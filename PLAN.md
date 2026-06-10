@@ -33,7 +33,11 @@ Last updated: 2026-06-10
 - References: 13 solver/checker repos shallow-cloned into `references/`
   (gitignored; reproducible via `scripts/fetch-references.sh`).
 - Decisions: [ADR-0001 vertical slice first](docs/research/09-decisions/adr-0001-vertical-slice-first.md)
-  **accepted** 2026-06-10.
+  and [ADR-0002 ground-up identity, oracle as bootstrap](docs/research/09-decisions/adr-0002-ground-up-identity-oracle-bootstrap.md)
+  both **accepted** 2026-06-10. ADR-0002 settles the Z3 question: the pure
+  Rust stack (including a custom SAT core) is the product; the linked oracle
+  is scaffolding with a planned demotion path (backend → differential
+  oracle → CI cross-check).
 - Ecosystem facts checked 2026-06-10: stable Rust 1.96; z3 crate 0.20
   removed the `'ctx` lifetime API; varisat unmaintained since 2019 (splr and
   rustsat are the maintained Rust SAT options).

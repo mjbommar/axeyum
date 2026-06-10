@@ -111,10 +111,13 @@ an adapted Rust SAT solver behind the SAT trait.
 Exit criteria: pure Rust path agrees with the oracle on the public QF_BV
 slice it supports; layer-attributed timing identifies the dominant cost.
 
-## Phase 6: SAT Core Research (Gated)
+## Phase 6: SAT Core (Identity; Priority Gated)
 
-Gate: enter only if the methodology note's custom-CDCL gate fires (SAT time
-dominates and the adapter gap to CaDiCaL is material on Axeyum CNF).
+The custom CDCL core is part of the project identity
+([ADR-0002](../09-decisions/adr-0002-ground-up-identity-oracle-bootstrap.md)):
+it will be built. The methodology note's gate decides *when* — it takes
+priority over encoding work only once SAT time dominates end-to-end time on
+the corpus tiers.
 
 - SAT trait stabilization with proof-logging hook (IPASIR-superset shape).
 - Clause arena, propagation, CDCL prototype with DRAT output.

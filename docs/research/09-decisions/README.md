@@ -55,3 +55,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | ADR | Title | Status |
 |---|---|---|
 | [0001](adr-0001-vertical-slice-first.md) | Vertical slice before horizontal layers | accepted |
+| [0002](adr-0002-ground-up-identity-oracle-bootstrap.md) | Ground-up identity, oracle as bootstrap scaffolding | accepted |

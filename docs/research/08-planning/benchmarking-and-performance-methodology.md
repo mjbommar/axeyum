@@ -52,10 +52,13 @@ Out of scope:
 
 ## Decision Gates
 
-- Custom CDCL core: justified only when, on the public + client tiers, (a) SAT
-  time dominates end-to-end time, and (b) the best Rust adapter shows a
-  consistent material gap to CaDiCaL/Kissat on Axeyum-generated CNF
-  specifically. Otherwise effort goes to encodings.
+- Custom CDCL core: building it is settled identity, not contingent
+  ([ADR-0002](../09-decisions/adr-0002-ground-up-identity-oracle-bootstrap.md));
+  this gate decides *priority*. It jumps the queue ahead of encoding work
+  when, on the public + client tiers, (a) SAT time dominates end-to-end
+  time, and (b) the best Rust adapter shows a consistent material gap to
+  CaDiCaL/Kissat on Axeyum-generated CNF specifically. Until then, effort
+  goes to encodings first.
 - Word-level/lazy techniques (beyond-bit-blasting note): justified per
   technique by layer attribution showing the targeted operator class dominates.
 - Backend default choice: highest PAR-2 on the client tier wins, revisited per
