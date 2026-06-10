@@ -1,0 +1,14 @@
+# Rust build artifacts
+/target
+
+# Local reference clones (recreate with scripts/fetch-references.sh)
+/references/*/
+
+# Editor and OS noise
+*.swp
+.DS_Store
+.idea/
+.vscode/
+
+# Benchmark scratch output
+/bench-results/local/

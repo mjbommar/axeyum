@@ -1,0 +1,23 @@
+[package]
+name = "axeyum-solver"
+description = "Solver backend trait, results, models, and capabilities for the Axeyum automated reasoning stack"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[dependencies]
+axeyum-ir.workspace = true
+
+[features]
+# Native backends are feature-gated leaf dependencies; the default build has
+# no C or C++ build requirement. The `z3` feature arrives with milestone M0.
+default = []
+
+[lints]
+workspace = true
