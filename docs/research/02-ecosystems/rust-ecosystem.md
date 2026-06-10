@@ -31,7 +31,7 @@ Out of scope:
 | Project | Notes | Relevance |
 |---|---|---|
 | RustSAT | SAT library ecosystem for encodings and solver interfaces. | Interop and inspiration. |
-| varisat | SAT solver written in Rust. | Pure Rust backend candidate. |
+| varisat | SAT solver written in Rust with DRAT/LRAT proof output; effectively unmaintained (last release 2019). | Proof-output design reference; backend candidate with maintenance caveat. |
 | splr | Modern Rust CDCL SAT solver inspired by Glucose/Kissat/CaDiCaL ideas. | Algorithmic reference. |
 | batsat | MiniSat-derived Rust SAT solver. | Simpler design reference. |
 | CreuSAT | Formally verified Rust SAT solver verified with Creusot. | Evidence/checking reference. |
@@ -40,7 +40,7 @@ Out of scope:
 
 | Project | Notes | Relevance |
 |---|---|---|
-| z3.rs | Rust bindings for Z3. | Primary native backend path. |
+| z3.rs | Rust bindings for Z3; 0.20 removed the `'ctx` lifetime API (contexts managed internally). | Primary native backend path. |
 | cvc5-rs | Rust bindings for cvc5. | Alternative backend. |
 | bitwuzla-sys | Low-level Bitwuzla bindings. | BV backend path. |
 | boolector-rs | Rust bindings for Boolector. | Legacy/reference backend. |

@@ -24,8 +24,10 @@ Out of scope:
 
 - Term handles should be plain `Copy` IDs with no lifetime parameter; validity
   is a runtime contract with the owning arena, optionally checked in debug
-  builds via arena tags. Lifetime-parameterized handles (the z3.rs `'ctx`
-  pattern) infect every downstream type and block portfolio parallelism.
+  builds via arena tags. Lifetime-parameterized handles (the pre-0.20 z3.rs
+  `'ctx` pattern) infect every downstream type and block portfolio
+  parallelism; the z3 crate itself abandoned that design in 0.20, which
+  confirms the lesson.
 - The arena should be usable as `&Arena` shared across threads for read-side
   work (rendering, evaluation, lowering), with term creation single-writer.
   An append-only design makes this natural.

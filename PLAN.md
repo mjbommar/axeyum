@@ -21,28 +21,37 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-10
 
-- Phase: **pre-code**. Research documentation only; no Cargo workspace yet.
-- Git: no commits yet; `docs/` and this file are untracked.
-- Research tree complete at `docs/research/` — 35 notes across orientation,
-  foundations, ecosystems, architecture, data structures, algorithms, Rust
-  strategy, verification, planning, and decisions.
-- Decision process exists: [docs/research/09-decisions/](docs/research/09-decisions/README.md).
-- One proposed (not yet accepted) decision:
-  [ADR-0001 vertical slice first](docs/research/09-decisions/adr-0001-vertical-slice-first.md).
+- Phase: **Phase 0 complete; M0 (vertical slice) is next.**
+- Git: on `main`; docs committed; workspace scaffold committed. Remote
+  `github.com/mjbommar/axeyum` exists but nothing pushed yet.
+- Workspace: `axeyum-ir` + `axeyum-solver` (per ADR-0001), edition 2024,
+  MSRV 1.85, workspace lints (`unsafe_code` denied, clippy pedantic).
+  fmt/clippy/test/doc all green locally; CI workflow defined
+  (fmt, clippy, test, MSRV check, rustdoc, cargo-deny).
+- Project metadata: README, CONTRIBUTING, CLAUDE.md, dual MIT/Apache-2.0
+  licenses, deny.toml, rustfmt.toml.
+- References: 13 solver/checker repos shallow-cloned into `references/`
+  (gitignored; reproducible via `scripts/fetch-references.sh`).
+- Decisions: [ADR-0001 vertical slice first](docs/research/09-decisions/adr-0001-vertical-slice-first.md)
+  **accepted** 2026-06-10.
+- Ecosystem facts checked 2026-06-10: stable Rust 1.96; z3 crate 0.20
+  removed the `'ctx` lifetime API; varisat unmaintained since 2019 (splr and
+  rustsat are the maintained Rust SAT options).
 
 ## Next Actions
 
 In order; check off and date as completed.
 
-- [ ] Review and accept (or amend) ADR-0001 — it sets the build order.
-- [ ] Initial commit of `docs/` + `PLAN.md`.
-- [ ] Phase 0: Cargo workspace skeleton (`axeyum-ir`, `axeyum-solver`),
-      license, CI (fmt, clippy, test).
+- [x] Review and accept (or amend) ADR-0001 — accepted 2026-06-10.
+- [x] Initial commit of `docs/` + `PLAN.md` — 2026-06-10.
+- [x] Phase 0: Cargo workspace skeleton (`axeyum-ir`, `axeyum-solver`),
+      licenses, CI — 2026-06-10.
+- [ ] Push `main` to GitHub and confirm CI is green there.
 - [ ] Milestone M0 (vertical slice): IR subset + arena + sort checking +
-      ground evaluator + solver trait + Z3 feature backend + model
-      check-by-evaluation. Done when the doctest in ADR-0001 passes:
-      `x + 1 == 5` over `BV(8)` solves via Z3 and the evaluator confirms the
-      lifted model.
+      ground evaluator + solver trait + Z3 feature backend (z3 crate 0.20+,
+      post-lifetime API) + model check-by-evaluation. Done when the doctest
+      in ADR-0001 passes: `x + 1 == 5` over `BV(8)` solves via Z3 and the
+      evaluator confirms the lifted model.
 - [ ] Then follow the [roadmap](docs/research/08-planning/roadmap.md)
       phase by phase; each phase has explicit exit criteria.
 
@@ -80,4 +89,6 @@ In order; check off and date as completed.
 | [docs/research/08-planning/roadmap.md](docs/research/08-planning/roadmap.md) | Phased plan with exit criteria and gates. |
 | [docs/research/08-planning/research-questions.md](docs/research/08-planning/research-questions.md) | Open question register. |
 | [docs/research/09-decisions/](docs/research/09-decisions/README.md) | ADRs: how questions get closed. |
-| `crates/` | (future) Cargo workspace. |
+| `crates/` | Cargo workspace: `axeyum-ir`, `axeyum-solver`. |
+| [CLAUDE.md](CLAUDE.md) | Agent guidance: session protocol, commands, hard rules. |
+| [references/](references/README.md) | Gitignored reference clones; `scripts/fetch-references.sh`. |

@@ -80,7 +80,9 @@ to experiment with representations, algorithms, and evidence checking.
   - Proposed: Z3 first ([ADR-0001](09-decisions/adr-0001-vertical-slice-first.md)); Bitwuzla second.
 - [ ] Which pure Rust SAT backend should be evaluated first?
   - Evaluate against the [benchmarking methodology](08-planning/benchmarking-and-performance-methodology.md);
-    varisat's proof output weighs in its favor for the evidence thesis.
+    varisat's proof output weighs in its favor for the evidence thesis, but it
+    is effectively unmaintained (last release 2019) — splr and rustsat are the
+    actively maintained alternatives.
 
 ## Source Pointers
 

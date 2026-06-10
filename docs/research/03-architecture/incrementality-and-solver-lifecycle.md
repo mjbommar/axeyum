@@ -57,7 +57,9 @@ Arena (terms, sorts, symbols)        long-lived, append-only
 - The query planner should decide reuse: same instance with new assumptions,
   incremental push, or fresh instance — measured, not hard-coded.
 - Do not tie term handles to a solver context lifetime. The z3.rs `'ctx`
-  lifetime infecting every type is the documented cautionary example.
+  lifetime infecting every type was the documented cautionary example —
+  upstream agreed: the z3 crate removed the lifetime-parameterized API in
+  0.20 (contexts are now managed internally).
 - Learned-clause and bit-blast cache reuse across related queries is a
   research topic in its own right; record per-query reuse statistics from the
   start so the payoff is measurable.
