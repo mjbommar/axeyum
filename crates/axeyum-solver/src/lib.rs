@@ -1,28 +1,25 @@
 //! Solver backend interface for the Axeyum automated reasoning stack.
 //!
-//! This crate owns the Axeyum-side solver contract: the backend trait, the
-//! result type (`Sat` / `Unsat` / `Unknown` as first-class outcomes), models
-//! keyed by Axeyum symbols rather than backend AST pointers, capability
-//! descriptions, and cooperative cancellation. Native backends (Z3 first,
-//! behind the `z3` feature) are adapters implementing this contract.
+//! This crate owns the Axeyum-side solver contract: the [`SolverBackend`]
+//! trait, [`CheckResult`] with `Unknown` as a first-class outcome, and
+//! [`Model`]s keyed by Axeyum symbols rather than backend AST pointers.
+//! Native backends are feature-gated adapters implementing this contract;
+//! the default build has no C or C++ dependency (ADR-0002).
 //!
-//! Design notes live in the repository under `docs/research/`, in particular:
+//! Enable the `z3` feature for the [`Z3Backend`] oracle (system libz3 via
+//! pkg-config) or `z3-static` for a hermetic prebuilt libz3. The milestone
+//! M0 doctest lives on the `Z3Backend` module.
 //!
-//! - `03-architecture/backend-model.md` — trait shape and capabilities.
-//! - `03-architecture/incrementality-and-solver-lifecycle.md` —
-//!   assumptions-first incrementality and arena/instance lifetimes.
-//! - `07-verification/evidence-and-checking.md` — why every `sat` result is
-//!   checked by evaluation against the original term.
-//!
-//! Milestone M0 (see `docs/research/09-decisions/adr-0001-vertical-slice-first.md`)
-//! scopes the first real contents: the trait, the Z3 feature backend, and
-//! model lifting checked by the `axeyum-ir` evaluator.
+//! Design notes: `docs/research/03-architecture/backend-model.md`,
+//! `incrementality-and-solver-lifecycle.md`, and
+//! `07-verification/evidence-and-checking.md` in the repository.
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn workspace_smoke() {
-        // Placeholder until M0 lands the trait; keeps the test harness wired.
-        assert_eq!(2_u32 + 2, 4);
-    }
-}
+mod backend;
+mod model;
+#[cfg(feature = "z3")]
+mod z3_backend;
+
+pub use backend::{Capabilities, CheckResult, SolverBackend, SolverConfig, SolverError};
+pub use model::Model;
+#[cfg(feature = "z3")]
+pub use z3_backend::Z3Backend;

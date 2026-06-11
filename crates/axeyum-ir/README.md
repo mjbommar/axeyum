@@ -16,7 +16,9 @@ Design rationale:
 - [API design](../../docs/research/06-rust-strategy/api-design-concurrency-and-stability.md)
   — lifetime-free `Copy` handles, append-only arena, determinism rules.
 
-Status: pre-M0 stub. First contents are scoped by
-[ADR-0001](../../docs/research/09-decisions/adr-0001-vertical-slice-first.md).
+Status: M0 complete — the ADR-0001 operator subset, arena with
+hash-consing, sort-checked builders, and the ground evaluator with
+exhaustive small-width tests. Representation choices in
+[ADR-0003](../../docs/research/09-decisions/adr-0003-m0-ir-representation.md).
 
 License: MIT OR Apache-2.0.

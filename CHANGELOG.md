@@ -10,6 +10,14 @@ see `docs/research/06-rust-strategy/api-design-concurrency-and-stability.md`).
 
 ### Added
 
+- **Milestone M0 (vertical slice, ADR-0001):** `axeyum-ir` typed term core
+  (Bool/BV sorts, hash-consed arena, sort-checked builders for the M0
+  operator subset, ground evaluator with exhaustive small-width tests) and
+  `axeyum-solver` (backend trait, `Unknown`-first results, symbol-keyed
+  models, feature-gated Z3 oracle backend with conformance tests). Every
+  `sat` result replays through the trusted evaluator. ADR-0003 records the
+  representation choices (u128-backed BV constants, width cap 128).
+
 - Research foundation: 36 notes under `docs/research/` plus the ADR process
   (`09-decisions/`); ADR-0001 (vertical slice first) and ADR-0002 (ground-up
   identity, oracle as bootstrap scaffolding) accepted.

@@ -56,3 +56,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 |---|---|---|
 | [0001](adr-0001-vertical-slice-first.md) | Vertical slice before horizontal layers | accepted |
 | [0002](adr-0002-ground-up-identity-oracle-bootstrap.md) | Ground-up identity, oracle as bootstrap scaffolding | accepted |
+| [0003](adr-0003-m0-ir-representation.md) | M0 IR representation choices | accepted |

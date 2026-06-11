@@ -20,6 +20,8 @@ Design rationale:
 - [Evidence and checking](../../docs/research/07-verification/evidence-and-checking.md)
   — why every `sat` is checked by evaluation.
 
-Status: pre-M0 stub.
+Status: M0 complete — trait, models, and the Z3 oracle backend with
+conformance tests; every `sat` in the test harness is replayed through the
+trusted evaluator.
 
 License: MIT OR Apache-2.0.

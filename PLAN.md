@@ -82,15 +82,22 @@ In order; check off and date as completed.
       CLAUDE.md, corpus skeleton, 20 reference clones. **Everything below
       this line is implementation, not scaffolding** — deliberately deferred
       to the next working session.
-- [ ] **NEXT: Milestone M0 (vertical slice).** IR subset + arena + sort
-      checking + ground evaluator + solver trait + Z3 feature backend
-      (z3 crate 0.20+, post-lifetime API) + model check-by-evaluation.
-      Done when the doctest in ADR-0001 passes: `x + 1 == 5` over `BV(8)`
-      solves via Z3 and the evaluator confirms the lifted model.
-      Start with `axeyum-ir`: sorts and interning first, evaluator second,
-      builders third (per term-ir and bv-semantics notes).
-- [ ] Then follow the [roadmap](docs/research/08-planning/roadmap.md)
-      phase by phase; each phase has explicit exit criteria.
+- [x] **Milestone M0 (vertical slice) — 2026-06-10.** The ADR-0001 doctest
+      passes: `x + 1 == 5` over `BV(8)` solves via `Z3Backend` and the
+      ground evaluator confirms the lifted model. `axeyum-ir` has the M0
+      operator subset, hash-consed arena, sort-checked builders, and the
+      evaluator with exhaustive small-width tests; `axeyum-solver` has the
+      trait, symbol-keyed models, and the feature-gated Z3 backend
+      (`z3` = system libz3 via pkg-config, `z3-static` = hermetic prebuilt).
+      Representation decisions in ADR-0003. All sat results in the test
+      harness replay through the evaluator.
+- [ ] **NEXT: Phase 1 (broaden the typed term core)** per the
+      [roadmap](docs/research/08-planning/roadmap.md): full scalar QF_BV
+      operator set with SMT-LIB edge-case semantics (sub/mul/div/rem,
+      shifts, comparisons, extensions), pretty printer, exhaustive
+      small-width evaluator coverage for the edge-case operators.
+- [ ] Then follow the roadmap phase by phase; each phase has explicit
+      exit criteria.
 
 ## How To Resume Work (for a human or an agent)
 

@@ -13,11 +13,17 @@ publish = false
 
 [dependencies]
 axeyum-ir.workspace = true
+z3 = { workspace = true, optional = true }
 
 [features]
 # Native backends are feature-gated leaf dependencies; the default build has
-# no C or C++ build requirement. The `z3` feature arrives with milestone M0.
+# no C or C++ build requirement (ADR-0002).
 default = []
+# Z3 oracle backend linked against the system libz3 (found via pkg-config).
+z3 = ["dep:z3"]
+# Use a prebuilt static libz3 instead of the system library; hermetic for CI
+# and machines without libz3-dev. Implies `z3`.
+z3-static = ["z3", "z3/gh-release"]
 
 [lints]
 workspace = true

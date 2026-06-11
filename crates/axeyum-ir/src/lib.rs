@@ -1,28 +1,45 @@
 //! Typed term IR for the Axeyum automated reasoning stack.
 //!
 //! This crate owns the core representations: sorts, symbols, terms stored as
-//! an interned DAG in an arena with compact `u32` newtype IDs, typed builder
-//! APIs, and the ground evaluator that serves as the executable semantic
+//! an interned DAG in an arena with compact `Copy` IDs, typed sort-checked
+//! builders, and the ground evaluator that serves as the executable semantic
 //! reference for every other layer.
 //!
-//! Design notes live in the repository under `docs/research/`, in particular:
+//! Design notes live in the repository under `docs/research/`; the operative
+//! decisions are ADR-0001 (vertical slice scope), ADR-0003 (representation
+//! choices), and the bv-semantics note (SMT-LIB edge-case semantics).
 //!
-//! - `04-data-structures/term-ir.md` — arena, interning, and ID design.
-//! - `01-foundations/bv-semantics-and-partial-operations.md` — the SMT-LIB
-//!   edge-case semantics this crate implements verbatim.
-//! - `06-rust-strategy/api-design-concurrency-and-stability.md` — handle and
-//!   ownership rules (lifetime-free `Copy` IDs, append-only arena).
+//! # Example
 //!
-//! Milestone M0 (see `docs/research/09-decisions/adr-0001-vertical-slice-first.md`)
-//! scopes the first real contents: `Bool`, `BV(n)` constants and symbols,
-//! `not/and/or/xor`, `add`, `eq/ult`, `extract/concat`, `ite`, and a ground
-//! evaluator.
+//! Build `x + 1 == 5` over `BV(8)` and confirm `x = 4` satisfies it:
+//!
+//! ```
+//! use axeyum_ir::{Assignment, Sort, TermArena, Value, eval};
+//!
+//! let mut arena = TermArena::new();
+//! let x_sym = arena.declare("x", Sort::BitVec(8))?;
+//! let x = arena.var(x_sym);
+//! let one = arena.bv_const(8, 1)?;
+//! let five = arena.bv_const(8, 5)?;
+//! let sum = arena.bv_add(x, one)?;
+//! let formula = arena.eq(sum, five)?;
+//!
+//! let mut assignment = Assignment::new();
+//! assignment.set(x_sym, Value::Bv { width: 8, value: 4 });
+//! assert_eq!(eval(&arena, formula, &assignment)?, Value::Bool(true));
+//! # Ok::<(), axeyum_ir::IrError>(())
+//! ```
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn workspace_smoke() {
-        // Placeholder until M0 lands real types; keeps the test harness wired.
-        assert_eq!(2_u32 + 2, 4);
-    }
-}
+mod arena;
+mod error;
+mod eval;
+mod sort;
+mod term;
+mod value;
+
+pub use arena::TermArena;
+pub use error::IrError;
+pub use eval::{Assignment, eval};
+pub use sort::{MAX_BV_WIDTH, Sort};
+pub use term::{Op, SymbolId, TermId, TermNode};
+pub use value::Value;

@@ -1,0 +1,246 @@
+//! Unit and exhaustive small-width tests for the term IR and evaluator.
+//!
+//! Per the bv-semantics note, operators with edge cases are tested
+//! exhaustively at small widths, not just on sampled inputs.
+
+use axeyum_ir::{Assignment, IrError, Sort, TermArena, Value, eval};
+
+fn bv(width: u32, value: u128) -> Value {
+    Value::Bv { width, value }
+}
+
+// ----- interning and determinism ----------------------------------------
+
+#[test]
+fn interning_dedups_structurally_equal_terms() {
+    let mut a = TermArena::new();
+    let x = a.bv_var("x", 8).unwrap();
+    let one_a = a.bv_const(8, 1).unwrap();
+    let one_b = a.bv_const(8, 1).unwrap();
+    assert_eq!(one_a, one_b);
+    let s1 = a.bv_add(x, one_a).unwrap();
+    let s2 = a.bv_add(x, one_b).unwrap();
+    assert_eq!(s1, s2);
+    assert_eq!(a.len(), 3); // x, 1, x+1
+}
+
+#[test]
+fn identical_construction_yields_identical_ids() {
+    let build = || {
+        let mut a = TermArena::new();
+        let x = a.bv_var("x", 8).unwrap();
+        let one = a.bv_const(8, 1).unwrap();
+        let sum = a.bv_add(x, one).unwrap();
+        let five = a.bv_const(8, 5).unwrap();
+        let eq = a.eq(sum, five).unwrap();
+        (x, one, sum, five, eq)
+    };
+    assert_eq!(build(), build());
+}
+
+#[test]
+fn symbol_redeclaration_same_sort_is_idempotent() {
+    let mut a = TermArena::new();
+    let s1 = a.declare("x", Sort::BitVec(8)).unwrap();
+    let s2 = a.declare("x", Sort::BitVec(8)).unwrap();
+    assert_eq!(s1, s2);
+    let err = a.declare("x", Sort::Bool).unwrap_err();
+    assert!(matches!(err, IrError::SymbolSortConflict { .. }));
+}
+
+// ----- build-time validation ---------------------------------------------
+
+#[test]
+fn width_and_value_validation() {
+    let mut a = TermArena::new();
+    assert!(matches!(a.bv_const(0, 0), Err(IrError::InvalidWidth(0))));
+    assert!(matches!(
+        a.bv_const(129, 0),
+        Err(IrError::InvalidWidth(129))
+    ));
+    assert!(matches!(
+        a.bv_const(4, 16),
+        Err(IrError::ValueOutOfRange {
+            width: 4,
+            value: 16
+        })
+    ));
+    assert!(a.bv_const(128, u128::MAX).is_ok());
+    assert!(a.bv_const(4, 15).is_ok());
+}
+
+#[test]
+fn sort_checking_rejects_mixed_operands() {
+    let mut a = TermArena::new();
+    let p = a.bool_var("p").unwrap();
+    let x = a.bv_var("x", 8).unwrap();
+    let y = a.bv_var("y", 4).unwrap();
+    assert!(matches!(a.and(p, x), Err(IrError::SortMismatch { .. })));
+    assert!(matches!(a.bv_add(x, y), Err(IrError::SortsDiffer(..))));
+    assert!(matches!(a.eq(p, x), Err(IrError::SortsDiffer(..))));
+    assert!(matches!(a.ite(x, p, p), Err(IrError::SortMismatch { .. })));
+    assert!(matches!(a.ite(p, p, x), Err(IrError::SortsDiffer(..))));
+    assert!(matches!(a.bv_not(p), Err(IrError::SortMismatch { .. })));
+}
+
+#[test]
+fn extract_and_concat_bounds_are_static_errors() {
+    let mut a = TermArena::new();
+    let x = a.bv_var("x", 8).unwrap();
+    assert!(matches!(
+        a.extract(8, 0, x),
+        Err(IrError::ExtractOutOfRange { .. })
+    ));
+    assert!(matches!(
+        a.extract(2, 3, x),
+        Err(IrError::ExtractOutOfRange { .. })
+    ));
+    let wide = a.bv_var("w", 128).unwrap();
+    assert!(matches!(
+        a.concat(wide, x),
+        Err(IrError::ConcatTooWide(136))
+    ));
+}
+
+// ----- evaluator: Boolean operators --------------------------------------
+
+#[test]
+fn boolean_truth_tables() {
+    let mut a = TermArena::new();
+    let asg = Assignment::new();
+    for p in [false, true] {
+        let tp = a.bool_const(p);
+        let np = a.not(tp).unwrap();
+        assert_eq!(eval(&a, np, &asg).unwrap(), Value::Bool(!p));
+        for q in [false, true] {
+            let tq = a.bool_const(q);
+            let cases = [
+                (a.and(tp, tq).unwrap(), p && q),
+                (a.or(tp, tq).unwrap(), p || q),
+                (a.xor(tp, tq).unwrap(), p ^ q),
+                (a.eq(tp, tq).unwrap(), p == q),
+            ];
+            for (term, expect) in cases {
+                assert_eq!(eval(&a, term, &asg).unwrap(), Value::Bool(expect));
+            }
+        }
+    }
+}
+
+// ----- evaluator: exhaustive small-width BV semantics ---------------------
+
+#[test]
+fn exhaustive_bv_binary_ops_small_widths() {
+    for w in [1u32, 2, 3, 4, 8] {
+        let count = 1u128 << w;
+        let m = count - 1;
+        let mut a = TermArena::new();
+        let asg = Assignment::new();
+        for x in 0..count {
+            for y in 0..count {
+                let tx = a.bv_const(w, x).unwrap();
+                let ty = a.bv_const(w, y).unwrap();
+                let cases = [
+                    (a.bv_add(tx, ty).unwrap(), bv(w, (x + y) & m)),
+                    (a.bv_and(tx, ty).unwrap(), bv(w, x & y)),
+                    (a.bv_or(tx, ty).unwrap(), bv(w, x | y)),
+                    (a.bv_xor(tx, ty).unwrap(), bv(w, x ^ y)),
+                    (a.bv_ult(tx, ty).unwrap(), Value::Bool(x < y)),
+                    (a.eq(tx, ty).unwrap(), Value::Bool(x == y)),
+                ];
+                for (term, expect) in cases {
+                    assert_eq!(eval(&a, term, &asg).unwrap(), expect, "w={w} x={x} y={y}");
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn exhaustive_bv_not_small_widths() {
+    for w in [1u32, 4, 8] {
+        let count = 1u128 << w;
+        let mut a = TermArena::new();
+        let asg = Assignment::new();
+        for x in 0..count {
+            let tx = a.bv_const(w, x).unwrap();
+            let t = a.bv_not(tx).unwrap();
+            assert_eq!(eval(&a, t, &asg).unwrap(), bv(w, !x & (count - 1)));
+        }
+    }
+}
+
+#[test]
+fn exhaustive_extract_concat_roundtrip() {
+    // Splitting at every position and re-concatenating restores the value.
+    let w = 6u32;
+    let mut a = TermArena::new();
+    let asg = Assignment::new();
+    for v in 0..(1u128 << w) {
+        let tv = a.bv_const(w, v).unwrap();
+        for split in 1..w {
+            let hi = a.extract(w - 1, split, tv).unwrap();
+            let lo = a.extract(split - 1, 0, tv).unwrap();
+            let back = a.concat(hi, lo).unwrap();
+            assert_eq!(
+                eval(&a, back, &asg).unwrap(),
+                bv(w, v),
+                "v={v} split={split}"
+            );
+        }
+    }
+}
+
+#[test]
+fn ite_selects_branches() {
+    let mut a = TermArena::new();
+    let asg = Assignment::new();
+    let cond_t = a.bool_const(true);
+    let cond_f = a.bool_const(false);
+    let seven = a.bv_const(8, 7).unwrap();
+    let nine = a.bv_const(8, 9).unwrap();
+    let pick_x = a.ite(cond_t, seven, nine).unwrap();
+    let pick_y = a.ite(cond_f, seven, nine).unwrap();
+    assert_eq!(eval(&a, pick_x, &asg).unwrap(), bv(8, 7));
+    assert_eq!(eval(&a, pick_y, &asg).unwrap(), bv(8, 9));
+}
+
+// ----- evaluator: width-128 boundary --------------------------------------
+
+#[test]
+fn width_128_wrapping_and_masking() {
+    let mut a = TermArena::new();
+    let asg = Assignment::new();
+    let max = a.bv_const(128, u128::MAX).unwrap();
+    let one = a.bv_const(128, 1).unwrap();
+    let sum = a.bv_add(max, one).unwrap();
+    assert_eq!(eval(&a, sum, &asg).unwrap(), bv(128, 0));
+    let n = a.bv_not(max).unwrap();
+    assert_eq!(eval(&a, n, &asg).unwrap(), bv(128, 0));
+}
+
+// ----- evaluator: symbols and sharing -------------------------------------
+
+#[test]
+fn unbound_symbol_is_a_typed_error() {
+    let mut a = TermArena::new();
+    let x = a.bv_var("x", 8).unwrap();
+    let err = eval(&a, x, &Assignment::new()).unwrap_err();
+    assert!(matches!(err, IrError::UnboundSymbol(_)));
+}
+
+#[test]
+fn deep_shared_term_evaluates_without_stack_overflow() {
+    // 100k stacked additions over a shared DAG; iterative eval must hold.
+    let mut a = TermArena::new();
+    let sym = a.declare("x", Sort::BitVec(64)).unwrap();
+    let x = a.var(sym);
+    let one = a.bv_const(64, 1).unwrap();
+    let mut t = x;
+    for _ in 0..100_000 {
+        t = a.bv_add(t, one).unwrap();
+    }
+    let mut asg = Assignment::new();
+    asg.set(sym, bv(64, 5));
+    assert_eq!(eval(&a, t, &asg).unwrap(), bv(64, 100_005));
+}

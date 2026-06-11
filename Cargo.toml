@@ -17,6 +17,7 @@ categories = ["science", "mathematics"]
 
 [workspace.dependencies]
 axeyum-ir = { path = "crates/axeyum-ir", version = "0.1.0" }
+z3 = { version = "0.20", default-features = false }
 
 [workspace.lints.rust]
 missing_docs = "warn"
