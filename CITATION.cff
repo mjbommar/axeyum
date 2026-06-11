@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+message: "If you use Axeyum in research, please cite it as below."
+title: "Axeyum: a Rust-first automated reasoning stack"
+type: software
+authors:
+  - family-names: Bommarito
+    given-names: Michael
+    email: mike@273ventures.com
+repository-code: "https://github.com/mjbommar/axeyum"
+license: "MIT OR Apache-2.0"
+abstract: >-
+  Axeyum is a Rust-first automated reasoning framework: typed term IR,
+  rewriting, query planning, solver backends, and checkable evidence,
+  building toward a complete framework for general reasoning, logic,
+  and proving.

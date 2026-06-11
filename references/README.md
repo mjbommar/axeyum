@@ -17,6 +17,9 @@ Axeyum. The clones themselves are gitignored; run
 | `egglog` | Successor to egg; where active e-graph development moved. |
 | `carcara` | Alethe SMT proof checker in Rust; proof-checking reference. |
 | `drat-trim` | DRAT proof checker and DRAT->LRAT elaboration reference. |
+| `ethos` | cvc5's CPC/Eunoia proof checker; SMT proof-pipeline reference. |
+| `lean-smt` | Replays cvc5 proofs inside Lean; the checked-bridge precedent. |
+| `nanoda_lib` | Lean kernel checker in Rust; the Rust trusted-kernel precedent. |
 | `cadical` | C++ CDCL design reference (clause arena, IPASIR, IPASIR-UP). |
 | `kissat` | C CDCL performance reference (memory layout, propagation). |
 | `bitwuzla` | BV/array solver reference (preprocessing, prop local search). |

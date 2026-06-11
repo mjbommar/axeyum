@@ -17,9 +17,12 @@ repos=(
   # Rewriting / e-graphs
   https://github.com/egraphs-good/egg
   https://github.com/egraphs-good/egglog
-  # Proof checking
+  # Proof checking and proof bridges
   https://github.com/ufmg-smite/carcara
   https://github.com/marijnheule/drat-trim
+  https://github.com/cvc5/ethos
+  https://github.com/ufmg-smite/lean-smt
+  https://github.com/ammkrn/nanoda_lib
   # C/C++ solver design references
   https://github.com/arminbiere/cadical
   https://github.com/arminbiere/kissat

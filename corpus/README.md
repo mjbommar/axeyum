@@ -7,7 +7,7 @@ Benchmark and regression corpora, organized by the tiers defined in
 |---|---|---|
 | `micro/` | Hand-written op-level cases and minimized regression fixtures. | Yes — every differential-testing failure gets minimized and stored here. |
 | `client/` | Minimized queries captured from real frontends. | Yes, with source noted. |
-| `public/` | SMT-LIB QF_BV/QF_ABV sets, SAT Competition CNF, HWMCC BTOR2. | No — gitignored; fetched by script (to be added) with corpus name and file hash recorded in results artifacts. |
+| `public/` | SMT-LIB QF_BV/QF_ABV sets, SAT Competition CNF, HWMCC BTOR2. | No — gitignored; fetch with [`../scripts/fetch-corpus.sh`](../scripts/fetch-corpus.sh) (per-target, multi-GB; QF_ABV at ~140 MB is the smallest useful start). Corpus name and file hash get recorded in results artifacts. |
 
 Conventions:
 

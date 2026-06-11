@@ -33,8 +33,13 @@ Last updated: 2026-06-10
   Node 24 runner migration).
 - Supporting scaffold: corpus tier directories (`corpus/micro|client`
   committed, `corpus/public` gitignored), dependabot (cargo + actions
-  weekly), CHANGELOG, .editorconfig; 20 reference repos cloned locally
-  (incl. proving horizon: cvc5, vampire, eprover, lean4).
+  weekly), CHANGELOG, .editorconfig, CITATION.cff, PR template, justfile
+  (`just check`), docs link checker (`scripts/check-links.sh`, also a CI
+  job); 23 reference repos cloned locally (incl. proving horizon: cvc5,
+  vampire, eprover, lean4, ethos, lean-smt, nanoda_lib).
+- Public corpus fetcher works: `scripts/fetch-corpus.sh` (verified Zenodo
+  sources — SMT-LIB 2024 QF_BV/QF_ABV, HWMCC'24 BTOR2, SAT Comp 2024 main);
+  QF_ABV fetched and extracted locally (3.4 GB under `corpus/public/`).
 - North star recorded 2026-06-10: complete framework for general
   reasoning/logic/proving — see
   [north-star](docs/research/00-orientation/north-star.md), the horizon

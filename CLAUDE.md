@@ -34,11 +34,13 @@ quantifier-free corner.
 ## Commands
 
 ```sh
+just check          # fmt + clippy + test + doc + docs link check (preferred)
 cargo fmt --all --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features
-cargo doc --workspace --all-features --no-deps    # RUSTDOCFLAGS="-D warnings" in CI
+cargo doc --workspace --all-features --no-deps    # RUSTDOCFLAGS="-D warnings" in CIA
 cargo deny check                                  # needs cargo-deny installed
+./scripts/check-links.sh                          # docs relative-link check (CI job)
 ```
 
 Local default toolchain may be nightly; CI runs stable plus an MSRV (1.85)
