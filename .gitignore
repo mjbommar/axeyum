@@ -12,3 +12,6 @@
 
 # Benchmark scratch output
 /bench-results/local/
+
+# Public corpus tier (fetched, not committed)
+/corpus/public/

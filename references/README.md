@@ -14,11 +14,14 @@ Axeyum. The clones themselves are gitignored; run
 | `CreuSAT` | Formally verified Rust SAT solver; evidence/checking reference. |
 | `z3.rs` | Z3 Rust bindings; M0 backend path and lifetime-design cautionary tale. |
 | `egg` | E-graph rewriting; optional optimizer research path. |
+| `egglog` | Successor to egg; where active e-graph development moved. |
 | `carcara` | Alethe SMT proof checker in Rust; proof-checking reference. |
 | `drat-trim` | DRAT proof checker and DRAT->LRAT elaboration reference. |
 | `cadical` | C++ CDCL design reference (clause arena, IPASIR, IPASIR-UP). |
 | `kissat` | C CDCL performance reference (memory layout, propagation). |
 | `bitwuzla` | BV/array solver reference (preprocessing, prop local search). |
+| `minisat` | Foundational CDCL design; the educational baseline for our own SAT core. |
+| `cryptominisat` | Richer inprocessing and XOR reasoning; infosec workload reference. |
 | `btor2tools` | BTOR2 format parser/tools reference. |
 
 Z3 itself is not cloned (very large); use the system package or the `z3.rs`

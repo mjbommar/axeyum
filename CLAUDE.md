@@ -48,6 +48,10 @@ check. Edition 2024, resolver 3.
   (e.g. CaDiCaL for clause arenas, varisat for Rust CDCL + proof output).
 - Crate split is deliberately minimal (ADR-0001): do not add crates until a
   boundary is proven by use.
+- The pure Rust stack including a custom CDCL SAT core is the product; the
+  Z3 oracle is bootstrap scaffolding with a planned demotion path
+  (ADR-0002). Never expand reliance on linked solvers beyond
+  backend/differential-oracle/CI-cross-check roles without a new ADR.
 
 ## Hard Rules
 
@@ -74,6 +78,8 @@ check. Edition 2024, resolver 3.
 - varisat is effectively unmaintained (last release 2019) but is the only
   Rust SAT solver with DRAT/LRAT proof output; treat it as a design reference
   and benchmark candidate, not a guaranteed dependency.
-- Performance bets (custom CDCL core, lazy techniques) are gated by
+- The custom CDCL core is settled identity (ADR-0002) but its *priority* is
+  gated by
   [docs/research/08-planning/benchmarking-and-performance-methodology.md](docs/research/08-planning/benchmarking-and-performance-methodology.md);
-  don't start them without the gate firing.
+  encodings come first until SAT time dominates on real corpora. Lazy
+  techniques are likewise priority-gated.

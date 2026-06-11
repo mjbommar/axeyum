@@ -16,6 +16,7 @@ repos=(
   https://github.com/prove-rs/z3.rs
   # Rewriting / e-graphs
   https://github.com/egraphs-good/egg
+  https://github.com/egraphs-good/egglog
   # Proof checking
   https://github.com/ufmg-smite/carcara
   https://github.com/marijnheule/drat-trim
@@ -23,6 +24,8 @@ repos=(
   https://github.com/arminbiere/cadical
   https://github.com/arminbiere/kissat
   https://github.com/bitwuzla/bitwuzla
+  https://github.com/niklasso/minisat
+  https://github.com/msoos/cryptominisat
   # Word-level formats
   https://github.com/Boolector/btor2tools
 )
