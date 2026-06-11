@@ -1,0 +1,212 @@
+//! Reader/writer tests: feature coverage, round trips, and corpus smoke.
+
+use axeyum_ir::{Assignment, SymbolId, TermStats, Value, eval};
+use axeyum_smtlib::{SmtError, parse_script, write_script};
+
+#[test]
+fn parses_core_benchmark_shape() {
+    let text = r"
+        (set-info :status sat)
+        (set-logic QF_BV)
+        (declare-fun x () (_ BitVec 8))
+        (declare-const y (_ BitVec 8))
+        (assert (= (bvadd x y #x01) (_ bv16 8)))
+        (assert (bvult x #b00001111))
+        (check-sat)
+        (exit)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.logic.as_deref(), Some("QF_BV"));
+    assert_eq!(script.status.as_deref(), Some("sat"));
+    assert_eq!(script.assertions.len(), 2);
+    assert_eq!(script.check_sats, 1);
+}
+
+#[test]
+fn let_bindings_shadow_and_share() {
+    let text = r"
+        (set-logic QF_BV)
+        (declare-const x (_ BitVec 8))
+        (assert (let ((t (bvadd x x))) (= (bvmul t t) (_ bv0 8))))
+    ";
+    let script = parse_script(text).unwrap();
+    // t is shared: mul's two children are the same TermId.
+    let stats = TermStats::compute(&script.arena, &script.assertions);
+    assert!(stats.tree_nodes > stats.dag_nodes);
+    // Evaluator agrees with hand computation under x = 4: t = 8, t*t = 64 != 0.
+    let sym = script.arena.find_symbol("x").unwrap();
+    let mut asg = Assignment::new();
+    asg.set(sym, Value::Bv { width: 8, value: 4 });
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg).unwrap(),
+        Value::Bool(false)
+    );
+}
+
+#[test]
+fn nary_and_parameterized_operators() {
+    let text = r"
+        (set-logic QF_BV)
+        (declare-const a (_ BitVec 4))
+        (declare-const p Bool)
+        (declare-const q Bool)
+        (assert (and p q (=> p q)))
+        (assert (= ((_ extract 3 2) a) ((_ rotate_left 1) ((_ extract 1 0) a))))
+        (assert (= ((_ zero_extend 4) a) (_ bv7 8)))
+        (assert (= ((_ repeat 2) a) (concat a a)))
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 4);
+}
+
+#[test]
+fn define_fun_aliases_expand() {
+    let text = r"
+        (set-logic QF_BV)
+        (declare-const x (_ BitVec 8))
+        (define-fun twice () (_ BitVec 8) (bvadd x x))
+        (assert (bvult twice (_ bv100 8)))
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+}
+
+#[test]
+fn unsupported_constructs_are_clear_errors() {
+    assert!(matches!(
+        parse_script("(push 1)"),
+        Err(SmtError::Unsupported(_))
+    ));
+    assert!(matches!(
+        parse_script("(declare-fun f ((_ BitVec 8)) (_ BitVec 8))"),
+        Err(SmtError::Unsupported(_))
+    ));
+    assert!(matches!(
+        parse_script("(assert (bvadd"),
+        Err(SmtError::Syntax(_))
+    ));
+}
+
+#[test]
+fn write_parse_round_trip_preserves_structure() {
+    let text = r"
+        (set-logic QF_BV)
+        (declare-const x (_ BitVec 8))
+        (declare-const p Bool)
+        (assert (let ((t (bvadd x (_ bv1 8))))
+            (ite p (bvule (bvmul t t) (_ bv64 8)) (= t (_ bv5 8)))))
+        (assert ((_ sign_extend 0) x (_ bv0 8)))
+    ";
+    // The second assert is bogus on purpose? No — keep it valid:
+    let text = text.replace("(assert ((_ sign_extend 0) x (_ bv0 8)))", "");
+    let first = parse_script(&text).unwrap();
+    let exported = write_script(&first.arena, &first.assertions);
+    let second = parse_script(&exported).unwrap();
+    // Semantically identical: evaluate both under the same assignments.
+    let sym_of =
+        |s: &axeyum_smtlib::Script, n: &str| -> SymbolId { s.arena.find_symbol(n).unwrap() };
+    for xv in [0u128, 4, 5, 200, 255] {
+        for pv in [false, true] {
+            let mut a1 = Assignment::new();
+            a1.set(
+                sym_of(&first, "x"),
+                Value::Bv {
+                    width: 8,
+                    value: xv,
+                },
+            );
+            a1.set(sym_of(&first, "p"), Value::Bool(pv));
+            let mut a2 = Assignment::new();
+            a2.set(
+                sym_of(&second, "x"),
+                Value::Bv {
+                    width: 8,
+                    value: xv,
+                },
+            );
+            a2.set(sym_of(&second, "p"), Value::Bool(pv));
+            assert_eq!(
+                eval(&first.arena, first.assertions[0], &a1).unwrap(),
+                eval(&second.arena, second.assertions[0], &a2).unwrap(),
+                "x={xv} p={pv}"
+            );
+        }
+    }
+}
+
+#[test]
+fn export_is_linear_in_dag_not_tree() {
+    use axeyum_ir::TermArena;
+    // The 2^k bomb must export in linear size via define-fun sharing.
+    let mut a = TermArena::new();
+    let mut t = a.bv_var("x", 64).unwrap();
+    for _ in 0..100 {
+        t = a.bv_add(t, t).unwrap();
+    }
+    let zero = a.bv_const(64, 0).unwrap();
+    let f = a.eq(t, zero).unwrap();
+    let exported = write_script(&a, &[f]);
+    assert!(
+        exported.len() < 20_000,
+        "export must stay linear, got {} bytes",
+        exported.len()
+    );
+    // And it must parse back.
+    let back = parse_script(&exported).unwrap();
+    assert_eq!(back.assertions.len(), 1);
+}
+
+#[test]
+fn corpus_smoke_ingests_local_benchmarks_when_present() {
+    // Runtime-skipped where the (gitignored) public corpus is absent (CI).
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../corpus/public/non-incremental/QF_ABV");
+    if !dir.exists() {
+        eprintln!("corpus absent; skipping");
+        return;
+    }
+    let mut tried = 0;
+    let mut parsed = 0;
+    let mut unsupported = 0;
+    for entry in walk(&dir) {
+        if tried >= 25 {
+            break;
+        }
+        let Ok(text) = std::fs::read_to_string(&entry) else {
+            continue;
+        };
+        tried += 1;
+        match parse_script(&text) {
+            Ok(_) => parsed += 1,
+            // QF_ABV files contain arrays — Unsupported is the correct,
+            // classified outcome until arrays land (Phase 7).
+            Err(SmtError::Unsupported(_) | SmtError::Ir(_)) => unsupported += 1,
+            Err(SmtError::Syntax(e)) => panic!("syntax error on {entry:?}: {e}"),
+        }
+    }
+    eprintln!("corpus smoke: {parsed} parsed, {unsupported} unsupported of {tried}");
+    assert!(tried > 0);
+}
+
+fn walk(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
+    let mut files = Vec::new();
+    let mut dirs = vec![dir.to_path_buf()];
+    while let Some(d) = dirs.pop() {
+        let Ok(entries) = std::fs::read_dir(&d) else {
+            continue;
+        };
+        for e in entries.flatten() {
+            let p = e.path();
+            if p.is_dir() {
+                dirs.push(p);
+            } else if p.extension().is_some_and(|x| x == "smt2") {
+                files.push(p);
+            }
+        }
+        if files.len() > 200 {
+            break;
+        }
+    }
+    files.sort();
+    files
+}

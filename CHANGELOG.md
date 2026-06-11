@@ -10,6 +10,12 @@ see `docs/research/06-rust-strategy/api-design-concurrency-and-stability.md`).
 
 ### Added
 
+- **`axeyum-smtlib` (Phase 2):** SMT-LIB 2 reader for the QF_BV benchmark
+  slice (iterative, let-scoped, n-ary/indexed operators, `:status` ground
+  truth) and sharing-preserving script writer (shared nodes emitted as
+  0-ary `define-fun`s — output linear in the DAG, never the tree). End to
+  end: parse → solve via Z3 → model replay through the evaluator.
+
 - **Observability & resource governance:** `axeyum_ir::TermStats` (DAG vs
   saturating tree size, depth, symbol support, op-class counts) for blowup
   detection and admission control; structured

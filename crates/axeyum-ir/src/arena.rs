@@ -56,6 +56,11 @@ impl TermArena {
         self.sorts[t.index()]
     }
 
+    /// Looks up a declared symbol by name.
+    pub fn find_symbol(&self, name: &str) -> Option<SymbolId> {
+        self.symbol_lookup.get(name).copied()
+    }
+
     /// The name and sort of a declared symbol.
     ///
     /// # Panics

@@ -109,11 +109,18 @@ In order; check off and date as completed.
       admission control); `SolveStats` layer-attributed telemetry via
       `last_stats()` incl. Z3 statistics. Tested: 2^200 chain saturates,
       node budget refuses with diagnosis, rlimit yields classified Unknown.
-- [ ] **NEXT: Phase 2 (native solver oracle, harden)** per the
-      [roadmap](docs/research/08-planning/roadmap.md): backend conformance
-      suite expansion (state retention, cancellation), SMT-LIB export for
-      debugging plus benchmark import for the QF_BV slice, benchmark
-      harness baseline runs.
+- [x] **Phase 2, SMT-LIB leg — 2026-06-11.** New `axeyum-smtlib` crate:
+      iterative QF_BV-slice parser (declare/define-fun, let scoping, n-ary
+      and indexed operators, hex/bin/indexed literals, `:status` ground
+      truth, clear Unsupported errors for arrays/UF/incremental) and
+      sharing-preserving writer (shared nodes as 0-ary define-funs; the
+      2^100 bomb exports linearly — tested). Parse→Z3→evaluator-replay and
+      export round-trip conformance tests; corpus smoke test ingests real
+      local SMT-LIB files (runtime-skipped on CI).
+- [ ] **NEXT: Phase 2 remainder:** benchmark harness (`axeyum-bench`)
+      recording baseline PAR-2 runs over the local QF_BV corpus slice;
+      conformance suite items for state retention once incrementality
+      lands.
 - [ ] Then follow the roadmap phase by phase; each phase has explicit
       exit criteria.
 

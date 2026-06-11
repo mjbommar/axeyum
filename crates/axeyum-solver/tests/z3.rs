@@ -217,3 +217,41 @@ fn solve_stats_attribute_layers() {
     assert!(stats.translate.as_nanos() > 0);
     assert!(stats.solve.as_nanos() > 0);
 }
+
+// ----- SMT-LIB ingestion through the trait (Phase 2) ------------------------
+
+#[test]
+fn parsed_benchmark_solves_and_replays() {
+    let text = r"
+        (set-info :status sat)
+        (set-logic QF_BV)
+        (declare-fun x () (_ BitVec 8))
+        (declare-fun y () (_ BitVec 8))
+        (assert (= (bvadd (bvmul x y) (_ bv1 8)) (_ bv16 8)))
+        (assert (bvult y x))
+        (check-sat)
+    ";
+    let script = axeyum_smtlib::parse_script(text).unwrap();
+    let result = Z3Backend::new()
+        .check(&script.arena, &script.assertions, &SolverConfig::default())
+        .unwrap();
+    let CheckResult::Sat(model) = result else {
+        panic!("ground truth says sat");
+    };
+    // Level-1 evidence: replay through the evaluator.
+    let asg = model.to_assignment();
+    for &t in &script.assertions {
+        assert_eq!(eval(&script.arena, t, &asg).unwrap(), Value::Bool(true));
+    }
+    // And the sharing-preserving export round-trips through Z3 too.
+    let exported = axeyum_smtlib::write_script(&script.arena, &script.assertions);
+    let reparsed = axeyum_smtlib::parse_script(&exported).unwrap();
+    let again = Z3Backend::new()
+        .check(
+            &reparsed.arena,
+            &reparsed.assertions,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+    assert!(matches!(again, CheckResult::Sat(_)));
+}

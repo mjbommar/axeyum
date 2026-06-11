@@ -1,0 +1,18 @@
+[package]
+name = "axeyum-smtlib"
+description = "SMT-LIB 2 reader/writer for the Axeyum QF_BV slice: benchmark ingestion and sharing-preserving export"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[dependencies]
+axeyum-ir.workspace = true
+
+[lints]
+workspace = true

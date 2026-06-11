@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
     "crates/axeyum-ir",
+    "crates/axeyum-smtlib",
     "crates/axeyum-solver",
 ]
 

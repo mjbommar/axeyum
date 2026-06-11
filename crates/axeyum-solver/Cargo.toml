@@ -27,3 +27,6 @@ z3-static = ["z3", "z3/gh-release"]
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+axeyum-smtlib = { path = "../axeyum-smtlib" }

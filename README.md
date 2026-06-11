@@ -29,6 +29,7 @@ check-by-evaluation) is the current milestone.
 | Crate | Purpose |
 |---|---|
 | [`axeyum-ir`](crates/axeyum-ir) | Sorts, terms, interning, ground evaluation. |
+| [`axeyum-smtlib`](crates/axeyum-smtlib) | SMT-LIB 2 reader/writer: benchmark ingestion, sharing-preserving export. |
 | [`axeyum-solver`](crates/axeyum-solver) | Backend trait, results, models, capabilities; native backends behind feature flags. |
 
 The pure Rust default build has no C or C++ dependency; native solver

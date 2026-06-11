@@ -36,10 +36,18 @@ name = "axeyum-ir"
 version = "0.1.0"
 
 [[package]]
+name = "axeyum-smtlib"
+version = "0.1.0"
+dependencies = [
+ "axeyum-ir",
+]
+
+[[package]]
 name = "axeyum-solver"
 version = "0.1.0"
 dependencies = [
  "axeyum-ir",
+ "axeyum-smtlib",
  "z3",
 ]
 
