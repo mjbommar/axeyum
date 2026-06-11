@@ -18,9 +18,37 @@ pub enum CheckResult {
     Sat(Model),
     /// The assertions are unsatisfiable.
     Unsat,
-    /// The backend could not decide; the payload is a backend-specific
-    /// reason (for example `"timeout"`).
-    Unknown(String),
+    /// The backend could not decide; the payload says why, structurally,
+    /// so "budget exhausted" can never be misread as "unsat".
+    Unknown(UnknownReason),
+}
+
+/// Why a check came back undecided.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct UnknownReason {
+    /// Classified cause.
+    pub kind: UnknownKind,
+    /// Backend-specific detail (for example Z3's reason string).
+    pub detail: String,
+}
+
+/// Classified causes of an `Unknown` result.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum UnknownKind {
+    /// Wall-clock budget exhausted.
+    Timeout,
+    /// Deterministic resource budget (e.g. Z3 `rlimit`) exhausted.
+    ResourceLimit,
+    /// Memory budget exhausted.
+    MemoryLimit,
+    /// Translation node budget exceeded; the query was never submitted.
+    NodeBudget,
+    /// The procedure is incomplete for this query.
+    Incomplete,
+    /// Unclassified backend reason.
+    Other,
 }
 
 /// Errors from a backend invocation.
@@ -53,13 +81,40 @@ impl core::error::Error for SolverError {}
 
 /// Per-query configuration.
 ///
-/// M0 backends are one-shot, so the timeout is the cancellation mechanism;
-/// a cooperative interrupt flag arrives with long-lived solver instances
-/// (incrementality note).
+/// Backends are one-shot for now, so budgets are the cancellation
+/// mechanism; a cooperative interrupt flag arrives with long-lived solver
+/// instances (incrementality note). Every budget exhaustion surfaces as
+/// [`CheckResult::Unknown`] with a classified reason, never a hang.
 #[derive(Debug, Clone, Default)]
 pub struct SolverConfig {
     /// Wall-clock budget for the check; `None` means no limit.
     pub timeout: Option<Duration>,
+    /// Deterministic resource budget (maps to Z3 `rlimit`); reproducible
+    /// across machines, preferred for bisecting blowups.
+    pub resource_limit: Option<u64>,
+    /// Memory budget in megabytes. Caveat: Z3 applies this process-wide.
+    pub memory_limit_mb: Option<u64>,
+    /// Maximum DAG nodes the backend may translate; larger queries return
+    /// [`UnknownKind::NodeBudget`] without being submitted (admission
+    /// control, query-cost-control note).
+    pub node_budget: Option<u64>,
+}
+
+/// Layer-attributed measurements from the most recent check.
+#[derive(Debug, Clone, Default, PartialEq)]
+#[non_exhaustive]
+pub struct SolveStats {
+    /// Time spent translating Axeyum terms to the backend representation.
+    pub translate: Duration,
+    /// Time spent inside the backend's check.
+    pub solve: Duration,
+    /// Unique DAG nodes translated.
+    pub terms_translated: u64,
+    /// Number of top-level assertions.
+    pub assertion_count: u64,
+    /// Backend-reported counters (name, value), e.g. Z3 statistics;
+    /// contents are backend-specific and for post-mortems, not contracts.
+    pub backend: Vec<(String, f64)>,
 }
 
 /// What a backend can do; not uniform across backends (backend-model note).
@@ -98,4 +153,11 @@ pub trait SolverBackend {
         assertions: &[TermId],
         config: &SolverConfig,
     ) -> Result<CheckResult, SolverError>;
+
+    /// Layer-attributed measurements from the most recent `check`, if the
+    /// backend records them. Telemetry is returned data, not logs
+    /// (observability note).
+    fn last_stats(&self) -> Option<&SolveStats> {
+        None
+    }
 }

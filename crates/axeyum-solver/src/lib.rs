@@ -19,7 +19,10 @@ mod model;
 #[cfg(feature = "z3")]
 mod z3_backend;
 
-pub use backend::{Capabilities, CheckResult, SolverBackend, SolverConfig, SolverError};
+pub use backend::{
+    Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind,
+    UnknownReason,
+};
 pub use model::Model;
 #[cfg(feature = "z3")]
 pub use z3_backend::Z3Backend;

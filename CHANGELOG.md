@@ -10,6 +10,16 @@ see `docs/research/06-rust-strategy/api-design-concurrency-and-stability.md`).
 
 ### Added
 
+- **Observability & resource governance:** `axeyum_ir::TermStats` (DAG vs
+  saturating tree size, depth, symbol support, op-class counts) for blowup
+  detection and admission control; structured
+  `CheckResult::Unknown(UnknownReason)` with classified kinds; budget
+  surface in `SolverConfig` (timeout, deterministic resource limit, memory
+  cap, translation node budget); `SolveStats` layer-attributed telemetry
+  via `SolverBackend::last_stats()`. Design notes:
+  `03-architecture/query-cost-control.md`,
+  `06-rust-strategy/observability-and-resource-governance.md`.
+
 - **Phase 1 (typed term core):** full scalar QF_BV operator set — signed and
   unsigned division/remainder/modulo, shifts (over-shift saturating),
   all comparisons, nand/nor/xnor/comp, zero/sign extension, rotates (build-

@@ -494,3 +494,41 @@ fn render_produces_smtlib_syntax() {
     let se = a.sign_ext(4, sl).unwrap();
     assert_eq!(render(&a, se), "((_ sign_extend 4) ((_ extract 7 4) x))");
 }
+
+// ----- term-shape metrics (query-cost-control note) ------------------------
+
+#[test]
+fn term_stats_detect_representational_blowup() {
+    use axeyum_ir::TermStats;
+    // The classic 2^k bomb: x doubled 200 times. DAG stays tiny; the tree
+    // count saturates, which is exactly the alarm signal.
+    let mut a = TermArena::new();
+    let mut t = a.bv_var("x", 64).unwrap();
+    for _ in 0..200 {
+        t = a.bv_add(t, t).unwrap();
+    }
+    let stats = TermStats::compute(&a, &[t]);
+    assert_eq!(stats.dag_nodes, 201);
+    assert_eq!(stats.tree_nodes, u64::MAX, "tree count must saturate");
+    assert_eq!(stats.max_depth, 201);
+    assert_eq!(stats.distinct_symbols, 1);
+    assert!(stats.sharing_ratio() > 1e15);
+}
+
+#[test]
+fn term_stats_count_op_classes() {
+    use axeyum_ir::TermStats;
+    let mut a = TermArena::new();
+    let x = a.bv_var("x", 8).unwrap();
+    let y = a.bv_var("y", 8).unwrap();
+    let p = a.bool_var("p").unwrap();
+    let prod_term = a.bv_mul(x, y).unwrap();
+    let div_term = a.bv_udiv(prod_term, y).unwrap();
+    let picked = a.ite(p, div_term, x).unwrap();
+    let stats = TermStats::compute(&a, &[picked]);
+    assert_eq!(stats.mul_div_count, 2);
+    assert_eq!(stats.ite_count, 1);
+    assert_eq!(stats.distinct_symbols, 3);
+    assert_eq!(stats.tree_nodes, 8); // ite(p, udiv(mul(x,y),y), x) as a tree
+    assert_eq!(stats.dag_nodes, 6);
+}

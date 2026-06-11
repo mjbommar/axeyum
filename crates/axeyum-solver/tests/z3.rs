@@ -140,3 +140,80 @@ fn capabilities_report_models() {
     assert!(caps.produces_models);
     assert!(caps.complete);
 }
+
+// ----- resource governance (observability note) ----------------------------
+
+#[test]
+fn node_budget_refuses_admission_with_diagnosis() {
+    use axeyum_solver::UnknownKind;
+    let mut a = TermArena::new();
+    let mut t = a.bv_var("x", 64).unwrap();
+    for _ in 0..50 {
+        t = a.bv_add(t, t).unwrap();
+    }
+    let zero = a.bv_const(64, 0).unwrap();
+    let f = a.eq(t, zero).unwrap();
+    let config = SolverConfig {
+        node_budget: Some(10),
+        ..SolverConfig::default()
+    };
+    let result = Z3Backend::new().check(&a, &[f], &config).unwrap();
+    let CheckResult::Unknown(reason) = result else {
+        panic!("expected Unknown, got {result:?}");
+    };
+    assert_eq!(reason.kind, UnknownKind::NodeBudget);
+    assert!(reason.detail.contains("budget 10"), "{}", reason.detail);
+}
+
+#[test]
+fn resource_limit_yields_classified_unknown() {
+    use axeyum_solver::UnknownKind;
+    // Wide multiplication inversion with a tiny deterministic budget: Z3
+    // must give up and say why, reproducibly.
+    let mut a = TermArena::new();
+    let x = a.bv_var("x", 64).unwrap();
+    let y = a.bv_var("y", 64).unwrap();
+    let prod = a.bv_mul(x, y).unwrap();
+    let target = a.bv_const(64, 0xDEAD_BEEF_CAFE_F00D).unwrap();
+    let f = a.eq(prod, target).unwrap();
+    let one = a.bv_const(64, 1).unwrap();
+    let x_big = a.bv_ugt(x, one).unwrap();
+    let y_big = a.bv_ugt(y, one).unwrap();
+    let config = SolverConfig {
+        resource_limit: Some(100),
+        ..SolverConfig::default()
+    };
+    let result = Z3Backend::new()
+        .check(&a, &[f, x_big, y_big], &config)
+        .unwrap();
+    let CheckResult::Unknown(reason) = result else {
+        panic!("expected Unknown under rlimit, got {result:?}");
+    };
+    assert!(
+        matches!(
+            reason.kind,
+            UnknownKind::ResourceLimit | UnknownKind::Timeout
+        ),
+        "unexpected kind {:?} ({})",
+        reason.kind,
+        reason.detail
+    );
+}
+
+#[test]
+fn solve_stats_attribute_layers() {
+    let mut a = TermArena::new();
+    let x = a.bv_var("x", 8).unwrap();
+    let one = a.bv_const(8, 1).unwrap();
+    let five = a.bv_const(8, 5).unwrap();
+    let sum = a.bv_add(x, one).unwrap();
+    let f = a.eq(sum, five).unwrap();
+    let mut backend = Z3Backend::new();
+    assert!(backend.last_stats().is_none());
+    let _ = backend.check(&a, &[f], &SolverConfig::default()).unwrap();
+    let stats = backend.last_stats().expect("stats recorded");
+    assert_eq!(stats.assertion_count, 1);
+    assert_eq!(stats.terms_translated, 5); // x, 1, 5, x+1, eq
+    assert!(stats.translate.as_nanos() > 0);
+    assert!(stats.solve.as_nanos() > 0);
+}

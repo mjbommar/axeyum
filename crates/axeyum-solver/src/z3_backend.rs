@@ -40,21 +40,29 @@
 
 use std::collections::HashMap;
 
-use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode, Value};
-use z3::ast::{BV, Bool};
-use z3::{Config, SatResult, Solver, with_z3_config};
+use std::time::Instant;
 
-use crate::backend::{Capabilities, CheckResult, SolverBackend, SolverConfig, SolverError};
+use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode, TermStats, Value};
+use z3::ast::{BV, Bool};
+use z3::{Config, Params, SatResult, Solver, with_z3_config};
+
+use crate::backend::{
+    Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind,
+    UnknownReason,
+};
 use crate::model::Model;
 
-/// Z3 oracle backend. Stateless in M0; each `check` is one-shot.
+/// Z3 oracle backend. Stateless across queries except for the telemetry of
+/// the most recent check.
 #[derive(Debug, Default)]
-pub struct Z3Backend {}
+pub struct Z3Backend {
+    stats: Option<SolveStats>,
+}
 
 impl Z3Backend {
     /// Creates a new backend instance.
     pub fn new() -> Self {
-        Self {}
+        Self::default()
     }
 }
 
@@ -73,19 +81,53 @@ impl SolverBackend for Z3Backend {
         assertions: &[TermId],
         config: &SolverConfig,
     ) -> Result<CheckResult, SolverError> {
+        self.stats = None;
         for &t in assertions {
             if arena.sort_of(t) != Sort::Bool {
                 return Err(SolverError::NonBooleanAssertion(t));
             }
         }
+        // Admission control: refuse to translate past the node budget.
+        let shape = TermStats::compute(arena, assertions);
+        if let Some(budget) = config.node_budget
+            && shape.dag_nodes > budget
+        {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::NodeBudget,
+                detail: format!("query has {} DAG nodes, budget {budget}", shape.dag_nodes),
+            }));
+        }
+        if let Some(mb) = config.memory_limit_mb {
+            // Z3's memory cap is process-global (observability note caveat).
+            z3::set_global_param("memory_max_size", &mb.to_string());
+        }
         let mut cfg = Config::new();
         cfg.set_model_generation(true);
-        if let Some(timeout) = config.timeout {
-            cfg.set_timeout_msec(u64::try_from(timeout.as_millis()).unwrap_or(u64::MAX));
-        }
         // The closure runs against a scoped thread-local Z3 context; no Z3
         // object survives past it.
-        with_z3_config(&cfg, || run_check(arena, assertions))
+        let (result, stats) = with_z3_config(&cfg, || run_check(arena, assertions, config));
+        self.stats = Some(stats);
+        result
+    }
+
+    fn last_stats(&self) -> Option<&SolveStats> {
+        self.stats.as_ref()
+    }
+}
+
+/// Classifies Z3's `reason_unknown` strings into structured kinds.
+fn classify_unknown(detail: &str) -> UnknownKind {
+    let lower = detail.to_lowercase();
+    if lower.contains("timeout") || lower.contains("canceled") || lower.contains("cancelled") {
+        UnknownKind::Timeout
+    } else if lower.contains("resource") || lower.contains("rlimit") {
+        UnknownKind::ResourceLimit
+    } else if lower.contains("memory") {
+        UnknownKind::MemoryLimit
+    } else if lower.contains("incomplete") {
+        UnknownKind::Incomplete
+    } else {
+        UnknownKind::Other
     }
 }
 
@@ -112,46 +154,90 @@ impl Z3Term {
     }
 }
 
-fn run_check(arena: &TermArena, assertions: &[TermId]) -> Result<CheckResult, SolverError> {
+fn run_check(
+    arena: &TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> (Result<CheckResult, SolverError>, SolveStats) {
+    let mut stats = SolveStats {
+        assertion_count: assertions.len() as u64,
+        ..SolveStats::default()
+    };
+    let translate_start = Instant::now();
     let mut cache: HashMap<TermId, Z3Term> = HashMap::new();
     let solver = Solver::new();
-    for &t in assertions {
-        let translated = translate(arena, t, &mut cache)?;
-        solver.assert(translated.as_bool());
+    let mut params = Params::new();
+    if let Some(timeout) = config.timeout {
+        params.set_u32(
+            "timeout",
+            u32::try_from(timeout.as_millis()).unwrap_or(u32::MAX),
+        );
     }
-    match solver.check() {
-        SatResult::Unsat => Ok(CheckResult::Unsat),
-        SatResult::Unknown => Ok(CheckResult::Unknown(
-            solver
-                .get_reason_unknown()
-                .unwrap_or_else(|| "unknown".to_owned()),
-        )),
-        SatResult::Sat => {
-            let z3_model = solver
-                .get_model()
-                .ok_or_else(|| SolverError::Backend("sat result without model".to_owned()))?;
-            let mut model = Model::new();
-            for (sym, name, sort) in arena.symbols() {
-                let value = match sort {
-                    Sort::Bool => {
-                        let ast = Bool::new_const(name);
-                        let v = z3_model
-                            .eval(&ast, true)
-                            .and_then(|b| b.as_bool())
-                            .ok_or_else(|| model_error(name))?;
-                        Value::Bool(v)
-                    }
-                    Sort::BitVec(width) => {
-                        let ast = BV::new_const(name, width);
-                        let v = lift_bv(&z3_model, &ast, width).ok_or_else(|| model_error(name))?;
-                        Value::Bv { width, value: v }
-                    }
-                };
-                model.set(sym, value);
-            }
-            Ok(CheckResult::Sat(model))
+    if let Some(rlimit) = config.resource_limit {
+        params.set_u32("rlimit", u32::try_from(rlimit).unwrap_or(u32::MAX));
+    }
+    solver.set_params(&params);
+    for &t in assertions {
+        match translate(arena, t, &mut cache) {
+            Ok(translated) => solver.assert(translated.as_bool()),
+            Err(e) => return (Err(e), stats),
         }
     }
+    stats.terms_translated = cache.len() as u64;
+    stats.translate = translate_start.elapsed();
+
+    let solve_start = Instant::now();
+    let sat_result = solver.check();
+    stats.solve = solve_start.elapsed();
+    for entry in solver.get_statistics().entries() {
+        let value = match entry.value {
+            z3::StatisticsValue::UInt(u) => f64::from(u),
+            z3::StatisticsValue::Double(d) => d,
+        };
+        stats.backend.push((entry.key.clone(), value));
+    }
+
+    let result = match sat_result {
+        SatResult::Unsat => Ok(CheckResult::Unsat),
+        SatResult::Unknown => {
+            let detail = solver
+                .get_reason_unknown()
+                .unwrap_or_else(|| "unknown".to_owned());
+            Ok(CheckResult::Unknown(UnknownReason {
+                kind: classify_unknown(&detail),
+                detail,
+            }))
+        }
+        SatResult::Sat => lift_model(arena, &solver).map(CheckResult::Sat),
+    };
+    (result, stats)
+}
+
+/// Lifts the backend model to Axeyum symbols.
+fn lift_model(arena: &TermArena, solver: &Solver) -> Result<Model, SolverError> {
+    let z3_model = solver
+        .get_model()
+        .ok_or_else(|| SolverError::Backend("sat result without model".to_owned()))?;
+    let mut model = Model::new();
+    for (sym, name, sort) in arena.symbols() {
+        let value = match sort {
+            Sort::Bool => {
+                let ast = Bool::new_const(name);
+                let v = z3_model
+                    .eval(&ast, true)
+                    .and_then(|b| b.as_bool())
+                    .ok_or_else(|| model_error(name))?;
+                Value::Bool(v)
+            }
+            Sort::BitVec(width) => {
+                let ast = BV::new_const(name, width);
+                let v = lift_bv(&z3_model, &ast, width).ok_or_else(|| model_error(name))?;
+                Value::Bv { width, value: v }
+            }
+        };
+        model.set(sym, value);
+    }
+    Ok(model)
 }
 
 fn model_error(name: &str) -> SolverError {

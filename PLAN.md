@@ -99,6 +99,16 @@ In order; check off and date as completed.
       tests); and a differential suite where Z3 confirms the evaluator on
       *every* input at width 3 for every operator — three independent
       implementations (evaluator, i64 test reference, Z3) agree.
+- [x] **Observability & resource governance — 2026-06-11.** Per the
+      query-cost-control and observability notes: `TermStats` sharing
+      metrics in `axeyum-ir` (DAG vs saturating tree size — the 2^k blowup
+      detector — depth, support, ite/mul-div counts); structured
+      `Unknown(UnknownReason{kind, detail})` so budget exhaustion can never
+      read as unsat; `SolverConfig` budgets (timeout, deterministic
+      `resource_limit`→Z3 rlimit, `memory_limit_mb`, `node_budget`
+      admission control); `SolveStats` layer-attributed telemetry via
+      `last_stats()` incl. Z3 statistics. Tested: 2^200 chain saturates,
+      node budget refuses with diagnosis, rlimit yields classified Unknown.
 - [ ] **NEXT: Phase 2 (native solver oracle, harden)** per the
       [roadmap](docs/research/08-planning/roadmap.md): backend conformance
       suite expansion (state retention, cancellation), SMT-LIB export for
