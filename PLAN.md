@@ -71,11 +71,19 @@ In order; check off and date as completed.
 - [x] Phase 0: Cargo workspace skeleton (`axeyum-ir`, `axeyum-solver`),
       licenses, CI — 2026-06-10.
 - [x] Push `main` to GitHub and confirm CI is green there — 2026-06-10.
-- [ ] Milestone M0 (vertical slice): IR subset + arena + sort checking +
-      ground evaluator + solver trait + Z3 feature backend (z3 crate 0.20+,
-      post-lifetime API) + model check-by-evaluation. Done when the doctest
-      in ADR-0001 passes: `x + 1 == 5` over `BV(8)` solves via Z3 and the
-      evaluator confirms the lifted model.
+- [x] Scaffolding complete — 2026-06-10. All pre-code work is done:
+      infrastructure, metadata, documentation (37 research notes, 2 ADRs,
+      north-star, LLM integration points), Cargo workspace, CI green,
+      CLAUDE.md, corpus skeleton, 20 reference clones. **Everything below
+      this line is implementation, not scaffolding** — deliberately deferred
+      to the next working session.
+- [ ] **NEXT: Milestone M0 (vertical slice).** IR subset + arena + sort
+      checking + ground evaluator + solver trait + Z3 feature backend
+      (z3 crate 0.20+, post-lifetime API) + model check-by-evaluation.
+      Done when the doctest in ADR-0001 passes: `x + 1 == 5` over `BV(8)`
+      solves via Z3 and the evaluator confirms the lifted model.
+      Start with `axeyum-ir`: sorts and interning first, evaluator second,
+      builders third (per term-ir and bv-semantics notes).
 - [ ] Then follow the [roadmap](docs/research/08-planning/roadmap.md)
       phase by phase; each phase has explicit exit criteria.
 
