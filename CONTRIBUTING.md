@@ -23,7 +23,9 @@ cargo doc --workspace --all-features --no-deps   # with RUSTDOCFLAGS="-D warning
 cargo deny check
 ```
 
-MSRV is **1.85** (edition 2024 floor); CI runs `cargo check` on it.
+MSRV is **1.85** (edition 2024 floor) and covers the default, pure Rust
+build; CI runs `cargo check` on it. Optional native-oracle features (`z3`,
+`z3-static`) track stable Rust instead.
 
 ## Code Conventions
 

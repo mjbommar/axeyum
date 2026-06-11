@@ -40,13 +40,15 @@ jobs:
       - run: cargo test --workspace --all-features
 
   msrv:
-    name: check (MSRV 1.85)
+    name: check (MSRV 1.85, default features)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@1.85.0
       - uses: Swatinem/rust-cache@v2
-      - run: cargo check --workspace --all-features
+      # The MSRV promise covers the default (pure Rust) build — the product
+      # per ADR-0002. Optional native-oracle features track stable Rust.
+      - run: cargo check --workspace
 
   docs:
     name: rustdoc

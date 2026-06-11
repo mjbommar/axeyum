@@ -19,6 +19,10 @@ allow = [
     "ISC",
     "Unicode-3.0",
     "Zlib",
+    # Permissive licenses pulled in by the z3-static (prebuilt libz3) path.
+    "bzip2-1.0.6",
+    "CC0-1.0",
+    "CDLA-Permissive-2.0",
 ]
 confidence-threshold = 0.8
 
