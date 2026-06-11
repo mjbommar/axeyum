@@ -36,17 +36,28 @@ Out of scope:
 - DRAT / LRAT: Clausal unsat proof formats; LRAT adds hints for fast checking.
 - E-graph / equality saturation: Data structure and technique for exploring
   many equivalent rewrites simultaneously.
+- E-matching: Pattern-based quantifier instantiation against ground terms in
+  an e-graph.
 - EUF: Equality with uninterpreted functions.
 - Hash-consing: Interning structurally equal terms so equal syntax shares one ID.
 - Inprocessing: Simplification interleaved with CDCL search (subsumption,
   vivification, blocked clause elimination).
 - IPASIR: De facto C API standard for incremental SAT solving.
 - LBD: Literal block distance ("glue"), a learned-clause quality score.
+- LIA / LRA: Linear integer / real arithmetic SMT theories.
+- MBQI: Model-based quantifier instantiation; tests candidate models against
+  quantified assertions.
 - Model: A satisfying assignment, usually mapped back to user variables or symbols.
+- Nelson-Oppen: The classic framework for combining decision procedures of
+  disjoint theories by exchanging equalities.
 - PAR-2: Competition scoring metric; timeouts count as twice the time limit.
 - QF_BV: Quantifier-free fixed-size bit-vector logic.
 - SAT: Boolean satisfiability.
 - SMT: Satisfiability modulo theories.
+- Superposition: The dominant calculus for first-order logic with equality,
+  used by saturation provers such as Vampire and E.
+- TPTP / CASC: The standard first-order problem library and the annual
+  automated theorem prover competition built on it.
 - Tseitin encoding: Translation from circuits to CNF with auxiliary variables.
 - UIP: Unique implication point, used in CDCL conflict analysis.
 - Unsat core: A subset of assertions/assumptions that is already unsatisfiable.

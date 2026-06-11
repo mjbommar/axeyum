@@ -8,6 +8,17 @@ Last updated: 2026-06-10
 Define Axeyum at the broadest level so the project is not accidentally scoped as
 only a binary-reachability tool or only a SAT solver.
 
+## North Star
+
+The long-horizon goal is a complete framework for general reasoning, logic,
+and proving. The decidable finite-domain core (SAT, QF_BV, arrays, EUF) is
+the first foundation layer, not the destination: the trajectory continues
+through arithmetic theories, theory combination, quantifiers, and proof
+production toward a system where automated search and checkable proof are
+two faces of one framework. The expansion ladder and its landmarks are
+recorded in [north-star.md](north-star.md). Phase scoping below bounds what
+is built *now*; nothing below bounds what Axeyum *is*.
+
 ## Scope
 
 In scope:

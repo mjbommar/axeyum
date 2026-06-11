@@ -36,7 +36,7 @@ Out of scope:
 | Bitwuzla | Successor lineage to Boolector, strong for BV/arrays/FP. | Key BV backend comparison. |
 | Boolector | Archived, historically important BV/array solver. | Design reference and legacy benchmark point. |
 | STP | Efficient SMT solver for bit-vectors. | Program-analysis historical baseline. |
-| Yices | Mature SMT solver with C API. | Alternative backend and design comparison. |
+| Yices | Mature SMT solver with C API; GPLv3. | Design comparison only — license precludes embedding. |
 
 ## SAT Solvers
 
@@ -46,6 +46,13 @@ Out of scope:
 | Kissat | Highly optimized SAT solver from the same research lineage. | Performance reference. |
 | MiniSat/Glucose | Foundational CDCL designs. | Algorithmic reference and educational baseline. |
 | CryptoMiniSat | SAT solver with richer inprocessing and XOR support. | Crypto/infosec workload comparison. |
+
+## First-Order Provers (Horizon Reference)
+
+| Prover | Notes | Relevance |
+|---|---|---|
+| Vampire | Superposition prover, BSD-3; swept all 8 CASC-30 divisions (2025). | North-star landmark for first-order proving. |
+| E | Superposition prover, GPL2+/LGPL dual. | Smaller saturation architecture reference. |
 
 ## Symbolic And Verification Systems
 

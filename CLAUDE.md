@@ -9,6 +9,14 @@ query planning → solver backends (native SMT oracles + a pure Rust
 bit-blast-to-SAT path) → models, proofs, and checkable evidence. Identity in
 one sentence: **untrusted fast search, trusted small checking.**
 
+North star: a **complete framework for general reasoning, logic, and
+proving** — the finite-domain core (SAT/QF_BV) is the foundation layer, and
+the ladder continues through arithmetic, theory combination, quantifiers,
+and proof production
+([north-star note](docs/research/00-orientation/north-star.md)). Design
+choices should not paint the IR, solver trait, or evidence formats into a
+quantifier-free corner.
+
 ## Session Protocol
 
 1. Read [PLAN.md](PLAN.md) **first** — it carries current status, the next

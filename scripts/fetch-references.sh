@@ -28,6 +28,11 @@ repos=(
   https://github.com/msoos/cryptominisat
   # Word-level formats
   https://github.com/Boolector/btor2tools
+  # General reasoning / proving horizon
+  https://github.com/cvc5/cvc5
+  https://github.com/vprover/vampire
+  https://github.com/eprover/eprover
+  https://github.com/leanprover/lean4
 )
 
 for url in "${repos[@]}"; do

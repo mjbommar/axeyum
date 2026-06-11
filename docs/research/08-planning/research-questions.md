@@ -77,6 +77,20 @@ Out of scope:
 - [ ] Is portfolio dispatch in scope for the first public release?
 - [ ] What must be `Send`/`Sync` to make portfolio solving natural?
 
+### Horizon: General Reasoning And Proving
+
+- [ ] What binder representation (de Bruijn, locally nameless, named with
+      alpha-canonicalization) should the IR adopt when quantifiers arrive,
+      and which arena/interning decisions today would foreclose options?
+- [ ] Which arithmetic enters first: QF_LRA simplex or QF_LIA on top of it?
+- [ ] What proof format covers theory lemmas once proofs extend beyond
+      clausal DRAT/LRAT — adopt Alethe/CPC or design Axeyum-native?
+- [ ] Should the proof-assistant bridge export obligations to Lean, import
+      checked rewrite rules from Lean, or both — and how early is a
+      Lean-checked rewrite-rule library worth prototyping?
+- [ ] When two theories exist, is Nelson-Oppen combination implemented
+      directly or via a CDCL(T) core from the start?
+
 ### Rust And Packaging
 
 - [ ] How many crates should exist in the first implementation?

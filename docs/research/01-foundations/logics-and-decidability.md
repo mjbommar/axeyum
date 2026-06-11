@@ -39,6 +39,22 @@ Bool
   -> selected extensions
 ```
 
+## Horizon Ladder (North Star)
+
+Beyond the initial ladder, toward general reasoning/logic/proving (see
+[north-star](../00-orientation/north-star.md)); each rung is gated on the
+previous being solid, and "out of scope" above means *initial phases*, not
+*ever*:
+
+```text
+QF_AUFBV
+  -> QF_LIA / QF_LRA (arithmetic: simplex, branch and bound)
+  -> theory combination (Nelson-Oppen style)
+  -> quantified fragments (E-matching, MBQI, enumerative instantiation)
+  -> first-order logic with equality (superposition territory)
+  -> induction, datatypes, and proof production throughout
+```
+
 ## Design Implications
 
 - `Sort` should be explicit and interned.

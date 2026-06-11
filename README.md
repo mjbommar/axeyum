@@ -5,6 +5,11 @@ planning, solver backends (native SMT oracles plus a growing pure Rust
 bit-blast-to-SAT path), and checkable evidence — models verified by
 evaluation, unsat claims backed by proof artifacts or independent oracles.
 
+The north star is a complete framework for general reasoning, logic, and
+proving; the decidable finite-domain core being built first is its
+foundation layer
+(see [north-star](docs/research/00-orientation/north-star.md)).
+
 **Status: pre-M0.** The research foundation and workspace scaffold exist; the
 first vertical slice (typed IR subset, Z3 oracle backend, model
 check-by-evaluation) is the current milestone.

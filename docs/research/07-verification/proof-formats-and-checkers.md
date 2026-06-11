@@ -85,4 +85,6 @@ differential testing concentrates.
 - cake_lpr verified LRAT checker: https://github.com/tanyongkiam/cake_lpr
 - Alethe proof format: https://verit.gitlabpages.uliege.be/alethe/
 - Carcara Alethe checker (Rust): https://github.com/ufmg-smite/carcara
+- cvc5 Ethos checker (CPC/Eunoia): https://github.com/cvc5/ethos
+- lean-smt, cvc5 proof replay in Lean: https://github.com/ufmg-smite/lean-smt
 - varisat proof output: https://github.com/jix/varisat

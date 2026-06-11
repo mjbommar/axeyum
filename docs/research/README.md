@@ -16,14 +16,15 @@ losing context.
 ## Reading Order
 
 1. [Mission and scope](00-orientation/mission-and-scope.md)
-2. [Automated reasoning foundations](01-foundations/automated-reasoning.md)
-3. [C and C++ solver ecosystem](02-ecosystems/cpp-solver-stack.md)
-4. [Rust ecosystem](02-ecosystems/rust-ecosystem.md)
-5. [System architecture](03-architecture/system-architecture.md)
-6. [Crate boundaries](03-architecture/crate-boundaries.md)
-7. [Roadmap](08-planning/roadmap.md)
-8. [Benchmarking and performance methodology](08-planning/benchmarking-and-performance-methodology.md)
-9. [Decision records](09-decisions/README.md)
+2. [North star: general reasoning, logic, proving](00-orientation/north-star.md)
+3. [Automated reasoning foundations](01-foundations/automated-reasoning.md)
+4. [C and C++ solver ecosystem](02-ecosystems/cpp-solver-stack.md)
+5. [Rust ecosystem](02-ecosystems/rust-ecosystem.md)
+6. [System architecture](03-architecture/system-architecture.md)
+7. [Crate boundaries](03-architecture/crate-boundaries.md)
+8. [Roadmap](08-planning/roadmap.md)
+9. [Benchmarking and performance methodology](08-planning/benchmarking-and-performance-methodology.md)
+10. [Decision records](09-decisions/README.md)
 
 ## Folder Map
 

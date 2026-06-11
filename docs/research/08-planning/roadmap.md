@@ -136,6 +136,24 @@ attempt is written up as an ADR documenting why not.
 Exit criteria: one real client example per audience runs end to end with
 checked evidence.
 
+## Beyond Phase 7: The Proving Horizon
+
+The phases above build the decidable finite-domain foundation. The north
+star ([north-star note](../00-orientation/north-star.md)) continues past it;
+these are direction markers, not commitments, sequenced only loosely:
+
+- Arithmetic theories (QF_LIA/QF_LRA): simplex core, branch and bound.
+- Theory combination (Nelson-Oppen style) once two real theories exist.
+- Quantified fragments: E-matching over the term index, then MBQI-style
+  model checking; enumerative instantiation as the simple baseline.
+- Proof production grows with each rung: every new engine ships with its
+  evidence story, extending the layered-certificate pattern.
+- Proof-assistant interop (export obligations to / import lemmas from
+  Lean-class systems) as the bridge to full proving.
+
+Entering any horizon item gets its own ADR with prerequisites and exit
+criteria; none may begin while it would starve a foundation phase.
+
 ## Open Questions
 
 - [ ] Should Phase 2 include the second backend or defer it to Phase 5's

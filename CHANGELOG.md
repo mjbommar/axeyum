@@ -18,3 +18,7 @@ see `docs/research/06-rust-strategy/api-design-concurrency-and-stability.md`).
   licensing, contributor and agent guidance (`CONTRIBUTING.md`, `CLAUDE.md`).
 - Test corpus skeleton under `corpus/` and reference-clone tooling
   (`scripts/fetch-references.sh`).
+- North-star orientation: the long-horizon goal (general reasoning, logic,
+  proving) recorded in `docs/research/00-orientation/north-star.md`, with
+  the horizon ladder, roadmap markers, and proving-layer reference clones
+  (cvc5, Vampire, E, Lean 4).

@@ -15,6 +15,12 @@ Identity in one sentence: **untrusted fast search, trusted small checking.**
 Every `sat` gets a model checked by evaluation; every `unsat` eventually gets
 a proof artifact or an independent oracle cross-check.
 
+North star: a **complete framework for general reasoning, logic, and
+proving**. The finite-domain core being built now is the foundation layer of
+that framework, not the destination — the expansion ladder runs through
+arithmetic, theory combination, quantifiers, and proof production
+(see [north-star](docs/research/00-orientation/north-star.md)).
+
 Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/00-orientation/mission-and-scope.md)
 
 ## Status
@@ -27,7 +33,17 @@ Last updated: 2026-06-10
   Node 24 runner migration).
 - Supporting scaffold: corpus tier directories (`corpus/micro|client`
   committed, `corpus/public` gitignored), dependabot (cargo + actions
-  weekly), CHANGELOG, .editorconfig; 16 reference repos cloned locally.
+  weekly), CHANGELOG, .editorconfig; 20 reference repos cloned locally
+  (incl. proving horizon: cvc5, vampire, eprover, lean4).
+- North star recorded 2026-06-10: complete framework for general
+  reasoning/logic/proving — see
+  [north-star](docs/research/00-orientation/north-star.md), the horizon
+  ladder in logics-and-decidability, the roadmap's "Beyond Phase 7"
+  markers, and the horizon section of the research-questions register.
+  Key landscape facts: Vampire (BSD-3) swept CASC-30 2025; cvc5
+  CPC/Eunoia/Ethos is the proof-production leader; nanoda is the Rust
+  Lean-kernel precedent; no Rust superposition prover or general proof
+  kernel exists — that gap is the opportunity.
 - Workspace: `axeyum-ir` + `axeyum-solver` (per ADR-0001), edition 2024,
   MSRV 1.85, workspace lints (`unsafe_code` denied, clippy pedantic).
   fmt/clippy/test/doc all green locally; CI workflow defined
