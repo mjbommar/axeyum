@@ -234,12 +234,34 @@ fn apply(op: Op, args: &[TermId], cache: &HashMap<TermId, Z3Term>) -> Z3Term {
         Op::BoolAnd => Z3Term::B(Bool::and(&[b(0).clone(), b(1).clone()])),
         Op::BoolOr => Z3Term::B(Bool::or(&[b(0).clone(), b(1).clone()])),
         Op::BoolXor => Z3Term::B(b(0).xor(b(1))),
+        Op::BoolImplies => Z3Term::B(b(0).implies(b(1))),
         Op::BvNot => Z3Term::V(v(0).bvnot()),
         Op::BvAnd => Z3Term::V(v(0).bvand(v(1))),
         Op::BvOr => Z3Term::V(v(0).bvor(v(1))),
         Op::BvXor => Z3Term::V(v(0).bvxor(v(1))),
+        Op::BvNand => Z3Term::V(v(0).bvnand(v(1))),
+        Op::BvNor => Z3Term::V(v(0).bvnor(v(1))),
+        Op::BvXnor => Z3Term::V(v(0).bvxnor(v(1))),
+        Op::BvNeg => Z3Term::V(v(0).bvneg()),
         Op::BvAdd => Z3Term::V(v(0).bvadd(v(1))),
+        Op::BvSub => Z3Term::V(v(0).bvsub(v(1))),
+        Op::BvMul => Z3Term::V(v(0).bvmul(v(1))),
+        Op::BvUdiv => Z3Term::V(v(0).bvudiv(v(1))),
+        Op::BvUrem => Z3Term::V(v(0).bvurem(v(1))),
+        Op::BvSdiv => Z3Term::V(v(0).bvsdiv(v(1))),
+        Op::BvSrem => Z3Term::V(v(0).bvsrem(v(1))),
+        Op::BvSmod => Z3Term::V(v(0).bvsmod(v(1))),
+        Op::BvShl => Z3Term::V(v(0).bvshl(v(1))),
+        Op::BvLshr => Z3Term::V(v(0).bvlshr(v(1))),
+        Op::BvAshr => Z3Term::V(v(0).bvashr(v(1))),
         Op::BvUlt => Z3Term::B(v(0).bvult(v(1))),
+        Op::BvUle => Z3Term::B(v(0).bvule(v(1))),
+        Op::BvUgt => Z3Term::B(v(0).bvugt(v(1))),
+        Op::BvUge => Z3Term::B(v(0).bvuge(v(1))),
+        Op::BvSlt => Z3Term::B(v(0).bvslt(v(1))),
+        Op::BvSle => Z3Term::B(v(0).bvsle(v(1))),
+        Op::BvSgt => Z3Term::B(v(0).bvsgt(v(1))),
+        Op::BvSge => Z3Term::B(v(0).bvsge(v(1))),
         Op::Eq => match (&cache[&args[0]], &cache[&args[1]]) {
             (Z3Term::B(x), Z3Term::B(y)) => Z3Term::B(x.eq(y)),
             (Z3Term::V(x), Z3Term::V(y)) => Z3Term::B(x.eq(y)),
@@ -250,7 +272,27 @@ fn apply(op: Op, args: &[TermId], cache: &HashMap<TermId, Z3Term>) -> Z3Term {
             (Z3Term::V(x), Z3Term::V(y)) => Z3Term::V(b(0).ite(x, y)),
             _ => unreachable!("builder-checked same-sort branches"),
         },
+        // bvcomp as a derived form: ite(x = y, #b1, #b0).
+        Op::BvComp => Z3Term::V(v(0).eq(v(1)).ite(&BV::from_u64(1, 1), &BV::from_u64(0, 1))),
         Op::Extract { hi, lo } => Z3Term::V(v(0).extract(hi, lo)),
         Op::Concat => Z3Term::V(v(0).concat(v(1))),
+        Op::ZeroExt { by } => Z3Term::V(v(0).zero_ext(by)),
+        Op::SignExt { by } => Z3Term::V(v(0).sign_ext(by)),
+        // Rotates as derived extract/concat forms; builders normalized the
+        // amount modulo width, so 0 <= by < width.
+        Op::RotateLeft { by } => Z3Term::V(rotate_left(v(0), by)),
+        Op::RotateRight { by } => {
+            let w = v(0).get_size();
+            Z3Term::V(rotate_left(v(0), (w - by) % w))
+        }
     }
+}
+
+/// Rotate left via extract/concat: `x[w-k-1:0] ++ x[w-1:w-k]`.
+fn rotate_left(x: &BV, k: u32) -> BV {
+    if k == 0 {
+        return x.clone();
+    }
+    let w = x.get_size();
+    x.extract(w - k - 1, 0).concat(x.extract(w - 1, w - k))
 }

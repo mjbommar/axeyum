@@ -10,6 +10,14 @@ see `docs/research/06-rust-strategy/api-design-concurrency-and-stability.md`).
 
 ### Added
 
+- **Phase 1 (typed term core):** full scalar QF_BV operator set — signed and
+  unsigned division/remainder/modulo, shifts (over-shift saturating),
+  all comparisons, nand/nor/xnor/comp, zero/sign extension, rotates (build-
+  time normalized), implication — with SMT-LIB-exact edge-case semantics;
+  SMT-LIB-style pretty printer (`axeyum_ir::render`); exhaustive
+  small-width evaluator tests; and a differential test suite in which Z3
+  confirms the evaluator on every input for every operator.
+
 - **Milestone M0 (vertical slice, ADR-0001):** `axeyum-ir` typed term core
   (Bool/BV sorts, hash-consed arena, sort-checked builders for the M0
   operator subset, ground evaluator with exhaustive small-width tests) and

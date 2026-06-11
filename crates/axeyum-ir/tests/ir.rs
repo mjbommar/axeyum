@@ -244,3 +244,253 @@ fn deep_shared_term_evaluates_without_stack_overflow() {
     asg.set(sym, bv(64, 5));
     assert_eq!(eval(&a, t, &asg).unwrap(), bv(64, 100_005));
 }
+
+// ----- Phase 1: exhaustive semantics for the extended operator set --------
+
+/// Two's-complement interpretation for the i64-based test reference.
+fn to_i(w: u32, v: u128) -> i64 {
+    let v = i64::try_from(v).unwrap();
+    if v >= 1i64 << (w - 1) {
+        v - (1i64 << w)
+    } else {
+        v
+    }
+}
+
+/// Masks an i64 reference result back to width bits.
+fn from_i(w: u32, v: i64) -> u128 {
+    u128::from(v.rem_euclid(1i64 << w) as u64)
+}
+
+#[test]
+fn exhaustive_arithmetic_ops() {
+    for w in [1u32, 2, 3, 4] {
+        let count = 1u128 << w;
+        let m = count - 1;
+        let mut a = TermArena::new();
+        let asg = Assignment::new();
+        for x in 0..count {
+            for y in 0..count {
+                let tx = a.bv_const(w, x).unwrap();
+                let ty = a.bv_const(w, y).unwrap();
+                let cases = [
+                    (a.bv_sub(tx, ty).unwrap(), x.wrapping_sub(y) & m),
+                    (a.bv_mul(tx, ty).unwrap(), x.wrapping_mul(y) & m),
+                    (
+                        a.bv_udiv(tx, ty).unwrap(),
+                        x.checked_div(y).unwrap_or(u128::MAX) & m,
+                    ),
+                    (a.bv_urem(tx, ty).unwrap(), x.checked_rem(y).unwrap_or(x)),
+                    (a.bv_nand(tx, ty).unwrap(), !(x & y) & m),
+                    (a.bv_nor(tx, ty).unwrap(), !(x | y) & m),
+                    (a.bv_xnor(tx, ty).unwrap(), !(x ^ y) & m),
+                ];
+                for (term, expect) in cases {
+                    assert_eq!(
+                        eval(&a, term, &asg).unwrap(),
+                        bv(w, expect),
+                        "w={w} x={x} y={y}"
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn exhaustive_signed_arithmetic() {
+    for w in [1u32, 2, 3, 4, 8] {
+        let count = 1u128 << w;
+        let mut a = TermArena::new();
+        let asg = Assignment::new();
+        for x in 0..count {
+            for y in 0..count {
+                let (sx, sy) = (to_i(w, x), to_i(w, y));
+                let tx = a.bv_const(w, x).unwrap();
+                let ty = a.bv_const(w, y).unwrap();
+                let sdiv = if sy == 0 {
+                    if sx >= 0 { from_i(w, -1) } else { 1 }
+                } else {
+                    from_i(w, sx.wrapping_div(sy))
+                };
+                let srem = if sy == 0 { x } else { from_i(w, sx % sy) };
+                let smod = if sy == 0 {
+                    x
+                } else {
+                    let r = sx % sy;
+                    if r != 0 && (r < 0) != (sy < 0) {
+                        from_i(w, r + sy)
+                    } else {
+                        from_i(w, r)
+                    }
+                };
+                let cases = [
+                    (a.bv_sdiv(tx, ty).unwrap(), bv(w, sdiv)),
+                    (a.bv_srem(tx, ty).unwrap(), bv(w, srem)),
+                    (a.bv_smod(tx, ty).unwrap(), bv(w, smod)),
+                    (a.bv_slt(tx, ty).unwrap(), Value::Bool(sx < sy)),
+                    (a.bv_sle(tx, ty).unwrap(), Value::Bool(sx <= sy)),
+                    (a.bv_sgt(tx, ty).unwrap(), Value::Bool(sx > sy)),
+                    (a.bv_sge(tx, ty).unwrap(), Value::Bool(sx >= sy)),
+                ];
+                for (term, expect) in cases {
+                    assert_eq!(eval(&a, term, &asg).unwrap(), expect, "w={w} x={x} y={y}");
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn exhaustive_unsigned_comparisons() {
+    let w = 4u32;
+    let mut a = TermArena::new();
+    let asg = Assignment::new();
+    for x in 0..16u128 {
+        for y in 0..16u128 {
+            let tx = a.bv_const(w, x).unwrap();
+            let ty = a.bv_const(w, y).unwrap();
+            let cases = [
+                (a.bv_ule(tx, ty).unwrap(), x <= y),
+                (a.bv_ugt(tx, ty).unwrap(), x > y),
+                (a.bv_uge(tx, ty).unwrap(), x >= y),
+            ];
+            for (term, expect) in cases {
+                assert_eq!(eval(&a, term, &asg).unwrap(), Value::Bool(expect));
+            }
+        }
+    }
+}
+
+#[test]
+fn exhaustive_shifts_including_overshift() {
+    for w in [1u32, 4, 8] {
+        let count = 1u128 << w;
+        let m = count - 1;
+        let mut a = TermArena::new();
+        let asg = Assignment::new();
+        for x in 0..count {
+            for k in 0..count {
+                let tx = a.bv_const(w, x).unwrap();
+                let tk = a.bv_const(w, k).unwrap();
+                let shl = if k >= u128::from(w) { 0 } else { (x << k) & m };
+                let lshr = if k >= u128::from(w) { 0 } else { x >> k };
+                let sign = (x >> (w - 1)) & 1 == 1;
+                let ashr = if k >= u128::from(w) {
+                    if sign { m } else { 0 }
+                } else {
+                    from_i(w, to_i(w, x) >> k)
+                };
+                let cases = [
+                    (a.bv_shl(tx, tk).unwrap(), shl),
+                    (a.bv_lshr(tx, tk).unwrap(), lshr),
+                    (a.bv_ashr(tx, tk).unwrap(), ashr),
+                ];
+                for (term, expect) in cases {
+                    assert_eq!(
+                        eval(&a, term, &asg).unwrap(),
+                        bv(w, expect),
+                        "w={w} x={x} k={k}"
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn exhaustive_extensions_and_rotates() {
+    let w = 4u32;
+    let mut a = TermArena::new();
+    let asg = Assignment::new();
+    for x in 0..16u128 {
+        let tx = a.bv_const(w, x).unwrap();
+        let neg = a.bv_neg(tx).unwrap();
+        assert_eq!(eval(&a, neg, &asg).unwrap(), bv(w, x.wrapping_neg() & 15));
+        for by in 0..=3u32 {
+            let z = a.zero_ext(by, tx).unwrap();
+            assert_eq!(eval(&a, z, &asg).unwrap(), bv(w + by, x));
+            let s = a.sign_ext(by, tx).unwrap();
+            let sign = x >> 3 & 1 == 1;
+            let expect = if sign {
+                x | (((1u128 << (w + by)) - 1) ^ 15)
+            } else {
+                x
+            };
+            assert_eq!(
+                eval(&a, s, &asg).unwrap(),
+                bv(w + by, expect),
+                "x={x} by={by}"
+            );
+        }
+        for by in 0..=9u32 {
+            let k = by % w;
+            let rl = a.rotate_left(by, tx).unwrap();
+            let expect_l = if k == 0 {
+                x
+            } else {
+                ((x << k) | (x >> (w - k))) & 15
+            };
+            assert_eq!(
+                eval(&a, rl, &asg).unwrap(),
+                bv(w, expect_l),
+                "x={x} by={by}"
+            );
+            let rr = a.rotate_right(by, tx).unwrap();
+            let expect_r = if k == 0 {
+                x
+            } else {
+                ((x >> k) | (x << (w - k))) & 15
+            };
+            assert_eq!(
+                eval(&a, rr, &asg).unwrap(),
+                bv(w, expect_r),
+                "x={x} by={by}"
+            );
+        }
+    }
+}
+
+#[test]
+fn rotate_amounts_normalize_for_interning() {
+    let mut a = TermArena::new();
+    let x = a.bv_var("x", 8).unwrap();
+    let r1 = a.rotate_left(1, x).unwrap();
+    let r9 = a.rotate_left(9, x).unwrap();
+    assert_eq!(r1, r9);
+}
+
+#[test]
+fn implies_and_comp() {
+    let mut a = TermArena::new();
+    let asg = Assignment::new();
+    for p in [false, true] {
+        for q in [false, true] {
+            let tp = a.bool_const(p);
+            let tq = a.bool_const(q);
+            let imp = a.implies(tp, tq).unwrap();
+            assert_eq!(eval(&a, imp, &asg).unwrap(), Value::Bool(!p || q));
+        }
+    }
+    let x = a.bv_const(8, 7).unwrap();
+    let y = a.bv_const(8, 9).unwrap();
+    let same = a.bv_comp(x, x).unwrap();
+    let diff = a.bv_comp(x, y).unwrap();
+    assert_eq!(eval(&a, same, &asg).unwrap(), bv(1, 1));
+    assert_eq!(eval(&a, diff, &asg).unwrap(), bv(1, 0));
+}
+
+#[test]
+fn render_produces_smtlib_syntax() {
+    use axeyum_ir::render;
+    let mut a = TermArena::new();
+    let x = a.bv_var("x", 8).unwrap();
+    let one = a.bv_const(8, 1).unwrap();
+    let five = a.bv_const(8, 5).unwrap();
+    let sum = a.bv_add(x, one).unwrap();
+    let f = a.eq(sum, five).unwrap();
+    assert_eq!(render(&a, f), "(= (bvadd x (_ bv1 8)) (_ bv5 8))");
+    let sl = a.extract(7, 4, x).unwrap();
+    let se = a.sign_ext(4, sl).unwrap();
+    assert_eq!(render(&a, se), "((_ sign_extend 4) ((_ extract 7 4) x))");
+}

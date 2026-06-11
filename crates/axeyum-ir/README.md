@@ -16,9 +16,11 @@ Design rationale:
 - [API design](../../docs/research/06-rust-strategy/api-design-concurrency-and-stability.md)
   — lifetime-free `Copy` handles, append-only arena, determinism rules.
 
-Status: M0 complete — the ADR-0001 operator subset, arena with
-hash-consing, sort-checked builders, and the ground evaluator with
-exhaustive small-width tests. Representation choices in
+Status: Phase 1 complete — the full scalar QF_BV operator set with SMT-LIB
+edge-case semantics, hash-consed arena, sort-checked builders, ground
+evaluator with exhaustive small-width tests, and an SMT-LIB-style pretty
+printer. Z3-differential tests confirm the evaluator on every input at
+small widths. Representation choices in
 [ADR-0003](../../docs/research/09-decisions/adr-0003-m0-ir-representation.md).
 
 License: MIT OR Apache-2.0.

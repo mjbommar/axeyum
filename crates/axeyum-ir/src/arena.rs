@@ -391,6 +391,280 @@ impl TermArena {
     }
 }
 
+impl TermArena {
+    fn bv_bin(&mut self, op: Op, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        let w = self.expect_same_bv(a, b)?;
+        Ok(self.app(op, &[a, b], Sort::BitVec(w)))
+    }
+
+    fn bv_cmp(&mut self, op: Op, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.expect_same_bv(a, b)?;
+        Ok(self.app(op, &[a, b], Sort::Bool))
+    }
+
+    /// Boolean implication.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless both operands are `Bool`.
+    pub fn implies(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.expect_bool(a)?;
+        self.expect_bool(b)?;
+        Ok(self.app(Op::BoolImplies, &[a, b], Sort::Bool))
+    }
+
+    /// Bitwise nand.
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::bv_and`].
+    pub fn bv_nand(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.bv_bin(Op::BvNand, a, b)
+    }
+
+    /// Bitwise nor.
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::bv_and`].
+    pub fn bv_nor(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.bv_bin(Op::BvNor, a, b)
+    }
+
+    /// Bitwise xnor.
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::bv_and`].
+    pub fn bv_xnor(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.bv_bin(Op::BvXnor, a, b)
+    }
+
+    /// Two's-complement negation, wrapping.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless `a` is a bit-vector.
+    pub fn bv_neg(&mut self, a: TermId) -> Result<TermId, IrError> {
+        let w = self.expect_bv(a)?;
+        Ok(self.app(Op::BvNeg, &[a], Sort::BitVec(w)))
+    }
+
+    /// Subtraction modulo `2^width`.
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::bv_and`].
+    pub fn bv_sub(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.bv_bin(Op::BvSub, a, b)
+    }
+
+    /// Multiplication modulo `2^width`.
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::bv_and`].
+    pub fn bv_mul(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.bv_bin(Op::BvMul, a, b)
+    }
+
+    /// Unsigned division (total: division by zero yields all-ones).
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::bv_and`].
+    pub fn bv_udiv(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.bv_bin(Op::BvUdiv, a, b)
+    }
+
+    /// Unsigned remainder (total: remainder by zero yields the dividend).
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::bv_and`].
+    pub fn bv_urem(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.bv_bin(Op::BvUrem, a, b)
+    }
+
+    /// Signed division (truncating; total per the SMT-LIB expansion).
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::bv_and`].
+    pub fn bv_sdiv(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.bv_bin(Op::BvSdiv, a, b)
+    }
+
+    /// Signed remainder, sign follows the dividend (total).
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::bv_and`].
+    pub fn bv_srem(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.bv_bin(Op::BvSrem, a, b)
+    }
+
+    /// Signed modulo, sign follows the divisor (total).
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::bv_and`].
+    pub fn bv_smod(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.bv_bin(Op::BvSmod, a, b)
+    }
+
+    /// Logical shift left by the numeric value of `b`.
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::bv_and`].
+    pub fn bv_shl(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.bv_bin(Op::BvShl, a, b)
+    }
+
+    /// Logical shift right by the numeric value of `b`.
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::bv_and`].
+    pub fn bv_lshr(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.bv_bin(Op::BvLshr, a, b)
+    }
+
+    /// Arithmetic shift right by the numeric value of `b`.
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::bv_and`].
+    pub fn bv_ashr(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.bv_bin(Op::BvAshr, a, b)
+    }
+
+    /// Unsigned less-or-equal.
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::bv_and`].
+    pub fn bv_ule(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.bv_cmp(Op::BvUle, a, b)
+    }
+
+    /// Unsigned greater-than.
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::bv_and`].
+    pub fn bv_ugt(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.bv_cmp(Op::BvUgt, a, b)
+    }
+
+    /// Unsigned greater-or-equal.
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::bv_and`].
+    pub fn bv_uge(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.bv_cmp(Op::BvUge, a, b)
+    }
+
+    /// Signed less-than.
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::bv_and`].
+    pub fn bv_slt(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.bv_cmp(Op::BvSlt, a, b)
+    }
+
+    /// Signed less-or-equal.
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::bv_and`].
+    pub fn bv_sle(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.bv_cmp(Op::BvSle, a, b)
+    }
+
+    /// Signed greater-than.
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::bv_and`].
+    pub fn bv_sgt(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.bv_cmp(Op::BvSgt, a, b)
+    }
+
+    /// Signed greater-or-equal.
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::bv_and`].
+    pub fn bv_sge(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.bv_cmp(Op::BvSge, a, b)
+    }
+
+    /// Equality as a bit: `BV(1)` one if equal, zero otherwise.
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::bv_and`].
+    pub fn bv_comp(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.expect_same_bv(a, b)?;
+        Ok(self.app(Op::BvComp, &[a, b], Sort::BitVec(1)))
+    }
+
+    /// Zero extension by `by` bits.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless `a` is a bit-vector, or
+    /// [`IrError::ConcatTooWide`] if the result exceeds [`MAX_BV_WIDTH`].
+    pub fn zero_ext(&mut self, by: u32, a: TermId) -> Result<TermId, IrError> {
+        let w = self.expect_bv(a)?;
+        let out = w + by;
+        if out > MAX_BV_WIDTH {
+            return Err(IrError::ConcatTooWide(out));
+        }
+        Ok(self.app(Op::ZeroExt { by }, &[a], Sort::BitVec(out)))
+    }
+
+    /// Sign extension by `by` bits.
+    ///
+    /// # Errors
+    ///
+    /// Same conditions as [`TermArena::zero_ext`].
+    pub fn sign_ext(&mut self, by: u32, a: TermId) -> Result<TermId, IrError> {
+        let w = self.expect_bv(a)?;
+        let out = w + by;
+        if out > MAX_BV_WIDTH {
+            return Err(IrError::ConcatTooWide(out));
+        }
+        Ok(self.app(Op::SignExt { by }, &[a], Sort::BitVec(out)))
+    }
+
+    /// Rotate left by a constant; the amount is normalized modulo width at
+    /// build time so equivalent rotations intern to the same term.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless `a` is a bit-vector.
+    pub fn rotate_left(&mut self, by: u32, a: TermId) -> Result<TermId, IrError> {
+        let w = self.expect_bv(a)?;
+        Ok(self.app(Op::RotateLeft { by: by % w }, &[a], Sort::BitVec(w)))
+    }
+
+    /// Rotate right by a constant; the amount is normalized modulo width at
+    /// build time so equivalent rotations intern to the same term.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless `a` is a bit-vector.
+    pub fn rotate_right(&mut self, by: u32, a: TermId) -> Result<TermId, IrError> {
+        let w = self.expect_bv(a)?;
+        Ok(self.app(Op::RotateRight { by: by % w }, &[a], Sort::BitVec(w)))
+    }
+}
+
 fn check_width(width: u32) -> Result<(), IrError> {
     if width == 0 || width > MAX_BV_WIDTH {
         return Err(IrError::InvalidWidth(width));

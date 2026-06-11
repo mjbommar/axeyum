@@ -26,13 +26,17 @@ impl SymbolId {
     }
 }
 
-/// Operators of the M0 subset (ADR-0001, ADR-0003).
+/// Operators of the scalar `QF_BV` fragment (Phase 1 set).
 ///
 /// Bool and bit-vector families are distinct; `Eq` and `Ite` are
-/// polymorphic with same-sort checking in the builders. `Extract` carries
-/// its bounds as operator parameters, not term arguments.
+/// polymorphic with same-sort checking in the builders. Parameterized
+/// operators (`Extract`, extensions, rotates) carry their parameters in the
+/// operator, not as term arguments. Edge-case semantics follow SMT-LIB
+/// exactly (bv-semantics note): division and remainder are total, shifts by
+/// amounts `>= width` saturate, rotates normalize modulo width.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Op {
+    // --- Boolean -------------------------------------------------------
     /// Boolean negation.
     BoolNot,
     /// Boolean conjunction (binary).
@@ -41,22 +45,75 @@ pub enum Op {
     BoolOr,
     /// Boolean exclusive or.
     BoolXor,
-    /// Bit-vector bitwise negation.
+    /// Boolean implication.
+    BoolImplies,
+    // --- bit-vector bitwise ---------------------------------------------
+    /// Bitwise negation.
     BvNot,
-    /// Bit-vector bitwise and.
+    /// Bitwise and.
     BvAnd,
-    /// Bit-vector bitwise or.
+    /// Bitwise or.
     BvOr,
-    /// Bit-vector bitwise xor.
+    /// Bitwise xor.
     BvXor,
-    /// Bit-vector addition, wrapping modulo `2^width`.
+    /// Bitwise nand.
+    BvNand,
+    /// Bitwise nor.
+    BvNor,
+    /// Bitwise xnor.
+    BvXnor,
+    // --- bit-vector arithmetic -------------------------------------------
+    /// Two's-complement negation, wrapping.
+    BvNeg,
+    /// Addition modulo `2^width`.
     BvAdd,
-    /// Bit-vector unsigned less-than; result sort is `Bool`.
+    /// Subtraction modulo `2^width`.
+    BvSub,
+    /// Multiplication modulo `2^width`.
+    BvMul,
+    /// Unsigned division; division by zero yields all-ones.
+    BvUdiv,
+    /// Unsigned remainder; remainder by zero yields the dividend.
+    BvUrem,
+    /// Signed division (truncating); by zero: `-1` if dividend
+    /// non-negative, `+1` otherwise (SMT-LIB expansion).
+    BvSdiv,
+    /// Signed remainder, sign follows the dividend; by zero: the dividend.
+    BvSrem,
+    /// Signed modulo, sign follows the divisor; by zero: the dividend.
+    BvSmod,
+    // --- shifts -----------------------------------------------------------
+    /// Logical shift left; amounts `>= width` yield zero.
+    BvShl,
+    /// Logical shift right; amounts `>= width` yield zero.
+    BvLshr,
+    /// Arithmetic shift right; amounts `>= width` yield all sign bits.
+    BvAshr,
+    // --- comparisons (result sort `Bool`) ---------------------------------
+    /// Unsigned less-than.
     BvUlt,
+    /// Unsigned less-or-equal.
+    BvUle,
+    /// Unsigned greater-than.
+    BvUgt,
+    /// Unsigned greater-or-equal.
+    BvUge,
+    /// Signed less-than.
+    BvSlt,
+    /// Signed less-or-equal.
+    BvSle,
+    /// Signed greater-than.
+    BvSgt,
+    /// Signed greater-or-equal.
+    BvSge,
+    // --- polymorphic -------------------------------------------------------
     /// Equality over any shared sort; result sort is `Bool`.
     Eq,
     /// If-then-else: `Bool` condition, same-sort branches.
     Ite,
+    // --- structural --------------------------------------------------------
+    /// Equality as a bit: `BV(1)` one if operands are equal, else zero.
+    BvComp,
     /// Bit slice `[hi:lo]` inclusive; result width is `hi - lo + 1`.
     Extract {
         /// High bit index (inclusive).
@@ -66,6 +123,26 @@ pub enum Op {
     },
     /// Bit-vector concatenation; first argument becomes the high bits.
     Concat,
+    /// Zero extension by `by` bits (result width `width + by`).
+    ZeroExt {
+        /// Number of zero bits appended at the high end.
+        by: u32,
+    },
+    /// Sign extension by `by` bits (result width `width + by`).
+    SignExt {
+        /// Number of sign bits appended at the high end.
+        by: u32,
+    },
+    /// Rotate left by a constant amount, normalized modulo width at build.
+    RotateLeft {
+        /// Rotation amount, already reduced modulo the operand width.
+        by: u32,
+    },
+    /// Rotate right by a constant amount, normalized modulo width at build.
+    RotateRight {
+        /// Rotation amount, already reduced modulo the operand width.
+        by: u32,
+    },
 }
 
 /// The structural body of a term, used as the hash-consing key.

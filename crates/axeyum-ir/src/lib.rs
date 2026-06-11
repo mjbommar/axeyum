@@ -33,6 +33,7 @@
 mod arena;
 mod error;
 mod eval;
+mod fmt;
 mod sort;
 mod term;
 mod value;
@@ -40,6 +41,7 @@ mod value;
 pub use arena::TermArena;
 pub use error::IrError;
 pub use eval::{Assignment, eval};
+pub use fmt::render;
 pub use sort::{MAX_BV_WIDTH, Sort};
 pub use term::{Op, SymbolId, TermId, TermNode};
 pub use value::Value;

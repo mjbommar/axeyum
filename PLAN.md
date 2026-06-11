@@ -91,11 +91,19 @@ In order; check off and date as completed.
       (`z3` = system libz3 via pkg-config, `z3-static` = hermetic prebuilt).
       Representation decisions in ADR-0003. All sat results in the test
       harness replay through the evaluator.
-- [ ] **NEXT: Phase 1 (broaden the typed term core)** per the
-      [roadmap](docs/research/08-planning/roadmap.md): full scalar QF_BV
-      operator set with SMT-LIB edge-case semantics (sub/mul/div/rem,
-      shifts, comparisons, extensions), pretty printer, exhaustive
-      small-width evaluator coverage for the edge-case operators.
+- [x] **Phase 1 (typed term core broadened) — 2026-06-10.** Full scalar
+      QF_BV operator set (40 operators: arithmetic incl. sdiv/srem/smod,
+      shifts, all 8 comparisons, nand/nor/xnor/comp, extensions, rotates,
+      implies) with SMT-LIB edge-case semantics; SMT-LIB-style pretty
+      printer (`render`); exhaustive small-width evaluator tests (22 IR
+      tests); and a differential suite where Z3 confirms the evaluator on
+      *every* input at width 3 for every operator — three independent
+      implementations (evaluator, i64 test reference, Z3) agree.
+- [ ] **NEXT: Phase 2 (native solver oracle, harden)** per the
+      [roadmap](docs/research/08-planning/roadmap.md): backend conformance
+      suite expansion (state retention, cancellation), SMT-LIB export for
+      debugging plus benchmark import for the QF_BV slice, benchmark
+      harness baseline runs.
 - [ ] Then follow the roadmap phase by phase; each phase has explicit
       exit criteria.
 
