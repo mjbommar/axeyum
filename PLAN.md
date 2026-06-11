@@ -22,8 +22,12 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 Last updated: 2026-06-10
 
 - Phase: **Phase 0 complete; M0 (vertical slice) is next.**
-- Git: on `main`; docs committed; workspace scaffold committed. Remote
-  `github.com/mjbommar/axeyum` exists but nothing pushed yet.
+- Git: on `main`, pushed to `github.com/mjbommar/axeyum`; CI green on GitHub
+  (fmt, clippy, test, MSRV 1.85, rustdoc, cargo-deny; checkout@v5 for the
+  Node 24 runner migration).
+- Supporting scaffold: corpus tier directories (`corpus/micro|client`
+  committed, `corpus/public` gitignored), dependabot (cargo + actions
+  weekly), CHANGELOG, .editorconfig; 16 reference repos cloned locally.
 - Workspace: `axeyum-ir` + `axeyum-solver` (per ADR-0001), edition 2024,
   MSRV 1.85, workspace lints (`unsafe_code` denied, clippy pedantic).
   fmt/clippy/test/doc all green locally; CI workflow defined
@@ -50,7 +54,7 @@ In order; check off and date as completed.
 - [x] Initial commit of `docs/` + `PLAN.md` — 2026-06-10.
 - [x] Phase 0: Cargo workspace skeleton (`axeyum-ir`, `axeyum-solver`),
       licenses, CI — 2026-06-10.
-- [ ] Push `main` to GitHub and confirm CI is green there.
+- [x] Push `main` to GitHub and confirm CI is green there — 2026-06-10.
 - [ ] Milestone M0 (vertical slice): IR subset + arena + sort checking +
       ground evaluator + solver trait + Z3 feature backend (z3 crate 0.20+,
       post-lifetime API) + model check-by-evaluation. Done when the doctest
