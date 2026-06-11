@@ -88,6 +88,35 @@ fn unsupported_constructs_are_clear_errors() {
 }
 
 #[test]
+fn malformed_commands_are_rejected_instead_of_truncated() {
+    assert!(matches!(
+        parse_script("(check-sat true)"),
+        Err(SmtError::Syntax(_))
+    ));
+    assert!(matches!(
+        parse_script("(assert true false)"),
+        Err(SmtError::Syntax(_))
+    ));
+    assert!(matches!(
+        parse_script("(set-logic QF_BV QF_ABV)"),
+        Err(SmtError::Syntax(_))
+    ));
+    assert!(matches!(
+        parse_script("(declare-const x (_ BitVec 8) extra)"),
+        Err(SmtError::Syntax(_))
+    ));
+}
+
+#[test]
+fn define_fun_declared_sort_must_match_body() {
+    let text = r"
+        (set-logic QF_BV)
+        (define-fun bad () Bool (_ bv0 1))
+    ";
+    assert!(matches!(parse_script(text), Err(SmtError::Ir(_))));
+}
+
+#[test]
 fn write_parse_round_trip_preserves_structure() {
     let text = r"
         (set-logic QF_BV)
@@ -132,6 +161,29 @@ fn write_parse_round_trip_preserves_structure() {
             );
         }
     }
+}
+
+#[test]
+fn writer_escapes_symbols_and_avoids_generated_name_collisions() {
+    use axeyum_ir::TermArena;
+
+    let mut a = TermArena::new();
+    let x = a.bv_var("x y", 8).unwrap();
+    let one = a.bv_const(8, 1).unwrap();
+    let sum = a.bv_add(x, one).unwrap();
+    let collision = a.bv_var("axy.t2", 8).unwrap();
+    let shared = a.eq(sum, sum).unwrap();
+    let mentions_collision = a.eq(collision, collision).unwrap();
+
+    let exported = write_script(&a, &[shared, mentions_collision]);
+    assert!(exported.contains("(declare-const |x y| (_ BitVec 8))"));
+    assert!(exported.contains("(declare-const axy.t2 (_ BitVec 8))"));
+    assert!(exported.contains("(define-fun axy.t2.1"));
+
+    let reparsed = parse_script(&exported).unwrap();
+    assert!(reparsed.arena.find_symbol("x y").is_some());
+    assert!(reparsed.arena.find_symbol("axy.t2").is_some());
+    assert_eq!(reparsed.assertions.len(), 2);
 }
 
 #[test]

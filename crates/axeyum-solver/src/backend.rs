@@ -108,6 +108,8 @@ pub struct SolveStats {
     pub translate: Duration,
     /// Time spent inside the backend's check.
     pub solve: Duration,
+    /// Time spent lifting a satisfying backend model into Axeyum-owned values.
+    pub model_lift: Duration,
     /// Unique DAG nodes translated.
     pub terms_translated: u64,
     /// Number of top-level assertions.

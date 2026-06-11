@@ -137,6 +137,7 @@ fn non_boolean_assertion_is_a_typed_error() {
 #[test]
 fn capabilities_report_models() {
     let caps = Z3Backend::new().capabilities();
+    assert!(caps.name.starts_with("z3 "));
     assert!(caps.produces_models);
     assert!(caps.complete);
 }
@@ -216,6 +217,7 @@ fn solve_stats_attribute_layers() {
     assert_eq!(stats.terms_translated, 5); // x, 1, 5, x+1, eq
     assert!(stats.translate.as_nanos() > 0);
     assert!(stats.solve.as_nanos() > 0);
+    assert!(stats.model_lift.as_nanos() > 0);
 }
 
 // ----- SMT-LIB ingestion through the trait (Phase 2) ------------------------

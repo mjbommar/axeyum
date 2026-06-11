@@ -10,9 +10,10 @@ proving; the decidable finite-domain core being built first is its
 foundation layer
 (see [north-star](docs/research/00-orientation/north-star.md)).
 
-**Status: pre-M0.** The research foundation and workspace scaffold exist; the
-first vertical slice (typed IR subset, Z3 oracle backend, model
-check-by-evaluation) is the current milestone.
+**Status: Phase 2 hardening.** M0 and Phase 1 are complete; the current stack
+has the scalar QF_BV IR/evaluator, Z3 oracle backend, SMT-LIB reader/writer,
+resource telemetry, and a micro-corpus benchmark harness. Phase 2 public-corpus
+baselines and later incrementality conformance remain active work.
 
 ## Start Here
 
@@ -29,6 +30,7 @@ check-by-evaluation) is the current milestone.
 | Crate | Purpose |
 |---|---|
 | [`axeyum-ir`](crates/axeyum-ir) | Sorts, terms, interning, ground evaluation. |
+| [`axeyum-bench`](crates/axeyum-bench) | Corpus benchmark harness with PAR-2 scoring and JSON artifacts. |
 | [`axeyum-smtlib`](crates/axeyum-smtlib) | SMT-LIB 2 reader/writer: benchmark ingestion, sharing-preserving export. |
 | [`axeyum-solver`](crates/axeyum-solver) | Backend trait, results, models, capabilities; native backends behind feature flags. |
 
@@ -41,6 +43,7 @@ backends (Z3 first) are optional features.
 cargo fmt --all --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features
+cargo run -p axeyum-bench --features z3 -- corpus/micro --timeout-ms 1000 --out /tmp/axeyum-bench-micro.json
 cargo deny check   # requires cargo-deny
 ```
 

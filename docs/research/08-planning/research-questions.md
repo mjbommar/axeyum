@@ -1,7 +1,7 @@
 # Research Questions
 
 Status: draft
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
 ## Purpose
 
@@ -28,7 +28,9 @@ Out of scope:
 
 ### Logic And IR
 
-- [ ] Should `Bool` and `BV(1)` be distinct in every layer?
+- [x] Should `Bool` and `BV(1)` be distinct in every layer?
+  - Answer: yes for the current public IR and backend surface; see
+    [ADR-0003](../09-decisions/adr-0003-m0-ir-representation.md).
 - [ ] Should arrays be in the first public IR?
 - [ ] Should uninterpreted functions be first-class early?
 - [ ] How should undefined or partial operations be represented?
@@ -41,7 +43,10 @@ Out of scope:
 
 ### Solvers
 
-- [ ] What is the first native backend?
+- [x] What is the first native backend?
+  - Answer: Z3 as a feature-gated oracle; see
+    [ADR-0001](../09-decisions/adr-0001-vertical-slice-first.md) and
+    [ADR-0002](../09-decisions/adr-0002-ground-up-identity-oracle-bootstrap.md).
 - [ ] Which pure Rust SAT solver is the first adapter?
 - [ ] When is a custom CDCL implementation justified?
 - [ ] What is the minimum incremental-solving API?
@@ -55,7 +60,10 @@ Out of scope:
 
 ### Evidence
 
-- [ ] What is the first checkable evidence artifact?
+- [x] What is the first checkable evidence artifact?
+  - Answer: `sat` model replay through the ground evaluator, implemented in
+    the solver tests and benchmark harness; see
+    [ADR-0001](../09-decisions/adr-0001-vertical-slice-first.md).
 - [ ] Should unsat proof checking be required in high-assurance mode?
 - [ ] How are model-lift maps serialized?
 
@@ -63,14 +71,21 @@ Out of scope:
 
 - [ ] Assumptions-first or push/pop-first public API?
 - [ ] What survives across queries: learned clauses, bit-blast caches, phases?
-- [ ] Should solver cancellation support memory budgets as well as time?
+- [x] Should solver cancellation support memory budgets as well as time?
+  - Answer: yes; `SolverConfig` carries timeout, deterministic resource,
+    memory, and node budgets. Memory-budget exhaustion is an `Unknown`
+    classification, not an error.
 - [ ] Frozen-arena type-state or runtime single-writer discipline?
 
 ### Formats
 
-- [ ] Full SMT-LIB script support or benchmark-slice parsing first?
+- [x] Full SMT-LIB script support or benchmark-slice parsing first?
+  - Answer: benchmark-slice parsing first, with explicit Unsupported errors
+    for arrays, UF, and incremental commands; implemented in `axeyum-smtlib`.
 - [ ] When does BTOR2 import earn its keep?
-- [ ] Where does the format parser crate boundary land?
+- [x] Where does the format parser crate boundary land?
+  - Answer: `axeyum-smtlib` is a dedicated crate because parsing/writing is
+    exercised by solver tests and the benchmark harness, not just a CLI.
 
 ### Parallelism
 
@@ -93,8 +108,11 @@ Out of scope:
 
 ### Rust And Packaging
 
-- [ ] How many crates should exist in the first implementation?
-  - Proposed answer in [ADR-0001](../09-decisions/adr-0001-vertical-slice-first.md): start with two.
+- [x] How many crates should exist in the first implementation?
+  - Answer: start with two crates per
+    [ADR-0001](../09-decisions/adr-0001-vertical-slice-first.md); later
+    `axeyum-smtlib` and `axeyum-bench` splits were introduced after the
+    format and benchmark boundaries were exercised by use.
 - [ ] Should optional native backends be separate crates or features?
 - [ ] Is `no_std` relevant for any low-level crate?
 

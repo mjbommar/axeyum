@@ -1,0 +1,26 @@
+[package]
+name = "axeyum-bench"
+description = "Benchmark harness for the Axeyum reasoning stack: corpus runs, PAR-2 scoring, versioned results artifacts"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[dependencies]
+axeyum-ir.workspace = true
+axeyum-smtlib = { path = "../axeyum-smtlib" }
+axeyum-solver = { path = "../axeyum-solver" }
+serde_json = "1"
+
+[features]
+default = []
+z3 = ["axeyum-solver/z3"]
+z3-static = ["axeyum-solver/z3-static"]
+
+[lints]
+workspace = true

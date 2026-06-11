@@ -25,12 +25,13 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 ## Status
 
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
-- Phase: **Phase 0 complete; M0 (vertical slice) is next.**
-- Git: on `main`, pushed to `github.com/mjbommar/axeyum`; CI green on GitHub
-  (fmt, clippy, test, MSRV 1.85, rustdoc, cargo-deny; checkout@v5 for the
-  Node 24 runner migration).
+- Phase: **Phase 2 hardening.** M0, Phase 1, SMT-LIB ingestion/export, and
+  the micro-corpus benchmark harness are implemented; the next Phase 2
+  evidence item is a recorded public QF_BV baseline run.
+- Git: on `main`; previous GitHub CI was green. The current Phase 2 hardening
+  pass is verified locally; package and push it before ending the session.
 - Supporting scaffold: corpus tier directories (`corpus/micro|client`
   committed, `corpus/public` gitignored), dependabot (cargo + actions
   weekly), CHANGELOG, .editorconfig, CITATION.cff, PR template, justfile
@@ -49,10 +50,11 @@ Last updated: 2026-06-10
   CPC/Eunoia/Ethos is the proof-production leader; nanoda is the Rust
   Lean-kernel precedent; no Rust superposition prover or general proof
   kernel exists — that gap is the opportunity.
-- Workspace: `axeyum-ir` + `axeyum-solver` (per ADR-0001), edition 2024,
-  MSRV 1.85, workspace lints (`unsafe_code` denied, clippy pedantic).
-  fmt/clippy/test/doc all green locally; CI workflow defined
-  (fmt, clippy, test, MSRV check, rustdoc, cargo-deny).
+- Workspace: `axeyum-ir`, `axeyum-solver`, `axeyum-smtlib`, and
+  `axeyum-bench`, edition 2024, MSRV 1.85, workspace lints (`unsafe_code`
+  denied, clippy pedantic). CI workflow covers fmt, clippy, tests,
+  micro-corpus benchmark smoke, MSRV check, rustdoc, cargo-deny, and docs
+  links.
 - Project metadata: README, CONTRIBUTING, CLAUDE.md, dual MIT/Apache-2.0
   licenses, deny.toml, rustfmt.toml.
 - References: 13 solver/checker repos shallow-cloned into `references/`
@@ -66,6 +68,14 @@ Last updated: 2026-06-10
 - Ecosystem facts checked 2026-06-10: stable Rust 1.96; z3 crate 0.20
   removed the `'ctx` lifetime API; varisat unmaintained since 2019 (splr and
   rustsat are the maintained Rust SAT options).
+- Local verification for the 2026-06-11 hardening pass: `cargo fmt --all
+  --check`, `cargo clippy --workspace --all-targets --all-features --
+  -D warnings`, `cargo test --workspace --all-features`,
+  `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features
+  --no-deps`, `./scripts/check-links.sh`, and `cargo run -p axeyum-bench
+  --features z3 -- corpus/micro --timeout-ms 1000 --out
+  /tmp/axeyum-bench-micro.json` all pass. `cargo deny check` was not run
+  locally because `cargo-deny` is not installed; CI still owns that gate.
 
 ## Next Actions
 
@@ -117,10 +127,18 @@ In order; check off and date as completed.
       2^100 bomb exports linearly — tested). Parse→Z3→evaluator-replay and
       export round-trip conformance tests; corpus smoke test ingests real
       local SMT-LIB files (runtime-skipped on CI).
-- [ ] **NEXT: Phase 2 remainder:** benchmark harness (`axeyum-bench`)
-      recording baseline PAR-2 runs over the local QF_BV corpus slice;
-      conformance suite items for state retention once incrementality
-      lands.
+- [x] **Phase 2 benchmark harness and hardening pass — 2026-06-11.**
+      `axeyum-bench` runs `.smt2` corpora through `Z3Backend`, replays every
+      `sat` model through the evaluator, checks `:status` agreement, reports
+      PAR-2, emits versioned JSON artifacts with config/corpus hashes,
+      backend version, hardware note, seed, shape metrics, and layer timings.
+      Committed `corpus/micro/*.smt2` fixtures now run in CI. Review fixes
+      also made SMT-LIB parsing stricter, escaped writer identifiers, avoided
+      generated-name collisions, made extension-width arithmetic overflow-safe,
+      scoped Z3 memory limits, and added model-lift telemetry.
+- [ ] **NEXT: Phase 2 public baseline:** fetch or select a local QF_BV public
+      corpus slice and record a baseline `axeyum-bench` artifact. Keep
+      conformance suite items for state retention once incrementality lands.
 - [ ] Then follow the roadmap phase by phase; each phase has explicit
       exit criteria.
 
@@ -158,6 +176,6 @@ In order; check off and date as completed.
 | [docs/research/08-planning/roadmap.md](docs/research/08-planning/roadmap.md) | Phased plan with exit criteria and gates. |
 | [docs/research/08-planning/research-questions.md](docs/research/08-planning/research-questions.md) | Open question register. |
 | [docs/research/09-decisions/](docs/research/09-decisions/README.md) | ADRs: how questions get closed. |
-| `crates/` | Cargo workspace: `axeyum-ir`, `axeyum-solver`. |
+| `crates/` | Cargo workspace: `axeyum-ir`, `axeyum-solver`, `axeyum-smtlib`, `axeyum-bench`. |
 | [CLAUDE.md](CLAUDE.md) | Agent guidance: session protocol, commands, hard rules. |
 | [references/](references/README.md) | Gitignored reference clones; `scripts/fetch-references.sh`. |

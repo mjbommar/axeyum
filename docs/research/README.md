@@ -1,7 +1,7 @@
 # Axeyum Research Index
 
 Status: draft
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
 ## Purpose
 
@@ -75,10 +75,15 @@ to experiment with representations, algorithms, and evidence checking.
 
 ## Open Questions
 
-- [ ] Which crate layout should be implemented first?
-  - Proposed: start with two crates ([ADR-0001](09-decisions/adr-0001-vertical-slice-first.md)).
-- [ ] Which native solver backend should be the first oracle?
-  - Proposed: Z3 first ([ADR-0001](09-decisions/adr-0001-vertical-slice-first.md)); Bitwuzla second.
+- [x] Which crate layout should be implemented first?
+  - Answered: start with two crates
+    ([ADR-0001](09-decisions/adr-0001-vertical-slice-first.md)); later
+    format and benchmark crates were split after use proved the boundaries.
+- [x] Which native solver backend should be the first oracle?
+  - Answered: Z3 first
+    ([ADR-0001](09-decisions/adr-0001-vertical-slice-first.md),
+    [ADR-0002](09-decisions/adr-0002-ground-up-identity-oracle-bootstrap.md));
+    Bitwuzla remains a later differential candidate.
 - [ ] Which pure Rust SAT backend should be evaluated first?
   - Evaluate against the [benchmarking methodology](08-planning/benchmarking-and-performance-methodology.md);
     varisat's proof output weighs in its favor for the evidence thesis, but it

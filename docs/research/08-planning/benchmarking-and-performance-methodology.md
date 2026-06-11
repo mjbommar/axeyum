@@ -1,7 +1,7 @@
 # Benchmarking And Performance Methodology
 
 Status: draft
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
 ## Purpose
 
@@ -68,12 +68,16 @@ Out of scope:
 
 - Build the harness early (`axeyum-bench` binary): runs a corpus against a
   named config, emits a versioned results artifact (config hash, corpus hash,
-  solver versions, hardware note, seed).
+  solver versions, hardware note, seed). Current artifact version 1 records
+  the Z3 version, timeout/limit config, deterministic corpus/config hashes,
+  machine note, PAR-2 summary, per-instance shape metrics, layer timings, and
+  `sat` model-replay failures.
 - Fixed seeds and pinned solver versions everywhere; repeated runs with
   variance reported for anything under a few seconds.
 - Statistics counters from sat-core-state and performance notes feed this
   harness; they are requirements, not nice-to-haves.
-- CI runs the micro tier per PR; public-tier runs are scheduled, not per-PR.
+- CI runs the micro tier per PR through `axeyum-bench`; public-tier runs are
+  scheduled, not per-PR.
 
 ## Risks
 

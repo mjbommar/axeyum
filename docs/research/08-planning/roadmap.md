@@ -1,7 +1,7 @@
 # Roadmap
 
 Status: draft
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
 ## Purpose
 
@@ -158,8 +158,10 @@ criteria; none may begin while it would starve a foundation phase.
 
 - [ ] Should Phase 2 include the second backend or defer it to Phase 5's
       differential needs?
-- [ ] Where does the SMT-LIB parser crate boundary land (`axeyum-smtlib` vs
+- [x] Where does the SMT-LIB parser crate boundary land (`axeyum-smtlib` vs
       CLI module)?
+      Answer: `axeyum-smtlib`, now exercised by solver tests and
+      `axeyum-bench`.
 - [ ] Should proof logging (DRAT from adapters that support it) be surfaced
       before Phase 6?
 

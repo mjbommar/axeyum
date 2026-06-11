@@ -100,6 +100,14 @@ fn extract_and_concat_bounds_are_static_errors() {
         a.concat(wide, x),
         Err(IrError::ConcatTooWide(136))
     ));
+    assert!(matches!(
+        a.zero_ext(u32::MAX, x),
+        Err(IrError::ConcatTooWide(u32::MAX))
+    ));
+    assert!(matches!(
+        a.sign_ext(u32::MAX, x),
+        Err(IrError::ConcatTooWide(u32::MAX))
+    ));
 }
 
 // ----- evaluator: Boolean operators --------------------------------------

@@ -388,10 +388,7 @@ impl TermArena {
     pub fn concat(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
         let wa = self.expect_bv(a)?;
         let wb = self.expect_bv(b)?;
-        let out = wa + wb;
-        if out > MAX_BV_WIDTH {
-            return Err(IrError::ConcatTooWide(out));
-        }
+        let out = checked_output_width(wa, wb)?;
         Ok(self.app(Op::Concat, &[a, b], Sort::BitVec(out)))
     }
 }
@@ -626,10 +623,7 @@ impl TermArena {
     /// [`IrError::ConcatTooWide`] if the result exceeds [`MAX_BV_WIDTH`].
     pub fn zero_ext(&mut self, by: u32, a: TermId) -> Result<TermId, IrError> {
         let w = self.expect_bv(a)?;
-        let out = w + by;
-        if out > MAX_BV_WIDTH {
-            return Err(IrError::ConcatTooWide(out));
-        }
+        let out = checked_output_width(w, by)?;
         Ok(self.app(Op::ZeroExt { by }, &[a], Sort::BitVec(out)))
     }
 
@@ -640,10 +634,7 @@ impl TermArena {
     /// Same conditions as [`TermArena::zero_ext`].
     pub fn sign_ext(&mut self, by: u32, a: TermId) -> Result<TermId, IrError> {
         let w = self.expect_bv(a)?;
-        let out = w + by;
-        if out > MAX_BV_WIDTH {
-            return Err(IrError::ConcatTooWide(out));
-        }
+        let out = checked_output_width(w, by)?;
         Ok(self.app(Op::SignExt { by }, &[a], Sort::BitVec(out)))
     }
 
@@ -675,4 +666,12 @@ fn check_width(width: u32) -> Result<(), IrError> {
         return Err(IrError::InvalidWidth(width));
     }
     Ok(())
+}
+
+fn checked_output_width(base: u32, extra: u32) -> Result<u32, IrError> {
+    let out = base.saturating_add(extra);
+    if out > MAX_BV_WIDTH {
+        return Err(IrError::ConcatTooWide(out));
+    }
+    Ok(out)
 }

@@ -69,7 +69,7 @@ impl Z3Backend {
 impl SolverBackend for Z3Backend {
     fn capabilities(&self) -> Capabilities {
         Capabilities {
-            name: "z3".to_owned(),
+            name: format!("z3 {}", z3::full_version()),
             produces_models: true,
             complete: true,
         }
@@ -97,10 +97,12 @@ impl SolverBackend for Z3Backend {
                 detail: format!("query has {} DAG nodes, budget {budget}", shape.dag_nodes),
             }));
         }
-        if let Some(mb) = config.memory_limit_mb {
-            // Z3's memory cap is process-global (observability note caveat).
-            z3::set_global_param("memory_max_size", &mb.to_string());
-        }
+        // Z3's memory cap is process-global (observability note caveat), so
+        // any per-query setting is restored when this check returns.
+        let _memory_guard = config.memory_limit_mb.map(|mb| {
+            let value = mb.to_string();
+            Z3GlobalParamGuard::set("memory_max_size", &value)
+        });
         let mut cfg = Config::new();
         cfg.set_model_generation(true);
         // The closure runs against a scoped thread-local Z3 context; no Z3
@@ -112,6 +114,29 @@ impl SolverBackend for Z3Backend {
 
     fn last_stats(&self) -> Option<&SolveStats> {
         self.stats.as_ref()
+    }
+}
+
+struct Z3GlobalParamGuard {
+    key: &'static str,
+    previous: Option<String>,
+}
+
+impl Z3GlobalParamGuard {
+    fn set(key: &'static str, value: &str) -> Self {
+        let previous = z3::get_global_param(key);
+        z3::set_global_param(key, value);
+        Self { key, previous }
+    }
+}
+
+impl Drop for Z3GlobalParamGuard {
+    fn drop(&mut self) {
+        if let Some(previous) = &self.previous {
+            z3::set_global_param(self.key, previous);
+        } else {
+            z3::reset_all_global_params();
+        }
     }
 }
 
@@ -208,7 +233,12 @@ fn run_check(
                 detail,
             }))
         }
-        SatResult::Sat => lift_model(arena, &solver).map(CheckResult::Sat),
+        SatResult::Sat => {
+            let lift_start = Instant::now();
+            let lifted = lift_model(arena, &solver).map(CheckResult::Sat);
+            stats.model_lift = lift_start.elapsed();
+            lifted
+        }
     };
     (result, stats)
 }

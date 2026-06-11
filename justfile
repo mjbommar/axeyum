@@ -24,6 +24,10 @@ deny:
 links:
     ./scripts/check-links.sh
 
+# Run the committed micro corpus through the benchmark harness.
+bench-micro:
+    cargo run -p axeyum-bench --features z3 -- corpus/micro --timeout-ms 1000 --out /tmp/axeyum-bench-micro.json
+
 # Repopulate gitignored reference clones.
 references:
     ./scripts/fetch-references.sh

@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
 members = [
+    "crates/axeyum-bench",
     "crates/axeyum-ir",
     "crates/axeyum-smtlib",
     "crates/axeyum-solver",

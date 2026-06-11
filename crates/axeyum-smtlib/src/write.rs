@@ -5,7 +5,7 @@
 //! (query-cost-control hard rule). Children always intern before parents,
 //! so ascending `TermId` order is a valid emission order.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 
 use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode};
@@ -20,7 +20,7 @@ pub fn write_script(arena: &TermArena, assertions: &[TermId]) -> String {
     // Count uses to find shared interior nodes (iterative).
     let mut uses: HashMap<TermId, u32> = HashMap::new();
     let mut stack: Vec<TermId> = assertions.to_vec();
-    let mut seen: std::collections::HashSet<TermId> = std::collections::HashSet::new();
+    let mut seen: HashSet<TermId> = HashSet::new();
     let mut symbols: Vec<(String, Sort)> = Vec::new();
     while let Some(t) = stack.pop() {
         if seen.contains(&t) {
@@ -42,10 +42,16 @@ pub fn write_script(arena: &TermArena, assertions: &[TermId]) -> String {
         }
     }
     symbols.sort_by(|a, b| a.0.cmp(&b.0));
+    let mut used_names: HashSet<String> = symbols.iter().map(|(name, _)| name.clone()).collect();
 
     let mut out = String::from("(set-logic QF_BV)\n");
     for (name, sort) in &symbols {
-        let _ = writeln!(out, "(declare-const {name} {})", sort_str(*sort));
+        let _ = writeln!(
+            out,
+            "(declare-const {} {})",
+            symbol_syntax(name),
+            sort_str(*sort)
+        );
     }
 
     // Emit shared App nodes as defs in ascending id order (children first).
@@ -56,14 +62,15 @@ pub fn write_script(arena: &TermArena, assertions: &[TermId]) -> String {
         let shared_app =
             uses.get(&t).copied().unwrap_or(0) > 1 && matches!(arena.node(t), TermNode::App { .. });
         if shared_app {
-            let name = format!("axy.t{}", t.index());
+            let name = fresh_def_name(t, &mut used_names);
+            let escaped_name = symbol_syntax(&name);
             let body = render_node(arena, t, &names);
             let _ = writeln!(
                 out,
-                "(define-fun {name} () {} {body})",
+                "(define-fun {escaped_name} () {} {body})",
                 sort_str(arena.sort_of(t))
             );
-            names.insert(t, name);
+            names.insert(t, escaped_name);
         }
     }
     for &t in assertions {
@@ -71,6 +78,53 @@ pub fn write_script(arena: &TermArena, assertions: &[TermId]) -> String {
     }
     out.push_str("(check-sat)\n");
     out
+}
+
+fn fresh_def_name(t: TermId, used_names: &mut HashSet<String>) -> String {
+    let base = format!("axy.t{}", t.index());
+    if used_names.insert(base.clone()) {
+        return base;
+    }
+    let mut i = 1u32;
+    loop {
+        let candidate = format!("{base}.{i}");
+        if used_names.insert(candidate.clone()) {
+            return candidate;
+        }
+        i += 1;
+    }
+}
+
+fn symbol_syntax(name: &str) -> String {
+    if is_simple_symbol(name) {
+        name.to_owned()
+    } else {
+        format!("|{}|", name.replace('|', "\\|"))
+    }
+}
+
+fn is_simple_symbol(name: &str) -> bool {
+    fn is_initial(c: char) -> bool {
+        c.is_ascii_alphabetic() || "~!@$%^&*_-+=<>.?/".contains(c)
+    }
+
+    fn is_rest(c: char) -> bool {
+        is_initial(c) || c.is_ascii_digit()
+    }
+
+    const RESERVED: &[&str] = &[
+        "!", "_", "as", "Bool", "exists", "false", "forall", "let", "match", "par", "true",
+    ];
+
+    let mut chars = name.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    is_initial(first)
+        && chars.all(is_rest)
+        && !name.starts_with('#')
+        && !name.starts_with(':')
+        && !RESERVED.contains(&name)
 }
 
 fn sort_str(sort: Sort) -> String {
@@ -104,7 +158,7 @@ fn render_node(arena: &TermArena, root: TermId, names: &HashMap<TermId, String>)
                 memo.insert(t, format!("(_ bv{value} {width})"));
             }
             TermNode::Symbol(s) => {
-                memo.insert(t, arena.symbol(*s).0.to_owned());
+                memo.insert(t, symbol_syntax(arena.symbol(*s).0));
             }
             TermNode::App { op, args } => {
                 if ready {

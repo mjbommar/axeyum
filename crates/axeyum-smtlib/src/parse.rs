@@ -52,20 +52,33 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
             .ok_or_else(|| SmtError::Syntax("empty command".to_owned()))?;
         match head {
             "set-logic" => {
+                exact_len(items, 2, head)?;
                 script.logic = items.get(1).and_then(SExpr::atom).map(str::to_owned);
             }
             "set-info" => {
+                exact_len(items, 3, head)?;
                 if items.get(1).and_then(SExpr::atom) == Some(":status") {
                     script.status = items.get(2).and_then(SExpr::atom).map(str::to_owned);
                 }
             }
-            "set-option" | "get-model" | "get-info" | "exit" | "check-sat-assuming" => {
-                if head == "check-sat-assuming" {
-                    return Err(SmtError::Unsupported("check-sat-assuming".to_owned()));
-                }
+            "set-option" => {
+                exact_len(items, 3, head)?;
             }
-            "check-sat" => script.check_sats += 1,
+            "get-model" | "exit" => {
+                exact_len(items, 1, head)?;
+            }
+            "get-info" => {
+                exact_len(items, 2, head)?;
+            }
+            "check-sat-assuming" => {
+                return Err(SmtError::Unsupported("check-sat-assuming".to_owned()));
+            }
+            "check-sat" => {
+                exact_len(items, 1, head)?;
+                script.check_sats += 1;
+            }
             "declare-fun" => {
+                exact_len(items, 4, head)?;
                 let name = atom_at(items, 1)?;
                 let args = items
                     .get(2)
@@ -80,11 +93,13 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
                 script.arena.declare(name, sort)?;
             }
             "declare-const" => {
+                exact_len(items, 3, head)?;
                 let name = atom_at(items, 1)?;
                 let sort = parse_sort(sexpr_at(items, 2)?)?;
                 script.arena.declare(name, sort)?;
             }
             "define-fun" => {
+                exact_len(items, 5, head)?;
                 let name = atom_at(items, 1)?;
                 let args = items
                     .get(2)
@@ -95,10 +110,19 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
                         "define-fun `{name}` with arguments"
                     )));
                 }
+                let declared_sort = parse_sort(sexpr_at(items, 3)?)?;
                 let body = parse_term(&mut script.arena, sexpr_at(items, 4)?, &aliases)?;
+                let body_sort = script.arena.sort_of(body);
+                if body_sort != declared_sort {
+                    return Err(SmtError::Ir(axeyum_ir::IrError::SortsDiffer(
+                        declared_sort,
+                        body_sort,
+                    )));
+                }
                 aliases.insert(name.to_owned(), body);
             }
             "assert" => {
+                exact_len(items, 2, head)?;
                 let t = parse_term(&mut script.arena, sexpr_at(items, 1)?, &aliases)?;
                 script.assertions.push(t);
             }
@@ -111,6 +135,18 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
         }
     }
     Ok(script)
+}
+
+fn exact_len(items: &[SExpr], expected: usize, head: &str) -> Result<(), SmtError> {
+    if items.len() == expected {
+        Ok(())
+    } else {
+        Err(SmtError::Syntax(format!(
+            "`{head}` expects {} arguments, got {}",
+            expected.saturating_sub(1),
+            items.len().saturating_sub(1)
+        )))
+    }
 }
 
 fn atom_at(items: &[SExpr], i: usize) -> Result<&str, SmtError> {
@@ -181,6 +217,7 @@ fn parse_term(
                         continue;
                     }
                     if head.atom() == Some("let") {
+                        exact_len(items, 3, "let")?;
                         let bindings = items
                             .get(1)
                             .and_then(SExpr::list)
@@ -197,6 +234,13 @@ fn parse_term(
                                     .atom()
                                     .ok_or_else(|| SmtError::Syntax("let name".to_owned()))?,
                             );
+                        }
+                        for (i, name) in names.iter().enumerate() {
+                            if names[..i].contains(name) {
+                                return Err(SmtError::Syntax(format!(
+                                    "duplicate let binding `{name}`"
+                                )));
+                            }
                         }
                         // Evaluate binding values, then bind, then the body.
                         frames.push(Frame::BindLet { names, body });
@@ -231,9 +275,14 @@ fn parse_term(
             }
         }
     }
-    results
-        .pop()
-        .ok_or_else(|| SmtError::Syntax("empty term".to_owned()))
+    if results.len() == 1 {
+        Ok(results.pop().expect("one result"))
+    } else {
+        Err(SmtError::Syntax(format!(
+            "term conversion produced {} results",
+            results.len()
+        )))
+    }
 }
 
 fn parse_atom(
@@ -431,6 +480,17 @@ fn apply_parameterized(
         .get(1)
         .and_then(SExpr::atom)
         .ok_or_else(|| SmtError::Syntax("indexed operator name".to_owned()))?;
+    let expect_head_len = |n: usize| -> Result<(), SmtError> {
+        if head.len() == n {
+            Ok(())
+        } else {
+            Err(SmtError::Syntax(format!(
+                "`{name}` expects {} indices, got {}",
+                n.saturating_sub(2),
+                head.len().saturating_sub(2)
+            )))
+        }
+    };
     let index = |i: usize| -> Result<u32, SmtError> {
         head.get(i)
             .and_then(SExpr::atom)
@@ -438,12 +498,28 @@ fn apply_parameterized(
             .ok_or_else(|| SmtError::Syntax(format!("`{name}` index {i}")))
     };
     Ok(match name {
-        "extract" => arena.extract(index(2)?, index(3)?, args[0])?,
-        "zero_extend" => arena.zero_ext(index(2)?, args[0])?,
-        "sign_extend" => arena.sign_ext(index(2)?, args[0])?,
-        "rotate_left" => arena.rotate_left(index(2)?, args[0])?,
-        "rotate_right" => arena.rotate_right(index(2)?, args[0])?,
+        "extract" => {
+            expect_head_len(4)?;
+            arena.extract(index(2)?, index(3)?, args[0])?
+        }
+        "zero_extend" => {
+            expect_head_len(3)?;
+            arena.zero_ext(index(2)?, args[0])?
+        }
+        "sign_extend" => {
+            expect_head_len(3)?;
+            arena.sign_ext(index(2)?, args[0])?
+        }
+        "rotate_left" => {
+            expect_head_len(3)?;
+            arena.rotate_left(index(2)?, args[0])?
+        }
+        "rotate_right" => {
+            expect_head_len(3)?;
+            arena.rotate_right(index(2)?, args[0])?
+        }
         "repeat" => {
+            expect_head_len(3)?;
             let n = index(2)?;
             if n == 0 {
                 return Err(SmtError::Syntax("`repeat` index must be >= 1".to_owned()));
