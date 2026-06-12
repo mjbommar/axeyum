@@ -1,7 +1,7 @@
 # Decision Records
 
 Status: draft
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
 ## Purpose
 
@@ -57,3 +57,7 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0001](adr-0001-vertical-slice-first.md) | Vertical slice before horizontal layers | accepted |
 | [0002](adr-0002-ground-up-identity-oracle-bootstrap.md) | Ground-up identity, oracle as bootstrap scaffolding | accepted |
 | [0003](adr-0003-m0-ir-representation.md) | M0 IR representation choices | accepted |
+| [0004](adr-0004-defer-second-native-backend.md) | Defer the second native backend | accepted |
+| [0005](adr-0005-phase3-query-evidence-rewrite-contracts.md) | Phase 3 query, evidence, and rewrite contracts | accepted |
+| [0006](adr-0006-phase4-bit-order-and-lowering-entry-contract.md) | Phase 4 bit order and lowering entry contract | accepted |
+| [0007](adr-0007-first-pure-rust-sat-adapter.md) | First pure Rust SAT adapter | accepted |

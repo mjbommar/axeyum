@@ -1,0 +1,24 @@
+[package]
+name = "axeyum-cnf"
+description = "CNF layer for Axeyum: Tseitin encoding, DIMACS I/O, evaluation, and lift maps"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[dependencies]
+axeyum-aig.workspace = true
+rustsat.workspace = true
+rustsat-batsat.workspace = true
+
+[dev-dependencies]
+axeyum-bv.workspace = true
+axeyum-ir.workspace = true
+
+[lints]
+workspace = true

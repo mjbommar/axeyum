@@ -38,6 +38,13 @@ pub enum IrError {
     },
     /// A `concat` result would exceed `MAX_BV_WIDTH` (ADR-0003).
     ConcatTooWide(u32),
+    /// A bit slice length does not match the requested sort or conversion.
+    BitCountMismatch {
+        /// Expected number of bits.
+        expected: u32,
+        /// Actual number of bits.
+        found: usize,
+    },
     /// A symbol name was redeclared with a different sort.
     SymbolSortConflict {
         /// The conflicting symbol name.
@@ -68,6 +75,9 @@ impl core::fmt::Display for IrError {
                 write!(f, "extract [{hi}:{lo}] out of range for width {width}")
             }
             IrError::ConcatTooWide(w) => write!(f, "concat result width {w} exceeds maximum"),
+            IrError::BitCountMismatch { expected, found } => {
+                write!(f, "expected {expected} bits, found {found}")
+            }
             IrError::SymbolSortConflict {
                 name,
                 existing,

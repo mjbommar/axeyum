@@ -24,11 +24,14 @@ quantifier-free corner.
    state.
 2. Work against the current roadmap phase and its exit criteria:
    [docs/research/08-planning/roadmap.md](docs/research/08-planning/roadmap.md).
-3. Decisions are not made silently in code. Check
+3. Before adding public operators, rewrites, encodings, backends, evidence
+   artifacts, or logic fragments, check the foundational dependency DAG:
+   [docs/research/08-planning/foundational-dag.md](docs/research/08-planning/foundational-dag.md).
+4. Decisions are not made silently in code. Check
    [docs/research/08-planning/research-questions.md](docs/research/08-planning/research-questions.md)
    and [docs/research/09-decisions/](docs/research/09-decisions/README.md);
    close questions with ADRs (template in the decisions README).
-4. Before ending a session: update PLAN.md's **Status** and **Next Actions**
+5. Before ending a session: update PLAN.md's **Status** and **Next Actions**
    sections.
 
 ## Commands
@@ -36,6 +39,9 @@ quantifier-free corner.
 ```sh
 just check          # fmt + clippy + test + doc + docs link check (preferred)
 just bench-micro    # committed SMT-LIB micro corpus through axeyum-bench
+just bench-public-qfbv-sat-bv-compare  # Phase 5 public sat-bv vs Z3 slice
+just bench-public-qfbv-sat-bv-guarded  # Phase 5 node/CNF guarded run
+just bench-public-qfbv-sat-bv-replay-refine  # replay-checked query refinement
 cargo fmt --all --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features
@@ -49,13 +55,25 @@ check. Edition 2024, resolver 3.
 
 ## Layout
 
-- `crates/axeyum-ir` — sorts, terms, arena/interning, ground evaluator.
+- `crates/axeyum-ir` — sorts, terms, arena/interning, ground evaluator,
+  LSB-first value/bit conversion helpers.
+- `crates/axeyum-aig` — AIG circuit graph with deterministic structural
+  hashing, evaluation, and ASCII AIGER debug export.
+- `crates/axeyum-bv` — term-to-AIG bit lowering with explicit term-bit and
+  symbol-input maps for the supported Bool/BV operator subset.
+- `crates/axeyum-cnf` — simple Tseitin encoding from AIG, DIMACS I/O, CNF
+  evaluation, BatSat-backed solving, and CNF-variable-to-AIG replay maps.
+- `crates/axeyum-query` — query object: assertions, assumptions, scopes,
+  stable labels.
+- `crates/axeyum-rewrite` — rewrite manifest contracts and the first
+  denotation-preserving canonicalizer.
 - `crates/axeyum-solver` — backend trait, results, models, capabilities;
-  native backends behind feature flags (`z3` arrives with milestone M0).
+  default pure Rust SAT-backed BV backend plus native backends behind feature
+  flags (`z3` is the oracle path).
 - `crates/axeyum-smtlib` — SMT-LIB benchmark-slice parser and
   sharing-preserving writer.
-- `crates/axeyum-bench` — corpus benchmark harness with PAR-2 scoring,
-  model replay, and JSON artifacts.
+- `crates/axeyum-bench` — corpus benchmark harness with backend selection,
+  PAR-2 scoring, model replay, and JSON artifacts.
 - `docs/research/` — research notes; the design rationale for everything.
   Folder map in [docs/research/README.md](docs/research/README.md).
 - `references/` — gitignored shallow clones of reference solvers/checkers;
@@ -63,7 +81,11 @@ check. Edition 2024, resolver 3.
   (e.g. CaDiCaL for clause arenas, varisat for Rust CDCL + proof output).
 - Crate split is deliberately minimal (ADR-0001): add crates only after a
   boundary is proven by use (`axeyum-smtlib` and `axeyum-bench` are such
-  exercised boundaries).
+  exercised boundaries; `axeyum-query` and `axeyum-rewrite` are the Phase 3
+  contract boundaries accepted in ADR-0005; `axeyum-aig`, `axeyum-bv`, and
+  `axeyum-cnf` are the Phase 4 circuit/lowering/CNF boundaries accepted in
+  ADR-0006; `rustsat-batsat` is the first pure-Rust SAT adapter accepted in
+  ADR-0007).
 - The pure Rust stack including a custom CDCL SAT core is the product; the
   Z3 oracle is bootstrap scaffolding with a planned demotion path
   (ADR-0002). Never expand reliance on linked solvers beyond
@@ -75,6 +97,9 @@ check. Edition 2024, resolver 3.
   backends are feature-gated leaf dependencies only.
 - `unsafe_code` is denied workspace-wide (workspace lints); exceptions need
   an ADR.
+- Semantics, model/proof lifting, and replay/checker routes must be explicit
+  before a new operator, rewrite class, encoding, backend, or logic fragment
+  becomes public surface.
 - `unknown` is a first-class solver result, never an error.
 - Determinism is a public API promise: stable iteration order, explicit
   seeds, explicit resource limits. No hash-map iteration order in output.
@@ -94,6 +119,9 @@ check. Edition 2024, resolver 3.
 - varisat is effectively unmaintained (last release 2019) but is the only
   Rust SAT solver with DRAT/LRAT proof output; treat it as a design reference
   and benchmark candidate, not a guaranteed dependency.
+- The first pure-Rust SAT adapter is `rustsat-batsat` through RustSAT
+  (ADR-0007). Its UNSAT results are lower-assurance until a proof-producing
+  route and checker exist.
 - The custom CDCL core is settled identity (ADR-0002) but its *priority* is
   gated by
   [docs/research/08-planning/benchmarking-and-performance-methodology.md](docs/research/08-planning/benchmarking-and-performance-methodology.md);

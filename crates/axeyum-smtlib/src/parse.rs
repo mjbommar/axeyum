@@ -39,102 +39,174 @@ pub struct Script {
 pub fn parse_script(input: &str) -> Result<Script, SmtError> {
     let exprs = read_all(input)?;
     let mut script = Script::default();
-    // 0-ary define-fun aliases, by name.
     let mut aliases: HashMap<String, TermId> = HashMap::new();
+    let mut macros: HashMap<String, MacroDef<'_>> = HashMap::new();
 
     for command in &exprs {
-        let items = command
-            .list()
-            .ok_or_else(|| SmtError::Syntax("top-level atom".to_owned()))?;
-        let head = items
-            .first()
-            .and_then(SExpr::atom)
-            .ok_or_else(|| SmtError::Syntax("empty command".to_owned()))?;
-        match head {
-            "set-logic" => {
-                exact_len(items, 2, head)?;
-                script.logic = items.get(1).and_then(SExpr::atom).map(str::to_owned);
-            }
-            "set-info" => {
-                exact_len(items, 3, head)?;
-                if items.get(1).and_then(SExpr::atom) == Some(":status") {
-                    script.status = items.get(2).and_then(SExpr::atom).map(str::to_owned);
-                }
-            }
-            "set-option" => {
-                exact_len(items, 3, head)?;
-            }
-            "get-model" | "exit" => {
-                exact_len(items, 1, head)?;
-            }
-            "get-info" => {
-                exact_len(items, 2, head)?;
-            }
-            "check-sat-assuming" => {
-                return Err(SmtError::Unsupported("check-sat-assuming".to_owned()));
-            }
-            "check-sat" => {
-                exact_len(items, 1, head)?;
-                script.check_sats += 1;
-            }
-            "declare-fun" => {
-                exact_len(items, 4, head)?;
-                let name = atom_at(items, 1)?;
-                let args = items
-                    .get(2)
-                    .and_then(SExpr::list)
-                    .ok_or_else(|| SmtError::Syntax("declare-fun args".to_owned()))?;
-                if !args.is_empty() {
-                    return Err(SmtError::Unsupported(format!(
-                        "uninterpreted function `{name}` with arguments"
-                    )));
-                }
-                let sort = parse_sort(sexpr_at(items, 3)?)?;
-                script.arena.declare(name, sort)?;
-            }
-            "declare-const" => {
-                exact_len(items, 3, head)?;
-                let name = atom_at(items, 1)?;
-                let sort = parse_sort(sexpr_at(items, 2)?)?;
-                script.arena.declare(name, sort)?;
-            }
-            "define-fun" => {
-                exact_len(items, 5, head)?;
-                let name = atom_at(items, 1)?;
-                let args = items
-                    .get(2)
-                    .and_then(SExpr::list)
-                    .ok_or_else(|| SmtError::Syntax("define-fun args".to_owned()))?;
-                if !args.is_empty() {
-                    return Err(SmtError::Unsupported(format!(
-                        "define-fun `{name}` with arguments"
-                    )));
-                }
-                let declared_sort = parse_sort(sexpr_at(items, 3)?)?;
-                let body = parse_term(&mut script.arena, sexpr_at(items, 4)?, &aliases)?;
-                let body_sort = script.arena.sort_of(body);
-                if body_sort != declared_sort {
-                    return Err(SmtError::Ir(axeyum_ir::IrError::SortsDiffer(
-                        declared_sort,
-                        body_sort,
-                    )));
-                }
-                aliases.insert(name.to_owned(), body);
-            }
-            "assert" => {
-                exact_len(items, 2, head)?;
-                let t = parse_term(&mut script.arena, sexpr_at(items, 1)?, &aliases)?;
-                script.assertions.push(t);
-            }
-            "push" | "pop" => {
-                return Err(SmtError::Unsupported(format!(
-                    "incremental command `{head}`"
-                )));
-            }
-            other => return Err(SmtError::Unsupported(format!("command `{other}`"))),
-        }
+        parse_command(&mut script, &mut aliases, &mut macros, command)?;
     }
     Ok(script)
+}
+
+fn parse_command<'a>(
+    script: &mut Script,
+    aliases: &mut HashMap<String, TermId>,
+    macros: &mut HashMap<String, MacroDef<'a>>,
+    command: &'a SExpr,
+) -> Result<(), SmtError> {
+    let items = command
+        .list()
+        .ok_or_else(|| SmtError::Syntax("top-level atom".to_owned()))?;
+    let head = items
+        .first()
+        .and_then(SExpr::atom)
+        .ok_or_else(|| SmtError::Syntax("empty command".to_owned()))?;
+    match head {
+        "set-logic" => {
+            exact_len(items, 2, head)?;
+            script.logic = items.get(1).and_then(SExpr::atom).map(str::to_owned);
+        }
+        "set-info" => {
+            exact_len(items, 3, head)?;
+            if items.get(1).and_then(SExpr::atom) == Some(":status") {
+                script.status = items.get(2).and_then(SExpr::atom).map(str::to_owned);
+            }
+        }
+        "set-option" => exact_len(items, 3, head)?,
+        "get-model" | "exit" => exact_len(items, 1, head)?,
+        "get-info" => exact_len(items, 2, head)?,
+        "check-sat-assuming" => {
+            return Err(SmtError::Unsupported("check-sat-assuming".to_owned()));
+        }
+        "check-sat" => {
+            exact_len(items, 1, head)?;
+            script.check_sats += 1;
+        }
+        "declare-fun" => parse_declare_fun(script, items)?,
+        "declare-const" => parse_declare_const(script, items)?,
+        "define-fun" => parse_define_fun(script, aliases, macros, items)?,
+        "assert" => {
+            exact_len(items, 2, head)?;
+            let t = parse_term(&mut script.arena, sexpr_at(items, 1)?, aliases, macros)?;
+            script.assertions.push(t);
+        }
+        "push" | "pop" => {
+            return Err(SmtError::Unsupported(format!(
+                "incremental command `{head}`"
+            )));
+        }
+        other => return Err(SmtError::Unsupported(format!("command `{other}`"))),
+    }
+    Ok(())
+}
+
+fn parse_declare_fun(script: &mut Script, items: &[SExpr]) -> Result<(), SmtError> {
+    exact_len(items, 4, "declare-fun")?;
+    let name = atom_at(items, 1)?;
+    let args = items
+        .get(2)
+        .and_then(SExpr::list)
+        .ok_or_else(|| SmtError::Syntax("declare-fun args".to_owned()))?;
+    if !args.is_empty() {
+        return Err(SmtError::Unsupported(format!(
+            "uninterpreted function `{name}` with arguments"
+        )));
+    }
+    let sort = parse_sort(sexpr_at(items, 3)?)?;
+    script.arena.declare(name, sort)?;
+    Ok(())
+}
+
+fn parse_declare_const(script: &mut Script, items: &[SExpr]) -> Result<(), SmtError> {
+    exact_len(items, 3, "declare-const")?;
+    let name = atom_at(items, 1)?;
+    let sort = parse_sort(sexpr_at(items, 2)?)?;
+    script.arena.declare(name, sort)?;
+    Ok(())
+}
+
+fn parse_define_fun<'a>(
+    script: &mut Script,
+    aliases: &mut HashMap<String, TermId>,
+    macros: &mut HashMap<String, MacroDef<'a>>,
+    items: &'a [SExpr],
+) -> Result<(), SmtError> {
+    exact_len(items, 5, "define-fun")?;
+    let name = atom_at(items, 1)?;
+    let args = items
+        .get(2)
+        .and_then(SExpr::list)
+        .ok_or_else(|| SmtError::Syntax("define-fun args".to_owned()))?;
+    let declared_sort = parse_sort(sexpr_at(items, 3)?)?;
+    let body_expr = sexpr_at(items, 4)?;
+    if args.is_empty() {
+        parse_define_fun_alias(script, aliases, macros, name, declared_sort, body_expr)
+    } else {
+        macros.insert(
+            name.to_owned(),
+            MacroDef {
+                params: parse_params(args)?,
+                result_sort: declared_sort,
+                body: body_expr,
+            },
+        );
+        Ok(())
+    }
+}
+
+fn parse_define_fun_alias(
+    script: &mut Script,
+    aliases: &mut HashMap<String, TermId>,
+    macros: &HashMap<String, MacroDef<'_>>,
+    name: &str,
+    declared_sort: Sort,
+    body_expr: &SExpr,
+) -> Result<(), SmtError> {
+    let body = parse_term(&mut script.arena, body_expr, aliases, macros)?;
+    let body_sort = script.arena.sort_of(body);
+    if body_sort != declared_sort {
+        return Err(SmtError::Ir(axeyum_ir::IrError::SortsDiffer(
+            declared_sort,
+            body_sort,
+        )));
+    }
+    aliases.insert(name.to_owned(), body);
+    Ok(())
+}
+
+#[derive(Clone, Copy)]
+struct Param<'a> {
+    name: &'a str,
+    sort: Sort,
+}
+
+struct MacroDef<'a> {
+    params: Vec<Param<'a>>,
+    result_sort: Sort,
+    body: &'a SExpr,
+}
+
+fn parse_params(args: &[SExpr]) -> Result<Vec<Param<'_>>, SmtError> {
+    let mut params = Vec::with_capacity(args.len());
+    for arg in args {
+        let pair = arg
+            .list()
+            .filter(|p| p.len() == 2)
+            .ok_or_else(|| SmtError::Syntax("define-fun parameter".to_owned()))?;
+        let name = pair[0]
+            .atom()
+            .ok_or_else(|| SmtError::Syntax("define-fun parameter name".to_owned()))?;
+        if params.iter().any(|p: &Param<'_>| p.name == name) {
+            return Err(SmtError::Syntax(format!(
+                "duplicate define-fun parameter `{name}`"
+            )));
+        }
+        params.push(Param {
+            name,
+            sort: parse_sort(&pair[1])?,
+        });
+    }
+    Ok(params)
 }
 
 fn exact_len(items: &[SExpr], expected: usize, head: &str) -> Result<(), SmtError> {
@@ -185,6 +257,10 @@ enum Frame<'a> {
     Eval(&'a SExpr),
     /// Pop `argc` results and apply the operator list.
     Apply { items: &'a [SExpr], argc: usize },
+    /// Pop `argc` results and expand a parameterized `define-fun` body.
+    ApplyMacro { name: &'a str, argc: usize },
+    /// Check the sort of the most recent result.
+    CheckSort { expected: Sort, context: &'a str },
     /// Pop one binding scope after a `let` body finishes.
     PopScope,
     /// Pop `count` evaluated binding values, bind them, then queue the body.
@@ -194,79 +270,47 @@ enum Frame<'a> {
     },
 }
 
-fn parse_term(
+fn parse_term<'a>(
     arena: &mut TermArena,
-    root: &SExpr,
+    root: &'a SExpr,
     aliases: &HashMap<String, TermId>,
+    macros: &HashMap<String, MacroDef<'a>>,
 ) -> Result<TermId, SmtError> {
     let mut frames: Vec<Frame> = vec![Frame::Eval(root)];
     let mut results: Vec<TermId> = Vec::new();
-    let mut scopes: Vec<HashMap<&str, TermId>> = Vec::new();
+    let mut scopes: Vec<HashMap<&'a str, TermId>> = Vec::new();
 
     while let Some(frame) = frames.pop() {
         match frame {
-            Frame::Eval(e) => match e {
-                SExpr::Atom(a) => results.push(parse_atom(arena, a, aliases, &scopes)?),
-                SExpr::List(items) => {
-                    let head = items
-                        .first()
-                        .ok_or_else(|| SmtError::Syntax("empty application".to_owned()))?;
-                    // Indexed constant (_ bvN w) is a complete term.
-                    if head.atom() == Some("_") {
-                        results.push(parse_indexed_constant(arena, items)?);
-                        continue;
-                    }
-                    if head.atom() == Some("let") {
-                        exact_len(items, 3, "let")?;
-                        let bindings = items
-                            .get(1)
-                            .and_then(SExpr::list)
-                            .ok_or_else(|| SmtError::Syntax("let bindings".to_owned()))?;
-                        let body = sexpr_at(items, 2)?;
-                        let mut names = Vec::with_capacity(bindings.len());
-                        for b in bindings {
-                            let pair = b
-                                .list()
-                                .filter(|p| p.len() == 2)
-                                .ok_or_else(|| SmtError::Syntax("let binding pair".to_owned()))?;
-                            names.push(
-                                pair[0]
-                                    .atom()
-                                    .ok_or_else(|| SmtError::Syntax("let name".to_owned()))?,
-                            );
-                        }
-                        for (i, name) in names.iter().enumerate() {
-                            if names[..i].contains(name) {
-                                return Err(SmtError::Syntax(format!(
-                                    "duplicate let binding `{name}`"
-                                )));
-                            }
-                        }
-                        // Evaluate binding values, then bind, then the body.
-                        frames.push(Frame::BindLet { names, body });
-                        for b in bindings.iter().rev() {
-                            frames.push(Frame::Eval(&b.list().expect("checked")[1]));
-                        }
-                        continue;
-                    }
-                    let argc = items.len() - 1;
-                    frames.push(Frame::Apply { items, argc });
-                    for child in items[1..].iter().rev() {
-                        frames.push(Frame::Eval(child));
-                    }
-                }
-            },
+            Frame::Eval(e) => queue_eval(
+                arena,
+                e,
+                aliases,
+                macros,
+                &scopes,
+                &mut frames,
+                &mut results,
+            )?,
             Frame::Apply { items, argc } => {
                 let args = results.split_off(results.len() - argc);
                 results.push(apply_op(arena, items, &args)?);
             }
+            Frame::ApplyMacro { name, argc } => {
+                queue_macro_expansion(
+                    arena,
+                    macros,
+                    &mut scopes,
+                    &mut frames,
+                    &mut results,
+                    name,
+                    argc,
+                )?;
+            }
+            Frame::CheckSort { expected, context } => {
+                check_recent_sort(arena, &results, expected, context)?;
+            }
             Frame::BindLet { names, body } => {
-                let values = results.split_off(results.len() - names.len());
-                let mut scope = HashMap::new();
-                for (name, value) in names.into_iter().zip(values) {
-                    scope.insert(name, value);
-                }
-                scopes.push(scope);
+                bind_let_scope(&mut scopes, &mut results, names);
                 frames.push(Frame::PopScope);
                 frames.push(Frame::Eval(body));
             }
@@ -283,6 +327,176 @@ fn parse_term(
             results.len()
         )))
     }
+}
+
+fn queue_eval<'a>(
+    arena: &mut TermArena,
+    expr: &'a SExpr,
+    aliases: &HashMap<String, TermId>,
+    macros: &HashMap<String, MacroDef<'a>>,
+    scopes: &[HashMap<&'a str, TermId>],
+    frames: &mut Vec<Frame<'a>>,
+    results: &mut Vec<TermId>,
+) -> Result<(), SmtError> {
+    match expr {
+        SExpr::Atom(a) => results.push(parse_atom(arena, a, aliases, scopes)?),
+        SExpr::List(items) => queue_list_eval(arena, items, macros, frames, results)?,
+    }
+    Ok(())
+}
+
+fn queue_list_eval<'a>(
+    arena: &mut TermArena,
+    items: &'a [SExpr],
+    macros: &HashMap<String, MacroDef<'a>>,
+    frames: &mut Vec<Frame<'a>>,
+    results: &mut Vec<TermId>,
+) -> Result<(), SmtError> {
+    let head = items
+        .first()
+        .ok_or_else(|| SmtError::Syntax("empty application".to_owned()))?;
+    if head.atom() == Some("_") {
+        results.push(parse_indexed_constant(arena, items)?);
+    } else if head.atom() == Some("let") {
+        queue_let(items, frames)?;
+    } else if let Some(name) = head.atom()
+        && macros.contains_key(name)
+    {
+        queue_children(
+            items,
+            frames,
+            Frame::ApplyMacro {
+                name,
+                argc: items.len() - 1,
+            },
+        );
+    } else {
+        queue_children(
+            items,
+            frames,
+            Frame::Apply {
+                items,
+                argc: items.len() - 1,
+            },
+        );
+    }
+    Ok(())
+}
+
+fn queue_children<'a>(items: &'a [SExpr], frames: &mut Vec<Frame<'a>>, apply: Frame<'a>) {
+    frames.push(apply);
+    for child in items[1..].iter().rev() {
+        frames.push(Frame::Eval(child));
+    }
+}
+
+fn queue_let<'a>(items: &'a [SExpr], frames: &mut Vec<Frame<'a>>) -> Result<(), SmtError> {
+    exact_len(items, 3, "let")?;
+    let bindings = items
+        .get(1)
+        .and_then(SExpr::list)
+        .ok_or_else(|| SmtError::Syntax("let bindings".to_owned()))?;
+    let body = sexpr_at(items, 2)?;
+    let names = parse_let_names(bindings)?;
+    frames.push(Frame::BindLet { names, body });
+    for b in bindings.iter().rev() {
+        frames.push(Frame::Eval(&b.list().expect("checked")[1]));
+    }
+    Ok(())
+}
+
+fn parse_let_names(bindings: &[SExpr]) -> Result<Vec<&str>, SmtError> {
+    let mut names = Vec::with_capacity(bindings.len());
+    for binding in bindings {
+        let pair = binding
+            .list()
+            .filter(|p| p.len() == 2)
+            .ok_or_else(|| SmtError::Syntax("let binding pair".to_owned()))?;
+        names.push(
+            pair[0]
+                .atom()
+                .ok_or_else(|| SmtError::Syntax("let name".to_owned()))?,
+        );
+    }
+    for (i, name) in names.iter().enumerate() {
+        if names[..i].contains(name) {
+            return Err(SmtError::Syntax(format!("duplicate let binding `{name}`")));
+        }
+    }
+    Ok(names)
+}
+
+fn queue_macro_expansion<'a>(
+    arena: &TermArena,
+    macros: &HashMap<String, MacroDef<'a>>,
+    scopes: &mut Vec<HashMap<&'a str, TermId>>,
+    frames: &mut Vec<Frame<'a>>,
+    results: &mut Vec<TermId>,
+    name: &'a str,
+    arity: usize,
+) -> Result<(), SmtError> {
+    let actuals = results.split_off(results.len() - arity);
+    let def = macros
+        .get(name)
+        .ok_or_else(|| SmtError::Unsupported(format!("operator `{name}`")))?;
+    if actuals.len() != def.params.len() {
+        return Err(SmtError::Syntax(format!(
+            "`{name}` expects {} arguments, got {}",
+            def.params.len(),
+            actuals.len()
+        )));
+    }
+    let mut scope = HashMap::new();
+    for (param, arg) in def.params.iter().zip(actuals) {
+        let actual = arena.sort_of(arg);
+        if actual != param.sort {
+            return Err(SmtError::Ir(axeyum_ir::IrError::SortsDiffer(
+                param.sort, actual,
+            )));
+        }
+        scope.insert(param.name, arg);
+    }
+    scopes.push(scope);
+    frames.push(Frame::PopScope);
+    frames.push(Frame::CheckSort {
+        expected: def.result_sort,
+        context: name,
+    });
+    frames.push(Frame::Eval(def.body));
+    Ok(())
+}
+
+fn check_recent_sort(
+    arena: &TermArena,
+    results: &[TermId],
+    expected: Sort,
+    context: &str,
+) -> Result<(), SmtError> {
+    let Some(&term) = results.last() else {
+        return Err(SmtError::Syntax(format!(
+            "`{context}` body produced no result"
+        )));
+    };
+    let actual = arena.sort_of(term);
+    if actual != expected {
+        return Err(SmtError::Ir(axeyum_ir::IrError::SortsDiffer(
+            expected, actual,
+        )));
+    }
+    Ok(())
+}
+
+fn bind_let_scope<'a>(
+    scopes: &mut Vec<HashMap<&'a str, TermId>>,
+    results: &mut Vec<TermId>,
+    names: Vec<&'a str>,
+) {
+    let values = results.split_off(results.len() - names.len());
+    let mut scope = HashMap::new();
+    for (name, value) in names.into_iter().zip(values) {
+        scope.insert(name, value);
+    }
+    scopes.push(scope);
 }
 
 fn parse_atom(
@@ -403,9 +617,23 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
             acc
         }
         "distinct" => {
-            need(2)?;
-            let e = arena.eq(args[0], args[1])?;
-            arena.not(e)?
+            if args.len() < 2 {
+                return Err(SmtError::Syntax(
+                    "`distinct` expects >= 2 arguments".to_owned(),
+                ));
+            }
+            let mut acc = None;
+            for i in 0..args.len() {
+                for j in i + 1..args.len() {
+                    let e = arena.eq(args[i], args[j])?;
+                    let ne = arena.not(e)?;
+                    acc = Some(match acc {
+                        Some(prev) => arena.and(prev, ne)?,
+                        None => ne,
+                    });
+                }
+            }
+            acc.expect("args length checked")
         }
         "ite" => {
             need(3)?;

@@ -1,8 +1,13 @@
 [workspace]
 resolver = "3"
 members = [
+    "crates/axeyum-aig",
     "crates/axeyum-bench",
+    "crates/axeyum-bv",
+    "crates/axeyum-cnf",
+    "crates/axeyum-query",
     "crates/axeyum-ir",
+    "crates/axeyum-rewrite",
     "crates/axeyum-smtlib",
     "crates/axeyum-solver",
 ]
@@ -18,7 +23,13 @@ keywords = ["smt", "sat", "solver", "verification", "symbolic"]
 categories = ["science", "mathematics"]
 
 [workspace.dependencies]
+axeyum-aig = { path = "crates/axeyum-aig", version = "0.1.0" }
+axeyum-bv = { path = "crates/axeyum-bv", version = "0.1.0" }
+axeyum-cnf = { path = "crates/axeyum-cnf", version = "0.1.0" }
 axeyum-ir = { path = "crates/axeyum-ir", version = "0.1.0" }
+axeyum-query = { path = "crates/axeyum-query", version = "0.1.0" }
+rustsat = { version = "0.7.5", default-features = false }
+rustsat-batsat = { version = "0.7.5" }
 z3 = { version = "0.20", default-features = false }
 
 [workspace.lints.rust]

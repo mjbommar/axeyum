@@ -60,6 +60,29 @@ fn nary_and_parameterized_operators() {
 }
 
 #[test]
+fn nary_distinct_is_pairwise() {
+    let text = r"
+        (set-logic QF_BV)
+        (assert (distinct (_ bv0 4) (_ bv1 4) (_ bv2 4)))
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
+
+    let text = r"
+        (set-logic QF_BV)
+        (assert (distinct (_ bv0 4) (_ bv1 4) (_ bv0 4)))
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(false)
+    );
+}
+
+#[test]
 fn define_fun_aliases_expand() {
     let text = r"
         (set-logic QF_BV)
@@ -69,6 +92,50 @@ fn define_fun_aliases_expand() {
     ";
     let script = parse_script(text).unwrap();
     assert_eq!(script.assertions.len(), 1);
+}
+
+#[test]
+fn parameterized_define_fun_macros_expand_hygienically() {
+    let text = r"
+        (set-logic QF_BV)
+        (define-fun add1 ((x (_ BitVec 8))) (_ BitVec 8)
+            (bvadd x (_ bv1 8)))
+        (assert (= (add1 (_ bv3 8)) (_ bv4 8)))
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+    assert!(
+        script.arena.find_symbol("x").is_none(),
+        "macro parameters must not leak into global symbols"
+    );
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
+}
+
+#[test]
+fn parameterized_define_fun_checks_arity_and_sorts_at_call_sites() {
+    assert!(matches!(
+        parse_script(
+            r"
+            (set-logic QF_BV)
+            (define-fun is-zero ((x (_ BitVec 8))) Bool (= x (_ bv0 8)))
+            (assert (is-zero (_ bv0 8) (_ bv1 8)))
+            "
+        ),
+        Err(SmtError::Syntax(_))
+    ));
+    assert!(matches!(
+        parse_script(
+            r"
+            (set-logic QF_BV)
+            (define-fun is-zero ((x (_ BitVec 8))) Bool (= x (_ bv0 8)))
+            (assert (is-zero true))
+            "
+        ),
+        Err(SmtError::Ir(_))
+    ));
 }
 
 #[test]

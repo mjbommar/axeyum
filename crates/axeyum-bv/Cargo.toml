@@ -1,0 +1,19 @@
+[package]
+name = "axeyum-bv"
+description = "Bit-vector lowering for Axeyum: typed IR terms to AIG wires with lift maps"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[dependencies]
+axeyum-aig.workspace = true
+axeyum-ir.workspace = true
+
+[lints]
+workspace = true

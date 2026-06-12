@@ -3,6 +3,7 @@
 use std::time::Duration;
 
 use axeyum_ir::{TermArena, TermId};
+use axeyum_query::Query;
 
 use crate::model::Model;
 
@@ -45,6 +46,9 @@ pub enum UnknownKind {
     MemoryLimit,
     /// Translation node budget exceeded; the query was never submitted.
     NodeBudget,
+    /// CNF size budget exceeded; the query was lowered but not submitted to
+    /// the SAT adapter.
+    EncodingBudget,
     /// The procedure is incomplete for this query.
     Incomplete,
     /// Unclassified backend reason.
@@ -98,6 +102,16 @@ pub struct SolverConfig {
     /// [`UnknownKind::NodeBudget`] without being submitted (admission
     /// control, query-cost-control note).
     pub node_budget: Option<u64>,
+    /// Maximum CNF variables the backend may submit to the SAT adapter.
+    ///
+    /// Larger encodings return [`UnknownKind::EncodingBudget`] before SAT
+    /// solving starts.
+    pub cnf_variable_budget: Option<u64>,
+    /// Maximum CNF clauses the backend may submit to the SAT adapter.
+    ///
+    /// Larger encodings return [`UnknownKind::EncodingBudget`] before SAT
+    /// solving starts.
+    pub cnf_clause_budget: Option<u64>,
 }
 
 /// Layer-attributed measurements from the most recent check.
@@ -155,6 +169,25 @@ pub trait SolverBackend {
         assertions: &[TermId],
         config: &SolverConfig,
     ) -> Result<CheckResult, SolverError>;
+
+    /// Checks a first-class [`Query`].
+    ///
+    /// One-shot backends enforce active assumptions as ordinary assertions for
+    /// now. Incremental backends can override this method later to use native
+    /// assumption literals while preserving the same query semantics.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same errors as [`SolverBackend::check`].
+    fn check_query(
+        &mut self,
+        arena: &TermArena,
+        query: &Query,
+        config: &SolverConfig,
+    ) -> Result<CheckResult, SolverError> {
+        let assertions = query.solver_terms().collect::<Vec<_>>();
+        self.check(arena, &assertions, config)
+    }
 
     /// Layer-attributed measurements from the most recent `check`, if the
     /// backend records them. Telemetry is returned data, not logs

@@ -12,7 +12,10 @@ categories.workspace = true
 publish = false
 
 [dependencies]
+axeyum-bv.workspace = true
+axeyum-cnf.workspace = true
 axeyum-ir.workspace = true
+axeyum-query.workspace = true
 z3 = { workspace = true, optional = true }
 
 [features]
@@ -29,4 +32,5 @@ z3-static = ["z3", "z3/gh-release"]
 workspace = true
 
 [dev-dependencies]
+axeyum-rewrite = { path = "../axeyum-rewrite" }
 axeyum-smtlib = { path = "../axeyum-smtlib" }

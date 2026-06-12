@@ -61,6 +61,10 @@ QF_AUFBV
 - `Bool` and `BV(1)` should be distinct in the core, with explicit conversion ops.
 - Arrays should not be forced into the first SAT-only milestone.
 - Backends should advertise supported logics and feature capabilities.
+- Public support for a new rung follows the
+  [foundational DAG](../08-planning/foundational-dag.md): semantics source,
+  typed representation, evaluator/model story, backend capability, evidence
+  route, and corpus coverage.
 
 ## Risks
 
@@ -79,4 +83,3 @@ QF_AUFBV
 - SMT-LIB logics: https://smt-lib.org/logics.shtml
 - Boolector supported BV/array logics: https://github.com/Boolector/boolector
 - Bitwuzla documentation: https://bitwuzla.github.io/docs/
-

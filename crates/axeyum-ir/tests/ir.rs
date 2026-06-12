@@ -3,7 +3,10 @@
 //! Per the bv-semantics note, operators with edge cases are tested
 //! exhaustively at small widths, not just on sampled inputs.
 
-use axeyum_ir::{Assignment, IrError, Sort, TermArena, Value, eval};
+use axeyum_ir::{
+    Assignment, BIT_VECTOR_WIRE_ORDER, BitOrder, IrError, Sort, TermArena, Value,
+    bv_value_to_lsb_bits, eval, lsb_bits_to_bv_value, lsb_bits_to_value, value_to_lsb_bits,
+};
 
 fn bv(width: u32, value: u128) -> Value {
     Value::Bv { width, value }
@@ -107,6 +110,74 @@ fn extract_and_concat_bounds_are_static_errors() {
     assert!(matches!(
         a.sign_ext(u32::MAX, x),
         Err(IrError::ConcatTooWide(u32::MAX))
+    ));
+}
+
+#[test]
+fn lsb_first_bit_conversion_uses_numeric_bit_indices() {
+    assert_eq!(BIT_VECTOR_WIRE_ORDER, BitOrder::LsbFirst);
+    assert_eq!(
+        bv_value_to_lsb_bits(4, 0b1010).unwrap(),
+        vec![false, true, false, true],
+        "element i is SMT-LIB bit i with numeric weight 2^i"
+    );
+    assert_eq!(
+        value_to_lsb_bits(Value::Bool(true)).unwrap(),
+        vec![true],
+        "Bool lowers to one Boolean wire"
+    );
+    assert_eq!(
+        lsb_bits_to_bv_value(&[false, true, false, true]).unwrap(),
+        bv(4, 0b1010)
+    );
+}
+
+#[test]
+fn lsb_first_bit_conversion_round_trips_values() {
+    let cases = [
+        bv(1, 0),
+        bv(1, 1),
+        bv(3, 5),
+        bv(8, 0xa5),
+        bv(64, 0x8000_0000_0000_0001),
+        bv(128, u128::MAX),
+    ];
+    for value in cases {
+        let bits = value_to_lsb_bits(value).unwrap();
+        assert_eq!(lsb_bits_to_value(value.sort(), &bits).unwrap(), value);
+    }
+}
+
+#[test]
+fn lsb_first_bit_conversion_rejects_invalid_shapes() {
+    assert!(matches!(
+        bv_value_to_lsb_bits(0, 0),
+        Err(IrError::InvalidWidth(0))
+    ));
+    assert!(matches!(
+        bv_value_to_lsb_bits(4, 16),
+        Err(IrError::ValueOutOfRange {
+            width: 4,
+            value: 16
+        })
+    ));
+    assert!(matches!(
+        lsb_bits_to_bv_value(&[]),
+        Err(IrError::InvalidWidth(0))
+    ));
+    assert!(matches!(
+        lsb_bits_to_value(Sort::Bool, &[true, false]),
+        Err(IrError::BitCountMismatch {
+            expected: 1,
+            found: 2
+        })
+    ));
+    assert!(matches!(
+        lsb_bits_to_value(Sort::BitVec(4), &[true, false]),
+        Err(IrError::BitCountMismatch {
+            expected: 4,
+            found: 2
+        })
     ));
 }
 

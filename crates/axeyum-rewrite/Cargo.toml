@@ -1,0 +1,18 @@
+[package]
+name = "axeyum-rewrite"
+description = "Rewrite manifest contracts for Axeyum: rule IDs, preservation class, projection obligations, and tests"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[dependencies]
+axeyum-ir.workspace = true
+
+[lints]
+workspace = true

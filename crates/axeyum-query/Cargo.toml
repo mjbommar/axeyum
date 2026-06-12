@@ -1,0 +1,18 @@
+[package]
+name = "axeyum-query"
+description = "Query object for Axeyum: assertions, assumptions, scopes, and stable labels"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[dependencies]
+axeyum-ir.workspace = true
+
+[lints]
+workspace = true

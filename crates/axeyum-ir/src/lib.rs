@@ -31,6 +31,7 @@
 //! ```
 
 mod arena;
+mod bits;
 mod error;
 mod eval;
 mod fmt;
@@ -40,6 +41,10 @@ mod term;
 mod value;
 
 pub use arena::TermArena;
+pub use bits::{
+    BIT_VECTOR_WIRE_ORDER, BitOrder, bv_value_to_lsb_bits, lsb_bits_to_bv_value, lsb_bits_to_value,
+    value_to_lsb_bits,
+};
 pub use error::IrError;
 pub use eval::{Assignment, eval};
 pub use fmt::render;

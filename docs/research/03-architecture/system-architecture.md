@@ -65,6 +65,13 @@ client frontends
 - IDs should be compact and stable within arenas.
 - Query caches should key on normalized structure, not string-rendered formulas.
 - Backends should report capabilities and limits.
+- The first pure-Rust SAT adapter is `rustsat-batsat` through RustSAT; UNSAT
+  through that route is lower-assurance until proof logging and checking land
+  ([ADR-0007](../09-decisions/adr-0007-first-pure-rust-sat-adapter.md)).
+- The first composed pure Rust BV backend is `SatBvBackend` in
+  `axeyum-solver`: it lowers supported QF_BV queries through AIG and CNF,
+  solves with BatSat, reconstructs Axeyum models, and replays original terms
+  before accepting `sat`.
 
 ## Risks
 
@@ -74,12 +81,23 @@ client frontends
 ## Open Questions
 
 - [ ] Should `axeyum-core` contain shared IDs/results or should those live in `axeyum-ir`?
-- [ ] Should query planning be a separate crate from rewriting?
-- [ ] Should AIG be the first circuit representation or should the first backend lower directly to CNF?
+- [x] Should query planning be a separate crate from rewriting?
+  - Answer: yes for the Phase 3 contract boundary. `axeyum-query` owns
+    assertions, assumptions, scopes, stable labels, structural cache keys, and
+    replay-checked target-support slicing; `axeyum-rewrite` owns rewrite
+    manifests and canonicalization
+    ([ADR-0005](../09-decisions/adr-0005-phase3-query-evidence-rewrite-contracts.md)).
+- [x] Should AIG be the first circuit representation or should the first backend lower directly to CNF?
+  - Answer: AIG first, then simple Tseitin CNF, with explicit lift maps across
+    original terms, AIG literals, CNF variables, and SAT assignments; see
+    [ADR-0006](../09-decisions/adr-0006-phase4-bit-order-and-lowering-entry-contract.md).
+- [x] Which pure Rust SAT solver is the first adapter?
+  - Answer: `rustsat-batsat` through RustSAT; see
+    [ADR-0007](../09-decisions/adr-0007-first-pure-rust-sat-adapter.md).
 
 ## Source Pointers
 
 - Z3: https://github.com/Z3Prover/z3
 - Bitwuzla: https://bitwuzla.github.io/docs/
 - RustSAT: https://github.com/chrjabs/rustsat
-
+- BatSat: https://github.com/c-cube/batsat

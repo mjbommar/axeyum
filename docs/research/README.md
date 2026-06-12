@@ -22,9 +22,12 @@ losing context.
 5. [Rust ecosystem](02-ecosystems/rust-ecosystem.md)
 6. [System architecture](03-architecture/system-architecture.md)
 7. [Crate boundaries](03-architecture/crate-boundaries.md)
-8. [Roadmap](08-planning/roadmap.md)
-9. [Benchmarking and performance methodology](08-planning/benchmarking-and-performance-methodology.md)
-10. [Decision records](09-decisions/README.md)
+8. [Foundational logic and math DAG](08-planning/foundational-dag.md)
+9. [Roadmap](08-planning/roadmap.md)
+10. [Phase 3 exit audit](08-planning/phase3-exit-audit.md)
+11. [Phase 4 exit audit](08-planning/phase4-exit-audit.md)
+12. [Benchmarking and performance methodology](08-planning/benchmarking-and-performance-methodology.md)
+13. [Decision records](09-decisions/README.md)
 
 ## Folder Map
 
@@ -38,7 +41,7 @@ losing context.
 | `05-algorithms/` | Algorithms: rewriting, bit-blasting, CDCL SAT, arrays, EUF. |
 | `06-rust-strategy/` | Rust-specific implementation and performance principles. |
 | `07-verification/` | Evidence, checking, differential testing, and soundness strategy. |
-| `08-planning/` | Roadmap, benchmarking methodology, and open research questions. |
+| `08-planning/` | Foundational DAG, roadmap, phase audits, benchmarking methodology, and open research questions. |
 | `09-decisions/` | Decision records (ADRs) that close open questions. |
 | `templates/` | Templates for future research notes. |
 
@@ -73,6 +76,12 @@ External solvers remain important as oracles and high-performance backends, but
 the long-term research value comes from owning the lower layers cleanly enough
 to experiment with representations, algorithms, and evidence checking.
 
+The [foundational DAG](08-planning/foundational-dag.md) is the planning
+checklist for that ownership: every public operator, rewrite, encoding,
+backend, and later logic fragment needs a semantics source, a model/proof lift
+story, and a replay or checker route before it graduates from experiment to
+foundation.
+
 ## Open Questions
 
 - [x] Which crate layout should be implemented first?
@@ -84,15 +93,22 @@ to experiment with representations, algorithms, and evidence checking.
     ([ADR-0001](09-decisions/adr-0001-vertical-slice-first.md),
     [ADR-0002](09-decisions/adr-0002-ground-up-identity-oracle-bootstrap.md));
     Bitwuzla remains a later differential candidate.
-- [ ] Which pure Rust SAT backend should be evaluated first?
-  - Evaluate against the [benchmarking methodology](08-planning/benchmarking-and-performance-methodology.md);
-    varisat's proof output weighs in its favor for the evidence thesis, but it
-    is effectively unmaintained (last release 2019) — splr and rustsat are the
-    actively maintained alternatives.
+- [x] Which pure Rust SAT backend should be evaluated first?
+  - Answered: `rustsat-batsat` through RustSAT as the first CNF/SAT adapter
+    ([ADR-0007](09-decisions/adr-0007-first-pure-rust-sat-adapter.md));
+    varisat and splr remain design/reference and benchmark candidates.
+- [x] Which evidence envelope should carry model replay, lift maps, benchmark
+      provenance, and future proof artifacts?
+  - Answered: layered, versioned envelope with query/source provenance, logic
+    and semantics version, query schema, rule-set and later layer versions,
+    resource config, replay, projection/lift-map references, proof/checker
+    references, and separated triage
+    ([ADR-0005](09-decisions/adr-0005-phase3-query-evidence-rewrite-contracts.md)).
 
 ## Source Pointers
 
 - Z3: https://github.com/Z3Prover/z3
 - Bitwuzla: https://bitwuzla.github.io/docs/
 - RustSAT: https://github.com/chrjabs/rustsat
+- BatSat: https://github.com/c-cube/batsat
 - Lean: https://lean-lang.org/

@@ -16,6 +16,7 @@
 
 mod backend;
 mod model;
+mod sat_bv_backend;
 #[cfg(feature = "z3")]
 mod z3_backend;
 
@@ -24,5 +25,6 @@ pub use backend::{
     UnknownReason,
 };
 pub use model::Model;
+pub use sat_bv_backend::SatBvBackend;
 #[cfg(feature = "z3")]
 pub use z3_backend::Z3Backend;

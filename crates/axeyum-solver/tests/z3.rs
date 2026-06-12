@@ -7,6 +7,7 @@
 #![cfg(feature = "z3")]
 
 use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
+use axeyum_query::Query;
 use axeyum_solver::{CheckResult, SolverBackend, SolverConfig, SolverError, Z3Backend};
 
 fn check(arena: &TermArena, assertions: &[TermId]) -> CheckResult {
@@ -68,6 +69,29 @@ fn boolean_structure_solves() {
     let model = expect_sat_checked(&a, &[x, np]);
     assert_eq!(model.get(p_sym), Some(Value::Bool(false)));
     assert_eq!(model.get(q_sym), Some(Value::Bool(true)));
+}
+
+#[test]
+fn query_object_solves_assertions_and_assumptions() {
+    let mut a = TermArena::new();
+    let p = a.bool_var("p").unwrap();
+    let q = a.bool_var("q").unwrap();
+    let mut query = Query::builder(&a);
+    query.assert(p).unwrap();
+    query.assume(q).unwrap();
+    let query = query.build();
+    let mut backend = Z3Backend::new();
+
+    let CheckResult::Sat(model) = backend
+        .check_query(&a, &query, &SolverConfig::default())
+        .unwrap()
+    else {
+        panic!("expected sat");
+    };
+    let asg = model.to_assignment();
+    for term in query.solver_terms() {
+        assert_eq!(eval(&a, term, &asg).unwrap(), Value::Bool(true));
+    }
 }
 
 #[test]
