@@ -15,11 +15,22 @@ Identity in one sentence: **untrusted fast search, trusted small checking.**
 Every `sat` gets a model checked by evaluation; every `unsat` eventually gets
 a proof artifact or an independent oracle cross-check.
 
-North star: a **complete framework for general reasoning, logic, and
-proving**. The finite-domain core being built now is the foundation layer of
-that framework, not the destination — the expansion ladder runs through
-arithmetic, theory combination, quantifiers, and proof production
+North star: a **usable, ideally pareto-dominant system for constrained program
+optimization and software verification**, reached in three destinations:
+(1) **foundation** — the decidable + arithmetic core with checkable evidence
+(where we are now); (2) **complete solver replacement** — a drop-in Z3/cvc5-class
+SMT solver, gated on *performance on real corpora*, not theory breadth; (3)
+**Lean / angr as first-class functionality** — binary frontend + symbolic
+execution/emulation (angr/unicorn) and kernel-checkable proving + proof-assistant
+interop (Lean), as first-class capabilities, not consumers on top
 (see [north-star](docs/research/00-orientation/north-star.md)).
+
+**Honest status: we are at destination (1).** Not yet a solver replacement (the
+pure-Rust path decides only a small slice of real public QF_BV; performance is
+the open gate) and not yet Lean/angr-class (the symbolic-execution consumer is a
+test-only register VM). Identity in one sentence: **untrusted fast search,
+trusted small checking** — every `sat` is model-checked by evaluation, every
+`unsat` gets a proof artifact (DRAT/Farkas) or independent cross-check.
 
 Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/00-orientation/mission-and-scope.md)
 
@@ -1581,6 +1592,43 @@ Last updated: 2026-06-13
 ## Next Actions
 
 In order; check off and date as completed.
+
+### The road ahead (re-anchored on the real north star, 2026-06-13)
+
+Destination (1) **foundation** is built. The remaining destinations, in order:
+
+- [ ] **Destination 2 — complete solver replacement (the next big goal).**
+      The binding constraint is **performance on real corpora**, not theory
+      breadth. Concretely, in rough order:
+  - [ ] **Honest baseline first.** Write `docs` capability-and-performance gap
+        assessment vs an angr+Z3 baseline on a fixed public set; pick the
+        decided-instance count + PAR-2 as the headline metric. (Do NOT hand-wave
+        progress without this number.)
+  - [ ] **A real CDCL(T) loop** (theory propagation + cross-theory conflict
+        learning) replacing the current eager-eliminate-then-bit-blast
+        composition where it pays; plus the encoding/preprocessing and SAT-core
+        work the methodology gates on. Goal: decide *most* of a public QF_BV
+        family, not ~2 instances.
+  - [ ] **Theory breadth to SMT-LIB parity:** unbounded `LIA`/`LRA` (real
+        simplex + branch-and-bound, retiring bounded bit-blasting as the only
+        path), floating point, strings/sequences, datatypes, nonlinear; and
+        production quantifier instantiation (E-matching + MBQI).
+  - [ ] **Surface + validation:** full SMT-LIB 2 command set, scale incremental,
+        run SMT-COMP corpora (OOM-safely: `--jobs 1`, guarded budgets — see
+        memory `avoid-public-benchmark-runs`).
+- [ ] **Destination 3 — Lean / angr as first-class functionality.** After (2):
+  - [ ] **angr/unicorn class:** a binary/IR frontend (lift + CFG), a real memory
+        model, and symbolic execution + concrete emulation as first-class APIs
+        for constrained program optimization and verification (the current
+        register-VM consumer test is the *shape*, not the product).
+  - [ ] **Lean class:** grow the evidence envelope into kernel-checkable proof
+        terms + an independent Rust kernel; proof-assistant interop
+        (export obligations / import checked rules); then dependent-type proving.
+
+Everything below `### Foundation work (destination 1)` is the completed/ongoing
+foundation; the items above are the actual product trajectory.
+
+### Foundation work (destination 1)
 
 - [x] Review and accept (or amend) ADR-0001 — accepted 2026-06-10.
 - [x] Initial commit of `docs/` + `PLAN.md` — 2026-06-10.

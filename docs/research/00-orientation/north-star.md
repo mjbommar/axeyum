@@ -1,16 +1,32 @@
-# North Star: General Reasoning, Logic, And Proving
+# North Star: Solver Replacement, Then Lean / angr First-Class
 
 Status: draft
-Last updated: 2026-06-10
+Last updated: 2026-06-13
 
 ## Purpose
 
-Record the long-horizon goal — a complete framework for general reasoning,
-logic, and proving — so near-term scoping decisions (quantifier-free,
-finite-domain) are read as sequencing, not identity. This note maps the
-ladder from the current core to that goal and the 2026 landscape at each
-rung, so today's IR, solver-trait, and evidence decisions do not foreclose
-tomorrow's rungs.
+Record the long-horizon goal so near-term scoping (quantifier-free,
+finite-domain) is read as *sequencing*, not identity. The product goal is a
+**usable, ideally pareto-dominant system for constrained program optimization
+and software verification**, reached through three destinations in order:
+
+1. **Foundation** — the decidable finite-domain + arithmetic core with checkable
+   evidence (where the project is today).
+2. **Complete solver replacement** — a drop-in Z3/cvc5-class SMT solver: full
+   theory coverage *and* competitive performance.
+3. **Lean / angr as first-class functionality** — program analysis
+   (angr/unicorn: binary/IR frontend, memory model, symbolic execution +
+   emulation) and proof assistance (Lean: kernel-checkable proofs,
+   proof-assistant interop) as first-class capabilities, not consumers on top.
+
+This note maps the technical ladder from the current core to those destinations
+and the 2026 landscape at each rung, so today's IR, solver-trait, and evidence
+decisions do not foreclose tomorrow's rungs.
+
+**Where we are (2026-06-13):** destination 1. Not yet a solver replacement
+(performance on real corpora is the open gate, not theory breadth alone); not
+yet Lean/angr-class (the symbolic-execution consumer is a test-only register
+VM). Destinations 2 then 3 are the work ahead.
 
 ## Scope
 
@@ -57,6 +73,42 @@ Out of scope:
 | First-order proving | Saturation, superposition calculus. | Vampire (BSD-3; swept all 8 CASC-30 divisions in 2025), E (GPL2+/LGPL dual), Zipperposition (higher-order). TPTP/CASC as corpus and yardstick. |
 | Proof production throughout | Checkable artifacts above clausal level. | cvc5 CPC/Eunoia/Ethos, Alethe/Carcara; DRAT/LRAT below. |
 | Proof-assistant interop | Export obligations, import checked rules. | Lean 4 (Apache-2.0), lean-smt (replays cvc5 proofs in Lean), lean-auto/Duper hammer stack, nanoda as the Rust kernel precedent. |
+
+## Product Destinations (What "Done" Means)
+
+The technical ladder above is the means; these are the product endpoints, and
+what each *actually* requires (so we don't mistake feature-coverage for arrival).
+
+### Destination 2 — complete solver replacement (Z3 / cvc5 class)
+
+A drop-in alternative a real consumer would choose. Requires, beyond the
+foundation:
+
+- **Performance, the gate.** A real CDCL(T) loop (theory propagation, conflict
+  learning across theories), encoding/preprocessing engineering, and a
+  competitive SAT core. *This is the binding constraint* — today the pure-Rust
+  path decides only a small slice of real public QF_BV where Z3 decides nearly
+  all. Measured against an angr+Z3-style baseline, not feature checkboxes.
+- **Theory breadth.** Floating point (`QF_FP`), strings/sequences/regex,
+  datatypes, nonlinear arithmetic (NIA/NRA), unbounded `LIA`/`LRA` via a real
+  simplex + branch-and-bound (the bounded bit-blasting today is a stand-in), and
+  production quantifier instantiation (E-matching + MBQI).
+- **Surface + robustness.** Full SMT-LIB 2 (incl. `get-value`/`get-unsat-core`/
+  `get-proof`, options, optimization), incremental at scale, and validation on
+  the SMT-COMP corpora — not a handful of families.
+
+### Destination 3 — Lean / angr as first-class functionality
+
+- **angr/unicorn class.** A binary/IR frontend (lifting, CFG recovery), a
+  realistic memory model, and symbolic execution + concrete emulation as
+  first-class APIs driving the solver for **constrained program optimization and
+  verification**. Today's `tests/symbolic_execution*.rs` is a hand-built
+  register VM for testing — the *shape* of the consumer, not the product.
+- **Lean class.** Kernel-checkable proofs above the clausal layer (the evidence
+  envelope grown into a proof term + an independent Rust kernel, cf. nanoda),
+  proof-assistant interop (export obligations / import checked rules, cf.
+  lean-smt/Alethe), and eventually dependent-type proving. The evidence thesis
+  already in the foundation is the seam this grows along.
 
 ## Design Implications (Backward Pressure On Today)
 

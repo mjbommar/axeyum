@@ -5,11 +5,20 @@ planning, solver backends (native SMT oracles plus a growing pure Rust
 bit-blast-to-SAT path), and checkable evidence — models verified by
 evaluation, unsat claims backed by proof artifacts or independent oracles.
 
-The north star is a complete framework for general reasoning, logic, and
-proving; the decidable finite-domain core was the foundation layer, and the
-ladder has since climbed through arithmetic, theory combination, quantifiers,
-and proof production
+The north star is a **usable, ideally pareto-dominant system for constrained
+program optimization and software verification**, reached in three destinations:
+(1) the decidable + arithmetic **foundation** with checkable evidence — where the
+project is today; (2) a **complete solver replacement** (Z3/cvc5 class), gated on
+performance on real corpora, not theory breadth; (3) **Lean / angr as
+first-class functionality** — binary frontend + symbolic execution/emulation and
+kernel-checkable proving + proof-assistant interop
 (see [north-star](docs/research/00-orientation/north-star.md)).
+
+**Honest status:** the project is at destination (1). It is **not yet** an SMT
+solver replacement (the pure-Rust path decides only a small slice of real public
+QF_BV instances — performance is the open gate) and **not yet** a Lean/angr-class
+system (the symbolic-execution consumer is a test-only register VM). Destinations
+(2) then (3) are the work ahead.
 
 ## What it does today
 
