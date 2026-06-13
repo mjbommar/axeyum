@@ -93,6 +93,58 @@ fn real_universal_refuted_by_instantiation() {
 }
 
 #[test]
+fn nested_universal_chain_is_refuted_by_instantiation() {
+    // forall x:Real. forall y:Real. x + y >= 0   plus   a < 0.
+    // A *nested* universal chain — previously skipped entirely (→ unknown). The
+    // chain is now peeled and instantiated over the cartesian product of ground
+    // terms {0, a}; the instance x:=a, y:=a gives 2a >= 0, which with a < 0 is
+    // unsatisfiable, so the universal is refuted.
+    let mut arena = TermArena::new();
+    let x_sym = arena.declare("x", Sort::Real).unwrap();
+    let y_sym = arena.declare("y", Sort::Real).unwrap();
+    let x = arena.var(x_sym);
+    let y = arena.var(y_sym);
+    let zero = arena.real_ratio(0, 1);
+    let sum = arena.real_add(x, y).unwrap();
+    let body = arena.real_ge(sum, zero).unwrap();
+    let inner = arena.forall(y_sym, body).unwrap();
+    let outer = arena.forall(x_sym, inner).unwrap();
+
+    let a = arena.real_var("a").unwrap();
+    let a_neg = arena.real_lt(a, zero).unwrap();
+
+    assert_eq!(
+        solve(&mut arena, &[outer, a_neg]),
+        CheckResult::Unsat,
+        "the nested universal is refuted by the x:=a, y:=a instance"
+    );
+}
+
+#[test]
+fn true_nested_universal_is_inconclusive() {
+    // forall x:Real. forall y:Real. x + y == y + x is valid, so no instance is
+    // false; the (satisfiable) instantiation is honestly reported `unknown`.
+    let mut arena = TermArena::new();
+    let x_sym = arena.declare("x", Sort::Real).unwrap();
+    let y_sym = arena.declare("y", Sort::Real).unwrap();
+    let x = arena.var(x_sym);
+    let y = arena.var(y_sym);
+    let xy = arena.real_add(x, y).unwrap();
+    let yx = arena.real_add(y, x).unwrap();
+    let body = arena.eq(xy, yx).unwrap();
+    let inner = arena.forall(y_sym, body).unwrap();
+    let outer = arena.forall(x_sym, inner).unwrap();
+    let a = arena.real_var("a").unwrap();
+    let zero = arena.real_ratio(0, 1);
+    let a_pos = arena.real_gt(a, zero).unwrap();
+
+    assert!(matches!(
+        solve(&mut arena, &[outer, a_pos]),
+        CheckResult::Unknown(_)
+    ));
+}
+
+#[test]
 fn ematching_refutes_a_compound_instance_enumeration_misses() {
     // forall x:BV16. g(x) == 0   plus   g(f(a)) != 0.
     // BV16 is too wide for finite expansion, so this exercises instantiation.

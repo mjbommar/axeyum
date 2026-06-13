@@ -599,6 +599,15 @@ Last updated: 2026-06-13
   stays `unknown` under leaves-only enumeration but is refuted (`unsat`) by
   E-matching binding `x:=f(a)`. Remaining for track b: multi-trigger /
   multi-variable matching and an E-graph match index for scale.
+- Nested universal chain instantiation recorded 2026-06-13 (ADR-0016): both
+  `instantiate_universals` and `instantiate_with_triggers` now peel a prenex
+  chain `forall x1. … forall xk. body` and instantiate over the **cartesian
+  product** of each variable's bindings (capped at `CHAIN_INSTANCE_CAP`; over the
+  cap the chain stays a sound residual `unknown`). Previously a multi-variable
+  universal was skipped entirely (always `unknown`); now e.g.
+  `forall x y:Real. x+y≥0` with `a<0` is refuted by the `x:=a, y:=a` instance.
+  Soundness unchanged (every tuple instance follows from the chain). Remaining
+  for track b: multi-variable *trigger* matching and an E-graph match index.
 - Phase: **Phase 5 first pure-Rust backend slice.** M0, Phase 1, SMT-LIB
   ingestion/export, the micro-corpus benchmark harness, the public QF_BV
   baseline, and the Phase 3 query/rewrite/evidence entry contracts are

@@ -228,30 +228,25 @@ pub fn instantiate_universals(
     let mut out = Vec::with_capacity(assertions.len());
     let mut instantiated = false;
     for &assertion in assertions {
-        if let TermNode::App {
-            op: Op::Forall(var),
-            args,
-        } = arena.node(assertion).clone()
-        {
-            let body = args[0];
-            if !contains_quantifier(arena, body) {
-                instantiated = true;
-                let sort = arena.symbol(var).1;
-                let terms = universe.get(&sort).cloned().unwrap_or_default();
-                let mut conjunction: Option<TermId> = None;
-                for term in terms {
-                    let mut memo = HashMap::new();
-                    let instance = substitute(arena, body, var, term, &mut memo)?;
-                    conjunction = Some(match conjunction {
-                        Some(acc) => arena.and(acc, instance)?,
-                        None => instance,
-                    });
+        if let Some((vars, body)) = peel_universals(arena, assertion) {
+            // Per-variable bindings: the ground leaves of each variable's sort.
+            let per_var: Vec<Vec<TermId>> = vars
+                .iter()
+                .map(|&v| {
+                    let sort = arena.symbol(v).1;
+                    universe.get(&sort).cloned().unwrap_or_default()
+                })
+                .collect();
+            match instantiate_chain(arena, &vars, body, &per_var)? {
+                Some(term) => {
+                    instantiated = true;
+                    out.push(term);
                 }
-                // An empty universe drops the universal entirely (sound
-                // weakening): represent it as `true`.
-                out.push(conjunction.unwrap_or_else(|| arena.bool_const(true)));
-                continue;
+                // Over the cartesian-instance cap: leave the universal in place
+                // (reported as a residual quantifier → `unknown`, sound).
+                None => out.push(assertion),
             }
+            continue;
         }
         out.push(assertion);
     }
@@ -262,6 +257,82 @@ pub fn instantiate_universals(
         instantiated,
         residual_quantifier,
     })
+}
+
+/// The cap on the number of cartesian-product instances a single universal chain
+/// may expand to; above it the chain is left uninstantiated (a sound `unknown`).
+const CHAIN_INSTANCE_CAP: usize = 4096;
+
+/// Peels a (possibly nested) prenex universal chain `forall x1. … forall xk.
+/// body` into its bound variables and quantifier-free `body`. Returns `None` if
+/// `assertion` is not a universal, or if the body still contains a quantifier
+/// (a non-prenex or existential residual the instantiation does not handle).
+fn peel_universals(arena: &TermArena, assertion: TermId) -> Option<(Vec<SymbolId>, TermId)> {
+    let mut vars = Vec::new();
+    let mut current = assertion;
+    while let TermNode::App {
+        op: Op::Forall(var),
+        args,
+    } = arena.node(current)
+    {
+        vars.push(*var);
+        current = args[0];
+    }
+    if vars.is_empty() || contains_quantifier(arena, current) {
+        return None;
+    }
+    Some((vars, current))
+}
+
+/// Instantiates `forall vars. body` over the cartesian product of each
+/// variable's `per_var` bindings, folding the instances with `and`. Returns
+/// `Ok(None)` if the product exceeds [`CHAIN_INSTANCE_CAP`]. An empty product
+/// (some variable has no binding) drops the universal to `true` (sound
+/// weakening). Bindings are ground, so sequential substitution is capture-free.
+fn instantiate_chain(
+    arena: &mut TermArena,
+    vars: &[SymbolId],
+    body: TermId,
+    per_var: &[Vec<TermId>],
+) -> Result<Option<TermId>, QuantExpandError> {
+    // Total instances = product of per-variable binding counts (capped).
+    let mut total: usize = 1;
+    for bindings in per_var {
+        if bindings.is_empty() {
+            return Ok(Some(arena.bool_const(true)));
+        }
+        total = match total.checked_mul(bindings.len()) {
+            Some(t) if t <= CHAIN_INSTANCE_CAP => t,
+            _ => return Ok(None),
+        };
+    }
+
+    // Enumerate the cartesian product via a mixed-radix index vector.
+    let mut indices = vec![0usize; vars.len()];
+    let mut conjunction: Option<TermId> = None;
+    for _ in 0..total {
+        let mut instance = body;
+        for (slot, &var) in vars.iter().enumerate() {
+            let replacement = per_var[slot][indices[slot]];
+            let mut memo = HashMap::new();
+            instance = substitute(arena, instance, var, replacement, &mut memo)?;
+        }
+        conjunction = Some(match conjunction {
+            Some(acc) => arena.and(acc, instance)?,
+            None => instance,
+        });
+        // Increment the mixed-radix counter.
+        for slot in (0..indices.len()).rev() {
+            indices[slot] += 1;
+            if indices[slot] < per_var[slot].len() {
+                break;
+            }
+            indices[slot] = 0;
+        }
+    }
+    Ok(Some(
+        conjunction.expect("total >= 1 so at least one instance"),
+    ))
 }
 
 /// **Trigger-based E-matching instantiation** of top-level universals — a more
@@ -296,28 +367,24 @@ pub fn instantiate_with_triggers(
     let mut out = Vec::with_capacity(assertions.len());
     let mut instantiated = false;
     for &assertion in assertions {
-        if let TermNode::App {
-            op: Op::Forall(var),
-            args,
-        } = arena.node(assertion).clone()
-        {
-            let body = args[0];
-            if !contains_quantifier(arena, body) {
-                instantiated = true;
-                let var_sort = arena.symbol(var).1;
-                let bindings = trigger_bindings(arena, body, var, var_sort, &ground, &leaves);
-                let mut conjunction: Option<TermId> = None;
-                for term in bindings {
-                    let mut memo = HashMap::new();
-                    let instance = substitute(arena, body, var, term, &mut memo)?;
-                    conjunction = Some(match conjunction {
-                        Some(acc) => arena.and(acc, instance)?,
-                        None => instance,
-                    });
+        if let Some((vars, body)) = peel_universals(arena, assertion) {
+            // Per-variable bindings: enumerative leaves augmented with the
+            // compound terms found by E-matching this variable's triggers.
+            let per_var: Vec<Vec<TermId>> = vars
+                .iter()
+                .map(|&v| {
+                    let sort = arena.symbol(v).1;
+                    trigger_bindings(arena, body, v, sort, &ground, &leaves)
+                })
+                .collect();
+            match instantiate_chain(arena, &vars, body, &per_var)? {
+                Some(term) => {
+                    instantiated = true;
+                    out.push(term);
                 }
-                out.push(conjunction.unwrap_or_else(|| arena.bool_const(true)));
-                continue;
+                None => out.push(assertion),
             }
+            continue;
         }
         out.push(assertion);
     }

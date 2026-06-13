@@ -129,6 +129,18 @@ evaluator sub-increment, then solving.
   leaves-only enumeration stays `unknown`, while E-matching binds `x:=f(a)` and
   refutes exactly. Remaining: multi-trigger/multi-variable matching and an
   E-graph-backed match index for scale.
+- 2026-06-13: **nested universal chains** instantiated — both instantiation
+  entries now peel a prenex chain `forall x1. … forall xk. body` (QF body) and
+  instantiate over the **cartesian product** of each variable's bindings (leaves
+  for `instantiate_universals`, leaves ∪ trigger matches for
+  `instantiate_with_triggers`), folded with `and`. The product is capped
+  (`CHAIN_INSTANCE_CAP`); over the cap the chain is left in place (a sound
+  residual `unknown`). Previously a multi-variable universal was skipped entirely
+  (always `unknown`); now `forall x y:Real. x+y≥0` with `a<0` is refuted (the
+  `x:=a, y:=a` instance gives `2a≥0`). Soundness is unchanged (every tuple
+  instance follows from the chain; the cap only ever yields `unknown`). Remaining:
+  multi-variable *trigger* matching (binding several vars from one trigger) and an
+  E-graph match index.
 
 ## Consequences
 
