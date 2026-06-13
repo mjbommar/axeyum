@@ -32,6 +32,7 @@ use axeyum_cnf::{
 use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode};
 
 use crate::backend::SolverError;
+use crate::proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};
 
 /// The outcome of [`certify_bitblast_by_miter`].
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -134,6 +135,76 @@ pub fn certify_bitblast_by_miter(
                 "bit-blast miter proof failed to check: {error}"
             ))),
         },
+    }
+}
+
+/// An **end-to-end** `QF_BV` `unsat` certificate: the reduction is certified
+/// faithful (the miter) *and* the resulting CNF is certified unsatisfiable (DRAT).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EndToEndUnsatOutcome {
+    /// Term-level `unsat`, certified end to end. The faithfulness miter proves
+    /// the production bit-blasting matches the independent reference on all
+    /// inputs; the refutation proves the bit-blasted CNF unsatisfiable; the
+    /// Tseitin step between them is equisatisfiability-preserving by construction.
+    /// Sound modulo trust in the independent reference bit-blaster.
+    Certified {
+        /// The bit-blast-faithfulness miter certificate (DIMACS).
+        faithfulness_dimacs: String,
+        /// The bit-blast-faithfulness miter refutation (DRAT).
+        faithfulness_drat: String,
+        /// The CNF-`unsat` refutation (DIMACS + DRAT).
+        unsat: UnsatProof,
+    },
+    /// The query is satisfiable, so there is no `unsat` to certify.
+    Satisfiable,
+    /// Could not certify end to end (an uncovered operator, or an inconclusive
+    /// proof core).
+    NotCertified,
+}
+
+/// Produces an end-to-end `QF_BV` `unsat` certificate by composing the
+/// bit-blast-faithfulness miter ([`certify_bitblast_by_miter`]) with the
+/// CNF-`unsat` DRAT proof ([`export_qf_bv_unsat_proof`]).
+///
+/// Together these establish *term-level* `unsat`: the term equals its AIG (miter,
+/// modulo the independent reference), the AIG equals the CNF (Tseitin, by
+/// construction), and the CNF is unsatisfiable (DRAT) — closing the term↔CNF gap
+/// at scale, the goal of track (a) path (B).
+///
+/// # Errors
+///
+/// Returns [`SolverError::Backend`] if the miter reveals the production
+/// bit-blasting **diverges** from the reference (a soundness alarm) or on an
+/// internal failure; uncovered operators yield
+/// [`EndToEndUnsatOutcome::NotCertified`].
+pub fn certify_qf_bv_unsat_end_to_end(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<EndToEndUnsatOutcome, SolverError> {
+    // 1. The bit-blasting of the assertions must be certified faithful.
+    let (faithfulness_dimacs, faithfulness_drat) =
+        match certify_bitblast_by_miter(arena, assertions)? {
+            BitblastMiterOutcome::Certified { dimacs, drat } => (dimacs, drat),
+            BitblastMiterOutcome::Diverged => {
+                return Err(SolverError::Backend(
+                "soundness alarm: production bit-blasting diverges from the independent reference"
+                    .to_owned(),
+            ));
+            }
+            BitblastMiterOutcome::Inconclusive | BitblastMiterOutcome::NotCertifiable => {
+                return Ok(EndToEndUnsatOutcome::NotCertified);
+            }
+        };
+
+    // 2. The resulting CNF must be unsatisfiable with a DRAT-checked proof.
+    match export_qf_bv_unsat_proof(arena, assertions)? {
+        UnsatProofOutcome::Proved(unsat) => Ok(EndToEndUnsatOutcome::Certified {
+            faithfulness_dimacs,
+            faithfulness_drat,
+            unsat,
+        }),
+        UnsatProofOutcome::Satisfiable => Ok(EndToEndUnsatOutcome::Satisfiable),
+        UnsatProofOutcome::Inconclusive => Ok(EndToEndUnsatOutcome::NotCertified),
     }
 }
 

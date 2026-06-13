@@ -152,3 +152,41 @@ fn signed_division_remainder_modulo_are_certified() {
         "signed division/remainder/modulo bit-blasting should certify faithful"
     );
 }
+
+#[test]
+fn end_to_end_unsat_is_certified() {
+    use axeyum_solver::{EndToEndUnsatOutcome, certify_qf_bv_unsat_end_to_end};
+    // x & 1 == 1 AND x & 1 == 0 is unsatisfiable. End-to-end certification:
+    // the bit-blasting is miter-certified faithful AND the CNF is DRAT-refuted.
+    let mut arena = TermArena::new();
+    let xv = arena.bv_var("x", 4).unwrap();
+    let one = arena.bv_const(4, 1).unwrap();
+    let zero = arena.bv_const(4, 0).unwrap();
+    let masked = arena.bv_and(xv, one).unwrap();
+    let is_one = arena.eq(masked, one).unwrap();
+    let is_zero = arena.eq(masked, zero).unwrap();
+
+    let outcome = certify_qf_bv_unsat_end_to_end(&arena, &[is_one, is_zero]).unwrap();
+    let EndToEndUnsatOutcome::Certified {
+        faithfulness_drat,
+        unsat,
+        ..
+    } = outcome
+    else {
+        panic!("expected end-to-end certification, got {outcome:?}");
+    };
+    assert!(!faithfulness_drat.is_empty() && !unsat.drat.is_empty());
+}
+
+#[test]
+fn end_to_end_satisfiable_query_is_not_unsat() {
+    use axeyum_solver::{EndToEndUnsatOutcome, certify_qf_bv_unsat_end_to_end};
+    let mut arena = TermArena::new();
+    let xv = arena.bv_var("x", 4).unwrap();
+    let five = arena.bv_const(4, 5).unwrap();
+    let eq = arena.eq(xv, five).unwrap();
+    assert_eq!(
+        certify_qf_bv_unsat_end_to_end(&arena, &[eq]).unwrap(),
+        EndToEndUnsatOutcome::Satisfiable
+    );
+}

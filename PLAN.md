@@ -719,10 +719,14 @@ Last updated: 2026-06-13
   quantifiers, which are not bit-blasted, fall outside). Tests certify
   arithmetic/comparison/shift, structural, and unsigned **and** signed div/rem/mod
   queries. This is a sound, exhaustive faithfulness certificate for the full
-  `QF_BV` reduction *modulo trust in the independent reference*; the lone
-  remaining item is path (A), a width-parametric **verified** bit-blaster that
-  removes reference-trust entirely (proof-assistant-scale — the genuine
-  fully-trusted frontier). See
+  `QF_BV` reduction *modulo trust in the independent reference*.
+  `certify_qf_bv_unsat_end_to_end` then composes the miter (term↔AIG faithful)
+  with the CNF-`unsat` DRAT (AIG/CNF unsat; Tseitin equisat by construction) into
+  a single **scalable, machine-checked, end-to-end `QF_BV` `unsat` certificate** —
+  the goal of track (a), realized via path (B) (a production/reference divergence
+  is a soundness alarm). The lone remaining item is path (A), a width-parametric
+  **verified** bit-blaster that removes reference-trust entirely
+  (proof-assistant-scale — the genuine fully-trusted frontier). See
   [scalable bit-blast certification](docs/research/07-verification/scalable-bitblast-certification.md).
 - Phase: **Phase 5 first pure-Rust backend slice.** M0, Phase 1, SMT-LIB
   ingestion/export, the micro-corpus benchmark harness, the public QF_BV

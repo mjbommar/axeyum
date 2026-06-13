@@ -47,7 +47,10 @@ pub use backend::{
     Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind,
     UnknownReason,
 };
-pub use bitblast_miter::{BitblastMiterOutcome, certify_bitblast_by_miter};
+pub use bitblast_miter::{
+    BitblastMiterOutcome, EndToEndUnsatOutcome, certify_bitblast_by_miter,
+    certify_qf_bv_unsat_end_to_end,
+};
 pub use certify::{CertifyOutcome, certify_qf_bv_by_enumeration};
 pub use combined::check_with_all_theories;
 pub use dpll_t::{

@@ -124,6 +124,14 @@ query's production bit-blasting is certifiable faithful by a DRAT-checked miter
 against the independent reference (only uninterpreted-function `apply` and
 quantifiers — which are not bit-blasted — fall outside).
 
+**End-to-end composition.** `certify_qf_bv_unsat_end_to_end` composes the two
+DRAT-checked proofs into a single term-level `unsat` certificate: the term equals
+its AIG (miter, modulo the reference), the AIG equals the CNF (Tseitin, by
+construction), and the CNF is unsatisfiable (DRAT). This is *scalable,
+machine-checked, end-to-end* `QF_BV` `unsat` — the goal of track (a) — realized
+via path (B); a production bit-blast that diverges from the reference is reported
+as a soundness alarm.
+
 **Status.** Path (B) gives a sound, exhaustive faithfulness certificate for the
 full `QF_BV` reduction, *modulo trust in the independent reference* (assurance: a
 production bug must be matched by an identical bug in separately written reference
