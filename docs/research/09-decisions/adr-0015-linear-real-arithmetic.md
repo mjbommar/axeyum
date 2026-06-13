@@ -156,8 +156,9 @@ way every prior theory was.
   learned blocking clause negates just that core (sound and strictly stronger
   than blocking the full atom assignment, giving faster convergence). And
   `lra_unsat_core` reads the Farkas support (the assertions whose constraints
-  have a nonzero multiplier) to return a re-verified unsatisfiable core — the
-  SMT-LIB `get-unsat-core` capability, useful for explaining infeasible paths.
+  have a nonzero multiplier) to seed a deletion-minimized, re-verified minimal
+  unsatisfiable core — the SMT-LIB `get-unsat-core` capability, useful for
+  explaining infeasible paths.
   Follow-up: a δ-rational simplex for scale must produce the same certificate.
 
 ## Consequences

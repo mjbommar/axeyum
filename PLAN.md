@@ -529,8 +529,9 @@ Last updated: 2026-06-13
   re-runs the independent Farkas verifier (the exact-arithmetic dual of the
   envelope's DRAT route), with tamper-rejection tests. `lra_unsat_core` also
   reads the Farkas support — the assertions whose constraints have a nonzero
-  multiplier — to return a re-verified **unsatisfiable core** (a recognized
-  SMT capability, useful for explaining infeasible symbolic-execution paths). A
+  multiplier — to seed a deletion-minimized, re-verified **minimal
+  unsatisfiable core** (a recognized SMT capability, useful for explaining
+  infeasible symbolic-execution paths). A
   δ-rational simplex for scale remains the open `QF_LRA` follow-up.
 - Phase: **Phase 5 first pure-Rust backend slice.** M0, Phase 1, SMT-LIB
   ingestion/export, the micro-corpus benchmark harness, the public QF_BV
@@ -1904,9 +1905,10 @@ In order; check off and date as completed.
       certificates, no-certificate `sat`, and tamper rejection. Also wired into
       the `Evidence` envelope (`Evidence::UnsatFarkas` + `produce_lra_evidence`,
       with tamper-rejection tests), used for DPLL(T) theory-conflict
-      minimization, and surfaced as `lra_unsat_core` (Farkas-support unsat-core
-      extraction — the SMT `get-unsat-core` capability, re-verified before
-      return). Follow-up: a δ-rational simplex for scale.
+      minimization, and surfaced as `lra_unsat_core` (Farkas-support-seeded,
+      deletion-minimized minimal unsat core — the SMT `get-unsat-core`
+      capability, re-verified before return). Follow-up: a δ-rational simplex
+      for scale.
 - [ ] **DPLL(T) `unsat` refutation certificates (scoped next step, builds on the
       Farkas work):** `check_with_lra_dpll` (the lazy-SMT path for arbitrary
       Boolean combinations of real + bit-blasted constraints) returns `unsat`

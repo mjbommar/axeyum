@@ -297,6 +297,43 @@ fn unsat_core_handles_equality_assertions() {
 }
 
 #[test]
+fn unsat_core_is_minimal_dropping_redundant_conflicts() {
+    // [x > 5, x < 1, x < 2] : {x>5, x<1} and {x>5, x<2} both conflict. A minimal
+    // core keeps just two assertions — every member necessary — never all three.
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let one = arena.real_ratio(1, 1);
+    let two = arena.real_ratio(2, 1);
+    let five = arena.real_ratio(5, 1);
+    let assertions = [
+        arena.real_gt(x, five).unwrap(),
+        arena.real_lt(x, one).unwrap(),
+        arena.real_lt(x, two).unwrap(),
+    ];
+
+    let core = lra_unsat_core(&arena, &assertions)
+        .expect("decides without error")
+        .expect("unsatisfiable");
+    assert_eq!(core.len(), 2, "minimal core drops the redundant bound");
+    // Whichever two survive, x > 5 must be one of them, and the pair is unsat.
+    assert!(core.contains(&0), "x > 5 is essential to every conflict");
+    let subset: Vec<_> = core.iter().map(|&i| assertions[i]).collect();
+    assert_eq!(check_with_lra(&arena, &subset).unwrap(), CheckResult::Unsat);
+    // Every member is necessary: removing any one leaves a satisfiable set.
+    for &drop in &core {
+        let rest: Vec<_> = core
+            .iter()
+            .filter(|&&i| i != drop)
+            .map(|&i| assertions[i])
+            .collect();
+        assert!(
+            matches!(check_with_lra(&arena, &rest).unwrap(), CheckResult::Sat(_)),
+            "dropping a core member must restore satisfiability"
+        );
+    }
+}
+
+#[test]
 fn satisfiable_query_has_no_unsat_core() {
     let mut arena = TermArena::new();
     let x = arena.real_var("x").unwrap();

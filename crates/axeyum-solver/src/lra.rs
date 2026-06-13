@@ -75,14 +75,16 @@ pub fn lra_farkas_certificate(
     }
 }
 
-/// Returns an unsatisfiable core of a conjunctive `QF_LRA` query: the indices
-/// (into `assertions`) of a subset that is **already jointly unsatisfiable**.
+/// Returns a **minimal** unsatisfiable core of a conjunctive `QF_LRA` query: the
+/// indices (into `assertions`) of a jointly-unsatisfiable subset in which every
+/// member is necessary (dropping any one makes the rest satisfiable).
 ///
-/// The core is read from the Farkas refutation — exactly the assertions whose
-/// constraints carry a nonzero multiplier participate, so dropping the rest
-/// preserves unsatisfiability. The extracted subset is re-decided as a defensive
-/// self-check before it is returned. Returns `Ok(None)` when the query is
-/// satisfiable.
+/// The Farkas refutation seeds the core — exactly the assertions whose
+/// constraints carry a nonzero multiplier participate — and a deterministic
+/// deletion pass then removes any still-redundant assertion (re-deciding the
+/// shrunk subset with the conjunctive solver, itself Farkas-self-checked). The
+/// final core is re-decided as a defensive self-check before return. Returns
+/// `Ok(None)` when the query is satisfiable.
 ///
 /// # Errors
 ///
@@ -98,6 +100,8 @@ pub fn lra_unsat_core(
             certificate,
             origins,
         } => {
+            // Seed with the Farkas support: the assertions that actually appear
+            // in the refutation.
             let mut core: Vec<usize> = origins
                 .iter()
                 .zip(&certificate.multipliers)
@@ -106,7 +110,25 @@ pub fn lra_unsat_core(
                 .collect();
             core.sort_unstable();
             core.dedup();
-            // Defensive self-check: the extracted subset must itself be unsat.
+
+            // Deletion-based minimization: try removing each member (in a fixed
+            // order, so the result is deterministic); keep the removal only if
+            // the remainder stays unsatisfiable. The outcome is minimal — every
+            // surviving member is necessary.
+            let candidates = core.clone();
+            for &candidate in &candidates {
+                let trial: Vec<TermId> = core
+                    .iter()
+                    .filter(|&&i| i != candidate)
+                    .map(|&i| assertions[i])
+                    .collect();
+                if !trial.is_empty() && matches!(check_with_lra(arena, &trial)?, CheckResult::Unsat)
+                {
+                    core.retain(|&i| i != candidate);
+                }
+            }
+
+            // Defensive self-check: the minimized subset must still be unsat.
             let subset: Vec<TermId> = core.iter().map(|&i| assertions[i]).collect();
             if !matches!(check_with_lra(arena, &subset)?, CheckResult::Unsat) {
                 return Err(SolverError::Backend(
