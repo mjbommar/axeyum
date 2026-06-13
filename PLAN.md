@@ -2109,7 +2109,10 @@ In order; check off and date as completed.
         term→AIG step); there is no sound bounded slice short of that verified
         reduction, so it is a genuine multi-increment research effort (a verified
         compiler in miniature), intrinsically the open frontier of a proof-carrying
-        reasoning framework.
+        reasoning framework. The precise design, the circularity obstacle, and a
+        concrete staged path (a trusted-reference + miter differential step **(B)**,
+        then a width-parametric verified bit-blaster **(A)**) are recorded in
+        [scalable bit-blast certification](docs/research/07-verification/scalable-bitblast-certification.md).
   - Real + bit-blasted theory combination is complete (reals share no sort with
         those theories, so the lazy-SMT loop suffices); general Nelson-Oppen would
         only be needed to combine two shared-sort theories, which the current set
