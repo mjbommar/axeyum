@@ -49,8 +49,8 @@ pub use dpll_t::{
 };
 pub use euf::check_with_function_elimination;
 pub use evidence::{
-    Evidence, EvidenceReport, Provenance, SEMANTICS_VERSION, produce_lra_evidence,
-    produce_qf_bv_evidence,
+    Evidence, EvidenceReport, Provenance, SEMANTICS_VERSION, produce_lra_dpll_evidence,
+    produce_lra_evidence, produce_qf_bv_evidence,
 };
 pub use incremental::IncrementalBvSolver;
 pub use layers::BvLayerStats;

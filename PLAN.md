@@ -1944,9 +1944,11 @@ In order; check off and date as completed.
       replaying model, bit-vector content is rejected `Unsupported`, and a
       lemma-stripped refutation fails verification. This generalizes the
       conjunctive-LRA Farkas certificate to arbitrary Boolean structure over reals.
-      Remaining: certify the lazy-SMT `unsat` when the skeleton also carries
-      bit-blasted theories (the propositional half then needs a DRAT proof, not
-      enumeration).
+      Also wired into the `Evidence` envelope (`Evidence::UnsatLraDpll` +
+      `produce_lra_dpll_evidence`) and hardened by a 1500-case deterministic fuzz
+      test (intrinsic soundness). Remaining: certify the lazy-SMT `unsat` when the
+      skeleton also carries bit-blasted theories (the propositional half then
+      needs a DRAT proof, not enumeration).
 - [ ] **NEXT: remaining R&D tracks.** The supported theories (`QF_BV`, arrays,
       EUF, `QF_LIA`, `QF_LRA`, their composition, and finite-domain quantifiers)
       are complete end to end with checkable evidence and wasm support. The open

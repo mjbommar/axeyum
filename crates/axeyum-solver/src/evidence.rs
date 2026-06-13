@@ -26,6 +26,7 @@ use axeyum_cnf::{check_drat, parse_dimacs, parse_drat};
 use axeyum_ir::{TermArena, TermId, Value, eval};
 
 use crate::backend::{CheckResult, SolverBackend, SolverConfig, SolverError, UnknownReason};
+use crate::dpll_t::{LraDpllOutcome, LraDpllRefutation, certify_lra_dpll_unsat};
 use crate::lra::{FarkasCertificate, lra_farkas_certificate};
 use crate::model::Model;
 use crate::proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};
@@ -98,6 +99,10 @@ pub enum Evidence {
     /// Unsatisfiable (`QF_LRA`): a Farkas refutation over the exact-rational
     /// constraints, whose [`FarkasCertificate::verify`] is the evidence.
     UnsatFarkas(FarkasCertificate),
+    /// Unsatisfiable (Boolean-structured pure-real `QF_LRA`): a lazy-SMT
+    /// refutation (skeleton + Farkas-certified theory lemmas) whose
+    /// [`LraDpllRefutation::verify`] is the evidence.
+    UnsatLraDpll(LraDpllRefutation),
     /// Undecided, with the classified reason.
     Unknown(UnknownReason),
 }
@@ -147,18 +152,23 @@ impl Evidence {
                 })
             }
             Evidence::UnsatFarkas(certificate) => Ok(certificate.verify()),
+            Evidence::UnsatLraDpll(refutation) => refutation.verify(arena),
             // No DRAT certificate (adapter-only `unsat`) or `unknown`: nothing to
             // independently re-check.
             Evidence::Unsat(None) | Evidence::Unknown(_) => Ok(true),
         }
     }
 
-    /// Whether this evidence carries an independently checkable certificate
-    /// (a `sat` model, a DRAT `unsat` proof, or a `QF_LRA` Farkas refutation).
+    /// Whether this evidence carries an independently checkable certificate (a
+    /// `sat` model, a DRAT `unsat` proof, or a `QF_LRA` Farkas/lazy-SMT
+    /// refutation).
     pub fn is_certified(&self) -> bool {
         matches!(
             self,
-            Evidence::Sat(_) | Evidence::Unsat(Some(_)) | Evidence::UnsatFarkas(_)
+            Evidence::Sat(_)
+                | Evidence::Unsat(Some(_))
+                | Evidence::UnsatFarkas(_)
+                | Evidence::UnsatLraDpll(_)
         )
     }
 }
@@ -238,6 +248,44 @@ pub fn produce_lra_evidence(
             // certify, so it is recorded as a (lower-assurance) bare `unsat`.
             None => Evidence::Unsat(None),
         },
+    };
+    Ok(EvidenceReport {
+        evidence,
+        provenance,
+    })
+}
+
+/// Runs the lazy-SMT pure-real `QF_LRA` pipeline on `assertions` (arbitrary
+/// Boolean structure over real order atoms) and packages the outcome as a
+/// self-checking [`EvidenceReport`]: a `sat` model, an `unsat` backed by a
+/// self-checked [`LraDpllRefutation`], or a classified `unknown` (including when
+/// the refutation has too many Boolean symbols to certify by enumeration).
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] if the query carries non-real,
+/// non-Boolean content, or [`SolverError::Backend`] on a `sat` replay failure or
+/// a refutation self-check failure (procedure-bug soundness alarms).
+pub fn produce_lra_dpll_evidence(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<EvidenceReport, SolverError> {
+    let provenance = Provenance {
+        semantics_version: SEMANTICS_VERSION,
+        backend: "lra-dpll-farkas-enumeration".to_owned(),
+        assertion_count: assertions.len(),
+        timeout: config.timeout,
+        resource_limit: config.resource_limit,
+        node_budget: config.node_budget,
+        cnf_variable_budget: config.cnf_variable_budget,
+        cnf_clause_budget: config.cnf_clause_budget,
+        prove_unsat: true,
+    };
+    let evidence = match certify_lra_dpll_unsat(arena, assertions, config)? {
+        LraDpllOutcome::Sat(model) => Evidence::Sat(model),
+        LraDpllOutcome::Unsat(refutation) => Evidence::UnsatLraDpll(refutation),
+        LraDpllOutcome::Unknown(reason) => Evidence::Unknown(reason),
     };
     Ok(EvidenceReport {
         evidence,

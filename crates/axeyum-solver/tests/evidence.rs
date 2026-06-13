@@ -4,7 +4,9 @@
 use std::time::Duration;
 
 use axeyum_ir::{Sort, TermArena};
-use axeyum_solver::{Evidence, SolverConfig, produce_lra_evidence, produce_qf_bv_evidence};
+use axeyum_solver::{
+    Evidence, SolverConfig, produce_lra_dpll_evidence, produce_lra_evidence, produce_qf_bv_evidence,
+};
 
 fn config() -> SolverConfig {
     SolverConfig::new().with_timeout(Duration::from_secs(30))
@@ -139,5 +141,75 @@ fn tampered_farkas_evidence_fails_its_own_check() {
     assert!(
         !bogus.check(&arena, &assertions).unwrap(),
         "a tampered Farkas certificate must not check"
+    );
+}
+
+#[test]
+fn lra_dpll_unsat_evidence_carries_a_recheckable_refutation() {
+    // (x < 0 ∨ x > 0) ∧ x >= 0 ∧ x <= 0 : Boolean-structured pure-real unsat.
+    let mut arena = TermArena::new();
+    let x_sym = arena.declare("x", Sort::Real).unwrap();
+    let x = arena.var(x_sym);
+    let zero = arena.real_ratio(0, 1);
+    let lt = arena.real_lt(x, zero).unwrap();
+    let gt = arena.real_gt(x, zero).unwrap();
+    let split = arena.or(lt, gt).unwrap();
+    let ge = arena.real_ge(x, zero).unwrap();
+    let le = arena.real_le(x, zero).unwrap();
+    let assertions = [split, ge, le];
+
+    let report = produce_lra_dpll_evidence(&mut arena, &assertions, &config()).unwrap();
+    let Evidence::UnsatLraDpll(_) = &report.evidence else {
+        panic!("expected a lazy-SMT refutation, got {:?}", report.evidence);
+    };
+    assert!(report.evidence.is_certified());
+    assert_eq!(report.provenance.backend, "lra-dpll-farkas-enumeration");
+    // The single Evidence::check re-runs the independent refutation verifier.
+    assert!(report.evidence.check(&arena, &assertions).unwrap());
+}
+
+#[test]
+fn lra_dpll_sat_evidence_replays() {
+    // (x < 0 ∨ x > 0) ∧ x >= 1 : satisfiable via the x > 0 branch.
+    let mut arena = TermArena::new();
+    let x_sym = arena.declare("x", Sort::Real).unwrap();
+    let x = arena.var(x_sym);
+    let zero = arena.real_ratio(0, 1);
+    let one = arena.real_ratio(1, 1);
+    let lt = arena.real_lt(x, zero).unwrap();
+    let gt = arena.real_gt(x, zero).unwrap();
+    let split = arena.or(lt, gt).unwrap();
+    let ge1 = arena.real_ge(x, one).unwrap();
+    let assertions = [split, ge1];
+
+    let report = produce_lra_dpll_evidence(&mut arena, &assertions, &config()).unwrap();
+    assert!(matches!(report.evidence, Evidence::Sat(_)));
+    assert!(report.evidence.check(&arena, &assertions).unwrap());
+}
+
+#[test]
+fn tampered_lra_dpll_evidence_fails_its_own_check() {
+    // Strip the lemmas from the refutation: the bare skeleton is satisfiable, so
+    // the independent verifier rejects the doctored evidence.
+    let mut arena = TermArena::new();
+    let x_sym = arena.declare("x", Sort::Real).unwrap();
+    let x = arena.var(x_sym);
+    let zero = arena.real_ratio(0, 1);
+    let lt = arena.real_lt(x, zero).unwrap();
+    let gt = arena.real_gt(x, zero).unwrap();
+    let split = arena.or(lt, gt).unwrap();
+    let ge = arena.real_ge(x, zero).unwrap();
+    let le = arena.real_le(x, zero).unwrap();
+    let assertions = [split, ge, le];
+
+    let report = produce_lra_dpll_evidence(&mut arena, &assertions, &config()).unwrap();
+    let Evidence::UnsatLraDpll(mut refutation) = report.evidence else {
+        panic!("expected a refutation");
+    };
+    refutation.lemmas.clear();
+    let bogus = Evidence::UnsatLraDpll(refutation);
+    assert!(
+        !bogus.check(&arena, &assertions).unwrap(),
+        "a lemma-stripped refutation must not check"
     );
 }
