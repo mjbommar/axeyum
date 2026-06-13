@@ -88,10 +88,31 @@ Option **(A)** (a verified bit-blaster) remains the eventual fully-trusted form
 and is the genuine open research frontier of the proof-carrying arm — it is the
 one roadmap item that is intrinsically not a bounded code increment.
 
+## Delivered: scalable faithfulness *checking* (the differential layer)
+
+Ahead of full certification, a **scalable, sound bug-detector** for the
+reduction is implemented: `axeyum_solver::check_qf_bv_faithfulness` samples
+random assignments and confirms the bit-blasted AIG (`axeyum-bv`'s
+`evaluate_roots`) evaluates to the **same value** as the original term (the
+`axeyum-ir` evaluator). It is the differential complement of model replay: model
+replay checks the reduction is sound *for the found `sat` model*, while this
+checks the reduction faithfully computes the term *on independent random inputs*
+— the regime that matters for `unsat`, where no model exists to replay. A
+disagreement is a *definitive* faithfulness bug with a concrete counterexample
+(sound bug-detection); agreement across many samples is real, scalable evidence
+the reduction did not distort the term. It is deterministic (seeded), so it is
+exactly reproducible. It is **not** a proof (sampling cannot certify the absence
+of a divergence), so it does not close the gap — it is the cheap, scalable
+assurance layer that sits below the staged path (B → A) and would catch most
+real bit-blasting bugs long before a verified bit-blaster exists. Tests confirm
+faithful arithmetic/bitwise and division/shift terms agree over hundreds of
+samples; integer terms report `Unsupported`.
+
 ## What "done" means for this note
 
 The bounded slice of track (a) — reduction-free term-level certification for
-small instances — is implemented and wired into the evidence envelope. The
-scalable form is recorded here as an open program with a concrete, sound, staged
-path (B → A). No part of it should be faked with an unsound shortcut: a wrong
-`unsat` would betray the project's core identity.
+small instances — is implemented and wired into the evidence envelope, and a
+scalable differential *faithfulness check* (above) guards the reduction at large
+sizes. The remaining *certification* form is recorded here as an open program
+with a concrete, sound, staged path (B → A). No part of it should be faked with
+an unsound shortcut: a wrong `unsat` would betray the project's core identity.

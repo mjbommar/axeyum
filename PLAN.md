@@ -678,6 +678,22 @@ Last updated: 2026-06-13
   term-level evidence's `check`. The *scalable* form (a verified bit-blaster so
   large-instance `unsat` is term-level-certified) remains the lone open research
   program — there is no sound bounded slice for it short of a verified reduction.
+- Scalable bit-blast **faithfulness checking** recorded 2026-06-13 (track a, the
+  differential assurance layer): `axeyum_solver::check_qf_bv_faithfulness` samples
+  random assignments and confirms the bit-blasted AIG (`axeyum-bv` `evaluate_roots`)
+  evaluates to the **same value** as the original term (the `axeyum-ir`
+  evaluator). It is the differential complement of model replay — replay checks
+  the reduction for the found `sat` model; this checks faithful term computation
+  on independent random inputs, the regime that matters for `unsat` (no model to
+  replay). A disagreement is a *definitive* faithfulness bug with a counterexample
+  (sound bug-detection); agreement across many samples is scalable evidence the
+  term→AIG reduction did not distort the term. Deterministic (seeded → exactly
+  reproducible); memory-safe (no corpus). Tests: faithful arithmetic/bitwise and
+  division/shift terms agree over 500–1000 samples; integer terms report
+  `Unsupported`. This is **not** a proof (sampling), so it does not close the
+  certification gap — it is the cheap scalable assurance below the staged path
+  (B trusted-reference + miter → A verified bit-blaster) in
+  [scalable bit-blast certification](docs/research/07-verification/scalable-bitblast-certification.md).
 - Phase: **Phase 5 first pure-Rust backend slice.** M0, Phase 1, SMT-LIB
   ingestion/export, the micro-corpus benchmark harness, the public QF_BV
   baseline, and the Phase 3 query/rewrite/evidence entry contracts are

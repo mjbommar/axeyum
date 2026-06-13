@@ -23,6 +23,7 @@ mod combined;
 mod dpll_t;
 mod euf;
 mod evidence;
+mod faithfulness;
 mod incremental;
 mod layers;
 mod lia;
@@ -55,6 +56,7 @@ pub use evidence::{
     Evidence, EvidenceReport, ProofOutcome, Provenance, SEMANTICS_VERSION, produce_evidence,
     produce_lra_dpll_evidence, produce_lra_evidence, produce_qf_bv_evidence, prove,
 };
+pub use faithfulness::{FaithfulnessOutcome, check_qf_bv_faithfulness};
 pub use incremental::IncrementalBvSolver;
 pub use layers::BvLayerStats;
 pub use lia::{DEFAULT_INT_WIDTH, check_with_int_blasting};
