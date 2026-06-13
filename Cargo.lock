@@ -106,6 +106,7 @@ dependencies = [
 name = "axeyum-solver"
 version = "0.1.0"
 dependencies = [
+ "axeyum-aig",
  "axeyum-bv",
  "axeyum-cnf",
  "axeyum-ir",

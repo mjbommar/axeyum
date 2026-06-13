@@ -88,7 +88,32 @@ Option **(A)** (a verified bit-blaster) remains the eventual fully-trusted form
 and is the genuine open research frontier of the proof-carrying arm — it is the
 one roadmap item that is intrinsically not a bounded code increment.
 
-## Delivered: scalable faithfulness *checking* (the differential layer)
+## Delivered: path (B) — the independent-reference miter *certificate*
+
+`axeyum_solver::certify_bitblast_by_miter` implements path (B) for the
+bitwise/Boolean/`eq`/`ite` fragment: it builds **one** AIG holding both the
+production bit-blasting (`axeyum-bv`, copied in over shared symbol-bit inputs)
+**and** a separately coded reference bit-blaster, forms the miter
+`OR over output bits (fast_bit XOR ref_bit)`, Tseitin-encodes it, and refutes it
+with `solve_with_drat_proof` + `check_drat`. An `unsat` miter is an **exhaustive,
+DRAT-checked** proof that the two encodings agree on *every* input — a real
+certificate (not sampling) that the production reduction is faithful on that
+fragment; a `sat` miter is a faithfulness bug with a witness. It is sound modulo
+trust in the reference, which is independent code, so a production bug surfaces as
+miter `sat` (the two-independent-procedures pattern, applied to bit-blasting).
+Operators the reference does not yet cover (arithmetic, shifts, concat/extract,
+extensions) return `NotCertifiable` and fall back to the sampled check. The
+`Certified` outcome carries the auditable `(dimacs, drat)` artifact.
+
+**Remaining for path (B):** extend the reference to the arithmetic, shift,
+comparison, and structural operators (each gadget written independently and
+exhaustively cross-checked against the evaluator), so the miter certifies the
+whole supported `QF_BV` operator set. That is incremental, operator-by-operator,
+green-at-each-step work on top of this scaffold. Path (A) (a width-parametric
+*verified* bit-blaster, eliminating the reference-trust) remains the eventual
+fully-trusted form.
+
+## Delivered earlier: scalable faithfulness *checking* (the differential layer)
 
 Ahead of full certification, a **scalable, sound bug-detector** for the
 reduction is implemented: `axeyum_solver::check_qf_bv_faithfulness` samples

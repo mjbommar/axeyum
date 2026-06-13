@@ -694,6 +694,26 @@ Last updated: 2026-06-13
   certification gap — it is the cheap scalable assurance below the staged path
   (B trusted-reference + miter → A verified bit-blaster) in
   [scalable bit-blast certification](docs/research/07-verification/scalable-bitblast-certification.md).
+- Certified bit-blasting by independent-reference miter recorded 2026-06-13
+  (track a, **path B delivered** for the bitwise/Boolean/`eq`/`ite` fragment):
+  `axeyum_solver::certify_bitblast_by_miter` builds one AIG holding both the
+  production bit-blasting (`axeyum-bv`, copied over shared symbol-bit inputs) and
+  a **separately coded reference** bit-blaster, miters their output bits
+  (`OR (fast XOR ref)`), Tseitin-encodes, and refutes with
+  `solve_with_drat_proof` + `check_drat`. An `unsat` miter is an **exhaustive,
+  DRAT-checked** proof the two agree on *every* input — a real faithfulness
+  *certificate* (not sampling), carrying the auditable `(dimacs, drat)`; a `sat`
+  miter is a faithfulness bug with a witness. Sound modulo trust in the
+  independent reference (so a production bug surfaces as miter `sat` — the
+  two-independent-procedures pattern applied to bit-blasting). Uncovered ops
+  (arithmetic/shifts/concat/extract) return `NotCertifiable` → fall back to the
+  sampled faithfulness check. Tests certify a covered-fragment query (and
+  nand/nor/xnor) and report `NotCertifiable` for `bvadd`/reals. This is the
+  scaffold for full path (B): extending the reference operator-by-operator (each
+  gadget independently coded + evaluator-cross-checked) certifies the whole
+  supported set; path (A), a width-parametric verified bit-blaster, is the
+  eventual reference-trust-free form. See
+  [scalable bit-blast certification](docs/research/07-verification/scalable-bitblast-certification.md).
 - Phase: **Phase 5 first pure-Rust backend slice.** M0, Phase 1, SMT-LIB
   ingestion/export, the micro-corpus benchmark harness, the public QF_BV
   baseline, and the Phase 3 query/rewrite/evidence entry contracts are

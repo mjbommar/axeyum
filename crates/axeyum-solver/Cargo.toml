@@ -12,6 +12,7 @@ categories.workspace = true
 publish = false
 
 [dependencies]
+axeyum-aig.workspace = true
 axeyum-bv.workspace = true
 axeyum-cnf.workspace = true
 axeyum-ir.workspace = true

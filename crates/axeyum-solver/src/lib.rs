@@ -18,6 +18,7 @@ mod abv;
 mod aufbv;
 mod auto;
 mod backend;
+mod bitblast_miter;
 mod certify;
 mod combined;
 mod dpll_t;
@@ -46,6 +47,7 @@ pub use backend::{
     Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind,
     UnknownReason,
 };
+pub use bitblast_miter::{BitblastMiterOutcome, certify_bitblast_by_miter};
 pub use certify::{CertifyOutcome, certify_qf_bv_by_enumeration};
 pub use combined::check_with_all_theories;
 pub use dpll_t::{
