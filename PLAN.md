@@ -626,9 +626,12 @@ Last updated: 2026-06-13
   the Fourier–Motzkin Farkas certificate (disagreement → soundness alarm), and a
   2000-case differential fuzz confirms the two engines agree on every verdict.
   Two independent exact procedures validating each other (the project's
-  characteristic move). Remaining: native Farkas extraction from the simplex
-  tableau (so it certifies its own `unsat`); the scale win over Fourier–Motzkin
-  shows only on large systems not yet in the corpus.
+  characteristic move). **Native Farkas extraction** now lets the simplex certify
+  its own `unsat` from the final tableau (multipliers `1` on the violating
+  slack's constraint, `−c_n` on each blocking slack's), self-checked via
+  `FarkasCertificate::verify` and exercised by the differential fuzz on every
+  `unsat`; Fourier–Motzkin only backs up the unreachable iteration cap. The scale
+  win over Fourier–Motzkin shows only on large systems not yet in the corpus.
 - Phase: **Phase 5 first pure-Rust backend slice.** M0, Phase 1, SMT-LIB
   ingestion/export, the micro-corpus benchmark harness, the public QF_BV
   baseline, and the Phase 3 query/rewrite/evidence entry contracts are

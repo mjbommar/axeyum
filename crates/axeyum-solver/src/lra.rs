@@ -895,7 +895,7 @@ pub fn check_with_lra_simplex(
     }
 
     match simplex_feasible(&ctx.constraints, ctx.vars.len()) {
-        Some(values) => {
+        Some(SimplexOutcome::Sat(values)) => {
             let mut model = Model::new();
             let mut assignment = axeyum_ir::Assignment::new();
             for (&symbol, &index) in &ctx.var_index {
@@ -921,24 +921,39 @@ pub fn check_with_lra_simplex(
             }
             Ok(CheckResult::Sat(model))
         }
-        None => {
-            // Cross-check the `unsat` verdict against the Fourier–Motzkin engine,
-            // which also supplies an independently verified Farkas certificate.
-            match lra_farkas_certificate(arena, assertions)? {
-                Some(certificate) if certificate.verify() => Ok(CheckResult::Unsat),
-                _ => Err(SolverError::Backend(
-                    "lra simplex/Fourier–Motzkin disagreement: simplex reports unsat but no \
-                     Farkas certificate was found"
+        Some(SimplexOutcome::Unsat(multipliers)) => {
+            // Self-check the simplex's own Farkas certificate (no Fourier–Motzkin
+            // dependency): the multipliers must independently refute the system.
+            let atoms: Vec<FarkasAtom> = ctx.constraints.iter().map(FarkasAtom::from).collect();
+            let certificate = FarkasCertificate { atoms, multipliers };
+            if certificate.verify() {
+                Ok(CheckResult::Unsat)
+            } else {
+                Err(SolverError::Backend(
+                    "lra simplex Farkas certificate failed self-check (tableau extraction bug)"
                         .to_string(),
-                )),
+                ))
             }
         }
+        // Iteration backstop hit without a verdict: defer to Fourier–Motzkin.
+        None => check_with_lra(arena, assertions),
     }
 }
 
-/// Exact-rational general simplex feasibility: returns a satisfying rational
-/// assignment for the `nvars` original variables, or `None` if infeasible.
-fn simplex_feasible(constraints: &[Constraint], nvars: usize) -> Option<Vec<Rational>> {
+/// The result of the general simplex: a satisfying rational assignment, or the
+/// Farkas multipliers (over the original constraints) refuting the system. `None`
+/// from [`simplex_feasible`] means the iteration backstop was hit without a
+/// verdict (practically unreachable under Bland's rule), and the caller defers.
+enum SimplexOutcome {
+    Sat(Vec<Rational>),
+    Unsat(Vec<Rational>),
+}
+
+/// Exact-rational general simplex: returns a satisfying rational assignment for
+/// the `nvars` original variables ([`SimplexOutcome::Sat`]) or the Farkas
+/// multipliers refuting the system ([`SimplexOutcome::Unsat`]); `None` only if
+/// the iteration backstop is reached without deciding.
+fn simplex_feasible(constraints: &[Constraint], nvars: usize) -> Option<SimplexOutcome> {
     let m = constraints.len();
     let total = nvars + m;
     // Variable layout: 0..nvars original (free), nvars..total slacks (one per
@@ -985,7 +1000,11 @@ fn simplex_feasible(constraints: &[Constraint], nvars: usize) -> Option<Vec<Rati
             .find(|&b| matches!(upper[b], Some(u) if value[b] > u));
         let Some(b) = violating else {
             // Feasible: instantiate δ to a concrete positive rational.
-            return Some(extract_model(constraints, nvars, &value));
+            return Some(SimplexOutcome::Sat(extract_model(
+                constraints,
+                nvars,
+                &value,
+            )));
         };
         let target = upper[b].expect("violating basic has an upper bound");
 
@@ -1014,7 +1033,19 @@ fn simplex_feasible(constraints: &[Constraint], nvars: usize) -> Option<Vec<Rati
             }
         }
         let Some(n) = entering else {
-            return None; // infeasible: row constant in the movable directions
+            // Infeasible. `b` is a slack above its upper bound that cannot
+            // decrease; every blocking nonbasic is a slack at its upper bound
+            // with a negative coefficient. The Farkas refutation is
+            // 1·(constraint of b) + Σ (−c_n)·(constraint of slack n); free
+            // original nonbasics have coefficient 0 here and are skipped.
+            let mut multipliers = vec![Rational::zero(); m];
+            multipliers[b - nvars] = multipliers[b - nvars] + Rational::integer(1);
+            for (&var, &coeff) in &row[&b] {
+                if var >= nvars {
+                    multipliers[var - nvars] = multipliers[var - nvars] - coeff;
+                }
+            }
+            return Some(SimplexOutcome::Unsat(multipliers));
         };
 
         pivot_and_update(
@@ -1027,17 +1058,19 @@ fn simplex_feasible(constraints: &[Constraint], nvars: usize) -> Option<Vec<Rati
             target,
         );
     }
-    // Backstop reached without a verdict: treat as undecided → infeasible would be
-    // unsound, so report feasible only if no bound is violated.
+    // Backstop reached without a verdict: report feasible only if no bound is
+    // violated, otherwise defer (`None`) — the caller falls back to the
+    // Fourier–Motzkin engine rather than risk a wrong answer.
     if basic
         .iter()
         .all(|&b| !matches!(upper[b], Some(u) if value[b] > u))
     {
-        Some(extract_model(constraints, nvars, &value))
+        Some(SimplexOutcome::Sat(extract_model(
+            constraints,
+            nvars,
+            &value,
+        )))
     } else {
-        // Could not decide within the backstop; fall back to "no model found".
-        // The caller cross-checks `unsat` against Fourier–Motzkin, so a spurious
-        // `None` here surfaces as a soundness alarm rather than a wrong answer.
         None
     }
 }

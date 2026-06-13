@@ -191,10 +191,19 @@ way every prior theory was.
   against the Fourier–Motzkin Farkas certificate** (a disagreement is a
   `SolverError::Backend` soundness alarm). A 2000-case differential fuzz test
   confirms the two engines agree on every verdict. This is the project's
-  characteristic move — two independent procedures validating each other. Native
-  Farkas extraction from the final simplex tableau (so the simplex certifies its
-  own `unsat` without leaning on Fourier–Motzkin) is the remaining follow-up;
-  the scale benefit over Fourier–Motzkin appears on large systems not yet in the
+  characteristic move — two independent procedures validating each other.
+- 2026-06-13: **native Farkas extraction** — the simplex now certifies its own
+  `unsat` from the final tableau (no Fourier–Motzkin dependency). At
+  infeasibility the violating slack `b` is above its upper bound and cannot
+  decrease, so every blocking nonbasic is a slack at its upper bound with a
+  negative coefficient `c_n`; the refutation multipliers are `1` on `b`'s
+  constraint and `−c_n` on each blocking slack's constraint, which collapse to a
+  positive constant exactly because `b` violates its bound. The extracted
+  `FarkasCertificate` is self-checked before `unsat` is returned (a failed check
+  is a `SolverError::Backend` alarm — the safety net for the tableau-extraction
+  logic), and the 2000-case differential fuzz exercises it on every `unsat`.
+  Fourier–Motzkin now only backs up the (practically unreachable) iteration cap.
+  The scale benefit over Fourier–Motzkin appears on large systems not yet in the
   corpus.
 
 ## Consequences
