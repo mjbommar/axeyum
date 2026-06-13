@@ -574,6 +574,17 @@ Last updated: 2026-06-13
   arrays, EUF, integers, and reals). Tests isolate a conflicting bit-vector pair
   (excluding a tautology), a real conflict (excluding an irrelevant bound), and
   return `None` for satisfiable queries.
+- Proving front door recorded 2026-06-13: `axeyum_solver::prove` is the
+  consumer-facing **theorem-proving interface** over the checkable-`unsat`
+  machinery — it proves `goal` follows from `hypotheses` by refuting the negation
+  (`hypotheses ∧ ¬goal`) via `produce_evidence`. `ProofOutcome::Proved` carries
+  the refutation's `EvidenceReport` (re-checked before return, so `Proved` is a
+  verified proof), `Disproved` carries a replay-checked countermodel, and
+  `Unknown` is inconclusive. This realizes the **proving arm of the north star**:
+  proving a theorem = a checkable refutation of its negation (untrusted search,
+  trusted small checking). Tests prove a real implication (`x>0 ⊨ x≥0`) and a
+  bit-vector tautology (`(x|x)=x`) with re-checked certificates, and disprove a
+  non-implication and a non-theorem with countermodels.
 - Phase: **Phase 5 first pure-Rust backend slice.** M0, Phase 1, SMT-LIB
   ingestion/export, the micro-corpus benchmark harness, the public QF_BV
   baseline, and the Phase 3 query/rewrite/evidence entry contracts are

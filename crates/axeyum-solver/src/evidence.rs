@@ -362,6 +362,64 @@ pub fn produce_evidence(
     })
 }
 
+/// The outcome of a [`prove`] attempt — the proving arm of the north star.
+#[derive(Debug, Clone)]
+pub enum ProofOutcome {
+    /// The goal follows from the hypotheses. The [`EvidenceReport`] is the
+    /// refutation of `hypotheses ∧ ¬goal`; for a certified theory it has already
+    /// been re-checked, so `Proved` means an independently verified proof.
+    Proved(EvidenceReport),
+    /// The goal does **not** follow: `countermodel` satisfies the hypotheses
+    /// while falsifying the goal (it is replay-checked against `hypotheses ∧
+    /// ¬goal`).
+    Disproved(Model),
+    /// Could not be decided, with the classified reason.
+    Unknown(UnknownReason),
+}
+
+/// Proves that `goal` follows from `hypotheses` by **refuting its negation**:
+/// it decides `hypotheses ∧ ¬goal` via [`produce_evidence`] and turns the
+/// outcome into a [`ProofOutcome`]. An `unsat` (the negation is impossible) is a
+/// proof; a `sat` is a countermodel; `unknown` is inconclusive.
+///
+/// When the refutation carries a certificate, it is **re-checked here before
+/// `Proved` is returned**, so `Proved` is a verified proof (a failed check is a
+/// [`SolverError::Backend`] soundness alarm). This is the consumer-facing
+/// "proving" interface over the checkable-`unsat` machinery: untrusted search,
+/// trusted small checking.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] if `goal` is non-Boolean or the query is
+/// outside the supported fragment, or [`SolverError`] from the engine; a failed
+/// proof re-check is a [`SolverError::Backend`].
+pub fn prove(
+    arena: &mut TermArena,
+    hypotheses: &[TermId],
+    goal: TermId,
+    config: &SolverConfig,
+) -> Result<ProofOutcome, SolverError> {
+    let negated_goal = arena.not(goal)?;
+    let mut query: Vec<TermId> = hypotheses.to_vec();
+    query.push(negated_goal);
+
+    let report = produce_evidence(arena, &query, config)?;
+    match &report.evidence {
+        Evidence::Sat(model) => Ok(ProofOutcome::Disproved(model.clone())),
+        Evidence::Unknown(reason) => Ok(ProofOutcome::Unknown(reason.clone())),
+        // Any `unsat` evidence variant means the negation is impossible: a proof.
+        // Re-check the certificate before declaring `Proved`.
+        Evidence::Unsat(_) | Evidence::UnsatFarkas(_) | Evidence::UnsatLraDpll(_) => {
+            if !report.evidence.check(arena, &query)? {
+                return Err(SolverError::Backend(
+                    "prove: refutation of the negated goal failed its own check".to_owned(),
+                ));
+            }
+            Ok(ProofOutcome::Proved(report))
+        }
+    }
+}
+
 /// Which certified-evidence producer a query should route to.
 enum EvidenceRoute {
     /// Only bit-vectors and Booleans — the `produce_qf_bv_evidence` (DRAT) path.
