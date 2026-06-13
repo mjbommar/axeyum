@@ -363,16 +363,25 @@ pub fn instantiate_with_triggers(
     let bound = bound_variables(arena, assertions);
     let ground = ground_subterms(arena, assertions, &bound);
     let leaves = ground_universe(arena, assertions, &bound);
+    // Congruence closure over the ground subterms, seeded by the asserted ground
+    // equalities, so trigger matching is performed **modulo equality** (proper
+    // E-matching): `g(x)` matches `g(c)` even when only `g(a)` is present, given
+    // `a = c`.
+    let egraph = EGraph::build(
+        arena,
+        &ground,
+        &collect_ground_equalities(arena, assertions),
+    );
 
     let mut out = Vec::with_capacity(assertions.len());
     let mut instantiated = false;
     for &assertion in assertions {
         if let Some((vars, body)) = peel_universals(arena, assertion) {
             // Per-variable bindings: enumerative leaves augmented with the
-            // (possibly compound) terms found by E-matching the body's triggers,
-            // including triggers that bind several of the chain's variables at
-            // once (e.g. `g(x, y)` against `g(f(c), h(c))`).
-            let per_var = trigger_per_var_bindings(arena, body, &vars, &ground, &leaves);
+            // (possibly compound) terms found by E-matching the body's triggers
+            // modulo congruence, including triggers that bind several of the
+            // chain's variables at once (e.g. `g(x, y)` against `g(f(c), h(c))`).
+            let per_var = trigger_per_var_bindings(arena, body, &vars, &leaves, &egraph);
             match instantiate_chain(arena, &vars, body, &per_var)? {
                 Some(term) => {
                     instantiated = true;
@@ -395,52 +404,46 @@ pub fn instantiate_with_triggers(
 
 /// Per-variable instantiation bindings for a universal chain over `vars`: each
 /// variable's enumerative ground leaves **augmented** with the terms it receives
-/// when the body's triggers are E-matched against the ground subterms.
+/// when the body's triggers are E-matched **modulo congruence** against the
+/// ground subterms (using the [`EGraph`]).
 ///
-/// Matching is **multi-variable**: a single trigger (e.g. `g(x, y)`) can bind
-/// several chain variables at once (`x := f(c)`, `y := h(c)` against
-/// `g(f(c), h(c))`), and each bound value is added to that variable's candidate
-/// set. The chain instantiation then takes the cartesian product, which includes
-/// the coupled tuple — so this refutes goals that need compound bindings of more
-/// than one variable, which neither leaf enumeration nor single-variable
-/// matching can reach. The union with the leaves keeps it strictly at least as
-/// capable as [`instantiate_universals`].
+/// Matching is multi-variable (one trigger can bind several chain variables) and
+/// congruence-aware (a trigger matches any ground term in the same equivalence
+/// class, at every position). Each bound value joins its variable's candidate
+/// set; the chain instantiation then takes the cartesian product. The union with
+/// the leaves keeps it strictly at least as capable as [`instantiate_universals`].
+/// With no asserted equalities every class is a singleton and matching reduces to
+/// the syntactic case.
 fn trigger_per_var_bindings(
     arena: &TermArena,
     body: TermId,
     vars: &[SymbolId],
-    ground: &[TermId],
     leaves: &HashMap<Sort, Vec<TermId>>,
+    egraph: &EGraph,
 ) -> Vec<Vec<TermId>> {
     let var_set: std::collections::BTreeSet<SymbolId> = vars.iter().copied().collect();
 
-    // Match index: group ground application subterms by their head operator. A
-    // trigger (itself an `apply`/`select` application) can only match a candidate
-    // with the same head, so this restricts each trigger to same-head candidates
-    // instead of scanning every ground subterm — the matching is identical, just
-    // indexed. (A lightweight stand-in for an E-graph match index.)
-    let mut index: HashMap<Op, Vec<TermId>> = HashMap::new();
-    for &candidate in ground {
-        if let TermNode::App { op, .. } = arena.node(candidate) {
-            index.entry(*op).or_default().push(candidate);
-        }
-    }
-
-    // Match every trigger against the same-head ground subterms, collecting the
-    // variable bindings each match induces.
+    // E-match every trigger against the equivalence classes whose members share
+    // the trigger's head, collecting the variable bindings each match induces.
     let mut matches: Vec<HashMap<SymbolId, TermId>> = Vec::new();
     for &trigger in &collect_triggers(arena, body, &var_set) {
-        let TermNode::App { op, .. } = arena.node(trigger) else {
+        let TermNode::App { op: trigger_op, .. } = arena.node(trigger) else {
             continue;
         };
-        let Some(candidates) = index.get(op) else {
-            continue;
-        };
-        for &candidate in candidates {
-            let mut binding = HashMap::new();
-            if match_multi(arena, trigger, candidate, &var_set, &mut binding) && !binding.is_empty()
-            {
-                matches.push(binding);
+        for (&class_rep, members) in &egraph.classes {
+            let head_matches = members
+                .iter()
+                .any(|&g| matches!(arena.node(g), TermNode::App { op, .. } if op == trigger_op));
+            if !head_matches {
+                continue;
+            }
+            for binding in ematch(arena, trigger, class_rep, &var_set, egraph) {
+                if !binding.is_empty() && !matches.contains(&binding) {
+                    matches.push(binding);
+                }
+                if matches.len() > MATCH_CAP {
+                    break;
+                }
             }
         }
     }
@@ -460,6 +463,10 @@ fn trigger_per_var_bindings(
         })
         .collect()
 }
+
+/// A backstop on the number of E-match substitutions collected, guarding against
+/// blow-up from large equivalence classes.
+const MATCH_CAP: usize = 4096;
 
 /// The triggers of `body`: `apply`/`select` subterms mentioning at least one of
 /// the chain's variables. Deterministic order.
@@ -486,43 +493,244 @@ fn collect_triggers(
     triggers
 }
 
-/// Matches trigger `pattern` against the ground term `candidate`, binding any of
-/// the chain's variables (`var_set`) it covers into `binding` (consistently).
-/// Returns `true` on a match.
-fn match_multi(
+/// A congruence closure over ground terms: an equivalence partition under the
+/// asserted ground equalities, closed so that applications with pairwise-equal
+/// arguments are themselves equal. Used to match triggers modulo equality.
+struct EGraph {
+    /// Each ground term mapped to its class representative.
+    rep: HashMap<TermId, TermId>,
+    /// Each representative mapped to the ground terms in its class.
+    classes: HashMap<TermId, Vec<TermId>>,
+}
+
+/// Union–find root with path compression.
+fn uf_find(parent: &mut [usize], mut i: usize) -> usize {
+    while parent[i] != i {
+        parent[i] = parent[parent[i]];
+        i = parent[i];
+    }
+    i
+}
+
+/// Union–find merge; returns whether the two were in distinct classes.
+fn uf_union(parent: &mut [usize], a: usize, b: usize) -> bool {
+    let (ra, rb) = (uf_find(parent, a), uf_find(parent, b));
+    if ra == rb {
+        return false;
+    }
+    parent[ra.max(rb)] = ra.min(rb);
+    true
+}
+
+impl EGraph {
+    /// Builds the congruence closure over `ground`, seeded with `equalities`.
+    fn build(arena: &TermArena, ground: &[TermId], equalities: &[(TermId, TermId)]) -> Self {
+        // Union–find over a dense index of the ground terms.
+        let index: HashMap<TermId, usize> =
+            ground.iter().enumerate().map(|(i, &t)| (t, i)).collect();
+        let mut parent: Vec<usize> = (0..ground.len()).collect();
+
+        for &(a, b) in equalities {
+            if let (Some(&ia), Some(&ib)) = (index.get(&a), index.get(&b)) {
+                uf_union(&mut parent, ia, ib);
+            }
+        }
+
+        // Congruence fixpoint: merge same-head applications with pairwise-equal
+        // arguments. Ground sets are small, so an O(n²) sweep per pass is fine.
+        let apps: Vec<usize> = ground
+            .iter()
+            .enumerate()
+            .filter(|&(_, &t)| matches!(arena.node(t), TermNode::App { .. }))
+            .map(|(i, _)| i)
+            .collect();
+        loop {
+            let mut changed = false;
+            for (a_pos, &ia) in apps.iter().enumerate() {
+                for &ib in &apps[a_pos + 1..] {
+                    if uf_find(&mut parent, ia) == uf_find(&mut parent, ib) {
+                        continue;
+                    }
+                    if congruent(arena, ground[ia], ground[ib], &index, &mut parent)
+                        && uf_union(&mut parent, ia, ib)
+                    {
+                        changed = true;
+                    }
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+
+        // Materialize representatives (the smallest-index member is canonical)
+        // and class memberships.
+        let mut rep = HashMap::new();
+        let mut classes: HashMap<TermId, Vec<TermId>> = HashMap::new();
+        for (i, &t) in ground.iter().enumerate() {
+            let r = ground[uf_find(&mut parent, i)];
+            rep.insert(t, r);
+            classes.entry(r).or_default().push(t);
+        }
+        EGraph { rep, classes }
+    }
+
+    /// The representative ground term of `t`'s class (or `t` itself if `t` is not
+    /// a tracked ground term).
+    fn rep_of(&self, t: TermId) -> TermId {
+        self.rep.get(&t).copied().unwrap_or(t)
+    }
+}
+
+/// Whether two ground applications are congruent: same head/arity with
+/// pairwise class-equal arguments.
+fn congruent(
+    arena: &TermArena,
+    a: TermId,
+    b: TermId,
+    index: &HashMap<TermId, usize>,
+    parent: &mut [usize],
+) -> bool {
+    match (arena.node(a), arena.node(b)) {
+        (TermNode::App { op: oa, args: aa }, TermNode::App { op: ob, args: ab })
+            if oa == ob && aa.len() == ab.len() =>
+        {
+            aa.iter()
+                .zip(ab.iter())
+                .all(|(&x, &y)| match (index.get(&x), index.get(&y)) {
+                    (Some(&ix), Some(&iy)) => uf_find(parent, ix) == uf_find(parent, iy),
+                    _ => x == y,
+                })
+        }
+        _ => false,
+    }
+}
+
+/// E-matches `pattern` against the equivalence class represented by `class_rep`,
+/// modulo congruence, returning every variable substitution that matches. Bound
+/// variables (`var_set`) bind to the class representative ground term.
+fn ematch(
     arena: &TermArena,
     pattern: TermId,
-    candidate: TermId,
+    class_rep: TermId,
     var_set: &std::collections::BTreeSet<SymbolId>,
-    binding: &mut HashMap<SymbolId, TermId>,
-) -> bool {
+    egraph: &EGraph,
+) -> Vec<HashMap<SymbolId, TermId>> {
     if let TermNode::Symbol(symbol) = arena.node(pattern) {
         if var_set.contains(symbol) {
-            // A bound-variable position: bind it to `candidate` (sorts must
-            // agree), or require consistency with an earlier binding.
-            if arena.sort_of(candidate) != arena.sort_of(pattern) {
-                return false;
+            // Bind the variable to the class's representative ground term (sorts
+            // must agree).
+            if arena.sort_of(class_rep) == arena.sort_of(pattern) {
+                return vec![HashMap::from([(*symbol, class_rep)])];
             }
-            if let Some(&prev) = binding.get(symbol) {
-                return prev == candidate;
-            }
-            binding.insert(*symbol, candidate);
-            return true;
+            return Vec::new();
         }
     }
-    match (arena.node(pattern), arena.node(candidate)) {
-        (TermNode::App { op: po, args: pa }, TermNode::App { op: go, args: ga })
-            if po == go && pa.len() == ga.len() =>
-        {
-            let pairs: Vec<(TermId, TermId)> = pa.iter().copied().zip(ga.iter().copied()).collect();
-            pairs
-                .into_iter()
-                .all(|(p, g)| match_multi(arena, p, g, var_set, binding))
+    match arena.node(pattern) {
+        TermNode::App {
+            op: pop,
+            args: pargs,
+        } => {
+            let pargs = pargs.clone();
+            let mut results = Vec::new();
+            let Some(members) = egraph.classes.get(&class_rep) else {
+                return results;
+            };
+            for &g in members {
+                if let TermNode::App {
+                    op: gop,
+                    args: gargs,
+                } = arena.node(g)
+                {
+                    if gop == pop && gargs.len() == pargs.len() {
+                        let gargs = gargs.clone();
+                        // Combine, by consistent merge, the substitutions from
+                        // matching each argument against the class of g's argument.
+                        let mut combos: Vec<HashMap<SymbolId, TermId>> = vec![HashMap::new()];
+                        for (p_arg, g_arg) in pargs.iter().zip(gargs.iter()) {
+                            let sub = ematch(arena, *p_arg, egraph.rep_of(*g_arg), var_set, egraph);
+                            combos = merge_substitutions(&combos, &sub);
+                            if combos.is_empty() {
+                                break;
+                            }
+                        }
+                        results.extend(combos);
+                    }
+                }
+            }
+            results
         }
-        // Non-variable leaves (constants, free symbols) match only their
-        // hash-consed equal; a structural mismatch fails.
-        _ => pattern == candidate,
+        // A ground leaf (constant or free symbol) matches the class iff it is in
+        // it.
+        _ => {
+            if egraph.rep_of(pattern) == class_rep {
+                vec![HashMap::new()]
+            } else {
+                Vec::new()
+            }
+        }
     }
+}
+
+/// Cartesian product of two substitution lists, keeping only pairs that agree on
+/// every shared variable.
+fn merge_substitutions(
+    a: &[HashMap<SymbolId, TermId>],
+    b: &[HashMap<SymbolId, TermId>],
+) -> Vec<HashMap<SymbolId, TermId>> {
+    let mut out = Vec::new();
+    for ma in a {
+        for mb in b {
+            let consistent = mb
+                .iter()
+                .all(|(k, v)| ma.get(k).is_none_or(|existing| existing == v));
+            if consistent {
+                let mut merged = ma.clone();
+                merged.extend(mb.iter().map(|(&k, &v)| (k, v)));
+                out.push(merged);
+            }
+        }
+    }
+    out
+}
+
+/// Collects the ground equalities entailed by `assertions`: the `(a, b)` pairs of
+/// every top-level conjunct `a = b` whose sides are both ground (so the equality
+/// holds in every model and is sound to use for congruence).
+fn collect_ground_equalities(arena: &TermArena, assertions: &[TermId]) -> Vec<(TermId, TermId)> {
+    let bound = bound_variables(arena, assertions);
+    let mut equalities = Vec::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    let mut seen = std::collections::BTreeSet::new();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(term) {
+            match op {
+                // Descend through top-level conjunctions.
+                Op::BoolAnd => stack.extend(args.iter().copied()),
+                Op::Eq if args.len() == 2 => {
+                    let (a, b) = (args[0], args[1]);
+                    if is_ground(arena, a, &bound) && is_ground(arena, b, &bound) {
+                        equalities.push((a, b));
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    equalities
+}
+
+/// Whether `term` is free of every bound variable (a ground term).
+fn is_ground(
+    arena: &TermArena,
+    term: TermId,
+    bound: &std::collections::BTreeSet<SymbolId>,
+) -> bool {
+    let mut memo = HashMap::new();
+    term_is_ground(arena, term, bound, &mut memo)
 }
 
 /// Whether `term` contains a free occurrence of any variable in `var_set`.

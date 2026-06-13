@@ -242,3 +242,56 @@ fn ematching_refutes_a_compound_instance_enumeration_misses() {
         "E-matching should refute via the compound binding x := f(a)"
     );
 }
+
+#[test]
+fn congruence_ematching_refutes_via_an_internal_equality() {
+    // forall x:BV16. f(g(x)) == 0  with  g(h(a)) == c  and  f(c) != 0.
+    // The refuting instance is x := h(a): then g(h(a)) == c gives f(g(h(a))) ==
+    // f(c) == 0, contradicting f(c) != 0. But h(a) is a *compound* term that is
+    // not a ground leaf (so leaf enumeration misses it), and the trigger f(g(x))
+    // only matches f(c) *modulo* the equality g(h(a)) == c at an internal
+    // position (so purely syntactic matching misses it too). Congruence-closure
+    // E-matching binds x := h(a) and refutes.
+    let build = |arena: &mut TermArena| {
+        let bv16 = Sort::BitVec(16);
+        let fun_f = arena.declare_fun("f", &[bv16], bv16).unwrap();
+        let fun_g = arena.declare_fun("g", &[bv16], bv16).unwrap();
+        let fun_h = arena.declare_fun("h", &[bv16], bv16).unwrap();
+        let aa = arena.bv_var("a", 16).unwrap();
+        let cc = arena.bv_var("c", 16).unwrap();
+        let zero = arena.bv_const(16, 0).unwrap();
+        let x_sym = arena.declare("x", bv16).unwrap();
+        let x = arena.var(x_sym);
+        let gx = arena.apply(fun_g, &[x]).unwrap();
+        let fgx = arena.apply(fun_f, &[gx]).unwrap();
+        let body = arena.eq(fgx, zero).unwrap();
+        let forall = arena.forall(x_sym, body).unwrap();
+        let ha = arena.apply(fun_h, &[aa]).unwrap();
+        let gha = arena.apply(fun_g, &[ha]).unwrap();
+        let g_eq_c = arena.eq(gha, cc).unwrap();
+        let fc = arena.apply(fun_f, &[cc]).unwrap();
+        let fc_eq0 = arena.eq(fc, zero).unwrap();
+        let fc_ne0 = arena.not(fc_eq0).unwrap();
+        vec![forall, g_eq_c, fc_ne0]
+    };
+
+    // Neither leaf enumeration nor (implicitly) syntactic matching reaches it.
+    let mut arena_enum = TermArena::new();
+    let enum_assertions = build(&mut arena_enum);
+    assert!(
+        matches!(
+            prove_unsat_by_instantiation(&mut arena_enum, &enum_assertions, &config()).unwrap(),
+            CheckResult::Unknown(_)
+        ),
+        "leaf enumeration should not reach the internal-congruence binding"
+    );
+
+    // Congruence-closure E-matching binds x := h(a) via g(h(a)) == c and refutes.
+    let mut arena_em = TermArena::new();
+    let em_assertions = build(&mut arena_em);
+    assert_eq!(
+        prove_unsat_by_ematching(&mut arena_em, &em_assertions, &config()).unwrap(),
+        CheckResult::Unsat,
+        "congruence E-matching should refute via x := h(a)"
+    );
+}

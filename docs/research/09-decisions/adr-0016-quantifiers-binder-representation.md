@@ -154,9 +154,22 @@ evaluator sub-increment, then solving.
   candidates instead of scanning every ground subterm. The matching results are
   identical (a trigger can only match a same-head term), so it is a pure
   efficiency refactor validated by the unchanged E-matching tests — a lightweight
-  stand-in for an E-graph match index. Remaining: a full E-graph index and
-  matching modulo the current equalities (E-matching proper) rather than purely
-  syntactic.
+  stand-in for an E-graph match index.
+- 2026-06-13: **congruence-closure E-matching** (E-matching proper) — matching is
+  now performed **modulo the asserted ground equalities**. An `EGraph` builds the
+  congruence closure over the ground subterms (union–find seeded by top-level
+  ground `=` conjuncts, then closed so same-head applications with pairwise-equal
+  arguments merge), and `ematch` matches a trigger against an equivalence class,
+  trying every class member at each position. So `g(x)` matches `g(c)` even when
+  only `g(a)` is present, given `a = c`; bound variables bind to the class
+  representative. Soundness is unchanged (every ground instance of the universal
+  is valid — congruence only guides *which* sound instances are produced), and
+  with no equalities every class is a singleton so it reduces to the prior
+  syntactic matching (existing tests unchanged). A test refutes
+  `forall x. f(g(x))=0` ∧ `g(h(a))=c` ∧ `f(c)≠0` via `x:=h(a)` — a case both leaf
+  enumeration (h(a) is not a leaf) and syntactic matching (c is not syntactically
+  `g(_)`) miss. This closes the "matching modulo equalities" item; a persistent
+  incremental E-graph for scale is the remaining performance refinement.
 
 ## Consequences
 

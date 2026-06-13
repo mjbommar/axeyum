@@ -632,6 +632,20 @@ Last updated: 2026-06-13
   `FarkasCertificate::verify` and exercised by the differential fuzz on every
   `unsat`; Fourier–Motzkin only backs up the unreachable iteration cap. The scale
   win over Fourier–Motzkin shows only on large systems not yet in the corpus.
+- Congruence-closure E-matching recorded 2026-06-13 (ADR-0016, completes track
+  b): trigger matching now runs **modulo the asserted ground equalities** (proper
+  E-matching). An `EGraph` builds the congruence closure over ground subterms
+  (union–find seeded by top-level ground `=` conjuncts, closed under same-head /
+  pairwise-equal-args), and `ematch` matches a trigger against an equivalence
+  class, trying every class member at each position — so `g(x)` matches `g(c)`
+  given `a=c` even when only `g(a)` is present. Sound (every ground instance is
+  valid; congruence only guides which sound instances are produced); with no
+  equalities classes are singletons and it reduces to syntactic matching
+  (existing tests unchanged). A test refutes `forall x. f(g(x))=0 ∧ g(h(a))=c ∧
+  f(c)≠0` via `x:=h(a)`, which leaf enumeration and syntactic matching both miss.
+  **Track b is now complete** end to end (single/multi-var matching, nested
+  chains, match index, congruence closure); a persistent incremental E-graph for
+  scale is the only remaining performance refinement.
 - Phase: **Phase 5 first pure-Rust backend slice.** M0, Phase 1, SMT-LIB
   ingestion/export, the micro-corpus benchmark harness, the public QF_BV
   baseline, and the Phase 3 query/rewrite/evidence entry contracts are
@@ -2039,12 +2053,12 @@ In order; check off and date as completed.
       **scalable bit-blast-reduction certification** — Tseitin definitions as
       definitional/RAT introductions, so large-instance `unsat` is machine-checked
       end to end (the small-instance term-level enumeration certificate is done);
-      (b) **trigger-based E-matching** for infinite-domain quantifiers — largely
-      **done** (single- and multi-variable `apply`/`select` matching binding
-      variables to compound ground terms, plus nested universal-chain
-      instantiation, refuting cases leaf enumeration cannot); remaining here is an
-      E-graph match index for scale and matching modulo the current equalities;
-      and, benchmarking-gated
+      (b) **trigger-based E-matching** for infinite-domain quantifiers — **done**
+      (single- and multi-variable `apply`/`select` matching binding variables to
+      compound ground terms, nested universal-chain instantiation, a head-symbol
+      match index, and congruence-closure matching modulo the asserted ground
+      equalities); the only remaining refinement is a persistent incremental
+      E-graph for scale; and, benchmarking-gated
       by the methodology (encodings before SAT-core tuning), (c) CDCL
       **restarts + activity heuristics (VSIDS)** — gate (a) is now *measured*,
       not assumed: artifact v14's `summary.layer_attribution` reports SAT-share
