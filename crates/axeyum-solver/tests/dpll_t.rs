@@ -313,3 +313,98 @@ fn tampered_refutation_fails_verification() {
         "without its lemmas the skeleton is satisfiable, so verify must fail"
     );
 }
+
+#[test]
+fn fuzz_certified_dpll_is_intrinsically_sound() {
+    // Deterministic fuzz over random CNF formulas in real order atoms. The
+    // intrinsic soundness invariant of `certify_lra_dpll_unsat`: a returned
+    // `Unsat` always carries a refutation that verifies, and a returned `Sat`
+    // always carries a model that replays. A wrong verdict cannot slip through —
+    // a bogus `unsat` fails its own self-check (surfacing as an error, not
+    // `Unsat`), and a bogus `sat` fails replay. So merely decoding the result
+    // exercises both checkers across many Boolean shapes.
+    let mut state: u64 = 0xD1B5_4A32_D192_ED03;
+    let mut next = || {
+        state = state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        (state >> 33) as u32
+    };
+
+    let mut sat_seen = 0u32;
+    let mut unsat_seen = 0u32;
+
+    for _ in 0..1500 {
+        let mut arena = TermArena::new();
+        let x = arena.real_var("x").unwrap();
+        // A pool of mutually-constraining order atoms over one variable, so a
+        // healthy fraction of random clause sets is unsatisfiable.
+        let pool: Vec<_> = [
+            (true, 1i128), // x < 1
+            (false, 3),    // x > 3
+            (true, 0),     // x < 0
+            (false, 5),    // x > 5
+            (true, 4),     // x < 4
+        ]
+        .into_iter()
+        .map(|(less, c)| {
+            let k = arena.real_ratio(c, 1);
+            if less {
+                arena.real_lt(x, k).unwrap()
+            } else {
+                arena.real_gt(x, k).unwrap()
+            }
+        })
+        .collect();
+
+        // Build 2..=5 clauses, each a disjunction of 1..=2 atom literals.
+        let nclauses = 2 + (next() % 4) as usize;
+        let mut assertions = Vec::with_capacity(nclauses);
+        for _ in 0..nclauses {
+            let nlits = 1 + (next() % 2) as usize;
+            let mut clause: Option<axeyum_ir::TermId> = None;
+            for _ in 0..nlits {
+                let atom = pool[(next() as usize) % pool.len()];
+                let lit = if next() % 2 == 0 {
+                    atom
+                } else {
+                    arena.not(atom).unwrap()
+                };
+                clause = Some(match clause {
+                    Some(acc) => arena.or(acc, lit).unwrap(),
+                    None => lit,
+                });
+            }
+            assertions.push(clause.unwrap());
+        }
+
+        match certify_lra_dpll_unsat(&mut arena, &assertions, &config())
+            .expect("pure-real query decides without a soundness alarm")
+        {
+            LraDpllOutcome::Sat(model) => {
+                sat_seen += 1;
+                let assignment = model.to_assignment();
+                for &a in &assertions {
+                    assert_eq!(
+                        eval(&arena, a, &assignment).unwrap(),
+                        Value::Bool(true),
+                        "fuzz sat model must satisfy every clause"
+                    );
+                }
+            }
+            LraDpllOutcome::Unsat(refutation) => {
+                unsat_seen += 1;
+                assert!(
+                    refutation.verify(&arena).unwrap(),
+                    "fuzz unsat refutation must verify"
+                );
+            }
+            LraDpllOutcome::Unknown(reason) => {
+                panic!("small pure-real query should decide, got unknown: {reason:?}")
+            }
+        }
+    }
+
+    assert!(sat_seen > 0, "expected some satisfiable clause sets");
+    assert!(unsat_seen > 0, "expected some unsatisfiable clause sets");
+}
