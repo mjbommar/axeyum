@@ -606,8 +606,17 @@ Last updated: 2026-06-13
   cap the chain stays a sound residual `unknown`). Previously a multi-variable
   universal was skipped entirely (always `unknown`); now e.g.
   `forall x y:Real. x+y≥0` with `a<0` is refuted by the `x:=a, y:=a` instance.
-  Soundness unchanged (every tuple instance follows from the chain). Remaining
-  for track b: multi-variable *trigger* matching and an E-graph match index.
+  Soundness unchanged (every tuple instance follows from the chain).
+- Multi-variable trigger matching recorded 2026-06-13 (ADR-0016, track b):
+  `match_multi` binds several chain variables from a single trigger (`g(x,y)`
+  against `g(f(c),h(c))` → `x:=f(c), y:=h(c)`), which single-variable matching
+  could not (the other bound var blocked the match). Bound values join each
+  variable's candidate set, so the cartesian product includes the coupled
+  compound tuple. A test shows `forall x y:BV16. g(x,y)=0 ∧ g(f(c),h(c))≠0`:
+  leaf enumeration stays `unknown` but multi-variable E-matching refutes it.
+  Soundness unchanged (per-variable union over-approximates the coupled tuples).
+  Remaining for track b: an E-graph match index for scale and matching modulo
+  the current equalities.
 - Phase: **Phase 5 first pure-Rust backend slice.** M0, Phase 1, SMT-LIB
   ingestion/export, the micro-corpus benchmark harness, the public QF_BV
   baseline, and the Phase 3 query/rewrite/evidence entry contracts are
@@ -2015,11 +2024,12 @@ In order; check off and date as completed.
       **scalable bit-blast-reduction certification** — Tseitin definitions as
       definitional/RAT introductions, so large-instance `unsat` is machine-checked
       end to end (the small-instance term-level enumeration certificate is done);
-      (b) **trigger-based E-matching** for infinite-domain quantifiers — a first
-      slice is **done** (single-trigger `apply`/`select` matching binding `x` to
-      compound ground terms, refuting cases leaf enumeration cannot); remaining
-      here is multi-trigger/multi-variable matching and an E-graph match index for
-      scale; and, benchmarking-gated
+      (b) **trigger-based E-matching** for infinite-domain quantifiers — largely
+      **done** (single- and multi-variable `apply`/`select` matching binding
+      variables to compound ground terms, plus nested universal-chain
+      instantiation, refuting cases leaf enumeration cannot); remaining here is an
+      E-graph match index for scale and matching modulo the current equalities;
+      and, benchmarking-gated
       by the methodology (encodings before SAT-core tuning), (c) CDCL
       **restarts + activity heuristics (VSIDS)** — gate (a) is now *measured*,
       not assumed: artifact v14's `summary.layer_attribution` reports SAT-share

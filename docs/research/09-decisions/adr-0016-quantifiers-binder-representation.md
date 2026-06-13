@@ -138,9 +138,18 @@ evaluator sub-increment, then solving.
   residual `unknown`). Previously a multi-variable universal was skipped entirely
   (always `unknown`); now `forall x y:Real. x+y≥0` with `a<0` is refuted (the
   `x:=a, y:=a` instance gives `2a≥0`). Soundness is unchanged (every tuple
-  instance follows from the chain; the cap only ever yields `unknown`). Remaining:
-  multi-variable *trigger* matching (binding several vars from one trigger) and an
-  E-graph match index.
+  instance follows from the chain; the cap only ever yields `unknown`).
+- 2026-06-13: **multi-variable trigger matching** — `match_multi` binds *several*
+  chain variables from one trigger (e.g. `g(x, y)` against `g(f(c), h(c))` binds
+  `x:=f(c), y:=h(c)`), where single-variable matching failed because the other
+  bound variable blocked the match. Each bound value joins that variable's
+  candidate set, so the chain's cartesian product includes the coupled compound
+  tuple. A test shows `forall x y:BV16. g(x,y)=0` ∧ `g(f(c),h(c))≠0`: leaf
+  enumeration stays `unknown` (the tuple `(f(c),h(c))` is unreachable), while
+  multi-variable E-matching refutes it. Soundness unchanged (the per-variable
+  union over-approximates the coupled tuples — more sound instances, never
+  fewer). Remaining: an E-graph match index for scale, and matching modulo the
+  current equalities (E-matching proper) rather than purely syntactic.
 
 ## Consequences
 

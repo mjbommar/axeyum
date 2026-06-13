@@ -145,6 +145,58 @@ fn true_nested_universal_is_inconclusive() {
 }
 
 #[test]
+fn multivariable_ematching_refutes_a_coupled_compound_instance() {
+    // forall x y:BV16. g(x, y) == 0   plus   g(f(c), h(c)) != 0.
+    // The refuting instance needs the *coupled* binding x := f(c), y := h(c) —
+    // compound terms that appear only together inside the two-argument trigger
+    // g(x, y). Leaf enumeration (cartesian over {c, 0}) never produces it, and
+    // single-variable matching fails because the other bound variable blocks the
+    // match. Multi-variable E-matching binds both at once and refutes.
+    let build = |arena: &mut TermArena| {
+        let bv16 = Sort::BitVec(16);
+        let fun_g = arena.declare_fun("g", &[bv16, bv16], bv16).unwrap();
+        let fun_f = arena.declare_fun("f", &[bv16], bv16).unwrap();
+        let fun_h = arena.declare_fun("h", &[bv16], bv16).unwrap();
+        let cc = arena.bv_var("c", 16).unwrap();
+        let zero = arena.bv_const(16, 0).unwrap();
+        let x_sym = arena.declare("x", bv16).unwrap();
+        let y_sym = arena.declare("y", bv16).unwrap();
+        let x = arena.var(x_sym);
+        let y = arena.var(y_sym);
+        let gxy = arena.apply(fun_g, &[x, y]).unwrap();
+        let body = arena.eq(gxy, zero).unwrap();
+        let inner = arena.forall(y_sym, body).unwrap();
+        let outer = arena.forall(x_sym, inner).unwrap();
+        let fc = arena.apply(fun_f, &[cc]).unwrap();
+        let hc = arena.apply(fun_h, &[cc]).unwrap();
+        let gfhc = arena.apply(fun_g, &[fc, hc]).unwrap();
+        let gfhc_eq0 = arena.eq(gfhc, zero).unwrap();
+        let gfhc_ne0 = arena.not(gfhc_eq0).unwrap();
+        vec![outer, gfhc_ne0]
+    };
+
+    // Leaf enumeration cannot reach the coupled compound binding: inconclusive.
+    let mut arena_enum = TermArena::new();
+    let enum_assertions = build(&mut arena_enum);
+    assert!(
+        matches!(
+            prove_unsat_by_instantiation(&mut arena_enum, &enum_assertions, &config()).unwrap(),
+            CheckResult::Unknown(_)
+        ),
+        "leaf enumeration should not refute the coupled compound case"
+    );
+
+    // Multi-variable E-matching binds x := f(c), y := h(c) and refutes exactly.
+    let mut arena_em = TermArena::new();
+    let em_assertions = build(&mut arena_em);
+    assert_eq!(
+        prove_unsat_by_ematching(&mut arena_em, &em_assertions, &config()).unwrap(),
+        CheckResult::Unsat,
+        "multi-variable E-matching should refute via x:=f(c), y:=h(c)"
+    );
+}
+
+#[test]
 fn ematching_refutes_a_compound_instance_enumeration_misses() {
     // forall x:BV16. g(x) == 0   plus   g(f(a)) != 0.
     // BV16 is too wide for finite expansion, so this exercises instantiation.

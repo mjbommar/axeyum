@@ -369,14 +369,10 @@ pub fn instantiate_with_triggers(
     for &assertion in assertions {
         if let Some((vars, body)) = peel_universals(arena, assertion) {
             // Per-variable bindings: enumerative leaves augmented with the
-            // compound terms found by E-matching this variable's triggers.
-            let per_var: Vec<Vec<TermId>> = vars
-                .iter()
-                .map(|&v| {
-                    let sort = arena.symbol(v).1;
-                    trigger_bindings(arena, body, v, sort, &ground, &leaves)
-                })
-                .collect();
+            // (possibly compound) terms found by E-matching the body's triggers,
+            // including triggers that bind several of the chain's variables at
+            // once (e.g. `g(x, y)` against `g(f(c), h(c))`).
+            let per_var = trigger_per_var_bindings(arena, body, &vars, &ground, &leaves);
             match instantiate_chain(arena, &vars, body, &per_var)? {
                 Some(term) => {
                     instantiated = true;
@@ -397,38 +393,63 @@ pub fn instantiate_with_triggers(
     })
 }
 
-/// The ground terms to instantiate `var` with: the enumerative ground leaves of
-/// `var`'s sort **augmented** with the compound ground terms found by matching
-/// the body's function/array triggers. The union makes this strictly at least as
-/// capable as [`instantiate_universals`] — it tries every leaf binding *and* the
-/// compound bindings (e.g. `f(a)`) that leaves-only enumeration misses.
-fn trigger_bindings(
+/// Per-variable instantiation bindings for a universal chain over `vars`: each
+/// variable's enumerative ground leaves **augmented** with the terms it receives
+/// when the body's triggers are E-matched against the ground subterms.
+///
+/// Matching is **multi-variable**: a single trigger (e.g. `g(x, y)`) can bind
+/// several chain variables at once (`x := f(c)`, `y := h(c)` against
+/// `g(f(c), h(c))`), and each bound value is added to that variable's candidate
+/// set. The chain instantiation then takes the cartesian product, which includes
+/// the coupled tuple — so this refutes goals that need compound bindings of more
+/// than one variable, which neither leaf enumeration nor single-variable
+/// matching can reach. The union with the leaves keeps it strictly at least as
+/// capable as [`instantiate_universals`].
+fn trigger_per_var_bindings(
     arena: &TermArena,
     body: TermId,
-    var: SymbolId,
-    var_sort: Sort,
+    vars: &[SymbolId],
     ground: &[TermId],
     leaves: &HashMap<Sort, Vec<TermId>>,
-) -> Vec<TermId> {
-    let mut bindings: Vec<TermId> = leaves.get(&var_sort).cloned().unwrap_or_default();
-    for &trigger in &collect_triggers(arena, body, var) {
+) -> Vec<Vec<TermId>> {
+    let var_set: std::collections::BTreeSet<SymbolId> = vars.iter().copied().collect();
+
+    // Match every trigger against every ground subterm, collecting the variable
+    // bindings each match induces.
+    let mut matches: Vec<HashMap<SymbolId, TermId>> = Vec::new();
+    for &trigger in &collect_triggers(arena, body, &var_set) {
         for &candidate in ground {
-            let mut binding: Option<TermId> = None;
-            if match_trigger(arena, trigger, candidate, var, var_sort, &mut binding) {
-                if let Some(term) = binding {
-                    if !bindings.contains(&term) {
-                        bindings.push(term);
-                    }
-                }
+            let mut binding = HashMap::new();
+            if match_multi(arena, trigger, candidate, &var_set, &mut binding) && !binding.is_empty()
+            {
+                matches.push(binding);
             }
         }
     }
-    bindings
+
+    vars.iter()
+        .map(|&v| {
+            let sort = arena.symbol(v).1;
+            let mut candidates = leaves.get(&sort).cloned().unwrap_or_default();
+            for binding in &matches {
+                if let Some(&term) = binding.get(&v) {
+                    if !candidates.contains(&term) {
+                        candidates.push(term);
+                    }
+                }
+            }
+            candidates
+        })
+        .collect()
 }
 
-/// The triggers of `body` for `var`: `apply`/`select` subterms that mention
-/// `var`. Deterministic order (first occurrence in a stable traversal).
-fn collect_triggers(arena: &TermArena, body: TermId, var: SymbolId) -> Vec<TermId> {
+/// The triggers of `body`: `apply`/`select` subterms mentioning at least one of
+/// the chain's variables. Deterministic order.
+fn collect_triggers(
+    arena: &TermArena,
+    body: TermId,
+    var_set: &std::collections::BTreeSet<SymbolId>,
+) -> Vec<TermId> {
     let mut triggers = Vec::new();
     let mut seen = std::collections::BTreeSet::new();
     let mut stack = vec![body];
@@ -437,38 +458,37 @@ fn collect_triggers(arena: &TermArena, body: TermId, var: SymbolId) -> Vec<TermI
             continue;
         }
         if let TermNode::App { op, args } = arena.node(term) {
-            if matches!(op, Op::Apply(_) | Op::Select) && contains_var(arena, term, var) {
+            if matches!(op, Op::Apply(_) | Op::Select) && contains_any_var(arena, term, var_set) {
                 triggers.push(term);
             }
             stack.extend(args.iter().copied());
         }
     }
-    // Stable order independent of the traversal's pop order.
     triggers.sort_by_key(|t| t.index());
     triggers
 }
 
-/// Matches trigger `pattern` (which may contain `var`) against the ground term
-/// `candidate`, binding `var` consistently. Returns `true` on a match.
-fn match_trigger(
+/// Matches trigger `pattern` against the ground term `candidate`, binding any of
+/// the chain's variables (`var_set`) it covers into `binding` (consistently).
+/// Returns `true` on a match.
+fn match_multi(
     arena: &TermArena,
     pattern: TermId,
     candidate: TermId,
-    var: SymbolId,
-    var_sort: Sort,
-    binding: &mut Option<TermId>,
+    var_set: &std::collections::BTreeSet<SymbolId>,
+    binding: &mut HashMap<SymbolId, TermId>,
 ) -> bool {
     if let TermNode::Symbol(symbol) = arena.node(pattern) {
-        if *symbol == var {
-            // `var` position: bind it to `candidate` (sorts must agree), or
-            // require consistency with an earlier binding.
-            if arena.sort_of(candidate) != var_sort {
+        if var_set.contains(symbol) {
+            // A bound-variable position: bind it to `candidate` (sorts must
+            // agree), or require consistency with an earlier binding.
+            if arena.sort_of(candidate) != arena.sort_of(pattern) {
                 return false;
             }
-            if let Some(bound) = binding {
-                return *bound == candidate;
+            if let Some(&prev) = binding.get(symbol) {
+                return prev == candidate;
             }
-            *binding = Some(candidate);
+            binding.insert(*symbol, candidate);
             return true;
         }
     }
@@ -479,16 +499,20 @@ fn match_trigger(
             let pairs: Vec<(TermId, TermId)> = pa.iter().copied().zip(ga.iter().copied()).collect();
             pairs
                 .into_iter()
-                .all(|(p, g)| match_trigger(arena, p, g, var, var_sort, binding))
+                .all(|(p, g)| match_multi(arena, p, g, var_set, binding))
         }
-        // Non-`var` leaves (constants, free symbols) match only their hash-consed
-        // equal; a structural mismatch fails.
+        // Non-variable leaves (constants, free symbols) match only their
+        // hash-consed equal; a structural mismatch fails.
         _ => pattern == candidate,
     }
 }
 
-/// Whether `term` contains a free occurrence of `var`.
-fn contains_var(arena: &TermArena, term: TermId, var: SymbolId) -> bool {
+/// Whether `term` contains a free occurrence of any variable in `var_set`.
+fn contains_any_var(
+    arena: &TermArena,
+    term: TermId,
+    var_set: &std::collections::BTreeSet<SymbolId>,
+) -> bool {
     let mut seen = std::collections::BTreeSet::new();
     let mut stack = vec![term];
     while let Some(t) = stack.pop() {
@@ -496,7 +520,7 @@ fn contains_var(arena: &TermArena, term: TermId, var: SymbolId) -> bool {
             continue;
         }
         match arena.node(t) {
-            TermNode::Symbol(symbol) if *symbol == var => return true,
+            TermNode::Symbol(symbol) if var_set.contains(symbol) => return true,
             TermNode::App { args, .. } => stack.extend(args.iter().copied()),
             _ => {}
         }
