@@ -549,6 +549,20 @@ Last updated: 2026-06-13
   (lemma-stripped) refutation. Remaining: certify lazy-SMT `unsat` when the
   skeleton also carries bit-blasted theories (the propositional half then needs
   a DRAT proof rather than enumeration).
+- Unified checkable-evidence front door recorded 2026-06-13:
+  `axeyum_solver::produce_evidence` is the evidence analogue of the `solve`
+  front door — one call routes any supported query to the producer with the
+  strongest available certificate: pure `QF_BV`/Boolean → DRAT
+  (`produce_qf_bv_evidence`), pure linear real → Farkas/lazy-SMT refutation
+  (`produce_lra_dpll_evidence`), and everything else supported (arrays, EUF,
+  bounded integers, mixed real+bit-blasted, quantifiers) → the unified `solve`
+  engine, whose `sat` is replay-certified and whose `unsat` is recorded as a
+  bare (honest, documented) `Evidence::Unsat(None)` pending a transferable proof
+  artifact for those reductions (the open bit-blast-reduction certification
+  track). Every branch's result re-validates through the single
+  `Evidence::check`. Tests route a QF_BV query to a DRAT certificate, a
+  pure-real query to a refutation, and an integer query to the replay-certified
+  fallback.
 - Phase: **Phase 5 first pure-Rust backend slice.** M0, Phase 1, SMT-LIB
   ingestion/export, the micro-corpus benchmark harness, the public QF_BV
   baseline, and the Phase 3 query/rewrite/evidence entry contracts are

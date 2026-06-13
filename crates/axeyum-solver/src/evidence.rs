@@ -14,17 +14,23 @@
 //! - `QF_LRA` `unsat` carries a [`FarkasCertificate`]; `check` re-runs the
 //!   independent [`FarkasCertificate::verify`] (the exact-arithmetic dual of the
 //!   DRAT route).
+//! - Boolean-structured pure-real `unsat` carries an [`LraDpllRefutation`];
+//!   `check` re-runs [`LraDpllRefutation::verify`].
 //! - `unknown` carries the reason and checks vacuously.
 //!
-//! [`produce_qf_bv_evidence`] runs the pure-Rust `QF_BV` pipeline and
-//! [`produce_lra_evidence`] runs the exact-rational `QF_LRA` pipeline; each
-//! packages the outcome as self-checking evidence.
+//! [`produce_qf_bv_evidence`], [`produce_lra_evidence`], and
+//! [`produce_lra_dpll_evidence`] run the per-theory pipelines, and
+//! [`produce_evidence`] is the unified front door that routes any supported query
+//! to the producer with the strongest available certificate (mirroring
+//! [`crate::solve`]).
 
+use std::collections::BTreeSet;
 use std::time::Duration;
 
 use axeyum_cnf::{check_drat, parse_dimacs, parse_drat};
-use axeyum_ir::{TermArena, TermId, Value, eval};
+use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode, Value, eval};
 
+use crate::auto::solve;
 use crate::backend::{CheckResult, SolverBackend, SolverConfig, SolverError, UnknownReason};
 use crate::dpll_t::{LraDpllOutcome, LraDpllRefutation, certify_lra_dpll_unsat};
 use crate::lra::{FarkasCertificate, lra_farkas_certificate};
@@ -291,4 +297,116 @@ pub fn produce_lra_dpll_evidence(
         evidence,
         provenance,
     })
+}
+
+/// The unified evidence front door: decides any supported query with [`solve`]'s
+/// routing and packages a self-checking [`EvidenceReport`].
+///
+/// It dispatches to the producer with the strongest available certificate:
+///
+/// - **pure `QF_BV`/Boolean** → [`produce_qf_bv_evidence`] (DRAT `unsat` proof);
+/// - **pure linear real arithmetic** → [`produce_lra_dpll_evidence`]
+///   (Farkas/lazy-SMT refutation);
+/// - **everything else supported** (arrays, uninterpreted functions, bounded
+///   integers, mixed real + bit-blasted, quantifiers) → [`solve`], whose `sat`
+///   model is replay-certified; its `unsat` is recorded as a *bare*
+///   `Evidence::Unsat(None)` because a transferable proof artifact for those
+///   reductions is not built yet (the honest, documented trust gap — see the
+///   open "bit-blast-reduction certification" track).
+///
+/// In every branch a `sat` result is replay-checkable and the result re-validates
+/// through a single [`Evidence::check`].
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] for queries outside the supported
+/// fragment, or [`SolverError`] from the chosen engine (a failed self-check is a
+/// [`SolverError::Backend`] soundness alarm).
+pub fn produce_evidence(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<EvidenceReport, SolverError> {
+    match evidence_route(arena, assertions) {
+        // Pure QF_BV/Boolean: the bit-blast → DRAT route gives a checkable `unsat`.
+        EvidenceRoute::QfBv => return produce_qf_bv_evidence(arena, assertions, config),
+        // Pure linear real arithmetic (any Boolean structure): the lazy-SMT /
+        // Farkas refutation route.
+        EvidenceRoute::PureReal => return produce_lra_dpll_evidence(arena, assertions, config),
+        EvidenceRoute::Other => {}
+    }
+
+    // Everything else supported: decide with the unified engine. `sat` is
+    // replay-certified; `unsat` has no transferable artifact for these
+    // reductions yet, so it is recorded as a bare (re-checkable-as-vacuous)
+    // `unsat`.
+    let provenance = Provenance {
+        semantics_version: SEMANTICS_VERSION,
+        backend: "auto-solve".to_owned(),
+        assertion_count: assertions.len(),
+        timeout: config.timeout,
+        resource_limit: config.resource_limit,
+        node_budget: config.node_budget,
+        cnf_variable_budget: config.cnf_variable_budget,
+        cnf_clause_budget: config.cnf_clause_budget,
+        prove_unsat: false,
+    };
+    let evidence = match solve(arena, assertions, config)? {
+        CheckResult::Sat(model) => Evidence::Sat(model),
+        CheckResult::Unsat => Evidence::Unsat(None),
+        CheckResult::Unknown(reason) => Evidence::Unknown(reason),
+    };
+    Ok(EvidenceReport {
+        evidence,
+        provenance,
+    })
+}
+
+/// Which certified-evidence producer a query should route to.
+enum EvidenceRoute {
+    /// Only bit-vectors and Booleans — the `produce_qf_bv_evidence` (DRAT) path.
+    QfBv,
+    /// Only reals and Booleans — the lazy-SMT / Farkas refutation path.
+    PureReal,
+    /// Anything else supported — the `solve` fallback (replay-certified `sat`).
+    Other,
+}
+
+/// Classifies a query by the sorts/operators it uses (one traversal), at the
+/// granularity the evidence router needs to pick the strongest certificate path.
+fn evidence_route(arena: &TermArena, assertions: &[TermId]) -> EvidenceRoute {
+    let (mut has_real, mut has_bitvec) = (false, false);
+    let (mut has_array, mut has_int) = (false, false);
+    let (mut has_func, mut has_quantifier) = (false, false);
+    let mut seen = BTreeSet::new();
+    let mut stack = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        match arena.sort_of(term) {
+            Sort::Real => has_real = true,
+            Sort::BitVec(_) => has_bitvec = true,
+            Sort::Array { .. } => has_array = true,
+            Sort::Int => has_int = true,
+            Sort::Bool => {}
+        }
+        if let TermNode::App { op, args } = arena.node(term) {
+            match op {
+                Op::Apply(_) => has_func = true,
+                Op::Forall(_) | Op::Exists(_) => has_quantifier = true,
+                _ => {}
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
+
+    let extra = has_array || has_int || has_func || has_quantifier;
+    if !has_real && !extra {
+        EvidenceRoute::QfBv // only bit-vectors and Booleans
+    } else if has_real && !has_bitvec && !extra {
+        EvidenceRoute::PureReal // only reals and Booleans
+    } else {
+        EvidenceRoute::Other
+    }
 }

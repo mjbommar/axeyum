@@ -213,3 +213,55 @@ fn tampered_lra_dpll_evidence_fails_its_own_check() {
         "a lemma-stripped refutation must not check"
     );
 }
+
+#[test]
+fn unified_front_door_routes_qf_bv_to_a_drat_certificate() {
+    // Pure QF_BV unsat → produce_evidence picks the DRAT route.
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 4).unwrap();
+    let one = arena.bv_const(4, 1).unwrap();
+    let zero = arena.bv_const(4, 0).unwrap();
+    let masked = arena.bv_and(x, one).unwrap();
+    let is_one = arena.eq(masked, one).unwrap();
+    let is_zero = arena.eq(masked, zero).unwrap();
+    let assertions = [is_one, is_zero];
+
+    let report = axeyum_solver::produce_evidence(&mut arena, &assertions, &config()).unwrap();
+    assert!(matches!(report.evidence, Evidence::Unsat(Some(_))));
+    assert!(report.evidence.check(&arena, &assertions).unwrap());
+}
+
+#[test]
+fn unified_front_door_routes_pure_real_to_a_refutation() {
+    // Boolean-structured pure-real unsat → the lazy-SMT refutation route.
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let zero = arena.real_ratio(0, 1);
+    let lt = arena.real_lt(x, zero).unwrap();
+    let gt = arena.real_gt(x, zero).unwrap();
+    let split = arena.or(lt, gt).unwrap();
+    let ge = arena.real_ge(x, zero).unwrap();
+    let le = arena.real_le(x, zero).unwrap();
+    let assertions = [split, ge, le];
+
+    let report = axeyum_solver::produce_evidence(&mut arena, &assertions, &config()).unwrap();
+    assert!(matches!(report.evidence, Evidence::UnsatLraDpll(_)));
+    assert!(report.evidence.check(&arena, &assertions).unwrap());
+}
+
+#[test]
+fn unified_front_door_falls_back_for_integer_queries() {
+    // A bounded-integer query is outside the certified routes; produce_evidence
+    // falls back to the unified engine and the sat model is replay-certified.
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let one = arena.int_const(1);
+    let five = arena.int_const(5);
+    let sum = arena.int_add(x, one).unwrap();
+    let eq = arena.eq(sum, five).unwrap();
+
+    let report = axeyum_solver::produce_evidence(&mut arena, &[eq], &config()).unwrap();
+    assert!(matches!(report.evidence, Evidence::Sat(_)));
+    assert_eq!(report.provenance.backend, "auto-solve");
+    assert!(report.evidence.check(&arena, &[eq]).unwrap());
+}
