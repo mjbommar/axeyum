@@ -710,11 +710,14 @@ Last updated: 2026-06-13
   (`bvadd`/`bvsub`/`bvneg`/`bvmul`), **all 8 comparisons** (unsigned/signed), and
   **shifts** (`bvshl`/`bvlshr`/`bvashr`) — each reference gadget textbook and
   independent of `axeyum-bv`; the width-4 miter is DRAT-`unsat`, confirming
-  exhaustive agreement. Still-uncovered ops (division/remainder, concat/extract,
-  extensions, rotates) return `NotCertifiable` → fall back to the sampled
-  faithfulness check. Remaining path (B): add the restoring divider + structural
-  gadgets (same green-per-op pattern); path (A), a width-parametric verified
-  bit-blaster, is the eventual reference-trust-free form. See
+  exhaustive agreement. Coverage has since grown to the **structural** ops
+  (concat/extract/zero+sign extend/rotate) and **unsigned division/remainder**
+  (a restoring divider with SMT-LIB divide-by-zero totality), so path (B) now
+  certifies the **entire supported `QF_BV` operator set except signed
+  division/remainder/modulo** (`bvsdiv`/`bvsrem`/`bvsmod` → `NotCertifiable` →
+  sampled fallback). Remaining path (B): the three signed div/rem/mod sign
+  wrappers; path (A), a width-parametric verified bit-blaster, is the eventual
+  reference-trust-free form. See
   [scalable bit-blast certification](docs/research/07-verification/scalable-bitblast-certification.md).
 - Phase: **Phase 5 first pure-Rust backend slice.** M0, Phase 1, SMT-LIB
   ingestion/export, the micro-corpus benchmark harness, the public QF_BV

@@ -284,11 +284,111 @@ fn reference_op(op: Op, args: &[Vec<AigLit>], aig: &mut Aig) -> Option<Vec<AigLi
         Op::BvSge => vec![ref_slt(aig, &args[0], &args[1]).negated()],
         // `bvcomp`: 1-bit BV, 1 iff all bits equal.
         Op::BvComp => vec![ref_eq_bits(aig, &args[0], &args[1])],
-        // Still uncovered: division/remainder, concat/extract, extensions,
-        // rotates, apply, quantifiers.
+        // --- structural -------------------------------------------------------
+        // `concat(hi, lo)`: SMT-LIB puts the first operand at the high end; in
+        // LSB-first order that is the low operand's bits followed by the high's.
+        Op::Concat => {
+            let mut bits = args[1].clone();
+            bits.extend_from_slice(&args[0]);
+            bits
+        }
+        // `extract[hi:lo]`: the inclusive LSB-first slice.
+        Op::Extract { hi, lo } => {
+            let (lo, hi) = (lo as usize, hi as usize);
+            if hi >= args[0].len() || lo > hi {
+                return None;
+            }
+            args[0][lo..=hi].to_vec()
+        }
+        // Zero/sign extension append `by` high bits (zero / the sign bit).
+        Op::ZeroExt { by } => {
+            let mut bits = args[0].clone();
+            bits.extend(std::iter::repeat_n(AigLit::FALSE, by as usize));
+            bits
+        }
+        Op::SignExt { by } => {
+            let sign = *args[0].last()?;
+            let mut bits = args[0].clone();
+            bits.extend(std::iter::repeat_n(sign, by as usize));
+            bits
+        }
+        // Constant rotates (amount already reduced modulo width at build time).
+        Op::RotateLeft { by } => rotate(&args[0], by as usize, true),
+        Op::RotateRight { by } => rotate(&args[0], by as usize, false),
+        // --- unsigned division/remainder (restoring divider + totality) -------
+        Op::BvUdiv => ref_udiv_urem(aig, &args[0], &args[1]).0,
+        Op::BvUrem => ref_udiv_urem(aig, &args[0], &args[1]).1,
+        // Still uncovered: signed division/remainder/modulo, apply, quantifiers.
         _ => return None,
     };
     Some(bits)
+}
+
+/// Restoring unsigned divider: returns `(bvudiv, bvurem)` with SMT-LIB
+/// divide-by-zero totality (`bvudiv x 0 = all-ones`, `bvurem x 0 = x`).
+fn ref_udiv_urem(aig: &mut Aig, a: &[AigLit], b: &[AigLit]) -> (Vec<AigLit>, Vec<AigLit>) {
+    let width = a.len();
+    // Divisor zero-extended by one bit so the partial remainder cannot overflow.
+    let mut divisor = b.to_vec();
+    divisor.push(AigLit::FALSE);
+    let not_divisor: Vec<AigLit> = divisor.iter().map(|&x| x.negated()).collect();
+
+    let mut rem = vec![AigLit::FALSE; width + 1];
+    let mut quotient = vec![AigLit::FALSE; width];
+    for i in (0..width).rev() {
+        // rem = (rem << 1) | a[i]  (the dropped top bit is always zero).
+        let mut shifted = Vec::with_capacity(width + 1);
+        shifted.push(a[i]);
+        shifted.extend_from_slice(&rem[0..width]);
+        rem = shifted;
+
+        // ge = rem >= divisor, via the subtractor's carry-out; conditionally
+        // restore (subtract) and set the quotient bit.
+        let (difference, carry) = ref_add(aig, &rem, &not_divisor, AigLit::TRUE);
+        rem = rem
+            .iter()
+            .zip(&difference)
+            .map(|(&keep, &subbed)| aig.mux(carry, subbed, keep))
+            .collect();
+        quotient[i] = carry;
+    }
+
+    // Totality: when the divisor is zero, `bvudiv` is all-ones and `bvurem` is
+    // the dividend.
+    let mut nonzero = AigLit::FALSE;
+    for &bit in b {
+        nonzero = aig.or(nonzero, bit);
+    }
+    let divisor_is_zero = nonzero.negated();
+    let udiv = quotient
+        .iter()
+        .map(|&q| aig.mux(divisor_is_zero, AigLit::TRUE, q))
+        .collect();
+    let urem = rem[0..width]
+        .iter()
+        .zip(a)
+        .map(|(&r, &dividend)| aig.mux(divisor_is_zero, dividend, r))
+        .collect();
+    (udiv, urem)
+}
+
+/// Rotates `bits` (LSB-first) by `by`; `left` toward the MSB, else toward the LSB.
+fn rotate(bits: &[AigLit], by: usize, left: bool) -> Vec<AigLit> {
+    let width = bits.len();
+    if width == 0 {
+        return Vec::new();
+    }
+    let by = by % width;
+    (0..width)
+        .map(|i| {
+            let src = if left {
+                (i + width - by) % width
+            } else {
+                (i + by) % width
+            };
+            bits[src]
+        })
+        .collect()
 }
 
 /// One bit: all of `a`'s and `b`'s bits are equal (AND of bitwise xnor).

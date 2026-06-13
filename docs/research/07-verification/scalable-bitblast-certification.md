@@ -115,13 +115,16 @@ textbook and *independent* of `axeyum-bv`'s code; the miter being `unsat`
 agree exhaustively — both certifying the production reduction and validating the
 reference.
 
-**Remaining for path (B):** the reference still lacks division/remainder
-(`bvudiv`/`bvurem`/`bvsdiv`/`bvsrem`/`bvsmod` — a restoring divider), the
-structural ops (concat/extract, zero/sign extension), and rotates. Each is the
-same incremental, green-at-each-step pattern on this scaffold (write the gadget
-independently; the miter test certifies it or flags a divergence). Path (A) (a
-width-parametric *verified* bit-blaster, eliminating reference-trust) remains the
-eventual fully-trusted form.
+The structural operators (concat/extract, zero/sign extension, rotates) and
+**unsigned division/remainder** (`bvudiv`/`bvurem`, a restoring divider with
+SMT-LIB divide-by-zero totality) are now covered too, so path (B) certifies the
+**entire supported `QF_BV` operator set except signed division/remainder/modulo**.
+
+**Remaining for path (B):** the three signed `bvsdiv`/`bvsrem`/`bvsmod` (sign
+wrappers over the unsigned divider, with their SMT-LIB totality edge cases) —
+the same green-per-op pattern (the miter test certifies the gadget or flags a
+divergence). Path (A) (a width-parametric *verified* bit-blaster, eliminating
+reference-trust) remains the eventual fully-trusted form.
 
 ## Delivered earlier: scalable faithfulness *checking* (the differential layer)
 
