@@ -695,3 +695,160 @@ fn zip_map(
     }
     Some(a.iter().zip(b).map(|(&x, &y)| combine(x, y)).collect())
 }
+
+#[cfg(test)]
+mod reference_grounding {
+    //! Grounds the independent reference bit-blaster in the trusted ground
+    //! evaluator: for every covered operator, the reference's AIG must evaluate
+    //! to the same value as the `axeyum-ir` evaluator on **all** inputs at small
+    //! width. Combined with the miter (reference == production at any width),
+    //! this anchors path (B)'s trust in the evaluator — the same spec that
+    //! anchors `sat` model replay — rather than in the production bit-blaster.
+
+    use super::{Aig, AigLit, reference_bits};
+    use axeyum_ir::{Assignment, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
+    use std::collections::{BTreeMap, BTreeSet, HashMap};
+
+    fn width_of(arena: &TermArena, term: TermId) -> u32 {
+        match arena.sort_of(term) {
+            Sort::Bool => 1,
+            Sort::BitVec(w) => w,
+            other => panic!("unexpected sort {other}"),
+        }
+    }
+
+    fn collect_symbols(arena: &TermArena, term: TermId, out: &mut BTreeMap<SymbolId, u32>) {
+        let mut seen = BTreeSet::new();
+        let mut stack = vec![term];
+        while let Some(t) = stack.pop() {
+            if !seen.insert(t) {
+                continue;
+            }
+            match arena.node(t) {
+                TermNode::Symbol(s) => {
+                    out.insert(*s, width_of(arena, t));
+                }
+                TermNode::App { args, .. } => stack.extend(args.iter().copied()),
+                _ => {}
+            }
+        }
+    }
+
+    /// Exhaustively checks the reference bit-blasting of `term` against the
+    /// evaluator over every assignment to its symbols.
+    fn check_exhaustive(arena: &TermArena, term: TermId) {
+        let mut symbols = BTreeMap::new();
+        collect_symbols(arena, term, &mut symbols);
+
+        let mut aig = Aig::new();
+        let mut shared: HashMap<(SymbolId, u32), AigLit> = HashMap::new();
+        let mut order: Vec<(SymbolId, u32)> = Vec::new();
+        for (&sym, &width) in &symbols {
+            for bit in 0..width {
+                let lit = aig.input(format!("i{}", order.len()));
+                shared.insert((sym, bit), lit);
+                order.push((sym, bit));
+            }
+        }
+        let mut memo = HashMap::new();
+        let bits = reference_bits(arena, term, &shared, &mut aig, &mut memo)
+            .expect("reference covers the term");
+        let total = u32::try_from(order.len()).unwrap();
+        assert!(total <= 12, "keep the exhaustive enumeration small");
+        let result_width = width_of(arena, term);
+
+        for mask in 0u32..(1u32 << total) {
+            let inputs: Vec<bool> = (0..order.len()).map(|i| (mask >> i) & 1 == 1).collect();
+            let mut assignment = Assignment::new();
+            for &sym in symbols.keys() {
+                let mut value: u128 = 0;
+                for (idx, &(os, ob)) in order.iter().enumerate() {
+                    if os == sym && inputs[idx] {
+                        value |= 1u128 << ob;
+                    }
+                }
+                let v = match arena.symbol(sym).1 {
+                    Sort::Bool => Value::Bool(value & 1 == 1),
+                    Sort::BitVec(w) => Value::Bv { width: w, value },
+                    other => panic!("unexpected sort {other}"),
+                };
+                assignment.set(sym, v);
+            }
+            let ref_bits = aig.eval_many(&bits, &inputs).unwrap();
+            let ref_value = match arena.sort_of(term) {
+                Sort::Bool => Value::Bool(ref_bits[0]),
+                Sort::BitVec(_) => Value::Bv {
+                    width: result_width,
+                    value: ref_bits
+                        .iter()
+                        .enumerate()
+                        .fold(0u128, |acc, (i, &b)| acc | (u128::from(b) << i)),
+                },
+                other => panic!("unexpected sort {other}"),
+            };
+            let term_value = eval(arena, term, &assignment).unwrap();
+            assert_eq!(
+                ref_value, term_value,
+                "reference disagrees with the evaluator at input mask {mask}"
+            );
+        }
+    }
+
+    #[test]
+    fn reference_gadgets_match_the_evaluator_exhaustively() {
+        // Width 3 for two operands (6 input bits = 64 assignments per term) over
+        // a representative set spanning every covered operator family.
+        let w = 3;
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", w).unwrap();
+        let y = arena.bv_var("y", w).unwrap();
+        let terms = [
+            arena.bv_and(x, y).unwrap(),
+            arena.bv_or(x, y).unwrap(),
+            arena.bv_xor(x, y).unwrap(),
+            arena.bv_nand(x, y).unwrap(),
+            arena.bv_not(x).unwrap(),
+            arena.bv_add(x, y).unwrap(),
+            arena.bv_sub(x, y).unwrap(),
+            arena.bv_neg(x).unwrap(),
+            arena.bv_mul(x, y).unwrap(),
+            arena.bv_udiv(x, y).unwrap(),
+            arena.bv_urem(x, y).unwrap(),
+            arena.bv_sdiv(x, y).unwrap(),
+            arena.bv_srem(x, y).unwrap(),
+            arena.bv_smod(x, y).unwrap(),
+            arena.bv_shl(x, y).unwrap(),
+            arena.bv_lshr(x, y).unwrap(),
+            arena.bv_ashr(x, y).unwrap(),
+            arena.eq(x, y).unwrap(),
+            arena.bv_ult(x, y).unwrap(),
+            arena.bv_ule(x, y).unwrap(),
+            arena.bv_ugt(x, y).unwrap(),
+            arena.bv_uge(x, y).unwrap(),
+            arena.bv_slt(x, y).unwrap(),
+            arena.bv_sle(x, y).unwrap(),
+            arena.bv_sgt(x, y).unwrap(),
+            arena.bv_sge(x, y).unwrap(),
+            arena.bv_comp(x, y).unwrap(),
+            arena.concat(x, y).unwrap(),
+            arena.extract(2, 1, x).unwrap(),
+            arena.zero_ext(2, x).unwrap(),
+            arena.sign_ext(2, x).unwrap(),
+            arena.rotate_left(1, x).unwrap(),
+            arena.rotate_right(2, y).unwrap(),
+        ];
+        for term in terms {
+            check_exhaustive(&arena, term);
+        }
+    }
+
+    #[test]
+    fn reference_ite_matches_the_evaluator_exhaustively() {
+        let mut arena = TermArena::new();
+        let c = arena.bool_var("c").unwrap();
+        let x = arena.bv_var("x", 3).unwrap();
+        let y = arena.bv_var("y", 3).unwrap();
+        let ite = arena.ite(c, x, y).unwrap();
+        check_exhaustive(&arena, ite);
+    }
+}

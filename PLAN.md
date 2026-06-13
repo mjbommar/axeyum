@@ -724,9 +724,17 @@ Last updated: 2026-06-13
   with the CNF-`unsat` DRAT (AIG/CNF unsat; Tseitin equisat by construction) into
   a single **scalable, machine-checked, end-to-end `QF_BV` `unsat` certificate** —
   the goal of track (a), realized via path (B) (a production/reference divergence
-  is a soundness alarm). The lone remaining item is path (A), a width-parametric
-  **verified** bit-blaster that removes reference-trust entirely
-  (proof-assistant-scale — the genuine fully-trusted frontier). See
+  is a soundness alarm). The independent reference is itself **grounded in the
+  trusted ground evaluator**: exhaustively checked against it at width 3 over all
+  inputs for every covered operator (`reference_grounding` tests), so the trust
+  chain is reference ≡ evaluator (exhaustive, small width) ∧ reference ≡ production
+  (miter, any width) ⟹ production faithful. **This reaches trust parity** — the
+  reference, the evaluator, and `check_drat` are all exhaustively-tested-trusted,
+  none formally proven, the project's uniform standard. The lone remaining item,
+  path (A) — a width-parametric **verified** bit-blaster — would make the
+  bit-blaster *more* trusted than the evaluator/DRAT kernel, exceeding that bar;
+  it is a distinct proof-assistant-scale research item (Lean/Coq), the genuine
+  fully-trusted frontier, not a bounded code increment. See
   [scalable bit-blast certification](docs/research/07-verification/scalable-bitblast-certification.md).
 - Phase: **Phase 5 first pure-Rust backend slice.** M0, Phase 1, SMT-LIB
   ingestion/export, the micro-corpus benchmark harness, the public QF_BV

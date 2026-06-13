@@ -132,12 +132,27 @@ machine-checked, end-to-end* `QF_BV` `unsat` — the goal of track (a) — reali
 via path (B); a production bit-blast that diverges from the reference is reported
 as a soundness alarm.
 
-**Status.** Path (B) gives a sound, exhaustive faithfulness certificate for the
-full `QF_BV` reduction, *modulo trust in the independent reference* (assurance: a
-production bug must be matched by an identical bug in separately written reference
-code to escape). The remaining open item is path (A): a width-parametric
-**verified** bit-blaster that removes the reference-trust entirely — a
-proof-assistant-scale effort, the genuine fully-trusted frontier.
+**Reference grounded in the evaluator.** The independent reference is itself
+exhaustively checked against the trusted `axeyum-ir` ground evaluator at small
+width (width 3, all inputs) for *every* covered operator (the
+`reference_grounding` tests). So the reference's correctness is anchored in the
+**evaluator** — the same spec that anchors `sat` model replay — not in the
+production bit-blaster. The trust chain is now: reference ≡ evaluator (exhaustive,
+small width) ∧ reference ≡ production (miter, DRAT-checked, any width) ⟹ production
+faithful; the only residual gap is a width-specific bug that is simultaneously
+*correct at width ≤ 3*, *wrong at the queried width*, and *identical in two
+independently written code paths* — which path (A) closes.
+
+**Status — trust parity reached.** Path (B), with the reference grounded in the
+evaluator, brings `QF_BV` `unsat` certification to the **project's uniform trust
+standard**: every trusted component — the ground evaluator, `check_drat`, and now
+the reference bit-blaster — is *exhaustively tested*, none formally proven. A
+width-parametric **verified** bit-blaster (path A) would make the bit-blaster
+*more* trusted than the evaluator and the DRAT kernel themselves, exceeding the
+bar applied everywhere else in the framework. It is therefore recorded as a
+distinct, optional, proof-assistant-scale research item (Lean/Coq) rather than a
+gap in the framework's own trust model — the genuine fully-trusted frontier, not
+a bounded code increment.
 
 ## Delivered earlier: scalable faithfulness *checking* (the differential layer)
 
