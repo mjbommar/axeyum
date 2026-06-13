@@ -414,11 +414,29 @@ fn trigger_per_var_bindings(
 ) -> Vec<Vec<TermId>> {
     let var_set: std::collections::BTreeSet<SymbolId> = vars.iter().copied().collect();
 
-    // Match every trigger against every ground subterm, collecting the variable
-    // bindings each match induces.
+    // Match index: group ground application subterms by their head operator. A
+    // trigger (itself an `apply`/`select` application) can only match a candidate
+    // with the same head, so this restricts each trigger to same-head candidates
+    // instead of scanning every ground subterm — the matching is identical, just
+    // indexed. (A lightweight stand-in for an E-graph match index.)
+    let mut index: HashMap<Op, Vec<TermId>> = HashMap::new();
+    for &candidate in ground {
+        if let TermNode::App { op, .. } = arena.node(candidate) {
+            index.entry(*op).or_default().push(candidate);
+        }
+    }
+
+    // Match every trigger against the same-head ground subterms, collecting the
+    // variable bindings each match induces.
     let mut matches: Vec<HashMap<SymbolId, TermId>> = Vec::new();
     for &trigger in &collect_triggers(arena, body, &var_set) {
-        for &candidate in ground {
+        let TermNode::App { op, .. } = arena.node(trigger) else {
+            continue;
+        };
+        let Some(candidates) = index.get(op) else {
+            continue;
+        };
+        for &candidate in candidates {
             let mut binding = HashMap::new();
             if match_multi(arena, trigger, candidate, &var_set, &mut binding) && !binding.is_empty()
             {

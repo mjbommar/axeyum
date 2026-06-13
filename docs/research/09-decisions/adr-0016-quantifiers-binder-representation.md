@@ -148,8 +148,15 @@ evaluator sub-increment, then solving.
   enumeration stays `unknown` (the tuple `(f(c),h(c))` is unreachable), while
   multi-variable E-matching refutes it. Soundness unchanged (the per-variable
   union over-approximates the coupled tuples — more sound instances, never
-  fewer). Remaining: an E-graph match index for scale, and matching modulo the
-  current equalities (E-matching proper) rather than purely syntactic.
+  fewer).
+- 2026-06-13: **match index** — ground application subterms are grouped by head
+  operator (`HashMap<Op, Vec<TermId>>`), so each trigger matches only same-head
+  candidates instead of scanning every ground subterm. The matching results are
+  identical (a trigger can only match a same-head term), so it is a pure
+  efficiency refactor validated by the unchanged E-matching tests — a lightweight
+  stand-in for an E-graph match index. Remaining: a full E-graph index and
+  matching modulo the current equalities (E-matching proper) rather than purely
+  syntactic.
 
 ## Consequences
 
