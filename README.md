@@ -99,6 +99,7 @@ Phase 5 target.
 | [`axeyum-cnf`](crates/axeyum-cnf) | Tseitin CNF encoding from AIG, DIMACS I/O, CNF evaluation, BatSat-backed solving, and assignment replay. |
 | [`axeyum-query`](crates/axeyum-query) | Query object, structural cache keys, conservative slicing, replay checks. |
 | [`axeyum-rewrite`](crates/axeyum-rewrite) | Rewrite manifest contracts and the first denotation-preserving canonicalizer. |
+| [`axeyum-scenarios`](crates/axeyum-scenarios) | Self-checking, oracle-free consumer workloads (SAT by concrete execution, UNSAT by bounded-verified identities) for testing and optimization. |
 | [`axeyum-bench`](crates/axeyum-bench) | Corpus benchmark harness with PAR-2 scoring, backend selection, and JSON artifacts. |
 | [`axeyum-smtlib`](crates/axeyum-smtlib) | SMT-LIB 2 reader/writer: benchmark ingestion, sharing-preserving export. |
 | [`axeyum-solver`](crates/axeyum-solver) | Backend trait, results, models, capabilities; default pure Rust SAT-backed BV backend plus native backends behind feature flags. |
@@ -114,6 +115,8 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features
 cargo run -p axeyum-bench -- corpus/micro --backend sat-bv --timeout-ms 1000 --out /tmp/axeyum-bench-micro-sat-bv.json
 cargo run -p axeyum-bench --features z3 -- corpus/micro --backend z3 --timeout-ms 1000 --out /tmp/axeyum-bench-micro-z3.json
+cargo run -p axeyum-bench --example scenario_pipeline_report   # per-stage pipeline report over the scenario corpus
+cargo run -p axeyum-bench --example scenario_scaling           # scaling profile of the sat-bv pipeline
 just bench-public-qfbv-baseline   # requires scripts/fetch-corpus.sh qf_bv first
 just bench-public-qfbv-rewrite    # same public slice, with --rewrite default
 just bench-public-qfbv-sat-bv-compare

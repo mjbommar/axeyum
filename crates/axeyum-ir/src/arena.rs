@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use crate::error::IrError;
 use crate::sort::{MAX_BV_WIDTH, Sort, mask};
-use crate::term::{Op, SymbolId, TermId, TermNode};
+use crate::term::{FuncId, Op, SymbolId, TermId, TermNode};
 
 /// Append-only arena owning symbols and hash-consed terms.
 ///
@@ -17,9 +17,20 @@ use crate::term::{Op, SymbolId, TermId, TermNode};
 pub struct TermArena {
     symbols: Vec<(String, Sort)>,
     symbol_lookup: HashMap<String, SymbolId>,
+    functions: Vec<FuncDecl>,
+    function_lookup: HashMap<String, FuncId>,
     nodes: Vec<TermNode>,
     sorts: Vec<Sort>,
     intern: HashMap<TermNode, TermId>,
+}
+
+/// Declaration of an uninterpreted function: a name, parameter sorts, and a
+/// result sort.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct FuncDecl {
+    name: String,
+    params: Vec<Sort>,
+    result: Sort,
 }
 
 impl TermArena {
@@ -82,6 +93,37 @@ impl TermArena {
                 SymbolId(u32::try_from(i).expect("symbol count fits u32")),
                 name.as_str(),
                 *sort,
+            )
+        })
+    }
+
+    /// Looks up a declared uninterpreted function by name.
+    pub fn find_function(&self, name: &str) -> Option<FuncId> {
+        self.function_lookup.get(name).copied()
+    }
+
+    /// The name, parameter sorts, and result sort of a declared function.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `func` does not belong to this arena.
+    pub fn function(&self, func: FuncId) -> (&str, &[Sort], Sort) {
+        let decl = &self.functions[func.index()];
+        (&decl.name, &decl.params, decl.result)
+    }
+
+    /// Iterates over all declared functions in declaration order.
+    ///
+    /// # Panics
+    ///
+    /// Panics on arena corruption (function count exceeding `u32`).
+    pub fn functions(&self) -> impl Iterator<Item = (FuncId, &str, &[Sort], Sort)> {
+        self.functions.iter().enumerate().map(|(i, decl)| {
+            (
+                FuncId(u32::try_from(i).expect("function count fits u32")),
+                decl.name.as_str(),
+                decl.params.as_slice(),
+                decl.result,
             )
         })
     }
@@ -188,20 +230,24 @@ impl TermArena {
     fn expect_bool(&self, t: TermId) -> Result<(), IrError> {
         match self.sort_of(t) {
             Sort::Bool => Ok(()),
-            found @ Sort::BitVec(_) => Err(IrError::SortMismatch {
-                expected: "Bool",
-                found,
-            }),
+            found @ (Sort::BitVec(_) | Sort::Array { .. } | Sort::Int | Sort::Real) => {
+                Err(IrError::SortMismatch {
+                    expected: "Bool",
+                    found,
+                })
+            }
         }
     }
 
     fn expect_bv(&self, t: TermId) -> Result<u32, IrError> {
         match self.sort_of(t) {
             Sort::BitVec(w) => Ok(w),
-            found @ Sort::Bool => Err(IrError::SortMismatch {
-                expected: "BitVec",
-                found,
-            }),
+            found @ (Sort::Bool | Sort::Array { .. } | Sort::Int | Sort::Real) => {
+                Err(IrError::SortMismatch {
+                    expected: "BitVec",
+                    found,
+                })
+            }
         }
     }
 
@@ -659,6 +705,445 @@ impl TermArena {
         let w = self.expect_bv(a)?;
         Ok(self.app(Op::RotateRight { by: by % w }, &[a], Sort::BitVec(w)))
     }
+
+    // ----- arrays (ADR-0010) --------------------------------------------
+
+    /// Declares an array symbol `Array(index -> element)` and returns its
+    /// variable term.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::InvalidWidth`] for an index or element width outside
+    /// `1..=MAX_BV_WIDTH`, or [`IrError::SymbolSortConflict`] on a name reuse
+    /// with a different sort.
+    pub fn array_var(&mut self, name: &str, index: u32, element: u32) -> Result<TermId, IrError> {
+        check_width(index)?;
+        check_width(element)?;
+        let symbol = self.declare(name, Sort::Array { index, element })?;
+        Ok(self.var(symbol))
+    }
+
+    /// Array read `select(array, idx)`; the result has the element sort.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless `array` is an array and `idx`
+    /// is a bit-vector, or [`IrError::SortsDiffer`] if `idx`'s width does not
+    /// match the array index width.
+    pub fn select(&mut self, array: TermId, idx: TermId) -> Result<TermId, IrError> {
+        let (index_width, element_width) = self.expect_array(array)?;
+        let idx_width = self.expect_bv(idx)?;
+        if idx_width != index_width {
+            return Err(IrError::SortsDiffer(
+                Sort::BitVec(idx_width),
+                Sort::BitVec(index_width),
+            ));
+        }
+        Ok(self.app(Op::Select, &[array, idx], Sort::BitVec(element_width)))
+    }
+
+    /// Array write `store(array, idx, element)`; the result has the array sort.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless `array` is an array and `idx`,
+    /// `element` are bit-vectors, or [`IrError::SortsDiffer`] if the widths do
+    /// not match the array sort.
+    pub fn store(
+        &mut self,
+        array: TermId,
+        idx: TermId,
+        element: TermId,
+    ) -> Result<TermId, IrError> {
+        let (index_width, element_width) = self.expect_array(array)?;
+        let idx_width = self.expect_bv(idx)?;
+        if idx_width != index_width {
+            return Err(IrError::SortsDiffer(
+                Sort::BitVec(idx_width),
+                Sort::BitVec(index_width),
+            ));
+        }
+        let elem_width = self.expect_bv(element)?;
+        if elem_width != element_width {
+            return Err(IrError::SortsDiffer(
+                Sort::BitVec(elem_width),
+                Sort::BitVec(element_width),
+            ));
+        }
+        Ok(self.app(
+            Op::Store,
+            &[array, idx, element],
+            Sort::Array {
+                index: index_width,
+                element: element_width,
+            },
+        ))
+    }
+
+    fn expect_array(&self, t: TermId) -> Result<(u32, u32), IrError> {
+        match self.sort_of(t) {
+            Sort::Array { index, element } => Ok((index, element)),
+            found @ (Sort::Bool | Sort::BitVec(_) | Sort::Int | Sort::Real) => {
+                Err(IrError::SortMismatch {
+                    expected: "Array",
+                    found,
+                })
+            }
+        }
+    }
+
+    // ----- uninterpreted functions (ADR-0013) ---------------------------
+
+    /// Declares an uninterpreted function with the given scalar parameter sorts
+    /// and result sort, or returns the existing one if `name` was already
+    /// declared with the identical signature.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] if any parameter or the result is an
+    /// array sort (functions are scalar in the supported fragment),
+    /// [`IrError::InvalidWidth`] for a bad bit-vector width, or
+    /// [`IrError::FunctionSignatureConflict`] if `name` exists with a different
+    /// signature.
+    ///
+    /// # Panics
+    ///
+    /// Panics on arena corruption (function count exceeding `u32`).
+    pub fn declare_fun(
+        &mut self,
+        name: &str,
+        params: &[Sort],
+        result: Sort,
+    ) -> Result<FuncId, IrError> {
+        for &sort in params {
+            check_scalar_width(sort)?;
+        }
+        check_scalar_width(result)?;
+        if let Some(&existing) = self.function_lookup.get(name) {
+            let decl = &self.functions[existing.index()];
+            if decl.params == params && decl.result == result {
+                return Ok(existing);
+            }
+            return Err(IrError::FunctionSignatureConflict {
+                name: name.to_owned(),
+            });
+        }
+        let id = FuncId(u32::try_from(self.functions.len()).expect("function count fits u32"));
+        self.functions.push(FuncDecl {
+            name: name.to_owned(),
+            params: params.to_vec(),
+            result,
+        });
+        self.function_lookup.insert(name.to_owned(), id);
+        Ok(id)
+    }
+
+    /// Application `func(args)` of a declared uninterpreted function; the result
+    /// has the function's declared result sort.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::ArityMismatch`] if `args` has the wrong length, or
+    /// [`IrError::SortsDiffer`] if an argument's sort does not match the
+    /// corresponding parameter sort.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `func` does not belong to this arena.
+    pub fn apply(&mut self, func: FuncId, args: &[TermId]) -> Result<TermId, IrError> {
+        let (params, result) = {
+            let decl = &self.functions[func.index()];
+            (decl.params.clone(), decl.result)
+        };
+        if args.len() != params.len() {
+            return Err(IrError::ArityMismatch {
+                expected: params.len(),
+                found: args.len(),
+            });
+        }
+        for (&arg, &param) in args.iter().zip(&params) {
+            let actual = self.sort_of(arg);
+            if actual != param {
+                return Err(IrError::SortsDiffer(actual, param));
+            }
+        }
+        Ok(self.app(Op::Apply(func), args, result))
+    }
+
+    // ----- linear integer arithmetic (ADR-0014) -------------------------
+
+    /// An integer constant.
+    pub fn int_const(&mut self, value: i128) -> TermId {
+        self.intern_node(TermNode::IntConst(value), Sort::Int)
+    }
+
+    /// Declares an integer symbol and returns its variable term.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SymbolSortConflict`] on a name reuse with a different
+    /// sort.
+    pub fn int_var(&mut self, name: &str) -> Result<TermId, IrError> {
+        let s = self.declare(name, Sort::Int)?;
+        Ok(self.var(s))
+    }
+
+    fn expect_int(&self, t: TermId) -> Result<(), IrError> {
+        match self.sort_of(t) {
+            Sort::Int => Ok(()),
+            found @ (Sort::Bool | Sort::BitVec(_) | Sort::Array { .. } | Sort::Real) => {
+                Err(IrError::SortMismatch {
+                    expected: "Int",
+                    found,
+                })
+            }
+        }
+    }
+
+    fn int_bin(&mut self, op: Op, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.expect_int(a)?;
+        self.expect_int(b)?;
+        Ok(self.app(op, &[a, b], Sort::Int))
+    }
+
+    fn int_cmp(&mut self, op: Op, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.expect_int(a)?;
+        self.expect_int(b)?;
+        Ok(self.app(op, &[a, b], Sort::Bool))
+    }
+
+    /// Integer negation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless `a` is an integer.
+    pub fn int_neg(&mut self, a: TermId) -> Result<TermId, IrError> {
+        self.expect_int(a)?;
+        Ok(self.app(Op::IntNeg, &[a], Sort::Int))
+    }
+
+    /// Integer addition.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless both operands are integers.
+    pub fn int_add(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.int_bin(Op::IntAdd, a, b)
+    }
+
+    /// Integer subtraction.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless both operands are integers.
+    pub fn int_sub(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.int_bin(Op::IntSub, a, b)
+    }
+
+    /// Integer multiplication (linear use is a fragment property, not enforced
+    /// at build time).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless both operands are integers.
+    pub fn int_mul(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.int_bin(Op::IntMul, a, b)
+    }
+
+    /// Integer less-than (result sort `Bool`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless both operands are integers.
+    pub fn int_lt(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.int_cmp(Op::IntLt, a, b)
+    }
+
+    /// Integer less-or-equal (result sort `Bool`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless both operands are integers.
+    pub fn int_le(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.int_cmp(Op::IntLe, a, b)
+    }
+
+    /// Integer greater-than (result sort `Bool`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless both operands are integers.
+    pub fn int_gt(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.int_cmp(Op::IntGt, a, b)
+    }
+
+    /// Integer greater-or-equal (result sort `Bool`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless both operands are integers.
+    pub fn int_ge(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.int_cmp(Op::IntGe, a, b)
+    }
+
+    // ----- linear real arithmetic (ADR-0015) ----------------------------
+
+    /// A real constant from an exact rational.
+    pub fn real_const(&mut self, value: crate::rational::Rational) -> TermId {
+        self.intern_node(TermNode::RealConst(value), Sort::Real)
+    }
+
+    /// A real constant `num/den`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `den` is zero (see [`crate::Rational::new`]).
+    pub fn real_ratio(&mut self, num: i128, den: i128) -> TermId {
+        self.real_const(crate::rational::Rational::new(num, den))
+    }
+
+    /// Declares a real symbol and returns its variable term.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SymbolSortConflict`] on a name reuse with a different
+    /// sort.
+    pub fn real_var(&mut self, name: &str) -> Result<TermId, IrError> {
+        let s = self.declare(name, Sort::Real)?;
+        Ok(self.var(s))
+    }
+
+    fn expect_real(&self, t: TermId) -> Result<(), IrError> {
+        match self.sort_of(t) {
+            Sort::Real => Ok(()),
+            found @ (Sort::Bool | Sort::BitVec(_) | Sort::Array { .. } | Sort::Int) => {
+                Err(IrError::SortMismatch {
+                    expected: "Real",
+                    found,
+                })
+            }
+        }
+    }
+
+    fn real_bin(&mut self, op: Op, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.expect_real(a)?;
+        self.expect_real(b)?;
+        Ok(self.app(op, &[a, b], Sort::Real))
+    }
+
+    fn real_cmp(&mut self, op: Op, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.expect_real(a)?;
+        self.expect_real(b)?;
+        Ok(self.app(op, &[a, b], Sort::Bool))
+    }
+
+    /// Real negation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless `a` is a real.
+    pub fn real_neg(&mut self, a: TermId) -> Result<TermId, IrError> {
+        self.expect_real(a)?;
+        Ok(self.app(Op::RealNeg, &[a], Sort::Real))
+    }
+
+    /// Real addition.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless both operands are reals.
+    pub fn real_add(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.real_bin(Op::RealAdd, a, b)
+    }
+
+    /// Real subtraction.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless both operands are reals.
+    pub fn real_sub(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.real_bin(Op::RealSub, a, b)
+    }
+
+    /// Real multiplication (linear use is a fragment property, not enforced at
+    /// build time).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless both operands are reals.
+    pub fn real_mul(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.real_bin(Op::RealMul, a, b)
+    }
+
+    /// Real less-than (result sort `Bool`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless both operands are reals.
+    pub fn real_lt(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.real_cmp(Op::RealLt, a, b)
+    }
+
+    /// Real less-or-equal (result sort `Bool`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless both operands are reals.
+    pub fn real_le(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.real_cmp(Op::RealLe, a, b)
+    }
+
+    /// Real greater-than (result sort `Bool`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless both operands are reals.
+    pub fn real_gt(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.real_cmp(Op::RealGt, a, b)
+    }
+
+    /// Real greater-or-equal (result sort `Bool`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless both operands are reals.
+    pub fn real_ge(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.real_cmp(Op::RealGe, a, b)
+    }
+
+    // ----- quantifiers (ADR-0016) ---------------------------------------
+
+    /// Universal quantifier `forall var. body`, binding the declared symbol
+    /// `var` over the `Bool` `body`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless `body` is `Bool`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `var` does not belong to this arena.
+    pub fn forall(&mut self, var: SymbolId, body: TermId) -> Result<TermId, IrError> {
+        self.expect_bool(body)?;
+        let _ = self.symbols[var.index()];
+        Ok(self.app(Op::Forall(var), &[body], Sort::Bool))
+    }
+
+    /// Existential quantifier `exists var. body`, binding the declared symbol
+    /// `var` over the `Bool` `body`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless `body` is `Bool`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `var` does not belong to this arena.
+    pub fn exists(&mut self, var: SymbolId, body: TermId) -> Result<TermId, IrError> {
+        self.expect_bool(body)?;
+        let _ = self.symbols[var.index()];
+        Ok(self.app(Op::Exists(var), &[body], Sort::Bool))
+    }
 }
 
 fn check_width(width: u32) -> Result<(), IrError> {
@@ -666,6 +1151,20 @@ fn check_width(width: u32) -> Result<(), IrError> {
         return Err(IrError::InvalidWidth(width));
     }
     Ok(())
+}
+
+/// Validates a function-signature sort: only finite scalar sorts
+/// (`Bool`/`BitVec`) are allowed. Arrays and integers are rejected (functions
+/// over integers are not in the bit-blasted fragment yet, ADR-0014).
+fn check_scalar_width(sort: Sort) -> Result<(), IrError> {
+    match sort {
+        Sort::Bool => Ok(()),
+        Sort::BitVec(w) => check_width(w),
+        found @ (Sort::Array { .. } | Sort::Int | Sort::Real) => Err(IrError::SortMismatch {
+            expected: "Bool or BitVec",
+            found,
+        }),
+    }
 }
 
 fn checked_output_width(base: u32, extra: u32) -> Result<u32, IrError> {

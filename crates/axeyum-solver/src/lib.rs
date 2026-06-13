@@ -14,17 +14,50 @@
 //! `incrementality-and-solver-lifecycle.md`, and
 //! `07-verification/evidence-and-checking.md` in the repository.
 
+mod abv;
+mod aufbv;
+mod auto;
 mod backend;
+mod certify;
+mod combined;
+mod dpll_t;
+mod euf;
+mod evidence;
+mod incremental;
+mod layers;
+mod lia;
+mod lra;
 mod model;
+mod proof;
 mod sat_bv_backend;
+mod smtlib;
+mod solver;
 #[cfg(feature = "z3")]
 mod z3_backend;
 
+pub use abv::check_with_array_elimination;
+pub use aufbv::check_with_arrays_and_functions;
+pub use auto::{check_auto, check_with_quantifiers, prove_unsat_by_instantiation, solve};
 pub use backend::{
     Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind,
     UnknownReason,
 };
+pub use certify::{CertifyOutcome, certify_qf_bv_by_enumeration};
+pub use combined::check_with_all_theories;
+pub use dpll_t::check_with_lra_dpll;
+pub use euf::check_with_function_elimination;
+pub use evidence::{
+    Evidence, EvidenceReport, Provenance, SEMANTICS_VERSION, produce_lra_evidence,
+    produce_qf_bv_evidence,
+};
+pub use incremental::IncrementalBvSolver;
+pub use layers::BvLayerStats;
+pub use lia::{DEFAULT_INT_WIDTH, check_with_int_blasting};
+pub use lra::{FarkasAtom, FarkasCertificate, check_with_lra, lra_farkas_certificate};
 pub use model::Model;
+pub use proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};
 pub use sat_bv_backend::SatBvBackend;
+pub use smtlib::{SmtLibOutcome, solve_smtlib};
+pub use solver::Solver;
 #[cfg(feature = "z3")]
 pub use z3_backend::Z3Backend;

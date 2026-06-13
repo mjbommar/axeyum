@@ -251,6 +251,21 @@ fn lift_model(arena: &TermArena, solver: &Solver) -> Result<Model, SolverError> 
     let mut model = Model::new();
     for (sym, name, sort) in arena.symbols() {
         let value = match sort {
+            Sort::Array { .. } => {
+                return Err(SolverError::Unsupported(
+                    "z3 oracle does not lift array models".to_owned(),
+                ));
+            }
+            Sort::Int => {
+                return Err(SolverError::Unsupported(
+                    "z3 oracle does not lift integer models yet (ADR-0014)".to_owned(),
+                ));
+            }
+            Sort::Real => {
+                return Err(SolverError::Unsupported(
+                    "z3 oracle does not lift real models yet (ADR-0015)".to_owned(),
+                ));
+            }
             Sort::Bool => {
                 let ast = Bool::new_const(name);
                 let v = z3_model
@@ -306,15 +321,68 @@ fn translate(
             TermNode::BvConst { width, value } => {
                 cache.insert(t, Z3Term::V(bv_constant(*width, *value)?));
             }
+            TermNode::IntConst(_) => {
+                return Err(SolverError::Unsupported(
+                    "z3 oracle does not support integer terms yet (ADR-0014)".to_owned(),
+                ));
+            }
+            TermNode::RealConst(_) => {
+                return Err(SolverError::Unsupported(
+                    "z3 oracle does not support real terms yet (ADR-0015)".to_owned(),
+                ));
+            }
             TermNode::Symbol(s) => {
                 let (name, sort) = arena.symbol(*s);
                 let term = match sort {
                     Sort::Bool => Z3Term::B(Bool::new_const(name)),
                     Sort::BitVec(w) => Z3Term::V(BV::new_const(name, w)),
+                    Sort::Array { .. } => {
+                        return Err(SolverError::Unsupported(
+                            "z3 oracle does not support array symbols".to_owned(),
+                        ));
+                    }
+                    Sort::Int => {
+                        return Err(SolverError::Unsupported(
+                            "z3 oracle does not support integer symbols yet (ADR-0014)".to_owned(),
+                        ));
+                    }
+                    Sort::Real => {
+                        return Err(SolverError::Unsupported(
+                            "z3 oracle does not support real symbols yet (ADR-0015)".to_owned(),
+                        ));
+                    }
                 };
                 cache.insert(t, term);
             }
             TermNode::App { op, args } => {
+                if matches!(
+                    op,
+                    Op::Apply(_)
+                        | Op::IntNeg
+                        | Op::IntAdd
+                        | Op::IntSub
+                        | Op::IntMul
+                        | Op::IntLt
+                        | Op::IntLe
+                        | Op::IntGt
+                        | Op::IntGe
+                        | Op::RealNeg
+                        | Op::RealAdd
+                        | Op::RealSub
+                        | Op::RealMul
+                        | Op::RealLt
+                        | Op::RealLe
+                        | Op::RealGt
+                        | Op::RealGe
+                        | Op::Forall(_)
+                        | Op::Exists(_)
+                ) {
+                    return Err(SolverError::Unsupported(
+                        "z3 oracle does not support uninterpreted functions, integer/real \
+                         arithmetic, or quantifiers yet"
+                            .to_owned(),
+                    ));
+                }
                 if children_ready {
                     let translated = apply(*op, args, cache);
                     cache.insert(t, translated);
@@ -400,6 +468,34 @@ fn apply(op: Op, args: &[TermId], cache: &HashMap<TermId, Z3Term>) -> Z3Term {
         Op::RotateRight { by } => {
             let w = v(0).get_size();
             Z3Term::V(rotate_left(v(0), (w - by) % w))
+        }
+        // Array, uninterpreted-function, and integer terms are rejected during
+        // translation before any select/store/apply/int op is reached (ADR-0010,
+        // ADR-0013, ADR-0014), so this is unreachable.
+        Op::Select
+        | Op::Store
+        | Op::Apply(_)
+        | Op::IntNeg
+        | Op::IntAdd
+        | Op::IntSub
+        | Op::IntMul
+        | Op::IntLt
+        | Op::IntLe
+        | Op::IntGt
+        | Op::IntGe
+        | Op::RealNeg
+        | Op::RealAdd
+        | Op::RealSub
+        | Op::RealMul
+        | Op::RealLt
+        | Op::RealLe
+        | Op::RealGt
+        | Op::RealGe
+        | Op::Forall(_)
+        | Op::Exists(_) => {
+            unreachable!(
+                "array, UF, integer, real, and quantifier terms are rejected during z3 translation"
+            )
         }
     }
 }

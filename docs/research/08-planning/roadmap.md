@@ -42,7 +42,9 @@ These run through every phase below:
 - Differential testing: every transformation gains an oracle comparison when
   an oracle exists.
 - Benchmarks: the harness and corpora grow with each layer
-  (see [benchmarking methodology](benchmarking-and-performance-methodology.md)).
+  (see [benchmarking methodology](benchmarking-and-performance-methodology.md)),
+  including the self-checking, oracle-free scenario tier (`axeyum-scenarios`,
+  ADR-0008) that measures optimizations on realistic, scalable workloads.
 - Decisions: questions close as ADRs in `09-decisions/` as phases force them.
 - DAG audit: before a phase is marked done, check that each new term,
   transformation, encoding, backend result, and artifact has a semantics
@@ -199,8 +201,14 @@ Implementation note: the first Phase 5 slice adds `SatBvBackend` in
 existing query terms, `axeyum-bv` lowering, `axeyum-cnf` Tseitin encoding, the
 `rustsat-batsat` adapter, model reconstruction, model completion for
 unconstrained symbols, and evaluator replay before returning `sat`.
-Unsupported lowering operators such as multiplication/division/remainder return
-`SolverError::Unsupported` with no oracle fallback. The benchmark harness now
+The full scalar QF_BV operator set now lowers (2026-06-13): multiplication
+(`bvmul`, truncated shift-and-add), unsigned division/remainder
+(`bvudiv`/`bvurem`, a combinational restoring divider with SMT-LIB
+divide-by-zero totality), and signed division/remainder/modulo
+(`bvsdiv`/`bvsrem`/`bvsmod`, sign-handling wrappers over the unsigned divider),
+each verified exhaustively against the evaluator. No scalar operator returns
+`SolverError::Unsupported`; that path is reserved for future non-scalar
+constructs (arrays, UF) with no oracle fallback. The benchmark harness now
 selects `--backend sat-bv|z3`; artifact version 4 introduced backend kind and
 per-instance backend stats, artifact version 5 adds node-budget provenance plus
 optional Z3 oracle comparison for pure-Rust runs, artifact version 6 adds CNF
@@ -289,7 +297,12 @@ it will be built. The methodology note's gate decides *when* — it takes
 priority over encoding work only once SAT time dominates end-to-end time on
 the corpus tiers.
 
-- SAT trait stabilization with proof-logging hook (IPASIR-superset shape).
+- SAT trait stabilization with proof-logging hook (IPASIR-superset shape). A
+  warm incremental SAT layer (`IncrementalSat`: monotone clauses + native
+  assumptions) already exists per
+  [ADR-0009](../09-decisions/adr-0009-incremental-sat-and-solving.md) stage 1;
+  Phase 6 stabilizes the trait shape across adapter and custom core and adds
+  proof logging.
 - Clause arena, propagation, CDCL prototype with DRAT output.
 - Profiling against the adapters that justified the work.
 - ADR for proof logging target, checker route, deterministic clause database
@@ -307,8 +320,16 @@ attempt is written up as an ADR documenting why not.
 - ADR for select/store, extensionality, congruence closure, model replay, and
   proof/evidence commitments before public arrays/EUF surface expands.
 
+Implementation note: a first infosec-workflow client example landed early
+(2026-06-13), ahead of arrays — a register-VM symbolic executor over
+`IncrementalBvSolver` that forks at branches, prunes infeasible paths, and
+cross-checks every found input by concrete re-execution
+(`axeyum-solver/tests/symbolic_execution.rs`). It is memory-free; memory-using
+programs are the motivation for the array work above.
+
 Exit criteria: one real client example per audience runs end to end with
-checked evidence.
+checked evidence. The infosec example exists for the memory-free fragment;
+math/verification examples and a memory-using infosec example remain.
 
 ## Beyond Phase 7: The Proving Horizon
 

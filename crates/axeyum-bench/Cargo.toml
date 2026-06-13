@@ -15,6 +15,7 @@ publish = false
 axeyum-ir.workspace = true
 axeyum-query.workspace = true
 axeyum-rewrite = { path = "../axeyum-rewrite" }
+axeyum-scenarios = { path = "../axeyum-scenarios" }
 axeyum-smtlib = { path = "../axeyum-smtlib" }
 axeyum-solver = { path = "../axeyum-solver" }
 rayon = "1"

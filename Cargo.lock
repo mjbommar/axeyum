@@ -42,6 +42,7 @@ dependencies = [
  "axeyum-ir",
  "axeyum-query",
  "axeyum-rewrite",
+ "axeyum-scenarios",
  "axeyum-smtlib",
  "axeyum-solver",
  "rayon",
@@ -65,6 +66,7 @@ dependencies = [
  "axeyum-ir",
  "rustsat",
  "rustsat-batsat",
+ "web-time",
 ]
 
 [[package]]
@@ -86,6 +88,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "axeyum-scenarios"
+version = "0.1.0"
+dependencies = [
+ "axeyum-ir",
+ "axeyum-query",
+]
+
+[[package]]
 name = "axeyum-smtlib"
 version = "0.1.0"
 dependencies = [
@@ -101,7 +111,9 @@ dependencies = [
  "axeyum-ir",
  "axeyum-query",
  "axeyum-rewrite",
+ "axeyum-scenarios",
  "axeyum-smtlib",
+ "web-time",
  "z3",
 ]
 

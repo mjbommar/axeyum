@@ -1,0 +1,19 @@
+[package]
+name = "axeyum-scenarios"
+description = "Self-checking consumer scenario models for Axeyum: oracle-free SAT/UNSAT workloads for testing and optimization"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[dependencies]
+axeyum-ir.workspace = true
+axeyum-query.workspace = true
+
+[lints]
+workspace = true

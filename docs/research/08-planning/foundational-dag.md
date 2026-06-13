@@ -60,6 +60,8 @@ authoritative semantics
   -> layered SAT/BV evidence artifacts
   -> custom SAT core and proof logging
   -> arrays/EUF and later theory layers
+  -> unified `solve` front door (any theory/quantifier mode)
+  -> SMT-LIB text front door (`solve_smtlib`: text -> checked answer)
 ```
 
 Read every arrow as a proof obligation, not just an implementation dependency.
@@ -86,7 +88,7 @@ shape.
 | CNF/Tseitin | Circuit/AIG | CNF is equisatisfiable with the circuit and liftable. | CNF evaluator, DIMACS round trips, lift-map tests. |
 | SAT adapter | CNF | SAT assignment satisfies CNF; UNSAT without proof is capability-marked lower assurance. | Assignment replay and capability reporting. |
 | Pure Rust BV backend | SAT adapter and lift maps | Backend answers original QF_BV queries without native SMT dependency. | Oracle agreement, model replay, layer timings. |
-| SAT proof path | SAT core or proof-capable adapter | UNSAT is checkable outside the solver. | DRAT/LRAT or chosen proof checker. |
+| SAT proof path | SAT core or proof-capable adapter | UNSAT is checkable outside the solver. | DRAT checker done (`check_drat`, ADR-0011) + proof-producing core (`solve_with_drat_proof`, ADR-0012): end-to-end checked `unsat`. |
 | Arrays/EUF | Stable scalar core | Extensionality, select/store, and congruence have evidence hooks. | ADR plus array/EUF-specific model/proof story. |
 
 ## Phase Gates
@@ -187,7 +189,11 @@ provides deterministic ASCII AIGER debug export. The
 [Phase 4 exit audit](phase4-exit-audit.md) records the completed gates and the
 explicit deferrals: multiplication/division/remainder lowering, pure-Rust
 benchmark-artifact integration, binary AIGER import/export, and proof-backed
-UNSAT.
+UNSAT. Of those, all arithmetic lowering — multiplication (`bvmul`), unsigned
+division/remainder (`bvudiv`/`bvurem`), and signed division/remainder/modulo
+(`bvsdiv`/`bvsrem`/`bvsmod`) — was subsequently added in Phase 5 (2026-06-13),
+each verified exhaustively against the evaluator, completing the full scalar
+QF_BV operator set; no arithmetic lowering deferral remains.
 
 ### Phase 5 Entry: Pure Rust BV Backend
 
@@ -281,12 +287,15 @@ Use this table as the planning checklist before declaring a fragment public.
 | Fragment | IR | Evaluator | SMT-LIB | Oracle | Pure Rust | Evidence |
 |---|---|---|---|---|---|---|
 | Bool | Done | Done | Partial via QF_BV scripts | Z3 | Done for `sat-bv` subset | Model replay |
-| Scalar BV | Done | Done | Benchmark-slice parser/writer | Z3 | Partial `sat-bv` subset | Model replay plus Z3 differential |
-| Arrays over BV | Deferred | Deferred | Explicit unsupported | Future oracle | Deferred | ADR required |
-| EUF | Deferred | Deferred | Explicit unsupported | Future oracle | Deferred | ADR required |
-| QF_LIA/QF_LRA | Horizon | Horizon | Horizon | Future oracle | Horizon | ADR required |
-| Quantifiers | Horizon | Horizon | Horizon | Future oracle | Horizon | Binder ADR required |
-| Proof artifacts | Envelope ADR | N/A | N/A | Oracle-specific | Pending SAT path | Proof-format ADR |
+| Scalar BV | Done | Done | Benchmark-slice parser/writer | Z3 | Full scalar `QF_BV` op set in `sat-bv` | Model replay plus Z3 differential |
+| Arrays over BV | `select`/`store` done | Read-over-write done | Reader + writer done (non-extensional) | Z3 (not yet wired) | Eager elimination to QF_BV (ADR-0010) | Model projection + evaluator replay |
+| EUF | `declare_fun`/`apply` done (ADR-0013) | `Op::Apply` against a `FuncValue` model | Reader + writer round-trip done (`declare-fun` n-ary + applications, `QF_UFBV`) | Z3 rejects `Op::Apply` (eliminated first) | Ackermann elimination + `QF_UFBV` solving done | Model projection + replay; `function_catalog` differential |
+| QF_AUFBV / QF_AUFLIA (arrays + UF + ints) | Composed from arrays + EUF + LIA | Composed | Composed (all passes) | n/a (reduced first) | `check_with_all_theories`: array → function → integer reduction | Combined reverse projection + replay; integer-bearing `unsat`/overflow → `unknown`; array equality still deferred |
+| QF_LIA (integers) | `Int` sort + linear ops done (ADR-0014) | `Int` arithmetic over `i128` reference | Reader + writer round-trip done (`Int`, literals, `+`/`-`/`*`/`<`…, `QF_LIA`) | Rejected (blasted to BV first) | Bounded bit-blasting done (`check_with_int_blasting`); `integer_catalog` differential | Integer model read-back + exact replay; bounded `unsat`/overflow → `unknown` |
+| QF_LRA (reals, conjunctive) | `Real` sort + exact `Rational` + linear ops done (ADR-0015) | Exact rational arithmetic | Reader + writer round-trip done (`Real`, `n.0`/`(/ ..)` literals, numeral coercion, `QF_LRA`) | n/a (own procedure) | Fourier–Motzkin over exact rationals (`check_with_lra`); `real_catalog` differential | Rational model + evaluator replay; `unsat` lower-assurance (Farkas pending); `or`/disequality need DPLL(T) |
+| Quantifiers | `forall`/`exists` (named binders, ADR-0016) | Finite-domain enumeration (Bool/BV) | Reader + writer round-trip (binder form, fresh-symbol scoping) | n/a (expanded first) | Finite-domain expansion (`check_with_quantifiers`); E-matching pending | Original-formula replay via enumerating evaluator |
+| Proof artifacts | Envelope ADR | N/A | Exportable DIMACS + DRAT text (`export_qf_bv_unsat_proof`) | Oracle-specific | DRAT checker (ADR-0011) + proof-producing core (ADR-0012) | DRAT (RUP+RAT) checked in-tree and re-checkable externally (drat-trim) |
+| Front door | n/a | n/a | `solve_smtlib`: SMT-LIB text → checked answer (ADR-0018) | via `solve` | `solve` routes any theory/quantifier mode; `solve_smtlib` adds the text path | Decision cross-checked against script `:status`; model replay inside `solve` |
 
 ## Web And Reference Refresh Gates
 
@@ -341,8 +350,13 @@ Required refresh points:
       projection is implemented?
   - Answer: they may be recorded while disabled, but must not be default until
     projection is implemented and replay-tested; see ADR-0005.
-- [ ] Which proof checker is the default high-assurance gate once UNSAT proofs
+- [x] Which proof checker is the default high-assurance gate once UNSAT proofs
       exist?
+  - Answer: an in-tree DRAT checker (RUP + RAT, `axeyum_cnf::check_drat`),
+    chosen and built first as the trust anchor; see
+    [ADR-0011](../09-decisions/adr-0011-drat-unsat-proof-checking.md). A DRAT
+    producer (proof-capable adapter or the custom CDCL core) is the remaining
+    piece to make UNSAT high-assurance end to end.
 
 ## Source Pointers
 

@@ -67,6 +67,8 @@ pub enum SolverError {
     Unsupported(String),
     /// The backend failed internally (missing model, API failure).
     Backend(String),
+    /// The input text could not be parsed (the SMT-LIB text front door).
+    Parse(String),
 }
 
 impl core::fmt::Display for SolverError {
@@ -77,11 +79,19 @@ impl core::fmt::Display for SolverError {
             }
             SolverError::Unsupported(what) => write!(f, "unsupported by backend: {what}"),
             SolverError::Backend(what) => write!(f, "backend failure: {what}"),
+            SolverError::Parse(what) => write!(f, "parse error: {what}"),
         }
     }
 }
 
 impl core::error::Error for SolverError {}
+
+impl From<axeyum_ir::IrError> for SolverError {
+    /// An IR builder error during solving is an internal backend failure.
+    fn from(error: axeyum_ir::IrError) -> Self {
+        SolverError::Backend(error.to_string())
+    }
+}
 
 /// Per-query configuration.
 ///
@@ -112,6 +122,68 @@ pub struct SolverConfig {
     /// Larger encodings return [`UnknownKind::EncodingBudget`] before SAT
     /// solving starts.
     pub cnf_clause_budget: Option<u64>,
+    /// When set, an `unsat` result is independently re-derived by the
+    /// proof-producing SAT core and its DRAT proof is verified before being
+    /// returned (ADR-0011/0012). A disagreement or failed proof becomes a
+    /// [`SolverError::Backend`] soundness alarm. The proof core is a reference,
+    /// not scalable, so this is for small instances / high-assurance checks.
+    pub prove_unsat: bool,
+}
+
+impl SolverConfig {
+    /// An empty configuration with no budgets (same as `Default`).
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the wall-clock timeout.
+    #[must_use]
+    pub fn with_timeout(mut self, timeout: Duration) -> Self {
+        self.timeout = Some(timeout);
+        self
+    }
+
+    /// Sets the deterministic resource budget (maps to Z3 `rlimit`).
+    #[must_use]
+    pub fn with_resource_limit(mut self, limit: u64) -> Self {
+        self.resource_limit = Some(limit);
+        self
+    }
+
+    /// Sets the memory budget in megabytes.
+    #[must_use]
+    pub fn with_memory_limit_mb(mut self, megabytes: u64) -> Self {
+        self.memory_limit_mb = Some(megabytes);
+        self
+    }
+
+    /// Sets the maximum DAG nodes the backend may translate.
+    #[must_use]
+    pub fn with_node_budget(mut self, nodes: u64) -> Self {
+        self.node_budget = Some(nodes);
+        self
+    }
+
+    /// Sets the maximum CNF variables the backend may submit.
+    #[must_use]
+    pub fn with_cnf_variable_budget(mut self, variables: u64) -> Self {
+        self.cnf_variable_budget = Some(variables);
+        self
+    }
+
+    /// Sets the maximum CNF clauses the backend may submit.
+    #[must_use]
+    pub fn with_cnf_clause_budget(mut self, clauses: u64) -> Self {
+        self.cnf_clause_budget = Some(clauses);
+        self
+    }
+
+    /// Enables independent DRAT proof verification of `unsat` results.
+    #[must_use]
+    pub fn with_prove_unsat(mut self, prove_unsat: bool) -> Self {
+        self.prove_unsat = prove_unsat;
+        self
+    }
 }
 
 /// Layer-attributed measurements from the most recent check.

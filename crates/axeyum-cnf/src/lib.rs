@@ -6,13 +6,24 @@
 //! path for CNF formulas.
 
 use axeyum_aig::{Aig, AigLit, AigNode, AigNodeId};
-use std::{
-    collections::BTreeSet,
-    time::{Duration, Instant},
-};
+use std::collections::BTreeSet;
+use std::time::Duration;
+
+// Monotonic clock: the browser has no `std` clock, so on wasm32 use `web-time`'s
+// drop-in `Instant` (ADR-0017). Native targets use the std clock.
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
+
+mod drat;
+mod proof_sat;
+
+pub use drat::{DratError, DratStep, check_drat, parse_drat, write_drat};
+pub use proof_sat::{ProofSolveOutcome, solve_with_drat_proof};
 
 use rustsat::{
-    solvers::{Solve, SolverResult as RustSatSolverResult},
+    solvers::{Solve, SolveIncremental, SolverResult as RustSatSolverResult},
     types::{
         Clause as RustSatClause, Lit as RustSatLit, TernaryVal as RustSatTernaryVal,
         Var as RustSatVar,
@@ -458,6 +469,339 @@ pub fn solve_with_rustsat_batsat_timeout(
             };
             Ok(SatResult::Unknown(SatUnknownReason { detail }))
         }
+    }
+}
+
+/// A warm, incremental CNF SAT solver over the pure-Rust `BatSat` adapter
+/// (ADR-0009, stage 1).
+///
+/// Unlike [`solve_with_rustsat_batsat`], the solver instance persists across
+/// [`IncrementalSat::solve`] calls: clauses added with
+/// [`IncrementalSat::add_clause`] stay in the database and the solver's learned
+/// clauses are reused. Assumptions passed to [`IncrementalSat::solve_assuming`]
+/// hold for that one solve only — the mechanism behind SMT-LIB `push`/`pop`
+/// (via selector literals) and `check-sat-assuming`.
+///
+/// The clause database is monotone (clauses are never removed); the variable
+/// namespace grows as clauses reference higher variables. Every `sat` is
+/// self-checked: the returned assignment must satisfy all accumulated clauses
+/// and the assumptions. `unsat` is lower-assurance until a proof path exists,
+/// matching the one-shot adapter (ADR-0007).
+#[derive(Default)]
+pub struct IncrementalSat {
+    solver: rustsat_batsat::BasicSolver,
+    clauses: Vec<CnfClause>,
+    variable_count: usize,
+}
+
+impl core::fmt::Debug for IncrementalSat {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        // The `BasicSolver` handle is opaque (not `Debug`); show the database
+        // shape instead.
+        f.debug_struct("IncrementalSat")
+            .field("clauses", &self.clauses.len())
+            .field("variable_count", &self.variable_count)
+            .finish_non_exhaustive()
+    }
+}
+
+impl IncrementalSat {
+    /// Creates an empty incremental solver.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Number of variables reserved so far.
+    pub fn variable_count(&self) -> usize {
+        self.variable_count
+    }
+
+    /// Number of clauses added so far.
+    pub fn clause_count(&self) -> usize {
+        self.clauses.len()
+    }
+
+    /// Reserves variable space up to `variable_count` variables.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SatError::VariableCountTooLarge`] if the count exceeds the
+    /// adapter's variable limit.
+    pub fn reserve(&mut self, variable_count: usize) -> Result<(), SatError> {
+        if variable_count > self.variable_count {
+            self.variable_count = variable_count;
+        }
+        reserve_rustsat_variables(&mut self.solver, self.variable_count)
+    }
+
+    /// Adds a clause to the persistent database.
+    ///
+    /// The variable namespace grows to cover the clause's literals.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SatError`] for adapter failures or variable counts beyond the
+    /// adapter limit.
+    pub fn add_clause(&mut self, clause: CnfClause) -> Result<(), SatError> {
+        for lit in clause.lits() {
+            let needed = lit.var().index() + 1;
+            if needed > self.variable_count {
+                self.variable_count = needed;
+            }
+        }
+        reserve_rustsat_variables(&mut self.solver, self.variable_count)?;
+        self.solver
+            .add_clause(rustsat_clause(&clause)?)
+            .map_err(|error| SatError::Solver(error.to_string()))?;
+        self.clauses.push(clause);
+        Ok(())
+    }
+
+    /// Solves the accumulated clauses, optionally bounded by a cooperative
+    /// wall-clock timeout.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SatError`] for adapter failures or invalid models.
+    pub fn solve(&mut self, timeout: Option<Duration>) -> Result<SatResult, SatError> {
+        self.solve_inner(&[], timeout)
+    }
+
+    /// Solves the accumulated clauses under one-shot `assumptions`, which hold
+    /// for this solve only.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SatError`] for adapter failures or invalid models.
+    pub fn solve_assuming(
+        &mut self,
+        assumptions: &[CnfLit],
+        timeout: Option<Duration>,
+    ) -> Result<SatResult, SatError> {
+        self.solve_inner(assumptions, timeout)
+    }
+
+    fn solve_inner(
+        &mut self,
+        assumptions: &[CnfLit],
+        timeout: Option<Duration>,
+    ) -> Result<SatResult, SatError> {
+        let timeout_deadline = timeout.and_then(|duration| Instant::now().checked_add(duration));
+        // The stop callback is (re)installed every solve so a stale deadline
+        // from a previous timed solve never aborts an untimed one.
+        match timeout_deadline {
+            Some(deadline) => self
+                .solver
+                .batsat_mut()
+                .cb_mut()
+                .set_stop(move || Instant::now() >= deadline),
+            None => self.solver.batsat_mut().cb_mut().set_stop(|| false),
+        }
+
+        let result = if assumptions.is_empty() {
+            self.solver.solve()
+        } else {
+            let lits = assumptions
+                .iter()
+                .copied()
+                .map(rustsat_lit)
+                .collect::<Result<Vec<_>, _>>()?;
+            self.solver.solve_assumps(&lits)
+        }
+        .map_err(|error| SatError::Solver(error.to_string()))?;
+
+        match result {
+            RustSatSolverResult::Sat => {
+                let assignment = rustsat_assignment(&self.solver, self.variable_count)?;
+                if self.assignment_is_model(&assignment, assumptions) {
+                    Ok(SatResult::Sat(assignment))
+                } else {
+                    Err(SatError::InvalidModel)
+                }
+            }
+            RustSatSolverResult::Unsat => Ok(SatResult::Unsat(SatUnsatEvidence {
+                proof: SatProofStatus::Unchecked,
+            })),
+            RustSatSolverResult::Interrupted => {
+                let detail = if timeout_deadline.is_some() {
+                    "rustsat-batsat timeout".to_owned()
+                } else {
+                    "rustsat-batsat interrupted".to_owned()
+                };
+                Ok(SatResult::Unknown(SatUnknownReason { detail }))
+            }
+        }
+    }
+
+    /// Checks a candidate model against every accumulated clause and assumption.
+    fn assignment_is_model(&self, assignment: &CnfAssignment, assumptions: &[CnfLit]) -> bool {
+        let values = assignment.values();
+        self.clauses.iter().all(|clause| clause.evaluate(values))
+            && assumptions.iter().all(|lit| eval_lit(*lit, values))
+    }
+}
+
+/// Incremental Tseitin encoder over a warm [`IncrementalSat`] (ADR-0009 stage 2).
+///
+/// Encodes AIG nodes into CNF on demand as the AIG grows — one CNF variable per
+/// node (simple per-node Tseitin) — and asserts roots, optionally guarded by a
+/// selector variable so SMT-LIB `push`/`pop` scopes can be activated and
+/// deactivated through assumptions. The one-variable-per-node mapping makes
+/// lifting a SAT assignment back to AIG node values direct, which feeds the
+/// existing symbol-model reconstruction and original-term replay.
+///
+/// This is the simple, sound encoder for the first end-to-end incremental
+/// slice; the sparse-CNF optimizations of [`tseitin_encode`] are deliberately
+/// not replicated here yet.
+#[derive(Debug, Default)]
+pub struct IncrementalCnf {
+    sat: IncrementalSat,
+    node_var: Vec<CnfVar>,
+    next_var: usize,
+}
+
+impl IncrementalCnf {
+    /// Creates an empty incremental encoder.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Number of CNF variables allocated so far (nodes plus selectors).
+    pub fn variable_count(&self) -> usize {
+        self.next_var
+    }
+
+    /// Number of clauses in the persistent database.
+    pub fn clause_count(&self) -> usize {
+        self.sat.clause_count()
+    }
+
+    fn alloc_var(&mut self) -> Result<CnfVar, SatError> {
+        let var =
+            CnfVar::new(self.next_var).map_err(|error| SatError::Solver(error.to_string()))?;
+        self.next_var += 1;
+        Ok(var)
+    }
+
+    /// Allocates a fresh selector variable for a push/pop scope.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SatError`] if the variable space is exhausted.
+    pub fn fresh_selector(&mut self) -> Result<CnfVar, SatError> {
+        let var = self.alloc_var()?;
+        self.sat.reserve(self.next_var)?;
+        Ok(var)
+    }
+
+    fn lit(&self, aig_lit: AigLit) -> CnfLit {
+        let var = self.node_var[aig_lit.node().index()];
+        let lit = CnfLit::positive(var);
+        if aig_lit.is_inverted() {
+            lit.negated()
+        } else {
+            lit
+        }
+    }
+
+    /// Encodes every AIG node not yet encoded into CNF clauses.
+    fn sync(&mut self, aig: &Aig) -> Result<(), SatError> {
+        for (id, node) in aig.nodes() {
+            if id.index() < self.node_var.len() {
+                continue;
+            }
+            let var = self.alloc_var()?;
+            self.node_var.push(var);
+            let var_lit = CnfLit::positive(var);
+            match node {
+                AigNode::ConstFalse => {
+                    // Force the constant-false node's variable to false.
+                    self.sat
+                        .add_clause(CnfClause::new(vec![var_lit.negated()]))?;
+                }
+                AigNode::Input(_) => {
+                    // A free variable; no defining clause.
+                }
+                AigNode::And(lhs, rhs) => {
+                    let lhs_lit = self.lit(lhs);
+                    let rhs_lit = self.lit(rhs);
+                    // var <-> (lhs & rhs)
+                    self.sat
+                        .add_clause(CnfClause::new(vec![var_lit.negated(), lhs_lit]))?;
+                    self.sat
+                        .add_clause(CnfClause::new(vec![var_lit.negated(), rhs_lit]))?;
+                    self.sat.add_clause(CnfClause::new(vec![
+                        var_lit,
+                        lhs_lit.negated(),
+                        rhs_lit.negated(),
+                    ]))?;
+                }
+            }
+        }
+        // Ensure the solver knows about every node variable, including inputs
+        // that appear in no clause, so a returned assignment covers them.
+        self.sat.reserve(self.next_var)?;
+        Ok(())
+    }
+
+    /// Encodes any new AIG nodes, then asserts `root`.
+    ///
+    /// When `selector` is `Some`, the assertion is guarded so it holds only
+    /// while that selector is assumed true in [`IncrementalCnf::solve`] — the
+    /// mechanism behind push/pop scopes. When `None`, the root is asserted
+    /// permanently.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SatError`] for adapter failures or variable-space exhaustion.
+    pub fn assert_root(
+        &mut self,
+        aig: &Aig,
+        root: AigLit,
+        selector: Option<CnfVar>,
+    ) -> Result<(), SatError> {
+        self.sync(aig)?;
+        let root_lit = self.lit(root);
+        let clause = match selector {
+            None => CnfClause::new(vec![root_lit]),
+            Some(sel) => CnfClause::new(vec![CnfLit::positive(sel).negated(), root_lit]),
+        };
+        self.sat.add_clause(clause)
+    }
+
+    /// Solves with the given scope selectors assumed active (true).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SatError`] for adapter failures or invalid models.
+    pub fn solve(
+        &mut self,
+        active_selectors: &[CnfVar],
+        timeout: Option<Duration>,
+    ) -> Result<SatResult, SatError> {
+        if active_selectors.is_empty() {
+            self.sat.solve(timeout)
+        } else {
+            let assumptions = active_selectors
+                .iter()
+                .map(|&var| CnfLit::positive(var))
+                .collect::<Vec<_>>();
+            self.sat.solve_assuming(&assumptions, timeout)
+        }
+    }
+
+    /// Maps a satisfying assignment to AIG node values in node-id order, ready
+    /// for the bit-lowering symbol-model reconstruction.
+    pub fn aig_node_values(&self, aig: &Aig, assignment: &CnfAssignment) -> Vec<bool> {
+        let values = assignment.values();
+        (0..aig.node_count())
+            .map(|node_id| {
+                self.node_var
+                    .get(node_id)
+                    .and_then(|var| values.get(var.index()).copied())
+                    .unwrap_or(false)
+            })
+            .collect()
     }
 }
 
@@ -2004,8 +2348,9 @@ mod tests {
     use axeyum_ir::{Sort, TermArena, Value, eval};
 
     use super::{
-        CnfError, EncodedLit, RustSatBatsatSolver, SatProofStatus, SatResult, SatSolver,
-        aig_lit_value, parse_dimacs, solve_with_rustsat_batsat, tseitin_encode,
+        CnfClause, CnfError, CnfLit, CnfVar, EncodedLit, IncrementalCnf, IncrementalSat,
+        RustSatBatsatSolver, SatProofStatus, SatResult, SatSolver, aig_lit_value, parse_dimacs,
+        solve_with_rustsat_batsat, tseitin_encode,
     };
 
     #[test]
@@ -2722,5 +3067,139 @@ p cnf 1 2
             lowering.root_values_from_aig_values(&aig_values).unwrap(),
             vec![Value::Bool(true)]
         );
+    }
+
+    fn var(index: usize) -> CnfVar {
+        CnfVar::new(index).unwrap()
+    }
+
+    fn pos(index: usize) -> CnfLit {
+        CnfLit::positive(var(index))
+    }
+
+    fn neg(index: usize) -> CnfLit {
+        CnfLit::positive(var(index)).negated()
+    }
+
+    #[test]
+    fn incremental_accumulates_clauses_across_solves() {
+        let mut sat = IncrementalSat::new();
+        // (x0 ∨ x1)
+        sat.add_clause(CnfClause::new(vec![pos(0), pos(1)]))
+            .unwrap();
+        let SatResult::Sat(first) = sat.solve(None).unwrap() else {
+            panic!("expected sat after first clause");
+        };
+        assert!(first.values()[0] || first.values()[1]);
+
+        // Add (¬x0); the warm solver keeps the earlier clause, so x1 is forced.
+        sat.add_clause(CnfClause::new(vec![neg(0)])).unwrap();
+        let SatResult::Sat(second) = sat.solve(None).unwrap() else {
+            panic!("expected sat after second clause");
+        };
+        assert!(!second.values()[0], "x0 is forced false");
+        assert!(
+            second.values()[1],
+            "x1 is forced true by the retained clause"
+        );
+    }
+
+    #[test]
+    fn incremental_assumptions_hold_for_one_solve_only() {
+        let mut sat = IncrementalSat::new();
+        sat.add_clause(CnfClause::new(vec![pos(0), pos(1)]))
+            .unwrap();
+
+        // Assuming both literals false contradicts the clause: unsat this solve.
+        assert!(matches!(
+            sat.solve_assuming(&[neg(0), neg(1)], None).unwrap(),
+            SatResult::Unsat(_)
+        ));
+        // Without the assumptions the formula is satisfiable again.
+        assert!(matches!(sat.solve(None).unwrap(), SatResult::Sat(_)));
+    }
+
+    #[test]
+    fn incremental_selector_literals_emulate_push_pop() {
+        let mut sat = IncrementalSat::new();
+        // Base assertion: x0 is true (unit clause).
+        sat.add_clause(CnfClause::new(vec![pos(0)])).unwrap();
+        // Scoped assertion guarded by selector x1: (¬x1 ∨ ¬x0), i.e. "if the
+        // scope is active, x0 must be false" — contradicts the base.
+        sat.add_clause(CnfClause::new(vec![neg(1), neg(0)]))
+            .unwrap();
+
+        // Scope active (assume x1): contradiction -> unsat.
+        assert!(matches!(
+            sat.solve_assuming(&[pos(1)], None).unwrap(),
+            SatResult::Unsat(_)
+        ));
+        // Scope popped (assume ¬x1, deactivating the guarded clause): sat again.
+        assert!(matches!(
+            sat.solve_assuming(&[neg(1)], None).unwrap(),
+            SatResult::Sat(_)
+        ));
+    }
+
+    #[test]
+    fn incremental_cnf_encodes_solves_and_lifts_node_values() {
+        let mut aig = Aig::new();
+        let p = aig.input("p");
+        let q = aig.input("q");
+        let conj = aig.and(p, q);
+
+        let mut cnf = IncrementalCnf::new();
+        cnf.assert_root(&aig, conj, None).unwrap();
+        let SatResult::Sat(assignment) = cnf.solve(&[], None).unwrap() else {
+            panic!("expected sat for `p & q`");
+        };
+        let node_values = cnf.aig_node_values(&aig, &assignment);
+        assert!(aig_lit_value(conj, &node_values).unwrap(), "root holds");
+        assert!(aig_lit_value(p, &node_values).unwrap(), "p forced true");
+        assert!(aig_lit_value(q, &node_values).unwrap(), "q forced true");
+
+        // Asserting the constant-false literal is unsatisfiable, matching the
+        // one-shot path's verdict on the same circuit.
+        let mut contradiction = IncrementalCnf::new();
+        contradiction
+            .assert_root(&aig, AigLit::FALSE, None)
+            .unwrap();
+        assert!(matches!(
+            contradiction.solve(&[], None).unwrap(),
+            SatResult::Unsat(_)
+        ));
+    }
+
+    #[test]
+    fn incremental_cnf_selector_scopes_toggle_assertions() {
+        let mut aig = Aig::new();
+        let p = aig.input("p");
+
+        let mut cnf = IncrementalCnf::new();
+        // Base scope: p must be true (permanent).
+        cnf.assert_root(&aig, p, None).unwrap();
+        // Nested scope: if its selector is active, ¬p — contradicting the base.
+        let selector = cnf.fresh_selector().unwrap();
+        cnf.assert_root(&aig, p.negated(), Some(selector)).unwrap();
+
+        // Scope active -> contradiction -> unsat.
+        assert!(matches!(
+            cnf.solve(&[selector], None).unwrap(),
+            SatResult::Unsat(_)
+        ));
+        // Scope popped (selector not assumed) -> satisfiable again.
+        assert!(matches!(cnf.solve(&[], None).unwrap(), SatResult::Sat(_)));
+    }
+
+    #[test]
+    fn incremental_permanent_contradiction_stays_unsat() {
+        let mut sat = IncrementalSat::new();
+        sat.add_clause(CnfClause::new(vec![pos(0)])).unwrap();
+        sat.add_clause(CnfClause::new(vec![neg(0)])).unwrap();
+        assert!(matches!(sat.solve(None).unwrap(), SatResult::Unsat(_)));
+        // Still unsat on a later solve; the contradiction is permanent.
+        assert!(matches!(sat.solve(None).unwrap(), SatResult::Unsat(_)));
+        assert_eq!(sat.clause_count(), 2);
+        assert_eq!(sat.variable_count(), 1);
     }
 }

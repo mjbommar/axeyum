@@ -52,6 +52,20 @@ fn op_name(op: Op) -> String {
         Op::SignExt { by } => format!("(_ sign_extend {by})"),
         Op::RotateLeft { by } => format!("(_ rotate_left {by})"),
         Op::RotateRight { by } => format!("(_ rotate_right {by})"),
+        Op::Select => "select".into(),
+        Op::Store => "store".into(),
+        // The function name needs the arena; handled in `render` directly.
+        Op::Apply(func) => format!("!fn{}", func.index()),
+        Op::IntNeg | Op::IntSub | Op::RealNeg | Op::RealSub => "-".into(),
+        Op::IntAdd | Op::RealAdd => "+".into(),
+        Op::IntMul | Op::RealMul => "*".into(),
+        Op::IntLt | Op::RealLt => "<".into(),
+        Op::IntLe | Op::RealLe => "<=".into(),
+        Op::IntGt | Op::RealGt => ">".into(),
+        Op::IntGe | Op::RealGe => ">=".into(),
+        // The bound variable name needs the arena; handled in `render`.
+        Op::Forall(_) => "forall".into(),
+        Op::Exists(_) => "exists".into(),
     }
 }
 
@@ -79,13 +93,54 @@ pub fn render(arena: &TermArena, term: TermId) -> String {
             TermNode::BvConst { width, value } => {
                 memo.insert(t, format!("(_ bv{value} {width})"));
             }
+            TermNode::IntConst(value) => {
+                // SMT-LIB renders negative integers as `(- n)`.
+                if *value < 0 {
+                    memo.insert(t, format!("(- {})", value.unsigned_abs()));
+                } else {
+                    memo.insert(t, value.to_string());
+                }
+            }
+            TermNode::RealConst(value) => {
+                // SMT-LIB rationals: `(/ n d)`, or `(- ...)` for negatives.
+                let num = value.numerator();
+                let den = value.denominator();
+                let magnitude = if den == 1 {
+                    num.unsigned_abs().to_string()
+                } else {
+                    format!("(/ {} {den})", num.unsigned_abs())
+                };
+                if num < 0 {
+                    memo.insert(t, format!("(- {magnitude})"));
+                } else {
+                    memo.insert(t, magnitude);
+                }
+            }
             TermNode::Symbol(s) => {
                 memo.insert(t, arena.symbol(*s).0.to_owned());
             }
             TermNode::App { op, args } => {
                 if children_ready {
+                    // Quantifiers render in SMT-LIB binder form:
+                    // `(forall ((x Sort)) body)`.
+                    if let Op::Forall(var) | Op::Exists(var) = op {
+                        let (name, sort) = arena.symbol(*var);
+                        let keyword = if matches!(op, Op::Forall(_)) {
+                            "forall"
+                        } else {
+                            "exists"
+                        };
+                        memo.insert(
+                            t,
+                            format!("({keyword} (({name} {sort})) {})", memo[&args[0]]),
+                        );
+                        continue;
+                    }
                     let mut out = String::from("(");
-                    out.push_str(&op_name(*op));
+                    match op {
+                        Op::Apply(func) => out.push_str(arena.function(*func).0),
+                        _ => out.push_str(&op_name(*op)),
+                    }
                     for a in args {
                         out.push(' ');
                         out.push_str(&memo[a]);

@@ -1,14 +1,15 @@
 //! SMT-LIB 2 script parser for the `QF_BV` benchmark slice.
 //!
 //! Scope (formats note): benchmarks-as-data — `set-logic`, `set-info`,
-//! `declare-fun`/`declare-const` (0-ary), `define-fun` (0-ary, as aliases),
-//! `assert`, `check-sat`, `exit`. Incremental scripting (`push`/`pop`) is
-//! rejected with a clear error. Term conversion is iterative, so deep
-//! benchmark terms cannot overflow the stack.
+//! `declare-fun` (0-ary constants and n-ary uninterpreted functions, ADR-0013),
+//! `declare-const`, `define-fun` (0-ary aliases and n-ary macros), `assert`,
+//! `check-sat`, `exit`, plus `let` and `forall`/`exists` binders (ADR-0016).
+//! Incremental scripting (`push`/`pop`) is rejected with a clear error. Term
+//! conversion is iterative, so deep benchmark terms cannot overflow the stack.
 
 use std::collections::HashMap;
 
-use axeyum_ir::{Sort, TermArena, TermId};
+use axeyum_ir::{Rational, Sort, TermArena, TermId, TermNode};
 
 use crate::SmtError;
 use crate::sexpr::{SExpr, read_all};
@@ -107,13 +108,18 @@ fn parse_declare_fun(script: &mut Script, items: &[SExpr]) -> Result<(), SmtErro
         .get(2)
         .and_then(SExpr::list)
         .ok_or_else(|| SmtError::Syntax("declare-fun args".to_owned()))?;
-    if !args.is_empty() {
-        return Err(SmtError::Unsupported(format!(
-            "uninterpreted function `{name}` with arguments"
-        )));
+    let result = parse_sort(sexpr_at(items, 3)?)?;
+    if args.is_empty() {
+        // 0-ary: a plain constant symbol.
+        script.arena.declare(name, result)?;
+    } else {
+        // n-ary: an uninterpreted function (ADR-0013).
+        let params = args
+            .iter()
+            .map(parse_sort)
+            .collect::<Result<Vec<Sort>, SmtError>>()?;
+        script.arena.declare_fun(name, &params, result)?;
     }
-    let sort = parse_sort(sexpr_at(items, 3)?)?;
-    script.arena.declare(name, sort)?;
     Ok(())
 }
 
@@ -237,6 +243,8 @@ fn sexpr_at(items: &[SExpr], i: usize) -> Result<&SExpr, SmtError> {
 fn parse_sort(e: &SExpr) -> Result<Sort, SmtError> {
     match e {
         SExpr::Atom(a) if a == "Bool" => Ok(Sort::Bool),
+        SExpr::Atom(a) if a == "Int" => Ok(Sort::Int),
+        SExpr::Atom(a) if a == "Real" => Ok(Sort::Real),
         SExpr::List(items) => {
             if items.len() == 3
                 && items[0].atom() == Some("_")
@@ -244,6 +252,16 @@ fn parse_sort(e: &SExpr) -> Result<Sort, SmtError> {
                 && let Some(w) = items[2].atom().and_then(|s| s.parse::<u32>().ok())
             {
                 return Ok(Sort::BitVec(w));
+            }
+            if items.len() == 3 && items[0].atom() == Some("Array") {
+                let index = parse_sort(&items[1])?;
+                let element = parse_sort(&items[2])?;
+                if let (Sort::BitVec(index), Sort::BitVec(element)) = (index, element) {
+                    return Ok(Sort::Array { index, element });
+                }
+                return Err(SmtError::Unsupported(format!(
+                    "only bit-vector-indexed/valued arrays are supported: {e:?}"
+                )));
             }
             Err(SmtError::Unsupported(format!("sort {e:?}")))
         }
@@ -267,6 +285,19 @@ enum Frame<'a> {
     BindLet {
         names: Vec<&'a str>,
         body: &'a SExpr,
+    },
+    /// Enter a quantifier scope (bound names → fresh symbol vars), then queue
+    /// the body, scope pop, and the quantifier wrap.
+    BindQuantifier {
+        bindings: Vec<(&'a str, TermId)>,
+        syms: Vec<axeyum_ir::SymbolId>,
+        is_forall: bool,
+        body: &'a SExpr,
+    },
+    /// Pop the quantifier body and wrap it in `forall`/`exists` over `syms`.
+    ApplyQuantifier {
+        syms: Vec<axeyum_ir::SymbolId>,
+        is_forall: bool,
     },
 }
 
@@ -314,6 +345,34 @@ fn parse_term<'a>(
                 frames.push(Frame::PopScope);
                 frames.push(Frame::Eval(body));
             }
+            Frame::BindQuantifier {
+                bindings,
+                syms,
+                is_forall,
+                body,
+            } => {
+                let mut scope = HashMap::new();
+                for (name, term) in bindings {
+                    scope.insert(name, term);
+                }
+                scopes.push(scope);
+                frames.push(Frame::ApplyQuantifier { syms, is_forall });
+                frames.push(Frame::PopScope);
+                frames.push(Frame::Eval(body));
+            }
+            Frame::ApplyQuantifier { syms, is_forall } => {
+                let mut acc = results
+                    .pop()
+                    .ok_or_else(|| SmtError::Syntax("quantifier body".to_owned()))?;
+                for &sym in syms.iter().rev() {
+                    acc = if is_forall {
+                        arena.forall(sym, acc)?
+                    } else {
+                        arena.exists(sym, acc)?
+                    };
+                }
+                results.push(acc);
+            }
             Frame::PopScope => {
                 scopes.pop();
             }
@@ -359,6 +418,9 @@ fn queue_list_eval<'a>(
         results.push(parse_indexed_constant(arena, items)?);
     } else if head.atom() == Some("let") {
         queue_let(items, frames)?;
+    } else if head.atom() == Some("forall") || head.atom() == Some("exists") {
+        let is_forall = head.atom() == Some("forall");
+        queue_quantifier(arena, items, is_forall, frames)?;
     } else if let Some(name) = head.atom()
         && macros.contains_key(name)
     {
@@ -387,6 +449,69 @@ fn queue_children<'a>(items: &'a [SExpr], frames: &mut Vec<Frame<'a>>, apply: Fr
     frames.push(apply);
     for child in items[1..].iter().rev() {
         frames.push(Frame::Eval(child));
+    }
+}
+
+/// Queues a quantifier `(forall ((x T) ..) body)`: each bound variable becomes
+/// a fresh arena symbol (uniquely named to avoid capture), scoped to `body`,
+/// and the body is wrapped in `forall`/`exists` over those symbols (ADR-0016).
+fn queue_quantifier<'a>(
+    arena: &mut TermArena,
+    items: &'a [SExpr],
+    is_forall: bool,
+    frames: &mut Vec<Frame<'a>>,
+) -> Result<(), SmtError> {
+    let keyword = if is_forall { "forall" } else { "exists" };
+    exact_len(items, 3, keyword)?;
+    let binding_list = items
+        .get(1)
+        .and_then(SExpr::list)
+        .ok_or_else(|| SmtError::Syntax(format!("{keyword} bindings")))?;
+    if binding_list.is_empty() {
+        return Err(SmtError::Syntax(format!(
+            "{keyword} needs >= 1 bound variable"
+        )));
+    }
+    let body = sexpr_at(items, 2)?;
+
+    let mut bindings = Vec::with_capacity(binding_list.len());
+    let mut syms = Vec::with_capacity(binding_list.len());
+    for binding in binding_list {
+        let pair = binding
+            .list()
+            .filter(|p| p.len() == 2)
+            .ok_or_else(|| SmtError::Syntax(format!("{keyword} binding pair")))?;
+        let name = pair[0]
+            .atom()
+            .ok_or_else(|| SmtError::Syntax(format!("{keyword} binding name")))?;
+        let sort = parse_sort(&pair[1])?;
+        let sym = fresh_quantifier_symbol(arena, name, sort)?;
+        bindings.push((name, arena.var(sym)));
+        syms.push(sym);
+    }
+    frames.push(Frame::BindQuantifier {
+        bindings,
+        syms,
+        is_forall,
+        body,
+    });
+    Ok(())
+}
+
+/// Declares a uniquely-named fresh symbol for a quantifier's bound variable, so
+/// it cannot capture a free symbol or another binder's variable.
+fn fresh_quantifier_symbol(
+    arena: &mut TermArena,
+    base: &str,
+    sort: Sort,
+) -> Result<axeyum_ir::SymbolId, SmtError> {
+    let mut index = 0u32;
+    loop {
+        let candidate = format!("!q.{base}.{index}");
+        if arena.find_symbol(&candidate).is_none() {
+            return Ok(arena.declare(&candidate, sort)?);
+        }
+        index += 1;
     }
 }
 
@@ -539,6 +664,17 @@ fn parse_atom(
     if let Some(sym) = arena.find_symbol(a) {
         return Ok(arena.var(sym));
     }
+    // A bare numeral is a non-negative integer literal (negatives are `(- n)`).
+    if a.bytes().all(|b| b.is_ascii_digit()) {
+        let value = a
+            .parse::<i128>()
+            .map_err(|_| SmtError::Syntax(format!("integer literal `{a}` out of range")))?;
+        return Ok(arena.int_const(value));
+    }
+    // A decimal literal `d.ddd` is a non-negative real (ADR-0015).
+    if let Some(rational) = parse_decimal(a) {
+        return Ok(arena.real_const(rational));
+    }
     Err(SmtError::Unsupported(format!("unknown identifier `{a}`")))
 }
 
@@ -605,12 +741,18 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
             acc
         }
         "=" => {
-            // n-ary chaining: pairwise equalities conjoined.
+            // n-ary chaining: pairwise equalities conjoined. Coerce integer
+            // constants to `Real` when any operand is real (numeral coercion).
             if args.len() < 2 {
                 return Err(SmtError::Syntax("`=` expects >= 2 arguments".to_owned()));
             }
-            let mut acc = arena.eq(args[0], args[1])?;
-            for pair in args.windows(2).skip(1) {
+            let eq_args = if args.iter().any(|&a| arena.sort_of(a) == Sort::Real) {
+                numeric_args(arena, args)?.1
+            } else {
+                args.to_vec()
+            };
+            let mut acc = arena.eq(eq_args[0], eq_args[1])?;
+            for pair in eq_args.windows(2).skip(1) {
                 let e = arena.eq(pair[0], pair[1])?;
                 acc = arena.and(acc, e)?;
             }
@@ -677,8 +819,201 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
         "bvsgt" => bin(arena, TermArena::bv_sgt, args, op)?,
         "bvsge" => bin(arena, TermArena::bv_sge, args, op)?,
         "bvcomp" => bin(arena, TermArena::bv_comp, args, op)?,
-        other => return Err(SmtError::Unsupported(format!("operator `{other}`"))),
+        "select" => {
+            need(2)?;
+            arena.select(args[0], args[1])?
+        }
+        "store" => {
+            need(3)?;
+            arena.store(args[0], args[1], args[2])?
+        }
+        // --- linear arithmetic, sort-directed Int/Real (ADR-0014/0015) ----
+        // `+`/`-`/`*`/comparisons are polymorphic: if any operand is `Real`,
+        // integer-constant operands are coerced to `Real` and the real builders
+        // are used; otherwise the integer builders.
+        "+" => {
+            let (real, a) = numeric_args(arena, args)?;
+            if real {
+                fold_args(arena, &a, op, TermArena::real_add)?
+            } else {
+                fold_args(arena, &a, op, TermArena::int_add)?
+            }
+        }
+        "*" => {
+            let (real, a) = numeric_args(arena, args)?;
+            if real {
+                fold_args(arena, &a, op, TermArena::real_mul)?
+            } else {
+                fold_args(arena, &a, op, TermArena::int_mul)?
+            }
+        }
+        "-" => {
+            let (real, a) = numeric_args(arena, args)?;
+            match a.len() {
+                1 if real => arena.real_neg(a[0])?,
+                1 => arena.int_neg(a[0])?,
+                0 => return Err(SmtError::Syntax("`-` expects >= 1 argument".to_owned())),
+                _ => {
+                    let mut acc = a[0];
+                    for &next in &a[1..] {
+                        acc = if real {
+                            arena.real_sub(acc, next)?
+                        } else {
+                            arena.int_sub(acc, next)?
+                        };
+                    }
+                    acc
+                }
+            }
+        }
+        "/" => {
+            // Real division; only constant/constant is in the linear fragment.
+            let (_, a) = numeric_args(arena, args)?;
+            real_division(arena, &a)?
+        }
+        "<" | "<=" | ">" | ">=" => {
+            let (real, a) = numeric_args(arena, args)?;
+            let int_f = match op {
+                "<" => TermArena::int_lt,
+                "<=" => TermArena::int_le,
+                ">" => TermArena::int_gt,
+                _ => TermArena::int_ge,
+            };
+            let real_f = match op {
+                "<" => TermArena::real_lt,
+                "<=" => TermArena::real_le,
+                ">" => TermArena::real_gt,
+                _ => TermArena::real_ge,
+            };
+            if real {
+                chain_args(arena, &a, op, real_f)?
+            } else {
+                chain_args(arena, &a, op, int_f)?
+            }
+        }
+        // A declared uninterpreted function applied to arguments (ADR-0013).
+        // Builtins above take priority, matching SMT-LIB reserved names.
+        other => {
+            if let Some(func) = arena.find_function(other) {
+                arena.apply(func, args)?
+            } else {
+                return Err(SmtError::Unsupported(format!("operator `{other}`")));
+            }
+        }
     })
+}
+
+/// Parses a non-negative decimal literal `d.ddd` into an exact rational, or
+/// `None` if `a` is not a decimal numeral.
+fn parse_decimal(a: &str) -> Option<Rational> {
+    let (int_part, frac_part) = a.split_once('.')?;
+    if int_part.is_empty() && frac_part.is_empty() {
+        return None;
+    }
+    let digits = |s: &str| s.bytes().all(|b| b.is_ascii_digit());
+    if !digits(int_part) || !digits(frac_part) {
+        return None;
+    }
+    let combined = format!("{int_part}{frac_part}");
+    let num: i128 = combined.parse().ok()?;
+    let mut den: i128 = 1;
+    for _ in 0..frac_part.len() {
+        den = den.checked_mul(10)?;
+    }
+    Some(Rational::new(num, den))
+}
+
+/// Classifies numeric `args` as real (any operand `Real`) and, if real, coerces
+/// integer-constant operands to `Real` (SMT-LIB numeral coercion). Non-constant
+/// integers and other sorts cannot be coerced.
+fn numeric_args(arena: &mut TermArena, args: &[TermId]) -> Result<(bool, Vec<TermId>), SmtError> {
+    let is_real = args.iter().any(|&a| arena.sort_of(a) == Sort::Real);
+    if !is_real {
+        return Ok((false, args.to_vec()));
+    }
+    let mut out = Vec::with_capacity(args.len());
+    for &a in args {
+        match arena.sort_of(a) {
+            Sort::Real => out.push(a),
+            Sort::Int => match *arena.node(a) {
+                TermNode::IntConst(value) => out.push(arena.real_const(Rational::integer(value))),
+                _ => {
+                    return Err(SmtError::Unsupported(
+                        "cannot coerce a non-constant Int to Real".to_owned(),
+                    ));
+                }
+            },
+            _ => {
+                return Err(SmtError::Syntax(
+                    "mixed real and non-arithmetic operands".to_owned(),
+                ));
+            }
+        }
+    }
+    Ok((true, out))
+}
+
+/// Folds a binary arithmetic builder over `args` (left-associative), requiring
+/// at least one argument.
+fn fold_args(
+    arena: &mut TermArena,
+    args: &[TermId],
+    op: &str,
+    f: fn(&mut TermArena, TermId, TermId) -> Result<TermId, axeyum_ir::IrError>,
+) -> Result<TermId, SmtError> {
+    let mut iter = args.iter();
+    let Some(&first) = iter.next() else {
+        return Err(SmtError::Syntax(format!("`{op}` expects >= 1 argument")));
+    };
+    let mut acc = first;
+    for &next in iter {
+        acc = f(arena, acc, next)?;
+    }
+    Ok(acc)
+}
+
+/// Real division `(/ a b ...)`; only constant operands are in the linear
+/// fragment, so each must be a real constant.
+fn real_division(arena: &mut TermArena, args: &[TermId]) -> Result<TermId, SmtError> {
+    if args.len() < 2 {
+        return Err(SmtError::Syntax("`/` expects >= 2 arguments".to_owned()));
+    }
+    let value = |arena: &TermArena, t: TermId| -> Option<Rational> {
+        match *arena.node(t) {
+            TermNode::RealConst(r) => Some(r),
+            _ => None,
+        }
+    };
+    let mut acc = value(arena, args[0])
+        .ok_or_else(|| SmtError::Unsupported("`/` requires constant operands".to_owned()))?;
+    for &next in &args[1..] {
+        let divisor = value(arena, next)
+            .ok_or_else(|| SmtError::Unsupported("`/` requires constant operands".to_owned()))?;
+        if divisor.is_zero() {
+            return Err(SmtError::Syntax("division by zero in `/`".to_owned()));
+        }
+        acc = acc / divisor;
+    }
+    Ok(arena.real_const(acc))
+}
+
+/// Chains a comparison over `args` pairwise, conjoining the results: `(< a b c)`
+/// becomes `(and (< a b) (< b c))` (SMT-LIB chainable relations).
+fn chain_args(
+    arena: &mut TermArena,
+    args: &[TermId],
+    op: &str,
+    f: fn(&mut TermArena, TermId, TermId) -> Result<TermId, axeyum_ir::IrError>,
+) -> Result<TermId, SmtError> {
+    if args.len() < 2 {
+        return Err(SmtError::Syntax(format!("`{op}` expects >= 2 arguments")));
+    }
+    let mut acc = f(arena, args[0], args[1])?;
+    for pair in args.windows(2).skip(1) {
+        let next = f(arena, pair[0], pair[1])?;
+        acc = arena.and(acc, next)?;
+    }
+    Ok(acc)
 }
 
 fn bin(

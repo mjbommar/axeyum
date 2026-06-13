@@ -8,7 +8,7 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 
-use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode};
+use axeyum_ir::{FuncId, Op, Sort, TermArena, TermId, TermNode};
 
 /// Renders `assertions` as a complete SMT-LIB script
 /// (`set-logic` … `check-sat`).
@@ -22,6 +22,8 @@ pub fn write_script(arena: &TermArena, assertions: &[TermId]) -> String {
     let mut stack: Vec<TermId> = assertions.to_vec();
     let mut seen: HashSet<TermId> = HashSet::new();
     let mut symbols: Vec<(String, Sort)> = Vec::new();
+    let mut functions: Vec<FuncId> = Vec::new();
+    let mut seen_functions: HashSet<FuncId> = HashSet::new();
     while let Some(t) = stack.pop() {
         if seen.contains(&t) {
             continue;
@@ -32,25 +34,68 @@ pub fn write_script(arena: &TermArena, assertions: &[TermId]) -> String {
                 let (name, sort) = arena.symbol(*s);
                 symbols.push((name.to_owned(), sort));
             }
-            TermNode::App { args, .. } => {
+            TermNode::App { op, args } => {
+                if let Op::Apply(func) = op
+                    && seen_functions.insert(*func)
+                {
+                    functions.push(*func);
+                }
                 for &a in &**args {
                     *uses.entry(a).or_insert(0) += 1;
                     stack.push(a);
                 }
             }
-            TermNode::BoolConst(_) | TermNode::BvConst { .. } => {}
+            TermNode::BoolConst(_)
+            | TermNode::BvConst { .. }
+            | TermNode::IntConst(_)
+            | TermNode::RealConst(_) => {}
         }
     }
     symbols.sort_by(|a, b| a.0.cmp(&b.0));
+    functions.sort_by_key(|f| arena.function(*f).0.to_owned());
     let mut used_names: HashSet<String> = symbols.iter().map(|(name, _)| name.clone()).collect();
 
-    let mut out = String::from("(set-logic QF_BV)\n");
+    // Assemble the quantifier-free logic name from the features present:
+    // `QF_` + `A` (arrays) + `UF` (functions) + arithmetic core (`LIA` for
+    // integers, else `BV`). Yields e.g. QF_BV, QF_ABV, QF_UFBV, QF_LIA, QF_UFLIA.
+    let has_arrays = symbols
+        .iter()
+        .any(|(_, sort)| matches!(sort, Sort::Array { .. }));
+    let has_integers = symbols.iter().any(|(_, sort)| *sort == Sort::Int);
+    let has_reals = symbols.iter().any(|(_, sort)| *sort == Sort::Real);
+    let arithmetic = if has_reals {
+        "LRA"
+    } else if has_integers {
+        "LIA"
+    } else {
+        "BV"
+    };
+    let logic = format!(
+        "QF_{}{}{arithmetic}",
+        if has_arrays { "A" } else { "" },
+        if functions.is_empty() { "" } else { "UF" },
+    );
+    let mut out = format!("(set-logic {logic})\n");
     for (name, sort) in &symbols {
         let _ = writeln!(
             out,
             "(declare-const {} {})",
             symbol_syntax(name),
             sort_str(*sort)
+        );
+    }
+    for &func in &functions {
+        let (name, params, result) = arena.function(func);
+        let params_str = params
+            .iter()
+            .map(|&s| sort_str(s))
+            .collect::<Vec<_>>()
+            .join(" ");
+        let _ = writeln!(
+            out,
+            "(declare-fun {} ({params_str}) {})",
+            symbol_syntax(name),
+            sort_str(result)
         );
     }
 
@@ -131,6 +176,11 @@ fn sort_str(sort: Sort) -> String {
     match sort {
         Sort::Bool => "Bool".to_owned(),
         Sort::BitVec(w) => format!("(_ BitVec {w})"),
+        Sort::Array { index, element } => {
+            format!("(Array (_ BitVec {index}) (_ BitVec {element}))")
+        }
+        Sort::Int => "Int".to_owned(),
+        Sort::Real => "Real".to_owned(),
     }
 }
 
@@ -157,12 +207,64 @@ fn render_node(arena: &TermArena, root: TermId, names: &HashMap<TermId, String>)
             TermNode::BvConst { width, value } => {
                 memo.insert(t, format!("(_ bv{value} {width})"));
             }
+            TermNode::IntConst(value) => {
+                // SMT-LIB renders negative integers as `(- n)`.
+                if *value < 0 {
+                    memo.insert(t, format!("(- {})", value.unsigned_abs()));
+                } else {
+                    memo.insert(t, value.to_string());
+                }
+            }
+            TermNode::RealConst(value) => {
+                // Render so the literal re-parses as `Real` (never `Int`):
+                // an integer value as `n.0`, otherwise `(/ n d)`; `(- ...)` for
+                // negatives.
+                let num = value.numerator();
+                let den = value.denominator();
+                let magnitude = if den == 1 {
+                    format!("{}.0", num.unsigned_abs())
+                } else {
+                    format!("(/ {}.0 {den}.0)", num.unsigned_abs())
+                };
+                if num < 0 {
+                    memo.insert(t, format!("(- {magnitude})"));
+                } else {
+                    memo.insert(t, magnitude);
+                }
+            }
             TermNode::Symbol(s) => {
                 memo.insert(t, symbol_syntax(arena.symbol(*s).0));
             }
             TermNode::App { op, args } => {
                 if ready {
-                    let mut text = format!("({}", op_str(*op));
+                    // Quantifiers render in SMT-LIB binder form:
+                    // `(forall ((x Sort)) body)`.
+                    if let Op::Forall(var) | Op::Exists(var) = op {
+                        let (name, sort) = arena.symbol(*var);
+                        let keyword = if matches!(op, Op::Forall(_)) {
+                            "forall"
+                        } else {
+                            "exists"
+                        };
+                        let body = match names.get(&args[0]) {
+                            Some(n) if args[0] != root => n.clone(),
+                            _ => memo[&args[0]].clone(),
+                        };
+                        memo.insert(
+                            t,
+                            format!(
+                                "({keyword} (({} {})) {body})",
+                                symbol_syntax(name),
+                                sort_str(sort)
+                            ),
+                        );
+                        continue;
+                    }
+                    let head = match op {
+                        Op::Apply(func) => symbol_syntax(arena.function(*func).0),
+                        _ => op_str(*op),
+                    };
+                    let mut text = format!("({head}");
                     for a in args {
                         text.push(' ');
                         match names.get(a) {
@@ -229,5 +331,20 @@ fn op_str(op: Op) -> String {
         Op::SignExt { by } => format!("(_ sign_extend {by})"),
         Op::RotateLeft { by } => format!("(_ rotate_left {by})"),
         Op::RotateRight { by } => format!("(_ rotate_right {by})"),
+        Op::Select => "select".into(),
+        Op::Store => "store".into(),
+        // Applications are rendered via the function name in `render_node`.
+        Op::Apply(_) => unreachable!("Op::Apply is rendered via its function name"),
+        Op::IntNeg | Op::IntSub | Op::RealNeg | Op::RealSub => "-".into(),
+        Op::IntAdd | Op::RealAdd => "+".into(),
+        Op::IntMul | Op::RealMul => "*".into(),
+        Op::IntLt | Op::RealLt => "<".into(),
+        Op::IntLe | Op::RealLe => "<=".into(),
+        Op::IntGt | Op::RealGt => ">".into(),
+        Op::IntGe | Op::RealGe => ">=".into(),
+        // Quantifiers render via their binder form in `render_node`.
+        Op::Forall(_) | Op::Exists(_) => {
+            unreachable!("quantifiers are rendered via their binder form")
+        }
     }
 }

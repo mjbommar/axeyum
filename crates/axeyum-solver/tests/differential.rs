@@ -20,6 +20,9 @@ fn eval_eq(a: &mut TermArena, term: TermId) -> TermId {
     let constant = match expected {
         Value::Bool(b) => a.bool_const(b),
         Value::Bv { width, value } => a.bv_const(width, value).unwrap(),
+        Value::Array(_) | Value::Int(_) | Value::Real(_) => {
+            unreachable!("differential terms are bit-vector/Bool")
+        }
     };
     a.eq(term, constant).unwrap()
 }

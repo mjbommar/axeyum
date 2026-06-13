@@ -35,6 +35,7 @@ mod bits;
 mod error;
 mod eval;
 mod fmt;
+mod rational;
 mod sort;
 mod stats;
 mod term;
@@ -48,7 +49,8 @@ pub use bits::{
 pub use error::IrError;
 pub use eval::{Assignment, eval};
 pub use fmt::render;
+pub use rational::Rational;
 pub use sort::{MAX_BV_WIDTH, Sort};
 pub use stats::TermStats;
-pub use term::{Op, SymbolId, TermId, TermNode};
-pub use value::Value;
+pub use term::{FuncId, Op, SymbolId, TermId, TermNode};
+pub use value::{ArrayValue, FuncValue, Value};

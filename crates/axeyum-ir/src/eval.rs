@@ -8,14 +8,16 @@ use std::collections::HashMap;
 
 use crate::arena::TermArena;
 use crate::error::IrError;
-use crate::sort::mask;
-use crate::term::{Op, SymbolId, TermId, TermNode};
-use crate::value::Value;
+use crate::sort::{Sort, mask};
+use crate::term::{FuncId, Op, SymbolId, TermId, TermNode};
+use crate::value::{FuncValue, Value};
 
-/// A binding of symbols to concrete values, used as evaluator input.
+/// A binding of symbols to concrete values (and uninterpreted functions to
+/// interpretations), used as evaluator input.
 #[derive(Debug, Clone, Default)]
 pub struct Assignment {
     bindings: HashMap<SymbolId, Value>,
+    functions: HashMap<FuncId, FuncValue>,
 }
 
 impl Assignment {
@@ -31,7 +33,18 @@ impl Assignment {
 
     /// The value bound to `symbol`, if any.
     pub fn get(&self, symbol: SymbolId) -> Option<Value> {
-        self.bindings.get(&symbol).copied()
+        self.bindings.get(&symbol).cloned()
+    }
+
+    /// Binds uninterpreted function `func` to interpretation `value`, replacing
+    /// any previous binding.
+    pub fn set_function(&mut self, func: FuncId, value: FuncValue) {
+        self.functions.insert(func, value);
+    }
+
+    /// The interpretation bound to `func`, if any.
+    pub fn function(&self, func: FuncId) -> Option<&FuncValue> {
+        self.functions.get(&func)
     }
 
     /// Number of bound symbols.
@@ -80,25 +93,105 @@ pub fn eval(arena: &TermArena, term: TermId, assignment: &Assignment) -> Result<
                     },
                 );
             }
+            TermNode::IntConst(value) => {
+                memo.insert(t, Value::Int(*value));
+            }
+            TermNode::RealConst(value) => {
+                memo.insert(t, Value::Real(*value));
+            }
             TermNode::Symbol(s) => {
                 let v = assignment.get(*s).ok_or(IrError::UnboundSymbol(*s))?;
                 memo.insert(t, v);
             }
-            TermNode::App { op, args } => {
-                if children_ready {
-                    let vals: Vec<Value> = args.iter().map(|a| memo[a]).collect();
-                    memo.insert(t, apply(*op, &vals));
-                } else {
-                    stack.push((t, true));
-                    for &a in &**args {
-                        stack.push((a, false));
+            TermNode::App { op, args } => match op {
+                // Quantifiers bind a symbol and range over its domain, so their
+                // body is *not* evaluated in the shared memo: each binding gets a
+                // fresh sub-evaluation (ADR-0016).
+                Op::Forall(var) | Op::Exists(var) => {
+                    let is_forall = matches!(op, Op::Forall(_));
+                    let value = eval_quantifier(arena, *var, args[0], is_forall, assignment)?;
+                    memo.insert(t, value);
+                }
+                _ => {
+                    if children_ready {
+                        let vals: Vec<Value> = args.iter().map(|a| memo[a].clone()).collect();
+                        let value = match op {
+                            // Uninterpreted functions have no fixed semantics: the
+                            // interpretation comes from the model, the result sort
+                            // from the function's declaration (carried by the term).
+                            Op::Apply(func) => {
+                                let interp = assignment
+                                    .function(*func)
+                                    .ok_or(IrError::UnboundFunction(*func))?;
+                                let key: Vec<u128> = vals.iter().map(Value::scalar_code).collect();
+                                let code = interp.apply(&key);
+                                Value::from_scalar_code(arena.sort_of(t), code)
+                            }
+                            _ => apply(*op, &vals),
+                        };
+                        memo.insert(t, value);
+                    } else {
+                        stack.push((t, true));
+                        for &a in &**args {
+                            stack.push((a, false));
+                        }
                     }
                 }
-            }
+            },
         }
     }
 
-    Ok(memo[&term])
+    Ok(memo[&term].clone())
+}
+
+/// The largest bit-vector width a quantifier may range over in the evaluator
+/// (`2^16` enumerated values); wider domains are an error.
+const QUANTIFIER_EVAL_BIT_LIMIT: u32 = 16;
+
+/// Evaluates `forall var. body` (or `exists`) by enumerating every value of
+/// `var`'s sort, binding it, and conjoining (`forall`) / disjoining (`exists`)
+/// the body's value, short-circuiting on the decisive case.
+fn eval_quantifier(
+    arena: &TermArena,
+    var: SymbolId,
+    body: TermId,
+    is_forall: bool,
+    assignment: &Assignment,
+) -> Result<Value, IrError> {
+    let sort = arena.symbol(var).1;
+    let mut sub = assignment.clone();
+    let mut check = |value: Value| -> Result<Option<bool>, IrError> {
+        sub.set(var, value);
+        let outcome = eval(arena, body, &sub)?
+            .as_bool()
+            .expect("quantified body is Bool-sorted");
+        // Short-circuit: `forall` fails on the first false, `exists` succeeds on
+        // the first true — i.e. when `outcome` differs from `is_forall`.
+        if outcome ^ is_forall {
+            Ok(Some(outcome))
+        } else {
+            Ok(None)
+        }
+    };
+    match sort {
+        Sort::Bool => {
+            for value in [Value::Bool(false), Value::Bool(true)] {
+                if let Some(decisive) = check(value)? {
+                    return Ok(Value::Bool(decisive));
+                }
+            }
+        }
+        Sort::BitVec(width) if width <= QUANTIFIER_EVAL_BIT_LIMIT => {
+            for value in 0..(1u128 << width) {
+                if let Some(decisive) = check(Value::Bv { width, value })? {
+                    return Ok(Value::Bool(decisive));
+                }
+            }
+        }
+        other => return Err(IrError::UnsupportedQuantifierDomain(other)),
+    }
+    // No decisive case: `forall` holds, `exists` does not.
+    Ok(Value::Bool(is_forall))
 }
 
 /// Applies an operator to already-evaluated operand values.
@@ -109,18 +202,20 @@ pub fn eval(arena: &TermArena, term: TermId, assignment: &Assignment) -> Result<
 // artificial split; length is inherent to the operator count.
 #[allow(clippy::too_many_lines)]
 fn apply(op: Op, vals: &[Value]) -> Value {
-    let b = |v: Value| v.as_bool().expect("builder guaranteed Bool operand");
-    let bv = |v: Value| v.as_bv().expect("builder guaranteed BitVec operand");
+    let b = |v: &Value| v.as_bool().expect("builder guaranteed Bool operand");
+    let bv = |v: &Value| v.as_bv().expect("builder guaranteed BitVec operand");
+    let int = |v: &Value| v.as_int().expect("builder guaranteed Int operand");
+    let real = |v: &Value| v.as_real().expect("builder guaranteed Real operand");
     match op {
         // --- Boolean ------------------------------------------------------
-        Op::BoolNot => Value::Bool(!b(vals[0])),
-        Op::BoolAnd => Value::Bool(b(vals[0]) && b(vals[1])),
-        Op::BoolOr => Value::Bool(b(vals[0]) || b(vals[1])),
-        Op::BoolXor => Value::Bool(b(vals[0]) ^ b(vals[1])),
-        Op::BoolImplies => Value::Bool(!b(vals[0]) || b(vals[1])),
+        Op::BoolNot => Value::Bool(!b(&vals[0])),
+        Op::BoolAnd => Value::Bool(b(&vals[0]) && b(&vals[1])),
+        Op::BoolOr => Value::Bool(b(&vals[0]) || b(&vals[1])),
+        Op::BoolXor => Value::Bool(b(&vals[0]) ^ b(&vals[1])),
+        Op::BoolImplies => Value::Bool(!b(&vals[0]) || b(&vals[1])),
         // --- bitwise -------------------------------------------------------
         Op::BvNot => {
-            let (w, v) = bv(vals[0]);
+            let (w, v) = bv(&vals[0]);
             Value::Bv {
                 width: w,
                 value: !v & mask(w),
@@ -134,7 +229,7 @@ fn apply(op: Op, vals: &[Value]) -> Value {
         Op::BvXnor => bin_bv(vals, |x, y| !(x ^ y)),
         // --- arithmetic ------------------------------------------------------
         Op::BvNeg => {
-            let (w, v) = bv(vals[0]);
+            let (w, v) = bv(&vals[0]);
             Value::Bv {
                 width: w,
                 value: v.wrapping_neg() & mask(w),
@@ -177,8 +272,8 @@ fn apply(op: Op, vals: &[Value]) -> Value {
         }),
         // --- shifts ----------------------------------------------------------
         Op::BvShl => {
-            let (w, x) = bv(vals[0]);
-            let (_, k) = bv(vals[1]);
+            let (w, x) = bv(&vals[0]);
+            let (_, k) = bv(&vals[1]);
             let value = if k >= u128::from(w) {
                 0
             } else {
@@ -187,14 +282,14 @@ fn apply(op: Op, vals: &[Value]) -> Value {
             Value::Bv { width: w, value }
         }
         Op::BvLshr => {
-            let (w, x) = bv(vals[0]);
-            let (_, k) = bv(vals[1]);
+            let (w, x) = bv(&vals[0]);
+            let (_, k) = bv(&vals[1]);
             let value = if k >= u128::from(w) { 0 } else { x >> k };
             Value::Bv { width: w, value }
         }
         Op::BvAshr => {
-            let (w, x) = bv(vals[0]);
-            let (_, k) = bv(vals[1]);
+            let (w, x) = bv(&vals[0]);
+            let (_, k) = bv(&vals[1]);
             let sign = (x >> (w - 1)) & 1 == 1;
             let value = if k >= u128::from(w) {
                 if sign { mask(w) } else { 0 }
@@ -218,23 +313,23 @@ fn apply(op: Op, vals: &[Value]) -> Value {
         // --- polymorphic ---------------------------------------------------------
         Op::Eq => Value::Bool(vals[0] == vals[1]),
         Op::Ite => {
-            if b(vals[0]) {
-                vals[1]
+            if b(&vals[0]) {
+                vals[1].clone()
             } else {
-                vals[2]
+                vals[2].clone()
             }
         }
         // --- structural -----------------------------------------------------------
         Op::BvComp => {
-            let (_, x) = bv(vals[0]);
-            let (_, y) = bv(vals[1]);
+            let (_, x) = bv(&vals[0]);
+            let (_, y) = bv(&vals[1]);
             Value::Bv {
                 width: 1,
                 value: u128::from(x == y),
             }
         }
         Op::Extract { hi, lo } => {
-            let (_, v) = bv(vals[0]);
+            let (_, v) = bv(&vals[0]);
             let out = hi - lo + 1;
             Value::Bv {
                 width: out,
@@ -242,29 +337,78 @@ fn apply(op: Op, vals: &[Value]) -> Value {
             }
         }
         Op::Concat => {
-            let (wa, a) = bv(vals[0]);
-            let (wb, bb) = bv(vals[1]);
+            let (wa, a) = bv(&vals[0]);
+            let (wb, bb) = bv(&vals[1]);
             Value::Bv {
                 width: wa + wb,
                 value: ((a << wb) | bb) & mask(wa + wb),
             }
         }
         Op::ZeroExt { by } => {
-            let (w, v) = bv(vals[0]);
+            let (w, v) = bv(&vals[0]);
             Value::Bv {
                 width: w + by,
                 value: v,
             }
         }
         Op::SignExt { by } => {
-            let (w, v) = bv(vals[0]);
+            let (w, v) = bv(&vals[0]);
             let out = w + by;
             let sign = (v >> (w - 1)) & 1 == 1;
             let value = if sign { v | (mask(out) ^ mask(w)) } else { v };
             Value::Bv { width: out, value }
         }
-        Op::RotateLeft { by } => rotate(vals[0], by, true),
-        Op::RotateRight { by } => rotate(vals[0], by, false),
+        Op::RotateLeft { by } => rotate(&vals[0], by, true),
+        Op::RotateRight { by } => rotate(&vals[0], by, false),
+        // --- arrays (ADR-0010) ---------------------------------------------------
+        Op::Select => {
+            let array = vals[0]
+                .as_array()
+                .expect("builder guaranteed Array operand");
+            let (_, index) = bv(&vals[1]);
+            Value::Bv {
+                width: array.element_width(),
+                value: array.select(index),
+            }
+        }
+        Op::Store => {
+            let array = vals[0]
+                .as_array()
+                .expect("builder guaranteed Array operand");
+            let (_, index) = bv(&vals[1]);
+            let (_, element) = bv(&vals[2]);
+            Value::Array(array.store(index, element))
+        }
+        // Handled in `eval` (needs the model interpretation and result sort).
+        Op::Apply(_) => unreachable!("Op::Apply is evaluated against the model in `eval`"),
+        // --- linear integer arithmetic (ADR-0014) --------------------------------
+        // Integers are exact within the i128 reference range; out-of-range
+        // intermediate values are a usage error (the bounded-LIA contract).
+        Op::IntNeg => {
+            let x = int(&vals[0]);
+            Value::Int(x.checked_neg().expect("integer negation within i128 range"))
+        }
+        Op::IntAdd => int_bin(vals, "addition", i128::checked_add),
+        Op::IntSub => int_bin(vals, "subtraction", i128::checked_sub),
+        Op::IntMul => int_bin(vals, "multiplication", i128::checked_mul),
+        Op::IntLt => int_cmp(vals, |x, y| x < y),
+        Op::IntLe => int_cmp(vals, |x, y| x <= y),
+        Op::IntGt => int_cmp(vals, |x, y| x > y),
+        Op::IntGe => int_cmp(vals, |x, y| x >= y),
+        // --- linear real arithmetic (ADR-0015) -----------------------------------
+        // Exact rational arithmetic; overflow within `Rational` is a usage error.
+        Op::RealNeg => Value::Real(-real(&vals[0])),
+        Op::RealAdd => Value::Real(real(&vals[0]) + real(&vals[1])),
+        Op::RealSub => Value::Real(real(&vals[0]) - real(&vals[1])),
+        Op::RealMul => Value::Real(real(&vals[0]) * real(&vals[1])),
+        Op::RealLt => Value::Bool(real(&vals[0]) < real(&vals[1])),
+        Op::RealLe => Value::Bool(real(&vals[0]) <= real(&vals[1])),
+        Op::RealGt => Value::Bool(real(&vals[0]) > real(&vals[1])),
+        Op::RealGe => Value::Bool(real(&vals[0]) >= real(&vals[1])),
+        // Handled in `eval` (they bind a variable and enumerate its domain).
+        Op::Forall(_) | Op::Exists(_) => {
+            unreachable!("quantifiers are evaluated by enumeration in `eval`")
+        }
     }
 }
 
@@ -314,7 +458,19 @@ fn cmp_signed(vals: &[Value], f: impl Fn(i128, i128) -> bool) -> Value {
     Value::Bool(f(to_signed(w, x), to_signed(w, y)))
 }
 
-fn rotate(val: Value, by: u32, left: bool) -> Value {
+fn int_bin(vals: &[Value], what: &str, f: impl Fn(i128, i128) -> Option<i128>) -> Value {
+    let x = vals[0].as_int().expect("builder guaranteed Int operand");
+    let y = vals[1].as_int().expect("builder guaranteed Int operand");
+    Value::Int(f(x, y).unwrap_or_else(|| panic!("integer {what} within i128 range")))
+}
+
+fn int_cmp(vals: &[Value], f: impl Fn(i128, i128) -> bool) -> Value {
+    let x = vals[0].as_int().expect("builder guaranteed Int operand");
+    let y = vals[1].as_int().expect("builder guaranteed Int operand");
+    Value::Bool(f(x, y))
+}
+
+fn rotate(val: &Value, by: u32, left: bool) -> Value {
     let (w, v) = val.as_bv().expect("builder guaranteed BitVec operand");
     // Builders normalize `by` modulo width, so 0 <= by < w here.
     let k = if left { by } else { (w - by) % w };

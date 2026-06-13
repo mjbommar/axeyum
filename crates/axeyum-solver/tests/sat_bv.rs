@@ -8,9 +8,7 @@ use std::time::Duration;
 
 use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
 use axeyum_query::Query;
-use axeyum_solver::{
-    CheckResult, SatBvBackend, SolverBackend, SolverConfig, SolverError, UnknownKind,
-};
+use axeyum_solver::{CheckResult, SatBvBackend, SolverBackend, SolverConfig, UnknownKind};
 
 fn check(arena: &TermArena, assertions: &[TermId]) -> CheckResult {
     SatBvBackend::new()
@@ -49,6 +47,35 @@ fn supported_bv_formula_solves_and_replays() {
     let model = expect_sat_checked(&arena, &[x_is_two, sum_is_five]);
     assert_eq!(model.get(x_sym), Some(Value::Bv { width: 4, value: 2 }));
     assert_eq!(model.get(y_sym), Some(Value::Bv { width: 4, value: 3 }));
+}
+
+#[test]
+fn unsat_is_drat_proof_checked_when_requested() {
+    // `x != x` is unsatisfiable; with `prove_unsat`, the backend re-derives the
+    // UNSAT with the proof core and verifies its DRAT proof end to end.
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 4).unwrap();
+    let eq_self = arena.eq(x, x).unwrap();
+    let contradiction = arena.not(eq_self).unwrap();
+    let config = SolverConfig {
+        prove_unsat: true,
+        ..SolverConfig::default()
+    };
+
+    let mut backend = SatBvBackend::new();
+    assert_eq!(
+        backend.check(&arena, &[contradiction], &config).unwrap(),
+        CheckResult::Unsat
+    );
+    let stats = backend.last_stats().expect("stats recorded");
+    assert!(
+        stats
+            .backend
+            .iter()
+            .any(|(name, value)| name == "unsat_proof_checked"
+                && (*value - 1.0).abs() < f64::EPSILON),
+        "unsat should be recorded as DRAT-proof-checked"
+    );
 }
 
 #[test]
@@ -104,42 +131,33 @@ fn model_completion_assigns_unconstrained_symbols() {
 }
 
 #[test]
-fn unsupported_operator_is_explicit_error_without_oracle_fallback() {
+fn full_scalar_qf_bv_operator_set_is_supported() {
+    // The whole scalar QF_BV operator set now lowers, including multiplication
+    // and signed/unsigned division and remainder. A formula mixing them must
+    // produce a decision, never a `SolverError::Unsupported` (there is no silent
+    // oracle fallback; the unsupported path is reserved for future non-scalar
+    // constructs such as arrays).
     let mut arena = TermArena::new();
-    let x = arena.bv_var("x", 8).unwrap();
-    let y = arena.bv_var("y", 8).unwrap();
+    let x = arena.bv_var("x", 4).unwrap();
+    let y = arena.bv_var("y", 4).unwrap();
     let product = arena.bv_mul(x, y).unwrap();
-    let one = arena.bv_const(8, 1).unwrap();
-    let formula = arena.eq(product, one).unwrap();
+    let udiv = arena.bv_udiv(product, y).unwrap();
+    let urem = arena.bv_urem(product, y).unwrap();
+    let sdiv = arena.bv_sdiv(x, y).unwrap();
+    let srem = arena.bv_srem(x, y).unwrap();
+    let smod = arena.bv_smod(x, y).unwrap();
+    let c1 = arena.eq(udiv, x).unwrap();
+    let c2 = arena.bv_ule(urem, y).unwrap();
+    let c3 = arena.bv_sle(sdiv, srem).unwrap();
+    let zero = arena.bv_const(4, 0).unwrap();
+    let c4 = arena.bv_sge(smod, zero).unwrap();
 
-    let error = SatBvBackend::new()
-        .check(&arena, &[formula], &SolverConfig::default())
-        .unwrap_err();
+    let result = SatBvBackend::new()
+        .check(&arena, &[c1, c2, c3, c4], &SolverConfig::default())
+        .expect("supported operators never error");
     assert!(
-        matches!(&error, SolverError::Unsupported(detail) if detail.contains("BvMul")),
-        "expected explicit unsupported BvMul, got {error:?}"
-    );
-}
-
-#[test]
-fn unsupported_operator_triage_runs_before_node_budget() {
-    let mut arena = TermArena::new();
-    let x = arena.bv_var("x", 8).unwrap();
-    let y = arena.bv_var("y", 8).unwrap();
-    let product = arena.bv_mul(x, y).unwrap();
-    let one = arena.bv_const(8, 1).unwrap();
-    let formula = arena.eq(product, one).unwrap();
-    let config = SolverConfig {
-        node_budget: Some(1),
-        ..SolverConfig::default()
-    };
-
-    let error = SatBvBackend::new()
-        .check(&arena, &[formula], &config)
-        .unwrap_err();
-    assert!(
-        matches!(&error, SolverError::Unsupported(detail) if detail.contains("BvMul")),
-        "expected explicit unsupported BvMul before budget refusal, got {error:?}"
+        matches!(result, CheckResult::Sat(_) | CheckResult::Unsat),
+        "expected a decision for the full operator set, got {result:?}"
     );
 }
 

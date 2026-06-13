@@ -60,6 +60,193 @@ fn nary_and_parameterized_operators() {
 }
 
 #[test]
+fn parses_and_round_trips_qf_abv_select_store() {
+    let text = r"
+        (set-logic QF_ABV)
+        (declare-fun mem () (Array (_ BitVec 4) (_ BitVec 8)))
+        (declare-const i (_ BitVec 4))
+        (declare-const v (_ BitVec 8))
+        (assert (= (select (store mem i v) i) v))
+        (assert (= (select mem (_ bv3 4)) (_ bv171 8)))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.logic.as_deref(), Some("QF_ABV"));
+    assert_eq!(script.assertions.len(), 2);
+
+    let rendered = write_script(&script.arena, &script.assertions);
+    assert!(rendered.contains("(Array (_ BitVec 4) (_ BitVec 8))"));
+    assert!(rendered.contains("select"));
+    assert!(rendered.contains("store"));
+
+    // The written script re-parses to the same number of assertions.
+    let reparsed = parse_script(&rendered).unwrap();
+    assert_eq!(reparsed.assertions.len(), 2);
+}
+
+#[test]
+fn parses_and_round_trips_qf_ufbv_applications() {
+    let text = r"
+        (set-logic QF_UFBV)
+        (declare-fun f ((_ BitVec 8)) (_ BitVec 8))
+        (declare-fun g ((_ BitVec 8) (_ BitVec 8)) (_ BitVec 8))
+        (declare-const x (_ BitVec 8))
+        (declare-const y (_ BitVec 8))
+        (assert (= (f x) (f y)))
+        (assert (= (g x y) (f x)))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.logic.as_deref(), Some("QF_UFBV"));
+    assert_eq!(script.assertions.len(), 2);
+
+    let rendered = write_script(&script.arena, &script.assertions);
+    // The writer re-declares the functions and selects the UF logic.
+    assert!(rendered.contains("(set-logic QF_UFBV)"));
+    assert!(rendered.contains("(declare-fun f ((_ BitVec 8)) (_ BitVec 8))"));
+    assert!(rendered.contains("(declare-fun g ((_ BitVec 8) (_ BitVec 8)) (_ BitVec 8))"));
+
+    // The written script re-parses to the same number of assertions.
+    let reparsed = parse_script(&rendered).unwrap();
+    assert_eq!(reparsed.assertions.len(), 2);
+}
+
+#[test]
+fn parses_and_round_trips_qf_lia() {
+    let text = r"
+        (set-logic QF_LIA)
+        (declare-const x Int)
+        (declare-const y Int)
+        (assert (= (+ (* 2 x) y) 7))
+        (assert (< x y))
+        (assert (>= x (- 0 3)))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.logic.as_deref(), Some("QF_LIA"));
+    assert_eq!(script.assertions.len(), 3);
+
+    let rendered = write_script(&script.arena, &script.assertions);
+    assert!(rendered.contains("(set-logic QF_LIA)"));
+    assert!(rendered.contains("(declare-const x Int)"));
+
+    // The written script re-parses to the same number of assertions.
+    let reparsed = parse_script(&rendered).unwrap();
+    assert_eq!(reparsed.assertions.len(), 3);
+}
+
+#[test]
+fn integer_literals_and_negation_parse() {
+    let text = r"
+        (set-logic QF_LIA)
+        (declare-const x Int)
+        (assert (= x (- 5)))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    // `(- 5)` is unary negation; the assertion is `x = -5`.
+    let rendered = write_script(&script.arena, &script.assertions);
+    let reparsed = parse_script(&rendered).unwrap();
+    assert_eq!(reparsed.assertions.len(), 1);
+}
+
+#[test]
+fn parses_and_round_trips_qf_lra() {
+    let text = r"
+        (set-logic QF_LRA)
+        (declare-const x Real)
+        (declare-const y Real)
+        (assert (< (+ x y) 1.5))
+        (assert (>= x (/ 1.0 3.0)))
+        (assert (= y (- 2.0)))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.logic.as_deref(), Some("QF_LRA"));
+    assert_eq!(script.assertions.len(), 3);
+
+    let rendered = write_script(&script.arena, &script.assertions);
+    assert!(rendered.contains("(set-logic QF_LRA)"));
+    assert!(rendered.contains("(declare-const x Real)"));
+
+    // The written script re-parses to the same number of assertions.
+    let reparsed = parse_script(&rendered).unwrap();
+    assert_eq!(reparsed.assertions.len(), 3);
+}
+
+#[test]
+fn integer_numerals_coerce_to_real_in_real_context() {
+    // The bare numeral `1` is coerced to `Real` because `x` is real.
+    let text = r"
+        (set-logic QF_LRA)
+        (declare-const x Real)
+        (assert (< x 1))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+    // Re-render and re-parse to confirm the coerced literal survives.
+    let rendered = write_script(&script.arena, &script.assertions);
+    let reparsed = parse_script(&rendered).unwrap();
+    assert_eq!(reparsed.assertions.len(), 1);
+}
+
+#[test]
+fn parses_and_round_trips_quantifiers() {
+    let text = r"
+        (set-logic BV)
+        (assert (forall ((x (_ BitVec 4))) (= (bvor x x) x)))
+        (assert (exists ((y (_ BitVec 4))) (= y (_ bv3 4))))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 2);
+
+    let rendered = write_script(&script.arena, &script.assertions);
+    assert!(rendered.contains("(forall ("));
+    assert!(rendered.contains("(exists ("));
+
+    // The written script re-parses to the same number of assertions.
+    let reparsed = parse_script(&rendered).unwrap();
+    assert_eq!(reparsed.assertions.len(), 2);
+}
+
+#[test]
+fn nested_quantifier_binding_does_not_capture() {
+    // Two separately-scoped `x` binders must not collide.
+    let text = r"
+        (set-logic BV)
+        (assert (and
+            (forall ((x (_ BitVec 2))) (bvule x x))
+            (exists ((x (_ BitVec 2))) (= x (_ bv1 2)))))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+    let rendered = write_script(&script.arena, &script.assertions);
+    assert_eq!(parse_script(&rendered).unwrap().assertions.len(), 1);
+}
+
+#[test]
+fn builtin_operators_take_priority_over_function_names() {
+    // A declared function may not shadow a builtin: `bvadd` stays the builtin.
+    let text = r"
+        (set-logic QF_UFBV)
+        (declare-fun f ((_ BitVec 4)) (_ BitVec 4))
+        (declare-const x (_ BitVec 4))
+        (assert (= (f (bvadd x x)) x))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+    // Re-parse the rendered form to confirm the application survives.
+    let rendered = write_script(&script.arena, &script.assertions);
+    assert!(rendered.contains("bvadd"));
+    let reparsed = parse_script(&rendered).unwrap();
+    assert_eq!(reparsed.assertions.len(), 1);
+}
+
+#[test]
 fn nary_distinct_is_pairwise() {
     let text = r"
         (set-logic QF_BV)
@@ -144,9 +331,12 @@ fn unsupported_constructs_are_clear_errors() {
         parse_script("(push 1)"),
         Err(SmtError::Unsupported(_))
     ));
+    // n-ary functions over scalar sorts are supported (ADR-0013); a function
+    // with an array-sorted parameter is not (functions are scalar).
+    assert!(parse_script("(declare-fun f ((_ BitVec 8)) (_ BitVec 8))").is_ok());
     assert!(matches!(
-        parse_script("(declare-fun f ((_ BitVec 8)) (_ BitVec 8))"),
-        Err(SmtError::Unsupported(_))
+        parse_script("(declare-fun f ((Array (_ BitVec 4) (_ BitVec 8))) Bool)"),
+        Err(SmtError::Ir(_))
     ));
     assert!(matches!(
         parse_script("(assert (bvadd"),

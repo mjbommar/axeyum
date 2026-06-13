@@ -509,6 +509,12 @@ fn profile_terms_with_label(label: &str, arena: &TermArena, roots: &[TermId]) {
                 *counts.entry("BvConst".to_owned()).or_default() += 1;
                 *widths.entry(format!("const_bv{width}")).or_default() += 1;
             }
+            TermNode::IntConst(_) => {
+                *counts.entry("IntConst".to_owned()).or_default() += 1;
+            }
+            TermNode::RealConst(_) => {
+                *counts.entry("RealConst".to_owned()).or_default() += 1;
+            }
             TermNode::Symbol(symbol) => {
                 let (_, sort) = arena.symbol(*symbol);
                 *counts.entry(format!("Symbol({sort})")).or_default() += 1;

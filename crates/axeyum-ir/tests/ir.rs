@@ -4,8 +4,9 @@
 //! exhaustively at small widths, not just on sampled inputs.
 
 use axeyum_ir::{
-    Assignment, BIT_VECTOR_WIRE_ORDER, BitOrder, IrError, Sort, TermArena, Value,
-    bv_value_to_lsb_bits, eval, lsb_bits_to_bv_value, lsb_bits_to_value, value_to_lsb_bits,
+    ArrayValue, Assignment, BIT_VECTOR_WIRE_ORDER, BitOrder, FuncValue, IrError, Rational, Sort,
+    TermArena, Value, bv_value_to_lsb_bits, eval, lsb_bits_to_bv_value, lsb_bits_to_value,
+    value_to_lsb_bits,
 };
 
 fn bv(width: u32, value: u128) -> Value {
@@ -143,8 +144,9 @@ fn lsb_first_bit_conversion_round_trips_values() {
         bv(128, u128::MAX),
     ];
     for value in cases {
-        let bits = value_to_lsb_bits(value).unwrap();
-        assert_eq!(lsb_bits_to_value(value.sort(), &bits).unwrap(), value);
+        let sort = value.sort();
+        let bits = value_to_lsb_bits(value.clone()).unwrap();
+        assert_eq!(lsb_bits_to_value(sort, &bits).unwrap(), value);
     }
 }
 
@@ -610,4 +612,512 @@ fn term_stats_count_op_classes() {
     assert_eq!(stats.distinct_symbols, 3);
     assert_eq!(stats.tree_nodes, 8); // ite(p, udiv(mul(x,y),y), x) as a tree
     assert_eq!(stats.dag_nodes, 6);
+}
+
+#[test]
+fn array_select_over_store_is_read_over_write() {
+    // select(store(a, i, e), j) == ite(i == j, e, select(a, j)), with `a` a
+    // constant array. Checked exhaustively over a small index/element domain.
+    let mut arena = TermArena::new();
+    let a_sym = arena
+        .declare(
+            "a",
+            Sort::Array {
+                index: 3,
+                element: 4,
+            },
+        )
+        .unwrap();
+    let a = arena.var(a_sym);
+    let i_sym = arena.declare("i", Sort::BitVec(3)).unwrap();
+    let j_sym = arena.declare("j", Sort::BitVec(3)).unwrap();
+    let e_sym = arena.declare("e", Sort::BitVec(4)).unwrap();
+    let i = arena.var(i_sym);
+    let j = arena.var(j_sym);
+    let e = arena.var(e_sym);
+    let stored = arena.store(a, i, e).unwrap();
+    let read = arena.select(stored, j).unwrap();
+    assert_eq!(arena.sort_of(read), Sort::BitVec(4));
+
+    let default = 0x5u128;
+    for i_val in 0..8u128 {
+        for j_val in 0..8u128 {
+            for e_val in [0u128, 1, 7, 15] {
+                let mut assignment = Assignment::new();
+                assignment.set(a_sym, Value::Array(ArrayValue::constant(3, 4, default)));
+                assignment.set(i_sym, bv(3, i_val));
+                assignment.set(j_sym, bv(3, j_val));
+                assignment.set(e_sym, bv(4, e_val));
+                let expected = if i_val == j_val { e_val } else { default };
+                assert_eq!(
+                    eval(&arena, read, &assignment).unwrap(),
+                    bv(4, expected),
+                    "i={i_val} j={j_val} e={e_val}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn array_store_is_last_write_wins_and_extensional() {
+    // store(store(a, i, e1), i, e2) is extensionally equal to store(a, i, e2).
+    let mut arena = TermArena::new();
+    let a_sym = arena
+        .declare(
+            "a",
+            Sort::Array {
+                index: 4,
+                element: 8,
+            },
+        )
+        .unwrap();
+    let a = arena.var(a_sym);
+    let i = arena.bv_const(4, 3).unwrap();
+    let e1 = arena.bv_const(8, 0xaa).unwrap();
+    let e2 = arena.bv_const(8, 0xbb).unwrap();
+    let inner = arena.store(a, i, e1).unwrap();
+    let outer = arena.store(inner, i, e2).unwrap();
+    let direct = arena.store(a, i, e2).unwrap();
+    let equal = arena.eq(outer, direct).unwrap();
+
+    let mut assignment = Assignment::new();
+    assignment.set(a_sym, Value::Array(ArrayValue::constant(4, 8, 0)));
+    assert_eq!(eval(&arena, equal, &assignment).unwrap(), Value::Bool(true));
+}
+
+#[test]
+fn array_builders_reject_mismatched_widths() {
+    let mut arena = TermArena::new();
+    let a = arena.array_var("a", 4, 8).unwrap();
+    let wrong_index = arena.bv_const(5, 0).unwrap();
+    assert!(matches!(
+        arena.select(a, wrong_index),
+        Err(IrError::SortsDiffer(..))
+    ));
+    let idx = arena.bv_const(4, 0).unwrap();
+    let wrong_elem = arena.bv_const(7, 0).unwrap();
+    assert!(matches!(
+        arena.store(a, idx, wrong_elem),
+        Err(IrError::SortsDiffer(..))
+    ));
+    // select on a non-array is a sort mismatch.
+    let bv8 = arena.bv_var("x", 8).unwrap();
+    assert!(matches!(
+        arena.select(bv8, idx),
+        Err(IrError::SortMismatch {
+            expected: "Array",
+            ..
+        })
+    ));
+}
+
+// ----- uninterpreted functions (ADR-0013) -------------------------------
+
+#[test]
+fn apply_interns_and_carries_result_sort() {
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(8)], Sort::BitVec(8))
+        .unwrap();
+    let x = arena.bv_var("x", 8).unwrap();
+    let a = arena.apply(f, &[x]).unwrap();
+    let b = arena.apply(f, &[x]).unwrap();
+    // Same function, same argument => the same interned term.
+    assert_eq!(a, b);
+    assert_eq!(arena.sort_of(a), Sort::BitVec(8));
+    // Re-declaring with the identical signature returns the same FuncId.
+    let f_again = arena
+        .declare_fun("f", &[Sort::BitVec(8)], Sort::BitVec(8))
+        .unwrap();
+    assert_eq!(f, f_again);
+}
+
+#[test]
+fn apply_rejects_bad_signatures_and_arguments() {
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(8)], Sort::BitVec(8))
+        .unwrap();
+    let x = arena.bv_var("x", 8).unwrap();
+    let y = arena.bv_var("y", 4).unwrap();
+    // Wrong arity.
+    assert!(matches!(
+        arena.apply(f, &[x, x]),
+        Err(IrError::ArityMismatch {
+            expected: 1,
+            found: 2
+        })
+    ));
+    // Wrong argument sort.
+    assert!(matches!(
+        arena.apply(f, &[y]),
+        Err(IrError::SortsDiffer(..))
+    ));
+    // Array sort in a signature is rejected.
+    assert!(matches!(
+        arena.declare_fun(
+            "g",
+            &[Sort::Array {
+                index: 4,
+                element: 8
+            }],
+            Sort::Bool
+        ),
+        Err(IrError::SortMismatch {
+            expected: "Bool or BitVec",
+            ..
+        })
+    ));
+    // Re-declaring a name with a different signature conflicts.
+    assert!(matches!(
+        arena.declare_fun("f", &[Sort::BitVec(4)], Sort::BitVec(8)),
+        Err(IrError::FunctionSignatureConflict { .. })
+    ));
+}
+
+#[test]
+fn apply_evaluates_against_a_model_interpretation() {
+    // F: f(x) where f is interpreted as a small table.
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(4)], Sort::BitVec(8))
+        .unwrap();
+    let x_sym = arena.declare("x", Sort::BitVec(4)).unwrap();
+    let x = arena.var(x_sym);
+    let app = arena.apply(f, &[x]).unwrap();
+
+    let interp = FuncValue::constant(vec![Sort::BitVec(4)], Sort::BitVec(8), 0xff)
+        .define(&[1], 0xaa)
+        .define(&[2], 0xbb);
+
+    for x_val in 0..16u128 {
+        let mut model = Assignment::new();
+        model.set(x_sym, bv(4, x_val));
+        model.set_function(f, interp.clone());
+        let expected = match x_val {
+            1 => 0xaa,
+            2 => 0xbb,
+            _ => 0xff,
+        };
+        assert_eq!(eval(&arena, app, &model).unwrap(), bv(8, expected));
+    }
+}
+
+#[test]
+fn apply_is_a_function_equal_arguments_give_equal_results() {
+    // The defining EUF property (congruence): under any interpretation,
+    // x == y implies f(x) == f(y). Checked exhaustively at width 3.
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(3)], Sort::BitVec(3))
+        .unwrap();
+    let x_sym = arena.declare("x", Sort::BitVec(3)).unwrap();
+    let y_sym = arena.declare("y", Sort::BitVec(3)).unwrap();
+    let x = arena.var(x_sym);
+    let y = arena.var(y_sym);
+    let fx = arena.apply(f, &[x]).unwrap();
+    let fy = arena.apply(f, &[y]).unwrap();
+    let same_arg = arena.eq(x, y).unwrap();
+    let same_res = arena.eq(fx, fy).unwrap();
+    let congruence = arena.implies(same_arg, same_res).unwrap();
+
+    // An arbitrary (deterministic) interpretation of f.
+    let mut interp = FuncValue::constant(vec![Sort::BitVec(3)], Sort::BitVec(3), 0);
+    for k in 0..8u128 {
+        interp = interp.define(&[k], (k.wrapping_mul(5).wrapping_add(1)) & 0x7);
+    }
+    for x_val in 0..8u128 {
+        for y_val in 0..8u128 {
+            let mut model = Assignment::new();
+            model.set(x_sym, bv(3, x_val));
+            model.set(y_sym, bv(3, y_val));
+            model.set_function(f, interp.clone());
+            assert_eq!(
+                eval(&arena, congruence, &model).unwrap(),
+                Value::Bool(true),
+                "congruence must hold for x={x_val} y={y_val}"
+            );
+        }
+    }
+}
+
+#[test]
+fn apply_without_interpretation_is_unbound_function() {
+    let mut arena = TermArena::new();
+    let f = arena.declare_fun("f", &[Sort::Bool], Sort::Bool).unwrap();
+    let p_sym = arena.declare("p", Sort::Bool).unwrap();
+    let p = arena.var(p_sym);
+    let app = arena.apply(f, &[p]).unwrap();
+    let mut model = Assignment::new();
+    model.set(p_sym, Value::Bool(true));
+    assert!(matches!(
+        eval(&arena, app, &model),
+        Err(IrError::UnboundFunction(_))
+    ));
+}
+
+#[test]
+fn func_value_normalizes_to_default() {
+    // Defining an entry equal to the default leaves no override (extensional).
+    let interp = FuncValue::constant(vec![Sort::BitVec(4)], Sort::BitVec(4), 7)
+        .define(&[1], 7)
+        .define(&[2], 3);
+    assert_eq!(interp.apply(&[1]), 7);
+    assert_eq!(interp.apply(&[2]), 3);
+    assert_eq!(interp.apply(&[9]), 7);
+    // Only the genuinely-overriding entry remains.
+    assert_eq!(interp.entries().count(), 1);
+}
+
+// ----- linear integer arithmetic (ADR-0014) -----------------------------
+
+fn int(value: i128) -> Value {
+    Value::Int(value)
+}
+
+#[test]
+fn int_builders_sort_check_and_intern() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let one = arena.int_const(1);
+    let sum_a = arena.int_add(x, one).unwrap();
+    let sum_b = arena.int_add(x, one).unwrap();
+    assert_eq!(sum_a, sum_b, "structurally equal int terms intern");
+    assert_eq!(arena.sort_of(sum_a), Sort::Int);
+    let lt = arena.int_lt(x, one).unwrap();
+    assert_eq!(arena.sort_of(lt), Sort::Bool);
+    // Mixing an integer with a bit-vector is a sort error.
+    let bv8 = arena.bv_var("b", 8).unwrap();
+    assert!(matches!(
+        arena.int_add(x, bv8),
+        Err(IrError::SortMismatch {
+            expected: "Int",
+            ..
+        })
+    ));
+    // Integers are distinct from bit-vectors under equality.
+    assert!(matches!(arena.eq(x, bv8), Err(IrError::SortsDiffer(..))));
+}
+
+#[test]
+fn int_evaluator_matches_reference_arithmetic() {
+    // Exhaustive small-range check of the linear operator semantics against
+    // i128 reference arithmetic.
+    let mut arena = TermArena::new();
+    let x_sym = arena.declare("x", Sort::Int).unwrap();
+    let y_sym = arena.declare("y", Sort::Int).unwrap();
+    let x = arena.var(x_sym);
+    let y = arena.var(y_sym);
+    let neg = arena.int_neg(x).unwrap();
+    let add = arena.int_add(x, y).unwrap();
+    let sub = arena.int_sub(x, y).unwrap();
+    let mul = arena.int_mul(x, y).unwrap();
+    let lt = arena.int_lt(x, y).unwrap();
+    let le = arena.int_le(x, y).unwrap();
+    let gt = arena.int_gt(x, y).unwrap();
+    let ge = arena.int_ge(x, y).unwrap();
+
+    for xv in -6i128..=6 {
+        for yv in -6i128..=6 {
+            let mut m = Assignment::new();
+            m.set(x_sym, int(xv));
+            m.set(y_sym, int(yv));
+            assert_eq!(eval(&arena, neg, &m).unwrap(), int(-xv));
+            assert_eq!(eval(&arena, add, &m).unwrap(), int(xv + yv));
+            assert_eq!(eval(&arena, sub, &m).unwrap(), int(xv - yv));
+            assert_eq!(eval(&arena, mul, &m).unwrap(), int(xv * yv));
+            assert_eq!(eval(&arena, lt, &m).unwrap(), Value::Bool(xv < yv));
+            assert_eq!(eval(&arena, le, &m).unwrap(), Value::Bool(xv <= yv));
+            assert_eq!(eval(&arena, gt, &m).unwrap(), Value::Bool(xv > yv));
+            assert_eq!(eval(&arena, ge, &m).unwrap(), Value::Bool(xv >= yv));
+        }
+    }
+}
+
+#[test]
+fn int_const_and_negative_evaluate() {
+    let mut arena = TermArena::new();
+    let a = arena.int_const(-5);
+    let b = arena.int_const(8);
+    let sum = arena.int_add(a, b).unwrap();
+    let asg = Assignment::new();
+    assert_eq!(eval(&arena, sum, &asg).unwrap(), int(3));
+    // Distinct integer constants are not equal; equal ones intern.
+    assert_eq!(arena.int_const(-5), a);
+}
+
+#[test]
+fn int_is_not_a_function_argument_sort() {
+    // Functions are finite scalar (Bool/BitVec); integers are rejected.
+    let mut arena = TermArena::new();
+    assert!(matches!(
+        arena.declare_fun("f", &[Sort::Int], Sort::Bool),
+        Err(IrError::SortMismatch { .. })
+    ));
+}
+
+// ----- linear real arithmetic (ADR-0015) --------------------------------
+
+fn real(num: i128, den: i128) -> Value {
+    Value::Real(axeyum_ir::Rational::new(num, den))
+}
+
+#[test]
+fn real_builders_sort_check_and_intern() {
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let half = arena.real_ratio(1, 2);
+    let sum_a = arena.real_add(x, half).unwrap();
+    let sum_b = arena.real_add(x, half).unwrap();
+    assert_eq!(sum_a, sum_b, "structurally equal real terms intern");
+    assert_eq!(arena.sort_of(sum_a), Sort::Real);
+    let lt = arena.real_lt(x, half).unwrap();
+    assert_eq!(arena.sort_of(lt), Sort::Bool);
+    // Mixing a real with an integer or bit-vector is a sort error.
+    let y = arena.int_var("y").unwrap();
+    assert!(matches!(
+        arena.real_add(x, y),
+        Err(IrError::SortMismatch {
+            expected: "Real",
+            ..
+        })
+    ));
+    assert!(matches!(arena.eq(x, y), Err(IrError::SortsDiffer(..))));
+    // Equal rationals in lowest terms intern to the same constant term.
+    assert_eq!(arena.real_ratio(2, 4), half);
+}
+
+#[test]
+fn real_evaluator_matches_exact_rational_arithmetic() {
+    // Check the linear operator semantics against exact rational reference
+    // values over a small grid of fractions.
+    let mut arena = TermArena::new();
+    let x_sym = arena.declare("x", Sort::Real).unwrap();
+    let y_sym = arena.declare("y", Sort::Real).unwrap();
+    let x = arena.var(x_sym);
+    let y = arena.var(y_sym);
+    let neg = arena.real_neg(x).unwrap();
+    let add = arena.real_add(x, y).unwrap();
+    let sub = arena.real_sub(x, y).unwrap();
+    let mul = arena.real_mul(x, y).unwrap();
+    let lt = arena.real_lt(x, y).unwrap();
+    let le = arena.real_le(x, y).unwrap();
+    let gt = arena.real_gt(x, y).unwrap();
+    let ge = arena.real_ge(x, y).unwrap();
+
+    let grid = [
+        Rational::new(-3, 2),
+        Rational::new(-1, 3),
+        Rational::zero(),
+        Rational::new(1, 4),
+        Rational::new(5, 3),
+        Rational::integer(2),
+    ];
+    for &xv in &grid {
+        for &yv in &grid {
+            let mut m = Assignment::new();
+            m.set(x_sym, Value::Real(xv));
+            m.set(y_sym, Value::Real(yv));
+            assert_eq!(eval(&arena, neg, &m).unwrap(), Value::Real(-xv));
+            assert_eq!(eval(&arena, add, &m).unwrap(), Value::Real(xv + yv));
+            assert_eq!(eval(&arena, sub, &m).unwrap(), Value::Real(xv - yv));
+            assert_eq!(eval(&arena, mul, &m).unwrap(), Value::Real(xv * yv));
+            assert_eq!(eval(&arena, lt, &m).unwrap(), Value::Bool(xv < yv));
+            assert_eq!(eval(&arena, le, &m).unwrap(), Value::Bool(xv <= yv));
+            assert_eq!(eval(&arena, gt, &m).unwrap(), Value::Bool(xv > yv));
+            assert_eq!(eval(&arena, ge, &m).unwrap(), Value::Bool(xv >= yv));
+        }
+    }
+}
+
+// ----- quantifiers (ADR-0016) -------------------------------------------
+
+#[test]
+fn boolean_quantifiers_enumerate() {
+    let mut a = TermArena::new();
+    let asg = Assignment::new();
+    let p_sym = a.declare("p", Sort::Bool).unwrap();
+    let p = a.var(p_sym);
+    let np = a.not(p).unwrap();
+    let tautology = a.or(p, np).unwrap();
+
+    // forall p. (p or not p) is true; forall p. p is false.
+    let all_taut = a.forall(p_sym, tautology).unwrap();
+    assert_eq!(eval(&a, all_taut, &asg).unwrap(), Value::Bool(true));
+    let all_p = a.forall(p_sym, p).unwrap();
+    assert_eq!(eval(&a, all_p, &asg).unwrap(), Value::Bool(false));
+    // exists p. p is true.
+    let some_p = a.exists(p_sym, p).unwrap();
+    assert_eq!(eval(&a, some_p, &asg).unwrap(), Value::Bool(true));
+}
+
+#[test]
+fn bitvector_quantifiers_range_over_all_values() {
+    let mut a = TermArena::new();
+    let asg = Assignment::new();
+    let x_sym = a.declare("x", Sort::BitVec(3)).unwrap();
+    let x = a.var(x_sym);
+    let zero = a.bv_const(3, 0).unwrap();
+    let three = a.bv_const(3, 3).unwrap();
+
+    // forall x. x + 0 == x  (true for all 3-bit x).
+    let sum = a.bv_add(x, zero).unwrap();
+    let idem = a.eq(sum, x).unwrap();
+    let all_idem = a.forall(x_sym, idem).unwrap();
+    assert_eq!(eval(&a, all_idem, &asg).unwrap(), Value::Bool(true));
+
+    // exists x. x == 3  (true); forall x. x == 3 (false).
+    let is_three = a.eq(x, three).unwrap();
+    let some_three = a.exists(x_sym, is_three).unwrap();
+    assert_eq!(eval(&a, some_three, &asg).unwrap(), Value::Bool(true));
+    let all_three = a.forall(x_sym, is_three).unwrap();
+    assert_eq!(eval(&a, all_three, &asg).unwrap(), Value::Bool(false));
+}
+
+#[test]
+fn nested_quantifiers_evaluate() {
+    // forall x:BV2. exists y:BV2. x == y  is true.
+    let mut a = TermArena::new();
+    let asg = Assignment::new();
+    let x_sym = a.declare("x", Sort::BitVec(2)).unwrap();
+    let y_sym = a.declare("y", Sort::BitVec(2)).unwrap();
+    let x = a.var(x_sym);
+    let y = a.var(y_sym);
+    let eq = a.eq(x, y).unwrap();
+    let inner = a.exists(y_sym, eq).unwrap();
+    let outer = a.forall(x_sym, inner).unwrap();
+    assert_eq!(eval(&a, outer, &asg).unwrap(), Value::Bool(true));
+
+    // forall x. forall y. x == y  is false.
+    let inner_all = a.forall(y_sym, eq).unwrap();
+    let outer_all = a.forall(x_sym, inner_all).unwrap();
+    assert_eq!(eval(&a, outer_all, &asg).unwrap(), Value::Bool(false));
+}
+
+#[test]
+fn quantifier_over_infinite_domain_is_an_error() {
+    // Reals cannot be enumerated by the evaluator.
+    let mut a = TermArena::new();
+    let asg = Assignment::new();
+    let r_sym = a.declare("r", Sort::Real).unwrap();
+    let r = a.var(r_sym);
+    let zero = a.real_ratio(0, 1);
+    let ge = a.real_ge(r, zero).unwrap();
+    let all = a.forall(r_sym, ge).unwrap();
+    assert!(matches!(
+        eval(&a, all, &asg),
+        Err(IrError::UnsupportedQuantifierDomain(Sort::Real))
+    ));
+}
+
+#[test]
+fn real_constant_arithmetic_evaluates_exactly() {
+    // 1/3 + 1/6 == 1/2, checked through the evaluator on constants.
+    let mut arena = TermArena::new();
+    let third = arena.real_ratio(1, 3);
+    let sixth = arena.real_ratio(1, 6);
+    let sum = arena.real_add(third, sixth).unwrap();
+    let asg = Assignment::new();
+    assert_eq!(eval(&arena, sum, &asg).unwrap(), real(1, 2));
 }

@@ -459,7 +459,11 @@ fn canonicalize_root(
 
         let node = arena.node(term).clone();
         match node {
-            TermNode::BoolConst(_) | TermNode::BvConst { .. } | TermNode::Symbol(_) => {
+            TermNode::BoolConst(_)
+            | TermNode::BvConst { .. }
+            | TermNode::IntConst(_)
+            | TermNode::RealConst(_)
+            | TermNode::Symbol(_) => {
                 memo.insert(term, term);
             }
             TermNode::App { op, args } if children_ready => {
@@ -500,7 +504,9 @@ fn rewrite_app(
         let folded = value_to_term(arena, eval(arena, rebuilt, &Assignment::new())?)?;
         let rule_id = match arena.sort_of(folded) {
             Sort::Bool => BOOL_CONST_FOLD,
-            Sort::BitVec(_) => BV_CONST_FOLD,
+            // `all_constant` matches only Bool/BV constants, so a folded term is
+            // only ever Bool/BV here; the array and integer arms are unreachable.
+            Sort::BitVec(_) | Sort::Array { .. } | Sort::Int | Sort::Real => BV_CONST_FOLD,
         };
         if enabled.contains(rule_id) {
             return Ok(applied(folded, rule_id));
@@ -544,7 +550,28 @@ fn rewrite_app(
         | Op::BvSgt
         | Op::BvSge
         | Op::BvComp
-        | Op::Concat => None,
+        | Op::Concat
+        | Op::Select
+        | Op::Store
+        | Op::Apply(_)
+        | Op::IntNeg
+        | Op::IntAdd
+        | Op::IntSub
+        | Op::IntMul
+        | Op::IntLt
+        | Op::IntLe
+        | Op::IntGt
+        | Op::IntGe
+        | Op::RealNeg
+        | Op::RealAdd
+        | Op::RealSub
+        | Op::RealMul
+        | Op::RealLt
+        | Op::RealLe
+        | Op::RealGt
+        | Op::RealGe
+        | Op::Forall(_)
+        | Op::Exists(_) => None,
     };
 
     if let Some(local) = local {
@@ -887,7 +914,7 @@ fn rewrite_rotate(by: u32, args: &[TermId], enabled: &BTreeSet<&str>) -> Option<
     None
 }
 
-fn build_app(arena: &mut TermArena, op: Op, args: &[TermId]) -> Result<TermId, IrError> {
+pub(crate) fn build_app(arena: &mut TermArena, op: Op, args: &[TermId]) -> Result<TermId, IrError> {
     match op {
         Op::BoolNot => arena.not(args[0]),
         Op::BoolAnd => arena.and(args[0], args[1]),
@@ -930,6 +957,27 @@ fn build_app(arena: &mut TermArena, op: Op, args: &[TermId]) -> Result<TermId, I
         Op::SignExt { by } => arena.sign_ext(by, args[0]),
         Op::RotateLeft { by } => arena.rotate_left(by, args[0]),
         Op::RotateRight { by } => arena.rotate_right(by, args[0]),
+        Op::Select => arena.select(args[0], args[1]),
+        Op::Store => arena.store(args[0], args[1], args[2]),
+        Op::Apply(func) => arena.apply(func, args),
+        Op::IntNeg => arena.int_neg(args[0]),
+        Op::IntAdd => arena.int_add(args[0], args[1]),
+        Op::IntSub => arena.int_sub(args[0], args[1]),
+        Op::IntMul => arena.int_mul(args[0], args[1]),
+        Op::IntLt => arena.int_lt(args[0], args[1]),
+        Op::IntLe => arena.int_le(args[0], args[1]),
+        Op::IntGt => arena.int_gt(args[0], args[1]),
+        Op::IntGe => arena.int_ge(args[0], args[1]),
+        Op::RealNeg => arena.real_neg(args[0]),
+        Op::RealAdd => arena.real_add(args[0], args[1]),
+        Op::RealSub => arena.real_sub(args[0], args[1]),
+        Op::RealMul => arena.real_mul(args[0], args[1]),
+        Op::RealLt => arena.real_lt(args[0], args[1]),
+        Op::RealLe => arena.real_le(args[0], args[1]),
+        Op::RealGt => arena.real_gt(args[0], args[1]),
+        Op::RealGe => arena.real_ge(args[0], args[1]),
+        Op::Forall(var) => arena.forall(var, args[0]),
+        Op::Exists(var) => arena.exists(var, args[0]),
     }
 }
 
@@ -953,13 +1001,26 @@ fn value_to_term(arena: &mut TermArena, value: Value) -> Result<TermId, IrError>
     match value {
         Value::Bool(value) => Ok(arena.bool_const(value)),
         Value::Bv { width, value } => arena.bv_const(width, value),
+        Value::Array(array) => Err(IrError::SortMismatch {
+            expected: "Bool or BitVec",
+            found: Sort::Array {
+                index: array.index_width(),
+                element: array.element_width(),
+            },
+        }),
+        Value::Int(value) => Ok(arena.int_const(value)),
+        Value::Real(value) => Ok(arena.real_const(value)),
     }
 }
 
 fn bool_const(arena: &TermArena, term: TermId) -> Option<bool> {
     match arena.node(term) {
         TermNode::BoolConst(value) => Some(*value),
-        TermNode::BvConst { .. } | TermNode::Symbol(_) | TermNode::App { .. } => None,
+        TermNode::BvConst { .. }
+        | TermNode::IntConst(_)
+        | TermNode::RealConst(_)
+        | TermNode::Symbol(_)
+        | TermNode::App { .. } => None,
     }
 }
 
@@ -970,7 +1031,11 @@ fn is_bool(arena: &TermArena, term: TermId, expected: bool) -> bool {
 fn bv_const(arena: &TermArena, term: TermId) -> Option<(u32, u128)> {
     match arena.node(term) {
         TermNode::BvConst { width, value } => Some((*width, *value)),
-        TermNode::BoolConst(_) | TermNode::Symbol(_) | TermNode::App { .. } => None,
+        TermNode::BoolConst(_)
+        | TermNode::IntConst(_)
+        | TermNode::RealConst(_)
+        | TermNode::Symbol(_)
+        | TermNode::App { .. } => None,
     }
 }
 

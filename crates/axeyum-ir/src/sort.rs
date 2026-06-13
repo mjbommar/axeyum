@@ -14,20 +14,39 @@ pub enum Sort {
     Bool,
     /// Fixed-width bit-vectors; width is in bits, `1..=MAX_BV_WIDTH`.
     BitVec(u32),
+    /// A total map from `BitVec(index)` to `BitVec(element)` (ADR-0010).
+    Array {
+        /// Index bit-vector width.
+        index: u32,
+        /// Element bit-vector width.
+        element: u32,
+    },
+    /// The mathematical integer sort (linear integer arithmetic, ADR-0014).
+    Int,
+    /// The mathematical real sort (linear real arithmetic, ADR-0015).
+    Real,
 }
 
 impl Sort {
     /// Returns the bit-vector width, or `None` for non-bit-vector sorts.
     pub fn bv_width(self) -> Option<u32> {
         match self {
-            Sort::Bool => None,
             Sort::BitVec(w) => Some(w),
+            Sort::Bool | Sort::Array { .. } | Sort::Int | Sort::Real => None,
         }
     }
 
     /// Returns `true` if this is the Boolean sort.
     pub fn is_bool(self) -> bool {
         self == Sort::Bool
+    }
+
+    /// Returns the `(index, element)` widths for an array sort, else `None`.
+    pub fn array_widths(self) -> Option<(u32, u32)> {
+        match self {
+            Sort::Array { index, element } => Some((index, element)),
+            Sort::Bool | Sort::BitVec(_) | Sort::Int | Sort::Real => None,
+        }
     }
 }
 
@@ -36,6 +55,11 @@ impl core::fmt::Display for Sort {
         match self {
             Sort::Bool => write!(f, "Bool"),
             Sort::BitVec(w) => write!(f, "(_ BitVec {w})"),
+            Sort::Array { index, element } => {
+                write!(f, "(Array (_ BitVec {index}) (_ BitVec {element}))")
+            }
+            Sort::Int => write!(f, "Int"),
+            Sort::Real => write!(f, "Real"),
         }
     }
 }

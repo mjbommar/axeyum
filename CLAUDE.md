@@ -48,6 +48,9 @@ cargo test --workspace --all-features
 cargo doc --workspace --all-features --no-deps    # RUSTDOCFLAGS="-D warnings" in CI
 cargo deny check                                  # needs cargo-deny installed
 ./scripts/check-links.sh                          # docs relative-link check (CI job)
+# WebAssembly is a supported target (ADR-0017); the default library stack builds
+# for browser and WASI. Native builds are unaffected (clock shim is wasm-only).
+cargo build --target wasm32-unknown-unknown -p axeyum-solver
 ```
 
 Local default toolchain may be nightly; CI runs stable plus an MSRV (1.85)
@@ -60,20 +63,34 @@ check. Edition 2024, resolver 3.
 - `crates/axeyum-aig` — AIG circuit graph with deterministic structural
   hashing, evaluation, and ASCII AIGER debug export.
 - `crates/axeyum-bv` — term-to-AIG bit lowering with explicit term-bit and
-  symbol-input maps for the supported Bool/BV operator subset.
+  symbol-input maps for the full scalar QF_BV operator set (bitwise, arithmetic
+  incl. mul and signed/unsigned div/rem, shifts, comparisons, structural ops);
+  one-shot `lower_terms` plus persistent `IncrementalLowering` (ADR-0009 st.2).
 - `crates/axeyum-cnf` — simple Tseitin encoding from AIG, DIMACS I/O, CNF
-  evaluation, BatSat-backed solving, and CNF-variable-to-AIG replay maps.
+  evaluation, BatSat-backed solving, CNF-variable-to-AIG replay maps, a warm
+  `IncrementalSat` adapter (monotone clauses + native assumptions),
+  `IncrementalCnf` (per-node Tseitin over the warm solver, ADR-0009), an
+  independent DRAT UNSAT proof checker `check_drat` (RUP+RAT, ADR-0011), and a
+  proof-producing CDCL SAT core `solve_with_drat_proof` (1-UIP conflict
+  analysis + two-watched-literal propagation, emits DRAT, ADR-0012).
 - `crates/axeyum-query` — query object: assertions, assumptions, scopes,
   stable labels.
-- `crates/axeyum-rewrite` — rewrite manifest contracts and the first
-  denotation-preserving canonicalizer.
+- `crates/axeyum-rewrite` — rewrite manifest contracts, the first
+  denotation-preserving canonicalizer, and `eliminate_arrays` (QF_ABV →
+  QF_BV by read-over-write + Ackermann, ADR-0010).
 - `crates/axeyum-solver` — backend trait, results, models, capabilities;
-  default pure Rust SAT-backed BV backend plus native backends behind feature
-  flags (`z3` is the oracle path).
+  default pure Rust SAT-backed BV backend (one-shot `SatBvBackend`, plus the
+  warm `IncrementalBvSolver` with push/pop/assume, ADR-0009 st.2); the high-level
+  `Solver` façade; `check_with_array_elimination` for QF_ABV (ADR-0010); native
+  backends behind feature flags (`z3` is the oracle).
 - `crates/axeyum-smtlib` — SMT-LIB benchmark-slice parser and
   sharing-preserving writer.
 - `crates/axeyum-bench` — corpus benchmark harness with backend selection,
-  PAR-2 scoring, model replay, and JSON artifacts.
+  PAR-2 scoring, model replay, and JSON artifacts; also the
+  `scenario_pipeline_report` and `scenario_scaling` examples.
+- `crates/axeyum-scenarios` — self-checking, oracle-free consumer workloads
+  (SAT by concrete execution, UNSAT by bounded-verified identities) for testing
+  and optimization (ADR-0008).
 - `docs/research/` — research notes; the design rationale for everything.
   Folder map in [docs/research/README.md](docs/research/README.md).
 - `references/` — gitignored shallow clones of reference solvers/checkers;
@@ -85,7 +102,8 @@ check. Edition 2024, resolver 3.
   contract boundaries accepted in ADR-0005; `axeyum-aig`, `axeyum-bv`, and
   `axeyum-cnf` are the Phase 4 circuit/lowering/CNF boundaries accepted in
   ADR-0006; `rustsat-batsat` is the first pure-Rust SAT adapter accepted in
-  ADR-0007).
+  ADR-0007; `axeyum-scenarios` is the self-checking consumer-workload boundary
+  accepted in ADR-0008).
 - The pure Rust stack including a custom CDCL SAT core is the product; the
   Z3 oracle is bootstrap scaffolding with a planned demotion path
   (ADR-0002). Never expand reliance on linked solvers beyond

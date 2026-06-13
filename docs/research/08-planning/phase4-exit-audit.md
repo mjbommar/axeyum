@@ -19,7 +19,9 @@ In scope:
 - Default dependency evidence for the first pure-Rust SAT path.
 - Explicit deferrals that should not block Phase 5 entry.
 
-Out of scope:
+Out of scope at Phase 4 exit (multiplication lowering was subsequently added in
+Phase 5 on 2026-06-13, so of the arithmetic deferrals only division and
+remainder remain):
 
 - Multiplication, division, and remainder lowering.
 - Proof-producing UNSAT.

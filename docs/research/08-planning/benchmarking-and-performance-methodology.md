@@ -1,7 +1,7 @@
 # Benchmarking And Performance Methodology
 
 Status: draft
-Last updated: 2026-06-12
+Last updated: 2026-06-13
 
 ## Purpose
 
@@ -38,8 +38,16 @@ Out of scope:
 | Tier | Contents | Question answered |
 |---|---|---|
 | Micro | Hand-written op-level cases, exhaustive small widths. | Regression per code change. |
+| Scenario | Self-checking, oracle-free synthetic consumer workloads (`axeyum-scenarios`): SAT by concrete execution, UNSAT by bounded-verified identities, parameterized by width/rounds. | Does an optimization help on realistic, scalable workloads, without an oracle? |
 | Public | SMT-LIB QF_BV / QF_ABV sets, SAT Competition CNF, HWMCC BTOR2. | Standing vs. mature solvers. |
 | Client | Minimized queries captured from real frontends. | Real-workload relevance. |
+
+The scenario tier (ADR-0008) is the bridge between micro and client until a real
+client frontend exists: it is realistic in shape, scales toward the frontier,
+runs in default CI without a native dependency, and carries its own ground truth
+so backend agreement is a genuine cross-check rather than a comparison against
+another solver. The [consumer-scenario-models note](../07-verification/consumer-scenario-models.md)
+records the contract and the first measured baselines.
 
 ## Metrics
 
@@ -101,7 +109,46 @@ Out of scope:
   selection heuristics without weakening the replay contract. Artifact version
   12 records the bounded plan-aware selection option and current root-direct
   assertion CNF encoder behavior, so plan-local and plan-aware refinement
-  diagnostics can be separated in artifacts.
+  diagnostics can be separated in artifacts. Artifact version 14 adds a
+  corpus-level `summary.layer_attribution` block: per-stage seconds and shares
+  (bit-blast, CNF encode, SAT solve, model lift) over the decided pure-Rust
+  (`sat-bv`) instances, plus an explicit `sat_dominates` boolean against a
+  documented `sat_dominates_threshold` (0.5). This makes CDCL-priority gate (a)
+  — "does SAT solve time dominate end-to-end?" — falsifiable from a single
+  summary instead of requiring per-instance reconstruction. The four stages are
+  non-overlapping and sum to the pure-Rust pipeline wall time (`translate`
+  equals `bit_blast + cnf_encode` on this path, so it is not double-counted as a
+  separate slice); the block is `null` when no `sat-bv` instance was decided, so
+  a fabricated zero share is never reported as "SAT does not dominate". On the
+  committed micro corpus the measured SAT share is ~0.31 (encoding stages ~0.57
+  combined), so gate (a) reads **false** there — but the micro tier is only 3
+  trivial instances dominated by fixed encoding overhead, which is precisely why
+  the gate is defined on the public/client tiers. On a public QF_BV slice
+  (`20190311-bv-term-small-rw-Noetzli`, 1416 decided `sat-bv` instances under a
+  100k-var / 300k-clause guard) the SAT-solve share is **~0.95** (bit-blast
+  ~0.016, CNF encode ~0.031, model lift ~0.0), so gate (a) reads **true** on that
+  slice. Caveats before treating gate (a) as met corpus-wide: (i) it is one
+  family of small-term rewrite benchmarks; the share must hold across a broader
+  public/client sample. (ii) The measurement is over instances that *decide
+  within the guard* — guard-rejected large instances never reach the SAT core,
+  so the share characterizes the population where SAT-core quality actually
+  matters. (iii) Gate (a) is necessary but not sufficient: the CDCL track still
+  needs gate (b), a consistent material gap to CaDiCaL/Kissat on Axeyum-generated
+  CNF, which is not yet measured. Net: SAT time *does* dominate on realistic
+  decided QF_BV, so encoding-vs-SAT priority is now an open, data-driven question
+  rather than a settled "encodings first" — the next measurement is breadth
+  (more families) plus the CaDiCaL/Kissat comparison, not core tuning yet.
+  Resource note: relaxing the CNF guard to admit large instances multiplies
+  memory by the parallel `--jobs`; the guard ceilings and `jobs` must stay
+  bounded together (a 2M-var / 6M-clause ceiling at `--jobs 16` OOM-killed a
+  26 GB host). Broad attribution runs should keep moderate budgets and choose
+  small-instance families rather than forcing large instances through.
+- Layer attribution is also available off-corpus: `axeyum_solver::BvLayerStats`
+  lifts the per-stage counters (bit-blast, CNF encode, solve, model lift; AIG
+  and CNF sizes; clause density) into a typed view, and the
+  `scenario_pipeline_report` and `scenario_scaling` `axeyum-bench` examples
+  report it across the scenario tier so an optimization's effect on encoding
+  size and SAT cost is measured before it is committed to.
 - Fixed seeds and pinned solver versions everywhere; repeated runs with
   variance reported for anything under a few seconds.
 - Corpus-level parallelism is an execution accelerator, not a solver-quality

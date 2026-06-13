@@ -6,11 +6,21 @@
 //! before a `sat` result is accepted. Z3 is not used and unsupported lowering
 //! remains explicit rather than falling through to an oracle.
 
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
-use axeyum_bv::{BitLowerError, BitLowering, first_unsupported_op, lower_terms};
+// Monotonic clock: on wasm32 the browser has no `std` clock, so use `web-time`'s
+// drop-in `Instant` (ADR-0017). Native targets use the std clock.
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
+
+use axeyum_bv::{
+    BitLowerError, BitLowering, first_unsupported_op, first_unsupported_sort, lower_terms,
+};
 use axeyum_cnf::{
-    CnfEncoding, CnfError, SatError, SatResult, solve_with_rustsat_batsat_timeout, tseitin_encode,
+    CnfEncoding, CnfError, CnfFormula, ProofSolveOutcome, SatError, SatResult, check_drat,
+    solve_with_drat_proof, solve_with_rustsat_batsat_timeout, tseitin_encode,
 };
 use axeyum_ir::{Assignment, IrError, Sort, TermArena, TermId, TermStats, Value, eval};
 use axeyum_query::{Query, QueryPlan};
@@ -23,11 +33,14 @@ use crate::model::Model;
 
 /// Pure Rust `QF_BV` backend for the currently supported bit-blasting subset.
 ///
-/// The supported subset is exactly the subset accepted by `axeyum-bv` lowering:
-/// Bool/BV constants and symbols, Boolean connectives, BV bitwise operators,
-/// equality, `ite`, `bvcomp`, concat/extract, zero/sign extension, neg/add/sub,
-/// comparisons, shifts, and constant rotates. Multiplication, division, and
-/// remainder currently return [`SolverError::Unsupported`].
+/// The supported subset is exactly the subset accepted by `axeyum-bv` lowering,
+/// which now covers the full scalar `QF_BV` operator set: Bool/BV constants and
+/// symbols, Boolean connectives, BV bitwise operators, equality, `ite`,
+/// `bvcomp`, concat/extract, zero/sign extension, neg/add/sub/mul, unsigned and
+/// signed division and remainder (`bvudiv`/`bvurem`/`bvsdiv`/`bvsrem`/`bvsmod`),
+/// comparisons, shifts, and constant rotates. Constructs outside the scalar
+/// `QF_BV` fragment (for example arrays) would return
+/// [`SolverError::Unsupported`] with no oracle fallback.
 #[derive(Debug, Default)]
 pub struct SatBvBackend {
     stats: Option<SolveStats>,
@@ -58,6 +71,12 @@ impl SatBvBackend {
         if let Some((term, op)) = first_unsupported_op(arena, assertions) {
             return Err(SolverError::Unsupported(format!(
                 "term #{} uses unsupported pure-Rust BV operator {op:?}",
+                term.index()
+            )));
+        }
+        if let Some((term, sort)) = first_unsupported_sort(arena, assertions) {
+            return Err(SolverError::Unsupported(format!(
+                "term #{} has sort {sort} that the pure-Rust BV backend cannot bit-blast",
                 term.index()
             )));
         }
@@ -132,6 +151,10 @@ impl SatBvBackend {
             .map_err(|error| map_sat_error(&error))?;
         stats.solve = solve_start.elapsed();
 
+        if config.prove_unsat && matches!(sat_result, SatResult::Unsat(_)) {
+            verify_unsat_proof(encoding.formula(), &mut stats)?;
+        }
+
         let result = handle_sat_result(
             arena,
             assertions,
@@ -195,6 +218,11 @@ fn default_value_for_sort(sort: Sort) -> Value {
     match sort {
         Sort::Bool => Value::Bool(false),
         Sort::BitVec(width) => Value::Bv { width, value: 0 },
+        Sort::Array { index, element } => {
+            Value::Array(axeyum_ir::ArrayValue::constant(index, element, 0))
+        }
+        Sort::Int => Value::Int(0),
+        Sort::Real => Value::Real(axeyum_ir::Rational::zero()),
     }
 }
 
@@ -323,6 +351,32 @@ fn map_cnf_error(error: &CnfError) -> SolverError {
 
 fn map_sat_error(error: &SatError) -> SolverError {
     SolverError::Backend(error.to_string())
+}
+
+/// Independently re-derives `unsat` with the proof-producing SAT core and
+/// verifies its DRAT proof (ADR-0011/0012). A disagreement (the proof core
+/// finds the formula satisfiable) or a failed proof is a soundness alarm.
+fn verify_unsat_proof(formula: &CnfFormula, stats: &mut SolveStats) -> Result<(), SolverError> {
+    match solve_with_drat_proof(formula) {
+        ProofSolveOutcome::Unsat(proof) => match check_drat(formula, &proof) {
+            Ok(true) => {
+                stats.backend.push(("unsat_proof_checked".to_owned(), 1.0));
+                Ok(())
+            }
+            Ok(false) => Err(SolverError::Backend(
+                "unsat proof did not derive the empty clause".to_owned(),
+            )),
+            Err(error) => Err(SolverError::Backend(format!(
+                "unsat proof failed to check: {error}"
+            ))),
+        },
+        ProofSolveOutcome::Sat(_) => Err(SolverError::Backend(
+            "soundness alarm: adapter reported unsat but the proof core found a model".to_owned(),
+        )),
+        // The reference proof core exhausted its budget; the adapter's `unsat`
+        // still stands, it is simply not DRAT-proof-checked.
+        ProofSolveOutcome::ResourceOut => Ok(()),
+    }
 }
 
 fn push_duration_ms(stats: &mut SolveStats, name: &str, duration: Duration) {

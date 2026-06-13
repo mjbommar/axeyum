@@ -87,7 +87,7 @@ but Phase 5 now exercises the first composed pure Rust BV backend boundary:
   evaluator
   ([ADR-0006](../09-decisions/adr-0006-phase4-bit-order-and-lowering-entry-contract.md)).
 - `axeyum-bv`: term-to-AIG bit lowering with explicit term-bit and
-  symbol-input maps for the supported Bool/BV operator subset
+  symbol-input maps for the full scalar QF_BV operator set
   ([ADR-0006](../09-decisions/adr-0006-phase4-bit-order-and-lowering-entry-contract.md)).
 - `axeyum-cnf`: simple Tseitin encoding from AIG, DIMACS I/O, CNF evaluator,
   CNF-variable-to-AIG lift maps, and the first `rustsat-batsat` SAT adapter

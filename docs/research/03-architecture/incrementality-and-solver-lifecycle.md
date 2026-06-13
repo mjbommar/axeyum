@@ -1,7 +1,7 @@
 # Incrementality And Solver Lifecycle
 
 Status: draft
-Last updated: 2026-06-10
+Last updated: 2026-06-13
 
 ## Purpose
 
@@ -39,6 +39,24 @@ Out of scope:
   outlive any one solver instance, and several solver instances may reference
   one arena.
 
+## Implementation Status
+
+[ADR-0009](../09-decisions/adr-0009-incremental-sat-and-solving.md) realizes
+this model end to end (both stages, 2026-06-13):
+
+- Stage 1: `IncrementalSat` (`axeyum-cnf`) is the warm SAT layer — monotone
+  clauses, native assumptions, learned-clause reuse across solves.
+- Stage 2: `IncrementalLowering` (`axeyum-bv`, persistent AIG + memo) and
+  `IncrementalCnf` (`axeyum-cnf`, per-node Tseitin into the warm layer) make
+  bit-blast caches survive across queries, and `IncrementalBvSolver`
+  (`axeyum-solver`) is the assumptions-first `assert`/`push`/`pop`/`check`/
+  `check_assuming` front end, with push/pop compiled to selector literals and
+  every `sat` model replayed against the original terms.
+
+Remaining work is performance parity (port the sparse-CNF optimizations to the
+incremental encoder) and an activation-literal GC/rebuild policy, not the core
+lifecycle.
+
 ## Lifecycle Model
 
 ```text
@@ -73,9 +91,18 @@ Arena (terms, sorts, symbols)        long-lived, append-only
 
 ## Open Questions
 
-- [ ] Should the first release be one-shot only, with the trait already shaped
+- [x] Should the first release be one-shot only, with the trait already shaped
       for assumptions (recommended), or ship incremental from day one?
-- [ ] How does bit-blast caching interact with push/pop in the pure Rust path?
+  - Answer: one-shot `SolverBackend` first, with the query/façade shaped for
+    assumptions, then a warm incremental SAT layer added on top — not a fork.
+    See [ADR-0009](../09-decisions/adr-0009-incremental-sat-and-solving.md)
+    stage 1.
+- [x] How does bit-blast caching interact with push/pop in the pure Rust path?
+  - Answer: the persistent AIG/CNF (`IncrementalLowering` + `IncrementalCnf`)
+    grows monotonically and is never rolled back; push/pop act purely through
+    scope selector literals (assumptions), so bit-blast caches are shared across
+    scopes while assertions are activated/deactivated by assumption. See
+    [ADR-0009](../09-decisions/adr-0009-incremental-sat-and-solving.md) stage 2.
 - [ ] Should user propagators (IPASIR-UP style) be in the SAT trait v1 or a
       separate extension trait?
 

@@ -1,7 +1,7 @@
 //! Error types for term construction and evaluation.
 
 use crate::sort::Sort;
-use crate::term::SymbolId;
+use crate::term::{FuncId, SymbolId};
 
 /// Errors produced by term builders and the ground evaluator.
 ///
@@ -56,6 +56,23 @@ pub enum IrError {
     },
     /// Evaluation found no value bound for a symbol.
     UnboundSymbol(SymbolId),
+    /// A function name was redeclared with a different signature.
+    FunctionSignatureConflict {
+        /// The conflicting function name.
+        name: String,
+    },
+    /// An application supplied the wrong number of arguments for a function.
+    ArityMismatch {
+        /// The declared arity.
+        expected: usize,
+        /// The number of arguments supplied.
+        found: usize,
+    },
+    /// Evaluation found no interpretation bound for an uninterpreted function.
+    UnboundFunction(FuncId),
+    /// A quantifier ranges over a domain the evaluator cannot enumerate (an
+    /// infinite sort, or a bit-vector wider than the enumeration limit).
+    UnsupportedQuantifierDomain(Sort),
 }
 
 impl core::fmt::Display for IrError {
@@ -87,6 +104,21 @@ impl core::fmt::Display for IrError {
                 "symbol `{name}` already declared with sort {existing}, requested {requested}"
             ),
             IrError::UnboundSymbol(s) => write!(f, "no value bound for symbol #{}", s.index()),
+            IrError::FunctionSignatureConflict { name } => {
+                write!(
+                    f,
+                    "function `{name}` already declared with a different signature"
+                )
+            }
+            IrError::ArityMismatch { expected, found } => {
+                write!(f, "function expects {expected} arguments, found {found}")
+            }
+            IrError::UnboundFunction(func) => {
+                write!(f, "no interpretation bound for function #{}", func.index())
+            }
+            IrError::UnsupportedQuantifierDomain(sort) => {
+                write!(f, "cannot enumerate quantifier domain {sort}")
+            }
         }
     }
 }

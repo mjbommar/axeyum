@@ -25,8 +25,510 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 ## Status
 
-Last updated: 2026-06-12
+Last updated: 2026-06-13
 
+- Consumer-models iteration 1 recorded 2026-06-13
+  ([ADR-0008](docs/research/09-decisions/adr-0008-consumer-scenario-models.md),
+  [consumer-scenario-models note](docs/research/07-verification/consumer-scenario-models.md)):
+  added the `axeyum-scenarios` crate, a self-checking consumer-workload
+  generator whose ground truth comes from the `axeyum-ir` evaluator, never from
+  Z3. SAT scenarios are built by concrete execution and carry a witness
+  verified by evaluation; UNSAT scenarios assert negated bit-vector identities
+  proven by exhaustive small-width enumeration (or deterministic sampling above
+  `EXHAUSTIVE_BIT_LIMIT`). Three families ship (`mixing` keyed-function
+  inversion, `machine` register-machine path conditions + conflicting paths,
+  `identity` full-adder/xor-swap/de-Morgan/two's-complement), all inside the
+  supported lowering subset. A new `axeyum-solver` differential test runs the
+  whole deterministic `catalog()` through `SatBvBackend`: every scenario is
+  decided in ~1.7s with zero unknowns and zero soundness alarms, agreeing with
+  the oracle-free ground truth. The self-check caught a real generator bug
+  during bring-up. This addresses the Phase 5 stall by giving optimization a
+  realistic, scalable, oracle-free corpus that exercises the pure-Rust path
+  (rather than tuning the single `p4dfa` public frontier against Z3). Four
+  iterations are recorded (consumer models, the incremental `Solver` façade,
+  typed `BvLayerStats` + pipeline report, and a scaling profile).
+- Follow-ons recorded 2026-06-13: (1) arithmetic lowering completes the **full
+  scalar QF_BV operator set** — `bvmul` (truncated shift-and-add), unsigned
+  division/remainder `bvudiv`/`bvurem` (a combinational restoring divider with
+  SMT-LIB divide-by-zero totality), and signed `bvsdiv`/`bvsrem`/`bvsmod`
+  (sign-handling wrappers over the unsigned divider) in `axeyum-bv`, each
+  verified exhaustively against the evaluator, plus an `Arithmetic` scenario
+  family the pure-Rust backend decides. No scalar operator is unsupported any
+  more. (2) Incremental SAT stage 1
+  ([ADR-0009](docs/research/09-decisions/adr-0009-incremental-sat-and-solving.md)):
+  `IncrementalSat` in `axeyum-cnf`, a warm `rustsat-batsat` wrapper with
+  monotone clause addition, native one-shot assumptions, and selector-literal
+  push/pop, with model self-check matching the one-shot adapter. Stage 2
+  (incremental bit-blasting wiring) is the next planned step.
+- Downstream standing spot-check 2026-06-13: ran the pure-Rust backend on six
+  small real multiplication/division SMT-LIB instances from the public QF_BV
+  corpus (`bmc-bv`, `challenge`). After the full arithmetic operator set landed:
+  3 sat, 1 unsat, 2 unknown (BatSat timeouts), **0 unsupported**, 0
+  disagreements, 0 model-replay failures, 4 status agreements with the declared
+  `:status`. Before this work every one of these would have returned
+  `Unsupported`; the operator-coverage gap is now closed and the only remaining
+  gap is SAT/encoding cost — the recorded performance R&D direction (ADR-0009
+  stage 2 incremental bit-blasting and encoding reduction).
+- Incremental bit-blasting (ADR-0009 stage 2) recorded 2026-06-13: end-to-end
+  incremental solving via `IncrementalLowering` (`axeyum-bv`, persistent AIG +
+  memo), `IncrementalCnf` (`axeyum-cnf`, per-node Tseitin over the warm
+  `IncrementalSat` with selector-guarded roots), and `IncrementalBvSolver`
+  (`axeyum-solver`, `assert`/`push`/`pop`/`check`/`check_assuming` with model
+  lift + original-term replay). Decides the whole oracle-free scenario catalog
+  with zero soundness alarms and passes a symbolic-execution push/pop
+  path-exploration test. This is the key performance lever for the
+  symbolic-execution consumer: shared subterms bit-blast once and the SAT
+  solver stays warm across path queries.
+- Arrays sub-increment 1 (IR) recorded 2026-06-13
+  ([ADR-0010](docs/research/09-decisions/adr-0010-arrays-via-eager-elimination.md)):
+  the IR now has an `Array` sort and `select`/`store` with a direct
+  read-over-write evaluator (the semantic reference), backing the eager-
+  elimination plan toward QF_ABV / memory-using symbolic execution. `Value`
+  moved from `Copy` to `Clone` (array values are non-`Copy`), rippled across all
+  crates.
+- Arrays sub-increments 2 & 3-core recorded 2026-06-13: `eliminate_arrays`
+  (`axeyum-rewrite`) reduces QF_ABV to QF_BV by read-over-write + Ackermann with
+  model projection, and `axeyum-solver/tests/arrays.rs` shows **QF_ABV solving
+  end to end** (elimination → `SatBvBackend` → projected model → original-query
+  evaluator replay) on aliasing loads, read-after-write (UNSAT), and a
+  satisfiable aliasing load — all soundness-checked oracle-free. Elimination is
+  now a first-class entry point (`axeyum_solver::check_with_array_elimination`),
+  and a memory-using symbolic-execution client
+  (`tests/symbolic_execution_memory.rs`) solves a write-then-load QF_ABV query
+  and confirms the found inputs + reconstructed memory by concrete
+  re-execution. Remaining array work is QF_ABV scenarios, bench-harness wiring,
+  and corpus blow-up measurement.
+- UNSAT proof checking recorded 2026-06-13
+  ([ADR-0011](docs/research/09-decisions/adr-0011-drat-unsat-proof-checking.md)):
+  `axeyum-cnf` now has an independent DRAT checker (`check_drat`/`parse_drat`,
+  RUP + RAT) — the trusted kernel that discharges `unsat`, depending only on the
+  formula and proof. This is the most identity-critical trust piece (`sat` is
+  replay-checked; `unsat` was previously unchecked). A DRAT *producer*
+  (proof-capable adapter or the custom CDCL core) is the remaining step to make
+  `unsat` high-assurance end to end.
+- Proof-producing SAT core recorded 2026-06-13
+  ([ADR-0012](docs/research/09-decisions/adr-0012-proof-producing-sat-core.md)):
+  `axeyum_cnf::solve_with_drat_proof` (a **1-UIP CDCL** core) emits DRAT
+  that `check_drat` verifies, giving **end-to-end checked `unsat` in pure Rust**
+  — the full "untrusted fast search, trusted small checking" identity now holds
+  for both `sat` (model replay) and `unsat` (DRAT proof + checker). The core is
+  a correctness reference; `rustsat-batsat` stays the fast default. This is now
+  wired into `SatBvBackend` via `SolverConfig::prove_unsat`: QF_BV `unsat` is
+  high-assurance end to end (term → AIG → CNF → proof core → DRAT → checker),
+  with a soundness alarm on any disagreement.
+- First downstream consumer recorded 2026-06-13: a symbolic-execution client
+  (`axeyum-solver/tests/symbolic_execution.rs`) — a register-VM symbolic
+  executor that forks at branches, maintains the path condition incrementally in
+  `IncrementalBvSolver` (push/pop), prunes infeasible branches by `check`, and
+  finds inputs reaching a target. Every solver-found input is cross-checked by
+  **concrete re-execution** of the program (unicorn-style oracle-free ground
+  truth). Covers single-stage and two-stage keychecks, a multiplication/
+  subtraction check, and infeasible-target pruning. This is the first Phase 7
+  infosec-workflow client example (memory-using programs still need arrays) and
+  validates the whole stack end to end against the real use case.
+- Watched-literal CDCL recorded 2026-06-13: the proof-producing core
+  (`solve_with_drat_proof`) now uses two-watched-literal propagation on top of
+  1-UIP learning, validated by a 400-CNF randomized differential test against the
+  `rustsat-batsat` adapter (agree on sat/unsat; `sat` models satisfy; `unsat`
+  proofs pass `check_drat`). Restarts/activity heuristics and becoming the
+  default solver stay benchmarking-gated (ADR-0012 follow-up).
+- Uninterpreted functions sub-increment 1 (IR) recorded 2026-06-13
+  ([ADR-0013](docs/research/09-decisions/adr-0013-uninterpreted-functions.md)):
+  the IR now has first-class uninterpreted functions — `declare_fun` with a
+  scalar signature, `Op::Apply`/`TermArena::apply`, and a `FuncValue`
+  interpretation carried by the model that the ground evaluator honors (the EUF
+  semantic reference). An exhaustive width-3 test confirms the defining
+  congruence property `x = y → f(x) = f(y)`, exactly what the planned Ackermann
+  reduction will encode (reusing the array-elimination machinery). The Z3 oracle
+  rejects `Op::Apply` (UF is eliminated before solving, like arrays); the
+  SMT-LIB writer emits `declare-fun` and selects `QF_UFBV`/`QF_AUFBV`.
+- Uninterpreted functions sub-increment 2 (elimination + solving) recorded
+  2026-06-13 (ADR-0013): `axeyum_rewrite::eliminate_functions` reduces
+  `QF_UFBV` to `QF_BV` by **Ackermann congruence reduction** (each distinct
+  application → a fresh scalar symbol; each pair of same-function applications →
+  `args_i = args_j → f_i = f_j`) with `FuncValue` model projection, reusing the
+  array-elimination shape. `axeyum_solver::check_with_function_elimination` is
+  the first-class entry point (eliminate → `SatBvBackend` → projected
+  interpretation → original-query evaluator replay), and `Model` now carries
+  function interpretations. End-to-end `QF_UFBV` tests pass oracle-free:
+  congruence-forced `unsat` (`x = y ∧ f(x) ≠ f(y)`; pinned `f(x)=aa, f(y)=bb`
+  with `x=y`), replayed `sat` (`f(x) ≠ f(y)`), and binary-function congruence.
+  Remaining EUF work: scenarios, the SMT-LIB parser side, and composing array +
+  function elimination for `QF_AUFBV`.
+- Uninterpreted functions SMT-LIB I/O recorded 2026-06-13 (ADR-0013): the
+  `axeyum-smtlib` parser now accepts n-ary `declare-fun` (scalar signatures) and
+  function applications (builtins keep priority over declared names), completing
+  a parse → write → parse round-trip for `QF_UFBV` with the existing writer.
+  Function parameters over array sorts are still rejected (functions are scalar).
+  Remaining EUF work: `QF_UFBV` scenarios and `QF_AUFBV` composition.
+- `QF_AUFBV` theory composition recorded 2026-06-13 (ADR-0010 + ADR-0013):
+  `axeyum_solver::check_with_arrays_and_functions` solves formulas mixing arrays
+  and uninterpreted functions by **composing the two eager passes** — array
+  elimination (`QF_AUFBV` → `QF_UFBV`) then function elimination (`QF_UFBV` →
+  `QF_BV`) — and projects the `sat` model back through both (functions first,
+  since a `select` index may mention a function application), replaying against
+  the original mixed query. Oracle-free end-to-end tests: cross-theory
+  congruence `unsat` (`mem[i]=v ∧ f(v)=aa ∧ f(mem[i])≠aa`), store-then-apply
+  `sat` with replay, distinct outputs over distinct loads. This is the first
+  two-theory composition — the eager precursor to a general combination
+  framework (Nelson-Oppen / CDCL(T)). Array *equality* remains deferred
+  (composition handles mixed formulas, not extensional array equality).
+- `QF_UFBV` scenarios recorded 2026-06-13 (ADR-0013): a `Family::Function` in
+  `axeyum-scenarios` (`function_chain` nested applications, `function_lookup`
+  unary with deliberate argument collisions exercising congruence,
+  `function_binary_merge` two-argument map) plus `function_catalog`, all
+  satisfiable by construction with the function table carried as the witness
+  (verified by the existing SAT self-check). A solver-crate differential test
+  decides the whole catalog through `check_with_function_elimination`,
+  oracle-free. **The EUF rollout now matches the array track** end to end (IR,
+  evaluator, elimination, solver entry point, SMT-LIB I/O, scenarios, `QF_AUFBV`
+  composition); array equality is the lone deferred theory feature.
+- Arithmetic sub-increment 1 (IR + evaluator) recorded 2026-06-13
+  ([ADR-0014](docs/research/09-decisions/adr-0014-first-arithmetic-fragment.md)):
+  the IR now has a first-class **`Int` sort** with integer constants and the
+  linear operator set (`int_add`/`int_sub`/`int_neg`/`int_mul` and the order
+  comparisons `int_lt`/`int_le`/`int_gt`/`int_ge`; `Eq`/`Ite` already
+  polymorphic), plus a `Value::Int` and a ground evaluator that interprets `Int`
+  as mathematical integers (exact within the `i128` reference range; out-of-range
+  intermediates panic as a usage error, the bounded-LIA contract). The
+  evaluator semantics are verified exhaustively over a small integer range. The
+  `Int` sort rippled across all crates (mirroring the earlier `Value` and
+  `Op::Apply` ripples); the pure-Rust BV backend (now via the new
+  `first_unsupported_sort` preflight) and the Z3 oracle reject `Int` with a clear
+  `Unsupported`, exactly as arrays and EUF were staged before their lowering
+  landed. This opens the arithmetic rung of the north-star ladder. Remaining
+  `QF_LIA`: the bounded bit-blasting decision procedure (`Int` → `QF_BV` at a
+  chosen width, with `sat` replay and out-of-range → `unknown`), then scenarios
+  and SMT-LIB I/O.
+- `QF_LIA` bounded bit-blasting decision procedure recorded 2026-06-13
+  (ADR-0014): `axeyum_rewrite::blast_integers` maps integers to signed width-`B`
+  bit-vectors (`int_add/sub/neg/mul` → `bvadd/bvsub/bvneg/bvmul`,
+  `int_lt/le/gt/ge` → `bvslt/bvsle/bvsgt/bvsge`), and
+  `axeyum_solver::check_with_int_blasting` solves with `SatBvBackend`, **reads
+  the model back as exact integers, and replays the original integer assertions**
+  with the ground evaluator. Soundness contract enforced end to end: BV `sat` +
+  exact replay → `sat`; replay failure from width-`B` wraparound → `unknown`; BV
+  `unsat` → `unknown` (never `unsat`, since an unbounded model may exist);
+  out-of-range constant → `unknown`. Oracle-free end-to-end tests cover
+  satisfiable linear equations (incl. negative solutions, two-variable
+  relations), contradictory bounds → `unknown`, and out-of-range → `unknown`.
+  This is the first **decision procedure for a new theory built by reduction to
+  the trusted core** — `QF_LIA` `sat` is now checkable end to end. Remaining
+  `QF_LIA`: scenarios and SMT-LIB I/O.
+- `QF_LIA` scenarios + SMT-LIB I/O recorded 2026-06-13 (ADR-0014): a
+  `Family::Integer` in `axeyum-scenarios` (`integer_system` boxed/ordered/
+  sum-pinned systems, `integer_equation` boxed linear equations) with
+  `integer_catalog`, all satisfiable by construction and decided through
+  `check_with_int_blasting` in a solver differential test (the boxing keeps the
+  only in-range models near the witness, so no spurious overflow `unknown`). The
+  SMT-LIB parser/writer now handle the `Int` sort, integer literals, `(- n)`
+  negation, `+`/`-`/`*`, and chainable `<`/`<=`/`>`/`>=`, with a `QF_LIA`
+  round-trip. **The `QF_LIA` rollout now matches the array/EUF tracks** end to
+  end (IR, evaluator, decision procedure, solver entry point, scenarios, SMT-LIB
+  I/O).
+- Full theory composition (`QF_AUFLIA`) recorded 2026-06-13 (ADR-0010 + 0013 +
+  0014): `axeyum_solver::check_with_all_theories` runs all three eager
+  reductions in dependency order — array elimination (`QF_AUFLIA` → `QF_UFLIA`),
+  function elimination (`QF_UFLIA` → `QF_LIA`), integer bit-blasting (`QF_LIA` →
+  `QF_BV`) — solves the pure-`QF_BV` result, and projects the model back in
+  reverse (integer read-back → function interpretations → array values) before
+  replaying against the original mixed query. It subsumes every single-theory
+  entry point (unused reductions act as the identity). The soundness contract is
+  branch-correct: array/function elimination are exact, so an **integer-free**
+  `unsat` is reported as `unsat` and a replay failure is a soundness alarm; an
+  **integer-bearing** `unsat` or overflowing replay is `unknown`. Oracle-free
+  end-to-end tests: full arrays+functions+integers `sat` with replay,
+  integer-free congruence → exact `unsat`, mixed integer contradiction →
+  `unknown`, pure-BV pass-through. This is the **eager precursor to a general
+  theory-combination framework** (Nelson-Oppen / CDCL(T)).
+- Linear real arithmetic sub-increment 1 (IR + evaluator) recorded 2026-06-13
+  ([ADR-0015](docs/research/09-decisions/adr-0015-linear-real-arithmetic.md)):
+  the project's **first non-`QF_BV` theory**. A pure-Rust exact `Rational`
+  (`i128` numerator/denominator, normalized, `Neg`/`Add`/`Sub`/`Mul`/`Ord`,
+  overflow-checked) backs a first-class **`Real` sort** with rational constants
+  and the linear operator set (`real_add`/`real_sub`/`real_neg`/`real_mul` and
+  order comparisons; `Eq`/`Ite` polymorphic), plus a `Value::Real` and a ground
+  evaluator doing **exact rational arithmetic** (the semantic reference; checked
+  against an exact reference over a grid of fractions). No floats — the model
+  must stay exactly checkable. The `Real` sort rippled across all crates;
+  backends reject `Real` via `first_unsupported_sort`/the oracle, as integers
+  were before bit-blasting. Remaining `QF_LRA`: the **exact-rational simplex**
+  decision procedure (reals do **not** bit-blast — this is the first procedure
+  not reducible to the trusted `QF_BV` kernel, guarded by `sat` model replay),
+  then scenarios and SMT-LIB I/O.
+- `QF_LRA` decision procedure recorded 2026-06-13 (ADR-0015):
+  `axeyum_solver::check_with_lra` decides **conjunctive** `QF_LRA` by
+  **exact-rational Fourier–Motzkin elimination** — the project's first decision
+  procedure not reducible to the `QF_BV` kernel. It parses assertions into linear
+  atoms (`and`/`not` pushed in, equality → two inequalities; `or`/disequality →
+  `Unsupported`, needing DPLL(T)), eliminates variables over exact `Rational`s,
+  and reconstructs a rational model by forward substitution. **Every `sat` model
+  is replayed through the ground evaluator** (the trust anchor — a
+  Fourier–Motzkin bug cannot yield an unsound `sat`); `unsat` is lower-assurance
+  pending a Farkas certificate. Oracle-free end-to-end tests: strict interval
+  with a fractional witness (`x ∈ (1/2,1)`), empty interval → `unsat`,
+  two-variable system, `3x = 1` pinning `x = 1/3`, strict cycle → `unsat`,
+  disjunction → `Unsupported`. Remaining `QF_LRA`: scenarios + SMT-LIB I/O, and
+  later DPLL(T) + δ-rational simplex for full Boolean structure and scale.
+- `QF_LRA` scenarios + SMT-LIB I/O recorded 2026-06-13 (ADR-0015): a
+  `Family::Real` in `axeyum-scenarios` (`real_system` boxed/ordered/sum-pinned
+  rational systems, `real_ratio_equation` pinning fractional witnesses) with
+  `real_catalog`, decided through `check_with_lra` in a solver differential test.
+  The SMT-LIB parser/writer now handle the `Real` sort, decimal literals
+  (`n.ddd`), `(/ a b)` rational division, `(- n)` negation, and **sort-directed
+  `+`/`-`/`*`/comparisons** that coerce integer numerals to `Real` in real
+  contexts (the standard SMT-LIB numeral coercion), with a `QF_LRA` round-trip
+  (integer-valued reals render as `n.0`). **The `QF_LRA` rollout now matches the
+  other theories** end to end, modulo the deferred DPLL(T) Boolean structure and
+  a δ-rational simplex for scale. **All five core theories (`QF_BV`, arrays,
+  EUF, `QF_LIA`, `QF_LRA`) now span IR → evaluator → procedure → solver entry
+  point → scenarios → SMT-LIB I/O.**
+- Lazy SMT / DPLL(T) over `QF_LRA` recorded 2026-06-13 (ADR-0015 follow-on):
+  `axeyum_solver::check_with_lra_dpll` is the **first theory-combination
+  engine** — it lifts the conjunction-only limit by Boolean-abstracting each real
+  order atom to a fresh proposition, solving the propositional skeleton with
+  `SatBvBackend`, checking the chosen atom literals with the conjunctive
+  `check_with_lra`, and learning a blocking clause on each theory conflict until
+  SAT and theory agree (or the skeleton is exhausted → `unsat`). Termination is
+  by finitely many atom assignments; **every `sat` is replayed against the
+  original assertions** (trust anchor). Oracle-free end-to-end tests: a
+  disjunction of real constraints (previously `Unsupported`) now decides, a
+  feasible-branch case split, a Boolean-unsatisfiable combination → `unsat`,
+  mixed Boolean variables + theory atoms, and pure conjunctions. A subtle
+  invariant was caught and fixed (the SAT backend completes all declared symbols
+  to defaults, so only Boolean values are taken from the propositional model —
+  the theory owns the real assignment). This is the architecture for full
+  theory combination; next is generalizing it across theories (Nelson-Oppen) and
+  adding equality/disequality.
+- Unified quantifier-free dispatcher recorded 2026-06-13:
+  `axeyum_solver::check_auto` is the **single front door** for any supported
+  quantifier-free query — it scans the theory features and routes: anything over
+  bit-vectors/arrays/uninterpreted-functions/bounded-integers (with arbitrary
+  Boolean structure, handled natively by the bit-blaster) goes to
+  `check_with_all_theories`; anything over reals goes to the lazy-SMT
+  `check_with_lra_dpll`. A query mixing reals with the bit-blasted theories is
+  reported `Unsupported` (true Nelson-Oppen real+other combination is future
+  work) rather than answered unsoundly. Tests route a pure-BV query, a full
+  `QF_AUFLIA` array+function+integer query, and a real disjunction to the right
+  engines, and reject a mixed real+BV query. This ties the whole solver together
+  for the downstream consumer: one call decides any supported logic.
+- Quantifiers sub-increment 1 (IR + evaluator) recorded 2026-06-13
+  ([ADR-0016](docs/research/09-decisions/adr-0016-quantifiers-binder-representation.md)):
+  the **jump from decision procedures toward general reasoning**. Quantifiers use
+  **named binders** (`Op::Forall(SymbolId)`/`Op::Exists(SymbolId)` over a `Bool`
+  body, reusing the symbol/`Assignment` machinery), with `TermArena::forall`/
+  `exists` builders and a ground evaluator that **enumerates the bound variable's
+  finite domain** (`Bool`, `BitVec(w)` up to `2^16`) with short-circuiting;
+  infinite domains (`Int`/`Real`/arrays) are an `UnsupportedQuantifierDomain`
+  error. Tested: Boolean tautology/contradiction quantifiers, bit-vector
+  `forall`/`exists` over all values, nested `forall x. exists y. x = y`, and a
+  real-domain `forall` correctly erroring. The `Op` encoding localized the
+  cross-crate ripple; backends reject quantified (non-QF) formulas, and the
+  SMT-LIB writer renders binder form. Remaining: quantifier **solving**
+  (instantiation / E-matching on the DPLL(T) core) and the SMT-LIB parser side.
+- Quantifier solving by finite-domain expansion recorded 2026-06-13 (ADR-0016):
+  `axeyum_rewrite::expand_quantifiers` rewrites each finite-domain quantifier to
+  the conjunction/disjunction of its instances (`BitVec` capped at `2^10`), and
+  `axeyum_solver::check_with_quantifiers` expands → dispatches via `check_auto` →
+  **replays the original quantified formula through the enumerating evaluator**
+  (trust anchor). Complete for finite domains. Oracle-free end-to-end tests: a
+  universal tautology → `sat`, a false universal → `unsat`, an existential
+  constraining a free variable, nested `forall x. exists y. x = y` → `sat`, and
+  an infinite domain → `Unsupported`. **Quantified finite-domain formulas now
+  decide end to end.** Remaining: E-matching for infinite-domain quantifiers and
+  the SMT-LIB parser side.
+- WebAssembly support recorded 2026-06-13
+  ([ADR-0017](docs/research/09-decisions/adr-0017-wasm-target-support.md)): the
+  default library stack — IR, AIG, BV, CNF, query, rewrite, SMT-LIB, and the
+  pure-Rust SAT solver — **builds and runs on WebAssembly** (browser and WASI),
+  enabling a sandboxed "untrusted fast search, trusted small checking"
+  deployment. This is a direct payoff of the no-C/C++-default-dep Hard Rule (the
+  `z3` C++ backend stays feature-gated off). The only change needed was a
+  target-conditional monotonic clock: on `wasm32` the timing/timeout code uses
+  `web-time`'s drop-in `Instant` (the browser has no `std` clock), via a
+  `cfg(target_arch = "wasm32")` dependency and import in `axeyum-cnf` and
+  `axeyum-solver`; native builds are untouched. Verified both
+  `cargo build --target wasm32-unknown-unknown` (all default crates) and the full
+  native gate. Determinism is unaffected (the clock only bounds timeouts/
+  telemetry, never results).
+- SMT-LIB quantifier parsing recorded 2026-06-13 (ADR-0016): the parser accepts
+  `(forall ((x T) ..) body)` / `(exists ..)` — each bound variable becomes a
+  **uniquely-named fresh symbol** (no capture of free symbols or sibling
+  binders), scoped to the body via the `let`-style scope stack, then wrapped in
+  nested `forall`/`exists`. With the existing writer this gives a quantifier
+  parse → write → parse round-trip; a nested-binding test confirms two separate
+  `x` binders do not collide. **The quantifier rollout now matches the other
+  theories end to end** (IR, evaluator, expansion solving, SMT-LIB I/O);
+  E-matching for infinite-domain quantifiers is the remaining piece.
+- Exportable `unsat` proof artifacts recorded 2026-06-13 (ADR-0011/0012
+  follow-on): `axeyum_cnf::write_drat` serializes a DRAT proof to the standard
+  textual format (inverse of `parse_drat`, accepted by `drat-trim`), and
+  `axeyum_solver::export_qf_bv_unsat_proof` bit-blasts a `QF_BV` query, runs the
+  proof-producing core, and on `unsat` returns an `UnsatProof { dimacs, drat }` —
+  the CNF in DIMACS and the refutation in DRAT, **self-verified by the in-tree
+  `check_drat` and independently re-checkable**. Tests: an unsat query exports a
+  certificate whose DRAT re-parses and refutes the re-parsed DIMACS (checked
+  independently of the producing solver); a sat query yields no proof; a
+  non-bit-blastable query is `Unsupported`. This is the first **exportable,
+  externally-auditable evidence artifact** — the "proving" arm of the north
+  star at the clausal layer. Certifying the bit-blast reduction itself (term →
+  AIG → CNF) is the future full SMT-level proof step.
+- Real equality/disequality in lazy SMT recorded 2026-06-13 (ADR-0015): the
+  DPLL(T) path now handles real `(= a b)` atoms by abstracting them to
+  `(a <= b) and (a >= b)`, so equality **and disequality** (`a < b or a > b`,
+  the negation) flow through the order-atom machinery and the SAT case split —
+  no special disequality reasoning in the Fourier–Motzkin solver. `check_auto`
+  thus decides arbitrary Boolean combinations of real equalities/inequalities.
+  Tests: a disjunction of real equalities, `x != 0 ∧ x <= 0 ∧ x >= 0` → `unsat`,
+  and a satisfiable disequality. Remaining `QF_LRA`: δ-rational simplex for scale
+  and Nelson-Oppen with the bit-blasted theories.
+- Self-checking evidence envelope recorded 2026-06-13 (ADR-0005 follow-through):
+  `axeyum_solver::Evidence` makes the "trusted small checking" identity
+  consumer-facing — a result paired with the artifact that justifies it and a
+  single `Evidence::check(arena, assertions)` that **re-validates it
+  independently**: a `sat` model is replayed through the ground evaluator; an
+  `unsat` DRAT certificate (DIMACS + DRAT) is re-parsed and re-run through the
+  trusted `check_drat` kernel; `unknown`/uncertified-`unsat` check vacuously.
+  `produce_qf_bv_evidence` runs the pure-Rust `QF_BV` pipeline and packages the
+  outcome (with a soundness alarm if backend and proof core disagree). Tests:
+  sat evidence replays, unsat evidence re-checks via DRAT, and a **tampered
+  (wrong) sat model fails its own `check`** — the replay guard catching a bogus
+  certificate. This concretizes ADR-0005's long-recorded "layered, checkable
+  evidence envelope" as a real type. `produce_qf_bv_evidence` now returns an
+  `EvidenceReport` pairing the evidence with **versioned `Provenance`**
+  (semantics version, backend identity, assertion count, and the resource-budget
+  config) so a run is reproducible and the evidence interpretable later.
+- Term-level `unsat` certification by enumeration recorded 2026-06-13:
+  `axeyum_solver::certify_qf_bv_by_enumeration` is the **trust dual of model
+  replay** — for small `QF_BV`/Boolean instances it enumerates every assignment
+  over the finite symbol domain and evaluates the original assertions with the
+  ground evaluator alone; if none satisfies them, that is an **oracle-free,
+  term-level `unsat` certificate independent of the bit-blaster, CNF encoder, and
+  SAT solver** (it uses only `axeyum-ir`). It returns a model when satisfiable
+  and `DomainTooLarge` above the bit budget. Tests: `x&1=1 ∧ x&1=0` → certified
+  unsat (16 cases), a sat model found, an oversized 64-bit domain reported, and
+  the xor-commutativity identity certified. This complements the scalable DRAT
+  proof (which certifies only the clausal layer) with a small-instance check at
+  the term level — closing the "certify beyond the clausal layer" gap for small
+  queries using the most-trusted component.
+- Disjoint theory combination recorded 2026-06-13: `check_auto` now decides a
+  query mixing reals with the bit-blasted theories when the two parts are
+  **variable-disjoint** (Nelson-Oppen's base case) — it partitions assertions
+  into a real group and a bit-blasted group, confirms no assertion is itself
+  entangled and the groups share no symbols, solves each with its engine
+  (`check_with_lra_dpll` / `check_with_all_theories`), merges the models (taking
+  each symbol from its owning group to avoid the backends' default-completion
+  overwriting the other engine's assignment), and replays the whole original
+  query. Genuinely entangled queries (a single mixed formula, or a shared
+  Boolean/variable link) stay `Unsupported`. Tests: disjoint real+BV → `sat`
+  combined, one part unsat → `unsat`, shared-Bool link → `Unsupported`, entangled
+  single assertion → `Unsupported`. This is the first **theory-combination across
+  the bit-blast/exact-arithmetic boundary** (general Nelson-Oppen with shared
+  equalities remains future work).
+- Quantifier instantiation for infinite domains recorded 2026-06-13 (ADR-0016):
+  `axeyum_rewrite::instantiate_universals` performs **enumerative ground
+  instantiation** — each top-level `forall x. body` becomes the conjunction of
+  `body[x := t]` over the formula's ground terms of `x`'s sort — and
+  `axeyum_solver::prove_unsat_by_instantiation` solves the result via
+  `check_auto`. Instantiation only weakens, so a returned `unsat` transfers
+  soundly to the original (a satisfiable instantiation is honest `unknown`; a
+  quantifier-free query decides exactly). This **refutes infinite-domain `Real`
+  universals that finite-domain expansion cannot enumerate**; integer universals
+  degrade to `unknown` (bounded blasting's unsat-in-range is `unknown`, ADR-0014).
+  Tests: a real universal refuted (`∀r. r<1` with ground `1`), integer-universal
+  bounded-`unknown`, satisfiable instantiation → `unknown`, and QF decided
+  exactly. Trigger-based E-matching is the scalable successor.
+- General real + bit-blasted theory combination recorded 2026-06-13: the
+  lazy-SMT loop `check_with_lra_dpll` is **generalized into a complete
+  combination of `QF_LRA` with the bit-blasted theories** (BV/arrays/EUF/bounded
+  integers). Key observation: reals share **no sort** with those theories, so
+  there are no interface equalities to propagate — the only coupling is
+  propositional, and a SAT-driven case split over the shared Boolean structure is
+  a complete Nelson-Oppen combination. Implementation: the abstractor now
+  abstracts **only real atoms** to fresh propositions and leaves every non-real
+  subterm intact, and the loop decides the skeleton with
+  `check_with_all_theories` (which handles bv/array/func/int natively) instead of
+  the bare SAT backend; the LRA theory solver checks the real-atom literals and
+  learns blocking clauses on conflict; the combined model (reals from LRA, the
+  rest from the bit-blaster) is replayed against the original query. This
+  **subsumes the earlier disjoint-only handler** — `check_auto` now decides
+  *any* mixed real + bit-blasted query (since real↔bit-vector atoms can't share a
+  term, every mix is decidable). Tests updated: a real+BV formula and a
+  Boolean-linked `(p ∨ r>0) ∧ (¬p ∨ b=1)` now both decide `sat`.
+- Unified `solve` front door recorded 2026-06-13: `axeyum_solver::solve` is the
+  **single entry point for any supported query** — quantifier-free or quantified,
+  over any theory combination. It routes: quantifier-free → `check_auto`
+  (lazy-SMT when reals present, bit-blasting composition otherwise); quantified →
+  `check_with_quantifiers` (finite-domain expansion, complete for Bool/BV), with
+  a sound `prove_unsat_by_instantiation` fallback when a quantifier ranges over an
+  infinite domain. One call now decides `QF_BV`, mixed real+BV, finite-domain
+  quantifiers, and infinite-domain refutation — tested across all four. This is
+  the consumer-facing capstone: "one call decides anything supported," with model
+  replay as the universal trust anchor.
+- SMT-LIB text front door recorded 2026-06-13 (ADR-0018): `axeyum_solver::solve_smtlib`
+  closes the real-world end-to-end path — **SMT-LIB 2 text in, a checked
+  `sat`/`unsat`/`unknown` out**. It parses with `axeyum-smtlib` (now a production
+  dependency of the solver crate, acyclic + wasm-clean) and decides with `solve`,
+  returning `SmtLibOutcome { result, logic, expected_status }` so a caller can
+  cross-check against the script's own `(set-info :status ...)`. New
+  `SolverError::Parse` variant keeps the whole text→answer path under one error
+  type. Integration tests (`tests/smtlib.rs`) drive real SMT-LIB text for QF_BV
+  sat, QF_BV unsat, a quantified script, and a malformed-input parse error.
+  Foundational DAG + support matrix updated to record the new edge and row.
+- CDCL-priority gate (a) made falsifiable 2026-06-13: `axeyum-bench` artifact
+  bumped to version 14 with a corpus-level `summary.layer_attribution` block —
+  per-stage seconds and shares (bit-blast / CNF encode / SAT solve / model lift)
+  over decided pure-Rust (`sat-bv`) instances, plus an explicit `sat_dominates`
+  boolean vs a documented 0.5 threshold. The four stages are non-overlapping and
+  sum to the pipeline wall time (`translate` = `bit_blast + cnf_encode`, not
+  double-counted); the block is `null` when no `sat-bv` instance decided.
+  **Measured on the micro corpus: SAT share ≈0.31, encoding stages ≈0.57 →
+  `sat_dominates: false`.** This is the methodology-required evidence for the
+  CDCL track: the micro tier (3 trivial instances) shows encoding-dominated
+  time, but a **public QF_BV slice now reverses that**: on
+  `20190311-bv-term-small-rw-Noetzli` (1416 decided `sat-bv` instances, full
+  ground-truth agreement, 0 replay failures) the SAT-solve share is **~0.95**
+  (bit-blast ~1.6%, CNF encode ~3.1%) → `sat_dominates: true`. So gate (a) holds
+  on realistic decided QF_BV; the "encodings first" priority is now an open,
+  data-driven question, not settled. Remaining before acting on CDCL: (i) breadth
+  — confirm the share across more public/client families; (ii) gate (b) — a
+  CaDiCaL/Kissat gap on Axeyum CNF, not yet measured. Core tuning still does NOT
+  jump the queue on one family alone. Methodology doc updated (artifact v14 +
+  micro-vs-public findings + a resource-governance note: relaxed CNF budgets ×
+  high `--jobs` OOM-killed the host once; keep budgets and jobs bounded
+  together).
+- `QF_LRA` Farkas `unsat` certificates recorded 2026-06-13 (ADR-0015
+  follow-through): `check_with_lra` now threads nonnegative Farkas multipliers
+  through Fourier–Motzkin elimination, so every `unsat` carries a
+  `FarkasCertificate` — a nonnegative combination of the original linear
+  constraints that collapses to a constant contradiction (`0 < 0` or
+  `0 <= -c`, `c > 0`). The certificate is rebuilt independently of the
+  elimination (depending only on the collected atoms and the multipliers) and
+  **self-checked via `FarkasCertificate::verify` before `unsat` is returned**;
+  a failed check is a `SolverError::Backend` soundness alarm. This is the
+  exact-arithmetic dual of DRAT for `QF_BV`: a Fourier–Motzkin bug can no more
+  produce an unsound `unsat` than it can an unsound `sat`. Because the whole
+  lazy-SMT/DPLL(T) real path routes theory checks through `check_with_lra`,
+  every real-theory conflict is now certificate-checked automatically. The
+  DPLL(T) loop also uses the certificate for **theory-conflict minimization**:
+  the atoms with a nonzero Farkas multiplier are exactly the infeasible core, so
+  it learns a blocking clause over just that core (a sound, strictly stronger
+  lemma that prunes every assignment sharing the core, not only the current one)
+  instead of negating the whole atom assignment — faster convergence at no
+  soundness cost. `lra_farkas_certificate` exposes the certificate for external
+  auditing.
+  Oracle-free tests: empty interval / strict cycle / conflicting equalities
+  each yield a verifying certificate, a `sat` query yields none, and a tampered
+  certificate (dropped/negative/zeroed multiplier, or a hand-made
+  non-refutation) is rejected by the independent checker. **This closes the
+  last lower-assurance result type — all of `sat` (model replay), `QF_BV`
+  `unsat` (DRAT + checker), and now `QF_LRA` `unsat` (Farkas + checker) are
+  independently checkable.** The certificate is also wired into the
+  consumer-facing `Evidence` envelope: a new `Evidence::UnsatFarkas` variant and
+  `produce_lra_evidence` give a `QF_LRA` result whose single `Evidence::check`
+  re-runs the independent Farkas verifier (the exact-arithmetic dual of the
+  envelope's DRAT route), with tamper-rejection tests. A δ-rational simplex for
+  scale remains the open `QF_LRA` follow-up.
 - Phase: **Phase 5 first pure-Rust backend slice.** M0, Phase 1, SMT-LIB
   ingestion/export, the micro-corpus benchmark harness, the public QF_BV
   baseline, and the Phase 3 query/rewrite/evidence entry contracts are
@@ -372,7 +874,8 @@ Last updated: 2026-06-12
   theories. Use that note before adding public operators, rewrites,
   encodings, backends, proof artifacts, or logic fragments.
 - Workspace: `axeyum-ir`, `axeyum-aig`, `axeyum-bv`, `axeyum-cnf`,
-  `axeyum-query`, `axeyum-rewrite`, `axeyum-solver`, `axeyum-smtlib`, and
+  `axeyum-query`, `axeyum-rewrite`, `axeyum-scenarios`, `axeyum-solver`,
+  `axeyum-smtlib`, and
   `axeyum-bench`, edition 2024, MSRV 1.85, workspace lints (`unsafe_code`
   denied, clippy pedantic). CI workflow covers fmt, clippy, tests,
   micro-corpus benchmark smoke, MSRV check, rustdoc, cargo-deny, and docs
@@ -1122,7 +1625,319 @@ In order; check off and date as completed.
       and measured a modest focused `StringMatching/string1x16.3` frontier
       reduction. The user requested commit/push before a full public v13 run,
       so this is focused selector evidence, not a support expansion.
-- [ ] **NEXT: Phase 5 supported-slice expansion:** use the version 11
+- [x] **Consumer-models iteration 1 — 2026-06-13:** added the
+      `axeyum-scenarios` crate (self-checking, oracle-free SAT/UNSAT consumer
+      workloads grounded in concrete execution and bounded-verified identities),
+      a deterministic `catalog()`, crate self-check tests, and an
+      `axeyum-solver` differential test that decides the whole catalog through
+      `SatBvBackend` with zero unknowns and zero soundness alarms. Recorded in
+      ADR-0008 and the consumer-scenario-models verification note. Establishes
+      a realistic, scalable, oracle-free corpus for the interface and
+      optimization-architecture iterations.
+- [x] **Consumer-models iteration 2 (interfaces) — 2026-06-13:** added the
+      high-level incremental `Solver` façade in `axeyum-solver` (assert /
+      assert_all / push / pop / check / check_assuming, with `last_stats` and
+      capability passthrough) and ergonomic `SolverConfig` builder methods
+      (`with_timeout`, `with_node_budget`, CNF budgets, etc.). The façade is
+      incremental at the interface level (SMT-LIB push/pop scopes and one-shot
+      `check_assuming` assumptions) over the still-one-shot backend, so a future
+      incremental backend drops in without changing consumer code. Tests cover
+      push/pop scope restoration, assumption non-persistence, and driving the
+      whole `axeyum-scenarios` catalog through the façade. A true incremental
+      SAT backend (native assumption literals, clause reuse) remains a separate
+      ADR-gated step.
+- [x] **Consumer-models iteration 3 (abstraction/optimization architecture) —
+      2026-06-13:** added the typed `BvLayerStats` view in `axeyum-solver`,
+      lifting the previously stringly-typed per-stage counters (bit-blast,
+      cnf-encode, solve, model-lift; AIG inputs/nodes, CNF variables/clauses,
+      clause density) into a first-class, regression-tested abstraction. Added
+      the `scenario_pipeline_report` bench example: a deterministic per-stage,
+      per-family report over the `axeyum-scenarios` corpus, so optimization can
+      be measured on realistic oracle-free workloads. The report already
+      surfaces structure (de-Morgan and two's-complement identities collapse to
+      0 CNF variables; mixing scales cleanly with rounds).
+- [x] **Consumer-models iteration 4 (integrate + measure) — 2026-06-13:** added
+      the `scenario_scaling` bench example, sweeping the `mixing` family's round
+      count at widths 16/32/64. It self-checks each workload, then records the
+      pipeline scaling profile: AIG/CNF size grows linearly in rounds, clause
+      density converges to ~3.5 clauses/variable (plain Tseitin's ~3/AND-node),
+      and `sat-bv` solve time scales near-linearly with size on these
+      satisfiable instances (e.g. width 64 / 64 rounds: 16,040 AIG nodes, 7,942
+      CNF variables, 27,676 clauses, ~29 ms). This gives an oracle-free,
+      frontier-scalable empirical baseline for choosing the next deep encoding
+      or SAT-cost optimization, instead of tuning the single `p4dfa` slice
+      against Z3.
+- [x] **Follow-on: `bvmul` lowering — 2026-06-13:** added a truncated
+      shift-and-add multiplier in `axeyum-bv` (`Op::BvMul`), verified
+      exhaustively against the ground evaluator for widths 1/2/4/5 over all
+      input pairs (symbol×symbol, squaring, symbol×constant). Added an
+      `Arithmetic` scenario family (`factor_target` satisfiable factoring,
+      `distributivity_identity` unsatisfiable), which the pure-Rust backend now
+      decides; the pipeline report shows multiplication is the dominant SAT cost
+      (~15 ms mean vs <0.5 ms for other families), confirming the measurement
+      substrate guides optimization.
+- [x] **Follow-on: unsigned division/remainder lowering — 2026-06-13:** added a
+      combinational restoring divider in `axeyum-bv` (`Op::BvUdiv`/`Op::BvUrem`)
+      that computes quotient and remainder together (the AIG dedups the shared
+      circuit) with SMT-LIB divide-by-zero totality (`x udiv 0 = ~0`,
+      `x urem 0 = x`), verified exhaustively against the evaluator for widths
+      1/2/3/4/5 over all input pairs including the zero-divisor path. Added
+      `division_target` (satisfiable, pins `x` by quotient+remainder) and
+      `division_roundtrip_identity` (unsatisfiable Euclidean identity) scenarios,
+      both decided by the pure-Rust backend. Only signed division/remainder
+      (`bvsdiv`/`bvsrem`/`bvsmod`) remain unsupported.
+- [x] **Follow-on: incremental SAT (ADR-0009, stage 1) — 2026-06-13:** added
+      `IncrementalSat` in `axeyum-cnf`, a warm `rustsat-batsat` wrapper with
+      monotone `add_clause`, native one-shot assumptions (`solve_assuming`), a
+      stable growing variable namespace, and the same `sat` model self-check as
+      the one-shot adapter. Tests cover cross-solve accumulation, one-shot
+      assumption non-persistence, selector-literal push/pop emulation, and a
+      permanent contradiction. ADR-0009 records the design and the staged plan;
+      stage 2 (incremental bit-blasting wiring so the `Solver` façade is
+      end-to-end incremental) is the next step.
+- [x] **Follow-on: signed division/remainder lowering — 2026-06-13:** added
+      `bvsdiv`/`bvsrem`/`bvsmod` in `axeyum-bv` as sign-handling wrappers over
+      the unsigned restoring divider (compute on absolute values via shared
+      `signed_divrem_abs`, fix signs per the SMT-LIB expansions; the AIG dedups
+      the shared divider), verified exhaustively against the evaluator for
+      widths 1–5 over all input pairs incl. negatives, the most-negative value,
+      and divide-by-zero. This **completes the full scalar QF_BV operator set**;
+      the backend's unsupported path now only guards future non-scalar
+      constructs. The real-corpus mul/div spot-check is now 0 unsupported.
+- [x] **Incremental bit-blasting (ADR-0009 stage 2) — 2026-06-13:** end-to-end
+      incremental solving now exists, built as three green sub-increments:
+      (2a) `IncrementalLowering` in `axeyum-bv` — a persistent AIG + symbol/term
+      memo so a symbol always maps to the same inputs and shared subterms lower
+      once (proven structurally identical to batch lowering); (2b)
+      `IncrementalCnf` in `axeyum-cnf` — simple per-node Tseitin over the warm
+      `IncrementalSat`, with selector-guarded roots and direct AIG-node-value
+      lifting; (2c) `IncrementalBvSolver` in `axeyum-solver` — `assert`/`push`/
+      `pop`/`check`/`check_assuming` composing 2a+2b, with push/pop compiled to
+      selector literals, `check_assuming` to ephemeral selectors, and every
+      `sat` model lifted through the shared reconstruction and **replayed against
+      the original terms** by the evaluator. It decides the whole oracle-free
+      scenario catalog with zero soundness alarms and runs a symbolic-execution-
+      style push/pop path-exploration test. Known follow-ups: the incremental
+      encoder uses simple per-node Tseitin (not the one-shot path's sparse-CNF
+      optimizations), and ephemeral assumption selectors leak clauses
+      (ADR-0009-acknowledged).
+- [x] **First downstream consumer (symbolic execution) — 2026-06-13:** built a
+      register-VM symbolic executor over `IncrementalBvSolver` with branch
+      forking (push/pop), feasibility pruning, model extraction, and
+      concrete-re-execution cross-check of every found input. CI-covered as
+      `axeyum-solver/tests/symbolic_execution.rs`. The first Phase 7
+      infosec-workflow client example; validates the incremental stack against
+      the real use case.
+- [x] **Arrays sub-increment 1 — IR (done, 2026-06-13)**
+      ([ADR-0010](docs/research/09-decisions/adr-0010-arrays-via-eager-elimination.md),
+      accepted). Added the `Array` sort, `select`/`store` builders (sort/width
+      checked), a non-`Copy` `ArrayValue`, and the read-over-write evaluator
+      (the semantic reference); moved `axeyum_ir::Value` from `Copy` to `Clone`
+      and rippled it across all crates. Exhaustive IR tests cover
+      read-over-write, last-write-wins extensional equality, and builder sort
+      checks. Arrays are rejected by the bit-blasting and z3 backends (via the
+      `first_unsupported_op` preflight) pending elimination.
+- [x] **Arrays sub-increment 2 — eager elimination (done, 2026-06-13):** added
+      `eliminate_arrays` in `axeyum-rewrite` (read-over-write + Ackermann →
+      pure QF_BV) with `ArrayElimination::project_model` for array-model
+      reconstruction, reusing `build_app` and the whole BV pipeline. Array
+      equality and selects over non-variable/store/ite bases return structured
+      `Unsupported`. Oracle-free tests prove the elimination is
+      denotation-preserving under consistent models and that Ackermann
+      constraints hold (read-over-write and two-select cases).
+- [x] **Arrays sub-increment 3 (core) — QF_ABV end to end (done, 2026-06-13):**
+      `axeyum-solver/tests/arrays.rs` composes elimination → `SatBvBackend` →
+      `project_model` → original-query evaluator replay. Decides distinct-address
+      loads (Ackermann aliasing), read-after-write (UNSAT), and aliasing
+      load (SAT), each soundness-checked oracle-free. **QF_ABV now solves.**
+- [x] **Arrays sub-increment 3 — first-class API + memory consumer (done,
+      2026-06-13):** promoted elimination to a first-class entry point
+      `axeyum_solver::check_with_array_elimination` (eliminate → backend → project
+      → replay; `axeyum-rewrite` is now a normal dep of `axeyum-solver`).
+      `axeyum-solver/tests/arrays.rs` uses it, and
+      `tests/symbolic_execution_memory.rs` is the memory-using consumer: it
+      solves a write-then-probe-load QF_ABV query, extracts the inputs and the
+      reconstructed memory array, and **concretely re-executes** the program to
+      confirm the target is reached (oracle-free).
+- [x] **Arrays — QF_ABV memory scenarios (done, 2026-06-13):** added a `Memory`
+      family and `memory_catalog()` in `axeyum-scenarios` (self-checking
+      store/load traces, satisfiable by construction), kept separate from the
+      scalar `catalog()`. A new `axeyum-solver` differential test runs the whole
+      memory catalog through `check_with_array_elimination` (all decided, zero
+      soundness alarms), exercising eager elimination + projection + replay on a
+      consumer-representative corpus.
+- [x] **Arrays — SMT-LIB parsing + corpus blow-up measurement (done,
+      2026-06-13):** the SMT-LIB reader now accepts `(Array (_ BitVec n)
+      (_ BitVec m))` sorts and `select`/`store` (round-trip tested via the
+      writer). A new `axeyum-bench` example `qf_abv_probe` parses real QF_ABV
+      files, eagerly eliminates arrays, and reports DAG blow-up. Measured on 20
+      small `QF_ABV` corpus files: 19/20 parse (1 needs BV width 1024 >
+      `MAX_BV_WIDTH` 128); 14/19 eliminate with blow-up 1.2–4.5× DAG nodes
+      (store chains like `memcpy` grow most); the other 5 use **array equality**
+      (the deferred extensionality construct, flagged `Unsupported` as designed).
+      Eager elimination is not catastrophic on this sample, so a lazy array
+      procedure is not yet justified.
+- [x] **UNSAT proof checking — DRAT checker (done, 2026-06-13, ADR-0011):**
+      added an independent in-tree DRAT checker in `axeyum-cnf`
+      (`check_drat`/`parse_drat`, RUP + RAT) — the trusted UNSAT-discharge
+      kernel, dependent only on the formula and proof. Tested on RUP chains, a
+      blocked (RAT-not-RUP) clause, unjustified-step rejection, no-empty-clause
+      (not-unsat), and parse round-trips. This closes the "which proof checker
+      discharges UNSAT" question; a DRAT *producer* is the remaining piece.
+- [x] **UNSAT proof producer — proof-producing SAT core (done, 2026-06-13,
+      ADR-0012):** added `solve_with_drat_proof` in `axeyum-cnf` — DPLL with
+      conflict-cube learning that emits DRAT, verified end to end by
+      `check_drat`. Tests show unit-contradiction, full-2×2, pigeonhole-like,
+      and empty-clause `unsat` all produce checker-accepted DRAT proofs, and SAT
+      models satisfy. This realizes "untrusted search, trusted checking" for
+      `unsat` in pure Rust (the core is untrusted; the checker is the trust
+      anchor). It is a proof/correctness reference, not the perf default
+      (`rustsat-batsat` stays the fast path).
+- [x] **Proof-checked `unsat` in the BV backend (done, 2026-06-13):** added
+      `SolverConfig::prove_unsat`; when set, `SatBvBackend` independently
+      re-derives an `unsat` with `solve_with_drat_proof` and verifies its DRAT
+      proof via `check_drat` before returning, recording an `unsat_proof_checked`
+      stat (a disagreement or failed proof is a `SolverError::Backend` soundness
+      alarm). QF_BV `unsat` is now high-assurance end to end through the normal
+      solve path (term → AIG → CNF → proof core → DRAT → trusted checker). The
+      proof core is a reference, so this is for small/high-assurance instances.
+- [x] **Custom CDCL core — 1-UIP + watched literals (done, 2026-06-13):** the
+      proof-producing core uses MiniSat-style 1-UIP learning plus
+      two-watched-literal propagation, validated by a 400-CNF randomized
+      differential test against the BatSat adapter (agree on sat/unsat; `sat`
+      models satisfy; `unsat` proofs pass `check_drat`). Solves e.g.
+      pigeonhole 3→2 with a DRAT-checked proof; conflict-budget safety valve.
+- [x] **Uninterpreted functions sub-increment 1 — IR (done, 2026-06-13,
+      ADR-0013):** first-class `declare_fun`/`Op::Apply` with a scalar signature,
+      a `FuncValue` model interpretation honored by the evaluator (congruence
+      verified exhaustively at width 3), Z3 rejection of `Op::Apply`, and an
+      SMT-LIB writer that emits `declare-fun` + `QF_UFBV`/`QF_AUFBV`.
+- [x] **Uninterpreted functions sub-increment 2 — elimination + solving (done,
+      2026-06-13, ADR-0013):** `eliminate_functions` (Ackermann congruence
+      reduction, `QF_UFBV` → `QF_BV`, `FuncValue` model projection) and
+      `check_with_function_elimination` (first-class entry point with
+      original-query evaluator replay); `Model` carries function interpretations;
+      oracle-free end-to-end `QF_UFBV` tests (congruence `unsat`, replayed `sat`,
+      binary functions).
+- [x] **Uninterpreted functions — SMT-LIB I/O (done, 2026-06-13, ADR-0013):**
+      parser accepts n-ary `declare-fun` (scalar signatures) and function
+      applications (builtin-priority); parse → write → parse round-trip for
+      `QF_UFBV`; obsolete "functions-with-args unsupported" test replaced.
+- [x] **`QF_AUFBV` theory composition (done, 2026-06-13, ADR-0010+0013):**
+      `check_with_arrays_and_functions` composes array then function elimination
+      with combined model projection (functions first) and original-query
+      replay; oracle-free end-to-end tests (cross-theory congruence `unsat`,
+      store-then-apply `sat`, distinct outputs). First two-theory composition.
+- [x] **`QF_UFBV` scenarios (done, 2026-06-13, ADR-0013):** `Family::Function`
+      with `function_chain`/`function_lookup`/`function_binary_merge` +
+      `function_catalog`; solver-crate differential test decides all through
+      `check_with_function_elimination`, oracle-free. EUF rollout complete.
+- [x] **Arithmetic fragment chosen + IR sub-increment 1 (done, 2026-06-13,
+      ADR-0014):** `QF_LIA` first via bounded bit-blasting; the `Int` sort,
+      linear operators, `Value::Int`, and the ground evaluator are in, verified
+      exhaustively over a small range; backends reject `Int` cleanly via
+      `first_unsupported_sort`.
+- [x] **`QF_LIA` bounded bit-blasting decision procedure (done, 2026-06-13,
+      ADR-0014):** `blast_integers` + `check_with_int_blasting` with exact-integer
+      model read-back and replay; BV `unsat`/overflow/out-of-range → `unknown`,
+      never wrong; oracle-free end-to-end tests.
+- [x] **`QF_LIA` scenarios + SMT-LIB I/O (done, 2026-06-13, ADR-0014):**
+      `Family::Integer` (`integer_system`/`integer_equation` + `integer_catalog`)
+      decided through `check_with_int_blasting`; parser/writer for `Int`,
+      literals, `+`/`-`/`*`, chainable comparisons, `QF_LIA` round-trip.
+- [x] **`QF_AUFLIA` full composition (done, 2026-06-13, ADR-0010+0013+0014):**
+      `check_with_all_theories` composes array → function → integer reductions
+      with reverse model projection, replay, and a branch-correct `unsat`/
+      `unknown` contract; subsumes the single-theory entry points; oracle-free
+      end-to-end tests.
+- [x] **`QF_LRA` ADR + IR sub-increment 1 (done, 2026-06-13, ADR-0015):**
+      exact-rational simplex chosen as the first non-`QF_BV` procedure; the
+      `Real` sort, pure-Rust `Rational`, linear operators, `Value::Real`, and
+      exact-rational evaluator are in, verified against an exact reference;
+      backends reject `Real` cleanly.
+- [x] **`QF_LRA` exact-rational decision procedure (done, 2026-06-13, ADR-0015):**
+      `check_with_lra` decides conjunctive `QF_LRA` by exact-rational
+      Fourier–Motzkin with rational-model replay; `or`/disequality → `Unsupported`;
+      oracle-free end-to-end tests (fractional witnesses, unsat cycles).
+- [x] **`QF_LRA` scenarios + SMT-LIB I/O (done, 2026-06-13, ADR-0015):**
+      `Family::Real` + `real_catalog` decided through `check_with_lra`;
+      parser/writer for `Real`, decimal/`(/ ..)` literals, numeral coercion,
+      sort-directed operators, `QF_LRA` round-trip.
+- [x] **Lazy SMT / DPLL(T) over `QF_LRA` (done, 2026-06-13, ADR-0015 follow-on):**
+      `check_with_lra_dpll` — Boolean abstraction → SAT skeleton → theory check →
+      blocking-clause refinement, with `sat` replay; lifts the conjunction-only
+      limit (disjunctions now decide). The lazy theory-combination architecture.
+- [x] **Unified quantifier-free dispatcher (done, 2026-06-13):** `check_auto`
+      routes any supported QF query to the bit-blasting composition or the
+      lazy-SMT real engine by theory features; mixed real+bit-blast → `Unsupported`.
+      One front door for the downstream consumer.
+- [x] **Quantifiers — binder ADR + IR sub-increment 1 (done, 2026-06-13,
+      ADR-0016):** named binders (`Op::Forall`/`Op::Exists`), `forall`/`exists`
+      builders, finite-domain enumerating evaluator; backends reject non-QF
+      formulas; writer renders binder form.
+- [x] **Quantifier solving by finite-domain expansion (done, 2026-06-13,
+      ADR-0016):** `expand_quantifiers` + `check_with_quantifiers` decide
+      finite-domain quantified formulas with original-formula replay.
+- [x] **WebAssembly target support (done, 2026-06-13, ADR-0017):** default
+      library stack builds/runs on wasm (browser + WASI) via a wasm-only
+      `web-time` clock shim; native builds untouched; verified both targets.
+- [x] **SMT-LIB quantifier parsing (done, 2026-06-13, ADR-0016):**
+      `(forall/exists ((x T)..) body)` parses with capture-free fresh-symbol
+      scoping; quantifier round-trip; nested-binding non-capture test.
+- [x] **Exportable clausal `unsat` proof artifacts (done, 2026-06-13):**
+      `write_drat` + `export_qf_bv_unsat_proof` emit a self-verified, externally
+      re-checkable DIMACS+DRAT certificate for `QF_BV` `unsat`.
+- [x] **Self-checking `Evidence` envelope (done, 2026-06-13, ADR-0005):**
+      `Evidence` + `produce_qf_bv_evidence` + `Evidence::check` — a result with
+      its justification that independently re-validates (model replay / DRAT
+      re-check); tampered models fail their own check.
+- [x] **`QF_LRA` Farkas `unsat` certificates (done, 2026-06-13, ADR-0015
+      follow-through):** `check_with_lra` threads nonnegative Farkas multipliers
+      through Fourier–Motzkin and returns a self-checked `FarkasCertificate` for
+      every `unsat` (`FarkasCertificate::verify` rebuilds the refutation
+      independently; a failed check is a `SolverError::Backend` soundness
+      alarm). `lra_farkas_certificate` exposes it for auditing. Closes the last
+      lower-assurance result type; oracle-free tests cover verifying
+      certificates, no-certificate `sat`, and tamper rejection. Also wired into
+      the `Evidence` envelope (`Evidence::UnsatFarkas` + `produce_lra_evidence`,
+      with tamper-rejection tests). Follow-up: a δ-rational simplex for scale.
+- [ ] **DPLL(T) `unsat` refutation certificates (scoped next step, builds on the
+      Farkas work):** `check_with_lra_dpll` (the lazy-SMT path for arbitrary
+      Boolean combinations of real + bit-blasted constraints) returns `unsat`
+      without a certificate. Each theory conflict is now Farkas-certifiable
+      (attach `lra_farkas_certificate` to every learned blocking clause), and the
+      final propositional `unsat` of `skeleton ∧ blocking-clauses` is decided by
+      the bit-blasting composition (DRAT-capable). The certificate is the set of
+      Farkas-certified theory lemmas plus a refutation that the skeleton with
+      those lemmas is unsatisfiable — a composed SMT proof. This generalizes the
+      conjunctive-LRA Farkas certificate to the full Boolean-structured path and
+      is the natural continuation of the 2026-06-13 Farkas work.
+- [ ] **NEXT: remaining R&D tracks.** The supported theories (`QF_BV`, arrays,
+      EUF, `QF_LIA`, `QF_LRA`, their composition, and finite-domain quantifiers)
+      are complete end to end with checkable evidence and wasm support. The open
+      tracks are open-ended research programs, each multi-increment: (a)
+      **scalable bit-blast-reduction certification** — Tseitin definitions as
+      definitional/RAT introductions, so large-instance `unsat` is machine-checked
+      end to end (the small-instance term-level enumeration certificate is done);
+      (b) **trigger-based E-matching** for infinite-domain quantifiers (sound
+      enumerative ground instantiation for refutation is now done; trigger
+      matching is the scalable, more-complete successor); and, benchmarking-gated
+      by the methodology (encodings before SAT-core tuning), (c) CDCL
+      **restarts + activity heuristics (VSIDS)** — gate (a) is now *measured*,
+      not assumed: artifact v14's `summary.layer_attribution` reports SAT-share
+      ≈0.31 on the micro corpus (`sat_dominates: false`), so this track stays
+      deprioritized until the public/client tiers show SAT time dominating
+      *and* a CaDiCaL/Kissat gap on Axeyum CNF. Next concrete step here is to run
+      the attribution on the public QF_BV tier, not to tune the core. (Real +
+      bit-blasted theory
+      combination is now complete — reals share no sort with those theories, so
+      the lazy-SMT loop suffices, no shared-equality propagation needed. General
+      Nelson-Oppen would only be needed to combine *two* shared-sort theories,
+      which the current theory set does not present.)
+- [ ] **Incremental performance + parity (parallel R&D):** port the sparse-CNF
+      optimizations to the incremental encoder; add a warm-vs-cold benchmark to
+      quantify the incrementality win; activation-literal GC for long sessions.
+- [ ] **Phase 5 supported-slice expansion (parallel track):** use the version 11
       smallest-DAG selector artifacts, the version 12 root-direct selector
       artifacts, the version 13 greedy selector diagnostic, the version 10
       adaptive exact-target artifacts, the version 9 static exact-target
@@ -1181,6 +1996,6 @@ In order; check off and date as completed.
 | [docs/research/08-planning/foundational-dag.md](docs/research/08-planning/foundational-dag.md) | Logic/math dependency DAG and layer contracts. |
 | [docs/research/08-planning/research-questions.md](docs/research/08-planning/research-questions.md) | Open question register. |
 | [docs/research/09-decisions/](docs/research/09-decisions/README.md) | ADRs: how questions get closed. |
-| `crates/` | Cargo workspace: `axeyum-ir`, `axeyum-aig`, `axeyum-bv`, `axeyum-cnf`, `axeyum-query`, `axeyum-rewrite`, `axeyum-solver`, `axeyum-smtlib`, `axeyum-bench`. |
+| `crates/` | Cargo workspace: `axeyum-ir`, `axeyum-aig`, `axeyum-bv`, `axeyum-cnf`, `axeyum-query`, `axeyum-rewrite`, `axeyum-scenarios`, `axeyum-solver`, `axeyum-smtlib`, `axeyum-bench`. |
 | [CLAUDE.md](CLAUDE.md) | Agent guidance: session protocol, commands, hard rules. |
 | [references/](references/README.md) | Gitignored reference clones; `scripts/fetch-references.sh`. |

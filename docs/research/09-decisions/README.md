@@ -61,3 +61,14 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0005](adr-0005-phase3-query-evidence-rewrite-contracts.md) | Phase 3 query, evidence, and rewrite contracts | accepted |
 | [0006](adr-0006-phase4-bit-order-and-lowering-entry-contract.md) | Phase 4 bit order and lowering entry contract | accepted |
 | [0007](adr-0007-first-pure-rust-sat-adapter.md) | First pure Rust SAT adapter | accepted |
+| [0008](adr-0008-consumer-scenario-models.md) | Consumer scenario models for testing and optimization | accepted |
+| [0009](adr-0009-incremental-sat-and-solving.md) | Incremental SAT and incremental solving | accepted |
+| [0010](adr-0010-arrays-via-eager-elimination.md) | Arrays (QF_ABV) via eager elimination to QF_BV | accepted |
+| [0011](adr-0011-drat-unsat-proof-checking.md) | DRAT UNSAT proof format with an in-tree checker | accepted |
+| [0012](adr-0012-proof-producing-sat-core.md) | First proof-producing pure-Rust SAT core | accepted |
+| [0013](adr-0013-uninterpreted-functions.md) | Uninterpreted functions (EUF) via Ackermann reduction | accepted |
+| [0014](adr-0014-first-arithmetic-fragment.md) | First arithmetic fragment: linear integer arithmetic, bit-blasted | accepted |
+| [0015](adr-0015-linear-real-arithmetic.md) | Linear real arithmetic via exact-rational simplex | accepted |
+| [0016](adr-0016-quantifiers-binder-representation.md) | Quantifiers: named binders and finite-domain semantics | accepted |
+| [0017](adr-0017-wasm-target-support.md) | WebAssembly as a supported target (browser + WASI) | accepted |
+| [0018](adr-0018-smtlib-text-front-door.md) | SMT-LIB text front door (`solve_smtlib`) in the solver crate | accepted |

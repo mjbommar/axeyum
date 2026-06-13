@@ -26,6 +26,22 @@ impl SymbolId {
     }
 }
 
+/// Handle to a declared uninterpreted function in a [`crate::TermArena`].
+///
+/// Functions are declared separately from variables (they have a signature,
+/// not a sort) and are not first-class terms; the only way to use one is an
+/// [`Op::Apply`] application. Like [`SymbolId`], this is a `Copy` ID with no
+/// lifetime, valid only against its owning arena.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct FuncId(pub(crate) u32);
+
+impl FuncId {
+    /// The dense index of this function within its arena.
+    pub fn index(self) -> usize {
+        self.0 as usize
+    }
+}
+
 /// Operators of the scalar `QF_BV` fragment (Phase 1 set).
 ///
 /// Bool and bit-vector families are distinct; `Eq` and `Ite` are
@@ -143,6 +159,56 @@ pub enum Op {
         /// Rotation amount, already reduced modulo the operand width.
         by: u32,
     },
+    // --- arrays (ADR-0010) -------------------------------------------------
+    /// Array read: `select(array, index)`; result is the element sort.
+    Select,
+    /// Array write: `store(array, index, element)`; result is the array sort.
+    Store,
+    // --- uninterpreted functions (ADR-0013) --------------------------------
+    /// Application of a declared uninterpreted function; the argument terms are
+    /// the operands and the result sort is the function's declared result.
+    Apply(FuncId),
+    // --- linear integer arithmetic (ADR-0014) ------------------------------
+    /// Integer negation.
+    IntNeg,
+    /// Integer addition.
+    IntAdd,
+    /// Integer subtraction.
+    IntSub,
+    /// Integer multiplication (linear use enforced by downstream procedures).
+    IntMul,
+    /// Integer less-than (result sort `Bool`).
+    IntLt,
+    /// Integer less-or-equal (result sort `Bool`).
+    IntLe,
+    /// Integer greater-than (result sort `Bool`).
+    IntGt,
+    /// Integer greater-or-equal (result sort `Bool`).
+    IntGe,
+    // --- linear real arithmetic (ADR-0015) ---------------------------------
+    /// Real negation.
+    RealNeg,
+    /// Real addition.
+    RealAdd,
+    /// Real subtraction.
+    RealSub,
+    /// Real multiplication (linear use enforced by downstream procedures).
+    RealMul,
+    /// Real less-than (result sort `Bool`).
+    RealLt,
+    /// Real less-or-equal (result sort `Bool`).
+    RealLe,
+    /// Real greater-than (result sort `Bool`).
+    RealGt,
+    /// Real greater-or-equal (result sort `Bool`).
+    RealGe,
+    // --- quantifiers (ADR-0016) --------------------------------------------
+    /// Universal quantifier binding `SymbolId` over a `Bool` body (the single
+    /// argument); result sort `Bool`.
+    Forall(SymbolId),
+    /// Existential quantifier binding `SymbolId` over a `Bool` body (the single
+    /// argument); result sort `Bool`.
+    Exists(SymbolId),
 }
 
 /// The structural body of a term, used as the hash-consing key.
@@ -157,6 +223,10 @@ pub enum TermNode {
         /// The constant value; always fits in `width` bits.
         value: u128,
     },
+    /// An integer constant (ADR-0014).
+    IntConst(i128),
+    /// A real constant as an exact rational (ADR-0015).
+    RealConst(crate::rational::Rational),
     /// A free variable referring to a declared symbol.
     Symbol(SymbolId),
     /// An operator application.

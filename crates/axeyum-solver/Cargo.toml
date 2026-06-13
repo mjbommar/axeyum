@@ -16,7 +16,14 @@ axeyum-bv.workspace = true
 axeyum-cnf.workspace = true
 axeyum-ir.workspace = true
 axeyum-query.workspace = true
+axeyum-rewrite = { path = "../axeyum-rewrite" }
+axeyum-smtlib = { path = "../axeyum-smtlib" }
 z3 = { workspace = true, optional = true }
+
+# Browser-compatible monotonic clock for timeouts/telemetry (ADR-0017); only on
+# wasm32, where `std::time::Instant` has no clock in the browser.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+web-time.workspace = true
 
 [features]
 # Native backends are feature-gated leaf dependencies; the default build has
@@ -32,5 +39,4 @@ z3-static = ["z3", "z3/gh-release"]
 workspace = true
 
 [dev-dependencies]
-axeyum-rewrite = { path = "../axeyum-rewrite" }
-axeyum-smtlib = { path = "../axeyum-smtlib" }
+axeyum-scenarios = { path = "../axeyum-scenarios" }

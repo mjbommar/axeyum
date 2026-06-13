@@ -35,13 +35,17 @@ mod run {
     #[cfg(feature = "z3")]
     use axeyum_solver::Z3Backend;
     use axeyum_solver::{
-        CheckResult, Model, SatBvBackend, SolveStats, SolverBackend, SolverConfig, SolverError,
-        UnknownKind,
+        BvLayerStats, CheckResult, Model, SatBvBackend, SolveStats, SolverBackend, SolverConfig,
+        SolverError, UnknownKind,
     };
     use rayon::prelude::*;
     use serde_json::{Value as JsonValue, json};
 
-    const ARTIFACT_VERSION: u32 = 13;
+    const ARTIFACT_VERSION: u32 = 14;
+    /// Corpus SAT-share threshold above which SAT solve time is reported as
+    /// dominating end-to-end time — gate (a) for prioritizing the custom CDCL
+    /// core (benchmarking-and-performance-methodology.md, "Decision Gates").
+    const SAT_DOMINATES_SHARE: f64 = 0.5;
     const PLAN_REFINE_SCORE_CANDIDATES: usize = 64;
     const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
     const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
@@ -403,6 +407,18 @@ mod run {
         oracle_disagree: u64,
         oracle_skipped: u64,
         par2_seconds: f64,
+        // Corpus layer attribution over decided pure-Rust (`sat-bv`) instances
+        // only, so gate (a) — "does SAT solve time dominate?" — is falsifiable
+        // from one summary. Other backends are excluded (their stage breakdown
+        // is not the pure-Rust pipeline the CDCL gate is about). The four stages
+        // are non-overlapping and sum to the pipeline wall time (`translate`
+        // equals `bit_blast + cnf_encode` for this path, so it is not a separate
+        // slice).
+        layer_files: u64,
+        layer_bit_blast_s: f64,
+        layer_cnf_encode_s: f64,
+        layer_solve_s: f64,
+        layer_model_lift_s: f64,
     }
 
     struct InstanceRun {
@@ -585,6 +601,54 @@ mod run {
         n
     }
 
+    /// The `rewrite` sub-block of the summary artifact.
+    fn rewrite_summary_record(s: &Summary, args: &Args) -> JsonValue {
+        json!({
+            "mode": args.rewrite.as_str(),
+            "changed_instances": s.rewrite_changed_instances,
+            "applications": s.rewrite_applications,
+            "input_dag_nodes": s.rewrite_input_dag_nodes,
+            "output_dag_nodes": s.rewrite_output_dag_nodes,
+            "input_tree_nodes": s.rewrite_input_tree_nodes,
+            "output_tree_nodes": s.rewrite_output_tree_nodes,
+            "decision_matches": s.rewrite_decision_matches,
+            "decision_changes": s.rewrite_decision_changes,
+            "sat_unsat_conflicts": s.rewrite_sat_unsat_conflicts,
+        })
+    }
+
+    /// Corpus layer attribution: per-stage seconds, each stage's share of the
+    /// pure-Rust pipeline wall time, and the gate (a) verdict on whether SAT
+    /// solve time dominates. `null` when no `sat-bv` instance was decided (the
+    /// breakdown would be vacuous and a fabricated `0` share could be misread as
+    /// "SAT does not dominate").
+    fn layer_attribution_record(s: &Summary) -> JsonValue {
+        if s.layer_files == 0 {
+            return JsonValue::Null;
+        }
+        let total =
+            s.layer_bit_blast_s + s.layer_cnf_encode_s + s.layer_solve_s + s.layer_model_lift_s;
+        let share = |stage: f64| if total > 0.0 { stage / total } else { 0.0 };
+        let sat_share = share(s.layer_solve_s);
+        json!({
+            "instances": s.layer_files,
+            "total_pipeline_s": total,
+            "bit_blast_s": s.layer_bit_blast_s,
+            "cnf_encode_s": s.layer_cnf_encode_s,
+            "solve_s": s.layer_solve_s,
+            "model_lift_s": s.layer_model_lift_s,
+            "bit_blast_share": share(s.layer_bit_blast_s),
+            "cnf_encode_share": share(s.layer_cnf_encode_s),
+            "solve_share": sat_share,
+            "model_lift_share": share(s.layer_model_lift_s),
+            // Gate (a): does SAT solve time dominate end-to-end? The CDCL-core
+            // priority gate needs this and a CaDiCaL/Kissat gap before it jumps
+            // the queue ahead of encoding work.
+            "sat_dominates": sat_share > SAT_DOMINATES_SHARE,
+            "sat_dominates_threshold": SAT_DOMINATES_SHARE,
+        })
+    }
+
     /// Runs one instance and returns its JSON record.
     fn run_one(
         backend: &mut dyn SolverBackend,
@@ -641,6 +705,7 @@ mod run {
         accumulate_query_plan(summary, &primary_solve.plan);
         accumulate_primary(&primary_solve.solve, summary);
         accumulate_par2(summary, &primary_solve.solve, timeout);
+        accumulate_layers(summary, &primary_solve.solve);
         accumulate_expected_agreement(summary, script.status.as_deref(), &primary_solve.solve);
         let stats = &primary_solve.solve.stats;
         let mut record = json!({
@@ -1508,6 +1573,26 @@ mod run {
         }
     }
 
+    /// Rolls a decided pure-Rust instance into the corpus layer attribution.
+    ///
+    /// Only `sat`/`unsat` instances solved by the `sat-bv` backend contribute:
+    /// [`BvLayerStats::from_solve_stats`] returns `None` for any other backend,
+    /// so this never fabricates a stage breakdown for, e.g., the Z3 oracle. The
+    /// `translate` stage comes straight from [`SolveStats`].
+    fn accumulate_layers(summary: &mut Summary, record: &SolveRecord) {
+        if !matches!(record.outcome, "sat" | "unsat") {
+            return;
+        }
+        let Some(layers) = BvLayerStats::from_solve_stats(&record.stats) else {
+            return;
+        };
+        summary.layer_files += 1;
+        summary.layer_bit_blast_s += layers.bit_blast.as_secs_f64();
+        summary.layer_cnf_encode_s += layers.cnf_encode.as_secs_f64();
+        summary.layer_solve_s += layers.solve.as_secs_f64();
+        summary.layer_model_lift_s += layers.model_lift.as_secs_f64();
+    }
+
     fn accumulate_par2(summary: &mut Summary, record: &SolveRecord, timeout: Duration) {
         if matches!(record.outcome, "sat" | "unsat") {
             summary.par2_seconds += record.stats.translate.as_secs_f64()
@@ -1566,6 +1651,11 @@ mod run {
         total.oracle_disagree += next.oracle_disagree;
         total.oracle_skipped += next.oracle_skipped;
         total.par2_seconds += next.par2_seconds;
+        total.layer_files += next.layer_files;
+        total.layer_bit_blast_s += next.layer_bit_blast_s;
+        total.layer_cnf_encode_s += next.layer_cnf_encode_s;
+        total.layer_solve_s += next.layer_solve_s;
+        total.layer_model_lift_s += next.layer_model_lift_s;
     }
 
     fn compare_with_oracle(
@@ -1816,18 +1906,7 @@ mod run {
                 "disagree": s.disagree,
                 "model_replay_failures": s.model_replay_failures,
                 "par2_mean_s": s.par2_seconds / decided_denominator(s),
-                "rewrite": {
-                    "mode": args.rewrite.as_str(),
-                    "changed_instances": s.rewrite_changed_instances,
-                    "applications": s.rewrite_applications,
-                    "input_dag_nodes": s.rewrite_input_dag_nodes,
-                    "output_dag_nodes": s.rewrite_output_dag_nodes,
-                    "input_tree_nodes": s.rewrite_input_tree_nodes,
-                    "output_tree_nodes": s.rewrite_output_tree_nodes,
-                    "decision_matches": s.rewrite_decision_matches,
-                    "decision_changes": s.rewrite_decision_changes,
-                    "sat_unsat_conflicts": s.rewrite_sat_unsat_conflicts,
-                },
+                "rewrite": rewrite_summary_record(s, args),
                 "query_plan": {
                     "slice_changed_instances": s.query_slice_changed_instances,
                     "slice_dropped_terms": s.query_slice_dropped_terms,
@@ -1844,6 +1923,7 @@ mod run {
                     "disagree": s.oracle_disagree,
                     "skipped": s.oracle_skipped,
                 },
+                "layer_attribution": layer_attribution_record(s),
             },
             "triage": {
                 "unsupported": triage(instances, &["unsupported"]),

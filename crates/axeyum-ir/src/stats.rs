@@ -49,7 +49,10 @@ impl TermStats {
                 continue;
             }
             match arena.node(t) {
-                TermNode::BoolConst(_) | TermNode::BvConst { .. } => {
+                TermNode::BoolConst(_)
+                | TermNode::BvConst { .. }
+                | TermNode::IntConst(_)
+                | TermNode::RealConst(_) => {
                     stats.dag_nodes += 1;
                     memo.insert(t, (1, 1));
                 }

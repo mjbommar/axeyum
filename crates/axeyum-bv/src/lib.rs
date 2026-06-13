@@ -48,6 +48,29 @@ pub fn first_unsupported_op(arena: &TermArena, roots: &[TermId]) -> Option<(Term
     None
 }
 
+/// Returns the first subterm whose sort the bit-blaster cannot represent
+/// directly — an integer (ADR-0014) or an array (ADR-0010). Such terms must be
+/// eliminated or otherwise handled before bit lowering; this preflight lets
+/// callers triage them as `Unsupported` (it catches sorts that the op-based
+/// [`first_unsupported_op`] misses, e.g. a bare integer leaf under `=`).
+pub fn first_unsupported_sort(arena: &TermArena, roots: &[TermId]) -> Option<(TermId, Sort)> {
+    let mut seen = BTreeSet::new();
+    let mut stack = roots.iter().rev().copied().collect::<Vec<_>>();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        match arena.sort_of(term) {
+            Sort::Bool | Sort::BitVec(_) => {}
+            other => return Some((term, other)),
+        }
+        if let TermNode::App { args, .. } = arena.node(term) {
+            stack.extend(args.iter().rev().copied());
+        }
+    }
+    None
+}
+
 /// Lowered term bits in ADR-0006 LSB-first order.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LoweredTerm {
@@ -217,34 +240,7 @@ impl BitLowering {
         &self,
         node_values: &[bool],
     ) -> Result<Assignment, BitLowerError> {
-        self.validate_aig_values(node_values)?;
-
-        let mut symbol_bits: BTreeMap<SymbolId, SymbolModelBits> = BTreeMap::new();
-        for binding in &self.symbol_inputs {
-            let entry = symbol_bits
-                .entry(binding.symbol)
-                .or_insert_with(|| SymbolModelBits::new(binding.sort));
-            let bit_index = binding.bit_index as usize;
-            if bit_index >= entry.bits.len() {
-                return Err(BitLowerError::BadInputBit {
-                    symbol: binding.symbol,
-                    bit_index: binding.bit_index,
-                });
-            }
-            entry.bits[bit_index] = aig_lit_from_node_values(binding.literal, node_values)?;
-            entry.seen[bit_index] = true;
-        }
-
-        let mut assignment = Assignment::new();
-        for (symbol, bits) in symbol_bits {
-            for (bit_index, seen) in (0u32..).zip(bits.seen.iter().copied()) {
-                if !seen {
-                    return Err(BitLowerError::MissingModelBit { symbol, bit_index });
-                }
-            }
-            assignment.set(symbol, lsb_bits_to_value(bits.sort, &bits.bits)?);
-        }
-        Ok(assignment)
+        assignment_from_aig_node_values(&self.aig, &self.symbol_inputs, node_values)
     }
 
     /// Reconstructs one lowered root value from replayed AIG node values.
@@ -297,31 +293,177 @@ impl BitLowering {
     }
 
     fn validate_aig_values(&self, node_values: &[bool]) -> Result<(), BitLowerError> {
-        if node_values.len() != self.aig.node_count() {
-            return Err(BitLowerError::AigValueLengthMismatch {
-                expected: self.aig.node_count(),
-                found: node_values.len(),
+        validate_aig_node_values(&self.aig, node_values)
+    }
+}
+
+/// Checks that `node_values` is a consistent valuation of every AIG node.
+///
+/// Shared by [`BitLowering`] and [`IncrementalLowering`] so both use the same
+/// trusted replay check.
+///
+/// # Errors
+///
+/// Returns [`BitLowerError::AigValueLengthMismatch`] for the wrong length or
+/// [`BitLowerError::AigValueMismatch`] when a node value contradicts the AIG.
+fn validate_aig_node_values(aig: &Aig, node_values: &[bool]) -> Result<(), BitLowerError> {
+    if node_values.len() != aig.node_count() {
+        return Err(BitLowerError::AigValueLengthMismatch {
+            expected: aig.node_count(),
+            found: node_values.len(),
+        });
+    }
+    for (node_id, node) in aig.nodes() {
+        let expected = match node {
+            AigNode::ConstFalse => false,
+            AigNode::Input(_) => continue,
+            AigNode::And(lhs, rhs) => {
+                aig_lit_from_node_values(lhs, node_values)?
+                    && aig_lit_from_node_values(rhs, node_values)?
+            }
+        };
+        let found = node_values[node_id.index()];
+        if found != expected {
+            return Err(BitLowerError::AigValueMismatch {
+                node: node_id.index(),
+                expected,
+                found,
             });
         }
-        for (node_id, node) in self.aig.nodes() {
-            let expected = match node {
-                AigNode::ConstFalse => false,
-                AigNode::Input(_) => continue,
-                AigNode::And(lhs, rhs) => {
-                    aig_lit_from_node_values(lhs, node_values)?
-                        && aig_lit_from_node_values(rhs, node_values)?
-                }
-            };
-            let found = node_values[node_id.index()];
-            if found != expected {
-                return Err(BitLowerError::AigValueMismatch {
-                    node: node_id.index(),
-                    expected,
-                    found,
-                });
+    }
+    Ok(())
+}
+
+/// Reconstructs an Axeyum assignment from replayed AIG node values, using the
+/// symbol-input map. Shared by [`BitLowering`] and [`IncrementalLowering`].
+///
+/// # Errors
+///
+/// Returns [`BitLowerError`] if the AIG values are inconsistent, a symbol bit is
+/// out of range, or a model bit is missing.
+fn assignment_from_aig_node_values(
+    aig: &Aig,
+    symbol_inputs: &[SymbolBitInput],
+    node_values: &[bool],
+) -> Result<Assignment, BitLowerError> {
+    validate_aig_node_values(aig, node_values)?;
+
+    let mut symbol_bits: BTreeMap<SymbolId, SymbolModelBits> = BTreeMap::new();
+    for binding in symbol_inputs {
+        let entry = symbol_bits
+            .entry(binding.symbol)
+            .or_insert_with(|| SymbolModelBits::new(binding.sort));
+        let bit_index = binding.bit_index as usize;
+        if bit_index >= entry.bits.len() {
+            return Err(BitLowerError::BadInputBit {
+                symbol: binding.symbol,
+                bit_index: binding.bit_index,
+            });
+        }
+        entry.bits[bit_index] = aig_lit_from_node_values(binding.literal, node_values)?;
+        entry.seen[bit_index] = true;
+    }
+
+    let mut assignment = Assignment::new();
+    for (symbol, bits) in symbol_bits {
+        for (bit_index, seen) in (0u32..).zip(bits.seen.iter().copied()) {
+            if !seen {
+                return Err(BitLowerError::MissingModelBit { symbol, bit_index });
             }
         }
-        Ok(())
+        assignment.set(symbol, lsb_bits_to_value(bits.sort, &bits.bits)?);
+    }
+    Ok(assignment)
+}
+
+/// Persistent, incremental term-to-AIG lowering (ADR-0009 stage 2).
+///
+/// Unlike [`lower_terms`], which lowers a fixed batch into a fresh AIG, this
+/// keeps one AIG and one symbol/term memo across many [`IncrementalLowering::lower`]
+/// calls. A symbol always maps to the same AIG inputs, and shared subterms are
+/// lowered once and reused, so an incremental backend can bit-blast each newly
+/// asserted term without redoing the shared prefix.
+///
+/// Term and symbol IDs are arena-stable, so the **same arena** must be used
+/// across all calls on one instance.
+#[derive(Debug, Default)]
+pub struct IncrementalLowering {
+    aig: Aig,
+    memo: BTreeMap<TermId, Vec<AigLit>>,
+    term_bits: Vec<TermBitBinding>,
+    term_bit_lookup: BTreeMap<(TermId, u32), AigLit>,
+    symbol_inputs: Vec<SymbolBitInput>,
+}
+
+impl IncrementalLowering {
+    /// Creates an empty incremental lowering context.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The persistent AIG built so far.
+    pub fn aig(&self) -> &Aig {
+        &self.aig
+    }
+
+    /// Number of AIG nodes built so far (including constant-false and inputs).
+    ///
+    /// Callers can record this before [`IncrementalLowering::lower`] to learn
+    /// which nodes are new afterwards (the new range is `[before, after)`).
+    pub fn node_count(&self) -> usize {
+        self.aig.node_count()
+    }
+
+    /// Symbol-bit to AIG-input map entries in AIG input order.
+    pub fn symbol_inputs(&self) -> &[SymbolBitInput] {
+        &self.symbol_inputs
+    }
+
+    /// Lowers `root` into the persistent AIG, reusing already-lowered shared
+    /// subterms, and returns the lowered root (its bit literals and sort).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BitLowerError`] if a term uses an operator outside the lowering
+    /// subset or an internal lowering invariant is violated. On error the
+    /// partially-built AIG state is retained.
+    pub fn lower(&mut self, arena: &TermArena, root: TermId) -> Result<LoweredTerm, BitLowerError> {
+        // Move the persistent accumulators into a one-shot builder, reuse the
+        // existing lowering logic, then move the grown state back. The memo
+        // makes shared subterms (and symbols) lower once across calls.
+        let mut builder = LoweringBuilder {
+            arena,
+            aig: core::mem::take(&mut self.aig),
+            memo: core::mem::take(&mut self.memo),
+            term_bits: core::mem::take(&mut self.term_bits),
+            term_bit_lookup: core::mem::take(&mut self.term_bit_lookup),
+            symbol_inputs: core::mem::take(&mut self.symbol_inputs),
+        };
+        let result = builder.lower_term(root);
+        self.aig = builder.aig;
+        self.memo = builder.memo;
+        self.term_bits = builder.term_bits;
+        self.term_bit_lookup = builder.term_bit_lookup;
+        self.symbol_inputs = builder.symbol_inputs;
+        let bits = result?;
+        Ok(LoweredTerm {
+            term: root,
+            sort: arena.sort_of(root),
+            bits,
+        })
+    }
+
+    /// Reconstructs an Axeyum model from replayed AIG node values, using the
+    /// accumulated symbol-input map.
+    ///
+    /// # Errors
+    ///
+    /// See [`BitLowering::assignment_from_aig_values`].
+    pub fn assignment_from_aig_values(
+        &self,
+        node_values: &[bool],
+    ) -> Result<Assignment, BitLowerError> {
+        assignment_from_aig_node_values(&self.aig, &self.symbol_inputs, node_values)
     }
 }
 
@@ -535,6 +677,16 @@ impl<'a> LoweringBuilder<'a> {
                         .collect::<Vec<_>>();
                     self.record(term, bits)?;
                 }
+                TermNode::IntConst(_) => {
+                    // Integers are not bit-blasted (ADR-0014); callers preflight
+                    // with `first_unsupported_sort`.
+                    unreachable!("integer terms are rejected before bit lowering (ADR-0014)")
+                }
+                TermNode::RealConst(_) => {
+                    // Reals are not bit-blasted (ADR-0015); callers preflight
+                    // with `first_unsupported_sort`.
+                    unreachable!("real terms are rejected before bit lowering (ADR-0015)")
+                }
                 TermNode::Symbol(symbol) => {
                     let bits = self.lower_symbol(*symbol);
                     self.record(term, bits)?;
@@ -574,6 +726,17 @@ impl<'a> LoweringBuilder<'a> {
             Sort::BitVec(width) => (0..width)
                 .map(|bit_index| self.symbol_input(symbol, name, sort, bit_index))
                 .collect(),
+            // Array symbols are eliminated to bit-vectors before lowering
+            // (ADR-0010); callers preflight with `first_unsupported_op`.
+            Sort::Array { .. } => {
+                unreachable!("array terms are eliminated before bit lowering (ADR-0010)")
+            }
+            Sort::Int => {
+                unreachable!("integer terms are rejected before bit lowering (ADR-0014)")
+            }
+            Sort::Real => {
+                unreachable!("real terms are rejected before bit lowering (ADR-0015)")
+            }
         }
     }
 
@@ -581,6 +744,15 @@ impl<'a> LoweringBuilder<'a> {
         let label = match sort {
             Sort::Bool => format!("{name}:bool"),
             Sort::BitVec(_) => format!("{name}[{bit_index}]"),
+            Sort::Array { .. } => {
+                unreachable!("array terms are eliminated before bit lowering (ADR-0010)")
+            }
+            Sort::Int => {
+                unreachable!("integer terms are rejected before bit lowering (ADR-0014)")
+            }
+            Sort::Real => {
+                unreachable!("real terms are rejected before bit lowering (ADR-0015)")
+            }
         };
         let literal = self.aig.input(label);
         let input = match self
@@ -650,6 +822,12 @@ impl<'a> LoweringBuilder<'a> {
                 Op::BvNeg => self.lower_neg_op(term, operands)?,
                 Op::BvAdd => self.lower_add_op(term, operands)?,
                 Op::BvSub => self.lower_sub_op(term, operands)?,
+                Op::BvMul => self.lower_mul_op(term, operands)?,
+                Op::BvUdiv => self.lower_udiv_op(term, operands)?,
+                Op::BvUrem => self.lower_urem_op(term, operands)?,
+                Op::BvSdiv => self.lower_sdiv_op(term, operands)?,
+                Op::BvSrem => self.lower_srem_op(term, operands)?,
+                Op::BvSmod => self.lower_smod_op(term, operands)?,
                 Op::BvUlt
                 | Op::BvUle
                 | Op::BvUgt
@@ -661,7 +839,30 @@ impl<'a> LoweringBuilder<'a> {
                 Op::BvShl | Op::BvLshr | Op::BvAshr => self.lower_shift_op(term, op, operands)?,
                 Op::RotateLeft { by } => Self::lower_rotate_op(term, operands, by, true)?,
                 Op::RotateRight { by } => Self::lower_rotate_op(term, operands, by, false)?,
-                Op::BvMul | Op::BvUdiv | Op::BvUrem | Op::BvSdiv | Op::BvSrem | Op::BvSmod => {
+                // Arrays are eliminated to QF_BV before lowering (ADR-0010);
+                // uninterpreted functions via Ackermann reduction (ADR-0013);
+                // integer arithmetic is not bit-blasted in this slice (ADR-0014).
+                Op::Select
+                | Op::Store
+                | Op::Apply(_)
+                | Op::IntNeg
+                | Op::IntAdd
+                | Op::IntSub
+                | Op::IntMul
+                | Op::IntLt
+                | Op::IntLe
+                | Op::IntGt
+                | Op::IntGe
+                | Op::RealNeg
+                | Op::RealAdd
+                | Op::RealSub
+                | Op::RealMul
+                | Op::RealLt
+                | Op::RealLe
+                | Op::RealGt
+                | Op::RealGe
+                | Op::Forall(_)
+                | Op::Exists(_) => {
                     return Err(BitLowerError::UnsupportedOp { term, op });
                 }
             };
@@ -714,6 +915,248 @@ impl<'a> LoweringBuilder<'a> {
         };
         let inverted_rhs = rhs.iter().map(|bit| bit.negated()).collect::<Vec<_>>();
         self.lower_add_bits(term, lhs, &inverted_rhs, AigLit::TRUE)
+    }
+
+    fn lower_mul_op(
+        &mut self,
+        term: TermId,
+        operands: &[Vec<AigLit>],
+    ) -> Result<Vec<AigLit>, BitLowerError> {
+        let [lhs, rhs] = operands else {
+            return Err(BitLowerError::BitWidthMismatch {
+                term,
+                expected: 2,
+                found: operands.len(),
+            });
+        };
+        if lhs.len() != rhs.len() {
+            return Err(BitLowerError::BitWidthMismatch {
+                term,
+                expected: u32::try_from(lhs.len()).unwrap_or(u32::MAX),
+                found: rhs.len(),
+            });
+        }
+        let width = lhs.len();
+        // Shift-and-add multiplier, truncated to `width` bits (SMT-LIB bvmul is
+        // multiplication modulo 2^width). Partial product `i` is `lhs << i`
+        // gated by `rhs[i]`; bits shifted past the top are dropped, so the
+        // running sum stays `width` bits and equals the wrapping product. The
+        // AIG folds the gated-`false` and shifted-in `false` bits, so low
+        // multiplier bits and leading partial bits cost no gates.
+        let mut result = vec![AigLit::FALSE; width];
+        for i in 0..width {
+            let multiplier_bit = rhs[i];
+            let mut partial = vec![AigLit::FALSE; width];
+            for j in i..width {
+                partial[j] = self.aig.and(lhs[j - i], multiplier_bit);
+            }
+            result = self.lower_add_bits(term, &result, &partial, AigLit::FALSE)?;
+        }
+        Ok(result)
+    }
+
+    fn lower_udiv_op(
+        &mut self,
+        term: TermId,
+        operands: &[Vec<AigLit>],
+    ) -> Result<Vec<AigLit>, BitLowerError> {
+        let (dividend, divisor) = expect_two(term, operands)?;
+        let (quotient, _remainder) = self.unsigned_divrem(term, dividend, divisor)?;
+        Ok(quotient)
+    }
+
+    fn lower_urem_op(
+        &mut self,
+        term: TermId,
+        operands: &[Vec<AigLit>],
+    ) -> Result<Vec<AigLit>, BitLowerError> {
+        let (dividend, divisor) = expect_two(term, operands)?;
+        let (_quotient, remainder) = self.unsigned_divrem(term, dividend, divisor)?;
+        Ok(remainder)
+    }
+
+    /// Combinational restoring divider.
+    ///
+    /// Returns `(quotient, remainder)` for the unsigned division of `dividend`
+    /// by `divisor`, both `width` bits, applying SMT-LIB totality: division by
+    /// zero yields an all-ones quotient and the dividend as remainder. The AIG's
+    /// structural hashing deduplicates the shared circuit when both `bvudiv` and
+    /// `bvurem` of the same operands appear.
+    fn unsigned_divrem(
+        &mut self,
+        term: TermId,
+        dividend: &[AigLit],
+        divisor: &[AigLit],
+    ) -> Result<(Vec<AigLit>, Vec<AigLit>), BitLowerError> {
+        let width = dividend.len();
+        if divisor.len() != width {
+            return Err(BitLowerError::BitWidthMismatch {
+                term,
+                expected: u32::try_from(width).unwrap_or(u32::MAX),
+                found: divisor.len(),
+            });
+        }
+
+        // Zero-extend the divisor by one bit so the partial-remainder compare
+        // and subtract never overflow: the invariant `remainder < divisor`
+        // keeps `shifted = 2*remainder + bit < 2*divisor`, which fits in
+        // `width + 1` bits, and the post-step value is again `< divisor`.
+        let mut divisor_ext = divisor.to_vec();
+        divisor_ext.push(AigLit::FALSE);
+        let negated_divisor_ext = divisor_ext
+            .iter()
+            .map(|bit| bit.negated())
+            .collect::<Vec<_>>();
+
+        let mut remainder = vec![AigLit::FALSE; width];
+        let mut quotient = vec![AigLit::FALSE; width];
+
+        for index in (0..width).rev() {
+            // shifted = (remainder << 1) | dividend[index], width + 1 bits.
+            let mut shifted = Vec::with_capacity(width + 1);
+            shifted.push(dividend[index]);
+            shifted.extend_from_slice(&remainder);
+
+            let less = self.lower_unsigned_less(term, &shifted, &divisor_ext)?;
+            let greater_equal = less.negated();
+            // diff = shifted - divisor (two's complement add of the negation).
+            let diff = self.lower_add_bits(term, &shifted, &negated_divisor_ext, AigLit::TRUE)?;
+            let next = self.mux_bits(greater_equal, &diff, &shifted);
+            // The post-step value is `< divisor`, so its top bit is zero.
+            remainder = next[..width].to_vec();
+            quotient[index] = greater_equal;
+        }
+
+        // SMT-LIB totality: `bvudiv x 0 = ~0`, `bvurem x 0 = x`.
+        let divisor_is_zero = self.lower_all_bits_clear(divisor);
+        let all_ones = vec![AigLit::TRUE; width];
+        let quotient = self.mux_bits(divisor_is_zero, &all_ones, &quotient);
+        let remainder = self.mux_bits(divisor_is_zero, dividend, &remainder);
+        Ok((quotient, remainder))
+    }
+
+    fn mux_bits(
+        &mut self,
+        condition: AigLit,
+        then_bits: &[AigLit],
+        else_bits: &[AigLit],
+    ) -> Vec<AigLit> {
+        then_bits
+            .iter()
+            .copied()
+            .zip(else_bits.iter().copied())
+            .map(|(then_bit, else_bit)| self.aig.mux(condition, then_bit, else_bit))
+            .collect()
+    }
+
+    /// Two's-complement negation: invert and increment.
+    fn negate_bits(&mut self, bits: &[AigLit]) -> Vec<AigLit> {
+        let inverted = bits.iter().map(|bit| bit.negated()).collect::<Vec<_>>();
+        self.lower_increment(&inverted)
+    }
+
+    /// Absolute value under two's complement: `msb ? -x : x` (the most-negative
+    /// value maps to itself, matching the SMT-LIB signed-division expansion).
+    fn absolute_bits(&mut self, bits: &[AigLit]) -> Vec<AigLit> {
+        let sign = bits[bits.len() - 1];
+        let negated = self.negate_bits(bits);
+        self.mux_bits(sign, &negated, bits)
+    }
+
+    /// Selects one of four equal-width vectors by two sign bits:
+    /// `(sign_a, sign_b) -> v00 | v10 | v01 | v11`.
+    fn select_by_signs(
+        &mut self,
+        sign_a: AigLit,
+        sign_b: AigLit,
+        v00: &[AigLit],
+        v10: &[AigLit],
+        v01: &[AigLit],
+        v11: &[AigLit],
+    ) -> Vec<AigLit> {
+        let when_a_clear = self.mux_bits(sign_b, v01, v00);
+        let when_a_set = self.mux_bits(sign_b, v11, v10);
+        self.mux_bits(sign_a, &when_a_set, &when_a_clear)
+    }
+
+    /// Shared signed-division core: returns the operand sign bits and the
+    /// unsigned quotient/remainder of the operands' absolute values. The AIG's
+    /// structural hashing deduplicates this across `bvsdiv`/`bvsrem`/`bvsmod` of
+    /// the same operands.
+    fn signed_divrem_abs(
+        &mut self,
+        term: TermId,
+        dividend: &[AigLit],
+        divisor: &[AigLit],
+    ) -> Result<(AigLit, AigLit, Vec<AigLit>, Vec<AigLit>), BitLowerError> {
+        let width = dividend.len();
+        if divisor.len() != width {
+            return Err(BitLowerError::BitWidthMismatch {
+                term,
+                expected: u32::try_from(width).unwrap_or(u32::MAX),
+                found: divisor.len(),
+            });
+        }
+        let sign_dividend = dividend[width - 1];
+        let sign_divisor = divisor[width - 1];
+        let abs_dividend = self.absolute_bits(dividend);
+        let abs_divisor = self.absolute_bits(divisor);
+        let (quotient, remainder) = self.unsigned_divrem(term, &abs_dividend, &abs_divisor)?;
+        Ok((sign_dividend, sign_divisor, quotient, remainder))
+    }
+
+    fn lower_sdiv_op(
+        &mut self,
+        term: TermId,
+        operands: &[Vec<AigLit>],
+    ) -> Result<Vec<AigLit>, BitLowerError> {
+        let (dividend, divisor) = expect_two(term, operands)?;
+        let (sign_dividend, sign_divisor, quotient, _remainder) =
+            self.signed_divrem_abs(term, dividend, divisor)?;
+        // The quotient is negated exactly when the operand signs differ.
+        let signs_differ = self.aig.xor(sign_dividend, sign_divisor);
+        let negated_quotient = self.negate_bits(&quotient);
+        Ok(self.mux_bits(signs_differ, &negated_quotient, &quotient))
+    }
+
+    fn lower_srem_op(
+        &mut self,
+        term: TermId,
+        operands: &[Vec<AigLit>],
+    ) -> Result<Vec<AigLit>, BitLowerError> {
+        let (dividend, divisor) = expect_two(term, operands)?;
+        let (sign_dividend, _sign_divisor, _quotient, remainder) =
+            self.signed_divrem_abs(term, dividend, divisor)?;
+        // The remainder's sign follows the dividend.
+        let negated_remainder = self.negate_bits(&remainder);
+        Ok(self.mux_bits(sign_dividend, &negated_remainder, &remainder))
+    }
+
+    fn lower_smod_op(
+        &mut self,
+        term: TermId,
+        operands: &[Vec<AigLit>],
+    ) -> Result<Vec<AigLit>, BitLowerError> {
+        let (dividend, divisor) = expect_two(term, operands)?;
+        let (sign_dividend, sign_divisor, _quotient, remainder) =
+            self.signed_divrem_abs(term, dividend, divisor)?;
+        // The result's sign follows the divisor (SMT-LIB bvsmod expansion); a
+        // zero unsigned remainder yields zero regardless of signs.
+        let remainder_is_zero = self.lower_all_bits_clear(&remainder);
+        let negated_remainder = self.negate_bits(&remainder);
+        let both_nonneg = remainder.clone();
+        let dividend_neg = self.lower_add_bits(term, &negated_remainder, divisor, AigLit::FALSE)?;
+        let divisor_neg = self.lower_add_bits(term, &remainder, divisor, AigLit::FALSE)?;
+        let both_neg = negated_remainder.clone();
+        let selected = self.select_by_signs(
+            sign_dividend,
+            sign_divisor,
+            &both_nonneg,
+            &dividend_neg,
+            &divisor_neg,
+            &both_neg,
+        );
+        Ok(self.mux_bits(remainder_is_zero, &remainder, &selected))
     }
 
     fn lower_compare_op(
@@ -1201,6 +1644,15 @@ impl<'a> LoweringBuilder<'a> {
         match self.arena.sort_of(term) {
             Sort::Bool => 1,
             Sort::BitVec(width) => width,
+            Sort::Array { .. } => {
+                unreachable!("array terms are eliminated before bit lowering (ADR-0010)")
+            }
+            Sort::Int => {
+                unreachable!("integer terms are rejected before bit lowering (ADR-0014)")
+            }
+            Sort::Real => {
+                unreachable!("real terms are rejected before bit lowering (ADR-0015)")
+            }
         }
     }
 }
@@ -1242,6 +1694,15 @@ fn sort_width(sort: Sort) -> usize {
     match sort {
         Sort::Bool => 1,
         Sort::BitVec(width) => width as usize,
+        Sort::Array { .. } => {
+            unreachable!("array terms are eliminated before bit lowering (ADR-0010)")
+        }
+        Sort::Int => {
+            unreachable!("integer terms are rejected before bit lowering (ADR-0014)")
+        }
+        Sort::Real => {
+            unreachable!("real terms are rejected before bit lowering (ADR-0015)")
+        }
     }
 }
 
@@ -1273,10 +1734,49 @@ fn expect_bool(term: TermId, bits: &[AigLit]) -> Result<AigLit, BitLowerError> {
     }
 }
 
+fn expect_two(
+    term: TermId,
+    operands: &[Vec<AigLit>],
+) -> Result<(&[AigLit], &[AigLit]), BitLowerError> {
+    if let [lhs, rhs] = operands {
+        Ok((lhs, rhs))
+    } else {
+        Err(BitLowerError::BitWidthMismatch {
+            term,
+            expected: 2,
+            found: operands.len(),
+        })
+    }
+}
+
 fn is_unsupported_op(op: Op) -> bool {
+    // The full scalar QF_BV operator set lowers; array operations are eliminated
+    // to QF_BV before lowering (ADR-0010) and uninterpreted-function
+    // applications via Ackermann reduction (ADR-0013), so neither is supported
+    // by the bit-blaster directly.
     matches!(
         op,
-        Op::BvMul | Op::BvUdiv | Op::BvUrem | Op::BvSdiv | Op::BvSrem | Op::BvSmod
+        Op::Select
+            | Op::Store
+            | Op::Apply(_)
+            | Op::IntNeg
+            | Op::IntAdd
+            | Op::IntSub
+            | Op::IntMul
+            | Op::IntLt
+            | Op::IntLe
+            | Op::IntGt
+            | Op::IntGe
+            | Op::RealNeg
+            | Op::RealAdd
+            | Op::RealSub
+            | Op::RealMul
+            | Op::RealLt
+            | Op::RealLe
+            | Op::RealGt
+            | Op::RealGe
+            | Op::Forall(_)
+            | Op::Exists(_)
     )
 }
 
@@ -1303,9 +1803,9 @@ pub fn eval_lowered_once(
 #[cfg(test)]
 mod tests {
     use axeyum_aig::AigLit;
-    use axeyum_ir::{Assignment, IrError, Op, Sort, TermArena, Value, eval};
+    use axeyum_ir::{Assignment, IrError, Sort, TermArena, Value, eval};
 
-    use super::{BitLowerError, eval_lowered_once, lower_terms};
+    use super::{BitLowerError, IncrementalLowering, eval_lowered_once, lower_terms};
 
     fn bv(width: u32, value: u128) -> Value {
         Value::Bv { width, value }
@@ -1657,19 +2157,160 @@ mod tests {
     }
 
     #[test]
-    fn unsupported_ops_are_structured_errors() {
+    fn incremental_lowering_matches_batch_and_shares_subterms() {
         let mut arena = TermArena::new();
-        let x = arena.bv_var("x", 4).unwrap();
-        let y = arena.bv_var("y", 4).unwrap();
-        let mul = arena.bv_mul(x, y).unwrap();
+        let x = arena.bv_var("x", 8).unwrap();
+        let y = arena.bv_var("y", 8).unwrap();
+        let sum = arena.bv_add(x, y).unwrap();
+        let prod = arena.bv_mul(x, y).unwrap();
+        let seven = arena.bv_const(8, 7).unwrap();
+        let a = arena.eq(sum, seven).unwrap();
+        // `b` shares `sum`, `x`, and `y` with `a`.
+        let b = arena.bv_ult(prod, sum).unwrap();
 
-        assert!(matches!(
-            lower_terms(&arena, &[mul]),
-            Err(BitLowerError::UnsupportedOp {
-                op: Op::BvMul,
-                term
-            }) if term == mul
-        ));
+        let batch = lower_terms(&arena, &[a, b]).unwrap();
+
+        let mut incremental = IncrementalLowering::new();
+        let lowered_a = incremental.lower(&arena, a).unwrap();
+        let lowered_b = incremental.lower(&arena, b).unwrap();
+
+        // Incremental lowering builds the same AIG and the same root bits as a
+        // single batch lowering, so it inherits the batch path's correctness.
+        assert_eq!(lowered_a.bits(), batch.roots()[0].bits());
+        assert_eq!(lowered_b.bits(), batch.roots()[1].bits());
+        assert_eq!(incremental.node_count(), batch.aig().node_count());
+        assert_eq!(incremental.symbol_inputs(), batch.symbol_inputs());
+
+        // Re-lowering an already-lowered term adds no AIG nodes (memoized).
+        let before = incremental.node_count();
+        let lowered_again = incremental.lower(&arena, a).unwrap();
+        assert_eq!(lowered_again.bits(), lowered_a.bits());
+        assert_eq!(
+            incremental.node_count(),
+            before,
+            "shared subterms must not be re-lowered"
+        );
+    }
+
+    #[test]
+    fn signed_division_matches_ground_evaluator() {
+        for width in [1u32, 2, 3, 4, 5] {
+            let mut arena = TermArena::new();
+            let x_sym = arena.declare("x", Sort::BitVec(width)).unwrap();
+            let y_sym = arena.declare("y", Sort::BitVec(width)).unwrap();
+            let x = arena.var(x_sym);
+            let y = arena.var(y_sym);
+            // Signed divide/rem/mod over all input pairs, including negative
+            // operands, the most-negative value, and the divide-by-zero path.
+            let roots = [
+                arena.bv_sdiv(x, y).unwrap(),
+                arena.bv_srem(x, y).unwrap(),
+                arena.bv_smod(x, y).unwrap(),
+            ];
+            let lowering = lower_terms(&arena, &roots).unwrap();
+
+            let bound = 1u128 << width;
+            for x_value in 0..bound {
+                for y_value in 0..bound {
+                    let mut assignment = Assignment::new();
+                    assignment.set(x_sym, bv(width, x_value));
+                    assignment.set(y_sym, bv(width, y_value));
+                    let expected = roots
+                        .iter()
+                        .copied()
+                        .map(|root| eval(&arena, root, &assignment))
+                        .collect::<Result<Vec<_>, _>>()
+                        .unwrap();
+                    assert_eq!(
+                        lowering.evaluate_roots(&assignment).unwrap(),
+                        expected,
+                        "width={width} x={x_value} y={y_value}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn unsigned_division_matches_ground_evaluator() {
+        for width in [1u32, 2, 3, 4, 5] {
+            let mut arena = TermArena::new();
+            let x_sym = arena.declare("x", Sort::BitVec(width)).unwrap();
+            let y_sym = arena.declare("y", Sort::BitVec(width)).unwrap();
+            let x = arena.var(x_sym);
+            let y = arena.var(y_sym);
+            // Cover divide-by-symbol, divide-by-constant, and self-division so
+            // the divide-by-zero totality path is exercised (y ranges over 0).
+            let three = arena.bv_const(width, 3 & ((1u128 << width) - 1)).unwrap();
+            let roots = [
+                arena.bv_udiv(x, y).unwrap(),
+                arena.bv_urem(x, y).unwrap(),
+                arena.bv_udiv(x, three).unwrap(),
+                arena.bv_urem(x, three).unwrap(),
+            ];
+            let lowering = lower_terms(&arena, &roots).unwrap();
+
+            let bound = 1u128 << width;
+            for x_value in 0..bound {
+                for y_value in 0..bound {
+                    let mut assignment = Assignment::new();
+                    assignment.set(x_sym, bv(width, x_value));
+                    assignment.set(y_sym, bv(width, y_value));
+                    let expected = roots
+                        .iter()
+                        .copied()
+                        .map(|root| eval(&arena, root, &assignment))
+                        .collect::<Result<Vec<_>, _>>()
+                        .unwrap();
+                    assert_eq!(
+                        lowering.evaluate_roots(&assignment).unwrap(),
+                        expected,
+                        "width={width} x={x_value} y={y_value}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn multiplication_matches_ground_evaluator() {
+        for width in [1u32, 2, 4, 5] {
+            let mut arena = TermArena::new();
+            let x_sym = arena.declare("x", Sort::BitVec(width)).unwrap();
+            let y_sym = arena.declare("y", Sort::BitVec(width)).unwrap();
+            let x = arena.var(x_sym);
+            let y = arena.var(y_sym);
+            // Cover symbol*symbol, squaring (shared operand), and
+            // symbol*constant so partial-product folding is exercised too.
+            let width_mask = (1u128 << width) - 1;
+            let three = arena.bv_const(width, 3 & width_mask).unwrap();
+            let roots = [
+                arena.bv_mul(x, y).unwrap(),
+                arena.bv_mul(x, x).unwrap(),
+                arena.bv_mul(x, three).unwrap(),
+            ];
+            let lowering = lower_terms(&arena, &roots).unwrap();
+
+            let bound = 1u128 << width;
+            for x_value in 0..bound {
+                for y_value in 0..bound {
+                    let mut assignment = Assignment::new();
+                    assignment.set(x_sym, bv(width, x_value));
+                    assignment.set(y_sym, bv(width, y_value));
+                    let expected = roots
+                        .iter()
+                        .copied()
+                        .map(|root| eval(&arena, root, &assignment))
+                        .collect::<Result<Vec<_>, _>>()
+                        .unwrap();
+                    assert_eq!(
+                        lowering.evaluate_roots(&assignment).unwrap(),
+                        expected,
+                        "width={width} x={x_value} y={y_value}"
+                    );
+                }
+            }
+        }
     }
 
     #[test]

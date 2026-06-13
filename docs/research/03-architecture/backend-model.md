@@ -1,7 +1,7 @@
 # Backend Model
 
 Status: draft
-Last updated: 2026-06-10
+Last updated: 2026-06-13
 
 ## Purpose
 
@@ -61,9 +61,18 @@ SolverBackend
 
 ## Open Questions
 
-- [ ] Should solver calls be one-shot first, then incremental later?
+- [x] Should solver calls be one-shot first, then incremental later?
+  - Answer: yes. The `SolverBackend` trait is one-shot; a warm incremental SAT
+    layer (`IncrementalSat`) and a high-level `Solver` façade with
+    push/pop/assume were added on top per
+    [ADR-0009](../09-decisions/adr-0009-incremental-sat-and-solving.md) stage 1,
+    without forking the one-shot trait.
 - [ ] Should model completion be requested per query or per backend configuration?
-- [ ] How should backend-specific statistics be exposed?
+- [x] How should backend-specific statistics be exposed?
+  - Answer: as returned data, not logs — `SolveStats` carries typed timings plus
+    a backend-specific `(name, value)` counter list, and
+    `axeyum_solver::BvLayerStats` lifts the pure-Rust pipeline counters into a
+    typed, regression-testable view.
 
 ## Source Pointers
 

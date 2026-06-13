@@ -442,6 +442,19 @@ fn term_fingerprint(arena: &TermArena, root: TermId) -> u64 {
                 update_u128(&mut hash, *value);
                 memo.insert(term, hash);
             }
+            TermNode::IntConst(value) => {
+                let mut hash = FNV_OFFSET;
+                update_u64(&mut hash, 5);
+                update_bytes(&mut hash, &value.to_le_bytes());
+                memo.insert(term, hash);
+            }
+            TermNode::RealConst(value) => {
+                let mut hash = FNV_OFFSET;
+                update_u64(&mut hash, 6);
+                update_bytes(&mut hash, &value.numerator().to_le_bytes());
+                update_bytes(&mut hash, &value.denominator().to_le_bytes());
+                memo.insert(term, hash);
+            }
             TermNode::Symbol(symbol) => {
                 let (name, sort) = arena.symbol(*symbol);
                 let mut hash = FNV_OFFSET;
@@ -491,7 +504,10 @@ fn support_for_terms(arena: &TermArena, roots: &[TermId]) -> BTreeSet<SymbolId> 
                     stack.push(arg);
                 }
             }
-            TermNode::BoolConst(_) | TermNode::BvConst { .. } => {}
+            TermNode::BoolConst(_)
+            | TermNode::BvConst { .. }
+            | TermNode::IntConst(_)
+            | TermNode::RealConst(_) => {}
         }
     }
 
@@ -505,6 +521,13 @@ fn update_sort(hash: &mut u64, sort: Sort) {
             update_u64(hash, 2);
             update_u64(hash, u64::from(width));
         }
+        Sort::Array { index, element } => {
+            update_u64(hash, 3);
+            update_u64(hash, u64::from(index));
+            update_u64(hash, u64::from(element));
+        }
+        Sort::Int => update_u64(hash, 4),
+        Sort::Real => update_u64(hash, 5),
     }
 }
 
@@ -567,6 +590,36 @@ fn update_op(hash: &mut u64, op: Op) {
         Op::RotateRight { by } => {
             update_u64(hash, 41);
             update_u64(hash, u64::from(by));
+        }
+        Op::Select => update_u64(hash, 42),
+        Op::Store => update_u64(hash, 43),
+        Op::Apply(func) => {
+            update_u64(hash, 44);
+            update_u64(hash, u64::try_from(func.index()).unwrap_or(u64::MAX));
+        }
+        Op::IntNeg => update_u64(hash, 45),
+        Op::IntAdd => update_u64(hash, 46),
+        Op::IntSub => update_u64(hash, 47),
+        Op::IntMul => update_u64(hash, 48),
+        Op::IntLt => update_u64(hash, 49),
+        Op::IntLe => update_u64(hash, 50),
+        Op::IntGt => update_u64(hash, 51),
+        Op::IntGe => update_u64(hash, 52),
+        Op::RealNeg => update_u64(hash, 53),
+        Op::RealAdd => update_u64(hash, 54),
+        Op::RealSub => update_u64(hash, 55),
+        Op::RealMul => update_u64(hash, 56),
+        Op::RealLt => update_u64(hash, 57),
+        Op::RealLe => update_u64(hash, 58),
+        Op::RealGt => update_u64(hash, 59),
+        Op::RealGe => update_u64(hash, 60),
+        Op::Forall(var) => {
+            update_u64(hash, 61);
+            update_u64(hash, u64::try_from(var.index()).unwrap_or(u64::MAX));
+        }
+        Op::Exists(var) => {
+            update_u64(hash, 62);
+            update_u64(hash, u64::try_from(var.index()).unwrap_or(u64::MAX));
         }
     }
 }
