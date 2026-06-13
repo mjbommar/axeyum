@@ -105,13 +105,23 @@ Operators the reference does not yet cover (arithmetic, shifts, concat/extract,
 extensions) return `NotCertifiable` and fall back to the sampled check. The
 `Certified` outcome carries the auditable `(dimacs, drat)` artifact.
 
-**Remaining for path (B):** extend the reference to the arithmetic, shift,
-comparison, and structural operators (each gadget written independently and
-exhaustively cross-checked against the evaluator), so the miter certifies the
-whole supported `QF_BV` operator set. That is incremental, operator-by-operator,
-green-at-each-step work on top of this scaffold. Path (A) (a width-parametric
-*verified* bit-blaster, eliminating the reference-trust) remains the eventual
-fully-trusted form.
+The covered fragment now includes **arithmetic** (`bvadd`/`bvsub`/`bvneg`/`bvmul`
+— ripple-carry adder, two's-complement, shift-and-add), **all comparisons**
+(unsigned via the subtractor's borrow, signed via sign analysis), and **shifts**
+(`bvshl`/`bvlshr`/`bvashr` — barrel shifter with SMT-LIB over-shift totality), in
+addition to the bitwise/Boolean/`eq`/`bvcomp`/`ite` base. Each reference gadget is
+textbook and *independent* of `axeyum-bv`'s code; the miter being `unsat`
+(DRAT-checked) for width-4 add/sub/mul/shift/comparison queries confirms the two
+agree exhaustively — both certifying the production reduction and validating the
+reference.
+
+**Remaining for path (B):** the reference still lacks division/remainder
+(`bvudiv`/`bvurem`/`bvsdiv`/`bvsrem`/`bvsmod` — a restoring divider), the
+structural ops (concat/extract, zero/sign extension), and rotates. Each is the
+same incremental, green-at-each-step pattern on this scaffold (write the gadget
+independently; the miter test certifies it or flags a divergence). Path (A) (a
+width-parametric *verified* bit-blaster, eliminating reference-trust) remains the
+eventual fully-trusted form.
 
 ## Delivered earlier: scalable faithfulness *checking* (the differential layer)
 

@@ -50,14 +50,43 @@ fn nand_nor_xnor_are_certified() {
 }
 
 #[test]
+fn arithmetic_comparisons_and_shifts_are_certified() {
+    // Add, sub, mul, neg, unsigned/signed comparisons, and logical/arithmetic
+    // shifts (the bug-prone gadgets) must all provably match the production
+    // bit-blasting on every input. Small width keeps the miter refutation fast.
+    let mut arena = TermArena::new();
+    let xv = arena.bv_var("x", 4).unwrap();
+    let yv = arena.bv_var("y", 4).unwrap();
+    let add = arena.bv_add(xv, yv).unwrap();
+    let sub = arena.bv_sub(xv, yv).unwrap();
+    let mul = arena.bv_mul(xv, yv).unwrap();
+    let neg = arena.bv_neg(xv).unwrap();
+    let shl = arena.bv_shl(xv, yv).unwrap();
+    let lshr = arena.bv_lshr(mul, xv).unwrap();
+    let ashr = arena.bv_ashr(sub, yv).unwrap();
+    let ult = arena.bv_ult(add, mul).unwrap();
+    let slt = arena.bv_slt(sub, neg).unwrap();
+    let uge = arena.bv_uge(shl, lshr).unwrap();
+
+    let roots = [add, sub, mul, neg, shl, lshr, ashr, ult, slt, uge];
+    assert!(
+        matches!(
+            certify_bitblast_by_miter(&arena, &roots).unwrap(),
+            BitblastMiterOutcome::Certified { .. }
+        ),
+        "arithmetic/comparison/shift bit-blasting should certify faithful"
+    );
+}
+
+#[test]
 fn uncovered_operator_is_not_certifiable() {
-    // Arithmetic is outside the reference's covered fragment (for now).
+    // Division is outside the reference's covered fragment (for now).
     let mut arena = TermArena::new();
     let x = arena.bv_var("x", 8).unwrap();
     let y = arena.bv_var("y", 8).unwrap();
-    let sum = arena.bv_add(x, y).unwrap();
+    let q = arena.bv_udiv(x, y).unwrap();
     assert_eq!(
-        certify_bitblast_by_miter(&arena, &[sum]).unwrap(),
+        certify_bitblast_by_miter(&arena, &[q]).unwrap(),
         BitblastMiterOutcome::NotCertifiable
     );
 }

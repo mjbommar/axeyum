@@ -10,12 +10,15 @@
 //! and a `sat` miter is a faithfulness bug with a witness.
 //!
 //! This upgrades the sampled [`crate::check_qf_bv_faithfulness`] to a real
-//! certificate, for the operator fragment the reference covers (Boolean
-//! connectives, bit-vector bitwise ops, `eq`, `ite`). It is sound *modulo trust
-//! in the reference*, which is independent of the production code (so production
-//! code bugs surface as miter `sat`) — the project's two-independent-procedures
+//! certificate, for the operator fragment the reference covers: Boolean
+//! connectives, bit-vector bitwise ops, `eq`/`bvcomp`, `ite`, **arithmetic**
+//! (`bvadd`/`bvsub`/`bvneg`/`bvmul`), **all comparisons** (unsigned and signed),
+//! and **shifts** (`bvshl`/`bvlshr`/`bvashr`). It is sound *modulo trust in the
+//! reference*, which is independent of the production code (so production code
+//! bugs surface as miter `sat`) — the project's two-independent-procedures
 //! pattern applied to bit-blasting. Operators the reference does not yet cover
-//! (arithmetic, shifts, concat/extract) return [`BitblastMiterOutcome::NotCertifiable`].
+//! (division/remainder, concat/extract, extensions, rotates) return
+//! [`BitblastMiterOutcome::NotCertifiable`].
 
 use std::collections::HashMap;
 
@@ -239,12 +242,7 @@ fn reference_op(op: Op, args: &[Vec<AigLit>], aig: &mut Aig) -> Option<Vec<AigLi
             if args[0].len() != args[1].len() {
                 return None;
             }
-            let mut acc = AigLit::TRUE;
-            for (&a, &b) in args[0].iter().zip(&args[1]) {
-                let same = aig.xor(a, b).negated();
-                acc = aig.and(acc, same);
-            }
-            vec![acc]
+            vec![ref_eq_bits(aig, &args[0], &args[1])]
         }
         // `ite(c, t, e)`: `c` is one bit; mux each result bit.
         Op::Ite => {
@@ -258,11 +256,181 @@ fn reference_op(op: Op, args: &[Vec<AigLit>], aig: &mut Aig) -> Option<Vec<AigLi
                 .map(|(&t, &e)| aig.mux(cond, t, e))
                 .collect()
         }
-        // Everything else (arithmetic, shifts, concat/extract, comparisons,
-        // extensions, apply, quantifiers) is not yet covered by the reference.
+        // --- arithmetic (textbook gadgets, independent of the production code) -
+        Op::BvNeg => ref_neg(aig, &args[0]),
+        Op::BvAdd => ref_add(aig, &args[0], &args[1], AigLit::FALSE).0,
+        Op::BvSub => ref_sub(aig, &args[0], &args[1]),
+        Op::BvMul => ref_mul(aig, &args[0], &args[1]),
+        // --- shifts (barrel shifter; SMT-LIB over-shift totality) -------------
+        Op::BvShl => ref_shift_left(aig, &args[0], &args[1]),
+        Op::BvLshr => ref_shift_right(aig, &args[0], &args[1], false),
+        Op::BvAshr => ref_shift_right(aig, &args[0], &args[1], true),
+        // --- comparisons (via the subtractor's borrow / sign) -----------------
+        Op::BvUlt => vec![ref_ult(aig, &args[0], &args[1])],
+        Op::BvUgt => vec![ref_ult(aig, &args[1], &args[0])],
+        Op::BvUle => {
+            let lt = ref_ult(aig, &args[0], &args[1]);
+            let eq = ref_eq_bits(aig, &args[0], &args[1]);
+            vec![aig.or(lt, eq)]
+        }
+        Op::BvUge => vec![ref_ult(aig, &args[0], &args[1]).negated()],
+        Op::BvSlt => vec![ref_slt(aig, &args[0], &args[1])],
+        Op::BvSgt => vec![ref_slt(aig, &args[1], &args[0])],
+        Op::BvSle => {
+            let lt = ref_slt(aig, &args[0], &args[1]);
+            let eq = ref_eq_bits(aig, &args[0], &args[1]);
+            vec![aig.or(lt, eq)]
+        }
+        Op::BvSge => vec![ref_slt(aig, &args[0], &args[1]).negated()],
+        // `bvcomp`: 1-bit BV, 1 iff all bits equal.
+        Op::BvComp => vec![ref_eq_bits(aig, &args[0], &args[1])],
+        // Still uncovered: division/remainder, concat/extract, extensions,
+        // rotates, apply, quantifiers.
         _ => return None,
     };
     Some(bits)
+}
+
+/// One bit: all of `a`'s and `b`'s bits are equal (AND of bitwise xnor).
+fn ref_eq_bits(aig: &mut Aig, a: &[AigLit], b: &[AigLit]) -> AigLit {
+    let mut acc = AigLit::TRUE;
+    for (&x, &y) in a.iter().zip(b) {
+        let same = aig.xor(x, y).negated();
+        acc = aig.and(acc, same);
+    }
+    acc
+}
+
+/// Ripple-carry adder: returns `(sum, carry_out)` for `a + b + carry_in`
+/// (operands equal width; sum truncated to that width).
+fn ref_add(aig: &mut Aig, a: &[AigLit], b: &[AigLit], carry_in: AigLit) -> (Vec<AigLit>, AigLit) {
+    let mut carry = carry_in;
+    let mut sum = Vec::with_capacity(a.len());
+    for (&ai, &bi) in a.iter().zip(b) {
+        let axb = aig.xor(ai, bi);
+        let s = aig.xor(axb, carry);
+        let ab = aig.and(ai, bi);
+        let carry_and = aig.and(carry, axb);
+        carry = aig.or(ab, carry_and);
+        sum.push(s);
+    }
+    (sum, carry)
+}
+
+/// Two's-complement negation: `~a + 1`.
+fn ref_neg(aig: &mut Aig, a: &[AigLit]) -> Vec<AigLit> {
+    let not_a: Vec<AigLit> = a.iter().map(|&x| x.negated()).collect();
+    let zeros = vec![AigLit::FALSE; a.len()];
+    ref_add(aig, &not_a, &zeros, AigLit::TRUE).0
+}
+
+/// Subtraction: `a + ~b + 1`.
+fn ref_sub(aig: &mut Aig, a: &[AigLit], b: &[AigLit]) -> Vec<AigLit> {
+    let not_b: Vec<AigLit> = b.iter().map(|&x| x.negated()).collect();
+    ref_add(aig, a, &not_b, AigLit::TRUE).0
+}
+
+/// Shift-and-add multiplier, truncated to the operand width.
+fn ref_mul(aig: &mut Aig, a: &[AigLit], b: &[AigLit]) -> Vec<AigLit> {
+    let width = a.len();
+    let mut acc = vec![AigLit::FALSE; width];
+    for (i, &bi) in b.iter().enumerate() {
+        let partial: Vec<AigLit> = (0..width)
+            .map(|j| {
+                if j >= i {
+                    aig.and(a[j - i], bi)
+                } else {
+                    AigLit::FALSE
+                }
+            })
+            .collect();
+        acc = ref_add(aig, &acc, &partial, AigLit::FALSE).0;
+    }
+    acc
+}
+
+/// Barrel left shift; a shift amount `>=` width yields zero (SMT-LIB totality).
+fn ref_shift_left(aig: &mut Aig, x: &[AigLit], amount: &[AigLit]) -> Vec<AigLit> {
+    let width = x.len();
+    let mut result = x.to_vec();
+    for (i, &si) in amount.iter().enumerate() {
+        let shift = if i < 64 { 1usize << i } else { usize::MAX };
+        if shift >= width {
+            result = result
+                .iter()
+                .map(|&r| aig.mux(si, AigLit::FALSE, r))
+                .collect();
+        } else {
+            let shifted: Vec<AigLit> = (0..width)
+                .map(|j| {
+                    if j >= shift {
+                        result[j - shift]
+                    } else {
+                        AigLit::FALSE
+                    }
+                })
+                .collect();
+            result = (0..width)
+                .map(|j| aig.mux(si, shifted[j], result[j]))
+                .collect();
+        }
+    }
+    result
+}
+
+/// Barrel right shift; `arithmetic` fills with the sign bit (`bvashr`), else
+/// zero (`bvlshr`). Over-shift yields the fill (SMT-LIB totality).
+fn ref_shift_right(
+    aig: &mut Aig,
+    x: &[AigLit],
+    amount: &[AigLit],
+    arithmetic: bool,
+) -> Vec<AigLit> {
+    let width = x.len();
+    let fill = if arithmetic {
+        x[width - 1]
+    } else {
+        AigLit::FALSE
+    };
+    let mut result = x.to_vec();
+    for (i, &si) in amount.iter().enumerate() {
+        let shift = if i < 64 { 1usize << i } else { usize::MAX };
+        if shift >= width {
+            result = result.iter().map(|&r| aig.mux(si, fill, r)).collect();
+        } else {
+            let shifted: Vec<AigLit> = (0..width)
+                .map(|j| {
+                    if j + shift < width {
+                        result[j + shift]
+                    } else {
+                        fill
+                    }
+                })
+                .collect();
+            result = (0..width)
+                .map(|j| aig.mux(si, shifted[j], result[j]))
+                .collect();
+        }
+    }
+    result
+}
+
+/// Unsigned less-than: the subtraction `a - b = a + ~b + 1` borrows iff `a < b`,
+/// i.e. its carry-out is 0.
+fn ref_ult(aig: &mut Aig, a: &[AigLit], b: &[AigLit]) -> AigLit {
+    let not_b: Vec<AigLit> = b.iter().map(|&x| x.negated()).collect();
+    let (_, carry_out) = ref_add(aig, a, &not_b, AigLit::TRUE);
+    carry_out.negated()
+}
+
+/// Signed less-than: if the sign bits differ, `a < b` iff `a` is negative;
+/// otherwise iff `a - b` is negative.
+fn ref_slt(aig: &mut Aig, a: &[AigLit], b: &[AigLit]) -> AigLit {
+    let not_b: Vec<AigLit> = b.iter().map(|&x| x.negated()).collect();
+    let (diff, _) = ref_add(aig, a, &not_b, AigLit::TRUE);
+    let msb = a.len() - 1;
+    let signs_differ = aig.xor(a[msb], b[msb]);
+    aig.mux(signs_differ, a[msb], diff[msb])
 }
 
 /// Bit width of a constant Boolean literal.
