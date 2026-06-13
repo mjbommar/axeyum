@@ -6,9 +6,36 @@ bit-blast-to-SAT path), and checkable evidence — models verified by
 evaluation, unsat claims backed by proof artifacts or independent oracles.
 
 The north star is a complete framework for general reasoning, logic, and
-proving; the decidable finite-domain core being built first is its
-foundation layer
+proving; the decidable finite-domain core was the foundation layer, and the
+ladder has since climbed through arithmetic, theory combination, quantifiers,
+and proof production
 (see [north-star](docs/research/00-orientation/north-star.md)).
+
+## What it does today
+
+Supported theories, each end to end (typed IR → evaluator → decision
+procedure → solver entry point → scenarios → SMT-LIB I/O): **QF_BV**,
+**arrays** (eager elimination), **uninterpreted functions** (Ackermann),
+**bounded integers** (`QF_LIA`), **linear real arithmetic** (`QF_LRA`), their
+composition (`QF_AUFLIA`), Boolean combinations via lazy SMT / DPLL(T), and
+finite-domain plus instantiation/E-matching **quantifiers** — pure Rust, no
+C/C++ in the default build, and buildable for **WebAssembly**.
+
+Everything routes through a few consumer entry points (`axeyum-solver`):
+
+| Call | Purpose |
+|---|---|
+| `solve` / `solve_smtlib` | decide any supported query (terms or SMT-LIB 2 text) |
+| `prove` | prove a goal from hypotheses by a **checkable refutation** of its negation |
+| `produce_evidence` | decide *and* package a self-checking certificate |
+| `unsat_core` | a minimal unsatisfiable core (explain infeasibility) |
+| `Evidence::check` | independently re-validate any result |
+
+**Trusted small checking** holds for every result type: a `sat` model is
+replayed through the ground evaluator; a `QF_BV` `unsat` carries a DRAT proof
+checked by an in-tree kernel; a `QF_LRA` `unsat` carries a Farkas (conjunctive)
+or lazy-SMT refutation that re-verifies independently. Search is untrusted; the
+checkers are small and independent.
 
 **Status: Phase 5 first pure-Rust backend slice.** M0, Phase 1, and the core
 Phase 2 oracle path are complete: scalar QF_BV IR/evaluator, Z3 oracle
