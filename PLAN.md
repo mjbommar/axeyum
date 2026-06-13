@@ -710,14 +710,19 @@ Last updated: 2026-06-13
   (`bvadd`/`bvsub`/`bvneg`/`bvmul`), **all 8 comparisons** (unsigned/signed), and
   **shifts** (`bvshl`/`bvlshr`/`bvashr`) — each reference gadget textbook and
   independent of `axeyum-bv`; the width-4 miter is DRAT-`unsat`, confirming
-  exhaustive agreement. Coverage has since grown to the **structural** ops
-  (concat/extract/zero+sign extend/rotate) and **unsigned division/remainder**
-  (a restoring divider with SMT-LIB divide-by-zero totality), so path (B) now
-  certifies the **entire supported `QF_BV` operator set except signed
-  division/remainder/modulo** (`bvsdiv`/`bvsrem`/`bvsmod` → `NotCertifiable` →
-  sampled fallback). Remaining path (B): the three signed div/rem/mod sign
-  wrappers; path (A), a width-parametric verified bit-blaster, is the eventual
-  reference-trust-free form. See
+  exhaustive agreement. Coverage then grew to the **structural** ops
+  (concat/extract/zero+sign extend/rotate), **unsigned** division/remainder (a
+  restoring divider with SMT-LIB divide-by-zero totality), and the **signed**
+  div/rem/mod sign wrappers — so **path (B) is now complete**: any pure-`QF_BV`
+  query's production bit-blasting is certifiable faithful by a DRAT-checked miter
+  against the independent reference (only uninterpreted-function `apply` and
+  quantifiers, which are not bit-blasted, fall outside). Tests certify
+  arithmetic/comparison/shift, structural, and unsigned **and** signed div/rem/mod
+  queries. This is a sound, exhaustive faithfulness certificate for the full
+  `QF_BV` reduction *modulo trust in the independent reference*; the lone
+  remaining item is path (A), a width-parametric **verified** bit-blaster that
+  removes reference-trust entirely (proof-assistant-scale — the genuine
+  fully-trusted frontier). See
   [scalable bit-blast certification](docs/research/07-verification/scalable-bitblast-certification.md).
 - Phase: **Phase 5 first pure-Rust backend slice.** M0, Phase 1, SMT-LIB
   ingestion/export, the micro-corpus benchmark harness, the public QF_BV

@@ -135,14 +135,20 @@ fn unsigned_division_and_remainder_are_certified() {
 }
 
 #[test]
-fn signed_division_is_still_uncovered() {
-    // Signed division/remainder/modulo are not yet in the reference fragment.
+fn signed_division_remainder_modulo_are_certified() {
+    // Signed div/rem/mod (sign wrappers over the unsigned divider, with SMT-LIB
+    // totality) must match the production bit-blasting on every input.
     let mut arena = TermArena::new();
-    let xv = arena.bv_var("x", 8).unwrap();
-    let yv = arena.bv_var("y", 8).unwrap();
-    let s = arena.bv_sdiv(xv, yv).unwrap();
-    assert_eq!(
-        certify_bitblast_by_miter(&arena, &[s]).unwrap(),
-        BitblastMiterOutcome::NotCertifiable
+    let xv = arena.bv_var("x", 4).unwrap();
+    let yv = arena.bv_var("y", 4).unwrap();
+    let sdiv = arena.bv_sdiv(xv, yv).unwrap();
+    let srem = arena.bv_srem(xv, yv).unwrap();
+    let smod = arena.bv_smod(xv, yv).unwrap();
+    assert!(
+        matches!(
+            certify_bitblast_by_miter(&arena, &[sdiv, srem, smod]).unwrap(),
+            BitblastMiterOutcome::Certified { .. }
+        ),
+        "signed division/remainder/modulo bit-blasting should certify faithful"
     );
 }

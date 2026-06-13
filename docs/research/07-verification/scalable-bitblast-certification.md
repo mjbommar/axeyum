@@ -115,16 +115,21 @@ textbook and *independent* of `axeyum-bv`'s code; the miter being `unsat`
 agree exhaustively — both certifying the production reduction and validating the
 reference.
 
-The structural operators (concat/extract, zero/sign extension, rotates) and
-**unsigned division/remainder** (`bvudiv`/`bvurem`, a restoring divider with
-SMT-LIB divide-by-zero totality) are now covered too, so path (B) certifies the
-**entire supported `QF_BV` operator set except signed division/remainder/modulo**.
+The reference now covers the **entire supported `QF_BV` operator set**: the
+structural operators (concat/extract, zero/sign extension, rotates), unsigned and
+signed division/remainder/modulo (a restoring divider with SMT-LIB totality, the
+signed forms as sign wrappers), in addition to bitwise/Boolean/`eq`/`bvcomp`/`ite`/
+arithmetic/comparisons/shifts. So **path (B) is complete**: any pure-`QF_BV`
+query's production bit-blasting is certifiable faithful by a DRAT-checked miter
+against the independent reference (only uninterpreted-function `apply` and
+quantifiers — which are not bit-blasted — fall outside).
 
-**Remaining for path (B):** the three signed `bvsdiv`/`bvsrem`/`bvsmod` (sign
-wrappers over the unsigned divider, with their SMT-LIB totality edge cases) —
-the same green-per-op pattern (the miter test certifies the gadget or flags a
-divergence). Path (A) (a width-parametric *verified* bit-blaster, eliminating
-reference-trust) remains the eventual fully-trusted form.
+**Status.** Path (B) gives a sound, exhaustive faithfulness certificate for the
+full `QF_BV` reduction, *modulo trust in the independent reference* (assurance: a
+production bug must be matched by an identical bug in separately written reference
+code to escape). The remaining open item is path (A): a width-parametric
+**verified** bit-blaster that removes the reference-trust entirely — a
+proof-assistant-scale effort, the genuine fully-trusted frontier.
 
 ## Delivered earlier: scalable faithfulness *checking* (the differential layer)
 

@@ -10,14 +10,16 @@
 //! and a `sat` miter is a faithfulness bug with a witness.
 //!
 //! This upgrades the sampled [`crate::check_qf_bv_faithfulness`] to a real
-//! certificate, for the operator fragment the reference covers: Boolean
-//! connectives, bit-vector bitwise ops, `eq`/`bvcomp`, `ite`, **arithmetic**
-//! (`bvadd`/`bvsub`/`bvneg`/`bvmul`), **all comparisons** (unsigned and signed),
-//! and **shifts** (`bvshl`/`bvlshr`/`bvashr`). It is sound *modulo trust in the
-//! reference*, which is independent of the production code (so production code
-//! bugs surface as miter `sat`) — the project's two-independent-procedures
-//! pattern applied to bit-blasting. Operators the reference does not yet cover
-//! (division/remainder, concat/extract, extensions, rotates) return
+//! certificate, and the reference now covers the **entire supported `QF_BV`
+//! operator set**: Boolean connectives, bitwise ops, `eq`/`bvcomp`, `ite`,
+//! arithmetic (`bvadd`/`bvsub`/`bvneg`/`bvmul`), all comparisons (unsigned and
+//! signed), shifts (`bvshl`/`bvlshr`/`bvashr`), the structural ops
+//! (concat/extract, zero/sign extension, constant rotates), and unsigned/signed
+//! division/remainder/modulo (a restoring divider with SMT-LIB totality). It is
+//! sound *modulo trust in the reference*, which is independent of the production
+//! code (so production code bugs surface as miter `sat`) — the project's
+//! two-independent-procedures pattern applied to bit-blasting. Constructs not
+//! bit-blasted at all (uninterpreted-function `apply`, quantifiers) return
 //! [`BitblastMiterOutcome::NotCertifiable`].
 
 use std::collections::HashMap;
@@ -315,13 +317,86 @@ fn reference_op(op: Op, args: &[Vec<AigLit>], aig: &mut Aig) -> Option<Vec<AigLi
         // Constant rotates (amount already reduced modulo width at build time).
         Op::RotateLeft { by } => rotate(&args[0], by as usize, true),
         Op::RotateRight { by } => rotate(&args[0], by as usize, false),
-        // --- unsigned division/remainder (restoring divider + totality) -------
-        Op::BvUdiv => ref_udiv_urem(aig, &args[0], &args[1]).0,
-        Op::BvUrem => ref_udiv_urem(aig, &args[0], &args[1]).1,
-        // Still uncovered: signed division/remainder/modulo, apply, quantifiers.
+        // Division/remainder/modulo (a restoring divider + SMT-LIB sign/totality
+        // wrappers) live in their own helper to keep this dispatch readable.
+        Op::BvUdiv | Op::BvUrem | Op::BvSdiv | Op::BvSrem | Op::BvSmod => {
+            reference_division(op, args, aig)
+        }
+        // Still uncovered: apply (uninterpreted functions), quantifiers.
         _ => return None,
     };
     Some(bits)
+}
+
+/// Reference gadgets for the division/remainder/modulo operators. `bvudiv`/
+/// `bvurem` use the restoring divider with SMT-LIB divide-by-zero totality; the
+/// signed forms are sign wrappers over it (the unsigned all-ones totality
+/// reproduces the signed by-zero results).
+fn reference_division(op: Op, args: &[Vec<AigLit>], aig: &mut Aig) -> Vec<AigLit> {
+    match op {
+        Op::BvUdiv => ref_udiv_urem(aig, &args[0], &args[1]).0,
+        Op::BvUrem => ref_udiv_urem(aig, &args[0], &args[1]).1,
+        // `bvsdiv`: |s|/|t| with the sign set by the operands' signs.
+        Op::BvSdiv => {
+            let (abs_s, sign_s) = ref_abs(aig, &args[0]);
+            let (abs_t, sign_t) = ref_abs(aig, &args[1]);
+            let quotient = ref_udiv_urem(aig, &abs_s, &abs_t).0;
+            let neg_q = ref_neg(aig, &quotient);
+            let signs_differ = aig.xor(sign_s, sign_t);
+            quotient
+                .iter()
+                .zip(&neg_q)
+                .map(|(&q, &nq)| aig.mux(signs_differ, nq, q))
+                .collect()
+        }
+        // `bvsrem`: remainder with the sign of the dividend.
+        Op::BvSrem => {
+            let (abs_s, sign_s) = ref_abs(aig, &args[0]);
+            let (abs_t, _) = ref_abs(aig, &args[1]);
+            let rem = ref_udiv_urem(aig, &abs_s, &abs_t).1;
+            let neg_r = ref_neg(aig, &rem);
+            rem.iter()
+                .zip(&neg_r)
+                .map(|(&r, &nr)| aig.mux(sign_s, nr, r))
+                .collect()
+        }
+        // `bvsmod`: modulo with the sign of the divisor (the SMT-LIB 5-case form).
+        Op::BvSmod => {
+            let (abs_s, sign_s) = ref_abs(aig, &args[0]);
+            let (abs_t, sign_t) = ref_abs(aig, &args[1]);
+            let u = ref_udiv_urem(aig, &abs_s, &abs_t).1;
+            let neg_u = ref_neg(aig, &u);
+            let u_plus_t = ref_add(aig, &u, &args[1], AigLit::FALSE).0;
+            let negu_plus_t = ref_add(aig, &neg_u, &args[1], AigLit::FALSE).0;
+            let mut nonzero = AigLit::FALSE;
+            for &bit in &u {
+                nonzero = aig.or(nonzero, bit);
+            }
+            let u_is_zero = nonzero.negated();
+            (0..u.len())
+                .map(|i| {
+                    // signs (s,t): 00→u, 10→neg_u+t, 01→u+t, 11→neg_u; u==0→0.
+                    let when_t_neg = aig.mux(sign_s, neg_u[i], u_plus_t[i]);
+                    let when_t_pos = aig.mux(sign_s, negu_plus_t[i], u[i]);
+                    let sel = aig.mux(sign_t, when_t_neg, when_t_pos);
+                    aig.mux(u_is_zero, AigLit::FALSE, sel)
+                })
+                .collect()
+        }
+        _ => unreachable!("reference_division handles only div/rem/mod operators"),
+    }
+}
+
+/// `(|x|, sign_bit)` in two's complement: negate when the sign bit is set.
+fn ref_abs(aig: &mut Aig, x: &[AigLit]) -> (Vec<AigLit>, AigLit) {
+    let sign = x[x.len() - 1];
+    let negated = ref_neg(aig, x);
+    let abs = x
+        .iter()
+        .zip(&negated)
+        .map(|(&xi, &ni)| aig.mux(sign, ni, xi))
+        .collect();
+    (abs, sign)
 }
 
 /// Restoring unsigned divider: returns `(bvudiv, bvurem)` with SMT-LIB
