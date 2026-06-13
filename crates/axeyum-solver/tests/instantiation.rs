@@ -5,7 +5,9 @@
 use std::time::Duration;
 
 use axeyum_ir::{Sort, TermArena};
-use axeyum_solver::{CheckResult, SolverConfig, prove_unsat_by_instantiation};
+use axeyum_solver::{
+    CheckResult, SolverConfig, prove_unsat_by_ematching, prove_unsat_by_instantiation,
+};
 
 fn config() -> SolverConfig {
     SolverConfig::new().with_timeout(Duration::from_secs(30))
@@ -88,4 +90,51 @@ fn real_universal_refuted_by_instantiation() {
     let s_is_1 = arena.eq(sv, one).unwrap();
 
     assert_eq!(solve(&mut arena, &[all, s_is_1]), CheckResult::Unsat);
+}
+
+#[test]
+fn ematching_refutes_a_compound_instance_enumeration_misses() {
+    // forall x:BV16. g(x) == 0   plus   g(f(a)) != 0.
+    // BV16 is too wide for finite expansion, so this exercises instantiation.
+    // The refuting instance needs x := f(a) — a *compound* ground term that
+    // leaves-only enumeration never tries. So enumerative instantiation cannot
+    // refute (it stays `unknown`), but trigger-based E-matching (trigger g(x)
+    // matches the ground term g(f(a))) instantiates g(f(a)) == 0 and refutes.
+    let build = |arena: &mut TermArena| {
+        let bv16 = Sort::BitVec(16);
+        let g = arena.declare_fun("g", &[bv16], bv16).unwrap();
+        let f = arena.declare_fun("f", &[bv16], bv16).unwrap();
+        let a = arena.bv_var("a", 16).unwrap();
+        let zero = arena.bv_const(16, 0).unwrap();
+        let x_sym = arena.declare("x", bv16).unwrap();
+        let x = arena.var(x_sym);
+        let gx = arena.apply(g, &[x]).unwrap();
+        let body = arena.eq(gx, zero).unwrap();
+        let all = arena.forall(x_sym, body).unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let gfa = arena.apply(g, &[fa]).unwrap();
+        let gfa_eq0 = arena.eq(gfa, zero).unwrap();
+        let gfa_ne0 = arena.not(gfa_eq0).unwrap();
+        vec![all, gfa_ne0]
+    };
+
+    // Leaves-only enumeration cannot reach x := f(a): inconclusive.
+    let mut arena_enum = TermArena::new();
+    let enum_assertions = build(&mut arena_enum);
+    assert!(
+        matches!(
+            prove_unsat_by_instantiation(&mut arena_enum, &enum_assertions, &config()).unwrap(),
+            CheckResult::Unknown(_)
+        ),
+        "leaves-only enumeration should not refute the compound case"
+    );
+
+    // E-matching binds x := f(a) via the trigger g(x) and refutes exactly.
+    let mut arena_em = TermArena::new();
+    let em_assertions = build(&mut arena_em);
+    assert_eq!(
+        prove_unsat_by_ematching(&mut arena_em, &em_assertions, &config()).unwrap(),
+        CheckResult::Unsat,
+        "E-matching should refute via the compound binding x := f(a)"
+    );
 }

@@ -22,7 +22,9 @@
 use std::collections::BTreeSet;
 
 use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode, Value, eval};
-use axeyum_rewrite::{QuantExpandError, expand_quantifiers, instantiate_universals};
+use axeyum_rewrite::{
+    QuantExpandError, expand_quantifiers, instantiate_universals, instantiate_with_triggers,
+};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::combined::check_with_all_theories;
@@ -54,8 +56,9 @@ pub fn solve(
     }
     match check_with_quantifiers(arena, assertions, config) {
         // An infinite quantifier domain defeats finite expansion; fall back to
-        // sound instantiation-based refutation.
-        Err(SolverError::Unsupported(_)) => prove_unsat_by_instantiation(arena, assertions, config),
+        // sound trigger-based (E-matching) instantiation, which subsumes plain
+        // leaf enumeration.
+        Err(SolverError::Unsupported(_)) => prove_unsat_by_ematching(arena, assertions, config),
         other => other,
     }
 }
@@ -243,13 +246,48 @@ pub fn prove_unsat_by_instantiation(
 ) -> Result<CheckResult, SolverError> {
     let instantiation = instantiate_universals(arena, assertions)
         .map_err(|error| SolverError::Backend(error.to_string()))?;
+    decide_instantiation(arena, &instantiation, config)
+}
 
+/// Attempts to **refute** a (possibly infinite-domain) quantified query by
+/// **trigger-based E-matching** instantiation of its top-level universals, then
+/// deciding the result with [`check_auto`].
+///
+/// Like [`prove_unsat_by_instantiation`] but more capable: each universal's
+/// function/array triggers are matched against the formula's ground subterms, so
+/// `x` is instantiated with **compound** ground terms (`f(a)`, `select(m,i)`),
+/// not only leaves — refuting goals that pure leaf enumeration cannot reach. The
+/// bindings still only *weaken* the query, so a returned [`CheckResult::Unsat`]
+/// transfers soundly to the original (a satisfiable instantiation is `unknown`;
+/// a quantifier-free query decides exactly).
+///
+/// # Errors
+///
+/// Returns [`SolverError::Backend`] on an internal rewrite failure, or
+/// [`SolverError`] from the underlying engine.
+pub fn prove_unsat_by_ematching(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    let instantiation = instantiate_with_triggers(arena, assertions)
+        .map_err(|error| SolverError::Backend(error.to_string()))?;
+    decide_instantiation(arena, &instantiation, config)
+}
+
+/// Shared back half of the instantiation-based refutation entries: decides the
+/// instantiated assertions and maps the result under the weakening contract.
+fn decide_instantiation(
+    arena: &mut TermArena,
+    instantiation: &axeyum_rewrite::Instantiation,
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
     // Quantifiers left after instantiation (nested, existential, or non-top
     // level) cannot be decided by the quantifier-free engines.
     if instantiation.residual_quantifier {
         return Ok(CheckResult::Unknown(UnknownReason {
             kind: UnknownKind::Incomplete,
-            detail: "query has quantifiers ground instantiation does not reach (nested, \
+            detail: "query has quantifiers instantiation does not reach (nested, \
                      existential, or non-top-level)"
                 .to_owned(),
         }));
@@ -266,7 +304,7 @@ pub fn prove_unsat_by_instantiation(
         CheckResult::Unsat => Ok(CheckResult::Unsat),
         CheckResult::Sat(_) => Ok(CheckResult::Unknown(UnknownReason {
             kind: UnknownKind::Incomplete,
-            detail: "ground instantiation is satisfiable; the universal may still be violated \
+            detail: "instantiation is satisfiable; the universal may still be violated \
                      outside the instantiated terms"
                 .to_owned(),
         })),

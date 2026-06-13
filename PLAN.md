@@ -585,6 +585,20 @@ Last updated: 2026-06-13
   trusted small checking). Tests prove a real implication (`x>0 ⊨ x≥0`) and a
   bit-vector tautology (`(x|x)=x`) with re-checked certificates, and disprove a
   non-implication and a non-theorem with countermodels.
+- Trigger-based E-matching recorded 2026-06-13 (ADR-0016, opens R&D track b):
+  `axeyum_rewrite::instantiate_with_triggers` + `axeyum_solver::prove_unsat_by_ematching`
+  refine quantifier instantiation — for each top-level `forall x. body` they pick
+  the body's `apply`/`select` subterms mentioning `x` as triggers, match them
+  against the assertions' ground subterms, and bind `x` to the matches, including
+  **compound** ground terms (`f(a)`, `select(m,i)`) that the leaves-only
+  enumeration of `instantiate_universals` never tries. Bindings union with the
+  enumerative leaves (strictly at least as capable); soundness is unchanged
+  (every ground instance follows from the universal — trigger choice only affects
+  *which* sound instances are produced). `solve`'s quantifier fallback now uses
+  it. A test demonstrates the capability gain: `forall x:BV16. g(x)=0 ∧ g(f(a))≠0`
+  stays `unknown` under leaves-only enumeration but is refuted (`unsat`) by
+  E-matching binding `x:=f(a)`. Remaining for track b: multi-trigger /
+  multi-variable matching and an E-graph match index for scale.
 - Phase: **Phase 5 first pure-Rust backend slice.** M0, Phase 1, SMT-LIB
   ingestion/export, the micro-corpus benchmark harness, the public QF_BV
   baseline, and the Phase 3 query/rewrite/evidence entry contracts are
@@ -1992,9 +2006,11 @@ In order; check off and date as completed.
       **scalable bit-blast-reduction certification** — Tseitin definitions as
       definitional/RAT introductions, so large-instance `unsat` is machine-checked
       end to end (the small-instance term-level enumeration certificate is done);
-      (b) **trigger-based E-matching** for infinite-domain quantifiers (sound
-      enumerative ground instantiation for refutation is now done; trigger
-      matching is the scalable, more-complete successor); and, benchmarking-gated
+      (b) **trigger-based E-matching** for infinite-domain quantifiers — a first
+      slice is **done** (single-trigger `apply`/`select` matching binding `x` to
+      compound ground terms, refuting cases leaf enumeration cannot); remaining
+      here is multi-trigger/multi-variable matching and an E-graph match index for
+      scale; and, benchmarking-gated
       by the methodology (encodings before SAT-core tuning), (c) CDCL
       **restarts + activity heuristics (VSIDS)** — gate (a) is now *measured*,
       not assumed: artifact v14's `summary.layer_attribution` reports SAT-share

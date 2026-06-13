@@ -264,6 +264,239 @@ pub fn instantiate_universals(
     })
 }
 
+/// **Trigger-based E-matching instantiation** of top-level universals — a more
+/// targeted, and strictly more capable, alternative to [`instantiate_universals`].
+///
+/// For each top-level `forall x. body`, it picks the *triggers* of the body — the
+/// uninterpreted-function (`apply`) and array (`select`) subterms that mention
+/// `x` — and instantiates `x` with every ground term that makes a trigger match a
+/// ground subterm of the assertions (E-matching). Crucially this binds `x` to
+/// **compound** ground terms (e.g. `f(a)`, `select(m,i)`), which the
+/// leaves-only enumeration in [`instantiate_universals`] never tries, so it
+/// refutes goals that pure enumeration cannot. When a universal has no
+/// function/array trigger (e.g. `forall x. x > 0`), it falls back to the
+/// enumerative ground leaves of `x`'s sort.
+///
+/// Soundness is identical to enumerative instantiation: every instance follows
+/// from the universal, so the rewritten set is weaker and a returned `unsat`
+/// transfers to the original. Trigger selection only affects *which* (sound)
+/// instances are produced, never correctness.
+///
+/// # Errors
+///
+/// Returns [`QuantExpandError`] on an internal IR builder error.
+pub fn instantiate_with_triggers(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<Instantiation, QuantExpandError> {
+    let bound = bound_variables(arena, assertions);
+    let ground = ground_subterms(arena, assertions, &bound);
+    let leaves = ground_universe(arena, assertions, &bound);
+
+    let mut out = Vec::with_capacity(assertions.len());
+    let mut instantiated = false;
+    for &assertion in assertions {
+        if let TermNode::App {
+            op: Op::Forall(var),
+            args,
+        } = arena.node(assertion).clone()
+        {
+            let body = args[0];
+            if !contains_quantifier(arena, body) {
+                instantiated = true;
+                let var_sort = arena.symbol(var).1;
+                let bindings = trigger_bindings(arena, body, var, var_sort, &ground, &leaves);
+                let mut conjunction: Option<TermId> = None;
+                for term in bindings {
+                    let mut memo = HashMap::new();
+                    let instance = substitute(arena, body, var, term, &mut memo)?;
+                    conjunction = Some(match conjunction {
+                        Some(acc) => arena.and(acc, instance)?,
+                        None => instance,
+                    });
+                }
+                out.push(conjunction.unwrap_or_else(|| arena.bool_const(true)));
+                continue;
+            }
+        }
+        out.push(assertion);
+    }
+
+    let residual_quantifier = out.iter().any(|&a| contains_quantifier(arena, a));
+    Ok(Instantiation {
+        assertions: out,
+        instantiated,
+        residual_quantifier,
+    })
+}
+
+/// The ground terms to instantiate `var` with: the enumerative ground leaves of
+/// `var`'s sort **augmented** with the compound ground terms found by matching
+/// the body's function/array triggers. The union makes this strictly at least as
+/// capable as [`instantiate_universals`] — it tries every leaf binding *and* the
+/// compound bindings (e.g. `f(a)`) that leaves-only enumeration misses.
+fn trigger_bindings(
+    arena: &TermArena,
+    body: TermId,
+    var: SymbolId,
+    var_sort: Sort,
+    ground: &[TermId],
+    leaves: &HashMap<Sort, Vec<TermId>>,
+) -> Vec<TermId> {
+    let mut bindings: Vec<TermId> = leaves.get(&var_sort).cloned().unwrap_or_default();
+    for &trigger in &collect_triggers(arena, body, var) {
+        for &candidate in ground {
+            let mut binding: Option<TermId> = None;
+            if match_trigger(arena, trigger, candidate, var, var_sort, &mut binding) {
+                if let Some(term) = binding {
+                    if !bindings.contains(&term) {
+                        bindings.push(term);
+                    }
+                }
+            }
+        }
+    }
+    bindings
+}
+
+/// The triggers of `body` for `var`: `apply`/`select` subterms that mention
+/// `var`. Deterministic order (first occurrence in a stable traversal).
+fn collect_triggers(arena: &TermArena, body: TermId, var: SymbolId) -> Vec<TermId> {
+    let mut triggers = Vec::new();
+    let mut seen = std::collections::BTreeSet::new();
+    let mut stack = vec![body];
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(term) {
+            if matches!(op, Op::Apply(_) | Op::Select) && contains_var(arena, term, var) {
+                triggers.push(term);
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
+    // Stable order independent of the traversal's pop order.
+    triggers.sort_by_key(|t| t.index());
+    triggers
+}
+
+/// Matches trigger `pattern` (which may contain `var`) against the ground term
+/// `candidate`, binding `var` consistently. Returns `true` on a match.
+fn match_trigger(
+    arena: &TermArena,
+    pattern: TermId,
+    candidate: TermId,
+    var: SymbolId,
+    var_sort: Sort,
+    binding: &mut Option<TermId>,
+) -> bool {
+    if let TermNode::Symbol(symbol) = arena.node(pattern) {
+        if *symbol == var {
+            // `var` position: bind it to `candidate` (sorts must agree), or
+            // require consistency with an earlier binding.
+            if arena.sort_of(candidate) != var_sort {
+                return false;
+            }
+            if let Some(bound) = binding {
+                return *bound == candidate;
+            }
+            *binding = Some(candidate);
+            return true;
+        }
+    }
+    match (arena.node(pattern), arena.node(candidate)) {
+        (TermNode::App { op: po, args: pa }, TermNode::App { op: go, args: ga })
+            if po == go && pa.len() == ga.len() =>
+        {
+            let pairs: Vec<(TermId, TermId)> = pa.iter().copied().zip(ga.iter().copied()).collect();
+            pairs
+                .into_iter()
+                .all(|(p, g)| match_trigger(arena, p, g, var, var_sort, binding))
+        }
+        // Non-`var` leaves (constants, free symbols) match only their hash-consed
+        // equal; a structural mismatch fails.
+        _ => pattern == candidate,
+    }
+}
+
+/// Whether `term` contains a free occurrence of `var`.
+fn contains_var(arena: &TermArena, term: TermId, var: SymbolId) -> bool {
+    let mut seen = std::collections::BTreeSet::new();
+    let mut stack = vec![term];
+    while let Some(t) = stack.pop() {
+        if !seen.insert(t) {
+            continue;
+        }
+        match arena.node(t) {
+            TermNode::Symbol(symbol) if *symbol == var => return true,
+            TermNode::App { args, .. } => stack.extend(args.iter().copied()),
+            _ => {}
+        }
+    }
+    false
+}
+
+/// All ground subterms (no bound variable anywhere inside) of `assertions`,
+/// **including compound terms** like `f(a)` — the E-matching candidate set.
+fn ground_subterms(
+    arena: &TermArena,
+    assertions: &[TermId],
+    bound: &std::collections::BTreeSet<SymbolId>,
+) -> Vec<TermId> {
+    // Memoized groundness, then collect the ground subterms in stable order.
+    let mut is_ground: HashMap<TermId, bool> = HashMap::new();
+    let mut order: Vec<TermId> = Vec::new();
+    let mut seen = std::collections::BTreeSet::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    // First gather all subterms (post-order via an explicit stack).
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        order.push(term);
+        if let TermNode::App { args, .. } = arena.node(term) {
+            stack.extend(args.iter().copied());
+        }
+    }
+    // Evaluate groundness; children appear later in `order`, so resolve by a
+    // fixpoint-free recursive helper with the memo.
+    let mut ground: Vec<TermId> = Vec::new();
+    for &term in &order {
+        if term_is_ground(arena, term, bound, &mut is_ground) {
+            ground.push(term);
+        }
+    }
+    ground.sort_by_key(|t| t.index());
+    ground.dedup();
+    ground
+}
+
+/// Memoized: whether `term` is free of every bound variable.
+fn term_is_ground(
+    arena: &TermArena,
+    term: TermId,
+    bound: &std::collections::BTreeSet<SymbolId>,
+    memo: &mut HashMap<TermId, bool>,
+) -> bool {
+    if let Some(&cached) = memo.get(&term) {
+        return cached;
+    }
+    let result = match arena.node(term) {
+        TermNode::BoolConst(_)
+        | TermNode::BvConst { .. }
+        | TermNode::IntConst(_)
+        | TermNode::RealConst(_) => true,
+        TermNode::Symbol(symbol) => !bound.contains(symbol),
+        TermNode::App { args, .. } => args
+            .clone()
+            .iter()
+            .all(|&arg| term_is_ground(arena, arg, bound, memo)),
+    };
+    memo.insert(term, result);
+    result
+}
+
 /// All symbols bound by a quantifier anywhere in `assertions`.
 fn bound_variables(
     arena: &TermArena,

@@ -114,6 +114,21 @@ evaluator sub-increment, then solving.
   `unknown` because bounded integer bit-blasting reports unsat-in-range as
   `unknown` (ADR-0014). True E-matching with trigger patterns is the scalable
   successor.
+- 2026-06-13: **trigger-based E-matching** added —
+  `axeyum_rewrite::instantiate_with_triggers` and
+  `axeyum_solver::prove_unsat_by_ematching`. For each top-level `forall x. body`
+  it picks the body's `apply`/`select` subterms mentioning `x` as triggers and
+  matches them against the assertions' ground subterms, binding `x` to the
+  matched terms. Crucially this binds `x` to **compound** ground terms (`f(a)`,
+  `select(m,i)`) — which the leaves-only enumeration of `instantiate_universals`
+  never tries — so it refutes goals enumeration cannot reach. Bindings are
+  unioned with the enumerative leaves, so it is strictly at least as capable, and
+  soundness is unchanged (every instance follows from the universal; trigger
+  choice only affects *which* sound instances are produced). `solve`'s quantifier
+  fallback now uses it. A test shows `forall x:BV16. g(x)=0` ∧ `g(f(a))≠0`:
+  leaves-only enumeration stays `unknown`, while E-matching binds `x:=f(a)` and
+  refutes exactly. Remaining: multi-trigger/multi-variable matching and an
+  E-graph-backed match index for scale.
 
 ## Consequences
 

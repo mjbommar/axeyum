@@ -23,7 +23,7 @@ pub use functions::{FuncElimError, FunctionElimination, eliminate_functions};
 pub use int_blast::{IntBlastError, IntBlasting, MAX_INT_BLAST_WIDTH, blast_integers};
 pub use quantifiers::{
     Instantiation, QUANT_EXPAND_BIT_LIMIT, QuantExpandError, expand_quantifiers,
-    instantiate_universals,
+    instantiate_universals, instantiate_with_triggers,
 };
 
 /// Stable rewrite rule identifier used in logs and future certificates.
