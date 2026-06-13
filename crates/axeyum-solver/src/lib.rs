@@ -53,7 +53,9 @@ pub use evidence::{
 pub use incremental::IncrementalBvSolver;
 pub use layers::BvLayerStats;
 pub use lia::{DEFAULT_INT_WIDTH, check_with_int_blasting};
-pub use lra::{FarkasAtom, FarkasCertificate, check_with_lra, lra_farkas_certificate};
+pub use lra::{
+    FarkasAtom, FarkasCertificate, check_with_lra, lra_farkas_certificate, lra_unsat_core,
+};
 pub use model::Model;
 pub use proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};
 pub use sat_bv_backend::SatBvBackend;

@@ -8,6 +8,7 @@
 use axeyum_ir::{Rational, Sort, TermArena, Value, eval};
 use axeyum_solver::{
     CheckResult, FarkasAtom, FarkasCertificate, check_with_lra, lra_farkas_certificate,
+    lra_unsat_core,
 };
 
 fn solve(arena: &TermArena, assertions: &[axeyum_ir::TermId]) -> CheckResult {
@@ -234,6 +235,74 @@ fn a_handmade_nonrefutation_does_not_verify() {
         multipliers: vec![Rational::integer(2), Rational::integer(3)],
     };
     assert!(!bogus.verify());
+}
+
+#[test]
+fn unsat_core_isolates_the_conflicting_assertions() {
+    // Assertions: [x > 5, y < 10, x < 1, z > 0]. Only #0 (x > 5) and #2 (x < 1)
+    // conflict; the y and z assertions are irrelevant. The core must be {0, 2}.
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let y = arena.real_var("y").unwrap();
+    let z = arena.real_var("z").unwrap();
+    let zero = arena.real_ratio(0, 1);
+    let one = arena.real_ratio(1, 1);
+    let five = arena.real_ratio(5, 1);
+    let ten = arena.real_ratio(10, 1);
+    let assertions = [
+        arena.real_gt(x, five).unwrap(),
+        arena.real_lt(y, ten).unwrap(),
+        arena.real_lt(x, one).unwrap(),
+        arena.real_gt(z, zero).unwrap(),
+    ];
+
+    let core = lra_unsat_core(&arena, &assertions)
+        .expect("decides without error")
+        .expect("the query is unsatisfiable");
+    assert_eq!(
+        core,
+        vec![0, 2],
+        "core must be exactly the conflicting pair"
+    );
+
+    // The core subset is itself unsatisfiable; dropping a core member is sat.
+    let subset: Vec<_> = core.iter().map(|&i| assertions[i]).collect();
+    assert_eq!(check_with_lra(&arena, &subset).unwrap(), CheckResult::Unsat);
+    assert!(matches!(
+        check_with_lra(&arena, &[assertions[0], assertions[1], assertions[3]]).unwrap(),
+        CheckResult::Sat(_)
+    ));
+}
+
+#[test]
+fn unsat_core_handles_equality_assertions() {
+    // [3*x == 1, x == 1, y > 0] : the two equalities conflict; y is irrelevant.
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let y = arena.real_var("y").unwrap();
+    let zero = arena.real_ratio(0, 1);
+    let one = arena.real_ratio(1, 1);
+    let three = arena.real_ratio(3, 1);
+    let three_x = arena.real_mul(three, x).unwrap();
+    let assertions = [
+        arena.eq(three_x, one).unwrap(),
+        arena.eq(x, one).unwrap(),
+        arena.real_gt(y, zero).unwrap(),
+    ];
+
+    let core = lra_unsat_core(&arena, &assertions)
+        .expect("decides without error")
+        .expect("the conflicting equalities are unsatisfiable");
+    assert_eq!(core, vec![0, 1]);
+}
+
+#[test]
+fn satisfiable_query_has_no_unsat_core() {
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let one = arena.real_ratio(1, 1);
+    let lt = arena.real_lt(x, one).unwrap();
+    assert!(lra_unsat_core(&arena, &[lt]).unwrap().is_none());
 }
 
 #[test]

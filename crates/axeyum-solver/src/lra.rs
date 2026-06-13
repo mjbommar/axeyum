@@ -46,7 +46,7 @@ pub fn check_with_lra(
 ) -> Result<CheckResult, SolverError> {
     match decide(arena, assertions)? {
         Decision::Sat(model) => Ok(CheckResult::Sat(model)),
-        Decision::UnsatFarkas(_) | Decision::UnsatTrivial => Ok(CheckResult::Unsat),
+        Decision::UnsatFarkas { .. } | Decision::UnsatTrivial(_) => Ok(CheckResult::Unsat),
     }
 }
 
@@ -70,8 +70,54 @@ pub fn lra_farkas_certificate(
     assertions: &[TermId],
 ) -> Result<Option<FarkasCertificate>, SolverError> {
     match decide(arena, assertions)? {
-        Decision::UnsatFarkas(cert) => Ok(Some(cert)),
-        Decision::Sat(_) | Decision::UnsatTrivial => Ok(None),
+        Decision::UnsatFarkas { certificate, .. } => Ok(Some(certificate)),
+        Decision::Sat(_) | Decision::UnsatTrivial(_) => Ok(None),
+    }
+}
+
+/// Returns an unsatisfiable core of a conjunctive `QF_LRA` query: the indices
+/// (into `assertions`) of a subset that is **already jointly unsatisfiable**.
+///
+/// The core is read from the Farkas refutation — exactly the assertions whose
+/// constraints carry a nonzero multiplier participate, so dropping the rest
+/// preserves unsatisfiability. The extracted subset is re-decided as a defensive
+/// self-check before it is returned. Returns `Ok(None)` when the query is
+/// satisfiable.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] for non-conjunctive-`QF_LRA` input, or
+/// [`SolverError::Backend`] on a `sat` replay failure, a Farkas self-check
+/// failure, or a core that fails to re-decide as `unsat` (all soundness alarms).
+pub fn lra_unsat_core(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<Option<Vec<usize>>, SolverError> {
+    match decide(arena, assertions)? {
+        Decision::UnsatFarkas {
+            certificate,
+            origins,
+        } => {
+            let mut core: Vec<usize> = origins
+                .iter()
+                .zip(&certificate.multipliers)
+                .filter(|(_, multiplier)| !multiplier.is_zero())
+                .map(|(&origin, _)| origin)
+                .collect();
+            core.sort_unstable();
+            core.dedup();
+            // Defensive self-check: the extracted subset must itself be unsat.
+            let subset: Vec<TermId> = core.iter().map(|&i| assertions[i]).collect();
+            if !matches!(check_with_lra(arena, &subset)?, CheckResult::Unsat) {
+                return Err(SolverError::Backend(
+                    "lra unsat-core self-check failed: extracted core is satisfiable".to_string(),
+                ));
+            }
+            Ok(Some(core))
+        }
+        // A literally-`false` assertion is its own (singleton) core.
+        Decision::UnsatTrivial(origin) => Ok(Some(vec![origin])),
+        Decision::Sat(_) => Ok(None),
     }
 }
 
@@ -80,20 +126,26 @@ pub fn lra_farkas_certificate(
 enum Decision {
     /// Satisfiable; the model has already replayed against the original query.
     Sat(Model),
-    /// Unsatisfiable with a self-checked Farkas refutation.
-    UnsatFarkas(FarkasCertificate),
+    /// Unsatisfiable with a self-checked Farkas refutation. `origins[i]` is the
+    /// assertion index that atom `i` of the certificate came from, so the
+    /// nonzero-multiplier atoms name the participating assertions.
+    UnsatFarkas {
+        certificate: FarkasCertificate,
+        origins: Vec<usize>,
+    },
     /// Unsatisfiable because a literally-`false` assertion was present (no
-    /// linear refutation is meaningful).
-    UnsatTrivial,
+    /// linear refutation is meaningful); carries that assertion's index.
+    UnsatTrivial(usize),
 }
 
 fn decide(arena: &TermArena, assertions: &[TermId]) -> Result<Decision, SolverError> {
     let mut ctx = Collector::default();
-    for &assertion in assertions {
+    for (index, &assertion) in assertions.iter().enumerate() {
+        ctx.current_origin = index;
         ctx.collect(arena, assertion, false)?;
     }
     if ctx.trivially_unsat {
-        return Ok(Decision::UnsatTrivial);
+        return Ok(Decision::UnsatTrivial(ctx.trivial_origin.unwrap_or(0)));
     }
 
     // Tag each collected constraint with a unit multiplier vector so
@@ -103,20 +155,25 @@ fn decide(arena: &TermArena, assertions: &[TermId]) -> Result<Decision, SolverEr
     for (i, constraint) in ctx.constraints.iter_mut().enumerate() {
         constraint.mult = unit_vec(n, i);
     }
-    // Snapshot the original atoms for the (independent) certificate.
+    // Snapshot the original atoms for the (independent) certificate, and the
+    // assertion each came from (aligned by index) for unsat-core extraction.
     let atoms: Vec<FarkasAtom> = ctx.constraints.iter().map(FarkasAtom::from).collect();
+    let origins: Vec<usize> = ctx.constraints.iter().map(|c| c.origin).collect();
 
     let nvars = ctx.vars.len();
     match solve(&ctx.constraints, nvars) {
         Feasibility::Unsat(multipliers) => {
-            let cert = FarkasCertificate { atoms, multipliers };
-            if !cert.verify() {
+            let certificate = FarkasCertificate { atoms, multipliers };
+            if !certificate.verify() {
                 return Err(SolverError::Backend(
                     "lra: Farkas unsat certificate failed self-check (Fourier–Motzkin bug)"
                         .to_string(),
                 ));
             }
-            Ok(Decision::UnsatFarkas(cert))
+            Ok(Decision::UnsatFarkas {
+                certificate,
+                origins,
+            })
         }
         Feasibility::Bug(message) => Err(SolverError::Backend(message)),
         Feasibility::Sat(values) => {
@@ -333,15 +390,17 @@ impl LinExpr {
 
 /// A constraint `expr <= 0` (or `expr < 0` when `strict`), tagged with the
 /// nonnegative combination of original constraints it was derived from (`mult`,
-/// indexed by original-constraint position). Original constraints carry a unit
-/// vector; Fourier–Motzkin accumulates `mult` so any derived contradiction
-/// names its Farkas multipliers. The collector leaves `mult` empty; [`decide`]
-/// fills it in once the constraint count is known.
+/// indexed by original-constraint position) and the index of the original
+/// assertion it came from (`origin`, for unsat-core extraction). Original
+/// constraints carry a unit vector; Fourier–Motzkin accumulates `mult` so any
+/// derived contradiction names its Farkas multipliers. The collector leaves
+/// `mult` empty; [`decide`] fills it in once the constraint count is known.
 #[derive(Debug, Clone)]
 struct Constraint {
     expr: LinExpr,
     strict: bool,
     mult: Vec<Rational>,
+    origin: usize,
 }
 
 #[derive(Default)]
@@ -350,6 +409,11 @@ struct Collector {
     vars: Vec<SymbolId>,
     constraints: Vec<Constraint>,
     trivially_unsat: bool,
+    /// Index (into the caller's `assertions`) of the assertion currently being
+    /// collected; stamped onto every constraint it produces.
+    current_origin: usize,
+    /// The assertion index of a literally-`false` assertion, if one was seen.
+    trivial_origin: Option<usize>,
 }
 
 impl Collector {
@@ -376,6 +440,7 @@ impl Collector {
                 if *value == negated {
                     // `false` asserted (or `not true`): unsatisfiable.
                     self.trivially_unsat = true;
+                    self.trivial_origin.get_or_insert(self.current_origin);
                 }
                 Ok(())
             }
@@ -419,11 +484,13 @@ impl Collector {
                     expr: diff.clone(),
                     strict: false,
                     mult: Vec::new(),
+                    origin: self.current_origin,
                 });
                 self.constraints.push(Constraint {
                     expr: diff.neg(),
                     strict: false,
                     mult: Vec::new(),
+                    origin: self.current_origin,
                 });
                 Ok(())
             }
@@ -454,6 +521,7 @@ impl Collector {
             expr,
             strict,
             mult: Vec::new(),
+            origin: self.current_origin,
         });
     }
 
@@ -581,6 +649,10 @@ fn eliminate(system: &[Constraint], v: usize) -> Vec<Constraint> {
                 expr: combined,
                 strict: p.strict || n.strict,
                 mult,
+                // `origin` is meaningful only on the original constraints (the
+                // unsat core reads it there, indexed by the multiplier vector);
+                // a derived constraint carries a placeholder.
+                origin: p.origin,
             });
         }
     }
