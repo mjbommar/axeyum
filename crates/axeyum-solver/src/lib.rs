@@ -44,7 +44,9 @@ pub use backend::{
 };
 pub use certify::{CertifyOutcome, certify_qf_bv_by_enumeration};
 pub use combined::check_with_all_theories;
-pub use dpll_t::check_with_lra_dpll;
+pub use dpll_t::{
+    LemmaLiteral, LraDpllOutcome, LraDpllRefutation, certify_lra_dpll_unsat, check_with_lra_dpll,
+};
 pub use euf::check_with_function_elimination;
 pub use evidence::{
     Evidence, EvidenceReport, Provenance, SEMANTICS_VERSION, produce_lra_evidence,

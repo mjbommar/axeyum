@@ -9,7 +9,10 @@
 use std::time::Duration;
 
 use axeyum_ir::{Sort, TermArena, Value, eval};
-use axeyum_solver::{CheckResult, SolverConfig, check_with_lra_dpll};
+use axeyum_solver::{
+    CheckResult, LraDpllOutcome, SolverConfig, SolverError, certify_lra_dpll_unsat,
+    check_with_lra_dpll,
+};
 
 fn config() -> SolverConfig {
     SolverConfig::new().with_timeout(Duration::from_secs(30))
@@ -215,4 +218,98 @@ fn pure_conjunction_still_works() {
     let gt = arena.real_gt(x, zero).unwrap();
     let lt = arena.real_lt(x, one).unwrap();
     assert!(matches!(solve(&mut arena, &[gt, lt]), CheckResult::Sat(_)));
+}
+
+#[test]
+fn certified_unsat_yields_a_verifying_refutation() {
+    // (x < 0 ∨ x > 0) ∧ x >= 0 ∧ x <= 0 : x is pinned to 0, contradicting the
+    // disjunction. Every case split conflicts, so the query is unsat — and the
+    // refutation (two theory lemmas + the propositional skeleton) verifies.
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let zero = arena.real_ratio(0, 1);
+    let lt = arena.real_lt(x, zero).unwrap();
+    let gt = arena.real_gt(x, zero).unwrap();
+    let split = arena.or(lt, gt).unwrap();
+    let ge = arena.real_ge(x, zero).unwrap();
+    let le = arena.real_le(x, zero).unwrap();
+    let assertions = [split, ge, le];
+
+    let LraDpllOutcome::Unsat(refutation) =
+        certify_lra_dpll_unsat(&mut arena, &assertions, &config()).unwrap()
+    else {
+        panic!("expected a certified unsat");
+    };
+    assert!(
+        refutation.verify(&arena).unwrap(),
+        "the returned refutation must verify"
+    );
+    assert!(
+        !refutation.lemmas.is_empty(),
+        "an unsat from case-split conflicts must record theory lemmas"
+    );
+}
+
+#[test]
+fn certified_sat_returns_a_replaying_model() {
+    // (x < 0 ∨ x > 0) ∧ x >= 1 : take x > 0, satisfiable.
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let zero = arena.real_ratio(0, 1);
+    let one = arena.real_ratio(1, 1);
+    let lt = arena.real_lt(x, zero).unwrap();
+    let gt = arena.real_gt(x, zero).unwrap();
+    let split = arena.or(lt, gt).unwrap();
+    let ge1 = arena.real_ge(x, one).unwrap();
+    let assertions = [split, ge1];
+
+    let LraDpllOutcome::Sat(model) =
+        certify_lra_dpll_unsat(&mut arena, &assertions, &config()).unwrap()
+    else {
+        panic!("expected sat");
+    };
+    let assignment = model.to_assignment();
+    assert_eq!(eval(&arena, split, &assignment).unwrap(), Value::Bool(true));
+    assert_eq!(eval(&arena, ge1, &assignment).unwrap(), Value::Bool(true));
+}
+
+#[test]
+fn certified_path_rejects_non_real_content() {
+    // A bit-vector assertion is outside the pure-real fragment this certificate
+    // covers; it must be reported Unsupported, never certified.
+    let mut arena = TermArena::new();
+    let b = arena.bv_var("b", 8).unwrap();
+    let c = arena.bv_const(8, 1).unwrap();
+    let eq = arena.eq(b, c).unwrap();
+    assert!(matches!(
+        certify_lra_dpll_unsat(&mut arena, &[eq], &config()),
+        Err(SolverError::Unsupported(_))
+    ));
+}
+
+#[test]
+fn tampered_refutation_fails_verification() {
+    // Strip the learned lemmas: the bare skeleton is propositionally satisfiable,
+    // so the independent verifier must reject the doctored refutation.
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let zero = arena.real_ratio(0, 1);
+    let lt = arena.real_lt(x, zero).unwrap();
+    let gt = arena.real_gt(x, zero).unwrap();
+    let split = arena.or(lt, gt).unwrap();
+    let ge = arena.real_ge(x, zero).unwrap();
+    let le = arena.real_le(x, zero).unwrap();
+    let assertions = [split, ge, le];
+
+    let LraDpllOutcome::Unsat(mut refutation) =
+        certify_lra_dpll_unsat(&mut arena, &assertions, &config()).unwrap()
+    else {
+        panic!("expected a certified unsat");
+    };
+    assert!(refutation.verify(&arena).unwrap());
+    refutation.lemmas.clear();
+    assert!(
+        !refutation.verify(&arena).unwrap(),
+        "without its lemmas the skeleton is satisfiable, so verify must fail"
+    );
 }

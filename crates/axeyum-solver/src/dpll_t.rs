@@ -131,6 +131,335 @@ pub fn check_with_lra_dpll(
     }))
 }
 
+/// Hard cap on the number of Boolean symbols (atom propositions + original
+/// Boolean variables) a refutation may have for its propositional half to be
+/// verified by exhaustive enumeration. Above this the certificate is declined
+/// (`unknown`), never produced unverified.
+const MAX_CERTIFIABLE_BOOLS: usize = 22;
+
+/// A checkable refutation of a **pure real** (Boolean structure over real order
+/// atoms, no bit-vector/integer/array/function content) `QF_LRA` query.
+///
+/// It records the Boolean skeleton (one term per assertion, real atoms replaced
+/// by fresh propositions) and the theory lemmas the lazy-SMT loop learned — each
+/// lemma is the infeasible core of a theory conflict. [`Self::verify`] re-checks
+/// it independently of the search:
+///
+/// 1. **Each lemma is a valid theory fact.** Its core literals are re-decided by
+///    [`check_with_lra`] (itself Farkas-self-checked) and must be `unsat`, so the
+///    lemma clause (the core's negation) holds in every real model.
+/// 2. **The skeleton with all lemma clauses is propositionally unsatisfiable**,
+///    confirmed by enumerating every truth assignment to the Boolean symbols.
+///
+/// Soundness: any real model of the original query induces a truth assignment
+/// that satisfies the skeleton (by the abstraction) and every lemma clause (by
+/// (1)); (2) says no such assignment exists, so the query is `unsat`. The
+/// abstraction (skeleton faithfully represents the originals over the atoms) is
+/// the trusted reduction here, exactly as bit-blasting is trusted on the DRAT
+/// route.
+#[derive(Debug, Clone)]
+pub struct LraDpllRefutation {
+    /// The Boolean skeleton: one term per original assertion, over fresh atom
+    /// propositions and any original Boolean variables.
+    pub skeleton: Vec<TermId>,
+    /// The learned theory lemmas; each is an infeasible core of real-atom
+    /// literals.
+    pub lemmas: Vec<Vec<LemmaLiteral>>,
+}
+
+/// One literal of a theory lemma: an abstracted atom proposition, the truth
+/// value it took in the conflicting assignment, and the corresponding real
+/// order literal (`atom` or its negation) used to re-check the lemma.
+#[derive(Debug, Clone, Copy)]
+pub struct LemmaLiteral {
+    /// The fresh Boolean proposition standing for the atom.
+    pub prop: SymbolId,
+    /// The truth value the proposition took in the (infeasible) assignment.
+    pub truth: bool,
+    /// The real order literal: the atom term when `truth`, else its negation.
+    pub literal: TermId,
+}
+
+/// The outcome of [`certify_lra_dpll_unsat`].
+#[derive(Debug, Clone)]
+pub enum LraDpllOutcome {
+    /// Satisfiable, with a replayed model.
+    Sat(Model),
+    /// Unsatisfiable, with a self-checked refutation.
+    Unsat(LraDpllRefutation),
+    /// Undecided / not certifiable, with a reason.
+    Unknown(UnknownReason),
+}
+
+/// Decides a **pure real** Boolean-structured `QF_LRA` query and, on `unsat`,
+/// returns a self-checked [`LraDpllRefutation`] — the lazy-SMT generalization of
+/// the conjunctive Farkas certificate to arbitrary Boolean structure.
+///
+/// On `unsat` the refutation is verified (theory lemmas + propositional
+/// enumeration) before it is returned; a failed self-check is a
+/// [`SolverError::Backend`] soundness alarm. If the refutation has too many
+/// Boolean symbols to enumerate, the result is a classified `unknown` rather
+/// than an unverified certificate.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] if the query carries non-real,
+/// non-Boolean content (bit-vectors, integers, arrays, functions, quantifiers),
+/// or [`SolverError`] from the underlying solvers; a failed self-check is a
+/// [`SolverError::Backend`].
+pub fn certify_lra_dpll_unsat(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<LraDpllOutcome, SolverError> {
+    for &assertion in assertions {
+        if !is_pure_bool_real(arena, assertion) {
+            return Err(SolverError::Unsupported(
+                "lra-dpll certificate: query has non-real/Boolean theory content".to_owned(),
+            ));
+        }
+    }
+
+    let mut ctx = Abstractor::default();
+    let mut skeleton = Vec::with_capacity(assertions.len());
+    for &assertion in assertions {
+        skeleton.push(ctx.abstract_term(arena, assertion)?);
+    }
+
+    let mut backend = SatBvBackend::new();
+    let mut blocking: Vec<TermId> = Vec::new();
+    let mut lemmas: Vec<Vec<LemmaLiteral>> = Vec::new();
+
+    for _ in 0..MAX_ROUNDS {
+        let mut sat_assertions = skeleton.clone();
+        sat_assertions.extend(blocking.iter().copied());
+        let propositional = match check_with_all_theories(
+            &mut backend,
+            arena,
+            &sat_assertions,
+            DEFAULT_INT_WIDTH,
+            config,
+        )? {
+            CheckResult::Sat(model) => model,
+            CheckResult::Unsat => {
+                // Propositional refutation reached: the skeleton plus learned
+                // lemmas is unsatisfiable. Package and self-check the certificate.
+                let refutation = LraDpllRefutation {
+                    skeleton: skeleton.clone(),
+                    lemmas,
+                };
+                return finish_certified_unsat(arena, refutation);
+            }
+            CheckResult::Unknown(reason) => return Ok(LraDpllOutcome::Unknown(reason)),
+        };
+
+        let mut theory_lits = Vec::with_capacity(ctx.atoms.len());
+        let mut assignment: Vec<(SymbolId, bool)> = Vec::with_capacity(ctx.atoms.len());
+        for atom in &ctx.atoms {
+            let truth = propositional
+                .get(atom.prop)
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            assignment.push((atom.prop, truth));
+            theory_lits.push(if truth {
+                atom.term
+            } else {
+                arena.not(atom.term)?
+            });
+        }
+
+        match check_with_lra(arena, &theory_lits)? {
+            CheckResult::Sat(theory_model) => {
+                return match finish_sat(arena, assertions, &ctx, &propositional, &theory_model)? {
+                    CheckResult::Sat(model) => Ok(LraDpllOutcome::Sat(model)),
+                    _ => unreachable!("finish_sat returns Sat or Err"),
+                };
+            }
+            CheckResult::Unsat => {
+                // Record the infeasible core as a lemma (the same minimized core
+                // used for the blocking clause), then block it.
+                let core = conflict_core(arena, &theory_lits, &assignment)?;
+                let mut lemma = Vec::with_capacity(core.len());
+                for &(prop, truth) in &core {
+                    let atom_term = ctx
+                        .atoms
+                        .iter()
+                        .find(|a| a.prop == prop)
+                        .map(|a| a.term)
+                        .ok_or_else(|| {
+                            SolverError::Backend(
+                                "lra-dpll lemma references an unknown atom proposition".to_owned(),
+                            )
+                        })?;
+                    let literal = if truth {
+                        atom_term
+                    } else {
+                        arena.not(atom_term)?
+                    };
+                    lemma.push(LemmaLiteral {
+                        prop,
+                        truth,
+                        literal,
+                    });
+                }
+                lemmas.push(lemma);
+                blocking.push(block_clause(arena, &core)?);
+            }
+            CheckResult::Unknown(reason) => return Ok(LraDpllOutcome::Unknown(reason)),
+        }
+    }
+
+    Ok(LraDpllOutcome::Unknown(UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail: format!("lazy SMT exceeded {MAX_ROUNDS} refinement rounds"),
+    }))
+}
+
+/// Size-gates and self-verifies a freshly built refutation.
+fn finish_certified_unsat(
+    arena: &TermArena,
+    refutation: LraDpllRefutation,
+) -> Result<LraDpllOutcome, SolverError> {
+    let bools = refutation.bool_symbols(arena);
+    if bools.len() > MAX_CERTIFIABLE_BOOLS {
+        return Ok(LraDpllOutcome::Unknown(UnknownReason {
+            kind: UnknownKind::Incomplete,
+            detail: format!(
+                "lra-dpll refutation has {} Boolean symbols, over the enumeration cap {MAX_CERTIFIABLE_BOOLS}",
+                bools.len()
+            ),
+        }));
+    }
+    if !refutation.verify(arena)? {
+        return Err(SolverError::Backend(
+            "lra-dpll refutation failed its own self-check (lazy-SMT bug)".to_owned(),
+        ));
+    }
+    Ok(LraDpllOutcome::Unsat(refutation))
+}
+
+impl LraDpllRefutation {
+    /// The Boolean symbols (atom propositions and original Boolean variables)
+    /// the refutation ranges over, in deterministic order.
+    fn bool_symbols(&self, arena: &TermArena) -> Vec<SymbolId> {
+        let mut set = std::collections::BTreeSet::new();
+        let mut stack: Vec<TermId> = self.skeleton.clone();
+        let mut seen = std::collections::HashSet::new();
+        while let Some(t) = stack.pop() {
+            if !seen.insert(t) {
+                continue;
+            }
+            match arena.node(t) {
+                TermNode::Symbol(symbol) if arena.sort_of(t) == Sort::Bool => {
+                    set.insert(*symbol);
+                }
+                TermNode::App { args, .. } => stack.extend(args.iter().copied()),
+                _ => {}
+            }
+        }
+        for lemma in &self.lemmas {
+            for literal in lemma {
+                set.insert(literal.prop);
+            }
+        }
+        set.into_iter().collect()
+    }
+
+    /// Independently re-checks the refutation; see the type docs for the
+    /// soundness argument. Returns `Ok(true)` iff it holds up.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Unsupported`] if there are too many Boolean
+    /// symbols to enumerate, or [`SolverError`] from the theory re-check or an
+    /// evaluation error.
+    pub fn verify(&self, arena: &TermArena) -> Result<bool, SolverError> {
+        // (1) Every lemma's core must be a genuine theory contradiction.
+        for lemma in &self.lemmas {
+            let lits: Vec<TermId> = lemma.iter().map(|l| l.literal).collect();
+            if lits.is_empty() || !matches!(check_with_lra(arena, &lits)?, CheckResult::Unsat) {
+                return Ok(false);
+            }
+        }
+
+        // (2) skeleton AND every lemma clause (the core's negation) must be
+        //     propositionally unsatisfiable — enumerate all Boolean assignments.
+        let bools = self.bool_symbols(arena);
+        if bools.len() > MAX_CERTIFIABLE_BOOLS {
+            return Err(SolverError::Unsupported(format!(
+                "lra-dpll refutation has {} Boolean symbols, too many to verify by enumeration",
+                bools.len()
+            )));
+        }
+        let index_of: std::collections::HashMap<SymbolId, usize> =
+            bools.iter().enumerate().map(|(i, &s)| (s, i)).collect();
+        let n = bools.len();
+        for mask in 0u64..(1u64 << n) {
+            let mut assignment = Assignment::new();
+            for (i, &symbol) in bools.iter().enumerate() {
+                assignment.set(symbol, Value::Bool((mask >> i) & 1 == 1));
+            }
+            // Does this assignment satisfy the whole skeleton?
+            let mut skeleton_holds = true;
+            for &term in &self.skeleton {
+                match eval(arena, term, &assignment) {
+                    Ok(Value::Bool(true)) => {}
+                    Ok(_) => {
+                        skeleton_holds = false;
+                        break;
+                    }
+                    Err(error) => {
+                        return Err(SolverError::Backend(format!(
+                            "lra-dpll verify: skeleton evaluation error: {error}"
+                        )));
+                    }
+                }
+            }
+            if !skeleton_holds {
+                continue;
+            }
+            // Does it also satisfy every lemma clause? A clause (the core's
+            // negation) is false exactly when the core is fully satisfied (every
+            // literal's proposition equals its recorded truth).
+            let all_clauses_hold = self.lemmas.iter().all(|lemma| {
+                let core_fully_satisfied = lemma
+                    .iter()
+                    .all(|l| (mask >> index_of[&l.prop]) & 1 == u64::from(l.truth));
+                !core_fully_satisfied
+            });
+            if all_clauses_hold {
+                // A model of skeleton AND all clauses exists: not a refutation.
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
+}
+
+/// Whether `term` is built only from Boolean and real sorts (no bit-vector,
+/// integer, array, function, or quantifier content) — the fragment the
+/// [`LraDpllRefutation`] enumeration certificate covers.
+fn is_pure_bool_real(arena: &TermArena, term: TermId) -> bool {
+    let mut seen = std::collections::HashSet::new();
+    let mut stack = vec![term];
+    while let Some(t) = stack.pop() {
+        if !seen.insert(t) {
+            continue;
+        }
+        match arena.sort_of(t) {
+            Sort::Bool | Sort::Real => {}
+            _ => return false,
+        }
+        if let TermNode::App { op, args } = arena.node(t) {
+            if matches!(op, Op::Apply(_) | Op::Forall(_) | Op::Exists(_)) {
+                return false;
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
+    true
+}
+
 /// Builds the final `sat` model (real values + original Boolean values) and
 /// replays it against the original assertions.
 fn finish_sat(

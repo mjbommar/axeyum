@@ -533,6 +533,22 @@ Last updated: 2026-06-13
   unsatisfiable core** (a recognized SMT capability, useful for explaining
   infeasible symbolic-execution paths). A
   δ-rational simplex for scale remains the open `QF_LRA` follow-up.
+- DPLL(T) `unsat` refutation certificates (pure-real) recorded 2026-06-13
+  (ADR-0015): `certify_lra_dpll_unsat` generalizes the conjunctive Farkas
+  certificate to **arbitrary Boolean structure over real atoms**. On `unsat` it
+  returns a self-checked `LraDpllRefutation` — the Boolean skeleton plus the
+  lazy-SMT loop's learned theory lemmas (infeasible real-atom cores).
+  `LraDpllRefutation::verify` re-checks it independently: every lemma's core is
+  re-decided `unsat` by `check_with_lra` (Farkas-self-checked), and the skeleton
+  with all lemma clauses is shown propositionally unsatisfiable by enumerating
+  the Boolean symbols (capped at 22 → otherwise classified `unknown`, never an
+  unverified certificate). The abstraction is the trusted reduction, exactly as
+  bit-blasting is on the DRAT route; the refutation is self-verified before
+  return (failure → soundness alarm). Tests cover a verifying certificate, a
+  replaying `sat` model, rejection of bit-vector content, and a tampered
+  (lemma-stripped) refutation. Remaining: certify lazy-SMT `unsat` when the
+  skeleton also carries bit-blasted theories (the propositional half then needs
+  a DRAT proof rather than enumeration).
 - Phase: **Phase 5 first pure-Rust backend slice.** M0, Phase 1, SMT-LIB
   ingestion/export, the micro-corpus benchmark harness, the public QF_BV
   baseline, and the Phase 3 query/rewrite/evidence entry contracts are
@@ -1909,17 +1925,28 @@ In order; check off and date as completed.
       deletion-minimized minimal unsat core — the SMT `get-unsat-core`
       capability, re-verified before return). Follow-up: a δ-rational simplex
       for scale.
-- [ ] **DPLL(T) `unsat` refutation certificates (scoped next step, builds on the
-      Farkas work):** `check_with_lra_dpll` (the lazy-SMT path for arbitrary
-      Boolean combinations of real + bit-blasted constraints) returns `unsat`
-      without a certificate. Each theory conflict is now Farkas-certifiable
-      (attach `lra_farkas_certificate` to every learned blocking clause), and the
-      final propositional `unsat` of `skeleton ∧ blocking-clauses` is decided by
-      the bit-blasting composition (DRAT-capable). The certificate is the set of
-      Farkas-certified theory lemmas plus a refutation that the skeleton with
-      those lemmas is unsatisfiable — a composed SMT proof. This generalizes the
-      conjunctive-LRA Farkas certificate to the full Boolean-structured path and
-      is the natural continuation of the 2026-06-13 Farkas work.
+- [x] **DPLL(T) `unsat` refutation certificates — pure-real (done, 2026-06-13,
+      ADR-0015):** `certify_lra_dpll_unsat` decides a **pure-real**
+      Boolean-structured `QF_LRA` query and, on `unsat`, returns a self-checked
+      `LraDpllRefutation` — the Boolean skeleton plus the lazy-SMT loop's learned
+      theory lemmas (each an infeasible real-atom core). `LraDpllRefutation::verify`
+      re-checks it independently of the search: (1) every lemma's core is
+      re-decided `unsat` by `check_with_lra` (itself Farkas-self-checked), so each
+      lemma clause holds in every real model; (2) the skeleton with all lemma
+      clauses is propositionally unsatisfiable, confirmed by enumerating every
+      truth assignment to the Boolean symbols (capped at 22; above that the
+      certificate is a classified `unknown`, never produced unverified). Soundness:
+      a real model would induce a truth assignment satisfying the skeleton and
+      every lemma clause, which (2) forbids — the abstraction is the trusted
+      reduction, exactly as bit-blasting is on the DRAT route. The refutation is
+      self-verified before return (failure → `SolverError::Backend` alarm). Tests:
+      a case-split conflict certifies and verifies, a `sat` query returns a
+      replaying model, bit-vector content is rejected `Unsupported`, and a
+      lemma-stripped refutation fails verification. This generalizes the
+      conjunctive-LRA Farkas certificate to arbitrary Boolean structure over reals.
+      Remaining: certify the lazy-SMT `unsat` when the skeleton also carries
+      bit-blasted theories (the propositional half then needs a DRAT proof, not
+      enumeration).
 - [ ] **NEXT: remaining R&D tracks.** The supported theories (`QF_BV`, arrays,
       EUF, `QF_LIA`, `QF_LRA`, their composition, and finite-domain quantifiers)
       are complete end to end with checkable evidence and wasm support. The open

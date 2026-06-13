@@ -159,6 +159,27 @@ way every prior theory was.
   have a nonzero multiplier) to seed a deletion-minimized, re-verified minimal
   unsatisfiable core — the SMT-LIB `get-unsat-core` capability, useful for
   explaining infeasible paths.
+- 2026-06-13: **DPLL(T) `unsat` refutation certificates (pure-real)** —
+  `certify_lra_dpll_unsat` generalizes the conjunctive Farkas certificate to
+  arbitrary Boolean structure over real order atoms. On `unsat` it returns a
+  self-checked `LraDpllRefutation`: the Boolean skeleton (one term per assertion,
+  atoms abstracted to fresh propositions) plus the lazy-SMT loop's learned theory
+  lemmas (each an infeasible real-atom core, the same minimized core used for the
+  blocking clause). `LraDpllRefutation::verify` re-checks it independently of the
+  search — (1) every lemma core is re-decided `unsat` by `check_with_lra` (itself
+  Farkas-self-checked), so each lemma clause holds in every real model, and (2)
+  the skeleton with all lemma clauses is propositionally unsatisfiable, confirmed
+  by enumerating all Boolean assignments (capped at 22 symbols → otherwise a
+  classified `unknown`, never an unverified certificate). Soundness: a real model
+  of the original would induce a truth assignment satisfying the skeleton and
+  every lemma clause, which (2) forbids; the abstraction is the trusted reduction,
+  exactly as bit-blasting is trusted on the DRAT route. Self-verified before
+  return (failure → `SolverError::Backend` alarm). Tests: a case-split conflict
+  certifies + verifies, a `sat` query returns a replaying model, bit-vector
+  content is rejected `Unsupported`, and a lemma-stripped refutation fails
+  verification. Remaining: certify the lazy-SMT `unsat` when the skeleton also
+  carries bit-blasted theories (the propositional half then needs a DRAT proof,
+  not enumeration).
   Follow-up: a δ-rational simplex for scale must produce the same certificate.
 
 ## Consequences
