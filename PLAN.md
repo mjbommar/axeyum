@@ -38,6 +38,31 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-13
 
+- Incremental encoder polarity optimization recorded 2026-06-13 (toward
+  destination 2, on the product-critical incremental path the symbolic-execution
+  consumer uses): `IncrementalCnf` (`axeyum-cnf`) now emits AND-gate definitions
+  with **lazy (on-demand) Plaisted–Greenbaum polarity encoding** — only the
+  half-implication for the polarity in which a node is actually used, adding the
+  opposite half if and only if an opposite-polarity use later appears. This is
+  sound incrementally because the encoder only ever *adds* clauses (never
+  retracts) and gate definitions are unconditional, so push/pop scopes do not
+  interact with the polarity bookkeeping. The model lift now recomputes every
+  AIG node value by a forward pass from the input bits (internal nodes may be
+  polarity-underconstrained), mirroring the one-shot sparse path's
+  recompute-from-inputs discipline. Soundness gate: the full pure-Rust solver
+  suite stays green (oracle-free scenario catalog, push/pop path exploration,
+  arrays, symbolic execution — zero soundness alarms), plus new `axeyum-cnf`
+  tests proving lazy-PG agrees with both exhaustive AIG evaluation and the
+  one-shot `tseitin_encode` verdict, and that it emits 2 clauses/AND (vs 3) on a
+  single-polarity cone. **Honest measured effect:** on a realistic
+  `x*y + z == c` bit-blasted circuit the aggregate clause reduction is only
+  10.9% (width 8), 5.8% (16), 4.0% (24) — modest and width-shrinking, because
+  multiplier/adder carry logic is mostly mixed-polarity and needs both halves.
+  Conclusion: PG is a correct, free win but does **not** close the encoding-size
+  gap; the dominant cost is AIG-level arithmetic-circuit size, which is the next
+  lever. Gate-fusion (XOR/mux/and-tree) was deliberately **not** ported to the
+  incremental encoder — it relies on global single-use counts that are not
+  stable as the AIG grows, so it is unsound to apply incrementally.
 - Consumer-models iteration 1 recorded 2026-06-13
   ([ADR-0008](docs/research/09-decisions/adr-0008-consumer-scenario-models.md),
   [consumer-scenario-models note](docs/research/07-verification/consumer-scenario-models.md)):
@@ -2223,9 +2248,13 @@ foundation; the items above are the actual product trajectory.
         those theories, so the lazy-SMT loop suffices); general Nelson-Oppen would
         only be needed to combine two shared-sort theories, which the current set
         does not present.
-- [ ] **Incremental performance + parity (parallel R&D):** port the sparse-CNF
-      optimizations to the incremental encoder; add a warm-vs-cold benchmark to
-      quantify the incrementality win; activation-literal GC for long sessions.
+- [ ] **Incremental performance + parity (parallel R&D):** lazy
+      Plaisted–Greenbaum polarity encoding is ported (2026-06-13) — the sound
+      subset; measured aggregate clause reduction is a modest 4–11% on
+      arithmetic circuits (gate-fusion is *not* portable incrementally, see
+      Status). Still open: add a warm-vs-cold benchmark to quantify the
+      cross-query incrementality win; activation-literal GC for long sessions;
+      and the bigger lever — AIG-level arithmetic-circuit size reduction.
 - [ ] **Phase 5 supported-slice expansion (parallel track):** use the version 11
       smallest-DAG selector artifacts, the version 12 root-direct selector
       artifacts, the version 13 greedy selector diagnostic, the version 10

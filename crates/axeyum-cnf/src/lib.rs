@@ -650,14 +650,39 @@ impl IncrementalSat {
 /// lifting a SAT assignment back to AIG node values direct, which feeds the
 /// existing symbol-model reconstruction and original-term replay.
 ///
-/// This is the simple, sound encoder for the first end-to-end incremental
-/// slice; the sparse-CNF optimizations of [`tseitin_encode`] are deliberately
-/// not replicated here yet.
+/// Gate definitions use **lazy (on-demand) Plaisted–Greenbaum polarity
+/// encoding**: an AND node's two implication halves are emitted only in the
+/// polarity in which the node is actually *used*, and the opposite half is added
+/// later if and only if an opposite-polarity use appears. This is the
+/// satisfiability-preserving polarity optimization that the one-shot
+/// [`tseitin_encode`] applies globally (it knows every use up front); here it is
+/// applied incrementally, which is sound because the encoder only ever *adds*
+/// clauses — never retracts — so a half emitted for an early use stays valid as
+/// the formula grows, and a new use simply triggers the missing half. Gate
+/// definitions are unconditional (only roots are selector-guarded), so push/pop
+/// scopes do not interact with the polarity bookkeeping.
+///
+/// Because a node may be left polarity-underconstrained (its CNF variable can
+/// take an arbitrary value the gate definition does not pin), the model lift
+/// [`IncrementalCnf::aig_node_values`] reconstructs every node value by forward
+/// evaluation from the input bits rather than reading internal node variables —
+/// the same recompute-from-inputs discipline the one-shot sparse path uses.
+///
+/// The gate-fusion optimizations of [`tseitin_encode`] (XOR/mux/and-tree
+/// detection) are deliberately *not* ported: they rely on global single-use
+/// counts that are not stable as the AIG grows, so they are not sound to apply
+/// incrementally.
 #[derive(Debug, Default)]
 pub struct IncrementalCnf {
     sat: IncrementalSat,
     node_var: Vec<CnfVar>,
     next_var: usize,
+    /// AND-node children (`None` for inputs/const), parallel to `node_var`.
+    and_children: Vec<Option<(AigLit, AigLit)>>,
+    /// Whether the `v -> (lhs & rhs)` half has been emitted, parallel to `node_var`.
+    emitted_up: Vec<bool>,
+    /// Whether the `(lhs & rhs) -> v` half has been emitted, parallel to `node_var`.
+    emitted_down: Vec<bool>,
 }
 
 impl IncrementalCnf {
@@ -704,7 +729,9 @@ impl IncrementalCnf {
         }
     }
 
-    /// Encodes every AIG node not yet encoded into CNF clauses.
+    /// Allocates a CNF variable for every new AIG node. AND-gate defining
+    /// clauses are *not* emitted here; they are added lazily, in the needed
+    /// polarity only, by [`IncrementalCnf::require`].
     fn sync(&mut self, aig: &Aig) -> Result<(), SatError> {
         for (id, node) in aig.nodes() {
             if id.index() < self.node_var.len() {
@@ -712,35 +739,83 @@ impl IncrementalCnf {
             }
             let var = self.alloc_var()?;
             self.node_var.push(var);
-            let var_lit = CnfLit::positive(var);
-            match node {
+            let children = match node {
                 AigNode::ConstFalse => {
                     // Force the constant-false node's variable to false.
                     self.sat
-                        .add_clause(CnfClause::new(vec![var_lit.negated()]))?;
+                        .add_clause(CnfClause::new(vec![CnfLit::positive(var).negated()]))?;
+                    None
                 }
                 AigNode::Input(_) => {
                     // A free variable; no defining clause.
+                    None
                 }
-                AigNode::And(lhs, rhs) => {
-                    let lhs_lit = self.lit(lhs);
-                    let rhs_lit = self.lit(rhs);
-                    // var <-> (lhs & rhs)
-                    self.sat
-                        .add_clause(CnfClause::new(vec![var_lit.negated(), lhs_lit]))?;
-                    self.sat
-                        .add_clause(CnfClause::new(vec![var_lit.negated(), rhs_lit]))?;
-                    self.sat.add_clause(CnfClause::new(vec![
-                        var_lit,
-                        lhs_lit.negated(),
-                        rhs_lit.negated(),
-                    ]))?;
-                }
-            }
+                // Defer the `var <-> (lhs & rhs)` clauses to `require`, which
+                // emits only the polarity halves that are actually used.
+                AigNode::And(lhs, rhs) => Some((lhs, rhs)),
+            };
+            self.and_children.push(children);
+            self.emitted_up.push(false);
+            self.emitted_down.push(false);
         }
         // Ensure the solver knows about every node variable, including inputs
         // that appear in no clause, so a returned assignment covers them.
         self.sat.reserve(self.next_var)?;
+        Ok(())
+    }
+
+    /// Lazily emits the Plaisted–Greenbaum half-definitions needed so that an
+    /// occurrence of AIG node `start` in polarity `want_up` is sound.
+    ///
+    /// `want_up == true` means node `start` occurs positively (`+v`), which needs
+    /// the `v -> (lhs & rhs)` implication; `false` means it occurs negatively
+    /// (`¬v`), needing `(lhs & rhs) -> v`. Emitting a half introduces child
+    /// occurrences whose polarities are propagated recursively. Each
+    /// `(node, direction)` is emitted at most once, so the propagation is finite
+    /// and monotone. An explicit work-stack avoids deep recursion on tall AIGs.
+    fn require(&mut self, start: usize, want_up: bool) -> Result<(), SatError> {
+        let mut stack = vec![(start, want_up)];
+        while let Some((idx, up)) = stack.pop() {
+            // Only AND nodes carry a defining implication; inputs and the
+            // constant are already fully determined.
+            let Some((lhs, rhs)) = self.and_children[idx] else {
+                continue;
+            };
+            let var = CnfLit::positive(self.node_var[idx]);
+            let lhs_lit = self.lit(lhs);
+            let rhs_lit = self.lit(rhs);
+            if up {
+                if self.emitted_up[idx] {
+                    continue;
+                }
+                self.emitted_up[idx] = true;
+                // v -> (lhs & rhs): (¬v ∨ lhs)(¬v ∨ rhs).
+                self.sat
+                    .add_clause(CnfClause::new(vec![var.negated(), lhs_lit]))?;
+                self.sat
+                    .add_clause(CnfClause::new(vec![var.negated(), rhs_lit]))?;
+                // Children occur with their own literal polarity: positive
+                // occurrence needs `up`, negated occurrence needs `down`.
+                stack.push((lhs.node().index(), !lhs.is_inverted()));
+                stack.push((rhs.node().index(), !rhs.is_inverted()));
+            } else {
+                if self.emitted_down[idx] {
+                    continue;
+                }
+                self.emitted_down[idx] = true;
+                // (lhs & rhs) -> v: (v ∨ ¬lhs ∨ ¬rhs).
+                self.sat.add_clause(CnfClause::new(vec![
+                    var,
+                    lhs_lit.negated(),
+                    rhs_lit.negated(),
+                ]))?;
+                // Children appear negated here, flipping the required polarity:
+                // a non-inverted child occurs negatively (needs `down`); an
+                // inverted child occurs positively (needs `up`).
+                stack.push((lhs.node().index(), lhs.is_inverted()));
+                stack.push((rhs.node().index(), rhs.is_inverted()));
+            }
+        }
         Ok(())
     }
 
@@ -761,6 +836,9 @@ impl IncrementalCnf {
         selector: Option<CnfVar>,
     ) -> Result<(), SatError> {
         self.sync(aig)?;
+        // The asserted clause contains `root` positively, so the root node
+        // occurs positively iff it is not inverted: emit that polarity half.
+        self.require(root.node().index(), !root.is_inverted())?;
         let root_lit = self.lit(root);
         let clause = match selector {
             None => CnfClause::new(vec![root_lit]),
@@ -792,16 +870,32 @@ impl IncrementalCnf {
 
     /// Maps a satisfying assignment to AIG node values in node-id order, ready
     /// for the bit-lowering symbol-model reconstruction.
+    ///
+    /// Internal AND nodes may be polarity-underconstrained under lazy
+    /// Plaisted–Greenbaum encoding, so their CNF variables are *not* trusted.
+    /// Instead every node value is recomputed by a single forward pass over the
+    /// AIG (nodes are in topological order, children before parents), reading
+    /// only the free input variables from the assignment. The result is a
+    /// consistent valuation of every gate, which the downstream replay check
+    /// (`validate_aig_node_values`) requires.
     pub fn aig_node_values(&self, aig: &Aig, assignment: &CnfAssignment) -> Vec<bool> {
-        let values = assignment.values();
-        (0..aig.node_count())
-            .map(|node_id| {
-                self.node_var
-                    .get(node_id)
-                    .and_then(|var| values.get(var.index()).copied())
-                    .unwrap_or(false)
-            })
-            .collect()
+        let assigned = assignment.values();
+        let mut values = vec![false; aig.node_count()];
+        for (id, node) in aig.nodes() {
+            let idx = id.index();
+            values[idx] = match node {
+                AigNode::ConstFalse => false,
+                AigNode::Input(_) => self
+                    .node_var
+                    .get(idx)
+                    .and_then(|var| assigned.get(var.index()).copied())
+                    .unwrap_or(false),
+                AigNode::And(lhs, rhs) => {
+                    aig_lit_in_values(lhs, &values) && aig_lit_in_values(rhs, &values)
+                }
+            };
+        }
+        values
     }
 }
 
@@ -2298,6 +2392,15 @@ fn replay_sparse_aig_values(
     Ok(())
 }
 
+/// Evaluates an AIG literal against an already-computed node-value table.
+///
+/// Used by the incremental forward recompute, where children precede parents in
+/// node-id order, so the child value is always present.
+fn aig_lit_in_values(lit: AigLit, values: &[bool]) -> bool {
+    let value = values.get(lit.node().index()).copied().unwrap_or(false);
+    value ^ lit.is_inverted()
+}
+
 fn aig_lit_value(lit: AigLit, values: &[bool]) -> Result<bool, CnfError> {
     let value = values
         .get(lit.node().index())
@@ -3201,5 +3304,151 @@ p cnf 1 2
         assert!(matches!(sat.solve(None).unwrap(), SatResult::Unsat(_)));
         assert_eq!(sat.clause_count(), 2);
         assert_eq!(sat.variable_count(), 1);
+    }
+
+    /// `xor(a, b)` built from ANDs and inversion: ¬(¬(a & ¬b) & ¬(¬a & b)).
+    fn xor_lit(aig: &mut Aig, a: AigLit, b: AigLit) -> AigLit {
+        let only_a = aig.and(a, b.negated());
+        let only_b = aig.and(a.negated(), b);
+        aig.and(only_a.negated(), only_b.negated()).negated()
+    }
+
+    /// A spread of small combinational circuits, each as `(aig, root)`.
+    fn pg_differential_cases() -> Vec<(Aig, AigLit)> {
+        let mut cases = Vec::new();
+
+        // Positive AND chain (single-polarity throughout).
+        {
+            let mut aig = Aig::new();
+            let mut acc = aig.input("x0");
+            for i in 1..4 {
+                let next = aig.input(format!("x{i}"));
+                acc = aig.and(acc, next);
+            }
+            cases.push((aig, acc));
+        }
+        // OR of two ANDs (mixes polarity through De Morgan).
+        {
+            let mut aig = Aig::new();
+            let a = aig.input("a");
+            let b = aig.input("b");
+            let c = aig.input("c");
+            let d = aig.input("d");
+            let ab = aig.and(a, b);
+            let cd = aig.and(c, d);
+            let or = aig.and(ab.negated(), cd.negated()).negated();
+            cases.push((aig, or));
+        }
+        // XOR (both polarity halves of inner nodes are needed).
+        {
+            let mut aig = Aig::new();
+            let a = aig.input("a");
+            let b = aig.input("b");
+            let root = xor_lit(&mut aig, a, b);
+            cases.push((aig, root));
+        }
+        // Negated root over an AND (root used in negative polarity).
+        {
+            let mut aig = Aig::new();
+            let a = aig.input("a");
+            let b = aig.input("b");
+            let ab = aig.and(a, b);
+            cases.push((aig, ab.negated()));
+        }
+        // Contradiction: x XOR x is always false -> unsatisfiable.
+        {
+            let mut aig = Aig::new();
+            let x = aig.input("x");
+            let root = xor_lit(&mut aig, x, x);
+            cases.push((aig, root));
+        }
+        // Tautology asserted: (a | ¬a) is always true -> satisfiable.
+        {
+            let mut aig = Aig::new();
+            let a = aig.input("a");
+            let root = aig.and(a.negated(), a).negated();
+            cases.push((aig, root));
+        }
+        cases
+    }
+
+    #[test]
+    fn incremental_pg_agrees_with_brute_force_and_one_shot() {
+        // The lazy Plaisted–Greenbaum incremental encoder must reach the same
+        // verdict as (1) exhaustive AIG evaluation and (2) the one-shot
+        // `tseitin_encode` path, and any SAT model it lifts must satisfy the
+        // asserted root. This is the soundness check for the polarity encoding.
+        for (case, (aig, root)) in pg_differential_cases().iter().enumerate() {
+            let k = aig.input_count();
+            let brute_sat = (0u32..(1u32 << k)).any(|mask| {
+                let inputs = (0..k).map(|bit| (mask >> bit) & 1 == 1).collect::<Vec<_>>();
+                aig.eval(*root, &inputs).expect("eval")
+            });
+
+            let one_shot = solve_with_rustsat_batsat(
+                tseitin_encode(aig, &[*root])
+                    .expect("one-shot encode")
+                    .formula(),
+            )
+            .expect("one-shot solve");
+            let one_shot_sat = matches!(one_shot, SatResult::Sat(_));
+            assert_eq!(
+                one_shot_sat, brute_sat,
+                "case {case}: one-shot disagrees with brute force"
+            );
+
+            let mut cnf = IncrementalCnf::new();
+            cnf.assert_root(aig, *root, None).expect("assert root");
+            match cnf.solve(&[], None).expect("incremental solve") {
+                SatResult::Sat(assignment) => {
+                    assert!(
+                        brute_sat,
+                        "case {case}: incremental SAT but brute force UNSAT"
+                    );
+                    let node_values = cnf.aig_node_values(aig, &assignment);
+                    assert!(
+                        aig_lit_value(*root, &node_values).expect("lift"),
+                        "case {case}: lifted model must satisfy the root"
+                    );
+                }
+                SatResult::Unsat(_) => {
+                    assert!(
+                        !brute_sat,
+                        "case {case}: incremental UNSAT but brute force SAT"
+                    );
+                }
+                other @ SatResult::Unknown(_) => panic!("case {case}: unexpected {other:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn incremental_pg_emits_fewer_clauses_than_full_tseitin() {
+        // A positive AND chain uses every gate in one (positive) polarity, so
+        // lazy Plaisted–Greenbaum emits only the `v -> lhs & rhs` half — two
+        // clauses per AND instead of the full three — proving the polarity win.
+        let mut aig = Aig::new();
+        let mut acc = aig.input("x0");
+        let n_ands = 8usize;
+        for i in 1..=n_ands {
+            let next = aig.input(format!("x{i}"));
+            acc = aig.and(acc, next);
+        }
+        let mut cnf = IncrementalCnf::new();
+        cnf.assert_root(&aig, acc, None).expect("assert root");
+
+        // 1 const-false unit + 2 clauses per AND (up half only) + 1 root unit.
+        let lazy_pg = cnf.clause_count();
+        assert_eq!(lazy_pg, 1 + 2 * n_ands + 1);
+        // Full both-polarity Tseitin would emit three clauses per AND.
+        let full_tseitin = 1 + 3 * n_ands + 1;
+        assert!(
+            lazy_pg < full_tseitin,
+            "lazy PG {lazy_pg} should beat full Tseitin {full_tseitin}"
+        );
+        assert!(matches!(
+            cnf.solve(&[], None).expect("solve"),
+            SatResult::Sat(_)
+        ));
     }
 }
