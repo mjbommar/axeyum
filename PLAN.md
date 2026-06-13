@@ -646,6 +646,23 @@ Last updated: 2026-06-13
   **Track b is now complete** end to end (single/multi-var matching, nested
   chains, match index, congruence closure); a persistent incremental E-graph for
   scale is the only remaining performance refinement.
+- CDCL gate (a) breadth measured 2026-06-13 (track c): a second public family
+  attribution settles the breadth caveat and **reverses** the Noetzli picture. On
+  `bench_ab` (285 decided `sat-bv` instances, `--jobs 1`, guarded budgets — node
+  5000 / CNF 7000-var / 20000-clause; all agree, 0 replay failures) the SAT-solve
+  share is **0.243** with bit-blast ~0.32 + CNF ~0.35 → `sat_dominates: false`,
+  **encoding dominates**. So gate (a) is **family-dependent** (SAT-dominated on
+  Noetzli ≈0.95; encoding-dominated on `bench_ab` ≈0.24 and micro ≈0.31). Per the
+  methodology the custom-CDCL/VSIDS track therefore stays **deprioritized** —
+  encoding reduction is the higher-value lever where SAT does not dominate, and
+  CDCL tuning is justified only once gate (a) holds *and* gate (b) (a
+  CaDiCaL/Kissat gap on Axeyum CNF) is measured, on SAT-dominated families. The
+  measurement was run OOM-safely at `--jobs 1` with guarded budgets (the node
+  guard refuses large instances before bit-blasting, so peak memory is one small
+  instance — memory stayed flat); baseline
+  `bench-results/baselines/qf-bv-bench_ab-sat-bv-layerattr-1s-n5000-cnf7k-20k-j1.json`.
+  **This is the measure-then-decide resolution of track (c): the data says do not
+  build VSIDS now.**
 - Phase: **Phase 5 first pure-Rust backend slice.** M0, Phase 1, SMT-LIB
   ingestion/export, the micro-corpus benchmark harness, the public QF_BV
   baseline, and the Phase 3 query/rewrite/evidence entry contracts are
@@ -2060,12 +2077,16 @@ In order; check off and date as completed.
       equalities); the only remaining refinement is a persistent incremental
       E-graph for scale; and, benchmarking-gated
       by the methodology (encodings before SAT-core tuning), (c) CDCL
-      **restarts + activity heuristics (VSIDS)** — gate (a) is now *measured*,
-      not assumed: artifact v14's `summary.layer_attribution` reports SAT-share
-      ≈0.31 on the micro corpus (`sat_dominates: false`), so this track stays
-      deprioritized until the public/client tiers show SAT time dominating
-      *and* a CaDiCaL/Kissat gap on Axeyum CNF. Next concrete step here is to run
-      the attribution on the public QF_BV tier, not to tune the core. (Real +
+      **restarts + activity heuristics (VSIDS)** — gate (a) is now *measured
+      across breadth* and the **data says do not build VSIDS now**: SAT-share is
+      family-dependent (micro ≈0.31, `bench_ab` ≈0.24 → encoding-dominated;
+      `Noetzli` ≈0.95 → SAT-dominated), so it does not uniformly meet the gate,
+      and gate (b) (a CaDiCaL/Kissat gap on Axeyum CNF) is unmeasured. Per the
+      methodology this track is **correctly deprioritized**; the higher-value
+      lever where SAT does not dominate is encoding reduction. CDCL tuning is
+      revisited only if a SAT-dominated family *also* shows a CaDiCaL/Kissat gap.
+      (Run benchmarks OOM-safely: `--jobs 1` + guarded budgets; never sweep the
+      public corpus at high `--jobs`/relaxed budgets.) (Real +
       bit-blasted theory
       combination is now complete — reals share no sort with those theories, so
       the lazy-SMT loop suffices, no shared-equality propagation needed. General

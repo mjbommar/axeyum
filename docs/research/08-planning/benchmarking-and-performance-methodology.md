@@ -138,6 +138,22 @@ records the contract and the first measured baselines.
   decided QF_BV, so encoding-vs-SAT priority is now an open, data-driven question
   rather than a settled "encodings first" — the next measurement is breadth
   (more families) plus the CaDiCaL/Kissat comparison, not core tuning yet.
+- 2026-06-13, gate (a) breadth: a second public family attribution settles the
+  breadth caveat — and reverses the picture. On `bench_ab` (285 decided `sat-bv`
+  instances, `--jobs 1`, node 5000 / CNF 7000-var / 20000-clause guard, all
+  agreeing, 0 replay failures), the SAT-solve share is **0.243**, with bit-blast
+  ~0.32 and CNF encode ~0.35 — `sat_dominates: false`; **encoding dominates**.
+  So gate (a) is **family-dependent**: SAT-dominated on `Noetzli` (~0.95) but
+  encoding-dominated on `bench_ab` (~0.24) and on the micro tier (~0.31). The
+  conclusion for the CDCL track: gate (a) does **not** hold uniformly, so per the
+  methodology the custom-CDCL/VSIDS work stays **deprioritized** — encoding
+  reduction (bit-blast + CNF, ~0.67 of the pipeline on `bench_ab`) is the
+  higher-value lever on the encoding-dominated families. CDCL core tuning would
+  only be justified once gate (a) holds *and* gate (b) (a CaDiCaL/Kissat gap on
+  Axeyum CNF) is measured, on families where SAT actually dominates. Baseline:
+  `bench-results/baselines/qf-bv-bench_ab-sat-bv-layerattr-1s-n5000-cnf7k-20k-j1.json`.
+  (Run safely: `--jobs 1`, guarded budgets — the node guard refuses large
+  instances before bit-blasting, so peak memory is a single small instance.)
   Resource note: relaxing the CNF guard to admit large instances multiplies
   memory by the parallel `--jobs`; the guard ceilings and `jobs` must stay
   bounded together (a 2M-var / 6M-clause ceiling at `--jobs 16` OOM-killed a
