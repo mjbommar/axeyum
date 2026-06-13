@@ -34,11 +34,13 @@ fn sat_evidence_carries_a_replayable_model() {
 
 #[test]
 fn unsat_evidence_carries_a_recheckable_drat_certificate() {
-    // x & 1 == 1 AND x & 1 == 0 is unsatisfiable.
+    // x & 1 == 1 AND x & 1 == 0 is unsatisfiable. Use a 24-bit variable so the
+    // combined domain exceeds the term-level enumeration budget and the DRAT
+    // clausal route is exercised.
     let mut arena = TermArena::new();
-    let x = arena.bv_var("x", 4).unwrap();
-    let one = arena.bv_const(4, 1).unwrap();
-    let zero = arena.bv_const(4, 0).unwrap();
+    let x = arena.bv_var("x", 24).unwrap();
+    let one = arena.bv_const(24, 1).unwrap();
+    let zero = arena.bv_const(24, 0).unwrap();
     let masked = arena.bv_and(x, one).unwrap();
     let is_one = arena.eq(masked, one).unwrap();
     let is_zero = arena.eq(masked, zero).unwrap();
@@ -215,8 +217,30 @@ fn tampered_lra_dpll_evidence_fails_its_own_check() {
 }
 
 #[test]
-fn unified_front_door_routes_qf_bv_to_a_drat_certificate() {
-    // Pure QF_BV unsat → produce_evidence picks the DRAT route.
+fn unified_front_door_routes_qf_bv_to_a_checkable_unsat() {
+    // Pure QF_BV unsat → produce_evidence routes to the QF_BV pipeline. A 24-bit
+    // variable exceeds the term-level enumeration budget, so this is the DRAT
+    // clausal route.
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 24).unwrap();
+    let one = arena.bv_const(24, 1).unwrap();
+    let zero = arena.bv_const(24, 0).unwrap();
+    let masked = arena.bv_and(x, one).unwrap();
+    let is_one = arena.eq(masked, one).unwrap();
+    let is_zero = arena.eq(masked, zero).unwrap();
+    let assertions = [is_one, is_zero];
+
+    let report = axeyum_solver::produce_evidence(&mut arena, &assertions, &config()).unwrap();
+    assert!(matches!(report.evidence, Evidence::Unsat(Some(_))));
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&arena, &assertions).unwrap());
+}
+
+#[test]
+fn small_qf_bv_unsat_is_term_level_certified_and_rechecks() {
+    // A small (4-bit) unsatisfiable QF_BV query gets the strongest evidence: a
+    // reduction-free term-level certificate (only the evaluator is trusted), and
+    // it re-validates via Evidence::check by re-enumerating.
     let mut arena = TermArena::new();
     let x = arena.bv_var("x", 4).unwrap();
     let one = arena.bv_const(4, 1).unwrap();
@@ -226,9 +250,21 @@ fn unified_front_door_routes_qf_bv_to_a_drat_certificate() {
     let is_zero = arena.eq(masked, zero).unwrap();
     let assertions = [is_one, is_zero];
 
-    let report = axeyum_solver::produce_evidence(&mut arena, &assertions, &config()).unwrap();
-    assert!(matches!(report.evidence, Evidence::Unsat(Some(_))));
+    let report = produce_qf_bv_evidence(&arena, &assertions, &config()).unwrap();
+    let Evidence::UnsatTermLevel { cases, .. } = &report.evidence else {
+        panic!(
+            "expected a term-level certificate, got {:?}",
+            report.evidence
+        );
+    };
+    assert_eq!(*cases, 16, "a 4-bit variable has 2^4 = 16 assignments");
+    assert!(report.evidence.is_certified());
     assert!(report.evidence.check(&arena, &assertions).unwrap());
+
+    // The term-level certificate re-checks against the actual query: a different
+    // (satisfiable) query must not pass this evidence's check.
+    let sat_query = [arena.eq(masked, one).unwrap()];
+    assert!(!report.evidence.check(&arena, &sat_query).unwrap());
 }
 
 #[test]

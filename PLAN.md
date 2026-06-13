@@ -663,6 +663,21 @@ Last updated: 2026-06-13
   `bench-results/baselines/qf-bv-bench_ab-sat-bv-layerattr-1s-n5000-cnf7k-20k-j1.json`.
   **This is the measure-then-decide resolution of track (c): the data says do not
   build VSIDS now.**
+- Term-level `unsat` certification wired into the evidence envelope recorded
+  2026-06-13 (track a, bounded slice): `produce_qf_bv_evidence` now prefers a
+  **reduction-free term-level certificate** for small `QF_BV` `unsat` instances
+  (combined symbol width ≤ 20 bits) — `Evidence::UnsatTermLevel { cases,
+  max_total_bits }` from exhaustive evaluation over the finite symbol domain,
+  trusting **only the `axeyum-ir` evaluator** (not the bit-blaster, CNF encoder,
+  or SAT solver); `Evidence::check` re-enumerates to re-validate. Larger
+  instances fall back to the DRAT clausal proof. This closes the term↔CNF trust
+  gap **entirely** for the tractable case (the "certify beyond the clausal layer"
+  goal of track a), and a backend/enumeration disagreement is a soundness alarm.
+  Tests: a 4-bit `unsat` is term-level certified (16 cases) and re-checks, a
+  24-bit `unsat` takes the DRAT route, and a satisfiable query fails the
+  term-level evidence's `check`. The *scalable* form (a verified bit-blaster so
+  large-instance `unsat` is term-level-certified) remains the lone open research
+  program — there is no sound bounded slice for it short of a verified reduction.
 - Phase: **Phase 5 first pure-Rust backend slice.** M0, Phase 1, SMT-LIB
   ingestion/export, the micro-corpus benchmark harness, the public QF_BV
   baseline, and the Phase 3 query/rewrite/evidence entry contracts are

@@ -7,9 +7,13 @@
 //!
 //! - `sat` carries a [`Model`]; `check` replays it through the ground evaluator
 //!   against the original assertions.
-//! - `unsat` carries an optional [`UnsatProof`] (DIMACS + DRAT); `check`
-//!   re-parses and re-runs the trusted [`axeyum_cnf::check_drat`] kernel. A
-//!   `None` proof means the result came from the (lower-assurance) adapter
+//! - small `QF_BV` `unsat` carries a **term-level** certificate (the strongest:
+//!   exhaustive evaluation over the finite symbol domain, trusting only the
+//!   evaluator — not the bit-blaster, CNF encoder, or SAT solver); `check`
+//!   re-enumerates.
+//! - larger `QF_BV` `unsat` carries an optional [`UnsatProof`] (DIMACS + DRAT);
+//!   `check` re-parses and re-runs the trusted [`axeyum_cnf::check_drat`] kernel.
+//!   A `None` proof means the result came from the (lower-assurance) adapter
 //!   without a DRAT certificate, and is documented as such.
 //! - `QF_LRA` `unsat` carries a [`FarkasCertificate`]; `check` re-runs the
 //!   independent [`FarkasCertificate::verify`] (the exact-arithmetic dual of the
@@ -32,6 +36,7 @@ use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode, Value, eval};
 
 use crate::auto::solve;
 use crate::backend::{CheckResult, SolverBackend, SolverConfig, SolverError, UnknownReason};
+use crate::certify::{CertifyOutcome, certify_qf_bv_by_enumeration};
 use crate::dpll_t::{LraDpllOutcome, LraDpllRefutation, certify_lra_dpll_unsat};
 use crate::lra::{FarkasCertificate, lra_farkas_certificate};
 use crate::model::Model;
@@ -42,6 +47,11 @@ use crate::sat_bv_backend::SatBvBackend;
 /// evidence was produced and is checkable against. Bump when evaluator
 /// semantics change so older evidence is not silently re-interpreted (ADR-0005).
 pub const SEMANTICS_VERSION: &str = "1";
+
+/// Combined-symbol-width budget for attaching a reduction-free term-level `unsat`
+/// certificate (2^20 = ~1M enumerated assignments). Above this the DRAT clausal
+/// proof is used instead.
+const TERM_LEVEL_CERT_BITS: u32 = 20;
 
 /// Versioned provenance for a produced [`Evidence`]: enough to reproduce the run
 /// and interpret the evidence later (ADR-0005). Determinism is a public promise,
@@ -102,6 +112,17 @@ pub enum Evidence {
     /// Unsatisfiable: a DRAT certificate over the bit-blasted CNF, or `None`
     /// when only a lower-assurance adapter result is available.
     Unsat(Option<UnsatProof>),
+    /// Unsatisfiable, certified **at the term level** by exhaustive evaluation
+    /// over the finite symbol domain — the strongest `QF_BV` `unsat` evidence,
+    /// trusting neither the bit-blaster, CNF encoder, nor SAT solver (only the
+    /// `axeyum-ir` evaluator). Carries the number of cases checked and the bit
+    /// budget, so `check` can re-run the same enumeration.
+    UnsatTermLevel {
+        /// Number of assignments exhaustively evaluated.
+        cases: u64,
+        /// The combined-symbol-width budget the certification used.
+        max_total_bits: u32,
+    },
     /// Unsatisfiable (`QF_LRA`): a Farkas refutation over the exact-rational
     /// constraints, whose [`FarkasCertificate::verify`] is the evidence.
     UnsatFarkas(FarkasCertificate),
@@ -157,6 +178,20 @@ impl Evidence {
                     SolverError::Backend(format!("unsat evidence DRAT re-check failed: {error}"))
                 })
             }
+            Evidence::UnsatTermLevel { max_total_bits, .. } => {
+                // Re-run the reduction-free enumeration; it must again find no
+                // satisfying assignment.
+                match certify_qf_bv_by_enumeration(arena, assertions, *max_total_bits)? {
+                    CertifyOutcome::CertifiedUnsat { .. } => Ok(true),
+                    CertifyOutcome::Satisfiable(_) => Ok(false),
+                    CertifyOutcome::DomainTooLarge { total_bits } => {
+                        Err(SolverError::Backend(format!(
+                            "term-level unsat evidence: domain {total_bits} bits exceeds the \
+                             recorded budget {max_total_bits}"
+                        )))
+                    }
+                }
+            }
             Evidence::UnsatFarkas(certificate) => Ok(certificate.verify()),
             Evidence::UnsatLraDpll(refutation) => refutation.verify(arena),
             // No DRAT certificate (adapter-only `unsat`) or `unknown`: nothing to
@@ -173,6 +208,7 @@ impl Evidence {
             self,
             Evidence::Sat(_)
                 | Evidence::Unsat(Some(_))
+                | Evidence::UnsatTermLevel { .. }
                 | Evidence::UnsatFarkas(_)
                 | Evidence::UnsatLraDpll(_)
         )
@@ -198,16 +234,38 @@ pub fn produce_qf_bv_evidence(
     let evidence = match backend.check(arena, assertions, config)? {
         CheckResult::Sat(model) => Evidence::Sat(model),
         CheckResult::Unknown(reason) => Evidence::Unknown(reason),
-        CheckResult::Unsat => match export_qf_bv_unsat_proof(arena, assertions)? {
-            UnsatProofOutcome::Proved(proof) => Evidence::Unsat(Some(proof)),
-            UnsatProofOutcome::Inconclusive => Evidence::Unsat(None),
-            UnsatProofOutcome::Satisfiable => {
-                return Err(SolverError::Backend(
-                    "soundness alarm: backend reported unsat but the proof core found a model"
-                        .to_owned(),
-                ));
+        CheckResult::Unsat => {
+            // Prefer a reduction-free term-level certificate when the instance is
+            // small enough to enumerate: it trusts only the evaluator, closing the
+            // term↔CNF gap entirely. Fall back to the DRAT clausal proof otherwise.
+            match certify_qf_bv_by_enumeration(arena, assertions, TERM_LEVEL_CERT_BITS) {
+                Ok(CertifyOutcome::CertifiedUnsat { cases }) => Evidence::UnsatTermLevel {
+                    cases,
+                    max_total_bits: TERM_LEVEL_CERT_BITS,
+                },
+                Ok(CertifyOutcome::Satisfiable(_)) => {
+                    return Err(SolverError::Backend(
+                        "soundness alarm: backend reported unsat but term-level enumeration \
+                         found a model"
+                            .to_owned(),
+                    ));
+                }
+                // Too large to enumerate (or enumeration unsupported): use DRAT.
+                Ok(CertifyOutcome::DomainTooLarge { .. }) | Err(_) => {
+                    match export_qf_bv_unsat_proof(arena, assertions)? {
+                        UnsatProofOutcome::Proved(proof) => Evidence::Unsat(Some(proof)),
+                        UnsatProofOutcome::Inconclusive => Evidence::Unsat(None),
+                        UnsatProofOutcome::Satisfiable => {
+                            return Err(SolverError::Backend(
+                                "soundness alarm: backend reported unsat but the proof core \
+                                 found a model"
+                                    .to_owned(),
+                            ));
+                        }
+                    }
+                }
             }
-        },
+        }
     };
     Ok(EvidenceReport {
         evidence,
@@ -409,7 +467,10 @@ pub fn prove(
         Evidence::Unknown(reason) => Ok(ProofOutcome::Unknown(reason.clone())),
         // Any `unsat` evidence variant means the negation is impossible: a proof.
         // Re-check the certificate before declaring `Proved`.
-        Evidence::Unsat(_) | Evidence::UnsatFarkas(_) | Evidence::UnsatLraDpll(_) => {
+        Evidence::Unsat(_)
+        | Evidence::UnsatTermLevel { .. }
+        | Evidence::UnsatFarkas(_)
+        | Evidence::UnsatLraDpll(_) => {
             if !report.evidence.check(arena, &query)? {
                 return Err(SolverError::Backend(
                     "prove: refutation of the negated goal failed its own check".to_owned(),
