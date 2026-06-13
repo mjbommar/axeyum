@@ -2078,35 +2078,42 @@ In order; check off and date as completed.
       test (intrinsic soundness). Remaining: certify the lazy-SMT `unsat` when the
       skeleton also carries bit-blasted theories (the propositional half then
       needs a DRAT proof, not enumeration).
-- [ ] **NEXT: remaining R&D tracks.** The supported theories (`QF_BV`, arrays,
-      EUF, `QF_LIA`, `QF_LRA`, their composition, and finite-domain quantifiers)
-      are complete end to end with checkable evidence and wasm support. The open
-      tracks are open-ended research programs, each multi-increment: (a)
-      **scalable bit-blast-reduction certification** — Tseitin definitions as
-      definitional/RAT introductions, so large-instance `unsat` is machine-checked
-      end to end (the small-instance term-level enumeration certificate is done);
-      (b) **trigger-based E-matching** for infinite-domain quantifiers — **done**
-      (single- and multi-variable `apply`/`select` matching binding variables to
-      compound ground terms, nested universal-chain instantiation, a head-symbol
-      match index, and congruence-closure matching modulo the asserted ground
-      equalities); the only remaining refinement is a persistent incremental
-      E-graph for scale; and, benchmarking-gated
-      by the methodology (encodings before SAT-core tuning), (c) CDCL
-      **restarts + activity heuristics (VSIDS)** — gate (a) is now *measured
-      across breadth* and the **data says do not build VSIDS now**: SAT-share is
-      family-dependent (micro ≈0.31, `bench_ab` ≈0.24 → encoding-dominated;
-      `Noetzli` ≈0.95 → SAT-dominated), so it does not uniformly meet the gate,
-      and gate (b) (a CaDiCaL/Kissat gap on Axeyum CNF) is unmeasured. Per the
-      methodology this track is **correctly deprioritized**; the higher-value
-      lever where SAT does not dominate is encoding reduction. CDCL tuning is
-      revisited only if a SAT-dominated family *also* shows a CaDiCaL/Kissat gap.
-      (Run benchmarks OOM-safely: `--jobs 1` + guarded budgets; never sweep the
-      public corpus at high `--jobs`/relaxed budgets.) (Real +
-      bit-blasted theory
-      combination is now complete — reals share no sort with those theories, so
-      the lazy-SMT loop suffices, no shared-equality propagation needed. General
-      Nelson-Oppen would only be needed to combine *two* shared-sort theories,
-      which the current theory set does not present.)
+- **R&D tracks status (all bounded work done; one open research remainder).** The
+      supported theories (`QF_BV`, arrays, EUF, `QF_LIA`, `QF_LRA`, their
+      composition, finite-domain + instantiation/E-matching quantifiers) are
+      complete end to end with checkable evidence and wasm support, behind the
+      `solve` / `produce_evidence` / `prove` / `unsat_core` consumer front doors.
+      The named tracks:
+  - [x] **(b) trigger-based E-matching — done.** Single- and multi-variable
+        `apply`/`select` matching binding variables to compound ground terms,
+        nested universal-chain instantiation, a head-symbol match index, and
+        congruence-closure matching modulo the asserted ground equalities. The
+        only remaining refinement is a *persistent incremental* E-graph for scale
+        (perf, not capability; current per-call rebuild is fine for present sizes).
+  - [x] **(c) CDCL VSIDS / benchmark — resolved by measurement: do not build it
+        now.** Gate (a) (SAT-share dominance) is measured across breadth and is
+        **family-dependent** (micro ≈0.31, `bench_ab` ≈0.24 encoding-dominated;
+        `Noetzli` ≈0.95 SAT-dominated), so it does not uniformly fire, and gate (b)
+        (a CaDiCaL/Kissat gap on Axeyum CNF) is unmeasured. Per the methodology the
+        custom-CDCL track is correctly deprioritized; encoding reduction is the
+        higher-value lever. Revisit only if a SAT-dominated family *also* shows a
+        CaDiCaL/Kissat gap. (Benchmark OOM-safely: `--jobs 1` + guarded budgets;
+        never sweep the public corpus at high `--jobs`/relaxed budgets — see
+        memory `avoid-public-benchmark-runs`.)
+  - [~] **(a) bit-blast-reduction certification — bounded slice done; scalable
+        form is the lone open research program.** Small `QF_BV` `unsat` now carries
+        a reduction-free term-level certificate in the `Evidence` envelope
+        (`Evidence::UnsatTermLevel`), closing the term↔CNF trust gap entirely for
+        the tractable case. The *scalable* form — machine-checking large-instance
+        `unsat` at the term level — requires a **verified bit-blaster** (the
+        term→AIG step); there is no sound bounded slice short of that verified
+        reduction, so it is a genuine multi-increment research effort (a verified
+        compiler in miniature), intrinsically the open frontier of a proof-carrying
+        reasoning framework.
+  - Real + bit-blasted theory combination is complete (reals share no sort with
+        those theories, so the lazy-SMT loop suffices); general Nelson-Oppen would
+        only be needed to combine two shared-sort theories, which the current set
+        does not present.
 - [ ] **Incremental performance + parity (parallel R&D):** port the sparse-CNF
       optimizations to the incremental encoder; add a warm-vs-cold benchmark to
       quantify the incrementality win; activation-literal GC for long sessions.
