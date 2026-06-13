@@ -181,6 +181,21 @@ way every prior theory was.
   carries bit-blasted theories (the propositional half then needs a DRAT proof,
   not enumeration).
   Follow-up: a δ-rational simplex for scale must produce the same certificate.
+- 2026-06-13: **exact-rational general simplex** added —
+  `axeyum_solver::check_with_lra_simplex` decides the same conjunctive `QF_LRA`
+  fragment by the Dutertre–de Moura "simplex with bounds" over exact δ-rationals
+  (the δ infinitesimal encodes strict inequalities exactly; the witness is
+  de-infinitesimalized by choosing a small concrete δ). It is a **second,
+  independent** LRA engine guarded by the same trust anchors: every `sat` model
+  is replayed through the ground evaluator, and every `unsat` is **cross-checked
+  against the Fourier–Motzkin Farkas certificate** (a disagreement is a
+  `SolverError::Backend` soundness alarm). A 2000-case differential fuzz test
+  confirms the two engines agree on every verdict. This is the project's
+  characteristic move — two independent procedures validating each other. Native
+  Farkas extraction from the final simplex tableau (so the simplex certifies its
+  own `unsat` without leaning on Fourier–Motzkin) is the remaining follow-up;
+  the scale benefit over Fourier–Motzkin appears on large systems not yet in the
+  corpus.
 
 ## Consequences
 

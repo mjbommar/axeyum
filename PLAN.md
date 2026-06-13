@@ -617,6 +617,18 @@ Last updated: 2026-06-13
   Soundness unchanged (per-variable union over-approximates the coupled tuples).
   Remaining for track b: an E-graph match index for scale and matching modulo
   the current equalities.
+- Exact-rational general simplex recorded 2026-06-13 (ADR-0015, the δ-simplex
+  roadmap item): `axeyum_solver::check_with_lra_simplex` decides conjunctive
+  `QF_LRA` by the Dutertre–de Moura "simplex with bounds" over exact δ-rationals
+  (δ encodes strict inequalities; the witness is de-infinitesimalized to a
+  concrete rational). It is a **second, independent** LRA engine — every `sat`
+  model is replayed through the evaluator, every `unsat` is cross-checked against
+  the Fourier–Motzkin Farkas certificate (disagreement → soundness alarm), and a
+  2000-case differential fuzz confirms the two engines agree on every verdict.
+  Two independent exact procedures validating each other (the project's
+  characteristic move). Remaining: native Farkas extraction from the simplex
+  tableau (so it certifies its own `unsat`); the scale win over Fourier–Motzkin
+  shows only on large systems not yet in the corpus.
 - Phase: **Phase 5 first pure-Rust backend slice.** M0, Phase 1, SMT-LIB
   ingestion/export, the micro-corpus benchmark harness, the public QF_BV
   baseline, and the Phase 3 query/rewrite/evidence entry contracts are

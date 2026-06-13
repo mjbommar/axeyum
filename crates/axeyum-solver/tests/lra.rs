@@ -7,8 +7,8 @@
 
 use axeyum_ir::{Rational, Sort, TermArena, Value, eval};
 use axeyum_solver::{
-    CheckResult, FarkasAtom, FarkasCertificate, check_with_lra, lra_farkas_certificate,
-    lra_unsat_core,
+    CheckResult, FarkasAtom, FarkasCertificate, check_with_lra, check_with_lra_simplex,
+    lra_farkas_certificate, lra_unsat_core,
 };
 
 fn solve(arena: &TermArena, assertions: &[axeyum_ir::TermId]) -> CheckResult {
@@ -444,4 +444,117 @@ fn fuzz_farkas_self_check_never_trips() {
     // the model-replay and Farkas-certificate paths are genuinely exercised.
     assert!(sat_seen > 0, "expected some satisfiable systems");
     assert!(unsat_seen > 0, "expected some unsatisfiable systems");
+}
+
+#[test]
+fn simplex_decides_basic_cases() {
+    // Strict interval (sat), empty interval (unsat), fractional pin (sat).
+    let mut arena = TermArena::new();
+    let x_sym = arena.declare("x", Sort::Real).unwrap();
+    let x = arena.var(x_sym);
+    let zero = arena.real_ratio(0, 1);
+    let one = arena.real_ratio(1, 1);
+    let two = arena.real_ratio(2, 1);
+    let two_x = arena.real_mul(two, x).unwrap();
+    let gt_half = arena.real_gt(two_x, one).unwrap(); // x > 1/2
+    let lt_one = arena.real_lt(x, one).unwrap(); // x < 1
+    let CheckResult::Sat(model) = check_with_lra_simplex(&arena, &[gt_half, lt_one]).unwrap()
+    else {
+        panic!("expected a satisfiable strict interval");
+    };
+    let xv = model.get(x_sym).unwrap().as_real().unwrap();
+    assert!(xv > Rational::new(1, 2) && xv < Rational::new(1, 1));
+
+    let lt0 = arena.real_lt(x, zero).unwrap();
+    let gt0 = arena.real_gt(x, zero).unwrap();
+    assert_eq!(
+        check_with_lra_simplex(&arena, &[lt0, gt0]).unwrap(),
+        CheckResult::Unsat
+    );
+}
+
+#[test]
+fn simplex_handles_a_two_variable_system() {
+    // x + y == 1 && x - y <= 0 && x >= 0 — satisfiable, model replays.
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let y = arena.real_var("y").unwrap();
+    let one = arena.real_ratio(1, 1);
+    let zero = arena.real_ratio(0, 1);
+    let sum = arena.real_add(x, y).unwrap();
+    let eq = arena.eq(sum, one).unwrap();
+    let diff = arena.real_sub(x, y).unwrap();
+    let le = arena.real_le(diff, zero).unwrap();
+    let nonneg = arena.real_ge(x, zero).unwrap();
+    assert!(matches!(
+        check_with_lra_simplex(&arena, &[eq, le, nonneg]).unwrap(),
+        CheckResult::Sat(_)
+    ));
+}
+
+#[test]
+fn fuzz_simplex_agrees_with_fourier_motzkin() {
+    // Differential fuzz: the exact-rational simplex must agree with the
+    // Fourier–Motzkin engine on the sat/unsat verdict for every random
+    // conjunctive system, neither tripping a soundness alarm. Two independent
+    // exact LRA decision procedures cross-validating each other.
+    let mut state: u64 = 0x2545_F491_4F6C_DD1D;
+    let mut next = || {
+        state = state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        (state >> 33) as u32
+    };
+
+    let mut sat_seen = 0u32;
+    let mut unsat_seen = 0u32;
+    for _ in 0..2000 {
+        let mut arena = TermArena::new();
+        let nvars = 1 + (next() % 3) as usize;
+        let vars: Vec<_> = (0..nvars)
+            .map(|i| arena.real_var(&format!("x{i}")).unwrap())
+            .collect();
+        let zero = arena.real_ratio(0, 1);
+
+        let nconstraints = 2 + (next() % 4) as usize;
+        let mut assertions = Vec::with_capacity(nconstraints);
+        for _ in 0..nconstraints {
+            let constant = i128::from(next() % 11) - 5;
+            let mut lhs = arena.real_ratio(constant, 1);
+            for &v in &vars {
+                let coeff = i128::from(next() % 7) - 3;
+                if coeff != 0 {
+                    let c = arena.real_ratio(coeff, 1);
+                    let term = arena.real_mul(c, v).unwrap();
+                    lhs = arena.real_add(lhs, term).unwrap();
+                }
+            }
+            let atom = match next() % 4 {
+                0 => arena.real_lt(lhs, zero),
+                1 => arena.real_le(lhs, zero),
+                2 => arena.real_gt(lhs, zero),
+                _ => arena.real_ge(lhs, zero),
+            }
+            .unwrap();
+            assertions.push(atom);
+        }
+
+        let fm = check_with_lra(&arena, &assertions).expect("FM decides without alarm");
+        let sx =
+            check_with_lra_simplex(&arena, &assertions).expect("simplex decides without alarm");
+        let agree = matches!(
+            (&fm, &sx),
+            (CheckResult::Sat(_), CheckResult::Sat(_)) | (CheckResult::Unsat, CheckResult::Unsat)
+        );
+        assert!(
+            agree,
+            "simplex and Fourier–Motzkin disagreed: fm={fm:?} sx={sx:?}"
+        );
+        match fm {
+            CheckResult::Sat(_) => sat_seen += 1,
+            CheckResult::Unsat => unsat_seen += 1,
+            CheckResult::Unknown(_) => panic!("conjunctive QF_LRA is total"),
+        }
+    }
+    assert!(sat_seen > 0 && unsat_seen > 0, "expected a mix of outcomes");
 }

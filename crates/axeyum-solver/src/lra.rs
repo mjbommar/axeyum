@@ -806,3 +806,326 @@ fn is_real(arena: &TermArena, term: TermId) -> bool {
 fn unsupported(what: &str) -> SolverError {
     SolverError::Unsupported(format!("QF_LRA: {what}"))
 }
+
+// ---------------------------------------------------------------------------
+// Exact-rational general simplex (a second, independent QF_LRA engine).
+//
+// `check_with_lra_simplex` decides the same conjunctive `QF_LRA` fragment as
+// `check_with_lra`, by the Dutertre–de Moura "simplex with bounds" over exact
+// δ-rationals (the δ infinitesimal encodes strict inequalities). It is an
+// alternative search guarded by the same trust anchors: every `sat` model is
+// replayed through the ground evaluator, and every `unsat` is cross-checked
+// against the Fourier–Motzkin engine's Farkas certificate (a disagreement is a
+// soundness alarm). Native Farkas extraction from the final tableau is future
+// work; for now the certificate is supplied (and independently verified) via
+// `lra_farkas_certificate`, so the two engines validate each other.
+// ---------------------------------------------------------------------------
+
+/// A δ-rational `c + k·δ`, where δ is a positive infinitesimal used to model
+/// strict bounds exactly. Ordered lexicographically by `(c, k)`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Delta {
+    c: Rational,
+    k: Rational,
+}
+
+impl Delta {
+    fn rational(c: Rational) -> Self {
+        Delta {
+            c,
+            k: Rational::zero(),
+        }
+    }
+    fn zero() -> Self {
+        Delta::rational(Rational::zero())
+    }
+    fn add(self, other: Self) -> Self {
+        Delta {
+            c: self.c + other.c,
+            k: self.k + other.k,
+        }
+    }
+    fn sub(self, other: Self) -> Self {
+        Delta {
+            c: self.c - other.c,
+            k: self.k - other.k,
+        }
+    }
+    fn scale(self, factor: Rational) -> Self {
+        Delta {
+            c: self.c * factor,
+            k: self.k * factor,
+        }
+    }
+}
+
+impl PartialOrd for Delta {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Delta {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        self.c.cmp(&other.c).then(self.k.cmp(&other.k))
+    }
+}
+
+/// Decides a conjunctive `QF_LRA` query by the exact-rational general simplex.
+///
+/// The returned [`Model`] assigns each real variable a [`Value::Real`] and
+/// replays against the original assertions (the `sat` trust anchor). On `unsat`
+/// the result is cross-checked against the Fourier–Motzkin Farkas certificate.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] for non-conjunctive-`QF_LRA` input, or
+/// [`SolverError::Backend`] on a `sat` replay failure or a disagreement with the
+/// Fourier–Motzkin engine (either is a soundness alarm).
+pub fn check_with_lra_simplex(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<CheckResult, SolverError> {
+    let mut ctx = Collector::default();
+    for &assertion in assertions {
+        ctx.collect(arena, assertion, false)?;
+    }
+    if ctx.trivially_unsat {
+        return Ok(CheckResult::Unsat);
+    }
+
+    match simplex_feasible(&ctx.constraints, ctx.vars.len()) {
+        Some(values) => {
+            let mut model = Model::new();
+            let mut assignment = axeyum_ir::Assignment::new();
+            for (&symbol, &index) in &ctx.var_index {
+                model.set(symbol, Value::Real(values[index]));
+                assignment.set(symbol, Value::Real(values[index]));
+            }
+            for &assertion in assertions {
+                match eval(arena, assertion, &assignment) {
+                    Ok(Value::Bool(true)) => {}
+                    Ok(_) => {
+                        return Err(SolverError::Backend(format!(
+                            "lra simplex sat model replay failed: assertion #{} not satisfied",
+                            assertion.index()
+                        )));
+                    }
+                    Err(error) => {
+                        return Err(SolverError::Backend(format!(
+                            "lra simplex sat model replay failed: assertion #{} eval error: {error}",
+                            assertion.index()
+                        )));
+                    }
+                }
+            }
+            Ok(CheckResult::Sat(model))
+        }
+        None => {
+            // Cross-check the `unsat` verdict against the Fourier–Motzkin engine,
+            // which also supplies an independently verified Farkas certificate.
+            match lra_farkas_certificate(arena, assertions)? {
+                Some(certificate) if certificate.verify() => Ok(CheckResult::Unsat),
+                _ => Err(SolverError::Backend(
+                    "lra simplex/Fourier–Motzkin disagreement: simplex reports unsat but no \
+                     Farkas certificate was found"
+                        .to_string(),
+                )),
+            }
+        }
+    }
+}
+
+/// Exact-rational general simplex feasibility: returns a satisfying rational
+/// assignment for the `nvars` original variables, or `None` if infeasible.
+fn simplex_feasible(constraints: &[Constraint], nvars: usize) -> Option<Vec<Rational>> {
+    let m = constraints.len();
+    let total = nvars + m;
+    // Variable layout: 0..nvars original (free), nvars..total slacks (one per
+    // constraint). Slack j = the linear part of constraint j; its upper bound is
+    // -constant (minus δ when the constraint is strict). Originals are free.
+    let mut upper: Vec<Option<Delta>> = vec![None; total];
+    let mut value: Vec<Delta> = vec![Delta::zero(); total];
+    // Tableau rows: for each basic var, coefficients over the (current) nonbasic
+    // vars. Initially every slack is basic over the original nonbasic vars.
+    let mut row: std::collections::HashMap<usize, std::collections::HashMap<usize, Rational>> =
+        std::collections::HashMap::new();
+    let mut basic: std::collections::BTreeSet<usize> = std::collections::BTreeSet::new();
+    let mut nonbasic: std::collections::BTreeSet<usize> = (0..nvars).collect();
+
+    for (j, constraint) in constraints.iter().enumerate() {
+        let slack = nvars + j;
+        let bound_c = -constraint.expr.constant;
+        let bound_k = if constraint.strict {
+            Rational::integer(-1)
+        } else {
+            Rational::zero()
+        };
+        upper[slack] = Some(Delta {
+            c: bound_c,
+            k: bound_k,
+        });
+        let mut coeffs = std::collections::HashMap::new();
+        for (&i, &a) in &constraint.expr.coeffs {
+            if !a.is_zero() {
+                coeffs.insert(i, a);
+            }
+        }
+        row.insert(slack, coeffs);
+        basic.insert(slack);
+        // slack value = Σ a_i·value[x_i] = 0 (all originals start at 0).
+    }
+
+    // Bland's rule guarantees termination; the bound is a generous backstop.
+    for _ in 0..(100_000 + 50 * total * total) {
+        // Find the smallest-index basic variable violating its (upper) bound.
+        let violating = basic
+            .iter()
+            .copied()
+            .find(|&b| matches!(upper[b], Some(u) if value[b] > u));
+        let Some(b) = violating else {
+            // Feasible: instantiate δ to a concrete positive rational.
+            return Some(extract_model(constraints, nvars, &value));
+        };
+        let target = upper[b].expect("violating basic has an upper bound");
+
+        // b is above its upper bound and must decrease. Find a suitable entering
+        // nonbasic (smallest index, Bland): one that can move in the direction
+        // that decreases b.
+        let mut entering: Option<usize> = None;
+        for &n in &nonbasic {
+            let a = row[&b].get(&n).copied().unwrap_or_else(Rational::zero);
+            if a.is_zero() {
+                continue;
+            }
+            let suitable = if a > Rational::zero() {
+                // decrease n (no lower bounds anywhere → always possible)
+                true
+            } else {
+                // increase n (possible unless n is at its upper bound)
+                match upper[n] {
+                    Some(u) => value[n] < u,
+                    None => true,
+                }
+            };
+            if suitable {
+                entering = Some(n);
+                break;
+            }
+        }
+        let Some(n) = entering else {
+            return None; // infeasible: row constant in the movable directions
+        };
+
+        pivot_and_update(
+            &mut row,
+            &mut basic,
+            &mut nonbasic,
+            &mut value,
+            b,
+            n,
+            target,
+        );
+    }
+    // Backstop reached without a verdict: treat as undecided → infeasible would be
+    // unsound, so report feasible only if no bound is violated.
+    if basic
+        .iter()
+        .all(|&b| !matches!(upper[b], Some(u) if value[b] > u))
+    {
+        Some(extract_model(constraints, nvars, &value))
+    } else {
+        // Could not decide within the backstop; fall back to "no model found".
+        // The caller cross-checks `unsat` against Fourier–Motzkin, so a spurious
+        // `None` here surfaces as a soundness alarm rather than a wrong answer.
+        None
+    }
+}
+
+/// Pivots basic `b` out and nonbasic `n` in, setting `value[b]` to `target` and
+/// updating every value and tableau row (Dutertre–de Moura `pivotAndUpdate`).
+fn pivot_and_update(
+    row: &mut std::collections::HashMap<usize, std::collections::HashMap<usize, Rational>>,
+    basic: &mut std::collections::BTreeSet<usize>,
+    nonbasic: &mut std::collections::BTreeSet<usize>,
+    value: &mut [Delta],
+    b: usize,
+    n: usize,
+    target: Delta,
+) {
+    let a_bn = row[&b][&n];
+    let theta = target.sub(value[b]).scale(a_bn.recip());
+    value[n] = value[n].add(theta);
+    value[b] = target;
+    for &i in basic.iter() {
+        if i == b {
+            continue;
+        }
+        if let Some(&a_in) = row[&i].get(&n) {
+            if !a_in.is_zero() {
+                value[i] = value[i].add(theta.scale(a_in));
+            }
+        }
+    }
+
+    // Rewrite the tableau: express n in terms of b and the other nonbasics.
+    let row_b = row.remove(&b).expect("b is basic");
+    let inv = a_bn.recip();
+    let mut row_n: std::collections::HashMap<usize, Rational> = std::collections::HashMap::new();
+    row_n.insert(b, inv);
+    for (&k, &coeff) in &row_b {
+        if k != n {
+            row_n.insert(k, -(coeff * inv));
+        }
+    }
+    // Substitute the new n-row into every other basic row mentioning n.
+    let others: Vec<usize> = basic.iter().copied().filter(|&i| i != b).collect();
+    for i in others {
+        if let Some(a_in) = row.get_mut(&i).and_then(|r| r.remove(&n)) {
+            if !a_in.is_zero() {
+                let additions: Vec<(usize, Rational)> =
+                    row_n.iter().map(|(&k, &c)| (k, a_in * c)).collect();
+                let r = row.get_mut(&i).expect("basic row exists");
+                for (k, delta) in additions {
+                    let entry = r.entry(k).or_insert_with(Rational::zero);
+                    *entry = *entry + delta;
+                }
+                r.retain(|_, c| !c.is_zero());
+            }
+        }
+    }
+    row.insert(n, row_n);
+
+    basic.remove(&b);
+    basic.insert(n);
+    nonbasic.remove(&n);
+    nonbasic.insert(b);
+}
+
+/// Turns the δ-rational assignment into a concrete rational model by choosing a
+/// positive δ small enough that every original constraint still holds.
+fn extract_model(constraints: &[Constraint], nvars: usize, value: &[Delta]) -> Vec<Rational> {
+    // Each original variable is `c_i + k_i·δ`. For a constraint with combined
+    // δ-coefficient K > 0 the bound on δ is -C/K (C < 0 in any δ-feasible
+    // solution); δ* is half the tightest such bound (or 1/2 if unbounded).
+    let mut delta_star = Rational::integer(1);
+    for constraint in constraints {
+        let mut big_c = constraint.expr.constant;
+        let mut big_k = Rational::zero();
+        for (&i, &a) in &constraint.expr.coeffs {
+            big_c = big_c + a * value[i].c;
+            big_k = big_k + a * value[i].k;
+        }
+        if big_k > Rational::zero() {
+            let bound = -big_c / big_k;
+            if bound < delta_star {
+                delta_star = bound;
+            }
+        }
+    }
+    delta_star = delta_star * Rational::new(1, 2);
+
+    (0..nvars)
+        .map(|i| value[i].c + value[i].k * delta_star)
+        .collect()
+}
