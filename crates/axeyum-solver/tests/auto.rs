@@ -4,7 +4,7 @@
 use std::time::Duration;
 
 use axeyum_ir::{Sort, TermArena, Value, eval};
-use axeyum_solver::{CheckResult, SolverConfig, check_auto};
+use axeyum_solver::{CheckResult, SolverConfig, check_auto, unsat_core};
 
 fn config() -> SolverConfig {
     SolverConfig::new().with_timeout(Duration::from_secs(30))
@@ -160,4 +160,68 @@ fn real_and_bitvector_sharing_a_bool_combine() {
     let assignment = model.to_assignment();
     assert_eq!(eval(&arena, c1, &assignment).unwrap(), Value::Bool(true));
     assert_eq!(eval(&arena, c2, &assignment).unwrap(), Value::Bool(true));
+}
+
+#[test]
+fn unsat_core_isolates_conflicting_bitvector_assertions() {
+    // [x&1==1, x&1==0, z|0 == z] : the first two conflict; the third is a
+    // tautology and must be excluded. The minimal core is {0, 1}.
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 4).unwrap();
+    let z = arena.bv_var("z", 4).unwrap();
+    let one = arena.bv_const(4, 1).unwrap();
+    let zero = arena.bv_const(4, 0).unwrap();
+    let masked = arena.bv_and(x, one).unwrap();
+    let is_one = arena.eq(masked, one).unwrap();
+    let is_zero = arena.eq(masked, zero).unwrap();
+    let z_or_0 = arena.bv_or(z, zero).unwrap();
+    let tautology = arena.eq(z_or_0, z).unwrap();
+    let assertions = [is_one, is_zero, tautology];
+
+    let core = unsat_core(&mut arena, &assertions, &config())
+        .expect("decides without error")
+        .expect("the query is unsatisfiable");
+    assert_eq!(core, vec![0, 1], "core excludes the tautology");
+
+    // Every core member is necessary: dropping either makes the rest sat.
+    assert!(matches!(
+        solve(&mut arena, &[assertions[0], assertions[2]]),
+        CheckResult::Sat(_)
+    ));
+    assert!(matches!(
+        solve(&mut arena, &[assertions[1], assertions[2]]),
+        CheckResult::Sat(_)
+    ));
+}
+
+#[test]
+fn unsat_core_works_across_theories_for_reals() {
+    // [x > 5, y < 10, x < 1] over the reals: core {0, 2}; y is irrelevant.
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let y = arena.real_var("y").unwrap();
+    let one = arena.real_ratio(1, 1);
+    let five = arena.real_ratio(5, 1);
+    let ten = arena.real_ratio(10, 1);
+    let assertions = [
+        arena.real_gt(x, five).unwrap(),
+        arena.real_lt(y, ten).unwrap(),
+        arena.real_lt(x, one).unwrap(),
+    ];
+
+    let core = unsat_core(&mut arena, &assertions, &config())
+        .expect("decides without error")
+        .expect("unsatisfiable");
+    assert_eq!(core, vec![0, 2]);
+}
+
+#[test]
+fn satisfiable_query_has_no_unsat_core() {
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 8).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let five = arena.bv_const(8, 5).unwrap();
+    let sum = arena.bv_add(x, one).unwrap();
+    let eq = arena.eq(sum, five).unwrap();
+    assert!(unsat_core(&mut arena, &[eq], &config()).unwrap().is_none());
 }

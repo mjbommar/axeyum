@@ -60,6 +60,64 @@ pub fn solve(
     }
 }
 
+/// Extracts a **minimal unsatisfiable core** of `assertions`: the indices of a
+/// jointly-unsatisfiable subset in which every member is necessary (dropping any
+/// one makes the rest satisfiable or undecided). Theory-agnostic — it works for
+/// any query [`solve`] can decide.
+///
+/// The algorithm is deletion-based: starting from the full (unsat) set, it tries
+/// removing each assertion in turn and keeps the removal only when the remainder
+/// is still **definitively** `unsat` (an `unknown` remainder is conservatively
+/// kept, so the result is always a genuine core). It costs `O(n)` solver calls
+/// for `n` assertions and re-decides the final core as a defensive self-check.
+///
+/// Returns `Ok(None)` when the whole set is satisfiable or could not be decided
+/// (`unknown`), so there is no core to report.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] for queries outside the supported
+/// fragment, or [`SolverError`] from the underlying engine, including a
+/// [`SolverError::Backend`] if the extracted core fails to re-decide as `unsat`.
+pub fn unsat_core(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<Option<Vec<usize>>, SolverError> {
+    // Only an unsatisfiable query has a core.
+    if !matches!(solve(arena, assertions, config)?, CheckResult::Unsat) {
+        return Ok(None);
+    }
+
+    // Deletion-based minimization over the assertion indices, in a fixed order
+    // for determinism. `core` always denotes an unsatisfiable subset.
+    let mut core: Vec<usize> = (0..assertions.len()).collect();
+    for candidate in 0..assertions.len() {
+        if !core.contains(&candidate) {
+            continue;
+        }
+        let trial: Vec<TermId> = core
+            .iter()
+            .filter(|&&i| i != candidate)
+            .map(|&i| assertions[i])
+            .collect();
+        // Keep the removal only if the smaller set is *definitively* unsat; an
+        // `unknown` remainder cannot justify dropping the assertion.
+        if !trial.is_empty() && matches!(solve(arena, &trial, config)?, CheckResult::Unsat) {
+            core.retain(|&i| i != candidate);
+        }
+    }
+
+    // Defensive self-check: the minimized subset must still be unsat.
+    let subset: Vec<TermId> = core.iter().map(|&i| assertions[i]).collect();
+    if !matches!(solve(arena, &subset, config)?, CheckResult::Unsat) {
+        return Err(SolverError::Backend(
+            "unsat-core self-check failed: extracted core is not unsatisfiable".to_owned(),
+        ));
+    }
+    Ok(Some(core))
+}
+
 /// Whether any assertion contains a quantifier.
 fn has_quantifier(arena: &TermArena, assertions: &[TermId]) -> bool {
     let mut seen = std::collections::BTreeSet::new();

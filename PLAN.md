@@ -563,6 +563,17 @@ Last updated: 2026-06-13
   `Evidence::check`. Tests route a QF_BV query to a DRAT certificate, a
   pure-real query to a refutation, and an integer query to the replay-certified
   fallback.
+- Theory-agnostic unsat cores recorded 2026-06-13: `axeyum_solver::unsat_core`
+  generalizes `lra_unsat_core` to **any query `solve` can decide** — a
+  deletion-based minimal unsatisfiable core over the unified front door. Starting
+  from the full (unsat) set it drops each assertion whose removal leaves the rest
+  *definitively* `unsat` (an `unknown` remainder is conservatively kept, so the
+  result is always a genuine core), then re-decides the final core as a defensive
+  self-check. `O(n)` solver calls, no corpus (memory-safe). Directly serves the
+  symbolic-execution use case (explain infeasible paths across bit-vectors,
+  arrays, EUF, integers, and reals). Tests isolate a conflicting bit-vector pair
+  (excluding a tautology), a real conflict (excluding an irrelevant bound), and
+  return `None` for satisfiable queries.
 - Phase: **Phase 5 first pure-Rust backend slice.** M0, Phase 1, SMT-LIB
   ingestion/export, the micro-corpus benchmark harness, the public QF_BV
   baseline, and the Phase 3 query/rewrite/evidence entry contracts are
