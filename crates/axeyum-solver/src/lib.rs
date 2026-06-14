@@ -23,6 +23,7 @@ mod certify;
 mod combined;
 mod dpll_lia;
 mod dpll_t;
+mod enums;
 mod euf;
 mod evidence;
 mod faithfulness;
@@ -63,6 +64,7 @@ pub use dpll_lia::{
 pub use dpll_t::{
     LemmaLiteral, LraDpllOutcome, LraDpllRefutation, certify_lra_dpll_unsat, check_with_lra_dpll,
 };
+pub use enums::{EnumError, EnumSort, EnumVar};
 pub use euf::check_with_function_elimination;
 pub use evidence::{
     Evidence, EvidenceReport, ProofOutcome, Provenance, SEMANTICS_VERSION, produce_evidence,

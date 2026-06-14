@@ -38,6 +38,18 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-13
 
+- Architecture iteration H — finite enumeration datatypes recorded 2026-06-13
+  (first datatype slice toward Z3/cvc5 datatype parity): `EnumSort` (`enums.rs`)
+  represents a sort with `k` nullary constructors as `BitVec(ceil(log2 k))` —
+  constructor `i` is the constant `i`, the `is-c` tester is BV equality, and a
+  variable is constrained to a valid constructor by a `< k` domain (omitted when
+  `k` is a power of two). Everything reduces to the (sound, replayed) bit-vector
+  theory, so enums need **no new core IR sort and no new decision procedure**.
+  Tests: tester selects a constructor and the model reads back the name; two
+  testers are mutually unsat; the domain constraint is shown essential (excluding
+  the spurious 4th pattern). Out of scope (needs a first-class datatype IR sort,
+  a later/larger increment): constructors with arguments, selectors, recursive
+  and mutually-recursive datatypes.
 - Architecture iteration G — checkable arithmetic-DPLL unsat certificate
   recorded 2026-06-13 (evidence thesis / proof-parity direction):
   `certify_arith_dpll_unsat` returns an `ArithDpllRefutation` (Boolean skeleton +
