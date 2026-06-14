@@ -250,6 +250,36 @@ fn fma_and_round_to_integral_fold() {
 }
 
 #[test]
+fn int_to_fp_conversions_fold() {
+    let mut a = TermArena::new();
+    let want = |a: &TermArena, t: Option<axeyum_ir::TermId>, v: f32, what: &str| {
+        let t = t.unwrap_or_else(|| panic!("{what}: expected fold"));
+        let want = u128::from(v.to_bits());
+        assert!(
+            matches!(eval(a, t, &Assignment::new()), Ok(Value::Bv { value, .. }) if value == want),
+            "{what}"
+        );
+    };
+
+    let five = a.bv_const(32, 5).unwrap();
+    let r = fp::ubv_to_fp(&mut a, F32, five).unwrap();
+    want(&a, r, 5.0, "ubv 5 -> 5.0");
+
+    // 8-bit 0xFF = -1 as signed.
+    let neg_one = a.bv_const(8, 0xFF).unwrap();
+    let r = fp::sbv_to_fp(&mut a, F32, neg_one).unwrap();
+    want(&a, r, -1.0, "sbv 0xFF (8-bit) -> -1.0");
+    // ...but unsigned it is 255.
+    let r = fp::ubv_to_fp(&mut a, F32, neg_one).unwrap();
+    want(&a, r, 255.0, "ubv 0xFF (8-bit) -> 255.0");
+
+    // Precision loss: 2^24 + 1 rounds to 2^24 in f32.
+    let big = a.bv_const(32, (1u128 << 24) + 1).unwrap();
+    let r = fp::ubv_to_fp(&mut a, F32, big).unwrap();
+    want(&a, r, 16_777_216.0, "ubv 2^24+1 rounds to 2^24");
+}
+
+#[test]
 fn folded_arithmetic_composes_with_symbolic_predicates() {
     // fp.lt(1.0 + 2.0, x) with x symbolic: the add folds to 3.0, leaving a
     // symbolic comparison -> sat (e.g. x = 4.0).

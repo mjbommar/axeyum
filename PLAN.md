@@ -60,8 +60,10 @@ Last updated: 2026-06-14
   **Deferred (next FP layer):** *symbolic* rounded arithmetic and non-default
   rounding modes for add/mul/div — a bit-blasted rounding encoding can't be
   replay-guarded, so it needs the validation harness (exhaustive small-format
-  diff against native) before it can be trusted for `unsat`; also FP↔BV/real/int
-  conversions and (optionally) a first-class `Sort::Float`.
+  diff against native) before it can be trusted for `unsat`. Int→FP conversion
+  folds (`ubv_to_fp`/`sbv_to_fp`, native round-nearest) are done; FP→int/real
+  conversions (out-of-range/NaN subtleties) and (optionally) a first-class
+  `Sort::Float` remain.
 - **Datatype SOLVING — non-recursive theory complete (2026-06-14, ADR-0022
   step B slices 1–2).** Building on the iteration-Q IR foundation, datatypes now
   *solve*, not just parse:

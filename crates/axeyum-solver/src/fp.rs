@@ -422,6 +422,64 @@ pub fn round_to_integral(
     Ok(Some(arena.bv_const(fmt.width(), bits)?))
 }
 
+/// Constant-folds `(_ to_fp eb sb)` from an **unsigned** bit-vector constant
+/// (`(_ to_fp_unsigned ...)`): the unsigned value, rounded to nearest-even into
+/// F32/F64 by native conversion. Always defined.
+#[allow(clippy::cast_precision_loss)] // intentional integer→float rounding
+pub fn ubv_to_fp(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    bv: TermId,
+) -> Result<Option<TermId>, IrError> {
+    let Some(v) = const_bits(arena, bv) else {
+        return Ok(None);
+    };
+    let bits = if fmt == FloatFormat::F32 {
+        u128::from((v as f32).to_bits())
+    } else if fmt == FloatFormat::F64 {
+        u128::from((v as f64).to_bits())
+    } else {
+        return Ok(None);
+    };
+    Ok(Some(arena.bv_const(fmt.width(), bits)?))
+}
+
+/// Constant-folds `(_ to_fp eb sb)` from a **signed** (two's-complement)
+/// bit-vector constant: the signed value, rounded to nearest-even into F32/F64.
+/// Always defined.
+#[allow(clippy::cast_precision_loss)] // intentional integer→float rounding
+pub fn sbv_to_fp(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    bv: TermId,
+) -> Result<Option<TermId>, IrError> {
+    let Some(v) = const_bits(arena, bv) else {
+        return Ok(None);
+    };
+    let Sort::BitVec(w) = arena.sort_of(bv) else {
+        return Ok(None);
+    };
+    let signed = to_signed(v, w);
+    let bits = if fmt == FloatFormat::F32 {
+        u128::from((signed as f32).to_bits())
+    } else if fmt == FloatFormat::F64 {
+        u128::from((signed as f64).to_bits())
+    } else {
+        return Ok(None);
+    };
+    Ok(Some(arena.bv_const(fmt.width(), bits)?))
+}
+
+/// Interprets a `w`-bit value as two's-complement signed.
+#[allow(clippy::cast_possible_wrap)] // value < 2^w ≤ 2^127 fits i128 before adjust
+fn to_signed(v: u128, w: u32) -> i128 {
+    if w < 128 && (v >> (w - 1)) & 1 == 1 {
+        (v as i128) - (1i128 << w)
+    } else {
+        v as i128
+    }
+}
+
 fn fold_bin(
     arena: &mut TermArena,
     fmt: FloatFormat,
