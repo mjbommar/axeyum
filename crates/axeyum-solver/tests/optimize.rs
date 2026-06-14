@@ -1,7 +1,10 @@
 //! Linear integer optimization (optimization modulo theories, integer slice).
 
 use axeyum_ir::{Sort, TermArena, TermId};
-use axeyum_solver::{OptOutcome, maximize_bv, maximize_lia, minimize_bv, minimize_lia};
+use axeyum_solver::{
+    OptOutcome, maximize_bv, maximize_bv_signed, maximize_lia, minimize_bv, minimize_bv_signed,
+    minimize_lia,
+};
 
 fn int_var(arena: &mut TermArena, name: &str) -> TermId {
     let sym = arena.declare(name, Sort::Int).unwrap();
@@ -161,5 +164,48 @@ fn bv_infeasible_has_no_optimum() {
     assert_eq!(
         maximize_bv(&mut arena, &[lo, hi], x).unwrap(),
         OptOutcome::Infeasible
+    );
+}
+
+#[test]
+fn bv_signed_maximize_respects_upper_bound() {
+    // maximize signed x:BV8 s.t. x <=s 100  ->  100.
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 8).unwrap();
+    let lim = arena.bv_const(8, 100).unwrap();
+    let c = arena.bv_sle(x, lim).unwrap();
+    assert_eq!(
+        maximize_bv_signed(&mut arena, &[c], x).unwrap(),
+        OptOutcome::Optimal(100)
+    );
+}
+
+#[test]
+fn bv_signed_minimize_respects_lower_bound() {
+    // minimize signed x:BV8 s.t. x >=s -50  ->  -50. (-50 as BV8 = 206)
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 8).unwrap();
+    let lim = arena.bv_const(8, 206).unwrap(); // two's complement of -50
+    let c = arena.bv_sge(x, lim).unwrap();
+    assert_eq!(
+        minimize_bv_signed(&mut arena, &[c], x).unwrap(),
+        OptOutcome::Optimal(-50)
+    );
+}
+
+#[test]
+fn bv_signed_unconstrained_spans_the_signed_range() {
+    // signed BV8 ranges over [-128, 127].
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 8).unwrap();
+    assert_eq!(
+        maximize_bv_signed(&mut arena, &[], x).unwrap(),
+        OptOutcome::Optimal(127)
+    );
+    let mut arena2 = TermArena::new();
+    let y = arena2.bv_var("y", 8).unwrap();
+    assert_eq!(
+        minimize_bv_signed(&mut arena2, &[], y).unwrap(),
+        OptOutcome::Optimal(-128)
     );
 }

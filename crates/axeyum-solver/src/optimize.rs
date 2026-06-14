@@ -246,6 +246,90 @@ pub fn minimize_bv(
     Ok(OptOutcome::Optimal(bv_to_i128(lo)?))
 }
 
+/// Maximizes the **signed** (two's-complement) value of bit-vector `objective`
+/// subject to `assertions`.
+///
+/// # Errors
+///
+/// [`SolverError::Unsupported`] if `objective` is not a bit-vector of width
+/// `<= 64`, or [`SolverError::Backend`] on an internal error.
+pub fn maximize_bv_signed(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objective: TermId,
+) -> Result<OptOutcome, SolverError> {
+    let width = bv_signed_width(arena, objective)?;
+    let (_, max_s) = bv_signed_range(width);
+    let mut lo = match bv_value(arena, assertions, objective, None)? {
+        BvProbe::Sat(raw) => bv_signed(raw, width),
+        BvProbe::Unsat => return Ok(OptOutcome::Infeasible),
+        BvProbe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
+    };
+    let mut hi = max_s;
+    while lo < hi {
+        let mid = lo + (hi - lo + 1) / 2; // upper mid; width <= 64 avoids overflow
+        match bv_value(
+            arena,
+            assertions,
+            objective,
+            Some((BvRel::Sge, signed_to_bits(mid, width))),
+        )? {
+            BvProbe::Sat(raw) => lo = bv_signed(raw, width).max(mid),
+            BvProbe::Unsat => hi = mid - 1,
+            BvProbe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
+        }
+    }
+    Ok(OptOutcome::Optimal(lo))
+}
+
+/// Minimizes the **signed** (two's-complement) value of bit-vector `objective`
+/// subject to `assertions`.
+///
+/// # Errors
+///
+/// See [`maximize_bv_signed`].
+pub fn minimize_bv_signed(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objective: TermId,
+) -> Result<OptOutcome, SolverError> {
+    let width = bv_signed_width(arena, objective)?;
+    let (min_s, _) = bv_signed_range(width);
+    let mut hi = match bv_value(arena, assertions, objective, None)? {
+        BvProbe::Sat(raw) => bv_signed(raw, width),
+        BvProbe::Unsat => return Ok(OptOutcome::Infeasible),
+        BvProbe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
+    };
+    let mut lo = min_s;
+    while lo < hi {
+        let mid = lo + (hi - lo) / 2; // lower mid
+        match bv_value(
+            arena,
+            assertions,
+            objective,
+            Some((BvRel::Sle, signed_to_bits(mid, width))),
+        )? {
+            BvProbe::Sat(raw) => hi = bv_signed(raw, width).min(mid),
+            BvProbe::Unsat => lo = mid + 1,
+            BvProbe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
+        }
+    }
+    Ok(OptOutcome::Optimal(lo))
+}
+
+/// The width of a signed-optimization objective (a bit-vector of width `<= 64`).
+fn bv_signed_width(arena: &TermArena, objective: TermId) -> Result<u32, SolverError> {
+    match arena.sort_of(objective) {
+        Sort::BitVec(width) if width <= 64 => Ok(width),
+        Sort::BitVec(width) => Err(SolverError::Unsupported(format!(
+            "signed bit-vector optimization objective width {width} exceeds 64"
+        ))),
+        other => Err(SolverError::Unsupported(format!(
+            "signed bit-vector optimization objective is not a bit-vector (got {other:?})"
+        ))),
+    }
+}
+
 /// Converts an unsigned optimum to `i128` (always succeeds for width <= 127,
 /// which the callers enforce via [`bv_objective_max`]).
 fn bv_to_i128(value: u128) -> Result<i128, SolverError> {
@@ -254,11 +338,46 @@ fn bv_to_i128(value: u128) -> Result<i128, SolverError> {
     })
 }
 
-/// An unsigned bit-vector bound relation for an optimization probe.
+/// A bit-vector bound relation for an optimization probe (unsigned or signed).
 #[derive(Clone, Copy)]
 enum BvRel {
     Uge,
     Ule,
+    Sge,
+    Sle,
+}
+
+/// Interprets a width-`w` bit pattern as a two's-complement signed value (sign-
+/// extended from `w` to 128 bits). Every such value fits `i128` for `w <= 128`.
+fn bv_signed(value: u128, width: u32) -> i128 {
+    let bits = i128::from_ne_bytes(value.to_ne_bytes());
+    if width >= 128 {
+        return bits;
+    }
+    // Sign-extend bit `width - 1` to bit 127 via a left-then-arithmetic-right
+    // shift; both shift amounts are < 128.
+    let shift = 128 - width;
+    (bits << shift) >> shift
+}
+
+/// The two's-complement `width`-bit pattern of a signed value, as `u128`.
+fn signed_to_bits(value: i128, width: u32) -> u128 {
+    let raw = u128::from_ne_bytes(value.to_ne_bytes());
+    if width >= 128 {
+        raw
+    } else {
+        raw & ((1u128 << width) - 1)
+    }
+}
+
+/// The inclusive signed range `[min, max]` of a width-`w` bit-vector.
+fn bv_signed_range(width: u32) -> (i128, i128) {
+    if width >= 128 {
+        return (i128::MIN, i128::MAX);
+    }
+    let max = (1i128 << (width - 1)) - 1;
+    let min = -(1i128 << (width - 1));
+    (min, max)
 }
 
 /// The maximum unsigned value of `objective`'s sort (and a width check).
@@ -301,6 +420,8 @@ fn bv_value(
         let constraint = match rel {
             BvRel::Uge => arena.bv_uge(objective, bound_term)?,
             BvRel::Ule => arena.bv_ule(objective, bound_term)?,
+            BvRel::Sge => arena.bv_sge(objective, bound_term)?,
+            BvRel::Sle => arena.bv_sle(objective, bound_term)?,
         };
         query.push(constraint);
     }
