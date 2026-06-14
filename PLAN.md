@@ -38,6 +38,23 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-13
 
+- Architecture iteration A — low-memory pure-Rust strategy recorded 2026-06-13
+  (roadmap step 2 of the
+  [solving-strategies note](docs/research/03-architecture/solving-strategies-and-memory-model.md)):
+  `Strategy::LazyBvAbstraction` (`lazy_bv.rs`) — lazy-multiplier
+  abstraction-refinement. Multipliers (the dominant eager-memory cost) are
+  abstracted to fresh variables (a sound over-approximation); the small
+  abstraction is solved eagerly; `unsat` ⇒ `unsat` with **no multiplier
+  bit-blasted**; `sat` ⇒ replay the original, and refine only the multipliers
+  whose abstract value differs from the real product, then re-solve. Sound,
+  complete, and terminating (≤ one refinement per `bvmul`, after which it equals
+  the eager strategy). Reuses a new public `axeyum_rewrite::replace_subterms`.
+  Tests: `x*y==6 ∧ x*y==7` is refuted **without bit-blasting the multiplier at
+  all** (`muls_refined == 0`); `x*y==6` refines once and returns a replayed
+  model; lazy and eager strategies agree across the battery. This is the first
+  pure-Rust low-memory strategy — closing the "low-memory = Z3 only" gap for the
+  case (multiplier-heavy constraints) that the encoding measurements flagged.
+  Next extension: abstract division/remainder too.
 - Architecture: swappable solving strategies recorded 2026-06-13
   ([ADR-0019](docs/research/09-decisions/adr-0019-swappable-solving-strategies.md),
   [solving-strategies note](docs/research/03-architecture/solving-strategies-and-memory-model.md)).

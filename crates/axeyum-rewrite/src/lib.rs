@@ -17,7 +17,7 @@ mod quantifiers;
 pub use arrays::{ArrayElimError, ArrayElimination, eliminate_arrays};
 pub use canonical::{
     CanonicalizeOutcome, CanonicalizeTermsOutcome, Canonicalizer, RewriteError, RewriteReport,
-    RuleApplication, canonicalize, canonicalize_terms, default_manifest,
+    RuleApplication, canonicalize, canonicalize_terms, default_manifest, replace_subterms,
 };
 pub use functions::{FuncElimError, FunctionElimination, eliminate_functions};
 pub use int_blast::{IntBlastError, IntBlasting, MAX_INT_BLAST_WIDTH, blast_integers};

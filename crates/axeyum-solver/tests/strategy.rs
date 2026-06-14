@@ -4,7 +4,20 @@
 //! low-memory Z3 oracle strategy agree on every verdict.
 
 use axeyum_ir::{TermArena, TermId};
-use axeyum_solver::{CheckResult, SolverConfig, Strategy, solve_with_strategy};
+use axeyum_solver::{
+    CheckResult, SolverConfig, Strategy, solve_lazy_bv_abstraction, solve_with_strategy,
+};
+
+/// The pure-Rust strategies, always available (no `z3` feature needed).
+const PURE_RUST: &[Strategy] = &[Strategy::EagerPureRust, Strategy::LazyBvAbstraction];
+
+fn is_sat(result: &CheckResult) -> Option<bool> {
+    match result {
+        CheckResult::Sat(_) => Some(true),
+        CheckResult::Unsat => Some(false),
+        CheckResult::Unknown(_) => None,
+    }
+}
 
 /// Builds a small battery of `QF_BV` queries with known verdicts: `(name,
 /// terms, expect_sat)`.
@@ -53,35 +66,98 @@ fn battery(arena: &mut TermArena) -> Vec<(&'static str, Vec<TermId>, bool)> {
 fn strategy_metadata_is_stable() {
     assert_eq!(Strategy::default(), Strategy::EagerPureRust);
     assert_eq!(Strategy::EagerPureRust.name(), "eager-pure-rust");
+    assert_eq!(Strategy::LazyBvAbstraction.name(), "lazy-bv-abstraction");
     assert!(Strategy::EagerPureRust.is_pure_rust());
+    assert!(Strategy::LazyBvAbstraction.is_pure_rust());
 }
 
 #[test]
-fn eager_pure_rust_strategy_decides_the_battery() {
-    let mut arena = TermArena::new();
-    let cases = battery(&mut arena);
+fn pure_rust_strategies_decide_the_battery() {
     let config = SolverConfig::default();
-    for (name, terms, expect_sat) in &cases {
-        let result = solve_with_strategy(&mut arena, terms, &config, Strategy::EagerPureRust)
-            .unwrap_or_else(|error| panic!("{name}: eager strategy errored: {error}"));
-        match (result, expect_sat) {
-            (CheckResult::Sat(_), true) | (CheckResult::Unsat, false) => {}
-            (other, _) => panic!("{name}: expected sat={expect_sat}, got {other:?}"),
+    for &strategy in PURE_RUST {
+        let mut arena = TermArena::new();
+        let cases = battery(&mut arena);
+        for (name, terms, expect_sat) in &cases {
+            let result = solve_with_strategy(&mut arena, terms, &config, strategy)
+                .unwrap_or_else(|error| panic!("{name}/{}: errored: {error}", strategy.name()));
+            match (result, expect_sat) {
+                (CheckResult::Sat(_), true) | (CheckResult::Unsat, false) => {}
+                (other, _) => {
+                    panic!(
+                        "{name}/{}: expected sat={expect_sat}, got {other:?}",
+                        strategy.name()
+                    )
+                }
+            }
         }
     }
+}
+
+#[test]
+fn eager_and_lazy_strategies_agree() {
+    let config = SolverConfig::default();
+    let mut arena = TermArena::new();
+    let cases = battery(&mut arena);
+    for (name, terms, _expect) in &cases {
+        let eager =
+            solve_with_strategy(&mut arena, terms, &config, Strategy::EagerPureRust).unwrap();
+        let lazy =
+            solve_with_strategy(&mut arena, terms, &config, Strategy::LazyBvAbstraction).unwrap();
+        if let (Some(a), Some(b)) = (is_sat(&eager), is_sat(&lazy)) {
+            assert_eq!(a, b, "{name}: eager/lazy disagree");
+        }
+    }
+}
+
+/// The lazy strategy decides `x*y == 6 AND x*y == 7` UNSAT **without bit-blasting
+/// the multiplier at all** — the abstraction (`m == 6 AND m == 7`) is already
+/// contradictory. This is the memory win the strategy exists for.
+#[test]
+fn lazy_strategy_refutes_without_materializing_the_multiplier() {
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 16).unwrap();
+    let y = arena.bv_var("y", 16).unwrap();
+    let xy = arena.bv_mul(x, y).unwrap();
+    let six = arena.bv_const(16, 6).unwrap();
+    let seven = arena.bv_const(16, 7).unwrap();
+    let c1 = arena.eq(xy, six).unwrap();
+    let c2 = arena.eq(xy, seven).unwrap();
+
+    let outcome =
+        solve_lazy_bv_abstraction(&mut arena, &[c1, c2], &SolverConfig::default()).unwrap();
+    assert!(
+        matches!(outcome.result, CheckResult::Unsat),
+        "should be unsat"
+    );
+    assert_eq!(outcome.muls_total, 1, "one shared multiplier");
+    assert_eq!(
+        outcome.muls_refined, 0,
+        "multiplier must never be bit-blasted for this refutation"
+    );
+}
+
+/// When the exact product *does* matter, the lazy strategy refines the
+/// multiplier and still returns a genuine (replayed) model.
+#[test]
+fn lazy_strategy_refines_when_the_product_matters() {
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 8).unwrap();
+    let y = arena.bv_var("y", 8).unwrap();
+    let xy = arena.bv_mul(x, y).unwrap();
+    let six = arena.bv_const(8, 6).unwrap();
+    let eq = arena.eq(xy, six).unwrap();
+
+    let outcome = solve_lazy_bv_abstraction(&mut arena, &[eq], &SolverConfig::default()).unwrap();
+    assert!(
+        matches!(outcome.result, CheckResult::Sat(_)),
+        "x*y==6 is sat"
+    );
+    assert_eq!(outcome.muls_refined, 1, "the product matters, so refine it");
 }
 
 #[cfg(feature = "z3")]
 #[test]
 fn eager_and_oracle_strategies_agree() {
-    fn is_sat(result: &CheckResult) -> Option<bool> {
-        match result {
-            CheckResult::Sat(_) => Some(true),
-            CheckResult::Unsat => Some(false),
-            CheckResult::Unknown(_) => None,
-        }
-    }
-
     let mut arena = TermArena::new();
     let cases = battery(&mut arena);
     let config = SolverConfig::default();
@@ -89,10 +165,9 @@ fn eager_and_oracle_strategies_agree() {
         let eager =
             solve_with_strategy(&mut arena, terms, &config, Strategy::EagerPureRust).unwrap();
         let oracle = solve_with_strategy(&mut arena, terms, &config, Strategy::Oracle).unwrap();
-        match (is_sat(&eager), is_sat(&oracle)) {
-            (Some(a), Some(b)) => assert_eq!(a, b, "{name}: eager/oracle disagree"),
-            // An `unknown` from either side is not a disagreement.
-            _ => {}
+        // An `unknown` from either side is not a disagreement.
+        if let (Some(a), Some(b)) = (is_sat(&eager), is_sat(&oracle)) {
+            assert_eq!(a, b, "{name}: eager/oracle disagree");
         }
     }
     assert_eq!(Strategy::Oracle.name(), "oracle-z3");

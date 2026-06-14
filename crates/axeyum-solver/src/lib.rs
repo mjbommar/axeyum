@@ -27,6 +27,7 @@ mod evidence;
 mod faithfulness;
 mod incremental;
 mod layers;
+mod lazy_bv;
 mod lia;
 mod lra;
 mod model;
@@ -65,6 +66,7 @@ pub use evidence::{
 pub use faithfulness::{FaithfulnessOutcome, check_qf_bv_faithfulness};
 pub use incremental::IncrementalBvSolver;
 pub use layers::BvLayerStats;
+pub use lazy_bv::{LazyBvOutcome, check_lazy_bv_abstraction, solve_lazy_bv_abstraction};
 pub use lia::{DEFAULT_INT_WIDTH, check_with_int_blasting};
 pub use lra::{
     FarkasAtom, FarkasCertificate, check_with_lra, check_with_lra_simplex, lra_farkas_certificate,

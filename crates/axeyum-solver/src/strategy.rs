@@ -41,6 +41,11 @@ pub enum Strategy {
     /// High-memory, pure-Rust eager bit-blast + theory elimination. Default.
     #[default]
     EagerPureRust,
+    /// Low-memory, pure-Rust lazy-multiplier abstraction-refinement: abstracts
+    /// `bvmul` to fresh variables and refines on demand, so multipliers are
+    /// bit-blasted only when they affect the verdict (ADR-0019). Sound and
+    /// complete; `sat` replayed, `unsat` sound by over-approximation.
+    LazyBvAbstraction,
     /// Low-memory reference oracle (Z3); `sat` is replayed for parity.
     #[cfg(feature = "z3")]
     Oracle,
@@ -51,6 +56,7 @@ impl Strategy {
     pub fn name(self) -> &'static str {
         match self {
             Strategy::EagerPureRust => "eager-pure-rust",
+            Strategy::LazyBvAbstraction => "lazy-bv-abstraction",
             #[cfg(feature = "z3")]
             Strategy::Oracle => "oracle-z3",
         }
@@ -59,7 +65,7 @@ impl Strategy {
     /// Whether the strategy is part of the pure-Rust (no C/C++) stack.
     pub fn is_pure_rust(self) -> bool {
         match self {
-            Strategy::EagerPureRust => true,
+            Strategy::EagerPureRust | Strategy::LazyBvAbstraction => true,
             #[cfg(feature = "z3")]
             Strategy::Oracle => false,
         }
@@ -86,6 +92,9 @@ pub fn solve_with_strategy(
 ) -> Result<CheckResult, SolverError> {
     match strategy {
         Strategy::EagerPureRust => crate::auto::solve(arena, assertions, config),
+        Strategy::LazyBvAbstraction => {
+            crate::lazy_bv::check_lazy_bv_abstraction(arena, assertions, config)
+        }
         #[cfg(feature = "z3")]
         Strategy::Oracle => solve_with_oracle(arena, assertions, config),
     }

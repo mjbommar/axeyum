@@ -981,6 +981,54 @@ pub(crate) fn build_app(arena: &mut TermArena, op: Op, args: &[TermId]) -> Resul
     }
 }
 
+/// Rebuilds `term`, replacing any subterm that is a key in `replacements` with
+/// its mapped value.
+///
+/// A match is replaced **non-recursively** (the replacement value is returned
+/// as-is, not itself rewritten), so a caller can map subterms to fresh variables
+/// — e.g. abstracting expensive operators for a low-memory solving strategy —
+/// and rebuild any constraints over those variables separately. `memo` shares
+/// work across the DAG and across calls under the *same* `replacements` map;
+/// pass a fresh `memo` when `replacements` changes.
+///
+/// # Errors
+///
+/// Returns [`IrError`] from the IR builders; for a faithful rebuild of
+/// well-sorted input this cannot occur.
+// The maps are keyed by `TermId` (a small `Copy` id); the default hasher is the
+// intended use, so the standard `HashMap` types are part of the signature.
+#[allow(clippy::implicit_hasher)]
+pub fn replace_subterms(
+    arena: &mut TermArena,
+    term: TermId,
+    replacements: &HashMap<TermId, TermId>,
+    memo: &mut HashMap<TermId, TermId>,
+) -> Result<TermId, IrError> {
+    if let Some(&mapped) = replacements.get(&term) {
+        return Ok(mapped);
+    }
+    if let Some(&cached) = memo.get(&term) {
+        return Ok(cached);
+    }
+    let node = arena.node(term).clone();
+    let result = match node {
+        TermNode::BoolConst(_)
+        | TermNode::BvConst { .. }
+        | TermNode::IntConst(_)
+        | TermNode::RealConst(_)
+        | TermNode::Symbol(_) => term,
+        TermNode::App { op, args } => {
+            let mut new_args = Vec::with_capacity(args.len());
+            for &arg in &args {
+                new_args.push(replace_subterms(arena, arg, replacements, memo)?);
+            }
+            build_app(arena, op, &new_args)?
+        }
+    };
+    memo.insert(term, result);
+    Ok(result)
+}
+
 fn applied(term: TermId, rule_id: &'static str) -> LocalRewrite {
     LocalRewrite {
         term,
