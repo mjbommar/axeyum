@@ -960,6 +960,12 @@ pub enum Regex {
     Union(Box<Regex>, Box<Regex>),
     /// Kleene star: zero or more repetitions of `a`.
     Star(Box<Regex>),
+    /// Kleene plus: one or more repetitions of `a` (`re.+`).
+    Plus(Box<Regex>),
+    /// Option: zero or one `a` (`re.opt`).
+    Opt(Box<Regex>),
+    /// Any single byte (`re.allchar`, the regex `.`).
+    AnyChar,
 }
 
 impl Regex {
@@ -1065,6 +1071,28 @@ impl Nfa {
                 self.eps.push((s, a));
                 self.eps.push((xa, xs));
                 self.eps.push((xa, a));
+                (s, a)
+            }
+            Regex::Plus(x) => {
+                // a+ = a a* : build a, then allow looping back through it.
+                let (xs, xa) = self.build(x);
+                self.eps.push((xa, xs));
+                (xs, xa)
+            }
+            Regex::Opt(x) => {
+                // a? = a | ε
+                let s = self.state();
+                let a = self.state();
+                let (xs, xa) = self.build(x);
+                self.eps.push((s, xs));
+                self.eps.push((s, a));
+                self.eps.push((xa, a));
+                (s, a)
+            }
+            Regex::AnyChar => {
+                let s = self.state();
+                let a = self.state();
+                self.chars.push((s, a, Pred::Range(0, 255)));
                 (s, a)
             }
         }

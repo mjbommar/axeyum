@@ -520,6 +520,53 @@ fn regex_membership() {
 }
 
 #[test]
+fn regex_plus_opt_anychar() {
+    let mut a = TermArena::new();
+    let s = BoundedString::new(8);
+
+    let matches = |a: &mut TermArena, re: &Regex, lit: &str| -> bool {
+        let st = s.literal(a, lit).unwrap();
+        let m = s.in_re(a, &st, re).unwrap();
+        eval_bool(a, m)
+    };
+
+    // a+ : one or more 'a'
+    let plus = Regex::Plus(Box::new(Regex::Char(b'a')));
+    assert!(matches(&mut a, &plus, "a"), "a+ matches \"a\"");
+    assert!(matches(&mut a, &plus, "aaa"), "a+ matches \"aaa\"");
+    assert!(!matches(&mut a, &plus, ""), "a+ rejects \"\"");
+    assert!(!matches(&mut a, &plus, "ab"), "a+ rejects \"ab\"");
+
+    // a b? : optional 'b'
+    let opt = Regex::Concat(
+        Box::new(Regex::Char(b'a')),
+        Box::new(Regex::Opt(Box::new(Regex::Char(b'b')))),
+    );
+    assert!(matches(&mut a, &opt, "a"), "ab? matches \"a\"");
+    assert!(matches(&mut a, &opt, "ab"), "ab? matches \"ab\"");
+    assert!(!matches(&mut a, &opt, "abb"), "ab? rejects \"abb\"");
+    assert!(!matches(&mut a, &opt, "b"), "ab? rejects \"b\"");
+
+    // a . c : any byte in the middle
+    let dot = Regex::Concat(
+        Box::new(Regex::Char(b'a')),
+        Box::new(Regex::Concat(
+            Box::new(Regex::AnyChar),
+            Box::new(Regex::Char(b'c')),
+        )),
+    );
+    assert!(matches(&mut a, &dot, "axc"), "a.c matches \"axc\"");
+    assert!(matches(&mut a, &dot, "abc"), "a.c matches \"abc\"");
+    assert!(!matches(&mut a, &dot, "ac"), "a.c rejects \"ac\"");
+    assert!(!matches(&mut a, &dot, "axyc"), "a.c rejects \"axyc\"");
+
+    // .* matches anything (incl. empty)
+    let any = Regex::Star(Box::new(Regex::AnyChar));
+    assert!(matches(&mut a, &any, ""), ".* matches \"\"");
+    assert!(matches(&mut a, &any, "hello"), ".* matches \"hello\"");
+}
+
+#[test]
 fn symbolic_regex_membership_is_sat() {
     // exists x (<=8): x matches a(b|c)* AND len(x)==3 -> sat (e.g. "abc").
     let mut a = TermArena::new();

@@ -78,7 +78,9 @@ Last updated: 2026-06-14
   all-occurrences, non-overlapping `"aaaa"/"aa"→"bb"` and `"aaa"/"aa"→"ba"`,
   growing `"aaa"/"a"→"bbbbbb"`, deletion, not-found, empty-old, and a symbolic
   `replace_all(x,"a","bb")=="bb"` (sat). The bounded string structural operator
-  set is now complete. **Next:** the unbounded string sort (`Sort::Seq`) + native
+  set is now complete. **Regex extended** with `Plus`/`Opt`/`AnyChar` (`re.+`,
+  `re.opt`, `re.allchar`/`.`) in the NFA builder; tests for `a+`, `ab?`, `a.c`,
+  and `.*`. **Next:** the unbounded string sort (`Sort::Seq`) + native
   solver — the remaining frontier; or depth on another theory.
   This was the last entirely-untouched Z3 theory; it is now opened.
 
