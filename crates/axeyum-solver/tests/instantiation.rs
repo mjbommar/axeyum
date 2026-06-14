@@ -394,3 +394,34 @@ fn mbqi_real_bound_universal_is_refuted() {
     let res = axeyum_solver::prove_unsat_by_mbqi(&mut arena, &[all, cc], &config()).unwrap();
     assert!(matches!(res, CheckResult::Unsat), "forall r. r<=10 is unsat (r=11), got {res:?}");
 }
+
+#[test]
+fn top_level_existential_skolemized() {
+    use axeyum_solver::solve;
+    // (exists x:Int. x > 100 AND x < 110) : sat (Skolem witness, e.g. 105) -- an
+    // infinite domain that finite expansion cannot enumerate.
+    let mut arena = TermArena::new();
+    let x = arena.declare("x", Sort::Int).unwrap();
+    let xv = arena.var(x);
+    let c100 = arena.int_const(100);
+    let c110 = arena.int_const(110);
+    let gt = arena.int_gt(xv, c100).unwrap();
+    let lt = arena.int_lt(xv, c110).unwrap();
+    let body = arena.and(gt, lt).unwrap();
+    let ex = arena.exists(x, body).unwrap();
+    assert!(matches!(solve(&mut arena, &[ex], &config()).unwrap(), CheckResult::Sat(_)),
+        "exists x in (100,110) is sat");
+
+    // (exists x:Int. x > 5 AND x < 3) : unsat (no such integer).
+    let mut arena = TermArena::new();
+    let x = arena.declare("x", Sort::Int).unwrap();
+    let xv = arena.var(x);
+    let c5 = arena.int_const(5);
+    let c3 = arena.int_const(3);
+    let gt = arena.int_gt(xv, c5).unwrap();
+    let lt = arena.int_lt(xv, c3).unwrap();
+    let body = arena.and(gt, lt).unwrap();
+    let ex = arena.exists(x, body).unwrap();
+    assert!(matches!(solve(&mut arena, &[ex], &config()).unwrap(), CheckResult::Unsat),
+        "exists x>5 ∧ x<3 is unsat");
+}
