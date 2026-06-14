@@ -470,6 +470,38 @@ pub fn sbv_to_fp(
     Ok(Some(arena.bv_const(fmt.width(), bits)?))
 }
 
+/// Symbolic **count-leading-zeros** over a bit-vector: returns a `BitVec(w)`
+/// term giving the number of leading zero bits of the `w`-bit operand `x`
+/// (`w` when `x` is zero). This is the variable-shift amount the FP normalizer
+/// needs for the future symbolic bit-blaster; it is a pure bit-vector formula,
+/// so it solves and replays on the existing path.
+///
+/// # Errors
+///
+/// Returns [`IrError::SortMismatch`] if `x` is not a bit-vector.
+pub fn count_leading_zeros(arena: &mut TermArena, x: TermId) -> Result<TermId, IrError> {
+    let Sort::BitVec(w) = arena.sort_of(x) else {
+        return Err(IrError::SortMismatch {
+            expected: "BitVec",
+            found: arena.sort_of(x),
+        });
+    };
+    let mut count = arena.bv_const(w, 0)?;
+    let one_w = arena.bv_const(w, 1)?;
+    let one_bit = arena.bv_const(1, 1)?;
+    let mut found = arena.bool_const(false);
+    // Scan from the most-significant bit down; count zeros until the first set
+    // bit (`found`), after which the count stops growing.
+    for i in (0..w).rev() {
+        let bit = arena.extract(i, i, x)?;
+        let bit_set = arena.eq(bit, one_bit)?;
+        found = arena.or(found, bit_set)?;
+        let incremented = arena.bv_add(count, one_w)?;
+        count = arena.ite(found, count, incremented)?;
+    }
+    Ok(count)
+}
+
 /// Rounds an exact `f64` value to the nearest value of format `(eb, sb)` under
 /// round-nearest-ties-to-even, returning the IEEE bit pattern. This is the
 /// rounding keystone for arbitrary-format FP work (and the algorithm a symbolic

@@ -315,6 +315,44 @@ fn fp_to_int_conversions_fold_when_defined() {
 }
 
 #[test]
+fn count_leading_zeros_matches_native() {
+    // Symbolic clz over concrete constants must match the native leading-zero
+    // count for the given width (w for zero).
+    let mut a = TermArena::new();
+    for w in [1u32, 4, 8, 16, 24, 32] {
+        for v in [0u128, 1, 2, 3, 7, 8, 255, 256, 1u128 << (w - 1)] {
+            if w < 128 && v >= (1u128 << w) {
+                continue; // not representable in w bits
+            }
+            let x = a.bv_const(w, v).unwrap();
+            let clz = fp::count_leading_zeros(&mut a, x).unwrap();
+            let want = if v == 0 {
+                u128::from(w)
+            } else {
+                u128::from(w) - (128 - u128::from(v.leading_zeros()))
+            };
+            assert!(
+                matches!(eval(&a, clz, &Assignment::new()), Ok(Value::Bv { value, .. }) if value == want),
+                "clz_{w}({v}) expected {want}"
+            );
+        }
+    }
+}
+
+#[test]
+fn count_leading_zeros_is_symbolically_sound() {
+    // For a free 8-bit x, clz(x) <= 8 always -> asserting clz(x) >= 9 is unsat.
+    let mut a = TermArena::new();
+    let xs = a.declare("x", axeyum_ir::Sort::BitVec(8)).unwrap();
+    let x = a.var(xs);
+    let clz = fp::count_leading_zeros(&mut a, x).unwrap();
+    let nine = a.bv_const(8, 9).unwrap();
+    let gt = a.bv_uge(clz, nine).unwrap();
+    let r = solve(&mut a, &[gt], &SolverConfig::default()).unwrap();
+    assert!(matches!(r, CheckResult::Unsat), "clz(x) is never > 8; got {r:?}");
+}
+
+#[test]
 #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)] // reference uses native casts
 fn round_to_format_matches_native_f32() {
     // The rounding keystone: round_to_format(8, 24, v) must equal native
