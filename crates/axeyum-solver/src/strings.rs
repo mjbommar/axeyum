@@ -403,6 +403,57 @@ impl BoundedString {
         Ok((result, StrTerm { len: rlen, content }))
     }
 
+    /// `str.<` — strict lexicographic order: `x < y` iff at the first differing
+    /// position `x`'s byte is smaller, or `x` is a proper prefix of `y`. A
+    /// bounded left-to-right scan tracking "equal so far".
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] from the builders.
+    #[allow(clippy::similar_names)]
+    pub fn less(&self, arena: &mut TermArena, x: &StrTerm, y: &StrTerm) -> Result<TermId, IrError> {
+        let mut prefix_eq = arena.bool_const(true); // positions < i present in both and equal
+        let mut lt = arena.bool_const(false);
+        for i in 0..self.max_len {
+            let idx = arena.bv_const(self.len_width(), u128::from(i))?;
+            let i_lt_lx = arena.bv_ult(idx, x.len)?;
+            let i_lt_ly = arena.bv_ult(idx, y.len)?;
+            let bx = arena.extract(i * 8 + 7, i * 8, x.content)?;
+            let by = arena.extract(i * 8 + 7, i * 8, y.content)?;
+            // case A: x ends exactly at i and y has more → x is a proper prefix.
+            let lx_eq_i = arena.eq(x.len, idx)?;
+            let case_a = arena.and(lx_eq_i, i_lt_ly)?;
+            // case B: both have byte i and x[i] < y[i].
+            let both = arena.and(i_lt_lx, i_lt_ly)?;
+            let bx_lt = arena.bv_ult(bx, by)?;
+            let case_b = arena.and(both, bx_lt)?;
+            let here = arena.or(case_a, case_b)?;
+            let decided = arena.and(prefix_eq, here)?;
+            lt = arena.or(lt, decided)?;
+            // advance the common-prefix flag.
+            let beq = arena.eq(bx, by)?;
+            let still = arena.and(both, beq)?;
+            prefix_eq = arena.and(prefix_eq, still)?;
+        }
+        Ok(lt)
+    }
+
+    /// `str.<=` — `x < y ∨ x = y`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] from the builders.
+    pub fn less_equal(
+        &self,
+        arena: &mut TermArena,
+        x: &StrTerm,
+        y: &StrTerm,
+    ) -> Result<TermId, IrError> {
+        let lt = self.less(arena, x, y)?;
+        let eq = self.equal(arena, x, y)?;
+        arena.or(lt, eq)
+    }
+
     /// `str.at` at a **constant** index: the byte at position `i` (an 8-bit
     /// `BitVec`), or `0` if `i` is at or beyond the length.
     ///

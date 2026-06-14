@@ -220,6 +220,31 @@ fn substr_at_symbolic_start() {
 }
 
 #[test]
+fn lexicographic_order() {
+    let mut a = TermArena::new();
+    let s = BoundedString::new(8);
+    let mk = |a: &mut TermArena, t: &str| s.literal(a, t).unwrap();
+    let ab = mk(&mut a, "ab");
+    let ac = mk(&mut a, "ac");
+    let abc = mk(&mut a, "abc");
+    let ab2 = mk(&mut a, "ab");
+    let empty = mk(&mut a, "");
+
+    let t = s.less(&mut a, &ab, &ac).unwrap();
+    assert!(eval_bool(&a, t), "\"ab\" < \"ac\"");
+    let t = s.less(&mut a, &ab, &abc).unwrap();
+    assert!(eval_bool(&a, t), "\"ab\" < \"abc\" (prefix)");
+    let t = s.less(&mut a, &abc, &ab).unwrap();
+    assert!(!eval_bool(&a, t), "not \"abc\" < \"ab\"");
+    let t = s.less(&mut a, &ab, &ab2).unwrap();
+    assert!(!eval_bool(&a, t), "not \"ab\" < \"ab\"");
+    let t = s.less_equal(&mut a, &ab, &ab2).unwrap();
+    assert!(eval_bool(&a, t), "\"ab\" <= \"ab\"");
+    let t = s.less(&mut a, &empty, &ab).unwrap();
+    assert!(eval_bool(&a, t), "\"\" < \"ab\"");
+}
+
+#[test]
 fn symbolic_contains_is_sat() {
     // exists x (<=8): x contains "lo" AND len(x)==5  -> sat (e.g. "hello").
     let mut a = TermArena::new();
