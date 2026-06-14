@@ -69,6 +69,23 @@ encode; having it implemented and validated in concrete arithmetic de-risks the
 symbolic bit-blaster (which becomes a faithful BV transcription of a checked
 reference, re-validated differentially against this oracle).
 
+**Symbolic multiplication (`fp::mul`).** The first *symbolic* rounded operation:
+an IEEE 754 `fp.mul` bit-blaster built from the validated primitives — unpack
+(subnormal-aware), significand `bv_mul` + exponent add, the round-and-pack core
+`pack_value` (= `pack_params` + `round_variable` + `count_leading_zeros`), then
+NaN/`0·∞`/∞/zero muxing. A pure bit-vector formula, so it solves and replays on
+the existing path with no new machinery.
+
+**Assurance: validated, not proven** (cf. ADR-0007 for BatSat's UNSAT). Every
+sub-circuit is checked against native arithmetic, and `mul` itself is
+differentially validated against native `f32` over structured values
+(specials/subnormals/normals, products that overflow and underflow) plus a
+pseudo-random sweep. This is the same assurance basis production bit-blasters
+(Z3/cvc5/bitwuzla) rest on — strong, but not a machine-checked proof. A
+formally-verified blaster, or a relaxation+replay route via an IR `fp` op, could
+raise assurance later if a workload demands it. `fp.add` (alignment + add, same
+`pack_value` tail) follows the identical pattern and is the next op.
+
 ## Evidence
 
 - Z3/cvc5 decide QF_FP by bit-blasting; the bit-level encodings of

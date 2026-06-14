@@ -62,9 +62,16 @@ Last updated: 2026-06-14
   overflow), **validated against native f32** (`== (v as f32).to_bits()`) over
   specials + a structured battery + ~200k pseudo-random f64 patterns — the exact
   algorithm the symbolic BV rounding circuit must encode, now de-risked.
-  **Deferred (next FP layer):** *symbolic* rounded arithmetic for add/mul/div —
-  the bit-blaster transcribes the validated `round_to_format` algorithm into BV
-  and is re-validated against native. Conversion folds are done both directions:
+  **Symbolic `fp.mul` done** (validated bit-blaster): the IEEE 754 multiplication
+  circuit from validated primitives — unpack (subnormal-aware) → significand
+  `bv_mul` + exponent add → `pack_value` round-and-pack core (`pack_params` +
+  `round_variable` + `count_leading_zeros`) → NaN/`0·∞`/∞/zero mux — pure BV, so
+  it solves/replays on the existing path. Differentially validated against native
+  `f32` over specials/subnormals/overflow/underflow + a random sweep. Assurance:
+  *validated, not proven* (cf. ADR-0007), the standard bit-blaster basis.
+  **Deferred (next FP layer):** `fp.add` (alignment + add, same `pack_value`
+  tail — identical pattern), then `div`/`sqrt`/`rem`, and non-default rounding
+  modes. Conversion folds are done both directions:
   int→FP (`ubv_to_fp`/`sbv_to_fp`), FP→int (`to_ubv`/`to_sbv`, per rounding mode,
   folded only when finite + in range else `None`), and FP→Real (`to_real`, exact
   when it fits the i128 rational). A first-class `Sort::Float` remains optional.

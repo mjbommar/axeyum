@@ -417,6 +417,97 @@ pub fn pack_value(
     arena.ite(is_zero_result, sign_bit, finite)
 }
 
+/// Symbolic `fp.mul` (round-nearest-ties-to-even): the IEEE 754 multiplication
+/// bit-blaster. Unpacks both operands (handling subnormals), multiplies the
+/// significands and adds the exponents, rounds and packs the result via
+/// [`pack_value`], then muxes the special cases (NaN, `0·∞ = NaN`, `∞`, zero).
+/// A pure bit-vector formula, so it solves and replays on the existing path.
+///
+/// This is a validated — not formally proven — bit-blaster: its building blocks
+/// and `pack_value` are checked against native arithmetic, and `mul` itself is
+/// differentially validated against native `f32` multiplication in tests
+/// (specials, subnormals, and products that overflow/underflow).
+///
+/// # Errors
+///
+/// Returns [`IrError::SortMismatch`] if an operand is not a `BitVec` of the
+/// format width, or [`IrError`] from the builders.
+#[allow(clippy::similar_names, clippy::many_single_char_names)]
+pub fn mul(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId) -> Result<TermId, IrError> {
+    fmt.check(arena, a)?;
+    fmt.check(arena, b)?;
+    let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
+    let total = fmt.width();
+    let bias = (1i64 << (eb - 1)) - 1;
+    let w = 3 * sb + 4; // room for the 2·sb product and pack_value's shifts
+
+    let one1 = arena.bv_const(1, 1)?;
+    // Unpack an operand into a W-bit significand and the W-bit signed exponent of
+    // its least-significant bit.
+    let unpack = |arena: &mut TermArena, x: TermId| -> Result<(TermId, TermId, TermId), IrError> {
+        let sx = arena.extract(total - 1, total - 1, x)?;
+        let exp_x = arena.extract(total - 2, sb - 1, x)?;
+        let trail_x = arena.extract(sb - 2, 0, x)?;
+        let exp_zero = arena.bv_const(eb, 0)?;
+        let is_sub = arena.eq(exp_x, exp_zero)?;
+        let zero1 = arena.bv_const(1, 0)?;
+        let hidden = arena.ite(is_sub, zero1, one1)?;
+        let sig = arena.concat(hidden, trail_x)?; // sb bits
+        let sig_w = arena.zero_ext(w - sb, sig)?;
+        let exp_w = arena.zero_ext(w - eb, exp_x)?;
+        let one_w = arena.bv_const(w, 1)?;
+        let eff = arena.ite(is_sub, one_w, exp_w)?;
+        let bias_sbm1 = sconst(arena, w, bias + i64::from(sb) - 1)?;
+        let e = arena.bv_sub(eff, bias_sbm1)?;
+        Ok((sx, sig_w, e))
+    };
+    let (sa, sig_a, e_a) = unpack(arena, a)?;
+    let (sb_bit, sig_b, e_b) = unpack(arena, b)?;
+
+    let product = arena.bv_mul(sig_a, sig_b)?;
+    let e_prod = arena.bv_add(e_a, e_b)?;
+    let sign_xor_bit = arena.bv_xor(sa, sb_bit)?;
+    let sign_xor = arena.eq(sign_xor_bit, one1)?;
+    let finite = pack_value(arena, eb, sb, sign_xor, product, e_prod)?;
+
+    // Special-case flags.
+    let na = is_nan(arena, fmt, a)?;
+    let nb = is_nan(arena, fmt, b)?;
+    let ia = is_infinite(arena, fmt, a)?;
+    let ib = is_infinite(arena, fmt, b)?;
+    let za = is_zero(arena, fmt, a)?;
+    let zb = is_zero(arena, fmt, b)?;
+    let inf_zero = {
+        let l = arena.and(ia, zb)?;
+        let r = arena.and(za, ib)?;
+        arena.or(l, r)?
+    };
+    let nan_flag = {
+        let t = arena.or(na, nb)?;
+        arena.or(t, inf_zero)?
+    };
+    let inf_flag = arena.or(ia, ib)?;
+    let zero_flag = arena.or(za, zb)?;
+
+    // Result field constants.
+    let sign_total = {
+        let on = arena.bv_const(total, 1u128 << (total - 1))?;
+        let off = arena.bv_const(total, 0)?;
+        arena.ite(sign_xor, on, off)?
+    };
+    let exp_ones = arena.bv_const(total, ((1u128 << eb) - 1) << (sb - 1))?;
+    let qnan = {
+        let q = arena.bv_const(total, 1u128 << (sb - 2))?;
+        arena.bv_or(exp_ones, q)?
+    };
+    let inf_total = arena.bv_or(sign_total, exp_ones)?;
+
+    // Mux: NaN, then ∞, then zero, else the rounded finite product.
+    let if_zero = arena.ite(zero_flag, sign_total, finite)?;
+    let if_inf = arena.ite(inf_flag, inf_total, if_zero)?;
+    arena.ite(nan_flag, qnan, if_inf)
+}
+
 // --- constant folding (round-nearest-even arithmetic) -------------------------
 //
 // Rounded FP arithmetic (`add`/`sub`/`mul`/`div`/`sqrt`) is, for *constant*
@@ -1220,6 +1311,73 @@ mod tests {
                 got, want,
                 "pack_value(sign={sign}, m={m:#x}, e={e}) = {got:#x}, want {want:#x} (value={value})"
             );
+        }
+    }
+
+    /// Symbolic `fp.mul` must match native `f32` multiplication over structured
+    /// values (specials/subnormals/normals) and a pseudo-random sweep. NaN
+    /// results are compared as "is a NaN" (bit pattern unspecified by SMT).
+    #[test]
+    fn mul_matches_native_f32() {
+        let mut a = TermArena::new();
+        let check = |a: &mut TermArena, ab: u32, bb: u32| {
+            let at = a.bv_const(32, u128::from(ab)).unwrap();
+            let bt = a.bv_const(32, u128::from(bb)).unwrap();
+            let r = mul(a, FloatFormat::F32, at, bt).unwrap();
+            let got = match eval(a, r, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("expected Bv, got {other:?}"),
+            };
+            let prod = f32::from_bits(ab) * f32::from_bits(bb);
+            if prod.is_nan() {
+                let exp = (got >> 23) & 0xFF;
+                let mant = got & 0x7F_FFFF;
+                assert!(
+                    exp == 0xFF && mant != 0,
+                    "mul({ab:#x}, {bb:#x}) should be NaN, got {got:#x}"
+                );
+            } else {
+                assert_eq!(
+                    got,
+                    u128::from(prod.to_bits()),
+                    "mul({ab:#x}, {bb:#x}) = {got:#x}, native = {:#x}",
+                    prod.to_bits()
+                );
+            }
+        };
+
+        let structured: [u32; 16] = [
+            0x0000_0000, // +0
+            0x8000_0000, // -0
+            0x3F80_0000, // 1.0
+            0xBF80_0000, // -1.0
+            0x4000_0000, // 2.0
+            0x3F00_0000, // 0.5
+            0x4040_0000, // 3.0
+            0x7F80_0000, // +inf
+            0xFF80_0000, // -inf
+            0x7FC0_0000, // NaN
+            0x0080_0000, // smallest normal
+            0x0000_0001, // smallest subnormal
+            0x007F_FFFF, // largest subnormal
+            0x7F7F_FFFF, // f32::MAX
+            0x4B00_0000, // 2^23
+            0x4B80_0000, // 2^24
+        ];
+        for &x in &structured {
+            for &y in &structured {
+                check(&mut a, x, y);
+            }
+        }
+
+        let mut state: u64 = 0x5151_a7e0_0d15_ea5e;
+        for _ in 0..4000 {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            let x = (state & 0xFFFF_FFFF) as u32;
+            let y = (state >> 32) as u32;
+            check(&mut a, x, y);
         }
     }
 }
