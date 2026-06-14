@@ -245,6 +245,35 @@ fn lexicographic_order() {
 }
 
 #[test]
+fn take_and_drop() {
+    let mut a = TermArena::new();
+    let s = BoundedString::new(8);
+    let hello = s.literal(&mut a, "hello").unwrap();
+
+    let two = a.bv_const(s_len_width(8), 2).unwrap();
+    let pre = s.take(&mut a, &hello, two).unwrap();
+    let he = s.literal(&mut a, "he").unwrap();
+    let pre_eq = s.equal(&mut a, &pre, &he).unwrap();
+    assert!(eval_bool(&a, pre_eq), "take(\"hello\",2)==\"he\"");
+
+    let suf = s.drop(&mut a, &hello, two).unwrap();
+    let llo = s.literal(&mut a, "llo").unwrap();
+    let suf_eq = s.equal(&mut a, &suf, &llo).unwrap();
+    assert!(eval_bool(&a, suf_eq), "drop(\"hello\",2)==\"llo\"");
+
+    // symbolic: exists k: take("hello", k) == "hel"  -> sat (k = 3).
+    let ks = a.declare("k", axeyum_ir::Sort::BitVec(s_len_width(8))).unwrap();
+    let k = a.var(ks);
+    let bound = a.bv_const(s_len_width(8), 8).unwrap();
+    let wf = a.bv_ule(k, bound).unwrap();
+    let tk = s.take(&mut a, &hello, k).unwrap();
+    let hel = s.literal(&mut a, "hel").unwrap();
+    let goal = s.equal(&mut a, &tk, &hel).unwrap();
+    let r = solve(&mut a, &[wf, goal], &SolverConfig::default()).unwrap();
+    assert!(matches!(r, CheckResult::Sat(_)), "exists k: take(hello,k)=\"hel\" sat, got {r:?}");
+}
+
+#[test]
 fn symbolic_contains_is_sat() {
     // exists x (<=8): x contains "lo" AND len(x)==5  -> sat (e.g. "hello").
     let mut a = TermArena::new();

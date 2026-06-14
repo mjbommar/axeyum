@@ -454,6 +454,47 @@ impl BoundedString {
         arena.or(lt, eq)
     }
 
+    /// `take` — the prefix of the first `k` bytes (`k` symbolic): content masked
+    /// to its low `k·8` bits, length `min(k, len(x))`. Same sort as `x`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] from the builders.
+    pub fn take(&self, arena: &mut TermArena, x: &StrTerm, k: TermId) -> Result<StrTerm, IrError> {
+        let cw = self.content_width();
+        let lw = self.len_width();
+        let k_c = arena.zero_ext(cw - lw, k)?;
+        let three = arena.bv_const(cw, 3)?;
+        let shift = arena.bv_shl(k_c, three)?; // k*8
+        let one = arena.bv_const(cw, 1)?;
+        let pow = arena.bv_shl(one, shift)?; // 2^(k*8) (0 if k*8 >= cw → take all)
+        let mask = arena.bv_sub(pow, one)?;
+        let content = arena.bv_and(x.content, mask)?;
+        let k_lt_len = arena.bv_ult(k, x.len)?;
+        let len = arena.ite(k_lt_len, k, x.len)?;
+        Ok(StrTerm { len, content })
+    }
+
+    /// `drop` — the suffix after the first `k` bytes (`k` symbolic): content
+    /// right-shifted by `k·8` bits, length `max(0, len(x) − k)`. Same sort as `x`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] from the builders.
+    pub fn drop(&self, arena: &mut TermArena, x: &StrTerm, k: TermId) -> Result<StrTerm, IrError> {
+        let cw = self.content_width();
+        let lw = self.len_width();
+        let k_c = arena.zero_ext(cw - lw, k)?;
+        let three = arena.bv_const(cw, 3)?;
+        let shift = arena.bv_shl(k_c, three)?;
+        let content = arena.bv_lshr(x.content, shift)?;
+        let zero = arena.bv_const(lw, 0)?;
+        let k_ge_len = arena.bv_uge(k, x.len)?;
+        let avail = arena.bv_sub(x.len, k)?;
+        let len = arena.ite(k_ge_len, zero, avail)?;
+        Ok(StrTerm { len, content })
+    }
+
     /// `str.at` at a **constant** index: the byte at position `i` (an 8-bit
     /// `BitVec`), or `0` if `i` is at or beyond the length.
     ///
