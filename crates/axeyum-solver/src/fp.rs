@@ -470,6 +470,94 @@ pub fn sbv_to_fp(
     Ok(Some(arena.bv_const(fmt.width(), bits)?))
 }
 
+/// Rounds an exact `f64` value to the nearest value of format `(eb, sb)` under
+/// round-nearest-ties-to-even, returning the IEEE bit pattern. This is the
+/// rounding keystone for arbitrary-format FP work (and the algorithm a symbolic
+/// bit-blaster must encode in bit-vectors).
+///
+/// Correctness is checked against native `f32` in tests: for any `f64` `v`,
+/// `round_to_format(8, 24, v)` equals `(v as f32).to_bits()` — native `as f32`
+/// *is* round-nearest-even f64→f32. The integer significand `m·2^e` decoded from
+/// `v` is exact, so the rounding is exact.
+#[must_use]
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss,
+    clippy::many_single_char_names
+)] // dense numeric routine; bit positions are intentional
+pub fn round_to_format(eb: u32, sb: u32, v: f64) -> u128 {
+    let total = eb + sb;
+    let exp_field_max = (1u128 << eb) - 1;
+    let sign = if v.is_sign_negative() {
+        1u128 << (total - 1)
+    } else {
+        0
+    };
+    if v.is_nan() {
+        return sign | (exp_field_max << (sb - 1)) | (1u128 << (sb - 2)); // canonical qNaN
+    }
+    if v.is_infinite() {
+        return sign | (exp_field_max << (sb - 1));
+    }
+    let a = v.abs();
+    if a == 0.0 {
+        return sign;
+    }
+    let bias = (1i64 << (eb - 1)) - 1;
+    let emin = 1 - bias; // minimum normal unbiased exponent
+
+    // Decode a = m · 2^e exactly (m has ≤ 53 significant bits).
+    let abits = a.to_bits();
+    let ae = ((abits >> 52) & 0x7FF) as i64;
+    let frac = abits & ((1u64 << 52) - 1);
+    let (m, e): (u64, i64) = if ae == 0 {
+        (frac, -1074) // subnormal f64
+    } else {
+        ((1u64 << 52) | frac, ae - 1075) // normal f64
+    };
+
+    // Unbiased exponent of the leading bit, clamped up to emin for the subnormal
+    // grid; the kept significand's least-significant bit has exponent `lsb_exp`.
+    let k = e + (63 - i64::from(m.leading_zeros()));
+    let res_exp = k.max(emin);
+    let lsb_exp = res_exp - (i64::from(sb) - 1);
+
+    // Round m·2^e to the nearest multiple of 2^lsb_exp (round-nearest-even).
+    let drop = lsb_exp - e;
+    let q: u128 = if drop <= 0 {
+        u128::from(m) << ((-drop) as u32)
+    } else if drop >= 64 {
+        0 // a is below a half-ulp of the grid → rounds to zero
+    } else {
+        let s = drop as u32;
+        let kept = u128::from(m >> s);
+        let round_bit = (m >> (s - 1)) & 1 == 1;
+        let sticky = (m & ((1u64 << (s - 1)) - 1)) != 0;
+        if round_bit && (sticky || (kept & 1 == 1)) {
+            kept + 1
+        } else {
+            kept
+        }
+    };
+    if q == 0 {
+        return sign; // rounded to ±0
+    }
+
+    let top = 127 - i64::from(q.leading_zeros());
+    let biased = lsb_exp + top + bias;
+    if biased >= exp_field_max as i64 {
+        return sign | (exp_field_max << (sb - 1)); // overflow → ±∞
+    }
+    if biased <= 0 {
+        // Subnormal: exponent field 0, trailing significand = q.
+        return sign | (q & ((1u128 << (sb - 1)) - 1));
+    }
+    // Normal: strip the leading bit to get the stored trailing significand.
+    let trailing = (q - (1u128 << top)) & ((1u128 << (sb - 1)) - 1);
+    sign | ((biased as u128) << (sb - 1)) | trailing
+}
+
 /// Constant-folds `fp.to_real` (FP → mathematical Real, ADR-0015) for a finite
 /// F32/F64 constant. FP→Real is **exact** (no rounding), so when the exact value
 /// fits the `i128`-based [`Rational`] this folds to a `Real` constant; `NaN`/`∞`

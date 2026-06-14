@@ -57,6 +57,18 @@ modes are deliberately **not** done yet — a bit-blasted rounding encoding cann
 be replay-guarded (replay would only re-check the encoding), so a subtle bug is a
 wrong `unsat`; it needs the validation harness, not a rushed encoding.
 
+**Rounding keystone (`round_to_format`).** The hardest part of FP arithmetic is
+correct rounding. `round_to_format(eb, sb, v: f64)` rounds an exact `f64` to the
+nearest `(eb, sb)` value (round-nearest-ties-to-even), via the exact integer
+significand `m·2^e` decoded from `v` with explicit guard/round/sticky, handling
+normal/subnormal/overflow. It is **validated against native `f32`** —
+`round_to_format(8, 24, v) == (v as f32).to_bits()` — over specials, a wide
+structured battery, and ~200k pseudo-random `f64` patterns (subnormals, ties,
+overflow). This is the algorithm a symbolic bit-vector rounding circuit must
+encode; having it implemented and validated in concrete arithmetic de-risks the
+symbolic bit-blaster (which becomes a faithful BV transcription of a checked
+reference, re-validated differentially against this oracle).
+
 ## Evidence
 
 - Z3/cvc5 decide QF_FP by bit-blasting; the bit-level encodings of

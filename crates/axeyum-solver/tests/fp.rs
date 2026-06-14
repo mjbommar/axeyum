@@ -315,6 +315,58 @@ fn fp_to_int_conversions_fold_when_defined() {
 }
 
 #[test]
+#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)] // reference uses native casts
+fn round_to_format_matches_native_f32() {
+    // The rounding keystone: round_to_format(8, 24, v) must equal native
+    // (v as f32) — which is round-nearest-even f64->f32 — for every f64 v.
+    // Validated over specials, a wide structured battery, and a deterministic
+    // pseudo-random sweep of f64 bit patterns (incl. subnormals, ties, overflow).
+    let check = |v: f64| {
+        let got = fp::round_to_format(8, 24, v);
+        let want = u128::from((v as f32).to_bits());
+        assert_eq!(
+            got, want,
+            "round_to_format(8,24,{v:?})={got:#x} but (v as f32)={want:#x}"
+        );
+    };
+
+    // Specials and exact values.
+    for v in [
+        0.0f64, -0.0, 1.0, -1.0, 2.0, 0.5, 3.0, 1.5, 0.1, -0.1,
+        f64::INFINITY, f64::NEG_INFINITY, f64::NAN,
+        f64::from(f32::MIN_POSITIVE), // smallest normal f32
+        f64::from(f32::MAX),
+        1e38, 1e39, // near/over f32 overflow
+        1e-40, 1e-45, 1e-50, // f32 subnormal range and below
+    ] {
+        check(v);
+    }
+
+    // Structured: i/j fractions exercise rounding/ties across many magnitudes.
+    for i in 0i64..200 {
+        for j in 1i64..200 {
+            check(i as f64 / j as f64);
+            check(-(i as f64) / j as f64);
+            check((i as f64) * 1e30 / j as f64);
+            check((i as f64) * 1e-30 / j as f64);
+        }
+    }
+
+    // Deterministic pseudo-random sweep of f64 bit patterns (LCG).
+    let mut state: u64 = 0x1234_5678_9abc_def0;
+    for _ in 0..200_000 {
+        state = state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        let v = f64::from_bits(state);
+        if v.is_nan() {
+            continue; // NaN payloads differ; covered by the explicit NAN case
+        }
+        check(v);
+    }
+}
+
+#[test]
 fn fp_to_real_folds_exactly() {
     use axeyum_ir::Rational;
     let mut a = TermArena::new();

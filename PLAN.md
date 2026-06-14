@@ -57,14 +57,17 @@ Last updated: 2026-06-14
   the add then solves) and is the **differential oracle** for the future symbolic
   bit-blaster. `fma_rne` (native fused `mul_add`) and `round_to_integral` (all
   five rounding modes via native round/trunc/ceil/floor) fold the same way.
-  **Deferred (next FP layer):** *symbolic* rounded arithmetic and non-default
-  rounding modes for add/mul/div — a bit-blasted rounding encoding can't be
-  replay-guarded, so it needs the validation harness (exhaustive small-format
-  diff against native) before it can be trusted for `unsat`. Conversion folds are
-  done both directions: int→FP (`ubv_to_fp`/`sbv_to_fp`) and FP→int
-  (`to_ubv`/`to_sbv`, per rounding mode, folded only when finite + in range, else
-  `None` since SMT leaves NaN/∞/out-of-range unspecified). FP→real conversions
-  and (optionally) a first-class `Sort::Float` remain.
+  **Rounding keystone done:** `round_to_format(eb, sb, v: f64)` rounds an exact
+  f64 to any `(eb, sb)` format (RNE, guard/round/sticky, normal/subnormal/
+  overflow), **validated against native f32** (`== (v as f32).to_bits()`) over
+  specials + a structured battery + ~200k pseudo-random f64 patterns — the exact
+  algorithm the symbolic BV rounding circuit must encode, now de-risked.
+  **Deferred (next FP layer):** *symbolic* rounded arithmetic for add/mul/div —
+  the bit-blaster transcribes the validated `round_to_format` algorithm into BV
+  and is re-validated against native. Conversion folds are done both directions:
+  int→FP (`ubv_to_fp`/`sbv_to_fp`), FP→int (`to_ubv`/`to_sbv`, per rounding mode,
+  folded only when finite + in range else `None`), and FP→Real (`to_real`, exact
+  when it fits the i128 rational). A first-class `Sort::Float` remains optional.
 - **Datatype SOLVING — non-recursive theory complete (2026-06-14, ADR-0022
   step B slices 1–2).** Building on the iteration-Q IR foundation, datatypes now
   *solve*, not just parse:
