@@ -55,11 +55,13 @@ Last updated: 2026-06-14
   delegates to native IEEE 754 (round-nearest-even, correct), so sound by
   construction; composes with the symbolic predicates (`fp.lt(1.0+2.0, x)` folds
   the add then solves) and is the **differential oracle** for the future symbolic
-  bit-blaster. **Deferred (next FP layer):** *symbolic* rounded arithmetic and
-  non-default rounding modes — a bit-blasted rounding encoding can't be
+  bit-blaster. `fma_rne` (native fused `mul_add`) and `round_to_integral` (all
+  five rounding modes via native round/trunc/ceil/floor) fold the same way.
+  **Deferred (next FP layer):** *symbolic* rounded arithmetic and non-default
+  rounding modes for add/mul/div — a bit-blasted rounding encoding can't be
   replay-guarded, so it needs the validation harness (exhaustive small-format
-  diff against native) before it can be trusted for `unsat`; also `fma`/
-  `roundToIntegral`, conversions, and (optionally) a first-class `Sort::Float`.
+  diff against native) before it can be trusted for `unsat`; also FP↔BV/real/int
+  conversions and (optionally) a first-class `Sort::Float`.
 - **Datatype SOLVING — non-recursive theory complete (2026-06-14, ADR-0022
   step B slices 1–2).** Building on the iteration-Q IR foundation, datatypes now
   *solve*, not just parse:

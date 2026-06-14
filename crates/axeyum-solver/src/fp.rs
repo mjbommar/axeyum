@@ -344,6 +344,84 @@ pub fn sqrt_rne(
     Ok(Some(arena.bv_const(fmt.width(), bits)?))
 }
 
+/// Constant-folds `fp.fma` (fused multiply-add, `x*y + z` with a *single*
+/// round-nearest-even rounding) over F32/F64 constants, via native `mul_add`.
+pub fn fma_rne(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+    y: TermId,
+    z: TermId,
+) -> Result<Option<TermId>, IrError> {
+    let (Some(xv), Some(yv), Some(zv)) =
+        (const_bits(arena, x), const_bits(arena, y), const_bits(arena, z))
+    else {
+        return Ok(None);
+    };
+    let bits = if fmt == FloatFormat::F32 {
+        let r = f32::from_bits(low32(xv)).mul_add(f32::from_bits(low32(yv)), f32::from_bits(low32(zv)));
+        u128::from(r.to_bits())
+    } else if fmt == FloatFormat::F64 {
+        let r = f64::from_bits(low64(xv)).mul_add(f64::from_bits(low64(yv)), f64::from_bits(low64(zv)));
+        u128::from(r.to_bits())
+    } else {
+        return Ok(None);
+    };
+    Ok(Some(arena.bv_const(fmt.width(), bits)?))
+}
+
+/// A floating-point rounding mode (SMT-LIB `RoundingMode`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RoundingMode {
+    /// Round to nearest, ties to even (`RNE`, the default).
+    NearestEven,
+    /// Round to nearest, ties away from zero (`RNA`).
+    NearestAway,
+    /// Round toward zero (`RTZ`).
+    TowardZero,
+    /// Round toward +∞ (`RTP`).
+    TowardPositive,
+    /// Round toward −∞ (`RTN`).
+    TowardNegative,
+}
+
+/// Constant-folds `fp.roundToIntegral` over an F32/F64 constant, per rounding
+/// mode, via the native rounding methods (correct by delegation).
+pub fn round_to_integral(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    mode: RoundingMode,
+    x: TermId,
+) -> Result<Option<TermId>, IrError> {
+    let Some(xv) = const_bits(arena, x) else {
+        return Ok(None);
+    };
+    let bits = if fmt == FloatFormat::F32 {
+        let v = f32::from_bits(low32(xv));
+        let r = match mode {
+            RoundingMode::NearestEven => v.round_ties_even(),
+            RoundingMode::NearestAway => v.round(),
+            RoundingMode::TowardZero => v.trunc(),
+            RoundingMode::TowardPositive => v.ceil(),
+            RoundingMode::TowardNegative => v.floor(),
+        };
+        u128::from(r.to_bits())
+    } else if fmt == FloatFormat::F64 {
+        let v = f64::from_bits(low64(xv));
+        let r = match mode {
+            RoundingMode::NearestEven => v.round_ties_even(),
+            RoundingMode::NearestAway => v.round(),
+            RoundingMode::TowardZero => v.trunc(),
+            RoundingMode::TowardPositive => v.ceil(),
+            RoundingMode::TowardNegative => v.floor(),
+        };
+        u128::from(r.to_bits())
+    } else {
+        return Ok(None);
+    };
+    Ok(Some(arena.bv_const(fmt.width(), bits)?))
+}
+
 fn fold_bin(
     arena: &mut TermArena,
     fmt: FloatFormat,

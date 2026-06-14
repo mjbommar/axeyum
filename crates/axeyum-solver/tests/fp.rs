@@ -212,6 +212,44 @@ fn constant_arithmetic_folds_round_nearest_even() {
 }
 
 #[test]
+fn fma_and_round_to_integral_fold() {
+    use axeyum_solver::fp::RoundingMode;
+    let mut a = TermArena::new();
+
+    let mk = |arena: &mut TermArena, val: f32| arena.bv_const(32, u128::from(val.to_bits())).unwrap();
+    let is = |arena: &TermArena, term: Option<axeyum_ir::TermId>, want: f32, what: &str| {
+        let term = term.unwrap_or_else(|| panic!("{what}: expected fold"));
+        let want = u128::from(want.to_bits());
+        assert!(
+            matches!(eval(arena, term, &Assignment::new()), Ok(Value::Bv { value, .. }) if value == want),
+            "{what}"
+        );
+    };
+
+    // fma: 2*3 + 1 = 7.
+    let (fx, fy, fz) = (mk(&mut a, 2.0), mk(&mut a, 3.0), mk(&mut a, 1.0));
+    let r = fp::fma_rne(&mut a, F32, fx, fy, fz).unwrap();
+    is(&a, r, 7.0, "fma(2,3,1) == 7");
+
+    // roundToIntegral per mode.
+    let v = mk(&mut a, 2.7);
+    let r = fp::round_to_integral(&mut a, F32, RoundingMode::TowardZero, v).unwrap();
+    is(&a, r, 2.0, "trunc(2.7) == 2");
+    let v = mk(&mut a, 2.1);
+    let r = fp::round_to_integral(&mut a, F32, RoundingMode::TowardPositive, v).unwrap();
+    is(&a, r, 3.0, "ceil(2.1) == 3");
+    let v = mk(&mut a, -2.1);
+    let r = fp::round_to_integral(&mut a, F32, RoundingMode::TowardNegative, v).unwrap();
+    is(&a, r, -3.0, "floor(-2.1) == -3");
+    let v = mk(&mut a, 2.5);
+    let r = fp::round_to_integral(&mut a, F32, RoundingMode::NearestEven, v).unwrap();
+    is(&a, r, 2.0, "round_ties_even(2.5) == 2");
+    let v = mk(&mut a, 2.5);
+    let r = fp::round_to_integral(&mut a, F32, RoundingMode::NearestAway, v).unwrap();
+    is(&a, r, 3.0, "round_ties_away(2.5) == 3");
+}
+
+#[test]
 fn folded_arithmetic_composes_with_symbolic_predicates() {
     // fp.lt(1.0 + 2.0, x) with x symbolic: the add folds to 3.0, leaving a
     // symbolic comparison -> sat (e.g. x = 4.0).
