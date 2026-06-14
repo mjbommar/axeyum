@@ -169,6 +169,32 @@ fn suffix_and_substr_on_literals() {
 }
 
 #[test]
+fn index_of_literals() {
+    let mut a = TermArena::new();
+    let s = BoundedString::new(8);
+    let hello = s.literal(&mut a, "hello").unwrap();
+    let l = s.literal(&mut a, "l").unwrap();
+    let z = s.literal(&mut a, "z").unwrap();
+
+    let want = |a: &TermArena, t: axeyum_ir::TermId, v: u128| {
+        matches!(eval(a, t, &Assignment::new()), Ok(Value::Bv { value, .. }) if value == v)
+    };
+
+    let (found, idx) = s.index_of(&mut a, &hello, &l, 0).unwrap();
+    assert!(eval_bool(&a, found), "\"hello\" contains \"l\"");
+    assert!(want(&a, idx, 2), "first \"l\" in \"hello\" is at 2");
+
+    // from = 3 -> the second 'l' at index 3
+    let (found, idx) = s.index_of(&mut a, &hello, &l, 3).unwrap();
+    assert!(eval_bool(&a, found));
+    assert!(want(&a, idx, 3), "first \"l\" from index 3 is at 3");
+
+    // not found
+    let (found, _idx) = s.index_of(&mut a, &hello, &z, 0).unwrap();
+    assert!(!eval_bool(&a, found), "\"hello\" has no \"z\"");
+}
+
+#[test]
 fn symbolic_contains_is_sat() {
     // exists x (<=8): x contains "lo" AND len(x)==5  -> sat (e.g. "hello").
     let mut a = TermArena::new();

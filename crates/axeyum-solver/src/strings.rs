@@ -241,7 +241,7 @@ impl BoundedString {
     /// Shared bounded substring scan: `needle` matches at some offset whose
     /// window either ends at or fits within `len(hay)` (`exact_end` selects
     /// suffix vs substring).
-    #[allow(clippy::similar_names, clippy::trivially_copy_pass_by_ref)] // mirror the public API shape
+    #[allow(clippy::trivially_copy_pass_by_ref)] // mirror the public API shape
     fn scan_match(
         &self,
         arena: &mut TermArena,
@@ -249,38 +249,79 @@ impl BoundedString {
         needle: &StrTerm,
         exact_end: bool,
     ) -> Result<TermId, IrError> {
-        let wide = self.len_width() + 1; // room for off + len(needle)
-        let len_h = arena.zero_ext(1, hay.len)?;
-        let len_n = arena.zero_ext(1, needle.len)?;
         let mut any = arena.bool_const(false);
         for off in 0..self.max_len {
-            let off_c = arena.bv_const(wide, u128::from(off))?;
-            let end = arena.bv_add(off_c, len_n)?;
-            // Window condition: ends exactly at len(hay) (suffix) or fits within
-            // it (substring). Correct for empty needle (off = 0).
-            let mut matched = if exact_end {
-                arena.eq(end, len_h)?
-            } else {
-                arena.bv_ule(end, len_h)?
-            };
-            for j in 0..self.max_len {
-                let jc = arena.bv_const(self.len_width(), u128::from(j))?;
-                let j_active = arena.bv_ult(jc, needle.len)?;
-                let nj_active = arena.not(j_active)?;
-                if off + j >= self.max_len {
-                    // hay[off+j] past the buffer: match only if needle lacks byte j.
-                    matched = arena.and(matched, nj_active)?;
-                } else {
-                    let hb = arena.extract((off + j) * 8 + 7, (off + j) * 8, hay.content)?;
-                    let nb = arena.extract(j * 8 + 7, j * 8, needle.content)?;
-                    let beq = arena.eq(hb, nb)?;
-                    let implied = arena.or(nj_active, beq)?;
-                    matched = arena.and(matched, implied)?;
-                }
-            }
+            let matched = self.match_at(arena, hay, needle, off, exact_end)?;
             any = arena.or(any, matched)?;
         }
         Ok(any)
+    }
+
+    /// Whether `needle` matches `hay` at the constant offset `off`: the window
+    /// fits (or ends exactly at `len(hay)`) and the bytes agree position-by-
+    /// position. The single-offset building block of the scan and of `indexof`.
+    #[allow(clippy::similar_names, clippy::trivially_copy_pass_by_ref)]
+    fn match_at(
+        &self,
+        arena: &mut TermArena,
+        hay: &StrTerm,
+        needle: &StrTerm,
+        off: u32,
+        exact_end: bool,
+    ) -> Result<TermId, IrError> {
+        let wide = self.len_width() + 1; // room for off + len(needle)
+        let len_h = arena.zero_ext(1, hay.len)?;
+        let len_n = arena.zero_ext(1, needle.len)?;
+        let off_c = arena.bv_const(wide, u128::from(off))?;
+        let end = arena.bv_add(off_c, len_n)?;
+        let mut matched = if exact_end {
+            arena.eq(end, len_h)?
+        } else {
+            arena.bv_ule(end, len_h)?
+        };
+        for j in 0..self.max_len {
+            let jc = arena.bv_const(self.len_width(), u128::from(j))?;
+            let j_active = arena.bv_ult(jc, needle.len)?;
+            let nj_active = arena.not(j_active)?;
+            if off + j >= self.max_len {
+                matched = arena.and(matched, nj_active)?;
+            } else {
+                let hb = arena.extract((off + j) * 8 + 7, (off + j) * 8, hay.content)?;
+                let nb = arena.extract(j * 8 + 7, j * 8, needle.content)?;
+                let beq = arena.eq(hb, nb)?;
+                let implied = arena.or(nj_active, beq)?;
+                matched = arena.and(matched, implied)?;
+            }
+        }
+        Ok(matched)
+    }
+
+    /// `str.indexof` from a **constant** start: returns `(found, index)` where
+    /// `found` is whether `needle` occurs at some offset `≥ from`, and `index` is
+    /// the smallest such offset (a `BitVec(len_width)`, meaningful when `found`).
+    /// Avoids the SMT `-1` sentinel by reporting `found` separately.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] from the builders.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub fn index_of(
+        &self,
+        arena: &mut TermArena,
+        hay: &StrTerm,
+        needle: &StrTerm,
+        from: u32,
+    ) -> Result<(TermId, TermId), IrError> {
+        let mut found = arena.bool_const(false);
+        let mut index = arena.bv_const(self.len_width(), 0)?;
+        // Process offsets high → low so the *smallest* matching offset wins.
+        for off in (from..self.max_len).rev() {
+            let m = self.match_at(arena, hay, needle, off, false)?;
+            found = arena.or(found, m)?;
+            let off_c = arena.bv_const(self.len_width(), u128::from(off))?;
+            index = arena.ite(m, off_c, index)?;
+        }
+        Ok((found, index))
     }
 
     /// `str.substr` with a **constant** start and length `n`: the substring of
