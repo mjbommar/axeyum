@@ -51,8 +51,9 @@ Last updated: 2026-06-14
   **`str.suffixof`**, constant-window **`str.substr`**, and **`str.indexof`**
   (smallest matching offset ≥ from, via a shared `match_at`) added. **Symbolic-start `substr_at`** and **lexicographic `str.<`/`str.<=`** added.
   String fragment now: len, =, at, literals, ++, prefixof, contains, suffixof,
-  substr (const+symbolic start), indexof, lex order. **Next:** `str.replace`
-  (splice), regex, then unbounded via a first-class sort.
+  substr (const+symbolic start), indexof, lex order, `take`/`drop`, and equal-length `str.replace`
+  (per-position, first occurrence). **Next:** general-length replace, regex, then
+  unbounded via a first-class sort.
   This was the last entirely-untouched Z3 theory; it is now opened.
 
 - **NRA — first slice (2026-06-14, ADR-0024).** Nonlinear real arithmetic by

@@ -495,6 +495,56 @@ impl BoundedString {
         Ok(StrTerm { len, content })
     }
 
+    /// `str.replace` for the **equal-length** case: replaces the first occurrence
+    /// of `old` in `x` with `new`, assuming `len(old) = len(new)` (so the result
+    /// length is unchanged — fixed-width/char replacement). If `old` does not
+    /// occur, `x` is returned unchanged. The caller must ensure `len(old) =
+    /// len(new)` (assert it, or use equal-length literals); otherwise the result
+    /// is only correct on the common bytes.
+    ///
+    /// Built per position (no sort growth): result byte `p` is `new[p − idx]` when
+    /// `p` is in the matched window `[idx, idx + len(old))`, else `x[p]`, where
+    /// `idx` is the first match offset.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] from the builders.
+    #[allow(clippy::similar_names)]
+    pub fn replace_same_len(
+        &self,
+        arena: &mut TermArena,
+        x: &StrTerm,
+        old: &StrTerm,
+        new: &StrTerm,
+    ) -> Result<StrTerm, IrError> {
+        let (found, idx) = self.index_of(arena, x, old, 0)?;
+        let lw = self.len_width();
+        let cw = self.content_width();
+        let mut content = arena.bv_const(cw, 0)?;
+        for p in 0..self.max_len {
+            let p_c = arena.bv_const(lw, u128::from(p))?;
+            let off = arena.bv_sub(p_c, idx)?; // p - idx (wraps if idx > p)
+            let in_window = arena.bv_ult(off, old.len)?;
+            let in_region = arena.and(found, in_window)?;
+            // new[off]: select new's byte at the (symbolic) offset.
+            let mut nb = arena.bv_const(8, 0)?;
+            for k in 0..self.max_len {
+                let k_c = arena.bv_const(lw, u128::from(k))?;
+                let sel = arena.eq(off, k_c)?;
+                let newk = arena.extract(k * 8 + 7, k * 8, new.content)?;
+                nb = arena.ite(sel, newk, nb)?;
+            }
+            let sb = arena.extract(p * 8 + 7, p * 8, x.content)?;
+            let rbyte = arena.ite(in_region, nb, sb)?;
+            // place rbyte at position p.
+            let rbyte_w = arena.zero_ext(cw - 8, rbyte)?;
+            let shift = arena.bv_const(cw, u128::from(p) * 8)?;
+            let placed = arena.bv_shl(rbyte_w, shift)?;
+            content = arena.bv_or(content, placed)?;
+        }
+        Ok(StrTerm { len: x.len, content })
+    }
+
     /// `str.at` at a **constant** index: the byte at position `i` (an 8-bit
     /// `BitVec`), or `0` if `i` is at or beyond the length.
     ///

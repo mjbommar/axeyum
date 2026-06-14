@@ -1,5 +1,6 @@
 //! Bounded-length string theory (BV-lowered): literals, length, equality,
 //! char-at, and symbolic string solving.
+#![allow(clippy::similar_names, clippy::many_single_char_names)]
 
 use axeyum_ir::{Assignment, TermArena, Value, eval};
 use axeyum_solver::strings::BoundedString;
@@ -271,6 +272,35 @@ fn take_and_drop() {
     let goal = s.equal(&mut a, &tk, &hel).unwrap();
     let r = solve(&mut a, &[wf, goal], &SolverConfig::default()).unwrap();
     assert!(matches!(r, CheckResult::Sat(_)), "exists k: take(hello,k)=\"hel\" sat, got {r:?}");
+}
+
+#[test]
+fn replace_same_len_first_occurrence() {
+    let mut a = TermArena::new();
+    let s = BoundedString::new(8);
+    let hello = s.literal(&mut a, "hello").unwrap();
+    let l = s.literal(&mut a, "l").unwrap();
+    let big_l = s.literal(&mut a, "L").unwrap();
+
+    // replace first "l" with "L": "hello" -> "heLlo".
+    let r = s.replace_same_len(&mut a, &hello, &l, &big_l).unwrap();
+    let want = s.literal(&mut a, "heLlo").unwrap();
+    let eq = s.equal(&mut a, &r, &want).unwrap();
+    assert!(eval_bool(&a, eq), "replace first \"l\"->\"L\" in \"hello\" == \"heLlo\"");
+
+    // not found -> unchanged.
+    let z = s.literal(&mut a, "z").unwrap();
+    let r2 = s.replace_same_len(&mut a, &hello, &z, &big_l).unwrap();
+    let eq2 = s.equal(&mut a, &r2, &hello).unwrap();
+    assert!(eval_bool(&a, eq2), "replace of absent needle leaves string unchanged");
+
+    // multi-char same-length: replace "ll" with "LL" in "hello" -> "heLLo".
+    let ll = s.literal(&mut a, "ll").unwrap();
+    let bigll = s.literal(&mut a, "LL").unwrap();
+    let r3 = s.replace_same_len(&mut a, &hello, &ll, &bigll).unwrap();
+    let want3 = s.literal(&mut a, "heLLo").unwrap();
+    let eq3 = s.equal(&mut a, &r3, &want3).unwrap();
+    assert!(eval_bool(&a, eq3), "replace \"ll\"->\"LL\" == \"heLLo\"");
 }
 
 #[test]
