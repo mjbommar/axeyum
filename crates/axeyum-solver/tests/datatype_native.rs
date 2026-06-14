@@ -432,6 +432,81 @@ fn nested_scalar_field_through_traversal_is_sat() {
 }
 
 #[test]
+fn recursive_equality_with_conflicting_testers_is_unsat() {
+    // l == m AND is-cons(l) AND is-nil(m): equality forces the tags equal, but
+    // the testers force them different -> sound unsat (equality over a datatype
+    // with datatype fields, reduced on tag + scalar fields).
+    let (mut arena, list, nil, cons) = list_arena();
+    let l = arena.declare("l", Sort::Datatype(list)).unwrap();
+    let m = arena.declare("m", Sort::Datatype(list)).unwrap();
+    let lv = arena.var(l);
+    let mv = arena.var(m);
+    let eq = arena.eq(lv, mv).unwrap();
+    let is_cons_l = arena.dt_test(cons, lv).unwrap();
+    let is_nil_m = arena.dt_test(nil, mv).unwrap();
+
+    let result =
+        check_with_datatype_native(&mut arena, &[eq, is_cons_l, is_nil_m], &SolverConfig::default())
+            .unwrap();
+    assert!(
+        matches!(result, CheckResult::Unsat),
+        "recursive equality with conflicting testers must be unsat, got {result:?}"
+    );
+}
+
+#[test]
+fn recursive_equality_forces_scalar_field_unsat() {
+    // l == m AND is-cons(l) AND is-cons(m) AND head(l) == 5 AND head(m) == 6:
+    // equality forces the cons heads equal, so 5 == 6 -> sound unsat.
+    let (mut arena, list, _nil, cons) = list_arena();
+    let l = arena.declare("l", Sort::Datatype(list)).unwrap();
+    let m = arena.declare("m", Sort::Datatype(list)).unwrap();
+    let lv = arena.var(l);
+    let mv = arena.var(m);
+    let eq = arena.eq(lv, mv).unwrap();
+    let is_cons_l = arena.dt_test(cons, lv).unwrap();
+    let is_cons_m = arena.dt_test(cons, mv).unwrap();
+    let head_l = arena.dt_select(cons, 0, lv).unwrap();
+    let head_m = arena.dt_select(cons, 0, mv).unwrap();
+    let five = arena.bv_const(8, 5).unwrap();
+    let six = arena.bv_const(8, 6).unwrap();
+    let e5 = arena.eq(head_l, five).unwrap();
+    let e6 = arena.eq(head_m, six).unwrap();
+
+    let result = check_with_datatype_native(
+        &mut arena,
+        &[eq, is_cons_l, is_cons_m, e5, e6],
+        &SolverConfig::default(),
+    )
+    .unwrap();
+    assert!(
+        matches!(result, CheckResult::Unsat),
+        "recursive equality forcing 5 == 6 must be unsat, got {result:?}"
+    );
+}
+
+#[test]
+fn recursive_equality_is_sat_with_defaulted_fields() {
+    // l == m AND is-cons(l): sat — both project to cons(0, nil) (datatype tail
+    // defaulted equally), so equality holds.
+    let (mut arena, list, _nil, cons) = list_arena();
+    let l = arena.declare("l", Sort::Datatype(list)).unwrap();
+    let m = arena.declare("m", Sort::Datatype(list)).unwrap();
+    let lv = arena.var(l);
+    let mv = arena.var(m);
+    let eq = arena.eq(lv, mv).unwrap();
+    let is_cons_l = arena.dt_test(cons, lv).unwrap();
+
+    let result =
+        check_with_datatype_native(&mut arena, &[eq, is_cons_l], &SolverConfig::default()).unwrap();
+    let CheckResult::Sat(model) = result else {
+        panic!("expected sat, got {result:?}");
+    };
+    // l and m project to the same value.
+    assert_eq!(model.get(l), model.get(m), "l and m must be equal");
+}
+
+#[test]
 fn dispatcher_routes_datatype_queries() {
     // The high-level `solve` dispatcher should route a free-datatype query
     // through to the native path and return sat.

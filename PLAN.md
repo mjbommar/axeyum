@@ -72,9 +72,14 @@ Last updated: 2026-06-14
     22 datatype tests green incl. the tail-forced-to-deeper-cons case (catches a
     wrong-`unsat`) and sound `unsat` on a traversed field. The earlier "must
     return unknown not unsat" worry was misplaced — relaxation handles `unsat`.
-  - **Next datatype unit:** `==` over datatypes with datatype fields (exact field
-    guards), then the acyclicity + congruence native theory (and exact traversal
-    guards to make the determined-parent `unknown` cases complete).
+  - **Equality over datatype-fielded datatypes — now solved** (slice 5,
+    2026-06-14): `build_dt_eq` compares tag + scalar fields (skips datatype
+    fields) — a weaker constraint, so the same relaxation gives sound `unsat` and
+    replay-checked `sat`/`unknown`. Decides `l==m ∧ is-cons(l) ∧ is-nil(m)`
+    (unsat) and `l==m ∧ head(l)==5 ∧ head(m)==6` (unsat). 25 datatype tests green.
+  - **Next datatype unit:** the acyclicity + congruence native theory (and exact
+    field guards to make the relaxed `unknown` cases complete), plus array/UF
+    datatype fields.
 - Architecture iteration Q — **first-class datatype sort (recursive datatypes)**
   recorded 2026-06-13
   ([ADR-0022](docs/research/09-decisions/adr-0022-first-class-datatype-sort.md),

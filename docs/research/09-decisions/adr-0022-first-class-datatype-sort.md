@@ -250,10 +250,20 @@ over-constraining wrong-`unsat`), sound `unsat` on a traversed field, and nested
 scalar access. This means the earlier "must return `unknown` not `unsat`" worry
 was misplaced for QF explicit-select access — relaxation handles `unsat`.
 
-Still open: **`==` over a datatype with datatype fields** (needs exact field
-guards), array/UF datatype fields, and the **acyclicity + congruence** native
-theory (plus exact traversal via field guards to make the determined-parent
-`unknown` cases complete). Those remain the next datatype unit.
+**Equality over datatype-fielded datatypes (2026-06-14):** also handled by the
+same relaxation. `build_dt_eq` compares tag + scalar fields and *skips* datatype
+fields, which is a *weaker* constraint than full structural equality (original ⊆
+reduced), so reduced-`unsat` ⇒ original-`unsat` is sound; a `sat` candidate is
+replay-checked (equal projections — e.g. both datatype fields defaulted to the
+same value — pass; a genuine difference is `unknown`). Decides e.g.
+`l == m ∧ is-cons(l) ∧ is-nil(m)` (unsat via tags) and
+`l == m ∧ head(l)==5 ∧ head(m)==6` (unsat via scalar fields). Tests in
+`tests/datatype_native.rs`.
+
+Still open: array/UF datatype fields, `is`/`select`/`==` over a non-variable
+datatype term, and the **acyclicity + congruence** native theory (plus exact
+field guards to make the relaxed `unknown` cases complete). Those are the next
+datatype unit.
 
 ## Consequences
 

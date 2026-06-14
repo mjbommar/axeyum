@@ -50,11 +50,16 @@
 //! to a deeper cons), and the sound `unsat` of `is-cons(l) ∧ is-nil(l)` or of
 //! `is-cons(tail(l)) ∧ is-nil(tail(l))` all decide.
 //!
-//! Still outside the fragment: `==` over a datatype that has datatype fields,
-//! array/UF datatype fields, and `is`/`select`/`==` over a non-variable datatype
-//! term — these return [`SolverError::Unsupported`]. A fuller native theory
-//! (acyclicity + congruence, and exact traversal via field guards for
-//! completeness) is future work.
+//! `==` over a datatype that *has* datatype fields is also handled: `build_dt_eq`
+//! compares tag + scalar fields and skips datatype fields, which is a weaker
+//! (relaxation) constraint — sound for `unsat`, and a `sat` candidate is
+//! replay-checked (equal projections, e.g. both datatype fields defaulted, pass;
+//! a real difference is `unknown`).
+//!
+//! Still outside the fragment: array/UF datatype fields, and `is`/`select`/`==`
+//! over a non-variable datatype term — these return [`SolverError::Unsupported`].
+//! A fuller native theory (acyclicity + congruence, and exact field guards to
+//! make the relaxed `unknown` cases complete) is future work.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
@@ -94,11 +99,14 @@ pub fn check_with_datatype_native(
     // still implies original-`unsat` (sound, no guards); `sat` is replay-guarded.
     let (unfolded, links) =
         unfold_traversals(arena, &simplified).map_err(|e| SolverError::Backend(e.to_string()))?;
-    let relaxed = !links.is_empty();
 
     // Immutable scan: validate the fragment and collect the datatype variables
     // used, the `is`/`select` sites to rewrite, and per-datatype layout.
     let scan = scan_fragment(arena, &unfolded)?;
+    // The query is a relaxation (so a `sat` candidate must be replay-checked and
+    // a mismatch is `unknown`) if it traverses datatype fields or compares
+    // datatypes that have datatype fields.
+    let relaxed = !links.is_empty() || scan.relaxed_eq;
     if scan.dt_symbols.is_empty() {
         // No datatype variables remain (read-over-construct sufficed).
         return solve(arena, &unfolded, config);
@@ -203,6 +211,11 @@ struct Scan {
     tests: Vec<TestSite>,
     selects: Vec<SelectSite>,
     eqs: Vec<EqSite>,
+    /// True if some `==` is over a datatype with datatype-typed fields, whose
+    /// reduction (`build_dt_eq`) compares only tag + scalar fields — a weaker
+    /// (relaxation) constraint, so the candidate must be replay-checked and a
+    /// mismatch is `unknown`, not a wrong answer.
+    relaxed_eq: bool,
 }
 
 /// Links a parent slot's datatype field `(parent symbol, constructor index,
@@ -287,6 +300,7 @@ fn scan_fragment(arena: &TermArena, roots: &[TermId]) -> Result<Scan, SolverErro
     let mut tests = Vec::new();
     let mut selects = Vec::new();
     let mut eqs = Vec::new();
+    let mut relaxed_eq = false;
 
     let mut seen = BTreeSet::new();
     let mut stack: Vec<TermId> = roots.to_vec();
@@ -348,15 +362,15 @@ fn scan_fragment(arena: &TermArena, roots: &[TermId]) -> Result<Scan, SolverErro
                 let Sort::Datatype(dt) = arena.sort_of(args[0]) else {
                     unreachable!("matched datatype sort");
                 };
-                // Equality over a datatype with datatype-typed fields would have
-                // to compare those (untraversed, defaulted) fields; that is only
-                // exact once they are expanded (the next unit). Restrict equality
-                // to fully-scalar datatypes.
+                // `build_dt_eq` compares tag + scalar fields and skips datatype
+                // fields. For a datatype *with* datatype fields that is a weaker
+                // (relaxation) constraint: sound for `unsat`, and a `sat`
+                // candidate is replay-checked (equal projections — e.g. both
+                // datatype fields defaulted — pass; a real difference is
+                // `unknown`). Mark the query relaxed so replay downgrades rather
+                // than errors.
                 if dt_has_datatype_field(arena, dt) {
-                    return Err(unsupported(
-                        "equality over a datatype with datatype-typed fields needs the \
-                         recursive field expansion (next unit)",
-                    ));
+                    relaxed_eq = true;
                 }
                 let left = expect_dt_symbol(arena, args[0])?;
                 let right = expect_dt_symbol(arena, args[1])?;
@@ -378,6 +392,7 @@ fn scan_fragment(arena: &TermArena, roots: &[TermId]) -> Result<Scan, SolverErro
         tests,
         selects,
         eqs,
+        relaxed_eq,
     })
 }
 
