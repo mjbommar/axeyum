@@ -315,6 +315,40 @@ fn fp_to_int_conversions_fold_when_defined() {
 }
 
 #[test]
+fn fp_to_real_folds_exactly() {
+    use axeyum_ir::Rational;
+    let mut a = TermArena::new();
+    let real = |a: &TermArena, t: Option<axeyum_ir::TermId>, want: Rational, what: &str| {
+        let t = t.unwrap_or_else(|| panic!("{what}: expected fold"));
+        match eval(a, t, &Assignment::new()) {
+            Ok(Value::Real(r)) => assert_eq!(r, want, "{what}"),
+            other => panic!("{what}: expected Real, got {other:?}"),
+        }
+    };
+
+    let v = c(&mut a, 0x3FC0_0000); // 1.5
+    let r = fp::to_real(&mut a, F32, v).unwrap();
+    real(&a, r, Rational::new(3, 2), "1.5 -> 3/2");
+    let v = c(&mut a, 0x3F00_0000); // 0.5
+    let r = fp::to_real(&mut a, F32, v).unwrap();
+    real(&a, r, Rational::new(1, 2), "0.5 -> 1/2");
+    let v = c(&mut a, NEG_TWO); // -2.0
+    let r = fp::to_real(&mut a, F32, v).unwrap();
+    real(&a, r, Rational::integer(-2), "-2.0 -> -2");
+    let v = c(&mut a, POS0);
+    let r = fp::to_real(&mut a, F32, v).unwrap();
+    real(&a, r, Rational::integer(0), "+0 -> 0");
+
+    // Not real / does not fit -> None.
+    let nan = c(&mut a, NAN);
+    assert!(fp::to_real(&mut a, F32, nan).unwrap().is_none(), "NaN -> None");
+    let inf = c(&mut a, INF);
+    assert!(fp::to_real(&mut a, F32, inf).unwrap().is_none(), "inf -> None");
+    let tiny = c(&mut a, 0x0000_0001); // smallest subnormal f32 = 2^-149
+    assert!(fp::to_real(&mut a, F32, tiny).unwrap().is_none(), "2^-149 exceeds i128 rational -> None");
+}
+
+#[test]
 fn folded_arithmetic_composes_with_symbolic_predicates() {
     // fp.lt(1.0 + 2.0, x) with x symbolic: the add folds to 3.0, leaving a
     // symbolic comparison -> sat (e.g. x = 4.0).

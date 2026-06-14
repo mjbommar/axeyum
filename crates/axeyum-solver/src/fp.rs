@@ -28,7 +28,7 @@
 //! [`IrError`] from an IR builder (which cannot occur for well-formed input).
 #![allow(clippy::missing_errors_doc)] // uniform contract documented above
 
-use axeyum_ir::{IrError, Sort, TermArena, TermId, TermNode};
+use axeyum_ir::{IrError, Rational, Sort, TermArena, TermId, TermNode};
 
 /// An IEEE 754 binary format: `exp_bits` exponent bits and `sig_bits`
 /// significand bits (the latter *including* the hidden bit). The bit width of a
@@ -468,6 +468,67 @@ pub fn sbv_to_fp(
         return Ok(None);
     };
     Ok(Some(arena.bv_const(fmt.width(), bits)?))
+}
+
+/// Constant-folds `fp.to_real` (FP → mathematical Real, ADR-0015) for a finite
+/// F32/F64 constant. FP→Real is **exact** (no rounding), so when the exact value
+/// fits the `i128`-based [`Rational`] this folds to a `Real` constant; `NaN`/`∞`
+/// (not real numbers) and values whose exact rational exceeds `i128` return
+/// `Ok(None)`. Bridges FP into the linear-real-arithmetic theory.
+pub fn to_real(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+) -> Result<Option<TermId>, IrError> {
+    let Some(bits) = const_bits(arena, x) else {
+        return Ok(None);
+    };
+    let (eb, sb, total) = (fmt.exp_bits, fmt.sig_bits, fmt.width());
+    let sign = (bits >> (total - 1)) & 1 == 1;
+    let exp_field = (bits >> (sb - 1)) & ((1u128 << eb) - 1);
+    let trailing = bits & ((1u128 << (sb - 1)) - 1);
+    if exp_field == (1u128 << eb) - 1 {
+        return Ok(None); // ∞ or NaN — not a real number
+    }
+    let exp_bias = (1i64 << (eb - 1)) - 1;
+    let sb_i = i64::from(sb);
+    let (mag, exp): (u128, i64) = if exp_field == 0 {
+        if trailing == 0 {
+            return Ok(Some(arena.real_const(Rational::integer(0))));
+        }
+        (trailing, 1 - exp_bias - (sb_i - 1)) // subnormal
+    } else {
+        let Ok(field) = i64::try_from(exp_field) else {
+            return Ok(None);
+        };
+        ((1u128 << (sb - 1)) | trailing, field - exp_bias - (sb_i - 1)) // normal
+    };
+    let Ok(m) = i128::try_from(mag) else {
+        return Ok(None);
+    };
+    let Some((num, den)) = scale_to_fraction(m, exp) else {
+        return Ok(None); // exact value does not fit i128
+    };
+    let num = if sign { -num } else { num };
+    Ok(Some(arena.real_const(Rational::new(num, den))))
+}
+
+/// `m * 2^exp` as an `i128` fraction `(num, den)`, or `None` if it overflows.
+fn scale_to_fraction(m: i128, exp: i64) -> Option<(i128, i128)> {
+    if exp >= 0 {
+        let shift = u32::try_from(exp).ok()?;
+        let used = 128 - m.leading_zeros();
+        if used + shift > 127 {
+            return None; // m << exp overflows i128
+        }
+        Some((m << shift, 1))
+    } else {
+        let shift = u32::try_from(-exp).ok()?;
+        if shift > 126 {
+            return None; // 2^shift overflows i128
+        }
+        Some((m, 1i128 << shift))
+    }
 }
 
 /// Constant-folds `fp.to_ubv` (FP → unsigned `width`-bit BV) per rounding mode,
