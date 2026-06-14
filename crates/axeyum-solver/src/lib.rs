@@ -36,6 +36,7 @@ mod lra;
 mod maxsat;
 mod model;
 mod optimize;
+mod pb;
 mod proof;
 mod records;
 mod sat_bv_backend;
@@ -90,6 +91,7 @@ pub use optimize::{
     OptOutcome, maximize_bv, maximize_bv_signed, maximize_lia, minimize_bv, minimize_bv_signed,
     minimize_lia,
 };
+pub use pb::{pb_eq, pb_ge, pb_le};
 pub use proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};
 pub use records::{RecordError, RecordSort};
 pub use sat_bv_backend::SatBvBackend;
