@@ -13,6 +13,7 @@ mod canonical;
 mod datatypes;
 mod functions;
 mod int_blast;
+mod int_divmod;
 mod quantifiers;
 
 pub use arrays::{ArrayElimError, ArrayElimination, eliminate_arrays};
@@ -23,6 +24,7 @@ pub use canonical::{
 pub use datatypes::simplify_datatypes;
 pub use functions::{FuncElimError, FunctionElimination, eliminate_functions};
 pub use int_blast::{IntBlastError, IntBlasting, MAX_INT_BLAST_WIDTH, blast_integers};
+pub use int_divmod::eliminate_int_divmod;
 pub use quantifiers::{
     Instantiation, QUANT_EXPAND_BIT_LIMIT, QuantExpandError, expand_quantifiers,
     instantiate_universals, instantiate_with_triggers,

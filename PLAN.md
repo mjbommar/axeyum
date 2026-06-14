@@ -752,6 +752,14 @@ Last updated: 2026-06-14
   `mod x n = 0`, no new IR op): parser maps the indexed predicate, eval/solver
   tests cover `divisible(6,3)`/`divisible(7,3)`/negative dividends and a solver
   `sat`, plus an SMT-LIB parse test.
+  **div/mod/abs now decided completely (sat AND unsat).** A new
+  `eliminate_int_divmod` rewrite replaces each `div`/`mod`-by-constant and `abs`
+  with fresh vars + their **exact** linear constraints (`a = c·q + r ∧ 0 ≤ r <
+  |c|`; `abs a` = `v ≥ a ∧ v ≥ −a ∧ (v = a ∨ v = −a)`), run before the simplex/
+  DPLL-LIA path — so their `unsat` is now genuine, not the bit-blaster's bounded
+  `unknown`. Tests (`tests/int_divmod.rs`): contradictory `mod`, out-of-range
+  `mod`/`abs`, inconsistent `div`, Euclidean negative consistency — all `unsat`;
+  satisfiable cases stay `sat`.
 - `QF_LIA` scenarios + SMT-LIB I/O recorded 2026-06-13 (ADR-0014): a
   `Family::Integer` in `axeyum-scenarios` (`integer_system` boxed/ordered/
   sum-pinned systems, `integer_equation` boxed linear equations) with

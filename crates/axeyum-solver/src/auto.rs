@@ -190,12 +190,19 @@ pub fn check_auto(
         // lazy-SMT loop over that simplex. Anything outside the integer-arithmetic
         // fragment (mixed BV/array/UF terms) surfaces as `Unsupported` and falls
         // through to bit-blasting, which handles it.
-        match check_with_lia_simplex(arena, assertions) {
+        //
+        // `div`/`mod`-by-constant and `abs` are first eliminated into exact linear
+        // constraints (equisatisfiable), so the *complete* simplex/DPLL path
+        // decides them for both `sat` and `unsat` — not just the sat-only
+        // bit-blaster (whose in-range `unsat` is only `unknown`).
+        let lin = axeyum_rewrite::eliminate_int_divmod(arena, assertions)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+        match check_with_lia_simplex(arena, &lin) {
             Ok(result) => return Ok(result),
             Err(SolverError::Unsupported(_)) => {}
             Err(other) => return Err(other),
         }
-        match check_with_lia_dpll(arena, assertions, config) {
+        match check_with_lia_dpll(arena, &lin, config) {
             Ok(result) => return Ok(result),
             Err(SolverError::Unsupported(_)) => {}
             Err(other) => return Err(other),
