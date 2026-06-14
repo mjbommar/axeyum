@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use crate::error::IrError;
 use crate::sort::{MAX_BV_WIDTH, Sort, mask};
-use crate::term::{FuncId, Op, SymbolId, TermId, TermNode};
+use crate::term::{ConstructorId, DatatypeId, FuncId, Op, SymbolId, TermId, TermNode};
 
 /// Append-only arena owning symbols and hash-consed terms.
 ///
@@ -22,6 +22,8 @@ pub struct TermArena {
     nodes: Vec<TermNode>,
     sorts: Vec<Sort>,
     intern: HashMap<TermNode, TermId>,
+    datatypes: Vec<DatatypeInfo>,
+    constructors: Vec<ConstructorInfo>,
 }
 
 /// Declaration of an uninterpreted function: a name, parameter sorts, and a
@@ -31,6 +33,22 @@ struct FuncDecl {
     name: String,
     params: Vec<Sort>,
     result: Sort,
+}
+
+/// A declared datatype: its name and the constructors that build it (ADR-0022).
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct DatatypeInfo {
+    name: String,
+    constructors: Vec<ConstructorId>,
+}
+
+/// A datatype constructor: its name, the datatype it builds, and its named,
+/// sorted fields (a field sort may be the datatype itself, for recursion).
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ConstructorInfo {
+    name: String,
+    datatype: DatatypeId,
+    fields: Vec<(String, Sort)>,
 }
 
 impl TermArena {
@@ -230,24 +248,28 @@ impl TermArena {
     fn expect_bool(&self, t: TermId) -> Result<(), IrError> {
         match self.sort_of(t) {
             Sort::Bool => Ok(()),
-            found @ (Sort::BitVec(_) | Sort::Array { .. } | Sort::Int | Sort::Real) => {
-                Err(IrError::SortMismatch {
-                    expected: "Bool",
-                    found,
-                })
-            }
+            found @ (Sort::BitVec(_)
+            | Sort::Array { .. }
+            | Sort::Int
+            | Sort::Real
+            | Sort::Datatype(_)) => Err(IrError::SortMismatch {
+                expected: "Bool",
+                found,
+            }),
         }
     }
 
     fn expect_bv(&self, t: TermId) -> Result<u32, IrError> {
         match self.sort_of(t) {
             Sort::BitVec(w) => Ok(w),
-            found @ (Sort::Bool | Sort::Array { .. } | Sort::Int | Sort::Real) => {
-                Err(IrError::SortMismatch {
-                    expected: "BitVec",
-                    found,
-                })
-            }
+            found @ (Sort::Bool
+            | Sort::Array { .. }
+            | Sort::Int
+            | Sort::Real
+            | Sort::Datatype(_)) => Err(IrError::SortMismatch {
+                expected: "BitVec",
+                found,
+            }),
         }
     }
 
@@ -269,6 +291,175 @@ impl TermArena {
             },
             sort,
         )
+    }
+
+    // ----- datatypes (ADR-0022) -----------------------------------------
+
+    /// Declares a datatype with no constructors yet, returning its id. Add
+    /// constructors with [`Self::add_constructor`]; a constructor field may use
+    /// `Sort::Datatype(id)` of this same id, so recursive datatypes are built by
+    /// declaring first, then adding constructors.
+    ///
+    /// # Panics
+    ///
+    /// Panics on arena corruption (datatype count exceeding `u32`).
+    pub fn declare_datatype(&mut self, name: &str) -> DatatypeId {
+        let id = DatatypeId(u32::try_from(self.datatypes.len()).expect("datatype count fits u32"));
+        self.datatypes.push(DatatypeInfo {
+            name: name.to_owned(),
+            constructors: Vec::new(),
+        });
+        id
+    }
+
+    /// Adds a constructor (name + named, sorted fields) to a declared datatype,
+    /// returning its id.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `datatype` does not belong to this arena.
+    pub fn add_constructor(
+        &mut self,
+        datatype: DatatypeId,
+        name: &str,
+        fields: &[(String, Sort)],
+    ) -> ConstructorId {
+        let id = ConstructorId(
+            u32::try_from(self.constructors.len()).expect("constructor count fits u32"),
+        );
+        self.constructors.push(ConstructorInfo {
+            name: name.to_owned(),
+            datatype,
+            fields: fields.to_vec(),
+        });
+        self.datatypes[datatype.index()].constructors.push(id);
+        id
+    }
+
+    /// The datatype's name.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `id` does not belong to this arena.
+    pub fn datatype_name(&self, id: DatatypeId) -> &str {
+        &self.datatypes[id.index()].name
+    }
+
+    /// The constructor ids of a datatype, in declaration order.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `id` does not belong to this arena.
+    pub fn datatype_constructors(&self, id: DatatypeId) -> &[ConstructorId] {
+        &self.datatypes[id.index()].constructors
+    }
+
+    /// The datatype a constructor builds.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `ctor` does not belong to this arena.
+    pub fn constructor_datatype(&self, ctor: ConstructorId) -> DatatypeId {
+        self.constructors[ctor.index()].datatype
+    }
+
+    /// A constructor's name.
+    pub fn constructor_name(&self, ctor: ConstructorId) -> &str {
+        &self.constructors[ctor.index()].name
+    }
+
+    /// A constructor's `(field name, sort)` list.
+    pub fn constructor_fields(&self, ctor: ConstructorId) -> &[(String, Sort)] {
+        &self.constructors[ctor.index()].fields
+    }
+
+    /// Builds `constructor(args...)`, a value of the constructor's datatype.
+    ///
+    /// # Errors
+    ///
+    /// [`IrError::ArityMismatch`] if the wrong number of fields is supplied, or
+    /// [`IrError::SortMismatch`] if a field argument has the wrong sort.
+    pub fn construct(&mut self, ctor: ConstructorId, args: &[TermId]) -> Result<TermId, IrError> {
+        let info = &self.constructors[ctor.index()];
+        if args.len() != info.fields.len() {
+            return Err(IrError::ArityMismatch {
+                expected: info.fields.len(),
+                found: args.len(),
+            });
+        }
+        let datatype = info.datatype;
+        let field_sorts: Vec<Sort> = info.fields.iter().map(|(_, sort)| *sort).collect();
+        for (&arg, expected) in args.iter().zip(&field_sorts) {
+            let found = self.sort_of(arg);
+            if found != *expected {
+                return Err(IrError::SortsDiffer(*expected, found));
+            }
+        }
+        Ok(self.app(
+            Op::DtConstruct {
+                constructor: ctor,
+                datatype,
+            },
+            args,
+            Sort::Datatype(datatype),
+        ))
+    }
+
+    /// Builds the selector for field `index` of `constructor` applied to `value`.
+    ///
+    /// # Errors
+    ///
+    /// [`IrError::SortMismatch`] if `value` is not of the constructor's datatype,
+    /// or [`IrError::ArityMismatch`] if `index` is out of range.
+    pub fn dt_select(
+        &mut self,
+        ctor: ConstructorId,
+        index: u32,
+        value: TermId,
+    ) -> Result<TermId, IrError> {
+        let info = &self.constructors[ctor.index()];
+        let datatype = info.datatype;
+        let field_count = info.fields.len();
+        let result_sort = info
+            .fields
+            .get(index as usize)
+            .map(|(_, sort)| *sort)
+            .ok_or(IrError::ArityMismatch {
+                expected: field_count,
+                found: index as usize + 1,
+            })?;
+        let found = self.sort_of(value);
+        if found != Sort::Datatype(datatype) {
+            return Err(IrError::SortMismatch {
+                expected: "datatype value",
+                found,
+            });
+        }
+        Ok(self.app(
+            Op::DtSelect {
+                constructor: ctor,
+                index,
+            },
+            &[value],
+            result_sort,
+        ))
+    }
+
+    /// Builds the tester `is-constructor(value)` (result `Bool`).
+    ///
+    /// # Errors
+    ///
+    /// [`IrError::SortMismatch`] if `value` is not of the constructor's datatype.
+    pub fn dt_test(&mut self, ctor: ConstructorId, value: TermId) -> Result<TermId, IrError> {
+        let datatype = self.constructors[ctor.index()].datatype;
+        let found = self.sort_of(value);
+        if found != Sort::Datatype(datatype) {
+            return Err(IrError::SortMismatch {
+                expected: "datatype value",
+                found,
+            });
+        }
+        Ok(self.app(Op::DtTest(ctor), &[value], Sort::Bool))
     }
 
     // ----- Boolean operators --------------------------------------------
@@ -783,7 +974,7 @@ impl TermArena {
     fn expect_array(&self, t: TermId) -> Result<(u32, u32), IrError> {
         match self.sort_of(t) {
             Sort::Array { index, element } => Ok((index, element)),
-            found @ (Sort::Bool | Sort::BitVec(_) | Sort::Int | Sort::Real) => {
+            found @ (Sort::Bool | Sort::BitVec(_) | Sort::Int | Sort::Real | Sort::Datatype(_)) => {
                 Err(IrError::SortMismatch {
                     expected: "Array",
                     found,
@@ -891,12 +1082,14 @@ impl TermArena {
     fn expect_int(&self, t: TermId) -> Result<(), IrError> {
         match self.sort_of(t) {
             Sort::Int => Ok(()),
-            found @ (Sort::Bool | Sort::BitVec(_) | Sort::Array { .. } | Sort::Real) => {
-                Err(IrError::SortMismatch {
-                    expected: "Int",
-                    found,
-                })
-            }
+            found @ (Sort::Bool
+            | Sort::BitVec(_)
+            | Sort::Array { .. }
+            | Sort::Real
+            | Sort::Datatype(_)) => Err(IrError::SortMismatch {
+                expected: "Int",
+                found,
+            }),
         }
     }
 
@@ -1016,12 +1209,14 @@ impl TermArena {
     fn expect_real(&self, t: TermId) -> Result<(), IrError> {
         match self.sort_of(t) {
             Sort::Real => Ok(()),
-            found @ (Sort::Bool | Sort::BitVec(_) | Sort::Array { .. } | Sort::Int) => {
-                Err(IrError::SortMismatch {
-                    expected: "Real",
-                    found,
-                })
-            }
+            found @ (Sort::Bool
+            | Sort::BitVec(_)
+            | Sort::Array { .. }
+            | Sort::Int
+            | Sort::Datatype(_)) => Err(IrError::SortMismatch {
+                expected: "Real",
+                found,
+            }),
         }
     }
 
@@ -1160,10 +1355,12 @@ fn check_scalar_width(sort: Sort) -> Result<(), IrError> {
     match sort {
         Sort::Bool => Ok(()),
         Sort::BitVec(w) => check_width(w),
-        found @ (Sort::Array { .. } | Sort::Int | Sort::Real) => Err(IrError::SortMismatch {
-            expected: "Bool or BitVec",
-            found,
-        }),
+        found @ (Sort::Array { .. } | Sort::Int | Sort::Real | Sort::Datatype(_)) => {
+            Err(IrError::SortMismatch {
+                expected: "Bool or BitVec",
+                found,
+            })
+        }
     }
 }
 

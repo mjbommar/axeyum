@@ -42,6 +42,28 @@ impl FuncId {
     }
 }
 
+/// A declared (possibly recursive) datatype, interned in the arena (ADR-0022).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct DatatypeId(pub(crate) u32);
+
+impl DatatypeId {
+    /// The dense index of this datatype within its arena.
+    pub fn index(self) -> usize {
+        self.0 as usize
+    }
+}
+
+/// A constructor of some datatype, interned globally in the arena (ADR-0022).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct ConstructorId(pub(crate) u32);
+
+impl ConstructorId {
+    /// The dense index of this constructor within its arena.
+    pub fn index(self) -> usize {
+        self.0 as usize
+    }
+}
+
 /// Operators of the scalar `QF_BV` fragment (Phase 1 set).
 ///
 /// Bool and bit-vector families are distinct; `Eq` and `Ite` are
@@ -209,6 +231,27 @@ pub enum Op {
     /// Existential quantifier binding `SymbolId` over a `Bool` body (the single
     /// argument); result sort `Bool`.
     Exists(SymbolId),
+
+    // --- datatypes (ADR-0022) ----------------------------------------------
+    /// Applies a datatype constructor to its field arguments; result sort is the
+    /// constructor's datatype (carried so evaluation needs no arena access).
+    DtConstruct {
+        /// The constructor applied.
+        constructor: ConstructorId,
+        /// The datatype it builds.
+        datatype: DatatypeId,
+    },
+    /// Selects field `index` of a value built by `constructor`; the single
+    /// argument is a datatype value; result sort is the field's sort.
+    DtSelect {
+        /// The constructor whose field is selected.
+        constructor: ConstructorId,
+        /// The field index within that constructor.
+        index: u32,
+    },
+    /// Tests whether its single datatype argument was built by `constructor`;
+    /// result sort `Bool`.
+    DtTest(ConstructorId),
 }
 
 /// The structural body of a term, used as the hash-consing key.

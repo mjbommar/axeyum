@@ -66,6 +66,10 @@ fn op_name(op: Op) -> String {
         // The bound variable name needs the arena; handled in `render`.
         Op::Forall(_) => "forall".into(),
         Op::Exists(_) => "exists".into(),
+        // Datatype ops (ADR-0022).
+        Op::DtConstruct { constructor, .. } => format!("!construct{}", constructor.index()),
+        Op::DtSelect { constructor, index } => format!("!select{}_{index}", constructor.index()),
+        Op::DtTest(constructor) => format!("!is{}", constructor.index()),
     }
 }
 

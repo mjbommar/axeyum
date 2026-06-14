@@ -127,6 +127,31 @@ pub fn eval(arena: &TermArena, term: TermId, assignment: &Assignment) -> Result<
                                 let code = interp.apply(&key);
                                 Value::from_scalar_code(arena.sort_of(t), code)
                             }
+                            Op::DtConstruct {
+                                constructor,
+                                datatype,
+                            } => Value::Datatype {
+                                datatype: *datatype,
+                                constructor: *constructor,
+                                fields: vals.clone(),
+                            },
+                            Op::DtSelect { constructor, index } => match &vals[0] {
+                                Value::Datatype {
+                                    constructor: built,
+                                    fields,
+                                    ..
+                                } if built == constructor => fields[*index as usize].clone(),
+                                Value::Datatype { .. } => {
+                                    return Err(IrError::DatatypeConstructorMismatch);
+                                }
+                                _ => unreachable!("builder guaranteed datatype operand"),
+                            },
+                            Op::DtTest(constructor) => match &vals[0] {
+                                Value::Datatype {
+                                    constructor: built, ..
+                                } => Value::Bool(built == constructor),
+                                _ => unreachable!("builder guaranteed datatype operand"),
+                            },
                             _ => apply(*op, &vals),
                         };
                         memo.insert(t, value);
@@ -408,6 +433,10 @@ fn apply(op: Op, vals: &[Value]) -> Value {
         // Handled in `eval` (they bind a variable and enumerate its domain).
         Op::Forall(_) | Op::Exists(_) => {
             unreachable!("quantifiers are evaluated by enumeration in `eval`")
+        }
+        // Handled in `eval` (datatype ops need arena + `Result`).
+        Op::DtConstruct { .. } | Op::DtSelect { .. } | Op::DtTest(_) => {
+            unreachable!("datatype ops are evaluated in `eval`")
         }
     }
 }

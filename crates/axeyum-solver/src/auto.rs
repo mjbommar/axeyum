@@ -373,7 +373,10 @@ impl Features {
                     features.has_int = true;
                 }
                 Sort::BitVec(_) | Sort::Array { .. } => features.has_bitblast = true,
-                Sort::Bool => {}
+                // Datatypes are not decided by any current engine; leave no
+                // feature flag so the query routes to the eager path, which
+                // reports it Unsupported (ADR-0022).
+                Sort::Bool | Sort::Datatype(_) => {}
             }
             if let TermNode::App { op, args } = arena.node(term) {
                 if matches!(op, Op::Apply(_)) {

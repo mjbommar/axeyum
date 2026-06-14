@@ -508,7 +508,7 @@ fn evidence_route(arena: &TermArena, assertions: &[TermId]) -> EvidenceRoute {
             Sort::BitVec(_) => has_bitvec = true,
             Sort::Array { .. } => has_array = true,
             Sort::Int => has_int = true,
-            Sort::Bool => {}
+            Sort::Bool | Sort::Datatype(_) => {}
         }
         if let TermNode::App { op, args } = arena.node(term) {
             match op {

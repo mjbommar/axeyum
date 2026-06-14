@@ -181,6 +181,7 @@ fn sort_str(sort: Sort) -> String {
         }
         Sort::Int => "Int".to_owned(),
         Sort::Real => "Real".to_owned(),
+        Sort::Datatype(id) => format!("(Datatype {})", id.index()),
     }
 }
 
@@ -346,5 +347,8 @@ fn op_str(op: Op) -> String {
         Op::Forall(_) | Op::Exists(_) => {
             unreachable!("quantifiers are rendered via their binder form")
         }
+        Op::DtConstruct { constructor, .. } => format!("construct/{}", constructor.index()),
+        Op::DtSelect { constructor, index } => format!("select/{}/{index}", constructor.index()),
+        Op::DtTest(constructor) => format!("is/{}", constructor.index()),
     }
 }

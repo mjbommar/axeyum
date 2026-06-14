@@ -73,6 +73,9 @@ pub enum IrError {
     /// A quantifier ranges over a domain the evaluator cannot enumerate (an
     /// infinite sort, or a bit-vector wider than the enumeration limit).
     UnsupportedQuantifierDomain(Sort),
+    /// A datatype selector was applied to a value built by a different
+    /// constructor (ADR-0022); the selection is undefined.
+    DatatypeConstructorMismatch,
 }
 
 impl core::fmt::Display for IrError {
@@ -118,6 +121,9 @@ impl core::fmt::Display for IrError {
             }
             IrError::UnsupportedQuantifierDomain(sort) => {
                 write!(f, "cannot enumerate quantifier domain {sort}")
+            }
+            IrError::DatatypeConstructorMismatch => {
+                write!(f, "datatype selector applied to a different constructor")
             }
         }
     }

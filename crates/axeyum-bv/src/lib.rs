@@ -737,6 +737,9 @@ impl<'a> LoweringBuilder<'a> {
             Sort::Real => {
                 unreachable!("real terms are rejected before bit lowering (ADR-0015)")
             }
+            Sort::Datatype(_) => {
+                unreachable!("datatype terms are rejected before bit lowering (ADR-0022)")
+            }
         }
     }
 
@@ -752,6 +755,9 @@ impl<'a> LoweringBuilder<'a> {
             }
             Sort::Real => {
                 unreachable!("real terms are rejected before bit lowering (ADR-0015)")
+            }
+            Sort::Datatype(_) => {
+                unreachable!("datatype terms are rejected before bit lowering (ADR-0022)")
             }
         };
         let literal = self.aig.input(label);
@@ -862,7 +868,10 @@ impl<'a> LoweringBuilder<'a> {
                 | Op::RealGt
                 | Op::RealGe
                 | Op::Forall(_)
-                | Op::Exists(_) => {
+                | Op::Exists(_)
+                | Op::DtConstruct { .. }
+                | Op::DtSelect { .. }
+                | Op::DtTest(_) => {
                     return Err(BitLowerError::UnsupportedOp { term, op });
                 }
             };
@@ -1661,6 +1670,9 @@ impl<'a> LoweringBuilder<'a> {
             Sort::Real => {
                 unreachable!("real terms are rejected before bit lowering (ADR-0015)")
             }
+            Sort::Datatype(_) => {
+                unreachable!("datatype terms are rejected before bit lowering (ADR-0022)")
+            }
         }
     }
 }
@@ -1710,6 +1722,9 @@ fn sort_width(sort: Sort) -> usize {
         }
         Sort::Real => {
             unreachable!("real terms are rejected before bit lowering (ADR-0015)")
+        }
+        Sort::Datatype(_) => {
+            unreachable!("datatype terms are rejected before bit lowering (ADR-0022)")
         }
     }
 }
@@ -1785,6 +1800,9 @@ fn is_unsupported_op(op: Op) -> bool {
             | Op::RealGe
             | Op::Forall(_)
             | Op::Exists(_)
+            | Op::DtConstruct { .. }
+            | Op::DtSelect { .. }
+            | Op::DtTest(_)
     )
 }
 

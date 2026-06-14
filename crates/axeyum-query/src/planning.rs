@@ -528,6 +528,10 @@ fn update_sort(hash: &mut u64, sort: Sort) {
         }
         Sort::Int => update_u64(hash, 4),
         Sort::Real => update_u64(hash, 5),
+        Sort::Datatype(id) => {
+            update_u64(hash, 6);
+            update_u64(hash, u64::try_from(id.index()).unwrap_or(u64::MAX));
+        }
     }
 }
 
@@ -620,6 +624,19 @@ fn update_op(hash: &mut u64, op: Op) {
         Op::Exists(var) => {
             update_u64(hash, 62);
             update_u64(hash, u64::try_from(var.index()).unwrap_or(u64::MAX));
+        }
+        Op::DtConstruct { constructor, .. } => {
+            update_u64(hash, 63);
+            update_u64(hash, u64::try_from(constructor.index()).unwrap_or(u64::MAX));
+        }
+        Op::DtSelect { constructor, index } => {
+            update_u64(hash, 64);
+            update_u64(hash, u64::try_from(constructor.index()).unwrap_or(u64::MAX));
+            update_u64(hash, u64::from(index));
+        }
+        Op::DtTest(constructor) => {
+            update_u64(hash, 65);
+            update_u64(hash, u64::try_from(constructor.index()).unwrap_or(u64::MAX));
         }
     }
 }

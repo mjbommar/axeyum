@@ -223,6 +223,9 @@ fn default_value_for_sort(sort: Sort) -> Value {
         }
         Sort::Int => Value::Int(0),
         Sort::Real => Value::Real(axeyum_ir::Rational::zero()),
+        Sort::Datatype(_) => {
+            unreachable!("datatype symbols are not solved by the bit-vector backend (ADR-0022)")
+        }
     }
 }
 

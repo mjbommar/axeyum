@@ -506,7 +506,9 @@ fn rewrite_app(
             Sort::Bool => BOOL_CONST_FOLD,
             // `all_constant` matches only Bool/BV constants, so a folded term is
             // only ever Bool/BV here; the array and integer arms are unreachable.
-            Sort::BitVec(_) | Sort::Array { .. } | Sort::Int | Sort::Real => BV_CONST_FOLD,
+            Sort::BitVec(_) | Sort::Array { .. } | Sort::Int | Sort::Real | Sort::Datatype(_) => {
+                BV_CONST_FOLD
+            }
         };
         if enabled.contains(rule_id) {
             return Ok(applied(folded, rule_id));
@@ -571,7 +573,10 @@ fn rewrite_app(
         | Op::RealGt
         | Op::RealGe
         | Op::Forall(_)
-        | Op::Exists(_) => None,
+        | Op::Exists(_)
+        | Op::DtConstruct { .. }
+        | Op::DtSelect { .. }
+        | Op::DtTest(_) => None,
     };
 
     if let Some(local) = local {
@@ -978,6 +983,9 @@ pub(crate) fn build_app(arena: &mut TermArena, op: Op, args: &[TermId]) -> Resul
         Op::RealGe => arena.real_ge(args[0], args[1]),
         Op::Forall(var) => arena.forall(var, args[0]),
         Op::Exists(var) => arena.exists(var, args[0]),
+        Op::DtConstruct { constructor, .. } => arena.construct(constructor, args),
+        Op::DtSelect { constructor, index } => arena.dt_select(constructor, index, args[0]),
+        Op::DtTest(constructor) => arena.dt_test(constructor, args[0]),
     }
 }
 
@@ -1049,6 +1057,10 @@ fn value_to_term(arena: &mut TermArena, value: Value) -> Result<TermId, IrError>
     match value {
         Value::Bool(value) => Ok(arena.bool_const(value)),
         Value::Bv { width, value } => arena.bv_const(width, value),
+        Value::Datatype { datatype, .. } => Err(IrError::SortMismatch {
+            expected: "Bool or BitVec",
+            found: Sort::Datatype(datatype),
+        }),
         Value::Array(array) => Err(IrError::SortMismatch {
             expected: "Bool or BitVec",
             found: Sort::Array {

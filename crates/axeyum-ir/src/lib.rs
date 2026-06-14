@@ -52,5 +52,5 @@ pub use fmt::render;
 pub use rational::Rational;
 pub use sort::{MAX_BV_WIDTH, Sort};
 pub use stats::TermStats;
-pub use term::{FuncId, Op, SymbolId, TermId, TermNode};
+pub use term::{ConstructorId, DatatypeId, FuncId, Op, SymbolId, TermId, TermNode};
 pub use value::{ArrayValue, FuncValue, Value};

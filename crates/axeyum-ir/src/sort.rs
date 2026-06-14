@@ -1,5 +1,7 @@
 //! Sorts (types) of terms.
 
+use crate::term::DatatypeId;
+
 /// Maximum bit-vector width supported in M0 (ADR-0003).
 pub const MAX_BV_WIDTH: u32 = 128;
 
@@ -25,6 +27,9 @@ pub enum Sort {
     Int,
     /// The mathematical real sort (linear real arithmetic, ADR-0015).
     Real,
+    /// A first-class (possibly recursive) datatype sort (ADR-0022); recursion
+    /// lives behind the interned id, so `Sort` stays `Copy`.
+    Datatype(DatatypeId),
 }
 
 impl Sort {
@@ -32,7 +37,7 @@ impl Sort {
     pub fn bv_width(self) -> Option<u32> {
         match self {
             Sort::BitVec(w) => Some(w),
-            Sort::Bool | Sort::Array { .. } | Sort::Int | Sort::Real => None,
+            Sort::Bool | Sort::Array { .. } | Sort::Int | Sort::Real | Sort::Datatype(_) => None,
         }
     }
 
@@ -45,7 +50,7 @@ impl Sort {
     pub fn array_widths(self) -> Option<(u32, u32)> {
         match self {
             Sort::Array { index, element } => Some((index, element)),
-            Sort::Bool | Sort::BitVec(_) | Sort::Int | Sort::Real => None,
+            Sort::Bool | Sort::BitVec(_) | Sort::Int | Sort::Real | Sort::Datatype(_) => None,
         }
     }
 }
@@ -60,6 +65,7 @@ impl core::fmt::Display for Sort {
             }
             Sort::Int => write!(f, "Int"),
             Sort::Real => write!(f, "Real"),
+            Sort::Datatype(id) => write!(f, "(Datatype {})", id.index()),
         }
     }
 }

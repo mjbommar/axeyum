@@ -45,6 +45,10 @@ pub fn value_to_lsb_bits(value: Value) -> Result<Vec<bool>, IrError> {
             expected: "Bool or BitVec",
             found: Sort::Real,
         }),
+        Value::Datatype { datatype, .. } => Err(IrError::SortMismatch {
+            expected: "Bool or BitVec",
+            found: Sort::Datatype(datatype),
+        }),
     }
 }
 
@@ -105,10 +109,12 @@ pub fn lsb_bits_to_value(sort: Sort, bits: &[bool]) -> Result<Value, IrError> {
                 })
             }
         }
-        Sort::Array { .. } | Sort::Int | Sort::Real => Err(IrError::SortMismatch {
-            expected: "Bool or BitVec",
-            found: sort,
-        }),
+        Sort::Array { .. } | Sort::Int | Sort::Real | Sort::Datatype(_) => {
+            Err(IrError::SortMismatch {
+                expected: "Bool or BitVec",
+                found: sort,
+            })
+        }
     }
 }
 

@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 
 use crate::rational::Rational;
 use crate::sort::Sort;
+use crate::term::{ConstructorId, DatatypeId};
 
 /// A concrete value of some [`Sort`].
 ///
@@ -28,6 +29,16 @@ pub enum Value {
     Int(i128),
     /// A mathematical real value as an exact rational (ADR-0015).
     Real(Rational),
+    /// A datatype value: its constructor and field values (a `Clone` tree, like
+    /// [`ArrayValue`]); ADR-0022.
+    Datatype {
+        /// The datatype this value belongs to.
+        datatype: DatatypeId,
+        /// The constructor used to build it.
+        constructor: ConstructorId,
+        /// The field values, in constructor-declaration order.
+        fields: Vec<Value>,
+    },
 }
 
 /// A concrete array value: a default element plus index→element overrides.
@@ -212,6 +223,7 @@ fn encode_to(sort: Sort, value: u128) -> u128 {
         Sort::Array { .. } => panic!("scalar encoding of an array sort"),
         Sort::Int => panic!("scalar encoding of an integer sort"),
         Sort::Real => panic!("scalar encoding of a real sort"),
+        Sort::Datatype(_) => panic!("scalar encoding of a datatype sort"),
     }
 }
 
@@ -232,6 +244,7 @@ impl Value {
             Sort::Array { .. } => panic!("scalar decoding of an array sort"),
             Sort::Int => panic!("scalar decoding of an integer sort"),
             Sort::Real => panic!("scalar decoding of a real sort"),
+            Sort::Datatype(_) => panic!("scalar decoding of a datatype sort"),
         }
     }
 
@@ -248,6 +261,7 @@ impl Value {
             Value::Array(_) => panic!("scalar encoding of an array value"),
             Value::Int(_) => panic!("scalar encoding of an integer value"),
             Value::Real(_) => panic!("scalar encoding of a real value"),
+            Value::Datatype { .. } => panic!("scalar encoding of a datatype value"),
         }
     }
 
@@ -262,6 +276,7 @@ impl Value {
             },
             Value::Int(_) => Sort::Int,
             Value::Real(_) => Sort::Real,
+            Value::Datatype { datatype, .. } => Sort::Datatype(*datatype),
         }
     }
 
@@ -269,7 +284,11 @@ impl Value {
     pub fn as_bool(&self) -> Option<bool> {
         match self {
             Value::Bool(b) => Some(*b),
-            Value::Bv { .. } | Value::Array(_) | Value::Int(_) | Value::Real(_) => None,
+            Value::Bv { .. }
+            | Value::Array(_)
+            | Value::Int(_)
+            | Value::Real(_)
+            | Value::Datatype { .. } => None,
         }
     }
 
@@ -277,7 +296,11 @@ impl Value {
     pub fn as_bv(&self) -> Option<(u32, u128)> {
         match self {
             Value::Bv { width, value } => Some((*width, *value)),
-            Value::Bool(_) | Value::Array(_) | Value::Int(_) | Value::Real(_) => None,
+            Value::Bool(_)
+            | Value::Array(_)
+            | Value::Int(_)
+            | Value::Real(_)
+            | Value::Datatype { .. } => None,
         }
     }
 
@@ -285,7 +308,11 @@ impl Value {
     pub fn as_array(&self) -> Option<&ArrayValue> {
         match self {
             Value::Array(array) => Some(array),
-            Value::Bool(_) | Value::Bv { .. } | Value::Int(_) | Value::Real(_) => None,
+            Value::Bool(_)
+            | Value::Bv { .. }
+            | Value::Int(_)
+            | Value::Real(_)
+            | Value::Datatype { .. } => None,
         }
     }
 
@@ -293,7 +320,11 @@ impl Value {
     pub fn as_int(&self) -> Option<i128> {
         match self {
             Value::Int(value) => Some(*value),
-            Value::Bool(_) | Value::Bv { .. } | Value::Array(_) | Value::Real(_) => None,
+            Value::Bool(_)
+            | Value::Bv { .. }
+            | Value::Array(_)
+            | Value::Real(_)
+            | Value::Datatype { .. } => None,
         }
     }
 
@@ -301,7 +332,11 @@ impl Value {
     pub fn as_real(&self) -> Option<Rational> {
         match self {
             Value::Real(value) => Some(*value),
-            Value::Bool(_) | Value::Bv { .. } | Value::Array(_) | Value::Int(_) => None,
+            Value::Bool(_)
+            | Value::Bv { .. }
+            | Value::Array(_)
+            | Value::Int(_)
+            | Value::Datatype { .. } => None,
         }
     }
 }
@@ -322,6 +357,17 @@ impl core::fmt::Display for Value {
             }
             Value::Int(value) => write!(f, "{value}"),
             Value::Real(value) => write!(f, "{value}"),
+            Value::Datatype {
+                constructor,
+                fields,
+                ..
+            } => {
+                write!(f, "(construct/{}", constructor.index())?;
+                for field in fields {
+                    write!(f, " {field}")?;
+                }
+                write!(f, ")")
+            }
         }
     }
 }

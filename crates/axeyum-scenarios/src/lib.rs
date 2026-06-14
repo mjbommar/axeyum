@@ -385,6 +385,9 @@ fn sort_bits(sort: Sort) -> u32 {
         Sort::Real => {
             unreachable!("scenarios do not declare real symbols for enumeration")
         }
+        Sort::Datatype(_) => {
+            unreachable!("scenarios do not declare datatype symbols for enumeration")
+        }
     }
 }
 
@@ -428,6 +431,9 @@ fn decode_value(sort: Sort, field: u128) -> Value {
         }
         Sort::Real => {
             unreachable!("scenarios do not declare real symbols for enumeration")
+        }
+        Sort::Datatype(_) => {
+            unreachable!("scenarios do not declare datatype symbols for enumeration")
         }
     }
 }
