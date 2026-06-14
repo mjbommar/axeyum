@@ -348,43 +348,58 @@ fn isqrt_matches_native() {
 
 #[test]
 fn round_variable_matches_reference() {
-    // Variable-drop RNE rounding must match a direct reference over a battery of
-    // (m, drop) at several widths.
-    // Reference for the documented precondition `drop < n`.
-    fn ref_round(m: u128, drop: u128) -> u128 {
+    use axeyum_solver::fp::RoundingMode;
+    // Variable-drop rounding must match a direct reference for ALL five rounding
+    // modes over a battery of (m, drop) at several widths.
+    fn ref_round(m: u128, drop: u128, mode: RoundingMode, negative: bool) -> u128 {
         if drop == 0 {
             return m;
         }
         let shifted = m >> drop;
         let dropped = m & ((1u128 << drop) - 1);
         let half = 1u128 << (drop - 1);
-        if dropped > half || (dropped == half && (shifted & 1 == 1)) {
-            shifted + 1
-        } else {
-            shifted
-        }
+        let up = match mode {
+            RoundingMode::NearestEven => dropped > half || (dropped == half && shifted & 1 == 1),
+            RoundingMode::NearestAway => dropped >= half,
+            RoundingMode::TowardZero => false,
+            RoundingMode::TowardPositive => dropped != 0 && !negative,
+            RoundingMode::TowardNegative => dropped != 0 && negative,
+        };
+        if up { shifted + 1 } else { shifted }
     }
 
+    let modes = [
+        RoundingMode::NearestEven,
+        RoundingMode::NearestAway,
+        RoundingMode::TowardZero,
+        RoundingMode::TowardPositive,
+        RoundingMode::TowardNegative,
+    ];
     let mut a = TermArena::new();
     let mut state: u64 = 0xfeed_face_dead_beef;
     for n in [8u32, 16, 24] {
         for drop in 0u128..u128::from(n.min(12)) {
             let mut samples = vec![0u128, 1, 2, 3, (1u128 << (n - 1)), (1u128 << n) - 1];
-            for _ in 0..48 {
+            for _ in 0..32 {
                 state = state
                     .wrapping_mul(6_364_136_223_846_793_005)
                     .wrapping_add(1_442_695_040_888_963_407);
                 samples.push(u128::from(state) & ((1u128 << n) - 1));
             }
             for m in samples {
-                let mt = a.bv_const(n, m).unwrap();
-                let dt = a.bv_const(n, drop).unwrap();
-                let r = fp::round_variable(&mut a, mt, dt).unwrap();
-                let want = ref_round(m, drop) & ((1u128 << n) - 1);
-                assert!(
-                    matches!(eval(&a, r, &Assignment::new()), Ok(Value::Bv { value, .. }) if value == want),
-                    "round_variable(n={n}, m={m:#x}, drop={drop}) expected {want:#x}"
-                );
+                for &mode in &modes {
+                    for negative in [false, true] {
+                        let mt = a.bv_const(n, m).unwrap();
+                        let dt = a.bv_const(n, drop).unwrap();
+                        let neg_t = a.bool_const(negative);
+                        let r = fp::round_variable(&mut a, mt, dt, mode, neg_t).unwrap();
+                        let want = ref_round(m, drop, mode, negative) & ((1u128 << n) - 1);
+                        assert!(
+                            matches!(eval(&a, r, &Assignment::new()), Ok(Value::Bv { value, .. }) if value == want),
+                            "round_variable(n={n}, m={m:#x}, drop={drop}, {mode:?}, neg={negative}) want {want:#x}"
+                        );
+                    }
+                }
             }
         }
     }

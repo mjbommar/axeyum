@@ -331,7 +331,7 @@ pub fn pack_params(
 /// # Errors
 ///
 /// Returns [`IrError`] from the builders (well-formed input cannot fail).
-#[allow(clippy::similar_names, clippy::many_single_char_names)]
+#[allow(clippy::similar_names, clippy::many_single_char_names, clippy::too_many_arguments)]
 pub fn pack_value(
     arena: &mut TermArena,
     eb: u32,
@@ -339,6 +339,7 @@ pub fn pack_value(
     sign: TermId,
     m: TermId,
     e: TermId,
+    mode: RoundingMode,
 ) -> Result<TermId, IrError> {
     let Sort::BitVec(w) = arena.sort_of(m) else {
         return Err(IrError::SortMismatch {
@@ -356,7 +357,7 @@ pub fn pack_value(
     // 0<=drop<W, else (drop>=W) the value is below half-ulp → 0.
     let neg_drop = arena.bv_sub(zero_w, drop)?;
     let left = arena.bv_shl(m, neg_drop)?;
-    let rounded = round_variable(arena, m, drop)?;
+    let rounded = round_variable(arena, m, drop, mode, sign)?;
     let drop_lt0 = arena.bv_slt(drop, zero_w)?;
     let w_const = sconst(arena, w, i64::from(w))?;
     let drop_ge_w = arena.bv_sge(drop, w_const)?;
@@ -460,7 +461,7 @@ pub fn mul(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId) -> Res
     let e_prod = arena.bv_add(e_a, e_b)?;
     let sign_xor_bit = arena.bv_xor(sa, sb_bit)?;
     let sign_xor = arena.eq(sign_xor_bit, one1)?;
-    let finite = pack_value(arena, eb, sb, sign_xor, product, e_prod)?;
+    let finite = pack_value(arena, eb, sb, sign_xor, product, e_prod, RoundingMode::NearestEven)?;
 
     // Special-case flags.
     let na = is_nan(arena, fmt, a)?;
@@ -604,7 +605,7 @@ pub fn sqrt(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId
     let e_res = arena.bv_sub(e_half, shift_c)?;
 
     let plus = arena.bool_const(false);
-    let finite = pack_value(arena, eb, sb, plus, m, e_res)?;
+    let finite = pack_value(arena, eb, sb, plus, m, e_res, RoundingMode::NearestEven)?;
 
     // Special cases.
     let nan_x = is_nan(arena, fmt, x)?;
@@ -679,7 +680,7 @@ pub fn div(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId) -> Res
     };
     let sign_xor_bit = arena.bv_xor(sa, sbit)?;
     let sign_xor = arena.eq(sign_xor_bit, one1)?;
-    let finite = pack_value(arena, eb, sb, sign_xor, quot_s, e_q)?;
+    let finite = pack_value(arena, eb, sb, sign_xor, quot_s, e_q, RoundingMode::NearestEven)?;
 
     // Special cases.
     let na = is_nan(arena, fmt, a)?;
@@ -794,7 +795,7 @@ pub fn add(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId) -> Res
     let result_sign_bit = arena.ite(same_sign, sign_big, sub_sign)?;
     let result_sign = arena.eq(result_sign_bit, one1)?;
     let e_c = arena.bv_sub(e_big, guard_c)?;
-    let finite = pack_value(arena, eb, sb, result_sign, result_mag, e_c)?;
+    let finite = pack_value(arena, eb, sb, result_sign, result_mag, e_c, RoundingMode::NearestEven)?;
 
     // Special-case flags.
     let na = is_nan(arena, fmt, a)?;
@@ -1151,28 +1152,30 @@ pub fn isqrt(arena: &mut TermArena, n: TermId) -> Result<(TermId, TermId), IrErr
     Ok((res, rem))
 }
 
-/// Symbolic **round-nearest-ties-to-even by a *variable* drop amount**: rounds
-/// `m` to `round(m / 2^drop)` (both `n`-bit), the form the FP bit-blaster needs
-/// when the number of bits to drop depends on a symbolic exponent. Returns an
-/// `n`-bit term (FP significands always have the headroom for the round-up
-/// carry). `drop == 0` returns `m` unchanged.
+/// Symbolic rounding of a nonnegative magnitude `m` by a *variable* drop amount
+/// under a given [`RoundingMode`]: returns `round(m / 2^drop)` (`n`-bit), the
+/// form the FP bit-blaster needs when the number of bits to drop depends on a
+/// symbolic exponent. `negative` is the sign of the value `m` represents (a
+/// `Bool` term; consulted only for the directed modes `TowardPositive`/
+/// `TowardNegative`). `drop == 0` returns `m` unchanged.
 ///
-/// Round-up iff the dropped remainder exceeds half an ULP, or equals it and the
-/// surviving LSB is odd (ties to even).
+/// Round-up rule by mode: nearest-even — over half, or exactly half with odd
+/// LSB; nearest-away — at least half; toward-zero — never; toward-±∞ — any
+/// nonzero remainder when the sign matches the rounding direction.
 ///
-/// **Precondition:** `drop < n`. The FP bit-blaster guarantees this by sizing the
-/// working significand wider than any drop it computes (underflow is bounded by
-/// exponent clamping *before* rounding); for `drop >= n`, `2^drop` overflows the
-/// width and the result is unspecified.
+/// **Precondition:** `drop < n` (the FP bit-blaster guarantees this; for
+/// `drop >= n`, `2^drop` overflows the width and the result is unspecified).
 ///
 /// # Errors
 ///
-/// Returns [`IrError::SortMismatch`] if `m`/`drop` are not equal-width
-/// bit-vectors, or [`IrError`] from the builders.
+/// Returns [`IrError::SortMismatch`] if `m` is not a bit-vector, or [`IrError`]
+/// from the builders.
 pub fn round_variable(
     arena: &mut TermArena,
     m: TermId,
     drop: TermId,
+    mode: RoundingMode,
+    negative: TermId,
 ) -> Result<TermId, IrError> {
     let Sort::BitVec(n) = arena.sort_of(m) else {
         return Err(IrError::SortMismatch {
@@ -1187,15 +1190,29 @@ pub fn round_variable(
     let mask = arena.bv_sub(pow, one)?; // 2^drop - 1
     let dropped = arena.bv_and(m, mask)?; // bits being discarded
     let shifted = arena.bv_lshr(m, drop)?; // kept quotient
-    // surviving LSB (for ties-to-even).
     let lsb = arena.bv_and(shifted, one)?;
     let lsb_set = arena.eq(lsb, one)?;
     let gt_half = arena.bv_ugt(dropped, half)?;
     let eq_half = arena.eq(dropped, half)?;
-    let tie_even = arena.and(eq_half, lsb_set)?;
-    let above = arena.or(gt_half, tie_even)?;
-    // No rounding when drop == 0 (then dropped == 0, half == 0, which would
-    // otherwise spuriously tie).
+    let any = {
+        let is_zero = arena.eq(dropped, zero)?;
+        arena.not(is_zero)?
+    };
+    let above = match mode {
+        RoundingMode::NearestEven => {
+            let tie = arena.and(eq_half, lsb_set)?;
+            arena.or(gt_half, tie)?
+        }
+        RoundingMode::NearestAway => arena.or(gt_half, eq_half)?,
+        RoundingMode::TowardZero => arena.bool_const(false),
+        RoundingMode::TowardPositive => {
+            let pos = arena.not(negative)?;
+            arena.and(any, pos)?
+        }
+        RoundingMode::TowardNegative => arena.and(any, negative)?,
+    };
+    // No rounding when drop == 0 (then dropped == 0, which would otherwise look
+    // like a tie for the nearest modes).
     let drop_nonzero = {
         let is_zero = arena.eq(drop, zero)?;
         arena.not(is_zero)?
@@ -1690,7 +1707,8 @@ mod tests {
             let m_w = a.bv_const(w, m).unwrap();
             let e_t = sconst(&mut a, w, e).unwrap();
             let sign_t = a.bool_const(sign);
-            let packed = pack_value(&mut a, eb, sb, sign_t, m_w, e_t).unwrap();
+            let packed =
+                pack_value(&mut a, eb, sb, sign_t, m_w, e_t, RoundingMode::NearestEven).unwrap();
             let got = match eval(&a, packed, &Assignment::new()) {
                 Ok(Value::Bv { value, .. }) => value,
                 other => panic!("expected Bv, got {other:?}"),
