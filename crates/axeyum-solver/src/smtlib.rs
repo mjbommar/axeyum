@@ -11,7 +11,7 @@
 //! The trust anchor stays exactly where it is in [`crate::solve`]: a `sat` model
 //! is replayed against the original term through the ground evaluator.
 
-use axeyum_smtlib::parse_script;
+use axeyum_smtlib::{ScriptCommand, parse_script};
 
 use crate::auto::solve;
 use crate::backend::{CheckResult, SolverConfig, SolverError};
@@ -52,4 +52,51 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
         logic: script.logic,
         expected_status: script.status,
     })
+}
+
+/// Decides an **incremental** SMT-LIB script, returning one result per
+/// `check-sat` in order (ADR-0009 lifecycle, ADR-0018 front door).
+///
+/// `push`/`pop` scope the assertion stack: `(push n)` opens `n` nested scopes,
+/// `(pop n)` drops the assertions made within the `n` innermost ones, and each
+/// `check-sat` decides the conjunction of the currently-active assertions. The
+/// decision at each `check-sat` is by [`crate::solve`] over that assertion set —
+/// re-solved from scratch, which is *semantically equivalent* to incremental
+/// solving (the warm-restart backends, ADR-0009, are a performance path, not a
+/// soundness one). Declarations are global (the shared arena keeps them), which
+/// is sound for deciding the assertion sets even across `pop`.
+///
+/// # Errors
+///
+/// [`SolverError::Parse`] for malformed/unsupported text, or any
+/// [`SolverError`] from a per-`check-sat` [`crate::solve`].
+pub fn solve_smtlib_incremental(
+    input: &str,
+    config: &SolverConfig,
+) -> Result<Vec<CheckResult>, SolverError> {
+    let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    let mut stack: Vec<axeyum_ir::TermId> = Vec::new();
+    let mut scopes: Vec<usize> = Vec::new(); // assertion-stack depth at each open push
+    let mut results = Vec::new();
+    for command in &script.commands {
+        match *command {
+            ScriptCommand::Assert(t) => stack.push(t),
+            ScriptCommand::Push(n) => {
+                for _ in 0..n {
+                    scopes.push(stack.len());
+                }
+            }
+            ScriptCommand::Pop(n) => {
+                for _ in 0..n {
+                    if let Some(depth) = scopes.pop() {
+                        stack.truncate(depth);
+                    }
+                }
+            }
+            ScriptCommand::CheckSat => {
+                results.push(solve(&mut script.arena, &stack, config)?);
+            }
+        }
+    }
+    Ok(results)
 }

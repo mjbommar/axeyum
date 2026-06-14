@@ -327,8 +327,12 @@ fn parameterized_define_fun_checks_arity_and_sorts_at_call_sites() {
 
 #[test]
 fn unsupported_constructs_are_clear_errors() {
+    // `push`/`pop` are now accepted (incremental scoping); they record commands.
+    let inc = parse_script("(push 1)").expect("push is accepted");
+    assert_eq!(inc.commands.len(), 1);
+    // `check-sat-assuming` is still unsupported.
     assert!(matches!(
-        parse_script("(push 1)"),
+        parse_script("(check-sat-assuming (a))"),
         Err(SmtError::Unsupported(_))
     ));
     // n-ary functions over scalar sorts are supported (ADR-0013); a function

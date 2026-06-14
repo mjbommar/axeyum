@@ -213,3 +213,54 @@ fn uninterpreted_function_over_float_is_sat() {
         outcome.result
     );
 }
+
+/// Incremental script: `push`/`pop` scope the assertion stack and each
+/// `check-sat` decides the currently-active assertions (ADR-0009 lifecycle).
+/// x=5 (sat); push, x=6 too (unsat); pop, x<10 (sat again) -> [sat, unsat, sat].
+#[test]
+fn incremental_push_pop_multiple_check_sats() {
+    use axeyum_solver::solve_smtlib_incremental;
+    let text = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (= x #x05))
+(check-sat)
+(push 1)
+(assert (= x #x06))
+(check-sat)
+(pop 1)
+(assert (bvult x #x0a))
+(check-sat)
+";
+    let results = solve_smtlib_incremental(text, &config()).expect("incremental script decides");
+    assert_eq!(results.len(), 3, "one result per check-sat");
+    assert!(matches!(results[0], CheckResult::Sat(_)), "x=5 is sat");
+    assert_eq!(results[1], CheckResult::Unsat, "x=5 and x=6 is unsat");
+    assert!(
+        matches!(results[2], CheckResult::Sat(_)),
+        "after pop, x=5 and x<10 is sat again"
+    );
+}
+
+/// `push`/`pop` are no longer rejected by the front door, and a flat script
+/// (no push/pop) still decides as before through `solve_smtlib`.
+#[test]
+fn incremental_nested_scopes_restore_on_pop() {
+    use axeyum_solver::solve_smtlib_incremental;
+    let text = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 4))
+(push 2)
+(assert (= x #x1))
+(assert (= x #x2))
+(check-sat)
+(pop 2)
+(check-sat)
+";
+    let results = solve_smtlib_incremental(text, &config()).expect("decides");
+    assert_eq!(results[0], CheckResult::Unsat, "x=1 and x=2 contradict");
+    assert!(
+        matches!(results[1], CheckResult::Sat(_)),
+        "popping both scopes removes the contradiction"
+    );
+}

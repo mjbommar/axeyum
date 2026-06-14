@@ -16,7 +16,7 @@ mod parse;
 mod sexpr;
 mod write;
 
-pub use parse::{Script, parse_script};
+pub use parse::{Script, ScriptCommand, parse_script};
 pub use sexpr::{SExpr, read_all};
 pub use write::write_script;
 

@@ -4,8 +4,10 @@
 //! `declare-fun` (0-ary constants and n-ary uninterpreted functions, ADR-0013),
 //! `declare-const`, `define-fun` (0-ary aliases and n-ary macros), `assert`,
 //! `check-sat`, `exit`, plus `let` and `forall`/`exists` binders (ADR-0016).
-//! Incremental scripting (`push`/`pop`) is rejected with a clear error. Term
-//! conversion is iterative, so deep benchmark terms cannot overflow the stack.
+//! Incremental scripting (`push`/`pop` with multiple `check-sat`) is recorded as
+//! an ordered [`ScriptCommand`] sequence for scoped, per-`check-sat` solving
+//! (ADR-0009 lifecycle). Term conversion is iterative, so deep benchmark terms
+//! cannot overflow the stack.
 
 use std::collections::HashMap;
 
@@ -15,13 +17,30 @@ use axeyum_ir::{Rational, Sort, TermArena, TermId, TermNode};
 use crate::SmtError;
 use crate::sexpr::{SExpr, read_all};
 
+/// An ordered command from an (incremental) SMT-LIB script. Only the commands
+/// that affect the assertion stack and its `check-sat` queries are recorded;
+/// declarations mutate the shared arena directly (and stay global).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScriptCommand {
+    /// `(assert t)` — push `t` onto the current assertion scope.
+    Assert(TermId),
+    /// `(push n)` — open `n` nested assertion scopes.
+    Push(u32),
+    /// `(pop n)` — close `n` scopes, dropping assertions made within them.
+    Pop(u32),
+    /// `(check-sat)` — decide the conjunction of the currently-active assertions.
+    CheckSat,
+}
+
 /// A parsed benchmark script.
 #[derive(Debug, Default)]
 #[non_exhaustive]
 pub struct Script {
     /// Arena holding all parsed terms.
     pub arena: TermArena,
-    /// Asserted formulas, in script order.
+    /// Every asserted formula, in script order (ignoring `push`/`pop` scoping —
+    /// for the flat, non-incremental view). Use [`Script::commands`] for the
+    /// scoped, incremental sequence.
     pub assertions: Vec<TermId>,
     /// `set-logic` value, if present.
     pub logic: Option<String>,
@@ -29,6 +48,9 @@ pub struct Script {
     pub status: Option<String>,
     /// Number of `check-sat` commands seen.
     pub check_sats: u32,
+    /// The ordered `assert`/`push`/`pop`/`check-sat` sequence — the incremental
+    /// view of the script (ADR-0009 lifecycle), for per-`check-sat` solving.
+    pub commands: Vec<ScriptCommand>,
 }
 
 /// Parses an SMT-LIB script.
@@ -83,6 +105,7 @@ fn parse_command<'a>(
         "check-sat" => {
             exact_len(items, 1, head)?;
             script.check_sats += 1;
+            script.commands.push(ScriptCommand::CheckSat);
         }
         "declare-fun" => parse_declare_fun(script, items)?,
         "declare-const" => parse_declare_const(script, items)?,
@@ -91,11 +114,25 @@ fn parse_command<'a>(
             exact_len(items, 2, head)?;
             let t = parse_term(&mut script.arena, sexpr_at(items, 1)?, aliases, macros)?;
             script.assertions.push(t);
+            script.commands.push(ScriptCommand::Assert(t));
         }
+        // Incremental scoping (ADR-0009): `(push)`/`(pop)` default to one scope.
         "push" | "pop" => {
-            return Err(SmtError::Unsupported(format!(
-                "incremental command `{head}`"
-            )));
+            let count = match items.get(1) {
+                None => 1,
+                Some(e) => e
+                    .atom()
+                    .and_then(|s| s.parse::<u32>().ok())
+                    .ok_or_else(|| SmtError::Syntax(format!("`{head}` count")))?,
+            };
+            if items.len() > 2 {
+                return Err(SmtError::Syntax(format!("`{head}` takes at most one count")));
+            }
+            script.commands.push(if head == "push" {
+                ScriptCommand::Push(count)
+            } else {
+                ScriptCommand::Pop(count)
+            });
         }
         other => return Err(SmtError::Unsupported(format!("command `{other}`"))),
     }

@@ -38,6 +38,19 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-14
 
+- **Incremental SMT-LIB scripts — `push`/`pop` + multiple `check-sat`
+  (2026-06-14).** The front door previously *rejected* `push`/`pop`; it now
+  records an ordered `ScriptCommand` sequence (`Assert`/`Push`/`Pop`/`CheckSat`),
+  and `solve_smtlib_incremental` replays it over a **scoped assertion stack**,
+  deciding the active conjunction at each `check-sat` and returning one result per
+  `check-sat`. `(push n)`/`(pop n)` open/close `n` nested scopes (assertions made
+  within a popped scope are dropped); declarations stay global (sound for deciding
+  the assertion sets). Each `check-sat` re-solves from scratch via `crate::solve`
+  — semantically equivalent to incremental solving (the warm-restart backends,
+  ADR-0009, remain the performance path). `solve_smtlib` (single conjunction) is
+  unchanged. Tests: `x=5` sat → push `x=6` unsat → pop, `x<10` sat → `[sat, unsat,
+  sat]`; and nested `(push 2)…(pop 2)` restoring satisfiability.
+
 - **QF_UFFP verified — uninterpreted functions over FP (2026-06-14).** The
   `Sort::Float` cascade (ADR-0026) plus the bit-blaster preflight accepting
   `Float` already make uninterpreted functions over floating-point sorts decide
