@@ -38,6 +38,19 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-13
 
+- Architecture iteration E — Boolean-structured QF_LIA recorded 2026-06-13
+  ([ADR-0021](docs/research/09-decisions/adr-0021-boolean-structured-lia-dpll.md)):
+  `check_with_lia_dpll` (`dpll_lia.rs`) lifts the conjunctive integer simplex
+  (ADR-0020) to **arbitrary Boolean structure** (disjunctions/implications of
+  integer atoms) via a lazy-SMT loop — abstract integer atoms to props (equality
+  split to `≤ ∧ ≥`), decide the skeleton, theory-check the implied conjunction
+  with the simplex, block conflicts, repeat. The dispatcher now tries, for
+  integer queries: conjunctive simplex → this lazy loop → bounded bit-blasting.
+  Sound (sat replayed; unsat = propositionally-unsat skeleton+lemmas); self-
+  contained, leaving the real `dpll_t.rs` untouched. Tests: `(x<0 ∨ x>10) ∧ x==5`
+  and `(x==2 ∨ x==4) ∧ x==3` are **unsat**; disjunction/implication sat cases
+  replay. Follow-ups: unify the real+int DPLL(T) loops into one combined `QF_LIRA`
+  engine; conflict-core minimization; an LIA `unsat` certificate.
 - Architecture iteration D — lazy abstraction extended to division recorded
   2026-06-13: `Strategy::LazyBvAbstraction` now abstracts the **full heavy-gadget
   set** — `bvmul` plus the `bvudiv`/`bvurem`/`bvsdiv`/`bvsrem`/`bvsmod` family

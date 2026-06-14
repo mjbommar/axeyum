@@ -74,3 +74,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0018](adr-0018-smtlib-text-front-door.md) | SMT-LIB text front door (`solve_smtlib`) in the solver crate | accepted |
 | [0019](adr-0019-swappable-solving-strategies.md) | Swappable solving strategies (high-memory eager vs low-memory oracle) | accepted |
 | [0020](adr-0020-unbounded-lia-branch-and-bound.md) | Unbounded QF_LIA via branch-and-bound over the simplex | accepted |
+| [0021](adr-0021-boolean-structured-lia-dpll.md) | Boolean-structured QF_LIA via lazy-SMT over the integer simplex | accepted |

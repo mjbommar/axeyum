@@ -28,6 +28,7 @@ use axeyum_rewrite::{
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::combined::check_with_all_theories;
+use crate::dpll_lia::check_with_lia_dpll;
 use crate::dpll_t::check_with_lra_dpll;
 use crate::lia::DEFAULT_INT_WIDTH;
 use crate::lra::check_with_lia_simplex;
@@ -164,12 +165,19 @@ pub fn check_auto(
         return check_with_lra_dpll(arena, assertions, config);
     }
     if features.has_int {
-        // A conjunctive pure-integer query is decided soundly for *both* sat and
+        // Conjunctive pure-integer queries are decided soundly for *both* sat and
         // unsat by branch-and-bound over the simplex (ADR-0020); the bounded
-        // bit-blasting fallback is sat-only. Anything outside that fragment
-        // (disjunction, disequality, or mixed BV/array/UF terms) surfaces as
-        // `Unsupported` and falls through to bit-blasting, which handles it.
+        // bit-blasting fallback is sat-only. Boolean-structured pure-integer
+        // queries (disjunctions/implications of integer atoms) are decided by the
+        // lazy-SMT loop over that simplex. Anything outside the integer-arithmetic
+        // fragment (mixed BV/array/UF terms) surfaces as `Unsupported` and falls
+        // through to bit-blasting, which handles it.
         match check_with_lia_simplex(arena, assertions) {
+            Ok(result) => return Ok(result),
+            Err(SolverError::Unsupported(_)) => {}
+            Err(other) => return Err(other),
+        }
+        match check_with_lia_dpll(arena, assertions, config) {
             Ok(result) => return Ok(result),
             Err(SolverError::Unsupported(_)) => {}
             Err(other) => return Err(other),
