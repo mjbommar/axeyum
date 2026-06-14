@@ -44,6 +44,19 @@ Because the result is ordinary QF_BV, **solving and model replay reuse the
 existing sound, replayed bit-vector path with no changes** — an FP `sat` model is
 a bit-vector model, replayed against the original term by the ground evaluator.
 
+**Rounded arithmetic — constant folding first (`add_rne`/`sub_rne`/`mul_rne`/
+`div_rne`/`sqrt_rne`).** For *constant* F32/F64 operands, rounded arithmetic is
+computed by delegating to the platform's native IEEE 754 arithmetic (which is
+round-nearest-even and correct), so the folds are **sound by construction** with
+no hand-written rounding, and compose with the symbolic predicates (e.g.
+`fp.lt(1.0 + 2.0, x)` folds the add to `3.0` then solves the comparison). This
+native arithmetic is *also the differential oracle* for the future symbolic
+bit-blaster: validate the blaster against it (exhaustively on small formats)
+before trusting it for `unsat`. Symbolic FP arithmetic and non-default rounding
+modes are deliberately **not** done yet — a bit-blasted rounding encoding cannot
+be replay-guarded (replay would only re-check the encoding), so a subtle bug is a
+wrong `unsat`; it needs the validation harness, not a rushed encoding.
+
 ## Evidence
 
 - Z3/cvc5 decide QF_FP by bit-blasting; the bit-level encodings of

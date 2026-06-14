@@ -50,10 +50,16 @@ Last updated: 2026-06-14
   value (NaN unordered, `±0` equal) via the monotone-key transform,
   `isNegative`/`isPositive` exclude NaN and zeros. Tests (`tests/fp.rs`): concrete
   f32 patterns via the evaluator + symbolic `fp.lt(x,x)` unsat and `1.0 < x` sat
-  through the solver. **Deferred (next FP layer):** rounded arithmetic
-  (`add`/`mul`/`div`/`sqrt`/`fma`/`roundToIntegral`) and conversions — each needs
-  careful per-rounding-mode encoding + differential validation; a first-class
-  `Sort::Float` is the upgrade path if sort-level FP typing is wanted.
+  through the solver. **Rounded arithmetic — constant folding** (`add_rne`/
+  `sub_rne`/`mul_rne`/`div_rne`/`sqrt_rne`): for constant F32/F64 operands,
+  delegates to native IEEE 754 (round-nearest-even, correct), so sound by
+  construction; composes with the symbolic predicates (`fp.lt(1.0+2.0, x)` folds
+  the add then solves) and is the **differential oracle** for the future symbolic
+  bit-blaster. **Deferred (next FP layer):** *symbolic* rounded arithmetic and
+  non-default rounding modes — a bit-blasted rounding encoding can't be
+  replay-guarded, so it needs the validation harness (exhaustive small-format
+  diff against native) before it can be trusted for `unsat`; also `fma`/
+  `roundToIntegral`, conversions, and (optionally) a first-class `Sort::Float`.
 - **Datatype SOLVING — non-recursive theory complete (2026-06-14, ADR-0022
   step B slices 1–2).** Building on the iteration-Q IR foundation, datatypes now
   *solve*, not just parse:

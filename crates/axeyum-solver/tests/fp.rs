@@ -165,6 +165,72 @@ fn min_max() {
 }
 
 #[test]
+fn constant_arithmetic_folds_round_nearest_even() {
+    let mut a = TermArena::new();
+    let one = c(&mut a, ONE);
+    let two = c(&mut a, TWO);
+    let four = c(&mut a, 0x4080_0000); // 4.0
+    let half = 0x3F00_0000u128; // 0.5
+    let three = 0x4040_0000u128; // 3.0
+    let six = 0x40C0_0000u128; // 6.0
+
+    let bits = |a: &TermArena, t: Option<axeyum_ir::TermId>, want: u128, what: &str| {
+        let t = t.unwrap_or_else(|| panic!("{what}: expected a folded constant"));
+        assert!(
+            matches!(eval(a, t, &Assignment::new()), Ok(Value::Bv { value, .. }) if value == want),
+            "{what}"
+        );
+    };
+
+    let r = fp::add_rne(&mut a, F32, one, two).unwrap();
+    bits(&a, r, three, "1.0 + 2.0 == 3.0");
+    let r = fp::sub_rne(&mut a, F32, two, one).unwrap();
+    bits(&a, r, ONE, "2.0 - 1.0 == 1.0");
+    let r = fp::mul_rne(&mut a, F32, two, four).unwrap();
+    bits(&a, r, 0x4100_0000, "2.0 * 4.0 == 8.0");
+    let three_c = c(&mut a, three);
+    let r = fp::mul_rne(&mut a, F32, two, three_c).unwrap();
+    bits(&a, r, six, "2.0 * 3.0 == 6.0");
+    let r = fp::div_rne(&mut a, F32, one, two).unwrap();
+    bits(&a, r, half, "1.0 / 2.0 == 0.5");
+    let r = fp::sqrt_rne(&mut a, F32, four).unwrap();
+    bits(&a, r, TWO, "sqrt(4.0) == 2.0");
+
+    // F64 (1.0 + 2.0 == 3.0).
+    let d1 = a.bv_const(64, 0x3FF0_0000_0000_0000).unwrap();
+    let d2 = a.bv_const(64, 0x4000_0000_0000_0000).unwrap();
+    let r = fp::add_rne(&mut a, FloatFormat::F64, d1, d2).unwrap();
+    bits(&a, r, 0x4008_0000_0000_0000, "1.0 + 2.0 == 3.0 (f64)");
+
+    // Non-constant operand: not folded.
+    let xs = a.declare("x", axeyum_ir::Sort::BitVec(32)).unwrap();
+    let x = a.var(xs);
+    assert!(
+        fp::add_rne(&mut a, F32, x, one).unwrap().is_none(),
+        "symbolic operand is not folded"
+    );
+}
+
+#[test]
+fn folded_arithmetic_composes_with_symbolic_predicates() {
+    // fp.lt(1.0 + 2.0, x) with x symbolic: the add folds to 3.0, leaving a
+    // symbolic comparison -> sat (e.g. x = 4.0).
+    let mut a = TermArena::new();
+    let one = c(&mut a, ONE);
+    let two = c(&mut a, TWO);
+    let three = fp::add_rne(&mut a, F32, one, two).unwrap().unwrap();
+    let xs = a.declare("x", axeyum_ir::Sort::BitVec(32)).unwrap();
+    let x = a.var(xs);
+    let lt = fp::lt(&mut a, F32, three, x).unwrap();
+
+    let result = solve(&mut a, &[lt], &SolverConfig::default()).unwrap();
+    assert!(
+        matches!(result, CheckResult::Sat(_)),
+        "3.0 < x is satisfiable; got {result:?}"
+    );
+}
+
+#[test]
 fn lt_is_irreflexive_symbolically() {
     // For every (non-NaN or NaN) x, fp.lt(x, x) is false -> asserting it is unsat.
     // This goes through the bit-vector solver over a free 32-bit `x`.

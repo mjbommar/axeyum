@@ -28,7 +28,7 @@
 //! [`IrError`] from an IR builder (which cannot occur for well-formed input).
 #![allow(clippy::missing_errors_doc)] // uniform contract documented above
 
-use axeyum_ir::{IrError, Sort, TermArena, TermId};
+use axeyum_ir::{IrError, Sort, TermArena, TermId, TermNode};
 
 /// An IEEE 754 binary format: `exp_bits` exponent bits and `sig_bits`
 /// significand bits (the latter *including* the hidden bit). The bit width of a
@@ -269,6 +269,117 @@ pub fn max(
     y: TermId,
 ) -> Result<TermId, IrError> {
     select_by_order(arena, fmt, x, y, false)
+}
+
+// --- constant folding (round-nearest-even arithmetic) -------------------------
+//
+// Rounded FP arithmetic (`add`/`sub`/`mul`/`div`/`sqrt`) is, for *constant*
+// F32/F64 operands, computed by delegating to the platform's native IEEE 754
+// arithmetic — which is round-nearest-even and correct — so these folds are
+// sound by construction and need no hand-written rounding. They also serve as
+// the differential oracle for a future *symbolic* FP bit-blaster (validate the
+// blaster against native arithmetic before trusting it for solving).
+//
+// Each returns `Ok(Some(result))` when both operands are bit-vector constants in
+// F32/F64, and `Ok(None)` otherwise (symbolic operands, other formats, or other
+// rounding modes are not folded here — that is the next, separately-validated
+// unit).
+
+/// Constant-folds `fp.add` (round-nearest-even) over F32/F64 constants.
+pub fn add_rne(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+    y: TermId,
+) -> Result<Option<TermId>, IrError> {
+    fold_bin(arena, fmt, x, y, |a, b| a + b, |a, b| a + b)
+}
+
+/// Constant-folds `fp.sub` (round-nearest-even) over F32/F64 constants.
+pub fn sub_rne(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+    y: TermId,
+) -> Result<Option<TermId>, IrError> {
+    fold_bin(arena, fmt, x, y, |a, b| a - b, |a, b| a - b)
+}
+
+/// Constant-folds `fp.mul` (round-nearest-even) over F32/F64 constants.
+pub fn mul_rne(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+    y: TermId,
+) -> Result<Option<TermId>, IrError> {
+    fold_bin(arena, fmt, x, y, |a, b| a * b, |a, b| a * b)
+}
+
+/// Constant-folds `fp.div` (round-nearest-even) over F32/F64 constants.
+pub fn div_rne(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+    y: TermId,
+) -> Result<Option<TermId>, IrError> {
+    fold_bin(arena, fmt, x, y, |a, b| a / b, |a, b| a / b)
+}
+
+/// Constant-folds `fp.sqrt` (round-nearest-even) over an F32/F64 constant.
+pub fn sqrt_rne(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+) -> Result<Option<TermId>, IrError> {
+    let Some(xv) = const_bits(arena, x) else {
+        return Ok(None);
+    };
+    let bits = if fmt == FloatFormat::F32 {
+        u128::from(f32::from_bits(low32(xv)).sqrt().to_bits())
+    } else if fmt == FloatFormat::F64 {
+        u128::from(f64::from_bits(low64(xv)).sqrt().to_bits())
+    } else {
+        return Ok(None);
+    };
+    Ok(Some(arena.bv_const(fmt.width(), bits)?))
+}
+
+fn fold_bin(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+    y: TermId,
+    op32: impl Fn(f32, f32) -> f32,
+    op64: impl Fn(f64, f64) -> f64,
+) -> Result<Option<TermId>, IrError> {
+    let (Some(xv), Some(yv)) = (const_bits(arena, x), const_bits(arena, y)) else {
+        return Ok(None);
+    };
+    let bits = if fmt == FloatFormat::F32 {
+        let r = op32(f32::from_bits(low32(xv)), f32::from_bits(low32(yv)));
+        u128::from(r.to_bits())
+    } else if fmt == FloatFormat::F64 {
+        let r = op64(f64::from_bits(low64(xv)), f64::from_bits(low64(yv)));
+        u128::from(r.to_bits())
+    } else {
+        return Ok(None);
+    };
+    Ok(Some(arena.bv_const(fmt.width(), bits)?))
+}
+
+fn const_bits(arena: &TermArena, t: TermId) -> Option<u128> {
+    match arena.node(t) {
+        TermNode::BvConst { value, .. } => Some(*value),
+        _ => None,
+    }
+}
+
+fn low32(v: u128) -> u32 {
+    u32::try_from(v & 0xFFFF_FFFF).unwrap_or(0)
+}
+
+fn low64(v: u128) -> u64 {
+    u64::try_from(v & 0xFFFF_FFFF_FFFF_FFFF).unwrap_or(0)
 }
 
 // --- internal helpers ---------------------------------------------------------
