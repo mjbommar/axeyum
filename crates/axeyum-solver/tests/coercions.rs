@@ -197,3 +197,26 @@ fn to_real_vs_constant_is_exactly_decided() {
     assert!(matches!(solve_auto(&mut a, &[le, ge]), CheckResult::Sat(_)),
         "to_real(i)<=2.9 ∧ i>=0 sat");
 }
+
+#[test]
+fn to_int_vs_constant_is_exactly_decided() {
+    // to_int(r) == 3 AND r == 3.5 : sat (floor(3.5) = 3).
+    let mut a = TermArena::new();
+    let r = a.declare("r", Sort::Real).map(|s| a.var(s)).unwrap();
+    let j = a.real_to_int(r).unwrap();
+    let three = a.int_const(3);
+    let je = a.eq(j, three).unwrap();
+    let half7 = a.real_const(axeyum_ir::Rational::new(7, 2));
+    let re = a.eq(r, half7).unwrap();
+    assert!(matches!(solve_auto(&mut a, &[je, re]), CheckResult::Sat(_)), "to_int(3.5)=3 sat");
+
+    // to_int(r) >= 5 AND r < 5.0 : unsat (floor(r)>=5 needs r>=5).
+    let mut a = TermArena::new();
+    let r = a.declare("r", Sort::Real).map(|s| a.var(s)).unwrap();
+    let j = a.real_to_int(r).unwrap();
+    let five = a.int_const(5);
+    let ge = a.int_ge(j, five).unwrap();
+    let five_r = a.real_const(axeyum_ir::Rational::integer(5));
+    let lt = a.real_lt(r, five_r).unwrap();
+    assert!(matches!(solve_auto(&mut a, &[ge, lt]), CheckResult::Unsat), "to_int(r)>=5 ∧ r<5 unsat");
+}

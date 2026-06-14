@@ -197,7 +197,10 @@ pub fn check_auto(
     // integer comparison (`to_real(i) ≤ c ⟺ i ≤ ⌊c⌋`, etc.), so rewrite those
     // *exactly* to pure-integer atoms — eliminating the coercion completely (no
     // relaxation, no `unknown`) for the common "coerced int vs literal" pattern.
-    let assertions = &eliminate_to_real_const_compare(arena, assertions)?;
+    // Dually, `to_int(r) = ⌊r⌋` compared to an integer constant rewrites to a
+    // pure-real comparison (`to_int(r) ≤ c ⟺ r < c+1`, etc.).
+    let r1 = eliminate_to_real_const_compare(arena, assertions)?;
+    let assertions = &eliminate_to_int_const_compare(arena, &r1)?;
 
     // Int↔Real coercions (`to_real`/`to_int`/`is_int`) couple the int and real
     // theories; a complete decision needs Nelson-Oppen. We relax each coercion to
@@ -767,6 +770,80 @@ fn eliminate_to_real_const_compare(
                 } else {
                     arena.bool_const(false)
                 }
+            }
+        };
+        map.insert(t, new);
+    }
+    if map.is_empty() {
+        return Ok(assertions.to_vec());
+    }
+    let mut memo: HashMap<TermId, TermId> = HashMap::new();
+    let mut out = Vec::with_capacity(assertions.len());
+    for &a in assertions {
+        out.push(replace_subterms(arena, a, &map, &mut memo).map_err(err)?);
+    }
+    Ok(out)
+}
+
+/// Rewrites comparisons between `to_int(r)` (= ⌊r⌋) and an integer constant into
+/// the equivalent pure-real atom (exact): `to_int(r) ≤ c ⟺ r < c+1`,
+/// `< c ⟺ r < c`, `≥ c ⟺ r ≥ c`, `> c ⟺ r ≥ c+1`, `= c ⟺ c ≤ r < c+1`.
+/// Eliminates the coercion for the common "floor vs integer literal" pattern.
+fn eliminate_to_int_const_compare(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<Vec<TermId>, SolverError> {
+    let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
+    let mut map: HashMap<TermId, TermId> = HashMap::new();
+    let mut seen = BTreeSet::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    while let Some(t) = stack.pop() {
+        if !seen.insert(t) {
+            continue;
+        }
+        let TermNode::App { op, args } = arena.node(t) else {
+            continue;
+        };
+        let (op, args) = (*op, args.clone());
+        stack.extend(args.iter().copied());
+        if !matches!(op, Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe | Op::Eq) || args.len() != 2 {
+            continue;
+        }
+        let to_int_arg = |t: TermId| match arena.node(t) {
+            TermNode::App { op: Op::RealToInt, args } => Some(args[0]),
+            _ => None,
+        };
+        let int_const = |t: TermId| match arena.node(t) {
+            TermNode::IntConst(n) => Some(*n),
+            _ => None,
+        };
+        let (r, c, flipped) = if let (Some(r), Some(c)) = (to_int_arg(args[0]), int_const(args[1])) {
+            (r, c, false)
+        } else if let (Some(c), Some(r)) = (int_const(args[0]), to_int_arg(args[1])) {
+            (r, c, true)
+        } else {
+            continue;
+        };
+        let rel = match (op, flipped) {
+            (Op::IntLt, false) | (Op::IntGt, true) => "lt",
+            (Op::IntLe, false) | (Op::IntGe, true) => "le",
+            (Op::IntGt, false) | (Op::IntLt, true) => "gt",
+            (Op::IntGe, false) | (Op::IntLe, true) => "ge",
+            (Op::Eq, _) => "eq",
+            _ => continue,
+        };
+        let c_real = arena.real_const(axeyum_ir::Rational::integer(c));
+        let c_plus_real = arena.real_const(axeyum_ir::Rational::integer(c + 1));
+        let new = match rel {
+            "lt" => arena.real_lt(r, c_real).map_err(err)?, // ⌊r⌋<c ⟺ r<c
+            "le" => arena.real_lt(r, c_plus_real).map_err(err)?, // ⌊r⌋≤c ⟺ r<c+1
+            "ge" => arena.real_ge(r, c_real).map_err(err)?, // ⌊r⌋≥c ⟺ r≥c
+            "gt" => arena.real_ge(r, c_plus_real).map_err(err)?, // ⌊r⌋>c ⟺ r≥c+1
+            _ => {
+                // ⌊r⌋ = c ⟺ c ≤ r < c+1
+                let ge = arena.real_ge(r, c_real).map_err(err)?;
+                let lt = arena.real_lt(r, c_plus_real).map_err(err)?;
+                arena.and(ge, lt).map_err(err)?
             }
         };
         map.insert(t, new);

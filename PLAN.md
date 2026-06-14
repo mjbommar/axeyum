@@ -648,8 +648,10 @@ Last updated: 2026-06-14
   rational constant is now decided *exactly***: such comparisons rewrite to the
   order-isomorphic integer atom (`to_real(i)≤c ⟺ i≤⌊c⌋`, `=3.5 ⟺ false`, …),
   eliminating the coercion with no bounds needed — the common "coerced int vs
-  literal" pattern is complete. A complete Nelson-Oppen combination (`to_real`
-  against non-constant reals) remains future.
+  literal" pattern is complete. Dually, **`to_int(r) = ⌊r⌋` vs an integer constant
+  rewrites to a pure-real atom** (`to_int(r)≤c ⟺ r<c+1`, `=c ⟺ c≤r<c+1`, …),
+  also exact (tests: `to_int(3.5)=3` sat, `to_int(r)≥5 ∧ r<5` unsat). A complete
+  Nelson-Oppen combination (coercions against non-constant operands) remains future.
 - **Arithmetic `ite` (2026-06-14).** Int/Real-sorted `ite(c,a,b)` is lifted to the
   Boolean level at the `check_auto` dispatch entry (`lift_arith_ite`): a fresh `t`
   plus `c→t=a ∧ ¬c→t=b`, an exact equisatisfiable rewrite so the linear-arith
