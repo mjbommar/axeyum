@@ -112,8 +112,16 @@ Last updated: 2026-06-14
   four bilinear inequalities (valid for all operands in range) are asserted,
   deciding e.g. `0≤x,y≤2 ∧ x·y>4` unsat and `0≤x≤2 ∧ x²>2x` unsat (the upper
   envelope is `r≤2x`) — cases the sign rules cannot. Sound (only valid lemmas).
-  Remaining: tangent lemmas at refinement points for tighter convergence. 11
-  tests in `tests/nra.rs`.
+  **Spatial branch-and-bound** now added: when the root McCormick relaxation is
+  `unknown`, the widest bounded operand interval is halved and each subdomain
+  re-solved (depth ≤ 6), re-deriving McCormick on the tighter box. A subdomain
+  `unsat` is sound (its interval constraints are assertion-implied and a split's
+  two halves exactly cover the parent's range), so both-halves-unsat ⇒ `unsat`;
+  a replayed `sat` transfers; an unbounded operand cannot be branched → `unknown`
+  (never a wrong `unsat`). Decides gapped nonlinear problems McCormick alone
+  can't: `x²<2x−2` on `[−5,5]` and `x·y>9` on `[1,3]²` (both `unsat`), while a
+  feasible `x²>2x+2` stays `sat` and the unbounded `x²<2x−2` stays `unknown`.
+  14 tests in `tests/nra.rs`.
 
 - **Floating point — non-arithmetic core (2026-06-14, ADR-0023).** New
   `axeyum-solver::fp` module: IEEE 754 classification (`is_nan`/`is_infinite`/

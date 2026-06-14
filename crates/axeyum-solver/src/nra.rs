@@ -34,13 +34,18 @@ use crate::model::Model;
 /// `unknown` (the loop adds exact point lemmas for inconsistent leaf products).
 const MAX_REFINE_ROUNDS: usize = 12;
 
+/// Maximum spatial branch-and-bound depth before a subdomain is reported
+/// `unknown` (each level halves one variable's interval).
+const MAX_BNB_DEPTH: usize = 6;
+
+type Bounds = HashMap<TermId, (axeyum_ir::Rational, axeyum_ir::Rational)>;
+
 /// Decides a (possibly nonlinear) real-arithmetic query by linear abstraction of
-/// nonlinear products, LRA solving, and replay.
+/// nonlinear products, `McCormick` envelopes, spatial branch-and-bound, and replay.
 ///
 /// # Errors
 ///
 /// Returns [`SolverError`] from the rewrite or the LRA solver.
-#[allow(clippy::too_many_lines)]
 pub fn check_with_nra(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -69,62 +74,146 @@ pub fn check_with_nra(
         triples.push((pa, pb, var));
     }
     let mut memo: HashMap<TermId, TermId> = HashMap::new();
-    let mut reduced = Vec::with_capacity(assertions.len());
+
+    // `base`: the abstracted assertions plus the sign/zero product lemmas (valid
+    // for `r = a·b`). McCormick envelopes and interval bounds are added per
+    // branch-and-bound node, since they depend on the (shrinking) variable box.
+    let mut base = Vec::with_capacity(assertions.len());
     for &assertion in assertions {
-        reduced.push(
+        base.push(
             replace_subterms(arena, assertion, &map, &mut memo)
                 .map_err(|e| SolverError::Backend(e.to_string()))?,
         );
     }
-
-    // Strengthen the relaxation with *sound* linear facts about each product
-    // (sign and zero rules). These are valid for `r = a·b`, so they preserve the
-    // relaxation (original models still satisfy them) while letting LRA decide
-    // sign-based nonlinear queries — e.g. `x·x < 0` is now unsat (x² ≥ 0).
     for &(pa, pb, r) in &triples {
         for lemma in product_lemmas(arena, pa, pb, r)? {
             let rewritten = replace_subterms(arena, lemma, &map, &mut memo)
                 .map_err(|e| SolverError::Backend(e.to_string()))?;
-            reduced.push(rewritten);
+            base.push(rewritten);
         }
     }
 
-    // McCormick envelopes: when both operands of a product have constant lower and
-    // upper bounds (read off the top-level assertions), add the four bilinear
-    // relaxation inequalities. They are valid for every `a∈[aL,aU], b∈[bL,bU]`
-    // with `r=a·b`, so they preserve the relaxation while bounding the product —
-    // deciding e.g. `0≤x≤2 ∧ 0≤y≤2 ∧ x·y>4` as `unsat` (the sign rules cannot).
-    for &(pa, pb, r) in &triples {
-        let (Some(a_lo), Some(a_hi)) = extract_bounds(arena, assertions, pa) else {
-            continue;
-        };
-        let (Some(b_lo), Some(b_hi)) = extract_bounds(arena, assertions, pb) else {
+    // Initial box: constant bounds on each product-operand *variable*, read off
+    // the top-level assertions. These are assertion-implied, so the root box
+    // covers every model (unbounded operands are simply left unrestricted).
+    let mut bounds: Bounds = HashMap::new();
+    for &(pa, pb, _) in &triples {
+        for operand in [pa, pb] {
+            if !matches!(arena.node(operand), TermNode::Symbol(_)) || bounds.contains_key(&operand)
+            {
+                continue;
+            }
+            if let (Some(lo), Some(hi)) = extract_bounds(arena, assertions, operand) {
+                bounds.insert(operand, (lo, hi));
+            }
+        }
+    }
+
+    branch_and_bound(arena, &base, &triples, &products, assertions, config, &bounds, 0)
+}
+
+/// Spatial branch-and-bound over the variable box. Solves the `McCormick`
+/// relaxation on the current box; on `unknown`, halves the widest variable's
+/// interval and recurses. `sat` (a replayed model) and `unsat` (the `McCormick`
+/// relaxation is itself unsat — sound, since the box's interval constraints are
+/// implied by the assertions and a split's two halves exactly cover the parent's
+/// range for that bounded variable) both transfer; only an undecided subdomain
+/// at the depth limit yields `unknown`.
+#[allow(clippy::too_many_arguments)]
+fn branch_and_bound(
+    arena: &mut TermArena,
+    base: &[TermId],
+    triples: &[(TermId, TermId, TermId)],
+    products: &BTreeSet<TermId>,
+    original: &[TermId],
+    config: &SolverConfig,
+    bounds: &Bounds,
+    depth: usize,
+) -> Result<CheckResult, SolverError> {
+    let unknown = || {
+        Ok(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Incomplete,
+            detail: "nonlinear abstraction: branch-and-bound did not converge".to_owned(),
+        }))
+    };
+
+    match solve_relaxation(arena, base, triples, products, original, bounds, config)? {
+        CheckResult::Sat(model) => Ok(CheckResult::Sat(model)),
+        CheckResult::Unsat => Ok(CheckResult::Unsat),
+        CheckResult::Unknown(reason) => {
+            if depth >= MAX_BNB_DEPTH {
+                return Ok(CheckResult::Unknown(reason));
+            }
+            // Halve the widest splittable interval; the two halves cover it.
+            let Some((var, lo, hi)) = widest_split(bounds) else {
+                return Ok(CheckResult::Unknown(reason));
+            };
+            let Some(mid) = rat_mid(lo, hi) else {
+                return Ok(CheckResult::Unknown(reason)); // overflow → cannot split
+            };
+            let mut any_unknown = false;
+            for (sub_lo, sub_hi) in [(lo, mid), (mid, hi)] {
+                let mut child = bounds.clone();
+                child.insert(var, (sub_lo, sub_hi));
+                match branch_and_bound(
+                    arena, base, triples, products, original, config, &child, depth + 1,
+                )? {
+                    CheckResult::Sat(model) => return Ok(CheckResult::Sat(model)),
+                    CheckResult::Unsat => {}
+                    CheckResult::Unknown(_) => any_unknown = true,
+                }
+            }
+            if any_unknown { unknown() } else { Ok(CheckResult::Unsat) }
+        }
+    }
+}
+
+/// Solve the `McCormick` relaxation on one box: `base` plus the interval
+/// constraints and `McCormick` envelopes for `bounds`, run through the
+/// point-lemma refinement loop. Returns a genuine (replayed) `sat`, a relaxation
+/// `unsat`, or `unknown` for this subdomain.
+#[allow(clippy::too_many_arguments)]
+fn solve_relaxation(
+    arena: &mut TermArena,
+    base: &[TermId],
+    triples: &[(TermId, TermId, TermId)],
+    products: &BTreeSet<TermId>,
+    original: &[TermId],
+    bounds: &Bounds,
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    let mut reduced = base.to_vec();
+    // Interval constraints `lo ≤ v ≤ hi` for this box.
+    for (&var, &(lo, hi)) in bounds {
+        let lo_c = arena.real_const(lo);
+        let hi_c = arena.real_const(hi);
+        let ge = arena.real_ge(var, lo_c)?;
+        let le = arena.real_le(var, hi_c)?;
+        reduced.push(ge);
+        reduced.push(le);
+    }
+    // McCormick envelopes using this box's bounds.
+    for &(pa, pb, r) in triples {
+        let (Some(&(a_lo, a_hi)), Some(&(b_lo, b_hi))) = (bounds.get(&pa), bounds.get(&pb)) else {
             continue;
         };
         for lemma in mccormick_lemmas(arena, pa, pb, a_lo, a_hi, b_lo, b_hi, r)? {
-            let rewritten = replace_subterms(arena, lemma, &map, &mut memo)
-                .map_err(|e| SolverError::Backend(e.to_string()))?;
-            reduced.push(rewritten);
+            reduced.push(lemma);
         }
     }
 
-    // Refinement loop (incremental linearization, bounded): solve the linear
-    // abstraction; replay the candidate; on failure add exact point lemmas
-    // `(a = a0 ∧ b = b0) → r = a0·b0` for the *leaf* products at the candidate's
-    // values (sound — those are the true products there) and re-solve. This
-    // decides e.g. `x·y = 6 ∧ x = 2 ∧ y = 4` (unsat). Bounded rounds → `unknown`.
+    // Incremental-linearization refinement: solve, replay, add exact point
+    // lemmas for inconsistent leaf products, re-solve. Bounded rounds → unknown.
     for _ in 0..MAX_REFINE_ROUNDS {
         let result = check_with_lra_dpll(arena, &reduced, config)?;
         let CheckResult::Sat(model) = result else {
-            // `unsat`/`unknown` transfer: the abstraction is a relaxation.
-            return Ok(result);
+            return Ok(result); // unsat/unknown transfer (the box is a relaxation)
         };
         let assignment = model.to_assignment();
-        if assertions
+        if original
             .iter()
             .all(|&a| matches!(eval(arena, a, &assignment), Ok(Value::Bool(true))))
         {
-            // Genuine model: project to the original symbols (drop fresh vars).
             let mut out = Model::new();
             for (symbol, name, _sort) in arena.symbols() {
                 if name.starts_with("!nra_") {
@@ -136,11 +225,10 @@ pub fn check_with_nra(
             }
             return Ok(CheckResult::Sat(out));
         }
-        // Refine: add point lemmas for inconsistent leaf products.
         let mut added = false;
-        for &(pa, pb, r) in &triples {
+        for &(pa, pb, r) in triples {
             if products.contains(&pa) || products.contains(&pb) {
-                continue; // only leaf products have well-defined operand values here
+                continue;
             }
             let (Some(a0), Some(b0), Some(r0)) = (
                 real_value(arena, pa, &assignment),
@@ -153,18 +241,18 @@ pub fn check_with_nra(
                 a0.numerator().checked_mul(b0.numerator()),
                 a0.denominator().checked_mul(b0.denominator()),
             ) else {
-                continue; // would overflow the i128 rational; skip
+                continue;
             };
             let prod = axeyum_ir::Rational::new(num, den);
             if r0 == prod {
-                continue; // already consistent
+                continue;
             }
             let lemma = point_lemma(arena, pa, a0, pb, b0, r, prod)?;
             reduced.push(lemma);
             added = true;
         }
         if !added {
-            break; // cannot refine further
+            break;
         }
     }
     Ok(CheckResult::Unknown(UnknownReason {
@@ -173,6 +261,43 @@ pub fn check_with_nra(
                  round bound"
             .to_owned(),
     }))
+}
+
+/// The bounded variable with the widest interval (`hi > lo`), for splitting.
+fn widest_split(bounds: &Bounds) -> Option<(TermId, axeyum_ir::Rational, axeyum_ir::Rational)> {
+    let mut best: Option<(TermId, axeyum_ir::Rational, axeyum_ir::Rational)> = None;
+    let mut best_w: Option<axeyum_ir::Rational> = None;
+    for (&var, &(lo, hi)) in bounds {
+        let Some(w) = rat_width(lo, hi) else { continue };
+        if w <= axeyum_ir::Rational::integer(0) {
+            continue; // already a point
+        }
+        if best_w.is_none_or(|bw| w > bw) {
+            best_w = Some(w);
+            best = Some((var, lo, hi));
+        }
+    }
+    best
+}
+
+/// Midpoint `(lo + hi) / 2`, `None` on i128 overflow.
+fn rat_mid(lo: axeyum_ir::Rational, hi: axeyum_ir::Rational) -> Option<axeyum_ir::Rational> {
+    let num = lo
+        .numerator()
+        .checked_mul(hi.denominator())?
+        .checked_add(hi.numerator().checked_mul(lo.denominator())?)?;
+    let den = lo.denominator().checked_mul(hi.denominator())?.checked_mul(2)?;
+    Some(axeyum_ir::Rational::new(num, den))
+}
+
+/// Interval width `hi − lo`, `None` on i128 overflow.
+fn rat_width(lo: axeyum_ir::Rational, hi: axeyum_ir::Rational) -> Option<axeyum_ir::Rational> {
+    let num = hi
+        .numerator()
+        .checked_mul(lo.denominator())?
+        .checked_sub(lo.numerator().checked_mul(hi.denominator())?)?;
+    let den = hi.denominator().checked_mul(lo.denominator())?;
+    Some(axeyum_ir::Rational::new(num, den))
 }
 
 /// The model value of a real term, if it evaluates to a `Real`.

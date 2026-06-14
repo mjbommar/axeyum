@@ -73,9 +73,15 @@ It is routed automatically from the dispatcher's real path.
   envelopes** are also implemented: when both operands of a product have constant
   bounds read off the top-level assertions (`a∈[aL,aU], b∈[bL,bU]`), the four
   valid bilinear inequalities are asserted, deciding e.g. `0≤x,y≤2 ∧ x·y>4`
-  (unsat) and `0≤x≤2 ∧ x²>2x` (unsat). Tangent planes at refinement points,
-  monotonicity, and full convergence remain — not a change to the soundness basis
-  (only valid lemmas are ever added).
+  (unsat) and `0≤x≤2 ∧ x²>2x` (unsat). **Spatial branch-and-bound** drives
+  convergence: on an `unknown` box, the widest bounded variable's interval is
+  halved and each subdomain re-solved with tighter McCormick envelopes (depth
+  ≤ 6). A subdomain `unsat` is sound (interval constraints are assertion-implied;
+  a split's halves cover the parent range), so both-halves-unsat ⇒ `unsat`;
+  unbounded operands degrade to `unknown`, never a wrong `unsat`. This decides
+  gapped nonlinear queries (e.g. `x²<2x−2` on `[−5,5]`, `x·y>9` on `[1,3]²`).
+  Monotonicity lemmas and a complete nonlinear core remain — not a change to the
+  soundness basis (only valid lemmas / domain splits are added).
 
 ## Consequences
 

@@ -176,3 +176,77 @@ fn mccormick_feasible_product_is_sat() {
     let r = check_with_nra(&mut a, &[xl, xu, yl, yu, eq4], &SolverConfig::default()).unwrap();
     assert!(matches!(r, CheckResult::Sat(_)), "x*y=4 on [0,2]^2 must be sat, got {r:?}");
 }
+
+#[test]
+fn bnb_square_strict_gap_is_unsat() {
+    // -5<=x<=5 ∧ x*x < 2x - 2 : x^2 - 2x + 2 = (x-1)^2 + 1 >= 1 > 0, so unsat
+    // with a strict gap. The root McCormick envelope on [-5,5] is too loose;
+    // spatial branch-and-bound subdivides until each subdomain refutes it.
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let neg5 = a.real_const(Rational::integer(-5));
+    let five = a.real_const(Rational::integer(5));
+    let two = a.real_const(Rational::integer(2));
+    let xl = a.real_ge(x, neg5).unwrap();
+    let xu = a.real_le(x, five).unwrap();
+    let sq = a.real_mul(x, x).unwrap();
+    let two_x = a.real_mul(two, x).unwrap();
+    let rhs = a.real_sub(two_x, two).unwrap(); // 2x - 2
+    let lt = a.real_lt(sq, rhs).unwrap();
+    let r = check_with_nra(&mut a, &[xl, xu, lt], &SolverConfig::default()).unwrap();
+    assert!(matches!(r, CheckResult::Unsat), "x^2 < 2x-2 on [-5,5] must be unsat, got {r:?}");
+}
+
+#[test]
+fn bnb_two_variable_box_unsat() {
+    // 1<=x<=3 ∧ 1<=y<=3 ∧ x*y > 9 : max of x*y on the box is 9, so >9 is unsat.
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let y = real(&mut a, "y");
+    let one = a.real_const(Rational::integer(1));
+    let three = a.real_const(Rational::integer(3));
+    let nine = a.real_const(Rational::integer(9));
+    let xl = a.real_ge(x, one).unwrap();
+    let xu = a.real_le(x, three).unwrap();
+    let yl = a.real_ge(y, one).unwrap();
+    let yu = a.real_le(y, three).unwrap();
+    let p = a.real_mul(x, y).unwrap();
+    let gt = a.real_gt(p, nine).unwrap();
+    let r = check_with_nra(&mut a, &[xl, xu, yl, yu, gt], &SolverConfig::default()).unwrap();
+    assert!(matches!(r, CheckResult::Unsat), "x*y>9 on [1,3]^2 must be unsat, got {r:?}");
+}
+
+#[test]
+fn bnb_feasible_square_stays_sat() {
+    // -5<=x<=5 ∧ x*x > 2x + 2 : feasible (e.g. x=5: 25>12). Must stay sat under B&B.
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let neg5 = a.real_const(Rational::integer(-5));
+    let five = a.real_const(Rational::integer(5));
+    let two = a.real_const(Rational::integer(2));
+    let xl = a.real_ge(x, neg5).unwrap();
+    let xu = a.real_le(x, five).unwrap();
+    let sq = a.real_mul(x, x).unwrap();
+    let two_x = a.real_mul(two, x).unwrap();
+    let rhs = a.real_add(two_x, two).unwrap(); // 2x + 2
+    let gt = a.real_gt(sq, rhs).unwrap();
+    let r = check_with_nra(&mut a, &[xl, xu, gt], &SolverConfig::default()).unwrap();
+    assert!(matches!(r, CheckResult::Sat(_)), "x^2 > 2x+2 on [-5,5] must be sat, got {r:?}");
+}
+
+#[test]
+fn bnb_unbounded_square_is_unknown_not_wrong_unsat() {
+    // x*x < -1 with x unbounded: truly unsat, but the sign rule already proves
+    // it (x^2 >= 0). Use a case the sign rule can't: x*x < 2x - 2 with NO bounds
+    // on x. Unsat in truth, but B&B cannot branch an unbounded var -> unknown
+    // (never a wrong unsat, and never a wrong sat).
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let two = a.real_const(Rational::integer(2));
+    let sq = a.real_mul(x, x).unwrap();
+    let two_x = a.real_mul(two, x).unwrap();
+    let rhs = a.real_sub(two_x, two).unwrap();
+    let lt = a.real_lt(sq, rhs).unwrap();
+    let r = check_with_nra(&mut a, &[lt], &SolverConfig::default()).unwrap();
+    assert!(matches!(r, CheckResult::Unknown(_)), "unbounded x^2<2x-2 -> unknown, got {r:?}");
+}
