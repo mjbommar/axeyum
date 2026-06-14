@@ -33,11 +33,19 @@ model space:
   assertions with the ground evaluator (which computes the true products), and
   accepted only if it actually satisfies them; otherwise the result is `unknown`.
 
+It is also strengthened with **sound multiplication lemmas** about each product
+`r = a·b` — the sign rules (`(a≥0 ∧ b≥0) → r≥0`, etc.) and the zero rule
+(`r = 0 ⟺ a = 0 ∨ b = 0`). These are valid facts, so they preserve the
+relaxation (the original model with `r = a·b` satisfies them), but they let the
+LRA loop decide *sign-based* nonlinear queries with no nonlinear reasoning — e.g.
+`x·x < 0` is now `unsat` (x² ≥ 0), `x>0 ∧ y>0 ∧ x·y<0` is `unsat`, and
+`x=0 ∧ x·y=5` is `unsat`.
+
 So the procedure is **sound in both directions and incomplete**: it decides
-queries whose (un)satisfiability does not require the nonlinear facts (or where
-the linear part pins the product's operands), and returns `unknown` — never a
-wrong answer — otherwise (e.g. `x·x < 0`, whose `unsat` needs `x² ≥ 0`). It is
-routed automatically from the dispatcher's real path.
+queries resolvable from the linear part plus these sign/zero facts (and replays
+candidate `sat` models against the true products), and returns `unknown` — never
+a wrong answer — when a deeper nonlinear fact is needed (e.g. magnitude bounds).
+It is routed automatically from the dispatcher's real path.
 
 ## Evidence
 

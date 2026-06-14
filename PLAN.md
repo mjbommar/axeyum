@@ -45,8 +45,12 @@ Last updated: 2026-06-14
   `unsat` transfers (relaxation → sound; the *same* product → one variable, so
   `x·y=5 ∧ x·y=6` is unsat), and `sat` is replayed through the ground evaluator
   (accepted only if the true products satisfy the original, else `unknown`).
-  Sound both directions, incomplete (no nonlinear facts like `x²≥0`); incremental
-  linearization is the documented refinement. Tests in `tests/nra.rs`.
+  Strengthened with **sound multiplication lemmas** (sign rules + zero rule) per
+  product, so sign-based nonlinear facts are now decided with no nonlinear
+  reasoning: `x·x<0` unsat (x²≥0), `x>0 ∧ y>0 ∧ x·y<0` unsat, `x=0 ∧ x·y=5` unsat.
+  Sound both directions, incomplete (deeper facts like magnitude bounds →
+  `unknown`); full incremental linearization is the documented refinement. 7
+  tests in `tests/nra.rs`.
 
 - **Floating point — non-arithmetic core (2026-06-14, ADR-0023).** New
   `axeyum-solver::fp` module: IEEE 754 classification (`is_nan`/`is_infinite`/
