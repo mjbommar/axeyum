@@ -9,7 +9,7 @@
 
 use std::collections::HashMap;
 
-use axeyum_fp::FloatFormat;
+use axeyum_fp::{FloatFormat, RoundingMode};
 use axeyum_ir::{Rational, Sort, TermArena, TermId, TermNode};
 
 use crate::SmtError;
@@ -292,6 +292,13 @@ enum Frame<'a> {
     Eval(&'a SExpr),
     /// Pop `argc` results and apply the operator list.
     Apply { items: &'a [SExpr], argc: usize },
+    /// Pop `argc` results and apply a rounding-mode FP op. The mode is the first
+    /// child (a `RoundingMode` value, not a term) parsed before queueing.
+    ApplyFpRounded {
+        items: &'a [SExpr],
+        mode: RoundingMode,
+        argc: usize,
+    },
     /// Pop `argc` results and expand a parameterized `define-fun` body.
     ApplyMacro { name: &'a str, argc: usize },
     /// Check the sort of the most recent result.
@@ -342,6 +349,10 @@ fn parse_term<'a>(
             Frame::Apply { items, argc } => {
                 let args = results.split_off(results.len() - argc);
                 results.push(apply_op(arena, items, &args)?);
+            }
+            Frame::ApplyFpRounded { items, mode, argc } => {
+                let args = results.split_off(results.len() - argc);
+                results.push(apply_fp_rounded(arena, items, mode, &args)?);
             }
             Frame::ApplyMacro { name, argc } => {
                 queue_macro_expansion(
@@ -445,6 +456,26 @@ fn queue_list_eval<'a>(
     } else if head.atom() == Some("forall") || head.atom() == Some("exists") {
         let is_forall = head.atom() == Some("forall");
         queue_quantifier(arena, items, is_forall, frames)?;
+    } else if let Some(name) = head.atom()
+        && is_fp_rounded_op(name)
+    {
+        // Rounding-mode FP ops `(fp.add RM x y)`: the first argument is a
+        // `RoundingMode` value (not a term), so parse it here and queue only the
+        // operand children.
+        let mode_expr = items
+            .get(1)
+            .ok_or_else(|| SmtError::Syntax(format!("{name} expects a rounding mode")))?;
+        let mode = parse_rounding_mode(mode_expr)
+            .ok_or_else(|| SmtError::Syntax(format!("{name}: unrecognized rounding mode")))?;
+        let operands = &items[2..];
+        frames.push(Frame::ApplyFpRounded {
+            items,
+            mode,
+            argc: operands.len(),
+        });
+        for child in operands.iter().rev() {
+            frames.push(Frame::Eval(child));
+        }
     } else if let Some(name) = head.atom()
         && macros.contains_key(name)
     {
@@ -713,6 +744,96 @@ fn fp_format(arena: &TermArena, t: TermId) -> Result<FloatFormat, SmtError> {
             "floating-point op on unsupported width/sort {s:?}"
         ))),
     }
+}
+
+/// Whether `name` is a floating-point op whose first argument is a rounding mode.
+fn is_fp_rounded_op(name: &str) -> bool {
+    matches!(
+        name,
+        "fp.add" | "fp.sub" | "fp.mul" | "fp.div" | "fp.fma" | "fp.sqrt" | "fp.roundToIntegral"
+    )
+}
+
+/// Parses an SMT-LIB `RoundingMode` value (short or long form). Returns `None`
+/// for anything that isn't a recognized mode symbol.
+fn parse_rounding_mode(expr: &SExpr) -> Option<RoundingMode> {
+    match expr.atom()? {
+        "RNE" | "roundNearestTiesToEven" => Some(RoundingMode::NearestEven),
+        "RNA" | "roundNearestTiesToAway" => Some(RoundingMode::NearestAway),
+        "RTZ" | "roundTowardZero" => Some(RoundingMode::TowardZero),
+        "RTP" | "roundTowardPositive" => Some(RoundingMode::TowardPositive),
+        "RTN" | "roundTowardNegative" => Some(RoundingMode::TowardNegative),
+        _ => None,
+    }
+}
+
+/// Applies a rounding-mode FP op (`mode` already parsed from the first argument);
+/// `args` are the evaluated operands. The format is recovered from operand width.
+fn apply_fp_rounded(
+    arena: &mut TermArena,
+    items: &[SExpr],
+    mode: RoundingMode,
+    args: &[TermId],
+) -> Result<TermId, SmtError> {
+    let head = items[0].atom().unwrap_or("");
+    let need = |n: usize| -> Result<(), SmtError> {
+        if args.len() == n {
+            Ok(())
+        } else {
+            Err(SmtError::Syntax(format!(
+                "{head} expects {n} operand(s), got {}",
+                args.len()
+            )))
+        }
+    };
+    let term = match head {
+        "fp.add" => {
+            need(2)?;
+            axeyum_fp::add(arena, fp_format(arena, args[0])?, args[0], args[1], mode)?
+        }
+        "fp.sub" => {
+            need(2)?;
+            axeyum_fp::sub(arena, fp_format(arena, args[0])?, args[0], args[1], mode)?
+        }
+        "fp.mul" => {
+            need(2)?;
+            axeyum_fp::mul(arena, fp_format(arena, args[0])?, args[0], args[1], mode)?
+        }
+        "fp.div" => {
+            need(2)?;
+            axeyum_fp::div(arena, fp_format(arena, args[0])?, args[0], args[1], mode)?
+        }
+        "fp.sqrt" => {
+            need(1)?;
+            axeyum_fp::sqrt(arena, fp_format(arena, args[0])?, args[0], mode)?
+        }
+        "fp.fma" => {
+            need(3)?;
+            axeyum_fp::fma(
+                arena,
+                fp_format(arena, args[0])?,
+                args[0],
+                args[1],
+                args[2],
+                mode,
+            )?
+        }
+        "fp.roundToIntegral" => {
+            need(1)?;
+            let fmt = fp_format(arena, args[0])?;
+            axeyum_fp::round_to_integral(arena, fmt, mode, args[0])?.ok_or_else(|| {
+                SmtError::Unsupported(
+                    "fp.roundToIntegral is only supported on constant operands".to_owned(),
+                )
+            })?
+        }
+        other => {
+            return Err(SmtError::Unsupported(format!(
+                "rounding-mode FP op `{other}`"
+            )));
+        }
+    };
+    Ok(term)
 }
 
 fn parse_indexed_constant(arena: &mut TermArena, items: &[SExpr]) -> Result<TermId, SmtError> {

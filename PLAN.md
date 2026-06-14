@@ -48,10 +48,19 @@ Last updated: 2026-06-14
   classification predicates `fp.isNaN/isInfinite/isZero/isNormal/isSubnormal/
   isNegative/isPositive` — with the format recovered from operand width via
   `fp_format` (16→F16, 32→F32, 64→F64). End-to-end parse test on a `QF_FP` script
-  (NaN/+oo constants, an `fp` literal, `fp.lt`, `fp.abs(neg)` identity). **Next:**
-  the mode-taking FP arithmetic (`fp.add/sub/mul/div/sqrt/fma/roundToIntegral`)
-  needs rounding-mode constants (`RNE/RNA/RTP/RTN/RTZ`) extracted as parse values
-  (like `let`), since modes aren't terms; then F64 `fp.fma` (blocked on >128-bit BV).
+  (NaN/+oo constants, an `fp` literal, `fp.lt`, `fp.abs(neg)` identity).
+  **Mode-taking arithmetic now added** — `fp.add/sub/mul/div/sqrt/fma/
+  roundToIntegral` parse their leading `RoundingMode` argument (short `RNE/RNA/
+  RTZ/RTP/RTN` and long `roundNearestTiesToEven/…` forms) as a parse value, not a
+  term: `queue_list_eval` detects these heads, parses the mode via
+  `parse_rounding_mode`, queues only the operand children, and a new
+  `Frame::ApplyFpRounded` dispatches to the validated `axeyum_fp` builders.
+  `fp.roundToIntegral` is constant-fold-only (errors on symbolic operands — sound,
+  not wrong). End-to-end test parses *and* evaluates `fp.add RNE 1.0 1.0 == 2.0`
+  (Float32) to `true` through the ground evaluator. **Next:** F64 `fp.fma` is the
+  remaining gap (`3·sig+5 = 164 > MAX_BV_WIDTH=128`, errors cleanly); needs
+  arbitrary-width BV. Symbolic `fp.roundToIntegral` and `fp`↔real/int conversions
+  (`fp.to_real`, `to_fp`, `fp.to_sbv/ubv`) are the other front-end frontier.
 
 - **Strings — first slice (2026-06-14, ADR-0025).** Bounded-length string theory
   by BV lowering (`strings::BoundedString`, no IR sort): a string is `(len,

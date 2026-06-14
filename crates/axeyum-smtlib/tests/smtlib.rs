@@ -677,3 +677,23 @@ fn parses_floating_point_predicates_and_literals() {
     let script = parse_script(text).unwrap();
     assert_eq!(script.assertions.len(), 5);
 }
+
+#[test]
+fn parses_and_evaluates_rounding_mode_fp_arithmetic() {
+    // `fp.add RNE 1.0 1.0 == 2.0` over Float32: the rounding-mode FP front-end
+    // lowers to the validated axeyum-fp builders, so the ground assertion
+    // evaluates to true. (1.0 = 0x3F800000, 2.0 = 0x40000000.)
+    let text = r"
+        (set-logic QF_FP)
+        (assert (fp.eq
+                  (fp.add RNE
+                    (fp #b0 #b01111111 #b00000000000000000000000)
+                    (fp #b0 #b01111111 #b00000000000000000000000))
+                  (fp #b0 #b10000000 #b00000000000000000000000)))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+    let v = eval(&script.arena, script.assertions[0], &Assignment::default()).unwrap();
+    assert_eq!(v, Value::Bool(true));
+}
