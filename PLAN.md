@@ -54,9 +54,19 @@ Last updated: 2026-06-14
   hash, bv lowering identity, z3 reject ×2). Tests: Float64→Float32 reformat,
   signed `0xFFFFFFFE`→−2.0f, declared-var to_fp identity (sort checked), plus the
   IR `fp_from_bits` round-trip. The bit-vector-source `to_fp` blocker from
-  ADR-0023 is **closed**. **Remaining FP gap:** F64 `fp.fma` (`3·sig+5 = 164 >
-  MAX_BV_WIDTH = 128`; needs arbitrary-width BV — orthogonal `Value`/width
-  decision).
+  ADR-0023 is **closed**.
+
+- **Constant F64 `fp.fma` now folds (2026-06-14).** `axeyum_fp::fma` tries the
+  round-nearest-even constant fold (native `f64::mul_add`, a single correctly-
+  rounded fused op — ADR-0023's "fold constants via native arithmetic" basis)
+  **before** building the symbolic circuit, so a constant Float64 `fp.fma` (whose
+  `3·sig+5 = 164`-bit circuit exceeds `MAX_BV_WIDTH = 128`) is now decided
+  soundly instead of erroring. Tests: IR-level F64 fma over a structured battery
+  (incl. overflow→NaN) matching native `mul_add`; the symbolic F64 fma still
+  reports `InvalidWidth(164)` (sound); and an end-to-end `fma(2,3,1)==7` Float64
+  SMT-LIB query. **Remaining FP gap:** *symbolic* F64 `fp.fma` (and all F128
+  arithmetic) — needs >128-bit BV values (a `Value`/`MAX_BV_WIDTH` change) or a
+  carefully-revalidated tighter FMA encoding; both are orthogonal to the FP sort.
 
 - **First-class `Sort::Float` — IR foundation (2026-06-14, ADR-0026 stage 1).**
   Added `Sort::Float { exp, sig }` to `axeyum-ir` (format inline — `FloatFormat`

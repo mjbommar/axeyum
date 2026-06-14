@@ -1176,6 +1176,16 @@ pub fn fma(
     fmt.check(arena, c)?;
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
     let total = fmt.width();
+    // Constant operands under round-nearest-even fold via native `mul_add` (a
+    // single, correctly-rounded fused op — the ADR-0023 "fold constants via native
+    // arithmetic" basis). This decides constant F64 `fp.fma`, whose symbolic
+    // circuit needs a `3·sb+5 = 164`-bit intermediate that exceeds
+    // `MAX_BV_WIDTH = 128`; without this it would error below.
+    if mode == RoundingMode::NearestEven
+        && let Some(folded) = fma_rne(arena, fmt, a, b, c)?
+    {
+        return Ok(folded);
+    }
     let w = 3 * sb + 5;
     if w > MAX_BV_WIDTH {
         return Err(IrError::InvalidWidth(w));
@@ -3801,5 +3811,54 @@ mod tests {
                 .wrapping_add(1_442_695_040_888_963_407);
             check(&mut a, (state & 0xFFFF_FFFF) as u32, (state >> 32) as u32);
         }
+    }
+}
+
+#[cfg(test)]
+mod fma_f64_const_tests {
+    use super::*;
+    use axeyum_ir::{Assignment, Value, eval};
+
+    #[test]
+    fn constant_f64_fma_folds_via_native_mul_add() {
+        // F64 fp.fma's symbolic circuit needs 164 bits (> MAX_BV_WIDTH=128), but
+        // constant operands under RNE fold via native mul_add (ADR-0026 note).
+        let mut arena = TermArena::new();
+        let mk = |arena: &mut TermArena, v: f64| arena.bv_const(64, u128::from(v.to_bits())).unwrap();
+        for &(x, y, z) in &[
+            (2.0f64, 3.0, 1.0),
+            (0.1, 0.2, 0.3),
+            (1e300, 1e300, f64::NEG_INFINITY), // product overflows to +inf; +(-inf) = NaN
+            (-2.0, 4.0, 0.5),
+            (f64::MAX, 2.0, 0.0),
+        ] {
+            let a = mk(&mut arena, x);
+            let b = mk(&mut arena, y);
+            let c = mk(&mut arena, z);
+            let t = fma(&mut arena, FloatFormat::F64, a, b, c, RoundingMode::NearestEven).unwrap();
+            // Result is a Float64-width bit-vector equal to native mul_add.
+            let want = x.mul_add(y, z).to_bits();
+            assert_eq!(
+                eval(&arena, t, &Assignment::new()).unwrap(),
+                Value::Bv {
+                    width: 64,
+                    value: u128::from(want)
+                },
+                "fma({x}, {y}, {z})"
+            );
+        }
+    }
+
+    #[test]
+    fn symbolic_f64_fma_still_unsupported() {
+        // A non-constant F64 fma still cannot build the 164-bit circuit.
+        let mut arena = TermArena::new();
+        let s = arena.declare("x", Sort::BitVec(64)).unwrap();
+        let x = arena.var(s);
+        let one = arena.bv_const(64, u128::from(1.0f64.to_bits())).unwrap();
+        assert!(matches!(
+            fma(&mut arena, FloatFormat::F64, x, one, one, RoundingMode::NearestEven),
+            Err(IrError::InvalidWidth(164))
+        ));
     }
 }

@@ -894,3 +894,25 @@ fn parses_sort_disambiguated_to_fp_conversions() {
         axeyum_ir::Sort::Float { exp: 8, sig: 24 }
     );
 }
+
+#[test]
+fn folds_constant_float64_fma() {
+    // F64 fp.fma's symbolic circuit exceeds MAX_BV_WIDTH, but constant operands
+    // under RNE fold via native mul_add: fma(2.0, 3.0, 1.0) == 7.0 (Float64).
+    // Constants built by bit reinterpret of their IEEE hex patterns.
+    let script = parse_script(
+        r"
+        (set-logic QF_FP)
+        (assert (fp.eq
+                  (fp.fma RNE
+                    ((_ to_fp 11 53) #x4000000000000000)
+                    ((_ to_fp 11 53) #x4008000000000000)
+                    ((_ to_fp 11 53) #x3FF0000000000000))
+                  ((_ to_fp 11 53) #x401C000000000000)))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+    let v = eval(&script.arena, script.assertions[0], &Assignment::default()).unwrap();
+    assert_eq!(v, Value::Bool(true));
+}
