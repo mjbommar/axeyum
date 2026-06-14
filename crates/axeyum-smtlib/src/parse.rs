@@ -416,6 +416,13 @@ fn queue_list_eval<'a>(
         .ok_or_else(|| SmtError::Syntax("empty application".to_owned()))?;
     if head.atom() == Some("_") {
         results.push(parse_indexed_constant(arena, items)?);
+    } else if head.atom() == Some("!") {
+        // Attributed term `(! t :attr v ...)` denotes `t`; the annotations
+        // (`:pattern` triggers, `:named`, …) are hints we currently drop.
+        let inner = items
+            .get(1)
+            .ok_or_else(|| SmtError::Syntax("`!` expects a term".to_owned()))?;
+        frames.push(Frame::Eval(inner));
     } else if head.atom() == Some("let") {
         queue_let(items, frames)?;
     } else if head.atom() == Some("forall") || head.atom() == Some("exists") {

@@ -644,3 +644,18 @@ fn folds_constant_int_real_coercions() {
     let script = parse_script(text).unwrap();
     assert_eq!(script.assertions.len(), 4);
 }
+
+#[test]
+fn parses_attributed_terms_with_patterns() {
+    // (! body :pattern (...)) and (! ... :named n) denote the inner term; the
+    // annotations are dropped. Common in quantified benchmarks.
+    let text = r"
+        (set-logic QF_LIA)
+        (declare-const x Int)
+        (assert (! (> x 0) :named c1))
+        (assert (! (< x 10) :pattern ((+ x 1))))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 2);
+}
