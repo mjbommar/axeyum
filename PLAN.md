@@ -54,10 +54,14 @@ Last updated: 2026-06-14
   shift against the corresponding `i128` operations, and `extract`/`concat`/
   extends), and satisfies algebraic identities (`a+0`, `a·1`, commutativity,
   `a−a`, `a^a`, double-not, shl/lshr) at 129/164/200/256 bits.
+  Also `to_lsb_bits`/`from_lsb_bits` (ADR-0006 LSB-first order) for the `bits`
+  layer, round-trip-tested and (for `≤128`) matched to the `u128` bit assembly.
   Currently `#[allow(dead_code)]` — the next step threads a `Value::WideBv` /
   `TermNode::WideBvConst` variant through `eval`/`bits`/the arena (an all-or-nothing
   change: the evaluator's bv ops must all handle wide operands, so it lands as one
-  green step on top of this validated core), then raises `MAX_BV_WIDTH`.
+  green step on top of this validated core), then raises `MAX_BV_WIDTH`. (Scoped
+  the integration's eval path so the `≤128` `Value::Bv` fast path stays untouched —
+  `apply` routes to a new wide path only when a `WideBv` operand is present.)
 
 - **Datatypes via SMT-LIB — `declare-datatypes` front-end (2026-06-14).** The
   first-class datatype theory (ADR-0022) was previously only reachable through the

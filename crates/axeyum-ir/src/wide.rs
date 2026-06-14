@@ -451,6 +451,26 @@ impl WideUint {
         z.or(&fill)
     }
 
+    /// The bits LSB-first (index `i` is bit `i`), length `width` — the order the
+    /// IR's `bits` layer and the bit-blaster use (ADR-0006).
+    #[must_use]
+    pub fn to_lsb_bits(&self) -> Vec<bool> {
+        (0..self.width).map(|i| self.bit(i)).collect()
+    }
+
+    /// Builds a `bits.len()`-bit value from LSB-first bits (index `i` is bit `i`).
+    #[must_use]
+    pub fn from_lsb_bits(bits: &[bool]) -> Self {
+        let width = u32::try_from(bits.len()).expect("bit count fits u32");
+        let mut v = Self::zero(width);
+        for (i, &b) in bits.iter().enumerate() {
+            if b {
+                v.set_bit(u32::try_from(i).expect("bit index fits u32"));
+            }
+        }
+        v
+    }
+
     /// Number of leading zero bits (from the MSB); `width` if all-zero.
     #[must_use]
     pub fn count_leading_zeros(&self) -> u32 {
@@ -632,6 +652,42 @@ mod tests {
                         assert_eq!(wa.concat(&wb).to_u128(), (a << bw) | b, "concat w{width}++{bw}");
                     }
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn lsb_bits_round_trip_and_match_u128() {
+        let mut rng = Lcg(0x5151_2626_3737_4848);
+        for width in [1u32, 8, 64, 65, 100, 128, 129, 200, 256] {
+            for _ in 0..50 {
+                let lo = rng.next();
+                let hi = rng.next();
+                // Build a wide value from two limbs' worth of random bits.
+                let mut bits: Vec<bool> = (0..width)
+                    .map(|i| {
+                        let src = if i < 128 { lo } else { hi };
+                        (src >> (i % 128)) & 1 == 1
+                    })
+                    .collect();
+                let w = WideUint::from_lsb_bits(&bits);
+                assert_eq!(w.width(), width);
+                assert_eq!(w.to_lsb_bits(), bits, "round-trip width {width}");
+                // Bit accessor agrees with the LSB-first vector.
+                for i in 0..width {
+                    assert_eq!(w.bit(i), bits[i as usize], "bit {i} width {width}");
+                }
+                // For width <= 128, the value matches the u128 assembled from bits.
+                if width <= 128 {
+                    let mut want = 0u128;
+                    for (i, &b) in bits.iter().enumerate() {
+                        if b {
+                            want |= 1u128 << i;
+                        }
+                    }
+                    assert_eq!(w.to_u128(), want, "to_u128 from bits width {width}");
+                }
+                bits.clear();
             }
         }
     }
