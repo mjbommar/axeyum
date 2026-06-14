@@ -1120,6 +1120,174 @@ pub fn add(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: 
     arena.ite(nan_flag, qnan, r2)
 }
 
+/// Symbolic `fp.fma` — fused multiply-add `a·b + c` with a **single**
+/// round-nearest-style rounding (no intermediate rounding of the product). The
+/// exact product (`2·sb`-bit significand at `e_a + e_b`) is aligned with `c` and
+/// summed exactly, then [`pack_value`] rounds once. The intermediate width is
+/// `3·sb + 5`, so **F16 and F32** fit the 128-bit cap (F64 needs 164 bits →
+/// `InvalidWidth`).
+///
+/// Special cases per IEEE: NaN if any operand is NaN, if `a·b` is `0·∞`, or if
+/// `a·b` and `c` are infinities of opposite sign; otherwise the infinity of an
+/// infinite product or addend. Validated against native `f32::mul_add` (the
+/// correctly-rounded fma) over a wide sweep.
+///
+/// # Errors
+///
+/// Returns [`IrError::InvalidWidth`] if `3·sb + 5 > 128`, [`IrError::SortMismatch`]
+/// for a mis-sized operand, or [`IrError`] from the builders.
+#[allow(clippy::similar_names, clippy::many_single_char_names, clippy::too_many_lines)]
+pub fn fma(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    a: TermId,
+    b: TermId,
+    c: TermId,
+    mode: RoundingMode,
+) -> Result<TermId, IrError> {
+    fmt.check(arena, a)?;
+    fmt.check(arena, b)?;
+    fmt.check(arena, c)?;
+    let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
+    let total = fmt.width();
+    let w = 3 * sb + 5;
+    if w > MAX_BV_WIDTH {
+        return Err(IrError::InvalidWidth(w));
+    }
+    let guard = sb + 2;
+    let one1 = arena.bv_const(1, 1)?;
+    let (sa, sig_a, e_a) = unpack_operand(arena, fmt, w, a)?;
+    let (sbb, sig_b, e_b) = unpack_operand(arena, fmt, w, b)?;
+    let (sc, sig_c, e_c) = unpack_operand(arena, fmt, w, c)?;
+
+    // Exact product (no rounding): significand `sig_a·sig_b` at `e_a + e_b`.
+    let sig_p = arena.bv_mul(sig_a, sig_b)?;
+    let e_p = arena.bv_add(e_a, e_b)?;
+    let sp_bit = arena.bv_xor(sa, sbb)?;
+
+    // Align the product and `c` (bigger exponent is "big"); same scheme as `add`.
+    let p_ge = arena.bv_sge(e_p, e_c)?;
+    let e_big = arena.ite(p_ge, e_p, e_c)?;
+    let sig_big = arena.ite(p_ge, sig_p, sig_c)?;
+    let sig_small = arena.ite(p_ge, sig_c, sig_p)?;
+    let sign_big = arena.ite(p_ge, sp_bit, sc)?;
+    let sign_small = arena.ite(p_ge, sc, sp_bit)?;
+    let e_small = arena.ite(p_ge, e_c, e_p)?;
+    let exp_diff = arena.bv_sub(e_big, e_small)?;
+
+    let guard_c = arena.bv_const(w, u128::from(guard))?;
+    let big_ext = arena.bv_shl(sig_big, guard_c)?;
+    let small_placed = arena.bv_shl(sig_small, guard_c)?;
+    let small_ext = arena.bv_lshr(small_placed, exp_diff)?;
+    let one_w = arena.bv_const(w, 1)?;
+    let zero_w = arena.bv_const(w, 0)?;
+    let sticky = {
+        let pow = arena.bv_shl(one_w, exp_diff)?;
+        let mask = arena.bv_sub(pow, one_w)?;
+        let lost = arena.bv_and(small_placed, mask)?;
+        let is_zero = arena.eq(lost, zero_w)?;
+        arena.not(is_zero)?
+    };
+    let sticky_bit = arena.ite(sticky, one_w, zero_w)?;
+    let small_ext_s = arena.bv_or(small_ext, sticky_bit)?;
+
+    let same_sign = arena.eq(sign_big, sign_small)?;
+    let add_mag = arena.bv_add(big_ext, small_ext_s)?;
+    let ge = arena.bv_uge(big_ext, small_ext_s)?;
+    let sub_ab = arena.bv_sub(big_ext, small_ext_s)?;
+    let sub_ba = arena.bv_sub(small_ext_s, big_ext)?;
+    let sub_mag = arena.ite(ge, sub_ab, sub_ba)?;
+    let sub_sign = arena.ite(ge, sign_big, sign_small)?;
+    let result_mag = arena.ite(same_sign, add_mag, sub_mag)?;
+    let result_sign_bit = arena.ite(same_sign, sign_big, sub_sign)?;
+    let result_sign = arena.eq(result_sign_bit, one1)?;
+    let e_result = arena.bv_sub(e_big, guard_c)?;
+    let finite = pack_value(arena, eb, sb, result_sign, result_mag, e_result, mode)?;
+
+    // Special-case flags.
+    let na = is_nan(arena, fmt, a)?;
+    let nb = is_nan(arena, fmt, b)?;
+    let nc = is_nan(arena, fmt, c)?;
+    let ia = is_infinite(arena, fmt, a)?;
+    let ib = is_infinite(arena, fmt, b)?;
+    let ic = is_infinite(arena, fmt, c)?;
+    let za = is_zero(arena, fmt, a)?;
+    let zb = is_zero(arena, fmt, b)?;
+    let zc = is_zero(arena, fmt, c)?;
+
+    // product NaN = 0·∞; product ∞ otherwise when a or b is ∞.
+    let prod_nan = {
+        let l = arena.and(ia, zb)?;
+        let r = arena.and(ib, za)?;
+        arena.or(l, r)?
+    };
+    let prod_inf = {
+        let l = {
+            let nzb = arena.not(zb)?;
+            arena.and(ia, nzb)?
+        };
+        let r = {
+            let nza = arena.not(za)?;
+            arena.and(ib, nza)?
+        };
+        arena.or(l, r)?
+    };
+    // ∞ − ∞ between the product and c.
+    let prod_c_inf_clash = {
+        let both = arena.and(prod_inf, ic)?;
+        let signs_differ = {
+            let s = arena.eq(sp_bit, sc)?;
+            arena.not(s)?
+        };
+        arena.and(both, signs_differ)?
+    };
+    let nan_flag = {
+        let a1 = arena.or(na, nb)?;
+        let a2 = arena.or(a1, nc)?;
+        let a3 = arena.or(a2, prod_nan)?;
+        arena.or(a3, prod_c_inf_clash)?
+    };
+    let inf_flag = arena.or(prod_inf, ic)?;
+    // Sign of the infinite result: the product's if it is ∞, else c's.
+    let inf_sign_bit = arena.ite(prod_inf, sp_bit, sc)?;
+
+    // Field constants.
+    let pos_zero = arena.bv_const(total, 0)?;
+    let neg_zero = arena.bv_const(total, 1u128 << (total - 1))?;
+    let exp_ones = arena.bv_const(total, ((1u128 << eb) - 1) << (sb - 1))?;
+    let qnan = {
+        let q = arena.bv_const(total, 1u128 << (sb - 2))?;
+        arena.bv_or(exp_ones, q)?
+    };
+    let inf_total = {
+        let inf_is_neg = arena.eq(inf_sign_bit, one1)?;
+        let neg_inf = arena.bv_or(neg_zero, exp_ones)?;
+        arena.ite(inf_is_neg, neg_inf, exp_ones)?
+    };
+    let mag_zero = arena.eq(result_mag, zero_w)?;
+
+    // Zero-sign rule (RNE): the sum of two zeros is −0 only if *both* the product
+    // and `c` are −0; any other zero result (incl. exact cancellation) is +0.
+    let prod_zero = arena.or(za, zb)?; // a·b is zero iff a or b is zero
+    let both_zero = arena.and(prod_zero, zc)?;
+    let prod_neg_zero = {
+        let neg = arena.eq(sp_bit, one1)?;
+        arena.and(prod_zero, neg)?
+    };
+    let c_neg_zero = {
+        let neg = arena.eq(sc, one1)?;
+        arena.and(zc, neg)?
+    };
+    let both_neg_zero = arena.and(prod_neg_zero, c_neg_zero)?;
+    let bothzero_total = arena.ite(both_neg_zero, neg_zero, pos_zero)?;
+
+    // Mux: NaN, ∞, both-zero, exact-cancellation → +0, else rounded finite.
+    let r0 = arena.ite(mag_zero, pos_zero, finite)?;
+    let r1 = arena.ite(both_zero, bothzero_total, r0)?;
+    let r2 = arena.ite(inf_flag, inf_total, r1)?;
+    arena.ite(nan_flag, qnan, r2)
+}
+
 // --- constant folding (round-nearest-even arithmetic) -------------------------
 //
 // Rounded FP arithmetic (`add`/`sub`/`mul`/`div`/`sqrt`) is, for *constant*
@@ -3129,6 +3297,78 @@ mod tests {
                 .wrapping_add(1_442_695_040_888_963_407);
             check(&mut a, (state & 0xFFFF) as u16, ((state >> 16) & 0xFFFF) as u16);
         }
+    }
+
+    #[test]
+    fn fma_matches_native_f32() {
+        // Symbolic fma (built over constants, evaluated) must equal native
+        // f32::mul_add — the correctly-rounded fused multiply-add.
+        let mut a = TermArena::new();
+        let check = |a: &mut TermArena, xb: u32, yb: u32, zb: u32| {
+            let xt = a.bv_const(32, u128::from(xb)).unwrap();
+            let yt = a.bv_const(32, u128::from(yb)).unwrap();
+            let zt = a.bv_const(32, u128::from(zb)).unwrap();
+            let r = fma(a, FloatFormat::F32, xt, yt, zt, RoundingMode::NearestEven).unwrap();
+            let got = match eval(a, r, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("{other:?}"),
+            };
+            let want = f32::from_bits(xb).mul_add(f32::from_bits(yb), f32::from_bits(zb));
+            if want.is_nan() {
+                let exp = (got >> 23) & 0xFF;
+                let mant = got & 0x7F_FFFF;
+                assert!(exp == 0xFF && mant != 0, "fma({xb:#x},{yb:#x},{zb:#x}) want NaN, got {got:#x}");
+            } else {
+                assert_eq!(got, u128::from(want.to_bits()), "fma({xb:#x},{yb:#x},{zb:#x})");
+            }
+        };
+        let structured: [u32; 12] = [
+            0x0000_0000, 0x8000_0000, 0x3f80_0000, 0xbf80_0000, 0x4000_0000, 0x3f00_0000,
+            0x7f80_0000, 0xff80_0000, 0x7fc0_0000, 0x0080_0000, 0x0000_0001, 0x4248_0000,
+        ];
+        for &x in &structured {
+            for &y in &structured {
+                for &z in &structured {
+                    check(&mut a, x, y, z);
+                }
+            }
+        }
+        let mut state: u64 = 0xfa11_3a5e_0bad_1dea;
+        for _ in 0..6000 {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            let x = (state & 0xFFFF_FFFF) as u32;
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            let y = (state & 0xFFFF_FFFF) as u32;
+            let z = (state >> 32) as u32;
+            check(&mut a, x, y, z);
+        }
+    }
+
+    #[test]
+    fn fma_f16_exact_cases() {
+        // Exact (no rounding) f16 cases: a*b + c with small integer values.
+        // 2.0=0x4000, 3.0=0x4200, 1.0=0x3C00, 0.5=0x3800, 7.0=0x4700,
+        // 3.5=0x4300, 1.5=0x3E00.
+        let mut a = TermArena::new();
+        let check = |a: &mut TermArena, xb: u16, yb: u16, zb: u16, want: u16| {
+            let xt = a.bv_const(16, u128::from(xb)).unwrap();
+            let yt = a.bv_const(16, u128::from(yb)).unwrap();
+            let zt = a.bv_const(16, u128::from(zb)).unwrap();
+            let r = fma(a, FloatFormat::F16, xt, yt, zt, RoundingMode::NearestEven).unwrap();
+            let got = match eval(a, r, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("{other:?}"),
+            };
+            assert_eq!(got, u128::from(want), "fma_f16({xb:#x},{yb:#x},{zb:#x})");
+        };
+        check(&mut a, 0x4000, 0x4200, 0x3C00, 0x4700); // 2*3 + 1 = 7
+        check(&mut a, 0x3E00, 0x4000, 0x3800, 0x4300); // 1.5*2 + 0.5 = 3.5
+        check(&mut a, 0x4000, 0x4000, 0x0000, 0x4400); // 2*2 + 0 = 4 (0x4400)
+        check(&mut a, 0x3C00, 0x3C00, 0xBC00, 0x0000); // 1*1 + (-1) = 0
     }
 
     #[test]
