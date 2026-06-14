@@ -33,6 +33,7 @@ mod layers;
 mod lazy_bv;
 mod lia;
 mod lra;
+mod maxsat;
 mod model;
 mod optimize;
 mod proof;
@@ -83,6 +84,7 @@ pub use lra::{
     FarkasAtom, FarkasCertificate, check_with_lia_simplex, check_with_lra, check_with_lra_simplex,
     lra_farkas_certificate, lra_unsat_core,
 };
+pub use maxsat::{max_satisfiable, max_satisfiable_weighted};
 pub use model::Model;
 pub use optimize::{
     OptOutcome, maximize_bv, maximize_bv_signed, maximize_lia, minimize_bv, minimize_bv_signed,
