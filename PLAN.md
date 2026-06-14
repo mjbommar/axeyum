@@ -41,14 +41,19 @@ Last updated: 2026-06-14
 - **Wide bit-vector arithmetic — foundation (2026-06-14, step 1 of lifting the
   128-bit ceiling).** `axeyum-ir`'s `wide::WideUint` is a limb-based (little-endian
   `u64`) arbitrary-width unsigned integer implementing the bit-vector operator
-  semantics (wrapping mod `2^width`): `add`/`sub`/`mul`/`neg`/`not`/`and`/`or`/
-  `xor`/`shl`/`lshr`/`ult`/`ule`, masked to width. This is the value
+  semantics (wrapping mod `2^width`): the **full operator set** —
+  `add`/`sub`/`mul`/`neg`/`not`/`and`/`or`/`xor`/`shl`/`lshr`/`ashr`,
+  `udiv`/`urem`/`sdiv`/`srem`/`smod` (SMT-LIB totality: `÷0` = all-ones/dividend),
+  `ult`/`ule`/`uge`/`slt`/`sle`, `extract`/`concat`/`zero_ext`/`sign_ext`,
+  `count_leading_zeros`, `is_zero`/`is_negative` — masked to width. This is the value
   representation `Value::Bv`/`TermNode::BvConst` (today `u128`, hence
   `MAX_BV_WIDTH = 128`) will carry for wider widths — the prerequisite for
   symbolic F64 `fp.fma` (a 164-bit intermediate) and F128/large-BV arithmetic.
   **Validated**: every op matches the native `u128` reference over a random
-  battery at all widths `≤ 128`, and satisfies algebraic identities (`a+0`, `a·1`,
-  commutativity, `a−a`, `a^a`, double-not, shl/lshr) at 129/164/200/256 bits.
+  battery at all widths `≤ 128` (including signed div/rem/mod and arithmetic
+  shift against the corresponding `i128` operations, and `extract`/`concat`/
+  extends), and satisfies algebraic identities (`a+0`, `a·1`, commutativity,
+  `a−a`, `a^a`, double-not, shl/lshr) at 129/164/200/256 bits.
   Currently `#[allow(dead_code)]` — the next step threads a `Value::WideBv` /
   `TermNode::WideBvConst` variant through `eval`/`bits`/the arena (an all-or-nothing
   change: the evaluator's bv ops must all handle wide operands, so it lands as one

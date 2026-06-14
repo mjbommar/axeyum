@@ -264,6 +264,212 @@ impl WideUint {
     pub fn is_zero(&self) -> bool {
         self.limbs.iter().all(|&l| l == 0)
     }
+
+    /// Unsigned `self ≥ other`.
+    #[must_use]
+    pub fn uge(&self, other: &Self) -> bool {
+        !self.ult(other)
+    }
+
+    /// The top (sign) bit.
+    #[must_use]
+    pub fn is_negative(&self) -> bool {
+        self.bit(self.width - 1)
+    }
+
+    /// Sets bit `i` to one (no-op if `i ≥ width`).
+    fn set_bit(&mut self, i: u32) {
+        if i < self.width {
+            self.limbs[(i / 64) as usize] |= 1u64 << (i % 64);
+        }
+    }
+
+    /// The all-ones value of `width` bits.
+    #[must_use]
+    pub fn ones(width: u32) -> Self {
+        Self::zero(width).not()
+    }
+
+    /// `(quotient, remainder)` of unsigned division with SMT-LIB totality:
+    /// dividing by zero yields all-ones / the dividend. Restoring long division.
+    #[must_use]
+    pub fn udivrem(&self, divisor: &Self) -> (Self, Self) {
+        debug_assert_eq!(self.width, divisor.width);
+        if divisor.is_zero() {
+            return (Self::ones(self.width), self.clone());
+        }
+        let mut q = Self::zero(self.width);
+        let mut r = Self::zero(self.width);
+        for i in (0..self.width).rev() {
+            r = r.shl(1);
+            if self.bit(i) {
+                r.set_bit(0);
+            }
+            if r.uge(divisor) {
+                r = r.sub(divisor);
+                q.set_bit(i);
+            }
+        }
+        (q, r)
+    }
+
+    /// Unsigned quotient (`bvudiv`, `÷0 = all-ones`).
+    #[must_use]
+    pub fn udiv(&self, d: &Self) -> Self {
+        self.udivrem(d).0
+    }
+
+    /// Unsigned remainder (`bvurem`, `rem 0 = self`).
+    #[must_use]
+    pub fn urem(&self, d: &Self) -> Self {
+        self.udivrem(d).1
+    }
+
+    /// Signed quotient (`bvsdiv`): magnitudes divided, sign by XOR; `÷0` per
+    /// SMT-LIB totality (`1` if `self ≥ 0`, `-1` if `self < 0`).
+    #[must_use]
+    pub fn sdiv(&self, d: &Self) -> Self {
+        if d.is_zero() {
+            return if self.is_negative() {
+                Self::from_u128(1, self.width)
+            } else {
+                Self::ones(self.width)
+            };
+        }
+        let (an, a) = abs(self);
+        let (bn, b) = abs(d);
+        let q = a.udiv(&b);
+        if an ^ bn { q.neg() } else { q }
+    }
+
+    /// Signed remainder (`bvsrem`): sign follows the dividend; `rem 0 = self`.
+    #[must_use]
+    pub fn srem(&self, d: &Self) -> Self {
+        if d.is_zero() {
+            return self.clone();
+        }
+        let (an, a) = abs(self);
+        let (_, b) = abs(d);
+        let r = a.urem(&b);
+        if an { r.neg() } else { r }
+    }
+
+    /// Signed modulo (`bvsmod`): sign follows the divisor; `mod 0 = self`.
+    #[must_use]
+    pub fn smod(&self, d: &Self) -> Self {
+        if d.is_zero() {
+            return self.clone();
+        }
+        let (an, a) = abs(self);
+        let (bn, b) = abs(d);
+        let u = a.urem(&b);
+        if u.is_zero() {
+            return u;
+        }
+        // Combine signs per SMT-LIB bvsmod.
+        match (an, bn) {
+            (false, false) => u,
+            (true, false) => b.sub(&u),
+            (false, true) => b.sub(&u).neg(),
+            (true, true) => u.neg(),
+        }
+    }
+
+    /// Arithmetic right shift by `amount` (sign-replicating).
+    #[must_use]
+    pub fn ashr(&self, amount: u32) -> Self {
+        let logical = self.lshr(amount);
+        if !self.is_negative() || amount == 0 {
+            return logical;
+        }
+        // OR in the sign-fill: the top `min(amount,width)` bits become one.
+        let fill = amount.min(self.width);
+        let top_ones = Self::ones(self.width).shl(self.width - fill);
+        logical.or(&top_ones)
+    }
+
+    /// Signed `self < other`.
+    #[must_use]
+    pub fn slt(&self, other: &Self) -> bool {
+        match (self.is_negative(), other.is_negative()) {
+            (true, false) => true,
+            (false, true) => false,
+            _ => self.ult(other), // same sign: unsigned order agrees
+        }
+    }
+
+    /// Signed `self ≤ other`.
+    #[must_use]
+    pub fn sle(&self, other: &Self) -> bool {
+        !other.slt(self)
+    }
+
+    /// Bits `[lo, hi]` (inclusive) as a `hi − lo + 1`-bit value.
+    #[must_use]
+    pub fn extract(&self, hi: u32, lo: u32) -> Self {
+        debug_assert!(hi >= lo && hi < self.width);
+        let out_w = hi - lo + 1;
+        let shifted = self.lshr(lo);
+        let mut out = Self::zero(out_w);
+        for i in 0..out.limbs.len() {
+            out.limbs[i] = shifted.limbs.get(i).copied().unwrap_or(0);
+        }
+        out.mask();
+        out
+    }
+
+    /// Concatenation `self ++ low` (self is the high part).
+    #[must_use]
+    pub fn concat(&self, low: &Self) -> Self {
+        let out_w = self.width + low.width;
+        // Place `self` above `low`: (zext self to out_w) << low.width | (zext low).
+        let hi = self.zero_ext(out_w - self.width).shl(low.width);
+        let lo = low.zero_ext(out_w - low.width);
+        hi.or(&lo)
+    }
+
+    /// Zero-extend by `by` bits.
+    #[must_use]
+    pub fn zero_ext(&self, by: u32) -> Self {
+        let mut out = Self::zero(self.width + by);
+        for i in 0..self.limbs.len() {
+            out.limbs[i] = self.limbs[i];
+        }
+        out.mask();
+        out
+    }
+
+    /// Sign-extend by `by` bits.
+    #[must_use]
+    pub fn sign_ext(&self, by: u32) -> Self {
+        let z = self.zero_ext(by);
+        if !self.is_negative() || by == 0 {
+            return z;
+        }
+        // Set the new high `by` bits.
+        let fill = Self::ones(z.width).shl(self.width);
+        z.or(&fill)
+    }
+
+    /// Number of leading zero bits (from the MSB); `width` if all-zero.
+    #[must_use]
+    pub fn count_leading_zeros(&self) -> u32 {
+        for i in (0..self.width).rev() {
+            if self.bit(i) {
+                return self.width - 1 - i;
+            }
+        }
+        self.width
+    }
+}
+
+/// `(is_negative, |value|)` as an unsigned magnitude of the same width.
+fn abs(v: &WideUint) -> (bool, WideUint) {
+    if v.is_negative() {
+        (true, v.neg())
+    } else {
+        (false, v.clone())
+    }
 }
 
 /// Mask of the low `width` bits within a `u128` (all ones if `width ≥ 128`).
@@ -276,6 +482,12 @@ fn low_mask_u128(width: u32) -> u128 {
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_truncation,
+    clippy::many_single_char_names
+)]
 mod tests {
     use super::*;
 
@@ -320,6 +532,105 @@ mod tests {
                     let want_lshr = if sh >= width { 0 } else { (a & low_mask_u128(width)) >> sh };
                     assert_eq!(wa.shl(sh).to_u128(), want_shl, "shl {width} by {sh}");
                     assert_eq!(wa.lshr(sh).to_u128(), want_lshr, "lshr {width} by {sh}");
+                }
+            }
+        }
+    }
+
+    // SMT-LIB-total reference helpers over the masked low `width` bits of a u128.
+    // `wrapping_sub` keeps `w = 127` correct (where `1i128 << w` is the sign bit).
+    fn to_signed(v: u128, w: u32) -> i128 {
+        if w < 128 && (v >> (w - 1)) & 1 == 1 {
+            (v as i128).wrapping_sub(1i128 << w)
+        } else {
+            v as i128
+        }
+    }
+
+    #[test]
+    #[allow(clippy::cast_sign_loss, clippy::cast_possible_wrap)]
+    fn extended_ops_match_u128_reference() {
+        let mut rng = Lcg(0x0f1e_2d3c_4b5a_6978);
+        for width in [1u32, 2, 8, 13, 32, 63, 64, 65, 100, 127, 128] {
+            let m = |v: u128| v & low_mask_u128(width);
+            for _ in 0..300 {
+                let a = m(rng.next());
+                let b = m(rng.next());
+                let wa = WideUint::from_u128(a, width);
+                let wb = WideUint::from_u128(b, width);
+
+                // Unsigned div/rem with SMT-LIB totality.
+                let (eq, er) = match (a.checked_div(b), a.checked_rem(b)) {
+                    (Some(q), Some(r)) => (q, r),
+                    _ => (low_mask_u128(width), a),
+                };
+                assert_eq!(wa.udiv(&wb).to_u128(), eq, "udiv {a}/{b} w{width}");
+                assert_eq!(wa.urem(&wb).to_u128(), er, "urem {a}%{b} w{width}");
+
+                // Signed div/rem/mod.
+                let sa = to_signed(a, width);
+                let sb = to_signed(b, width);
+                let sdiv_ref = if sb == 0 {
+                    if sa < 0 { 1 } else { -1i128 }
+                } else {
+                    sa.wrapping_div(sb)
+                };
+                let srem_ref = if sb == 0 { sa } else { sa.wrapping_rem(sb) };
+                assert_eq!(wa.sdiv(&wb).to_u128(), m(sdiv_ref as u128), "sdiv w{width}");
+                assert_eq!(wa.srem(&wb).to_u128(), m(srem_ref as u128), "srem w{width}");
+                let smod_ref = if sb == 0 {
+                    sa
+                } else {
+                    let r = sa.rem_euclid(sb.abs());
+                    if sb < 0 && r != 0 { r - sb.abs() } else { r }
+                };
+                assert_eq!(wa.smod(&wb).to_u128(), m(smod_ref as u128), "smod {sa} {sb} w{width}");
+
+                // Signed compares.
+                assert_eq!(wa.slt(&wb), sa < sb, "slt w{width}");
+                assert_eq!(wa.sle(&wb), sa <= sb, "sle w{width}");
+                assert_eq!(wa.uge(&wb), a >= b, "uge w{width}");
+                assert_eq!(wa.count_leading_zeros(), a.leading_zeros() - (128 - width), "clz {a} w{width}");
+
+                // Arithmetic shift.
+                for sh in [0u32, 1, 7, width / 2, width.saturating_sub(1), width] {
+                    let want = if sh >= width {
+                        if sa < 0 { low_mask_u128(width) } else { 0 }
+                    } else {
+                        m((sa >> sh) as u128)
+                    };
+                    assert_eq!(wa.ashr(sh).to_u128(), want, "ashr {sa} by {sh} w{width}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn structural_ops_match_u128_reference() {
+        let mut rng = Lcg(0xa1b2_c3d4_e5f6_0718);
+        for width in [4u32, 8, 16, 32, 60, 64, 96] {
+            for _ in 0..200 {
+                let a = rng.next() & low_mask_u128(width);
+                let wa = WideUint::from_u128(a, width);
+                // extract
+                let lo = rng.next() as u32 % width;
+                let hi = lo + rng.next() as u32 % (width - lo);
+                let ew = hi - lo + 1;
+                let want = (a >> lo) & low_mask_u128(ew);
+                assert_eq!(wa.extract(hi, lo).to_u128(), want, "extract[{hi}:{lo}] w{width}");
+                // zero/sign extend (keep total within 128 for the reference)
+                if width <= 64 {
+                    let by = rng.next() as u32 % (128 - width);
+                    assert_eq!(wa.zero_ext(by).to_u128(), a, "zext w{width} by{by}");
+                    let sref = (to_signed(a, width) as u128) & low_mask_u128(width + by);
+                    assert_eq!(wa.sign_ext(by).to_u128(), sref, "sext w{width} by{by}");
+                    // concat with a second value
+                    let bw = 1 + rng.next() as u32 % (128 - width).max(1);
+                    if width + bw <= 128 {
+                        let b = rng.next() & low_mask_u128(bw);
+                        let wb = WideUint::from_u128(b, bw);
+                        assert_eq!(wa.concat(&wb).to_u128(), (a << bw) | b, "concat w{width}++{bw}");
+                    }
                 }
             }
         }
