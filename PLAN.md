@@ -222,7 +222,15 @@ Last updated: 2026-06-14
   zero-sign edge.
   **Symbolic `fp.sub`** added as the exact identity `add(a, neg(b))` (holds for
   all cases incl. signed zeros/specials); validated against native f32 `-`.
-  **Next FP:** iterative symbolic `fp.rem` for wide-exponent formats, symbolic FP↔real (nonlinear). Conversion folds are done both directions:
+  **Wide-exponent symbolic `fp.rem` (F32/BF16/TF32) now done** (`rem_iterative`):
+  when the scaled encoding exceeds 128 bits, a shift-subtract reduction with a
+  small `sb`-wide register over `e_span` data-independent steps computes
+  `(Mx·2^d) mod My` (phase 1 = MSB-first `Mx mod My`, correct for subnormal `y`;
+  phase 2 folds in `d` trailing zeros), then a nearest-adjust + `pack_value`.
+  Validated against the trusted fold over F32 (structured incl. subnormals + 3k
+  random); the differential caught a subnormal-divisor bug. F64 (e_span 2045)
+  remains out of range.
+  **Next FP:** symbolic FP↔real (nonlinear). Conversion folds are done both directions:
   int→FP (`ubv_to_fp`/`sbv_to_fp`), FP→int (`to_ubv`/`to_sbv`, per rounding mode,
   folded only when finite + in range else `None`), and FP→Real (`to_real`, exact
   when it fits the i128 rational). A first-class `Sort::Float` remains optional.
