@@ -602,6 +602,8 @@ fn update_op(hash: &mut u64, op: Op) {
             update_u64(hash, u64::from(index));
         }
         Op::IntToReal => update_u64(hash, 73),
+        Op::RealToInt => update_u64(hash, 74),
+        Op::RealIsInt => update_u64(hash, 75),
         Op::Bv2Nat => update_u64(hash, 70),
         Op::Int2Bv { width } => {
             update_u64(hash, 71);

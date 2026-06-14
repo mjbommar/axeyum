@@ -356,6 +356,8 @@ fn op_str(op: Op) -> String {
         // Rendered via its `(as const (Array …))` head in `render_node`.
         Op::ConstArray { .. } => unreachable!("const arrays render via their `as const` head"),
         Op::IntToReal => "to_real".into(),
+        Op::RealToInt => "to_int".into(),
+        Op::RealIsInt => "is_int".into(),
         Op::Bv2Nat => "bv2nat".into(),
         Op::Int2Bv { width } => format!("(_ int2bv {width})"),
         // Applications are rendered via the function name in `render_node`.

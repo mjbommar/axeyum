@@ -917,14 +917,14 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
                 TermNode::RealConst(r) => {
                     arena.int_const(r.numerator().div_euclid(r.denominator()))
                 }
-                _ => return Err(SmtError::Unsupported("symbolic `to_int`".to_owned())),
+                _ => arena.real_to_int(args[0])?,
             }
         }
         "is_int" => {
             need(1)?;
             match *arena.node(args[0]) {
                 TermNode::RealConst(r) => arena.bool_const(r.denominator() == 1),
-                _ => return Err(SmtError::Unsupported("symbolic `is_int`".to_owned())),
+                _ => arena.real_is_int(args[0])?,
             }
         }
         "bv2nat" => {

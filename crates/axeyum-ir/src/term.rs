@@ -197,6 +197,10 @@ pub enum Op {
     /// `to_real`: the real number equal to an integer (the exact numeric
     /// embedding `Int → Real`).
     IntToReal,
+    /// `to_int`: the floor of a real, as an integer (`Real → Int`).
+    RealToInt,
+    /// `is_int`: whether a real is an integer (`Real → Bool`).
+    RealIsInt,
     /// `bv2nat`: the unsigned integer value of a bit-vector (result sort `Int`,
     /// always in `0..2^w`).
     Bv2Nat,

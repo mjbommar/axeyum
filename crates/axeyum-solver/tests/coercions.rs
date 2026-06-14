@@ -86,3 +86,46 @@ fn to_real_pinned_is_sat() {
     let rc = a.eq(r, three_r).unwrap();
     assert!(matches!(solve_auto(&mut a, &[ic, rc]), CheckResult::Sat(_)));
 }
+
+#[test]
+fn to_int_pinned_is_sat_and_contradiction_unsat() {
+    // r == 7/2 AND to_int(r) == 3 : sat (floor(3.5) = 3).
+    let mut a = TermArena::new();
+    let r = a.declare("r", Sort::Real).map(|s| a.var(s)).unwrap();
+    let half7 = a.real_const(axeyum_ir::Rational::new(7, 2));
+    let rc = a.eq(r, half7).unwrap();
+    let j = a.real_to_int(r).unwrap();
+    let three = a.int_const(3);
+    let jc = a.eq(j, three).unwrap();
+    assert!(matches!(solve_auto(&mut a, &[rc, jc]), CheckResult::Sat(_)));
+
+    // to_int(r) == 3 AND to_int(r) == 4 : same coerced value can't be both -> unsat.
+    let mut a = TermArena::new();
+    let r = a.declare("r", Sort::Real).map(|s| a.var(s)).unwrap();
+    let j1 = a.real_to_int(r).unwrap();
+    let j2 = a.real_to_int(r).unwrap();
+    let three = a.int_const(3);
+    let four = a.int_const(4);
+    let c1 = a.eq(j1, three).unwrap();
+    let c2 = a.eq(j2, four).unwrap();
+    assert!(matches!(solve_auto(&mut a, &[c1, c2]), CheckResult::Unsat));
+}
+
+#[test]
+fn is_int_pinned_is_sat() {
+    // r == 4.0 AND is_int(r) : sat. r == 3.5 AND is_int(r) : replay fails -> not sat.
+    let mut a = TermArena::new();
+    let r = a.declare("r", Sort::Real).map(|s| a.var(s)).unwrap();
+    let four = a.real_const(axeyum_ir::Rational::integer(4));
+    let rc = a.eq(r, four).unwrap();
+    let ii = a.real_is_int(r).unwrap();
+    assert!(matches!(solve_auto(&mut a, &[rc, ii]), CheckResult::Sat(_)));
+
+    // is_int(r) AND not(is_int(r)) : same value can't be both -> unsat.
+    let mut a = TermArena::new();
+    let r = a.declare("r", Sort::Real).map(|s| a.var(s)).unwrap();
+    let i1 = a.real_is_int(r).unwrap();
+    let i2 = a.real_is_int(r).unwrap();
+    let n2 = a.not(i2).unwrap();
+    assert!(matches!(solve_auto(&mut a, &[i1, n2]), CheckResult::Unsat));
+}

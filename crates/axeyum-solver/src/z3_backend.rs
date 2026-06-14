@@ -396,6 +396,8 @@ fn translate(
                         | Op::DtTest(_)
                         | Op::ConstArray { .. }
                         | Op::IntToReal
+                        | Op::RealToInt
+                        | Op::RealIsInt
                         | Op::Bv2Nat
                         | Op::Int2Bv { .. }
                 ) {
@@ -525,6 +527,8 @@ fn apply(op: Op, args: &[TermId], cache: &HashMap<TermId, Z3Term>) -> Z3Term {
         | Op::DtTest(_)
         | Op::ConstArray { .. }
         | Op::IntToReal
+        | Op::RealToInt
+        | Op::RealIsInt
         | Op::Bv2Nat
         | Op::Int2Bv { .. } => {
             unreachable!(

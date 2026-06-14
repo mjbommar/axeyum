@@ -56,6 +56,8 @@ fn op_name(op: Op) -> String {
         Op::Store => "store".into(),
         Op::ConstArray { .. } => "const".into(),
         Op::IntToReal => "to_real".into(),
+        Op::RealToInt => "to_int".into(),
+        Op::RealIsInt => "is_int".into(),
         Op::Bv2Nat => "bv2nat".into(),
         Op::Int2Bv { width } => format!("(_ int2bv {width})"),
         // The function name needs the arena; handled in `render` directly.

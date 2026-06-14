@@ -636,8 +636,12 @@ Last updated: 2026-06-14
   decoupled problem, and replays against the original (eval computes the true
   `to_real(i)=i`) — `unsat` sound, replay-confirmed `sat`, else `unknown`. Tests:
   same-value contradiction (`unsat`), pinned `i=3 ∧ to_real(i)=3.0` (`sat`).
-  Symbolic `to_int`/`is_int` (the same cross-sort coupling) and a complete
-  Nelson-Oppen combination remain future.
+  **Symbolic `to_int`/`is_int`** (`Op::RealToInt`/`Op::RealIsInt`) now handled by
+  the same relaxation — generalized to a `relax_coercions` wrapper at `check_auto`
+  (so `is_int`-only queries, which dispatch through the real/NRA path, are covered
+  too). Tests: `to_int` pinned `sat` + same-value contradiction `unsat`; `is_int`
+  pinned `sat` + `is_int(r) ∧ ¬is_int(r)` `unsat`. A complete Nelson-Oppen
+  combination (the strong version) remains future.
 - **Constant arrays added (2026-06-14, extends ADR-0010).** New IR op
   `Op::ConstArray { index }` (`((as const (Array I E)) v)`): every index maps to
   `v`. The ground evaluator builds `ArrayValue::constant`; `eliminate_arrays`

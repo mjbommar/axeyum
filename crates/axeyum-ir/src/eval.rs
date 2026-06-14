@@ -495,6 +495,15 @@ fn apply(op: Op, vals: &[Value]) -> Value {
             let i = vals[0].as_int().expect("builder guaranteed Int operand");
             Value::Real(crate::rational::Rational::integer(i))
         }
+        Op::RealToInt => {
+            let r = real(&vals[0]);
+            // Floor: denominator is positive by normalization.
+            Value::Int(r.numerator().div_euclid(r.denominator()))
+        }
+        Op::RealIsInt => {
+            let r = real(&vals[0]);
+            Value::Bool(r.denominator() == 1)
+        }
         Op::Bv2Nat => {
             let (_, value) = bv(&vals[0]);
             // Unsigned BV value as a non-negative integer (within the i128

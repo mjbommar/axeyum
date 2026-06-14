@@ -1477,6 +1477,26 @@ impl TermArena {
         Ok(self.app(Op::IntToReal, &[a], Sort::Real))
     }
 
+    /// `to_int`: the floor of real `a`, as an integer.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless `a` is a real.
+    pub fn real_to_int(&mut self, a: TermId) -> Result<TermId, IrError> {
+        self.expect_real(a)?;
+        Ok(self.app(Op::RealToInt, &[a], Sort::Int))
+    }
+
+    /// `is_int`: whether real `a` is an integer (result sort `Bool`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless `a` is a real.
+    pub fn real_is_int(&mut self, a: TermId) -> Result<TermId, IrError> {
+        self.expect_real(a)?;
+        Ok(self.app(Op::RealIsInt, &[a], Sort::Bool))
+    }
+
     /// Real less-than (result sort `Bool`).
     ///
     /// # Errors

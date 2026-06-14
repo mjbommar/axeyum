@@ -156,6 +156,44 @@ pub fn check_auto(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    // Int↔Real coercions (`to_real`/`to_int`/`is_int`) couple the int and real
+    // theories; a complete decision needs Nelson-Oppen. We relax each coercion to
+    // a fresh variable of its result sort — shared per distinct term, so a
+    // contradiction on the *same* coerced value (e.g. `to_real(i) > 5 ∧
+    // to_real(i) < 5`) is still proven — dispatch the decoupled query, and replay
+    // any `sat` candidate against the *original* (where the evaluator computes the
+    // true coercion). `unsat` of the relaxation is sound; a candidate whose
+    // coupling fails on replay is `unknown`.
+    let (relaxed, had_coercion) = relax_coercions(arena, assertions)?;
+    if !had_coercion {
+        return check_auto_dispatch(arena, assertions, config);
+    }
+    match check_auto_dispatch(arena, &relaxed, config)? {
+        CheckResult::Sat(model) => {
+            let assignment = model.to_assignment();
+            if assertions
+                .iter()
+                .all(|&a| matches!(eval(arena, a, &assignment), Ok(Value::Bool(true))))
+            {
+                Ok(CheckResult::Sat(model))
+            } else {
+                Ok(CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::Incomplete,
+                    detail: "int↔real coercion relaxation: candidate fails the original coupling"
+                        .to_owned(),
+                }))
+            }
+        }
+        other => Ok(other), // Unsat (sound) or Unknown
+    }
+}
+
+/// The theory dispatcher (coercions already relaxed away by [`check_auto`]).
+fn check_auto_dispatch(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
     let features = Features::scan(arena, assertions);
     if features.has_datatype {
         // Datatypes: fold read-over-construct, then decide the residual (or
@@ -168,33 +206,8 @@ pub fn check_auto(
         // integer and real atoms with their exact simplices independently (they
         // share no sort). Falls back to the real loop on non-arithmetic atoms
         // (mixed BV/array), which bit-blasts them.
-        //
-        // `to_real(i)` couples the int and real sides (a full decision needs
-        // Nelson-Oppen). We relax it: replace each `to_real(i)` with a fresh real
-        // (shared per term, so a contradiction on the *same* coerced value — e.g.
-        // `to_real(i) > 5 ∧ to_real(i) < 5` — is still proven), solve, and replay
-        // the candidate against the *original* (where the evaluator computes the
-        // true `to_real(i) = i`). `unsat` of the relaxation is sound; a `sat`
-        // candidate whose replay fails is `unknown`.
-        let (relaxed, had_coercion) = relax_int_to_real(arena, assertions)?;
-        match check_with_arith_dpll(arena, &relaxed, config) {
-            Ok(result) if !had_coercion => return Ok(result),
-            Ok(CheckResult::Sat(model)) => {
-                let assignment = model.to_assignment();
-                if assertions
-                    .iter()
-                    .all(|&a| matches!(eval(arena, a, &assignment), Ok(Value::Bool(true))))
-                {
-                    return Ok(CheckResult::Sat(model));
-                }
-                return Ok(CheckResult::Unknown(UnknownReason {
-                    kind: UnknownKind::Incomplete,
-                    detail: "int→real coercion relaxation: candidate fails the original (the \
-                             coupling to_real(i)=i is not satisfied)"
-                        .to_owned(),
-                }));
-            }
-            Ok(other) => return Ok(other), // Unsat (sound) or Unknown
+        match check_with_arith_dpll(arena, assertions, config) {
+            Ok(result) => return Ok(result),
             Err(SolverError::Unsupported(_)) => {}
             Err(other) => return Err(other),
         }
@@ -384,12 +397,13 @@ fn decide_instantiation(
     }
 }
 
-/// Replaces each `to_real(i)` (`Op::IntToReal`) with a fresh real variable,
-/// shared per distinct term so a contradiction on the same coerced value is
-/// preserved. Returns the rewritten assertions and whether any coercion was
-/// found. A pure relaxation (the fresh real is unconstrained relative to `i`);
-/// soundness for `sat` comes from replaying the original.
-fn relax_int_to_real(
+/// Replaces each Int↔Real coercion (`to_real`/`to_int`/`is_int`) with a fresh
+/// variable of its result sort, shared per distinct term so a contradiction on
+/// the same coerced value is preserved. Returns the rewritten assertions and
+/// whether any coercion was found. A pure relaxation (the fresh variable is
+/// unconstrained relative to the operand); soundness for `sat` comes from
+/// replaying the original.
+fn relax_coercions(
     arena: &mut TermArena,
     assertions: &[TermId],
 ) -> Result<(Vec<TermId>, bool), SolverError> {
@@ -402,7 +416,7 @@ fn relax_int_to_real(
         }
         if let TermNode::App { op, args } = arena.node(t) {
             let (op, args) = (*op, args.clone());
-            if op == Op::IntToReal {
+            if matches!(op, Op::IntToReal | Op::RealToInt | Op::RealIsInt) {
                 terms.push(t);
             }
             stack.extend(args);
@@ -414,7 +428,8 @@ fn relax_int_to_real(
     let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
     let mut map: HashMap<TermId, TermId> = HashMap::new();
     for (i, t) in terms.into_iter().enumerate() {
-        let sym = arena.declare(&format!("!coerce_r_{i}"), Sort::Real).map_err(err)?;
+        let sort = arena.sort_of(t);
+        let sym = arena.declare(&format!("!coerce_{i}"), sort).map_err(err)?;
         map.insert(t, arena.var(sym));
     }
     let mut memo: HashMap<TermId, TermId> = HashMap::new();
