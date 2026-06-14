@@ -439,6 +439,52 @@ fn symbolic_replace_is_sat() {
 }
 
 #[test]
+fn replace_all_non_overlapping() {
+    let mut a = TermArena::new();
+    let s = BoundedString::new(4);
+
+    let check = |a: &mut TermArena, hay: &str, old: &str, new: &str, expect: &str| {
+        let h = s.literal(a, hay).unwrap();
+        let o = s.literal(a, old).unwrap();
+        let n = s.literal(a, new).unwrap();
+        let (rs, out) = s.replace_all(a, &h, &o, &n).unwrap();
+        let exp = rs.literal(a, expect).unwrap();
+        let eq = rs.equal(a, &out, &exp).unwrap();
+        assert!(eval_bool(a, eq), "replace_all({hay:?},{old:?},{new:?}) == {expect:?}");
+    };
+    // all occurrences
+    check(&mut a, "abab", "ab", "X", "XX");
+    // non-overlapping, left to right: "aaaa"/"aa" -> two matches
+    check(&mut a, "aaaa", "aa", "b", "bb");
+    // non-overlapping leaves a trailing unmatched byte: "aaa"/"aa" -> "ba"
+    check(&mut a, "aaa", "aa", "b", "ba");
+    // growing replacement, multiple matches
+    check(&mut a, "aaa", "a", "bb", "bbbbbb");
+    // deletion of all occurrences
+    check(&mut a, "aba", "a", "", "b");
+    // not found -> unchanged
+    check(&mut a, "xyz", "q", "1", "xyz");
+    // empty old -> unchanged
+    check(&mut a, "hi", "", "AB", "hi");
+}
+
+#[test]
+fn symbolic_replace_all_is_sat() {
+    // exists x (<=4): replace_all(x, "a", "bb") == "bb" -> sat (x = "a" or "bb").
+    let mut a = TermArena::new();
+    let s = BoundedString::new(4);
+    let x = s.declare(&mut a, "x").unwrap();
+    let wf = s.well_formed(&mut a, &x).unwrap();
+    let old = s.literal(&mut a, "a").unwrap();
+    let new = s.literal(&mut a, "bb").unwrap();
+    let (rs, out) = s.replace_all(&mut a, &x, &old, &new).unwrap();
+    let target = rs.literal(&mut a, "bb").unwrap();
+    let eq = rs.equal(&mut a, &out, &target).unwrap();
+    let r = solve(&mut a, &[wf, eq], &SolverConfig::default()).unwrap();
+    assert!(matches!(r, CheckResult::Sat(_)), "exists x: replace_all(x,a,bb)=bb, got {r:?}");
+}
+
+#[test]
 fn regex_membership() {
     let mut a = TermArena::new();
     let s = BoundedString::new(8);

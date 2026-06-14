@@ -15,8 +15,10 @@
 //! `suffixof`, `substr` (constant and symbolic start), `indexof`, lexicographic
 //! `<`/`<=`, `take`/`drop`, equal-length `replace`, regex membership (`in_re`,
 //! via a Thompson NFA simulated over the bounded positions), decimal
-//! `to_int`/`from_int`, and general-length `replace` (first occurrence, result
-//! in a `2·max_len` sort). Unbounded strings and `replace_all` are future work.
+//! `to_int`/`from_int`, general-length `replace` (first occurrence, result in a
+//! `2·max_len` sort), and `replace_all` (non-overlapping, left to right, result
+//! in a `max_len²` sort). Unbounded strings (a first-class sequence sort and a
+//! native solver) are the remaining frontier.
 
 use axeyum_ir::{IrError, Sort, TermArena, TermId};
 
@@ -629,6 +631,111 @@ impl BoundedString {
         let len = arena.ite(found, rep_len, lenx_r)?;
 
         Ok((result, StrTerm { len, content }))
+    }
+
+    /// `str.replace_all` — replaces **all** non-overlapping occurrences of `old`
+    /// in `x` with `new`, scanning left to right (greedy leftmost, matches do not
+    /// overlap), in a sort of size `max_len²` (worst case: every byte starts a
+    /// match of a length-1 `old` replaced by a length-`max_len` `new`). An empty
+    /// `old` leaves `x` unchanged (SMT-LIB). Requires `max_len ≤ 4` (so
+    /// `max_len² ≤ 16`).
+    ///
+    /// A single left-to-right pass carries a `skip` counter (bytes remaining in
+    /// the current match, so inner offsets cannot re-match) and a symbolic output
+    /// cursor `out_off`. At position `i`: if `old` matches and `skip = 0`, emit
+    /// `new` and set `skip = len(old) − 1`; else if not skipping and `i < len(x)`,
+    /// emit `x[i]`; the emitted chunk is shifted to `out_off·8` and `or`-ed in.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::InvalidWidth`] if `max_len² > 16`, or [`IrError`] from
+    /// the builders.
+    #[allow(clippy::similar_names, clippy::too_many_lines)]
+    pub fn replace_all(
+        &self,
+        arena: &mut TermArena,
+        x: &StrTerm,
+        old: &StrTerm,
+        new: &StrTerm,
+    ) -> Result<(BoundedString, StrTerm), IrError> {
+        let rmax = self.max_len * self.max_len;
+        if rmax > 16 {
+            return Err(IrError::InvalidWidth(rmax * 8));
+        }
+        let result = BoundedString::new(rmax);
+        let rcw = result.content_width();
+        let rlw = result.len_width();
+        let lw = self.len_width();
+        let cw = self.content_width();
+        let sw = lw + 1; // skip counter width (holds 0..=max_len)
+        let three = arena.bv_const(rcw, 3)?; // ·8
+
+        // new masked to its low len(new)·8 bits, widened to the result width.
+        let new_wide = arena.zero_ext(rcw - cw, new.content)?;
+        let newlen_c = arena.zero_ext(rcw - lw, new.len)?;
+        let newlen_sh = arena.bv_shl(newlen_c, three)?;
+        let one_c = arena.bv_const(rcw, 1)?;
+        let pownew = arena.bv_shl(one_c, newlen_sh)?;
+        let masknew = arena.bv_sub(pownew, one_c)?;
+        let new_masked = arena.bv_and(new_wide, masknew)?;
+        let newlen_r = arena.zero_ext(rlw - lw, new.len)?;
+
+        let zero_r = arena.bv_const(rlw, 0)?;
+        let one_r = arena.bv_const(rlw, 1)?;
+        let zero_rcw = arena.bv_const(rcw, 0)?;
+        let zero_s = arena.bv_const(sw, 0)?;
+        let one_s = arena.bv_const(sw, 1)?;
+
+        let mut skip = zero_s;
+        let mut out_off = zero_r;
+        let mut content = zero_rcw;
+
+        for i in 0..self.max_len {
+            let match_i = self.match_at(arena, x, old, i, false)?;
+            let skip_zero = arena.eq(skip, zero_s)?;
+            let matched_here = arena.and(match_i, skip_zero)?;
+            // emit a kept byte when not skipping, no match here, and i < len(x).
+            let i_c = arena.bv_const(lw, u128::from(i))?;
+            let i_lt_len = arena.bv_ult(i_c, x.len)?;
+            let not_match = arena.not(match_i)?;
+            let nb = arena.and(skip_zero, not_match)?;
+            let emit_byte = arena.and(nb, i_lt_len)?;
+
+            // chunk_len = matched_here ? len(new) : emit_byte ? 1 : 0
+            let cl_eb = arena.ite(emit_byte, one_r, zero_r)?;
+            let chunk_len = arena.ite(matched_here, newlen_r, cl_eb)?;
+
+            // chunk content (right-aligned): new, or x[i], or nothing.
+            let xbyte = arena.extract(i * 8 + 7, i * 8, x.content)?;
+            let xbyte_w = arena.zero_ext(rcw - 8, xbyte)?;
+            let chunk_eb = arena.ite(emit_byte, xbyte_w, zero_rcw)?;
+            let chunk = arena.ite(matched_here, new_masked, chunk_eb)?;
+
+            // place chunk at byte out_off.
+            let out_off_c = arena.zero_ext(rcw - rlw, out_off)?;
+            let out_sh = arena.bv_shl(out_off_c, three)?;
+            let placed = arena.bv_shl(chunk, out_sh)?;
+            content = arena.bv_or(content, placed)?;
+            out_off = arena.bv_add(out_off, chunk_len)?;
+
+            // advance skip: matched_here ? len(old)-1 : max(skip-1, 0)
+            let oldlen_s = arena.zero_ext(sw - lw, old.len)?;
+            let oldlen_m1 = arena.bv_sub(oldlen_s, one_s)?;
+            let skip_pos = arena.bv_ugt(skip, zero_s)?;
+            let skip_dec = arena.bv_sub(skip, one_s)?;
+            let skip_else = arena.ite(skip_pos, skip_dec, zero_s)?;
+            skip = arena.ite(matched_here, oldlen_m1, skip_else)?;
+        }
+
+        // empty old -> x unchanged (SMT-LIB).
+        let zero_lw = arena.bv_const(lw, 0)?;
+        let old_empty = arena.eq(old.len, zero_lw)?;
+        let x_wide = arena.zero_ext(rcw - cw, x.content)?;
+        let x_len_r = arena.zero_ext(rlw - lw, x.len)?;
+        let final_content = arena.ite(old_empty, x_wide, content)?;
+        let final_len = arena.ite(old_empty, x_len_r, out_off)?;
+
+        Ok((result, StrTerm { len: final_len, content: final_content }))
     }
 
     /// `str.in_re` — does the bounded string `x` match the regular expression

@@ -72,7 +72,14 @@ Last updated: 2026-06-14
   result in a `2·max_len` sort, length `len(x)−len(old)+len(new)`; empty old
   prepends, not-found returns `x`. Tests: equal/longer/shorter/delete, first-only,
   not-found, empty-old, and a symbolic `replace(x,"a","bb")=="bbc"` (sat).
-  **Next:** `replace_all`, then unbounded via a first-class sort.
+  **`str.replace_all`** now added — a single left-to-right pass carrying a `skip`
+  counter (so matches don't overlap) and a symbolic output cursor; result in a
+  `max_len²` sort (`max_len ≤ 4`), empty old leaves `x` unchanged. Tests:
+  all-occurrences, non-overlapping `"aaaa"/"aa"→"bb"` and `"aaa"/"aa"→"ba"`,
+  growing `"aaa"/"a"→"bbbbbb"`, deletion, not-found, empty-old, and a symbolic
+  `replace_all(x,"a","bb")=="bb"` (sat). The bounded string structural operator
+  set is now complete. **Next:** the unbounded string sort (`Sort::Seq`) + native
+  solver — the remaining frontier; or depth on another theory.
   This was the last entirely-untouched Z3 theory; it is now opened.
 
 - **NRA — first slice (2026-06-14, ADR-0024).** Nonlinear real arithmetic by

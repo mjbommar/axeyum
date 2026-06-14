@@ -76,7 +76,9 @@ bound is explicit.
   Horner, returning `(valid, value)`) and `str.from_int` (decimal format —
   digits peeled by `÷10`/`mod 10`, reversed into print order, returning
   `(fits, s)`) are also in. General-length `str.replace` (first occurrence
-  spliced by masks/shifts into a `2·max_len` result sort) lands the last
-  structural op. Remaining: `replace_all` and the unbounded sort.)*
+  spliced by masks/shifts into a `2·max_len` result sort) and `str.replace_all`
+  (non-overlapping left-to-right scan carrying a skip counter and a symbolic
+  output cursor, `max_len²` result sort) complete the structural operator set.
+  Remaining: the unbounded sequence sort and a native solver.)*
 - **Revisited when:** a workload needs unbounded strings or the structural
   operations (then the next bounded slice, and eventually the first-class sort).
