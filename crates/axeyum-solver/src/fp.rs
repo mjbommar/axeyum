@@ -78,6 +78,16 @@ impl FloatFormat {
         exp_bits: 5,
         sig_bits: 3,
     };
+    /// OCP FP8 E4M3: 4 exponent bits, 4 significand bits. **Deviates from IEEE**
+    /// (no infinities; a single NaN encoding `S.1111.111`; the all-ones exponent
+    /// is reused for finite values, extending the max to ±448). Use the
+    /// `e4m3_is_*` classification predicates — the generic IEEE classification and
+    /// arithmetic are **not** correct for it (its overflow/saturation semantics
+    /// need the OCP spec and a validation oracle; arithmetic is not yet provided).
+    pub const FP8_E4M3: Self = Self {
+        exp_bits: 4,
+        sig_bits: 4,
+    };
 
     /// Total bit width of a value in this format.
     #[must_use]
@@ -110,6 +120,64 @@ impl FloatFormat {
     fn trailing_sig(self, arena: &mut TermArena, x: TermId) -> Result<TermId, IrError> {
         arena.extract(self.sig_bits - 2, 0, x)
     }
+}
+
+// --- OCP FP8 E4M3 classification (non-IEEE conventions) -----------------------
+//
+// E4M3 (1 sign, 4 exp, 3 significand) has NO infinities, exactly one NaN
+// (`S.1111.111`), and reuses the all-ones exponent for finite values (max ±448).
+// So its classification differs from the IEEE [`is_nan`]/[`is_infinite`]/… and is
+// provided separately. Arithmetic on E4M3 is not yet supported (the
+// overflow/saturation behavior needs the OCP spec and a validation oracle).
+
+fn e4m3_fields(arena: &mut TermArena, x: TermId) -> Result<(TermId, TermId), IrError> {
+    // (exponent[4], trailing significand[3]) of an 8-bit E4M3 value.
+    let exp = arena.extract(6, 3, x)?;
+    let mant = arena.extract(2, 0, x)?;
+    Ok((exp, mant))
+}
+
+/// `x` is the (unique) E4M3 NaN: exponent all ones **and** significand all ones.
+pub fn e4m3_is_nan(arena: &mut TermArena, x: TermId) -> Result<TermId, IrError> {
+    let (exp, mant) = e4m3_fields(arena, x)?;
+    let ones4 = arena.bv_const(4, 0xF)?;
+    let ones3 = arena.bv_const(3, 0x7)?;
+    let e = arena.eq(exp, ones4)?;
+    let m = arena.eq(mant, ones3)?;
+    arena.and(e, m)
+}
+
+/// `x` is an E4M3 zero (`±0`).
+pub fn e4m3_is_zero(arena: &mut TermArena, x: TermId) -> Result<TermId, IrError> {
+    let (exp, mant) = e4m3_fields(arena, x)?;
+    let zero_exp = arena.bv_const(4, 0)?;
+    let zero_sig = arena.bv_const(3, 0)?;
+    let e = arena.eq(exp, zero_exp)?;
+    let m = arena.eq(mant, zero_sig)?;
+    arena.and(e, m)
+}
+
+/// `x` is an E4M3 subnormal: zero exponent, non-zero significand.
+pub fn e4m3_is_subnormal(arena: &mut TermArena, x: TermId) -> Result<TermId, IrError> {
+    let (exp, mant) = e4m3_fields(arena, x)?;
+    let zero_exp = arena.bv_const(4, 0)?;
+    let zero_sig = arena.bv_const(3, 0)?;
+    let e = arena.eq(exp, zero_exp)?;
+    let m = arena.eq(mant, zero_sig)?;
+    let mnz = arena.not(m)?;
+    arena.and(e, mnz)
+}
+
+/// `x` is an E4M3 normal number: non-zero exponent and not the NaN encoding
+/// (the all-ones exponent is a *normal* range in E4M3, except `S.1111.111`).
+pub fn e4m3_is_normal(arena: &mut TermArena, x: TermId) -> Result<TermId, IrError> {
+    let (exp, _mant) = e4m3_fields(arena, x)?;
+    let zero_exp = arena.bv_const(4, 0)?;
+    let exp_is_zero = arena.eq(exp, zero_exp)?;
+    let exp_nonzero = arena.not(exp_is_zero)?;
+    let nan = e4m3_is_nan(arena, x)?;
+    let not_nan = arena.not(nan)?;
+    arena.and(exp_nonzero, not_nan)
 }
 
 /// `x` is NaN: exponent all ones and a non-zero trailing significand.
@@ -2116,6 +2184,42 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn e4m3_classification() {
+        // OCP FP8 E4M3 deviates from IEEE: 0x7E (0.1111.110) is the *max normal*
+        // (448), not infinity; only 0x7F/0xFF (S.1111.111) is NaN; there are no
+        // infinities.
+        let mut a = TermArena::new();
+        let bit = |a: &TermArena, t: axeyum_ir::TermId| matches!(
+            eval(a, t, &Assignment::new()), Ok(Value::Bool(true))
+        );
+        let mk = |a: &mut TermArena, v: u128| a.bv_const(8, v).unwrap();
+
+        for nan in [0x7Fu128, 0xFF] {
+            let x = mk(&mut a, nan);
+            let t = e4m3_is_nan(&mut a, x).unwrap();
+            assert!(bit(&a, t), "{nan:#x} is E4M3 NaN");
+        }
+        // 0x7E is max-normal (would be inf in IEEE) — NOT NaN, IS normal.
+        let max = mk(&mut a, 0x7E);
+        let t = e4m3_is_nan(&mut a, max).unwrap();
+        assert!(!bit(&a, t), "0x7E is not NaN in E4M3");
+        let t = e4m3_is_normal(&mut a, max).unwrap();
+        assert!(bit(&a, t), "0x7E (448) is a normal in E4M3");
+
+        for z in [0x00u128, 0x80] {
+            let x = mk(&mut a, z);
+            let t = e4m3_is_zero(&mut a, x).unwrap();
+            assert!(bit(&a, t), "{z:#x} is zero");
+        }
+        let sub = mk(&mut a, 0x01);
+        let t = e4m3_is_subnormal(&mut a, sub).unwrap();
+        assert!(bit(&a, t), "0x01 is subnormal");
+        let normal = mk(&mut a, 0x08); // 0.0001.000 smallest normal
+        let t = e4m3_is_normal(&mut a, normal).unwrap();
+        assert!(bit(&a, t), "0x08 is normal");
     }
 
     #[test]
