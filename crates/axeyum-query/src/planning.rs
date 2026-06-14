@@ -597,6 +597,10 @@ fn update_op(hash: &mut u64, op: Op) {
         }
         Op::Select => update_u64(hash, 42),
         Op::Store => update_u64(hash, 43),
+        Op::ConstArray { index } => {
+            update_u64(hash, 69);
+            update_u64(hash, u64::from(index));
+        }
         Op::Apply(func) => {
             update_u64(hash, 44);
             update_u64(hash, u64::try_from(func.index()).unwrap_or(u64::MAX));

@@ -194,6 +194,7 @@ fn render_ref(arena: &TermArena, t: TermId, names: &HashMap<TermId, String>) -> 
 }
 
 /// Renders `t` inline, with children as references. Iterative.
+#[allow(clippy::too_many_lines)]
 fn render_node(arena: &TermArena, root: TermId, names: &HashMap<TermId, String>) -> String {
     let mut memo: HashMap<TermId, String> = HashMap::new();
     let mut stack: Vec<(TermId, bool)> = vec![(root, false)];
@@ -257,6 +258,24 @@ fn render_node(arena: &TermArena, root: TermId, names: &HashMap<TermId, String>)
                                 "({keyword} (({} {})) {body})",
                                 symbol_syntax(name),
                                 sort_str(sort)
+                            ),
+                        );
+                        continue;
+                    }
+                    // Constant arrays render with an `(as const (Array I E))` head.
+                    if let Op::ConstArray { index } = op {
+                        let element = match arena.sort_of(t) {
+                            Sort::Array { element, .. } => element,
+                            _ => *index, // unreachable: ConstArray is array-sorted
+                        };
+                        let value = match names.get(&args[0]) {
+                            Some(n) if args[0] != root => n.clone(),
+                            _ => memo[&args[0]].clone(),
+                        };
+                        memo.insert(
+                            t,
+                            format!(
+                                "((as const (Array (_ BitVec {index}) (_ BitVec {element}))) {value})"
                             ),
                         );
                         continue;
@@ -334,6 +353,8 @@ fn op_str(op: Op) -> String {
         Op::RotateRight { by } => format!("(_ rotate_right {by})"),
         Op::Select => "select".into(),
         Op::Store => "store".into(),
+        // Rendered via its `(as const (Array …))` head in `render_node`.
+        Op::ConstArray { .. } => unreachable!("const arrays render via their `as const` head"),
         // Applications are rendered via the function name in `render_node`.
         Op::Apply(_) => unreachable!("Op::Apply is rendered via its function name"),
         Op::IntNeg | Op::IntSub | Op::RealNeg | Op::RealSub => "-".into(),

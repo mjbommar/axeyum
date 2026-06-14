@@ -971,6 +971,19 @@ impl TermArena {
         ))
     }
 
+    /// Constant array `((as const (Array (_ BitVec index) (_ BitVec e))) value)`:
+    /// every index maps to `value`. The element width is taken from `value`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::InvalidWidth`] for a bad index width, or
+    /// [`IrError::SortMismatch`] unless `value` is a bit-vector.
+    pub fn const_array(&mut self, index: u32, value: TermId) -> Result<TermId, IrError> {
+        check_width(index)?;
+        let element = self.expect_bv(value)?;
+        Ok(self.app(Op::ConstArray { index }, &[value], Sort::Array { index, element }))
+    }
+
     fn expect_array(&self, t: TermId) -> Result<(u32, u32), IrError> {
         match self.sort_of(t) {
             Sort::Array { index, element } => Ok((index, element)),

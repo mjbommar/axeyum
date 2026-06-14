@@ -251,6 +251,13 @@ impl Eliminator {
                 let else_select = self.resolve_select(arena, args[2], index)?;
                 arena.ite(condition, then_select, else_select)?
             }
+            TermNode::App {
+                op: Op::ConstArray { .. },
+                args,
+            } => {
+                // `select((as const _) v, i) = v` for every `i`.
+                self.rewrite(arena, args[0])?
+            }
             TermNode::Symbol(array_symbol) => {
                 let element_width = arena
                     .symbol(array_symbol)

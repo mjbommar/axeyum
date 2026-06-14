@@ -75,3 +75,49 @@ fn aliasing_write_then_distinct_load_is_satisfiable() {
         panic!("expected a satisfiable aliasing load");
     };
 }
+
+#[test]
+fn const_array_read_equals_default_is_sat() {
+    // (select ((as const ...) 0xaa) i) == 0xaa is sat: every read is the default.
+    let mut arena = TermArena::new();
+    let val = arena.bv_const(8, 0xaa).unwrap();
+    let c = arena.const_array(4, val).unwrap();
+    let i = arena.bv_var("i", 4).unwrap();
+    let load = arena.select(c, i).unwrap();
+    let def = arena.bv_const(8, 0xaa).unwrap();
+    let eq = arena.eq(load, def).unwrap();
+    assert!(matches!(solve_qf_abv(&mut arena, &[eq]), CheckResult::Sat(_)));
+}
+
+#[test]
+fn const_array_default_contradiction_is_unsat() {
+    // c = const_array(3); select(c, i) == 4 is unsat (every entry is 3).
+    let mut arena = TermArena::new();
+    let three = arena.bv_const(8, 3).unwrap();
+    let c = arena.const_array(4, three).unwrap();
+    let i = arena.bv_var("i", 4).unwrap();
+    let load = arena.select(c, i).unwrap();
+    let four = arena.bv_const(8, 4).unwrap();
+    let eq = arena.eq(load, four).unwrap();
+    assert!(matches!(solve_qf_abv(&mut arena, &[eq]), CheckResult::Unsat));
+}
+
+#[test]
+fn store_over_const_array() {
+    // c = const_array(0); d = store(c, i, 5); select(d, i)==5 ∧ select(d, j)==1
+    // ∧ i!=j is unsat (j-entry is the default 0, not 1).
+    let mut arena = TermArena::new();
+    let zero = arena.bv_const(8, 0).unwrap();
+    let c = arena.const_array(4, zero).unwrap();
+    let i = arena.bv_var("i", 4).unwrap();
+    let j = arena.bv_var("j", 4).unwrap();
+    let five = arena.bv_const(8, 5).unwrap();
+    let d = arena.store(c, i, five).unwrap();
+    let li = arena.select(d, i).unwrap();
+    let lj = arena.select(d, j).unwrap();
+    let c1 = arena.eq(li, five).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let c2 = arena.eq(lj, one).unwrap();
+    let lt = arena.bv_ult(j, i).unwrap(); // j != i
+    assert!(matches!(solve_qf_abv(&mut arena, &[c1, c2, lt]), CheckResult::Unsat));
+}

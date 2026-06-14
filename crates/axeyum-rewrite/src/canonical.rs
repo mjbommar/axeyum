@@ -555,6 +555,7 @@ fn rewrite_app(
         | Op::Concat
         | Op::Select
         | Op::Store
+        | Op::ConstArray { .. }
         | Op::Apply(_)
         | Op::IntNeg
         | Op::IntAdd
@@ -967,6 +968,7 @@ pub(crate) fn build_app(arena: &mut TermArena, op: Op, args: &[TermId]) -> Resul
         Op::RotateRight { by } => arena.rotate_right(by, args[0]),
         Op::Select => arena.select(args[0], args[1]),
         Op::Store => arena.store(args[0], args[1], args[2]),
+        Op::ConstArray { index } => arena.const_array(index, args[0]),
         Op::Apply(func) => arena.apply(func, args),
         Op::IntNeg => arena.int_neg(args[0]),
         Op::IntAdd => arena.int_add(args[0], args[1]),

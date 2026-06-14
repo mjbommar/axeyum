@@ -54,6 +54,7 @@ fn op_name(op: Op) -> String {
         Op::RotateRight { by } => format!("(_ rotate_right {by})"),
         Op::Select => "select".into(),
         Op::Store => "store".into(),
+        Op::ConstArray { .. } => "const".into(),
         // The function name needs the arena; handled in `render` directly.
         Op::Apply(func) => format!("!fn{}", func.index()),
         Op::IntNeg | Op::IntSub | Op::RealNeg | Op::RealSub => "-".into(),

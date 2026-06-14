@@ -1056,6 +1056,17 @@ fn apply_parameterized(
     head: &[SExpr],
     args: &[TermId],
 ) -> Result<TermId, SmtError> {
+    // Constant array `((as const (Array (_ BitVec i) (_ BitVec e))) v)`.
+    if head.first().and_then(SExpr::atom) == Some("as") {
+        if head.get(1).and_then(SExpr::atom) == Some("const") && head.len() == 3 && args.len() == 1
+        {
+            let Sort::Array { index, .. } = parse_sort(&head[2])? else {
+                return Err(SmtError::Unsupported(format!("`as const` non-array sort {head:?}")));
+            };
+            return Ok(arena.const_array(index, args[0])?);
+        }
+        return Err(SmtError::Unsupported(format!("`as` form {head:?}")));
+    }
     if head.first().and_then(SExpr::atom) != Some("_") || args.len() != 1 {
         return Err(SmtError::Unsupported(format!("application head {head:?}")));
     }

@@ -575,6 +575,15 @@ Last updated: 2026-06-14
   and confirms the found inputs + reconstructed memory by concrete
   re-execution. Remaining array work is QF_ABV scenarios, bench-harness wiring,
   and corpus blow-up measurement.
+- **Constant arrays added (2026-06-14, extends ADR-0010).** New IR op
+  `Op::ConstArray { index }` (`((as const (Array I E)) v)`): every index maps to
+  `v`. The ground evaluator builds `ArrayValue::constant`; `eliminate_arrays`
+  resolves `select((as const _) v, i)` to `v` for any `i` (a base case alongside
+  store/ite/variable, so reads over const arrays need no Ackermann variable). The
+  SMT-LIB parser handles the `(as const (Array …))` qualified head and the writer
+  renders it. Tests: eval (const reads + store-over-const), solver (`select ==
+  default` sat, default contradiction unsat, store-over-const unsat), and an
+  SMT-LIB round-trip. Common for zero-initialized memory.
 - UNSAT proof checking recorded 2026-06-13
   ([ADR-0011](docs/research/09-decisions/adr-0011-drat-unsat-proof-checking.md)):
   `axeyum-cnf` now has an independent DRAT checker (`check_drat`/`parse_drat`,

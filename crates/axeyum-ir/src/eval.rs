@@ -487,6 +487,10 @@ fn apply(op: Op, vals: &[Value]) -> Value {
             let (_, element) = bv(&vals[2]);
             Value::Array(array.store(index, element))
         }
+        Op::ConstArray { index } => {
+            let (element_width, value) = bv(&vals[0]);
+            Value::Array(ArrayValue::constant(index, element_width, value))
+        }
         // Handled in `eval` (needs the model interpretation and result sort).
         Op::Apply(_) => unreachable!("Op::Apply is evaluated against the model in `eval`"),
         // --- linear integer arithmetic (ADR-0014) --------------------------------

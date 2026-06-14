@@ -186,6 +186,13 @@ pub enum Op {
     Select,
     /// Array write: `store(array, index, element)`; result is the array sort.
     Store,
+    /// Constant array `((as const (Array (_ BitVec index) (_ BitVec e))) v)`:
+    /// every index maps to the single element argument `v`. The index width is
+    /// carried here; the element width comes from `v`. Result is the array sort.
+    ConstArray {
+        /// Bit-width of the array index.
+        index: u32,
+    },
     // --- uninterpreted functions (ADR-0013) --------------------------------
     /// Application of a declared uninterpreted function; the argument terms are
     /// the operands and the result sort is the function's declared result.

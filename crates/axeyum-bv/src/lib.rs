@@ -850,6 +850,7 @@ impl<'a> LoweringBuilder<'a> {
                 // integer arithmetic is not bit-blasted in this slice (ADR-0014).
                 Op::Select
                 | Op::Store
+                | Op::ConstArray { .. }
                 | Op::Apply(_)
                 | Op::IntNeg
                 | Op::IntAdd
@@ -1784,6 +1785,7 @@ fn is_unsupported_op(op: Op) -> bool {
         op,
         Op::Select
             | Op::Store
+            | Op::ConstArray { .. }
             | Op::Apply(_)
             | Op::IntNeg
             | Op::IntAdd

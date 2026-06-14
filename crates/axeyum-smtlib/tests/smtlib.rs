@@ -557,3 +557,19 @@ fn parses_lia_divisible() {
     let reparsed = parse_script(&rendered).unwrap();
     assert_eq!(reparsed.assertions.len(), 1);
 }
+
+#[test]
+fn parses_and_round_trips_const_array() {
+    let text = r"
+        (set-logic QF_ABV)
+        (declare-const i (_ BitVec 4))
+        (assert (= (select ((as const (Array (_ BitVec 4) (_ BitVec 8))) (_ bv0 8)) i) (_ bv0 8)))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+    let rendered = write_script(&script.arena, &script.assertions);
+    assert!(rendered.contains("(as const (Array (_ BitVec 4) (_ BitVec 8)))"), "renders as const: {rendered}");
+    let reparsed = parse_script(&rendered).unwrap();
+    assert_eq!(reparsed.assertions.len(), 1);
+}

@@ -1176,3 +1176,27 @@ fn int_divisible_predicate() {
         assert_eq!(eval_bool(&mut a, d), want, "divisible({x},{n})");
     }
 }
+
+#[test]
+#[allow(clippy::many_single_char_names)]
+fn const_array_evaluates_to_constant_everywhere() {
+    let mut a = TermArena::new();
+    let asg = Assignment::new();
+    let v = a.bv_const(8, 0x2a).unwrap();
+    let c = a.const_array(4, v).unwrap();
+    assert_eq!(a.sort_of(c), Sort::Array { index: 4, element: 8 });
+    for i in [0u128, 5, 15] {
+        let idx = a.bv_const(4, i).unwrap();
+        let sel = a.select(c, idx).unwrap();
+        assert_eq!(eval(&a, sel, &asg).unwrap(), bv(8, 0x2a), "const read at {i}");
+    }
+    // store over a const array overrides one cell, defaults elsewhere.
+    let j = a.bv_const(4, 7).unwrap();
+    let nine = a.bv_const(8, 9).unwrap();
+    let d = a.store(c, j, nine).unwrap();
+    let at7 = a.select(d, j).unwrap();
+    let k = a.bv_const(4, 8).unwrap();
+    let at8 = a.select(d, k).unwrap();
+    assert_eq!(eval(&a, at7, &asg).unwrap(), bv(8, 9));
+    assert_eq!(eval(&a, at8, &asg).unwrap(), bv(8, 0x2a));
+}

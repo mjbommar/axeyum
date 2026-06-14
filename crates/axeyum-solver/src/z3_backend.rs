@@ -392,6 +392,7 @@ fn translate(
                         | Op::DtConstruct { .. }
                         | Op::DtSelect { .. }
                         | Op::DtTest(_)
+                        | Op::ConstArray { .. }
                 ) {
                     return Err(SolverError::Unsupported(
                         "z3 oracle does not support uninterpreted functions, integer/real \
@@ -515,7 +516,8 @@ fn apply(op: Op, args: &[TermId], cache: &HashMap<TermId, Z3Term>) -> Z3Term {
         | Op::Exists(_)
         | Op::DtConstruct { .. }
         | Op::DtSelect { .. }
-        | Op::DtTest(_) => {
+        | Op::DtTest(_)
+        | Op::ConstArray { .. } => {
             unreachable!(
                 "array, UF, integer, real, quantifier, and datatype terms are rejected during z3 translation"
             )
