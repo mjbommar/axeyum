@@ -436,6 +436,26 @@ pub fn prove_unsat_by_mbqi(
                         }
                     }
                 }
+                Sort::Real => {
+                    // Probe one above/below each real candidate (e.g. `∀r. r ≤ c`
+                    // is violated at `c + 1`); `±1` suffices to step across an
+                    // open bound expressed by `<`/`≤`/`>`/`≥`.
+                    let one = axeyum_ir::Rational::integer(1);
+                    let neighbours: Vec<axeyum_ir::Rational> = candidates
+                        .iter()
+                        .filter_map(|v| match v {
+                            Value::Real(r) => Some(*r),
+                            _ => None,
+                        })
+                        .flat_map(|r| [r + one, r - one])
+                        .collect();
+                    for r in neighbours {
+                        let v = Value::Real(r);
+                        if !candidates.contains(&v) {
+                            candidates.push(v);
+                        }
+                    }
+                }
                 Sort::Bool => {
                     candidates.push(Value::Bool(false));
                     candidates.push(Value::Bool(true));

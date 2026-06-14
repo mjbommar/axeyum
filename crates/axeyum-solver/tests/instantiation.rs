@@ -379,3 +379,18 @@ fn mbqi_bound_universal_is_refuted() {
     let r = axeyum_solver::prove_unsat_by_mbqi(&mut arena, &[all, cc], &config()).unwrap();
     assert!(matches!(r, CheckResult::Unsat), "forall x. x<=10 is unsat (x=11), got {r:?}");
 }
+
+#[test]
+fn mbqi_real_bound_universal_is_refuted() {
+    // (forall r:Real. r <= c) AND c == 10 : false (r = 11 = c+1 violates).
+    let mut arena = TermArena::new();
+    let r = arena.declare("r", Sort::Real).unwrap();
+    let rv = arena.var(r);
+    let c = arena.declare("c", Sort::Real).map(|s| arena.var(s)).unwrap();
+    let body = arena.real_le(rv, c).unwrap();
+    let all = arena.forall(r, body).unwrap();
+    let ten = arena.real_const(axeyum_ir::Rational::integer(10));
+    let cc = arena.eq(c, ten).unwrap();
+    let res = axeyum_solver::prove_unsat_by_mbqi(&mut arena, &[all, cc], &config()).unwrap();
+    assert!(matches!(res, CheckResult::Unsat), "forall r. r<=10 is unsat (r=11), got {res:?}");
+}
