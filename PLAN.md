@@ -46,6 +46,19 @@ Last updated: 2026-06-13
   lossy casts). Rounds out the OMT story: **integer + unsigned/signed BV,
   conjunctive + Boolean-structured**. Tests: signed max/min with bounds,
   unconstrained BV8 spanning [-128, 127].
+- Architecture iterations M & N — cardinality + MaxSAT recorded 2026-06-13
+  (combinatorial-optimization capabilities Z3/cvc5 expose; the
+  constrained-optimization north star): `at_most`/`at_least`/`exactly`
+  (`cardinality.rs`) lower a Boolean count to a bit-vector sum + comparison, and
+  `max_satisfiable`/`max_satisfiable_weighted` (`maxsat.rs`) maximize the
+  (weighted) number of satisfied soft constraints by composing that sum with the
+  bit-vector optimizer (`maximize_bv`). Both reduce entirely to the sound,
+  replayed bit-vector theory — no new core machinery — and compose with the OMT
+  work. Tests: cardinality bounds pin/conflict; MaxSAT finds the best
+  (un)weighted count and reports `Infeasible` on unsat hard constraints. The
+  sound, no-IR-surgery capability space (linear arithmetic, finite datatypes,
+  optimization, cardinality, MaxSAT, checkable proofs, low-memory strategies) is
+  now exhausted for this session.
 - **Remaining for Z3 parity (all require core IR `Sort`/`Op` surgery or a large
   new subsystem — fresh-context, ADR-first work):** recursive/mutually-recursive
   datatypes (first-class datatype sort; enums+records cover the finite case);
