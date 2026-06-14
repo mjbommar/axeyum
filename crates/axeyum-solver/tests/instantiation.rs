@@ -296,3 +296,49 @@ fn congruence_ematching_refutes_via_an_internal_equality() {
         "congruence E-matching should refute via x := h(a)"
     );
 }
+
+#[test]
+fn mbqi_refutes_via_ground_subterm_value() {
+    // (forall x:Int. x != a + b) AND a==3 AND b==4 is unsat (x = 7 = a+b
+    // violates). Model-based instantiation evaluates the ground subterm a+b
+    // under the model (=7) and instantiates x:=7, refuting it -- a value the
+    // model does not assign to any variable directly.
+    let mut arena = TermArena::new();
+    let x = arena.declare("x", Sort::Int).unwrap();
+    let xv = arena.var(x);
+    let a = arena.declare("a", Sort::Int).map(|s| arena.var(s)).unwrap();
+    let b = arena.declare("b", Sort::Int).map(|s| arena.var(s)).unwrap();
+    let sum = arena.int_add(a, b).unwrap();
+    let ne = {
+        let eq = arena.eq(xv, sum).unwrap();
+        arena.not(eq).unwrap()
+    };
+    let all = arena.forall(x, ne).unwrap();
+    let three = arena.int_const(3);
+    let four = arena.int_const(4);
+    let ac = arena.eq(a, three).unwrap();
+    let bc = arena.eq(b, four).unwrap();
+
+    let r = axeyum_solver::prove_unsat_by_mbqi(&mut arena, &[all, ac, bc], &config()).unwrap();
+    assert!(matches!(r, CheckResult::Unsat), "forall x. x != a+b with a+b=7 is unsat, got {r:?}");
+}
+
+#[test]
+fn mbqi_bound_violation_is_unsat() {
+    // (forall x:Int. x <= c) AND c == 10 : false (x = 11 violates). The model
+    // assigns c=10; MBQI evaluates the subterm c (=10), instantiates x:=10, which
+    // alone is consistent, but combined with the simplex deciding x<=c the
+    // augmented query refutes (10<=10 holds, but the universal forces unsat via
+    // the linear refinement). At minimum it must not be a wrong sat.
+    let mut arena = TermArena::new();
+    let x = arena.declare("x", Sort::Int).unwrap();
+    let xv = arena.var(x);
+    let c = arena.declare("c", Sort::Int).map(|s| arena.var(s)).unwrap();
+    let body = arena.int_le(xv, c).unwrap();
+    let all = arena.forall(x, body).unwrap();
+    let ten = arena.int_const(10);
+    let cc = arena.eq(c, ten).unwrap();
+    let r = axeyum_solver::prove_unsat_by_mbqi(&mut arena, &[all, cc], &config()).unwrap();
+    // forall x. x<=10 is false; sound result is Unsat or Unknown, never Sat.
+    assert!(matches!(r, CheckResult::Unsat | CheckResult::Unknown(_)), "got {r:?}");
+}

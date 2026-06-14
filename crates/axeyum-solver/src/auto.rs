@@ -58,9 +58,10 @@ pub fn solve(
     }
     match check_with_quantifiers(arena, assertions, config) {
         // An infinite quantifier domain defeats finite expansion; fall back to
-        // sound trigger-based (E-matching) instantiation, which subsumes plain
-        // leaf enumeration.
-        Err(SolverError::Unsupported(_)) => prove_unsat_by_ematching(arena, assertions, config),
+        // model-based instantiation (MBQI), which loops adding model-violated
+        // instances and itself defers to trigger-based (E-matching) instantiation
+        // when it cannot refine.
+        Err(SolverError::Unsupported(_)) => prove_unsat_by_mbqi(arena, assertions, config),
         other => other,
     }
 }
@@ -312,6 +313,145 @@ pub fn check_with_quantifiers(
         }
     }
     Ok(CheckResult::Sat(model))
+}
+
+/// Maximum model-based instantiation rounds before reporting `unknown`.
+const MAX_MBQI_ROUNDS: usize = 16;
+
+/// A `Value` as a constant term (scalar sorts only).
+fn value_to_const(arena: &mut TermArena, value: &Value) -> Option<TermId> {
+    match value {
+        Value::Bool(b) => Some(arena.bool_const(*b)),
+        Value::Int(n) => Some(arena.int_const(*n)),
+        Value::Real(r) => Some(arena.real_const(*r)),
+        Value::Bv { width, value } => arena.bv_const(*width, *value).ok(),
+        _ => None,
+    }
+}
+
+/// Model-based quantifier instantiation (MBQI): a refutation loop for top-level
+/// universals over infinite domains. Each round decides `ground ∧ instances`; on
+/// a `sat` candidate, every universal `∀x. body` is checked against the model at
+/// the values the model assigns (its candidate instantiation set), and any
+/// instance the model **falsifies** — a consequence of the universal that the
+/// model violates — is added, blocking that model. `unsat` of the augmented
+/// (still-implied) query transfers soundly; if no universal can be refined the
+/// result is `unknown` (an infinite `∀` cannot be confirmed `sat` here).
+///
+/// # Errors
+///
+/// Returns [`SolverError`] from the underlying engine or an internal builder.
+#[allow(clippy::too_many_lines)]
+pub fn prove_unsat_by_mbqi(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    // Split into ground assertions and top-level universals `(bound_var, body)`.
+    let mut ground: Vec<TermId> = Vec::new();
+    let mut universals: Vec<(axeyum_ir::SymbolId, TermId)> = Vec::new();
+    for &a in assertions {
+        if let TermNode::App { op: Op::Forall(sym), args } = arena.node(a) {
+            universals.push((*sym, args[0]));
+        } else {
+            ground.push(a);
+        }
+    }
+    if universals.is_empty() {
+        // No top-level universal to instantiate; defer to the trigger fallback.
+        return prove_unsat_by_ematching(arena, assertions, config);
+    }
+    let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
+
+    let mut instances: Vec<TermId> = Vec::new();
+    for _ in 0..MAX_MBQI_ROUNDS {
+        let mut query = ground.clone();
+        query.extend(instances.iter().copied());
+        // The query is now quantifier-free (ground + instances).
+        let result = check_auto(arena, &query, config)?;
+        let CheckResult::Sat(model) = result else {
+            // `unsat` (sound — instances are implied) or `unknown` transfers.
+            return Ok(result);
+        };
+        let assignment = model.to_assignment();
+        // Candidate instantiation values: the distinct values the model assigns,
+        // grouped by sort, plus 0/1 defaults for arithmetic robustness.
+        let mut added = false;
+        for &(sym, body) in &universals {
+            let sort = arena.symbol(sym).1;
+            let var = arena.var(sym);
+            let mut candidates: Vec<Value> = Vec::new();
+            for (_, v) in model.iter() {
+                if v.sort() == sort && !candidates.contains(&v) {
+                    candidates.push(v);
+                }
+            }
+            // The key MBQI heuristic: evaluate the body's ground subterms (those
+            // not mentioning the bound variable) of the right sort under the
+            // model and use their values — so a violation at e.g. `a + b` is found.
+            let mut seen = BTreeSet::new();
+            let mut stack = vec![body];
+            while let Some(t) = stack.pop() {
+                if t == var || !seen.insert(t) {
+                    continue;
+                }
+                if arena.sort_of(t) == sort
+                    && let Ok(v) = eval(arena, t, &assignment)
+                    && !candidates.contains(&v)
+                {
+                    candidates.push(v);
+                }
+                if let TermNode::App { args, .. } = arena.node(t) {
+                    let args = args.clone();
+                    stack.extend(args);
+                }
+            }
+            match sort {
+                Sort::Int => {
+                    for d in [0i128, 1, -1] {
+                        let v = Value::Int(d);
+                        if !candidates.contains(&v) {
+                            candidates.push(v);
+                        }
+                    }
+                }
+                Sort::Bool => {
+                    candidates.push(Value::Bool(false));
+                    candidates.push(Value::Bool(true));
+                }
+                _ => {}
+            }
+            for v in candidates {
+                let mut probe = assignment.clone();
+                probe.set(sym, v.clone());
+                if matches!(eval(arena, body, &probe), Ok(Value::Bool(false))) {
+                    // The model falsifies `body[x:=v]`; add it (implied by ∀x.body).
+                    let Some(c) = value_to_const(arena, &v) else {
+                        continue;
+                    };
+                    let var = arena.var(sym);
+                    let mut map: HashMap<TermId, TermId> = HashMap::new();
+                    map.insert(var, c);
+                    let mut memo: HashMap<TermId, TermId> = HashMap::new();
+                    let inst = replace_subterms(arena, body, &map, &mut memo).map_err(err)?;
+                    if !instances.contains(&inst) {
+                        instances.push(inst);
+                        added = true;
+                    }
+                    break;
+                }
+            }
+        }
+        if !added {
+            // No universal could be refined at this model: the trigger-based
+            // family may still refute via compound terms; otherwise `unknown`.
+            return prove_unsat_by_ematching(arena, assertions, config);
+        }
+    }
+    Ok(CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail: format!("MBQI did not converge within {MAX_MBQI_ROUNDS} rounds"),
+    }))
 }
 
 /// Attempts to **refute** a (possibly infinite-domain) quantified query by

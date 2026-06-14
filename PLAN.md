@@ -1025,6 +1025,18 @@ Last updated: 2026-06-14
   Tests: a real universal refuted (`∀r. r<1` with ground `1`), integer-universal
   bounded-`unknown`, satisfiable instantiation → `unknown`, and QF decided
   exactly. Trigger-based E-matching is the scalable successor.
+- **Model-based quantifier instantiation (MBQI) recorded 2026-06-14.**
+  `prove_unsat_by_mbqi` is now the infinite-domain fallback: it loops deciding
+  `ground ∧ instances`, and on a `sat` candidate adds, for each top-level
+  `∀x.body`, an instance the model *falsifies*. Candidate values come from the
+  model's assignments **and from evaluating the body's ground subterms under the
+  model** — the key heuristic that finds violations at values no variable holds
+  directly (e.g. `∀x. x≠a+b` with `a=3,b=4` instantiates `x:=7` and refutes).
+  Instances are consequences of the universal, so `unsat` is sound; it defers to
+  E-matching when it cannot refine, and bounds its rounds (→ `unknown`). Tests
+  (`tests/instantiation.rs`): the `a+b` refutation, and a bound-violation case
+  that is never a wrong `sat`. A complete model-construction MBQI (deciding
+  infinite-domain `sat`) remains future.
 - General real + bit-blasted theory combination recorded 2026-06-13: the
   lazy-SMT loop `check_with_lra_dpll` is **generalized into a complete
   combination of `QF_LRA` with the bit-blasted theories** (BV/arrays/EUF/bounded
