@@ -29,7 +29,6 @@ use axeyum_rewrite::{
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::combined::check_with_all_theories;
 use crate::dpll_lia::{check_with_arith_dpll, check_with_lia_dpll};
-use crate::dpll_t::check_with_lra_dpll;
 use crate::lia::DEFAULT_INT_WIDTH;
 use crate::lra::check_with_lia_simplex;
 use crate::sat_bv_backend::SatBvBackend;
@@ -178,8 +177,10 @@ pub fn check_auto(
         // Reals plus (optionally) the bit-blasted theories: the lazy-SMT loop
         // abstracts the real atoms and lets the bit-blasting backend decide the
         // rest. Reals share no sort with those theories, so the only coupling is
-        // propositional and this is a complete combination.
-        return check_with_lra_dpll(arena, assertions, config);
+        // propositional and this is a complete combination. Routed through the
+        // NRA layer, which abstracts any nonlinear products (relaxation + replay,
+        // ADR-pending) and otherwise delegates straight to the LRA loop.
+        return crate::nra::check_with_nra(arena, assertions, config);
     }
     if features.has_int {
         // Conjunctive pure-integer queries are decided soundly for *both* sat and

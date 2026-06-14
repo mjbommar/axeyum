@@ -38,6 +38,16 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-14
 
+- **NRA — first slice (2026-06-14, ADR-0024).** Nonlinear real arithmetic by
+  linear abstraction + replay (`check_with_nra`, routed from the dispatcher's
+  real path): each nonlinear product `x·y` (both operands non-constant) is
+  abstracted to a fresh unconstrained real, the residual goes to the LRA loop,
+  `unsat` transfers (relaxation → sound; the *same* product → one variable, so
+  `x·y=5 ∧ x·y=6` is unsat), and `sat` is replayed through the ground evaluator
+  (accepted only if the true products satisfy the original, else `unknown`).
+  Sound both directions, incomplete (no nonlinear facts like `x²≥0`); incremental
+  linearization is the documented refinement. Tests in `tests/nra.rs`.
+
 - **Floating point — non-arithmetic core (2026-06-14, ADR-0023).** New
   `axeyum-solver::fp` module: IEEE 754 classification (`is_nan`/`is_infinite`/
   `is_zero`/`is_normal`/`is_subnormal`/`is_negative`/`is_positive`), `abs`/`neg`,

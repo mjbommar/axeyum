@@ -77,3 +77,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0021](adr-0021-boolean-structured-lia-dpll.md) | Boolean-structured QF_LIA via lazy-SMT over the integer simplex | accepted |
 | [0022](adr-0022-first-class-datatype-sort.md) | First-class datatype sort in the IR (recursive datatypes) | accepted |
 | [0023](adr-0023-floating-point-bv-lowering.md) | Floating-point (IEEE 754) as bit-vector formula builders, non-arithmetic core first | accepted |
+| [0024](adr-0024-nra-linear-abstraction.md) | Nonlinear real arithmetic via linear abstraction + replay (sound, incomplete) | accepted |

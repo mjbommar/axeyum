@@ -42,6 +42,7 @@ mod lia;
 mod lra;
 mod maxsat;
 mod model;
+mod nra;
 mod optimize;
 mod pb;
 mod proof;
@@ -98,6 +99,7 @@ pub use lra::{
 };
 pub use maxsat::{max_satisfiable, max_satisfiable_weighted};
 pub use model::Model;
+pub use nra::check_with_nra;
 pub use optimize::{
     OptOutcome, maximize_bv, maximize_bv_signed, maximize_lia, minimize_bv, minimize_bv_signed,
     minimize_lia,
