@@ -99,7 +99,15 @@ Last updated: 2026-06-14
   **Symbolic `fp.roundToIntegral` done** (`round_to_integral_sym`, all 5 modes,
   F16/F32/F64): integral values pass through, fractional bits rounded via
   `round_variable` then repacked; validated against native f32
-  round_ties_even/round/trunc/ceil/floor. **Next FP:** `fp.rem`, symbolic FP↔real. Conversion folds are done both directions:
+  round_ties_even/round/trunc/ceil/floor.
+  **fp→fp conversion** (`to_fp`): format conversion (f32↔f64, any pair) via
+  unpack+pack_value, all modes; validated vs native casts.
+  **GPU/ML precisions (free via the generic `(eb,sb)` design):** added `BF16`
+  (8,8), `TF32` (8,11), `FP8_E5M2` (5,3) — IEEE-style, so the same validated
+  generic ops are correct; bf16 add/mul validated against `round_to_format`.
+  (OCP FP8 `E4M3` deviates from IEEE — no ∞, single NaN, extended max — so it
+  needs a per-format special-value convention; deliberately not added.)
+  **Next FP:** `fp.rem` (complex), symbolic FP↔real (nonlinear). Conversion folds are done both directions:
   int→FP (`ubv_to_fp`/`sbv_to_fp`), FP→int (`to_ubv`/`to_sbv`, per rounding mode,
   folded only when finite + in range else `None`), and FP→Real (`to_real`, exact
   when it fits the i128 rational). A first-class `Sort::Float` remains optional.

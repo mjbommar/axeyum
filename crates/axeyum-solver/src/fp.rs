@@ -57,6 +57,27 @@ impl FloatFormat {
         exp_bits: 11,
         sig_bits: 53,
     };
+    /// bfloat16 (BF16): the top 16 bits of an f32 — 8 exponent bits, 8
+    /// significand bits. Ubiquitous in ML/GPU compute; IEEE-style (∞/NaN), so
+    /// the generic arithmetic here is correct for it.
+    pub const BF16: Self = Self {
+        exp_bits: 8,
+        sig_bits: 8,
+    };
+    /// NVIDIA TensorFloat-32 (TF32): 8 exponent bits, 11 significand bits (f32
+    /// range, f16-ish precision). IEEE-style.
+    pub const TF32: Self = Self {
+        exp_bits: 8,
+        sig_bits: 11,
+    };
+    /// OCP FP8 E5M2: 5 exponent bits, 3 significand bits. IEEE-style (has ∞/NaN),
+    /// so the generic arithmetic is correct. (Its sibling E4M3 deviates from
+    /// IEEE — no ∞, a single NaN encoding, extended max — and would need a
+    /// per-format special-value convention; not provided here.)
+    pub const FP8_E5M2: Self = Self {
+        exp_bits: 5,
+        sig_bits: 3,
+    };
 
     /// Total bit width of a value in this format.
     #[must_use]
@@ -2092,6 +2113,46 @@ mod tests {
                     assert!((got >> 23) & 0xFF == 0xFF && got & 0x7F_FFFF != 0);
                 } else {
                     assert_eq!(got, u128::from(want.to_bits()), "rint({xb:#x},{mode:?})");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn bf16_arithmetic_is_correct() {
+        // bfloat16 is the top 16 bits of an f32, so we can decode it exactly to
+        // f64 and use round_to_format (the algorithm validated against native f32)
+        // as the correctly-rounded reference for the generic add/mul on BF16.
+        // Demonstrates that GPU/ML precisions work via the format-generic ops.
+        fn bf16_to_f64(bits: u16) -> f64 {
+            f64::from(f32::from_bits(u32::from(bits) << 16))
+        }
+        let bf = FloatFormat::BF16;
+        let mut a = TermArena::new();
+        let mut state: u64 = 0xb16b_00b5_1234_5678;
+        for _ in 0..3000 {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            let xb = (state & 0xFFFF) as u16;
+            let yb = ((state >> 16) & 0xFFFF) as u16;
+            let xt = a.bv_const(16, u128::from(xb)).unwrap();
+            let yt = a.bv_const(16, u128::from(yb)).unwrap();
+            for (term, exact) in [
+                (mul(&mut a, bf, xt, yt, RoundingMode::NearestEven).unwrap(),
+                 bf16_to_f64(xb) * bf16_to_f64(yb)),
+                (add(&mut a, bf, xt, yt, RoundingMode::NearestEven).unwrap(),
+                 bf16_to_f64(xb) + bf16_to_f64(yb)),
+            ] {
+                let got = match eval(&a, term, &Assignment::new()) {
+                    Ok(Value::Bv { value, .. }) => value,
+                    other => panic!("expected Bv, got {other:?}"),
+                };
+                if exact.is_nan() {
+                    assert!((got >> 7) & 0xFF == 0xFF && got & 0x7F != 0, "bf16 want NaN");
+                } else {
+                    let want = round_to_format(8, 8, exact, RoundingMode::NearestEven);
+                    assert_eq!(got, want, "bf16 op({xb:#x},{yb:#x}) = {got:#x}, want {want:#x}");
                 }
             }
         }
