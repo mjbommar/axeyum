@@ -2267,7 +2267,18 @@ foundation; the items above are the actual product trajectory.
       5.64× fewer clauses across 6 shared-base queries). Still open:
       activation-literal GC for long sessions, and the bigger lever — AIG-level
       arithmetic-circuit size reduction (the dominant encoding cost the polarity
-      measurement exposed).
+      measurement exposed). **Lever analysis (2026-06-13):** the current `bvmul`
+      is a linear chain of `width` ripple-carry adds. Carry-save / Wallace-tree
+      reduction collapses *depth* but **not gate count** (summing N partial
+      products needs ~N·W full-adders regardless of tree shape), so it does
+      *not* relieve the clause/variable budget that gates the public frontier —
+      it would only help SAT solve *time*, which is not yet the binding
+      constraint. The size lever is reducing the partial-product **count**:
+      **Booth radix-4 recoding (~2× fewer partial products)**. It is bounded but
+      soundness-delicate (signed two's-complement recoding) and must be
+      exhaustively verified by the existing `bvmul` evaluator test *and* the
+      `certify_bitblast_by_miter` DRAT certificate before landing. That is the
+      deliberate next arithmetic increment — not carry-save.
 - [ ] **Phase 5 supported-slice expansion (parallel track):** use the version 11
       smallest-DAG selector artifacts, the version 12 root-direct selector
       artifacts, the version 13 greedy selector diagnostic, the version 10
