@@ -23,8 +23,8 @@ use std::collections::{BTreeSet, HashMap};
 
 use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode, Value, eval};
 use axeyum_rewrite::{
-    QuantExpandError, expand_quantifiers, instantiate_universals, instantiate_with_triggers,
-    replace_subterms,
+    QuantExpandError, build_app, expand_quantifiers, instantiate_universals,
+    instantiate_with_triggers, replace_subterms,
 };
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
@@ -193,13 +193,18 @@ pub fn check_auto(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    // `to_real` is a ring homomorphism, so fold `to_real(a) ± to_real(b)` into
+    // `to_real(a ± b)` (bottom-up): a linear combination of coerced integers
+    // collapses to one coercion, which the comparison rewrites below can then
+    // eliminate exactly (e.g. `to_real(x) + to_real(y) ≤ 10`).
+    let folded = fold_to_real_sums(arena, assertions)?;
     // A `to_real(i)` compared to a rational constant is order-isomorphic to an
     // integer comparison (`to_real(i) ≤ c ⟺ i ≤ ⌊c⌋`, etc.), so rewrite those
     // *exactly* to pure-integer atoms — eliminating the coercion completely (no
     // relaxation, no `unknown`) for the common "coerced int vs literal" pattern.
     // Dually, `to_int(r) = ⌊r⌋` compared to an integer constant rewrites to a
     // pure-real comparison (`to_int(r) ≤ c ⟺ r < c+1`, etc.).
-    let r1 = eliminate_to_real_const_compare(arena, assertions)?;
+    let r1 = eliminate_to_real_const_compare(arena, &folded)?;
     let assertions = &eliminate_to_int_const_compare(arena, &r1)?;
 
     // Int↔Real coercions (`to_real`/`to_int`/`is_int`) couple the int and real
@@ -684,6 +689,63 @@ fn lift_arith_ite(
         out.push(replace_subterms(arena, c, &map, &mut memo).map_err(err)?);
     }
     Ok(out)
+}
+
+/// Folds `to_real(a) ± to_real(b)` into `to_real(a ± b)` bottom-up (the `Int→Real`
+/// embedding is a ring homomorphism), collapsing a linear combination of coerced
+/// integers into a single coercion. Equisatisfiable; enables the exact
+/// comparison rewrites downstream.
+fn fold_to_real_sums(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<Vec<TermId>, SolverError> {
+    let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
+    let mut memo: HashMap<TermId, TermId> = HashMap::new();
+    let mut out = Vec::with_capacity(assertions.len());
+    for &a in assertions {
+        out.push(fold_to_real_rec(arena, a, &mut memo).map_err(err)?);
+    }
+    Ok(out)
+}
+
+fn fold_to_real_rec(
+    arena: &mut TermArena,
+    term: TermId,
+    memo: &mut HashMap<TermId, TermId>,
+) -> Result<TermId, axeyum_ir::IrError> {
+    if let Some(&c) = memo.get(&term) {
+        return Ok(c);
+    }
+    let result = match arena.node(term) {
+        TermNode::App { op, args } => {
+            let (op, args) = (*op, args.clone());
+            let mut new_args = Vec::with_capacity(args.len());
+            for arg in &args {
+                new_args.push(fold_to_real_rec(arena, *arg, memo)?);
+            }
+            let to_real_arg = |arena: &TermArena, t: TermId| match arena.node(t) {
+                TermNode::App { op: Op::IntToReal, args } => Some(args[0]),
+                _ => None,
+            };
+            // to_real(a) +/- to_real(b)  ->  to_real(a +/- b)
+            if matches!(op, Op::RealAdd | Op::RealSub)
+                && let (Some(a), Some(b)) =
+                    (to_real_arg(arena, new_args[0]), to_real_arg(arena, new_args[1]))
+            {
+                let int = if op == Op::RealAdd {
+                    arena.int_add(a, b)?
+                } else {
+                    arena.int_sub(a, b)?
+                };
+                arena.int_to_real(int)?
+            } else {
+                build_app(arena, op, &new_args)?
+            }
+        }
+        _ => term,
+    };
+    memo.insert(term, result);
+    Ok(result)
 }
 
 /// Rewrites comparisons between `to_real(i)` and a rational constant into the

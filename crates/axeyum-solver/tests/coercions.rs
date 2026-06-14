@@ -234,3 +234,22 @@ fn to_real_vs_to_real_is_exact() {
     assert!(matches!(solve_auto(&mut a, &[lt, ge]), CheckResult::Unsat),
         "to_real(i)<to_real(j) ∧ i>=j unsat");
 }
+
+#[test]
+fn sum_of_to_real_vs_constant_is_exact() {
+    // to_real(x) + to_real(y) <= 5.5 AND x + y >= 6 : unsat. The sum of coercions
+    // folds to to_real(x+y), then <= 5.5 rewrites to (x+y) <= 5.
+    let mut a = TermArena::new();
+    let x = a.declare("x", Sort::Int).map(|s| a.var(s)).unwrap();
+    let y = a.declare("y", Sort::Int).map(|s| a.var(s)).unwrap();
+    let rx = a.int_to_real(x).unwrap();
+    let ry = a.int_to_real(y).unwrap();
+    let sum = a.real_add(rx, ry).unwrap();
+    let c = a.real_const(axeyum_ir::Rational::new(11, 2)); // 5.5
+    let le = a.real_le(sum, c).unwrap();
+    let isum = a.int_add(x, y).unwrap();
+    let six = a.int_const(6);
+    let ge = a.int_ge(isum, six).unwrap();
+    assert!(matches!(solve_auto(&mut a, &[le, ge]), CheckResult::Unsat),
+        "to_real(x)+to_real(y)<=5.5 ∧ x+y>=6 unsat");
+}

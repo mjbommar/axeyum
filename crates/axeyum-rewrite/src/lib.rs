@@ -19,7 +19,8 @@ mod quantifiers;
 pub use arrays::{ArrayElimError, ArrayElimination, eliminate_arrays};
 pub use canonical::{
     CanonicalizeOutcome, CanonicalizeTermsOutcome, Canonicalizer, RewriteError, RewriteReport,
-    RuleApplication, canonicalize, canonicalize_terms, default_manifest, replace_subterms,
+    RuleApplication, build_app, canonicalize, canonicalize_terms, default_manifest,
+    replace_subterms,
 };
 pub use datatypes::simplify_datatypes;
 pub use functions::{FuncElimError, FunctionElimination, eliminate_functions};

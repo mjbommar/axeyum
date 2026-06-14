@@ -929,7 +929,15 @@ fn rewrite_rotate(by: u32, args: &[TermId], enabled: &BTreeSet<&str>) -> Option<
     None
 }
 
-pub(crate) fn build_app(arena: &mut TermArena, op: Op, args: &[TermId]) -> Result<TermId, IrError> {
+/// Rebuilds the application `op(args…)` via the typed arena builders, re-running
+/// their sort checks. The inverse of destructuring a [`TermNode::App`]; useful
+/// for bottom-up rewrites that reconstruct a node from transformed children.
+///
+/// # Errors
+///
+/// Returns [`IrError`] if the operands do not satisfy the operator's sort
+/// contract (which cannot happen when reassembling a well-formed term).
+pub fn build_app(arena: &mut TermArena, op: Op, args: &[TermId]) -> Result<TermId, IrError> {
     match op {
         Op::BoolNot => arena.not(args[0]),
         Op::BoolAnd => arena.and(args[0], args[1]),
