@@ -1297,6 +1297,100 @@ pub fn rem(
     Ok(Some(arena.bv_const(fmt.width(), bits)?))
 }
 
+/// Symbolic `fp.rem` (IEEE remainder, exact) bit-blaster for **small-exponent**
+/// IEEE formats (`F16`, `FP8_E5M2`). Both magnitudes are scaled to a common
+/// minimum exponent so they become integers, the truncated remainder and
+/// quotient come from the sound `bvurem`/`bvudiv`, and a nearest-adjust (compare
+/// `2·r₀` to `|y|`, ties resolved by the parity of the quotient) selects the
+/// final magnitude and sign; the exact result is packed via [`pack_value`].
+///
+/// The scaled integers need `sig_bits + (2^exp_bits − 3) + 2` bits, which only
+/// fits the 128-bit cap for `exp_bits ≤ 5`. Wide-exponent formats
+/// (`F32`/`F64`/`BF16`/`TF32`) return [`IrError::InvalidWidth`] — their symbolic
+/// remainder needs an iterative encoding (future work); the constant fold
+/// [`rem`] still covers them when both operands are known.
+///
+/// Validated against the trusted constant fold [`rem`] over F16.
+///
+/// # Errors
+///
+/// Returns [`IrError::Unsupported`] for a non-IEEE format,
+/// [`IrError::InvalidWidth`] for a wide-exponent format, [`IrError::SortMismatch`]
+/// for a mis-sized operand, or [`IrError`] from builders.
+#[allow(clippy::similar_names, clippy::many_single_char_names, clippy::too_many_lines)]
+pub fn rem_sym(arena: &mut TermArena, fmt: FloatFormat, x: TermId, y: TermId) -> Result<TermId, IrError> {
+    fmt.check(arena, x)?;
+    fmt.check(arena, y)?;
+    if !fmt.is_ieee() {
+        return Err(IrError::Unsupported("fp.rem symbolic: non-IEEE format"));
+    }
+    let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
+    let total = fmt.width();
+    let e_span = (1u32 << eb) - 3; // max LSB-exponent minus min LSB-exponent
+    let w = sb + e_span + 2;
+    if w > MAX_BV_WIDTH {
+        return Err(IrError::InvalidWidth(w));
+    }
+    let bias = (1i64 << (eb - 1)) - 1;
+    let e_min = 1 - bias - i64::from(sb - 1);
+
+    let one1 = arena.bv_const(1, 1)?;
+    let (sx, mx, ex) = unpack_operand(arena, fmt, w, x)?;
+    let (_sy, my, ey) = unpack_operand(arena, fmt, w, y)?;
+
+    // Scale both magnitudes to integers at the common scale 2^e_min.
+    let emin_c = sconst(arena, w, e_min)?;
+    let shx = arena.bv_sub(ex, emin_c)?;
+    let shy = arena.bv_sub(ey, emin_c)?;
+    let xi = arena.bv_shl(mx, shx)?;
+    let yi = arena.bv_shl(my, shy)?;
+
+    // Truncated remainder r0 and quotient parity (bvurem/bvudiv are sound;
+    // division by zero is masked out by the y-zero → NaN special case below).
+    let r0 = arena.bv_urem(xi, yi)?;
+    let q0 = arena.bv_udiv(xi, yi)?;
+    let q0_lsb = arena.extract(0, 0, q0)?;
+    let q0_odd = arena.eq(q0_lsb, one1)?;
+
+    // Nearest-adjust: compare 2·r0 to |y|; on a tie, adjust iff the quotient is odd.
+    let shift1 = arena.bv_const(w, 1)?;
+    let two_r0 = arena.bv_shl(r0, shift1)?;
+    let gt = arena.bv_ugt(two_r0, yi)?;
+    let eq_half = arena.eq(two_r0, yi)?;
+    let tie_adj = arena.and(eq_half, q0_odd)?;
+    let adjust = arena.or(gt, tie_adj)?;
+
+    // magnitude = adjust ? |y| - r0 : r0 ; sign = sign(x) flipped on adjust.
+    let yi_minus_r0 = arena.bv_sub(yi, r0)?;
+    let mag = arena.ite(adjust, yi_minus_r0, r0)?;
+    let sx_bool = arena.eq(sx, one1)?;
+    let nsx = arena.not(sx_bool)?;
+    let sign = arena.ite(adjust, nsx, sx_bool)?;
+
+    // Pack the exact remainder magnitude·2^e_min (rounding is identity).
+    let finite = pack_value(arena, eb, sb, sign, mag, emin_c, RoundingMode::NearestEven)?;
+
+    // Special cases: NaN if x is NaN/∞ or y is NaN/0; x itself if y is ∞.
+    let nx = is_nan(arena, fmt, x)?;
+    let ny = is_nan(arena, fmt, y)?;
+    let ix = is_infinite(arena, fmt, x)?;
+    let iy = is_infinite(arena, fmt, y)?;
+    let zy = is_zero(arena, fmt, y)?;
+    let nan_flag = {
+        let a1 = arena.or(nx, ny)?;
+        let a2 = arena.or(a1, ix)?;
+        arena.or(a2, zy)?
+    };
+    let exp_ones = arena.bv_const(total, ((1u128 << eb) - 1) << (sb - 1))?;
+    let qnan = {
+        let q = arena.bv_const(total, 1u128 << (sb - 2))?;
+        arena.bv_or(exp_ones, q)?
+    };
+    // y infinite (x finite) → x unchanged; else the packed finite remainder.
+    let if_yinf = arena.ite(iy, x, finite)?;
+    arena.ite(nan_flag, qnan, if_yinf)
+}
+
 /// A floating-point rounding mode (SMT-LIB `RoundingMode`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RoundingMode {
@@ -2987,5 +3081,64 @@ mod tests {
         let xt = a.bv_const(8, 0x40).unwrap();
         let yt = a.bv_const(8, 0x38).unwrap();
         assert!(rem(&mut a, FloatFormat::FP8_E4M3, xt, yt).unwrap().is_none(), "E4M3 not folded");
+    }
+
+    #[test]
+    fn rem_sym_matches_fold_f16() {
+        // The symbolic bit-blaster (built over constants, then evaluated) must
+        // agree with the trusted constant fold across the F16 space.
+        let mut a = TermArena::new();
+        let is_nan_bits = |b: u128| (b >> 10) & 0x1F == 0x1F && (b & 0x3FF) != 0;
+        let check = |a: &mut TermArena, xb: u16, yb: u16| {
+            let xt = a.bv_const(16, u128::from(xb)).unwrap();
+            let yt = a.bv_const(16, u128::from(yb)).unwrap();
+            let want = match rem(a, FloatFormat::F16, xt, yt).unwrap() {
+                Some(t) => match eval(a, t, &Assignment::new()) {
+                    Ok(Value::Bv { value, .. }) => value,
+                    other => panic!("{other:?}"),
+                },
+                None => panic!("fold should cover F16"),
+            };
+            let sym = rem_sym(a, FloatFormat::F16, xt, yt).unwrap();
+            let got = match eval(a, sym, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("{other:?}"),
+            };
+            if is_nan_bits(want) {
+                assert!(is_nan_bits(got), "rem_sym({xb:#x},{yb:#x}) want NaN, got {got:#x}");
+            } else {
+                assert_eq!(got, want, "rem_sym({xb:#x},{yb:#x}) got {got:#x} want {want:#x}");
+            }
+        };
+
+        // structured: ±0, ±1, ±2, 0.5, 1.5, smallest normal/subnormals, max, ∞, NaN.
+        let structured: [u16; 16] = [
+            0x0000, 0x8000, 0x3C00, 0xBC00, 0x4000, 0xC000, 0x3800, 0x3E00, 0x0400,
+            0x0001, 0x03FF, 0x7BFF, 0x7C00, 0xFC00, 0x7E00, 0x4900,
+        ];
+        for &x in &structured {
+            for &y in &structured {
+                check(&mut a, x, y);
+            }
+        }
+
+        let mut state: u64 = 0x0bad_c0de_1234_9999;
+        for _ in 0..20000 {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            check(&mut a, (state & 0xFFFF) as u16, ((state >> 16) & 0xFFFF) as u16);
+        }
+    }
+
+    #[test]
+    fn rem_sym_rejects_wide_exponent_formats() {
+        // F32/BF16/TF32 (8-bit exponent) exceed the 128-bit scaled-integer cap.
+        let mut a = TermArena::new();
+        for fmt in [FloatFormat::F32, FloatFormat::BF16, FloatFormat::TF32] {
+            let xt = a.bv_const(fmt.width(), 0).unwrap();
+            let yt = a.bv_const(fmt.width(), 0).unwrap();
+            assert!(rem_sym(&mut a, fmt, xt, yt).is_err(), "{fmt:?} should be rejected");
+        }
     }
 }

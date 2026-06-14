@@ -189,7 +189,16 @@ Last updated: 2026-06-14
   the non-IEEE OCP formats (`FP8_E4M3`/`FP4_E2M1`, via new `is_ieee`) are not
   folded. Validated by an independent BF16 differential (bf16 ⊂ f32) over ~8k
   pairs plus concrete F16 cases.
-  **Next FP:** *symbolic* `fp.rem`, symbolic FP↔real (nonlinear). Conversion folds are done both directions:
+  **Symbolic `fp.rem` (bit-blaster) done for small-exponent formats**
+  (`F16`/`FP8_E5M2`, `rem_sym`): both magnitudes scaled to a common minimum
+  exponent become integers, so the truncated remainder/quotient come from the
+  sound `bvurem`/`bvudiv`; a nearest-adjust (`2·r₀` vs `|y|`, ties by quotient
+  parity) picks the magnitude/sign, packed via `pack_value`. Scaled integers need
+  `sig + (2^eb − 3) + 2` bits → fits 128 only for `eb ≤ 5`; wide-exponent formats
+  (F32/F64/BF16/TF32) return `InvalidWidth` (iterative encoding = future). Solves
+  via the BV backend (FP is a formula-builder lib, not dispatcher-gated).
+  Validated against the trusted fold over ~20k F16 pairs + structured edges.
+  **Next FP:** iterative symbolic `fp.rem` for wide-exponent formats, symbolic FP↔real (nonlinear). Conversion folds are done both directions:
   int→FP (`ubv_to_fp`/`sbv_to_fp`), FP→int (`to_ubv`/`to_sbv`, per rounding mode,
   folded only when finite + in range else `None`), and FP→Real (`to_real`, exact
   when it fits the i128 rational). A first-class `Sort::Float` remains optional.
