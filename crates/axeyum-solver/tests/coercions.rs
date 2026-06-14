@@ -162,3 +162,38 @@ fn bounded_to_real_feasible_is_sat() {
     assert!(matches!(solve_auto(&mut a, &[lo, hi, gt]), CheckResult::Sat(_)),
         "0<=i<=3 ∧ to_real(i)>2.5 must be sat");
 }
+
+#[test]
+fn to_real_vs_constant_is_exactly_decided() {
+    // to_real(i) > 5.5 AND i < 6 : unsat (i>5.5 means i>=6, contradicts i<6).
+    // Exact: no bounds needed, no relaxation -- the comparison rewrites to i>=6.
+    let mut a = TermArena::new();
+    let i = a.declare("i", Sort::Int).map(|s| a.var(s)).unwrap();
+    let r = a.int_to_real(i).unwrap();
+    let c = a.real_const(axeyum_ir::Rational::new(11, 2)); // 5.5
+    let gt = a.real_gt(r, c).unwrap();
+    let six = a.int_const(6);
+    let lt = a.int_lt(i, six).unwrap();
+    assert!(matches!(solve_auto(&mut a, &[gt, lt]), CheckResult::Unsat),
+        "to_real(i)>5.5 ∧ i<6 unsat");
+
+    // to_real(i) == 3.5 : unsat (no integer equals 3.5).
+    let mut a = TermArena::new();
+    let i = a.declare("i", Sort::Int).map(|s| a.var(s)).unwrap();
+    let r = a.int_to_real(i).unwrap();
+    let c = a.real_const(axeyum_ir::Rational::new(7, 2)); // 3.5
+    let eq = a.eq(r, c).unwrap();
+    assert!(matches!(solve_auto(&mut a, &[eq]), CheckResult::Unsat),
+        "to_real(i)=3.5 unsat");
+
+    // to_real(i) <= 2.9 AND i >= 0 : sat (i ∈ {0,1,2}).
+    let mut a = TermArena::new();
+    let i = a.declare("i", Sort::Int).map(|s| a.var(s)).unwrap();
+    let r = a.int_to_real(i).unwrap();
+    let c = a.real_const(axeyum_ir::Rational::new(29, 10)); // 2.9
+    let le = a.real_le(r, c).unwrap();
+    let zero = a.int_const(0);
+    let ge = a.int_ge(i, zero).unwrap();
+    assert!(matches!(solve_auto(&mut a, &[le, ge]), CheckResult::Sat(_)),
+        "to_real(i)<=2.9 ∧ i>=0 sat");
+}

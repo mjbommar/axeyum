@@ -193,6 +193,12 @@ pub fn check_auto(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    // A `to_real(i)` compared to a rational constant is order-isomorphic to an
+    // integer comparison (`to_real(i) ≤ c ⟺ i ≤ ⌊c⌋`, etc.), so rewrite those
+    // *exactly* to pure-integer atoms — eliminating the coercion completely (no
+    // relaxation, no `unknown`) for the common "coerced int vs literal" pattern.
+    let assertions = &eliminate_to_real_const_compare(arena, assertions)?;
+
     // Int↔Real coercions (`to_real`/`to_int`/`is_int`) couple the int and real
     // theories; a complete decision needs Nelson-Oppen. We relax each coercion to
     // a fresh variable of its result sort — shared per distinct term, so a
@@ -673,6 +679,105 @@ fn lift_arith_ite(
     }
     for c in constraints {
         out.push(replace_subterms(arena, c, &map, &mut memo).map_err(err)?);
+    }
+    Ok(out)
+}
+
+/// Rewrites comparisons between `to_real(i)` and a rational constant into the
+/// equivalent pure-integer atom (exact, since the integer embedding is
+/// order-isomorphic): `to_real(i) ≤ c ⟺ i ≤ ⌊c⌋`, `< ⟺ i ≤ ⌈c⌉−1`,
+/// `≥ ⟺ i ≥ ⌈c⌉`, `> ⟺ i ≥ ⌊c⌋+1`, `= c ⟺ i = c` if `c` is integral else
+/// false. Eliminates the coercion entirely for these (no relaxation).
+fn eliminate_to_real_const_compare(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<Vec<TermId>, SolverError> {
+    let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
+    // Collect (comparison_atom -> replacement) for matching atoms.
+    let mut map: HashMap<TermId, TermId> = HashMap::new();
+    let mut seen = BTreeSet::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    while let Some(t) = stack.pop() {
+        if !seen.insert(t) {
+            continue;
+        }
+        let TermNode::App { op, args } = arena.node(t) else {
+            continue;
+        };
+        let (op, args) = (*op, args.clone());
+        // Recurse first so nested atoms are also considered.
+        stack.extend(args.iter().copied());
+        let is_cmp = matches!(op, Op::RealLt | Op::RealLe | Op::RealGt | Op::RealGe | Op::Eq);
+        if !is_cmp || args.len() != 2 {
+            continue;
+        }
+        // Identify `to_real(i)` and a real constant among the two operands.
+        let to_real_arg = |t: TermId| match arena.node(t) {
+            TermNode::App { op: Op::IntToReal, args } => Some(args[0]),
+            _ => None,
+        };
+        let real_const = |t: TermId| match arena.node(t) {
+            TermNode::RealConst(r) => Some(*r),
+            _ => None,
+        };
+        // Normalize to `to_real(i) <op'> c` (flip if the constant is on the left).
+        let (i, c, flipped) = if let (Some(i), Some(c)) = (to_real_arg(args[0]), real_const(args[1]))
+        {
+            (i, c, false)
+        } else if let (Some(c), Some(i)) = (real_const(args[0]), to_real_arg(args[1])) {
+            (i, c, true)
+        } else {
+            continue;
+        };
+        let floor = c.numerator().div_euclid(c.denominator());
+        let is_int = c.denominator() == 1;
+        let ceil = if is_int { floor } else { floor + 1 };
+        // Effective relation with `to_real(i)` on the left.
+        let rel = match (op, flipped) {
+            (Op::RealLt, false) | (Op::RealGt, true) => "lt",
+            (Op::RealLe, false) | (Op::RealGe, true) => "le",
+            (Op::RealGt, false) | (Op::RealLt, true) => "gt",
+            (Op::RealGe, false) | (Op::RealLe, true) => "ge",
+            (Op::Eq, _) => "eq",
+            _ => continue,
+        };
+        let new = match rel {
+            // i < c  ⟺  i ≤ ⌈c⌉−1
+            "lt" => {
+                let k = arena.int_const(ceil - 1);
+                arena.int_le(i, k).map_err(err)?
+            }
+            "le" => {
+                let k = arena.int_const(floor);
+                arena.int_le(i, k).map_err(err)?
+            }
+            "gt" => {
+                let k = arena.int_const(floor + 1);
+                arena.int_ge(i, k).map_err(err)?
+            }
+            "ge" => {
+                let k = arena.int_const(ceil);
+                arena.int_ge(i, k).map_err(err)?
+            }
+            // i = c  ⟺  (c integral ∧ i = c) else false
+            _ => {
+                if is_int {
+                    let k = arena.int_const(floor);
+                    arena.eq(i, k).map_err(err)?
+                } else {
+                    arena.bool_const(false)
+                }
+            }
+        };
+        map.insert(t, new);
+    }
+    if map.is_empty() {
+        return Ok(assertions.to_vec());
+    }
+    let mut memo: HashMap<TermId, TermId> = HashMap::new();
+    let mut out = Vec::with_capacity(assertions.len());
+    for &a in assertions {
+        out.push(replace_subterms(arena, a, &map, &mut memo).map_err(err)?);
     }
     Ok(out)
 }

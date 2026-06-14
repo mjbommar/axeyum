@@ -644,8 +644,12 @@ Last updated: 2026-06-14
   now decided completely**: when the integer operand has a small constant range
   (`≤ 64`), exact linking constraints `(i=v) → (to_real(i)=v)` over the range tie
   the coercion to its operand, so e.g. `0≤i≤3 ∧ to_real(i)>5` is `unsat` (not the
-  relaxation's `unknown`) and the feasible `>2.5` is `sat`. A complete
-  Nelson-Oppen combination (unbounded operands) remains future.
+  relaxation's `unknown`) and the feasible `>2.5` is `sat`. **`to_real(i)` vs a
+  rational constant is now decided *exactly***: such comparisons rewrite to the
+  order-isomorphic integer atom (`to_real(i)≤c ⟺ i≤⌊c⌋`, `=3.5 ⟺ false`, …),
+  eliminating the coercion with no bounds needed — the common "coerced int vs
+  literal" pattern is complete. A complete Nelson-Oppen combination (`to_real`
+  against non-constant reals) remains future.
 - **Arithmetic `ite` (2026-06-14).** Int/Real-sorted `ite(c,a,b)` is lifted to the
   Boolean level at the `check_auto` dispatch entry (`lift_arith_ite`): a fresh `t`
   plus `c→t=a ∧ ¬c→t=b`, an exact equisatisfiable rewrite so the linear-arith
