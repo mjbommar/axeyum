@@ -646,6 +646,13 @@ Last updated: 2026-06-14
   the coercion to its operand, so e.g. `0≤i≤3 ∧ to_real(i)>5` is `unsat` (not the
   relaxation's `unknown`) and the feasible `>2.5` is `sat`. A complete
   Nelson-Oppen combination (unbounded operands) remains future.
+- **Arithmetic `ite` (2026-06-14).** Int/Real-sorted `ite(c,a,b)` is lifted to the
+  Boolean level at the `check_auto` dispatch entry (`lift_arith_ite`): a fresh `t`
+  plus `c→t=a ∧ ¬c→t=b`, an exact equisatisfiable rewrite so the linear-arith
+  linearizers (which reject `ite`) see a plain variable and the lazy-SMT loop
+  handles the disjunctions. (BV `ite` is left to the bit-blaster.) Tests
+  (`tests/arith_ite.rs`): `ite(false,1,-1)>0` unsat, `x=ite(b,10,20) ∧ x=20` sat,
+  real `ite(b,x,y)>5 ∧ x,y≤5` unsat.
 - **Constant arrays added (2026-06-14, extends ADR-0010).** New IR op
   `Op::ConstArray { index }` (`((as const (Array I E)) v)`): every index maps to
   `v`. The ground evaluator builds `ArrayValue::constant`; `eliminate_arrays`

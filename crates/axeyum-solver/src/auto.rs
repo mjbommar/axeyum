@@ -194,6 +194,13 @@ fn check_auto_dispatch(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    // Lift Int/Real `ite` to the Boolean level (`ite(c,a,b)` → fresh `t` with
+    // `c→t=a ∧ ¬c→t=b`) so the arithmetic linearizers, which only accept linear
+    // arith terms, see a plain variable. An exact (equisatisfiable) rewrite, so
+    // the dispatched result transfers directly. (BV `ite` is left for the
+    // bit-blaster, which handles it natively.)
+    let lifted = lift_arith_ite(arena, assertions)?;
+    let assertions = &lifted;
     let features = Features::scan(arena, assertions);
     if features.has_datatype {
         // Datatypes: fold read-over-construct, then decide the residual (or
@@ -395,6 +402,62 @@ fn decide_instantiation(
         })),
         CheckResult::Unknown(reason) => Ok(CheckResult::Unknown(reason)),
     }
+}
+
+/// Lifts each Int/Real-sorted `ite(c, a, b)` to a fresh variable `t` plus the
+/// Boolean constraints `c → t = a` and `¬c → t = b` (i.e. `¬c ∨ t=a`, `c ∨ t=b`).
+/// An exact, equisatisfiable rewrite that moves arithmetic `ite` out of the
+/// linear-arithmetic terms (which the simplices' linearizers do not accept) into
+/// the propositional structure the lazy-SMT loop handles.
+fn lift_arith_ite(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<Vec<TermId>, SolverError> {
+    let mut ites: Vec<TermId> = Vec::new();
+    let mut seen = BTreeSet::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    while let Some(t) = stack.pop() {
+        if !seen.insert(t) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(t) {
+            let (op, args) = (*op, args.clone());
+            if op == Op::Ite && matches!(arena.sort_of(t), Sort::Int | Sort::Real) {
+                ites.push(t);
+            }
+            stack.extend(args);
+        }
+    }
+    if ites.is_empty() {
+        return Ok(assertions.to_vec());
+    }
+    let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
+    let mut map: HashMap<TermId, TermId> = HashMap::new();
+    let mut constraints: Vec<TermId> = Vec::new();
+    for (k, t) in ites.iter().enumerate() {
+        let TermNode::App { args, .. } = arena.node(*t) else {
+            continue;
+        };
+        let (c, a, b) = (args[0], args[1], args[2]);
+        let sort = arena.sort_of(*t);
+        let sym = arena.declare(&format!("!ite_{k}"), sort).map_err(err)?;
+        let tv = arena.var(sym);
+        map.insert(*t, tv);
+        let nc = arena.not(c).map_err(err)?;
+        let ta = arena.eq(tv, a).map_err(err)?;
+        let tb = arena.eq(tv, b).map_err(err)?;
+        constraints.push(arena.or(nc, ta).map_err(err)?);
+        constraints.push(arena.or(c, tb).map_err(err)?);
+    }
+    let mut memo: HashMap<TermId, TermId> = HashMap::new();
+    let mut out = Vec::with_capacity(assertions.len() + constraints.len());
+    for &a in assertions {
+        out.push(replace_subterms(arena, a, &map, &mut memo).map_err(err)?);
+    }
+    for c in constraints {
+        out.push(replace_subterms(arena, c, &map, &mut memo).map_err(err)?);
+    }
+    Ok(out)
 }
 
 /// Maximum integer range over which a bounded `to_real(i)` is linked exactly to
