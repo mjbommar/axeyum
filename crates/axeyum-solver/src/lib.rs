@@ -22,6 +22,7 @@ mod bitblast_miter;
 mod cardinality;
 mod certify;
 mod combined;
+mod distinct;
 mod dpll_lia;
 mod dpll_t;
 mod enums;
@@ -63,6 +64,7 @@ pub use bitblast_miter::{
 pub use cardinality::{at_least, at_most, exactly};
 pub use certify::{CertifyOutcome, certify_qf_bv_by_enumeration};
 pub use combined::check_with_all_theories;
+pub use distinct::distinct;
 pub use dpll_lia::{
     ArithDpllOutcome, ArithDpllRefutation, ArithLemmaLiteral, certify_arith_dpll_unsat,
     check_with_arith_dpll, check_with_lia_dpll,
