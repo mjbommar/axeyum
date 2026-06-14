@@ -220,6 +220,8 @@ fn encode_to(sort: Sort, value: u128) -> u128 {
     match sort {
         Sort::Bool => u128::from(value != 0),
         Sort::BitVec(w) => value & mask(w),
+        // Floating-point values are represented as their `exp + sig`-bit pattern.
+        Sort::Float { exp, sig } => value & mask(exp + sig),
         Sort::Array { .. } => panic!("scalar encoding of an array sort"),
         Sort::Int => panic!("scalar encoding of an integer sort"),
         Sort::Real => panic!("scalar encoding of a real sort"),
@@ -240,6 +242,11 @@ impl Value {
             Sort::BitVec(w) => Value::Bv {
                 width: w,
                 value: code & mask(w),
+            },
+            // A floating-point value decodes as its `exp + sig`-bit pattern.
+            Sort::Float { exp, sig } => Value::Bv {
+                width: exp + sig,
+                value: code & mask(exp + sig),
             },
             Sort::Array { .. } => panic!("scalar decoding of an array sort"),
             Sort::Int => panic!("scalar decoding of an integer sort"),

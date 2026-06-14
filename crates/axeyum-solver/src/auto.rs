@@ -1110,7 +1110,9 @@ impl Features {
                     features.has_bitblast = true;
                     features.has_int = true;
                 }
-                Sort::BitVec(_) | Sort::Array { .. } => features.has_bitblast = true,
+                Sort::BitVec(_) | Sort::Array { .. } | Sort::Float { .. } => {
+                    features.has_bitblast = true;
+                }
                 Sort::Datatype(_) => features.has_datatype = true,
                 Sort::Bool => {}
             }

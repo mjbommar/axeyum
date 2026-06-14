@@ -88,6 +88,11 @@ fn well_founded_default_rec(
     match sort {
         Sort::Bool => Some(Value::Bool(false)),
         Sort::BitVec(width) => Some(Value::Bv { width, value: 0 }),
+        // A floating-point default is +0.0: the all-zero `exp + sig`-bit pattern.
+        Sort::Float { exp, sig } => Some(Value::Bv {
+            width: exp + sig,
+            value: 0,
+        }),
         Sort::Int => Some(Value::Int(0)),
         Sort::Real => Some(Value::Real(Rational::zero())),
         Sort::Array { index, element } => Some(Value::Array(ArrayValue::constant(

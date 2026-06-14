@@ -182,6 +182,7 @@ fn sort_str(sort: Sort) -> String {
         Sort::Int => "Int".to_owned(),
         Sort::Real => "Real".to_owned(),
         Sort::Datatype(id) => format!("(Datatype {})", id.index()),
+        Sort::Float { exp, sig } => format!("(_ FloatingPoint {exp} {sig})"),
     }
 }
 

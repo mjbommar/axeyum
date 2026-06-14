@@ -98,7 +98,13 @@ pub fn lsb_bits_to_value(sort: Sort, bits: &[bool]) -> Result<Value, IrError> {
                 })
             }
         }
-        Sort::BitVec(width) => {
+        // Floating-point shares the bit-vector representation: `exp + sig` bits.
+        Sort::BitVec(_) | Sort::Float { .. } => {
+            let width = match sort {
+                Sort::BitVec(w) => w,
+                Sort::Float { exp, sig } => exp + sig,
+                _ => 0, // unreachable given the outer arm, but keeps this total
+            };
             validate_width(width)?;
             if bits.len() == width as usize {
                 lsb_bits_to_bv_value(bits)

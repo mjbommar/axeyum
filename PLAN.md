@@ -38,6 +38,26 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-14
 
+- **First-class `Sort::Float` — IR foundation (2026-06-14, ADR-0026 stage 1).**
+  Added `Sort::Float { exp, sig }` to `axeyum-ir` (format inline — `FloatFormat`
+  lives in `axeyum-fp`, which depends on the IR, so `Sort` can't reference it
+  without a cycle), with `lowered_width()` (`exp + sig`, shared with `BitVec`),
+  `float_format()`, `Display` (`(_ FloatingPoint e s)`), and threading through
+  every exhaustive `Sort` match in the workspace (~12 files: arena, value, bits,
+  eval, query planning, rewrite canonical, bv lowering, scenarios, solver
+  auto/evidence, smtlib write, z3 backend ×2). A floating-point value **is** its
+  `exp + sig`-bit pattern, so it lowers/evaluates/replays exactly as `BitVec` and
+  `Value` stays `Value::Bv` (model replay unchanged). Sort-checks (`expect_bv`
+  etc.) reject `Float` for now — **nothing produces it yet**, so behavior is
+  unchanged; this is a sound, green foundation. Test: `lowered_width`/`bv_width`/
+  `float_format`/`Display` + a declared FP symbol round-tripping its bits through
+  the evaluator. **Next (stage 2):** make the SMT-LIB front-end declare FP
+  variables and FP-producing ops as `Sort::Float`, reinterpreting Float↔BitVec at
+  the parser/builder boundary (needs `FpToBits`/`FpFromBits` reinterpret ops — a
+  small `Op` cascade — or per-builder re-stamping). **Stage 3:** wire the
+  sort-disambiguated `(_ to_fp eb sb) RM x` (FP→FP and signed-BV→FP) and drop the
+  current `Unsupported` rejection.
+
 - **FP SMT-LIB front-end — first slice (2026-06-14).** The `axeyum-fp` builders
   (extracted to their own crate so the reader needn't depend on the solver) are
   now reachable from SMT-LIB text. `parse_sort` accepts `Float16/32/64/128` and

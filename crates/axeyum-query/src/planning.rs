@@ -532,6 +532,11 @@ fn update_sort(hash: &mut u64, sort: Sort) {
             update_u64(hash, 6);
             update_u64(hash, u64::try_from(id.index()).unwrap_or(u64::MAX));
         }
+        Sort::Float { exp, sig } => {
+            update_u64(hash, 7);
+            update_u64(hash, u64::from(exp));
+            update_u64(hash, u64::from(sig));
+        }
     }
 }
 

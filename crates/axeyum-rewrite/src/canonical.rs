@@ -506,9 +506,12 @@ fn rewrite_app(
             Sort::Bool => BOOL_CONST_FOLD,
             // `all_constant` matches only Bool/BV constants, so a folded term is
             // only ever Bool/BV here; the array and integer arms are unreachable.
-            Sort::BitVec(_) | Sort::Array { .. } | Sort::Int | Sort::Real | Sort::Datatype(_) => {
-                BV_CONST_FOLD
-            }
+            Sort::BitVec(_)
+            | Sort::Array { .. }
+            | Sort::Int
+            | Sort::Real
+            | Sort::Datatype(_)
+            | Sort::Float { .. } => BV_CONST_FOLD,
         };
         if enabled.contains(rule_id) {
             return Ok(applied(folded, rule_id));

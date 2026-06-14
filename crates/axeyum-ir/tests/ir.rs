@@ -1279,3 +1279,45 @@ fn real_division_evaluates_exactly() {
     let dz = a.real_div(six, zero).unwrap();
     assert_eq!(eval(&a, dz, &asg).unwrap(), Value::Real(Rational::new(0, 1)));
 }
+
+#[test]
+fn float_sort_is_represented_as_a_bit_vector() {
+    // ADR-0026: a floating-point sort lowers structurally to BitVec(exp + sig).
+    let f32 = Sort::Float { exp: 8, sig: 24 };
+    assert_eq!(f32.lowered_width(), Some(32));
+    assert_eq!(f32.bv_width(), None); // distinct sort, not a bit-vector
+    assert_eq!(f32.float_format(), Some((8, 24)));
+    assert_eq!(Sort::BitVec(32).float_format(), None);
+    assert_eq!(format!("{f32}"), "(_ FloatingPoint 8 24)");
+
+    // Scalar decode treats it as a 32-bit value.
+    let v = Value::from_scalar_code(f32, 0x4000_0000);
+    assert_eq!(
+        v,
+        Value::Bv {
+            width: 32,
+            value: 0x4000_0000
+        }
+    );
+
+    // A declared FP symbol round-trips its bit pattern through the evaluator.
+    let mut arena = TermArena::new();
+    let sym = arena.declare("x", f32).unwrap();
+    let term = arena.var(sym);
+    assert_eq!(arena.sort_of(term), f32);
+    let mut asg = Assignment::new();
+    asg.set(
+        sym,
+        Value::Bv {
+            width: 32,
+            value: 0x3F80_0000,
+        },
+    );
+    assert_eq!(
+        eval(&arena, term, &asg).unwrap(),
+        Value::Bv {
+            width: 32,
+            value: 0x3F80_0000
+        }
+    );
+}

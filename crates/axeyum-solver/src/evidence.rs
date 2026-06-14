@@ -505,7 +505,7 @@ fn evidence_route(arena: &TermArena, assertions: &[TermId]) -> EvidenceRoute {
         }
         match arena.sort_of(term) {
             Sort::Real => has_real = true,
-            Sort::BitVec(_) => has_bitvec = true,
+            Sort::BitVec(_) | Sort::Float { .. } => has_bitvec = true,
             Sort::Array { .. } => has_array = true,
             Sort::Int => has_int = true,
             Sort::Bool | Sort::Datatype(_) => {}

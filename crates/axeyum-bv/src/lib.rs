@@ -723,7 +723,10 @@ impl<'a> LoweringBuilder<'a> {
         let (name, sort) = self.arena.symbol(symbol);
         match sort {
             Sort::Bool => vec![self.symbol_input(symbol, name, sort, 0)],
-            Sort::BitVec(width) => (0..width)
+            // Floating-point shares the bit-vector lowering: `exp + sig` input bits.
+            Sort::BitVec(_) | Sort::Float { .. } => (0..sort
+                .lowered_width()
+                .expect("bitvec/float has a width"))
                 .map(|bit_index| self.symbol_input(symbol, name, sort, bit_index))
                 .collect(),
             // Array symbols are eliminated to bit-vectors before lowering
@@ -746,7 +749,7 @@ impl<'a> LoweringBuilder<'a> {
     fn symbol_input(&mut self, symbol: SymbolId, name: &str, sort: Sort, bit_index: u32) -> AigLit {
         let label = match sort {
             Sort::Bool => format!("{name}:bool"),
-            Sort::BitVec(_) => format!("{name}[{bit_index}]"),
+            Sort::BitVec(_) | Sort::Float { .. } => format!("{name}[{bit_index}]"),
             Sort::Array { .. } => {
                 unreachable!("array terms are eliminated before bit lowering (ADR-0010)")
             }
@@ -1671,6 +1674,7 @@ impl<'a> LoweringBuilder<'a> {
         match self.arena.sort_of(term) {
             Sort::Bool => 1,
             Sort::BitVec(width) => width,
+            Sort::Float { exp, sig } => exp + sig,
             Sort::Array { .. } => {
                 unreachable!("array terms are eliminated before bit lowering (ADR-0010)")
             }
@@ -1724,6 +1728,7 @@ fn sort_width(sort: Sort) -> usize {
     match sort {
         Sort::Bool => 1,
         Sort::BitVec(width) => width as usize,
+        Sort::Float { exp, sig } => (exp + sig) as usize,
         Sort::Array { .. } => {
             unreachable!("array terms are eliminated before bit lowering (ADR-0010)")
         }

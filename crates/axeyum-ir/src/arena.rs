@@ -252,7 +252,8 @@ impl TermArena {
             | Sort::Array { .. }
             | Sort::Int
             | Sort::Real
-            | Sort::Datatype(_)) => Err(IrError::SortMismatch {
+            | Sort::Datatype(_)
+            | Sort::Float { .. }) => Err(IrError::SortMismatch {
                 expected: "Bool",
                 found,
             }),
@@ -266,7 +267,8 @@ impl TermArena {
             | Sort::Array { .. }
             | Sort::Int
             | Sort::Real
-            | Sort::Datatype(_)) => Err(IrError::SortMismatch {
+            | Sort::Datatype(_)
+            | Sort::Float { .. }) => Err(IrError::SortMismatch {
                 expected: "BitVec",
                 found,
             }),
@@ -1119,12 +1121,15 @@ impl TermArena {
     fn expect_array(&self, t: TermId) -> Result<(u32, u32), IrError> {
         match self.sort_of(t) {
             Sort::Array { index, element } => Ok((index, element)),
-            found @ (Sort::Bool | Sort::BitVec(_) | Sort::Int | Sort::Real | Sort::Datatype(_)) => {
-                Err(IrError::SortMismatch {
-                    expected: "Array",
-                    found,
-                })
-            }
+            found @ (Sort::Bool
+            | Sort::BitVec(_)
+            | Sort::Int
+            | Sort::Real
+            | Sort::Datatype(_)
+            | Sort::Float { .. }) => Err(IrError::SortMismatch {
+                expected: "Array",
+                found,
+            }),
         }
     }
 
@@ -1231,7 +1236,8 @@ impl TermArena {
             | Sort::BitVec(_)
             | Sort::Array { .. }
             | Sort::Real
-            | Sort::Datatype(_)) => Err(IrError::SortMismatch {
+            | Sort::Datatype(_)
+            | Sort::Float { .. }) => Err(IrError::SortMismatch {
                 expected: "Int",
                 found,
             }),
@@ -1401,7 +1407,8 @@ impl TermArena {
             | Sort::BitVec(_)
             | Sort::Array { .. }
             | Sort::Int
-            | Sort::Datatype(_)) => Err(IrError::SortMismatch {
+            | Sort::Datatype(_)
+            | Sort::Float { .. }) => Err(IrError::SortMismatch {
                 expected: "Real",
                 found,
             }),
@@ -1582,6 +1589,8 @@ fn check_scalar_width(sort: Sort) -> Result<(), IrError> {
     match sort {
         Sort::Bool => Ok(()),
         Sort::BitVec(w) => check_width(w),
+        // A floating-point sort is a finite scalar of `exp + sig` bits.
+        Sort::Float { exp, sig } => check_width(exp + sig),
         found @ (Sort::Array { .. } | Sort::Int | Sort::Real | Sort::Datatype(_)) => {
             Err(IrError::SortMismatch {
                 expected: "Bool or BitVec",

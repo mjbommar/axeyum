@@ -373,6 +373,8 @@ fn sort_bits(sort: Sort) -> u32 {
     match sort {
         Sort::Bool => 1,
         Sort::BitVec(width) => width,
+        // Floating point enumerates over its `exp + sig`-bit pattern.
+        Sort::Float { exp, sig } => exp + sig,
         // No scenario family declares array or integer symbols for finite
         // enumeration (arrays via elimination, ADR-0010; integers are not in the
         // enumerable domain, ADR-0014).
@@ -421,6 +423,10 @@ fn decode_value(sort: Sort, field: u128) -> Value {
         Sort::Bool => Value::Bool(field & 1 == 1),
         Sort::BitVec(width) => Value::Bv {
             width,
+            value: field,
+        },
+        Sort::Float { exp, sig } => Value::Bv {
+            width: exp + sig,
             value: field,
         },
         Sort::Array { .. } => {

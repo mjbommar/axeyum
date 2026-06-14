@@ -30,13 +30,45 @@ pub enum Sort {
     /// A first-class (possibly recursive) datatype sort (ADR-0022); recursion
     /// lives behind the interned id, so `Sort` stays `Copy`.
     Datatype(DatatypeId),
+    /// An IEEE 754 floating-point sort of format `(exp, sig)` bits (ADR-0026).
+    /// `exp` is the exponent width and `sig` the total significand width
+    /// (including the hidden bit); the value is a `Bv` of width `exp + sig`, so
+    /// FP lowers structurally to `BitVec(exp + sig)`. The format lives inline
+    /// because `FloatFormat` (in `axeyum-fp`) cannot be referenced from the IR
+    /// without a dependency cycle.
+    Float {
+        /// Exponent bits.
+        exp: u32,
+        /// Significand bits, including the implicit leading bit.
+        sig: u32,
+    },
 }
 
 impl Sort {
     /// Returns the bit-vector width, or `None` for non-bit-vector sorts.
+    ///
+    /// A floating-point sort is **not** a bit-vector and returns `None` here even
+    /// though it is *represented* as one; use [`Sort::lowered_width`] for the
+    /// width shared by both.
     pub fn bv_width(self) -> Option<u32> {
         match self {
             Sort::BitVec(w) => Some(w),
+            Sort::Bool
+            | Sort::Array { .. }
+            | Sort::Int
+            | Sort::Real
+            | Sort::Datatype(_)
+            | Sort::Float { .. } => None,
+        }
+    }
+
+    /// Returns the bit width this sort lowers to: the width for `BitVec`, and
+    /// `exp + sig` for a floating-point sort (which is bit-blasted as that many
+    /// bits). `None` for sorts with no fixed bit-vector lowering.
+    pub fn lowered_width(self) -> Option<u32> {
+        match self {
+            Sort::BitVec(w) => Some(w),
+            Sort::Float { exp, sig } => Some(exp + sig),
             Sort::Bool | Sort::Array { .. } | Sort::Int | Sort::Real | Sort::Datatype(_) => None,
         }
     }
@@ -46,11 +78,29 @@ impl Sort {
         self == Sort::Bool
     }
 
+    /// Returns the `(exp, sig)` format of a floating-point sort, else `None`.
+    pub fn float_format(self) -> Option<(u32, u32)> {
+        match self {
+            Sort::Float { exp, sig } => Some((exp, sig)),
+            Sort::Bool
+            | Sort::BitVec(_)
+            | Sort::Array { .. }
+            | Sort::Int
+            | Sort::Real
+            | Sort::Datatype(_) => None,
+        }
+    }
+
     /// Returns the `(index, element)` widths for an array sort, else `None`.
     pub fn array_widths(self) -> Option<(u32, u32)> {
         match self {
             Sort::Array { index, element } => Some((index, element)),
-            Sort::Bool | Sort::BitVec(_) | Sort::Int | Sort::Real | Sort::Datatype(_) => None,
+            Sort::Bool
+            | Sort::BitVec(_)
+            | Sort::Int
+            | Sort::Real
+            | Sort::Datatype(_)
+            | Sort::Float { .. } => None,
         }
     }
 }
@@ -66,6 +116,7 @@ impl core::fmt::Display for Sort {
             Sort::Int => write!(f, "Int"),
             Sort::Real => write!(f, "Real"),
             Sort::Datatype(id) => write!(f, "(Datatype {})", id.index()),
+            Sort::Float { exp, sig } => write!(f, "(_ FloatingPoint {exp} {sig})"),
         }
     }
 }
