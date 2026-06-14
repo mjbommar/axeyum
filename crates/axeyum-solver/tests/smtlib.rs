@@ -72,3 +72,24 @@ fn malformed_text_is_a_parse_error() {
     let err = solve_smtlib("(assert (bvadd", &config()).expect_err("malformed input must error");
     assert!(matches!(err, SolverError::Parse(_)));
 }
+
+/// A symbolic signed bit-vector -> Float32 conversion is now bit-blasted (not
+/// just constant-folded): find a 32-bit x whose signed value converts to 2.0f.
+/// x = 2 works, so this is sat and the model replays through the conversion
+/// circuit (ADR-0026 / int->fp).
+#[test]
+fn decides_symbolic_sbv_to_fp_conversion() {
+    let text = "\
+(set-info :status sat)
+(set-logic QF_BVFP)
+(declare-const x (_ BitVec 32))
+(assert (fp.eq ((_ to_fp 8 24) RNE x) (fp #b0 #b10000000 #b00000000000000000000000)))
+(check-sat)
+";
+    let outcome = run(text);
+    assert!(
+        matches!(outcome.result, CheckResult::Sat(_)),
+        "symbolic int->fp conversion must decide sat, got {:?}",
+        outcome.result
+    );
+}

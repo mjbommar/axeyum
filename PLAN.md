@@ -56,6 +56,22 @@ Last updated: 2026-06-14
   IR `fp_from_bits` round-trip. The bit-vector-source `to_fp` blocker from
   ADR-0023 is **closed**.
 
+- **Symbolic integer→float conversions (2026-06-14).** `ubv_to_fp`/`sbv_to_fp`
+  (the `(_ to_fp eb sb)` from an unsigned/signed bit-vector, and
+  `(_ to_fp_unsigned …)`) now build a **symbolic** bit-blasted circuit, not just a
+  constant fold: the integer is the magnitude `v · 2^0` rounded through the
+  validated [`pack_value`] core (`sbv` first splits sign/magnitude — `−v` for a
+  negative `v`, correct including the most-negative value). Both now take the
+  rounding `mode` (the const-fold path previously *ignored* it — a latent bug for
+  non-RNE); constant + RNE still folds via native cast (clean constant), all other
+  cases use the circuit. Working width `m + sig + 4` (`None` → unsupported if it
+  exceeds `MAX_BV_WIDTH = 128`). Validated: the symbolic circuit differentially
+  matches `round_to_format` for **all five modes** and native `f32` casts (RNE)
+  over a battery (precision-loss `2^24+1`, `0x7FFFFFFF`, most-negative
+  `0x80000000`, …); plus an end-to-end solver test deciding a symbolic
+  signed-BV→Float32 query **sat** with the model replayed through the circuit.
+  Closes the const-only limitation on int→FP.
+
 - **Constant F64 `fp.fma` now folds (2026-06-14).** `axeyum_fp::fma` tries the
   round-nearest-even constant fold (native `f64::mul_add`, a single correctly-
   rounded fused op — ADR-0023's "fold constants via native arithmetic" basis)

@@ -911,11 +911,12 @@ fn apply_fp_rounded_indexed(
                     as_float(arena, dst, r)?
                 }
                 Sort::BitVec(_) => {
-                    // Signed bit-vector → FP (const-fold; symbolic ⇒ unsupported).
-                    let r = axeyum_fp::sbv_to_fp(arena, dst, x)?.ok_or_else(|| {
+                    // Signed bit-vector → FP (symbolic circuit via pack_value;
+                    // None only if the working width exceeds MAX_BV_WIDTH).
+                    let r = axeyum_fp::sbv_to_fp(arena, dst, x, mode)?.ok_or_else(|| {
                         SmtError::Unsupported(
-                            "(_ to_fp …) from a signed bit-vector is only supported on \
-                             constant operands"
+                            "(_ to_fp …) from a signed bit-vector: integer width too large \
+                             for the conversion circuit"
                                 .to_owned(),
                         )
                     })?;
@@ -933,9 +934,10 @@ fn apply_fp_rounded_indexed(
                 exp_bits: index(2)?,
                 sig_bits: index(3)?,
             };
-            let r = axeyum_fp::ubv_to_fp(arena, fmt, x)?.ok_or_else(|| {
+            let r = axeyum_fp::ubv_to_fp(arena, fmt, x, mode)?.ok_or_else(|| {
                 SmtError::Unsupported(
-                    "(_ to_fp_unsigned …) is only supported on constant operands".to_owned(),
+                    "(_ to_fp_unsigned …): integer width too large for the conversion circuit"
+                        .to_owned(),
                 )
             })?;
             as_float(arena, fmt, r)?

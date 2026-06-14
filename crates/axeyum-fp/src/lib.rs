@@ -1847,52 +1847,112 @@ pub fn round_to_integral_sym(
     arena.ite(nan, qnan, if_inf)
 }
 
-/// Constant-folds `(_ to_fp eb sb)` from an **unsigned** bit-vector constant
-/// (`(_ to_fp_unsigned ...)`): the unsigned value, rounded to nearest-even into
-/// F32/F64 by native conversion. Always defined.
-#[allow(clippy::cast_precision_loss)] // intentional integer→float rounding
+/// The working width for an `m`-bit integer → `(eb, sb)` float conversion: wide
+/// enough to hold the magnitude, the left-shift of a small value into the
+/// significand, and the rounding `drop` (`< W`). `None` if it would exceed
+/// [`MAX_BV_WIDTH`].
+fn int_to_fp_width(m: u32, sb: u32) -> Option<u32> {
+    let w = m + sb + 4;
+    (w <= MAX_BV_WIDTH).then_some(w)
+}
+
+/// `(_ to_fp eb sb)` from an **unsigned** bit-vector (`(_ to_fp_unsigned ...)`):
+/// the unsigned value rounded to `(eb, sb)` under `mode`. Constant operands under
+/// round-nearest-even fold via native conversion (exact); otherwise a symbolic
+/// circuit rounds the value through the validated [`pack_value`] core (the integer
+/// `v` is the magnitude `v · 2^0`). Returns `None` only when the working width
+/// would exceed [`MAX_BV_WIDTH`].
 pub fn ubv_to_fp(
     arena: &mut TermArena,
     fmt: FloatFormat,
     bv: TermId,
+    mode: RoundingMode,
 ) -> Result<Option<TermId>, IrError> {
-    let Some(v) = const_bits(arena, bv) else {
+    let Sort::BitVec(m) = arena.sort_of(bv) else {
+        return Err(IrError::SortMismatch {
+            expected: "BitVec",
+            found: arena.sort_of(bv),
+        });
+    };
+    // Constant + RNE: native conversion is exact and folds to a clean constant.
+    #[allow(clippy::cast_precision_loss)] // intentional integer→float rounding
+    if mode == RoundingMode::NearestEven
+        && let Some(v) = const_bits(arena, bv)
+    {
+        if fmt == FloatFormat::F32 {
+            return Ok(Some(arena.bv_const(32, u128::from((v as f32).to_bits()))?));
+        } else if fmt == FloatFormat::F64 {
+            return Ok(Some(arena.bv_const(64, u128::from((v as f64).to_bits()))?));
+        }
+    }
+    let Some(w) = int_to_fp_width(m, fmt.sig_bits) else {
         return Ok(None);
     };
-    let bits = if fmt == FloatFormat::F32 {
-        u128::from((v as f32).to_bits())
-    } else if fmt == FloatFormat::F64 {
-        u128::from((v as f64).to_bits())
-    } else {
-        return Ok(None);
-    };
-    Ok(Some(arena.bv_const(fmt.width(), bits)?))
+    let mag = arena.zero_ext(w - m, bv)?;
+    let sign = arena.bool_const(false);
+    let e = arena.bv_const(w, 0)?;
+    Ok(Some(pack_value(
+        arena,
+        fmt.exp_bits,
+        fmt.sig_bits,
+        sign,
+        mag,
+        e,
+        mode,
+    )?))
 }
 
-/// Constant-folds `(_ to_fp eb sb)` from a **signed** (two's-complement)
-/// bit-vector constant: the signed value, rounded to nearest-even into F32/F64.
-/// Always defined.
-#[allow(clippy::cast_precision_loss)] // intentional integer→float rounding
+/// `(_ to_fp eb sb)` from a **signed** (two's-complement) bit-vector: the signed
+/// value rounded to `(eb, sb)` under `mode`. Constant operands under
+/// round-nearest-even fold via native conversion; otherwise a symbolic circuit
+/// splits the sign and magnitude (the magnitude is `−v` for a negative `v`, which
+/// is correct including the most-negative value) and rounds through the validated
+/// [`pack_value`] core. Returns `None` only when the working width would exceed
+/// [`MAX_BV_WIDTH`].
 pub fn sbv_to_fp(
     arena: &mut TermArena,
     fmt: FloatFormat,
     bv: TermId,
+    mode: RoundingMode,
 ) -> Result<Option<TermId>, IrError> {
-    let Some(v) = const_bits(arena, bv) else {
+    let Sort::BitVec(m) = arena.sort_of(bv) else {
+        return Err(IrError::SortMismatch {
+            expected: "BitVec",
+            found: arena.sort_of(bv),
+        });
+    };
+    #[allow(clippy::cast_precision_loss)] // intentional integer→float rounding
+    if mode == RoundingMode::NearestEven
+        && let Some(v) = const_bits(arena, bv)
+    {
+        let signed = to_signed(v, m);
+        if fmt == FloatFormat::F32 {
+            return Ok(Some(arena.bv_const(32, u128::from((signed as f32).to_bits()))?));
+        } else if fmt == FloatFormat::F64 {
+            return Ok(Some(arena.bv_const(64, u128::from((signed as f64).to_bits()))?));
+        }
+    }
+    let Some(w) = int_to_fp_width(m, fmt.sig_bits) else {
         return Ok(None);
     };
-    let Sort::BitVec(w) = arena.sort_of(bv) else {
-        return Ok(None);
-    };
-    let signed = to_signed(v, w);
-    let bits = if fmt == FloatFormat::F32 {
-        u128::from((signed as f32).to_bits())
-    } else if fmt == FloatFormat::F64 {
-        u128::from((signed as f64).to_bits())
-    } else {
-        return Ok(None);
-    };
-    Ok(Some(arena.bv_const(fmt.width(), bits)?))
+    // sign = top bit; magnitude = |v| (two's-complement negate when negative,
+    // which maps the most-negative value to its correct unsigned magnitude).
+    let one1 = arena.bv_const(1, 1)?;
+    let sign_bv = arena.extract(m - 1, m - 1, bv)?;
+    let sign = arena.eq(sign_bv, one1)?;
+    let neg = arena.bv_neg(bv)?;
+    let abs = arena.ite(sign, neg, bv)?;
+    let mag = arena.zero_ext(w - m, abs)?;
+    let e = arena.bv_const(w, 0)?;
+    Ok(Some(pack_value(
+        arena,
+        fmt.exp_bits,
+        fmt.sig_bits,
+        sign,
+        mag,
+        e,
+        mode,
+    )?))
 }
 
 /// Symbolic **round-nearest-ties-to-even** of a significand bit-vector: rounds
@@ -3860,5 +3920,89 @@ mod fma_f64_const_tests {
             fma(&mut arena, FloatFormat::F64, x, one, one, RoundingMode::NearestEven),
             Err(IrError::InvalidWidth(164))
         ));
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+mod int_to_fp_symbolic_tests {
+    use super::*;
+    use axeyum_ir::{Assignment, Value, eval};
+
+    fn eval_bits(arena: &TermArena, t: TermId, sym: axeyum_ir::SymbolId, v: u128) -> u128 {
+        let mut asg = Assignment::new();
+        asg.set(sym, Value::Bv { width: 32, value: v });
+        match eval(arena, t, &asg).unwrap() {
+            Value::Bv { value, .. } => value,
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn symbolic_ubv_to_fp_matches_native_and_round_to_format() {
+        // A symbolic 32-bit operand forces the pack_value circuit (not the
+        // constant fold). Validate against native (RNE) and round_to_format (all
+        // modes); 32-bit values are exact in f64, so f64 is the exact reference.
+        let mut arena = TermArena::new();
+        let s = arena.declare("x", Sort::BitVec(32)).unwrap();
+        let x = arena.var(s);
+        let modes = [
+            RoundingMode::NearestEven,
+            RoundingMode::NearestAway,
+            RoundingMode::TowardZero,
+            RoundingMode::TowardPositive,
+            RoundingMode::TowardNegative,
+        ];
+        let vals: [u128; 12] = [
+            0, 1, 2, 3, 5, 255, 1 << 23, (1 << 24) + 1, (1 << 24) + 3, 0x7FFF_FFFF,
+            0xFFFF_FFFF, 0xFFFF_FF81,
+        ];
+        for mode in modes {
+            let t = ubv_to_fp(&mut arena, FloatFormat::F32, x, mode).unwrap().unwrap();
+            for &v in &vals {
+                let got = eval_bits(&arena, t, s, v);
+                let want = round_to_format(8, 24, v as f64, mode);
+                assert_eq!(got, want, "ubv {v} mode {mode:?}: got {got:#x} want {want:#x}");
+                if mode == RoundingMode::NearestEven {
+                    assert_eq!(got, u128::from((v as f32).to_bits()), "ubv {v} vs native");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn symbolic_sbv_to_fp_matches_native_and_round_to_format() {
+        let mut arena = TermArena::new();
+        let s = arena.declare("y", Sort::BitVec(32)).unwrap();
+        let y = arena.var(s);
+        let to_signed = |v: u128| -> i64 {
+            if v >> 31 & 1 == 1 {
+                (v as i64) - (1i64 << 32)
+            } else {
+                v as i64
+            }
+        };
+        let modes = [
+            RoundingMode::NearestEven,
+            RoundingMode::TowardZero,
+            RoundingMode::TowardPositive,
+            RoundingMode::TowardNegative,
+        ];
+        let vals: [u128; 10] = [
+            0, 1, 0xFFFF_FFFF, 0xFFFF_FFFE, 0x8000_0000, 0x7FFF_FFFF, 5, 0xFFFF_FF81,
+            (1 << 24) + 1, 0x8000_0001,
+        ];
+        for mode in modes {
+            let t = sbv_to_fp(&mut arena, FloatFormat::F32, y, mode).unwrap().unwrap();
+            for &v in &vals {
+                let sv = to_signed(v);
+                let got = eval_bits(&arena, t, s, v);
+                let want = round_to_format(8, 24, sv as f64, mode);
+                assert_eq!(got, want, "sbv {sv} mode {mode:?}: got {got:#x} want {want:#x}");
+                if mode == RoundingMode::NearestEven {
+                    assert_eq!(got, u128::from((sv as f32).to_bits()), "sbv {sv} vs native");
+                }
+            }
+        }
     }
 }

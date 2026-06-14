@@ -828,8 +828,9 @@ fn parses_and_folds_unambiguous_fp_conversions() {
     );
     assert!(matches!(nd, Err(SmtError::Unsupported(_))), "got {nd:?}");
 
-    // bit-vector source to_fp WITH a rounding mode is rejected (FP/sBV ambiguity).
-    let amb = parse_script(
+    // A symbolic bit-vector-source to_fp is now signed-BV->FP (no longer
+    // ambiguous, since FP operands carry Sort::Float): it parses into a circuit.
+    let sbv_sym = parse_script(
         r"
         (set-logic QF_BVFP)
         (declare-const b (_ BitVec 32))
@@ -837,7 +838,7 @@ fn parses_and_folds_unambiguous_fp_conversions() {
         (check-sat)
     ",
     );
-    assert!(matches!(amb, Err(SmtError::Unsupported(_))), "got {amb:?}");
+    assert!(sbv_sym.is_ok(), "symbolic signed-BV->FP should parse: {sbv_sym:?}");
 }
 
 #[test]
