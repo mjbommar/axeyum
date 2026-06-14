@@ -299,6 +299,13 @@ enum Frame<'a> {
         mode: RoundingMode,
         argc: usize,
     },
+    /// Like [`Frame::ApplyFpRounded`] but for an *indexed* head, e.g.
+    /// `((_ to_fp 8 24) RM x)` or `((_ fp.to_sbv 32) RM x)`.
+    ApplyFpRoundedIndexed {
+        items: &'a [SExpr],
+        mode: RoundingMode,
+        argc: usize,
+    },
     /// Pop `argc` results and expand a parameterized `define-fun` body.
     ApplyMacro { name: &'a str, argc: usize },
     /// Check the sort of the most recent result.
@@ -353,6 +360,10 @@ fn parse_term<'a>(
             Frame::ApplyFpRounded { items, mode, argc } => {
                 let args = results.split_off(results.len() - argc);
                 results.push(apply_fp_rounded(arena, items, mode, &args)?);
+            }
+            Frame::ApplyFpRoundedIndexed { items, mode, argc } => {
+                let args = results.split_off(results.len() - argc);
+                results.push(apply_fp_rounded_indexed(arena, items, mode, &args)?);
             }
             Frame::ApplyMacro { name, argc } => {
                 queue_macro_expansion(
@@ -469,6 +480,25 @@ fn queue_list_eval<'a>(
             .ok_or_else(|| SmtError::Syntax(format!("{name}: unrecognized rounding mode")))?;
         let operands = &items[2..];
         frames.push(Frame::ApplyFpRounded {
+            items,
+            mode,
+            argc: operands.len(),
+        });
+        for child in operands.iter().rev() {
+            frames.push(Frame::Eval(child));
+        }
+    } else if let Some(idx) = head.list()
+        && idx.first().and_then(SExpr::atom) == Some("_")
+        && idx.get(1).and_then(SExpr::atom).is_some_and(is_fp_indexed_conversion)
+        && items.get(1).is_some_and(|e| parse_rounding_mode(e).is_some())
+    {
+        // Indexed rounding-mode FP conversions `((_ to_fp eb sb) RM x)`,
+        // `((_ fp.to_sbv m) RM x)`, …: the leading `RM` is a value, not a term.
+        // (The mode-free bit-reinterpret `((_ to_fp eb sb) x)` has no RM here, so
+        // it falls through to the generic indexed-application path.)
+        let mode = parse_rounding_mode(&items[1]).expect("checked");
+        let operands = &items[2..];
+        frames.push(Frame::ApplyFpRoundedIndexed {
             items,
             mode,
             argc: operands.len(),
@@ -765,6 +795,122 @@ fn parse_rounding_mode(expr: &SExpr) -> Option<RoundingMode> {
         "RTN" | "roundTowardNegative" => Some(RoundingMode::TowardNegative),
         _ => None,
     }
+}
+
+/// Whether `name` is an indexed FP conversion op taking a leading rounding mode.
+fn is_fp_indexed_conversion(name: &str) -> bool {
+    matches!(
+        name,
+        "to_fp" | "to_fp_unsigned" | "fp.to_sbv" | "fp.to_ubv"
+    )
+}
+
+/// Applies an *indexed* rounding-mode FP conversion (`mode` already parsed). Only
+/// the unambiguous conversions are supported: `(_ to_fp eb sb)` from a **real**
+/// constant (dyadic only — sound), `(_ to_fp_unsigned eb sb)` from an unsigned
+/// bit-vector, and `(_ fp.to_sbv/to_ubv m)` from a floating-point value. The
+/// `(_ to_fp eb sb)` overload from a bit-vector is rejected: in this BV lowering
+/// an FP source and a signed-BV source share the `BitVec` sort and cannot be told
+/// apart without a dedicated FP sort (ADR-0023's named upgrade path).
+fn apply_fp_rounded_indexed(
+    arena: &mut TermArena,
+    items: &[SExpr],
+    mode: RoundingMode,
+    args: &[TermId],
+) -> Result<TermId, SmtError> {
+    let head = items[0].list().expect("indexed head");
+    let name = head.get(1).and_then(SExpr::atom).unwrap_or("");
+    let index = |i: usize| -> Result<u32, SmtError> {
+        head.get(i)
+            .and_then(SExpr::atom)
+            .and_then(|s| s.parse::<u32>().ok())
+            .ok_or_else(|| SmtError::Syntax(format!("`{name}` index {i}")))
+    };
+    if args.len() != 1 {
+        return Err(SmtError::Syntax(format!(
+            "`{name}` expects 1 operand, got {}",
+            args.len()
+        )));
+    }
+    let x = args[0];
+    let term = match name {
+        "to_fp" => {
+            let (eb, sb) = (index(2)?, index(3)?);
+            match arena.sort_of(x) {
+                Sort::Real => {
+                    // Real → FP: fold a dyadic real *constant*; non-dyadic or
+                    // symbolic reals are unsupported (sound — never double-rounded).
+                    let TermNode::RealConst(r) = *arena.node(x) else {
+                        return Err(SmtError::Unsupported(
+                            "(_ to_fp …) from a non-constant real".to_owned(),
+                        ));
+                    };
+                    let bits = axeyum_fp::round_rational_to_format(
+                        eb,
+                        sb,
+                        r.numerator(),
+                        r.denominator(),
+                        mode,
+                    )
+                    .ok_or_else(|| {
+                        SmtError::Unsupported(format!(
+                            "(_ to_fp {eb} {sb}) from non-dyadic real {}/{}",
+                            r.numerator(),
+                            r.denominator()
+                        ))
+                    })?;
+                    arena.bv_const(eb + sb, bits)?
+                }
+                Sort::BitVec(_) => {
+                    return Err(SmtError::Unsupported(
+                        "(_ to_fp …) with a rounding mode over a bit-vector (FP- or \
+                         signed-BV-source) needs a dedicated FP sort to disambiguate"
+                            .to_owned(),
+                    ));
+                }
+                s => {
+                    return Err(SmtError::Syntax(format!(
+                        "(_ to_fp …) operand must be Real or BitVec, got {s:?}"
+                    )));
+                }
+            }
+        }
+        "to_fp_unsigned" => {
+            let fmt = FloatFormat {
+                exp_bits: index(2)?,
+                sig_bits: index(3)?,
+            };
+            axeyum_fp::ubv_to_fp(arena, fmt, x)?.ok_or_else(|| {
+                SmtError::Unsupported(
+                    "(_ to_fp_unsigned …) is only supported on constant operands".to_owned(),
+                )
+            })?
+        }
+        "fp.to_ubv" => {
+            let width = index(2)?;
+            let fmt = fp_format(arena, x)?;
+            axeyum_fp::to_ubv(arena, fmt, mode, x, width)?.ok_or_else(|| {
+                SmtError::Unsupported(
+                    "(_ fp.to_ubv …) is only supported on constant operands".to_owned(),
+                )
+            })?
+        }
+        "fp.to_sbv" => {
+            let width = index(2)?;
+            let fmt = fp_format(arena, x)?;
+            axeyum_fp::to_sbv(arena, fmt, mode, x, width)?.ok_or_else(|| {
+                SmtError::Unsupported(
+                    "(_ fp.to_sbv …) is only supported on constant operands".to_owned(),
+                )
+            })?
+        }
+        other => {
+            return Err(SmtError::Unsupported(format!(
+                "indexed rounding-mode FP op `{other}`"
+            )));
+        }
+    };
+    Ok(term)
 }
 
 /// Applies a rounding-mode FP op (`mode` already parsed from the first argument);

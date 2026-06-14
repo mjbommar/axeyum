@@ -2179,6 +2179,50 @@ pub fn round_to_format(eb: u32, sb: u32, v: f64, mode: RoundingMode) -> u128 {
     sign | ((biased as u128) << (sb - 1)) | trailing
 }
 
+/// Rounds an exact rational `num/den` (`den > 0`) to IEEE format `(eb, sb)` under
+/// `mode`, returning the bit pattern — but **only** when `num/den` is a *dyadic*
+/// number exactly representable as an `f64` (denominator a power of two,
+/// `|num| < 2^53`, `den ≤ 2^62`). In that case the `f64` division is exact, so the
+/// single rounding to the target format (the validated [`round_to_format`]) is the
+/// only rounding and the result is correct. For any other rational (non-dyadic
+/// like `1/3`, or out of the exact range) it returns `None`, so a `(_ to_fp …)`
+/// from such a real literal is reported *unsupported* rather than double-rounded
+/// (which could yield a wrong value). This keeps real→FP conversion sound.
+#[must_use]
+#[allow(
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_truncation
+)]
+pub fn round_rational_to_format(
+    eb: u32,
+    sb: u32,
+    num: i128,
+    den: i128,
+    mode: RoundingMode,
+) -> Option<u128> {
+    if den <= 0 {
+        return None;
+    }
+    if num == 0 {
+        return Some(round_to_format(eb, sb, 0.0, mode)); // +0
+    }
+    let uden = den as u128; // den > 0 checked
+    if uden & (uden - 1) != 0 {
+        return None; // denominator not a power of two → non-dyadic
+    }
+    if num.unsigned_abs() >= (1u128 << 53) {
+        return None; // numerator needs > 53 significant bits
+    }
+    if uden > (1u128 << 62) {
+        return None; // scale too small to stay exact in f64
+    }
+    // Both operands are exact f64s and the quotient has ≤ 53 significant bits with
+    // a power-of-two scale in range, so this division is exact.
+    let v = (num as f64) / (den as f64);
+    Some(round_to_format(eb, sb, v, mode))
+}
+
 /// Constant-folds `fp.to_real` (FP → mathematical Real, ADR-0015) for a finite
 /// F32/F64 constant. FP→Real is **exact** (no rounding), so when the exact value
 /// fits the `i128`-based [`Rational`] this folds to a `Real` constant; `NaN`/`∞`
@@ -2475,6 +2519,63 @@ fn order_key(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermI
 mod tests {
     use super::*;
     use axeyum_ir::{Assignment, Value, eval};
+
+    #[test]
+    fn rational_to_format_dyadic_matches_native_f32_and_f64() {
+        // Dyadic rationals round to exactly the native cast (the only rounding is
+        // the validated round_to_format on the exact f64).
+        for &(num, den) in &[
+            (1i128, 1i128),
+            (-1, 1),
+            (1, 2),
+            (-3, 2),
+            (1, 4),
+            (5, 8),
+            (-7, 16),
+            (3, 1),
+            (255, 256),
+            (123_456, 1024),
+        ] {
+            let v = num as f64 / den as f64;
+            assert_eq!(
+                round_rational_to_format(8, 24, num, den, RoundingMode::NearestEven),
+                Some(u128::from((v as f32).to_bits())),
+                "F32 {num}/{den}",
+            );
+            assert_eq!(
+                round_rational_to_format(11, 53, num, den, RoundingMode::NearestEven),
+                Some(u128::from(v.to_bits())),
+                "F64 {num}/{den}",
+            );
+        }
+        // Zero folds to +0.
+        assert_eq!(
+            round_rational_to_format(8, 24, 0, 1, RoundingMode::NearestEven),
+            Some(0)
+        );
+        // Non-dyadic and out-of-range rationals are reported unsupported (None),
+        // never double-rounded.
+        assert_eq!(
+            round_rational_to_format(8, 24, 1, 3, RoundingMode::NearestEven),
+            None,
+            "1/3 is non-dyadic",
+        );
+        assert_eq!(
+            round_rational_to_format(8, 24, 1, 10, RoundingMode::NearestEven),
+            None,
+            "1/10 is non-dyadic",
+        );
+        assert_eq!(
+            round_rational_to_format(8, 24, 1i128 << 53, 1, RoundingMode::NearestEven),
+            None,
+            "numerator needs > 53 bits",
+        );
+        assert_eq!(
+            round_rational_to_format(8, 24, 1, 1i128 << 63, RoundingMode::NearestEven),
+            None,
+            "denominator scale too small",
+        );
+    }
 
     fn to_signed(v: u128, w: u32) -> i128 {
         if w < 128 && (v >> (w - 1)) & 1 == 1 {

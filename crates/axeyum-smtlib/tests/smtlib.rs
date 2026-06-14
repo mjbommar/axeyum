@@ -762,3 +762,80 @@ fn parses_symbolic_round_to_integral_and_fp_conversions() {
     assert_eq!(v, Value::Bool(true));
     assert_eq!(reinterpret.arena.sort_of(reinterpret.assertions[0]), Sort::Bool);
 }
+
+#[test]
+#[allow(clippy::similar_names)]
+fn parses_and_folds_unambiguous_fp_conversions() {
+    // real → fp: (_ to_fp 8 24) RNE 2.0 == the Float32 bit pattern for 2.0.
+    let r2fp = parse_script(
+        r"
+        (set-logic QF_FP)
+        (assert (fp.eq ((_ to_fp 8 24) RNE 2.0)
+                       (fp #b0 #b10000000 #b00000000000000000000000)))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+    let v = eval(&r2fp.arena, r2fp.assertions[0], &Assignment::default()).unwrap();
+    assert_eq!(v, Value::Bool(true));
+
+    // unsigned bv → fp: (_ to_fp_unsigned 8 24) RNE #x00000002 == 2.0.
+    let u2fp = parse_script(
+        r"
+        (set-logic QF_BVFP)
+        (assert (fp.eq ((_ to_fp_unsigned 8 24) RNE #x00000002)
+                       (fp #b0 #b10000000 #b00000000000000000000000)))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+    let v = eval(&u2fp.arena, u2fp.assertions[0], &Assignment::default()).unwrap();
+    assert_eq!(v, Value::Bool(true));
+
+    // fp → unsigned bv: (_ fp.to_ubv 32) RNE 2.0 == #x00000002.
+    let to_ubv_script = parse_script(
+        r"
+        (set-logic QF_BVFP)
+        (assert (= ((_ fp.to_ubv 32) RNE (fp #b0 #b10000000 #b00000000000000000000000))
+                   #x00000002))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+    let v = eval(&to_ubv_script.arena, to_ubv_script.assertions[0], &Assignment::default()).unwrap();
+    assert_eq!(v, Value::Bool(true));
+
+    // fp → signed bv: (_ fp.to_sbv 32) RNE -2.0 == the two's-complement of 2.
+    let to_sbv_script = parse_script(
+        r"
+        (set-logic QF_BVFP)
+        (assert (= ((_ fp.to_sbv 32) RNE (fp #b1 #b10000000 #b00000000000000000000000))
+                   (bvneg #x00000002)))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+    let v = eval(&to_sbv_script.arena, to_sbv_script.assertions[0], &Assignment::default()).unwrap();
+    assert_eq!(v, Value::Bool(true));
+
+    // Non-dyadic real → fp is reported unsupported, never double-rounded.
+    let nd = parse_script(
+        r"
+        (set-logic QF_FP)
+        (assert (fp.isNaN ((_ to_fp 8 24) RNE (/ 1.0 3.0))))
+        (check-sat)
+    ",
+    );
+    assert!(matches!(nd, Err(SmtError::Unsupported(_))), "got {nd:?}");
+
+    // bit-vector source to_fp WITH a rounding mode is rejected (FP/sBV ambiguity).
+    let amb = parse_script(
+        r"
+        (set-logic QF_BVFP)
+        (declare-const b (_ BitVec 32))
+        (assert (fp.isNaN ((_ to_fp 8 24) RNE b)))
+        (check-sat)
+    ",
+    );
+    assert!(matches!(amb, Err(SmtError::Unsupported(_))), "got {amb:?}");
+}

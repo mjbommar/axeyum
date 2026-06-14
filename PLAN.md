@@ -64,12 +64,23 @@ Last updated: 2026-06-14
   bit-reinterpret `((_ to_fp eb sb) x)` over a single `BitVec(eb+sb)` (identity in
   our lowering) are wired. Tests: symbolic `roundToIntegral`, `roundToIntegral RTZ
   2.5 == 2.0`, `fp.to_real 2.0 == 2.0`, and `not (fp.isNaN ((_ to_fp 8 24)
-  #x40000000))`, all evaluated to `true`. **Deferred (architectural):** the
-  rounding-mode `(_ to_fp eb sb) RM x` / `(_ to_fp_unsigned …)` / `(_ fp.to_sbv/
-  to_ubv m) RM x` conversions — because BV-lowering collapses FP and BitVec to one
-  sort, an FP source can't be told from a signed-BV source by sort alone; a
-  dedicated FP sort (ADR-level) is the prerequisite. F64 `fp.fma` is the other gap
-  (`3·sig+5 = 164 > MAX_BV_WIDTH=128`, errors cleanly); needs arbitrary-width BV.
+  #x40000000))`, all evaluated to `true`. **Unambiguous rounding-mode conversions
+  now added** — `((_ to_fp eb sb) RM <real>)` (real→FP), `((_ to_fp_unsigned eb
+  sb) RM bv)` (uBV→FP), and `((_ fp.to_sbv/to_ubv m) RM x)` (FP→BV): all four have
+  sort-distinguishable operands, so they are wired soundly via a new
+  `Frame::ApplyFpRoundedIndexed`. Real→FP uses a new exact `round_rational_to_format`
+  in `axeyum-fp` that folds **only dyadic** rationals (denominator a power of two,
+  `|num| < 2^53`, validated == native `f32`/`f64` casts) and returns `None` for
+  non-dyadic/out-of-range literals (e.g. `1/3`) so they are reported *unsupported*,
+  never double-rounded — soundness preserved. uBV→FP and FP→BV are constant-fold
+  (symbolic ⇒ unsupported). Tests parse+evaluate `to_fp RNE 2.0 == 2.0f`,
+  `to_fp_unsigned RNE #x2 == 2.0f`, `fp.to_ubv 32 RNE 2.0f == #x2`, `fp.to_sbv 32
+  RNE −2.0f == −2`, and assert the non-dyadic and bit-vector-source forms error.
+  **Deferred (architectural):** the **bit-vector-source** `(_ to_fp eb sb) RM bv`
+  overload — in this BV lowering an FP source and a signed-BV source share the
+  `BitVec` sort and can't be told apart without a dedicated `Sort::Float` (ADR-0023's
+  named upgrade path). F64 `fp.fma` is the other gap (`3·sig+5 = 164 >
+  MAX_BV_WIDTH=128`, errors cleanly); needs arbitrary-width BV.
 
 - **Strings — first slice (2026-06-14, ADR-0025).** Bounded-length string theory
   by BV lowering (`strings::BoundedString`, no IR sort): a string is `(len,
