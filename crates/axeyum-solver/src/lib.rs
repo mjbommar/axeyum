@@ -69,8 +69,8 @@ pub use layers::BvLayerStats;
 pub use lazy_bv::{LazyBvOutcome, check_lazy_bv_abstraction, solve_lazy_bv_abstraction};
 pub use lia::{DEFAULT_INT_WIDTH, check_with_int_blasting};
 pub use lra::{
-    FarkasAtom, FarkasCertificate, check_with_lra, check_with_lra_simplex, lra_farkas_certificate,
-    lra_unsat_core,
+    FarkasAtom, FarkasCertificate, check_with_lia_simplex, check_with_lra, check_with_lra_simplex,
+    lra_farkas_certificate, lra_unsat_core,
 };
 pub use model::Model;
 pub use proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};

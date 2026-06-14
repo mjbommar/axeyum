@@ -27,7 +27,7 @@ use std::collections::BTreeMap;
 
 use axeyum_ir::{Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 
-use crate::backend::{CheckResult, SolverError};
+use crate::backend::{CheckResult, SolverError, UnknownKind, UnknownReason};
 use crate::model::Model;
 
 /// Checks a conjunctive `QF_LRA` query by exact-rational Fourier–Motzkin
@@ -805,6 +805,331 @@ fn is_real(arena: &TermArena, term: TermId) -> bool {
 
 fn unsupported(what: &str) -> SolverError {
     SolverError::Unsupported(format!("QF_LRA: {what}"))
+}
+
+// ---------------------------------------------------------------------------
+// Unbounded QF_LIA by branch-and-bound over the exact-rational simplex.
+//
+// The same simplex that decides QF_LRA decides the *relaxation* of an integer
+// problem; branch-and-bound on fractional integer variables closes the gap.
+// Unlike bounded bit-blasting (sat-only), this is sound for BOTH `sat` and
+// `unsat`:
+//   - `sat`: an all-integer simplex point, replayed through the evaluator;
+//   - `unsat`: a fully-closed branch tree — every leaf's LP relaxation is
+//     infeasible, and `x <= floor(v)` OR `x >= floor(v)+1` is exhaustive over
+//     the integers, so no integer solution exists.
+// A node budget bounds the search; exhaustion yields `unknown`, never a wrong
+// verdict.
+// ---------------------------------------------------------------------------
+
+/// Node budget for LIA branch-and-bound; on exhaustion the result is `unknown`.
+const MAX_LIA_BNB_NODES: u64 = 50_000;
+
+/// Decides a conjunctive `QF_LIA` query by branch-and-bound over the
+/// exact-rational simplex.
+///
+/// The returned [`Model`] assigns each integer variable a [`Value::Int`] and is
+/// replayed against the original assertions (the `sat` trust anchor). `unsat` is
+/// sound by exhaustive integer branching over (LP-)infeasible leaves. Unlike the
+/// bounded bit-blasting path, this decides `unsat` soundly and is unbounded in
+/// the integer magnitudes it can reason about.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] for input outside conjunctive linear
+/// integer arithmetic (disjunction, disequality, nonlinear product, or a
+/// non-integer term), or [`SolverError::Backend`] on a `sat` replay failure.
+pub fn check_with_lia_simplex(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<CheckResult, SolverError> {
+    let mut ctx = IntCollector::default();
+    for &assertion in assertions {
+        ctx.collect(arena, assertion, false)?;
+    }
+    if ctx.trivially_unsat {
+        return Ok(CheckResult::Unsat);
+    }
+    let nvars = ctx.vars.len();
+    let mut constraints = ctx.constraints;
+    let mut budget = MAX_LIA_BNB_NODES;
+    match lia_branch_and_bound(&mut constraints, nvars, &mut budget) {
+        LiaBnb::Unsat => Ok(CheckResult::Unsat),
+        LiaBnb::Unknown => Ok(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Incomplete,
+            detail: format!("QF_LIA branch-and-bound exceeded {MAX_LIA_BNB_NODES} nodes"),
+        })),
+        LiaBnb::Sat(values) => {
+            let mut model = Model::new();
+            let mut assignment = axeyum_ir::Assignment::new();
+            for (&symbol, &index) in &ctx.var_index {
+                let value = values[index];
+                debug_assert!(
+                    value.is_integer(),
+                    "branch-and-bound returned a fractional value"
+                );
+                model.set(symbol, Value::Int(value.numerator()));
+                assignment.set(symbol, Value::Int(value.numerator()));
+            }
+            for &assertion in assertions {
+                match eval(arena, assertion, &assignment) {
+                    Ok(Value::Bool(true)) => {}
+                    Ok(_) => {
+                        return Err(SolverError::Backend(format!(
+                            "lia simplex sat model replay failed: assertion #{} not satisfied",
+                            assertion.index()
+                        )));
+                    }
+                    Err(error) => {
+                        return Err(SolverError::Backend(format!(
+                            "lia simplex sat model replay error on assertion #{}: {error}",
+                            assertion.index()
+                        )));
+                    }
+                }
+            }
+            Ok(CheckResult::Sat(model))
+        }
+    }
+}
+
+/// Result of one branch-and-bound subtree.
+enum LiaBnb {
+    Sat(Vec<Rational>),
+    Unsat,
+    Unknown,
+}
+
+/// Branch-and-bound over the simplex relaxation. `constraints` is used as a
+/// backtracking stack: branch constraints are pushed and popped around the
+/// recursive calls.
+fn lia_branch_and_bound(
+    constraints: &mut Vec<Constraint>,
+    nvars: usize,
+    budget: &mut u64,
+) -> LiaBnb {
+    if *budget == 0 {
+        return LiaBnb::Unknown;
+    }
+    *budget -= 1;
+
+    let values = match simplex_feasible(constraints, nvars) {
+        Some(SimplexOutcome::Sat(values)) => values,
+        Some(SimplexOutcome::Unsat(_)) => return LiaBnb::Unsat,
+        None => return LiaBnb::Unknown,
+    };
+    let Some(branch_var) = (0..nvars).find(|&i| !values[i].is_integer()) else {
+        return LiaBnb::Sat(values);
+    };
+    let floor = values[branch_var]
+        .numerator()
+        .div_euclid(values[branch_var].denominator());
+
+    // Left branch: x_i <= floor, i.e. `1*x_i + (-floor) <= 0`.
+    constraints.push(bound_constraint(
+        branch_var,
+        Rational::integer(1),
+        Rational::integer(-floor),
+    ));
+    let left = lia_branch_and_bound(constraints, nvars, budget);
+    constraints.pop();
+    if let LiaBnb::Sat(_) | LiaBnb::Unknown = left {
+        return left;
+    }
+
+    // Right branch: x_i >= floor+1, i.e. `-1*x_i + (floor+1) <= 0`.
+    let next = floor.checked_add(1).expect("floor + 1 fits in i128");
+    constraints.push(bound_constraint(
+        branch_var,
+        Rational::integer(-1),
+        Rational::integer(next),
+    ));
+    let right = lia_branch_and_bound(constraints, nvars, budget);
+    constraints.pop();
+    right
+}
+
+/// A non-strict bound `coeff * x_i + constant <= 0`.
+fn bound_constraint(index: usize, coeff: Rational, constant: Rational) -> Constraint {
+    let mut coeffs = BTreeMap::new();
+    coeffs.insert(index, coeff);
+    Constraint {
+        expr: LinExpr { coeffs, constant },
+        strict: false,
+        mult: Vec::new(),
+        origin: 0,
+    }
+}
+
+fn negate_int_op(op: Op) -> Op {
+    match op {
+        Op::IntLt => Op::IntGe,
+        Op::IntLe => Op::IntGt,
+        Op::IntGt => Op::IntLe,
+        Op::IntGe => Op::IntLt,
+        _ => unreachable!("negate_int_op only handles integer order relations"),
+    }
+}
+
+fn is_int(arena: &TermArena, term: TermId) -> bool {
+    arena.sort_of(term) == Sort::Int
+}
+
+fn unsupported_lia(what: &str) -> SolverError {
+    SolverError::Unsupported(format!("QF_LIA: {what}"))
+}
+
+/// Collects the conjunctive linear-integer constraints of an assertion, into the
+/// same dense `Constraint`/`LinExpr` form the simplex consumes. Mirrors the LRA
+/// [`Collector`] for the integer operator set; the LRA collector is left
+/// untouched.
+#[derive(Default)]
+struct IntCollector {
+    var_index: BTreeMap<SymbolId, usize>,
+    vars: Vec<SymbolId>,
+    constraints: Vec<Constraint>,
+    trivially_unsat: bool,
+}
+
+impl IntCollector {
+    fn index_of(&mut self, symbol: SymbolId) -> usize {
+        if let Some(&index) = self.var_index.get(&symbol) {
+            return index;
+        }
+        let index = self.vars.len();
+        self.vars.push(symbol);
+        self.var_index.insert(symbol, index);
+        index
+    }
+
+    fn collect(
+        &mut self,
+        arena: &TermArena,
+        term: TermId,
+        negated: bool,
+    ) -> Result<(), SolverError> {
+        match arena.node(term) {
+            TermNode::BoolConst(value) => {
+                if *value == negated {
+                    self.trivially_unsat = true;
+                }
+                Ok(())
+            }
+            TermNode::App {
+                op: Op::BoolNot,
+                args,
+            } => self.collect(arena, args[0], !negated),
+            TermNode::App {
+                op: Op::BoolAnd,
+                args,
+            } if !negated => {
+                self.collect(arena, args[0], false)?;
+                self.collect(arena, args[1], false)
+            }
+            TermNode::App {
+                op: Op::BoolOr,
+                args,
+            } if negated => {
+                self.collect(arena, args[0], true)?;
+                self.collect(arena, args[1], true)
+            }
+            TermNode::App { op, args }
+                if matches!(op, Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe) =>
+            {
+                let left = self.linearize(arena, args[0])?;
+                let right = self.linearize(arena, args[1])?;
+                self.push_comparison(*op, &left, &right, negated);
+                Ok(())
+            }
+            TermNode::App { op: Op::Eq, args } if is_int(arena, args[0]) => {
+                if negated {
+                    return Err(unsupported_lia("integer disequality (needs DPLL(T))"));
+                }
+                let left = self.linearize(arena, args[0])?;
+                let right = self.linearize(arena, args[1])?;
+                let diff = left.sub(&right);
+                self.constraints.push(Constraint {
+                    expr: diff.clone(),
+                    strict: false,
+                    mult: Vec::new(),
+                    origin: 0,
+                });
+                self.constraints.push(Constraint {
+                    expr: diff.neg(),
+                    strict: false,
+                    mult: Vec::new(),
+                    origin: 0,
+                });
+                Ok(())
+            }
+            _ => Err(unsupported_lia(
+                "assertion is not a conjunctive linear integer constraint",
+            )),
+        }
+    }
+
+    fn push_comparison(&mut self, op: Op, left: &LinExpr, right: &LinExpr, negated: bool) {
+        let effective = if negated { negate_int_op(op) } else { op };
+        let (expr, strict) = match effective {
+            Op::IntLt => (left.sub(right), true),
+            Op::IntLe => (left.sub(right), false),
+            Op::IntGt => (right.sub(left), true),
+            Op::IntGe => (right.sub(left), false),
+            _ => unreachable!("push_comparison only handles integer order relations"),
+        };
+        self.constraints.push(Constraint {
+            expr,
+            strict,
+            mult: Vec::new(),
+            origin: 0,
+        });
+    }
+
+    fn linearize(&mut self, arena: &TermArena, term: TermId) -> Result<LinExpr, SolverError> {
+        match arena.node(term) {
+            TermNode::IntConst(value) => Ok(LinExpr::constant(Rational::integer(*value))),
+            TermNode::Symbol(symbol) if is_int(arena, term) => {
+                Ok(LinExpr::var(self.index_of(*symbol)))
+            }
+            TermNode::App {
+                op: Op::IntNeg,
+                args,
+            } => Ok(self.linearize(arena, args[0])?.neg()),
+            TermNode::App {
+                op: Op::IntAdd,
+                args,
+            } => {
+                let a = self.linearize(arena, args[0])?;
+                let b = self.linearize(arena, args[1])?;
+                Ok(a.add(&b))
+            }
+            TermNode::App {
+                op: Op::IntSub,
+                args,
+            } => {
+                let a = self.linearize(arena, args[0])?;
+                let b = self.linearize(arena, args[1])?;
+                Ok(a.sub(&b))
+            }
+            TermNode::App {
+                op: Op::IntMul,
+                args,
+            } => {
+                let a = self.linearize(arena, args[0])?;
+                let b = self.linearize(arena, args[1])?;
+                if a.is_constant() {
+                    Ok(b.scale(a.constant))
+                } else if b.is_constant() {
+                    Ok(a.scale(b.constant))
+                } else {
+                    Err(unsupported_lia("nonlinear integer multiplication"))
+                }
+            }
+            _ => Err(unsupported_lia(
+                "non-linear or non-integer subterm in a constraint",
+            )),
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

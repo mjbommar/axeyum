@@ -38,6 +38,19 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-13
 
+- Architecture iteration B — unbounded QF_LIA recorded 2026-06-13
+  ([ADR-0020](docs/research/09-decisions/adr-0020-unbounded-lia-branch-and-bound.md)):
+  `check_with_lia_simplex` decides conjunctive `QF_LIA` by branch-and-bound over
+  the existing exact-rational simplex (`lra.rs`), **sound for both sat and
+  unsat** — unlike the bounded bit-blasting path (ADR-0014), which is sat-only
+  and width-bounded. Relaxation infeasible ⇒ unsat; all-integer simplex point ⇒
+  replayed `Value::Int` model; otherwise branch `x ≤ ⌊v⌋ ∨ x ≥ ⌊v⌋+1` (exhaustive
+  over integers, so a closed tree is a sound refutation). Node budget ⇒ unknown,
+  never a wrong verdict. A dedicated `IntCollector` leaves the LRA Farkas path
+  untouched. Tests prove `2x==1` and `0<x<1` **unsat** (bounded bit-blasting
+  could only say unknown), branching to `x=1` for `1≤2x≤3`, and large
+  magnitudes. Follow-ups: dispatcher integration (prefer simplex-LIA for
+  conjunctive integer queries) and a DPLL(T) integer layer / cutting planes.
 - Architecture iteration A — low-memory pure-Rust strategy recorded 2026-06-13
   (roadmap step 2 of the
   [solving-strategies note](docs/research/03-architecture/solving-strategies-and-memory-model.md)):
