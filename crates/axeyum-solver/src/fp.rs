@@ -271,6 +271,51 @@ pub fn max(
     select_by_order(arena, fmt, x, y, false)
 }
 
+// --- symbolic round-and-pack (bit-blaster core, front half) -------------------
+
+/// A signed constant of width `w` (two's complement of `val`).
+#[allow(clippy::cast_sign_loss)]
+fn sconst(arena: &mut TermArena, w: u32, val: i64) -> Result<TermId, IrError> {
+    let mask = if w >= 128 { u128::MAX } else { (1u128 << w) - 1 };
+    let bits = (i128::from(val) as u128) & mask;
+    arena.bv_const(w, bits)
+}
+
+/// Front half of symbolic round-and-pack: from a (nonzero) significand `m_w` and
+/// the exponent `e` of its least-significant bit (both `W`-bit, `e` signed),
+/// compute `lsb_exp` (the exponent of the rounded result's LSB) and `drop` (how
+/// many low bits of `m_w` to discard — negative means shift left), mirroring the
+/// validated [`round_to_format`] reference. All arithmetic is `W`-bit signed.
+///
+/// Returns `(lsb_exp, drop)`. A bit-blaster building block (unstable surface).
+pub fn pack_params(
+    arena: &mut TermArena,
+    m_w: TermId,
+    e: TermId,
+    sb: u32,
+    bias: i64,
+) -> Result<(TermId, TermId), IrError> {
+    let Sort::BitVec(w) = arena.sort_of(m_w) else {
+        return Err(IrError::SortMismatch {
+            expected: "BitVec",
+            found: arena.sort_of(m_w),
+        });
+    };
+    // lead_idx = index of m_w's top set bit = (W-1) - clz(m_w).
+    let clz = count_leading_zeros(arena, m_w)?;
+    let w_minus_1 = sconst(arena, w, i64::from(w) - 1)?;
+    let lead_idx = arena.bv_sub(w_minus_1, clz)?;
+    // k = e + lead_idx; res_exp = max(k, emin); lsb_exp = res_exp - (sb-1).
+    let k = arena.bv_add(e, lead_idx)?;
+    let emin = sconst(arena, w, 1 - bias)?;
+    let k_ge_emin = arena.bv_sge(k, emin)?;
+    let res_exp = arena.ite(k_ge_emin, k, emin)?;
+    let sbm1 = sconst(arena, w, i64::from(sb) - 1)?;
+    let lsb_exp = arena.bv_sub(res_exp, sbm1)?;
+    let drop = arena.bv_sub(lsb_exp, e)?;
+    Ok((lsb_exp, drop))
+}
+
 // --- constant folding (round-nearest-even arithmetic) -------------------------
 //
 // Rounded FP arithmetic (`add`/`sub`/`mul`/`div`/`sqrt`) is, for *constant*
@@ -982,4 +1027,61 @@ fn order_key(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermI
     let smask = arena.bv_const(fmt.width(), sign_mask(fmt))?;
     let pos_key = arena.bv_or(x, smask)?;
     arena.ite(signed, flipped, pos_key)
+}
+
+#[cfg(test)]
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss
+)]
+mod tests {
+    use super::*;
+    use axeyum_ir::{Assignment, Value, eval};
+
+    fn to_signed(v: u128, w: u32) -> i128 {
+        if w < 128 && (v >> (w - 1)) & 1 == 1 {
+            (v as i128) - (1i128 << w)
+        } else {
+            v as i128
+        }
+    }
+
+    /// `pack_params` must match a direct reference for the rounding `lsb_exp`/
+    /// `drop` over a pseudo-random battery of significands and exponents.
+    #[test]
+    fn pack_params_matches_reference() {
+        fn ref_params(m: u128, e: i64, sb: u32, bias: i64) -> (i64, i64) {
+            let lead_idx = (128 - i64::from(m.leading_zeros())) - 1; // bit_length - 1
+            let k = e + lead_idx;
+            let res_exp = k.max(1 - bias);
+            let lsb_exp = res_exp - (i64::from(sb) - 1);
+            (lsb_exp, lsb_exp - e)
+        }
+
+        let w = 80u32;
+        let sb = 24u32;
+        let bias = 127i64;
+        let mut state = 0xabcd_1234_5678_9999u64;
+        for _ in 0..3000 {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            let m = (u128::from(state) % ((1u128 << 53) - 1)) + 1;
+            let e = i64::try_from((state >> 8) % 401).unwrap() - 200;
+
+            let mut a = TermArena::new();
+            let m_w = a.bv_const(w, m).unwrap();
+            let e_t = sconst(&mut a, w, e).unwrap();
+            let (lsb_t, drop_t) = pack_params(&mut a, m_w, e_t, sb, bias).unwrap();
+            let (want_lsb, want_drop) = ref_params(m, e, sb, bias);
+
+            let read = |a: &TermArena, t| match eval(a, t, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => to_signed(value, w),
+                other => panic!("expected Bv, got {other:?}"),
+            };
+            assert_eq!(read(&a, lsb_t), i128::from(want_lsb), "lsb_exp m={m} e={e}");
+            assert_eq!(read(&a, drop_t), i128::from(want_drop), "drop m={m} e={e}");
+        }
+    }
 }
