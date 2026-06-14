@@ -28,7 +28,7 @@
 //! [`IrError`] from an IR builder (which cannot occur for well-formed input).
 #![allow(clippy::missing_errors_doc)] // uniform contract documented above
 
-use axeyum_ir::{IrError, Rational, Sort, TermArena, TermId, TermNode};
+use axeyum_ir::{IrError, MAX_BV_WIDTH, Rational, Sort, TermArena, TermId, TermNode};
 
 /// An IEEE 754 binary format: `exp_bits` exponent bits and `sig_bits`
 /// significand bits (the latter *including* the hidden bit). The bit width of a
@@ -428,10 +428,17 @@ pub fn pack_value(
 /// differentially validated against native `f32` multiplication in tests
 /// (specials, subnormals, and products that overflow/underflow).
 ///
+/// **Format support.** The encoding works in a `3·sig_bits + 4`-bit intermediate,
+/// so it requires `3·sig_bits + 4 ≤ 128` ([`MAX_BV_WIDTH`]) — i.e. `F16` and
+/// `F32`. `F64` (`sig_bits = 53` → 163 bits) exceeds the bit-vector width cap and
+/// returns [`IrError::InvalidWidth`]; a bounded-width (alignment + sticky)
+/// rewrite is needed to reach `F64` and is tracked as future work.
+///
 /// # Errors
 ///
-/// Returns [`IrError::SortMismatch`] if an operand is not a `BitVec` of the
-/// format width, or [`IrError`] from the builders.
+/// Returns [`IrError::InvalidWidth`] if the format's intermediate width exceeds
+/// [`MAX_BV_WIDTH`], [`IrError::SortMismatch`] if an operand is not a `BitVec` of
+/// the format width, or [`IrError`] from the builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
 pub fn mul(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId) -> Result<TermId, IrError> {
     fmt.check(arena, a)?;
@@ -440,6 +447,11 @@ pub fn mul(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId) -> Res
     let total = fmt.width();
     let bias = (1i64 << (eb - 1)) - 1;
     let w = 3 * sb + 4; // room for the 2·sb product and pack_value's shifts
+    if w > MAX_BV_WIDTH {
+        // F64 lands here: the wide intermediate exceeds the 128-bit cap. A
+        // bounded-width (alignment + sticky) encoding is needed for F64.
+        return Err(IrError::InvalidWidth(w));
+    }
 
     let one1 = arena.bv_const(1, 1)?;
     // Unpack an operand into a W-bit significand and the W-bit signed exponent of
@@ -1379,5 +1391,21 @@ mod tests {
             let y = (state >> 32) as u32;
             check(&mut a, x, y);
         }
+    }
+
+    #[test]
+    fn mul_f64_is_a_clean_error_not_a_wrong_result() {
+        // The wide intermediate (3*53+4 = 163 bits) exceeds MAX_BV_WIDTH, so F64
+        // mul must error rather than silently truncate.
+        let mut a = TermArena::new();
+        let x = a.bv_const(64, 0x3FF0_0000_0000_0000).unwrap(); // 1.0
+        let y = a.bv_const(64, 0x4000_0000_0000_0000).unwrap(); // 2.0
+        assert!(
+            matches!(
+                mul(&mut a, FloatFormat::F64, x, y),
+                Err(axeyum_ir::IrError::InvalidWidth(_))
+            ),
+            "F64 mul must return InvalidWidth, not a (possibly wrong) result"
+        );
     }
 }
