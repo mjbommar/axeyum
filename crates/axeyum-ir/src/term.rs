@@ -288,6 +288,18 @@ pub enum Op {
     /// Tests whether its single datatype argument was built by `constructor`;
     /// result sort `Bool`.
     DtTest(ConstructorId),
+    // --- floating point (ADR-0026) -----------------------------------------
+    /// Reinterprets a `BitVec(exp + sig)` operand as a floating-point value of
+    /// format `(exp, sig)` (result sort `Float { exp, sig }`). This is a pure
+    /// bit reinterpret — identity on the bits — used to stamp the floating-point
+    /// sort onto a value built by the (bit-vector) FP formula builders, so
+    /// conversions can tell a floating-point operand from a plain bit-vector.
+    FpFromBits {
+        /// Exponent bits of the result float.
+        exp: u32,
+        /// Significand bits (including the hidden bit) of the result float.
+        sig: u32,
+    },
 }
 
 /// The structural body of a term, used as the hash-consing key.

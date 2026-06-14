@@ -246,12 +246,13 @@ fn parse_sort(e: &SExpr) -> Result<Sort, SmtError> {
         SExpr::Atom(a) if a == "Bool" => Ok(Sort::Bool),
         SExpr::Atom(a) if a == "Int" => Ok(Sort::Int),
         SExpr::Atom(a) if a == "Real" => Ok(Sort::Real),
-        // Floating-point sorts lower to the matching bit-vector width (the FP
-        // operators are bit-vector formula builders; ADR-0023).
-        SExpr::Atom(a) if a == "Float16" => Ok(Sort::BitVec(16)),
-        SExpr::Atom(a) if a == "Float32" => Ok(Sort::BitVec(32)),
-        SExpr::Atom(a) if a == "Float64" => Ok(Sort::BitVec(64)),
-        SExpr::Atom(a) if a == "Float128" => Ok(Sort::BitVec(128)),
+        // Floating-point sorts are first-class `Sort::Float` (ADR-0026), lowered
+        // structurally to `BitVec(exp + sig)`; the distinct sort lets conversions
+        // tell a float operand from a plain bit-vector.
+        SExpr::Atom(a) if a == "Float16" => Ok(Sort::Float { exp: 5, sig: 11 }),
+        SExpr::Atom(a) if a == "Float32" => Ok(Sort::Float { exp: 8, sig: 24 }),
+        SExpr::Atom(a) if a == "Float64" => Ok(Sort::Float { exp: 11, sig: 53 }),
+        SExpr::Atom(a) if a == "Float128" => Ok(Sort::Float { exp: 15, sig: 113 }),
         SExpr::List(items) => {
             if items.len() == 4
                 && items[0].atom() == Some("_")
@@ -261,7 +262,7 @@ fn parse_sort(e: &SExpr) -> Result<Sort, SmtError> {
                     items[3].atom().and_then(|s| s.parse::<u32>().ok()),
                 )
             {
-                return Ok(Sort::BitVec(eb + sb));
+                return Ok(Sort::Float { exp: eb, sig: sb });
             }
             if items.len() == 3
                 && items[0].atom() == Some("_")
@@ -763,16 +764,50 @@ fn parse_atom(
     Err(SmtError::Unsupported(format!("unknown identifier `{a}`")))
 }
 
-/// The IEEE format of a floating-point operand, recovered from its bit-vector
-/// width (`16→F16`, `32→F32`, `64→F64`).
+/// The IEEE format of a floating-point operand: read directly from a
+/// `Sort::Float` (ADR-0026), or inferred from a bit-vector width as a fallback
+/// (`16→F16`, `32→F32`, `64→F64`) for terms not yet float-typed.
 fn fp_format(arena: &TermArena, t: TermId) -> Result<FloatFormat, SmtError> {
     match arena.sort_of(t) {
+        Sort::Float { exp, sig } => Ok(FloatFormat {
+            exp_bits: exp,
+            sig_bits: sig,
+        }),
         Sort::BitVec(16) => Ok(FloatFormat::F16),
         Sort::BitVec(32) => Ok(FloatFormat::F32),
         Sort::BitVec(64) => Ok(FloatFormat::F64),
         s => Err(SmtError::Unsupported(format!(
             "floating-point op on unsupported width/sort {s:?}"
         ))),
+    }
+}
+
+/// Stamps the floating-point sort of `fmt` onto a bit-vector result `t` produced
+/// by an FP formula builder, so downstream conversions can tell it is a float
+/// (ADR-0026). If `t` is already that float sort this is a no-op.
+fn as_float(arena: &mut TermArena, fmt: FloatFormat, t: TermId) -> Result<TermId, SmtError> {
+    if arena.sort_of(t) == (Sort::Float { exp: fmt.exp_bits, sig: fmt.sig_bits }) {
+        return Ok(t);
+    }
+    Ok(arena.fp_from_bits(t, fmt.exp_bits, fmt.sig_bits)?)
+}
+
+/// Reinterprets a `Float`-typed term to its `BitVec(exp + sig)` bits (identity on
+/// bits) so the FP formula builders — which operate on bit-vectors and freely mix
+/// operands with bit-vector constants — never see a `Float` operand. A non-float
+/// term is returned unchanged.
+fn to_bits(arena: &mut TermArena, t: TermId) -> Result<TermId, SmtError> {
+    // A float built by `fp_from_bits` wraps a bit-vector directly: peel the
+    // reinterpret to recover that exact term (preserving any `BvConst`, so the
+    // constant-folding conversions still see a literal).
+    if let TermNode::App { op, args } = arena.node(t)
+        && let axeyum_ir::Op::FpFromBits { .. } = op
+    {
+        return Ok(args[0]);
+    }
+    match arena.sort_of(t) {
+        Sort::Float { exp, sig } => Ok(arena.extract(exp + sig - 1, 0, t)?),
+        _ => Ok(t),
     }
 }
 
@@ -805,13 +840,13 @@ fn is_fp_indexed_conversion(name: &str) -> bool {
     )
 }
 
-/// Applies an *indexed* rounding-mode FP conversion (`mode` already parsed). Only
-/// the unambiguous conversions are supported: `(_ to_fp eb sb)` from a **real**
-/// constant (dyadic only — sound), `(_ to_fp_unsigned eb sb)` from an unsigned
-/// bit-vector, and `(_ fp.to_sbv/to_ubv m)` from a floating-point value. The
-/// `(_ to_fp eb sb)` overload from a bit-vector is rejected: in this BV lowering
-/// an FP source and a signed-BV source share the `BitVec` sort and cannot be told
-/// apart without a dedicated FP sort (ADR-0023's named upgrade path).
+/// Applies an *indexed* rounding-mode FP conversion (`mode` already parsed). With
+/// the first-class `Sort::Float` (ADR-0026) every overload is sort-disambiguated:
+/// `(_ to_fp eb sb)` from a **real** constant (dyadic only — sound), from a
+/// **float** (FP→FP reformat), or from a **bit-vector** (signed-BV→FP);
+/// `(_ to_fp_unsigned eb sb)` from an unsigned bit-vector; and `(_ fp.to_sbv/
+/// to_ubv m)` from a floating-point value.
+#[allow(clippy::too_many_lines)]
 fn apply_fp_rounded_indexed(
     arena: &mut TermArena,
     items: &[SExpr],
@@ -836,6 +871,10 @@ fn apply_fp_rounded_indexed(
     let term = match name {
         "to_fp" => {
             let (eb, sb) = (index(2)?, index(3)?);
+            let dst = FloatFormat {
+                exp_bits: eb,
+                sig_bits: sb,
+            };
             match arena.sort_of(x) {
                 Sort::Real => {
                     // Real → FP: fold a dyadic real *constant*; non-dyadic or
@@ -859,18 +898,32 @@ fn apply_fp_rounded_indexed(
                             r.denominator()
                         ))
                     })?;
-                    arena.bv_const(eb + sb, bits)?
+                    let bv = arena.bv_const(eb + sb, bits)?;
+                    as_float(arena, dst, bv)?
+                }
+                Sort::Float { .. } => {
+                    // FP → FP reformat: now sort-disambiguated from a signed-BV
+                    // source (ADR-0026); the validated symbolic `to_fp` builder
+                    // runs on the unwrapped bits.
+                    let src = fp_format(arena, x)?;
+                    let xb = to_bits(arena, x)?;
+                    let r = axeyum_fp::to_fp(arena, src, dst, mode, xb)?;
+                    as_float(arena, dst, r)?
                 }
                 Sort::BitVec(_) => {
-                    return Err(SmtError::Unsupported(
-                        "(_ to_fp …) with a rounding mode over a bit-vector (FP- or \
-                         signed-BV-source) needs a dedicated FP sort to disambiguate"
-                            .to_owned(),
-                    ));
+                    // Signed bit-vector → FP (const-fold; symbolic ⇒ unsupported).
+                    let r = axeyum_fp::sbv_to_fp(arena, dst, x)?.ok_or_else(|| {
+                        SmtError::Unsupported(
+                            "(_ to_fp …) from a signed bit-vector is only supported on \
+                             constant operands"
+                                .to_owned(),
+                        )
+                    })?;
+                    as_float(arena, dst, r)?
                 }
                 s => {
                     return Err(SmtError::Syntax(format!(
-                        "(_ to_fp …) operand must be Real or BitVec, got {s:?}"
+                        "(_ to_fp …) operand must be Real, Float, or BitVec, got {s:?}"
                     )));
                 }
             }
@@ -880,16 +933,18 @@ fn apply_fp_rounded_indexed(
                 exp_bits: index(2)?,
                 sig_bits: index(3)?,
             };
-            axeyum_fp::ubv_to_fp(arena, fmt, x)?.ok_or_else(|| {
+            let r = axeyum_fp::ubv_to_fp(arena, fmt, x)?.ok_or_else(|| {
                 SmtError::Unsupported(
                     "(_ to_fp_unsigned …) is only supported on constant operands".to_owned(),
                 )
-            })?
+            })?;
+            as_float(arena, fmt, r)?
         }
         "fp.to_ubv" => {
             let width = index(2)?;
             let fmt = fp_format(arena, x)?;
-            axeyum_fp::to_ubv(arena, fmt, mode, x, width)?.ok_or_else(|| {
+            let xb = to_bits(arena, x)?;
+            axeyum_fp::to_ubv(arena, fmt, mode, xb, width)?.ok_or_else(|| {
                 SmtError::Unsupported(
                     "(_ fp.to_ubv …) is only supported on constant operands".to_owned(),
                 )
@@ -898,7 +953,8 @@ fn apply_fp_rounded_indexed(
         "fp.to_sbv" => {
             let width = index(2)?;
             let fmt = fp_format(arena, x)?;
-            axeyum_fp::to_sbv(arena, fmt, mode, x, width)?.ok_or_else(|| {
+            let xb = to_bits(arena, x)?;
+            axeyum_fp::to_sbv(arena, fmt, mode, xb, width)?.ok_or_else(|| {
                 SmtError::Unsupported(
                     "(_ fp.to_sbv …) is only supported on constant operands".to_owned(),
                 )
@@ -932,42 +988,40 @@ fn apply_fp_rounded(
             )))
         }
     };
+    // Format from the (float-typed) operand; builders run on the unwrapped bits.
+    let fmt = fp_format(arena, args[0])?;
+    let b = args
+        .iter()
+        .map(|&a| to_bits(arena, a))
+        .collect::<Result<Vec<_>, _>>()?;
     let term = match head {
         "fp.add" => {
             need(2)?;
-            axeyum_fp::add(arena, fp_format(arena, args[0])?, args[0], args[1], mode)?
+            axeyum_fp::add(arena, fmt, b[0], b[1], mode)?
         }
         "fp.sub" => {
             need(2)?;
-            axeyum_fp::sub(arena, fp_format(arena, args[0])?, args[0], args[1], mode)?
+            axeyum_fp::sub(arena, fmt, b[0], b[1], mode)?
         }
         "fp.mul" => {
             need(2)?;
-            axeyum_fp::mul(arena, fp_format(arena, args[0])?, args[0], args[1], mode)?
+            axeyum_fp::mul(arena, fmt, b[0], b[1], mode)?
         }
         "fp.div" => {
             need(2)?;
-            axeyum_fp::div(arena, fp_format(arena, args[0])?, args[0], args[1], mode)?
+            axeyum_fp::div(arena, fmt, b[0], b[1], mode)?
         }
         "fp.sqrt" => {
             need(1)?;
-            axeyum_fp::sqrt(arena, fp_format(arena, args[0])?, args[0], mode)?
+            axeyum_fp::sqrt(arena, fmt, b[0], mode)?
         }
         "fp.fma" => {
             need(3)?;
-            axeyum_fp::fma(
-                arena,
-                fp_format(arena, args[0])?,
-                args[0],
-                args[1],
-                args[2],
-                mode,
-            )?
+            axeyum_fp::fma(arena, fmt, b[0], b[1], b[2], mode)?
         }
         "fp.roundToIntegral" => {
             need(1)?;
-            let fmt = fp_format(arena, args[0])?;
-            axeyum_fp::round_to_integral_sym(arena, fmt, mode, args[0])?
+            axeyum_fp::round_to_integral_sym(arena, fmt, mode, b[0])?
         }
         other => {
             return Err(SmtError::Unsupported(format!(
@@ -975,7 +1029,8 @@ fn apply_fp_rounded(
             )));
         }
     };
-    Ok(term)
+    // Every rounding-mode op here is FP-valued; stamp the float sort (ADR-0026).
+    as_float(arena, fmt, term)
 }
 
 fn parse_indexed_constant(arena: &mut TermArena, items: &[SExpr]) -> Result<TermId, SmtError> {
@@ -1008,7 +1063,8 @@ fn parse_indexed_constant(arena: &mut TermArena, items: &[SExpr]) -> Result<Term
             _ => None,
         };
         if let Some(bits) = bits {
-            return Ok(arena.bv_const(total, bits)?);
+            let bv = arena.bv_const(total, bits)?;
+            return Ok(arena.fp_from_bits(bv, eb, sb)?); // float-typed (ADR-0026)
         }
     }
     Err(SmtError::Unsupported(format!("indexed term {items:?}")))
@@ -1154,11 +1210,19 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
             need(1)?;
             arena.bv_nego(args[0])?
         }
-        // Floating-point: a value is its bit-vector; the format is recovered from
-        // the operand width (16→F16, 32→F32, 64→F64). Rounding-mode-free ops only;
-        // `(fp s e m)` assembles a literal by concatenation. (ADR-0023.)
+        // Floating-point: a value is its bit-vector pattern carried by a
+        // `Sort::Float` (ADR-0026); the format is recovered from the operand sort.
+        // Rounding-mode-free ops only; `(fp s e m)` assembles a literal.
         "fp" => {
             need(3)?;
+            // sign(1) · exp(eb) · significand(sb-1)  →  Float { exp: eb, sig: sb }.
+            let eb = arena.sort_of(args[1]).lowered_width().ok_or_else(|| {
+                SmtError::Syntax("fp exponent field must be a bit-vector".to_owned())
+            })?;
+            let sig_field = arena.sort_of(args[2]).lowered_width().ok_or_else(|| {
+                SmtError::Syntax("fp significand field must be a bit-vector".to_owned())
+            })?;
+            let sb = sig_field + 1;
             // Concatenate sign·exp·significand MSB-first. When all three fields are
             // constant, fold to a single `BvConst` so constant-folding ops
             // (`fp.to_real`, `fp.roundToIntegral`, …) see a literal value.
@@ -1166,7 +1230,7 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
                 &TermNode::BvConst { width, value } => Some((width, value)),
                 _ => None,
             };
-            if let (Some((ws, vs)), Some((we, ve)), Some((wm, vm))) =
+            let bv = if let (Some((ws, vs)), Some((we, ve)), Some((wm, vm))) =
                 (as_const(args[0]), as_const(args[1]), as_const(args[2]))
             {
                 let total = ws + we + wm;
@@ -1175,80 +1239,124 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
             } else {
                 let se = arena.concat(args[0], args[1])?;
                 arena.concat(se, args[2])?
-            }
+            };
+            arena.fp_from_bits(bv, eb, sb)?
         }
+        // FP ops: read the format from the (float-typed) operand, then run the
+        // bit-vector builders on the unwrapped bits (ADR-0026). FP-valued results
+        // are re-stamped to `Float`; predicates/`to_real` are Bool/Real.
         "fp.abs" => {
             need(1)?;
-            axeyum_fp::abs(arena, fp_format(arena, args[0])?, args[0])?
+            let fmt = fp_format(arena, args[0])?;
+            let x = to_bits(arena, args[0])?;
+            let r = axeyum_fp::abs(arena, fmt, x)?;
+            as_float(arena, fmt, r)?
         }
         "fp.neg" => {
             need(1)?;
-            axeyum_fp::neg(arena, fp_format(arena, args[0])?, args[0])?
+            let fmt = fp_format(arena, args[0])?;
+            let x = to_bits(arena, args[0])?;
+            let r = axeyum_fp::neg(arena, fmt, x)?;
+            as_float(arena, fmt, r)?
         }
         "fp.eq" => {
             need(2)?;
-            axeyum_fp::eq(arena, fp_format(arena, args[0])?, args[0], args[1])?
+            let fmt = fp_format(arena, args[0])?;
+            let (a, b) = (to_bits(arena, args[0])?, to_bits(arena, args[1])?);
+            axeyum_fp::eq(arena, fmt, a, b)?
         }
         "fp.lt" => {
             need(2)?;
-            axeyum_fp::lt(arena, fp_format(arena, args[0])?, args[0], args[1])?
+            let fmt = fp_format(arena, args[0])?;
+            let (a, b) = (to_bits(arena, args[0])?, to_bits(arena, args[1])?);
+            axeyum_fp::lt(arena, fmt, a, b)?
         }
         "fp.leq" => {
             need(2)?;
-            axeyum_fp::leq(arena, fp_format(arena, args[0])?, args[0], args[1])?
+            let fmt = fp_format(arena, args[0])?;
+            let (a, b) = (to_bits(arena, args[0])?, to_bits(arena, args[1])?);
+            axeyum_fp::leq(arena, fmt, a, b)?
         }
         "fp.gt" => {
             need(2)?;
-            axeyum_fp::gt(arena, fp_format(arena, args[0])?, args[0], args[1])?
+            let fmt = fp_format(arena, args[0])?;
+            let (a, b) = (to_bits(arena, args[0])?, to_bits(arena, args[1])?);
+            axeyum_fp::gt(arena, fmt, a, b)?
         }
         "fp.geq" => {
             need(2)?;
-            axeyum_fp::geq(arena, fp_format(arena, args[0])?, args[0], args[1])?
+            let fmt = fp_format(arena, args[0])?;
+            let (a, b) = (to_bits(arena, args[0])?, to_bits(arena, args[1])?);
+            axeyum_fp::geq(arena, fmt, a, b)?
         }
         "fp.min" => {
             need(2)?;
-            axeyum_fp::min(arena, fp_format(arena, args[0])?, args[0], args[1])?
+            let fmt = fp_format(arena, args[0])?;
+            let (a, b) = (to_bits(arena, args[0])?, to_bits(arena, args[1])?);
+            let r = axeyum_fp::min(arena, fmt, a, b)?;
+            as_float(arena, fmt, r)?
         }
         "fp.max" => {
             need(2)?;
-            axeyum_fp::max(arena, fp_format(arena, args[0])?, args[0], args[1])?
+            let fmt = fp_format(arena, args[0])?;
+            let (a, b) = (to_bits(arena, args[0])?, to_bits(arena, args[1])?);
+            let r = axeyum_fp::max(arena, fmt, a, b)?;
+            as_float(arena, fmt, r)?
         }
         "fp.rem" => {
             need(2)?;
-            axeyum_fp::rem_sym(arena, fp_format(arena, args[0])?, args[0], args[1])?
+            let fmt = fp_format(arena, args[0])?;
+            let (a, b) = (to_bits(arena, args[0])?, to_bits(arena, args[1])?);
+            let r = axeyum_fp::rem_sym(arena, fmt, a, b)?;
+            as_float(arena, fmt, r)?
         }
         "fp.isNaN" => {
             need(1)?;
-            axeyum_fp::is_nan(arena, fp_format(arena, args[0])?, args[0])?
+            let fmt = fp_format(arena, args[0])?;
+            let x = to_bits(arena, args[0])?;
+            axeyum_fp::is_nan(arena, fmt, x)?
         }
         "fp.isInfinite" => {
             need(1)?;
-            axeyum_fp::is_infinite(arena, fp_format(arena, args[0])?, args[0])?
+            let fmt = fp_format(arena, args[0])?;
+            let x = to_bits(arena, args[0])?;
+            axeyum_fp::is_infinite(arena, fmt, x)?
         }
         "fp.isZero" => {
             need(1)?;
-            axeyum_fp::is_zero(arena, fp_format(arena, args[0])?, args[0])?
+            let fmt = fp_format(arena, args[0])?;
+            let x = to_bits(arena, args[0])?;
+            axeyum_fp::is_zero(arena, fmt, x)?
         }
         "fp.isNormal" => {
             need(1)?;
-            axeyum_fp::is_normal(arena, fp_format(arena, args[0])?, args[0])?
+            let fmt = fp_format(arena, args[0])?;
+            let x = to_bits(arena, args[0])?;
+            axeyum_fp::is_normal(arena, fmt, x)?
         }
         "fp.isSubnormal" => {
             need(1)?;
-            axeyum_fp::is_subnormal(arena, fp_format(arena, args[0])?, args[0])?
+            let fmt = fp_format(arena, args[0])?;
+            let x = to_bits(arena, args[0])?;
+            axeyum_fp::is_subnormal(arena, fmt, x)?
         }
         "fp.isNegative" => {
             need(1)?;
-            axeyum_fp::is_negative(arena, fp_format(arena, args[0])?, args[0])?
+            let fmt = fp_format(arena, args[0])?;
+            let x = to_bits(arena, args[0])?;
+            axeyum_fp::is_negative(arena, fmt, x)?
         }
         "fp.isPositive" => {
             need(1)?;
-            axeyum_fp::is_positive(arena, fp_format(arena, args[0])?, args[0])?
+            let fmt = fp_format(arena, args[0])?;
+            let x = to_bits(arena, args[0])?;
+            axeyum_fp::is_positive(arena, fmt, x)?
         }
         "fp.to_real" => {
             need(1)?;
             let fmt = fp_format(arena, args[0])?;
-            axeyum_fp::to_real(arena, fmt, args[0])?.ok_or_else(|| {
+            let x = to_bits(arena, args[0])?;
+            axeyum_fp::to_real(arena, fmt, x)?.ok_or_else(|| {
                 SmtError::Unsupported(
                     "fp.to_real is only supported on constant operands".to_owned(),
                 )
@@ -1618,24 +1726,23 @@ fn apply_parameterized(
         }
         "to_fp" => {
             expect_head_len(4)?;
-            let w = index(2)? + index(3)?;
+            let (eb, sb) = (index(2)?, index(3)?);
             // `((_ to_fp eb sb) x)` over a single bit-vector argument is an IEEE
-            // bit-pattern reinterpret — identity in our BV lowering, where an FP
-            // value *is* a `BitVec(eb+sb)`. The rounding-mode forms (from FP, real,
-            // or signed BV) are deferred: they need a dedicated FP sort to be told
-            // apart from a plain bit-vector source (see PLAN).
+            // bit-pattern reinterpret to a `Float { eb, sb }` (ADR-0026). The
+            // rounding-mode forms (from FP, real, or signed BV) take a leading
+            // `RoundingMode` and are handled in `apply_fp_rounded_indexed`.
             if args.len() != 1 {
                 return Err(SmtError::Unsupported(
-                    "(_ to_fp …) with a rounding mode needs a dedicated FP sort".to_owned(),
+                    "(_ to_fp …) bit reinterpret expects exactly one bit-vector operand"
+                        .to_owned(),
                 ));
             }
             match arena.sort_of(args[0]) {
-                Sort::BitVec(bw) if bw == w => args[0],
+                Sort::BitVec(bw) if bw == eb + sb => arena.fp_from_bits(args[0], eb, sb)?,
                 s => {
                     return Err(SmtError::Syntax(format!(
-                        "(_ to_fp {} {}) bit reinterpret expects a BitVec({w}), got {s:?}",
-                        index(2)?,
-                        index(3)?
+                        "(_ to_fp {eb} {sb}) bit reinterpret expects a BitVec({}), got {s:?}",
+                        eb + sb
                     )));
                 }
             }

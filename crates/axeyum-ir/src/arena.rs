@@ -263,12 +263,15 @@ impl TermArena {
     fn expect_bv(&self, t: TermId) -> Result<u32, IrError> {
         match self.sort_of(t) {
             Sort::BitVec(w) => Ok(w),
+            // A floating-point value shares the bit-vector representation
+            // (ADR-0026), so bit-vector operations accept it as its `exp + sig`
+            // bits (this is how the FP formula builders operate on FP terms).
+            Sort::Float { exp, sig } => Ok(exp + sig),
             found @ (Sort::Bool
             | Sort::Array { .. }
             | Sort::Int
             | Sort::Real
-            | Sort::Datatype(_)
-            | Sort::Float { .. }) => Err(IrError::SortMismatch {
+            | Sort::Datatype(_)) => Err(IrError::SortMismatch {
                 expected: "BitVec",
                 found,
             }),
@@ -1116,6 +1119,28 @@ impl TermArena {
         check_width(width)?;
         self.expect_int(x)?;
         Ok(self.app(Op::Int2Bv { width }, &[x], Sort::BitVec(width)))
+    }
+
+    /// Reinterprets a `BitVec(exp + sig)` value as a floating-point value of
+    /// format `(exp, sig)` — a pure bit reinterpret (identity on bits) that
+    /// stamps the floating-point sort onto a value built by the bit-vector FP
+    /// formula builders (ADR-0026). The operand may itself already be a `Float`
+    /// (also `exp + sig` bits).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::InvalidWidth`] for a bad width, or
+    /// [`IrError::SortMismatch`] unless the operand is `exp + sig` bits wide.
+    pub fn fp_from_bits(&mut self, x: TermId, exp: u32, sig: u32) -> Result<TermId, IrError> {
+        check_width(exp + sig)?;
+        let w = self.expect_bv(x)?;
+        if w != exp + sig {
+            return Err(IrError::SortMismatch {
+                expected: "BitVec matching the float format width",
+                found: self.sort_of(x),
+            });
+        }
+        Ok(self.app(Op::FpFromBits { exp, sig }, &[x], Sort::Float { exp, sig }))
     }
 
     fn expect_array(&self, t: TermId) -> Result<(u32, u32), IrError> {

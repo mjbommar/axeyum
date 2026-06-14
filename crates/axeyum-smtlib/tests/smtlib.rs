@@ -839,3 +839,58 @@ fn parses_and_folds_unambiguous_fp_conversions() {
     );
     assert!(matches!(amb, Err(SmtError::Unsupported(_))), "got {amb:?}");
 }
+
+#[test]
+#[allow(clippy::similar_names)]
+fn parses_sort_disambiguated_to_fp_conversions() {
+    // ADR-0026 stage 2/3: with a first-class Float sort, (_ to_fp eb sb) is
+    // disambiguated by operand sort, so FP->FP reformat and signed-BV->FP both
+    // parse and fold (previously rejected as ambiguous).
+
+    // Float64 2.0 -> Float32 2.0. F64 2.0 = (fp 0 10000000000 0…0[52]);
+    // F32 2.0 = 0x40000000.
+    let fp_to_fp = parse_script(
+        r"
+        (set-logic QF_FP)
+        (assert (fp.eq
+                  ((_ to_fp 8 24) RNE
+                    (fp #b0 #b10000000000
+                        #b0000000000000000000000000000000000000000000000000000))
+                  (fp #b0 #b10000000 #b00000000000000000000000)))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+    let v = eval(&fp_to_fp.arena, fp_to_fp.assertions[0], &Assignment::default()).unwrap();
+    assert_eq!(v, Value::Bool(true));
+
+    // Signed bit-vector -2 (two's complement 0xFFFFFFFE) -> Float32 -2.0.
+    let sbv_to_fp = parse_script(
+        r"
+        (set-logic QF_BVFP)
+        (assert (fp.eq ((_ to_fp 8 24) RNE #xFFFFFFFE)
+                       (fp #b1 #b10000000 #b00000000000000000000000)))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+    let v = eval(&sbv_to_fp.arena, sbv_to_fp.assertions[0], &Assignment::default()).unwrap();
+    assert_eq!(v, Value::Bool(true));
+
+    // A declared Float32 variable now carries the Float sort, and round-trips
+    // through to_fp identity (Float32 -> Float32) symbolically (sat).
+    let decl = parse_script(
+        r"
+        (set-logic QF_FP)
+        (declare-const x Float32)
+        (assert (fp.eq ((_ to_fp 8 24) RNE x) x))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+    let sym = decl.arena.find_symbol("x").unwrap();
+    assert_eq!(
+        decl.arena.symbol(sym).1,
+        axeyum_ir::Sort::Float { exp: 8, sig: 24 }
+    );
+}

@@ -1321,3 +1321,25 @@ fn float_sort_is_represented_as_a_bit_vector() {
         }
     );
 }
+
+#[test]
+fn fp_from_bits_reinterprets_as_float_identity_on_bits() {
+    // ADR-0026: fp_from_bits stamps the Float sort onto a bit-vector, identity
+    // on the bits (the value is unchanged; only the sort becomes Float).
+    let mut arena = TermArena::new();
+    let bits = arena.bv_const(32, 0x4000_0000).unwrap(); // Float32 2.0 pattern
+    let f = arena.fp_from_bits(bits, 8, 24).unwrap();
+    assert_eq!(arena.sort_of(f), Sort::Float { exp: 8, sig: 24 });
+    assert_eq!(
+        eval(&arena, f, &Assignment::new()).unwrap(),
+        Value::Bv {
+            width: 32,
+            value: 0x4000_0000
+        }
+    );
+    // Width mismatch is rejected.
+    assert!(matches!(
+        arena.fp_from_bits(bits, 5, 11),
+        Err(IrError::SortMismatch { .. })
+    ));
+}

@@ -79,4 +79,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0023](adr-0023-floating-point-bv-lowering.md) | Floating-point (IEEE 754) as bit-vector formula builders, non-arithmetic core first | accepted |
 | [0024](adr-0024-nra-linear-abstraction.md) | Nonlinear real arithmetic via linear abstraction + replay (sound, incomplete) | accepted |
 | [0025](adr-0025-bounded-strings-bv-lowering.md) | Bounded-length strings by bit-vector lowering (BMC fragment) | accepted |
-| [0026](adr-0026-first-class-float-sort.md) | First-class floating-point sort in the IR (disambiguates FP conversions) | proposed |
+| [0026](adr-0026-first-class-float-sort.md) | First-class floating-point sort in the IR (disambiguates FP conversions) | accepted |

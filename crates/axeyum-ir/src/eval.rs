@@ -523,6 +523,14 @@ fn apply(op: Op, vals: &[Value]) -> Value {
             let value = (x as u128) & mask(width);
             Value::Bv { width, value }
         }
+        // A pure bit reinterpret: the floating-point value is the operand's bits.
+        Op::FpFromBits { exp, sig } => {
+            let (_, value) = bv(&vals[0]);
+            Value::Bv {
+                width: exp + sig,
+                value,
+            }
+        }
         // Handled in `eval` (needs the model interpretation and result sort).
         Op::Apply(_) => unreachable!("Op::Apply is evaluated against the model in `eval`"),
         // --- linear integer arithmetic (ADR-0014) --------------------------------

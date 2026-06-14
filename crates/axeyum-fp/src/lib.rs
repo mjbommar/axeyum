@@ -144,13 +144,20 @@ impl FloatFormat {
     }
 
     fn check(self, arena: &TermArena, x: TermId) -> Result<(), IrError> {
-        let expected = Sort::BitVec(self.width());
+        // An operand may be a plain `BitVec` (the builders' internal
+        // representation) or a `Float` of this format (ADR-0026); both carry the
+        // `width()` bits this format operates on.
         let found = arena.sort_of(x);
-        if found == expected {
+        let ok = match found {
+            Sort::BitVec(w) => w == self.width(),
+            Sort::Float { exp, sig } => exp == self.exp_bits && sig == self.sig_bits,
+            _ => false,
+        };
+        if ok {
             Ok(())
         } else {
             Err(IrError::SortMismatch {
-                expected: "BitVec matching the float format width",
+                expected: "BitVec or Float matching the float format width",
                 found,
             })
         }

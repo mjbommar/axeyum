@@ -38,6 +38,26 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-14
 
+- **First-class `Sort::Float` — conversions complete (2026-06-14, ADR-0026
+  stage 2/3).** The SMT-LIB front-end now produces `Sort::Float` for declared FP
+  variables, the `fp` literal, FP special constants, and every FP-valued op
+  result, so `(_ to_fp eb sb) RM x` is **sort-disambiguated**: a `Real` operand
+  folds a dyadic constant, a `Float` operand is an **FP→FP reformat** (validated
+  `axeyum_fp::to_fp`), and a `BitVec` operand is **signed-BV→FP** (`sbv_to_fp`).
+  The bridge is one new op, `Op::FpFromBits { exp, sig }` (`BitVec(exp+sig) →
+  Float`, identity on bits, lowered as identity), plus `expect_bv`/`check`
+  leniency; the FP builders are untouched — the parser **unwraps** each `Float`
+  operand to bits before a builder call (peeling the `FpFromBits` wrapper to keep
+  `BvConst`s foldable, else `extract`) and **re-stamps** results via
+  `fp_from_bits`. `Op::FpFromBits` threaded through every op match site (eval
+  identity, fmt, smtlib write `((_ to_fp …))`, canonical passthrough+build, query
+  hash, bv lowering identity, z3 reject ×2). Tests: Float64→Float32 reformat,
+  signed `0xFFFFFFFE`→−2.0f, declared-var to_fp identity (sort checked), plus the
+  IR `fp_from_bits` round-trip. The bit-vector-source `to_fp` blocker from
+  ADR-0023 is **closed**. **Remaining FP gap:** F64 `fp.fma` (`3·sig+5 = 164 >
+  MAX_BV_WIDTH = 128`; needs arbitrary-width BV — orthogonal `Value`/width
+  decision).
+
 - **First-class `Sort::Float` — IR foundation (2026-06-14, ADR-0026 stage 1).**
   Added `Sort::Float { exp, sig }` to `axeyum-ir` (format inline — `FloatFormat`
   lives in `axeyum-fp`, which depends on the IR, so `Sort` can't reference it

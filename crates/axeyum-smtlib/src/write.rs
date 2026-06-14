@@ -361,6 +361,8 @@ fn op_str(op: Op) -> String {
         Op::RealIsInt => "is_int".into(),
         Op::Bv2Nat => "bv2nat".into(),
         Op::Int2Bv { width } => format!("(_ int2bv {width})"),
+        // The bit-reinterpret head `((_ to_fp eb sb) bv)` (ADR-0026).
+        Op::FpFromBits { exp, sig } => format!("(_ to_fp {exp} {sig})"),
         // Applications are rendered via the function name in `render_node`.
         Op::Apply(_) => unreachable!("Op::Apply is rendered via its function name"),
         Op::IntNeg | Op::IntSub | Op::RealNeg | Op::RealSub => "-".into(),

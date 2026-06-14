@@ -411,10 +411,11 @@ fn translate(
                         | Op::RealIsInt
                         | Op::Bv2Nat
                         | Op::Int2Bv { .. }
+                        | Op::FpFromBits { .. }
                 ) {
                     return Err(SolverError::Unsupported(
                         "z3 oracle does not support uninterpreted functions, integer/real \
-                         arithmetic, datatypes, or quantifiers yet"
+                         arithmetic, datatypes, quantifiers, or floating point yet"
                             .to_owned(),
                     ));
                 }
@@ -541,9 +542,10 @@ fn apply(op: Op, args: &[TermId], cache: &HashMap<TermId, Z3Term>) -> Z3Term {
         | Op::RealToInt
         | Op::RealIsInt
         | Op::Bv2Nat
-        | Op::Int2Bv { .. } => {
+        | Op::Int2Bv { .. }
+        | Op::FpFromBits { .. } => {
             unreachable!(
-                "array, UF, integer, real, quantifier, and datatype terms are rejected during z3 translation"
+                "array, UF, integer, real, quantifier, datatype, and floating-point terms are rejected during z3 translation"
             )
         }
     }

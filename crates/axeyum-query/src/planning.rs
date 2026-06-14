@@ -614,6 +614,11 @@ fn update_op(hash: &mut u64, op: Op) {
             update_u64(hash, 71);
             update_u64(hash, u64::from(width));
         }
+        Op::FpFromBits { exp, sig } => {
+            update_u64(hash, 72);
+            update_u64(hash, u64::from(exp));
+            update_u64(hash, u64::from(sig));
+        }
         Op::Apply(func) => {
             update_u64(hash, 44);
             update_u64(hash, u64::try_from(func.index()).unwrap_or(u64::MAX));

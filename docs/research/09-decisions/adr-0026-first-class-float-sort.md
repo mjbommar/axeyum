@@ -1,6 +1,6 @@
 # ADR-0026: First-Class Floating-Point Sort in the IR
 
-Status: proposed
+Status: accepted (implemented 2026-06-14)
 Date: 2026-06-14
 
 ## Context
@@ -123,6 +123,20 @@ Concretely:
 - **A new `Value::Float`.** Rejected: an FP value is exactly its bits; a separate
   value type would duplicate the BV model/replay machinery for no semantic gain
   and would complicate the "sat replays as a BV model" guarantee.
+
+## Implementation note (as built)
+
+The realized bridge uses a **single** new op, `Op::FpFromBits { exp, sig }`
+(`BitVec(exp+sig) → Float`, identity on bits, lowered as identity), plus
+leniency in `expect_bv`/`FloatFormat::check` so a `Float` term is accepted as its
+bits. The FP formula builders are left untouched (they assume bit-vector
+operands and freely mix with bit-vector constants): the SMT-LIB front-end
+**unwraps** each `Float` operand to its bits right before a builder call — peeling
+the `FpFromBits` wrapper when present (preserving `BvConst`s for the
+constant-folding conversions) or `extract`-ing a symbolic float — and **re-stamps**
+every FP-valued result with `fp_from_bits`. So `Float` is effectively a
+parser-level tag that survives between ops and is unwrapped at each builder
+boundary; no reverse `FpToBits` op was needed.
 
 ## Consequences
 

@@ -785,6 +785,7 @@ impl<'a> LoweringBuilder<'a> {
         literal
     }
 
+    #[allow(clippy::too_many_lines)]
     fn lower_app(
         &mut self,
         term: TermId,
@@ -848,6 +849,17 @@ impl<'a> LoweringBuilder<'a> {
                 Op::BvShl | Op::BvLshr | Op::BvAshr => self.lower_shift_op(term, op, operands)?,
                 Op::RotateLeft { by } => Self::lower_rotate_op(term, operands, by, true)?,
                 Op::RotateRight { by } => Self::lower_rotate_op(term, operands, by, false)?,
+                // A floating-point reinterpret is identity on the bits (ADR-0026).
+                Op::FpFromBits { .. } => {
+                    let [source] = operands else {
+                        return Err(BitLowerError::BitWidthMismatch {
+                            term,
+                            expected: 1,
+                            found: operands.len(),
+                        });
+                    };
+                    source.clone()
+                }
                 // Arrays are eliminated to QF_BV before lowering (ADR-0010);
                 // uninterpreted functions via Ackermann reduction (ADR-0013);
                 // integer arithmetic is not bit-blasted in this slice (ADR-0014).
