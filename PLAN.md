@@ -36,8 +36,39 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 ## Status
 
-Last updated: 2026-06-13
+Last updated: 2026-06-14
 
+- **Datatype SOLVING — non-recursive theory complete (2026-06-14, ADR-0022
+  step B slices 1–2).** Building on the iteration-Q IR foundation, datatypes now
+  *solve*, not just parse:
+  - **Read-over-construct** (`simplify_datatypes` + `check_with_datatype_elimination`):
+    folds `select`/`test` over explicit constructors, then decides the
+    datatype-free residual via the dispatcher.
+  - **Selector-totality convention** (`axeyum_ir::well_founded_default`): `select`
+    over a wrong constructor now returns the field sort's well-founded default
+    (cycle-guarded base-constructor search; `None` only for uninhabited
+    datatypes), making `select` total — restoring eval's "all operators total"
+    invariant and enabling sound model projection. Also fixed a latent
+    `--all-features` gap: the `z3` adapter had no datatype arms.
+  - **Native free-variable solving** (`check_with_datatype_native`): free datatype
+    variables under `is`/`select`/`==` over **non-recursive, scalar-field**
+    datatypes expand to a tag bit-vector + per-constructor field variables
+    (default-pinning guards keep `select` faithful); equisatisfiable, so
+    `unsat`/`unknown` transfer, and every `sat` model is projected back to a
+    `Value::Datatype` and **replayed against the assertions** before return
+    (projection bug ⇒ replay error, never a wrong `sat`). Datatype **equality**
+    reduces to tag + field-wise equality (exact given the guards).
+  - Dispatcher (`solve`/`check_auto`) routes datatype queries through this path.
+    Tests: `tests/datatype_native.rs` (9) + `tests/datatype_elim.rs`; workspace
+    clippy + full suite green under `--all-features` (incl. `z3`).
+  - **Next datatype unit:** recursive / nested-datatype fields via **depth-bounded
+    unfolding**. Design note for soundness: bounded unfolding gives sound `sat`
+    (replay-confirmed) but **must return `unknown`, never `unsat`, when the bound
+    binds** (deeper structures might satisfy) — a real departure from the
+    equisatisfiable reductions above, and the one datatype step where a mistake
+    is an unsound `unsat`. Make it sound-by-construction (emit only Sat-or-Unknown,
+    replay-guard the witness), then add the acyclicity + congruence native theory
+    for completeness. This is a fresh, ADR-tracked focused unit.
 - Architecture iteration Q — **first-class datatype sort (recursive datatypes)**
   recorded 2026-06-13
   ([ADR-0022](docs/research/09-decisions/adr-0022-first-class-datatype-sort.md),
@@ -78,14 +109,15 @@ Last updated: 2026-06-13
   sound, no-IR-surgery capability space (linear arithmetic, finite datatypes,
   optimization, cardinality, MaxSAT, checkable proofs, low-memory strategies) is
   now exhausted for this session.
-- **Remaining for Z3 parity (all require core IR `Sort`/`Op` surgery or a large
-  new subsystem — fresh-context, ADR-first work):** recursive/mutually-recursive
-  datatypes (first-class datatype sort; enums+records cover the finite case);
-  floating point; strings/sequences/regex; nonlinear real arithmetic (NRA/CAD);
-  production quantifiers (E-matching + MBQI); and a measured SMT-COMP performance
-  campaign (the actual parity gate — OOM-gated, needs explicit go-ahead). The
-  sound, no-IR-surgery increments are now exhausted; this is the line where the
-  next session resumes with a datatype-sort ADR.
+- **Remaining for Z3 parity (each a large, soundness- or OOM-sensitive unit —
+  fresh-context, ADR-first work):** **recursive/mutually-recursive datatypes**
+  (the non-recursive scalar-field theory now solves, incl. equality — what
+  remains is depth-bounded unfolding with `unsat`→`unknown`, then the native
+  acyclicity+congruence theory); floating point; strings/sequences/regex;
+  nonlinear real arithmetic (NRA/CAD); production quantifiers (E-matching + MBQI);
+  and a measured SMT-COMP performance campaign (the actual parity gate — OOM-gated,
+  needs explicit go-ahead). The next session resumes with recursive-datatype
+  bounded unfolding (sound-by-construction: Sat-or-Unknown, replay-guarded).
 - Architecture iteration K — bit-vector optimization recorded 2026-06-13
   (machine-word program optimization — the use case): `maximize_bv` /
   `minimize_bv` (`optimize.rs`) optimize the **unsigned** value of a bit-vector
