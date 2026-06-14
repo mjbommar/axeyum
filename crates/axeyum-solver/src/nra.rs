@@ -40,6 +40,7 @@ const MAX_REFINE_ROUNDS: usize = 12;
 /// # Errors
 ///
 /// Returns [`SolverError`] from the rewrite or the LRA solver.
+#[allow(clippy::too_many_lines)]
 pub fn check_with_nra(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -82,6 +83,25 @@ pub fn check_with_nra(
     // sign-based nonlinear queries — e.g. `x·x < 0` is now unsat (x² ≥ 0).
     for &(pa, pb, r) in &triples {
         for lemma in product_lemmas(arena, pa, pb, r)? {
+            let rewritten = replace_subterms(arena, lemma, &map, &mut memo)
+                .map_err(|e| SolverError::Backend(e.to_string()))?;
+            reduced.push(rewritten);
+        }
+    }
+
+    // McCormick envelopes: when both operands of a product have constant lower and
+    // upper bounds (read off the top-level assertions), add the four bilinear
+    // relaxation inequalities. They are valid for every `a∈[aL,aU], b∈[bL,bU]`
+    // with `r=a·b`, so they preserve the relaxation while bounding the product —
+    // deciding e.g. `0≤x≤2 ∧ 0≤y≤2 ∧ x·y>4` as `unsat` (the sign rules cannot).
+    for &(pa, pb, r) in &triples {
+        let (Some(a_lo), Some(a_hi)) = extract_bounds(arena, assertions, pa) else {
+            continue;
+        };
+        let (Some(b_lo), Some(b_hi)) = extract_bounds(arena, assertions, pb) else {
+            continue;
+        };
+        for lemma in mccormick_lemmas(arena, pa, pb, a_lo, a_hi, b_lo, b_hi, r)? {
             let rewritten = replace_subterms(arena, lemma, &map, &mut memo)
                 .map_err(|e| SolverError::Backend(e.to_string()))?;
             reduced.push(rewritten);
@@ -229,6 +249,146 @@ fn product_lemmas(
     let either_z = arena.or(a_z, b_z)?;
     out.push(imp(arena, either_z, r_z)?);
     out.push(imp(arena, r_z, either_z)?);
+    Ok(out)
+}
+
+/// The real constant a node denotes, if it is one.
+fn as_real_const(arena: &TermArena, t: TermId) -> Option<axeyum_ir::Rational> {
+    match arena.node(t) {
+        TermNode::RealConst(r) => Some(*r),
+        _ => None,
+    }
+}
+
+/// Tightest constant lower/upper bounds on `t` read off the **top-level**
+/// assertions (each of which holds unconditionally), from the direct comparison
+/// forms `t ≤ c`, `c ≤ t`, `t ≥ c`, `c ≥ t` (strict variants give the same
+/// non-strict bound — sound, slightly loose) and `t = c`. Returns `(lower,
+/// upper)`, each `None` if unbounded. Only syntactic operand-vs-constant bounds
+/// are recognised; that is enough for the common bounded-variable case and keeps
+/// every bound sound.
+fn extract_bounds(
+    arena: &TermArena,
+    assertions: &[TermId],
+    t: TermId,
+) -> (Option<axeyum_ir::Rational>, Option<axeyum_ir::Rational>) {
+    let mut lo: Option<axeyum_ir::Rational> = None;
+    let mut hi: Option<axeyum_ir::Rational> = None;
+    let mut see_lo = |c: axeyum_ir::Rational| lo = Some(lo.map_or(c, |x| x.max(c)));
+    let mut see_hi = |c: axeyum_ir::Rational| hi = Some(hi.map_or(c, |x| x.min(c)));
+    for &asrt in assertions {
+        let TermNode::App { op, args } = arena.node(asrt) else {
+            continue;
+        };
+        if args.len() != 2 {
+            continue;
+        }
+        let (op, l, r) = (*op, args[0], args[1]);
+        let (lc, rc) = (as_real_const(arena, l), as_real_const(arena, r));
+        match op {
+            Op::RealLe | Op::RealLt => {
+                if l == t {
+                    if let Some(c) = rc {
+                        see_hi(c); // t ≤ c
+                    }
+                }
+                if r == t {
+                    if let Some(c) = lc {
+                        see_lo(c); // c ≤ t
+                    }
+                }
+            }
+            Op::RealGe | Op::RealGt => {
+                if l == t {
+                    if let Some(c) = rc {
+                        see_lo(c); // t ≥ c
+                    }
+                }
+                if r == t {
+                    if let Some(c) = lc {
+                        see_hi(c); // c ≥ t
+                    }
+                }
+            }
+            Op::Eq => {
+                if l == t {
+                    if let Some(c) = rc {
+                        see_lo(c);
+                        see_hi(c);
+                    }
+                }
+                if r == t {
+                    if let Some(c) = lc {
+                        see_lo(c);
+                        see_hi(c);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    (lo, hi)
+}
+
+/// Exact rational product, `None` on i128 overflow.
+fn rat_mul(p: axeyum_ir::Rational, q: axeyum_ir::Rational) -> Option<axeyum_ir::Rational> {
+    let num = p.numerator().checked_mul(q.numerator())?;
+    let den = p.denominator().checked_mul(q.denominator())?;
+    Some(axeyum_ir::Rational::new(num, den))
+}
+
+/// The four `McCormick` envelope inequalities for the product `r = a*b`, given
+/// `a` in `[a_lo, a_hi]` and `b` in `[b_lo, b_hi]` (all valid for any such
+/// operands): the two lower bounds use the matching corner products and the two
+/// upper bounds use the opposite corners. Any inequality whose constant term
+/// overflows the `i128` rational is skipped.
+#[allow(clippy::similar_names, clippy::too_many_arguments)]
+fn mccormick_lemmas(
+    arena: &mut TermArena,
+    a: TermId,
+    b: TermId,
+    a_lo: axeyum_ir::Rational,
+    a_hi: axeyum_ir::Rational,
+    b_lo: axeyum_ir::Rational,
+    b_hi: axeyum_ir::Rational,
+    r: TermId,
+) -> Result<Vec<TermId>, IrError> {
+    // term for `k·t`
+    fn scaled(arena: &mut TermArena, k: axeyum_ir::Rational, t: TermId) -> Result<TermId, IrError> {
+        let kc = arena.real_const(k);
+        arena.real_mul(kc, t)
+    }
+    // rhs = ka·b + kb·a − const, then compare r against it (ge = `≥`, else `≤`).
+    let build = |arena: &mut TermArena,
+                     ka: axeyum_ir::Rational,
+                     kb: axeyum_ir::Rational,
+                     ge: bool|
+     -> Result<Option<TermId>, IrError> {
+        let Some(cst) = rat_mul(ka, kb) else {
+            return Ok(None); // constant term overflowed; skip this inequality
+        };
+        let t1 = scaled(arena, ka, b)?;
+        let t2 = scaled(arena, kb, a)?;
+        let sum = arena.real_add(t1, t2)?;
+        let cc = arena.real_const(cst);
+        let rhs = arena.real_sub(sum, cc)?;
+        let lemma = if ge { arena.real_ge(r, rhs)? } else { arena.real_le(r, rhs)? };
+        Ok(Some(lemma))
+    };
+
+    let mut out = Vec::new();
+    if let Some(l) = build(arena, a_lo, b_lo, true)? {
+        out.push(l);
+    }
+    if let Some(l) = build(arena, a_hi, b_hi, true)? {
+        out.push(l);
+    }
+    if let Some(l) = build(arena, a_hi, b_lo, false)? {
+        out.push(l);
+    }
+    if let Some(l) = build(arena, a_lo, b_hi, false)? {
+        out.push(l);
+    }
     Ok(out)
 }
 

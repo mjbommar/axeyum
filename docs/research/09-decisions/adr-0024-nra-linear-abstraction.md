@@ -69,10 +69,13 @@ It is routed automatically from the dispatcher's real path.
   refinement loop adds **exact point lemmas** `(a = a0 ∧ b = b0) → r = a0·b0` for
   the *leaf* products at a failed candidate's values and re-solves (sound — those
   are the true products there). This decides e.g. `x·y = 6 ∧ x = 2 ∧ y = 4`
-  (unsat). It runs up to a round bound, then returns `unknown`; richer lemmas
-  (tangent planes / McCormick envelopes with variable bounds, monotonicity) and
-  full convergence are the remaining refinement, not a change to the soundness
-  basis.
+  (unsat). It runs up to a round bound, then returns `unknown`. **McCormick
+  envelopes** are also implemented: when both operands of a product have constant
+  bounds read off the top-level assertions (`a∈[aL,aU], b∈[bL,bU]`), the four
+  valid bilinear inequalities are asserted, deciding e.g. `0≤x,y≤2 ∧ x·y>4`
+  (unsat) and `0≤x≤2 ∧ x²>2x` (unsat). Tangent planes at refinement points,
+  monotonicity, and full convergence remain — not a change to the soundness basis
+  (only valid lemmas are ever added).
 
 ## Consequences
 

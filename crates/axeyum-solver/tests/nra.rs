@@ -120,3 +120,59 @@ fn linear_real_still_works_through_nra() {
     let r = check_with_nra(&mut a, &[eq], &SolverConfig::default()).unwrap();
     assert!(matches!(r, CheckResult::Sat(_)), "x+1=3 sat, got {r:?}");
 }
+
+#[test]
+fn mccormick_bounds_product_above_max_is_unsat() {
+    // 0<=x<=2 ∧ 0<=y<=2 ∧ x*y > 4: the product cannot exceed 4 on [0,2]^2.
+    // The McCormick envelopes (r <= 2y, r <= 2x) bound it; sign rules cannot.
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let y = real(&mut a, "y");
+    let zero = a.real_const(Rational::integer(0));
+    let two = a.real_const(Rational::integer(2));
+    let four = a.real_const(Rational::integer(4));
+    let xl = a.real_ge(x, zero).unwrap();
+    let xu = a.real_le(x, two).unwrap();
+    let yl = a.real_ge(y, zero).unwrap();
+    let yu = a.real_le(y, two).unwrap();
+    let p = a.real_mul(x, y).unwrap();
+    let big = a.real_gt(p, four).unwrap();
+    let r = check_with_nra(&mut a, &[xl, xu, yl, yu, big], &SolverConfig::default()).unwrap();
+    assert!(matches!(r, CheckResult::Unsat), "x*y>4 on [0,2]^2 must be unsat, got {r:?}");
+}
+
+#[test]
+fn mccormick_square_above_secant_is_unsat() {
+    // 0<=x<=2 ∧ x*x > 2x: on [0,2], x^2 <= 2x (since x(x-2)<=0). The upper
+    // McCormick envelope of x^2 on [0,2] is exactly r <= 2x, contradicting r>2x.
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let zero = a.real_const(Rational::integer(0));
+    let two = a.real_const(Rational::integer(2));
+    let xl = a.real_ge(x, zero).unwrap();
+    let xu = a.real_le(x, two).unwrap();
+    let sq = a.real_mul(x, x).unwrap();
+    let two_x = a.real_mul(two, x).unwrap(); // linear (const * term), not abstracted
+    let gt = a.real_gt(sq, two_x).unwrap();
+    let r = check_with_nra(&mut a, &[xl, xu, gt], &SolverConfig::default()).unwrap();
+    assert!(matches!(r, CheckResult::Unsat), "x^2 > 2x on [0,2] must be unsat, got {r:?}");
+}
+
+#[test]
+fn mccormick_feasible_product_is_sat() {
+    // 0<=x<=2 ∧ 0<=y<=2 ∧ x*y == 4: feasible (x=y=2); envelopes must not reject it.
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let y = real(&mut a, "y");
+    let zero = a.real_const(Rational::integer(0));
+    let two = a.real_const(Rational::integer(2));
+    let four = a.real_const(Rational::integer(4));
+    let xl = a.real_ge(x, zero).unwrap();
+    let xu = a.real_le(x, two).unwrap();
+    let yl = a.real_ge(y, zero).unwrap();
+    let yu = a.real_le(y, two).unwrap();
+    let p = a.real_mul(x, y).unwrap();
+    let eq4 = a.eq(p, four).unwrap();
+    let r = check_with_nra(&mut a, &[xl, xu, yl, yu, eq4], &SolverConfig::default()).unwrap();
+    assert!(matches!(r, CheckResult::Sat(_)), "x*y=4 on [0,2]^2 must be sat, got {r:?}");
+}

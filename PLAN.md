@@ -106,8 +106,14 @@ Last updated: 2026-06-14
   refinement loop**: on a replay failure it adds exact point lemmas
   `(a=a0 ∧ b=b0) → r=a0·b0` for leaf products at the candidate's values and
   re-solves (sound), deciding e.g. `x·y=6 ∧ x=2 ∧ y=4` (unsat); after a round
-  bound it returns `unknown`. Remaining: richer lemmas (tangent/McCormick with
-  variable bounds) for full convergence. 8 tests in `tests/nra.rs`.
+  bound it returns `unknown`. **McCormick envelopes** now added: when both
+  operands of a product have constant lower+upper bounds (read off the top-level
+  assertions — `t≤c`/`c≤t`/`t≥c`/`c≥t`/`t=c`, strict treated as non-strict), the
+  four bilinear inequalities (valid for all operands in range) are asserted,
+  deciding e.g. `0≤x,y≤2 ∧ x·y>4` unsat and `0≤x≤2 ∧ x²>2x` unsat (the upper
+  envelope is `r≤2x`) — cases the sign rules cannot. Sound (only valid lemmas).
+  Remaining: tangent lemmas at refinement points for tighter convergence. 11
+  tests in `tests/nra.rs`.
 
 - **Floating point — non-arithmetic core (2026-06-14, ADR-0023).** New
   `axeyum-solver::fp` module: IEEE 754 classification (`is_nan`/`is_infinite`/
