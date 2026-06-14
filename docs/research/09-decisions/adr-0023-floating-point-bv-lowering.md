@@ -83,8 +83,25 @@ differentially validated against native `f32` over structured values
 pseudo-random sweep. This is the same assurance basis production bit-blasters
 (Z3/cvc5/bitwuzla) rest on — strong, but not a machine-checked proof. A
 formally-verified blaster, or a relaxation+replay route via an IR `fp` op, could
-raise assurance later if a workload demands it. `fp.add` (alignment + add, same
-`pack_value` tail) follows the identical pattern and is the next op.
+raise assurance later if a workload demands it.
+
+**Symbolic addition (`fp::add`).** Exact-alignment adder: both significands are
+shifted to the common (minimum) exponent and added/subtracted *exactly* (no
+sticky, hence borrow-free), then rounded by `pack_value`, with NaN / `∞ + −∞` /
+`∞` / signed-zero muxing. Validated against the `round_to_format` reference
+(applied to the exact f64 sum) for **F16**. Exact alignment needs
+`sig_bits + (2^exp_bits − 3) + 2 ≤ 128`, which holds for F16 only; F32/F64 return
+`InvalidWidth`.
+
+**Width cap and the bounded-width path.** Bit-vectors are capped at
+`MAX_BV_WIDTH = 128` (`Value::Bv` is a `u128`). The current `mul` (`3·sb+4`) and
+`add` (exact alignment) intermediates exceed this for F64 (and F32 for add), so
+those formats error cleanly rather than return a wrong result. A **bounded-width
+encoding** (cap the alignment/normalization window and fold the rest into a
+sticky bit, `W ≈ 2·sb + guard ≤ 128`) is the single piece that lifts both `mul`
+and `add` to F32/F64; the sticky/borrow handling is its careful part. It is the
+next FP unit, after which `div`/`sqrt`/`rem` and non-default rounding modes
+follow.
 
 ## Evidence
 

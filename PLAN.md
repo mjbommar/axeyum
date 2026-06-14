@@ -69,9 +69,16 @@ Last updated: 2026-06-14
   it solves/replays on the existing path. Differentially validated against native
   `f32` over specials/subnormals/overflow/underflow + a random sweep. Assurance:
   *validated, not proven* (cf. ADR-0007), the standard bit-blaster basis.
-  **Deferred (next FP layer):** `fp.add` (alignment + add, same `pack_value`
-  tail — identical pattern), then `div`/`sqrt`/`rem`, and non-default rounding
-  modes. Conversion folds are done both directions:
+  **Symbolic `fp.add` done for F16** (validated bit-blaster): exact-alignment
+  adder (align both significands to the min exponent, exact add/subtract — so
+  borrow-free — then `pack_value`), with NaN/`∞+−∞`/`∞`/signed-zero muxing.
+  Validated against the `round_to_format` reference (exact f64 sum) over
+  specials/subnormals/normals + a random sweep. F32/F64 exceed the 128-bit cap
+  under exact alignment and return a clean error.
+  **Deferred (next FP layer):** a **bounded-width (alignment + sticky)** encoding
+  — the one piece that lifts both `fp.mul` and `fp.add` to F32/F64 within the
+  128-bit cap (the borrow/sticky logic is the careful part) — then `div`/`sqrt`/
+  `rem` and non-default rounding modes. Conversion folds are done both directions:
   int→FP (`ubv_to_fp`/`sbv_to_fp`), FP→int (`to_ubv`/`to_sbv`, per rounding mode,
   folded only when finite + in range else `None`), and FP→Real (`to_real`, exact
   when it fits the i128 rational). A first-class `Sort::Float` remains optional.

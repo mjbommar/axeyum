@@ -520,6 +520,131 @@ pub fn mul(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId) -> Res
     arena.ite(nan_flag, qnan, if_inf)
 }
 
+/// Symbolic `fp.add` (round-nearest-ties-to-even) via **exact alignment**: both
+/// significands are shifted to the common (minimum) exponent, added or subtracted
+/// exactly (no sticky/borrow approximation), and rounded by [`pack_value`]; then
+/// NaN / `∞ + −∞` / `∞` / signed-zero special cases are muxed. A pure bit-vector
+/// formula, so it solves and replays on the existing path; works symbolically
+/// and folds on constants.
+///
+/// **Format support.** Exact alignment needs `sig_bits + (2^exp_bits − 3) + 2 ≤
+/// 128` ([`MAX_BV_WIDTH`]) — i.e. **`F16`** (42 bits). `F32`/`F64` exceed the cap
+/// and return [`IrError::InvalidWidth`]; reaching them needs a bounded-width
+/// (alignment + sticky) adder, tracked as future work. (`fp.add` is borrow-free
+/// here precisely because the alignment is exact.)
+///
+/// # Errors
+///
+/// Returns [`IrError::InvalidWidth`] if the exact-alignment width exceeds
+/// [`MAX_BV_WIDTH`], [`IrError::SortMismatch`] for a mis-sized operand, or
+/// [`IrError`] from the builders.
+#[allow(clippy::similar_names, clippy::many_single_char_names)]
+pub fn add(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId) -> Result<TermId, IrError> {
+    fmt.check(arena, a)?;
+    fmt.check(arena, b)?;
+    let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
+    let total = fmt.width();
+    let bias = (1i64 << (eb - 1)) - 1;
+    let max_shift = (1u32 << eb) - 3; // max exponent difference
+    let w = sb + max_shift + 2;
+    if w > MAX_BV_WIDTH {
+        return Err(IrError::InvalidWidth(w));
+    }
+
+    let one1 = arena.bv_const(1, 1)?;
+    let unpack = |arena: &mut TermArena, x: TermId| -> Result<(TermId, TermId, TermId), IrError> {
+        let sx = arena.extract(total - 1, total - 1, x)?;
+        let exp_x = arena.extract(total - 2, sb - 1, x)?;
+        let trail_x = arena.extract(sb - 2, 0, x)?;
+        let exp_zero = arena.bv_const(eb, 0)?;
+        let is_sub = arena.eq(exp_x, exp_zero)?;
+        let zero1 = arena.bv_const(1, 0)?;
+        let hidden = arena.ite(is_sub, zero1, one1)?;
+        let sig = arena.concat(hidden, trail_x)?; // sb bits
+        let sig_w = arena.zero_ext(w - sb, sig)?;
+        let exp_w = arena.zero_ext(w - eb, exp_x)?;
+        let one_w = arena.bv_const(w, 1)?;
+        let eff = arena.ite(is_sub, one_w, exp_w)?;
+        let bias_sbm1 = sconst(arena, w, bias + i64::from(sb) - 1)?;
+        let e = arena.bv_sub(eff, bias_sbm1)?;
+        Ok((sx, sig_w, e))
+    };
+    let (sa, sig_a, e_a) = unpack(arena, a)?;
+    let (sbit, sig_b, e_b) = unpack(arena, b)?;
+
+    // Align both significands to the common (minimum) exponent — exact.
+    let a_le = arena.bv_sle(e_a, e_b)?;
+    let e_min = arena.ite(a_le, e_a, e_b)?;
+    let sh_a = arena.bv_sub(e_a, e_min)?;
+    let sh_b = arena.bv_sub(e_b, e_min)?;
+    let m_a = arena.bv_shl(sig_a, sh_a)?;
+    let m_b = arena.bv_shl(sig_b, sh_b)?;
+
+    let same_sign = arena.eq(sa, sbit)?;
+    let sum_add = arena.bv_add(m_a, m_b)?;
+    let a_ge = arena.bv_uge(m_a, m_b)?;
+    let sub_ab = arena.bv_sub(m_a, m_b)?;
+    let sub_ba = arena.bv_sub(m_b, m_a)?;
+    let sub_mag = arena.ite(a_ge, sub_ab, sub_ba)?;
+    let result_mag = arena.ite(same_sign, sum_add, sub_mag)?;
+    let sub_sign = arena.ite(a_ge, sa, sbit)?;
+    let result_sign_bit = arena.ite(same_sign, sa, sub_sign)?;
+    let result_sign = arena.eq(result_sign_bit, one1)?;
+    let finite = pack_value(arena, eb, sb, result_sign, result_mag, e_min)?;
+
+    // Special-case flags.
+    let na = is_nan(arena, fmt, a)?;
+    let nb = is_nan(arena, fmt, b)?;
+    let ia = is_infinite(arena, fmt, a)?;
+    let ib = is_infinite(arena, fmt, b)?;
+    let za = is_zero(arena, fmt, a)?;
+    let zb = is_zero(arena, fmt, b)?;
+    let signs_differ = {
+        let s = arena.eq(sa, sbit)?;
+        arena.not(s)?
+    };
+    let inf_minus_inf = {
+        let both = arena.and(ia, ib)?;
+        arena.and(both, signs_differ)?
+    };
+    let nan_flag = {
+        let t = arena.or(na, nb)?;
+        arena.or(t, inf_minus_inf)?
+    };
+    let inf_flag = arena.or(ia, ib)?;
+    let inf_sign = arena.ite(ia, sa, sbit)?; // sign of the (an) infinity
+    let both_zero = arena.and(za, zb)?;
+    let zero_w = arena.bv_const(w, 0)?;
+    let mag_zero = arena.eq(result_mag, zero_w)?;
+
+    // Field constants.
+    let pos_zero = arena.bv_const(total, 0)?;
+    let neg_zero = arena.bv_const(total, 1u128 << (total - 1))?;
+    let exp_ones = arena.bv_const(total, ((1u128 << eb) - 1) << (sb - 1))?;
+    let qnan = {
+        let q = arena.bv_const(total, 1u128 << (sb - 2))?;
+        arena.bv_or(exp_ones, q)?
+    };
+    let inf_total = {
+        let inf_is_neg = arena.eq(inf_sign, one1)?;
+        let neg_inf = arena.bv_or(neg_zero, exp_ones)?;
+        arena.ite(inf_is_neg, neg_inf, exp_ones)?
+    };
+    // Both zero: −0 only if both are −0; else +0. (RNE: x + −x = +0 too.)
+    let both_neg_zero = {
+        let na_ = arena.eq(sa, one1)?;
+        let nb_ = arena.eq(sbit, one1)?;
+        arena.and(na_, nb_)?
+    };
+    let bothzero_total = arena.ite(both_neg_zero, neg_zero, pos_zero)?;
+
+    // Mux: NaN, ∞, both-zero, exact-cancellation→+0, else rounded finite.
+    let r0 = arena.ite(mag_zero, pos_zero, finite)?;
+    let r1 = arena.ite(both_zero, bothzero_total, r0)?;
+    let r2 = arena.ite(inf_flag, inf_total, r1)?;
+    arena.ite(nan_flag, qnan, r2)
+}
+
 // --- constant folding (round-nearest-even arithmetic) -------------------------
 //
 // Rounded FP arithmetic (`add`/`sub`/`mul`/`div`/`sqrt`) is, for *constant*
@@ -1237,7 +1362,8 @@ fn order_key(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermI
 #[allow(
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap,
-    clippy::cast_sign_loss
+    clippy::cast_sign_loss,
+    clippy::cast_precision_loss
 )]
 mod tests {
     use super::*;
@@ -1391,6 +1517,84 @@ mod tests {
             let y = (state >> 32) as u32;
             check(&mut a, x, y);
         }
+    }
+
+    fn f16_to_f64(bits: u16) -> f64 {
+        let sign = if (bits >> 15) & 1 == 1 { -1.0 } else { 1.0 };
+        let exp = (bits >> 10) & 0x1F;
+        let mant = bits & 0x3FF;
+        if exp == 0x1F {
+            return if mant != 0 { f64::NAN } else { sign * f64::INFINITY };
+        }
+        if exp == 0 {
+            return sign * f64::from(mant) * 2f64.powi(-24); // subnormal
+        }
+        sign * f64::from(1024 + mant) * 2f64.powi(i32::from(exp) - 25)
+    }
+
+    /// Symbolic `fp.add` for F16 must equal the validated `round_to_format`
+    /// reference applied to the exact f64 sum of the operands. Structured
+    /// (specials/subnormals/normals) + pseudo-random sweep.
+    #[test]
+    fn add_f16_matches_reference() {
+        let mut a = TermArena::new();
+        let check = |a: &mut TermArena, ab: u16, bb: u16| {
+            let at = a.bv_const(16, u128::from(ab)).unwrap();
+            let bt = a.bv_const(16, u128::from(bb)).unwrap();
+            let r = add(a, FloatFormat::F16, at, bt).unwrap();
+            let got = match eval(a, r, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("expected Bv, got {other:?}"),
+            };
+            let sum = f16_to_f64(ab) + f16_to_f64(bb); // exact for f16 operands
+            if sum.is_nan() {
+                let exp = (got >> 10) & 0x1F;
+                let mant = got & 0x3FF;
+                assert!(exp == 0x1F && mant != 0, "add({ab:#x},{bb:#x}) want NaN, got {got:#x}");
+            } else {
+                let want = round_to_format(5, 11, sum);
+                assert_eq!(got, want, "add({ab:#x},{bb:#x}) = {got:#x}, want {want:#x}");
+            }
+        };
+
+        let structured: [u16; 14] = [
+            0x0000, 0x8000, // ±0
+            0x3C00, 0xBC00, // ±1.0
+            0x4000, 0x3800, // 2.0, 0.5
+            0x7C00, 0xFC00, // ±inf
+            0x7E00, // NaN
+            0x0400, // smallest normal
+            0x0001, 0x03FF, // subnormals
+            0x7BFF, // f16 max
+            0x4900, // 10.0
+        ];
+        for &x in &structured {
+            for &y in &structured {
+                check(&mut a, x, y);
+            }
+        }
+
+        let mut state: u64 = 0x9e37_79b9_7f4a_7c15;
+        for _ in 0..4000 {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            let x = (state & 0xFFFF) as u16;
+            let y = ((state >> 16) & 0xFFFF) as u16;
+            check(&mut a, x, y);
+        }
+    }
+
+    #[test]
+    fn add_f32_is_a_clean_error() {
+        // Exact-alignment width for F32 (24 + 253 + 2 = 279) exceeds the cap.
+        let mut a = TermArena::new();
+        let x = a.bv_const(32, 0x3F80_0000).unwrap();
+        let y = a.bv_const(32, 0x4000_0000).unwrap();
+        assert!(matches!(
+            add(&mut a, FloatFormat::F32, x, y),
+            Err(axeyum_ir::IrError::InvalidWidth(_))
+        ));
     }
 
     #[test]
