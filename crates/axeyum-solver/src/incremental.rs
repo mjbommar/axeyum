@@ -76,6 +76,21 @@ impl IncrementalBvSolver {
         self.frames.len() - 1
     }
 
+    /// Total CNF clauses encoded so far across all queries on this warm solver.
+    ///
+    /// Because shared subterms bit-blast and encode exactly once, this grows far
+    /// more slowly across related path queries than re-encoding each query from a
+    /// cold solver would — the measurable incrementality win for the
+    /// symbolic-execution consumer.
+    pub fn encoded_clause_count(&self) -> usize {
+        self.cnf.clause_count()
+    }
+
+    /// Total CNF variables (AIG nodes plus scope selectors) encoded so far.
+    pub fn encoded_variable_count(&self) -> usize {
+        self.cnf.variable_count()
+    }
+
     /// Bit-blasts `term` and adds it to the current scope.
     ///
     /// The assertion is enforced while the current scope (and all enclosing

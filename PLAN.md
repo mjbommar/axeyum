@@ -63,6 +63,18 @@ Last updated: 2026-06-13
   lever. Gate-fusion (XOR/mux/and-tree) was deliberately **not** ported to the
   incremental encoder — it relies on global single-use counts that are not
   stable as the AIG grows, so it is unsound to apply incrementally.
+- Warm-vs-cold incrementality measured 2026-06-13: `IncrementalBvSolver` now
+  exposes `encoded_clause_count`/`encoded_variable_count`, and a new
+  deterministic test (`tests/warm_vs_cold.rs`) quantifies the symbolic-execution
+  reuse win. Exploring 6 path branches over a shared `x*y == 0` multiplier base:
+  a warm solver (assert base once, then `push`/`check`/`pop` per branch) encodes
+  **1,859 clauses vs 10,488 cold** (a fresh solver re-encoding the base each
+  branch) — a **5.64× reduction**, near the ~6× ceiling, confirming the shared
+  circuit is bit-blasted and Tseitin-encoded exactly once. Warm and cold agree
+  on every branch verdict. This is the genuine, large incrementality payoff for
+  the destination-3 symbolic-execution consumer — far bigger than the 4–11% from
+  the polarity encoding — and it scales with the number of queries sharing
+  structure.
 - Consumer-models iteration 1 recorded 2026-06-13
   ([ADR-0008](docs/research/09-decisions/adr-0008-consumer-scenario-models.md),
   [consumer-scenario-models note](docs/research/07-verification/consumer-scenario-models.md)):
@@ -2249,12 +2261,13 @@ foundation; the items above are the actual product trajectory.
         only be needed to combine two shared-sort theories, which the current set
         does not present.
 - [ ] **Incremental performance + parity (parallel R&D):** lazy
-      Plaisted–Greenbaum polarity encoding is ported (2026-06-13) — the sound
-      subset; measured aggregate clause reduction is a modest 4–11% on
-      arithmetic circuits (gate-fusion is *not* portable incrementally, see
-      Status). Still open: add a warm-vs-cold benchmark to quantify the
-      cross-query incrementality win; activation-literal GC for long sessions;
-      and the bigger lever — AIG-level arithmetic-circuit size reduction.
+      Plaisted–Greenbaum polarity encoding is ported (2026-06-13, sound subset;
+      modest 4–11% clause win — gate-fusion is *not* portable incrementally, see
+      Status), and the warm-vs-cold incrementality win is measured (2026-06-13:
+      5.64× fewer clauses across 6 shared-base queries). Still open:
+      activation-literal GC for long sessions, and the bigger lever — AIG-level
+      arithmetic-circuit size reduction (the dominant encoding cost the polarity
+      measurement exposed).
 - [ ] **Phase 5 supported-slice expansion (parallel track):** use the version 11
       smallest-DAG selector artifacts, the version 12 root-direct selector
       artifacts, the version 13 greedy selector diagnostic, the version 10
