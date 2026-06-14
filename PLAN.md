@@ -38,6 +38,21 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-14
 
+- **Mixed integer/real by branch-and-bound (2026-06-14, ADR-0027).** Conjunctive
+  `QF_LIRA` where a `to_real(x)` is coupled to a **real variable** (so the exact
+  const-compare rewrites don't apply) is now decided completely by mixed-integer
+  branch-and-bound, replacing the `unknown` the bounded coercion relaxation
+  returned. `check_with_milp` lowers the query to an all-real LP (each integer
+  symbol → a fresh real symbol; `to_real(i)` → that same symbol, so the coupling
+  is exact), then branches on any integer column the LP returns fractional. Each
+  node's LP is solved by the **Farkas-checked `check_with_lra`**, so node `unsat`
+  is sound; a fully-integral `sat` leaf is **replayed against the original** mixed
+  query. Out of the linear fragment / over the node budget → `unknown` → falls
+  back to the (sound) relaxation, so completeness only improves. Tried in
+  `check_auto` before the relaxation. Tests: `to_real(x)=y ∧ 1000.3<y<1000.9`
+  **unsat** (both branches Farkas-refuted) and `…<y<1001.3` **sat** (`x=1001`,
+  coupling replay-checked) — both previously `unknown`.
+
 - **Array equality by bounded extensionality (2026-06-14).** `eliminate_arrays`
   now handles `(= a b)` over array terms (previously `Unsupported`): for an
   `iw`-bit index, `a = b ⟺ ⋀_{i<2^iw} select(a,i) = select(b,i)` — an exact,

@@ -21,7 +21,7 @@
 
 use std::collections::{BTreeSet, HashMap};
 
-use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode, Value, eval};
+use axeyum_ir::{Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 use axeyum_rewrite::{
     QuantExpandError, build_app, expand_quantifiers, instantiate_universals,
     instantiate_with_triggers, replace_subterms,
@@ -31,7 +31,8 @@ use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, Unknow
 use crate::combined::check_with_all_theories;
 use crate::dpll_lia::{check_with_arith_dpll, check_with_lia_dpll};
 use crate::lia::DEFAULT_INT_WIDTH;
-use crate::lra::check_with_lia_simplex;
+use crate::lra::{check_with_lia_simplex, check_with_lra};
+use crate::model::Model;
 use crate::sat_bv_backend::SatBvBackend;
 
 /// The unified front door: decides any supported query — quantifier-free or
@@ -219,6 +220,19 @@ pub fn check_auto(
     if !had_coercion {
         return check_auto_dispatch(arena, assertions, config);
     }
+    // A `to_real` coercion couples the integer and real theories. Before the
+    // (sound but incomplete) relaxation above, try exact mixed-integer linear
+    // branch-and-bound: solve the LP relaxation with the Farkas-checked LRA
+    // engine and branch on any coerced integer that comes back fractional. This
+    // is *complete* for the linear mixed fragment — `unsat` is anchored by the
+    // per-node Farkas certificate and `sat` by replay against the original. Out
+    // of that fragment (or on the node budget) it returns `unknown`, and we fall
+    // through to the relaxation.
+    match check_with_milp(arena, assertions) {
+        Ok(CheckResult::Sat(model)) => return Ok(CheckResult::Sat(model)),
+        Ok(CheckResult::Unsat) => return Ok(CheckResult::Unsat),
+        Ok(CheckResult::Unknown(_)) | Err(_) => {}
+    }
     match check_auto_dispatch(arena, &relaxed, config)? {
         CheckResult::Sat(model) => {
             let assignment = model.to_assignment();
@@ -237,6 +251,212 @@ pub fn check_auto(
         }
         other => Ok(other), // Unsat (sound) or Unknown
     }
+}
+
+/// Node budget for the mixed-integer branch-and-bound; on exhaustion the result
+/// is `unknown` (and `check_auto` falls back to the coercion relaxation).
+const MAX_MILP_NODES: u32 = 2_000;
+
+/// Decides a conjunctive mixed integer/real (`QF_LIRA`) query — with `to_real`
+/// coercions intact — by mixed-integer linear branch-and-bound.
+///
+/// The query is lowered to an all-real LP by mapping every integer symbol to a
+/// fresh real symbol and `to_real(i)` to that same symbol (so the coupling is
+/// exact, not relaxed); the integer symbols are remembered as the integrality
+/// constraints. Each branch-and-bound node solves the LP with the
+/// Farkas-checked [`check_with_lra`] engine: `unsat` at a node is sound
+/// (the LP relaxation has *more* solutions than the original), and a `sat` leaf
+/// whose integer columns are all integral is **replayed against the original**
+/// mixed query through the ground evaluator. Anything outside the linear mixed
+/// fragment (nonlinear, `to_int`/`is_int`, bit-vectors, …) or the node budget
+/// yields `unknown`, so the caller falls back to the sound relaxation.
+fn check_with_milp(arena: &mut TermArena, assertions: &[TermId]) -> Result<CheckResult, SolverError> {
+    let mut lower = LiraLower::default();
+    let mut real_assertions = Vec::with_capacity(assertions.len());
+    for &a in assertions {
+        real_assertions.push(lower.lower(arena, a)?);
+    }
+    // The fresh real symbols that must take integer values (former int symbols),
+    // paired with the original integer symbol for model projection.
+    let int_cols: Vec<(SymbolId, SymbolId)> = lower.int_to_real.iter().map(|(&i, &r)| (r, i)).collect();
+    let mut budget = MAX_MILP_NODES;
+    milp_bnb(arena, &real_assertions, &int_cols, assertions, &mut budget)
+}
+
+/// One branch-and-bound subtree over the all-real lowering `real_assertions`.
+/// `int_cols` pairs each integrality-constrained real symbol with its original
+/// integer symbol; `original` is the untouched mixed query (for `sat` replay).
+fn milp_bnb(
+    arena: &mut TermArena,
+    real_assertions: &[TermId],
+    int_cols: &[(SymbolId, SymbolId)],
+    original: &[TermId],
+    budget: &mut u32,
+) -> Result<CheckResult, SolverError> {
+    if *budget == 0 {
+        return Ok(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Incomplete,
+            detail: format!("MILP branch-and-bound exceeded {MAX_MILP_NODES} nodes"),
+        }));
+    }
+    *budget -= 1;
+    let model = match check_with_lra(arena, real_assertions)? {
+        CheckResult::Unsat => return Ok(CheckResult::Unsat), // LP relaxation unsat ⇒ MILP unsat
+        CheckResult::Unknown(r) => return Ok(CheckResult::Unknown(r)),
+        CheckResult::Sat(model) => model,
+    };
+    // Find an integrality-constrained variable with a fractional LP value.
+    for &(real_sym, _) in int_cols {
+        let Some(Value::Real(q)) = model.get(real_sym) else {
+            continue;
+        };
+        if q.is_integer() {
+            continue;
+        }
+        let floor = q.numerator().div_euclid(q.denominator());
+        let var = arena.var(real_sym);
+        let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
+        // Left branch: var ≤ floor.
+        let le_c = arena.real_const(Rational::integer(floor));
+        let le = arena.real_le(var, le_c).map_err(err)?;
+        let mut left = real_assertions.to_vec();
+        left.push(le);
+        let left_res = milp_bnb(arena, &left, int_cols, original, budget)?;
+        if let CheckResult::Sat(m) = left_res {
+            return Ok(CheckResult::Sat(m));
+        }
+        // Right branch: var ≥ floor + 1.
+        let ge_c = arena.real_const(Rational::integer(floor + 1));
+        let ge = arena.real_ge(var, ge_c).map_err(err)?;
+        let mut right = real_assertions.to_vec();
+        right.push(ge);
+        let right_res = milp_bnb(arena, &right, int_cols, original, budget)?;
+        // The two half-spaces var≤floor / var≥floor+1 cover every integer value,
+        // so: sat if either branch is sat; unsat only if *both* are unsat; else
+        // unknown (a branch hit the budget).
+        return Ok(match (left_res, right_res) {
+            (_, CheckResult::Sat(m)) | (CheckResult::Sat(m), _) => CheckResult::Sat(m),
+            (CheckResult::Unsat, CheckResult::Unsat) => CheckResult::Unsat,
+            (CheckResult::Unknown(r), _) | (_, CheckResult::Unknown(r)) => {
+                CheckResult::Unknown(r)
+            }
+        });
+    }
+    // All integrality columns are integral: a genuine MILP candidate. Replay it
+    // against the *original* mixed query through the ground evaluator.
+    let mut assignment = axeyum_ir::Assignment::new();
+    let mut projected = Model::new();
+    for &(real_sym, int_sym) in int_cols {
+        let value = match model.get(real_sym) {
+            Some(Value::Real(q)) if q.is_integer() => Value::Int(q.numerator()),
+            _ => return Ok(milp_unknown()),
+        };
+        assignment.set(int_sym, value.clone());
+        projected.set(int_sym, value);
+    }
+    // Carry the genuine real variables straight through.
+    for (sym, value) in model.iter() {
+        if int_cols.iter().any(|&(r, _)| r == sym) {
+            continue; // integer column, already projected to its int symbol
+        }
+        assignment.set(sym, value.clone());
+        projected.set(sym, value);
+    }
+    for &a in original {
+        match eval(arena, a, &assignment) {
+            Ok(Value::Bool(true)) => {}
+            _ => return Ok(milp_unknown()),
+        }
+    }
+    Ok(CheckResult::Sat(projected))
+}
+
+fn milp_unknown() -> CheckResult {
+    CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail: "MILP candidate failed replay against the original query".to_owned(),
+    })
+}
+
+/// Lowers a mixed integer/real query to an all-real one for the MILP LP oracle:
+/// each integer symbol becomes a fresh real symbol, `to_real(i)` becomes that
+/// symbol, and the integer linear operators map to their real counterparts.
+#[derive(Default)]
+struct LiraLower {
+    /// Original integer symbol → fresh real symbol.
+    int_to_real: std::collections::BTreeMap<SymbolId, SymbolId>,
+    memo: HashMap<TermId, TermId>,
+}
+
+impl LiraLower {
+    fn real_of_int(&mut self, arena: &mut TermArena, int_sym: SymbolId) -> Result<TermId, SolverError> {
+        if let Some(&r) = self.int_to_real.get(&int_sym) {
+            return Ok(arena.var(r));
+        }
+        let name = format!("!milp.{}", int_sym.index());
+        let r = arena
+            .declare(&name, Sort::Real)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+        self.int_to_real.insert(int_sym, r);
+        Ok(arena.var(r))
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn lower(&mut self, arena: &mut TermArena, t: TermId) -> Result<TermId, SolverError> {
+        if let Some(&c) = self.memo.get(&t) {
+            return Ok(c);
+        }
+        let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
+        let node = arena.node(t).clone();
+        let out = match node {
+            TermNode::BoolConst(_) | TermNode::RealConst(_) => t,
+            // Bit-vectors (and any other leaf) are outside the mixed LIA/LRA
+            // fragment this oracle lowers.
+            TermNode::BvConst { .. } => return Err(milp_out_of_fragment()),
+            TermNode::IntConst(n) => arena.real_const(Rational::integer(n)),
+            TermNode::Symbol(s) => match arena.sort_of(t) {
+                Sort::Int => self.real_of_int(arena, s)?,
+                Sort::Real | Sort::Bool => t,
+                _ => return Err(milp_out_of_fragment()),
+            },
+            TermNode::App { op, args } => {
+                // `to_real(i)` collapses to the lowered (real) integer operand.
+                if matches!(op, Op::IntToReal) {
+                    let inner = self.lower(arena, args[0])?;
+                    self.memo.insert(t, inner);
+                    return Ok(inner);
+                }
+                let mut low = Vec::with_capacity(args.len());
+                for &a in &args {
+                    low.push(self.lower(arena, a)?);
+                }
+                match op {
+                    Op::IntNeg => arena.real_neg(low[0]).map_err(err)?,
+                    Op::IntAdd => arena.real_add(low[0], low[1]).map_err(err)?,
+                    Op::IntSub => arena.real_sub(low[0], low[1]).map_err(err)?,
+                    Op::IntMul => arena.real_mul(low[0], low[1]).map_err(err)?,
+                    Op::IntLt => arena.real_lt(low[0], low[1]).map_err(err)?,
+                    Op::IntLe => arena.real_le(low[0], low[1]).map_err(err)?,
+                    Op::IntGt => arena.real_gt(low[0], low[1]).map_err(err)?,
+                    Op::IntGe => arena.real_ge(low[0], low[1]).map_err(err)?,
+                    Op::Eq | Op::BoolAnd | Op::BoolOr | Op::BoolNot | Op::BoolXor
+                    | Op::BoolImplies | Op::Ite | Op::RealNeg | Op::RealAdd | Op::RealSub
+                    | Op::RealMul | Op::RealLt | Op::RealLe | Op::RealGt | Op::RealGe => {
+                        build_app(arena, op, &low).map_err(err)?
+                    }
+                    // to_int/is_int, integer div/mod/abs, bit-vectors, arrays, …
+                    // are outside the linear mixed fragment this oracle handles.
+                    _ => return Err(milp_out_of_fragment()),
+                }
+            }
+        };
+        self.memo.insert(t, out);
+        Ok(out)
+    }
+}
+
+fn milp_out_of_fragment() -> SolverError {
+    SolverError::Unsupported("term outside the linear mixed integer/real fragment".to_owned())
 }
 
 /// The theory dispatcher (coercions already relaxed away by [`check_auto`]).

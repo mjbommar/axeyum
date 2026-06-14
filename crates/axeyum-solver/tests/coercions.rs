@@ -253,3 +253,50 @@ fn sum_of_to_real_vs_constant_is_exact() {
     assert!(matches!(solve_auto(&mut a, &[le, ge]), CheckResult::Unsat),
         "to_real(x)+to_real(y)<=5.5 ∧ x+y>=6 unsat");
 }
+
+// --- Mixed integer/real (QF_LIRA) by branch-and-bound (ADR-pending MILP) ------
+// These couple an integer to a *real variable* via `to_real`, so the exact
+// "coerced int vs constant" rewrites don't apply; only the mixed-integer
+// branch-and-bound decides them (the bounded coercion relaxation returns
+// `unknown`).
+
+#[test]
+fn milp_coerced_integer_vs_real_var_unsat() {
+    // to_real(x) == y && 1000.3 < y < 1000.9: no integer x has a real image in
+    // that open interval, so unsat. Branch-and-bound: x<=1000 and x>=1001 both
+    // contradict the bounds (each leaf's LP is Farkas-refuted).
+    use axeyum_ir::Rational;
+    let mut a = TermArena::new();
+    let x = a.int_var("x").unwrap();
+    let y = a.real_var("y").unwrap();
+    let xr = a.int_to_real(x).unwrap();
+    let eq = a.eq(xr, y).unwrap();
+    let lo = a.real_const(Rational::new(10003, 10)); // 1000.3
+    let hi = a.real_const(Rational::new(10009, 10)); // 1000.9
+    let gt = a.real_gt(y, lo).unwrap();
+    let lt = a.real_lt(y, hi).unwrap();
+    assert!(matches!(
+        solve_auto(&mut a, &[eq, gt, lt]),
+        CheckResult::Unsat
+    ));
+}
+
+#[test]
+fn milp_coerced_integer_vs_real_var_sat() {
+    // to_real(x) == y && 1000.3 < y < 1001.3: x = 1001 (image 1001.0) works.
+    // Decided sat and replayed against the original (to_real coupling holds).
+    use axeyum_ir::Rational;
+    let mut a = TermArena::new();
+    let x = a.int_var("x").unwrap();
+    let y = a.real_var("y").unwrap();
+    let xr = a.int_to_real(x).unwrap();
+    let eq = a.eq(xr, y).unwrap();
+    let lo = a.real_const(Rational::new(10003, 10)); // 1000.3
+    let hi = a.real_const(Rational::new(10013, 10)); // 1001.3
+    let gt = a.real_gt(y, lo).unwrap();
+    let lt = a.real_lt(y, hi).unwrap();
+    assert!(matches!(
+        solve_auto(&mut a, &[eq, gt, lt]),
+        CheckResult::Sat(_)
+    ));
+}
