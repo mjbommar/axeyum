@@ -52,6 +52,7 @@ fn simplify(
     let result = match node {
         TermNode::BoolConst(_)
         | TermNode::BvConst { .. }
+        | TermNode::WideBvConst(_)
         | TermNode::IntConst(_)
         | TermNode::RealConst(_)
         | TermNode::Symbol(_) => term,

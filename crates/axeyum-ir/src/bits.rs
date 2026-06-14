@@ -30,6 +30,7 @@ pub fn value_to_lsb_bits(value: Value) -> Result<Vec<bool>, IrError> {
     match value {
         Value::Bool(bit) => Ok(vec![bit]),
         Value::Bv { width, value } => bv_value_to_lsb_bits(width, value),
+        Value::WideBv(w) => Ok(w.to_lsb_bits()),
         Value::Array(array) => Err(IrError::SortMismatch {
             expected: "Bool or BitVec",
             found: Sort::Array {

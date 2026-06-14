@@ -82,6 +82,7 @@ impl Expander {
         let result = match node {
             TermNode::BoolConst(_)
             | TermNode::BvConst { .. }
+            | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
             | TermNode::RealConst(_)
             | TermNode::Symbol(_) => term,
@@ -185,6 +186,7 @@ fn substitute(
         TermNode::Symbol(symbol) if symbol == var => replacement,
         TermNode::BoolConst(_)
         | TermNode::BvConst { .. }
+        | TermNode::WideBvConst(_)
         | TermNode::IntConst(_)
         | TermNode::RealConst(_)
         | TermNode::Symbol(_) => term,
@@ -814,6 +816,7 @@ fn term_is_ground(
     let result = match arena.node(term) {
         TermNode::BoolConst(_)
         | TermNode::BvConst { .. }
+        | TermNode::WideBvConst(_)
         | TermNode::IntConst(_)
         | TermNode::RealConst(_) => true,
         TermNode::Symbol(symbol) => !bound.contains(symbol),
@@ -865,6 +868,7 @@ fn ground_universe(
         let ground = match arena.node(term) {
             TermNode::BoolConst(_)
             | TermNode::BvConst { .. }
+            | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
             | TermNode::RealConst(_) => true,
             TermNode::Symbol(symbol) => !bound.contains(symbol),

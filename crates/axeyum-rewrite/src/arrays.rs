@@ -198,6 +198,7 @@ impl Eliminator {
         let result = match node {
             TermNode::BoolConst(_)
             | TermNode::BvConst { .. }
+            | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
             | TermNode::RealConst(_)
             | TermNode::Symbol(_) => term,
@@ -393,6 +394,7 @@ fn contains_array(arena: &TermArena, term: TermId) -> bool {
             }
             TermNode::BoolConst(_)
             | TermNode::BvConst { .. }
+            | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
             | TermNode::RealConst(_)
             | TermNode::Symbol(_) => {}

@@ -14,13 +14,16 @@ use crate::term::{ConstructorId, DatatypeId};
 pub enum Value {
     /// A Boolean value.
     Bool(bool),
-    /// A bit-vector value; `value` always fits in `width` bits.
+    /// A bit-vector value of width `≤ 128`; `value` always fits in `width` bits.
+    /// Wider bit-vectors are [`Value::WideBv`]; the two never overlap.
     Bv {
         /// Width in bits.
         width: u32,
         /// The value, masked to `width` bits.
         value: u128,
     },
+    /// A bit-vector value of width `> 128`, stored as limbs (wide-BV).
+    WideBv(crate::wide::WideUint),
     /// An array value: a total map from `BitVec(index)` to `BitVec(element)`,
     /// stored as a default element plus the overriding entries.
     Array(ArrayValue),
@@ -265,6 +268,7 @@ impl Value {
         match self {
             Value::Bool(b) => u128::from(*b),
             Value::Bv { value, .. } => *value,
+            Value::WideBv(_) => panic!("scalar encoding of a >128-bit bit-vector value"),
             Value::Array(_) => panic!("scalar encoding of an array value"),
             Value::Int(_) => panic!("scalar encoding of an integer value"),
             Value::Real(_) => panic!("scalar encoding of a real value"),
@@ -277,6 +281,7 @@ impl Value {
         match self {
             Value::Bool(_) => Sort::Bool,
             Value::Bv { width, .. } => Sort::BitVec(*width),
+            Value::WideBv(w) => Sort::BitVec(w.width()),
             Value::Array(array) => Sort::Array {
                 index: array.index_width,
                 element: array.element_width,
@@ -295,7 +300,8 @@ impl Value {
             | Value::Array(_)
             | Value::Int(_)
             | Value::Real(_)
-            | Value::Datatype { .. } => None,
+            | Value::Datatype { .. }
+            | Value::WideBv(_) => None,
         }
     }
 
@@ -307,7 +313,8 @@ impl Value {
             | Value::Array(_)
             | Value::Int(_)
             | Value::Real(_)
-            | Value::Datatype { .. } => None,
+            | Value::Datatype { .. }
+            | Value::WideBv(_) => None,
         }
     }
 
@@ -319,7 +326,8 @@ impl Value {
             | Value::Bv { .. }
             | Value::Int(_)
             | Value::Real(_)
-            | Value::Datatype { .. } => None,
+            | Value::Datatype { .. }
+            | Value::WideBv(_) => None,
         }
     }
 
@@ -331,7 +339,8 @@ impl Value {
             | Value::Bv { .. }
             | Value::Array(_)
             | Value::Real(_)
-            | Value::Datatype { .. } => None,
+            | Value::Datatype { .. }
+            | Value::WideBv(_) => None,
         }
     }
 
@@ -343,7 +352,16 @@ impl Value {
             | Value::Bv { .. }
             | Value::Array(_)
             | Value::Int(_)
-            | Value::Datatype { .. } => None,
+            | Value::Datatype { .. }
+            | Value::WideBv(_) => None,
+        }
+    }
+
+    /// Returns the wide (`> 128`-bit) bit-vector payload, or `None`.
+    pub fn as_wide_bv(&self) -> Option<&crate::wide::WideUint> {
+        match self {
+            Value::WideBv(w) => Some(w),
+            _ => None,
         }
     }
 }
@@ -354,6 +372,14 @@ impl core::fmt::Display for Value {
             Value::Bool(b) => write!(f, "{b}"),
             Value::Bv { width, value } => {
                 write!(f, "#x{value:0>pad$x}", pad = (*width as usize).div_ceil(4))
+            }
+            Value::WideBv(w) => {
+                // Render MSB-first as a binary literal (no u128 to hex-format).
+                write!(f, "#b")?;
+                for i in (0..w.width()).rev() {
+                    write!(f, "{}", u8::from(w.bit(i)))?;
+                }
+                Ok(())
             }
             Value::Array(array) => {
                 write!(f, "(array default #x{:x}", array.default)?;

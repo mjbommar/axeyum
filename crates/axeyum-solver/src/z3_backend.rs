@@ -332,6 +332,11 @@ fn translate(
             TermNode::BvConst { width, value } => {
                 cache.insert(t, Z3Term::V(bv_constant(*width, *value)?));
             }
+            TermNode::WideBvConst(_) => {
+                return Err(SolverError::Unsupported(
+                    "z3 oracle does not support >128-bit bit-vectors yet".to_owned(),
+                ));
+            }
             TermNode::IntConst(_) => {
                 return Err(SolverError::Unsupported(
                     "z3 oracle does not support integer terms yet (ADR-0014)".to_owned(),

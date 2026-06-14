@@ -51,6 +51,7 @@ impl TermStats {
             match arena.node(t) {
                 TermNode::BoolConst(_)
                 | TermNode::BvConst { .. }
+                | TermNode::WideBvConst(_)
                 | TermNode::IntConst(_)
                 | TermNode::RealConst(_) => {
                     stats.dag_nodes += 1;

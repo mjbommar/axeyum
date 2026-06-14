@@ -509,6 +509,10 @@ fn profile_terms_with_label(label: &str, arena: &TermArena, roots: &[TermId]) {
                 *counts.entry("BvConst".to_owned()).or_default() += 1;
                 *widths.entry(format!("const_bv{width}")).or_default() += 1;
             }
+            TermNode::WideBvConst(w) => {
+                *counts.entry("WideBvConst".to_owned()).or_default() += 1;
+                *widths.entry(format!("const_bv{}", w.width())).or_default() += 1;
+            }
             TermNode::IntConst(_) => {
                 *counts.entry("IntConst".to_owned()).or_default() += 1;
             }

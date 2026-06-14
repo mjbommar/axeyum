@@ -108,6 +108,14 @@ pub fn render(arena: &TermArena, term: TermId) -> String {
             TermNode::BvConst { width, value } => {
                 memo.insert(t, format!("(_ bv{value} {width})"));
             }
+            TermNode::WideBvConst(w) => {
+                // MSB-first binary literal (the value may exceed u128).
+                let mut s = String::from("#b");
+                for i in (0..w.width()).rev() {
+                    s.push(if w.bit(i) { '1' } else { '0' });
+                }
+                memo.insert(t, s);
+            }
             TermNode::IntConst(value) => {
                 // SMT-LIB renders negative integers as `(- n)`.
                 if *value < 0 {

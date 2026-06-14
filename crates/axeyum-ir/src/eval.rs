@@ -168,6 +168,9 @@ pub fn eval(arena: &TermArena, term: TermId, assignment: &Assignment) -> Result<
                     },
                 );
             }
+            TermNode::WideBvConst(w) => {
+                memo.insert(t, Value::WideBv(w.clone()));
+            }
             TermNode::IntConst(value) => {
                 memo.insert(t, Value::Int(*value));
             }
@@ -325,6 +328,11 @@ fn eval_quantifier(
 // artificial split; length is inherent to the operator count.
 #[allow(clippy::too_many_lines)]
 fn apply(op: Op, vals: &[Value]) -> Value {
+    // Bit-vectors wider than 128 bits take a separate path; the `u128` fast path
+    // below is unchanged for the common case (no `WideBv` operand).
+    if vals.iter().any(|v| matches!(v, Value::WideBv(_))) {
+        return apply_wide(op, vals);
+    }
     let b = |v: &Value| v.as_bool().expect("builder guaranteed Bool operand");
     let bv = |v: &Value| v.as_bv().expect("builder guaranteed BitVec operand");
     let int = |v: &Value| v.as_int().expect("builder guaranteed Int operand");
@@ -607,6 +615,122 @@ fn apply(op: Op, vals: &[Value]) -> Value {
         Op::DtConstruct { .. } | Op::DtSelect { .. } | Op::DtTest(_) => {
             unreachable!("datatype ops are evaluated in `eval`")
         }
+    }
+}
+
+/// The wide (`> 128`-bit) bit-vector evaluation path, reached from [`apply`] only
+/// when an operand is a [`Value::WideBv`]. Operands are normalized to
+/// [`crate::wide::WideUint`] (a `Value::Bv` widens losslessly), the operator runs
+/// via its validated `WideUint` implementation, and a `≤ 128`-bit result narrows
+/// back to a `Value::Bv` (so the two representations never overlap).
+#[allow(clippy::too_many_lines)]
+fn apply_wide(op: Op, vals: &[Value]) -> Value {
+    use crate::wide::WideUint;
+    let w = |v: &Value| -> WideUint {
+        match v {
+            Value::WideBv(x) => x.clone(),
+            Value::Bv { width, value } => WideUint::from_u128(*value, *width),
+            _ => panic!("apply_wide on a non-bit-vector operand"),
+        }
+    };
+    // Narrow a result back to `Value::Bv` when it fits 128 bits.
+    let pack = |r: WideUint| -> Value {
+        if r.width() <= 128 {
+            Value::Bv {
+                width: r.width(),
+                value: r.to_u128(),
+            }
+        } else {
+            Value::WideBv(r)
+        }
+    };
+    // The shift amount (second operand) as a `u32`, saturated to the width.
+    let shift_amount = |amount: &WideUint, width: u32| -> u32 {
+        let width_w = WideUint::from_u128(u128::from(width), amount.width());
+        if amount.uge(&width_w) {
+            width
+        } else {
+            // amount < width fits a u32: read its low bits.
+            let bits = amount.to_lsb_bits();
+            let mut n = 0u32;
+            for (i, &bit) in bits.iter().take(32).enumerate() {
+                if bit {
+                    n |= 1u32 << i;
+                }
+            }
+            n
+        }
+    };
+    let one_bit = |b: bool| Value::Bv {
+        width: 1,
+        value: u128::from(b),
+    };
+    match op {
+        Op::BvNot => pack(w(&vals[0]).not()),
+        Op::BvAnd => pack(w(&vals[0]).and(&w(&vals[1]))),
+        Op::BvOr => pack(w(&vals[0]).or(&w(&vals[1]))),
+        Op::BvXor => pack(w(&vals[0]).xor(&w(&vals[1]))),
+        Op::BvNand => pack(w(&vals[0]).and(&w(&vals[1])).not()),
+        Op::BvNor => pack(w(&vals[0]).or(&w(&vals[1])).not()),
+        Op::BvXnor => pack(w(&vals[0]).xor(&w(&vals[1])).not()),
+        Op::BvNeg => pack(w(&vals[0]).neg()),
+        Op::BvAdd => pack(w(&vals[0]).add(&w(&vals[1]))),
+        Op::BvSub => pack(w(&vals[0]).sub(&w(&vals[1]))),
+        Op::BvMul => pack(w(&vals[0]).mul(&w(&vals[1]))),
+        Op::BvUdiv => pack(w(&vals[0]).udiv(&w(&vals[1]))),
+        Op::BvUrem => pack(w(&vals[0]).urem(&w(&vals[1]))),
+        Op::BvSdiv => pack(w(&vals[0]).sdiv(&w(&vals[1]))),
+        Op::BvSrem => pack(w(&vals[0]).srem(&w(&vals[1]))),
+        Op::BvSmod => pack(w(&vals[0]).smod(&w(&vals[1]))),
+        Op::BvShl => {
+            let a = w(&vals[0]);
+            let k = shift_amount(&w(&vals[1]), a.width());
+            pack(a.shl(k))
+        }
+        Op::BvLshr => {
+            let a = w(&vals[0]);
+            let k = shift_amount(&w(&vals[1]), a.width());
+            pack(a.lshr(k))
+        }
+        Op::BvAshr => {
+            let a = w(&vals[0]);
+            let k = shift_amount(&w(&vals[1]), a.width());
+            pack(a.ashr(k))
+        }
+        Op::BvUlt => Value::Bool(w(&vals[0]).ult(&w(&vals[1]))),
+        Op::BvUle => Value::Bool(w(&vals[0]).ule(&w(&vals[1]))),
+        Op::BvUgt => Value::Bool(w(&vals[1]).ult(&w(&vals[0]))),
+        Op::BvUge => Value::Bool(w(&vals[0]).uge(&w(&vals[1]))),
+        Op::BvSlt => Value::Bool(w(&vals[0]).slt(&w(&vals[1]))),
+        Op::BvSle => Value::Bool(w(&vals[0]).sle(&w(&vals[1]))),
+        Op::BvSgt => Value::Bool(w(&vals[1]).slt(&w(&vals[0]))),
+        Op::BvSge => Value::Bool(w(&vals[1]).sle(&w(&vals[0]))),
+        Op::Eq => Value::Bool(w(&vals[0]) == w(&vals[1])),
+        Op::BvComp => one_bit(w(&vals[0]) == w(&vals[1])),
+        Op::Ite => {
+            if vals[0].as_bool().expect("ite condition is Bool") {
+                vals[1].clone()
+            } else {
+                vals[2].clone()
+            }
+        }
+        Op::Extract { hi, lo } => pack(w(&vals[0]).extract(hi, lo)),
+        Op::Concat => pack(w(&vals[0]).concat(&w(&vals[1]))),
+        Op::ZeroExt { by } => pack(w(&vals[0]).zero_ext(by)),
+        Op::SignExt { by } => pack(w(&vals[0]).sign_ext(by)),
+        Op::RotateLeft { by } => {
+            let a = w(&vals[0]);
+            let k = by % a.width().max(1);
+            pack(a.shl(k).or(&a.lshr(a.width() - k)))
+        }
+        Op::RotateRight { by } => {
+            let a = w(&vals[0]);
+            let k = by % a.width().max(1);
+            pack(a.lshr(k).or(&a.shl(a.width() - k)))
+        }
+        // A floating-point reinterpret is identity on the bits.
+        Op::FpFromBits { .. } => pack(w(&vals[0])),
+        other => panic!("apply_wide: operator {other:?} not supported on wide bit-vectors"),
     }
 }
 

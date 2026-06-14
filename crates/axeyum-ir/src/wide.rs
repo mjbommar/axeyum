@@ -13,9 +13,10 @@
 //! exactly. It is not yet referenced by the evaluator; that integration (a
 //! `Value::WideBv` / `TermNode::WideBvConst` variant threaded through `eval`,
 //! `bits`, and the arena) is the next step and is gated on this validated core.
-#![allow(dead_code)] // foundation for >128-bit bit-vectors; wired in a follow-up.
-// Limb arithmetic deliberately takes the low 64/32 bits of wider intermediates.
-#![allow(clippy::cast_possible_truncation)]
+// Some operators are wired into the evaluator's wide path; others await the
+// ceiling raise. Limb arithmetic deliberately takes the low 64/32 bits of wider
+// intermediates.
+#![allow(dead_code, clippy::cast_possible_truncation)]
 
 /// An unsigned bit-vector value of a fixed `width`, stored little-endian as
 /// `u64` limbs and always masked to `width` (bits above `width` are zero).
@@ -459,6 +460,10 @@ impl WideUint {
     }
 
     /// Builds a `bits.len()`-bit value from LSB-first bits (index `i` is bit `i`).
+    ///
+    /// # Panics
+    ///
+    /// Panics only if `bits.len()` exceeds `u32::MAX`.
     #[must_use]
     pub fn from_lsb_bits(bits: &[bool]) -> Self {
         let width = u32::try_from(bits.len()).expect("bit count fits u32");

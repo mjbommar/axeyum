@@ -412,7 +412,9 @@ impl LiraLower {
             TermNode::BoolConst(_) | TermNode::RealConst(_) => t,
             // Bit-vectors (and any other leaf) are outside the mixed LIA/LRA
             // fragment this oracle lowers.
-            TermNode::BvConst { .. } => return Err(milp_out_of_fragment()),
+            TermNode::BvConst { .. } | TermNode::WideBvConst(_) => {
+                return Err(milp_out_of_fragment());
+            }
             TermNode::IntConst(n) => arena.real_const(Rational::integer(n)),
             TermNode::Symbol(s) => match arena.sort_of(t) {
                 Sort::Int => self.real_of_int(arena, s)?,

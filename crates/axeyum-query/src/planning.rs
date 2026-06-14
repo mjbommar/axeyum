@@ -442,6 +442,15 @@ fn term_fingerprint(arena: &TermArena, root: TermId) -> u64 {
                 update_u128(&mut hash, *value);
                 memo.insert(term, hash);
             }
+            TermNode::WideBvConst(w) => {
+                let mut hash = FNV_OFFSET;
+                update_u64(&mut hash, 7);
+                update_u64(&mut hash, u64::from(w.width()));
+                for bit in w.to_lsb_bits() {
+                    update_u64(&mut hash, u64::from(bit));
+                }
+                memo.insert(term, hash);
+            }
             TermNode::IntConst(value) => {
                 let mut hash = FNV_OFFSET;
                 update_u64(&mut hash, 5);
@@ -506,6 +515,7 @@ fn support_for_terms(arena: &TermArena, roots: &[TermId]) -> BTreeSet<SymbolId> 
             }
             TermNode::BoolConst(_)
             | TermNode::BvConst { .. }
+            | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
             | TermNode::RealConst(_) => {}
         }

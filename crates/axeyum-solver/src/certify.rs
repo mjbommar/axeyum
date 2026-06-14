@@ -116,7 +116,7 @@ fn collect_enumerable_symbols(
                     "enumeration certificate: query uses integer/real arithmetic".to_owned(),
                 ));
             }
-            TermNode::BoolConst(_) | TermNode::BvConst { .. } => {}
+            TermNode::BoolConst(_) | TermNode::BvConst { .. } | TermNode::WideBvConst(_) => {}
         }
     }
     // Deduplicate (a symbol may be reached via several terms) and order

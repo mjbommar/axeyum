@@ -657,11 +657,12 @@ impl Abstractor {
                     "lazy SMT: assertion is not Boolean structure over real order atoms".to_owned(),
                 )),
             },
-            TermNode::BvConst { .. } | TermNode::IntConst(_) | TermNode::RealConst(_) => {
-                Err(SolverError::Unsupported(
-                    "lazy SMT: non-Boolean constant at a Boolean position".to_owned(),
-                ))
-            }
+            TermNode::BvConst { .. }
+            | TermNode::WideBvConst(_)
+            | TermNode::IntConst(_)
+            | TermNode::RealConst(_) => Err(SolverError::Unsupported(
+                "lazy SMT: non-Boolean constant at a Boolean position".to_owned(),
+            )),
         }
     }
 

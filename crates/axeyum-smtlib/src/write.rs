@@ -47,6 +47,7 @@ pub fn write_script(arena: &TermArena, assertions: &[TermId]) -> String {
             }
             TermNode::BoolConst(_)
             | TermNode::BvConst { .. }
+            | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
             | TermNode::RealConst(_) => {}
         }
@@ -209,6 +210,14 @@ fn render_node(arena: &TermArena, root: TermId, names: &HashMap<TermId, String>)
             }
             TermNode::BvConst { width, value } => {
                 memo.insert(t, format!("(_ bv{value} {width})"));
+            }
+            TermNode::WideBvConst(w) => {
+                // MSB-first binary literal (the value exceeds u128).
+                let mut s = String::from("#b");
+                for i in (0..w.width()).rev() {
+                    s.push(if w.bit(i) { '1' } else { '0' });
+                }
+                memo.insert(t, s);
             }
             TermNode::IntConst(value) => {
                 // SMT-LIB renders negative integers as `(- n)`.

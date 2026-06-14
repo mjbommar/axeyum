@@ -38,6 +38,25 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-14
 
+- **Wide bit-vectors — IR integration (2026-06-14, wide-BV step 3).** The IR now
+  represents bit-vectors of width `> 128`: `Value::WideBv(WideUint)` and
+  `TermNode::WideBvConst(WideUint)` (the `≤ 128` `Value::Bv`/`BvConst` are
+  unchanged; the two never overlap). The evaluator routes to a new `apply_wide`
+  path **only when an operand is wide** — so the `u128` fast path is untouched —
+  and that path runs every bit-vector operator through the validated `WideUint`
+  kernel, narrowing a `≤ 128`-bit result back to `Value::Bv`. Threaded through the
+  whole workspace's `Value`/`TermNode` matches (eval, bits, fmt, stats, query
+  planning, rewrite canonical/int-blast/functions/quantifiers/arrays/datatypes,
+  bv lowering — wide consts lower to their bit literals — smtlib writer, solver
+  miter/certify/dpll/auto/z3). `arena.wide_bv_const` builds wide constants; the
+  bit-blaster handles them (the AIG is bit-level, so width is unbounded). Tested
+  end-to-end: a 200-bit `bvadd`/`bvmul`/`bvxor`/`bvult`/`extract` evaluates
+  correctly against the `WideUint` reference (comparison → `Bool`, extract → a
+  narrowed `Bv`). **`MAX_BV_WIDTH` stays 128 for now** — production builders/parser
+  don't yet produce wide values, so behavior is unchanged; the next step raises
+  the ceiling (and has `bv_const`/the FP fma builder emit wide), unblocking
+  symbolic F64 `fp.fma` and F128/large-BV arithmetic.
+
 - **Wide bit-vector arithmetic — foundation (2026-06-14, step 1 of lifting the
   128-bit ceiling).** `axeyum-ir`'s `wide::WideUint` is a limb-based (little-endian
   `u64`) arbitrary-width unsigned integer implementing the bit-vector operator

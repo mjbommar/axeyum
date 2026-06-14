@@ -461,6 +461,7 @@ fn canonicalize_root(
         match node {
             TermNode::BoolConst(_)
             | TermNode::BvConst { .. }
+            | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
             | TermNode::RealConst(_)
             | TermNode::Symbol(_) => {
@@ -1055,6 +1056,7 @@ pub fn replace_subterms(
     let result = match node {
         TermNode::BoolConst(_)
         | TermNode::BvConst { .. }
+        | TermNode::WideBvConst(_)
         | TermNode::IntConst(_)
         | TermNode::RealConst(_)
         | TermNode::Symbol(_) => term,
@@ -1090,6 +1092,7 @@ fn value_to_term(arena: &mut TermArena, value: Value) -> Result<TermId, IrError>
     match value {
         Value::Bool(value) => Ok(arena.bool_const(value)),
         Value::Bv { width, value } => arena.bv_const(width, value),
+        Value::WideBv(w) => Ok(arena.wide_bv_const(w)),
         Value::Datatype { datatype, .. } => Err(IrError::SortMismatch {
             expected: "Bool or BitVec",
             found: Sort::Datatype(datatype),
@@ -1110,6 +1113,7 @@ fn bool_const(arena: &TermArena, term: TermId) -> Option<bool> {
     match arena.node(term) {
         TermNode::BoolConst(value) => Some(*value),
         TermNode::BvConst { .. }
+        | TermNode::WideBvConst(_)
         | TermNode::IntConst(_)
         | TermNode::RealConst(_)
         | TermNode::Symbol(_)
@@ -1125,6 +1129,7 @@ fn bv_const(arena: &TermArena, term: TermId) -> Option<(u32, u128)> {
     match arena.node(term) {
         TermNode::BvConst { width, value } => Some((*width, *value)),
         TermNode::BoolConst(_)
+        | TermNode::WideBvConst(_)
         | TermNode::IntConst(_)
         | TermNode::RealConst(_)
         | TermNode::Symbol(_)

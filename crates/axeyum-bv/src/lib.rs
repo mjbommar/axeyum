@@ -678,6 +678,12 @@ impl<'a> LoweringBuilder<'a> {
                         .collect::<Vec<_>>();
                     self.record(term, bits)?;
                 }
+                TermNode::WideBvConst(w) => {
+                    // A >128-bit constant lowers to its LSB-first bit literals
+                    // (wide-BV; the AIG is bit-level so width is unbounded).
+                    let bits = w.to_lsb_bits().into_iter().map(const_lit).collect::<Vec<_>>();
+                    self.record(term, bits)?;
+                }
                 TermNode::IntConst(_) => {
                     // Integers are not bit-blasted (ADR-0014); callers preflight
                     // with `first_unsupported_sort`.

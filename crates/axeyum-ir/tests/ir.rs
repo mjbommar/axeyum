@@ -1343,3 +1343,41 @@ fn fp_from_bits_reinterprets_as_float_identity_on_bits() {
         Err(IrError::SortMismatch { .. })
     ));
 }
+
+#[test]
+fn wide_bit_vector_evaluation() {
+    use axeyum_ir::WideUint;
+    // A 200-bit bit-vector exceeds the u128 ceiling, so it flows through the
+    // Value::WideBv / WideBvConst path and the evaluator's wide arithmetic.
+    let mut arena = TermArena::new();
+    let a = WideUint::from_u128(0x1234_5678_9abc, 200).shl(70); // a large 200-bit value
+    let b = WideUint::from_u128(0xdead_beef, 200);
+    let at = arena.wide_bv_const(a.clone());
+    let bt = arena.wide_bv_const(b.clone());
+    assert_eq!(arena.sort_of(at), Sort::BitVec(200));
+
+    let asg = Assignment::new();
+    let check = |arena: &TermArena, t, want: &WideUint| {
+        assert_eq!(eval(arena, t, &asg).unwrap(), Value::WideBv(want.clone()));
+    };
+    let add = arena.bv_add(at, bt).unwrap();
+    check(&arena, add, &a.add(&b));
+    let mul = arena.bv_mul(at, bt).unwrap();
+    check(&arena, mul, &a.mul(&b));
+    let xor = arena.bv_xor(at, bt).unwrap();
+    check(&arena, xor, &a.xor(&b));
+
+    // A comparison narrows to Bool.
+    let ult = arena.bv_ult(bt, at).unwrap();
+    assert_eq!(eval(&arena, ult, &asg).unwrap(), Value::Bool(b.ult(&a)));
+
+    // Extracting the low 64 bits narrows the result back to a Value::Bv.
+    let low = arena.extract(63, 0, at).unwrap();
+    assert_eq!(
+        eval(&arena, low, &asg).unwrap(),
+        Value::Bv {
+            width: 64,
+            value: a.extract(63, 0).to_u128()
+        }
+    );
+}

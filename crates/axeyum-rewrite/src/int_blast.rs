@@ -183,7 +183,10 @@ impl Blaster {
         }
         let node = arena.node(term).clone();
         let result = match node {
-            TermNode::BoolConst(_) | TermNode::BvConst { .. } | TermNode::RealConst(_) => term,
+            TermNode::BoolConst(_)
+            | TermNode::BvConst { .. }
+            | TermNode::WideBvConst(_)
+            | TermNode::RealConst(_) => term,
             TermNode::IntConst(value) => self.encode_constant(arena, value)?,
             TermNode::Symbol(symbol) => {
                 if arena.sort_of(term) == Sort::Int {
@@ -345,6 +348,7 @@ fn contains_integer(arena: &TermArena, term: TermId) -> bool {
             TermNode::App { args, .. } => stack.extend(args.iter().copied()),
             TermNode::BoolConst(_)
             | TermNode::BvConst { .. }
+            | TermNode::WideBvConst(_)
             | TermNode::RealConst(_)
             | TermNode::Symbol(_) => {}
         }

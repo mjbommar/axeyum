@@ -271,6 +271,7 @@ fn reference_bits(
         TermNode::BvConst { width, value } => (0..width)
             .map(|i| bool_lit((value >> i) & 1 == 1))
             .collect(),
+        TermNode::WideBvConst(w) => w.to_lsb_bits().into_iter().map(bool_lit).collect(),
         TermNode::Symbol(symbol) => {
             let width = term_width(arena, term)?;
             (0..width)

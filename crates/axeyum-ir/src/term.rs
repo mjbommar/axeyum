@@ -307,13 +307,16 @@ pub enum Op {
 pub enum TermNode {
     /// A Boolean constant.
     BoolConst(bool),
-    /// A bit-vector constant; `value` is masked to `width` at build time.
+    /// A bit-vector constant of width `≤ 128`; `value` is masked to `width` at
+    /// build time. Wider constants are [`TermNode::WideBvConst`].
     BvConst {
         /// Width in bits.
         width: u32,
         /// The constant value; always fits in `width` bits.
         value: u128,
     },
+    /// A bit-vector constant of width `> 128` (wide-BV).
+    WideBvConst(crate::wide::WideUint),
     /// An integer constant (ADR-0014).
     IntConst(i128),
     /// A real constant as an exact rational (ADR-0015).

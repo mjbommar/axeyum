@@ -243,6 +243,14 @@ impl TermArena {
         Ok(self.intern_node(TermNode::BvConst { width, value }, Sort::BitVec(width)))
     }
 
+    /// A bit-vector constant of width `> 128`, carried as limbs (wide-BV). The
+    /// `≤ 128` case must use [`TermArena::bv_const`]; this is the wider path used
+    /// by the bit-vector lowering for large intermediates.
+    pub fn wide_bv_const(&mut self, value: crate::wide::WideUint) -> TermId {
+        let width = value.width();
+        self.intern_node(TermNode::WideBvConst(value), Sort::BitVec(width))
+    }
+
     // ----- sort-check helpers -------------------------------------------
 
     fn expect_bool(&self, t: TermId) -> Result<(), IrError> {
