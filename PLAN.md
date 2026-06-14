@@ -56,6 +56,25 @@ Last updated: 2026-06-14
   IR `fp_from_bits` round-trip. The bit-vector-source `to_fp` blocker from
   ADR-0023 is **closed**.
 
+- **Symbolic float→integer conversions (2026-06-14, ADR-0026).** `fp.to_ubv`/
+  `fp.to_sbv` now build a **symbolic** bit-blasted circuit (not just const-fold):
+  `fp_rounded_magnitude` unpacks the operand and computes the rounded integer
+  magnitude (left shift for `e ≥ 0`; the validated `round_variable` for the
+  fractional `e < 0` case), then the result is **pinned** only when *definitely*
+  in range (finite, sign/range/shift-overflow checked; `to_sbv` also admits the
+  exact most-negative `−2^(w−1)`). NaN/∞/out-of-range route to a **fresh
+  unconstrained** value (SMT-LIB leaves them unspecified) — over-routing to fresh
+  is always sound (never a wrong `unsat`); only the in-range pin must be correct,
+  and it reuses validated primitives. The fresh value is keyed by
+  `(op, operand, width, mode)` so identical conversions **share** it (an FP→int
+  conversion is a function — `(= (fp.to_ubv x) (fp.to_ubv x))` stays valid). The
+  bit-blaster preflight (`first_unsupported_sort`) now accepts `Sort::Float`, so
+  **declared FP variables solve end-to-end** too. Validated: the circuit matches
+  the validated constant fold on in-range inputs and the native casts, and routes
+  out-of-range to fresh, over all four/five modes and widths 8/16/32; plus solver
+  tests deciding a symbolic `fp.to_sbv` query **sat** (replayed) and the
+  functional-consistency inequality **unsat**. Closes symbolic FP→int.
+
 - **Float128 non-arithmetic surface verified (2026-06-14).** F128 `(15, 113)` is
   exactly 128 bits, so its whole non-arithmetic surface decides with no wider
   intermediate: classification (`isNaN/isInfinite/isZero/isNegative/isPositive`),

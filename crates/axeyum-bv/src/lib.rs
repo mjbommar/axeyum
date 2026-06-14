@@ -61,7 +61,8 @@ pub fn first_unsupported_sort(arena: &TermArena, roots: &[TermId]) -> Option<(Te
             continue;
         }
         match arena.sort_of(term) {
-            Sort::Bool | Sort::BitVec(_) => {}
+            // Floating-point lowers structurally to BitVec(exp+sig) (ADR-0026).
+            Sort::Bool | Sort::BitVec(_) | Sort::Float { .. } => {}
             other => return Some((term, other)),
         }
         if let TermNode::App { args, .. } = arena.node(term) {

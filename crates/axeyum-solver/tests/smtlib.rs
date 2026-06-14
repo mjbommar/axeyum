@@ -93,3 +93,43 @@ fn decides_symbolic_sbv_to_fp_conversion() {
         outcome.result
     );
 }
+
+/// A symbolic FP->int conversion is now bit-blasted (not just constant-folded):
+/// find a Float32 x with `fp.to_sbv(RNE, x)` == 5. x = 5.0 works -> sat, replayed
+/// through the conversion circuit (ADR-0026 / fp->int).
+#[test]
+fn decides_symbolic_fp_to_sbv_conversion() {
+    let text = "\
+(set-info :status sat)
+(set-logic QF_BVFP)
+(declare-const x Float32)
+(assert (= ((_ fp.to_sbv 32) RNE x) (_ bv5 32)))
+(check-sat)
+";
+    let outcome = run(text);
+    assert!(
+        matches!(outcome.result, CheckResult::Sat(_)),
+        "symbolic fp->int must decide sat, got {:?}",
+        outcome.result
+    );
+}
+
+/// FP->int is a function: two occurrences on the same operand denote one value,
+/// so their inequality is unsat even when the operand is unconstrained (the
+/// shared fresh value for the unspecified out-of-range case must be the SAME).
+#[test]
+fn fp_to_int_is_functional_even_when_unspecified() {
+    let text = "\
+(set-info :status unsat)
+(set-logic QF_BVFP)
+(declare-const x Float32)
+(assert (not (= ((_ fp.to_ubv 8) RNE x) ((_ fp.to_ubv 8) RNE x))))
+(check-sat)
+";
+    let outcome = run(text);
+    assert!(
+        matches!(outcome.result, CheckResult::Unsat),
+        "fp.to_ubv(x) must equal itself (functional), got {:?}",
+        outcome.result
+    );
+}

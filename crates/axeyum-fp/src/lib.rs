@@ -2420,6 +2420,169 @@ pub fn to_sbv(
     Ok(Some(arena.bv_const(width, bits)?))
 }
 
+/// Computes the rounded integer **magnitude** of `x` (an FP value), as a `W`-bit
+/// bit-vector, together with `(sign, e)`: `|x|` rounded to an integer under
+/// `mode`. `e` is the unpacked LSB exponent (signed, `W`-bit) and `sign` the
+/// sign bit (`Bool`); the value is `(-1)^sign · magnitude`. Shared by
+/// [`to_ubv_sym`]/[`to_sbv_sym`]. `e ≥ 0` ⇒ the integer is `sig · 2^e`
+/// (left shift); `e < 0` ⇒ the fractional bits are rounded off via the validated
+/// [`round_variable`]. Magnitudes with `e ≥ width` overflow the requested integer
+/// width and are caught by the callers' range check (here the shift just yields a
+/// don't-care).
+#[allow(clippy::similar_names, clippy::many_single_char_names, clippy::type_complexity)]
+fn fp_rounded_magnitude(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    w: u32,
+    x: TermId,
+    mode: RoundingMode,
+) -> Result<(TermId, TermId, TermId), IrError> {
+    let one1 = arena.bv_const(1, 1)?;
+    let (sx, sig_w, e) = unpack_operand(arena, fmt, w, x)?;
+    let sign = arena.eq(sx, one1)?;
+    let zero_w = arena.bv_const(w, 0)?;
+    let one_w = arena.bv_const(w, 1)?;
+    let w_const = arena.bv_const(w, u128::from(w))?;
+
+    // e >= 0: integer = sig << e (don't-care, becomes 0, when e >= w).
+    let e_ge0 = arena.bv_sge(e, zero_w)?;
+    let e_lt_w = arena.bv_ult(e, w_const)?;
+    let shifted = arena.bv_shl(sig_w, e)?;
+    let int_mag = arena.ite(e_lt_w, shifted, zero_w)?;
+
+    // e < 0: round off `-e` fractional bits. |value| < 1 (drop >= w) gives 0
+    // (nearest/toward-zero) or 1 (directed mode matching the sign).
+    let neg_e = arena.bv_sub(zero_w, e)?;
+    let rounded = round_variable(arena, sig_w, neg_e, mode, sign)?;
+    let drop_ge_w = arena.bv_uge(neg_e, w_const)?;
+    let tiny = {
+        let m_nonzero = {
+            let z = arena.eq(sig_w, zero_w)?;
+            arena.not(z)?
+        };
+        let up = match mode {
+            RoundingMode::TowardPositive => {
+                let pos = arena.not(sign)?;
+                arena.and(m_nonzero, pos)?
+            }
+            RoundingMode::TowardNegative => arena.and(m_nonzero, sign)?,
+            _ => arena.bool_const(false),
+        };
+        arena.ite(up, one_w, zero_w)?
+    };
+    let frac_mag = arena.ite(drop_ge_w, tiny, rounded)?;
+
+    let mag = arena.ite(e_ge0, int_mag, frac_mag)?;
+    Ok((mag, sign, e))
+}
+
+/// Symbolic `fp.to_ubv` (FP → unsigned `width`-bit BV) under `mode`. The rounded
+/// magnitude is **pinned** only when the value is *definitely* in `[0, 2^width)`
+/// (finite, nonnegative, no shift overflow); NaN/∞/negative/out-of-range route to
+/// `fresh` — an unconstrained `BitVec(width)` the caller supplies — matching
+/// SMT-LIB's leaving those cases unspecified. Over-routing to `fresh` is always
+/// sound (it can never force a wrong `unsat`); only the pinned value must be
+/// correct, and it reuses the validated rounding primitives. `fresh` is returned
+/// whole if the working width would exceed [`MAX_BV_WIDTH`].
+#[allow(clippy::similar_names, clippy::many_single_char_names)]
+pub fn to_ubv_sym(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    mode: RoundingMode,
+    x: TermId,
+    width: u32,
+    fresh: TermId,
+) -> Result<TermId, IrError> {
+    let w = width + fmt.sig_bits + 4;
+    if width == 0 || w > MAX_BV_WIDTH {
+        return Ok(fresh);
+    }
+    let (mag, sign, e) = fp_rounded_magnitude(arena, fmt, w, x, mode)?;
+    let zero_w = arena.bv_const(w, 0)?;
+    let finite = {
+        let nan = is_nan(arena, fmt, x)?;
+        let inf = is_infinite(arena, fmt, x)?;
+        let bad = arena.or(nan, inf)?;
+        arena.not(bad)?
+    };
+    // Nonnegative: not (sign && mag != 0)  (−0 is allowed, value 0).
+    let mag_zero = arena.eq(mag, zero_w)?;
+    let nonneg = {
+        let neg_nonzero = {
+            let nz = arena.not(mag_zero)?;
+            arena.and(sign, nz)?
+        };
+        arena.not(neg_nonzero)?
+    };
+    // e < width (necessary: value ≥ 2^e), and value < 2^width (high bits zero).
+    let width_c = sconst(arena, w, i64::from(width))?;
+    let e_small = arena.bv_slt(e, width_c)?;
+    let high = arena.extract(w - 1, width, mag)?;
+    let high_zero = {
+        let hz = arena.bv_const(w - width, 0)?;
+        arena.eq(high, hz)?
+    };
+    let in_range = {
+        let a = arena.and(finite, nonneg)?;
+        let b = arena.and(e_small, high_zero)?;
+        arena.and(a, b)?
+    };
+    let low = arena.extract(width - 1, 0, mag)?;
+    arena.ite(in_range, low, fresh)
+}
+
+/// Symbolic `fp.to_sbv` (FP → signed two's-complement `width`-bit BV) under
+/// `mode`. As [`to_ubv_sym`], pins the value only when *definitely* in range:
+/// finite and `|magnitude| < 2^(width−1)` (the most-negative `−2^(width−1)` is
+/// conservatively routed to `fresh` too — sound, just incomplete for that one
+/// value). NaN/∞/out-of-range route to the unconstrained `fresh`.
+#[allow(clippy::similar_names, clippy::many_single_char_names)]
+pub fn to_sbv_sym(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    mode: RoundingMode,
+    x: TermId,
+    width: u32,
+    fresh: TermId,
+) -> Result<TermId, IrError> {
+    let w = width + fmt.sig_bits + 4;
+    if width == 0 || w > MAX_BV_WIDTH {
+        return Ok(fresh);
+    }
+    let (mag, sign, e) = fp_rounded_magnitude(arena, fmt, w, x, mode)?;
+    let finite = {
+        let nan = is_nan(arena, fmt, x)?;
+        let inf = is_infinite(arena, fmt, x)?;
+        let bad = arena.or(nan, inf)?;
+        arena.not(bad)?
+    };
+    // e < width (shift validity / coarse bound) and |mag| < 2^(width−1), plus the
+    // exact most-negative value −2^(width−1) (mag == 2^(width−1) with sign set),
+    // whose two's-complement is itself.
+    let width_c = sconst(arena, w, i64::from(width))?;
+    let e_small = arena.bv_slt(e, width_c)?;
+    let high = arena.extract(w - 1, width - 1, mag)?;
+    let mag_fits = {
+        let hz = arena.bv_const(w - (width - 1), 0)?;
+        arena.eq(high, hz)?
+    };
+    let is_min_neg = {
+        let min_mag = arena.bv_const(w, 1u128 << (width - 1))?;
+        let eq_min = arena.eq(mag, min_mag)?;
+        arena.and(sign, eq_min)?
+    };
+    let fits = arena.or(mag_fits, is_min_neg)?;
+    let in_range = {
+        let a = arena.and(finite, e_small)?;
+        arena.and(a, fits)?
+    };
+    // Two's-complement: negate the low `width` bits when the sign is set.
+    let low = arena.extract(width - 1, 0, mag)?;
+    let neg = arena.bv_neg(low)?;
+    let signed = arena.ite(sign, neg, low)?;
+    arena.ite(in_range, signed, fresh)
+}
+
 fn decode_to_f64(arena: &TermArena, fmt: FloatFormat, x: TermId) -> Option<f64> {
     let v = const_bits(arena, x)?;
     if fmt == FloatFormat::F32 {
@@ -4004,5 +4167,91 @@ mod int_to_fp_symbolic_tests {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::float_cmp)]
+mod fp_to_int_symbolic_tests {
+    use super::*;
+    use axeyum_ir::{Assignment, Value, eval};
+
+    // The symbolic FP->int circuit must match the validated constant fold on
+    // in-range inputs, and route out-of-range / NaN / inf to the fresh value.
+    fn check(signed: bool) {
+        let modes = [
+            RoundingMode::NearestEven,
+            RoundingMode::TowardZero,
+            RoundingMode::TowardPositive,
+            RoundingMode::TowardNegative,
+        ];
+        let vals: [f32; 14] = [
+            0.0, -0.0, 2.7, -2.7, 5.0, -5.0, 0.5, -0.5, 1.5, 127.0, -128.0, 130.0,
+            f32::NAN, f32::INFINITY,
+        ];
+        for &width in &[8u32, 16, 32] {
+            for mode in modes {
+                let mut a = TermArena::new();
+                let xs = a.declare("x", Sort::BitVec(32)).unwrap();
+                let x = a.var(xs);
+                let fs = a.declare("fresh", Sort::BitVec(width)).unwrap();
+                let fresh = a.var(fs);
+                let t = if signed {
+                    to_sbv_sym(&mut a, FloatFormat::F32, mode, x, width, fresh).unwrap()
+                } else {
+                    to_ubv_sym(&mut a, FloatFormat::F32, mode, x, width, fresh).unwrap()
+                };
+                for &v in &vals {
+                    let bits = u128::from(v.to_bits());
+                    // Reference: the validated constant fold (None = unspecified).
+                    let cx = a.bv_const(32, bits).unwrap();
+                    let want = if signed {
+                        to_sbv(&mut a, FloatFormat::F32, mode, cx, width).unwrap()
+                    } else {
+                        to_ubv(&mut a, FloatFormat::F32, mode, cx, width).unwrap()
+                    };
+                    let fresh_val = 0xA5u128 & ((1u128 << width) - 1);
+                    let mut asg = Assignment::new();
+                    asg.set(xs, Value::Bv { width: 32, value: bits });
+                    asg.set(fs, Value::Bv { width, value: fresh_val });
+                    let got = match eval(&a, t, &asg).unwrap() {
+                        Value::Bv { value, .. } => value,
+                        other => panic!("{other:?}"),
+                    };
+                    match want {
+                        Some(rt) => {
+                            // In range: pinned to the rounded value (fold reference).
+                            let w_ref = match eval(&a, rt, &Assignment::new()).unwrap() {
+                                Value::Bv { value, .. } => value,
+                                other => panic!("{other:?}"),
+                            };
+                            assert_eq!(
+                                got, w_ref,
+                                "{} v={v} width={width} mode={mode:?}: got {got:#x} want {w_ref:#x}",
+                                if signed { "sbv" } else { "ubv" }
+                            );
+                        }
+                        None => {
+                            // Unspecified: must route to the fresh (unconstrained) value.
+                            assert_eq!(
+                                got, fresh_val,
+                                "{} v={v} width={width} mode={mode:?}: out-of-range must be fresh",
+                                if signed { "sbv" } else { "ubv" }
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn symbolic_to_ubv_matches_fold_in_range_and_fresh_out_of_range() {
+        check(false);
+    }
+
+    #[test]
+    fn symbolic_to_sbv_matches_fold_in_range_and_fresh_out_of_range() {
+        check(true);
     }
 }

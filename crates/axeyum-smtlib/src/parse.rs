@@ -601,6 +601,27 @@ fn fresh_quantifier_symbol(
     }
 }
 
+/// A fresh, unconstrained `BitVec(width)` value standing for the *unspecified*
+/// result of an out-of-domain FP→int conversion (NaN/∞/out-of-range; ADR-0026).
+/// Keyed deterministically by `(tag, operand, width, mode)` so two occurrences of
+/// the **same** conversion share one value — an FP→int conversion is a function,
+/// so `(= (fp.to_ubv x) (fp.to_ubv x))` must hold even when the value is
+/// unspecified.
+fn fresh_conversion_value(
+    arena: &mut TermArena,
+    tag: &str,
+    operand: TermId,
+    width: u32,
+    mode: RoundingMode,
+) -> Result<TermId, SmtError> {
+    let name = format!("!fp.{tag}.{}.{width}.{mode:?}", operand.index());
+    let sym = match arena.find_symbol(&name) {
+        Some(s) => s,
+        None => arena.declare(&name, Sort::BitVec(width))?,
+    };
+    Ok(arena.var(sym))
+}
+
 fn queue_let<'a>(items: &'a [SExpr], frames: &mut Vec<Frame<'a>>) -> Result<(), SmtError> {
     exact_len(items, 3, "let")?;
     let bindings = items
@@ -946,21 +967,26 @@ fn apply_fp_rounded_indexed(
             let width = index(2)?;
             let fmt = fp_format(arena, x)?;
             let xb = to_bits(arena, x)?;
-            axeyum_fp::to_ubv(arena, fmt, mode, xb, width)?.ok_or_else(|| {
-                SmtError::Unsupported(
-                    "(_ fp.to_ubv …) is only supported on constant operands".to_owned(),
-                )
-            })?
+            // Constant + well-defined folds to a clean value; otherwise build the
+            // symbolic circuit, routing NaN/∞/out-of-range to a fresh value
+            // (SMT-LIB underspecification; ADR-0026).
+            if let Some(c) = axeyum_fp::to_ubv(arena, fmt, mode, xb, width)? {
+                c
+            } else {
+                let fresh = fresh_conversion_value(arena, "to_ubv", xb, width, mode)?;
+                axeyum_fp::to_ubv_sym(arena, fmt, mode, xb, width, fresh)?
+            }
         }
         "fp.to_sbv" => {
             let width = index(2)?;
             let fmt = fp_format(arena, x)?;
             let xb = to_bits(arena, x)?;
-            axeyum_fp::to_sbv(arena, fmt, mode, xb, width)?.ok_or_else(|| {
-                SmtError::Unsupported(
-                    "(_ fp.to_sbv …) is only supported on constant operands".to_owned(),
-                )
-            })?
+            if let Some(c) = axeyum_fp::to_sbv(arena, fmt, mode, xb, width)? {
+                c
+            } else {
+                let fresh = fresh_conversion_value(arena, "to_sbv", xb, width, mode)?;
+                axeyum_fp::to_sbv_sym(arena, fmt, mode, xb, width, fresh)?
+            }
         }
         other => {
             return Err(SmtError::Unsupported(format!(
