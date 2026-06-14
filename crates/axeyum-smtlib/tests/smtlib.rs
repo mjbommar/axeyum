@@ -541,3 +541,19 @@ fn parses_and_round_trips_lia_div_mod_abs() {
     let reparsed = parse_script(&rendered).unwrap();
     assert_eq!(reparsed.assertions.len(), 3);
 }
+
+#[test]
+fn parses_lia_divisible() {
+    let text = r"
+        (set-logic QF_LIA)
+        (declare-const x Int)
+        (assert ((_ divisible 3) x))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+    // desugars to (= (mod x 3) 0), which re-parses fine.
+    let rendered = write_script(&script.arena, &script.assertions);
+    let reparsed = parse_script(&rendered).unwrap();
+    assert_eq!(reparsed.assertions.len(), 1);
+}

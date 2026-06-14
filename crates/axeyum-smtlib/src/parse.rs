@@ -1113,6 +1113,15 @@ fn apply_parameterized(
             }
             acc
         }
+        "divisible" => {
+            expect_head_len(3)?;
+            let n: i128 = head
+                .get(2)
+                .and_then(SExpr::atom)
+                .and_then(|s| s.parse().ok())
+                .ok_or_else(|| SmtError::Syntax("`divisible` index".to_owned()))?;
+            arena.int_divisible(args[0], n)?
+        }
         other => return Err(SmtError::Unsupported(format!("indexed operator `{other}`"))),
     })
 }

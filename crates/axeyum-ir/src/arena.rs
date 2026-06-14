@@ -1173,6 +1173,19 @@ impl TermArena {
         Ok(self.app(Op::IntAbs, &[a], Sort::Int))
     }
 
+    /// SMT-LIB `(_ divisible n) x` — true iff `n` divides `x`. Sugar for
+    /// `mod x n = 0` (result sort `Bool`); reuses the Euclidean [`Op::IntMod`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless `x` is an integer.
+    pub fn int_divisible(&mut self, x: TermId, n: i128) -> Result<TermId, IrError> {
+        let n_c = self.int_const(n);
+        let m = self.int_mod(x, n_c)?;
+        let zero = self.int_const(0);
+        self.eq(m, zero)
+    }
+
     /// Integer less-than (result sort `Bool`).
     ///
     /// # Errors

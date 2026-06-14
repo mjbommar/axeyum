@@ -1164,3 +1164,15 @@ fn int_div_mod_abs_euclidean_semantics() {
         assert_eq!(eval_int(&mut a, av), v.abs(), "abs({v})");
     }
 }
+
+#[test]
+fn int_divisible_predicate() {
+    let mut a = TermArena::new();
+    let asg = Assignment::new();
+    let eval_bool = |a: &mut TermArena, t| matches!(eval(a, t, &asg), Ok(Value::Bool(true)));
+    for (x, n, want) in [(6i128, 3i128, true), (7, 3, false), (-6, 3, true), (0, 5, true), (5, 1, true)] {
+        let xt = a.int_const(x);
+        let d = a.int_divisible(xt, n).unwrap();
+        assert_eq!(eval_bool(&mut a, d), want, "divisible({x},{n})");
+    }
+}

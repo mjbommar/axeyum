@@ -185,3 +185,17 @@ fn abs_constraint_is_sat() {
     let r = solve(&mut a, &[ae, neg], DEFAULT_INT_WIDTH);
     assert!(matches!(r, CheckResult::Sat(_)), "abs(x)=5 ∧ x<0 sat, got {r:?}");
 }
+
+#[test]
+fn divisible_predicate_is_sat() {
+    // (_ divisible 4) x ∧ x > 0 ∧ x < 10 : sat (x ∈ {4, 8}).
+    let mut a = TermArena::new();
+    let x = a.int_var("x").unwrap();
+    let zero = a.int_const(0);
+    let ten = a.int_const(10);
+    let d = a.int_divisible(x, 4).unwrap();
+    let lo = a.int_gt(x, zero).unwrap();
+    let hi = a.int_lt(x, ten).unwrap();
+    let r = solve(&mut a, &[d, lo, hi], DEFAULT_INT_WIDTH);
+    assert!(matches!(r, CheckResult::Sat(_)), "divisible-by-4 in (0,10) sat, got {r:?}");
+}

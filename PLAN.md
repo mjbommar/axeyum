@@ -695,6 +695,10 @@ Last updated: 2026-06-14
   (incl. all sign quadrants, the `a = b·div + mod` identity, `b = 0`), solver
   `sat`+replay (incl. `−7 mod 3 = 2`), `abs`, and an SMT-LIB round-trip. Inherits
   the bit-blast soundness contract (`sat` via replay; in-range `unsat` → `unknown`).
+  **`(_ divisible n)` added** as sugar over the above (`int_divisible(x, n)` =
+  `mod x n = 0`, no new IR op): parser maps the indexed predicate, eval/solver
+  tests cover `divisible(6,3)`/`divisible(7,3)`/negative dividends and a solver
+  `sat`, plus an SMT-LIB parse test.
 - `QF_LIA` scenarios + SMT-LIB I/O recorded 2026-06-13 (ADR-0014): a
   `Family::Integer` in `axeyum-scenarios` (`integer_system` boxed/ordered/
   sum-pinned systems, `integer_equation` boxed linear equations) with
