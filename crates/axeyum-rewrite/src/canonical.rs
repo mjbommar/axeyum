@@ -556,6 +556,7 @@ fn rewrite_app(
         | Op::Select
         | Op::Store
         | Op::ConstArray { .. }
+        | Op::IntToReal
         | Op::Bv2Nat
         | Op::Int2Bv { .. }
         | Op::Apply(_)
@@ -972,6 +973,7 @@ pub(crate) fn build_app(arena: &mut TermArena, op: Op, args: &[TermId]) -> Resul
         Op::Select => arena.select(args[0], args[1]),
         Op::Store => arena.store(args[0], args[1], args[2]),
         Op::ConstArray { index } => arena.const_array(index, args[0]),
+        Op::IntToReal => arena.int_to_real(args[0]),
         Op::Bv2Nat => arena.bv2nat(args[0]),
         Op::Int2Bv { width } => arena.int2bv(width, args[0]),
         Op::Apply(func) => arena.apply(func, args),

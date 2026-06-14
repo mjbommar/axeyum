@@ -19,11 +19,12 @@
 //! Every `sat` is replayed through the ground evaluator against the original
 //! query, so no routing or combination step can yield an unsound `sat`.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 
 use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode, Value, eval};
 use axeyum_rewrite::{
     QuantExpandError, expand_quantifiers, instantiate_universals, instantiate_with_triggers,
+    replace_subterms,
 };
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
@@ -167,8 +168,33 @@ pub fn check_auto(
         // integer and real atoms with their exact simplices independently (they
         // share no sort). Falls back to the real loop on non-arithmetic atoms
         // (mixed BV/array), which bit-blasts them.
-        match check_with_arith_dpll(arena, assertions, config) {
-            Ok(result) => return Ok(result),
+        //
+        // `to_real(i)` couples the int and real sides (a full decision needs
+        // Nelson-Oppen). We relax it: replace each `to_real(i)` with a fresh real
+        // (shared per term, so a contradiction on the *same* coerced value — e.g.
+        // `to_real(i) > 5 ∧ to_real(i) < 5` — is still proven), solve, and replay
+        // the candidate against the *original* (where the evaluator computes the
+        // true `to_real(i) = i`). `unsat` of the relaxation is sound; a `sat`
+        // candidate whose replay fails is `unknown`.
+        let (relaxed, had_coercion) = relax_int_to_real(arena, assertions)?;
+        match check_with_arith_dpll(arena, &relaxed, config) {
+            Ok(result) if !had_coercion => return Ok(result),
+            Ok(CheckResult::Sat(model)) => {
+                let assignment = model.to_assignment();
+                if assertions
+                    .iter()
+                    .all(|&a| matches!(eval(arena, a, &assignment), Ok(Value::Bool(true))))
+                {
+                    return Ok(CheckResult::Sat(model));
+                }
+                return Ok(CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::Incomplete,
+                    detail: "int→real coercion relaxation: candidate fails the original (the \
+                             coupling to_real(i)=i is not satisfied)"
+                        .to_owned(),
+                }));
+            }
+            Ok(other) => return Ok(other), // Unsat (sound) or Unknown
             Err(SolverError::Unsupported(_)) => {}
             Err(other) => return Err(other),
         }
@@ -356,6 +382,47 @@ fn decide_instantiation(
         })),
         CheckResult::Unknown(reason) => Ok(CheckResult::Unknown(reason)),
     }
+}
+
+/// Replaces each `to_real(i)` (`Op::IntToReal`) with a fresh real variable,
+/// shared per distinct term so a contradiction on the same coerced value is
+/// preserved. Returns the rewritten assertions and whether any coercion was
+/// found. A pure relaxation (the fresh real is unconstrained relative to `i`);
+/// soundness for `sat` comes from replaying the original.
+fn relax_int_to_real(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<(Vec<TermId>, bool), SolverError> {
+    let mut terms: Vec<TermId> = Vec::new();
+    let mut seen = BTreeSet::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    while let Some(t) = stack.pop() {
+        if !seen.insert(t) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(t) {
+            let (op, args) = (*op, args.clone());
+            if op == Op::IntToReal {
+                terms.push(t);
+            }
+            stack.extend(args);
+        }
+    }
+    if terms.is_empty() {
+        return Ok((assertions.to_vec(), false));
+    }
+    let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
+    let mut map: HashMap<TermId, TermId> = HashMap::new();
+    for (i, t) in terms.into_iter().enumerate() {
+        let sym = arena.declare(&format!("!coerce_r_{i}"), Sort::Real).map_err(err)?;
+        map.insert(t, arena.var(sym));
+    }
+    let mut memo: HashMap<TermId, TermId> = HashMap::new();
+    let mut out = Vec::with_capacity(assertions.len());
+    for &a in assertions {
+        out.push(replace_subterms(arena, a, &map, &mut memo).map_err(err)?);
+    }
+    Ok((out, true))
 }
 
 /// Which theory features a query uses.

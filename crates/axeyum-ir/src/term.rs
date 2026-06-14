@@ -194,6 +194,9 @@ pub enum Op {
         index: u32,
     },
     // --- bit-vector / integer coercions ------------------------------------
+    /// `to_real`: the real number equal to an integer (the exact numeric
+    /// embedding `Int → Real`).
+    IntToReal,
     /// `bv2nat`: the unsigned integer value of a bit-vector (result sort `Int`,
     /// always in `0..2^w`).
     Bv2Nat,

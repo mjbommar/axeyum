@@ -491,6 +491,10 @@ fn apply(op: Op, vals: &[Value]) -> Value {
             let (element_width, value) = bv(&vals[0]);
             Value::Array(ArrayValue::constant(index, element_width, value))
         }
+        Op::IntToReal => {
+            let i = vals[0].as_int().expect("builder guaranteed Int operand");
+            Value::Real(crate::rational::Rational::integer(i))
+        }
         Op::Bv2Nat => {
             let (_, value) = bv(&vals[0]);
             // Unsigned BV value as a non-negative integer (within the i128

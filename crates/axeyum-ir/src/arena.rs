@@ -1467,6 +1467,16 @@ impl TermArena {
         self.real_bin(Op::RealDiv, a, b)
     }
 
+    /// `to_real`: the real equal to integer `a` (exact `Int → Real` embedding).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless `a` is an integer.
+    pub fn int_to_real(&mut self, a: TermId) -> Result<TermId, IrError> {
+        self.expect_int(a)?;
+        Ok(self.app(Op::IntToReal, &[a], Sort::Real))
+    }
+
     /// Real less-than (result sort `Bool`).
     ///
     /// # Errors

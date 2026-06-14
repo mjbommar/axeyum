@@ -628,6 +628,16 @@ Last updated: 2026-06-14
   parser/writer handle `bv2nat` and `(_ int2bv n)`. Tests: eval (positive/wrap/
   negative + round-trip), combined-solver sat (`bv2nat(x)=200`, `int2bv` round-
   trip, modular wrap) and the out-of-range `unknown`, plus an SMT-LIB round-trip.
+- **Int↔Real coercions (2026-06-14).** Parser constant-folds `to_real`/`to_int`/
+  `is_int` exactly (`(to_real 3)`→`3.0`, `(to_int 3.5)`→`3`, `(is_int 4.0)`→true).
+  **Symbolic `to_real`** (`Op::IntToReal`) is solved by relaxation+replay (the
+  NRA pattern): `check_auto`'s mixed path replaces each `to_real(i)` with a fresh
+  real (shared per term, so `to_real(i)>5 ∧ to_real(i)<5` is `unsat`), solves the
+  decoupled problem, and replays against the original (eval computes the true
+  `to_real(i)=i`) — `unsat` sound, replay-confirmed `sat`, else `unknown`. Tests:
+  same-value contradiction (`unsat`), pinned `i=3 ∧ to_real(i)=3.0` (`sat`).
+  Symbolic `to_int`/`is_int` (the same cross-sort coupling) and a complete
+  Nelson-Oppen combination remain future.
 - **Constant arrays added (2026-06-14, extends ADR-0010).** New IR op
   `Op::ConstArray { index }` (`((as const (Array I E)) v)`): every index maps to
   `v`. The ground evaluator builds `ArrayValue::constant`; `eliminate_arrays`

@@ -395,6 +395,7 @@ fn translate(
                         | Op::DtSelect { .. }
                         | Op::DtTest(_)
                         | Op::ConstArray { .. }
+                        | Op::IntToReal
                         | Op::Bv2Nat
                         | Op::Int2Bv { .. }
                 ) {
@@ -523,6 +524,7 @@ fn apply(op: Op, args: &[TermId], cache: &HashMap<TermId, Z3Term>) -> Z3Term {
         | Op::DtSelect { .. }
         | Op::DtTest(_)
         | Op::ConstArray { .. }
+        | Op::IntToReal
         | Op::Bv2Nat
         | Op::Int2Bv { .. } => {
             unreachable!(

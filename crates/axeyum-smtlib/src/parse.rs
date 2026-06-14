@@ -908,7 +908,7 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
             need(1)?;
             match *arena.node(args[0]) {
                 TermNode::IntConst(n) => arena.real_const(Rational::integer(n)),
-                _ => return Err(SmtError::Unsupported("symbolic `to_real`".to_owned())),
+                _ => arena.int_to_real(args[0])?,
             }
         }
         "to_int" => {

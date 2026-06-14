@@ -59,3 +59,30 @@ fn int2bv_wraps_modulo() {
     let eq = a.eq(b, zero).unwrap();
     assert!(matches!(solve_auto(&mut a, &[ye, eq]), CheckResult::Sat(_)));
 }
+
+#[test]
+fn to_real_same_value_contradiction_is_unsat() {
+    // to_real(i) > 5 AND to_real(i) < 5 : the same coerced value can't be both
+    // (shared per-term relaxation catches it) -> unsat.
+    let mut a = TermArena::new();
+    let i = a.declare("i", Sort::Int).map(|s| a.var(s)).unwrap();
+    let r = a.int_to_real(i).unwrap();
+    let five = a.real_const(axeyum_ir::Rational::integer(5));
+    let r2 = a.int_to_real(i).unwrap();
+    let gt = a.real_gt(r, five).unwrap();
+    let lt = a.real_lt(r2, five).unwrap();
+    assert!(matches!(solve_auto(&mut a, &[gt, lt]), CheckResult::Unsat));
+}
+
+#[test]
+fn to_real_pinned_is_sat() {
+    // i == 3 AND to_real(i) == 3.0 : sat (replay confirms to_real(3) = 3.0).
+    let mut a = TermArena::new();
+    let i = a.declare("i", Sort::Int).map(|s| a.var(s)).unwrap();
+    let three_i = a.int_const(3);
+    let ic = a.eq(i, three_i).unwrap();
+    let r = a.int_to_real(i).unwrap();
+    let three_r = a.real_const(axeyum_ir::Rational::integer(3));
+    let rc = a.eq(r, three_r).unwrap();
+    assert!(matches!(solve_auto(&mut a, &[ic, rc]), CheckResult::Sat(_)));
+}

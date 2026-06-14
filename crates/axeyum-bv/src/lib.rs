@@ -851,6 +851,7 @@ impl<'a> LoweringBuilder<'a> {
                 Op::Select
                 | Op::Store
                 | Op::ConstArray { .. }
+                | Op::IntToReal
                 | Op::Bv2Nat
                 | Op::Int2Bv { .. }
                 | Op::Apply(_)
@@ -1789,6 +1790,7 @@ fn is_unsupported_op(op: Op) -> bool {
         Op::Select
             | Op::Store
             | Op::ConstArray { .. }
+            | Op::IntToReal
             | Op::Bv2Nat
             | Op::Int2Bv { .. }
             | Op::Apply(_)
