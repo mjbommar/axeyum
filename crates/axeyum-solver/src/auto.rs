@@ -723,6 +723,20 @@ fn eliminate_to_real_const_compare(
             TermNode::RealConst(r) => Some(*r),
             _ => None,
         };
+        // `to_real(i) op to_real(j)` ⟺ `i op j` (both integer-valued): rewrite to
+        // the integer comparison, eliminating both coercions exactly.
+        if let (Some(i), Some(j)) = (to_real_arg(args[0]), to_real_arg(args[1])) {
+            let new = match op {
+                Op::RealLt => arena.int_lt(i, j).map_err(err)?,
+                Op::RealLe => arena.int_le(i, j).map_err(err)?,
+                Op::RealGt => arena.int_gt(i, j).map_err(err)?,
+                Op::RealGe => arena.int_ge(i, j).map_err(err)?,
+                Op::Eq => arena.eq(i, j).map_err(err)?,
+                _ => continue,
+            };
+            map.insert(t, new);
+            continue;
+        }
         // Normalize to `to_real(i) <op'> c` (flip if the constant is on the left).
         let (i, c, flipped) = if let (Some(i), Some(c)) = (to_real_arg(args[0]), real_const(args[1]))
         {

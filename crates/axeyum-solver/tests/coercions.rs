@@ -220,3 +220,17 @@ fn to_int_vs_constant_is_exactly_decided() {
     let lt = a.real_lt(r, five_r).unwrap();
     assert!(matches!(solve_auto(&mut a, &[ge, lt]), CheckResult::Unsat), "to_int(r)>=5 ∧ r<5 unsat");
 }
+
+#[test]
+fn to_real_vs_to_real_is_exact() {
+    // to_real(i) < to_real(j) AND i >= j : unsat (i<j ⟺ to_real(i)<to_real(j)).
+    let mut a = TermArena::new();
+    let i = a.declare("i", Sort::Int).map(|s| a.var(s)).unwrap();
+    let j = a.declare("j", Sort::Int).map(|s| a.var(s)).unwrap();
+    let ri = a.int_to_real(i).unwrap();
+    let rj = a.int_to_real(j).unwrap();
+    let lt = a.real_lt(ri, rj).unwrap();
+    let ge = a.int_ge(i, j).unwrap();
+    assert!(matches!(solve_auto(&mut a, &[lt, ge]), CheckResult::Unsat),
+        "to_real(i)<to_real(j) ∧ i>=j unsat");
+}
