@@ -131,6 +131,56 @@ impl BoundedString {
         Ok(acc)
     }
 
+    /// `str.++` — concatenation. Produces a result in a bounded-string sort of
+    /// size `self.max_len + other.max_len` (so there is no overflow), placing
+    /// `y`'s `other.max_len` bytes after `x`'s symbolic length. `x`'s padding is
+    /// masked off first so it cannot corrupt the joined content.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::InvalidWidth`] if the combined length exceeds 16 (the
+    /// 128-bit content cap), or [`IrError`] from the builders.
+    #[allow(clippy::similar_names)] // len_x_r/len_y_r/len_x_c mirror the layout
+    pub fn concat(
+        &self,
+        arena: &mut TermArena,
+        x: &StrTerm,
+        other: BoundedString,
+        y: &StrTerm,
+    ) -> Result<(BoundedString, StrTerm), IrError> {
+        let rmax = self.max_len + other.max_len;
+        if rmax > 16 {
+            return Err(IrError::InvalidWidth(rmax * 8));
+        }
+        let result = BoundedString::new(rmax);
+        let rcw = result.content_width();
+        let rlw = result.len_width();
+
+        // result length = len_x + len_y (widened to the result's len width).
+        let len_x_r = arena.zero_ext(rlw - self.len_width(), x.len)?;
+        let len_y_r = arena.zero_ext(rlw - other.len_width(), y.len)?;
+        let rlen = arena.bv_add(len_x_r, len_y_r)?;
+
+        // shift (in bits) for y = len_x * 8, in the result content width.
+        let len_x_c = arena.zero_ext(rcw - self.len_width(), x.len)?;
+        let three = arena.bv_const(rcw, 3)?; // *8
+        let shift = arena.bv_shl(len_x_c, three)?;
+
+        // mask x's content to its low len_x*8 bits (drop padding), widened.
+        let one = arena.bv_const(rcw, 1)?;
+        let pow = arena.bv_shl(one, shift)?; // 2^(len_x*8)
+        let mask = arena.bv_sub(pow, one)?; // low len_x*8 ones
+        let x_wide = arena.zero_ext(rcw - self.content_width(), x.content)?;
+        let x_masked = arena.bv_and(x_wide, mask)?;
+
+        // place y after x.
+        let y_wide = arena.zero_ext(rcw - other.content_width(), y.content)?;
+        let y_shifted = arena.bv_shl(y_wide, shift)?;
+        let rcontent = arena.bv_or(x_masked, y_shifted)?;
+
+        Ok((result, StrTerm { len: rlen, content: rcontent }))
+    }
+
     /// `str.at` at a **constant** index: the byte at position `i` (an 8-bit
     /// `BitVec`), or `0` if `i` is at or beyond the length.
     ///

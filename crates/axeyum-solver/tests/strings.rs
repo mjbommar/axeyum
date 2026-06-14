@@ -73,6 +73,47 @@ fn symbolic_length_and_char_constraint_is_sat() {
 }
 
 #[test]
+fn concat_of_literals_equals_joined_literal() {
+    // "ab" ++ "cd" == "abcd".
+    let mut a = TermArena::new();
+    let s4 = BoundedString::new(4);
+    let ab = s4.literal(&mut a, "ab").unwrap();
+    let cd = s4.literal(&mut a, "cd").unwrap();
+    let (s8, joined) = s4.concat(&mut a, &ab, s4, &cd).unwrap();
+    let abcd = s8.literal(&mut a, "abcd").unwrap();
+    let eq = s8.equal(&mut a, &joined, &abcd).unwrap();
+    assert!(eval_bool(&a, eq), "\"ab\"++\"cd\" == \"abcd\"");
+
+    // length is 4
+    let four = a.bv_const(s_len_width(8), 4).unwrap();
+    let len_eq = a.eq(s8.length(&joined), four).unwrap();
+    assert!(eval_bool(&a, len_eq), "len(\"ab\"++\"cd\") == 4");
+}
+
+#[test]
+fn concat_with_empty_and_symbolic() {
+    // "" ++ "cd" == "cd" (empty-length operand) — exercises len_x = 0 shift.
+    let mut a = TermArena::new();
+    let s4 = BoundedString::new(4);
+    let empty = s4.literal(&mut a, "").unwrap();
+    let cd = s4.literal(&mut a, "cd").unwrap();
+    let (s8, joined) = s4.concat(&mut a, &empty, s4, &cd).unwrap();
+    let cd8 = s8.literal(&mut a, "cd").unwrap();
+    let eq = s8.equal(&mut a, &joined, &cd8).unwrap();
+    assert!(eval_bool(&a, eq), "\"\"++\"cd\" == \"cd\"");
+
+    // symbolic: exists x (<=4): x ++ "!" == "hi!"  -> sat with x = "hi".
+    let x = s4.declare(&mut a, "x").unwrap();
+    let wf = s4.well_formed(&mut a, &x).unwrap();
+    let bang = s4.literal(&mut a, "!").unwrap();
+    let (s8b, joined2) = s4.concat(&mut a, &x, s4, &bang).unwrap();
+    let hi_bang = s8b.literal(&mut a, "hi!").unwrap();
+    let goal = s8b.equal(&mut a, &joined2, &hi_bang).unwrap();
+    let result = solve(&mut a, &[wf, goal], &SolverConfig::default()).unwrap();
+    assert!(matches!(result, CheckResult::Sat(_)), "x ++ \"!\" = \"hi!\" sat, got {result:?}");
+}
+
+#[test]
 fn contradictory_string_constraints_are_unsat() {
     // x == "ab" AND len(x) == 3  -> unsat.
     let mut a = TermArena::new();

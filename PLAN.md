@@ -44,8 +44,10 @@ Last updated: 2026-06-14
   literals build BV formulas (padding ignored via `i < len` guards), so solving
   and model replay reuse the BV path — the BMC fragment (CBMC/Kani style). Tests:
   literal eq/len/char-at, symbolic string = literal (sat), len+char (sat),
-  length/literal contradiction (unsat). **Next:** the shift-heavy ops
-  (`str.++`/`substr`/`contains`), then regex and unbounded via a first-class sort.
+  length/literal contradiction (unsat). **`str.++` (concat)** now added —
+  symbolic-length barrel shift placing `y` after `x` (result sized `x.max+y.max`,
+  padding masked); tests incl. `x ++ "!" = "hi!"` (sat). **Next:** `substr`/
+  `contains`/`indexof`, then regex and unbounded via a first-class sort.
   This was the last entirely-untouched Z3 theory; it is now opened.
 
 - **NRA — first slice (2026-06-14, ADR-0024).** Nonlinear real arithmetic by
