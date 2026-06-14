@@ -169,3 +169,47 @@ fn quantified_small_float_nan_makes_eq_unsat() {
         outcome.result
     );
 }
+
+/// `QF_UFFP`: an uninterpreted function over a floating-point sort. `f(x) == 2.0`
+/// and `f(x) == 3.0` (same argument) is unsat by functional consistency; the FP
+/// sort flows through Ackermann reduction and bit-blasting (ADR-0026).
+#[test]
+fn uninterpreted_function_over_float_is_unsat() {
+    let text = "\
+(set-info :status unsat)
+(set-logic QF_UFFP)
+(declare-fun f (Float32) Float32)
+(declare-const x Float32)
+(assert (fp.eq (f x) (fp #b0 #b10000000 #b00000000000000000000000)))
+(assert (fp.eq (f x) (fp #b0 #b10000000 #b10000000000000000000000)))
+(check-sat)
+";
+    let outcome = run(text);
+    assert!(
+        matches!(outcome.result, CheckResult::Unsat),
+        "f(x)=2.0 and f(x)=3.0 must be unsat, got {:?}",
+        outcome.result
+    );
+}
+
+/// `QF_UFFP` sat: `f(x) == 2.0` with a distinct argument is consistent (sat); the
+/// model is replayed through the original UF+FP query.
+#[test]
+fn uninterpreted_function_over_float_is_sat() {
+    let text = "\
+(set-info :status sat)
+(set-logic QF_UFFP)
+(declare-fun f (Float32) Float32)
+(declare-const x Float32)
+(declare-const y Float32)
+(assert (fp.eq (f x) (fp #b0 #b10000000 #b00000000000000000000000)))
+(assert (fp.eq (f y) (fp #b0 #b01111111 #b00000000000000000000000)))
+(check-sat)
+";
+    let outcome = run(text);
+    assert!(
+        matches!(outcome.result, CheckResult::Sat(_)),
+        "consistent UF+FP query must be sat, got {:?}",
+        outcome.result
+    );
+}

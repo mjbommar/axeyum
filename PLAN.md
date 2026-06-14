@@ -38,6 +38,15 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-14
 
+- **QF_UFFP verified — uninterpreted functions over FP (2026-06-14).** The
+  `Sort::Float` cascade (ADR-0026) plus the bit-blaster preflight accepting
+  `Float` already make uninterpreted functions over floating-point sorts decide
+  end-to-end: the FP sort flows through Ackermann reduction (`check_with_function_
+  elimination`) and bit-blasting, and FP equality keys the consistency
+  constraints. Locked in with `QF_UFFP` tests: `f(x)=2.0 ∧ f(x)=3.0` (same
+  argument) is **unsat** by functional consistency, and a consistent `f(x)=2.0 ∧
+  f(y)=1.0` is **sat** with the model replayed through the original UF+FP query.
+
 - **Finite-domain quantifiers over floating point (2026-06-14).** Quantifier
   expansion treated `Sort::Float` as a non-enumerable domain (a regression once FP
   became a distinct sort, ADR-0026). Both enumerators — `expand_quantifiers`
