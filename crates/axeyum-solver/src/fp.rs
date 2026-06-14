@@ -1,0 +1,309 @@
+//! Floating-point (IEEE 754) predicates, classification, sign ops, equality,
+//! and ordering as **bit-vector formula builders** — the non-arithmetic core of
+//! the SMT `FloatingPoint` theory.
+//!
+//! A floating-point value of format `(eb, sb)` (exponent bits `eb`, significand
+//! bits `sb` *including* the hidden bit) is exactly an `eb + sb`-bit IEEE 754
+//! bit pattern, so — like the finite enum/record helpers (ADR-0008) — this
+//! needs **no new IR sort**: an FP "variable" is a `BitVec(eb + sb)` and every
+//! operation here builds a bit-vector/Boolean formula over it. Solving and model
+//! replay therefore reuse the existing sound, replayed bit-vector path unchanged.
+//!
+//! Layout (MSB→LSB): sign (1 bit), biased exponent (`eb` bits), trailing
+//! significand (`sb - 1` bits). Semantics follow SMT-LIB / IEEE 754:
+//! `fp.eq` is *not* bit equality (`NaN ≠ NaN`, `+0 = -0`), `fp.lt`/`fp.leq` order
+//! by value (NaN unordered, `±0` equal), and `fp.isNegative`/`isPositive` exclude
+//! NaN and zeros.
+//!
+//! What is here: classification (`isNaN`/`isInfinite`/`isZero`/`isNormal`/
+//! `isSubnormal`/`isNegative`/`isPositive`), `abs`/`neg`, `eq`, and the four
+//! comparisons. **Not** here: arithmetic (`add`/`mul`/`div`/`sqrt`/`fma`/
+//! `roundToIntegral`) and real/int conversions, which require correct rounding —
+//! the harder next layer, deferred deliberately rather than done unsoundly.
+//!
+//! # Errors
+//!
+//! Every builder shares one error contract: it returns [`IrError::SortMismatch`]
+//! if an operand is not a `BitVec` of the format's width, or the underlying
+//! [`IrError`] from an IR builder (which cannot occur for well-formed input).
+#![allow(clippy::missing_errors_doc)] // uniform contract documented above
+
+use axeyum_ir::{IrError, Sort, TermArena, TermId};
+
+/// An IEEE 754 binary format: `exp_bits` exponent bits and `sig_bits`
+/// significand bits (the latter *including* the hidden bit). The bit width of a
+/// value is `exp_bits + sig_bits`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FloatFormat {
+    /// Exponent width in bits.
+    pub exp_bits: u32,
+    /// Significand width in bits, including the hidden leading bit.
+    pub sig_bits: u32,
+}
+
+impl FloatFormat {
+    /// IEEE 754 binary16 (half precision).
+    pub const F16: Self = Self {
+        exp_bits: 5,
+        sig_bits: 11,
+    };
+    /// IEEE 754 binary32 (single precision).
+    pub const F32: Self = Self {
+        exp_bits: 8,
+        sig_bits: 24,
+    };
+    /// IEEE 754 binary64 (double precision).
+    pub const F64: Self = Self {
+        exp_bits: 11,
+        sig_bits: 53,
+    };
+
+    /// Total bit width of a value in this format.
+    #[must_use]
+    pub const fn width(self) -> u32 {
+        self.exp_bits + self.sig_bits
+    }
+
+    fn check(self, arena: &TermArena, x: TermId) -> Result<(), IrError> {
+        let expected = Sort::BitVec(self.width());
+        let found = arena.sort_of(x);
+        if found == expected {
+            Ok(())
+        } else {
+            Err(IrError::SortMismatch {
+                expected: "BitVec matching the float format width",
+                found,
+            })
+        }
+    }
+
+    fn sign(self, arena: &mut TermArena, x: TermId) -> Result<TermId, IrError> {
+        let top = self.width() - 1;
+        arena.extract(top, top, x)
+    }
+
+    fn exponent(self, arena: &mut TermArena, x: TermId) -> Result<TermId, IrError> {
+        arena.extract(self.width() - 2, self.sig_bits - 1, x)
+    }
+
+    fn trailing_sig(self, arena: &mut TermArena, x: TermId) -> Result<TermId, IrError> {
+        arena.extract(self.sig_bits - 2, 0, x)
+    }
+}
+
+/// `x` is NaN: exponent all ones and a non-zero trailing significand.
+pub fn is_nan(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId, IrError> {
+    fmt.check(arena, x)?;
+    let all_ones = exp_all_ones(arena, fmt, x)?;
+    let sig_nz = sig_nonzero(arena, fmt, x)?;
+    arena.and(all_ones, sig_nz)
+}
+
+/// `x` is +∞ or −∞: exponent all ones and a zero trailing significand.
+pub fn is_infinite(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId, IrError> {
+    fmt.check(arena, x)?;
+    let all_ones = exp_all_ones(arena, fmt, x)?;
+    let sig_z = sig_zero(arena, fmt, x)?;
+    arena.and(all_ones, sig_z)
+}
+
+/// `x` is +0 or −0: exponent all zero and a zero trailing significand.
+pub fn is_zero(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId, IrError> {
+    fmt.check(arena, x)?;
+    let exp_z = exp_all_zero(arena, fmt, x)?;
+    let sig_z = sig_zero(arena, fmt, x)?;
+    arena.and(exp_z, sig_z)
+}
+
+/// `x` is subnormal: exponent all zero and a non-zero trailing significand.
+pub fn is_subnormal(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId, IrError> {
+    fmt.check(arena, x)?;
+    let exp_z = exp_all_zero(arena, fmt, x)?;
+    let sig_nz = sig_nonzero(arena, fmt, x)?;
+    arena.and(exp_z, sig_nz)
+}
+
+/// `x` is a normal number: exponent neither all zero nor all ones.
+pub fn is_normal(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId, IrError> {
+    fmt.check(arena, x)?;
+    let exp_z = exp_all_zero(arena, fmt, x)?;
+    let exp_o = exp_all_ones(arena, fmt, x)?;
+    let not_z = arena.not(exp_z)?;
+    let not_o = arena.not(exp_o)?;
+    arena.and(not_z, not_o)
+}
+
+/// `x` is negative: sign bit set, and `x` is neither NaN nor a zero.
+pub fn is_negative(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId, IrError> {
+    fmt.check(arena, x)?;
+    let signed = sign_set(arena, fmt, x)?;
+    let nan = is_nan(arena, fmt, x)?;
+    let zero = is_zero(arena, fmt, x)?;
+    not_nan_not_zero_and(arena, signed, nan, zero)
+}
+
+/// `x` is positive: sign bit clear, and `x` is neither NaN nor a zero.
+pub fn is_positive(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId, IrError> {
+    fmt.check(arena, x)?;
+    let signed = sign_set(arena, fmt, x)?;
+    let unsigned = arena.not(signed)?;
+    let nan = is_nan(arena, fmt, x)?;
+    let zero = is_zero(arena, fmt, x)?;
+    not_nan_not_zero_and(arena, unsigned, nan, zero)
+}
+
+/// Absolute value: clears the sign bit.
+pub fn abs(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId, IrError> {
+    fmt.check(arena, x)?;
+    let mask = arena.bv_const(fmt.width(), sign_mask(fmt) ^ all_ones_mask(fmt))?;
+    arena.bv_and(x, mask)
+}
+
+/// Negation: flips the sign bit.
+pub fn neg(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId, IrError> {
+    fmt.check(arena, x)?;
+    let mask = arena.bv_const(fmt.width(), sign_mask(fmt))?;
+    arena.bv_xor(x, mask)
+}
+
+/// IEEE equality `fp.eq`: neither operand is NaN, and they are the same value
+/// (bit-identical, or both zero so `+0 = -0`).
+pub fn eq(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+    y: TermId,
+) -> Result<TermId, IrError> {
+    fmt.check(arena, x)?;
+    fmt.check(arena, y)?;
+    let nx = is_nan(arena, fmt, x)?;
+    let ny = is_nan(arena, fmt, y)?;
+    let no_nan = {
+        let a = arena.not(nx)?;
+        let b = arena.not(ny)?;
+        arena.and(a, b)?
+    };
+    let bit_eq = arena.eq(x, y)?;
+    let both_zero = {
+        let zx = is_zero(arena, fmt, x)?;
+        let zy = is_zero(arena, fmt, y)?;
+        arena.and(zx, zy)?
+    };
+    let same = arena.or(bit_eq, both_zero)?;
+    arena.and(no_nan, same)
+}
+
+/// `fp.lt`: ordered less-than (NaN unordered, `±0` equal).
+pub fn lt(arena: &mut TermArena, fmt: FloatFormat, x: TermId, y: TermId) -> Result<TermId, IrError> {
+    fmt.check(arena, x)?;
+    fmt.check(arena, y)?;
+    let nx = is_nan(arena, fmt, x)?;
+    let ny = is_nan(arena, fmt, y)?;
+    let no_nan = {
+        let a = arena.not(nx)?;
+        let b = arena.not(ny)?;
+        arena.and(a, b)?
+    };
+    let both_zero = {
+        let zx = is_zero(arena, fmt, x)?;
+        let zy = is_zero(arena, fmt, y)?;
+        arena.and(zx, zy)?
+    };
+    let not_both_zero = arena.not(both_zero)?;
+    let kx = order_key(arena, fmt, x)?;
+    let ky = order_key(arena, fmt, y)?;
+    let key_lt = arena.bv_ult(kx, ky)?;
+    let a = arena.and(no_nan, not_both_zero)?;
+    arena.and(a, key_lt)
+}
+
+/// `fp.leq`: `lt(x, y) ∨ eq(x, y)`.
+pub fn leq(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+    y: TermId,
+) -> Result<TermId, IrError> {
+    let l = lt(arena, fmt, x, y)?;
+    let e = eq(arena, fmt, x, y)?;
+    arena.or(l, e)
+}
+
+/// `fp.gt`: `lt(y, x)`.
+pub fn gt(arena: &mut TermArena, fmt: FloatFormat, x: TermId, y: TermId) -> Result<TermId, IrError> {
+    lt(arena, fmt, y, x)
+}
+
+/// `fp.geq`: `leq(y, x)`.
+pub fn geq(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+    y: TermId,
+) -> Result<TermId, IrError> {
+    leq(arena, fmt, y, x)
+}
+
+// --- internal helpers ---------------------------------------------------------
+
+fn all_ones_mask(fmt: FloatFormat) -> u128 {
+    let w = fmt.width();
+    if w >= 128 { u128::MAX } else { (1u128 << w) - 1 }
+}
+
+fn sign_mask(fmt: FloatFormat) -> u128 {
+    1u128 << (fmt.width() - 1)
+}
+
+fn sign_set(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId, IrError> {
+    let s = fmt.sign(arena, x)?;
+    let one = arena.bv_const(1, 1)?;
+    arena.eq(s, one)
+}
+
+fn exp_all_ones(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId, IrError> {
+    let e = fmt.exponent(arena, x)?;
+    let ones = arena.bv_const(fmt.exp_bits, (1u128 << fmt.exp_bits) - 1)?;
+    arena.eq(e, ones)
+}
+
+fn exp_all_zero(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId, IrError> {
+    let e = fmt.exponent(arena, x)?;
+    let zero = arena.bv_const(fmt.exp_bits, 0)?;
+    arena.eq(e, zero)
+}
+
+fn sig_zero(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId, IrError> {
+    let s = fmt.trailing_sig(arena, x)?;
+    let zero = arena.bv_const(fmt.sig_bits - 1, 0)?;
+    arena.eq(s, zero)
+}
+
+fn sig_nonzero(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId, IrError> {
+    let z = sig_zero(arena, fmt, x)?;
+    arena.not(z)
+}
+
+/// `cond ∧ ¬nan ∧ ¬zero` — the shared tail of `isNegative`/`isPositive`.
+fn not_nan_not_zero_and(
+    arena: &mut TermArena,
+    cond: TermId,
+    nan: TermId,
+    zero: TermId,
+) -> Result<TermId, IrError> {
+    let not_nan = arena.not(nan)?;
+    let not_zero = arena.not(zero)?;
+    let a = arena.and(cond, not_nan)?;
+    arena.and(a, not_zero)
+}
+
+/// The monotone unsigned ordering key: flip all bits if the sign is set,
+/// otherwise set the sign bit. Unsigned `<` on keys is the float order for
+/// non-NaN values (with `±0` handled by the zero special-case in [`lt`]).
+fn order_key(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId, IrError> {
+    let signed = sign_set(arena, fmt, x)?;
+    let flipped = arena.bv_not(x)?;
+    let smask = arena.bv_const(fmt.width(), sign_mask(fmt))?;
+    let pos_key = arena.bv_or(x, smask)?;
+    arena.ite(signed, flipped, pos_key)
+}

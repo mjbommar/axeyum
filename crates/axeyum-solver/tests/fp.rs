@@ -1,0 +1,169 @@
+//! IEEE 754 floating-point predicates/comparisons as bit-vector formulas.
+//! Concrete bit patterns are checked through the ground evaluator (the semantic
+//! reference); a symbolic irreflexivity query goes through the solver.
+
+use axeyum_ir::{Assignment, TermArena, Value, eval};
+use axeyum_solver::fp::{self, FloatFormat};
+use axeyum_solver::{CheckResult, SolverConfig, solve};
+
+const F32: FloatFormat = FloatFormat::F32;
+
+// Single-precision bit patterns.
+const NAN: u128 = 0x7FC0_0000;
+const INF: u128 = 0x7F80_0000;
+const POS0: u128 = 0x0000_0000;
+const NEG0: u128 = 0x8000_0000;
+const ONE: u128 = 0x3F80_0000;
+const TWO: u128 = 0x4000_0000;
+const NEG_TWO: u128 = 0xC000_0000;
+
+fn c(arena: &mut TermArena, bits: u128) -> axeyum_ir::TermId {
+    arena.bv_const(32, bits).unwrap()
+}
+
+fn eval_bool(arena: &TermArena, term: axeyum_ir::TermId) -> bool {
+    match eval(arena, term, &Assignment::new()) {
+        Ok(Value::Bool(b)) => b,
+        other => panic!("expected Bool, got {other:?}"),
+    }
+}
+
+#[test]
+fn classification() {
+    let mut a = TermArena::new();
+
+    let nan = c(&mut a, NAN);
+    let t = fp::is_nan(&mut a, F32, nan).unwrap();
+    assert!(eval_bool(&a, t), "0x7FC00000 is NaN");
+    let one = c(&mut a, ONE);
+    let t = fp::is_nan(&mut a, F32, one).unwrap();
+    assert!(!eval_bool(&a, t), "1.0 is not NaN");
+
+    let inf = c(&mut a, INF);
+    let t = fp::is_infinite(&mut a, F32, inf).unwrap();
+    assert!(eval_bool(&a, t), "0x7F800000 is +inf");
+    let t = fp::is_infinite(&mut a, F32, nan).unwrap();
+    assert!(!eval_bool(&a, t), "NaN is not infinite");
+
+    for z in [POS0, NEG0] {
+        let zt = c(&mut a, z);
+        let t = fp::is_zero(&mut a, F32, zt).unwrap();
+        assert!(eval_bool(&a, t), "{z:#x} is zero");
+    }
+    let t = fp::is_zero(&mut a, F32, one).unwrap();
+    assert!(!eval_bool(&a, t), "1.0 is not zero");
+}
+
+#[test]
+fn sign_predicates() {
+    let mut a = TermArena::new();
+    let neg_two = c(&mut a, NEG_TWO);
+    let pos_two = c(&mut a, TWO);
+    let neg0 = c(&mut a, NEG0);
+    let nan = c(&mut a, NAN);
+
+    let t = fp::is_negative(&mut a, F32, neg_two).unwrap();
+    assert!(eval_bool(&a, t), "-2.0 is negative");
+    let t = fp::is_negative(&mut a, F32, pos_two).unwrap();
+    assert!(!eval_bool(&a, t), "+2.0 is not negative");
+    let t = fp::is_negative(&mut a, F32, neg0).unwrap();
+    assert!(!eval_bool(&a, t), "-0.0 is not negative (it is a zero)");
+    let t = fp::is_negative(&mut a, F32, nan).unwrap();
+    assert!(!eval_bool(&a, t), "NaN is not negative");
+
+    let t = fp::is_positive(&mut a, F32, pos_two).unwrap();
+    assert!(eval_bool(&a, t), "+2.0 is positive");
+    let t = fp::is_positive(&mut a, F32, nan).unwrap();
+    assert!(!eval_bool(&a, t), "NaN is not positive");
+}
+
+#[test]
+fn abs_and_neg() {
+    let mut a = TermArena::new();
+    let neg_two = c(&mut a, NEG_TWO);
+    let two = c(&mut a, TWO);
+
+    let abs = fp::abs(&mut a, F32, neg_two).unwrap();
+    let same = a.eq(abs, two).unwrap();
+    assert!(eval_bool(&a, same), "abs(-2.0) == 2.0 (bitwise)");
+
+    let neg = fp::neg(&mut a, F32, two).unwrap();
+    let nt = c(&mut a, NEG_TWO);
+    let same = a.eq(neg, nt).unwrap();
+    assert!(eval_bool(&a, same), "neg(2.0) == -2.0 (bitwise)");
+}
+
+#[test]
+fn ieee_equality() {
+    let mut a = TermArena::new();
+    let pos0 = c(&mut a, POS0);
+    let neg0 = c(&mut a, NEG0);
+    let nan = c(&mut a, NAN);
+    let one = c(&mut a, ONE);
+
+    let t = fp::eq(&mut a, F32, pos0, neg0).unwrap();
+    assert!(eval_bool(&a, t), "+0 == -0");
+    let t = fp::eq(&mut a, F32, nan, nan).unwrap();
+    assert!(!eval_bool(&a, t), "NaN != NaN");
+    let t = fp::eq(&mut a, F32, one, one).unwrap();
+    assert!(eval_bool(&a, t), "1.0 == 1.0");
+}
+
+#[test]
+fn ordering() {
+    let mut a = TermArena::new();
+    let one = c(&mut a, ONE);
+    let two = c(&mut a, TWO);
+    let neg_two = c(&mut a, NEG_TWO);
+    let pos0 = c(&mut a, POS0);
+    let neg0 = c(&mut a, NEG0);
+    let nan = c(&mut a, NAN);
+
+    let t = fp::lt(&mut a, F32, one, two).unwrap();
+    assert!(eval_bool(&a, t), "1.0 < 2.0");
+    let t = fp::lt(&mut a, F32, two, one).unwrap();
+    assert!(!eval_bool(&a, t), "not 2.0 < 1.0");
+    let t = fp::lt(&mut a, F32, neg_two, one).unwrap();
+    assert!(eval_bool(&a, t), "-2.0 < 1.0");
+    let t = fp::lt(&mut a, F32, neg0, pos0).unwrap();
+    assert!(!eval_bool(&a, t), "not -0 < +0 (they are equal)");
+    let t = fp::lt(&mut a, F32, nan, one).unwrap();
+    assert!(!eval_bool(&a, t), "NaN unordered");
+
+    let t = fp::leq(&mut a, F32, pos0, neg0).unwrap();
+    assert!(eval_bool(&a, t), "+0 <= -0");
+    let t = fp::geq(&mut a, F32, two, one).unwrap();
+    assert!(eval_bool(&a, t), "2.0 >= 1.0");
+}
+
+#[test]
+fn lt_is_irreflexive_symbolically() {
+    // For every (non-NaN or NaN) x, fp.lt(x, x) is false -> asserting it is unsat.
+    // This goes through the bit-vector solver over a free 32-bit `x`.
+    let mut a = TermArena::new();
+    let xs = a.declare("x", axeyum_ir::Sort::BitVec(32)).unwrap();
+    let x = a.var(xs);
+    let lt_xx = fp::lt(&mut a, F32, x, x).unwrap();
+
+    let result = solve(&mut a, &[lt_xx], &SolverConfig::default()).unwrap();
+    assert!(
+        matches!(result, CheckResult::Unsat),
+        "fp.lt(x, x) is never true, so asserting it must be unsat; got {result:?}"
+    );
+}
+
+#[test]
+fn nan_is_not_less_than_itself_but_neither_is_anything_symbolic() {
+    // A satisfiable symbolic query: there exists x with 1.0 < x (e.g. x = 2.0).
+    let mut a = TermArena::new();
+    let xs = a.declare("x", axeyum_ir::Sort::BitVec(32)).unwrap();
+    let x = a.var(xs);
+    let one = c(&mut a, ONE);
+    let one_lt_x = fp::lt(&mut a, F32, one, x).unwrap();
+
+    let result = solve(&mut a, &[one_lt_x], &SolverConfig::default()).unwrap();
+    assert!(
+        matches!(result, CheckResult::Sat(_)),
+        "there is a float greater than 1.0; got {result:?}"
+    );
+}

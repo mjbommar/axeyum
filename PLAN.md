@@ -38,6 +38,20 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-14
 
+- **Floating point — non-arithmetic core (2026-06-14, ADR-0023).** New
+  `axeyum-solver::fp` module: IEEE 754 classification (`is_nan`/`is_infinite`/
+  `is_zero`/`is_normal`/`is_subnormal`/`is_negative`/`is_positive`), `abs`/`neg`,
+  `eq`, and `lt`/`leq`/`gt`/`geq` as **bit-vector formula builders** — an FP value
+  of format `(eb, sb)` is a `BitVec(eb + sb)`, so (like enums/records, ADR-0008)
+  there is **no new IR sort** and solving/replay reuse the sound BV path. SMT/IEEE
+  semantics: `fp.eq` is not bit equality (`NaN ≠ NaN`, `+0 = −0`), ordering is by
+  value (NaN unordered, `±0` equal) via the monotone-key transform,
+  `isNegative`/`isPositive` exclude NaN and zeros. Tests (`tests/fp.rs`): concrete
+  f32 patterns via the evaluator + symbolic `fp.lt(x,x)` unsat and `1.0 < x` sat
+  through the solver. **Deferred (next FP layer):** rounded arithmetic
+  (`add`/`mul`/`div`/`sqrt`/`fma`/`roundToIntegral`) and conversions — each needs
+  careful per-rounding-mode encoding + differential validation; a first-class
+  `Sort::Float` is the upgrade path if sort-level FP typing is wanted.
 - **Datatype SOLVING — non-recursive theory complete (2026-06-14, ADR-0022
   step B slices 1–2).** Building on the iteration-Q IR foundation, datatypes now
   *solve*, not just parse:

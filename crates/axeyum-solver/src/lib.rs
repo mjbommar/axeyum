@@ -29,6 +29,10 @@ mod dpll_lia;
 mod dpll_t;
 mod enums;
 mod euf;
+/// IEEE 754 floating-point predicates, classification, sign ops, equality, and
+/// ordering as bit-vector formula builders (the non-arithmetic `FloatingPoint`
+/// core). FP values are `BitVec(eb + sb)`; see the module docs.
+pub mod fp;
 mod evidence;
 mod faithfulness;
 mod incremental;
@@ -78,6 +82,7 @@ pub use dpll_t::{
 };
 pub use enums::{EnumError, EnumSort, EnumVar};
 pub use euf::check_with_function_elimination;
+pub use fp::FloatFormat;
 pub use evidence::{
     Evidence, EvidenceReport, ProofOutcome, Provenance, SEMANTICS_VERSION, produce_evidence,
     produce_lra_dpll_evidence, produce_lra_evidence, produce_qf_bv_evidence, prove,

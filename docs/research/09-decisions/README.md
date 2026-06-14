@@ -76,3 +76,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0020](adr-0020-unbounded-lia-branch-and-bound.md) | Unbounded QF_LIA via branch-and-bound over the simplex | accepted |
 | [0021](adr-0021-boolean-structured-lia-dpll.md) | Boolean-structured QF_LIA via lazy-SMT over the integer simplex | accepted |
 | [0022](adr-0022-first-class-datatype-sort.md) | First-class datatype sort in the IR (recursive datatypes) | accepted |
+| [0023](adr-0023-floating-point-bv-lowering.md) | Floating-point (IEEE 754) as bit-vector formula builders, non-arithmetic core first | accepted |
