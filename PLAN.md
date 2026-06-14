@@ -38,6 +38,25 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-13
 
+- Architecture: swappable solving strategies recorded 2026-06-13
+  ([ADR-0019](docs/research/09-decisions/adr-0019-swappable-solving-strategies.md),
+  [solving-strategies note](docs/research/03-architecture/solving-strategies-and-memory-model.md)).
+  Research mapped the solver core (trait-based, the strategy seam already latent
+  at `SolverBackend`/`check_with_all_theories<B>`; `dpll_t.rs` is a *real*
+  lazy-SMT loop and QF_LRA is native, not stubs) and the gaps to
+  z3/lean/angr/unicorn. The key reframing: **"high-memory vs low-memory" is
+  about how much is materialized eagerly**, and the binding QF_BV gap is that the
+  pure-Rust stack has *no* low-memory strategy (low-memory = Z3 only), so the
+  encoding-size caps that produce `EncodingBudget` unknowns are OOM guards on the
+  eager pipeline. First slice implemented: a first-class `Strategy`
+  (`EagerPureRust` default; `Oracle` feature-gated on `z3`) and a unified
+  `solve_with_strategy` entry point — every strategy ends in evaluator replay, so
+  they are interchangeable *and* cross-validatable. A differential test confirms
+  the eager pure-Rust and Z3 oracle strategies agree across a QF_BV battery
+  (z3-gated); the no-C build keeps only pure-Rust strategies. Roadmap (note §5):
+  next is a low-memory pure-Rust strategy (abstraction-refinement bit-blasting /
+  native BV theory solver generalizing the DPLL(T) loop) — the destination-2
+  architecture — prototyped and memory-measured OOM-safely before its own ADR.
 - Incremental encoder polarity optimization recorded 2026-06-13 (toward
   destination 2, on the product-critical incremental path the symbolic-execution
   consumer uses): `IncrementalCnf` (`axeyum-cnf`) now emits AND-gate definitions
