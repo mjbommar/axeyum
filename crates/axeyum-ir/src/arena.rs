@@ -852,6 +852,115 @@ impl TermArena {
         Ok(self.app(Op::BvComp, &[a, b], Sort::BitVec(1)))
     }
 
+    /// `bvuaddo` — unsigned addition overflow: the `(w+1)`-bit sum carries out.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] from the builders (e.g. operands of differing width).
+    pub fn bv_uaddo(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        let w = self.expect_same_bv(a, b)?;
+        let ae = self.zero_ext(1, a)?;
+        let be = self.zero_ext(1, b)?;
+        let s = self.bv_add(ae, be)?;
+        let carry = self.extract(w, w, s)?;
+        let one1 = self.bv_const(1, 1)?;
+        self.eq(carry, one1)
+    }
+
+    /// `bvsaddo` — signed addition overflow: operands share a sign but the sum's
+    /// sign differs.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] from the builders.
+    pub fn bv_saddo(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        let w = self.expect_same_bv(a, b)?;
+        let sa = self.extract(w - 1, w - 1, a)?;
+        let sb = self.extract(w - 1, w - 1, b)?;
+        let s = self.bv_add(a, b)?;
+        let ss = self.extract(w - 1, w - 1, s)?;
+        let same = self.eq(sa, sb)?;
+        let ss_eq_sa = self.eq(ss, sa)?;
+        let differs = self.not(ss_eq_sa)?;
+        self.and(same, differs)
+    }
+
+    /// `bvusubo` — unsigned subtraction overflow (borrow): `a < b` unsigned.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] from the builders.
+    pub fn bv_usubo(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.expect_same_bv(a, b)?;
+        self.bv_ult(a, b)
+    }
+
+    /// `bvssubo` — signed subtraction overflow: operands differ in sign and the
+    /// difference's sign differs from `a`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] from the builders.
+    pub fn bv_ssubo(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        let w = self.expect_same_bv(a, b)?;
+        let sa = self.extract(w - 1, w - 1, a)?;
+        let sb = self.extract(w - 1, w - 1, b)?;
+        let s = self.bv_sub(a, b)?;
+        let ss = self.extract(w - 1, w - 1, s)?;
+        let sa_eq_sb = self.eq(sa, sb)?;
+        let signs_differ = self.not(sa_eq_sb)?;
+        let ss_eq_sa = self.eq(ss, sa)?;
+        let res_differs = self.not(ss_eq_sa)?;
+        self.and(signs_differ, res_differs)
+    }
+
+    /// `bvnego` — negation overflow: `a` is the signed minimum (`−2^(w−1)`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] from the builders.
+    pub fn bv_nego(&mut self, a: TermId) -> Result<TermId, IrError> {
+        let w = self.expect_bv(a)?;
+        let min = self.bv_const(w, 1u128 << (w - 1))?;
+        self.eq(a, min)
+    }
+
+    /// `bvumulo` — unsigned multiplication overflow: the high `w` bits of the
+    /// `2w`-bit product are nonzero.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] from the builders (incl. [`IrError::ConcatTooWide`] if
+    /// `2w` exceeds [`MAX_BV_WIDTH`]).
+    pub fn bv_umulo(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        let w = self.expect_same_bv(a, b)?;
+        let ae = self.zero_ext(w, a)?;
+        let be = self.zero_ext(w, b)?;
+        let p = self.bv_mul(ae, be)?;
+        let hi = self.extract(2 * w - 1, w, p)?;
+        let zero = self.bv_const(w, 0)?;
+        let hi_zero = self.eq(hi, zero)?;
+        self.not(hi_zero)
+    }
+
+    /// `bvsmulo` — signed multiplication overflow: the `2w`-bit signed product
+    /// does not fit in `w` bits (its low `w` bits, sign-extended, differ from it).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] from the builders (incl. [`IrError::ConcatTooWide`] if
+    /// `2w` exceeds [`MAX_BV_WIDTH`]).
+    pub fn bv_smulo(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        let w = self.expect_same_bv(a, b)?;
+        let ae = self.sign_ext(w, a)?;
+        let be = self.sign_ext(w, b)?;
+        let p = self.bv_mul(ae, be)?;
+        let lo = self.extract(w - 1, 0, p)?;
+        let lo_ext = self.sign_ext(w, lo)?;
+        let fits = self.eq(p, lo_ext)?;
+        self.not(fits)
+    }
+
     /// Zero extension by `by` bits.
     ///
     /// # Errors

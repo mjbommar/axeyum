@@ -592,3 +592,22 @@ fn parses_and_round_trips_bv_int_coercions() {
     let reparsed = parse_script(&rendered).unwrap();
     assert_eq!(reparsed.assertions.len(), 2);
 }
+
+#[test]
+fn parses_bv_overflow_predicates() {
+    // bvuaddo(0xff, 0x01) on 8-bit is true (255 + 1 overflows); the formula
+    // asserting it must parse and be satisfiable (it is a true ground fact).
+    let text = r"
+        (set-logic QF_BV)
+        (assert (bvuaddo (_ bv255 8) (_ bv1 8)))
+        (assert (not (bvuaddo (_ bv1 8) (_ bv1 8))))
+        (assert (bvnego (_ bv128 8)))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 3);
+    // round-trips structurally (desugared to bvadd/extract/eq); re-parses.
+    let rendered = write_script(&script.arena, &script.assertions);
+    let reparsed = parse_script(&rendered).unwrap();
+    assert_eq!(reparsed.assertions.len(), 3);
+}

@@ -819,6 +819,17 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
         "bvsgt" => bin(arena, TermArena::bv_sgt, args, op)?,
         "bvsge" => bin(arena, TermArena::bv_sge, args, op)?,
         "bvcomp" => bin(arena, TermArena::bv_comp, args, op)?,
+        // Overflow-detection predicates (SMT-LIB 2.6).
+        "bvuaddo" => bin(arena, TermArena::bv_uaddo, args, op)?,
+        "bvsaddo" => bin(arena, TermArena::bv_saddo, args, op)?,
+        "bvusubo" => bin(arena, TermArena::bv_usubo, args, op)?,
+        "bvssubo" => bin(arena, TermArena::bv_ssubo, args, op)?,
+        "bvumulo" => bin(arena, TermArena::bv_umulo, args, op)?,
+        "bvsmulo" => bin(arena, TermArena::bv_smulo, args, op)?,
+        "bvnego" => {
+            need(1)?;
+            arena.bv_nego(args[0])?
+        }
         "select" => {
             need(2)?;
             arena.select(args[0], args[1])?

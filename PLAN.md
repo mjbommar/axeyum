@@ -585,6 +585,14 @@ Last updated: 2026-06-14
   and confirms the found inputs + reconstructed memory by concrete
   re-execution. Remaining array work is QF_ABV scenarios, bench-harness wiring,
   and corpus blow-up measurement.
+- **BV overflow predicates added (2026-06-14).** The SMT-LIB 2.6
+  overflow-detection ops `bvuaddo`/`bvsaddo`/`bvusubo`/`bvssubo`/`bvumulo`/
+  `bvsmulo`/`bvnego` as arena builders that **compose existing BV ops** (no new IR
+  op, no cross-cutting): unsigned add/mul via a widened `(w+1)`/`2w`-bit result's
+  high bits, signed add/sub via sign agreement, `bvnego` = `a == −2^(w−1)`,
+  `bvsmulo` via `sign_ext(low w) ≠ product`. So they bit-blast and round-trip
+  through the existing path unchanged. Validated **exhaustively** (all `x,y` for
+  `w ≤ 4`) against an i128 overflow reference; SMT-LIB parser accepts them.
 - **BV↔Int coercions added (2026-06-14, extends ADR-0014).** New IR ops
   `Op::Bv2Nat` (BV→Int, unsigned value) and `Op::Int2Bv { width }` (Int→BV,
   `x mod 2^width`). Eval is the replay oracle (`bv2nat` = unsigned value as

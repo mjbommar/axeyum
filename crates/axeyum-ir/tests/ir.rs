@@ -1229,3 +1229,39 @@ fn bv_int_coercions_evaluate() {
     let back = a.bv2nat(rt).unwrap();
     assert_eq!(eval(&a, back, &asg).unwrap(), Value::Int(70));
 }
+
+#[test]
+#[allow(clippy::cast_sign_loss)] // loop values are in 0..2^w, always non-negative
+fn bv_overflow_predicates_match_reference_exhaustively() {
+    let asg = Assignment::new();
+    let eval_b = |a: &TermArena, t| matches!(eval(a, t, &asg), Ok(Value::Bool(true)));
+    for w in 1u32..=4 {
+        let n = 1i128 << w;
+        let half = 1i128 << (w - 1);
+        let signed = |v: i128| if v >= half { v - n } else { v };
+        let in_range = |v: i128| (-half..half).contains(&v);
+        let mut a = TermArena::new();
+        for xu in 0..n {
+            for yu in 0..n {
+                let x = a.bv_const(w, xu as u128).unwrap();
+                let y = a.bv_const(w, yu as u128).unwrap();
+                let (xs, ys) = (signed(xu), signed(yu));
+                let cases: [(axeyum_ir::TermId, bool); 6] = [
+                    (a.bv_uaddo(x, y).unwrap(), xu + yu >= n),
+                    (a.bv_saddo(x, y).unwrap(), !in_range(xs + ys)),
+                    (a.bv_usubo(x, y).unwrap(), xu < yu),
+                    (a.bv_ssubo(x, y).unwrap(), !in_range(xs - ys)),
+                    (a.bv_umulo(x, y).unwrap(), xu * yu >= n),
+                    (a.bv_smulo(x, y).unwrap(), !in_range(xs * ys)),
+                ];
+                for (t, want) in cases {
+                    assert_eq!(eval_b(&a, t), want, "w={w} x={xu} y={yu}");
+                }
+            }
+            // unary negation overflow
+            let x = a.bv_const(w, xu as u128).unwrap();
+            let nego = a.bv_nego(x).unwrap();
+            assert_eq!(eval_b(&a, nego), !in_range(-signed(xu)), "nego w={w} x={xu}");
+        }
+    }
+}
