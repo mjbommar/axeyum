@@ -181,6 +181,77 @@ impl BoundedString {
         Ok((result, StrTerm { len: rlen, content: rcontent }))
     }
 
+    /// `str.prefixof` — is `needle` a prefix of `hay`? (`needle`, `hay` in this
+    /// sort.) `len(needle) ≤ len(hay)` and the first `len(needle)` bytes agree.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] from the builders.
+    pub fn prefix_of(
+        &self,
+        arena: &mut TermArena,
+        needle: &StrTerm,
+        hay: &StrTerm,
+    ) -> Result<TermId, IrError> {
+        let mut acc = arena.bv_ule(needle.len, hay.len)?;
+        for i in 0..self.max_len {
+            let idx = arena.bv_const(self.len_width(), u128::from(i))?;
+            let active = arena.bv_ult(idx, needle.len)?;
+            let nb = arena.extract(i * 8 + 7, i * 8, needle.content)?;
+            let hb = arena.extract(i * 8 + 7, i * 8, hay.content)?;
+            let beq = arena.eq(nb, hb)?;
+            let nactive = arena.not(active)?;
+            let implied = arena.or(nactive, beq)?;
+            acc = arena.and(acc, implied)?;
+        }
+        Ok(acc)
+    }
+
+    /// `str.contains` — does `hay` contain `needle` as a (contiguous) substring?
+    /// A bounded scan: `needle` matches at *some* offset whose window fits within
+    /// `len(hay)`. (Both strings in this sort.)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] from the builders.
+    #[allow(clippy::similar_names)]
+    pub fn contains(
+        &self,
+        arena: &mut TermArena,
+        hay: &StrTerm,
+        needle: &StrTerm,
+    ) -> Result<TermId, IrError> {
+        let wide = self.len_width() + 1; // room for off + len(needle)
+        let len_h = arena.zero_ext(1, hay.len)?;
+        let len_n = arena.zero_ext(1, needle.len)?;
+        let mut any = arena.bool_const(false);
+        for off in 0..self.max_len {
+            let off_c = arena.bv_const(wide, u128::from(off))?;
+            let end = arena.bv_add(off_c, len_n)?;
+            // window fits within the string: off + len(needle) <= len(hay).
+            // (This is also correct for an empty needle: 0 <= len(hay).)
+            let mut matched = arena.bv_ule(end, len_h)?;
+            for j in 0..self.max_len {
+                let jc = arena.bv_const(self.len_width(), u128::from(j))?;
+                let j_active = arena.bv_ult(jc, needle.len)?;
+                let nj_active = arena.not(j_active)?;
+                if off + j >= self.max_len {
+                    // hay[off+j] is past the buffer: this offset can only match if
+                    // needle has no byte j (j ≥ len(needle)).
+                    matched = arena.and(matched, nj_active)?;
+                } else {
+                    let hb = arena.extract((off + j) * 8 + 7, (off + j) * 8, hay.content)?;
+                    let nb = arena.extract(j * 8 + 7, j * 8, needle.content)?;
+                    let beq = arena.eq(hb, nb)?;
+                    let implied = arena.or(nj_active, beq)?;
+                    matched = arena.and(matched, implied)?;
+                }
+            }
+            any = arena.or(any, matched)?;
+        }
+        Ok(any)
+    }
+
     /// `str.at` at a **constant** index: the byte at position `i` (an 8-bit
     /// `BitVec`), or `0` if `i` is at or beyond the length.
     ///

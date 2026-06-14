@@ -114,6 +114,49 @@ fn concat_with_empty_and_symbolic() {
 }
 
 #[test]
+fn prefix_and_contains_on_literals() {
+    let mut a = TermArena::new();
+    let s = BoundedString::new(8);
+    let abc = s.literal(&mut a, "abc").unwrap();
+    let ab = s.literal(&mut a, "ab").unwrap();
+    let ac = s.literal(&mut a, "ac").unwrap();
+    let bc = s.literal(&mut a, "bc").unwrap();
+    let xy = s.literal(&mut a, "xy").unwrap();
+    let empty = s.literal(&mut a, "").unwrap();
+
+    let t = s.prefix_of(&mut a, &ab, &abc).unwrap();
+    assert!(eval_bool(&a, t), "\"ab\" prefixof \"abc\"");
+    let t = s.prefix_of(&mut a, &ac, &abc).unwrap();
+    assert!(!eval_bool(&a, t), "\"ac\" not prefixof \"abc\"");
+    let t = s.prefix_of(&mut a, &empty, &abc).unwrap();
+    assert!(eval_bool(&a, t), "\"\" prefixof \"abc\"");
+
+    let t = s.contains(&mut a, &abc, &bc).unwrap();
+    assert!(eval_bool(&a, t), "\"abc\" contains \"bc\"");
+    let t = s.contains(&mut a, &abc, &ab).unwrap();
+    assert!(eval_bool(&a, t), "\"abc\" contains \"ab\"");
+    let t = s.contains(&mut a, &abc, &xy).unwrap();
+    assert!(!eval_bool(&a, t), "\"abc\" does not contain \"xy\"");
+    let t = s.contains(&mut a, &abc, &empty).unwrap();
+    assert!(eval_bool(&a, t), "\"abc\" contains \"\"");
+}
+
+#[test]
+fn symbolic_contains_is_sat() {
+    // exists x (<=8): x contains "lo" AND len(x)==5  -> sat (e.g. "hello").
+    let mut a = TermArena::new();
+    let s = BoundedString::new(8);
+    let x = s.declare(&mut a, "x").unwrap();
+    let wf = s.well_formed(&mut a, &x).unwrap();
+    let lo = s.literal(&mut a, "lo").unwrap();
+    let has = s.contains(&mut a, &x, &lo).unwrap();
+    let five = a.bv_const(s_len_width(8), 5).unwrap();
+    let len5 = a.eq(s.length(&x), five).unwrap();
+    let r = solve(&mut a, &[wf, has, len5], &SolverConfig::default()).unwrap();
+    assert!(matches!(r, CheckResult::Sat(_)), "x contains \"lo\" ∧ len 5 sat, got {r:?}");
+}
+
+#[test]
 fn contradictory_string_constraints_are_unsat() {
     // x == "ab" AND len(x) == 3  -> unsat.
     let mut a = TermArena::new();
