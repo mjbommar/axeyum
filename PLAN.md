@@ -38,6 +38,19 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-14
 
+- **Array equality by bounded extensionality (2026-06-14).** `eliminate_arrays`
+  now handles `(= a b)` over array terms (previously `Unsupported`): for an
+  `iw`-bit index, `a = b ⟺ ⋀_{i<2^iw} select(a,i) = select(b,i)` — an exact,
+  equisatisfiable rewrite (each `select` resolves through the same machinery and
+  Ackermann pairing, so symbolic selects on `a`/`b` elsewhere stay consistent).
+  Capped at `iw ≤ 8` (256 indices) to bound the eager expansion and the `O(n²)`
+  Ackermann pairing; wider indices stay `Unsupported` (sound). Disequality
+  `(not (= a b))` falls out for free (negated conjunction). Tests: SAT load
+  propagation `a=b ∧ a[0]=0xa1`, UNSAT contradiction `a=b ∧ a[0]=0xa1 ∧
+  b[0]=0xb2`, SAT disequality, plus the rewrite-level elimination/`Unsupported`-
+  cap unit test — all model-replayed through the ground evaluator (which already
+  compares `Value::Array`s). Closes the array-equality gap in QF_ABV.
+
 - **First-class `Sort::Float` — conversions complete (2026-06-14, ADR-0026
   stage 2/3).** The SMT-LIB front-end now produces `Sort::Float` for declared FP
   variables, the `fp` literal, FP special constants, and every FP-valued op

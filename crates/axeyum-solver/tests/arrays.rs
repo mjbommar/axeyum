@@ -121,3 +121,58 @@ fn store_over_const_array() {
     let lt = arena.bv_ult(j, i).unwrap(); // j != i
     assert!(matches!(solve_qf_abv(&mut arena, &[c1, c2, lt]), CheckResult::Unsat));
 }
+
+#[test]
+fn array_equality_propagates_loads_sat() {
+    // a == b (extensionality) && a[0] == 0xa1  =>  b[0] == 0xa1 (sat, replayed).
+    let mut arena = TermArena::new();
+    let a = arena.array_var("a", 4, 8).unwrap();
+    let b = arena.array_var("b", 4, 8).unwrap();
+    let zero = arena.bv_const(4, 0).unwrap();
+    let a0 = arena.select(a, zero).unwrap();
+    let b0 = arena.select(b, zero).unwrap();
+    let a1 = arena.bv_const(8, 0xa1).unwrap();
+    let eq_ab = arena.eq(a, b).unwrap();
+    let a0_is = arena.eq(a0, a1).unwrap();
+    // Also require b[0] == 0xa1 to confirm equality forced it (consistent, sat).
+    let b0_is = arena.eq(b0, a1).unwrap();
+    assert!(matches!(
+        solve_qf_abv(&mut arena, &[eq_ab, a0_is, b0_is]),
+        CheckResult::Sat(_)
+    ));
+}
+
+#[test]
+fn array_equality_contradiction_unsat() {
+    // a == b && a[0] == 0xa1 && b[0] == 0xb2 is unsat: extensionality forces
+    // a[0] == b[0], contradicting 0xa1 != 0xb2.
+    let mut arena = TermArena::new();
+    let a = arena.array_var("a", 4, 8).unwrap();
+    let b = arena.array_var("b", 4, 8).unwrap();
+    let zero = arena.bv_const(4, 0).unwrap();
+    let a0 = arena.select(a, zero).unwrap();
+    let b0 = arena.select(b, zero).unwrap();
+    let a1 = arena.bv_const(8, 0xa1).unwrap();
+    let b2 = arena.bv_const(8, 0xb2).unwrap();
+    let eq_ab = arena.eq(a, b).unwrap();
+    let a0_is = arena.eq(a0, a1).unwrap();
+    let b0_is = arena.eq(b0, b2).unwrap();
+    assert!(matches!(
+        solve_qf_abv(&mut arena, &[eq_ab, a0_is, b0_is]),
+        CheckResult::Unsat
+    ));
+}
+
+#[test]
+fn array_disequality_is_satisfiable() {
+    // a != b is sat: they can differ at some index (extensionality negated).
+    let mut arena = TermArena::new();
+    let a = arena.array_var("a", 4, 8).unwrap();
+    let b = arena.array_var("b", 4, 8).unwrap();
+    let eq_ab = arena.eq(a, b).unwrap();
+    let neq = arena.not(eq_ab).unwrap();
+    assert!(matches!(
+        solve_qf_abv(&mut arena, &[neq]),
+        CheckResult::Sat(_)
+    ));
+}

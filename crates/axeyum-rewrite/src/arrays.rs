@@ -23,12 +23,18 @@ use axeyum_ir::{
 
 use crate::canonical::build_app;
 
+/// Largest index width for which array equality is expanded by bounded
+/// extensionality (`2^iw` index enumeration). Capped to keep the eager expansion
+/// — and the `O(n²)` Ackermann pairing over the resulting selects — bounded;
+/// wider-index equalities are reported `Unsupported` rather than blowing up.
+const MAX_ARRAY_EQ_INDEX_BITS: u32 = 8;
+
 /// Error from array elimination.
 #[derive(Debug, Clone)]
 pub enum ArrayElimError {
-    /// A construct outside the supported `QF_ABV` fragment (e.g. array equality,
-    /// or a `select` over a base that is neither a variable, a store, nor an
-    /// `ite` of arrays).
+    /// A construct outside the supported `QF_ABV` fragment (e.g. array equality
+    /// over an index too wide to enumerate, or a `select` over a base that is
+    /// neither a variable, a store, nor an `ite` of arrays).
     Unsupported(String),
     /// An IR builder error while constructing replacement terms.
     Ir(IrError),
@@ -208,7 +214,7 @@ impl Eliminator {
                 ));
             }
             TermNode::App { op: Op::Eq, args } if is_array(arena, args[0]) => {
-                return Err(ArrayElimError::Unsupported("array equality".to_owned()));
+                self.eliminate_array_eq(arena, args[0], args[1])?
             }
             TermNode::App { op, args } => {
                 let mut lowered = Vec::with_capacity(args.len());
@@ -277,6 +283,48 @@ impl Eliminator {
         };
         self.select_memo.insert((array, index), result);
         Ok(result)
+    }
+
+    /// Eliminates an array equality `a = b` by **bounded extensionality**: over
+    /// an `iw`-bit index the arrays are equal iff they agree at every one of the
+    /// `2^iw` indices, so this expands to `⋀_{i<2^iw} select(a, i) = select(b, i)`
+    /// — an exact, equisatisfiable rewrite. Each `select` resolves through the
+    /// same machinery (and Ackermann pairing) as ordinary selects, so symbolic
+    /// selects on `a`/`b` elsewhere stay consistent. Refused (sound) when the
+    /// index is too wide to enumerate (`iw > MAX_ARRAY_EQ_INDEX_BITS`).
+    fn eliminate_array_eq(
+        &mut self,
+        arena: &mut TermArena,
+        a: TermId,
+        b: TermId,
+    ) -> Result<TermId, ArrayElimError> {
+        let iw = arena
+            .sort_of(a)
+            .array_widths()
+            .expect("array equality operand is array sorted")
+            .0;
+        if iw > MAX_ARRAY_EQ_INDEX_BITS {
+            return Err(ArrayElimError::Unsupported(format!(
+                "array equality over a {iw}-bit index (bounded extensionality supports \
+                 indices up to {MAX_ARRAY_EQ_INDEX_BITS} bits)"
+            )));
+        }
+        let count = 1u128 << iw;
+        let mut acc: Option<TermId> = None;
+        for i in 0..count {
+            let idx = arena.bv_const(iw, i)?;
+            let sa = self.resolve_select(arena, a, idx)?;
+            let sb = self.resolve_select(arena, b, idx)?;
+            let eq_i = arena.eq(sa, sb)?;
+            acc = Some(match acc {
+                None => eq_i,
+                Some(prev) => arena.and(prev, eq_i)?,
+            });
+        }
+        match acc {
+            Some(t) => Ok(t),
+            None => Ok(arena.bool_const(true)), // 2^iw == 0 is impossible (iw >= 1)
+        }
     }
 
     fn fresh_select_symbol(
@@ -355,7 +403,7 @@ fn contains_array(arena: &TermArena, term: TermId) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{contains_array, eliminate_arrays};
+    use super::{ArrayElimError, contains_array, eliminate_arrays};
     use axeyum_ir::{ArrayValue, Assignment, Sort, TermArena, Value, eval};
 
     fn bv(width: u32, value: u128) -> Value {
@@ -381,14 +429,26 @@ mod tests {
     }
 
     #[test]
-    fn array_equality_is_unsupported() {
+    #[allow(clippy::many_single_char_names)] // a, i, e, b, c: arrays, index, element
+    fn array_equality_eliminates_by_bounded_extensionality() {
+        // 3-bit index: `a = store(a, i, e)` expands over the 8 indices and
+        // eliminates successfully (extensionality; ADR-0010 follow-up).
         let mut arena = TermArena::new();
         let a = arena.array_var("a", 3, 4).unwrap();
         let i = arena.bv_var("i", 3).unwrap();
         let e = arena.bv_var("e", 4).unwrap();
         let stored = arena.store(a, i, e).unwrap();
         let array_eq = arena.eq(a, stored).unwrap();
-        assert!(eliminate_arrays(&mut arena, &[array_eq]).is_err());
+        assert!(eliminate_arrays(&mut arena, &[array_eq]).is_ok());
+
+        // A wide index exceeds the enumeration cap and stays Unsupported (sound).
+        let b = arena.array_var("b", 16, 8).unwrap();
+        let c = arena.array_var("c", 16, 8).unwrap();
+        let wide_eq = arena.eq(b, c).unwrap();
+        assert!(matches!(
+            eliminate_arrays(&mut arena, &[wide_eq]),
+            Err(ArrayElimError::Unsupported(_))
+        ));
     }
 
     #[test]
