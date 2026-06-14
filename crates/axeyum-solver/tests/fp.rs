@@ -315,6 +315,54 @@ fn fp_to_int_conversions_fold_when_defined() {
 }
 
 #[test]
+fn round_significand_matches_grs_reference() {
+    // The symbolic RNE rounding circuit must match a direct guard/round/sticky
+    // reference over a battery of significands and (n, keep) shapes.
+    fn grs_ref(sig: u128, n: u32, keep: u32) -> u128 {
+        if keep >= n {
+            return sig;
+        }
+        let drop = n - keep;
+        let kept = sig >> drop;
+        let guard = (sig >> (drop - 1)) & 1;
+        let sticky = drop >= 2 && (sig & ((1u128 << (drop - 1)) - 1)) != 0;
+        let lsb = kept & 1;
+        if guard == 1 && (sticky || lsb == 1) {
+            kept + 1
+        } else {
+            kept
+        }
+    }
+
+    let mut a = TermArena::new();
+    let mut state: u64 = 0xc0ff_eeee_1234_5678;
+    for n in [8u32, 16, 24, 28] {
+        for keep in [1u32, 2, 4, 8, 12] {
+            if keep >= n {
+                continue;
+            }
+            // structured + pseudo-random significands within n bits
+            let mut samples = vec![0u128, 1, 2, 3, (1u128 << n) - 1, 1u128 << (n - 1)];
+            for _ in 0..64 {
+                state = state
+                    .wrapping_mul(6_364_136_223_846_793_005)
+                    .wrapping_add(1_442_695_040_888_963_407);
+                samples.push(u128::from(state) & ((1u128 << n) - 1));
+            }
+            for sig in samples {
+                let st = a.bv_const(n, sig).unwrap();
+                let r = fp::round_significand(&mut a, st, keep).unwrap();
+                let want = grs_ref(sig, n, keep);
+                assert!(
+                    matches!(eval(&a, r, &Assignment::new()), Ok(Value::Bv { value, .. }) if value == want),
+                    "round_significand(n={n}, keep={keep}, sig={sig:#x}) expected {want:#x}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn count_leading_zeros_matches_native() {
     // Symbolic clz over concrete constants must match the native leading-zero
     // count for the given width (w for zero).

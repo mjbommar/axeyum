@@ -470,6 +470,63 @@ pub fn sbv_to_fp(
     Ok(Some(arena.bv_const(fmt.width(), bits)?))
 }
 
+/// Symbolic **round-nearest-ties-to-even** of a significand bit-vector: rounds
+/// the `n`-bit `sig` to keep its top `keep` bits, dropping the low `drop = n -
+/// keep` bits via guard/round/sticky, and returns a `BitVec(keep + 1)` (one
+/// extra bit so a round-up carry out of the top is visible to the caller, which
+/// adjusts the exponent). This is the rounding sub-circuit of the symbolic FP
+/// bit-blaster — the bit-vector transcription of the algorithm validated in
+/// [`round_to_format`]; a pure BV formula, so it solves and replays normally.
+///
+/// # Errors
+///
+/// Returns [`IrError::SortMismatch`] if `sig` is not a bit-vector, or
+/// [`IrError`] from the builders.
+pub fn round_significand(
+    arena: &mut TermArena,
+    sig: TermId,
+    keep: u32,
+) -> Result<TermId, IrError> {
+    let Sort::BitVec(n) = arena.sort_of(sig) else {
+        return Err(IrError::SortMismatch {
+            expected: "BitVec",
+            found: arena.sort_of(sig),
+        });
+    };
+    if keep >= n {
+        // No bits dropped: zero-extend to keep+1 (room for the absent carry).
+        return arena.zero_ext(keep + 1 - n, sig);
+    }
+    let drop = n - keep;
+    // kept = top `keep` bits, zero-extended to keep+1 for the carry slot.
+    let kept = arena.extract(n - 1, drop, sig)?;
+    let kept_ext = arena.zero_ext(1, kept)?; // width keep+1
+    // guard bit = bit at position drop-1.
+    let guard = arena.extract(drop - 1, drop - 1, sig)?;
+    let one1 = arena.bv_const(1, 1)?;
+    let guard_set = arena.eq(guard, one1)?;
+    // sticky = any bit below the guard is set (none if drop == 1).
+    let sticky = if drop >= 2 {
+        let low = arena.extract(drop - 2, 0, sig)?;
+        let zero_low = arena.bv_const(drop - 1, 0)?;
+        let is_zero = arena.eq(low, zero_low)?;
+        arena.not(is_zero)?
+    } else {
+        arena.bool_const(false)
+    };
+    // lsb of the kept significand = bit at position `drop`.
+    let lsb = arena.extract(drop, drop, sig)?;
+    let lsb_set = arena.eq(lsb, one1)?;
+    // round_up = guard AND (sticky OR lsb).
+    let sticky_or_lsb = arena.or(sticky, lsb_set)?;
+    let round_up = arena.and(guard_set, sticky_or_lsb)?;
+    // result = kept_ext + (round_up ? 1 : 0).
+    let one_w = arena.bv_const(keep + 1, 1)?;
+    let zero_w = arena.bv_const(keep + 1, 0)?;
+    let inc = arena.ite(round_up, one_w, zero_w)?;
+    arena.bv_add(kept_ext, inc)
+}
+
 /// Symbolic **count-leading-zeros** over a bit-vector: returns a `BitVec(w)`
 /// term giving the number of leading zero bits of the `w`-bit operand `x`
 /// (`w` when `x` is zero). This is the variable-shift amount the FP normalizer
