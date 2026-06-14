@@ -1427,11 +1427,14 @@ fn ieee_remainder(x: f64, y: f64) -> f64 {
     }
     let ay = y.abs();
     let mut r = x % ay; // fmod: exact, |r| < ay, sign of x
-    let half = ay * 0.5; // exact (×0.5)
-    let ar = r.abs();
-    if ar > half {
+    // Compare 2·|r| to |y| (not |r| to |y|/2): `ay*0.5` underflows to 0 for the
+    // smallest subnormals, which would spuriously trigger the tie branch at r=0.
+    // `2·|r|` is exact for the magnitudes here (and overflow to ∞ only happens
+    // when |r| > |y|/2, where an adjust is correct anyway).
+    let two_ar = 2.0 * r.abs();
+    if two_ar > ay {
         r -= r.signum() * ay;
-    } else if ar == half {
+    } else if two_ar == ay {
         // Tie: x/y is a half-integer; n is the even neighbour of the truncated
         // quotient nA. nA is even iff |x mod 2·ay| < ay (so x sits in the lower
         // half of a 2·ay-wide band). When 2·ay overflows to ∞, |x| < 2·ay forces
@@ -1518,10 +1521,10 @@ pub fn rem_sym(arena: &mut TermArena, fmt: FloatFormat, x: TermId, y: TermId) ->
     if w > MAX_BV_WIDTH {
         // The scaled-integer encoding overflows 128 bits (wide exponent). Fall
         // back to the iterative shift-subtract reduction, which uses a small
-        // (`sb`-wide) register but `e_span` data-independent steps. Capped at
-        // `e_span ≤ 256` (exp_bits ≤ 8: F32/BF16/TF32) to keep the formula
-        // bounded; F64 (e_span 2045) is out of range.
-        if e_span <= 256 {
+        // `sb+4`-bit register (the only 128-bit constraint) over `e_span`
+        // data-independent steps. This covers F32/BF16/TF32 (e_span 253) and
+        // F64 (e_span 2045, a larger but bounded formula).
+        if sb + 4 <= MAX_BV_WIDTH {
             return rem_iterative(arena, fmt, x, y);
         }
         return Err(IrError::InvalidWidth(w));
@@ -1587,8 +1590,9 @@ pub fn rem_sym(arena: &mut TermArena, fmt: FloatFormat, x: TermId, y: TermId) ->
 }
 
 /// Iterative (shift-subtract) symbolic `fp.rem` for wide-exponent formats
-/// (`exp_bits = 8`: F32/BF16/TF32), where the scaled-integer encoding of
-/// [`rem_sym`] would exceed 128 bits. The truncated remainder of `|x|` by `|y|`
+/// (F32/BF16/TF32 and F64), where the scaled-integer encoding of [`rem_sym`]
+/// would exceed 128 bits. Only the small `sb+4`-bit register is 128-bit bound;
+/// the `e_span` reduction steps make a larger but bounded formula (F64: 2045). The truncated remainder of `|x|` by `|y|`
 /// is computed with a small (`sb`-wide) register over `e_span`
 /// data-independent reduction steps (so `Mx·2^d mod My` for `Ex ≥ Ey`, else
 /// `|x|`), the quotient's parity is tracked for the tie rule, and a nearest
@@ -3559,12 +3563,54 @@ mod tests {
     }
 
     #[test]
-    fn rem_sym_rejects_f64() {
-        // F64 (e_span 2045) is out of range for both the scaled and iterative paths.
+    fn rem_sym_iterative_matches_fold_f64() {
+        // F64 uses the iterative path (e_span 2045); validate against the trusted
+        // fold on a modest sample (the formula is large, so eval is slow).
         let mut a = TermArena::new();
-        let xt = a.bv_const(64, 0).unwrap();
-        let yt = a.bv_const(64, 0).unwrap();
-        assert!(rem_sym(&mut a, FloatFormat::F64, xt, yt).is_err(), "F64 rejected");
+        let is_nan_bits = |b: u128| (b >> 52) & 0x7FF == 0x7FF && (b & 0xF_FFFF_FFFF_FFFF) != 0;
+        let check = |a: &mut TermArena, xb: u64, yb: u64| {
+            let xt = a.bv_const(64, u128::from(xb)).unwrap();
+            let yt = a.bv_const(64, u128::from(yb)).unwrap();
+            let want = match rem(a, FloatFormat::F64, xt, yt).unwrap() {
+                Some(t) => match eval(a, t, &Assignment::new()) {
+                    Ok(Value::Bv { value, .. }) => value,
+                    other => panic!("{other:?}"),
+                },
+                None => panic!("fold covers F64"),
+            };
+            let sym = rem_sym(a, FloatFormat::F64, xt, yt).unwrap();
+            let got = match eval(a, sym, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("{other:?}"),
+            };
+            if is_nan_bits(want) {
+                assert!(is_nan_bits(got), "rem_f64({xb:#x},{yb:#x}) want NaN, got {got:#x}");
+            } else {
+                assert_eq!(got, want, "rem_f64({xb:#x},{yb:#x}) got {got:#x} want {want:#x}");
+            }
+        };
+        let structured: [u64; 10] = [
+            0x0000_0000_0000_0000, 0x8000_0000_0000_0000, 0x3ff0_0000_0000_0000, // ±0, 1.0
+            0xbff0_0000_0000_0000, 0x4000_0000_0000_0000, 0x3fe0_0000_0000_0000, // -1, 2, 0.5
+            0x4008_0000_0000_0000, 0x0000_0000_0000_0001, 0x7ff0_0000_0000_0000, // 3, subn, +inf
+            0x7ff8_0000_0000_0000, // NaN
+        ];
+        for &xb in &structured {
+            for &yb in &structured {
+                check(&mut a, xb, yb);
+            }
+        }
+        let mut state: u64 = 0xd00d_feed_face_b00c;
+        for _ in 0..40 {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            let xb = state;
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            check(&mut a, xb, state);
+        }
     }
 
     #[test]

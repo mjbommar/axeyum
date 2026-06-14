@@ -228,8 +228,13 @@ Last updated: 2026-06-14
   `(Mx·2^d) mod My` (phase 1 = MSB-first `Mx mod My`, correct for subnormal `y`;
   phase 2 folds in `d` trailing zeros), then a nearest-adjust + `pack_value`.
   Validated against the trusted fold over F32 (structured incl. subnormals + 3k
-  random); the differential caught a subnormal-divisor bug. F64 (e_span 2045)
-  remains out of range.
+  random); the differential caught a subnormal-divisor bug. **F64 now also
+  supported** (the iterative register is only `sb+4 = 57` bits; the 2045 reduction
+  steps make a large but bounded formula). Validating F64 against the fold caught
+  a **latent soundness bug in the F64 `rem` constant fold**: `ay*0.5` underflowed
+  to 0 for true f64 subnormals, so `rem(2^-1074, 2^-1074)` wrongly gave `-2^-1074`
+  — fixed by comparing `2·|r|` to `|y|`. (F32 couldn't surface it: f32 subnormals
+  are f64-normal.)
   **FP→int/integral folds extended to all IEEE formats:** `decode_to_f64` now
   uses the exact generic `decode_ieee_f64`, so `to_ubv`/`to_sbv` and the
   `roundToIntegral` constant fold work for F16/BF16/TF32/FP8 (not just F32/F64);
