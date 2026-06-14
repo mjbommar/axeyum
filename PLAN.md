@@ -183,7 +183,12 @@ Last updated: 2026-06-14
   half-integer tie by the parity of the truncated quotient (parity read from
   `|x mod 2·|y|| < |y|`); specials per IEEE (NaN if `x`=∞ or `y`=0; `x` if `y`=∞;
   zero takes the sign of `x`). Validated by an independent brute-force-over-`n`
-  oracle across ~6k f32 pairs plus explicit tie/special cases.
+  oracle across ~6k f32 pairs plus explicit tie/special cases. **Extended to all
+  IEEE formats** (`F16`/`BF16`/`TF32`/`FP8_E5M2`) via a generic `decode_ieee_f64`
+  + `round_to_format` (the remainder is a format value, so re-encoding is exact);
+  the non-IEEE OCP formats (`FP8_E4M3`/`FP4_E2M1`, via new `is_ieee`) are not
+  folded. Validated by an independent BF16 differential (bf16 ⊂ f32) over ~8k
+  pairs plus concrete F16 cases.
   **Next FP:** *symbolic* `fp.rem`, symbolic FP↔real (nonlinear). Conversion folds are done both directions:
   int→FP (`ubv_to_fp`/`sbv_to_fp`), FP→int (`to_ubv`/`to_sbv`, per rounding mode,
   folded only when finite + in range else `None`), and FP→Real (`to_real`, exact

@@ -108,6 +108,41 @@ impl FloatFormat {
         self.exp_bits + self.sig_bits
     }
 
+    /// Whether this format follows IEEE 754 conventions (an all-ones exponent
+    /// encodes ∞/NaN). The OCP FP8 `E4M3` and FP4 `E2M1` formats do not and need
+    /// their dedicated helpers; the generic IEEE arithmetic is not valid for them.
+    #[must_use]
+    pub fn is_ieee(self) -> bool {
+        self != Self::FP8_E4M3 && self != Self::FP4_E2M1
+    }
+
+    /// Decodes a constant bit pattern of this (IEEE) format to its exact `f64`
+    /// value. Exact for every supported IEEE format (`sig_bits ≤ 53`). Only valid
+    /// for IEEE formats — see [`Self::is_ieee`].
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
+        clippy::cast_precision_loss
+    )] // frac < 2^52 is exact in f64; exponents are small and in i32 range
+    fn decode_ieee_f64(self, bits: u128) -> f64 {
+        let frac_bits = self.sig_bits - 1;
+        let s = if (bits >> (self.width() - 1)) & 1 == 1 { -1.0 } else { 1.0 };
+        let exp_mask = (1u128 << self.exp_bits) - 1;
+        let exp = (bits >> frac_bits) & exp_mask;
+        let frac = bits & ((1u128 << frac_bits) - 1);
+        let exp_bias = (1i64 << (self.exp_bits - 1)) - 1;
+        if exp == exp_mask {
+            return if frac != 0 { f64::NAN } else { s * f64::INFINITY };
+        }
+        if exp == 0 {
+            // subnormal (or zero): frac · 2^(1 − bias − frac_bits)
+            return s * (frac as f64) * (2.0f64).powi((1 - exp_bias - i64::from(frac_bits)) as i32);
+        }
+        // normal: (frac + 2^frac_bits) · 2^(exp − bias − frac_bits)
+        let mant = (frac as f64) + (2.0f64).powi(frac_bits as i32);
+        s * mant * (2.0f64).powi((exp as i64 - exp_bias - i64::from(frac_bits)) as i32)
+    }
+
     fn check(self, arena: &TermArena, x: TermId) -> Result<(), IrError> {
         let expected = Sort::BitVec(self.width());
         let found = arena.sort_of(x);
@@ -1224,7 +1259,10 @@ fn ieee_remainder(x: f64, y: f64) -> f64 {
 }
 
 /// Constant-folds `fp.rem` (IEEE remainder, exact — no rounding mode) over
-/// F32/F64 constants. Returns `Ok(None)` for symbolic operands or other formats.
+/// constants of any IEEE format (`F16`/`F32`/`F64`/`BF16`/`TF32`/`FP8_E5M2`).
+/// The remainder of two format values is itself exactly representable in the
+/// format, so re-encoding is exact. Returns `Ok(None)` for symbolic operands or
+/// the non-IEEE formats (`FP8_E4M3`/`FP4_E2M1`).
 ///
 /// # Errors
 ///
@@ -1247,6 +1285,12 @@ pub fn rem(
     } else if fmt == FloatFormat::F64 {
         let r = ieee_remainder(f64::from_bits(low64(xv)), f64::from_bits(low64(yv)));
         u128::from(r.to_bits())
+    } else if fmt.is_ieee() {
+        // Other IEEE formats (incl. the GPU/ML precisions): decode exactly to
+        // f64, take the remainder, and round back (exact, since the result is a
+        // format value). round_to_format handles NaN/∞/±0 with the correct sign.
+        let r = ieee_remainder(fmt.decode_ieee_f64(xv), fmt.decode_ieee_f64(yv));
+        round_to_format(fmt.exp_bits, fmt.sig_bits, r, RoundingMode::NearestEven)
     } else {
         return Ok(None);
     };
@@ -2886,5 +2930,62 @@ mod tests {
             let y = (state >> 32) as u32;
             check(&mut a, x, y);
         }
+    }
+
+    #[test]
+    fn rem_bf16_matches_brute_force() {
+        // bf16 ⊂ f32 (low 16 mantissa bits zero), so the remainder — itself a
+        // bf16 value — is encoded independently as (r as f32).to_bits() >> 16.
+        let mut a = TermArena::new();
+        let bf16_to_f64 = |b: u16| f64::from(f32::from_bits(u32::from(b) << 16));
+        let check = |a: &mut TermArena, xb: u16, yb: u16| {
+            let (xd, yd) = (bf16_to_f64(xb), bf16_to_f64(yb));
+            if !xd.is_finite() || !yd.is_finite() || yd == 0.0 || (xd / yd).abs() >= 60.0 {
+                return;
+            }
+            let xt = a.bv_const(16, u128::from(xb)).unwrap();
+            let yt = a.bv_const(16, u128::from(yb)).unwrap();
+            let r = rem(a, FloatFormat::BF16, xt, yt).unwrap().unwrap();
+            let got = match eval(a, r, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("{other:?}"),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let want = u128::from((rem_oracle(xd, yd) as f32).to_bits() >> 16);
+            assert_eq!(got, want, "rem_bf16({xb:#x},{yb:#x}) got {got:#x} want {want:#x}");
+        };
+        let mut state: u64 = 0xfeed_face_dead_beef;
+        for _ in 0..8000 {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            check(&mut a, (state & 0xFFFF) as u16, ((state >> 16) & 0xFFFF) as u16);
+        }
+    }
+
+    #[test]
+    fn rem_f16_concrete_and_e4m3_none() {
+        let mut a = TermArena::new();
+        // F16 bit patterns: 1.0=0x3C00, -1.0=0xBC00, 2.0=0x4000, 3.0=0x4200,
+        // 5.0=0x4500, 6.0=0x4600, 7.0=0x4700, 0.0=0x0000.
+        let cases: [(u16, u16, u16); 3] = [
+            (0x4700, 0x4000, 0xBC00), // rem(7,2) = -1
+            (0x4500, 0x4000, 0x3C00), // rem(5,2) = 1
+            (0x4600, 0x4200, 0x0000), // rem(6,3) = 0
+        ];
+        for (xb, yb, want) in cases {
+            let xt = a.bv_const(16, u128::from(xb)).unwrap();
+            let yt = a.bv_const(16, u128::from(yb)).unwrap();
+            let r = rem(&mut a, FloatFormat::F16, xt, yt).unwrap().unwrap();
+            let got = match eval(&a, r, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("{other:?}"),
+            };
+            assert_eq!(got, u128::from(want), "rem_f16({xb:#x},{yb:#x})");
+        }
+        // The non-IEEE OCP formats are not folded (no remainder semantics).
+        let xt = a.bv_const(8, 0x40).unwrap();
+        let yt = a.bv_const(8, 0x38).unwrap();
+        assert!(rem(&mut a, FloatFormat::FP8_E4M3, xt, yt).unwrap().is_none(), "E4M3 not folded");
     }
 }
