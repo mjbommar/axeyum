@@ -61,14 +61,20 @@ Last updated: 2026-06-14
   - Dispatcher (`solve`/`check_auto`) routes datatype queries through this path.
     Tests: `tests/datatype_native.rs` (9) + `tests/datatype_elim.rs`; workspace
     clippy + full suite green under `--all-features` (incl. `z3`).
-  - **Next datatype unit:** recursive / nested-datatype fields via **depth-bounded
-    unfolding**. Design note for soundness: bounded unfolding gives sound `sat`
-    (replay-confirmed) but **must return `unknown`, never `unsat`, when the bound
-    binds** (deeper structures might satisfy) — a real departure from the
-    equisatisfiable reductions above, and the one datatype step where a mistake
-    is an unsound `unsat`. Make it sound-by-construction (emit only Sat-or-Unknown,
-    replay-guard the witness), then add the acyclicity + congruence native theory
-    for completeness. This is a fresh, ADR-tracked focused unit.
+  - **Recursive datatypes — now solved** (slices 3–4, 2026-06-14): untraversed
+    datatype fields are defaulted (equisatisfiable); **traversed** fields
+    (`select` into a datatype field) are unfolded — each becomes a fresh *free*
+    child variable to exactly the accessed depth (`unfold_traversals`). A free
+    child is a **relaxation** (only enlarges the model space), so reduced-`unsat`
+    ⇒ original-`unsat` is sound *with no guards*, and `sat` is projected +
+    replayed (replay-fail ⇒ `unknown`, never wrong). Sound always; complete when
+    accessed parents' constructors are determined (e.g. `is-cons(l) ∧ P(tail l)`).
+    22 datatype tests green incl. the tail-forced-to-deeper-cons case (catches a
+    wrong-`unsat`) and sound `unsat` on a traversed field. The earlier "must
+    return unknown not unsat" worry was misplaced — relaxation handles `unsat`.
+  - **Next datatype unit:** `==` over datatypes with datatype fields (exact field
+    guards), then the acyclicity + congruence native theory (and exact traversal
+    guards to make the determined-parent `unknown` cases complete).
 - Architecture iteration Q — **first-class datatype sort (recursive datatypes)**
   recorded 2026-06-13
   ([ADR-0022](docs/research/09-decisions/adr-0022-first-class-datatype-sort.md),

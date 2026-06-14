@@ -314,21 +314,121 @@ fn recursive_datatype_contradictory_testers_are_unsat() {
 }
 
 #[test]
-fn traversing_a_datatype_field_is_unsupported() {
-    // select tail(l) traverses into the recursive structure -> Unsupported
-    // (needs depth-bounded unfolding, the next unit).
-    let (mut arena, list, _nil, cons) = list_arena();
+fn traversing_a_datatype_field_is_sat() {
+    // is-cons(l) AND is-nil(tail(l)): traverses into the tail -> sat, with
+    // l = cons(_, nil).
+    let (mut arena, list, nil, cons) = list_arena();
+    let l = arena.declare("l", Sort::Datatype(list)).unwrap();
+    let lv = arena.var(l);
+    let is_cons = arena.dt_test(cons, lv).unwrap();
+    let tail = arena.dt_select(cons, 1, lv).unwrap();
+    let tail_is_nil = arena.dt_test(nil, tail).unwrap();
+
+    let result =
+        check_with_datatype_native(&mut arena, &[is_cons, tail_is_nil], &SolverConfig::default())
+            .unwrap();
+    let CheckResult::Sat(model) = result else {
+        panic!("expected sat, got {result:?}");
+    };
+    match model.get(l) {
+        Some(Value::Datatype {
+            constructor, fields, ..
+        }) => {
+            assert_eq!(constructor, cons);
+            match &fields[1] {
+                Value::Datatype { constructor, .. } => assert_eq!(*constructor, nil),
+                other => panic!("expected nil tail, got {other:?}"),
+            }
+        }
+        other => panic!("expected cons(_, nil), got {other:?}"),
+    }
+}
+
+#[test]
+fn traversal_requires_nondefault_tail_is_sat() {
+    // is-cons(l) AND is-cons(tail(l)): the tail must be a *cons*, not the default
+    // `nil`. This catches an over-constraining bug (which would wrongly report
+    // unsat): l = cons(_, cons(_, nil)).
+    let (mut arena, list, nil, cons) = list_arena();
+    let l = arena.declare("l", Sort::Datatype(list)).unwrap();
+    let lv = arena.var(l);
+    let is_cons = arena.dt_test(cons, lv).unwrap();
+    let tail = arena.dt_select(cons, 1, lv).unwrap();
+    let tail_is_cons = arena.dt_test(cons, tail).unwrap();
+
+    let result =
+        check_with_datatype_native(&mut arena, &[is_cons, tail_is_cons], &SolverConfig::default())
+            .unwrap();
+    let CheckResult::Sat(model) = result else {
+        panic!("expected sat (tail can be a deeper cons), got {result:?}");
+    };
+    match model.get(l) {
+        Some(Value::Datatype { fields, .. }) => match &fields[1] {
+            Value::Datatype { constructor, .. } => {
+                assert_eq!(*constructor, cons, "tail must be a cons, not the nil default");
+                let _ = nil;
+            }
+            other => panic!("expected cons tail, got {other:?}"),
+        },
+        other => panic!("expected a cons value, got {other:?}"),
+    }
+}
+
+#[test]
+fn contradictory_testers_on_a_traversed_field_are_unsat() {
+    // is-cons(tail(l)) AND is-nil(tail(l)): the tail cannot be both -> sound
+    // unsat (the relaxation preserves unsat soundness).
+    let (mut arena, list, nil, cons) = list_arena();
     let l = arena.declare("l", Sort::Datatype(list)).unwrap();
     let lv = arena.var(l);
     let tail = arena.dt_select(cons, 1, lv).unwrap();
-    let is_cons_tail = arena.dt_test(cons, tail).unwrap();
+    let tail_is_cons = arena.dt_test(cons, tail).unwrap();
+    let tail_is_nil = arena.dt_test(nil, tail).unwrap();
 
-    let result =
-        check_with_datatype_native(&mut arena, &[is_cons_tail], &SolverConfig::default());
+    let result = check_with_datatype_native(
+        &mut arena,
+        &[tail_is_cons, tail_is_nil],
+        &SolverConfig::default(),
+    )
+    .unwrap();
     assert!(
-        matches!(result, Err(axeyum_solver::SolverError::Unsupported(_))),
-        "traversing a datatype field must be Unsupported, got {result:?}"
+        matches!(result, CheckResult::Unsat),
+        "contradictory testers on a traversed field must be unsat, got {result:?}"
     );
+}
+
+#[test]
+fn nested_scalar_field_through_traversal_is_sat() {
+    // is-cons(l) AND is-cons(tail(l)) AND select head(tail(l)) == 9: a scalar
+    // field reached through a traversal -> sat with the nested head == 9.
+    let (mut arena, list, _nil, cons) = list_arena();
+    let l = arena.declare("l", Sort::Datatype(list)).unwrap();
+    let lv = arena.var(l);
+    let is_cons = arena.dt_test(cons, lv).unwrap();
+    let tail = arena.dt_select(cons, 1, lv).unwrap();
+    let tail_is_cons = arena.dt_test(cons, tail).unwrap();
+    let nested_head = arena.dt_select(cons, 0, tail).unwrap();
+    let nine = arena.bv_const(8, 9).unwrap();
+    let eq = arena.eq(nested_head, nine).unwrap();
+
+    let result = check_with_datatype_native(
+        &mut arena,
+        &[is_cons, tail_is_cons, eq],
+        &SolverConfig::default(),
+    )
+    .unwrap();
+    let CheckResult::Sat(model) = result else {
+        panic!("expected sat, got {result:?}");
+    };
+    match model.get(l) {
+        Some(Value::Datatype { fields, .. }) => match &fields[1] {
+            Value::Datatype { fields: tfields, .. } => {
+                assert_eq!(tfields[0], Value::Bv { width: 8, value: 9 }, "nested head is 9");
+            }
+            other => panic!("expected cons tail, got {other:?}"),
+        },
+        other => panic!("expected a cons value, got {other:?}"),
+    }
 }
 
 #[test]

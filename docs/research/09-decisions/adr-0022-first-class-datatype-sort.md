@@ -233,12 +233,27 @@ to its `well_founded_default`; the reduction stays **equisatisfiable** (sound
 `unsat`) all decide. Tests in `tests/datatype_native.rs` and
 `tests/datatype_elim.rs`.
 
-Still open for step B's completeness: **`select` that traverses a datatype field**
-(depth-bounded unfolding — which, unlike everything above, must return `unknown`
-not `unsat` when the bound binds; make it sound-by-construction: emit only
-Sat-or-Unknown, replay-guard the witness), **`==` over datatypes with datatype
-fields**, and then the acyclicity + congruence native theory. Those remain
-`Unsupported` and are the next datatype unit.
+**Traversed datatype fields (2026-06-14):** `select` *into* a datatype field is
+now solved by unfolding (`unfold_traversals`): each traversed datatype-field
+`select` becomes a fresh **free** child datatype variable, recursively, to
+exactly the depth the (quantifier-free) query accesses. The insight that made
+this safe without the depth-bound/`unknown` machinery I'd feared: a free child is
+a **relaxation** (it only enlarges the model space), so reduced-`unsat` ⇒
+original-`unsat` is sound *with no guards*, and a `sat` candidate is projected
+through the links and **replayed** — a replay failure (the parent's constructor
+left free, child ≠ wrong-constructor default) yields `unknown`, never a wrong
+answer. So traversal is **sound always**, and **complete when the accessed
+parents' constructors are determined** (e.g. `is-cons(l) ∧ P(tail l)`); when a
+parent is otherwise unconstrained it may return `unknown` (sound). Tests cover
+traversal sat, the tail forced to a deeper `cons` (would catch an
+over-constraining wrong-`unsat`), sound `unsat` on a traversed field, and nested
+scalar access. This means the earlier "must return `unknown` not `unsat`" worry
+was misplaced for QF explicit-select access — relaxation handles `unsat`.
+
+Still open: **`==` over a datatype with datatype fields** (needs exact field
+guards), array/UF datatype fields, and the **acyclicity + congruence** native
+theory (plus exact traversal via field guards to make the determined-parent
+`unknown` cases complete). Those remain the next datatype unit.
 
 ## Consequences
 

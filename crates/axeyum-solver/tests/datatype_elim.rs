@@ -90,9 +90,10 @@ fn recursive_datatype_tester_is_solved() {
 }
 
 #[test]
-fn traversing_a_recursive_field_is_unsupported() {
-    // Selecting the recursive `tail` field traverses the structure -> still
-    // Unsupported (needs depth-bounded unfolding).
+fn traversing_a_recursive_field_is_solved() {
+    // Selecting the recursive `tail` field now unfolds to the accessed depth and
+    // is solved when the parent constructor is determined: is-cons(l) AND
+    // is-cons(tail(l)) is sat (l = cons(_, cons(_, nil))).
     let mut arena = TermArena::new();
     let list = arena.declare_datatype("IntList");
     let _nil = arena.add_constructor(list, "nil", &[]);
@@ -106,11 +107,16 @@ fn traversing_a_recursive_field_is_unsupported() {
     );
     let ls = arena.declare("l", Sort::Datatype(list)).unwrap();
     let l = arena.var(ls);
+    let is_cons = arena.dt_test(cons, l).unwrap();
     let tail = arena.dt_select(cons, 1, l).unwrap();
     let is_cons_tail = arena.dt_test(cons, tail).unwrap();
     assert!(matches!(
-        check_with_datatype_elimination(&mut arena, &[is_cons_tail], &SolverConfig::default()),
-        Err(axeyum_solver::SolverError::Unsupported(_))
+        check_with_datatype_elimination(
+            &mut arena,
+            &[is_cons, is_cons_tail],
+            &SolverConfig::default()
+        ),
+        Ok(CheckResult::Sat(_))
     ));
 }
 
