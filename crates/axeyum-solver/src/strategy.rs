@@ -41,10 +41,11 @@ pub enum Strategy {
     /// High-memory, pure-Rust eager bit-blast + theory elimination. Default.
     #[default]
     EagerPureRust,
-    /// Low-memory, pure-Rust lazy-multiplier abstraction-refinement: abstracts
-    /// `bvmul` to fresh variables and refines on demand, so multipliers are
-    /// bit-blasted only when they affect the verdict (ADR-0019). Sound and
-    /// complete; `sat` replayed, `unsat` sound by over-approximation.
+    /// Low-memory, pure-Rust lazy abstraction-refinement: abstracts the heavy
+    /// gadgets (`bvmul` and the `bvudiv`/`bvurem`/`bvsdiv`/`bvsrem`/`bvsmod`
+    /// family) to fresh variables and refines on demand, so multipliers and
+    /// dividers are bit-blasted only when they affect the verdict (ADR-0019).
+    /// Sound and complete; `sat` replayed, `unsat` sound by over-approximation.
     LazyBvAbstraction,
     /// Low-memory reference oracle (Z3); `sat` is replayed for parity.
     #[cfg(feature = "z3")]

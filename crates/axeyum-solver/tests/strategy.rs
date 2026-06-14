@@ -129,11 +129,31 @@ fn lazy_strategy_refutes_without_materializing_the_multiplier() {
         matches!(outcome.result, CheckResult::Unsat),
         "should be unsat"
     );
-    assert_eq!(outcome.muls_total, 1, "one shared multiplier");
+    assert_eq!(outcome.ops_total, 1, "one shared multiplier");
     assert_eq!(
-        outcome.muls_refined, 0,
+        outcome.ops_refined, 0,
         "multiplier must never be bit-blasted for this refutation"
     );
+}
+
+/// The same memory win for division: `x udiv y == 6 AND x udiv y == 7` is
+/// refuted without ever materializing the (heavy) restoring divider.
+#[test]
+fn lazy_strategy_refutes_division_without_materializing_it() {
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 16).unwrap();
+    let y = arena.bv_var("y", 16).unwrap();
+    let q = arena.bv_udiv(x, y).unwrap();
+    let six = arena.bv_const(16, 6).unwrap();
+    let seven = arena.bv_const(16, 7).unwrap();
+    let c1 = arena.eq(q, six).unwrap();
+    let c2 = arena.eq(q, seven).unwrap();
+
+    let outcome =
+        solve_lazy_bv_abstraction(&mut arena, &[c1, c2], &SolverConfig::default()).unwrap();
+    assert!(matches!(outcome.result, CheckResult::Unsat));
+    assert_eq!(outcome.ops_total, 1, "one shared divider");
+    assert_eq!(outcome.ops_refined, 0, "divider never bit-blasted");
 }
 
 /// When the exact product *does* matter, the lazy strategy refines the
@@ -152,7 +172,7 @@ fn lazy_strategy_refines_when_the_product_matters() {
         matches!(outcome.result, CheckResult::Sat(_)),
         "x*y==6 is sat"
     );
-    assert_eq!(outcome.muls_refined, 1, "the product matters, so refine it");
+    assert_eq!(outcome.ops_refined, 1, "the product matters, so refine it");
 }
 
 #[cfg(feature = "z3")]

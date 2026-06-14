@@ -38,6 +38,14 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-13
 
+- Architecture iteration D — lazy abstraction extended to division recorded
+  2026-06-13: `Strategy::LazyBvAbstraction` now abstracts the **full heavy-gadget
+  set** — `bvmul` plus the `bvudiv`/`bvurem`/`bvsdiv`/`bvsrem`/`bvsmod` family
+  (the restoring divider is as heavy as the multiplier) — not just multiplication.
+  Same sound over-approximation + refine-on-demand; refinement rebuilds the exact
+  op per-kind. Telemetry renamed `ops_total`/`ops_refined`. New test: `x udiv y ==
+  6 ∧ x udiv y == 7` is refuted with the divider **never bit-blasted**
+  (`ops_refined == 0`). Full pure-Rust suite green.
 - Architecture iteration C — LIA wired into the dispatcher recorded 2026-06-13:
   `check_auto` now routes conjunctive pure-integer queries to
   `check_with_lia_simplex` first (sound sat *and* unsat), falling back to bounded
