@@ -32,7 +32,10 @@ mod euf;
 /// IEEE 754 floating-point predicates, classification, sign ops, equality, and
 /// ordering as bit-vector formula builders (the non-arithmetic `FloatingPoint`
 /// core). FP values are `BitVec(eb + sb)`; see the module docs.
-pub mod fp;
+/// Floating-point (IEEE 754) formula builders, re-exported from the `axeyum-fp`
+/// crate (extracted so the SMT-LIB front-end can share them without depending on
+/// the solver).
+pub use axeyum_fp as fp;
 mod evidence;
 mod faithfulness;
 mod incremental;

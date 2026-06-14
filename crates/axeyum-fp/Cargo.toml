@@ -1,0 +1,18 @@
+[package]
+name = "axeyum-fp"
+description = "Floating-point (IEEE 754) bit-vector formula builders for Axeyum: classification, comparison, arithmetic, and conversions over the typed IR"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[dependencies]
+axeyum-ir.workspace = true
+
+[lints]
+workspace = true

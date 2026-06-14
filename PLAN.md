@@ -130,8 +130,14 @@ Last updated: 2026-06-14
   pinned `6/3=2` (sat), inconsistent `7/3≠2` (unsat), div-by-zero unconstrained
   (sat), eval, and an SMT-LIB round-trip.
 
+- **FP module extracted to its own crate (2026-06-14).** The `fp` module moved
+  from `axeyum-solver` to a new `axeyum-fp` crate (depends only on `axeyum-ir`);
+  `axeyum-solver` re-exports it as `pub use axeyum_fp as fp` (call sites and tests
+  unchanged). This unblocks an SMT-LIB FP front-end: the parser (`axeyum-smtlib`)
+  can now share the FP builders without `smtlib` depending on `solver` (the
+  dependency runs the other way). Full suite + clippy green after the move.
 - **Floating point — non-arithmetic core (2026-06-14, ADR-0023).** New
-  `axeyum-solver::fp` module: IEEE 754 classification (`is_nan`/`is_infinite`/
+  `axeyum-fp` crate (was `axeyum-solver::fp`): IEEE 754 classification (`is_nan`/`is_infinite`/
   `is_zero`/`is_normal`/`is_subnormal`/`is_negative`/`is_positive`), `abs`/`neg`,
   `eq`, `lt`/`leq`/`gt`/`geq`, and `min`/`max` as **bit-vector formula builders**
   (`min`/`max` are the rounding-*free* part of FP arithmetic — they return an

@@ -73,6 +73,12 @@ check. Edition 2024, resolver 3.
   independent DRAT UNSAT proof checker `check_drat` (RUP+RAT, ADR-0011), and a
   proof-producing CDCL SAT core `solve_with_drat_proof` (1-UIP conflict
   analysis + two-watched-literal propagation, emits DRAT, ADR-0012).
+- `crates/axeyum-fp` — floating-point (IEEE 754) bit-vector formula builders
+  (classification, comparison, abs/neg/min/max, arithmetic incl. rem/fma/sub,
+  and int/real conversions) over the typed IR; the GPU/ML precisions are free
+  from the generic `(exp_bits, sig_bits)` design (ADR-0023). Extracted from
+  `axeyum-solver` so the SMT-LIB front-end can share it (depends only on
+  `axeyum-ir`).
 - `crates/axeyum-query` — query object: assertions, assumptions, scopes,
   stable labels.
 - `crates/axeyum-rewrite` — rewrite manifest contracts, the first

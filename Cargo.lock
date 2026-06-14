@@ -70,6 +70,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "axeyum-fp"
+version = "0.1.0"
+dependencies = [
+ "axeyum-ir",
+]
+
+[[package]]
 name = "axeyum-ir"
 version = "0.1.0"
 
@@ -109,6 +116,7 @@ dependencies = [
  "axeyum-aig",
  "axeyum-bv",
  "axeyum-cnf",
+ "axeyum-fp",
  "axeyum-ir",
  "axeyum-query",
  "axeyum-rewrite",
