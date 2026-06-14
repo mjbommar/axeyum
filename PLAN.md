@@ -38,6 +38,22 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-14
 
+- **Datatypes via SMT-LIB — `declare-datatypes` front-end (2026-06-14).** The
+  first-class datatype theory (ADR-0022) was previously only reachable through the
+  Rust API; it now parses from SMT-LIB text. `declare-datatype`/`declare-datatypes`
+  (SMT-LIB 2.6, non-parametric, mutual recursion supported) declare the sorts then
+  their constructors (so field sorts can recurse); `parse_sort` resolves datatype
+  sort names; nullary constructors parse as term atoms, `(C a…)` as constructor
+  application, `(sel x)` as selector, and `((_ is C) x)` as tester — all resolved
+  via new arena lookups (`find_datatype`/`find_constructor`/`datatype_ids`), so no
+  new parser state was threaded (besides adding `arena` to `parse_sort`). The
+  solver dispatch now falls back from datatype *elimination* to the *native*
+  tag/field solver when free datatype variables remain (ADR-0022 step B), and
+  `simplify_datatypes` gained the **constructor-equality axiom** `(= x C(a…)) ⟹
+  is_C(x) ∧ ⋀ sel_i(x)=a_i`, so the common enum idiom `(= c red)` decides. Tests:
+  an enum `Color` (sat `c≠red ∧ c≠green`, unsat `is-red ∧ c≠red`) and a `Pair`
+  record (`fst`/`snd` selectors via `get-value`).
+
 - **Incremental SMT-LIB scripts — `push`/`pop` + multiple `check-sat`
   (2026-06-14).** The front door previously *rejected* `push`/`pop`; it now
   records an ordered `ScriptCommand` sequence (`Assert`/`Push`/`Pop`/`CheckSat`),

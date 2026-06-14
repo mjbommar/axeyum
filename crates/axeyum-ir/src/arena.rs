@@ -341,6 +341,47 @@ impl TermArena {
         id
     }
 
+    /// The number of declared datatypes (their ids are `0..num_datatypes`).
+    pub fn num_datatypes(&self) -> usize {
+        self.datatypes.len()
+    }
+
+    /// Iterates the ids of all declared datatypes, in declaration order.
+    ///
+    /// # Panics
+    ///
+    /// Panics only if more than `u32::MAX` datatypes have been declared.
+    pub fn datatype_ids(&self) -> impl Iterator<Item = DatatypeId> + '_ {
+        (0..self.datatypes.len())
+            .map(|i| DatatypeId(u32::try_from(i).expect("datatype index fits u32")))
+    }
+
+    /// Looks up a declared datatype by name (e.g. for resolving a sort name in a
+    /// front-end), or `None` if no datatype has that name.
+    ///
+    /// # Panics
+    ///
+    /// Panics only if more than `u32::MAX` datatypes have been declared.
+    pub fn find_datatype(&self, name: &str) -> Option<DatatypeId> {
+        self.datatypes
+            .iter()
+            .position(|d| d.name == name)
+            .map(|i| DatatypeId(u32::try_from(i).expect("datatype index fits u32")))
+    }
+
+    /// Looks up a constructor by name across all datatypes (constructor names are
+    /// globally unique in SMT-LIB), or `None`.
+    ///
+    /// # Panics
+    ///
+    /// Panics only if more than `u32::MAX` constructors have been declared.
+    pub fn find_constructor(&self, name: &str) -> Option<ConstructorId> {
+        self.constructors
+            .iter()
+            .position(|c| c.name == name)
+            .map(|i| ConstructorId(u32::try_from(i).expect("constructor index fits u32")))
+    }
+
     /// The datatype's name.
     ///
     /// # Panics

@@ -398,3 +398,50 @@ fn optimize_bitvector_objective() {
     let outcomes = optimize_smtlib(text, &config()).expect("optimizes");
     assert_eq!(outcomes[0], OptOutcome::Optimal(100), "max unsigned x <= 100 = 100");
 }
+
+/// Enum datatype: `Color` with three nullary constructors. `c != red ∧ c != green`
+/// forces `c = blue` (sat); the `(_ is C)` tester contradicting equality is unsat.
+#[test]
+fn enum_datatype_decides() {
+    let sat = "\
+(set-logic QF_DT)
+(declare-datatypes ((Color 0)) (((red) (green) (blue))))
+(declare-const c Color)
+(assert (not (= c red)))
+(assert (not (= c green)))
+(check-sat)
+";
+    assert!(matches!(run(sat).result, CheckResult::Sat(_)), "c=blue is sat");
+
+    let unsat = "\
+(set-logic QF_DT)
+(declare-datatypes ((Color 0)) (((red) (green) (blue))))
+(declare-const c Color)
+(assert ((_ is red) c))
+(assert (not (= c red)))
+(check-sat)
+";
+    assert_eq!(run(unsat).result, CheckResult::Unsat, "is-red ∧ c≠red is unsat");
+}
+
+/// Record datatype with selectors: `Pair` over bit-vectors. Constraining the
+/// fields is satisfiable and `(get-value)` reads them back via the selectors.
+#[test]
+fn record_datatype_constructor_and_selectors() {
+    use axeyum_ir::Value;
+    use axeyum_solver::solve_smtlib_get_value;
+    let text = "\
+(set-logic QF_DT)
+(declare-datatypes ((Pair 0)) (((mk (fst (_ BitVec 8)) (snd (_ BitVec 8))))))
+(declare-const p Pair)
+(assert (= (fst p) #x03))
+(assert (= (snd p) #x05))
+(check-sat)
+(get-value ((fst p) (snd p)))
+";
+    let values = solve_smtlib_get_value(text, &config())
+        .expect("decides")
+        .expect("sat");
+    assert_eq!(values[0], Value::Bv { width: 8, value: 3 });
+    assert_eq!(values[1], Value::Bv { width: 8, value: 5 });
+}

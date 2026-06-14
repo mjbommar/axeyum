@@ -474,10 +474,19 @@ fn check_auto_dispatch(
     let assertions = &lifted;
     let features = Features::scan(arena, assertions);
     if features.has_datatype {
-        // Datatypes: fold read-over-construct, then decide the residual (or
-        // report Unsupported if datatype variables remain). The residual is
-        // datatype-free, so this does not re-enter here (ADR-0022).
-        return crate::datatype_elim::check_with_datatype_elimination(arena, assertions, config);
+        // Datatypes: first fold read-over-construct and decide the residual
+        // (ADR-0022 step A). If free datatype variables remain (under `is-c`/
+        // `select`), that path reports `Unsupported`; decide those natively by
+        // eager tag/field expansion (ADR-0022 step B).
+        match crate::datatype_elim::check_with_datatype_elimination(arena, assertions, config) {
+            Ok(result) => return Ok(result),
+            Err(SolverError::Unsupported(_)) => {
+                return crate::datatype_native::check_with_datatype_native(
+                    arena, assertions, config,
+                );
+            }
+            Err(other) => return Err(other),
+        }
     }
     if features.has_real && features.has_int {
         // Combined linear arithmetic (QF_LIRA): the lazy-SMT loop theory-checks

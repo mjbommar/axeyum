@@ -152,6 +152,8 @@ fn parse_command<'a>(
         }
         "declare-fun" => parse_declare_fun(script, items)?,
         "declare-const" => parse_declare_const(script, items)?,
+        "declare-datatype" => parse_declare_datatype(script, items)?,
+        "declare-datatypes" => parse_declare_datatypes(script, items)?,
         "define-fun" => parse_define_fun(script, aliases, macros, items)?,
         "assert" => {
             exact_len(items, 2, head)?;
@@ -209,7 +211,7 @@ fn parse_declare_fun(script: &mut Script, items: &[SExpr]) -> Result<(), SmtErro
         .get(2)
         .and_then(SExpr::list)
         .ok_or_else(|| SmtError::Syntax("declare-fun args".to_owned()))?;
-    let result = parse_sort(sexpr_at(items, 3)?)?;
+    let result = parse_sort(&script.arena, sexpr_at(items, 3)?)?;
     if args.is_empty() {
         // 0-ary: a plain constant symbol.
         script.arena.declare(name, result)?;
@@ -217,9 +219,104 @@ fn parse_declare_fun(script: &mut Script, items: &[SExpr]) -> Result<(), SmtErro
         // n-ary: an uninterpreted function (ADR-0013).
         let params = args
             .iter()
-            .map(parse_sort)
+            .map(|s| parse_sort(&script.arena, s))
             .collect::<Result<Vec<Sort>, SmtError>>()?;
         script.arena.declare_fun(name, &params, result)?;
+    }
+    Ok(())
+}
+
+/// Adds the constructors `(cname (sel sort) …)` of one datatype `dt` to the
+/// arena. Sorts resolve through `parse_sort`, so a field may reference any
+/// already-declared datatype (the sorts in a `declare-datatypes` group are all
+/// declared before their constructors, supporting (mutual) recursion).
+fn add_datatype_constructors(
+    script: &mut Script,
+    dt: axeyum_ir::DatatypeId,
+    ctors: &[SExpr],
+) -> Result<(), SmtError> {
+    for ctor in ctors {
+        let parts = ctor
+            .list()
+            .filter(|p| !p.is_empty())
+            .ok_or_else(|| SmtError::Syntax("datatype constructor".to_owned()))?;
+        let cname = parts[0]
+            .atom()
+            .ok_or_else(|| SmtError::Syntax("constructor name".to_owned()))?
+            .to_owned();
+        let mut fields = Vec::with_capacity(parts.len() - 1);
+        for field in &parts[1..] {
+            let fp = field
+                .list()
+                .filter(|p| p.len() == 2)
+                .ok_or_else(|| SmtError::Syntax("(selector sort)".to_owned()))?;
+            let sname = fp[0]
+                .atom()
+                .ok_or_else(|| SmtError::Syntax("selector name".to_owned()))?
+                .to_owned();
+            let fsort = parse_sort(&script.arena, &fp[1])?;
+            fields.push((sname, fsort));
+        }
+        script.arena.add_constructor(dt, &cname, &fields);
+    }
+    Ok(())
+}
+
+/// `(declare-datatype Name (ctor …))` — a single (non-parametric) datatype.
+fn parse_declare_datatype(script: &mut Script, items: &[SExpr]) -> Result<(), SmtError> {
+    exact_len(items, 3, "declare-datatype")?;
+    let name = atom_at(items, 1)?;
+    let ctors = items
+        .get(2)
+        .and_then(SExpr::list)
+        .ok_or_else(|| SmtError::Syntax("datatype constructor list".to_owned()))?;
+    let dt = script.arena.declare_datatype(name);
+    add_datatype_constructors(script, dt, ctors)
+}
+
+/// `(declare-datatypes ((Name 0) …) ((ctors) …))` (SMT-LIB 2.6) — one or more
+/// non-parametric datatypes (mutual recursion supported; parametric `arity > 0`
+/// is rejected). All sorts are declared first, then their constructors, so a
+/// field sort may reference any datatype in the group.
+fn parse_declare_datatypes(script: &mut Script, items: &[SExpr]) -> Result<(), SmtError> {
+    exact_len(items, 3, "declare-datatypes")?;
+    let sort_decls = items
+        .get(1)
+        .and_then(SExpr::list)
+        .ok_or_else(|| SmtError::Syntax("datatype sort declarations".to_owned()))?;
+    let groups = items
+        .get(2)
+        .and_then(SExpr::list)
+        .ok_or_else(|| SmtError::Syntax("datatype constructor groups".to_owned()))?;
+    if sort_decls.len() != groups.len() {
+        return Err(SmtError::Syntax(
+            "declare-datatypes: sort and constructor lists differ in length".to_owned(),
+        ));
+    }
+    // First pass: declare every datatype sort (so constructor fields can recurse).
+    let mut ids = Vec::with_capacity(sort_decls.len());
+    for decl in sort_decls {
+        let pair = decl
+            .list()
+            .filter(|p| p.len() == 2)
+            .ok_or_else(|| SmtError::Syntax("(Name arity)".to_owned()))?;
+        let name = pair[0]
+            .atom()
+            .ok_or_else(|| SmtError::Syntax("datatype name".to_owned()))?;
+        let arity = pair[1].atom().and_then(|s| s.parse::<u32>().ok());
+        if arity != Some(0) {
+            return Err(SmtError::Unsupported(
+                "parametric datatypes (arity > 0)".to_owned(),
+            ));
+        }
+        ids.push(script.arena.declare_datatype(name));
+    }
+    // Second pass: add each datatype's constructors.
+    for (dt, group) in ids.into_iter().zip(groups) {
+        let ctors = group
+            .list()
+            .ok_or_else(|| SmtError::Syntax("datatype constructor list".to_owned()))?;
+        add_datatype_constructors(script, dt, ctors)?;
     }
     Ok(())
 }
@@ -227,7 +324,7 @@ fn parse_declare_fun(script: &mut Script, items: &[SExpr]) -> Result<(), SmtErro
 fn parse_declare_const(script: &mut Script, items: &[SExpr]) -> Result<(), SmtError> {
     exact_len(items, 3, "declare-const")?;
     let name = atom_at(items, 1)?;
-    let sort = parse_sort(sexpr_at(items, 2)?)?;
+    let sort = parse_sort(&script.arena, sexpr_at(items, 2)?)?;
     script.arena.declare(name, sort)?;
     Ok(())
 }
@@ -244,7 +341,7 @@ fn parse_define_fun<'a>(
         .get(2)
         .and_then(SExpr::list)
         .ok_or_else(|| SmtError::Syntax("define-fun args".to_owned()))?;
-    let declared_sort = parse_sort(sexpr_at(items, 3)?)?;
+    let declared_sort = parse_sort(&script.arena, sexpr_at(items, 3)?)?;
     let body_expr = sexpr_at(items, 4)?;
     if args.is_empty() {
         parse_define_fun_alias(script, aliases, macros, name, declared_sort, body_expr)
@@ -252,7 +349,7 @@ fn parse_define_fun<'a>(
         macros.insert(
             name.to_owned(),
             MacroDef {
-                params: parse_params(args)?,
+                params: parse_params(&script.arena, args)?,
                 result_sort: declared_sort,
                 body: body_expr,
             },
@@ -293,7 +390,7 @@ struct MacroDef<'a> {
     body: &'a SExpr,
 }
 
-fn parse_params(args: &[SExpr]) -> Result<Vec<Param<'_>>, SmtError> {
+fn parse_params<'a>(arena: &TermArena, args: &'a [SExpr]) -> Result<Vec<Param<'a>>, SmtError> {
     let mut params = Vec::with_capacity(args.len());
     for arg in args {
         let pair = arg
@@ -310,7 +407,7 @@ fn parse_params(args: &[SExpr]) -> Result<Vec<Param<'_>>, SmtError> {
         }
         params.push(Param {
             name,
-            sort: parse_sort(&pair[1])?,
+            sort: parse_sort(arena, &pair[1])?,
         });
     }
     Ok(params)
@@ -341,7 +438,7 @@ fn sexpr_at(items: &[SExpr], i: usize) -> Result<&SExpr, SmtError> {
         .ok_or_else(|| SmtError::Syntax(format!("expected argument at position {i}")))
 }
 
-fn parse_sort(e: &SExpr) -> Result<Sort, SmtError> {
+fn parse_sort(arena: &TermArena, e: &SExpr) -> Result<Sort, SmtError> {
     match e {
         SExpr::Atom(a) if a == "Bool" => Ok(Sort::Bool),
         SExpr::Atom(a) if a == "Int" => Ok(Sort::Int),
@@ -372,8 +469,8 @@ fn parse_sort(e: &SExpr) -> Result<Sort, SmtError> {
                 return Ok(Sort::BitVec(w));
             }
             if items.len() == 3 && items[0].atom() == Some("Array") {
-                let index = parse_sort(&items[1])?;
-                let element = parse_sort(&items[2])?;
+                let index = parse_sort(arena, &items[1])?;
+                let element = parse_sort(arena, &items[2])?;
                 if let (Sort::BitVec(index), Sort::BitVec(element)) = (index, element) {
                     return Ok(Sort::Array { index, element });
                 }
@@ -383,7 +480,11 @@ fn parse_sort(e: &SExpr) -> Result<Sort, SmtError> {
             }
             Err(SmtError::Unsupported(format!("sort {e:?}")))
         }
-        SExpr::Atom(a) => Err(SmtError::Unsupported(format!("sort `{a}`"))),
+        // A declared datatype sort (ADR-0022), referenced by name.
+        SExpr::Atom(a) => arena
+            .find_datatype(a)
+            .map(Sort::Datatype)
+            .ok_or_else(|| SmtError::Unsupported(format!("sort `{a}`"))),
     }
 }
 
@@ -670,7 +771,7 @@ fn queue_quantifier<'a>(
         let name = pair[0]
             .atom()
             .ok_or_else(|| SmtError::Syntax(format!("{keyword} binding name")))?;
-        let sort = parse_sort(&pair[1])?;
+        let sort = parse_sort(arena, &pair[1])?;
         let sym = fresh_quantifier_symbol(arena, name, sort)?;
         bindings.push((name, arena.var(sym)));
         syms.push(sym);
@@ -881,6 +982,15 @@ fn parse_atom(
     // A decimal literal `d.ddd` is a non-negative real (ADR-0015).
     if let Some(rational) = parse_decimal(a) {
         return Ok(arena.real_const(rational));
+    }
+    // A nullary datatype constructor (e.g. an enum value `red`) used as a term.
+    if let Some(ctor) = arena.find_constructor(a) {
+        if arena.constructor_fields(ctor).is_empty() {
+            return Ok(arena.construct(ctor, &[])?);
+        }
+        return Err(SmtError::Syntax(format!(
+            "constructor `{a}` needs arguments"
+        )));
     }
     Err(SmtError::Unsupported(format!("unknown identifier `{a}`")))
 }
@@ -1618,11 +1728,36 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
         other => {
             if let Some(func) = arena.find_function(other) {
                 arena.apply(func, args)?
+            } else if let Some(ctor) = arena.find_constructor(other) {
+                // Datatype constructor application `(C a …)` (ADR-0022).
+                arena.construct(ctor, args)?
+            } else if let Some((ctor, field)) = find_selector(arena, other) {
+                // Selector application `(sel x)`: project a constructor's field.
+                need(1)?;
+                arena.dt_select(ctor, field, args[0])?
             } else {
                 return Err(SmtError::Unsupported(format!("operator `{other}`")));
             }
         }
     })
+}
+
+/// Resolves a datatype selector name to its `(constructor, field index)`, by
+/// scanning the constructors' field lists. `None` if no constructor has a field
+/// with that name.
+fn find_selector(arena: &TermArena, name: &str) -> Option<(axeyum_ir::ConstructorId, u32)> {
+    for dt in arena.datatype_ids() {
+        for &ctor in arena.datatype_constructors(dt) {
+            if let Some(field) = arena
+                .constructor_fields(ctor)
+                .iter()
+                .position(|(fname, _)| fname == name)
+            {
+                return Some((ctor, u32::try_from(field).expect("field index fits u32")));
+            }
+        }
+    }
+    None
 }
 
 /// Parses a non-negative decimal literal `d.ddd` into an exact rational, or
@@ -1775,7 +1910,7 @@ fn apply_parameterized(
     if head.first().and_then(SExpr::atom) == Some("as") {
         if head.get(1).and_then(SExpr::atom) == Some("const") && head.len() == 3 && args.len() == 1
         {
-            let Sort::Array { index, .. } = parse_sort(&head[2])? else {
+            let Sort::Array { index, .. } = parse_sort(arena, &head[2])? else {
                 return Err(SmtError::Unsupported(format!("`as const` non-array sort {head:?}")));
             };
             return Ok(arena.const_array(index, args[0])?);
@@ -1874,6 +2009,18 @@ fn apply_parameterized(
                     )));
                 }
             }
+        }
+        // Datatype tester `((_ is C) x)` → is `x` built by constructor `C`?
+        "is" => {
+            expect_head_len(3)?;
+            let cname = head
+                .get(2)
+                .and_then(SExpr::atom)
+                .ok_or_else(|| SmtError::Syntax("`(_ is C)` constructor name".to_owned()))?;
+            let ctor = arena
+                .find_constructor(cname)
+                .ok_or_else(|| SmtError::Unsupported(format!("unknown constructor `{cname}`")))?;
+            arena.dt_test(ctor, args[0])?
         }
         other => return Err(SmtError::Unsupported(format!("indexed operator `{other}`"))),
     })

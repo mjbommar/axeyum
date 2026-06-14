@@ -18,7 +18,7 @@
 
 use std::collections::HashMap;
 
-use axeyum_ir::{IrError, Op, TermArena, TermId, TermNode};
+use axeyum_ir::{IrError, Op, Sort, TermArena, TermId, TermNode};
 
 use crate::canonical::build_app;
 
@@ -88,8 +88,46 @@ fn fold_datatype_op(arena: &mut TermArena, op: Op, args: &[TermId]) -> Result<Te
             }
             build_app(arena, op, args)
         }
+        // Datatype constructor equality `(= x C(a…))` is the constructor axiom:
+        // `is_C(x) ∧ ⋀ sel_i(x) = a_i` (just `is_C(x)` for a nullary C). This
+        // makes the common idiom `(= c red)` decidable by the native solver,
+        // which otherwise only accepts `is`/`select` over a variable.
+        Op::Eq if matches!(arena.sort_of(args[0]), Sort::Datatype(_)) => {
+            if let Some((ctor, fields)) = as_construct(arena, args[0]) {
+                return expand_constructor_eq(arena, ctor, &fields, args[1]);
+            }
+            if let Some((ctor, fields)) = as_construct(arena, args[1]) {
+                return expand_constructor_eq(arena, ctor, &fields, args[0]);
+            }
+            build_app(arena, op, args)
+        }
         _ => build_app(arena, op, args),
     }
+}
+
+/// Expands `(= other C(fields…))` to the constructor axiom `is_C(other) ∧ ⋀
+/// sel_i(other) = fields_i`. The produced `select`/`test` are re-folded (so when
+/// `other` is itself a constructor the whole thing collapses to a constant).
+fn expand_constructor_eq(
+    arena: &mut TermArena,
+    ctor: axeyum_ir::ConstructorId,
+    fields: &[TermId],
+    other: TermId,
+) -> Result<TermId, IrError> {
+    let mut acc = fold_datatype_op(arena, Op::DtTest(ctor), &[other])?;
+    for (i, &field) in fields.iter().enumerate() {
+        let sel = fold_datatype_op(
+            arena,
+            Op::DtSelect {
+                constructor: ctor,
+                index: u32::try_from(i).expect("field index fits u32"),
+            },
+            &[other],
+        )?;
+        let eq = arena.eq(sel, field)?;
+        acc = arena.and(acc, eq)?;
+    }
+    Ok(acc)
 }
 
 /// If `term` is `construct_c(args…)`, returns `(c, args)`.
