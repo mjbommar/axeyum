@@ -67,6 +67,20 @@ Concretely, in dependency order:
 - cvc5 and Z3 decide datatypes by exactly this combination (congruence +
   acyclicity, with selectors total by convention); their behavior is the
   reference and differential oracle.
+- **Measured blast radius (2026-06-13 probe).** Adding a placeholder
+  `Sort::Datatype` variant and building the workspace shows the exhaustive-match
+  breakage is **contained to 4 `axeyum-ir` files** (`sort.rs`, `value.rs`,
+  `bits.rs`, `arena.rs`) — every downstream crate (bv/cnf/solver/rewrite/smtlib)
+  already has wildcard `_` arms that compile against the new sort (treating it as
+  unsupported/skip). So the *match-fixing* cost is small and IR-local; the real
+  effort is the **semantic design** — the `DatatypeId`/`ConstructorId`/
+  `SelectorId` tables, the two-phase declare needed for recursion (reserve the id,
+  then define constructors that can reference it), the `Value::Datatype` tree, the
+  new construct/select/test ops in the evaluator, and the selector-totality
+  convention. That semantic core is what the implementing session should focus
+  on; the match arms are mechanical. (Downstream wildcard arms must also be
+  audited to confirm they *reject* datatype sorts soundly rather than mishandle
+  them, before any datatype solving is wired in.)
 
 ## Alternatives
 
