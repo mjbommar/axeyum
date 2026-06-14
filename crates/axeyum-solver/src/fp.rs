@@ -645,6 +645,60 @@ pub fn sqrt(arena: &mut TermArena, fmt: FloatFormat, x: TermId, mode: RoundingMo
     arena.ite(nan_flag, qnan, if_zero)
 }
 
+/// Symbolic floating-point **format conversion** `(_ to_fp)` from one float
+/// format to another (e.g. `f32 → f64` widening or `f64 → f32` narrowing) under
+/// `mode`. Unpacks `x` in `src` and repacks the same value into `dst` via
+/// [`pack_value`] (widening is exact; narrowing rounds), with NaN/∞/±0 mapped to
+/// the destination format. Pure bit-vector formula; solves and replays on the
+/// existing path. Validated against native `f32`/`f64` casts.
+///
+/// # Errors
+///
+/// Returns [`IrError::InvalidWidth`] if the working width exceeds
+/// [`MAX_BV_WIDTH`], [`IrError::SortMismatch`] for a mis-sized operand, or
+/// [`IrError`] from the builders.
+#[allow(clippy::similar_names, clippy::many_single_char_names)]
+pub fn to_fp(
+    arena: &mut TermArena,
+    src: FloatFormat,
+    dst: FloatFormat,
+    mode: RoundingMode,
+    x: TermId,
+) -> Result<TermId, IrError> {
+    src.check(arena, x)?;
+    let w = src.sig_bits.max(dst.sig_bits) + 4;
+    if w > MAX_BV_WIDTH {
+        return Err(IrError::InvalidWidth(w));
+    }
+    let (deb, dsb) = (dst.exp_bits, dst.sig_bits);
+    let dtotal = dst.width();
+
+    let one1 = arena.bv_const(1, 1)?;
+    let (sx, sig_w, e) = unpack_operand(arena, src, w, x)?;
+    let sign = arena.eq(sx, one1)?;
+    let finite = pack_value(arena, deb, dsb, sign, sig_w, e, mode)?;
+
+    // Specials map to the destination format.
+    let nan = is_nan(arena, src, x)?;
+    let inf = is_infinite(arena, src, x)?;
+    let zero = is_zero(arena, src, x)?;
+    let sign_total = {
+        let on = arena.bv_const(dtotal, 1u128 << (dtotal - 1))?;
+        let off = arena.bv_const(dtotal, 0)?;
+        arena.ite(sign, on, off)?
+    };
+    let exp_ones = arena.bv_const(dtotal, ((1u128 << deb) - 1) << (dsb - 1))?;
+    let qnan = {
+        let q = arena.bv_const(dtotal, 1u128 << (dsb - 2))?;
+        arena.bv_or(exp_ones, q)?
+    };
+    let inf_total = arena.bv_or(sign_total, exp_ones)?;
+
+    let if_zero = arena.ite(zero, sign_total, finite)?;
+    let if_inf = arena.ite(inf, inf_total, if_zero)?;
+    arena.ite(nan, qnan, if_inf)
+}
+
 /// Symbolic `fp.div` (round-nearest-ties-to-even): the IEEE 754 division
 /// bit-blaster. Computes the quotient of the significands to `sb + 3` fractional
 /// bits via `bv_udiv` (with the `bv_urem` remainder folded into a sticky bit),
@@ -2038,6 +2092,63 @@ mod tests {
                     assert!((got >> 23) & 0xFF == 0xFF && got & 0x7F_FFFF != 0);
                 } else {
                     assert_eq!(got, u128::from(want.to_bits()), "rint({xb:#x},{mode:?})");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn to_fp_matches_native_casts() {
+        let mut a = TermArena::new();
+        // f32 -> f64 is exact (widening); mode-independent.
+        let mut state: u64 = 0xc0ff_ee00_1234_5678;
+        for _ in 0..1500 {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            let xb = (state >> 16) as u32;
+            let xt = a.bv_const(32, u128::from(xb)).unwrap();
+            let r = to_fp(&mut a, FloatFormat::F32, FloatFormat::F64, RoundingMode::NearestEven, xt)
+                .unwrap();
+            let got = match eval(&a, r, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("expected Bv, got {other:?}"),
+            };
+            let wide = f64::from(f32::from_bits(xb));
+            if wide.is_nan() {
+                assert!((got >> 52) & 0x7FF == 0x7FF && got & 0xF_FFFF_FFFF_FFFF != 0);
+            } else {
+                assert_eq!(got, u128::from(wide.to_bits()), "f32->f64({xb:#x})");
+            }
+        }
+        // f64 -> f32 narrows (rounds); RNE checked against native `as f32`,
+        // all modes against round_to_format on the exact f64 value.
+        let modes = [
+            RoundingMode::NearestEven,
+            RoundingMode::NearestAway,
+            RoundingMode::TowardZero,
+            RoundingMode::TowardPositive,
+            RoundingMode::TowardNegative,
+        ];
+        let mut s = 0x3243_f6a8_885a_308du64;
+        for &mode in &modes {
+            for _ in 0..600 {
+                s = s
+                    .wrapping_mul(6_364_136_223_846_793_005)
+                    .wrapping_add(1_442_695_040_888_963_407);
+                let xt = a.bv_const(64, u128::from(s)).unwrap();
+                let r =
+                    to_fp(&mut a, FloatFormat::F64, FloatFormat::F32, mode, xt).unwrap();
+                let got = match eval(&a, r, &Assignment::new()) {
+                    Ok(Value::Bv { value, .. }) => value,
+                    other => panic!("expected Bv, got {other:?}"),
+                };
+                let v = f64::from_bits(s);
+                if v.is_nan() {
+                    assert!((got >> 23) & 0xFF == 0xFF && got & 0x7F_FFFF != 0);
+                } else {
+                    let want = round_to_format(8, 24, v, mode);
+                    assert_eq!(got, want, "f64->f32({s:#x},{mode:?})");
                 }
             }
         }
