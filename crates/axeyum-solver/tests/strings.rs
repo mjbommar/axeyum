@@ -564,6 +564,29 @@ fn regex_plus_opt_anychar() {
     let any = Regex::Star(Box::new(Regex::AnyChar));
     assert!(matches(&mut a, &any, ""), ".* matches \"\"");
     assert!(matches(&mut a, &any, "hello"), ".* matches \"hello\"");
+
+    // a{2,4} : two to four 'a'
+    let loop24 = Regex::Loop(Box::new(Regex::Char(b'a')), 2, 4);
+    assert!(!matches(&mut a, &loop24, "a"), "a{{2,4}} rejects \"a\"");
+    assert!(matches(&mut a, &loop24, "aa"), "a{{2,4}} matches \"aa\"");
+    assert!(matches(&mut a, &loop24, "aaaa"), "a{{2,4}} matches \"aaaa\"");
+    assert!(!matches(&mut a, &loop24, "aaaaa"), "a{{2,4}} rejects \"aaaaa\"");
+
+    // a{0,2} : up to two 'a' (incl. empty)
+    let loop02 = Regex::Loop(Box::new(Regex::Char(b'a')), 0, 2);
+    assert!(matches(&mut a, &loop02, ""), "a{{0,2}} matches \"\"");
+    assert!(matches(&mut a, &loop02, "aa"), "a{{0,2}} matches \"aa\"");
+    assert!(!matches(&mut a, &loop02, "aaa"), "a{{0,2}} rejects \"aaa\"");
+
+    // exact a{3,3}
+    let loop33 = Regex::Loop(Box::new(Regex::Char(b'a')), 3, 3);
+    assert!(matches(&mut a, &loop33, "aaa"), "a{{3,3}} matches \"aaa\"");
+    assert!(!matches(&mut a, &loop33, "aa"), "a{{3,3}} rejects \"aa\"");
+
+    // empty language a{3,1} matches nothing
+    let empty_lang = Regex::Loop(Box::new(Regex::Char(b'a')), 3, 1);
+    assert!(!matches(&mut a, &empty_lang, ""), "a{{3,1}} matches nothing");
+    assert!(!matches(&mut a, &empty_lang, "aaa"), "a{{3,1}} matches nothing");
 }
 
 #[test]

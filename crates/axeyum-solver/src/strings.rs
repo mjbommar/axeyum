@@ -966,6 +966,9 @@ pub enum Regex {
     Opt(Box<Regex>),
     /// Any single byte (`re.allchar`, the regex `.`).
     AnyChar,
+    /// Bounded repetition `a{n, m}` (`re.loop`): between `n` and `m` (inclusive)
+    /// repetitions of `a`. If `n > m` the language is empty (matches nothing).
+    Loop(Box<Regex>, u32, u32),
 }
 
 impl Regex {
@@ -1094,6 +1097,28 @@ impl Nfa {
                 let a = self.state();
                 self.chars.push((s, a, Pred::Range(0, 255)));
                 (s, a)
+            }
+            Regex::Loop(x, n, m) => {
+                if n > m {
+                    // empty language: two disconnected states, accept unreachable.
+                    let start = self.state();
+                    let accept = self.state();
+                    (start, accept)
+                } else {
+                    // a{n,m} = a^n (a?)^(m-n) : n mandatory then m-n optional copies.
+                    let mut parts: Vec<Regex> = Vec::with_capacity(*m as usize);
+                    for _ in 0..*n {
+                        parts.push((**x).clone());
+                    }
+                    for _ in *n..*m {
+                        parts.push(Regex::Opt(Box::new((**x).clone())));
+                    }
+                    let folded = parts.into_iter().rev().fold(None, |acc, p| match acc {
+                        None => Some(p),
+                        Some(rest) => Some(Regex::Concat(Box::new(p), Box::new(rest))),
+                    });
+                    self.build(&folded.unwrap_or(Regex::Empty))
+                }
             }
         }
     }
