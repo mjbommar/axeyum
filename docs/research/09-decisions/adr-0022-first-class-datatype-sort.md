@@ -1,6 +1,6 @@
 # ADR-0022: First-Class Datatype Sort in the IR
 
-Status: proposed
+Status: accepted (IR foundation implemented 2026-06-13; datatype solving deferred)
 Date: 2026-06-13
 
 ## Context

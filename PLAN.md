@@ -38,6 +38,25 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-13
 
+- Architecture iteration Q — **first-class datatype sort (recursive datatypes)**
+  recorded 2026-06-13
+  ([ADR-0022](docs/research/09-decisions/adr-0022-first-class-datatype-sort.md),
+  now accepted): the IR foundation for datatypes — twice probed/scoped, once
+  reverted, now landed end-to-end and fully green. `axeyum-ir` gains
+  `DatatypeId`/`ConstructorId` interned tables with a two-phase declare
+  (`declare_datatype` then `add_constructor`, so a field may reference
+  `Sort::Datatype(self)` for recursion), `Sort::Datatype` (Sort stays `Copy`),
+  `Value::Datatype` (a `Clone` tree), and `DtConstruct`/`DtSelect`/`DtTest` ops
+  with sort-checked builders and full evaluator semantics (wrong-constructor
+  select → new `IrError::DatatypeConstructorMismatch`). Downstream crates handle
+  the new sort/ops via the support guards (datatype queries → `Unsupported`,
+  solving deferred), `build_app` rebuild, and mechanical match arms — 18 files,
+  contained, compiler-guided. Tests: recursive `IntList` and `Option`
+  construct/select/test + eval round-trip; whole workspace 66 test binaries +
+  clippy + links green. This is the first **recursive** theory the IR can express
+  (the finite enum/record helpers covered only the non-recursive case). Next per
+  ADR-0022: datatype *solving* (eager bounded unfolding, then native
+  acyclicity+congruence).
 - Architecture iteration L — signed bit-vector optimization recorded 2026-06-13:
   `maximize_bv_signed` / `minimize_bv_signed` (`optimize.rs`) optimize the
   two's-complement signed value of a bit-vector objective (width ≤ 64) by binary
