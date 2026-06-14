@@ -62,6 +62,11 @@ Last updated: 2026-06-14
   assertions' `:named` labels (falling back to `assertion #i`), or `None` when
   sat. Tests: `x>5 ∧ x<3` core is `{a, b}` excluding an irrelevant tautology; a
   sat script yields no core.
+  **`(get-value (t …))` now added** — the requested terms are recorded
+  (`Script::get_value_terms`) and `solve_smtlib_get_value` evaluates each against
+  the `sat` model through the ground evaluator (the same trusted, replay-checked
+  model), returning the values in order (or `None` when unsat/unknown). Test:
+  `x+1=5` ⇒ `get-value (x (bvadd x x))` returns `[4, 8]`.
 
 - **QF_UFFP verified — uninterpreted functions over FP (2026-06-14).** The
   `Sort::Float` cascade (ADR-0026) plus the bit-blaster preflight accepting

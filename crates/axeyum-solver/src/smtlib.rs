@@ -54,6 +54,41 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
     })
 }
 
+/// Evaluates the `(get-value (t …))` terms of an SMT-LIB script against a `sat`
+/// model. The conjunction of all assertions is decided; on `sat` each requested
+/// term is evaluated through the ground evaluator under the model, returning the
+/// values in script order. Returns `Ok(None)` when the script is `unsat`/
+/// `unknown` (no model) or requested no values.
+///
+/// This is the model-query companion to [`solve_smtlib`]: the same trusted `sat`
+/// model that is replay-checked is what the values are read from.
+///
+/// # Errors
+///
+/// [`SolverError::Parse`] for malformed/unsupported text, any [`SolverError`]
+/// from [`crate::solve`], or [`SolverError::Backend`] if a requested term fails
+/// to evaluate under the model.
+pub fn solve_smtlib_get_value(
+    input: &str,
+    config: &SolverConfig,
+) -> Result<Option<Vec<axeyum_ir::Value>>, SolverError> {
+    let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    if script.get_value_terms.is_empty() {
+        return Ok(None);
+    }
+    let CheckResult::Sat(model) = solve(&mut script.arena, &script.assertions, config)? else {
+        return Ok(None);
+    };
+    let assignment = model.to_assignment();
+    let mut values = Vec::with_capacity(script.get_value_terms.len());
+    for &term in &script.get_value_terms {
+        let value = axeyum_ir::eval(&script.arena, term, &assignment)
+            .map_err(|e| SolverError::Backend(format!("get-value evaluation failed: {e}")))?;
+        values.push(value);
+    }
+    Ok(Some(values))
+}
+
 /// Extracts an **unsat core** from an SMT-LIB script (`get-unsat-core`): the
 /// conjunction of all its assertions is decided, and if it is `unsat`, a minimal
 /// unsatisfiable subset is returned, reported as the assertions' `:named` labels

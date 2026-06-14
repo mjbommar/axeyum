@@ -54,6 +54,9 @@ pub struct Script {
     /// Per-assertion `:named` label (parallel to [`Script::assertions`]; `None`
     /// when the assertion was not named), for `(get-unsat-core)`.
     pub assertion_names: Vec<Option<String>>,
+    /// Terms requested by `(get-value (t …))`, in script order, to be evaluated
+    /// against a `sat` model.
+    pub get_value_terms: Vec<TermId>,
     /// The ordered `assert`/`push`/`pop`/`check-sat` sequence — the incremental
     /// view of the script (ADR-0009 lifecycle), for per-`check-sat` solving.
     pub commands: Vec<ScriptCommand>,
@@ -109,6 +112,17 @@ fn parse_command<'a>(
         "get-model" | "exit" | "get-unsat-core" | "get-assertions" | "reset"
         | "reset-assertions" => exact_len(items, 1, head)?,
         "get-info" => exact_len(items, 2, head)?,
+        "get-value" => {
+            exact_len(items, 2, head)?;
+            let list = items
+                .get(1)
+                .and_then(SExpr::list)
+                .ok_or_else(|| SmtError::Syntax("get-value expects (t …)".to_owned()))?;
+            for t in list {
+                let term = parse_term(&mut script.arena, t, aliases, macros)?;
+                script.get_value_terms.push(term);
+            }
+        }
         "check-sat-assuming" => {
             exact_len(items, 2, head)?;
             let list = items

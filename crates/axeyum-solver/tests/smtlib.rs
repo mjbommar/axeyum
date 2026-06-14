@@ -327,3 +327,38 @@ fn unsat_core_is_none_when_sat() {
 ";
     assert_eq!(solve_smtlib_unsat_core(text, &config()).expect("decides"), None);
 }
+
+/// `(get-value (t …))` reads the sat model: with `x+1 == 5`, the model has x=4,
+/// so `x` is 4 and `(bvadd x x)` is 8 (evaluated through the ground evaluator).
+#[test]
+fn get_value_reads_the_model() {
+    use axeyum_ir::Value;
+    use axeyum_solver::solve_smtlib_get_value;
+    let text = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (= (bvadd x (_ bv1 8)) (_ bv5 8)))
+(check-sat)
+(get-value (x (bvadd x x)))
+";
+    let values = solve_smtlib_get_value(text, &config())
+        .expect("decides")
+        .expect("sat, so a model exists");
+    assert_eq!(values.len(), 2);
+    assert_eq!(values[0], Value::Bv { width: 8, value: 4 }, "x = 4");
+    assert_eq!(values[1], Value::Bv { width: 8, value: 8 }, "x+x = 8");
+}
+
+/// `get-value` has nothing to read when the script is unsat.
+#[test]
+fn get_value_is_none_when_unsat() {
+    use axeyum_solver::solve_smtlib_get_value;
+    let text = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (bvult x (_ bv0 8)))
+(check-sat)
+(get-value (x))
+";
+    assert_eq!(solve_smtlib_get_value(text, &config()).expect("decides"), None);
+}
