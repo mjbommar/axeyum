@@ -3,7 +3,10 @@
 //! reals together), and through the dispatcher.
 
 use axeyum_ir::{Rational, Sort, TermArena, TermId, Value, eval};
-use axeyum_solver::{CheckResult, SolverConfig, check_with_lia_dpll, solve};
+use axeyum_solver::{
+    ArithDpllOutcome, CheckResult, SolverConfig, certify_arith_dpll_unsat, check_with_lia_dpll,
+    solve,
+};
 
 fn int_var(arena: &mut TermArena, name: &str) -> TermId {
     let sym = arena.declare(name, Sort::Int).unwrap();
@@ -130,6 +133,30 @@ fn combined_lira_is_satisfiable_and_replayed() {
             }
         }
         other => panic!("expected sat, got {other:?}"),
+    }
+}
+
+#[test]
+fn unsat_certificate_verifies_independently() {
+    // (x == 2 OR x == 4) AND x == 3 is unsat; the lazy loop must produce a
+    // refutation (skeleton + learned theory lemmas) that re-checks on its own.
+    let mut arena = TermArena::new();
+    let x = int_var(&mut arena, "x");
+    let two = arena.int_const(2);
+    let four = arena.int_const(4);
+    let three = arena.int_const(3);
+    let is2 = arena.eq(x, two).unwrap();
+    let is4 = arena.eq(x, four).unwrap();
+    let disj = arena.or(is2, is4).unwrap();
+    let pin = arena.eq(x, three).unwrap();
+
+    match certify_arith_dpll_unsat(&mut arena, &[disj, pin], &SolverConfig::default()).unwrap() {
+        ArithDpllOutcome::Unsat(refutation) => {
+            // certify_* already self-checked, but verify again explicitly.
+            assert!(refutation.verify(&arena).unwrap(), "refutation must verify");
+            assert!(!refutation.lemmas.is_empty(), "should have learned lemmas");
+        }
+        other => panic!("expected a verified unsat refutation, got {other:?}"),
     }
 }
 

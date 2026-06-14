@@ -38,6 +38,18 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-13
 
+- Architecture iteration G — checkable arithmetic-DPLL unsat certificate
+  recorded 2026-06-13 (evidence thesis / proof-parity direction):
+  `certify_arith_dpll_unsat` returns an `ArithDpllRefutation` (Boolean skeleton +
+  learned theory lemmas) with an independent `verify` — each lemma core is
+  re-decided `unsat` by its theory's exact procedure (`check_with_lia_simplex` /
+  `check_with_lra`) and the skeleton+lemma-clauses are shown propositionally
+  unsatisfiable by enumeration (cap 22 Booleans). The loop now records lemmas;
+  the certificate self-checks before return (a failed check is a soundness
+  alarm). Auxiliary (the solver verdict is unchanged), mirroring the real
+  `LraDpllRefutation`. Test: a disjunctive integer `unsat` produces a refutation
+  that re-verifies. **Whole workspace** (58 test binaries) + clippy green with
+  all this session's arithmetic/strategy work integrated.
 - Architecture iteration F — combined QF_LIRA recorded 2026-06-13 (realizes the
   ADR-0021 follow-up): the Boolean-structured arithmetic loop (`dpll_lia.rs`,
   generalized to `check_with_arith_dpll`) now theory-checks **integer and real

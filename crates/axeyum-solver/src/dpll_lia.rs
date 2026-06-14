@@ -44,6 +44,183 @@ enum Theory {
     Real,
 }
 
+/// Hard cap on Boolean symbols a refutation's propositional half may have to be
+/// verified by exhaustive enumeration; above it the certificate is declined.
+const MAX_CERTIFIABLE_BOOLS: usize = 22;
+
+/// One literal of a learned theory lemma: the atom's proposition, the truth it
+/// took in the conflict, the arithmetic literal (atom or its negation) used to
+/// re-check the lemma, and the theory that decides it.
+#[derive(Debug, Clone, Copy)]
+pub struct ArithLemmaLiteral {
+    /// The fresh Boolean proposition standing for the atom.
+    pub prop: SymbolId,
+    /// The truth value the proposition took in the (infeasible) assignment.
+    pub truth: bool,
+    /// The arithmetic literal: the atom term when `truth`, else its negation.
+    pub literal: TermId,
+    theory: Theory,
+}
+
+/// A checkable refutation of a Boolean-structured linear-arithmetic query: the
+/// Boolean skeleton plus the learned theory lemmas (each an infeasible core).
+/// [`Self::verify`] re-checks it independently of the search: every lemma core is
+/// re-decided `unsat` by its theory's exact procedure, and the skeleton with all
+/// lemma clauses is shown propositionally unsatisfiable by enumeration.
+#[derive(Debug, Clone)]
+pub struct ArithDpllRefutation {
+    /// The Boolean skeleton (one term per assertion, arithmetic atoms as props).
+    pub skeleton: Vec<TermId>,
+    /// The learned theory lemmas; each is an infeasible core of arithmetic
+    /// literals from a single theory.
+    pub lemmas: Vec<Vec<ArithLemmaLiteral>>,
+}
+
+/// The outcome of [`certify_arith_dpll_unsat`].
+#[derive(Debug, Clone)]
+pub enum ArithDpllOutcome {
+    /// Satisfiable, with a replayed model.
+    Sat(Model),
+    /// Unsatisfiable, with a self-checked refutation.
+    Unsat(ArithDpllRefutation),
+    /// Undecided / not certifiable, with a reason.
+    Unknown(UnknownReason),
+}
+
+/// Decides a Boolean-structured linear-arithmetic query and, on `unsat`, returns
+/// a self-checked [`ArithDpllRefutation`].
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] for input outside Boolean-structured
+/// linear arithmetic or with too many Boolean symbols to verify; or
+/// [`SolverError::Backend`] if the refutation fails its own check (a soundness
+/// alarm).
+pub fn certify_arith_dpll_unsat(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<ArithDpllOutcome, SolverError> {
+    let run = run_arith_dpll(arena, assertions, config)?;
+    match run.result {
+        CheckResult::Sat(model) => Ok(ArithDpllOutcome::Sat(model)),
+        CheckResult::Unknown(reason) => Ok(ArithDpllOutcome::Unknown(reason)),
+        CheckResult::Unsat => {
+            let refutation = ArithDpllRefutation {
+                skeleton: run.skeleton,
+                lemmas: run.lemmas,
+            };
+            if refutation.verify(arena)? {
+                Ok(ArithDpllOutcome::Unsat(refutation))
+            } else {
+                Err(SolverError::Backend(
+                    "arith-dpll refutation failed its own self-check".to_string(),
+                ))
+            }
+        }
+    }
+}
+
+impl ArithDpllRefutation {
+    /// The Boolean symbols (atom props and original Boolean variables) the
+    /// refutation ranges over, in deterministic order.
+    fn bool_symbols(&self, arena: &TermArena) -> Vec<SymbolId> {
+        let mut set = std::collections::BTreeSet::new();
+        let mut stack = self.skeleton.clone();
+        let mut seen = HashSet::new();
+        while let Some(t) = stack.pop() {
+            if !seen.insert(t) {
+                continue;
+            }
+            match arena.node(t) {
+                TermNode::Symbol(symbol) if arena.sort_of(t) == Sort::Bool => {
+                    set.insert(*symbol);
+                }
+                TermNode::App { args, .. } => stack.extend(args.iter().copied()),
+                _ => {}
+            }
+        }
+        for lemma in &self.lemmas {
+            for literal in lemma {
+                set.insert(literal.prop);
+            }
+        }
+        set.into_iter().collect()
+    }
+
+    /// Independently re-checks the refutation. Returns `Ok(true)` iff it holds.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Unsupported`] if there are too many Boolean symbols
+    /// to enumerate, or [`SolverError`] from a theory re-check or evaluation.
+    pub fn verify(&self, arena: &TermArena) -> Result<bool, SolverError> {
+        // (1) Every lemma core is a genuine theory contradiction.
+        for lemma in &self.lemmas {
+            let lits: Vec<TermId> = lemma.iter().map(|l| l.literal).collect();
+            if lits.is_empty() {
+                return Ok(false);
+            }
+            let theory = lemma[0].theory;
+            let unsat = match theory {
+                Theory::Int => matches!(check_with_lia_simplex(arena, &lits)?, CheckResult::Unsat),
+                Theory::Real => matches!(check_with_lra(arena, &lits)?, CheckResult::Unsat),
+            };
+            if !unsat {
+                return Ok(false);
+            }
+        }
+
+        // (2) skeleton AND every lemma clause is propositionally unsatisfiable.
+        let bools = self.bool_symbols(arena);
+        if bools.len() > MAX_CERTIFIABLE_BOOLS {
+            return Err(SolverError::Unsupported(format!(
+                "arith-dpll refutation has {} Boolean symbols, too many to verify by enumeration",
+                bools.len()
+            )));
+        }
+        let index_of: HashMap<SymbolId, usize> =
+            bools.iter().enumerate().map(|(i, &s)| (s, i)).collect();
+        let n = bools.len();
+        for mask in 0u64..(1u64 << n) {
+            let mut assignment = axeyum_ir::Assignment::new();
+            for (i, &symbol) in bools.iter().enumerate() {
+                assignment.set(symbol, Value::Bool((mask >> i) & 1 == 1));
+            }
+            let mut skeleton_holds = true;
+            for &term in &self.skeleton {
+                match eval(arena, term, &assignment) {
+                    Ok(Value::Bool(true)) => {}
+                    Ok(_) => {
+                        skeleton_holds = false;
+                        break;
+                    }
+                    Err(error) => {
+                        return Err(SolverError::Backend(format!(
+                            "arith-dpll verify: skeleton evaluation error: {error}"
+                        )));
+                    }
+                }
+            }
+            if !skeleton_holds {
+                continue;
+            }
+            // A lemma clause (the core's negation) is false exactly when the core
+            // is fully satisfied; the refutation needs at least one clause false.
+            let all_clauses_hold = self.lemmas.iter().all(|lemma| {
+                let core_fully_satisfied = lemma
+                    .iter()
+                    .all(|l| (mask >> index_of[&l.prop]) & 1 == u64::from(l.truth));
+                !core_fully_satisfied
+            });
+            if all_clauses_hold {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
+}
+
 /// Decides a Boolean-structured `QF_LIA` query (integer atoms only) by lazy-SMT.
 ///
 /// A thin wrapper over [`check_with_arith_dpll`]; kept as a named entry point for
@@ -74,6 +251,22 @@ pub fn check_with_arith_dpll(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    Ok(run_arith_dpll(arena, assertions, config)?.result)
+}
+
+/// The lazy-SMT loop plus the trace needed to certify an `unsat` (the Boolean
+/// skeleton and the learned theory lemmas).
+struct ArithRun {
+    result: CheckResult,
+    skeleton: Vec<TermId>,
+    lemmas: Vec<Vec<ArithLemmaLiteral>>,
+}
+
+fn run_arith_dpll(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<ArithRun, SolverError> {
     let mut ctx = ArithAbstractor::default();
     let mut skeleton = Vec::with_capacity(assertions.len());
     for &assertion in assertions {
@@ -82,14 +275,27 @@ pub fn check_with_arith_dpll(
 
     let mut backend = SatBvBackend::new();
     let mut blocking: Vec<TermId> = Vec::new();
+    let mut lemmas: Vec<Vec<ArithLemmaLiteral>> = Vec::new();
 
     for _ in 0..MAX_DPLL_ROUNDS {
         let mut sat_assertions = skeleton.clone();
         sat_assertions.extend(blocking.iter().copied());
         let propositional = match backend.check(arena, &sat_assertions, config)? {
             CheckResult::Sat(model) => model,
-            CheckResult::Unsat => return Ok(CheckResult::Unsat),
-            CheckResult::Unknown(reason) => return Ok(CheckResult::Unknown(reason)),
+            CheckResult::Unsat => {
+                return Ok(ArithRun {
+                    result: CheckResult::Unsat,
+                    skeleton,
+                    lemmas,
+                });
+            }
+            CheckResult::Unknown(reason) => {
+                return Ok(ArithRun {
+                    result: CheckResult::Unknown(reason),
+                    skeleton,
+                    lemmas,
+                });
+            }
         };
 
         // The arithmetic literal implied by this assignment for each atom, in
@@ -113,22 +319,50 @@ pub fn check_with_arith_dpll(
         if let Some(conflict) =
             theory_conflict(arena, &ctx, &lits, Theory::Int, check_with_lia_simplex)?
         {
+            lemmas.push(record_lemma(&ctx, &truths, &lits, &conflict));
             blocking.push(block_clause(arena, &ctx.atoms, &truths, &conflict)?);
             continue;
         }
         if let Some(conflict) = theory_conflict(arena, &ctx, &lits, Theory::Real, check_with_lra)? {
+            lemmas.push(record_lemma(&ctx, &truths, &lits, &conflict));
             blocking.push(block_clause(arena, &ctx.atoms, &truths, &conflict)?);
             continue;
         }
 
         // Both theories consistent: build and replay the combined model.
-        return finish_sat(arena, assertions, &ctx, &propositional, &lits);
+        let result = finish_sat(arena, assertions, &ctx, &propositional, &lits)?;
+        return Ok(ArithRun {
+            result,
+            skeleton,
+            lemmas,
+        });
     }
 
-    Ok(CheckResult::Unknown(UnknownReason {
-        kind: UnknownKind::Incomplete,
-        detail: format!("lazy linear arithmetic exceeded {MAX_DPLL_ROUNDS} refinement rounds"),
-    }))
+    Ok(ArithRun {
+        result: CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Incomplete,
+            detail: format!("lazy linear arithmetic exceeded {MAX_DPLL_ROUNDS} refinement rounds"),
+        }),
+        skeleton,
+        lemmas,
+    })
+}
+
+/// Records a theory conflict core as a structured lemma for certification.
+fn record_lemma(
+    ctx: &ArithAbstractor,
+    truths: &[bool],
+    lits: &[TermId],
+    core: &[usize],
+) -> Vec<ArithLemmaLiteral> {
+    core.iter()
+        .map(|&i| ArithLemmaLiteral {
+            prop: ctx.atoms[i].prop,
+            truth: truths[i],
+            literal: lits[i],
+            theory: ctx.atoms[i].theory,
+        })
+        .collect()
 }
 
 /// Checks one theory's conjunction; on `unsat`, returns the minimized conflict
