@@ -214,12 +214,40 @@ impl BoundedString {
     /// # Errors
     ///
     /// Returns [`IrError`] from the builders.
-    #[allow(clippy::similar_names)]
     pub fn contains(
         &self,
         arena: &mut TermArena,
         hay: &StrTerm,
         needle: &StrTerm,
+    ) -> Result<TermId, IrError> {
+        self.scan_match(arena, hay, needle, false)
+    }
+
+    /// `str.suffixof` — is `needle` a suffix of `hay`? Like [`Self::contains`] but
+    /// the match window must end exactly at `len(hay)`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] from the builders.
+    pub fn suffix_of(
+        &self,
+        arena: &mut TermArena,
+        needle: &StrTerm,
+        hay: &StrTerm,
+    ) -> Result<TermId, IrError> {
+        self.scan_match(arena, hay, needle, true)
+    }
+
+    /// Shared bounded substring scan: `needle` matches at some offset whose
+    /// window either ends at or fits within `len(hay)` (`exact_end` selects
+    /// suffix vs substring).
+    #[allow(clippy::similar_names, clippy::trivially_copy_pass_by_ref)] // mirror the public API shape
+    fn scan_match(
+        &self,
+        arena: &mut TermArena,
+        hay: &StrTerm,
+        needle: &StrTerm,
+        exact_end: bool,
     ) -> Result<TermId, IrError> {
         let wide = self.len_width() + 1; // room for off + len(needle)
         let len_h = arena.zero_ext(1, hay.len)?;
@@ -228,16 +256,19 @@ impl BoundedString {
         for off in 0..self.max_len {
             let off_c = arena.bv_const(wide, u128::from(off))?;
             let end = arena.bv_add(off_c, len_n)?;
-            // window fits within the string: off + len(needle) <= len(hay).
-            // (This is also correct for an empty needle: 0 <= len(hay).)
-            let mut matched = arena.bv_ule(end, len_h)?;
+            // Window condition: ends exactly at len(hay) (suffix) or fits within
+            // it (substring). Correct for empty needle (off = 0).
+            let mut matched = if exact_end {
+                arena.eq(end, len_h)?
+            } else {
+                arena.bv_ule(end, len_h)?
+            };
             for j in 0..self.max_len {
                 let jc = arena.bv_const(self.len_width(), u128::from(j))?;
                 let j_active = arena.bv_ult(jc, needle.len)?;
                 let nj_active = arena.not(j_active)?;
                 if off + j >= self.max_len {
-                    // hay[off+j] is past the buffer: this offset can only match if
-                    // needle has no byte j (j ≥ len(needle)).
+                    // hay[off+j] past the buffer: match only if needle lacks byte j.
                     matched = arena.and(matched, nj_active)?;
                 } else {
                     let hb = arena.extract((off + j) * 8 + 7, (off + j) * 8, hay.content)?;
@@ -250,6 +281,44 @@ impl BoundedString {
             any = arena.or(any, matched)?;
         }
         Ok(any)
+    }
+
+    /// `str.substr` with a **constant** start and length `n`: the substring of
+    /// `x` at `[start, start+n)`, in a bounded-string sort of size `n`. The
+    /// content is the `n` source bytes (padding beyond the actual length is
+    /// don't-care); the result length is `min(n, len(x) − start)` clamped to 0
+    /// when `start ≥ len(x)`, matching SMT-LIB `str.substr`. Requires
+    /// `start + n ≤ max_len` and `n ≥ 1`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::InvalidWidth`] if the window is out of range or `n = 0`,
+    /// or [`IrError`] from the builders.
+    pub fn substr(
+        &self,
+        arena: &mut TermArena,
+        x: &StrTerm,
+        start: u32,
+        n: u32,
+    ) -> Result<(BoundedString, StrTerm), IrError> {
+        if n == 0 || start + n > self.max_len {
+            return Err(IrError::InvalidWidth(n));
+        }
+        let result = BoundedString::new(n);
+        // content = source bytes [start, start+n).
+        let content = arena.extract((start + n) * 8 - 1, start * 8, x.content)?;
+        // actual length = start >= len(x) ? 0 : min(n, len(x) - start).
+        let lw = self.len_width();
+        let start_c = arena.bv_const(lw, u128::from(start))?;
+        let n_c = arena.bv_const(lw, u128::from(n))?;
+        let zero = arena.bv_const(lw, 0)?;
+        let start_ge = arena.bv_uge(start_c, x.len)?;
+        let avail = arena.bv_sub(x.len, start_c)?; // valid when start < len(x)
+        let avail_lt_n = arena.bv_ult(avail, n_c)?;
+        let min_an = arena.ite(avail_lt_n, avail, n_c)?;
+        let actual = arena.ite(start_ge, zero, min_an)?;
+        let rlen = arena.extract(result.len_width() - 1, 0, actual)?;
+        Ok((result, StrTerm { len: rlen, content }))
     }
 
     /// `str.at` at a **constant** index: the byte at position `i` (an 8-bit

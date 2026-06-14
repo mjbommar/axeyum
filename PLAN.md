@@ -47,8 +47,10 @@ Last updated: 2026-06-14
   length/literal contradiction (unsat). **`str.++` (concat)** now added —
   symbolic-length barrel shift placing `y` after `x` (result sized `x.max+y.max`,
   padding masked); tests incl. `x ++ "!" = "hi!"` (sat). **`str.prefixof` and `str.contains`**
-  now added (contains = bounded offset scan); symbolic contains tested. **Next:**
-  `substr`/`indexof`/`suffixof`, then regex and unbounded via a first-class sort.
+  now added (contains = bounded offset scan); symbolic contains tested.
+  **`str.suffixof`** (exact-end scan) and **constant-window `str.substr`** added.
+  **Next:** symbolic-index `substr`/`indexof`, then regex and unbounded via a
+  first-class sort.
   This was the last entirely-untouched Z3 theory; it is now opened.
 
 - **NRA — first slice (2026-06-14, ADR-0024).** Nonlinear real arithmetic by

@@ -142,6 +142,33 @@ fn prefix_and_contains_on_literals() {
 }
 
 #[test]
+fn suffix_and_substr_on_literals() {
+    let mut a = TermArena::new();
+    let s = BoundedString::new(8);
+    let hello = s.literal(&mut a, "hello").unwrap();
+    let lo = s.literal(&mut a, "lo").unwrap();
+    let he = s.literal(&mut a, "he").unwrap();
+
+    let t = s.suffix_of(&mut a, &lo, &hello).unwrap();
+    assert!(eval_bool(&a, t), "\"lo\" suffixof \"hello\"");
+    let t = s.suffix_of(&mut a, &he, &hello).unwrap();
+    assert!(!eval_bool(&a, t), "\"he\" not suffixof \"hello\"");
+
+    // substr("hello", 1, 3) == "ell"
+    let (s3, sub) = s.substr(&mut a, &hello, 1, 3).unwrap();
+    let ell = s3.literal(&mut a, "ell").unwrap();
+    let eq = s3.equal(&mut a, &sub, &ell).unwrap();
+    assert!(eval_bool(&a, eq), "substr(\"hello\",1,3) == \"ell\"");
+
+    // substr past the end clamps: substr("hi", 1, 3) == "i"
+    let hi = s.literal(&mut a, "hi").unwrap();
+    let (s3b, sub2) = s.substr(&mut a, &hi, 1, 3).unwrap();
+    let i = s3b.literal(&mut a, "i").unwrap();
+    let eq = s3b.equal(&mut a, &sub2, &i).unwrap();
+    assert!(eval_bool(&a, eq), "substr(\"hi\",1,3) == \"i\"");
+}
+
+#[test]
 fn symbolic_contains_is_sat() {
     // exists x (<=8): x contains "lo" AND len(x)==5  -> sat (e.g. "hello").
     let mut a = TermArena::new();
