@@ -77,9 +77,15 @@ Last updated: 2026-06-14
     fields) — a weaker constraint, so the same relaxation gives sound `unsat` and
     replay-checked `sat`/`unknown`. Decides `l==m ∧ is-cons(l) ∧ is-nil(m)`
     (unsat) and `l==m ∧ head(l)==5 ∧ head(m)==6` (unsat). 25 datatype tests green.
-  - **Next datatype unit:** the acyclicity + congruence native theory (and exact
+  - **Mutually-recursive datatypes — confirmed working** (2026-06-14): the
+    recursion-guarded `register_datatype` / `well_founded_default` / unfolding
+    handle mutual recursion for free; locked with a Tree↔Forest test that
+    traverses Tree→Forest→Tree and solves (26 datatype tests green). Note:
+    *acyclicity* is not a gap here — our fragment forbids construct-in-equality,
+    so cycles like `x = cons(0, x)` cannot be expressed.
+  - **Next datatype unit:** the acyclicity + congruence native theory (exact
     field guards to make the relaxed `unknown` cases complete), plus array/UF
-    datatype fields.
+    datatype fields. Lower priority than the unbuilt theories below.
 - Architecture iteration Q — **first-class datatype sort (recursive datatypes)**
   recorded 2026-06-13
   ([ADR-0022](docs/research/09-decisions/adr-0022-first-class-datatype-sort.md),

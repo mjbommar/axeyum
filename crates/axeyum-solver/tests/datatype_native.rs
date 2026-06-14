@@ -507,6 +507,65 @@ fn recursive_equality_is_sat_with_defaulted_fields() {
 }
 
 #[test]
+fn mutually_recursive_datatypes_traverse_and_solve() {
+    // Tree = leaf(lval: BitVec(8)) | branch(bforest: Forest)
+    // Forest = fnil | fcons(fhead: Tree, ftail: Forest)
+    // Traverse Tree -> Forest -> Tree: is-branch(t), the forest is fcons, its
+    // head is a leaf with lval == 9. Sat with t = branch(fcons(leaf(9), fnil)).
+    let mut arena = TermArena::new();
+    let tree = arena.declare_datatype("Tree");
+    let forest = arena.declare_datatype("Forest");
+    let leaf = arena.add_constructor(tree, "leaf", &[("lval".into(), Sort::BitVec(8))]);
+    let branch = arena.add_constructor(tree, "branch", &[("bforest".into(), Sort::Datatype(forest))]);
+    let _fnil = arena.add_constructor(forest, "fnil", &[]);
+    let fcons = arena.add_constructor(
+        forest,
+        "fcons",
+        &[
+            ("fhead".into(), Sort::Datatype(tree)),
+            ("ftail".into(), Sort::Datatype(forest)),
+        ],
+    );
+
+    let t = arena.declare("t", Sort::Datatype(tree)).unwrap();
+    let tv = arena.var(t);
+    let is_branch = arena.dt_test(branch, tv).unwrap(); // is-branch(t)
+    let bf = arena.dt_select(branch, 0, tv).unwrap(); // bforest(t) : Forest
+    let is_fcons = arena.dt_test(fcons, bf).unwrap(); // is-fcons(bforest(t))
+    let fh = arena.dt_select(fcons, 0, bf).unwrap(); // fhead(...) : Tree
+    let is_leaf = arena.dt_test(leaf, fh).unwrap(); // is-leaf(fhead(...))
+    let lv = arena.dt_select(leaf, 0, fh).unwrap(); // lval(...) : BitVec(8)
+    let nine = arena.bv_const(8, 9).unwrap();
+    let eq = arena.eq(lv, nine).unwrap();
+
+    let result = check_with_datatype_native(
+        &mut arena,
+        &[is_branch, is_fcons, is_leaf, eq],
+        &SolverConfig::default(),
+    )
+    .unwrap();
+    let CheckResult::Sat(model) = result else {
+        panic!("expected sat, got {result:?}");
+    };
+    // t = branch(fcons(leaf(9), _))
+    match model.get(t) {
+        Some(Value::Datatype {
+            constructor, fields, ..
+        }) => {
+            assert_eq!(constructor, branch, "t is a branch");
+            let Value::Datatype { fields: f, .. } = &fields[0] else {
+                panic!("bforest is a Forest value");
+            };
+            let Value::Datatype { fields: h, .. } = &f[0] else {
+                panic!("fhead is a Tree value");
+            };
+            assert_eq!(h[0], Value::Bv { width: 8, value: 9 }, "nested lval is 9");
+        }
+        other => panic!("expected branch(...), got {other:?}"),
+    }
+}
+
+#[test]
 fn dispatcher_routes_datatype_queries() {
     // The high-level `solve` dispatcher should route a free-datatype query
     // through to the native path and return sat.
