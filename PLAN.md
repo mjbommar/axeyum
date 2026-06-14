@@ -38,6 +38,21 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-14
 
+- **FP SMT-LIB front-end — first slice (2026-06-14).** The `axeyum-fp` builders
+  (extracted to their own crate so the reader needn't depend on the solver) are
+  now reachable from SMT-LIB text. `parse_sort` accepts `Float16/32/64/128` and
+  `(_ FloatingPoint eb sb)` (lowered to `BitVec(eb+sb)`); `parse_indexed_constant`
+  builds the FP special constants `(_ +zero/-zero/+oo/-oo/NaN eb sb)`; `apply_op`
+  handles the `(fp s e m)` literal (concatenation) and the rounding-mode-free ops
+  — `fp.abs/neg/min/max/rem`, comparisons `fp.eq/lt/leq/gt/geq`, and the
+  classification predicates `fp.isNaN/isInfinite/isZero/isNormal/isSubnormal/
+  isNegative/isPositive` — with the format recovered from operand width via
+  `fp_format` (16→F16, 32→F32, 64→F64). End-to-end parse test on a `QF_FP` script
+  (NaN/+oo constants, an `fp` literal, `fp.lt`, `fp.abs(neg)` identity). **Next:**
+  the mode-taking FP arithmetic (`fp.add/sub/mul/div/sqrt/fma/roundToIntegral`)
+  needs rounding-mode constants (`RNE/RNA/RTP/RTN/RTZ`) extracted as parse values
+  (like `let`), since modes aren't terms; then F64 `fp.fma` (blocked on >128-bit BV).
+
 - **Strings — first slice (2026-06-14, ADR-0025).** Bounded-length string theory
   by BV lowering (`strings::BoundedString`, no IR sort): a string is `(len,
   content)` over a byte alphabet, `max_len ≤ 16`. `str.len`/`str.=`/`str.at` +

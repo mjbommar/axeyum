@@ -659,3 +659,21 @@ fn parses_attributed_terms_with_patterns() {
     let script = parse_script(text).unwrap();
     assert_eq!(script.assertions.len(), 2);
 }
+
+#[test]
+fn parses_floating_point_predicates_and_literals() {
+    // Float32 declarations, fp literals, special constants, comparisons, and
+    // classification all parse (lowered to bit-vectors; ADR-0023).
+    let text = r"
+        (set-logic QF_FP)
+        (declare-const x Float32)
+        (assert (fp.isNaN (_ NaN 8 24)))
+        (assert (not (fp.isNaN x)))
+        (assert (fp.lt x (fp #b0 #b10000000 #b00000000000000000000000)))
+        (assert (fp.isInfinite (_ +oo 8 24)))
+        (assert (= (fp.abs x) (fp.abs (fp.neg x))))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 5);
+}

@@ -9,6 +9,7 @@
 
 use std::collections::HashMap;
 
+use axeyum_fp::FloatFormat;
 use axeyum_ir::{Rational, Sort, TermArena, TermId, TermNode};
 
 use crate::SmtError;
@@ -245,7 +246,23 @@ fn parse_sort(e: &SExpr) -> Result<Sort, SmtError> {
         SExpr::Atom(a) if a == "Bool" => Ok(Sort::Bool),
         SExpr::Atom(a) if a == "Int" => Ok(Sort::Int),
         SExpr::Atom(a) if a == "Real" => Ok(Sort::Real),
+        // Floating-point sorts lower to the matching bit-vector width (the FP
+        // operators are bit-vector formula builders; ADR-0023).
+        SExpr::Atom(a) if a == "Float16" => Ok(Sort::BitVec(16)),
+        SExpr::Atom(a) if a == "Float32" => Ok(Sort::BitVec(32)),
+        SExpr::Atom(a) if a == "Float64" => Ok(Sort::BitVec(64)),
+        SExpr::Atom(a) if a == "Float128" => Ok(Sort::BitVec(128)),
         SExpr::List(items) => {
+            if items.len() == 4
+                && items[0].atom() == Some("_")
+                && items[1].atom() == Some("FloatingPoint")
+                && let (Some(eb), Some(sb)) = (
+                    items[2].atom().and_then(|s| s.parse::<u32>().ok()),
+                    items[3].atom().and_then(|s| s.parse::<u32>().ok()),
+                )
+            {
+                return Ok(Sort::BitVec(eb + sb));
+            }
             if items.len() == 3
                 && items[0].atom() == Some("_")
                 && items[1].atom() == Some("BitVec")
@@ -685,6 +702,19 @@ fn parse_atom(
     Err(SmtError::Unsupported(format!("unknown identifier `{a}`")))
 }
 
+/// The IEEE format of a floating-point operand, recovered from its bit-vector
+/// width (`16→F16`, `32→F32`, `64→F64`).
+fn fp_format(arena: &TermArena, t: TermId) -> Result<FloatFormat, SmtError> {
+    match arena.sort_of(t) {
+        Sort::BitVec(16) => Ok(FloatFormat::F16),
+        Sort::BitVec(32) => Ok(FloatFormat::F32),
+        Sort::BitVec(64) => Ok(FloatFormat::F64),
+        s => Err(SmtError::Unsupported(format!(
+            "floating-point op on unsupported width/sort {s:?}"
+        ))),
+    }
+}
+
 fn parse_indexed_constant(arena: &mut TermArena, items: &[SExpr]) -> Result<TermId, SmtError> {
     if items.len() == 3
         && let Some(name) = items[1].atom()
@@ -693,6 +723,30 @@ fn parse_indexed_constant(arena: &mut TermArena, items: &[SExpr]) -> Result<Term
             (num.parse::<u128>(), items[2].atom().map(str::parse::<u32>))
     {
         return Ok(arena.bv_const(width, value)?);
+    }
+    // FP special constants `(_ <name> eb sb)` → the matching bit pattern in a
+    // BitVec(eb+sb) (FP values are bit-vectors; ADR-0023).
+    if items.len() == 4
+        && let Some(name) = items[1].atom()
+        && let (Some(Ok(eb)), Some(Ok(sb))) = (
+            items[2].atom().map(str::parse::<u32>),
+            items[3].atom().map(str::parse::<u32>),
+        )
+    {
+        let total = eb + sb;
+        let sign = 1u128 << (total - 1);
+        let exp_ones = ((1u128 << eb) - 1) << (sb - 1);
+        let bits = match name {
+            "+zero" => Some(0),
+            "-zero" => Some(sign),
+            "+oo" => Some(exp_ones),
+            "-oo" => Some(sign | exp_ones),
+            "NaN" => Some(exp_ones | (1u128 << (sb - 2))), // canonical qNaN
+            _ => None,
+        };
+        if let Some(bits) = bits {
+            return Ok(arena.bv_const(total, bits)?);
+        }
     }
     Err(SmtError::Unsupported(format!("indexed term {items:?}")))
 }
@@ -836,6 +890,82 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
         "bvnego" => {
             need(1)?;
             arena.bv_nego(args[0])?
+        }
+        // Floating-point: a value is its bit-vector; the format is recovered from
+        // the operand width (16→F16, 32→F32, 64→F64). Rounding-mode-free ops only;
+        // `(fp s e m)` assembles a literal by concatenation. (ADR-0023.)
+        "fp" => {
+            need(3)?;
+            let se = arena.concat(args[0], args[1])?;
+            arena.concat(se, args[2])?
+        }
+        "fp.abs" => {
+            need(1)?;
+            axeyum_fp::abs(arena, fp_format(arena, args[0])?, args[0])?
+        }
+        "fp.neg" => {
+            need(1)?;
+            axeyum_fp::neg(arena, fp_format(arena, args[0])?, args[0])?
+        }
+        "fp.eq" => {
+            need(2)?;
+            axeyum_fp::eq(arena, fp_format(arena, args[0])?, args[0], args[1])?
+        }
+        "fp.lt" => {
+            need(2)?;
+            axeyum_fp::lt(arena, fp_format(arena, args[0])?, args[0], args[1])?
+        }
+        "fp.leq" => {
+            need(2)?;
+            axeyum_fp::leq(arena, fp_format(arena, args[0])?, args[0], args[1])?
+        }
+        "fp.gt" => {
+            need(2)?;
+            axeyum_fp::gt(arena, fp_format(arena, args[0])?, args[0], args[1])?
+        }
+        "fp.geq" => {
+            need(2)?;
+            axeyum_fp::geq(arena, fp_format(arena, args[0])?, args[0], args[1])?
+        }
+        "fp.min" => {
+            need(2)?;
+            axeyum_fp::min(arena, fp_format(arena, args[0])?, args[0], args[1])?
+        }
+        "fp.max" => {
+            need(2)?;
+            axeyum_fp::max(arena, fp_format(arena, args[0])?, args[0], args[1])?
+        }
+        "fp.rem" => {
+            need(2)?;
+            axeyum_fp::rem_sym(arena, fp_format(arena, args[0])?, args[0], args[1])?
+        }
+        "fp.isNaN" => {
+            need(1)?;
+            axeyum_fp::is_nan(arena, fp_format(arena, args[0])?, args[0])?
+        }
+        "fp.isInfinite" => {
+            need(1)?;
+            axeyum_fp::is_infinite(arena, fp_format(arena, args[0])?, args[0])?
+        }
+        "fp.isZero" => {
+            need(1)?;
+            axeyum_fp::is_zero(arena, fp_format(arena, args[0])?, args[0])?
+        }
+        "fp.isNormal" => {
+            need(1)?;
+            axeyum_fp::is_normal(arena, fp_format(arena, args[0])?, args[0])?
+        }
+        "fp.isSubnormal" => {
+            need(1)?;
+            axeyum_fp::is_subnormal(arena, fp_format(arena, args[0])?, args[0])?
+        }
+        "fp.isNegative" => {
+            need(1)?;
+            axeyum_fp::is_negative(arena, fp_format(arena, args[0])?, args[0])?
+        }
+        "fp.isPositive" => {
+            need(1)?;
+            axeyum_fp::is_positive(arena, fp_format(arena, args[0])?, args[0])?
         }
         "select" => {
             need(2)?;

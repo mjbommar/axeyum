@@ -12,6 +12,7 @@ categories.workspace = true
 publish = false
 
 [dependencies]
+axeyum-fp.workspace = true
 axeyum-ir.workspace = true
 
 [lints]
