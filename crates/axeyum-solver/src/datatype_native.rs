@@ -11,7 +11,9 @@
 //! - a **field variable** `f_{o,c,i}` for every constructor `c` and field `i`,
 //!
 //! then replacing `is-c(o)` with `tag_o == c` and `select_{c,i}(o)` with
-//! `f_{o,c,i}`. To keep the expansion faithful to the *total* `select`
+//! `f_{o,c,i}`. Structural equality `o == o'` of two datatype variables reduces
+//! to `tag_o == tag_o'` conjoined with field-wise equality (exact given the
+//! default guards below). To keep the expansion faithful to the *total* `select`
 //! convention ([`well_founded_default`]), each non-active field is pinned to its
 //! sort's well-founded default by a guard `tag_o == c \/ f_{o,c,i} == default`,
 //! so `select_{c,i}(o)` when `o`'s constructor is not `c` yields the same default
@@ -27,9 +29,9 @@
 //! the original assertions** with the ground evaluator before it is returned —
 //! a projection bug surfaces as a replay error, never a wrong `sat`.
 //!
-//! Outside this fragment (recursive datatypes, non-scalar fields, datatype
-//! equality, `is`/`select` over a non-variable datatype term) the function
-//! returns [`SolverError::Unsupported`]; a fuller native theory
+//! Outside this fragment (recursive datatypes, non-scalar fields, `is`/`select`
+//! or `==` over a non-variable datatype term such as a surviving constructor)
+//! the function returns [`SolverError::Unsupported`]; a fuller native theory
 //! (acyclicity + congruence, ADR-0022 step B's completeness extension) is future
 //! work.
 
@@ -98,6 +100,10 @@ pub fn check_with_datatype_native(
         let field = vars.fields[site.ctor_index][site.field_index];
         replacements.insert(site.term, arena.var(field));
     }
+    for site in &scan.eqs {
+        let eq_term = build_dt_eq(arena, &layout[&site.left], &layout[&site.right])?;
+        replacements.insert(site.term, eq_term);
+    }
 
     let mut reduced = Vec::with_capacity(simplified.len() + extra.len());
     let mut memo: HashMap<TermId, TermId> = HashMap::new();
@@ -140,6 +146,13 @@ struct SelectSite {
     field_index: usize,
 }
 
+/// An `o == o'` rewrite site over two datatype variables.
+struct EqSite {
+    term: TermId,
+    left: SymbolId,
+    right: SymbolId,
+}
+
 /// Result of the immutable fragment scan.
 struct Scan {
     dt_symbols: BTreeMap<SymbolId, DatatypeId>,
@@ -148,6 +161,7 @@ struct Scan {
     layouts: BTreeMap<DatatypeId, Vec<(ConstructorId, Vec<Sort>)>>,
     tests: Vec<TestSite>,
     selects: Vec<SelectSite>,
+    eqs: Vec<EqSite>,
 }
 
 fn scan_fragment(arena: &TermArena, roots: &[TermId]) -> Result<Scan, SolverError> {
@@ -155,6 +169,7 @@ fn scan_fragment(arena: &TermArena, roots: &[TermId]) -> Result<Scan, SolverErro
     let mut layouts: BTreeMap<DatatypeId, Vec<(ConstructorId, Vec<Sort>)>> = BTreeMap::new();
     let mut tests = Vec::new();
     let mut selects = Vec::new();
+    let mut eqs = Vec::new();
 
     let mut seen = BTreeSet::new();
     let mut stack: Vec<TermId> = roots.to_vec();
@@ -198,9 +213,18 @@ fn scan_fragment(arena: &TermArena, roots: &[TermId]) -> Result<Scan, SolverErro
                 });
             }
             Op::Eq if matches!(arena.sort_of(args[0]), Sort::Datatype(_)) => {
-                return Err(unsupported(
-                    "datatype equality is not yet supported by native datatype solving",
-                ));
+                // Structural equality of two datatype variables. Constructors on
+                // either side are not handled in this slice (they should fold
+                // first; otherwise Unsupported).
+                let Sort::Datatype(dt) = arena.sort_of(args[0]) else {
+                    unreachable!("matched datatype sort");
+                };
+                let left = expect_dt_symbol(arena, args[0])?;
+                let right = expect_dt_symbol(arena, args[1])?;
+                register_datatype(arena, dt, &mut layouts)?;
+                dt_symbols.insert(left, dt);
+                dt_symbols.insert(right, dt);
+                eqs.push(EqSite { term, left, right });
             }
             _ => {
                 // A datatype-sorted operand of any other op (e.g. `ite` of a
@@ -232,6 +256,7 @@ fn scan_fragment(arena: &TermArena, roots: &[TermId]) -> Result<Scan, SolverErro
         layouts,
         tests,
         selects,
+        eqs,
     })
 }
 
@@ -362,6 +387,37 @@ fn build_sym_vars(
         tag_width,
         fields,
     })
+}
+
+/// Builds the reduced term for `o == o'` over two same-datatype variables:
+/// `tag_l == tag_r` conjoined with field-wise equality across all constructors.
+///
+/// This is exact structural equality given the field-default guards: non-active
+/// fields are pinned to the same default on both sides, so they compare equal
+/// automatically, leaving the active constructor's fields to decide equality.
+fn build_dt_eq(
+    arena: &mut TermArena,
+    left: &SymVars,
+    right: &SymVars,
+) -> Result<TermId, SolverError> {
+    let lt = arena.var(left.tag);
+    let rt = arena.var(right.tag);
+    let mut conj = arena
+        .eq(lt, rt)
+        .map_err(|e| SolverError::Backend(e.to_string()))?;
+    for (lrow, rrow) in left.fields.iter().zip(&right.fields) {
+        for (&lf, &rf) in lrow.iter().zip(rrow) {
+            let lfv = arena.var(lf);
+            let rfv = arena.var(rf);
+            let fe = arena
+                .eq(lfv, rfv)
+                .map_err(|e| SolverError::Backend(e.to_string()))?;
+            conj = arena
+                .and(conj, fe)
+                .map_err(|e| SolverError::Backend(e.to_string()))?;
+        }
+    }
+    Ok(conj)
 }
 
 /// Projects the expansion model back to datatype values and replays it against

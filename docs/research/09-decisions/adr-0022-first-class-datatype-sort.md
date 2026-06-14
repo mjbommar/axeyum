@@ -214,9 +214,17 @@ panics). Tests: `tests/datatype_native.rs` (enum sat with projected constructor,
 sat / != default unsat, dispatcher routing) and an updated `tests/datatype_elim.rs`
 (free variable now sat; recursive variable still `Unsupported`).
 
+**Datatype equality (2026-06-14):** `o == o'` over two variables of the same
+non-recursive scalar-field datatype is now decided too — it reduces to
+`tag_o == tag_o'` conjoined with field-wise equality, which is exact structural
+equality because the field-default guards pin non-active fields to the same
+default on both sides. Tests: conflicting testers under equality (unsat),
+equality forcing `7 == 8` (unsat), and matching values (sat, both variables
+projected to the same value).
+
 Still open for step B's completeness: **recursive / nested-datatype fields**
-(bounded unfolding, then the acyclicity + congruence native theory) and
-**datatype equality**. Those remain `Unsupported` and are the next datatype unit.
+(bounded unfolding, then the acyclicity + congruence native theory). Those remain
+`Unsupported` and are the next datatype unit.
 
 ## Consequences
 

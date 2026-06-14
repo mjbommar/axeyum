@@ -126,6 +126,96 @@ fn select_on_wrong_constructor_nonzero_is_unsat() {
 }
 
 #[test]
+fn datatype_equality_with_conflicting_testers_is_unsat() {
+    // o == o' AND is-some(o) AND is-none(o'): equal values cannot have different
+    // constructors -> unsat.
+    let (mut arena, opt, none, some) = option_arena();
+    let o = arena.declare("o", Sort::Datatype(opt)).unwrap();
+    let p = arena.declare("p", Sort::Datatype(opt)).unwrap();
+    let ov = arena.var(o);
+    let pv = arena.var(p);
+    let eq = arena.eq(ov, pv).unwrap();
+    let is_some_o = arena.dt_test(some, ov).unwrap();
+    let is_none_p = arena.dt_test(none, pv).unwrap();
+
+    let result = check_with_datatype_native(
+        &mut arena,
+        &[eq, is_some_o, is_none_p],
+        &SolverConfig::default(),
+    )
+    .unwrap();
+    assert!(
+        matches!(result, CheckResult::Unsat),
+        "equal values with different constructors must be unsat, got {result:?}"
+    );
+}
+
+#[test]
+fn datatype_equality_forces_field_agreement_unsat() {
+    // o == p AND select v(o) == 7 AND select v(p) == 8 (both some): equality
+    // forces the fields equal, so 7 == 8 -> unsat.
+    let (mut arena, opt, _none, some) = option_arena();
+    let o = arena.declare("o", Sort::Datatype(opt)).unwrap();
+    let p = arena.declare("p", Sort::Datatype(opt)).unwrap();
+    let ov = arena.var(o);
+    let pv = arena.var(p);
+    let eq = arena.eq(ov, pv).unwrap();
+    let is_some_o = arena.dt_test(some, ov).unwrap();
+    let is_some_p = arena.dt_test(some, pv).unwrap();
+    let sel_o = arena.dt_select(some, 0, ov).unwrap();
+    let sel_p = arena.dt_select(some, 0, pv).unwrap();
+    let seven = arena.bv_const(8, 7).unwrap();
+    let eight = arena.bv_const(8, 8).unwrap();
+    let eo = arena.eq(sel_o, seven).unwrap();
+    let ep = arena.eq(sel_p, eight).unwrap();
+
+    let result = check_with_datatype_native(
+        &mut arena,
+        &[eq, is_some_o, is_some_p, eo, ep],
+        &SolverConfig::default(),
+    )
+    .unwrap();
+    assert!(
+        matches!(result, CheckResult::Unsat),
+        "equality forcing 7 == 8 must be unsat, got {result:?}"
+    );
+}
+
+#[test]
+fn datatype_equality_is_sat_with_matching_values() {
+    // o == p AND select v(o) == 7 (both some): sat, with o and p both some(7).
+    let (mut arena, opt, _none, some) = option_arena();
+    let o = arena.declare("o", Sort::Datatype(opt)).unwrap();
+    let p = arena.declare("p", Sort::Datatype(opt)).unwrap();
+    let ov = arena.var(o);
+    let pv = arena.var(p);
+    let eq = arena.eq(ov, pv).unwrap();
+    let is_some_o = arena.dt_test(some, ov).unwrap();
+    let sel_o = arena.dt_select(some, 0, ov).unwrap();
+    let seven = arena.bv_const(8, 7).unwrap();
+    let eo = arena.eq(sel_o, seven).unwrap();
+
+    let result =
+        check_with_datatype_native(&mut arena, &[eq, is_some_o, eo], &SolverConfig::default())
+            .unwrap();
+    let CheckResult::Sat(model) = result else {
+        panic!("expected sat, got {result:?}");
+    };
+    // Both variables project to some(7).
+    for sym in [o, p] {
+        match model.get(sym) {
+            Some(Value::Datatype {
+                constructor, fields, ..
+            }) => {
+                assert_eq!(constructor, some);
+                assert_eq!(fields, vec![Value::Bv { width: 8, value: 7 }]);
+            }
+            other => panic!("expected some(7), got {other:?}"),
+        }
+    }
+}
+
+#[test]
 fn dispatcher_routes_datatype_queries() {
     // The high-level `solve` dispatcher should route a free-datatype query
     // through to the native path and return sat.
