@@ -38,6 +38,19 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-13
 
+- Architecture iteration J — linear integer optimization (OMT) recorded
+  2026-06-13 (directly serves the "constrained program optimization" north star;
+  a capability Z3/cvc5 expose via maximize/minimize): `maximize_lia` /
+  `minimize_lia` (`optimize.rs`) optimize an integer-linear objective subject to
+  constraints, built **on top of** the sound conjunctive simplex (ADR-0020) by
+  feasibility probes — exponential search for an infeasible upper bound, then
+  binary search for the largest `objective ≥ k` that holds. Returns the exact
+  `Optimal(k)`, `Unbounded` (objective grows past the i128 magnitude cap),
+  `Infeasible` (constraints unsat), or `Unknown` (a probe undecided). Sound (each
+  probe is a sound decision; minimize = maximize of the negated objective). No new
+  core machinery. Tests: bounded max/min, a linear objective `x+y`, unbounded
+  detection, and infeasibility. Conjunctive integer fragment only (the oracle's
+  domain); LRA/Boolean-structured optimization is a follow-up.
 - Architecture iteration I — finite product datatypes recorded 2026-06-13
   (records/tuples/structs, the product counterpart to enums): `RecordSort`
   (`records.rs`) represents named fixed-width fields as a `BitVec` of their total
