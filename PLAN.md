@@ -78,9 +78,13 @@ Last updated: 2026-06-14
   (no cancellation), so it never corrupts a guard/round bit; `2·sb+5` bits fit
   F64 in 128. Differentially validated against native `f32` AND `f64` (and the
   `round_to_format` reference for F16). Assurance: *validated, not proven*.
-  **Deferred (next FP layer):** `div`/`sqrt`/`rem`, non-default rounding modes,
-  and FP→real beyond constants. (`add`/`mul` share `unpack_operand` + the
-  validated `pack_value` core.) Conversion folds are done both directions:
+  **Symbolic `fp.div` done for F16/F32/F64** (validated bit-blaster): quotient of
+  significands to `sb+3` fractional bits via `bv_udiv` (with the `bv_urem`
+  remainder folded to a sticky bit) → exponent subtract → `pack_value` → special
+  muxing (`0/0`,`∞/∞`→NaN; `x/0`,`∞/finite`→∞; `finite/∞`,`0`→0). Validated
+  against native `f32` AND `f64`. **Deferred (next FP layer):** `sqrt`/`rem`,
+  non-default rounding modes, and FP→real beyond constants. (`add`/`mul`/`div`
+  share `unpack_operand` + the validated `pack_value` core.) Conversion folds are done both directions:
   int→FP (`ubv_to_fp`/`sbv_to_fp`), FP→int (`to_ubv`/`to_sbv`, per rounding mode,
   folded only when finite + in range else `None`), and FP→Real (`to_real`, exact
   when it fits the i128 rational). A first-class `Sort::Float` remains optional.

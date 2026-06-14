@@ -102,9 +102,15 @@ a normalizing left shift (a product of significands has its leading bit at index
 ≥ sb−1 for any normal result), so a `2·sb + 3`-bit intermediate suffices (109
 bits for F64). Validated against native `f32` *and* `f64`.
 
-`add` and `mul` share `unpack_operand` and the validated `pack_value`
+**Symbolic division (`fp::div`).** Quotient of the significands to `sb + 3`
+fractional bits via `bv_udiv`, with the `bv_urem` remainder folded into a sticky
+bit; exponents subtracted; rounded by `pack_value`; special-cased (`0/0` and
+`∞/∞` → NaN, `x/0` and `∞/finite` → ∞, `finite/∞` and `0` → 0). F16/F32/F64
+(`2·sb + 5` ≤ 128), validated against native `f32` and `f64`.
+
+`add`, `mul`, and `div` share `unpack_operand` and the validated `pack_value`
 round-and-pack core. Bit-vectors are capped at `MAX_BV_WIDTH = 128` (`Value::Bv`
-is a `u128`); both ops fit F64 within it. Next FP units: `div`/`sqrt`/`rem`,
+is a `u128`); all three fit F64 within it. Next FP units: `sqrt`/`rem`,
 non-default rounding modes, and FP↔real beyond constants.
 
 ## Evidence
