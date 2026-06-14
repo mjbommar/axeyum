@@ -443,7 +443,6 @@ pub fn mul(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId) -> Res
     fmt.check(arena, b)?;
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
     let total = fmt.width();
-    let bias = (1i64 << (eb - 1)) - 1;
     // The significand product is exactly 2·sb bits and `mul` never needs a
     // normalizing left shift (a product of significands has its leading bit at
     // index ≥ sb−1 whenever the result is normal), so `pack_value` only ever
@@ -454,27 +453,8 @@ pub fn mul(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId) -> Res
     }
 
     let one1 = arena.bv_const(1, 1)?;
-    // Unpack an operand into a W-bit significand and the W-bit signed exponent of
-    // its least-significant bit.
-    let unpack = |arena: &mut TermArena, x: TermId| -> Result<(TermId, TermId, TermId), IrError> {
-        let sx = arena.extract(total - 1, total - 1, x)?;
-        let exp_x = arena.extract(total - 2, sb - 1, x)?;
-        let trail_x = arena.extract(sb - 2, 0, x)?;
-        let exp_zero = arena.bv_const(eb, 0)?;
-        let is_sub = arena.eq(exp_x, exp_zero)?;
-        let zero1 = arena.bv_const(1, 0)?;
-        let hidden = arena.ite(is_sub, zero1, one1)?;
-        let sig = arena.concat(hidden, trail_x)?; // sb bits
-        let sig_w = arena.zero_ext(w - sb, sig)?;
-        let exp_w = arena.zero_ext(w - eb, exp_x)?;
-        let one_w = arena.bv_const(w, 1)?;
-        let eff = arena.ite(is_sub, one_w, exp_w)?;
-        let bias_sbm1 = sconst(arena, w, bias + i64::from(sb) - 1)?;
-        let e = arena.bv_sub(eff, bias_sbm1)?;
-        Ok((sx, sig_w, e))
-    };
-    let (sa, sig_a, e_a) = unpack(arena, a)?;
-    let (sb_bit, sig_b, e_b) = unpack(arena, b)?;
+    let (sa, sig_a, e_a) = unpack_operand(arena, fmt, w, a)?;
+    let (sb_bit, sig_b, e_b) = unpack_operand(arena, fmt, w, b)?;
 
     let product = arena.bv_mul(sig_a, sig_b)?;
     let e_prod = arena.bv_add(e_a, e_b)?;
@@ -520,22 +500,57 @@ pub fn mul(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId) -> Res
     arena.ite(nan_flag, qnan, if_inf)
 }
 
-/// Symbolic `fp.add` (round-nearest-ties-to-even) via **exact alignment**: both
-/// significands are shifted to the common (minimum) exponent, added or subtracted
-/// exactly (no sticky/borrow approximation), and rounded by [`pack_value`]; then
-/// NaN / `∞ + −∞` / `∞` / signed-zero special cases are muxed. A pure bit-vector
-/// formula, so it solves and replays on the existing path; works symbolically
-/// and folds on constants.
+/// Unpacks an FP operand into `(sign_bit, significand_w, lsb_exponent_w)`, all
+/// in working width `w`: the significand (with the hidden bit, subnormal-aware)
+/// zero-extended to `w`, and the signed exponent of its least-significant bit.
+/// Shared by `add` and `mul`.
+fn unpack_operand(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    w: u32,
+    x: TermId,
+) -> Result<(TermId, TermId, TermId), IrError> {
+    let (eb, sb, total) = (fmt.exp_bits, fmt.sig_bits, fmt.width());
+    let bias = (1i64 << (eb - 1)) - 1;
+    let sx = arena.extract(total - 1, total - 1, x)?;
+    let exp_x = arena.extract(total - 2, sb - 1, x)?;
+    let trail_x = arena.extract(sb - 2, 0, x)?;
+    let exp_zero = arena.bv_const(eb, 0)?;
+    let is_sub = arena.eq(exp_x, exp_zero)?;
+    let one1 = arena.bv_const(1, 1)?;
+    let zero1 = arena.bv_const(1, 0)?;
+    let hidden = arena.ite(is_sub, zero1, one1)?;
+    let sig = arena.concat(hidden, trail_x)?;
+    let sig_w = arena.zero_ext(w - sb, sig)?;
+    let exp_w = arena.zero_ext(w - eb, exp_x)?;
+    let one_w = arena.bv_const(w, 1)?;
+    let eff = arena.ite(is_sub, one_w, exp_w)?;
+    let bias_sbm1 = sconst(arena, w, bias + i64::from(sb) - 1)?;
+    let e = arena.bv_sub(eff, bias_sbm1)?;
+    Ok((sx, sig_w, e))
+}
+
+/// Symbolic `fp.add` (round-nearest-ties-to-even): the IEEE 754 addition
+/// bit-blaster via **bounded alignment with a sticky bit**. The larger-exponent
+/// operand is placed with `sb + 2` guard bits below it; the smaller is shifted
+/// right by the exponent difference, with the bits shifted past the window OR'd
+/// into the bottom (sticky). Magnitudes are added (same sign) or subtracted
+/// (opposite sign, with a magnitude compare for the equal-exponent case), then
+/// rounded by [`pack_value`], and NaN / `∞ + −∞` / `∞` / signed-zero cases are
+/// muxed. A pure bit-vector formula; solves and replays on the existing path.
 ///
-/// **Format support.** Exact alignment needs `sig_bits + (2^exp_bits − 3) + 2 ≤
-/// 128` ([`MAX_BV_WIDTH`]) — i.e. **`F16`** (42 bits). `F32`/`F64` exceed the cap
-/// and return [`IrError::InvalidWidth`]; reaching them needs a bounded-width
-/// (alignment + sticky) adder, tracked as future work. (`fp.add` is borrow-free
-/// here precisely because the alignment is exact.)
+/// Borrow-clean: the sticky is nonzero only when `exp_diff > sb + 2`, where the
+/// result has no catastrophic cancellation (its leading bit is the larger
+/// operand's, ±1), so the sticky always lands strictly below the round position
+/// and never corrupts a guard/round bit. The `2·sb + 5`-bit intermediate fits
+/// **F16/F32/F64** in 128 bits ([`MAX_BV_WIDTH`]).
+///
+/// This is a validated — not formally proven — bit-blaster: differentially
+/// validated against native `f32` and `f64` addition in tests.
 ///
 /// # Errors
 ///
-/// Returns [`IrError::InvalidWidth`] if the exact-alignment width exceeds
+/// Returns [`IrError::InvalidWidth`] if the format's intermediate width exceeds
 /// [`MAX_BV_WIDTH`], [`IrError::SortMismatch`] for a mis-sized operand, or
 /// [`IrError`] from the builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
@@ -544,53 +559,56 @@ pub fn add(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId) -> Res
     fmt.check(arena, b)?;
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
     let total = fmt.width();
-    let bias = (1i64 << (eb - 1)) - 1;
-    let max_shift = (1u32 << eb) - 3; // max exponent difference
-    let w = sb + max_shift + 2;
+    let w = 2 * sb + 5;
     if w > MAX_BV_WIDTH {
         return Err(IrError::InvalidWidth(w));
     }
+    let guard = sb + 2;
 
     let one1 = arena.bv_const(1, 1)?;
-    let unpack = |arena: &mut TermArena, x: TermId| -> Result<(TermId, TermId, TermId), IrError> {
-        let sx = arena.extract(total - 1, total - 1, x)?;
-        let exp_x = arena.extract(total - 2, sb - 1, x)?;
-        let trail_x = arena.extract(sb - 2, 0, x)?;
-        let exp_zero = arena.bv_const(eb, 0)?;
-        let is_sub = arena.eq(exp_x, exp_zero)?;
-        let zero1 = arena.bv_const(1, 0)?;
-        let hidden = arena.ite(is_sub, zero1, one1)?;
-        let sig = arena.concat(hidden, trail_x)?; // sb bits
-        let sig_w = arena.zero_ext(w - sb, sig)?;
-        let exp_w = arena.zero_ext(w - eb, exp_x)?;
-        let one_w = arena.bv_const(w, 1)?;
-        let eff = arena.ite(is_sub, one_w, exp_w)?;
-        let bias_sbm1 = sconst(arena, w, bias + i64::from(sb) - 1)?;
-        let e = arena.bv_sub(eff, bias_sbm1)?;
-        Ok((sx, sig_w, e))
+    let (sa, sig_a, e_a) = unpack_operand(arena, fmt, w, a)?;
+    let (sbit, sig_b, e_b) = unpack_operand(arena, fmt, w, b)?;
+
+    // Pick the larger-exponent operand ("big"); the other ("small") is aligned
+    // down to big's scale (E_big − guard) with a sticky bit.
+    let a_ge = arena.bv_sge(e_a, e_b)?;
+    let e_big = arena.ite(a_ge, e_a, e_b)?;
+    let sig_big = arena.ite(a_ge, sig_a, sig_b)?;
+    let sig_small = arena.ite(a_ge, sig_b, sig_a)?;
+    let sign_big = arena.ite(a_ge, sa, sbit)?;
+    let sign_small = arena.ite(a_ge, sbit, sa)?;
+    let e_small = arena.ite(a_ge, e_b, e_a)?;
+    let exp_diff = arena.bv_sub(e_big, e_small)?;
+
+    let guard_c = arena.bv_const(w, u128::from(guard))?;
+    let big_ext = arena.bv_shl(sig_big, guard_c)?;
+    let small_placed = arena.bv_shl(sig_small, guard_c)?;
+    let small_ext = arena.bv_lshr(small_placed, exp_diff)?;
+    // sticky = any bit of small_placed shifted out by `exp_diff` is set.
+    let one_w = arena.bv_const(w, 1)?;
+    let zero_w = arena.bv_const(w, 0)?;
+    let sticky = {
+        let pow = arena.bv_shl(one_w, exp_diff)?;
+        let mask = arena.bv_sub(pow, one_w)?;
+        let lost = arena.bv_and(small_placed, mask)?;
+        let is_zero = arena.eq(lost, zero_w)?;
+        arena.not(is_zero)?
     };
-    let (sa, sig_a, e_a) = unpack(arena, a)?;
-    let (sbit, sig_b, e_b) = unpack(arena, b)?;
+    let sticky_bit = arena.ite(sticky, one_w, zero_w)?;
+    let small_ext_s = arena.bv_or(small_ext, sticky_bit)?;
 
-    // Align both significands to the common (minimum) exponent — exact.
-    let a_le = arena.bv_sle(e_a, e_b)?;
-    let e_min = arena.ite(a_le, e_a, e_b)?;
-    let sh_a = arena.bv_sub(e_a, e_min)?;
-    let sh_b = arena.bv_sub(e_b, e_min)?;
-    let m_a = arena.bv_shl(sig_a, sh_a)?;
-    let m_b = arena.bv_shl(sig_b, sh_b)?;
-
-    let same_sign = arena.eq(sa, sbit)?;
-    let sum_add = arena.bv_add(m_a, m_b)?;
-    let a_ge = arena.bv_uge(m_a, m_b)?;
-    let sub_ab = arena.bv_sub(m_a, m_b)?;
-    let sub_ba = arena.bv_sub(m_b, m_a)?;
-    let sub_mag = arena.ite(a_ge, sub_ab, sub_ba)?;
-    let result_mag = arena.ite(same_sign, sum_add, sub_mag)?;
-    let sub_sign = arena.ite(a_ge, sa, sbit)?;
-    let result_sign_bit = arena.ite(same_sign, sa, sub_sign)?;
+    let same_sign = arena.eq(sign_big, sign_small)?;
+    let add_mag = arena.bv_add(big_ext, small_ext_s)?;
+    let ge = arena.bv_uge(big_ext, small_ext_s)?;
+    let sub_ab = arena.bv_sub(big_ext, small_ext_s)?;
+    let sub_ba = arena.bv_sub(small_ext_s, big_ext)?;
+    let sub_mag = arena.ite(ge, sub_ab, sub_ba)?;
+    let sub_sign = arena.ite(ge, sign_big, sign_small)?;
+    let result_mag = arena.ite(same_sign, add_mag, sub_mag)?;
+    let result_sign_bit = arena.ite(same_sign, sign_big, sub_sign)?;
     let result_sign = arena.eq(result_sign_bit, one1)?;
-    let finite = pack_value(arena, eb, sb, result_sign, result_mag, e_min)?;
+    let e_c = arena.bv_sub(e_big, guard_c)?;
+    let finite = pack_value(arena, eb, sb, result_sign, result_mag, e_c)?;
 
     // Special-case flags.
     let na = is_nan(arena, fmt, a)?;
@@ -614,7 +632,6 @@ pub fn add(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId) -> Res
     let inf_flag = arena.or(ia, ib)?;
     let inf_sign = arena.ite(ia, sa, sbit)?; // sign of the (an) infinity
     let both_zero = arena.and(za, zb)?;
-    let zero_w = arena.bv_const(w, 0)?;
     let mag_zero = arena.eq(result_mag, zero_w)?;
 
     // Field constants.
@@ -1586,15 +1603,88 @@ mod tests {
     }
 
     #[test]
-    fn add_f32_is_a_clean_error() {
-        // Exact-alignment width for F32 (24 + 253 + 2 = 279) exceeds the cap.
+    fn add_matches_native_f32() {
         let mut a = TermArena::new();
-        let x = a.bv_const(32, 0x3F80_0000).unwrap();
-        let y = a.bv_const(32, 0x4000_0000).unwrap();
-        assert!(matches!(
-            add(&mut a, FloatFormat::F32, x, y),
-            Err(axeyum_ir::IrError::InvalidWidth(_))
-        ));
+        let check = |a: &mut TermArena, ab: u32, bb: u32| {
+            let at = a.bv_const(32, u128::from(ab)).unwrap();
+            let bt = a.bv_const(32, u128::from(bb)).unwrap();
+            let r = add(a, FloatFormat::F32, at, bt).unwrap();
+            let got = match eval(a, r, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("expected Bv, got {other:?}"),
+            };
+            let sum = f32::from_bits(ab) + f32::from_bits(bb);
+            if sum.is_nan() {
+                let exp = (got >> 23) & 0xFF;
+                let mant = got & 0x7F_FFFF;
+                assert!(exp == 0xFF && mant != 0, "add({ab:#x},{bb:#x}) want NaN, got {got:#x}");
+            } else {
+                assert_eq!(got, u128::from(sum.to_bits()), "add({ab:#x},{bb:#x})");
+            }
+        };
+        let structured: [u32; 14] = [
+            0x0000_0000, 0x8000_0000, 0x3F80_0000, 0xBF80_0000, 0x4000_0000, 0x3F00_0000,
+            0x7F80_0000, 0xFF80_0000, 0x7FC0_0000, 0x0080_0000, 0x0000_0001, 0x007F_FFFF,
+            0x7F7F_FFFF, 0x4B80_0000,
+        ];
+        for &x in &structured {
+            for &y in &structured {
+                check(&mut a, x, y);
+            }
+        }
+        let mut state: u64 = 0xb529_7a4d_1234_5678;
+        for _ in 0..4000 {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            let x = (state & 0xFFFF_FFFF) as u32;
+            let y = (state >> 32) as u32;
+            check(&mut a, x, y);
+        }
+    }
+
+    #[test]
+    fn add_matches_native_f64() {
+        let mut a = TermArena::new();
+        let check = |a: &mut TermArena, ab: u64, bb: u64| {
+            let at = a.bv_const(64, u128::from(ab)).unwrap();
+            let bt = a.bv_const(64, u128::from(bb)).unwrap();
+            let r = add(a, FloatFormat::F64, at, bt).unwrap();
+            let got = match eval(a, r, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("expected Bv, got {other:?}"),
+            };
+            let sum = f64::from_bits(ab) + f64::from_bits(bb);
+            if sum.is_nan() {
+                let exp = (got >> 52) & 0x7FF;
+                let mant = got & 0xF_FFFF_FFFF_FFFF;
+                assert!(exp == 0x7FF && mant != 0, "add64({ab:#x},{bb:#x}) want NaN");
+            } else {
+                assert_eq!(got, u128::from(sum.to_bits()), "add64({ab:#x},{bb:#x})");
+            }
+        };
+        let structured: [u64; 10] = [
+            0x0000_0000_0000_0000, 0x8000_0000_0000_0000, 0x3FF0_0000_0000_0000,
+            0xBFF0_0000_0000_0000, 0x4000_0000_0000_0000, 0x7FF0_0000_0000_0000,
+            0x7FF8_0000_0000_0000, 0x0010_0000_0000_0000, 0x0000_0000_0000_0001,
+            0x7FEF_FFFF_FFFF_FFFF,
+        ];
+        for &x in &structured {
+            for &y in &structured {
+                check(&mut a, x, y);
+            }
+        }
+        let mut state: u64 = 0x1357_9bdf_2468_ace0;
+        for _ in 0..3000 {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            let x = state;
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            check(&mut a, x, state);
+        }
     }
 
     #[test]

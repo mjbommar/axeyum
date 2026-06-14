@@ -85,27 +85,27 @@ pseudo-random sweep. This is the same assurance basis production bit-blasters
 formally-verified blaster, or a relaxation+replay route via an IR `fp` op, could
 raise assurance later if a workload demands it.
 
-**Symbolic addition (`fp::add`).** Exact-alignment adder: both significands are
-shifted to the common (minimum) exponent and added/subtracted *exactly* (no
-sticky, hence borrow-free), then rounded by `pack_value`, with NaN / `∞ + −∞` /
-`∞` / signed-zero muxing. Validated against the `round_to_format` reference
-(applied to the exact f64 sum) for **F16**. Exact alignment needs
-`sig_bits + (2^exp_bits − 3) + 2 ≤ 128`, which holds for F16 only; F32/F64 return
-`InvalidWidth`.
+**Symbolic addition (`fp::add`).** Bounded-width adder (F16/F32/F64): the
+larger-exponent operand is placed with `sb + 2` guard bits, the smaller is
+shifted right by the exponent difference with a **sticky** bit (bits past the
+window OR'd in), then magnitudes are added (same sign) or subtracted (opposite
+sign, with an equal-exponent magnitude compare), rounded by `pack_value`, and
+NaN / `∞ + −∞` / `∞` / signed-zero muxed. It is **borrow-clean**: the sticky is
+nonzero only when `exp_diff > sb + 2`, where there is no catastrophic
+cancellation (the result's leading bit is the larger operand's ±1), so the sticky
+always lands strictly below the round position and never corrupts a guard/round
+bit. The `2·sb + 5`-bit intermediate fits F64 in 128 bits. Differentially
+validated against native `f32` and `f64` (and `round_to_format` for F16).
 
-`mul` now works for **F16/F32/F64**: multiplication needs no alignment and never
+`mul` works for **F16/F32/F64** too: multiplication needs no alignment and never
 a normalizing left shift (a product of significands has its leading bit at index
 ≥ sb−1 for any normal result), so a `2·sb + 3`-bit intermediate suffices (109
-bits for F64) — well under the cap. Validated against native `f32` *and* `f64`.
+bits for F64). Validated against native `f32` *and* `f64`.
 
-**Width cap and the bounded-width path (for `add`).** Bit-vectors are capped at
-`MAX_BV_WIDTH = 128` (`Value::Bv` is a `u128`). `add`'s *exact-alignment*
-intermediate spans the full exponent range (`sb + 2^eb − 3 + 2`), which exceeds
-128 for F32/F64, so those error cleanly rather than return a wrong result. A
-**bounded-width adder** (cap the alignment window, fold the rest into a sticky
-bit, `W ≈ 2·sb + guard ≤ 128`) lifts `add` to F32/F64; the sticky/borrow handling
-is its careful part and it is the next FP unit, after which `div`/`sqrt`/`rem`
-and non-default rounding modes follow.
+`add` and `mul` share `unpack_operand` and the validated `pack_value`
+round-and-pack core. Bit-vectors are capped at `MAX_BV_WIDTH = 128` (`Value::Bv`
+is a `u128`); both ops fit F64 within it. Next FP units: `div`/`sqrt`/`rem`,
+non-default rounding modes, and FP↔real beyond constants.
 
 ## Evidence
 
