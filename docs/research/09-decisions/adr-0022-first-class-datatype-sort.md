@@ -145,6 +145,35 @@ only `axeyum-ir` errors visible; the downstream sites below appear only once
     *solving* (downstream wildcards already make it `Unsupported`); audit those
     wildcards reject soundly before wiring any solving.
 
+## Step B gate: the selector-totality convention (found while building step A)
+
+Native solving of *free* datatype variables (eager expansion: a tag variable +
+per-constructor field variables, replacing `is_c` with `tag == c` and
+`select_{c,i}` with the field variable) needs **model projection** — reconstruct a
+`Value::Datatype` from the solved tag + field values, then replay the original
+assertions. Replay exposes a concrete blocker:
+
+- The original may contain `select_{c,i}(o)` where the projected model gives `o`
+  the constructor `d != c`. The iter-Q evaluator currently **errors** on such a
+  wrong-constructor select (`DatatypeConstructorMismatch`), so replay of an
+  otherwise-valid `sat` model would fail. (This also means iter-Q quietly
+  introduced a *partial* operator, against eval.rs's "all operators are total"
+  invariant — worth reconciling regardless.)
+- For replay to be sound, `select` must be **total**: wrong-constructor select
+  returns a fixed default of the *field's* sort, and the eager reduction must use
+  the *same* default. Defaults for `Bool`/`BitVec`/`Int`/`Real`/`Array` are
+  trivial, but a field whose sort is a (recursive) datatype needs a default
+  datatype value — which requires **well-foundedness analysis**: pick a base
+  (least-recursive) constructor and recurse, terminating only for datatypes that
+  have a base case. Non-well-founded datatypes (no base constructor) are
+  uninhabited and need separate handling.
+
+So step B's first task is fixing the totality convention (total `select` with a
+well-founded default, shared by evaluator and reduction), then the
+tag/field-variable expansion and model projection. This is the careful design the
+ADR flagged; it is recorded here so the implementing session resolves it before
+writing the reduction, rather than discovering it mid-change.
+
 ## Consequences
 
 - **Easier:** lists/trees/option/either become expressible — a large class of
