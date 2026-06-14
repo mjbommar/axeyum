@@ -73,8 +73,9 @@ bound is explicit.
   `in_re` builds a Thompson NFA — Empty/Char/Range/Concat/Union/Star — precomputes
   its epsilon closure, and simulates it symbolically over the bounded positions,
   so regex membership reuses the same sound BV path. `str.to_int` (decimal parse,
-  Horner over the significant positions, returning `(valid, value)`) is also in.
-  Remaining: `from_int`, general-length `replace`, `replace_all`, and the
-  unbounded sort.)*
+  Horner, returning `(valid, value)`) and `str.from_int` (decimal format —
+  digits peeled by `÷10`/`mod 10`, reversed into print order, returning
+  `(fits, s)`) are also in. Remaining: general-length `replace`, `replace_all`,
+  and the unbounded sort.)*
 - **Revisited when:** a workload needs unbounded strings or the structural
   operations (then the next bounded slice, and eventually the first-class sort).

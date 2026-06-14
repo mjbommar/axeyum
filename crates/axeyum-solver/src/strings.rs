@@ -15,8 +15,8 @@
 //! `suffixof`, `substr` (constant and symbolic start), `indexof`, lexicographic
 //! `<`/`<=`, `take`/`drop`, equal-length `replace`, regex membership (`in_re`,
 //! via a Thompson NFA simulated over the bounded positions), and decimal
-//! `to_int`. Unbounded strings, general-length `replace`, `replace_all`, and
-//! `from_int` are future work.
+//! `to_int`/`from_int`. Unbounded strings, general-length `replace`, and
+//! `replace_all` are future work.
 
 use axeyum_ir::{IrError, Sort, TermArena, TermId};
 
@@ -673,6 +673,85 @@ impl BoundedString {
         let nonempty = arena.not(is_empty)?;
         valid = arena.and(valid, nonempty)?;
         Ok((valid, value))
+    }
+
+    /// `str.from_int` — decimal format. Given a bit-vector `n` (read as a
+    /// non-negative integer), returns `(fits, s)` where `s` is the decimal string
+    /// (no leading zeros, `"0"` for zero) and `fits` is the Boolean "the value
+    /// needs at most `max_len` digits". When `fits` is false `s` is not the true
+    /// rendering (the value is out of range), so callers should assert `fits`.
+    ///
+    /// Digits are peeled least-significant first by repeated `÷10`/`mod 10`; the
+    /// significant length `k` is one past the highest nonzero digit (at least 1),
+    /// and string byte `p` holds decimal place `k-1-p`, so the content is the
+    /// digit sequence reversed into print order.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] from the builders.
+    pub fn from_int(&self, arena: &mut TermArena, n: TermId) -> Result<(TermId, StrTerm), IrError> {
+        let n_sort = arena.sort_of(n);
+        let w = n_sort.bv_width().ok_or(IrError::SortMismatch {
+            expected: "BitVec",
+            found: n_sort,
+        })?;
+        let ten = arena.bv_const(w, 10)?;
+        let zero_w = arena.bv_const(w, 0)?;
+        // Peel digits LSB-first: digit[j] in 0..=9 (8-bit), rem after j+1 divisions.
+        let mut digits: Vec<TermId> = Vec::with_capacity(self.max_len as usize);
+        let mut rem = n;
+        for _ in 0..self.max_len {
+            let d = arena.bv_urem(rem, ten)?;
+            let d8 = arena.extract(7, 0, d)?;
+            digits.push(d8);
+            rem = arena.bv_udiv(rem, ten)?;
+        }
+        // fits iff the value is fully consumed within max_len digits.
+        let fits = arena.eq(rem, zero_w)?;
+        // Significant length k = 1 + highest j (>=1) with digit[j] != 0, else 1.
+        let mut k = arena.bv_const(self.len_width(), 1)?;
+        let zero8 = arena.bv_const(8, 0)?;
+        for j in 1..self.max_len {
+            let nonzero = {
+                let is_zero = arena.eq(digits[j as usize], zero8)?;
+                arena.not(is_zero)?
+            };
+            let jp1 = arena.bv_const(self.len_width(), u128::from(j + 1))?;
+            k = arena.ite(nonzero, jp1, k)?;
+        }
+        // content byte p holds decimal place (k-1-p): select digit[k-1-p] when p<k.
+        let off = arena.bv_const(8, u128::from(b'0'))?;
+        let mut content = arena.bv_const(self.content_width(), 0)?;
+        for p in 0..self.max_len {
+            let pc = arena.bv_const(self.len_width(), u128::from(p))?;
+            let active = arena.bv_ult(pc, k)?;
+            // didx = k - 1 - p (only meaningful when active)
+            let one = arena.bv_const(self.len_width(), 1)?;
+            let km1 = arena.bv_sub(k, one)?;
+            let didx = arena.bv_sub(km1, pc)?;
+            // select digit[didx] by ite-chain over j
+            let mut sel = zero8;
+            for j in 0..self.max_len {
+                let jc = arena.bv_const(self.len_width(), u128::from(j))?;
+                let is_j = arena.eq(didx, jc)?;
+                sel = arena.ite(is_j, digits[j as usize], sel)?;
+            }
+            let byte = arena.bv_add(sel, off)?;
+            let placed = arena.ite(active, byte, zero8)?;
+            // OR the byte into position p of content
+            let widened = if self.content_width() > 8 {
+                let zpad = arena.bv_const(self.content_width() - 8, 0)?;
+                arena.concat(zpad, placed)?
+            } else {
+                placed
+            };
+            let shifted = {
+                let amt = arena.bv_const(self.content_width(), u128::from(p) * 8)?;
+                arena.bv_shl(widened, amt)?
+            };
+            content = arena.bv_or(content, shifted)?;
+        }
+        Ok((fits, StrTerm { len: k, content }))
     }
 }
 

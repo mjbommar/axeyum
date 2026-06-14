@@ -62,8 +62,12 @@ Last updated: 2026-06-14
   (`value := value·10 + digit`) over the significant positions returns
   `(valid, value)` (64-bit, holds any ≤16-digit number); `valid` = non-empty run
   of ASCII digits. Tests: literal parse incl. leading zeros, non-digit and empty
-  invalid, and a symbolic `to_int(x)==42` (sat).
-  **Next:** `from_int`, general-length `replace`, `replace_all`, then unbounded via a first-class sort.
+  invalid, and a symbolic `to_int(x)==42` (sat). **`str.from_int` (decimal format)**
+  now added — digits peeled LSB-first by `÷10`/`mod 10`, significant length =
+  one past highest nonzero digit, content reversed into print order; returns
+  `(fits, s)` (`fits` = value needs ≤ `max_len` digits). Tests: `0/7/42/1000/90807`,
+  out-of-range `fits=false`, and a `to_int(from_int(555))==555` round-trip (sat).
+  **Next:** general-length `replace`, `replace_all`, then unbounded via a first-class sort.
   This was the last entirely-untouched Z3 theory; it is now opened.
 
 - **NRA — first slice (2026-06-14, ADR-0024).** Nonlinear real arithmetic by

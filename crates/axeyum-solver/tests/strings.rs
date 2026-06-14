@@ -354,6 +354,45 @@ fn symbolic_to_int_is_sat() {
 }
 
 #[test]
+fn from_int_literals() {
+    let mut a = TermArena::new();
+    let s = BoundedString::new(8);
+
+    let check = |a: &mut TermArena, n: u128, expect: &str| {
+        let nv = a.bv_const(64, n).unwrap();
+        let (fits, st) = s.from_int(a, nv).unwrap();
+        assert!(eval_bool(a, fits), "from_int({n}) fits");
+        let lit = s.literal(a, expect).unwrap();
+        let eq = s.equal(a, &st, &lit).unwrap();
+        assert!(eval_bool(a, eq), "from_int({n}) == {expect:?}");
+    };
+    check(&mut a, 0, "0");
+    check(&mut a, 7, "7");
+    check(&mut a, 42, "42");
+    check(&mut a, 1234, "1234");
+    check(&mut a, 1_000, "1000");
+    check(&mut a, 90_807, "90807");
+
+    // out of range: 9 digits does not fit max_len 8
+    let big = a.bv_const(64, 123_456_789).unwrap();
+    let (fits, _) = s.from_int(&mut a, big).unwrap();
+    assert!(!eval_bool(&a, fits), "123456789 does not fit 8 chars");
+}
+
+#[test]
+fn from_int_to_int_roundtrip_is_sat() {
+    // exists n: to_int(from_int(n)) == n AND n == 555 -> sat.
+    let mut a = TermArena::new();
+    let s = BoundedString::new(8);
+    let n = a.bv_const(64, 555).unwrap();
+    let (fits, st) = s.from_int(&mut a, n).unwrap();
+    let (valid, value) = s.to_int(&mut a, &st).unwrap();
+    let back = a.eq(value, n).unwrap();
+    let r = solve(&mut a, &[fits, valid, back], &SolverConfig::default()).unwrap();
+    assert!(matches!(r, CheckResult::Sat(_)), "to_int(from_int(555))==555, got {r:?}");
+}
+
+#[test]
 fn regex_membership() {
     let mut a = TermArena::new();
     let s = BoundedString::new(8);
