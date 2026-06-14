@@ -89,10 +89,12 @@ pub fn check_with_lia_dpll(
                 return finish_sat(arena, assertions, &ctx, &propositional, &theory_model);
             }
             CheckResult::Unsat => {
-                // Block this propositional assignment: at least one atom prop must
-                // flip. (Whole-assignment blocking; core minimization is a future
-                // refinement.)
-                blocking.push(block_clause(arena, &ctx.atoms, &truths)?);
+                // Minimize the conflict to a small unsatisfiable core, then block
+                // only that core — a strictly stronger lemma that rules out every
+                // assignment sharing it, not just this one, so the loop converges
+                // in far fewer rounds on disjunction-heavy queries.
+                let core = minimize_core(arena, &theory_lits)?;
+                blocking.push(block_clause(arena, &ctx.atoms, &truths, &core)?);
             }
             CheckResult::Unknown(reason) => return Ok(CheckResult::Unknown(reason)),
         }
@@ -149,23 +151,48 @@ fn finish_sat(
     Ok(CheckResult::Sat(model))
 }
 
-/// A clause forcing at least one atom proposition to flip from `truths`.
+/// Deletion-based minimization of a theory conflict: returns the indices (into
+/// `theory_lits`) of a subset that is still unsatisfiable but minimal — dropping
+/// any member makes it satisfiable (or undecided, conservatively kept). Each
+/// surviving member is necessary, so the negated core is a strong, sound lemma.
+fn minimize_core(arena: &TermArena, theory_lits: &[TermId]) -> Result<Vec<usize>, SolverError> {
+    let mut core: Vec<usize> = (0..theory_lits.len()).collect();
+    for candidate in 0..theory_lits.len() {
+        if !core.contains(&candidate) {
+            continue;
+        }
+        let trial: Vec<TermId> = core
+            .iter()
+            .filter(|&&i| i != candidate)
+            .map(|&i| theory_lits[i])
+            .collect();
+        // Drop the candidate only if the remainder is *definitively* unsat.
+        if !trial.is_empty() && matches!(check_with_lia_simplex(arena, &trial)?, CheckResult::Unsat)
+        {
+            core.retain(|&i| i != candidate);
+        }
+    }
+    Ok(core)
+}
+
+/// A clause forcing at least one atom in `core` to flip from `truths`. `core`
+/// indexes `atoms`/`truths` (same order as the theory literals).
 fn block_clause(
     arena: &mut TermArena,
     atoms: &[IntAtom],
     truths: &[bool],
+    core: &[usize],
 ) -> Result<TermId, SolverError> {
     let mut clause: Option<TermId> = None;
-    for (atom, &truth) in atoms.iter().zip(truths) {
-        let prop = arena.var(atom.prop);
-        let lit = if truth { arena.not(prop)? } else { prop };
+    for &i in core {
+        let prop = arena.var(atoms[i].prop);
+        let lit = if truths[i] { arena.not(prop)? } else { prop };
         clause = Some(match clause {
             None => lit,
             Some(acc) => arena.or(acc, lit)?,
         });
     }
-    // An empty atom set cannot produce a theory conflict, so this is reachable
-    // only with at least one atom; default to `false` defensively.
+    // A non-empty conflict always yields a non-empty core.
     clause.ok_or_else(|| SolverError::Backend("lia dpll: empty conflict clause".to_string()))
 }
 
