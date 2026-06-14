@@ -342,3 +342,24 @@ fn mbqi_bound_violation_is_unsat() {
     // forall x. x<=10 is false; sound result is Unsat or Unknown, never Sat.
     assert!(matches!(r, CheckResult::Unsat | CheckResult::Unknown(_)), "got {r:?}");
 }
+
+#[test]
+fn mbqi_multivar_forall_defers_without_error() {
+    // (forall x y. x + y >= 0) is false; a multi-variable universal is outside
+    // the single-var MBQI loop, so it must defer to e-matching and decide (or
+    // unknown) WITHOUT erroring. Here ground a==-1, b==-1 and x:=a,y:=b refutes
+    // via trigger instantiation; at minimum it must not panic or wrongly sat.
+    let mut arena = TermArena::new();
+    let x = arena.declare("x", Sort::Int).unwrap();
+    let y = arena.declare("y", Sort::Int).unwrap();
+    let xv = arena.var(x);
+    let yv = arena.var(y);
+    let sum = arena.int_add(xv, yv).unwrap();
+    let zero = arena.int_const(0);
+    let body = arena.int_ge(sum, zero).unwrap();
+    let inner = arena.forall(y, body).unwrap();
+    let outer = arena.forall(x, inner).unwrap();
+    let r = axeyum_solver::prove_unsat_by_mbqi(&mut arena, &[outer], &config()).unwrap();
+    // forall x y. x+y>=0 is false; sound result is Unsat or Unknown, never Sat.
+    assert!(matches!(r, CheckResult::Unsat | CheckResult::Unknown(_)), "got {r:?}");
+}

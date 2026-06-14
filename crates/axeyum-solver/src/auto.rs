@@ -348,11 +348,20 @@ pub fn prove_unsat_by_mbqi(
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
     // Split into ground assertions and top-level universals `(bound_var, body)`.
+    // This loop only handles single-variable universals with quantifier-free
+    // bodies: a quantified body (multi-variable `forall`) or a quantifier in a
+    // ground position (existential, nested) is outside its scope, so the whole
+    // query defers to the trigger-based fallback (which instantiates uniformly).
     let mut ground: Vec<TermId> = Vec::new();
     let mut universals: Vec<(axeyum_ir::SymbolId, TermId)> = Vec::new();
     for &a in assertions {
         if let TermNode::App { op: Op::Forall(sym), args } = arena.node(a) {
+            if has_quantifier(arena, &[args[0]]) {
+                return prove_unsat_by_ematching(arena, assertions, config);
+            }
             universals.push((*sym, args[0]));
+        } else if has_quantifier(arena, &[a]) {
+            return prove_unsat_by_ematching(arena, assertions, config);
         } else {
             ground.push(a);
         }
