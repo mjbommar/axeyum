@@ -2,7 +2,7 @@
 //! (ADR-0022). The ground evaluator is the semantic reference, so these tests
 //! pin the datatype semantics that any future datatype solver must match.
 
-use axeyum_ir::{Assignment, Sort, TermArena, Value, eval};
+use axeyum_ir::{Assignment, Sort, TermArena, Value, eval, well_founded_default};
 
 #[test]
 fn recursive_list_construct_select_test() {
@@ -45,8 +45,63 @@ fn recursive_list_construct_select_test() {
 }
 
 #[test]
-fn selector_on_wrong_constructor_is_an_error() {
-    // Selecting cons's head from a nil value is undefined -> evaluation error.
+fn well_founded_default_picks_a_base_constructor() {
+    // A recursive list defaults to its base constructor `nil`, not the recursive
+    // `cons` (which would not terminate). Constructor declaration order is
+    // deliberately recursive-first to prove the search prefers the well-founded
+    // case rather than the first constructor.
+    let mut arena = TermArena::new();
+    let list = arena.declare_datatype("IntList");
+    let cons = arena.add_constructor(
+        list,
+        "cons",
+        &[
+            ("head".to_string(), Sort::BitVec(8)),
+            ("tail".to_string(), Sort::Datatype(list)),
+        ],
+    );
+    let nil = arena.add_constructor(list, "nil", &[]);
+    let _ = cons;
+
+    match well_founded_default(&arena, Sort::Datatype(list)) {
+        Some(Value::Datatype {
+            constructor, fields, ..
+        }) => {
+            assert_eq!(constructor, nil, "default list is the base constructor nil");
+            assert!(fields.is_empty(), "nil has no fields");
+        }
+        other => panic!("expected a default list value, got {other:?}"),
+    }
+}
+
+#[test]
+fn well_founded_default_none_for_uninhabited_datatype() {
+    // A datatype with only a recursive constructor (no base case) is uninhabited
+    // -> no finite default value exists.
+    let mut arena = TermArena::new();
+    let stream = arena.declare_datatype("Stream");
+    let _scons = arena.add_constructor(
+        stream,
+        "scons",
+        &[
+            ("head".to_string(), Sort::BitVec(8)),
+            ("tail".to_string(), Sort::Datatype(stream)),
+        ],
+    );
+    assert_eq!(
+        well_founded_default(&arena, Sort::Datatype(stream)),
+        None,
+        "an uninhabited datatype has no well-founded default"
+    );
+}
+
+#[test]
+fn selector_on_wrong_constructor_returns_field_default() {
+    // Selecting cons's `head` from a `nil` value is the chosen-total convention
+    // (ADR-0022 step-B gate): it returns the well-founded default of the field's
+    // sort (BitVec(8) -> 0), keeping `select` total so projected datatype models
+    // replay soundly. (Previously this errored; totality is required for native
+    // datatype solving's model projection.)
     let mut arena = TermArena::new();
     let list = arena.declare_datatype("IntList");
     let nil = arena.add_constructor(list, "nil", &[]);
@@ -60,7 +115,12 @@ fn selector_on_wrong_constructor_is_an_error() {
     );
     let nil_t = arena.construct(nil, &[]).unwrap();
     let bad = arena.dt_select(cons, 0, nil_t).unwrap();
-    assert!(eval(&arena, bad, &Assignment::new()).is_err());
+    let v = eval(&arena, bad, &Assignment::new()).expect("select is total");
+    assert_eq!(
+        v.as_bv(),
+        Some((8, 0)),
+        "wrong-constructor select returns the field's well-founded default"
+    );
 }
 
 #[test]

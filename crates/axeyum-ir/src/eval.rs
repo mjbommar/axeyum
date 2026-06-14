@@ -8,9 +8,10 @@ use std::collections::HashMap;
 
 use crate::arena::TermArena;
 use crate::error::IrError;
+use crate::rational::Rational;
 use crate::sort::{Sort, mask};
-use crate::term::{FuncId, Op, SymbolId, TermId, TermNode};
-use crate::value::{FuncValue, Value};
+use crate::term::{DatatypeId, FuncId, Op, SymbolId, TermId, TermNode};
+use crate::value::{ArrayValue, FuncValue, Value};
 
 /// A binding of symbols to concrete values (and uninterpreted functions to
 /// interpretations), used as evaluator input.
@@ -55,6 +56,75 @@ impl Assignment {
     /// Returns `true` if no symbols are bound.
     pub fn is_empty(&self) -> bool {
         self.bindings.is_empty()
+    }
+}
+
+/// The well-founded default value of `sort` — the chosen-total convention for
+/// `select` over a wrong constructor (ADR-0022 step-B gate).
+///
+/// Selecting field `i` of constructor `c` from a value built with a *different*
+/// constructor returns this default of field `i`'s sort, so the evaluator stays
+/// total and a projected `Value::Datatype` model (from native datatype solving)
+/// replays soundly. Any expansion of datatype variables must use this same
+/// default.
+///
+/// Returns `None` only for an *uninhabited* datatype (no well-founded
+/// constructor — e.g. `Stream = cons(head, tail: Stream)` with no base case),
+/// where no finite value exists. For inhabited sorts the result is `Some`, so
+/// `select` is total in practice.
+#[must_use]
+pub fn well_founded_default(arena: &TermArena, sort: Sort) -> Option<Value> {
+    well_founded_default_rec(arena, sort, &mut Vec::new())
+}
+
+/// Recursive worker for [`well_founded_default`]; `visiting` tracks the
+/// datatypes currently being constructed so a cyclic (non-well-founded) path is
+/// abandoned in favour of a base constructor.
+fn well_founded_default_rec(
+    arena: &TermArena,
+    sort: Sort,
+    visiting: &mut Vec<DatatypeId>,
+) -> Option<Value> {
+    match sort {
+        Sort::Bool => Some(Value::Bool(false)),
+        Sort::BitVec(width) => Some(Value::Bv { width, value: 0 }),
+        Sort::Int => Some(Value::Int(0)),
+        Sort::Real => Some(Value::Real(Rational::zero())),
+        Sort::Array { index, element } => Some(Value::Array(ArrayValue::constant(
+            index, element, 0,
+        ))),
+        Sort::Datatype(dt) => {
+            if visiting.contains(&dt) {
+                // Recursing back into `dt` mid-construction: this path is not
+                // well-founded. Another constructor (a base case) may still be.
+                return None;
+            }
+            visiting.push(dt);
+            let mut chosen = None;
+            for &ctor in arena.datatype_constructors(dt) {
+                let fields = arena.constructor_fields(ctor);
+                let mut field_vals = Vec::with_capacity(fields.len());
+                let mut ok = true;
+                for (_, fsort) in fields {
+                    if let Some(v) = well_founded_default_rec(arena, *fsort, visiting) {
+                        field_vals.push(v);
+                    } else {
+                        ok = false;
+                        break;
+                    }
+                }
+                if ok {
+                    chosen = Some(Value::Datatype {
+                        datatype: dt,
+                        constructor: ctor,
+                        fields: field_vals,
+                    });
+                    break;
+                }
+            }
+            visiting.pop();
+            chosen
+        }
     }
 }
 
@@ -142,7 +212,20 @@ pub fn eval(arena: &TermArena, term: TermId, assignment: &Assignment) -> Result<
                                     ..
                                 } if built == constructor => fields[*index as usize].clone(),
                                 Value::Datatype { .. } => {
-                                    return Err(IrError::DatatypeConstructorMismatch);
+                                    // Selecting a field of `constructor` from a value built
+                                    // with a *different* constructor is the chosen-total
+                                    // convention (ADR-0022 step-B gate): return the
+                                    // well-founded default of the field's sort, so `select`
+                                    // is total and projected datatype models replay soundly.
+                                    let field_sort =
+                                        arena.constructor_fields(*constructor)[*index as usize].1;
+                                    match well_founded_default(arena, field_sort) {
+                                        Some(v) => v,
+                                        // Only an *uninhabited* field sort has no value.
+                                        None => {
+                                            return Err(IrError::DatatypeConstructorMismatch);
+                                        }
+                                    }
                                 }
                                 _ => unreachable!("builder guaranteed datatype operand"),
                             },

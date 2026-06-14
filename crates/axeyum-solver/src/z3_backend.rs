@@ -266,6 +266,11 @@ fn lift_model(arena: &TermArena, solver: &Solver) -> Result<Model, SolverError> 
                     "z3 oracle does not lift real models yet (ADR-0015)".to_owned(),
                 ));
             }
+            Sort::Datatype(_) => {
+                return Err(SolverError::Unsupported(
+                    "z3 oracle does not lift datatype models yet (ADR-0022)".to_owned(),
+                ));
+            }
             Sort::Bool => {
                 let ast = Bool::new_const(name);
                 let v = z3_model
@@ -351,6 +356,11 @@ fn translate(
                             "z3 oracle does not support real symbols yet (ADR-0015)".to_owned(),
                         ));
                     }
+                    Sort::Datatype(_) => {
+                        return Err(SolverError::Unsupported(
+                            "z3 oracle does not support datatype symbols yet (ADR-0022)".to_owned(),
+                        ));
+                    }
                 };
                 cache.insert(t, term);
             }
@@ -376,10 +386,13 @@ fn translate(
                         | Op::RealGe
                         | Op::Forall(_)
                         | Op::Exists(_)
+                        | Op::DtConstruct { .. }
+                        | Op::DtSelect { .. }
+                        | Op::DtTest(_)
                 ) {
                     return Err(SolverError::Unsupported(
                         "z3 oracle does not support uninterpreted functions, integer/real \
-                         arithmetic, or quantifiers yet"
+                         arithmetic, datatypes, or quantifiers yet"
                             .to_owned(),
                     ));
                 }
@@ -469,9 +482,10 @@ fn apply(op: Op, args: &[TermId], cache: &HashMap<TermId, Z3Term>) -> Z3Term {
             let w = v(0).get_size();
             Z3Term::V(rotate_left(v(0), (w - by) % w))
         }
-        // Array, uninterpreted-function, and integer terms are rejected during
-        // translation before any select/store/apply/int op is reached (ADR-0010,
-        // ADR-0013, ADR-0014), so this is unreachable.
+        // Array, uninterpreted-function, integer, real, quantifier, and datatype
+        // terms are rejected during translation before any select/store/apply/int/
+        // datatype op is reached (ADR-0010, ADR-0013, ADR-0014, ADR-0022), so this
+        // is unreachable.
         Op::Select
         | Op::Store
         | Op::Apply(_)
@@ -492,9 +506,12 @@ fn apply(op: Op, args: &[TermId], cache: &HashMap<TermId, Z3Term>) -> Z3Term {
         | Op::RealGt
         | Op::RealGe
         | Op::Forall(_)
-        | Op::Exists(_) => {
+        | Op::Exists(_)
+        | Op::DtConstruct { .. }
+        | Op::DtSelect { .. }
+        | Op::DtTest(_) => {
             unreachable!(
-                "array, UF, integer, real, and quantifier terms are rejected during z3 translation"
+                "array, UF, integer, real, quantifier, and datatype terms are rejected during z3 translation"
             )
         }
     }

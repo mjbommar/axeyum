@@ -174,6 +174,25 @@ tag/field-variable expansion and model projection. This is the careful design th
 ADR flagged; it is recorded here so the implementing session resolves it before
 writing the reduction, rather than discovering it mid-change.
 
+**Resolved (2026-06-14): the totality convention is now implemented.**
+`axeyum_ir::well_founded_default(arena, sort)` computes the chosen default for any
+sort — `false`/`0`/empty-array for the scalar sorts, and for a datatype a
+*well-founded* base value found by a cycle-guarded search over constructors (it
+returns `None` only for an uninhabited datatype, where no finite value exists).
+The evaluator's `select`-over-wrong-constructor now returns this default instead
+of erroring, so `select` is total (restoring eval.rs's "all operators are total"
+invariant that iter-Q had broken) and a projected `Value::Datatype` model replays
+soundly. The same function is the shared default the step-B reduction must reuse.
+Tests: `well_founded_default_picks_a_base_constructor` (recursive-first list →
+`nil`), `well_founded_default_none_for_uninhabited_datatype` (`Stream` with no
+base → `None`), and `selector_on_wrong_constructor_returns_field_default`. The
+`z3` adapter gained explicit datatype-reject arms (sort lift, symbol translation,
+op translation) so the new variants stay sound under `--all-features`.
+
+What remains for step B is now purely the **tag + per-constructor field-variable
+expansion and the model projection back through `well_founded_default`** — the
+totality gate is closed.
+
 ## Consequences
 
 - **Easier:** lists/trees/option/either become expressible — a large class of
