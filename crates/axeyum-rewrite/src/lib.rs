@@ -10,6 +10,7 @@ use std::collections::BTreeSet;
 
 mod arrays;
 mod canonical;
+mod datatypes;
 mod functions;
 mod int_blast;
 mod quantifiers;
@@ -19,6 +20,7 @@ pub use canonical::{
     CanonicalizeOutcome, CanonicalizeTermsOutcome, Canonicalizer, RewriteError, RewriteReport,
     RuleApplication, canonicalize, canonicalize_terms, default_manifest, replace_subterms,
 };
+pub use datatypes::simplify_datatypes;
 pub use functions::{FuncElimError, FunctionElimination, eliminate_functions};
 pub use int_blast::{IntBlastError, IntBlasting, MAX_INT_BLAST_WIDTH, blast_integers};
 pub use quantifiers::{
