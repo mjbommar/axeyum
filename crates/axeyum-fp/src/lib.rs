@@ -31,7 +31,7 @@
 //! [`IrError`] from an IR builder (which cannot occur for well-formed input).
 #![allow(clippy::missing_errors_doc)] // uniform contract documented above
 
-use axeyum_ir::{IrError, MAX_BV_WIDTH, Rational, Sort, TermArena, TermId, TermNode};
+use axeyum_ir::{IrError, Rational, Sort, TermArena, TermId, TermNode};
 
 /// An IEEE 754 binary format: `exp_bits` exponent bits and `sig_bits`
 /// significand bits (the latter *including* the hidden bit). The bit width of a
@@ -673,13 +673,13 @@ pub fn pack_value(
 /// (specials, subnormals, and products that overflow/underflow).
 ///
 /// **Format support.** The intermediate is `2·sig_bits + 3` bits, so this works
-/// for any format with `2·sig_bits + 3 ≤ 128` ([`MAX_BV_WIDTH`]) — **F16, F32,
+/// for any format with `2·sig_bits + 3 ≤ 128` (128 bits) — **F16, F32,
 /// and F64** (109 bits). Wider formats return [`IrError::InvalidWidth`].
 ///
 /// # Errors
 ///
 /// Returns [`IrError::InvalidWidth`] if the format's intermediate width exceeds
-/// [`MAX_BV_WIDTH`], [`IrError::SortMismatch`] if an operand is not a `BitVec` of
+/// 128 bits, [`IrError::SortMismatch`] if an operand is not a `BitVec` of
 /// the format width, or [`IrError`] from the builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
 pub fn mul(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: RoundingMode) -> Result<TermId, IrError> {
@@ -692,7 +692,7 @@ pub fn mul(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: 
     // index ≥ sb−1 whenever the result is normal), so `pack_value` only ever
     // rounds *down* — 2·sb + 3 bits suffice, which fits F16/F32/F64 in 128 bits.
     let w = 2 * sb + 3;
-    if w > MAX_BV_WIDTH {
+    if w > 128 {
         return Err(IrError::InvalidWidth(w));
     }
 
@@ -798,7 +798,7 @@ pub fn sqrt(arena: &mut TermArena, fmt: FloatFormat, x: TermId, mode: RoundingMo
     if w % 2 != 0 {
         w += 1; // isqrt needs an even width
     }
-    if w > MAX_BV_WIDTH {
+    if w > 128 {
         return Err(IrError::InvalidWidth(w));
     }
 
@@ -880,7 +880,7 @@ pub fn sqrt(arena: &mut TermArena, fmt: FloatFormat, x: TermId, mode: RoundingMo
 /// # Errors
 ///
 /// Returns [`IrError::InvalidWidth`] if the working width exceeds
-/// [`MAX_BV_WIDTH`], [`IrError::SortMismatch`] for a mis-sized operand, or
+/// 128 bits, [`IrError::SortMismatch`] for a mis-sized operand, or
 /// [`IrError`] from the builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
 pub fn to_fp(
@@ -892,7 +892,7 @@ pub fn to_fp(
 ) -> Result<TermId, IrError> {
     src.check(arena, x)?;
     let w = src.sig_bits.max(dst.sig_bits) + 4;
-    if w > MAX_BV_WIDTH {
+    if w > 128 {
         return Err(IrError::InvalidWidth(w));
     }
     let (deb, dsb) = (dst.exp_bits, dst.sig_bits);
@@ -946,7 +946,7 @@ pub fn div(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: 
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
     let total = fmt.width();
     let w = 2 * sb + 5;
-    if w > MAX_BV_WIDTH {
+    if w > 128 {
         return Err(IrError::InvalidWidth(w));
     }
     let frac = sb + 3; // quotient fractional bits
@@ -1027,7 +1027,7 @@ pub fn div(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: 
 /// result has no catastrophic cancellation (its leading bit is the larger
 /// operand's, ±1), so the sticky always lands strictly below the round position
 /// and never corrupts a guard/round bit. The `2·sb + 5`-bit intermediate fits
-/// **F16/F32/F64** in 128 bits ([`MAX_BV_WIDTH`]).
+/// **F16/F32/F64** in 128 bits (128 bits).
 ///
 /// This is a validated — not formally proven — bit-blaster: differentially
 /// validated against native `f32` and `f64` addition in tests.
@@ -1035,7 +1035,7 @@ pub fn div(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: 
 /// # Errors
 ///
 /// Returns [`IrError::InvalidWidth`] if the format's intermediate width exceeds
-/// [`MAX_BV_WIDTH`], [`IrError::SortMismatch`] for a mis-sized operand, or
+/// 128 bits, [`IrError::SortMismatch`] for a mis-sized operand, or
 /// [`IrError`] from the builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
 pub fn add(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: RoundingMode) -> Result<TermId, IrError> {
@@ -1044,7 +1044,7 @@ pub fn add(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: 
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
     let total = fmt.width();
     let w = 2 * sb + 5;
-    if w > MAX_BV_WIDTH {
+    if w > 128 {
         return Err(IrError::InvalidWidth(w));
     }
     let guard = sb + 2;
@@ -1178,16 +1178,19 @@ pub fn fma(
     let total = fmt.width();
     // Constant operands under round-nearest-even fold via native `mul_add` (a
     // single, correctly-rounded fused op — the ADR-0023 "fold constants via native
-    // arithmetic" basis). This decides constant F64 `fp.fma`, whose symbolic
-    // circuit needs a `3·sb+5 = 164`-bit intermediate that exceeds
-    // `MAX_BV_WIDTH = 128`; without this it would error below.
+    // arithmetic" basis). This decides constant F64 `fp.fma`.
     if mode == RoundingMode::NearestEven
         && let Some(folded) = fma_rne(arena, fmt, a, b, c)?
     {
         return Ok(folded);
     }
     let w = 3 * sb + 5;
-    if w > MAX_BV_WIDTH {
+    // The symbolic FMA circuit is only validated for intermediates that fit the
+    // `u128` representation (F16/F32). Although the IR now supports wider
+    // bit-vectors, the FMA circuit is not yet verified through the wide path, so
+    // a `> 128`-bit intermediate (F64/F128) remains `unsupported` (sound) rather
+    // than risk a wrong result. (Symbolic wide FMA is the remaining wide-BV step.)
+    if w > 128 {
         return Err(IrError::InvalidWidth(w));
     }
     let guard = sb + 2;
@@ -1535,13 +1538,13 @@ pub fn rem_sym(arena: &mut TermArena, fmt: FloatFormat, x: TermId, y: TermId) ->
     let total = fmt.width();
     let e_span = (1u32 << eb) - 3; // max LSB-exponent minus min LSB-exponent
     let w = sb + e_span + 2;
-    if w > MAX_BV_WIDTH {
+    if w > 128 {
         // The scaled-integer encoding overflows 128 bits (wide exponent). Fall
         // back to the iterative shift-subtract reduction, which uses a small
         // `sb+4`-bit register (the only 128-bit constraint) over `e_span`
         // data-independent steps. This covers F32/BF16/TF32 (e_span 253) and
         // F64 (e_span 2045, a larger but bounded formula).
-        if sb + 4 <= MAX_BV_WIDTH {
+        if sb + 4 <= 128 {
             return rem_iterative(arena, fmt, x, y);
         }
         return Err(IrError::InvalidWidth(w));
@@ -1798,7 +1801,7 @@ pub fn round_to_integral_sym(
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
     let total = fmt.width();
     let w = sb + 4;
-    if w > MAX_BV_WIDTH {
+    if w > 128 {
         return Err(IrError::InvalidWidth(w));
     }
     let one1 = arena.bv_const(1, 1)?;
@@ -1850,10 +1853,10 @@ pub fn round_to_integral_sym(
 /// The working width for an `m`-bit integer → `(eb, sb)` float conversion: wide
 /// enough to hold the magnitude, the left-shift of a small value into the
 /// significand, and the rounding `drop` (`< W`). `None` if it would exceed
-/// [`MAX_BV_WIDTH`].
+/// 128 bits.
 fn int_to_fp_width(m: u32, sb: u32) -> Option<u32> {
     let w = m + sb + 4;
-    (w <= MAX_BV_WIDTH).then_some(w)
+    (w <= 128).then_some(w)
 }
 
 /// `(_ to_fp eb sb)` from an **unsigned** bit-vector (`(_ to_fp_unsigned ...)`):
@@ -1861,7 +1864,7 @@ fn int_to_fp_width(m: u32, sb: u32) -> Option<u32> {
 /// round-nearest-even fold via native conversion (exact); otherwise a symbolic
 /// circuit rounds the value through the validated [`pack_value`] core (the integer
 /// `v` is the magnitude `v · 2^0`). Returns `None` only when the working width
-/// would exceed [`MAX_BV_WIDTH`].
+/// would exceed 128 bits.
 pub fn ubv_to_fp(
     arena: &mut TermArena,
     fmt: FloatFormat,
@@ -1908,7 +1911,7 @@ pub fn ubv_to_fp(
 /// splits the sign and magnitude (the magnitude is `−v` for a negative `v`, which
 /// is correct including the most-negative value) and rounds through the validated
 /// [`pack_value`] core. Returns `None` only when the working width would exceed
-/// [`MAX_BV_WIDTH`].
+/// 128 bits.
 pub fn sbv_to_fp(
     arena: &mut TermArena,
     fmt: FloatFormat,
@@ -2483,7 +2486,7 @@ fn fp_rounded_magnitude(
 /// SMT-LIB's leaving those cases unspecified. Over-routing to `fresh` is always
 /// sound (it can never force a wrong `unsat`); only the pinned value must be
 /// correct, and it reuses the validated rounding primitives. `fresh` is returned
-/// whole if the working width would exceed [`MAX_BV_WIDTH`].
+/// whole if the working width would exceed 128 bits.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
 pub fn to_ubv_sym(
     arena: &mut TermArena,
@@ -2494,7 +2497,7 @@ pub fn to_ubv_sym(
     fresh: TermId,
 ) -> Result<TermId, IrError> {
     let w = width + fmt.sig_bits + 4;
-    if width == 0 || w > MAX_BV_WIDTH {
+    if width == 0 || w > 128 {
         return Ok(fresh);
     }
     let (mag, sign, e) = fp_rounded_magnitude(arena, fmt, w, x, mode)?;
@@ -2546,7 +2549,7 @@ pub fn to_sbv_sym(
     fresh: TermId,
 ) -> Result<TermId, IrError> {
     let w = width + fmt.sig_bits + 4;
-    if width == 0 || w > MAX_BV_WIDTH {
+    if width == 0 || w > 128 {
         return Ok(fresh);
     }
     let (mag, sign, e) = fp_rounded_magnitude(arena, fmt, w, x, mode)?;
@@ -4044,7 +4047,7 @@ mod fma_f64_const_tests {
 
     #[test]
     fn constant_f64_fma_folds_via_native_mul_add() {
-        // F64 fp.fma's symbolic circuit needs 164 bits (> MAX_BV_WIDTH=128), but
+        // F64 fp.fma's symbolic circuit needs 164 bits (> 128=128), but
         // constant operands under RNE fold via native mul_add (ADR-0026 note).
         let mut arena = TermArena::new();
         let mk = |arena: &mut TermArena, v: f64| arena.bv_const(64, u128::from(v.to_bits())).unwrap();

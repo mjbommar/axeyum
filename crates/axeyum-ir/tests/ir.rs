@@ -58,10 +58,10 @@ fn symbol_redeclaration_same_sort_is_idempotent() {
 fn width_and_value_validation() {
     let mut a = TermArena::new();
     assert!(matches!(a.bv_const(0, 0), Err(IrError::InvalidWidth(0))));
-    assert!(matches!(
-        a.bv_const(129, 0),
-        Err(IrError::InvalidWidth(129))
-    ));
+    // 129 bits is now a valid (wide) bit-vector; only beyond MAX_BV_WIDTH errors.
+    assert!(a.bv_const(129, 0).is_ok());
+    let over = (1u32 << 16) + 1;
+    assert!(matches!(a.bv_const(over, 0), Err(IrError::InvalidWidth(w)) if w == over));
     assert!(matches!(
         a.bv_const(4, 16),
         Err(IrError::ValueOutOfRange {
@@ -99,10 +99,12 @@ fn extract_and_concat_bounds_are_static_errors() {
         a.extract(2, 3, x),
         Err(IrError::ExtractOutOfRange { .. })
     ));
-    let wide = a.bv_var("w", 128).unwrap();
+    // Concat is allowed up to the (raised) width cap; a sum beyond it errors.
+    let big = a.bv_var("big1", 40000).unwrap();
+    let big2 = a.bv_var("big2", 40000).unwrap();
     assert!(matches!(
-        a.concat(wide, x),
-        Err(IrError::ConcatTooWide(136))
+        a.concat(big, big2),
+        Err(IrError::ConcatTooWide(80000))
     ));
     assert!(matches!(
         a.zero_ext(u32::MAX, x),

@@ -294,3 +294,35 @@ fn supported_subset_decisions_match_z3_oracle() {
         assert_eq!(outcome_tag(&pure), outcome_tag(&z3));
     }
 }
+
+#[test]
+fn wide_bit_vector_solves_and_replays() {
+    // A 200-bit bit-vector exceeds the old u128 ceiling; with wide-BV it solves
+    // and the model (a WideBv) replays through the evaluator. x + 1 = 5 => x = 4.
+    let mut arena = TermArena::new();
+    let x = arena.declare("x", Sort::BitVec(200)).unwrap();
+    let xv = arena.var(x);
+    let one = arena.bv_const(200, 1).unwrap();
+    let sum = arena.bv_add(xv, one).unwrap();
+    let five = arena.bv_const(200, 5).unwrap();
+    let eq = arena.eq(sum, five).unwrap();
+    let model = expect_sat_checked(&arena, &[eq]);
+    // The lifted value is a wide bit-vector equal to 4.
+    let want = axeyum_ir::WideUint::from_u128(4, 200);
+    assert_eq!(model.get(x), Some(Value::WideBv(want)));
+}
+
+#[test]
+fn wide_bit_vector_contradiction_is_unsat() {
+    // x + 1 = 5 (so x = 4) and x = 10 contradict, at 200 bits.
+    let mut arena = TermArena::new();
+    let x = arena.declare("x", Sort::BitVec(200)).unwrap();
+    let xv = arena.var(x);
+    let one = arena.bv_const(200, 1).unwrap();
+    let sum = arena.bv_add(xv, one).unwrap();
+    let five = arena.bv_const(200, 5).unwrap();
+    let ten = arena.bv_const(200, 10).unwrap();
+    let c1 = arena.eq(sum, five).unwrap();
+    let c2 = arena.eq(xv, ten).unwrap();
+    assert_eq!(check(&arena, &[c1, c2]), CheckResult::Unsat);
+}

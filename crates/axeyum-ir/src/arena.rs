@@ -237,6 +237,11 @@ impl TermArena {
     /// not fit in `width` bits.
     pub fn bv_const(&mut self, width: u32, value: u128) -> Result<TermId, IrError> {
         check_width(width)?;
+        // Widths > 128 use the wide representation (the `u128` `value` supplies the
+        // low 128 bits; callers needing larger literals use `wide_bv_const`).
+        if width > 128 {
+            return Ok(self.wide_bv_const(crate::wide::WideUint::from_u128(value, width)));
+        }
         if value & !mask(width) != 0 {
             return Err(IrError::ValueOutOfRange { width, value });
         }

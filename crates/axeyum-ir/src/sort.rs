@@ -2,8 +2,12 @@
 
 use crate::term::DatatypeId;
 
-/// Maximum bit-vector width supported in M0 (ADR-0003).
-pub const MAX_BV_WIDTH: u32 = 128;
+/// Maximum bit-vector width. Values `≤ 128` use the `u128` representation;
+/// wider ones (up to this cap) use the limb-based wide representation
+/// ([`crate::WideUint`], `Value::WideBv`), which the evaluator and bit-blaster
+/// handle. The cap is a generous backstop against runaway memory, not a
+/// semantic limit (ADR-0003 set the original `128`; wide-BV lifted it).
+pub const MAX_BV_WIDTH: u32 = 1 << 16;
 
 /// The sort (type) of a term.
 ///

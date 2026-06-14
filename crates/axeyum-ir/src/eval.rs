@@ -329,8 +329,10 @@ fn eval_quantifier(
 #[allow(clippy::too_many_lines)]
 fn apply(op: Op, vals: &[Value]) -> Value {
     // Bit-vectors wider than 128 bits take a separate path; the `u128` fast path
-    // below is unchanged for the common case (no `WideBv` operand).
-    if vals.iter().any(|v| matches!(v, Value::WideBv(_))) {
+    // below is unchanged for the common case. This triggers when an operand is
+    // already wide, or when a width-*growing* op produces a `> 128`-bit result
+    // from `≤ 128`-bit operands (zero/sign-extend, concat, int2bv).
+    if vals.iter().any(|v| matches!(v, Value::WideBv(_))) || result_exceeds_128(op, vals) {
         return apply_wide(op, vals);
     }
     let b = |v: &Value| v.as_bool().expect("builder guaranteed Bool operand");
@@ -618,6 +620,31 @@ fn apply(op: Op, vals: &[Value]) -> Value {
     }
 }
 
+/// The bit-vector width an operand value carries (`Bv`/`WideBv`), else `None`.
+fn bv_width_of(v: &Value) -> Option<u32> {
+    match v {
+        Value::Bv { width, .. } => Some(*width),
+        Value::WideBv(w) => Some(w.width()),
+        _ => None,
+    }
+}
+
+/// Whether `op` over `vals` yields a bit-vector wider than 128 bits — true only
+/// for the width-growing operators (the rest preserve or shrink width, so a wide
+/// result already implies a wide operand, caught separately).
+fn result_exceeds_128(op: Op, vals: &[Value]) -> bool {
+    match op {
+        Op::ZeroExt { by } | Op::SignExt { by } => {
+            bv_width_of(&vals[0]).is_some_and(|w| w + by > 128)
+        }
+        Op::Concat => {
+            matches!((bv_width_of(&vals[0]), bv_width_of(&vals[1])), (Some(a), Some(b)) if a + b > 128)
+        }
+        Op::Int2Bv { width } => width > 128,
+        _ => false,
+    }
+}
+
 /// The wide (`> 128`-bit) bit-vector evaluation path, reached from [`apply`] only
 /// when an operand is a [`Value::WideBv`]. Operands are normalized to
 /// [`crate::wide::WideUint`] (a `Value::Bv` widens losslessly), the operator runs
@@ -730,6 +757,18 @@ fn apply_wide(op: Op, vals: &[Value]) -> Value {
         }
         // A floating-point reinterpret is identity on the bits.
         Op::FpFromBits { .. } => pack(w(&vals[0])),
+        // `(_ int2bv width)` with width > 128: the integer mod 2^width as a
+        // two's-complement wide value (low 128 bits, sign-extended).
+        Op::Int2Bv { width } => {
+            let x = vals[0].as_int().expect("int2bv operand is Int");
+            #[allow(clippy::cast_sign_loss)]
+            let low = WideUint::from_u128(x as u128, 128.min(width));
+            pack(if width > 128 {
+                low.sign_ext(width - 128)
+            } else {
+                low
+            })
+        }
         other => panic!("apply_wide: operator {other:?} not supported on wide bit-vectors"),
     }
 }

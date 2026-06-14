@@ -38,6 +38,25 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-14
 
+- **Wide bit-vectors — ceiling raised, general wide-BV works (2026-06-14, wide-BV
+  step 4).** `MAX_BV_WIDTH` is now `1 << 16` (was 128): bit-vectors up to 65536
+  bits build, evaluate, **bit-blast, solve, and replay** end-to-end. `bv_const`
+  routes width `> 128` to a wide constant; the `bits` layer's `validate_width`
+  now follows `MAX_BV_WIDTH` (the `u128` helpers `bv_value_to_lsb_bits`/
+  `lsb_bits_to_bv_value` keep their `≤ 128` contract — wide uses the `WideUint`
+  path), and model lifting produces `Value::WideBv` for wide symbols. Test: a
+  200-bit `x + 1 = 5` decides **sat** with the lifted `WideBv` model = 4 (replayed
+  through the evaluator), and a 200-bit contradiction is **unsat**. **FP circuits
+  stay pinned to `≤ 128`** (their *validated* regime — gates changed from
+  `MAX_BV_WIDTH` to `128`), so raising the ceiling did **not** activate
+  unvalidated wide FP paths: F16/F32 (and F64 add/mul/div/sqrt that already fit)
+  are unchanged; symbolic F64 `fp.fma`/`fp.rem`-wide and all F128 arithmetic
+  remain `unsupported` (sound), constant F64 `fp.fma` still folds. **Remaining
+  wide-BV step:** make the FP arithmetic circuits correct through the wide path
+  (the symbolic F64 fma circuit currently mis-evaluates at 164 bits — a circuit
+  bug to debug), then lift their `128` gate — that unblocks symbolic F64 fma and
+  F128 arithmetic.
+
 - **Wide bit-vectors — IR integration (2026-06-14, wide-BV step 3).** The IR now
   represents bit-vectors of width `> 128`: `Value::WideBv(WideUint)` and
   `TermNode::WideBvConst(WideUint)` (the `≤ 128` `Value::Bv`/`BvConst` are

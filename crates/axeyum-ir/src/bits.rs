@@ -4,6 +4,7 @@
 //! wire vectors are LSB-first. Element `i` is SMT-LIB bit index `i` and has
 //! numeric weight `2^i`.
 
+use crate::sort::MAX_BV_WIDTH;
 use crate::{IrError, Sort, Value};
 
 /// Bit order used when lowering bit-vector values to Boolean wires.
@@ -61,6 +62,10 @@ pub fn value_to_lsb_bits(value: Value) -> Result<Vec<bool>, IrError> {
 /// [`IrError::ValueOutOfRange`] if `value` does not fit in `width` bits.
 pub fn bv_value_to_lsb_bits(width: u32, value: u128) -> Result<Vec<bool>, IrError> {
     validate_bv_payload(width, value)?;
+    if width > 128 {
+        // A `u128` cannot hold a wider value; callers use the `WideUint` path.
+        return Err(IrError::InvalidWidth(width));
+    }
     Ok((0..width).map(|bit| ((value >> bit) & 1) == 1).collect())
 }
 
@@ -72,6 +77,10 @@ pub fn bv_value_to_lsb_bits(width: u32, value: u128) -> Result<Vec<bool>, IrErro
 pub fn lsb_bits_to_bv_value(bits: &[bool]) -> Result<Value, IrError> {
     let width = u32::try_from(bits.len()).unwrap_or(u32::MAX);
     validate_width(width)?;
+    if width > 128 {
+        // Use `Value::WideBv` (via `lsb_bits_to_value`) for wider bit-vectors.
+        return Err(IrError::InvalidWidth(width));
+    }
     let mut value = 0u128;
     for (index, bit) in bits.iter().copied().enumerate() {
         if bit {
@@ -107,13 +116,17 @@ pub fn lsb_bits_to_value(sort: Sort, bits: &[bool]) -> Result<Value, IrError> {
                 _ => 0, // unreachable given the outer arm, but keeps this total
             };
             validate_width(width)?;
-            if bits.len() == width as usize {
-                lsb_bits_to_bv_value(bits)
-            } else {
-                Err(IrError::BitCountMismatch {
+            if bits.len() != width as usize {
+                return Err(IrError::BitCountMismatch {
                     expected: width,
                     found: bits.len(),
-                })
+                });
+            }
+            if width > 128 {
+                // Wide bit-vector model value (ADR wide-BV).
+                Ok(Value::WideBv(crate::wide::WideUint::from_lsb_bits(bits)))
+            } else {
+                lsb_bits_to_bv_value(bits)
             }
         }
         Sort::Array { .. } | Sort::Int | Sort::Real | Sort::Datatype(_) => {
@@ -135,7 +148,7 @@ fn validate_bv_payload(width: u32, value: u128) -> Result<(), IrError> {
 }
 
 fn validate_width(width: u32) -> Result<(), IrError> {
-    if (1..=128).contains(&width) {
+    if (1..=MAX_BV_WIDTH).contains(&width) {
         Ok(())
     } else {
         Err(IrError::InvalidWidth(width))
