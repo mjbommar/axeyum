@@ -574,6 +574,7 @@ fn rewrite_app(
         | Op::RealAdd
         | Op::RealSub
         | Op::RealMul
+        | Op::RealDiv
         | Op::RealLt
         | Op::RealLe
         | Op::RealGt
@@ -989,6 +990,7 @@ pub(crate) fn build_app(arena: &mut TermArena, op: Op, args: &[TermId]) -> Resul
         Op::RealAdd => arena.real_add(args[0], args[1]),
         Op::RealSub => arena.real_sub(args[0], args[1]),
         Op::RealMul => arena.real_mul(args[0], args[1]),
+        Op::RealDiv => arena.real_div(args[0], args[1]),
         Op::RealLt => arena.real_lt(args[0], args[1]),
         Op::RealLe => arena.real_le(args[0], args[1]),
         Op::RealGt => arena.real_gt(args[0], args[1]),

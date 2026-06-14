@@ -242,6 +242,9 @@ pub enum Op {
     RealSub,
     /// Real multiplication (linear use enforced by downstream procedures).
     RealMul,
+    /// Real division (`/`). Total per SMT-LIB; division by zero is unspecified,
+    /// and the in-tree evaluator uses the convention `x / 0 = 0`.
+    RealDiv,
     /// Real less-than (result sort `Bool`).
     RealLt,
     /// Real less-or-equal (result sort `Bool`).

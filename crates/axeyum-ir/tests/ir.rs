@@ -1265,3 +1265,17 @@ fn bv_overflow_predicates_match_reference_exhaustively() {
         }
     }
 }
+
+#[test]
+fn real_division_evaluates_exactly() {
+    let mut a = TermArena::new();
+    let asg = Assignment::new();
+    let six = a.real_const(Rational::new(6, 1));
+    let four = a.real_const(Rational::new(4, 1));
+    let d = a.real_div(six, four).unwrap();
+    assert_eq!(eval(&a, d, &asg).unwrap(), Value::Real(Rational::new(3, 2)));
+    // division by zero uses the convention x/0 = 0.
+    let zero = a.real_const(Rational::new(0, 1));
+    let dz = a.real_div(six, zero).unwrap();
+    assert_eq!(eval(&a, dz, &asg).unwrap(), Value::Real(Rational::new(0, 1)));
+}

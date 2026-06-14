@@ -122,6 +122,13 @@ Last updated: 2026-06-14
   can't: `x²<2x−2` on `[−5,5]` and `x·y>9` on `[1,3]²` (both `unsat`), while a
   feasible `x²>2x+2` stays `sat` and the unbounded `x²<2x−2` stays `unknown`.
   14 tests in `tests/nra.rs`.
+  **Symbolic real division (`/`, `Op::RealDiv`) now added.** New IR op with eval
+  convention `x/0 = 0`; `check_with_nra` eliminates it first via
+  `eliminate_real_div` — `x/y → r` with `(y = 0) ∨ (x = r·y)`, the exact SMT-LIB
+  semantics (free `r` at `y = 0`), where `r·y` rides the nonlinear abstraction.
+  SMT-LIB parser builds symbolic `/` (still folds constant/constant). Tests:
+  pinned `6/3=2` (sat), inconsistent `7/3≠2` (unsat), div-by-zero unconstrained
+  (sat), eval, and an SMT-LIB round-trip.
 
 - **Floating point — non-arithmetic core (2026-06-14, ADR-0023).** New
   `axeyum-solver::fp` module: IEEE 754 classification (`is_nan`/`is_infinite`/

@@ -1021,17 +1021,29 @@ fn real_division(arena: &mut TermArena, args: &[TermId]) -> Result<TermId, SmtEr
             _ => None,
         }
     };
-    let mut acc = value(arena, args[0])
-        .ok_or_else(|| SmtError::Unsupported("`/` requires constant operands".to_owned()))?;
-    for &next in &args[1..] {
-        let divisor = value(arena, next)
-            .ok_or_else(|| SmtError::Unsupported("`/` requires constant operands".to_owned()))?;
-        if divisor.is_zero() {
-            return Err(SmtError::Syntax("division by zero in `/`".to_owned()));
+    // Constant-fold when every operand is a real constant (and no zero divisor);
+    // otherwise build symbolic `RealDiv` terms (left-associative), decided by the
+    // NRA layer.
+    if let Some(mut acc) = value(arena, args[0]) {
+        let mut all_const = true;
+        for &next in &args[1..] {
+            match value(arena, next) {
+                Some(divisor) if !divisor.is_zero() => acc = acc / divisor,
+                _ => {
+                    all_const = false;
+                    break;
+                }
+            }
         }
-        acc = acc / divisor;
+        if all_const {
+            return Ok(arena.real_const(acc));
+        }
     }
-    Ok(arena.real_const(acc))
+    let mut acc = args[0];
+    for &next in &args[1..] {
+        acc = arena.real_div(acc, next)?;
+    }
+    Ok(acc)
 }
 
 /// Chains a comparison over `args` pairwise, conjoining the results: `(< a b c)`

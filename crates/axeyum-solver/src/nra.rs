@@ -51,6 +51,12 @@ pub fn check_with_nra(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    // Eliminate real division first: `x/y → r` with `(y = 0) ∨ (x = r·y)`,
+    // matching SMT-LIB's unspecified division by zero. The `r·y` product is then
+    // handled by the nonlinear abstraction below (or is linear when `y` is
+    // constant). Exact encoding, so soundness is preserved.
+    let assertions = &eliminate_real_div(arena, assertions)?;
+
     let products = nonlinear_products(arena, assertions);
     if products.is_empty() {
         // Already linear — straight to LRA.
@@ -298,6 +304,67 @@ fn rat_width(lo: axeyum_ir::Rational, hi: axeyum_ir::Rational) -> Option<axeyum_
         .checked_sub(lo.numerator().checked_mul(hi.denominator())?)?;
     let den = hi.denominator().checked_mul(lo.denominator())?;
     Some(axeyum_ir::Rational::new(num, den))
+}
+
+/// Replaces each `x / y` (`RealDiv`) with a fresh real `r` constrained by
+/// `(y = 0) ∨ (x = r·y)` — the exact SMT-LIB semantics (division by zero is an
+/// unspecified value, so `r` is left free there). The `r·y` term is a `RealMul`
+/// the nonlinear abstraction then handles. Equisatisfiable; soundness preserved.
+fn eliminate_real_div(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<Vec<TermId>, SolverError> {
+    // Collect distinct RealDiv subterms.
+    let mut divs: Vec<TermId> = Vec::new();
+    let mut seen = BTreeSet::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    while let Some(t) = stack.pop() {
+        if !seen.insert(t) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(t) {
+            let op = *op;
+            let args = args.clone();
+            if op == Op::RealDiv {
+                divs.push(t);
+            }
+            stack.extend(args);
+        }
+    }
+    if divs.is_empty() {
+        return Ok(assertions.to_vec());
+    }
+
+    let err = |e: IrError| SolverError::Backend(e.to_string());
+    let zero = arena.real_const(axeyum_ir::Rational::integer(0));
+    let mut map: HashMap<TermId, TermId> = HashMap::new();
+    let mut constraints: Vec<TermId> = Vec::new();
+    for (i, div) in divs.into_iter().enumerate() {
+        let TermNode::App { args, .. } = arena.node(div) else {
+            continue;
+        };
+        let (x, y) = (args[0], args[1]);
+        let fresh = arena
+            .declare(&format!("!div_{i}"), Sort::Real)
+            .map_err(err)?;
+        let r = arena.var(fresh);
+        map.insert(div, r);
+        // (y = 0) ∨ (x = r·y)
+        let y_zero = arena.eq(y, zero).map_err(err)?;
+        let ry = arena.real_mul(r, y).map_err(err)?;
+        let x_eq = arena.eq(x, ry).map_err(err)?;
+        constraints.push(arena.or(y_zero, x_eq).map_err(err)?);
+    }
+
+    let mut memo: HashMap<TermId, TermId> = HashMap::new();
+    let mut out = Vec::with_capacity(assertions.len() + constraints.len());
+    for &a in assertions {
+        out.push(replace_subterms(arena, a, &map, &mut memo).map_err(err)?);
+    }
+    for c in constraints {
+        out.push(replace_subterms(arena, c, &map, &mut memo).map_err(err)?);
+    }
+    Ok(out)
 }
 
 /// The model value of a real term, if it evaluates to a `Real`.

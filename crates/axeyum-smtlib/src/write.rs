@@ -362,6 +362,7 @@ fn op_str(op: Op) -> String {
         Op::IntNeg | Op::IntSub | Op::RealNeg | Op::RealSub => "-".into(),
         Op::IntAdd | Op::RealAdd => "+".into(),
         Op::IntMul | Op::RealMul => "*".into(),
+        Op::RealDiv => "/".into(),
         Op::IntDiv => "div".into(),
         Op::IntMod => "mod".into(),
         Op::IntAbs => "abs".into(),

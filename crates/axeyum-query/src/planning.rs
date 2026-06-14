@@ -625,6 +625,7 @@ fn update_op(hash: &mut u64, op: Op) {
         Op::RealAdd => update_u64(hash, 54),
         Op::RealSub => update_u64(hash, 55),
         Op::RealMul => update_u64(hash, 56),
+        Op::RealDiv => update_u64(hash, 72),
         Op::RealLt => update_u64(hash, 57),
         Op::RealLe => update_u64(hash, 58),
         Op::RealGt => update_u64(hash, 59),

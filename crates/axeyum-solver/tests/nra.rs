@@ -250,3 +250,54 @@ fn bnb_unbounded_square_is_unknown_not_wrong_unsat() {
     let r = check_with_nra(&mut a, &[lt], &SolverConfig::default()).unwrap();
     assert!(matches!(r, CheckResult::Unknown(_)), "unbounded x^2<2x-2 -> unknown, got {r:?}");
 }
+
+#[test]
+fn real_division_pinned_is_sat() {
+    // x / y == 2 AND y == 3 AND x == 6 : sat (6/3 = 2).
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let y = real(&mut a, "y");
+    let d = a.real_div(x, y).unwrap();
+    let two = a.real_const(Rational::integer(2));
+    let three = a.real_const(Rational::integer(3));
+    let six = a.real_const(Rational::integer(6));
+    let dc = a.eq(d, two).unwrap();
+    let yc = a.eq(y, three).unwrap();
+    let xc = a.eq(x, six).unwrap();
+    let r = check_with_nra(&mut a, &[dc, yc, xc], &SolverConfig::default()).unwrap();
+    assert!(matches!(r, CheckResult::Sat(_)), "6/3=2 sat, got {r:?}");
+}
+
+#[test]
+fn real_division_inconsistent_is_unsat() {
+    // x / y == 2 AND y == 3 AND x == 7 : unsat (7 = 2*3 = 6 is false).
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let y = real(&mut a, "y");
+    let d = a.real_div(x, y).unwrap();
+    let two = a.real_const(Rational::integer(2));
+    let three = a.real_const(Rational::integer(3));
+    let seven = a.real_const(Rational::integer(7));
+    let dc = a.eq(d, two).unwrap();
+    let yc = a.eq(y, three).unwrap();
+    let xc = a.eq(x, seven).unwrap();
+    let r = check_with_nra(&mut a, &[dc, yc, xc], &SolverConfig::default()).unwrap();
+    assert!(matches!(r, CheckResult::Unsat), "7/3 != 2 unsat, got {r:?}");
+}
+
+#[test]
+fn real_division_by_zero_is_unconstrained() {
+    // y == 0 AND x == 5 AND x/y == 100 : sat (x/0 is unspecified, so r=100 ok).
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let y = real(&mut a, "y");
+    let d = a.real_div(x, y).unwrap();
+    let zero = a.real_const(Rational::integer(0));
+    let five = a.real_const(Rational::integer(5));
+    let hundred = a.real_const(Rational::integer(100));
+    let yc = a.eq(y, zero).unwrap();
+    let xc = a.eq(x, five).unwrap();
+    let dc = a.eq(d, hundred).unwrap();
+    let r = check_with_nra(&mut a, &[yc, xc, dc], &SolverConfig::default()).unwrap();
+    assert!(matches!(r, CheckResult::Sat(_)), "x/0 unconstrained -> sat, got {r:?}");
+}

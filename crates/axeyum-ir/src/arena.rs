@@ -1458,6 +1458,15 @@ impl TermArena {
         self.real_bin(Op::RealMul, a, b)
     }
 
+    /// Real division (`/`). Total; the evaluator uses `x / 0 = 0`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless both operands are reals.
+    pub fn real_div(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.real_bin(Op::RealDiv, a, b)
+    }
+
     /// Real less-than (result sort `Bool`).
     ///
     /// # Errors

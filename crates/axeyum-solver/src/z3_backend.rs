@@ -384,6 +384,7 @@ fn translate(
                         | Op::RealAdd
                         | Op::RealSub
                         | Op::RealMul
+                        | Op::RealDiv
                         | Op::RealLt
                         | Op::RealLe
                         | Op::RealGt
@@ -511,6 +512,7 @@ fn apply(op: Op, args: &[TermId], cache: &HashMap<TermId, Z3Term>) -> Z3Term {
         | Op::RealAdd
         | Op::RealSub
         | Op::RealMul
+        | Op::RealDiv
         | Op::RealLt
         | Op::RealLe
         | Op::RealGt

@@ -550,6 +550,15 @@ fn apply(op: Op, vals: &[Value]) -> Value {
         Op::RealAdd => Value::Real(real(&vals[0]) + real(&vals[1])),
         Op::RealSub => Value::Real(real(&vals[0]) - real(&vals[1])),
         Op::RealMul => Value::Real(real(&vals[0]) * real(&vals[1])),
+        Op::RealDiv => {
+            let (a, b) = (real(&vals[0]), real(&vals[1]));
+            // Convention: x / 0 = 0 (SMT-LIB leaves it unspecified).
+            if b == crate::rational::Rational::integer(0) {
+                Value::Real(crate::rational::Rational::integer(0))
+            } else {
+                Value::Real(a / b)
+            }
+        }
         Op::RealLt => Value::Bool(real(&vals[0]) < real(&vals[1])),
         Op::RealLe => Value::Bool(real(&vals[0]) <= real(&vals[1])),
         Op::RealGt => Value::Bool(real(&vals[0]) > real(&vals[1])),

@@ -869,6 +869,7 @@ impl<'a> LoweringBuilder<'a> {
                 | Op::RealAdd
                 | Op::RealSub
                 | Op::RealMul
+                | Op::RealDiv
                 | Op::RealLt
                 | Op::RealLe
                 | Op::RealGt
@@ -1803,6 +1804,7 @@ fn is_unsupported_op(op: Op) -> bool {
             | Op::RealAdd
             | Op::RealSub
             | Op::RealMul
+            | Op::RealDiv
             | Op::RealLt
             | Op::RealLe
             | Op::RealGt

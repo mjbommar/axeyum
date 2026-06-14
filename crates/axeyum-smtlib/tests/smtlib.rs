@@ -611,3 +611,20 @@ fn parses_bv_overflow_predicates() {
     let reparsed = parse_script(&rendered).unwrap();
     assert_eq!(reparsed.assertions.len(), 3);
 }
+
+#[test]
+fn parses_symbolic_real_division() {
+    let text = r"
+        (set-logic QF_NRA)
+        (declare-const x Real)
+        (declare-const y Real)
+        (assert (= (/ x y) 2.0))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+    let rendered = write_script(&script.arena, &script.assertions);
+    assert!(rendered.contains("(/ "), "renders /: {rendered}");
+    let reparsed = parse_script(&rendered).unwrap();
+    assert_eq!(reparsed.assertions.len(), 1);
+}
