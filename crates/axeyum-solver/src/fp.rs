@@ -354,14 +354,32 @@ pub fn pack_value(
     let (lsb_exp, drop) = pack_params(arena, m, e, sb, bias)?;
 
     // q = the rounded/scaled significand: shift left if drop<0, round right if
-    // 0<=drop<W, else (drop>=W) the value is below half-ulp → 0.
+    // 0<=drop<W. When drop>=W the whole value is below the grid: nearest/
+    // toward-zero give 0, but a directed mode rounds a nonzero value up to the
+    // smallest representable magnitude (1) when the sign matches its direction.
+    let one_w = arena.bv_const(w, 1)?;
     let neg_drop = arena.bv_sub(zero_w, drop)?;
     let left = arena.bv_shl(m, neg_drop)?;
     let rounded = round_variable(arena, m, drop, mode, sign)?;
     let drop_lt0 = arena.bv_slt(drop, zero_w)?;
     let w_const = sconst(arena, w, i64::from(w))?;
     let drop_ge_w = arena.bv_sge(drop, w_const)?;
-    let right = arena.ite(drop_ge_w, zero_w, rounded)?;
+    let tiny_q = {
+        let m_nonzero = {
+            let z = arena.eq(m, zero_w)?;
+            arena.not(z)?
+        };
+        let up = match mode {
+            RoundingMode::TowardPositive => {
+                let pos = arena.not(sign)?;
+                arena.and(m_nonzero, pos)?
+            }
+            RoundingMode::TowardNegative => arena.and(m_nonzero, sign)?,
+            _ => arena.bool_const(false),
+        };
+        arena.ite(up, one_w, zero_w)?
+    };
+    let right = arena.ite(drop_ge_w, tiny_q, rounded)?;
     let q = arena.ite(drop_lt0, left, right)?;
 
     // Result exponent of q's leading bit.
@@ -439,7 +457,7 @@ pub fn pack_value(
 /// [`MAX_BV_WIDTH`], [`IrError::SortMismatch`] if an operand is not a `BitVec` of
 /// the format width, or [`IrError`] from the builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
-pub fn mul(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId) -> Result<TermId, IrError> {
+pub fn mul(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: RoundingMode) -> Result<TermId, IrError> {
     fmt.check(arena, a)?;
     fmt.check(arena, b)?;
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
@@ -461,7 +479,7 @@ pub fn mul(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId) -> Res
     let e_prod = arena.bv_add(e_a, e_b)?;
     let sign_xor_bit = arena.bv_xor(sa, sb_bit)?;
     let sign_xor = arena.eq(sign_xor_bit, one1)?;
-    let finite = pack_value(arena, eb, sb, sign_xor, product, e_prod, RoundingMode::NearestEven)?;
+    let finite = pack_value(arena, eb, sb, sign_xor, product, e_prod, mode)?;
 
     // Special-case flags.
     let na = is_nan(arena, fmt, a)?;
@@ -546,7 +564,7 @@ fn unpack_operand(
 /// Returns [`IrError::InvalidWidth`] if the format is too wide,
 /// [`IrError::SortMismatch`] for a mis-sized operand, or [`IrError`] from builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
-pub fn sqrt(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId, IrError> {
+pub fn sqrt(arena: &mut TermArena, fmt: FloatFormat, x: TermId, mode: RoundingMode) -> Result<TermId, IrError> {
     fmt.check(arena, x)?;
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
     let total = fmt.width();
@@ -605,7 +623,7 @@ pub fn sqrt(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId
     let e_res = arena.bv_sub(e_half, shift_c)?;
 
     let plus = arena.bool_const(false);
-    let finite = pack_value(arena, eb, sb, plus, m, e_res, RoundingMode::NearestEven)?;
+    let finite = pack_value(arena, eb, sb, plus, m, e_res, mode)?;
 
     // Special cases.
     let nan_x = is_nan(arena, fmt, x)?;
@@ -643,7 +661,7 @@ pub fn sqrt(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId
 /// Returns [`IrError::InvalidWidth`] if the format is too wide,
 /// [`IrError::SortMismatch`] for a mis-sized operand, or [`IrError`] from builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
-pub fn div(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId) -> Result<TermId, IrError> {
+pub fn div(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: RoundingMode) -> Result<TermId, IrError> {
     fmt.check(arena, a)?;
     fmt.check(arena, b)?;
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
@@ -680,7 +698,7 @@ pub fn div(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId) -> Res
     };
     let sign_xor_bit = arena.bv_xor(sa, sbit)?;
     let sign_xor = arena.eq(sign_xor_bit, one1)?;
-    let finite = pack_value(arena, eb, sb, sign_xor, quot_s, e_q, RoundingMode::NearestEven)?;
+    let finite = pack_value(arena, eb, sb, sign_xor, quot_s, e_q, mode)?;
 
     // Special cases.
     let na = is_nan(arena, fmt, a)?;
@@ -741,7 +759,7 @@ pub fn div(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId) -> Res
 /// [`MAX_BV_WIDTH`], [`IrError::SortMismatch`] for a mis-sized operand, or
 /// [`IrError`] from the builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
-pub fn add(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId) -> Result<TermId, IrError> {
+pub fn add(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: RoundingMode) -> Result<TermId, IrError> {
     fmt.check(arena, a)?;
     fmt.check(arena, b)?;
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
@@ -795,7 +813,7 @@ pub fn add(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId) -> Res
     let result_sign_bit = arena.ite(same_sign, sign_big, sub_sign)?;
     let result_sign = arena.eq(result_sign_bit, one1)?;
     let e_c = arena.bv_sub(e_big, guard_c)?;
-    let finite = pack_value(arena, eb, sb, result_sign, result_mag, e_c, RoundingMode::NearestEven)?;
+    let finite = pack_value(arena, eb, sb, result_sign, result_mag, e_c, mode)?;
 
     // Special-case flags.
     let na = is_nan(arena, fmt, a)?;
@@ -1270,7 +1288,7 @@ pub fn count_leading_zeros(arena: &mut TermArena, x: TermId) -> Result<TermId, I
     clippy::cast_sign_loss,
     clippy::many_single_char_names
 )] // dense numeric routine; bit positions are intentional
-pub fn round_to_format(eb: u32, sb: u32, v: f64) -> u128 {
+pub fn round_to_format(eb: u32, sb: u32, v: f64, mode: RoundingMode) -> u128 {
     let total = eb + sb;
     let exp_field_max = (1u128 << eb) - 1;
     let sign = if v.is_sign_negative() {
@@ -1307,22 +1325,29 @@ pub fn round_to_format(eb: u32, sb: u32, v: f64) -> u128 {
     let res_exp = k.max(emin);
     let lsb_exp = res_exp - (i64::from(sb) - 1);
 
-    // Round m·2^e to the nearest multiple of 2^lsb_exp (round-nearest-even).
+    // Round m·2^e to a multiple of 2^lsb_exp under `mode`.
+    let negative = v.is_sign_negative();
     let drop = lsb_exp - e;
     let q: u128 = if drop <= 0 {
         u128::from(m) << ((-drop) as u32)
-    } else if drop >= 64 {
-        0 // a is below a half-ulp of the grid → rounds to zero
     } else {
         let s = drop as u32;
-        let kept = u128::from(m >> s);
-        let round_bit = (m >> (s - 1)) & 1 == 1;
-        let sticky = (m & ((1u64 << (s - 1)) - 1)) != 0;
-        if round_bit && (sticky || (kept & 1 == 1)) {
-            kept + 1
+        let (kept, round_bit, sticky) = if s >= 64 {
+            (0u128, false, m != 0) // entire significand below the grid
         } else {
-            kept
-        }
+            let kept = u128::from(m >> s);
+            let round_bit = (m >> (s - 1)) & 1 == 1;
+            let sticky = (m & ((1u64 << (s - 1)) - 1)) != 0;
+            (kept, round_bit, sticky)
+        };
+        let up = match mode {
+            RoundingMode::NearestEven => round_bit && (sticky || kept & 1 == 1),
+            RoundingMode::NearestAway => round_bit,
+            RoundingMode::TowardZero => false,
+            RoundingMode::TowardPositive => (round_bit || sticky) && !negative,
+            RoundingMode::TowardNegative => (round_bit || sticky) && negative,
+        };
+        if up { kept + 1 } else { kept }
     };
     if q == 0 {
         return sign; // rounded to ±0
@@ -1701,7 +1726,7 @@ mod tests {
             let sign = (state >> 3) & 1 == 1;
 
             let value = (if sign { -1.0f64 } else { 1.0 }) * (m as f64) * 2.0f64.powi(e as i32);
-            let want = round_to_format(eb, sb, value);
+            let want = round_to_format(eb, sb, value, RoundingMode::NearestEven);
 
             let mut a = TermArena::new();
             let m_w = a.bv_const(w, m).unwrap();
@@ -1729,7 +1754,7 @@ mod tests {
         let check = |a: &mut TermArena, ab: u32, bb: u32| {
             let at = a.bv_const(32, u128::from(ab)).unwrap();
             let bt = a.bv_const(32, u128::from(bb)).unwrap();
-            let r = mul(a, FloatFormat::F32, at, bt).unwrap();
+            let r = mul(a, FloatFormat::F32, at, bt, RoundingMode::NearestEven).unwrap();
             let got = match eval(a, r, &Assignment::new()) {
                 Ok(Value::Bv { value, .. }) => value,
                 other => panic!("expected Bv, got {other:?}"),
@@ -1809,7 +1834,7 @@ mod tests {
         let check = |a: &mut TermArena, ab: u16, bb: u16| {
             let at = a.bv_const(16, u128::from(ab)).unwrap();
             let bt = a.bv_const(16, u128::from(bb)).unwrap();
-            let r = add(a, FloatFormat::F16, at, bt).unwrap();
+            let r = add(a, FloatFormat::F16, at, bt, RoundingMode::NearestEven).unwrap();
             let got = match eval(a, r, &Assignment::new()) {
                 Ok(Value::Bv { value, .. }) => value,
                 other => panic!("expected Bv, got {other:?}"),
@@ -1820,7 +1845,7 @@ mod tests {
                 let mant = got & 0x3FF;
                 assert!(exp == 0x1F && mant != 0, "add({ab:#x},{bb:#x}) want NaN, got {got:#x}");
             } else {
-                let want = round_to_format(5, 11, sum);
+                let want = round_to_format(5, 11, sum, RoundingMode::NearestEven);
                 assert_eq!(got, want, "add({ab:#x},{bb:#x}) = {got:#x}, want {want:#x}");
             }
         };
@@ -1858,7 +1883,7 @@ mod tests {
         let mut a = TermArena::new();
         let check32 = |a: &mut TermArena, xb: u32| {
             let xt = a.bv_const(32, u128::from(xb)).unwrap();
-            let r = sqrt(a, FloatFormat::F32, xt).unwrap();
+            let r = sqrt(a, FloatFormat::F32, xt, RoundingMode::NearestEven).unwrap();
             let got = match eval(a, r, &Assignment::new()) {
                 Ok(Value::Bv { value, .. }) => value,
                 other => panic!("expected Bv, got {other:?}"),
@@ -1889,7 +1914,7 @@ mod tests {
 
         let check64 = |a: &mut TermArena, xb: u64| {
             let xt = a.bv_const(64, u128::from(xb)).unwrap();
-            let r = sqrt(a, FloatFormat::F64, xt).unwrap();
+            let r = sqrt(a, FloatFormat::F64, xt, RoundingMode::NearestEven).unwrap();
             let got = match eval(a, r, &Assignment::new()) {
                 Ok(Value::Bv { value, .. }) => value,
                 other => panic!("expected Bv, got {other:?}"),
@@ -1909,12 +1934,51 @@ mod tests {
     }
 
     #[test]
+    fn mul_all_rounding_modes_f32() {
+        // For F32 the exact product fits f64 (≤48-bit significand), so
+        // round_to_format(exact, mode) is the correctly-rounded reference for
+        // every mode — validating the rounding-mode plumbing end to end.
+        let modes = [
+            RoundingMode::NearestEven,
+            RoundingMode::NearestAway,
+            RoundingMode::TowardZero,
+            RoundingMode::TowardPositive,
+            RoundingMode::TowardNegative,
+        ];
+        let mut a = TermArena::new();
+        let mut state: u64 = 0x9e37_79b9_7f4a_7c15;
+        for &mode in &modes {
+            for _ in 0..800 {
+                state = state
+                    .wrapping_mul(6_364_136_223_846_793_005)
+                    .wrapping_add(1_442_695_040_888_963_407);
+                let ab = (state & 0xFFFF_FFFF) as u32;
+                let bb = (state >> 32) as u32;
+                let at = a.bv_const(32, u128::from(ab)).unwrap();
+                let bt = a.bv_const(32, u128::from(bb)).unwrap();
+                let r = mul(&mut a, FloatFormat::F32, at, bt, mode).unwrap();
+                let got = match eval(&a, r, &Assignment::new()) {
+                    Ok(Value::Bv { value, .. }) => value,
+                    other => panic!("expected Bv, got {other:?}"),
+                };
+                let exact = f64::from(f32::from_bits(ab)) * f64::from(f32::from_bits(bb));
+                if exact.is_nan() {
+                    assert!((got >> 23) & 0xFF == 0xFF && got & 0x7F_FFFF != 0);
+                } else {
+                    let want = round_to_format(8, 24, exact, mode);
+                    assert_eq!(got, want, "mul({ab:#x},{bb:#x},{mode:?}) = {got:#x}, want {want:#x}");
+                }
+            }
+        }
+    }
+
+    #[test]
     fn div_matches_native_f32_and_f64() {
         let mut a = TermArena::new();
         let check32 = |a: &mut TermArena, ab: u32, bb: u32| {
             let at = a.bv_const(32, u128::from(ab)).unwrap();
             let bt = a.bv_const(32, u128::from(bb)).unwrap();
-            let r = div(a, FloatFormat::F32, at, bt).unwrap();
+            let r = div(a, FloatFormat::F32, at, bt, RoundingMode::NearestEven).unwrap();
             let got = match eval(a, r, &Assignment::new()) {
                 Ok(Value::Bv { value, .. }) => value,
                 other => panic!("expected Bv, got {other:?}"),
@@ -1951,7 +2015,7 @@ mod tests {
         let check64 = |a: &mut TermArena, ab: u64, bb: u64| {
             let at = a.bv_const(64, u128::from(ab)).unwrap();
             let bt = a.bv_const(64, u128::from(bb)).unwrap();
-            let r = div(a, FloatFormat::F64, at, bt).unwrap();
+            let r = div(a, FloatFormat::F64, at, bt, RoundingMode::NearestEven).unwrap();
             let got = match eval(a, r, &Assignment::new()) {
                 Ok(Value::Bv { value, .. }) => value,
                 other => panic!("expected Bv, got {other:?}"),
@@ -1978,7 +2042,7 @@ mod tests {
         let check = |a: &mut TermArena, ab: u32, bb: u32| {
             let at = a.bv_const(32, u128::from(ab)).unwrap();
             let bt = a.bv_const(32, u128::from(bb)).unwrap();
-            let r = add(a, FloatFormat::F32, at, bt).unwrap();
+            let r = add(a, FloatFormat::F32, at, bt, RoundingMode::NearestEven).unwrap();
             let got = match eval(a, r, &Assignment::new()) {
                 Ok(Value::Bv { value, .. }) => value,
                 other => panic!("expected Bv, got {other:?}"),
@@ -2019,7 +2083,7 @@ mod tests {
         let check = |a: &mut TermArena, ab: u64, bb: u64| {
             let at = a.bv_const(64, u128::from(ab)).unwrap();
             let bt = a.bv_const(64, u128::from(bb)).unwrap();
-            let r = add(a, FloatFormat::F64, at, bt).unwrap();
+            let r = add(a, FloatFormat::F64, at, bt, RoundingMode::NearestEven).unwrap();
             let got = match eval(a, r, &Assignment::new()) {
                 Ok(Value::Bv { value, .. }) => value,
                 other => panic!("expected Bv, got {other:?}"),
@@ -2063,7 +2127,7 @@ mod tests {
         let check = |a: &mut TermArena, ab: u64, bb: u64| {
             let at = a.bv_const(64, u128::from(ab)).unwrap();
             let bt = a.bv_const(64, u128::from(bb)).unwrap();
-            let r = mul(a, FloatFormat::F64, at, bt).unwrap();
+            let r = mul(a, FloatFormat::F64, at, bt, RoundingMode::NearestEven).unwrap();
             let got = match eval(a, r, &Assignment::new()) {
                 Ok(Value::Bv { value, .. }) => value,
                 other => panic!("expected Bv, got {other:?}"),

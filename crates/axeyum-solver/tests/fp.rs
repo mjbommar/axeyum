@@ -499,7 +499,7 @@ fn round_to_format_matches_native_f32() {
     // Validated over specials, a wide structured battery, and a deterministic
     // pseudo-random sweep of f64 bit patterns (incl. subnormals, ties, overflow).
     let check = |v: f64| {
-        let got = fp::round_to_format(8, 24, v);
+        let got = fp::round_to_format(8, 24, v, fp::RoundingMode::NearestEven);
         let want = u128::from((v as f32).to_bits());
         assert_eq!(
             got, want,

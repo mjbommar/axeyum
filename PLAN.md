@@ -90,7 +90,13 @@ Last updated: 2026-06-14
   digit-by-digit circuit (checked vs `u128::isqrt`). Validated against native
   `f32` AND `f64` incl. subnormals. **Deferred (next FP layer):** `rem`,
   non-default rounding modes, FP→real beyond constants. (`add`/`mul`/`div`/`sqrt`
-  share `unpack_operand` + the validated `pack_value` core.) Conversion folds are done both directions:
+  share `unpack_operand` + the validated `pack_value` core.)
+  **Rounding modes — exposed on all ops** (2026-06-14): `add`/`mul`/`div`/`sqrt`
+  and `pack_value`/`round_variable`/`round_to_format` all take a `RoundingMode`
+  (nearest-even/away, toward-zero/+∞/−∞), incl. the directed-underflow case
+  (tiny value → smallest subnormal under toward-±∞). `mul` validated end-to-end
+  across all five modes for F32 against the mode-aware `round_to_format`. **Next
+  FP:** `fp.rem`, symbolic FP↔real. Conversion folds are done both directions:
   int→FP (`ubv_to_fp`/`sbv_to_fp`), FP→int (`to_ubv`/`to_sbv`, per rounding mode,
   folded only when finite + in range else `None`), and FP→Real (`to_real`, exact
   when it fits the i128 rational). A first-class `Sort::Float` remains optional.
