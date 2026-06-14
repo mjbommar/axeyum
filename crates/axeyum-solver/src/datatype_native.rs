@@ -3,8 +3,8 @@
 //!
 //! After read-over-construct simplification ([`simplify_datatypes`]), a query
 //! may still mention **free datatype variables** under `is-c`/`select`. This
-//! module decides such queries for the *non-recursive, scalar-field* fragment by
-//! eagerly expanding each datatype variable `o : D` into
+//! module decides such queries by eagerly expanding each datatype variable
+//! `o : D` into
 //!
 //! - a **tag** bit-vector `tag_o` (which constructor `o` uses), constrained to
 //!   the constructor range, and
@@ -29,11 +29,20 @@
 //! the original assertions** with the ground evaluator before it is returned —
 //! a projection bug surfaces as a replay error, never a wrong `sat`.
 //!
-//! Outside this fragment (recursive datatypes, non-scalar fields, `is`/`select`
-//! or `==` over a non-variable datatype term such as a surviving constructor)
-//! the function returns [`SolverError::Unsupported`]; a fuller native theory
-//! (acyclicity + congruence, ADR-0022 step B's completeness extension) is future
-//! work.
+//! Recursive datatypes are handled **as long as their datatype-typed fields are
+//! never traversed** (no `select` into a datatype field) or compared (`==`):
+//! such a field never affects satisfiability, so it gets no expansion variable
+//! and is projected to its [`well_founded_default`]. This keeps the whole
+//! reduction equisatisfiable (sound `sat` *and* `unsat`, no depth bound) — e.g.
+//! `is-cons(l)`, `select head(l) == 5`, and the sound `unsat` of
+//! `is-cons(l) ∧ is-nil(l)` all work on `IntList = nil | cons(head, tail)`.
+//!
+//! Outside this fragment — `select` *into* a datatype field (which traverses the
+//! recursive structure and needs depth-bounded unfolding, the next unit), `==`
+//! over a datatype that has datatype fields, array/UF fields, or `is`/`select`/`==`
+//! over a non-variable datatype term — the function returns
+//! [`SolverError::Unsupported`]; the bounded unfolding and a fuller native theory
+//! (acyclicity + congruence) are future work.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
@@ -97,7 +106,12 @@ pub fn check_with_datatype_native(
     }
     for site in &scan.selects {
         let vars = &layout[&site.symbol];
-        let field = vars.fields[site.ctor_index][site.field_index];
+        // The scan rejects selects of datatype-typed fields, so this is `Some`.
+        let Some(field) = vars.fields[site.ctor_index][site.field_index] else {
+            return Err(SolverError::Backend(
+                "scalar-field select site mapped to a datatype field".to_owned(),
+            ));
+        };
         replacements.insert(site.term, arena.var(field));
     }
     for site in &scan.eqs {
@@ -127,8 +141,10 @@ pub fn check_with_datatype_native(
 struct SymVars {
     tag: SymbolId,
     tag_width: u32,
-    /// `fields[constructor_index][field_index]` — the fresh field variable.
-    fields: Vec<Vec<SymbolId>>,
+    /// `fields[constructor_index][field_index]` — the fresh field variable, or
+    /// `None` for a datatype-typed field (not expanded in this slice; never
+    /// traversed, so it is projected to a well-founded default).
+    fields: Vec<Vec<Option<SymbolId>>>,
 }
 
 /// An `is-c(o)` rewrite site.
@@ -203,6 +219,18 @@ fn scan_fragment(arena: &TermArena, roots: &[TermId]) -> Result<Scan, SolverErro
             Op::DtSelect { constructor, index } => {
                 let sym = expect_dt_symbol(arena, args[0])?;
                 let dt = arena.constructor_datatype(constructor);
+                // Selecting a *datatype-typed* field traverses into the recursive
+                // structure, which needs depth-bounded unfolding (the next unit);
+                // selecting a scalar field is in this fragment.
+                if matches!(
+                    arena.constructor_fields(constructor)[index as usize].1,
+                    Sort::Datatype(_)
+                ) {
+                    return Err(unsupported(
+                        "select of a datatype-typed field traverses recursive structure; \
+                         needs depth-bounded unfolding",
+                    ));
+                }
                 register_datatype(arena, dt, &mut layouts)?;
                 dt_symbols.insert(sym, dt);
                 selects.push(SelectSite {
@@ -219,6 +247,16 @@ fn scan_fragment(arena: &TermArena, roots: &[TermId]) -> Result<Scan, SolverErro
                 let Sort::Datatype(dt) = arena.sort_of(args[0]) else {
                     unreachable!("matched datatype sort");
                 };
+                // Equality over a datatype with datatype-typed fields would have
+                // to compare those (untraversed, defaulted) fields; that is only
+                // exact once they are expanded (the next unit). Restrict equality
+                // to fully-scalar datatypes.
+                if dt_has_datatype_field(arena, dt) {
+                    return Err(unsupported(
+                        "equality over a datatype with datatype-typed fields needs the \
+                         recursive field expansion (next unit)",
+                    ));
+                }
                 let left = expect_dt_symbol(arena, args[0])?;
                 let right = expect_dt_symbol(arena, args[1])?;
                 register_datatype(arena, dt, &mut layouts)?;
@@ -227,25 +265,7 @@ fn scan_fragment(arena: &TermArena, roots: &[TermId]) -> Result<Scan, SolverErro
                 eqs.push(EqSite { term, left, right });
             }
             _ => {
-                // A datatype-sorted operand of any other op (e.g. `ite` of a
-                // datatype) cannot be expanded by this fragment.
-                for &arg in &args {
-                    if matches!(arena.sort_of(arg), Sort::Datatype(_))
-                        && !matches!(
-                            arena.node(arg),
-                            TermNode::App {
-                                op: Op::DtConstruct { .. },
-                                ..
-                            }
-                        )
-                        && !matches!(arena.node(arg), TermNode::Symbol(_))
-                    {
-                        return Err(unsupported(
-                            "a datatype-sorted term other than a free variable or constructor \
-                             reaches a non-datatype operator",
-                        ));
-                    }
-                }
+                reject_stray_datatype_operands(arena, &args)?;
                 stack.extend(args.iter().copied());
             }
         }
@@ -260,6 +280,30 @@ fn scan_fragment(arena: &TermArena, roots: &[TermId]) -> Result<Scan, SolverErro
     })
 }
 
+/// Rejects a datatype-sorted operand of a non-datatype op (e.g. `ite` of a
+/// datatype) that is neither a free variable nor a constructor — such terms
+/// cannot be expanded by this fragment.
+fn reject_stray_datatype_operands(arena: &TermArena, args: &[TermId]) -> Result<(), SolverError> {
+    for &arg in args {
+        if matches!(arena.sort_of(arg), Sort::Datatype(_))
+            && !matches!(
+                arena.node(arg),
+                TermNode::App {
+                    op: Op::DtConstruct { .. },
+                    ..
+                }
+            )
+            && !matches!(arena.node(arg), TermNode::Symbol(_))
+        {
+            return Err(unsupported(
+                "a datatype-sorted term other than a free variable or constructor \
+                 reaches a non-datatype operator",
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// Requires `term` to be a datatype-sorted variable; returns its symbol.
 fn expect_dt_symbol(arena: &TermArena, term: TermId) -> Result<SymbolId, SolverError> {
     match arena.node(term) {
@@ -270,8 +314,13 @@ fn expect_dt_symbol(arena: &TermArena, term: TermId) -> Result<SymbolId, SolverE
     }
 }
 
-/// Records `dt`'s constructor/field layout, validating it is in the
-/// non-recursive scalar-field fragment.
+/// Records `dt`'s constructor/field layout.
+///
+/// Scalar (`Bool`/`BitVec`) fields are expanded to field variables; datatype and
+/// array fields are recorded too (kept in `field_sorts`) but get no expansion
+/// variable — they are sound only as long as they are never traversed by a
+/// `select` or compared by `==`, which the scan enforces, so they are projected
+/// to a well-founded default. Other non-scalar fields (e.g. arrays) are rejected.
 fn register_datatype(
     arena: &TermArena,
     dt: DatatypeId,
@@ -280,16 +329,23 @@ fn register_datatype(
     if layouts.contains_key(&dt) {
         return Ok(());
     }
+    // Insert a placeholder first so a recursive field (`Sort::Datatype(dt)`)
+    // does not recurse forever through `register_datatype`.
+    layouts.insert(dt, Vec::new());
     let mut ctors = Vec::new();
     for &ctor in arena.datatype_constructors(dt) {
         let mut field_sorts = Vec::new();
         for (_, sort) in arena.constructor_fields(ctor) {
             match sort {
                 Sort::Bool | Sort::BitVec(_) => field_sorts.push(*sort),
+                Sort::Datatype(inner) => {
+                    register_datatype(arena, *inner, layouts)?;
+                    field_sorts.push(*sort);
+                }
                 _ => {
                     return Err(unsupported(
-                        "native datatype solving supports only scalar (Bool/BitVec) fields; \
-                         recursive or nested-datatype fields need bounded unfolding (ADR-0022)",
+                        "native datatype solving supports scalar and datatype fields; \
+                         array/UF datatype fields are not yet supported",
                     ));
                 }
             }
@@ -298,6 +354,16 @@ fn register_datatype(
     }
     layouts.insert(dt, ctors);
     Ok(())
+}
+
+/// Whether any constructor of `dt` has a datatype-typed field.
+fn dt_has_datatype_field(arena: &TermArena, dt: DatatypeId) -> bool {
+    arena.datatype_constructors(dt).iter().any(|&ctor| {
+        arena
+            .constructor_fields(ctor)
+            .iter()
+            .any(|(_, sort)| matches!(sort, Sort::Datatype(_)))
+    })
 }
 
 fn ctor_position(arena: &TermArena, dt: DatatypeId, ctor: ConstructorId) -> usize {
@@ -359,10 +425,17 @@ fn build_sym_vars(
         };
         let mut row = Vec::with_capacity(field_sorts.len());
         for (i, &fsort) in field_sorts.iter().enumerate() {
+            // Datatype-typed fields are never traversed (the scan rejects such
+            // `select`/`==`), so they get no variable and no guard — they are
+            // projected to a well-founded default. Only scalar fields expand.
+            if matches!(fsort, Sort::Datatype(_)) {
+                row.push(None);
+                continue;
+            }
             let field = arena
                 .declare(&format!("!dt_fld_{oidx}_{j}_{i}"), fsort)
                 .map_err(|e| SolverError::Backend(e.to_string()))?;
-            row.push(field);
+            row.push(Some(field));
 
             // Guard: non-active fields take their well-founded default, matching
             // the total `select` convention so projection replays exactly.
@@ -406,9 +479,14 @@ fn build_dt_eq(
         .eq(lt, rt)
         .map_err(|e| SolverError::Backend(e.to_string()))?;
     for (lrow, rrow) in left.fields.iter().zip(&right.fields) {
-        for (&lf, &rf) in lrow.iter().zip(rrow) {
-            let lfv = arena.var(lf);
-            let rfv = arena.var(rf);
+        for (lf, rf) in lrow.iter().zip(rrow) {
+            // Equality is admitted only for fully-scalar datatypes, so every
+            // field has a variable; a `None` (datatype field) cannot occur here.
+            let (Some(lf), Some(rf)) = (lf, rf) else {
+                continue;
+            };
+            let lfv = arena.var(*lf);
+            let rfv = arena.var(*rf);
             let fe = arena
                 .eq(lfv, rfv)
                 .map_err(|e| SolverError::Backend(e.to_string()))?;
@@ -448,11 +526,21 @@ fn project_and_replay(
         }
         let (ctor, field_sorts) = &ctors[tag];
         let mut field_vals = Vec::with_capacity(field_sorts.len());
-        for i in 0..field_sorts.len() {
-            let field = vars.fields[tag][i];
-            let value = assignment.get(field).ok_or_else(|| {
-                SolverError::Backend("datatype expansion model lacks a field value".to_owned())
-            })?;
+        for (i, &fsort) in field_sorts.iter().enumerate() {
+            let value = match vars.fields[tag][i] {
+                // Scalar field: read its expansion variable.
+                Some(field) => assignment.get(field).ok_or_else(|| {
+                    SolverError::Backend(
+                        "datatype expansion model lacks a field value".to_owned(),
+                    )
+                })?,
+                // Datatype field (never traversed): the well-founded default.
+                None => well_founded_default(arena, fsort).ok_or_else(|| {
+                    SolverError::Backend(
+                        "uninhabited datatype field has no default for projection".to_owned(),
+                    )
+                })?,
+            };
             field_vals.push(value);
         }
         assignment.set(

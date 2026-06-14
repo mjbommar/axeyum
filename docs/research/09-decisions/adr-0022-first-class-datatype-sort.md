@@ -222,8 +222,22 @@ default on both sides. Tests: conflicting testers under equality (unsat),
 equality forcing `7 == 8` (unsat), and matching values (sat, both variables
 projected to the same value).
 
-Still open for step B's completeness: **recursive / nested-datatype fields**
-(bounded unfolding, then the acyclicity + congruence native theory). Those remain
+**Recursive datatypes, untraversed-field slice (2026-06-14):** recursive and
+nested datatypes are now solved *as long as their datatype-typed fields are never
+traversed* (`select` into a datatype field) or compared (`==`). Such a field
+never affects satisfiability, so it gets no expansion variable and is projected
+to its `well_founded_default`; the reduction stays **equisatisfiable** (sound
+`sat` *and* `unsat`, no depth bound, no `unknown` hedge). E.g. on
+`IntList = nil | cons(head, tail)`: `is-cons(l)` (sat, tail defaults to `nil`),
+`is-cons(l) ∧ select head(l) == 5` (sat), and `is-cons(l) ∧ is-nil(l)` (sound
+`unsat`) all decide. Tests in `tests/datatype_native.rs` and
+`tests/datatype_elim.rs`.
+
+Still open for step B's completeness: **`select` that traverses a datatype field**
+(depth-bounded unfolding — which, unlike everything above, must return `unknown`
+not `unsat` when the bound binds; make it sound-by-construction: emit only
+Sat-or-Unknown, replay-guard the witness), **`==` over datatypes with datatype
+fields**, and then the acyclicity + congruence native theory. Those remain
 `Unsupported` and are the next datatype unit.
 
 ## Consequences

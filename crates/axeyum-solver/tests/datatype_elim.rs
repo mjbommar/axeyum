@@ -65,9 +65,10 @@ fn free_datatype_variable_is_solved_natively() {
 }
 
 #[test]
-fn recursive_free_datatype_variable_is_unsupported() {
-    // A recursive datatype field is outside the native scalar-field fragment ->
-    // Unsupported (needs bounded unfolding / the full native theory).
+fn recursive_datatype_tester_is_solved() {
+    // A recursive datatype tester is now solved: the untraversed recursive field
+    // is defaulted, so is-cons(l) is sat (ADR-0022 step B, recursive-untraversed
+    // slice).
     let mut arena = TermArena::new();
     let list = arena.declare_datatype("IntList");
     let _nil = arena.add_constructor(list, "nil", &[]);
@@ -84,6 +85,31 @@ fn recursive_free_datatype_variable_is_unsupported() {
     let is_cons = arena.dt_test(cons, l).unwrap();
     assert!(matches!(
         check_with_datatype_elimination(&mut arena, &[is_cons], &SolverConfig::default()),
+        Ok(CheckResult::Sat(_))
+    ));
+}
+
+#[test]
+fn traversing_a_recursive_field_is_unsupported() {
+    // Selecting the recursive `tail` field traverses the structure -> still
+    // Unsupported (needs depth-bounded unfolding).
+    let mut arena = TermArena::new();
+    let list = arena.declare_datatype("IntList");
+    let _nil = arena.add_constructor(list, "nil", &[]);
+    let cons = arena.add_constructor(
+        list,
+        "cons",
+        &[
+            ("head".into(), Sort::BitVec(8)),
+            ("tail".into(), Sort::Datatype(list)),
+        ],
+    );
+    let ls = arena.declare("l", Sort::Datatype(list)).unwrap();
+    let l = arena.var(ls);
+    let tail = arena.dt_select(cons, 1, l).unwrap();
+    let is_cons_tail = arena.dt_test(cons, tail).unwrap();
+    assert!(matches!(
+        check_with_datatype_elimination(&mut arena, &[is_cons_tail], &SolverConfig::default()),
         Err(axeyum_solver::SolverError::Unsupported(_))
     ));
 }

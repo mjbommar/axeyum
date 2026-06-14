@@ -215,6 +215,122 @@ fn datatype_equality_is_sat_with_matching_values() {
     }
 }
 
+/// Builds `IntList = nil | cons(head: BitVec(8), tail: IntList)` and returns
+/// (arena, list, nil, cons).
+fn list_arena() -> (
+    TermArena,
+    axeyum_ir::DatatypeId,
+    axeyum_ir::ConstructorId,
+    axeyum_ir::ConstructorId,
+) {
+    let mut arena = TermArena::new();
+    let list = arena.declare_datatype("IntList");
+    let nil = arena.add_constructor(list, "nil", &[]);
+    let cons = arena.add_constructor(
+        list,
+        "cons",
+        &[
+            ("head".into(), Sort::BitVec(8)),
+            ("tail".into(), Sort::Datatype(list)),
+        ],
+    );
+    (arena, list, nil, cons)
+}
+
+#[test]
+fn recursive_datatype_tester_is_sat_with_defaulted_tail() {
+    // is-cons(l) over a recursive list: sat. The (untraversed) tail field is
+    // projected to its well-founded default `nil`, so l = cons(0, nil).
+    let (mut arena, list, nil, cons) = list_arena();
+    let l = arena.declare("l", Sort::Datatype(list)).unwrap();
+    let lv = arena.var(l);
+    let is_cons = arena.dt_test(cons, lv).unwrap();
+
+    let result =
+        check_with_datatype_native(&mut arena, &[is_cons], &SolverConfig::default()).unwrap();
+    let CheckResult::Sat(model) = result else {
+        panic!("expected sat, got {result:?}");
+    };
+    match model.get(l) {
+        Some(Value::Datatype {
+            constructor, fields, ..
+        }) => {
+            assert_eq!(constructor, cons, "l must be a cons cell");
+            assert_eq!(fields.len(), 2, "cons has head + tail");
+            // The tail defaults to nil (the well-founded base).
+            match &fields[1] {
+                Value::Datatype { constructor, .. } => {
+                    assert_eq!(*constructor, nil, "defaulted tail is nil");
+                }
+                other => panic!("expected datatype tail, got {other:?}"),
+            }
+        }
+        other => panic!("expected a cons value, got {other:?}"),
+    }
+}
+
+#[test]
+fn recursive_datatype_scalar_field_constraint_is_sat() {
+    // is-cons(l) AND select head(l) == 5: the *scalar* field is constrained;
+    // sat with l = cons(5, nil). (The datatype tail is still untraversed.)
+    let (mut arena, list, _nil, cons) = list_arena();
+    let l = arena.declare("l", Sort::Datatype(list)).unwrap();
+    let lv = arena.var(l);
+    let is_cons = arena.dt_test(cons, lv).unwrap();
+    let head = arena.dt_select(cons, 0, lv).unwrap();
+    let five = arena.bv_const(8, 5).unwrap();
+    let eq = arena.eq(head, five).unwrap();
+
+    let result =
+        check_with_datatype_native(&mut arena, &[is_cons, eq], &SolverConfig::default()).unwrap();
+    let CheckResult::Sat(model) = result else {
+        panic!("expected sat, got {result:?}");
+    };
+    match model.get(l) {
+        Some(Value::Datatype { fields, .. }) => {
+            assert_eq!(fields[0], Value::Bv { width: 8, value: 5 }, "head is 5");
+        }
+        other => panic!("expected a cons value, got {other:?}"),
+    }
+}
+
+#[test]
+fn recursive_datatype_contradictory_testers_are_unsat() {
+    // is-cons(l) AND is-nil(l): sound unsat — the tag cannot be both, and the
+    // (untraversed) tail does not affect this, so unsat is sound (no unfolding).
+    let (mut arena, list, nil, cons) = list_arena();
+    let l = arena.declare("l", Sort::Datatype(list)).unwrap();
+    let lv = arena.var(l);
+    let is_cons = arena.dt_test(cons, lv).unwrap();
+    let is_nil = arena.dt_test(nil, lv).unwrap();
+
+    let result =
+        check_with_datatype_native(&mut arena, &[is_cons, is_nil], &SolverConfig::default())
+            .unwrap();
+    assert!(
+        matches!(result, CheckResult::Unsat),
+        "contradictory testers on a recursive list must be unsat, got {result:?}"
+    );
+}
+
+#[test]
+fn traversing_a_datatype_field_is_unsupported() {
+    // select tail(l) traverses into the recursive structure -> Unsupported
+    // (needs depth-bounded unfolding, the next unit).
+    let (mut arena, list, _nil, cons) = list_arena();
+    let l = arena.declare("l", Sort::Datatype(list)).unwrap();
+    let lv = arena.var(l);
+    let tail = arena.dt_select(cons, 1, lv).unwrap();
+    let is_cons_tail = arena.dt_test(cons, tail).unwrap();
+
+    let result =
+        check_with_datatype_native(&mut arena, &[is_cons_tail], &SolverConfig::default());
+    assert!(
+        matches!(result, Err(axeyum_solver::SolverError::Unsupported(_))),
+        "traversing a datatype field must be Unsupported, got {result:?}"
+    );
+}
+
 #[test]
 fn dispatcher_routes_datatype_queries() {
     // The high-level `solve` dispatcher should route a free-datatype query
