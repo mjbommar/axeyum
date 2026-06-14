@@ -38,6 +38,22 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-14
 
+- **Wide bit-vector arithmetic — foundation (2026-06-14, step 1 of lifting the
+  128-bit ceiling).** `axeyum-ir`'s `wide::WideUint` is a limb-based (little-endian
+  `u64`) arbitrary-width unsigned integer implementing the bit-vector operator
+  semantics (wrapping mod `2^width`): `add`/`sub`/`mul`/`neg`/`not`/`and`/`or`/
+  `xor`/`shl`/`lshr`/`ult`/`ule`, masked to width. This is the value
+  representation `Value::Bv`/`TermNode::BvConst` (today `u128`, hence
+  `MAX_BV_WIDTH = 128`) will carry for wider widths — the prerequisite for
+  symbolic F64 `fp.fma` (a 164-bit intermediate) and F128/large-BV arithmetic.
+  **Validated**: every op matches the native `u128` reference over a random
+  battery at all widths `≤ 128`, and satisfies algebraic identities (`a+0`, `a·1`,
+  commutativity, `a−a`, `a^a`, double-not, shl/lshr) at 129/164/200/256 bits.
+  Currently `#[allow(dead_code)]` — the next step threads a `Value::WideBv` /
+  `TermNode::WideBvConst` variant through `eval`/`bits`/the arena (an all-or-nothing
+  change: the evaluator's bv ops must all handle wide operands, so it lands as one
+  green step on top of this validated core), then raises `MAX_BV_WIDTH`.
+
 - **Datatypes via SMT-LIB — `declare-datatypes` front-end (2026-06-14).** The
   first-class datatype theory (ADR-0022) was previously only reachable through the
   Rust API; it now parses from SMT-LIB text. `declare-datatype`/`declare-datatypes`

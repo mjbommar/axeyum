@@ -40,6 +40,7 @@ mod sort;
 mod stats;
 mod term;
 mod value;
+mod wide;
 
 pub use arena::TermArena;
 pub use bits::{
