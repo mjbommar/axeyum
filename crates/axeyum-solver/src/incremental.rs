@@ -17,7 +17,7 @@
 
 use axeyum_bv::{BitLowerError, IncrementalLowering, first_unsupported_op};
 use axeyum_cnf::{CnfVar, IncrementalCnf, SatError, SatResult};
-use axeyum_ir::{Assignment, IrError, Sort, TermArena, TermId, Value, eval};
+use axeyum_ir::{Assignment, IrError, Sort, TermArena, TermId, Value, eval, well_founded_default};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::model::Model;
@@ -302,27 +302,16 @@ impl IncrementalBvSolver {
 fn complete_model(arena: &TermArena, assignment: &Assignment) -> Model {
     let mut model = Model::new();
     for (symbol, _name, sort) in arena.symbols() {
+        // Unconstrained symbols get their sort's well-founded default; an
+        // uninhabited datatype gets no entry (see the sat-bv backend's twin).
         let value = assignment
             .get(symbol)
-            .unwrap_or_else(|| default_value_for_sort(sort));
-        model.set(symbol, value);
+            .or_else(|| well_founded_default(arena, sort));
+        if let Some(value) = value {
+            model.set(symbol, value);
+        }
     }
     model
-}
-
-fn default_value_for_sort(sort: Sort) -> Value {
-    match sort {
-        Sort::Bool => Value::Bool(false),
-        Sort::BitVec(width) => Value::Bv { width, value: 0 },
-        Sort::Array { index, element } => {
-            Value::Array(axeyum_ir::ArrayValue::constant(index, element, 0))
-        }
-        Sort::Int => Value::Int(0),
-        Sort::Real => Value::Real(axeyum_ir::Rational::zero()),
-        Sort::Datatype(_) => {
-            unreachable!("datatype symbols are not solved by the bit-vector backend (ADR-0022)")
-        }
-    }
 }
 
 fn map_lower_error(error: BitLowerError) -> SolverError {

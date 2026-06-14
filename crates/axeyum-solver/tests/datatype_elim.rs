@@ -48,9 +48,9 @@ fn conflicting_field_constraints_are_unsat() {
 }
 
 #[test]
-fn free_datatype_variable_is_unsupported() {
-    // A bare datatype variable can't be eliminated -> Unsupported (needs a
-    // native datatype theory).
+fn free_datatype_variable_is_solved_natively() {
+    // A free datatype variable under `is`/`select` is now decided by the native
+    // tag/field expansion (ADR-0022 step B): is-some(o) is sat.
     let mut arena = TermArena::new();
     let opt = arena.declare_datatype("Option");
     let _none = arena.add_constructor(opt, "none", &[]);
@@ -60,6 +60,30 @@ fn free_datatype_variable_is_unsupported() {
     let is_some = arena.dt_test(some, o).unwrap();
     assert!(matches!(
         check_with_datatype_elimination(&mut arena, &[is_some], &SolverConfig::default()),
+        Ok(CheckResult::Sat(_))
+    ));
+}
+
+#[test]
+fn recursive_free_datatype_variable_is_unsupported() {
+    // A recursive datatype field is outside the native scalar-field fragment ->
+    // Unsupported (needs bounded unfolding / the full native theory).
+    let mut arena = TermArena::new();
+    let list = arena.declare_datatype("IntList");
+    let _nil = arena.add_constructor(list, "nil", &[]);
+    let cons = arena.add_constructor(
+        list,
+        "cons",
+        &[
+            ("head".into(), Sort::BitVec(8)),
+            ("tail".into(), Sort::Datatype(list)),
+        ],
+    );
+    let ls = arena.declare("l", Sort::Datatype(list)).unwrap();
+    let l = arena.var(ls);
+    let is_cons = arena.dt_test(cons, l).unwrap();
+    assert!(matches!(
+        check_with_datatype_elimination(&mut arena, &[is_cons], &SolverConfig::default()),
         Err(axeyum_solver::SolverError::Unsupported(_))
     ));
 }

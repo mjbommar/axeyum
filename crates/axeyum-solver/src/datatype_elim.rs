@@ -36,12 +36,11 @@ pub fn check_with_datatype_elimination(
 ) -> Result<CheckResult, SolverError> {
     let simplified =
         simplify_datatypes(arena, assertions).map_err(|e| SolverError::Backend(e.to_string()))?;
-    if let Some(term) = first_datatype_term(arena, &simplified) {
-        return Err(SolverError::Unsupported(format!(
-            "datatype term #{} survives read-over-construct elimination; a native \
-             datatype theory is not yet implemented (ADR-0022)",
-            term.index()
-        )));
+    if first_datatype_term(arena, &simplified).is_some() {
+        // Free datatype variables remain: hand the residual to the native
+        // tag/field expansion (ADR-0022 step B), which decides the
+        // non-recursive scalar-field fragment and projects datatype models.
+        return crate::datatype_native::check_with_datatype_native(arena, &simplified, config);
     }
     solve(arena, &simplified, config)
 }

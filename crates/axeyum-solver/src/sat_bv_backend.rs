@@ -22,7 +22,9 @@ use axeyum_cnf::{
     CnfEncoding, CnfError, CnfFormula, ProofSolveOutcome, SatError, SatResult, check_drat,
     solve_with_drat_proof, solve_with_rustsat_batsat_timeout, tseitin_encode,
 };
-use axeyum_ir::{Assignment, IrError, Sort, TermArena, TermId, TermStats, Value, eval};
+use axeyum_ir::{
+    Assignment, IrError, Sort, TermArena, TermId, TermStats, Value, eval, well_founded_default,
+};
 use axeyum_query::{Query, QueryPlan};
 
 use crate::backend::{
@@ -206,27 +208,18 @@ impl SolverBackend for SatBvBackend {
 fn complete_model(arena: &TermArena, assignment: &Assignment) -> Model {
     let mut model = Model::new();
     for (symbol, _name, sort) in arena.symbols() {
+        // A symbol unconstrained by the query gets its sort's well-founded
+        // default (false/0/empty-array/base-constructor). Datatype symbols left
+        // over from an eliminated datatype query are handled here too; an
+        // uninhabited datatype simply gets no model entry.
         let value = assignment
             .get(symbol)
-            .unwrap_or_else(|| default_value_for_sort(sort));
-        model.set(symbol, value);
+            .or_else(|| well_founded_default(arena, sort));
+        if let Some(value) = value {
+            model.set(symbol, value);
+        }
     }
     model
-}
-
-fn default_value_for_sort(sort: Sort) -> Value {
-    match sort {
-        Sort::Bool => Value::Bool(false),
-        Sort::BitVec(width) => Value::Bv { width, value: 0 },
-        Sort::Array { index, element } => {
-            Value::Array(axeyum_ir::ArrayValue::constant(index, element, 0))
-        }
-        Sort::Int => Value::Int(0),
-        Sort::Real => Value::Real(axeyum_ir::Rational::zero()),
-        Sort::Datatype(_) => {
-            unreachable!("datatype symbols are not solved by the bit-vector backend (ADR-0022)")
-        }
-    }
 }
 
 fn handle_sat_result(

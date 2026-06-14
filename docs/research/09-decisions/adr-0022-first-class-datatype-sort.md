@@ -193,6 +193,31 @@ What remains for step B is now purely the **tag + per-constructor field-variable
 expansion and the model projection back through `well_founded_default`** — the
 totality gate is closed.
 
+**Implemented (2026-06-14): native free-variable solving, first slice.**
+`axeyum_solver::check_with_datatype_native` decides queries with free datatype
+variables over the **non-recursive, scalar-field** fragment by eager tag/field
+expansion: each variable `o : D` becomes a tag bit-vector (domain-constrained to
+the constructor range) plus a field variable per constructor/field; `is-c(o)`
+rewrites to `tag_o == c` and `select_{c,i}(o)` to the field variable, with a guard
+`tag_o == c \/ field == default` pinning every non-active field to its
+`well_founded_default` so `select` agrees with the evaluator. The expansion is
+equisatisfiable (so `unsat`/`unknown` transfer), and a `sat` model is projected
+back to a `Value::Datatype` and **replayed against the (simplified) assertions**
+with the ground evaluator before being returned, so a projection bug is a replay
+error, never a wrong `sat`. The dispatcher (`check_with_datatype_elimination`,
+reached from `solve`/`check_auto`) now routes the read-over-construct residual
+here instead of returning `Unsupported`. The bit-vector backends' `complete_model`
+was generalized to fill any leftover symbol via `well_founded_default` (so a
+datatype variable that survives into the arena but not the reduced query no longer
+panics). Tests: `tests/datatype_native.rs` (enum sat with projected constructor,
+`some(7)` via select, contradictory testers unsat, wrong-ctor select == default
+sat / != default unsat, dispatcher routing) and an updated `tests/datatype_elim.rs`
+(free variable now sat; recursive variable still `Unsupported`).
+
+Still open for step B's completeness: **recursive / nested-datatype fields**
+(bounded unfolding, then the acyclicity + congruence native theory) and
+**datatype equality**. Those remain `Unsupported` and are the next datatype unit.
+
 ## Consequences
 
 - **Easier:** lists/trees/option/either become expressible — a large class of
