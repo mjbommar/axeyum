@@ -943,6 +943,14 @@ impl<'a> LoweringBuilder<'a> {
         // running sum stays `width` bits and equals the wrapping product. The
         // AIG folds the gated-`false` and shifted-in `false` bits, so low
         // multiplier bits and leading partial bits cost no gates.
+        //
+        // A modified-Booth (radix-4) recoding was implemented and verified
+        // (exhaustive evaluator equality + DRAT miter) and then reverted: it
+        // halves the partial-product *count* but its per-digit select/negate
+        // logic is ~4x heavier than a single AND, so the net AND-node change was
+        // only +6% at width 8, -8% at width 16, -14% at width 24. The public
+        // QF_BV frontier instances are 8-bit, where Booth is a *regression*, so
+        // it is not the right size lever here (see PLAN.md Status 2026-06-13).
         let mut result = vec![AigLit::FALSE; width];
         for i in 0..width {
             let multiplier_bit = rhs[i];
@@ -2274,7 +2282,9 @@ mod tests {
 
     #[test]
     fn multiplication_matches_ground_evaluator() {
-        for width in [1u32, 2, 4, 5] {
+        // Widths span Booth radix-4 grouping cases: 1 (degenerate), even, and
+        // odd (last digit straddles the top bit).
+        for width in [1u32, 2, 3, 4, 5, 6, 7] {
             let mut arena = TermArena::new();
             let x_sym = arena.declare("x", Sort::BitVec(width)).unwrap();
             let y_sym = arena.declare("y", Sort::BitVec(width)).unwrap();

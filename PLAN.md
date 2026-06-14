@@ -2267,18 +2267,23 @@ foundation; the items above are the actual product trajectory.
       5.64× fewer clauses across 6 shared-base queries). Still open:
       activation-literal GC for long sessions, and the bigger lever — AIG-level
       arithmetic-circuit size reduction (the dominant encoding cost the polarity
-      measurement exposed). **Lever analysis (2026-06-13):** the current `bvmul`
-      is a linear chain of `width` ripple-carry adds. Carry-save / Wallace-tree
-      reduction collapses *depth* but **not gate count** (summing N partial
-      products needs ~N·W full-adders regardless of tree shape), so it does
-      *not* relieve the clause/variable budget that gates the public frontier —
-      it would only help SAT solve *time*, which is not yet the binding
-      constraint. The size lever is reducing the partial-product **count**:
-      **Booth radix-4 recoding (~2× fewer partial products)**. It is bounded but
-      soundness-delicate (signed two's-complement recoding) and must be
-      exhaustively verified by the existing `bvmul` evaluator test *and* the
-      `certify_bitblast_by_miter` DRAT certificate before landing. That is the
-      deliberate next arithmetic increment — not carry-save.
+      measurement exposed). **Two multiplier levers measured and ruled out
+      (2026-06-13):** (a) carry-save / Wallace-tree reduction collapses circuit
+      *depth* but **not gate count** (summing N partial products needs ~N·W
+      full-adders regardless of tree shape), so it cannot relieve the
+      clause/variable budget that gates the public frontier — it would only help
+      SAT solve *time*, not yet the binding constraint. (b) **Booth radix-4** was
+      actually implemented and fully verified (exhaustive `bvmul` evaluator
+      equality at widths 1–7 + DRAT `certify_bitblast_by_miter`), then
+      **reverted**: halving the partial-product *count* did not halve gates,
+      because each Booth digit's select/negate logic is ~4× heavier than a single
+      AND. Net AND-node change on `x*y+z==c` was **+6% at width 8, −8% at 16,
+      −14% at 24** — a *regression* at the 8-bit width the public frontier
+      instances actually use. So the multiplier gadget is not the size lever for
+      the current corpus. Remaining candidates to investigate: AIG-level
+      rewriting/CSE across the adder tree (real node sharing, not restructuring),
+      or moving the binding constraint off encoding-size entirely via a stronger
+      SAT core / CDCL(T) (so the caps can be raised).
 - [ ] **Phase 5 supported-slice expansion (parallel track):** use the version 11
       smallest-DAG selector artifacts, the version 12 root-direct selector
       artifacts, the version 13 greedy selector diagnostic, the version 10
