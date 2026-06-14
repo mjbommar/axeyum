@@ -475,3 +475,33 @@ fn recursive_datatype_list_decides() {
 ";
     assert_eq!(run(unsat).result, CheckResult::Unsat, "cons and nil exclude");
 }
+
+/// Lexicographic vs boxed optimization differ when objectives interact. With
+/// x+y <= 10, x,y >= 0 and priorities (maximize y, maximize x):
+/// - lexicographic: y=10 first, then x maximal subject to y=10 -> x=0  => [10, 0]
+/// - boxed (independent): y=10 and x=10 independently               => [10, 10]
+#[test]
+fn lexicographic_optimization_differs_from_boxed() {
+    use axeyum_solver::{OptOutcome, optimize_smtlib, optimize_smtlib_lexicographic};
+    let text = "\
+(set-logic QF_LIA)
+(declare-const x Int)
+(declare-const y Int)
+(assert (<= (+ x y) 10))
+(assert (>= x 0))
+(assert (>= y 0))
+(maximize y)
+(maximize x)
+(check-sat)
+(get-objectives)
+";
+    let lex = optimize_smtlib_lexicographic(text, &config()).expect("lex optimizes");
+    assert_eq!(lex, vec![OptOutcome::Optimal(10), OptOutcome::Optimal(0)], "lex");
+
+    let boxed = optimize_smtlib(text, &config()).expect("box optimizes");
+    assert_eq!(
+        boxed,
+        vec![OptOutcome::Optimal(10), OptOutcome::Optimal(10)],
+        "box"
+    );
+}

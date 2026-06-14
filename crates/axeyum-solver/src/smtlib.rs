@@ -11,7 +11,7 @@
 //! The trust anchor stays exactly where it is in [`crate::solve`]: a `sat` model
 //! is replayed against the original term through the ground evaluator.
 
-use axeyum_ir::Sort;
+use axeyum_ir::{Sort, TermArena};
 use axeyum_smtlib::{ScriptCommand, parse_script};
 
 use crate::auto::{solve, unsat_core};
@@ -77,24 +77,81 @@ pub fn optimize_smtlib(input: &str, config: &SolverConfig) -> Result<Vec<OptOutc
     let objectives = std::mem::take(&mut script.objectives);
     let mut outcomes = Vec::with_capacity(objectives.len());
     for (objective, is_max) in objectives {
-        let outcome = match (script.arena.sort_of(objective), is_max) {
-            (Sort::Int, true) => maximize_lia(&mut script.arena, &script.assertions, objective)?,
-            (Sort::Int, false) => minimize_lia(&mut script.arena, &script.assertions, objective)?,
-            (Sort::BitVec(_), true) => {
-                maximize_bv(&mut script.arena, &script.assertions, objective)?
-            }
-            (Sort::BitVec(_), false) => {
-                minimize_bv(&mut script.arena, &script.assertions, objective)?
-            }
-            (other, _) => {
-                return Err(SolverError::Unsupported(format!(
-                    "optimization objective of sort {other:?} (only Int and BitVec are supported)"
-                )));
-            }
-        };
+        outcomes.push(optimize_one(
+            &mut script.arena,
+            &script.assertions,
+            objective,
+            is_max,
+        )?);
+    }
+    Ok(outcomes)
+}
+
+/// Lexicographic (priority-order) multi-objective optimization: each objective is
+/// optimized subject to the previous ones being **fixed at their optima**. The
+/// first objective is optimized over the assertions; if it has an exact optimum,
+/// the constraint `objective = optimum` is added before optimizing the next, and
+/// so on. Returns the optima in priority (declaration) order. (Z3's `lex` mode;
+/// [`optimize_smtlib`] gives the independent/`box` interpretation.)
+///
+/// # Errors
+///
+/// As [`optimize_smtlib`]; additionally [`SolverError::Backend`] if a fixing
+/// constraint cannot be built.
+pub fn optimize_smtlib_lexicographic(
+    input: &str,
+    config: &SolverConfig,
+) -> Result<Vec<OptOutcome>, SolverError> {
+    let _ = config;
+    let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    let objectives = std::mem::take(&mut script.objectives);
+    let mut assertions = script.assertions.clone();
+    let mut outcomes = Vec::with_capacity(objectives.len());
+    for (objective, is_max) in objectives {
+        let outcome = optimize_one(&mut script.arena, &assertions, objective, is_max)?;
+        // Pin this objective at its optimum for the lower-priority ones.
+        if let OptOutcome::Optimal(value) = outcome {
+            let pin = match script.arena.sort_of(objective) {
+                Sort::Int => script.arena.int_const(value),
+                Sort::BitVec(width) => {
+                    let mask = if width >= 128 { u128::MAX } else { (1u128 << width) - 1 };
+                    #[allow(clippy::cast_sign_loss)] // two's-complement reinterpret into the BV
+                    let bits = (value as u128) & mask;
+                    script
+                        .arena
+                        .bv_const(width, bits)
+                        .map_err(|e| SolverError::Backend(e.to_string()))?
+                }
+                _ => unreachable!("optimize_one rejects non-Int/BitVec objectives"),
+            };
+            let eq = script
+                .arena
+                .eq(objective, pin)
+                .map_err(|e| SolverError::Backend(e.to_string()))?;
+            assertions.push(eq);
+        }
         outcomes.push(outcome);
     }
     Ok(outcomes)
+}
+
+/// Optimizes one objective subject to `assertions`, dispatching by sort (`Int` /
+/// `BitVec`, unsigned) and direction.
+fn optimize_one(
+    arena: &mut TermArena,
+    assertions: &[axeyum_ir::TermId],
+    objective: axeyum_ir::TermId,
+    is_max: bool,
+) -> Result<OptOutcome, SolverError> {
+    match (arena.sort_of(objective), is_max) {
+        (Sort::Int, true) => maximize_lia(arena, assertions, objective),
+        (Sort::Int, false) => minimize_lia(arena, assertions, objective),
+        (Sort::BitVec(_), true) => maximize_bv(arena, assertions, objective),
+        (Sort::BitVec(_), false) => minimize_bv(arena, assertions, objective),
+        (other, _) => Err(SolverError::Unsupported(format!(
+            "optimization objective of sort {other:?} (only Int and BitVec are supported)"
+        ))),
+    }
 }
 
 /// Evaluates the `(get-value (t …))` terms of an SMT-LIB script against a `sat`

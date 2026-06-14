@@ -93,6 +93,10 @@ Last updated: 2026-06-14
   `BitVec` → `maximize_bv`/`minimize_bv`) and returning one `OptOutcome` per
   objective (boxed/independent). Tests: max/min of `x∈[0,10]` give `Optimal(10)`/
   `Optimal(0)`; unsigned BV `max x ≤u 100` gives `Optimal(100)`.
+  **Lexicographic OMT now added** — `optimize_smtlib_lexicographic` optimizes each
+  objective subject to the higher-priority ones being *pinned at their optima*
+  (Z3's `lex` mode). Test (`x+y≤10`, priorities `maximize y`, `maximize x`): lex
+  gives `[10, 0]` (y maxed, then x subject to y=10) vs boxed `[10, 10]`.
 
 - **QF_UFFP verified — uninterpreted functions over FP (2026-06-14).** The
   `Sort::Float` cascade (ADR-0026) plus the bit-blaster preflight accepting
