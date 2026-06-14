@@ -65,10 +65,14 @@ It is routed automatically from the dispatcher's real path.
   deferred — far more code and soundness surface. The abstraction lands a sound,
   useful slice now and reuses the proven LRA path, exactly as bounded LIA
   preceded the integer simplex and lazy-BV preceded heavier BV reasoning.
-- **Incremental linearization (cvc5-style).** A natural *refinement* of this
-  ADR: on a replay failure, add lemmas (`r = x·y` tangent planes, sign/monotonicity
-  axioms) and re-solve. This slice stops at one round (`unknown` on failure); the
-  refinement loop is the next step and does not change the soundness basis.
+- **Incremental linearization (cvc5-style).** Now partly implemented: a bounded
+  refinement loop adds **exact point lemmas** `(a = a0 ∧ b = b0) → r = a0·b0` for
+  the *leaf* products at a failed candidate's values and re-solves (sound — those
+  are the true products there). This decides e.g. `x·y = 6 ∧ x = 2 ∧ y = 4`
+  (unsat). It runs up to a round bound, then returns `unknown`; richer lemmas
+  (tangent planes / McCormick envelopes with variable bounds, monotonicity) and
+  full convergence are the remaining refinement, not a change to the soundness
+  basis.
 
 ## Consequences
 

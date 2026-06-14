@@ -47,9 +47,9 @@ fn constrained_product_is_sat_via_replay() {
 }
 
 #[test]
-fn product_forcing_contradiction_with_linear_is_sat_or_unsat_soundly() {
-    // x*y == 6 AND x == 2 AND y == 4: replay gives 2*4=8 != 6 -> the candidate
-    // fails, so the sound answer is unknown (not a wrong sat/unsat).
+fn refinement_decides_inconsistent_pinned_product() {
+    // x*y == 6 AND x == 2 AND y == 4: 2*4=8 ≠ 6, so unsat. The point-lemma
+    // refinement loop (add (x=2 ∧ y=4)→r=8 on replay failure) decides it.
     let mut a = TermArena::new();
     let x = real(&mut a, "x");
     let y = real(&mut a, "y");
@@ -62,12 +62,7 @@ fn product_forcing_contradiction_with_linear_is_sat_or_unsat_soundly() {
     let ey = a.eq(y, four).unwrap();
 
     let r = check_with_nra(&mut a, &[e6, ex, ey], &SolverConfig::default()).unwrap();
-    // 2*4=8 ≠ 6 so this is actually unsat; the abstraction can't see that, so a
-    // sound solver returns unknown here (never a wrong sat).
-    assert!(
-        matches!(r, CheckResult::Unknown(_) | CheckResult::Unsat),
-        "must not be a wrong sat; got {r:?}"
-    );
+    assert!(matches!(r, CheckResult::Unsat), "2*4=8≠6 must be unsat, got {r:?}");
 }
 
 #[test]

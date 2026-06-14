@@ -30,6 +30,10 @@ use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, Unknow
 use crate::dpll_t::check_with_lra_dpll;
 use crate::model::Model;
 
+/// Bound on the incremental-linearization refinement rounds before returning
+/// `unknown` (the loop adds exact point lemmas for inconsistent leaf products).
+const MAX_REFINE_ROUNDS: usize = 12;
+
 /// Decides a (possibly nonlinear) real-arithmetic query by linear abstraction of
 /// nonlinear products, LRA solving, and replay.
 ///
@@ -76,7 +80,7 @@ pub fn check_with_nra(
     // (sign and zero rules). These are valid for `r = a·b`, so they preserve the
     // relaxation (original models still satisfy them) while letting LRA decide
     // sign-based nonlinear queries — e.g. `x·x < 0` is now unsat (x² ≥ 0).
-    for (pa, pb, r) in triples {
+    for &(pa, pb, r) in &triples {
         for lemma in product_lemmas(arena, pa, pb, r)? {
             let rewritten = replace_subterms(arena, lemma, &map, &mut memo)
                 .map_err(|e| SolverError::Backend(e.to_string()))?;
@@ -84,37 +88,104 @@ pub fn check_with_nra(
         }
     }
 
-    let result = check_with_lra_dpll(arena, &reduced, config)?;
-    let CheckResult::Sat(model) = result else {
-        // `unsat`/`unknown` transfer: the abstraction is a relaxation.
-        return Ok(result);
-    };
-
-    // Replay the candidate against the original (nonlinear) assertions.
-    let assignment = model.to_assignment();
-    for &assertion in assertions {
-        if !matches!(eval(arena, assertion, &assignment), Ok(Value::Bool(true))) {
-            return Ok(CheckResult::Unknown(UnknownReason {
-                kind: UnknownKind::Incomplete,
-                detail: "nonlinear abstraction: the linear candidate does not satisfy the \
-                         nonlinear constraints; refinement (r = x·y lemmas) is not implemented"
-                    .to_owned(),
-            }));
+    // Refinement loop (incremental linearization, bounded): solve the linear
+    // abstraction; replay the candidate; on failure add exact point lemmas
+    // `(a = a0 ∧ b = b0) → r = a0·b0` for the *leaf* products at the candidate's
+    // values (sound — those are the true products there) and re-solve. This
+    // decides e.g. `x·y = 6 ∧ x = 2 ∧ y = 4` (unsat). Bounded rounds → `unknown`.
+    for _ in 0..MAX_REFINE_ROUNDS {
+        let result = check_with_lra_dpll(arena, &reduced, config)?;
+        let CheckResult::Sat(model) = result else {
+            // `unsat`/`unknown` transfer: the abstraction is a relaxation.
+            return Ok(result);
+        };
+        let assignment = model.to_assignment();
+        if assertions
+            .iter()
+            .all(|&a| matches!(eval(arena, a, &assignment), Ok(Value::Bool(true))))
+        {
+            // Genuine model: project to the original symbols (drop fresh vars).
+            let mut out = Model::new();
+            for (symbol, name, _sort) in arena.symbols() {
+                if name.starts_with("!nra_") {
+                    continue;
+                }
+                if let Some(value) = assignment.get(symbol) {
+                    out.set(symbol, value);
+                }
+            }
+            return Ok(CheckResult::Sat(out));
+        }
+        // Refine: add point lemmas for inconsistent leaf products.
+        let mut added = false;
+        for &(pa, pb, r) in &triples {
+            if products.contains(&pa) || products.contains(&pb) {
+                continue; // only leaf products have well-defined operand values here
+            }
+            let (Some(a0), Some(b0), Some(r0)) = (
+                real_value(arena, pa, &assignment),
+                real_value(arena, pb, &assignment),
+                real_value(arena, r, &assignment),
+            ) else {
+                continue;
+            };
+            let (Some(num), Some(den)) = (
+                a0.numerator().checked_mul(b0.numerator()),
+                a0.denominator().checked_mul(b0.denominator()),
+            ) else {
+                continue; // would overflow the i128 rational; skip
+            };
+            let prod = axeyum_ir::Rational::new(num, den);
+            if r0 == prod {
+                continue; // already consistent
+            }
+            let lemma = point_lemma(arena, pa, a0, pb, b0, r, prod)?;
+            reduced.push(lemma);
+            added = true;
+        }
+        if !added {
+            break; // cannot refine further
         }
     }
+    Ok(CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail: "nonlinear abstraction: candidate refinement did not converge within the \
+                 round bound"
+            .to_owned(),
+    }))
+}
 
-    // Build a model over the original symbols, dropping the fresh abstraction
-    // variables.
-    let mut out = Model::new();
-    for (symbol, name, _sort) in arena.symbols() {
-        if name.starts_with("!nra_") {
-            continue;
-        }
-        if let Some(value) = assignment.get(symbol) {
-            out.set(symbol, value);
-        }
+/// The model value of a real term, if it evaluates to a `Real`.
+fn real_value(
+    arena: &TermArena,
+    term: TermId,
+    assignment: &axeyum_ir::Assignment,
+) -> Option<axeyum_ir::Rational> {
+    match eval(arena, term, assignment) {
+        Ok(Value::Real(r)) => Some(r),
+        _ => None,
     }
-    Ok(CheckResult::Sat(out))
+}
+
+/// The exact point lemma `(a = a0 ∧ b = b0) → r = a0·b0`.
+fn point_lemma(
+    arena: &mut TermArena,
+    a: TermId,
+    a0: axeyum_ir::Rational,
+    b: TermId,
+    b0: axeyum_ir::Rational,
+    r: TermId,
+    prod: axeyum_ir::Rational,
+) -> Result<TermId, IrError> {
+    let a0c = arena.real_const(a0);
+    let b0c = arena.real_const(b0);
+    let prodc = arena.real_const(prod);
+    let a_eq = arena.eq(a, a0c)?;
+    let b_eq = arena.eq(b, b0c)?;
+    let r_eq = arena.eq(r, prodc)?;
+    let prem = arena.and(a_eq, b_eq)?;
+    let nprem = arena.not(prem)?;
+    arena.or(nprem, r_eq)
 }
 
 /// Sound linear lemmas about the product `r = a·b`: the sign rules and the zero
