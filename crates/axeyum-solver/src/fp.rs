@@ -316,6 +316,107 @@ pub fn pack_params(
     Ok((lsb_exp, drop))
 }
 
+/// Symbolic round-and-pack: rounds the value `(-1)^sign · m · 2^e` to format
+/// `(eb, sb)` (round-nearest-ties-to-even) and returns the IEEE bit pattern
+/// (`eb + sb` bits). `m` and `e` are `W`-bit (`e` signed); `m` carries the
+/// significand (any leading-bit position — subnormal inputs need no special
+/// pre-normalization). Handles normal/subnormal/overflow and the zero result.
+///
+/// This is the bit-vector transcription of [`round_to_format`] (validated there
+/// in concrete arithmetic and, end to end, in tests) — the shared core both
+/// `fp.add` and `fp.mul` round through. A pure BV formula; solves and replays
+/// on the existing path. The caller handles NaN/∞ operands and supplies a `W`
+/// wide enough that the rounding `drop` stays `< W` (see [`round_variable`]).
+///
+/// # Errors
+///
+/// Returns [`IrError`] from the builders (well-formed input cannot fail).
+#[allow(clippy::similar_names, clippy::many_single_char_names)]
+pub fn pack_value(
+    arena: &mut TermArena,
+    eb: u32,
+    sb: u32,
+    sign: TermId,
+    m: TermId,
+    e: TermId,
+) -> Result<TermId, IrError> {
+    let Sort::BitVec(w) = arena.sort_of(m) else {
+        return Err(IrError::SortMismatch {
+            expected: "BitVec",
+            found: arena.sort_of(m),
+        });
+    };
+    let total = eb + sb;
+    let bias = (1i64 << (eb - 1)) - 1;
+    let zero_w = arena.bv_const(w, 0)?;
+
+    let (lsb_exp, drop) = pack_params(arena, m, e, sb, bias)?;
+
+    // q = the rounded/scaled significand: shift left if drop<0, round right if
+    // 0<=drop<W, else (drop>=W) the value is below half-ulp → 0.
+    let neg_drop = arena.bv_sub(zero_w, drop)?;
+    let left = arena.bv_shl(m, neg_drop)?;
+    let rounded = round_variable(arena, m, drop)?;
+    let drop_lt0 = arena.bv_slt(drop, zero_w)?;
+    let w_const = sconst(arena, w, i64::from(w))?;
+    let drop_ge_w = arena.bv_sge(drop, w_const)?;
+    let right = arena.ite(drop_ge_w, zero_w, rounded)?;
+    let q = arena.ite(drop_lt0, left, right)?;
+
+    // Result exponent of q's leading bit.
+    let clz_q = count_leading_zeros(arena, q)?;
+    let w_minus_1 = sconst(arena, w, i64::from(w) - 1)?;
+    let top = arena.bv_sub(w_minus_1, clz_q)?;
+    let bias_c = sconst(arena, w, bias)?;
+    let biased = {
+        let t = arena.bv_add(lsb_exp, top)?;
+        arena.bv_add(t, bias_c)?
+    };
+
+    // Classify the result exponent.
+    let exp_max = sconst(arena, w, (1i64 << eb) - 1)?;
+    let overflow = arena.bv_sge(biased, exp_max)?;
+    let subnormal = arena.bv_sle(biased, zero_w)?;
+    let m_zero = arena.eq(m, zero_w)?;
+    let q_zero = arena.eq(q, zero_w)?;
+    let is_zero_result = arena.or(m_zero, q_zero)?;
+
+    // Assemble the result fields (total-bit).
+    let sign_bit = {
+        let on = arena.bv_const(total, 1u128 << (total - 1))?;
+        let off = arena.bv_const(total, 0)?;
+        arena.ite(sign, on, off)?
+    };
+    let exp_ones = arena.bv_const(total, ((1u128 << eb) - 1) << (sb - 1))?;
+    let inf_bits = arena.bv_or(sign_bit, exp_ones)?;
+
+    // Subnormal: exponent field 0, trailing = low (sb-1) bits of q.
+    let subnormal_bits = {
+        let q_low = arena.extract(sb - 2, 0, q)?;
+        let q_low_t = arena.zero_ext(total - (sb - 1), q_low)?;
+        arena.bv_or(sign_bit, q_low_t)?
+    };
+    // Normal: trailing = (q - 2^top) low (sb-1) bits; exponent field = biased.
+    let normal_bits = {
+        let one_w = arena.bv_const(w, 1)?;
+        let pow_top = arena.bv_shl(one_w, top)?;
+        let qmt = arena.bv_sub(q, pow_top)?;
+        let trail = arena.extract(sb - 2, 0, qmt)?;
+        let trail_t = arena.zero_ext(total - (sb - 1), trail)?;
+        let biased_field = arena.extract(eb - 1, 0, biased)?;
+        let biased_t = arena.zero_ext(total - eb, biased_field)?;
+        let shift = arena.bv_const(total, u128::from(sb - 1))?;
+        let exp_placed = arena.bv_shl(biased_t, shift)?;
+        let with_exp = arena.bv_or(sign_bit, exp_placed)?;
+        arena.bv_or(with_exp, trail_t)?
+    };
+
+    // Mux: zero, then overflow→∞, then subnormal, else normal.
+    let normal_or_sub = arena.ite(subnormal, subnormal_bits, normal_bits)?;
+    let finite = arena.ite(overflow, inf_bits, normal_or_sub)?;
+    arena.ite(is_zero_result, sign_bit, finite)
+}
+
 // --- constant folding (round-nearest-even arithmetic) -------------------------
 //
 // Rounded FP arithmetic (`add`/`sub`/`mul`/`div`/`sqrt`) is, for *constant*
@@ -1082,6 +1183,43 @@ mod tests {
             };
             assert_eq!(read(&a, lsb_t), i128::from(want_lsb), "lsb_exp m={m} e={e}");
             assert_eq!(read(&a, drop_t), i128::from(want_drop), "drop m={m} e={e}");
+        }
+    }
+
+    /// `pack_value` must equal the validated `round_to_format` reference for the
+    /// value (-1)^sign · m · 2^e, over a pseudo-random battery (m ≤ 2^53, so the
+    /// f64 reference value is exact), exercising normal/subnormal/overflow.
+    #[test]
+    #[allow(clippy::cast_precision_loss)] // m ≤ 2^53 is exact in f64
+    fn pack_value_matches_round_to_format() {
+        let w = 80u32;
+        let (eb, sb) = (8u32, 24u32);
+        let mut state = 0x0bad_c0de_0f1e_2d3cu64;
+        for _ in 0..4000 {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            let m = (u128::from(state) % ((1u128 << 53) - 1)) + 1;
+            // exponent spread across overflow / normal / subnormal / underflow
+            let e = i64::try_from((state >> 7) % 380).unwrap() - 200;
+            let sign = (state >> 3) & 1 == 1;
+
+            let value = (if sign { -1.0f64 } else { 1.0 }) * (m as f64) * 2.0f64.powi(e as i32);
+            let want = round_to_format(eb, sb, value);
+
+            let mut a = TermArena::new();
+            let m_w = a.bv_const(w, m).unwrap();
+            let e_t = sconst(&mut a, w, e).unwrap();
+            let sign_t = a.bool_const(sign);
+            let packed = pack_value(&mut a, eb, sb, sign_t, m_w, e_t).unwrap();
+            let got = match eval(&a, packed, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("expected Bv, got {other:?}"),
+            };
+            assert_eq!(
+                got, want,
+                "pack_value(sign={sign}, m={m:#x}, e={e}) = {got:#x}, want {want:#x} (value={value})"
+            );
         }
     }
 }
