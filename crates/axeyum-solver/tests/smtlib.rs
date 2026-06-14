@@ -133,3 +133,39 @@ fn fp_to_int_is_functional_even_when_unspecified() {
         outcome.result
     );
 }
+
+/// Quantifier over a small floating-point format decides by finite-domain
+/// expansion (ADR-0016 + ADR-0026): an 8-value `(_ FloatingPoint 3 3)` domain.
+/// `forall x. (x <= x or isNaN x)` is valid (leq is reflexive except on NaN,
+/// which isNaN catches), so asserting it is sat.
+#[test]
+fn quantified_small_float_tautology_is_sat() {
+    let text = "\
+(set-logic FP)
+(assert (forall ((x (_ FloatingPoint 3 3))) (or (fp.leq x x) (fp.isNaN x))))
+(check-sat)
+";
+    let outcome = run(text);
+    assert!(
+        matches!(outcome.result, CheckResult::Sat(_)),
+        "valid small-FP forall must be sat, got {:?}",
+        outcome.result
+    );
+}
+
+/// `forall x:(_ FloatingPoint 3 3). fp.eq(x, x)` is false (a NaN value makes
+/// `fp.eq` false), so asserting it is unsat — found by exhaustive expansion.
+#[test]
+fn quantified_small_float_nan_makes_eq_unsat() {
+    let text = "\
+(set-logic FP)
+(assert (forall ((x (_ FloatingPoint 3 3))) (fp.eq x x)))
+(check-sat)
+";
+    let outcome = run(text);
+    assert!(
+        matches!(outcome.result, CheckResult::Unsat),
+        "forall x. fp.eq(x,x) is false (NaN), so unsat, got {:?}",
+        outcome.result
+    );
+}

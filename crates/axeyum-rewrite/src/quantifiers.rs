@@ -152,6 +152,18 @@ fn domain_values(arena: &mut TermArena, var: SymbolId) -> Result<Vec<TermId>, Qu
             }
             Ok(values)
         }
+        // A floating-point domain is finite (`exp + sig` bits); enumerate every
+        // bit pattern as a `Float`-sorted constant (ADR-0026), so small FP formats
+        // (FP8/FP4) quantify by exhaustive expansion just like bit-vectors.
+        Sort::Float { exp, sig } if exp + sig <= QUANT_EXPAND_BIT_LIMIT => {
+            let width = exp + sig;
+            let mut values = Vec::with_capacity(1usize << width);
+            for value in 0..(1u128 << width) {
+                let bv = arena.bv_const(width, value)?;
+                values.push(arena.fp_from_bits(bv, exp, sig)?);
+            }
+            Ok(values)
+        }
         other => Err(QuantExpandError::UnsupportedDomain(other)),
     }
 }

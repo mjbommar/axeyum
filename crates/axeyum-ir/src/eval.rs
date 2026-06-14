@@ -301,6 +301,16 @@ fn eval_quantifier(
                 }
             }
         }
+        // A floating-point domain enumerates its `exp + sig`-bit patterns; an FP
+        // value is represented as that bit-vector (ADR-0026).
+        Sort::Float { exp, sig } if exp + sig <= QUANTIFIER_EVAL_BIT_LIMIT => {
+            let width = exp + sig;
+            for value in 0..(1u128 << width) {
+                if let Some(decisive) = check(Value::Bv { width, value })? {
+                    return Ok(Value::Bool(decisive));
+                }
+            }
+        }
         other => return Err(IrError::UnsupportedQuantifierDomain(other)),
     }
     // No decisive case: `forall` holds, `exists` does not.

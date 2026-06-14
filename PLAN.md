@@ -38,6 +38,18 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-14
 
+- **Finite-domain quantifiers over floating point (2026-06-14).** Quantifier
+  expansion treated `Sort::Float` as a non-enumerable domain (a regression once FP
+  became a distinct sort, ADR-0026). Both enumerators — `expand_quantifiers`
+  (axeyum-rewrite) and the ground evaluator's quantifier replay (axeyum-ir) — now
+  enumerate a floating-point domain as its `exp + sig` bit patterns (Float-sorted
+  constants), so quantifiers over small FP formats (FP8/FP4, ≤ the bit limit)
+  decide by exhaustive expansion exactly like bit-vectors. Tests: `forall
+  x:(_ FloatingPoint 3 3). (fp.leq x x ∨ fp.isNaN x)` is **sat** (valid; leq is
+  reflexive except on NaN) and `forall x. fp.eq(x,x)` is **unsat** (a NaN value
+  falsifies it) — both decided and the sat case model-replayed through the
+  enumerating evaluator.
+
 - **Mixed integer/real by branch-and-bound (2026-06-14, ADR-0027).** Conjunctive
   `QF_LIRA` where a `to_real(x)` is coupled to a **real variable** (so the exact
   const-compare rewrites don't apply) is now decided completely by mixed-integer
