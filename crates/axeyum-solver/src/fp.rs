@@ -88,6 +88,16 @@ impl FloatFormat {
         exp_bits: 4,
         sig_bits: 4,
     };
+    /// OCP MX **element** format FP4 E2M1: 2 exponent bits, 2 significand bits
+    /// (4 bits total). All-finite: **no infinities, no NaN** — every bit pattern
+    /// is one of `±{0, 0.5, 1, 1.5, 2, 3, 4, 6}`. (This is only the *element*; a
+    /// full MXFP4 value is a *block* of 32 such elements times a shared E8M0
+    /// scale — a structured/array semantics, not a scalar sort.) Use the `e2m1_*`
+    /// helpers; the generic IEEE classification/arithmetic is not correct for it.
+    pub const FP4_E2M1: Self = Self {
+        exp_bits: 2,
+        sig_bits: 2,
+    };
 
     /// Total bit width of a value in this format.
     #[must_use]
@@ -178,6 +188,68 @@ pub fn e4m3_is_normal(arena: &mut TermArena, x: TermId) -> Result<TermId, IrErro
     let nan = e4m3_is_nan(arena, x)?;
     let not_nan = arena.not(nan)?;
     arena.and(exp_nonzero, not_nan)
+}
+
+// --- OCP MX element FP4 E2M1 (all-finite, no ∞/NaN) ---------------------------
+//
+// E2M1 (1 sign, 2 exp, 1 significand) has no infinities and no NaN; every code
+// is a finite value in ±{0, 0.5, 1, 1.5, 2, 3, 4, 6}. So `e2m1_is_nan` and
+// `e2m1_is_infinite` are always false; classification reduces to zero vs
+// subnormal vs normal, and the value decodes exactly to a rational.
+
+/// `x` is an E2M1 zero (`±0`): exponent and significand both zero.
+pub fn e2m1_is_zero(arena: &mut TermArena, x: TermId) -> Result<TermId, IrError> {
+    let body = arena.extract(2, 0, x)?; // exp(2) ++ sig(1) = low 3 bits
+    let zero3 = arena.bv_const(3, 0)?;
+    arena.eq(body, zero3)
+}
+
+/// `x` is an E2M1 subnormal: zero exponent, non-zero significand (`±0.5`).
+pub fn e2m1_is_subnormal(arena: &mut TermArena, x: TermId) -> Result<TermId, IrError> {
+    let exp = arena.extract(2, 1, x)?;
+    let sig = arena.extract(0, 0, x)?;
+    let z2 = arena.bv_const(2, 0)?;
+    let o1 = arena.bv_const(1, 1)?;
+    let exp_z = arena.eq(exp, z2)?;
+    let sig_set = arena.eq(sig, o1)?;
+    arena.and(exp_z, sig_set)
+}
+
+/// `x` is an E2M1 normal number: non-zero exponent (the all-ones exponent is a
+/// normal value, `±4`/`±6`, in E2M1 — there is no infinity).
+pub fn e2m1_is_normal(arena: &mut TermArena, x: TermId) -> Result<TermId, IrError> {
+    let exp = arena.extract(2, 1, x)?;
+    let z2 = arena.bv_const(2, 0)?;
+    let exp_z = arena.eq(exp, z2)?;
+    arena.not(exp_z)
+}
+
+/// Exactly decodes a **constant** E2M1 value to a `Real` (ADR-0015). E2M1 is
+/// all-finite with a tiny exact value set, so this always succeeds for a
+/// constant; returns `Ok(None)` for a non-constant operand. Bridges MX FP4
+/// elements into linear real arithmetic (a block value is the element times its
+/// shared power-of-two scale).
+pub fn e2m1_to_real(arena: &mut TermArena, x: TermId) -> Result<Option<TermId>, IrError> {
+    let Some(bits) = const_bits(arena, x) else {
+        return Ok(None);
+    };
+    let sign = (bits >> 3) & 1 == 1;
+    let exp = (bits >> 1) & 0b11;
+    let mant = bits & 1;
+    // magnitude as a rational num/den
+    let (num, den): (i128, i128) = if exp == 0 {
+        (i128::try_from(mant).unwrap_or(0), 2) // 0 or 1/2
+    } else {
+        // (2 + mant) * 2^(exp - 2)
+        let base = 2 + i128::try_from(mant).unwrap_or(0);
+        match exp {
+            1 => (base, 2),       // *0.5
+            2 => (base, 1),       // *1
+            _ => (base * 2, 1),   // exp==3 -> *2
+        }
+    };
+    let num = if sign { -num } else { num };
+    Ok(Some(arena.real_const(Rational::new(num, den))))
 }
 
 /// `x` is NaN: exponent all ones and a non-zero trailing significand.
@@ -2184,6 +2256,54 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn e2m1_decode_and_classification() {
+        use axeyum_ir::Rational;
+        // The full E2M1 magnitude table by (exp, mant): the 8 magnitudes.
+        // codes 0..8 = sign 0; the spec value set is {0,.5,1,1.5,2,3,4,6}.
+        let table: [(i128, i128); 8] = [
+            (0, 1),   // 000: 0
+            (1, 2),   // 001: 0.5
+            (1, 1),   // 010: 1
+            (3, 2),   // 011: 1.5
+            (2, 1),   // 100: 2
+            (3, 1),   // 101: 3
+            (4, 1),   // 110: 4
+            (6, 1),   // 111: 6
+        ];
+        let mut a = TermArena::new();
+        for code in 0u128..8 {
+            for sign in [0u128, 1] {
+                let bits = (sign << 3) | code;
+                let x = a.bv_const(4, bits).unwrap();
+                let r = e2m1_to_real(&mut a, x).unwrap().expect("constant decodes");
+                let (num, den) = table[code as usize];
+                let want = if sign == 1 {
+                    Rational::new(-num, den)
+                } else {
+                    Rational::new(num, den)
+                };
+                match eval(&a, r, &Assignment::new()) {
+                    Ok(Value::Real(got)) => assert_eq!(got, want, "E2M1 {bits:#x}"),
+                    other => panic!("expected Real, got {other:?}"),
+                }
+            }
+        }
+        // Classification: 0x0 zero; 0x1 subnormal (±0.5); 0b110 (=4) normal.
+        let is_true = |arena: &TermArena, term: axeyum_ir::TermId| {
+            matches!(eval(arena, term, &Assignment::new()), Ok(Value::Bool(true)))
+        };
+        let zero = a.bv_const(4, 0).unwrap();
+        let t_zero = e2m1_is_zero(&mut a, zero).unwrap();
+        assert!(is_true(&a, t_zero), "0 is zero");
+        let half = a.bv_const(4, 1).unwrap();
+        let t_sub = e2m1_is_subnormal(&mut a, half).unwrap();
+        assert!(is_true(&a, t_sub), "0.5 is subnormal");
+        let four = a.bv_const(4, 0b110).unwrap();
+        let t_norm = e2m1_is_normal(&mut a, four).unwrap();
+        assert!(is_true(&a, t_norm), "4 is normal");
     }
 
     #[test]
