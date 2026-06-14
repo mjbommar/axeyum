@@ -362,3 +362,39 @@ fn get_value_is_none_when_unsat() {
 ";
     assert_eq!(solve_smtlib_get_value(text, &config()).expect("decides"), None);
 }
+
+/// Optimization (OMT): maximize/minimize an Int objective under linear bounds.
+#[test]
+fn optimize_integer_objective() {
+    use axeyum_solver::{OptOutcome, optimize_smtlib};
+    let text = "\
+(set-logic QF_LIA)
+(declare-const x Int)
+(assert (<= x 10))
+(assert (>= x 0))
+(maximize x)
+(minimize x)
+(check-sat)
+(get-objectives)
+";
+    let outcomes = optimize_smtlib(text, &config()).expect("optimizes");
+    assert_eq!(outcomes.len(), 2);
+    assert_eq!(outcomes[0], OptOutcome::Optimal(10), "max x in [0,10] = 10");
+    assert_eq!(outcomes[1], OptOutcome::Optimal(0), "min x in [0,10] = 0");
+}
+
+/// OMT over a bit-vector objective (unsigned): maximize x with x <=u 100.
+#[test]
+fn optimize_bitvector_objective() {
+    use axeyum_solver::{OptOutcome, optimize_smtlib};
+    let text = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (bvule x #x64))
+(maximize x)
+(check-sat)
+(get-objectives)
+";
+    let outcomes = optimize_smtlib(text, &config()).expect("optimizes");
+    assert_eq!(outcomes[0], OptOutcome::Optimal(100), "max unsigned x <= 100 = 100");
+}

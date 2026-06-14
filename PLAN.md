@@ -67,6 +67,13 @@ Last updated: 2026-06-14
   the `sat` model through the ground evaluator (the same trusted, replay-checked
   model), returning the values in order (or `None` when unsat/unknown). Test:
   `x+1=5` ⇒ `get-value (x (bvadd x x))` returns `[4, 8]`.
+  **Optimization (OMT) now added** — `(maximize t)`/`(minimize t)` (with
+  `get-objectives` as a no-op) are recorded (`Script::objectives`) and
+  `optimize_smtlib` optimizes each subject to the assertions, dispatching by
+  objective sort to the existing engines (`Int` → `maximize_lia`/`minimize_lia`,
+  `BitVec` → `maximize_bv`/`minimize_bv`) and returning one `OptOutcome` per
+  objective (boxed/independent). Tests: max/min of `x∈[0,10]` give `Optimal(10)`/
+  `Optimal(0)`; unsigned BV `max x ≤u 100` gives `Optimal(100)`.
 
 - **QF_UFFP verified — uninterpreted functions over FP (2026-06-14).** The
   `Sort::Float` cascade (ADR-0026) plus the bit-blaster preflight accepting

@@ -57,6 +57,9 @@ pub struct Script {
     /// Terms requested by `(get-value (t …))`, in script order, to be evaluated
     /// against a `sat` model.
     pub get_value_terms: Vec<TermId>,
+    /// Optimization objectives `(maximize t)` / `(minimize t)`, in script order;
+    /// the flag is `true` for `maximize`, `false` for `minimize` (ADR-pending OMT).
+    pub objectives: Vec<(TermId, bool)>,
     /// The ordered `assert`/`push`/`pop`/`check-sat` sequence — the incremental
     /// view of the script (ADR-0009 lifecycle), for per-`check-sat` solving.
     pub commands: Vec<ScriptCommand>,
@@ -110,7 +113,13 @@ fn parse_command<'a>(
         // produced by the solver (`solve_smtlib_unsat_core`), the model by the
         // `sat` result — the parser just records a well-formed script.
         "get-model" | "exit" | "get-unsat-core" | "get-assertions" | "reset"
-        | "reset-assertions" => exact_len(items, 1, head)?,
+        | "reset-assertions" | "get-objectives" => exact_len(items, 1, head)?,
+        // Optimization objectives (OMT): `(maximize t)` / `(minimize t)`.
+        "maximize" | "minimize" => {
+            exact_len(items, 2, head)?;
+            let t = parse_term(&mut script.arena, sexpr_at(items, 1)?, aliases, macros)?;
+            script.objectives.push((t, head == "maximize"));
+        }
         "get-info" => exact_len(items, 2, head)?,
         "get-value" => {
             exact_len(items, 2, head)?;

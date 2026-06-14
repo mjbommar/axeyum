@@ -11,10 +11,14 @@
 //! The trust anchor stays exactly where it is in [`crate::solve`]: a `sat` model
 //! is replayed against the original term through the ground evaluator.
 
+use axeyum_ir::Sort;
 use axeyum_smtlib::{ScriptCommand, parse_script};
 
 use crate::auto::{solve, unsat_core};
 use crate::backend::{CheckResult, SolverConfig, SolverError};
+use crate::optimize::{
+    OptOutcome, maximize_bv, maximize_lia, minimize_bv, minimize_lia,
+};
 
 /// The result of deciding an SMT-LIB script, with the script's own declarations.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -52,6 +56,45 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
         logic: script.logic,
         expected_status: script.status,
     })
+}
+
+/// Solves an **optimization** (OMT) SMT-LIB script: each `(maximize t)` /
+/// `(minimize t)` objective is optimized subject to the script's assertions,
+/// returning one [`OptOutcome`] per objective in script order (the boxed /
+/// independent interpretation). The objective sort selects the engine — `Int`
+/// uses the simplex-bounded integer optimizer, `BitVec` the unsigned bit-vector
+/// optimizer — and each `Optimal` value is anchored by the underlying optimizer's
+/// model checks (ADR-0020 / the optimize module).
+///
+/// # Errors
+///
+/// [`SolverError::Parse`] for malformed/unsupported text, [`SolverError::Unsupported`]
+/// for an objective outside the supported (`Int`/`BitVec`) optimization
+/// fragment, or any [`SolverError`] from the optimizer.
+pub fn optimize_smtlib(input: &str, config: &SolverConfig) -> Result<Vec<OptOutcome>, SolverError> {
+    let _ = config;
+    let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    let objectives = std::mem::take(&mut script.objectives);
+    let mut outcomes = Vec::with_capacity(objectives.len());
+    for (objective, is_max) in objectives {
+        let outcome = match (script.arena.sort_of(objective), is_max) {
+            (Sort::Int, true) => maximize_lia(&mut script.arena, &script.assertions, objective)?,
+            (Sort::Int, false) => minimize_lia(&mut script.arena, &script.assertions, objective)?,
+            (Sort::BitVec(_), true) => {
+                maximize_bv(&mut script.arena, &script.assertions, objective)?
+            }
+            (Sort::BitVec(_), false) => {
+                minimize_bv(&mut script.arena, &script.assertions, objective)?
+            }
+            (other, _) => {
+                return Err(SolverError::Unsupported(format!(
+                    "optimization objective of sort {other:?} (only Int and BitVec are supported)"
+                )));
+            }
+        };
+        outcomes.push(outcome);
+    }
+    Ok(outcomes)
 }
 
 /// Evaluates the `(get-value (t …))` terms of an SMT-LIB script against a `sat`
