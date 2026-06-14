@@ -244,6 +244,33 @@ pub fn geq(
     leq(arena, fmt, y, x)
 }
 
+/// `fp.min(x, y)`: the smaller operand. NaN propagates the other operand
+/// (`min(NaN, y) = y`, `min(x, NaN) = x`); the result is always one of the input
+/// bit patterns unchanged, so this is exact (no rounding).
+///
+/// For zeros of opposite sign — where SMT-LIB leaves the result unspecified —
+/// this makes the deterministic, allowed choice `−0` (the smaller ordering key).
+pub fn min(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+    y: TermId,
+) -> Result<TermId, IrError> {
+    select_by_order(arena, fmt, x, y, true)
+}
+
+/// `fp.max(x, y)`: the larger operand. NaN propagates the other operand; the
+/// result is one of the inputs unchanged (exact, no rounding). Opposite-sign
+/// zeros pick `+0` (the larger ordering key), a deterministic allowed choice.
+pub fn max(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+    y: TermId,
+) -> Result<TermId, IrError> {
+    select_by_order(arena, fmt, x, y, false)
+}
+
 // --- internal helpers ---------------------------------------------------------
 
 fn all_ones_mask(fmt: FloatFormat) -> u128 {
@@ -295,6 +322,30 @@ fn not_nan_not_zero_and(
     let not_zero = arena.not(zero)?;
     let a = arena.and(cond, not_nan)?;
     arena.and(a, not_zero)
+}
+
+/// Shared core of [`min`]/[`max`]: pick `x` or `y` by ordering key, propagating
+/// the non-NaN operand when one is NaN. `want_smaller` selects min vs max.
+fn select_by_order(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+    y: TermId,
+    want_smaller: bool,
+) -> Result<TermId, IrError> {
+    fmt.check(arena, x)?;
+    fmt.check(arena, y)?;
+    let kx = order_key(arena, fmt, x)?;
+    let ky = order_key(arena, fmt, y)?;
+    let x_le_y = arena.bv_ule(kx, ky)?;
+    // min: x when x ≤ y; max: y when x ≤ y.
+    let (lo, hi) = if want_smaller { (x, y) } else { (y, x) };
+    let by_order = arena.ite(x_le_y, lo, hi)?;
+    // NaN propagation: if x is NaN return y, if y is NaN return x.
+    let nx = is_nan(arena, fmt, x)?;
+    let ny = is_nan(arena, fmt, y)?;
+    let if_x_nan = arena.ite(nx, y, by_order)?;
+    arena.ite(ny, x, if_x_nan)
 }
 
 /// The monotone unsigned ordering key: flip all bits if the sign is set,

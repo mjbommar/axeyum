@@ -30,7 +30,10 @@ Concretely (`axeyum-solver`'s `fp` module):
   exponent(`eb`), trailing significand(`sb − 1`).
 - Builders construct bit-vector/Boolean **formulas** over such terms:
   `is_nan`/`is_infinite`/`is_zero`/`is_normal`/`is_subnormal`/`is_negative`/
-  `is_positive`, `abs`/`neg`, `eq`, and `lt`/`leq`/`gt`/`geq`.
+  `is_positive`, `abs`/`neg`, `eq`, `lt`/`leq`/`gt`/`geq`, and `min`/`max`. The
+  last two are the rounding-*free* part of FP arithmetic: they return one operand
+  unchanged, so they are exact and correct-by-construction (NaN propagates the
+  other operand; opposite-sign zeros take a deterministic SMT-allowed choice).
 - Semantics follow SMT-LIB/IEEE 754: `fp.eq` is **not** bit equality
   (`NaN ≠ NaN`, `+0 = +0 = −0`); `fp.lt`/`leq` order by value (NaN unordered,
   `±0` equal); `isNegative`/`isPositive` exclude NaN and zeros. Ordering uses the

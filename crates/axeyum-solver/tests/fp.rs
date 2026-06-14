@@ -137,6 +137,34 @@ fn ordering() {
 }
 
 #[test]
+fn min_max() {
+    let mut a = TermArena::new();
+    let one = c(&mut a, ONE);
+    let two = c(&mut a, TWO);
+    let neg_two = c(&mut a, NEG_TWO);
+    let nan = c(&mut a, NAN);
+
+    let bits_eq = |a: &TermArena, t: axeyum_ir::TermId, bits: u128| {
+        matches!(eval(a, t, &Assignment::new()), Ok(Value::Bv { value, .. }) if value == bits)
+    };
+
+    let m = fp::min(&mut a, F32, one, two).unwrap();
+    assert!(bits_eq(&a, m, ONE), "min(1,2) = 1");
+    let m = fp::max(&mut a, F32, one, two).unwrap();
+    assert!(bits_eq(&a, m, TWO), "max(1,2) = 2");
+    let m = fp::min(&mut a, F32, neg_two, one).unwrap();
+    assert!(bits_eq(&a, m, NEG_TWO), "min(-2,1) = -2");
+    let m = fp::max(&mut a, F32, neg_two, one).unwrap();
+    assert!(bits_eq(&a, m, ONE), "max(-2,1) = 1");
+
+    // NaN propagates the other operand.
+    let m = fp::min(&mut a, F32, nan, one).unwrap();
+    assert!(bits_eq(&a, m, ONE), "min(NaN,1) = 1");
+    let m = fp::max(&mut a, F32, two, nan).unwrap();
+    assert!(bits_eq(&a, m, TWO), "max(2,NaN) = 2");
+}
+
+#[test]
 fn lt_is_irreflexive_symbolically() {
     // For every (non-NaN or NaN) x, fp.lt(x, x) is false -> asserting it is unsat.
     // This goes through the bit-vector solver over a free 32-bit `x`.

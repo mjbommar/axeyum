@@ -41,7 +41,9 @@ Last updated: 2026-06-14
 - **Floating point — non-arithmetic core (2026-06-14, ADR-0023).** New
   `axeyum-solver::fp` module: IEEE 754 classification (`is_nan`/`is_infinite`/
   `is_zero`/`is_normal`/`is_subnormal`/`is_negative`/`is_positive`), `abs`/`neg`,
-  `eq`, and `lt`/`leq`/`gt`/`geq` as **bit-vector formula builders** — an FP value
+  `eq`, `lt`/`leq`/`gt`/`geq`, and `min`/`max` as **bit-vector formula builders**
+  (`min`/`max` are the rounding-*free* part of FP arithmetic — they return an
+  operand unchanged, so exact and correct-by-construction) — an FP value
   of format `(eb, sb)` is a `BitVec(eb + sb)`, so (like enums/records, ADR-0008)
   there is **no new IR sort** and solving/replay reuse the sound BV path. SMT/IEEE
   semantics: `fp.eq` is not bit equality (`NaN ≠ NaN`, `+0 = −0`), ordering is by
