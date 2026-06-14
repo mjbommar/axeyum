@@ -75,7 +75,8 @@ bound is explicit.
   so regex membership reuses the same sound BV path. `str.to_int` (decimal parse,
   Horner, returning `(valid, value)`) and `str.from_int` (decimal format —
   digits peeled by `÷10`/`mod 10`, reversed into print order, returning
-  `(fits, s)`) are also in. Remaining: general-length `replace`, `replace_all`,
-  and the unbounded sort.)*
+  `(fits, s)`) are also in. General-length `str.replace` (first occurrence
+  spliced by masks/shifts into a `2·max_len` result sort) lands the last
+  structural op. Remaining: `replace_all` and the unbounded sort.)*
 - **Revisited when:** a workload needs unbounded strings or the structural
   operations (then the next bounded slice, and eventually the first-class sort).

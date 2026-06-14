@@ -67,7 +67,12 @@ Last updated: 2026-06-14
   one past highest nonzero digit, content reversed into print order; returns
   `(fits, s)` (`fits` = value needs ≤ `max_len` digits). Tests: `0/7/42/1000/90807`,
   out-of-range `fits=false`, and a `to_int(from_int(555))==555` round-trip (sat).
-  **Next:** general-length `replace`, `replace_all`, then unbounded via a first-class sort.
+  **General-length `str.replace`** now added — first occurrence spliced by
+  masks/shifts (low `idx` bytes of `x`, `or` `new`<<idx, `or` tail<<(idx+len new)),
+  result in a `2·max_len` sort, length `len(x)−len(old)+len(new)`; empty old
+  prepends, not-found returns `x`. Tests: equal/longer/shorter/delete, first-only,
+  not-found, empty-old, and a symbolic `replace(x,"a","bb")=="bbc"` (sat).
+  **Next:** `replace_all`, then unbounded via a first-class sort.
   This was the last entirely-untouched Z3 theory; it is now opened.
 
 - **NRA — first slice (2026-06-14, ADR-0024).** Nonlinear real arithmetic by

@@ -393,6 +393,52 @@ fn from_int_to_int_roundtrip_is_sat() {
 }
 
 #[test]
+fn replace_general_length() {
+    let mut a = TermArena::new();
+    let s = BoundedString::new(8);
+
+    let check = |a: &mut TermArena, hay: &str, old: &str, new: &str, expect: &str| {
+        let h = s.literal(a, hay).unwrap();
+        let o = s.literal(a, old).unwrap();
+        let n = s.literal(a, new).unwrap();
+        let (rs, out) = s.replace(a, &h, &o, &n).unwrap();
+        let exp = rs.literal(a, expect).unwrap();
+        let eq = rs.equal(a, &out, &exp).unwrap();
+        assert!(eval_bool(a, eq), "replace({hay:?},{old:?},{new:?}) == {expect:?}");
+    };
+    // equal-length
+    check(&mut a, "abab", "ab", "XY", "XYab");
+    // longer replacement
+    check(&mut a, "hello", "l", "LL", "heLLlo");
+    // shorter replacement (deletion)
+    check(&mut a, "aXbXc", "X", "", "abXc");
+    // first occurrence only
+    check(&mut a, "abcabc", "bc", "Q", "aQabc");
+    // not found -> unchanged
+    check(&mut a, "xyz", "q", "123", "xyz");
+    // empty old -> prepend new
+    check(&mut a, "hi", "", "AB", "ABhi");
+    // multi-byte needle at offset 0
+    check(&mut a, "aaa", "a", "bb", "bbaa");
+}
+
+#[test]
+fn symbolic_replace_is_sat() {
+    // exists x (<=4): replace(x, "a", "bb") == "bbc" -> sat (x = "ac").
+    let mut a = TermArena::new();
+    let s = BoundedString::new(4);
+    let x = s.declare(&mut a, "x").unwrap();
+    let wf = s.well_formed(&mut a, &x).unwrap();
+    let old = s.literal(&mut a, "a").unwrap();
+    let new = s.literal(&mut a, "bb").unwrap();
+    let (rs, out) = s.replace(&mut a, &x, &old, &new).unwrap();
+    let target = rs.literal(&mut a, "bbc").unwrap();
+    let eq = rs.equal(&mut a, &out, &target).unwrap();
+    let r = solve(&mut a, &[wf, eq], &SolverConfig::default()).unwrap();
+    assert!(matches!(r, CheckResult::Sat(_)), "exists x: replace(x,a,bb)=bbc, got {r:?}");
+}
+
+#[test]
 fn regex_membership() {
     let mut a = TermArena::new();
     let s = BoundedString::new(8);

@@ -14,9 +14,9 @@
 //! shape CBMC/Kani use): `len`, `=`, `at`, literals, `++`, `prefixof`, `contains`,
 //! `suffixof`, `substr` (constant and symbolic start), `indexof`, lexicographic
 //! `<`/`<=`, `take`/`drop`, equal-length `replace`, regex membership (`in_re`,
-//! via a Thompson NFA simulated over the bounded positions), and decimal
-//! `to_int`/`from_int`. Unbounded strings, general-length `replace`, and
-//! `replace_all` are future work.
+//! via a Thompson NFA simulated over the bounded positions), decimal
+//! `to_int`/`from_int`, and general-length `replace` (first occurrence, result
+//! in a `2·max_len` sort). Unbounded strings and `replace_all` are future work.
 
 use axeyum_ir::{IrError, Sort, TermArena, TermId};
 
@@ -546,6 +546,89 @@ impl BoundedString {
             content = arena.bv_or(content, placed)?;
         }
         Ok(StrTerm { len: x.len, content })
+    }
+
+    /// `str.replace` — general length. Replaces the **first** occurrence of `old`
+    /// in `x` with `new` (all in this sort), returning the result in a sort of
+    /// size `2·max_len` (large enough for any splice: the kept bytes total
+    /// `len(x) − len(old) ≤ max_len` plus up to `max_len` inserted bytes). If
+    /// `old` does not occur, `x` is returned unchanged; if `old` is empty, `new`
+    /// is prepended (SMT-LIB semantics — the empty string occurs first at 0).
+    /// Requires `max_len ≤ 8`.
+    ///
+    /// Splice by masks and shifts (no per-byte ite-chain): with `idx` the first
+    /// match offset, the result content is the low `idx` bytes of `x`, `or` `new`
+    /// shifted to byte `idx`, `or` the tail `x[idx+len(old)..]` shifted to byte
+    /// `idx+len(new)`; the length is `len(x) − len(old) + len(new)`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::InvalidWidth`] if `2·max_len > 16`, or [`IrError`] from
+    /// the builders.
+    #[allow(clippy::similar_names)]
+    pub fn replace(
+        &self,
+        arena: &mut TermArena,
+        x: &StrTerm,
+        old: &StrTerm,
+        new: &StrTerm,
+    ) -> Result<(BoundedString, StrTerm), IrError> {
+        let rmax = self.max_len * 2;
+        if rmax > 16 {
+            return Err(IrError::InvalidWidth(rmax * 8));
+        }
+        let result = BoundedString::new(rmax);
+        let rcw = result.content_width();
+        let rlw = result.len_width();
+        let lw = self.len_width();
+        let cw = self.content_width();
+
+        let (found, idx) = self.index_of(arena, x, old, 0)?;
+
+        // Byte-position shift amounts (·8), all widened to the result content width.
+        let three = arena.bv_const(rcw, 3)?;
+        let idx_c = arena.zero_ext(rcw - lw, idx)?;
+        let idx_sh = arena.bv_shl(idx_c, three)?; // idx*8
+        let oldlen_c = arena.zero_ext(rcw - lw, old.len)?;
+        let oldend = arena.bv_add(idx_c, oldlen_c)?;
+        let oldend_sh = arena.bv_shl(oldend, three)?; // (idx+len(old))*8
+        let newlen_c = arena.zero_ext(rcw - lw, new.len)?;
+        let newend = arena.bv_add(idx_c, newlen_c)?;
+        let newend_sh = arena.bv_shl(newend, three)?; // (idx+len(new))*8
+
+        let x_wide = arena.zero_ext(rcw - cw, x.content)?;
+        let new_wide = arena.zero_ext(rcw - cw, new.content)?;
+        let one = arena.bv_const(rcw, 1)?;
+
+        // part1 = low idx bytes of x = x & (2^(idx*8) - 1)
+        let powidx = arena.bv_shl(one, idx_sh)?;
+        let maskidx = arena.bv_sub(powidx, one)?;
+        let part1 = arena.bv_and(x_wide, maskidx)?;
+
+        // part2 = new (masked to its len) shifted to byte idx
+        let newlen_sh = arena.bv_shl(newlen_c, three)?;
+        let pownew = arena.bv_shl(one, newlen_sh)?;
+        let masknew = arena.bv_sub(pownew, one)?;
+        let new_masked = arena.bv_and(new_wide, masknew)?;
+        let part2 = arena.bv_shl(new_masked, idx_sh)?;
+
+        // part3 = tail x[idx+len(old)..] shifted to byte idx+len(new)
+        let after = arena.bv_lshr(x_wide, oldend_sh)?;
+        let part3 = arena.bv_shl(after, newend_sh)?;
+
+        let c12 = arena.bv_or(part1, part2)?;
+        let spliced = arena.bv_or(c12, part3)?;
+        let content = arena.ite(found, spliced, x_wide)?;
+
+        // result length = found ? len(x) - len(old) + len(new) : len(x)
+        let lenx_r = arena.zero_ext(rlw - lw, x.len)?;
+        let oldlen_r = arena.zero_ext(rlw - lw, old.len)?;
+        let newlen_r = arena.zero_ext(rlw - lw, new.len)?;
+        let sub = arena.bv_sub(lenx_r, oldlen_r)?;
+        let rep_len = arena.bv_add(sub, newlen_r)?;
+        let len = arena.ite(found, rep_len, lenx_r)?;
+
+        Ok((result, StrTerm { len, content }))
     }
 
     /// `str.in_re` — does the bounded string `x` match the regular expression
