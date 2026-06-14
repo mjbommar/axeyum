@@ -13,9 +13,10 @@
 //! This is the bounded-model-checking fragment of the SMT string theory (the
 //! shape CBMC/Kani use): `len`, `=`, `at`, literals, `++`, `prefixof`, `contains`,
 //! `suffixof`, `substr` (constant and symbolic start), `indexof`, lexicographic
-//! `<`/`<=`, `take`/`drop`, equal-length `replace`, and regex membership
-//! (`in_re`, via a Thompson NFA simulated over the bounded positions). Unbounded
-//! strings, general-length `replace`, and `replace_all` are future work.
+//! `<`/`<=`, `take`/`drop`, equal-length `replace`, regex membership (`in_re`,
+//! via a Thompson NFA simulated over the bounded positions), and decimal
+//! `to_int`. Unbounded strings, general-length `replace`, `replace_all`, and
+//! `from_int` are future work.
 
 use axeyum_ir::{IrError, Sort, TermArena, TermId};
 
@@ -622,6 +623,56 @@ impl BoundedString {
         let byte = arena.extract(i * 8 + 7, i * 8, x.content)?;
         let zero = arena.bv_const(8, 0)?;
         arena.ite(active, byte, zero)
+    }
+
+    /// `str.to_int` — decimal parse. Returns `(valid, value)`: `value` is a
+    /// `BitVec(64)` holding the decimal number the string denotes, and `valid` is
+    /// the Boolean "the string is a non-empty run of ASCII digits `'0'..='9'`".
+    /// SMT-LIB `str.to_int` yields `-1` for a non-numeral; a caller wanting that
+    /// convention can take `ite(valid, value, -1)`. 64 bits hold any value with
+    /// `≤ 16` digits (`< 10^16 < 2^54`), so no overflow within the bound.
+    ///
+    /// Horner left-to-right (`value := value·10 + digit`) over the significant
+    /// positions makes the result length-independent: padding bytes (`i ≥ len`)
+    /// leave `value` unchanged.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] from the builders.
+    pub fn to_int(&self, arena: &mut TermArena, x: &StrTerm) -> Result<(TermId, TermId), IrError> {
+        const W: u32 = 64;
+        let ten = arena.bv_const(W, 10)?;
+        let lo = arena.bv_const(8, u128::from(b'0'))?;
+        let hi = arena.bv_const(8, u128::from(b'9'))?;
+        let mut value = arena.bv_const(W, 0)?;
+        let mut valid = arena.bool_const(true);
+        for i in 0..self.max_len {
+            let idx = arena.bv_const(self.len_width(), u128::from(i))?;
+            let active = arena.bv_ult(idx, x.len)?;
+            let byte = arena.extract(i * 8 + 7, i * 8, x.content)?;
+            // is_digit: '0' <= byte <= '9'
+            let ge = arena.bv_uge(byte, lo)?;
+            let le = arena.bv_ule(byte, hi)?;
+            let is_digit = arena.and(ge, le)?;
+            // digit value = zero_extend(byte) - '0'
+            let zpad = arena.bv_const(W - 8, 0)?;
+            let byte_w = arena.concat(zpad, byte)?;
+            let off = arena.bv_const(W, u128::from(b'0'))?;
+            let digit = arena.bv_sub(byte_w, off)?;
+            // stepped = value * 10 + digit
+            let scaled = arena.bv_mul(value, ten)?;
+            let stepped = arena.bv_add(scaled, digit)?;
+            value = arena.ite(active, stepped, value)?;
+            // valid &= (active -> is_digit)
+            let imp = arena.implies(active, is_digit)?;
+            valid = arena.and(valid, imp)?;
+        }
+        // a numeral is non-empty
+        let zero_len = arena.bv_const(self.len_width(), 0)?;
+        let is_empty = arena.eq(x.len, zero_len)?;
+        let nonempty = arena.not(is_empty)?;
+        valid = arena.and(valid, nonempty)?;
+        Ok((valid, value))
     }
 }
 

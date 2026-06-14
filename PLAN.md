@@ -58,7 +58,12 @@ Last updated: 2026-06-14
   per-position active-state Bools advance on `pos < len ∧ pred(byte)` then take
   the epsilon closure; accept = OR over positions of `len==k ∧ active[accept]`.
   Tests: literal/symbolic `a(b|c)*` and `[a-z]*` membership (sat + concrete eval).
-  **Next:** general-length replace, `replace_all`, then unbounded via a first-class sort.
+  **`str.to_int` (decimal parse)** now added — Horner left-to-right
+  (`value := value·10 + digit`) over the significant positions returns
+  `(valid, value)` (64-bit, holds any ≤16-digit number); `valid` = non-empty run
+  of ASCII digits. Tests: literal parse incl. leading zeros, non-digit and empty
+  invalid, and a symbolic `to_int(x)==42` (sat).
+  **Next:** `from_int`, general-length `replace`, `replace_all`, then unbounded via a first-class sort.
   This was the last entirely-untouched Z3 theory; it is now opened.
 
 - **NRA — first slice (2026-06-14, ADR-0024).** Nonlinear real arithmetic by

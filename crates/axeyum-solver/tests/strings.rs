@@ -10,6 +10,10 @@ fn eval_bool(arena: &TermArena, term: axeyum_ir::TermId) -> bool {
     matches!(eval(arena, term, &Assignment::new()), Ok(Value::Bool(true)))
 }
 
+fn eval_bv(arena: &TermArena, term: axeyum_ir::TermId, v: u128) -> bool {
+    matches!(eval(arena, term, &Assignment::new()), Ok(Value::Bv { value, .. }) if value == v)
+}
+
 #[test]
 fn literal_equality_and_length() {
     let mut a = TermArena::new();
@@ -301,6 +305,52 @@ fn replace_same_len_first_occurrence() {
     let want3 = s.literal(&mut a, "heLLo").unwrap();
     let eq3 = s.equal(&mut a, &r3, &want3).unwrap();
     assert!(eval_bool(&a, eq3), "replace \"ll\"->\"LL\" == \"heLLo\"");
+}
+
+#[test]
+fn to_int_literals() {
+    let mut a = TermArena::new();
+    let s = BoundedString::new(8);
+
+    // "1234" -> valid, 1234
+    let lit = s.literal(&mut a, "1234").unwrap();
+    let (valid, value) = s.to_int(&mut a, &lit).unwrap();
+    assert!(eval_bool(&a, valid), "\"1234\" is a numeral");
+    assert!(eval_bv(&a, value, 1234), "to_int(\"1234\") == 1234");
+
+    // "0" -> valid, 0
+    let z = s.literal(&mut a, "0").unwrap();
+    let (vz, valz) = s.to_int(&mut a, &z).unwrap();
+    assert!(eval_bool(&a, vz) && eval_bv(&a, valz, 0), "to_int(\"0\") == 0");
+
+    // "007" -> valid, 7 (leading zeros are fine, just digits)
+    let lz = s.literal(&mut a, "007").unwrap();
+    let (vlz, vallz) = s.to_int(&mut a, &lz).unwrap();
+    assert!(eval_bool(&a, vlz) && eval_bv(&a, vallz, 7), "to_int(\"007\") == 7");
+
+    // "12a4" -> invalid (non-digit)
+    let bad = s.literal(&mut a, "12a4").unwrap();
+    let (vbad, _) = s.to_int(&mut a, &bad).unwrap();
+    assert!(!eval_bool(&a, vbad), "\"12a4\" is not a numeral");
+
+    // "" -> invalid (empty)
+    let empty = s.literal(&mut a, "").unwrap();
+    let (ve, _) = s.to_int(&mut a, &empty).unwrap();
+    assert!(!eval_bool(&a, ve), "\"\" is not a numeral");
+}
+
+#[test]
+fn symbolic_to_int_is_sat() {
+    // exists x (<=4): to_int(x) valid AND value == 42 -> sat (e.g. "42").
+    let mut a = TermArena::new();
+    let s = BoundedString::new(4);
+    let x = s.declare(&mut a, "x").unwrap();
+    let wf = s.well_formed(&mut a, &x).unwrap();
+    let (valid, value) = s.to_int(&mut a, &x).unwrap();
+    let target = a.bv_const(64, 42).unwrap();
+    let is42 = a.eq(value, target).unwrap();
+    let r = solve(&mut a, &[wf, valid, is42], &SolverConfig::default()).unwrap();
+    assert!(matches!(r, CheckResult::Sat(_)), "exists x with to_int(x)==42, got {r:?}");
 }
 
 #[test]
