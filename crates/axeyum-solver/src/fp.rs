@@ -1743,6 +1743,13 @@ pub fn round_to_integral(
             RoundingMode::TowardNegative => v.floor(),
         };
         u128::from(r.to_bits())
+    } else if fmt.is_ieee() {
+        // Other IEEE formats: decode exactly, round to an integer value (itself a
+        // format value), and re-encode exactly via round_to_format (which also
+        // handles NaN/∞/±0 with the right sign).
+        let v = fmt.decode_ieee_f64(xv);
+        let r = round_f64(v, mode);
+        round_to_format(fmt.exp_bits, fmt.sig_bits, r, RoundingMode::NearestEven)
     } else {
         return Ok(None);
     };
@@ -2294,6 +2301,9 @@ fn decode_to_f64(arena: &TermArena, fmt: FloatFormat, x: TermId) -> Option<f64> 
         Some(f64::from(f32::from_bits(low32(v))))
     } else if fmt == FloatFormat::F64 {
         Some(f64::from_bits(low64(v)))
+    } else if fmt.is_ieee() {
+        // Every other IEEE format (`sig_bits ≤ 53`) decodes exactly to f64.
+        Some(fmt.decode_ieee_f64(v))
     } else {
         None
     }
@@ -3555,6 +3565,42 @@ mod tests {
         let xt = a.bv_const(64, 0).unwrap();
         let yt = a.bv_const(64, 0).unwrap();
         assert!(rem_sym(&mut a, FloatFormat::F64, xt, yt).is_err(), "F64 rejected");
+    }
+
+    #[test]
+    fn conversions_fold_for_f16() {
+        // to_ubv / to_sbv / round_to_integral now fold for F16 (any IEEE format),
+        // not just F32/F64. F16: 3.5=0x4300, 2.5=0x4100, -3.5=0xC300.
+        let mut a = TermArena::new();
+        let bits16 = |a: &mut TermArena, b: u16| a.bv_const(16, u128::from(b)).unwrap();
+        let eval_bv = |a: &TermArena, t| match eval(a, t, &Assignment::new()) {
+            Ok(Value::Bv { value, .. }) => value,
+            other => panic!("{other:?}"),
+        };
+        // to_ubv(3.5, RTZ, 8) = 3
+        let x = bits16(&mut a, 0x4300);
+        let r = to_ubv(&mut a, FloatFormat::F16, RoundingMode::TowardZero, x, 8).unwrap().unwrap();
+        assert_eq!(eval_bv(&a, r), 3);
+        // to_ubv(2.5, NearestEven, 8) = 2 (ties to even)
+        let x = bits16(&mut a, 0x4100);
+        let r = to_ubv(&mut a, FloatFormat::F16, RoundingMode::NearestEven, x, 8).unwrap().unwrap();
+        assert_eq!(eval_bv(&a, r), 2);
+        // to_sbv(-3.5, RTZ, 8) = -3 = 0xFD
+        let x = bits16(&mut a, 0xC300);
+        let r = to_sbv(&mut a, FloatFormat::F16, RoundingMode::TowardZero, x, 8).unwrap().unwrap();
+        assert_eq!(eval_bv(&a, r), 0xFD);
+        // round_to_integral(3.5, RTZ) = 3.0 = 0x4200
+        let x = bits16(&mut a, 0x4300);
+        let r = round_to_integral(&mut a, FloatFormat::F16, RoundingMode::TowardZero, x).unwrap().unwrap();
+        assert_eq!(eval_bv(&a, r), 0x4200);
+        // round_to_integral(2.5, NearestEven) = 2.0 = 0x4000
+        let x = bits16(&mut a, 0x4100);
+        let r = round_to_integral(&mut a, FloatFormat::F16, RoundingMode::NearestEven, x).unwrap().unwrap();
+        assert_eq!(eval_bv(&a, r), 0x4000);
+        // BF16 too: to_ubv(2.0, RTZ, 8); 2.0 in bf16 = 0x4000.
+        let x = a.bv_const(16, 0x4000).unwrap();
+        let r = to_ubv(&mut a, FloatFormat::BF16, RoundingMode::TowardZero, x, 8).unwrap().unwrap();
+        assert_eq!(eval_bv(&a, r), 2);
     }
 
     #[test]

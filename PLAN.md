@@ -230,6 +230,11 @@ Last updated: 2026-06-14
   Validated against the trusted fold over F32 (structured incl. subnormals + 3k
   random); the differential caught a subnormal-divisor bug. F64 (e_span 2045)
   remains out of range.
+  **FP→int/integral folds extended to all IEEE formats:** `decode_to_f64` now
+  uses the exact generic `decode_ieee_f64`, so `to_ubv`/`to_sbv` and the
+  `roundToIntegral` constant fold work for F16/BF16/TF32/FP8 (not just F32/F64);
+  tested on F16/BF16 (`to_ubv 3.5→3`, ties-to-even `2.5→2`, `to_sbv −3.5→−3`,
+  `roundToIntegral`).
   **Next FP:** symbolic FP↔real (nonlinear). Conversion folds are done both directions:
   int→FP (`ubv_to_fp`/`sbv_to_fp`), FP→int (`to_ubv`/`to_sbv`, per rounding mode,
   folded only when finite + in range else `None`), and FP→Real (`to_real`, exact
