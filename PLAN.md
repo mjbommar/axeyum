@@ -38,6 +38,19 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-13
 
+- Architecture iteration I — finite product datatypes recorded 2026-06-13
+  (records/tuples/structs, the product counterpart to enums): `RecordSort`
+  (`records.rs`) represents named fixed-width fields as a `BitVec` of their total
+  width — the constructor is the `concat` of field terms (field 0 in the low
+  bits), the selector is the `extract` of the field's slice. `concat`/`extract`
+  are exact, so construct-then-select returns the field verbatim; all reduces to
+  the sound, replayed bit-vector theory (**no new core IR sort**). Fields are raw
+  widths, so they compose with `EnumSort` and nested records. Tests: roundtrip
+  construct/select, field-constrained solving with replay, same-field
+  contradiction unsat, and arity/unknown-field errors. Together with enums
+  (iter H), this covers non-recursive finite datatypes built from bit-vector and
+  enum fields. Still later (needs a first-class datatype IR sort): recursive and
+  mutually-recursive datatypes.
 - Architecture iteration H — finite enumeration datatypes recorded 2026-06-13
   (first datatype slice toward Z3/cvc5 datatype parity): `EnumSort` (`enums.rs`)
   represents a sort with `k` nullary constructors as `BitVec(ceil(log2 k))` —

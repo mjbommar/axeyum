@@ -34,6 +34,7 @@ mod lia;
 mod lra;
 mod model;
 mod proof;
+mod records;
 mod sat_bv_backend;
 mod smtlib;
 mod solver;
@@ -81,6 +82,7 @@ pub use lra::{
 };
 pub use model::Model;
 pub use proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};
+pub use records::{RecordError, RecordSort};
 pub use sat_bv_backend::SatBvBackend;
 pub use smtlib::{SmtLibOutcome, solve_smtlib};
 pub use solver::Solver;
