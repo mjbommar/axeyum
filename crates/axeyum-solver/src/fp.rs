@@ -16,10 +16,13 @@
 //! NaN and zeros.
 //!
 //! What is here: classification (`isNaN`/`isInfinite`/`isZero`/`isNormal`/
-//! `isSubnormal`/`isNegative`/`isPositive`), `abs`/`neg`, `eq`, and the four
-//! comparisons. **Not** here: arithmetic (`add`/`mul`/`div`/`sqrt`/`fma`/
-//! `roundToIntegral`) and real/int conversions, which require correct rounding —
-//! the harder next layer, deferred deliberately rather than done unsoundly.
+//! `isSubnormal`/`isNegative`/`isPositive`), `abs`/`neg`, `eq`, the four
+//! comparisons, `min`/`max`; arithmetic as *constant folds* over F32/F64
+//! (`add`/`sub`/`mul`/`div`/`sqrt`/`fma`/`rem`/`roundToIntegral`) and as
+//! *validated symbolic* bit-blasters (`add`/`mul`/`div`/`sqrt`/`roundToIntegral`,
+//! checked against native arithmetic); and int/real conversions. `fp.rem` is the
+//! exact IEEE remainder (no rounding). **Not** yet here: symbolic `fp.rem`, and
+//! symbolic conversions between FP and the `Real` sort.
 //!
 //! # Errors
 //!
@@ -1174,6 +1177,75 @@ pub fn fma_rne(
         u128::from(r.to_bits())
     } else if fmt == FloatFormat::F64 {
         let r = f64::from_bits(low64(xv)).mul_add(f64::from_bits(low64(yv)), f64::from_bits(low64(zv)));
+        u128::from(r.to_bits())
+    } else {
+        return Ok(None);
+    };
+    Ok(Some(arena.bv_const(fmt.width(), bits)?))
+}
+
+/// The IEEE 754 / SMT-LIB `fp.rem(x, y)` remainder: `x − y·n` where `n` is the
+/// integer quotient `x/y` rounded to nearest, ties to even. The result is
+/// *exact* (always representable, no rounding mode), with `|r| ≤ |y|/2`.
+///
+/// Special cases follow IEEE: `NaN` if `x` is infinite, `y` is zero, or either
+/// is `NaN`; `x` itself if `y` is infinite (and `x` finite); `±0` (sign of `x`)
+/// if `x` is zero. Computed via `fmod` (exact) then a nearest-adjust that
+/// resolves the half-integer tie by the parity of the truncated quotient.
+#[allow(clippy::float_cmp)] // exact half-integer tie detection is intentional
+fn ieee_remainder(x: f64, y: f64) -> f64 {
+    if x.is_nan() || y.is_nan() || x.is_infinite() || y == 0.0 {
+        return f64::NAN;
+    }
+    if y.is_infinite() {
+        return x; // x is finite
+    }
+    if x == 0.0 {
+        return x; // preserve the sign of zero
+    }
+    let ay = y.abs();
+    let mut r = x % ay; // fmod: exact, |r| < ay, sign of x
+    let half = ay * 0.5; // exact (×0.5)
+    let ar = r.abs();
+    if ar > half {
+        r -= r.signum() * ay;
+    } else if ar == half {
+        // Tie: x/y is a half-integer; n is the even neighbour of the truncated
+        // quotient nA. nA is even iff |x mod 2·ay| < ay (so x sits in the lower
+        // half of a 2·ay-wide band). When 2·ay overflows to ∞, |x| < 2·ay forces
+        // nA ∈ {0} at a tie, i.e. even — and x % ∞ = x gives |x| = ay/2 < ay,
+        // which the same test reports as even. So no overflow guard is needed.
+        let r2 = x % (2.0 * ay);
+        if r2.abs() >= ay {
+            r -= r.signum() * ay; // nA odd → step to the even neighbour
+        }
+    }
+    r
+}
+
+/// Constant-folds `fp.rem` (IEEE remainder, exact — no rounding mode) over
+/// F32/F64 constants. Returns `Ok(None)` for symbolic operands or other formats.
+///
+/// # Errors
+///
+/// Returns [`IrError`] from the constant builder.
+pub fn rem(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+    y: TermId,
+) -> Result<Option<TermId>, IrError> {
+    let (Some(xv), Some(yv)) = (const_bits(arena, x), const_bits(arena, y)) else {
+        return Ok(None);
+    };
+    let bits = if fmt == FloatFormat::F32 {
+        // f32 → f64 is exact; the exact remainder of two f32 values is itself an
+        // f32 value, so narrowing back is exact too.
+        let r = ieee_remainder(f64::from(f32::from_bits(low32(xv))), f64::from(f32::from_bits(low32(yv))));
+        #[allow(clippy::cast_possible_truncation)] // r is exactly an f32 value
+        u128::from((r as f32).to_bits())
+    } else if fmt == FloatFormat::F64 {
+        let r = ieee_remainder(f64::from_bits(low64(xv)), f64::from_bits(low64(yv)));
         u128::from(r.to_bits())
     } else {
         return Ok(None);
@@ -2677,6 +2749,142 @@ mod tests {
                 .wrapping_mul(6_364_136_223_846_793_005)
                 .wrapping_add(1_442_695_040_888_963_407);
             check(&mut a, x, state);
+        }
+    }
+
+    // Independent IEEE-remainder oracle by brute force over the integer quotient
+    // (exact for a bounded quotient: the products and difference are exactly
+    // representable). Picks the nearest n; ties to even n.
+    #[allow(clippy::float_cmp)] // exact equality of the candidate magnitudes is intentional
+    fn rem_oracle(xd: f64, yd: f64) -> f64 {
+        let base = (xd / yd).floor();
+        let mut best_r = f64::INFINITY;
+        let mut i = -2i64;
+        while i <= 2 {
+            #[allow(clippy::cast_precision_loss)]
+            let n = base + i as f64;
+            let r = xd - yd * n;
+            #[allow(clippy::cast_possible_truncation)]
+            let n_even = (n as i64).rem_euclid(2) == 0;
+            if r.abs() < best_r.abs() || (r.abs() == best_r.abs() && n_even) {
+                best_r = r;
+            }
+            i += 1;
+        }
+        // IEEE: a zero remainder takes the sign of x (f64 subtraction loses it).
+        if best_r == 0.0 {
+            return 0.0_f64.copysign(xd);
+        }
+        best_r
+    }
+
+    #[test]
+    fn rem_specials_and_ties() {
+        let mut a = TermArena::new();
+        // (x, y, expected) over both F32 and F64 for clean, format-independent values.
+        let cases: [(f64, f64, f64); 7] = [
+            (7.0, 2.0, -1.0), // 3.5 ties to even (4) -> 7-8
+            (5.0, 2.0, 1.0),  // 2.5 ties to even (2) -> 5-4
+            (3.0, 2.0, -1.0), // 1.5 ties to even (2) -> 3-4
+            (1.0, 2.0, 1.0),  // 0.5 ties to even (0) -> 1-0
+            (-7.0, 2.0, 1.0), // -3.5 ties to even (-4) -> -7+8
+            (6.0, 3.0, 0.0),  // exact
+            (5.5, 2.0, -0.5), // 2.75 -> 3 -> 5.5-6
+        ];
+        for (x, y, want) in cases {
+            // F64
+            let xt = a.bv_const(64, u128::from(f64::to_bits(x))).unwrap();
+            let yt = a.bv_const(64, u128::from(f64::to_bits(y))).unwrap();
+            let r = rem(&mut a, FloatFormat::F64, xt, yt).unwrap().unwrap();
+            let got = match eval(&a, r, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("{other:?}"),
+            };
+            assert_eq!(got, u128::from(want.to_bits()), "rem64({x},{y}) want {want}");
+            // F32
+            #[allow(clippy::cast_possible_truncation)]
+            let (xf, yf, wf) = (x as f32, y as f32, want as f32);
+            let xt = a.bv_const(32, u128::from(xf.to_bits())).unwrap();
+            let yt = a.bv_const(32, u128::from(yf.to_bits())).unwrap();
+            let r = rem(&mut a, FloatFormat::F32, xt, yt).unwrap().unwrap();
+            let got = match eval(&a, r, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("{other:?}"),
+            };
+            assert_eq!(got, u128::from(wf.to_bits()), "rem32({xf},{yf}) want {wf}");
+        }
+
+        // specials (F64): NaN when x infinite / y zero; x when y infinite; ±0 from ±0.
+        let nan = |a: &mut TermArena, x: f64, y: f64| -> u128 {
+            let xt = a.bv_const(64, u128::from(f64::to_bits(x))).unwrap();
+            let yt = a.bv_const(64, u128::from(f64::to_bits(y))).unwrap();
+            let r = rem(a, FloatFormat::F64, xt, yt).unwrap().unwrap();
+            match eval(a, r, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("{other:?}"),
+            }
+        };
+        assert!(f64::from_bits(nan(&mut a, f64::INFINITY, 2.0) as u64).is_nan(), "rem(inf,2)=NaN");
+        assert!(f64::from_bits(nan(&mut a, 3.0, 0.0) as u64).is_nan(), "rem(3,0)=NaN");
+        assert_eq!(nan(&mut a, 3.0, f64::INFINITY), u128::from(3.0f64.to_bits()), "rem(3,inf)=3");
+        assert_eq!(nan(&mut a, 0.0, 3.0), u128::from(0.0f64.to_bits()), "rem(+0,3)=+0");
+        assert_eq!(nan(&mut a, -0.0, 3.0), u128::from((-0.0f64).to_bits()), "rem(-0,3)=-0");
+    }
+
+    #[test]
+    fn rem_matches_brute_force_f32() {
+        let mut a = TermArena::new();
+        let check = |a: &mut TermArena, xb: u32, yb: u32| {
+            let xf = f32::from_bits(xb);
+            let yf = f32::from_bits(yb);
+            if !xf.is_finite() || !yf.is_finite() || yf == 0.0 {
+                return;
+            }
+            let (xd, yd) = (f64::from(xf), f64::from(yf));
+            // restrict to the bounded-quotient region where the oracle is exact
+            if (xd / yd).abs() >= 60.0 {
+                return;
+            }
+            let xt = a.bv_const(32, u128::from(xb)).unwrap();
+            let yt = a.bv_const(32, u128::from(yb)).unwrap();
+            let r = rem(a, FloatFormat::F32, xt, yt).unwrap().unwrap();
+            let got = match eval(a, r, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("{other:?}"),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let want = (rem_oracle(xd, yd) as f32).to_bits();
+            assert_eq!(got, u128::from(want), "rem({xf},{yf}) got {got:#x} want {want:#x}");
+        };
+
+        let structured: [u32; 12] = [
+            0x3f80_0000, // 1.0
+            0x4000_0000, // 2.0
+            0x4040_0000, // 3.0
+            0x40a0_0000, // 5.0
+            0x40e0_0000, // 7.0
+            0x40c0_0000, // 6.0
+            0x3f00_0000, // 0.5
+            0x40b0_0000, // 5.5
+            0xc0e0_0000, // -7.0
+            0x3fc0_0000, // 1.5
+            0x4120_0000, // 10.0
+            0x4248_0000, // 50.0
+        ];
+        for &x in &structured {
+            for &y in &structured {
+                check(&mut a, x, y);
+            }
+        }
+
+        let mut state: u64 = 0x1234_5678_9abc_def0;
+        for _ in 0..6000 {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            let x = (state & 0xFFFF_FFFF) as u32;
+            let y = (state >> 32) as u32;
+            check(&mut a, x, y);
         }
     }
 }

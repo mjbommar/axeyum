@@ -178,7 +178,13 @@ Last updated: 2026-06-14
   generic ops are correct; bf16 add/mul validated against `round_to_format`.
   (OCP FP8 `E4M3` deviates from IEEE — no ∞, single NaN, extended max — so it
   needs a per-format special-value convention; deliberately not added.)
-  **Next FP:** `fp.rem` (complex), symbolic FP↔real (nonlinear). Conversion folds are done both directions:
+  **`fp.rem` (IEEE remainder) done as a constant fold** (F32/F64): exact `x − y·n`
+  with `n = round_even(x/y)` via `fmod` + a nearest-adjust that resolves the
+  half-integer tie by the parity of the truncated quotient (parity read from
+  `|x mod 2·|y|| < |y|`); specials per IEEE (NaN if `x`=∞ or `y`=0; `x` if `y`=∞;
+  zero takes the sign of `x`). Validated by an independent brute-force-over-`n`
+  oracle across ~6k f32 pairs plus explicit tie/special cases.
+  **Next FP:** *symbolic* `fp.rem`, symbolic FP↔real (nonlinear). Conversion folds are done both directions:
   int→FP (`ubv_to_fp`/`sbv_to_fp`), FP→int (`to_ubv`/`to_sbv`, per rounding mode,
   folded only when finite + in range else `None`), and FP→Real (`to_real`, exact
   when it fits the i128 rational). A first-class `Sort::Float` remains optional.
