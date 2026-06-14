@@ -628,3 +628,19 @@ fn parses_symbolic_real_division() {
     let reparsed = parse_script(&rendered).unwrap();
     assert_eq!(reparsed.assertions.len(), 1);
 }
+
+#[test]
+fn folds_constant_int_real_coercions() {
+    // (to_real 3) = 3.0, (to_int 7/2) = 3, (is_int 4.0) = true, (is_int 3.5) = false.
+    let text = r"
+        (set-logic QF_LIRA)
+        (declare-const x Real)
+        (assert (= x (to_real 3)))
+        (assert (> (to_int 3.5) 2))
+        (assert (is_int 4.0))
+        (assert (not (is_int 3.5)))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 4);
+}

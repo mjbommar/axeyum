@@ -902,6 +902,31 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
             }
             arena.int_abs(a[0])?
         }
+        // Int↔Real coercions. Constant operands fold exactly; symbolic operands
+        // need cross-sort (Nelson-Oppen) reasoning and are not yet supported.
+        "to_real" => {
+            need(1)?;
+            match *arena.node(args[0]) {
+                TermNode::IntConst(n) => arena.real_const(Rational::integer(n)),
+                _ => return Err(SmtError::Unsupported("symbolic `to_real`".to_owned())),
+            }
+        }
+        "to_int" => {
+            need(1)?;
+            match *arena.node(args[0]) {
+                TermNode::RealConst(r) => {
+                    arena.int_const(r.numerator().div_euclid(r.denominator()))
+                }
+                _ => return Err(SmtError::Unsupported("symbolic `to_int`".to_owned())),
+            }
+        }
+        "is_int" => {
+            need(1)?;
+            match *arena.node(args[0]) {
+                TermNode::RealConst(r) => arena.bool_const(r.denominator() == 1),
+                _ => return Err(SmtError::Unsupported("symbolic `is_int`".to_owned())),
+            }
+        }
         "bv2nat" => {
             if args.len() != 1 {
                 return Err(SmtError::Syntax("`bv2nat` expects 1 argument".to_owned()));
