@@ -9,7 +9,11 @@ use axeyum_solver::{
 };
 
 /// The pure-Rust strategies, always available (no `z3` feature needed).
-const PURE_RUST: &[Strategy] = &[Strategy::EagerPureRust, Strategy::LazyBvAbstraction];
+const PURE_RUST: &[Strategy] = &[
+    Strategy::EagerPureRust,
+    Strategy::LazyBvAbstraction,
+    Strategy::Auto,
+];
 
 fn is_sat(result: &CheckResult) -> Option<bool> {
     match result {
@@ -67,8 +71,10 @@ fn strategy_metadata_is_stable() {
     assert_eq!(Strategy::default(), Strategy::EagerPureRust);
     assert_eq!(Strategy::EagerPureRust.name(), "eager-pure-rust");
     assert_eq!(Strategy::LazyBvAbstraction.name(), "lazy-bv-abstraction");
+    assert_eq!(Strategy::Auto.name(), "auto");
     assert!(Strategy::EagerPureRust.is_pure_rust());
     assert!(Strategy::LazyBvAbstraction.is_pure_rust());
+    assert!(Strategy::Auto.is_pure_rust());
 }
 
 #[test]

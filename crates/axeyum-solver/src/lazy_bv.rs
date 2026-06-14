@@ -217,6 +217,13 @@ fn is_heavy(op: Op) -> bool {
     )
 }
 
+/// Whether `assertions` contain any heavy gadget (`bvmul`/`bvudiv`/…) — the
+/// signal the [`crate::Strategy::Auto`] selector uses to prefer the low-memory
+/// abstraction strategy.
+pub(crate) fn has_heavy_ops(arena: &TermArena, assertions: &[TermId]) -> bool {
+    !collect_heavy_ops(arena, assertions).is_empty()
+}
+
 /// Distinct heavy-op subterms in `assertions`, in deterministic first-seen order.
 fn collect_heavy_ops(arena: &TermArena, assertions: &[TermId]) -> Vec<TermId> {
     let mut seen: HashSet<TermId> = HashSet::new();

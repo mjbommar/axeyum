@@ -47,6 +47,11 @@ pub enum Strategy {
     /// dividers are bit-blasted only when they affect the verdict (ADR-0019).
     /// Sound and complete; `sat` replayed, `unsat` sound by over-approximation.
     LazyBvAbstraction,
+    /// Heuristic selector: use [`Strategy::LazyBvAbstraction`] when the query
+    /// contains heavy gadgets (`bvmul`/`bvudiv`/…), else [`Strategy::EagerPureRust`].
+    /// Both are sound, so the choice only trades memory against refinement
+    /// rounds; this is a first heuristic, not a cost model.
+    Auto,
     /// Low-memory reference oracle (Z3); `sat` is replayed for parity.
     #[cfg(feature = "z3")]
     Oracle,
@@ -58,6 +63,7 @@ impl Strategy {
         match self {
             Strategy::EagerPureRust => "eager-pure-rust",
             Strategy::LazyBvAbstraction => "lazy-bv-abstraction",
+            Strategy::Auto => "auto",
             #[cfg(feature = "z3")]
             Strategy::Oracle => "oracle-z3",
         }
@@ -66,7 +72,7 @@ impl Strategy {
     /// Whether the strategy is part of the pure-Rust (no C/C++) stack.
     pub fn is_pure_rust(self) -> bool {
         match self {
-            Strategy::EagerPureRust | Strategy::LazyBvAbstraction => true,
+            Strategy::EagerPureRust | Strategy::LazyBvAbstraction | Strategy::Auto => true,
             #[cfg(feature = "z3")]
             Strategy::Oracle => false,
         }
@@ -95,6 +101,13 @@ pub fn solve_with_strategy(
         Strategy::EagerPureRust => crate::auto::solve(arena, assertions, config),
         Strategy::LazyBvAbstraction => {
             crate::lazy_bv::check_lazy_bv_abstraction(arena, assertions, config)
+        }
+        Strategy::Auto => {
+            if crate::lazy_bv::has_heavy_ops(arena, assertions) {
+                crate::lazy_bv::check_lazy_bv_abstraction(arena, assertions, config)
+            } else {
+                crate::auto::solve(arena, assertions, config)
+            }
         }
         #[cfg(feature = "z3")]
         Strategy::Oracle => solve_with_oracle(arena, assertions, config),
