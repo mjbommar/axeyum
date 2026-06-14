@@ -38,6 +38,22 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-13
 
+- Architecture iteration L — signed bit-vector optimization recorded 2026-06-13:
+  `maximize_bv_signed` / `minimize_bv_signed` (`optimize.rs`) optimize the
+  two's-complement signed value of a bit-vector objective (width ≤ 64) by binary
+  search over the signed range with `bv_sge`/`bv_sle` probes; two's-complement
+  bound encoding via bit reinterpretation, sign interpretation via shifts (no
+  lossy casts). Rounds out the OMT story: **integer + unsigned/signed BV,
+  conjunctive + Boolean-structured**. Tests: signed max/min with bounds,
+  unconstrained BV8 spanning [-128, 127].
+- **Remaining for Z3 parity (all require core IR `Sort`/`Op` surgery or a large
+  new subsystem — fresh-context, ADR-first work):** recursive/mutually-recursive
+  datatypes (first-class datatype sort; enums+records cover the finite case);
+  floating point; strings/sequences/regex; nonlinear real arithmetic (NRA/CAD);
+  production quantifiers (E-matching + MBQI); and a measured SMT-COMP performance
+  campaign (the actual parity gate — OOM-gated, needs explicit go-ahead). The
+  sound, no-IR-surgery increments are now exhausted; this is the line where the
+  next session resumes with a datatype-sort ADR.
 - Architecture iteration K — bit-vector optimization recorded 2026-06-13
   (machine-word program optimization — the use case): `maximize_bv` /
   `minimize_bv` (`optimize.rs`) optimize the **unsigned** value of a bit-vector
