@@ -417,8 +417,20 @@ pub fn prove_unsat_by_mbqi(
             }
             match sort {
                 Sort::Int => {
-                    for d in [0i128, 1, -1] {
-                        let v = Value::Int(d);
+                    // Also probe one above/below each integer candidate: bound
+                    // universals like `∀x. x ≤ c` are violated at `c+1`, which the
+                    // exact subterm value `c` does not surface on its own.
+                    let neighbours: Vec<i128> = candidates
+                        .iter()
+                        .filter_map(|v| match v {
+                            Value::Int(n) => Some(*n),
+                            _ => None,
+                        })
+                        .flat_map(|n| [n.checked_add(1), n.checked_sub(1)])
+                        .flatten()
+                        .collect();
+                    for n in neighbours.into_iter().chain([0, 1, -1]) {
+                        let v = Value::Int(n);
                         if !candidates.contains(&v) {
                             candidates.push(v);
                         }

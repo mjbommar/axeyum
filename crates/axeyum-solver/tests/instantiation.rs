@@ -363,3 +363,19 @@ fn mbqi_multivar_forall_defers_without_error() {
     // forall x y. x+y>=0 is false; sound result is Unsat or Unknown, never Sat.
     assert!(matches!(r, CheckResult::Unsat | CheckResult::Unknown(_)), "got {r:?}");
 }
+
+#[test]
+fn mbqi_bound_universal_is_refuted() {
+    // (forall x:Int. x <= c) AND c == 10 : false (x = 11 = c+1 violates). With
+    // the neighbour-probing heuristic, MBQI instantiates x:=11 and refutes it.
+    let mut arena = TermArena::new();
+    let x = arena.declare("x", Sort::Int).unwrap();
+    let xv = arena.var(x);
+    let c = arena.declare("c", Sort::Int).map(|s| arena.var(s)).unwrap();
+    let body = arena.int_le(xv, c).unwrap();
+    let all = arena.forall(x, body).unwrap();
+    let ten = arena.int_const(10);
+    let cc = arena.eq(c, ten).unwrap();
+    let r = axeyum_solver::prove_unsat_by_mbqi(&mut arena, &[all, cc], &config()).unwrap();
+    assert!(matches!(r, CheckResult::Unsat), "forall x. x<=10 is unsat (x=11), got {r:?}");
+}
