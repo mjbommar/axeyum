@@ -365,6 +365,25 @@ pub fn neg(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId,
     arena.bv_xor(x, mask)
 }
 
+/// Symbolic `fp.sub` — `a − b`, via the exact IEEE identity
+/// `fp.sub(a, b) = fp.add(a, fp.neg(b))` (which holds for every case, including
+/// NaN/∞ and signed zeros: `a − (+0) = a + (−0)`, `a − (−0) = a + (+0)`). Same
+/// format support as [`add`] (F16/F32/F64).
+///
+/// # Errors
+///
+/// Returns [`IrError`] from [`neg`] or [`add`] (mis-sized operand, width, etc.).
+pub fn sub(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    a: TermId,
+    b: TermId,
+    mode: RoundingMode,
+) -> Result<TermId, IrError> {
+    let neg_b = neg(arena, fmt, b)?;
+    add(arena, fmt, a, neg_b, mode)
+}
+
 /// IEEE equality `fp.eq`: neither operand is NaN, and they are the same value
 /// (bit-identical, or both zero so `+0 = -0`).
 pub fn eq(
@@ -3345,6 +3364,45 @@ mod tests {
             let y = (state & 0xFFFF_FFFF) as u32;
             let z = (state >> 32) as u32;
             check(&mut a, x, y, z);
+        }
+    }
+
+    #[test]
+    fn sub_matches_native_f32() {
+        // Symbolic fp.sub must equal native f32 subtraction (= a + (-b)).
+        let mut a = TermArena::new();
+        let check = |a: &mut TermArena, xb: u32, yb: u32| {
+            let xt = a.bv_const(32, u128::from(xb)).unwrap();
+            let yt = a.bv_const(32, u128::from(yb)).unwrap();
+            let r = sub(a, FloatFormat::F32, xt, yt, RoundingMode::NearestEven).unwrap();
+            let got = match eval(a, r, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("{other:?}"),
+            };
+            let want = f32::from_bits(xb) - f32::from_bits(yb);
+            if want.is_nan() {
+                let exp = (got >> 23) & 0xFF;
+                let mant = got & 0x7F_FFFF;
+                assert!(exp == 0xFF && mant != 0, "sub({xb:#x},{yb:#x}) want NaN, got {got:#x}");
+            } else {
+                assert_eq!(got, u128::from(want.to_bits()), "sub({xb:#x},{yb:#x})");
+            }
+        };
+        let structured: [u32; 10] = [
+            0x0000_0000, 0x8000_0000, 0x3f80_0000, 0xbf80_0000, 0x4000_0000, 0x7f80_0000,
+            0xff80_0000, 0x7fc0_0000, 0x0080_0000, 0x0000_0001,
+        ];
+        for &x in &structured {
+            for &y in &structured {
+                check(&mut a, x, y);
+            }
+        }
+        let mut state: u64 = 0x5b50_0bad_cafe_1234;
+        for _ in 0..4000 {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            check(&mut a, (state & 0xFFFF_FFFF) as u32, (state >> 32) as u32);
         }
     }
 

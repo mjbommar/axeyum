@@ -220,6 +220,8 @@ Last updated: 2026-06-14
   Validated against native `f32::mul_add` (the correctly-rounded fma) over ~6k
   random + structured triples, plus exact F16 cases. The differential caught the
   zero-sign edge.
+  **Symbolic `fp.sub`** added as the exact identity `add(a, neg(b))` (holds for
+  all cases incl. signed zeros/specials); validated against native f32 `-`.
   **Next FP:** iterative symbolic `fp.rem` for wide-exponent formats, symbolic FP↔real (nonlinear). Conversion folds are done both directions:
   int→FP (`ubv_to_fp`/`sbv_to_fp`), FP→int (`to_ubv`/`to_sbv`, per rounding mode,
   folded only when finite + in range else `None`), and FP→Real (`to_real`, exact
