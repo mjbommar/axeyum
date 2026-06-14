@@ -95,8 +95,11 @@ Last updated: 2026-06-14
   and `pack_value`/`round_variable`/`round_to_format` all take a `RoundingMode`
   (nearest-even/away, toward-zero/+∞/−∞), incl. the directed-underflow case
   (tiny value → smallest subnormal under toward-±∞). `mul` validated end-to-end
-  across all five modes for F32 against the mode-aware `round_to_format`. **Next
-  FP:** `fp.rem`, symbolic FP↔real. Conversion folds are done both directions:
+  across all five modes for F32 against the mode-aware `round_to_format`.
+  **Symbolic `fp.roundToIntegral` done** (`round_to_integral_sym`, all 5 modes,
+  F16/F32/F64): integral values pass through, fractional bits rounded via
+  `round_variable` then repacked; validated against native f32
+  round_ties_even/round/trunc/ceil/floor. **Next FP:** `fp.rem`, symbolic FP↔real. Conversion folds are done both directions:
   int→FP (`ubv_to_fp`/`sbv_to_fp`), FP→int (`to_ubv`/`to_sbv`, per rounding mode,
   folded only when finite + in range else `None`), and FP→Real (`to_real`, exact
   when it fits the i128 rational). A first-class `Sort::Float` remains optional.

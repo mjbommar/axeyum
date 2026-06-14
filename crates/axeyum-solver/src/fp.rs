@@ -1018,6 +1018,76 @@ pub fn round_to_integral(
     Ok(Some(arena.bv_const(fmt.width(), bits)?))
 }
 
+/// Symbolic `fp.roundToIntegral`: rounds `x` to an integer-valued float under
+/// `mode`. A value with a nonnegative LSB exponent is already integral (returned
+/// unchanged); otherwise the fractional bits are rounded off via [`round_variable`]
+/// and the integer is repacked via [`pack_value`]. NaN/∞/±0 pass through. Pure
+/// bit-vector formula; F16/F32/F64. Validated against native `f32` rounding.
+///
+/// # Errors
+///
+/// Returns [`IrError::SortMismatch`] for a mis-sized operand or [`IrError`] from
+/// builders.
+#[allow(clippy::similar_names, clippy::many_single_char_names)]
+pub fn round_to_integral_sym(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    mode: RoundingMode,
+    x: TermId,
+) -> Result<TermId, IrError> {
+    fmt.check(arena, x)?;
+    let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
+    let total = fmt.width();
+    let w = sb + 4;
+    if w > MAX_BV_WIDTH {
+        return Err(IrError::InvalidWidth(w));
+    }
+    let one1 = arena.bv_const(1, 1)?;
+    let (sx, sig_w, e) = unpack_operand(arena, fmt, w, x)?;
+    let sign = arena.eq(sx, one1)?;
+    let zero_w = arena.bv_const(w, 0)?;
+    let one_w = arena.bv_const(w, 1)?;
+
+    // E ≥ 0 ⇒ already integral; E < 0 ⇒ round off `-E` fractional bits.
+    let e_ge0 = arena.bv_sge(e, zero_w)?;
+    let neg_e = arena.bv_sub(zero_w, e)?;
+    let rounded = round_variable(arena, sig_w, neg_e, mode, sign)?;
+    // |value| < 1 (drop ≥ w): nearest/toward-zero → 0; directed → ±1.
+    let w_const = arena.bv_const(w, u128::from(w))?;
+    let drop_ge_w = arena.bv_uge(neg_e, w_const)?;
+    let tiny = {
+        let m_nonzero = {
+            let z = arena.eq(sig_w, zero_w)?;
+            arena.not(z)?
+        };
+        let up = match mode {
+            RoundingMode::TowardPositive => {
+                let pos = arena.not(sign)?;
+                arena.and(m_nonzero, pos)?
+            }
+            RoundingMode::TowardNegative => arena.and(m_nonzero, sign)?,
+            _ => arena.bool_const(false),
+        };
+        arena.ite(up, one_w, zero_w)?
+    };
+    let mag = arena.ite(drop_ge_w, tiny, rounded)?;
+    let repacked = pack_value(arena, eb, sb, sign, mag, zero_w, mode)?;
+    let finite = arena.ite(e_ge0, x, repacked)?;
+
+    // Specials: NaN → NaN; ∞ and ±0 pass through unchanged.
+    let nan = is_nan(arena, fmt, x)?;
+    let inf = is_infinite(arena, fmt, x)?;
+    let zero = is_zero(arena, fmt, x)?;
+    let exp_ones = arena.bv_const(total, ((1u128 << eb) - 1) << (sb - 1))?;
+    let qnan = {
+        let q = arena.bv_const(total, 1u128 << (sb - 2))?;
+        arena.bv_or(exp_ones, q)?
+    };
+    let if_zero = arena.ite(zero, x, finite)?;
+    let if_inf = arena.ite(inf, x, if_zero)?;
+    arena.ite(nan, qnan, if_inf)
+}
+
 /// Constant-folds `(_ to_fp eb sb)` from an **unsigned** bit-vector constant
 /// (`(_ to_fp_unsigned ...)`): the unsigned value, rounded to nearest-even into
 /// F32/F64 by native conversion. Always defined.
@@ -1930,6 +2000,46 @@ mod tests {
         for _ in 0..1000 {
             s = s.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1_442_695_040_888_963_407);
             check64(&mut a, s);
+        }
+    }
+
+    #[test]
+    fn round_to_integral_sym_matches_native_f32() {
+        let modes = [
+            (RoundingMode::NearestEven, 0u8),
+            (RoundingMode::NearestAway, 1),
+            (RoundingMode::TowardZero, 2),
+            (RoundingMode::TowardPositive, 3),
+            (RoundingMode::TowardNegative, 4),
+        ];
+        let mut a = TermArena::new();
+        let mut state: u64 = 0x1234_5678_9abc_def0;
+        for &(mode, kind) in &modes {
+            for _ in 0..600 {
+                state = state
+                    .wrapping_mul(6_364_136_223_846_793_005)
+                    .wrapping_add(1_442_695_040_888_963_407);
+                let xb = (state >> 16) as u32;
+                let xt = a.bv_const(32, u128::from(xb)).unwrap();
+                let r = round_to_integral_sym(&mut a, FloatFormat::F32, mode, xt).unwrap();
+                let got = match eval(&a, r, &Assignment::new()) {
+                    Ok(Value::Bv { value, .. }) => value,
+                    other => panic!("expected Bv, got {other:?}"),
+                };
+                let v = f32::from_bits(xb);
+                let want = match kind {
+                    0 => v.round_ties_even(),
+                    1 => v.round(),
+                    2 => v.trunc(),
+                    3 => v.ceil(),
+                    _ => v.floor(),
+                };
+                if want.is_nan() {
+                    assert!((got >> 23) & 0xFF == 0xFF && got & 0x7F_FFFF != 0);
+                } else {
+                    assert_eq!(got, u128::from(want.to_bits()), "rint({xb:#x},{mode:?})");
+                }
+            }
         }
     }
 
