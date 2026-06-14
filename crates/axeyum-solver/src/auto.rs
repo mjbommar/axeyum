@@ -157,6 +157,12 @@ pub fn check_auto(
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
     let features = Features::scan(arena, assertions);
+    if features.has_datatype {
+        // Datatypes: fold read-over-construct, then decide the residual (or
+        // report Unsupported if datatype variables remain). The residual is
+        // datatype-free, so this does not re-enter here (ADR-0022).
+        return crate::datatype_elim::check_with_datatype_elimination(arena, assertions, config);
+    }
     if features.has_real && features.has_int {
         // Combined linear arithmetic (QF_LIRA): the lazy-SMT loop theory-checks
         // integer and real atoms with their exact simplices independently (they
@@ -345,12 +351,17 @@ fn decide_instantiation(
 }
 
 /// Which theory features a query uses.
+// A flat set of independent theory-presence flags reads better than a packed
+// enum; each is checked independently in `check_auto`.
+#[allow(clippy::struct_excessive_bools)]
 struct Features {
     has_real: bool,
     /// Any sort/operator handled by the bit-blasting composition (bit-vectors,
     /// arrays, integers, uninterpreted functions) — i.e. not pure Bool/real.
     has_bitblast: bool,
     has_int: bool,
+    /// Any datatype sort or constructor/selector/tester op (ADR-0022).
+    has_datatype: bool,
 }
 
 impl Features {
@@ -359,6 +370,7 @@ impl Features {
             has_real: false,
             has_bitblast: false,
             has_int: false,
+            has_datatype: false,
         };
         let mut seen = BTreeSet::new();
         let mut stack = assertions.to_vec();
@@ -373,14 +385,18 @@ impl Features {
                     features.has_int = true;
                 }
                 Sort::BitVec(_) | Sort::Array { .. } => features.has_bitblast = true,
-                // Datatypes are not decided by any current engine; leave no
-                // feature flag so the query routes to the eager path, which
-                // reports it Unsupported (ADR-0022).
-                Sort::Bool | Sort::Datatype(_) => {}
+                Sort::Datatype(_) => features.has_datatype = true,
+                Sort::Bool => {}
             }
             if let TermNode::App { op, args } = arena.node(term) {
                 if matches!(op, Op::Apply(_)) {
                     features.has_bitblast = true;
+                }
+                if matches!(
+                    op,
+                    Op::DtConstruct { .. } | Op::DtSelect { .. } | Op::DtTest(_)
+                ) {
+                    features.has_datatype = true;
                 }
                 stack.extend(args.iter().copied());
             }

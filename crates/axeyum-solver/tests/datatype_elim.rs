@@ -63,3 +63,19 @@ fn free_datatype_variable_is_unsupported() {
         Err(axeyum_solver::SolverError::Unsupported(_))
     ));
 }
+
+#[test]
+fn dispatcher_routes_datatype_queries() {
+    // The top-level `solve` must decide a constructor-built datatype query.
+    use axeyum_solver::solve;
+    let mut arena = TermArena::new();
+    let (mk, x, y) = pair_sort(&mut arena);
+    let p = arena.construct(mk, &[x, y]).unwrap();
+    let sel = arena.dt_select(mk, 1, p).unwrap();
+    let nine = arena.bv_const(8, 9).unwrap();
+    let eq = arena.eq(sel, nine).unwrap(); // select_b(mk(x,y)) == 9 -> y == 9 -> sat
+    assert!(matches!(
+        solve(&mut arena, &[eq], &SolverConfig::default()),
+        Ok(CheckResult::Sat(_))
+    ));
+}
