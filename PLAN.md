@@ -52,8 +52,13 @@ Last updated: 2026-06-14
   (smallest matching offset ≥ from, via a shared `match_at`) added. **Symbolic-start `substr_at`** and **lexicographic `str.<`/`str.<=`** added.
   String fragment now: len, =, at, literals, ++, prefixof, contains, suffixof,
   substr (const+symbolic start), indexof, lex order, `take`/`drop`, and equal-length `str.replace`
-  (per-position, first occurrence). **Next:** general-length replace, regex, then
-  unbounded via a first-class sort.
+  (per-position, first occurrence). **`str.in_re` (regex membership)** now added —
+  a Thompson NFA (Empty/Char/Range/Concat/Union/Star) is built and its epsilon
+  closure precomputed, then simulated symbolically over the ≤`max_len` positions:
+  per-position active-state Bools advance on `pos < len ∧ pred(byte)` then take
+  the epsilon closure; accept = OR over positions of `len==k ∧ active[accept]`.
+  Tests: literal/symbolic `a(b|c)*` and `[a-z]*` membership (sat + concrete eval).
+  **Next:** general-length replace, `replace_all`, then unbounded via a first-class sort.
   This was the last entirely-untouched Z3 theory; it is now opened.
 
 - **NRA — first slice (2026-06-14, ADR-0024).** Nonlinear real arithmetic by

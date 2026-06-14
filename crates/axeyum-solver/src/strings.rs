@@ -11,9 +11,11 @@
 //! 128-bit width (`max_len ≤ 16`).
 //!
 //! This is the bounded-model-checking fragment of the SMT string theory (the
-//! shape CBMC/Kani use): `str.len`, `str.=`, `str.at`, and literals. Unbounded
-//! strings and the shift-heavy operations (`str.++`/`substr`/`contains`/regex)
-//! are future work.
+//! shape CBMC/Kani use): `len`, `=`, `at`, literals, `++`, `prefixof`, `contains`,
+//! `suffixof`, `substr` (constant and symbolic start), `indexof`, lexicographic
+//! `<`/`<=`, `take`/`drop`, equal-length `replace`, and regex membership
+//! (`in_re`, via a Thompson NFA simulated over the bounded positions). Unbounded
+//! strings, general-length `replace`, and `replace_all` are future work.
 
 use axeyum_ir::{IrError, Sort, TermArena, TermId};
 
@@ -545,6 +547,66 @@ impl BoundedString {
         Ok(StrTerm { len: x.len, content })
     }
 
+    /// `str.in_re` — does the bounded string `x` match the regular expression
+    /// `re`? Compiles `re` to a Thompson NFA and simulates it symbolically over
+    /// the `≤ max_len` positions (a per-position state set, char transitions
+    /// gated by `pos < len`), accepting iff the accept state is active after
+    /// exactly `len` consumed characters. Pure bit-vector/Boolean formula.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] from the builders.
+    pub fn in_re(&self, arena: &mut TermArena, x: &StrTerm, re: &Regex) -> Result<TermId, IrError> {
+        let mut nfa = Nfa::default();
+        let (start, accept) = nfa.build(re);
+        let n = nfa.count;
+        let reach = nfa.epsilon_closure();
+
+        // active[s] = is NFA state s reachable after the chars consumed so far?
+        // Initially: epsilon-closure of {start} (static).
+        let mut active: Vec<TermId> = (0..n)
+            .map(|s| arena.bool_const(reach[start][s]))
+            .collect();
+
+        // accepted iff at some point exactly `len` chars are consumed and the
+        // accept state is active. Check after 0 chars, then after each position.
+        let zero = arena.bv_const(self.len_width(), 0)?;
+        let len_is_0 = arena.eq(x.len, zero)?;
+        let mut accepted = arena.and(len_is_0, active[accept])?;
+
+        for pos in 0..self.max_len {
+            let ch = arena.extract(pos * 8 + 7, pos * 8, x.content)?;
+            let pos_c = arena.bv_const(self.len_width(), u128::from(pos))?;
+            let consume = arena.bv_ult(pos_c, x.len)?; // char at pos is within the string
+
+            // char step: after[t] = OR over edges s--pred-->t of active[s] ∧ consume ∧ pred(ch)
+            let mut after = vec![arena.bool_const(false); n];
+            for &(s, t, ref pred) in &nfa.chars {
+                let pmatch = pred.eval(arena, ch)?;
+                let gated = arena.and(active[s], consume)?;
+                let step = arena.and(gated, pmatch)?;
+                after[t] = arena.or(after[t], step)?;
+            }
+            // epsilon closure: next[s'] = OR over t of after[t] ∧ reach[t][s']
+            let mut next = vec![arena.bool_const(false); n];
+            for (t, &a_t) in after.iter().enumerate() {
+                for (sp, slot) in next.iter_mut().enumerate() {
+                    if reach[t][sp] {
+                        *slot = arena.or(*slot, a_t)?;
+                    }
+                }
+            }
+            active = next;
+
+            // accept after pos+1 chars: len == pos+1 ∧ active[accept].
+            let lenp = arena.bv_const(self.len_width(), u128::from(pos) + 1)?;
+            let len_eq = arena.eq(x.len, lenp)?;
+            let acc = arena.and(len_eq, active[accept])?;
+            accepted = arena.or(accepted, acc)?;
+        }
+        Ok(accepted)
+    }
+
     /// `str.at` at a **constant** index: the byte at position `i` (an 8-bit
     /// `BitVec`), or `0` if `i` is at or beyond the length.
     ///
@@ -560,5 +622,156 @@ impl BoundedString {
         let byte = arena.extract(i * 8 + 7, i * 8, x.content)?;
         let zero = arena.bv_const(8, 0)?;
         arena.ite(active, byte, zero)
+    }
+}
+
+/// A regular expression over bytes for [`BoundedString::in_re`].
+#[derive(Clone, Debug)]
+pub enum Regex {
+    /// Matches only the empty string.
+    Empty,
+    /// Matches a single specific byte.
+    Char(u8),
+    /// Matches any byte in `[lo, hi]` (inclusive).
+    Range(u8, u8),
+    /// Concatenation: `a` then `b`.
+    Concat(Box<Regex>, Box<Regex>),
+    /// Alternation: `a` or `b`.
+    Union(Box<Regex>, Box<Regex>),
+    /// Kleene star: zero or more repetitions of `a`.
+    Star(Box<Regex>),
+}
+
+impl Regex {
+    /// A literal multi-byte string regex (`Concat` of `Char`s; empty → `Empty`).
+    #[must_use]
+    pub fn literal(s: &str) -> Regex {
+        let mut it = s.bytes().rev();
+        match it.next() {
+            None => Regex::Empty,
+            Some(last) => {
+                let mut acc = Regex::Char(last);
+                for b in it {
+                    acc = Regex::Concat(Box::new(Regex::Char(b)), Box::new(acc));
+                }
+                acc
+            }
+        }
+    }
+}
+
+/// A byte predicate on an NFA character transition.
+enum Pred {
+    Eq(u8),
+    Range(u8, u8),
+}
+
+impl Pred {
+    fn eval(&self, arena: &mut TermArena, ch: TermId) -> Result<TermId, IrError> {
+        match *self {
+            Pred::Eq(c) => {
+                let cc = arena.bv_const(8, u128::from(c))?;
+                arena.eq(ch, cc)
+            }
+            Pred::Range(lo, hi) => {
+                let lo_c = arena.bv_const(8, u128::from(lo))?;
+                let hi_c = arena.bv_const(8, u128::from(hi))?;
+                let ge = arena.bv_uge(ch, lo_c)?;
+                let le = arena.bv_ule(ch, hi_c)?;
+                arena.and(ge, le)
+            }
+        }
+    }
+}
+
+/// A Thompson NFA: epsilon edges, predicate-labeled char edges, state count.
+#[derive(Default)]
+struct Nfa {
+    eps: Vec<(usize, usize)>,
+    chars: Vec<(usize, usize, Pred)>,
+    count: usize,
+}
+
+impl Nfa {
+    fn state(&mut self) -> usize {
+        let s = self.count;
+        self.count += 1;
+        s
+    }
+
+    /// Builds the NFA fragment for `re`, returning its `(start, accept)` states.
+    fn build(&mut self, re: &Regex) -> (usize, usize) {
+        match re {
+            Regex::Empty => {
+                let s = self.state();
+                let a = self.state();
+                self.eps.push((s, a));
+                (s, a)
+            }
+            Regex::Char(c) => {
+                let s = self.state();
+                let a = self.state();
+                self.chars.push((s, a, Pred::Eq(*c)));
+                (s, a)
+            }
+            Regex::Range(lo, hi) => {
+                let s = self.state();
+                let a = self.state();
+                self.chars.push((s, a, Pred::Range(*lo, *hi)));
+                (s, a)
+            }
+            Regex::Concat(x, y) => {
+                let (xs, xa) = self.build(x);
+                let (ys, ya) = self.build(y);
+                self.eps.push((xa, ys));
+                (xs, ya)
+            }
+            Regex::Union(x, y) => {
+                let s = self.state();
+                let a = self.state();
+                let (xs, xa) = self.build(x);
+                let (ys, ya) = self.build(y);
+                self.eps.push((s, xs));
+                self.eps.push((s, ys));
+                self.eps.push((xa, a));
+                self.eps.push((ya, a));
+                (s, a)
+            }
+            Regex::Star(x) => {
+                let s = self.state();
+                let a = self.state();
+                let (xs, xa) = self.build(x);
+                self.eps.push((s, xs));
+                self.eps.push((s, a));
+                self.eps.push((xa, xs));
+                self.eps.push((xa, a));
+                (s, a)
+            }
+        }
+    }
+
+    /// `reach[i][j]` = state `j` is reachable from `i` by epsilon edges (with
+    /// `reach[i][i]` true). Transitive closure over the epsilon edges.
+    fn epsilon_closure(&self) -> Vec<Vec<bool>> {
+        let n = self.count;
+        let mut reach = vec![vec![false; n]; n];
+        for (i, row) in reach.iter_mut().enumerate() {
+            row[i] = true;
+        }
+        for &(u, v) in &self.eps {
+            reach[u][v] = true;
+        }
+        // Floyd–Warshall transitive closure.
+        for k in 0..n {
+            let row_k = reach[k].clone();
+            for row in &mut reach {
+                if row[k] {
+                    for (dst, &src) in row.iter_mut().zip(row_k.iter()) {
+                        *dst |= src;
+                    }
+                }
+            }
+        }
+        reach
     }
 }

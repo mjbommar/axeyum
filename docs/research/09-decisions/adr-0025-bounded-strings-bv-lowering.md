@@ -67,5 +67,12 @@ bound is explicit.
   and `to_int`/`from_int` — plus regex, and ultimately unbounded strings via a
   first-class sequence sort and a native solver. `str.++`/`substr`/`contains`
   are the natural next slice (bounded, but needing symbolic-length barrel shifts).
+  *(Update 2026-06-14: `str.++`, `prefixof`, `contains`, `suffixof`, `substr`
+  (const + symbolic start), `indexof`, lexicographic `<`/`<=`, `take`/`drop`,
+  equal-length `replace`, and `str.in_re` regex membership are now implemented.
+  `in_re` builds a Thompson NFA — Empty/Char/Range/Concat/Union/Star — precomputes
+  its epsilon closure, and simulates it symbolically over the bounded positions,
+  so regex membership reuses the same sound BV path. Remaining: general-length
+  `replace`, `replace_all`, `to_int`/`from_int`, and the unbounded sort.)*
 - **Revisited when:** a workload needs unbounded strings or the structural
   operations (then the next bounded slice, and eventually the first-class sort).

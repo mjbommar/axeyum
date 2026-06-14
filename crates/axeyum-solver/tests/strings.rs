@@ -3,7 +3,7 @@
 #![allow(clippy::similar_names, clippy::many_single_char_names)]
 
 use axeyum_ir::{Assignment, TermArena, Value, eval};
-use axeyum_solver::strings::BoundedString;
+use axeyum_solver::strings::{BoundedString, Regex};
 use axeyum_solver::{CheckResult, SolverConfig, solve};
 
 fn eval_bool(arena: &TermArena, term: axeyum_ir::TermId) -> bool {
@@ -301,6 +301,62 @@ fn replace_same_len_first_occurrence() {
     let want3 = s.literal(&mut a, "heLLo").unwrap();
     let eq3 = s.equal(&mut a, &r3, &want3).unwrap();
     assert!(eval_bool(&a, eq3), "replace \"ll\"->\"LL\" == \"heLLo\"");
+}
+
+#[test]
+fn regex_membership() {
+    let mut a = TermArena::new();
+    let s = BoundedString::new(8);
+
+    // a(b|c)*
+    let re = Regex::Concat(
+        Box::new(Regex::Char(b'a')),
+        Box::new(Regex::Star(Box::new(Regex::Union(
+            Box::new(Regex::Char(b'b')),
+            Box::new(Regex::Char(b'c')),
+        )))),
+    );
+    let check = |a: &mut TermArena, lit: &str, expect: bool, what: &str| {
+        let st = s.literal(a, lit).unwrap();
+        let m = s.in_re(a, &st, &re).unwrap();
+        assert_eq!(eval_bool(a, m), expect, "{what}");
+    };
+    check(&mut a, "a", true, "\"a\" matches a(b|c)*");
+    check(&mut a, "abccb", true, "\"abccb\" matches");
+    check(&mut a, "ac", true, "\"ac\" matches");
+    check(&mut a, "b", false, "\"b\" does not match");
+    check(&mut a, "ba", false, "\"ba\" does not match");
+    check(&mut a, "", false, "\"\" does not match (needs leading a)");
+
+    // [a-z]* matches lowercase only.
+    let lower = Regex::Star(Box::new(Regex::Range(b'a', b'z')));
+    let abc = s.literal(&mut a, "abc").unwrap();
+    let m = s.in_re(&mut a, &abc, &lower).unwrap();
+    assert!(eval_bool(&a, m), "\"abc\" matches [a-z]*");
+    let mixed = s.literal(&mut a, "aBc").unwrap();
+    let m = s.in_re(&mut a, &mixed, &lower).unwrap();
+    assert!(!eval_bool(&a, m), "\"aBc\" does not match [a-z]*");
+}
+
+#[test]
+fn symbolic_regex_membership_is_sat() {
+    // exists x (<=8): x matches a(b|c)* AND len(x)==3 -> sat (e.g. "abc").
+    let mut a = TermArena::new();
+    let s = BoundedString::new(8);
+    let re = Regex::Concat(
+        Box::new(Regex::Char(b'a')),
+        Box::new(Regex::Star(Box::new(Regex::Union(
+            Box::new(Regex::Char(b'b')),
+            Box::new(Regex::Char(b'c')),
+        )))),
+    );
+    let x = s.declare(&mut a, "x").unwrap();
+    let wf = s.well_formed(&mut a, &x).unwrap();
+    let m = s.in_re(&mut a, &x, &re).unwrap();
+    let three = a.bv_const(s_len_width(8), 3).unwrap();
+    let len3 = a.eq(s.length(&x), three).unwrap();
+    let r = solve(&mut a, &[wf, m, len3], &SolverConfig::default()).unwrap();
+    assert!(matches!(r, CheckResult::Sat(_)), "exists x in a(b|c)* with len 3, got {r:?}");
 }
 
 #[test]
