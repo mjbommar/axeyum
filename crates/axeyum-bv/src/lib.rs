@@ -855,6 +855,9 @@ impl<'a> LoweringBuilder<'a> {
                 | Op::IntAdd
                 | Op::IntSub
                 | Op::IntMul
+                | Op::IntDiv
+                | Op::IntMod
+                | Op::IntAbs
                 | Op::IntLt
                 | Op::IntLe
                 | Op::IntGt

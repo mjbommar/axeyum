@@ -684,6 +684,17 @@ Last updated: 2026-06-14
   This is the first **decision procedure for a new theory built by reduction to
   the trusted core** — `QF_LIA` `sat` is now checkable end to end. Remaining
   `QF_LIA`: scenarios and SMT-LIB I/O.
+- **`QF_LIA` Euclidean `div`/`mod`/`abs` added (2026-06-14, extends ADR-0014).**
+  New IR ops `IntDiv`/`IntMod`/`IntAbs` with SMT-LIB Euclidean semantics
+  (`0 ≤ mod a b < |b|` for `b ≠ 0`; convention `div a 0 = 0`, `mod a 0 = a`),
+  evaluated via Rust `div_euclid`/`rem_euclid` (the replay oracle). Bit-blasted in
+  `int_blast` from the truncated remainder `bvsrem` (`r = rt + |b|` when `rt < 0`,
+  else `rt`; `q = (a − r) bvsdiv b`, forced to `0` for `b = 0`); `abs` is
+  `ite(a < 0, −a, a)`. The simplex path reports `Unsupported` (→ bit-blast); the
+  SMT-LIB parser/writer handle `div`/`mod`/`abs`. Tests: eval Euclidean semantics
+  (incl. all sign quadrants, the `a = b·div + mod` identity, `b = 0`), solver
+  `sat`+replay (incl. `−7 mod 3 = 2`), `abs`, and an SMT-LIB round-trip. Inherits
+  the bit-blast soundness contract (`sat` via replay; in-range `unsat` → `unknown`).
 - `QF_LIA` scenarios + SMT-LIB I/O recorded 2026-06-13 (ADR-0014): a
   `Family::Integer` in `axeyum-scenarios` (`integer_system` boxed/ordered/
   sum-pinned systems, `integer_equation` boxed linear equations) with

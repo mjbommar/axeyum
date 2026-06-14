@@ -1143,6 +1143,36 @@ impl TermArena {
         self.int_bin(Op::IntMul, a, b)
     }
 
+    /// Integer Euclidean division (SMT-LIB `div`): `0 ≤ (mod a b) < |b|` for
+    /// `b ≠ 0`, with the in-tree convention `div a 0 = 0`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless both operands are integers.
+    pub fn int_div(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.int_bin(Op::IntDiv, a, b)
+    }
+
+    /// Integer Euclidean modulo (SMT-LIB `mod`): always in `0..|b|` for `b ≠ 0`,
+    /// with the convention `mod a 0 = a`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless both operands are integers.
+    pub fn int_mod(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        self.int_bin(Op::IntMod, a, b)
+    }
+
+    /// Integer absolute value (SMT-LIB `abs`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless `a` is an integer.
+    pub fn int_abs(&mut self, a: TermId) -> Result<TermId, IrError> {
+        self.expect_int(a)?;
+        Ok(self.app(Op::IntAbs, &[a], Sort::Int))
+    }
+
     /// Integer less-than (result sort `Bool`).
     ///
     /// # Errors

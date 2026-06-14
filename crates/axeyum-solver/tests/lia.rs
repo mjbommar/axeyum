@@ -123,3 +123,65 @@ fn out_of_range_constant_is_unknown() {
         "out-of-range constant must be unknown, got {result:?}"
     );
 }
+
+#[test]
+fn euclidean_mod_constraint_is_sat_and_replays() {
+    // mod(x, 3) == 2 ∧ 0 < x < 10 : sat (x ∈ {2,5,8}); replay confirms the
+    // bit-blast encoding agrees with the Euclidean evaluator.
+    let mut a = TermArena::new();
+    let x = a.int_var("x").unwrap();
+    let three = a.int_const(3);
+    let two = a.int_const(2);
+    let zero = a.int_const(0);
+    let ten = a.int_const(10);
+    let m = a.int_mod(x, three).unwrap();
+    let me = a.eq(m, two).unwrap();
+    let lo = a.int_gt(x, zero).unwrap();
+    let hi = a.int_lt(x, ten).unwrap();
+    let r = solve(&mut a, &[me, lo, hi], DEFAULT_INT_WIDTH);
+    assert!(matches!(r, CheckResult::Sat(_)), "mod(x,3)=2 in (0,10) sat, got {r:?}");
+}
+
+#[test]
+fn euclidean_div_constraint_is_sat() {
+    // div(x, 4) == 2 ∧ x >= 0 : sat (x ∈ {8,9,10,11}).
+    let mut a = TermArena::new();
+    let x = a.int_var("x").unwrap();
+    let four = a.int_const(4);
+    let two = a.int_const(2);
+    let zero = a.int_const(0);
+    let d = a.int_div(x, four).unwrap();
+    let de = a.eq(d, two).unwrap();
+    let nn = a.int_ge(x, zero).unwrap();
+    let r = solve(&mut a, &[de, nn], DEFAULT_INT_WIDTH);
+    assert!(matches!(r, CheckResult::Sat(_)), "div(x,4)=2 sat, got {r:?}");
+}
+
+#[test]
+fn euclidean_mod_negative_dividend_is_sat() {
+    // x == -7 ∧ mod(x, 3) == 2 : sat (Euclidean: -7 mod 3 = 2, not -1).
+    let mut a = TermArena::new();
+    let x = a.int_var("x").unwrap();
+    let neg7 = a.int_const(-7);
+    let three = a.int_const(3);
+    let two = a.int_const(2);
+    let xe = a.eq(x, neg7).unwrap();
+    let m = a.int_mod(x, three).unwrap();
+    let me = a.eq(m, two).unwrap();
+    let r = solve(&mut a, &[xe, me], DEFAULT_INT_WIDTH);
+    assert!(matches!(r, CheckResult::Sat(_)), "-7 mod 3 = 2 sat, got {r:?}");
+}
+
+#[test]
+fn abs_constraint_is_sat() {
+    // abs(x) == 5 ∧ x < 0 : sat (x = -5).
+    let mut a = TermArena::new();
+    let x = a.int_var("x").unwrap();
+    let five = a.int_const(5);
+    let zero = a.int_const(0);
+    let av = a.int_abs(x).unwrap();
+    let ae = a.eq(av, five).unwrap();
+    let neg = a.int_lt(x, zero).unwrap();
+    let r = solve(&mut a, &[ae, neg], DEFAULT_INT_WIDTH);
+    assert!(matches!(r, CheckResult::Sat(_)), "abs(x)=5 ∧ x<0 sat, got {r:?}");
+}

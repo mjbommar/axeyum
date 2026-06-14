@@ -871,6 +871,26 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
             let (_, a) = numeric_args(arena, args)?;
             real_division(arena, &a)?
         }
+        "div" | "mod" => {
+            // SMT-LIB integer Euclidean division/modulo (binary, left-assoc for div).
+            let (_, a) = numeric_args(arena, args)?;
+            if a.len() < 2 {
+                return Err(SmtError::Syntax(format!("`{op}` expects >= 2 arguments")));
+            }
+            let f = if op == "div" { TermArena::int_div } else { TermArena::int_mod };
+            let mut acc = a[0];
+            for &next in &a[1..] {
+                acc = f(arena, acc, next)?;
+            }
+            acc
+        }
+        "abs" => {
+            let (_, a) = numeric_args(arena, args)?;
+            if a.len() != 1 {
+                return Err(SmtError::Syntax("`abs` expects 1 argument".to_owned()));
+            }
+            arena.int_abs(a[0])?
+        }
         "<" | "<=" | ">" | ">=" => {
             let (real, a) = numeric_args(arena, args)?;
             let int_f = match op {

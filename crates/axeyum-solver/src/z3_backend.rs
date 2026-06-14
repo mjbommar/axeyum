@@ -372,6 +372,9 @@ fn translate(
                         | Op::IntAdd
                         | Op::IntSub
                         | Op::IntMul
+                        | Op::IntDiv
+                        | Op::IntMod
+                        | Op::IntAbs
                         | Op::IntLt
                         | Op::IntLe
                         | Op::IntGt
@@ -493,6 +496,9 @@ fn apply(op: Op, args: &[TermId], cache: &HashMap<TermId, Z3Term>) -> Z3Term {
         | Op::IntAdd
         | Op::IntSub
         | Op::IntMul
+        | Op::IntDiv
+        | Op::IntMod
+        | Op::IntAbs
         | Op::IntLt
         | Op::IntLe
         | Op::IntGt

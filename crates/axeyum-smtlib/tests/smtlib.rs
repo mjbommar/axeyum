@@ -519,3 +519,25 @@ fn walk(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
     files.sort();
     files
 }
+
+#[test]
+fn parses_and_round_trips_lia_div_mod_abs() {
+    let text = r"
+        (set-logic QF_LIA)
+        (declare-const x Int)
+        (assert (= (mod x 3) 2))
+        (assert (= (div x 4) 1))
+        (assert (= (abs x) 5))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 3);
+
+    let rendered = write_script(&script.arena, &script.assertions);
+    assert!(rendered.contains("(mod "), "renders mod: {rendered}");
+    assert!(rendered.contains("(div "), "renders div: {rendered}");
+    assert!(rendered.contains("(abs "), "renders abs: {rendered}");
+
+    let reparsed = parse_script(&rendered).unwrap();
+    assert_eq!(reparsed.assertions.len(), 3);
+}

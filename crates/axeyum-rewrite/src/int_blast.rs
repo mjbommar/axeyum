@@ -205,6 +205,17 @@ impl Blaster {
         Ok(result)
     }
 
+    /// A zero bit-vector constant of the same width as `t`.
+    fn bv_zero_like(arena: &mut TermArena, t: TermId) -> Result<TermId, IntBlastError> {
+        let Sort::BitVec(w) = arena.sort_of(t) else {
+            return Err(IntBlastError::Ir(IrError::SortMismatch {
+                expected: "BitVec",
+                found: arena.sort_of(t),
+            }));
+        };
+        Ok(arena.bv_const(w, 0)?)
+    }
+
     fn build_int_app(
         arena: &mut TermArena,
         op: Op,
@@ -215,6 +226,38 @@ impl Blaster {
             Op::IntAdd => arena.bv_add(args[0], args[1])?,
             Op::IntSub => arena.bv_sub(args[0], args[1])?,
             Op::IntMul => arena.bv_mul(args[0], args[1])?,
+            // Euclidean div/mod on the two's-complement encoding. From the
+            // truncated remainder `rt = bvsrem(a,b)` (sign of `a`), the Euclidean
+            // remainder is `rt + |b|` when `rt < 0`, else `rt` (always in
+            // `0..|b|`); the quotient is then `(a − r) bvsdiv b`, exact since
+            // `a − r` is a multiple of `b`. SMT-LIB BV totality gives the right
+            // `b = 0` behaviour for `mod` (`bvsrem a 0 = a` ⇒ `mod = a`); `div`
+            // is forced to `0` to match the in-tree `div a 0 = 0` convention.
+            Op::IntAbs => {
+                let zero = Self::bv_zero_like(arena, args[0])?;
+                let neg = arena.bv_neg(args[0])?;
+                let is_neg = arena.bv_slt(args[0], zero)?;
+                arena.ite(is_neg, neg, args[0])?
+            }
+            Op::IntDiv | Op::IntMod => {
+                let (a, b) = (args[0], args[1]);
+                let zero = Self::bv_zero_like(arena, a)?;
+                let rt = arena.bv_srem(a, b)?;
+                let b_neg = arena.bv_slt(b, zero)?;
+                let neg_b = arena.bv_neg(b)?;
+                let abs_b = arena.ite(b_neg, neg_b, b)?;
+                let rt_neg = arena.bv_slt(rt, zero)?;
+                let rt_plus = arena.bv_add(rt, abs_b)?;
+                let r_eucl = arena.ite(rt_neg, rt_plus, rt)?;
+                if op == Op::IntMod {
+                    r_eucl
+                } else {
+                    let diff = arena.bv_sub(a, r_eucl)?;
+                    let q = arena.bv_sdiv(diff, b)?;
+                    let b_zero = arena.eq(b, zero)?;
+                    arena.ite(b_zero, zero, q)?
+                }
+            }
             Op::IntLt => arena.bv_slt(args[0], args[1])?,
             Op::IntLe => arena.bv_sle(args[0], args[1])?,
             Op::IntGt => arena.bv_sgt(args[0], args[1])?,

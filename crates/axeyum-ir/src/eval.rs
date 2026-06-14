@@ -499,6 +499,29 @@ fn apply(op: Op, vals: &[Value]) -> Value {
         Op::IntAdd => int_bin(vals, "addition", i128::checked_add),
         Op::IntSub => int_bin(vals, "subtraction", i128::checked_sub),
         Op::IntMul => int_bin(vals, "multiplication", i128::checked_mul),
+        // Euclidean div/mod (SMT-LIB): `mod` always in `0..|b|`; by convention
+        // `div a 0 = 0` and `mod a 0 = a`. `div_euclid`/`rem_euclid` implement
+        // exactly the Euclidean semantics for `b ≠ 0`.
+        Op::IntDiv => {
+            let x = vals[0].as_int().expect("builder guaranteed Int operand");
+            let y = vals[1].as_int().expect("builder guaranteed Int operand");
+            let q = if y == 0 {
+                0
+            } else {
+                x.checked_div_euclid(y).expect("integer division within i128 range")
+            };
+            Value::Int(q)
+        }
+        Op::IntMod => {
+            let x = vals[0].as_int().expect("builder guaranteed Int operand");
+            let y = vals[1].as_int().expect("builder guaranteed Int operand");
+            let r = if y == 0 { x } else { x.rem_euclid(y) };
+            Value::Int(r)
+        }
+        Op::IntAbs => {
+            let x = vals[0].as_int().expect("builder guaranteed Int operand");
+            Value::Int(x.checked_abs().expect("integer abs within i128 range"))
+        }
         Op::IntLt => int_cmp(vals, |x, y| x < y),
         Op::IntLe => int_cmp(vals, |x, y| x <= y),
         Op::IntGt => int_cmp(vals, |x, y| x > y),

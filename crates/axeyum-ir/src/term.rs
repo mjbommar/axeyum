@@ -199,6 +199,15 @@ pub enum Op {
     IntSub,
     /// Integer multiplication (linear use enforced by downstream procedures).
     IntMul,
+    /// Integer Euclidean division (SMT-LIB `div`): `div a b` with
+    /// `a = b·(div a b) + (mod a b)` and `0 ≤ mod a b < |b|` for `b ≠ 0`; by the
+    /// in-tree convention `div a 0 = 0`.
+    IntDiv,
+    /// Integer Euclidean modulo (SMT-LIB `mod`): the remainder of [`Op::IntDiv`],
+    /// always in `0..|b|` for `b ≠ 0`; by convention `mod a 0 = a`.
+    IntMod,
+    /// Integer absolute value (SMT-LIB `abs`).
+    IntAbs,
     /// Integer less-than (result sort `Bool`).
     IntLt,
     /// Integer less-or-equal (result sort `Bool`).

@@ -1121,3 +1121,46 @@ fn real_constant_arithmetic_evaluates_exactly() {
     let asg = Assignment::new();
     assert_eq!(eval(&arena, sum, &asg).unwrap(), real(1, 2));
 }
+
+// ----- integer Euclidean div/mod/abs (SMT-LIB semantics) -----------------
+
+#[test]
+fn int_div_mod_abs_euclidean_semantics() {
+    let mut a = TermArena::new();
+    let asg = Assignment::new();
+    let eval_int = |a: &mut TermArena, t| match eval(a, t, &asg) {
+        Ok(Value::Int(v)) => v,
+        other => panic!("expected Int, got {other:?}"),
+    };
+    let int = |a: &mut TermArena, v: i128| a.int_const(v);
+    // (dividend, divisor, expected_div, expected_mod) — SMT-LIB Euclidean: 0<=mod<|b|.
+    let cases: [(i128, i128, i128, i128); 8] = [
+        (7, 3, 2, 1),
+        (-7, 3, -3, 2),
+        (7, -3, -2, 1),
+        (-7, -3, 3, 2),
+        (6, 3, 2, 0),
+        (0, 5, 0, 0),
+        (5, 0, 0, 5),   // convention: div a 0 = 0, mod a 0 = a
+        (-5, 0, 0, -5),
+    ];
+    for (x, y, ed, em) in cases {
+        let xt = int(&mut a, x);
+        let yt = int(&mut a, y);
+        let d = a.int_div(xt, yt).unwrap();
+        let m = a.int_mod(xt, yt).unwrap();
+        assert_eq!(eval_int(&mut a, d), ed, "div({x},{y})");
+        assert_eq!(eval_int(&mut a, m), em, "mod({x},{y})");
+        // the defining identity a = b*div + mod holds
+        if y != 0 {
+            assert_eq!(y * ed + em, x, "identity for ({x},{y})");
+            assert!((0..y.abs()).contains(&em), "0<=mod<|b| for ({x},{y})");
+        }
+    }
+    // abs
+    for v in [-5i128, 0, 7] {
+        let vt = int(&mut a, v);
+        let av = a.int_abs(vt).unwrap();
+        assert_eq!(eval_int(&mut a, av), v.abs(), "abs({v})");
+    }
+}
