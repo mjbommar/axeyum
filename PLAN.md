@@ -55,12 +55,21 @@ Last updated: 2026-06-14
   term: `queue_list_eval` detects these heads, parses the mode via
   `parse_rounding_mode`, queues only the operand children, and a new
   `Frame::ApplyFpRounded` dispatches to the validated `axeyum_fp` builders.
-  `fp.roundToIntegral` is constant-fold-only (errors on symbolic operands — sound,
-  not wrong). End-to-end test parses *and* evaluates `fp.add RNE 1.0 1.0 == 2.0`
-  (Float32) to `true` through the ground evaluator. **Next:** F64 `fp.fma` is the
-  remaining gap (`3·sig+5 = 164 > MAX_BV_WIDTH=128`, errors cleanly); needs
-  arbitrary-width BV. Symbolic `fp.roundToIntegral` and `fp`↔real/int conversions
-  (`fp.to_real`, `to_fp`, `fp.to_sbv/ubv`) are the other front-end frontier.
+  `fp.roundToIntegral` uses the fully-symbolic builder (`round_to_integral_sym`),
+  so it works over declared FP operands, not just constants. End-to-end test
+  parses *and* evaluates `fp.add RNE 1.0 1.0 == 2.0` (Float32) to `true` through
+  the ground evaluator. **Conversions + literal folding now added** — the `(fp s e
+  m)` literal folds to a single `BvConst` when all three fields are constant (so
+  constant-fold ops see a literal); `fp.to_real` (const-fold) and the
+  bit-reinterpret `((_ to_fp eb sb) x)` over a single `BitVec(eb+sb)` (identity in
+  our lowering) are wired. Tests: symbolic `roundToIntegral`, `roundToIntegral RTZ
+  2.5 == 2.0`, `fp.to_real 2.0 == 2.0`, and `not (fp.isNaN ((_ to_fp 8 24)
+  #x40000000))`, all evaluated to `true`. **Deferred (architectural):** the
+  rounding-mode `(_ to_fp eb sb) RM x` / `(_ to_fp_unsigned …)` / `(_ fp.to_sbv/
+  to_ubv m) RM x` conversions — because BV-lowering collapses FP and BitVec to one
+  sort, an FP source can't be told from a signed-BV source by sort alone; a
+  dedicated FP sort (ADR-level) is the prerequisite. F64 `fp.fma` is the other gap
+  (`3·sig+5 = 164 > MAX_BV_WIDTH=128`, errors cleanly); needs arbitrary-width BV.
 
 - **Strings — first slice (2026-06-14, ADR-0025).** Bounded-length string theory
   by BV lowering (`strings::BoundedString`, no IR sort): a string is `(len,

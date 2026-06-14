@@ -821,11 +821,7 @@ fn apply_fp_rounded(
         "fp.roundToIntegral" => {
             need(1)?;
             let fmt = fp_format(arena, args[0])?;
-            axeyum_fp::round_to_integral(arena, fmt, mode, args[0])?.ok_or_else(|| {
-                SmtError::Unsupported(
-                    "fp.roundToIntegral is only supported on constant operands".to_owned(),
-                )
-            })?
+            axeyum_fp::round_to_integral_sym(arena, fmt, mode, args[0])?
         }
         other => {
             return Err(SmtError::Unsupported(format!(
@@ -1017,8 +1013,23 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
         // `(fp s e m)` assembles a literal by concatenation. (ADR-0023.)
         "fp" => {
             need(3)?;
-            let se = arena.concat(args[0], args[1])?;
-            arena.concat(se, args[2])?
+            // Concatenate sign·exp·significand MSB-first. When all three fields are
+            // constant, fold to a single `BvConst` so constant-folding ops
+            // (`fp.to_real`, `fp.roundToIntegral`, …) see a literal value.
+            let as_const = |t: TermId| match arena.node(t) {
+                &TermNode::BvConst { width, value } => Some((width, value)),
+                _ => None,
+            };
+            if let (Some((ws, vs)), Some((we, ve)), Some((wm, vm))) =
+                (as_const(args[0]), as_const(args[1]), as_const(args[2]))
+            {
+                let total = ws + we + wm;
+                let value = (vs << (we + wm)) | (ve << wm) | vm;
+                arena.bv_const(total, value)?
+            } else {
+                let se = arena.concat(args[0], args[1])?;
+                arena.concat(se, args[2])?
+            }
         }
         "fp.abs" => {
             need(1)?;
@@ -1087,6 +1098,15 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
         "fp.isPositive" => {
             need(1)?;
             axeyum_fp::is_positive(arena, fp_format(arena, args[0])?, args[0])?
+        }
+        "fp.to_real" => {
+            need(1)?;
+            let fmt = fp_format(arena, args[0])?;
+            axeyum_fp::to_real(arena, fmt, args[0])?.ok_or_else(|| {
+                SmtError::Unsupported(
+                    "fp.to_real is only supported on constant operands".to_owned(),
+                )
+            })?
         }
         "select" => {
             need(2)?;
@@ -1363,6 +1383,7 @@ fn bin(
     Ok(f(arena, args[0], args[1])?)
 }
 
+#[allow(clippy::too_many_lines)]
 fn apply_parameterized(
     arena: &mut TermArena,
     head: &[SExpr],
@@ -1448,6 +1469,30 @@ fn apply_parameterized(
         "int2bv" => {
             expect_head_len(3)?;
             arena.int2bv(index(2)?, args[0])?
+        }
+        "to_fp" => {
+            expect_head_len(4)?;
+            let w = index(2)? + index(3)?;
+            // `((_ to_fp eb sb) x)` over a single bit-vector argument is an IEEE
+            // bit-pattern reinterpret — identity in our BV lowering, where an FP
+            // value *is* a `BitVec(eb+sb)`. The rounding-mode forms (from FP, real,
+            // or signed BV) are deferred: they need a dedicated FP sort to be told
+            // apart from a plain bit-vector source (see PLAN).
+            if args.len() != 1 {
+                return Err(SmtError::Unsupported(
+                    "(_ to_fp …) with a rounding mode needs a dedicated FP sort".to_owned(),
+                ));
+            }
+            match arena.sort_of(args[0]) {
+                Sort::BitVec(bw) if bw == w => args[0],
+                s => {
+                    return Err(SmtError::Syntax(format!(
+                        "(_ to_fp {} {}) bit reinterpret expects a BitVec({w}), got {s:?}",
+                        index(2)?,
+                        index(3)?
+                    )));
+                }
+            }
         }
         other => return Err(SmtError::Unsupported(format!("indexed operator `{other}`"))),
     })

@@ -697,3 +697,68 @@ fn parses_and_evaluates_rounding_mode_fp_arithmetic() {
     let v = eval(&script.arena, script.assertions[0], &Assignment::default()).unwrap();
     assert_eq!(v, Value::Bool(true));
 }
+
+#[test]
+fn parses_symbolic_round_to_integral_and_fp_conversions() {
+    use axeyum_ir::Sort;
+
+    // fp.roundToIntegral now uses the symbolic builder, so it parses over a
+    // declared (non-constant) Float32 operand.
+    let sym = parse_script(
+        r"
+        (set-logic QF_FP)
+        (declare-const x Float32)
+        (assert (fp.eq (fp.roundToIntegral RTZ x) x))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+    assert_eq!(sym.assertions.len(), 1);
+
+    // fp.roundToIntegral RTZ 2.5 == 2.0 evaluates to true (constant operand).
+    // 2.5 = (fp 0 10000000 0100…0), 2.0 = (fp 0 10000000 0…0) over Float32.
+    let rti = parse_script(
+        r"
+        (set-logic QF_FP)
+        (assert (fp.eq
+                  (fp.roundToIntegral RTZ
+                    (fp #b0 #b10000000 #b01000000000000000000000))
+                  (fp #b0 #b10000000 #b00000000000000000000000)))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+    let v = eval(&rti.arena, rti.assertions[0], &Assignment::default()).unwrap();
+    assert_eq!(v, Value::Bool(true));
+
+    // fp.to_real on a constant 2.0 folds to the rational 2.
+    let to_real = parse_script(
+        r"
+        (set-logic QF_FP)
+        (assert (= (fp.to_real (fp #b0 #b10000000 #b00000000000000000000000)) 2.0))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+    let v = eval(&to_real.arena, to_real.assertions[0], &Assignment::default()).unwrap();
+    assert_eq!(v, Value::Bool(true));
+
+    // ((_ to_fp 8 24) bv) bit-reinterprets a BitVec(32) as Float32 (identity);
+    // classifying the reinterpreted 2.0 pattern as not-NaN is true.
+    let reinterpret = parse_script(
+        r"
+        (set-logic QF_FP)
+        (assert (not (fp.isNaN ((_ to_fp 8 24) #x40000000))))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+    let v = eval(
+        &reinterpret.arena,
+        reinterpret.assertions[0],
+        &Assignment::default(),
+    )
+    .unwrap();
+    assert_eq!(v, Value::Bool(true));
+    assert_eq!(reinterpret.arena.sort_of(reinterpret.assertions[0]), Sort::Bool);
+}
