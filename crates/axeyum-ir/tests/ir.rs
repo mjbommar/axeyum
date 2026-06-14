@@ -1200,3 +1200,32 @@ fn const_array_evaluates_to_constant_everywhere() {
     assert_eq!(eval(&a, at7, &asg).unwrap(), bv(8, 9));
     assert_eq!(eval(&a, at8, &asg).unwrap(), bv(8, 0x2a));
 }
+
+#[test]
+fn bv_int_coercions_evaluate() {
+    let mut a = TermArena::new();
+    let asg = Assignment::new();
+    // bv2nat: unsigned value as a non-negative integer.
+    let bv200 = a.bv_const(8, 200).unwrap();
+    let n = a.bv2nat(bv200).unwrap();
+    assert_eq!(a.sort_of(n), Sort::Int);
+    assert_eq!(eval(&a, n, &asg).unwrap(), Value::Int(200));
+    // int2bv: x mod 2^width, for positive, wrapping, and negative inputs.
+    let cases: [(u32, i128, u128); 4] = [
+        (8, 200, 200),
+        (8, -1, 255),   // two's complement low 8 bits
+        (4, 19, 3),     // 19 mod 16
+        (8, 256, 0),    // 256 mod 256
+    ];
+    for (w, x, want) in cases {
+        let xc = a.int_const(x);
+        let b = a.int2bv(w, xc).unwrap();
+        assert_eq!(a.sort_of(b), Sort::BitVec(w));
+        assert_eq!(eval(&a, b, &asg).unwrap(), bv(w, want), "int2bv({w}, {x})");
+    }
+    // round trip: bv2nat(int2bv(w, k)) == k mod 2^w
+    let k = a.int_const(70);
+    let rt = a.int2bv(8, k).unwrap();
+    let back = a.bv2nat(rt).unwrap();
+    assert_eq!(eval(&a, back, &asg).unwrap(), Value::Int(70));
+}

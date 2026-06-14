@@ -573,3 +573,22 @@ fn parses_and_round_trips_const_array() {
     let reparsed = parse_script(&rendered).unwrap();
     assert_eq!(reparsed.assertions.len(), 1);
 }
+
+#[test]
+fn parses_and_round_trips_bv_int_coercions() {
+    let text = r"
+        (set-logic QF_UFBV)
+        (declare-const x (_ BitVec 8))
+        (declare-const y Int)
+        (assert (= (bv2nat x) 200))
+        (assert (= ((_ int2bv 8) y) x))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 2);
+    let rendered = write_script(&script.arena, &script.assertions);
+    assert!(rendered.contains("(bv2nat "), "renders bv2nat: {rendered}");
+    assert!(rendered.contains("((_ int2bv 8) "), "renders int2bv: {rendered}");
+    let reparsed = parse_script(&rendered).unwrap();
+    assert_eq!(reparsed.assertions.len(), 2);
+}

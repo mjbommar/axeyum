@@ -193,6 +193,16 @@ pub enum Op {
         /// Bit-width of the array index.
         index: u32,
     },
+    // --- bit-vector / integer coercions ------------------------------------
+    /// `bv2nat`: the unsigned integer value of a bit-vector (result sort `Int`,
+    /// always in `0..2^w`).
+    Bv2Nat,
+    /// `(_ int2bv n)`: the bit-vector of width `n` whose value is the operand
+    /// integer reduced mod `2^n` (result sort `BitVec(n)`).
+    Int2Bv {
+        /// Bit-width of the result.
+        width: u32,
+    },
     // --- uninterpreted functions (ADR-0013) --------------------------------
     /// Application of a declared uninterpreted function; the argument terms are
     /// the operands and the result sort is the function's declared result.

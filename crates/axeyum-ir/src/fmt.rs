@@ -55,6 +55,8 @@ fn op_name(op: Op) -> String {
         Op::Select => "select".into(),
         Op::Store => "store".into(),
         Op::ConstArray { .. } => "const".into(),
+        Op::Bv2Nat => "bv2nat".into(),
+        Op::Int2Bv { width } => format!("(_ int2bv {width})"),
         // The function name needs the arena; handled in `render` directly.
         Op::Apply(func) => format!("!fn{}", func.index()),
         Op::IntNeg | Op::IntSub | Op::RealNeg | Op::RealSub => "-".into(),

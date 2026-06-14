@@ -491,6 +491,20 @@ fn apply(op: Op, vals: &[Value]) -> Value {
             let (element_width, value) = bv(&vals[0]);
             Value::Array(ArrayValue::constant(index, element_width, value))
         }
+        Op::Bv2Nat => {
+            let (_, value) = bv(&vals[0]);
+            // Unsigned BV value as a non-negative integer (within the i128
+            // reference range; widths up to 127 are exact).
+            #[allow(clippy::cast_possible_wrap)]
+            Value::Int(value as i128)
+        }
+        Op::Int2Bv { width } => {
+            let x = vals[0].as_int().expect("builder guaranteed Int operand");
+            // x mod 2^width: the low `width` bits of x's two's-complement form.
+            #[allow(clippy::cast_sign_loss)]
+            let value = (x as u128) & mask(width);
+            Value::Bv { width, value }
+        }
         // Handled in `eval` (needs the model interpretation and result sort).
         Op::Apply(_) => unreachable!("Op::Apply is evaluated against the model in `eval`"),
         // --- linear integer arithmetic (ADR-0014) --------------------------------

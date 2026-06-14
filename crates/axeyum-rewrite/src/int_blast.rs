@@ -193,6 +193,37 @@ impl Blaster {
                     term
                 }
             }
+            // Coercions bridge the BV and (width-`B`) integer encodings; they
+            // need the blast width, so they are handled here, not in the static
+            // `build_int_app`.
+            TermNode::App { op: Op::Bv2Nat, args } => {
+                let bv = self.rewrite(arena, args[0])?; // BV passthrough (width w)
+                let Sort::BitVec(w) = arena.sort_of(bv) else {
+                    return Err(IntBlastError::Ir(IrError::SortMismatch {
+                        expected: "BitVec",
+                        found: arena.sort_of(bv),
+                    }));
+                };
+                // Reinterpret the unsigned BV value in the signed width-`B`
+                // encoding: zero-extend when `B > w` (stays non-negative); when
+                // `B <= w` the high bits are dropped (bounded — replay-checked).
+                match w.cmp(&self.width) {
+                    core::cmp::Ordering::Less => arena.zero_ext(self.width - w, bv)?,
+                    core::cmp::Ordering::Equal => bv,
+                    core::cmp::Ordering::Greater => arena.extract(self.width - 1, 0, bv)?,
+                }
+            }
+            TermNode::App { op: Op::Int2Bv { width }, args } => {
+                let x = self.rewrite(arena, args[0])?; // Int → width-`B` BV
+                // x mod 2^width = low `width` bits of x's two's complement; when
+                // `width > B`, sign-extend (preserves the modular value).
+                match width.cmp(&self.width) {
+                    core::cmp::Ordering::Less | core::cmp::Ordering::Equal => {
+                        arena.extract(width - 1, 0, x)?
+                    }
+                    core::cmp::Ordering::Greater => arena.sign_ext(width - self.width, x)?,
+                }
+            }
             TermNode::App { op, args } => {
                 let mut lowered = Vec::with_capacity(args.len());
                 for &arg in &args {

@@ -601,6 +601,11 @@ fn update_op(hash: &mut u64, op: Op) {
             update_u64(hash, 69);
             update_u64(hash, u64::from(index));
         }
+        Op::Bv2Nat => update_u64(hash, 70),
+        Op::Int2Bv { width } => {
+            update_u64(hash, 71);
+            update_u64(hash, u64::from(width));
+        }
         Op::Apply(func) => {
             update_u64(hash, 44);
             update_u64(hash, u64::try_from(func.index()).unwrap_or(u64::MAX));

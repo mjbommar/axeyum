@@ -306,6 +306,7 @@ fn lift_bv(model: &z3::Model, ast: &BV, width: u32) -> Option<u128> {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn translate(
     arena: &TermArena,
     root: TermId,
@@ -393,6 +394,8 @@ fn translate(
                         | Op::DtSelect { .. }
                         | Op::DtTest(_)
                         | Op::ConstArray { .. }
+                        | Op::Bv2Nat
+                        | Op::Int2Bv { .. }
                 ) {
                     return Err(SolverError::Unsupported(
                         "z3 oracle does not support uninterpreted functions, integer/real \
@@ -517,7 +520,9 @@ fn apply(op: Op, args: &[TermId], cache: &HashMap<TermId, Z3Term>) -> Z3Term {
         | Op::DtConstruct { .. }
         | Op::DtSelect { .. }
         | Op::DtTest(_)
-        | Op::ConstArray { .. } => {
+        | Op::ConstArray { .. }
+        | Op::Bv2Nat
+        | Op::Int2Bv { .. } => {
             unreachable!(
                 "array, UF, integer, real, quantifier, and datatype terms are rejected during z3 translation"
             )

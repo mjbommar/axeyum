@@ -556,6 +556,8 @@ fn rewrite_app(
         | Op::Select
         | Op::Store
         | Op::ConstArray { .. }
+        | Op::Bv2Nat
+        | Op::Int2Bv { .. }
         | Op::Apply(_)
         | Op::IntNeg
         | Op::IntAdd
@@ -969,6 +971,8 @@ pub(crate) fn build_app(arena: &mut TermArena, op: Op, args: &[TermId]) -> Resul
         Op::Select => arena.select(args[0], args[1]),
         Op::Store => arena.store(args[0], args[1], args[2]),
         Op::ConstArray { index } => arena.const_array(index, args[0]),
+        Op::Bv2Nat => arena.bv2nat(args[0]),
+        Op::Int2Bv { width } => arena.int2bv(width, args[0]),
         Op::Apply(func) => arena.apply(func, args),
         Op::IntNeg => arena.int_neg(args[0]),
         Op::IntAdd => arena.int_add(args[0], args[1]),

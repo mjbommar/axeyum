@@ -585,6 +585,16 @@ Last updated: 2026-06-14
   and confirms the found inputs + reconstructed memory by concrete
   re-execution. Remaining array work is QF_ABV scenarios, bench-harness wiring,
   and corpus blow-up measurement.
+- **BV↔Int coercions added (2026-06-14, extends ADR-0014).** New IR ops
+  `Op::Bv2Nat` (BV→Int, unsigned value) and `Op::Int2Bv { width }` (Int→BV,
+  `x mod 2^width`). Eval is the replay oracle (`bv2nat` = unsigned value as
+  non-negative Int; `int2bv` = low `width` bits of `x`'s two's complement). In the
+  combined bit-blast path they bridge the BV and width-`B` integer encodings:
+  `bv2nat` zero-extends the BV to `B` (drops high bits if `B ≤ w`, bounded);
+  `int2bv` extracts the low `width` bits (or sign-extends if `width > B`). SMT-LIB
+  parser/writer handle `bv2nat` and `(_ int2bv n)`. Tests: eval (positive/wrap/
+  negative + round-trip), combined-solver sat (`bv2nat(x)=200`, `int2bv` round-
+  trip, modular wrap) and the out-of-range `unknown`, plus an SMT-LIB round-trip.
 - **Constant arrays added (2026-06-14, extends ADR-0010).** New IR op
   `Op::ConstArray { index }` (`((as const (Array I E)) v)`): every index maps to
   `v`. The ground evaluator builds `ArrayValue::constant`; `eliminate_arrays`

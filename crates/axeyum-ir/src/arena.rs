@@ -984,6 +984,29 @@ impl TermArena {
         Ok(self.app(Op::ConstArray { index }, &[value], Sort::Array { index, element }))
     }
 
+    /// `bv2nat`: the unsigned integer value of a bit-vector (result sort `Int`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless `x` is a bit-vector.
+    pub fn bv2nat(&mut self, x: TermId) -> Result<TermId, IrError> {
+        self.expect_bv(x)?;
+        Ok(self.app(Op::Bv2Nat, &[x], Sort::Int))
+    }
+
+    /// `(_ int2bv width)`: the bit-vector of `width` bits equal to the operand
+    /// integer reduced mod `2^width`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::InvalidWidth`] for a bad width, or
+    /// [`IrError::SortMismatch`] unless `x` is an integer.
+    pub fn int2bv(&mut self, width: u32, x: TermId) -> Result<TermId, IrError> {
+        check_width(width)?;
+        self.expect_int(x)?;
+        Ok(self.app(Op::Int2Bv { width }, &[x], Sort::BitVec(width)))
+    }
+
     fn expect_array(&self, t: TermId) -> Result<(u32, u32), IrError> {
         match self.sort_of(t) {
             Sort::Array { index, element } => Ok((index, element)),

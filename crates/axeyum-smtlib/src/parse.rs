@@ -891,6 +891,12 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
             }
             arena.int_abs(a[0])?
         }
+        "bv2nat" => {
+            if args.len() != 1 {
+                return Err(SmtError::Syntax("`bv2nat` expects 1 argument".to_owned()));
+            }
+            arena.bv2nat(args[0])?
+        }
         "<" | "<=" | ">" | ">=" => {
             let (real, a) = numeric_args(arena, args)?;
             let int_f = match op {
@@ -1132,6 +1138,10 @@ fn apply_parameterized(
                 .and_then(|s| s.parse().ok())
                 .ok_or_else(|| SmtError::Syntax("`divisible` index".to_owned()))?;
             arena.int_divisible(args[0], n)?
+        }
+        "int2bv" => {
+            expect_head_len(3)?;
+            arena.int2bv(index(2)?, args[0])?
         }
         other => return Err(SmtError::Unsupported(format!("indexed operator `{other}`"))),
     })
