@@ -62,6 +62,27 @@ fn maximize_linear_objective() {
 }
 
 #[test]
+fn maximize_over_disjunctive_constraints() {
+    // maximize x s.t. (x <= 5 OR x == 8) AND x <= 8  ->  8 (the disjunct's island
+    // beats the <=5 region). Requires the Boolean-structured oracle.
+    let mut arena = TermArena::new();
+    let x = int_var(&mut arena, "x");
+    let zero = arena.int_const(0);
+    let five = arena.int_const(5);
+    let eight = arena.int_const(8);
+    let le5 = arena.int_le(x, five).unwrap();
+    let is8 = arena.eq(x, eight).unwrap();
+    let disj = arena.or(le5, is8).unwrap();
+    let lo = arena.int_ge(x, zero).unwrap();
+    let hi = arena.int_le(x, eight).unwrap();
+
+    assert_eq!(
+        maximize_lia(&mut arena, &[disj, lo, hi], x).unwrap(),
+        OptOutcome::Optimal(8)
+    );
+}
+
+#[test]
 fn unbounded_objective_is_detected() {
     // maximize x s.t. x >= 0  ->  unbounded.
     let mut arena = TermArena::new();

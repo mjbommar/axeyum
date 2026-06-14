@@ -16,13 +16,15 @@
 //! when one exists, [`OptOutcome::Unbounded`] when the objective grows past the
 //! magnitude cap, [`OptOutcome::Infeasible`] when the constraints are `unsat`, and
 //! [`OptOutcome::Unknown`] if a probe is undecided. `minimize` is `maximize` of
-//! the negated objective. Only the conjunctive integer fragment is handled today
-//! (the simplex oracle's domain).
+//! the negated objective. Feasibility probes go through the Boolean-structured
+//! integer oracle ([`crate::check_with_lia_dpll`]), so the constraints may be
+//! arbitrary Boolean structure over integer atoms (disjunctions, implications),
+//! not just conjunctions.
 
 use axeyum_ir::{TermArena, TermId, Value, eval};
 
-use crate::backend::{CheckResult, SolverError, UnknownReason};
-use crate::lra::check_with_lia_simplex;
+use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownReason};
+use crate::dpll_lia::check_with_lia_dpll;
 
 /// Doubling steps before the objective is declared unbounded. `2^126` overflows
 /// `i128` magnitude, so this is effectively an overflow guard, not a real bound.
@@ -153,7 +155,10 @@ fn decide_with_objective(
         let bound_term = arena.int_const(bound);
         query.push(arena.int_ge(objective, bound_term)?);
     }
-    match check_with_lia_simplex(arena, &query)? {
+    // Use the Boolean-structured integer oracle so optimization works over
+    // disjunctive/implicative constraints, not just conjunctions. (On a pure
+    // conjunction it reduces to the same simplex decision.)
+    match check_with_lia_dpll(arena, &query, &SolverConfig::default())? {
         CheckResult::Sat(model) => {
             let assignment = model.to_assignment();
             match eval(arena, objective, &assignment)? {
