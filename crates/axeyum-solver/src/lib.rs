@@ -82,7 +82,7 @@ pub use lra::{
     lra_farkas_certificate, lra_unsat_core,
 };
 pub use model::Model;
-pub use optimize::{OptOutcome, maximize_lia, minimize_lia};
+pub use optimize::{OptOutcome, maximize_bv, maximize_lia, minimize_bv, minimize_lia};
 pub use proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};
 pub use records::{RecordError, RecordSort};
 pub use sat_bv_backend::SatBvBackend;

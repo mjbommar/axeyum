@@ -1,7 +1,7 @@
 //! Linear integer optimization (optimization modulo theories, integer slice).
 
 use axeyum_ir::{Sort, TermArena, TermId};
-use axeyum_solver::{OptOutcome, maximize_lia, minimize_lia};
+use axeyum_solver::{OptOutcome, maximize_bv, maximize_lia, minimize_bv, minimize_lia};
 
 fn int_var(arena: &mut TermArena, name: &str) -> TermId {
     let sym = arena.declare(name, Sort::Int).unwrap();
@@ -108,6 +108,58 @@ fn infeasible_constraints_have_no_optimum() {
 
     assert_eq!(
         maximize_lia(&mut arena, &[lo, hi], x).unwrap(),
+        OptOutcome::Infeasible
+    );
+}
+
+#[test]
+fn bv_maximize_respects_upper_bound() {
+    // maximize unsigned x:BV8 s.t. x <=u 200  ->  200.
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 8).unwrap();
+    let lim = arena.bv_const(8, 200).unwrap();
+    let c = arena.bv_ule(x, lim).unwrap();
+    assert_eq!(
+        maximize_bv(&mut arena, &[c], x).unwrap(),
+        OptOutcome::Optimal(200)
+    );
+}
+
+#[test]
+fn bv_minimize_respects_lower_bound() {
+    // minimize unsigned x:BV8 s.t. x >=u 50  ->  50.
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 8).unwrap();
+    let lim = arena.bv_const(8, 50).unwrap();
+    let c = arena.bv_uge(x, lim).unwrap();
+    assert_eq!(
+        minimize_bv(&mut arena, &[c], x).unwrap(),
+        OptOutcome::Optimal(50)
+    );
+}
+
+#[test]
+fn bv_maximize_unconstrained_is_all_ones() {
+    // maximize unsigned x:BV8 with no constraints  ->  255.
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 8).unwrap();
+    assert_eq!(
+        maximize_bv(&mut arena, &[], x).unwrap(),
+        OptOutcome::Optimal(255)
+    );
+}
+
+#[test]
+fn bv_infeasible_has_no_optimum() {
+    // x <=u 10 AND x >=u 20 is unsatisfiable.
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 8).unwrap();
+    let ten = arena.bv_const(8, 10).unwrap();
+    let twenty = arena.bv_const(8, 20).unwrap();
+    let lo = arena.bv_ule(x, ten).unwrap();
+    let hi = arena.bv_uge(x, twenty).unwrap();
+    assert_eq!(
+        maximize_bv(&mut arena, &[lo, hi], x).unwrap(),
         OptOutcome::Infeasible
     );
 }

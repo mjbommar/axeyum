@@ -38,6 +38,17 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-13
 
+- Architecture iteration K — bit-vector optimization recorded 2026-06-13
+  (machine-word program optimization — the use case): `maximize_bv` /
+  `minimize_bv` (`optimize.rs`) optimize the **unsigned** value of a bit-vector
+  objective subject to arbitrary `QF_BV` constraints, by binary search on the
+  bound over the finite BV domain using the eager BV dispatcher as the probe
+  oracle. No unbounded case (finite domain) → exact optimum; `Infeasible` when
+  constraints are unsat. Width ≤ 127 (so the optimum fits `i128`). Sound (each
+  probe is a sound, replayed BV decision). Also generalized the integer
+  optimizer to Boolean-structured constraints (probe via `check_with_lia_dpll`).
+  Tests: bounded BV max/min, unconstrained max = all-ones, infeasible, and a
+  disjunctive integer maximize. 61-binary workspace + clippy green.
 - Architecture iteration J — linear integer optimization (OMT) recorded
   2026-06-13 (directly serves the "constrained program optimization" north star;
   a capability Z3/cvc5 expose via maximize/minimize): `maximize_lia` /

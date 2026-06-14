@@ -21,7 +21,7 @@
 //! arbitrary Boolean structure over integer atoms (disjunctions, implications),
 //! not just conjunctions.
 
-use axeyum_ir::{TermArena, TermId, Value, eval};
+use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownReason};
 use crate::dpll_lia::check_with_lia_dpll;
@@ -170,5 +170,151 @@ fn decide_with_objective(
         }
         CheckResult::Unsat => Ok(Probe::Unsat),
         CheckResult::Unknown(reason) => Ok(Probe::Unknown(reason)),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Unsigned bit-vector optimization.
+//
+// The bit-vector domain is finite, so there is no unbounded case and binary
+// search on the objective bound terminates with the exact optimum. Probes go
+// through the eager bit-vector solver (the full dispatcher), so the constraints
+// may be arbitrary `QF_BV` (and the supported theory composition). Objectives
+// wider than 127 bits are declined (the optimum may not fit the `i128` result).
+// ---------------------------------------------------------------------------
+
+/// Maximizes the **unsigned** value of bit-vector `objective` subject to
+/// `assertions`.
+///
+/// # Errors
+///
+/// [`SolverError::Unsupported`] if `objective` is not a bit-vector of width
+/// `<= 127`, or [`SolverError::Backend`] on an internal error.
+pub fn maximize_bv(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objective: TermId,
+) -> Result<OptOutcome, SolverError> {
+    let max = bv_objective_max(arena, objective)?;
+    let v0 = match bv_value(arena, assertions, objective, None)? {
+        BvProbe::Sat(value) => value,
+        BvProbe::Unsat => return Ok(OptOutcome::Infeasible),
+        BvProbe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
+    };
+    // Largest k in [v0, max] with `objective >=u k` satisfiable.
+    let mut lo = v0;
+    let mut hi = max;
+    while lo < hi {
+        let mid = lo + (hi - lo).div_ceil(2);
+        match bv_value(arena, assertions, objective, Some((BvRel::Uge, mid)))? {
+            BvProbe::Sat(value) => lo = value.max(mid),
+            BvProbe::Unsat => hi = mid - 1,
+            BvProbe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
+        }
+    }
+    Ok(OptOutcome::Optimal(bv_to_i128(lo)?))
+}
+
+/// Minimizes the **unsigned** value of bit-vector `objective` subject to
+/// `assertions`.
+///
+/// # Errors
+///
+/// See [`maximize_bv`].
+pub fn minimize_bv(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objective: TermId,
+) -> Result<OptOutcome, SolverError> {
+    bv_objective_max(arena, objective)?; // width check
+    let v0 = match bv_value(arena, assertions, objective, None)? {
+        BvProbe::Sat(value) => value,
+        BvProbe::Unsat => return Ok(OptOutcome::Infeasible),
+        BvProbe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
+    };
+    // Smallest k in [0, v0] with `objective <=u k` satisfiable.
+    let mut lo = 0u128;
+    let mut hi = v0;
+    while lo < hi {
+        let mid = lo + (hi - lo) / 2;
+        match bv_value(arena, assertions, objective, Some((BvRel::Ule, mid)))? {
+            BvProbe::Sat(value) => hi = value.min(mid),
+            BvProbe::Unsat => lo = mid + 1,
+            BvProbe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
+        }
+    }
+    Ok(OptOutcome::Optimal(bv_to_i128(lo)?))
+}
+
+/// Converts an unsigned optimum to `i128` (always succeeds for width <= 127,
+/// which the callers enforce via [`bv_objective_max`]).
+fn bv_to_i128(value: u128) -> Result<i128, SolverError> {
+    i128::try_from(value).map_err(|_| {
+        SolverError::Backend("bit-vector optimum exceeds the i128 result range".to_string())
+    })
+}
+
+/// An unsigned bit-vector bound relation for an optimization probe.
+#[derive(Clone, Copy)]
+enum BvRel {
+    Uge,
+    Ule,
+}
+
+/// The maximum unsigned value of `objective`'s sort (and a width check).
+fn bv_objective_max(arena: &TermArena, objective: TermId) -> Result<u128, SolverError> {
+    match arena.sort_of(objective) {
+        Sort::BitVec(width) if width <= 127 => {
+            Ok(if width == 0 { 0 } else { (1u128 << width) - 1 })
+        }
+        Sort::BitVec(width) => Err(SolverError::Unsupported(format!(
+            "bit-vector optimization objective width {width} exceeds 127"
+        ))),
+        other => Err(SolverError::Unsupported(format!(
+            "bit-vector optimization objective is not a bit-vector (got {other:?})"
+        ))),
+    }
+}
+
+/// One bit-vector feasibility probe result, carrying the objective's unsigned
+/// value in the found model.
+enum BvProbe {
+    Sat(u128),
+    Unsat,
+    Unknown(UnknownReason),
+}
+
+/// Decides `assertions` (optionally with an unsigned bound on `objective`) via
+/// the eager bit-vector dispatcher and returns the objective's value.
+fn bv_value(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objective: TermId,
+    bound: Option<(BvRel, u128)>,
+) -> Result<BvProbe, SolverError> {
+    let Sort::BitVec(width) = arena.sort_of(objective) else {
+        unreachable!("bv_value called on a non-bit-vector objective")
+    };
+    let mut query = assertions.to_vec();
+    if let Some((rel, value)) = bound {
+        let bound_term = arena.bv_const(width, value)?;
+        let constraint = match rel {
+            BvRel::Uge => arena.bv_uge(objective, bound_term)?,
+            BvRel::Ule => arena.bv_ule(objective, bound_term)?,
+        };
+        query.push(constraint);
+    }
+    match crate::auto::solve(arena, &query, &SolverConfig::default())? {
+        CheckResult::Sat(model) => {
+            let assignment = model.to_assignment();
+            match eval(arena, objective, &assignment)? {
+                Value::Bv { value, .. } => Ok(BvProbe::Sat(value)),
+                other => Err(SolverError::Backend(format!(
+                    "bv optimization objective evaluated to a non-bit-vector ({other:?})"
+                ))),
+            }
+        }
+        CheckResult::Unsat => Ok(BvProbe::Unsat),
+        CheckResult::Unknown(reason) => Ok(BvProbe::Unknown(reason)),
     }
 }
