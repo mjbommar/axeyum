@@ -76,6 +76,10 @@ pub enum IrError {
     /// A datatype selector was applied to a value built by a different
     /// constructor (ADR-0022); the selection is undefined.
     DatatypeConstructorMismatch,
+    /// A construction is well-typed but not supported by the current encoding
+    /// (e.g. a regex Boolean operator nested where only an automaton-expressible
+    /// sub-expression is allowed). The string explains the limitation.
+    Unsupported(&'static str),
 }
 
 impl core::fmt::Display for IrError {
@@ -125,6 +129,7 @@ impl core::fmt::Display for IrError {
             IrError::DatatypeConstructorMismatch => {
                 write!(f, "datatype selector applied to a different constructor")
             }
+            IrError::Unsupported(why) => write!(f, "unsupported construction: {why}"),
         }
     }
 }

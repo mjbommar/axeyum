@@ -82,8 +82,14 @@ Last updated: 2026-06-14
   (`re.+`, `re.opt`, `re.allchar`/`.`, `re.loop`/`a{n,m}`) in the NFA builder;
   `Loop` desugars to `n` mandatory plus `m−n` optional copies (`n>m` → empty
   language). Tests for `a+`, `ab?`, `a.c`, `.*`, `a{2,4}`, `a{0,2}`, `a{3,3}`,
-  `a{3,1}`. **Next:** the unbounded string sort (`Sort::Seq`) + native
-  solver — the remaining frontier; or depth on another theory.
+  `a{3,1}`. **Regex Boolean combinators** `Inter`/`Comp`/`Diff` (`re.inter`/
+  `re.comp`/`re.diff`) now added — handled at the membership-formula level
+  (`∧`/`¬`/`∧¬`) by `in_re` recursion; a Boolean op nested under a
+  repetition/concatenation returns `IrError::Unsupported` (new variant). Tests:
+  `[a-z]*∩.{3}`, complement of `"no"`, `[a-z]+∖"x"`, nested `Comp` inside
+  `Inter`, and the nested-under-`Star` rejection. **Next:** the unbounded string
+  sort (`Sort::Seq`) + native solver — the remaining frontier; or depth on
+  another theory.
   This was the last entirely-untouched Z3 theory; it is now opened.
 
 - **NRA — first slice (2026-06-14, ADR-0024).** Nonlinear real arithmetic by

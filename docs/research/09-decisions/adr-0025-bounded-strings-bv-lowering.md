@@ -79,6 +79,10 @@ bound is explicit.
   spliced by masks/shifts into a `2·max_len` result sort) and `str.replace_all`
   (non-overlapping left-to-right scan carrying a skip counter and a symbolic
   output cursor, `max_len²` result sort) complete the structural operator set.
-  Remaining: the unbounded sequence sort and a native solver.)*
+  The regex fragment (`str.in_re`) covers the NFA-expressible operators
+  (`Empty`/`Char`/`Range`/`AnyChar`/`Concat`/`Union`/`Star`/`Plus`/`Opt`/`Loop`)
+  plus the Boolean combinators (`Inter`/`Comp`/`Diff`) handled at the
+  membership-formula level. Remaining: the unbounded sequence sort and a native
+  solver.)*
 - **Revisited when:** a workload needs unbounded strings or the structural
   operations (then the next bounded slice, and eventually the first-class sort).

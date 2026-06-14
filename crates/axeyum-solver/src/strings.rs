@@ -17,8 +17,11 @@
 //! via a Thompson NFA simulated over the bounded positions), decimal
 //! `to_int`/`from_int`, general-length `replace` (first occurrence, result in a
 //! `2·max_len` sort), and `replace_all` (non-overlapping, left to right, result
-//! in a `max_len²` sort). Unbounded strings (a first-class sequence sort and a
-//! native solver) are the remaining frontier.
+//! in a `max_len²` sort). The regex fragment covers `Empty`/`Char`/`Range`/
+//! `AnyChar`/`Concat`/`Union`/`Star`/`Plus`/`Opt`/`Loop` (NFA) plus the Boolean
+//! combinators `Inter`/`Comp`/`Diff` (membership-formula level). Unbounded
+//! strings (a first-class sequence sort and a native solver) are the remaining
+//! frontier.
 
 use axeyum_ir::{IrError, Sort, TermArena, TermId};
 
@@ -739,15 +742,44 @@ impl BoundedString {
     }
 
     /// `str.in_re` — does the bounded string `x` match the regular expression
-    /// `re`? Compiles `re` to a Thompson NFA and simulates it symbolically over
-    /// the `≤ max_len` positions (a per-position state set, char transitions
-    /// gated by `pos < len`), accepting iff the accept state is active after
-    /// exactly `len` consumed characters. Pure bit-vector/Boolean formula.
+    /// `re`? The automaton-expressible core (`Empty`/`Char`/`Range`/`AnyChar`/
+    /// `Concat`/`Union`/`Star`/`Plus`/`Opt`/`Loop`) is compiled to a Thompson NFA
+    /// and simulated symbolically over the `≤ max_len` positions (a per-position
+    /// state set, char transitions gated by `pos < len`), accepting iff the
+    /// accept state is active after exactly `len` consumed characters. The Boolean
+    /// combinators (`Inter`/`Comp`/`Diff`) are handled by combining the membership
+    /// formulas of their operands (`∧`, `¬`, `∧¬`). Pure bit-vector/Boolean
+    /// formula on the sound BV path.
     ///
     /// # Errors
     ///
-    /// Returns [`IrError`] from the builders.
+    /// Returns [`IrError::Unsupported`] if a Boolean combinator is nested under a
+    /// repetition/concatenation (it must appear at the top level or within other
+    /// Boolean combinators), or [`IrError`] from the builders.
     pub fn in_re(&self, arena: &mut TermArena, x: &StrTerm, re: &Regex) -> Result<TermId, IrError> {
+        match re {
+            Regex::Inter(a, b) => {
+                let ma = self.in_re(arena, x, a)?;
+                let mb = self.in_re(arena, x, b)?;
+                return arena.and(ma, mb);
+            }
+            Regex::Comp(a) => {
+                let ma = self.in_re(arena, x, a)?;
+                return arena.not(ma);
+            }
+            Regex::Diff(a, b) => {
+                let ma = self.in_re(arena, x, a)?;
+                let mb = self.in_re(arena, x, b)?;
+                let not_b = arena.not(mb)?;
+                return arena.and(ma, not_b);
+            }
+            _ => {}
+        }
+        if !re.is_nfa_safe() {
+            return Err(IrError::Unsupported(
+                "regex Boolean operator (inter/comp/diff) nested under repetition or concatenation",
+            ));
+        }
         let mut nfa = Nfa::default();
         let (start, accept) = nfa.build(re);
         let n = nfa.count;
@@ -969,6 +1001,32 @@ pub enum Regex {
     /// Bounded repetition `a{n, m}` (`re.loop`): between `n` and `m` (inclusive)
     /// repetitions of `a`. If `n > m` the language is empty (matches nothing).
     Loop(Box<Regex>, u32, u32),
+    /// Intersection (`re.inter`): matches iff both `a` and `b` match. A Boolean
+    /// combinator — see [`BoundedString::in_re`] for the nesting restriction.
+    Inter(Box<Regex>, Box<Regex>),
+    /// Complement (`re.comp`): matches iff `a` does **not** match. A Boolean
+    /// combinator.
+    Comp(Box<Regex>),
+    /// Difference (`re.diff`): matches iff `a` matches and `b` does not. A
+    /// Boolean combinator.
+    Diff(Box<Regex>, Box<Regex>),
+}
+
+impl Regex {
+    /// Whether this regex is automaton-expressible (no Boolean combinator
+    /// anywhere). [`BoundedString::in_re`] handles top-level Boolean combinators
+    /// by combining membership formulas, but cannot compile one nested under a
+    /// repetition/concatenation into the NFA.
+    fn is_nfa_safe(&self) -> bool {
+        match self {
+            Regex::Empty | Regex::Char(_) | Regex::Range(_, _) | Regex::AnyChar => true,
+            Regex::Concat(x, y) | Regex::Union(x, y) => x.is_nfa_safe() && y.is_nfa_safe(),
+            Regex::Star(x) | Regex::Plus(x) | Regex::Opt(x) | Regex::Loop(x, _, _) => {
+                x.is_nfa_safe()
+            }
+            Regex::Inter(_, _) | Regex::Comp(_) | Regex::Diff(_, _) => false,
+        }
+    }
 }
 
 impl Regex {
@@ -1097,6 +1155,11 @@ impl Nfa {
                 let a = self.state();
                 self.chars.push((s, a, Pred::Range(0, 255)));
                 (s, a)
+            }
+            // Boolean combinators are stripped/rejected by `in_re` before any
+            // automaton is built, so `build` never receives one.
+            Regex::Inter(_, _) | Regex::Comp(_) | Regex::Diff(_, _) => {
+                unreachable!("Boolean regex combinators are handled in in_re, not the NFA builder")
             }
             Regex::Loop(x, n, m) => {
                 if n > m {

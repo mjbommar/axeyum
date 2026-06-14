@@ -590,6 +590,53 @@ fn regex_plus_opt_anychar() {
 }
 
 #[test]
+fn regex_boolean_combinators() {
+    let mut a = TermArena::new();
+    let s = BoundedString::new(8);
+
+    let matches = |a: &mut TermArena, re: &Regex, lit: &str| -> bool {
+        let st = s.literal(a, lit).unwrap();
+        let m = s.in_re(a, &st, re).unwrap();
+        eval_bool(a, m)
+    };
+
+    // Inter: [a-z]* AND .{3} = exactly three lowercase letters.
+    let lower_star = Regex::Star(Box::new(Regex::Range(b'a', b'z')));
+    let three = Regex::Loop(Box::new(Regex::AnyChar), 3, 3);
+    let inter = Regex::Inter(Box::new(lower_star), Box::new(three));
+    assert!(matches(&mut a, &inter, "abc"), "inter matches \"abc\"");
+    assert!(!matches(&mut a, &inter, "ab"), "inter rejects \"ab\" (len)");
+    assert!(!matches(&mut a, &inter, "abcd"), "inter rejects \"abcd\" (len)");
+    assert!(!matches(&mut a, &inter, "aBc"), "inter rejects \"aBc\" (uppercase)");
+
+    // Comp: complement of the literal "no".
+    let comp = Regex::Comp(Box::new(Regex::literal("no")));
+    assert!(!matches(&mut a, &comp, "no"), "comp rejects \"no\"");
+    assert!(matches(&mut a, &comp, "yes"), "comp matches \"yes\"");
+    assert!(matches(&mut a, &comp, ""), "comp matches \"\"");
+
+    // Diff: [a-z]+ minus the literal "x" = lowercase words except "x".
+    let lower_plus = Regex::Plus(Box::new(Regex::Range(b'a', b'z')));
+    let diff = Regex::Diff(Box::new(lower_plus), Box::new(Regex::literal("x")));
+    assert!(matches(&mut a, &diff, "abc"), "diff matches \"abc\"");
+    assert!(!matches(&mut a, &diff, "x"), "diff rejects \"x\"");
+    assert!(matches(&mut a, &diff, "xy"), "diff matches \"xy\"");
+
+    // Nested Boolean (Comp inside Inter) is allowed.
+    let nested = Regex::Inter(
+        Box::new(Regex::Plus(Box::new(Regex::Range(b'a', b'z')))),
+        Box::new(Regex::Comp(Box::new(Regex::literal("no")))),
+    );
+    assert!(matches(&mut a, &nested, "yes"), "nested matches \"yes\"");
+    assert!(!matches(&mut a, &nested, "no"), "nested rejects \"no\"");
+
+    // A Boolean op nested under a repetition is rejected with an error.
+    let bad = Regex::Star(Box::new(Regex::Comp(Box::new(Regex::Char(b'a')))));
+    let st = s.literal(&mut a, "a").unwrap();
+    assert!(s.in_re(&mut a, &st, &bad).is_err(), "nested-under-star is unsupported");
+}
+
+#[test]
 fn symbolic_regex_membership_is_sat() {
     // exists x (<=8): x matches a(b|c)* AND len(x)==3 -> sat (e.g. "abc").
     let mut a = TermArena::new();
