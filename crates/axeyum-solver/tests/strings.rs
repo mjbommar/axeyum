@@ -195,6 +195,31 @@ fn index_of_literals() {
 }
 
 #[test]
+fn substr_at_symbolic_start() {
+    let mut a = TermArena::new();
+    let s = BoundedString::new(8);
+    let hello = s.literal(&mut a, "hello").unwrap();
+
+    // constant-folded symbolic start: substr_at("hello", 1, 3) == "ell".
+    let one = a.bv_const(s_len_width(8), 1).unwrap();
+    let (s3, sub) = s.substr_at(&mut a, &hello, one, 3).unwrap();
+    let ell = s3.literal(&mut a, "ell").unwrap();
+    let eq = s3.equal(&mut a, &sub, &ell).unwrap();
+    assert!(eval_bool(&a, eq), "substr_at(\"hello\",1,3) == \"ell\"");
+
+    // symbolic: exists i: substr_at("hello", i, 2) == "lo"  -> sat (i = 3).
+    let is = a.declare("i", axeyum_ir::Sort::BitVec(s_len_width(8))).unwrap();
+    let i = a.var(is);
+    let bound = a.bv_const(s_len_width(8), 8).unwrap();
+    let wf = a.bv_ule(i, bound).unwrap();
+    let (s2, sub2) = s.substr_at(&mut a, &hello, i, 2).unwrap();
+    let lo = s2.literal(&mut a, "lo").unwrap();
+    let goal = s2.equal(&mut a, &sub2, &lo).unwrap();
+    let r = solve(&mut a, &[wf, goal], &SolverConfig::default()).unwrap();
+    assert!(matches!(r, CheckResult::Sat(_)), "exists i: hello[i..i+2]=\"lo\" sat, got {r:?}");
+}
+
+#[test]
 fn symbolic_contains_is_sat() {
     // exists x (<=8): x contains "lo" AND len(x)==5  -> sat (e.g. "hello").
     let mut a = TermArena::new();

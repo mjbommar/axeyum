@@ -362,6 +362,47 @@ impl BoundedString {
         Ok((result, StrTerm { len: rlen, content }))
     }
 
+    /// `str.substr` with a **symbolic** start and constant length `n`: the
+    /// substring of `x` at `[start, start+n)`, in a bounded-string sort of size
+    /// `n`. Content is `x` right-shifted by `start·8` bytes (variable shift),
+    /// truncated to `n` bytes; length is `min(n, len(x) − start)` clamped to 0
+    /// when `start ≥ len(x)`. Requires `n ≤ self.max_len` and `n ≥ 1`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::InvalidWidth`] if `n` is out of range, or [`IrError`]
+    /// from the builders.
+    pub fn substr_at(
+        &self,
+        arena: &mut TermArena,
+        x: &StrTerm,
+        start: TermId,
+        n: u32,
+    ) -> Result<(BoundedString, StrTerm), IrError> {
+        if n == 0 || n > self.max_len {
+            return Err(IrError::InvalidWidth(n));
+        }
+        let result = BoundedString::new(n);
+        let cw = self.content_width();
+        let lw = self.len_width();
+        // shift x right by start*8 bits, then take the low n bytes.
+        let start_c = arena.zero_ext(cw - lw, start)?;
+        let three = arena.bv_const(cw, 3)?; // *8
+        let shift = arena.bv_shl(start_c, three)?;
+        let shifted = arena.bv_lshr(x.content, shift)?;
+        let content = arena.extract(n * 8 - 1, 0, shifted)?;
+        // actual length = start >= len(x) ? 0 : min(n, len(x) - start).
+        let n_c = arena.bv_const(lw, u128::from(n))?;
+        let zero = arena.bv_const(lw, 0)?;
+        let start_ge = arena.bv_uge(start, x.len)?;
+        let avail = arena.bv_sub(x.len, start)?;
+        let avail_lt_n = arena.bv_ult(avail, n_c)?;
+        let min_an = arena.ite(avail_lt_n, avail, n_c)?;
+        let actual = arena.ite(start_ge, zero, min_an)?;
+        let rlen = arena.extract(result.len_width() - 1, 0, actual)?;
+        Ok((result, StrTerm { len: rlen, content }))
+    }
+
     /// `str.at` at a **constant** index: the byte at position `i` (an 8-bit
     /// `BitVec`), or `0` if `i` is at or beyond the length.
     ///

@@ -49,9 +49,9 @@ Last updated: 2026-06-14
   padding masked); tests incl. `x ++ "!" = "hi!"` (sat). **`str.prefixof` and `str.contains`**
   now added (contains = bounded offset scan); symbolic contains tested.
   **`str.suffixof`**, constant-window **`str.substr`**, and **`str.indexof`**
-  (smallest matching offset ≥ from, via a shared `match_at`) added. **Next:**
-  symbolic-index `substr`, `str.replace`, regex, then unbounded via a first-class
-  sort.
+  (smallest matching offset ≥ from, via a shared `match_at`) added. **Symbolic-start `substr_at`** (variable right-shift) added — the building
+  block for `str.replace`. **Next:** `str.replace` (splice), regex, then
+  unbounded via a first-class sort.
   This was the last entirely-untouched Z3 theory; it is now opened.
 
 - **NRA — first slice (2026-06-14, ADR-0024).** Nonlinear real arithmetic by
