@@ -13,7 +13,7 @@
 
 use axeyum_smtlib::{ScriptCommand, parse_script};
 
-use crate::auto::solve;
+use crate::auto::{solve, unsat_core};
 use crate::backend::{CheckResult, SolverConfig, SolverError};
 
 /// The result of deciding an SMT-LIB script, with the script's own declarations.
@@ -52,6 +52,40 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
         logic: script.logic,
         expected_status: script.status,
     })
+}
+
+/// Extracts an **unsat core** from an SMT-LIB script (`get-unsat-core`): the
+/// conjunction of all its assertions is decided, and if it is `unsat`, a minimal
+/// unsatisfiable subset is returned, reported as the assertions' `:named` labels
+/// where present (and `assertion #i` otherwise, in script order). Returns
+/// `Ok(None)` when the script is `sat`/`unknown` (no core exists).
+///
+/// The core is the deletion-minimized subset from [`crate::unsat_core`], so every
+/// returned name is genuinely needed for unsatisfiability.
+///
+/// # Errors
+///
+/// [`SolverError::Parse`] for malformed/unsupported text, or any [`SolverError`]
+/// from the underlying [`crate::unsat_core`] solving.
+pub fn solve_smtlib_unsat_core(
+    input: &str,
+    config: &SolverConfig,
+) -> Result<Option<Vec<String>>, SolverError> {
+    let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    let Some(core) = unsat_core(&mut script.arena, &script.assertions, config)? else {
+        return Ok(None);
+    };
+    let names = core
+        .into_iter()
+        .map(|i| {
+            script
+                .assertion_names
+                .get(i)
+                .and_then(Clone::clone)
+                .unwrap_or_else(|| format!("assertion #{i}"))
+        })
+        .collect();
+    Ok(Some(names))
 }
 
 /// Decides an **incremental** SMT-LIB script, returning one result per

@@ -55,6 +55,13 @@ Last updated: 2026-06-14
   (a temporary stack is solved and discarded), so a later `check-sat` is
   unaffected. Test: `x<5` then assuming `x=3` (sat), assuming `x=7` (unsat), then
   plain `check-sat` (sat — assumptions not kept).
+  **Named assertions + unsat cores now added** — `(assert (! t :named c))`
+  records the label (parallel `Script::assertion_names`), `get-unsat-core`/
+  `get-assertions`/`reset`/`reset-assertions` parse as no-ops, and
+  `solve_smtlib_unsat_core` returns the deletion-minimized unsat core as the
+  assertions' `:named` labels (falling back to `assertion #i`), or `None` when
+  sat. Tests: `x>5 ∧ x<3` core is `{a, b}` excluding an irrelevant tautology; a
+  sat script yields no core.
 
 - **QF_UFFP verified — uninterpreted functions over FP (2026-06-14).** The
   `Sort::Float` cascade (ADR-0026) plus the bit-blaster preflight accepting

@@ -288,3 +288,42 @@ fn check_sat_assuming_does_not_retain_assumptions() {
         "assumptions were not retained, so x<5 is still sat"
     );
 }
+
+/// Named assertions + unsat core: `x>5 ∧ x<3` is unsat; the minimized core is
+/// the two named conflicting assertions, excluding an irrelevant tautology.
+#[test]
+fn unsat_core_returns_named_minimal_subset() {
+    use axeyum_solver::solve_smtlib_unsat_core;
+    let text = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (! (bvugt x #x05) :named a))
+(assert (! (bvult x #x03) :named b))
+(assert (! (= x x) :named irrelevant))
+(check-sat)
+(get-unsat-core)
+";
+    let core = solve_smtlib_unsat_core(text, &config())
+        .expect("decides")
+        .expect("query is unsat, so a core exists");
+    assert!(core.contains(&"a".to_owned()), "core must include a: {core:?}");
+    assert!(core.contains(&"b".to_owned()), "core must include b: {core:?}");
+    assert!(
+        !core.contains(&"irrelevant".to_owned()),
+        "minimized core excludes the tautology: {core:?}"
+    );
+}
+
+/// A satisfiable script has no unsat core.
+#[test]
+fn unsat_core_is_none_when_sat() {
+    use axeyum_solver::solve_smtlib_unsat_core;
+    let text = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (! (bvugt x #x05) :named a))
+(check-sat)
+(get-unsat-core)
+";
+    assert_eq!(solve_smtlib_unsat_core(text, &config()).expect("decides"), None);
+}

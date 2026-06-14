@@ -112,7 +112,9 @@ pub use pb::{pb_eq, pb_ge, pb_le};
 pub use proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};
 pub use records::{RecordError, RecordSort};
 pub use sat_bv_backend::SatBvBackend;
-pub use smtlib::{SmtLibOutcome, solve_smtlib, solve_smtlib_incremental};
+pub use smtlib::{
+    SmtLibOutcome, solve_smtlib, solve_smtlib_incremental, solve_smtlib_unsat_core,
+};
 pub use solver::Solver;
 pub use strategy::{Strategy, solve_with_strategy};
 #[cfg(feature = "z3")]

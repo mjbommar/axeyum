@@ -51,6 +51,9 @@ pub struct Script {
     pub status: Option<String>,
     /// Number of `check-sat` commands seen.
     pub check_sats: u32,
+    /// Per-assertion `:named` label (parallel to [`Script::assertions`]; `None`
+    /// when the assertion was not named), for `(get-unsat-core)`.
+    pub assertion_names: Vec<Option<String>>,
     /// The ordered `assert`/`push`/`pop`/`check-sat` sequence — the incremental
     /// view of the script (ADR-0009 lifecycle), for per-`check-sat` solving.
     pub commands: Vec<ScriptCommand>,
@@ -100,7 +103,11 @@ fn parse_command<'a>(
             }
         }
         "set-option" => exact_len(items, 3, head)?,
-        "get-model" | "exit" => exact_len(items, 1, head)?,
+        // Output/query commands: accepted as no-ops at parse time. The core is
+        // produced by the solver (`solve_smtlib_unsat_core`), the model by the
+        // `sat` result — the parser just records a well-formed script.
+        "get-model" | "exit" | "get-unsat-core" | "get-assertions" | "reset"
+        | "reset-assertions" => exact_len(items, 1, head)?,
         "get-info" => exact_len(items, 2, head)?,
         "check-sat-assuming" => {
             exact_len(items, 2, head)?;
@@ -125,8 +132,11 @@ fn parse_command<'a>(
         "define-fun" => parse_define_fun(script, aliases, macros, items)?,
         "assert" => {
             exact_len(items, 2, head)?;
-            let t = parse_term(&mut script.arena, sexpr_at(items, 1)?, aliases, macros)?;
+            let body = sexpr_at(items, 1)?;
+            let name = named_label(body);
+            let t = parse_term(&mut script.arena, body, aliases, macros)?;
             script.assertions.push(t);
+            script.assertion_names.push(name);
             script.commands.push(ScriptCommand::Assert(t));
         }
         // Incremental scoping (ADR-0009): `(push)`/`(pop)` default to one scope.
@@ -150,6 +160,23 @@ fn parse_command<'a>(
         other => return Err(SmtError::Unsupported(format!("command `{other}`"))),
     }
     Ok(())
+}
+
+/// The `:named` label of an attributed assertion `(! t :named name …)`, if any.
+fn named_label(body: &SExpr) -> Option<String> {
+    let items = body.list()?;
+    if items.first().and_then(SExpr::atom) != Some("!") {
+        return None;
+    }
+    // Scan `:attr value` pairs after the term for `:named`.
+    let mut i = 2;
+    while i + 1 < items.len() {
+        if items[i].atom() == Some(":named") {
+            return items[i + 1].atom().map(str::to_owned);
+        }
+        i += 2;
+    }
+    None
 }
 
 fn parse_declare_fun(script: &mut Script, items: &[SExpr]) -> Result<(), SmtError> {
