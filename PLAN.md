@@ -38,6 +38,16 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-14
 
+- **Strings — first slice (2026-06-14, ADR-0025).** Bounded-length string theory
+  by BV lowering (`strings::BoundedString`, no IR sort): a string is `(len,
+  content)` over a byte alphabet, `max_len ≤ 16`. `str.len`/`str.=`/`str.at` +
+  literals build BV formulas (padding ignored via `i < len` guards), so solving
+  and model replay reuse the BV path — the BMC fragment (CBMC/Kani style). Tests:
+  literal eq/len/char-at, symbolic string = literal (sat), len+char (sat),
+  length/literal contradiction (unsat). **Next:** the shift-heavy ops
+  (`str.++`/`substr`/`contains`), then regex and unbounded via a first-class sort.
+  This was the last entirely-untouched Z3 theory; it is now opened.
+
 - **NRA — first slice (2026-06-14, ADR-0024).** Nonlinear real arithmetic by
   linear abstraction + replay (`check_with_nra`, routed from the dispatcher's
   real path): each nonlinear product `x·y` (both operands non-constant) is

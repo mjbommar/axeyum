@@ -51,6 +51,9 @@ mod sat_bv_backend;
 mod smtlib;
 mod solver;
 mod strategy;
+/// Bounded-length string theory by bit-vector lowering (no IR sort): `str.len`,
+/// `str.=`, `str.at`, literals over byte strings of length `0..=max_len`.
+pub mod strings;
 #[cfg(feature = "z3")]
 mod z3_backend;
 
