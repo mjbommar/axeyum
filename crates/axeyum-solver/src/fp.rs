@@ -530,6 +530,102 @@ fn unpack_operand(
     Ok((sx, sig_w, e))
 }
 
+/// Symbolic `fp.sqrt` (round-nearest-ties-to-even): the IEEE 754 square-root
+/// bit-blaster. Makes the exponent even, takes the integer square root of the
+/// (scaled) significand via [`isqrt`] (remainder → sticky bit), halves the
+/// exponent, rounds via [`pack_value`], and muxes the special cases
+/// (`sqrt(NaN)` and `sqrt(x<0)` → NaN, `sqrt(±0) = ±0`, `sqrt(+∞) = +∞`). Pure
+/// bit-vector formula; solves and replays on the existing path.
+///
+/// Works for **F16/F32/F64** (the working width stays ≤ 128). Validated against
+/// native `f32`/`f64` `sqrt`.
+///
+/// # Errors
+///
+/// Returns [`IrError::InvalidWidth`] if the format is too wide,
+/// [`IrError::SortMismatch`] for a mis-sized operand, or [`IrError`] from builders.
+#[allow(clippy::similar_names, clippy::many_single_char_names)]
+pub fn sqrt(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId, IrError> {
+    fmt.check(arena, x)?;
+    let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
+    let total = fmt.width();
+    let shift = (sb + 1).div_ceil(2) + 3; // result fractional bits
+    let mut w = (sb + 1) + 2 * shift;
+    if w % 2 != 0 {
+        w += 1; // isqrt needs an even width
+    }
+    if w > MAX_BV_WIDTH {
+        return Err(IrError::InvalidWidth(w));
+    }
+
+    let (_sx, sig_w, e) = unpack_operand(arena, fmt, w, x)?;
+    let one_w = arena.bv_const(w, 1)?;
+    let zero_w = arena.bv_const(w, 0)?;
+
+    // Normalize a (sub)normal significand to a full sb-bit significand (leading
+    // bit at sb−1), adjusting the exponent — so the integer sqrt always gets full
+    // precision regardless of how many leading zeros a subnormal input had.
+    let (sig_n, e_n) = {
+        let lz = count_leading_zeros(arena, sig_w)?;
+        let wsb = arena.bv_const(w, u128::from(w - sb))?;
+        let norm = arena.bv_sub(lz, wsb)?;
+        let sig_n = arena.bv_shl(sig_w, norm)?;
+        let e_n = arena.bv_sub(e, norm)?;
+        (sig_n, e_n)
+    };
+
+    // Make the exponent even: if odd, double the significand and decrement E.
+    let e_lsb = arena.extract(0, 0, e_n)?;
+    let one1 = arena.bv_const(1, 1)?;
+    let e_odd = arena.eq(e_lsb, one1)?;
+    let sig2 = {
+        let doubled = arena.bv_shl(sig_n, one_w)?;
+        arena.ite(e_odd, doubled, sig_n)?
+    };
+    let e2 = {
+        let dec = arena.bv_sub(e_n, one_w)?;
+        arena.ite(e_odd, dec, e_n)?
+    };
+
+    // N = sig2 << (2·shift); isqrt(N) ≈ sqrt(sig2) · 2^shift.
+    let two_shift = arena.bv_const(w, u128::from(2 * shift))?;
+    let n = arena.bv_shl(sig2, two_shift)?;
+    let (root, rem) = isqrt(arena, n)?;
+    let sticky = {
+        let z = arena.eq(rem, zero_w)?;
+        arena.not(z)?
+    };
+    let sticky_bit = arena.ite(sticky, one_w, zero_w)?;
+    let m = arena.bv_or(root, sticky_bit)?;
+
+    // result exponent of m's LSB = E2/2 − shift.
+    let e_half = arena.bv_ashr(e2, one_w)?; // E2 even → exact /2
+    let shift_c = sconst(arena, w, i64::from(shift))?;
+    let e_res = arena.bv_sub(e_half, shift_c)?;
+
+    let plus = arena.bool_const(false);
+    let finite = pack_value(arena, eb, sb, plus, m, e_res)?;
+
+    // Special cases.
+    let nan_x = is_nan(arena, fmt, x)?;
+    let neg_x = is_negative(arena, fmt, x)?; // negative finite or −∞ (excludes −0, NaN)
+    let zero_x = is_zero(arena, fmt, x)?;
+    let inf_x = is_infinite(arena, fmt, x)?;
+    let nan_flag = arena.or(nan_x, neg_x)?; // sqrt(NaN) and sqrt(negative) → NaN
+
+    let exp_ones = arena.bv_const(total, ((1u128 << eb) - 1) << (sb - 1))?;
+    let qnan = {
+        let q = arena.bv_const(total, 1u128 << (sb - 2))?;
+        arena.bv_or(exp_ones, q)?
+    };
+    // sqrt(+∞) = +∞ (the negative-∞ case is already NaN via `neg_x`).
+    let pos_inf = exp_ones;
+
+    let if_inf = arena.ite(inf_x, pos_inf, finite)?;
+    let if_zero = arena.ite(zero_x, x, if_inf)?; // ±0 preserved
+    arena.ite(nan_flag, qnan, if_zero)
+}
+
 /// Symbolic `fp.div` (round-nearest-ties-to-even): the IEEE 754 division
 /// bit-blaster. Computes the quotient of the significands to `sb + 3` fractional
 /// bits via `bv_udiv` (with the `bv_urem` remainder folded into a sticky bit),
@@ -1006,6 +1102,53 @@ pub fn round_significand(
     let zero_w = arena.bv_const(keep + 1, 0)?;
     let inc = arena.ite(round_up, one_w, zero_w)?;
     arena.bv_add(kept_ext, inc)
+}
+
+/// Symbolic **integer square root**: returns `(root, remainder)` for the `W`-bit
+/// operand `n` (`W` even), where `root = floor(sqrt(n))` and
+/// `remainder = n − root²` (so `remainder != 0` ⟺ `n` is not a perfect square —
+/// the sticky bit `fp.sqrt` needs). Built by the classic digit-by-digit
+/// (two-bits-at-a-time) algorithm as a pure bit-vector formula.
+///
+/// # Errors
+///
+/// Returns [`IrError::SortMismatch`] if `n` is not a bit-vector, or
+/// [`IrError::InvalidWidth`] if its width is odd, or [`IrError`] from builders.
+#[allow(clippy::similar_names)] // rem4/res4/res2 are the classic algorithm's terms
+pub fn isqrt(arena: &mut TermArena, n: TermId) -> Result<(TermId, TermId), IrError> {
+    let Sort::BitVec(w) = arena.sort_of(n) else {
+        return Err(IrError::SortMismatch {
+            expected: "BitVec",
+            found: arena.sort_of(n),
+        });
+    };
+    if w % 2 != 0 {
+        return Err(IrError::InvalidWidth(w));
+    }
+    let mut res = arena.bv_const(w, 0)?;
+    let mut rem = arena.bv_const(w, 0)?;
+    let one_c = arena.bv_const(w, 1)?;
+    let two_c = arena.bv_const(w, 2)?;
+    let three_c = arena.bv_const(w, 3)?;
+    for i in (0..w / 2).rev() {
+        // Bring down the next 2 bits of n (group i).
+        let shift = arena.bv_const(w, u128::from(2 * i))?;
+        let shifted = arena.bv_lshr(n, shift)?;
+        let two_bits = arena.bv_and(shifted, three_c)?;
+        // rem = rem*4 + group; trial = res*4 + 1.
+        let rem4 = arena.bv_shl(rem, two_c)?;
+        rem = arena.bv_or(rem4, two_bits)?;
+        let res4 = arena.bv_shl(res, two_c)?;
+        let trial = arena.bv_or(res4, one_c)?;
+        let ge = arena.bv_uge(rem, trial)?;
+        let rem_sub = arena.bv_sub(rem, trial)?;
+        rem = arena.ite(ge, rem_sub, rem)?;
+        // res = res*2 (+1 if we subtracted).
+        let res2 = arena.bv_shl(res, one_c)?;
+        let res2_1 = arena.bv_or(res2, one_c)?;
+        res = arena.ite(ge, res2_1, res2)?;
+    }
+    Ok((res, rem))
 }
 
 /// Symbolic **round-nearest-ties-to-even by a *variable* drop amount**: rounds
@@ -1689,6 +1832,61 @@ mod tests {
             let x = (state & 0xFFFF) as u16;
             let y = ((state >> 16) & 0xFFFF) as u16;
             check(&mut a, x, y);
+        }
+    }
+
+    #[test]
+    fn sqrt_matches_native_f32_and_f64() {
+        let mut a = TermArena::new();
+        let check32 = |a: &mut TermArena, xb: u32| {
+            let xt = a.bv_const(32, u128::from(xb)).unwrap();
+            let r = sqrt(a, FloatFormat::F32, xt).unwrap();
+            let got = match eval(a, r, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("expected Bv, got {other:?}"),
+            };
+            let s = f32::from_bits(xb).sqrt();
+            if s.is_nan() {
+                let exp = (got >> 23) & 0xFF;
+                let mant = got & 0x7F_FFFF;
+                assert!(exp == 0xFF && mant != 0, "sqrt({xb:#x}) want NaN, got {got:#x}");
+            } else {
+                assert_eq!(got, u128::from(s.to_bits()), "sqrt({xb:#x})");
+            }
+        };
+        let s32: [u32; 12] = [
+            0x0000_0000, 0x8000_0000, 0x3F80_0000, 0x4080_0000, 0x4000_0000, 0xBF80_0000,
+            0x7F80_0000, 0xFF80_0000, 0x7FC0_0000, 0x0080_0000, 0x0000_0001, 0x7F7F_FFFF,
+        ];
+        for &x in &s32 {
+            check32(&mut a, x);
+        }
+        let mut state: u64 = 0x5217_b1f7_2c8e_0001;
+        for _ in 0..1500 {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            check32(&mut a, (state >> 16) as u32);
+        }
+
+        let check64 = |a: &mut TermArena, xb: u64| {
+            let xt = a.bv_const(64, u128::from(xb)).unwrap();
+            let r = sqrt(a, FloatFormat::F64, xt).unwrap();
+            let got = match eval(a, r, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("expected Bv, got {other:?}"),
+            };
+            let s = f64::from_bits(xb).sqrt();
+            if s.is_nan() {
+                assert!((got >> 52) & 0x7FF == 0x7FF && got & 0xF_FFFF_FFFF_FFFF != 0);
+            } else {
+                assert_eq!(got, u128::from(s.to_bits()), "sqrt64({xb:#x})");
+            }
+        };
+        let mut s = 0x3243_f6a8_885a_308du64;
+        for _ in 0..1000 {
+            s = s.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1_442_695_040_888_963_407);
+            check64(&mut a, s);
         }
     }
 

@@ -82,8 +82,14 @@ Last updated: 2026-06-14
   significands to `sb+3` fractional bits via `bv_udiv` (with the `bv_urem`
   remainder folded to a sticky bit) → exponent subtract → `pack_value` → special
   muxing (`0/0`,`∞/∞`→NaN; `x/0`,`∞/finite`→∞; `finite/∞`,`0`→0). Validated
-  against native `f32` AND `f64`. **Deferred (next FP layer):** `sqrt`/`rem`,
-  non-default rounding modes, and FP→real beyond constants. (`add`/`mul`/`div`
+  against native `f32` AND `f64`.
+  **Symbolic `fp.sqrt` done for F16/F32/F64** (validated bit-blaster): normalize
+  (sub)normal significand → even exponent → integer `isqrt` of the scaled
+  significand (remainder → sticky) → halve exponent → `pack_value`, with
+  NaN/`sqrt(<0)`→NaN, `sqrt(±0)=±0`, `sqrt(+∞)=+∞` muxing. `isqrt` is a validated
+  digit-by-digit circuit (checked vs `u128::isqrt`). Validated against native
+  `f32` AND `f64` incl. subnormals. **Deferred (next FP layer):** `rem`,
+  non-default rounding modes, FP→real beyond constants. (`add`/`mul`/`div`/`sqrt`
   share `unpack_operand` + the validated `pack_value` core.) Conversion folds are done both directions:
   int→FP (`ubv_to_fp`/`sbv_to_fp`), FP→int (`to_ubv`/`to_sbv`, per rounding mode,
   folded only when finite + in range else `None`), and FP→Real (`to_real`, exact

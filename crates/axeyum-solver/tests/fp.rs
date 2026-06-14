@@ -315,6 +315,38 @@ fn fp_to_int_conversions_fold_when_defined() {
 }
 
 #[test]
+fn isqrt_matches_native() {
+    // floor-sqrt + remainder must match u128::isqrt over a battery of widths.
+    let mut a = TermArena::new();
+    for w in [8u32, 16, 32, 64] {
+        let mut samples = vec![0u128, 1, 2, 3, 4, 15, 16, 17, (1u128 << w) - 1];
+        let mut state: u64 = 0x51ed_0000_beef_0001 ^ u64::from(w);
+        for _ in 0..40 {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            samples.push(u128::from(state) & ((1u128 << w) - 1));
+        }
+        for n in samples {
+            let nt = a.bv_const(w, n).unwrap();
+            let (root_t, rem_t) = fp::isqrt(&mut a, nt).unwrap();
+            let want_root = n.isqrt();
+            let want_rem = n - want_root * want_root;
+            let got_root = match eval(&a, root_t, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("expected Bv, got {other:?}"),
+            };
+            let got_rem = match eval(&a, rem_t, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("expected Bv, got {other:?}"),
+            };
+            assert_eq!(got_root, want_root, "isqrt_{w}({n}) root");
+            assert_eq!(got_rem, want_rem, "isqrt_{w}({n}) rem");
+        }
+    }
+}
+
+#[test]
 fn round_variable_matches_reference() {
     // Variable-drop RNE rounding must match a direct reference over a battery of
     // (m, drop) at several widths.

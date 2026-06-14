@@ -108,9 +108,17 @@ bit; exponents subtracted; rounded by `pack_value`; special-cased (`0/0` and
 `∞/∞` → NaN, `x/0` and `∞/finite` → ∞, `finite/∞` and `0` → 0). F16/F32/F64
 (`2·sb + 5` ≤ 128), validated against native `f32` and `f64`.
 
-`add`, `mul`, and `div` share `unpack_operand` and the validated `pack_value`
-round-and-pack core. Bit-vectors are capped at `MAX_BV_WIDTH = 128` (`Value::Bv`
-is a `u128`); all three fit F64 within it. Next FP units: `sqrt`/`rem`,
+**Symbolic square root (`fp::sqrt`).** Normalizes a (sub)normal significand to
+full width, makes the exponent even, takes the integer square root of the scaled
+significand via a validated digit-by-digit `isqrt` (the `n − root²` remainder
+becomes the sticky bit), halves the exponent, rounds via `pack_value`, and
+special-cases `sqrt(NaN)`/`sqrt(<0)` → NaN, `sqrt(±0) = ±0`, `sqrt(+∞) = +∞`.
+F16/F32/F64; validated against native `f32`/`f64` including subnormals (and
+`isqrt` against `u128::isqrt`).
+
+`add`, `mul`, `div`, and `sqrt` share `unpack_operand` and the validated
+`pack_value` round-and-pack core. Bit-vectors are capped at `MAX_BV_WIDTH = 128`
+(`Value::Bv` is a `u128`); all four fit F64 within it. Next FP units: `rem`,
 non-default rounding modes, and FP↔real beyond constants.
 
 ## Evidence
