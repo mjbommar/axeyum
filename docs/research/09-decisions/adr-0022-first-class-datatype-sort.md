@@ -102,6 +102,49 @@ Concretely, in dependency order:
   bounded unfolding lands a sound, useful slice first and reuses the proven
   bit-blasting + replay path, exactly as bounded LIA preceded the LIA simplex.
 
+## Implementation checklist (from the 2026-06-13 attempt)
+
+An ordered, executable plan distilled from the reverted attempt, so the next
+session lands it in one green pass. **Probe caveat:** `cargo build` stops at the
+first crate that fails to compile, so adding the IR variants and building made
+only `axeyum-ir` errors visible; the downstream sites below appear only once
+`axeyum-ir` compiles. Build IR green *first*, then the workspace, then tests.
+
+1. **`term.rs`** — add `DatatypeId(u32)` and `ConstructorId(u32)` (mirror
+   `FuncId`, derive `Ord`/`Hash`); add ops `DtConstruct { constructor,
+   datatype }`, `DtSelect { constructor, index }`, `DtTest(constructor)` (note:
+   `Op::Select` already exists for arrays — use the `Dt` prefix).
+2. **`sort.rs`** — `Sort::Datatype(DatatypeId)`; arms in `bv_width`,
+   `array_widths`, `Display`.
+3. **`value.rs`** — `Value::Datatype { datatype, constructor, fields: Vec<Value> }`;
+   arms in `sort`, `as_bool/as_bv/as_array/as_int/as_real`, `scalar_code`,
+   `from_scalar_code`, `encode_to`, `Display` (datatype is non-scalar → panic in
+   the scalar encode/decode paths, `None` in the `as_*` accessors).
+4. **`bits.rs`** — reject `Value::Datatype` / `Sort::Datatype` in
+   `value_to_lsb_bits` and `lsb_bits_to_value` (`SortMismatch`).
+5. **`error.rs`** — add `IrError::DatatypeConstructorMismatch` + its `Display` arm.
+6. **`eval.rs`** — handle the three ops in the *`Result`-returning recursion*
+   (not infallible `apply`): `DtConstruct` builds the value; `DtSelect` projects
+   field `index` when the constructor matches, else returns
+   `DatatypeConstructorMismatch`; `DtTest` compares constructors. Add an
+   `unreachable!` arm for the three ops in `apply`.
+7. **`arena.rs`** — `datatypes: Vec<DatatypeInfo>` and `constructors:
+   Vec<ConstructorInfo>` tables; `declare_datatype(name) -> DatatypeId` then
+   `add_constructor(dt, name, fields: &[(String, Sort)]) -> ConstructorId`
+   (two-phase, so a field `Sort::Datatype(dt)` can reference its own datatype for
+   recursion); accessors; builders `construct`/`select`/`test` (sort-checked,
+   passing the result sort to `app`); arms in the `expect_*` helpers and
+   `check_scalar_width` (reject the datatype sort).
+8. **`axeyum-rewrite/canonical.rs`** — `build_app` must rebuild the three ops
+   (call the arena builders); add datatype arms to its `Sort`/`Value` matches.
+9. **`axeyum-query`** (`planning.rs`, `lib.rs`) and **IR test modules** — add the
+   mechanical reject/skip arms the compiler flags.
+10. **Tests** — a recursive datatype (e.g. `IntList = nil | cons(head: BitVec(8),
+    tail: IntList)`): construct `cons(5, nil)`, `select head -> 5`, `is-cons ->
+    true`, eval round-trip; and a non-recursive `Option`. Defer datatype
+    *solving* (downstream wildcards already make it `Unsupported`); audit those
+    wildcards reject soundly before wiring any solving.
+
 ## Consequences
 
 - **Easier:** lists/trees/option/either become expressible — a large class of
