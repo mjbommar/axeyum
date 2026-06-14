@@ -470,6 +470,92 @@ pub fn sbv_to_fp(
     Ok(Some(arena.bv_const(fmt.width(), bits)?))
 }
 
+/// Constant-folds `fp.to_ubv` (FP → unsigned `width`-bit BV) per rounding mode,
+/// for an F32/F64 constant. Folds only when the result is **well-defined**: the
+/// operand is finite and the rounded integer is in `[0, 2^width)`; otherwise
+/// returns `Ok(None)` (SMT leaves NaN/∞/out-of-range unspecified, so refusing to
+/// fold is sound).
+#[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)] // range-checked
+pub fn to_ubv(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    mode: RoundingMode,
+    x: TermId,
+    width: u32,
+) -> Result<Option<TermId>, IrError> {
+    let Some(v) = decode_to_f64(arena, fmt, x) else {
+        return Ok(None);
+    };
+    if !v.is_finite() {
+        return Ok(None);
+    }
+    let r = round_f64(v, mode);
+    if r < 0.0 || width == 0 || r >= exp2(width) {
+        return Ok(None);
+    }
+    let int = r as u128;
+    Ok(Some(arena.bv_const(width, int)?))
+}
+
+/// Constant-folds `fp.to_sbv` (FP → signed two's-complement `width`-bit BV) per
+/// rounding mode, for an F32/F64 constant. Folds only when well-defined: finite
+/// and the rounded integer is in `[-2^(width-1), 2^(width-1))`; otherwise `None`.
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // range-checked
+pub fn to_sbv(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    mode: RoundingMode,
+    x: TermId,
+    width: u32,
+) -> Result<Option<TermId>, IrError> {
+    let Some(v) = decode_to_f64(arena, fmt, x) else {
+        return Ok(None);
+    };
+    if !v.is_finite() || width == 0 {
+        return Ok(None);
+    }
+    let r = round_f64(v, mode);
+    let limit = exp2(width - 1);
+    if r < -limit || r >= limit {
+        return Ok(None);
+    }
+    let int = r as i128;
+    let mask = if width >= 128 {
+        u128::MAX
+    } else {
+        (1u128 << width) - 1
+    };
+    let bits = (int as u128) & mask;
+    Ok(Some(arena.bv_const(width, bits)?))
+}
+
+fn decode_to_f64(arena: &TermArena, fmt: FloatFormat, x: TermId) -> Option<f64> {
+    let v = const_bits(arena, x)?;
+    if fmt == FloatFormat::F32 {
+        Some(f64::from(f32::from_bits(low32(v))))
+    } else if fmt == FloatFormat::F64 {
+        Some(f64::from_bits(low64(v)))
+    } else {
+        None
+    }
+}
+
+fn round_f64(v: f64, mode: RoundingMode) -> f64 {
+    match mode {
+        RoundingMode::NearestEven => v.round_ties_even(),
+        RoundingMode::NearestAway => v.round(),
+        RoundingMode::TowardZero => v.trunc(),
+        RoundingMode::TowardPositive => v.ceil(),
+        RoundingMode::TowardNegative => v.floor(),
+    }
+}
+
+// power of two is exact in f64 for the BV widths we handle; `width` ≤ 2^31.
+#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+fn exp2(width: u32) -> f64 {
+    (2.0f64).powi(width as i32)
+}
+
 /// Interprets a `w`-bit value as two's-complement signed.
 #[allow(clippy::cast_possible_wrap)] // value < 2^w ≤ 2^127 fits i128 before adjust
 fn to_signed(v: u128, w: u32) -> i128 {

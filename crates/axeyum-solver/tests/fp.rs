@@ -280,6 +280,41 @@ fn int_to_fp_conversions_fold() {
 }
 
 #[test]
+fn fp_to_int_conversions_fold_when_defined() {
+    use axeyum_solver::fp::RoundingMode::TowardZero;
+    let mut a = TermArena::new();
+    let mk = |a: &mut TermArena, val: f32| a.bv_const(32, u128::from(val.to_bits())).unwrap();
+    let ubv = |a: &TermArena, t: Option<axeyum_ir::TermId>, want: u128, what: &str| {
+        let t = t.unwrap_or_else(|| panic!("{what}: expected fold"));
+        assert!(
+            matches!(eval(a, t, &Assignment::new()), Ok(Value::Bv { value, .. }) if value == want),
+            "{what}"
+        );
+    };
+
+    // Well-defined folds.
+    let v = mk(&mut a, 2.7);
+    let r = fp::to_ubv(&mut a, F32, TowardZero, v, 8).unwrap();
+    ubv(&a, r, 2, "to_ubv(trunc, 2.7) == 2");
+    let v = mk(&mut a, -2.7);
+    let r = fp::to_sbv(&mut a, F32, TowardZero, v, 8).unwrap();
+    ubv(&a, r, 0xFE, "to_sbv(trunc, -2.7) == -2 (0xFE)");
+    let v = mk(&mut a, 5.0);
+    let r = fp::to_sbv(&mut a, F32, TowardZero, v, 8).unwrap();
+    ubv(&a, r, 5, "to_sbv(5.0) == 5");
+
+    // Undefined cases are not folded (None).
+    let nan = c(&mut a, NAN);
+    assert!(fp::to_ubv(&mut a, F32, TowardZero, nan, 8).unwrap().is_none(), "NaN -> None");
+    let inf = c(&mut a, INF);
+    assert!(fp::to_sbv(&mut a, F32, TowardZero, inf, 8).unwrap().is_none(), "inf -> None");
+    let big = mk(&mut a, 300.0);
+    assert!(fp::to_ubv(&mut a, F32, TowardZero, big, 8).unwrap().is_none(), "300 out of u8 range -> None");
+    let neg = mk(&mut a, -1.0);
+    assert!(fp::to_ubv(&mut a, F32, TowardZero, neg, 8).unwrap().is_none(), "-1 out of unsigned range -> None");
+}
+
+#[test]
 fn folded_arithmetic_composes_with_symbolic_predicates() {
     // fp.lt(1.0 + 2.0, x) with x symbolic: the add folds to 3.0, leaving a
     // symbolic comparison -> sat (e.g. x = 4.0).
