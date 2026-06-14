@@ -52,7 +52,10 @@ Last updated: 2026-06-14
   `simplify_datatypes` gained the **constructor-equality axiom** `(= x C(a…)) ⟹
   is_C(x) ∧ ⋀ sel_i(x)=a_i`, so the common enum idiom `(= c red)` decides. Tests:
   an enum `Color` (sat `c≠red ∧ c≠green`, unsat `is-red ∧ c≠red`) and a `Pair`
-  record (`fst`/`snd` selectors via `get-value`).
+  record (`fst`/`snd` selectors via `get-value`). **Recursive datatypes** also
+  decide: a `Lst` with a `(tl Lst)` field — `is-cons(l) ∧ hd(l)=5` is sat (the
+  native solver unfolds the recursive field into a fresh relaxed child, replay-
+  guarded), and `is-cons(l) ∧ is-nil(l)` is unsat.
 
 - **Incremental SMT-LIB scripts — `push`/`pop` + multiple `check-sat`
   (2026-06-14).** The front door previously *rejected* `push`/`pop`; it now

@@ -445,3 +445,33 @@ fn record_datatype_constructor_and_selectors() {
     assert_eq!(values[0], Value::Bv { width: 8, value: 3 });
     assert_eq!(values[1], Value::Bv { width: 8, value: 5 });
 }
+
+/// Recursive datatype (a list): `((_ is cons) l) ∧ hd(l) = 5` is satisfiable
+/// (l = cons(5, _)); the native solver unfolds the recursive `tl` field into a
+/// fresh child (relaxation), and the sat candidate replays (ADR-0022).
+#[test]
+fn recursive_datatype_list_decides() {
+    let sat = "\
+(set-logic QF_DT)
+(declare-datatypes ((Lst 0)) (((cons (hd (_ BitVec 8)) (tl Lst)) (nil))))
+(declare-const l Lst)
+(assert ((_ is cons) l))
+(assert (= (hd l) #x05))
+(check-sat)
+";
+    assert!(
+        matches!(run(sat).result, CheckResult::Sat(_)),
+        "cons-headed list with hd=5 is sat"
+    );
+
+    // is-cons and is-nil are mutually exclusive: unsat.
+    let unsat = "\
+(set-logic QF_DT)
+(declare-datatypes ((Lst 0)) (((cons (hd (_ BitVec 8)) (tl Lst)) (nil))))
+(declare-const l Lst)
+(assert ((_ is cons) l))
+(assert ((_ is nil) l))
+(check-sat)
+";
+    assert_eq!(run(unsat).result, CheckResult::Unsat, "cons and nil exclude");
+}
