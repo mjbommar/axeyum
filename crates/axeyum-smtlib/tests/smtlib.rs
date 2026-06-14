@@ -917,3 +917,46 @@ fn folds_constant_float64_fma() {
     let v = eval(&script.arena, script.assertions[0], &Assignment::default()).unwrap();
     assert_eq!(v, Value::Bool(true));
 }
+
+#[test]
+fn float128_nonarithmetic_ops_decide() {
+    // F128 (15,113) is exactly 128 bits, so the whole non-arithmetic surface —
+    // classification, comparison, sign, min/max, eq — decides with no wider
+    // intermediate. Each assertion below is a tautology over F128 constants.
+    let tautologies = [
+        "(fp.isInfinite (_ +oo 15 113))",
+        "(not (fp.isNaN (_ +oo 15 113)))",
+        "(fp.isNaN (_ NaN 15 113))",
+        "(fp.isZero (_ +zero 15 113))",
+        "(fp.isZero (_ -zero 15 113))",
+        "(fp.eq (_ +zero 15 113) (_ -zero 15 113))",      // +0 == -0
+        "(not (fp.eq (_ NaN 15 113) (_ NaN 15 113)))",    // NaN != NaN
+        "(fp.lt (_ -oo 15 113) (_ +oo 15 113))",
+        "(fp.leq (_ +zero 15 113) (_ +zero 15 113))",
+        "(fp.isNegative (_ -oo 15 113))",
+        "(fp.isPositive (_ +oo 15 113))",
+        "(fp.eq (fp.abs (_ -oo 15 113)) (_ +oo 15 113))",  // abs(-inf) = +inf
+        "(fp.eq (fp.neg (_ +oo 15 113)) (_ -oo 15 113))",  // neg(+inf) = -inf
+        "(fp.eq (fp.min (_ -oo 15 113) (_ +oo 15 113)) (_ -oo 15 113))",
+        "(fp.eq (fp.max (_ -oo 15 113) (_ +oo 15 113)) (_ +oo 15 113))",
+    ];
+    for t in tautologies {
+        let text = format!("(set-logic QF_FP)\n(assert {t})\n(check-sat)\n");
+        let script = parse_script(&text).unwrap_or_else(|e| panic!("parse {t}: {e:?}"));
+        let v = eval(&script.arena, script.assertions[0], &Assignment::default())
+            .unwrap_or_else(|e| panic!("eval {t}: {e:?}"));
+        assert_eq!(v, Value::Bool(true), "F128 tautology failed: {t}");
+    }
+
+    // F128 *arithmetic* still exceeds MAX_BV_WIDTH (2*113+5 = 231 > 128) and is
+    // reported cleanly (sound), not silently wrong.
+    let arith = parse_script(
+        "(set-logic QF_FP)\n\
+         (assert (fp.eq (fp.add RNE (_ +zero 15 113) (_ +zero 15 113)) (_ +zero 15 113)))\n\
+         (check-sat)\n",
+    );
+    assert!(
+        matches!(arith, Err(SmtError::Ir(_) | SmtError::Unsupported(_))),
+        "F128 arithmetic should error cleanly, got {arith:?}"
+    );
+}

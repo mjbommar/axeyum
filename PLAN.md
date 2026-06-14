@@ -56,6 +56,21 @@ Last updated: 2026-06-14
   IR `fp_from_bits` round-trip. The bit-vector-source `to_fp` blocker from
   ADR-0023 is **closed**.
 
+- **Float128 non-arithmetic surface verified (2026-06-14).** F128 `(15, 113)` is
+  exactly 128 bits, so its whole non-arithmetic surface decides with no wider
+  intermediate: classification (`isNaN/isInfinite/isZero/isNegative/isPositive`),
+  comparison (`fp.eq/lt/leq` incl. `+0 == −0`, `NaN ≠ NaN`), sign (`abs`/`neg`),
+  and `min`/`max` — locked in by a tautology battery over F128 constants. F128
+  *arithmetic* (`2·113+5 = 231 > MAX_BV_WIDTH = 128`) errors cleanly (sound), not
+  silently wrong; asserted by the same test. **Next (FP→int, sound design):**
+  symbolic `fp.to_ubv`/`fp.to_sbv` can be made sound-by-construction — compute the
+  rounded magnitude via the validated `round_variable`/`unpack_operand`, **pin**
+  the result only when *definitely* in range (finite, sign/range checked, no shift
+  overflow), and route every other case (NaN/∞/out-of-range) to a fresh
+  unconstrained value (matching SMT-LIB's underspecification). Over-routing to
+  fresh is always sound (a free result can never cause a wrong `unsat`); only the
+  in-range pinned value must be correct, and that reuses validated primitives.
+
 - **Symbolic integer→float conversions (2026-06-14).** `ubv_to_fp`/`sbv_to_fp`
   (the `(_ to_fp eb sb)` from an unsigned/signed bit-vector, and
   `(_ to_fp_unsigned …)`) now build a **symbolic** bit-blasted circuit, not just a
