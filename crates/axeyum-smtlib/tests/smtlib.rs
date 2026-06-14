@@ -330,9 +330,9 @@ fn unsupported_constructs_are_clear_errors() {
     // `push`/`pop` are now accepted (incremental scoping); they record commands.
     let inc = parse_script("(push 1)").expect("push is accepted");
     assert_eq!(inc.commands.len(), 1);
-    // `check-sat-assuming` is still unsupported.
+    // An unknown command is still a clear unsupported error.
     assert!(matches!(
-        parse_script("(check-sat-assuming (a))"),
+        parse_script("(declare-sort S 0)"),
         Err(SmtError::Unsupported(_))
     ));
     // n-ary functions over scalar sorts are supported (ADR-0013); a function

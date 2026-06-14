@@ -20,7 +20,7 @@ use crate::sexpr::{SExpr, read_all};
 /// An ordered command from an (incremental) SMT-LIB script. Only the commands
 /// that affect the assertion stack and its `check-sat` queries are recorded;
 /// declarations mutate the shared arena directly (and stay global).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScriptCommand {
     /// `(assert t)` — push `t` onto the current assertion scope.
     Assert(TermId),
@@ -30,6 +30,9 @@ pub enum ScriptCommand {
     Pop(u32),
     /// `(check-sat)` — decide the conjunction of the currently-active assertions.
     CheckSat,
+    /// `(check-sat-assuming (l ...))` — decide the active assertions together with
+    /// the assumption literals `l`, without retaining them afterwards.
+    CheckSatAssuming(Vec<TermId>),
 }
 
 /// A parsed benchmark script.
@@ -100,7 +103,17 @@ fn parse_command<'a>(
         "get-model" | "exit" => exact_len(items, 1, head)?,
         "get-info" => exact_len(items, 2, head)?,
         "check-sat-assuming" => {
-            return Err(SmtError::Unsupported("check-sat-assuming".to_owned()));
+            exact_len(items, 2, head)?;
+            let list = items
+                .get(1)
+                .and_then(SExpr::list)
+                .ok_or_else(|| SmtError::Syntax("check-sat-assuming expects (l ...)".to_owned()))?;
+            let mut assumptions = Vec::with_capacity(list.len());
+            for lit in list {
+                assumptions.push(parse_term(&mut script.arena, lit, aliases, macros)?);
+            }
+            script.check_sats += 1;
+            script.commands.push(ScriptCommand::CheckSatAssuming(assumptions));
         }
         "check-sat" => {
             exact_len(items, 1, head)?;

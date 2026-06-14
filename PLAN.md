@@ -50,6 +50,11 @@ Last updated: 2026-06-14
   ADR-0009, remain the performance path). `solve_smtlib` (single conjunction) is
   unchanged. Tests: `x=5` sat → push `x=6` unsat → pop, `x<10` sat → `[sat, unsat,
   sat]`; and nested `(push 2)…(pop 2)` restoring satisfiability.
+  **`check-sat-assuming` now added** — `(check-sat-assuming (l …))` decides the
+  active assertions together with the assumption literals without retaining them
+  (a temporary stack is solved and discarded), so a later `check-sat` is
+  unaffected. Test: `x<5` then assuming `x=3` (sat), assuming `x=7` (unsat), then
+  plain `check-sat` (sat — assumptions not kept).
 
 - **QF_UFFP verified — uninterpreted functions over FP (2026-06-14).** The
   `Sort::Float` cascade (ADR-0026) plus the bit-blaster preflight accepting

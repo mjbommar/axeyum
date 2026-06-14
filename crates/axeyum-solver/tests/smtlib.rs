@@ -264,3 +264,27 @@ fn incremental_nested_scopes_restore_on_pop() {
         "popping both scopes removes the contradiction"
     );
 }
+
+/// `check-sat-assuming` decides the active assertions plus the given assumption
+/// literals, without retaining them. x<5: assuming x=3 is sat, assuming x=7 is
+/// unsat, and a plain check-sat afterwards is sat (assumptions not kept).
+#[test]
+fn check_sat_assuming_does_not_retain_assumptions() {
+    use axeyum_solver::solve_smtlib_incremental;
+    let text = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (bvult x #x05))
+(check-sat-assuming ((= x #x03)))
+(check-sat-assuming ((= x #x07)))
+(check-sat)
+";
+    let results = solve_smtlib_incremental(text, &config()).expect("decides");
+    assert_eq!(results.len(), 3);
+    assert!(matches!(results[0], CheckResult::Sat(_)), "x<5 & x=3 sat");
+    assert_eq!(results[1], CheckResult::Unsat, "x<5 & x=7 unsat");
+    assert!(
+        matches!(results[2], CheckResult::Sat(_)),
+        "assumptions were not retained, so x<5 is still sat"
+    );
+}

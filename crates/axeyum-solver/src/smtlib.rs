@@ -59,7 +59,9 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
 ///
 /// `push`/`pop` scope the assertion stack: `(push n)` opens `n` nested scopes,
 /// `(pop n)` drops the assertions made within the `n` innermost ones, and each
-/// `check-sat` decides the conjunction of the currently-active assertions. The
+/// `check-sat` decides the conjunction of the currently-active assertions.
+/// `(check-sat-assuming (l …))` decides the active assertions together with the
+/// assumption literals `l`, *without* retaining them past that query. The
 /// decision at each `check-sat` is by [`crate::solve`] over that assertion set —
 /// re-solved from scratch, which is *semantically equivalent* to incremental
 /// solving (the warm-restart backends, ADR-0009, are a performance path, not a
@@ -79,15 +81,15 @@ pub fn solve_smtlib_incremental(
     let mut scopes: Vec<usize> = Vec::new(); // assertion-stack depth at each open push
     let mut results = Vec::new();
     for command in &script.commands {
-        match *command {
-            ScriptCommand::Assert(t) => stack.push(t),
+        match command {
+            ScriptCommand::Assert(t) => stack.push(*t),
             ScriptCommand::Push(n) => {
-                for _ in 0..n {
+                for _ in 0..*n {
                     scopes.push(stack.len());
                 }
             }
             ScriptCommand::Pop(n) => {
-                for _ in 0..n {
+                for _ in 0..*n {
                     if let Some(depth) = scopes.pop() {
                         stack.truncate(depth);
                     }
@@ -95,6 +97,13 @@ pub fn solve_smtlib_incremental(
             }
             ScriptCommand::CheckSat => {
                 results.push(solve(&mut script.arena, &stack, config)?);
+            }
+            ScriptCommand::CheckSatAssuming(assumptions) => {
+                // Decide the active assertions together with the assumptions, but
+                // do not retain them: solve a temporary stack, then discard.
+                let mut with = stack.clone();
+                with.extend_from_slice(assumptions);
+                results.push(solve(&mut script.arena, &with, config)?);
             }
         }
     }
