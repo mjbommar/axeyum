@@ -93,15 +93,19 @@ sticky, hence borrow-free), then rounded by `pack_value`, with NaN / `∞ + −�
 `sig_bits + (2^exp_bits − 3) + 2 ≤ 128`, which holds for F16 only; F32/F64 return
 `InvalidWidth`.
 
-**Width cap and the bounded-width path.** Bit-vectors are capped at
-`MAX_BV_WIDTH = 128` (`Value::Bv` is a `u128`). The current `mul` (`3·sb+4`) and
-`add` (exact alignment) intermediates exceed this for F64 (and F32 for add), so
-those formats error cleanly rather than return a wrong result. A **bounded-width
-encoding** (cap the alignment/normalization window and fold the rest into a
-sticky bit, `W ≈ 2·sb + guard ≤ 128`) is the single piece that lifts both `mul`
-and `add` to F32/F64; the sticky/borrow handling is its careful part. It is the
-next FP unit, after which `div`/`sqrt`/`rem` and non-default rounding modes
-follow.
+`mul` now works for **F16/F32/F64**: multiplication needs no alignment and never
+a normalizing left shift (a product of significands has its leading bit at index
+≥ sb−1 for any normal result), so a `2·sb + 3`-bit intermediate suffices (109
+bits for F64) — well under the cap. Validated against native `f32` *and* `f64`.
+
+**Width cap and the bounded-width path (for `add`).** Bit-vectors are capped at
+`MAX_BV_WIDTH = 128` (`Value::Bv` is a `u128`). `add`'s *exact-alignment*
+intermediate spans the full exponent range (`sb + 2^eb − 3 + 2`), which exceeds
+128 for F32/F64, so those error cleanly rather than return a wrong result. A
+**bounded-width adder** (cap the alignment window, fold the rest into a sticky
+bit, `W ≈ 2·sb + guard ≤ 128`) lifts `add` to F32/F64; the sticky/borrow handling
+is its careful part and it is the next FP unit, after which `div`/`sqrt`/`rem`
+and non-default rounding modes follow.
 
 ## Evidence
 

@@ -62,13 +62,14 @@ Last updated: 2026-06-14
   overflow), **validated against native f32** (`== (v as f32).to_bits()`) over
   specials + a structured battery + ~200k pseudo-random f64 patterns — the exact
   algorithm the symbolic BV rounding circuit must encode, now de-risked.
-  **Symbolic `fp.mul` done** (validated bit-blaster): the IEEE 754 multiplication
-  circuit from validated primitives — unpack (subnormal-aware) → significand
-  `bv_mul` + exponent add → `pack_value` round-and-pack core (`pack_params` +
-  `round_variable` + `count_leading_zeros`) → NaN/`0·∞`/∞/zero mux — pure BV, so
-  it solves/replays on the existing path. Differentially validated against native
-  `f32` over specials/subnormals/overflow/underflow + a random sweep. Assurance:
-  *validated, not proven* (cf. ADR-0007), the standard bit-blaster basis.
+  **Symbolic `fp.mul` done for F16/F32/F64** (validated bit-blaster): the IEEE 754
+  multiplication circuit from validated primitives — unpack (subnormal-aware) →
+  significand `bv_mul` + exponent add → `pack_value` round-and-pack core
+  (`pack_params` + `round_variable` + `count_leading_zeros`) → NaN/`0·∞`/∞/zero
+  mux — pure BV, so it solves/replays on the existing path. A `2·sb+3`-bit
+  intermediate (mul needs no left-shift) fits F64 in 128 bits. Differentially
+  validated against native `f32` AND `f64` over specials/subnormals/overflow/
+  underflow + random sweeps. Assurance: *validated, not proven* (cf. ADR-0007).
   **Symbolic `fp.add` done for F16** (validated bit-blaster): exact-alignment
   adder (align both significands to the min exponent, exact add/subtract — so
   borrow-free — then `pack_value`), with NaN/`∞+−∞`/`∞`/signed-zero muxing.

@@ -428,11 +428,9 @@ pub fn pack_value(
 /// differentially validated against native `f32` multiplication in tests
 /// (specials, subnormals, and products that overflow/underflow).
 ///
-/// **Format support.** The encoding works in a `3·sig_bits + 4`-bit intermediate,
-/// so it requires `3·sig_bits + 4 ≤ 128` ([`MAX_BV_WIDTH`]) — i.e. `F16` and
-/// `F32`. `F64` (`sig_bits = 53` → 163 bits) exceeds the bit-vector width cap and
-/// returns [`IrError::InvalidWidth`]; a bounded-width (alignment + sticky)
-/// rewrite is needed to reach `F64` and is tracked as future work.
+/// **Format support.** The intermediate is `2·sig_bits + 3` bits, so this works
+/// for any format with `2·sig_bits + 3 ≤ 128` ([`MAX_BV_WIDTH`]) — **F16, F32,
+/// and F64** (109 bits). Wider formats return [`IrError::InvalidWidth`].
 ///
 /// # Errors
 ///
@@ -446,10 +444,12 @@ pub fn mul(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId) -> Res
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
     let total = fmt.width();
     let bias = (1i64 << (eb - 1)) - 1;
-    let w = 3 * sb + 4; // room for the 2·sb product and pack_value's shifts
+    // The significand product is exactly 2·sb bits and `mul` never needs a
+    // normalizing left shift (a product of significands has its leading bit at
+    // index ≥ sb−1 whenever the result is normal), so `pack_value` only ever
+    // rounds *down* — 2·sb + 3 bits suffice, which fits F16/F32/F64 in 128 bits.
+    let w = 2 * sb + 3;
     if w > MAX_BV_WIDTH {
-        // F64 lands here: the wide intermediate exceeds the 128-bit cap. A
-        // bounded-width (alignment + sticky) encoding is needed for F64.
         return Err(IrError::InvalidWidth(w));
     }
 
@@ -1598,18 +1598,55 @@ mod tests {
     }
 
     #[test]
-    fn mul_f64_is_a_clean_error_not_a_wrong_result() {
-        // The wide intermediate (3*53+4 = 163 bits) exceeds MAX_BV_WIDTH, so F64
-        // mul must error rather than silently truncate.
+    fn mul_matches_native_f64() {
         let mut a = TermArena::new();
-        let x = a.bv_const(64, 0x3FF0_0000_0000_0000).unwrap(); // 1.0
-        let y = a.bv_const(64, 0x4000_0000_0000_0000).unwrap(); // 2.0
-        assert!(
-            matches!(
-                mul(&mut a, FloatFormat::F64, x, y),
-                Err(axeyum_ir::IrError::InvalidWidth(_))
-            ),
-            "F64 mul must return InvalidWidth, not a (possibly wrong) result"
-        );
+        let check = |a: &mut TermArena, ab: u64, bb: u64| {
+            let at = a.bv_const(64, u128::from(ab)).unwrap();
+            let bt = a.bv_const(64, u128::from(bb)).unwrap();
+            let r = mul(a, FloatFormat::F64, at, bt).unwrap();
+            let got = match eval(a, r, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("expected Bv, got {other:?}"),
+            };
+            let prod = f64::from_bits(ab) * f64::from_bits(bb);
+            if prod.is_nan() {
+                let exp = (got >> 52) & 0x7FF;
+                let mant = got & 0xF_FFFF_FFFF_FFFF;
+                assert!(exp == 0x7FF && mant != 0, "mul64({ab:#x},{bb:#x}) want NaN, got {got:#x}");
+            } else {
+                assert_eq!(got, u128::from(prod.to_bits()), "mul64({ab:#x},{bb:#x})");
+            }
+        };
+
+        let structured: [u64; 12] = [
+            0x0000_0000_0000_0000, // +0
+            0x8000_0000_0000_0000, // -0
+            0x3FF0_0000_0000_0000, // 1.0
+            0xBFF0_0000_0000_0000, // -1.0
+            0x4000_0000_0000_0000, // 2.0
+            0x3FE0_0000_0000_0000, // 0.5
+            0x7FF0_0000_0000_0000, // +inf
+            0x7FF8_0000_0000_0000, // NaN
+            0x0010_0000_0000_0000, // smallest normal
+            0x0000_0000_0000_0001, // smallest subnormal
+            0x7FEF_FFFF_FFFF_FFFF, // f64::MAX
+            0x4340_0000_0000_0000, // 2^53
+        ];
+        for &x in &structured {
+            for &y in &structured {
+                check(&mut a, x, y);
+            }
+        }
+        let mut state: u64 = 0x243f_6a88_85a3_08d3;
+        for _ in 0..3000 {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            let x = state;
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            check(&mut a, x, state);
+        }
     }
 }
