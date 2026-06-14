@@ -1,56 +1,80 @@
-//! Boolean-structured `QF_LIA` by lazy-SMT / DPLL(T) over the integer simplex.
+//! Boolean-structured linear arithmetic (`QF_LIA`, `QF_LRA`, and their
+//! combination `QF_LIRA`) by lazy-SMT / DPLL(T) over the exact-rational
+//! simplices.
 //!
-//! The conjunctive integer decision procedure ([`crate::check_with_lia_simplex`],
-//! ADR-0020) decides a *conjunction* of linear integer constraints. This module
-//! lifts it to **arbitrary Boolean structure** — disjunctions, implications,
-//! negations of integer atoms (e.g. `x <= 0 OR x >= 10`) — by the standard
-//! lazy-SMT loop, mirroring [`crate::check_with_lra_dpll`] for integers:
+//! The conjunctive procedures decide a *conjunction* of linear constraints —
+//! [`crate::check_with_lia_simplex`] for integers (ADR-0020),
+//! [`crate::check_with_lra`] for reals (ADR-0015). This module lifts them to
+//! **arbitrary Boolean structure** (disjunctions, implications, negations of
+//! arithmetic atoms, over both sorts at once):
 //!
-//! 1. **Abstract** every integer order atom to a fresh Boolean proposition and
-//!    every integer equality `a = b` to `(a <= b) AND (a >= b)`, leaving the
-//!    Boolean structure (and original Boolean variables) intact. The result is a
-//!    propositional skeleton.
-//! 2. **Decide the skeleton** (pure Boolean) to get a truth assignment to the
-//!    atom propositions.
-//! 3. **Theory-check** the implied conjunction of integer order literals with the
-//!    simplex branch-and-bound. `sat` ⇒ build and replay a model; `unsat` ⇒ add a
-//!    blocking clause ruling out this propositional assignment and retry.
+//! 1. **Abstract** every linear-arithmetic order atom to a fresh Boolean
+//!    proposition (equality `a = b` split to `(a <= b) AND (a >= b)`), tagging
+//!    each by its theory (`Int`/`Real`), and keep the Boolean structure.
+//! 2. **Decide the skeleton** (pure Boolean) for a truth assignment.
+//! 3. **Theory-check** each theory's implied conjunction independently — integers
+//!    and reals share no sort, so the combination is just propositional (no
+//!    interface equalities). `sat` in both ⇒ build and replay a model; `unsat` in
+//!    either ⇒ block the minimized conflict core and retry.
 //!
-//! Soundness: every integer model of the original induces a skeleton-satisfying
-//! truth assignment; the loop only returns `sat` after replaying the original
-//! assertions, and only returns `unsat` when the skeleton plus learned blocking
-//! clauses is propositionally unsatisfiable — i.e. no truth assignment is
-//! theory-consistent. A round budget bounds the search (`unknown`, never wrong).
-//! Equality is split into order atoms, so the theory solver never sees a
-//! disequality.
+//! Soundness: every model induces a skeleton-satisfying truth assignment whose
+//! per-theory conjunctions are each satisfiable; the loop returns `sat` only
+//! after replaying the original assertions, and `unsat` only when the skeleton
+//! plus learned lemmas is propositionally unsatisfiable. A round budget bounds
+//! the search (`unknown`, never wrong).
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 
 use crate::backend::{
     CheckResult, SolverBackend, SolverConfig, SolverError, UnknownKind, UnknownReason,
 };
-use crate::lra::check_with_lia_simplex;
+use crate::lra::{check_with_lia_simplex, check_with_lra};
 use crate::model::Model;
 use crate::sat_bv_backend::SatBvBackend;
 
-const ATOM_PREFIX: &str = "!lia_atom_";
+const ATOM_PREFIX: &str = "!arith_atom_";
 const MAX_DPLL_ROUNDS: usize = 10_000;
 
-/// Decides a Boolean-structured `QF_LIA` query by lazy-SMT over the simplex.
+/// The arithmetic theory an atom belongs to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Theory {
+    Int,
+    Real,
+}
+
+/// Decides a Boolean-structured `QF_LIA` query (integer atoms only) by lazy-SMT.
+///
+/// A thin wrapper over [`check_with_arith_dpll`]; kept as a named entry point for
+/// the integer dispatcher.
 ///
 /// # Errors
 ///
-/// Returns [`SolverError::Unsupported`] if an assertion is not Boolean structure
-/// over linear-integer atoms (e.g. it mentions bit-vectors, arrays, or reals), so
-/// the caller can fall back; or [`SolverError::Backend`] on a replay alarm.
+/// See [`check_with_arith_dpll`].
 pub fn check_with_lia_dpll(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
-    let mut ctx = IntAbstractor::default();
+    check_with_arith_dpll(arena, assertions, config)
+}
+
+/// Decides a Boolean-structured linear-arithmetic query — integer, real, or
+/// combined `QF_LIRA` — by lazy-SMT over the exact-rational simplices.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] if an assertion is not Boolean structure
+/// over linear-arithmetic atoms (e.g. it mentions bit-vectors, arrays, or
+/// functions), so the caller can fall back; or [`SolverError::Backend`] on a
+/// replay alarm.
+pub fn check_with_arith_dpll(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    let mut ctx = ArithAbstractor::default();
     let mut skeleton = Vec::with_capacity(assertions.len());
     for &assertion in assertions {
         skeleton.push(ctx.abstract_term(arena, assertion)?);
@@ -68,53 +92,110 @@ pub fn check_with_lia_dpll(
             CheckResult::Unknown(reason) => return Ok(CheckResult::Unknown(reason)),
         };
 
-        // The integer literals implied by this propositional assignment.
-        let mut theory_lits = Vec::with_capacity(ctx.atoms.len());
+        // The arithmetic literal implied by this assignment for each atom, in
+        // `ctx.atoms` order.
         let mut truths = Vec::with_capacity(ctx.atoms.len());
+        let mut lits = Vec::with_capacity(ctx.atoms.len());
         for atom in &ctx.atoms {
             let truth = propositional
                 .get(atom.prop)
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
             truths.push(truth);
-            theory_lits.push(if truth {
+            lits.push(if truth {
                 atom.term
             } else {
                 arena.not(atom.term)?
             });
         }
 
-        match check_with_lia_simplex(arena, &theory_lits)? {
-            CheckResult::Sat(theory_model) => {
-                return finish_sat(arena, assertions, &ctx, &propositional, &theory_model);
-            }
-            CheckResult::Unsat => {
-                // Minimize the conflict to a small unsatisfiable core, then block
-                // only that core — a strictly stronger lemma that rules out every
-                // assignment sharing it, not just this one, so the loop converges
-                // in far fewer rounds on disjunction-heavy queries.
-                let core = minimize_core(arena, &theory_lits)?;
-                blocking.push(block_clause(arena, &ctx.atoms, &truths, &core)?);
-            }
-            CheckResult::Unknown(reason) => return Ok(CheckResult::Unknown(reason)),
+        // Theory-check each theory's conjunction independently.
+        if let Some(conflict) =
+            theory_conflict(arena, &ctx, &lits, Theory::Int, check_with_lia_simplex)?
+        {
+            blocking.push(block_clause(arena, &ctx.atoms, &truths, &conflict)?);
+            continue;
         }
+        if let Some(conflict) = theory_conflict(arena, &ctx, &lits, Theory::Real, check_with_lra)? {
+            blocking.push(block_clause(arena, &ctx.atoms, &truths, &conflict)?);
+            continue;
+        }
+
+        // Both theories consistent: build and replay the combined model.
+        return finish_sat(arena, assertions, &ctx, &propositional, &lits);
     }
 
     Ok(CheckResult::Unknown(UnknownReason {
         kind: UnknownKind::Incomplete,
-        detail: format!("lazy QF_LIA exceeded {MAX_DPLL_ROUNDS} refinement rounds"),
+        detail: format!("lazy linear arithmetic exceeded {MAX_DPLL_ROUNDS} refinement rounds"),
     }))
 }
 
-/// Builds the model from the propositional (Boolean) and integer theory models
-/// and replays the original assertions.
-fn finish_sat(
+/// Checks one theory's conjunction; on `unsat`, returns the minimized conflict
+/// core as global atom indices. `oracle` is the conjunctive decision procedure
+/// for the theory.
+fn theory_conflict(
     arena: &TermArena,
+    ctx: &ArithAbstractor,
+    lits: &[TermId],
+    theory: Theory,
+    oracle: fn(&TermArena, &[TermId]) -> Result<CheckResult, SolverError>,
+) -> Result<Option<Vec<usize>>, SolverError> {
+    let indices: Vec<usize> = (0..ctx.atoms.len())
+        .filter(|&i| ctx.atoms[i].theory == theory)
+        .collect();
+    if indices.is_empty() {
+        return Ok(None);
+    }
+    let conj: Vec<TermId> = indices.iter().map(|&i| lits[i]).collect();
+    if !matches!(oracle(arena, &conj)?, CheckResult::Unsat) {
+        return Ok(None);
+    }
+    Ok(Some(minimize_core(arena, &indices, lits, oracle)?))
+}
+
+/// Deletion-based minimization: returns a minimal still-unsatisfiable subset of
+/// `indices` (global atom indices). Each surviving member is necessary, so the
+/// negated core is a strong, sound lemma.
+fn minimize_core(
+    arena: &TermArena,
+    indices: &[usize],
+    lits: &[TermId],
+    oracle: fn(&TermArena, &[TermId]) -> Result<CheckResult, SolverError>,
+) -> Result<Vec<usize>, SolverError> {
+    let mut core: Vec<usize> = indices.to_vec();
+    for &candidate in indices {
+        if !core.contains(&candidate) {
+            continue;
+        }
+        let trial: Vec<TermId> = core
+            .iter()
+            .filter(|&&i| i != candidate)
+            .map(|&i| lits[i])
+            .collect();
+        if !trial.is_empty() && matches!(oracle(arena, &trial)?, CheckResult::Unsat) {
+            core.retain(|&i| i != candidate);
+        }
+    }
+    Ok(core)
+}
+
+/// Builds the combined model (integers from the integer simplex, reals from the
+/// real engine, Booleans from the skeleton) and replays the original assertions.
+fn finish_sat(
+    arena: &mut TermArena,
     assertions: &[TermId],
-    ctx: &IntAbstractor,
+    ctx: &ArithAbstractor,
     propositional: &Model,
-    theory_model: &Model,
+    lits: &[TermId],
 ) -> Result<CheckResult, SolverError> {
+    // Re-decide each theory's conjunction to recover its model (the loop only
+    // learned that they are *consistent*).
+    let int_lits: Vec<TermId> = atom_lits(ctx, lits, Theory::Int);
+    let real_lits: Vec<TermId> = atom_lits(ctx, lits, Theory::Real);
+    let int_model = theory_model(arena, &int_lits, check_with_lia_simplex)?;
+    let real_model = theory_model(arena, &real_lits, check_with_lra)?;
+
     let mut model = Model::new();
     let mut assignment = axeyum_ir::Assignment::new();
     for (symbol, name, sort) in arena.symbols() {
@@ -122,7 +203,8 @@ fn finish_sat(
             continue;
         }
         let value = match sort {
-            Sort::Int => theory_model.get(symbol),
+            Sort::Int => int_model.as_ref().and_then(|m| m.get(symbol)),
+            Sort::Real => real_model.as_ref().and_then(|m| m.get(symbol)),
             Sort::Bool => propositional.get(symbol),
             _ => None,
         };
@@ -136,13 +218,13 @@ fn finish_sat(
             Ok(Value::Bool(true)) => {}
             Ok(_) => {
                 return Err(SolverError::Backend(format!(
-                    "lia dpll sat model replay failed: assertion #{} not satisfied",
+                    "arith dpll sat model replay failed: assertion #{} not satisfied",
                     assertion.index()
                 )));
             }
             Err(error) => {
                 return Err(SolverError::Backend(format!(
-                    "lia dpll sat model replay error on assertion #{}: {error}",
+                    "arith dpll sat model replay error on assertion #{}: {error}",
                     assertion.index()
                 )));
             }
@@ -151,35 +233,36 @@ fn finish_sat(
     Ok(CheckResult::Sat(model))
 }
 
-/// Deletion-based minimization of a theory conflict: returns the indices (into
-/// `theory_lits`) of a subset that is still unsatisfiable but minimal — dropping
-/// any member makes it satisfiable (or undecided, conservatively kept). Each
-/// surviving member is necessary, so the negated core is a strong, sound lemma.
-fn minimize_core(arena: &TermArena, theory_lits: &[TermId]) -> Result<Vec<usize>, SolverError> {
-    let mut core: Vec<usize> = (0..theory_lits.len()).collect();
-    for candidate in 0..theory_lits.len() {
-        if !core.contains(&candidate) {
-            continue;
-        }
-        let trial: Vec<TermId> = core
-            .iter()
-            .filter(|&&i| i != candidate)
-            .map(|&i| theory_lits[i])
-            .collect();
-        // Drop the candidate only if the remainder is *definitively* unsat.
-        if !trial.is_empty() && matches!(check_with_lia_simplex(arena, &trial)?, CheckResult::Unsat)
-        {
-            core.retain(|&i| i != candidate);
-        }
+/// The literals of one theory's atoms.
+fn atom_lits(ctx: &ArithAbstractor, lits: &[TermId], theory: Theory) -> Vec<TermId> {
+    (0..ctx.atoms.len())
+        .filter(|&i| ctx.atoms[i].theory == theory)
+        .map(|i| lits[i])
+        .collect()
+}
+
+/// Re-decides a consistent theory conjunction to recover its model.
+fn theory_model(
+    arena: &TermArena,
+    lits: &[TermId],
+    oracle: fn(&TermArena, &[TermId]) -> Result<CheckResult, SolverError>,
+) -> Result<Option<Model>, SolverError> {
+    if lits.is_empty() {
+        return Ok(None);
     }
-    Ok(core)
+    match oracle(arena, lits)? {
+        CheckResult::Sat(model) => Ok(Some(model)),
+        // The loop already established consistency, so this is unreachable; treat
+        // as no extra bindings rather than failing.
+        _ => Ok(None),
+    }
 }
 
 /// A clause forcing at least one atom in `core` to flip from `truths`. `core`
-/// indexes `atoms`/`truths` (same order as the theory literals).
+/// indexes `atoms`/`truths`.
 fn block_clause(
     arena: &mut TermArena,
-    atoms: &[IntAtom],
+    atoms: &[ArithAtom],
     truths: &[bool],
     core: &[usize],
 ) -> Result<TermId, SolverError> {
@@ -192,26 +275,28 @@ fn block_clause(
             Some(acc) => arena.or(acc, lit)?,
         });
     }
-    // A non-empty conflict always yields a non-empty core.
-    clause.ok_or_else(|| SolverError::Backend("lia dpll: empty conflict clause".to_string()))
+    clause.ok_or_else(|| SolverError::Backend("arith dpll: empty conflict clause".to_string()))
 }
 
-/// One abstracted integer order atom and its fresh proposition.
-struct IntAtom {
+/// One abstracted arithmetic order atom: its fresh proposition, the atom term,
+/// and which theory decides it.
+struct ArithAtom {
     prop: SymbolId,
     term: TermId,
+    theory: Theory,
 }
 
-/// Abstracts Boolean structure over integer atoms into a propositional skeleton.
+/// Abstracts Boolean structure over linear-arithmetic atoms into a propositional
+/// skeleton.
 #[derive(Default)]
-struct IntAbstractor {
+struct ArithAbstractor {
     atom_of: HashMap<TermId, SymbolId>,
-    props: std::collections::HashSet<SymbolId>,
-    atoms: Vec<IntAtom>,
+    props: HashSet<SymbolId>,
+    atoms: Vec<ArithAtom>,
     fresh_counter: usize,
 }
 
-impl IntAbstractor {
+impl ArithAbstractor {
     fn is_atom_prop(&self, symbol: SymbolId) -> bool {
         self.props.contains(&symbol)
     }
@@ -224,7 +309,6 @@ impl IntAbstractor {
         let node = arena.node(term).clone();
         match node {
             TermNode::BoolConst(_) => Ok(term),
-            // An original Boolean variable; keep it in the skeleton.
             TermNode::Symbol(_) if arena.sort_of(term) == Sort::Bool => Ok(term),
             TermNode::App { op, args } => match op {
                 Op::BoolNot => {
@@ -245,25 +329,36 @@ impl IntAbstractor {
                     Ok(arena.ite(c, t, e)?)
                 }
                 Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe => {
-                    let prop = self.atom(arena, term);
+                    let prop = self.atom(arena, term, Theory::Int);
+                    Ok(arena.var(prop))
+                }
+                Op::RealLt | Op::RealLe | Op::RealGt | Op::RealGe => {
+                    let prop = self.atom(arena, term, Theory::Real);
                     Ok(arena.var(prop))
                 }
                 Op::Eq if arena.sort_of(args[0]) == Sort::Int => {
-                    // a = b  ->  (a <= b) AND (a >= b), so equality and its
-                    // negation both flow through order atoms; the theory solver
-                    // never sees a disequality.
                     let le = arena.int_le(args[0], args[1])?;
                     let ge = arena.int_ge(args[0], args[1])?;
                     let le_prop = self.abstract_term(arena, le)?;
                     let ge_prop = self.abstract_term(arena, ge)?;
                     Ok(arena.and(le_prop, ge_prop)?)
                 }
+                Op::Eq if arena.sort_of(args[0]) == Sort::Real => {
+                    let le = arena.real_le(args[0], args[1])?;
+                    let ge = arena.real_ge(args[0], args[1])?;
+                    let le_prop = self.abstract_term(arena, le)?;
+                    let ge_prop = self.abstract_term(arena, ge)?;
+                    Ok(arena.and(le_prop, ge_prop)?)
+                }
                 _ => Err(SolverError::Unsupported(
-                    "lazy QF_LIA: assertion is not Boolean structure over integer atoms".to_owned(),
+                    "lazy arithmetic: assertion is not Boolean structure over linear-arithmetic \
+                     atoms"
+                        .to_owned(),
                 )),
             },
             _ => Err(SolverError::Unsupported(
-                "lazy QF_LIA: non-Boolean, non-integer-atom term in a Boolean position".to_owned(),
+                "lazy arithmetic: non-Boolean, non-arithmetic-atom term in a Boolean position"
+                    .to_owned(),
             )),
         }
     }
@@ -279,7 +374,7 @@ impl IntAbstractor {
         Ok(build(arena, a, b)?)
     }
 
-    fn atom(&mut self, arena: &mut TermArena, term: TermId) -> SymbolId {
+    fn atom(&mut self, arena: &mut TermArena, term: TermId, theory: Theory) -> SymbolId {
         if let Some(&prop) = self.atom_of.get(&term) {
             return prop;
         }
@@ -290,7 +385,7 @@ impl IntAbstractor {
             .expect("fresh Boolean proposition declares");
         self.atom_of.insert(term, prop);
         self.props.insert(prop);
-        self.atoms.push(IntAtom { prop, term });
+        self.atoms.push(ArithAtom { prop, term, theory });
         prop
     }
 }

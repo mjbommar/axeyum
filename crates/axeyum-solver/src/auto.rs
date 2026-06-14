@@ -28,7 +28,7 @@ use axeyum_rewrite::{
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::combined::check_with_all_theories;
-use crate::dpll_lia::check_with_lia_dpll;
+use crate::dpll_lia::{check_with_arith_dpll, check_with_lia_dpll};
 use crate::dpll_t::check_with_lra_dpll;
 use crate::lia::DEFAULT_INT_WIDTH;
 use crate::lra::check_with_lia_simplex;
@@ -157,6 +157,17 @@ pub fn check_auto(
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
     let features = Features::scan(arena, assertions);
+    if features.has_real && features.has_int {
+        // Combined linear arithmetic (QF_LIRA): the lazy-SMT loop theory-checks
+        // integer and real atoms with their exact simplices independently (they
+        // share no sort). Falls back to the real loop on non-arithmetic atoms
+        // (mixed BV/array), which bit-blasts them.
+        match check_with_arith_dpll(arena, assertions, config) {
+            Ok(result) => return Ok(result),
+            Err(SolverError::Unsupported(_)) => {}
+            Err(other) => return Err(other),
+        }
+    }
     if features.has_real {
         // Reals plus (optionally) the bit-blasted theories: the lazy-SMT loop
         // abstracts the real atoms and lets the bit-blasting backend decide the

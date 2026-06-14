@@ -56,7 +56,7 @@ pub use bitblast_miter::{
 };
 pub use certify::{CertifyOutcome, certify_qf_bv_by_enumeration};
 pub use combined::check_with_all_theories;
-pub use dpll_lia::check_with_lia_dpll;
+pub use dpll_lia::{check_with_arith_dpll, check_with_lia_dpll};
 pub use dpll_t::{
     LemmaLiteral, LraDpllOutcome, LraDpllRefutation, certify_lra_dpll_unsat, check_with_lra_dpll,
 };

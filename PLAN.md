@@ -38,6 +38,20 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-13
 
+- Architecture iteration F — combined QF_LIRA recorded 2026-06-13 (realizes the
+  ADR-0021 follow-up): the Boolean-structured arithmetic loop (`dpll_lia.rs`,
+  generalized to `check_with_arith_dpll`) now theory-checks **integer and real
+  atoms together** — each atom is tagged by theory and decided by its own exact
+  simplex (`check_with_lia_simplex` / `check_with_lra`), with conflict-core
+  minimization per theory. Integers and reals share no sort, so the combination
+  is purely propositional (trivial Nelson-Oppen, no interface equalities); the
+  dispatcher routes mixed real+int queries here, falling back to the bit-blasting
+  real loop on non-arithmetic atoms. Sound (each `sat` replays the merged model;
+  `unsat` = propositionally-unsat skeleton+lemmas). Tests: `(x:Int>0 ∨ r:Real>0)
+  ∧ x<0 ∧ r<0` is **unsat** (exercises both oracles); a mixed sat case merges and
+  replays both models. Also added: deletion-based conflict-core minimization
+  (fewer rounds on disjunction-heavy queries). The certified pure-real
+  `dpll_t.rs` path is untouched.
 - Architecture iteration E — Boolean-structured QF_LIA recorded 2026-06-13
   ([ADR-0021](docs/research/09-decisions/adr-0021-boolean-structured-lia-dpll.md)):
   `check_with_lia_dpll` (`dpll_lia.rs`) lifts the conjunctive integer simplex
