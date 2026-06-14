@@ -397,12 +397,17 @@ fn decide_instantiation(
     }
 }
 
+/// Maximum integer range over which a bounded `to_real(i)` is linked exactly to
+/// its operand (a finite case-split); wider ranges fall back to relaxation.
+const MAX_COERCION_LINK: i128 = 64;
+
 /// Replaces each Int↔Real coercion (`to_real`/`to_int`/`is_int`) with a fresh
 /// variable of its result sort, shared per distinct term so a contradiction on
-/// the same coerced value is preserved. Returns the rewritten assertions and
-/// whether any coercion was found. A pure relaxation (the fresh variable is
-/// unconstrained relative to the operand); soundness for `sat` comes from
-/// replaying the original.
+/// the same coerced value is preserved. For a `to_real(i)` whose integer operand
+/// has a small constant range, also appends exact linking constraints
+/// `(i = v) → (r = v)` for each `v` in range — making that coercion *complete*
+/// (not just a relaxation). Returns the rewritten assertions (plus any links) and
+/// whether any coercion was found; `sat` soundness still comes from replay.
 fn relax_coercions(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -427,17 +432,110 @@ fn relax_coercions(
     }
     let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
     let mut map: HashMap<TermId, TermId> = HashMap::new();
-    for (i, t) in terms.into_iter().enumerate() {
+    let mut links: Vec<TermId> = Vec::new();
+    for (idx, t) in terms.into_iter().enumerate() {
         let sort = arena.sort_of(t);
-        let sym = arena.declare(&format!("!coerce_{i}"), sort).map_err(err)?;
-        map.insert(t, arena.var(sym));
+        let sym = arena.declare(&format!("!coerce_{idx}"), sort).map_err(err)?;
+        let fresh = arena.var(sym);
+        map.insert(t, fresh);
+        // Exact linking for a bounded `to_real(i)`: r = i over its finite range.
+        if let TermNode::App { op: Op::IntToReal, args } = arena.node(t) {
+            let operand = args[0];
+            if let (Some(lo), Some(hi)) = int_bounds(arena, assertions, operand) {
+                if hi >= lo && hi - lo <= MAX_COERCION_LINK {
+                    for v in lo..=hi {
+                        let iv = arena.int_const(v);
+                        let rv = arena.real_const(axeyum_ir::Rational::integer(v));
+                        let i_eq = arena.eq(operand, iv).map_err(err)?;
+                        let r_eq = arena.eq(fresh, rv).map_err(err)?;
+                        let n = arena.not(i_eq).map_err(err)?;
+                        links.push(arena.or(n, r_eq).map_err(err)?); // (i=v) → (r=v)
+                    }
+                }
+            }
+        }
     }
     let mut memo: HashMap<TermId, TermId> = HashMap::new();
-    let mut out = Vec::with_capacity(assertions.len());
+    let mut out = Vec::with_capacity(assertions.len() + links.len());
     for &a in assertions {
         out.push(replace_subterms(arena, a, &map, &mut memo).map_err(err)?);
     }
+    out.extend(links);
     Ok((out, true))
+}
+
+/// Tightest constant `(lower, upper)` bounds on integer `term` from the
+/// top-level assertions (`term ≤ c`, `c ≤ term`, `<`/`>` with the ±1 shift, and
+/// `term = c`); each `None` if unbounded.
+fn int_bounds(
+    arena: &TermArena,
+    assertions: &[TermId],
+    term: TermId,
+) -> (Option<i128>, Option<i128>) {
+    let mut lo: Option<i128> = None;
+    let mut hi: Option<i128> = None;
+    let mut see_lo = |c: i128| lo = Some(lo.map_or(c, |x: i128| x.max(c)));
+    let mut see_hi = |c: i128| hi = Some(hi.map_or(c, |x: i128| x.min(c)));
+    let int_const = |t: TermId| match arena.node(t) {
+        TermNode::IntConst(n) => Some(*n),
+        _ => None,
+    };
+    for &a in assertions {
+        let TermNode::App { op, args } = arena.node(a) else {
+            continue;
+        };
+        if args.len() != 2 {
+            continue;
+        }
+        let (op, l, r) = (*op, args[0], args[1]);
+        let (lc, rc) = (int_const(l), int_const(r));
+        match op {
+            Op::IntLe => {
+                if l == term && let Some(c) = rc {
+                    see_hi(c);
+                }
+                if r == term && let Some(c) = lc {
+                    see_lo(c);
+                }
+            }
+            Op::IntLt => {
+                if l == term && let Some(c) = rc {
+                    see_hi(c - 1);
+                }
+                if r == term && let Some(c) = lc {
+                    see_lo(c + 1);
+                }
+            }
+            Op::IntGe => {
+                if l == term && let Some(c) = rc {
+                    see_lo(c);
+                }
+                if r == term && let Some(c) = lc {
+                    see_hi(c);
+                }
+            }
+            Op::IntGt => {
+                if l == term && let Some(c) = rc {
+                    see_lo(c + 1);
+                }
+                if r == term && let Some(c) = lc {
+                    see_hi(c - 1);
+                }
+            }
+            Op::Eq => {
+                if l == term && let Some(c) = rc {
+                    see_lo(c);
+                    see_hi(c);
+                }
+                if r == term && let Some(c) = lc {
+                    see_lo(c);
+                    see_hi(c);
+                }
+            }
+            _ => {}
+        }
+    }
+    (lo, hi)
 }
 
 /// Which theory features a query uses.

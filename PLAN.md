@@ -640,8 +640,12 @@ Last updated: 2026-06-14
   the same relaxation — generalized to a `relax_coercions` wrapper at `check_auto`
   (so `is_int`-only queries, which dispatch through the real/NRA path, are covered
   too). Tests: `to_int` pinned `sat` + same-value contradiction `unsat`; `is_int`
-  pinned `sat` + `is_int(r) ∧ ¬is_int(r)` `unsat`. A complete Nelson-Oppen
-  combination (the strong version) remains future.
+  pinned `sat` + `is_int(r) ∧ ¬is_int(r)` `unsat`. **Bounded `to_real(i)` is
+  now decided completely**: when the integer operand has a small constant range
+  (`≤ 64`), exact linking constraints `(i=v) → (to_real(i)=v)` over the range tie
+  the coercion to its operand, so e.g. `0≤i≤3 ∧ to_real(i)>5` is `unsat` (not the
+  relaxation's `unknown`) and the feasible `>2.5` is `sat`. A complete
+  Nelson-Oppen combination (unbounded operands) remains future.
 - **Constant arrays added (2026-06-14, extends ADR-0010).** New IR op
   `Op::ConstArray { index }` (`((as const (Array I E)) v)`): every index maps to
   `v`. The ground evaluator builds `ArrayValue::constant`; `eliminate_arrays`

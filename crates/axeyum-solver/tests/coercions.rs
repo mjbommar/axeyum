@@ -129,3 +129,36 @@ fn is_int_pinned_is_sat() {
     let n2 = a.not(i2).unwrap();
     assert!(matches!(solve_auto(&mut a, &[i1, n2]), CheckResult::Unsat));
 }
+
+#[test]
+fn bounded_to_real_is_completely_decided() {
+    // 0 <= i <= 3 AND to_real(i) > 5 : unsat. The bounded linking ties
+    // to_real(i) exactly to i over {0,1,2,3}, so this is decided (not unknown).
+    let mut a = TermArena::new();
+    let i = a.declare("i", Sort::Int).map(|s| a.var(s)).unwrap();
+    let zero = a.int_const(0);
+    let three = a.int_const(3);
+    let lo = a.int_ge(i, zero).unwrap();
+    let hi = a.int_le(i, three).unwrap();
+    let r = a.int_to_real(i).unwrap();
+    let five = a.real_const(axeyum_ir::Rational::integer(5));
+    let gt = a.real_gt(r, five).unwrap();
+    assert!(matches!(solve_auto(&mut a, &[lo, hi, gt]), CheckResult::Unsat),
+        "0<=i<=3 ∧ to_real(i)>5 must be unsat");
+}
+
+#[test]
+fn bounded_to_real_feasible_is_sat() {
+    // 0 <= i <= 3 AND to_real(i) > 2.5 : sat (i = 3, to_real(i) = 3 > 2.5).
+    let mut a = TermArena::new();
+    let i = a.declare("i", Sort::Int).map(|s| a.var(s)).unwrap();
+    let zero = a.int_const(0);
+    let three = a.int_const(3);
+    let lo = a.int_ge(i, zero).unwrap();
+    let hi = a.int_le(i, three).unwrap();
+    let r = a.int_to_real(i).unwrap();
+    let two_half = a.real_const(axeyum_ir::Rational::new(5, 2));
+    let gt = a.real_gt(r, two_half).unwrap();
+    assert!(matches!(solve_auto(&mut a, &[lo, hi, gt]), CheckResult::Sat(_)),
+        "0<=i<=3 ∧ to_real(i)>2.5 must be sat");
+}
