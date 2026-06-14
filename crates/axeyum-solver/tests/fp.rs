@@ -315,6 +315,50 @@ fn fp_to_int_conversions_fold_when_defined() {
 }
 
 #[test]
+fn round_variable_matches_reference() {
+    // Variable-drop RNE rounding must match a direct reference over a battery of
+    // (m, drop) at several widths.
+    // Reference for the documented precondition `drop < n`.
+    fn ref_round(m: u128, drop: u128) -> u128 {
+        if drop == 0 {
+            return m;
+        }
+        let shifted = m >> drop;
+        let dropped = m & ((1u128 << drop) - 1);
+        let half = 1u128 << (drop - 1);
+        if dropped > half || (dropped == half && (shifted & 1 == 1)) {
+            shifted + 1
+        } else {
+            shifted
+        }
+    }
+
+    let mut a = TermArena::new();
+    let mut state: u64 = 0xfeed_face_dead_beef;
+    for n in [8u32, 16, 24] {
+        for drop in 0u128..u128::from(n.min(12)) {
+            let mut samples = vec![0u128, 1, 2, 3, (1u128 << (n - 1)), (1u128 << n) - 1];
+            for _ in 0..48 {
+                state = state
+                    .wrapping_mul(6_364_136_223_846_793_005)
+                    .wrapping_add(1_442_695_040_888_963_407);
+                samples.push(u128::from(state) & ((1u128 << n) - 1));
+            }
+            for m in samples {
+                let mt = a.bv_const(n, m).unwrap();
+                let dt = a.bv_const(n, drop).unwrap();
+                let r = fp::round_variable(&mut a, mt, dt).unwrap();
+                let want = ref_round(m, drop) & ((1u128 << n) - 1);
+                assert!(
+                    matches!(eval(&a, r, &Assignment::new()), Ok(Value::Bv { value, .. }) if value == want),
+                    "round_variable(n={n}, m={m:#x}, drop={drop}) expected {want:#x}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn round_significand_matches_grs_reference() {
     // The symbolic RNE rounding circuit must match a direct guard/round/sticky
     // reference over a battery of significands and (n, keep) shapes.

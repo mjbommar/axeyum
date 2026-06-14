@@ -527,6 +527,60 @@ pub fn round_significand(
     arena.bv_add(kept_ext, inc)
 }
 
+/// Symbolic **round-nearest-ties-to-even by a *variable* drop amount**: rounds
+/// `m` to `round(m / 2^drop)` (both `n`-bit), the form the FP bit-blaster needs
+/// when the number of bits to drop depends on a symbolic exponent. Returns an
+/// `n`-bit term (FP significands always have the headroom for the round-up
+/// carry). `drop == 0` returns `m` unchanged.
+///
+/// Round-up iff the dropped remainder exceeds half an ULP, or equals it and the
+/// surviving LSB is odd (ties to even).
+///
+/// **Precondition:** `drop < n`. The FP bit-blaster guarantees this by sizing the
+/// working significand wider than any drop it computes (underflow is bounded by
+/// exponent clamping *before* rounding); for `drop >= n`, `2^drop` overflows the
+/// width and the result is unspecified.
+///
+/// # Errors
+///
+/// Returns [`IrError::SortMismatch`] if `m`/`drop` are not equal-width
+/// bit-vectors, or [`IrError`] from the builders.
+pub fn round_variable(
+    arena: &mut TermArena,
+    m: TermId,
+    drop: TermId,
+) -> Result<TermId, IrError> {
+    let Sort::BitVec(n) = arena.sort_of(m) else {
+        return Err(IrError::SortMismatch {
+            expected: "BitVec",
+            found: arena.sort_of(m),
+        });
+    };
+    let one = arena.bv_const(n, 1)?;
+    let zero = arena.bv_const(n, 0)?;
+    let pow = arena.bv_shl(one, drop)?; // 2^drop
+    let half = arena.bv_lshr(pow, one)?; // 2^(drop-1)
+    let mask = arena.bv_sub(pow, one)?; // 2^drop - 1
+    let dropped = arena.bv_and(m, mask)?; // bits being discarded
+    let shifted = arena.bv_lshr(m, drop)?; // kept quotient
+    // surviving LSB (for ties-to-even).
+    let lsb = arena.bv_and(shifted, one)?;
+    let lsb_set = arena.eq(lsb, one)?;
+    let gt_half = arena.bv_ugt(dropped, half)?;
+    let eq_half = arena.eq(dropped, half)?;
+    let tie_even = arena.and(eq_half, lsb_set)?;
+    let above = arena.or(gt_half, tie_even)?;
+    // No rounding when drop == 0 (then dropped == 0, half == 0, which would
+    // otherwise spuriously tie).
+    let drop_nonzero = {
+        let is_zero = arena.eq(drop, zero)?;
+        arena.not(is_zero)?
+    };
+    let round_up = arena.and(drop_nonzero, above)?;
+    let inc = arena.ite(round_up, one, zero)?;
+    arena.bv_add(shifted, inc)
+}
+
 /// Symbolic **count-leading-zeros** over a bit-vector: returns a `BitVec(w)`
 /// term giving the number of leading zero bits of the `w`-bit operand `x`
 /// (`w` when `x` is zero). This is the variable-shift amount the FP normalizer
