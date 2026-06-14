@@ -67,20 +67,27 @@ Concretely, in dependency order:
 - cvc5 and Z3 decide datatypes by exactly this combination (congruence +
   acyclicity, with selectors total by convention); their behavior is the
   reference and differential oracle.
-- **Measured blast radius (2026-06-13 probe).** Adding a placeholder
-  `Sort::Datatype` variant and building the workspace shows the exhaustive-match
-  breakage is **contained to 4 `axeyum-ir` files** (`sort.rs`, `value.rs`,
-  `bits.rs`, `arena.rs`) — every downstream crate (bv/cnf/solver/rewrite/smtlib)
-  already has wildcard `_` arms that compile against the new sort (treating it as
-  unsupported/skip). So the *match-fixing* cost is small and IR-local; the real
-  effort is the **semantic design** — the `DatatypeId`/`ConstructorId`/
-  `SelectorId` tables, the two-phase declare needed for recursion (reserve the id,
-  then define constructors that can reference it), the `Value::Datatype` tree, the
-  new construct/select/test ops in the evaluator, and the selector-totality
-  convention. That semantic core is what the implementing session should focus
-  on; the match arms are mechanical. (Downstream wildcard arms must also be
-  audited to confirm they *reject* datatype sorts soundly rather than mishandle
-  them, before any datatype solving is wired in.)
+- **Measured blast radius (2026-06-13, two passes).** A first `cargo build`-only
+  probe (placeholder `Sort::Datatype` + datatype ops) suggested the breakage was
+  contained to 4 `axeyum-ir` files. A fuller implementation attempt **corrected
+  this**: building the whole workspace *including tests* surfaces exhaustive
+  matches that also need datatype arms in **`axeyum-rewrite`** (`canonical.rs`'s
+  `build_app` over `Op`, plus `Sort`/`Value` matches), **`axeyum-query`**
+  (`planning.rs`, `lib.rs`), and `axeyum-ir`'s own test modules — i.e. the
+  `cargo build`-only probe undercounted because it does not compile test code or
+  every reduction path. So the change is genuinely **multi-crate** (though most
+  added arms are mechanical: reject/skip the datatype sort, or rebuild the new
+  ops in `build_app`). The substantive work — confirmed by the attempt — is the
+  IR semantic core: `DatatypeId`/`ConstructorId` tables in the arena, the
+  two-phase declare for recursion (reserve the id, then add constructors that can
+  reference `Sort::Datatype(id)`), the recursive `Value::Datatype` tree, the
+  construct/select/test evaluator ops (built in the `Result`-returning recursion
+  so a wrong-constructor select can return an `IrError` rather than fabricate a
+  value), and a new `IrError::DatatypeConstructorMismatch`. The attempt was
+  **reverted to keep the workspace green** rather than land a large partial diff;
+  the next session should implement it end-to-end (arena tables + ops + eval +
+  all match arms + tests) as one focused unit, then audit downstream wildcard
+  arms to confirm they reject datatype sorts soundly before any datatype solving.
 
 ## Alternatives
 
