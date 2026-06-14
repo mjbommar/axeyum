@@ -6,7 +6,7 @@
 //! evaluator.
 
 use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
-use axeyum_solver::{CheckResult, check_with_lia_simplex};
+use axeyum_solver::{CheckResult, SolverConfig, check_with_lia_simplex, solve};
 
 fn int_var(arena: &mut TermArena, name: &str) -> TermId {
     let sym = arena.declare(name, Sort::Int).unwrap();
@@ -111,6 +111,24 @@ fn unbounded_magnitude_is_handled() {
         }
         other => panic!("expected sat, got {other:?}"),
     }
+}
+
+#[test]
+fn dispatcher_routes_conjunctive_lia_to_simplex() {
+    // The top-level dispatcher (`solve`) must decide a conjunctive pure-integer
+    // query soundly: `2x == 1` is unsat, and the integer path now routes through
+    // the simplex branch-and-bound (ADR-0020) rather than degrading to unknown.
+    let mut arena = TermArena::new();
+    let x = int_var(&mut arena, "x");
+    let two = arena.int_const(2);
+    let one = arena.int_const(1);
+    let two_x = arena.int_mul(two, x).unwrap();
+    let eq = arena.eq(two_x, one).unwrap();
+
+    assert!(matches!(
+        solve(&mut arena, &[eq], &SolverConfig::default()),
+        Ok(CheckResult::Unsat)
+    ));
 }
 
 /// Looks up a declared symbol id by name (test helper).

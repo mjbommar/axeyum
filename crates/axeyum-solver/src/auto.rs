@@ -30,6 +30,7 @@ use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, Unknow
 use crate::combined::check_with_all_theories;
 use crate::dpll_t::check_with_lra_dpll;
 use crate::lia::DEFAULT_INT_WIDTH;
+use crate::lra::check_with_lia_simplex;
 use crate::sat_bv_backend::SatBvBackend;
 
 /// The unified front door: decides any supported query — quantifier-free or
@@ -161,6 +162,18 @@ pub fn check_auto(
         // rest. Reals share no sort with those theories, so the only coupling is
         // propositional and this is a complete combination.
         return check_with_lra_dpll(arena, assertions, config);
+    }
+    if features.has_int {
+        // A conjunctive pure-integer query is decided soundly for *both* sat and
+        // unsat by branch-and-bound over the simplex (ADR-0020); the bounded
+        // bit-blasting fallback is sat-only. Anything outside that fragment
+        // (disjunction, disequality, or mixed BV/array/UF terms) surfaces as
+        // `Unsupported` and falls through to bit-blasting, which handles it.
+        match check_with_lia_simplex(arena, assertions) {
+            Ok(result) => return Ok(result),
+            Err(SolverError::Unsupported(_)) => {}
+            Err(other) => return Err(other),
+        }
     }
     let mut backend = SatBvBackend::new();
     check_with_all_theories(&mut backend, arena, assertions, DEFAULT_INT_WIDTH, config)
@@ -318,6 +331,7 @@ struct Features {
     /// Any sort/operator handled by the bit-blasting composition (bit-vectors,
     /// arrays, integers, uninterpreted functions) — i.e. not pure Bool/real.
     has_bitblast: bool,
+    has_int: bool,
 }
 
 impl Features {
@@ -325,6 +339,7 @@ impl Features {
         let mut features = Features {
             has_real: false,
             has_bitblast: false,
+            has_int: false,
         };
         let mut seen = BTreeSet::new();
         let mut stack = assertions.to_vec();
@@ -334,7 +349,11 @@ impl Features {
             }
             match arena.sort_of(term) {
                 Sort::Real => features.has_real = true,
-                Sort::BitVec(_) | Sort::Array { .. } | Sort::Int => features.has_bitblast = true,
+                Sort::Int => {
+                    features.has_bitblast = true;
+                    features.has_int = true;
+                }
+                Sort::BitVec(_) | Sort::Array { .. } => features.has_bitblast = true,
                 Sort::Bool => {}
             }
             if let TermNode::App { op, args } = arena.node(term) {

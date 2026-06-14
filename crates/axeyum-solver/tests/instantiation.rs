@@ -19,12 +19,13 @@ fn solve(arena: &mut TermArena, assertions: &[axeyum_ir::TermId]) -> CheckResult
 }
 
 #[test]
-fn integer_universal_instantiation_is_bounded_unknown() {
+fn integer_universal_refutation_succeeds_via_simplex() {
     // (forall x:Int. x < 10) is false; instantiating x:=10 gives 10 < 10 (false),
-    // so the instantiation is unsatisfiable. But integers go through *bounded*
-    // bit-blasting, whose `unsat` is only "no model in range" → reported
-    // `unknown` (ADR-0014). So integer-universal refutation degrades to
-    // `unknown`, unlike the exact real case below.
+    // so the instantiation is unsatisfiable. The instantiated query is conjunctive
+    // pure-LIA, so the dispatcher now decides it with the *exact* simplex
+    // branch-and-bound (ADR-0020) and returns a sound `unsat` — an improvement
+    // over the bounded bit-blasting path (ADR-0014), which degraded integer
+    // refutation to `unknown`.
     let mut arena = TermArena::new();
     let x_sym = arena.declare("x", Sort::Int).unwrap();
     let x = arena.var(x_sym);
@@ -37,7 +38,7 @@ fn integer_universal_instantiation_is_bounded_unknown() {
 
     assert!(matches!(
         solve(&mut arena, &[all, c_is_10]),
-        CheckResult::Unknown(_)
+        CheckResult::Unsat
     ));
 }
 

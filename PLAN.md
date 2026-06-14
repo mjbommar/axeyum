@@ -38,6 +38,15 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-13
 
+- Architecture iteration C — LIA wired into the dispatcher recorded 2026-06-13:
+  `check_auto` now routes conjunctive pure-integer queries to
+  `check_with_lia_simplex` first (sound sat *and* unsat), falling back to bounded
+  bit-blasting on `Unsupported` (non-conjunctive / mixed-theory). Only conjunctive
+  pure-LIA behavior changes (unknown→unsat; sat unchanged), so it is strictly an
+  improvement: e.g. integer *quantifier* refutation that previously degraded to
+  `unknown` (`forall x:Int. x<10` ∧ `c==10`) now returns sound `unsat` through
+  instantiation + simplex. Full pure-Rust suite green (the one test encoding the
+  old bounded-unknown limitation was updated to assert the improved verdict).
 - Architecture iteration B — unbounded QF_LIA recorded 2026-06-13
   ([ADR-0020](docs/research/09-decisions/adr-0020-unbounded-lia-branch-and-bound.md)):
   `check_with_lia_simplex` decides conjunctive `QF_LIA` by branch-and-bound over
