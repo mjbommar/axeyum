@@ -137,6 +137,35 @@ pub fn export_qf_abv_unsat_proof(
     export_qf_bv_unsat_proof(arena, &eliminated)
 }
 
+/// Checkable `unsat` certificate for the combined **`QF_AUFBV`** fragment
+/// (arrays *and* uninterpreted functions over bit-vectors — the realistic
+/// verification/symbolic-execution shape: symbolic memory plus uninterpreted
+/// summaries). Eliminates arrays then functions, then exports the `QF_BV`
+/// certificate. Same assurance shape as the single-reduction exporters
+/// (clausal-layer checked, modulo the trusted reductions).
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] for constructs outside `QF_AUFBV`,
+/// [`SolverError::NonBooleanAssertion`], or [`SolverError::Backend`] on an
+/// encoding failure or a proof that fails to check.
+pub fn export_qf_aufbv_unsat_proof(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<UnsatProofOutcome, SolverError> {
+    let array_elim = eliminate_arrays(arena, assertions).map_err(|error| match error {
+        ArrayElimError::Unsupported(what) => SolverError::Unsupported(what),
+        ArrayElimError::Ir(inner) => SolverError::Backend(inner.to_string()),
+    })?;
+    let after_arrays = array_elim.assertions().to_vec();
+    let func_elim = eliminate_functions(arena, &after_arrays).map_err(|error| match error {
+        FuncElimError::Unsupported(what) => SolverError::Unsupported(what),
+        FuncElimError::Ir(inner) => SolverError::Backend(inner.to_string()),
+    })?;
+    let eliminated = func_elim.assertions().to_vec();
+    export_qf_bv_unsat_proof(arena, &eliminated)
+}
+
 /// Like [`export_qf_bv_unsat_proof`] but for **`QF_UFBV`** (uninterpreted
 /// functions over bit-vectors): Ackermann-reduces function applications to
 /// fresh variables plus functional-consistency constraints (ADR-0013), then

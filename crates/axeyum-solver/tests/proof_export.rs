@@ -134,3 +134,50 @@ fn qf_uf_unsat_exports_a_recheckable_certificate() {
         "exported DRAT must refute the Ackermann-reduced CNF"
     );
 }
+
+#[test]
+fn qf_aufbv_unsat_exports_a_recheckable_certificate() {
+    // Arrays + UF together: with a == b, select(store(mem,a,x),b) == x, so
+    // f(select(...)) == f(x) by congruence — demanding they differ is unsat.
+    // Exercises both array elimination and Ackermann reduction in one proof.
+    use axeyum_ir::Sort;
+    use axeyum_solver::export_qf_aufbv_unsat_proof;
+
+    let mut arena = TermArena::new();
+    let mem = arena
+        .declare(
+            "mem",
+            Sort::Array {
+                index: 4,
+                element: 4,
+            },
+        )
+        .unwrap();
+    let mem_v = arena.var(mem);
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(4)], Sort::BitVec(4))
+        .unwrap();
+    let a = arena.bv_var("a", 4).unwrap();
+    let b = arena.bv_var("b", 4).unwrap();
+    let x = arena.bv_var("x", 4).unwrap();
+    let stored = arena.store(mem_v, a, x).unwrap();
+    let loaded = arena.select(stored, b).unwrap();
+    let f_loaded = arena.apply(f, &[loaded]).unwrap();
+    let f_x = arena.apply(f, &[x]).unwrap();
+    let a_eq_b = arena.eq(a, b).unwrap();
+    let f_ne = {
+        let eq = arena.eq(f_loaded, f_x).unwrap();
+        arena.not(eq).unwrap()
+    };
+
+    let outcome = export_qf_aufbv_unsat_proof(&mut arena, &[a_eq_b, f_ne]).unwrap();
+    let UnsatProofOutcome::Proved(proof) = outcome else {
+        panic!("expected an unsat certificate, got {outcome:?}");
+    };
+    let formula = parse_dimacs(&proof.dimacs).expect("exported DIMACS re-parses");
+    let steps = parse_drat(&proof.drat).expect("exported DRAT re-parses");
+    assert!(
+        check_drat(&formula, &steps).expect("re-check runs"),
+        "exported DRAT must refute the array+function-reduced CNF"
+    );
+}
