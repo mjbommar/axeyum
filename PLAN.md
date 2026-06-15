@@ -67,9 +67,19 @@ Last updated: 2026-06-14
   integer rounding so f64 is an exact oracle). `to_fp` (FP→FP) was validated only
   F32↔F64 — added a sweep over F16/BF16/TF32/(6,8)/F32/F64 source/target pairs
   (a small/standard source value is exact in f64, so `round_to_format(dst, value)`
-  is a single correctly-rounded step). Residual: widen the *arithmetic* validated
-  region (`sb 12..24`, `eb = 11`) with an exact oracle if a use case appears;
-  F128 `rem` (iterative path) still lacks an exact oracle.
+  is a single correctly-rounded step).
+
+- **`fp.rem` gated to its validated formats (2026-06-14).** Symbolic `fp.rem`
+  (`rem_sym`, the parser's `fp.rem` target) is validated against the trusted fold
+  only for **F16/F32/F64**; it now refuses every other format with
+  `Unsupported`. This both enforces `enabled ⟹ validated` and removes a real
+  hazard: F128 `rem` would fall to the iterative reduction whose `e_span` is
+  32765 — an impractical (effectively unbuildable) circuit. Test
+  `rem_sym_refuses_unvalidated_formats` locks it. **The FP theory is now
+  uniformly `enabled ⟹ validated` across add/sub/mul/div/sqrt/fma (gated) and
+  rem (gated); roundToIntegral/to_fp validated for the realistic formats.**
+  Residual (marginal): widen the arithmetic validated region (`sb 12..24`,
+  `eb = 11`) and add an exact F128 `rem` oracle only if a use case appears.
 
 - **Small-format FP validation caught and fixed a real `div` soundness bug
   (2026-06-14).** Added a differential sweep of `add`/`mul`/`div`/`sqrt` over all

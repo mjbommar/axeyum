@@ -1647,6 +1647,17 @@ pub fn rem_sym(arena: &mut TermArena, fmt: FloatFormat, x: TermId, y: TermId) ->
     if !fmt.is_ieee() {
         return Err(IrError::Unsupported("fp.rem symbolic: non-IEEE format"));
     }
+    // Only the differentially-validated formats are accepted (ADR-0023): a wrong
+    // FP circuit is not caught by model replay. The symbolic remainder is
+    // validated against the trusted fold for F16/F32/F64. Wider-exponent formats
+    // also reach the iterative reduction, but F128's `e_span` (32765) makes that
+    // circuit impractical and it is unvalidated — refuse rather than risk a wrong
+    // (or unbuildable) result.
+    if !matches!(fmt, FloatFormat::F16 | FloatFormat::F32 | FloatFormat::F64) {
+        return Err(IrError::Unsupported(
+            "fp.rem symbolic: format not differentially validated (only F16/F32/F64)",
+        ));
+    }
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
     let total = fmt.width();
     let e_span = (1u32 << eb) - 3; // max LSB-exponent minus min LSB-exponent
@@ -1655,8 +1666,8 @@ pub fn rem_sym(arena: &mut TermArena, fmt: FloatFormat, x: TermId, y: TermId) ->
         // The scaled-integer encoding overflows 128 bits (wide exponent). Fall
         // back to the iterative shift-subtract reduction, which uses a small
         // `sb+4`-bit register (the only 128-bit constraint) over `e_span`
-        // data-independent steps. This covers F32/BF16/TF32 (e_span 253) and
-        // F64 (e_span 2045, a larger but bounded formula).
+        // data-independent steps. Of the validated formats this covers F32
+        // (e_span 253) and F64 (e_span 2045); F16 uses the scaled path above.
         if sb + 4 <= 128 {
             return rem_iterative(arena, fmt, x, y);
         }
@@ -4182,6 +4193,35 @@ mod tests {
         check(&mut a, 0x3E00, 0x4000, 0x3800, 0x4300); // 1.5*2 + 0.5 = 3.5
         check(&mut a, 0x4000, 0x4000, 0x0000, 0x4400); // 2*2 + 0 = 4 (0x4400)
         check(&mut a, 0x3C00, 0x3C00, 0xBC00, 0x0000); // 1*1 + (-1) = 0
+    }
+
+    #[test]
+    fn rem_sym_refuses_unvalidated_formats() {
+        // Only F16/F32/F64 are differentially validated for symbolic fp.rem.
+        // Others (incl. F128, whose iterative circuit is impractical at e_span
+        // 32765) must be refused, not silently built.
+        let mut a = TermArena::new();
+        for fmt in [
+            FloatFormat::F128,
+            FloatFormat::BF16,
+            FloatFormat::TF32,
+            FloatFormat { exp_bits: 6, sig_bits: 8 },
+        ] {
+            let w = fmt.width();
+            let x = a.bv_const(w, 0).unwrap();
+            let y = a.bv_const(w, 0).unwrap();
+            assert!(
+                matches!(rem_sym(&mut a, fmt, x, y), Err(IrError::Unsupported(_))),
+                "rem_sym should refuse {fmt:?}"
+            );
+        }
+        // Validated formats still build.
+        for fmt in [FloatFormat::F16, FloatFormat::F32, FloatFormat::F64] {
+            let w = fmt.width();
+            let x = a.bv_const(w, 0).unwrap();
+            let y = a.bv_const(w, 0).unwrap();
+            assert!(rem_sym(&mut a, fmt, x, y).is_ok(), "rem_sym should build {fmt:?}");
+        }
     }
 
     #[test]
