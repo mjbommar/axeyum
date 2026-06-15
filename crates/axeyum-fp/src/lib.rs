@@ -5457,6 +5457,7 @@ mod small_format_arithmetic_validation {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)] // exhaustive per-format sweep, kept as one test
     fn small_ieee_formats_match_f64_oracle() {
         let mut state = 0x5151_a5a5_3c3c_9696u64;
         let rng = |state: &mut u64| {
