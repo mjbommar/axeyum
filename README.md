@@ -47,7 +47,10 @@ solver entry → SMT-LIB I/O):
 **Symbolic execution & reachability** are first-class on the warm incremental
 engine (`IncrementalBvSolver`): `push`/`pop`/`assume`, **assumption-core path
 pruning** (`check_assuming_core`), **all-SAT reachable-state enumeration**
-(`block_model`), and **symbolic memory** (`check_with_memory`).
+(`block_model`), and **symbolic memory** (`check_with_memory`). On top of these,
+**bounded model checking** (`bounded_model_check` over a `TransitionSystem`)
+answers reachability queries with a replay-checked counterexample trace, or an
+honestly *bounded* unreachability result.
 
 Everything routes through a few consumer entry points (`axeyum-solver`):
 

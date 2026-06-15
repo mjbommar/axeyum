@@ -199,6 +199,15 @@ pub const CAPABILITIES: &[Capability] = &[
         evidence: "eager array elimination (ADR-0010) + model replay; warm path refuses arrays",
         reference: "ADR-0010/0030",
     },
+    Capability {
+        area: "reachability",
+        feature: "bounded model checking over a symbolic transition system \
+                  (bounded_model_check / TransitionSystem; BV/Bool, array-free first slice)",
+        assurance: Assurance::Validated,
+        evidence: "Reachable = replay-checked counterexample trace; UnreachableWithinBound is \
+                   bounded only (k-induction/interpolation = future work); unknown-safe",
+        reference: "ADR-0009",
+    },
 ];
 
 /// Renders [`CAPABILITIES`] as the canonical capability-matrix markdown table.

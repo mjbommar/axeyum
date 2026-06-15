@@ -212,9 +212,13 @@ clausal proof closes the trusted base.
 
 ### Track C — use-case capstones
 
-- [ ] **C1 — Symbolic execution / reachability as a first-class API + BMC
+- [~] **C1 — Symbolic execution / reachability as a first-class API + BMC
         driver** over the incremental engine (path pruning + all-SAT + symbolic
-        memory). Needs A2 for speed.
+        memory). *BMC driver landed* (`bounded_model_check` over a
+        `TransitionSystem`: warm unrolling, replay-checked counterexample traces,
+        honestly-bounded unreachability — array-free BV/Bool first slice).
+        Remaining: array/memory transition relations (rides A2), k-induction /
+        interpolation for unbounded safety, and a CFG-shaped path-explorer API.
 - [ ] **C2 — angr/unicorn-class** binary/IR frontend (lift + CFG), real memory
         model, concrete-emulation cross-check. Needs C1 + A2.
 - [ ] **C3 — Constrained optimization**: OMT lexicographic/Pareto; MILP hardening.
