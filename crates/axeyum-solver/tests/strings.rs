@@ -687,3 +687,36 @@ fn contradictory_string_constraints_are_unsat() {
     let result = solve(&mut a, &[wf, eq, len3], &SolverConfig::default()).unwrap();
     assert!(matches!(result, CheckResult::Unsat), "x=\"ab\" ∧ len(x)=3 unsat, got {result:?}");
 }
+
+#[test]
+fn is_digit_on_literals() {
+    // str.is_digit: true only for a single ASCII digit character.
+    let mut a = TermArena::new();
+    let s = BoundedString::new(8);
+    let cases = [("5", true), ("0", true), ("9", true), ("a", false), ("", false), ("12", false), (" ", false)];
+    for (lit, want) in cases {
+        let t = s.literal(&mut a, lit).unwrap();
+        let d = s.is_digit(&mut a, &t).unwrap();
+        assert_eq!(eval_bool(&a, d), want, "is_digit({lit:?})");
+    }
+}
+
+#[test]
+fn is_digit_symbolic_constrains_to_single_digit() {
+    // A symbolic string with is_digit(x) true and x == "7" is sat; with x == "a"
+    // it is unsat (well-formedness + is_digit through the BV path).
+    let mut a = TermArena::new();
+    let s = BoundedString::new(4);
+    let x = s.declare(&mut a, "x").unwrap();
+    let wf = s.well_formed(&mut a, &x).unwrap();
+    let d = s.is_digit(&mut a, &x).unwrap();
+    let seven = s.literal(&mut a, "7").unwrap();
+    let eq7 = s.equal(&mut a, &x, &seven).unwrap();
+    let sat = solve(&mut a, &[wf, d, eq7], &SolverConfig::default()).unwrap();
+    assert!(matches!(sat, CheckResult::Sat(_)), "is_digit(x) ∧ x=\"7\" sat, got {sat:?}");
+
+    let letter = s.literal(&mut a, "a").unwrap();
+    let eqa = s.equal(&mut a, &x, &letter).unwrap();
+    let unsat = solve(&mut a, &[wf, d, eqa], &SolverConfig::default()).unwrap();
+    assert!(matches!(unsat, CheckResult::Unsat), "is_digit(x) ∧ x=\"a\" unsat, got {unsat:?}");
+}

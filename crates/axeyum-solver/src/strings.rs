@@ -847,6 +847,25 @@ impl BoundedString {
         arena.ite(active, byte, zero)
     }
 
+    /// `str.is_digit` — true iff `x` is a single character that is an ASCII
+    /// decimal digit (`len = 1` and byte 0 in `'0'..='9'`). A bounded Boolean
+    /// formula, so it solves and replays on the bit-vector path.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] from the builders.
+    pub fn is_digit(&self, arena: &mut TermArena, x: &StrTerm) -> Result<TermId, IrError> {
+        let one = arena.bv_const(self.len_width(), 1)?;
+        let len_one = arena.eq(x.len, one)?;
+        let byte0 = arena.extract(7, 0, x.content)?;
+        let lo = arena.bv_const(8, u128::from(b'0'))?;
+        let hi = arena.bv_const(8, u128::from(b'9'))?;
+        let ge = arena.bv_uge(byte0, lo)?;
+        let le = arena.bv_ule(byte0, hi)?;
+        let in_range = arena.and(ge, le)?;
+        arena.and(len_one, in_range)
+    }
+
     /// `str.to_int` — decimal parse. Returns `(valid, value)`: `value` is a
     /// `BitVec(64)` holding the decimal number the string denotes, and `valid` is
     /// the Boolean "the string is a non-empty run of ASCII digits `'0'..='9'`".

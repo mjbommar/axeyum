@@ -38,6 +38,17 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-14
 
+- **Bounded strings — added `str.is_digit` (2026-06-14).** The `BoundedString`
+  theory (BV-lowered, ADR-0025) is already broad (len/eq/concat/contains/
+  prefix/suffix/index_of/substr/replace/replace_all/regex `in_re`/to_int/from_int)
+  and well-tested. Added the missing SMT-LIB `str.is_digit` predicate (`len = 1`
+  ∧ byte 0 in `'0'..='9'`) as a first-class method, with literal and symbolic
+  sat/unsat tests. **The biggest remaining strings gap is *not* the theory but the
+  front door:** the rich `BoundedString` API is **not yet wired into the SMT-LIB
+  parser** (no `String` sort / `str.*` parsing), so string benchmarks can't be
+  fed as text — that wiring (String→(len,content) BV pair in the parser + model
+  extraction back to a string) is the next substantial strings increment.
+
 - **Small-format `fma` validated via an exact big-integer oracle (2026-06-14).**
   `f64`'s `mul_add` is not a sound oracle for small-format fma (the fused
   `a·b + c` can span ≫ 53 bits when product and addend exponents differ widely,
