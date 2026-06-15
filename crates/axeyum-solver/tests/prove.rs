@@ -82,3 +82,32 @@ fn disproves_a_bitvector_non_theorem() {
     let assignment = model.to_assignment();
     assert_eq!(eval(&arena, goal, &assignment).unwrap(), Value::Bool(false));
 }
+
+#[test]
+fn proves_function_congruence_with_a_checkable_certificate() {
+    // x == y ⊨ f(x) == f(y) (congruence). The negation reduces (Ackermann) to
+    // QF_BV, so the proof now carries a re-checkable DRAT certificate end to end
+    // through the proving front door — proof-assistant-grade for the UF fragment.
+    use axeyum_ir::Sort;
+
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(8)], Sort::BitVec(8))
+        .unwrap();
+    let x = arena.bv_var("x", 8).unwrap();
+    let y = arena.bv_var("y", 8).unwrap();
+    let fx = arena.apply(f, &[x]).unwrap();
+    let fy = arena.apply(f, &[y]).unwrap();
+    let hyp = arena.eq(x, y).unwrap();
+    let goal = arena.eq(fx, fy).unwrap();
+
+    let outcome = prove(&mut arena, &[hyp], goal, &config()).unwrap();
+    let ProofOutcome::Proved(report) = outcome else {
+        panic!("x==y should prove f(x)==f(y), got {outcome:?}");
+    };
+    // The proof carries a re-checkable certificate (not a bare unsat) and the
+    // proving front door already re-validated it.
+    assert!(report.evidence.is_certified(), "UF proof must be certified");
+    let neg_goal = arena.not(goal).unwrap();
+    assert!(report.evidence.check(&arena, &[hyp, neg_goal]).unwrap());
+}
