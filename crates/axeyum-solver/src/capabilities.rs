@@ -200,6 +200,15 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0010/0030",
     },
     Capability {
+        area: "symbolic execution",
+        feature: "DFS path explorer (SymbolicExecutor): assume / branch fork query / \
+                  enter+backtrack / concrete test-input model",
+        assurance: Assurance::Validated,
+        evidence: "models replay-checked vs path condition; three-valued PathStatus keeps \
+                   unknown from wrongly pruning a live path",
+        reference: "ADR-0009",
+    },
+    Capability {
         area: "reachability",
         feature: "bounded model checking over a symbolic transition system \
                   (bounded_model_check; warm BV/Bool, plus bounded_model_check_with_memory \

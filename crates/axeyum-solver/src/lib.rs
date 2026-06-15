@@ -57,6 +57,7 @@ mod strategy;
 /// Bounded-length string theory by bit-vector lowering (no IR sort): `str.len`,
 /// `str.=`, `str.at`, literals over byte strings of length `0..=max_len`.
 pub mod strings;
+mod symexec;
 #[cfg(feature = "z3")]
 mod z3_backend;
 
@@ -130,5 +131,6 @@ pub use smtlib::{
 };
 pub use solver::Solver;
 pub use strategy::{Strategy, solve_with_strategy};
+pub use symexec::{Branch, PathStatus, SymbolicExecutor};
 #[cfg(feature = "z3")]
 pub use z3_backend::Z3Backend;

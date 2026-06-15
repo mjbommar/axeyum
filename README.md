@@ -47,7 +47,10 @@ solver entry → SMT-LIB I/O):
 **Symbolic execution & reachability** are first-class on the warm incremental
 engine (`IncrementalBvSolver`): `push`/`pop`/`assume`, **assumption-core path
 pruning** (`check_assuming_core`), **all-SAT reachable-state enumeration**
-(`block_model`), and **symbolic memory** (`check_with_memory`). On top of these,
+(`block_model`), and **symbolic memory** (`check_with_memory`). A
+`SymbolicExecutor` driver exposes these in DFS shape — `assume` / `branch` fork
+query / `enter`+`backtrack` / concrete test-input `model`, with a three-valued
+`PathStatus` so an undecided path is never wrongly pruned. On top of these,
 **bounded model checking** (`bounded_model_check` over a `TransitionSystem`,
 and `bounded_model_check_with_memory` for array/symbolic-memory state) answers
 reachability queries with a replay-checked counterexample trace, and

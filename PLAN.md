@@ -223,10 +223,12 @@ clausal proof closes the trusted base.
         state via eager elimination, one-shot per depth). *Certified k-induction
         landed* (`certify_safety_k_induction`: a `Safe` verdict carries a
         drat-trim-checkable DRAT certificate per obligation — the reachability
-        track meeting the proof/checking track). Remaining: warm lazy arrays for
-        memory BMC + memory k-induction (rides A2), interpolation / invariant
-        strengthening for k-induction completeness, and a CFG-shaped
-        path-explorer API.
+        track meeting the proof/checking track). *Symbolic-execution driver API
+        landed* (`SymbolicExecutor`: assume / branch fork query / enter+backtrack
+        DFS / concrete test-input model, three-valued `PathStatus`). Remaining:
+        warm lazy arrays for memory BMC + memory k-induction (rides A2),
+        interpolation / invariant strengthening for k-induction completeness, and
+        a CFG-shaped path-explorer built on the driver.
 - [ ] **C2 — angr/unicorn-class** binary/IR frontend (lift + CFG), real memory
         model, concrete-emulation cross-check. Needs C1 + A2.
 - [ ] **C3 — Constrained optimization**: OMT lexicographic/Pareto; MILP hardening.
