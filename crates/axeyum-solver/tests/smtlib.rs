@@ -856,3 +856,43 @@ fn decides_str_suffixof_both_directions() {
         CheckResult::Sat(_)
     ));
 }
+
+/// `str.at` with a constant index returns the indexed character as a length-1
+/// string (empty when out of range) — packed, canonical, decides both
+/// directions (ADR-0029).
+#[test]
+fn decides_str_at_constant_index() {
+    // s == "abc": s[1] == "b" sat, s[1] == "c" unsat.
+    assert!(matches!(
+        run("\
+(declare-const s String)
+(assert (= s \"abc\"))
+(assert (= (str.at s 1) \"b\"))
+(check-sat)
+")
+        .result,
+        CheckResult::Sat(_)
+    ));
+    assert_eq!(
+        run("\
+(declare-const s String)
+(assert (= s \"abc\"))
+(assert (= (str.at s 1) \"c\"))
+(check-sat)
+")
+        .result,
+        CheckResult::Unsat,
+        "s[1] is 'b', not 'c'"
+    );
+    // Out-of-range index yields the empty string.
+    assert!(matches!(
+        run("\
+(declare-const s String)
+(assert (= s \"abc\"))
+(assert (= (str.at s 5) \"\"))
+(check-sat)
+")
+        .result,
+        CheckResult::Sat(_)
+    ));
+}

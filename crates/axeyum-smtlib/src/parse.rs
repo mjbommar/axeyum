@@ -1097,6 +1097,31 @@ fn string_suffixof(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId
     Ok(any)
 }
 
+/// `str.at s k` for a **constant** index `k`: the length-1 string holding byte
+/// `s[k]` when `0 ≤ k < len(s)` (and within the bound), else the empty string.
+/// The result is another packed string (no width growth), canonical, so it
+/// composes with equality. Pure BV/Bool — decides both directions.
+fn string_at_const(arena: &mut TermArena, s: TermId, k: i128) -> Result<TermId, SmtError> {
+    // Out of the representable range: always the empty string (all-zero packing).
+    if k < 0 || k >= i128::from(STRING_MAX_LEN) {
+        return arena.bv_const(STRING_TOTAL, 0).map_err(SmtError::Ir);
+    }
+    let kk = u32::try_from(k).expect("0 ≤ k < STRING_MAX_LEN");
+    let slen = string_len(arena, s)?;
+    let kconst = arena.bv_const(STRING_LEN_WIDTH, u128::from(kk))?;
+    let active = arena.bv_ult(kconst, slen)?; // k < len(s)
+    let byte_k = string_byte(arena, s, kk)?;
+    let zero8 = arena.bv_const(8, 0)?;
+    let one_len = arena.bv_const(STRING_LEN_WIDTH, 1)?;
+    let zero_len = arena.bv_const(STRING_LEN_WIDTH, 0)?;
+    let rlen = arena.ite(active, one_len, zero_len)?;
+    let rbyte = arena.ite(active, byte_k, zero8)?;
+    // Pack: content = zero-padding ++ byte0(rbyte); packed = content ++ length.
+    let zeros_hi = arena.bv_const((STRING_MAX_LEN - 1) * 8, 0)?;
+    let content = arena.concat(zeros_hi, rbyte)?;
+    arena.concat(content, rlen).map_err(SmtError::Ir)
+}
+
 /// The canonical well-formedness constraint for a packed string `v`: its length
 /// is `≤ STRING_MAX_LEN`, and every content byte at or above the length is zero.
 fn string_wellformed(arena: &mut TermArena, v: TermId) -> Result<TermId, SmtError> {
@@ -1559,6 +1584,21 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
         "str.suffixof" => {
             need(2)?;
             string_suffixof(arena, args[0], args[1])?
+        }
+        // `str.at s k` — constant index only (symbolic indices need the Int↔
+        // position bridge); returns a length-≤1 packed string.
+        "str.at" => {
+            need(2)?;
+            let k = match arena.node(args[1]) {
+                TermNode::IntConst(k) => *k,
+                _ => {
+                    return Err(SmtError::Unsupported(
+                        "str.at with a non-constant index is not yet supported (ADR-0029)"
+                            .to_owned(),
+                    ));
+                }
+            };
+            string_at_const(arena, args[0], k)?
         }
         "and" => fold(arena, TermArena::and)?,
         "or" => fold(arena, TermArena::or)?,
