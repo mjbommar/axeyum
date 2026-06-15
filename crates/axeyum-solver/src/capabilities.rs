@@ -202,11 +202,12 @@ pub const CAPABILITIES: &[Capability] = &[
     Capability {
         area: "reachability",
         feature: "bounded model checking over a symbolic transition system \
-                  (bounded_model_check / TransitionSystem; BV/Bool, array-free first slice)",
+                  (bounded_model_check; warm BV/Bool, plus bounded_model_check_with_memory \
+                  for array/symbolic-memory state via eager elimination)",
         assurance: Assurance::Validated,
-        evidence: "Reachable = replay-checked counterexample trace; UnreachableWithinBound is \
-                   bounded only (interpolation = future work); unknown-safe",
-        reference: "ADR-0009",
+        evidence: "Reachable = replay-checked counterexample trace (incl. select/store); \
+                   UnreachableWithinBound is bounded only (interpolation = future work); unknown-safe",
+        reference: "ADR-0009/0010",
     },
     Capability {
         area: "reachability",

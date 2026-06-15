@@ -48,8 +48,9 @@ solver entry → SMT-LIB I/O):
 engine (`IncrementalBvSolver`): `push`/`pop`/`assume`, **assumption-core path
 pruning** (`check_assuming_core`), **all-SAT reachable-state enumeration**
 (`block_model`), and **symbolic memory** (`check_with_memory`). On top of these,
-**bounded model checking** (`bounded_model_check` over a `TransitionSystem`)
-answers reachability queries with a replay-checked counterexample trace, and
+**bounded model checking** (`bounded_model_check` over a `TransitionSystem`,
+and `bounded_model_check_with_memory` for array/symbolic-memory state) answers
+reachability queries with a replay-checked counterexample trace, and
 **k-induction** (`prove_safety_k_induction`) lifts that to *unbounded* safety
 proofs — `Safe`, a counterexample, or an honest `Inconclusive` (never a wrong
 `Safe`).

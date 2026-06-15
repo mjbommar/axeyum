@@ -25,8 +25,10 @@
 //! * [`BmcOutcome::Unknown`] is first-class: a resource limit or an unsupported
 //!   construct at some depth is reported honestly, never as a safe result.
 //!
-//! The first slice rides the array-free warm path (BV/Bool transition systems);
-//! symbolic-memory transition relations are the ADR-0030 follow-up.
+//! [`bounded_model_check`] rides the array-free warm path (BV/Bool transition
+//! systems); [`bounded_model_check_with_memory`] adds array/symbolic-memory state
+//! (`select`/`store`) via the validated eager elimination, one-shot per depth
+//! (warm lazy arrays are the ADR-0030 follow-up).
 
 use axeyum_ir::{SymbolId, TermArena, TermId};
 
@@ -130,6 +132,48 @@ pub fn bounded_model_check(
     bound: usize,
     config: &SolverConfig,
 ) -> Result<BmcOutcome, SolverError> {
+    run_bounded_model_check(arena, system, bound, config, false)
+}
+
+/// Like [`bounded_model_check`], but for transition systems whose state includes
+/// **arrays / symbolic memory** (`select`/`store`) — the representation symbolic
+/// execution uses for program heaps and register files.
+///
+/// Each depth's query is decided by the incremental engine's
+/// [`check_with_memory`](IncrementalBvSolver::check_with_memory), which discharges
+/// array constraints by the validated eager read-over-write + Ackermann
+/// elimination (ADR-0010). Soundness is unchanged: a `sat` is replay-checked
+/// against the original `select`/`store` assertions before becoming a
+/// [`BmcOutcome::Reachable`] counterexample.
+///
+/// This first slice re-solves each depth one-shot (eager elimination does not yet
+/// reuse the warm CNF across depths — warm lazy arrays are ADR-0030 follow-up), so
+/// it trades the warm-solver speedup for memory support. For array-free systems it
+/// agrees with [`bounded_model_check`]; prefer that one there (it stays warm).
+///
+/// # Errors
+///
+/// As [`bounded_model_check`], plus array-elimination errors from
+/// [`check_with_memory`](IncrementalBvSolver::check_with_memory).
+pub fn bounded_model_check_with_memory(
+    arena: &mut TermArena,
+    system: &impl TransitionSystem,
+    bound: usize,
+    config: &SolverConfig,
+) -> Result<BmcOutcome, SolverError> {
+    run_bounded_model_check(arena, system, bound, config, true)
+}
+
+/// Shared BMC unrolling for [`bounded_model_check`] and
+/// [`bounded_model_check_with_memory`]; `use_memory` selects the array-aware
+/// `check_with_memory` decision procedure for memory-bearing systems.
+fn run_bounded_model_check(
+    arena: &mut TermArena,
+    system: &impl TransitionSystem,
+    bound: usize,
+    config: &SolverConfig,
+    use_memory: bool,
+) -> Result<BmcOutcome, SolverError> {
     let mut solver = IncrementalBvSolver::with_config(config.clone());
 
     // Step 0: declare s0 and pin the initial-state constraint permanently.
@@ -145,7 +189,11 @@ pub fn bounded_model_check(
         let bad = system.bad(arena, &states[k])?;
         solver.push()?;
         solver.assert(arena, bad)?;
-        let result = solver.check(arena)?;
+        let result = if use_memory {
+            solver.check_with_memory(arena)?
+        } else {
+            solver.check(arena)?
+        };
         solver.pop();
 
         match result {
@@ -513,6 +561,107 @@ mod tests {
         assert!(
             matches!(outcome, SafetyOutcome::Inconclusive { max_k: 3 }),
             "must not over-claim Safe for a non-inductive property, got {outcome:?}"
+        );
+    }
+
+    /// A memory-bearing system: a 4-cell array `mem` (2-bit index → 8-bit value)
+    /// and a 2-bit write pointer `i`. `init`: all cells 0, `i = 0`. `trans`:
+    /// `mem' = store(mem, i, 7)`, `i' = i + 1`. `bad`: `mem[3] == 7`. Cell 3 is
+    /// first written when the pointer reaches 3 — i.e. the `3 → 4` transition —
+    /// so a bad state is reachable in exactly four steps. Exercises the
+    /// symbolic-memory (`select`/`store`) reachability path.
+    struct MemWriter;
+
+    impl MemWriter {
+        fn mem(arena: &mut TermArena, step: usize) -> SymbolId {
+            arena
+                .declare(
+                    &format!("mem@{step}"),
+                    Sort::Array {
+                        index: 2,
+                        element: 8,
+                    },
+                )
+                .unwrap()
+        }
+        fn ptr(arena: &mut TermArena, step: usize) -> SymbolId {
+            arena
+                .declare(&format!("i@{step}"), Sort::BitVec(2))
+                .unwrap()
+        }
+    }
+
+    impl TransitionSystem for MemWriter {
+        fn state_vars(
+            &self,
+            arena: &mut TermArena,
+            step: usize,
+        ) -> Result<Vec<SymbolId>, SolverError> {
+            Ok(vec![Self::mem(arena, step), Self::ptr(arena, step)])
+        }
+
+        fn init(&self, arena: &mut TermArena, s0: &[SymbolId]) -> Result<TermId, SolverError> {
+            let mem = arena.var(s0[0]);
+            let zero8 = arena.bv_const(8, 0)?;
+            let all_zero = arena.const_array(2, zero8)?;
+            let mem_init = arena.eq(mem, all_zero)?;
+            let ptr = arena.var(s0[1]);
+            let zero2 = arena.bv_const(2, 0)?;
+            let ptr_init = arena.eq(ptr, zero2)?;
+            Ok(arena.and(mem_init, ptr_init)?)
+        }
+
+        fn trans(
+            &self,
+            arena: &mut TermArena,
+            pre: &[SymbolId],
+            post: &[SymbolId],
+        ) -> Result<TermId, SolverError> {
+            let mem = arena.var(pre[0]);
+            let i = arena.var(pre[1]);
+            let seven = arena.bv_const(8, 7)?;
+            let written = arena.store(mem, i, seven)?;
+            let mem_next = arena.var(post[0]);
+            let mem_step = arena.eq(mem_next, written)?;
+
+            let one = arena.bv_const(2, 1)?;
+            let inc = arena.bv_add(i, one)?;
+            let ptr_next = arena.var(post[1]);
+            let ptr_step = arena.eq(ptr_next, inc)?;
+            Ok(arena.and(mem_step, ptr_step)?)
+        }
+
+        fn bad(&self, arena: &mut TermArena, s: &[SymbolId]) -> Result<TermId, SolverError> {
+            let mem = arena.var(s[0]);
+            let three = arena.bv_const(2, 3)?;
+            let cell3 = arena.select(mem, three)?;
+            let seven = arena.bv_const(8, 7)?;
+            Ok(arena.eq(cell3, seven)?)
+        }
+    }
+
+    #[test]
+    fn memory_bmc_reaches_a_written_cell() {
+        let mut arena = TermArena::new();
+        let outcome =
+            bounded_model_check_with_memory(&mut arena, &MemWriter, 6, &SolverConfig::default())
+                .unwrap();
+        assert!(
+            matches!(outcome, BmcOutcome::Reachable { steps: 4, .. }),
+            "mem[3] is first written on the 3→4 transition, got {outcome:?}"
+        );
+    }
+
+    #[test]
+    fn memory_bmc_is_bounded_before_the_write() {
+        let mut arena = TermArena::new();
+        // Through step 3 the pointer has only visited cells 0,1,2; mem[3] is still 0.
+        let outcome =
+            bounded_model_check_with_memory(&mut arena, &MemWriter, 3, &SolverConfig::default())
+                .unwrap();
+        assert!(
+            matches!(outcome, BmcOutcome::UnreachableWithinBound { bound: 3 }),
+            "mem[3] is untouched within three steps, got {outcome:?}"
         );
     }
 }

@@ -219,7 +219,9 @@ clausal proof closes the trusted base.
         honestly-bounded unreachability — array-free BV/Bool first slice).
         *k-induction landed* (`prove_safety_k_induction`: base case + inductive
         step ⇒ unbounded `Safe`, counterexample, or honest `Inconclusive`).
-        Remaining: array/memory transition relations (rides A2), interpolation /
+        *Symbolic-memory BMC landed* (`bounded_model_check_with_memory`: array
+        state via eager elimination, one-shot per depth). Remaining: warm lazy
+        arrays for memory BMC + memory k-induction (rides A2), interpolation /
         invariant strengthening for k-induction completeness, and a CFG-shaped
         path-explorer API.
 - [ ] **C2 — angr/unicorn-class** binary/IR frontend (lift + CFG), real memory
