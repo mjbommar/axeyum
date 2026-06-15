@@ -83,3 +83,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0027](adr-0027-milp-branch-and-bound.md) | Mixed integer/real arithmetic by branch-and-bound over the Farkas-checked LRA engine | accepted |
 | [0028](adr-0028-fp-arithmetic-validation-oracle.md) | A software-float oracle (`rustc_apfloat`) for validating wide-format FP arithmetic | accepted |
 | [0029](adr-0029-smtlib-string-front-end.md) | SMT-LIB string front-end over the bounded-string BV lowering (`Parsed = Term \| Str`) | proposed |
+| [0030](adr-0030-incremental-lazy-arrays.md) | Incremental (lazy) arrays for symbolic memory in the warm push/pop engine | proposed |
