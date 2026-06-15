@@ -16,3 +16,10 @@ axeyum-ir.workspace = true
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+# Test-only IEEE 754 software-float oracle for validating the wide-format FP
+# circuits (F128) against correctly-rounded reference arithmetic — there is no
+# native f128 on stable Rust (ADR-0028). Dev-only: never in the runtime graph,
+# so the default build stays C-free. License Apache-2.0 WITH LLVM-exception.
+rustc_apfloat = "0.2.3"

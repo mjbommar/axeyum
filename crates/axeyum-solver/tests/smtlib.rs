@@ -167,6 +167,34 @@ fn decides_symbolic_float64_fma_unsat() {
     );
 }
 
+/// A symbolic **Float128 `fp.fma`** is bit-blasted through the wide path (the
+/// 344-bit intermediate far exceeds `u128`): find a Float128 `x` with
+/// `fma(x, 2.0, 1.0) == 7.0`. `x = 3.0` works, so this is sat and the model
+/// replays through the 344-bit fma circuit (validated against `rustc_apfloat`'s
+/// quad, ADR-0028). Constants are `to_fp` bit-reinterprets of their IEEE quad
+/// hex: 2.0 = `0x4000<<112`, 1.0 = `0x3FFF<<112`, 7.0 = `0x4001<<112 | 0xC<<108`.
+#[test]
+fn decides_symbolic_float128_fma() {
+    let text = "\
+(set-info :status sat)
+(set-logic QF_FP)
+(declare-const x (_ FloatingPoint 15 113))
+(assert (fp.eq
+          (fp.fma RNE
+            x
+            ((_ to_fp 15 113) #x40000000000000000000000000000000)
+            ((_ to_fp 15 113) #x3FFF0000000000000000000000000000))
+          ((_ to_fp 15 113) #x4001C000000000000000000000000000)))
+(check-sat)
+";
+    let outcome = run(text);
+    assert!(
+        matches!(outcome.result, CheckResult::Sat(_)),
+        "symbolic Float128 fp.fma must decide sat (x = 3.0), got {:?}",
+        outcome.result
+    );
+}
+
 /// FP->int is a function: two occurrences on the same operand denote one value,
 /// so their inequality is unsat even when the operand is unconstrained (the
 /// shared fresh value for the unspecified out-of-range case must be the SAME).

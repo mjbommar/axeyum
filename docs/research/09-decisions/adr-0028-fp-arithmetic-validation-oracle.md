@@ -1,6 +1,6 @@
 # ADR-0028: A software-float oracle for validating wide-format FP arithmetic
 
-Status: proposed
+Status: accepted (implemented for F128 add/mul/div/fma, 2026-06-14)
 Date: 2026-06-14
 
 ## Context
@@ -53,13 +53,21 @@ that format, with NaN compared by payload-class and signs/zeros bit-exact.
 Until that sweep exists for a format, the format's wide circuit stays
 `unsupported` (sound), exactly as F128 is today.
 
-Preconditions before acceptance:
+Preconditions (met at acceptance):
 
-- `cargo deny check` passes with `rustc_apfloat` added as a **dev-dependency**
-  only (it must not enter the default/runtime dependency graph, preserving the
-  C-free, minimal-runtime guarantees).
+- `rustc_apfloat` is a **dev-dependency** of `axeyum-fp` only; it does not enter
+  the default/runtime dependency graph, so the C-free, minimal-runtime guarantees
+  hold. Its license `Apache-2.0 WITH LLVM-exception` and its transitive
+  dev-deps (`smallvec`, `bitflags`: MIT/Apache-2.0) are all already in
+  `deny.toml`'s allow-list — CI's `cargo deny check` confirms.
 - The oracle is used exclusively in `#[cfg(test)]` validation, never in the
   shipped lowering path.
+
+Implemented 2026-06-14: F128 `add`/`mul`/`div`/`fma` are validated against
+`ieee::Quad` (structured corners + 2000 random pairs/triples each, RNE) and
+their `128` gates lifted. F128 `sqrt` stays `unsupported` — `rustc_apfloat` does
+not implement square root, so there is no oracle for it. F128 `fp.rem` already
+decides via the iterative reduction (`rem_iterative`).
 
 ## Evidence
 

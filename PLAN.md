@@ -38,6 +38,22 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-14
 
+- **F128 arithmetic enabled + validated against an independent oracle (ADR-0028,
+  2026-06-14, wide-BV step 6).** Added `rustc_apfloat` (LLVM APFloat port, pure
+  Rust) as a **dev-dependency** of `axeyum-fp` — a correctly-rounded IEEE oracle
+  for arbitrary formats, there being no native `f128` on stable Rust. With the
+  `sconst` fix in place, **F128 `add`/`mul`/`div`/`fma`** now run through the wide
+  bit-vector path and match `rustc_apfloat`'s `ieee::Quad` over a structured
+  battery + 2000 random pairs/triples each (RNE); their `128` gates are lifted to
+  allow F128. F128 `fp.rem` already decides via `rem_iterative`; **F128 `sqrt`
+  stays `unsupported`** — APFloat implements no square root, so there is no oracle
+  for it (sound). End-to-end: `decides_symbolic_float128_fma` solves a symbolic
+  Float128 fma (sat, `x = 3.0`, model replayed through the 344-bit circuit).
+  License `Apache-2.0 WITH LLVM-exception` (+ `smallvec`/`bitflags`) is already in
+  `deny.toml`; the dep is test-only, so the default build stays C-free.
+  **Remaining FP gap:** F128 `sqrt` (needs a non-APFloat oracle) and arithmetic
+  for formats wider than F128 (need a per-format sweep). ADR-0028 accepted.
+
 - **Symbolic F64 `fp.fma` works through the wide path — root-caused a wide-FP
   soundness bug (2026-06-14, wide-BV step 5).** The 164-bit symbolic F64 fma
   circuit mis-evaluated (`fma(2,3,1)→0`) for one reason: `sconst` (signed

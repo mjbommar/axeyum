@@ -60,6 +60,14 @@ impl FloatFormat {
         exp_bits: 11,
         sig_bits: 53,
     };
+    /// IEEE 754 binary128 (quadruple precision): 15 exponent bits, 113
+    /// significand bits. Its arithmetic intermediates exceed `u128`, so it runs
+    /// through the wide bit-vector path and is validated against `rustc_apfloat`'s
+    /// `ieee::Quad` (ADR-0028), there being no native `f128` on stable Rust.
+    pub const F128: Self = Self {
+        exp_bits: 15,
+        sig_bits: 113,
+    };
     /// bfloat16 (BF16): the top 16 bits of an f32 — 8 exponent bits, 8
     /// significand bits. Ubiquitous in ML/GPU compute; IEEE-style (∞/NaN), so
     /// the generic arithmetic here is correct for it.
@@ -681,14 +689,15 @@ pub fn pack_value(
 /// differentially validated against native `f32` multiplication in tests
 /// (specials, subnormals, and products that overflow/underflow).
 ///
-/// **Format support.** The intermediate is `2·sig_bits + 3` bits, so this works
-/// for any format with `2·sig_bits + 3 ≤ 128` (128 bits) — **F16, F32,
-/// and F64** (109 bits). Wider formats return [`IrError::InvalidWidth`].
+/// **Format support.** The intermediate is `2·sig_bits + 3` bits. **F16/F32/F64**
+/// (≤ 109 bits) use the `u128` path; **F128** (229 bits) runs through the wide
+/// bit-vector path, validated against `rustc_apfloat`'s quad (ADR-0028). Other
+/// wide formats return [`IrError::InvalidWidth`].
 ///
 /// # Errors
 ///
-/// Returns [`IrError::InvalidWidth`] if the format's intermediate width exceeds
-/// 128 bits, [`IrError::SortMismatch`] if an operand is not a `BitVec` of
+/// Returns [`IrError::InvalidWidth`] for a wide non-F128 format,
+/// [`IrError::SortMismatch`] if an operand is not a `BitVec` of
 /// the format width, or [`IrError`] from the builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
 pub fn mul(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: RoundingMode) -> Result<TermId, IrError> {
@@ -700,8 +709,10 @@ pub fn mul(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: 
     // normalizing left shift (a product of significands has its leading bit at
     // index ≥ sb−1 whenever the result is normal), so `pack_value` only ever
     // rounds *down* — 2·sb + 3 bits suffice, which fits F16/F32/F64 in 128 bits.
+    // F128 (229 bits) runs through the wide path, validated against `Quad`
+    // (ADR-0028); other wide formats stay `unsupported` (sound) pending a sweep.
     let w = 2 * sb + 3;
-    if w > 128 {
+    if w > 128 && fmt != FloatFormat::F128 {
         return Err(IrError::InvalidWidth(w));
     }
 
@@ -940,13 +951,14 @@ pub fn to_fp(
 /// (NaN for `0/0` and `∞/∞`, `∞` for `x/0` and `∞/finite`, `0` for `finite/∞`).
 /// A pure bit-vector formula; solves and replays on the existing path.
 ///
-/// Works for **F16/F32/F64** (the `2·sb + 5`-bit intermediate fits 128 bits).
-/// Validated, not proven: differentially validated against native `f32`/`f64`
-/// division.
+/// Works for **F16/F32/F64** (the `2·sb + 5`-bit intermediate fits 128 bits) and
+/// **F128** (231 bits, via the wide path). Validated, not proven: differentially
+/// validated against native `f32`/`f64` division and `rustc_apfloat`'s quad
+/// (ADR-0028).
 ///
 /// # Errors
 ///
-/// Returns [`IrError::InvalidWidth`] if the format is too wide,
+/// Returns [`IrError::InvalidWidth`] for a wide non-F128 format,
 /// [`IrError::SortMismatch`] for a mis-sized operand, or [`IrError`] from builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
 pub fn div(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: RoundingMode) -> Result<TermId, IrError> {
@@ -955,7 +967,9 @@ pub fn div(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: 
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
     let total = fmt.width();
     let w = 2 * sb + 5;
-    if w > 128 {
+    // F16/F32/F64 fit `u128`; F128 (231 bits) runs through the wide path,
+    // validated against `Quad` (ADR-0028). Other wide formats stay `unsupported`.
+    if w > 128 && fmt != FloatFormat::F128 {
         return Err(IrError::InvalidWidth(w));
     }
     let frac = sb + 3; // quotient fractional bits
@@ -1036,15 +1050,16 @@ pub fn div(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: 
 /// result has no catastrophic cancellation (its leading bit is the larger
 /// operand's, ±1), so the sticky always lands strictly below the round position
 /// and never corrupts a guard/round bit. The `2·sb + 5`-bit intermediate fits
-/// **F16/F32/F64** in 128 bits (128 bits).
+/// **F16/F32/F64** in 128 bits; **F128** (231 bits) runs through the wide path.
 ///
 /// This is a validated — not formally proven — bit-blaster: differentially
-/// validated against native `f32` and `f64` addition in tests.
+/// validated against native `f32`/`f64` addition and `rustc_apfloat`'s quad
+/// (ADR-0028) in tests.
 ///
 /// # Errors
 ///
-/// Returns [`IrError::InvalidWidth`] if the format's intermediate width exceeds
-/// 128 bits, [`IrError::SortMismatch`] for a mis-sized operand, or
+/// Returns [`IrError::InvalidWidth`] for a wide non-F128 format,
+/// [`IrError::SortMismatch`] for a mis-sized operand, or
 /// [`IrError`] from the builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
 pub fn add(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: RoundingMode) -> Result<TermId, IrError> {
@@ -1053,7 +1068,9 @@ pub fn add(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: 
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
     let total = fmt.width();
     let w = 2 * sb + 5;
-    if w > 128 {
+    // F16/F32/F64 fit `u128`; F128 (231 bits) runs through the wide path,
+    // validated against `Quad` (ADR-0028). Other wide formats stay `unsupported`.
+    if w > 128 && fmt != FloatFormat::F128 {
         return Err(IrError::InvalidWidth(w));
     }
     let guard = sb + 2;
@@ -1159,18 +1176,18 @@ pub fn add(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: 
 /// round-nearest-style rounding (no intermediate rounding of the product). The
 /// exact product (`2·sb`-bit significand at `e_a + e_b`) is aligned with `c` and
 /// summed exactly, then [`pack_value`] rounds once. The intermediate width is
-/// `3·sb + 5`; **F16/F32** fit the 128-bit `u128` path, and **F64** (164 bits)
-/// runs through the wide bit-vector path. Wider formats (F128) return
-/// `InvalidWidth` — they have no native oracle to validate the circuit.
+/// `3·sb + 5`; **F16/F32** fit the 128-bit `u128` path, while **F64** (164 bits)
+/// and **F128** (344 bits) run through the wide bit-vector path. Other wide
+/// formats return `InvalidWidth` — they have no oracle to validate the circuit.
 ///
 /// Special cases per IEEE: NaN if any operand is NaN, if `a·b` is `0·∞`, or if
 /// `a·b` and `c` are infinities of opposite sign; otherwise the infinity of an
-/// infinite product or addend. Validated against native `f32::mul_add` and
-/// `f64::mul_add` (the correctly-rounded fma) over a wide sweep.
+/// infinite product or addend. Validated against native `f32::mul_add`/
+/// `f64::mul_add` and `rustc_apfloat`'s quad fma (ADR-0028) over a wide sweep.
 ///
 /// # Errors
 ///
-/// Returns [`IrError::InvalidWidth`] for formats wider than F64,
+/// Returns [`IrError::InvalidWidth`] for formats wider than F64 other than F128,
 /// [`IrError::SortMismatch`] for a mis-sized operand, or [`IrError`] from the
 /// builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names, clippy::too_many_lines)]
@@ -1197,14 +1214,15 @@ pub fn fma(
     }
     let w = 3 * sb + 5;
     // The symbolic FMA circuit runs through the wide bit-vector path for
-    // intermediates that exceed `u128` (F64 needs 164 bits), validated against
-    // native `f64::mul_add` (`symbolic_f64_fma_matches_native`). There is no
-    // first-class FP op, so the evaluator evaluates this very circuit — a wrong
-    // circuit is NOT caught by model replay. Wider formats (F128) have no native
-    // oracle on stable Rust, and the `sconst` width bug showed width-specific
-    // faults are real, so their wide circuit stays `unsupported` (sound) until a
-    // software-float validation oracle exists.
-    if w > 128 && fmt != FloatFormat::F64 {
+    // intermediates that exceed `u128` (F64 needs 164 bits, F128 needs 344).
+    // There is no first-class FP op, so the evaluator evaluates this very
+    // circuit — a wrong circuit is NOT caught by model replay; the only assurance
+    // is differential validation against an independent oracle (ADR-0028). The
+    // wide path is therefore enabled only for formats with a validated sweep:
+    // F64 against native `f64::mul_add` (`symbolic_f64_fma_matches_native`) and
+    // F128 against `rustc_apfloat`'s `ieee::Quad` (`symbolic_f128_fma_matches_apfloat`).
+    // Other wide formats stay `unsupported` (sound) pending their own sweep.
+    if w > 128 && fmt != FloatFormat::F64 && fmt != FloatFormat::F128 {
         return Err(IrError::InvalidWidth(w));
     }
     let guard = sb + 2;
@@ -4155,6 +4173,158 @@ mod fma_f64_const_tests {
         };
         for _ in 0..3000 {
             check(&arena, next(&mut state), next(&mut state), next(&mut state));
+        }
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::many_single_char_names)]
+mod fma_f128_apfloat_tests {
+    use super::*;
+    use axeyum_ir::{Assignment, Value, eval};
+    use rustc_apfloat::{Float, Round, ieee::Quad};
+
+    // F128 field layout: sign at bit 127, 15-bit exponent at bits 112..=126,
+    // 112-bit trailing significand at bits 0..=111.
+    const EXP_SHIFT: u32 = 112;
+    const MANT_MASK: u128 = (1u128 << 112) - 1;
+    const EXP_ONES: u128 = 0x7FFF;
+
+    fn f128(sign: bool, exp: u32, mant: u128) -> u128 {
+        (u128::from(sign) << 127) | (u128::from(exp) << EXP_SHIFT) | (mant & MANT_MASK)
+    }
+
+    fn is_f128_nan(bits: u128) -> bool {
+        ((bits >> EXP_SHIFT) & EXP_ONES) == EXP_ONES && (bits & MANT_MASK) != 0
+    }
+
+    /// A battery of F128 corner bit-patterns: signed zeros, ±1, 2.0, 0.5,
+    /// ±inf, NaN, the smallest subnormal, and a generic finite value.
+    fn structured() -> [u128; 11] {
+        [
+            f128(false, 0, 0),               // +0
+            f128(true, 0, 0),                // -0
+            f128(false, 0x3FFF, 0),          // 1.0
+            f128(true, 0x3FFF, 0),           // -1.0
+            f128(false, 0x4000, 0),          // 2.0
+            f128(false, 0x3FFE, 0),          // 0.5
+            f128(false, 0x7FFF, 0), // +inf
+            f128(true, 0x7FFF, 0),  // -inf
+            f128(false, 0x7FFF, 1), // NaN
+            f128(false, 0, 1),               // smallest subnormal
+            f128(false, 0x4000, 0x1234_5678_9abc_def0), // a generic finite value
+        ]
+    }
+
+    /// Splits a 64-bit LCG state into a 128-bit pattern (full bit coverage,
+    /// including NaNs and infinities).
+    fn rng128(state: &mut u64) -> u128 {
+        let mut next = || {
+            *state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            *state
+        };
+        (u128::from(next()) << 64) | u128::from(next())
+    }
+
+    /// Validates an F128 binary op circuit against `rustc_apfloat`'s `Quad`
+    /// (RNE) over the structured battery plus 2000 random pairs.
+    fn validate_binop(
+        build: impl Fn(&mut TermArena, FloatFormat, TermId, TermId, RoundingMode) -> Result<TermId, IrError>,
+        oracle: impl Fn(Quad, Quad) -> Quad,
+        name: &str,
+    ) {
+        let mut arena = TermArena::new();
+        let sx = arena.declare("a", Sort::BitVec(128)).unwrap();
+        let sy = arena.declare("b", Sort::BitVec(128)).unwrap();
+        let (x, y) = (arena.var(sx), arena.var(sy));
+        let t = build(&mut arena, FloatFormat::F128, x, y, RoundingMode::NearestEven).unwrap();
+        let check = |arena: &TermArena, xb: u128, yb: u128| {
+            let mut asg = Assignment::new();
+            asg.set(sx, Value::Bv { width: 128, value: xb });
+            asg.set(sy, Value::Bv { width: 128, value: yb });
+            let got = match eval(arena, t, &asg).unwrap() {
+                Value::Bv { value, .. } => value,
+                other => panic!("{other:?}"),
+            };
+            let want = oracle(Quad::from_bits(xb), Quad::from_bits(yb)).to_bits();
+            if Quad::from_bits(want).is_nan() {
+                assert!(is_f128_nan(got), "{name}({xb:#x},{yb:#x}) want NaN, got {got:#x}");
+            } else {
+                assert_eq!(got, want, "{name}({xb:#x},{yb:#x})");
+            }
+        };
+        let s = structured();
+        for &xb in &s {
+            for &yb in &s {
+                check(&arena, xb, yb);
+            }
+        }
+        let mut state: u64 = 0x9e37_79b9_7f4a_7c15;
+        for _ in 0..2000 {
+            check(&arena, rng128(&mut state), rng128(&mut state));
+        }
+    }
+
+    #[test]
+    fn symbolic_f128_add_matches_apfloat() {
+        validate_binop(add, |a, b| a.add_r(b, Round::NearestTiesToEven).value, "add");
+    }
+
+    #[test]
+    fn symbolic_f128_mul_matches_apfloat() {
+        validate_binop(mul, |a, b| a.mul_r(b, Round::NearestTiesToEven).value, "mul");
+    }
+
+    #[test]
+    fn symbolic_f128_div_matches_apfloat() {
+        validate_binop(div, |a, b| a.div_r(b, Round::NearestTiesToEven).value, "div");
+    }
+
+    #[test]
+    fn symbolic_f128_fma_matches_apfloat() {
+        // Symbolic F128 operands force the 344-bit wide circuit (no constant
+        // fold). It must equal `rustc_apfloat`'s correctly-rounded quad fma
+        // (ADR-0028) — there is no native `f128` on stable Rust. This validates
+        // the wide path at the widest standard format.
+        let mut arena = TermArena::new();
+        let sx = arena.declare("qx", Sort::BitVec(128)).unwrap();
+        let sy = arena.declare("qy", Sort::BitVec(128)).unwrap();
+        let sz = arena.declare("qz", Sort::BitVec(128)).unwrap();
+        let (x, y, z) = (arena.var(sx), arena.var(sy), arena.var(sz));
+        let t = fma(&mut arena, FloatFormat::F128, x, y, z, RoundingMode::NearestEven).unwrap();
+        let check = |arena: &TermArena, xb: u128, yb: u128, zb: u128| {
+            let mut asg = Assignment::new();
+            asg.set(sx, Value::Bv { width: 128, value: xb });
+            asg.set(sy, Value::Bv { width: 128, value: yb });
+            asg.set(sz, Value::Bv { width: 128, value: zb });
+            let got = match eval(arena, t, &asg).unwrap() {
+                Value::Bv { value, .. } => value,
+                other => panic!("{other:?}"),
+            };
+            let want = Quad::from_bits(xb)
+                .mul_add_r(Quad::from_bits(yb), Quad::from_bits(zb), Round::NearestTiesToEven)
+                .value
+                .to_bits();
+            if Quad::from_bits(want).is_nan() {
+                assert!(is_f128_nan(got), "fma({xb:#x},{yb:#x},{zb:#x}) want NaN, got {got:#x}");
+            } else {
+                assert_eq!(got, want, "fma({xb:#x},{yb:#x},{zb:#x})");
+            }
+        };
+        let s = structured();
+        for &xb in &s {
+            for &yb in &s {
+                for &zb in &s {
+                    check(&arena, xb, yb, zb);
+                }
+            }
+        }
+        // Randomized 128-bit patterns (full bit-pattern coverage incl. NaNs/inf).
+        let mut state: u64 = 0xc0ff_ee00_d15e_a5e5;
+        for _ in 0..2000 {
+            check(&arena, rng128(&mut state), rng128(&mut state), rng128(&mut state));
         }
     }
 }
