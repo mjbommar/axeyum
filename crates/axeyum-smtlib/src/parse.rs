@@ -1122,6 +1122,35 @@ fn string_at_const(arena: &mut TermArena, s: TermId, k: i128) -> Result<TermId, 
     arena.concat(content, rlen).map_err(SmtError::Ir)
 }
 
+/// `str.++` over **constant** strings: concatenate their bytes and pack the
+/// result (a literal of the true total length, so no width-growth/equality
+/// issue). Variable concatenation grows the bound and needs the typed-result
+/// front end (ADR-0029) — a clean `Unsupported`. An over-bound result is also
+/// `Unsupported` (handled by [`pack_string_literal`]).
+fn string_concat_const(arena: &mut TermArena, args: &[TermId]) -> Result<Vec<u8>, SmtError> {
+    let mut bytes: Vec<u8> = Vec::new();
+    for &arg in args {
+        let (len, content) = match arena.node(arg) {
+            TermNode::BvConst { width, value } if *width == STRING_TOTAL => {
+                let len = usize::try_from(*value & ((1u128 << STRING_LEN_WIDTH) - 1))
+                    .expect("length fits usize");
+                (len, *value >> STRING_LEN_WIDTH)
+            }
+            _ => {
+                return Err(SmtError::Unsupported(
+                    "str.++ is supported only for constant strings; variable concatenation \
+                     needs the typed-result front end (ADR-0029)"
+                        .to_owned(),
+                ));
+            }
+        };
+        for i in 0..len {
+            bytes.push(u8::try_from((content >> (8 * i)) & 0xff).expect("byte fits u8"));
+        }
+    }
+    Ok(bytes)
+}
+
 /// The canonical well-formedness constraint for a packed string `v`: its length
 /// is `≤ STRING_MAX_LEN`, and every content byte at or above the length is zero.
 fn string_wellformed(arena: &mut TermArena, v: TermId) -> Result<TermId, SmtError> {
@@ -1599,6 +1628,11 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
                 }
             };
             string_at_const(arena, args[0], k)?
+        }
+        // `str.++` over constant strings folds to a literal (ADR-0029).
+        "str.concat" | "str.++" => {
+            let bytes = string_concat_const(arena, args)?;
+            pack_string_literal(arena, &bytes)?
         }
         "and" => fold(arena, TermArena::and)?,
         "or" => fold(arena, TermArena::or)?,

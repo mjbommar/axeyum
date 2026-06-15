@@ -896,3 +896,40 @@ fn decides_str_at_constant_index() {
         CheckResult::Sat(_)
     ));
 }
+
+/// `str.++` over constant strings folds to a literal (ADR-0029): s == "foo"++"bar"
+/// is sat with s=="foobar"; an over-bound concat is a clean error.
+#[test]
+fn decides_str_concat_of_constants() {
+    assert!(matches!(
+        run("\
+(declare-const s String)
+(assert (= s (str.++ \"foo\" \"bar\")))
+(check-sat)
+")
+        .result,
+        CheckResult::Sat(_)
+    ));
+    // The folded "foobar" really equals the literal: contains "oob".
+    assert!(matches!(
+        run("\
+(declare-const s String)
+(assert (= s (str.++ \"foo\" \"bar\")))
+(assert (str.contains s \"oob\"))
+(check-sat)
+")
+        .result,
+        CheckResult::Sat(_)
+    ));
+    // Wrong concat result is unsat.
+    assert_eq!(
+        run("\
+(declare-const s String)
+(assert (= s (str.++ \"foo\" \"bar\")))
+(assert (= s \"foobaz\"))
+(check-sat)
+")
+        .result,
+        CheckResult::Unsat
+    );
+}
