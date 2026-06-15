@@ -111,7 +111,9 @@ pub use optimize::{
     minimize_lia,
 };
 pub use pb::{pb_eq, pb_ge, pb_le};
-pub use proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};
+pub use proof::{
+    UnsatProof, UnsatProofOutcome, export_qf_abv_unsat_proof, export_qf_bv_unsat_proof,
+};
 pub use records::{RecordError, RecordSort};
 pub use sat_bv_backend::SatBvBackend;
 pub use smtlib::{

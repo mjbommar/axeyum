@@ -19,6 +19,7 @@ use axeyum_cnf::{
     ProofSolveOutcome, check_drat, solve_with_drat_proof, tseitin_encode, write_drat,
 };
 use axeyum_ir::{Sort, TermArena, TermId};
+use axeyum_rewrite::{ArrayElimError, eliminate_arrays};
 
 use crate::backend::SolverError;
 
@@ -101,4 +102,37 @@ pub fn export_qf_bv_unsat_proof(
             ))),
         },
     }
+}
+
+/// Like [`export_qf_bv_unsat_proof`] but for **`QF_ABV`** (arrays): eagerly
+/// eliminates `select`/`store` to `QF_BV` (read-over-write + Ackermann,
+/// ADR-0010), then exports the DRAT-checked certificate of the eliminated query.
+///
+/// The returned `(dimacs, drat)` is an externally-checkable (`drat-trim`) proof
+/// that the *array-eliminated* CNF is `unsat`. The original `QF_ABV` query is
+/// then `unsat` by the soundness of the elimination (an
+/// equisatisfiability-preserving transform, ADR-0010 — the same one the
+/// validated `check_with_array_elimination` solve path uses, and which a `sat`
+/// model independently replays through). So the assurance is: **machine-checked
+/// at the clausal layer, modulo the trusted (and replay-validatable) array
+/// elimination** — strictly stronger than a bare uncertified `unsat`. Certifying
+/// the elimination step itself is future SMT-level proof work.
+///
+/// Takes `&mut` arena because elimination introduces terms.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] for constructs outside `QF_ABV`,
+/// [`SolverError::NonBooleanAssertion`], or [`SolverError::Backend`] on an
+/// encoding failure or a proof that fails to check.
+pub fn export_qf_abv_unsat_proof(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<UnsatProofOutcome, SolverError> {
+    let elimination = eliminate_arrays(arena, assertions).map_err(|error| match error {
+        ArrayElimError::Unsupported(what) => SolverError::Unsupported(what),
+        ArrayElimError::Ir(inner) => SolverError::Backend(inner.to_string()),
+    })?;
+    let eliminated = elimination.assertions().to_vec();
+    export_qf_bv_unsat_proof(arena, &eliminated)
 }

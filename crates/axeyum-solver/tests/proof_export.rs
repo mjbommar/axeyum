@@ -56,3 +56,47 @@ fn non_bitblastable_query_is_unsupported() {
     let eq = arena.eq(n, one).unwrap();
     assert!(export_qf_bv_unsat_proof(&arena, &[eq]).is_err());
 }
+
+#[test]
+fn qf_abv_unsat_exports_a_recheckable_certificate() {
+    // Read-over-write: with i == j, select(store(mem,i,v),j) == v, so demanding
+    // it differ is unsat. The array-eliminated CNF's DRAT refutation is exported
+    // and independently re-checked — a checkable certificate for the array
+    // fragment (modulo the trusted, replay-validatable elimination).
+    use axeyum_ir::Sort;
+    use axeyum_solver::export_qf_abv_unsat_proof;
+
+    let mut arena = TermArena::new();
+    let mem = arena
+        .declare(
+            "mem",
+            Sort::Array {
+                index: 4,
+                element: 4,
+            },
+        )
+        .unwrap();
+    let mem_v = arena.var(mem);
+    let is = arena.declare("i", Sort::BitVec(4)).unwrap();
+    let js = arena.declare("j", Sort::BitVec(4)).unwrap();
+    let vs = arena.declare("v", Sort::BitVec(4)).unwrap();
+    let (i, j, v) = (arena.var(is), arena.var(js), arena.var(vs));
+    let stored = arena.store(mem_v, i, v).unwrap();
+    let loaded = arena.select(stored, j).unwrap();
+    let i_eq_j = arena.eq(i, j).unwrap();
+    let load_ne_v = {
+        let eq = arena.eq(loaded, v).unwrap();
+        arena.not(eq).unwrap()
+    };
+
+    let outcome = export_qf_abv_unsat_proof(&mut arena, &[i_eq_j, load_ne_v]).unwrap();
+    let UnsatProofOutcome::Proved(proof) = outcome else {
+        panic!("expected an unsat certificate, got {outcome:?}");
+    };
+    let formula = parse_dimacs(&proof.dimacs).expect("exported DIMACS re-parses");
+    let steps = parse_drat(&proof.drat).expect("exported DRAT re-parses");
+    assert!(
+        check_drat(&formula, &steps).expect("re-check runs"),
+        "exported DRAT must refute the array-eliminated CNF"
+    );
+}

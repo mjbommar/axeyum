@@ -104,7 +104,8 @@ pub const CAPABILITIES: &[Capability] = &[
         area: "QF_ABV",
         feature: "arrays via eager read-over-write + Ackermann elimination",
         assurance: Assurance::Validated,
-        evidence: "reduction to QF_BV; model replay",
+        evidence: "reduction to QF_BV; model replay; UNSAT exportable as a re-checkable \
+                   DRAT certificate (clausal layer, modulo trusted elimination)",
         reference: "ADR-0010",
     },
     Capability {
