@@ -24,6 +24,7 @@ repos=(
   https://github.com/ufmg-smite/lean-smt
   https://github.com/ammkrn/nanoda_lib
   # C/C++ solver design references
+  https://github.com/Z3Prover/z3
   https://github.com/arminbiere/cadical
   https://github.com/arminbiere/kissat
   https://github.com/bitwuzla/bitwuzla
