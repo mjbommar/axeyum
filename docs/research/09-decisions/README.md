@@ -81,3 +81,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0025](adr-0025-bounded-strings-bv-lowering.md) | Bounded-length strings by bit-vector lowering (BMC fragment) | accepted |
 | [0026](adr-0026-first-class-float-sort.md) | First-class floating-point sort in the IR (disambiguates FP conversions) | accepted |
 | [0027](adr-0027-milp-branch-and-bound.md) | Mixed integer/real arithmetic by branch-and-bound over the Farkas-checked LRA engine | accepted |
+| [0028](adr-0028-fp-arithmetic-validation-oracle.md) | A software-float oracle (`rustc_apfloat`) for validating wide-format FP arithmetic | proposed |
