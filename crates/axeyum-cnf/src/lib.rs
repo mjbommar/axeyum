@@ -18,9 +18,11 @@ use web_time::Instant;
 
 mod drat;
 mod proof_sat;
+mod simplify;
 
 pub use drat::{DratError, DratStep, check_drat, parse_drat, write_drat};
 pub use proof_sat::{ProofSolveOutcome, solve_with_drat_proof};
+pub use simplify::{SubsumeStats, simplify};
 
 use rustsat::{
     solvers::{Solve, SolveIncremental, SolverResult as RustSatSolverResult},

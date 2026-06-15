@@ -13,11 +13,16 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   levels, per-result `trusted_steps` on `EvidenceReport`, golden-tested
   [trust-ledger.md](docs/research/08-planning/trust-ledger.md) (5 of 11
   reductions are trust holes), ADR-0031. The trusted base is now countable.
+- **T1.1.1 forward subsumption — DONE (correctness)** (2026-06-15): `axeyum_cnf::simplify`
+  does model-preserving tautology removal + forward subsumption + one round of
+  self-subsuming resolution, with 7 tests (brute-force model-equivalence,
+  clause-count drop, SAT-equivalence + DRAT-still-checks). The DRAT-pipeline
+  integration (emitting deletion steps inside the proof-producing solve) and the
+  measured perf delta ride the next steps / P4.5.
 - **Next task to start:** Track 4 →
   [P4.5 benchmarking](docs/plan/track-4-usecases-frontend/P4.5-benchmarking.md)
-  (the measured Z3 head-to-head harness that gates Track 1), then Track 1 →
-  [P1.1 SAT inprocessing](docs/plan/track-1-engine/P1.1-sat-inprocessing.md) task
-  **T1.1.1 forward subsumption** (toward the highest-leverage perf win, BVE).
+  (the measured Z3 head-to-head that gates Track 1 and quantifies T1.1.1's impact),
+  then T1.1.2 **bounded variable elimination** — the highest-leverage SAT win.
 
 ## Already shipped this session (pre-plan)
 
@@ -36,7 +41,7 @@ plan is built and committed on the current branch:
 ### Track 1 — Engine & Performance
 | Phase | Title | Status |
 |---|---|---|
-| P1.1 | SAT inprocessing (subsumption → BVE → vivification → glue tiers) | TODO |
+| P1.1 | SAT inprocessing (subsumption → BVE → vivification → glue tiers) | WIP — T1.1.1 subsumption pass landed |
 | P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | TODO |
 | P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | TODO |
 | P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | TODO |
@@ -91,3 +96,7 @@ plan is built and committed on the current branch:
   `docs/research/08-planning/trust-ledger.md`; 4 per-result tests; ADR-0031.
   Trusted base is now countable: 5 trust holes (array-elim, ackermann, int-blast,
   datatype-elim, fpa2bv) — the targets for Track 3 P3.5.
+- **2026-06-15** — **T1.1.1 subsumption pass.** New `axeyum_cnf::simplify`
+  (`SubsumeStats`): model-preserving tautology removal + forward subsumption (64-bit
+  signature fast-reject) + self-subsuming resolution; 7 tests incl. brute-force
+  equivalence and SAT/DRAT preservation. P1.1 → WIP.
