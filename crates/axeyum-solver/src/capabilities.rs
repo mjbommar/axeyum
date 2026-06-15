@@ -169,9 +169,10 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "QF_S (strings)",
-        feature: "bounded-length strings + regex (BV-lowered) — API only, not SMT-LIB-wired",
+        feature: "bounded strings + regex (BV-lowered); SMT-LIB front end wired for the \
+                  equality fragment (declare/literal/=/distinct), full str.* via API only",
         assurance: Assurance::Experimental,
-        evidence: "model replay through BV path; length bound explicit (≤16)",
+        evidence: "model replay through BV path; canonical-padding equality; length bound explicit",
         reference: "ADR-0025/0029",
     },
     Capability {

@@ -328,6 +328,18 @@ fn parse_declare_datatypes(script: &mut Script, items: &[SExpr]) -> Result<(), S
 fn parse_declare_const(script: &mut Script, items: &[SExpr]) -> Result<(), SmtError> {
     exact_len(items, 3, "declare-const")?;
     let name = atom_at(items, 1)?;
+    // String front-end (ADR-0029, first slice): a String constant is a packed
+    // bit-vector plus its canonical well-formedness constraint, asserted in both
+    // the flat and incremental views so equality/disequality decide via the BV path.
+    if sexpr_at(items, 2)?.atom() == Some("String") {
+        let sym = script.arena.declare(name, Sort::BitVec(STRING_TOTAL))?;
+        let v = script.arena.var(sym);
+        let wf = string_wellformed(&mut script.arena, v)?;
+        script.assertions.push(wf);
+        script.assertion_names.push(None);
+        script.commands.push(ScriptCommand::Assert(wf));
+        return Ok(());
+    }
     let sort = parse_sort(&script.arena, sexpr_at(items, 2)?)?;
     script.arena.declare(name, sort)?;
     Ok(())
@@ -949,6 +961,60 @@ fn bind_let_scope<'a>(
     scopes.push(scope);
 }
 
+// --- bounded string front-end (ADR-0029, first slice) ------------------------
+//
+// A `String` is represented as one bit-vector packing a length in the low
+// `STRING_LEN_WIDTH` bits and up to `STRING_MAX_LEN` content bytes above it
+// (byte `i` at bits `[LEN_WIDTH + 8i, +8)`). String variables carry a
+// canonical well-formedness constraint (length ≤ max; padding bytes zero), so
+// two equal strings share exactly one bit pattern and `=` / `distinct` over
+// strings are decided as plain bit-vector equality / inequality through the
+// existing BV path — no operator-dispatch changes. This is the bounded-model
+// fragment; `str.*` operations and lengths beyond the bound are future slices.
+
+/// Maximum bounded string length in bytes.
+const STRING_MAX_LEN: u32 = 8;
+/// Bits holding a length in `0..=STRING_MAX_LEN`.
+const STRING_LEN_WIDTH: u32 = 4;
+/// Total packed width: length bits plus `STRING_MAX_LEN` content bytes.
+const STRING_TOTAL: u32 = STRING_LEN_WIDTH + STRING_MAX_LEN * 8;
+
+/// Packs a string literal's bytes into the canonical bit-vector representation
+/// (length low, content above, padding zero). Errors if it exceeds the bound.
+fn pack_string_literal(arena: &mut TermArena, bytes: &[u8]) -> Result<TermId, SmtError> {
+    if bytes.len() > STRING_MAX_LEN as usize {
+        return Err(SmtError::Unsupported(format!(
+            "string literal longer than the bounded length {STRING_MAX_LEN} (ADR-0029)"
+        )));
+    }
+    let mut content: u128 = 0;
+    for (i, &b) in bytes.iter().enumerate() {
+        content |= u128::from(b) << (8 * i);
+    }
+    let packed = u128::from(u32::try_from(bytes.len()).expect("len ≤ STRING_MAX_LEN"))
+        | (content << STRING_LEN_WIDTH);
+    arena.bv_const(STRING_TOTAL, packed).map_err(SmtError::Ir)
+}
+
+/// The canonical well-formedness constraint for a packed string `v`: its length
+/// is `≤ STRING_MAX_LEN`, and every content byte at or above the length is zero.
+fn string_wellformed(arena: &mut TermArena, v: TermId) -> Result<TermId, SmtError> {
+    let len = arena.extract(STRING_LEN_WIDTH - 1, 0, v)?;
+    let max = arena.bv_const(STRING_LEN_WIDTH, u128::from(STRING_MAX_LEN))?;
+    let mut wf = arena.bv_ule(len, max)?;
+    let zero8 = arena.bv_const(8, 0)?;
+    for i in 0..STRING_MAX_LEN {
+        let lo = STRING_LEN_WIDTH + i * 8;
+        let byte = arena.extract(lo + 7, lo, v)?;
+        let byte_zero = arena.eq(byte, zero8)?;
+        let idx = arena.bv_const(STRING_LEN_WIDTH, u128::from(i))?;
+        let active = arena.bv_ult(idx, len)?;
+        let ok = arena.or(active, byte_zero)?;
+        wf = arena.and(wf, ok)?;
+    }
+    Ok(wf)
+}
+
 fn parse_atom(
     arena: &mut TermArena,
     a: &str,
@@ -982,6 +1048,13 @@ fn parse_atom(
                 .map_err(|_| SmtError::Syntax("literal too wide".to_owned()))?,
             value,
         )?);
+    }
+    // SMT-LIB string literal `"..."` (the lexer keeps the surrounding quotes;
+    // a doubled `""` escapes one quote). Pack into the canonical bit-vector.
+    if a.len() >= 2 && a.starts_with('"') && a.ends_with('"') {
+        let inner = &a[1..a.len() - 1];
+        let unescaped = inner.replace("\"\"", "\"");
+        return pack_string_literal(arena, unescaped.as_bytes());
     }
     if let Some(&t) = aliases.get(a) {
         return Ok(t);

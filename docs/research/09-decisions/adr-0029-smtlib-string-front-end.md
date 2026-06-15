@@ -1,6 +1,6 @@
 # ADR-0029: SMT-LIB string front-end over the bounded-string BV lowering
 
-Status: proposed
+Status: accepted (equality slice implemented 2026-06-14; full str.* front end deferred)
 Date: 2026-06-14
 
 ## Context
@@ -79,6 +79,28 @@ CBMC/Kani use): strings up to `max_len` decide soundly; longer ones are
   the one parser, not a sibling.
 - **Keep strings API-only.** Rejected: it blocks text-level QF_S parity testing,
   the whole point of the front door.
+
+## Implementation status
+
+First slice landed 2026-06-14 — the **string-equality fragment**, with a simpler
+representation than the `Parsed = Term | Str` plan: a `String` is a single packed
+bit-vector (length in the low bits, content above) with a **canonical
+well-formedness constraint** (padding bytes forced zero) asserted at
+`declare-const`. Because padding is canonical, two equal strings share one bit
+pattern, so `=` / `distinct` / `not` over strings decide as plain bit-vector
+(in)equality through the existing path — **no operator-dispatch / `Parsed` change
+needed for equality**. `parse_sort` recognizes `String`/`Seq`; `"..."` literals
+pack to constants; bound is `STRING_MAX_LEN = 8` bytes (over-length literals are a
+clean `Unsupported`). Tested end-to-end through `solve_smtlib`
+(`decides_string_equality_sat`/`_unsat`, `decides_string_disequality_sat`).
+
+**Deferred (the `Parsed = Term | Str` refactor still applies):** `str.len`
+(returns `Int` — needs a BV→Int bridge), `str.++`/`substr`/`replace` (string
+*results*, which compose and need the typed result), `str.contains`/`prefixof`/
+`suffixof`/`in_re` (would dispatch to `BoundedString`), `get-value` decoding back
+to a string, and a larger/configurable bound. The equality slice proves the
+single-packed-BV representation end to end and is useful on its own
+(configuration/matching-style string-equality constraints).
 
 ## Consequences
 

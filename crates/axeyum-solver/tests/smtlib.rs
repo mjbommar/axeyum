@@ -642,3 +642,61 @@ fn lexicographic_optimization_differs_from_boxed() {
         "box"
     );
 }
+
+/// First slice of the SMT-LIB string front end (ADR-0029): a bounded `String`
+/// is a packed bit-vector with a canonical well-formedness constraint, so string
+/// equality decides through the bit-vector path. Find s with s == "ab" -> sat.
+#[test]
+fn decides_string_equality_sat() {
+    let text = "\
+(set-info :status sat)
+(declare-const s String)
+(assert (= s \"ab\"))
+(check-sat)
+";
+    let outcome = run(text);
+    assert!(
+        matches!(outcome.result, CheckResult::Sat(_)),
+        "s == \"ab\" must be sat, got {:?}",
+        outcome.result
+    );
+}
+
+/// Conflicting string equalities are unsat (s cannot be both "ab" and "ac").
+#[test]
+fn decides_string_equality_unsat() {
+    let text = "\
+(set-info :status unsat)
+(declare-const s String)
+(assert (= s \"ab\"))
+(assert (= s \"ac\"))
+(check-sat)
+";
+    let outcome = run(text);
+    assert_eq!(
+        outcome.result,
+        CheckResult::Unsat,
+        "s == \"ab\" ∧ s == \"ac\" must be unsat"
+    );
+}
+
+/// String disequality is sound through the canonical packing: with s == "ab" and
+/// s != t, a distinct t exists -> sat (the canonical-padding wf makes BV
+/// disequality coincide with string disequality).
+#[test]
+fn decides_string_disequality_sat() {
+    let text = "\
+(set-info :status sat)
+(declare-const s String)
+(declare-const t String)
+(assert (= s \"ab\"))
+(assert (not (= s t)))
+(check-sat)
+";
+    let outcome = run(text);
+    assert!(
+        matches!(outcome.result, CheckResult::Sat(_)),
+        "s==\"ab\" ∧ s!=t must be sat, got {:?}",
+        outcome.result
+    );
+}

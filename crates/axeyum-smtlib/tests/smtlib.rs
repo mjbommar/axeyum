@@ -1004,17 +1004,27 @@ fn float128_nonarithmetic_ops_decide() {
 }
 
 #[test]
-fn string_sort_is_a_clear_unsupported_not_a_cryptic_error() {
-    // The string theory is scoped (ADR-0029) but not yet wired into the parser;
-    // declaring a String must fail with an actionable Unsupported, not a generic
-    // "unknown sort" or a panic.
-    let err = parse_script("(declare-const s String)\n(check-sat)\n")
-        .expect_err("String sort is not yet front-end-wired");
+fn string_const_and_literal_parse_into_packed_bitvectors() {
+    // First slice of the string front end (ADR-0029): a String constant parses
+    // (a packed bit-vector with a canonical well-formedness assertion) and a
+    // string literal parses into a constant; `(= s "ab")` is a Bool assertion.
+    let script = parse_script("(declare-const s String)\n(assert (= s \"ab\"))\n(check-sat)\n")
+        .expect("String const + literal should parse");
+    // The declare injects one well-formedness assertion; the assert adds another.
+    assert_eq!(script.assertions.len(), 2, "wf constraint + the equality");
+}
+
+#[test]
+fn string_sort_in_unsupported_context_is_a_clear_error() {
+    // Outside the wired const slice (e.g. a String-returning function), String is
+    // still a clean, actionable Unsupported rather than a cryptic "unknown sort".
+    let err = parse_script("(declare-fun f () String)\n(check-sat)\n")
+        .expect_err("String return sort is not yet front-end-wired");
     let SmtError::Unsupported(msg) = err else {
         panic!("expected Unsupported for the String sort, got {err:?}");
     };
     assert!(
         msg.contains("String") && msg.contains("ADR-0025/0029"),
-        "the message should name the sort and point to the ADR: {msg}"
+        "actionable msg: {msg}"
     );
 }
