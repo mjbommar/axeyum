@@ -84,3 +84,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0028](adr-0028-fp-arithmetic-validation-oracle.md) | A software-float oracle (`rustc_apfloat`) for validating wide-format FP arithmetic | accepted |
 | [0029](adr-0029-smtlib-string-front-end.md) | SMT-LIB string front-end over the bounded-string BV lowering (equality slice done; full str.* deferred) | accepted |
 | [0030](adr-0030-incremental-lazy-arrays.md) | Incremental arrays for symbolic memory (eager-route slice done; warm lazy deferred) | accepted |
+| [0031](adr-0031-reduction-trust-ledger.md) | Reduction trust ledger (typed, countable trust holes) | accepted |

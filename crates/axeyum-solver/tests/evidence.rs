@@ -5,9 +5,14 @@ use std::time::Duration;
 
 use axeyum_ir::{Sort, TermArena};
 use axeyum_solver::{
-    Evidence, SolverConfig, produce_evidence, produce_lra_dpll_evidence, produce_lra_evidence,
-    produce_qf_bv_evidence,
+    Evidence, EvidenceReport, SolverConfig, TrustId, produce_evidence, produce_lra_dpll_evidence,
+    produce_lra_evidence, produce_qf_bv_evidence,
 };
+
+/// The trust-step ids a report depends on (P3.0).
+fn step_ids(report: &EvidenceReport) -> Vec<TrustId> {
+    report.trusted_steps.iter().map(|s| s.id).collect()
+}
 
 fn config() -> SolverConfig {
     SolverConfig::new().with_timeout(Duration::from_secs(30))
@@ -344,4 +349,119 @@ fn produce_evidence_certifies_qf_abv_unsat() {
     );
     // The attached certificate re-validates independently.
     assert!(report.evidence.check(&arena, &[i_eq_j, load_ne_v]).unwrap());
+}
+
+// ----- P3.0 trust-ledger: per-result trust steps ----------------------------
+
+#[test]
+fn qf_bv_drat_unsat_reports_bitblast_tseitin_sat_steps() {
+    // The DRAT route (24-bit, too large to enumerate) depends on bit-blast +
+    // Tseitin + the SAT refutation — and on no theory reduction.
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 24).unwrap();
+    let one = arena.bv_const(24, 1).unwrap();
+    let zero = arena.bv_const(24, 0).unwrap();
+    let masked = arena.bv_and(x, one).unwrap();
+    let is_one = arena.eq(masked, one).unwrap();
+    let is_zero = arena.eq(masked, zero).unwrap();
+    let assertions = [is_one, is_zero];
+
+    let report = produce_qf_bv_evidence(&arena, &assertions, &config()).unwrap();
+    let ids = step_ids(&report);
+    assert!(ids.contains(&TrustId::BitBlast), "got {ids:?}");
+    assert!(ids.contains(&TrustId::Tseitin), "got {ids:?}");
+    assert!(ids.contains(&TrustId::SatRefutation), "got {ids:?}");
+    assert!(
+        !ids.contains(&TrustId::ArrayElim),
+        "no array reduction here"
+    );
+    // Tseitin + SAT refutation are certified this run; bit-blast is recorded but
+    // not miter-certified on the plain DRAT route.
+    let tseitin = report
+        .trusted_steps
+        .iter()
+        .find(|s| s.id == TrustId::Tseitin)
+        .unwrap();
+    assert!(tseitin.certified);
+    let bitblast = report
+        .trusted_steps
+        .iter()
+        .find(|s| s.id == TrustId::BitBlast)
+        .unwrap();
+    assert!(!bitblast.certified);
+}
+
+#[test]
+fn small_qf_bv_unsat_reports_only_term_level_step() {
+    // The term-level route (4-bit) trusts only the evaluator — exactly one step.
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 4).unwrap();
+    let one = arena.bv_const(4, 1).unwrap();
+    let zero = arena.bv_const(4, 0).unwrap();
+    let masked = arena.bv_and(x, one).unwrap();
+    let is_one = arena.eq(masked, one).unwrap();
+    let is_zero = arena.eq(masked, zero).unwrap();
+    let assertions = [is_one, is_zero];
+
+    let report = produce_qf_bv_evidence(&arena, &assertions, &config()).unwrap();
+    assert_eq!(step_ids(&report), vec![TrustId::TermLevelEnum]);
+    assert!(report.trusted_steps.iter().all(|s| s.certified));
+}
+
+#[test]
+fn qf_abv_unsat_reports_array_elim_trust_hole() {
+    // The array reduction is a recorded trust hole; bit-blast is also recorded.
+    let mut arena = TermArena::new();
+    let mem = arena
+        .declare(
+            "mem",
+            Sort::Array {
+                index: 4,
+                element: 4,
+            },
+        )
+        .unwrap();
+    let mem_v = arena.var(mem);
+    let is = arena.declare("i", Sort::BitVec(4)).unwrap();
+    let js = arena.declare("j", Sort::BitVec(4)).unwrap();
+    let vs = arena.declare("v", Sort::BitVec(4)).unwrap();
+    let (i, j, v) = (arena.var(is), arena.var(js), arena.var(vs));
+    let stored = arena.store(mem_v, i, v).unwrap();
+    let loaded = arena.select(stored, j).unwrap();
+    let i_eq_j = arena.eq(i, j).unwrap();
+    let load_ne_v = {
+        let eq = arena.eq(loaded, v).unwrap();
+        arena.not(eq).unwrap()
+    };
+
+    let report = produce_evidence(&mut arena, &[i_eq_j, load_ne_v], &config()).unwrap();
+    let ids = step_ids(&report);
+    assert!(ids.contains(&TrustId::ArrayElim), "got {ids:?}");
+    assert!(ids.contains(&TrustId::BitBlast), "got {ids:?}");
+    let array_step = report
+        .trusted_steps
+        .iter()
+        .find(|s| s.id == TrustId::ArrayElim)
+        .unwrap();
+    assert!(!array_step.certified, "array-elim is a trust hole");
+}
+
+#[test]
+fn qf_lra_unsat_reports_no_bitblast() {
+    // The Farkas route carries no bit-blast / Tseitin trust — only the certified
+    // Farkas refutation.
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let zero = arena.real_ratio(0, 1);
+    let one = arena.real_ratio(1, 1);
+    let ge_one = arena.real_ge(x, one).unwrap();
+    let le_zero = arena.real_le(x, zero).unwrap();
+    let assertions = [ge_one, le_zero];
+
+    let report = produce_lra_evidence(&arena, &assertions).unwrap();
+    let ids = step_ids(&report);
+    assert!(!ids.contains(&TrustId::BitBlast), "got {ids:?}");
+    assert!(!ids.contains(&TrustId::Tseitin), "got {ids:?}");
+    assert!(ids.contains(&TrustId::Farkas), "got {ids:?}");
+    assert!(report.trusted_steps.iter().all(|s| s.certified));
 }

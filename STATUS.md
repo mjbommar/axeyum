@@ -6,16 +6,18 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
-- **Plan authored** (2026-06-15): the full track/phase/task plan is written under
+- **Plan authored** (2026-06-15): the full track/phase/task plan is under
   [`docs/plan/`](docs/plan/README.md), built from the five reference reviews in
   [`docs/plan/references/`](docs/plan/references/README.md).
-- **Next task to start:** Track 1 → [P1.1 SAT inprocessing](docs/plan/track-1-engine/P1.1-sat-inprocessing.md),
-  task **T1.1.1 forward subsumption** (smallest first step toward the
-  highest-leverage performance win, BVE), run in parallel with Track 3 →
-  [P3.0 trust ledger](docs/plan/track-3-proof-lean/P3.0-trust-ledger.md) (small,
-  unblocks the proof track) and Track 4 →
+- **P3.0 trust ledger — DONE** (2026-06-15): typed `TrustId` taxonomy + pedantic
+  levels, per-result `trusted_steps` on `EvidenceReport`, golden-tested
+  [trust-ledger.md](docs/research/08-planning/trust-ledger.md) (5 of 11
+  reductions are trust holes), ADR-0031. The trusted base is now countable.
+- **Next task to start:** Track 4 →
   [P4.5 benchmarking](docs/plan/track-4-usecases-frontend/P4.5-benchmarking.md)
-  (establish the measured Z3 head-to-head harness before tuning).
+  (the measured Z3 head-to-head harness that gates Track 1), then Track 1 →
+  [P1.1 SAT inprocessing](docs/plan/track-1-engine/P1.1-sat-inprocessing.md) task
+  **T1.1.1 forward subsumption** (toward the highest-leverage perf win, BVE).
 
 ## Already shipped this session (pre-plan)
 
@@ -59,7 +61,7 @@ plan is built and committed on the current branch:
 ### Track 3 — Proofs & Lean
 | Phase | Title | Status |
 |---|---|---|
-| P3.0 | Reduction trust ledger (TrustId + pedantic levels) | TODO |
+| P3.0 | Reduction trust ledger (TrustId + pedantic levels) | DONE |
 | P3.1 | LRAT clausal upgrade (+ in-tree check_lrat) | TODO |
 | P3.2 | Alethe term/proof IR + emitter (`axeyum-alethe`) **[critical path]** | TODO |
 | P3.3 | Alethe for QF_BV (bitblast_* + CNF rules + resolution/drat; Carcara CI) | TODO |
@@ -83,3 +85,9 @@ plan is built and committed on the current branch:
   Ran five Opus sub-agents over Z3 core, Z3 theories, bitwuzla+CaDiCaL/Kissat,
   proof/Lean, and an axeyum self-audit. Authored the end-to-end plan under
   `docs/plan/` with this STATUS tracker and the master `PLAN.md` index.
+- **2026-06-15** — **P3.0 done.** New `axeyum_solver::trust` module (`TrustId`,
+  `TrustStep`, `ALL_TRUST_IDS`, `trust_ledger_markdown`); `EvidenceReport.trusted_steps`
+  records per-result trust dependencies across all producers; golden test +
+  `docs/research/08-planning/trust-ledger.md`; 4 per-result tests; ADR-0031.
+  Trusted base is now countable: 5 trust holes (array-elim, ackermann, int-blast,
+  datatype-elim, fpa2bv) — the targets for Track 3 P3.5.

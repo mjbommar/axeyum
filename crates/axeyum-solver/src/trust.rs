@@ -1,0 +1,220 @@
+//! The reduction **trust ledger** (P3.0): every reduction the stack relies on is
+//! a named, countable [`TrustId`] with a pedantic level, mirroring cvc5's
+//! `TrustId`. This turns the implicit "checked **modulo trusted reduction**"
+//! caveat into an auditable list — the precondition for shrinking the trusted
+//! base to zero (Track 3 in `docs/plan/track-3-proof-lean/`).
+//!
+//! A reduction is **certified** when an independent per-query checker re-derives
+//! it (bit-blast via the exhaustive miter; Tseitin/SAT via DRAT; Farkas /
+//! lazy-SMT / term-level enumeration by their verifiers) and a **trust hole**
+//! when it is a sound (equi)satisfiability transform with no per-query
+//! certificate yet. A produced [`crate::EvidenceReport`] records the
+//! [`TrustStep`]s a given result depended on (with whether *this run* certified
+//! each), so a consumer can see exactly what it is trusting.
+//!
+//! [`ALL_TRUST_IDS`] is the canonical iteration order (source order, never
+//! hash-map order — determinism is a public promise). The rendered
+//! [`trust_ledger_markdown`] is golden-tested against
+//! `docs/research/08-planning/trust-ledger.md`, so the doc cannot drift.
+
+use core::fmt;
+use core::fmt::Write as _;
+
+/// A reduction the stack relies on, mirroring cvc5's `TrustId`. `Copy` + `Ord`
+/// so dependency sets are `BTreeSet`s with deterministic iteration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum TrustId {
+    /// Term → AIG bit-blasting (`axeyum-bv`).
+    BitBlast,
+    /// AIG → CNF Tseitin encoding (`axeyum-cnf`).
+    Tseitin,
+    /// CNF UNSAT from the CDCL core (DRAT-checked).
+    SatRefutation,
+    /// Arrays → BV by read-over-write + Ackermann (ADR-0010).
+    ArrayElim,
+    /// Uninterpreted-function applications → fresh vars + functional consistency (ADR-0013).
+    Ackermann,
+    /// Bounded integers → `BitVec` at a chosen width (ADR-0014).
+    IntBlast,
+    /// Datatype `select`/`is`/eq folded over constructors → BV (ADR-0022).
+    DatatypeElim,
+    /// Floating-point operators → BV circuits (ADR-0023).
+    Fpa2Bv,
+    /// Reduction-free exhaustive evaluation over the finite symbol domain.
+    TermLevelEnum,
+    /// Exact-rational Farkas refutation for `QF_LRA` (ADR-0015).
+    Farkas,
+    /// Lazy-SMT skeleton + Farkas-certified theory lemmas (ADR-0021).
+    LraDpll,
+}
+
+/// Every [`TrustId`] in canonical (stable) order — the iteration source of truth.
+pub const ALL_TRUST_IDS: &[TrustId] = &[
+    TrustId::BitBlast,
+    TrustId::Tseitin,
+    TrustId::SatRefutation,
+    TrustId::ArrayElim,
+    TrustId::Ackermann,
+    TrustId::IntBlast,
+    TrustId::DatatypeElim,
+    TrustId::Fpa2Bv,
+    TrustId::TermLevelEnum,
+    TrustId::Farkas,
+    TrustId::LraDpll,
+];
+
+impl TrustId {
+    /// Stable label used in the rendered ledger and provenance.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            TrustId::BitBlast => "bit-blast",
+            TrustId::Tseitin => "tseitin",
+            TrustId::SatRefutation => "sat-refutation",
+            TrustId::ArrayElim => "array-elim",
+            TrustId::Ackermann => "ackermann",
+            TrustId::IntBlast => "int-blast",
+            TrustId::DatatypeElim => "datatype-elim",
+            TrustId::Fpa2Bv => "fpa2bv",
+            TrustId::TermLevelEnum => "term-level-enum",
+            TrustId::Farkas => "farkas",
+            TrustId::LraDpll => "lra-dpll",
+        }
+    }
+
+    /// One-line meaning.
+    #[must_use]
+    pub const fn meaning(self) -> &'static str {
+        match self {
+            TrustId::BitBlast => "term \u{2192} AIG bit-blasting",
+            TrustId::Tseitin => "AIG \u{2192} CNF Tseitin encoding",
+            TrustId::SatRefutation => "CNF UNSAT from the CDCL core",
+            TrustId::ArrayElim => "arrays \u{2192} BV (read-over-write + Ackermann)",
+            TrustId::Ackermann => {
+                "uninterpreted functions \u{2192} fresh vars + functional consistency"
+            }
+            TrustId::IntBlast => "bounded integers \u{2192} BV at a chosen width",
+            TrustId::DatatypeElim => "datatypes folded over constructors \u{2192} BV",
+            TrustId::Fpa2Bv => "floating-point operators \u{2192} BV circuits",
+            TrustId::TermLevelEnum => "reduction-free exhaustive evaluation over the finite domain",
+            TrustId::Farkas => "exact-rational Farkas refutation (QF_LRA)",
+            TrustId::LraDpll => "lazy-SMT skeleton + Farkas-certified theory lemmas",
+        }
+    }
+
+    /// cvc5-style grade: 0 = hard fail (unsound if wrong, no recovery) … 10 = minor.
+    #[must_use]
+    pub const fn pedantic_level(self) -> u8 {
+        match self {
+            TrustId::TermLevelEnum | TrustId::Farkas => 10,
+            TrustId::Tseitin | TrustId::SatRefutation | TrustId::LraDpll => 9,
+            TrustId::BitBlast => 8,
+            TrustId::Fpa2Bv => 5,
+            TrustId::ArrayElim | TrustId::Ackermann | TrustId::DatatypeElim => 4,
+            TrustId::IntBlast => 3,
+        }
+    }
+
+    /// Whether this reduction has an independent per-query checker today (the
+    /// bit-blast miter; DRAT for Tseitin/SAT; Farkas/lazy-SMT/enumeration
+    /// verifiers). Trust holes return `false` — these are what Track 3 P3.5 drives
+    /// to zero.
+    #[must_use]
+    pub const fn is_certified(self) -> bool {
+        match self {
+            TrustId::BitBlast
+            | TrustId::Tseitin
+            | TrustId::SatRefutation
+            | TrustId::TermLevelEnum
+            | TrustId::Farkas
+            | TrustId::LraDpll => true,
+            TrustId::ArrayElim
+            | TrustId::Ackermann
+            | TrustId::IntBlast
+            | TrustId::DatatypeElim
+            | TrustId::Fpa2Bv => false,
+        }
+    }
+
+    /// The governing architecture-decision record.
+    #[must_use]
+    pub const fn reference(self) -> &'static str {
+        match self {
+            TrustId::BitBlast | TrustId::Tseitin => "ADR-0006",
+            TrustId::SatRefutation => "ADR-0012",
+            TrustId::ArrayElim => "ADR-0010",
+            TrustId::Ackermann => "ADR-0013",
+            TrustId::IntBlast => "ADR-0014",
+            TrustId::DatatypeElim => "ADR-0022",
+            TrustId::Fpa2Bv => "ADR-0023",
+            TrustId::TermLevelEnum => "ADR-0005",
+            TrustId::Farkas => "ADR-0015",
+            TrustId::LraDpll => "ADR-0021",
+        }
+    }
+}
+
+impl fmt::Display for TrustId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.label())
+    }
+}
+
+/// A trust step a particular result depended on: the reduction and whether the
+/// run that produced this result actually carried an independent certificate for
+/// it (e.g. bit-blast is `certified: true` only on the end-to-end miter route,
+/// `false` on the plain DRAT export route — even though a miter route *exists*,
+/// per [`TrustId::is_certified`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TrustStep {
+    /// The reduction.
+    pub id: TrustId,
+    /// Whether *this run* carried an independent certificate for the step.
+    pub certified: bool,
+}
+
+/// Renders [`ALL_TRUST_IDS`] as the canonical trust-ledger markdown table.
+///
+/// Golden-tested against `docs/research/08-planning/trust-ledger.md`; that file is
+/// regenerated from here, never hand-edited.
+#[must_use]
+pub fn trust_ledger_markdown() -> String {
+    let mut out = String::new();
+    out.push_str("# Reduction trust ledger\n\n");
+    out.push_str(
+        "Generated from `axeyum_solver::trust::ALL_TRUST_IDS` — do not edit by hand.\n\
+         Regenerate after changing the enum and commit the result; a golden test\n\
+         (`tests/trust_ledger.rs`) fails if this file drifts from the source of truth.\n\n",
+    );
+    out.push_str(
+        "Pedantic levels mirror cvc5's `TrustId` grading: 0 = hard fail \u{2026} 10 = minor.\n\
+         **certified** = an independent per-query checker re-derives the step \
+         (bit-blast miter / DRAT / Farkas / enumeration); **trust hole** = a sound \
+         reduction with no per-query certificate yet (the base Track 3 P3.5 drives to \
+         zero).\n\n",
+    );
+    let holes = ALL_TRUST_IDS.iter().filter(|t| !t.is_certified()).count();
+    let _ = writeln!(
+        out,
+        "Trusted base: **{holes}** reduction(s) remain trust holes.\n"
+    );
+    out.push_str("| Reduction | Meaning | Pedantic | Status | Ref |\n");
+    out.push_str("|---|---|---|---|---|\n");
+    for &id in ALL_TRUST_IDS {
+        let status = if id.is_certified() {
+            "certified"
+        } else {
+            "trust hole"
+        };
+        let _ = writeln!(
+            out,
+            "| {} | {} | {} | {} | {} |",
+            id.label(),
+            id.meaning(),
+            id.pedantic_level(),
+            status,
+            id.reference(),
+        );
+    }
+    out
+}

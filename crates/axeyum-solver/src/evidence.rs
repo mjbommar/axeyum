@@ -42,6 +42,7 @@ use crate::lra::{FarkasCertificate, lra_farkas_certificate};
 use crate::model::Model;
 use crate::proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};
 use crate::sat_bv_backend::SatBvBackend;
+use crate::trust::{TrustId, TrustStep};
 
 /// Version of the executable semantics (the `axeyum-ir` ground evaluator) the
 /// evidence was produced and is checkable against. Bump when evaluator
@@ -151,6 +152,27 @@ pub struct EvidenceReport {
     pub evidence: Evidence,
     /// How and against what version the evidence was produced.
     pub provenance: Provenance,
+    /// The trusted/certified reductions this result depended on, in canonical
+    /// [`crate::trust::ALL_TRUST_IDS`] order (deduplicated). Empty for `sat`
+    /// (replay), `unknown`, and bare `unsat` without a certificate. This is the
+    /// trust ledger made per-result (P3.0): a consumer can read exactly which
+    /// reductions back an `unsat` and whether this run certified each.
+    pub trusted_steps: Vec<TrustStep>,
+}
+
+/// Builds a deterministic, deduplicated, canonically-ordered trust-step list from
+/// `(id, certified_this_run)` pairs. Iterating [`crate::trust::ALL_TRUST_IDS`]
+/// guarantees source order regardless of insertion order (no hash-map leak).
+fn trust_steps(steps: &[(TrustId, bool)]) -> Vec<TrustStep> {
+    crate::trust::ALL_TRUST_IDS
+        .iter()
+        .filter_map(|&id| {
+            steps
+                .iter()
+                .find(|(sid, _)| *sid == id)
+                .map(|&(_, certified)| TrustStep { id, certified })
+        })
+        .collect()
 }
 
 /// A decided (or undecided) result together with its checkable justification.
@@ -280,18 +302,22 @@ pub fn produce_qf_bv_evidence(
 ) -> Result<EvidenceReport, SolverError> {
     let mut backend = SatBvBackend::new();
     let provenance = Provenance::for_query(config, backend.capabilities().name, assertions.len());
-    let evidence = match backend.check(arena, assertions, config)? {
-        CheckResult::Sat(model) => Evidence::Sat(model),
-        CheckResult::Unknown(reason) => Evidence::Unknown(reason),
+    let (evidence, trusted_steps) = match backend.check(arena, assertions, config)? {
+        CheckResult::Sat(model) => (Evidence::Sat(model), Vec::new()),
+        CheckResult::Unknown(reason) => (Evidence::Unknown(reason), Vec::new()),
         CheckResult::Unsat => {
             // Prefer a reduction-free term-level certificate when the instance is
             // small enough to enumerate: it trusts only the evaluator, closing the
             // term↔CNF gap entirely. Fall back to the DRAT clausal proof otherwise.
             match certify_qf_bv_by_enumeration(arena, assertions, TERM_LEVEL_CERT_BITS) {
-                Ok(CertifyOutcome::CertifiedUnsat { cases }) => Evidence::UnsatTermLevel {
-                    cases,
-                    max_total_bits: TERM_LEVEL_CERT_BITS,
-                },
+                Ok(CertifyOutcome::CertifiedUnsat { cases }) => (
+                    Evidence::UnsatTermLevel {
+                        cases,
+                        max_total_bits: TERM_LEVEL_CERT_BITS,
+                    },
+                    // Trusts only the evaluator — no reduction trust.
+                    trust_steps(&[(TrustId::TermLevelEnum, true)]),
+                ),
                 Ok(CertifyOutcome::Satisfiable(_)) => {
                     return Err(SolverError::Backend(
                         "soundness alarm: backend reported unsat but term-level enumeration \
@@ -302,8 +328,25 @@ pub fn produce_qf_bv_evidence(
                 // Too large to enumerate (or enumeration unsupported): use DRAT.
                 Ok(CertifyOutcome::DomainTooLarge { .. }) | Err(_) => {
                     match export_qf_bv_unsat_proof(arena, assertions)? {
-                        UnsatProofOutcome::Proved(proof) => Evidence::Unsat(Some(proof)),
-                        UnsatProofOutcome::Inconclusive => Evidence::Unsat(None),
+                        // Bit-blast is recorded (a miter route exists, but this
+                        // plain DRAT export does not run it → certified:false);
+                        // Tseitin + the SAT refutation are DRAT-checked here.
+                        UnsatProofOutcome::Proved(proof) => (
+                            Evidence::Unsat(Some(proof)),
+                            trust_steps(&[
+                                (TrustId::BitBlast, false),
+                                (TrustId::Tseitin, true),
+                                (TrustId::SatRefutation, true),
+                            ]),
+                        ),
+                        UnsatProofOutcome::Inconclusive => (
+                            Evidence::Unsat(None),
+                            trust_steps(&[
+                                (TrustId::BitBlast, false),
+                                (TrustId::Tseitin, true),
+                                (TrustId::SatRefutation, false),
+                            ]),
+                        ),
                         UnsatProofOutcome::Satisfiable => {
                             return Err(SolverError::Backend(
                                 "soundness alarm: backend reported unsat but the proof core \
@@ -319,6 +362,7 @@ pub fn produce_qf_bv_evidence(
     Ok(EvidenceReport {
         evidence,
         provenance,
+        trusted_steps,
     })
 }
 
@@ -352,20 +396,25 @@ pub fn produce_lra_evidence(
         cnf_clause_budget: None,
         prove_unsat: true,
     };
-    let evidence = match crate::lra::check_with_lra(arena, assertions)? {
-        CheckResult::Sat(model) => Evidence::Sat(model),
-        CheckResult::Unknown(reason) => Evidence::Unknown(reason),
+    let (evidence, trusted_steps) = match crate::lra::check_with_lra(arena, assertions)? {
+        CheckResult::Sat(model) => (Evidence::Sat(model), Vec::new()),
+        CheckResult::Unknown(reason) => (Evidence::Unknown(reason), Vec::new()),
         CheckResult::Unsat => match lra_farkas_certificate(arena, assertions)? {
-            Some(certificate) => Evidence::UnsatFarkas(certificate),
+            // Exact-rational Farkas: no bit-blast, no Tseitin — certified.
+            Some(certificate) => (
+                Evidence::UnsatFarkas(certificate),
+                trust_steps(&[(TrustId::Farkas, true)]),
+            ),
             // `unsat` with no Farkas certificate is the degenerate
             // literally-`false` assertion case: there is nothing linear to
             // certify, so it is recorded as a (lower-assurance) bare `unsat`.
-            None => Evidence::Unsat(None),
+            None => (Evidence::Unsat(None), Vec::new()),
         },
     };
     Ok(EvidenceReport {
         evidence,
         provenance,
+        trusted_steps,
     })
 }
 
@@ -397,14 +446,18 @@ pub fn produce_lra_dpll_evidence(
         cnf_clause_budget: config.cnf_clause_budget,
         prove_unsat: true,
     };
-    let evidence = match certify_lra_dpll_unsat(arena, assertions, config)? {
-        LraDpllOutcome::Sat(model) => Evidence::Sat(model),
-        LraDpllOutcome::Unsat(refutation) => Evidence::UnsatLraDpll(refutation),
-        LraDpllOutcome::Unknown(reason) => Evidence::Unknown(reason),
+    let (evidence, trusted_steps) = match certify_lra_dpll_unsat(arena, assertions, config)? {
+        LraDpllOutcome::Sat(model) => (Evidence::Sat(model), Vec::new()),
+        LraDpllOutcome::Unsat(refutation) => (
+            Evidence::UnsatLraDpll(refutation),
+            trust_steps(&[(TrustId::LraDpll, true)]),
+        ),
+        LraDpllOutcome::Unknown(reason) => (Evidence::Unknown(reason), Vec::new()),
     };
     Ok(EvidenceReport {
         evidence,
         provenance,
+        trusted_steps,
     })
 }
 
@@ -462,35 +515,88 @@ pub fn produce_evidence(
         cnf_clause_budget: config.cnf_clause_budget,
         prove_unsat: false,
     };
-    let evidence = match solve(arena, assertions, config)? {
-        CheckResult::Sat(model) => Evidence::Sat(model),
-        CheckResult::Unsat => Evidence::Unsat(reduction_unsat_certificate(arena, assertions)),
-        CheckResult::Unknown(reason) => Evidence::Unknown(reason),
+    let (evidence, trusted_steps) = match solve(arena, assertions, config)? {
+        CheckResult::Sat(model) => (Evidence::Sat(model), Vec::new()),
+        CheckResult::Unsat => {
+            let (cert, steps) = reduction_unsat_certificate(arena, assertions);
+            (Evidence::Unsat(cert), steps)
+        }
+        CheckResult::Unknown(reason) => (Evidence::Unknown(reason), Vec::new()),
     };
     Ok(EvidenceReport {
         evidence,
         provenance,
+        trusted_steps,
     })
 }
 
 /// Best-effort re-checkable certificate for an `unsat` over a BV-reducible
 /// fragment: tries the arrays+UF reduction, then the datatype reduction, and
-/// returns the first DRAT-checked proof. `None` for fragments without a
+/// returns the first DRAT-checked proof together with the [`TrustStep`]s that
+/// certificate depended on (the reduction trust holes it went through plus the
+/// certified clausal layer). `None` (and no steps) for fragments without a
 /// reduction-to-BV certificate (integers/real/nonlinear) — a sound bare `unsat`.
 /// The underlying engine already decided `unsat`; this only adds an artifact.
-fn reduction_unsat_certificate(arena: &mut TermArena, assertions: &[TermId]) -> Option<UnsatProof> {
-    use crate::proof::{
-        UnsatProofOutcome, export_datatype_unsat_proof, export_qf_aufbv_unsat_proof,
-    };
-    for export in [
-        export_qf_aufbv_unsat_proof as fn(&mut TermArena, &[TermId]) -> _,
-        export_datatype_unsat_proof,
-    ] {
-        if let Ok(UnsatProofOutcome::Proved(proof)) = export(arena, assertions) {
-            return Some(proof);
+fn reduction_unsat_certificate(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> (Option<UnsatProof>, Vec<TrustStep>) {
+    use crate::proof::{export_datatype_unsat_proof, export_qf_aufbv_unsat_proof};
+
+    let (has_array, has_func, has_datatype) = reduction_fragment_flags(arena, assertions);
+
+    // Arrays + uninterpreted functions → BV. Only the reductions that actually
+    // fire (present in the fragment) are recorded as trust holes.
+    if let Ok(UnsatProofOutcome::Proved(proof)) = export_qf_aufbv_unsat_proof(arena, assertions) {
+        let mut steps: Vec<(TrustId, bool)> = Vec::new();
+        if has_array {
+            steps.push((TrustId::ArrayElim, false));
+        }
+        if has_func {
+            steps.push((TrustId::Ackermann, false));
+        }
+        steps.push((TrustId::BitBlast, false));
+        steps.push((TrustId::Tseitin, true));
+        steps.push((TrustId::SatRefutation, true));
+        return (Some(proof), trust_steps(&steps));
+    }
+    // Datatypes folded over constructors → BV.
+    if let Ok(UnsatProofOutcome::Proved(proof)) = export_datatype_unsat_proof(arena, assertions) {
+        let mut steps: Vec<(TrustId, bool)> = Vec::new();
+        if has_datatype {
+            steps.push((TrustId::DatatypeElim, false));
+        }
+        steps.push((TrustId::BitBlast, false));
+        steps.push((TrustId::Tseitin, true));
+        steps.push((TrustId::SatRefutation, true));
+        return (Some(proof), trust_steps(&steps));
+    }
+    (None, Vec::new())
+}
+
+/// The presence of the reductions whose trust the `Other` route can incur:
+/// arrays, uninterpreted-function applications, and datatypes. One traversal.
+fn reduction_fragment_flags(arena: &TermArena, assertions: &[TermId]) -> (bool, bool, bool) {
+    let (mut has_array, mut has_func, mut has_datatype) = (false, false, false);
+    let mut seen = BTreeSet::new();
+    let mut stack = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        match arena.sort_of(term) {
+            Sort::Array { .. } => has_array = true,
+            Sort::Datatype(_) => has_datatype = true,
+            _ => {}
+        }
+        if let TermNode::App { op, args } = arena.node(term) {
+            if matches!(op, Op::Apply(_)) {
+                has_func = true;
+            }
+            stack.extend(args.iter().copied());
         }
     }
-    None
+    (has_array, has_func, has_datatype)
 }
 
 /// The outcome of a [`prove`] attempt — the proving arm of the north star.
