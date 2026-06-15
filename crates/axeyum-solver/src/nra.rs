@@ -15,9 +15,17 @@
 //! - `sat` of the abstraction is a *candidate*: it is **replayed** against the
 //!   original assertions with the ground evaluator (which computes the true
 //!   products), and accepted only if it genuinely satisfies them; otherwise the
-//!   result is `unknown` (a refinement loop — adding `r = x·y` lemmas — is future
-//!   work). So `x·y = 6 ∧ x = 2 ∧ y = 3` is `sat`, while `x·x < 0` is `unknown`
-//!   (proving `x² ≥ 0` needs nonlinear reasoning this slice does not do).
+//!   refinement loop adds exact point lemmas (`r = x·y` at the candidate point)
+//!   and retries, finally returning `unknown` if it does not converge. So
+//!   `x·y = 6 ∧ x = 2 ∧ y = 3` is `sat`.
+//!
+//! Beyond the bare abstraction, the relaxation is strengthened with **sound
+//! product lemmas** — the sign rules `(a≥0∧b≥0)→r≥0`, … and the zero rule
+//! `r=0 ⟺ a=0 ∨ b=0` — plus `McCormick` envelopes over extracted variable
+//! bounds and spatial branch-and-bound. These are enough to decide many
+//! sign-based queries with no model at all, e.g. `x·x < 0` is **unsat** (`x² ≥ 0`
+//! follows from the sign rules since the two factors are the same `x`), and
+//! `x>0 ∧ x·y<0 → y<0`.
 //!
 //! Sound in both directions; incomplete. `unknown` is first-class, never wrong.
 

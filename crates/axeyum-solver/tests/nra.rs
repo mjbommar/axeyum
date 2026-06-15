@@ -301,3 +301,34 @@ fn real_division_by_zero_is_unconstrained() {
     let r = check_with_nra(&mut a, &[yc, xc, dc], &SolverConfig::default()).unwrap();
     assert!(matches!(r, CheckResult::Sat(_)), "x/0 unconstrained -> sat, got {r:?}");
 }
+
+#[test]
+fn mixed_sign_product_cannot_be_positive() {
+    // x > 0 ∧ y < 0 ∧ x*y > 0 is unsat: opposite signs give a non-positive
+    // product (the (a≥0 ∧ b≤0) → r≤0 sign lemma), with no model needed.
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let y = real(&mut a, "y");
+    let zero = a.real_const(Rational::integer(0));
+    let xpos = a.real_gt(x, zero).unwrap();
+    let yneg = a.real_lt(y, zero).unwrap();
+    let p = a.real_mul(x, y).unwrap();
+    let ppos = a.real_gt(p, zero).unwrap();
+    let r = check_with_nra(&mut a, &[xpos, yneg, ppos], &SolverConfig::default()).unwrap();
+    assert!(matches!(r, CheckResult::Unsat), "pos*neg>0 must be unsat, got {r:?}");
+}
+
+#[test]
+fn zero_square_forces_zero_base() {
+    // x*x == 0 ∧ x != 0 is unsat: the zero rule's reverse direction
+    // (r=0 → a=0 ∨ b=0) with a=b=x forces x=0.
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let zero = a.real_const(Rational::integer(0));
+    let sq = a.real_mul(x, x).unwrap();
+    let sq_zero = a.eq(sq, zero).unwrap();
+    let x_eq_zero = a.eq(x, zero).unwrap();
+    let x_ne_zero = a.not(x_eq_zero).unwrap();
+    let r = check_with_nra(&mut a, &[sq_zero, x_ne_zero], &SolverConfig::default()).unwrap();
+    assert!(matches!(r, CheckResult::Unsat), "x*x=0 ∧ x≠0 must be unsat, got {r:?}");
+}
