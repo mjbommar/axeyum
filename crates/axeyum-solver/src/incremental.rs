@@ -17,7 +17,9 @@
 
 use axeyum_bv::{BitLowerError, IncrementalLowering, first_unsupported_op};
 use axeyum_cnf::{CnfVar, IncrementalCnf, SatError, SatResult};
-use axeyum_ir::{Assignment, IrError, Sort, TermArena, TermId, Value, eval, well_founded_default};
+use axeyum_ir::{
+    Assignment, IrError, Sort, SymbolId, TermArena, TermId, Value, eval, well_founded_default,
+};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::model::Model;
@@ -234,6 +236,70 @@ impl IncrementalBvSolver {
             CheckResult::Unsat => AssumptionOutcome::Unsat { core },
             CheckResult::Unknown(reason) => AssumptionOutcome::Unknown(reason),
         })
+    }
+
+    /// Asserts a **blocking clause** excluding `model`'s assignment to `symbols`
+    /// from future solutions: `⋁_s (s ≠ model[s])`. This is the
+    /// **reachable-state / all-SAT enumeration** primitive for reachability
+    /// analysis: repeatedly `check`, record the model, `block_model` it, and
+    /// re-`check` until `unsat` — each iteration yields a *distinct* assignment
+    /// over `symbols` (the set of reachable states/inputs, projected to
+    /// `symbols`). Sound: the clause is a valid consequence asserted as a normal
+    /// constraint, so models stay replay-checked.
+    ///
+    /// Symbols absent from the model are skipped; an empty effective clause (no
+    /// listed symbol has a value) blocks everything (asserts `false`), ending
+    /// enumeration.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Unsupported`] if a listed symbol's value is not a
+    /// `Bool`/`BitVec` (the incremental engine's sorts), or [`SolverError`] from
+    /// the builders / [`Self::assert`].
+    pub fn block_model(
+        &mut self,
+        arena: &mut TermArena,
+        model: &Model,
+        symbols: &[SymbolId],
+    ) -> Result<(), SolverError> {
+        let mut disjuncts = Vec::new();
+        for &symbol in symbols {
+            let Some(value) = model.get(symbol) else {
+                continue;
+            };
+            let var = arena.var(symbol);
+            let literal = match value {
+                Value::Bv { width, value } => {
+                    let constant = arena.bv_const(width, value)?;
+                    let equal = arena.eq(var, constant)?;
+                    arena.not(equal)?
+                }
+                Value::Bool(b) => {
+                    if b {
+                        arena.not(var)?
+                    } else {
+                        var
+                    }
+                }
+                other => {
+                    return Err(SolverError::Unsupported(format!(
+                        "block_model: symbol value {other:?} is not a Bool/BitVec"
+                    )));
+                }
+            };
+            disjuncts.push(literal);
+        }
+        let clause = match disjuncts.split_first() {
+            None => arena.bool_const(false),
+            Some((&first, rest)) => {
+                let mut acc = first;
+                for &disjunct in rest {
+                    acc = arena.or(acc, disjunct)?;
+                }
+                acc
+            }
+        };
+        self.assert(arena, clause)
     }
 
     /// Core solve. Returns the [`CheckResult`] and, on an `unsat` under

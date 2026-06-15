@@ -467,3 +467,51 @@ fn assumption_core_reports_a_jointly_infeasible_pair() {
         other => panic!("expected unsat with a 2-element core, got {other:?}"),
     }
 }
+
+// --- all-SAT / reachable-state enumeration (the reachability primitive) -------
+
+/// Reachability analysis enumerates the reachable states. With `block_model`,
+/// the incremental engine does all-SAT directly: check, record, block, repeat
+/// until unsat — each step a distinct assignment. Here the reachable set of a
+/// 4-bit `x` constrained to `2 <= x <= 5` is exactly {2,3,4,5}.
+#[test]
+fn all_sat_enumerates_reachable_states() {
+    let mut arena = TermArena::new();
+    let xs = arena.declare("x", Sort::BitVec(4)).unwrap();
+    let x = arena.var(xs);
+    let mut solver = IncrementalBvSolver::new();
+    let two = arena.bv_const(4, 2).unwrap();
+    let five = arena.bv_const(4, 5).unwrap();
+    let lo = arena.bv_uge(x, two).unwrap();
+    let hi = arena.bv_ule(x, five).unwrap();
+    solver.assert(&arena, lo).unwrap();
+    solver.assert(&arena, hi).unwrap();
+
+    let mut reachable = std::collections::BTreeSet::new();
+    loop {
+        match solver.check(&arena).unwrap() {
+            CheckResult::Sat(model) => {
+                let value = match model.get(xs) {
+                    Some(Value::Bv { value, .. }) => value,
+                    other => panic!("expected a BV model value, got {other:?}"),
+                };
+                assert!(
+                    reachable.insert(value),
+                    "enumeration repeated a model: {value}"
+                );
+                solver.block_model(&mut arena, &model, &[xs]).unwrap();
+            }
+            CheckResult::Unsat => break, // enumeration exhausted
+            CheckResult::Unknown(reason) => panic!("unexpected unknown: {reason:?}"),
+        }
+        assert!(
+            reachable.len() <= 4,
+            "must not exceed the 4 reachable values"
+        );
+    }
+    assert_eq!(
+        reachable,
+        [2u128, 3, 4, 5].into_iter().collect(),
+        "the reachable set must be exactly {{2,3,4,5}}"
+    );
+}

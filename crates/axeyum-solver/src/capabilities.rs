@@ -179,7 +179,8 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "incremental",
-        feature: "warm push/pop/assume QF_BV + assumption-core (symbolic-execution path pruning)",
+        feature: "warm push/pop/assume QF_BV; assumption-core path pruning; all-SAT \
+                  reachable-state enumeration (symbolic execution / reachability)",
         assurance: Assurance::Validated,
         evidence: "model replay; SAT final-conflict core (a sound inconsistent subset)",
         reference: "ADR-0009",
