@@ -801,12 +801,15 @@ fn unpack_operand(
 /// (`sqrt(NaN)` and `sqrt(x<0)` → NaN, `sqrt(±0) = ±0`, `sqrt(+∞) = +∞`). Pure
 /// bit-vector formula; solves and replays on the existing path.
 ///
-/// Works for **F16/F32/F64** (the working width stays ≤ 128). Validated against
-/// native `f32`/`f64` `sqrt`.
+/// Works for **F16/F32/F64** (working width ≤ 128, validated against native
+/// `f32`/`f64` `sqrt`) and **F128** (234 bits, via the wide path). F128 has no
+/// native or `rustc_apfloat` sqrt oracle, so it is validated against an exact
+/// correct-rounding checker (the rounding-interval property over `WideUint`
+/// integers) that is itself validated against native `f64::sqrt` — ADR-0028.
 ///
 /// # Errors
 ///
-/// Returns [`IrError::InvalidWidth`] if the format is too wide,
+/// Returns [`IrError::InvalidWidth`] for a wide non-F128 format,
 /// [`IrError::SortMismatch`] for a mis-sized operand, or [`IrError`] from builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
 pub fn sqrt(arena: &mut TermArena, fmt: FloatFormat, x: TermId, mode: RoundingMode) -> Result<TermId, IrError> {
@@ -818,7 +821,12 @@ pub fn sqrt(arena: &mut TermArena, fmt: FloatFormat, x: TermId, mode: RoundingMo
     if w % 2 != 0 {
         w += 1; // isqrt needs an even width
     }
-    if w > 128 {
+    // F16/F32/F64 keep `w ≤ 128`; F128 (234 bits) runs through the wide path,
+    // validated against an exact correct-rounding oracle (ADR-0028 —
+    // `rustc_apfloat` has no sqrt, so the oracle checks the rounding-interval
+    // property and is itself validated against native `f64::sqrt`). Other wide
+    // formats stay `unsupported` (sound).
+    if w > 128 && fmt != FloatFormat::F128 {
         return Err(IrError::InvalidWidth(w));
     }
 
@@ -4325,6 +4333,272 @@ mod fma_f128_apfloat_tests {
         let mut state: u64 = 0xc0ff_ee00_d15e_a5e5;
         for _ in 0..2000 {
             check(&arena, rng128(&mut state), rng128(&mut state), rng128(&mut state));
+        }
+    }
+}
+
+/// An independent, exact correct-rounding oracle for `fp.sqrt`, used to validate
+/// the (wide) F128 `sqrt` circuit — `rustc_apfloat` implements no square root,
+/// so there is no off-the-shelf oracle (ADR-0028). Instead of recomputing the
+/// root, this checks the *defining property* of round-nearest-ties-to-even: the
+/// candidate result `r` is correct iff the true `√x` lies in `r`'s rounding
+/// interval `[(pred+r)/2, (r+succ)/2]`, with exact ties resolved to the even
+/// significand. The check squares the dyadic interval endpoints and compares to
+/// `x` with exact big integers (`WideUint`), never forming an irrational root.
+///
+/// Crucially, the oracle is itself **validated against native `f64::sqrt`**
+/// (which is IEEE correctly-rounded) over a wide sweep — it must accept the
+/// native result and reject both neighbours — before it is trusted for F128.
+#[cfg(test)]
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::many_single_char_names,
+    clippy::similar_names
+)]
+mod sqrt_correct_rounding_oracle {
+    use super::*;
+    use axeyum_ir::{Assignment, Value, WideUint, eval};
+    use core::cmp::Ordering;
+
+    const W: u32 = 1024; // wide enough for F128 squared significands + alignment
+
+    fn field(bits: u128, eb: u32, sb: u32) -> (bool, u128, u128) {
+        let sign = (bits >> (eb + sb - 1)) & 1 == 1;
+        let exp = (bits >> (sb - 1)) & ((1u128 << eb) - 1);
+        let frac = bits & ((1u128 << (sb - 1)) - 1);
+        (sign, exp, frac)
+    }
+
+    fn is_nan(bits: u128, eb: u32, sb: u32) -> bool {
+        let (_, exp, frac) = field(bits, eb, sb);
+        exp == (1u128 << eb) - 1 && frac != 0
+    }
+    fn is_inf(bits: u128, eb: u32, sb: u32) -> bool {
+        let (_, exp, frac) = field(bits, eb, sb);
+        exp == (1u128 << eb) - 1 && frac == 0
+    }
+    fn is_zero(bits: u128, eb: u32, sb: u32) -> bool {
+        let (_, exp, frac) = field(bits, eb, sb);
+        exp == 0 && frac == 0
+    }
+
+    /// Decodes a *positive finite* pattern to an exact dyadic `(mant, exp)`
+    /// meaning `mant · 2^exp`. `+0` decodes to `(0, 0)`.
+    fn decode(bits: u128, eb: u32, sb: u32) -> (u128, i64) {
+        let (_, exp, frac) = field(bits, eb, sb);
+        let bias = (1i64 << (eb - 1)) - 1;
+        if exp == 0 {
+            if frac == 0 {
+                return (0, 0); // +0
+            }
+            (frac, 1 - bias - i64::from(sb - 1))
+        } else {
+            let m = frac | (1u128 << (sb - 1));
+            let e = i64::try_from(exp).unwrap() - bias - i64::from(sb - 1);
+            (m, e)
+        }
+    }
+
+    /// `a + b` for exact dyadics (one may be zero).
+    fn add(a: (u128, i64), b: (u128, i64)) -> (u128, i64) {
+        if a.0 == 0 {
+            return b;
+        }
+        if b.0 == 0 {
+            return a;
+        }
+        let e0 = a.1.min(b.1);
+        let m = (a.0 << (a.1 - e0)) + (b.0 << (b.1 - e0));
+        (m, e0)
+    }
+
+    /// Squares an exact dyadic, returning `(value², exp)` as a wide integer.
+    fn square(v: (u128, i64)) -> (WideUint, i64) {
+        let m = WideUint::from_u128(v.0, W);
+        (m.mul(&m), 2 * v.1)
+    }
+
+    /// Compares `a.0 · 2^a.1` against `b.0 · 2^b.1` (both non-negative). Panics if
+    /// the exponent gap would overflow the working width — a signal that the
+    /// candidate is wildly off, which never happens for a near-correct root.
+    fn cmp(a: &(WideUint, i64), b: &(WideUint, i64)) -> Ordering {
+        let m = a.1.min(b.1);
+        let da = u32::try_from(a.1 - m).unwrap();
+        let db = u32::try_from(b.1 - m).unwrap();
+        assert!(da < W - 256 && db < W - 256, "exponent gap too large: {da}/{db}");
+        let l = a.0.shl(da);
+        let r = b.0.shl(db);
+        if l.ult(&r) {
+            Ordering::Less
+        } else if r.ult(&l) {
+            Ordering::Greater
+        } else {
+            Ordering::Equal
+        }
+    }
+
+    /// True iff `rbits` is the round-nearest-ties-to-even `sqrt` of `xbits` in
+    /// format `(eb, sb)`.
+    fn correctly_rounded_sqrt(eb: u32, sb: u32, xbits: u128, rbits: u128) -> bool {
+        let (xsign, _, _) = field(xbits, eb, sb);
+        // Special cases (mirror IEEE / the circuit): sqrt(NaN) and sqrt(x<0) are
+        // NaN; sqrt(±0) = ±0; sqrt(+inf) = +inf.
+        if is_nan(xbits, eb, sb) {
+            return is_nan(rbits, eb, sb);
+        }
+        let x_is_neg_zero = is_zero(xbits, eb, sb) && xsign;
+        if xsign && !x_is_neg_zero {
+            return is_nan(rbits, eb, sb); // negative finite or -inf
+        }
+        if is_zero(xbits, eb, sb) {
+            return rbits == xbits; // ±0 preserved (sign included)
+        }
+        if is_inf(xbits, eb, sb) {
+            return is_inf(rbits, eb, sb) && !field(rbits, eb, sb).0; // +inf
+        }
+        // Positive finite x: the result must be positive, finite and non-zero.
+        let (rsign, _, _) = field(rbits, eb, sb);
+        if rsign || is_nan(rbits, eb, sb) || is_inf(rbits, eb, sb) || is_zero(rbits, eb, sb) {
+            return false;
+        }
+        let vx = {
+            let (mx, ex) = decode(xbits, eb, sb);
+            (WideUint::from_u128(mx, W), ex)
+        };
+        let vr = decode(rbits, eb, sb);
+        let vp = decode(rbits - 1, eb, sb); // predecessor (or +0 at the bottom)
+        let r_even = (vr.0 & 1) == 0;
+
+        // Lower endpoint: (pred + r)/2, squared, vs x.
+        let lower_sq = {
+            let (m, e) = add(vp, vr);
+            square((m, e - 1)) // /2
+        };
+        let lower_ok = match cmp(&lower_sq, &vx) {
+            Ordering::Less => true,      // pred-midpoint strictly below x ⇒ inside
+            Ordering::Equal => r_even,   // exact tie pred|r ⇒ rounds to even
+            Ordering::Greater => false,  // √x below the interval ⇒ r too big
+        };
+
+        // Upper endpoint: (r + succ)/2, squared, vs x. A succ of +inf imposes no
+        // upper bound (never happens for a real sqrt result, handled for safety).
+        let succ = rbits + 1;
+        let upper_ok = if is_inf(succ, eb, sb) {
+            true
+        } else {
+            let upper_sq = {
+                let (m, e) = add(vr, decode(succ, eb, sb));
+                square((m, e - 1))
+            };
+            match cmp(&upper_sq, &vx) {
+                Ordering::Greater => true,  // succ-midpoint strictly above x ⇒ inside
+                Ordering::Equal => r_even,  // exact tie r|succ ⇒ rounds to even
+                Ordering::Less => false,    // √x above the interval ⇒ r too small
+            }
+        };
+        lower_ok && upper_ok
+    }
+
+    fn rng(state: &mut u64) -> u64 {
+        *state = state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        *state
+    }
+
+    /// The oracle itself must agree with native `f64::sqrt` (IEEE correctly
+    /// rounded): accept the native result, reject both finite neighbours.
+    #[test]
+    fn oracle_matches_native_f64_sqrt() {
+        let check = |xb: u64| {
+            let xf = f64::from_bits(xb);
+            let r = xf.sqrt().to_bits();
+            assert!(
+                correctly_rounded_sqrt(11, 53, u128::from(xb), u128::from(r)),
+                "oracle rejected native sqrt({xb:#x}) = {r:#x}"
+            );
+            // Neighbours must be rejected (only meaningful for positive finite x,
+            // where r is a positive finite non-zero float with finite neighbours).
+            if xf.is_sign_positive() && xf.is_finite() && xf != 0.0 {
+                for nb in [r.wrapping_sub(1), r.wrapping_add(1)] {
+                    if !is_nan(u128::from(nb), 11, 53) && !is_inf(u128::from(nb), 11, 53) {
+                        assert!(
+                            !correctly_rounded_sqrt(11, 53, u128::from(xb), u128::from(nb)),
+                            "oracle accepted wrong neighbour {nb:#x} for sqrt({xb:#x})"
+                        );
+                    }
+                }
+            }
+        };
+        let structured: [u64; 12] = [
+            0x0000_0000_0000_0000, // +0
+            0x8000_0000_0000_0000, // -0
+            0x3FF0_0000_0000_0000, // 1.0
+            0x4000_0000_0000_0000, // 2.0
+            0x4010_0000_0000_0000, // 4.0
+            0x7FF0_0000_0000_0000, // +inf
+            0xFFF0_0000_0000_0000, // -inf
+            0x7FF8_0000_0000_0000, // NaN
+            0xBFF0_0000_0000_0000, // -1.0 (negative ⇒ NaN)
+            0x0008_0000_0000_0000, // subnormal
+            0x0000_0000_0000_0001, // smallest subnormal
+            0x4048_F5C2_8F5C_28F6, // ~49.92
+        ];
+        for &x in &structured {
+            check(x);
+        }
+        let mut state = 0x1234_5678_9abc_def0u64;
+        for _ in 0..20000 {
+            check(rng(&mut state));
+        }
+    }
+
+    // F128 field layout helpers (sign at 127, 15-bit exp at 112..=126).
+    fn q128(sign: bool, exp: u32, mant: u128) -> u128 {
+        (u128::from(sign) << 127) | (u128::from(exp) << 112) | (mant & ((1u128 << 112) - 1))
+    }
+
+    /// The wide F128 `sqrt` circuit must produce the correctly-rounded result for
+    /// every input, judged by the (native-validated) oracle above.
+    #[test]
+    fn symbolic_f128_sqrt_matches_oracle() {
+        let mut arena = TermArena::new();
+        let s = arena.declare("qx", Sort::BitVec(128)).unwrap();
+        let x = arena.var(s);
+        let t = sqrt(&mut arena, FloatFormat::F128, x, RoundingMode::NearestEven).unwrap();
+        let check = |arena: &TermArena, xb: u128| {
+            let mut asg = Assignment::new();
+            asg.set(s, Value::Bv { width: 128, value: xb });
+            let got = match eval(arena, t, &asg).unwrap() {
+                Value::Bv { value, .. } => value,
+                other => panic!("{other:?}"),
+            };
+            assert!(
+                correctly_rounded_sqrt(15, 113, xb, got),
+                "F128 sqrt({xb:#034x}) = {got:#034x} is not correctly rounded"
+            );
+        };
+        let structured: [u128; 12] = [
+            q128(false, 0, 0),               // +0
+            q128(true, 0, 0),                // -0
+            q128(false, 0x3FFF, 0),          // 1.0
+            q128(false, 0x4000, 0),          // 2.0
+            q128(false, 0x4001, 0),          // 4.0
+            q128(false, 0x7FFF, 0),          // +inf
+            q128(true, 0x7FFF, 0),           // -inf
+            q128(false, 0x7FFF, 1),          // NaN
+            q128(true, 0x3FFF, 0),           // -1.0 (negative ⇒ NaN)
+            q128(false, 0, 1),               // smallest subnormal
+            q128(false, 1, 0),               // smallest normal
+            q128(false, 0x4000, 0x1234_5678_9abc_def0_1234), // a generic value
+        ];
+        for &xb in &structured {
+            check(&arena, xb);
+        }
+        let mut state = 0xdead_beef_0bad_f00du64;
+        for _ in 0..1500 {
+            let xb = (u128::from(rng(&mut state)) << 64) | u128::from(rng(&mut state));
+            check(&arena, xb);
         }
     }
 }

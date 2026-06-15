@@ -1,6 +1,6 @@
 # ADR-0028: A software-float oracle for validating wide-format FP arithmetic
 
-Status: accepted (implemented for F128 add/mul/div/fma, 2026-06-14)
+Status: accepted (implemented for F128 add/mul/div/fma/sqrt, 2026-06-14)
 Date: 2026-06-14
 
 ## Context
@@ -65,9 +65,17 @@ Preconditions (met at acceptance):
 
 Implemented 2026-06-14: F128 `add`/`mul`/`div`/`fma` are validated against
 `ieee::Quad` (structured corners + 2000 random pairs/triples each, RNE) and
-their `128` gates lifted. F128 `sqrt` stays `unsupported` — `rustc_apfloat` does
-not implement square root, so there is no oracle for it. F128 `fp.rem` already
-decides via the iterative reduction (`rem_iterative`).
+their `128` gates lifted. **F128 `sqrt`** is also enabled: `rustc_apfloat`
+implements no square root, so it is validated instead against an exact
+*correct-rounding* checker — one that does not recompute the root but verifies
+the candidate lies in its round-to-nearest-even interval `[(pred+r)/2,
+(r+succ)/2]` by squaring the dyadic endpoints and comparing to `x` with
+`WideUint` big integers, ties resolved to even. That checker is itself validated
+against native `f64::sqrt` (accept the native result, reject both neighbours)
+over 20 000 cases before being trusted on F128. F128 `fp.rem` already decides via
+the iterative reduction (`rem_iterative`). Net: the **full F128 arithmetic
+surface** (`add`/`sub`/`mul`/`div`/`fma`/`rem`/`sqrt`/`roundToIntegral`/`to_fp`)
+is now symbolically supported and validated.
 
 ## Evidence
 

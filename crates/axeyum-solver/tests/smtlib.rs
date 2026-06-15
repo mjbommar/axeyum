@@ -195,6 +195,31 @@ fn decides_symbolic_float128_fma() {
     );
 }
 
+/// A **Float128 `fp.sqrt`** is bit-blasted through the wide path (234 bits) and
+/// decided end-to-end: `sqrt(4.0) == 2.0` holds, so the assertion is sat. The
+/// 234-bit isqrt makes a deep CNF, so the operand is the constant 4.0 (the
+/// search for a *free* root is correct but slow); the wide circuit's correctness
+/// over all inputs is covered exhaustively at the IR level by the exact
+/// correct-rounding oracle (`symbolic_f128_sqrt_matches_oracle`, ADR-0028).
+/// 4.0 = `0x4001<<112`, 2.0 = `0x4000<<112`.
+#[test]
+fn decides_float128_sqrt() {
+    let text = "\
+(set-info :status sat)
+(set-logic QF_FP)
+(assert (fp.eq
+          (fp.sqrt RNE ((_ to_fp 15 113) #x40010000000000000000000000000000))
+          ((_ to_fp 15 113) #x40000000000000000000000000000000)))
+(check-sat)
+";
+    let outcome = run(text);
+    assert!(
+        matches!(outcome.result, CheckResult::Sat(_)),
+        "Float128 sqrt(4.0) == 2.0 must decide sat, got {:?}",
+        outcome.result
+    );
+}
+
 /// FP->int is a function: two occurrences on the same operand denote one value,
 /// so their inequality is unsat even when the operand is unconstrained (the
 /// shared fresh value for the unspecified out-of-range case must be the SAME).

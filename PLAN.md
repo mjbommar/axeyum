@@ -51,8 +51,20 @@ Last updated: 2026-06-14
   Float128 fma (sat, `x = 3.0`, model replayed through the 344-bit circuit).
   License `Apache-2.0 WITH LLVM-exception` (+ `smallvec`/`bitflags`) is already in
   `deny.toml`; the dep is test-only, so the default build stays C-free.
-  **Remaining FP gap:** F128 `sqrt` (needs a non-APFloat oracle) and arithmetic
-  for formats wider than F128 (need a per-format sweep). ADR-0028 accepted.
+  **F128 `sqrt` also done** (same day): APFloat has no sqrt, so the wide sqrt
+  circuit is validated against an exact *correct-rounding* checker — it verifies
+  the candidate lies in its round-nearest-ties-to-even interval
+  `[(pred+r)/2, (r+succ)/2]` by squaring the dyadic endpoints and comparing to
+  `x` with `WideUint` big integers (ties to even), never forming the irrational
+  root. That checker is itself validated against native `f64::sqrt` (accept the
+  native result, reject both neighbours) over 20 000 cases, then run on the F128
+  circuit over 1500+ cases; end-to-end `decides_float128_sqrt` (`sqrt(4)=2`)
+  decides via the pipeline. **Net: the full F128 arithmetic surface
+  (add/sub/mul/div/fma/rem/sqrt/roundToIntegral/to_fp) is symbolically supported
+  and validated.** **Remaining FP gap:** arithmetic for formats *wider* than F128
+  (each needs a per-format sweep) and SAT-solving performance for free-variable
+  wide-FP queries (the F128 sqrt isqrt CNF is deep — a perf, not correctness,
+  limit). ADR-0028 accepted.
 
 - **Symbolic F64 `fp.fma` works through the wide path — root-caused a wide-FP
   soundness bug (2026-06-14, wide-BV step 5).** The 164-bit symbolic F64 fma
