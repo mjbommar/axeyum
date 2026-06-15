@@ -205,7 +205,16 @@ pub const CAPABILITIES: &[Capability] = &[
                   (bounded_model_check / TransitionSystem; BV/Bool, array-free first slice)",
         assurance: Assurance::Validated,
         evidence: "Reachable = replay-checked counterexample trace; UnreachableWithinBound is \
-                   bounded only (k-induction/interpolation = future work); unknown-safe",
+                   bounded only (interpolation = future work); unknown-safe",
+        reference: "ADR-0009",
+    },
+    Capability {
+        area: "reachability",
+        feature: "unbounded safety proving by k-induction (prove_safety_k_induction)",
+        assurance: Assurance::SoundIncomplete,
+        evidence: "Safe = base case (BMC) + inductive-step UNSAT (unbounded); Reachable = \
+                   replay-checked counterexample; non-inductive properties return Inconclusive, \
+                   never a wrong Safe",
         reference: "ADR-0009",
     },
 ];

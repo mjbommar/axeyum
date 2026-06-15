@@ -170,6 +170,133 @@ pub fn bounded_model_check(
     Ok(BmcOutcome::UnreachableWithinBound { bound })
 }
 
+/// The result of [`prove_safety_k_induction`].
+#[derive(Debug, Clone)]
+pub enum SafetyOutcome {
+    /// The property `¬bad` holds in **every reachable state** (an unbounded
+    /// guarantee), proven by `k`-induction at this `k`: no bad state is reachable
+    /// within `k` transitions of an initial state (base case), and any path of
+    /// `k+1` consecutive good states cannot transition into a bad state
+    /// (inductive step).
+    Safe {
+        /// The induction depth at which both obligations discharged.
+        k: usize,
+    },
+    /// A bad state **is** reachable: `model` is a replay-checked counterexample
+    /// at `steps` transitions. The property is false.
+    Reachable {
+        /// The number of transitions to the bad state.
+        steps: usize,
+        /// The witnessed trace.
+        model: Model,
+    },
+    /// `k`-induction was inconclusive through depth `max_k`: no counterexample was
+    /// found within the base bound, but the inductive step never closed. The
+    /// property may still be true — try a larger `max_k`, strengthen it with an
+    /// inductive invariant, or use interpolation (future work). Reported honestly
+    /// rather than as a (possibly wrong) `Safe`.
+    Inconclusive {
+        /// The deepest induction depth attempted.
+        max_k: usize,
+    },
+    /// Undecided: a resource limit or unsupported construct prevented a decision.
+    Unknown {
+        /// The classified reason.
+        reason: UnknownReason,
+    },
+}
+
+/// Proves a safety property (`bad` is *never* reachable) by **k-induction** — the
+/// standard lifting of bounded model checking to an *unbounded* guarantee.
+///
+/// For increasing `k` up to `max_k`:
+///
+/// * **Base case** — no bad state is reachable within `k` transitions of an
+///   initial state. This is exactly [`bounded_model_check`] to depth `max_k`; a
+///   `sat` here is a real counterexample ([`SafetyOutcome::Reachable`]).
+/// * **Inductive step** — over *arbitrary* (not necessarily initial) states, a
+///   path of `k+1` consecutive states each satisfying `¬bad`, followed by one
+///   transition, cannot land in a bad state. Encoded as the unsatisfiability of
+///   `¬bad(t₀) ∧ trans(t₀,t₁) ∧ … ∧ ¬bad(t_k) ∧ trans(t_k,t_{k+1}) ∧ bad(t_{k+1})`.
+///
+/// When both discharge at some `k`, the property holds in every reachable state
+/// ([`SafetyOutcome::Safe`]). This is a genuine unbounded result, not a bounded
+/// one — the step quantifies over all states, so it covers depths beyond `max_k`.
+///
+/// Soundness: a `Safe` verdict rests on the inductive step's `unsat` (a sound
+/// CDCL result over the bit-blasted encoding) plus the base case; the technique
+/// itself is sound. Incompleteness is first-class: a true-but-not-k-inductive
+/// property returns [`SafetyOutcome::Inconclusive`], never a wrong `Safe`.
+///
+/// The inductive step reuses the per-step state-variable symbols in its own
+/// independent solver (it asserts no `init`), so the two obligations do not
+/// interfere.
+///
+/// # Errors
+///
+/// Returns [`SolverError`] if building the system's terms or driving the warm
+/// solver fails.
+pub fn prove_safety_k_induction(
+    arena: &mut TermArena,
+    system: &impl TransitionSystem,
+    max_k: usize,
+    config: &SolverConfig,
+) -> Result<SafetyOutcome, SolverError> {
+    // Base case: a counterexample within max_k transitions refutes safety
+    // outright; otherwise the base obligation holds for every k ≤ max_k.
+    match bounded_model_check(arena, system, max_k, config)? {
+        BmcOutcome::Reachable { steps, model } => {
+            return Ok(SafetyOutcome::Reachable { steps, model });
+        }
+        BmcOutcome::Unknown { reason, .. } => return Ok(SafetyOutcome::Unknown { reason }),
+        BmcOutcome::UnreachableWithinBound { .. } => {}
+    }
+
+    // Inductive step, warm: assert ¬bad on the hypothesis chain and the trans
+    // links once, and probe bad(t_{k+1}) under a temporary scope at each depth.
+    let mut step = IncrementalBvSolver::with_config(config.clone());
+    let mut t: Vec<Vec<SymbolId>> = vec![system.state_vars(arena, 0)?];
+    let not_bad0 = negate_bad(arena, system, &t[0])?;
+    step.assert(arena, not_bad0)?;
+
+    for k in 0..=max_k {
+        let next = system.state_vars(arena, k + 1)?;
+        let trans = system.trans(arena, &t[k], &next)?;
+        step.assert(arena, trans)?;
+        t.push(next);
+
+        let bad_next = system.bad(arena, &t[k + 1])?;
+        step.push()?;
+        step.assert(arena, bad_next)?;
+        let result = step.check(arena)?;
+        step.pop();
+
+        match result {
+            // No P-chain of length k+1 can reach a bad state ⇒ inductive ⇒ safe.
+            CheckResult::Unsat => return Ok(SafetyOutcome::Safe { k }),
+            CheckResult::Unknown(reason) => return Ok(SafetyOutcome::Unknown { reason }),
+            // Step failed at this depth: extend the good-state hypothesis to
+            // t_{k+1} (it becomes part of the chain for the next, deeper attempt).
+            CheckResult::Sat(_) => {
+                let not_bad_next = negate_bad(arena, system, &t[k + 1])?;
+                step.assert(arena, not_bad_next)?;
+            }
+        }
+    }
+
+    Ok(SafetyOutcome::Inconclusive { max_k })
+}
+
+/// `¬bad(s)` — the per-state safety predicate `P`.
+fn negate_bad(
+    arena: &mut TermArena,
+    system: &impl TransitionSystem,
+    s: &[SymbolId],
+) -> Result<TermId, SolverError> {
+    let bad = system.bad(arena, s)?;
+    Ok(arena.not(bad)?)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -292,6 +419,100 @@ mod tests {
         assert!(
             matches!(outcome, BmcOutcome::Reachable { steps: 2, .. }),
             "248 → 250 is two increments, got {outcome:?}"
+        );
+    }
+
+    /// An 8-bit register stepping by +2 from 0; "bad" = the value is odd. The
+    /// invariant "x is even" is genuinely *inductive* (even + 2 is even), so
+    /// k-induction proves unbounded safety already at k = 0 (plain induction).
+    struct EvenStepper;
+
+    impl EvenStepper {
+        fn is_odd(arena: &mut TermArena, s: &[SymbolId]) -> Result<TermId, SolverError> {
+            let x = arena.var(s[0]);
+            let one = arena.bv_const(8, 1)?;
+            let lsb = arena.bv_and(x, one)?;
+            Ok(arena.eq(lsb, one)?)
+        }
+    }
+
+    impl TransitionSystem for EvenStepper {
+        fn state_vars(
+            &self,
+            arena: &mut TermArena,
+            step: usize,
+        ) -> Result<Vec<SymbolId>, SolverError> {
+            Ok(vec![counter_var(arena, step)])
+        }
+
+        fn init(&self, arena: &mut TermArena, s0: &[SymbolId]) -> Result<TermId, SolverError> {
+            let x = arena.var(s0[0]);
+            let zero = arena.bv_const(8, 0)?;
+            Ok(arena.eq(x, zero)?)
+        }
+
+        fn trans(
+            &self,
+            arena: &mut TermArena,
+            pre: &[SymbolId],
+            post: &[SymbolId],
+        ) -> Result<TermId, SolverError> {
+            let x = arena.var(pre[0]);
+            let two = arena.bv_const(8, 2)?;
+            let inc = arena.bv_add(x, two)?;
+            let x_next = arena.var(post[0]);
+            Ok(arena.eq(x_next, inc)?)
+        }
+
+        fn bad(&self, arena: &mut TermArena, s: &[SymbolId]) -> Result<TermId, SolverError> {
+            Self::is_odd(arena, s)
+        }
+    }
+
+    #[test]
+    fn k_induction_proves_unbounded_safety() {
+        let mut arena = TermArena::new();
+        let outcome =
+            prove_safety_k_induction(&mut arena, &EvenStepper, 4, &SolverConfig::default())
+                .unwrap();
+        assert!(
+            matches!(outcome, SafetyOutcome::Safe { k: 0 }),
+            "‘x even’ is 0-inductive ⇒ unbounded Safe at k=0, got {outcome:?}"
+        );
+    }
+
+    #[test]
+    fn k_induction_returns_counterexample_for_unsafe_property() {
+        let mut arena = TermArena::new();
+        // Counter from 0 reaches 5; "bad = x == 5" is genuinely violated.
+        let system = Counter {
+            start: 0,
+            target: 5,
+        };
+        let outcome =
+            prove_safety_k_induction(&mut arena, &system, 8, &SolverConfig::default()).unwrap();
+        assert!(
+            matches!(outcome, SafetyOutcome::Reachable { steps: 5, .. }),
+            "k-induction base case must surface the real counterexample, got {outcome:?}"
+        );
+    }
+
+    #[test]
+    fn k_induction_is_honestly_inconclusive_not_wrongly_safe() {
+        let mut arena = TermArena::new();
+        // "x != 100" holds for the first few steps but is NOT k-inductive for any
+        // small k (the 99 → 100 transition always breaks the step), and the base
+        // bound (3) is too shallow to find the real counterexample at step 100.
+        // The only sound answer is Inconclusive — never Safe.
+        let system = Counter {
+            start: 0,
+            target: 100,
+        };
+        let outcome =
+            prove_safety_k_induction(&mut arena, &system, 3, &SolverConfig::default()).unwrap();
+        assert!(
+            matches!(outcome, SafetyOutcome::Inconclusive { max_k: 3 }),
+            "must not over-claim Safe for a non-inductive property, got {outcome:?}"
         );
     }
 }

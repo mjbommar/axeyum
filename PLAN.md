@@ -217,8 +217,11 @@ clausal proof closes the trusted base.
         memory). *BMC driver landed* (`bounded_model_check` over a
         `TransitionSystem`: warm unrolling, replay-checked counterexample traces,
         honestly-bounded unreachability — array-free BV/Bool first slice).
-        Remaining: array/memory transition relations (rides A2), k-induction /
-        interpolation for unbounded safety, and a CFG-shaped path-explorer API.
+        *k-induction landed* (`prove_safety_k_induction`: base case + inductive
+        step ⇒ unbounded `Safe`, counterexample, or honest `Inconclusive`).
+        Remaining: array/memory transition relations (rides A2), interpolation /
+        invariant strengthening for k-induction completeness, and a CFG-shaped
+        path-explorer API.
 - [ ] **C2 — angr/unicorn-class** binary/IR frontend (lift + CFG), real memory
         model, concrete-emulation cross-check. Needs C1 + A2.
 - [ ] **C3 — Constrained optimization**: OMT lexicographic/Pareto; MILP hardening.

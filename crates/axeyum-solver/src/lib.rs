@@ -74,7 +74,9 @@ pub use bitblast_miter::{
     BitblastMiterOutcome, EndToEndUnsatOutcome, certify_bitblast_by_miter,
     certify_qf_bv_unsat_end_to_end,
 };
-pub use bmc::{BmcOutcome, TransitionSystem, bounded_model_check};
+pub use bmc::{
+    BmcOutcome, SafetyOutcome, TransitionSystem, bounded_model_check, prove_safety_k_induction,
+};
 pub use cardinality::{at_least, at_most, exactly};
 pub use certify::{CertifyOutcome, certify_qf_bv_by_enumeration};
 pub use combined::check_with_all_theories;
