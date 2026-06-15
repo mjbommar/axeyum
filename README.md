@@ -53,7 +53,8 @@ and `bounded_model_check_with_memory` for array/symbolic-memory state) answers
 reachability queries with a replay-checked counterexample trace, and
 **k-induction** (`prove_safety_k_induction`) lifts that to *unbounded* safety
 proofs — `Safe`, a counterexample, or an honest `Inconclusive` (never a wrong
-`Safe`).
+`Safe`) — and `certify_safety_k_induction` returns a `Safe` verdict with a
+`drat-trim`-checkable DRAT certificate for **each** induction obligation.
 
 Everything routes through a few consumer entry points (`axeyum-solver`):
 

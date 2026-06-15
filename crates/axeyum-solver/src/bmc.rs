@@ -35,6 +35,7 @@ use axeyum_ir::{SymbolId, TermArena, TermId};
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownReason};
 use crate::incremental::IncrementalBvSolver;
 use crate::model::Model;
+use crate::proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};
 
 /// A symbolic transition system: the input to [`bounded_model_check`].
 ///
@@ -343,6 +344,171 @@ fn negate_bad(
 ) -> Result<TermId, SolverError> {
     let bad = system.bad(arena, s)?;
     Ok(arena.not(bad)?)
+}
+
+/// Two externally-checkable `unsat` certificates that together establish a
+/// `k`-induction safety proof: the base case and the inductive step.
+#[derive(Debug, Clone)]
+pub struct SafetyCertificate {
+    /// The induction depth the proof closed at.
+    pub k: usize,
+    /// DRAT-checked `unsat` of `init ∧ trans₀…ₖ ∧ (bad(s₀) ∨ … ∨ bad(s_k))` — no
+    /// counterexample of length `≤ k` exists.
+    pub base_case: UnsatProof,
+    /// DRAT-checked `unsat` of `¬bad(t₀) ∧ trans … ∧ ¬bad(t_k) ∧ trans ∧
+    /// bad(t_{k+1})` — a path of `k+1` consecutive good states cannot reach a bad
+    /// one (over arbitrary, non-initial states).
+    pub inductive_step: UnsatProof,
+}
+
+/// The outcome of [`certify_safety_k_induction`].
+#[derive(Debug, Clone)]
+pub enum CertifiedSafetyOutcome {
+    /// Proven safe in every reachable state, with both `k`-induction obligations
+    /// as `drat-trim`-checkable certificates (machine-checked at the clausal
+    /// layer, modulo the trusted term→CNF reduction — the same caveat as every
+    /// `export_qf_*_unsat_proof`).
+    Safe(SafetyCertificate),
+    /// A counterexample exists: `model` is a replay-checked trace at `steps`.
+    Reachable {
+        /// The number of transitions to the bad state.
+        steps: usize,
+        /// The witnessed trace.
+        model: Model,
+    },
+    /// No `k ≤ max_k` closed the inductive step (and no counterexample within the
+    /// base bound). The property may still hold — honest, not `Safe`.
+    Inconclusive {
+        /// The deepest depth attempted.
+        max_k: usize,
+    },
+    /// A proof core exhausted its conflict budget on an obligation at depth `k`.
+    ProofInconclusive {
+        /// The depth whose obligation could not be proven within budget.
+        k: usize,
+    },
+}
+
+/// Like [`prove_safety_k_induction`], but a `Safe` verdict comes with **two
+/// externally-checkable DRAT certificates** — one per `k`-induction obligation.
+///
+/// For increasing `k` up to `max_k`, both the base case and the inductive step
+/// are exported through [`export_qf_bv_unsat_proof`](crate::export_qf_bv_unsat_proof),
+/// which bit-blasts the obligation, runs the proof-producing CDCL core, and
+/// self-verifies the DRAT before returning it. A `Safe` result therefore carries
+/// proof a consumer (or `drat-trim`, or eventually a Lean checker) can re-check
+/// offline — the reachability track meeting the trusted-checking north star.
+///
+/// Outcomes mirror [`SafetyOutcome`] but with certificates on `Safe`; a base case
+/// that turns out *satisfiable* means a counterexample exists, recovered (with its
+/// model) via [`bounded_model_check`] and returned as
+/// [`CertifiedSafetyOutcome::Reachable`].
+///
+/// Array-free `QF_BV`/Bool transition systems only (the proof exporter does not
+/// take arrays; certified memory safety would ride `export_qf_abv_unsat_proof`).
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] for non-QF_BV constructs (e.g. arrays),
+/// or [`SolverError::Backend`] on an encoding failure, a proof that fails to
+/// check (a soundness alarm), or a base/BMC disagreement.
+pub fn certify_safety_k_induction(
+    arena: &mut TermArena,
+    system: &impl TransitionSystem,
+    max_k: usize,
+    config: &SolverConfig,
+) -> Result<CertifiedSafetyOutcome, SolverError> {
+    for k in 0..=max_k {
+        // Base case: is there a counterexample of length ≤ k?
+        let base = base_case_assertions(arena, system, k)?;
+        match export_qf_bv_unsat_proof(arena, &base)? {
+            UnsatProofOutcome::Satisfiable => {
+                // A counterexample exists within k; recover its model and depth.
+                return match bounded_model_check(arena, system, k, config)? {
+                    BmcOutcome::Reachable { steps, model } => {
+                        Ok(CertifiedSafetyOutcome::Reachable { steps, model })
+                    }
+                    other => Err(SolverError::Backend(format!(
+                        "base case at k={k} is satisfiable but BMC returned {other:?}"
+                    ))),
+                };
+            }
+            UnsatProofOutcome::Inconclusive => {
+                return Ok(CertifiedSafetyOutcome::ProofInconclusive { k });
+            }
+            UnsatProofOutcome::Proved(base_case) => {
+                // Base holds at k; try to close the inductive step at the same k.
+                let step = inductive_step_assertions(arena, system, k)?;
+                match export_qf_bv_unsat_proof(arena, &step)? {
+                    UnsatProofOutcome::Proved(inductive_step) => {
+                        return Ok(CertifiedSafetyOutcome::Safe(SafetyCertificate {
+                            k,
+                            base_case,
+                            inductive_step,
+                        }));
+                    }
+                    // Step failed at this k: deepen the induction.
+                    UnsatProofOutcome::Satisfiable => {}
+                    UnsatProofOutcome::Inconclusive => {
+                        return Ok(CertifiedSafetyOutcome::ProofInconclusive { k });
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(CertifiedSafetyOutcome::Inconclusive { max_k })
+}
+
+/// The base-case obligation at depth `k`: `init(s₀) ∧ trans(s₀,s₁) ∧ … ∧
+/// trans(s_{k-1},s_k) ∧ (bad(s₀) ∨ … ∨ bad(s_k))`. Unsatisfiable iff no bad state
+/// is reachable within `k` transitions.
+fn base_case_assertions(
+    arena: &mut TermArena,
+    system: &impl TransitionSystem,
+    k: usize,
+) -> Result<Vec<TermId>, SolverError> {
+    let mut states = vec![system.state_vars(arena, 0)?];
+    let mut assertions = vec![system.init(arena, &states[0])?];
+    for i in 0..k {
+        let next = system.state_vars(arena, i + 1)?;
+        let trans = system.trans(arena, &states[i], &next)?;
+        assertions.push(trans);
+        states.push(next);
+    }
+    let mut bad_any = system.bad(arena, &states[0])?;
+    for state in states.iter().skip(1) {
+        let bad_i = system.bad(arena, state)?;
+        bad_any = arena.or(bad_any, bad_i)?;
+    }
+    assertions.push(bad_any);
+    Ok(assertions)
+}
+
+/// The inductive-step obligation at depth `k`: `¬bad(t₀) ∧ trans(t₀,t₁) ∧ … ∧
+/// ¬bad(t_k) ∧ trans(t_k,t_{k+1}) ∧ bad(t_{k+1})` over arbitrary (non-initial)
+/// states. Unsatisfiable iff `k+1` consecutive good states cannot transition into
+/// a bad one.
+fn inductive_step_assertions(
+    arena: &mut TermArena,
+    system: &impl TransitionSystem,
+    k: usize,
+) -> Result<Vec<TermId>, SolverError> {
+    let mut t = vec![system.state_vars(arena, 0)?];
+    let mut assertions = vec![negate_bad(arena, system, &t[0])?];
+    for i in 0..=k {
+        let next = system.state_vars(arena, i + 1)?;
+        let trans = system.trans(arena, &t[i], &next)?;
+        assertions.push(trans);
+        t.push(next);
+        let tail = if i < k {
+            negate_bad(arena, system, &t[i + 1])?
+        } else {
+            system.bad(arena, &t[i + 1])?
+        };
+        assertions.push(tail);
+    }
+    Ok(assertions)
 }
 
 #[cfg(test)]
@@ -662,6 +828,62 @@ mod tests {
         assert!(
             matches!(outcome, BmcOutcome::UnreachableWithinBound { bound: 3 }),
             "mem[3] is untouched within three steps, got {outcome:?}"
+        );
+    }
+
+    #[test]
+    fn certified_k_induction_emits_checkable_proofs() {
+        use axeyum_cnf::check_drat;
+
+        let mut arena = TermArena::new();
+        let outcome =
+            certify_safety_k_induction(&mut arena, &EvenStepper, 4, &SolverConfig::default())
+                .unwrap();
+        let CertifiedSafetyOutcome::Safe(cert) = outcome else {
+            panic!("expected a certified Safe verdict, got {outcome:?}");
+        };
+        assert_eq!(cert.k, 0, "‘x even’ is 0-inductive");
+        // Both certificates are non-empty and independently re-checkable: parse
+        // each DIMACS+DRAT pair and confirm the refutation derives the empty
+        // clause (the same gate `drat-trim` applies).
+        for proof in [&cert.base_case, &cert.inductive_step] {
+            assert!(!proof.dimacs.is_empty() && !proof.drat.is_empty());
+            let formula = axeyum_cnf::parse_dimacs(&proof.dimacs).unwrap();
+            let drat = axeyum_cnf::parse_drat(&proof.drat).unwrap();
+            assert!(
+                check_drat(&formula, &drat).unwrap(),
+                "exported certificate must re-check independently"
+            );
+        }
+    }
+
+    #[test]
+    fn certified_k_induction_surfaces_counterexample_for_unsafe() {
+        let mut arena = TermArena::new();
+        let system = Counter {
+            start: 0,
+            target: 5,
+        };
+        let outcome =
+            certify_safety_k_induction(&mut arena, &system, 8, &SolverConfig::default()).unwrap();
+        assert!(
+            matches!(outcome, CertifiedSafetyOutcome::Reachable { steps: 5, .. }),
+            "an unsafe property has no safety certificate; expected Reachable, got {outcome:?}"
+        );
+    }
+
+    #[test]
+    fn certified_k_induction_is_honestly_inconclusive() {
+        let mut arena = TermArena::new();
+        let system = Counter {
+            start: 0,
+            target: 100,
+        };
+        let outcome =
+            certify_safety_k_induction(&mut arena, &system, 3, &SolverConfig::default()).unwrap();
+        assert!(
+            matches!(outcome, CertifiedSafetyOutcome::Inconclusive { max_k: 3 }),
+            "never fabricate a certificate for a non-inductive property, got {outcome:?}"
         );
     }
 }

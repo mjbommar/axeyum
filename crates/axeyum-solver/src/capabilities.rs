@@ -218,6 +218,15 @@ pub const CAPABILITIES: &[Capability] = &[
                    never a wrong Safe",
         reference: "ADR-0009",
     },
+    Capability {
+        area: "reachability",
+        feature: "certified k-induction (certify_safety_k_induction): Safe carries DRAT \
+                  certificates for both obligations",
+        assurance: Assurance::Checked,
+        evidence: "base-case + inductive-step UNSAT each exported as a drat-trim-checkable \
+                   DIMACS+DRAT pair (clausal layer, modulo trusted term→CNF reduction)",
+        reference: "ADR-0011/0012",
+    },
 ];
 
 /// Renders [`CAPABILITIES`] as the canonical capability-matrix markdown table.

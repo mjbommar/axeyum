@@ -75,8 +75,9 @@ pub use bitblast_miter::{
     certify_qf_bv_unsat_end_to_end,
 };
 pub use bmc::{
-    BmcOutcome, SafetyOutcome, TransitionSystem, bounded_model_check,
-    bounded_model_check_with_memory, prove_safety_k_induction,
+    BmcOutcome, CertifiedSafetyOutcome, SafetyCertificate, SafetyOutcome, TransitionSystem,
+    bounded_model_check, bounded_model_check_with_memory, certify_safety_k_induction,
+    prove_safety_k_induction,
 };
 pub use cardinality::{at_least, at_most, exactly};
 pub use certify::{CertifyOutcome, certify_qf_bv_by_enumeration};

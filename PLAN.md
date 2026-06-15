@@ -220,9 +220,12 @@ clausal proof closes the trusted base.
         *k-induction landed* (`prove_safety_k_induction`: base case + inductive
         step ⇒ unbounded `Safe`, counterexample, or honest `Inconclusive`).
         *Symbolic-memory BMC landed* (`bounded_model_check_with_memory`: array
-        state via eager elimination, one-shot per depth). Remaining: warm lazy
-        arrays for memory BMC + memory k-induction (rides A2), interpolation /
-        invariant strengthening for k-induction completeness, and a CFG-shaped
+        state via eager elimination, one-shot per depth). *Certified k-induction
+        landed* (`certify_safety_k_induction`: a `Safe` verdict carries a
+        drat-trim-checkable DRAT certificate per obligation — the reachability
+        track meeting the proof/checking track). Remaining: warm lazy arrays for
+        memory BMC + memory k-induction (rides A2), interpolation / invariant
+        strengthening for k-induction completeness, and a CFG-shaped
         path-explorer API.
 - [ ] **C2 — angr/unicorn-class** binary/IR frontend (lift + CFG), real memory
         model, concrete-emulation cross-check. Needs C1 + A2.
