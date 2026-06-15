@@ -49,9 +49,19 @@ Last updated: 2026-06-14
   13 500 cases. Also fixed a stale `float128_nonarithmetic_ops_decide` assertion
   (F128 arithmetic now decides rather than erroring — a regression missed when
   F128 was enabled). **Now every small-format arithmetic op (add/mul/div/sqrt/fma)
-  is validated.** Remaining: a per-op *format-support gate* so arbitrary parser
-  formats outside the validated set return `unsupported` (enabled ⟹ validated),
-  and widening the validated region (sb 12..24, eb = 11) if needed.
+  is validated.**
+
+- **FP arithmetic is now `enabled ⟹ validated` — format-support gate
+  (2026-06-14).** `add`/`sub`/`mul`/`div`/`sqrt`/`fma` now refuse any format
+  outside the *validated* set with `IrError::Unsupported`, rather than silently
+  building an unvalidated (possibly wrong) circuit — the only sound stance given
+  that no first-class FP op exists and model replay can't catch a wrong FP
+  circuit. Validated set (`arithmetic_format_supported`): IEEE formats with
+  `eb ≤ 10, sb ≤ 11` (F16/BF16/TF32/FP8 + tiny formats) ∪ {F32, F64, F128};
+  non-IEEE `FP8_E4M3`/`FP4_E2M1` are refused (no IEEE inf/NaN). Test
+  `unvalidated_formats_are_refused_not_silently_wrong` locks it. Residual: widen
+  the validated region (`sb 12..24`, `eb = 11`) with an exact oracle if a use
+  case appears; the same gate could extend to `rem`/`to_fp`/`roundToIntegral`.
 
 - **Small-format FP validation caught and fixed a real `div` soundness bug
   (2026-06-14).** Added a differential sweep of `add`/`mul`/`div`/`sqrt` over all

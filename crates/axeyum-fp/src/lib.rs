@@ -701,6 +701,9 @@ pub fn pack_value(
 /// the format width, or [`IrError`] from the builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
 pub fn mul(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: RoundingMode) -> Result<TermId, IrError> {
+    if !arithmetic_format_supported(fmt) {
+        return Err(IrError::Unsupported("fp.mul: unvalidated format"));
+    }
     fmt.check(arena, a)?;
     fmt.check(arena, b)?;
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
@@ -765,6 +768,24 @@ pub fn mul(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: 
     let if_zero = arena.ite(zero_flag, sign_total, finite)?;
     let if_inf = arena.ite(inf_flag, inf_total, if_zero)?;
     arena.ite(nan_flag, qnan, if_inf)
+}
+
+/// Whether the symbolic arithmetic circuits (`add`/`sub`/`mul`/`div`/`sqrt`/
+/// `fma`) are **differentially validated** for this format, and may therefore be
+/// built. Validation is the soundness contract for FP here (ADR-0023/0028): there
+/// is no first-class FP op, so the evaluator runs the very circuit the solver
+/// does and model replay cannot catch a wrong circuit — only an oracle can. An
+/// *unvalidated* format must therefore be refused (`unsupported`), never silently
+/// computed. Validated today: the small IEEE formats (`eb ≤ 10`, `sb ≤ 11` —
+/// F16/BF16/TF32/FP8 and the tiny quantifier formats) against native `f64` and
+/// the exact big-integer fma oracle, plus **F32**/**F64** (native) and **F128**
+/// (`rustc_apfloat` and the sqrt correct-rounding oracle).
+fn arithmetic_format_supported(fmt: FloatFormat) -> bool {
+    fmt.is_ieee()
+        && ((fmt.exp_bits <= 10 && fmt.sig_bits <= 11)
+            || fmt == FloatFormat::F32
+            || fmt == FloatFormat::F64
+            || fmt == FloatFormat::F128)
 }
 
 /// Normalizes a (possibly subnormal) significand so its leading one sits at bit
@@ -838,6 +859,9 @@ fn unpack_operand(
 /// [`IrError::SortMismatch`] for a mis-sized operand, or [`IrError`] from builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
 pub fn sqrt(arena: &mut TermArena, fmt: FloatFormat, x: TermId, mode: RoundingMode) -> Result<TermId, IrError> {
+    if !arithmetic_format_supported(fmt) {
+        return Err(IrError::Unsupported("fp.sqrt: unvalidated format"));
+    }
     fmt.check(arena, x)?;
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
     let total = fmt.width();
@@ -997,6 +1021,9 @@ pub fn to_fp(
 /// [`IrError::SortMismatch`] for a mis-sized operand, or [`IrError`] from builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
 pub fn div(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: RoundingMode) -> Result<TermId, IrError> {
+    if !arithmetic_format_supported(fmt) {
+        return Err(IrError::Unsupported("fp.div: unvalidated format"));
+    }
     fmt.check(arena, a)?;
     fmt.check(arena, b)?;
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
@@ -1106,6 +1133,9 @@ pub fn div(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: 
 /// [`IrError`] from the builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
 pub fn add(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: RoundingMode) -> Result<TermId, IrError> {
+    if !arithmetic_format_supported(fmt) {
+        return Err(IrError::Unsupported("fp.add: unvalidated format"));
+    }
     fmt.check(arena, a)?;
     fmt.check(arena, b)?;
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
@@ -1245,6 +1275,9 @@ pub fn fma(
     c: TermId,
     mode: RoundingMode,
 ) -> Result<TermId, IrError> {
+    if !arithmetic_format_supported(fmt) {
+        return Err(IrError::Unsupported("fp.fma: unvalidated format"));
+    }
     fmt.check(arena, a)?;
     fmt.check(arena, b)?;
     fmt.check(arena, c)?;
@@ -4725,6 +4758,36 @@ mod small_format_arithmetic_validation {
     }
 
     #[test]
+    fn unvalidated_formats_are_refused_not_silently_wrong() {
+        // Formats outside the validated set must return `Unsupported`, never a
+        // silently-unvalidated (possibly wrong) circuit — enabled ⟹ validated.
+        let mut a = TermArena::new();
+        let unvalidated = [
+            FloatFormat { exp_bits: 8, sig_bits: 20 },  // sb > 11, not standard
+            FloatFormat { exp_bits: 11, sig_bits: 5 },  // eb > 10, not standard
+            FloatFormat { exp_bits: 15, sig_bits: 64 }, // wide, not F128
+            FloatFormat::FP8_E4M3,                      // non-IEEE
+        ];
+        for fmt in unvalidated {
+            let w = fmt.width();
+            let x = a.bv_const(w, 0).unwrap();
+            let y = a.bv_const(w, 0).unwrap();
+            assert!(matches!(add(&mut a, fmt, x, y, RoundingMode::NearestEven), Err(IrError::Unsupported(_))), "add {fmt:?}");
+            assert!(matches!(mul(&mut a, fmt, x, y, RoundingMode::NearestEven), Err(IrError::Unsupported(_))), "mul {fmt:?}");
+            assert!(matches!(div(&mut a, fmt, x, y, RoundingMode::NearestEven), Err(IrError::Unsupported(_))), "div {fmt:?}");
+            assert!(matches!(sqrt(&mut a, fmt, x, RoundingMode::NearestEven), Err(IrError::Unsupported(_))), "sqrt {fmt:?}");
+            assert!(matches!(fma(&mut a, fmt, x, y, x, RoundingMode::NearestEven), Err(IrError::Unsupported(_))), "fma {fmt:?}");
+        }
+        // Validated formats still build.
+        for fmt in [FloatFormat::F16, FloatFormat::BF16, FloatFormat::F32, FloatFormat::F64, FloatFormat::F128] {
+            let w = fmt.width();
+            let x = a.bv_const(w, 0).unwrap();
+            let y = a.bv_const(w, 0).unwrap();
+            assert!(add(&mut a, fmt, x, y, RoundingMode::NearestEven).is_ok(), "add {fmt:?} should build");
+        }
+    }
+
+    #[test]
     fn small_ieee_formats_match_f64_oracle() {
         let mut state = 0x5151_a5a5_3c3c_9696u64;
         let rng = |state: &mut u64| {
@@ -4741,6 +4804,9 @@ mod small_format_arithmetic_validation {
         for eb in 2u32..=10 {
             for sb in 2u32..=11 {
                 let fmt = FloatFormat { exp_bits: eb, sig_bits: sb };
+                if !fmt.is_ieee() {
+                    continue; // (4,4)=FP8_E4M3 and (2,2)=FP4_E2M1 are non-IEEE
+                }
                 let total = eb + sb;
                 let bias = (1i64 << (eb - 1)) - 1;
                 // Per-format structured corners: ±0, ±1, ±2, +inf, -inf, NaN,
@@ -5012,6 +5078,9 @@ mod fma_exact_oracle {
         for eb in 2u32..=10 {
             for sb in 2u32..=11 {
                 let fmt = FloatFormat { exp_bits: eb, sig_bits: sb };
+                if !fmt.is_ieee() {
+                    continue; // (4,4)=FP8_E4M3 and (2,2)=FP4_E2M1 are non-IEEE
+                }
                 let total = eb + sb;
                 let mask = (1u128 << total) - 1;
                 let mut a = TermArena::new();
