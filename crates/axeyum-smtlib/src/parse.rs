@@ -1029,6 +1029,41 @@ fn string_prefixof(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId
     Ok(acc)
 }
 
+/// `str.contains x y` — `y` occurs in `x` as a contiguous substring. A pure
+/// bit-vector/Boolean formula: the disjunction over each start offset `d` of
+/// "`y` fits at `d` (`d + len(y) ≤ len(x)`) and matches there". Bounded
+/// (`O(MAX_LEN²)`), decides both directions.
+fn string_contains(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId, SmtError> {
+    let xlen = string_len(arena, x)?;
+    let ylen = string_len(arena, y)?;
+    // Widen lengths by one bit so `d + len(y)` cannot overflow the length width.
+    let xlen_w = arena.zero_ext(1, xlen)?;
+    let ylen_w = arena.zero_ext(1, ylen)?;
+    let wlen = STRING_LEN_WIDTH + 1;
+    let mut any = arena.bool_const(false);
+    for d in 0..STRING_MAX_LEN {
+        let dconst = arena.bv_const(wlen, u128::from(d))?;
+        let sum = arena.bv_add(dconst, ylen_w)?;
+        let fits = arena.bv_ule(sum, xlen_w)?; // d + len(y) ≤ len(x)
+        let mut matched = fits;
+        for j in 0..STRING_MAX_LEN {
+            if d + j >= STRING_MAX_LEN {
+                break; // x has no byte at d+j; under `fits` this forces j ≥ len(y)
+            }
+            let xb = string_byte(arena, x, d + j)?;
+            let yb = string_byte(arena, y, j)?;
+            let beq = arena.eq(xb, yb)?;
+            let jconst = arena.bv_const(STRING_LEN_WIDTH, u128::from(j))?;
+            let jactive = arena.bv_ult(jconst, ylen)?; // j < len(y)
+            let njactive = arena.not(jactive)?;
+            let ok = arena.or(njactive, beq)?; // j ≥ len(y) ∨ bytes equal
+            matched = arena.and(matched, ok)?;
+        }
+        any = arena.or(any, matched)?;
+    }
+    Ok(any)
+}
+
 /// The canonical well-formedness constraint for a packed string `v`: its length
 /// is `≤ STRING_MAX_LEN`, and every content byte at or above the length is zero.
 fn string_wellformed(arena: &mut TermArena, v: TermId) -> Result<TermId, SmtError> {
@@ -1482,6 +1517,11 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
         "str.prefixof" => {
             need(2)?;
             string_prefixof(arena, args[0], args[1])?
+        }
+        // `str.contains x y` — y occurs in x; pure BV/Bool, decides both directions.
+        "str.contains" => {
+            need(2)?;
+            string_contains(arena, args[0], args[1])?
         }
         "and" => fold(arena, TermArena::and)?,
         "or" => fold(arena, TermArena::or)?,

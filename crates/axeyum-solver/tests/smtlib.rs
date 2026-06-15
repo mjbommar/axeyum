@@ -787,3 +787,47 @@ fn decides_str_prefixof_both_directions() {
         "\"xy\" is not a prefix of \"abc\""
     );
 }
+
+/// `str.contains` (substring search) is pure BV/Bool over packed strings —
+/// decides both directions (ADR-0029).
+#[test]
+fn decides_str_contains_both_directions() {
+    // Ground truths.
+    assert!(matches!(
+        run("(assert (str.contains \"abcd\" \"bc\"))\n(check-sat)\n").result,
+        CheckResult::Sat(_)
+    ));
+    assert_eq!(
+        run("(assert (str.contains \"abcd\" \"bd\"))\n(check-sat)\n").result,
+        CheckResult::Unsat,
+        "\"bd\" is not a contiguous substring of \"abcd\""
+    );
+    // Empty string is contained in everything.
+    assert!(matches!(
+        run("(assert (str.contains \"ab\" \"\"))\n(check-sat)\n").result,
+        CheckResult::Sat(_)
+    ));
+    // Variable haystack containing "xy" with s == "axyz" -> sat.
+    assert!(matches!(
+        run("\
+(declare-const s String)
+(assert (= s \"axyz\"))
+(assert (str.contains s \"xy\"))
+(check-sat)
+")
+        .result,
+        CheckResult::Sat(_)
+    ));
+    // s == "ab" cannot contain "abc" (needle longer) -> unsat.
+    assert_eq!(
+        run("\
+(declare-const s String)
+(assert (= s \"ab\"))
+(assert (str.contains s \"abc\"))
+(check-sat)
+")
+        .result,
+        CheckResult::Unsat,
+        "a 2-byte string cannot contain a 3-byte substring"
+    );
+}
