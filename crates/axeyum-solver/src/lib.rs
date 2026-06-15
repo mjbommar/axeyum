@@ -112,8 +112,9 @@ pub use optimize::{
 };
 pub use pb::{pb_eq, pb_ge, pb_le};
 pub use proof::{
-    UnsatProof, UnsatProofOutcome, export_qf_abv_unsat_proof, export_qf_aufbv_unsat_proof,
-    export_qf_bv_unsat_proof, export_qf_uf_unsat_proof,
+    UnsatProof, UnsatProofOutcome, export_datatype_unsat_proof, export_qf_abv_unsat_proof,
+    export_qf_aufbv_unsat_proof, export_qf_bv_unsat_proof, export_qf_lia_unsat_proof,
+    export_qf_uf_unsat_proof,
 };
 pub use records::{RecordError, RecordSort};
 pub use sat_bv_backend::SatBvBackend;

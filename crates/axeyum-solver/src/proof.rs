@@ -19,7 +19,10 @@ use axeyum_cnf::{
     ProofSolveOutcome, check_drat, solve_with_drat_proof, tseitin_encode, write_drat,
 };
 use axeyum_ir::{Sort, TermArena, TermId};
-use axeyum_rewrite::{ArrayElimError, FuncElimError, eliminate_arrays, eliminate_functions};
+use axeyum_rewrite::{
+    ArrayElimError, FuncElimError, IntBlastError, blast_integers, eliminate_arrays,
+    eliminate_functions, simplify_datatypes,
+};
 
 use crate::backend::SolverError;
 
@@ -190,4 +193,56 @@ pub fn export_qf_uf_unsat_proof(
     })?;
     let eliminated = elimination.assertions().to_vec();
     export_qf_bv_unsat_proof(arena, &eliminated)
+}
+
+/// Checkable `unsat` certificate for **bounded `QF_LIA`**: bit-blasts integers
+/// to `BitVec(int_width)` (ADR-0014) and exports the DRAT-checked certificate of
+/// the resulting `QF_BV` query. The certificate refutes the query *at the chosen
+/// bound* (the bound is part of the claim). If a constant does not fit
+/// `int_width`, returns [`UnsatProofOutcome::Inconclusive`] (widen the bound).
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] for non-`QF_LIA`/BV constructs,
+/// [`SolverError::NonBooleanAssertion`], or [`SolverError::Backend`] on an
+/// invalid width / encoding failure / a proof that fails to check.
+pub fn export_qf_lia_unsat_proof(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    int_width: u32,
+) -> Result<UnsatProofOutcome, SolverError> {
+    let blasting = match blast_integers(arena, assertions, int_width) {
+        Ok(blasting) => blasting,
+        Err(IntBlastError::ConstantOutOfRange { .. }) => {
+            return Ok(UnsatProofOutcome::Inconclusive); // bound too small to bit-blast
+        }
+        Err(IntBlastError::InvalidWidth(width)) => {
+            return Err(SolverError::Backend(format!(
+                "invalid integer bit-blast width {width}"
+            )));
+        }
+        Err(IntBlastError::Ir(inner)) => return Err(SolverError::Backend(inner.to_string())),
+    };
+    let eliminated = blasting.assertions().to_vec();
+    export_qf_bv_unsat_proof(arena, &eliminated)
+}
+
+/// Checkable `unsat` certificate for **datatypes** over bit-vectors: folds
+/// `select`/`is`/equality over explicit constructors ([`simplify_datatypes`],
+/// ADR-0022) and exports the DRAT-checked certificate of the resulting `QF_BV`
+/// query. Works when the datatypes fully fold away; a query left with free
+/// datatype variables (not bit-blastable) is a clean [`SolverError::Unsupported`].
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] for residual datatype constructs,
+/// [`SolverError::NonBooleanAssertion`], or [`SolverError::Backend`] on an
+/// encoding failure or a proof that fails to check.
+pub fn export_datatype_unsat_proof(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<UnsatProofOutcome, SolverError> {
+    let simplified =
+        simplify_datatypes(arena, assertions).map_err(|e| SolverError::Backend(e.to_string()))?;
+    export_qf_bv_unsat_proof(arena, &simplified)
 }

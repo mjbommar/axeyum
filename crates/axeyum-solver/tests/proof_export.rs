@@ -181,3 +181,58 @@ fn qf_aufbv_unsat_exports_a_recheckable_certificate() {
         "exported DRAT must refute the array+function-reduced CNF"
     );
 }
+
+#[test]
+fn bounded_qf_lia_unsat_exports_a_recheckable_certificate() {
+    // x + 2 == 5 (x == 3) and x == 0 is unsat. Bit-blasted at width 8, the
+    // resulting QF_BV CNF's DRAT refutation is exported and re-checked.
+    use axeyum_ir::Sort;
+    use axeyum_solver::export_qf_lia_unsat_proof;
+
+    let mut arena = TermArena::new();
+    let xs = arena.declare("x", Sort::Int).unwrap();
+    let x = arena.var(xs);
+    let two = arena.int_const(2);
+    let five = arena.int_const(5);
+    let zero = arena.int_const(0);
+    let sum = arena.int_add(x, two).unwrap();
+    let sum_eq_5 = arena.eq(sum, five).unwrap();
+    let x_eq_0 = arena.eq(x, zero).unwrap();
+
+    let outcome = export_qf_lia_unsat_proof(&mut arena, &[sum_eq_5, x_eq_0], 8).unwrap();
+    let UnsatProofOutcome::Proved(proof) = outcome else {
+        panic!("expected an unsat certificate, got {outcome:?}");
+    };
+    let formula = parse_dimacs(&proof.dimacs).expect("exported DIMACS re-parses");
+    let steps = parse_drat(&proof.drat).expect("exported DRAT re-parses");
+    assert!(
+        check_drat(&formula, &steps).expect("re-check runs"),
+        "exported DRAT must refute the integer-blasted CNF"
+    );
+}
+
+#[test]
+fn datatype_unsat_exports_a_recheckable_certificate() {
+    // A ground constructor mismatch folds to false: is_green(red) is unsat.
+    // simplify_datatypes reduces it to a Boolean contradiction, exported and
+    // re-checked through the QF_BV proof path.
+    use axeyum_solver::export_datatype_unsat_proof;
+
+    let mut arena = TermArena::new();
+    let color = arena.declare_datatype("color");
+    let red = arena.add_constructor(color, "red", &[]);
+    let green = arena.add_constructor(color, "green", &[]);
+    let red_t = arena.construct(red, &[]).unwrap();
+    let is_green = arena.dt_test(green, red_t).unwrap();
+
+    let outcome = export_datatype_unsat_proof(&mut arena, &[is_green]).unwrap();
+    let UnsatProofOutcome::Proved(proof) = outcome else {
+        panic!("expected an unsat certificate, got {outcome:?}");
+    };
+    let formula = parse_dimacs(&proof.dimacs).expect("exported DIMACS re-parses");
+    let steps = parse_drat(&proof.drat).expect("exported DRAT re-parses");
+    assert!(
+        check_drat(&formula, &steps).expect("re-check runs"),
+        "exported DRAT must refute the datatype-simplified CNF"
+    );
+}

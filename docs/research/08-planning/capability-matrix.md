@@ -14,11 +14,11 @@ Assurance levels: **checked** (independent certificate — Farkas/DRAT/replayed 
 | QF_ABV | arrays via eager read-over-write + Ackermann elimination | validated | reduction to QF_BV; model replay; UNSAT exportable as a re-checkable DRAT certificate (clausal layer, modulo trusted elimination) | ADR-0010 |
 | QF_UF | uninterpreted functions via Ackermann reduction | validated | reduction; model replay; UNSAT exportable as a re-checkable DRAT certificate (clausal layer, modulo trusted reduction) | ADR-0013 |
 | QF_LRA | linear real arithmetic (exact-rational simplex) | checked | Farkas certificate for UNSAT; exact rational model | ADR-0015 |
-| QF_LIA | linear integer arithmetic (bit-blast + branch-and-bound simplex) | validated | model replay; bounded bit-blast / simplex | ADR-0014/0020/0021 |
+| QF_LIA | linear integer arithmetic (bit-blast + branch-and-bound simplex) | validated | model replay; bounded bit-blast / simplex; bounded UNSAT exportable as a re-checkable DRAT certificate (at the chosen width) | ADR-0014/0020/0021 |
 | QF_NRA/NIA | nonlinear via linear abstraction + sign/zero lemmas + McCormick B&B | sound, incomplete | model replay (SAT); relaxation-unsat (UNSAT); unknown otherwise | ADR-0024 |
 | QF_FP | float add/sub/mul/div/fma/sqrt — F16/F32/F64/F128 + small formats | validated | circuit differential vs native f32/f64 and rustc_apfloat; model replay | ADR-0023/0026/0028 |
 | QF_FP | float rem/roundToIntegral/to_fp/conversions/classification | validated | differential vs trusted fold / native; unvalidated formats refused | ADR-0023/0026 |
-| datatypes | algebraic datatypes (constructor axioms; elimination + native) | validated | model replay; first-class sort | ADR-0022 |
+| datatypes | algebraic datatypes (constructor axioms; elimination + native) | validated | model replay; first-class sort; folded-away UNSAT exportable as a re-checkable DRAT certificate | ADR-0022 |
 | quantifiers | finite-domain expansion + E-matching instantiation | sound, incomplete | complete over finite domains; instantiation otherwise (unknown-safe) | ADR-0016 |
 | QF_S (strings) | bounded-length strings + regex (BV-lowered) — API only, not SMT-LIB-wired | experimental | model replay through BV path; length bound explicit (≤16) | ADR-0025/0029 |
 | optimization | MaxSAT / OMT / MILP (branch-and-bound over the arithmetic cores) | experimental | optimum certified by the underlying decision procedure per step | ADR-0027 |

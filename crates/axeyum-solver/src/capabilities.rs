@@ -127,7 +127,8 @@ pub const CAPABILITIES: &[Capability] = &[
         area: "QF_LIA",
         feature: "linear integer arithmetic (bit-blast + branch-and-bound simplex)",
         assurance: Assurance::Validated,
-        evidence: "model replay; bounded bit-blast / simplex",
+        evidence: "model replay; bounded bit-blast / simplex; bounded UNSAT exportable as a \
+                   re-checkable DRAT certificate (at the chosen width)",
         reference: "ADR-0014/0020/0021",
     },
     Capability {
@@ -155,7 +156,8 @@ pub const CAPABILITIES: &[Capability] = &[
         area: "datatypes",
         feature: "algebraic datatypes (constructor axioms; elimination + native)",
         assurance: Assurance::Validated,
-        evidence: "model replay; first-class sort",
+        evidence: "model replay; first-class sort; folded-away UNSAT exportable as a \
+                   re-checkable DRAT certificate",
         reference: "ADR-0022",
     },
     Capability {
