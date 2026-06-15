@@ -748,3 +748,42 @@ fn str_len_sat_direction_decides() {
         conflict.result
     );
 }
+
+/// `str.prefixof` is a pure bit-vector/Boolean formula over packed strings, so
+/// it decides both sat and unsat (no Int/theory-combination gap). ADR-0029.
+#[test]
+fn decides_str_prefixof_both_directions() {
+    // Ground truths.
+    assert!(matches!(
+        run("(assert (str.prefixof \"ab\" \"abc\"))\n(check-sat)\n").result,
+        CheckResult::Sat(_)
+    ));
+    assert_eq!(
+        run("(assert (str.prefixof \"ac\" \"abc\"))\n(check-sat)\n").result,
+        CheckResult::Unsat,
+        "\"ac\" is not a prefix of \"abc\""
+    );
+    // With a variable: s is a prefix of "abcd" and s == "ab" -> sat.
+    assert!(matches!(
+        run("\
+(declare-const s String)
+(assert (str.prefixof s \"abcd\"))
+(assert (= s \"ab\"))
+(check-sat)
+")
+        .result,
+        CheckResult::Sat(_)
+    ));
+    // s == "xy" cannot be a prefix of "abc" -> unsat (decides, no gap).
+    assert_eq!(
+        run("\
+(declare-const s String)
+(assert (= s \"xy\"))
+(assert (str.prefixof s \"abc\"))
+(check-sat)
+")
+        .result,
+        CheckResult::Unsat,
+        "\"xy\" is not a prefix of \"abc\""
+    );
+}

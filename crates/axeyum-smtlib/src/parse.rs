@@ -996,6 +996,39 @@ fn pack_string_literal(arena: &mut TermArena, bytes: &[u8]) -> Result<TermId, Sm
     arena.bv_const(STRING_TOTAL, packed).map_err(SmtError::Ir)
 }
 
+/// The length field (a `BitVec(STRING_LEN_WIDTH)`) of a packed string.
+fn string_len(arena: &mut TermArena, v: TermId) -> Result<TermId, SmtError> {
+    arena
+        .extract(STRING_LEN_WIDTH - 1, 0, v)
+        .map_err(SmtError::Ir)
+}
+
+/// Content byte `i` (a `BitVec(8)`) of a packed string.
+fn string_byte(arena: &mut TermArena, v: TermId, i: u32) -> Result<TermId, SmtError> {
+    let lo = STRING_LEN_WIDTH + i * 8;
+    arena.extract(lo + 7, lo, v).map_err(SmtError::Ir)
+}
+
+/// `str.prefixof x y` — `x` is a prefix of `y`: `len(x) ≤ len(y)` and the first
+/// `len(x)` bytes match. A pure bit-vector/Boolean formula over the packed
+/// strings, so it decides both directions (no Int / theory-combination gap).
+fn string_prefixof(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId, SmtError> {
+    let xlen = string_len(arena, x)?;
+    let ylen = string_len(arena, y)?;
+    let mut acc = arena.bv_ule(xlen, ylen)?;
+    for i in 0..STRING_MAX_LEN {
+        let xb = string_byte(arena, x, i)?;
+        let yb = string_byte(arena, y, i)?;
+        let beq = arena.eq(xb, yb)?;
+        let idx = arena.bv_const(STRING_LEN_WIDTH, u128::from(i))?;
+        let active = arena.bv_ult(idx, xlen)?; // i < len(x)
+        let nactive = arena.not(active)?;
+        let ok = arena.or(nactive, beq)?; // i ≥ len(x) ∨ bytes equal
+        acc = arena.and(acc, ok)?;
+    }
+    Ok(acc)
+}
+
 /// The canonical well-formedness constraint for a packed string `v`: its length
 /// is `≤ STRING_MAX_LEN`, and every content byte at or above the length is zero.
 fn string_wellformed(arena: &mut TermArena, v: TermId) -> Result<TermId, SmtError> {
@@ -1443,6 +1476,12 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
             need(1)?;
             let len = arena.extract(STRING_LEN_WIDTH - 1, 0, args[0])?;
             arena.bv2nat(len)?
+        }
+        // `str.prefixof x y` — pure BV/Bool over packed strings; decides both
+        // directions (no Int bridge, no theory-combination gap).
+        "str.prefixof" => {
+            need(2)?;
+            string_prefixof(arena, args[0], args[1])?
         }
         "and" => fold(arena, TermArena::and)?,
         "or" => fold(arena, TermArena::or)?,
