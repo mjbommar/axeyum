@@ -446,9 +446,10 @@ pub fn produce_evidence(
     }
 
     // Everything else supported: decide with the unified engine. `sat` is
-    // replay-certified; `unsat` has no transferable artifact for these
-    // reductions yet, so it is recorded as a bare (re-checkable-as-vacuous)
-    // `unsat`.
+    // replay-certified; `unsat` over a BV-reducible fragment (arrays/UF/datatypes)
+    // now carries a re-checkable DRAT certificate of the reduced CNF (clausal
+    // layer, modulo the trusted reduction); fragments without a reduction-to-BV
+    // certificate (e.g. integers/real/nonlinear) still record a bare `unsat`.
     let provenance = Provenance {
         semantics_version: SEMANTICS_VERSION,
         layers: LayerVersions::CURRENT,
@@ -463,13 +464,33 @@ pub fn produce_evidence(
     };
     let evidence = match solve(arena, assertions, config)? {
         CheckResult::Sat(model) => Evidence::Sat(model),
-        CheckResult::Unsat => Evidence::Unsat(None),
+        CheckResult::Unsat => Evidence::Unsat(reduction_unsat_certificate(arena, assertions)),
         CheckResult::Unknown(reason) => Evidence::Unknown(reason),
     };
     Ok(EvidenceReport {
         evidence,
         provenance,
     })
+}
+
+/// Best-effort re-checkable certificate for an `unsat` over a BV-reducible
+/// fragment: tries the arrays+UF reduction, then the datatype reduction, and
+/// returns the first DRAT-checked proof. `None` for fragments without a
+/// reduction-to-BV certificate (integers/real/nonlinear) — a sound bare `unsat`.
+/// The underlying engine already decided `unsat`; this only adds an artifact.
+fn reduction_unsat_certificate(arena: &mut TermArena, assertions: &[TermId]) -> Option<UnsatProof> {
+    use crate::proof::{
+        UnsatProofOutcome, export_datatype_unsat_proof, export_qf_aufbv_unsat_proof,
+    };
+    for export in [
+        export_qf_aufbv_unsat_proof as fn(&mut TermArena, &[TermId]) -> _,
+        export_datatype_unsat_proof,
+    ] {
+        if let Ok(UnsatProofOutcome::Proved(proof)) = export(arena, assertions) {
+            return Some(proof);
+        }
+    }
+    None
 }
 
 /// The outcome of a [`prove`] attempt — the proving arm of the north star.

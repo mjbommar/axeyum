@@ -5,7 +5,8 @@ use std::time::Duration;
 
 use axeyum_ir::{Sort, TermArena};
 use axeyum_solver::{
-    Evidence, SolverConfig, produce_lra_dpll_evidence, produce_lra_evidence, produce_qf_bv_evidence,
+    Evidence, SolverConfig, produce_evidence, produce_lra_dpll_evidence, produce_lra_evidence,
+    produce_qf_bv_evidence,
 };
 
 fn config() -> SolverConfig {
@@ -305,4 +306,42 @@ fn unified_front_door_falls_back_for_integer_queries() {
     assert!(matches!(report.evidence, Evidence::Sat(_)));
     assert_eq!(report.provenance.backend, "auto-solve");
     assert!(report.evidence.check(&arena, &[eq]).unwrap());
+}
+
+#[test]
+fn produce_evidence_certifies_qf_abv_unsat() {
+    // The unified evidence path now attaches a re-checkable DRAT certificate for
+    // a BV-reducible (array) unsat, instead of a bare Unsat(None). Read-over-
+    // write: i==j => select(store(mem,i,v),j) == v, so the inequality is unsat.
+    let mut arena = TermArena::new();
+    let mem = arena
+        .declare(
+            "mem",
+            Sort::Array {
+                index: 4,
+                element: 4,
+            },
+        )
+        .unwrap();
+    let mem_v = arena.var(mem);
+    let is = arena.declare("i", Sort::BitVec(4)).unwrap();
+    let js = arena.declare("j", Sort::BitVec(4)).unwrap();
+    let vs = arena.declare("v", Sort::BitVec(4)).unwrap();
+    let (i, j, v) = (arena.var(is), arena.var(js), arena.var(vs));
+    let stored = arena.store(mem_v, i, v).unwrap();
+    let loaded = arena.select(stored, j).unwrap();
+    let i_eq_j = arena.eq(i, j).unwrap();
+    let load_ne_v = {
+        let eq = arena.eq(loaded, v).unwrap();
+        arena.not(eq).unwrap()
+    };
+
+    let report = produce_evidence(&mut arena, &[i_eq_j, load_ne_v], &config()).unwrap();
+    assert!(
+        matches!(report.evidence, Evidence::Unsat(Some(_))),
+        "QF_ABV unsat must now carry a certificate, got {:?}",
+        report.evidence
+    );
+    // The attached certificate re-validates independently.
+    assert!(report.evidence.check(&arena, &[i_eq_j, load_ne_v]).unwrap());
 }
