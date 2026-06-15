@@ -19,7 +19,7 @@ use axeyum_cnf::{
     ProofSolveOutcome, check_drat, solve_with_drat_proof, tseitin_encode, write_drat,
 };
 use axeyum_ir::{Sort, TermArena, TermId};
-use axeyum_rewrite::{ArrayElimError, eliminate_arrays};
+use axeyum_rewrite::{ArrayElimError, FuncElimError, eliminate_arrays, eliminate_functions};
 
 use crate::backend::SolverError;
 
@@ -132,6 +132,32 @@ pub fn export_qf_abv_unsat_proof(
     let elimination = eliminate_arrays(arena, assertions).map_err(|error| match error {
         ArrayElimError::Unsupported(what) => SolverError::Unsupported(what),
         ArrayElimError::Ir(inner) => SolverError::Backend(inner.to_string()),
+    })?;
+    let eliminated = elimination.assertions().to_vec();
+    export_qf_bv_unsat_proof(arena, &eliminated)
+}
+
+/// Like [`export_qf_bv_unsat_proof`] but for **`QF_UFBV`** (uninterpreted
+/// functions over bit-vectors): Ackermann-reduces function applications to
+/// fresh variables plus functional-consistency constraints (ADR-0013), then
+/// exports the DRAT-checked certificate of the reduced `QF_BV` query.
+///
+/// Same assurance shape as [`export_qf_abv_unsat_proof`]: machine-checked at the
+/// clausal layer, modulo the trusted (replay-validatable) Ackermann reduction.
+/// Takes `&mut` arena because the reduction introduces terms.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] for constructs outside `QF_UFBV`,
+/// [`SolverError::NonBooleanAssertion`], or [`SolverError::Backend`] on an
+/// encoding failure or a proof that fails to check.
+pub fn export_qf_uf_unsat_proof(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<UnsatProofOutcome, SolverError> {
+    let elimination = eliminate_functions(arena, assertions).map_err(|error| match error {
+        FuncElimError::Unsupported(what) => SolverError::Unsupported(what),
+        FuncElimError::Ir(inner) => SolverError::Backend(inner.to_string()),
     })?;
     let eliminated = elimination.assertions().to_vec();
     export_qf_bv_unsat_proof(arena, &eliminated)

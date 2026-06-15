@@ -112,7 +112,8 @@ pub const CAPABILITIES: &[Capability] = &[
         area: "QF_UF",
         feature: "uninterpreted functions via Ackermann reduction",
         assurance: Assurance::Validated,
-        evidence: "reduction; model replay",
+        evidence: "reduction; model replay; UNSAT exportable as a re-checkable DRAT \
+                   certificate (clausal layer, modulo trusted reduction)",
         reference: "ADR-0013",
     },
     Capability {

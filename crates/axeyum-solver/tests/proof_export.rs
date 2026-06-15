@@ -100,3 +100,37 @@ fn qf_abv_unsat_exports_a_recheckable_certificate() {
         "exported DRAT must refute the array-eliminated CNF"
     );
 }
+
+#[test]
+fn qf_uf_unsat_exports_a_recheckable_certificate() {
+    // Congruence: x == y but f(x) != f(y) is unsat. The Ackermann-reduced CNF's
+    // DRAT refutation is exported and independently re-checked — a checkable
+    // certificate for the uninterpreted-function fragment.
+    use axeyum_ir::Sort;
+    use axeyum_solver::export_qf_uf_unsat_proof;
+
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(4)], Sort::BitVec(4))
+        .unwrap();
+    let x = arena.bv_var("x", 4).unwrap();
+    let y = arena.bv_var("y", 4).unwrap();
+    let fx = arena.apply(f, &[x]).unwrap();
+    let fy = arena.apply(f, &[y]).unwrap();
+    let x_eq_y = arena.eq(x, y).unwrap();
+    let fx_ne_fy = {
+        let eq = arena.eq(fx, fy).unwrap();
+        arena.not(eq).unwrap()
+    };
+
+    let outcome = export_qf_uf_unsat_proof(&mut arena, &[x_eq_y, fx_ne_fy]).unwrap();
+    let UnsatProofOutcome::Proved(proof) = outcome else {
+        panic!("expected an unsat certificate, got {outcome:?}");
+    };
+    let formula = parse_dimacs(&proof.dimacs).expect("exported DIMACS re-parses");
+    let steps = parse_drat(&proof.drat).expect("exported DRAT re-parses");
+    assert!(
+        check_drat(&formula, &steps).expect("re-check runs"),
+        "exported DRAT must refute the Ackermann-reduced CNF"
+    );
+}

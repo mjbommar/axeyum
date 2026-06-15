@@ -12,7 +12,7 @@ Assurance levels: **checked** (independent certificate — Farkas/DRAT/replayed 
 | QF_BV | UNSAT with a DRAT proof (proof-producing CDCL + in-tree checker) | checked | DRAT proof checked by check_drat (RUP+RAT) | ADR-0011/0012 |
 | QF_BV | arbitrary width up to 2^16 (wide bit-vectors) | validated | WideUint vs u128/i128; model replay | ADR-0006 |
 | QF_ABV | arrays via eager read-over-write + Ackermann elimination | validated | reduction to QF_BV; model replay; UNSAT exportable as a re-checkable DRAT certificate (clausal layer, modulo trusted elimination) | ADR-0010 |
-| QF_UF | uninterpreted functions via Ackermann reduction | validated | reduction; model replay | ADR-0013 |
+| QF_UF | uninterpreted functions via Ackermann reduction | validated | reduction; model replay; UNSAT exportable as a re-checkable DRAT certificate (clausal layer, modulo trusted reduction) | ADR-0013 |
 | QF_LRA | linear real arithmetic (exact-rational simplex) | checked | Farkas certificate for UNSAT; exact rational model | ADR-0015 |
 | QF_LIA | linear integer arithmetic (bit-blast + branch-and-bound simplex) | validated | model replay; bounded bit-blast / simplex | ADR-0014/0020/0021 |
 | QF_NRA/NIA | nonlinear via linear abstraction + sign/zero lemmas + McCormick B&B | sound, incomplete | model replay (SAT); relaxation-unsat (UNSAT); unknown otherwise | ADR-0024 |
