@@ -38,6 +38,21 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-14
 
+- **Small-format `fma` validated via an exact big-integer oracle (2026-06-14).**
+  `f64`'s `mul_add` is not a sound oracle for small-format fma (the fused
+  `a·b + c` can span ≫ 53 bits when product and addend exponents differ widely,
+  so f64 double-rounds). Built an **exact fma oracle** that forms `a·b + c` with
+  `WideUint` integers and rounds once (RNE), and **validated the oracle itself
+  against native `f32::mul_add`** (correctly rounded, exercising the wide fused
+  intermediate) over 9 000 cases before trusting it. The symbolic fma circuit is
+  then confirmed correctly rounded over all small formats `(eb ≤ 10, sb ≤ 11)`,
+  13 500 cases. Also fixed a stale `float128_nonarithmetic_ops_decide` assertion
+  (F128 arithmetic now decides rather than erroring — a regression missed when
+  F128 was enabled). **Now every small-format arithmetic op (add/mul/div/sqrt/fma)
+  is validated.** Remaining: a per-op *format-support gate* so arbitrary parser
+  formats outside the validated set return `unsupported` (enabled ⟹ validated),
+  and widening the validated region (sb 12..24, eb = 11) if needed.
+
 - **Small-format FP validation caught and fixed a real `div` soundness bug
   (2026-06-14).** Added a differential sweep of `add`/`mul`/`div`/`sqrt` over all
   small IEEE formats `(eb ≤ 10, sb ≤ 11)` — covering F16/BF16/TF32/FP8 and the

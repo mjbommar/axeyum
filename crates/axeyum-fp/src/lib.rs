@@ -4827,6 +4827,221 @@ mod small_format_arithmetic_validation {
     }
 }
 
+/// An exact big-integer oracle for `fp.fma`, and validation of the symbolic fma
+/// circuit over small formats against it. `f64`'s `mul_add` is **not** a valid
+/// oracle for small-format fma — the exact `a·b + c` can span far more than 53
+/// bits when the product and addend exponents differ widely, so `f64` discards
+/// information that decides the final rounding. This oracle instead forms the
+/// exact sum with `WideUint` integers and rounds once, round-nearest-ties-to-even.
+/// It is itself validated against native `f32::mul_add` (correctly rounded,
+/// exercising the wide fused intermediate) before being trusted on small formats.
+#[cfg(test)]
+#[allow(clippy::cast_possible_truncation, clippy::many_single_char_names, clippy::similar_names)]
+mod fma_exact_oracle {
+    use super::*;
+    use axeyum_ir::{Assignment, Value, WideUint, eval};
+
+    const FW: u32 = 4096; // exact-arithmetic width; covers eb ≤ 11 exponent spread
+
+    #[allow(dead_code)] // Inf/Nan are classified but resolved via the f64 result
+    enum Cls {
+        Nan,
+        Inf(bool),
+        /// `(-1)^neg · mant · 2^e`; `mant == 0` is signed zero.
+        Fin(bool, u128, i64),
+    }
+
+    fn classify(bits: u128, eb: u32, sb: u32) -> Cls {
+        let total = eb + sb;
+        let neg = (bits >> (total - 1)) & 1 == 1;
+        let exp = (bits >> (sb - 1)) & ((1u128 << eb) - 1);
+        let frac = bits & ((1u128 << (sb - 1)) - 1);
+        let bias = (1i64 << (eb - 1)) - 1;
+        if exp == (1u128 << eb) - 1 {
+            return if frac == 0 { Cls::Inf(neg) } else { Cls::Nan };
+        }
+        if exp == 0 {
+            return Cls::Fin(neg, frac, 1 - bias - i64::from(sb - 1));
+        }
+        Cls::Fin(neg, frac | (1u128 << (sb - 1)), i64::try_from(exp).unwrap() - bias - i64::from(sb - 1))
+    }
+
+    fn inf_bits(eb: u32, sb: u32, neg: bool) -> u128 {
+        let total = eb + sb;
+        (u128::from(neg) << (total - 1)) | (((1u128 << eb) - 1) << (sb - 1))
+    }
+    fn zero_bits(eb: u32, sb: u32, neg: bool) -> u128 {
+        u128::from(neg) << (eb + sb - 1)
+    }
+
+    /// Rounds `(-1)^neg · mag · 2^emin` (with `mag > 0`) to format `(eb, sb)`
+    /// under round-nearest-ties-to-even, returning the IEEE bit pattern.
+    fn round_mag(eb: u32, sb: u32, neg: bool, mag: &WideUint, emin: i64) -> u128 {
+        let total = eb + sb;
+        let bias = (1i64 << (eb - 1)) - 1;
+        let bl = i64::from(mag.width() - mag.count_leading_zeros()); // significant bits ≥ 1
+        let e_lead = emin + (bl - 1); // unbiased exponent of the leading bit
+        let normal_lsb = e_lead - i64::from(sb - 1);
+        let sub_lsb = 1 - bias - i64::from(sb - 1);
+        let target_lsb = normal_lsb.max(sub_lsb);
+        let shift = emin - target_lsb;
+        // The significand fits in `sb+1` bits; take the low 128 of the wide value
+        // (`to_u128` rejects a >128-bit *width*, even when the value is small).
+        let q: u128 = if shift >= 0 {
+            mag.shl(u32::try_from(shift).unwrap()).extract(127, 0).to_u128()
+        } else {
+            let drop = u32::try_from(-shift).unwrap();
+            let kept = mag.lshr(drop).extract(127, 0).to_u128();
+            let round_bit = mag.bit(drop - 1);
+            let sticky = (0..drop - 1).any(|i| mag.bit(i));
+            let mut qv = kept;
+            if round_bit && (sticky || (qv & 1 == 1)) {
+                qv += 1;
+            }
+            qv
+        };
+        if q == 0 {
+            return zero_bits(eb, sb, neg); // rounded away to ±0
+        }
+        let value_exp = target_lsb + i64::from(q.ilog2());
+        let biased = value_exp + bias;
+        if biased >= (1i64 << eb) - 1 {
+            return inf_bits(eb, sb, neg); // overflow
+        }
+        if biased >= 1 {
+            let frac = q & ((1u128 << (sb - 1)) - 1);
+            (u128::from(neg) << (total - 1)) | (u128::try_from(biased).unwrap() << (sb - 1)) | frac
+        } else {
+            // subnormal: exponent field 0, `q` is the trailing significand.
+            (u128::from(neg) << (total - 1)) | q
+        }
+    }
+
+    /// Exact correctly-rounded (RNE) `fma(a, b, c)` in format `(eb, sb)`.
+    /// Returns `None` to mean "a NaN" (compared by class, not bits).
+    fn exact_fma(fmt: FloatFormat, ab: u128, bb: u128, cb: u128) -> Option<u128> {
+        let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
+        // Special cases (NaN/Inf) are precision-independent, so derive them from
+        // f64 — exact for these small formats (eb ≤ 11 keeps values in range).
+        let rf = fmt
+            .decode_ieee_f64(ab)
+            .mul_add(fmt.decode_ieee_f64(bb), fmt.decode_ieee_f64(cb));
+        if rf.is_nan() {
+            return None;
+        }
+        if rf.is_infinite() {
+            return Some(inf_bits(eb, sb, rf.is_sign_negative()));
+        }
+        // All operands finite. Form the exact a·b + c with big integers.
+        let Cls::Fin(an, am, ae) = classify(ab, eb, sb) else { unreachable!("finite (rf finite)") };
+        let Cls::Fin(bn, bm, be) = classify(bb, eb, sb) else { unreachable!() };
+        let Cls::Fin(cn, cm, ce) = classify(cb, eb, sb) else { unreachable!() };
+        let pneg = an ^ bn;
+        let pmant = am * bm; // ≤ 2^(2·sb), fits u128 for sb ≤ 64
+        let pe = ae + be;
+        let emin = pe.min(ce);
+        let p = WideUint::from_u128(pmant, FW).shl(u32::try_from(pe - emin).unwrap());
+        let c = WideUint::from_u128(cm, FW).shl(u32::try_from(ce - emin).unwrap());
+        let (mag, rneg) = if pneg == cn {
+            (p.add(&c), pneg)
+        } else if p.uge(&c) {
+            (p.sub(&c), pneg)
+        } else {
+            (c.sub(&p), cn)
+        };
+        if mag.is_zero() {
+            // Exact zero: RNE gives +0 (sign of the f64 result is authoritative).
+            return Some(zero_bits(eb, sb, rf.is_sign_negative()));
+        }
+        Some(round_mag(eb, sb, rneg, &mag, emin))
+    }
+
+    fn is_nan_bits(bits: u128, eb: u32, sb: u32) -> bool {
+        let exp = (bits >> (sb - 1)) & ((1u128 << eb) - 1);
+        let frac = bits & ((1u128 << (sb - 1)) - 1);
+        exp == (1u128 << eb) - 1 && frac != 0
+    }
+
+    fn rng(state: &mut u64) -> u64 {
+        *state = state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        *state
+    }
+
+    /// The oracle must agree with native `f32::mul_add` (IEEE correctly rounded),
+    /// which exercises the wide fused intermediate the oracle's big-integer path
+    /// is for. This validates the oracle before it judges small-format circuits.
+    #[test]
+    fn oracle_matches_native_f32_fma() {
+        let f = FloatFormat::F32;
+        let check = |xb: u32, yb: u32, zb: u32| {
+            let got = exact_fma(f, u128::from(xb), u128::from(yb), u128::from(zb));
+            let want = f32::from_bits(xb).mul_add(f32::from_bits(yb), f32::from_bits(zb));
+            match got {
+                None => assert!(want.is_nan(), "oracle NaN but native {want} for {xb:#x},{yb:#x},{zb:#x}"),
+                Some(bits) => {
+                    assert!(!want.is_nan(), "oracle {bits:#x} but native NaN for {xb:#x},{yb:#x},{zb:#x}");
+                    assert_eq!(bits, u128::from(want.to_bits()), "fma {xb:#x},{yb:#x},{zb:#x}");
+                }
+            }
+        };
+        let structured: [u32; 10] = [
+            0x0000_0000, 0x8000_0000, 0x3f80_0000, 0xbf80_0000, 0x4000_0000,
+            0x7f80_0000, 0xff80_0000, 0x7fc0_0000, 0x0080_0000, 0x0000_0001,
+        ];
+        for &x in &structured {
+            for &y in &structured {
+                for &z in &structured {
+                    check(x, y, z);
+                }
+            }
+        }
+        let mut s = 0xabcd_1234_5678_9f0fu64;
+        for _ in 0..8000 {
+            check(rng(&mut s) as u32, rng(&mut s) as u32, rng(&mut s) as u32);
+        }
+    }
+
+    /// With the oracle trusted, the symbolic fma circuit must be correctly rounded
+    /// over all small IEEE formats (`eb ≤ 10`, `sb ≤ 11`) — closing the last
+    /// small-format arithmetic validation gap.
+    #[test]
+    fn small_format_fma_matches_exact_oracle() {
+        let mut state = 0x0fee_1dad_c0de_2025u64;
+        for eb in 2u32..=10 {
+            for sb in 2u32..=11 {
+                let fmt = FloatFormat { exp_bits: eb, sig_bits: sb };
+                let total = eb + sb;
+                let mask = (1u128 << total) - 1;
+                let mut a = TermArena::new();
+                let sx = a.declare("x", Sort::BitVec(total)).unwrap();
+                let sy = a.declare("y", Sort::BitVec(total)).unwrap();
+                let sz = a.declare("z", Sort::BitVec(total)).unwrap();
+                let (x, y, z) = (a.var(sx), a.var(sy), a.var(sz));
+                let t = fma(&mut a, fmt, x, y, z, RoundingMode::NearestEven).unwrap();
+                for _ in 0..150 {
+                    let xb = u128::from(rng(&mut state)) & mask;
+                    let yb = u128::from(rng(&mut state)) & mask;
+                    let zb = u128::from(rng(&mut state)) & mask;
+                    let mut asg = Assignment::new();
+                    asg.set(sx, Value::Bv { width: total, value: xb });
+                    asg.set(sy, Value::Bv { width: total, value: yb });
+                    asg.set(sz, Value::Bv { width: total, value: zb });
+                    let got = match eval(&a, t, &asg).unwrap() {
+                        Value::Bv { value, .. } => value,
+                        other => panic!("{other:?}"),
+                    };
+                    match exact_fma(fmt, xb, yb, zb) {
+                        None => assert!(is_nan_bits(got, eb, sb), "fma {eb},{sb} {xb:#x},{yb:#x},{zb:#x} want NaN got {got:#x}"),
+                        Some(w) => assert_eq!(got, w, "fma {eb},{sb} {xb:#x},{yb:#x},{zb:#x}"),
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
 mod int_to_fp_symbolic_tests {

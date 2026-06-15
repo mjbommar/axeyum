@@ -953,15 +953,15 @@ fn float128_nonarithmetic_ops_decide() {
         assert_eq!(v, Value::Bool(true), "F128 tautology failed: {t}");
     }
 
-    // F128 *arithmetic* still exceeds MAX_BV_WIDTH (2*113+5 = 231 > 128) and is
-    // reported cleanly (sound), not silently wrong.
-    let arith = parse_script(
+    // F128 *arithmetic* now runs through the wide bit-vector path (ADR-0028,
+    // validated against rustc_apfloat): `+0 + +0 == +0` builds and evaluates to
+    // true rather than erroring.
+    let script = parse_script(
         "(set-logic QF_FP)\n\
          (assert (fp.eq (fp.add RNE (_ +zero 15 113) (_ +zero 15 113)) (_ +zero 15 113)))\n\
          (check-sat)\n",
-    );
-    assert!(
-        matches!(arith, Err(SmtError::Ir(_) | SmtError::Unsupported(_))),
-        "F128 arithmetic should error cleanly, got {arith:?}"
-    );
+    )
+    .expect("F128 arithmetic is supported");
+    let v = eval(&script.arena, script.assertions[0], &Assignment::default()).unwrap();
+    assert_eq!(v, Value::Bool(true), "F128 (+0 + +0 == +0) should hold");
 }
