@@ -31,6 +31,10 @@ use axeyum_ir::{TermArena, TermId};
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownReason};
 use crate::incremental::IncrementalBvSolver;
 use crate::model::Model;
+use crate::optimize::{
+    OptOutcome, maximize_bv, maximize_bv_signed, maximize_lia, minimize_bv, minimize_bv_signed,
+    minimize_lia,
+};
 
 /// The feasibility of a path (prefix) under the solver: a sound three-valued
 /// answer. `Unknown` preserves the "never wrong" contract — an undecided path is
@@ -88,15 +92,20 @@ impl Branch {
 #[derive(Debug, Default)]
 pub struct SymbolicExecutor {
     solver: IncrementalBvSolver,
+    /// The current path condition as a flat list of committed constraints, kept
+    /// in sync with the solver so the path can be handed to the optimizers
+    /// ([`minimize`](Self::minimize) / [`maximize`](Self::maximize)).
+    path: Vec<TermId>,
+    /// `path.len()` at each open choice point, so [`backtrack`](Self::backtrack)
+    /// can drop the constraints added since the matching [`enter`](Self::enter).
+    marks: Vec<usize>,
 }
 
 impl SymbolicExecutor {
     /// Creates an executor with the default configuration.
     #[must_use]
     pub fn new() -> Self {
-        Self {
-            solver: IncrementalBvSolver::new(),
-        }
+        Self::default()
     }
 
     /// Creates an executor with an explicit configuration (e.g. a per-query
@@ -105,7 +114,15 @@ impl SymbolicExecutor {
     pub fn with_config(config: SolverConfig) -> Self {
         Self {
             solver: IncrementalBvSolver::with_config(config),
+            path: Vec::new(),
+            marks: Vec::new(),
         }
+    }
+
+    /// The current path condition (the committed constraints, in order).
+    #[must_use]
+    pub fn path_condition(&self) -> &[TermId] {
+        &self.path
     }
 
     /// The number of open choice points (from [`enter`](Self::enter)).
@@ -121,13 +138,22 @@ impl SymbolicExecutor {
     ///
     /// Returns [`SolverError`] if the underlying scope cannot be opened.
     pub fn enter(&mut self) -> Result<(), SolverError> {
-        self.solver.push()
+        self.solver.push()?;
+        self.marks.push(self.path.len());
+        Ok(())
     }
 
     /// Discards the most recent choice point and everything assumed under it.
     /// Returns `false` if there was no open choice point.
     pub fn backtrack(&mut self) -> bool {
-        self.solver.pop()
+        if self.solver.pop() {
+            if let Some(mark) = self.marks.pop() {
+                self.path.truncate(mark);
+            }
+            true
+        } else {
+            false
+        }
     }
 
     /// Commits `cond` to the current path condition and reports whether the path
@@ -145,6 +171,7 @@ impl SymbolicExecutor {
     /// non-Boolean condition or an unsupported operator).
     pub fn assume(&mut self, arena: &TermArena, cond: TermId) -> Result<PathStatus, SolverError> {
         self.solver.assert(arena, cond)?;
+        self.path.push(cond);
         Ok(status_of(self.solver.check(arena)?))
     }
 
@@ -184,6 +211,94 @@ impl SymbolicExecutor {
             CheckResult::Sat(model) => Ok(Some(model)),
             CheckResult::Unsat | CheckResult::Unknown(_) => Ok(None),
         }
+    }
+
+    /// Maximizes the **unsigned** bit-vector `objective` subject to the current
+    /// path condition — e.g. the worst-case value a variable can take along this
+    /// path. The optimum is certified by the underlying procedure (a witness model
+    /// at the bound). This is the constrained-optimization face of symbolic
+    /// execution: optimize over exactly the inputs that drive this path.
+    ///
+    /// # Errors
+    ///
+    /// As [`maximize_bv`]: [`SolverError::Unsupported`] for a non-bit-vector or
+    /// too-wide `objective`, or [`SolverError::Backend`].
+    pub fn maximize(
+        &self,
+        arena: &mut TermArena,
+        objective: TermId,
+    ) -> Result<OptOutcome, SolverError> {
+        maximize_bv(arena, &self.path, objective)
+    }
+
+    /// Minimizes the **unsigned** bit-vector `objective` subject to the current
+    /// path condition — e.g. the smallest input that still drives this path.
+    ///
+    /// # Errors
+    ///
+    /// See [`Self::maximize`].
+    pub fn minimize(
+        &self,
+        arena: &mut TermArena,
+        objective: TermId,
+    ) -> Result<OptOutcome, SolverError> {
+        minimize_bv(arena, &self.path, objective)
+    }
+
+    /// Maximizes the **signed** (two's-complement) bit-vector `objective` subject
+    /// to the current path condition.
+    ///
+    /// # Errors
+    ///
+    /// See [`Self::maximize`].
+    pub fn maximize_signed(
+        &self,
+        arena: &mut TermArena,
+        objective: TermId,
+    ) -> Result<OptOutcome, SolverError> {
+        maximize_bv_signed(arena, &self.path, objective)
+    }
+
+    /// Minimizes the **signed** (two's-complement) bit-vector `objective` subject
+    /// to the current path condition.
+    ///
+    /// # Errors
+    ///
+    /// See [`Self::maximize`].
+    pub fn minimize_signed(
+        &self,
+        arena: &mut TermArena,
+        objective: TermId,
+    ) -> Result<OptOutcome, SolverError> {
+        minimize_bv_signed(arena, &self.path, objective)
+    }
+
+    /// Maximizes the integer-linear `objective` subject to the current path
+    /// condition (for `Int`-sorted objectives / `QF_LIA` paths).
+    ///
+    /// # Errors
+    ///
+    /// As [`maximize_lia`].
+    pub fn maximize_int(
+        &self,
+        arena: &mut TermArena,
+        objective: TermId,
+    ) -> Result<OptOutcome, SolverError> {
+        maximize_lia(arena, &self.path, objective)
+    }
+
+    /// Minimizes the integer-linear `objective` subject to the current path
+    /// condition (for `Int`-sorted objectives / `QF_LIA` paths).
+    ///
+    /// # Errors
+    ///
+    /// As [`minimize_lia`].
+    pub fn minimize_int(
+        &self,
+        arena: &mut TermArena,
+        objective: TermId,
+    ) -> Result<OptOutcome, SolverError> {
+        minimize_lia(arena, &self.path, objective)
     }
 }
 
@@ -290,5 +405,33 @@ mod tests {
         );
         assert!(se.backtrack());
         assert_eq!(se.depth(), 0, "fully backtracked to the root path");
+    }
+
+    #[test]
+    fn optimize_objective_along_the_path_condition() {
+        // Path: x > 10 ∧ x is even. Smallest such x is 12, largest (8-bit) is 254.
+        let mut arena = TermArena::new();
+        let xv = x(&mut arena);
+        let ten = arena.bv_const(8, 10).unwrap();
+        let one = arena.bv_const(8, 1).unwrap();
+        let zero = arena.bv_const(8, 0).unwrap();
+        let x_gt_10 = arena.bv_ugt(xv, ten).unwrap();
+        let lsb = arena.bv_and(xv, one).unwrap();
+        let is_even = arena.eq(lsb, zero).unwrap();
+
+        let mut se = SymbolicExecutor::new();
+        assert!(se.assume(&arena, x_gt_10).unwrap().is_feasible());
+        assert!(se.assume(&arena, is_even).unwrap().is_feasible());
+
+        assert_eq!(
+            se.minimize(&mut arena, xv).unwrap(),
+            crate::OptOutcome::Optimal(12),
+            "smallest even input above 10"
+        );
+        assert_eq!(
+            se.maximize(&mut arena, xv).unwrap(),
+            crate::OptOutcome::Optimal(254),
+            "largest even 8-bit input"
+        );
     }
 }

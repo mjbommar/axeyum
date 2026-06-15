@@ -202,11 +202,12 @@ pub const CAPABILITIES: &[Capability] = &[
     Capability {
         area: "symbolic execution",
         feature: "DFS path explorer (SymbolicExecutor): assume / branch fork query / \
-                  enter+backtrack / concrete test-input model",
+                  enter+backtrack / concrete test-input model / optimize objective over the \
+                  path condition (min/max, unsigned/signed BV + LIA)",
         assurance: Assurance::Validated,
-        evidence: "models replay-checked vs path condition; three-valued PathStatus keeps \
-                   unknown from wrongly pruning a live path",
-        reference: "ADR-0009",
+        evidence: "models replay-checked vs path condition; optimum certified by the underlying \
+                   procedure; three-valued PathStatus keeps unknown from wrongly pruning a live path",
+        reference: "ADR-0009/0027",
     },
     Capability {
         area: "reachability",

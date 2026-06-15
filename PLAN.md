@@ -225,7 +225,8 @@ clausal proof closes the trusted base.
         drat-trim-checkable DRAT certificate per obligation — the reachability
         track meeting the proof/checking track). *Symbolic-execution driver API
         landed* (`SymbolicExecutor`: assume / branch fork query / enter+backtrack
-        DFS / concrete test-input model, three-valued `PathStatus`). Remaining:
+        DFS / concrete test-input model / optimize objective over the path
+        condition, three-valued `PathStatus`). Remaining:
         warm lazy arrays for memory BMC + memory k-induction (rides A2),
         interpolation / invariant strengthening for k-induction completeness, and
         a CFG-shaped path-explorer built on the driver.
