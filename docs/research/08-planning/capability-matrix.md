@@ -22,3 +22,4 @@ Assurance levels: **checked** (independent certificate — Farkas/DRAT/replayed 
 | quantifiers | finite-domain expansion + E-matching instantiation | sound, incomplete | complete over finite domains; instantiation otherwise (unknown-safe) | ADR-0016 |
 | QF_S (strings) | bounded-length strings + regex (BV-lowered) — API only, not SMT-LIB-wired | experimental | model replay through BV path; length bound explicit (≤16) | ADR-0025/0029 |
 | optimization | MaxSAT / OMT / MILP (branch-and-bound over the arithmetic cores) | experimental | optimum certified by the underlying decision procedure per step | ADR-0027 |
+| incremental | warm push/pop/assume QF_BV + assumption-core (symbolic-execution path pruning) | validated | model replay; SAT final-conflict core (a sound inconsistent subset) | ADR-0009 |

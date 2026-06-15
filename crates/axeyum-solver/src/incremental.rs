@@ -22,6 +22,23 @@ use axeyum_ir::{Assignment, IrError, Sort, TermArena, TermId, Value, eval, well_
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::model::Model;
 
+/// Outcome of [`IncrementalBvSolver::check_assuming_core`]: like a
+/// [`CheckResult`], but the `unsat` case carries the **assumption core**.
+#[derive(Debug, Clone)]
+pub enum AssumptionOutcome {
+    /// Satisfiable, with a replay-checked model.
+    Sat(Model),
+    /// Unsatisfiable. `core` is the subset of the passed assumptions already
+    /// jointly inconsistent with the active assertions (a sound, often minimal,
+    /// blocking set; its negation is a sound conflict clause for path pruning).
+    Unsat {
+        /// The inconsistent assumption subset.
+        core: Vec<TermId>,
+    },
+    /// Undecided, with the classified reason.
+    Unknown(UnknownReason),
+}
+
 /// One push/pop frame: its activation selector (none for the permanent base
 /// frame) and the terms asserted while it was the top frame.
 #[derive(Debug)]
@@ -170,7 +187,7 @@ impl IncrementalBvSolver {
     ///
     /// Returns [`SolverError::Backend`] for an adapter or lift failure.
     pub fn check(&mut self, arena: &TermArena) -> Result<CheckResult, SolverError> {
-        self.solve_with_extra(arena, &[])
+        Ok(self.solve_with_extra(arena, &[])?.0)
     }
 
     /// Checks the active assertions together with one-shot `assumptions`, which
@@ -185,14 +202,50 @@ impl IncrementalBvSolver {
         arena: &TermArena,
         assumptions: &[TermId],
     ) -> Result<CheckResult, SolverError> {
-        self.solve_with_extra(arena, assumptions)
+        Ok(self.solve_with_extra(arena, assumptions)?.0)
     }
 
+    /// Like [`Self::check_assuming`], but on `unsat` also returns the
+    /// **assumption core**: the subset of `assumptions` already jointly
+    /// inconsistent with the active assertions. The rest of the assumptions are
+    /// irrelevant to the contradiction.
+    ///
+    /// This is the path-pruning primitive for **symbolic execution and
+    /// reachability**: feed candidate branch conditions as `assumptions`; an
+    /// `Unsat { core }` says the conditions in `core` cannot co-occur on this
+    /// path prefix, so the whole sub-tree under that combination is infeasible
+    /// and can be pruned (and the negated core is a sound blocking clause).
+    ///
+    /// The core is sound by construction (the SAT solver's final conflict is
+    /// entailed); when the adapter returns none, the full assumption set — always
+    /// a sound core — is returned instead.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same errors as [`Self::check_assuming`].
+    pub fn check_assuming_core(
+        &mut self,
+        arena: &TermArena,
+        assumptions: &[TermId],
+    ) -> Result<AssumptionOutcome, SolverError> {
+        let (result, core) = self.solve_with_extra(arena, assumptions)?;
+        Ok(match result {
+            CheckResult::Sat(model) => AssumptionOutcome::Sat(model),
+            CheckResult::Unsat => AssumptionOutcome::Unsat { core },
+            CheckResult::Unknown(reason) => AssumptionOutcome::Unknown(reason),
+        })
+    }
+
+    /// Core solve. Returns the [`CheckResult`] and, on an `unsat` under
+    /// assumptions, the subset of `assumptions` (as `TermId`s) the solver found
+    /// sufficient for the contradiction — its final-conflict core, the
+    /// path-pruning primitive. The core is empty for `sat`/`unknown` and for an
+    /// assumption-free solve.
     fn solve_with_extra(
         &mut self,
         arena: &TermArena,
         assumptions: &[TermId],
-    ) -> Result<CheckResult, SolverError> {
+    ) -> Result<(CheckResult, Vec<TermId>), SolverError> {
         // Encode each one-shot assumption guarded by an ephemeral selector that
         // is assumed only for this solve, so it does not persist as a hard
         // constraint after the check returns.
@@ -242,19 +295,38 @@ impl IncrementalBvSolver {
                     .map_err(map_lower_error)?;
                 let model = complete_model(arena, &reconstructed);
                 self.replay(arena, assumptions, &model)?;
-                Ok(CheckResult::Sat(model))
+                Ok((CheckResult::Sat(model), Vec::new()))
             }
-            SatResult::Unsat(_) => Ok(CheckResult::Unsat),
+            SatResult::Unsat(evidence) => {
+                // Map the solver's failed-assumption selector literals back to the
+                // source assumption terms (ephemeral[i] is the selector for
+                // assumptions[i]). An empty core (e.g. unsat without assumptions,
+                // or an adapter that returns none) is reported as the full set,
+                // which is always a sound core.
+                let mut core = Vec::new();
+                for lit in &evidence.failed_assumptions {
+                    if let Some(i) = ephemeral.iter().position(|&sel| sel == lit.var()) {
+                        core.push(assumptions[i]);
+                    }
+                }
+                if core.is_empty() && !assumptions.is_empty() {
+                    core.extend_from_slice(assumptions);
+                }
+                Ok((CheckResult::Unsat, core))
+            }
             SatResult::Unknown(reason) => {
                 let kind = if reason.detail.contains("timeout") {
                     UnknownKind::Timeout
                 } else {
                     UnknownKind::Other
                 };
-                Ok(CheckResult::Unknown(UnknownReason {
-                    kind,
-                    detail: reason.detail,
-                }))
+                Ok((
+                    CheckResult::Unknown(UnknownReason {
+                        kind,
+                        detail: reason.detail,
+                    }),
+                    Vec::new(),
+                ))
             }
         }
     }

@@ -318,10 +318,16 @@ pub enum SatResult {
 }
 
 /// UNSAT evidence metadata.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SatUnsatEvidence {
     /// Proof availability for this UNSAT result.
     pub proof: SatProofStatus,
+    /// When the solve was under assumptions, the subset of those assumption
+    /// literals that the solver found sufficient for the contradiction (its
+    /// final-conflict core). Empty for an assumption-free solve. This is the
+    /// path-pruning primitive for symbolic execution / reachability: it names the
+    /// branch conditions that are *already* jointly infeasible.
+    pub failed_assumptions: Vec<CnfLit>,
 }
 
 /// Proof status for an UNSAT result.
@@ -460,6 +466,7 @@ pub fn solve_with_rustsat_batsat_timeout(
         }
         RustSatSolverResult::Unsat => Ok(SatResult::Unsat(SatUnsatEvidence {
             proof: SatProofStatus::Unchecked,
+            failed_assumptions: Vec::new(), // one-shot solve has no assumptions
         })),
         RustSatSolverResult::Interrupted => {
             let detail = if timeout_deadline.is_some() {
@@ -619,9 +626,35 @@ impl IncrementalSat {
                     Err(SatError::InvalidModel)
                 }
             }
-            RustSatSolverResult::Unsat => Ok(SatResult::Unsat(SatUnsatEvidence {
-                proof: SatProofStatus::Unchecked,
-            })),
+            RustSatSolverResult::Unsat => {
+                // Under assumptions, recover the solver's final-conflict core: the
+                // subset of `assumptions` sufficient for the contradiction. The
+                // solver returns it as the clause `⋁ ¬aᵢ`, so each core literal is
+                // the negation of a failed assumption; map back and intersect with
+                // the assumptions actually passed (defensive).
+                let failed_assumptions = if assumptions.is_empty() {
+                    Vec::new()
+                } else {
+                    let passed: std::collections::HashSet<CnfLit> =
+                        assumptions.iter().copied().collect();
+                    let core = self
+                        .solver
+                        .core()
+                        .map_err(|error| SatError::Solver(error.to_string()))?;
+                    let mut failed = Vec::new();
+                    for core_lit in core {
+                        let assumption = cnf_lit_from_rustsat(core_lit)?.negated();
+                        if passed.contains(&assumption) {
+                            failed.push(assumption);
+                        }
+                    }
+                    failed
+                };
+                Ok(SatResult::Unsat(SatUnsatEvidence {
+                    proof: SatProofStatus::Unchecked,
+                    failed_assumptions,
+                }))
+            }
             RustSatSolverResult::Interrupted => {
                 let detail = if timeout_deadline.is_some() {
                     "rustsat-batsat timeout".to_owned()
@@ -2315,6 +2348,21 @@ fn rustsat_clause(clause: &CnfClause) -> Result<RustSatClause, SatError> {
         .copied()
         .map(rustsat_lit)
         .collect::<Result<RustSatClause, SatError>>()
+}
+
+/// Inverse of [`rustsat_lit`]: a `rustsat` literal back to a [`CnfLit`] (used to
+/// read the assumption core after an unsat solve).
+fn cnf_lit_from_rustsat(lit: RustSatLit) -> Result<CnfLit, SatError> {
+    let index = lit.var().idx();
+    let var = CnfVar::new(index).map_err(|_| SatError::VariableCountTooLarge {
+        variable_count: index + 1,
+    })?;
+    let positive = CnfLit::positive(var);
+    Ok(if lit.is_neg() {
+        positive.negated()
+    } else {
+        positive
+    })
 }
 
 fn rustsat_lit(lit: CnfLit) -> Result<RustSatLit, SatError> {

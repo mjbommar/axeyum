@@ -10,7 +10,7 @@
 //! supports realistic path exploration.
 
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId, Value};
-use axeyum_solver::{CheckResult, IncrementalBvSolver};
+use axeyum_solver::{AssumptionOutcome, CheckResult, IncrementalBvSolver};
 
 /// A register-machine instruction. Registers are `BV(WIDTH)`; `Branch` forks on
 /// equality to a constant.
@@ -388,4 +388,82 @@ fn infeasible_target_yields_no_winning_paths() {
 
     let wins = symbolically_execute(&mut arena, &program);
     assert!(wins.is_empty(), "no input can satisfy in0==1 and in0==2");
+}
+
+// --- assumption-core path pruning (the reachability primitive) ----------------
+
+/// The path-pruning primitive symbolic execution / reachability is built on:
+/// feed candidate branch conditions as assumptions; on `unsat`, the returned
+/// core names exactly the conditions that cannot co-occur with the path prefix.
+#[test]
+fn assumption_core_isolates_the_infeasible_branch_conditions() {
+    let mut arena = TermArena::new();
+    let xs = arena.declare("x", Sort::BitVec(8)).unwrap();
+    let ys = arena.declare("y", Sort::BitVec(8)).unwrap();
+    let x = arena.var(xs);
+    let y = arena.var(ys);
+    let mut solver = IncrementalBvSolver::new();
+
+    // Path prefix: x >= 10 (a hard assertion on this path).
+    let ten = arena.bv_const(8, 10).unwrap();
+    let prefix = arena.bv_uge(x, ten).unwrap();
+    solver.assert(&arena, prefix).unwrap();
+
+    // Candidate branch conditions for the next step: x < 5 and y == 7.
+    let five = arena.bv_const(8, 5).unwrap();
+    let x_lt_5 = arena.bv_ult(x, five).unwrap();
+    let seven = arena.bv_const(8, 7).unwrap();
+    let y_eq_7 = arena.eq(y, seven).unwrap();
+
+    // x >= 10 ∧ x < 5 is infeasible; y == 7 is irrelevant to the conflict, so
+    // the core must be exactly {x < 5}.
+    match solver
+        .check_assuming_core(&arena, &[x_lt_5, y_eq_7])
+        .unwrap()
+    {
+        AssumptionOutcome::Unsat { core } => {
+            assert_eq!(core, vec![x_lt_5], "core must isolate x<5, got {core:?}");
+        }
+        other => panic!("expected unsat with a core, got {other:?}"),
+    }
+
+    // A feasible branch (x < 20) is sat — the prefix is not over-pruned.
+    let twenty = arena.bv_const(8, 20).unwrap();
+    let x_lt_20 = arena.bv_ult(x, twenty).unwrap();
+    assert!(
+        matches!(
+            solver.check_assuming_core(&arena, &[x_lt_20]).unwrap(),
+            AssumptionOutcome::Sat(_)
+        ),
+        "x in [10,20) is reachable"
+    );
+}
+
+/// When several assumptions are jointly (but not individually) responsible, the
+/// core contains all of them.
+#[test]
+#[allow(clippy::similar_names)] // x_lt_3 / x_gt_5 are intentionally parallel
+fn assumption_core_reports_a_jointly_infeasible_pair() {
+    let mut arena = TermArena::new();
+    let xs = arena.declare("x", Sort::BitVec(8)).unwrap();
+    let x = arena.var(xs);
+    let mut solver = IncrementalBvSolver::new();
+
+    let three = arena.bv_const(8, 3).unwrap();
+    let five = arena.bv_const(8, 5).unwrap();
+    let x_lt_3 = arena.bv_ult(x, three).unwrap(); // x < 3
+    let x_gt_5 = arena.bv_ugt(x, five).unwrap(); // x > 5
+
+    // Neither alone is unsat; together they are. The core is the whole pair, and
+    // its negation is a sound conflict clause.
+    match solver
+        .check_assuming_core(&arena, &[x_lt_3, x_gt_5])
+        .unwrap()
+    {
+        AssumptionOutcome::Unsat { core } => {
+            assert_eq!(core.len(), 2, "both conditions are needed, got {core:?}");
+            assert!(core.contains(&x_lt_3) && core.contains(&x_gt_5));
+        }
+        other => panic!("expected unsat with a 2-element core, got {other:?}"),
+    }
 }

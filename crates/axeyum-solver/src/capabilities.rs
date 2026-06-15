@@ -177,6 +177,13 @@ pub const CAPABILITIES: &[Capability] = &[
         evidence: "optimum certified by the underlying decision procedure per step",
         reference: "ADR-0027",
     },
+    Capability {
+        area: "incremental",
+        feature: "warm push/pop/assume QF_BV + assumption-core (symbolic-execution path pruning)",
+        assurance: Assurance::Validated,
+        evidence: "model replay; SAT final-conflict core (a sound inconsistent subset)",
+        reference: "ADR-0009",
+    },
 ];
 
 /// Renders [`CAPABILITIES`] as the canonical capability-matrix markdown table.
