@@ -46,8 +46,15 @@ Last updated: 2026-06-14
   sat/unsat tests. **The biggest remaining strings gap is *not* the theory but the
   front door:** the rich `BoundedString` API is **not yet wired into the SMT-LIB
   parser** (no `String` sort / `str.*` parsing), so string benchmarks can't be
-  fed as text — that wiring (String→(len,content) BV pair in the parser + model
-  extraction back to a string) is the next substantial strings increment.
+  fed as text. **Scoped in ADR-0029 (proposed):** the parser's expression result
+  type becomes `Parsed = Term(TermId) | Str(StrTerm)`, a fixed `max_len`
+  `BoundedString` backs every string, `"..."` literals lex to constant `StrTerm`s
+  (the s-expr lexer already tokenizes them), `str.*`/`re.*` dispatch to the
+  existing methods, and `sat` models decode `len`/`content` back to a Rust string
+  (replay-checkable through the BV path). It is the BMC slice — strings over
+  `max_len` are `Unsupported`, never wrong. Recorded as an ADR before
+  implementation because the result-type change touches every expression site (a
+  dedicated multi-turn parser refactor), not rushed at a turn's tail.
 
 - **Small-format `fma` validated via an exact big-integer oracle (2026-06-14).**
   `f64`'s `mul_add` is not a sound oracle for small-format fma (the fused
