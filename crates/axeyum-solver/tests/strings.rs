@@ -57,7 +57,10 @@ fn symbolic_string_equals_literal_is_sat() {
     let eq = s.equal(&mut a, &x, &hi).unwrap();
 
     let result = solve(&mut a, &[wf, eq], &SolverConfig::default()).unwrap();
-    assert!(matches!(result, CheckResult::Sat(_)), "x == \"hi\" sat, got {result:?}");
+    assert!(
+        matches!(result, CheckResult::Sat(_)),
+        "x == \"hi\" sat, got {result:?}"
+    );
 }
 
 #[test]
@@ -74,7 +77,10 @@ fn symbolic_length_and_char_constraint_is_sat() {
     let c0_eq = a.eq(c0, h).unwrap();
 
     let result = solve(&mut a, &[wf, len_eq, c0_eq], &SolverConfig::default()).unwrap();
-    assert!(matches!(result, CheckResult::Sat(_)), "len=3 ∧ x[0]='h' sat, got {result:?}");
+    assert!(
+        matches!(result, CheckResult::Sat(_)),
+        "len=3 ∧ x[0]='h' sat, got {result:?}"
+    );
 }
 
 #[test]
@@ -115,7 +121,10 @@ fn concat_with_empty_and_symbolic() {
     let hi_bang = s8b.literal(&mut a, "hi!").unwrap();
     let goal = s8b.equal(&mut a, &joined2, &hi_bang).unwrap();
     let result = solve(&mut a, &[wf, goal], &SolverConfig::default()).unwrap();
-    assert!(matches!(result, CheckResult::Sat(_)), "x ++ \"!\" = \"hi!\" sat, got {result:?}");
+    assert!(
+        matches!(result, CheckResult::Sat(_)),
+        "x ++ \"!\" = \"hi!\" sat, got {result:?}"
+    );
 }
 
 #[test]
@@ -181,9 +190,7 @@ fn index_of_literals() {
     let l = s.literal(&mut a, "l").unwrap();
     let z = s.literal(&mut a, "z").unwrap();
 
-    let want = |a: &TermArena, t: axeyum_ir::TermId, v: u128| {
-        matches!(eval(a, t, &Assignment::new()), Ok(Value::Bv { value, .. }) if value == v)
-    };
+    let want = |a: &TermArena, t: axeyum_ir::TermId, v: u128| matches!(eval(a, t, &Assignment::new()), Ok(Value::Bv { value, .. }) if value == v);
 
     let (found, idx) = s.index_of(&mut a, &hello, &l, 0).unwrap();
     assert!(eval_bool(&a, found), "\"hello\" contains \"l\"");
@@ -213,7 +220,9 @@ fn substr_at_symbolic_start() {
     assert!(eval_bool(&a, eq), "substr_at(\"hello\",1,3) == \"ell\"");
 
     // symbolic: exists i: substr_at("hello", i, 2) == "lo"  -> sat (i = 3).
-    let is = a.declare("i", axeyum_ir::Sort::BitVec(s_len_width(8))).unwrap();
+    let is = a
+        .declare("i", axeyum_ir::Sort::BitVec(s_len_width(8)))
+        .unwrap();
     let i = a.var(is);
     let bound = a.bv_const(s_len_width(8), 8).unwrap();
     let wf = a.bv_ule(i, bound).unwrap();
@@ -221,7 +230,10 @@ fn substr_at_symbolic_start() {
     let lo = s2.literal(&mut a, "lo").unwrap();
     let goal = s2.equal(&mut a, &sub2, &lo).unwrap();
     let r = solve(&mut a, &[wf, goal], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Sat(_)), "exists i: hello[i..i+2]=\"lo\" sat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Sat(_)),
+        "exists i: hello[i..i+2]=\"lo\" sat, got {r:?}"
+    );
 }
 
 #[test]
@@ -267,7 +279,9 @@ fn take_and_drop() {
     assert!(eval_bool(&a, suf_eq), "drop(\"hello\",2)==\"llo\"");
 
     // symbolic: exists k: take("hello", k) == "hel"  -> sat (k = 3).
-    let ks = a.declare("k", axeyum_ir::Sort::BitVec(s_len_width(8))).unwrap();
+    let ks = a
+        .declare("k", axeyum_ir::Sort::BitVec(s_len_width(8)))
+        .unwrap();
     let k = a.var(ks);
     let bound = a.bv_const(s_len_width(8), 8).unwrap();
     let wf = a.bv_ule(k, bound).unwrap();
@@ -275,7 +289,10 @@ fn take_and_drop() {
     let hel = s.literal(&mut a, "hel").unwrap();
     let goal = s.equal(&mut a, &tk, &hel).unwrap();
     let r = solve(&mut a, &[wf, goal], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Sat(_)), "exists k: take(hello,k)=\"hel\" sat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Sat(_)),
+        "exists k: take(hello,k)=\"hel\" sat, got {r:?}"
+    );
 }
 
 #[test]
@@ -290,13 +307,19 @@ fn replace_same_len_first_occurrence() {
     let r = s.replace_same_len(&mut a, &hello, &l, &big_l).unwrap();
     let want = s.literal(&mut a, "heLlo").unwrap();
     let eq = s.equal(&mut a, &r, &want).unwrap();
-    assert!(eval_bool(&a, eq), "replace first \"l\"->\"L\" in \"hello\" == \"heLlo\"");
+    assert!(
+        eval_bool(&a, eq),
+        "replace first \"l\"->\"L\" in \"hello\" == \"heLlo\""
+    );
 
     // not found -> unchanged.
     let z = s.literal(&mut a, "z").unwrap();
     let r2 = s.replace_same_len(&mut a, &hello, &z, &big_l).unwrap();
     let eq2 = s.equal(&mut a, &r2, &hello).unwrap();
-    assert!(eval_bool(&a, eq2), "replace of absent needle leaves string unchanged");
+    assert!(
+        eval_bool(&a, eq2),
+        "replace of absent needle leaves string unchanged"
+    );
 
     // multi-char same-length: replace "ll" with "LL" in "hello" -> "heLLo".
     let ll = s.literal(&mut a, "ll").unwrap();
@@ -321,12 +344,18 @@ fn to_int_literals() {
     // "0" -> valid, 0
     let z = s.literal(&mut a, "0").unwrap();
     let (vz, valz) = s.to_int(&mut a, &z).unwrap();
-    assert!(eval_bool(&a, vz) && eval_bv(&a, valz, 0), "to_int(\"0\") == 0");
+    assert!(
+        eval_bool(&a, vz) && eval_bv(&a, valz, 0),
+        "to_int(\"0\") == 0"
+    );
 
     // "007" -> valid, 7 (leading zeros are fine, just digits)
     let lz = s.literal(&mut a, "007").unwrap();
     let (vlz, vallz) = s.to_int(&mut a, &lz).unwrap();
-    assert!(eval_bool(&a, vlz) && eval_bv(&a, vallz, 7), "to_int(\"007\") == 7");
+    assert!(
+        eval_bool(&a, vlz) && eval_bv(&a, vallz, 7),
+        "to_int(\"007\") == 7"
+    );
 
     // "12a4" -> invalid (non-digit)
     let bad = s.literal(&mut a, "12a4").unwrap();
@@ -350,7 +379,10 @@ fn symbolic_to_int_is_sat() {
     let target = a.bv_const(64, 42).unwrap();
     let is42 = a.eq(value, target).unwrap();
     let r = solve(&mut a, &[wf, valid, is42], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Sat(_)), "exists x with to_int(x)==42, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Sat(_)),
+        "exists x with to_int(x)==42, got {r:?}"
+    );
 }
 
 #[test]
@@ -389,7 +421,10 @@ fn from_int_to_int_roundtrip_is_sat() {
     let (valid, value) = s.to_int(&mut a, &st).unwrap();
     let back = a.eq(value, n).unwrap();
     let r = solve(&mut a, &[fits, valid, back], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Sat(_)), "to_int(from_int(555))==555, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Sat(_)),
+        "to_int(from_int(555))==555, got {r:?}"
+    );
 }
 
 #[test]
@@ -404,7 +439,10 @@ fn replace_general_length() {
         let (rs, out) = s.replace(a, &h, &o, &n).unwrap();
         let exp = rs.literal(a, expect).unwrap();
         let eq = rs.equal(a, &out, &exp).unwrap();
-        assert!(eval_bool(a, eq), "replace({hay:?},{old:?},{new:?}) == {expect:?}");
+        assert!(
+            eval_bool(a, eq),
+            "replace({hay:?},{old:?},{new:?}) == {expect:?}"
+        );
     };
     // equal-length
     check(&mut a, "abab", "ab", "XY", "XYab");
@@ -435,7 +473,10 @@ fn symbolic_replace_is_sat() {
     let target = rs.literal(&mut a, "bbc").unwrap();
     let eq = rs.equal(&mut a, &out, &target).unwrap();
     let r = solve(&mut a, &[wf, eq], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Sat(_)), "exists x: replace(x,a,bb)=bbc, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Sat(_)),
+        "exists x: replace(x,a,bb)=bbc, got {r:?}"
+    );
 }
 
 #[test]
@@ -450,7 +491,10 @@ fn replace_all_non_overlapping() {
         let (rs, out) = s.replace_all(a, &h, &o, &n).unwrap();
         let exp = rs.literal(a, expect).unwrap();
         let eq = rs.equal(a, &out, &exp).unwrap();
-        assert!(eval_bool(a, eq), "replace_all({hay:?},{old:?},{new:?}) == {expect:?}");
+        assert!(
+            eval_bool(a, eq),
+            "replace_all({hay:?},{old:?},{new:?}) == {expect:?}"
+        );
     };
     // all occurrences
     check(&mut a, "abab", "ab", "X", "XX");
@@ -481,7 +525,10 @@ fn symbolic_replace_all_is_sat() {
     let target = rs.literal(&mut a, "bb").unwrap();
     let eq = rs.equal(&mut a, &out, &target).unwrap();
     let r = solve(&mut a, &[wf, eq], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Sat(_)), "exists x: replace_all(x,a,bb)=bb, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Sat(_)),
+        "exists x: replace_all(x,a,bb)=bb, got {r:?}"
+    );
 }
 
 #[test]
@@ -569,8 +616,14 @@ fn regex_plus_opt_anychar() {
     let loop24 = Regex::Loop(Box::new(Regex::Char(b'a')), 2, 4);
     assert!(!matches(&mut a, &loop24, "a"), "a{{2,4}} rejects \"a\"");
     assert!(matches(&mut a, &loop24, "aa"), "a{{2,4}} matches \"aa\"");
-    assert!(matches(&mut a, &loop24, "aaaa"), "a{{2,4}} matches \"aaaa\"");
-    assert!(!matches(&mut a, &loop24, "aaaaa"), "a{{2,4}} rejects \"aaaaa\"");
+    assert!(
+        matches(&mut a, &loop24, "aaaa"),
+        "a{{2,4}} matches \"aaaa\""
+    );
+    assert!(
+        !matches(&mut a, &loop24, "aaaaa"),
+        "a{{2,4}} rejects \"aaaaa\""
+    );
 
     // a{0,2} : up to two 'a' (incl. empty)
     let loop02 = Regex::Loop(Box::new(Regex::Char(b'a')), 0, 2);
@@ -585,8 +638,14 @@ fn regex_plus_opt_anychar() {
 
     // empty language a{3,1} matches nothing
     let empty_lang = Regex::Loop(Box::new(Regex::Char(b'a')), 3, 1);
-    assert!(!matches(&mut a, &empty_lang, ""), "a{{3,1}} matches nothing");
-    assert!(!matches(&mut a, &empty_lang, "aaa"), "a{{3,1}} matches nothing");
+    assert!(
+        !matches(&mut a, &empty_lang, ""),
+        "a{{3,1}} matches nothing"
+    );
+    assert!(
+        !matches(&mut a, &empty_lang, "aaa"),
+        "a{{3,1}} matches nothing"
+    );
 }
 
 #[test]
@@ -606,8 +665,14 @@ fn regex_boolean_combinators() {
     let inter = Regex::Inter(Box::new(lower_star), Box::new(three));
     assert!(matches(&mut a, &inter, "abc"), "inter matches \"abc\"");
     assert!(!matches(&mut a, &inter, "ab"), "inter rejects \"ab\" (len)");
-    assert!(!matches(&mut a, &inter, "abcd"), "inter rejects \"abcd\" (len)");
-    assert!(!matches(&mut a, &inter, "aBc"), "inter rejects \"aBc\" (uppercase)");
+    assert!(
+        !matches(&mut a, &inter, "abcd"),
+        "inter rejects \"abcd\" (len)"
+    );
+    assert!(
+        !matches(&mut a, &inter, "aBc"),
+        "inter rejects \"aBc\" (uppercase)"
+    );
 
     // Comp: complement of the literal "no".
     let comp = Regex::Comp(Box::new(Regex::literal("no")));
@@ -633,7 +698,10 @@ fn regex_boolean_combinators() {
     // A Boolean op nested under a repetition is rejected with an error.
     let bad = Regex::Star(Box::new(Regex::Comp(Box::new(Regex::Char(b'a')))));
     let st = s.literal(&mut a, "a").unwrap();
-    assert!(s.in_re(&mut a, &st, &bad).is_err(), "nested-under-star is unsupported");
+    assert!(
+        s.in_re(&mut a, &st, &bad).is_err(),
+        "nested-under-star is unsupported"
+    );
 }
 
 #[test]
@@ -654,7 +722,10 @@ fn symbolic_regex_membership_is_sat() {
     let three = a.bv_const(s_len_width(8), 3).unwrap();
     let len3 = a.eq(s.length(&x), three).unwrap();
     let r = solve(&mut a, &[wf, m, len3], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Sat(_)), "exists x in a(b|c)* with len 3, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Sat(_)),
+        "exists x in a(b|c)* with len 3, got {r:?}"
+    );
 }
 
 #[test]
@@ -669,7 +740,10 @@ fn symbolic_contains_is_sat() {
     let five = a.bv_const(s_len_width(8), 5).unwrap();
     let len5 = a.eq(s.length(&x), five).unwrap();
     let r = solve(&mut a, &[wf, has, len5], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Sat(_)), "x contains \"lo\" ∧ len 5 sat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Sat(_)),
+        "x contains \"lo\" ∧ len 5 sat, got {r:?}"
+    );
 }
 
 #[test]
@@ -685,7 +759,10 @@ fn contradictory_string_constraints_are_unsat() {
     let len3 = a.eq(s.length(&x), three).unwrap();
 
     let result = solve(&mut a, &[wf, eq, len3], &SolverConfig::default()).unwrap();
-    assert!(matches!(result, CheckResult::Unsat), "x=\"ab\" ∧ len(x)=3 unsat, got {result:?}");
+    assert!(
+        matches!(result, CheckResult::Unsat),
+        "x=\"ab\" ∧ len(x)=3 unsat, got {result:?}"
+    );
 }
 
 #[test]
@@ -693,7 +770,15 @@ fn is_digit_on_literals() {
     // str.is_digit: true only for a single ASCII digit character.
     let mut a = TermArena::new();
     let s = BoundedString::new(8);
-    let cases = [("5", true), ("0", true), ("9", true), ("a", false), ("", false), ("12", false), (" ", false)];
+    let cases = [
+        ("5", true),
+        ("0", true),
+        ("9", true),
+        ("a", false),
+        ("", false),
+        ("12", false),
+        (" ", false),
+    ];
     for (lit, want) in cases {
         let t = s.literal(&mut a, lit).unwrap();
         let d = s.is_digit(&mut a, &t).unwrap();
@@ -713,10 +798,16 @@ fn is_digit_symbolic_constrains_to_single_digit() {
     let seven = s.literal(&mut a, "7").unwrap();
     let eq7 = s.equal(&mut a, &x, &seven).unwrap();
     let sat = solve(&mut a, &[wf, d, eq7], &SolverConfig::default()).unwrap();
-    assert!(matches!(sat, CheckResult::Sat(_)), "is_digit(x) ∧ x=\"7\" sat, got {sat:?}");
+    assert!(
+        matches!(sat, CheckResult::Sat(_)),
+        "is_digit(x) ∧ x=\"7\" sat, got {sat:?}"
+    );
 
     let letter = s.literal(&mut a, "a").unwrap();
     let eqa = s.equal(&mut a, &x, &letter).unwrap();
     let unsat = solve(&mut a, &[wf, d, eqa], &SolverConfig::default()).unwrap();
-    assert!(matches!(unsat, CheckResult::Unsat), "is_digit(x) ∧ x=\"a\" unsat, got {unsat:?}");
+    assert!(
+        matches!(unsat, CheckResult::Unsat),
+        "is_digit(x) ∧ x=\"a\" unsat, got {unsat:?}"
+    );
 }

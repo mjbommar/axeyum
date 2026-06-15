@@ -143,7 +143,11 @@ fn skolemize_top_existentials(
     let mut out = Vec::with_capacity(assertions.len());
     let mut k = 0u32;
     for &a in assertions {
-        if let TermNode::App { op: Op::Exists(sym), args } = arena.node(a) {
+        if let TermNode::App {
+            op: Op::Exists(sym),
+            args,
+        } = arena.node(a)
+        {
             let (sym, body) = (*sym, args[0]);
             let sort = arena.symbol(sym).1;
             let skolem = arena.declare(&format!("!sk_{k}"), sort).map_err(err)?;
@@ -270,7 +274,10 @@ const MAX_MILP_NODES: u32 = 2_000;
 /// mixed query through the ground evaluator. Anything outside the linear mixed
 /// fragment (nonlinear, `to_int`/`is_int`, bit-vectors, …) or the node budget
 /// yields `unknown`, so the caller falls back to the sound relaxation.
-fn check_with_milp(arena: &mut TermArena, assertions: &[TermId]) -> Result<CheckResult, SolverError> {
+fn check_with_milp(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<CheckResult, SolverError> {
     let mut lower = LiraLower::default();
     let mut real_assertions = Vec::with_capacity(assertions.len());
     for &a in assertions {
@@ -278,7 +285,8 @@ fn check_with_milp(arena: &mut TermArena, assertions: &[TermId]) -> Result<Check
     }
     // The fresh real symbols that must take integer values (former int symbols),
     // paired with the original integer symbol for model projection.
-    let int_cols: Vec<(SymbolId, SymbolId)> = lower.int_to_real.iter().map(|(&i, &r)| (r, i)).collect();
+    let int_cols: Vec<(SymbolId, SymbolId)> =
+        lower.int_to_real.iter().map(|(&i, &r)| (r, i)).collect();
     let mut budget = MAX_MILP_NODES;
     milp_bnb(arena, &real_assertions, &int_cols, assertions, &mut budget)
 }
@@ -337,9 +345,7 @@ fn milp_bnb(
         return Ok(match (left_res, right_res) {
             (_, CheckResult::Sat(m)) | (CheckResult::Sat(m), _) => CheckResult::Sat(m),
             (CheckResult::Unsat, CheckResult::Unsat) => CheckResult::Unsat,
-            (CheckResult::Unknown(r), _) | (_, CheckResult::Unknown(r)) => {
-                CheckResult::Unknown(r)
-            }
+            (CheckResult::Unknown(r), _) | (_, CheckResult::Unknown(r)) => CheckResult::Unknown(r),
         });
     }
     // All integrality columns are integral: a genuine MILP candidate. Replay it
@@ -389,7 +395,11 @@ struct LiraLower {
 }
 
 impl LiraLower {
-    fn real_of_int(&mut self, arena: &mut TermArena, int_sym: SymbolId) -> Result<TermId, SolverError> {
+    fn real_of_int(
+        &mut self,
+        arena: &mut TermArena,
+        int_sym: SymbolId,
+    ) -> Result<TermId, SolverError> {
         if let Some(&r) = self.int_to_real.get(&int_sym) {
             return Ok(arena.var(r));
         }
@@ -441,11 +451,21 @@ impl LiraLower {
                     Op::IntLe => arena.real_le(low[0], low[1]).map_err(err)?,
                     Op::IntGt => arena.real_gt(low[0], low[1]).map_err(err)?,
                     Op::IntGe => arena.real_ge(low[0], low[1]).map_err(err)?,
-                    Op::Eq | Op::BoolAnd | Op::BoolOr | Op::BoolNot | Op::BoolXor
-                    | Op::BoolImplies | Op::Ite | Op::RealNeg | Op::RealAdd | Op::RealSub
-                    | Op::RealMul | Op::RealLt | Op::RealLe | Op::RealGt | Op::RealGe => {
-                        build_app(arena, op, &low).map_err(err)?
-                    }
+                    Op::Eq
+                    | Op::BoolAnd
+                    | Op::BoolOr
+                    | Op::BoolNot
+                    | Op::BoolXor
+                    | Op::BoolImplies
+                    | Op::Ite
+                    | Op::RealNeg
+                    | Op::RealAdd
+                    | Op::RealSub
+                    | Op::RealMul
+                    | Op::RealLt
+                    | Op::RealLe
+                    | Op::RealGt
+                    | Op::RealGe => build_app(arena, op, &low).map_err(err)?,
                     // to_int/is_int, integer div/mod/abs, bit-vectors, arrays, …
                     // are outside the linear mixed fragment this oracle handles.
                     _ => return Err(milp_out_of_fragment()),
@@ -636,7 +656,11 @@ pub fn prove_unsat_by_mbqi(
     let mut ground: Vec<TermId> = Vec::new();
     let mut universals: Vec<(axeyum_ir::SymbolId, TermId)> = Vec::new();
     for &a in assertions {
-        if let TermNode::App { op: Op::Forall(sym), args } = arena.node(a) {
+        if let TermNode::App {
+            op: Op::Forall(sym),
+            args,
+        } = arena.node(a)
+        {
             if has_quantifier(arena, &[args[0]]) {
                 return prove_unsat_by_ematching(arena, assertions, config);
             }
@@ -955,13 +979,18 @@ fn fold_to_real_rec(
                 new_args.push(fold_to_real_rec(arena, *arg, memo)?);
             }
             let to_real_arg = |arena: &TermArena, t: TermId| match arena.node(t) {
-                TermNode::App { op: Op::IntToReal, args } => Some(args[0]),
+                TermNode::App {
+                    op: Op::IntToReal,
+                    args,
+                } => Some(args[0]),
                 _ => None,
             };
             // to_real(a) +/- to_real(b)  ->  to_real(a +/- b)
             if matches!(op, Op::RealAdd | Op::RealSub)
-                && let (Some(a), Some(b)) =
-                    (to_real_arg(arena, new_args[0]), to_real_arg(arena, new_args[1]))
+                && let (Some(a), Some(b)) = (
+                    to_real_arg(arena, new_args[0]),
+                    to_real_arg(arena, new_args[1]),
+                )
             {
                 let int = if op == Op::RealAdd {
                     arena.int_add(a, b)?
@@ -1003,13 +1032,19 @@ fn eliminate_to_real_const_compare(
         let (op, args) = (*op, args.clone());
         // Recurse first so nested atoms are also considered.
         stack.extend(args.iter().copied());
-        let is_cmp = matches!(op, Op::RealLt | Op::RealLe | Op::RealGt | Op::RealGe | Op::Eq);
+        let is_cmp = matches!(
+            op,
+            Op::RealLt | Op::RealLe | Op::RealGt | Op::RealGe | Op::Eq
+        );
         if !is_cmp || args.len() != 2 {
             continue;
         }
         // Identify `to_real(i)` and a real constant among the two operands.
         let to_real_arg = |t: TermId| match arena.node(t) {
-            TermNode::App { op: Op::IntToReal, args } => Some(args[0]),
+            TermNode::App {
+                op: Op::IntToReal,
+                args,
+            } => Some(args[0]),
             _ => None,
         };
         let real_const = |t: TermId| match arena.node(t) {
@@ -1031,14 +1066,14 @@ fn eliminate_to_real_const_compare(
             continue;
         }
         // Normalize to `to_real(i) <op'> c` (flip if the constant is on the left).
-        let (i, c, flipped) = if let (Some(i), Some(c)) = (to_real_arg(args[0]), real_const(args[1]))
-        {
-            (i, c, false)
-        } else if let (Some(c), Some(i)) = (real_const(args[0]), to_real_arg(args[1])) {
-            (i, c, true)
-        } else {
-            continue;
-        };
+        let (i, c, flipped) =
+            if let (Some(i), Some(c)) = (to_real_arg(args[0]), real_const(args[1])) {
+                (i, c, false)
+            } else if let (Some(c), Some(i)) = (real_const(args[0]), to_real_arg(args[1])) {
+                (i, c, true)
+            } else {
+                continue;
+            };
         let floor = c.numerator().div_euclid(c.denominator());
         let is_int = c.denominator() == 1;
         let ceil = if is_int { floor } else { floor + 1 };
@@ -1113,18 +1148,23 @@ fn eliminate_to_int_const_compare(
         };
         let (op, args) = (*op, args.clone());
         stack.extend(args.iter().copied());
-        if !matches!(op, Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe | Op::Eq) || args.len() != 2 {
+        if !matches!(op, Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe | Op::Eq) || args.len() != 2
+        {
             continue;
         }
         let to_int_arg = |t: TermId| match arena.node(t) {
-            TermNode::App { op: Op::RealToInt, args } => Some(args[0]),
+            TermNode::App {
+                op: Op::RealToInt,
+                args,
+            } => Some(args[0]),
             _ => None,
         };
         let int_const = |t: TermId| match arena.node(t) {
             TermNode::IntConst(n) => Some(*n),
             _ => None,
         };
-        let (r, c, flipped) = if let (Some(r), Some(c)) = (to_int_arg(args[0]), int_const(args[1])) {
+        let (r, c, flipped) = if let (Some(r), Some(c)) = (to_int_arg(args[0]), int_const(args[1]))
+        {
             (r, c, false)
         } else if let (Some(c), Some(r)) = (int_const(args[0]), to_int_arg(args[1])) {
             (r, c, true)
@@ -1204,11 +1244,17 @@ fn relax_coercions(
     let mut links: Vec<TermId> = Vec::new();
     for (idx, t) in terms.into_iter().enumerate() {
         let sort = arena.sort_of(t);
-        let sym = arena.declare(&format!("!coerce_{idx}"), sort).map_err(err)?;
+        let sym = arena
+            .declare(&format!("!coerce_{idx}"), sort)
+            .map_err(err)?;
         let fresh = arena.var(sym);
         map.insert(t, fresh);
         // Exact linking for a bounded `to_real(i)`: r = i over its finite range.
-        if let TermNode::App { op: Op::IntToReal, args } = arena.node(t) {
+        if let TermNode::App {
+            op: Op::IntToReal,
+            args,
+        } = arena.node(t)
+        {
             let operand = args[0];
             if let (Some(lo), Some(hi)) = int_bounds(arena, assertions, operand) {
                 if hi >= lo && hi - lo <= MAX_COERCION_LINK {
@@ -1260,43 +1306,63 @@ fn int_bounds(
         let (lc, rc) = (int_const(l), int_const(r));
         match op {
             Op::IntLe => {
-                if l == term && let Some(c) = rc {
+                if l == term
+                    && let Some(c) = rc
+                {
                     see_hi(c);
                 }
-                if r == term && let Some(c) = lc {
+                if r == term
+                    && let Some(c) = lc
+                {
                     see_lo(c);
                 }
             }
             Op::IntLt => {
-                if l == term && let Some(c) = rc {
+                if l == term
+                    && let Some(c) = rc
+                {
                     see_hi(c - 1);
                 }
-                if r == term && let Some(c) = lc {
+                if r == term
+                    && let Some(c) = lc
+                {
                     see_lo(c + 1);
                 }
             }
             Op::IntGe => {
-                if l == term && let Some(c) = rc {
+                if l == term
+                    && let Some(c) = rc
+                {
                     see_lo(c);
                 }
-                if r == term && let Some(c) = lc {
+                if r == term
+                    && let Some(c) = lc
+                {
                     see_hi(c);
                 }
             }
             Op::IntGt => {
-                if l == term && let Some(c) = rc {
+                if l == term
+                    && let Some(c) = rc
+                {
                     see_lo(c + 1);
                 }
-                if r == term && let Some(c) = lc {
+                if r == term
+                    && let Some(c) = lc
+                {
                     see_hi(c - 1);
                 }
             }
             Op::Eq => {
-                if l == term && let Some(c) = rc {
+                if l == term
+                    && let Some(c) = rc
+                {
                     see_lo(c);
                     see_hi(c);
                 }
-                if r == term && let Some(c) = lc {
+                if r == term
+                    && let Some(c) = lc
+                {
                     see_lo(c);
                     see_hi(c);
                 }

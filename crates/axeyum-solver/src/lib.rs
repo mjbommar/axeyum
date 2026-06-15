@@ -87,12 +87,12 @@ pub use dpll_t::{
 };
 pub use enums::{EnumError, EnumSort, EnumVar};
 pub use euf::check_with_function_elimination;
-pub use fp::FloatFormat;
 pub use evidence::{
     Evidence, EvidenceReport, ProofOutcome, Provenance, SEMANTICS_VERSION, produce_evidence,
     produce_lra_dpll_evidence, produce_lra_evidence, produce_qf_bv_evidence, prove,
 };
 pub use faithfulness::{FaithfulnessOutcome, check_qf_bv_faithfulness};
+pub use fp::FloatFormat;
 pub use incremental::IncrementalBvSolver;
 pub use layers::BvLayerStats;
 pub use lazy_bv::{LazyBvOutcome, check_lazy_bv_abstraction, solve_lazy_bv_abstraction};

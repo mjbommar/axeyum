@@ -573,7 +573,10 @@ fn parses_and_round_trips_const_array() {
     let script = parse_script(text).unwrap();
     assert_eq!(script.assertions.len(), 1);
     let rendered = write_script(&script.arena, &script.assertions);
-    assert!(rendered.contains("(as const (Array (_ BitVec 4) (_ BitVec 8)))"), "renders as const: {rendered}");
+    assert!(
+        rendered.contains("(as const (Array (_ BitVec 4) (_ BitVec 8)))"),
+        "renders as const: {rendered}"
+    );
     let reparsed = parse_script(&rendered).unwrap();
     assert_eq!(reparsed.assertions.len(), 1);
 }
@@ -592,7 +595,10 @@ fn parses_and_round_trips_bv_int_coercions() {
     assert_eq!(script.assertions.len(), 2);
     let rendered = write_script(&script.arena, &script.assertions);
     assert!(rendered.contains("(bv2nat "), "renders bv2nat: {rendered}");
-    assert!(rendered.contains("((_ int2bv 8) "), "renders int2bv: {rendered}");
+    assert!(
+        rendered.contains("((_ int2bv 8) "),
+        "renders int2bv: {rendered}"
+    );
     let reparsed = parse_script(&rendered).unwrap();
     assert_eq!(reparsed.assertions.len(), 2);
 }
@@ -744,7 +750,12 @@ fn parses_symbolic_round_to_integral_and_fp_conversions() {
     ",
     )
     .unwrap();
-    let v = eval(&to_real.arena, to_real.assertions[0], &Assignment::default()).unwrap();
+    let v = eval(
+        &to_real.arena,
+        to_real.assertions[0],
+        &Assignment::default(),
+    )
+    .unwrap();
     assert_eq!(v, Value::Bool(true));
 
     // ((_ to_fp 8 24) bv) bit-reinterprets a BitVec(32) as Float32 (identity);
@@ -764,7 +775,10 @@ fn parses_symbolic_round_to_integral_and_fp_conversions() {
     )
     .unwrap();
     assert_eq!(v, Value::Bool(true));
-    assert_eq!(reinterpret.arena.sort_of(reinterpret.assertions[0]), Sort::Bool);
+    assert_eq!(
+        reinterpret.arena.sort_of(reinterpret.assertions[0]),
+        Sort::Bool
+    );
 }
 
 #[test]
@@ -806,7 +820,12 @@ fn parses_and_folds_unambiguous_fp_conversions() {
     ",
     )
     .unwrap();
-    let v = eval(&to_ubv_script.arena, to_ubv_script.assertions[0], &Assignment::default()).unwrap();
+    let v = eval(
+        &to_ubv_script.arena,
+        to_ubv_script.assertions[0],
+        &Assignment::default(),
+    )
+    .unwrap();
     assert_eq!(v, Value::Bool(true));
 
     // fp → signed bv: (_ fp.to_sbv 32) RNE -2.0 == the two's-complement of 2.
@@ -819,7 +838,12 @@ fn parses_and_folds_unambiguous_fp_conversions() {
     ",
     )
     .unwrap();
-    let v = eval(&to_sbv_script.arena, to_sbv_script.assertions[0], &Assignment::default()).unwrap();
+    let v = eval(
+        &to_sbv_script.arena,
+        to_sbv_script.assertions[0],
+        &Assignment::default(),
+    )
+    .unwrap();
     assert_eq!(v, Value::Bool(true));
 
     // Non-dyadic real → fp is reported unsupported, never double-rounded.
@@ -842,7 +866,10 @@ fn parses_and_folds_unambiguous_fp_conversions() {
         (check-sat)
     ",
     );
-    assert!(sbv_sym.is_ok(), "symbolic signed-BV->FP should parse: {sbv_sym:?}");
+    assert!(
+        sbv_sym.is_ok(),
+        "symbolic signed-BV->FP should parse: {sbv_sym:?}"
+    );
 }
 
 #[test]
@@ -866,7 +893,12 @@ fn parses_sort_disambiguated_to_fp_conversions() {
     ",
     )
     .unwrap();
-    let v = eval(&fp_to_fp.arena, fp_to_fp.assertions[0], &Assignment::default()).unwrap();
+    let v = eval(
+        &fp_to_fp.arena,
+        fp_to_fp.assertions[0],
+        &Assignment::default(),
+    )
+    .unwrap();
     assert_eq!(v, Value::Bool(true));
 
     // Signed bit-vector -2 (two's complement 0xFFFFFFFE) -> Float32 -2.0.
@@ -879,7 +911,12 @@ fn parses_sort_disambiguated_to_fp_conversions() {
     ",
     )
     .unwrap();
-    let v = eval(&sbv_to_fp.arena, sbv_to_fp.assertions[0], &Assignment::default()).unwrap();
+    let v = eval(
+        &sbv_to_fp.arena,
+        sbv_to_fp.assertions[0],
+        &Assignment::default(),
+    )
+    .unwrap();
     assert_eq!(v, Value::Bool(true));
 
     // A declared Float32 variable now carries the Float sort, and round-trips
@@ -934,14 +971,14 @@ fn float128_nonarithmetic_ops_decide() {
         "(fp.isNaN (_ NaN 15 113))",
         "(fp.isZero (_ +zero 15 113))",
         "(fp.isZero (_ -zero 15 113))",
-        "(fp.eq (_ +zero 15 113) (_ -zero 15 113))",      // +0 == -0
-        "(not (fp.eq (_ NaN 15 113) (_ NaN 15 113)))",    // NaN != NaN
+        "(fp.eq (_ +zero 15 113) (_ -zero 15 113))", // +0 == -0
+        "(not (fp.eq (_ NaN 15 113) (_ NaN 15 113)))", // NaN != NaN
         "(fp.lt (_ -oo 15 113) (_ +oo 15 113))",
         "(fp.leq (_ +zero 15 113) (_ +zero 15 113))",
         "(fp.isNegative (_ -oo 15 113))",
         "(fp.isPositive (_ +oo 15 113))",
-        "(fp.eq (fp.abs (_ -oo 15 113)) (_ +oo 15 113))",  // abs(-inf) = +inf
-        "(fp.eq (fp.neg (_ +oo 15 113)) (_ -oo 15 113))",  // neg(+inf) = -inf
+        "(fp.eq (fp.abs (_ -oo 15 113)) (_ +oo 15 113))", // abs(-inf) = +inf
+        "(fp.eq (fp.neg (_ +oo 15 113)) (_ -oo 15 113))", // neg(+inf) = -inf
         "(fp.eq (fp.min (_ -oo 15 113) (_ +oo 15 113)) (_ -oo 15 113))",
         "(fp.eq (fp.max (_ -oo 15 113) (_ +oo 15 113)) (_ +oo 15 113))",
     ];

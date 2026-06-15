@@ -18,7 +18,10 @@ fn int_ite_false_branch_contradiction_is_unsat() {
     let zero = a.int_const(0);
     let gt = a.int_gt(it, zero).unwrap();
     let nb = a.not(b).unwrap();
-    assert!(matches!(run(&mut a, &[nb, gt]), CheckResult::Unsat), "ite(false,1,-1)>0 unsat");
+    assert!(
+        matches!(run(&mut a, &[nb, gt]), CheckResult::Unsat),
+        "ite(false,1,-1)>0 unsat"
+    );
 }
 
 #[test]
@@ -32,7 +35,10 @@ fn int_ite_is_sat_with_right_branch() {
     let it = a.ite(b, ten, twenty).unwrap();
     let xe = a.eq(x, it).unwrap();
     let x20 = a.eq(x, twenty).unwrap();
-    assert!(matches!(run(&mut a, &[xe, x20]), CheckResult::Sat(_)), "x=ite,x=20 sat");
+    assert!(
+        matches!(run(&mut a, &[xe, x20]), CheckResult::Sat(_)),
+        "x=ite,x=20 sat"
+    );
 }
 
 #[test]
@@ -47,5 +53,8 @@ fn real_ite_both_branches_force_unsat() {
     let gt = a.real_gt(it, five).unwrap();
     let xle = a.real_le(x, five).unwrap();
     let yle = a.real_le(y, five).unwrap();
-    assert!(matches!(run(&mut a, &[gt, xle, yle]), CheckResult::Unsat), "real ite > 5 unsat");
+    assert!(
+        matches!(run(&mut a, &[gt, xle, yle]), CheckResult::Unsat),
+        "real ite > 5 unsat"
+    );
 }

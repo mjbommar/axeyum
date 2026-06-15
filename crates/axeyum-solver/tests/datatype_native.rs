@@ -6,7 +6,12 @@ use axeyum_solver::{CheckResult, SolverConfig, check_with_datatype_native};
 
 /// Builds `Option = none | some(v: BitVec(8))` and returns (arena, opt, none,
 /// some) ready for assertions.
-fn option_arena() -> (TermArena, axeyum_ir::DatatypeId, axeyum_ir::ConstructorId, axeyum_ir::ConstructorId) {
+fn option_arena() -> (
+    TermArena,
+    axeyum_ir::DatatypeId,
+    axeyum_ir::ConstructorId,
+    axeyum_ir::ConstructorId,
+) {
     let mut arena = TermArena::new();
     let opt = arena.declare_datatype("Option");
     let none = arena.add_constructor(opt, "none", &[]);
@@ -58,7 +63,9 @@ fn free_variable_with_select_is_sat() {
     };
     match model.get(o) {
         Some(Value::Datatype {
-            constructor, fields, ..
+            constructor,
+            fields,
+            ..
         }) => {
             assert_eq!(constructor, some, "o must be `some`");
             assert_eq!(fields, vec![Value::Bv { width: 8, value: 7 }], "field is 7");
@@ -205,7 +212,9 @@ fn datatype_equality_is_sat_with_matching_values() {
     for sym in [o, p] {
         match model.get(sym) {
             Some(Value::Datatype {
-                constructor, fields, ..
+                constructor,
+                fields,
+                ..
             }) => {
                 assert_eq!(constructor, some);
                 assert_eq!(fields, vec![Value::Bv { width: 8, value: 7 }]);
@@ -253,7 +262,9 @@ fn recursive_datatype_tester_is_sat_with_defaulted_tail() {
     };
     match model.get(l) {
         Some(Value::Datatype {
-            constructor, fields, ..
+            constructor,
+            fields,
+            ..
         }) => {
             assert_eq!(constructor, cons, "l must be a cons cell");
             assert_eq!(fields.len(), 2, "cons has head + tail");
@@ -324,15 +335,20 @@ fn traversing_a_datatype_field_is_sat() {
     let tail = arena.dt_select(cons, 1, lv).unwrap();
     let tail_is_nil = arena.dt_test(nil, tail).unwrap();
 
-    let result =
-        check_with_datatype_native(&mut arena, &[is_cons, tail_is_nil], &SolverConfig::default())
-            .unwrap();
+    let result = check_with_datatype_native(
+        &mut arena,
+        &[is_cons, tail_is_nil],
+        &SolverConfig::default(),
+    )
+    .unwrap();
     let CheckResult::Sat(model) = result else {
         panic!("expected sat, got {result:?}");
     };
     match model.get(l) {
         Some(Value::Datatype {
-            constructor, fields, ..
+            constructor,
+            fields,
+            ..
         }) => {
             assert_eq!(constructor, cons);
             match &fields[1] {
@@ -356,16 +372,22 @@ fn traversal_requires_nondefault_tail_is_sat() {
     let tail = arena.dt_select(cons, 1, lv).unwrap();
     let tail_is_cons = arena.dt_test(cons, tail).unwrap();
 
-    let result =
-        check_with_datatype_native(&mut arena, &[is_cons, tail_is_cons], &SolverConfig::default())
-            .unwrap();
+    let result = check_with_datatype_native(
+        &mut arena,
+        &[is_cons, tail_is_cons],
+        &SolverConfig::default(),
+    )
+    .unwrap();
     let CheckResult::Sat(model) = result else {
         panic!("expected sat (tail can be a deeper cons), got {result:?}");
     };
     match model.get(l) {
         Some(Value::Datatype { fields, .. }) => match &fields[1] {
             Value::Datatype { constructor, .. } => {
-                assert_eq!(*constructor, cons, "tail must be a cons, not the nil default");
+                assert_eq!(
+                    *constructor, cons,
+                    "tail must be a cons, not the nil default"
+                );
                 let _ = nil;
             }
             other => panic!("expected cons tail, got {other:?}"),
@@ -422,8 +444,14 @@ fn nested_scalar_field_through_traversal_is_sat() {
     };
     match model.get(l) {
         Some(Value::Datatype { fields, .. }) => match &fields[1] {
-            Value::Datatype { fields: tfields, .. } => {
-                assert_eq!(tfields[0], Value::Bv { width: 8, value: 9 }, "nested head is 9");
+            Value::Datatype {
+                fields: tfields, ..
+            } => {
+                assert_eq!(
+                    tfields[0],
+                    Value::Bv { width: 8, value: 9 },
+                    "nested head is 9"
+                );
             }
             other => panic!("expected cons tail, got {other:?}"),
         },
@@ -445,9 +473,12 @@ fn recursive_equality_with_conflicting_testers_is_unsat() {
     let is_cons_l = arena.dt_test(cons, lv).unwrap();
     let is_nil_m = arena.dt_test(nil, mv).unwrap();
 
-    let result =
-        check_with_datatype_native(&mut arena, &[eq, is_cons_l, is_nil_m], &SolverConfig::default())
-            .unwrap();
+    let result = check_with_datatype_native(
+        &mut arena,
+        &[eq, is_cons_l, is_nil_m],
+        &SolverConfig::default(),
+    )
+    .unwrap();
     assert!(
         matches!(result, CheckResult::Unsat),
         "recursive equality with conflicting testers must be unsat, got {result:?}"
@@ -516,7 +547,11 @@ fn mutually_recursive_datatypes_traverse_and_solve() {
     let tree = arena.declare_datatype("Tree");
     let forest = arena.declare_datatype("Forest");
     let leaf = arena.add_constructor(tree, "leaf", &[("lval".into(), Sort::BitVec(8))]);
-    let branch = arena.add_constructor(tree, "branch", &[("bforest".into(), Sort::Datatype(forest))]);
+    let branch = arena.add_constructor(
+        tree,
+        "branch",
+        &[("bforest".into(), Sort::Datatype(forest))],
+    );
     let _fnil = arena.add_constructor(forest, "fnil", &[]);
     let fcons = arena.add_constructor(
         forest,
@@ -550,7 +585,9 @@ fn mutually_recursive_datatypes_traverse_and_solve() {
     // t = branch(fcons(leaf(9), _))
     match model.get(t) {
         Some(Value::Datatype {
-            constructor, fields, ..
+            constructor,
+            fields,
+            ..
         }) => {
             assert_eq!(constructor, branch, "t is a branch");
             let Value::Datatype { fields: f, .. } = &fields[0] else {

@@ -139,7 +139,10 @@ fn euclidean_mod_constraint_is_sat_and_replays() {
     let lo = a.int_gt(x, zero).unwrap();
     let hi = a.int_lt(x, ten).unwrap();
     let r = solve(&mut a, &[me, lo, hi], DEFAULT_INT_WIDTH);
-    assert!(matches!(r, CheckResult::Sat(_)), "mod(x,3)=2 in (0,10) sat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Sat(_)),
+        "mod(x,3)=2 in (0,10) sat, got {r:?}"
+    );
 }
 
 #[test]
@@ -154,7 +157,10 @@ fn euclidean_div_constraint_is_sat() {
     let de = a.eq(d, two).unwrap();
     let nn = a.int_ge(x, zero).unwrap();
     let r = solve(&mut a, &[de, nn], DEFAULT_INT_WIDTH);
-    assert!(matches!(r, CheckResult::Sat(_)), "div(x,4)=2 sat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Sat(_)),
+        "div(x,4)=2 sat, got {r:?}"
+    );
 }
 
 #[test]
@@ -169,7 +175,10 @@ fn euclidean_mod_negative_dividend_is_sat() {
     let m = a.int_mod(x, three).unwrap();
     let me = a.eq(m, two).unwrap();
     let r = solve(&mut a, &[xe, me], DEFAULT_INT_WIDTH);
-    assert!(matches!(r, CheckResult::Sat(_)), "-7 mod 3 = 2 sat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Sat(_)),
+        "-7 mod 3 = 2 sat, got {r:?}"
+    );
 }
 
 #[test]
@@ -183,7 +192,10 @@ fn abs_constraint_is_sat() {
     let ae = a.eq(av, five).unwrap();
     let neg = a.int_lt(x, zero).unwrap();
     let r = solve(&mut a, &[ae, neg], DEFAULT_INT_WIDTH);
-    assert!(matches!(r, CheckResult::Sat(_)), "abs(x)=5 ∧ x<0 sat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Sat(_)),
+        "abs(x)=5 ∧ x<0 sat, got {r:?}"
+    );
 }
 
 #[test]
@@ -197,5 +209,8 @@ fn divisible_predicate_is_sat() {
     let lo = a.int_gt(x, zero).unwrap();
     let hi = a.int_lt(x, ten).unwrap();
     let r = solve(&mut a, &[d, lo, hi], DEFAULT_INT_WIDTH);
-    assert!(matches!(r, CheckResult::Sat(_)), "divisible-by-4 in (0,10) sat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Sat(_)),
+        "divisible-by-4 in (0,10) sat, got {r:?}"
+    );
 }

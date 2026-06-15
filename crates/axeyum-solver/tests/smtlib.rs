@@ -412,8 +412,14 @@ fn unsat_core_returns_named_minimal_subset() {
     let core = solve_smtlib_unsat_core(text, &config())
         .expect("decides")
         .expect("query is unsat, so a core exists");
-    assert!(core.contains(&"a".to_owned()), "core must include a: {core:?}");
-    assert!(core.contains(&"b".to_owned()), "core must include b: {core:?}");
+    assert!(
+        core.contains(&"a".to_owned()),
+        "core must include a: {core:?}"
+    );
+    assert!(
+        core.contains(&"b".to_owned()),
+        "core must include b: {core:?}"
+    );
     assert!(
         !core.contains(&"irrelevant".to_owned()),
         "minimized core excludes the tautology: {core:?}"
@@ -431,7 +437,10 @@ fn unsat_core_is_none_when_sat() {
 (check-sat)
 (get-unsat-core)
 ";
-    assert_eq!(solve_smtlib_unsat_core(text, &config()).expect("decides"), None);
+    assert_eq!(
+        solve_smtlib_unsat_core(text, &config()).expect("decides"),
+        None
+    );
 }
 
 /// `(get-value (t …))` reads the sat model: with `x+1 == 5`, the model has x=4,
@@ -466,7 +475,10 @@ fn get_value_is_none_when_unsat() {
 (check-sat)
 (get-value (x))
 ";
-    assert_eq!(solve_smtlib_get_value(text, &config()).expect("decides"), None);
+    assert_eq!(
+        solve_smtlib_get_value(text, &config()).expect("decides"),
+        None
+    );
 }
 
 /// Optimization (OMT): maximize/minimize an Int objective under linear bounds.
@@ -502,7 +514,11 @@ fn optimize_bitvector_objective() {
 (get-objectives)
 ";
     let outcomes = optimize_smtlib(text, &config()).expect("optimizes");
-    assert_eq!(outcomes[0], OptOutcome::Optimal(100), "max unsigned x <= 100 = 100");
+    assert_eq!(
+        outcomes[0],
+        OptOutcome::Optimal(100),
+        "max unsigned x <= 100 = 100"
+    );
 }
 
 /// Enum datatype: `Color` with three nullary constructors. `c != red ∧ c != green`
@@ -517,7 +533,10 @@ fn enum_datatype_decides() {
 (assert (not (= c green)))
 (check-sat)
 ";
-    assert!(matches!(run(sat).result, CheckResult::Sat(_)), "c=blue is sat");
+    assert!(
+        matches!(run(sat).result, CheckResult::Sat(_)),
+        "c=blue is sat"
+    );
 
     let unsat = "\
 (set-logic QF_DT)
@@ -527,7 +546,11 @@ fn enum_datatype_decides() {
 (assert (not (= c red)))
 (check-sat)
 ";
-    assert_eq!(run(unsat).result, CheckResult::Unsat, "is-red ∧ c≠red is unsat");
+    assert_eq!(
+        run(unsat).result,
+        CheckResult::Unsat,
+        "is-red ∧ c≠red is unsat"
+    );
 }
 
 /// Record datatype with selectors: `Pair` over bit-vectors. Constraining the
@@ -579,7 +602,11 @@ fn recursive_datatype_list_decides() {
 (assert ((_ is nil) l))
 (check-sat)
 ";
-    assert_eq!(run(unsat).result, CheckResult::Unsat, "cons and nil exclude");
+    assert_eq!(
+        run(unsat).result,
+        CheckResult::Unsat,
+        "cons and nil exclude"
+    );
 }
 
 /// Lexicographic vs boxed optimization differ when objectives interact. With
@@ -602,7 +629,11 @@ fn lexicographic_optimization_differs_from_boxed() {
 (get-objectives)
 ";
     let lex = optimize_smtlib_lexicographic(text, &config()).expect("lex optimizes");
-    assert_eq!(lex, vec![OptOutcome::Optimal(10), OptOutcome::Optimal(0)], "lex");
+    assert_eq!(
+        lex,
+        vec![OptOutcome::Optimal(10), OptOutcome::Optimal(0)],
+        "lex"
+    );
 
     let boxed = optimize_smtlib(text, &config()).expect("box optimizes");
     assert_eq!(

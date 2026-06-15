@@ -30,7 +30,10 @@ fn bv2nat_out_of_range_target_is_unsat_or_unknown() {
     let target = a.int_const(300);
     let eq = a.eq(n, target).unwrap();
     let r = solve_auto(&mut a, &[eq]);
-    assert!(matches!(r, CheckResult::Unsat | CheckResult::Unknown(_)), "got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Unsat | CheckResult::Unknown(_)),
+        "got {r:?}"
+    );
 }
 
 #[test]
@@ -44,7 +47,10 @@ fn int2bv_round_trip_is_sat() {
     let back = a.bv2nat(b).unwrap();
     let forty_two = a.int_const(42);
     let eq_int = a.eq(back, forty_two).unwrap();
-    assert!(matches!(solve_auto(&mut a, &[eq_bv, eq_int]), CheckResult::Sat(_)));
+    assert!(matches!(
+        solve_auto(&mut a, &[eq_bv, eq_int]),
+        CheckResult::Sat(_)
+    ));
 }
 
 #[test]
@@ -143,8 +149,10 @@ fn bounded_to_real_is_completely_decided() {
     let r = a.int_to_real(i).unwrap();
     let five = a.real_const(axeyum_ir::Rational::integer(5));
     let gt = a.real_gt(r, five).unwrap();
-    assert!(matches!(solve_auto(&mut a, &[lo, hi, gt]), CheckResult::Unsat),
-        "0<=i<=3 ∧ to_real(i)>5 must be unsat");
+    assert!(
+        matches!(solve_auto(&mut a, &[lo, hi, gt]), CheckResult::Unsat),
+        "0<=i<=3 ∧ to_real(i)>5 must be unsat"
+    );
 }
 
 #[test]
@@ -159,8 +167,10 @@ fn bounded_to_real_feasible_is_sat() {
     let r = a.int_to_real(i).unwrap();
     let two_half = a.real_const(axeyum_ir::Rational::new(5, 2));
     let gt = a.real_gt(r, two_half).unwrap();
-    assert!(matches!(solve_auto(&mut a, &[lo, hi, gt]), CheckResult::Sat(_)),
-        "0<=i<=3 ∧ to_real(i)>2.5 must be sat");
+    assert!(
+        matches!(solve_auto(&mut a, &[lo, hi, gt]), CheckResult::Sat(_)),
+        "0<=i<=3 ∧ to_real(i)>2.5 must be sat"
+    );
 }
 
 #[test]
@@ -174,8 +184,10 @@ fn to_real_vs_constant_is_exactly_decided() {
     let gt = a.real_gt(r, c).unwrap();
     let six = a.int_const(6);
     let lt = a.int_lt(i, six).unwrap();
-    assert!(matches!(solve_auto(&mut a, &[gt, lt]), CheckResult::Unsat),
-        "to_real(i)>5.5 ∧ i<6 unsat");
+    assert!(
+        matches!(solve_auto(&mut a, &[gt, lt]), CheckResult::Unsat),
+        "to_real(i)>5.5 ∧ i<6 unsat"
+    );
 
     // to_real(i) == 3.5 : unsat (no integer equals 3.5).
     let mut a = TermArena::new();
@@ -183,8 +195,10 @@ fn to_real_vs_constant_is_exactly_decided() {
     let r = a.int_to_real(i).unwrap();
     let c = a.real_const(axeyum_ir::Rational::new(7, 2)); // 3.5
     let eq = a.eq(r, c).unwrap();
-    assert!(matches!(solve_auto(&mut a, &[eq]), CheckResult::Unsat),
-        "to_real(i)=3.5 unsat");
+    assert!(
+        matches!(solve_auto(&mut a, &[eq]), CheckResult::Unsat),
+        "to_real(i)=3.5 unsat"
+    );
 
     // to_real(i) <= 2.9 AND i >= 0 : sat (i ∈ {0,1,2}).
     let mut a = TermArena::new();
@@ -194,8 +208,10 @@ fn to_real_vs_constant_is_exactly_decided() {
     let le = a.real_le(r, c).unwrap();
     let zero = a.int_const(0);
     let ge = a.int_ge(i, zero).unwrap();
-    assert!(matches!(solve_auto(&mut a, &[le, ge]), CheckResult::Sat(_)),
-        "to_real(i)<=2.9 ∧ i>=0 sat");
+    assert!(
+        matches!(solve_auto(&mut a, &[le, ge]), CheckResult::Sat(_)),
+        "to_real(i)<=2.9 ∧ i>=0 sat"
+    );
 }
 
 #[test]
@@ -208,7 +224,10 @@ fn to_int_vs_constant_is_exactly_decided() {
     let je = a.eq(j, three).unwrap();
     let half7 = a.real_const(axeyum_ir::Rational::new(7, 2));
     let re = a.eq(r, half7).unwrap();
-    assert!(matches!(solve_auto(&mut a, &[je, re]), CheckResult::Sat(_)), "to_int(3.5)=3 sat");
+    assert!(
+        matches!(solve_auto(&mut a, &[je, re]), CheckResult::Sat(_)),
+        "to_int(3.5)=3 sat"
+    );
 
     // to_int(r) >= 5 AND r < 5.0 : unsat (floor(r)>=5 needs r>=5).
     let mut a = TermArena::new();
@@ -218,7 +237,10 @@ fn to_int_vs_constant_is_exactly_decided() {
     let ge = a.int_ge(j, five).unwrap();
     let five_r = a.real_const(axeyum_ir::Rational::integer(5));
     let lt = a.real_lt(r, five_r).unwrap();
-    assert!(matches!(solve_auto(&mut a, &[ge, lt]), CheckResult::Unsat), "to_int(r)>=5 ∧ r<5 unsat");
+    assert!(
+        matches!(solve_auto(&mut a, &[ge, lt]), CheckResult::Unsat),
+        "to_int(r)>=5 ∧ r<5 unsat"
+    );
 }
 
 #[test]
@@ -231,8 +253,10 @@ fn to_real_vs_to_real_is_exact() {
     let rj = a.int_to_real(j).unwrap();
     let lt = a.real_lt(ri, rj).unwrap();
     let ge = a.int_ge(i, j).unwrap();
-    assert!(matches!(solve_auto(&mut a, &[lt, ge]), CheckResult::Unsat),
-        "to_real(i)<to_real(j) ∧ i>=j unsat");
+    assert!(
+        matches!(solve_auto(&mut a, &[lt, ge]), CheckResult::Unsat),
+        "to_real(i)<to_real(j) ∧ i>=j unsat"
+    );
 }
 
 #[test]
@@ -250,8 +274,10 @@ fn sum_of_to_real_vs_constant_is_exact() {
     let isum = a.int_add(x, y).unwrap();
     let six = a.int_const(6);
     let ge = a.int_ge(isum, six).unwrap();
-    assert!(matches!(solve_auto(&mut a, &[le, ge]), CheckResult::Unsat),
-        "to_real(x)+to_real(y)<=5.5 ∧ x+y>=6 unsat");
+    assert!(
+        matches!(solve_auto(&mut a, &[le, ge]), CheckResult::Unsat),
+        "to_real(x)+to_real(y)<=5.5 ∧ x+y>=6 unsat"
+    );
 }
 
 // --- Mixed integer/real (QF_LIRA) by branch-and-bound (ADR-pending MILP) ------

@@ -143,7 +143,9 @@ fn parse_command<'a>(
                 assumptions.push(parse_term(&mut script.arena, lit, aliases, macros)?);
             }
             script.check_sats += 1;
-            script.commands.push(ScriptCommand::CheckSatAssuming(assumptions));
+            script
+                .commands
+                .push(ScriptCommand::CheckSatAssuming(assumptions));
         }
         "check-sat" => {
             exact_len(items, 1, head)?;
@@ -174,7 +176,9 @@ fn parse_command<'a>(
                     .ok_or_else(|| SmtError::Syntax(format!("`{head}` count")))?,
             };
             if items.len() > 2 {
-                return Err(SmtError::Syntax(format!("`{head}` takes at most one count")));
+                return Err(SmtError::Syntax(format!(
+                    "`{head}` takes at most one count"
+                )));
             }
             script.commands.push(if head == "push" {
                 ScriptCommand::Push(count)
@@ -691,8 +695,13 @@ fn queue_list_eval<'a>(
         }
     } else if let Some(idx) = head.list()
         && idx.first().and_then(SExpr::atom) == Some("_")
-        && idx.get(1).and_then(SExpr::atom).is_some_and(is_fp_indexed_conversion)
-        && items.get(1).is_some_and(|e| parse_rounding_mode(e).is_some())
+        && idx
+            .get(1)
+            .and_then(SExpr::atom)
+            .is_some_and(is_fp_indexed_conversion)
+        && items
+            .get(1)
+            .is_some_and(|e| parse_rounding_mode(e).is_some())
     {
         // Indexed rounding-mode FP conversions `((_ to_fp eb sb) RM x)`,
         // `((_ fp.to_sbv m) RM x)`, …: the leading `RM` is a value, not a term.
@@ -1017,7 +1026,12 @@ fn fp_format(arena: &TermArena, t: TermId) -> Result<FloatFormat, SmtError> {
 /// by an FP formula builder, so downstream conversions can tell it is a float
 /// (ADR-0026). If `t` is already that float sort this is a no-op.
 fn as_float(arena: &mut TermArena, fmt: FloatFormat, t: TermId) -> Result<TermId, SmtError> {
-    if arena.sort_of(t) == (Sort::Float { exp: fmt.exp_bits, sig: fmt.sig_bits }) {
+    if arena.sort_of(t)
+        == (Sort::Float {
+            exp: fmt.exp_bits,
+            sig: fmt.sig_bits,
+        })
+    {
         return Ok(t);
     }
     Ok(arena.fp_from_bits(t, fmt.exp_bits, fmt.sig_bits)?)
@@ -1065,10 +1079,7 @@ fn parse_rounding_mode(expr: &SExpr) -> Option<RoundingMode> {
 
 /// Whether `name` is an indexed FP conversion op taking a leading rounding mode.
 fn is_fp_indexed_conversion(name: &str) -> bool {
-    matches!(
-        name,
-        "to_fp" | "to_fp_unsigned" | "fp.to_sbv" | "fp.to_ubv"
-    )
+    matches!(name, "to_fp" | "to_fp_unsigned" | "fp.to_sbv" | "fp.to_ubv")
 }
 
 /// Applies an *indexed* rounding-mode FP conversion (`mode` already parsed). With
@@ -1658,7 +1669,11 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
             if a.len() < 2 {
                 return Err(SmtError::Syntax(format!("`{op}` expects >= 2 arguments")));
             }
-            let f = if op == "div" { TermArena::int_div } else { TermArena::int_mod };
+            let f = if op == "div" {
+                TermArena::int_div
+            } else {
+                TermArena::int_mod
+            };
             let mut acc = a[0];
             for &next in &a[1..] {
                 acc = f(arena, acc, next)?;
@@ -1911,7 +1926,9 @@ fn apply_parameterized(
         if head.get(1).and_then(SExpr::atom) == Some("const") && head.len() == 3 && args.len() == 1
         {
             let Sort::Array { index, .. } = parse_sort(arena, &head[2])? else {
-                return Err(SmtError::Unsupported(format!("`as const` non-array sort {head:?}")));
+                return Err(SmtError::Unsupported(format!(
+                    "`as const` non-array sort {head:?}"
+                )));
             };
             return Ok(arena.const_array(index, args[0])?);
         }
@@ -1996,8 +2013,7 @@ fn apply_parameterized(
             // `RoundingMode` and are handled in `apply_fp_rounded_indexed`.
             if args.len() != 1 {
                 return Err(SmtError::Unsupported(
-                    "(_ to_fp …) bit reinterpret expects exactly one bit-vector operand"
-                        .to_owned(),
+                    "(_ to_fp …) bit reinterpret expects exactly one bit-vector operand".to_owned(),
                 ));
             }
             match arena.sort_of(args[0]) {

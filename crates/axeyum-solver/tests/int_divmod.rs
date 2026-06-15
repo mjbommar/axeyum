@@ -26,7 +26,10 @@ fn contradictory_mod_is_unsat() {
     let c1 = a.eq(m, one).unwrap();
     let m2 = a.int_mod(x, three).unwrap();
     let c2 = a.eq(m2, two).unwrap();
-    assert!(matches!(run(&mut a, &[c1, c2]), CheckResult::Unsat), "contradictory mod");
+    assert!(
+        matches!(run(&mut a, &[c1, c2]), CheckResult::Unsat),
+        "contradictory mod"
+    );
 }
 
 #[test]
@@ -39,7 +42,10 @@ fn mod_out_of_range_value_is_unsat() {
         let m = a.int_mod(x, three).unwrap();
         let b = a.int_const(bad);
         let eq = a.eq(m, b).unwrap();
-        assert!(matches!(run(&mut a, &[eq]), CheckResult::Unsat), "mod==^{bad} unsat");
+        assert!(
+            matches!(run(&mut a, &[eq]), CheckResult::Unsat),
+            "mod==^{bad} unsat"
+        );
     }
 }
 
@@ -54,7 +60,10 @@ fn inconsistent_div_is_unsat() {
     let dc = a.eq(d, three).unwrap();
     let five = a.int_const(5);
     let xc = a.eq(x, five).unwrap();
-    assert!(matches!(run(&mut a, &[dc, xc]), CheckResult::Unsat), "div(5,2)=2!=3");
+    assert!(
+        matches!(run(&mut a, &[dc, xc]), CheckResult::Unsat),
+        "div(5,2)=2!=3"
+    );
 }
 
 #[test]
@@ -67,7 +76,10 @@ fn abs_contradiction_is_unsat() {
     let ac = a.eq(av, three).unwrap();
     let five = a.int_const(5);
     let xc = a.eq(x, five).unwrap();
-    assert!(matches!(run(&mut a, &[ac, xc]), CheckResult::Unsat), "abs(5)=5!=3");
+    assert!(
+        matches!(run(&mut a, &[ac, xc]), CheckResult::Unsat),
+        "abs(5)=5!=3"
+    );
 }
 
 #[test]
@@ -78,7 +90,10 @@ fn abs_negative_is_unsat() {
     let av = a.int_abs(x).unwrap();
     let neg1 = a.int_const(-1);
     let eq = a.eq(av, neg1).unwrap();
-    assert!(matches!(run(&mut a, &[eq]), CheckResult::Unsat), "abs == -1");
+    assert!(
+        matches!(run(&mut a, &[eq]), CheckResult::Unsat),
+        "abs == -1"
+    );
 }
 
 #[test]
@@ -92,7 +107,10 @@ fn euclidean_mod_negative_is_sat_and_consistent() {
     let m = a.int_mod(x, three).unwrap();
     let two = a.int_const(2);
     let mc = a.eq(m, two).unwrap();
-    assert!(matches!(run(&mut a, &[xc, mc]), CheckResult::Sat(_)), "-7 mod 3 = 2");
+    assert!(
+        matches!(run(&mut a, &[xc, mc]), CheckResult::Sat(_)),
+        "-7 mod 3 = 2"
+    );
     // and mod == 1 would be wrong -> unsat
     let mut a = TermArena::new();
     let x = int(&mut a, "x");
@@ -102,7 +120,10 @@ fn euclidean_mod_negative_is_sat_and_consistent() {
     let m = a.int_mod(x, three).unwrap();
     let one = a.int_const(1);
     let mc = a.eq(m, one).unwrap();
-    assert!(matches!(run(&mut a, &[xc, mc]), CheckResult::Unsat), "-7 mod 3 != 1");
+    assert!(
+        matches!(run(&mut a, &[xc, mc]), CheckResult::Unsat),
+        "-7 mod 3 != 1"
+    );
 }
 
 #[test]

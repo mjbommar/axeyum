@@ -95,9 +95,9 @@ fn well_founded_default_rec(
         }),
         Sort::Int => Some(Value::Int(0)),
         Sort::Real => Some(Value::Real(Rational::zero())),
-        Sort::Array { index, element } => Some(Value::Array(ArrayValue::constant(
-            index, element, 0,
-        ))),
+        Sort::Array { index, element } => {
+            Some(Value::Array(ArrayValue::constant(index, element, 0)))
+        }
         Sort::Datatype(dt) => {
             if visiting.contains(&dt) {
                 // Recursing back into `dt` mid-construction: this path is not
@@ -572,7 +572,8 @@ fn apply(op: Op, vals: &[Value]) -> Value {
             let q = if y == 0 {
                 0
             } else {
-                x.checked_div_euclid(y).expect("integer division within i128 range")
+                x.checked_div_euclid(y)
+                    .expect("integer division within i128 range")
             };
             Value::Int(q)
         }

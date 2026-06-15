@@ -681,7 +681,11 @@ impl<'a> LoweringBuilder<'a> {
                 TermNode::WideBvConst(w) => {
                     // A >128-bit constant lowers to its LSB-first bit literals
                     // (wide-BV; the AIG is bit-level so width is unbounded).
-                    let bits = w.to_lsb_bits().into_iter().map(const_lit).collect::<Vec<_>>();
+                    let bits = w
+                        .to_lsb_bits()
+                        .into_iter()
+                        .map(const_lit)
+                        .collect::<Vec<_>>();
                     self.record(term, bits)?;
                 }
                 TermNode::IntConst(_) => {
@@ -731,11 +735,11 @@ impl<'a> LoweringBuilder<'a> {
         match sort {
             Sort::Bool => vec![self.symbol_input(symbol, name, sort, 0)],
             // Floating-point shares the bit-vector lowering: `exp + sig` input bits.
-            Sort::BitVec(_) | Sort::Float { .. } => (0..sort
-                .lowered_width()
-                .expect("bitvec/float has a width"))
-                .map(|bit_index| self.symbol_input(symbol, name, sort, bit_index))
-                .collect(),
+            Sort::BitVec(_) | Sort::Float { .. } => {
+                (0..sort.lowered_width().expect("bitvec/float has a width"))
+                    .map(|bit_index| self.symbol_input(symbol, name, sort, bit_index))
+                    .collect()
+            }
             // Array symbols are eliminated to bit-vectors before lowering
             // (ADR-0010); callers preflight with `first_unsupported_op`.
             Sort::Array { .. } => {

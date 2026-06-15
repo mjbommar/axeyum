@@ -320,7 +320,10 @@ fn mbqi_refutes_via_ground_subterm_value() {
     let bc = arena.eq(b, four).unwrap();
 
     let r = axeyum_solver::prove_unsat_by_mbqi(&mut arena, &[all, ac, bc], &config()).unwrap();
-    assert!(matches!(r, CheckResult::Unsat), "forall x. x != a+b with a+b=7 is unsat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "forall x. x != a+b with a+b=7 is unsat, got {r:?}"
+    );
 }
 
 #[test]
@@ -340,7 +343,10 @@ fn mbqi_bound_violation_is_unsat() {
     let cc = arena.eq(c, ten).unwrap();
     let r = axeyum_solver::prove_unsat_by_mbqi(&mut arena, &[all, cc], &config()).unwrap();
     // forall x. x<=10 is false; sound result is Unsat or Unknown, never Sat.
-    assert!(matches!(r, CheckResult::Unsat | CheckResult::Unknown(_)), "got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Unsat | CheckResult::Unknown(_)),
+        "got {r:?}"
+    );
 }
 
 #[test]
@@ -361,7 +367,10 @@ fn mbqi_multivar_forall_defers_without_error() {
     let outer = arena.forall(x, inner).unwrap();
     let r = axeyum_solver::prove_unsat_by_mbqi(&mut arena, &[outer], &config()).unwrap();
     // forall x y. x+y>=0 is false; sound result is Unsat or Unknown, never Sat.
-    assert!(matches!(r, CheckResult::Unsat | CheckResult::Unknown(_)), "got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Unsat | CheckResult::Unknown(_)),
+        "got {r:?}"
+    );
 }
 
 #[test]
@@ -377,7 +386,10 @@ fn mbqi_bound_universal_is_refuted() {
     let ten = arena.int_const(10);
     let cc = arena.eq(c, ten).unwrap();
     let r = axeyum_solver::prove_unsat_by_mbqi(&mut arena, &[all, cc], &config()).unwrap();
-    assert!(matches!(r, CheckResult::Unsat), "forall x. x<=10 is unsat (x=11), got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "forall x. x<=10 is unsat (x=11), got {r:?}"
+    );
 }
 
 #[test]
@@ -386,13 +398,19 @@ fn mbqi_real_bound_universal_is_refuted() {
     let mut arena = TermArena::new();
     let r = arena.declare("r", Sort::Real).unwrap();
     let rv = arena.var(r);
-    let c = arena.declare("c", Sort::Real).map(|s| arena.var(s)).unwrap();
+    let c = arena
+        .declare("c", Sort::Real)
+        .map(|s| arena.var(s))
+        .unwrap();
     let body = arena.real_le(rv, c).unwrap();
     let all = arena.forall(r, body).unwrap();
     let ten = arena.real_const(axeyum_ir::Rational::integer(10));
     let cc = arena.eq(c, ten).unwrap();
     let res = axeyum_solver::prove_unsat_by_mbqi(&mut arena, &[all, cc], &config()).unwrap();
-    assert!(matches!(res, CheckResult::Unsat), "forall r. r<=10 is unsat (r=11), got {res:?}");
+    assert!(
+        matches!(res, CheckResult::Unsat),
+        "forall r. r<=10 is unsat (r=11), got {res:?}"
+    );
 }
 
 #[test]
@@ -409,8 +427,13 @@ fn top_level_existential_skolemized() {
     let lt = arena.int_lt(xv, c110).unwrap();
     let body = arena.and(gt, lt).unwrap();
     let ex = arena.exists(x, body).unwrap();
-    assert!(matches!(solve(&mut arena, &[ex], &config()).unwrap(), CheckResult::Sat(_)),
-        "exists x in (100,110) is sat");
+    assert!(
+        matches!(
+            solve(&mut arena, &[ex], &config()).unwrap(),
+            CheckResult::Sat(_)
+        ),
+        "exists x in (100,110) is sat"
+    );
 
     // (exists x:Int. x > 5 AND x < 3) : unsat (no such integer).
     let mut arena = TermArena::new();
@@ -422,6 +445,11 @@ fn top_level_existential_skolemized() {
     let lt = arena.int_lt(xv, c3).unwrap();
     let body = arena.and(gt, lt).unwrap();
     let ex = arena.exists(x, body).unwrap();
-    assert!(matches!(solve(&mut arena, &[ex], &config()).unwrap(), CheckResult::Unsat),
-        "exists x>5 ∧ x<3 is unsat");
+    assert!(
+        matches!(
+            solve(&mut arena, &[ex], &config()).unwrap(),
+            CheckResult::Unsat
+        ),
+        "exists x>5 ∧ x<3 is unsat"
+    );
 }

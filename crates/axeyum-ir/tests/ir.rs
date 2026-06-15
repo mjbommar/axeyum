@@ -1143,7 +1143,7 @@ fn int_div_mod_abs_euclidean_semantics() {
         (-7, -3, 3, 2),
         (6, 3, 2, 0),
         (0, 5, 0, 0),
-        (5, 0, 0, 5),   // convention: div a 0 = 0, mod a 0 = a
+        (5, 0, 0, 5), // convention: div a 0 = 0, mod a 0 = a
         (-5, 0, 0, -5),
     ];
     for (x, y, ed, em) in cases {
@@ -1172,7 +1172,13 @@ fn int_divisible_predicate() {
     let mut a = TermArena::new();
     let asg = Assignment::new();
     let eval_bool = |a: &mut TermArena, t| matches!(eval(a, t, &asg), Ok(Value::Bool(true)));
-    for (x, n, want) in [(6i128, 3i128, true), (7, 3, false), (-6, 3, true), (0, 5, true), (5, 1, true)] {
+    for (x, n, want) in [
+        (6i128, 3i128, true),
+        (7, 3, false),
+        (-6, 3, true),
+        (0, 5, true),
+        (5, 1, true),
+    ] {
         let xt = a.int_const(x);
         let d = a.int_divisible(xt, n).unwrap();
         assert_eq!(eval_bool(&mut a, d), want, "divisible({x},{n})");
@@ -1186,11 +1192,21 @@ fn const_array_evaluates_to_constant_everywhere() {
     let asg = Assignment::new();
     let v = a.bv_const(8, 0x2a).unwrap();
     let c = a.const_array(4, v).unwrap();
-    assert_eq!(a.sort_of(c), Sort::Array { index: 4, element: 8 });
+    assert_eq!(
+        a.sort_of(c),
+        Sort::Array {
+            index: 4,
+            element: 8
+        }
+    );
     for i in [0u128, 5, 15] {
         let idx = a.bv_const(4, i).unwrap();
         let sel = a.select(c, idx).unwrap();
-        assert_eq!(eval(&a, sel, &asg).unwrap(), bv(8, 0x2a), "const read at {i}");
+        assert_eq!(
+            eval(&a, sel, &asg).unwrap(),
+            bv(8, 0x2a),
+            "const read at {i}"
+        );
     }
     // store over a const array overrides one cell, defaults elsewhere.
     let j = a.bv_const(4, 7).unwrap();
@@ -1215,9 +1231,9 @@ fn bv_int_coercions_evaluate() {
     // int2bv: x mod 2^width, for positive, wrapping, and negative inputs.
     let cases: [(u32, i128, u128); 4] = [
         (8, 200, 200),
-        (8, -1, 255),   // two's complement low 8 bits
-        (4, 19, 3),     // 19 mod 16
-        (8, 256, 0),    // 256 mod 256
+        (8, -1, 255), // two's complement low 8 bits
+        (4, 19, 3),   // 19 mod 16
+        (8, 256, 0),  // 256 mod 256
     ];
     for (w, x, want) in cases {
         let xc = a.int_const(x);
@@ -1263,7 +1279,11 @@ fn bv_overflow_predicates_match_reference_exhaustively() {
             // unary negation overflow
             let x = a.bv_const(w, xu as u128).unwrap();
             let nego = a.bv_nego(x).unwrap();
-            assert_eq!(eval_b(&a, nego), !in_range(-signed(xu)), "nego w={w} x={xu}");
+            assert_eq!(
+                eval_b(&a, nego),
+                !in_range(-signed(xu)),
+                "nego w={w} x={xu}"
+            );
         }
     }
 }
@@ -1279,7 +1299,10 @@ fn real_division_evaluates_exactly() {
     // division by zero uses the convention x/0 = 0.
     let zero = a.real_const(Rational::new(0, 1));
     let dz = a.real_div(six, zero).unwrap();
-    assert_eq!(eval(&a, dz, &asg).unwrap(), Value::Real(Rational::new(0, 1)));
+    assert_eq!(
+        eval(&a, dz, &asg).unwrap(),
+        Value::Real(Rational::new(0, 1))
+    );
 }
 
 #[test]

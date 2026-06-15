@@ -520,9 +520,15 @@ mod tests {
     struct Lcg(u64);
     impl Lcg {
         fn next(&mut self) -> u128 {
-            self.0 = self.0.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1);
+            self.0 = self
+                .0
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1);
             let hi = u128::from(self.0);
-            self.0 = self.0.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1);
+            self.0 = self
+                .0
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1);
             (hi << 64) | u128::from(self.0)
         }
     }
@@ -542,10 +548,26 @@ mod tests {
                 let wb = WideUint::from_u128(b, width);
                 assert_eq!(wa.to_u128(), a, "round-trip a width {width}");
                 assert_eq!(wb.to_u128(), b, "round-trip b width {width}");
-                assert_eq!(wa.add(&wb).to_u128(), a.wrapping_add(b) & low_mask_u128(width), "add {width}");
-                assert_eq!(wa.sub(&wb).to_u128(), a.wrapping_sub(b) & low_mask_u128(width), "sub {width}");
-                assert_eq!(wa.mul(&wb).to_u128(), a.wrapping_mul(b) & low_mask_u128(width), "mul {width}");
-                assert_eq!(wa.neg().to_u128(), a.wrapping_neg() & low_mask_u128(width), "neg {width}");
+                assert_eq!(
+                    wa.add(&wb).to_u128(),
+                    a.wrapping_add(b) & low_mask_u128(width),
+                    "add {width}"
+                );
+                assert_eq!(
+                    wa.sub(&wb).to_u128(),
+                    a.wrapping_sub(b) & low_mask_u128(width),
+                    "sub {width}"
+                );
+                assert_eq!(
+                    wa.mul(&wb).to_u128(),
+                    a.wrapping_mul(b) & low_mask_u128(width),
+                    "mul {width}"
+                );
+                assert_eq!(
+                    wa.neg().to_u128(),
+                    a.wrapping_neg() & low_mask_u128(width),
+                    "neg {width}"
+                );
                 assert_eq!(wa.not().to_u128(), !a & low_mask_u128(width), "not {width}");
                 assert_eq!(wa.and(&wb).to_u128(), a & b, "and {width}");
                 assert_eq!(wa.or(&wb).to_u128(), a | b, "or {width}");
@@ -553,8 +575,16 @@ mod tests {
                 assert_eq!(wa.ult(&wb), a < b, "ult {width}");
                 assert_eq!(wa.ule(&wb), a <= b, "ule {width}");
                 for sh in [0u32, 1, 7, 63, 64, 65, width.saturating_sub(1), width] {
-                    let want_shl = if sh >= width { 0 } else { a.wrapping_shl(sh) & low_mask_u128(width) };
-                    let want_lshr = if sh >= width { 0 } else { (a & low_mask_u128(width)) >> sh };
+                    let want_shl = if sh >= width {
+                        0
+                    } else {
+                        a.wrapping_shl(sh) & low_mask_u128(width)
+                    };
+                    let want_lshr = if sh >= width {
+                        0
+                    } else {
+                        (a & low_mask_u128(width)) >> sh
+                    };
                     assert_eq!(wa.shl(sh).to_u128(), want_shl, "shl {width} by {sh}");
                     assert_eq!(wa.lshr(sh).to_u128(), want_lshr, "lshr {width} by {sh}");
                 }
@@ -609,13 +639,21 @@ mod tests {
                     let r = sa.rem_euclid(sb.abs());
                     if sb < 0 && r != 0 { r - sb.abs() } else { r }
                 };
-                assert_eq!(wa.smod(&wb).to_u128(), m(smod_ref as u128), "smod {sa} {sb} w{width}");
+                assert_eq!(
+                    wa.smod(&wb).to_u128(),
+                    m(smod_ref as u128),
+                    "smod {sa} {sb} w{width}"
+                );
 
                 // Signed compares.
                 assert_eq!(wa.slt(&wb), sa < sb, "slt w{width}");
                 assert_eq!(wa.sle(&wb), sa <= sb, "sle w{width}");
                 assert_eq!(wa.uge(&wb), a >= b, "uge w{width}");
-                assert_eq!(wa.count_leading_zeros(), a.leading_zeros() - (128 - width), "clz {a} w{width}");
+                assert_eq!(
+                    wa.count_leading_zeros(),
+                    a.leading_zeros() - (128 - width),
+                    "clz {a} w{width}"
+                );
 
                 // Arithmetic shift.
                 for sh in [0u32, 1, 7, width / 2, width.saturating_sub(1), width] {
@@ -642,7 +680,11 @@ mod tests {
                 let hi = lo + rng.next() as u32 % (width - lo);
                 let ew = hi - lo + 1;
                 let want = (a >> lo) & low_mask_u128(ew);
-                assert_eq!(wa.extract(hi, lo).to_u128(), want, "extract[{hi}:{lo}] w{width}");
+                assert_eq!(
+                    wa.extract(hi, lo).to_u128(),
+                    want,
+                    "extract[{hi}:{lo}] w{width}"
+                );
                 // zero/sign extend (keep total within 128 for the reference)
                 if width <= 64 {
                     let by = rng.next() as u32 % (128 - width);
@@ -654,7 +696,11 @@ mod tests {
                     if width + bw <= 128 {
                         let b = rng.next() & low_mask_u128(bw);
                         let wb = WideUint::from_u128(b, bw);
-                        assert_eq!(wa.concat(&wb).to_u128(), (a << bw) | b, "concat w{width}++{bw}");
+                        assert_eq!(
+                            wa.concat(&wb).to_u128(),
+                            (a << bw) | b,
+                            "concat w{width}++{bw}"
+                        );
                     }
                 }
             }
@@ -717,7 +763,11 @@ mod tests {
                 assert_eq!(a.not().not(), a, "double not");
                 // x << k >> k clears the top k bits: equals x & (2^(width-k)-1).
                 let k = 1 + rng.next() as u32 % (width - 1);
-                assert_eq!(a.shl(k).lshr(k), a.lshr(0).and(&one.shl(width - k).sub(&one)), "shl/lshr {width} {k}");
+                assert_eq!(
+                    a.shl(k).lshr(k),
+                    a.lshr(0).and(&one.shl(width - k).sub(&one)),
+                    "shl/lshr {width} {k}"
+                );
             }
         }
     }

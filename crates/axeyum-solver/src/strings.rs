@@ -50,7 +50,10 @@ impl BoundedString {
     /// the 128-bit bit-vector cap).
     #[must_use]
     pub fn new(max_len: u32) -> Self {
-        assert!((1..=16).contains(&max_len), "bounded string max_len must be 1..=16");
+        assert!(
+            (1..=16).contains(&max_len),
+            "bounded string max_len must be 1..=16"
+        );
         Self { max_len }
     }
 
@@ -70,8 +73,10 @@ impl BoundedString {
     /// Returns [`IrError`] from the IR builders (e.g. a name conflict).
     pub fn declare(&self, arena: &mut TermArena, name: &str) -> Result<StrTerm, IrError> {
         let len_sym = arena.declare(&format!("{name}!len"), Sort::BitVec(self.len_width()))?;
-        let content_sym =
-            arena.declare(&format!("{name}!content"), Sort::BitVec(self.content_width()))?;
+        let content_sym = arena.declare(
+            &format!("{name}!content"),
+            Sort::BitVec(self.content_width()),
+        )?;
         Ok(StrTerm {
             len: arena.var(len_sym),
             content: arena.var(content_sym),
@@ -123,7 +128,12 @@ impl BoundedString {
     /// # Errors
     ///
     /// Returns [`IrError`] from the builders.
-    pub fn equal(&self, arena: &mut TermArena, x: &StrTerm, y: &StrTerm) -> Result<TermId, IrError> {
+    pub fn equal(
+        &self,
+        arena: &mut TermArena,
+        x: &StrTerm,
+        y: &StrTerm,
+    ) -> Result<TermId, IrError> {
         let mut acc = arena.eq(x.len, y.len)?;
         for i in 0..self.max_len {
             // (i < len_x) → byte_x[i] == byte_y[i]
@@ -186,7 +196,13 @@ impl BoundedString {
         let y_shifted = arena.bv_shl(y_wide, shift)?;
         let rcontent = arena.bv_or(x_masked, y_shifted)?;
 
-        Ok((result, StrTerm { len: rlen, content: rcontent }))
+        Ok((
+            result,
+            StrTerm {
+                len: rlen,
+                content: rcontent,
+            },
+        ))
     }
 
     /// `str.prefixof` — is `needle` a prefix of `hay`? (`needle`, `hay` in this
@@ -550,7 +566,10 @@ impl BoundedString {
             let placed = arena.bv_shl(rbyte_w, shift)?;
             content = arena.bv_or(content, placed)?;
         }
-        Ok(StrTerm { len: x.len, content })
+        Ok(StrTerm {
+            len: x.len,
+            content,
+        })
     }
 
     /// `str.replace` — general length. Replaces the **first** occurrence of `old`
@@ -738,7 +757,13 @@ impl BoundedString {
         let final_content = arena.ite(old_empty, x_wide, content)?;
         let final_len = arena.ite(old_empty, x_len_r, out_off)?;
 
-        Ok((result, StrTerm { len: final_len, content: final_content }))
+        Ok((
+            result,
+            StrTerm {
+                len: final_len,
+                content: final_content,
+            },
+        ))
     }
 
     /// `str.in_re` — does the bounded string `x` match the regular expression
@@ -787,9 +812,7 @@ impl BoundedString {
 
         // active[s] = is NFA state s reachable after the chars consumed so far?
         // Initially: epsilon-closure of {start} (static).
-        let mut active: Vec<TermId> = (0..n)
-            .map(|s| arena.bool_const(reach[start][s]))
-            .collect();
+        let mut active: Vec<TermId> = (0..n).map(|s| arena.bool_const(reach[start][s])).collect();
 
         // accepted iff at some point exactly `len` chars are consumed and the
         // accept state is active. Check after 0 chars, then after each position.

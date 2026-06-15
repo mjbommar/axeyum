@@ -199,7 +199,10 @@ impl Blaster {
             // Coercions bridge the BV and (width-`B`) integer encodings; they
             // need the blast width, so they are handled here, not in the static
             // `build_int_app`.
-            TermNode::App { op: Op::Bv2Nat, args } => {
+            TermNode::App {
+                op: Op::Bv2Nat,
+                args,
+            } => {
                 let bv = self.rewrite(arena, args[0])?; // BV passthrough (width w)
                 let Sort::BitVec(w) = arena.sort_of(bv) else {
                     return Err(IntBlastError::Ir(IrError::SortMismatch {
@@ -216,7 +219,10 @@ impl Blaster {
                     core::cmp::Ordering::Greater => arena.extract(self.width - 1, 0, bv)?,
                 }
             }
-            TermNode::App { op: Op::Int2Bv { width }, args } => {
+            TermNode::App {
+                op: Op::Int2Bv { width },
+                args,
+            } => {
                 let x = self.rewrite(arena, args[0])?; // Int → width-`B` BV
                 // x mod 2^width = low `width` bits of x's two's complement; when
                 // `width > B`, sign-extend (preserves the modular value).

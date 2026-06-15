@@ -1149,7 +1149,11 @@ impl TermArena {
     pub fn const_array(&mut self, index: u32, value: TermId) -> Result<TermId, IrError> {
         check_width(index)?;
         let element = self.expect_bv(value)?;
-        Ok(self.app(Op::ConstArray { index }, &[value], Sort::Array { index, element }))
+        Ok(self.app(
+            Op::ConstArray { index },
+            &[value],
+            Sort::Array { index, element },
+        ))
     }
 
     /// `bv2nat`: the unsigned integer value of a bit-vector (result sort `Int`).

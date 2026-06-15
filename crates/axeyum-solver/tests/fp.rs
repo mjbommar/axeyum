@@ -144,9 +144,7 @@ fn min_max() {
     let neg_two = c(&mut a, NEG_TWO);
     let nan = c(&mut a, NAN);
 
-    let bits_eq = |a: &TermArena, t: axeyum_ir::TermId, bits: u128| {
-        matches!(eval(a, t, &Assignment::new()), Ok(Value::Bv { value, .. }) if value == bits)
-    };
+    let bits_eq = |a: &TermArena, t: axeyum_ir::TermId, bits: u128| matches!(eval(a, t, &Assignment::new()), Ok(Value::Bv { value, .. }) if value == bits);
 
     let m = fp::min(&mut a, F32, one, two).unwrap();
     assert!(bits_eq(&a, m, ONE), "min(1,2) = 1");
@@ -216,7 +214,8 @@ fn fma_and_round_to_integral_fold() {
     use axeyum_solver::fp::RoundingMode;
     let mut a = TermArena::new();
 
-    let mk = |arena: &mut TermArena, val: f32| arena.bv_const(32, u128::from(val.to_bits())).unwrap();
+    let mk =
+        |arena: &mut TermArena, val: f32| arena.bv_const(32, u128::from(val.to_bits())).unwrap();
     let is = |arena: &TermArena, term: Option<axeyum_ir::TermId>, want: f32, what: &str| {
         let term = term.unwrap_or_else(|| panic!("{what}: expected fold"));
         let want = u128::from(want.to_bits());
@@ -305,13 +304,33 @@ fn fp_to_int_conversions_fold_when_defined() {
 
     // Undefined cases are not folded (None).
     let nan = c(&mut a, NAN);
-    assert!(fp::to_ubv(&mut a, F32, TowardZero, nan, 8).unwrap().is_none(), "NaN -> None");
+    assert!(
+        fp::to_ubv(&mut a, F32, TowardZero, nan, 8)
+            .unwrap()
+            .is_none(),
+        "NaN -> None"
+    );
     let inf = c(&mut a, INF);
-    assert!(fp::to_sbv(&mut a, F32, TowardZero, inf, 8).unwrap().is_none(), "inf -> None");
+    assert!(
+        fp::to_sbv(&mut a, F32, TowardZero, inf, 8)
+            .unwrap()
+            .is_none(),
+        "inf -> None"
+    );
     let big = mk(&mut a, 300.0);
-    assert!(fp::to_ubv(&mut a, F32, TowardZero, big, 8).unwrap().is_none(), "300 out of u8 range -> None");
+    assert!(
+        fp::to_ubv(&mut a, F32, TowardZero, big, 8)
+            .unwrap()
+            .is_none(),
+        "300 out of u8 range -> None"
+    );
     let neg = mk(&mut a, -1.0);
-    assert!(fp::to_ubv(&mut a, F32, TowardZero, neg, 8).unwrap().is_none(), "-1 out of unsigned range -> None");
+    assert!(
+        fp::to_ubv(&mut a, F32, TowardZero, neg, 8)
+            .unwrap()
+            .is_none(),
+        "-1 out of unsigned range -> None"
+    );
 }
 
 #[test]
@@ -488,7 +507,10 @@ fn count_leading_zeros_is_symbolically_sound() {
     let nine = a.bv_const(8, 9).unwrap();
     let gt = a.bv_uge(clz, nine).unwrap();
     let r = solve(&mut a, &[gt], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Unsat), "clz(x) is never > 8; got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "clz(x) is never > 8; got {r:?}"
+    );
 }
 
 #[test]
@@ -509,12 +531,26 @@ fn round_to_format_matches_native_f32() {
 
     // Specials and exact values.
     for v in [
-        0.0f64, -0.0, 1.0, -1.0, 2.0, 0.5, 3.0, 1.5, 0.1, -0.1,
-        f64::INFINITY, f64::NEG_INFINITY, f64::NAN,
+        0.0f64,
+        -0.0,
+        1.0,
+        -1.0,
+        2.0,
+        0.5,
+        3.0,
+        1.5,
+        0.1,
+        -0.1,
+        f64::INFINITY,
+        f64::NEG_INFINITY,
+        f64::NAN,
         f64::from(f32::MIN_POSITIVE), // smallest normal f32
         f64::from(f32::MAX),
-        1e38, 1e39, // near/over f32 overflow
-        1e-40, 1e-45, 1e-50, // f32 subnormal range and below
+        1e38,
+        1e39, // near/over f32 overflow
+        1e-40,
+        1e-45,
+        1e-50, // f32 subnormal range and below
     ] {
         check(v);
     }
@@ -570,11 +606,20 @@ fn fp_to_real_folds_exactly() {
 
     // Not real / does not fit -> None.
     let nan = c(&mut a, NAN);
-    assert!(fp::to_real(&mut a, F32, nan).unwrap().is_none(), "NaN -> None");
+    assert!(
+        fp::to_real(&mut a, F32, nan).unwrap().is_none(),
+        "NaN -> None"
+    );
     let inf = c(&mut a, INF);
-    assert!(fp::to_real(&mut a, F32, inf).unwrap().is_none(), "inf -> None");
+    assert!(
+        fp::to_real(&mut a, F32, inf).unwrap().is_none(),
+        "inf -> None"
+    );
     let tiny = c(&mut a, 0x0000_0001); // smallest subnormal f32 = 2^-149
-    assert!(fp::to_real(&mut a, F32, tiny).unwrap().is_none(), "2^-149 exceeds i128 rational -> None");
+    assert!(
+        fp::to_real(&mut a, F32, tiny).unwrap().is_none(),
+        "2^-149 exceeds i128 rational -> None"
+    );
 }
 
 #[test]

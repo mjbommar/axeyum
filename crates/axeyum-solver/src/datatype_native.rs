@@ -555,8 +555,8 @@ fn build_sym_vars(
 
             // Guard: non-active fields take their well-founded default, matching
             // the total `select` convention so projection replays exactly.
-            let default = well_founded_default(arena, fsort)
-                .expect("scalar field sorts are inhabited");
+            let default =
+                well_founded_default(arena, fsort).expect("scalar field sorts are inhabited");
             let default_term =
                 value_to_term(arena, &default).map_err(|e| SolverError::Backend(e.to_string()))?;
             let field_var = arena.var(field);

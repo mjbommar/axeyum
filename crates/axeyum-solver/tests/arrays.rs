@@ -86,7 +86,10 @@ fn const_array_read_equals_default_is_sat() {
     let load = arena.select(c, i).unwrap();
     let def = arena.bv_const(8, 0xaa).unwrap();
     let eq = arena.eq(load, def).unwrap();
-    assert!(matches!(solve_qf_abv(&mut arena, &[eq]), CheckResult::Sat(_)));
+    assert!(matches!(
+        solve_qf_abv(&mut arena, &[eq]),
+        CheckResult::Sat(_)
+    ));
 }
 
 #[test]
@@ -99,7 +102,10 @@ fn const_array_default_contradiction_is_unsat() {
     let load = arena.select(c, i).unwrap();
     let four = arena.bv_const(8, 4).unwrap();
     let eq = arena.eq(load, four).unwrap();
-    assert!(matches!(solve_qf_abv(&mut arena, &[eq]), CheckResult::Unsat));
+    assert!(matches!(
+        solve_qf_abv(&mut arena, &[eq]),
+        CheckResult::Unsat
+    ));
 }
 
 #[test]
@@ -119,7 +125,10 @@ fn store_over_const_array() {
     let one = arena.bv_const(8, 1).unwrap();
     let c2 = arena.eq(lj, one).unwrap();
     let lt = arena.bv_ult(j, i).unwrap(); // j != i
-    assert!(matches!(solve_qf_abv(&mut arena, &[c1, c2, lt]), CheckResult::Unsat));
+    assert!(matches!(
+        solve_qf_abv(&mut arena, &[c1, c2, lt]),
+        CheckResult::Unsat
+    ));
 }
 
 #[test]

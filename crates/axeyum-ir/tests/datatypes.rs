@@ -65,7 +65,9 @@ fn well_founded_default_picks_a_base_constructor() {
 
     match well_founded_default(&arena, Sort::Datatype(list)) {
         Some(Value::Datatype {
-            constructor, fields, ..
+            constructor,
+            fields,
+            ..
         }) => {
             assert_eq!(constructor, nil, "default list is the base constructor nil");
             assert!(fields.is_empty(), "nil has no fields");

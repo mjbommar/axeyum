@@ -134,13 +134,21 @@ impl FloatFormat {
     )] // frac < 2^52 is exact in f64; exponents are small and in i32 range
     fn decode_ieee_f64(self, bits: u128) -> f64 {
         let frac_bits = self.sig_bits - 1;
-        let s = if (bits >> (self.width() - 1)) & 1 == 1 { -1.0 } else { 1.0 };
+        let s = if (bits >> (self.width() - 1)) & 1 == 1 {
+            -1.0
+        } else {
+            1.0
+        };
         let exp_mask = (1u128 << self.exp_bits) - 1;
         let exp = (bits >> frac_bits) & exp_mask;
         let frac = bits & ((1u128 << frac_bits) - 1);
         let exp_bias = (1i64 << (self.exp_bits - 1)) - 1;
         if exp == exp_mask {
-            return if frac != 0 { f64::NAN } else { s * f64::INFINITY };
+            return if frac != 0 {
+                f64::NAN
+            } else {
+                s * f64::INFINITY
+            };
         }
         if exp == 0 {
             // subnormal (or zero): frac · 2^(1 − bias − frac_bits)
@@ -296,9 +304,9 @@ pub fn e2m1_to_real(arena: &mut TermArena, x: TermId) -> Result<Option<TermId>, 
         // (2 + mant) * 2^(exp - 2)
         let base = 2 + i128::try_from(mant).unwrap_or(0);
         match exp {
-            1 => (base, 2),       // *0.5
-            2 => (base, 1),       // *1
-            _ => (base * 2, 1),   // exp==3 -> *2
+            1 => (base, 2),     // *0.5
+            2 => (base, 1),     // *1
+            _ => (base * 2, 1), // exp==3 -> *2
         }
     };
     let num = if sign { -num } else { num };
@@ -427,7 +435,12 @@ pub fn eq(
 }
 
 /// `fp.lt`: ordered less-than (NaN unordered, `±0` equal).
-pub fn lt(arena: &mut TermArena, fmt: FloatFormat, x: TermId, y: TermId) -> Result<TermId, IrError> {
+pub fn lt(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+    y: TermId,
+) -> Result<TermId, IrError> {
     fmt.check(arena, x)?;
     fmt.check(arena, y)?;
     let nx = is_nan(arena, fmt, x)?;
@@ -463,7 +476,12 @@ pub fn leq(
 }
 
 /// `fp.gt`: `lt(y, x)`.
-pub fn gt(arena: &mut TermArena, fmt: FloatFormat, x: TermId, y: TermId) -> Result<TermId, IrError> {
+pub fn gt(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+    y: TermId,
+) -> Result<TermId, IrError> {
     lt(arena, fmt, y, x)
 }
 
@@ -510,7 +528,11 @@ pub fn max(
 #[allow(clippy::cast_sign_loss)]
 fn sconst(arena: &mut TermArena, w: u32, val: i64) -> Result<TermId, IrError> {
     if w <= 128 {
-        let mask = if w == 128 { u128::MAX } else { (1u128 << w) - 1 };
+        let mask = if w == 128 {
+            u128::MAX
+        } else {
+            (1u128 << w) - 1
+        };
         let bits = (i128::from(val) as u128) & mask;
         return arena.bv_const(w, bits);
     }
@@ -573,7 +595,11 @@ pub fn pack_params(
 /// # Errors
 ///
 /// Returns [`IrError`] from the builders (well-formed input cannot fail).
-#[allow(clippy::similar_names, clippy::many_single_char_names, clippy::too_many_arguments)]
+#[allow(
+    clippy::similar_names,
+    clippy::many_single_char_names,
+    clippy::too_many_arguments
+)]
 pub fn pack_value(
     arena: &mut TermArena,
     eb: u32,
@@ -700,7 +726,13 @@ pub fn pack_value(
 /// [`IrError::SortMismatch`] if an operand is not a `BitVec` of
 /// the format width, or [`IrError`] from the builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
-pub fn mul(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: RoundingMode) -> Result<TermId, IrError> {
+pub fn mul(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    a: TermId,
+    b: TermId,
+    mode: RoundingMode,
+) -> Result<TermId, IrError> {
     if !arithmetic_format_supported(fmt) {
         return Err(IrError::Unsupported("fp.mul: unvalidated format"));
     }
@@ -858,7 +890,12 @@ fn unpack_operand(
 /// Returns [`IrError::InvalidWidth`] for a wide non-F128 format,
 /// [`IrError::SortMismatch`] for a mis-sized operand, or [`IrError`] from builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
-pub fn sqrt(arena: &mut TermArena, fmt: FloatFormat, x: TermId, mode: RoundingMode) -> Result<TermId, IrError> {
+pub fn sqrt(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+    mode: RoundingMode,
+) -> Result<TermId, IrError> {
     if !arithmetic_format_supported(fmt) {
         return Err(IrError::Unsupported("fp.sqrt: unvalidated format"));
     }
@@ -1020,7 +1057,13 @@ pub fn to_fp(
 /// Returns [`IrError::InvalidWidth`] for a wide non-F128 format,
 /// [`IrError::SortMismatch`] for a mis-sized operand, or [`IrError`] from builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
-pub fn div(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: RoundingMode) -> Result<TermId, IrError> {
+pub fn div(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    a: TermId,
+    b: TermId,
+    mode: RoundingMode,
+) -> Result<TermId, IrError> {
     if !arithmetic_format_supported(fmt) {
         return Err(IrError::Unsupported("fp.div: unvalidated format"));
     }
@@ -1132,7 +1175,13 @@ pub fn div(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: 
 /// [`IrError::SortMismatch`] for a mis-sized operand, or
 /// [`IrError`] from the builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names)]
-pub fn add(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: RoundingMode) -> Result<TermId, IrError> {
+pub fn add(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    a: TermId,
+    b: TermId,
+    mode: RoundingMode,
+) -> Result<TermId, IrError> {
     if !arithmetic_format_supported(fmt) {
         return Err(IrError::Unsupported("fp.add: unvalidated format"));
     }
@@ -1266,7 +1315,11 @@ pub fn add(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: 
 /// Returns [`IrError::InvalidWidth`] for formats wider than F64 other than F128,
 /// [`IrError::SortMismatch`] for a mis-sized operand, or [`IrError`] from the
 /// builders.
-#[allow(clippy::similar_names, clippy::many_single_char_names, clippy::too_many_lines)]
+#[allow(
+    clippy::similar_names,
+    clippy::many_single_char_names,
+    clippy::too_many_lines
+)]
 pub fn fma(
     arena: &mut TermArena,
     fmt: FloatFormat,
@@ -1522,16 +1575,20 @@ pub fn fma_rne(
     y: TermId,
     z: TermId,
 ) -> Result<Option<TermId>, IrError> {
-    let (Some(xv), Some(yv), Some(zv)) =
-        (const_bits(arena, x), const_bits(arena, y), const_bits(arena, z))
-    else {
+    let (Some(xv), Some(yv), Some(zv)) = (
+        const_bits(arena, x),
+        const_bits(arena, y),
+        const_bits(arena, z),
+    ) else {
         return Ok(None);
     };
     let bits = if fmt == FloatFormat::F32 {
-        let r = f32::from_bits(low32(xv)).mul_add(f32::from_bits(low32(yv)), f32::from_bits(low32(zv)));
+        let r =
+            f32::from_bits(low32(xv)).mul_add(f32::from_bits(low32(yv)), f32::from_bits(low32(zv)));
         u128::from(r.to_bits())
     } else if fmt == FloatFormat::F64 {
-        let r = f64::from_bits(low64(xv)).mul_add(f64::from_bits(low64(yv)), f64::from_bits(low64(zv)));
+        let r =
+            f64::from_bits(low64(xv)).mul_add(f64::from_bits(low64(yv)), f64::from_bits(low64(zv)));
         u128::from(r.to_bits())
     } else {
         return Ok(None);
@@ -1602,7 +1659,10 @@ pub fn rem(
     let bits = if fmt == FloatFormat::F32 {
         // f32 → f64 is exact; the exact remainder of two f32 values is itself an
         // f32 value, so narrowing back is exact too.
-        let r = ieee_remainder(f64::from(f32::from_bits(low32(xv))), f64::from(f32::from_bits(low32(yv))));
+        let r = ieee_remainder(
+            f64::from(f32::from_bits(low32(xv))),
+            f64::from(f32::from_bits(low32(yv))),
+        );
         #[allow(clippy::cast_possible_truncation)] // r is exactly an f32 value
         u128::from((r as f32).to_bits())
     } else if fmt == FloatFormat::F64 {
@@ -1640,8 +1700,17 @@ pub fn rem(
 /// Returns [`IrError::Unsupported`] for a non-IEEE format,
 /// [`IrError::InvalidWidth`] for a wide-exponent format, [`IrError::SortMismatch`]
 /// for a mis-sized operand, or [`IrError`] from builders.
-#[allow(clippy::similar_names, clippy::many_single_char_names, clippy::too_many_lines)]
-pub fn rem_sym(arena: &mut TermArena, fmt: FloatFormat, x: TermId, y: TermId) -> Result<TermId, IrError> {
+#[allow(
+    clippy::similar_names,
+    clippy::many_single_char_names,
+    clippy::too_many_lines
+)]
+pub fn rem_sym(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+    y: TermId,
+) -> Result<TermId, IrError> {
     fmt.check(arena, x)?;
     fmt.check(arena, y)?;
     if !fmt.is_ieee() {
@@ -1742,8 +1811,17 @@ pub fn rem_sym(arena: &mut TermArena, fmt: FloatFormat, x: TermId, y: TermId) ->
 /// `|x|`), the quotient's parity is tracked for the tie rule, and a nearest
 /// adjust selects the final magnitude/sign before [`pack_value`] packs the exact
 /// result. Validated against the trusted constant fold [`rem`] over F32.
-#[allow(clippy::similar_names, clippy::many_single_char_names, clippy::too_many_lines)]
-fn rem_iterative(arena: &mut TermArena, fmt: FloatFormat, x: TermId, y: TermId) -> Result<TermId, IrError> {
+#[allow(
+    clippy::similar_names,
+    clippy::many_single_char_names,
+    clippy::too_many_lines
+)]
+fn rem_iterative(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+    y: TermId,
+) -> Result<TermId, IrError> {
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
     let total = fmt.width();
     let e_span = (1u32 << eb) - 3;
@@ -2054,9 +2132,13 @@ pub fn sbv_to_fp(
     {
         let signed = to_signed(v, m);
         if fmt == FloatFormat::F32 {
-            return Ok(Some(arena.bv_const(32, u128::from((signed as f32).to_bits()))?));
+            return Ok(Some(
+                arena.bv_const(32, u128::from((signed as f32).to_bits()))?,
+            ));
         } else if fmt == FloatFormat::F64 {
-            return Ok(Some(arena.bv_const(64, u128::from((signed as f64).to_bits()))?));
+            return Ok(Some(
+                arena.bv_const(64, u128::from((signed as f64).to_bits()))?,
+            ));
         }
     }
     let Some(w) = int_to_fp_width(m, fmt.sig_bits) else {
@@ -2094,11 +2176,7 @@ pub fn sbv_to_fp(
 ///
 /// Returns [`IrError::SortMismatch`] if `sig` is not a bit-vector, or
 /// [`IrError`] from the builders.
-pub fn round_significand(
-    arena: &mut TermArena,
-    sig: TermId,
-    keep: u32,
-) -> Result<TermId, IrError> {
+pub fn round_significand(arena: &mut TermArena, sig: TermId, keep: u32) -> Result<TermId, IrError> {
     let Sort::BitVec(n) = arena.sort_of(sig) else {
         return Err(IrError::SortMismatch {
             expected: "BitVec",
@@ -2458,7 +2536,10 @@ pub fn to_real(
         let Ok(field) = i64::try_from(exp_field) else {
             return Ok(None);
         };
-        ((1u128 << (sb - 1)) | trailing, field - exp_bias - (sb_i - 1)) // normal
+        (
+            (1u128 << (sb - 1)) | trailing,
+            field - exp_bias - (sb_i - 1),
+        ) // normal
     };
     let Ok(m) = i128::try_from(mag) else {
         return Ok(None);
@@ -2556,7 +2637,11 @@ pub fn to_sbv(
 /// [`round_variable`]. Magnitudes with `e ≥ width` overflow the requested integer
 /// width and are caught by the callers' range check (here the shift just yields a
 /// don't-care).
-#[allow(clippy::similar_names, clippy::many_single_char_names, clippy::type_complexity)]
+#[allow(
+    clippy::similar_names,
+    clippy::many_single_char_names,
+    clippy::type_complexity
+)]
 fn fp_rounded_magnitude(
     arena: &mut TermArena,
     fmt: FloatFormat,
@@ -2735,7 +2820,11 @@ fn round_f64(v: f64, mode: RoundingMode) -> f64 {
 }
 
 // power of two is exact in f64 for the BV widths we handle; `width` ≤ 2^31.
-#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+#[allow(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
 fn exp2(width: u32) -> f64 {
     (2.0f64).powi(width as i32)
 }
@@ -2792,7 +2881,11 @@ fn low64(v: u128) -> u64 {
 
 fn all_ones_mask(fmt: FloatFormat) -> u128 {
     let w = fmt.width();
-    if w >= 128 { u128::MAX } else { (1u128 << w) - 1 }
+    if w >= 128 {
+        u128::MAX
+    } else {
+        (1u128 << w) - 1
+    }
 }
 
 fn sign_mask(fmt: FloatFormat) -> u128 {
@@ -3100,7 +3193,11 @@ mod tests {
         let exp = (bits >> 10) & 0x1F;
         let mant = bits & 0x3FF;
         if exp == 0x1F {
-            return if mant != 0 { f64::NAN } else { sign * f64::INFINITY };
+            return if mant != 0 {
+                f64::NAN
+            } else {
+                sign * f64::INFINITY
+            };
         }
         if exp == 0 {
             return sign * f64::from(mant) * 2f64.powi(-24); // subnormal
@@ -3126,7 +3223,10 @@ mod tests {
             if sum.is_nan() {
                 let exp = (got >> 10) & 0x1F;
                 let mant = got & 0x3FF;
-                assert!(exp == 0x1F && mant != 0, "add({ab:#x},{bb:#x}) want NaN, got {got:#x}");
+                assert!(
+                    exp == 0x1F && mant != 0,
+                    "add({ab:#x},{bb:#x}) want NaN, got {got:#x}"
+                );
             } else {
                 let want = round_to_format(5, 11, sum, RoundingMode::NearestEven);
                 assert_eq!(got, want, "add({ab:#x},{bb:#x}) = {got:#x}, want {want:#x}");
@@ -3175,14 +3275,27 @@ mod tests {
             if s.is_nan() {
                 let exp = (got >> 23) & 0xFF;
                 let mant = got & 0x7F_FFFF;
-                assert!(exp == 0xFF && mant != 0, "sqrt({xb:#x}) want NaN, got {got:#x}");
+                assert!(
+                    exp == 0xFF && mant != 0,
+                    "sqrt({xb:#x}) want NaN, got {got:#x}"
+                );
             } else {
                 assert_eq!(got, u128::from(s.to_bits()), "sqrt({xb:#x})");
             }
         };
         let s32: [u32; 12] = [
-            0x0000_0000, 0x8000_0000, 0x3F80_0000, 0x4080_0000, 0x4000_0000, 0xBF80_0000,
-            0x7F80_0000, 0xFF80_0000, 0x7FC0_0000, 0x0080_0000, 0x0000_0001, 0x7F7F_FFFF,
+            0x0000_0000,
+            0x8000_0000,
+            0x3F80_0000,
+            0x4080_0000,
+            0x4000_0000,
+            0xBF80_0000,
+            0x7F80_0000,
+            0xFF80_0000,
+            0x7FC0_0000,
+            0x0080_0000,
+            0x0000_0001,
+            0x7F7F_FFFF,
         ];
         for &x in &s32 {
             check32(&mut a, x);
@@ -3211,7 +3324,9 @@ mod tests {
         };
         let mut s = 0x3243_f6a8_885a_308du64;
         for _ in 0..1000 {
-            s = s.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1_442_695_040_888_963_407);
+            s = s
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
             check64(&mut a, s);
         }
     }
@@ -3288,7 +3403,9 @@ mod tests {
         for &(mode, kind) in &modes {
             let mut inputs = structured.to_vec();
             for _ in 0..400 {
-                state = state.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1_442_695_040_888_963_407);
+                state = state
+                    .wrapping_mul(6_364_136_223_846_793_005)
+                    .wrapping_add(1_442_695_040_888_963_407);
                 inputs.push(state);
             }
             for xb in inputs {
@@ -3307,7 +3424,10 @@ mod tests {
                     _ => v.floor(),
                 };
                 if want.is_nan() {
-                    assert!(is_nan_bits(got), "rint64({xb:#x},{mode:?}) want NaN got {got:#x}");
+                    assert!(
+                        is_nan_bits(got),
+                        "rint64({xb:#x},{mode:?}) want NaN got {got:#x}"
+                    );
                 } else {
                     assert_eq!(got, u128::from(want.to_bits()), "rint64({xb:#x},{mode:?})");
                 }
@@ -3321,14 +3441,14 @@ mod tests {
         // The full E2M1 magnitude table by (exp, mant): the 8 magnitudes.
         // codes 0..8 = sign 0; the spec value set is {0,.5,1,1.5,2,3,4,6}.
         let table: [(i128, i128); 8] = [
-            (0, 1),   // 000: 0
-            (1, 2),   // 001: 0.5
-            (1, 1),   // 010: 1
-            (3, 2),   // 011: 1.5
-            (2, 1),   // 100: 2
-            (3, 1),   // 101: 3
-            (4, 1),   // 110: 4
-            (6, 1),   // 111: 6
+            (0, 1), // 000: 0
+            (1, 2), // 001: 0.5
+            (1, 1), // 010: 1
+            (3, 2), // 011: 1.5
+            (2, 1), // 100: 2
+            (3, 1), // 101: 3
+            (4, 1), // 110: 4
+            (6, 1), // 111: 6
         ];
         let mut a = TermArena::new();
         for code in 0u128..8 {
@@ -3369,9 +3489,9 @@ mod tests {
         // (448), not infinity; only 0x7F/0xFF (S.1111.111) is NaN; there are no
         // infinities.
         let mut a = TermArena::new();
-        let bit = |a: &TermArena, t: axeyum_ir::TermId| matches!(
-            eval(a, t, &Assignment::new()), Ok(Value::Bool(true))
-        );
+        let bit = |a: &TermArena, t: axeyum_ir::TermId| {
+            matches!(eval(a, t, &Assignment::new()), Ok(Value::Bool(true)))
+        };
         let mk = |a: &mut TermArena, v: u128| a.bv_const(8, v).unwrap();
 
         for nan in [0x7Fu128, 0xFF] {
@@ -3420,20 +3540,30 @@ mod tests {
             let xt = a.bv_const(16, u128::from(xb)).unwrap();
             let yt = a.bv_const(16, u128::from(yb)).unwrap();
             for (term, exact) in [
-                (mul(&mut a, bf, xt, yt, RoundingMode::NearestEven).unwrap(),
-                 bf16_to_f64(xb) * bf16_to_f64(yb)),
-                (add(&mut a, bf, xt, yt, RoundingMode::NearestEven).unwrap(),
-                 bf16_to_f64(xb) + bf16_to_f64(yb)),
+                (
+                    mul(&mut a, bf, xt, yt, RoundingMode::NearestEven).unwrap(),
+                    bf16_to_f64(xb) * bf16_to_f64(yb),
+                ),
+                (
+                    add(&mut a, bf, xt, yt, RoundingMode::NearestEven).unwrap(),
+                    bf16_to_f64(xb) + bf16_to_f64(yb),
+                ),
             ] {
                 let got = match eval(&a, term, &Assignment::new()) {
                     Ok(Value::Bv { value, .. }) => value,
                     other => panic!("expected Bv, got {other:?}"),
                 };
                 if exact.is_nan() {
-                    assert!((got >> 7) & 0xFF == 0xFF && got & 0x7F != 0, "bf16 want NaN");
+                    assert!(
+                        (got >> 7) & 0xFF == 0xFF && got & 0x7F != 0,
+                        "bf16 want NaN"
+                    );
                 } else {
                     let want = round_to_format(8, 8, exact, RoundingMode::NearestEven);
-                    assert_eq!(got, want, "bf16 op({xb:#x},{yb:#x}) = {got:#x}, want {want:#x}");
+                    assert_eq!(
+                        got, want,
+                        "bf16 op({xb:#x},{yb:#x}) = {got:#x}, want {want:#x}"
+                    );
                 }
             }
         }
@@ -3450,8 +3580,14 @@ mod tests {
                 .wrapping_add(1_442_695_040_888_963_407);
             let xb = (state >> 16) as u32;
             let xt = a.bv_const(32, u128::from(xb)).unwrap();
-            let r = to_fp(&mut a, FloatFormat::F32, FloatFormat::F64, RoundingMode::NearestEven, xt)
-                .unwrap();
+            let r = to_fp(
+                &mut a,
+                FloatFormat::F32,
+                FloatFormat::F64,
+                RoundingMode::NearestEven,
+                xt,
+            )
+            .unwrap();
             let got = match eval(&a, r, &Assignment::new()) {
                 Ok(Value::Bv { value, .. }) => value,
                 other => panic!("expected Bv, got {other:?}"),
@@ -3479,8 +3615,7 @@ mod tests {
                     .wrapping_mul(6_364_136_223_846_793_005)
                     .wrapping_add(1_442_695_040_888_963_407);
                 let xt = a.bv_const(64, u128::from(s)).unwrap();
-                let r =
-                    to_fp(&mut a, FloatFormat::F64, FloatFormat::F32, mode, xt).unwrap();
+                let r = to_fp(&mut a, FloatFormat::F64, FloatFormat::F32, mode, xt).unwrap();
                 let got = match eval(&a, r, &Assignment::new()) {
                     Ok(Value::Bv { value, .. }) => value,
                     other => panic!("expected Bv, got {other:?}"),
@@ -3514,18 +3649,24 @@ mod tests {
             FloatFormat::F16,
             FloatFormat::BF16,
             FloatFormat::TF32,
-            FloatFormat { exp_bits: 6, sig_bits: 8 },
+            FloatFormat {
+                exp_bits: 6,
+                sig_bits: 8,
+            },
             FloatFormat::F32,
             FloatFormat::F64,
         ];
         let mut a = TermArena::new();
         let mut state: u64 = 0x51a5_3c3c_9696_5151;
         let next = |s: &mut u64| {
-            *s = s.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1_442_695_040_888_963_407);
+            *s = s
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
             *s
         };
         let is_nan_bits = |b: u128, eb: u32, sb: u32| {
-            (b >> (sb - 1)) & ((1u128 << eb) - 1) == (1u128 << eb) - 1 && b & ((1u128 << (sb - 1)) - 1) != 0
+            (b >> (sb - 1)) & ((1u128 << eb) - 1) == (1u128 << eb) - 1
+                && b & ((1u128 << (sb - 1)) - 1) != 0
         };
         let mut uid = 0u32;
         for &src in &fmts {
@@ -3533,7 +3674,9 @@ mod tests {
                 let smask = (1u128 << src.width()) - 1;
                 for &mode in &modes {
                     uid += 1;
-                    let xt = a.declare(&format!("x{uid}"), Sort::BitVec(src.width())).unwrap();
+                    let xt = a
+                        .declare(&format!("x{uid}"), Sort::BitVec(src.width()))
+                        .unwrap();
                     let xv = a.var(xt);
                     let t = to_fp(&mut a, src, dst, mode, xv).unwrap();
                     for _ in 0..40 {
@@ -3546,13 +3689,22 @@ mod tests {
                             src.decode_ieee_f64(xb)
                         };
                         let mut asg = Assignment::new();
-                        asg.set(xt, Value::Bv { width: src.width(), value: xb });
+                        asg.set(
+                            xt,
+                            Value::Bv {
+                                width: src.width(),
+                                value: xb,
+                            },
+                        );
                         let got = match eval(&a, t, &asg) {
                             Ok(Value::Bv { value, .. }) => value,
                             other => panic!("{other:?}"),
                         };
                         if v.is_nan() {
-                            assert!(is_nan_bits(got, dst.exp_bits, dst.sig_bits), "to_fp {src:?}->{dst:?} {xb:#x} want NaN got {got:#x}");
+                            assert!(
+                                is_nan_bits(got, dst.exp_bits, dst.sig_bits),
+                                "to_fp {src:?}->{dst:?} {xb:#x} want NaN got {got:#x}"
+                            );
                         } else {
                             let want = round_to_format(dst.exp_bits, dst.sig_bits, v, mode);
                             assert_eq!(got, want, "to_fp {src:?}->{dst:?} ({xb:#x},{mode:?})");
@@ -3596,7 +3748,10 @@ mod tests {
                     assert!((got >> 23) & 0xFF == 0xFF && got & 0x7F_FFFF != 0);
                 } else {
                     let want = round_to_format(8, 24, exact, mode);
-                    assert_eq!(got, want, "mul({ab:#x},{bb:#x},{mode:?}) = {got:#x}, want {want:#x}");
+                    assert_eq!(
+                        got, want,
+                        "mul({ab:#x},{bb:#x},{mode:?}) = {got:#x}, want {want:#x}"
+                    );
                 }
             }
         }
@@ -3617,14 +3772,27 @@ mod tests {
             if q.is_nan() {
                 let exp = (got >> 23) & 0xFF;
                 let mant = got & 0x7F_FFFF;
-                assert!(exp == 0xFF && mant != 0, "div({ab:#x},{bb:#x}) want NaN, got {got:#x}");
+                assert!(
+                    exp == 0xFF && mant != 0,
+                    "div({ab:#x},{bb:#x}) want NaN, got {got:#x}"
+                );
             } else {
                 assert_eq!(got, u128::from(q.to_bits()), "div({ab:#x},{bb:#x})");
             }
         };
         let s32: [u32; 12] = [
-            0x0000_0000, 0x8000_0000, 0x3F80_0000, 0xBF80_0000, 0x4000_0000, 0x3F00_0000,
-            0x7F80_0000, 0xFF80_0000, 0x7FC0_0000, 0x0080_0000, 0x0000_0001, 0x7F7F_FFFF,
+            0x0000_0000,
+            0x8000_0000,
+            0x3F80_0000,
+            0xBF80_0000,
+            0x4000_0000,
+            0x3F00_0000,
+            0x7F80_0000,
+            0xFF80_0000,
+            0x7FC0_0000,
+            0x0080_0000,
+            0x0000_0001,
+            0x7F7F_FFFF,
         ];
         for &x in &s32 {
             for &y in &s32 {
@@ -3659,9 +3827,13 @@ mod tests {
         };
         let mut s = 0x2718_2818_2845_9045u64;
         for _ in 0..2000 {
-            s = s.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1_442_695_040_888_963_407);
+            s = s
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
             let x = s;
-            s = s.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1_442_695_040_888_963_407);
+            s = s
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
             check64(&mut a, x, s);
         }
     }
@@ -3683,14 +3855,19 @@ mod tests {
             };
             let q = f32::from_bits(ab) / f32::from_bits(bb);
             if q.is_nan() {
-                assert!((got >> 23) & 0xFF == 0xFF && got & 0x7F_FFFF != 0, "div({ab:#x},{bb:#x}) want NaN got {got:#x}");
+                assert!(
+                    (got >> 23) & 0xFF == 0xFF && got & 0x7F_FFFF != 0,
+                    "div({ab:#x},{bb:#x}) want NaN got {got:#x}"
+                );
             } else {
                 assert_eq!(got, u128::from(q.to_bits()), "div({ab:#x},{bb:#x})");
             }
         };
         let mut s = 0x9e37_79b9_7f4a_7c15u64;
         let mut next = || {
-            s = s.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1_442_695_040_888_963_407);
+            s = s
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
             s
         };
         for _ in 0..5000 {
@@ -3720,15 +3897,29 @@ mod tests {
             if sum.is_nan() {
                 let exp = (got >> 23) & 0xFF;
                 let mant = got & 0x7F_FFFF;
-                assert!(exp == 0xFF && mant != 0, "add({ab:#x},{bb:#x}) want NaN, got {got:#x}");
+                assert!(
+                    exp == 0xFF && mant != 0,
+                    "add({ab:#x},{bb:#x}) want NaN, got {got:#x}"
+                );
             } else {
                 assert_eq!(got, u128::from(sum.to_bits()), "add({ab:#x},{bb:#x})");
             }
         };
         let structured: [u32; 14] = [
-            0x0000_0000, 0x8000_0000, 0x3F80_0000, 0xBF80_0000, 0x4000_0000, 0x3F00_0000,
-            0x7F80_0000, 0xFF80_0000, 0x7FC0_0000, 0x0080_0000, 0x0000_0001, 0x007F_FFFF,
-            0x7F7F_FFFF, 0x4B80_0000,
+            0x0000_0000,
+            0x8000_0000,
+            0x3F80_0000,
+            0xBF80_0000,
+            0x4000_0000,
+            0x3F00_0000,
+            0x7F80_0000,
+            0xFF80_0000,
+            0x7FC0_0000,
+            0x0080_0000,
+            0x0000_0001,
+            0x007F_FFFF,
+            0x7F7F_FFFF,
+            0x4B80_0000,
         ];
         for &x in &structured {
             for &y in &structured {
@@ -3767,9 +3958,15 @@ mod tests {
             }
         };
         let structured: [u64; 10] = [
-            0x0000_0000_0000_0000, 0x8000_0000_0000_0000, 0x3FF0_0000_0000_0000,
-            0xBFF0_0000_0000_0000, 0x4000_0000_0000_0000, 0x7FF0_0000_0000_0000,
-            0x7FF8_0000_0000_0000, 0x0010_0000_0000_0000, 0x0000_0000_0000_0001,
+            0x0000_0000_0000_0000,
+            0x8000_0000_0000_0000,
+            0x3FF0_0000_0000_0000,
+            0xBFF0_0000_0000_0000,
+            0x4000_0000_0000_0000,
+            0x7FF0_0000_0000_0000,
+            0x7FF8_0000_0000_0000,
+            0x0010_0000_0000_0000,
+            0x0000_0000_0000_0001,
             0x7FEF_FFFF_FFFF_FFFF,
         ];
         for &x in &structured {
@@ -3805,7 +4002,10 @@ mod tests {
             if prod.is_nan() {
                 let exp = (got >> 52) & 0x7FF;
                 let mant = got & 0xF_FFFF_FFFF_FFFF;
-                assert!(exp == 0x7FF && mant != 0, "mul64({ab:#x},{bb:#x}) want NaN, got {got:#x}");
+                assert!(
+                    exp == 0x7FF && mant != 0,
+                    "mul64({ab:#x},{bb:#x}) want NaN, got {got:#x}"
+                );
             } else {
                 assert_eq!(got, u128::from(prod.to_bits()), "mul64({ab:#x},{bb:#x})");
             }
@@ -3891,7 +4091,11 @@ mod tests {
                 Ok(Value::Bv { value, .. }) => value,
                 other => panic!("{other:?}"),
             };
-            assert_eq!(got, u128::from(want.to_bits()), "rem64({x},{y}) want {want}");
+            assert_eq!(
+                got,
+                u128::from(want.to_bits()),
+                "rem64({x},{y}) want {want}"
+            );
             // F32
             #[allow(clippy::cast_possible_truncation)]
             let (xf, yf, wf) = (x as f32, y as f32, want as f32);
@@ -3915,11 +4119,29 @@ mod tests {
                 other => panic!("{other:?}"),
             }
         };
-        assert!(f64::from_bits(nan(&mut a, f64::INFINITY, 2.0) as u64).is_nan(), "rem(inf,2)=NaN");
-        assert!(f64::from_bits(nan(&mut a, 3.0, 0.0) as u64).is_nan(), "rem(3,0)=NaN");
-        assert_eq!(nan(&mut a, 3.0, f64::INFINITY), u128::from(3.0f64.to_bits()), "rem(3,inf)=3");
-        assert_eq!(nan(&mut a, 0.0, 3.0), u128::from(0.0f64.to_bits()), "rem(+0,3)=+0");
-        assert_eq!(nan(&mut a, -0.0, 3.0), u128::from((-0.0f64).to_bits()), "rem(-0,3)=-0");
+        assert!(
+            f64::from_bits(nan(&mut a, f64::INFINITY, 2.0) as u64).is_nan(),
+            "rem(inf,2)=NaN"
+        );
+        assert!(
+            f64::from_bits(nan(&mut a, 3.0, 0.0) as u64).is_nan(),
+            "rem(3,0)=NaN"
+        );
+        assert_eq!(
+            nan(&mut a, 3.0, f64::INFINITY),
+            u128::from(3.0f64.to_bits()),
+            "rem(3,inf)=3"
+        );
+        assert_eq!(
+            nan(&mut a, 0.0, 3.0),
+            u128::from(0.0f64.to_bits()),
+            "rem(+0,3)=+0"
+        );
+        assert_eq!(
+            nan(&mut a, -0.0, 3.0),
+            u128::from((-0.0f64).to_bits()),
+            "rem(-0,3)=-0"
+        );
     }
 
     #[test]
@@ -3945,7 +4167,11 @@ mod tests {
             };
             #[allow(clippy::cast_possible_truncation)]
             let want = (rem_oracle(xd, yd) as f32).to_bits();
-            assert_eq!(got, u128::from(want), "rem({xf},{yf}) got {got:#x} want {want:#x}");
+            assert_eq!(
+                got,
+                u128::from(want),
+                "rem({xf},{yf}) got {got:#x} want {want:#x}"
+            );
         };
 
         let structured: [u32; 12] = [
@@ -3999,14 +4225,21 @@ mod tests {
             };
             #[allow(clippy::cast_possible_truncation)]
             let want = u128::from((rem_oracle(xd, yd) as f32).to_bits() >> 16);
-            assert_eq!(got, want, "rem_bf16({xb:#x},{yb:#x}) got {got:#x} want {want:#x}");
+            assert_eq!(
+                got, want,
+                "rem_bf16({xb:#x},{yb:#x}) got {got:#x} want {want:#x}"
+            );
         };
         let mut state: u64 = 0xfeed_face_dead_beef;
         for _ in 0..8000 {
             state = state
                 .wrapping_mul(6_364_136_223_846_793_005)
                 .wrapping_add(1_442_695_040_888_963_407);
-            check(&mut a, (state & 0xFFFF) as u16, ((state >> 16) & 0xFFFF) as u16);
+            check(
+                &mut a,
+                (state & 0xFFFF) as u16,
+                ((state >> 16) & 0xFFFF) as u16,
+            );
         }
     }
 
@@ -4033,7 +4266,12 @@ mod tests {
         // The non-IEEE OCP formats are not folded (no remainder semantics).
         let xt = a.bv_const(8, 0x40).unwrap();
         let yt = a.bv_const(8, 0x38).unwrap();
-        assert!(rem(&mut a, FloatFormat::FP8_E4M3, xt, yt).unwrap().is_none(), "E4M3 not folded");
+        assert!(
+            rem(&mut a, FloatFormat::FP8_E4M3, xt, yt)
+                .unwrap()
+                .is_none(),
+            "E4M3 not folded"
+        );
     }
 
     #[test]
@@ -4058,16 +4296,22 @@ mod tests {
                 other => panic!("{other:?}"),
             };
             if is_nan_bits(want) {
-                assert!(is_nan_bits(got), "rem_sym({xb:#x},{yb:#x}) want NaN, got {got:#x}");
+                assert!(
+                    is_nan_bits(got),
+                    "rem_sym({xb:#x},{yb:#x}) want NaN, got {got:#x}"
+                );
             } else {
-                assert_eq!(got, want, "rem_sym({xb:#x},{yb:#x}) got {got:#x} want {want:#x}");
+                assert_eq!(
+                    got, want,
+                    "rem_sym({xb:#x},{yb:#x}) got {got:#x} want {want:#x}"
+                );
             }
         };
 
         // structured: ±0, ±1, ±2, 0.5, 1.5, smallest normal/subnormals, max, ∞, NaN.
         let structured: [u16; 16] = [
-            0x0000, 0x8000, 0x3C00, 0xBC00, 0x4000, 0xC000, 0x3800, 0x3E00, 0x0400,
-            0x0001, 0x03FF, 0x7BFF, 0x7C00, 0xFC00, 0x7E00, 0x4900,
+            0x0000, 0x8000, 0x3C00, 0xBC00, 0x4000, 0xC000, 0x3800, 0x3E00, 0x0400, 0x0001, 0x03FF,
+            0x7BFF, 0x7C00, 0xFC00, 0x7E00, 0x4900,
         ];
         for &x in &structured {
             for &y in &structured {
@@ -4080,7 +4324,11 @@ mod tests {
             state = state
                 .wrapping_mul(6_364_136_223_846_793_005)
                 .wrapping_add(1_442_695_040_888_963_407);
-            check(&mut a, (state & 0xFFFF) as u16, ((state >> 16) & 0xFFFF) as u16);
+            check(
+                &mut a,
+                (state & 0xFFFF) as u16,
+                ((state >> 16) & 0xFFFF) as u16,
+            );
         }
     }
 
@@ -4102,14 +4350,31 @@ mod tests {
             if want.is_nan() {
                 let exp = (got >> 23) & 0xFF;
                 let mant = got & 0x7F_FFFF;
-                assert!(exp == 0xFF && mant != 0, "fma({xb:#x},{yb:#x},{zb:#x}) want NaN, got {got:#x}");
+                assert!(
+                    exp == 0xFF && mant != 0,
+                    "fma({xb:#x},{yb:#x},{zb:#x}) want NaN, got {got:#x}"
+                );
             } else {
-                assert_eq!(got, u128::from(want.to_bits()), "fma({xb:#x},{yb:#x},{zb:#x})");
+                assert_eq!(
+                    got,
+                    u128::from(want.to_bits()),
+                    "fma({xb:#x},{yb:#x},{zb:#x})"
+                );
             }
         };
         let structured: [u32; 12] = [
-            0x0000_0000, 0x8000_0000, 0x3f80_0000, 0xbf80_0000, 0x4000_0000, 0x3f00_0000,
-            0x7f80_0000, 0xff80_0000, 0x7fc0_0000, 0x0080_0000, 0x0000_0001, 0x4248_0000,
+            0x0000_0000,
+            0x8000_0000,
+            0x3f80_0000,
+            0xbf80_0000,
+            0x4000_0000,
+            0x3f00_0000,
+            0x7f80_0000,
+            0xff80_0000,
+            0x7fc0_0000,
+            0x0080_0000,
+            0x0000_0001,
+            0x4248_0000,
         ];
         for &x in &structured {
             for &y in &structured {
@@ -4149,14 +4414,25 @@ mod tests {
             if want.is_nan() {
                 let exp = (got >> 23) & 0xFF;
                 let mant = got & 0x7F_FFFF;
-                assert!(exp == 0xFF && mant != 0, "sub({xb:#x},{yb:#x}) want NaN, got {got:#x}");
+                assert!(
+                    exp == 0xFF && mant != 0,
+                    "sub({xb:#x},{yb:#x}) want NaN, got {got:#x}"
+                );
             } else {
                 assert_eq!(got, u128::from(want.to_bits()), "sub({xb:#x},{yb:#x})");
             }
         };
         let structured: [u32; 10] = [
-            0x0000_0000, 0x8000_0000, 0x3f80_0000, 0xbf80_0000, 0x4000_0000, 0x7f80_0000,
-            0xff80_0000, 0x7fc0_0000, 0x0080_0000, 0x0000_0001,
+            0x0000_0000,
+            0x8000_0000,
+            0x3f80_0000,
+            0xbf80_0000,
+            0x4000_0000,
+            0x7f80_0000,
+            0xff80_0000,
+            0x7fc0_0000,
+            0x0080_0000,
+            0x0000_0001,
         ];
         for &x in &structured {
             for &y in &structured {
@@ -4205,7 +4481,10 @@ mod tests {
             FloatFormat::F128,
             FloatFormat::BF16,
             FloatFormat::TF32,
-            FloatFormat { exp_bits: 6, sig_bits: 8 },
+            FloatFormat {
+                exp_bits: 6,
+                sig_bits: 8,
+            },
         ] {
             let w = fmt.width();
             let x = a.bv_const(w, 0).unwrap();
@@ -4220,7 +4499,10 @@ mod tests {
             let w = fmt.width();
             let x = a.bv_const(w, 0).unwrap();
             let y = a.bv_const(w, 0).unwrap();
-            assert!(rem_sym(&mut a, fmt, x, y).is_ok(), "rem_sym should build {fmt:?}");
+            assert!(
+                rem_sym(&mut a, fmt, x, y).is_ok(),
+                "rem_sym should build {fmt:?}"
+            );
         }
     }
 
@@ -4246,15 +4528,27 @@ mod tests {
                 other => panic!("{other:?}"),
             };
             if is_nan_bits(want) {
-                assert!(is_nan_bits(got), "rem_f64({xb:#x},{yb:#x}) want NaN, got {got:#x}");
+                assert!(
+                    is_nan_bits(got),
+                    "rem_f64({xb:#x},{yb:#x}) want NaN, got {got:#x}"
+                );
             } else {
-                assert_eq!(got, want, "rem_f64({xb:#x},{yb:#x}) got {got:#x} want {want:#x}");
+                assert_eq!(
+                    got, want,
+                    "rem_f64({xb:#x},{yb:#x}) got {got:#x} want {want:#x}"
+                );
             }
         };
         let structured: [u64; 10] = [
-            0x0000_0000_0000_0000, 0x8000_0000_0000_0000, 0x3ff0_0000_0000_0000, // ±0, 1.0
-            0xbff0_0000_0000_0000, 0x4000_0000_0000_0000, 0x3fe0_0000_0000_0000, // -1, 2, 0.5
-            0x4008_0000_0000_0000, 0x0000_0000_0000_0001, 0x7ff0_0000_0000_0000, // 3, subn, +inf
+            0x0000_0000_0000_0000,
+            0x8000_0000_0000_0000,
+            0x3ff0_0000_0000_0000, // ±0, 1.0
+            0xbff0_0000_0000_0000,
+            0x4000_0000_0000_0000,
+            0x3fe0_0000_0000_0000, // -1, 2, 0.5
+            0x4008_0000_0000_0000,
+            0x0000_0000_0000_0001,
+            0x7ff0_0000_0000_0000, // 3, subn, +inf
             0x7ff8_0000_0000_0000, // NaN
         ];
         for &xb in &structured {
@@ -4287,27 +4581,39 @@ mod tests {
         };
         // to_ubv(3.5, RTZ, 8) = 3
         let x = bits16(&mut a, 0x4300);
-        let r = to_ubv(&mut a, FloatFormat::F16, RoundingMode::TowardZero, x, 8).unwrap().unwrap();
+        let r = to_ubv(&mut a, FloatFormat::F16, RoundingMode::TowardZero, x, 8)
+            .unwrap()
+            .unwrap();
         assert_eq!(eval_bv(&a, r), 3);
         // to_ubv(2.5, NearestEven, 8) = 2 (ties to even)
         let x = bits16(&mut a, 0x4100);
-        let r = to_ubv(&mut a, FloatFormat::F16, RoundingMode::NearestEven, x, 8).unwrap().unwrap();
+        let r = to_ubv(&mut a, FloatFormat::F16, RoundingMode::NearestEven, x, 8)
+            .unwrap()
+            .unwrap();
         assert_eq!(eval_bv(&a, r), 2);
         // to_sbv(-3.5, RTZ, 8) = -3 = 0xFD
         let x = bits16(&mut a, 0xC300);
-        let r = to_sbv(&mut a, FloatFormat::F16, RoundingMode::TowardZero, x, 8).unwrap().unwrap();
+        let r = to_sbv(&mut a, FloatFormat::F16, RoundingMode::TowardZero, x, 8)
+            .unwrap()
+            .unwrap();
         assert_eq!(eval_bv(&a, r), 0xFD);
         // round_to_integral(3.5, RTZ) = 3.0 = 0x4200
         let x = bits16(&mut a, 0x4300);
-        let r = round_to_integral(&mut a, FloatFormat::F16, RoundingMode::TowardZero, x).unwrap().unwrap();
+        let r = round_to_integral(&mut a, FloatFormat::F16, RoundingMode::TowardZero, x)
+            .unwrap()
+            .unwrap();
         assert_eq!(eval_bv(&a, r), 0x4200);
         // round_to_integral(2.5, NearestEven) = 2.0 = 0x4000
         let x = bits16(&mut a, 0x4100);
-        let r = round_to_integral(&mut a, FloatFormat::F16, RoundingMode::NearestEven, x).unwrap().unwrap();
+        let r = round_to_integral(&mut a, FloatFormat::F16, RoundingMode::NearestEven, x)
+            .unwrap()
+            .unwrap();
         assert_eq!(eval_bv(&a, r), 0x4000);
         // BF16 too: to_ubv(2.0, RTZ, 8); 2.0 in bf16 = 0x4000.
         let x = a.bv_const(16, 0x4000).unwrap();
-        let r = to_ubv(&mut a, FloatFormat::BF16, RoundingMode::TowardZero, x, 8).unwrap().unwrap();
+        let r = to_ubv(&mut a, FloatFormat::BF16, RoundingMode::TowardZero, x, 8)
+            .unwrap()
+            .unwrap();
         assert_eq!(eval_bv(&a, r), 2);
     }
 
@@ -4333,15 +4639,32 @@ mod tests {
                 other => panic!("{other:?}"),
             };
             if is_nan_bits(want) {
-                assert!(is_nan_bits(got), "rem_f32({xb:#x},{yb:#x}) want NaN, got {got:#x}");
+                assert!(
+                    is_nan_bits(got),
+                    "rem_f32({xb:#x},{yb:#x}) want NaN, got {got:#x}"
+                );
             } else {
-                assert_eq!(got, want, "rem_f32({xb:#x},{yb:#x}) got {got:#x} want {want:#x}");
+                assert_eq!(
+                    got, want,
+                    "rem_f32({xb:#x},{yb:#x}) got {got:#x} want {want:#x}"
+                );
             }
         };
         let structured: [u32; 14] = [
-            0x0000_0000, 0x8000_0000, 0x3f80_0000, 0xbf80_0000, 0x4000_0000, 0x3f00_0000,
-            0x4070_0000, 0x40e0_0000, 0x7f80_0000, 0xff80_0000, 0x7fc0_0000, 0x0080_0000,
-            0x0000_0001, 0x4248_0000,
+            0x0000_0000,
+            0x8000_0000,
+            0x3f80_0000,
+            0xbf80_0000,
+            0x4000_0000,
+            0x3f00_0000,
+            0x4070_0000,
+            0x40e0_0000,
+            0x7f80_0000,
+            0xff80_0000,
+            0x7fc0_0000,
+            0x0080_0000,
+            0x0000_0001,
+            0x4248_0000,
         ];
         for &x in &structured {
             for &y in &structured {
@@ -4368,7 +4691,8 @@ mod fma_f64_const_tests {
         // F64 fp.fma's symbolic circuit needs 164 bits (> 128=128), but
         // constant operands under RNE fold via native mul_add (ADR-0026 note).
         let mut arena = TermArena::new();
-        let mk = |arena: &mut TermArena, v: f64| arena.bv_const(64, u128::from(v.to_bits())).unwrap();
+        let mk =
+            |arena: &mut TermArena, v: f64| arena.bv_const(64, u128::from(v.to_bits())).unwrap();
         for &(x, y, z) in &[
             (2.0f64, 3.0, 1.0),
             (0.1, 0.2, 0.3),
@@ -4379,7 +4703,15 @@ mod fma_f64_const_tests {
             let a = mk(&mut arena, x);
             let b = mk(&mut arena, y);
             let c = mk(&mut arena, z);
-            let t = fma(&mut arena, FloatFormat::F64, a, b, c, RoundingMode::NearestEven).unwrap();
+            let t = fma(
+                &mut arena,
+                FloatFormat::F64,
+                a,
+                b,
+                c,
+                RoundingMode::NearestEven,
+            )
+            .unwrap();
             // Result is a Float64-width bit-vector equal to native mul_add.
             let want = x.mul_add(y, z).to_bits();
             assert_eq!(
@@ -4405,12 +4737,38 @@ mod fma_f64_const_tests {
         let sy = arena.declare("fy", Sort::BitVec(64)).unwrap();
         let sz = arena.declare("fz", Sort::BitVec(64)).unwrap();
         let (x, y, z) = (arena.var(sx), arena.var(sy), arena.var(sz));
-        let t = fma(&mut arena, FloatFormat::F64, x, y, z, RoundingMode::NearestEven).unwrap();
+        let t = fma(
+            &mut arena,
+            FloatFormat::F64,
+            x,
+            y,
+            z,
+            RoundingMode::NearestEven,
+        )
+        .unwrap();
         let check = |arena: &TermArena, xb: u64, yb: u64, zb: u64| {
             let mut asg = Assignment::new();
-            asg.set(sx, Value::Bv { width: 64, value: u128::from(xb) });
-            asg.set(sy, Value::Bv { width: 64, value: u128::from(yb) });
-            asg.set(sz, Value::Bv { width: 64, value: u128::from(zb) });
+            asg.set(
+                sx,
+                Value::Bv {
+                    width: 64,
+                    value: u128::from(xb),
+                },
+            );
+            asg.set(
+                sy,
+                Value::Bv {
+                    width: 64,
+                    value: u128::from(yb),
+                },
+            );
+            asg.set(
+                sz,
+                Value::Bv {
+                    width: 64,
+                    value: u128::from(zb),
+                },
+            );
             let got = match eval(arena, t, &asg).unwrap() {
                 Value::Bv { value, .. } => value,
                 other => panic!("{other:?}"),
@@ -4424,7 +4782,11 @@ mod fma_f64_const_tests {
                     "fma({xb:#x},{yb:#x},{zb:#x}) want NaN, got {got:#x}"
                 );
             } else {
-                assert_eq!(got, u128::from(want.to_bits()), "fma({xb:#x},{yb:#x},{zb:#x})");
+                assert_eq!(
+                    got,
+                    u128::from(want.to_bits()),
+                    "fma({xb:#x},{yb:#x},{zb:#x})"
+                );
             }
         };
         // Structured: zeros, signed ones, 2.0, 0.5, infinities, NaN, subnormal,
@@ -4488,16 +4850,16 @@ mod fma_f128_apfloat_tests {
     /// ±inf, NaN, the smallest subnormal, and a generic finite value.
     fn structured() -> [u128; 11] {
         [
-            f128(false, 0, 0),               // +0
-            f128(true, 0, 0),                // -0
-            f128(false, 0x3FFF, 0),          // 1.0
-            f128(true, 0x3FFF, 0),           // -1.0
-            f128(false, 0x4000, 0),          // 2.0
-            f128(false, 0x3FFE, 0),          // 0.5
-            f128(false, 0x7FFF, 0), // +inf
-            f128(true, 0x7FFF, 0),  // -inf
-            f128(false, 0x7FFF, 1), // NaN
-            f128(false, 0, 1),               // smallest subnormal
+            f128(false, 0, 0),                          // +0
+            f128(true, 0, 0),                           // -0
+            f128(false, 0x3FFF, 0),                     // 1.0
+            f128(true, 0x3FFF, 0),                      // -1.0
+            f128(false, 0x4000, 0),                     // 2.0
+            f128(false, 0x3FFE, 0),                     // 0.5
+            f128(false, 0x7FFF, 0),                     // +inf
+            f128(true, 0x7FFF, 0),                      // -inf
+            f128(false, 0x7FFF, 1),                     // NaN
+            f128(false, 0, 1),                          // smallest subnormal
             f128(false, 0x4000, 0x1234_5678_9abc_def0), // a generic finite value
         ]
     }
@@ -4517,7 +4879,13 @@ mod fma_f128_apfloat_tests {
     /// Validates an F128 binary op circuit against `rustc_apfloat`'s `Quad`
     /// (RNE) over the structured battery plus 2000 random pairs.
     fn validate_binop(
-        build: impl Fn(&mut TermArena, FloatFormat, TermId, TermId, RoundingMode) -> Result<TermId, IrError>,
+        build: impl Fn(
+            &mut TermArena,
+            FloatFormat,
+            TermId,
+            TermId,
+            RoundingMode,
+        ) -> Result<TermId, IrError>,
         oracle: impl Fn(Quad, Quad) -> Quad,
         name: &str,
     ) {
@@ -4525,18 +4893,40 @@ mod fma_f128_apfloat_tests {
         let sx = arena.declare("a", Sort::BitVec(128)).unwrap();
         let sy = arena.declare("b", Sort::BitVec(128)).unwrap();
         let (x, y) = (arena.var(sx), arena.var(sy));
-        let t = build(&mut arena, FloatFormat::F128, x, y, RoundingMode::NearestEven).unwrap();
+        let t = build(
+            &mut arena,
+            FloatFormat::F128,
+            x,
+            y,
+            RoundingMode::NearestEven,
+        )
+        .unwrap();
         let check = |arena: &TermArena, xb: u128, yb: u128| {
             let mut asg = Assignment::new();
-            asg.set(sx, Value::Bv { width: 128, value: xb });
-            asg.set(sy, Value::Bv { width: 128, value: yb });
+            asg.set(
+                sx,
+                Value::Bv {
+                    width: 128,
+                    value: xb,
+                },
+            );
+            asg.set(
+                sy,
+                Value::Bv {
+                    width: 128,
+                    value: yb,
+                },
+            );
             let got = match eval(arena, t, &asg).unwrap() {
                 Value::Bv { value, .. } => value,
                 other => panic!("{other:?}"),
             };
             let want = oracle(Quad::from_bits(xb), Quad::from_bits(yb)).to_bits();
             if Quad::from_bits(want).is_nan() {
-                assert!(is_f128_nan(got), "{name}({xb:#x},{yb:#x}) want NaN, got {got:#x}");
+                assert!(
+                    is_f128_nan(got),
+                    "{name}({xb:#x},{yb:#x}) want NaN, got {got:#x}"
+                );
             } else {
                 assert_eq!(got, want, "{name}({xb:#x},{yb:#x})");
             }
@@ -4555,17 +4945,29 @@ mod fma_f128_apfloat_tests {
 
     #[test]
     fn symbolic_f128_add_matches_apfloat() {
-        validate_binop(add, |a, b| a.add_r(b, Round::NearestTiesToEven).value, "add");
+        validate_binop(
+            add,
+            |a, b| a.add_r(b, Round::NearestTiesToEven).value,
+            "add",
+        );
     }
 
     #[test]
     fn symbolic_f128_mul_matches_apfloat() {
-        validate_binop(mul, |a, b| a.mul_r(b, Round::NearestTiesToEven).value, "mul");
+        validate_binop(
+            mul,
+            |a, b| a.mul_r(b, Round::NearestTiesToEven).value,
+            "mul",
+        );
     }
 
     #[test]
     fn symbolic_f128_div_matches_apfloat() {
-        validate_binop(div, |a, b| a.div_r(b, Round::NearestTiesToEven).value, "div");
+        validate_binop(
+            div,
+            |a, b| a.div_r(b, Round::NearestTiesToEven).value,
+            "div",
+        );
     }
 
     #[test]
@@ -4579,22 +4981,55 @@ mod fma_f128_apfloat_tests {
         let sy = arena.declare("qy", Sort::BitVec(128)).unwrap();
         let sz = arena.declare("qz", Sort::BitVec(128)).unwrap();
         let (x, y, z) = (arena.var(sx), arena.var(sy), arena.var(sz));
-        let t = fma(&mut arena, FloatFormat::F128, x, y, z, RoundingMode::NearestEven).unwrap();
+        let t = fma(
+            &mut arena,
+            FloatFormat::F128,
+            x,
+            y,
+            z,
+            RoundingMode::NearestEven,
+        )
+        .unwrap();
         let check = |arena: &TermArena, xb: u128, yb: u128, zb: u128| {
             let mut asg = Assignment::new();
-            asg.set(sx, Value::Bv { width: 128, value: xb });
-            asg.set(sy, Value::Bv { width: 128, value: yb });
-            asg.set(sz, Value::Bv { width: 128, value: zb });
+            asg.set(
+                sx,
+                Value::Bv {
+                    width: 128,
+                    value: xb,
+                },
+            );
+            asg.set(
+                sy,
+                Value::Bv {
+                    width: 128,
+                    value: yb,
+                },
+            );
+            asg.set(
+                sz,
+                Value::Bv {
+                    width: 128,
+                    value: zb,
+                },
+            );
             let got = match eval(arena, t, &asg).unwrap() {
                 Value::Bv { value, .. } => value,
                 other => panic!("{other:?}"),
             };
             let want = Quad::from_bits(xb)
-                .mul_add_r(Quad::from_bits(yb), Quad::from_bits(zb), Round::NearestTiesToEven)
+                .mul_add_r(
+                    Quad::from_bits(yb),
+                    Quad::from_bits(zb),
+                    Round::NearestTiesToEven,
+                )
                 .value
                 .to_bits();
             if Quad::from_bits(want).is_nan() {
-                assert!(is_f128_nan(got), "fma({xb:#x},{yb:#x},{zb:#x}) want NaN, got {got:#x}");
+                assert!(
+                    is_f128_nan(got),
+                    "fma({xb:#x},{yb:#x},{zb:#x}) want NaN, got {got:#x}"
+                );
             } else {
                 assert_eq!(got, want, "fma({xb:#x},{yb:#x},{zb:#x})");
             }
@@ -4610,7 +5045,12 @@ mod fma_f128_apfloat_tests {
         // Randomized 128-bit patterns (full bit-pattern coverage incl. NaNs/inf).
         let mut state: u64 = 0xc0ff_ee00_d15e_a5e5;
         for _ in 0..2000 {
-            check(&arena, rng128(&mut state), rng128(&mut state), rng128(&mut state));
+            check(
+                &arena,
+                rng128(&mut state),
+                rng128(&mut state),
+                rng128(&mut state),
+            );
         }
     }
 }
@@ -4703,7 +5143,10 @@ mod sqrt_correct_rounding_oracle {
         let m = a.1.min(b.1);
         let da = u32::try_from(a.1 - m).unwrap();
         let db = u32::try_from(b.1 - m).unwrap();
-        assert!(da < W - 256 && db < W - 256, "exponent gap too large: {da}/{db}");
+        assert!(
+            da < W - 256 && db < W - 256,
+            "exponent gap too large: {da}/{db}"
+        );
         let l = a.0.shl(da);
         let r = b.0.shl(db);
         if l.ult(&r) {
@@ -4753,9 +5196,9 @@ mod sqrt_correct_rounding_oracle {
             square((m, e - 1)) // /2
         };
         let lower_ok = match cmp(&lower_sq, &vx) {
-            Ordering::Less => true,      // pred-midpoint strictly below x ⇒ inside
-            Ordering::Equal => r_even,   // exact tie pred|r ⇒ rounds to even
-            Ordering::Greater => false,  // √x below the interval ⇒ r too big
+            Ordering::Less => true,     // pred-midpoint strictly below x ⇒ inside
+            Ordering::Equal => r_even,  // exact tie pred|r ⇒ rounds to even
+            Ordering::Greater => false, // √x below the interval ⇒ r too big
         };
 
         // Upper endpoint: (r + succ)/2, squared, vs x. A succ of +inf imposes no
@@ -4769,9 +5212,9 @@ mod sqrt_correct_rounding_oracle {
                 square((m, e - 1))
             };
             match cmp(&upper_sq, &vx) {
-                Ordering::Greater => true,  // succ-midpoint strictly above x ⇒ inside
-                Ordering::Equal => r_even,  // exact tie r|succ ⇒ rounds to even
-                Ordering::Less => false,    // √x above the interval ⇒ r too small
+                Ordering::Greater => true, // succ-midpoint strictly above x ⇒ inside
+                Ordering::Equal => r_even, // exact tie r|succ ⇒ rounds to even
+                Ordering::Less => false,   // √x above the interval ⇒ r too small
             }
         };
         lower_ok && upper_ok
@@ -4846,7 +5289,13 @@ mod sqrt_correct_rounding_oracle {
         let t = sqrt(&mut arena, FloatFormat::F128, x, RoundingMode::NearestEven).unwrap();
         let check = |arena: &TermArena, xb: u128| {
             let mut asg = Assignment::new();
-            asg.set(s, Value::Bv { width: 128, value: xb });
+            asg.set(
+                s,
+                Value::Bv {
+                    width: 128,
+                    value: xb,
+                },
+            );
             let got = match eval(arena, t, &asg).unwrap() {
                 Value::Bv { value, .. } => value,
                 other => panic!("{other:?}"),
@@ -4857,17 +5306,17 @@ mod sqrt_correct_rounding_oracle {
             );
         };
         let structured: [u128; 12] = [
-            q128(false, 0, 0),               // +0
-            q128(true, 0, 0),                // -0
-            q128(false, 0x3FFF, 0),          // 1.0
-            q128(false, 0x4000, 0),          // 2.0
-            q128(false, 0x4001, 0),          // 4.0
-            q128(false, 0x7FFF, 0),          // +inf
-            q128(true, 0x7FFF, 0),           // -inf
-            q128(false, 0x7FFF, 1),          // NaN
-            q128(true, 0x3FFF, 0),           // -1.0 (negative ⇒ NaN)
-            q128(false, 0, 1),               // smallest subnormal
-            q128(false, 1, 0),               // smallest normal
+            q128(false, 0, 0),                               // +0
+            q128(true, 0, 0),                                // -0
+            q128(false, 0x3FFF, 0),                          // 1.0
+            q128(false, 0x4000, 0),                          // 2.0
+            q128(false, 0x4001, 0),                          // 4.0
+            q128(false, 0x7FFF, 0),                          // +inf
+            q128(true, 0x7FFF, 0),                           // -inf
+            q128(false, 0x7FFF, 1),                          // NaN
+            q128(true, 0x3FFF, 0),                           // -1.0 (negative ⇒ NaN)
+            q128(false, 0, 1),                               // smallest subnormal
+            q128(false, 1, 0),                               // smallest normal
             q128(false, 0x4000, 0x1234_5678_9abc_def0_1234), // a generic value
         ];
         for &xb in &structured {
@@ -4916,7 +5365,13 @@ mod small_format_arithmetic_validation {
 
     fn eval_bits(arena: &TermArena, t: TermId, s: axeyum_ir::SymbolId, v: u128) -> u128 {
         let mut asg = Assignment::new();
-        asg.set(s, Value::Bv { width: 32, value: v });
+        asg.set(
+            s,
+            Value::Bv {
+                width: 32,
+                value: v,
+            },
+        );
         match eval(arena, t, &asg).unwrap() {
             Value::Bv { value, .. } => value,
             other => panic!("{other:?}"),
@@ -4929,27 +5384,75 @@ mod small_format_arithmetic_validation {
         // silently-unvalidated (possibly wrong) circuit — enabled ⟹ validated.
         let mut a = TermArena::new();
         let unvalidated = [
-            FloatFormat { exp_bits: 8, sig_bits: 20 },  // sb > 11, not standard
-            FloatFormat { exp_bits: 11, sig_bits: 5 },  // eb > 10, not standard
-            FloatFormat { exp_bits: 15, sig_bits: 64 }, // wide, not F128
-            FloatFormat::FP8_E4M3,                      // non-IEEE
+            FloatFormat {
+                exp_bits: 8,
+                sig_bits: 20,
+            }, // sb > 11, not standard
+            FloatFormat {
+                exp_bits: 11,
+                sig_bits: 5,
+            }, // eb > 10, not standard
+            FloatFormat {
+                exp_bits: 15,
+                sig_bits: 64,
+            }, // wide, not F128
+            FloatFormat::FP8_E4M3, // non-IEEE
         ];
         for fmt in unvalidated {
             let w = fmt.width();
             let x = a.bv_const(w, 0).unwrap();
             let y = a.bv_const(w, 0).unwrap();
-            assert!(matches!(add(&mut a, fmt, x, y, RoundingMode::NearestEven), Err(IrError::Unsupported(_))), "add {fmt:?}");
-            assert!(matches!(mul(&mut a, fmt, x, y, RoundingMode::NearestEven), Err(IrError::Unsupported(_))), "mul {fmt:?}");
-            assert!(matches!(div(&mut a, fmt, x, y, RoundingMode::NearestEven), Err(IrError::Unsupported(_))), "div {fmt:?}");
-            assert!(matches!(sqrt(&mut a, fmt, x, RoundingMode::NearestEven), Err(IrError::Unsupported(_))), "sqrt {fmt:?}");
-            assert!(matches!(fma(&mut a, fmt, x, y, x, RoundingMode::NearestEven), Err(IrError::Unsupported(_))), "fma {fmt:?}");
+            assert!(
+                matches!(
+                    add(&mut a, fmt, x, y, RoundingMode::NearestEven),
+                    Err(IrError::Unsupported(_))
+                ),
+                "add {fmt:?}"
+            );
+            assert!(
+                matches!(
+                    mul(&mut a, fmt, x, y, RoundingMode::NearestEven),
+                    Err(IrError::Unsupported(_))
+                ),
+                "mul {fmt:?}"
+            );
+            assert!(
+                matches!(
+                    div(&mut a, fmt, x, y, RoundingMode::NearestEven),
+                    Err(IrError::Unsupported(_))
+                ),
+                "div {fmt:?}"
+            );
+            assert!(
+                matches!(
+                    sqrt(&mut a, fmt, x, RoundingMode::NearestEven),
+                    Err(IrError::Unsupported(_))
+                ),
+                "sqrt {fmt:?}"
+            );
+            assert!(
+                matches!(
+                    fma(&mut a, fmt, x, y, x, RoundingMode::NearestEven),
+                    Err(IrError::Unsupported(_))
+                ),
+                "fma {fmt:?}"
+            );
         }
         // Validated formats still build.
-        for fmt in [FloatFormat::F16, FloatFormat::BF16, FloatFormat::F32, FloatFormat::F64, FloatFormat::F128] {
+        for fmt in [
+            FloatFormat::F16,
+            FloatFormat::BF16,
+            FloatFormat::F32,
+            FloatFormat::F64,
+            FloatFormat::F128,
+        ] {
             let w = fmt.width();
             let x = a.bv_const(w, 0).unwrap();
             let y = a.bv_const(w, 0).unwrap();
-            assert!(add(&mut a, fmt, x, y, RoundingMode::NearestEven).is_ok(), "add {fmt:?} should build");
+            assert!(
+                add(&mut a, fmt, x, y, RoundingMode::NearestEven).is_ok(),
+                "add {fmt:?} should build"
+            );
         }
     }
 
@@ -4969,7 +5472,10 @@ mod small_format_arithmetic_validation {
         // (F16/BF16/TF32/FP8, `eb ≤ 8`) fall well within this range.
         for eb in 2u32..=10 {
             for sb in 2u32..=11 {
-                let fmt = FloatFormat { exp_bits: eb, sig_bits: sb };
+                let fmt = FloatFormat {
+                    exp_bits: eb,
+                    sig_bits: sb,
+                };
                 if !fmt.is_ieee() {
                     continue; // (4,4)=FP8_E4M3 and (2,2)=FP4_E2M1 are non-IEEE
                 }
@@ -4982,15 +5488,15 @@ mod small_format_arithmetic_validation {
                 let max_fin = inf - 1;
                 let corners: [u128; 10] = [
                     0,
-                    1u128 << (total - 1),                 // -0
-                    one,                                  // 1.0
-                    one | (1u128 << (total - 1)),         // -1.0
-                    one + (1u128 << (sb - 1)),            // 2.0
-                    inf,                                  // +inf
-                    inf | (1u128 << (total - 1)),         // -inf
-                    inf | 1,                              // NaN
-                    1,                                    // smallest subnormal
-                    max_fin,                              // largest finite
+                    1u128 << (total - 1),         // -0
+                    one,                          // 1.0
+                    one | (1u128 << (total - 1)), // -1.0
+                    one + (1u128 << (sb - 1)),    // 2.0
+                    inf,                          // +inf
+                    inf | (1u128 << (total - 1)), // -inf
+                    inf | 1,                      // NaN
+                    1,                            // smallest subnormal
+                    max_fin,                      // largest finite
                 ];
                 let mask = (1u128 << total) - 1;
                 let mut inputs: Vec<u128> = corners.to_vec();
@@ -5019,8 +5525,20 @@ mod small_format_arithmetic_validation {
 
                 let set2 = |a: &TermArena, t: TermId, xb: u128, yb: u128| {
                     let mut asg = Assignment::new();
-                    asg.set(sx, Value::Bv { width: total, value: xb });
-                    asg.set(sy, Value::Bv { width: total, value: yb });
+                    asg.set(
+                        sx,
+                        Value::Bv {
+                            width: total,
+                            value: xb,
+                        },
+                    );
+                    asg.set(
+                        sy,
+                        Value::Bv {
+                            width: total,
+                            value: yb,
+                        },
+                    );
                     match eval(a, t, &asg).unwrap() {
                         Value::Bv { value, .. } => value,
                         other => panic!("{other:?}"),
@@ -5036,7 +5554,10 @@ mod small_format_arithmetic_validation {
                         let rf = xf.sqrt();
                         match expected(eb, sb, rf) {
                             Some(w) => assert_eq!(got, w, "sqrt {eb},{sb} x={xb:#x}"),
-                            None => assert!(is_nan_bits(got, eb, sb), "sqrt {eb},{sb} x={xb:#x} want NaN got {got:#x}"),
+                            None => assert!(
+                                is_nan_bits(got, eb, sb),
+                                "sqrt {eb},{sb} x={xb:#x} want NaN got {got:#x}"
+                            ),
                         }
                     }
                     // binary ops paired with another input
@@ -5050,7 +5571,10 @@ mod small_format_arithmetic_validation {
                         let got = set2(&a, t, xb, yb);
                         match expected(eb, sb, rf) {
                             Some(w) => assert_eq!(got, w, "{name} {eb},{sb} x={xb:#x} y={yb:#x}"),
-                            None => assert!(is_nan_bits(got, eb, sb), "{name} {eb},{sb} x={xb:#x} y={yb:#x} want NaN got {got:#x}"),
+                            None => assert!(
+                                is_nan_bits(got, eb, sb),
+                                "{name} {eb},{sb} x={xb:#x} y={yb:#x} want NaN got {got:#x}"
+                            ),
                         }
                     }
                 }
@@ -5068,7 +5592,11 @@ mod small_format_arithmetic_validation {
 /// It is itself validated against native `f32::mul_add` (correctly rounded,
 /// exercising the wide fused intermediate) before being trusted on small formats.
 #[cfg(test)]
-#[allow(clippy::cast_possible_truncation, clippy::many_single_char_names, clippy::similar_names)]
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::many_single_char_names,
+    clippy::similar_names
+)]
 mod fma_exact_oracle {
     use super::*;
     use axeyum_ir::{Assignment, Value, WideUint, eval};
@@ -5095,7 +5623,11 @@ mod fma_exact_oracle {
         if exp == 0 {
             return Cls::Fin(neg, frac, 1 - bias - i64::from(sb - 1));
         }
-        Cls::Fin(neg, frac | (1u128 << (sb - 1)), i64::try_from(exp).unwrap() - bias - i64::from(sb - 1))
+        Cls::Fin(
+            neg,
+            frac | (1u128 << (sb - 1)),
+            i64::try_from(exp).unwrap() - bias - i64::from(sb - 1),
+        )
     }
 
     fn inf_bits(eb: u32, sb: u32, neg: bool) -> u128 {
@@ -5120,7 +5652,9 @@ mod fma_exact_oracle {
         // The significand fits in `sb+1` bits; take the low 128 of the wide value
         // (`to_u128` rejects a >128-bit *width*, even when the value is small).
         let q: u128 = if shift >= 0 {
-            mag.shl(u32::try_from(shift).unwrap()).extract(127, 0).to_u128()
+            mag.shl(u32::try_from(shift).unwrap())
+                .extract(127, 0)
+                .to_u128()
         } else {
             let drop = u32::try_from(-shift).unwrap();
             let kept = mag.lshr(drop).extract(127, 0).to_u128();
@@ -5165,9 +5699,15 @@ mod fma_exact_oracle {
             return Some(inf_bits(eb, sb, rf.is_sign_negative()));
         }
         // All operands finite. Form the exact a·b + c with big integers.
-        let Cls::Fin(an, am, ae) = classify(ab, eb, sb) else { unreachable!("finite (rf finite)") };
-        let Cls::Fin(bn, bm, be) = classify(bb, eb, sb) else { unreachable!() };
-        let Cls::Fin(cn, cm, ce) = classify(cb, eb, sb) else { unreachable!() };
+        let Cls::Fin(an, am, ae) = classify(ab, eb, sb) else {
+            unreachable!("finite (rf finite)")
+        };
+        let Cls::Fin(bn, bm, be) = classify(bb, eb, sb) else {
+            unreachable!()
+        };
+        let Cls::Fin(cn, cm, ce) = classify(cb, eb, sb) else {
+            unreachable!()
+        };
         let pneg = an ^ bn;
         let pmant = am * bm; // ≤ 2^(2·sb), fits u128 for sb ≤ 64
         let pe = ae + be;
@@ -5211,16 +5751,34 @@ mod fma_exact_oracle {
             let got = exact_fma(f, u128::from(xb), u128::from(yb), u128::from(zb));
             let want = f32::from_bits(xb).mul_add(f32::from_bits(yb), f32::from_bits(zb));
             match got {
-                None => assert!(want.is_nan(), "oracle NaN but native {want} for {xb:#x},{yb:#x},{zb:#x}"),
+                None => assert!(
+                    want.is_nan(),
+                    "oracle NaN but native {want} for {xb:#x},{yb:#x},{zb:#x}"
+                ),
                 Some(bits) => {
-                    assert!(!want.is_nan(), "oracle {bits:#x} but native NaN for {xb:#x},{yb:#x},{zb:#x}");
-                    assert_eq!(bits, u128::from(want.to_bits()), "fma {xb:#x},{yb:#x},{zb:#x}");
+                    assert!(
+                        !want.is_nan(),
+                        "oracle {bits:#x} but native NaN for {xb:#x},{yb:#x},{zb:#x}"
+                    );
+                    assert_eq!(
+                        bits,
+                        u128::from(want.to_bits()),
+                        "fma {xb:#x},{yb:#x},{zb:#x}"
+                    );
                 }
             }
         };
         let structured: [u32; 10] = [
-            0x0000_0000, 0x8000_0000, 0x3f80_0000, 0xbf80_0000, 0x4000_0000,
-            0x7f80_0000, 0xff80_0000, 0x7fc0_0000, 0x0080_0000, 0x0000_0001,
+            0x0000_0000,
+            0x8000_0000,
+            0x3f80_0000,
+            0xbf80_0000,
+            0x4000_0000,
+            0x7f80_0000,
+            0xff80_0000,
+            0x7fc0_0000,
+            0x0080_0000,
+            0x0000_0001,
         ];
         for &x in &structured {
             for &y in &structured {
@@ -5243,7 +5801,10 @@ mod fma_exact_oracle {
         let mut state = 0x0fee_1dad_c0de_2025u64;
         for eb in 2u32..=10 {
             for sb in 2u32..=11 {
-                let fmt = FloatFormat { exp_bits: eb, sig_bits: sb };
+                let fmt = FloatFormat {
+                    exp_bits: eb,
+                    sig_bits: sb,
+                };
                 if !fmt.is_ieee() {
                     continue; // (4,4)=FP8_E4M3 and (2,2)=FP4_E2M1 are non-IEEE
                 }
@@ -5260,15 +5821,36 @@ mod fma_exact_oracle {
                     let yb = u128::from(rng(&mut state)) & mask;
                     let zb = u128::from(rng(&mut state)) & mask;
                     let mut asg = Assignment::new();
-                    asg.set(sx, Value::Bv { width: total, value: xb });
-                    asg.set(sy, Value::Bv { width: total, value: yb });
-                    asg.set(sz, Value::Bv { width: total, value: zb });
+                    asg.set(
+                        sx,
+                        Value::Bv {
+                            width: total,
+                            value: xb,
+                        },
+                    );
+                    asg.set(
+                        sy,
+                        Value::Bv {
+                            width: total,
+                            value: yb,
+                        },
+                    );
+                    asg.set(
+                        sz,
+                        Value::Bv {
+                            width: total,
+                            value: zb,
+                        },
+                    );
                     let got = match eval(&a, t, &asg).unwrap() {
                         Value::Bv { value, .. } => value,
                         other => panic!("{other:?}"),
                     };
                     match exact_fma(fmt, xb, yb, zb) {
-                        None => assert!(is_nan_bits(got, eb, sb), "fma {eb},{sb} {xb:#x},{yb:#x},{zb:#x} want NaN got {got:#x}"),
+                        None => assert!(
+                            is_nan_bits(got, eb, sb),
+                            "fma {eb},{sb} {xb:#x},{yb:#x},{zb:#x} want NaN got {got:#x}"
+                        ),
                         Some(w) => assert_eq!(got, w, "fma {eb},{sb} {xb:#x},{yb:#x},{zb:#x}"),
                     }
                 }
@@ -5285,7 +5867,13 @@ mod int_to_fp_symbolic_tests {
 
     fn eval_bits(arena: &TermArena, t: TermId, sym: axeyum_ir::SymbolId, v: u128) -> u128 {
         let mut asg = Assignment::new();
-        asg.set(sym, Value::Bv { width: 32, value: v });
+        asg.set(
+            sym,
+            Value::Bv {
+                width: 32,
+                value: v,
+            },
+        );
         match eval(arena, t, &asg).unwrap() {
             Value::Bv { value, .. } => value,
             other => panic!("{other:?}"),
@@ -5308,15 +5896,30 @@ mod int_to_fp_symbolic_tests {
             RoundingMode::TowardNegative,
         ];
         let vals: [u128; 12] = [
-            0, 1, 2, 3, 5, 255, 1 << 23, (1 << 24) + 1, (1 << 24) + 3, 0x7FFF_FFFF,
-            0xFFFF_FFFF, 0xFFFF_FF81,
+            0,
+            1,
+            2,
+            3,
+            5,
+            255,
+            1 << 23,
+            (1 << 24) + 1,
+            (1 << 24) + 3,
+            0x7FFF_FFFF,
+            0xFFFF_FFFF,
+            0xFFFF_FF81,
         ];
         for mode in modes {
-            let t = ubv_to_fp(&mut arena, FloatFormat::F32, x, mode).unwrap().unwrap();
+            let t = ubv_to_fp(&mut arena, FloatFormat::F32, x, mode)
+                .unwrap()
+                .unwrap();
             for &v in &vals {
                 let got = eval_bits(&arena, t, s, v);
                 let want = round_to_format(8, 24, v as f64, mode);
-                assert_eq!(got, want, "ubv {v} mode {mode:?}: got {got:#x} want {want:#x}");
+                assert_eq!(
+                    got, want,
+                    "ubv {v} mode {mode:?}: got {got:#x} want {want:#x}"
+                );
                 if mode == RoundingMode::NearestEven {
                     assert_eq!(got, u128::from((v as f32).to_bits()), "ubv {v} vs native");
                 }
@@ -5343,16 +5946,29 @@ mod int_to_fp_symbolic_tests {
             RoundingMode::TowardNegative,
         ];
         let vals: [u128; 10] = [
-            0, 1, 0xFFFF_FFFF, 0xFFFF_FFFE, 0x8000_0000, 0x7FFF_FFFF, 5, 0xFFFF_FF81,
-            (1 << 24) + 1, 0x8000_0001,
+            0,
+            1,
+            0xFFFF_FFFF,
+            0xFFFF_FFFE,
+            0x8000_0000,
+            0x7FFF_FFFF,
+            5,
+            0xFFFF_FF81,
+            (1 << 24) + 1,
+            0x8000_0001,
         ];
         for mode in modes {
-            let t = sbv_to_fp(&mut arena, FloatFormat::F32, y, mode).unwrap().unwrap();
+            let t = sbv_to_fp(&mut arena, FloatFormat::F32, y, mode)
+                .unwrap()
+                .unwrap();
             for &v in &vals {
                 let sv = to_signed(v);
                 let got = eval_bits(&arena, t, s, v);
                 let want = round_to_format(8, 24, sv as f64, mode);
-                assert_eq!(got, want, "sbv {sv} mode {mode:?}: got {got:#x} want {want:#x}");
+                assert_eq!(
+                    got, want,
+                    "sbv {sv} mode {mode:?}: got {got:#x} want {want:#x}"
+                );
                 if mode == RoundingMode::NearestEven {
                     assert_eq!(got, u128::from((sv as f32).to_bits()), "sbv {sv} vs native");
                 }
@@ -5362,7 +5978,11 @@ mod int_to_fp_symbolic_tests {
 }
 
 #[cfg(test)]
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::float_cmp)]
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::float_cmp
+)]
 mod fp_to_int_symbolic_tests {
     use super::*;
     use axeyum_ir::{Assignment, Value, eval};
@@ -5377,8 +5997,20 @@ mod fp_to_int_symbolic_tests {
             RoundingMode::TowardNegative,
         ];
         let vals: [f32; 14] = [
-            0.0, -0.0, 2.7, -2.7, 5.0, -5.0, 0.5, -0.5, 1.5, 127.0, -128.0, 130.0,
-            f32::NAN, f32::INFINITY,
+            0.0,
+            -0.0,
+            2.7,
+            -2.7,
+            5.0,
+            -5.0,
+            0.5,
+            -0.5,
+            1.5,
+            127.0,
+            -128.0,
+            130.0,
+            f32::NAN,
+            f32::INFINITY,
         ];
         for &width in &[8u32, 16, 32] {
             for mode in modes {
@@ -5403,8 +6035,20 @@ mod fp_to_int_symbolic_tests {
                     };
                     let fresh_val = 0xA5u128 & ((1u128 << width) - 1);
                     let mut asg = Assignment::new();
-                    asg.set(xs, Value::Bv { width: 32, value: bits });
-                    asg.set(fs, Value::Bv { width, value: fresh_val });
+                    asg.set(
+                        xs,
+                        Value::Bv {
+                            width: 32,
+                            value: bits,
+                        },
+                    );
+                    asg.set(
+                        fs,
+                        Value::Bv {
+                            width,
+                            value: fresh_val,
+                        },
+                    );
                     let got = match eval(&a, t, &asg).unwrap() {
                         Value::Bv { value, .. } => value,
                         other => panic!("{other:?}"),
@@ -5417,7 +6061,8 @@ mod fp_to_int_symbolic_tests {
                                 other => panic!("{other:?}"),
                             };
                             assert_eq!(
-                                got, w_ref,
+                                got,
+                                w_ref,
                                 "{} v={v} width={width} mode={mode:?}: got {got:#x} want {w_ref:#x}",
                                 if signed { "sbv" } else { "ubv" }
                             );
@@ -5425,7 +6070,8 @@ mod fp_to_int_symbolic_tests {
                         None => {
                             // Unspecified: must route to the fresh (unconstrained) value.
                             assert_eq!(
-                                got, fresh_val,
+                                got,
+                                fresh_val,
                                 "{} v={v} width={width} mode={mode:?}: out-of-range must be fresh",
                                 if signed { "sbv" } else { "ubv" }
                             );

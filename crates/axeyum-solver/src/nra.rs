@@ -123,7 +123,9 @@ pub fn check_with_nra(
         }
     }
 
-    branch_and_bound(arena, &base, &triples, &products, assertions, config, &bounds, 0)
+    branch_and_bound(
+        arena, &base, &triples, &products, assertions, config, &bounds, 0,
+    )
 }
 
 /// Spatial branch-and-bound over the variable box. Solves the `McCormick`
@@ -170,14 +172,25 @@ fn branch_and_bound(
                 let mut child = bounds.clone();
                 child.insert(var, (sub_lo, sub_hi));
                 match branch_and_bound(
-                    arena, base, triples, products, original, config, &child, depth + 1,
+                    arena,
+                    base,
+                    triples,
+                    products,
+                    original,
+                    config,
+                    &child,
+                    depth + 1,
                 )? {
                     CheckResult::Sat(model) => return Ok(CheckResult::Sat(model)),
                     CheckResult::Unsat => {}
                     CheckResult::Unknown(_) => any_unknown = true,
                 }
             }
-            if any_unknown { unknown() } else { Ok(CheckResult::Unsat) }
+            if any_unknown {
+                unknown()
+            } else {
+                Ok(CheckResult::Unsat)
+            }
         }
     }
 }
@@ -300,7 +313,10 @@ fn rat_mid(lo: axeyum_ir::Rational, hi: axeyum_ir::Rational) -> Option<axeyum_ir
         .numerator()
         .checked_mul(hi.denominator())?
         .checked_add(hi.numerator().checked_mul(lo.denominator())?)?;
-    let den = lo.denominator().checked_mul(hi.denominator())?.checked_mul(2)?;
+    let den = lo
+        .denominator()
+        .checked_mul(hi.denominator())?
+        .checked_mul(2)?;
     Some(axeyum_ir::Rational::new(num, den))
 }
 
@@ -560,9 +576,9 @@ fn mccormick_lemmas(
     }
     // rhs = ka·b + kb·a − const, then compare r against it (ge = `≥`, else `≤`).
     let build = |arena: &mut TermArena,
-                     ka: axeyum_ir::Rational,
-                     kb: axeyum_ir::Rational,
-                     ge: bool|
+                 ka: axeyum_ir::Rational,
+                 kb: axeyum_ir::Rational,
+                 ge: bool|
      -> Result<Option<TermId>, IrError> {
         let Some(cst) = rat_mul(ka, kb) else {
             return Ok(None); // constant term overflowed; skip this inequality
@@ -572,7 +588,11 @@ fn mccormick_lemmas(
         let sum = arena.real_add(t1, t2)?;
         let cc = arena.real_const(cst);
         let rhs = arena.real_sub(sum, cc)?;
-        let lemma = if ge { arena.real_ge(r, rhs)? } else { arena.real_le(r, rhs)? };
+        let lemma = if ge {
+            arena.real_ge(r, rhs)?
+        } else {
+            arena.real_le(r, rhs)?
+        };
         Ok(Some(lemma))
     };
 

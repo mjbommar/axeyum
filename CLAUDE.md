@@ -38,6 +38,7 @@ quantifier-free corner.
 
 ```sh
 just check          # fmt + clippy + test + doc + docs link check (preferred)
+./scripts/check.sh  # same aggregate gate without `just` (fresh-machine fallback)
 just bench-micro    # committed SMT-LIB micro corpus through axeyum-bench
 just bench-public-qfbv-sat-bv-compare  # Phase 5 public sat-bv vs Z3 slice
 just bench-public-qfbv-sat-bv-guarded  # Phase 5 node/CNF guarded run

@@ -329,7 +329,10 @@ fn wide_bit_vector_variable_shift_solves_and_replays() {
     let target = arena.bv_shl(one, onefifty).unwrap();
     let eq = arena.eq(shifted, target).unwrap();
     let model = expect_sat_checked(&arena, &[eq]);
-    assert_eq!(model.get(s), Some(Value::WideBv(axeyum_ir::WideUint::from_u128(150, 200))));
+    assert_eq!(
+        model.get(s),
+        Some(Value::WideBv(axeyum_ir::WideUint::from_u128(150, 200)))
+    );
 }
 
 #[test]

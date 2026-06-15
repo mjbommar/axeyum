@@ -24,7 +24,10 @@ fn same_product_two_values_is_unsat() {
     let e6 = a.eq(p2, six).unwrap();
 
     let r = check_with_nra(&mut a, &[e5, e6], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Unsat), "x*y=5 ∧ x*y=6 must be unsat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x*y=5 ∧ x*y=6 must be unsat, got {r:?}"
+    );
 }
 
 #[test]
@@ -43,7 +46,10 @@ fn constrained_product_is_sat_via_replay() {
     let ey = a.eq(y, three).unwrap();
 
     let r = check_with_nra(&mut a, &[e6, ex, ey], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Sat(_)), "2*3=6 must be sat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Sat(_)),
+        "2*3=6 must be sat, got {r:?}"
+    );
 }
 
 #[test]
@@ -62,7 +68,10 @@ fn refinement_decides_inconsistent_pinned_product() {
     let ey = a.eq(y, four).unwrap();
 
     let r = check_with_nra(&mut a, &[e6, ex, ey], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Unsat), "2*4=8≠6 must be unsat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "2*4=8≠6 must be unsat, got {r:?}"
+    );
 }
 
 #[test]
@@ -75,7 +84,10 @@ fn square_is_nonnegative_so_negative_square_is_unsat() {
     let zero = a.real_const(Rational::integer(0));
     let neg = a.real_lt(sq, zero).unwrap(); // x*x < 0
     let r = check_with_nra(&mut a, &[neg], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Unsat), "x*x < 0 must be unsat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x*x < 0 must be unsat, got {r:?}"
+    );
 }
 
 #[test]
@@ -90,7 +102,10 @@ fn sign_rule_decides_product_of_positives() {
     let p = a.real_mul(x, y).unwrap();
     let pneg = a.real_lt(p, zero).unwrap();
     let r = check_with_nra(&mut a, &[xpos, ypos, pneg], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Unsat), "pos*pos<0 must be unsat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "pos*pos<0 must be unsat, got {r:?}"
+    );
 }
 
 #[test]
@@ -105,7 +120,10 @@ fn zero_rule_decides() {
     let p = a.real_mul(x, y).unwrap();
     let p5 = a.eq(p, five).unwrap();
     let r = check_with_nra(&mut a, &[xz, p5], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Unsat), "x=0 ∧ x*y=5 must be unsat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x=0 ∧ x*y=5 must be unsat, got {r:?}"
+    );
 }
 
 #[test]
@@ -138,7 +156,10 @@ fn mccormick_bounds_product_above_max_is_unsat() {
     let p = a.real_mul(x, y).unwrap();
     let big = a.real_gt(p, four).unwrap();
     let r = check_with_nra(&mut a, &[xl, xu, yl, yu, big], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Unsat), "x*y>4 on [0,2]^2 must be unsat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x*y>4 on [0,2]^2 must be unsat, got {r:?}"
+    );
 }
 
 #[test]
@@ -155,7 +176,10 @@ fn mccormick_square_above_secant_is_unsat() {
     let two_x = a.real_mul(two, x).unwrap(); // linear (const * term), not abstracted
     let gt = a.real_gt(sq, two_x).unwrap();
     let r = check_with_nra(&mut a, &[xl, xu, gt], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Unsat), "x^2 > 2x on [0,2] must be unsat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x^2 > 2x on [0,2] must be unsat, got {r:?}"
+    );
 }
 
 #[test]
@@ -174,7 +198,10 @@ fn mccormick_feasible_product_is_sat() {
     let p = a.real_mul(x, y).unwrap();
     let eq4 = a.eq(p, four).unwrap();
     let r = check_with_nra(&mut a, &[xl, xu, yl, yu, eq4], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Sat(_)), "x*y=4 on [0,2]^2 must be sat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Sat(_)),
+        "x*y=4 on [0,2]^2 must be sat, got {r:?}"
+    );
 }
 
 #[test]
@@ -194,7 +221,10 @@ fn bnb_square_strict_gap_is_unsat() {
     let rhs = a.real_sub(two_x, two).unwrap(); // 2x - 2
     let lt = a.real_lt(sq, rhs).unwrap();
     let r = check_with_nra(&mut a, &[xl, xu, lt], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Unsat), "x^2 < 2x-2 on [-5,5] must be unsat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x^2 < 2x-2 on [-5,5] must be unsat, got {r:?}"
+    );
 }
 
 #[test]
@@ -213,7 +243,10 @@ fn bnb_two_variable_box_unsat() {
     let p = a.real_mul(x, y).unwrap();
     let gt = a.real_gt(p, nine).unwrap();
     let r = check_with_nra(&mut a, &[xl, xu, yl, yu, gt], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Unsat), "x*y>9 on [1,3]^2 must be unsat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x*y>9 on [1,3]^2 must be unsat, got {r:?}"
+    );
 }
 
 #[test]
@@ -231,7 +264,10 @@ fn bnb_feasible_square_stays_sat() {
     let rhs = a.real_add(two_x, two).unwrap(); // 2x + 2
     let gt = a.real_gt(sq, rhs).unwrap();
     let r = check_with_nra(&mut a, &[xl, xu, gt], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Sat(_)), "x^2 > 2x+2 on [-5,5] must be sat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Sat(_)),
+        "x^2 > 2x+2 on [-5,5] must be sat, got {r:?}"
+    );
 }
 
 #[test]
@@ -248,7 +284,10 @@ fn bnb_unbounded_square_is_unknown_not_wrong_unsat() {
     let rhs = a.real_sub(two_x, two).unwrap();
     let lt = a.real_lt(sq, rhs).unwrap();
     let r = check_with_nra(&mut a, &[lt], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Unknown(_)), "unbounded x^2<2x-2 -> unknown, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Unknown(_)),
+        "unbounded x^2<2x-2 -> unknown, got {r:?}"
+    );
 }
 
 #[test]
@@ -299,7 +338,10 @@ fn real_division_by_zero_is_unconstrained() {
     let xc = a.eq(x, five).unwrap();
     let dc = a.eq(d, hundred).unwrap();
     let r = check_with_nra(&mut a, &[yc, xc, dc], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Sat(_)), "x/0 unconstrained -> sat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Sat(_)),
+        "x/0 unconstrained -> sat, got {r:?}"
+    );
 }
 
 #[test]
@@ -315,7 +357,10 @@ fn mixed_sign_product_cannot_be_positive() {
     let p = a.real_mul(x, y).unwrap();
     let ppos = a.real_gt(p, zero).unwrap();
     let r = check_with_nra(&mut a, &[xpos, yneg, ppos], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Unsat), "pos*neg>0 must be unsat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "pos*neg>0 must be unsat, got {r:?}"
+    );
 }
 
 #[test]
@@ -330,5 +375,8 @@ fn zero_square_forces_zero_base() {
     let x_eq_zero = a.eq(x, zero).unwrap();
     let x_ne_zero = a.not(x_eq_zero).unwrap();
     let r = check_with_nra(&mut a, &[sq_zero, x_ne_zero], &SolverConfig::default()).unwrap();
-    assert!(matches!(r, CheckResult::Unsat), "x*x=0 ∧ x≠0 must be unsat, got {r:?}");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x*x=0 ∧ x≠0 must be unsat, got {r:?}"
+    );
 }

@@ -16,9 +16,7 @@ use axeyum_smtlib::{ScriptCommand, parse_script};
 
 use crate::auto::{solve, unsat_core};
 use crate::backend::{CheckResult, SolverConfig, SolverError};
-use crate::optimize::{
-    OptOutcome, maximize_bv, maximize_lia, minimize_bv, minimize_lia,
-};
+use crate::optimize::{OptOutcome, maximize_bv, maximize_lia, minimize_bv, minimize_lia};
 
 /// The result of deciding an SMT-LIB script, with the script's own declarations.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -114,7 +112,11 @@ pub fn optimize_smtlib_lexicographic(
             let pin = match script.arena.sort_of(objective) {
                 Sort::Int => script.arena.int_const(value),
                 Sort::BitVec(width) => {
-                    let mask = if width >= 128 { u128::MAX } else { (1u128 << width) - 1 };
+                    let mask = if width >= 128 {
+                        u128::MAX
+                    } else {
+                        (1u128 << width) - 1
+                    };
                     #[allow(clippy::cast_sign_loss)] // two's-complement reinterpret into the BV
                     let bits = (value as u128) & mask;
                     script
