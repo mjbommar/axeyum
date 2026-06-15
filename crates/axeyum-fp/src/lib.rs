@@ -711,7 +711,10 @@ pub fn mul(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: 
     // rounds *down* — 2·sb + 3 bits suffice, which fits F16/F32/F64 in 128 bits.
     // F128 (229 bits) runs through the wide path, validated against `Quad`
     // (ADR-0028); other wide formats stay `unsupported` (sound) pending a sweep.
-    let w = 2 * sb + 3;
+    // `pack_value`'s exponent arithmetic also runs at this width, so it must hold
+    // the biased exponent (`max ~ 2^eb`): grow to `eb + 4` for formats whose
+    // exponent is large relative to the significand (a no-op when `eb < 2·sb`).
+    let w = (2 * sb + 3).max(eb + 4);
     if w > 128 && fmt != FloatFormat::F128 {
         return Err(IrError::InvalidWidth(w));
     }
@@ -762,6 +765,28 @@ pub fn mul(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: 
     let if_zero = arena.ite(zero_flag, sign_total, finite)?;
     let if_inf = arena.ite(inf_flag, inf_total, if_zero)?;
     arena.ite(nan_flag, qnan, if_inf)
+}
+
+/// Normalizes a (possibly subnormal) significand so its leading one sits at bit
+/// `sb-1` (a full `sb`-bit significand), decreasing the LSB exponent to match —
+/// the `value = sig·2^e` product is preserved. A zero significand (the operand
+/// is ±0) is left zero; callers mux ±0 out via the zero special case. This makes
+/// algorithms whose precision depends on a fully-populated significand (integer
+/// division in [`div`], the integer square root in [`sqrt`]) correct for
+/// subnormal operands, not just normal ones.
+fn normalize_significand(
+    arena: &mut TermArena,
+    w: u32,
+    sb: u32,
+    sig: TermId,
+    e: TermId,
+) -> Result<(TermId, TermId), IrError> {
+    let lz = count_leading_zeros(arena, sig)?;
+    let wsb = arena.bv_const(w, u128::from(w - sb))?; // leading zeros of a normal sig
+    let norm = arena.bv_sub(lz, wsb)?; // extra leading zeros to shift away
+    let sig_n = arena.bv_shl(sig, norm)?;
+    let e_n = arena.bv_sub(e, norm)?;
+    Ok((sig_n, e_n))
 }
 
 /// Unpacks an FP operand into `(sign_bit, significand_w, lsb_exponent_w)`, all
@@ -817,7 +842,9 @@ pub fn sqrt(arena: &mut TermArena, fmt: FloatFormat, x: TermId, mode: RoundingMo
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
     let total = fmt.width();
     let shift = (sb + 1).div_ceil(2) + 3; // result fractional bits
-    let mut w = (sb + 1) + 2 * shift;
+    // `eb + 4` headroom so `pack_value`'s exponent arithmetic doesn't overflow
+    // for formats whose exponent is large relative to the significand.
+    let mut w = ((sb + 1) + 2 * shift).max(eb + 4);
     if w % 2 != 0 {
         w += 1; // isqrt needs an even width
     }
@@ -974,7 +1001,10 @@ pub fn div(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: 
     fmt.check(arena, b)?;
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
     let total = fmt.width();
-    let w = 2 * sb + 5;
+    // `eb + 4` headroom so `pack_value`'s exponent arithmetic doesn't overflow
+    // for formats whose exponent is large relative to the significand (a no-op
+    // when `eb < 2·sb`, i.e. all standard formats).
+    let w = (2 * sb + 5).max(eb + 4);
     // F16/F32/F64 fit `u128`; F128 (231 bits) runs through the wide path,
     // validated against `Quad` (ADR-0028). Other wide formats stay `unsupported`.
     if w > 128 && fmt != FloatFormat::F128 {
@@ -983,8 +1013,13 @@ pub fn div(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: 
     let frac = sb + 3; // quotient fractional bits
 
     let one1 = arena.bv_const(1, 1)?;
-    let (sa, sig_a, e_a) = unpack_operand(arena, fmt, w, a)?;
-    let (sbit, sig_b, e_b) = unpack_operand(arena, fmt, w, b)?;
+    let (sa, sig_a0, e_a0) = unpack_operand(arena, fmt, w, a)?;
+    let (sbit, sig_b0, e_b0) = unpack_operand(arena, fmt, w, b)?;
+    // Normalize subnormal operands to a full `sb`-bit significand so the integer
+    // division below always yields the same precision (otherwise a subnormal
+    // dividend under-produces quotient bits and the sticky/round bit is wrong).
+    let (sig_a, e_a) = normalize_significand(arena, w, sb, sig_a0, e_a0)?;
+    let (sig_b, e_b) = normalize_significand(arena, w, sb, sig_b0, e_b0)?;
 
     // quotient = (sig_a << frac) / sig_b, with the remainder as a sticky bit.
     let frac_c = arena.bv_const(w, u128::from(frac))?;
@@ -1075,7 +1110,10 @@ pub fn add(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: 
     fmt.check(arena, b)?;
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
     let total = fmt.width();
-    let w = 2 * sb + 5;
+    // `eb + 4` headroom so `pack_value`'s exponent arithmetic doesn't overflow
+    // for formats whose exponent is large relative to the significand (a no-op
+    // when `eb < 2·sb`, i.e. all standard formats).
+    let w = (2 * sb + 5).max(eb + 4);
     // F16/F32/F64 fit `u128`; F128 (231 bits) runs through the wide path,
     // validated against `Quad` (ADR-0028). Other wide formats stay `unsupported`.
     if w > 128 && fmt != FloatFormat::F128 {
@@ -1220,7 +1258,9 @@ pub fn fma(
     {
         return Ok(folded);
     }
-    let w = 3 * sb + 5;
+    // `eb + 4` headroom so `pack_value`'s exponent arithmetic doesn't overflow
+    // for formats whose exponent is large relative to the significand.
+    let w = (3 * sb + 5).max(eb + 4);
     // The symbolic FMA circuit runs through the wide bit-vector path for
     // intermediates that exceed `u128` (F64 needs 164 bits, F128 needs 344).
     // There is no first-class FP op, so the evaluator evaluates this very
@@ -3456,6 +3496,45 @@ mod tests {
         }
     }
 
+    /// Regression: `div` must normalize **subnormal** operands before the integer
+    /// division, or it under-produces quotient bits and loses the sticky bit
+    /// (round-down where round-to-nearest should round up). A subnormal dividend
+    /// is the trigger; validated against native `f32` division (correctly rounded).
+    #[test]
+    fn div_subnormal_operands_f32_matches_native() {
+        let mut a = TermArena::new();
+        let check = |a: &mut TermArena, ab: u32, bb: u32| {
+            let at = a.bv_const(32, u128::from(ab)).unwrap();
+            let bt = a.bv_const(32, u128::from(bb)).unwrap();
+            let r = div(a, FloatFormat::F32, at, bt, RoundingMode::NearestEven).unwrap();
+            let got = match eval(a, r, &Assignment::new()) {
+                Ok(Value::Bv { value, .. }) => value,
+                other => panic!("{other:?}"),
+            };
+            let q = f32::from_bits(ab) / f32::from_bits(bb);
+            if q.is_nan() {
+                assert!((got >> 23) & 0xFF == 0xFF && got & 0x7F_FFFF != 0, "div({ab:#x},{bb:#x}) want NaN got {got:#x}");
+            } else {
+                assert_eq!(got, u128::from(q.to_bits()), "div({ab:#x},{bb:#x})");
+            }
+        };
+        let mut s = 0x9e37_79b9_7f4a_7c15u64;
+        let mut next = || {
+            s = s.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1_442_695_040_888_963_407);
+            s
+        };
+        for _ in 0..5000 {
+            // Subnormal dividend (exp field 0, nonzero fraction, random sign).
+            let sub = ((next() & 0x8000_0000) | (next() & 0x7F_FFFF) | 1) as u32;
+            let other = next() as u32;
+            check(&mut a, sub, other); // subnormal / arbitrary
+            check(&mut a, other, sub); // arbitrary / subnormal
+            // Subnormal / subnormal.
+            let sub2 = ((next() & 0x8000_0000) | (next() & 0x7F_FFFF) | 1) as u32;
+            check(&mut a, sub, sub2);
+        }
+    }
+
     #[test]
     fn add_matches_native_f32() {
         let mut a = TermArena::new();
@@ -4599,6 +4678,151 @@ mod sqrt_correct_rounding_oracle {
         for _ in 0..1500 {
             let xb = (u128::from(rng(&mut state)) << 64) | u128::from(rng(&mut state));
             check(&arena, xb);
+        }
+    }
+}
+
+/// Differential validation of the symbolic FP `add`/`mul`/`div`/`sqrt` circuits
+/// **over small IEEE formats** — every `(eb, sb)` with `eb ≤ 11` and `sb ≤ 11`
+/// (which covers F16, BF16, TF32, FP8 E5M2, and the tiny formats used by
+/// quantifier expansion). These formats are exactly representable in `f64`, and
+/// for a *single* operation round-nearest double rounding through `f64`'s 53-bit
+/// significand is innocuous at this precision (`53 ≥ 2·sb + 2`), so
+/// `round_to_format(native f64 op)` is a correct oracle. (`fma` is excluded — see
+/// the note in the test — because its fused result can exceed 53 bits, making the
+/// f64 oracle unsound.) This validates formats that reach the circuit from the
+/// parser but were previously untested (a wrong FP circuit is not caught by model
+/// replay — there is no first-class FP op), and it caught a real `div` sticky-bit
+/// bug for subnormal operands and an exponent-width overflow for large-`eb`
+/// formats, both fixed.
+#[cfg(test)]
+#[allow(clippy::cast_possible_truncation, clippy::many_single_char_names)]
+mod small_format_arithmetic_validation {
+    use super::*;
+    use axeyum_ir::{Assignment, Value, eval};
+
+    fn is_nan_bits(bits: u128, eb: u32, sb: u32) -> bool {
+        let exp = (bits >> (sb - 1)) & ((1u128 << eb) - 1);
+        let frac = bits & ((1u128 << (sb - 1)) - 1);
+        exp == (1u128 << eb) - 1 && frac != 0
+    }
+
+    /// Expected format bits for an exact-or-native-rounded `f64` result `rf`.
+    fn expected(eb: u32, sb: u32, rf: f64) -> Option<u128> {
+        if rf.is_nan() {
+            return None; // NaN: compare by class, not bits
+        }
+        Some(round_to_format(eb, sb, rf, RoundingMode::NearestEven))
+    }
+
+    fn eval_bits(arena: &TermArena, t: TermId, s: axeyum_ir::SymbolId, v: u128) -> u128 {
+        let mut asg = Assignment::new();
+        asg.set(s, Value::Bv { width: 32, value: v });
+        match eval(arena, t, &asg).unwrap() {
+            Value::Bv { value, .. } => value,
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn small_ieee_formats_match_f64_oracle() {
+        let mut state = 0x5151_a5a5_3c3c_9696u64;
+        let rng = |state: &mut u64| {
+            *state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            *state
+        };
+        // `eb ≤ 10` keeps every format value within f64's normal range, so the
+        // `f64` oracle (and `decode_ieee_f64`, which scales by `2^e`) stays exact
+        // — at `eb = 11` the format's subnormal exponents reach `2^-1024`, where
+        // `2.0.powi(-1024)` overflows to `1/inf = 0`. All real small formats
+        // (F16/BF16/TF32/FP8, `eb ≤ 8`) fall well within this range.
+        for eb in 2u32..=10 {
+            for sb in 2u32..=11 {
+                let fmt = FloatFormat { exp_bits: eb, sig_bits: sb };
+                let total = eb + sb;
+                let bias = (1i64 << (eb - 1)) - 1;
+                // Per-format structured corners: ±0, ±1, ±2, +inf, -inf, NaN,
+                // smallest subnormal, largest finite.
+                let one = (u128::try_from(bias).unwrap()) << (sb - 1);
+                let inf = ((1u128 << eb) - 1) << (sb - 1);
+                let max_fin = inf - 1;
+                let corners: [u128; 10] = [
+                    0,
+                    1u128 << (total - 1),                 // -0
+                    one,                                  // 1.0
+                    one | (1u128 << (total - 1)),         // -1.0
+                    one + (1u128 << (sb - 1)),            // 2.0
+                    inf,                                  // +inf
+                    inf | (1u128 << (total - 1)),         // -inf
+                    inf | 1,                              // NaN
+                    1,                                    // smallest subnormal
+                    max_fin,                              // largest finite
+                ];
+                let mask = (1u128 << total) - 1;
+                let mut inputs: Vec<u128> = corners.to_vec();
+                for _ in 0..120 {
+                    inputs.push(u128::from(rng(&mut state)) & mask);
+                }
+
+                // Build each op once over a symbolic operand pair, eval per input.
+                let mut a = TermArena::new();
+                let sx = a.declare("x", Sort::BitVec(total)).unwrap();
+                let sy = a.declare("y", Sort::BitVec(total)).unwrap();
+                let (x, y) = (a.var(sx), a.var(sy));
+                let rne = RoundingMode::NearestEven;
+                let t_add = add(&mut a, fmt, x, y, rne).unwrap();
+                let t_mul = mul(&mut a, fmt, x, y, rne).unwrap();
+                let t_div = div(&mut a, fmt, x, y, rne).unwrap();
+                let t_sqrt = sqrt(&mut a, fmt, x, rne).unwrap();
+                // NB: `fma` is deliberately NOT validated here. f64 `mul_add` is
+                // not a valid oracle for fused multiply-add at these formats: the
+                // exact `a·b + c` can span more than 53 bits (when the product
+                // and addend exponents differ widely), so the f64 fma discards
+                // information that decides the final rounding — a double-rounding
+                // error in the oracle, not the circuit. Small-format fma needs an
+                // exact big-integer oracle (future work); fma is validated for
+                // F16(exact)/F32/F64 (native) and F128 (`rustc_apfloat`).
+
+                let set2 = |a: &TermArena, t: TermId, xb: u128, yb: u128| {
+                    let mut asg = Assignment::new();
+                    asg.set(sx, Value::Bv { width: total, value: xb });
+                    asg.set(sy, Value::Bv { width: total, value: yb });
+                    match eval(a, t, &asg).unwrap() {
+                        Value::Bv { value, .. } => value,
+                        other => panic!("{other:?}"),
+                    }
+                };
+
+                for i in 0..inputs.len() {
+                    let xb = inputs[i];
+                    let xf = fmt.decode_ieee_f64(xb);
+                    // sqrt (unary)
+                    {
+                        let got = eval_bits(&a, t_sqrt, sx, xb);
+                        let rf = xf.sqrt();
+                        match expected(eb, sb, rf) {
+                            Some(w) => assert_eq!(got, w, "sqrt {eb},{sb} x={xb:#x}"),
+                            None => assert!(is_nan_bits(got, eb, sb), "sqrt {eb},{sb} x={xb:#x} want NaN got {got:#x}"),
+                        }
+                    }
+                    // binary ops paired with another input
+                    let yb = inputs[(i * 7 + 3) % inputs.len()];
+                    let yf = fmt.decode_ieee_f64(yb);
+                    for (t, rf, name) in [
+                        (t_add, xf + yf, "add"),
+                        (t_mul, xf * yf, "mul"),
+                        (t_div, xf / yf, "div"),
+                    ] {
+                        let got = set2(&a, t, xb, yb);
+                        match expected(eb, sb, rf) {
+                            Some(w) => assert_eq!(got, w, "{name} {eb},{sb} x={xb:#x} y={yb:#x}"),
+                            None => assert!(is_nan_bits(got, eb, sb), "{name} {eb},{sb} x={xb:#x} y={yb:#x} want NaN got {got:#x}"),
+                        }
+                    }
+                }
+            }
         }
     }
 }

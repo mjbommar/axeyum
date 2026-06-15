@@ -38,6 +38,30 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-14
 
+- **Small-format FP validation caught and fixed a real `div` soundness bug
+  (2026-06-14).** Added a differential sweep of `add`/`mul`/`div`/`sqrt` over all
+  small IEEE formats `(eb ≤ 10, sb ≤ 11)` — covering F16/BF16/TF32/FP8 and the
+  tiny quantifier formats — against an `f64` + `round_to_format` oracle (a single
+  op double-rounds innocuously at `sb ≤ 11`). These formats reach the circuits
+  from the parser but were previously *unvalidated* (a wrong FP circuit isn't
+  caught by replay — there is no first-class FP op). The sweep exposed **two real
+  bugs, both fixed:** (1) **`div` lost the sticky bit for subnormal operands** —
+  it divided by a fixed quotient-bit count assuming a normalized dividend, so a
+  subnormal under-produced precision and rounded down where round-to-nearest
+  should round up. This was latent at **F32/F64 too** (their tests never hit a
+  boundary subnormal); fixed by normalizing operands before division (new
+  `normalize_significand`, mirroring `sqrt`), with an F32 subnormal-div
+  regression test vs native (15 000 cases). (2) **exponent-width overflow** for
+  formats with large `eb` relative to `sb` — `pack_value`'s exponent arithmetic
+  runs at the significand-sized working width, which overflowed; fixed by growing
+  `w` to `max(sig_need, eb + 4)` in mul/add/div/fma/sqrt (a no-op for all
+  standard formats). **Residual FP validation gaps:** small-format **`fma`** (f64
+  is not a sound oracle for the fused result — double-rounding when the product
+  and addend exponents differ widely — needs an exact big-integer oracle);
+  `eb = 11` exotic formats (f64 oracle range-limited; `decode_ieee_f64` itself
+  under-scales there); and a per-op *format-support gate* so `enabled ⟹ validated`
+  for arbitrary parser formats.
+
 - **F128 arithmetic enabled + validated against an independent oracle (ADR-0028,
   2026-06-14, wide-BV step 6).** Added `rustc_apfloat` (LLVM APFloat port, pure
   Rust) as a **dev-dependency** of `axeyum-fp` — a correctly-rounded IEEE oracle
