@@ -46,7 +46,52 @@ use crate::sat_bv_backend::SatBvBackend;
 /// Version of the executable semantics (the `axeyum-ir` ground evaluator) the
 /// evidence was produced and is checkable against. Bump when evaluator
 /// semantics change so older evidence is not silently re-interpreted (ADR-0005).
+///
+/// This is the **trusted checker's** version — distinct from the untrusted
+/// search-pipeline layer versions in [`LayerVersions`].
 pub const SEMANTICS_VERSION: &str = "1";
+
+/// Versions of the **untrusted search-pipeline** layers, recorded in
+/// [`Provenance`] so a replay failure can be localized to whichever layer
+/// changed rather than being mysterious (architecture review #8; ADR-0005). The
+/// trusted checker's version is [`Provenance::semantics_version`] separately —
+/// these layers produce the result; the evaluator checks it.
+///
+/// Bump a field when that layer's *observable* behavior changes (a new rewrite
+/// rule, a different bit encoding, a changed CNF scheme, a swapped SAT adapter,
+/// an FP-circuit change, a parser grammar change, or a different lift-map
+/// convention). Centralized here for one place to bump; a future refinement can
+/// source each from its own crate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LayerVersions {
+    /// `axeyum-rewrite` ruleset / canonicalizer version.
+    pub rewrite: &'static str,
+    /// `axeyum-bv` term→AIG bit-blaster version.
+    pub bitblaster: &'static str,
+    /// `axeyum-cnf` Tseitin/DIMACS encoder version.
+    pub cnf: &'static str,
+    /// SAT adapter identity/behavior version (e.g. `rustsat-batsat`).
+    pub sat_adapter: &'static str,
+    /// `axeyum-fp` floating-point circuit semantics version.
+    pub fp_semantics: &'static str,
+    /// `axeyum-smtlib` front-end (parser/writer) version.
+    pub parser: &'static str,
+    /// Model lift-map / replay-map convention version.
+    pub lift_map: &'static str,
+}
+
+impl LayerVersions {
+    /// The versions of the layers as currently built.
+    pub const CURRENT: LayerVersions = LayerVersions {
+        rewrite: "1",
+        bitblaster: "1",
+        cnf: "1",
+        sat_adapter: "rustsat-batsat",
+        fp_semantics: "1",
+        parser: "1",
+        lift_map: "1",
+    };
+}
 
 /// Combined-symbol-width budget for attaching a reduction-free term-level `unsat`
 /// certificate (2^20 = ~1M enumerated assignments). Above this the DRAT clausal
@@ -59,8 +104,11 @@ const TERM_LEVEL_CERT_BITS: u32 = 20;
 /// because it changes which queries return `unknown`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Provenance {
-    /// Executable-semantics version ([`SEMANTICS_VERSION`]).
+    /// Executable-semantics version ([`SEMANTICS_VERSION`]) — the trusted checker.
     pub semantics_version: &'static str,
+    /// Versions of the untrusted search-pipeline layers (review #8), so a replay
+    /// failure localizes to the layer that changed.
+    pub layers: LayerVersions,
     /// The deciding backend's capability name (encoder + SAT adapter identity).
     pub backend: String,
     /// Number of asserted formulas decided.
@@ -83,6 +131,7 @@ impl Provenance {
     fn for_query(config: &SolverConfig, backend: String, assertion_count: usize) -> Self {
         Self {
             semantics_version: SEMANTICS_VERSION,
+            layers: LayerVersions::CURRENT,
             backend,
             assertion_count,
             timeout: config.timeout,
@@ -293,6 +342,7 @@ pub fn produce_lra_evidence(
 ) -> Result<EvidenceReport, SolverError> {
     let provenance = Provenance {
         semantics_version: SEMANTICS_VERSION,
+        layers: LayerVersions::CURRENT,
         backend: "lra-fourier-motzkin-farkas".to_owned(),
         assertion_count: assertions.len(),
         timeout: None,
@@ -337,6 +387,7 @@ pub fn produce_lra_dpll_evidence(
 ) -> Result<EvidenceReport, SolverError> {
     let provenance = Provenance {
         semantics_version: SEMANTICS_VERSION,
+        layers: LayerVersions::CURRENT,
         backend: "lra-dpll-farkas-enumeration".to_owned(),
         assertion_count: assertions.len(),
         timeout: config.timeout,
@@ -400,6 +451,7 @@ pub fn produce_evidence(
     // `unsat`.
     let provenance = Provenance {
         semantics_version: SEMANTICS_VERSION,
+        layers: LayerVersions::CURRENT,
         backend: "auto-solve".to_owned(),
         assertion_count: assertions.len(),
         timeout: config.timeout,
@@ -426,7 +478,9 @@ pub enum ProofOutcome {
     /// The goal follows from the hypotheses. The [`EvidenceReport`] is the
     /// refutation of `hypotheses ∧ ¬goal`; for a certified theory it has already
     /// been re-checked, so `Proved` means an independently verified proof.
-    Proved(EvidenceReport),
+    /// Boxed because the report (model/proof + provenance) is much larger than
+    /// the other variants.
+    Proved(Box<EvidenceReport>),
     /// The goal does **not** follow: `countermodel` satisfies the hypotheses
     /// while falsifying the goal (it is replay-checked against `hypotheses ∧
     /// ¬goal`).
@@ -476,7 +530,7 @@ pub fn prove(
                     "prove: refutation of the negated goal failed its own check".to_owned(),
                 ));
             }
-            Ok(ProofOutcome::Proved(report))
+            Ok(ProofOutcome::Proved(Box::new(report)))
         }
     }
 }

@@ -28,6 +28,11 @@ fn sat_evidence_carries_a_replayable_model() {
     // Provenance is recorded for reproducibility.
     assert_eq!(report.provenance.semantics_version, "1");
     assert_eq!(report.provenance.assertion_count, 1);
+    // Per-layer provenance is snapshotted so a replay failure localizes (#8).
+    let layers = report.provenance.layers;
+    assert_eq!(layers, axeyum_solver::LayerVersions::CURRENT);
+    assert_eq!(layers.sat_adapter, "rustsat-batsat");
+    assert!(!layers.bitblaster.is_empty() && !layers.cnf.is_empty());
     // The evidence re-validates against the original query, independently.
     assert!(report.evidence.check(&arena, &[eq]).unwrap());
 }
