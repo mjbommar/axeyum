@@ -1436,6 +1436,14 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
             need(1)?;
             arena.not(args[0])?
         }
+        // `str.len` over a packed bounded string (ADR-0029): the length field as
+        // an `Int`, so it composes with the existing integer arithmetic
+        // (`(>= (str.len s) 3)`, `(= (str.len s) 0)`, …).
+        "str.len" => {
+            need(1)?;
+            let len = arena.extract(STRING_LEN_WIDTH - 1, 0, args[0])?;
+            arena.bv2nat(len)?
+        }
         "and" => fold(arena, TermArena::and)?,
         "or" => fold(arena, TermArena::or)?,
         "xor" => fold(arena, TermArena::xor)?,

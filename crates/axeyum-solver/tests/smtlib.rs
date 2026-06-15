@@ -700,3 +700,51 @@ fn decides_string_disequality_sat() {
         outcome.result
     );
 }
+
+/// `str.len` returns an Int (via `bv2nat`) composing with integer arithmetic
+/// (ADR-0029). The SAT direction decides — useful for generating strings with
+/// length properties. The conflicting direction may return `Unknown`: a bounded
+/// integer-blast can't soundly conclude `unsat` (ADR-0014) and the simplex path
+/// doesn't see the string BV constraints — a known BV+LIA combination gap.
+/// `Unknown` is sound; what matters is it is never a wrong `sat`.
+#[test]
+fn str_len_sat_direction_decides() {
+    let sat = run("\
+(declare-const s String)
+(assert (= (str.len s) 2))
+(check-sat)
+");
+    assert!(
+        matches!(sat.result, CheckResult::Sat(_)),
+        "a length-2 string exists, got {:?}",
+        sat.result
+    );
+
+    let sat2 = run("\
+(declare-const s String)
+(assert (= s \"ab\"))
+(assert (= (str.len s) 2))
+(check-sat)
+");
+    assert!(
+        matches!(sat2.result, CheckResult::Sat(_)),
+        "s==\"ab\" with len 2 must be sat, got {:?}",
+        sat2.result
+    );
+
+    // Conflicting length: decided soundly — Unsat or (soundly) Unknown, never sat.
+    let conflict = run("\
+(declare-const s String)
+(assert (= s \"ab\"))
+(assert (= (str.len s) 3))
+(check-sat)
+");
+    assert!(
+        matches!(
+            conflict.result,
+            CheckResult::Unsat | CheckResult::Unknown(_)
+        ),
+        "len(\"ab\")==3 must not be wrongly sat, got {:?}",
+        conflict.result
+    );
+}
