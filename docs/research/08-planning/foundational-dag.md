@@ -282,6 +282,13 @@ structure. Entering a new rung requires an ADR with:
 
 ## Support Matrix
 
+> **Authoritative assurance/evidence per capability lives in the golden-tested
+> [capability matrix](capability-matrix.md)**, generated from
+> `axeyum_solver::capabilities::CAPABILITIES` (a test fails if the doc drifts).
+> The table below is a coarser *planning checklist* (IR / evaluator / SMT-LIB /
+> oracle / pure-Rust / evidence per fragment), maintained by hand — prefer the
+> capability matrix when the two disagree, and migrate stale rows here over time.
+
 Use this table as the planning checklist before declaring a fragment public.
 
 | Fragment | IR | Evaluator | SMT-LIB | Oracle | Pure Rust | Evidence |

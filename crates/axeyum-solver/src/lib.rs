@@ -19,6 +19,7 @@ mod aufbv;
 mod auto;
 mod backend;
 mod bitblast_miter;
+pub mod capabilities;
 mod cardinality;
 mod certify;
 mod combined;
