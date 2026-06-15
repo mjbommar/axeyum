@@ -202,8 +202,9 @@ pub const CAPABILITIES: &[Capability] = &[
     Capability {
         area: "symbolic execution",
         feature: "DFS path explorer (SymbolicExecutor): assume / branch fork query / \
-                  enter+backtrack / concrete test-input model / optimize objective over the \
-                  path condition (min/max, unsigned/signed BV + LIA)",
+                  enter+backtrack / concrete test-input model / distinct test-suite enumeration \
+                  (all-SAT) / optimize objective over the path condition (min/max, unsigned/signed \
+                  BV + LIA)",
         assurance: Assurance::Validated,
         evidence: "models replay-checked vs path condition; optimum certified by the underlying \
                    procedure; three-valued PathStatus keeps unknown from wrongly pruning a live path",

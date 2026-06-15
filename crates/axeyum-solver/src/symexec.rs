@@ -26,7 +26,7 @@
 //! `unknown` (a resource limit) is a first-class [`PathStatus`], never silently
 //! treated as infeasible (which would wrongly prune a live path).
 
-use axeyum_ir::{TermArena, TermId};
+use axeyum_ir::{SymbolId, TermArena, TermId};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownReason};
 use crate::incremental::IncrementalBvSolver;
@@ -211,6 +211,43 @@ impl SymbolicExecutor {
             CheckResult::Sat(model) => Ok(Some(model)),
             CheckResult::Unsat | CheckResult::Unknown(_) => Ok(None),
         }
+    }
+
+    /// Enumerates up to `limit` **distinct** concrete inputs (over `symbols`)
+    /// that all drive the current path — a test suite for this path. Each input
+    /// is a replay-checked [`Model`] and differs from every other on at least one
+    /// listed symbol (all-SAT by blocking clauses).
+    ///
+    /// The enumeration runs in a temporary scope, so the blocking clauses are
+    /// discarded afterwards and the path condition is left exactly as it was —
+    /// the executor can keep exploring or optimizing. Fewer than `limit` results
+    /// means the path admits only that many distinct assignments over `symbols`
+    /// (or the solver returned `unknown`/`unsat` first — a short list is never a
+    /// wrong claim of exhaustiveness, just what was found).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] from the underlying scope, solve, or block step.
+    pub fn enumerate_inputs(
+        &mut self,
+        arena: &mut TermArena,
+        symbols: &[SymbolId],
+        limit: usize,
+    ) -> Result<Vec<Model>, SolverError> {
+        let mut inputs = Vec::new();
+        // Isolate the blocking clauses so the path condition survives the call.
+        self.solver.push()?;
+        while inputs.len() < limit {
+            match self.solver.check(arena)? {
+                CheckResult::Sat(model) => {
+                    self.solver.block_model(arena, &model, symbols)?;
+                    inputs.push(model);
+                }
+                CheckResult::Unsat | CheckResult::Unknown(_) => break,
+            }
+        }
+        self.solver.pop();
+        Ok(inputs)
     }
 
     /// Maximizes the **unsigned** bit-vector `objective` subject to the current
@@ -432,6 +469,57 @@ mod tests {
             se.maximize(&mut arena, xv).unwrap(),
             crate::OptOutcome::Optimal(254),
             "largest even 8-bit input"
+        );
+    }
+
+    #[test]
+    fn enumerate_inputs_generates_a_distinct_test_suite() {
+        // Path: x is even. Generate three distinct even test inputs, then confirm
+        // the path condition is intact and still optimizable afterwards.
+        let mut arena = TermArena::new();
+        let xv = x(&mut arena);
+        let one = arena.bv_const(8, 1).unwrap();
+        let zero = arena.bv_const(8, 0).unwrap();
+        let lsb = arena.bv_and(xv, one).unwrap();
+        let is_even = arena.eq(lsb, zero).unwrap();
+        let x_sym = arena.find_symbol("x").unwrap();
+
+        let mut se = SymbolicExecutor::new();
+        assert!(se.assume(&arena, is_even).unwrap().is_feasible());
+
+        let suite = se.enumerate_inputs(&mut arena, &[x_sym], 3).unwrap();
+        assert_eq!(
+            suite.len(),
+            3,
+            "three distinct inputs requested and available"
+        );
+
+        let mut values = Vec::new();
+        for model in &suite {
+            let assignment = model.to_assignment();
+            // Every generated input genuinely drives the path (x even)...
+            assert_eq!(
+                eval(&arena, is_even, &assignment).unwrap(),
+                Value::Bool(true)
+            );
+            let Value::Bv { value, .. } = model.get(x_sym).unwrap() else {
+                panic!("x is a bit-vector");
+            };
+            values.push(value);
+        }
+        values.sort_unstable();
+        values.dedup();
+        assert_eq!(
+            values.len(),
+            3,
+            "...and the three inputs are pairwise distinct"
+        );
+
+        // The temporary blocking clauses were discarded: the path still optimizes.
+        assert_eq!(
+            se.minimize(&mut arena, xv).unwrap(),
+            crate::OptOutcome::Optimal(0),
+            "path condition intact after enumeration (smallest even is 0)"
         );
     }
 }
