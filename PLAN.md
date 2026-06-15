@@ -191,10 +191,16 @@ clausal proof closes the trusted base.
 - [x] **B1 — DRAT across the BV-reducible core, through `prove`/`produce_evidence`**
         (+ Farkas for LRA, term-level for small QF_BV, model replay; capability
         ledger + per-layer provenance). Done this session.
-- [ ] **B2 — Reduction certificates (the critical lever).** Emit, per reduction
+- [~] **B2 — Reduction certificates (the critical lever).** Emit, per reduction
         (bit-blast term→AIG→CNF, Ackermann for UF, read-over-write for arrays,
         datatype/int elimination, FP circuit lowering), a certificate that the
         step preserves (equi)satisfiability, independently checkable.
+        *First reduction certified*: bit-blast term→AIG→CNF via an exhaustive
+        faithfulness miter vs an independent reference (`certify_qf_bv_unsat_end_to_end`,
+        `EndToEndUnsatOutcome::recheck` — closes the term→CNF gap modulo the
+        independent reference). All exported certificates now self-recheck
+        (`UnsatProof::recheck`). Remaining reductions: Ackermann, read-over-write,
+        datatype/int elimination, FP lowering.
   - **Exit:** a checker validates *reduction certs + DRAT* end-to-end; the
         trusted base shrinks to {ground evaluator, clausal/Farkas kernel}.
 - [ ] **B3 — Unified proof format + independent kernel.** Combine clausal

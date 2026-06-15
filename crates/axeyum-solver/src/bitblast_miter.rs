@@ -162,6 +162,42 @@ pub enum EndToEndUnsatOutcome {
     NotCertified,
 }
 
+impl EndToEndUnsatOutcome {
+    /// Independently re-validates a [`Certified`](EndToEndUnsatOutcome::Certified)
+    /// end-to-end certificate **from its text alone**: both the bit-blast-
+    /// faithfulness miter refutation and the CNF-`unsat` refutation must re-derive
+    /// the empty clause (RUP+RAT) under [`UnsatProof::recheck`].
+    ///
+    /// Returns `Ok(true)` only for a `Certified` outcome whose *both* DRAT proofs
+    /// re-check; `Ok(false)` for [`Satisfiable`](EndToEndUnsatOutcome::Satisfiable)
+    /// / [`NotCertified`](EndToEndUnsatOutcome::NotCertified) (no term-level
+    /// certificate to validate). The consumer-side counterpart to the
+    /// producer-side self-check, completing the self-rechecking certificate family
+    /// ([`UnsatProof::recheck`], [`crate::SafetyCertificate::recheck`],
+    /// [`crate::FarkasCertificate::verify`]).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Backend`] if either stored certificate is
+    /// unparseable.
+    pub fn recheck(&self) -> Result<bool, SolverError> {
+        match self {
+            EndToEndUnsatOutcome::Certified {
+                faithfulness_dimacs,
+                faithfulness_drat,
+                unsat,
+            } => {
+                let faithfulness = UnsatProof {
+                    dimacs: faithfulness_dimacs.clone(),
+                    drat: faithfulness_drat.clone(),
+                };
+                Ok(faithfulness.recheck()? && unsat.recheck()?)
+            }
+            EndToEndUnsatOutcome::Satisfiable | EndToEndUnsatOutcome::NotCertified => Ok(false),
+        }
+    }
+}
+
 /// Produces an end-to-end `QF_BV` `unsat` certificate by composing the
 /// bit-blast-faithfulness miter ([`certify_bitblast_by_miter`]) with the
 /// CNF-`unsat` DRAT proof ([`export_qf_bv_unsat_proof`]).
@@ -695,6 +731,47 @@ fn zip_map(
         return None;
     }
     Some(a.iter().zip(b).map(|(&x, &y)| combine(x, y)).collect())
+}
+
+#[cfg(test)]
+mod end_to_end_recheck {
+    use super::{EndToEndUnsatOutcome, certify_qf_bv_unsat_end_to_end};
+    use axeyum_ir::TermArena;
+
+    #[test]
+    fn certified_end_to_end_unsat_rechecks_independently() {
+        // x = 0 ∧ x = 1 over BV4 is unsatisfiable.
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 4).unwrap();
+        let zero = arena.bv_const(4, 0).unwrap();
+        let one = arena.bv_const(4, 1).unwrap();
+        let a = arena.eq(x, zero).unwrap();
+        let b = arena.eq(x, one).unwrap();
+
+        let outcome = certify_qf_bv_unsat_end_to_end(&arena, &[a, b]).unwrap();
+        assert!(
+            matches!(outcome, EndToEndUnsatOutcome::Certified { .. }),
+            "x=0 ∧ x=1 must certify end to end, got {outcome:?}"
+        );
+        // Both the faithfulness miter and the CNF-unsat proof re-check from text.
+        assert!(
+            outcome.recheck().unwrap(),
+            "the end-to-end certificate must re-validate independently"
+        );
+    }
+
+    #[test]
+    fn satisfiable_query_is_not_a_certified_unsat() {
+        // x = 0 is satisfiable; there is no end-to-end unsat certificate.
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 4).unwrap();
+        let zero = arena.bv_const(4, 0).unwrap();
+        let a = arena.eq(x, zero).unwrap();
+
+        let outcome = certify_qf_bv_unsat_end_to_end(&arena, &[a]).unwrap();
+        assert!(matches!(outcome, EndToEndUnsatOutcome::Satisfiable));
+        assert!(!outcome.recheck().unwrap(), "sat is not a certified unsat");
+    }
 }
 
 #[cfg(test)]

@@ -9,7 +9,8 @@ Assurance levels: **checked** (independent certificate — Farkas/DRAT/replayed 
 | Area | Capability | Assurance | Evidence | Ref |
 |---|---|---|---|---|
 | QF_BV | bit-vectors → AIG → SAT (full scalar operator set) | validated | model replay vs ground evaluator; differential vs Z3 | ADR-0006/0007 |
-| QF_BV | UNSAT with a DRAT proof (proof-producing CDCL + in-tree checker) | checked | DRAT proof checked by check_drat (RUP+RAT) | ADR-0011/0012 |
+| QF_BV | UNSAT with a DRAT proof (proof-producing CDCL + in-tree checker) | checked | DRAT proof checked by check_drat (RUP+RAT); UnsatProof::recheck re-validates from text alone | ADR-0011/0012 |
+| QF_BV | end-to-end certified UNSAT (certify_qf_bv_unsat_end_to_end): bit-blasting certified faithful vs an independent reference + CNF-UNSAT DRAT | checked | faithfulness miter (exhaustive, DRAT) closes the term→CNF gap modulo an independent reference bit-blaster; EndToEndUnsatOutcome::recheck re-validates both | ADR-0011/0012 |
 | QF_BV | arbitrary width up to 2^16 (wide bit-vectors) | validated | WideUint vs u128/i128; model replay | ADR-0006 |
 | QF_ABV | arrays via eager read-over-write + Ackermann elimination | validated | reduction to QF_BV; model replay; UNSAT exportable as a re-checkable DRAT certificate (clausal layer, modulo trusted elimination) | ADR-0010 |
 | QF_UF | uninterpreted functions via Ackermann reduction | validated | reduction; model replay; UNSAT exportable as a re-checkable DRAT certificate (clausal layer, modulo trusted reduction) | ADR-0013 |

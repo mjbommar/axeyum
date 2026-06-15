@@ -90,7 +90,17 @@ pub const CAPABILITIES: &[Capability] = &[
         area: "QF_BV",
         feature: "UNSAT with a DRAT proof (proof-producing CDCL + in-tree checker)",
         assurance: Assurance::Checked,
-        evidence: "DRAT proof checked by check_drat (RUP+RAT)",
+        evidence: "DRAT proof checked by check_drat (RUP+RAT); UnsatProof::recheck re-validates \
+                   from text alone",
+        reference: "ADR-0011/0012",
+    },
+    Capability {
+        area: "QF_BV",
+        feature: "end-to-end certified UNSAT (certify_qf_bv_unsat_end_to_end): bit-blasting \
+                  certified faithful vs an independent reference + CNF-UNSAT DRAT",
+        assurance: Assurance::Checked,
+        evidence: "faithfulness miter (exhaustive, DRAT) closes the term→CNF gap modulo an \
+                   independent reference bit-blaster; EndToEndUnsatOutcome::recheck re-validates both",
         reference: "ADR-0011/0012",
     },
     Capability {
