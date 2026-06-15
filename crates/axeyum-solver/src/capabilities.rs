@@ -185,6 +185,14 @@ pub const CAPABILITIES: &[Capability] = &[
         evidence: "model replay; SAT final-conflict core (a sound inconsistent subset)",
         reference: "ADR-0009",
     },
+    Capability {
+        area: "incremental",
+        feature: "symbolic memory: select/store via check_with_memory (eager elimination; \
+                  warm lazy arrays = ADR-0030 future work)",
+        assurance: Assurance::Validated,
+        evidence: "eager array elimination (ADR-0010) + model replay; warm path refuses arrays",
+        reference: "ADR-0010/0030",
+    },
 ];
 
 /// Renders [`CAPABILITIES`] as the canonical capability-matrix markdown table.

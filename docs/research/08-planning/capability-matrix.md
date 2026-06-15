@@ -23,3 +23,4 @@ Assurance levels: **checked** (independent certificate — Farkas/DRAT/replayed 
 | QF_S (strings) | bounded-length strings + regex (BV-lowered) — API only, not SMT-LIB-wired | experimental | model replay through BV path; length bound explicit (≤16) | ADR-0025/0029 |
 | optimization | MaxSAT / OMT / MILP (branch-and-bound over the arithmetic cores) | experimental | optimum certified by the underlying decision procedure per step | ADR-0027 |
 | incremental | warm push/pop/assume QF_BV; assumption-core path pruning; all-SAT reachable-state enumeration (symbolic execution / reachability) | validated | model replay; SAT final-conflict core (a sound inconsistent subset) | ADR-0009 |
+| incremental | symbolic memory: select/store via check_with_memory (eager elimination; warm lazy arrays = ADR-0030 future work) | validated | eager array elimination (ADR-0010) + model replay; warm path refuses arrays | ADR-0010/0030 |

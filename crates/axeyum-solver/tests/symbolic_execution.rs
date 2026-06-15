@@ -515,3 +515,102 @@ fn all_sat_enumerates_reachable_states() {
         "the reachable set must be exactly {{2,3,4,5}}"
     );
 }
+
+// --- symbolic memory (arrays) through the incremental engine (ADR-0030 slice) --
+
+/// Read-over-write soundness through `check_with_memory`: at the same index, a
+/// load after a store returns the stored value, so demanding otherwise is unsat.
+/// This is the memory primitive symbolic execution needs.
+#[test]
+fn symbolic_memory_read_over_write_is_unsat_when_violated() {
+    let mut arena = TermArena::new();
+    let mem = arena
+        .declare(
+            "mem",
+            Sort::Array {
+                index: 8,
+                element: 8,
+            },
+        )
+        .unwrap();
+    let mem_v = arena.var(mem);
+    let is = arena.declare("i", Sort::BitVec(8)).unwrap();
+    let js = arena.declare("j", Sort::BitVec(8)).unwrap();
+    let vs = arena.declare("v", Sort::BitVec(8)).unwrap();
+    let (i, j, v) = (arena.var(is), arena.var(js), arena.var(vs));
+
+    let stored = arena.store(mem_v, i, v).unwrap();
+    let loaded = arena.select(stored, j).unwrap();
+    let i_eq_j = arena.eq(i, j).unwrap();
+    let load_ne_v = {
+        let eq = arena.eq(loaded, v).unwrap();
+        arena.not(eq).unwrap()
+    };
+
+    let mut solver = IncrementalBvSolver::new();
+    solver.assert(&arena, i_eq_j).unwrap();
+    solver.assert(&arena, load_ne_v).unwrap();
+
+    // The warm path refuses array assertions rather than ignore them.
+    assert!(
+        solver.check(&arena).is_err(),
+        "warm check must refuse active array assertions"
+    );
+    // The memory-aware path decides it: unsat.
+    assert!(
+        matches!(
+            solver.check_with_memory(&mut arena).unwrap(),
+            CheckResult::Unsat
+        ),
+        "select(store(mem,i,v),j) == v when i==j, so the inequality is unsat"
+    );
+}
+
+/// Symbolic memory is sat-feasible and the model replays: find `v` such that
+/// loading the just-stored cell yields a target, with `push`/`pop` scoping.
+#[test]
+fn symbolic_memory_reachability_is_sat_and_scoped() {
+    let mut arena = TermArena::new();
+    let mem = arena
+        .declare(
+            "m",
+            Sort::Array {
+                index: 8,
+                element: 8,
+            },
+        )
+        .unwrap();
+    let mem_v = arena.var(mem);
+    let is = arena.declare("ix", Sort::BitVec(8)).unwrap();
+    let vs = arena.declare("val", Sort::BitVec(8)).unwrap();
+    let (i, v) = (arena.var(is), arena.var(vs));
+
+    let stored = arena.store(mem_v, i, v).unwrap();
+    let loaded = arena.select(stored, i).unwrap(); // read same index back
+    let target = arena.bv_const(8, 42).unwrap();
+    let goal = arena.eq(loaded, target).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver.push().unwrap();
+    solver.assert(&arena, goal).unwrap();
+    // mem[i] := v then read i back == 42 forces v == 42 -> sat.
+    match solver.check_with_memory(&mut arena).unwrap() {
+        CheckResult::Sat(model) => {
+            assert_eq!(
+                model.get(vs),
+                Some(Value::Bv {
+                    width: 8,
+                    value: 42
+                }),
+                "the stored value must be 42"
+            );
+        }
+        other => panic!("expected sat, got {other:?}"),
+    }
+    // Popping the scope retracts the array assertion; the empty solver is sat.
+    solver.pop();
+    assert!(matches!(
+        solver.check_with_memory(&mut arena).unwrap(),
+        CheckResult::Sat(_)
+    ));
+}

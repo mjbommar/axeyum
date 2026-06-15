@@ -1,6 +1,6 @@
 # ADR-0030: Incremental (lazy) arrays for symbolic memory
 
-Status: proposed
+Status: accepted (eager-route first slice implemented 2026-06-14; warm lazy deferred)
 Date: 2026-06-14
 
 ## Context
@@ -77,6 +77,24 @@ one-shot QF_ABV.
   classes, à la a dedicated theory solver). The complete approach; deferred as
   much larger — the lazy-axiom slice lands the symbolic-memory use case first,
   exactly as eager elimination preceded any fuller array procedure.
+
+## Implementation status
+
+Landed 2026-06-14, a sound first slice (correctness before warm performance):
+`IncrementalBvSolver` now **accepts** `select`/`store` assertions (deferred, not
+bit-blasted) and decides them with `check_with_memory`, which re-solves all
+active assertions one-shot via the validated eager elimination (read-over-write
++ Ackermann, ADR-0010) over the pure-Rust BV backend, with the usual `sat`
+model-replay against the original `select`/`store` terms. The warm `check`
+*refuses* active array assertions (sound — never silently ignores them) and
+directs callers to `check_with_memory`. `push`/`pop` scope array assertions like
+any other. Tested: read-over-write unsat-when-violated, a sat reachability query
+with model replay, and the warm-path refusal.
+
+**Still deferred (the warm path):** discharging the array axioms lazily as
+selector-scoped lemmas over the warm CNF (reusing learned clauses across path
+steps) per the decision above. The eager route makes symbolic memory *usable*
+now; the lazy route makes it *fast* incrementally.
 
 ## Consequences
 

@@ -18,11 +18,34 @@
 use axeyum_bv::{BitLowerError, IncrementalLowering, first_unsupported_op};
 use axeyum_cnf::{CnfVar, IncrementalCnf, SatError, SatResult};
 use axeyum_ir::{
-    Assignment, IrError, Sort, SymbolId, TermArena, TermId, Value, eval, well_founded_default,
+    Assignment, IrError, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval,
+    well_founded_default,
 };
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::model::Model;
+use crate::sat_bv_backend::SatBvBackend;
+
+/// Whether `term` involves arrays (any subterm of `Array` sort — an array
+/// variable, a `store` result, or a `const-array`). Such assertions need the
+/// array-aware [`IncrementalBvSolver::check_with_memory`]; the warm bit-blaster
+/// does not encode arrays.
+fn contains_array(arena: &TermArena, term: TermId) -> bool {
+    let mut stack = vec![term];
+    let mut seen = std::collections::HashSet::new();
+    while let Some(t) = stack.pop() {
+        if !seen.insert(t) {
+            continue;
+        }
+        if matches!(arena.sort_of(t), Sort::Array { .. }) {
+            return true;
+        }
+        if let TermNode::App { args, .. } = arena.node(t) {
+            stack.extend(args.iter().copied());
+        }
+    }
+    false
+}
 
 /// Outcome of [`IncrementalBvSolver::check_assuming_core`]: like a
 /// [`CheckResult`], but the `unsat` case carries the **assumption core**.
@@ -46,7 +69,13 @@ pub enum AssumptionOutcome {
 #[derive(Debug)]
 struct Frame {
     selector: Option<CnfVar>,
+    /// Array-free assertions, bit-blasted into the warm CNF.
     assertions: Vec<TermId>,
+    /// Assertions involving arrays (`select`/`store`). The warm bit-blaster does
+    /// not encode arrays, so these are deferred and decided by
+    /// [`IncrementalBvSolver::check_with_memory`] via eager array elimination
+    /// (ADR-0010; the warm lazy-array path is ADR-0030 future work).
+    array_assertions: Vec<TermId>,
 }
 
 /// A warm, incremental pure-Rust bit-vector solver.
@@ -86,6 +115,7 @@ impl IncrementalBvSolver {
             frames: vec![Frame {
                 selector: None,
                 assertions: Vec::new(),
+                array_assertions: Vec::new(),
             }],
         }
     }
@@ -129,6 +159,18 @@ impl IncrementalBvSolver {
         if arena.sort_of(term) != Sort::Bool {
             return Err(SolverError::NonBooleanAssertion(term));
         }
+        if contains_array(arena, term) {
+            // The warm bit-blaster does not encode arrays; defer this assertion
+            // to `check_with_memory`, which decides it (with all active
+            // assertions) via eager array elimination. Scope is honored: it is
+            // dropped by the matching `pop` with the rest of the frame.
+            self.frames
+                .last_mut()
+                .expect("base frame always present")
+                .array_assertions
+                .push(term);
+            return Ok(());
+        }
         if let Some((unsupported, op)) = first_unsupported_op(arena, &[term]) {
             return Err(SolverError::Unsupported(format!(
                 "term #{} uses unsupported pure-Rust BV operator {op:?}",
@@ -168,6 +210,7 @@ impl IncrementalBvSolver {
         self.frames.push(Frame {
             selector: Some(selector),
             assertions: Vec::new(),
+            array_assertions: Vec::new(),
         });
         Ok(())
     }
@@ -181,6 +224,40 @@ impl IncrementalBvSolver {
         } else {
             false
         }
+    }
+
+    /// Decides the active assertions **including array/memory** (`select`/`store`)
+    /// — the symbolic-memory capability symbolic execution needs. The first slice
+    /// of ADR-0030: it re-solves all active assertions one-shot via the validated
+    /// eager array elimination (read-over-write + Ackermann, ADR-0010) over the
+    /// pure-Rust BV backend, so it does not yet reuse the warm CNF (warm lazy
+    /// arrays are the follow-up). Requires `&mut` arena because elimination
+    /// introduces terms.
+    ///
+    /// Use this instead of [`Self::check`] whenever array assertions are present
+    /// (the warm `check` refuses them rather than ignore them). For array-free
+    /// queries it agrees with `check` (elimination is then a no-op).
+    ///
+    /// Soundness is unchanged: a `sat` model is replay-checked against the
+    /// original `select`/`store` assertions by the ground evaluator.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] from array elimination or the backend.
+    pub fn check_with_memory(&mut self, arena: &mut TermArena) -> Result<CheckResult, SolverError> {
+        let active: Vec<TermId> = self
+            .frames
+            .iter()
+            .flat_map(|frame| {
+                frame
+                    .assertions
+                    .iter()
+                    .chain(frame.array_assertions.iter())
+                    .copied()
+            })
+            .collect();
+        let mut backend = SatBvBackend::new();
+        crate::abv::check_with_array_elimination(&mut backend, arena, &active, &self.config)
     }
 
     /// Checks satisfiability of the currently active assertions.
@@ -312,6 +389,16 @@ impl IncrementalBvSolver {
         arena: &TermArena,
         assumptions: &[TermId],
     ) -> Result<(CheckResult, Vec<TermId>), SolverError> {
+        // The warm path does not bit-blast arrays; if any array assertion is
+        // active, refuse rather than silently ignore it (which would risk a wrong
+        // result). Callers use `check_with_memory` for array/memory queries.
+        if self.frames.iter().any(|f| !f.array_assertions.is_empty()) {
+            return Err(SolverError::Unsupported(
+                "active array/memory assertions: use check_with_memory (the warm path does not \
+                 bit-blast arrays)"
+                    .to_owned(),
+            ));
+        }
         // Encode each one-shot assumption guarded by an ephemeral selector that
         // is assumed only for this solve, so it does not persist as a hard
         // constraint after the check returns.
