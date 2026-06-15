@@ -1002,3 +1002,19 @@ fn float128_nonarithmetic_ops_decide() {
     let v = eval(&script.arena, script.assertions[0], &Assignment::default()).unwrap();
     assert_eq!(v, Value::Bool(true), "F128 (+0 + +0 == +0) should hold");
 }
+
+#[test]
+fn string_sort_is_a_clear_unsupported_not_a_cryptic_error() {
+    // The string theory is scoped (ADR-0029) but not yet wired into the parser;
+    // declaring a String must fail with an actionable Unsupported, not a generic
+    // "unknown sort" or a panic.
+    let err = parse_script("(declare-const s String)\n(check-sat)\n")
+        .expect_err("String sort is not yet front-end-wired");
+    let SmtError::Unsupported(msg) = err else {
+        panic!("expected Unsupported for the String sort, got {err:?}");
+    };
+    assert!(
+        msg.contains("String") && msg.contains("ADR-0025/0029"),
+        "the message should name the sort and point to the ADR: {msg}"
+    );
+}

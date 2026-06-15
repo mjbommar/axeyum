@@ -454,6 +454,14 @@ fn parse_sort(arena: &TermArena, e: &SExpr) -> Result<Sort, SmtError> {
         SExpr::Atom(a) if a == "Float32" => Ok(Sort::Float { exp: 8, sig: 24 }),
         SExpr::Atom(a) if a == "Float64" => Ok(Sort::Float { exp: 11, sig: 53 }),
         SExpr::Atom(a) if a == "Float128" => Ok(Sort::Float { exp: 15, sig: 113 }),
+        // The string/sequence theory exists at the API level (the BoundedString
+        // BV lowering, ADR-0025) but is not yet wired into the text front end
+        // (ADR-0029). Fail with an actionable message rather than a generic
+        // "unknown sort", so consumers know it is scoped, not unrecognized.
+        SExpr::Atom(a) if a == "String" || a == "Seq" => Err(SmtError::Unsupported(format!(
+            "the `{a}` sort is not yet wired into the SMT-LIB front end; the bounded-string \
+             theory exists at the API level (ADR-0025/0029)"
+        ))),
         SExpr::List(items) => {
             if items.len() == 4
                 && items[0].atom() == Some("_")
