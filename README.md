@@ -74,8 +74,11 @@ Everything routes through a few consumer entry points (`axeyum-solver`):
 **Trusted small checking** holds for every result: a `sat` model is replayed
 through the ground evaluator; `unsat` over the bit-vector-reducible core
 (QF_BV/ABV/UF/AUFBV/bounded-LIA/datatypes) carries an externally re-checkable
-DRAT proof; `QF_LRA` `unsat` carries a Farkas refutation. Search is untrusted;
-the checkers are small and independent.
+DRAT proof; `QF_LRA` `unsat` carries a Farkas refutation. Certificates know how
+to re-check themselves with no access to the producing solver —
+`UnsatProof::recheck` (RUP+RAT, the in-tree `drat-trim` analogue) and
+`FarkasCertificate::verify` (exact-rational). Search is untrusted; the checkers
+are small and independent.
 
 **Status.** A broad, evidence-backed foundation (destination 1). The remaining
 work — performance parity on real corpora, the rest of the SMT-LIB breadth, and

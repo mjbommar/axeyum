@@ -16,7 +16,8 @@
 
 use axeyum_bv::{first_unsupported_op, first_unsupported_sort, lower_terms};
 use axeyum_cnf::{
-    ProofSolveOutcome, check_drat, solve_with_drat_proof, tseitin_encode, write_drat,
+    ProofSolveOutcome, check_drat, parse_dimacs, parse_drat, solve_with_drat_proof, tseitin_encode,
+    write_drat,
 };
 use axeyum_ir::{Sort, TermArena, TermId};
 use axeyum_rewrite::{
@@ -34,6 +35,33 @@ pub struct UnsatProof {
     pub dimacs: String,
     /// The DRAT refutation (verified by `check_drat`, accepted by `drat-trim`).
     pub drat: String,
+}
+
+impl UnsatProof {
+    /// Independently re-checks this certificate **from its text alone**: parses
+    /// the DIMACS formula and the DRAT proof and confirms the refutation derives
+    /// the empty clause (RUP+RAT), exactly as an external `drat-trim` run would.
+    ///
+    /// This is the consumer-side "trusted small checking" entry point — the DRAT
+    /// analogue of [`FarkasCertificate::verify`](crate::FarkasCertificate::verify):
+    /// a saved certificate can be re-validated later with no access to the solver
+    /// that produced it. (The exporters already self-check on the way out; this
+    /// lets a *consumer* re-check independently.)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Backend`] if the stored DIMACS or DRAT text cannot
+    /// be parsed (a malformed certificate).
+    pub fn recheck(&self) -> Result<bool, SolverError> {
+        let formula = parse_dimacs(&self.dimacs).map_err(|error| {
+            SolverError::Backend(format!("certificate DIMACS unparseable: {error}"))
+        })?;
+        let proof = parse_drat(&self.drat).map_err(|error| {
+            SolverError::Backend(format!("certificate DRAT unparseable: {error}"))
+        })?;
+        check_drat(&formula, &proof)
+            .map_err(|error| SolverError::Backend(format!("certificate failed to check: {error}")))
+    }
 }
 
 /// The outcome of attempting to export an `unsat` proof.
@@ -245,4 +273,40 @@ pub fn export_datatype_unsat_proof(
     let simplified =
         simplify_datatypes(arena, assertions).map_err(|e| SolverError::Backend(e.to_string()))?;
     export_qf_bv_unsat_proof(arena, &simplified)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unsat_proof_rechecks_and_detects_tampering() {
+        // x = 0 ∧ x = 1 over BV8 is unsatisfiable.
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 8).unwrap();
+        let zero = arena.bv_const(8, 0).unwrap();
+        let one = arena.bv_const(8, 1).unwrap();
+        let a = arena.eq(x, zero).unwrap();
+        let b = arena.eq(x, one).unwrap();
+
+        let UnsatProofOutcome::Proved(proof) = export_qf_bv_unsat_proof(&arena, &[a, b]).unwrap()
+        else {
+            panic!("x=0 ∧ x=1 must be unsat with a proof");
+        };
+        // The exported certificate re-checks independently from its text alone.
+        assert!(proof.recheck().unwrap());
+
+        // Corrupting the DRAT (drop its final empty-clause line) must fail the
+        // re-check rather than pass — the checker is not fooled.
+        let mut broken = proof.clone();
+        broken.drat = broken
+            .drat
+            .lines()
+            .filter(|line| line.trim() != "0")
+            .collect::<Vec<_>>()
+            .join("\n");
+        // Either it no longer derives the empty clause (Ok(false)) or the text is
+        // now unparseable (Err); both are a rejected certificate, never Ok(true).
+        assert!(!matches!(broken.recheck(), Ok(true)));
+    }
 }

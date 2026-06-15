@@ -361,6 +361,20 @@ pub struct SafetyCertificate {
     pub inductive_step: UnsatProof,
 }
 
+impl SafetyCertificate {
+    /// Independently re-checks **both** induction obligations from their stored
+    /// DRAT text (see [`UnsatProof::recheck`](crate::UnsatProof::recheck)). Returns
+    /// `true` only if each certificate re-derives the empty clause — the
+    /// consumer-side validation of the whole k-induction safety proof.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Backend`] if either certificate is unparseable.
+    pub fn recheck(&self) -> Result<bool, SolverError> {
+        Ok(self.base_case.recheck()? && self.inductive_step.recheck()?)
+    }
+}
+
 /// The outcome of [`certify_safety_k_induction`].
 #[derive(Debug, Clone)]
 pub enum CertifiedSafetyOutcome {
@@ -833,8 +847,6 @@ mod tests {
 
     #[test]
     fn certified_k_induction_emits_checkable_proofs() {
-        use axeyum_cnf::check_drat;
-
         let mut arena = TermArena::new();
         let outcome =
             certify_safety_k_induction(&mut arena, &EvenStepper, 4, &SolverConfig::default())
@@ -843,18 +855,16 @@ mod tests {
             panic!("expected a certified Safe verdict, got {outcome:?}");
         };
         assert_eq!(cert.k, 0, "‘x even’ is 0-inductive");
-        // Both certificates are non-empty and independently re-checkable: parse
-        // each DIMACS+DRAT pair and confirm the refutation derives the empty
-        // clause (the same gate `drat-trim` applies).
+        // Each obligation carries non-empty certificate text, and the whole proof
+        // re-checks independently through the consumer-side entry point.
         for proof in [&cert.base_case, &cert.inductive_step] {
             assert!(!proof.dimacs.is_empty() && !proof.drat.is_empty());
-            let formula = axeyum_cnf::parse_dimacs(&proof.dimacs).unwrap();
-            let drat = axeyum_cnf::parse_drat(&proof.drat).unwrap();
-            assert!(
-                check_drat(&formula, &drat).unwrap(),
-                "exported certificate must re-check independently"
-            );
+            assert!(proof.recheck().unwrap(), "each obligation must re-check");
         }
+        assert!(
+            cert.recheck().unwrap(),
+            "the whole k-induction certificate must re-check independently"
+        );
     }
 
     #[test]
