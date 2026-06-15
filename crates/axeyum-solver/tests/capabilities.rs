@@ -33,7 +33,12 @@ fn ledger_entries_are_well_formed() {
     for c in CAPABILITIES {
         assert!(!c.area.is_empty(), "area must be set");
         assert!(!c.feature.is_empty(), "feature must be set for {}", c.area);
-        assert!(!c.evidence.is_empty(), "evidence must be set for {} / {}", c.area, c.feature);
+        assert!(
+            !c.evidence.is_empty(),
+            "evidence must be set for {} / {}",
+            c.area,
+            c.feature
+        );
         assert!(
             c.reference.starts_with("ADR-"),
             "{} / {} must cite an ADR, got {:?}",

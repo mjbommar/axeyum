@@ -146,10 +146,12 @@ fn branch_and_bound(
     bounds: &Bounds,
     depth: usize,
 ) -> Result<CheckResult, SolverError> {
+    // Hitting the (tunable) branch-and-bound depth budget is a ResourceLimit —
+    // a deeper search could still decide — not fundamental incompleteness.
     let unknown = || {
         Ok(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Incomplete,
-            detail: "nonlinear abstraction: branch-and-bound did not converge".to_owned(),
+            kind: UnknownKind::ResourceLimit,
+            detail: "nonlinear abstraction: branch-and-bound depth budget reached".to_owned(),
         }))
     };
 
@@ -158,7 +160,7 @@ fn branch_and_bound(
         CheckResult::Unsat => Ok(CheckResult::Unsat),
         CheckResult::Unknown(reason) => {
             if depth >= MAX_BNB_DEPTH {
-                return Ok(CheckResult::Unknown(reason));
+                return unknown();
             }
             // Halve the widest splittable interval; the two halves cover it.
             let Some((var, lo, hi)) = widest_split(bounds) else {
@@ -231,6 +233,10 @@ fn solve_relaxation(
 
     // Incremental-linearization refinement: solve, replay, add exact point
     // lemmas for inconsistent leaf products, re-solve. Bounded rounds → unknown.
+    // `hit_round_bound` distinguishes "ran out of the (tunable) round budget"
+    // (retryable → ResourceLimit) from "refinement reached a fixpoint without
+    // deciding" (fundamental for this relaxation → Incomplete).
+    let mut hit_round_bound = true;
     for _ in 0..MAX_REFINE_ROUNDS {
         let result = check_with_lra_dpll(arena, &reduced, config)?;
         let CheckResult::Sat(model) = result else {
@@ -279,14 +285,24 @@ fn solve_relaxation(
             added = true;
         }
         if !added {
+            hit_round_bound = false; // refinement stalled, not out of budget
             break;
         }
     }
+    let (kind, detail) = if hit_round_bound {
+        (
+            UnknownKind::ResourceLimit,
+            "nonlinear abstraction: refinement round bound reached (raise the budget to attempt more)",
+        )
+    } else {
+        (
+            UnknownKind::Incomplete,
+            "nonlinear abstraction: refinement reached a fixpoint without deciding",
+        )
+    };
     Ok(CheckResult::Unknown(UnknownReason {
-        kind: UnknownKind::Incomplete,
-        detail: "nonlinear abstraction: candidate refinement did not converge within the \
-                 round bound"
-            .to_owned(),
+        kind,
+        detail: detail.to_owned(),
     }))
 }
 

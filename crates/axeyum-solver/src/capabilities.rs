@@ -192,10 +192,12 @@ pub fn capability_matrix_markdown() -> String {
          Regenerate after changing the ledger and commit the result; a golden test\n\
          (`tests/capabilities.rs`) fails if this file drifts from the source of truth.\n\n",
     );
-    out.push_str("Assurance levels: **checked** (independent certificate — Farkas/DRAT/replayed \
+    out.push_str(
+        "Assurance levels: **checked** (independent certificate — Farkas/DRAT/replayed \
                   model), **validated** (differential vs an oracle, no per-query certificate), \
                   **sound, incomplete** (`unknown`-safe), **experimental** (lower assurance or \
-                  bounded/horizon surface).\n\n");
+                  bounded/horizon surface).\n\n",
+    );
     out.push_str("| Area | Capability | Assurance | Evidence | Ref |\n");
     out.push_str("|---|---|---|---|---|\n");
     for c in CAPABILITIES {

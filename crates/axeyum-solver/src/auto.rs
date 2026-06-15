@@ -302,8 +302,11 @@ fn milp_bnb(
     budget: &mut u32,
 ) -> Result<CheckResult, SolverError> {
     if *budget == 0 {
+        // A deterministic search budget was hit (retryable with a larger budget),
+        // not fundamental incompleteness — report ResourceLimit consistently with
+        // the NRA branch-and-bound / refinement bounds.
         return Ok(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Incomplete,
+            kind: UnknownKind::ResourceLimit,
             detail: format!("MILP branch-and-bound exceeded {MAX_MILP_NODES} nodes"),
         }));
     }
