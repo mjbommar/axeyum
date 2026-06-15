@@ -313,6 +313,26 @@ fn wide_bit_vector_solves_and_replays() {
 }
 
 #[test]
+fn wide_bit_vector_variable_shift_solves_and_replays() {
+    // A variable left-shift at 200 bits exercises the wide shift-lowering path,
+    // whose in-range `width_constant` is a >128-bit constant (regression: that
+    // constant's lowering shifted a u128 past bit 127 and panicked). Find s with
+    // (1 << s) == 2^150; s = 150 works, and the model replays.
+    let mut arena = TermArena::new();
+    let s = arena.declare("s", Sort::BitVec(200)).unwrap();
+    let sv = arena.var(s);
+    let one = arena.bv_const(200, 1).unwrap();
+    let shifted = arena.bv_shl(one, sv).unwrap();
+    // 2^150 as a wide constant: 1 shifted left 150 from a u128 base is too wide
+    // for bv_const(value:u128); build it as (one << 150) over wide constants.
+    let onefifty = arena.bv_const(200, 150).unwrap();
+    let target = arena.bv_shl(one, onefifty).unwrap();
+    let eq = arena.eq(shifted, target).unwrap();
+    let model = expect_sat_checked(&arena, &[eq]);
+    assert_eq!(model.get(s), Some(Value::WideBv(axeyum_ir::WideUint::from_u128(150, 200))));
+}
+
+#[test]
 fn wide_bit_vector_contradiction_is_unsat() {
     // x + 1 = 5 (so x = 4) and x = 10 contradict, at 200 bits.
     let mut arena = TermArena::new();

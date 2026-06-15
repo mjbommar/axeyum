@@ -38,6 +38,32 @@ Full framing: [docs/research/00-orientation/mission-and-scope.md](docs/research/
 
 Last updated: 2026-06-14
 
+- **Symbolic F64 `fp.fma` works through the wide path — root-caused a wide-FP
+  soundness bug (2026-06-14, wide-BV step 5).** The 164-bit symbolic F64 fma
+  circuit mis-evaluated (`fma(2,3,1)→0`) for one reason: `sconst` (signed
+  constants in `pack_value`) built a negative constant at width `> 128` via
+  `bv_const`→`from_u128`, which **zero-fills** the high limbs instead of
+  sign-extending — so negative exponents were corrupted. Fix: `sconst` now builds
+  at 128 bits (where the `i64`→`u128` cast carries the sign) then `sign_ext`s to
+  the target width. With that, symbolic F64 fma matches native `f64::mul_add`
+  over 1728 structured + 3000 random triples; the fma gate is lifted from `128`
+  to allow **F64** (still blocked for F128 — see below). Also fixed
+  `constant_lits` in the BV→AIG lowering: a wide shift's in-range `width_constant`
+  is a `> 128`-bit constant, and the old `value >> bit` overflowed `u128` at
+  `bit ≥ 128` (panic) — now guarded, so **all** wide-BV variable shifts lower
+  soundly. Tests: IR-level `symbolic_f64_fma_matches_native`; end-to-end SMT-LIB
+  `decides_symbolic_float64_fma` (sat, model replayed) + `_unsat`; a 200-bit
+  variable-shift solve+replay. **Key soundness note:** there is **no first-class
+  FP op** — the evaluator evaluates the *same* lowered circuit the solver uses, so
+  model replay does **not** catch a wrong FP circuit. The only assurance is
+  differential validation against a native oracle. **F128 arithmetic stays
+  `unsupported`** (no native `f128` on stable Rust, and the `sconst` bug proves
+  width-specific faults are real) until a software-float validation oracle (e.g.
+  an APFloat-style reference, ADR-worthy) exists. `fp.rem`-wide already routes to
+  the validated `rem_iterative` (covers F16/F32/F64/F128). Remaining symbolic-FP
+  gaps: **F128 arithmetic** (needs an oracle) and wide `to_fp`/`roundToIntegral`
+  (still gated at `128`, not yet wide-validated).
+
 - **Wide bit-vectors — ceiling raised, general wide-BV works (2026-06-14, wide-BV
   step 4).** `MAX_BV_WIDTH` is now `1 << 16` (was 128): bit-vectors up to 65536
   bits build, evaluate, **bit-blast, solve, and replay** end-to-end. `bv_const`

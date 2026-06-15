@@ -902,8 +902,9 @@ fn parses_sort_disambiguated_to_fp_conversions() {
 
 #[test]
 fn folds_constant_float64_fma() {
-    // F64 fp.fma's symbolic circuit exceeds MAX_BV_WIDTH, but constant operands
-    // under RNE fold via native mul_add: fma(2.0, 3.0, 1.0) == 7.0 (Float64).
+    // Constant F64 fp.fma operands under RNE fold via native mul_add:
+    // fma(2.0, 3.0, 1.0) == 7.0 (Float64). (The symbolic F64 circuit also runs,
+    // through the wide bit-vector path — see the solver-level fma tests.)
     // Constants built by bit reinterpret of their IEEE hex patterns.
     let script = parse_script(
         r"

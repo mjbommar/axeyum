@@ -114,6 +114,59 @@ fn decides_symbolic_fp_to_sbv_conversion() {
     );
 }
 
+/// A symbolic **Float64 `fp.fma`** is now bit-blasted through the wide
+/// bit-vector path (the 164-bit intermediate exceeds `u128`): find a Float64 `x`
+/// with `fma(x, 3.0, 1.0) == 7.0`. `x = 2.0` works, so this is sat and the model
+/// replays through the 164-bit fma circuit. This is the symbolic-wide-FP gap that
+/// the `sconst` sign-extension fix closed (the circuit is validated against
+/// native `f64::mul_add`).
+#[test]
+fn decides_symbolic_float64_fma() {
+    let text = "\
+(set-info :status sat)
+(set-logic QF_FP)
+(declare-const x Float64)
+(assert (fp.eq
+          (fp.fma RNE
+            x
+            ((_ to_fp 11 53) #x4008000000000000)
+            ((_ to_fp 11 53) #x3FF0000000000000))
+          ((_ to_fp 11 53) #x401C000000000000)))
+(check-sat)
+";
+    let outcome = run(text);
+    assert!(
+        matches!(outcome.result, CheckResult::Sat(_)),
+        "symbolic Float64 fp.fma must decide sat (x = 2.0), got {:?}",
+        outcome.result
+    );
+}
+
+/// A symbolic Float64 `fp.fma` with an unsatisfiable target is `unsat`: no `x`
+/// gives `fma(x, +0, +0) == 7.0` (the product is `±0` or NaN, never 7), and the
+/// answer is sound through the wide circuit.
+#[test]
+fn decides_symbolic_float64_fma_unsat() {
+    let text = "\
+(set-info :status unsat)
+(set-logic QF_FP)
+(declare-const x Float64)
+(assert (fp.eq
+          (fp.fma RNE
+            x
+            ((_ to_fp 11 53) #x0000000000000000)
+            ((_ to_fp 11 53) #x0000000000000000))
+          ((_ to_fp 11 53) #x401C000000000000)))
+(check-sat)
+";
+    let outcome = run(text);
+    assert_eq!(
+        outcome.result,
+        CheckResult::Unsat,
+        "fma(x, 0, 0) can never equal 7.0"
+    );
+}
+
 /// FP->int is a function: two occurrences on the same operand denote one value,
 /// so their inequality is unsat even when the operand is unconstrained (the
 /// shared fresh value for the unspecified out-of-range case must be the SAME).

@@ -1774,8 +1774,11 @@ fn aig_lit_from_node_values(lit: AigLit, node_values: &[bool]) -> Result<bool, B
 }
 
 fn constant_lits(width: usize, value: u128) -> Vec<AigLit> {
+    // `width` may exceed 128 (wide bit-vectors), while `value` always fits a
+    // `u128` (callers pass a bit-width). Bits at position `>= 128` of a `u128`
+    // are zero, so guard the shift to avoid a shift-amount overflow panic.
     (0..width)
-        .map(|bit| const_lit(((value >> bit) & 1) == 1))
+        .map(|bit| const_lit(bit < 128 && ((value >> bit) & 1) == 1))
         .collect()
 }
 

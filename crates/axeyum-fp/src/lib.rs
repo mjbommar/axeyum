@@ -501,9 +501,18 @@ pub fn max(
 /// A signed constant of width `w` (two's complement of `val`).
 #[allow(clippy::cast_sign_loss)]
 fn sconst(arena: &mut TermArena, w: u32, val: i64) -> Result<TermId, IrError> {
-    let mask = if w >= 128 { u128::MAX } else { (1u128 << w) - 1 };
-    let bits = (i128::from(val) as u128) & mask;
-    arena.bv_const(w, bits)
+    if w <= 128 {
+        let mask = if w == 128 { u128::MAX } else { (1u128 << w) - 1 };
+        let bits = (i128::from(val) as u128) & mask;
+        return arena.bv_const(w, bits);
+    }
+    // Width exceeds the `u128` payload: `bv_const`'s wide path zero-fills the
+    // high limbs, which is wrong for negative values (their high bits must be
+    // ones). Any `i64` fits in 128 two's-complement bits, so build the constant
+    // at 128 bits — where the cast carries the correct sign — then sign-extend
+    // to `w`, replicating the sign bit into the high limbs.
+    let base = arena.bv_const(128, i128::from(val) as u128)?;
+    arena.sign_ext(w - 128, base)
 }
 
 /// Front half of symbolic round-and-pack: from a (nonzero) significand `m_w` and
@@ -1150,18 +1159,20 @@ pub fn add(arena: &mut TermArena, fmt: FloatFormat, a: TermId, b: TermId, mode: 
 /// round-nearest-style rounding (no intermediate rounding of the product). The
 /// exact product (`2·sb`-bit significand at `e_a + e_b`) is aligned with `c` and
 /// summed exactly, then [`pack_value`] rounds once. The intermediate width is
-/// `3·sb + 5`, so **F16 and F32** fit the 128-bit cap (F64 needs 164 bits →
-/// `InvalidWidth`).
+/// `3·sb + 5`; **F16/F32** fit the 128-bit `u128` path, and **F64** (164 bits)
+/// runs through the wide bit-vector path. Wider formats (F128) return
+/// `InvalidWidth` — they have no native oracle to validate the circuit.
 ///
 /// Special cases per IEEE: NaN if any operand is NaN, if `a·b` is `0·∞`, or if
 /// `a·b` and `c` are infinities of opposite sign; otherwise the infinity of an
-/// infinite product or addend. Validated against native `f32::mul_add` (the
-/// correctly-rounded fma) over a wide sweep.
+/// infinite product or addend. Validated against native `f32::mul_add` and
+/// `f64::mul_add` (the correctly-rounded fma) over a wide sweep.
 ///
 /// # Errors
 ///
-/// Returns [`IrError::InvalidWidth`] if `3·sb + 5 > 128`, [`IrError::SortMismatch`]
-/// for a mis-sized operand, or [`IrError`] from the builders.
+/// Returns [`IrError::InvalidWidth`] for formats wider than F64,
+/// [`IrError::SortMismatch`] for a mis-sized operand, or [`IrError`] from the
+/// builders.
 #[allow(clippy::similar_names, clippy::many_single_char_names, clippy::too_many_lines)]
 pub fn fma(
     arena: &mut TermArena,
@@ -1185,12 +1196,15 @@ pub fn fma(
         return Ok(folded);
     }
     let w = 3 * sb + 5;
-    // The symbolic FMA circuit is only validated for intermediates that fit the
-    // `u128` representation (F16/F32). Although the IR now supports wider
-    // bit-vectors, the FMA circuit is not yet verified through the wide path, so
-    // a `> 128`-bit intermediate (F64/F128) remains `unsupported` (sound) rather
-    // than risk a wrong result. (Symbolic wide FMA is the remaining wide-BV step.)
-    if w > 128 {
+    // The symbolic FMA circuit runs through the wide bit-vector path for
+    // intermediates that exceed `u128` (F64 needs 164 bits), validated against
+    // native `f64::mul_add` (`symbolic_f64_fma_matches_native`). There is no
+    // first-class FP op, so the evaluator evaluates this very circuit — a wrong
+    // circuit is NOT caught by model replay. Wider formats (F128) have no native
+    // oracle on stable Rust, and the `sconst` width bug showed width-specific
+    // faults are real, so their wide circuit stays `unsupported` (sound) until a
+    // software-float validation oracle exists.
+    if w > 128 && fmt != FloatFormat::F64 {
         return Err(IrError::InvalidWidth(w));
     }
     let guard = sb + 2;
@@ -4076,16 +4090,72 @@ mod fma_f64_const_tests {
     }
 
     #[test]
-    fn symbolic_f64_fma_still_unsupported() {
-        // A non-constant F64 fma still cannot build the 164-bit circuit.
+    #[allow(clippy::many_single_char_names)]
+    fn symbolic_f64_fma_matches_native() {
+        // Symbolic F64 operands force the 164-bit wide circuit (no constant
+        // fold). It must equal native `f64::mul_add` — the correctly-rounded
+        // fused multiply-add — over a wide sweep. This validates the wide
+        // bit-vector path for `pack_value`'s signed exponent arithmetic.
         let mut arena = TermArena::new();
-        let s = arena.declare("x", Sort::BitVec(64)).unwrap();
-        let x = arena.var(s);
-        let one = arena.bv_const(64, u128::from(1.0f64.to_bits())).unwrap();
-        assert!(matches!(
-            fma(&mut arena, FloatFormat::F64, x, one, one, RoundingMode::NearestEven),
-            Err(IrError::InvalidWidth(164))
-        ));
+        let sx = arena.declare("fx", Sort::BitVec(64)).unwrap();
+        let sy = arena.declare("fy", Sort::BitVec(64)).unwrap();
+        let sz = arena.declare("fz", Sort::BitVec(64)).unwrap();
+        let (x, y, z) = (arena.var(sx), arena.var(sy), arena.var(sz));
+        let t = fma(&mut arena, FloatFormat::F64, x, y, z, RoundingMode::NearestEven).unwrap();
+        let check = |arena: &TermArena, xb: u64, yb: u64, zb: u64| {
+            let mut asg = Assignment::new();
+            asg.set(sx, Value::Bv { width: 64, value: u128::from(xb) });
+            asg.set(sy, Value::Bv { width: 64, value: u128::from(yb) });
+            asg.set(sz, Value::Bv { width: 64, value: u128::from(zb) });
+            let got = match eval(arena, t, &asg).unwrap() {
+                Value::Bv { value, .. } => value,
+                other => panic!("{other:?}"),
+            };
+            let want = f64::from_bits(xb).mul_add(f64::from_bits(yb), f64::from_bits(zb));
+            if want.is_nan() {
+                let exp = (got >> 52) & 0x7FF;
+                let mant = got & 0xF_FFFF_FFFF_FFFF;
+                assert!(
+                    exp == 0x7FF && mant != 0,
+                    "fma({xb:#x},{yb:#x},{zb:#x}) want NaN, got {got:#x}"
+                );
+            } else {
+                assert_eq!(got, u128::from(want.to_bits()), "fma({xb:#x},{yb:#x},{zb:#x})");
+            }
+        };
+        // Structured: zeros, signed ones, 2.0, 0.5, infinities, NaN, subnormal,
+        // smallest, a non-trivial fraction, and a large finite value.
+        let structured: [u64; 12] = [
+            0x0000_0000_0000_0000, // +0
+            0x8000_0000_0000_0000, // -0
+            0x3FF0_0000_0000_0000, // 1.0
+            0xBFF0_0000_0000_0000, // -1.0
+            0x4000_0000_0000_0000, // 2.0
+            0x3FE0_0000_0000_0000, // 0.5
+            0x7FF0_0000_0000_0000, // +inf
+            0xFFF0_0000_0000_0000, // -inf
+            0x7FF8_0000_0000_0000, // NaN
+            0x0008_0000_0000_0000, // subnormal
+            0x0000_0000_0000_0001, // smallest subnormal
+            0x4049_21FB_5444_2D18, // ~pi*... a generic finite value
+        ];
+        for &xb in &structured {
+            for &yb in &structured {
+                for &zb in &structured {
+                    check(&arena, xb, yb, zb);
+                }
+            }
+        }
+        let mut state: u64 = 0xf00d_face_dead_b33f;
+        let next = |state: &mut u64| {
+            *state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            *state
+        };
+        for _ in 0..3000 {
+            check(&arena, next(&mut state), next(&mut state), next(&mut state));
+        }
     }
 }
 
