@@ -14,116 +14,79 @@ first-class functionality** — binary frontend + symbolic execution/emulation a
 kernel-checkable proving + proof-assistant interop
 (see [north-star](docs/research/00-orientation/north-star.md)).
 
-**Honest status:** the project is at destination (1). It is **not yet** an SMT
-solver replacement (the pure-Rust path decides only a small slice of real public
-QF_BV instances — performance is the open gate) and **not yet** a Lean/angr-class
-system (the symbolic-execution consumer is a test-only register VM). Destinations
-(2) then (3) are the work ahead.
+**Honest status:** destination (1) is built and broad. It is **not yet** a
+performance-parity solver replacement (the pure-Rust path decides a slice of real
+public QF_BV — performance is the open gate), **not yet** full SMT-LIB breadth
+(unbounded strings, quantified arithmetic), and **not yet** Lean parity
+(reductions are trusted, not yet certified into exportable proof terms). The
+followable roadmap from here to 100% Z3 + Lean parity is in [PLAN.md](PLAN.md).
 
 ## What it does today
 
-Supported theories, each end to end (typed IR → evaluator → decision
-procedure → solver entry point → scenarios → SMT-LIB I/O): **QF_BV**,
-**arrays** (eager elimination), **uninterpreted functions** (Ackermann),
-**bounded integers** (`QF_LIA`), **linear real arithmetic** (`QF_LRA`), their
-composition (`QF_AUFLIA`), Boolean combinations via lazy SMT / DPLL(T), and
-finite-domain plus instantiation/E-matching **quantifiers** — pure Rust, no
-C/C++ in the default build, and buildable for **WebAssembly**.
+Pure Rust, no C/C++ in the default build, buildable for **WebAssembly**. The
+authoritative, golden-tested inventory (capability × assurance × evidence) is the
+[capability matrix](docs/research/08-planning/capability-matrix.md).
+
+**Theories, each end to end** (typed IR → evaluator → decision procedure →
+solver entry → SMT-LIB I/O):
+
+- **QF_BV** — full scalar operator set, widths to 2¹⁶; `unsat` carries a
+  DRAT-checked proof.
+- **Arrays** (QF_ABV, eager elimination), **uninterpreted functions** (QF_UF,
+  Ackermann), and their composition **QF_AUFBV**.
+- **Linear arithmetic** — `QF_LRA` (exact-rational simplex, Farkas-certified
+  `unsat`), `QF_LIA` (bit-blast + branch-and-bound simplex), mixed `QF_LIRA`
+  (MILP); Boolean combinations via lazy SMT / DPLL(T).
+- **Floating point** (QF_FP) — IEEE 754 arithmetic (add/sub/mul/div/fma/sqrt/
+  rem/roundToIntegral/conversions) for **F16/F32/F64/F128** and ML formats,
+  differentially validated against native `f32`/`f64` and `rustc_apfloat`.
+- **Datatypes** (algebraic, recursive), **nonlinear** arithmetic (QF_NRA/NIA,
+  sound-incomplete), **quantifiers** (finite-domain complete + E-matching/MBQI
+  instantiation), and **bounded strings** (QF_S, BV-lowered).
+
+**Symbolic execution & reachability** are first-class on the warm incremental
+engine (`IncrementalBvSolver`): `push`/`pop`/`assume`, **assumption-core path
+pruning** (`check_assuming_core`), **all-SAT reachable-state enumeration**
+(`block_model`), and **symbolic memory** (`check_with_memory`).
 
 Everything routes through a few consumer entry points (`axeyum-solver`):
 
 | Call | Purpose |
 |---|---|
 | `solve` / `solve_smtlib` | decide any supported query (terms or SMT-LIB 2 text) |
-| `prove` | prove a goal from hypotheses by a **checkable refutation** of its negation |
+| `prove` | prove a goal by a **checkable refutation** of its negation |
 | `produce_evidence` | decide *and* package a self-checking certificate |
-| `unsat_core` | a minimal unsatisfiable core (explain infeasibility) |
-| `Evidence::check` | independently re-validate any result |
+| `export_qf_{bv,abv,uf,aufbv,lia}_unsat_proof`, `export_datatype_unsat_proof` | emit a `drat-trim`-checkable DIMACS+DRAT certificate |
+| `IncrementalBvSolver` | warm push/pop/assume + path-pruning core + all-SAT + symbolic memory |
+| `unsat_core` / `Evidence::check` | minimal core; independently re-validate any result |
 
-**Trusted small checking** holds for every result type: a `sat` model is
-replayed through the ground evaluator; a `QF_BV` `unsat` carries a DRAT proof
-checked by an in-tree kernel; a `QF_LRA` `unsat` carries a Farkas (conjunctive)
-or lazy-SMT refutation that re-verifies independently. Search is untrusted; the
-checkers are small and independent.
+**Trusted small checking** holds for every result: a `sat` model is replayed
+through the ground evaluator; `unsat` over the bit-vector-reducible core
+(QF_BV/ABV/UF/AUFBV/bounded-LIA/datatypes) carries an externally re-checkable
+DRAT proof; `QF_LRA` `unsat` carries a Farkas refutation. Search is untrusted;
+the checkers are small and independent.
 
-**Status: Phase 5 first pure-Rust backend slice.** M0, Phase 1, and the core
-Phase 2 oracle path are complete: scalar QF_BV IR/evaluator, Z3 oracle
-backend, SMT-LIB reader/writer, resource telemetry, micro-corpus benchmark
-harness, and a recorded public QF_BV baseline. Phase 3 now has
-query/rewrite/evidence contracts, the first denotation-preserving
-canonicalizer, structural cache keys, conservative slicing, rewrite
-measurement, and an exit audit. Phase 4 has an accepted bit-order/lowering
-entry contract, shared LSB-first value-to-bits helpers, an AIG graph/evaluator
-crate with ASCII AIGER debug export, and term-to-AIG lowering for constants,
-symbols, Boolean connectives, BV bitwise operators, equality, `ite`, `bvcomp`,
-concat/extract, and zero/sign extension, `bvneg`, `bvadd`, `bvsub`, and
-unsigned/signed comparisons, `bvshl`, `bvlshr`, `bvashr`, and constant rotates,
-with explicit term-bit and symbol-input maps. The first CNF layer adds simple
-Tseitin encoding from AIG, DIMACS I/O, CNF evaluation, and
-CNF-variable-to-AIG lift maps. The first SAT adapter path uses `rustsat-batsat`
-through RustSAT, solves CNF through an Axeyum SAT trait/result surface, and
-replay-checks satisfying assignments through CNF variables, AIG node values,
-reconstructed symbol models, and the original evaluator. UNSAT through this path
-is explicitly unchecked until proof output and proof checking land. Phase 5 now
-has the first `SatBvBackend`: a native-free `SolverBackend` implementation for
-the supported QF_BV subset that composes query terms, AIG lowering, Tseitin CNF,
-BatSat, model reconstruction, and evaluator replay. `axeyum-bench` can run this
-backend with `--backend sat-bv` and emits artifact version 7 records with
-bit-blast/CNF layer stats, node and CNF admission budgets, submitted query-plan
-mode, replay policy, replay-refinement limits, and optional Z3 oracle
-comparison; artifact version 8 also records the harness `jobs` setting for
-parallel corpus diagnostics, artifact version 9 records replay-refinement
-batch size for exact-target diagnostic runs, artifact version 10 records
-adaptive batch policy and backoff counts, and artifact version 11 records
-refinement selection policy. Artifact version 12 records the bounded
-plan-aware selection option and current root-direct assertion CNF encoder
-behavior. The first public `sat-bv` vs Z3
-baseline is recorded for the admitted supported slice: 1 public `sat` decision
-agrees with Z3, 112 larger instances are structured node-budget `unknown`s,
-and there are no unsupported/error/model-replay/oracle-disagreement alarms. A
-guarded rerun raises the node budget only behind CNF variable/clause caps; it
-keeps the same one public decision and classifies the next admitted candidate
-as `EncodingBudget`. Replay-refinement diagnostics prove sliced query plans can
-be iteratively replayed without weakening the full-query model contract. The
-relaxed-admission public artifact now reaches 2 public `sat` decisions with Z3
-agreement and no soundness alarms. The exact-target relaxed diagnostic keeps
-the same 2 decisions, removes node-budget unknowns from that profile, and
-leaves all 111 remaining unknowns as `EncodingBudget`; root-direct assertion
-CNF and an 8.5k variable sweep still leave the supported public slice at 2
-decisions, so encoding and SAT cost, not admission bookkeeping, remain the next
-Phase 5 target.
+**Status.** A broad, evidence-backed foundation (destination 1). The remaining
+work — performance parity on real corpora, the rest of the SMT-LIB breadth, and
+the Lean proof-export ladder — is the followable roadmap in [PLAN.md](PLAN.md).
+30 ADRs (all accepted) record the design.
 
 ## Start Here
 
-- [PLAN.md](PLAN.md) — master plan, current status, and next actions. The
-  single entry point for resuming work.
+- [PLAN.md](PLAN.md) — master plan, current status, and the followable roadmap
+  to 100% Z3 + Lean parity. The single entry point for resuming work.
+- [docs/research/08-planning/capability-matrix.md](docs/research/08-planning/capability-matrix.md) —
+  the authoritative, golden-tested inventory: capability × assurance × evidence.
 - [docs/research/](docs/research/README.md) — the research foundation:
   notes covering foundations, architecture, data structures, algorithms,
   verification strategy, and planning.
 - [docs/research/08-planning/foundational-dag.md](docs/research/08-planning/foundational-dag.md) —
   the logic/math dependency DAG from semantics through evidence.
-- [docs/research/08-planning/phase3-exit-audit.md](docs/research/08-planning/phase3-exit-audit.md) —
-  the Phase 3 rewrite/query-planning exit evidence and Phase 4 handoff.
-- [docs/research/08-planning/phase4-exit-audit.md](docs/research/08-planning/phase4-exit-audit.md) —
-  the Phase 4 circuit/CNF/SAT-adapter exit evidence and Phase 5 handoff.
-- [docs/research/09-decisions/adr-0006-phase4-bit-order-and-lowering-entry-contract.md](docs/research/09-decisions/adr-0006-phase4-bit-order-and-lowering-entry-contract.md) —
-  the Phase 4 bit-order, AIG, CNF, and lift-map entry contract.
-- [docs/research/09-decisions/adr-0007-first-pure-rust-sat-adapter.md](docs/research/09-decisions/adr-0007-first-pure-rust-sat-adapter.md) —
-  the first pure-Rust SAT adapter decision.
 - [docs/research/09-decisions/](docs/research/09-decisions/README.md) —
-  decision records (ADRs).
-- [bench-results/baselines/qf-bv-20221214-p4dfa-z3-1s.json](bench-results/baselines/qf-bv-20221214-p4dfa-z3-1s.json) —
-  current public QF_BV baseline artifact.
-- [bench-results/baselines/qf-bv-20221214-p4dfa-z3-1s-rewrite-default.json](bench-results/baselines/qf-bv-20221214-p4dfa-z3-1s-rewrite-default.json) —
-  Phase 3 rewrite-measurement artifact.
-- [bench-results/baselines/qf-bv-20221214-p4dfa-sat-bv-z3-compare-1s-n1000.json](bench-results/baselines/qf-bv-20221214-p4dfa-sat-bv-z3-compare-1s-n1000.json) —
-  Phase 5 public `sat-bv` vs Z3 supported-slice artifact.
-- [bench-results/baselines/qf-bv-20221214-p4dfa-sat-bv-z3-compare-1s-n5000-cnf7k-20k.json](bench-results/baselines/qf-bv-20221214-p4dfa-sat-bv-z3-compare-1s-n5000-cnf7k-20k.json) —
-  Phase 5 guarded-admission artifact with explicit CNF budgets.
-- [bench-results/baselines/qf-bv-20221214-p4dfa-sat-bv-z3-replay-refine-1s-n5000-cnf7k-20k-r16.json](bench-results/baselines/qf-bv-20221214-p4dfa-sat-bv-z3-replay-refine-1s-n5000-cnf7k-20k-r16.json) —
-  Phase 5 replay-refinement diagnostic artifact.
-- [bench-results/baselines/qf-bv-20221214-p4dfa-sat-bv-z3-replay-refine-exact-10s-n5000-cnf8k-30k-r64-b64-j8.json](bench-results/baselines/qf-bv-20221214-p4dfa-sat-bv-z3-replay-refine-exact-10s-n5000-cnf8k-30k-r64-b64-j8.json) —
-  Phase 5 exact-target relaxed replay-refinement diagnostic artifact.
+  decision records (30 accepted ADRs).
+- [bench-results/baselines/](bench-results/baselines/) —
+  recorded benchmark baselines (public QF_BV `sat-bv` vs Z3 slices, rewrite
+  measurement, replay-refinement diagnostics).
 
 ## Workspace
 
@@ -132,13 +95,14 @@ Phase 5 target.
 | [`axeyum-ir`](crates/axeyum-ir) | Sorts, terms, interning, ground evaluation, LSB-first value/bit conversion. |
 | [`axeyum-aig`](crates/axeyum-aig) | AIG circuit graph with deterministic structural hashing, evaluation, and ASCII AIGER debug export. |
 | [`axeyum-bv`](crates/axeyum-bv) | Term-to-AIG bit lowering with explicit term-bit and symbol-input maps. |
-| [`axeyum-cnf`](crates/axeyum-cnf) | Tseitin CNF encoding from AIG, DIMACS I/O, CNF evaluation, BatSat-backed solving, and assignment replay. |
+| [`axeyum-cnf`](crates/axeyum-cnf) | Tseitin CNF encoding from AIG, DIMACS I/O, CNF evaluation, BatSat-backed solving, assignment replay, and a proof-producing CDCL core with an in-tree DRAT checker. |
+| [`axeyum-fp`](crates/axeyum-fp) | IEEE 754 floating-point formula builders (F16–F128 + ML formats) over the typed IR. |
 | [`axeyum-query`](crates/axeyum-query) | Query object, structural cache keys, conservative slicing, replay checks. |
-| [`axeyum-rewrite`](crates/axeyum-rewrite) | Rewrite manifest contracts and the first denotation-preserving canonicalizer. |
+| [`axeyum-rewrite`](crates/axeyum-rewrite) | Rewrite manifest contracts, the denotation-preserving canonicalizer, and array elimination (QF_ABV → QF_BV). |
 | [`axeyum-scenarios`](crates/axeyum-scenarios) | Self-checking, oracle-free consumer workloads (SAT by concrete execution, UNSAT by bounded-verified identities) for testing and optimization. |
 | [`axeyum-bench`](crates/axeyum-bench) | Corpus benchmark harness with PAR-2 scoring, backend selection, and JSON artifacts. |
 | [`axeyum-smtlib`](crates/axeyum-smtlib) | SMT-LIB 2 reader/writer: benchmark ingestion, sharing-preserving export. |
-| [`axeyum-solver`](crates/axeyum-solver) | Backend trait, results, models, capabilities; default pure Rust SAT-backed BV backend plus native backends behind feature flags. |
+| [`axeyum-solver`](crates/axeyum-solver) | Backend trait, results, models, capability ledger; high-level `solve`/`prove`/`produce_evidence`; warm incremental engine with symbolic-execution primitives; DRAT proof exporters; native backends behind feature flags. |
 
 The pure Rust default build has no C or C++ dependency; native solver
 backends (Z3 first) are optional features.
