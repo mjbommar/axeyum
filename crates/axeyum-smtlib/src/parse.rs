@@ -1064,6 +1064,39 @@ fn string_contains(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId
     Ok(any)
 }
 
+/// `str.suffixof x y` — `x` is a suffix of `y`: aligned at offset
+/// `o = len(y) − len(x)`, the bytes match. Disjunction over `o` (pure BV/Bool,
+/// decides both directions).
+fn string_suffixof(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId, SmtError> {
+    let xlen = string_len(arena, x)?;
+    let ylen = string_len(arena, y)?;
+    let xlen_w = arena.zero_ext(1, xlen)?;
+    let ylen_w = arena.zero_ext(1, ylen)?;
+    let wlen = STRING_LEN_WIDTH + 1;
+    let mut any = arena.bool_const(false);
+    for o in 0..=STRING_MAX_LEN {
+        let oconst = arena.bv_const(wlen, u128::from(o))?;
+        let sum = arena.bv_add(oconst, xlen_w)?;
+        let aligned = arena.eq(sum, ylen_w)?; // len(y) == o + len(x)
+        let mut matched = aligned;
+        for i in 0..STRING_MAX_LEN {
+            if o + i >= STRING_MAX_LEN {
+                break; // y has no byte at o+i; under `aligned` this forces i ≥ len(x)
+            }
+            let xb = string_byte(arena, x, i)?;
+            let yb = string_byte(arena, y, o + i)?;
+            let beq = arena.eq(xb, yb)?;
+            let iconst = arena.bv_const(STRING_LEN_WIDTH, u128::from(i))?;
+            let iactive = arena.bv_ult(iconst, xlen)?; // i < len(x)
+            let niactive = arena.not(iactive)?;
+            let ok = arena.or(niactive, beq)?;
+            matched = arena.and(matched, ok)?;
+        }
+        any = arena.or(any, matched)?;
+    }
+    Ok(any)
+}
+
 /// The canonical well-formedness constraint for a packed string `v`: its length
 /// is `≤ STRING_MAX_LEN`, and every content byte at or above the length is zero.
 fn string_wellformed(arena: &mut TermArena, v: TermId) -> Result<TermId, SmtError> {
@@ -1522,6 +1555,10 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
         "str.contains" => {
             need(2)?;
             string_contains(arena, args[0], args[1])?
+        }
+        "str.suffixof" => {
+            need(2)?;
+            string_suffixof(arena, args[0], args[1])?
         }
         "and" => fold(arena, TermArena::and)?,
         "or" => fold(arena, TermArena::or)?,

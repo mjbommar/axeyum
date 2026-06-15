@@ -831,3 +831,28 @@ fn decides_str_contains_both_directions() {
         "a 2-byte string cannot contain a 3-byte substring"
     );
 }
+
+/// `str.suffixof` over packed strings — pure BV/Bool, decides both directions.
+#[test]
+fn decides_str_suffixof_both_directions() {
+    assert!(matches!(
+        run("(assert (str.suffixof \"cd\" \"abcd\"))\n(check-sat)\n").result,
+        CheckResult::Sat(_)
+    ));
+    assert_eq!(
+        run("(assert (str.suffixof \"ab\" \"abcd\"))\n(check-sat)\n").result,
+        CheckResult::Unsat,
+        "\"ab\" is a prefix, not a suffix, of \"abcd\""
+    );
+    // Variable: s == "world" and "rld" is a suffix -> sat.
+    assert!(matches!(
+        run("\
+(declare-const s String)
+(assert (= s \"world\"))
+(assert (str.suffixof \"rld\" s))
+(check-sat)
+")
+        .result,
+        CheckResult::Sat(_)
+    ));
+}

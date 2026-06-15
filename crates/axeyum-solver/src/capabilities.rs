@@ -170,7 +170,7 @@ pub const CAPABILITIES: &[Capability] = &[
     Capability {
         area: "QF_S (strings)",
         feature: "bounded strings + regex (BV-lowered); SMT-LIB front end wired for \
-                  declare/literal/=/distinct + str.prefixof/str.contains (both directions) \
+                  declare/literal/=/distinct + str.prefixof/suffixof/contains (both directions) \
                   + str.len (sat direction; unsat may be unknown — BV+LIA gap), rest via API",
         assurance: Assurance::Experimental,
         evidence: "model replay through BV path; canonical-padding equality; length bound explicit",
