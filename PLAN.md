@@ -59,9 +59,17 @@ Last updated: 2026-06-14
   circuit. Validated set (`arithmetic_format_supported`): IEEE formats with
   `eb ≤ 10, sb ≤ 11` (F16/BF16/TF32/FP8 + tiny formats) ∪ {F32, F64, F128};
   non-IEEE `FP8_E4M3`/`FP4_E2M1` are refused (no IEEE inf/NaN). Test
-  `unvalidated_formats_are_refused_not_silently_wrong` locks it. Residual: widen
-  the validated region (`sb 12..24`, `eb = 11`) with an exact oracle if a use
-  case appears; the same gate could extend to `rem`/`to_fp`/`roundToIntegral`.
+  `unvalidated_formats_are_refused_not_silently_wrong` locks it.
+
+- **Extended FP validation coverage to `roundToIntegral` (F64) and `to_fp`
+  (small/mixed pairs) (2026-06-14).** `fp.roundToIntegral` was validated only at
+  F32 — added **F64** coverage (all five modes vs native f64 rounding; it is exact
+  integer rounding so f64 is an exact oracle). `to_fp` (FP→FP) was validated only
+  F32↔F64 — added a sweep over F16/BF16/TF32/(6,8)/F32/F64 source/target pairs
+  (a small/standard source value is exact in f64, so `round_to_format(dst, value)`
+  is a single correctly-rounded step). Residual: widen the *arithmetic* validated
+  region (`sb 12..24`, `eb = 11`) with an exact oracle if a use case appears;
+  F128 `rem` (iterative path) still lacks an exact oracle.
 
 - **Small-format FP validation caught and fixed a real `div` soundness bug
   (2026-06-14).** Added a differential sweep of `add`/`mul`/`div`/`sqrt` over all

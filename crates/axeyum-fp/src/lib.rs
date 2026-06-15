@@ -3246,6 +3246,65 @@ mod tests {
     }
 
     #[test]
+    fn round_to_integral_sym_matches_native_f64() {
+        // F64 is a primary real-world format; `fp.roundToIntegral` is exact
+        // integer rounding, so native f64 rounding is an exact oracle. Validate
+        // all five modes (the F32 test above leaves F64 uncovered).
+        let modes = [
+            (RoundingMode::NearestEven, 0u8),
+            (RoundingMode::NearestAway, 1),
+            (RoundingMode::TowardZero, 2),
+            (RoundingMode::TowardPositive, 3),
+            (RoundingMode::TowardNegative, 4),
+        ];
+        let mut a = TermArena::new();
+        let is_nan_bits = |b: u128| (b >> 52) & 0x7FF == 0x7FF && (b & 0xF_FFFF_FFFF_FFFF) != 0;
+        let structured: [u64; 12] = [
+            0x0000_0000_0000_0000, // +0
+            0x8000_0000_0000_0000, // -0
+            0x3FE0_0000_0000_0000, // 0.5
+            0xBFE0_0000_0000_0000, // -0.5
+            0x3FF8_0000_0000_0000, // 1.5
+            0x4004_0000_0000_0000, // 2.5
+            0x7FF0_0000_0000_0000, // +inf
+            0xFFF0_0000_0000_0000, // -inf
+            0x7FF8_0000_0000_0000, // NaN
+            0x0008_0000_0000_0000, // subnormal
+            0x4049_21FB_5444_2D18, // ~pi-ish
+            0xC059_0000_0000_0000, // -100.0
+        ];
+        let mut state: u64 = 0x9e37_79b9_7f4a_7c15;
+        for &(mode, kind) in &modes {
+            let mut inputs = structured.to_vec();
+            for _ in 0..400 {
+                state = state.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1_442_695_040_888_963_407);
+                inputs.push(state);
+            }
+            for xb in inputs {
+                let xt = a.bv_const(64, u128::from(xb)).unwrap();
+                let r = round_to_integral_sym(&mut a, FloatFormat::F64, mode, xt).unwrap();
+                let got = match eval(&a, r, &Assignment::new()) {
+                    Ok(Value::Bv { value, .. }) => value,
+                    other => panic!("expected Bv, got {other:?}"),
+                };
+                let v = f64::from_bits(xb);
+                let want = match kind {
+                    0 => v.round_ties_even(),
+                    1 => v.round(),
+                    2 => v.trunc(),
+                    3 => v.ceil(),
+                    _ => v.floor(),
+                };
+                if want.is_nan() {
+                    assert!(is_nan_bits(got), "rint64({xb:#x},{mode:?}) want NaN got {got:#x}");
+                } else {
+                    assert_eq!(got, u128::from(want.to_bits()), "rint64({xb:#x},{mode:?})");
+                }
+            }
+        }
+    }
+
+    #[test]
     fn e2m1_decode_and_classification() {
         use axeyum_ir::Rational;
         // The full E2M1 magnitude table by (exp, mant): the 8 magnitudes.
@@ -3421,6 +3480,73 @@ mod tests {
                 } else {
                     let want = round_to_format(8, 24, v, mode);
                     assert_eq!(got, want, "f64->f32({s:#x},{mode:?})");
+                }
+            }
+        }
+    }
+
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn to_fp_small_format_pairs_match_round_to_format() {
+        // Validate FP→FP conversion over many small (src, dst) format pairs (the
+        // native-cast test above only covers F32↔F64). A small/standard `src`
+        // value is exact in f64 (sb ≤ 53, eb ≤ 11), so converting via
+        // `round_to_format(dst, src_value)` is a single, correctly-rounded step —
+        // an exact oracle. Covers F16/BF16/TF32/F32/F64 widening and narrowing.
+        let modes = [
+            RoundingMode::NearestEven,
+            RoundingMode::TowardZero,
+            RoundingMode::TowardPositive,
+            RoundingMode::TowardNegative,
+        ];
+        let fmts = [
+            FloatFormat::F16,
+            FloatFormat::BF16,
+            FloatFormat::TF32,
+            FloatFormat { exp_bits: 6, sig_bits: 8 },
+            FloatFormat::F32,
+            FloatFormat::F64,
+        ];
+        let mut a = TermArena::new();
+        let mut state: u64 = 0x51a5_3c3c_9696_5151;
+        let next = |s: &mut u64| {
+            *s = s.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1_442_695_040_888_963_407);
+            *s
+        };
+        let is_nan_bits = |b: u128, eb: u32, sb: u32| {
+            (b >> (sb - 1)) & ((1u128 << eb) - 1) == (1u128 << eb) - 1 && b & ((1u128 << (sb - 1)) - 1) != 0
+        };
+        let mut uid = 0u32;
+        for &src in &fmts {
+            for &dst in &fmts {
+                let smask = (1u128 << src.width()) - 1;
+                for &mode in &modes {
+                    uid += 1;
+                    let xt = a.declare(&format!("x{uid}"), Sort::BitVec(src.width())).unwrap();
+                    let xv = a.var(xt);
+                    let t = to_fp(&mut a, src, dst, mode, xv).unwrap();
+                    for _ in 0..40 {
+                        let xb = u128::from(next(&mut state)) & smask;
+                        // Source value, exact in f64 (decode is exact for eb ≤ 11
+                        // here; for F64 use native from_bits to dodge powi range).
+                        let v = if src == FloatFormat::F64 {
+                            f64::from_bits(xb as u64)
+                        } else {
+                            src.decode_ieee_f64(xb)
+                        };
+                        let mut asg = Assignment::new();
+                        asg.set(xt, Value::Bv { width: src.width(), value: xb });
+                        let got = match eval(&a, t, &asg) {
+                            Ok(Value::Bv { value, .. }) => value,
+                            other => panic!("{other:?}"),
+                        };
+                        if v.is_nan() {
+                            assert!(is_nan_bits(got, dst.exp_bits, dst.sig_bits), "to_fp {src:?}->{dst:?} {xb:#x} want NaN got {got:#x}");
+                        } else {
+                            let want = round_to_format(dst.exp_bits, dst.sig_bits, v, mode);
+                            assert_eq!(got, want, "to_fp {src:?}->{dst:?} ({xb:#x},{mode:?})");
+                        }
+                    }
                 }
             }
         }
