@@ -14,8 +14,9 @@
 //!   by [`crate::check_drat`]**, so the entailment underpinning every accepted
 //!   resolution step is itself independently verified — not trusted to the search.
 //! - The **EUF** rules `eq_reflexive`, `eq_symmetric`, `eq_transitive`, and
-//!   `eq_congruent` are checked *structurally* against each rule's exact tautology
-//!   shape (strict and order-sensitive).
+//!   `eq_congruent`, and the **Boolean CNF-introduction** rules `and_pos`,
+//!   `and_neg`, `or_pos`, `or_neg` are checked *structurally* against each rule's
+//!   exact tautology shape (strict and order-sensitive).
 //!
 //! Atoms are structured [`AletheTerm`]s (a symbol or an application), compared by
 //! structural equality so theory rules can inspect their shape. Any other rule is
@@ -587,6 +588,26 @@ pub fn check_alethe(commands: &[AletheCommand]) -> Result<bool, AletheError> {
                             return Err(AletheError::StepNotEntailed { id: id.clone() });
                         }
                     }
+                    "and_pos" => {
+                        if !premise_clauses.is_empty() || !is_and_pos(clause) {
+                            return Err(AletheError::StepNotEntailed { id: id.clone() });
+                        }
+                    }
+                    "and_neg" => {
+                        if !premise_clauses.is_empty() || !is_and_neg(clause) {
+                            return Err(AletheError::StepNotEntailed { id: id.clone() });
+                        }
+                    }
+                    "or_pos" => {
+                        if !premise_clauses.is_empty() || !is_or_pos(clause) {
+                            return Err(AletheError::StepNotEntailed { id: id.clone() });
+                        }
+                    }
+                    "or_neg" => {
+                        if !premise_clauses.is_empty() || !is_or_neg(clause) {
+                            return Err(AletheError::StepNotEntailed { id: id.clone() });
+                        }
+                    }
                     _ => return Err(AletheError::UnsupportedRule { rule: rule.clone() }),
                 }
                 if clause.is_empty() {
@@ -607,6 +628,85 @@ fn as_eq(term: &AletheTerm) -> Option<(&AletheTerm, &AletheTerm)> {
         AletheTerm::App(head, args) if head == "=" && args.len() == 2 => Some((&args[0], &args[1])),
         _ => None,
     }
+}
+
+/// Returns the arguments of an application with the given `head`, or `None`.
+fn as_app<'a>(term: &'a AletheTerm, head: &str) -> Option<&'a [AletheTerm]> {
+    match term {
+        AletheTerm::App(h, args) if h == head => Some(args),
+        _ => None,
+    }
+}
+
+/// Structural check for the Alethe `and_pos` rule:
+/// `(cl (not (and t1 ... tn)) ti)` — a tautology `¬(t1∧…∧tn) ∨ ti` for any
+/// conjunct `ti`. Valid iff two literals: a negated `and`-term, then a positive
+/// literal whose atom is one of the conjuncts.
+fn is_and_pos(clause: &AletheClause) -> bool {
+    let [head, picked] = clause.as_slice() else {
+        return false;
+    };
+    if !head.negated || picked.negated {
+        return false;
+    }
+    let Some(conjuncts) = as_app(&head.atom, "and") else {
+        return false;
+    };
+    conjuncts.contains(&picked.atom)
+}
+
+/// Structural check for the Alethe `or_neg` rule:
+/// `(cl (or t1 ... tn) (not ti))` — a tautology `(t1∨…∨tn) ∨ ¬ti` for any
+/// disjunct `ti`. Valid iff two literals: a positive `or`-term, then a negated
+/// literal whose atom is one of the disjuncts.
+fn is_or_neg(clause: &AletheClause) -> bool {
+    let [head, picked] = clause.as_slice() else {
+        return false;
+    };
+    if head.negated || !picked.negated {
+        return false;
+    }
+    let Some(disjuncts) = as_app(&head.atom, "or") else {
+        return false;
+    };
+    disjuncts.contains(&picked.atom)
+}
+
+/// Structural check for the Alethe `and_neg` rule:
+/// `(cl (and t1 ... tn) (not t1) ... (not tn))` — the tautology
+/// `(t1∧…∧tn) ∨ ¬t1 ∨ … ∨ ¬tn`. Valid iff a positive `and`-term followed by the
+/// negation of each conjunct, in order.
+fn is_and_neg(clause: &AletheClause) -> bool {
+    polarity_spread(clause, "and", false)
+}
+
+/// Structural check for the Alethe `or_pos` rule:
+/// `(cl (not (or t1 ... tn)) t1 ... tn)` — the tautology
+/// `¬(t1∨…∨tn) ∨ t1 ∨ … ∨ tn`. Valid iff a negated `or`-term followed by each
+/// disjunct, in order.
+fn is_or_pos(clause: &AletheClause) -> bool {
+    polarity_spread(clause, "or", true)
+}
+
+/// Shared shape for `and_neg` / `or_pos`: the first literal is the `head`-term
+/// with `head_negated` polarity, followed by every argument as a literal of the
+/// opposite polarity, in order.
+fn polarity_spread(clause: &AletheClause, head: &str, head_negated: bool) -> bool {
+    let Some((first, rest)) = clause.split_first() else {
+        return false;
+    };
+    if first.negated != head_negated {
+        return false;
+    }
+    let Some(args) = as_app(&first.atom, head) else {
+        return false;
+    };
+    if args.len() != rest.len() {
+        return false;
+    }
+    rest.iter()
+        .zip(args)
+        .all(|(lit, arg)| lit.negated != head_negated && &lit.atom == arg)
 }
 
 /// Structural check for the EUF `eq_reflexive` rule.
@@ -1255,6 +1355,81 @@ mod tests {
                 id: "c1".to_owned()
             })
         );
+    }
+
+    #[test]
+    fn boolean_cnf_intro_rules_check() {
+        let cst = |s: &str| AletheTerm::Const(s.to_owned());
+        let and_ab = AletheTerm::App("and".to_owned(), vec![cst("a"), cst("b")]);
+        let or_ab = AletheTerm::App("or".to_owned(), vec![cst("a"), cst("b")]);
+        let lit_t = |t: AletheTerm| AletheLit {
+            atom: t,
+            negated: false,
+        };
+        let lit_f = |t: AletheTerm| AletheLit {
+            atom: t,
+            negated: true,
+        };
+
+        // and_pos: (cl (not (and a b)) a) — valid.
+        let and_pos = vec![step(
+            "p",
+            vec![lit_f(and_ab.clone()), lit_t(cst("a"))],
+            "and_pos",
+            &[],
+        )];
+        assert_eq!(check_alethe(&and_pos), Ok(false));
+
+        // and_pos broken: picked conjunct `c` is not in (and a b).
+        let and_pos_bad = vec![step(
+            "p",
+            vec![lit_f(and_ab.clone()), lit_t(cst("c"))],
+            "and_pos",
+            &[],
+        )];
+        assert_eq!(
+            check_alethe(&and_pos_bad),
+            Err(AletheError::StepNotEntailed { id: "p".to_owned() })
+        );
+
+        // or_neg: (cl (or a b) (not b)) — valid.
+        let or_neg = vec![step(
+            "p",
+            vec![lit_t(or_ab.clone()), lit_f(cst("b"))],
+            "or_neg",
+            &[],
+        )];
+        assert_eq!(check_alethe(&or_neg), Ok(false));
+
+        // and_neg: (cl (and a b) (not a) (not b)) — valid.
+        let and_neg = vec![step(
+            "p",
+            vec![lit_t(and_ab.clone()), lit_f(cst("a")), lit_f(cst("b"))],
+            "and_neg",
+            &[],
+        )];
+        assert_eq!(check_alethe(&and_neg), Ok(false));
+
+        // and_neg broken: wrong order of negated conjuncts.
+        let and_neg_bad = vec![step(
+            "p",
+            vec![lit_t(and_ab.clone()), lit_f(cst("b")), lit_f(cst("a"))],
+            "and_neg",
+            &[],
+        )];
+        assert_eq!(
+            check_alethe(&and_neg_bad),
+            Err(AletheError::StepNotEntailed { id: "p".to_owned() })
+        );
+
+        // or_pos: (cl (not (or a b)) a b) — valid.
+        let or_pos = vec![step(
+            "p",
+            vec![lit_f(or_ab.clone()), lit_t(cst("a")), lit_t(cst("b"))],
+            "or_pos",
+            &[],
+        )];
+        assert_eq!(check_alethe(&or_pos), Ok(false));
     }
 
     #[test]
