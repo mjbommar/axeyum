@@ -155,7 +155,7 @@ plan is built and committed on the current branch:
 | P2.3 | EUF on the e-graph (from Ackermann to incremental) | TODO |
 | P2.4 | LIA cut portfolio (GCD, Gomory, HNF, cube, Diophantine) | TODO |
 | P2.5 | NRA: incremental linearization → nlsat/CAD | TODO |
-| P2.6 | Quantifiers (MAM e-matching, trigger inference, MBQI, QE/MBP) | WIP — full e-matching vertical slice on the keystone: `enumerate_apps` + `ematch` engine + `instantiate_forall_via_egraph` (congruence-aware, single/multi-var, nested/joint triggers) + `prove_quantified_unsat_via_egraph` (the **instantiation loop**: instantiate → re-solve via `check_auto` → fixpoint, sound UNSAT). Next: trigger *inference* (auto-pick), wire the loop into `check_auto`/`check_with_quantifiers` dispatch for quantified inputs, then MBQI; migrate `axeyum_rewrite`'s bespoke closure onto the keystone |
+| P2.6 | Quantifiers (MAM e-matching, trigger inference, MBQI, QE/MBP) | WIP — full e-matching vertical slice on the keystone: `enumerate_apps` + `ematch` engine + `instantiate_forall_via_egraph` (congruence-aware, single/multi-var, nested/joint triggers) + `prove_quantified_unsat_via_egraph` (the **instantiation loop**: instantiate → re-solve via `check_auto` → fixpoint, sound UNSAT). trigger *inference* (single + multi-pattern set cover) landed; loop **wired into `solve`** (infinite/too-wide-domain fallback → keystone before MBQI). Next: congruence-aware variable consistency in the multi-pattern join (compare e-class roots, not raw node ids), MBQI on the keystone (model-guided instance selection), then migrate `axeyum_rewrite`'s bespoke closure onto the keystone |
 | P2.7 | Strings (unbounded, full `str.*`, regex) | TODO |
 | P2.8 | FP polish (unspecified values, min/max ±0, lazy conversion) | TODO |
 | P2.9 | Datatypes lazy (e-graph splitting + occurs-check) | TODO |
@@ -183,7 +183,16 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
-- **2026-06-16** — **P2.6 multi-pattern trigger inference** (pending commit).
+- **2026-06-16** — **P2.6 keystone wired into `solve` dispatch** (pending commit).
+  The infinite/too-wide-domain quantifier fallback in `solve` now tries the
+  congruence-aware `prove_quantified_unsat_via_egraph` (keystone) **before** MBQI:
+  finite-domain expansion refuses domains wider than `QUANT_EXPAND_BIT_LIMIT`
+  (2¹⁰), and since UF is finite-scalar-only in the IR, a `∀x:BV32. f(x)=…`
+  quantifier surfaces there — exactly where e-matching modulo the ground
+  congruence refutes (fire `f(x)` at ground `f(a)`). Only ever returns `unsat`
+  (sound, instances implied) or falls through to MBQI on `unknown`. New
+  `auto::tests` dispatch test proves the `solve` → keystone route end to end.
+- **2026-06-16** — **P2.6 multi-pattern trigger inference** (commit c82c175).
   `select_triggers` infers a (possibly multi-term) trigger set from the body when
   no single subterm covers all bound variables — single-cover preferred, else a
   greedy set cover over function-app candidates. `instantiate_forall_via_egraph`

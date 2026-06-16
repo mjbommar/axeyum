@@ -33,6 +33,7 @@ use crate::dpll_lia::{check_with_arith_dpll, check_with_lia_dpll};
 use crate::lia::DEFAULT_INT_WIDTH;
 use crate::lra::{check_with_lia_simplex, check_with_lra};
 use crate::model::Model;
+use crate::qinst_egraph::prove_quantified_unsat_via_egraph;
 use crate::sat_bv_backend::SatBvBackend;
 
 /// The unified front door: decides any supported query — quantifier-free or
@@ -65,10 +66,18 @@ pub fn solve(
     }
     match check_with_quantifiers(arena, assertions, config) {
         // An infinite quantifier domain defeats finite expansion; fall back to
-        // model-based instantiation (MBQI), which loops adding model-violated
-        // instances and itself defers to trigger-based (E-matching) instantiation
-        // when it cannot refine.
-        Err(SolverError::Unsupported(_)) => prove_unsat_by_mbqi(arena, assertions, config),
+        // sound refutation. Try congruence-aware e-matching on the e-graph keystone
+        // first (Track 2, P2.6): it instantiates inferred triggers *modulo the
+        // ground congruence*, so equalities the bespoke loop misses fire here. Its
+        // result is only ever `unsat` (sound — instances are implied) or `unknown`;
+        // on `unknown` the model-based instantiation loop (MBQI, which itself defers
+        // to the trigger-based family) takes over.
+        Err(SolverError::Unsupported(_)) => {
+            match prove_quantified_unsat_via_egraph(arena, assertions, config)? {
+                CheckResult::Unsat => Ok(CheckResult::Unsat),
+                _ => prove_unsat_by_mbqi(arena, assertions, config),
+            }
+        }
         other => other,
     }
 }
@@ -1449,5 +1458,47 @@ impl Features {
             }
         }
         features
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `solve` routes a *too-wide-to-enumerate* (`BitVec(32)`) quantified EUF
+    /// refutation through the e-graph keystone instantiation loop: finite-domain
+    /// expansion refuses a 2³² domain (`QUANT_EXPAND_BIT_LIMIT`), so the fallback
+    /// fires, and the congruence-aware trigger instantiation refutes it by firing
+    /// `f(x)` at the ground `f(a)`. This pins the dispatch wiring (`solve` →
+    /// keystone) in place. (UF is finite-scalar-only in the IR, so a 33-bit-plus
+    /// domain is how an unbounded UF quantifier surfaces here.)
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn solve_refutes_wide_bv_quantified_euf_via_keystone() {
+        let mut arena = TermArena::new();
+        let w = 32;
+        let bv = Sort::BitVec(w);
+        let f = arena.declare_fun("f", &[bv], bv).unwrap();
+        let a = arena.bv_var("a", w).unwrap();
+        let b = arena.bv_var("b", w).unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        // f(a) = b ∧ a ≠ b
+        let fa_eq_b = arena.eq(fa, b).unwrap();
+        let a_eq_b = arena.eq(a, b).unwrap();
+        let a_ne_b = arena.not(a_eq_b).unwrap();
+        // ∀x. f(x) = x  (over a domain too wide to enumerate)
+        let x = arena.declare("x", bv).unwrap();
+        let xv = arena.var(x);
+        let fx = arena.apply(f, &[xv]).unwrap();
+        let body = arena.eq(fx, xv).unwrap();
+        let forall = arena.forall(x, body).unwrap();
+
+        // Instantiating x↦a gives f(a)=a, which with f(a)=b forces a=b ⨯ a≠b.
+        let config = SolverConfig::default();
+        let result = solve(&mut arena, &[forall, fa_eq_b, a_ne_b], &config).unwrap();
+        assert!(
+            matches!(result, CheckResult::Unsat),
+            "expected Unsat from keystone instantiation, got {result:?}"
+        );
     }
 }
