@@ -137,6 +137,19 @@ impl EGraph {
         self.nodes.is_empty()
     }
 
+    /// The function symbol (`decl`) of node `id` — immutable term structure, used
+    /// by the independent checker [`check_congruence`].
+    #[must_use]
+    pub fn decl(&self, id: ENodeId) -> u32 {
+        self.nodes[id.index()].decl
+    }
+
+    /// The argument nodes of `id` — immutable term structure.
+    #[must_use]
+    pub fn args(&self, id: ENodeId) -> &[ENodeId] {
+        &self.nodes[id.index()].args
+    }
+
     /// Adds the application `decl(args)`, returning its class representative. If a
     /// congruent node already exists it is returned (hash-consing); otherwise a
     /// fresh node is created. Leaves are `add(unique_decl, &[])`.
@@ -463,6 +476,87 @@ impl EGraph {
     }
 }
 
+/// Independent congruence checker (T1.4.5): the EUF analogue of `check_drat`.
+///
+/// Re-validates a claimed equality `a = b` from a set of `premises` (input
+/// equalities — e.g. the pairs an [`EGraph::explain`] result names) using a
+/// **fresh** union-find and its own congruence-closure fixpoint over the e-graph's
+/// immutable term structure (`decl`/`args` only — never the e-graph's own derived
+/// union-find or proof forest). Returns `true` iff the premises, closed under
+/// reflexivity/symmetry/transitivity/congruence, entail `a = b`.
+///
+/// This keeps equality reasoning inside the project's "untrusted search, trusted
+/// small checking" identity: a bug in the e-graph's incremental machinery cannot
+/// make a wrong explanation pass this check, which shares no state with it.
+///
+/// # Panics
+///
+/// Panics only if `graph` somehow holds more than `u32::MAX` nodes, which
+/// [`EGraph::add`] prevents at creation time (so this does not happen in practice).
+#[must_use]
+pub fn check_congruence(
+    graph: &EGraph,
+    premises: &[(ENodeId, ENodeId)],
+    a: ENodeId,
+    b: ENodeId,
+) -> bool {
+    let n = graph.len();
+    let mut parent: Vec<usize> = (0..n).collect();
+
+    for &(x, y) in premises {
+        cc_union(&mut parent, x.index(), y.index());
+    }
+
+    // Congruence-closure fixpoint: two nodes with the same `decl` and pairwise-equal
+    // arguments are merged, until nothing changes.
+    loop {
+        let mut changed = false;
+        for i in 0..n {
+            for j in (i + 1)..n {
+                if cc_find(&mut parent, i) == cc_find(&mut parent, j) {
+                    continue;
+                }
+                let id_i = ENodeId(u32::try_from(i).expect("index fits u32"));
+                let id_j = ENodeId(u32::try_from(j).expect("index fits u32"));
+                let ai = graph.args(id_i);
+                let aj = graph.args(id_j);
+                if graph.decl(id_i) == graph.decl(id_j)
+                    && ai.len() == aj.len()
+                    && ai.iter().zip(aj).all(|(&x, &y)| {
+                        cc_find(&mut parent, x.index()) == cc_find(&mut parent, y.index())
+                    })
+                {
+                    cc_union(&mut parent, i, j);
+                    changed = true;
+                }
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+
+    cc_find(&mut parent, a.index()) == cc_find(&mut parent, b.index())
+}
+
+/// Path-compressing find for the checker's private union-find.
+fn cc_find(parent: &mut [usize], mut i: usize) -> usize {
+    while parent[i] != i {
+        parent[i] = parent[parent[i]];
+        i = parent[i];
+    }
+    i
+}
+
+/// Union for the checker's private union-find.
+fn cc_union(parent: &mut [usize], a: usize, b: usize) {
+    let ra = cc_find(parent, a);
+    let rb = cc_find(parent, b);
+    if ra != rb {
+        parent[ra] = rb;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -562,6 +656,27 @@ mod tests {
         let reasons = g.explain(a, c);
         assert_eq!(reasons, vec![0, 1]);
         assert!(!reasons.contains(&2), "unrelated merge must not appear");
+    }
+
+    #[test]
+    fn explanation_passes_the_independent_checker() {
+        // f(a) = f(b) explained by a=b (reason 5); the independent checker confirms
+        // the premise (a,b) entails f(a)=f(b), and rejects the empty premise set.
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        let fa = g.add(2, &[a]);
+        let fb = g.add(2, &[b]);
+        g.merge(a, b, 5);
+        assert_eq!(g.explain(fa, fb), vec![5]);
+        assert!(
+            check_congruence(&g, &[(a, b)], fa, fb),
+            "premise entails it"
+        );
+        assert!(
+            !check_congruence(&g, &[], fa, fb),
+            "no premises must not entail f(a)=f(b)"
+        );
     }
 
     #[test]
@@ -882,6 +997,19 @@ mod tests {
                             check.find(i),
                             check.find(j),
                             "explanation {reasons:?} does not entail {i} = {j}"
+                        );
+                        // The same explanation must also pass the in-tree
+                        // independent congruence checker (T1.4.5).
+                        let premises: Vec<(ENodeId, ENodeId)> = reasons
+                            .iter()
+                            .map(|&r| {
+                                let (mi, mj) = input_merges[r as usize];
+                                (ids[mi], ids[mj])
+                            })
+                            .collect();
+                        assert!(
+                            check_congruence(&g, &premises, ids[i], ids[j]),
+                            "independent checker rejected a sound explanation"
                         );
                     }
                 }
