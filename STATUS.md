@@ -75,10 +75,19 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   (provably cheap, ≤121 ms here) — at which size the committed A/B is
   decision-identical to baseline (32/43, PAR-2 1.071 s vs 1.063 s). **Real win
   needs occurrence-list indexing first.**
-- **Next task (T1.1.4):** give `axeyum_cnf::simplify` and `axeyum_cnf::bve`
-  occurrence-list / signature indexing (near-linear passes) so inprocessing can
-  run on the wide instances (the 11 unknowns) without escaping the solve budget;
-  then re-run `just bench-qfbv-curated-inprocess` and lift the size guard.
+- **Next task — wire the P1.2 preprocessing pipeline into the solve path + measure.**
+  Build a `check_with_preprocessing<B>(backend, &mut arena, assertions, config)`
+  wrapper (mirror `check_with_array_elimination` in
+  `crates/axeyum-solver/src/abv.rs`): run `propagate_values` then `solve_eqs`
+  (composing their `ModelReconstructionTrail`s via `append`), call the backend on
+  the reduced assertions, and on `sat` `trail.reconstruct(arena, model.to_assignment())`
+  → rebuild the `Model` → replay against the **original** assertions. Architectural
+  note: preprocessing needs `&mut TermArena` (it builds substituted terms), but
+  `SolverBackend::check` takes `&TermArena`, so this must wrap the backend at the
+  `&mut`-arena layer (façade/bench), not live inside `sat_bv_backend`. Add a bench
+  `--preprocess` flag and re-run the curated slice to record the AIG/CNF-size and
+  PAR-2 delta. Then continue T1.2.4–T1.2.9 (elim_unconstrained, max_bv_sharing,
+  bv_slice/bounds, elim_bvudiv, two-level AIG rewrite, broader BV rewriter).
 
 ## Already shipped this session (pre-plan)
 
@@ -98,7 +107,7 @@ plan is built and committed on the current branch:
 | Phase | Title | Status |
 |---|---|---|
 | P1.1 | SAT inprocessing (subsumption → BVE → vivification → glue tiers) | WIP — subsumption+BVE landed (T1.1.1/2), wired into the solve pipeline (T1.1.3), made occurrence-list near-linear + time-bounded (T1.1.4): safe, no regression, but the curated unknowns are SAT-search-bound (→ P1.3) or BVE-resistant. Vivification / glue tiers remain |
-| P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | WIP — T1.2.1 model-reconstruction trail + T1.2.2 propagate_values landed (model-sound, unit-tested); next solve_eqs (T1.2.3) + pipeline wiring + measure |
+| P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | WIP — T1.2.1 trail + T1.2.2 propagate_values + T1.2.3 solve_eqs landed (model-sound, unit-tested, 36 tests). Next: wire the preprocessing pipeline into the solve path + measure; then elim_unconstrained / max_bv_sharing / bv_slice / AIG 2-level (T1.2.4–T1.2.9) |
 | P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | TODO |
 | P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | TODO |
 | P1.5 | CDCL(T) loop (theory-as-extension, final-check, theory propagation) **[keystone]** | TODO |
@@ -142,6 +151,12 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **T1.2.3 solve_eqs** (commit e1682ce). Top-level `(= x t)`
+  oriented to `x := t` with a memoized occurs-check, substituted to a fixpoint,
+  recorded in the trail; generalizes propagate_values. DAG interning keeps
+  substitution linear. 200-trial randomized chain-of-definitions reconstruction
+  test. axeyum-rewrite at 36 tests. Next: wire propagate_values+solve_eqs into the
+  solve path (the `check_with_preprocessing` wrapper) and measure.
 - **2026-06-16** — **P1.2 started: T1.2.1 model-reconstruction trail + T1.2.2
   propagate_values** (commit d5c49b6). New `axeyum_rewrite::ModelReconstructionTrail`
   (eliminated-symbol → defining-term steps, reverse-replay `reconstruct`, composable
