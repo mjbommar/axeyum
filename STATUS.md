@@ -75,24 +75,28 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   (provably cheap, ≤121 ms here) — at which size the committed A/B is
   decision-identical to baseline (32/43, PAR-2 1.071 s vs 1.063 s). **Real win
   needs occurrence-list indexing first.**
-- **`check_with_preprocessing` DONE** (commit 86cd28a): façade wrapper runs
-  `propagate_values`+`solve_eqs`, composes their trails, reconstructs + replays on
-  `sat`. 5 integration tests through the real sat-bv backend prove model soundness
-  end to end. **Still off the bench/default path.**
-- **Next task — measure preprocessing on the bench (then T1.2.4+).** The bench runs
-  jobs in parallel over a *shared `&TermArena`*, but preprocessing mutates the arena
-  (builds substituted terms), so it cannot run during the parallel solve. Wire it the
-  way `--rewrite default` does: in the per-instance **setup** phase (`apply_rewrite`
-  in `crates/axeyum-bench/src/main.rs`, ~line 828, which already takes `&mut
-  script.arena`), run `propagate_values`+`solve_eqs`, store `(reduced_assertions,
-  ModelReconstructionTrail)`, solve the reduced set, and thread the trail to
-  reconstruct the model **before** the original-assertion replay
-  (`classify_result`). Add a `--preprocess` flag, re-run `bench-qfbv-curated`,
-  record the AIG/CNF-size + PAR-2 delta (expect modest on this slice — bit-blasted
-  QF_BV has few top-level `x=t` facts post-canonicalization; the win shows on
-  corpora with explicit defines). Then T1.2.4–T1.2.9 (elim_unconstrained,
-  max_bv_sharing, bv_slice/bounds, elim_bvudiv, two-level AIG rewrite, broader BV
-  rewriter).
+- **P1.2 preprocessing wired into the bench + measured — DONE** (commit 0c594ac).
+  `check_with_preprocessing` (commit 86cd28a) + bench `--preprocess` flag
+  (`just bench-qfbv-curated-preprocess`): the trail is threaded through
+  solve_planned→solve_one→classify_result→replay_model so a `sat` model
+  reconstructs before replaying the originals. Curated A/B: 32/43, agree=32,
+  DISAGREE=0, 0 replay failures, PAR-2 1.060 s — decision-identical, model-sound
+  across all 43 incl. the oracle path; reduced the DAG on 5/43 (the instances with
+  top-level `x=t` structure), no-op on the multiplier-heavy rest. Correct
+  infrastructure; the PAR-2 payoff needs a corpus with explicit defines.
+- **Next task — choose the next lever. Two good options:**
+  1. **Continue P1.2 toward the bit-blasting-direct passes** (bigger impact on this
+     slice than term-level elimination): **T1.2.8 two-level AIG rewriting** at
+     construction in `axeyum-aig` (`rewrite_and`: neutrality/idempotence/
+     contradiction/subsumption/resolution — bitwuzla's speed lever, shrinks the AIG
+     before CNF, can help the multipliers) and **T1.2.5 max_bv_sharing**. Skip/defer
+     T1.2.4 (elim_unconstrained) and T1.2.6/7 until measured need.
+  2. **Start the keystone chain P1.4 (incremental e-graph)** — congruence closure +
+     explanation + independent checker. This unlocks P1.5 CDCL(T) and all of Track 2
+     (EUF, quantifiers, theory combination), i.e. the bulk of *functional* z3 parity.
+     Highest leverage for breadth; larger and not perf-gated.
+  Recommendation: **P1.4 keystone** is the higher-leverage path to "100% z3
+  functionality" (breadth), with T1.2.8 as the quick perf win if staying in Track 1.
 
 ## Already shipped this session (pre-plan)
 
@@ -156,6 +160,12 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **bench `--preprocess` + measurement** (commit 0c594ac).
+  propagate_values+solve_eqs wired into the bench setup phase; trail threaded to
+  reconstruct the model before the original-assertion replay. Curated A/B: 32/43,
+  agree=32, DISAGREE=0, 0 replay failures, PAR-2 1.060 s (≈ baseline 1.063);
+  DAG reduced on 5/43. `just bench-qfbv-curated-preprocess`,
+  `qfbv-curated-sat-bv-preprocess-vs-z3-2s.json`.
 - **2026-06-16** — **`check_with_preprocessing` wrapper** (commit 86cd28a). Façade
   entry that runs propagate_values+solve_eqs before a backend, composes their
   ModelReconstructionTrails, and on `sat` reconstructs + replays against the
