@@ -22,6 +22,18 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     that only helps *trigger-less UF universals* (rare). Skipped as low marginal
     value vs. the duplication/maintenance cost; revisit only if a real corpus shows
     the gap.
+- **P3.1 LRAT checker + DRAT→LRAT elaborator — DONE** (2026-06-16): a second,
+  independent UNSAT-proof checker alongside `check_drat`, in the stronger *clausal*
+  LRAT format (every clause has an id; each addition carries antecedent hints, so
+  checking is **linear** — follow the hints — not a RUP search). `check_lrat`
+  (sound: accepts a clause only when its hint chain performs genuine RUP to a
+  conflict; rejects a satisfied/under-determined/missing/never-conflicting hint),
+  `elaborate_drat_to_lrat` (RUP DRAT — e.g. from `solve_with_drat_proof` — →
+  hinted LRAT; RAT out of scope), `parse_lrat`/`write_lrat`. **3 negative
+  (soundness) tests confirm rejection** (corrupted/dropped hint, non-entailed clause
+  over a SAT formula, no-empty-clause ⇒ `Ok(false)`) + a **600-CNF random
+  differential** (every UNSAT formula's CDCL DRAT proof elaborates and LRAT-checks,
+  with text round-trip). First rung of the proof-checking ladder above DRAT.
 - **P2.2 lazy arrays — first slice DONE (lazy select-congruence)** (2026-06-16):
   `check_qf_abv_lazy` — the array analogue of lazy Ackermann (a `select` is an
   application of a per-array read function). `eliminate_arrays` still does
@@ -257,7 +269,7 @@ plan is built and committed on the current branch:
 | Phase | Title | Status |
 |---|---|---|
 | P3.0 | Reduction trust ledger (TrustId + pedantic levels) | DONE |
-| P3.1 | LRAT clausal upgrade (+ in-tree check_lrat) | TODO |
+| P3.1 | LRAT clausal upgrade (+ in-tree check_lrat) | WIP — **`check_lrat` (hint-based linear checker) + `elaborate_drat_to_lrat` + parse/write** landed in `axeyum-cnf`, sound (3 negative/rejection tests) + 600-CNF differential vs the DRAT path. Remaining: emit LRAT hints directly from the proof-producing CDCL core (`solve_with_drat_proof`) instead of post-hoc elaboration; RAT-step elaboration (negative hints); thread LRAT through the `UnsatProof`/evidence export so QF_BV UNSAT can ship an LRAT artifact |
 | P3.2 | Alethe term/proof IR + emitter (`axeyum-alethe`) **[critical path]** | TODO |
 | P3.3 | Alethe for QF_BV (bitblast_* + CNF rules + resolution/drat; Carcara CI) | TODO |
 | P3.4 | Embedded Alethe checker subset (self-checking) | TODO |
