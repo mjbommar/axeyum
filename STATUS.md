@@ -98,7 +98,7 @@ plan is built and committed on the current branch:
 | Phase | Title | Status |
 |---|---|---|
 | P1.1 | SAT inprocessing (subsumption → BVE → vivification → glue tiers) | WIP — subsumption+BVE landed (T1.1.1/2), wired into the solve pipeline (T1.1.3), made occurrence-list near-linear + time-bounded (T1.1.4): safe, no regression, but the curated unknowns are SAT-search-bound (→ P1.3) or BVE-resistant. Vivification / glue tiers remain |
-| P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | TODO |
+| P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | WIP — T1.2.1 model-reconstruction trail + T1.2.2 propagate_values landed (model-sound, unit-tested); next solve_eqs (T1.2.3) + pipeline wiring + measure |
 | P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | TODO |
 | P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | TODO |
 | P1.5 | CDCL(T) loop (theory-as-extension, final-check, theory propagation) **[keystone]** | TODO |
@@ -142,6 +142,15 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **P1.2 started: T1.2.1 model-reconstruction trail + T1.2.2
+  propagate_values** (commit d5c49b6). New `axeyum_rewrite::ModelReconstructionTrail`
+  (eliminated-symbol → defining-term steps, reverse-replay `reconstruct`, composable
+  `append`) generalizing the bit-blast-lift / array-`project_model` / BVE-reconstruct
+  patterns. First consumer `propagate_values`: top-level `var = const` (and bare /
+  negated Boolean) facts substituted to a fixpoint, model-sound via the trail
+  (proven end to end). Pure axeyum-rewrite, 32 tests. **Next:** `solve_eqs` (T1.2.3,
+  `var = term` elimination — the big variable-count win) and wiring the preprocessing
+  pipeline into the solve path + measuring the curated slice.
 - **2026-06-16** — **T1.1.4 inprocessing made near-linear + time-bounded.**
   `simplify` → forward one-watch occurrence-list subsumption (variable-keyed
   signature so self-subsuming witnesses aren't false-rejected); `bve` → full
