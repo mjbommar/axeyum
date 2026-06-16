@@ -29,14 +29,18 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   reasons), `push`/`pop` (lockstep backtrack of merges, disequalities, and assigned
   state). 6 unit tests. This replaces the offline `prove_unsat_lazy` per-model
   e-graph rebuild with one incremental graph.
-  - **Next action (precise resume point):** build the **online DPLL(T) driver**
-    `solve_qf_uf_online` (T1.5.1–T1.5.4) — a Boolean search over the eq-atom
-    skeleton that drives `EufTheory` incrementally (assert on decide, take
-    `propagate()` implications, on `Err(core)` learn `¬⋀core` and backtrack via
-    `pop`), deciding QF_UF. **Validate differentially against the existing
-    `check_qf_uf`** (same answers on the euf_egraph_diff corpus). Then wire it as the
-    QF_UF fast path and extend toward P1.6 theory combination (interface equalities
-    → complete QF_UFBV without Ackermann). Secondary: migrate `axeyum_rewrite`'s
+  - **Online DPLL(T) refutation `prove_unsat_qf_uf_online` — DONE** (Tseitin + own
+    DPLL + online `EufTheory`, 500-formula differential vs `prove_unsat_lazy`). The
+    online *search* now exists, not just the online theory.
+  - **Next action (precise resume point):** extend the online DPLL(T) from a
+    *refutation* engine to a full *decision* procedure `solve_qf_uf_online` —
+    add **SAT model construction** on a theory-consistent total assignment (reuse
+    `build_model` from the e-graph classes + the `replays` soundness gate), so it
+    returns `Sat(model)`/`Unsat`/`Unknown` like `check_qf_uf`; validate differentially
+    vs `check_qf_uf` (same verdicts, all sat models replay). Then wire it as the
+    QF_UF fast path in `check_auto_dispatch` (replacing/【ahead of】the offline
+    `check_qf_uf`) and extend toward P1.6 theory combination (interface equalities →
+    complete QF_UFBV without Ackermann). Secondary: migrate `axeyum_rewrite`'s
     bespoke trigger closure onto the keystone.
 - **Plan authored** (2026-06-15): the full track/phase/task plan is under
   [`docs/plan/`](docs/plan/README.md), built from the five reference reviews in
@@ -215,8 +219,22 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **P1.5 online DPLL(T) refutation engine** (pending commit).
+  `prove_unsat_qf_uf_online`: a self-contained online DPLL(T) for QF_UF — Tseitin
+  CNF of the Boolean skeleton (and/or/not/xor/implies/ite gates; un-encodable
+  structure → sound give-up) driving the online `EufTheory`. Interleaves Boolean
+  unit propagation with `EufTheory::propagate`, mirrors eq-atom assignments via
+  `assert` (theory `push` per decision, `pop` per backtrack — lockstep), learns
+  `¬⋀core` on theory conflicts, chronological backtracking. Returns `true` only at
+  a root-level conflict (sound UNSAT). **Differentially validated vs the offline
+  `prove_unsat_lazy` on 500 random QF_UF formulas (exact agreement) + 4 crafted
+  cases** (disjunction, transitivity, congruence, a SAT case). This is the *online
+  search* atop the online theory — the offline SAT-enumeration loop replaced by one
+  incremental backtrackable e-graph. (Implemented by a sub-agent; reviewed in full —
+  Tseitin gates are equivalence-correct, the UNSAT verdict is sound, push/pop stays
+  balanced — and the differential count was raised 50→500.)
 - **2026-06-16** — **P1.5 online theory propagation (`EufTheory::propagate`)**
-  (pending commit). Extends the online theory with sound EUF propagation: the
+  (commit a3cea13). Extends the online theory with sound EUF propagation: the
   unassigned equality atoms whose sides are already congruent, each entailed `true`
   with the asserted equalities that force it (`TheoryProp{lit, reason}`).
   Assigned-state is now tracked and backtracked in lockstep (per-`push`

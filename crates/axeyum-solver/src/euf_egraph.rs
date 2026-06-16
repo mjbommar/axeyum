@@ -356,6 +356,60 @@ pub fn prove_unsat_lazy(arena: &mut TermArena, assertions: &[TermId]) -> bool {
     }
 }
 
+/// Online DPLL(T) refutation for the `QF_UF` equality fragment (Track 1, P1.5):
+/// a small self-contained CDCL-free DPLL search drives the **online** [`EufTheory`]
+/// over the backtrackable congruence-closure e-graph, instead of the offline
+/// SAT-then-recheck enumeration of [`prove_unsat_lazy`].
+///
+/// The assertions are Tseitin-encoded into a CNF skeleton whose atom variables are
+/// the distinct equality atoms (registered with [`EufTheory`]) plus Boolean-sorted
+/// leaves; auxiliary variables gate the Boolean connectives. A simple-scan DPLL
+/// loop then explores assignments: each equality-atom assignment is mirrored into
+/// the theory ([`EufTheory::assert`]), theory conflicts are learned as blocking
+/// clauses, theory propagations ([`EufTheory::propagate`]) extend the trail, and the
+/// theory is pushed/popped in lockstep with the decision levels.
+///
+/// Like [`prove_unsat_lazy`] this is a **sound, incomplete** prover with the *same*
+/// uninterpreted abstraction, so the two must return the identical Boolean verdict:
+/// it returns `true` only when it genuinely refutes the assertions, and `false`
+/// (proved nothing) for a Boolean- and theory-consistent assignment or for any
+/// skeleton it cannot encode. Mutates `arena` only by registering atoms in the
+/// theory's bridge (no new terms are created).
+#[must_use]
+pub fn prove_unsat_qf_uf_online(arena: &mut TermArena, assertions: &[TermId]) -> bool {
+    // Distinct equality atoms over the whole assertion set (these become the
+    // theory's atom indices and the first variables 0..eq_count).
+    let mut atom_terms: Vec<TermId> = Vec::new();
+    let mut seen = HashSet::new();
+    for &a in assertions {
+        collect_eq_atoms(arena, a, &mut atom_terms, &mut seen);
+    }
+    if atom_terms.is_empty() {
+        return false; // no equalities: congruence cannot prove anything
+    }
+
+    // Variable map: each equality atom keeps its collected index; Boolean-sorted
+    // leaves that surface as atoms get fresh indices after the equalities. The
+    // theory is built over exactly `atom_terms`, so theory atom indices line up
+    // with the first `atom_terms.len()` variables.
+    let mut enc = Encoder::new(&atom_terms);
+    let mut clauses: Vec<Vec<Lit>> = Vec::new();
+    for &assertion in assertions {
+        let Some(top) = enc.encode(arena, assertion, &mut clauses) else {
+            return false; // un-encodable Boolean structure: sound to give up
+        };
+        clauses.push(vec![Lit {
+            var: top,
+            positive: true,
+        }]);
+    }
+
+    let eq_count = atom_terms.len();
+    let mut theory = EufTheory::new(arena, &atom_terms);
+    let mut solver = Dpll::new(enc.var_count, eq_count, clauses);
+    solver.solve(&mut theory)
+}
+
 /// Decides a `QF_UF`(-equality) conjunction by the lazy DPLL(T) loop, returning a
 /// **replay-checked** model on `sat`.
 ///
@@ -681,6 +735,398 @@ fn build_blocking_clause(
         });
     }
     clause.expect("a conflict has at least one literal")
+}
+
+/// A CNF literal in the online DPLL(T) skeleton: a variable index and its polarity.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Lit {
+    var: usize,
+    positive: bool,
+}
+
+impl Lit {
+    fn negate(self) -> Self {
+        Self {
+            var: self.var,
+            positive: !self.positive,
+        }
+    }
+}
+
+/// Tseitin encoder from the typed Boolean IR into a CNF skeleton. The first
+/// `atom_index` variables are reserved for the equality atoms (numbered to match
+/// [`EufTheory`]); Boolean-sorted leaves reuse those slots or take fresh indices,
+/// and connective gates allocate fresh auxiliary variables.
+struct Encoder {
+    /// Variable index per already-encoded term (atoms and gates), so structurally
+    /// shared subterms share a variable.
+    term_var: HashMap<TermId, usize>,
+    var_count: usize,
+}
+
+impl Encoder {
+    fn new(atom_terms: &[TermId]) -> Self {
+        let mut term_var = HashMap::new();
+        for (i, &t) in atom_terms.iter().enumerate() {
+            term_var.insert(t, i);
+        }
+        Self {
+            term_var,
+            var_count: atom_terms.len(),
+        }
+    }
+
+    /// A fresh auxiliary variable index.
+    fn fresh(&mut self) -> usize {
+        let v = self.var_count;
+        self.var_count += 1;
+        v
+    }
+
+    /// Encodes the Boolean term `t` into `clauses`, returning the variable whose
+    /// truth equals `t`, or `None` if `t` has Boolean-position structure outside the
+    /// supported connectives (the caller then soundly gives up).
+    fn encode(
+        &mut self,
+        arena: &TermArena,
+        t: TermId,
+        clauses: &mut Vec<Vec<Lit>>,
+    ) -> Option<usize> {
+        if let Some(&v) = self.term_var.get(&t) {
+            return Some(v);
+        }
+        let v = match arena.node(t) {
+            // A registered equality atom is handled by the map lookup above; a leaf
+            // Boolean symbol becomes its own variable.
+            TermNode::Symbol(_) if arena.sort_of(t) == Sort::Bool => self.fresh(),
+            TermNode::BoolConst(b) => {
+                let value = *b;
+                let g = self.fresh();
+                // Force g to the constant.
+                clauses.push(vec![Lit {
+                    var: g,
+                    positive: value,
+                }]);
+                g
+            }
+            TermNode::App { op, args } => {
+                let op = *op;
+                let args = args.clone();
+                self.encode_app(arena, op, &args, clauses)?
+            }
+            // Non-Boolean leaf at a Boolean position cannot be encoded.
+            _ => return None,
+        };
+        self.term_var.insert(t, v);
+        Some(v)
+    }
+
+    /// Encodes a connective application into a fresh gate variable with the standard
+    /// Tseitin clauses. Returns `None` for an unsupported operator at Boolean
+    /// position (e.g. `Op::Eq` over non-Boolean sides is already an atom; any other
+    /// operator yielding a non-Boolean is a give-up).
+    fn encode_app(
+        &mut self,
+        arena: &TermArena,
+        op: Op,
+        args: &[TermId],
+        clauses: &mut Vec<Vec<Lit>>,
+    ) -> Option<usize> {
+        let lits: Vec<Lit> = args
+            .iter()
+            .map(|&a| {
+                self.encode(arena, a, clauses).map(|var| Lit {
+                    var,
+                    positive: true,
+                })
+            })
+            .collect::<Option<Vec<_>>>()?;
+        let g = self.fresh();
+        let gl = Lit {
+            var: g,
+            positive: true,
+        };
+        match (op, lits.as_slice()) {
+            (Op::BoolNot, [a]) => {
+                // g <-> ¬a
+                clauses.push(vec![gl.negate(), a.negate()]);
+                clauses.push(vec![gl, *a]);
+            }
+            (Op::BoolAnd, [a, b]) => {
+                // g <-> a ∧ b
+                clauses.push(vec![gl.negate(), *a]);
+                clauses.push(vec![gl.negate(), *b]);
+                clauses.push(vec![a.negate(), b.negate(), gl]);
+            }
+            (Op::BoolOr, [a, b]) => {
+                // g <-> a ∨ b
+                clauses.push(vec![gl, a.negate()]);
+                clauses.push(vec![gl, b.negate()]);
+                clauses.push(vec![gl.negate(), *a, *b]);
+            }
+            (Op::BoolImplies, [a, b]) => {
+                // g <-> (¬a ∨ b)
+                clauses.push(vec![gl, *a]);
+                clauses.push(vec![gl, b.negate()]);
+                clauses.push(vec![gl.negate(), a.negate(), *b]);
+            }
+            (Op::BoolXor, [a, b]) => {
+                // g <-> a xor b
+                clauses.push(vec![gl.negate(), *a, *b]);
+                clauses.push(vec![gl.negate(), a.negate(), b.negate()]);
+                clauses.push(vec![gl, a.negate(), *b]);
+                clauses.push(vec![gl, *a, b.negate()]);
+            }
+            (Op::Ite, [c, x, y]) => {
+                // g <-> (c ? x : y), over Boolean branches only.
+                clauses.push(vec![c.negate(), x.negate(), gl]);
+                clauses.push(vec![c.negate(), *x, gl.negate()]);
+                clauses.push(vec![*c, y.negate(), gl]);
+                clauses.push(vec![*c, *y, gl.negate()]);
+            }
+            _ => return None,
+        }
+        Some(g)
+    }
+}
+
+/// How a variable came to be assigned, so backtracking can undo theory state and
+/// (for theory propagations) chronological backtracking stays correct.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Cause {
+    /// A branching decision; its level owns a theory `push`.
+    Decision,
+    /// Forced by unit propagation, a theory propagation, or a learned unit.
+    Implied,
+}
+
+/// A self-contained DPLL(T) search over the CNF skeleton, driving an [`EufTheory`]
+/// online. Chronological backtracking with theory-conflict clause learning; the
+/// theory is pushed on each decision and popped on each backtrack so its e-graph
+/// stays in lockstep with the trail.
+struct Dpll {
+    var_count: usize,
+    eq_count: usize,
+    clauses: Vec<Vec<Lit>>,
+    /// Current value per variable (`None` if unassigned).
+    value: Vec<Option<bool>>,
+    /// Trail of `(var, value, cause)` in assignment order.
+    trail: Vec<(usize, bool, Cause)>,
+}
+
+impl Dpll {
+    fn new(var_count: usize, eq_count: usize, clauses: Vec<Vec<Lit>>) -> Self {
+        Self {
+            var_count,
+            eq_count,
+            clauses,
+            value: vec![None; var_count],
+            trail: Vec::new(),
+        }
+    }
+
+    fn lit_sat(&self, lit: Lit) -> Option<bool> {
+        self.value[lit.var].map(|v| v == lit.positive)
+    }
+
+    /// Assigns `var := value` with the given cause, mirroring an equality atom into
+    /// the theory. Returns the theory conflict if the assertion is inconsistent.
+    fn assign(
+        &mut self,
+        theory: &mut EufTheory,
+        var: usize,
+        value: bool,
+        cause: Cause,
+    ) -> Result<(), Vec<TheoryLit>> {
+        self.value[var] = Some(value);
+        self.trail.push((var, value, cause));
+        if var < self.eq_count {
+            theory.assert(var, value)?;
+        }
+        Ok(())
+    }
+
+    /// Undoes the trail back to (and excluding) the most recent decision, popping the
+    /// theory once. Returns the decision's `(var, value)`, or `None` if there is no
+    /// decision left (the search is exhausted).
+    fn backtrack_to_decision(&mut self, theory: &mut EufTheory) -> Option<(usize, bool)> {
+        loop {
+            let (var, value, cause) = self.trail.pop()?;
+            self.value[var] = None;
+            if cause == Cause::Decision {
+                theory.pop();
+                return Some((var, value));
+            }
+        }
+    }
+
+    /// Boolean unit propagation to fixpoint over the current clauses. Returns `Err`
+    /// with a conflicting clause's falsified literals' negations (a learned clause)
+    /// on a Boolean conflict, or with a theory conflict from a forced theory
+    /// assertion; `Ok(())` at a (Boolean-)consistent fixpoint.
+    fn unit_propagate(&mut self, theory: &mut EufTheory) -> Result<(), Vec<Lit>> {
+        let mut changed = true;
+        while changed {
+            changed = false;
+            for ci in 0..self.clauses.len() {
+                let mut unassigned: Option<Lit> = None;
+                let mut satisfied = false;
+                let mut count = 0;
+                for &lit in &self.clauses[ci] {
+                    match self.lit_sat(lit) {
+                        Some(true) => {
+                            satisfied = true;
+                            break;
+                        }
+                        Some(false) => {}
+                        None => {
+                            unassigned = Some(lit);
+                            count += 1;
+                        }
+                    }
+                }
+                if satisfied {
+                    continue;
+                }
+                if count == 0 {
+                    // All literals false: Boolean conflict. Learn the negation of the
+                    // clause's (necessarily falsified) literals.
+                    return Err(self.clauses[ci].iter().map(|l| l.negate()).collect());
+                }
+                if count == 1 {
+                    let lit = unassigned.expect("count == 1 has the unit literal");
+                    if let Err(core) = self.assign(theory, lit.var, lit.positive, Cause::Implied) {
+                        return Err(Self::theory_conflict_clause(&core));
+                    }
+                    changed = true;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Applies sound theory propagations to the trail until fixpoint. Returns the
+    /// learned clause on a theory conflict, else `Ok(())`.
+    fn theory_propagate(&mut self, theory: &mut EufTheory) -> Result<(), Vec<Lit>> {
+        loop {
+            let props = theory.propagate();
+            let mut progress = false;
+            for prop in props {
+                let var = prop.lit.atom;
+                match self.value[var] {
+                    Some(v) if v == prop.lit.value => {}
+                    Some(_) => {
+                        // Theory entails the opposite of the current value: a
+                        // conflict. Learn ¬(reason ∧ current literal).
+                        let mut core = prop.reason.clone();
+                        core.push(TheoryLit {
+                            atom: var,
+                            value: !prop.lit.value,
+                        });
+                        return Err(Self::theory_conflict_clause(&core));
+                    }
+                    None => {
+                        if let Err(c) = self.assign(theory, var, prop.lit.value, Cause::Implied) {
+                            return Err(Self::theory_conflict_clause(&c));
+                        }
+                        progress = true;
+                    }
+                }
+            }
+            if !progress {
+                return Ok(());
+            }
+        }
+    }
+
+    /// Maps a theory conflict core to a learned CNF clause: the disjunction of the
+    /// negated core literals (`¬⋀core`), each over the matching atom variable.
+    fn theory_conflict_clause(core: &[TheoryLit]) -> Vec<Lit> {
+        core.iter()
+            .map(|l| Lit {
+                var: l.atom,
+                positive: !l.value,
+            })
+            .collect()
+    }
+
+    /// The lowest-index unassigned variable, or `None` when the assignment is total.
+    fn pick_unassigned(&self) -> Option<usize> {
+        (0..self.var_count).find(|&v| self.value[v].is_none())
+    }
+
+    /// Runs the DPLL(T) search. Returns `true` iff the skeleton is UNSAT under the
+    /// theory (a proof of UNSAT), `false` on a Boolean- and theory-consistent total
+    /// assignment.
+    fn solve(&mut self, theory: &mut EufTheory) -> bool {
+        // Each iteration resolves any pending conflict, then either decides or
+        // reports a complete consistent assignment.
+        loop {
+            // Drive propagation to a fixpoint, resolving conflicts by backtracking.
+            loop {
+                match self.propagate(theory) {
+                    Ok(()) => break,
+                    Err(clause) => {
+                        if !self.learn_and_backtrack(theory, clause) {
+                            return true; // exhausted under a conflict: UNSAT
+                        }
+                    }
+                }
+            }
+            match self.pick_unassigned() {
+                None => return false, // total, consistent assignment: not UNSAT
+                Some(var) => {
+                    theory.push();
+                    if let Err(core) = self.assign(theory, var, true, Cause::Decision) {
+                        let clause = Self::theory_conflict_clause(&core);
+                        if !self.learn_and_backtrack(theory, clause) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Unit propagation interleaved with theory propagation to a joint fixpoint.
+    fn propagate(&mut self, theory: &mut EufTheory) -> Result<(), Vec<Lit>> {
+        loop {
+            self.unit_propagate(theory)?;
+            let before = self.trail.len();
+            self.theory_propagate(theory)?;
+            if self.trail.len() == before {
+                return Ok(());
+            }
+        }
+    }
+
+    /// Records the learned clause, backtracks past the most recent decision, and
+    /// flips that decision's variable as an implied assignment (so the search
+    /// progresses and the learned clause forbids revisiting the conflict). Returns
+    /// `false` when there is no decision to undo — i.e. the empty assignment already
+    /// conflicts, proving UNSAT.
+    fn learn_and_backtrack(&mut self, theory: &mut EufTheory, clause: Vec<Lit>) -> bool {
+        if !clause.is_empty() {
+            self.clauses.push(clause);
+        }
+        loop {
+            let Some((var, value)) = self.backtrack_to_decision(theory) else {
+                return false; // exhausted: UNSAT
+            };
+            // Try the opposite polarity as an implied assignment at the parent level.
+            let flipped = !value;
+            match self.assign(theory, var, flipped, Cause::Implied) {
+                Ok(()) => return true,
+                Err(core) => {
+                    // The flip immediately conflicts too; learn and keep backtracking.
+                    let learned = Self::theory_conflict_clause(&core);
+                    if !learned.is_empty() {
+                        self.clauses.push(learned);
+                    }
+                }
+            }
+        }
+    }
 }
 
 /// An equality/disequality atom between two e-nodes, tagged with the original
@@ -1272,5 +1718,156 @@ mod tests {
         let conj = arena.and(ab, fa_ne_fb).unwrap();
 
         assert!(prove_unsat_by_congruence(&arena, &[conj]).is_some());
+    }
+
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn prove_unsat_qf_uf_online_refutes_a_disjunction() {
+        // (a=b ∨ a=c) ∧ a≠b ∧ a≠c is UNSAT; the online loop must prove it.
+        let mut arena = TermArena::new();
+        let a = arena.bv_var("a", 8).unwrap();
+        let b = arena.bv_var("b", 8).unwrap();
+        let c = arena.bv_var("c", 8).unwrap();
+        let ab = arena.eq(a, b).unwrap();
+        let ac = arena.eq(a, c).unwrap();
+        let ab_or_ac = arena.or(ab, ac).unwrap();
+        let a_ne_b = arena.not(ab).unwrap();
+        let a_ne_c = arena.not(ac).unwrap();
+
+        assert!(prove_unsat_qf_uf_online(
+            &mut arena,
+            &[ab_or_ac, a_ne_b, a_ne_c]
+        ));
+    }
+
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn prove_unsat_qf_uf_online_refutes_transitivity() {
+        // a=b ∧ b=c ∧ a≠c is UNSAT.
+        let mut arena = TermArena::new();
+        let a = arena.bv_var("a", 8).unwrap();
+        let b = arena.bv_var("b", 8).unwrap();
+        let c = arena.bv_var("c", 8).unwrap();
+        let ab = arena.eq(a, b).unwrap();
+        let bc = arena.eq(b, c).unwrap();
+        let ac = arena.eq(a, c).unwrap();
+        let a_ne_c = arena.not(ac).unwrap();
+
+        assert!(prove_unsat_qf_uf_online(&mut arena, &[ab, bc, a_ne_c]));
+    }
+
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn prove_unsat_qf_uf_online_refutes_congruence() {
+        // a=b ∧ f(a)≠f(b) is UNSAT by congruence.
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(8);
+        let a = arena.bv_var("a", 8).unwrap();
+        let b = arena.bv_var("b", 8).unwrap();
+        let f = arena.declare_fun("f", &[sort], sort).unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let fb = arena.apply(f, &[b]).unwrap();
+        let ab = arena.eq(a, b).unwrap();
+        let fa_eq_fb = arena.eq(fa, fb).unwrap();
+        let fa_ne_fb = arena.not(fa_eq_fb).unwrap();
+
+        assert!(prove_unsat_qf_uf_online(&mut arena, &[ab, fa_ne_fb]));
+    }
+
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn prove_unsat_qf_uf_online_does_not_claim_satisfiable_unsat() {
+        // (a=b ∨ c=d) with nothing else is SAT; the online loop must return false.
+        let mut arena = TermArena::new();
+        let a = arena.bv_var("a", 8).unwrap();
+        let b = arena.bv_var("b", 8).unwrap();
+        let c = arena.bv_var("c", 8).unwrap();
+        let d = arena.bv_var("d", 8).unwrap();
+        let ab = arena.eq(a, b).unwrap();
+        let cd = arena.eq(c, d).unwrap();
+        let disj = arena.or(ab, cd).unwrap();
+
+        assert!(!prove_unsat_qf_uf_online(&mut arena, &[disj]));
+    }
+
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn prove_unsat_qf_uf_online_matches_lazy_differential() {
+        // ~50 small random QF_UF formulas: the online loop and the offline lazy
+        // loop share the same uninterpreted abstraction, so they must agree on the
+        // boolean verdict for every formula. Deterministic LCG, no `rand` crate.
+        let mut rng: u64 = 0x9E37_79B9_7F4A_7C15;
+        // Returns a 31-bit value; `u32 -> usize` is lossless on every target.
+        let next = |rng: &mut u64| -> usize {
+            *rng = rng
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            u32::try_from((*rng >> 33) & 0x7FFF_FFFF).expect("31-bit value fits u32") as usize
+        };
+
+        let mut agree = 0;
+        let mut proved = 0;
+        let rounds = 500;
+        for _ in 0..rounds {
+            // Fresh arena per formula keeps atom numbering clean across runs.
+            let mut arena = TermArena::new();
+            let sort = Sort::BitVec(8);
+            let consts: Vec<TermId> = ["a", "b", "c", "d"]
+                .iter()
+                .map(|n| arena.bv_var(n, 8).unwrap())
+                .collect();
+            let f = arena.declare_fun("f", &[sort], sort).unwrap();
+
+            // Build a handful of base equality atoms over constants and f-applies.
+            let mut atoms: Vec<TermId> = Vec::new();
+            let atom_count = 3 + next(&mut rng) % 3; // 3..=5
+            for _ in 0..atom_count {
+                let mk_term = |rng: &mut u64, arena: &mut TermArena| -> TermId {
+                    let base = consts[next(rng) % consts.len()];
+                    if next(rng) % 2 == 0 {
+                        arena.apply(f, &[base]).unwrap()
+                    } else {
+                        base
+                    }
+                };
+                let l = mk_term(&mut rng, &mut arena);
+                let r = mk_term(&mut rng, &mut arena);
+                let eq = arena.eq(l, r).unwrap();
+                let lit = if next(&mut rng) % 2 == 0 {
+                    eq
+                } else {
+                    arena.not(eq).unwrap()
+                };
+                atoms.push(lit);
+            }
+
+            // Combine the literals into a few assertions with and/or/not.
+            let mut assertions: Vec<TermId> = Vec::new();
+            let assertion_count = 1 + next(&mut rng) % 3; // 1..=3
+            for _ in 0..assertion_count {
+                let x = atoms[next(&mut rng) % atoms.len()];
+                let y = atoms[next(&mut rng) % atoms.len()];
+                let combined = match next(&mut rng) % 3 {
+                    0 => arena.and(x, y).unwrap(),
+                    1 => arena.or(x, y).unwrap(),
+                    _ => arena.not(x).unwrap(),
+                };
+                assertions.push(combined);
+            }
+
+            let online = prove_unsat_qf_uf_online(&mut arena, &assertions);
+            let lazy = prove_unsat_lazy(&mut arena, &assertions);
+            assert_eq!(
+                online, lazy,
+                "online vs lazy disagree on {assertions:?} (online={online}, lazy={lazy})"
+            );
+            agree += 1;
+            if online {
+                proved += 1;
+            }
+        }
+        assert_eq!(agree, rounds, "all formulas compared");
+        // Sanity: the random mix should hit a healthy number of UNSAT cases.
+        assert!(proved > 0, "differential set proved at least one UNSAT");
     }
 }
