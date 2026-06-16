@@ -22,14 +22,22 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     that only helps *trigger-less UF universals* (rare). Skipped as low marginal
     value vs. the duplication/maintenance cost; revisit only if a real corpus shows
     the gap.
-  - **Next action (new thrust):** P1.5 — `TheorySolver` trait + online theory
-    propagation, lifting `euf_egraph`'s offline DPLL(T) (`prove_unsat_lazy`) into
-    an online CDCL(T) theory interface (assert-literal / theory-propagate /
-    explain / final-check on the backtrackable e-graph). This is the keystone for
-    P1.6 theory combination (interface equalities → complete QF_UFBV without
-    Ackermann), the real z3-parity gap. Larger refactor → start with a fresh
-    context. Secondary: migrate `axeyum_rewrite`'s bespoke trigger closure onto the
-    keystone to unify on the validated path.
+- **P1.5 online theory interface — DONE (theory side)** (2026-06-16): the online
+  `TheorySolver` trait + `EufTheory` over one backtrackable keystone `EGraph` now
+  exposes the full surface a CDCL(T) loop drives — `assert(atom,value)` (→ explained
+  conflict core via `EGraph::explain`), `propagate()` (entailed equalities with
+  reasons), `push`/`pop` (lockstep backtrack of merges, disequalities, and assigned
+  state). 6 unit tests. This replaces the offline `prove_unsat_lazy` per-model
+  e-graph rebuild with one incremental graph.
+  - **Next action (precise resume point):** build the **online DPLL(T) driver**
+    `solve_qf_uf_online` (T1.5.1–T1.5.4) — a Boolean search over the eq-atom
+    skeleton that drives `EufTheory` incrementally (assert on decide, take
+    `propagate()` implications, on `Err(core)` learn `¬⋀core` and backtrack via
+    `pop`), deciding QF_UF. **Validate differentially against the existing
+    `check_qf_uf`** (same answers on the euf_egraph_diff corpus). Then wire it as the
+    QF_UF fast path and extend toward P1.6 theory combination (interface equalities
+    → complete QF_UFBV without Ackermann). Secondary: migrate `axeyum_rewrite`'s
+    bespoke trigger closure onto the keystone.
 - **Plan authored** (2026-06-15): the full track/phase/task plan is under
   [`docs/plan/`](docs/plan/README.md), built from the five reference reviews in
   [`docs/plan/references/`](docs/plan/references/README.md).
