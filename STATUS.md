@@ -93,19 +93,23 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   (conjunctive) and `prove_unsat_lazy` (offline DPLL(T) over boolean structure —
   boolean skeleton via sat-bv + e-graph theory check + explain-based blocking
   clauses). Sound EUF UNSAT proving with independently-checked conflicts.
+- **SAT model construction DONE** (commit c08c763): `check_qf_uf` decides QF_UF with
+  replay-checked `sat` models, differentially validated vs Ackermann.
 - **Next task — options (pick highest-leverage):**
-  (a) **SAT model construction + dispatch wiring** so the EUF path returns
-      replay-checked `sat` models and `check_auto`/QF_UF instances route through it
-      (completes the "model replays" exit of T1.5.5 for pure UF).
-  (b) **`TheorySolver` trait + online theory propagation** (T1.5.1–T1.5.4): refactor
-      the offline loop into an incremental theory plugged into the warm CDCL core
-      (uses the e-graph's push/pop), with lazy `get_antecedents` and final-check.
-  (c) **P1.6 theory combination (e-graph UF + bit-blaster BV)** for *complete*
-      QF_UFBV — the offline loop today only proves UNSAT, since the uninterpreted
-      abstraction ignores BV semantics.
-  Recommend (a) then (c): a complete, model-replaying QF_UF path is the cleanest
-  Track-2 unlock; (b) is an efficiency refactor. Deferred Track-1 perf option still
-  open: T1.2.8 two-level AIG rewriting in `axeyum-aig`.
+  (a) **P1.6 theory combination (e-graph UF + bit-blaster BV)** for *complete*
+      QF_UFBV: the EUF abstraction is exact for pure equality/UF but ignores BV
+      semantics, so a theory-consistent model whose constructed values violate BV
+      arithmetic currently → `unknown`. Combination (Nelson–Oppen interface
+      equalities on the `th_var` bus, or sending the e-graph's induced
+      equalities/disequalities to the bit-blaster) closes this. This is the real
+      Track-2 unlock — most theories combine with BV.
+  (b) **Dispatch wiring**: route QF_UF instances through `check_qf_uf` in
+      `check_auto`, and add `prove_unsat_lazy` as a cheap sound UNSAT pre-check
+      before bit-blasting (guarded to instances with equality structure).
+  (c) **`TheorySolver` trait + online propagation** (T1.5.1–T1.5.4): efficiency
+      refactor of the offline loop onto the warm CDCL core with the e-graph push/pop.
+  Recommend (b) (cheap, integrates the win) then (a). Deferred Track-1 perf option
+  still open: T1.2.8 two-level AIG rewriting in `axeyum-aig`.
 
 ## Already shipped this session (pre-plan)
 
@@ -128,7 +132,7 @@ plan is built and committed on the current branch:
 | P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | WIP — T1.2.1 trail + T1.2.2 propagate_values + T1.2.3 solve_eqs landed (model-sound, unit-tested, 36 tests). Next: wire the preprocessing pipeline into the solve path + measure; then elim_unconstrained / max_bv_sharing / bv_slice / AIG 2-level (T1.2.4–T1.2.9) |
 | P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | TODO |
 | P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | **DONE** — `axeyum-egraph` (ADR-0032): hash-cons + union-find + congruence cascade (T1.4.1/2), proof-forest `explain` (T1.4.3), backtrackable push/pop (T1.4.4), independent `check_congruence` (T1.4.5), per-class theory-var lists (T1.4.6). 17 tests incl. brute-force + backtracking property tests |
-| P1.5 | CDCL(T) loop (theory-as-extension, final-check, theory propagation) **[keystone]** | WIP — EUF on the e-graph: `prove_unsat_by_congruence` (conjunctive) + `prove_unsat_lazy` (offline DPLL(T): boolean skeleton + e-graph theory check + explain-based blocking clauses). Sound UNSAT over arbitrary boolean structure, conflicts independently checked. Next: `TheorySolver` trait + online propagation (T1.5.1–T1.5.4), SAT model construction, theory combination with BV (P1.6) for complete QF_UFBV |
+| P1.5 | CDCL(T) loop (theory-as-extension, final-check, theory propagation) **[keystone]** | WIP — EUF on the e-graph: `prove_unsat_by_congruence` (conjunctive), `prove_unsat_lazy` (offline DPLL(T)), and `check_qf_uf` (full decision with **replay-checked sat models** from e-graph classes + function interps). Conflicts independently checked; **differentially validated vs Ackermann**. T1.5.5 met for the equality/UF fragment. Remaining: `TheorySolver` trait + online propagation (T1.5.1–T1.5.4 efficiency refactor), dispatch wiring; theory combination with BV (P1.6) for complete QF_UFBV |
 | P1.6 | Theory combination (th_eq bus, interface equalities) | TODO |
 | P1.7 | PBLS local-search BV engine (portfolio) | TODO |
 | P1.8 | Strategy & tactics (combinators + probes + per-logic scripts) | TODO |
@@ -169,6 +173,12 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **T1.5.5 `check_qf_uf` with replay-checked sat models** (commit
+  c08c763). Full QF_UF decision on the e-graph: lazy DPLL(T) + a candidate model
+  built from e-graph classes (distinct class values, constants pinned, function
+  interpretations) replayed against the originals as the soundness gate. Decisions
+  + models differentially agree with Ackermann on all 6 cases. The "model replays"
+  half of T1.5.5.
 - **2026-06-16** — **EUF prover differentially validated** (commit a73d34a).
   `tests/euf_egraph_diff.rs` cross-checks `prove_unsat_lazy` against the trusted
   Ackermann `QF_UFBV` path: 6 instances (congruence/transitivity/two-arg conflicts,
