@@ -174,6 +174,9 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **EUF dispatch path hardened** (commit 21ca0a9). 120-iteration
+  randomized differential test: random pure equality/UF formulas decided by both
+  `check_qf_uf` and Ackermann must agree. Hardens the now-production EUF fast-path.
 - **2026-06-16** — **EUF e-graph path wired into `check_auto`** (commit 6ce85b0).
   UF instances try `check_qf_uf` (congruence fast-path) before the Ackermann
   bit-blast; sound for QF_UFBV (replay-checked sat, re-checked unsat), Ackermann
