@@ -13,8 +13,9 @@
 //!   ([`crate::solve_with_drat_proof`]) and the resulting DRAT proof is **re-checked
 //!   by [`crate::check_drat`]**, so the entailment underpinning every accepted
 //!   resolution step is itself independently verified — not trusted to the search.
-//! - **`eq_reflexive`/`eq_transitive`** (EUF) are checked *structurally* against
-//!   the rule's exact tautology shape.
+//! - The **EUF** rules `eq_reflexive`, `eq_symmetric`, `eq_transitive`, and
+//!   `eq_congruent` are checked *structurally* against each rule's exact tautology
+//!   shape (strict and order-sensitive).
 //!
 //! Atoms are structured [`AletheTerm`]s (a symbol or an application), compared by
 //! structural equality so theory rules can inspect their shape. Any other rule is
@@ -87,8 +88,8 @@ pub enum AletheCommand {
         id: String,
         /// The derived clause (`(cl ...)`); empty means the empty clause.
         clause: AletheClause,
-        /// The rule name (`resolution`/`th_resolution` by entailment;
-        /// `eq_reflexive`/`eq_transitive` structurally; others unsupported).
+        /// The rule name (`resolution`/`th_resolution` by entailment; the EUF
+        /// `eq_*` rules structurally; others unsupported).
         rule: String,
         /// Identifiers of the premise commands.
         premises: Vec<String>,
@@ -576,6 +577,16 @@ pub fn check_alethe(commands: &[AletheCommand]) -> Result<bool, AletheError> {
                             return Err(AletheError::StepNotEntailed { id: id.clone() });
                         }
                     }
+                    "eq_symmetric" => {
+                        if !premise_clauses.is_empty() || !is_eq_symmetric(clause) {
+                            return Err(AletheError::StepNotEntailed { id: id.clone() });
+                        }
+                    }
+                    "eq_congruent" => {
+                        if !premise_clauses.is_empty() || !is_eq_congruent(clause) {
+                            return Err(AletheError::StepNotEntailed { id: id.clone() });
+                        }
+                    }
                     _ => return Err(AletheError::UnsupportedRule { rule: rule.clone() }),
                 }
                 if clause.is_empty() {
@@ -669,6 +680,70 @@ fn is_eq_transitive(clause: &AletheClause) -> bool {
 
     // Conclusion endpoints must match the chain endpoints exactly.
     first_lhs == Some(concl_lhs) && last_rhs == Some(concl_rhs)
+}
+
+/// Structural check for the EUF `eq_symmetric` rule.
+///
+/// Valid iff the clause is exactly `(cl (not (= a b)) (= b a))` — a negated
+/// equality followed by the positive equality with the sides swapped. This is the
+/// symmetry tautology `a = b → b = a`. Any other shape is rejected.
+fn is_eq_symmetric(clause: &AletheClause) -> bool {
+    let [hyp, concl] = clause.as_slice() else {
+        return false;
+    };
+    if !hyp.negated || concl.negated {
+        return false;
+    }
+    let (Some((a, b)), Some((c, d))) = (as_eq(&hyp.atom), as_eq(&concl.atom)) else {
+        return false;
+    };
+    // `(= a b)` hypothesis, `(= b a)` conclusion.
+    a == d && b == c
+}
+
+/// Structural check for the EUF `eq_congruent` rule.
+///
+/// Valid iff the clause has the shape
+/// `(cl (not (= a1 b1)) ... (not (= an bn)) (= (f a1 ... an) (f b1 ... bn)))`:
+/// the last literal is a positive equality between two applications of the **same
+/// head** `f` with the same arity `n`, and the first `n` literals are the negated
+/// argument equalities `¬(= aᵢ bᵢ)` in order matching the conclusion's argument
+/// pairs. This is the congruence tautology `⋀ᵢ aᵢ = bᵢ → f(a⃗) = f(b⃗)`. Strict and
+/// order-sensitive; any deviation is rejected.
+fn is_eq_congruent(clause: &AletheClause) -> bool {
+    if clause.is_empty() {
+        return false;
+    }
+    let (hyps, last) = clause.split_at(clause.len() - 1);
+    let conclusion = &last[0];
+    if conclusion.negated {
+        return false;
+    }
+    // The conclusion equates `f(a1..an)` and `f(b1..bn)` (same head, same arity).
+    let Some((lhs, rhs)) = as_eq(&conclusion.atom) else {
+        return false;
+    };
+    let (AletheTerm::App(f_head, a_args), AletheTerm::App(g_head, b_args)) = (lhs, rhs) else {
+        return false;
+    };
+    if f_head != g_head || a_args.len() != b_args.len() || a_args.len() != hyps.len() {
+        return false;
+    }
+    // Each hypothesis is the negated equality of the matching argument pair, in
+    // order. (A reflexive pair `aᵢ == bᵢ` still requires its `¬(= aᵢ bᵢ)` literal —
+    // strict, sound; the omitted-reflexive form is left incomplete.)
+    for (hyp, (a, b)) in hyps.iter().zip(a_args.iter().zip(b_args)) {
+        if !hyp.negated {
+            return false;
+        }
+        let Some((ha, hb)) = as_eq(&hyp.atom) else {
+            return false;
+        };
+        if ha != a || hb != b {
+            return false;
+        }
+    }
+    true
 }
 
 /// Returns `true` iff `premises ⊨ conclusion`, decided as
@@ -1072,6 +1147,112 @@ mod tests {
             check_alethe(&scrambled),
             Err(AletheError::StepNotEntailed {
                 id: "t1".to_owned()
+            })
+        );
+    }
+
+    #[test]
+    fn eq_symmetric_checks() {
+        // Valid: (cl (not (= a b)) (= b a)).
+        let valid = vec![step(
+            "s1",
+            vec![neq_lit("a", "b"), eq_lit("b", "a")],
+            "eq_symmetric",
+            &[],
+        )];
+        assert_eq!(check_alethe(&valid), Ok(false));
+
+        // Broken: conclusion not swapped — (cl (not (= a b)) (= a b)).
+        let not_swapped = vec![step(
+            "s1",
+            vec![neq_lit("a", "b"), eq_lit("a", "b")],
+            "eq_symmetric",
+            &[],
+        )];
+        assert_eq!(
+            check_alethe(&not_swapped),
+            Err(AletheError::StepNotEntailed {
+                id: "s1".to_owned()
+            })
+        );
+    }
+
+    #[test]
+    fn eq_congruent_checks() {
+        // Valid: (cl (not (= a c)) (not (= b d)) (= (f a b) (f c d))).
+        let fab = AletheTerm::App(
+            "f".to_owned(),
+            vec![
+                AletheTerm::Const("a".to_owned()),
+                AletheTerm::Const("b".to_owned()),
+            ],
+        );
+        let fcd = AletheTerm::App(
+            "f".to_owned(),
+            vec![
+                AletheTerm::Const("c".to_owned()),
+                AletheTerm::Const("d".to_owned()),
+            ],
+        );
+        let concl = AletheLit {
+            atom: AletheTerm::App("=".to_owned(), vec![fab, fcd]),
+            negated: false,
+        };
+        let valid = vec![step(
+            "c1",
+            vec![neq_lit("a", "c"), neq_lit("b", "d"), concl.clone()],
+            "eq_congruent",
+            &[],
+        )];
+        assert_eq!(check_alethe(&valid), Ok(false));
+
+        // Broken: a hypothesis pair does not match the conclusion's argument pair
+        // — uses (not (= a d)) where the first f-argument pair is (a, c).
+        let mismatched = vec![step(
+            "c1",
+            vec![neq_lit("a", "d"), neq_lit("b", "d"), concl.clone()],
+            "eq_congruent",
+            &[],
+        )];
+        assert_eq!(
+            check_alethe(&mismatched),
+            Err(AletheError::StepNotEntailed {
+                id: "c1".to_owned()
+            })
+        );
+
+        // Broken: mismatched function heads f vs g in the conclusion.
+        let gcd = AletheTerm::App(
+            "g".to_owned(),
+            vec![
+                AletheTerm::Const("c".to_owned()),
+                AletheTerm::Const("d".to_owned()),
+            ],
+        );
+        let fab2 = AletheTerm::App(
+            "f".to_owned(),
+            vec![
+                AletheTerm::Const("a".to_owned()),
+                AletheTerm::Const("b".to_owned()),
+            ],
+        );
+        let head_mismatch = vec![step(
+            "c1",
+            vec![
+                neq_lit("a", "c"),
+                neq_lit("b", "d"),
+                AletheLit {
+                    atom: AletheTerm::App("=".to_owned(), vec![fab2, gcd]),
+                    negated: false,
+                },
+            ],
+            "eq_congruent",
+            &[],
+        )];
+        assert_eq!(
+            check_alethe(&head_mismatch),
+            Err(AletheError::StepNotEntailed {
+                id: "c1".to_owned()
             })
         );
     }
