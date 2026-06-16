@@ -22,6 +22,19 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     that only helps *trigger-less UF universals* (rare). Skipped as low marginal
     value vs. the duplication/maintenance cost; revisit only if a real corpus shows
     the gap.
+- **P3.2 Alethe resolution-layer checker — first slice DONE** (2026-06-16): the
+  Alethe (veriT/cvc5 SMT proof format) IR + s-expr `parse_alethe`/`write_alethe` +
+  a sound `check_alethe` for the propositional resolution layer in
+  `axeyum-cnf::alethe`. A `resolution`/`th_resolution` step is verified by
+  `{premises, ¬conclusion}`-UNSAT, decided by the **proof-producing** core and
+  **re-checked by `check_drat`** (so each accepted step's entailment is itself
+  independently verified, not trusted to the SAT search); a step is recorded only
+  after it verifies; UNSAT requires a verified empty clause `(cl)`. 7 tests incl. 3
+  negative/rejection. The resolution rung connecting to the DRAT/LRAT clausal
+  proofs. Remaining (P3.2/3.3): typed-term IR (SMT-LIB terms vs opaque atoms);
+  more rules (`or`/`and`/`contraction`/theory lemmas); emit Alethe from the solver
+  (e.g. LRAT→Alethe resolution); Carcara cross-check. NOTE: when the term IR lands,
+  consider extracting `axeyum-alethe` per the roadmap (needs an ADR per ADR-0001).
 - **P2.9 datatypes — structural refutation DONE** (2026-06-16):
   `prove_datatype_unsat_structurally` — the three datatype structural axioms over a
   term-level union-find: **acyclicity** (`x = cons(h, x)` ⇒ unsat), **distinctness**
@@ -280,7 +293,7 @@ plan is built and committed on the current branch:
 |---|---|---|
 | P3.0 | Reduction trust ledger (TrustId + pedantic levels) | DONE |
 | P3.1 | LRAT clausal upgrade (+ in-tree check_lrat) | WIP — **`check_lrat` (hint-based linear checker) + `elaborate_drat_to_lrat` + parse/write** landed in `axeyum-cnf`, sound (3 negative/rejection tests) + 600-CNF differential; **threaded into the evidence export**: every `UnsatProof` (QF_BV + reduced QF_ABV/AUFBV/UF/LIA/datatype) now carries a self-checked LRAT certificate, `recheck` cross-checks it, `recheck_lrat` re-checks it in linear time, tamper-detected. Remaining: emit LRAT hints directly from the proof-producing CDCL core (vs post-hoc elaboration); RAT-step elaboration (negative hints) |
-| P3.2 | Alethe term/proof IR + emitter (`axeyum-alethe`) **[critical path]** | TODO |
+| P3.2 | Alethe term/proof IR + emitter (`axeyum-alethe`) **[critical path]** | WIP — **resolution-layer IR + parser/printer + sound `check_alethe`** in `axeyum-cnf::alethe`: `resolution`/`th_resolution` steps verified by `{premises,¬concl}`-UNSAT via the proof-producing core + `check_drat` re-check (entailment itself independently checked); verify-before-record; 7 tests incl. 3 rejection. Remaining: typed-term IR (vs opaque atoms), more rules, emit Alethe from solver runs, Carcara CI cross-check; extract `axeyum-alethe` crate (ADR) when the term IR lands |
 | P3.3 | Alethe for QF_BV (bitblast_* + CNF rules + resolution/drat; Carcara CI) | TODO |
 | P3.4 | Embedded Alethe checker subset (self-checking) | TODO |
 | P3.5 | Alethe for reductions (arrays → Ackermann → int-blast) | TODO |
