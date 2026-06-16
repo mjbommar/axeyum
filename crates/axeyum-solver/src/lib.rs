@@ -51,6 +51,7 @@ mod optimize;
 mod pb;
 mod preprocess;
 mod proof;
+mod qinst_egraph;
 mod records;
 mod sat_bv_backend;
 mod smtlib;
@@ -128,6 +129,7 @@ pub use proof::{
     export_qf_aufbv_unsat_proof, export_qf_bv_unsat_proof, export_qf_lia_unsat_proof,
     export_qf_uf_unsat_proof,
 };
+pub use qinst_egraph::instantiate_forall_via_egraph;
 pub use records::{RecordError, RecordSort};
 pub use sat_bv_backend::SatBvBackend;
 pub use smtlib::{
