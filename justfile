@@ -33,10 +33,13 @@ bench-micro-z3:
     cargo run -p axeyum-bench --features z3 -- corpus/micro --backend z3 --timeout-ms 1000 --out /tmp/axeyum-bench-micro-z3.json
 
 # P4.5: the committed curated QF_BV slice, sat-bv vs Z3 (oracle-enabled). The
-# measured head-to-head gate for Track 1; bounded to --jobs 2 for the 32GB host.
+# measured head-to-head gate for Track 1. Encoding budgets bound the bit-blast so
+# a pathological instance returns a structured `unknown` instead of allocating
+# gigabytes (some curated files have very wide terms). Wrap in `ulimit -v` (e.g.
+# `( ulimit -v 64000000; just bench-qfbv-curated )`) so a runaway can't OOM the box.
 bench-qfbv-curated:
     mkdir -p bench-results/baselines
-    cargo run -p axeyum-bench --features z3 -- corpus/qfbv-curated --backend sat-bv --compare-z3 --timeout-ms 2000 --jobs 2 --out bench-results/baselines/qfbv-curated-sat-bv-vs-z3-2s.json --logic QF_BV
+    cargo run -p axeyum-bench --features z3 -- corpus/qfbv-curated --backend sat-bv --compare-z3 --timeout-ms 2000 --jobs 2 --node-budget 50000 --cnf-var-budget 200000 --cnf-clause-budget 1000000 --out bench-results/baselines/qfbv-curated-sat-bv-vs-z3-2s.json --logic QF_BV
 
 # Reproduce the Phase 2 public QF_BV baseline after `scripts/fetch-corpus.sh qf_bv`.
 bench-public-qfbv-baseline:

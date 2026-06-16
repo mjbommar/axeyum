@@ -21,18 +21,24 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   total incl. brute-force equisatisfiability + per-model reconstruction + SAT/DRAT
   preservation. DRAT-step emission inside the proof-producing solve and the measured
   perf delta ride P4.5 + the pipeline-integration step.
-- **P4.5 — WIP, blocked on host RAM (transitioning to s4).** Landed: the bench
-  harness now gives workers a 512 MB stack (fixes a stack overflow a deeply-nested
-  instance triggered, which aborted the batch); a committed curated QF_BV slice
-  `corpus/qfbv-curated/` (36 files); `just bench-qfbv-curated`. The instrument is
-  validated on `corpus/micro` (3/3 decided, agree=3, DISAGREE=0). **The full
-  curated baseline OOM-killed this 26–32 GB host twice** (unbounded Z3/sat-bv
-  worker memory) — to be run on s4 with a per-process memory cap (see host-setup).
-- **Machine transition:** see [docs/plan/host-setup.md](docs/plan/host-setup.md).
-  All work is on branch `docs/readme-plan-parity-roadmap` (pushed to origin).
-- **Next task (on s4):** run the curated baseline under a memory cap, commit the
-  artifact, then wire subsumption + BVE into the bit-blast→CNF→solve pipeline and
-  re-measure the inprocessing delta.
+- **P4.5 — DONE.** Committed measurement slice `corpus/qfbv-curated/` (43 files,
+  **width-capped ≤64 bits**) + recorded baseline
+  `bench-results/baselines/qfbv-curated-sat-bv-vs-z3-2s.json`: sat-bv vs Z3 4.13.3,
+  2 s, budgets — **32/43 decided (8 sat + 24 unsat), 11 unknown, agree=32,
+  DISAGREE=0, replay failures=0**, PAR-2 ≈1.07 s. Harness now gives workers a
+  512 MB stack (deep-term fix). `just bench-qfbv-curated`.
+- **Known robustness gap (Track 1 / P1.2):** sat-bv allocates eagerly during
+  lowering on wide terms (a 1024-bit multiply / 20k-bit vector → multi-GB alloc)
+  *before* the node budget is enforced, aborting instead of returning `unknown`.
+  Curating by width sidesteps it; the real fix is graceful oversized-encoding
+  refusal. This is why the original size-based slice OOM'd two hosts.
+- **Machine transition to s4 done:** repo at the same path on `server4` (123 GB,
+  2× RTX 4060 Ti 16 GB, CUDA 12.4); `corpus/public` symlinked to NAS
+  `/nas3/data/...`; z3 + rust verified; 54/54 cnf tests pass. See
+  [docs/plan/host-setup.md](docs/plan/host-setup.md).
+- **Next task:** wire subsumption + BVE into the bit-blast→CNF→solve pipeline
+  (model-replay-safe), then re-run `just bench-qfbv-curated` to measure the
+  inprocessing delta against this baseline (the 11 unknowns are the target).
 
 ## Already shipped this session (pre-plan)
 
@@ -92,7 +98,7 @@ plan is built and committed on the current branch:
 | P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | TODO |
 | P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | TODO |
 | P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | TODO |
-| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | WIP — harness fix + curated slice landed; baseline pending on s4 (OOM here) |
+| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed slice + baseline (32/43 decided, agree=32, DISAGREE=0) |
 
 ## Changelog
 

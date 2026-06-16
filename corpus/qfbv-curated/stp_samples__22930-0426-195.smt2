@@ -1,0 +1,23 @@
+(set-info :smt-lib-version 2.6)
+(set-logic QF_BV)
+(set-info :source |
+Ivan Jager <aij+nospam@andrew.cmu.edu>
+
+|)
+(set-info :category "industrial")
+(set-info :status unsat)
+(declare-fun input0_9_66 () (_ BitVec 8))
+(declare-fun input0_8_65 () (_ BitVec 8))
+(declare-fun input0_15_72 () (_ BitVec 8))
+(declare-fun input0_11_68 () (_ BitVec 8))
+(declare-fun input0_14_71 () (_ BitVec 8))
+(declare-fun input0_5_62 () (_ BitVec 8))
+(declare-fun input0_13_70 () (_ BitVec 8))
+(declare-fun input0_7_64 () (_ BitVec 8))
+(declare-fun input0_4_61 () (_ BitVec 8))
+(declare-fun input0_10_67 () (_ BitVec 8))
+(declare-fun input0_12_69 () (_ BitVec 8))
+(declare-fun input0_6_63 () (_ BitVec 8))
+(assert (let ((?v_0 (bvor (concat (_ bv0 16) (bvor (concat (_ bv0 8) input0_4_61) ((_ extract 15 0) (concat (concat (_ bv0 8) input0_5_62) (_ bv0 8))))) ((_ extract 31 0) (concat (concat (_ bv0 16) (bvor (concat (_ bv0 8) input0_6_63) ((_ extract 15 0) (concat (concat (_ bv0 8) input0_7_64) (_ bv0 8))))) (_ bv0 16))))) (?v_1 (bvor (concat (_ bv0 16) (bvor (concat (_ bv0 8) input0_8_65) ((_ extract 15 0) (concat (concat (_ bv0 8) input0_9_66) (_ bv0 8))))) ((_ extract 31 0) (concat (concat (_ bv0 16) (bvor (concat (_ bv0 8) input0_10_67) ((_ extract 15 0) (concat (concat (_ bv0 8) input0_11_68) (_ bv0 8))))) (_ bv0 16)))))) (let ((?v_2 (concat (_ bv0 3) ((_ extract 31 3) ((_ extract 63 32) (bvmul (_ bv3435973837 64) (concat (_ bv0 32) ?v_1))))))) (not (= (_ bv0 1) (bvand (bvand (bvand (bvand (bvand (bvnot (ite (= (concat (_ bv0 24) ((_ extract 7 0) (concat (_ bv0 31) (bvnot (ite (= (bvand (_ bv4 32) (bvor (concat (_ bv0 16) (bvor (concat (_ bv0 8) input0_12_69) ((_ extract 15 0) (concat (concat (_ bv0 8) input0_13_70) (_ bv0 8))))) ((_ extract 31 0) (concat (concat (_ bv0 16) (bvor (concat (_ bv0 8) input0_14_71) ((_ extract 15 0) (concat (concat (_ bv0 8) input0_15_72) (_ bv0 8))))) (_ bv0 16))))) (_ bv0 32)) (_ bv1 1) (_ bv0 1)))))) (_ bv0 32)) (_ bv1 1) (_ bv0 1))) (bvnot (ite (= (concat (_ bv0 24) ((_ extract 7 0) (bvor (concat (_ bv0 31) (ite (= (bvadd (_ bv2147483649 32) ?v_0) (_ bv0 32)) (_ bv1 1) (_ bv0 1))) (bvand (_ bv4294967040 32) ?v_0)))) (_ bv0 32)) (_ bv1 1) (_ bv0 1)))) (bvnot (ite (= (bvadd (_ bv4294639615 32) ?v_1) (_ bv0 32)) (_ bv1 1) (_ bv0 1)))) (bvnot (ite (= (bvadd (_ bv4294639614 32) ?v_1) (_ bv0 32)) (_ bv1 1) (_ bv0 1)))) (bvnot (ite (= (bvadd (_ bv4294639616 32) ?v_1) (_ bv0 32)) (_ bv1 1) (_ bv0 1)))) ((_ extract 0 0) (concat (_ bv0 31) ((_ extract 31 31) (bvadd ?v_1 (bvneg ((_ extract 31 0) (concat (bvadd ?v_2 ((_ extract 31 0) (concat ?v_2 (_ bv0 2)))) (_ bv0 1))))))))))))))
+(check-sat)
+(exit)

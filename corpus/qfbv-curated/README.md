@@ -7,13 +7,29 @@ fixed instrument every Track 1 performance change is measured against.
 
 ## What's here
 
-36 small (`< 3 KB`) QF_BV instances, three per family, drawn from a spread of
-SMT-LIB QF_BV families so the slice is diverse (sat + unsat, several solvers'
-benchmark styles). Files are flattened and named `<family>__<original>.smt2`.
+43 QF_BV instances drawn from a spread of SMT-LIB families so the slice is diverse
+(sat + unsat, several solvers' benchmark styles). Files are flattened and named
+`<family>__<original>.smt2`.
 
-Families: `brummayerbiere3`, `brummayerbiere4`, `bruttomesso`, `crafted`,
-`dwp_formulas`, `log-slicing`, `pspace`, `stp_samples`, `wienand-cav2008`,
-`bmc-bv`, `20190311-bv-term-small-rw-Noetzli`, `bench_ab`.
+**Selected by term width, not file size.** The slice caps the maximum declared
+bit-vector width at **64 bits** (actual max in the slice: 32). This is deliberate:
+a 3 KB file can declare a 20,000-bit vector or a 1024-bit multiplier, and
+bit-blasting those allocates *gigabytes* — sat-bv currently lacks graceful
+refusal of oversized encodings (the node budget is enforced after the eager
+lowering allocation; a known robustness gap, tracked for Track 1 P1.2). The width
+cap keeps the slice fast and bounded so it can run repeatedly without OOM.
+
+Families: `brummayerbiere3`, `bruttomesso`, `crafted`, `dwp_formulas`,
+`stp_samples`, `wienand-cav2008`, `bmc-bv`, `20190311-bv-term-small-rw-Noetzli`,
+`bench_ab`, `calypto`, `check2`, `20220315-ecrw`.
+
+## Baseline (recorded)
+
+`sat-bv` vs Z3 4.13.3, 2 s timeout, encoding budgets, `--jobs 2`:
+**32/43 decided** (8 sat + 24 unsat), 11 `unknown` (budget/timeout), **agree=32,
+DISAGREE=0, model_replay_failures=0**, PAR-2 ≈ 1.07 s. Artifact:
+`bench-results/baselines/qfbv-curated-sat-bv-vs-z3-2s.json`. The 11 unknowns are
+the performance gap the Track 1 inprocessing/preprocessing work targets.
 
 ## Why committed + small
 
@@ -25,10 +41,11 @@ Families: `brummayerbiere3`, `brummayerbiere4`, `bruttomesso`, `crafted`,
 
 ## How it was selected
 
-Deterministically (file selection only, no solving): for each family, the three
-smallest `*.smt2` files under `corpus/public/non-incremental/QF_BV/<family>/`
-(by size, then name), copied with a `<family>__` prefix. Regenerating the slice
-reproduces the same files.
+Deterministically (file selection only, no solving): for each family, the small
+(`< 4 KB`) `*.smt2` files under `corpus/public/non-incremental/QF_BV/<family>/`
+in name order whose **maximum declared `BitVec` width ≤ 64**, up to 4 per family,
+copied with a `<family>__` prefix. Regenerating with the same rule reproduces the
+same files.
 
 ## Running the head-to-head
 
