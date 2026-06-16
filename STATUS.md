@@ -35,9 +35,10 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   `solve_with_drat_proof → DRAT → LRAT → Alethe`, re-checkable by *both* `check_lrat`
   and `check_alethe` (end-to-end test). **Typed-term IR landed**:
   `AletheTerm` (`Const`/`App`) replaces opaque-string atoms (resolution keys on the
-  canonical `key()`), plus the first **EUF theory rules** `eq_reflexive` /
-  `eq_transitive` checked structurally against their exact tautology shapes (strict,
-  order-sensitive; broken shapes rejected). 12 tests. Remaining (P3.2/3.3):
+  canonical `key()`), plus the **core EUF theory rules**
+  `eq_reflexive` / `eq_symmetric` / `eq_transitive` / `eq_congruent` checked
+  structurally against their exact tautology shapes (strict, order-sensitive; broken
+  shapes rejected). 14 tests. Remaining (P3.2/3.3):
   more rules (`or`/`and`/`contraction`/theory lemmas); emit Alethe from the solver
   (e.g. LRAT→Alethe resolution); Carcara cross-check. NOTE: when the term IR lands,
   consider extracting `axeyum-alethe` per the roadmap (needs an ADR per ADR-0001).
