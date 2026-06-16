@@ -17,11 +17,82 @@
 //! `axeyum_rewrite::instantiate_with_triggers` carries); deeper triggers,
 //! inference, and the full instantiation loop build on it.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use axeyum_egraph::{EGraph, ENodeId, Pattern};
 use axeyum_ir::{FuncId, Op, SymbolId, TermArena, TermId, TermNode};
 use axeyum_rewrite::replace_subterms;
+
+use crate::auto::check_auto;
+use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
+
+/// Default e-matching instantiation rounds before giving up (`unknown`).
+const MAX_INSTANTIATION_ROUNDS: usize = 8;
+
+/// Tries to refute a (possibly quantified) conjunction by **e-matching
+/// instantiation on the e-graph** (Track 2, P2.6): it separates the ground
+/// assertions from the universals, and repeatedly instantiates each universal over
+/// the current ground terms ([`instantiate_forall_via_egraph`]), adds the fresh
+/// instances, and re-checks the ground set with [`check_auto`] — until the ground
+/// set is `unsat` (⇒ the original is `unsat`, since the universals entail every
+/// instance), a round adds no new instance (instantiation fixpoint), or the round
+/// budget is exhausted.
+///
+/// **Sound, incomplete:** a ground `unsat` is a real refutation; otherwise the
+/// result is `unknown` (e-matching may simply not have found the refuting
+/// instance). Quantifier-free inputs go straight to [`check_auto`].
+///
+/// # Errors
+///
+/// Propagates any [`SolverError`] from the ground solver.
+pub fn prove_quantified_unsat_via_egraph(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    let mut ground: Vec<TermId> = Vec::new();
+    let mut foralls: Vec<TermId> = Vec::new();
+    for &a in assertions {
+        if matches!(arena.node(a), TermNode::App { op, .. } if matches!(op, Op::Forall(_))) {
+            foralls.push(a);
+        } else {
+            ground.push(a);
+        }
+    }
+    if foralls.is_empty() {
+        return check_auto(arena, &ground, config);
+    }
+
+    let mut seen: HashSet<TermId> = ground.iter().copied().collect();
+    for _ in 0..MAX_INSTANTIATION_ROUNDS {
+        // A ground refutation at any point is a refutation of the whole problem.
+        if matches!(check_auto(arena, &ground, config)?, CheckResult::Unsat) {
+            return Ok(CheckResult::Unsat);
+        }
+        // Instantiate every universal over the current ground terms.
+        let mut added = false;
+        let universals = foralls.clone();
+        for quantifier in universals {
+            for instance in instantiate_forall_via_egraph(arena, &ground, quantifier) {
+                if seen.insert(instance) {
+                    ground.push(instance);
+                    added = true;
+                }
+            }
+        }
+        if !added {
+            break; // instantiation fixpoint: no new ground facts
+        }
+    }
+    // Final ground check (may now be unsat with the last round's instances).
+    match check_auto(arena, &ground, config)? {
+        CheckResult::Unsat => Ok(CheckResult::Unsat),
+        _ => Ok(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Incomplete,
+            detail: "e-matching instantiation did not refute within the round budget".to_owned(),
+        })),
+    }
+}
 
 /// Instantiates the universal `forall_term` by e-matching a trigger against the
 /// `ground` terms, returning the ground instances of its body. Returns an empty
@@ -451,6 +522,48 @@ mod tests {
             2,
             "only h(_, a) matches, got {instances:?}"
         );
+    }
+
+    #[test]
+    #[allow(clippy::similar_names)]
+    fn instantiation_loop_refutes_a_quantified_contradiction() {
+        // f(a) ≠ 0  ∧  ∀x. (= (f x) 0): instantiating x = a gives f(a) = 0,
+        // contradicting the ground disequality → UNSAT.
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(8);
+        let a = arena.bv_var("a", 8).unwrap();
+        let f = arena.declare_fun("f", &[sort], sort).unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let zero = arena.bv_const(8, 0).unwrap();
+        let fa_eq_0 = arena.eq(fa, zero).unwrap();
+        let fa_ne_0 = arena.not(fa_eq_0).unwrap();
+
+        let x = arena.declare("x", sort).unwrap();
+        let xv = arena.var(x);
+        let fx = arena.apply(f, &[xv]).unwrap();
+        let fx_eq_0 = arena.eq(fx, zero).unwrap();
+        let forall = arena.forall(x, fx_eq_0).unwrap();
+
+        let result = prove_quantified_unsat_via_egraph(
+            &mut arena,
+            &[fa_ne_0, forall],
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        assert_eq!(result, CheckResult::Unsat);
+    }
+
+    #[test]
+    fn instantiation_loop_passes_through_quantifier_free() {
+        // No universals: routes straight to check_auto (here, sat).
+        let mut arena = TermArena::new();
+        let a = arena.bv_var("a", 8).unwrap();
+        let one = arena.bv_const(8, 1).unwrap();
+        let a_eq_1 = arena.eq(a, one).unwrap();
+        let result =
+            prove_quantified_unsat_via_egraph(&mut arena, &[a_eq_1], &SolverConfig::default())
+                .unwrap();
+        assert!(matches!(result, CheckResult::Sat(_)));
     }
 
     #[test]
