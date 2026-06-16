@@ -1,4 +1,4 @@
-//! Bounded variable elimination (Track 1, P1.1 / task T1.1.2).
+//! Bounded variable elimination (Track 1, P1.1 / tasks T1.1.2, T1.1.4).
 //!
 //! BVE eliminates a variable `x` by **clause distribution** (Davis–Putnam
 //! resolution): every clause with `+x` is resolved against every clause with `¬x`
@@ -21,13 +21,21 @@
 //! [`BveOptions::occurrence_limit`] are skipped (`CaDiCaL` `elimclslim`/`elimocclim`
 //! defaults of 100, the non-increasing-resolvent bound).
 //!
-//! This first slice is a clear, deterministic transform; it does not yet emit DRAT
-//! steps relating the reduced formula's proof back to the original (a separate
-//! proof-pipeline task, as for `simplify`). Occurrence lists are recomputed per
-//! candidate (correctness-first); incremental maintenance is the follow-up.
+//! **Implementation (T1.1.4): full literal occurrence lists + a touched queue**
+//! (`CaDiCaL` `elim.cpp`, `Kissat` `eliminate.c`). `occ[lit]` gives a candidate's
+//! positive/negative clause sets directly in `O(occ)` rather than by rescanning
+//! every clause, and after eliminating `x` only the variables whose neighbourhood
+//! changed are re-queued — so the pass is near-linear instead of the earlier
+//! `O(variables · clauses)` per round. Clause removal is lazy (a removed clause's
+//! id is left in its occurrence lists and skipped on scan); resolvents are appended
+//! and their variables re-queued. A size-scaled resolution budget bounds the worst
+//! case. Occurrence lists are transient and rebuilt per call (correctness-first);
+//! per-literal incremental count maintenance is a later refinement.
+
+use std::collections::VecDeque;
 
 use crate::simplify::NormClause;
-use crate::{CnfClause, CnfFormula, CnfLit};
+use crate::{CnfClause, CnfFormula, CnfLit, CnfVar};
 
 /// Tuning knobs for bounded variable elimination.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -41,7 +49,9 @@ pub struct BveOptions {
     /// Skip a variable whose smaller occurrence side exceeds this (bounds the
     /// O(|pos|·|neg|) resolvent scan). `CaDiCaL` `elimocclim` default 100.
     pub occurrence_limit: usize,
-    /// Max elimination rounds before stopping at a fixpoint.
+    /// Resolution work-budget multiplier. The touched-queue schedule runs to a
+    /// fixpoint, bounded by roughly `max_rounds · 30 · (literals + variables)`
+    /// total resolution attempts (the near-linear guarantee's safety net).
     pub max_rounds: usize,
 }
 
@@ -69,7 +79,8 @@ pub struct BveStats {
     pub tautological_resolvents_skipped: usize,
     /// Variables left in place because elimination would exceed a bound.
     pub variables_skipped_bound: usize,
-    /// Elimination rounds executed.
+    /// `1` if any variable was eliminated, else `0` (the schedule runs to a single
+    /// fixpoint drain; retained for source compatibility with the round-based API).
     pub rounds: usize,
 }
 
@@ -144,6 +155,157 @@ fn lit_true(lit: CnfLit, asg: &[bool]) -> bool {
     if lit.is_negated() { !v } else { v }
 }
 
+/// Zero-based occurrence-list index for a literal: `2 * variable + sign`.
+fn lit_index(lit: CnfLit) -> usize {
+    2 * lit.var().index() + usize::from(lit.is_negated())
+}
+
+/// The mutable elimination state: live clauses, literal occurrence lists, the
+/// touched-variable schedule, and the reconstruction log.
+struct Eliminator {
+    /// Live clauses; `None` marks a removed (garbage) clause.
+    clauses: Vec<Option<Vec<CnfLit>>>,
+    /// `occ[lit_index(l)]` = clause ids that contain `l` (lazily maintained).
+    occ: Vec<Vec<usize>>,
+    /// Variables waiting to be (re)considered.
+    queue: VecDeque<usize>,
+    /// Membership flag for `queue`, to avoid duplicate enqueues.
+    in_queue: Vec<bool>,
+    /// Eliminated-variable flags.
+    eliminated: Vec<bool>,
+    /// Reverse-replay records in elimination order.
+    records: Vec<ElimRecord>,
+    /// Total resolution attempts so far (bounded by the work budget).
+    resolutions: usize,
+}
+
+impl Eliminator {
+    /// Live clause ids containing `lit` (skipping lazily-removed clauses). A clause
+    /// is immutable once created, so membership in `occ[lit]` never goes stale
+    /// except by removal.
+    fn live_ids(&self, lit: CnfLit) -> Vec<usize> {
+        self.occ[lit_index(lit)]
+            .iter()
+            .copied()
+            .filter(|&ci| self.clauses[ci].is_some())
+            .collect()
+    }
+
+    /// Re-queues `var` for reconsideration unless it is eliminated or already queued.
+    fn enqueue(&mut self, var: usize) {
+        if !self.eliminated[var] && !self.in_queue[var] {
+            self.in_queue[var] = true;
+            self.queue.push_back(var);
+        }
+    }
+
+    /// Attempts to eliminate `x` by bounded resolution. Returns whether it was
+    /// eliminated; on success it has rewritten clauses/occ lists and re-queued the
+    /// affected neighbour variables.
+    fn try_eliminate(&mut self, x: usize, opts: BveOptions, stats: &mut BveStats) -> bool {
+        let pos_lit = CnfLit::positive(CnfVar::new(x).expect("var index in range"));
+        let neg_lit = pos_lit.negated();
+        let pos_ids = self.live_ids(pos_lit);
+        let neg_ids = self.live_ids(neg_lit);
+
+        if pos_ids.is_empty() && neg_ids.is_empty() {
+            return false; // already gone
+        }
+        if pos_ids.len().min(neg_ids.len()) > opts.occurrence_limit {
+            stats.variables_skipped_bound += 1;
+            return false;
+        }
+
+        // Build non-tautological, deduplicated resolvents.
+        let mut resolvents: Vec<Vec<CnfLit>> = Vec::new();
+        let mut taut_skipped = 0usize;
+        for &pi in &pos_ids {
+            for &ni in &neg_ids {
+                self.resolutions += 1;
+                let p = self.clauses[pi].as_ref().expect("live");
+                let n = self.clauses[ni].as_ref().expect("live");
+                let mut merged: Vec<CnfLit> = p.iter().copied().filter(|&l| l != pos_lit).collect();
+                merged.extend(n.iter().copied().filter(|&l| l != neg_lit));
+                match NormClause::from_clause(&CnfClause::new(merged)) {
+                    Some(nc) => {
+                        if nc.lits.len() > opts.clause_size_limit {
+                            stats.variables_skipped_bound += 1;
+                            return false; // a resolvent too large: do not eliminate
+                        }
+                        if !resolvents.contains(&nc.lits) {
+                            resolvents.push(nc.lits);
+                        }
+                    }
+                    None => taut_skipped += 1, // tautology
+                }
+            }
+        }
+
+        // Non-increasing bound: resolvents must not exceed the eliminated clauses.
+        if resolvents.len() > pos_ids.len() + neg_ids.len() + opts.growth {
+            stats.variables_skipped_bound += 1;
+            return false;
+        }
+
+        // Commit: record the original occurrences for reconstruction.
+        let pos_clauses: Vec<Vec<CnfLit>> = pos_ids
+            .iter()
+            .map(|&ci| self.clauses[ci].clone().expect("live"))
+            .collect();
+        let neg_clauses: Vec<Vec<CnfLit>> = neg_ids
+            .iter()
+            .map(|&ci| self.clauses[ci].clone().expect("live"))
+            .collect();
+
+        // Neighbour variables (from the clauses being removed) whose environment
+        // shrinks and that should be reconsidered.
+        let mut neighbours: Vec<usize> = Vec::new();
+        for &ci in pos_ids.iter().chain(neg_ids.iter()) {
+            if let Some(lits) = &self.clauses[ci] {
+                for &l in lits {
+                    if l.var().index() != x {
+                        neighbours.push(l.var().index());
+                    }
+                }
+            }
+        }
+
+        self.records.push(ElimRecord {
+            var: x,
+            pos_clauses,
+            neg_clauses,
+        });
+
+        // Remove pivot clauses (lazy: ids stay in occ lists, skipped on scan).
+        for &ci in pos_ids.iter().chain(neg_ids.iter()) {
+            self.clauses[ci] = None;
+        }
+        stats.clauses_removed += pos_ids.len() + neg_ids.len();
+        stats.tautological_resolvents_skipped += taut_skipped;
+        stats.clauses_added += resolvents.len();
+
+        // Append resolvents, connecting their literals and noting their variables.
+        for r in resolvents {
+            let new_id = self.clauses.len();
+            for &l in &r {
+                self.occ[lit_index(l)].push(new_id);
+                neighbours.push(l.var().index());
+            }
+            self.clauses.push(Some(r));
+        }
+        stats.variables_eliminated += 1;
+
+        neighbours.sort_unstable();
+        neighbours.dedup();
+        for nbr in neighbours {
+            if nbr != x {
+                self.enqueue(nbr);
+            }
+        }
+        true
+    }
+}
+
 /// Eliminates variables from `formula` by bounded resolution (see module docs).
 ///
 /// The result is **equisatisfiable** to `formula`: it is SAT iff `formula` is, and
@@ -156,149 +318,77 @@ pub fn eliminate_variables(formula: &CnfFormula, opts: BveOptions) -> BveOutcome
     let nvars = formula.variable_count();
     let mut stats = BveStats::default();
 
-    // Live clauses as normalized literal sets (`None` = removed). Tautologies and
-    // duplicate literals in the input are dropped up front.
-    let mut clauses: Vec<Option<Vec<CnfLit>>> = formula
+    // Live clauses as normalized literal sets. Tautologies and duplicate literals
+    // in the input are dropped up front.
+    let clauses: Vec<Option<Vec<CnfLit>>> = formula
         .clauses()
         .iter()
         .filter_map(|c| NormClause::from_clause(c).map(|nc| Some(nc.lits)))
         .collect();
 
-    let mut eliminated = vec![false; nvars];
-    let mut records: Vec<ElimRecord> = Vec::new();
-
-    for round in 0..opts.max_rounds {
-        // Round-start occurrence counts give a deterministic candidate order
-        // (fewest occurrences first, var index as tiebreak). Per-candidate
-        // occurrences are recomputed fresh below, so staleness here is harmless.
-        let mut occ = vec![0usize; nvars];
-        for lits in clauses.iter().flatten() {
+    // Full literal occurrence lists.
+    let mut occ: Vec<Vec<usize>> = vec![Vec::new(); 2 * nvars];
+    let mut total_lits = 0usize;
+    for (ci, slot) in clauses.iter().enumerate() {
+        if let Some(lits) = slot {
             for &l in lits {
-                occ[l.var().index()] += 1;
+                occ[lit_index(l)].push(ci);
             }
-        }
-        let mut candidates: Vec<usize> = (0..nvars)
-            .filter(|&x| !eliminated[x] && occ[x] > 0)
-            .collect();
-        candidates.sort_by_key(|&x| (occ[x], x));
-
-        let mut changed = false;
-        for x in candidates {
-            if eliminated[x] {
-                continue;
-            }
-            if try_eliminate(x, &mut clauses, &mut records, &mut stats, opts) {
-                eliminated[x] = true;
-                changed = true;
-            }
-        }
-
-        stats.rounds = round + 1;
-        if !changed {
-            break;
+            total_lits += lits.len();
         }
     }
 
+    let mut elim = Eliminator {
+        clauses,
+        occ,
+        queue: VecDeque::new(),
+        in_queue: vec![false; nvars],
+        eliminated: vec![false; nvars],
+        records: Vec::new(),
+        resolutions: 0,
+    };
+
+    // Seed the schedule with every occurring variable, fewest occurrences first
+    // (cheap eliminations — pure and near-pure literals — go first).
+    let mut seed: Vec<usize> = (0..nvars)
+        .filter(|&x| !elim.occ[2 * x].is_empty() || !elim.occ[2 * x + 1].is_empty())
+        .collect();
+    seed.sort_by_key(|&x| (elim.occ[2 * x].len() + elim.occ[2 * x + 1].len(), x));
+    for x in seed {
+        elim.in_queue[x] = true;
+        elim.queue.push_back(x);
+    }
+
+    let budget = opts.max_rounds.max(1) * 30 * (total_lits + nvars);
+    let mut eliminated_any = false;
+    while let Some(x) = elim.queue.pop_front() {
+        elim.in_queue[x] = false;
+        if elim.eliminated[x] {
+            continue;
+        }
+        if elim.resolutions > budget {
+            break; // bounded work: stop (the partial result is still equisatisfiable)
+        }
+        if elim.try_eliminate(x, opts, &mut stats) {
+            elim.eliminated[x] = true;
+            eliminated_any = true;
+        }
+    }
+    stats.rounds = usize::from(eliminated_any);
+
+    // Rebuild the reduced formula from the live clauses.
     let mut out = CnfFormula::new(nvars);
-    for lits in clauses.into_iter().flatten() {
+    for lits in elim.clauses.into_iter().flatten() {
         // Infallible: variables are a subset of the original's.
         let _ = out.add_clause(CnfClause::new(lits));
     }
     BveOutcome {
         formula: out,
-        reconstruction: Reconstruction { records },
+        reconstruction: Reconstruction {
+            records: elim.records,
+        },
         stats,
     }
-}
-
-/// Attempts to eliminate `x`, mutating the live clause store. Returns whether `x`
-/// was eliminated. Occurrences are scanned fresh, so this is always correct after
-/// earlier eliminations in the same round.
-fn try_eliminate(
-    x: usize,
-    clauses: &mut Vec<Option<Vec<CnfLit>>>,
-    records: &mut Vec<ElimRecord>,
-    stats: &mut BveStats,
-    opts: BveOptions,
-) -> bool {
-    let pos_lit = CnfLit::positive(crate::CnfVar::new(x).expect("var index in range"));
-    let neg_lit = pos_lit.negated();
-
-    let mut pos_idx = Vec::new();
-    let mut neg_idx = Vec::new();
-    for (ci, slot) in clauses.iter().enumerate() {
-        if let Some(lits) = slot {
-            if lits.contains(&pos_lit) {
-                pos_idx.push(ci);
-            } else if lits.contains(&neg_lit) {
-                neg_idx.push(ci);
-            }
-        }
-    }
-    if pos_idx.is_empty() && neg_idx.is_empty() {
-        return false; // already gone
-    }
-    if pos_idx.len().min(neg_idx.len()) > opts.occurrence_limit {
-        stats.variables_skipped_bound += 1;
-        return false;
-    }
-
-    // Build non-tautological, deduplicated resolvents.
-    let mut resolvents: Vec<Vec<CnfLit>> = Vec::new();
-    let mut taut_skipped = 0usize;
-    for &pi in &pos_idx {
-        let p = clauses[pi].as_ref().expect("live");
-        for &ni in &neg_idx {
-            let n = clauses[ni].as_ref().expect("live");
-            let mut merged: Vec<CnfLit> = p.iter().copied().filter(|&l| l != pos_lit).collect();
-            merged.extend(n.iter().copied().filter(|&l| l != neg_lit));
-            match NormClause::from_clause(&CnfClause::new(merged)) {
-                Some(nc) => {
-                    if nc.lits.len() > opts.clause_size_limit {
-                        stats.variables_skipped_bound += 1;
-                        return false; // a resolvent too large: do not eliminate
-                    }
-                    if !resolvents.contains(&nc.lits) {
-                        resolvents.push(nc.lits);
-                    }
-                }
-                None => taut_skipped += 1, // tautology
-            }
-        }
-    }
-
-    // Non-increasing bound: resolvents must not exceed the eliminated clauses.
-    if resolvents.len() > pos_idx.len() + neg_idx.len() + opts.growth {
-        stats.variables_skipped_bound += 1;
-        return false;
-    }
-
-    // Commit: record the original occurrences, remove them, add the resolvents.
-    let pos_clauses: Vec<Vec<CnfLit>> = pos_idx
-        .iter()
-        .map(|&ci| clauses[ci].as_ref().expect("live").clone())
-        .collect();
-    let neg_clauses: Vec<Vec<CnfLit>> = neg_idx
-        .iter()
-        .map(|&ci| clauses[ci].as_ref().expect("live").clone())
-        .collect();
-    records.push(ElimRecord {
-        var: x,
-        pos_clauses,
-        neg_clauses,
-    });
-
-    for &ci in pos_idx.iter().chain(neg_idx.iter()) {
-        clauses[ci] = None;
-    }
-    stats.clauses_removed += pos_idx.len() + neg_idx.len();
-    stats.tautological_resolvents_skipped += taut_skipped;
-    stats.clauses_added += resolvents.len();
-    for r in resolvents {
-        clauses.push(Some(r));
-    }
-    stats.variables_eliminated += 1;
-    true
 }
 
 #[cfg(test)]
@@ -510,6 +600,62 @@ mod tests {
                     f.evaluate(&out.reconstruction.extend(&m)).unwrap(),
                     "model {m:?} must reconstruct"
                 );
+            }
+        }
+    }
+
+    /// Deterministic xorshift PRNG (no clock/`Math.random`; reproducible).
+    fn xorshift(state: &mut u64) -> u64 {
+        let mut x = *state;
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        *state = x;
+        x
+    }
+
+    fn rand_usize(state: &mut u64) -> usize {
+        usize::try_from(xorshift(state)).unwrap_or(usize::MAX)
+    }
+
+    #[test]
+    fn random_formulas_stay_equisatisfiable_and_reconstruct() {
+        // Stress the occurrence-list elimination + touched queue against the
+        // brute-force semantics on many random 5-variable formulas: equisatisfiable,
+        // and every model of the reduced formula reconstructs to a model of the
+        // original.
+        const NVARS: usize = 5;
+        let mut state = 0xDEAD_BEEF_CAFE_F00Du64;
+        for _ in 0..400 {
+            let nclauses = 1 + rand_usize(&mut state) % 10;
+            let mut f = CnfFormula::new(NVARS);
+            for _ in 0..nclauses {
+                let width = 1 + rand_usize(&mut state) % 3;
+                let mut lits = Vec::new();
+                for _ in 0..width {
+                    let var = rand_usize(&mut state) % NVARS;
+                    lits.push(if xorshift(&mut state) & 1 == 0 {
+                        p(var)
+                    } else {
+                        n(var)
+                    });
+                }
+                f.add_clause(CnfClause::new(lits)).unwrap();
+            }
+            let out = eliminate_variables(&f, BveOptions::default());
+            assert_eq!(
+                sat(&out.formula, NVARS),
+                sat(&f, NVARS),
+                "equisatisfiability must hold"
+            );
+            for mask in 0u32..(1 << NVARS) {
+                let m: Vec<bool> = (0..NVARS).map(|i| (mask >> i) & 1 == 1).collect();
+                if out.formula.evaluate(&m).unwrap() {
+                    assert!(
+                        f.evaluate(&out.reconstruction.extend(&m)).unwrap(),
+                        "reconstructed model must satisfy the original"
+                    );
+                }
             }
         }
     }
