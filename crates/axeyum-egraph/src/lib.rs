@@ -43,6 +43,16 @@ impl ENodeId {
     }
 }
 
+/// One congruence class of applications of a function symbol, as returned by
+/// [`EGraph::enumerate_apps`] — the result of a single-symbol e-matching trigger.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AppMatch {
+    /// Class representative of the application term.
+    pub app: ENodeId,
+    /// Class representatives of the arguments, in order.
+    pub args: Vec<ENodeId>,
+}
+
 /// A hash-cons key: a function symbol applied to the **current class roots** of
 /// its arguments. Two e-nodes are congruent iff they share this key.
 type Signature = (u32, Vec<ENodeId>);
@@ -174,6 +184,39 @@ impl EGraph {
     pub fn th_vars(&self, node: ENodeId) -> &[u32] {
         let root = self.root(node);
         &self.nodes[root.index()].th_vars
+    }
+
+    /// Enumerates the distinct applications of function symbol `decl` in the
+    /// e-graph **modulo congruence** — the single-symbol e-matching trigger that
+    /// drives quantifier instantiation (P2.6): one [`AppMatch`] per congruence
+    /// class of `decl`-applications, with the class roots of its arguments.
+    ///
+    /// Congruent applications (e.g. `f(a)` and `f(b)` once `a = b`) share a class
+    /// and are returned once; the argument class roots are canonical, so two
+    /// applications appear here as one iff they are equal in the current e-graph.
+    /// Results are in node-creation order for determinism.
+    ///
+    /// # Panics
+    ///
+    /// Panics only if the e-graph holds more than `u32::MAX` nodes, which
+    /// [`Self::add`] prevents at creation time.
+    #[must_use]
+    pub fn enumerate_apps(&self, decl: u32) -> Vec<AppMatch> {
+        let mut seen = std::collections::HashSet::new();
+        let mut out = Vec::new();
+        for (i, node) in self.nodes.iter().enumerate() {
+            if node.decl != decl || node.args.is_empty() {
+                continue;
+            }
+            let id = ENodeId(u32::try_from(i).expect("node index fits u32"));
+            let root = self.root(id);
+            if !seen.insert(root) {
+                continue; // a congruent application already reported
+            }
+            let args = node.args.iter().map(|&a| self.root(a)).collect();
+            out.push(AppMatch { app: root, args });
+        }
+        out
     }
 
     /// Adds the application `decl(args)`, returning its class representative. If a
@@ -799,6 +842,55 @@ mod tests {
         assert!(g.len() > base_len);
         g.pop();
         assert_eq!(g.len(), base_len, "nodes added in the scope are removed");
+    }
+
+    #[test]
+    fn enumerate_apps_dedups_modulo_congruence() {
+        // f(a), f(b), f(c): three distinct applications until a = b makes f(a), f(b)
+        // congruent — then two; the trigger reflects the current e-graph.
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        let c = g.add(2, &[]);
+        let fa = g.add(10, &[a]);
+        let _fb = g.add(10, &[b]);
+        let fc = g.add(10, &[c]);
+
+        let apps = g.enumerate_apps(10);
+        assert_eq!(apps.len(), 3, "three distinct f-applications");
+
+        g.merge(a, b, 0);
+        let apps = g.enumerate_apps(10);
+        assert_eq!(apps.len(), 2, "f(a) and f(b) collapse to one class");
+        // The surviving representatives are f(a)/f(b)'s class and f(c).
+        let roots: std::collections::HashSet<ENodeId> =
+            apps.iter().map(|m| g.root(m.app)).collect();
+        assert!(roots.contains(&g.root(fa)));
+        assert!(roots.contains(&g.root(fc)));
+        // Argument class roots are canonical: f(a)'s argument is a's (= b's) class.
+        let fa_match = apps.iter().find(|m| g.root(m.app) == g.root(fa)).unwrap();
+        assert_eq!(fa_match.args, vec![g.root(a)]);
+        assert_eq!(g.root(a), g.root(b));
+    }
+
+    #[test]
+    fn enumerate_apps_separates_function_symbols_and_arity() {
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        g.add(10, &[a]); // f(a)
+        g.add(11, &[a, b]); // h(a, b)
+        g.add(11, &[b, a]); // h(b, a)
+        assert_eq!(g.enumerate_apps(10).len(), 1, "one f-application");
+        assert_eq!(
+            g.enumerate_apps(11).len(),
+            2,
+            "h(a,b) and h(b,a) are distinct (argument order matters)"
+        );
+        assert!(
+            g.enumerate_apps(99).is_empty(),
+            "no applications of an unused symbol"
+        );
     }
 
     #[test]
