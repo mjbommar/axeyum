@@ -5,6 +5,7 @@ members = [
     "crates/axeyum-bench",
     "crates/axeyum-bv",
     "crates/axeyum-cnf",
+    "crates/axeyum-egraph",
     "crates/axeyum-fp",
     "crates/axeyum-query",
     "crates/axeyum-ir",
@@ -28,6 +29,7 @@ categories = ["science", "mathematics"]
 axeyum-aig = { path = "crates/axeyum-aig", version = "0.1.0" }
 axeyum-bv = { path = "crates/axeyum-bv", version = "0.1.0" }
 axeyum-cnf = { path = "crates/axeyum-cnf", version = "0.1.0" }
+axeyum-egraph = { path = "crates/axeyum-egraph", version = "0.1.0" }
 axeyum-fp = { path = "crates/axeyum-fp", version = "0.1.0" }
 axeyum-ir = { path = "crates/axeyum-ir", version = "0.1.0" }
 axeyum-query = { path = "crates/axeyum-query", version = "0.1.0" }

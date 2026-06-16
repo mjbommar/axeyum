@@ -1,0 +1,17 @@
+[package]
+name = "axeyum-egraph"
+description = "Incremental congruence-closure e-graph for Axeyum: the shared equality bus (keystone)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[dependencies]
+
+[lints]
+workspace = true
