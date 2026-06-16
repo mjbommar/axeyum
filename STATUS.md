@@ -89,17 +89,22 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   explanation-producing, independently-checkable equality bus — hash-cons +
   congruence cascade, `explain`, push/pop, `check_congruence`, theory-var lists.
   17 tests. This unblocks the Track-2 theory upgrades and the CDCL(T) loop.
-- **Next task — P1.5 CDCL(T) loop (keystone #2), first client EUF/QF_UF.** Drive
-  the e-graph from a SAT core: theory atoms (equalities/predicates) ↔ SAT literals;
-  on a SAT assignment assert the true equality atoms into the e-graph (`merge`,
-  literal = reason), detect a conflict when an asserted disequality's sides become
-  congruent, and turn `explain` into a conflict clause fed back to SAT;
-  final-check + theory propagation. Read
-  `docs/plan/track-1-engine/P1.5-cdcl-t-loop.md`. Start with **EUF** (the e-graph
-  *is* EUF's solver) as the first client — a clean QF_UF path that replaces the
-  Ackermann reduction (ADR-0013) with real congruence + conflict clauses; then
-  lazy arrays/datatypes/quantifiers migrate onto the same loop. Deferred Track-1
-  perf option still open: T1.2.8 two-level AIG rewriting in `axeyum-aig`.
+- **P1.5 first slice DONE** (commit f69aa40): `prove_unsat_by_congruence` — EUF on
+  the e-graph, a sound conjunctive UNSAT prover (congruence + constant distinctness)
+  with conflicts re-checked by `check_congruence` and an UNSAT core. The congruence
+  core of CDCL(T).
+- **Next task — the lazy boolean loop (full CDCL(T) for QF_UF).** Lift the
+  conjunctive prover to arbitrary boolean structure: (1) abstract each theory atom
+  (equality / uninterpreted predicate) to a Boolean var and Tseitin-encode the
+  assertions' boolean skeleton to CNF (reuse `axeyum-cnf`); (2) SAT-solve the
+  skeleton; (3) on a model, assert the true equality atoms into the e-graph and
+  check disequalities (the conjunctive prover's core) — on a theory conflict, turn
+  `explain` into a blocking clause (¬eq-atoms ∨ diseq-atom) and re-solve; on theory
+  consistency, build + replay a model → SAT. This is the offline DPLL(T) loop that
+  decides full QF_UF without Ackermann. Then refactor into the `TheorySolver`
+  trait + online propagation (T1.5.1–T1.5.4) and theory combination with BV (P1.6,
+  for QF_UFBV). Deferred Track-1 perf option still open: T1.2.8 two-level AIG
+  rewriting in `axeyum-aig`.
 
 ## Already shipped this session (pre-plan)
 
@@ -122,7 +127,7 @@ plan is built and committed on the current branch:
 | P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | WIP — T1.2.1 trail + T1.2.2 propagate_values + T1.2.3 solve_eqs landed (model-sound, unit-tested, 36 tests). Next: wire the preprocessing pipeline into the solve path + measure; then elim_unconstrained / max_bv_sharing / bv_slice / AIG 2-level (T1.2.4–T1.2.9) |
 | P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | TODO |
 | P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | **DONE** — `axeyum-egraph` (ADR-0032): hash-cons + union-find + congruence cascade (T1.4.1/2), proof-forest `explain` (T1.4.3), backtrackable push/pop (T1.4.4), independent `check_congruence` (T1.4.5), per-class theory-var lists (T1.4.6). 17 tests incl. brute-force + backtracking property tests |
-| P1.5 | CDCL(T) loop (theory-as-extension, final-check, theory propagation) **[keystone]** | TODO |
+| P1.5 | CDCL(T) loop (theory-as-extension, final-check, theory propagation) **[keystone]** | WIP — first slice landed: `prove_unsat_by_congruence` (EUF on the e-graph, sound conjunctive UNSAT prover with independently-checked conflicts + UNSAT core). Next: lazy boolean loop (SAT skeleton + theory conflicts), then the `TheorySolver` trait (T1.5.1–T1.5.4) and full QF_UF (T1.5.5) |
 | P1.6 | Theory combination (th_eq bus, interface equalities) | TODO |
 | P1.7 | PBLS local-search BV engine (portfolio) | TODO |
 | P1.8 | Strategy & tactics (combinators + probes + per-logic scripts) | TODO |
@@ -163,6 +168,12 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **P1.5 first slice: EUF congruence UNSAT prover** (commit f69aa40).
+  `axeyum-egraph` wired into the solver; `prove_unsat_by_congruence` abstracts
+  assertions as uninterpreted equality logic and proves UNSAT by congruence +
+  constant distinctness (sound, incomplete), every conflict re-checked by the
+  independent `check_congruence` and carrying an UNSAT core. 5 tests. The EUF-on-
+  the-e-graph core; next is the lazy boolean loop for full QF_UF.
 - **2026-06-16** — **P1.4 e-graph keystone COMPLETE: T1.4.4–T1.4.6** (commits
   c47dc0c, 2c735b5, d81bf46). T1.4.4 backtrackable push/pop trail (path compression
   dropped; every mutation trailed; 150-iteration rebuild property test). T1.4.5
