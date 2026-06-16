@@ -48,6 +48,7 @@ mod model;
 mod nra;
 mod optimize;
 mod pb;
+mod preprocess;
 mod proof;
 mod records;
 mod sat_bv_backend;
@@ -119,6 +120,7 @@ pub use optimize::{
     minimize_lia,
 };
 pub use pb::{pb_eq, pb_ge, pb_le};
+pub use preprocess::check_with_preprocessing;
 pub use proof::{
     UnsatProof, UnsatProofOutcome, export_datatype_unsat_proof, export_qf_abv_unsat_proof,
     export_qf_aufbv_unsat_proof, export_qf_bv_unsat_proof, export_qf_lia_unsat_proof,
