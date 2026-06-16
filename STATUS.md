@@ -155,7 +155,7 @@ plan is built and committed on the current branch:
 | P2.3 | EUF on the e-graph (from Ackermann to incremental) | TODO |
 | P2.4 | LIA cut portfolio (GCD, Gomory, HNF, cube, Diophantine) | TODO |
 | P2.5 | NRA: incremental linearization → nlsat/CAD | TODO |
-| P2.6 | Quantifiers (MAM e-matching, trigger inference, MBQI, QE/MBP) | TODO |
+| P2.6 | Quantifiers (MAM e-matching, trigger inference, MBQI, QE/MBP) | WIP — e-matching foundation on the e-graph: `EGraph::enumerate_apps` (single-symbol trigger, distinct applications modulo congruence). Next: nested/multi-symbol pattern matching, trigger inference, and wiring into a quantifier-instantiation loop (beyond today's finite-domain expansion, ADR-0016) |
 | P2.7 | Strings (unbounded, full `str.*`, regex) | TODO |
 | P2.8 | FP polish (unspecified values, min/max ±0, lazy conversion) | TODO |
 | P2.9 | Datatypes lazy (e-graph splitting + occurs-check) | TODO |
@@ -183,6 +183,14 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **P2.6 e-matching foundation** (commit ff53168).
+  `EGraph::enumerate_apps(decl)` — distinct applications of a function symbol modulo
+  congruence (one per class, canonical arg roots), the single-symbol trigger that
+  drives quantifier instantiation. The first step toward e-matching / unbounded
+  quantifiers (the biggest functional gap; today only finite-domain expansion).
+- **2026-06-16** — **QF_UF upgraded to checked** (commit 799cd43); **T1.2.8 AIG
+  rewrite attempted + reverted** (regressed a borderline FP128 instance — negative
+  result recorded).
 - **2026-06-16** — **EUF dispatch path hardened** (commit 21ca0a9). 120-iteration
   randomized differential test: random pure equality/UF formulas decided by both
   `check_qf_uf` and Ackermann must agree. Hardens the now-production EUF fast-path.
