@@ -7,12 +7,13 @@
 //! quantifier work) is built on it, so it is the keystone the reference review
 //! flagged as "do first".
 //!
-//! This first slice (tasks T1.4.1 + T1.4.2) is the structural core: e-node
-//! creation with hash-consing, a union-find `find` with path compression, and the
-//! deferred-merge cascade that re-canonicalizes parents so transitive congruence
-//! closes. Explanations (proof forest), the backtrackable trail, the independent
-//! congruence checker, and theory-variable lists are the follow-up tasks
-//! (T1.4.3–T1.4.6).
+//! Phase P1.4 is complete: e-node creation with hash-consing + a union-find
+//! `find` and the deferred-merge cascade that closes transitive congruence
+//! (T1.4.1/T1.4.2); a Nieuwenhuis–Oliveras proof forest with `explain`-to-LCA
+//! (T1.4.3); a backtrackable [`EGraph::push`]/[`EGraph::pop`] trail (T1.4.4); the
+//! independent [`check_congruence`] re-validator (T1.4.5); and per-class
+//! theory-variable lists for the equality bus (T1.4.6). Next is the CDCL(T) loop
+//! (P1.5) that drives this structure from the SAT core.
 //!
 //! ## Model
 //!
@@ -74,6 +75,9 @@ struct ENode {
     proof_parent: Option<ENodeId>,
     /// Justification of the edge to [`Self::proof_parent`].
     proof_edge: Option<Edge>,
+    /// Theory variables attached to this node's class (meaningful on roots; a child
+    /// keeps its own list, which is restored when a union is backtracked).
+    th_vars: Vec<u32>,
 }
 
 /// One reversible mutation recorded on the backtracking trail (T1.4.4).
@@ -101,6 +105,11 @@ enum Undo {
     ProofRewritten {
         saved: Vec<(ENodeId, Option<ENodeId>, Option<Edge>)>,
     },
+    /// One theory variable was attached to `node`'s class; undo pops it.
+    ThVarAttached { node: ENodeId },
+    /// `count` theory variables were appended to `node`'s class on a union; undo
+    /// truncates them back.
+    ThVarsMerged { node: ENodeId, count: usize },
 }
 
 /// An incremental, **backtrackable** congruence-closure e-graph.
@@ -150,6 +159,23 @@ impl EGraph {
         &self.nodes[id.index()].args
     }
 
+    /// Attaches theory variable `th_var` to the class of `node` (T1.4.6). When two
+    /// classes merge their theory-variable lists are concatenated, so a theory can
+    /// detect that two of its variables have become equal (the interface-equality
+    /// bus for Nelson–Oppen / CDCL(T)). Reversed by [`Self::pop`].
+    pub fn attach_th_var(&mut self, node: ENodeId, th_var: u32) {
+        let root = self.root(node);
+        self.nodes[root.index()].th_vars.push(th_var);
+        self.trail.push(Undo::ThVarAttached { node: root });
+    }
+
+    /// The theory variables attached to the class of `node`.
+    #[must_use]
+    pub fn th_vars(&self, node: ENodeId) -> &[u32] {
+        let root = self.root(node);
+        &self.nodes[root.index()].th_vars
+    }
+
     /// Adds the application `decl(args)`, returning its class representative. If a
     /// congruent node already exists it is returned (hash-consing); otherwise a
     /// fresh node is created. Leaves are `add(unique_decl, &[])`.
@@ -171,6 +197,7 @@ impl EGraph {
             parents: Vec::new(),
             proof_parent: None,
             proof_edge: None,
+            th_vars: Vec::new(),
         });
         self.trail.push(Undo::NodeAdded);
         for &arg in args {
@@ -273,6 +300,13 @@ impl EGraph {
                     self.nodes[node.index()].proof_edge = edge;
                 }
             }
+            Undo::ThVarAttached { node } => {
+                self.nodes[node.index()].th_vars.pop();
+            }
+            Undo::ThVarsMerged { node, count } => {
+                let new_len = self.nodes[node.index()].th_vars.len() - count;
+                self.nodes[node.index()].th_vars.truncate(new_len);
+            }
         }
     }
 
@@ -335,6 +369,15 @@ impl EGraph {
                 root,
                 child_size,
             });
+
+            // Move the child class's theory variables onto the new root (the child
+            // keeps its own copy, restored if this union is backtracked).
+            let child_th_vars = self.nodes[child.index()].th_vars.clone();
+            if !child_th_vars.is_empty() {
+                let count = child_th_vars.len();
+                self.nodes[root.index()].th_vars.extend(child_th_vars);
+                self.trail.push(Undo::ThVarsMerged { node: root, count });
+            }
 
             // Re-insert the parents under their *post-union* signatures; a collision
             // means two parents are now congruent, so enqueue their merge with a
@@ -756,6 +799,56 @@ mod tests {
         assert!(g.len() > base_len);
         g.pop();
         assert_eq!(g.len(), base_len, "nodes added in the scope are removed");
+    }
+
+    #[test]
+    fn theory_vars_merge_on_union_and_backtrack() {
+        // Attach theory vars to two classes; merging unions their lists, and a
+        // theory reading `th_vars` after the merge sees both (an interface
+        // equality). pop restores the per-class lists.
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        g.attach_th_var(a, 100);
+        g.attach_th_var(b, 200);
+        assert_eq!(g.th_vars(a), &[100]);
+        assert_eq!(g.th_vars(b), &[200]);
+
+        g.push();
+        g.merge(a, b, 0);
+        let mut shared = g.th_vars(a).to_vec();
+        shared.sort_unstable();
+        assert_eq!(
+            shared,
+            vec![100, 200],
+            "merged class holds both theory vars"
+        );
+        // Both nodes see the same class list.
+        assert_eq!(g.th_vars(a), g.th_vars(b));
+
+        g.pop();
+        assert!(!g.equal(a, b));
+        assert_eq!(g.th_vars(a), &[100], "theory-var lists restored on pop");
+        assert_eq!(g.th_vars(b), &[200]);
+    }
+
+    #[test]
+    fn theory_vars_propagate_through_congruence() {
+        // A theory var on f(a)'s class is visible from f(b) once a = b makes them
+        // congruent — the equality bus carrying an interface equality.
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        let fa = g.add(2, &[a]);
+        let fb = g.add(2, &[b]);
+        g.attach_th_var(fa, 7);
+        assert!(g.th_vars(fb).is_empty());
+        g.merge(a, b, 0);
+        assert_eq!(
+            g.th_vars(fb),
+            &[7],
+            "f(b) joins f(a)'s class and its th_vars"
+        );
     }
 
     /// Deterministic xorshift PRNG (no clock / `Math.random`).
