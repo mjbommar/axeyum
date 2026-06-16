@@ -48,22 +48,22 @@ impl SubsumeStats {
 }
 
 /// A normalized clause: literals sorted + deduplicated, with a 64-bit signature
-/// over literal identities for fast subset rejection.
+/// over literal identities for fast subset rejection. Shared with [`crate::bve`].
 #[derive(Debug, Clone)]
-struct NormClause {
-    lits: Vec<CnfLit>,
-    sig: u64,
+pub(crate) struct NormClause {
+    pub(crate) lits: Vec<CnfLit>,
+    pub(crate) sig: u64,
 }
 
 /// One bit of the signature for a literal (variable index + sign folded mod 64).
-fn lit_bit(lit: CnfLit) -> u64 {
+pub(crate) fn lit_bit(lit: CnfLit) -> u64 {
     let key = lit.var().index().wrapping_mul(2) + usize::from(lit.is_negated());
     1u64 << (key % 64)
 }
 
 impl NormClause {
     /// Normalizes a clause; returns `None` if it is a tautology (always true).
-    fn from_clause(clause: &CnfClause) -> Option<Self> {
+    pub(crate) fn from_clause(clause: &CnfClause) -> Option<Self> {
         let mut lits = clause.lits().to_vec();
         lits.sort_unstable();
         lits.dedup();
@@ -82,7 +82,7 @@ impl NormClause {
     /// Whether `self`'s literal set is a subset of `other`'s (so `self` subsumes
     /// `other`). Both literal vectors are sorted; uses the signature to reject
     /// fast, then a two-pointer subset check.
-    fn subsumes(&self, other: &NormClause) -> bool {
+    pub(crate) fn subsumes(&self, other: &NormClause) -> bool {
         if self.lits.len() > other.lits.len() || (self.sig & !other.sig) != 0 {
             return false;
         }

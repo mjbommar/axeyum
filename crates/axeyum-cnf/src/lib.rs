@@ -16,10 +16,12 @@ use std::time::Instant;
 #[cfg(target_arch = "wasm32")]
 use web_time::Instant;
 
+mod bve;
 mod drat;
 mod proof_sat;
 mod simplify;
 
+pub use bve::{BveOptions, BveOutcome, BveStats, Reconstruction, eliminate_variables};
 pub use drat::{DratError, DratStep, check_drat, parse_drat, write_drat};
 pub use proof_sat::{ProofSolveOutcome, solve_with_drat_proof};
 pub use simplify::{SubsumeStats, simplify};

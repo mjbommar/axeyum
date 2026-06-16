@@ -13,16 +13,18 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   levels, per-result `trusted_steps` on `EvidenceReport`, golden-tested
   [trust-ledger.md](docs/research/08-planning/trust-ledger.md) (5 of 11
   reductions are trust holes), ADR-0031. The trusted base is now countable.
-- **T1.1.1 forward subsumption — DONE (correctness)** (2026-06-15): `axeyum_cnf::simplify`
-  does model-preserving tautology removal + forward subsumption + one round of
-  self-subsuming resolution, with 7 tests (brute-force model-equivalence,
-  clause-count drop, SAT-equivalence + DRAT-still-checks). The DRAT-pipeline
-  integration (emitting deletion steps inside the proof-producing solve) and the
-  measured perf delta ride the next steps / P4.5.
+- **T1.1.1 subsumption + T1.1.2 BVE — DONE (correctness)** (2026-06-15):
+  `axeyum_cnf::simplify` (model-preserving tautology removal + forward subsumption
+  + self-subsuming resolution) and `axeyum_cnf::eliminate_variables` (bounded
+  variable elimination by resolution with a `Reconstruction` stack to lift reduced
+  models back to the original, the non-increasing/size/occurrence bounds). 13 tests
+  total incl. brute-force equisatisfiability + per-model reconstruction + SAT/DRAT
+  preservation. DRAT-step emission inside the proof-producing solve and the measured
+  perf delta ride P4.5 + the pipeline-integration step.
 - **Next task to start:** Track 4 →
   [P4.5 benchmarking](docs/plan/track-4-usecases-frontend/P4.5-benchmarking.md)
-  (the measured Z3 head-to-head that gates Track 1 and quantifies T1.1.1's impact),
-  then T1.1.2 **bounded variable elimination** — the highest-leverage SAT win.
+  (the measured Z3 head-to-head that gates Track 1 and quantifies the inprocessing
+  wins), then wire subsumption + BVE into the bit-blast→CNF→solve pipeline.
 
 ## Already shipped this session (pre-plan)
 
@@ -41,7 +43,7 @@ plan is built and committed on the current branch:
 ### Track 1 — Engine & Performance
 | Phase | Title | Status |
 |---|---|---|
-| P1.1 | SAT inprocessing (subsumption → BVE → vivification → glue tiers) | WIP — T1.1.1 subsumption pass landed |
+| P1.1 | SAT inprocessing (subsumption → BVE → vivification → glue tiers) | WIP — T1.1.1 subsumption + T1.1.2 BVE landed |
 | P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | TODO |
 | P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | TODO |
 | P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | TODO |
@@ -100,3 +102,9 @@ plan is built and committed on the current branch:
   (`SubsumeStats`): model-preserving tautology removal + forward subsumption (64-bit
   signature fast-reject) + self-subsuming resolution; 7 tests incl. brute-force
   equivalence and SAT/DRAT preservation. P1.1 → WIP.
+- **2026-06-15** — **T1.1.2 bounded variable elimination.** New `axeyum_cnf::bve`
+  (`eliminate_variables`, `BveOptions`, `BveOutcome`, `BveStats`, `Reconstruction`):
+  Davis–Putnam resolution with the CaDiCaL non-increasing/size/occurrence bounds and
+  a reverse-replay reconstruction stack (equisatisfiable, not model-preserving — the
+  reduced model extends via `Reconstruction::extend`). 6 tests incl. brute-force
+  equisatisfiability + per-model reconstruction + bound-respect + SAT/DRAT preservation.
