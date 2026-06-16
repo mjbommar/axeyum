@@ -183,6 +183,13 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **P2.6 multi-pattern trigger inference** (pending commit).
+  `select_triggers` infers a (possibly multi-term) trigger set from the body when
+  no single subterm covers all bound variables — single-cover preferred, else a
+  greedy set cover over function-app candidates. `instantiate_forall_via_egraph`
+  e-matches each trigger and joins the per-trigger substitutions consistently on
+  shared variables (`merge_substitutions`), so `∀x,y. f(x)=g(y)` instantiates from
+  `{f(x), g(y)}`. 9 qinst tests.
 - **2026-06-16** — **P2.6 e-matching instantiation loop** (commit 6902f84).
   `prove_quantified_unsat_via_egraph`: split ground/universals, then instantiate →
   re-check (`check_auto`) → fixpoint; ground-unsat ⇒ sound refutation. Closes the

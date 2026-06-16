@@ -120,10 +120,14 @@ pub fn instantiate_forall_via_egraph(
         .map(|(i, &v)| (v, u32::try_from(i).expect("variable count fits u32")))
         .collect();
 
-    // Pick one trigger (a function application) mentioning *all* bound variables.
-    let Some(trigger) = select_trigger(arena, body, &var_index) else {
+    // Infer a (possibly multi-pattern) trigger: a set of function-application
+    // subterms whose bound variables together cover all of them. A single term is
+    // used when one covers all variables; otherwise a greedy set cover (matched
+    // and joined below) handles patterns like `∀x,y. f(x) = g(y)`.
+    let triggers = select_triggers(arena, body, &var_index);
+    if triggers.is_empty() {
         return Vec::new();
-    };
+    }
 
     let mut bridge = InstBridge::new();
     for &g in ground {
@@ -140,12 +144,30 @@ pub fn instantiate_forall_via_egraph(
         }
     }
 
-    // Convert the trigger to an e-matching pattern (each bound var → its Var index,
-    // every ground subterm → an application by its bridge decl).
-    let pattern = bridge.trigger_to_pattern(arena, trigger, &var_index);
+    // Match each trigger and join the per-trigger substitutions into full
+    // substitutions consistent on shared variables.
+    let nvars = vars.len();
+    let mut joined: Vec<Vec<Option<ENodeId>>> = vec![vec![None; nvars]];
+    for trigger in triggers {
+        let pattern = bridge.trigger_to_pattern(arena, trigger, &var_index);
+        let matches = bridge.egraph.ematch(&pattern);
+        let mut next = Vec::new();
+        for partial in &joined {
+            for m in &matches {
+                if let Some(merged) = merge_substitutions(partial, m) {
+                    next.push(merged);
+                }
+            }
+        }
+        joined = next;
+        if joined.is_empty() {
+            return Vec::new();
+        }
+    }
+
     let var_terms: Vec<TermId> = vars.iter().map(|&v| arena.var(v)).collect();
     let mut instances = Vec::new();
-    for subst in bridge.egraph.ematch(&pattern) {
+    for subst in joined {
         // Build the substitution from every bound variable to a ground witness of
         // its matched class; skip incomplete matches.
         let mut replacements = HashMap::new();
@@ -194,33 +216,81 @@ fn as_forall(arena: &TermArena, term: TermId) -> Option<(SymbolId, TermId)> {
     }
 }
 
-/// Selects a trigger: the outermost function-application subterm of `body` that
-/// mentions **every** bound variable (e.g. `f(x)`, `f(g(x))`, `g(x, y)`). A valid
-/// trigger must be headed by a function symbol so the e-graph can enumerate it.
-fn select_trigger(
+/// Infers a trigger: a set of function-application subterms whose bound variables
+/// together cover all of them. Prefers a single term that covers everything (e.g.
+/// `f(x)`, `g(x, y)`); otherwise a greedy set cover yields a multi-pattern (e.g.
+/// `{f(x), g(y)}` for `∀x,y. f(x) = g(y)`). Returns empty when the variables cannot
+/// be covered by function applications.
+fn select_triggers(arena: &TermArena, body: TermId, vars: &HashMap<SymbolId, u32>) -> Vec<TermId> {
+    // Candidate function-application subterms with the variable-index set each one
+    // covers.
+    let mut candidates: Vec<(TermId, HashSet<u32>)> = Vec::new();
+    collect_app_candidates(arena, body, vars, &mut candidates);
+
+    let all: HashSet<u32> = (0..u32::try_from(vars.len()).expect("var count fits u32")).collect();
+    // A single covering term is the best trigger.
+    if let Some((t, _)) = candidates.iter().find(|(_, c)| *c == all) {
+        return vec![*t];
+    }
+    // Greedy set cover otherwise.
+    let mut uncovered = all;
+    let mut chosen = Vec::new();
+    while !uncovered.is_empty() {
+        let best = candidates
+            .iter()
+            .max_by_key(|(_, c)| c.intersection(&uncovered).count());
+        match best {
+            Some((t, c)) if c.intersection(&uncovered).next().is_some() => {
+                for v in c {
+                    uncovered.remove(v);
+                }
+                chosen.push(*t);
+            }
+            _ => return Vec::new(), // some variable is in no function application
+        }
+    }
+    chosen
+}
+
+/// Collects every function-application subterm of `body`, with the set of bound
+/// variable indices it mentions (only those covering ≥1 bound variable are kept).
+fn collect_app_candidates(
     arena: &TermArena,
-    body: TermId,
+    term: TermId,
     vars: &HashMap<SymbolId, u32>,
-) -> Option<TermId> {
-    if let TermNode::App { op, args } = arena.node(body) {
-        if matches!(op, Op::Apply(_)) && mentions_all(arena, body, vars) {
-            return Some(body);
+    out: &mut Vec<(TermId, HashSet<u32>)>,
+) {
+    if let TermNode::App { op, args } = arena.node(term) {
+        if matches!(op, Op::Apply(_)) {
+            let mut seen = HashSet::new();
+            collect_vars(arena, term, vars, &mut seen);
+            if !seen.is_empty() {
+                let indices: HashSet<u32> = seen.iter().map(|s| vars[s]).collect();
+                out.push((term, indices));
+            }
         }
         let args = args.clone();
         for a in args {
-            if let Some(found) = select_trigger(arena, a, vars) {
-                return Some(found);
+            collect_app_candidates(arena, a, vars, out);
+        }
+    }
+}
+
+/// Merges two partial substitutions, returning `None` on a variable conflict.
+fn merge_substitutions(
+    a: &[Option<ENodeId>],
+    b: &[Option<ENodeId>],
+) -> Option<Vec<Option<ENodeId>>> {
+    let mut out = a.to_vec();
+    for (slot, &bi) in out.iter_mut().zip(b) {
+        if let Some(bv) = bi {
+            match *slot {
+                Some(av) if av != bv => return None,
+                _ => *slot = Some(bv),
             }
         }
     }
-    None
-}
-
-/// Whether `term` mentions every variable in `vars`.
-fn mentions_all(arena: &TermArena, term: TermId, vars: &HashMap<SymbolId, u32>) -> bool {
-    let mut seen = std::collections::HashSet::new();
-    collect_vars(arena, term, vars, &mut seen);
-    seen.len() == vars.len()
+    Some(out)
 }
 
 /// Records which `vars` occur in `term`.
@@ -522,6 +592,38 @@ mod tests {
             2,
             "only h(_, a) matches, got {instances:?}"
         );
+    }
+
+    #[test]
+    #[allow(clippy::many_single_char_names, clippy::similar_names)]
+    fn instantiates_a_multi_pattern_trigger() {
+        // ∀x. ∀y. (= (f x) (g y)): no single subterm covers both x and y, so the
+        // multi-pattern {f(x), g(y)} is inferred and the matches joined.
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(8);
+        let a = arena.bv_var("a", 8).unwrap();
+        let b = arena.bv_var("b", 8).unwrap();
+        let f = arena.declare_fun("f", &[sort], sort).unwrap();
+        let g = arena.declare_fun("g", &[sort], sort).unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let gb = arena.apply(g, &[b]).unwrap();
+        let zero = arena.bv_const(8, 0).unwrap();
+        let g0 = arena.eq(fa, zero).unwrap();
+        let g1 = arena.eq(gb, zero).unwrap();
+
+        let x = arena.declare("x", sort).unwrap();
+        let y = arena.declare("y", sort).unwrap();
+        let xv = arena.var(x);
+        let yv = arena.var(y);
+        let fx = arena.apply(f, &[xv]).unwrap();
+        let gy = arena.apply(g, &[yv]).unwrap();
+        let inner_body = arena.eq(fx, gy).unwrap();
+        let inner = arena.forall(y, inner_body).unwrap();
+        let forall = arena.forall(x, inner).unwrap();
+
+        let instances = instantiate_forall_via_egraph(&mut arena, &[g0, g1], forall);
+        let want = arena.eq(fa, gb).unwrap();
+        assert_eq!(instances, vec![want], "x↦a, y↦b joined from {{f(x), g(y)}}");
     }
 
     #[test]
