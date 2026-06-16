@@ -24,7 +24,8 @@ mod proof_sat;
 mod simplify;
 
 pub use alethe::{
-    AletheClause, AletheCommand, AletheError, AletheLit, check_alethe, parse_alethe, write_alethe,
+    AletheClause, AletheCommand, AletheError, AletheLit, check_alethe, lrat_to_alethe,
+    parse_alethe, write_alethe,
 };
 pub use bve::{
     BveOptions, BveOutcome, BveStats, Reconstruction, eliminate_variables,

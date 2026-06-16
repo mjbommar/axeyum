@@ -21,7 +21,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::{CnfClause, CnfFormula, CnfLit, CnfVar};
+use crate::{CnfClause, CnfFormula, CnfLit, CnfVar, LratStep};
 
 /// A propositional literal: an atom token, optionally negated.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -568,6 +568,49 @@ fn premises_entail(
     }
 }
 
+/// Bridges a clausal **LRAT** proof into an Alethe resolution proof over the same
+/// formula, so a `QF_BV` (or any CNF) refutation produced through the
+/// `solve_with_drat_proof` → `elaborate_drat_to_lrat` pipeline can be re-checked by
+/// [`check_alethe`] as well as by [`crate::check_lrat`].
+///
+/// Each input clause becomes an `assume` with id `"1".."n"` (matching the LRAT
+/// numbering); each LRAT `Add { id, clause, hints }` becomes a `resolution` step
+/// whose premises are the antecedent hint ids — and since the learned clause is RUP
+/// from exactly those antecedents, `{premises, ¬clause}` is UNSAT, so the
+/// entailment check in [`check_alethe`] accepts it. LRAT deletions are dropped
+/// (Alethe checking does not need them). CNF variable `k` maps to the atom `vk`.
+#[must_use]
+pub fn lrat_to_alethe(formula: &CnfFormula, proof: &[LratStep]) -> Vec<AletheCommand> {
+    let mut commands = Vec::new();
+    for (i, clause) in formula.clauses().iter().enumerate() {
+        commands.push(AletheCommand::Assume {
+            id: (i + 1).to_string(),
+            clause: alethe_clause(clause.lits()),
+        });
+    }
+    for step in proof {
+        if let LratStep::Add { id, clause, hints } = step {
+            commands.push(AletheCommand::Step {
+                id: id.to_string(),
+                clause: alethe_clause(clause),
+                rule: "resolution".to_owned(),
+                premises: hints.iter().map(u64::to_string).collect(),
+            });
+        }
+    }
+    commands
+}
+
+/// Lowers a CNF clause to an Alethe clause, mapping variable `k` to atom `vk`.
+fn alethe_clause(lits: &[CnfLit]) -> AletheClause {
+    lits.iter()
+        .map(|lit| AletheLit {
+            atom: format!("v{}", lit.var().index()),
+            negated: lit.is_negated(),
+        })
+        .collect()
+}
+
 fn register_atom(var_of: &mut BTreeMap<String, CnfVar>, atom: &str) -> Result<(), AletheError> {
     if !var_of.contains_key(atom) {
         let index = var_of.len();
@@ -590,8 +633,12 @@ fn cnf_lit(var_of: &BTreeMap<String, CnfVar>, lit: &AletheLit) -> CnfLit {
 #[cfg(test)]
 mod tests {
     use super::{
-        AletheClause, AletheCommand, AletheError, AletheLit, check_alethe, parse_alethe,
-        write_alethe,
+        AletheClause, AletheCommand, AletheError, AletheLit, check_alethe, lrat_to_alethe,
+        parse_alethe, write_alethe,
+    };
+    use crate::{
+        CnfClause, CnfFormula, CnfLit, CnfVar, ProofSolveOutcome, elaborate_drat_to_lrat,
+        solve_with_drat_proof,
     };
 
     fn lit(atom: &str) -> AletheLit {
@@ -622,6 +669,38 @@ mod tests {
             rule: rule.to_owned(),
             premises: premises.iter().map(|p| (*p).to_owned()).collect(),
         }
+    }
+
+    #[test]
+    fn lrat_proof_bridges_to_a_checkable_alethe_proof() {
+        // End-to-end: a CNF UNSAT formula → proof-producing CDCL → DRAT → LRAT →
+        // Alethe resolution → check_alethe accepts. (a∨b)∧(a∨¬b)∧(¬a∨b)∧(¬a∨¬b).
+        let v = |i: usize| CnfVar::new(i).unwrap();
+        let pos = |i: usize| CnfLit::positive(v(i));
+        let neg_l = |i: usize| CnfLit::positive(v(i)).negated();
+        let mut formula = CnfFormula::new(2);
+        for clause in [
+            vec![pos(0), pos(1)],
+            vec![pos(0), neg_l(1)],
+            vec![neg_l(0), pos(1)],
+            vec![neg_l(0), neg_l(1)],
+        ] {
+            formula.add_clause(CnfClause::new(clause)).unwrap();
+        }
+
+        let ProofSolveOutcome::Unsat(drat) = solve_with_drat_proof(&formula) else {
+            panic!("the formula is unsatisfiable");
+        };
+        let lrat = elaborate_drat_to_lrat(&formula, &drat).expect("RUP proof elaborates to LRAT");
+        let alethe = lrat_to_alethe(&formula, &lrat);
+        assert_eq!(
+            check_alethe(&alethe),
+            Ok(true),
+            "the bridged Alethe resolution proof must check and derive the empty clause"
+        );
+        // The bridged proof also survives a text round-trip and still checks.
+        let reparsed = parse_alethe(&write_alethe(&alethe)).expect("bridged Alethe round-trips");
+        assert_eq!(check_alethe(&reparsed), Ok(true));
     }
 
     #[test]
