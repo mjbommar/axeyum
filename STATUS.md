@@ -109,8 +109,17 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   carries. Read `docs/plan/track-1-engine/P1.6-theory-combination.md`. Also open:
   the `TheorySolver` trait + online propagation (T1.5.1–T1.5.4 efficiency refactor),
   and the broader Track 2 theories (lazy arrays P2.2, datatypes P2.9, quantifiers/
-  e-matching P2.6) which all migrate onto the e-graph + CDCL(T) loop. Deferred
-  Track-1 perf option still open: T1.2.8 two-level AIG rewriting in `axeyum-aig`.
+  e-matching P2.6) which all migrate onto the e-graph + CDCL(T) loop.
+- **T1.2.8 AIG two-level rewriting — attempted, reverted (negative result,
+  2026-06-16).** `axeyum-aig` already does level-0/1 rewrites (constants,
+  idempotence, contradiction, OR-absorption, consensus). Adding the bitwuzla
+  positive-AND-operand subsumption/contradiction (`x∧(x∧y)=x∧y`, `x∧(¬x∧y)=0`) was
+  correct + semantics-tested but **regressed a borderline Float128 fp.fma**
+  (`decides_symbolic_float128_fma`) from sat to a batsat **timeout** — CNF-structure-
+  induced SAT chaos on a borderline instance. Reverted (no net benefit measured, a
+  concrete regression). If retried: gate behind a flag and measure broadly on the
+  curated slice + the FP tests before enabling; AIG rewrites need measurement, not
+  blind application (the P1.2 methodology point, reconfirmed).
 
 ## Already shipped this session (pre-plan)
 
