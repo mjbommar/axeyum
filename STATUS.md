@@ -155,7 +155,7 @@ plan is built and committed on the current branch:
 | P2.3 | EUF on the e-graph (from Ackermann to incremental) | TODO |
 | P2.4 | LIA cut portfolio (GCD, Gomory, HNF, cube, Diophantine) | TODO |
 | P2.5 | NRA: incremental linearization → nlsat/CAD | TODO |
-| P2.6 | Quantifiers (MAM e-matching, trigger inference, MBQI, QE/MBP) | WIP — e-matching engine (`enumerate_apps` + `ematch`) + `instantiate_forall_via_egraph`: congruence-aware instantiation for **single- and multi-variable** quantifiers with **nested** (`f(g(x))`) and **joint** (`g(x,y)`) triggers, ground e-graph built from the assertions (ground equalities merged). The keystone drives both EUF (P1.5) and quantifier instantiation. Next: the instantiation **loop** in the solve path (instances → re-solve to fixpoint), trigger *inference* (auto-pick triggers), then MBQI; migrate `axeyum_rewrite::instantiate_with_triggers`' bespoke congruence closure onto this |
+| P2.6 | Quantifiers (MAM e-matching, trigger inference, MBQI, QE/MBP) | WIP — full e-matching vertical slice on the keystone: `enumerate_apps` + `ematch` engine + `instantiate_forall_via_egraph` (congruence-aware, single/multi-var, nested/joint triggers) + `prove_quantified_unsat_via_egraph` (the **instantiation loop**: instantiate → re-solve via `check_auto` → fixpoint, sound UNSAT). Next: trigger *inference* (auto-pick), wire the loop into `check_auto`/`check_with_quantifiers` dispatch for quantified inputs, then MBQI; migrate `axeyum_rewrite`'s bespoke closure onto the keystone |
 | P2.7 | Strings (unbounded, full `str.*`, regex) | TODO |
 | P2.8 | FP polish (unspecified values, min/max ±0, lazy conversion) | TODO |
 | P2.9 | Datatypes lazy (e-graph splitting + occurs-check) | TODO |
@@ -183,6 +183,11 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **P2.6 e-matching instantiation loop** (commit 6902f84).
+  `prove_quantified_unsat_via_egraph`: split ground/universals, then instantiate →
+  re-check (`check_auto`) → fixpoint; ground-unsat ⇒ sound refutation. Closes the
+  e-matching vertical slice on the keystone (e-graph → ematch → instantiation →
+  ground refutation). 8 qinst tests.
 - **2026-06-16** — **P2.6 multi-variable quantifiers** (commit 0fdf634).
   `instantiate_forall_via_egraph` now peels nested `∀x.∀y.…`, requires a trigger
   covering all bound variables, maps each to its own `Var(index)`, and builds the
