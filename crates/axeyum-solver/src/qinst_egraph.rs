@@ -627,6 +627,50 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::similar_names, clippy::many_single_char_names)]
+    fn nested_trigger_fires_through_congruence_involution() {
+        // The canonical congruence-only test: ∀x. f(f(x)) = x with ground
+        //   f(a) = b,  f(b) = c,  a ≠ c.
+        // The trigger f(f(x)) has NO syntactic match — there is no literal
+        // `f(f(·))` ground term. It fires only because f(a)=b puts f(a) inside b's
+        // class, so the outer ground f(b) has an inner f-application (f(a)) in its
+        // argument class ⇒ x ↦ a. The instance f(f(a)) = a forces c = a ⨯ a ≠ c.
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(8);
+        let a = arena.bv_var("a", 8).unwrap();
+        let b = arena.bv_var("b", 8).unwrap();
+        let c = arena.bv_var("c", 8).unwrap();
+        let f = arena.declare_fun("f", &[sort], sort).unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let fb = arena.apply(f, &[b]).unwrap();
+        let fa_eq_b = arena.eq(fa, b).unwrap();
+        let fb_eq_c = arena.eq(fb, c).unwrap();
+        let a_ne_c = {
+            let e = arena.eq(a, c).unwrap();
+            arena.not(e).unwrap()
+        };
+
+        let x = arena.declare("x", sort).unwrap();
+        let xv = arena.var(x);
+        let fx = arena.apply(f, &[xv]).unwrap();
+        let ffx = arena.apply(f, &[fx]).unwrap();
+        let body = arena.eq(ffx, xv).unwrap();
+        let forall = arena.forall(x, body).unwrap();
+
+        let result = prove_quantified_unsat_via_egraph(
+            &mut arena,
+            &[fa_eq_b, fb_eq_c, a_ne_c, forall],
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            result,
+            CheckResult::Unsat,
+            "nested trigger must fire via congruence and refute"
+        );
+    }
+
+    #[test]
     #[allow(clippy::similar_names)]
     fn instantiation_loop_refutes_a_quantified_contradiction() {
         // f(a) ≠ 0  ∧  ∀x. (= (f x) 0): instantiating x = a gives f(a) = 0,
