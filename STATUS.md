@@ -169,6 +169,11 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **EUF prover differentially validated** (commit a73d34a).
+  `tests/euf_egraph_diff.rs` cross-checks `prove_unsat_lazy` against the trusted
+  Ackermann `QF_UFBV` path: 6 instances (congruence/transitivity/two-arg conflicts,
+  a disjunctive refutation, two sat) all agree. The "verified against the eager
+  path" check (T1.5.4).
 - **2026-06-16** — **P1.5 lazy DPLL(T) loop** (commit 8d97081). `prove_unsat_lazy`
   lifts the conjunctive prover to arbitrary boolean structure: equality atoms →
   fresh Boolean vars, boolean skeleton solved by sat-bv, model theory-checked on
