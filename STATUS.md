@@ -84,24 +84,22 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   across all 43 incl. the oracle path; reduced the DAG on 5/43 (the instances with
   top-level `x=t` structure), no-op on the multiplier-heavy rest. Correct
   infrastructure; the PAR-2 payoff needs a corpus with explicit defines.
-- **P1.4 e-graph keystone STARTED** (commit eb3e9e6): `axeyum-egraph` crate with the
-  congruence-closure core (hash-cons + union-find + deferred-merge cascade),
-  property-tested vs a brute-force oracle. ADR-0032.
-- **T1.4.3 explanations DONE** (commit 0c5840f): proof forest + `explain(a,b)` to
-  the LCA, soundness property-tested. The e-graph can now emit conflict clauses.
-- **Next task — T1.4.4 backtrackable trail (push/pop).** Record every union (and
-  its proof-forest edge + signature-table mutation) on an undo trail with scope
-  marks; `push()`/`pop()` save/restore so the e-graph integrates with the
-  incremental engine and the eventual CDCL(T) decision stack. Care: undo must
-  restore the union-find root, the class `size`, the moved `parents`, the proof
-  edge (re-rooting is destructive — store enough to invert), and re-insert the
-  removed signature-table entries. Reference
-  `references/z3/src/ast/euf/euf_egraph.cpp` (trail). Then T1.4.5 the **independent
-  congruence checker** (re-derive refl/symm/trans/cong with its own union-find to
-  re-validate an `explain` result — extends "trusted small checking" to equality),
-  and T1.4.6 theory-var lists per class. After P1.4: **P1.5 CDCL(T) loop** → Track 2
-  theories (EUF on the e-graph, lazy arrays, quantifiers/e-matching). Deferred
-  Track-1 perf option still open: T1.2.8 two-level AIG rewriting in `axeyum-aig`.
+- **P1.4 e-graph keystone COMPLETE** (commits eb3e9e6, 0c5840f, c47dc0c, 2c735b5,
+  d81bf46): `axeyum-egraph` (ADR-0032) is a standalone, backtrackable,
+  explanation-producing, independently-checkable equality bus — hash-cons +
+  congruence cascade, `explain`, push/pop, `check_congruence`, theory-var lists.
+  17 tests. This unblocks the Track-2 theory upgrades and the CDCL(T) loop.
+- **Next task — P1.5 CDCL(T) loop (keystone #2), first client EUF/QF_UF.** Drive
+  the e-graph from a SAT core: theory atoms (equalities/predicates) ↔ SAT literals;
+  on a SAT assignment assert the true equality atoms into the e-graph (`merge`,
+  literal = reason), detect a conflict when an asserted disequality's sides become
+  congruent, and turn `explain` into a conflict clause fed back to SAT;
+  final-check + theory propagation. Read
+  `docs/plan/track-1-engine/P1.5-cdcl-t-loop.md`. Start with **EUF** (the e-graph
+  *is* EUF's solver) as the first client — a clean QF_UF path that replaces the
+  Ackermann reduction (ADR-0013) with real congruence + conflict clauses; then
+  lazy arrays/datatypes/quantifiers migrate onto the same loop. Deferred Track-1
+  perf option still open: T1.2.8 two-level AIG rewriting in `axeyum-aig`.
 
 ## Already shipped this session (pre-plan)
 
@@ -123,7 +121,7 @@ plan is built and committed on the current branch:
 | P1.1 | SAT inprocessing (subsumption → BVE → vivification → glue tiers) | WIP — subsumption+BVE landed (T1.1.1/2), wired into the solve pipeline (T1.1.3), made occurrence-list near-linear + time-bounded (T1.1.4): safe, no regression, but the curated unknowns are SAT-search-bound (→ P1.3) or BVE-resistant. Vivification / glue tiers remain |
 | P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | WIP — T1.2.1 trail + T1.2.2 propagate_values + T1.2.3 solve_eqs landed (model-sound, unit-tested, 36 tests). Next: wire the preprocessing pipeline into the solve path + measure; then elim_unconstrained / max_bv_sharing / bv_slice / AIG 2-level (T1.2.4–T1.2.9) |
 | P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | TODO |
-| P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | WIP — T1.4.1/T1.4.2/T1.4.3 done: `axeyum-egraph` (ADR-0032) = hash-cons + union-find + congruence cascade + Nieuwenhuis–Oliveras proof forest (`explain` to LCA, soundness property-tested). Next: T1.4.4 backtrackable trail (push/pop), T1.4.5 independent congruence checker, T1.4.6 th-var lists |
+| P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | **DONE** — `axeyum-egraph` (ADR-0032): hash-cons + union-find + congruence cascade (T1.4.1/2), proof-forest `explain` (T1.4.3), backtrackable push/pop (T1.4.4), independent `check_congruence` (T1.4.5), per-class theory-var lists (T1.4.6). 17 tests incl. brute-force + backtracking property tests |
 | P1.5 | CDCL(T) loop (theory-as-extension, final-check, theory propagation) **[keystone]** | TODO |
 | P1.6 | Theory combination (th_eq bus, interface equalities) | TODO |
 | P1.7 | PBLS local-search BV engine (portfolio) | TODO |
@@ -165,6 +163,13 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **P1.4 e-graph keystone COMPLETE: T1.4.4–T1.4.6** (commits
+  c47dc0c, 2c735b5, d81bf46). T1.4.4 backtrackable push/pop trail (path compression
+  dropped; every mutation trailed; 150-iteration rebuild property test). T1.4.5
+  independent `check_congruence` (own union-find + congruence closure re-validates
+  every `explain`). T1.4.6 per-class theory-variable lists (the interface-equality
+  bus, merge-propagated + backtracked). The e-graph is now a complete keystone;
+  next is P1.5 CDCL(T).
 - **2026-06-16** — **T1.4.3 e-graph explanations** (commit 0c5840f). Nieuwenhuis–
   Oliveras proof forest alongside the union-find; `merge(a,b,reason)` records edges;
   `explain(a,b)` returns the minimal input-reason set entailing the equality
