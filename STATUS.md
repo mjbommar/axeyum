@@ -31,7 +31,10 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   independently verified, not trusted to the SAT search); a step is recorded only
   after it verifies; UNSAT requires a verified empty clause `(cl)`. 7 tests incl. 3
   negative/rejection. The resolution rung connecting to the DRAT/LRAT clausal
-  proofs. Remaining (P3.2/3.3): typed-term IR (SMT-LIB terms vs opaque atoms);
+  proofs. **`lrat_to_alethe` bridge landed**: a CNF/QF_BV UNSAT now goes
+  `solve_with_drat_proof → DRAT → LRAT → Alethe`, re-checkable by *both* `check_lrat`
+  and `check_alethe` (end-to-end test). Remaining (P3.2/3.3): typed-term IR (SMT-LIB
+  terms vs opaque atoms);
   more rules (`or`/`and`/`contraction`/theory lemmas); emit Alethe from the solver
   (e.g. LRAT→Alethe resolution); Carcara cross-check. NOTE: when the term IR lands,
   consider extracting `axeyum-alethe` per the roadmap (needs an ADR per ADR-0001).
