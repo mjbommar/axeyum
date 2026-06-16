@@ -120,11 +120,15 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "QF_UF",
-        feature: "uninterpreted functions via Ackermann reduction",
-        assurance: Assurance::Validated,
-        evidence: "reduction; model replay; UNSAT exportable as a re-checkable DRAT \
-                   certificate (clausal layer, modulo trusted reduction)",
-        reference: "ADR-0013",
+        feature: "uninterpreted functions: lazy congruence closure on a backtrackable \
+                  e-graph (check_qf_uf, the check_auto fast path) with an eager Ackermann \
+                  bit-blast fallback",
+        assurance: Assurance::Checked,
+        evidence: "UNSAT carries a congruence explanation re-derived by an independent \
+                   union-find + congruence checker (check_congruence); SAT model built from \
+                   the e-graph classes and replayed against the original; both routes \
+                   differentially + randomly validated against the Ackermann path",
+        reference: "ADR-0013/0032",
     },
     Capability {
         area: "QF_LRA",
