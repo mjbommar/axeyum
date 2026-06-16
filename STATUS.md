@@ -84,19 +84,20 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   across all 43 incl. the oracle path; reduced the DAG on 5/43 (the instances with
   top-level `x=t` structure), no-op on the multiplier-heavy rest. Correct
   infrastructure; the PAR-2 payoff needs a corpus with explicit defines.
-- **Next task — choose the next lever. Two good options:**
-  1. **Continue P1.2 toward the bit-blasting-direct passes** (bigger impact on this
-     slice than term-level elimination): **T1.2.8 two-level AIG rewriting** at
-     construction in `axeyum-aig` (`rewrite_and`: neutrality/idempotence/
-     contradiction/subsumption/resolution — bitwuzla's speed lever, shrinks the AIG
-     before CNF, can help the multipliers) and **T1.2.5 max_bv_sharing**. Skip/defer
-     T1.2.4 (elim_unconstrained) and T1.2.6/7 until measured need.
-  2. **Start the keystone chain P1.4 (incremental e-graph)** — congruence closure +
-     explanation + independent checker. This unlocks P1.5 CDCL(T) and all of Track 2
-     (EUF, quantifiers, theory combination), i.e. the bulk of *functional* z3 parity.
-     Highest leverage for breadth; larger and not perf-gated.
-  Recommendation: **P1.4 keystone** is the higher-leverage path to "100% z3
-  functionality" (breadth), with T1.2.8 as the quick perf win if staying in Track 1.
+- **P1.4 e-graph keystone STARTED** (commit eb3e9e6): `axeyum-egraph` crate with the
+  congruence-closure core (hash-cons + union-find + deferred-merge cascade),
+  property-tested vs a brute-force oracle. ADR-0032.
+- **Next task — T1.4.3 explanation / proof forest.** Add a *separate* proof forest
+  (per node `target` + `justification`) alongside the union-find: `merge(a,b,reason)`
+  records the reason, and `explain(a,b)` returns a minimal sound set of input
+  equalities entailing `a=b` (explain-to-LCA; congruence steps recover premises
+  from the argument explanations, timestamped). Reference
+  `references/z3/src/ast/euf/euf_justification.cpp`. This is what makes the e-graph
+  usable in CDCL(T) (conflict clauses) and is the prerequisite for T1.4.5 (the
+  independent congruence checker). Then T1.4.4 backtrackable trail (push/pop),
+  T1.4.6 theory-var lists. After P1.4: P1.5 CDCL(T) loop → Track 2 theories.
+  Deferred Track-1 perf option still open: T1.2.8 two-level AIG rewriting in
+  `axeyum-aig` (bitwuzla's speed lever, helps the bit-blasting multipliers).
 
 ## Already shipped this session (pre-plan)
 
@@ -118,7 +119,7 @@ plan is built and committed on the current branch:
 | P1.1 | SAT inprocessing (subsumption → BVE → vivification → glue tiers) | WIP — subsumption+BVE landed (T1.1.1/2), wired into the solve pipeline (T1.1.3), made occurrence-list near-linear + time-bounded (T1.1.4): safe, no regression, but the curated unknowns are SAT-search-bound (→ P1.3) or BVE-resistant. Vivification / glue tiers remain |
 | P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | WIP — T1.2.1 trail + T1.2.2 propagate_values + T1.2.3 solve_eqs landed (model-sound, unit-tested, 36 tests). Next: wire the preprocessing pipeline into the solve path + measure; then elim_unconstrained / max_bv_sharing / bv_slice / AIG 2-level (T1.2.4–T1.2.9) |
 | P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | TODO |
-| P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | TODO |
+| P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | WIP — T1.4.1+T1.4.2 done: `axeyum-egraph` crate (ADR-0032), hash-cons + union-find + deferred-merge congruence cascade, brute-force property-tested. Next: T1.4.3 explanations (proof forest), then T1.4.4 backtracking, T1.4.5 checker, T1.4.6 th-vars |
 | P1.5 | CDCL(T) loop (theory-as-extension, final-check, theory propagation) **[keystone]** | TODO |
 | P1.6 | Theory combination (th_eq bus, interface equalities) | TODO |
 | P1.7 | PBLS local-search BV engine (portfolio) | TODO |
@@ -160,6 +161,12 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **P1.4 e-graph keystone started: T1.4.1+T1.4.2** (commit eb3e9e6).
+  New dependency-free `axeyum-egraph` crate (ADR-0032): hash-consed e-node creation
+  over a root-keyed signature table, path-compressing union-find, and the
+  deferred-merge cascade that re-canonicalizes parents to close transitive
+  congruence. 5 tests incl. a 300-iteration brute-force congruence-oracle property
+  test. Next: T1.4.3 explanations.
 - **2026-06-16** — **bench `--preprocess` + measurement** (commit 0c594ac).
   propagate_values+solve_eqs wired into the bench setup phase; trail threaded to
   reconstruct the model before the original-assertion replay. Curated A/B: 32/43,
