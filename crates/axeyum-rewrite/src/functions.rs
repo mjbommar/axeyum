@@ -71,6 +71,7 @@ struct ProjectedApply {
 #[derive(Debug, Clone)]
 pub struct FunctionElimination {
     assertions: Vec<TermId>,
+    abstraction: Vec<TermId>,
     applies: Vec<ProjectedApply>,
     had_functions: bool,
 }
@@ -80,6 +81,28 @@ impl FunctionElimination {
     /// constraints.
     pub fn assertions(&self) -> &[TermId] {
         &self.assertions
+    }
+
+    /// The rewritten-only assertions WITHOUT the appended congruence
+    /// constraints: each uninterpreted application is abstracted as a fresh
+    /// scalar variable, but no functional-consistency lemmas are present. This
+    /// is the relaxation a lazy/on-demand Ackermann procedure ([`crate`]
+    /// consumers in `axeyum-solver`) starts from, adding congruence lemmas only
+    /// for the application pairs a candidate model violates.
+    pub fn abstraction(&self) -> &[TermId] {
+        &self.abstraction
+    }
+
+    /// The eliminated applications as `(func, rewritten args, fresh symbol)`
+    /// triples, in discovery order (deterministic). Used to build on-demand
+    /// congruence lemmas: a pair `(i, j)` of entries for the same `func`
+    /// (matching arity) whose argument tuples are equal under a candidate model
+    /// but whose fresh symbols differ is a functional-consistency violation.
+    pub fn applications(&self) -> Vec<(FuncId, &[TermId], SymbolId)> {
+        self.applies
+            .iter()
+            .map(|apply| (apply.func, apply.args.as_slice(), apply.fresh))
+            .collect()
     }
 
     /// Whether the input actually contained any uninterpreted-function
@@ -151,6 +174,7 @@ pub fn eliminate_functions(
     if !had_functions {
         return Ok(FunctionElimination {
             assertions: assertions.to_vec(),
+            abstraction: assertions.to_vec(),
             applies: Vec::new(),
             had_functions: false,
         });
@@ -161,10 +185,14 @@ pub fn eliminate_functions(
     for &assertion in assertions {
         rewritten.push(ctx.rewrite(arena, assertion)?);
     }
+    // The abstraction is the rewritten-only assertions, before the eager
+    // congruence lemmas are appended.
+    let abstraction = rewritten.clone();
     rewritten.extend(ctx.congruence_constraints(arena)?);
 
     Ok(FunctionElimination {
         assertions: rewritten,
+        abstraction,
         applies: ctx.applies,
         had_functions: true,
     })
