@@ -8,7 +8,8 @@
 
 use axeyum_ir::{Sort, TermArena, TermId};
 use axeyum_solver::{
-    CheckResult, SatBvBackend, SolverConfig, check_with_function_elimination, prove_unsat_lazy,
+    CheckResult, SatBvBackend, SolverConfig, check_qf_uf, check_with_function_elimination,
+    prove_unsat_lazy,
 };
 
 /// Runs the Ackermann `QF_UFBV` path on `assertions`.
@@ -18,12 +19,14 @@ fn ackermann(arena: &mut TermArena, assertions: &[TermId]) -> CheckResult {
         .expect("Ackermann QF_UFBV path succeeds")
 }
 
-/// Asserts the e-graph prover proves UNSAT and the Ackermann path agrees.
+/// Asserts the e-graph prover proves UNSAT, `check_qf_uf` decides UNSAT, and the
+/// Ackermann path agrees.
 fn assert_unsat_agree(arena: &mut TermArena, assertions: &[TermId]) {
     assert!(
         prove_unsat_lazy(arena, assertions),
         "e-graph EUF prover should prove UNSAT"
     );
+    assert_eq!(check_qf_uf(arena, assertions), CheckResult::Unsat);
     assert_eq!(
         ackermann(arena, assertions),
         CheckResult::Unsat,
@@ -31,12 +34,16 @@ fn assert_unsat_agree(arena: &mut TermArena, assertions: &[TermId]) {
     );
 }
 
-/// Asserts the instance is satisfiable: the prover does not claim UNSAT and the
-/// Ackermann path reports `sat`.
+/// Asserts the instance is satisfiable: the prover does not claim UNSAT,
+/// `check_qf_uf` returns a model, and the Ackermann path reports `sat`.
 fn assert_sat_agree(arena: &mut TermArena, assertions: &[TermId]) {
     assert!(
         !prove_unsat_lazy(arena, assertions),
         "prover must not claim a satisfiable instance UNSAT"
+    );
+    assert!(
+        matches!(check_qf_uf(arena, assertions), CheckResult::Sat(_)),
+        "check_qf_uf should return a (replay-checked) model"
     );
     assert!(
         matches!(ackermann(arena, assertions), CheckResult::Sat(_)),

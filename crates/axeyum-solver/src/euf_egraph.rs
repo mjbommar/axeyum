@@ -21,13 +21,16 @@
 //! This is the congruence core that the full lazy CDCL(T) loop (boolean search +
 //! theory propagation, the rest of P1.5) and theory combination (P1.6) build on.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use axeyum_egraph::{EGraph, ENodeId, check_congruence};
-use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode};
+use axeyum_ir::{
+    Assignment, FuncId, FuncValue, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval,
+};
 use axeyum_rewrite::replace_subterms;
 
 use crate::backend::{CheckResult, SolverBackend, SolverConfig};
+use crate::model::Model;
 use crate::sat_bv_backend::SatBvBackend;
 
 /// A congruence conflict proving the assertions UNSAT: the subset of original
@@ -147,6 +150,206 @@ pub fn prove_unsat_lazy(arena: &mut TermArena, assertions: &[TermId]) -> bool {
     }
 }
 
+/// Decides a `QF_UF`(-equality) conjunction by the lazy DPLL(T) loop, returning a
+/// **replay-checked** model on `sat`.
+///
+/// Like [`prove_unsat_lazy`] it abstracts equalities to Boolean atoms and searches;
+/// on a theory-consistent boolean model it builds a candidate model from the
+/// e-graph classes (each class a distinct value, literal constants their own value,
+/// uninterpreted functions an interpretation consistent with congruence) and
+/// **replays it against the original assertions**. The replay is the soundness
+/// gate: a model that does not satisfy the originals (e.g. because the
+/// uninterpreted abstraction missed base-sort semantics) yields
+/// [`CheckResult::Unknown`], never a wrong `sat`. So this is a sound decider for
+/// the equality-and-uninterpreted-function fragment and conservative elsewhere.
+///
+/// Mutates `arena` (fresh atom variables and blocking-clause terms).
+///
+/// # Panics
+///
+/// Panics on a soundness bug: a congruence conflict whose explanation fails the
+/// independent [`check_congruence`] re-check (which cannot happen for a correct
+/// e-graph).
+#[must_use]
+pub fn check_qf_uf(arena: &mut TermArena, assertions: &[TermId]) -> CheckResult {
+    let mut atom_terms: Vec<TermId> = Vec::new();
+    let mut seen = HashSet::new();
+    for &a in assertions {
+        collect_eq_atoms(arena, a, &mut atom_terms, &mut seen);
+    }
+    if atom_terms.is_empty() {
+        return CheckResult::Unknown(unknown("no equality atoms for the e-graph path"));
+    }
+
+    let mut subst: HashMap<TermId, TermId> = HashMap::new();
+    let mut atoms: Vec<(TermId, SymbolId)> = Vec::new();
+    for (i, &atom) in atom_terms.iter().enumerate() {
+        let sym = arena
+            .declare(&format!("!euf_atom_{i}"), Sort::Bool)
+            .expect("fresh atom symbol");
+        let var = arena.var(sym);
+        subst.insert(atom, var);
+        atoms.push((atom, sym));
+    }
+    let mut memo: HashMap<TermId, TermId> = HashMap::new();
+    let mut skeleton: Vec<TermId> = assertions
+        .iter()
+        .map(|&a| replace_subterms(arena, a, &subst, &mut memo).expect("skeleton substitution"))
+        .collect();
+
+    loop {
+        let mut backend = SatBvBackend::new();
+        match backend.check(arena, &skeleton, &SolverConfig::default()) {
+            Ok(CheckResult::Unsat) => return CheckResult::Unsat,
+            Ok(CheckResult::Sat(bool_model)) => {
+                let (bridge, eq_nodes) = theory_state(arena, &atoms, &bool_model);
+                if let Some(lits) = find_conflict(&bridge, &eq_nodes) {
+                    let blocking = build_blocking_clause(arena, &atoms, &lits);
+                    skeleton.push(blocking);
+                    continue;
+                }
+                // Theory-consistent: build a candidate model and replay it.
+                return match build_model(arena, &bridge) {
+                    Some(model) if replays(arena, assertions, &model) => CheckResult::Sat(model),
+                    _ => CheckResult::Unknown(unknown(
+                        "e-graph model did not replay (base-sort semantics outside congruence)",
+                    )),
+                };
+            }
+            _ => return CheckResult::Unknown(unknown("boolean skeleton undecided")),
+        }
+    }
+}
+
+/// Constructs a candidate model from a theory-consistent e-graph: each class gets
+/// a distinct value (a literal constant's value if it has one), symbols take their
+/// class value, and each function gets an interpretation from its applications.
+/// Returns `None` for sorts outside `Bool`/`BitVec(≤128)` (the caller treats that
+/// as `Unknown`).
+fn build_model(arena: &TermArena, bridge: &Bridge) -> Option<Model> {
+    let mut class_width: HashMap<ENodeId, u32> = HashMap::new();
+    for (&term, &node) in &bridge.term_to_node {
+        let root = bridge.egraph.root(node);
+        let width = match arena.sort_of(term) {
+            Sort::Bool => 1,
+            Sort::BitVec(w) if w <= 128 => w,
+            _ => return None,
+        };
+        class_width.insert(root, width);
+    }
+
+    // Class codes: constants pin their class, the rest get fresh distinct codes.
+    let mut class_code: HashMap<ENodeId, u128> = HashMap::new();
+    let mut used: HashMap<u32, HashSet<u128>> = HashMap::new();
+    for (&term, &node) in &bridge.term_to_node {
+        if is_constant(arena.node(term)) {
+            let root = bridge.egraph.root(node);
+            let code = eval(arena, term, &Assignment::new()).ok()?.scalar_code();
+            class_code.insert(root, code);
+            used.entry(class_width[&root]).or_default().insert(code);
+        }
+    }
+    for (&root, &width) in &class_width {
+        if class_code.contains_key(&root) {
+            continue;
+        }
+        let set = used.entry(width).or_default();
+        let max = if width >= 128 {
+            u128::MAX
+        } else {
+            (1u128 << width) - 1
+        };
+        let mut v = 0u128;
+        while set.contains(&v) {
+            if v == max {
+                return None; // too many distinct classes for this width
+            }
+            v += 1;
+        }
+        set.insert(v);
+        class_code.insert(root, v);
+    }
+
+    let mut model = Model::new();
+    let mut tables: HashMap<FuncId, Vec<(Vec<u128>, u128)>> = HashMap::new();
+    for (&term, &node) in &bridge.term_to_node {
+        let code = class_code[&bridge.egraph.root(node)];
+        match arena.node(term) {
+            TermNode::Symbol(s) => {
+                model.set(*s, value_from_code(arena.sort_of(term), code));
+            }
+            TermNode::App {
+                op: Op::Apply(func),
+                args,
+            } => {
+                let arg_codes: Vec<u128> = args
+                    .iter()
+                    .map(|&a| class_code[&bridge.egraph.root(bridge.term_to_node[&a])])
+                    .collect();
+                tables.entry(*func).or_default().push((arg_codes, code));
+            }
+            _ => {}
+        }
+    }
+    for (func, entries) in tables {
+        let (_, params, result) = arena.function(func);
+        let mut fv = FuncValue::constant(params.to_vec(), result, 0);
+        for (args, res) in entries {
+            fv = fv.define(&args, res);
+        }
+        model.set_function(func, fv);
+    }
+    Some(model)
+}
+
+/// Whether a term node is a literal constant of any sort.
+fn is_constant(node: &TermNode) -> bool {
+    matches!(
+        node,
+        TermNode::BoolConst(_)
+            | TermNode::BvConst { .. }
+            | TermNode::WideBvConst(_)
+            | TermNode::IntConst(_)
+            | TermNode::RealConst(_)
+    )
+}
+
+/// A [`Value`] of `sort` carrying the encoded `code`.
+fn value_from_code(sort: Sort, code: u128) -> Value {
+    match sort {
+        Sort::Bool => Value::Bool(code != 0),
+        Sort::BitVec(width) => {
+            let mask = if width >= 128 {
+                u128::MAX
+            } else {
+                (1u128 << width) - 1
+            };
+            Value::Bv {
+                width,
+                value: code & mask,
+            }
+        }
+        _ => unreachable!("build_model filtered to Bool/BitVec"),
+    }
+}
+
+/// Whether `model` satisfies every original assertion (the soundness gate for a
+/// constructed `sat` model).
+fn replays(arena: &TermArena, assertions: &[TermId], model: &Model) -> bool {
+    let assignment = model.to_assignment();
+    assertions
+        .iter()
+        .all(|&a| matches!(eval(arena, a, &assignment), Ok(Value::Bool(true))))
+}
+
+/// An [`UnknownReason`] for the e-graph path.
+fn unknown(detail: &str) -> crate::backend::UnknownReason {
+    crate::backend::UnknownReason {
+        kind: crate::backend::UnknownKind::Other,
+        detail: detail.to_owned(),
+    }
+}
+
 /// Collects distinct equality subterms of `term`.
 fn collect_eq_atoms(
     arena: &TermArena,
@@ -165,19 +368,15 @@ fn collect_eq_atoms(
     }
 }
 
-/// Theory-checks a boolean model: asserts the true equality atoms into a fresh
-/// e-graph and looks for a congruence conflict (a false equality whose sides are
-/// congruent, or a constant clash). Returns the conflicting atom literals as
-/// `(atom index, assigned value)` when inconsistent, else `None`.
-fn lazy_theory_check(
+/// Builds the e-graph theory state for a boolean model: every equality atom's
+/// sides as e-nodes (with the atom's assigned truth value), with the true
+/// equalities merged in.
+fn theory_state(
     arena: &TermArena,
     atoms: &[(TermId, SymbolId)],
-    model: &crate::model::Model,
-) -> Option<Vec<(usize, bool)>> {
-    use axeyum_ir::Value;
-
+    model: &Model,
+) -> (Bridge, Vec<(ENodeId, ENodeId, bool)>) {
     let mut bridge = Bridge::new();
-    // (s-node, t-node, assigned value) per atom.
     let mut eq_nodes: Vec<(ENodeId, ENodeId, bool)> = Vec::with_capacity(atoms.len());
     for &(eq_term, sym) in atoms {
         let TermNode::App { args, .. } = arena.node(eq_term) else {
@@ -196,24 +395,43 @@ fn lazy_theory_check(
                 .merge(ns, nt, u32::try_from(i).expect("atom count fits u32"));
         }
     }
-    // A false equality whose sides are congruent is a conflict.
+    (bridge, eq_nodes)
+}
+
+/// Looks for a congruence conflict in a theory state — a false equality whose
+/// sides are congruent, or two distinct constants forced equal — returning the
+/// conflicting atom literals `(index, assigned value)`, else `None` (consistent).
+fn find_conflict(
+    bridge: &Bridge,
+    eq_nodes: &[(ENodeId, ENodeId, bool)],
+) -> Option<Vec<(usize, bool)>> {
     for (i, &(ns, nt, val)) in eq_nodes.iter().enumerate() {
         if !val && bridge.egraph.equal(ns, nt) {
-            let mut lits = explain_as_true_lits(&bridge.egraph, &eq_nodes, ns, nt);
+            let mut lits = explain_as_true_lits(&bridge.egraph, eq_nodes, ns, nt);
             lits.push((i, false));
             return Some(lits);
         }
     }
-    // Two distinct constants forced congruent is a conflict.
     for i in 0..bridge.constants.len() {
         for j in (i + 1)..bridge.constants.len() {
             let (ci, cj) = (bridge.constants[i], bridge.constants[j]);
             if bridge.egraph.equal(ci, cj) {
-                return Some(explain_as_true_lits(&bridge.egraph, &eq_nodes, ci, cj));
+                return Some(explain_as_true_lits(&bridge.egraph, eq_nodes, ci, cj));
             }
         }
     }
     None
+}
+
+/// Theory-checks a boolean model, returning conflicting atom literals if
+/// inconsistent (used by [`prove_unsat_lazy`]).
+fn lazy_theory_check(
+    arena: &TermArena,
+    atoms: &[(TermId, SymbolId)],
+    model: &Model,
+) -> Option<Vec<(usize, bool)>> {
+    let (bridge, eq_nodes) = theory_state(arena, atoms, model);
+    find_conflict(&bridge, &eq_nodes)
 }
 
 /// The equality atoms (all assigned true) that force `a = b`, as `(index, true)`
@@ -569,6 +787,62 @@ mod tests {
         assert!(prove_unsat_lazy(
             &mut arena,
             &[ab, disj, fa_eq_fc, fb_eq_fc]
+        ));
+    }
+
+    #[test]
+    fn check_qf_uf_sat_model_replays() {
+        // a=b ∧ f(a)=f(b): SAT; check_qf_uf must return a model that satisfies the
+        // original assertions (the replay gate).
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(8);
+        let a = arena.bv_var("a", 8).unwrap();
+        let b = arena.bv_var("b", 8).unwrap();
+        let f = arena.declare_fun("f", &[sort], sort).unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let fb = arena.apply(f, &[b]).unwrap();
+        let ab = arena.eq(a, b).unwrap();
+        let fa_eq_fb = arena.eq(fa, fb).unwrap();
+        let originals = [ab, fa_eq_fb];
+
+        let CheckResult::Sat(model) = check_qf_uf(&mut arena, &originals) else {
+            panic!("expected sat");
+        };
+        let assignment = model.to_assignment();
+        for &asrt in &originals {
+            assert_eq!(
+                axeyum_ir::eval(&arena, asrt, &assignment).unwrap(),
+                Value::Bool(true),
+                "returned model must satisfy the original assertions"
+            );
+        }
+    }
+
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn check_qf_uf_decides_unsat_and_sat() {
+        // UNSAT: a=b ∧ f(a)≠f(b).
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(8);
+        let a = arena.bv_var("a", 8).unwrap();
+        let b = arena.bv_var("b", 8).unwrap();
+        let f = arena.declare_fun("f", &[sort], sort).unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let fb = arena.apply(f, &[b]).unwrap();
+        let ab = arena.eq(a, b).unwrap();
+        let fa_eq_fb = arena.eq(fa, fb).unwrap();
+        let fa_ne_fb = arena.not(fa_eq_fb).unwrap();
+        assert_eq!(check_qf_uf(&mut arena, &[ab, fa_ne_fb]), CheckResult::Unsat);
+
+        // SAT: a disequality alone (distinct values exist).
+        let mut arena2 = TermArena::new();
+        let x = arena2.bv_var("x", 8).unwrap();
+        let y = arena2.bv_var("y", 8).unwrap();
+        let xy = arena2.eq(x, y).unwrap();
+        let x_ne_y = arena2.not(xy).unwrap();
+        assert!(matches!(
+            check_qf_uf(&mut arena2, &[x_ne_y]),
+            CheckResult::Sat(_)
         ));
     }
 
