@@ -207,7 +207,16 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
-- **2026-06-16** — **P1.5 online `TheorySolver` trait + `EufTheory`** (pending commit).
+- **2026-06-16** — **P1.5 online theory propagation (`EufTheory::propagate`)**
+  (pending commit). Extends the online theory with sound EUF propagation: the
+  unassigned equality atoms whose sides are already congruent, each entailed `true`
+  with the asserted equalities that force it (`TheoryProp{lit, reason}`).
+  Assigned-state is now tracked and backtracked in lockstep (per-`push`
+  `(diseqs, assigned_log)` markers), so entailments retract on `pop`. 2 added tests
+  (transitivity+congruence propagation with reasons; retraction on backtrack).
+  The online theory now has the full assert/propagate/explain/backtrack surface a
+  CDCL(T) loop drives.
+- **2026-06-16** — **P1.5 online `TheorySolver` trait + `EufTheory`** (commit afec596).
   First slice of the *online* CDCL(T) theory interface (vs the offline
   `prove_unsat_lazy` model-enumeration): `TheorySolver` (`assert(atom,value)` →
   `Ok` or a conflicting `Vec<TheoryLit>`; `push`/`pop`) and `EufTheory`, an EUF

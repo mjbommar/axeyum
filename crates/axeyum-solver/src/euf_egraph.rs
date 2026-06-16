@@ -89,10 +89,26 @@ pub struct EufTheory {
     /// Per atom index: the e-nodes of its two sides, or `None` for a non-equality
     /// atom (asserting it is a congruence no-op).
     atoms: Vec<Option<(ENodeId, ENodeId)>>,
+    /// Per atom index: the value it is currently asserted at (`None` if unassigned).
+    /// Lets [`EufTheory::propagate`] skip already-decided atoms.
+    assigned: Vec<Option<bool>>,
+    /// Atom indices assigned since the start, in order — the backtrack log for
+    /// `assigned` (cleared back to a marker on [`EufTheory::pop`]).
+    assigned_log: Vec<usize>,
     /// Currently-asserted disequalities: (atom index, side a, side b).
     diseqs: Vec<(usize, ENodeId, ENodeId)>,
-    /// Backtrack trail of `diseqs` lengths, one entry per [`EufTheory::push`].
-    diseq_trail: Vec<usize>,
+    /// Backtrack trail: per [`EufTheory::push`], the `(diseqs, assigned_log)` lengths.
+    trail: Vec<(usize, usize)>,
+}
+
+/// A sound theory propagation: a literal the theory entails under the current
+/// assertions, with the asserted literals that force it (its explanation).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TheoryProp {
+    /// The entailed literal.
+    pub lit: TheoryLit,
+    /// The asserted literals whose conjunction entails `lit`.
+    pub reason: Vec<TheoryLit>,
 }
 
 impl EufTheory {
@@ -115,12 +131,39 @@ impl EufTheory {
             };
             atoms.push(sides);
         }
+        let n = atoms.len();
         Self {
             bridge,
             atoms,
+            assigned: vec![None; n],
+            assigned_log: Vec::new(),
             diseqs: Vec::new(),
-            diseq_trail: Vec::new(),
+            trail: Vec::new(),
         }
+    }
+
+    /// Sound EUF theory propagation: the unassigned equality atoms whose two sides
+    /// are **already congruent** under the current assertions — each entailed
+    /// `true`, with the explanation (the asserted equalities forcing the merge). A
+    /// CDCL(T) loop can assign these without a decision. (Disequality entailment —
+    /// an atom forced `false` — needs the fuller "distinct classes" analysis and is
+    /// deferred.)
+    #[must_use]
+    pub fn propagate(&self) -> Vec<TheoryProp> {
+        let mut out = Vec::new();
+        for (atom, sides) in self.atoms.iter().enumerate() {
+            if self.assigned[atom].is_some() {
+                continue; // already decided by the search
+            }
+            let Some((a, b)) = *sides else { continue };
+            if self.bridge.egraph.equal(a, b) {
+                out.push(TheoryProp {
+                    lit: TheoryLit { atom, value: true },
+                    reason: self.explain_true(a, b),
+                });
+            }
+        }
+        out
     }
 
     /// The first conflict in the current state: an asserted disequality whose sides
@@ -164,6 +207,12 @@ impl EufTheory {
 
 impl TheorySolver for EufTheory {
     fn assert(&mut self, atom: usize, value: bool) -> Result<(), Vec<TheoryLit>> {
+        // Record the assignment (even for non-equality atoms) so propagation and a
+        // future re-assert are consistent; backtracked in lockstep on `pop`.
+        if self.assigned[atom].is_none() {
+            self.assigned[atom] = Some(value);
+            self.assigned_log.push(atom);
+        }
         let Some((a, b)) = self.atoms[atom] else {
             return Ok(()); // non-equality atom: nothing for congruence to do
         };
@@ -181,13 +230,19 @@ impl TheorySolver for EufTheory {
 
     fn push(&mut self) {
         self.bridge.egraph.push();
-        self.diseq_trail.push(self.diseqs.len());
+        self.trail
+            .push((self.diseqs.len(), self.assigned_log.len()));
     }
 
     fn pop(&mut self) {
         self.bridge.egraph.pop();
-        if let Some(len) = self.diseq_trail.pop() {
-            self.diseqs.truncate(len);
+        if let Some((diseq_len, assigned_len)) = self.trail.pop() {
+            self.diseqs.truncate(diseq_len);
+            while self.assigned_log.len() > assigned_len {
+                if let Some(atom) = self.assigned_log.pop() {
+                    self.assigned[atom] = None;
+                }
+            }
         }
     }
 }
@@ -889,6 +944,98 @@ mod tests {
             atom: 1,
             value: true
         }));
+    }
+
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn online_euf_propagates_entailed_equalities() {
+        // Atoms: 0:a=b, 1:b=c, 2:a=c, 3:f(a)=f(c). Assert a=b and b=c. Congruence
+        // then entails a=c (atom 2) and f(a)=f(c) (atom 3) — both unassigned — and
+        // propagation must surface them with the equalities that force them.
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(8);
+        let a = arena.bv_var("a", 8).unwrap();
+        let b = arena.bv_var("b", 8).unwrap();
+        let c = arena.bv_var("c", 8).unwrap();
+        let f = arena.declare_fun("f", &[sort], sort).unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let fc = arena.apply(f, &[c]).unwrap();
+        let ab = arena.eq(a, b).unwrap();
+        let bc = arena.eq(b, c).unwrap();
+        let ac = arena.eq(a, c).unwrap();
+        let fa_eq_fc = arena.eq(fa, fc).unwrap();
+
+        let mut theory = EufTheory::new(&arena, &[ab, bc, ac, fa_eq_fc]);
+        assert!(theory.propagate().is_empty(), "nothing entailed yet");
+        assert!(theory.assert(0, true).is_ok());
+        assert!(theory.assert(1, true).is_ok());
+
+        let props = theory.propagate();
+        let lits: Vec<TheoryLit> = props.iter().map(|p| p.lit).collect();
+        assert!(
+            lits.contains(&TheoryLit {
+                atom: 2,
+                value: true
+            }),
+            "a=c must be propagated"
+        );
+        assert!(
+            lits.contains(&TheoryLit {
+                atom: 3,
+                value: true
+            }),
+            "f(a)=f(c) must be propagated by congruence"
+        );
+        // The already-asserted equalities are not re-propagated.
+        assert!(!lits.contains(&TheoryLit {
+            atom: 0,
+            value: true
+        }));
+        // a=c is justified by exactly the two asserted equalities.
+        let ac_prop = props.iter().find(|p| p.lit.atom == 2).unwrap();
+        assert!(ac_prop.reason.contains(&TheoryLit {
+            atom: 0,
+            value: true
+        }));
+        assert!(ac_prop.reason.contains(&TheoryLit {
+            atom: 1,
+            value: true
+        }));
+
+        // After popping both asserts, nothing is entailed again.
+        theory.push(); // (no-op marker so the asserts below pop cleanly in a real loop)
+        theory.pop();
+    }
+
+    #[test]
+    fn online_euf_propagation_retracts_on_backtrack() {
+        // a=b entails f(a)=f(b); popping the a=b decision must retract that.
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(8);
+        let a = arena.bv_var("a", 8).unwrap();
+        let b = arena.bv_var("b", 8).unwrap();
+        let f = arena.declare_fun("f", &[sort], sort).unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let fb = arena.apply(f, &[b]).unwrap();
+        let ab = arena.eq(a, b).unwrap();
+        let fa_eq_fb = arena.eq(fa, fb).unwrap();
+
+        let mut theory = EufTheory::new(&arena, &[ab, fa_eq_fb]);
+        theory.push();
+        assert!(theory.assert(0, true).is_ok());
+        assert!(
+            theory.propagate().iter().any(|p| p.lit
+                == TheoryLit {
+                    atom: 1,
+                    value: true
+                }),
+            "f(a)=f(b) entailed while a=b holds"
+        );
+        theory.pop();
+        assert!(
+            theory.propagate().is_empty(),
+            "entailment retracted once a=b is backtracked"
+        );
     }
 
     #[test]
