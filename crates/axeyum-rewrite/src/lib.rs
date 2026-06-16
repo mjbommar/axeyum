@@ -17,6 +17,7 @@ mod int_divmod;
 mod propagate_values;
 mod quantifiers;
 mod reconstruct;
+mod solve_eqs;
 
 pub use arrays::{ArrayElimError, ArrayElimination, eliminate_arrays};
 pub use canonical::{
@@ -34,6 +35,7 @@ pub use quantifiers::{
     instantiate_universals, instantiate_with_triggers,
 };
 pub use reconstruct::ModelReconstructionTrail;
+pub use solve_eqs::{EqSolution, solve_eqs};
 
 /// Stable rewrite rule identifier used in logs and future certificates.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
