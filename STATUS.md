@@ -45,16 +45,24 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   `FunctionElimination` now exposes `abstraction()` + `applications()` (eager
   `assertions()` byte-identical). **300-formula differential vs the eager
   `check_with_all_theories` — all jointly decided, all agreed (21 unsat).**
-  - **Next action (precise resume point):** (1) **Wire `check_qf_ufbv_lazy` into
-    `check_auto_dispatch`** for the function+BV fragment (when `has_function` and the
-    bit-blast theories are present but no array/int), ahead of the eager
-    `check_with_all_theories`, falling through on `Unsupported`/`Unknown`; run the
-    full suite (aufbv/functions/combined) for no-regression. (2) Then the *fuller*
-    **online interface-equality combination**: drive the BV theory and the online
+  - **Dispatch wiring of `check_qf_ufbv_lazy` — deliberately deferred (methodology):**
+    routing lazy-before-eager is a *performance* optimization (fewer up-front
+    lemmas), not a correctness/capability gain — the eager `check_with_all_theories`
+    already decides QF_UFBV completely. Per the project's benchmarking-first rule
+    (encodings/perfwork gated on measured corpora) and the array-fragment interaction
+    risk (lazy abstracts functions but not arrays), it stays an available, validated
+    API until a real UFBV corpus shows eager-Ackermann lemma count is the
+    bottleneck. The function is exported and ready.
+  - **Next action (precise resume point):** the *fuller* **online interface-equality
+    combination** — the actual P1.6 prize that removes the Ackermann trust hole
+    (lazy Ackermann only defers it). Drive the bit-blasted BV theory and the online
     `EufTheory` together via Nelson–Oppen equality sharing over shared BV-sorted
-    terms (split on unknown interface equalities) — removing the Ackermann reduction
-    entirely, not just deferring it. Secondary: migrate `axeyum_rewrite`'s bespoke
-    trigger closure onto the keystone.
+    terms: from a BV model read the arrangement of shared terms, feed entailed
+    equalities/disequalities to the e-graph, split on undetermined interface
+    equalities, and let the e-graph's congruence conflicts refine — deciding
+    QF_UFBV with UF handled by the *checked* e-graph rather than a trusted reduction.
+    Validate differentially vs `check_with_all_theories`. Secondary: migrate
+    `axeyum_rewrite`'s bespoke trigger closure onto the keystone.
 - **Plan authored** (2026-06-15): the full track/phase/task plan is under
   [`docs/plan/`](docs/plan/README.md), built from the five reference reviews in
   [`docs/plan/references/`](docs/plan/references/README.md).
