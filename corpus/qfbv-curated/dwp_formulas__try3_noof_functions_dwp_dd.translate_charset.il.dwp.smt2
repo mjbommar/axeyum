@@ -1,0 +1,22 @@
+(set-info :smt-lib-version 2.6)
+(set-logic QF_BV)
+(set-info :source |
+Ivan Jager <aij+nospam@andrew.cmu.edu>
+
+|)
+(set-info :category "industrial")
+(set-info :status unsat)
+(declare-fun t_261 () (_ BitVec 1))
+(declare-fun t_260 () (_ BitVec 1))
+(declare-fun t_259 () (_ BitVec 1))
+(declare-fun t_258 () (_ BitVec 1))
+(declare-fun t_257 () (_ BitVec 1))
+(declare-fun t_256 () (_ BitVec 1))
+(declare-fun t_255 () (_ BitVec 1))
+(declare-fun t_254 () (_ BitVec 1))
+(declare-fun t_253 () (_ BitVec 1))
+(declare-fun t_252 () (_ BitVec 1))
+(declare-fun t_251 () (_ BitVec 1))
+(assert (= (_ bv1 1) (bvand (bvand (ite (= t_251 (_ bv1 1)) (_ bv1 1) (_ bv0 1)) (bvand (ite (= t_252 (_ bv1 1)) (_ bv1 1) (_ bv0 1)) (bvand (ite (= t_253 (_ bv1 1)) (_ bv1 1) (_ bv0 1)) (bvand (ite (= t_254 (_ bv0 1)) (_ bv1 1) (_ bv0 1)) (bvand (ite (= t_255 (_ bv0 1)) (_ bv1 1) (_ bv0 1)) (bvand (ite (= t_256 t_254) (_ bv1 1) (_ bv0 1)) (bvand (ite (= t_257 (bvnot (_ bv0 1))) (_ bv1 1) (_ bv0 1)) (bvand (ite (= t_258 (bvor t_255 (bvand t_257 t_256))) (_ bv1 1) (_ bv0 1)) (bvand (ite (= t_259 t_253) (_ bv1 1) (_ bv0 1)) (bvand (ite (= t_260 t_252) (_ bv1 1) (_ bv0 1)) (ite (= t_261 t_251) (_ bv1 1) (_ bv0 1)))))))))))) (bvand (bvnot (bvor (bvnot t_251) (bvand t_261 (bvor (bvnot t_252) (bvand t_260 (bvor (bvnot t_253) (bvand t_259 (bvand t_257 (bvnot t_254))))))))) (bvand (bvand t_261 (bvand t_260 (bvand t_259 t_258))) (_ bv1 1))))))
+(check-sat)
+(exit)

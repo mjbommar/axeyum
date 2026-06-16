@@ -1,0 +1,23 @@
+(set-info :smt-lib-version 2.6)
+(set-logic QF_BV)
+(set-info :source |
+Ivan Jager <aij+nospam@andrew.cmu.edu>
+
+|)
+(set-info :category "industrial")
+(set-info :status unsat)
+(declare-fun input0_6 () (_ BitVec 8))
+(declare-fun input0_9 () (_ BitVec 8))
+(declare-fun input0_15 () (_ BitVec 8))
+(declare-fun input0_8 () (_ BitVec 8))
+(declare-fun input0_11 () (_ BitVec 8))
+(declare-fun input0_13 () (_ BitVec 8))
+(declare-fun input0_5 () (_ BitVec 8))
+(declare-fun input0_14 () (_ BitVec 8))
+(declare-fun input0_7 () (_ BitVec 8))
+(declare-fun input0_4 () (_ BitVec 8))
+(declare-fun input0_10 () (_ BitVec 8))
+(declare-fun input0_12 () (_ BitVec 8))
+(assert (let ((?v_0 (concat (concat input0_7 input0_6) (concat input0_5 input0_4))) (?v_1 (concat (concat input0_11 input0_10) (concat input0_9 input0_8)))) (let ((?v_2 (concat (_ bv0 3) ((_ extract 31 3) ((_ extract 63 32) (bvmul (_ bv3435973837 64) (concat (_ bv0 32) ?v_1))))))) (and (and (and (and (and (= (concat (_ bv0 24) ((_ extract 7 0) (ite (not (= (bvand (_ bv4 32) (concat (concat input0_15 input0_14) (concat input0_13 input0_12))) (_ bv0 32))) (_ bv1 32) (_ bv0 32)))) (_ bv0 32)) (not (= (concat (_ bv0 24) ((_ extract 7 0) (bvor (ite (= ?v_0 (_ bv2147483647 32)) (_ bv1 32) (_ bv0 32)) (bvand (_ bv4294967040 32) ?v_0)))) (_ bv0 32)))) (not (= ?v_1 (_ bv327681 32)))) (not (= ?v_1 (_ bv327682 32)))) (not (= ?v_1 (_ bv327680 32)))) (= (_ bv1 1) ((_ extract 31 31) (bvadd ?v_1 (bvneg ((_ extract 31 0) (concat (bvadd ?v_2 ((_ extract 31 0) (concat ?v_2 (_ bv0 2)))) (_ bv0 1)))))))))))
+(check-sat)
+(exit)

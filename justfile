@@ -32,6 +32,12 @@ bench-micro:
 bench-micro-z3:
     cargo run -p axeyum-bench --features z3 -- corpus/micro --backend z3 --timeout-ms 1000 --out /tmp/axeyum-bench-micro-z3.json
 
+# P4.5: the committed curated QF_BV slice, sat-bv vs Z3 (oracle-enabled). The
+# measured head-to-head gate for Track 1; bounded to --jobs 2 for the 32GB host.
+bench-qfbv-curated:
+    mkdir -p bench-results/baselines
+    cargo run -p axeyum-bench --features z3 -- corpus/qfbv-curated --backend sat-bv --compare-z3 --timeout-ms 2000 --jobs 2 --out bench-results/baselines/qfbv-curated-sat-bv-vs-z3-2s.json --logic QF_BV
+
 # Reproduce the Phase 2 public QF_BV baseline after `scripts/fetch-corpus.sh qf_bv`.
 bench-public-qfbv-baseline:
     mkdir -p bench-results/baselines

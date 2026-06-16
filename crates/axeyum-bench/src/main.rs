@@ -527,21 +527,25 @@ mod run {
         ExitCode::SUCCESS
     }
 
+    /// Per-worker stack size. SMT-LIB terms can nest thousands deep, and the
+    /// recursive parse/lower/eval traversals consume a frame per level; the
+    /// default thread stack (≈2 MB on rayon workers, 8 MB on the main thread)
+    /// overflows on such files and *aborts the whole batch* (a stack overflow
+    /// cannot be caught). A large stack is reserved address space, not committed
+    /// memory, so this costs nothing until the depth is actually reached.
+    const WORKER_STACK_BYTES: usize = 512 * 1024 * 1024;
+
     fn run_instances(
         files: &[PathBuf],
         timeout: Duration,
         args: &Args,
     ) -> Result<Vec<InstanceRun>, String> {
-        if args.jobs == 1 {
-            return Ok(files
-                .iter()
-                .enumerate()
-                .map(|(index, file)| run_one_isolated(index, file, timeout, args))
-                .collect());
-        }
-
+        // Always run on a pool with a large stack (including `--jobs 1`, a
+        // one-thread pool), so a single deeply-nested instance cannot crash the
+        // run. `par_iter().collect()` preserves input order.
         rayon::ThreadPoolBuilder::new()
             .num_threads(args.jobs)
+            .stack_size(WORKER_STACK_BYTES)
             .build()
             .map_err(|e| format!("create rayon thread pool: {e}"))
             .map(|pool| {

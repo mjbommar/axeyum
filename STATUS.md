@@ -21,10 +21,18 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   total incl. brute-force equisatisfiability + per-model reconstruction + SAT/DRAT
   preservation. DRAT-step emission inside the proof-producing solve and the measured
   perf delta ride P4.5 + the pipeline-integration step.
-- **Next task to start:** Track 4 →
-  [P4.5 benchmarking](docs/plan/track-4-usecases-frontend/P4.5-benchmarking.md)
-  (the measured Z3 head-to-head that gates Track 1 and quantifies the inprocessing
-  wins), then wire subsumption + BVE into the bit-blast→CNF→solve pipeline.
+- **P4.5 — WIP, blocked on host RAM (transitioning to s4).** Landed: the bench
+  harness now gives workers a 512 MB stack (fixes a stack overflow a deeply-nested
+  instance triggered, which aborted the batch); a committed curated QF_BV slice
+  `corpus/qfbv-curated/` (36 files); `just bench-qfbv-curated`. The instrument is
+  validated on `corpus/micro` (3/3 decided, agree=3, DISAGREE=0). **The full
+  curated baseline OOM-killed this 26–32 GB host twice** (unbounded Z3/sat-bv
+  worker memory) — to be run on s4 with a per-process memory cap (see host-setup).
+- **Machine transition:** see [docs/plan/host-setup.md](docs/plan/host-setup.md).
+  All work is on branch `docs/readme-plan-parity-roadmap` (pushed to origin).
+- **Next task (on s4):** run the curated baseline under a memory cap, commit the
+  artifact, then wire subsumption + BVE into the bit-blast→CNF→solve pipeline and
+  re-measure the inprocessing delta.
 
 ## Already shipped this session (pre-plan)
 
@@ -84,7 +92,7 @@ plan is built and committed on the current branch:
 | P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | TODO |
 | P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | TODO |
 | P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | TODO |
-| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | TODO |
+| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | WIP — harness fix + curated slice landed; baseline pending on s4 (OOM here) |
 
 ## Changelog
 
@@ -102,6 +110,11 @@ plan is built and committed on the current branch:
   (`SubsumeStats`): model-preserving tautology removal + forward subsumption (64-bit
   signature fast-reject) + self-subsuming resolution; 7 tests incl. brute-force
   equivalence and SAT/DRAT preservation. P1.1 → WIP.
+- **2026-06-15** — **P4.5 (WIP) + s4 transition.** Bench harness worker stack
+  raised to 512 MB (deeply-nested-term stack-overflow fix); committed curated
+  QF_BV slice `corpus/qfbv-curated/` (36 files) + `just bench-qfbv-curated`;
+  GPU horizon note; `docs/plan/host-setup.md` transition checklist. Full baseline
+  OOM-killed the host — deferred to s4 with memory caps.
 - **2026-06-15** — **T1.1.2 bounded variable elimination.** New `axeyum_cnf::bve`
   (`eliminate_variables`, `BveOptions`, `BveOutcome`, `BveStats`, `Reconstruction`):
   Davis–Putnam resolution with the CaDiCaL non-increasing/size/occurrence bounds and
