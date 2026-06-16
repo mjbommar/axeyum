@@ -155,7 +155,7 @@ plan is built and committed on the current branch:
 | P2.3 | EUF on the e-graph (from Ackermann to incremental) | TODO |
 | P2.4 | LIA cut portfolio (GCD, Gomory, HNF, cube, Diophantine) | TODO |
 | P2.5 | NRA: incremental linearization → nlsat/CAD | TODO |
-| P2.6 | Quantifiers (MAM e-matching, trigger inference, MBQI, QE/MBP) | WIP — e-matching foundation on the e-graph: `EGraph::enumerate_apps` (single-symbol trigger, distinct applications modulo congruence). Next: nested/multi-symbol pattern matching, trigger inference, and wiring into a quantifier-instantiation loop (beyond today's finite-domain expansion, ADR-0016) |
+| P2.6 | Quantifiers (MAM e-matching, trigger inference, MBQI, QE/MBP) | WIP — e-matching engine on the e-graph: `EGraph::enumerate_apps` (single-symbol trigger) + `EGraph::ematch(Pattern)` (full single-pattern matcher modulo congruence — nested patterns, repeated-variable consistency, all substitutions). Next: wire ematch into a quantifier-instantiation loop (instantiate ∀ over matched terms, add instances, re-solve — unbounded quantifiers beyond the finite-domain expansion of ADR-0016), then trigger inference + MBQI |
 | P2.7 | Strings (unbounded, full `str.*`, regex) | TODO |
 | P2.8 | FP polish (unspecified values, min/max ±0, lazy conversion) | TODO |
 | P2.9 | Datatypes lazy (e-graph splitting + occurs-check) | TODO |
@@ -183,6 +183,10 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **P2.6 e-matching engine** (commit 30ebec9). `EGraph::ematch`:
+  full single-pattern matching modulo congruence (nested patterns, repeated-variable
+  consistency, all substitutions) — the matching engine quantifier instantiation
+  runs. Built on the keystone; matching is intrinsically up to congruence. 23 tests.
 - **2026-06-16** — **P2.6 e-matching foundation** (commit ff53168).
   `EGraph::enumerate_apps(decl)` — distinct applications of a function symbol modulo
   congruence (one per class, canonical arg roots), the single-symbol trigger that
