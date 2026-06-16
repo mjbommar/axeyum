@@ -22,14 +22,16 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     that only helps *trigger-less UF universals* (rare). Skipped as low marginal
     value vs. the duplication/maintenance cost; revisit only if a real corpus shows
     the gap.
-- **P2.9 datatypes — acyclicity (occurs-check) refutation DONE** (2026-06-16):
-  `prove_datatype_unsat_by_acyclicity` — inductive datatype values are
-  well-founded, so a forced strict-containment cycle (`x = cons(h, x)`, or
-  `x = cons(h, y) ∧ y = cons(g, x)`) is `unsat`. Union-find over `x = y` aliases +
-  `x ⊐ y` edges from `x = c(…y…)`, cycle detection (iterative 3-colour DFS). Sound
-  (each edge is a definite strict containment) + wired into `check_auto_dispatch`
-  ahead of the eager expansion. Closes the acyclicity gap `datatype_native`
-  explicitly left as future work. 5 tests (incl. diamond-sharing = not a cycle).
+- **P2.9 datatypes — structural refutation DONE** (2026-06-16):
+  `prove_datatype_unsat_structurally` — the three datatype structural axioms over a
+  term-level union-find: **acyclicity** (`x = cons(h, x)` ⇒ unsat), **distinctness**
+  (`x = nil ∧ x = cons(…)` ⇒ unsat), and **injectivity** (`cons(h,x) = cons(h,y) ∧
+  x ≠ y` ⇒ unsat — the datatype-*field* injectivity case the eager `build_dt_eq`
+  relaxes away, the genuine gap-closer). Unions definite equalities, closes under
+  injectivity while checking distinctness, then reports unsat on a same-class
+  datatype disequality or a containment cycle. Sound (each union/edge forced by a
+  definite (dis)equality + a datatype axiom) + wired into `check_auto_dispatch`
+  ahead of the eager expansion. 7 tests (incl. two NOT-refuted SAT cases).
 - **P3.1 LRAT checker + DRAT→LRAT elaborator — DONE** (2026-06-16): a second,
   independent UNSAT-proof checker alongside `check_drat`, in the stronger *clausal*
   LRAT format (every clause has an id; each addition carries antecedent hints, so
@@ -271,7 +273,7 @@ plan is built and committed on the current branch:
 | P2.6 | Quantifiers (MAM e-matching, trigger inference, MBQI, QE/MBP) | WIP — full e-matching vertical slice on the keystone: `enumerate_apps` + `ematch` engine + `instantiate_forall_via_egraph` (congruence-aware, single/multi-var, nested/joint triggers) + `prove_quantified_unsat_via_egraph` (the **instantiation loop**: instantiate → re-solve via `check_auto` → fixpoint, sound UNSAT). trigger *inference* (single + multi-pattern set cover) landed; loop **wired into `solve`** (infinite/too-wide-domain fallback → keystone before MBQI). Next: MBQI on the keystone (model-guided instance selection over the congruence), then migrate `axeyum_rewrite`'s bespoke closure onto the keystone. (Verified: the multi-pattern join is already congruence-correct — `ematch` binds variables to canonical e-class roots and `trigger_to_pattern` never mutates the union-find, so raw `ENodeId` equality in `merge_substitutions` *is* root equality.) |
 | P2.7 | Strings (unbounded, full `str.*`, regex) | TODO |
 | P2.8 | FP polish (unspecified values, min/max ±0, lazy conversion) | TODO |
-| P2.9 | Datatypes lazy (e-graph splitting + occurs-check) | WIP — **acyclicity (occurs-check) refutation** (`prove_datatype_unsat_by_acyclicity`): strict-containment graph over datatype-variable aliases (union-find) + `x ⊐ y` edges from `x = c(…y…)`; a cycle ⇒ sound UNSAT (e.g. `x = cons(h, x)`). Wired into dispatch ahead of the eager expansion; closes the gap `datatype_native` left as future work. 5 tests. Remaining: e-graph constructor *splitting* (case-split `is-c` on the keystone) for completeness; injectivity/distinctness conflicts; exact field guards to remove the relaxed `unknown` cases |
+| P2.9 | Datatypes lazy (e-graph splitting + occurs-check) | WIP — **structural refutation** (`prove_datatype_unsat_structurally`): acyclicity + distinctness + injectivity over a term-level union-find (closes the datatype-field injectivity gap the eager `build_dt_eq` relaxes); sound, wired into dispatch ahead of the eager expansion. 7 tests. Remaining: e-graph constructor *splitting* (case-split `is-c` on the keystone) for SAT-side completeness; exact field guards to remove the relaxed `unknown` cases; non-variable `is`/`select` terms |
 
 ### Track 3 — Proofs & Lean
 | Phase | Title | Status |
