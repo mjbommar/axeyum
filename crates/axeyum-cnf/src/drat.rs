@@ -147,7 +147,7 @@ pub fn parse_drat(text: &str) -> Result<Vec<DratStep>, DratError> {
     Ok(steps)
 }
 
-fn literal_from_dimacs(value: i64) -> Result<CnfLit, DratError> {
+pub(crate) fn literal_from_dimacs(value: i64) -> Result<CnfLit, DratError> {
     let index = usize::try_from(value.unsigned_abs() - 1)
         .map_err(|_| DratError::Parse(format!("variable {value} out of range")))?;
     let var = CnfVar::new(index).map_err(|error| DratError::Parse(error.to_string()))?;
@@ -166,7 +166,7 @@ fn position_of(active: &[Vec<CnfLit>], clause: &[CnfLit]) -> Option<usize> {
         .position(|candidate| sorted(candidate) == target)
 }
 
-fn sorted(clause: &[CnfLit]) -> Vec<(usize, bool)> {
+pub(crate) fn sorted(clause: &[CnfLit]) -> Vec<(usize, bool)> {
     let mut key: Vec<(usize, bool)> = clause
         .iter()
         .map(|lit| (lit.var().index(), lit.is_negated()))
