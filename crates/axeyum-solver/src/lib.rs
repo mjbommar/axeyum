@@ -88,7 +88,7 @@ pub use bmc::{
 pub use cardinality::{at_least, at_most, exactly};
 pub use certify::{CertifyOutcome, certify_qf_bv_by_enumeration};
 pub use combined::check_with_all_theories;
-pub use datatype_acyclicity::prove_datatype_unsat_by_acyclicity;
+pub use datatype_acyclicity::prove_datatype_unsat_structurally;
 pub use datatype_elim::check_with_datatype_elimination;
 pub use datatype_native::check_with_datatype_native;
 pub use distinct::distinct;

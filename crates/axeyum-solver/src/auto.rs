@@ -508,11 +508,12 @@ fn check_auto_dispatch(
     let assertions = &lifted;
     let features = Features::scan(arena, assertions);
     if features.has_datatype {
-        // Datatype acyclicity (occurs-check): inductive values are well-founded, so
-        // a forced strict-containment cycle (`x = cons(h, x)`, …) is `unsat` — a
-        // sound refutation the eager tag/field expansion does not catch. Cheap and
-        // only ever fast-paths a correct `unsat`.
-        if crate::datatype_acyclicity::prove_datatype_unsat_by_acyclicity(arena, assertions) {
+        // Datatype structural axioms (acyclicity / distinctness / injectivity):
+        // a forced containment cycle (`x = cons(h, x)`), two constructors on one
+        // value (`x = nil ∧ x = cons(…)`), or an injectivity-vs-disequality clash
+        // (`cons(h,x) = cons(h,y) ∧ x ≠ y`) is `unsat` — sound refutations the eager
+        // tag/field expansion misses. Cheap; only ever fast-paths a correct `unsat`.
+        if crate::datatype_acyclicity::prove_datatype_unsat_structurally(arena, assertions) {
             return Ok(CheckResult::Unsat);
         }
         // Datatypes: first fold read-over-construct and decide the residual

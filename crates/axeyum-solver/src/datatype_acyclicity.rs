@@ -1,63 +1,87 @@
-//! Datatype **acyclicity** (occurs-check) refutation (Track 2, P2.9).
+//! Structural datatype refutation (Track 2, P2.9): acyclicity (occurs-check),
+//! constructor distinctness, and constructor injectivity, over the top-level
+//! (dis)equalities.
 //!
-//! Inductive (algebraic) datatype values are *well-founded*: `cons(1, cons(2,
-//! nil))` is finite, and no value can strictly contain itself. So a conjunction
-//! that forces a datatype value to be a proper subterm of itself — e.g.
-//! `x = cons(h, x)`, or the chain `x = cons(h, y) ∧ y = cons(g, x)` — is
-//! **unsatisfiable**, a fact the eager tag/field expansion
-//! ([`crate::check_with_datatype_native`]) does not catch on its own.
+//! Algebraic datatypes obey three structural axioms that make many conjunctions
+//! unsatisfiable on shape alone, independent of the field theories:
 //!
-//! [`prove_datatype_unsat_by_acyclicity`] decides this from the top-level
-//! (definite) equalities: it unions datatype-variable aliases (`x = y`) and adds
-//! a **strict-containment** edge `x ⊐ y` whenever `x = c(… y …)` (the value of `x`
-//! is a constructor application whose fields contain the value of `y`, so `x`
-//! strictly contains `y`). A directed cycle in that graph forces some value to
-//! strictly contain itself, which is impossible — hence `unsat`.
+//! - **Acyclicity.** Inductive values are well-founded: no value strictly
+//!   contains itself, so `x = cons(h, x)` (or any containment cycle) is `unsat`.
+//! - **Distinctness.** Distinct constructors build distinct values:
+//!   `x = nil ∧ x = cons(h, t)` is `unsat`.
+//! - **Injectivity.** A constructor is injective: `cons(a, b) = cons(c, d)` forces
+//!   `a = c ∧ b = d`, so `cons(h, x) = cons(h, y) ∧ x ≠ y` is `unsat` — a fact the
+//!   eager tag/field expansion misses, since it relaxes (skips) *datatype-typed*
+//!   fields when comparing.
 //!
-//! **Sound, incomplete.** Every edge is a real strict-containment forced by a
-//! definite equality, so a cycle is a genuine contradiction (regardless of the
-//! datatype's other axioms): proving `unsat` this way is sound. It is silent
-//! (returns `false`) when there is no cycle — satisfiability is left to the
+//! [`prove_datatype_unsat_structurally`] decides these by a small term-level
+//! union-find: it unions the sides of every definite equality, closes under
+//! injectivity (same-class same-constructor ⇒ union corresponding arguments) while
+//! checking distinctness (same-class different-constructor ⇒ `unsat`), then reports
+//! `unsat` if any asserted disequality has its two sides in one class, or the
+//! strict-containment graph (`t ⊐ field` for every `t = c(… field …)`) has a cycle.
+//!
+//! **Sound, incomplete.** Every union/edge is forced by a definite (dis)equality
+//! and a datatype axiom, so a reported conflict is genuine; the check is silent
+//! (`false`) otherwise — satisfiability and the field theories are left to the
 //! native datatype path.
 
 use std::collections::HashMap;
 
-use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode};
+use axeyum_ir::{ConstructorId, Op, Sort, TermArena, TermId, TermNode};
 
-/// Tries to prove `assertions` `unsat` by datatype acyclicity. Returns `true`
-/// only when a strict-containment cycle is found (a sound refutation); `false`
-/// otherwise (no claim about satisfiability).
+/// Tries to prove `assertions` `unsat` by the datatype structural axioms
+/// (acyclicity, distinctness, injectivity). Returns `true` only on a genuine
+/// structural conflict (a sound refutation); `false` otherwise (no claim about
+/// satisfiability).
 #[must_use]
-pub fn prove_datatype_unsat_by_acyclicity(arena: &TermArena, assertions: &[TermId]) -> bool {
-    let mut graph = ContainmentGraph::default();
+pub fn prove_datatype_unsat_structurally(arena: &TermArena, assertions: &[TermId]) -> bool {
+    let mut s = Structural::default();
+    let mut diseqs: Vec<(TermId, TermId)> = Vec::new();
 
     for &assertion in assertions {
-        // Only definite top-level equalities `(= a b)` over a datatype sort
-        // contribute a forced containment/alias.
-        let TermNode::App { op: Op::Eq, args } = arena.node(assertion) else {
-            continue;
-        };
-        if args.len() != 2 {
-            continue;
-        }
-        let (a, b) = (args[0], args[1]);
-        if !is_datatype(arena, a) {
-            continue;
-        }
-        match (as_variable(arena, a), as_variable(arena, b)) {
-            // `x = y`: the two datatype variables are the same value — union them.
-            (Some(x), Some(y)) => graph.union(x, y),
-            // `x = c(args)`: `x` strictly contains every datatype variable under
-            // the constructor term.
-            (Some(x), None) => graph.add_construction(arena, x, b),
-            (None, Some(y)) => graph.add_construction(arena, y, a),
-            // `c(..) = c'(..)`: no variable to anchor a containment edge here
-            // (injectivity/distinctness is a different refutation); skip.
-            (None, None) => {}
+        match arena.node(assertion) {
+            // Definite equality `(= a b)` over a datatype sort: union the sides.
+            TermNode::App { op: Op::Eq, args }
+                if args.len() == 2 && is_datatype(arena, args[0]) =>
+            {
+                let (a, b) = (args[0], args[1]);
+                s.union(arena, a, b);
+            }
+            // Disequality `(not (= a b))` over a datatype sort: record it.
+            TermNode::App {
+                op: Op::BoolNot,
+                args,
+            } if args.len() == 1 => {
+                if let TermNode::App {
+                    op: Op::Eq,
+                    args: eq_args,
+                } = arena.node(args[0])
+                {
+                    if eq_args.len() == 2 && is_datatype(arena, eq_args[0]) {
+                        let (p, q) = (eq_args[0], eq_args[1]);
+                        s.intern(arena, p);
+                        s.intern(arena, q);
+                        diseqs.push((p, q));
+                    }
+                }
+            }
+            _ => {}
         }
     }
 
-    graph.has_cycle()
+    // Close under injectivity while checking distinctness.
+    if s.close(arena) {
+        return true; // distinctness conflict: one class, two constructors
+    }
+    // A disequality whose sides are forced into one class is contradictory.
+    for &(p, q) in &diseqs {
+        if s.same_class(p, q) {
+            return true;
+        }
+    }
+    // Acyclicity: a value forced to strictly contain itself.
+    s.has_containment_cycle(arena)
 }
 
 /// Whether `term` is datatype-sorted.
@@ -65,38 +89,54 @@ fn is_datatype(arena: &TermArena, term: TermId) -> bool {
     matches!(arena.sort_of(term), Sort::Datatype(_))
 }
 
-/// The symbol of `term` if it is a plain variable, else `None`.
-fn as_variable(arena: &TermArena, term: TermId) -> Option<SymbolId> {
+/// The constructor and field arguments of `term` if it is a constructor
+/// application, else `None`.
+fn as_construction(arena: &TermArena, term: TermId) -> Option<(ConstructorId, Vec<TermId>)> {
     match arena.node(term) {
-        TermNode::Symbol(symbol) => Some(*symbol),
+        TermNode::App {
+            op: Op::DtConstruct { constructor, .. },
+            args,
+        } => Some((*constructor, args.to_vec())),
         _ => None,
     }
 }
 
-/// A union-find over datatype variables plus strict-containment edges between
-/// their representatives; `has_cycle` reports whether a value is forced to
-/// contain itself.
+/// A term-level union-find with the datatype constructor terms tracked, for
+/// closing under injectivity and reporting distinctness / containment cycles.
 #[derive(Default)]
-struct ContainmentGraph {
-    /// Dense index per datatype variable (interned on first use).
-    index: HashMap<SymbolId, usize>,
+struct Structural {
+    /// Dense index per interned term.
+    index: HashMap<TermId, usize>,
     /// Union-find parent pointers (by dense index).
     parent: Vec<usize>,
-    /// Strict-containment edges `from ⊐ to`, as `(from_index, to_index)` over the
-    /// *raw* indices (resolved to representatives in `has_cycle`).
-    edges: Vec<(usize, usize)>,
+    /// The term each dense index interns (for inspecting its constructor / args).
+    term_of: Vec<TermId>,
+    /// Dense indices that intern a **constructor application**.
+    ctor_nodes: Vec<usize>,
 }
 
-impl ContainmentGraph {
-    /// The dense index of `symbol`, interning it (as its own union-find root) on
-    /// first use.
-    fn intern(&mut self, symbol: SymbolId) -> usize {
-        if let Some(&i) = self.index.get(&symbol) {
+impl Structural {
+    /// Interns `term` and all its subterms, returning `term`'s dense index. A
+    /// constructor application is recorded in `ctor_nodes`.
+    fn intern(&mut self, arena: &TermArena, term: TermId) -> usize {
+        if let Some(&i) = self.index.get(&term) {
             return i;
         }
         let i = self.parent.len();
         self.parent.push(i);
-        self.index.insert(symbol, i);
+        self.term_of.push(term);
+        self.index.insert(term, i);
+        if as_construction(arena, term).is_some() {
+            self.ctor_nodes.push(i);
+        }
+        // Intern subterms so injectivity unions and containment edges can reach
+        // every constructor application in the query.
+        if let TermNode::App { args, .. } = arena.node(term) {
+            let args = args.clone();
+            for arg in args {
+                self.intern(arena, arg);
+            }
+        }
         i
     }
 
@@ -109,47 +149,87 @@ impl ContainmentGraph {
         i
     }
 
-    /// Unions the classes of two datatype variables (`x = y`).
-    fn union(&mut self, x: SymbolId, y: SymbolId) {
-        let xi = self.intern(x);
-        let yi = self.intern(y);
-        let (rx, ry) = (self.find(xi), self.find(yi));
-        if rx != ry {
-            self.parent[rx] = ry;
+    /// Unions the classes of two terms; returns `true` if they were distinct.
+    fn union(&mut self, arena: &TermArena, a: TermId, b: TermId) -> bool {
+        let ia = self.intern(arena, a);
+        let ib = self.intern(arena, b);
+        let (ra, rb) = (self.find(ia), self.find(ib));
+        if ra == rb {
+            return false;
+        }
+        self.parent[ra] = rb;
+        true
+    }
+
+    /// Whether two interned terms are in the same class.
+    fn same_class(&mut self, a: TermId, b: TermId) -> bool {
+        let (Some(&ia), Some(&ib)) = (self.index.get(&a), self.index.get(&b)) else {
+            return false;
+        };
+        self.find(ia) == self.find(ib)
+    }
+
+    /// Closes the partition under **injectivity** (same class + same constructor ⇒
+    /// union corresponding arguments) to a fixpoint, checking **distinctness** along
+    /// the way. Returns `true` on a distinctness conflict (one class, two distinct
+    /// constructors).
+    fn close(&mut self, arena: &TermArena) -> bool {
+        loop {
+            let mut changed = false;
+            let ctors = self.ctor_nodes.clone();
+            for a in 0..ctors.len() {
+                for b in (a + 1)..ctors.len() {
+                    let (na, nb) = (ctors[a], ctors[b]);
+                    if self.find(na) != self.find(nb) {
+                        continue;
+                    }
+                    let (ca, args_a) = as_construction(arena, self.term_of[na])
+                        .expect("ctor_nodes holds constructor terms");
+                    let (cb, args_b) = as_construction(arena, self.term_of[nb])
+                        .expect("ctor_nodes holds constructor terms");
+                    if ca != cb {
+                        return true; // distinctness: same value, two constructors
+                    }
+                    // Injectivity: equal constructor applications have equal fields.
+                    for (&x, &y) in args_a.iter().zip(&args_b) {
+                        if self.union(arena, x, y) {
+                            changed = true;
+                        }
+                    }
+                }
+            }
+            if !changed {
+                return false;
+            }
         }
     }
 
-    /// Records `container = constructor_term`: adds `container ⊐ y` for every
-    /// datatype variable `y` occurring under the constructor term.
-    fn add_construction(&mut self, arena: &TermArena, container: SymbolId, term: TermId) {
-        let ci = self.intern(container);
-        let mut inner = Vec::new();
-        collect_datatype_vars(arena, term, &mut inner);
-        for y in inner {
-            let yi = self.intern(y);
-            self.edges.push((ci, yi));
-        }
-    }
-
-    /// Whether the strict-containment graph (over union-find representatives) has
-    /// a directed cycle — i.e. some value must strictly contain itself.
-    fn has_cycle(&mut self) -> bool {
+    /// Whether the strict-containment graph has a cycle. Edge `find(t) → find(arg)`
+    /// for every constructor term `t = c(args)` and datatype-sorted `arg` (the value
+    /// of `t` strictly contains the value of each datatype field).
+    fn has_containment_cycle(&mut self, arena: &TermArena) -> bool {
         let n = self.parent.len();
-        // Adjacency over representatives.
         let mut adj: Vec<Vec<usize>> = vec![Vec::new(); n];
-        let edges = self.edges.clone();
-        for (from, to) in edges {
-            let (rf, rt) = (self.find(from), self.find(to));
-            // A self-edge after unioning is already a self-containment cycle.
-            adj[rf].push(rt);
+        let ctors = self.ctor_nodes.clone();
+        for node in ctors {
+            let (_c, args) = as_construction(arena, self.term_of[node])
+                .expect("ctor_nodes holds constructor terms");
+            let from = self.find(node);
+            for arg in args {
+                if !is_datatype(arena, arg) {
+                    continue;
+                }
+                let ai = self.intern(arena, arg);
+                let to = self.find(ai);
+                adj[from].push(to);
+            }
         }
-        // Iterative DFS with three colors (0 = white, 1 = grey/on-stack, 2 = black).
+        // Iterative three-colour DFS (0 = white, 1 = grey/on-path, 2 = black).
         let mut color = vec![0u8; n];
         for start in 0..n {
             if color[start] != 0 {
                 continue;
             }
-            // Stack of (node, whether we are entering or finishing it).
             let mut stack: Vec<(usize, bool)> = vec![(start, false)];
             while let Some((node, finishing)) = stack.pop() {
                 if finishing {
@@ -157,9 +237,7 @@ impl ContainmentGraph {
                     continue;
                 }
                 if color[node] != 0 {
-                    // Already grey (on the current path) or black (finished): a
-                    // duplicate entry from a second parent — do not reprocess.
-                    continue;
+                    continue; // grey (on path) or black (done): skip re-entry
                 }
                 color[node] = 1;
                 stack.push((node, true));
@@ -176,25 +254,10 @@ impl ContainmentGraph {
     }
 }
 
-/// Collects the symbols of every datatype-sorted **variable** occurring in
-/// `term` (descending through constructor applications and any other operators).
-fn collect_datatype_vars(arena: &TermArena, term: TermId, out: &mut Vec<SymbolId>) {
-    match arena.node(term) {
-        TermNode::Symbol(symbol) if is_datatype(arena, term) => out.push(*symbol),
-        TermNode::App { args, .. } => {
-            let args = args.clone();
-            for arg in args {
-                collect_datatype_vars(arena, arg, out);
-            }
-        }
-        _ => {}
-    }
-}
-
 #[cfg(test)]
 #[allow(clippy::many_single_char_names)]
 mod tests {
-    use super::prove_datatype_unsat_by_acyclicity;
+    use super::prove_datatype_unsat_structurally;
     use axeyum_ir::{Sort, TermArena};
 
     /// `IntList = nil | cons(head: BitVec(8), tail: IntList)`.
@@ -222,7 +285,7 @@ mod tests {
         let h = arena.bv_var("h", 8).unwrap();
         let consed = arena.construct(cons, &[h, xv]).unwrap();
         let eq = arena.eq(xv, consed).unwrap();
-        assert!(prove_datatype_unsat_by_acyclicity(&arena, &[eq]));
+        assert!(prove_datatype_unsat_structurally(&arena, &[eq]));
     }
 
     #[test]
@@ -239,12 +302,12 @@ mod tests {
         let cy = arena.construct(cons, &[g, xv]).unwrap();
         let e1 = arena.eq(xv, cx).unwrap();
         let e2 = arena.eq(yv, cy).unwrap();
-        assert!(prove_datatype_unsat_by_acyclicity(&arena, &[e1, e2]));
+        assert!(prove_datatype_unsat_structurally(&arena, &[e1, e2]));
     }
 
     #[test]
     fn cycle_via_variable_equality_is_unsat() {
-        // x = cons(h, y) ∧ y = x: union(x,y) closes the self-cycle ⇒ UNSAT.
+        // x = cons(h, y) ∧ y = x ⇒ UNSAT.
         let mut arena = TermArena::new();
         let (dt, [_nil, cons]) = int_list(&mut arena);
         let x = arena.declare("x", Sort::Datatype(dt)).unwrap();
@@ -254,14 +317,46 @@ mod tests {
         let cx = arena.construct(cons, &[h, yv]).unwrap();
         let e1 = arena.eq(xv, cx).unwrap();
         let e2 = arena.eq(yv, xv).unwrap();
-        assert!(prove_datatype_unsat_by_acyclicity(&arena, &[e1, e2]));
+        assert!(prove_datatype_unsat_structurally(&arena, &[e1, e2]));
+    }
+
+    #[test]
+    fn distinct_constructors_on_one_value_is_unsat() {
+        // x = nil ∧ x = cons(h, t) ⇒ UNSAT (distinctness).
+        let mut arena = TermArena::new();
+        let (dt, [nil, cons]) = int_list(&mut arena);
+        let x = arena.declare("x", Sort::Datatype(dt)).unwrap();
+        let t = arena.declare("t", Sort::Datatype(dt)).unwrap();
+        let (xv, tv) = (arena.var(x), arena.var(t));
+        let h = arena.bv_var("h", 8).unwrap();
+        let niled = arena.construct(nil, &[]).unwrap();
+        let consed = arena.construct(cons, &[h, tv]).unwrap();
+        let e1 = arena.eq(xv, niled).unwrap();
+        let e2 = arena.eq(xv, consed).unwrap();
+        assert!(prove_datatype_unsat_structurally(&arena, &[e1, e2]));
+    }
+
+    #[test]
+    fn injectivity_over_datatype_field_is_unsat() {
+        // cons(h, x) = cons(h, y) ∧ x ≠ y ⇒ UNSAT (injectivity on the tail field —
+        // exactly the case the eager expansion relaxes away).
+        let mut arena = TermArena::new();
+        let (dt, [_nil, cons]) = int_list(&mut arena);
+        let x = arena.declare("x", Sort::Datatype(dt)).unwrap();
+        let y = arena.declare("y", Sort::Datatype(dt)).unwrap();
+        let (xv, yv) = (arena.var(x), arena.var(y));
+        let h = arena.bv_var("h", 8).unwrap();
+        let cx = arena.construct(cons, &[h, xv]).unwrap();
+        let cy = arena.construct(cons, &[h, yv]).unwrap();
+        let eq = arena.eq(cx, cy).unwrap();
+        let xy = arena.eq(xv, yv).unwrap();
+        let ne = arena.not(xy).unwrap();
+        assert!(prove_datatype_unsat_structurally(&arena, &[eq, ne]));
     }
 
     #[test]
     fn diamond_sharing_is_not_a_cycle() {
-        // x = cons(h, z) ∧ y = cons(g, z): z has two parents but there is no
-        // cycle — the acyclicity check must NOT refute (no false UNSAT from the
-        // shared-child DFS path).
+        // x = cons(h, z) ∧ y = cons(g, z): no cycle ⇒ NOT refuted.
         let mut arena = TermArena::new();
         let (dt, [_nil, cons]) = int_list(&mut arena);
         let x = arena.declare("x", Sort::Datatype(dt)).unwrap();
@@ -274,22 +369,21 @@ mod tests {
         let cy = arena.construct(cons, &[g, zv]).unwrap();
         let e1 = arena.eq(xv, cx).unwrap();
         let e2 = arena.eq(yv, cy).unwrap();
-        assert!(!prove_datatype_unsat_by_acyclicity(&arena, &[e1, e2]));
+        assert!(!prove_datatype_unsat_structurally(&arena, &[e1, e2]));
     }
 
     #[test]
-    fn finite_list_is_not_refuted() {
-        // x = cons(h, y) ∧ y = nil: a genuine finite list ⇒ no cycle (not UNSAT here).
+    fn finite_list_with_distinct_tails_is_not_refuted() {
+        // cons(h, x) = cons(h, y) with no x ≠ y: consistent (x = y) ⇒ NOT refuted.
         let mut arena = TermArena::new();
-        let (dt, [nil, cons]) = int_list(&mut arena);
+        let (dt, [_nil, cons]) = int_list(&mut arena);
         let x = arena.declare("x", Sort::Datatype(dt)).unwrap();
         let y = arena.declare("y", Sort::Datatype(dt)).unwrap();
         let (xv, yv) = (arena.var(x), arena.var(y));
         let h = arena.bv_var("h", 8).unwrap();
-        let cx = arena.construct(cons, &[h, yv]).unwrap();
-        let niled = arena.construct(nil, &[]).unwrap();
-        let e1 = arena.eq(xv, cx).unwrap();
-        let e2 = arena.eq(yv, niled).unwrap();
-        assert!(!prove_datatype_unsat_by_acyclicity(&arena, &[e1, e2]));
+        let cx = arena.construct(cons, &[h, xv]).unwrap();
+        let cy = arena.construct(cons, &[h, yv]).unwrap();
+        let eq = arena.eq(cx, cy).unwrap();
+        assert!(!prove_datatype_unsat_structurally(&arena, &[eq]));
     }
 }
