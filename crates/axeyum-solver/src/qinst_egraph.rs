@@ -23,22 +23,34 @@ use axeyum_egraph::{EGraph, ENodeId, Pattern};
 use axeyum_ir::{FuncId, Op, SymbolId, TermArena, TermId, TermNode};
 use axeyum_rewrite::replace_subterms;
 
-/// Instantiates the universal `forall_term` by e-matching a unary trigger against
-/// the `ground` terms, returning the ground instances of its body. Returns an
-/// empty vector when `forall_term` is not a universal, has no usable unary trigger,
-/// or the trigger's function does not occur in the ground terms.
+/// Instantiates the universal `forall_term` by e-matching a trigger against the
+/// `ground` terms, returning the ground instances of its body. Returns an empty
+/// vector when `forall_term` is not a universal, has no trigger covering all bound
+/// variables, or the trigger's symbols do not occur in the ground terms.
+///
+/// # Panics
+///
+/// Panics only if the quantifier binds more than `u32::MAX` variables (which no
+/// real input does).
 #[must_use]
 pub fn instantiate_forall_via_egraph(
     arena: &mut TermArena,
     ground: &[TermId],
     forall_term: TermId,
 ) -> Vec<TermId> {
-    let Some((var, body)) = as_forall(arena, forall_term) else {
+    // Peel the (possibly nested) universal prefix `∀x. ∀y. … body`.
+    let (vars, body) = peel_foralls(arena, forall_term);
+    if vars.is_empty() {
         return Vec::new();
-    };
-    // Pick a trigger: a function-application subterm of the body that mentions the
-    // bound variable (z3's trigger rule). Single bound variable for now.
-    let Some(trigger) = select_trigger(arena, body, var) else {
+    }
+    let var_index: HashMap<SymbolId, u32> = vars
+        .iter()
+        .enumerate()
+        .map(|(i, &v)| (v, u32::try_from(i).expect("variable count fits u32")))
+        .collect();
+
+    // Pick one trigger (a function application) mentioning *all* bound variables.
+    let Some(trigger) = select_trigger(arena, body, &var_index) else {
         return Vec::new();
     };
 
@@ -57,18 +69,26 @@ pub fn instantiate_forall_via_egraph(
         }
     }
 
-    // Convert the trigger term to an e-matching pattern (bound var → Var(0), every
-    // ground subterm → an application by its bridge decl). The top level is a
-    // function application, so this is a usable trigger.
-    let pattern = bridge.trigger_to_pattern(arena, trigger, var);
+    // Convert the trigger to an e-matching pattern (each bound var → its Var index,
+    // every ground subterm → an application by its bridge decl).
+    let pattern = bridge.trigger_to_pattern(arena, trigger, &var_index);
+    let var_terms: Vec<TermId> = vars.iter().map(|&v| arena.var(v)).collect();
     let mut instances = Vec::new();
-    let var_term = arena.var(var);
     for subst in bridge.egraph.ematch(&pattern) {
-        let Some(class) = subst[0] else { continue };
-        let Some(&repr) = bridge.repr_term.get(&class) else {
+        // Build the substitution from every bound variable to a ground witness of
+        // its matched class; skip incomplete matches.
+        let mut replacements = HashMap::new();
+        let complete = (0..vars.len()).all(|i| {
+            subst
+                .get(i)
+                .copied()
+                .flatten()
+                .and_then(|class| bridge.repr_term.get(&class).copied())
+                .is_some_and(|repr| replacements.insert(var_terms[i], repr).is_none())
+        });
+        if !complete {
             continue;
-        };
-        let replacements = HashMap::from([(var_term, repr)]);
+        }
         let mut memo = HashMap::new();
         if let Ok(instance) = replace_subterms(arena, body, &replacements, &mut memo) {
             instances.push(instance);
@@ -77,6 +97,17 @@ pub fn instantiate_forall_via_egraph(
     instances.sort_by_key(|t| t.index());
     instances.dedup();
     instances
+}
+
+/// Peels the universal prefix `∀v1. ∀v2. … body`, returning the bound variables
+/// (outer first) and the innermost non-quantified body.
+fn peel_foralls(arena: &TermArena, mut term: TermId) -> (Vec<SymbolId>, TermId) {
+    let mut vars = Vec::new();
+    while let Some((var, body)) = as_forall(arena, term) {
+        vars.push(var);
+        term = body;
+    }
+    (vars, term)
 }
 
 /// Decomposes a `(forall x body)` term into its bound variable and body.
@@ -93,16 +124,20 @@ fn as_forall(arena: &TermArena, term: TermId) -> Option<(SymbolId, TermId)> {
 }
 
 /// Selects a trigger: the outermost function-application subterm of `body` that
-/// mentions the bound variable `var` (e.g. `f(x)`, `f(g(x))`, `g(x, a)`). A valid
+/// mentions **every** bound variable (e.g. `f(x)`, `f(g(x))`, `g(x, y)`). A valid
 /// trigger must be headed by a function symbol so the e-graph can enumerate it.
-fn select_trigger(arena: &TermArena, body: TermId, var: SymbolId) -> Option<TermId> {
+fn select_trigger(
+    arena: &TermArena,
+    body: TermId,
+    vars: &HashMap<SymbolId, u32>,
+) -> Option<TermId> {
     if let TermNode::App { op, args } = arena.node(body) {
-        if matches!(op, Op::Apply(_)) && contains_var(arena, body, var) {
+        if matches!(op, Op::Apply(_)) && mentions_all(arena, body, vars) {
             return Some(body);
         }
         let args = args.clone();
         for a in args {
-            if let Some(found) = select_trigger(arena, a, var) {
+            if let Some(found) = select_trigger(arena, a, vars) {
                 return Some(found);
             }
         }
@@ -110,15 +145,31 @@ fn select_trigger(arena: &TermArena, body: TermId, var: SymbolId) -> Option<Term
     None
 }
 
-/// Whether `term` mentions the symbol `var`.
-fn contains_var(arena: &TermArena, term: TermId, var: SymbolId) -> bool {
+/// Whether `term` mentions every variable in `vars`.
+fn mentions_all(arena: &TermArena, term: TermId, vars: &HashMap<SymbolId, u32>) -> bool {
+    let mut seen = std::collections::HashSet::new();
+    collect_vars(arena, term, vars, &mut seen);
+    seen.len() == vars.len()
+}
+
+/// Records which `vars` occur in `term`.
+fn collect_vars(
+    arena: &TermArena,
+    term: TermId,
+    vars: &HashMap<SymbolId, u32>,
+    seen: &mut std::collections::HashSet<SymbolId>,
+) {
     match arena.node(term) {
-        TermNode::Symbol(s) => *s == var,
+        TermNode::Symbol(s) if vars.contains_key(s) => {
+            seen.insert(*s);
+        }
         TermNode::App { args, .. } => {
             let args = args.clone();
-            args.iter().any(|&a| contains_var(arena, a, var))
+            for a in args {
+                collect_vars(arena, a, vars, seen);
+            }
         }
-        _ => false,
+        _ => {}
     }
 }
 
@@ -230,9 +281,14 @@ impl InstBridge {
     /// (symbols, applications, constants, interpreted ops) becomes an application
     /// keyed by the same decl the ground terms use — so a ground subterm in the
     /// trigger matches its own class, while only `var` is free.
-    fn trigger_to_pattern(&mut self, arena: &TermArena, term: TermId, var: SymbolId) -> Pattern {
+    fn trigger_to_pattern(
+        &mut self,
+        arena: &TermArena,
+        term: TermId,
+        vars: &HashMap<SymbolId, u32>,
+    ) -> Pattern {
         match arena.node(term) {
-            TermNode::Symbol(s) if *s == var => Pattern::Var(0),
+            TermNode::Symbol(s) if vars.contains_key(s) => Pattern::Var(vars[s]),
             TermNode::Symbol(s) => Pattern::App(self.symbol_decl(s.index()), Vec::new()),
             TermNode::App {
                 op: Op::Apply(func),
@@ -242,7 +298,7 @@ impl InstBridge {
                 let args = args.clone();
                 let subs = args
                     .iter()
-                    .map(|&a| self.trigger_to_pattern(arena, a, var))
+                    .map(|&a| self.trigger_to_pattern(arena, a, vars))
                     .collect();
                 Pattern::App(self.func_decl(func), subs)
             }
@@ -251,7 +307,7 @@ impl InstBridge {
                 let args = args.clone();
                 let subs = args
                     .iter()
-                    .map(|&a| self.trigger_to_pattern(arena, a, var))
+                    .map(|&a| self.trigger_to_pattern(arena, a, vars))
                     .collect();
                 Pattern::App(self.op_decl(&key), subs)
             }
@@ -395,6 +451,34 @@ mod tests {
             2,
             "only h(_, a) matches, got {instances:?}"
         );
+    }
+
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn instantiates_a_two_variable_quantifier() {
+        // ∀x. ∀y. (= (g x y) c), ground containing g(a, b): instance (= (g a b) c).
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(8);
+        let a = arena.bv_var("a", 8).unwrap();
+        let b = arena.bv_var("b", 8).unwrap();
+        let g = arena.declare_fun("g", &[sort, sort], sort).unwrap();
+        let c = arena.bv_const(8, 5).unwrap();
+        let gab = arena.apply(g, &[a, b]).unwrap();
+        let zero = arena.bv_const(8, 0).unwrap();
+        let ground0 = arena.eq(gab, zero).unwrap();
+
+        let x = arena.declare("x", sort).unwrap();
+        let y = arena.declare("y", sort).unwrap();
+        let xv = arena.var(x);
+        let yv = arena.var(y);
+        let gxy = arena.apply(g, &[xv, yv]).unwrap();
+        let inner_body = arena.eq(gxy, c).unwrap();
+        let inner = arena.forall(y, inner_body).unwrap();
+        let forall = arena.forall(x, inner).unwrap();
+
+        let instances = instantiate_forall_via_egraph(&mut arena, &[ground0], forall);
+        let want = arena.eq(gab, c).unwrap();
+        assert_eq!(instances, vec![want], "x↦a, y↦b from the g(x,y) trigger");
     }
 
     #[test]
