@@ -34,15 +34,18 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     (full decider with replay-checked sat models, 400-formula differential vs
     `check_qf_uf`). The online *search* on one backtrackable e-graph now exists, not
     just the online theory.
-  - **Next action (precise resume point):** (1) **Wire `solve_qf_uf_online` as the
-    QF_UF fast path** in `auto::check_auto_dispatch` ahead of the offline
-    `check_qf_uf` (it's `unknown`-safe, so on `Unknown` fall through to the existing
-    path — zero risk), and run the QF_UF differential/test corpus to confirm no
-    regression. (2) Then **P1.6 theory combination**: extend the online loop with
-    **interface equalities** between the e-graph (UF) and the bit-blasted BV theory
-    (Nelson–Oppen-style equality propagation) → complete QF_UFBV without the
-    Ackermann reduction. Secondary: migrate `axeyum_rewrite`'s bespoke trigger
-    closure onto the keystone.
+  - **Online decider wired as the QF_UF fast path — DONE** (ahead of `check_qf_uf`,
+    unknown-safe fall-through; full suite green).
+  - **Next action (precise resume point): P1.6 theory combination.** Extend the
+    online DPLL(T) loop with **interface equalities** between the e-graph (UF) and
+    the bit-blasted BV theory — Nelson–Oppen-style: share the equalities each theory
+    entails over the shared BV-sorted terms, propagate them across, and split on
+    unknown interface equalities — to decide **QF_UFBV completely without the
+    Ackermann reduction** (the current `combined`/`aufbv` path eagerly Ackermannizes;
+    P1.6 removes that trust hole). Start by enumerating shared terms + a
+    case-splitting driver over interface equalities, validated differentially vs the
+    existing Ackermann path (`check_with_all_theories`). Secondary: migrate
+    `axeyum_rewrite`'s bespoke trigger closure onto the keystone.
 - **Plan authored** (2026-06-15): the full track/phase/task plan is under
   [`docs/plan/`](docs/plan/README.md), built from the five reference reviews in
   [`docs/plan/references/`](docs/plan/references/README.md).
@@ -220,7 +223,14 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
-- **2026-06-16** — **P1.5 online DPLL(T) decision procedure** (pending commit).
+- **2026-06-16** — **P1.5 online decider wired as the QF_UF fast path** (pending
+  commit). `auto::check_auto_dispatch` now tries `solve_qf_uf_online` (online
+  DPLL(T) on the backtrackable e-graph) **before** the offline `check_qf_uf`; on
+  `Unknown` it falls through to the offline enumeration, then bit-blasting — so the
+  change is zero-risk (unknown-safe backstop) and only ever fast-paths a sound
+  answer. Full solver suite (incl. functions/aufbv/function_scenarios) green: no
+  regression.
+- **2026-06-16** — **P1.5 online DPLL(T) decision procedure** (commit 8bbdb9d).
   `solve_qf_uf_online`: extends the refutation engine to a full decider —
   `Unsat`/`Sat(model)`/`Unknown`. On a theory-consistent total assignment it builds
   a model from the e-graph classes (`EufTheory::model`) and **replays it against the

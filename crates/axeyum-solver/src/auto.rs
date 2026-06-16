@@ -576,6 +576,18 @@ fn check_auto_dispatch(
     // its `sat` (replay-checked) and `unsat` (congruence, independently re-checked)
     // are sound for QF_UFBV, so this only ever fast-paths a correct answer.
     if features.has_function {
+        // Try the **online** DPLL(T) decider on the backtrackable e-graph first: it
+        // keeps one incremental congruence graph across the Boolean search (vs the
+        // offline per-model rebuild) and is differentially validated against both
+        // `check_qf_uf` and the Ackermann path. Both its `sat` (replay-checked) and
+        // `unsat` (root-level congruence conflict) are sound. On `unknown` (no
+        // equality atoms or Boolean structure outside its Tseitin encoder) fall
+        // through to the offline enumeration, then to bit-blasting.
+        match crate::euf_egraph::solve_qf_uf_online(arena, assertions) {
+            CheckResult::Sat(model) => return Ok(CheckResult::Sat(model)),
+            CheckResult::Unsat => return Ok(CheckResult::Unsat),
+            CheckResult::Unknown(_) => {}
+        }
         match crate::euf_egraph::check_qf_uf(arena, assertions) {
             CheckResult::Sat(model) => return Ok(CheckResult::Sat(model)),
             CheckResult::Unsat => return Ok(CheckResult::Unsat),
