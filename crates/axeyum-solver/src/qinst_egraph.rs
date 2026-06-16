@@ -1,11 +1,13 @@
 //! E-matching quantifier instantiation on the e-graph keystone (Track 2, P2.6).
 //!
 //! [`instantiate_forall_via_egraph`] is the keystone-driven path for instantiating
-//! a universal `∀x. body`: it builds an [`EGraph`] over the ground terms, picks a
-//! unary trigger `f(x)` from the body, e-matches it against the e-graph **modulo
-//! congruence** ([`EGraph::ematch`]), and for each match substitutes the bound
-//! variable with a representative of the matched argument class — producing the
-//! ground instances to add and re-check.
+//! a universal `∀x. body`: it builds an [`EGraph`] over the ground terms, selects a
+//! trigger — a function-application subterm mentioning the bound variable, which
+//! may be **nested** (`f(g(x))`) or **multi-argument with ground parts**
+//! (`g(x, a)`) — e-matches it against the e-graph **modulo congruence**
+//! ([`EGraph::ematch`]), and for each match substitutes the bound variable with a
+//! representative of the matched argument class, producing the ground instances to
+//! add and re-check.
 //!
 //! Matching on the e-graph is congruence-aware for free: if the ground terms force
 //! `a = b`, then `f(a)` and `f(b)` are one class and the trigger fires once, so the
@@ -34,7 +36,9 @@ pub fn instantiate_forall_via_egraph(
     let Some((var, body)) = as_forall(arena, forall_term) else {
         return Vec::new();
     };
-    let Some(trigger_func) = unary_trigger_function(arena, body, var) else {
+    // Pick a trigger: a function-application subterm of the body that mentions the
+    // bound variable (z3's trigger rule). Single bound variable for now.
+    let Some(trigger) = select_trigger(arena, body, var) else {
         return Vec::new();
     };
 
@@ -52,11 +56,11 @@ pub fn instantiate_forall_via_egraph(
             }
         }
     }
-    let Some(decl) = bridge.func_decls.get(&trigger_func).copied() else {
-        return Vec::new(); // the trigger's function never appears in the ground terms
-    };
 
-    let pattern = Pattern::App(decl, vec![Pattern::Var(0)]);
+    // Convert the trigger term to an e-matching pattern (bound var → Var(0), every
+    // ground subterm → an application by its bridge decl). The top level is a
+    // function application, so this is a usable trigger.
+    let pattern = bridge.trigger_to_pattern(arena, trigger, var);
     let mut instances = Vec::new();
     let var_term = arena.var(var);
     for subst in bridge.egraph.ematch(&pattern) {
@@ -88,27 +92,34 @@ fn as_forall(arena: &TermArena, term: TermId) -> Option<(SymbolId, TermId)> {
     }
 }
 
-/// Finds a unary trigger `f(var)` in `body`: a function application whose only
-/// argument is the bound variable. Returns its function symbol.
-fn unary_trigger_function(arena: &TermArena, body: TermId, var: SymbolId) -> Option<FuncId> {
+/// Selects a trigger: the outermost function-application subterm of `body` that
+/// mentions the bound variable `var` (e.g. `f(x)`, `f(g(x))`, `g(x, a)`). A valid
+/// trigger must be headed by a function symbol so the e-graph can enumerate it.
+fn select_trigger(arena: &TermArena, body: TermId, var: SymbolId) -> Option<TermId> {
     if let TermNode::App { op, args } = arena.node(body) {
-        if let Op::Apply(func) = op {
-            if args.len() == 1 {
-                if let TermNode::Symbol(s) = arena.node(args[0]) {
-                    if *s == var {
-                        return Some(*func);
-                    }
-                }
-            }
+        if matches!(op, Op::Apply(_)) && contains_var(arena, body, var) {
+            return Some(body);
         }
         let args = args.clone();
         for a in args {
-            if let Some(found) = unary_trigger_function(arena, a, var) {
+            if let Some(found) = select_trigger(arena, a, var) {
                 return Some(found);
             }
         }
     }
     None
+}
+
+/// Whether `term` mentions the symbol `var`.
+fn contains_var(arena: &TermArena, term: TermId, var: SymbolId) -> bool {
+    match arena.node(term) {
+        TermNode::Symbol(s) => *s == var,
+        TermNode::App { args, .. } => {
+            let args = args.clone();
+            args.iter().any(|&a| contains_var(arena, a, var))
+        }
+        _ => false,
+    }
 }
 
 /// Bridges ground IR terms to the e-graph for instantiation: it builds e-nodes,
@@ -213,6 +224,43 @@ impl InstBridge {
         self.op_decls.insert(key.to_owned(), d);
         d
     }
+
+    /// Converts a trigger term to an e-matching [`Pattern`] under this bridge's
+    /// decl assignment: the bound `var` becomes `Var(0)`, and every other subterm
+    /// (symbols, applications, constants, interpreted ops) becomes an application
+    /// keyed by the same decl the ground terms use — so a ground subterm in the
+    /// trigger matches its own class, while only `var` is free.
+    fn trigger_to_pattern(&mut self, arena: &TermArena, term: TermId, var: SymbolId) -> Pattern {
+        match arena.node(term) {
+            TermNode::Symbol(s) if *s == var => Pattern::Var(0),
+            TermNode::Symbol(s) => Pattern::App(self.symbol_decl(s.index()), Vec::new()),
+            TermNode::App {
+                op: Op::Apply(func),
+                args,
+            } => {
+                let func = *func;
+                let args = args.clone();
+                let subs = args
+                    .iter()
+                    .map(|&a| self.trigger_to_pattern(arena, a, var))
+                    .collect();
+                Pattern::App(self.func_decl(func), subs)
+            }
+            TermNode::App { op, args } => {
+                let key = format!("{op:?}");
+                let args = args.clone();
+                let subs = args
+                    .iter()
+                    .map(|&a| self.trigger_to_pattern(arena, a, var))
+                    .collect();
+                Pattern::App(self.op_decl(&key), subs)
+            }
+            _ => Pattern::App(
+                self.op_decl(&format!("c:{:?}", arena.node(term))),
+                Vec::new(),
+            ),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -280,6 +328,72 @@ mod tests {
             instances.len(),
             1,
             "congruent f-applications instantiate once, got {instances:?}"
+        );
+    }
+
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn instantiates_over_a_nested_trigger() {
+        // ∀x. (= (f (g x)) c), ground containing f(g(a)): instance (= (f (g a)) c).
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(8);
+        let a = arena.bv_var("a", 8).unwrap();
+        let f = arena.declare_fun("f", &[sort], sort).unwrap();
+        let g = arena.declare_fun("g", &[sort], sort).unwrap();
+        let c = arena.bv_const(8, 5).unwrap();
+        let ga = arena.apply(g, &[a]).unwrap();
+        let fga = arena.apply(f, &[ga]).unwrap();
+        let zero = arena.bv_const(8, 0).unwrap();
+        let ground0 = arena.eq(fga, zero).unwrap();
+
+        let x = arena.declare("x", sort).unwrap();
+        let xv = arena.var(x);
+        let gx = arena.apply(g, &[xv]).unwrap();
+        let fgx = arena.apply(f, &[gx]).unwrap();
+        let body = arena.eq(fgx, c).unwrap();
+        let forall = arena.forall(x, body).unwrap();
+
+        let instances = instantiate_forall_via_egraph(&mut arena, &[ground0], forall);
+        let want = arena.eq(fga, c).unwrap();
+        assert_eq!(instances, vec![want], "nested trigger f(g(x)) → x = a");
+    }
+
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn instantiates_over_a_binary_trigger_with_a_ground_argument() {
+        // ∀x. (= (h x a) c), ground containing h(b, a) and h(d, a): two instances;
+        // the ground argument `a` in the trigger is matched by its class.
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(8);
+        let a = arena.bv_var("a", 8).unwrap();
+        let b = arena.bv_var("b", 8).unwrap();
+        let d = arena.bv_var("d", 8).unwrap();
+        let h = arena.declare_fun("h", &[sort, sort], sort).unwrap();
+        let c = arena.bv_const(8, 5).unwrap();
+        let hba = arena.apply(h, &[b, a]).unwrap();
+        let hda = arena.apply(h, &[d, a]).unwrap();
+        // A decoy h(a, b) whose ground argument is b, not a — must NOT match h(x, a).
+        let hab = arena.apply(h, &[a, b]).unwrap();
+        let hba_hda = arena.bv_add(hba, hda).unwrap();
+        let sum = arena.bv_add(hba_hda, hab).unwrap();
+        let zero = arena.bv_const(8, 0).unwrap();
+        let ground0 = arena.eq(sum, zero).unwrap();
+
+        let x = arena.declare("x", sort).unwrap();
+        let xv = arena.var(x);
+        let hxa = arena.apply(h, &[xv, a]).unwrap();
+        let body = arena.eq(hxa, c).unwrap();
+        let forall = arena.forall(x, body).unwrap();
+
+        let instances = instantiate_forall_via_egraph(&mut arena, &[ground0], forall);
+        let want_b = arena.eq(hba, c).unwrap();
+        let want_d = arena.eq(hda, c).unwrap();
+        assert!(instances.contains(&want_b));
+        assert!(instances.contains(&want_d));
+        assert_eq!(
+            instances.len(),
+            2,
+            "only h(_, a) matches, got {instances:?}"
         );
     }
 
