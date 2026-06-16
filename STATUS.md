@@ -22,6 +22,19 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     that only helps *trigger-less UF universals* (rare). Skipped as low marginal
     value vs. the duplication/maintenance cost; revisit only if a real corpus shows
     the gap.
+- **P2.2 lazy arrays — first slice DONE (lazy select-congruence)** (2026-06-16):
+  `check_qf_abv_lazy` — the array analogue of lazy Ackermann (a `select` is an
+  application of a per-array read function). `eliminate_arrays` still does
+  read-over-write eagerly, but the read-over-read consistency
+  `i=j ⇒ select(a,i)=select(a,j)` is now added on demand (CEGAR) instead of the
+  eager O(n²) per-array pairing. Sound (post-ROW abstraction is a relaxation ⇒ UNSAT
+  transfers; consistent sat replays) + terminating. rewrite `ArrayElimination` now
+  exposes `abstraction()` + `selects()` (eager `assertions()` byte-identical).
+  **200-formula differential vs eager `check_with_array_elimination` — all jointly
+  decided, all agreed (28 unsat)** + a select-congruence refutation and a
+  store/select sat replay. Same regime caveat as lazy Ackermann: this defers the
+  congruence pairing, not ROW; **full lazy ROW / on-demand store axioms / wide-index
+  (>8-bit) arrays remain** (the eager path caps extensionality at 8-bit indices).
 - **P1.5 online theory interface — DONE (theory side)** (2026-06-16): the online
   `TheorySolver` trait + `EufTheory` over one backtrackable keystone `EGraph` now
   exposes the full surface a CDCL(T) loop drives — `assert(atom,value)` (→ explained
@@ -231,7 +244,7 @@ plan is built and committed on the current branch:
 | Phase | Title | Status |
 |---|---|---|
 | P2.1 | BV lazy blasting + word-level slicing + BV theory-checker | TODO |
-| P2.2 | Arrays: lazy ROW axioms + extensionality + func_interp models | TODO |
+| P2.2 | Arrays: lazy ROW axioms + extensionality + func_interp models | WIP — **lazy select-congruence** (`check_qf_abv_lazy`): read-over-read consistency added on demand (CEGAR) vs the eager O(n²) per-array pairing; sound (post-ROW abstraction relaxation ⇒ UNSAT transfers; sat replays) + terminating; 200-formula differential vs eager `check_with_array_elimination` (all agree). `eliminate_arrays` exposes `abstraction()`/`selects()`. Remaining: **lazy ROW (on-demand store axioms)** so wide-index (>8-bit) arrays + array equality avoid the eager 2^iw extensionality enumeration; func_interp model polish |
 | P2.3 | EUF on the e-graph (from Ackermann to incremental) | TODO |
 | P2.4 | LIA cut portfolio (GCD, Gomory, HNF, cube, Diophantine) | TODO |
 | P2.5 | NRA: incremental linearization → nlsat/CAD | TODO |
