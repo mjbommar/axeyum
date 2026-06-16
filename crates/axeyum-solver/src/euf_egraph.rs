@@ -166,6 +166,17 @@ impl EufTheory {
         out
     }
 
+    /// Builds a candidate model from the current e-graph state — valid to call when
+    /// the theory is **consistent** (no conflict), e.g. once a DPLL(T) search reaches
+    /// a total, theory-consistent assignment. Each congruence class takes a distinct
+    /// value (a literal constant keeps its own), symbols take their class value, and
+    /// each function an interpretation from its applications. Returns `None` for a
+    /// sort the model builder does not cover (the caller treats that as `unknown`).
+    #[must_use]
+    pub fn model(&self, arena: &TermArena) -> Option<Model> {
+        build_model(arena, &self.bridge)
+    }
+
     /// The first conflict in the current state: an asserted disequality whose sides
     /// are congruent, or two distinct constants merged into one class. The conflict
     /// is the asserted literals (recovered via [`EGraph::explain`]) whose
@@ -377,6 +388,27 @@ pub fn prove_unsat_lazy(arena: &mut TermArena, assertions: &[TermId]) -> bool {
 /// theory's bridge (no new terms are created).
 #[must_use]
 pub fn prove_unsat_qf_uf_online(arena: &mut TermArena, assertions: &[TermId]) -> bool {
+    matches!(solve_qf_uf_online(arena, assertions), CheckResult::Unsat)
+}
+
+/// Decides the `QF_UF`(-equality) fragment by the **online DPLL(T)** loop, returning
+/// a **replay-checked** model on `sat`. This is the decision-procedure form of
+/// [`prove_unsat_qf_uf_online`]: the same online search (Tseitin skeleton + one
+/// backtrackable [`EufTheory`]), but on a Boolean- and theory-consistent total
+/// assignment it builds a candidate model from the e-graph classes
+/// ([`EufTheory::model`]) and **replays it against the original assertions** — the
+/// soundness gate, so a model the uninterpreted abstraction cannot justify (base-sort
+/// semantics outside congruence) yields [`CheckResult::Unknown`], never a wrong
+/// `sat`. `unsat` is a sound refutation (only ever returned at a root-level conflict).
+///
+/// Returns [`CheckResult::Unknown`] when there are no equality atoms or the Boolean
+/// skeleton has structure the encoder does not cover (the same conservative
+/// give-ups as the offline [`check_qf_uf`], leaving those to the bit-blaster).
+///
+/// Mutates `arena` only via the model builder's read path (no fresh symbols, unlike
+/// the offline loop).
+#[must_use]
+pub fn solve_qf_uf_online(arena: &mut TermArena, assertions: &[TermId]) -> CheckResult {
     // Distinct equality atoms over the whole assertion set (these become the
     // theory's atom indices and the first variables 0..eq_count).
     let mut atom_terms: Vec<TermId> = Vec::new();
@@ -385,7 +417,7 @@ pub fn prove_unsat_qf_uf_online(arena: &mut TermArena, assertions: &[TermId]) ->
         collect_eq_atoms(arena, a, &mut atom_terms, &mut seen);
     }
     if atom_terms.is_empty() {
-        return false; // no equalities: congruence cannot prove anything
+        return CheckResult::Unknown(unknown("no equality atoms for the online e-graph path"));
     }
 
     // Variable map: each equality atom keeps its collected index; Boolean-sorted
@@ -396,7 +428,9 @@ pub fn prove_unsat_qf_uf_online(arena: &mut TermArena, assertions: &[TermId]) ->
     let mut clauses: Vec<Vec<Lit>> = Vec::new();
     for &assertion in assertions {
         let Some(top) = enc.encode(arena, assertion, &mut clauses) else {
-            return false; // un-encodable Boolean structure: sound to give up
+            // Un-encodable Boolean structure: conservative `unknown` (the bit-blaster
+            // handles it), never a guess.
+            return CheckResult::Unknown(unknown("boolean skeleton outside the online encoder"));
         };
         clauses.push(vec![Lit {
             var: top,
@@ -407,7 +441,17 @@ pub fn prove_unsat_qf_uf_online(arena: &mut TermArena, assertions: &[TermId]) ->
     let eq_count = atom_terms.len();
     let mut theory = EufTheory::new(arena, &atom_terms);
     let mut solver = Dpll::new(enc.var_count, eq_count, clauses);
-    solver.solve(&mut theory)
+    if solver.solve(&mut theory) {
+        return CheckResult::Unsat;
+    }
+    // The search ended on a theory-consistent total assignment: the theory's e-graph
+    // holds that satisfying state. Build a model and replay it against the originals.
+    match theory.model(arena) {
+        Some(model) if replays(arena, assertions, &model) => CheckResult::Sat(model),
+        _ => CheckResult::Unknown(unknown(
+            "online e-graph model did not replay (base-sort semantics outside congruence)",
+        )),
+    }
 }
 
 /// Decides a `QF_UF`(-equality) conjunction by the lazy DPLL(T) loop, returning a
@@ -1869,5 +1913,136 @@ mod tests {
         assert_eq!(agree, rounds, "all formulas compared");
         // Sanity: the random mix should hit a healthy number of UNSAT cases.
         assert!(proved > 0, "differential set proved at least one UNSAT");
+    }
+
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn solve_qf_uf_online_returns_a_replayed_sat_model() {
+        // a = b ∧ f(a) = c: satisfiable; the online decider must return a model that
+        // replays against the original assertions.
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(8);
+        let a = arena.bv_var("a", 8).unwrap();
+        let b = arena.bv_var("b", 8).unwrap();
+        let c = arena.bv_var("c", 8).unwrap();
+        let f = arena.declare_fun("f", &[sort], sort).unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let ab = arena.eq(a, b).unwrap();
+        let fa_c = arena.eq(fa, c).unwrap();
+
+        match solve_qf_uf_online(&mut arena, &[ab, fa_c]) {
+            CheckResult::Sat(model) => {
+                let assignment = model.to_assignment();
+                for &assertion in &[ab, fa_c] {
+                    assert_eq!(
+                        eval(&arena, assertion, &assignment).unwrap(),
+                        Value::Bool(true),
+                        "sat model must satisfy the original assertion"
+                    );
+                }
+            }
+            other => panic!("expected Sat, got {other:?}"),
+        }
+    }
+
+    #[test]
+    #[allow(clippy::similar_names)]
+    fn solve_qf_uf_online_decides_unsat() {
+        // The disjunctive refutation, now via the decision entry point.
+        let mut arena = TermArena::new();
+        let a = arena.bv_var("a", 8).unwrap();
+        let b = arena.bv_var("b", 8).unwrap();
+        let c = arena.bv_var("c", 8).unwrap();
+        let ab = arena.eq(a, b).unwrap();
+        let ac = arena.eq(a, c).unwrap();
+        let or = arena.or(ab, ac).unwrap();
+        let ne_ab = arena.not(ab).unwrap();
+        let ne_ac = arena.not(ac).unwrap();
+        assert_eq!(
+            solve_qf_uf_online(&mut arena, &[or, ne_ab, ne_ac]),
+            CheckResult::Unsat
+        );
+    }
+
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn solve_qf_uf_online_matches_check_qf_uf_differential() {
+        // The decision procedure must agree with the offline check_qf_uf whenever
+        // both decide (Sat/Unsat); an Unknown on either side is not a disagreement
+        // (the two use different give-up boundaries). Every online Sat model is
+        // additionally replay-checked above by construction.
+        let mut rng: u64 = 0x2545_F491_4F6C_DD1D;
+        let next = |rng: &mut u64| -> usize {
+            *rng = rng
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            u32::try_from((*rng >> 33) & 0x7FFF_FFFF).expect("31-bit value fits u32") as usize
+        };
+
+        let rounds = 400;
+        let mut both_decided = 0;
+        for _ in 0..rounds {
+            let mut arena = TermArena::new();
+            let sort = Sort::BitVec(8);
+            let consts: Vec<TermId> = ["a", "b", "c", "d"]
+                .iter()
+                .map(|n| arena.bv_var(n, 8).unwrap())
+                .collect();
+            let f = arena.declare_fun("f", &[sort], sort).unwrap();
+
+            let mut atoms: Vec<TermId> = Vec::new();
+            let atom_count = 3 + next(&mut rng) % 3;
+            for _ in 0..atom_count {
+                let mk = |rng: &mut u64, arena: &mut TermArena| -> TermId {
+                    let base = consts[next(rng) % consts.len()];
+                    if next(rng) % 2 == 0 {
+                        arena.apply(f, &[base]).unwrap()
+                    } else {
+                        base
+                    }
+                };
+                let l = mk(&mut rng, &mut arena);
+                let r = mk(&mut rng, &mut arena);
+                let eq = arena.eq(l, r).unwrap();
+                atoms.push(if next(&mut rng) % 2 == 0 {
+                    eq
+                } else {
+                    arena.not(eq).unwrap()
+                });
+            }
+            let mut assertions: Vec<TermId> = Vec::new();
+            let assertion_count = 1 + next(&mut rng) % 3;
+            for _ in 0..assertion_count {
+                let x = atoms[next(&mut rng) % atoms.len()];
+                let y = atoms[next(&mut rng) % atoms.len()];
+                assertions.push(match next(&mut rng) % 3 {
+                    0 => arena.and(x, y).unwrap(),
+                    1 => arena.or(x, y).unwrap(),
+                    _ => arena.not(x).unwrap(),
+                });
+            }
+
+            // Reduce each result to a decisive verdict (`Some(sat?)`) or `None`
+            // (`unknown`); the two procedures have different give-up boundaries, so
+            // only a clash where *both* decide is a real bug.
+            let verdict = |r: &CheckResult| match r {
+                CheckResult::Unsat => Some(false),
+                CheckResult::Sat(_) => Some(true),
+                CheckResult::Unknown(_) => None,
+            };
+            let online = solve_qf_uf_online(&mut arena, &assertions);
+            let reference = check_qf_uf(&mut arena, &assertions);
+            if let (Some(o), Some(r)) = (verdict(&online), verdict(&reference)) {
+                assert_eq!(
+                    o, r,
+                    "online {online:?} vs check_qf_uf {reference:?} on {assertions:?}"
+                );
+                both_decided += 1;
+            }
+        }
+        assert!(
+            both_decided > 0,
+            "the differential set jointly decided some cases"
+        );
     }
 }

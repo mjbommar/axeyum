@@ -101,7 +101,7 @@ pub use enums::{EnumError, EnumSort, EnumVar};
 pub use euf::check_with_function_elimination;
 pub use euf_egraph::{
     EufConflict, EufTheory, TheoryLit, TheoryProp, TheorySolver, check_qf_uf,
-    prove_unsat_by_congruence, prove_unsat_lazy, prove_unsat_qf_uf_online,
+    prove_unsat_by_congruence, prove_unsat_lazy, prove_unsat_qf_uf_online, solve_qf_uf_online,
 };
 pub use evidence::{
     Evidence, EvidenceReport, LayerVersions, ProofOutcome, Provenance, SEMANTICS_VERSION,
