@@ -48,6 +48,13 @@ bench-qfbv-curated-inprocess:
     mkdir -p bench-results/baselines
     cargo run -p axeyum-bench --features z3 -- corpus/qfbv-curated --backend sat-bv --inprocess --compare-z3 --timeout-ms 2000 --jobs 2 --node-budget 50000 --cnf-var-budget 200000 --cnf-clause-budget 1000000 --out bench-results/baselines/qfbv-curated-sat-bv-inprocess-vs-z3-2s.json --logic QF_BV
 
+# P1.2: the same curated QF_BV slice with word-level preprocessing (propagate_values
+# + solve_eqs) enabled before bit-blasting (`--preprocess`). Model-sound via the
+# reconstruction trail; compare decided/PAR-2 against `bench-qfbv-curated`.
+bench-qfbv-curated-preprocess:
+    mkdir -p bench-results/baselines
+    cargo run -p axeyum-bench --features z3 -- corpus/qfbv-curated --backend sat-bv --preprocess --compare-z3 --timeout-ms 2000 --jobs 2 --node-budget 50000 --cnf-var-budget 200000 --cnf-clause-budget 1000000 --out bench-results/baselines/qfbv-curated-sat-bv-preprocess-vs-z3-2s.json --logic QF_BV
+
 # Reproduce the Phase 2 public QF_BV baseline after `scripts/fetch-corpus.sh qf_bv`.
 bench-public-qfbv-baseline:
     mkdir -p bench-results/baselines

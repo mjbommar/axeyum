@@ -1,0 +1,3411 @@
+{
+  "config": {
+    "backend": "axeyum-sat-bv rustsat-batsat",
+    "backend_kind": "sat-bv",
+    "cnf_clause_budget": 1000000,
+    "cnf_inprocessing": false,
+    "cnf_variable_budget": 200000,
+    "compare_backend": "z3 4.13.3.0",
+    "compare_z3": true,
+    "config_hash": "e6141458109e79e8",
+    "corpus": "corpus/qfbv-curated",
+    "corpus_hash": "401108f0538622a3",
+    "corpus_source": null,
+    "hardware": {
+      "arch": "x86_64",
+      "hostname": null,
+      "os": "linux",
+      "parallelism": 16
+    },
+    "harness": "axeyum-bench 0.1.0",
+    "jobs": 2,
+    "limit": null,
+    "logic": "QF_BV",
+    "node_budget": 50000,
+    "preprocess": true,
+    "query_plan": {
+      "mode": "full",
+      "refine_adaptive_batch": false,
+      "refine_batch": 1,
+      "refine_rounds": 16,
+      "refine_select": "first",
+      "sat_replay_failure_policy": "soundness-alarm"
+    },
+    "rewrite": {
+      "enabled_rule_ids": [],
+      "mode": "off",
+      "rule_set": null
+    },
+    "seed": "none",
+    "selected_families": null,
+    "timeout_ms": 2000
+  },
+  "instances": [
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 64.0,
+        "aig_nodes": 65.0,
+        "bit_blast_ms": 0.291749,
+        "cnf_clauses": 1.0,
+        "cnf_encode_ms": 0.080698,
+        "cnf_variables": 0.0
+      },
+      "dag_nodes": 8,
+      "distinct_symbols": 2,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/20190311-bv-term-small-rw-Noetzli__bv-term-small-rw_1000.smt2",
+      "max_depth": 6,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 33.49,
+          "memory": 33.49,
+          "num allocs": 12676.0,
+          "rlimit count": 38.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 8,
+          "digest": "f72f79174fb4f180",
+          "tree_nodes": 10
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 8,
+            "digest": "f72f79174fb4f180",
+            "tree_nodes": 10
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 8,
+        "input_tree_nodes": 10,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 8,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 6,
+        "output_tree_nodes": 10,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 10
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 64.0,
+        "aig_nodes": 65.0,
+        "bit_blast_ms": 0.166926,
+        "cnf_clauses": 1.0,
+        "cnf_encode_ms": 0.044385,
+        "cnf_variables": 0.0
+      },
+      "dag_nodes": 8,
+      "distinct_symbols": 2,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/20190311-bv-term-small-rw-Noetzli__bv-term-small-rw_1001.smt2",
+      "max_depth": 6,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 33.49,
+          "memory": 33.49,
+          "num allocs": 50611.0,
+          "rlimit count": 38.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 8,
+          "digest": "44b90484c9cbdb3f",
+          "tree_nodes": 10
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 8,
+            "digest": "44b90484c9cbdb3f",
+            "tree_nodes": 10
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 8,
+        "input_tree_nodes": 10,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 8,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 6,
+        "output_tree_nodes": 10,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 10
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 64.0,
+        "aig_nodes": 65.0,
+        "bit_blast_ms": 0.162991,
+        "cnf_clauses": 1.0,
+        "cnf_encode_ms": 0.031269000000000005,
+        "cnf_variables": 0.0
+      },
+      "dag_nodes": 8,
+      "distinct_symbols": 2,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/20190311-bv-term-small-rw-Noetzli__bv-term-small-rw_1002.smt2",
+      "max_depth": 6,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 33.49,
+          "memory": 33.49,
+          "num allocs": 109735.0,
+          "rlimit count": 38.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 8,
+          "digest": "8f2e2db4f9147ec6",
+          "tree_nodes": 10
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 8,
+            "digest": "8f2e2db4f9147ec6",
+            "tree_nodes": 10
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 8,
+        "input_tree_nodes": 10,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 8,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 6,
+        "output_tree_nodes": 10,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 10
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 64.0,
+        "aig_nodes": 65.0,
+        "bit_blast_ms": 0.094684,
+        "cnf_clauses": 1.0,
+        "cnf_encode_ms": 0.034193999999999995,
+        "cnf_variables": 0.0
+      },
+      "dag_nodes": 8,
+      "distinct_symbols": 2,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/20190311-bv-term-small-rw-Noetzli__bv-term-small-rw_1003.smt2",
+      "max_depth": 6,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 33.49,
+          "memory": 33.49,
+          "num allocs": 190059.0,
+          "rlimit count": 52.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 8,
+          "digest": "4767e6289c865598",
+          "tree_nodes": 10
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 8,
+            "digest": "4767e6289c865598",
+            "tree_nodes": 10
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 8,
+        "input_tree_nodes": 10,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 8,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 6,
+        "output_tree_nodes": 10,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 10
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 32.0,
+        "aig_nodes": 68.0,
+        "bit_blast_ms": 0.054166000000000006,
+        "cnf_clauses": 44.0,
+        "cnf_encode_ms": 0.10045899999999999,
+        "cnf_variables": 35.0
+      },
+      "dag_nodes": 3,
+      "distinct_symbols": 1,
+      "expected": "sat",
+      "file": "corpus/qfbv-curated/bench_ab__a100test0001.smt2",
+      "max_depth": 2,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "elim-unconstrained": 2.0,
+          "final checks": 1.0,
+          "max memory": 33.97,
+          "memory": 33.73,
+          "mk bool var": 1.0,
+          "num allocs": 368506.0,
+          "num checks": 1.0,
+          "rlimit count": 97.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 3,
+          "digest": "8cade113543cdce6",
+          "tree_nodes": 3
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 3,
+            "digest": "8cade113543cdce6",
+            "tree_nodes": 3
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 3,
+        "input_tree_nodes": 3,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 3,
+        "output_distinct_symbols": 1,
+        "output_max_depth": 2,
+        "output_tree_nodes": 3,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 3
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 32.0,
+        "aig_nodes": 68.0,
+        "bit_blast_ms": 0.05473,
+        "cnf_clauses": 45.0,
+        "cnf_encode_ms": 0.092978,
+        "cnf_variables": 35.0
+      },
+      "dag_nodes": 4,
+      "distinct_symbols": 1,
+      "expected": "sat",
+      "file": "corpus/qfbv-curated/bench_ab__a101test0002.smt2",
+      "max_depth": 3,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "elim-unconstrained": 1.0,
+          "final checks": 1.0,
+          "max memory": 33.97,
+          "memory": 33.73,
+          "mk bool var": 1.0,
+          "num allocs": 639259.0,
+          "num checks": 1.0,
+          "rlimit count": 81.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 4,
+          "digest": "8362a96957b36acd",
+          "tree_nodes": 4
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 4,
+            "digest": "8362a96957b36acd",
+            "tree_nodes": 4
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 4,
+        "input_tree_nodes": 4,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 4,
+        "output_distinct_symbols": 1,
+        "output_max_depth": 3,
+        "output_tree_nodes": 4,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 4
+    },
+    {
+      "assertions": 2,
+      "backend_stats": {
+        "aig_inputs": 64.0,
+        "aig_nodes": 127.0,
+        "bit_blast_ms": 0.08970399999999999,
+        "cnf_clauses": 64.0,
+        "cnf_encode_ms": 0.0996,
+        "cnf_variables": 64.0
+      },
+      "dag_nodes": 9,
+      "distinct_symbols": 2,
+      "expected": "sat",
+      "file": "corpus/qfbv-curated/bench_ab__a115test0002.smt2",
+      "max_depth": 4,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 33.97,
+          "memory": 33.68,
+          "num allocs": 912842.0,
+          "rlimit count": 61.0,
+          "solve-eqs-elim-vars": 2.0,
+          "solve-eqs-steps": 2.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 2,
+          "assumptions": 0,
+          "dag_nodes": 9,
+          "digest": "b5e515eb0835a91f",
+          "tree_nodes": 10
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 2,
+            "assumptions": 0,
+            "dag_nodes": 9,
+            "digest": "b5e515eb0835a91f",
+            "tree_nodes": 10
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 9,
+        "input_tree_nodes": 10,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 2,
+        "output_dag_nodes": 9,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 4,
+        "output_tree_nodes": 10,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 10
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 32.0,
+        "aig_nodes": 64.0,
+        "bit_blast_ms": 0.052413,
+        "cnf_clauses": 1.0,
+        "cnf_encode_ms": 0.057395,
+        "cnf_variables": 32.0
+      },
+      "dag_nodes": 4,
+      "distinct_symbols": 1,
+      "expected": "sat",
+      "file": "corpus/qfbv-curated/bench_ab__a121test0001.smt2",
+      "max_depth": 3,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "elim-unconstrained": 2.0,
+          "final checks": 1.0,
+          "max memory": 33.97,
+          "memory": 33.73,
+          "mk bool var": 1.0,
+          "num allocs": 1317547.0,
+          "num checks": 1.0,
+          "rlimit count": 73.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 4,
+          "digest": "db10fa38c93f16be",
+          "tree_nodes": 4
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 4,
+            "digest": "db10fa38c93f16be",
+            "tree_nodes": 4
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 4,
+        "input_tree_nodes": 4,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 4,
+        "output_distinct_symbols": 1,
+        "output_max_depth": 3,
+        "output_tree_nodes": 4,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 4
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 0.0,
+        "aig_nodes": 1.0,
+        "bit_blast_ms": 0.007906,
+        "cnf_clauses": 0.0,
+        "cnf_encode_ms": 0.014932999999999998,
+        "cnf_variables": 0.0
+      },
+      "dag_nodes": 2,
+      "distinct_symbols": 0,
+      "expected": "sat",
+      "file": "corpus/qfbv-curated/bmc-bv__adpcm.smt2",
+      "max_depth": 2,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 33.97,
+          "memory": 33.49,
+          "num allocs": 1651019.0,
+          "rlimit count": 7.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 2,
+          "digest": "d90e43efef782874",
+          "tree_nodes": 2
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 2,
+            "digest": "d90e43efef782874",
+            "tree_nodes": 2
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 2,
+        "input_tree_nodes": 2,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 2,
+        "output_distinct_symbols": 0,
+        "output_max_depth": 2,
+        "output_tree_nodes": 2,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 2
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 64.0,
+        "aig_nodes": 128.0,
+        "bit_blast_ms": 0.094954,
+        "cnf_clauses": 1.0,
+        "cnf_encode_ms": 0.101325,
+        "cnf_variables": 64.0
+      },
+      "dag_nodes": 4,
+      "distinct_symbols": 1,
+      "expected": "sat",
+      "file": "corpus/qfbv-curated/bmc-bv__ex10.smt2",
+      "max_depth": 3,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "elim-unconstrained": 2.0,
+          "final checks": 1.0,
+          "max memory": 33.97,
+          "memory": 33.73,
+          "mk bool var": 1.0,
+          "num allocs": 2097377.0,
+          "num checks": 1.0,
+          "rlimit count": 73.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 4,
+          "digest": "daea9a9b90a45722",
+          "tree_nodes": 4
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 4,
+            "digest": "daea9a9b90a45722",
+            "tree_nodes": 4
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 4,
+        "input_tree_nodes": 4,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 4,
+        "output_distinct_symbols": 1,
+        "output_max_depth": 3,
+        "output_tree_nodes": 4,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 4
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 32.0,
+        "aig_nodes": 216.0,
+        "bit_blast_ms": 0.811739,
+        "cnf_clauses": 32.0,
+        "cnf_encode_ms": 0.09997099999999999,
+        "cnf_variables": 14.0
+      },
+      "dag_nodes": 28,
+      "distinct_symbols": 1,
+      "expected": "sat",
+      "file": "corpus/qfbv-curated/bmc-bv__ex13.smt2",
+      "max_depth": 15,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 41.89,
+          "memory": 33.77,
+          "num allocs": 2634776.0,
+          "rlimit count": 861.0,
+          "sat decisions": 5.0,
+          "sat mk clause nary": 1.0,
+          "sat mk var": 6.0,
+          "sat propagations nary": 1.0,
+          "solve-eqs-elim-vars": 1.0,
+          "solve-eqs-steps": 1.0,
+          "time": 0.003
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 3,
+        "translate_ms": 0
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 28,
+          "digest": "30708d6aba984787",
+          "tree_nodes": 72
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 28,
+            "digest": "30708d6aba984787",
+            "tree_nodes": 72
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 28,
+        "input_tree_nodes": 72,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 28,
+        "output_distinct_symbols": 1,
+        "output_max_depth": 15,
+        "output_tree_nodes": 72,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 72
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 32.0,
+        "aig_nodes": 2375.0,
+        "bit_blast_ms": 2.859807,
+        "cnf_clauses": 4156.0,
+        "cnf_encode_ms": 5.253715,
+        "cnf_variables": 1083.0
+      },
+      "dag_nodes": 44,
+      "distinct_symbols": 1,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/bmc-bv__ex33.smt2",
+      "max_depth": 14,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 42.11,
+          "memory": 33.85,
+          "num allocs": 3413609.0,
+          "rlimit count": 5629.0,
+          "sat backjumps": 1.0,
+          "sat conflicts": 2.0,
+          "sat decisions": 3.0,
+          "sat mk clause 2ary": 444.0,
+          "sat mk clause nary": 464.0,
+          "sat mk var": 269.0,
+          "sat propagations 2ary": 221.0,
+          "sat propagations nary": 128.0,
+          "time": 0.003
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 3,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 44,
+          "digest": "46e180b429080df5",
+          "tree_nodes": 105
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 44,
+            "digest": "46e180b429080df5",
+            "tree_nodes": 105
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 44,
+        "input_tree_nodes": 105,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 44,
+        "output_distinct_symbols": 1,
+        "output_max_depth": 14,
+        "output_tree_nodes": 105,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 22,
+      "translate_ms": 8,
+      "tree_nodes": 105
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 16.0,
+        "aig_nodes": 1832.0,
+        "bit_blast_ms": 1.730473,
+        "cnf_clauses": 2716.0,
+        "cnf_encode_ms": 3.424519,
+        "cnf_variables": 655.0
+      },
+      "dag_nodes": 32,
+      "detail": "Timeout: rustsat-batsat timeout",
+      "distinct_symbols": 2,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/brummayerbiere3__mulhs08.smt2",
+      "max_depth": 15,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 32,
+          "digest": "d098318aa9ee5c76",
+          "tree_nodes": 80
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 32,
+            "digest": "d098318aa9ee5c76",
+            "tree_nodes": 80
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 32,
+        "input_tree_nodes": 80,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 32,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 15,
+        "output_tree_nodes": 80,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 1995,
+      "translate_ms": 5,
+      "tree_nodes": 80
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 32.0,
+        "aig_nodes": 7678.0,
+        "bit_blast_ms": 7.544338000000001,
+        "cnf_clauses": 11840.0,
+        "cnf_encode_ms": 15.922125,
+        "cnf_variables": 2733.0
+      },
+      "dag_nodes": 32,
+      "detail": "Timeout: rustsat-batsat timeout",
+      "distinct_symbols": 2,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/brummayerbiere3__mulhs16.smt2",
+      "max_depth": 15,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 32,
+          "digest": "de3ac1912a542bd7",
+          "tree_nodes": 80
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 32,
+            "digest": "de3ac1912a542bd7",
+            "tree_nodes": 80
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 32,
+        "input_tree_nodes": 80,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 32,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 15,
+        "output_tree_nodes": 80,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 1977,
+      "translate_ms": 23,
+      "tree_nodes": 80
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 64.0,
+        "aig_nodes": 31418.0,
+        "bit_blast_ms": 33.700828,
+        "cnf_clauses": 49384.0,
+        "cnf_encode_ms": 73.589328,
+        "cnf_variables": 11161.0
+      },
+      "dag_nodes": 32,
+      "detail": "Timeout: rustsat-batsat timeout",
+      "distinct_symbols": 2,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/brummayerbiere3__mulhs32.smt2",
+      "max_depth": 15,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 32,
+          "digest": "db7a34e9d744bb7b",
+          "tree_nodes": 80
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 32,
+            "digest": "db7a34e9d744bb7b",
+            "tree_nodes": 80
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 32,
+        "input_tree_nodes": 80,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 32,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 15,
+        "output_tree_nodes": 80,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 1894,
+      "translate_ms": 107,
+      "tree_nodes": 80
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 128.0,
+        "aig_nodes": 127090.0,
+        "bit_blast_ms": 152.67234399999998,
+        "cnf_clauses": 201656.0,
+        "cnf_encode_ms": 329.75787099999997,
+        "cnf_variables": 45105.0
+      },
+      "dag_nodes": 32,
+      "detail": "Timeout: rustsat-batsat timeout",
+      "distinct_symbols": 2,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/brummayerbiere3__mulhs64.smt2",
+      "max_depth": 15,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 32,
+          "digest": "ae112aadcd55e674",
+          "tree_nodes": 80
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 32,
+            "digest": "ae112aadcd55e674",
+            "tree_nodes": 80
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 32,
+        "input_tree_nodes": 80,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 32,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 15,
+        "output_tree_nodes": 80,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 1526,
+      "translate_ms": 482,
+      "tree_nodes": 80
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 84.0,
+        "aig_nodes": 451.0,
+        "bit_blast_ms": 0.447454,
+        "cnf_clauses": 495.0,
+        "cnf_encode_ms": 0.614762,
+        "cnf_variables": 191.0
+      },
+      "dag_nodes": 59,
+      "distinct_symbols": 6,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/bruttomesso__ext_con_004_001_0016.smt2",
+      "max_depth": 9,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "added eqs": 122.0,
+          "binary propagations": 96.0,
+          "bv dynamic diseqs": 4.0,
+          "conflicts": 6.0,
+          "decisions": 10.0,
+          "del clause": 13.0,
+          "max memory": 58.32,
+          "memory": 50.29,
+          "mk bool var": 180.0,
+          "mk clause": 22.0,
+          "mk clause binary": 96.0,
+          "num allocs": 8414178.0,
+          "num checks": 1.0,
+          "propagations": 98.0,
+          "rlimit count": 3216.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 59,
+          "digest": "250337adb9aa011a",
+          "tree_nodes": 91
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 59,
+            "digest": "250337adb9aa011a",
+            "tree_nodes": 91
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 59,
+        "input_tree_nodes": 91,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 59,
+        "output_distinct_symbols": 6,
+        "output_max_depth": 9,
+        "output_tree_nodes": 91,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 1,
+      "translate_ms": 1,
+      "tree_nodes": 91
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 168.0,
+        "aig_nodes": 899.0,
+        "bit_blast_ms": 0.843284,
+        "cnf_clauses": 947.0,
+        "cnf_encode_ms": 1.177642,
+        "cnf_variables": 363.0
+      },
+      "dag_nodes": 59,
+      "distinct_symbols": 6,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/bruttomesso__ext_con_004_001_0032.smt2",
+      "max_depth": 9,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "added eqs": 259.0,
+          "binary propagations": 192.0,
+          "bv dynamic diseqs": 40.0,
+          "conflicts": 6.0,
+          "decisions": 30.0,
+          "del clause": 112.0,
+          "max memory": 58.32,
+          "memory": 50.31,
+          "mk bool var": 388.0,
+          "mk clause": 121.0,
+          "mk clause binary": 192.0,
+          "num allocs": 9619079.0,
+          "num checks": 1.0,
+          "propagations": 209.0,
+          "rlimit count": 5373.0,
+          "time": 0.001
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 1,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 59,
+          "digest": "8457ab5b872a767e",
+          "tree_nodes": 91
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 59,
+            "digest": "8457ab5b872a767e",
+            "tree_nodes": 91
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 59,
+        "input_tree_nodes": 91,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 59,
+        "output_distinct_symbols": 6,
+        "output_max_depth": 9,
+        "output_tree_nodes": 91,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 3,
+      "translate_ms": 2,
+      "tree_nodes": 91
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 336.0,
+        "aig_nodes": 1795.0,
+        "bit_blast_ms": 1.6984229999999998,
+        "cnf_clauses": 1851.0,
+        "cnf_encode_ms": 2.38572,
+        "cnf_variables": 707.0
+      },
+      "dag_nodes": 59,
+      "distinct_symbols": 6,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/bruttomesso__ext_con_004_001_0064.smt2",
+      "max_depth": 9,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "added eqs": 524.0,
+          "binary propagations": 384.0,
+          "bv dynamic diseqs": 77.0,
+          "conflicts": 6.0,
+          "decisions": 51.0,
+          "del clause": 215.0,
+          "max memory": 58.32,
+          "memory": 50.29,
+          "mk bool var": 769.0,
+          "mk clause": 224.0,
+          "mk clause binary": 384.0,
+          "num allocs": 11306290.0,
+          "num checks": 1.0,
+          "propagations": 416.0,
+          "rlimit count": 9299.0,
+          "time": 0.001
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 1,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 59,
+          "digest": "e60ef50fadadd92f",
+          "tree_nodes": 91
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 59,
+            "digest": "e60ef50fadadd92f",
+            "tree_nodes": 91
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 59,
+        "input_tree_nodes": 91,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 59,
+        "output_distinct_symbols": 6,
+        "output_max_depth": 9,
+        "output_tree_nodes": 91,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 33,
+      "translate_ms": 4,
+      "tree_nodes": 91
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 84.0,
+        "aig_nodes": 454.0,
+        "bit_blast_ms": 0.5584509999999999,
+        "cnf_clauses": 508.0,
+        "cnf_encode_ms": 0.6602049999999999,
+        "cnf_variables": 196.0
+      },
+      "dag_nodes": 114,
+      "distinct_symbols": 7,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/bruttomesso__ext_con_004_002_0016.smt2",
+      "max_depth": 10,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "added eqs": 123.0,
+          "binary propagations": 97.0,
+          "bv bit2core": 4.0,
+          "bv dynamic diseqs": 6.0,
+          "conflicts": 6.0,
+          "decisions": 10.0,
+          "del clause": 18.0,
+          "max memory": 58.32,
+          "memory": 50.29,
+          "mk bool var": 184.0,
+          "mk clause": 27.0,
+          "mk clause binary": 96.0,
+          "num allocs": 12722920.0,
+          "num checks": 1.0,
+          "propagations": 100.0,
+          "rlimit count": 4314.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 114,
+          "digest": "a17921b58989a5bb",
+          "tree_nodes": 183
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 114,
+            "digest": "a17921b58989a5bb",
+            "tree_nodes": 183
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 114,
+        "input_tree_nodes": 183,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 114,
+        "output_distinct_symbols": 7,
+        "output_max_depth": 10,
+        "output_tree_nodes": 183,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 1,
+      "translate_ms": 1,
+      "tree_nodes": 183
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 128.0,
+        "aig_nodes": 42489.0,
+        "bit_blast_ms": 49.427103,
+        "cnf_clauses": 50309.0,
+        "cnf_encode_ms": 78.83654,
+        "cnf_variables": 11648.0
+      },
+      "dag_nodes": 38,
+      "detail": "Timeout: rustsat-batsat timeout",
+      "distinct_symbols": 2,
+      "expected": "unknown",
+      "file": "corpus/qfbv-curated/calypto__problem_12.smt2",
+      "max_depth": 14,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 38,
+          "digest": "ec12fdd3b757bd1c",
+          "tree_nodes": 56
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 38,
+            "digest": "ec12fdd3b757bd1c",
+            "tree_nodes": 56
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 38,
+        "input_tree_nodes": 56,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 38,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 14,
+        "output_tree_nodes": 56,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 1873,
+      "translate_ms": 128,
+      "tree_nodes": 56
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 260.0,
+        "aig_nodes": 23594.0,
+        "bit_blast_ms": 28.990361,
+        "cnf_clauses": 37325.0,
+        "cnf_encode_ms": 58.144276000000005,
+        "cnf_variables": 8795.0
+      },
+      "dag_nodes": 78,
+      "detail": "Timeout: rustsat-batsat timeout",
+      "distinct_symbols": 12,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/calypto__problem_16.smt2",
+      "max_depth": 14,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 78,
+          "digest": "d5dae9b56088838c",
+          "tree_nodes": 406
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 78,
+            "digest": "d5dae9b56088838c",
+            "tree_nodes": 406
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 78,
+        "input_tree_nodes": 406,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 78,
+        "output_distinct_symbols": 12,
+        "output_max_depth": 14,
+        "output_tree_nodes": 406,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 1914,
+      "translate_ms": 87,
+      "tree_nodes": 406
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 25.0,
+        "aig_nodes": 4734.0,
+        "bit_blast_ms": 4.760025000000001,
+        "cnf_clauses": 7236.0,
+        "cnf_encode_ms": 10.087746,
+        "cnf_variables": 1680.0
+      },
+      "dag_nodes": 36,
+      "detail": "Timeout: rustsat-batsat timeout",
+      "distinct_symbols": 3,
+      "expected": "sat",
+      "file": "corpus/qfbv-curated/calypto__problem_9.smt2",
+      "max_depth": 16,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 36,
+          "digest": "b80f35112f83b7d1",
+          "tree_nodes": 80
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 36,
+            "digest": "b80f35112f83b7d1",
+            "tree_nodes": 80
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 36,
+        "input_tree_nodes": 80,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 36,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 16,
+        "output_tree_nodes": 80,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 1985,
+      "translate_ms": 14,
+      "tree_nodes": 80
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 1.0,
+        "aig_nodes": 2.0,
+        "bit_blast_ms": 0.032876,
+        "cnf_clauses": 1.0,
+        "cnf_encode_ms": 0.023473,
+        "cnf_variables": 0.0
+      },
+      "dag_nodes": 9,
+      "distinct_symbols": 1,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/check2__bvnor.smt2",
+      "max_depth": 6,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 49.9,
+          "memory": 49.9,
+          "num allocs": 3805892.0,
+          "rlimit count": 70.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 9,
+          "digest": "743dcadc3d55ad9f",
+          "tree_nodes": 10
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 9,
+            "digest": "743dcadc3d55ad9f",
+            "tree_nodes": 10
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 9,
+        "input_tree_nodes": 10,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 9,
+        "output_distinct_symbols": 1,
+        "output_max_depth": 6,
+        "output_tree_nodes": 10,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 10
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 0.0,
+        "aig_nodes": 1.0,
+        "bit_blast_ms": 0.025722,
+        "cnf_clauses": 0.0,
+        "cnf_encode_ms": 0.014807,
+        "cnf_variables": 0.0
+      },
+      "dag_nodes": 5,
+      "distinct_symbols": 0,
+      "expected": "sat",
+      "file": "corpus/qfbv-curated/check2__bvsdiv.smt2",
+      "max_depth": 3,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 49.9,
+          "memory": 49.89,
+          "num allocs": 3838869.0,
+          "rlimit count": 11.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 5,
+          "digest": "4b7975f7551e9cf4",
+          "tree_nodes": 5
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 5,
+            "digest": "4b7975f7551e9cf4",
+            "tree_nodes": 5
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 5,
+        "input_tree_nodes": 5,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 5,
+        "output_distinct_symbols": 0,
+        "output_max_depth": 3,
+        "output_tree_nodes": 5,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 5
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 0.0,
+        "aig_nodes": 1.0,
+        "bit_blast_ms": 0.027006,
+        "cnf_clauses": 1.0,
+        "cnf_encode_ms": 0.012815,
+        "cnf_variables": 0.0
+      },
+      "dag_nodes": 4,
+      "distinct_symbols": 0,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/check2__bvsmod.smt2",
+      "max_depth": 3,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 49.9,
+          "memory": 49.89,
+          "num allocs": 3892499.0,
+          "rlimit count": 14.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 4,
+          "digest": "e3059172f83872f3",
+          "tree_nodes": 5
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 4,
+            "digest": "e3059172f83872f3",
+            "tree_nodes": 5
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 4,
+        "input_tree_nodes": 5,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 4,
+        "output_distinct_symbols": 0,
+        "output_max_depth": 3,
+        "output_tree_nodes": 5,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 5
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 1.0,
+        "aig_nodes": 2.0,
+        "bit_blast_ms": 0.017733000000000002,
+        "cnf_clauses": 1.0,
+        "cnf_encode_ms": 0.017089,
+        "cnf_variables": 0.0
+      },
+      "dag_nodes": 4,
+      "distinct_symbols": 1,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/check2__repeat.smt2",
+      "max_depth": 4,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 49.9,
+          "memory": 49.9,
+          "num allocs": 3965890.0,
+          "rlimit count": 14.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 4,
+          "digest": "92a625863b212805",
+          "tree_nodes": 8
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 4,
+            "digest": "92a625863b212805",
+            "tree_nodes": 8
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 4,
+        "input_tree_nodes": 8,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 4,
+        "output_distinct_symbols": 1,
+        "output_max_depth": 4,
+        "output_tree_nodes": 8,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 8
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 0.0,
+        "aig_nodes": 1.0,
+        "bit_blast_ms": 0.059358,
+        "cnf_clauses": 1.0,
+        "cnf_encode_ms": 0.013222,
+        "cnf_variables": 0.0
+      },
+      "dag_nodes": 36,
+      "distinct_symbols": 0,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/crafted__bb.smt2",
+      "max_depth": 16,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 49.9,
+          "memory": 49.9,
+          "num allocs": 4059012.0,
+          "rlimit count": 130.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 36,
+          "digest": "6cc4cf0a145986cf",
+          "tree_nodes": 133
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 36,
+            "digest": "6cc4cf0a145986cf",
+            "tree_nodes": 133
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 36,
+        "input_tree_nodes": 133,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 36,
+        "output_distinct_symbols": 0,
+        "output_max_depth": 16,
+        "output_tree_nodes": 133,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 133
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 0.0,
+        "aig_nodes": 1.0,
+        "bit_blast_ms": 0.021662999999999998,
+        "cnf_clauses": 1.0,
+        "cnf_encode_ms": 0.012102,
+        "cnf_variables": 0.0
+      },
+      "dag_nodes": 11,
+      "distinct_symbols": 0,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/crafted__bbb.smt2",
+      "max_depth": 8,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 49.9,
+          "memory": 49.9,
+          "num allocs": 4172868.0,
+          "rlimit count": 30.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 11,
+          "digest": "ba8a6e6bc0daef01",
+          "tree_nodes": 15
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 11,
+            "digest": "ba8a6e6bc0daef01",
+            "tree_nodes": 15
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 11,
+        "input_tree_nodes": 15,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 11,
+        "output_distinct_symbols": 0,
+        "output_max_depth": 8,
+        "output_tree_nodes": 15,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 15
+    },
+    {
+      "assertions": 14,
+      "backend_stats": {
+        "aig_inputs": 0.0,
+        "aig_nodes": 1.0,
+        "bit_blast_ms": 1.428293,
+        "cnf_clauses": 1.0,
+        "cnf_encode_ms": 0.014888,
+        "cnf_variables": 0.0
+      },
+      "dag_nodes": 155,
+      "distinct_symbols": 13,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/crafted__bit-counting.smt2",
+      "max_depth": 36,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 50.0,
+          "memory": 50.0,
+          "num allocs": 4321420.0,
+          "rlimit count": 614.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 128,
+          "digest": "463ead20da58d31a",
+          "tree_nodes": 410
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 128,
+            "digest": "463ead20da58d31a",
+            "tree_nodes": 410
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 155,
+        "input_tree_nodes": 241,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 128,
+        "output_distinct_symbols": 0,
+        "output_max_depth": 36,
+        "output_tree_nodes": 410,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 1,
+      "tree_nodes": 241
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 32.0,
+        "aig_nodes": 253.0,
+        "bit_blast_ms": 0.351504,
+        "cnf_clauses": 288.0,
+        "cnf_encode_ms": 0.36793200000000004,
+        "cnf_variables": 98.0
+      },
+      "dag_nodes": 95,
+      "distinct_symbols": 9,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/crafted__bitops0.smt2",
+      "max_depth": 16,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "elim-unconstrained": 1.0,
+          "max memory": 58.32,
+          "memory": 50.2,
+          "num allocs": 4601367.0,
+          "rlimit count": 1985.0,
+          "sat backjumps": 5.0,
+          "sat conflicts": 6.0,
+          "sat decisions": 18.0,
+          "sat del clause": 4.0,
+          "sat elim clauses": 2.0,
+          "sat elim literals": 3.0,
+          "sat mk clause 2ary": 37.0,
+          "sat mk clause nary": 41.0,
+          "sat mk var": 29.0,
+          "sat propagations 2ary": 30.0,
+          "sat propagations nary": 27.0,
+          "sat units": 3.0,
+          "solve-eqs-elim-vars": 1.0,
+          "solve-eqs-steps": 1.0,
+          "time": 0.003
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 3,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 95,
+          "digest": "c5168b018278ec01",
+          "tree_nodes": 131
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 95,
+            "digest": "c5168b018278ec01",
+            "tree_nodes": 131
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 95,
+        "input_tree_nodes": 131,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 95,
+        "output_distinct_symbols": 9,
+        "output_max_depth": 16,
+        "output_tree_nodes": 131,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 1,
+      "translate_ms": 0,
+      "tree_nodes": 131
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 109.0,
+        "aig_nodes": 773.0,
+        "bit_blast_ms": 0.830337,
+        "cnf_clauses": 784.0,
+        "cnf_encode_ms": 1.0269540000000001,
+        "cnf_variables": 299.0
+      },
+      "dag_nodes": 97,
+      "distinct_symbols": 16,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/dwp_formulas__try3_noof_functions_dwp_base64.quoting_options_from_style.il.dwp.smt2",
+      "max_depth": 23,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 58.32,
+          "memory": 50.21,
+          "num allocs": 4966754.0,
+          "rlimit count": 1770.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 97,
+          "digest": "df314c45d610737a",
+          "tree_nodes": 161
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 97,
+            "digest": "df314c45d610737a",
+            "tree_nodes": 161
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 97,
+        "input_tree_nodes": 161,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 97,
+        "output_distinct_symbols": 16,
+        "output_max_depth": 23,
+        "output_tree_nodes": 161,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 1,
+      "tree_nodes": 161
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 109.0,
+        "aig_nodes": 773.0,
+        "bit_blast_ms": 0.823179,
+        "cnf_clauses": 784.0,
+        "cnf_encode_ms": 1.072122,
+        "cnf_variables": 299.0
+      },
+      "dag_nodes": 97,
+      "distinct_symbols": 16,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/dwp_formulas__try3_noof_functions_dwp_basename.quoting_options_from_style.il.dwp.smt2",
+      "max_depth": 23,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 58.32,
+          "memory": 50.21,
+          "num allocs": 5396871.0,
+          "rlimit count": 1770.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 97,
+          "digest": "ae0d1857b224cb05",
+          "tree_nodes": 161
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 97,
+            "digest": "ae0d1857b224cb05",
+            "tree_nodes": 161
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 97,
+        "input_tree_nodes": 161,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 97,
+        "output_distinct_symbols": 16,
+        "output_max_depth": 23,
+        "output_tree_nodes": 161,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 1,
+      "tree_nodes": 161
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 109.0,
+        "aig_nodes": 773.0,
+        "bit_blast_ms": 0.833369,
+        "cnf_clauses": 784.0,
+        "cnf_encode_ms": 1.02881,
+        "cnf_variables": 299.0
+      },
+      "dag_nodes": 97,
+      "distinct_symbols": 16,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/dwp_formulas__try3_noof_functions_dwp_cat.quoting_options_from_style.il.dwp.smt2",
+      "max_depth": 23,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 58.32,
+          "memory": 50.21,
+          "num allocs": 5891781.0,
+          "rlimit count": 1770.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 97,
+          "digest": "12faed28cb494367",
+          "tree_nodes": 161
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 97,
+            "digest": "12faed28cb494367",
+            "tree_nodes": 161
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 97,
+        "input_tree_nodes": 161,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 97,
+        "output_distinct_symbols": 16,
+        "output_max_depth": 23,
+        "output_tree_nodes": 161,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 1,
+      "tree_nodes": 161
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 109.0,
+        "aig_nodes": 773.0,
+        "bit_blast_ms": 0.814054,
+        "cnf_clauses": 784.0,
+        "cnf_encode_ms": 1.0084479999999998,
+        "cnf_variables": 299.0
+      },
+      "dag_nodes": 97,
+      "distinct_symbols": 16,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/dwp_formulas__try3_noof_functions_dwp_chgrp.quoting_options_from_style.il.dwp.smt2",
+      "max_depth": 23,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 58.32,
+          "memory": 50.21,
+          "num allocs": 6451479.0,
+          "rlimit count": 1770.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 97,
+          "digest": "be88699495c8a5a4",
+          "tree_nodes": 161
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 97,
+            "digest": "be88699495c8a5a4",
+            "tree_nodes": 161
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 97,
+        "input_tree_nodes": 161,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 97,
+        "output_distinct_symbols": 16,
+        "output_max_depth": 23,
+        "output_tree_nodes": 161,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 1,
+      "tree_nodes": 161
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 96.0,
+        "aig_nodes": 7466.0,
+        "bit_blast_ms": 8.019493,
+        "cnf_clauses": 11635.0,
+        "cnf_encode_ms": 15.997533,
+        "cnf_variables": 2844.0
+      },
+      "dag_nodes": 128,
+      "detail": "Timeout: rustsat-batsat timeout",
+      "distinct_symbols": 12,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/stp_samples__22930-0426-195.smt2",
+      "max_depth": 27,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 128,
+          "digest": "7120640bfa9e4bcb",
+          "tree_nodes": 353
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 128,
+            "digest": "7120640bfa9e4bcb",
+            "tree_nodes": 353
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 128,
+        "input_tree_nodes": 353,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 128,
+        "output_distinct_symbols": 12,
+        "output_max_depth": 27,
+        "output_tree_nodes": 353,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 1976,
+      "translate_ms": 24,
+      "tree_nodes": 353
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 96.0,
+        "aig_nodes": 7055.0,
+        "bit_blast_ms": 6.936515,
+        "cnf_clauses": 10915.0,
+        "cnf_encode_ms": 14.735048,
+        "cnf_variables": 2635.0
+      },
+      "dag_nodes": 75,
+      "detail": "Timeout: rustsat-batsat timeout",
+      "distinct_symbols": 12,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/stp_samples__22930-0601-11.smt2",
+      "max_depth": 18,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 75,
+          "digest": "1e2a43408365eb43",
+          "tree_nodes": 132
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 75,
+            "digest": "1e2a43408365eb43",
+            "tree_nodes": 132
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 75,
+        "input_tree_nodes": 132,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 75,
+        "output_distinct_symbols": 12,
+        "output_max_depth": 18,
+        "output_tree_nodes": 132,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 1979,
+      "translate_ms": 21,
+      "tree_nodes": 132
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 16.0,
+        "aig_nodes": 45.0,
+        "bit_blast_ms": 0.947465,
+        "cnf_clauses": 1.0,
+        "cnf_encode_ms": 0.035515,
+        "cnf_variables": 0.0
+      },
+      "dag_nodes": 89,
+      "distinct_symbols": 2,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/stp_samples__run_00000.trace.Alloc_large__011273.smt2",
+      "max_depth": 44,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 58.32,
+          "memory": 50.0,
+          "num allocs": 7006543.0,
+          "rlimit count": 940.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 89,
+          "digest": "752d4ea56886b40b",
+          "tree_nodes": 646
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 89,
+            "digest": "752d4ea56886b40b",
+            "tree_nodes": 646
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 89,
+        "input_tree_nodes": 646,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 89,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 44,
+        "output_tree_nodes": 646,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 646
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 16.0,
+        "aig_nodes": 65.0,
+        "bit_blast_ms": 1.00803,
+        "cnf_clauses": 1.0,
+        "cnf_encode_ms": 0.033708,
+        "cnf_variables": 0.0
+      },
+      "dag_nodes": 89,
+      "distinct_symbols": 2,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/stp_samples__run_00000.trace.Alloc_large__012077.smt2",
+      "max_depth": 44,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 58.32,
+          "memory": 50.0,
+          "num allocs": 7539166.0,
+          "rlimit count": 846.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 89,
+          "digest": "5ccdc0fe85536c5e",
+          "tree_nodes": 646
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 89,
+            "digest": "5ccdc0fe85536c5e",
+            "tree_nodes": 646
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 89,
+        "input_tree_nodes": 646,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 89,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 44,
+        "output_tree_nodes": 646,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 1,
+      "tree_nodes": 646
+    },
+    {
+      "assertions": 14,
+      "backend_stats": {
+        "aig_inputs": 13.0,
+        "aig_nodes": 760.0,
+        "bit_blast_ms": 0.639831,
+        "cnf_clauses": 1304.0,
+        "cnf_encode_ms": 1.5426909999999998,
+        "cnf_variables": 338.0
+      },
+      "dag_nodes": 47,
+      "distinct_symbols": 16,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/wienand-cav2008__commute04.sf.smt2",
+      "max_depth": 3,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 58.32,
+          "memory": 50.13,
+          "num allocs": 13610734.0,
+          "rlimit count": 89.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 2,
+          "assumptions": 0,
+          "dag_nodes": 23,
+          "digest": "d73bda8d2ff5d527",
+          "tree_nodes": 38
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 2,
+            "assumptions": 0,
+            "dag_nodes": 23,
+            "digest": "d73bda8d2ff5d527",
+            "tree_nodes": 38
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 47,
+        "input_tree_nodes": 68,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 2,
+        "output_dag_nodes": 23,
+        "output_distinct_symbols": 4,
+        "output_max_depth": 6,
+        "output_tree_nodes": 38,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 821,
+      "translate_ms": 2,
+      "tree_nodes": 68
+    },
+    {
+      "assertions": 14,
+      "backend_stats": {
+        "aig_inputs": 25.0,
+        "aig_nodes": 3436.0,
+        "bit_blast_ms": 3.257495,
+        "cnf_clauses": 5868.0,
+        "cnf_encode_ms": 8.030163,
+        "cnf_variables": 1442.0
+      },
+      "dag_nodes": 47,
+      "detail": "Timeout: rustsat-batsat timeout",
+      "distinct_symbols": 16,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/wienand-cav2008__commute08.sf.smt2",
+      "max_depth": 3,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 2,
+          "assumptions": 0,
+          "dag_nodes": 23,
+          "digest": "49662888e39df585",
+          "tree_nodes": 38
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 2,
+            "assumptions": 0,
+            "dag_nodes": 23,
+            "digest": "49662888e39df585",
+            "tree_nodes": 38
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 47,
+        "input_tree_nodes": 68,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 2,
+        "output_dag_nodes": 23,
+        "output_distinct_symbols": 4,
+        "output_max_depth": 6,
+        "output_tree_nodes": 38,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 1989,
+      "translate_ms": 11,
+      "tree_nodes": 68
+    },
+    {
+      "assertions": 14,
+      "backend_stats": {
+        "aig_inputs": 49.0,
+        "aig_nodes": 14548.0,
+        "bit_blast_ms": 14.726746,
+        "cnf_clauses": 24788.0,
+        "cnf_encode_ms": 34.771703,
+        "cnf_variables": 5954.0
+      },
+      "dag_nodes": 47,
+      "detail": "Timeout: rustsat-batsat timeout",
+      "distinct_symbols": 16,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/wienand-cav2008__commute16.sf.smt2",
+      "max_depth": 3,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 2,
+          "assumptions": 0,
+          "dag_nodes": 23,
+          "digest": "2968a36cc213fb8d",
+          "tree_nodes": 38
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 2,
+            "assumptions": 0,
+            "dag_nodes": 23,
+            "digest": "2968a36cc213fb8d",
+            "tree_nodes": 38
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 47,
+        "input_tree_nodes": 68,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 2,
+        "output_dag_nodes": 23,
+        "output_distinct_symbols": 4,
+        "output_max_depth": 6,
+        "output_tree_nodes": 38,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 1951,
+      "translate_ms": 49,
+      "tree_nodes": 68
+    },
+    {
+      "assertions": 15,
+      "backend_stats": {
+        "aig_inputs": 13.0,
+        "aig_nodes": 497.0,
+        "bit_blast_ms": 0.458011,
+        "cnf_clauses": 828.0,
+        "cnf_encode_ms": 1.050251,
+        "cnf_variables": 216.0
+      },
+      "dag_nodes": 50,
+      "distinct_symbols": 17,
+      "expected": "unsat",
+      "file": "corpus/qfbv-curated/wienand-cav2008__distrib04.sf.smt2",
+      "max_depth": 3,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 58.32,
+          "memory": 50.13,
+          "num allocs": 14305070.0,
+          "rlimit count": 264.0,
+          "solve-eqs-elim-vars": 1.0,
+          "solve-eqs-steps": 1.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 2,
+          "assumptions": 0,
+          "dag_nodes": 24,
+          "digest": "a9254b6514b859e3",
+          "tree_nodes": 42
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 2,
+            "assumptions": 0,
+            "dag_nodes": 24,
+            "digest": "a9254b6514b859e3",
+            "tree_nodes": 42
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 50,
+        "input_tree_nodes": 73,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 2,
+        "output_dag_nodes": 24,
+        "output_distinct_symbols": 4,
+        "output_max_depth": 6,
+        "output_tree_nodes": 42,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 659,
+      "translate_ms": 1,
+      "tree_nodes": 73
+    }
+  ],
+  "summary": {
+    "agree": 32,
+    "disagree": 0,
+    "errors": 0,
+    "files": 43,
+    "layer_attribution": {
+      "bit_blast_s": 0.016607812000000003,
+      "bit_blast_share": 0.010487793769851605,
+      "cnf_encode_s": 0.018124078,
+      "cnf_encode_share": 0.011445312141822444,
+      "instances": 32,
+      "model_lift_s": 0.000219334,
+      "model_lift_share": 0.00013850889922866608,
+      "sat_dominates": true,
+      "sat_dominates_threshold": 0.5,
+      "solve_s": 1.5485860159999998,
+      "solve_share": 0.9779283851890973,
+      "total_pipeline_s": 1.5835372399999998
+    },
+    "model_replay_failures": 0,
+    "oracle": {
+      "agree": 32,
+      "backend": "z3 4.13.3.0",
+      "compared": 32,
+      "disagree": 0,
+      "enabled": true,
+      "skipped": 11
+    },
+    "par2_mean_s": 1.0600822613953491,
+    "query_plan": {
+      "original_dag_nodes": 1855,
+      "original_tree_nodes": 4856,
+      "slice_changed_instances": 0,
+      "slice_dag_nodes": 1855,
+      "slice_dropped_terms": 0,
+      "slice_tree_nodes": 4856
+    },
+    "rewrite": {
+      "applications": 0,
+      "changed_instances": 0,
+      "decision_changes": 0,
+      "decision_matches": 0,
+      "input_dag_nodes": 0,
+      "input_tree_nodes": 0,
+      "mode": "off",
+      "output_dag_nodes": 0,
+      "output_tree_nodes": 0,
+      "sat_unsat_conflicts": 0
+    },
+    "sat": 8,
+    "unknown": 11,
+    "unsat": 24,
+    "unsupported": 0
+  },
+  "triage": {
+    "errors": [],
+    "rewrite_decision_changes": [],
+    "soundness": {
+      "model_replay_failures": 0,
+      "oracle_disagreements": 0,
+      "rewrite_sat_unsat_conflicts": 0,
+      "status_disagreements": 0
+    },
+    "unsupported": []
+  },
+  "version": 14
+}

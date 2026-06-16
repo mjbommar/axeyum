@@ -30,7 +30,10 @@ mod run {
 
     use axeyum_ir::{TermArena, TermId, TermStats, Value, eval};
     use axeyum_query::{Query, QueryPlan, StructuralCacheKey};
-    use axeyum_rewrite::{RewriteReport, canonicalize_terms, default_manifest};
+    use axeyum_rewrite::{
+        ModelReconstructionTrail, RewriteReport, canonicalize_terms, default_manifest,
+        propagate_values, solve_eqs,
+    };
     use axeyum_smtlib::{Script, SmtError, parse_script};
     #[cfg(feature = "z3")]
     use axeyum_solver::Z3Backend;
@@ -154,6 +157,8 @@ mod run {
         }
     }
 
+    // A CLI argument bag: each independent flag is naturally its own bool.
+    #[allow(clippy::struct_excessive_bools)]
     struct Args {
         dir: PathBuf,
         timeout_ms: u64,
@@ -174,6 +179,7 @@ mod run {
         cnf_variable_budget: Option<u64>,
         cnf_clause_budget: Option<u64>,
         cnf_inprocessing: bool,
+        preprocess: bool,
         compare_z3: bool,
         jobs: usize,
     }
@@ -201,6 +207,7 @@ mod run {
             cnf_variable_budget: None,
             cnf_clause_budget: None,
             cnf_inprocessing: false,
+            preprocess: false,
             compare_z3: false,
             jobs: 1,
         };
@@ -287,6 +294,7 @@ mod run {
                 );
             }
             "--inprocess" => parsed.cnf_inprocessing = true,
+            "--preprocess" => parsed.preprocess = true,
             "--compare-z3" => {
                 #[cfg(feature = "z3")]
                 {
@@ -326,6 +334,17 @@ mod run {
         {
             return Err(
                 "`--refine-adaptive-batch` requires `--query-plan replay-refine` or `replay-refine-exact`"
+                    .to_owned(),
+            );
+        }
+        if args.preprocess
+            && matches!(
+                args.query_plan,
+                QueryPlanMode::ReplayRefine | QueryPlanMode::ReplayRefineExact
+            )
+        {
+            return Err(
+                "`--preprocess` is not yet supported with the replay-refinement query plans"
                     .to_owned(),
             );
         }
@@ -671,7 +690,17 @@ mod run {
             Err(record) => return record,
         };
         let input_shape = TermStats::compute(&script.arena, &script.assertions);
-        let rewrite = apply_rewrite(&mut script, args.rewrite);
+        let mut rewrite = apply_rewrite(&mut script, args.rewrite);
+        // Word-level preprocessing (P1.2): shrink the post-rewrite assertions and
+        // keep a reconstruction trail so the sat model still replays against the
+        // original query. The reduced set replaces what the backend solves.
+        let preprocess_trail = if args.preprocess {
+            let (reduced, trail) = apply_preprocess(&mut script.arena, &rewrite.assertions);
+            rewrite.assertions = reduced;
+            Some(trail)
+        } else {
+            None
+        };
         let output_shape = TermStats::compute(&script.arena, &rewrite.assertions);
         accumulate_rewrite(summary, args.rewrite, &rewrite, &input_shape, &output_shape);
         let config = solver_config(args, timeout);
@@ -684,6 +713,7 @@ mod run {
                 &script.assertions,
                 &config,
                 plan_config,
+                None,
             ))
         } else {
             None
@@ -695,6 +725,7 @@ mod run {
             &script.assertions,
             &config,
             plan_config,
+            preprocess_trail.as_ref(),
         );
         if let Some(original) = &original_solve {
             compare_rewrite_decision(&original.solve, &primary_solve.solve, summary);
@@ -707,6 +738,7 @@ mod run {
                 &primary_solve.solve,
                 &config,
                 summary,
+                preprocess_trail.as_ref(),
             )
         });
         accumulate_query_plan(summary, &primary_solve.plan);
@@ -816,6 +848,24 @@ mod run {
     struct RewriteRun {
         assertions: Vec<axeyum_ir::TermId>,
         report: RewriteReport,
+    }
+
+    /// Runs the model-sound word-level passes (`propagate_values` then
+    /// `solve_eqs`) on `assertions`, returning the reduced assertions and the
+    /// composed reconstruction trail. Mutates the arena (builds substituted terms),
+    /// so it runs in the per-instance setup phase, before the shared-`&arena` solve.
+    fn apply_preprocess(
+        arena: &mut TermArena,
+        assertions: &[TermId],
+    ) -> (Vec<TermId>, ModelReconstructionTrail) {
+        let (after_values, mut trail) = propagate_values(arena, assertions)
+            .expect("propagate_values preserves IR well-formedness")
+            .into_parts();
+        let (reduced, eq_trail) = solve_eqs(arena, &after_values)
+            .expect("solve_eqs preserves IR well-formedness")
+            .into_parts();
+        trail.append(eq_trail);
+        (reduced, trail)
     }
 
     fn apply_rewrite(script: &mut Script, mode: RewriteMode) -> RewriteRun {
@@ -1102,11 +1152,17 @@ mod run {
         replay_assertions: &[axeyum_ir::TermId],
         config: &SolverConfig,
         replay_failure_policy: ReplayFailurePolicy,
+        reconstruct: Option<&ModelReconstructionTrail>,
     ) -> SolveRecord {
         let result = backend.check(arena, solver_assertions, config);
         let stats = backend.last_stats().cloned().unwrap_or_default();
-        let (outcome, detail, model_replay_failure) =
-            classify_result(result, arena, replay_assertions, replay_failure_policy);
+        let (outcome, detail, model_replay_failure) = classify_result(
+            result,
+            arena,
+            replay_assertions,
+            replay_failure_policy,
+            reconstruct,
+        );
         SolveRecord {
             outcome,
             detail,
@@ -1122,8 +1178,11 @@ mod run {
         replay_assertions: &[TermId],
         config: &SolverConfig,
         plan_config: PlanSolveConfig,
+        reconstruct: Option<&ModelReconstructionTrail>,
     ) -> PlannedSolve {
         if plan_config.uses_replay_refinement() {
+            // `--preprocess` is rejected with replay-refinement at arg validation.
+            debug_assert!(reconstruct.is_none());
             return solve_with_replay_refinement(
                 backend,
                 arena,
@@ -1143,6 +1202,7 @@ mod run {
             replay_assertions,
             config,
             replay_policy_for_plan(&plan),
+            reconstruct,
         );
         PlannedSolve {
             solve,
@@ -1221,6 +1281,7 @@ mod run {
             replay_assertions,
             config,
             replay_policy_for_plan(&plan),
+            None,
         );
         PlannedSolve {
             solve,
@@ -1540,19 +1601,22 @@ mod run {
         arena: &axeyum_ir::TermArena,
         replay_assertions: &[axeyum_ir::TermId],
         replay_failure_policy: ReplayFailurePolicy,
+        reconstruct: Option<&ModelReconstructionTrail>,
     ) -> (&'static str, Option<String>, bool) {
         match result {
-            Ok(CheckResult::Sat(model)) => match replay_model(arena, replay_assertions, &model) {
-                Ok(()) => ("sat", None, false),
-                Err(e) if replay_failure_policy == ReplayFailurePolicy::DowngradeToUnknown => (
-                    "unknown",
-                    Some(format!(
-                        "Incomplete: sliced sat model did not replay original query: {e}"
-                    )),
-                    false,
-                ),
-                Err(e) => ("model-replay-error", Some(e), true),
-            },
+            Ok(CheckResult::Sat(model)) => {
+                match replay_model(arena, replay_assertions, &model, reconstruct) {
+                    Ok(()) => ("sat", None, false),
+                    Err(e) if replay_failure_policy == ReplayFailurePolicy::DowngradeToUnknown => (
+                        "unknown",
+                        Some(format!(
+                            "Incomplete: sliced sat model did not replay original query: {e}"
+                        )),
+                        false,
+                    ),
+                    Err(e) => ("model-replay-error", Some(e), true),
+                }
+            }
             Ok(CheckResult::Unsat) => ("unsat", None, false),
             Ok(CheckResult::Unknown(r)) => (
                 "unknown",
@@ -1673,6 +1737,7 @@ mod run {
         primary: &SolveRecord,
         config: &SolverConfig,
         summary: &mut Summary,
+        reconstruct: Option<&ModelReconstructionTrail>,
     ) -> JsonValue {
         if !matches!(primary.outcome, "sat" | "unsat") {
             summary.oracle_skipped += 1;
@@ -1696,6 +1761,7 @@ mod run {
             &script.assertions,
             &oracle_config,
             ReplayFailurePolicy::SoundnessAlarm,
+            reconstruct,
         );
         let compared = matches!(oracle_solve.outcome, "sat" | "unsat");
         let agrees = compared && oracle_solve.outcome == primary.outcome;
@@ -1834,8 +1900,17 @@ mod run {
         arena: &axeyum_ir::TermArena,
         assertions: &[axeyum_ir::TermId],
         model: &Model,
+        reconstruct: Option<&ModelReconstructionTrail>,
     ) -> Result<(), String> {
-        let assignment = model.to_assignment();
+        // With word-level preprocessing the backend's model is over the reduced
+        // symbols; reconstruct the eliminated variables before replaying against
+        // the original assertions.
+        let assignment = match reconstruct {
+            Some(trail) => trail
+                .reconstruct(arena, &model.to_assignment())
+                .map_err(|e| e.to_string())?,
+            None => model.to_assignment(),
+        };
         for &assertion in assertions {
             match eval(arena, assertion, &assignment) {
                 Ok(Value::Bool(true)) => {}
@@ -1886,6 +1961,7 @@ mod run {
                 "cnf_variable_budget": cnf_variable_budget,
                 "cnf_clause_budget": cnf_clause_budget,
                 "cnf_inprocessing": args.cnf_inprocessing,
+                "preprocess": args.preprocess,
                 "limit": limit,
                 "backend": backend_name,
                 "backend_kind": args.backend.as_str(),
@@ -2196,6 +2272,7 @@ mod run {
             &args.cnf_clause_budget.unwrap_or(u64::MAX).to_le_bytes(),
         );
         update_hash(&mut hash, &[u8::from(args.cnf_inprocessing)]);
+        update_hash(&mut hash, &[u8::from(args.preprocess)]);
         update_hash(&mut hash, &[u8::from(args.compare_z3)]);
         update_hash(&mut hash, backend_name.as_bytes());
         update_hash(&mut hash, corpus_hash.as_bytes());
