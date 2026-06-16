@@ -176,10 +176,14 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "quantifiers",
-        feature: "finite-domain expansion + E-matching instantiation",
+        feature: "finite-domain expansion + congruence-aware e-matching on the e-graph keystone \
+                  (single/multi-variable, multi-pattern set-cover triggers, nested triggers) \
+                  + the instantiation fixpoint loop + model-based instantiation (MBQI)",
         assurance: Assurance::SoundIncomplete,
-        evidence: "complete over finite domains; instantiation otherwise (unknown-safe)",
-        reference: "ADR-0016",
+        evidence: "complete over finite domains; otherwise sound refutation by instantiation \
+                   (every instance is entailed, so a ground UNSAT transfers; SAT/no-progress is \
+                   unknown-safe). E-matching is modulo the ground congruence (keystone EGraph::ematch)",
+        reference: "ADR-0016/0032",
     },
     Capability {
         area: "QF_S (strings)",
