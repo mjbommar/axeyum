@@ -190,6 +190,9 @@ impl EndToEndUnsatOutcome {
                 let faithfulness = UnsatProof {
                     dimacs: faithfulness_dimacs.clone(),
                     drat: faithfulness_drat.clone(),
+                    // The faithfulness miter is stored as a DIMACS/DRAT pair; no LRAT
+                    // is elaborated for this sub-proof (DRAT re-check below suffices).
+                    lrat: None,
                 };
                 Ok(faithfulness.recheck()? && unsat.recheck()?)
             }

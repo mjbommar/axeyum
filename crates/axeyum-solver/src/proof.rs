@@ -16,8 +16,8 @@
 
 use axeyum_bv::{first_unsupported_op, first_unsupported_sort, lower_terms};
 use axeyum_cnf::{
-    ProofSolveOutcome, check_drat, parse_dimacs, parse_drat, solve_with_drat_proof, tseitin_encode,
-    write_drat,
+    ProofSolveOutcome, check_drat, check_lrat, elaborate_drat_to_lrat, parse_dimacs, parse_drat,
+    parse_lrat, solve_with_drat_proof, tseitin_encode, write_drat, write_lrat,
 };
 use axeyum_ir::{Sort, TermArena, TermId};
 use axeyum_rewrite::{
@@ -35,6 +35,12 @@ pub struct UnsatProof {
     pub dimacs: String,
     /// The DRAT refutation (verified by `check_drat`, accepted by `drat-trim`).
     pub drat: String,
+    /// The **LRAT** refutation: the same proof in the stronger clausal format with
+    /// explicit antecedent hints, so it re-checks in *linear* time (follow the
+    /// hints) via [`axeyum_cnf::check_lrat`] — no RUP search. `None` when the proof
+    /// could not be elaborated to LRAT (e.g. it uses a RAT step, which the current
+    /// elaborator does not hint); the DRAT certificate still stands in that case.
+    pub lrat: Option<String>,
 }
 
 impl UnsatProof {
@@ -59,8 +65,45 @@ impl UnsatProof {
         let proof = parse_drat(&self.drat).map_err(|error| {
             SolverError::Backend(format!("certificate DRAT unparseable: {error}"))
         })?;
-        check_drat(&formula, &proof)
-            .map_err(|error| SolverError::Backend(format!("certificate failed to check: {error}")))
+        let drat_ok = check_drat(&formula, &proof).map_err(|error| {
+            SolverError::Backend(format!("certificate failed to check: {error}"))
+        })?;
+        // When an LRAT certificate is also present, it must independently confirm
+        // the same refutation; a present-but-failing LRAT is a tampered certificate,
+        // so the whole certificate is rejected (never silently trusted to the DRAT).
+        if let Some(lrat_text) = &self.lrat {
+            let lrat = parse_lrat(lrat_text).map_err(|error| {
+                SolverError::Backend(format!("certificate LRAT unparseable: {error}"))
+            })?;
+            let lrat_ok = check_lrat(&formula, &lrat).map_err(|error| {
+                SolverError::Backend(format!("certificate LRAT failed to check: {error}"))
+            })?;
+            return Ok(drat_ok && lrat_ok);
+        }
+        Ok(drat_ok)
+    }
+
+    /// Independently re-checks **only** the LRAT certificate in *linear* time
+    /// ([`axeyum_cnf::check_lrat`], following the antecedent hints — no RUP search).
+    /// Returns `Ok(None)` when no LRAT certificate is attached.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Backend`] if the stored DIMACS or LRAT text cannot be
+    /// parsed.
+    pub fn recheck_lrat(&self) -> Result<Option<bool>, SolverError> {
+        let Some(lrat_text) = &self.lrat else {
+            return Ok(None);
+        };
+        let formula = parse_dimacs(&self.dimacs).map_err(|error| {
+            SolverError::Backend(format!("certificate DIMACS unparseable: {error}"))
+        })?;
+        let lrat = parse_lrat(lrat_text).map_err(|error| {
+            SolverError::Backend(format!("certificate LRAT unparseable: {error}"))
+        })?;
+        check_lrat(&formula, &lrat).map(Some).map_err(|error| {
+            SolverError::Backend(format!("certificate LRAT failed to check: {error}"))
+        })
     }
 }
 
@@ -121,10 +164,23 @@ pub fn export_qf_bv_unsat_proof(
         ProofSolveOutcome::Sat(_) => Ok(UnsatProofOutcome::Satisfiable),
         ProofSolveOutcome::ResourceOut => Ok(UnsatProofOutcome::Inconclusive),
         ProofSolveOutcome::Unsat(proof) => match check_drat(formula, &proof) {
-            Ok(true) => Ok(UnsatProofOutcome::Proved(UnsatProof {
-                dimacs: formula.to_dimacs(),
-                drat: write_drat(&proof),
-            })),
+            Ok(true) => {
+                // Elaborate the (RUP) DRAT proof to LRAT for linear re-checking; if
+                // a step is not RUP-elaboratable (RAT), keep DRAT-only. The LRAT, when
+                // present, is self-checked here so a stored certificate cannot carry a
+                // bad LRAT past the exporter.
+                let lrat = match elaborate_drat_to_lrat(formula, &proof) {
+                    Ok(steps) if matches!(check_lrat(formula, &steps), Ok(true)) => {
+                        Some(write_lrat(&steps))
+                    }
+                    _ => None,
+                };
+                Ok(UnsatProofOutcome::Proved(UnsatProof {
+                    dimacs: formula.to_dimacs(),
+                    drat: write_drat(&proof),
+                    lrat,
+                }))
+            }
             Ok(false) => Err(SolverError::Backend(
                 "exported unsat proof did not derive the empty clause".to_owned(),
             )),
@@ -296,6 +352,14 @@ mod tests {
         // The exported certificate re-checks independently from its text alone.
         assert!(proof.recheck().unwrap());
 
+        // An LRAT certificate is attached and re-checks in linear time (hints) on
+        // its own.
+        assert_eq!(
+            proof.recheck_lrat().unwrap(),
+            Some(true),
+            "the exported certificate must carry a linearly-checkable LRAT proof"
+        );
+
         // Corrupting the DRAT (drop its final empty-clause line) must fail the
         // re-check rather than pass — the checker is not fooled.
         let mut broken = proof.clone();
@@ -308,5 +372,18 @@ mod tests {
         // Either it no longer derives the empty clause (Ok(false)) or the text is
         // now unparseable (Err); both are a rejected certificate, never Ok(true).
         assert!(!matches!(broken.recheck(), Ok(true)));
+
+        // Tampering with the LRAT alone (drop its last hint line) is likewise
+        // caught: `recheck` cross-checks the LRAT and rejects the certificate.
+        let mut lrat_broken = proof.clone();
+        if let Some(text) = lrat_broken.lrat.take() {
+            let mut lines: Vec<&str> = text.lines().collect();
+            lines.pop(); // drop the final (empty-clause) addition line
+            lrat_broken.lrat = Some(lines.join("\n"));
+            assert!(
+                !matches!(lrat_broken.recheck(), Ok(true)),
+                "a tampered LRAT must fail the combined re-check"
+            );
+        }
     }
 }
