@@ -155,7 +155,7 @@ plan is built and committed on the current branch:
 | P2.3 | EUF on the e-graph (from Ackermann to incremental) | TODO |
 | P2.4 | LIA cut portfolio (GCD, Gomory, HNF, cube, Diophantine) | TODO |
 | P2.5 | NRA: incremental linearization → nlsat/CAD | TODO |
-| P2.6 | Quantifiers (MAM e-matching, trigger inference, MBQI, QE/MBP) | WIP — e-matching engine on the e-graph: `EGraph::enumerate_apps` (single-symbol trigger) + `EGraph::ematch(Pattern)` (full single-pattern matcher modulo congruence — nested patterns, repeated-variable consistency, all substitutions). Next: wire ematch into a quantifier-instantiation loop (instantiate ∀ over matched terms, add instances, re-solve — unbounded quantifiers beyond the finite-domain expansion of ADR-0016), then trigger inference + MBQI |
+| P2.6 | Quantifiers (MAM e-matching, trigger inference, MBQI, QE/MBP) | WIP — e-matching engine on the e-graph (`enumerate_apps` + `ematch`) **wired into instantiation**: `instantiate_forall_via_egraph` builds the ground e-graph (merging ground equalities), e-matches a unary trigger, and produces congruence-aware instances. The keystone now drives both EUF (P1.5) and quantifier instantiation. Next: full instantiation *loop* (add instances → re-solve to fixpoint) in the solve path, multi-var/nested trigger selection + inference, then MBQI; migrate `axeyum_rewrite::instantiate_with_triggers`' bespoke congruence closure onto this |
 | P2.7 | Strings (unbounded, full `str.*`, regex) | TODO |
 | P2.8 | FP polish (unspecified values, min/max ±0, lazy conversion) | TODO |
 | P2.9 | Datatypes lazy (e-graph splitting + occurs-check) | TODO |
@@ -183,6 +183,11 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **P2.6 keystone quantifier instantiation** (commit 5ac7343).
+  `instantiate_forall_via_egraph` wires `ematch` into instantiation: builds the
+  ground e-graph (merging ground equalities), e-matches a unary trigger, emits
+  congruence-aware instances (a=b ⇒ f(a),f(b) fire once). The keystone now drives
+  EUF and quantifier instantiation end to end. 3 tests.
 - **2026-06-16** — **P2.6 e-matching engine** (commit 30ebec9). `EGraph::ematch`:
   full single-pattern matching modulo congruence (nested patterns, repeated-variable
   consistency, all substitutions) — the matching engine quantifier instantiation
