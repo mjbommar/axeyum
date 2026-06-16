@@ -1,34 +1,69 @@
-//! A self-contained Alethe proof checker for the propositional resolution
-//! layer (Track 3, phase P3.2).
+//! A self-contained Alethe proof checker — the resolution core plus a first
+//! slice of EUF theory rules (Track 3, phase P3.2).
 //!
-//! Alethe is the proof format produced by veriT and cvc5. This module checks
-//! the **propositional resolution core**: a proof is a list of commands over
-//! clauses, where each `resolution`/`th_resolution` step's conclusion must be a
-//! logical consequence of its premises. The proof establishes UNSAT iff a
-//! verified step derives the empty clause `(cl)`.
+//! Alethe is the proof format produced by veriT and cvc5. A proof is a list of
+//! commands over clauses; the proof establishes UNSAT iff a verified step derives
+//! the empty clause `(cl)`. This is a SOUNDNESS-CRITICAL checker: it accepts a
+//! step only when it is genuinely valid, and rejects when in doubt.
 //!
-//! This is a SOUNDNESS-CRITICAL checker: it accepts a step only when its
-//! conclusion genuinely follows from its premises. The entailment test reuses
-//! the pure-Rust SAT adapter [`crate::solve_with_rustsat_batsat`]: a step with
-//! premises `C1..Cn` and conclusion `D` is valid iff `{C1, …, Cn, ¬D}` is
-//! propositionally UNSAT (where `¬D` is the unit clauses negating each literal
-//! of `D`). Because that test accepts `D` only when `D` truly follows, a checker
-//! built on it can never bless an invalid step. When in doubt, it rejects.
+//! - **`resolution`/`th_resolution`** are checked by *entailment*: a step with
+//!   premises `C1..Cn` and conclusion `D` is valid iff `{C1, …, Cn, ¬D}` is
+//!   propositionally UNSAT (`¬D` = the unit clauses negating each literal of `D`).
+//!   That UNSAT is decided by the **proof-producing** SAT core
+//!   ([`crate::solve_with_drat_proof`]) and the resulting DRAT proof is **re-checked
+//!   by [`crate::check_drat`]**, so the entailment underpinning every accepted
+//!   resolution step is itself independently verified — not trusted to the search.
+//! - **`eq_reflexive`/`eq_transitive`** (EUF) are checked *structurally* against
+//!   the rule's exact tautology shape.
 //!
-//! Atoms are uninterpreted: two atoms are equal iff their token text is
-//! identical. Only `resolution` and `th_resolution` rules are supported in this
-//! slice; any other rule is rejected with [`AletheError::UnsupportedRule`].
+//! Atoms are structured [`AletheTerm`]s (a symbol or an application), compared by
+//! structural equality so theory rules can inspect their shape. Any other rule is
+//! rejected with [`AletheError::UnsupportedRule`].
 
 use std::collections::BTreeMap;
 
 use crate::{CnfClause, CnfFormula, CnfLit, CnfVar, LratStep};
 
-/// A propositional literal: an atom token, optionally negated.
+/// An Alethe term: an SMT-LIB-style symbol or application. Atoms in literals are
+/// terms (so theory rules can inspect structure); they are compared structurally.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum AletheTerm {
+    /// A symbol / nullary constant, e.g. `x`, `a`, `true`.
+    Const(String),
+    /// An application `(f a1 ... an)`, e.g. `(= a b)`, `(f x)`.
+    App(String, Vec<AletheTerm>),
+}
+
+impl AletheTerm {
+    /// A canonical s-expression key (used to map a term to a `CnfVar` in the
+    /// resolution entailment check, so structurally-equal terms share a
+    /// variable).
+    ///
+    /// `Const(s)` maps to `s`; `App(f, args)` maps to `(f k1 k2 ...)`, where
+    /// each `ki` is the key of the corresponding argument.
+    #[must_use]
+    pub fn key(&self) -> String {
+        match self {
+            AletheTerm::Const(symbol) => symbol.clone(),
+            AletheTerm::App(head, args) => {
+                let mut out = String::from("(");
+                out.push_str(head);
+                for arg in args {
+                    out.push(' ');
+                    out.push_str(&arg.key());
+                }
+                out.push(')');
+                out
+            }
+        }
+    }
+}
+
+/// A propositional literal: a [`AletheTerm`] atom, optionally negated.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct AletheLit {
-    /// The atom's opaque identifier text. Atoms are equal iff this text is
-    /// identical.
-    pub atom: String,
+    /// The atom term. Atoms are equal iff they are structurally equal.
+    pub atom: AletheTerm,
     /// Whether the literal is the negation of its atom.
     pub negated: bool,
 }
@@ -52,7 +87,8 @@ pub enum AletheCommand {
         id: String,
         /// The derived clause (`(cl ...)`); empty means the empty clause.
         clause: AletheClause,
-        /// The rule name (only `resolution`/`th_resolution` are supported).
+        /// The rule name (`resolution`/`th_resolution` by entailment;
+        /// `eq_reflexive`/`eq_transitive` structurally; others unsupported).
         rule: String,
         /// Identifiers of the premise commands.
         premises: Vec<String>,
@@ -69,7 +105,7 @@ pub enum AletheError {
         /// The undefined premise identifier.
         id: String,
     },
-    /// A step used a rule outside this resolution-only slice.
+    /// A step used a rule this checker does not yet support.
     UnsupportedRule {
         /// The unsupported rule name.
         rule: String,
@@ -87,10 +123,7 @@ impl core::fmt::Display for AletheError {
             AletheError::Parse(what) => write!(f, "Alethe parse error: {what}"),
             AletheError::UnknownPremise { id } => write!(f, "unknown premise `{id}`"),
             AletheError::UnsupportedRule { rule } => {
-                write!(
-                    f,
-                    "unsupported Alethe rule `{rule}` (resolution layer only)"
-                )
+                write!(f, "unsupported Alethe rule `{rule}`")
             }
             AletheError::StepNotEntailed { id } => {
                 write!(f, "step `{id}` conclusion is not entailed by its premises")
@@ -352,27 +385,42 @@ fn parse_term_as_clause(sexp: &Sexp) -> Result<AletheClause, AletheError> {
     Ok(vec![parse_literal(sexp)?])
 }
 
-/// Parses a single literal: `(not atom)` (negated) or a bare `atom` (positive).
+/// Parses a single literal: `(not <term>)` (negated) or a bare `<term>`
+/// (positive). The `not` connective is clause-level syntax (it negates the
+/// literal); it is not an [`AletheTerm::App`] head.
 fn parse_literal(sexp: &Sexp) -> Result<AletheLit, AletheError> {
+    if let Sexp::List(items) = sexp
+        && items.len() == 2
+        && items[0].as_atom() == Some("not")
+    {
+        return Ok(AletheLit {
+            atom: parse_term(&items[1])?,
+            negated: true,
+        });
+    }
+    Ok(AletheLit {
+        atom: parse_term(sexp)?,
+        negated: false,
+    })
+}
+
+/// Parses an [`AletheTerm`]: a bare token is a [`AletheTerm::Const`]; a
+/// parenthesized list whose head is a symbol is an [`AletheTerm::App`], with the
+/// remaining elements parsed recursively as argument terms.
+fn parse_term(sexp: &Sexp) -> Result<AletheTerm, AletheError> {
     match sexp {
-        Sexp::Atom(atom) => Ok(AletheLit {
-            atom: atom.clone(),
-            negated: false,
-        }),
+        Sexp::Atom(symbol) => Ok(AletheTerm::Const(symbol.clone())),
         Sexp::List(items) => {
-            if items.len() == 2 && items[0].as_atom() == Some("not") {
-                let atom = items[1].as_atom().ok_or_else(|| {
-                    AletheError::Parse("`(not ...)` argument must be an atom".to_owned())
-                })?;
-                Ok(AletheLit {
-                    atom: atom.to_owned(),
-                    negated: true,
-                })
-            } else {
-                Err(AletheError::Parse(
-                    "literal must be an atom or `(not atom)`".to_owned(),
-                ))
-            }
+            let head = items
+                .first()
+                .and_then(Sexp::as_atom)
+                .ok_or_else(|| AletheError::Parse("application head must be a symbol".to_owned()))?
+                .to_owned();
+            let args = items[1..]
+                .iter()
+                .map(parse_term)
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(AletheTerm::App(head, args))
         }
     }
 }
@@ -444,9 +492,26 @@ fn write_cl(clause: &AletheClause) -> String {
 
 fn write_literal(lit: &AletheLit) -> String {
     if lit.negated {
-        format!("(not {})", lit.atom)
+        format!("(not {})", write_atom(&lit.atom))
     } else {
-        lit.atom.clone()
+        write_atom(&lit.atom)
+    }
+}
+
+/// Renders an [`AletheTerm`]: `Const(s)` as `s`; `App(f, args)` as `(f a1 ...)`.
+fn write_atom(term: &AletheTerm) -> String {
+    match term {
+        AletheTerm::Const(symbol) => symbol.clone(),
+        AletheTerm::App(head, args) => {
+            let mut out = String::from("(");
+            out.push_str(head);
+            for arg in args {
+                out.push(' ');
+                out.push_str(&write_atom(arg));
+            }
+            out.push(')');
+            out
+        }
     }
 }
 
@@ -495,17 +560,28 @@ pub fn check_alethe(commands: &[AletheCommand]) -> Result<bool, AletheError> {
                     premise_clauses.push(premise);
                 }
 
-                if rule == "resolution" || rule == "th_resolution" {
-                    if !premises_entail(&premise_clauses, clause)? {
-                        return Err(AletheError::StepNotEntailed { id: id.clone() });
+                match rule.as_str() {
+                    "resolution" | "th_resolution" => {
+                        if !premises_entail(&premise_clauses, clause)? {
+                            return Err(AletheError::StepNotEntailed { id: id.clone() });
+                        }
                     }
-                    if clause.is_empty() {
-                        derived_empty = true;
+                    "eq_reflexive" => {
+                        if !premise_clauses.is_empty() || !is_eq_reflexive(clause) {
+                            return Err(AletheError::StepNotEntailed { id: id.clone() });
+                        }
                     }
-                    clauses.insert(id.clone(), clause.clone());
-                } else {
-                    return Err(AletheError::UnsupportedRule { rule: rule.clone() });
+                    "eq_transitive" => {
+                        if !premise_clauses.is_empty() || !is_eq_transitive(clause) {
+                            return Err(AletheError::StepNotEntailed { id: id.clone() });
+                        }
+                    }
+                    _ => return Err(AletheError::UnsupportedRule { rule: rule.clone() }),
                 }
+                if clause.is_empty() {
+                    derived_empty = true;
+                }
+                clauses.insert(id.clone(), clause.clone());
             }
         }
     }
@@ -513,13 +589,97 @@ pub fn check_alethe(commands: &[AletheCommand]) -> Result<bool, AletheError> {
     Ok(derived_empty)
 }
 
-/// Returns `true` iff `premises ⊨ conclusion`, decided as
-/// `{premises..., ¬conclusion}`-UNSAT via the pure-Rust SAT adapter.
+/// Returns the two arguments of a 2-arity `=` application, or `None` if the term
+/// is not exactly an `(= a b)` application.
+fn as_eq(term: &AletheTerm) -> Option<(&AletheTerm, &AletheTerm)> {
+    match term {
+        AletheTerm::App(head, args) if head == "=" && args.len() == 2 => Some((&args[0], &args[1])),
+        _ => None,
+    }
+}
+
+/// Structural check for the EUF `eq_reflexive` rule.
 ///
-/// Sound by construction: it returns `true` only when adding the unit clauses
-/// that negate every conclusion literal makes the premise set unsatisfiable —
-/// i.e. the conclusion truly follows. A `Sat` (or `Unknown`) result yields
-/// `false`, so the checker rejects rather than blessing an unverified step.
+/// Valid iff the clause is exactly one positive literal `(= t t)` — i.e. a
+/// single non-negated `App("=", [a, b])` with `a` structurally equal to `b`.
+/// This clause `(= t t)` is an EUF tautology. Any other shape is rejected.
+fn is_eq_reflexive(clause: &AletheClause) -> bool {
+    let [lit] = clause.as_slice() else {
+        return false;
+    };
+    if lit.negated {
+        return false;
+    }
+    matches!(as_eq(&lit.atom), Some((a, b)) if a == b)
+}
+
+/// Structural check for the EUF `eq_transitive` rule.
+///
+/// Valid iff the clause has the exact ordered shape
+/// `(cl (not (= t1 t2)) (not (= t2 t3)) ... (not (= t_{n-1} t_n)) (= t1 t_n))`
+/// with `n >= 2` (so the clause has at least two literals):
+///
+/// - the first `k = len - 1` literals are each NEGATED equalities `¬(= aᵢ bᵢ)`
+///   forming a chain — `bᵢ == a_{i+1}` structurally for consecutive literals;
+/// - the last literal is a POSITIVE equality `(= s t)` with `s == a₁` (the first
+///   chain lhs) and `t == b_k` (the last chain rhs).
+///
+/// Every expected-equality literal must be exactly a 2-arg `=` application; any
+/// other head/arity rejects. The check is strict and order-sensitive: a
+/// scrambled order is rejected (sound, just incomplete). The resulting clause is
+/// the transitivity tautology `a₁=a₂ ∧ … ∧ a_{n-1}=aₙ → a₁=aₙ`.
+fn is_eq_transitive(clause: &AletheClause) -> bool {
+    // Need at least the chain (>= 1 hypothesis) plus the conclusion literal.
+    if clause.len() < 2 {
+        return false;
+    }
+    let (chain, last) = clause.split_at(clause.len() - 1);
+    let conclusion = &last[0];
+
+    // The conclusion is a positive equality `(= s t)`.
+    if conclusion.negated {
+        return false;
+    }
+    let Some((concl_lhs, concl_rhs)) = as_eq(&conclusion.atom) else {
+        return false;
+    };
+
+    // The chain literals are negated equalities; collect their (lhs, rhs).
+    let mut prev_rhs: Option<&AletheTerm> = None;
+    let mut first_lhs: Option<&AletheTerm> = None;
+    let mut last_rhs: Option<&AletheTerm> = None;
+    for lit in chain {
+        if !lit.negated {
+            return false;
+        }
+        let Some((lhs, rhs)) = as_eq(&lit.atom) else {
+            return false;
+        };
+        if let Some(expected) = prev_rhs {
+            // Consecutive chain links must share the middle term.
+            if expected != lhs {
+                return false;
+            }
+        } else {
+            first_lhs = Some(lhs);
+        }
+        prev_rhs = Some(rhs);
+        last_rhs = Some(rhs);
+    }
+
+    // Conclusion endpoints must match the chain endpoints exactly.
+    first_lhs == Some(concl_lhs) && last_rhs == Some(concl_rhs)
+}
+
+/// Returns `true` iff `premises ⊨ conclusion`, decided as
+/// `{premises..., ¬conclusion}`-UNSAT via the **proof-producing** SAT core with
+/// the DRAT proof re-checked by [`crate::check_drat`].
+///
+/// Sound by construction: it returns `true` only when negating every conclusion
+/// literal makes the premise set unsatisfiable *and* the refutation derives the
+/// empty clause under an independent re-check — i.e. the conclusion truly follows.
+/// A `Sat` (or resource-out) result yields `false`, so the checker rejects rather
+/// than blessing an unverified step.
 fn premises_entail(
     premises: &[&AletheClause],
     conclusion: &AletheClause,
@@ -605,26 +765,31 @@ pub fn lrat_to_alethe(formula: &CnfFormula, proof: &[LratStep]) -> Vec<AletheCom
 fn alethe_clause(lits: &[CnfLit]) -> AletheClause {
     lits.iter()
         .map(|lit| AletheLit {
-            atom: format!("v{}", lit.var().index()),
+            atom: AletheTerm::Const(format!("v{}", lit.var().index())),
             negated: lit.is_negated(),
         })
         .collect()
 }
 
-fn register_atom(var_of: &mut BTreeMap<String, CnfVar>, atom: &str) -> Result<(), AletheError> {
-    if !var_of.contains_key(atom) {
+fn register_atom(
+    var_of: &mut BTreeMap<String, CnfVar>,
+    atom: &AletheTerm,
+) -> Result<(), AletheError> {
+    let key = atom.key();
+    if !var_of.contains_key(&key) {
         let index = var_of.len();
         let var = CnfVar::new(index).map_err(|error| AletheError::Parse(error.to_string()))?;
-        var_of.insert(atom.to_owned(), var);
+        var_of.insert(key, var);
     }
     Ok(())
 }
 
-/// Maps an [`AletheLit`] to a [`CnfLit`] over the atom-variable map. The atom is
-/// guaranteed present (every atom is registered before this is called).
+/// Maps an [`AletheLit`] to a [`CnfLit`] over the atom-variable map, keyed by the
+/// atom's canonical [`AletheTerm::key`]. The atom is guaranteed present (every
+/// atom is registered before this is called).
 fn cnf_lit(var_of: &BTreeMap<String, CnfVar>, lit: &AletheLit) -> CnfLit {
     let var = *var_of
-        .get(&lit.atom)
+        .get(&lit.atom.key())
         .expect("atom registered before literal lowering");
     let cnf = CnfLit::positive(var);
     if lit.negated { cnf.negated() } else { cnf }
@@ -633,8 +798,8 @@ fn cnf_lit(var_of: &BTreeMap<String, CnfVar>, lit: &AletheLit) -> CnfLit {
 #[cfg(test)]
 mod tests {
     use super::{
-        AletheClause, AletheCommand, AletheError, AletheLit, check_alethe, lrat_to_alethe,
-        parse_alethe, write_alethe,
+        AletheClause, AletheCommand, AletheError, AletheLit, AletheTerm, check_alethe,
+        lrat_to_alethe, parse_alethe, write_alethe,
     };
     use crate::{
         CnfClause, CnfFormula, CnfLit, CnfVar, ProofSolveOutcome, elaborate_drat_to_lrat,
@@ -643,15 +808,37 @@ mod tests {
 
     fn lit(atom: &str) -> AletheLit {
         AletheLit {
-            atom: atom.to_owned(),
+            atom: AletheTerm::Const(atom.to_owned()),
             negated: false,
         }
     }
 
     fn neg(atom: &str) -> AletheLit {
         AletheLit {
-            atom: atom.to_owned(),
+            atom: AletheTerm::Const(atom.to_owned()),
             negated: true,
+        }
+    }
+
+    /// A positive literal `(= a b)`.
+    fn eq_lit(a: &str, b: &str) -> AletheLit {
+        AletheLit {
+            atom: AletheTerm::App(
+                "=".to_owned(),
+                vec![
+                    AletheTerm::Const(a.to_owned()),
+                    AletheTerm::Const(b.to_owned()),
+                ],
+            ),
+            negated: false,
+        }
+    }
+
+    /// A negated literal `(not (= a b))`.
+    fn neq_lit(a: &str, b: &str) -> AletheLit {
+        AletheLit {
+            negated: true,
+            ..eq_lit(a, b)
         }
     }
 
@@ -809,5 +996,115 @@ mod tests {
         let commands = parse_alethe(text).unwrap();
         assert_eq!(commands.len(), 7);
         assert_eq!(check_alethe(&commands), Ok(true));
+    }
+
+    #[test]
+    fn eq_reflexive_checks() {
+        // A lone valid `eq_reflexive` step `(cl (= a a))` verifies but does not
+        // derive the empty clause => Ok(false).
+        let valid = vec![step("r1", vec![eq_lit("a", "a")], "eq_reflexive", &[])];
+        assert_eq!(check_alethe(&valid), Ok(false));
+
+        // A broken reflexivity `(cl (= a b))` with a != b is rejected.
+        let broken = vec![step("r1", vec![eq_lit("a", "b")], "eq_reflexive", &[])];
+        assert_eq!(
+            check_alethe(&broken),
+            Err(AletheError::StepNotEntailed {
+                id: "r1".to_owned()
+            })
+        );
+    }
+
+    #[test]
+    fn eq_transitive_checks() {
+        // Valid: (not (= a b)) (not (= b c)) (= a c).
+        let valid = vec![step(
+            "t1",
+            vec![neq_lit("a", "b"), neq_lit("b", "c"), eq_lit("a", "c")],
+            "eq_transitive",
+            &[],
+        )];
+        assert_eq!(check_alethe(&valid), Ok(false));
+
+        // Broken: wrong final rhs `d` instead of `c`.
+        let bad_rhs = vec![step(
+            "t1",
+            vec![neq_lit("a", "b"), neq_lit("b", "c"), eq_lit("a", "d")],
+            "eq_transitive",
+            &[],
+        )];
+        assert_eq!(
+            check_alethe(&bad_rhs),
+            Err(AletheError::StepNotEntailed {
+                id: "t1".to_owned()
+            })
+        );
+
+        // Broken: a non-equality middle literal `(not (p b))`.
+        let non_eq_middle = vec![step(
+            "t1",
+            vec![
+                neq_lit("a", "b"),
+                AletheLit {
+                    atom: AletheTerm::App("p".to_owned(), vec![AletheTerm::Const("b".to_owned())]),
+                    negated: true,
+                },
+                eq_lit("a", "c"),
+            ],
+            "eq_transitive",
+            &[],
+        )];
+        assert_eq!(
+            check_alethe(&non_eq_middle),
+            Err(AletheError::StepNotEntailed {
+                id: "t1".to_owned()
+            })
+        );
+
+        // Broken: scrambled chain order is rejected (sound, just incomplete).
+        let scrambled = vec![step(
+            "t1",
+            vec![neq_lit("b", "c"), neq_lit("a", "b"), eq_lit("a", "c")],
+            "eq_transitive",
+            &[],
+        )];
+        assert_eq!(
+            check_alethe(&scrambled),
+            Err(AletheError::StepNotEntailed {
+                id: "t1".to_owned()
+            })
+        );
+    }
+
+    #[test]
+    fn typed_term_resolution_still_works() {
+        // The same structured atom `(= a b)` used across two clauses must unify
+        // to one entailment variable: (¬(= a b)) and ((= a b)) resolve to ().
+        let commands = vec![
+            assume("h1", vec![eq_lit("a", "b")]),
+            assume("h2", vec![neq_lit("a", "b")]),
+            step("s1", vec![], "resolution", &["h1", "h2"]),
+        ];
+        assert_eq!(check_alethe(&commands), Ok(true));
+
+        // And the structured atoms survive a text round-trip.
+        let reparsed = parse_alethe(&write_alethe(&commands)).unwrap();
+        assert_eq!(reparsed, commands);
+    }
+
+    #[test]
+    fn typed_term_parse_write_roundtrip() {
+        let commands = vec![
+            assume("h1", vec![eq_lit("a", "b"), lit("p")]),
+            assume("h2", vec![neq_lit("a", "b")]),
+            step(
+                "t1",
+                vec![neq_lit("a", "b"), neq_lit("b", "c"), eq_lit("a", "c")],
+                "eq_transitive",
+                &[],
+            ),
+        ];
+        let parsed = parse_alethe(&write_alethe(&commands)).unwrap();
+        assert_eq!(parsed, commands);
     }
 }
