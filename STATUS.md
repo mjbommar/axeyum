@@ -6,6 +6,16 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **P2.6 quantifier e-matching vertical — keystone-complete & wired** (2026-06-16):
+  trigger *inference* (single-cover + greedy multi-pattern set cover), congruence-
+  aware multi-pattern join, the instantiation fixpoint loop (verified multi-round),
+  and **dispatch wiring into `solve`** (too-wide-BV / infinite-domain quantifier
+  fallback → keystone before MBQI). All gated. **Next action:** MBQI *on the
+  keystone* — model-guided instance selection over the congruence for universals
+  where no trigger fires (the complement to e-matching); then migrate
+  `axeyum_rewrite`'s bespoke trigger closure onto the keystone, and pick up P1.5
+  (`TheorySolver` trait + online theory propagation) for the CDCL(T) efficiency
+  refactor.
 - **Plan authored** (2026-06-15): the full track/phase/task plan is under
   [`docs/plan/`](docs/plan/README.md), built from the five reference reviews in
   [`docs/plan/references/`](docs/plan/references/README.md).
