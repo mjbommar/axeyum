@@ -6,16 +6,30 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
-- **P2.6 quantifier e-matching vertical — keystone-complete & wired** (2026-06-16):
-  trigger *inference* (single-cover + greedy multi-pattern set cover), congruence-
-  aware multi-pattern join, the instantiation fixpoint loop (verified multi-round),
-  and **dispatch wiring into `solve`** (too-wide-BV / infinite-domain quantifier
-  fallback → keystone before MBQI). All gated. **Next action:** MBQI *on the
-  keystone* — model-guided instance selection over the congruence for universals
-  where no trigger fires (the complement to e-matching); then migrate
-  `axeyum_rewrite`'s bespoke trigger closure onto the keystone, and pick up P1.5
-  (`TheorySolver` trait + online theory propagation) for the CDCL(T) efficiency
-  refactor.
+- **P2.6 quantifier e-matching vertical — keystone-complete, wired & validated**
+  (2026-06-16): trigger *inference* (single-cover + greedy multi-pattern set
+  cover), congruence-aware multi-pattern join, the instantiation fixpoint loop
+  (verified multi-round chaining), nested triggers fired purely via congruence
+  (involution test), **dispatch wiring into `solve`** (too-wide-BV / infinite-domain
+  quantifier fallback → keystone before MBQI), and the capability ledger/matrix
+  updated. All gated.
+  - **MBQI-on-keystone assessed, deliberately deferred:** `eval` does support UF
+    application against a model (`eval.rs:200`), so it's feasible — but the
+    keystone's trigger e-matching already instantiates at *all* congruent ground
+    matches (strictly more aggressive than model-guided selection), and the
+    existing value-based `prove_unsat_by_mbqi` already does arithmetic
+    bound-probing. A ground-term-candidate MBQI would be near-duplicate machinery
+    that only helps *trigger-less UF universals* (rare). Skipped as low marginal
+    value vs. the duplication/maintenance cost; revisit only if a real corpus shows
+    the gap.
+  - **Next action (new thrust):** P1.5 — `TheorySolver` trait + online theory
+    propagation, lifting `euf_egraph`'s offline DPLL(T) (`prove_unsat_lazy`) into
+    an online CDCL(T) theory interface (assert-literal / theory-propagate /
+    explain / final-check on the backtrackable e-graph). This is the keystone for
+    P1.6 theory combination (interface equalities → complete QF_UFBV without
+    Ackermann), the real z3-parity gap. Larger refactor → start with a fresh
+    context. Secondary: migrate `axeyum_rewrite`'s bespoke trigger closure onto the
+    keystone to unify on the validated path.
 - **Plan authored** (2026-06-15): the full track/phase/task plan is under
   [`docs/plan/`](docs/plan/README.md), built from the five reference reviews in
   [`docs/plan/references/`](docs/plan/references/README.md).
