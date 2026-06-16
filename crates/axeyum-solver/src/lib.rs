@@ -65,7 +65,7 @@ pub mod trust;
 #[cfg(feature = "z3")]
 mod z3_backend;
 
-pub use abv::check_with_array_elimination;
+pub use abv::{check_qf_abv_lazy, check_with_array_elimination};
 pub use aufbv::check_with_arrays_and_functions;
 pub use auto::{
     check_auto, check_with_quantifiers, prove_unsat_by_ematching, prove_unsat_by_instantiation,

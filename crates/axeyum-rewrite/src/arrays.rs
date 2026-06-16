@@ -70,6 +70,7 @@ struct ProjectedSelect {
 #[derive(Debug, Clone)]
 pub struct ArrayElimination {
     assertions: Vec<TermId>,
+    abstraction: Vec<TermId>,
     selects: Vec<ProjectedSelect>,
     had_arrays: bool,
 }
@@ -79,6 +80,30 @@ impl ArrayElimination {
     /// consistency constraints.
     pub fn assertions(&self) -> &[TermId] {
         &self.assertions
+    }
+
+    /// The rewritten-only assertions WITHOUT the appended Ackermann
+    /// select-congruence constraints: each `select` over an array variable is
+    /// abstracted as a fresh `BitVec` variable, but no select-consistency
+    /// lemmas are present. This is the relaxation a lazy/on-demand
+    /// select-congruence procedure ([`crate`] consumers in `axeyum-solver`)
+    /// starts from, adding congruence lemmas only for the select pairs a
+    /// candidate model violates. Read-over-write is already applied (stores are
+    /// eliminated) in this abstraction; only select congruence is deferred.
+    pub fn abstraction(&self) -> &[TermId] {
+        &self.abstraction
+    }
+
+    /// The eliminated selects as `(array symbol, index term, fresh result
+    /// symbol)` triples, in discovery order (deterministic). Used to build
+    /// on-demand select-congruence lemmas: a pair of entries on the same array
+    /// whose index terms are equal under a candidate model but whose fresh
+    /// symbols differ is a select-consistency violation.
+    pub fn selects(&self) -> Vec<(SymbolId, TermId, SymbolId)> {
+        self.selects
+            .iter()
+            .map(|select| (select.array, select.index, select.fresh))
+            .collect()
     }
 
     /// Whether the input actually contained any array constructs.
@@ -152,6 +177,7 @@ pub fn eliminate_arrays(
     if !had_arrays {
         return Ok(ArrayElimination {
             assertions: assertions.to_vec(),
+            abstraction: assertions.to_vec(),
             selects: Vec::new(),
             had_arrays: false,
         });
@@ -162,10 +188,14 @@ pub fn eliminate_arrays(
     for &assertion in assertions {
         rewritten.push(ctx.rewrite(arena, assertion)?);
     }
+    // The abstraction is the rewritten-only (post-read-over-write) assertions,
+    // before the eager Ackermann select-congruence lemmas are appended.
+    let abstraction = rewritten.clone();
     rewritten.extend(ctx.ackermann_constraints(arena)?);
 
     Ok(ArrayElimination {
         assertions: rewritten,
+        abstraction,
         selects: ctx.selects,
         had_arrays: true,
     })
