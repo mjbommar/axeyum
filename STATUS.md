@@ -93,23 +93,24 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   (conjunctive) and `prove_unsat_lazy` (offline DPLL(T) over boolean structure —
   boolean skeleton via sat-bv + e-graph theory check + explain-based blocking
   clauses). Sound EUF UNSAT proving with independently-checked conflicts.
-- **SAT model construction DONE** (commit c08c763): `check_qf_uf` decides QF_UF with
-  replay-checked `sat` models, differentially validated vs Ackermann.
-- **Next task — options (pick highest-leverage):**
-  (a) **P1.6 theory combination (e-graph UF + bit-blaster BV)** for *complete*
-      QF_UFBV: the EUF abstraction is exact for pure equality/UF but ignores BV
-      semantics, so a theory-consistent model whose constructed values violate BV
-      arithmetic currently → `unknown`. Combination (Nelson–Oppen interface
-      equalities on the `th_var` bus, or sending the e-graph's induced
-      equalities/disequalities to the bit-blaster) closes this. This is the real
-      Track-2 unlock — most theories combine with BV.
-  (b) **Dispatch wiring**: route QF_UF instances through `check_qf_uf` in
-      `check_auto`, and add `prove_unsat_lazy` as a cheap sound UNSAT pre-check
-      before bit-blasting (guarded to instances with equality structure).
-  (c) **`TheorySolver` trait + online propagation** (T1.5.1–T1.5.4): efficiency
-      refactor of the offline loop onto the warm CDCL core with the e-graph push/pop.
-  Recommend (b) (cheap, integrates the win) then (a). Deferred Track-1 perf option
-  still open: T1.2.8 two-level AIG rewriting in `axeyum-aig`.
+- **SAT model construction + dispatch wiring DONE** (commits c08c763, 6ce85b0):
+  `check_qf_uf` decides QF_UF with replay-checked `sat` models (differentially
+  validated vs Ackermann), and `check_auto` now routes UF instances through it
+  first (congruence fast-path), falling back to the complete Ackermann bit-blast on
+  `unknown`. Full solver test suite + micro bench regression-free.
+- **Next task — P1.6 theory combination (e-graph UF + bit-blaster BV)** for
+  *complete* QF_UFBV. Today the EUF path fast-paths only when the answer is settled
+  by congruence alone; a theory-consistent boolean model whose constructed values
+  violate BV arithmetic → `unknown` → Ackermann fallback. Combination closes this:
+  on a theory-consistent boolean model, send the e-graph's induced equalities AND
+  disequalities (from the class structure + the asserted diseqs) to the bit-blaster
+  as BV constraints and let it decide / produce the model — or the Nelson–Oppen
+  interface-equality exchange on the `th_var` bus (T1.4.6) the e-graph already
+  carries. Read `docs/plan/track-1-engine/P1.6-theory-combination.md`. Also open:
+  the `TheorySolver` trait + online propagation (T1.5.1–T1.5.4 efficiency refactor),
+  and the broader Track 2 theories (lazy arrays P2.2, datatypes P2.9, quantifiers/
+  e-matching P2.6) which all migrate onto the e-graph + CDCL(T) loop. Deferred
+  Track-1 perf option still open: T1.2.8 two-level AIG rewriting in `axeyum-aig`.
 
 ## Already shipped this session (pre-plan)
 
@@ -173,6 +174,10 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **EUF e-graph path wired into `check_auto`** (commit 6ce85b0).
+  UF instances try `check_qf_uf` (congruence fast-path) before the Ackermann
+  bit-blast; sound for QF_UFBV (replay-checked sat, re-checked unsat), Ackermann
+  fallback on unknown. Full solver test suite + micro bench regression-free.
 - **2026-06-16** — **T1.5.5 `check_qf_uf` with replay-checked sat models** (commit
   c08c763). Full QF_UF decision on the e-graph: lazy DPLL(T) + a candidate model
   built from e-graph classes (distinct class values, constants pinned, function
