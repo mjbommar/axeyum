@@ -183,6 +183,10 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **P2.6 nested/multi-arg triggers** (commit c658839).
+  `instantiate_forall_via_egraph` generalized from unary to arbitrary triggers via
+  the full `ematch` engine: `f(g(x))`, `g(x, a)` (ground parts matched by class).
+  5 qinst tests.
 - **2026-06-16** — **P2.6 keystone quantifier instantiation** (commit 5ac7343).
   `instantiate_forall_via_egraph` wires `ematch` into instantiation: builds the
   ground e-graph (merging ground equalities), e-matches a unary trigger, emits
