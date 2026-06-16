@@ -70,6 +70,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "axeyum-egraph"
+version = "0.1.0"
+
+[[package]]
 name = "axeyum-fp"
 version = "0.1.0"
 dependencies = [
