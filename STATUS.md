@@ -75,19 +75,24 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   (provably cheap, ≤121 ms here) — at which size the committed A/B is
   decision-identical to baseline (32/43, PAR-2 1.071 s vs 1.063 s). **Real win
   needs occurrence-list indexing first.**
-- **Next task — wire the P1.2 preprocessing pipeline into the solve path + measure.**
-  Build a `check_with_preprocessing<B>(backend, &mut arena, assertions, config)`
-  wrapper (mirror `check_with_array_elimination` in
-  `crates/axeyum-solver/src/abv.rs`): run `propagate_values` then `solve_eqs`
-  (composing their `ModelReconstructionTrail`s via `append`), call the backend on
-  the reduced assertions, and on `sat` `trail.reconstruct(arena, model.to_assignment())`
-  → rebuild the `Model` → replay against the **original** assertions. Architectural
-  note: preprocessing needs `&mut TermArena` (it builds substituted terms), but
-  `SolverBackend::check` takes `&TermArena`, so this must wrap the backend at the
-  `&mut`-arena layer (façade/bench), not live inside `sat_bv_backend`. Add a bench
-  `--preprocess` flag and re-run the curated slice to record the AIG/CNF-size and
-  PAR-2 delta. Then continue T1.2.4–T1.2.9 (elim_unconstrained, max_bv_sharing,
-  bv_slice/bounds, elim_bvudiv, two-level AIG rewrite, broader BV rewriter).
+- **`check_with_preprocessing` DONE** (commit 86cd28a): façade wrapper runs
+  `propagate_values`+`solve_eqs`, composes their trails, reconstructs + replays on
+  `sat`. 5 integration tests through the real sat-bv backend prove model soundness
+  end to end. **Still off the bench/default path.**
+- **Next task — measure preprocessing on the bench (then T1.2.4+).** The bench runs
+  jobs in parallel over a *shared `&TermArena`*, but preprocessing mutates the arena
+  (builds substituted terms), so it cannot run during the parallel solve. Wire it the
+  way `--rewrite default` does: in the per-instance **setup** phase (`apply_rewrite`
+  in `crates/axeyum-bench/src/main.rs`, ~line 828, which already takes `&mut
+  script.arena`), run `propagate_values`+`solve_eqs`, store `(reduced_assertions,
+  ModelReconstructionTrail)`, solve the reduced set, and thread the trail to
+  reconstruct the model **before** the original-assertion replay
+  (`classify_result`). Add a `--preprocess` flag, re-run `bench-qfbv-curated`,
+  record the AIG/CNF-size + PAR-2 delta (expect modest on this slice — bit-blasted
+  QF_BV has few top-level `x=t` facts post-canonicalization; the win shows on
+  corpora with explicit defines). Then T1.2.4–T1.2.9 (elim_unconstrained,
+  max_bv_sharing, bv_slice/bounds, elim_bvudiv, two-level AIG rewrite, broader BV
+  rewriter).
 
 ## Already shipped this session (pre-plan)
 
@@ -151,6 +156,12 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **`check_with_preprocessing` wrapper** (commit 86cd28a). Façade
+  entry that runs propagate_values+solve_eqs before a backend, composes their
+  ModelReconstructionTrails, and on `sat` reconstructs + replays against the
+  original assertions (mirrors check_with_array_elimination; wraps at the
+  `&mut`-arena layer). 5 integration tests through the real sat-bv backend. Not yet
+  on the bench/default path — see Current focus for the setup-phase wiring approach.
 - **2026-06-16** — **T1.2.3 solve_eqs** (commit e1682ce). Top-level `(= x t)`
   oriented to `x := t` with a memoized occurs-check, substituted to a fixpoint,
   recorded in the trail; generalizes propagate_values. DAG interning keeps
