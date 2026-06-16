@@ -656,6 +656,49 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::similar_names, clippy::many_single_char_names)]
+    fn instantiation_loop_refutes_across_multiple_rounds() {
+        // A genuinely multi-round refutation: the g(x) trigger can only fire after
+        // the f(x) instantiation has introduced g(a) into the ground set.
+        //   ground:    f(a) ≠ 0
+        //   ∀x. f(x) = g(x)   → round 1: f(a) = g(a)  (introduces ground g(a))
+        //   ∀x. g(x) = 0      → round 2: g(a) = 0     (now g(a) exists to match)
+        //   ⇒ f(a) = g(a) = 0 contradicts f(a) ≠ 0   → UNSAT (round 3 check)
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(8);
+        let a = arena.bv_var("a", 8).unwrap();
+        let f = arena.declare_fun("f", &[sort], sort).unwrap();
+        let g = arena.declare_fun("g", &[sort], sort).unwrap();
+        let zero = arena.bv_const(8, 0).unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let fa_ne_0 = {
+            let e = arena.eq(fa, zero).unwrap();
+            arena.not(e).unwrap()
+        };
+
+        let x = arena.declare("x", sort).unwrap();
+        let xv = arena.var(x);
+        let fx = arena.apply(f, &[xv]).unwrap();
+        let gx = arena.apply(g, &[xv]).unwrap();
+        let fx_eq_gx = arena.eq(fx, gx).unwrap();
+        let forall_fg = arena.forall(x, fx_eq_gx).unwrap();
+        let gx_eq_0 = arena.eq(gx, zero).unwrap();
+        let forall_g0 = arena.forall(x, gx_eq_0).unwrap();
+
+        let result = prove_quantified_unsat_via_egraph(
+            &mut arena,
+            &[fa_ne_0, forall_fg, forall_g0],
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            result,
+            CheckResult::Unsat,
+            "multi-round chaining should refute"
+        );
+    }
+
+    #[test]
     fn instantiation_loop_passes_through_quantifier_free() {
         // No universals: routes straight to check_auto (here, sat).
         let mut arena = TermArena::new();

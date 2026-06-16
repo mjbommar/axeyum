@@ -183,7 +183,12 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
-- **2026-06-16** — **P2.6 keystone wired into `solve` dispatch** (pending commit).
+- **2026-06-16** — **P2.6 multi-round instantiation test** (pending commit).
+  Added `instantiation_loop_refutes_across_multiple_rounds`: a refutation that
+  only closes because round 1 (`∀x. f(x)=g(x)` over ground `f(a)`) introduces
+  `g(a)`, which round 2 (`∀x. g(x)=0`) can then match — proving the fixpoint loop
+  genuinely chains instances across rounds, not just single-shot.
+- **2026-06-16** — **P2.6 keystone wired into `solve` dispatch** (commit 2a6d4bd).
   The infinite/too-wide-domain quantifier fallback in `solve` now tries the
   congruence-aware `prove_quantified_unsat_via_egraph` (keystone) **before** MBQI:
   finite-domain expansion refuses domains wider than `QUANT_EXPAND_BIT_LIMIT`
