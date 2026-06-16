@@ -1,4 +1,4 @@
-//! CNF subsumption simplification (Track 1, P1.1 / task T1.1.1).
+//! CNF subsumption simplification (Track 1, P1.1 / tasks T1.1.1, T1.1.4).
 //!
 //! Bit-blasting an AIG via Tseitin floods the CNF with intermediate variables
 //! and redundant clauses; collapsing them before (and during) solving is the
@@ -20,11 +20,25 @@
 //!   witness `D` stays in the formula, `F'' ∧ C ≡ F'' ∧ (C \ {l})` (model-preserving,
 //!   not merely equisatisfiable).
 //!
-//! This first slice is a straightforward O(clauses²) sweep with a 64-bit literal
-//! signature (à la Z3's `var_approx_set`) as a fast reject; an occurrence-list
-//! index is the natural follow-up once profiling calls for it. It is a pure
-//! `CnfFormula → CnfFormula` transform and does not yet emit DRAT deletion steps
-//! (the proof-pipeline integration is the next task).
+//! **Implementation (T1.1.4): forward subsumption over literal occurrence lists**,
+//! the `CaDiCaL`/`Kissat` scheme (`subsume.cpp` `subsume_round`/`try_to_subsume_clause`,
+//! `Kissat` `forward.c`), which replaces the original O(clauses²) all-pairs sweep:
+//!
+//! * Clauses are processed shortest-first and each is connected on **one** literal
+//!   — the globally least-frequent one (`noccs`). A connected clause therefore
+//!   appears in exactly one occurrence list, so a candidate `C` is checked only
+//!   against the (few) clauses sharing one of its literals, never all clauses.
+//! * The subset test uses signed per-variable **marks** (`+1`/`-1`/`0`) plus a
+//!   per-clause variable **signature** as an O(1) pre-reject; both subsumption and
+//!   self-subsuming strengthening are detected in the same single pass over a
+//!   candidate's literals. The signature is keyed by *variable* (not literal) so a
+//!   strengthening witness — which carries `¬l` where `C` carries `l` — is not
+//!   falsely rejected.
+//! * Rounds repeat to a fixpoint (strengthening exposes new subsumptions); a work
+//!   budget and occurrence/size caps keep each round near-linear and bounded.
+//!
+//! It is a pure `CnfFormula → CnfFormula` transform and does not yet emit DRAT
+//! deletion steps (the proof-pipeline integration is a separate task).
 
 use crate::{CnfClause, CnfFormula, CnfLit};
 
@@ -47,18 +61,42 @@ impl SubsumeStats {
     }
 }
 
-/// A normalized clause: literals sorted + deduplicated, with a 64-bit signature
-/// over literal identities for fast subset rejection. Shared with [`crate::bve`].
+/// Maximum literals in a clause considered for subsumption work (`CaDiCaL`
+/// `subsumeclslim`). Larger clauses are still kept verbatim; they are simply not
+/// used as subsumption candidates or connected, bounding occurrence-list growth.
+const SUBSUME_CLAUSE_LIMIT: usize = 100;
+
+/// Maximum length of the occurrence list a clause is connected onto (`CaDiCaL`
+/// `subsumeocclim`). A clause whose least-frequent literal already occurs this
+/// often is left unconnected (it will not subsume others, still sound).
+const SUBSUME_OCCURRENCE_LIMIT: usize = 1_000;
+
+/// Hard cap on subsumption rounds. Real inputs reach a fixpoint in a couple of
+/// rounds; the cap only bounds pathological inputs (soundness is unaffected —
+/// stopping early leaves a still model-preserving formula).
+const SUBSUME_MAX_ROUNDS: usize = 32;
+
+/// One bit of the signature for a literal, keyed by **variable** (sign-agnostic).
+///
+/// Subset rejection must pass both pure subsumption (`D ⊆ C`) and self-subsuming
+/// resolution (`D = D' ∪ {¬l}`, `C = C' ∪ {l}`): in both cases every variable of
+/// `D` occurs in `C`, so a variable-keyed signature is a sound pre-filter, while a
+/// literal-keyed one would wrongly reject the `¬l`/`l` strengthening witness.
+pub(crate) fn lit_bit(lit: CnfLit) -> u64 {
+    1u64 << (lit.var().index() % 64)
+}
+
+/// Zero-based occurrence-list index for a literal: `2 * variable + sign`.
+fn lit_index(lit: CnfLit) -> usize {
+    2 * lit.var().index() + usize::from(lit.is_negated())
+}
+
+/// A normalized clause: literals sorted + deduplicated, with a variable-keyed
+/// 64-bit signature for fast subset rejection. Shared with [`crate::bve`].
 #[derive(Debug, Clone)]
 pub(crate) struct NormClause {
     pub(crate) lits: Vec<CnfLit>,
     pub(crate) sig: u64,
-}
-
-/// One bit of the signature for a literal (variable index + sign folded mod 64).
-pub(crate) fn lit_bit(lit: CnfLit) -> u64 {
-    let key = lit.var().index().wrapping_mul(2) + usize::from(lit.is_negated());
-    1u64 << (key % 64)
 }
 
 impl NormClause {
@@ -67,9 +105,7 @@ impl NormClause {
         let mut lits = clause.lits().to_vec();
         lits.sort_unstable();
         lits.dedup();
-        // Tautology: some variable appears both positive and negative. After
-        // sorting, a literal and its complement are adjacent only if the positive
-        // form sorts right before the negative; check directly instead.
+        // Tautology: some variable appears both positive and negative.
         for (i, &l) in lits.iter().enumerate() {
             if lits[i + 1..].iter().any(|&m| m == l.negated()) {
                 return None;
@@ -79,116 +115,240 @@ impl NormClause {
         Some(Self { lits, sig })
     }
 
-    /// Whether `self`'s literal set is a subset of `other`'s (so `self` subsumes
-    /// `other`). Both literal vectors are sorted; uses the signature to reject
-    /// fast, then a two-pointer subset check.
-    pub(crate) fn subsumes(&self, other: &NormClause) -> bool {
-        if self.lits.len() > other.lits.len() || (self.sig & !other.sig) != 0 {
-            return false;
+    /// Removes `lit` from the clause (if present) and refreshes the signature.
+    fn remove_lit(&mut self, lit: CnfLit) {
+        if let Some(pos) = self.lits.iter().position(|&l| l == lit) {
+            self.lits.remove(pos);
+            self.sig = self.lits.iter().fold(0u64, |acc, &l| acc | lit_bit(l));
         }
-        let mut it = other.lits.iter();
-        'outer: for &want in &self.lits {
-            for &have in it.by_ref() {
-                if have == want {
-                    continue 'outer;
-                }
-                if have > want {
-                    return false; // sorted: `want` can no longer appear
-                }
-            }
-            return false;
-        }
-        true
     }
 }
 
-/// Simplifies `formula` by tautology removal, forward subsumption, and one round
-/// of self-subsuming resolution. Returns the simplified formula and the
-/// [`SubsumeStats`]. The result is **logically equivalent** to the input (same
-/// variable count, same satisfying assignments).
+/// Signed membership of literal `m` in the currently marked clause: `+1` if `m`
+/// occurs (same phase), `-1` if `¬m` occurs (opposite phase), `0` if absent.
+fn marked(marks: &[i8], m: CnfLit) -> i8 {
+    let stored = marks[m.var().index()];
+    if stored == 0 {
+        return 0;
+    }
+    let want = if m.is_negated() { -1 } else { 1 };
+    if stored == want { 1 } else { -1 }
+}
+
+/// Outcome of checking a candidate clause against the marked clause `C`.
+enum Check {
+    /// The candidate subsumes `C` (every literal present, same phase).
+    Subsumed,
+    /// Self-subsuming resolution: the candidate's clashing literal is `m`, so the
+    /// literal `¬m` can be removed from `C`.
+    Strengthen(CnfLit),
+    /// No relationship.
+    No,
+}
+
+/// Tests a connected candidate `d` against the marked clause `C` (whose literals
+/// set `marks`). `d` is known to be no longer than `C`.
+fn subsume_check(d: &NormClause, marks: &[i8]) -> Check {
+    let mut flipped: Option<CnfLit> = None;
+    for &m in &d.lits {
+        match marked(marks, m) {
+            0 => return Check::No, // a literal of d is absent from C
+            s if s < 0 => {
+                if flipped.is_some() {
+                    return Check::No; // two clashes: neither subsume nor single strengthen
+                }
+                flipped = Some(m);
+            }
+            _ => {} // present, same phase
+        }
+    }
+    match flipped {
+        None => Check::Subsumed,
+        Some(m) => Check::Strengthen(m),
+    }
+}
+
+/// What [`try_subsume`] decided for a candidate clause.
+enum Outcome {
+    /// The clause is subsumed and should be removed.
+    Subsumed,
+    /// The clause should be strengthened by removing this literal.
+    Strengthen(CnfLit),
+    /// Keep the clause unchanged.
+    Keep,
+}
+
+/// Checks clause `ci` against the already-connected clauses, using `marks` as the
+/// signed membership scratch (left zeroed on return). Reads only immutable state.
+fn try_subsume(
+    ci: usize,
+    clauses: &[Option<NormClause>],
+    occs: &[Vec<usize>],
+    marks: &mut [i8],
+    checks: &mut usize,
+) -> Outcome {
+    let c = clauses[ci].as_ref().expect("live candidate");
+    let c_len = c.lits.len();
+    let c_sig = c.sig;
+    for &l in &c.lits {
+        marks[l.var().index()] = if l.is_negated() { -1 } else { 1 };
+    }
+
+    let mut outcome = Outcome::Keep;
+    // A subsuming/strengthening witness is connected on one of its literals, which
+    // is a literal of `C` (subsumption) or the negation of one (strengthening), so
+    // walking both phases of each literal of `C` finds every witness exactly once.
+    'outer: for &l in &c.lits {
+        for sgn in [l, l.negated()] {
+            for &d_id in &occs[lit_index(sgn)] {
+                if d_id == ci {
+                    continue;
+                }
+                let Some(d) = clauses[d_id].as_ref() else {
+                    continue; // removed earlier this round
+                };
+                if d.lits.len() > c_len || (d.sig & !c_sig) != 0 {
+                    continue;
+                }
+                *checks += 1;
+                match subsume_check(d, marks) {
+                    Check::Subsumed => {
+                        outcome = Outcome::Subsumed;
+                        break 'outer;
+                    }
+                    Check::Strengthen(m) => {
+                        // `m` is `d`'s clashing literal; `C` carries `¬m`.
+                        outcome = Outcome::Strengthen(m.negated());
+                        break 'outer;
+                    }
+                    Check::No => {}
+                }
+            }
+        }
+    }
+
+    for &l in &c.lits {
+        marks[l.var().index()] = 0;
+    }
+    outcome
+}
+
+/// Connects clause `ci` onto its globally least-frequent literal (one-watch),
+/// unless that list is already at the occurrence cap or the clause is empty.
+fn connect(ci: usize, clause: &NormClause, occs: &mut [Vec<usize>], noccs: &[u32]) {
+    let Some(&watch) = clause
+        .lits
+        .iter()
+        .min_by_key(|&&l| (noccs[lit_index(l)], lit_index(l)))
+    else {
+        return; // empty clause (unsat): nothing to connect
+    };
+    let slot = lit_index(watch);
+    if occs[slot].len() < SUBSUME_OCCURRENCE_LIMIT {
+        occs[slot].push(ci);
+    }
+}
+
+/// One forward-subsumption round over the live clauses; returns whether anything
+/// changed (a clause was subsumed or strengthened).
+fn subsume_round(
+    clauses: &mut [Option<NormClause>],
+    nvars: usize,
+    marks: &mut [i8],
+) -> Option<SubsumeStats> {
+    let lit_slots = 2 * nvars;
+    let mut noccs = vec![0u32; lit_slots];
+    let mut order: Vec<usize> = Vec::new();
+    let mut total_lits = 0usize;
+    for (ci, slot) in clauses.iter().enumerate() {
+        if let Some(c) = slot {
+            if c.lits.len() > SUBSUME_CLAUSE_LIMIT {
+                continue; // too large to use as a subsumption candidate
+            }
+            for &l in &c.lits {
+                noccs[lit_index(l)] += 1;
+            }
+            total_lits += c.lits.len();
+            order.push(ci);
+        }
+    }
+    order.sort_by_key(|&ci| (clauses[ci].as_ref().map_or(0, |c| c.lits.len()), ci));
+
+    let mut occs: Vec<Vec<usize>> = vec![Vec::new(); lit_slots];
+    let mut stats = SubsumeStats::default();
+    let mut checks = 0usize;
+    let budget = 64 * (total_lits + nvars) + (1 << 16);
+
+    for &ci in &order {
+        if clauses[ci].is_none() {
+            continue; // subsumed earlier this round
+        }
+        match try_subsume(ci, clauses, &occs, marks, &mut checks) {
+            Outcome::Subsumed => {
+                clauses[ci] = None;
+                stats.clauses_subsumed += 1;
+            }
+            Outcome::Strengthen(remove) => {
+                clauses[ci]
+                    .as_mut()
+                    .expect("live candidate")
+                    .remove_lit(remove);
+                stats.literals_strengthened += 1;
+                // The shrunken clause is reconsidered (and reconnected) next round.
+            }
+            Outcome::Keep => {
+                connect(
+                    ci,
+                    clauses[ci].as_ref().expect("live candidate"),
+                    &mut occs,
+                    &noccs,
+                );
+            }
+        }
+        if checks > budget {
+            break; // bounded work: stop early (still sound)
+        }
+    }
+
+    if stats.is_empty() { None } else { Some(stats) }
+}
+
+/// Simplifies `formula` by tautology removal, forward subsumption, and
+/// self-subsuming resolution, iterated to a fixpoint. Returns the simplified
+/// formula and the [`SubsumeStats`]. The result is **logically equivalent** to the
+/// input (same variable count, same satisfying assignments).
 #[must_use]
 pub fn simplify(formula: &CnfFormula) -> (CnfFormula, SubsumeStats) {
+    let nvars = formula.variable_count();
     let mut stats = SubsumeStats::default();
 
-    // 1. Normalize; drop tautologies.
-    let mut norm: Vec<NormClause> = Vec::with_capacity(formula.clauses().len());
+    // Normalize; drop tautologies up front (they constrain nothing).
+    let mut clauses: Vec<Option<NormClause>> = Vec::with_capacity(formula.clauses().len());
     for clause in formula.clauses() {
         match NormClause::from_clause(clause) {
-            Some(nc) => norm.push(nc),
+            Some(nc) => clauses.push(Some(nc)),
             None => stats.tautologies_removed += 1,
         }
     }
 
-    // 2. Forward subsumption. Process shortest clauses first and keep a clause
-    //    only if no already-kept clause subsumes it. This removes duplicates
-    //    (keeps one) and longer clauses subsumed by shorter ones.
-    norm.sort_by_key(|c| c.lits.len());
-    let mut kept: Vec<NormClause> = Vec::with_capacity(norm.len());
-    for c in norm {
-        if kept.iter().any(|k| k.subsumes(&c)) {
-            stats.clauses_subsumed += 1;
-        } else {
-            kept.push(c);
-        }
-    }
-
-    // 3. Self-subsuming resolution (one round): for each clause C and literal l,
-    //    if some other clause D contains ¬l and D\{¬l} ⊆ C\{l}, drop l from C.
-    let snapshot = kept.clone();
-    for c in &mut kept {
-        let mut i = 0;
-        while i < c.lits.len() {
-            let l = c.lits[i];
-            if self_subsumes_on(&snapshot, c, l) {
-                c.lits.remove(i);
-                c.sig = c.lits.iter().fold(0u64, |acc, &m| acc | lit_bit(m));
-                stats.literals_strengthened += 1;
-            } else {
-                i += 1;
+    // Rounds to a fixpoint: strengthening a clause can expose new subsumptions.
+    let mut marks = vec![0i8; nvars];
+    for _ in 0..SUBSUME_MAX_ROUNDS {
+        match subsume_round(&mut clauses, nvars, &mut marks) {
+            Some(round) => {
+                stats.clauses_subsumed += round.clauses_subsumed;
+                stats.literals_strengthened += round.literals_strengthened;
             }
+            None => break,
         }
     }
 
-    // Rebuild the formula.
-    let mut out = CnfFormula::new(formula.variable_count());
-    for c in kept {
-        // Infallible: variables are unchanged from `formula`, already validated.
+    let mut out = CnfFormula::new(nvars);
+    for c in clauses.into_iter().flatten() {
+        // Infallible: variables are a subset of the original's, already validated.
         let _ = out.add_clause(CnfClause::new(c.lits));
     }
     (out, stats)
-}
-
-/// Whether clause `c` can be strengthened by removing literal `l`: some clause in
-/// `others` contains `¬l` and (that clause minus `¬l`) is a subset of (`c` minus
-/// `l`). `c` itself is skipped (matched by identity of the remaining literals).
-fn self_subsumes_on(others: &[NormClause], c: &NormClause, l: CnfLit) -> bool {
-    let not_l = l.negated();
-    // The "C minus l" literal set, as a signature-bearing pseudo-clause.
-    let c_minus_l: Vec<CnfLit> = c.lits.iter().copied().filter(|&m| m != l).collect();
-    let c_minus_sig = c_minus_l.iter().fold(0u64, |acc, &m| acc | lit_bit(m));
-    let c_minus = NormClause {
-        lits: c_minus_l,
-        sig: c_minus_sig,
-    };
-    for d in others {
-        if !d.lits.contains(&not_l) {
-            continue;
-        }
-        // d_minus = D \ {¬l}; require d_minus ⊆ c_minus.
-        let d_minus_lits: Vec<CnfLit> = d.lits.iter().copied().filter(|&m| m != not_l).collect();
-        // Skip the degenerate self-match (D\{¬l} identical situation): D must be a
-        // genuinely different clause; if d_minus == c_minus and D has ¬l where C
-        // has l, D is a different clause, which is exactly the resolution witness.
-        let d_minus_sig = d_minus_lits.iter().fold(0u64, |acc, &m| acc | lit_bit(m));
-        let d_minus = NormClause {
-            lits: d_minus_lits,
-            sig: d_minus_sig,
-        };
-        if d_minus.subsumes(&c_minus) {
-            return true;
-        }
-    }
-    false
 }
 
 #[cfg(test)]
@@ -360,5 +520,88 @@ mod tests {
         assert!(!stats.is_empty());
         assert!(out.clauses().len() < f.clauses().len());
         equivalent(&f, &out, 4);
+    }
+
+    /// Deterministic xorshift PRNG (no `Math.random`/clock; reproducible).
+    fn xorshift(state: &mut u64) -> u64 {
+        let mut x = *state;
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        *state = x;
+        x
+    }
+
+    /// A pseudo-random `usize` (no lossy casts; `u64`→`usize` is total on 64-bit
+    /// and saturates harmlessly elsewhere — the value is only ever used modulo a
+    /// small bound).
+    fn rand_usize(state: &mut u64) -> usize {
+        usize::try_from(xorshift(state)).unwrap_or(usize::MAX)
+    }
+
+    #[test]
+    fn random_formulas_are_logically_equivalent() {
+        // Stress the occurrence-list subsumption + strengthening against the
+        // brute-force semantics on many random 5-variable formulas.
+        const NVARS: usize = 5;
+        let mut state = 0x9E37_79B9_7F4A_7C15u64;
+        for _ in 0..400 {
+            let nclauses = 1 + rand_usize(&mut state) % 12;
+            let mut f = CnfFormula::new(NVARS);
+            for _ in 0..nclauses {
+                let width = 1 + rand_usize(&mut state) % 4;
+                let mut lits = Vec::new();
+                for _ in 0..width {
+                    let var = rand_usize(&mut state) % NVARS;
+                    let lit = if xorshift(&mut state) & 1 == 0 {
+                        p(var)
+                    } else {
+                        n(var)
+                    };
+                    lits.push(lit);
+                }
+                f.add_clause(clause(&lits)).unwrap();
+            }
+            let (out, _) = simplify(&f);
+            equivalent(&f, &out, NVARS);
+            // Re-simplifying is a fixpoint.
+            let (again, stats2) = simplify(&out);
+            assert!(stats2.is_empty(), "not a fixpoint: {stats2:?}");
+            assert_eq!(out, again);
+        }
+    }
+
+    #[test]
+    fn large_formula_simplifies_quickly_and_soundly() {
+        // ~6000 clauses: the occurrence-list pass must complete near-instantly
+        // (the old O(clauses²) sweep would do ~36M subset checks here). We can't
+        // brute-force 200 variables, so assert structural soundness: the result
+        // never grows, and a known model of the input still satisfies the output.
+        const NVARS: usize = 200;
+        let mut state = 0x0123_4567_89AB_CDEFu64;
+        let mut f = CnfFormula::new(NVARS);
+        // A fixed all-true model: every clause includes at least one positive lit.
+        for _ in 0..6000 {
+            let width = 2 + rand_usize(&mut state) % 4;
+            let mut lits = vec![p(rand_usize(&mut state) % NVARS)];
+            for _ in 1..width {
+                let var = rand_usize(&mut state) % NVARS;
+                let lit = if xorshift(&mut state) & 1 == 0 {
+                    p(var)
+                } else {
+                    n(var)
+                };
+                lits.push(lit);
+            }
+            f.add_clause(clause(&lits)).unwrap();
+        }
+        let (out, _) = simplify(&f);
+        assert!(out.clauses().len() <= f.clauses().len());
+        let all_true = vec![true; NVARS];
+        assert!(f.evaluate(&all_true).unwrap());
+        assert!(
+            out.evaluate(&all_true).unwrap(),
+            "a model of the input must satisfy the simplified formula"
+        );
     }
 }
