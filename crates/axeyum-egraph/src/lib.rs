@@ -53,6 +53,32 @@ pub struct AppMatch {
     pub args: Vec<ENodeId>,
 }
 
+/// An e-matching pattern: a term tree over pattern **variables** and function
+/// applications, matched against the e-graph modulo congruence by
+/// [`EGraph::ematch`]. A leaf constant is an [`Pattern::App`] with no arguments.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Pattern {
+    /// A pattern variable (zero-based index) that binds to an e-class.
+    Var(u32),
+    /// `decl(args)` — match a function application.
+    App(u32, Vec<Pattern>),
+}
+
+impl Pattern {
+    /// The largest variable index in the pattern, or `None` if it is ground.
+    #[must_use]
+    fn max_var(&self) -> Option<u32> {
+        match self {
+            Pattern::Var(v) => Some(*v),
+            Pattern::App(_, args) => args.iter().filter_map(Pattern::max_var).max(),
+        }
+    }
+}
+
+/// A substitution from an [`EGraph::ematch`]: index `v` maps to the bound e-class
+/// representative, or `None` if the pattern did not constrain variable `v`.
+pub type Substitution = Vec<Option<ENodeId>>;
+
 /// A hash-cons key: a function symbol applied to the **current class roots** of
 /// its arguments. Two e-nodes are congruent iff they share this key.
 type Signature = (u32, Vec<ENodeId>);
@@ -217,6 +243,108 @@ impl EGraph {
             out.push(AppMatch { app: root, args });
         }
         out
+    }
+
+    /// E-matches `pattern` against the e-graph **modulo congruence** (P2.6),
+    /// returning every distinct [`Substitution`] under which the pattern matches
+    /// some e-node. A variable binds to the e-class of the matched subterm; a
+    /// repeated variable must bind consistently (`f(x, x)` matches only where both
+    /// arguments are in the same class). The top-level pattern must be an
+    /// application (a bare variable would match everything).
+    ///
+    /// This is the matching engine quantifier instantiation runs: for `∀x. body`
+    /// with trigger `t`, each returned substitution gives a ground instance to add.
+    #[must_use]
+    pub fn ematch(&self, pattern: &Pattern) -> Vec<Substitution> {
+        let Pattern::App(decl, subs) = pattern else {
+            return Vec::new(); // a bare variable is not a usable trigger
+        };
+        let nvars = pattern.max_var().map_or(0, |v| v as usize + 1);
+        let index = self.class_index();
+        let mut results = Vec::new();
+        for app in self.enumerate_apps(*decl) {
+            if app.args.len() != subs.len() {
+                continue;
+            }
+            let blank = vec![None; nvars];
+            results.extend(self.match_sequence(subs, &app.args, blank, &index));
+        }
+        results.sort();
+        results.dedup();
+        results
+    }
+
+    /// Groups every node by its current class root (for in-class pattern lookup).
+    fn class_index(&self) -> HashMap<ENodeId, Vec<ENodeId>> {
+        let mut index: HashMap<ENodeId, Vec<ENodeId>> = HashMap::new();
+        for i in 0..self.nodes.len() {
+            let id = ENodeId(u32::try_from(i).expect("node index fits u32"));
+            index.entry(self.root(id)).or_default().push(id);
+        }
+        index
+    }
+
+    /// Matches a sequence of subpatterns against the class roots of an
+    /// application's arguments, threading the substitution (a Cartesian fold).
+    fn match_sequence(
+        &self,
+        subs: &[Pattern],
+        arg_roots: &[ENodeId],
+        subst: Substitution,
+        index: &HashMap<ENodeId, Vec<ENodeId>>,
+    ) -> Vec<Substitution> {
+        let mut current = vec![subst];
+        for (sub, &arg_root) in subs.iter().zip(arg_roots) {
+            let mut next = Vec::new();
+            for partial in current {
+                next.extend(self.match_in_class(sub, arg_root, partial, index));
+            }
+            current = next;
+            if current.is_empty() {
+                break;
+            }
+        }
+        current
+    }
+
+    /// Matches `pattern` against the class of `class_root` (which is a root),
+    /// returning every consistent extension of `subst`.
+    fn match_in_class(
+        &self,
+        pattern: &Pattern,
+        class_root: ENodeId,
+        subst: Substitution,
+        index: &HashMap<ENodeId, Vec<ENodeId>>,
+    ) -> Vec<Substitution> {
+        match pattern {
+            Pattern::Var(v) => {
+                let slot = *v as usize;
+                if let Some(bound) = subst[slot] {
+                    // A repeated variable must bind to the same class.
+                    if bound == class_root {
+                        vec![subst]
+                    } else {
+                        Vec::new()
+                    }
+                } else {
+                    let mut extended = subst;
+                    extended[slot] = Some(class_root);
+                    vec![extended]
+                }
+            }
+            Pattern::App(decl, subs) => {
+                let mut results = Vec::new();
+                for &m in index.get(&class_root).into_iter().flatten() {
+                    let node = &self.nodes[m.index()];
+                    if node.decl != *decl || node.args.len() != subs.len() {
+                        continue;
+                    }
+                    let arg_roots: Vec<ENodeId> = node.args.iter().map(|&a| self.root(a)).collect();
+                    results.extend(self.match_sequence(subs, &arg_roots, subst.clone(), index));
+                }
+                results
+            }
+        }
     }
 
     /// Adds the application `decl(args)`, returning its class representative. If a
@@ -871,6 +999,69 @@ mod tests {
         let fa_match = apps.iter().find(|m| g.root(m.app) == g.root(fa)).unwrap();
         assert_eq!(fa_match.args, vec![g.root(a)]);
         assert_eq!(g.root(a), g.root(b));
+    }
+
+    #[test]
+    fn ematch_unary_pattern_binds_each_argument() {
+        // f(x) matches every f-application; x binds to each argument's class.
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        g.add(10, &[a]); // f(a)
+        g.add(10, &[b]); // f(b)
+        let pat = Pattern::App(10, vec![Pattern::Var(0)]);
+        let subs = g.ematch(&pat);
+        let bound: std::collections::HashSet<ENodeId> =
+            subs.iter().map(|s| s[0].unwrap()).collect();
+        assert_eq!(bound, [g.root(a), g.root(b)].into_iter().collect());
+    }
+
+    #[test]
+    fn ematch_is_modulo_congruence() {
+        // After a = b, f(a) and f(b) are one class, so f(x) yields a single binding.
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        g.add(10, &[a]);
+        g.add(10, &[b]);
+        g.merge(a, b, 0);
+        let pat = Pattern::App(10, vec![Pattern::Var(0)]);
+        let subs = g.ematch(&pat);
+        assert_eq!(subs.len(), 1, "congruent f-applications match once");
+        assert_eq!(subs[0][0], Some(g.root(a)));
+    }
+
+    #[test]
+    fn ematch_nested_pattern() {
+        // f(g(x)) matches f(g(a)); x binds to a's class.
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let ga = g.add(20, &[a]); // g(a)
+        g.add(10, &[ga]); // f(g(a))
+        // A decoy f(a) that should NOT match f(g(x)).
+        g.add(10, &[a]);
+        let pat = Pattern::App(10, vec![Pattern::App(20, vec![Pattern::Var(0)])]);
+        let subs = g.ematch(&pat);
+        assert_eq!(subs.len(), 1);
+        assert_eq!(subs[0][0], Some(g.root(a)));
+    }
+
+    #[test]
+    fn ematch_repeated_variable_requires_consistency() {
+        // h(x, x) matches only where both arguments are in the same class.
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        g.add(30, &[a, b]); // h(a, b)
+        g.add(30, &[a, a]); // h(a, a)
+        let pat = Pattern::App(30, vec![Pattern::Var(0), Pattern::Var(0)]);
+        let subs = g.ematch(&pat);
+        assert_eq!(subs.len(), 1, "only h(a, a) matches h(x, x)");
+        assert_eq!(subs[0][0], Some(g.root(a)));
+
+        // After a = b, h(a, b) also matches (its arguments share a class).
+        g.merge(a, b, 0);
+        assert_eq!(g.ematch(&pat).len(), 1, "h(a,b)=h(a,a) now one class");
     }
 
     #[test]
