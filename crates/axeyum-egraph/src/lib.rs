@@ -76,7 +76,34 @@ struct ENode {
     proof_edge: Option<Edge>,
 }
 
-/// An incremental congruence-closure e-graph.
+/// One reversible mutation recorded on the backtracking trail (T1.4.4).
+#[derive(Debug, Clone)]
+enum Undo {
+    /// A node was pushed; undo pops it.
+    NodeAdded,
+    /// `node`'s `parents` had one entry pushed; undo pops it.
+    ParentPushed { node: ENodeId },
+    /// `node`'s entire `parents` vector was replaced; undo restores the old one.
+    ParentsTaken { node: ENodeId, old: Vec<ENodeId> },
+    /// `child` (then its own root) was unioned into `root`, whose size grew by
+    /// `child_size`; undo detaches `child` and restores the size.
+    Unioned {
+        child: ENodeId,
+        root: ENodeId,
+        child_size: u32,
+    },
+    /// A signature-table key was inserted; undo removes it.
+    TableInserted { key: Signature },
+    /// A signature-table key was removed (it mapped to `value`); undo re-inserts.
+    TableRemoved { key: Signature, value: ENodeId },
+    /// Proof-forest pointers were rewritten (re-rooting + a new edge); undo restores
+    /// each saved `(node, old_parent, old_edge)`.
+    ProofRewritten {
+        saved: Vec<(ENodeId, Option<ENodeId>, Option<Edge>)>,
+    },
+}
+
+/// An incremental, **backtrackable** congruence-closure e-graph.
 #[derive(Debug, Default)]
 pub struct EGraph {
     nodes: Vec<ENode>,
@@ -85,6 +112,10 @@ pub struct EGraph {
     /// Pending equalities to process (deferred-merge worklist), each carrying the
     /// justification for the proof forest.
     pending: Vec<(ENodeId, ENodeId, Edge)>,
+    /// Reversible mutations since the start, for `pop`.
+    trail: Vec<Undo>,
+    /// Trail lengths at each `push`; `pop` rewinds to the last.
+    scopes: Vec<usize>,
 }
 
 impl EGraph {
@@ -128,27 +159,28 @@ impl EGraph {
             proof_parent: None,
             proof_edge: None,
         });
+        self.trail.push(Undo::NodeAdded);
         for &arg in args {
             let root = self.find(arg);
             self.nodes[root.index()].parents.push(id);
+            self.trail.push(Undo::ParentPushed { node: root });
         }
-        self.table.insert(sig, id);
+        self.table.insert(sig.clone(), id);
+        self.trail.push(Undo::TableInserted { key: sig });
         id
     }
 
-    /// The current class representative of `id` (path-compressing union-find).
+    /// The current class representative of `id`.
+    ///
+    /// Path compression is deliberately omitted so the union-find is cheaply
+    /// **backtrackable** (a union is undone by a single record); union-by-size
+    /// keeps `find` at `O(log n)`. Takes `&mut self` for call-site symmetry with
+    /// the mutating operations.
     pub fn find(&mut self, id: ENodeId) -> ENodeId {
-        let parent = self.nodes[id.index()].root;
-        if parent == id {
-            return id;
-        }
-        let root = self.find(parent);
-        // Path compression.
-        self.nodes[id.index()].root = root;
-        root
+        self.root(id)
     }
 
-    /// The class representative without mutating (no path compression).
+    /// The class representative (non-mutating walk to the union-find root).
     #[must_use]
     pub fn root(&self, mut id: ENodeId) -> ENodeId {
         while self.nodes[id.index()].root != id {
@@ -169,6 +201,66 @@ impl EGraph {
     pub fn merge(&mut self, a: ENodeId, b: ENodeId, reason: u32) {
         self.pending.push((a, b, Edge::Input(reason)));
         self.process_pending();
+    }
+
+    /// Opens a new backtracking scope. Every node, equality, and congruence added
+    /// after this is undone by the matching [`Self::pop`].
+    pub fn push(&mut self) {
+        self.scopes.push(self.trail.len());
+    }
+
+    /// The current scope depth (number of open [`Self::push`]es).
+    #[must_use]
+    pub fn scope_depth(&self) -> usize {
+        self.scopes.len()
+    }
+
+    /// Closes the most recent scope, reverting every mutation since its
+    /// [`Self::push`]. No-op if no scope is open.
+    pub fn pop(&mut self) {
+        let Some(mark) = self.scopes.pop() else {
+            return;
+        };
+        while self.trail.len() > mark {
+            if let Some(undo) = self.trail.pop() {
+                self.revert(undo);
+            }
+        }
+    }
+
+    /// Reverts a single trailed mutation.
+    fn revert(&mut self, undo: Undo) {
+        match undo {
+            Undo::NodeAdded => {
+                self.nodes.pop();
+            }
+            Undo::ParentPushed { node } => {
+                self.nodes[node.index()].parents.pop();
+            }
+            Undo::ParentsTaken { node, old } => {
+                self.nodes[node.index()].parents = old;
+            }
+            Undo::Unioned {
+                child,
+                root,
+                child_size,
+            } => {
+                self.nodes[child.index()].root = child;
+                self.nodes[root.index()].size -= child_size;
+            }
+            Undo::TableInserted { key } => {
+                self.table.remove(&key);
+            }
+            Undo::TableRemoved { key, value } => {
+                self.table.insert(key, value);
+            }
+            Undo::ProofRewritten { saved } => {
+                for (node, parent, edge) in saved {
+                    self.nodes[node.index()].proof_parent = parent;
+                    self.nodes[node.index()].proof_edge = edge;
+                }
+            }
+        }
     }
 
     /// The hash-cons signature of `decl(args)` under the current union-find.
@@ -209,10 +301,15 @@ impl EGraph {
             // Detach the child's parents and remove their *pre-union* signatures
             // from the table (the keys still reflect the old roots).
             let child_parents = std::mem::take(&mut self.nodes[child.index()].parents);
+            self.trail.push(Undo::ParentsTaken {
+                node: child,
+                old: child_parents.clone(),
+            });
             for &p in &child_parents {
                 let key = self.signature_of(p);
                 if self.table.get(&key) == Some(&p) {
                     self.table.remove(&key);
+                    self.trail.push(Undo::TableRemoved { key, value: p });
                 }
             }
 
@@ -220,23 +317,27 @@ impl EGraph {
             self.nodes[child.index()].root = root;
             let child_size = self.nodes[child.index()].size;
             self.nodes[root.index()].size += child_size;
+            self.trail.push(Undo::Unioned {
+                child,
+                root,
+                child_size,
+            });
 
             // Re-insert the parents under their *post-union* signatures; a collision
             // means two parents are now congruent, so enqueue their merge with a
             // congruence justification.
             for &p in &child_parents {
                 let key = self.signature_of(p);
-                match self.table.get(&key) {
-                    Some(&rep) => {
-                        if self.find(rep) != self.find(p) {
-                            self.pending.push((rep, p, Edge::Congruence));
-                        }
+                if let Some(&rep) = self.table.get(&key) {
+                    if self.find(rep) != self.find(p) {
+                        self.pending.push((rep, p, Edge::Congruence));
                     }
-                    None => {
-                        self.table.insert(key, p);
-                    }
+                } else {
+                    self.table.insert(key.clone(), p);
+                    self.trail.push(Undo::TableInserted { key });
                 }
                 self.nodes[root.index()].parents.push(p);
+                self.trail.push(Undo::ParentPushed { node: root });
             }
         }
     }
@@ -246,6 +347,21 @@ impl EGraph {
     /// union-find classes (the caller checks), they are in different proof trees,
     /// so this never creates a cycle.
     fn add_proof_edge(&mut self, x: ENodeId, y: ENodeId, edge: Edge) {
+        // Save the proof state of `x` and every ancestor before rewriting them
+        // (re-rooting reverses the whole chain; the link then rewrites `x`). `y` is
+        // not mutated — the forest is parent-pointer based.
+        let mut saved = Vec::new();
+        let mut cur = Some(x);
+        while let Some(n) = cur {
+            saved.push((
+                n,
+                self.nodes[n.index()].proof_parent,
+                self.nodes[n.index()].proof_edge,
+            ));
+            cur = self.nodes[n.index()].proof_parent;
+        }
+        self.trail.push(Undo::ProofRewritten { saved });
+
         self.reroot_proof_tree(x);
         self.nodes[x.index()].proof_parent = Some(y);
         self.nodes[x.index()].proof_edge = Some(edge);
@@ -462,6 +578,71 @@ mod tests {
         assert_eq!(g.explain(gfa, gfb), vec![9]);
     }
 
+    #[test]
+    fn push_merge_pop_restores_equality() {
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        g.push();
+        g.merge(a, b, 0);
+        assert!(g.equal(a, b));
+        g.pop();
+        assert!(!g.equal(a, b), "pop must undo the merge");
+        assert_eq!(g.scope_depth(), 0);
+    }
+
+    #[test]
+    fn pop_restores_congruence() {
+        // f(a), f(b); merge inside a scope makes f(a)=f(b); pop reverts the cascade.
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        let fa = g.add(2, &[a]);
+        let fb = g.add(2, &[b]);
+        g.push();
+        g.merge(a, b, 0);
+        assert!(g.equal(fa, fb));
+        g.pop();
+        assert!(!g.equal(a, b));
+        assert!(!g.equal(fa, fb), "congruence consequence must be undone");
+        // The e-graph is reusable: a fresh merge still works after pop.
+        g.merge(a, b, 1);
+        assert!(g.equal(fa, fb));
+        assert_eq!(g.explain(fa, fb), vec![1]);
+    }
+
+    #[test]
+    fn nested_scopes_unwind_in_order() {
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        let c = g.add(2, &[]);
+        g.push();
+        g.merge(a, b, 0);
+        g.push();
+        g.merge(b, c, 1);
+        assert!(g.equal(a, c));
+        g.pop(); // undo b = c
+        assert!(g.equal(a, b));
+        assert!(!g.equal(a, c));
+        g.pop(); // undo a = b
+        assert!(!g.equal(a, b));
+        assert_eq!(g.scope_depth(), 0);
+    }
+
+    #[test]
+    fn add_inside_scope_is_undone() {
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let base_len = g.len();
+        g.push();
+        let b = g.add(1, &[]);
+        let _fab = g.add(2, &[a, b]);
+        assert!(g.len() > base_len);
+        g.pop();
+        assert_eq!(g.len(), base_len, "nodes added in the scope are removed");
+    }
+
     /// Deterministic xorshift PRNG (no clock / `Math.random`).
     fn xorshift(state: &mut u64) -> u64 {
         let mut x = *state;
@@ -536,6 +717,80 @@ mod tests {
                 }
                 if !changed {
                     break;
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn random_push_pop_matches_rebuilt_state() {
+        // Build a fixed term DAG, then drive a random push/pop/merge sequence. After
+        // each step the e-graph's equality relation must match a *fresh* e-graph
+        // built from the same terms with only the currently in-scope merges applied.
+        let mut state = 0x1357_9BDF_2468_ACE0u64;
+        for _ in 0..150 {
+            // Recipe: leaves then unary/binary apps referencing earlier terms.
+            let n_leaves = 3 + rand_usize(&mut state) % 3;
+            let n_apps = 3 + rand_usize(&mut state) % 5;
+            let mut recipe: Vec<(u32, Vec<usize>)> = Vec::new();
+            for leaf in 0..n_leaves {
+                recipe.push((1000 + u32::try_from(leaf).unwrap(), Vec::new()));
+            }
+            for _ in 0..n_apps {
+                let arity = 1 + rand_usize(&mut state) % 2;
+                let decl = rand_u32(&mut state) % 3;
+                let args = (0..arity)
+                    .map(|_| rand_usize(&mut state) % recipe.len())
+                    .collect();
+                recipe.push((decl, args));
+            }
+            let build = |merges: &[(usize, usize)]| -> (EGraph, Vec<ENodeId>) {
+                let mut g = EGraph::new();
+                let mut ids = Vec::new();
+                for (decl, args) in &recipe {
+                    let arg_ids: Vec<ENodeId> = args.iter().map(|&i| ids[i]).collect();
+                    ids.push(g.add(*decl, &arg_ids));
+                }
+                for (i, &(mi, mj)) in merges.iter().enumerate() {
+                    g.merge(ids[mi], ids[mj], u32::try_from(i).unwrap());
+                }
+                (g, ids)
+            };
+
+            let (mut g, ids) = build(&[]);
+            // Stack of per-scope merge lists; the flattened concatenation is "active".
+            let mut scopes: Vec<Vec<(usize, usize)>> = vec![Vec::new()];
+
+            for _ in 0..20 {
+                match rand_usize(&mut state) % 3 {
+                    0 => {
+                        g.push();
+                        scopes.push(Vec::new());
+                    }
+                    1 if scopes.len() > 1 => {
+                        g.pop();
+                        scopes.pop();
+                    }
+                    _ => {
+                        let i = rand_usize(&mut state) % ids.len();
+                        let j = rand_usize(&mut state) % ids.len();
+                        let active: usize = scopes.iter().map(Vec::len).sum();
+                        g.merge(ids[i], ids[j], u32::try_from(active).unwrap());
+                        scopes.last_mut().unwrap().push((i, j));
+                    }
+                }
+
+                // Compare against a fresh build from the active merges.
+                let active: Vec<(usize, usize)> = scopes.iter().flatten().copied().collect();
+                let (reference, ref_ids) = build(&active);
+                for a in 0..ids.len() {
+                    for b in 0..ids.len() {
+                        assert_eq!(
+                            g.equal(ids[a], ids[b]),
+                            reference.equal(ref_ids[a], ref_ids[b]),
+                            "backtracked state disagrees with rebuild on ({a}, {b})"
+                        );
+                    }
                 }
             }
         }
