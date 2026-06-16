@@ -36,9 +36,29 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   2× RTX 4060 Ti 16 GB, CUDA 12.4); `corpus/public` symlinked to NAS
   `/nas3/data/...`; z3 + rust verified; 54/54 cnf tests pass. See
   [docs/plan/host-setup.md](docs/plan/host-setup.md).
-- **Next task:** wire subsumption + BVE into the bit-blast→CNF→solve pipeline
-  (model-replay-safe), then re-run `just bench-qfbv-curated` to measure the
-  inprocessing delta against this baseline (the 11 unknowns are the target).
+- **T1.1.3 inprocessing wired into the solve pipeline — DONE (sound), measured
+  net-negative with current passes** (2026-06-16):
+  `SolverConfig::cnf_inprocessing` (off by default) runs `simplify` (subsumption,
+  model-preserving) then `eliminate_variables` (BVE, equisatisfiable) on the
+  Tseitin formula in `sat_bv_backend`; a reduced `sat` model is lifted back to
+  the original CNF variables via `Reconstruction::extend` before the existing
+  AIG→model→original-term replay. 3 A/B tests + bench `--inprocess` flag +
+  `just bench-qfbv-curated-inprocess`. **Correctness proven** across the curated
+  slice (DISAGREE=0, model_replay_failures=0; 27 instances inprocessed end to end
+  incl. SAT reconstruction, BVE eliminating up to 296 vars).
+- **Key measured finding (gates P1.1):** the correctness-first passes do **not**
+  scale to solve-relevant CNF. At a 5k-var/20k-clause cap the pass took **13–22 s**
+  on `mulhs16`/`commute08`, blew the 2 s budget, regressed 3 decided instances to
+  `unknown`, and decided **none** of the 11 existing unknowns. `simplify` is an
+  `O(clauses²)` sweep; `bve` rescans all clauses per candidate (`O(vars·clauses)`
+  per round). Inprocessing is therefore guarded to ≤512 vars / ≤2048 clauses
+  (provably cheap, ≤121 ms here) — at which size the committed A/B is
+  decision-identical to baseline (32/43, PAR-2 1.071 s vs 1.063 s). **Real win
+  needs occurrence-list indexing first.**
+- **Next task (T1.1.4):** give `axeyum_cnf::simplify` and `axeyum_cnf::bve`
+  occurrence-list / signature indexing (near-linear passes) so inprocessing can
+  run on the wide instances (the 11 unknowns) without escaping the solve budget;
+  then re-run `just bench-qfbv-curated-inprocess` and lift the size guard.
 
 ## Already shipped this session (pre-plan)
 
@@ -57,7 +77,7 @@ plan is built and committed on the current branch:
 ### Track 1 — Engine & Performance
 | Phase | Title | Status |
 |---|---|---|
-| P1.1 | SAT inprocessing (subsumption → BVE → vivification → glue tiers) | WIP — T1.1.1 subsumption + T1.1.2 BVE landed |
+| P1.1 | SAT inprocessing (subsumption → BVE → vivification → glue tiers) | WIP — T1.1.1 subsumption + T1.1.2 BVE landed + T1.1.3 wired into solve pipeline (sound; measured net-negative — needs occurrence-list indexing, T1.1.4) |
 | P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | TODO |
 | P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | TODO |
 | P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | TODO |
@@ -102,6 +122,22 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **T1.1.3 inprocessing wired into the bit-blast→CNF→solve
+  pipeline + measured on s4.** New `SolverConfig::cnf_inprocessing`
+  (`with_cnf_inprocessing`, off by default); `sat_bv_backend` runs
+  `simplify`+`eliminate_variables` on the Tseitin formula behind a
+  `maybe_inprocess` size guard, solves the reduced formula, DRAT-checks /
+  `prove_unsat`s the reduced formula, and lifts a reduced `sat` model back via
+  `Reconstruction::extend` before the original-term replay (`inprocess_ms`
+  folded into `translate`; per-pass stats recorded). 3 A/B tests
+  (`tests/sat_bv.rs`), bench `--inprocess` flag (config + JSON metadata + run
+  fingerprint), `just bench-qfbv-curated-inprocess`, committed artifact
+  `qfbv-curated-sat-bv-inprocess-vs-z3-2s.json`. **Measurement:** with the
+  current `O(clauses²)` subsumption + per-candidate-rescan BVE, inprocessing is a
+  net regression (13–22 s passes blow a 2 s budget) and decides none of the 11
+  unknowns; correctness is intact (DISAGREE=0, 0 replay failures). Guarded to
+  ≤512 vars/≤2048 clauses → decision-identical to baseline (32/43, PAR-2 1.071 s).
+  Real win deferred to T1.1.4 (occurrence-list indexing).
 - **2026-06-15** — Cloned full reference set (added Z3 to `scripts/fetch-references.sh`).
   Ran five Opus sub-agents over Z3 core, Z3 theories, bitwuzla+CaDiCaL/Kissat,
   proof/Lean, and an axeyum self-audit. Authored the end-to-end plan under

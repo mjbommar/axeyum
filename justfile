@@ -41,6 +41,13 @@ bench-qfbv-curated:
     mkdir -p bench-results/baselines
     cargo run -p axeyum-bench --features z3 -- corpus/qfbv-curated --backend sat-bv --compare-z3 --timeout-ms 2000 --jobs 2 --node-budget 50000 --cnf-var-budget 200000 --cnf-clause-budget 1000000 --out bench-results/baselines/qfbv-curated-sat-bv-vs-z3-2s.json --logic QF_BV
 
+# P1.1: the same curated QF_BV slice with CNF inprocessing (subsumption + BVE)
+# enabled on the sat-bv encoding (`--inprocess`). Compare its decided/unknown/PAR-2
+# against `bench-qfbv-curated` to read the inprocessing delta. Same memory caveat.
+bench-qfbv-curated-inprocess:
+    mkdir -p bench-results/baselines
+    cargo run -p axeyum-bench --features z3 -- corpus/qfbv-curated --backend sat-bv --inprocess --compare-z3 --timeout-ms 2000 --jobs 2 --node-budget 50000 --cnf-var-budget 200000 --cnf-clause-budget 1000000 --out bench-results/baselines/qfbv-curated-sat-bv-inprocess-vs-z3-2s.json --logic QF_BV
+
 # Reproduce the Phase 2 public QF_BV baseline after `scripts/fetch-corpus.sh qf_bv`.
 bench-public-qfbv-baseline:
     mkdir -p bench-results/baselines

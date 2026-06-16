@@ -335,6 +335,144 @@ fn wide_bit_vector_variable_shift_solves_and_replays() {
     );
 }
 
+fn outcome_tag(result: &CheckResult) -> &'static str {
+    match result {
+        CheckResult::Sat(_) => "sat",
+        CheckResult::Unsat => "unsat",
+        CheckResult::Unknown(_) => "unknown",
+    }
+}
+
+#[test]
+fn cnf_inprocessing_agrees_with_baseline_and_replays() {
+    // For both a SAT and an UNSAT instance, inprocessing (subsumption + BVE)
+    // must reach the same decision as the un-inprocessed encoding, and a `sat`
+    // model reconstructed through the BVE stack must still satisfy the original
+    // terms (the backend replays it before returning, so a bad reconstruction
+    // would surface as a `Backend` error, not a wrong `sat`).
+    let mut arena = TermArena::new();
+    let x_sym = arena.declare("x", Sort::BitVec(8)).unwrap();
+    let y_sym = arena.declare("y", Sort::BitVec(8)).unwrap();
+    let x = arena.var(x_sym);
+    let y = arena.var(y_sym);
+    let seven = arena.bv_const(8, 7).unwrap();
+    let x_is_seven = arena.eq(x, seven).unwrap();
+    let sum = arena.bv_add(x, y).unwrap();
+    let ten = arena.bv_const(8, 10).unwrap();
+    let sum_is_ten = arena.eq(sum, ten).unwrap();
+    let sat_case = vec![x_is_seven, sum_is_ten];
+
+    // x*y = 0 with x = 3 and y odd is contradictory at 8 bits (3 is invertible).
+    let product = arena.bv_mul(x, y).unwrap();
+    let zero = arena.bv_const(8, 0).unwrap();
+    let prod_zero = arena.eq(product, zero).unwrap();
+    let three = arena.bv_const(8, 3).unwrap();
+    let x_is_three = arena.eq(x, three).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let y_odd_bit = arena.bv_and(y, one).unwrap();
+    let y_is_odd = arena.eq(y_odd_bit, one).unwrap();
+    let unsat_case = vec![prod_zero, x_is_three, y_is_odd];
+
+    for assertions in [sat_case, unsat_case] {
+        let baseline = SatBvBackend::new()
+            .check(&arena, &assertions, &SolverConfig::default())
+            .unwrap();
+        let inprocessed = SatBvBackend::new()
+            .check(
+                &arena,
+                &assertions,
+                &SolverConfig::default().with_cnf_inprocessing(true),
+            )
+            .unwrap();
+        assert_eq!(
+            outcome_tag(&baseline),
+            outcome_tag(&inprocessed),
+            "inprocessing changed the decision"
+        );
+        if let CheckResult::Sat(model) = &inprocessed {
+            let assignment = model.to_assignment();
+            for &term in &assertions {
+                assert_eq!(
+                    eval(&arena, term, &assignment).unwrap(),
+                    Value::Bool(true),
+                    "reconstructed model must satisfy every original assertion"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn cnf_inprocessing_records_stats_and_eliminates_variables() {
+    // A formula dense with Tseitin gate variables: inprocessing should fire and
+    // BVE should eliminate at least one variable, leaving an audit trail.
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 8).unwrap();
+    let y = arena.bv_var("y", 8).unwrap();
+    let sum = arena.bv_add(x, y).unwrap();
+    let prod = arena.bv_mul(sum, x).unwrap();
+    let nine = arena.bv_const(8, 9).unwrap();
+    let formula = arena.eq(prod, nine).unwrap();
+
+    let mut backend = SatBvBackend::new();
+    let result = backend
+        .check(
+            &arena,
+            &[formula],
+            &SolverConfig::default().with_cnf_inprocessing(true),
+        )
+        .unwrap();
+    assert!(matches!(
+        result,
+        CheckResult::Sat(_) | CheckResult::Unsat | CheckResult::Unknown(_)
+    ));
+    let stats = backend.last_stats().expect("stats recorded");
+    let stat = |key: &str| {
+        stats
+            .backend
+            .iter()
+            .find(|(name, _)| name == key)
+            .map(|(_, value)| *value)
+    };
+    assert_eq!(stat("cnf_inprocessing"), Some(1.0), "inprocessing must run");
+    assert!(
+        stat("bve_variables_eliminated").is_some_and(|v| v >= 1.0),
+        "BVE should eliminate at least one Tseitin variable"
+    );
+    assert!(
+        stat("cnf_clauses_solved").is_some(),
+        "the reduced clause count must be recorded"
+    );
+}
+
+#[test]
+fn cnf_inprocessing_unsat_is_drat_proof_checked() {
+    // Inprocessing + prove_unsat: the reduced (equisatisfiable) formula is the
+    // one independently re-derived and DRAT-checked.
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 6).unwrap();
+    let zero = arena.bv_const(6, 0).unwrap();
+    let below_zero = arena.bv_ult(x, zero).unwrap();
+    let config = SolverConfig::default()
+        .with_cnf_inprocessing(true)
+        .with_prove_unsat(true);
+
+    let mut backend = SatBvBackend::new();
+    assert_eq!(
+        backend.check(&arena, &[below_zero], &config).unwrap(),
+        CheckResult::Unsat
+    );
+    let stats = backend.last_stats().expect("stats recorded");
+    assert!(
+        stats
+            .backend
+            .iter()
+            .any(|(name, value)| name == "unsat_proof_checked"
+                && (*value - 1.0).abs() < f64::EPSILON),
+        "reduced-formula unsat should be DRAT-proof-checked"
+    );
+}
+
 #[test]
 fn wide_bit_vector_contradiction_is_unsat() {
     // x + 1 = 5 (so x = 4) and x = 10 contradict, at 200 bits.

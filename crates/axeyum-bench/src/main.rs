@@ -173,6 +173,7 @@ mod run {
         node_budget: Option<u64>,
         cnf_variable_budget: Option<u64>,
         cnf_clause_budget: Option<u64>,
+        cnf_inprocessing: bool,
         compare_z3: bool,
         jobs: usize,
     }
@@ -199,6 +200,7 @@ mod run {
             node_budget: None,
             cnf_variable_budget: None,
             cnf_clause_budget: None,
+            cnf_inprocessing: false,
             compare_z3: false,
             jobs: 1,
         };
@@ -284,6 +286,7 @@ mod run {
                         .map_err(|e| format!("{e}"))?,
                 );
             }
+            "--inprocess" => parsed.cnf_inprocessing = true,
             "--compare-z3" => {
                 #[cfg(feature = "z3")]
                 {
@@ -758,6 +761,7 @@ mod run {
             node_budget: args.node_budget,
             cnf_variable_budget: args.cnf_variable_budget,
             cnf_clause_budget: args.cnf_clause_budget,
+            cnf_inprocessing: args.cnf_inprocessing,
             ..SolverConfig::default()
         }
     }
@@ -1881,6 +1885,7 @@ mod run {
                 "node_budget": node_budget,
                 "cnf_variable_budget": cnf_variable_budget,
                 "cnf_clause_budget": cnf_clause_budget,
+                "cnf_inprocessing": args.cnf_inprocessing,
                 "limit": limit,
                 "backend": backend_name,
                 "backend_kind": args.backend.as_str(),
@@ -2190,6 +2195,7 @@ mod run {
             &mut hash,
             &args.cnf_clause_budget.unwrap_or(u64::MAX).to_le_bytes(),
         );
+        update_hash(&mut hash, &[u8::from(args.cnf_inprocessing)]);
         update_hash(&mut hash, &[u8::from(args.compare_z3)]);
         update_hash(&mut hash, backend_name.as_bytes());
         update_hash(&mut hash, corpus_hash.as_bytes());

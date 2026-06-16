@@ -128,6 +128,16 @@ pub struct SolverConfig {
     /// [`SolverError::Backend`] soundness alarm. The proof core is a reference,
     /// not scalable, so this is for small instances / high-assurance checks.
     pub prove_unsat: bool,
+    /// When set, the bit-blasting BV backend runs CNF inprocessing
+    /// (subsumption + bounded variable elimination) on the Tseitin formula
+    /// before handing it to the SAT adapter.
+    ///
+    /// The transforms are model-preserving (subsumption) and equisatisfiable
+    /// (BVE, lifted back through its reconstruction stack), and every `sat`
+    /// result is still replay-checked against the original terms, so this is a
+    /// sound, off-by-default performance lever (Track 1, P1.1). Defaults to
+    /// `false` so the recorded baselines reflect the un-inprocessed encoding.
+    pub cnf_inprocessing: bool,
 }
 
 impl SolverConfig {
@@ -182,6 +192,14 @@ impl SolverConfig {
     #[must_use]
     pub fn with_prove_unsat(mut self, prove_unsat: bool) -> Self {
         self.prove_unsat = prove_unsat;
+        self
+    }
+
+    /// Enables CNF inprocessing (subsumption + bounded variable elimination)
+    /// on the bit-blasting BV backend's Tseitin formula before SAT solving.
+    #[must_use]
+    pub fn with_cnf_inprocessing(mut self, cnf_inprocessing: bool) -> Self {
+        self.cnf_inprocessing = cnf_inprocessing;
         self
     }
 }

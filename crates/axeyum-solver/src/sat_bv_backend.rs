@@ -19,7 +19,8 @@ use axeyum_bv::{
     BitLowerError, BitLowering, first_unsupported_op, first_unsupported_sort, lower_terms,
 };
 use axeyum_cnf::{
-    CnfEncoding, CnfError, CnfFormula, ProofSolveOutcome, SatError, SatResult, check_drat,
+    BveOptions, CnfAssignment, CnfEncoding, CnfError, CnfFormula, ProofSolveOutcome,
+    Reconstruction, SatError, SatResult, check_drat, eliminate_variables, simplify,
     solve_with_drat_proof, solve_with_rustsat_batsat_timeout, tseitin_encode,
 };
 use axeyum_ir::{
@@ -115,24 +116,24 @@ impl SatBvBackend {
         stats.translate = bit_blast + cnf_encode;
         push_duration_ms(&mut stats, "bit_blast_ms", bit_blast);
         push_duration_ms(&mut stats, "cnf_encode_ms", cnf_encode);
-        stats.backend.push((
-            "aig_nodes".to_owned(),
-            usize_to_f64(lowering.aig().node_count()),
-        ));
-        stats.backend.push((
-            "aig_inputs".to_owned(),
-            usize_to_f64(lowering.aig().input_count()),
-        ));
-        stats.backend.push((
-            "cnf_variables".to_owned(),
-            usize_to_f64(encoding.formula().variable_count()),
-        ));
-        stats.backend.push((
-            "cnf_clauses".to_owned(),
-            usize_to_f64(encoding.formula().clauses().len()),
-        ));
+        record_encoding_stats(&mut stats, &lowering, encoding.formula());
 
-        if let Some(result) = check_cnf_budgets(config, encoding.formula(), &mut stats) {
+        // Optional CNF inprocessing (subsumption + bounded variable elimination)
+        // on the Tseitin formula. Subsumption is model-preserving and BVE is
+        // equisatisfiable — a reduced `sat` model is lifted back to the original
+        // CNF variables through the reconstruction stack before the AIG/model
+        // lift, and every `sat` result still replays against the original terms.
+        // The `cnf_variables`/`cnf_clauses` stats above describe the
+        // un-inprocessed encoding (baseline comparability); the formula actually
+        // submitted to the SAT adapter is `solve_formula`. A size guard keeps the
+        // pass off wide formulas where it cannot finish within a solve budget.
+        let inprocessed = maybe_inprocess(config, encoding.formula(), &mut stats);
+        let solve_formula: &CnfFormula = inprocessed
+            .as_ref()
+            .map_or_else(|| encoding.formula(), |out| &out.formula);
+        let reconstruction = inprocessed.as_ref().map(|out| &out.reconstruction);
+
+        if let Some(result) = check_cnf_budgets(config, solve_formula, &mut stats) {
             self.stats = Some(stats);
             return Ok(result);
         }
@@ -149,13 +150,19 @@ impl SatBvBackend {
         let sat_timeout =
             deadline.map(|deadline| deadline.saturating_duration_since(Instant::now()));
         let solve_start = Instant::now();
-        let sat_result = solve_with_rustsat_batsat_timeout(encoding.formula(), sat_timeout)
+        let sat_result = solve_with_rustsat_batsat_timeout(solve_formula, sat_timeout)
             .map_err(|error| map_sat_error(&error))?;
         stats.solve = solve_start.elapsed();
 
         if config.prove_unsat && matches!(sat_result, SatResult::Unsat(_)) {
-            verify_unsat_proof(encoding.formula(), &mut stats)?;
+            // The reduced formula is equisatisfiable with the original, so an
+            // independent UNSAT proof of it certifies the original is UNSAT.
+            verify_unsat_proof(solve_formula, &mut stats)?;
         }
+
+        // Lift a reduced `sat` model back to the original CNF variables (no-op
+        // without inprocessing) so the AIG/model lift uses the original encoding.
+        let sat_result = reconstruct_sat_result(sat_result, reconstruction);
 
         let result = handle_sat_result(
             arena,
@@ -202,6 +209,133 @@ impl SolverBackend for SatBvBackend {
 
     fn last_stats(&self) -> Option<&SolveStats> {
         self.stats.as_ref()
+    }
+}
+
+/// Records the AIG and (un-inprocessed) CNF size counters for the most recent
+/// encoding into `stats.backend`.
+fn record_encoding_stats(stats: &mut SolveStats, lowering: &BitLowering, formula: &CnfFormula) {
+    stats.backend.push((
+        "aig_nodes".to_owned(),
+        usize_to_f64(lowering.aig().node_count()),
+    ));
+    stats.backend.push((
+        "aig_inputs".to_owned(),
+        usize_to_f64(lowering.aig().input_count()),
+    ));
+    stats.backend.push((
+        "cnf_variables".to_owned(),
+        usize_to_f64(formula.variable_count()),
+    ));
+    stats.backend.push((
+        "cnf_clauses".to_owned(),
+        usize_to_f64(formula.clauses().len()),
+    ));
+}
+
+/// A Tseitin formula after CNF inprocessing, plus the stack that lifts a model
+/// of the reduced formula back to the original CNF variables.
+struct Inprocessed {
+    formula: CnfFormula,
+    reconstruction: Reconstruction,
+}
+
+/// Inprocessing size guard. Both passes are correctness-first and quadratic:
+/// `axeyum_cnf::simplify` is an `O(clauses²)` subsumption sweep and
+/// `axeyum_cnf::bve` recomputes occurrence lists per candidate, costing roughly
+/// `O(variables · clauses)` per round. The committed curated `QF_BV` A/B showed
+/// this empirically — at a 5k-var / 20k-clause cap the pass took **13–22 s** on
+/// instances like `mulhs16` / `commute08`, blowing past a 2 s solve budget and
+/// turning three previously-decided instances into timeouts while deciding none
+/// of the existing unknowns (the regression is purely time, never soundness:
+/// DISAGREE=0, no replay failures). Until both passes gain occurrence-list
+/// indexing (Track 1, P1.1 continuation), inprocessing only runs when the
+/// formula is small enough that the passes are provably cheap; everything larger
+/// goes straight to the SAT adapter unchanged.
+const INPROCESS_MAX_VARIABLES: usize = 512;
+const INPROCESS_MAX_CLAUSES: usize = 2_048;
+
+/// Runs CNF inprocessing when it is enabled and the formula is small enough for
+/// the current (non-incremental) BVE to finish cheaply. Records `inprocess_ms`
+/// and folds it into `stats.translate`; a size skip is recorded too.
+fn maybe_inprocess(
+    config: &SolverConfig,
+    formula: &CnfFormula,
+    stats: &mut SolveStats,
+) -> Option<Inprocessed> {
+    if !config.cnf_inprocessing {
+        return None;
+    }
+    if formula.variable_count() > INPROCESS_MAX_VARIABLES
+        || formula.clauses().len() > INPROCESS_MAX_CLAUSES
+    {
+        stats
+            .backend
+            .push(("cnf_inprocessing_skipped_size".to_owned(), 1.0));
+        return None;
+    }
+    let start = Instant::now();
+    let out = inprocess(formula, stats);
+    let elapsed = start.elapsed();
+    stats.translate += elapsed;
+    push_duration_ms(stats, "inprocess_ms", elapsed);
+    Some(out)
+}
+
+/// Runs subsumption then bounded variable elimination on `formula`, recording
+/// what each pass removed in `stats`. Subsumption is model-preserving; BVE is
+/// equisatisfiable and pairs the reduced formula with a reconstruction stack.
+fn inprocess(formula: &CnfFormula, stats: &mut SolveStats) -> Inprocessed {
+    let (simplified, subsume) = simplify(formula);
+    let bve = eliminate_variables(&simplified, BveOptions::default());
+
+    stats.backend.push(("cnf_inprocessing".to_owned(), 1.0));
+    stats.backend.push((
+        "subsume_tautologies_removed".to_owned(),
+        usize_to_f64(subsume.tautologies_removed),
+    ));
+    stats.backend.push((
+        "subsume_clauses_subsumed".to_owned(),
+        usize_to_f64(subsume.clauses_subsumed),
+    ));
+    stats.backend.push((
+        "subsume_literals_strengthened".to_owned(),
+        usize_to_f64(subsume.literals_strengthened),
+    ));
+    stats.backend.push((
+        "bve_variables_eliminated".to_owned(),
+        usize_to_f64(bve.stats.variables_eliminated),
+    ));
+    stats.backend.push((
+        "bve_clauses_removed".to_owned(),
+        usize_to_f64(bve.stats.clauses_removed),
+    ));
+    stats.backend.push((
+        "bve_clauses_added".to_owned(),
+        usize_to_f64(bve.stats.clauses_added),
+    ));
+    // The variable count is preserved by both passes (an eliminated variable
+    // simply occurs in no clause), so only the clause count moves here.
+    stats.backend.push((
+        "cnf_clauses_solved".to_owned(),
+        usize_to_f64(bve.formula.clauses().len()),
+    ));
+
+    Inprocessed {
+        formula: bve.formula,
+        reconstruction: bve.reconstruction,
+    }
+}
+
+/// Lifts a reduced `sat` assignment back to the original CNF variable space via
+/// the BVE reconstruction stack. A no-op (identity) when inprocessing was off or
+/// for non-`sat` results.
+fn reconstruct_sat_result(result: SatResult, reconstruction: Option<&Reconstruction>) -> SatResult {
+    match (result, reconstruction) {
+        (SatResult::Sat(assignment), Some(reconstruction)) => SatResult::Sat(CnfAssignment::new(
+            reconstruction.extend(assignment.values()),
+        )),
+        (result, _) => result,
     }
 }
 
