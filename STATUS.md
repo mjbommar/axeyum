@@ -87,17 +87,21 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 - **P1.4 e-graph keystone STARTED** (commit eb3e9e6): `axeyum-egraph` crate with the
   congruence-closure core (hash-cons + union-find + deferred-merge cascade),
   property-tested vs a brute-force oracle. ADR-0032.
-- **Next task — T1.4.3 explanation / proof forest.** Add a *separate* proof forest
-  (per node `target` + `justification`) alongside the union-find: `merge(a,b,reason)`
-  records the reason, and `explain(a,b)` returns a minimal sound set of input
-  equalities entailing `a=b` (explain-to-LCA; congruence steps recover premises
-  from the argument explanations, timestamped). Reference
-  `references/z3/src/ast/euf/euf_justification.cpp`. This is what makes the e-graph
-  usable in CDCL(T) (conflict clauses) and is the prerequisite for T1.4.5 (the
-  independent congruence checker). Then T1.4.4 backtrackable trail (push/pop),
-  T1.4.6 theory-var lists. After P1.4: P1.5 CDCL(T) loop → Track 2 theories.
-  Deferred Track-1 perf option still open: T1.2.8 two-level AIG rewriting in
-  `axeyum-aig` (bitwuzla's speed lever, helps the bit-blasting multipliers).
+- **T1.4.3 explanations DONE** (commit 0c5840f): proof forest + `explain(a,b)` to
+  the LCA, soundness property-tested. The e-graph can now emit conflict clauses.
+- **Next task — T1.4.4 backtrackable trail (push/pop).** Record every union (and
+  its proof-forest edge + signature-table mutation) on an undo trail with scope
+  marks; `push()`/`pop()` save/restore so the e-graph integrates with the
+  incremental engine and the eventual CDCL(T) decision stack. Care: undo must
+  restore the union-find root, the class `size`, the moved `parents`, the proof
+  edge (re-rooting is destructive — store enough to invert), and re-insert the
+  removed signature-table entries. Reference
+  `references/z3/src/ast/euf/euf_egraph.cpp` (trail). Then T1.4.5 the **independent
+  congruence checker** (re-derive refl/symm/trans/cong with its own union-find to
+  re-validate an `explain` result — extends "trusted small checking" to equality),
+  and T1.4.6 theory-var lists per class. After P1.4: **P1.5 CDCL(T) loop** → Track 2
+  theories (EUF on the e-graph, lazy arrays, quantifiers/e-matching). Deferred
+  Track-1 perf option still open: T1.2.8 two-level AIG rewriting in `axeyum-aig`.
 
 ## Already shipped this session (pre-plan)
 
@@ -119,7 +123,7 @@ plan is built and committed on the current branch:
 | P1.1 | SAT inprocessing (subsumption → BVE → vivification → glue tiers) | WIP — subsumption+BVE landed (T1.1.1/2), wired into the solve pipeline (T1.1.3), made occurrence-list near-linear + time-bounded (T1.1.4): safe, no regression, but the curated unknowns are SAT-search-bound (→ P1.3) or BVE-resistant. Vivification / glue tiers remain |
 | P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | WIP — T1.2.1 trail + T1.2.2 propagate_values + T1.2.3 solve_eqs landed (model-sound, unit-tested, 36 tests). Next: wire the preprocessing pipeline into the solve path + measure; then elim_unconstrained / max_bv_sharing / bv_slice / AIG 2-level (T1.2.4–T1.2.9) |
 | P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | TODO |
-| P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | WIP — T1.4.1+T1.4.2 done: `axeyum-egraph` crate (ADR-0032), hash-cons + union-find + deferred-merge congruence cascade, brute-force property-tested. Next: T1.4.3 explanations (proof forest), then T1.4.4 backtracking, T1.4.5 checker, T1.4.6 th-vars |
+| P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | WIP — T1.4.1/T1.4.2/T1.4.3 done: `axeyum-egraph` (ADR-0032) = hash-cons + union-find + congruence cascade + Nieuwenhuis–Oliveras proof forest (`explain` to LCA, soundness property-tested). Next: T1.4.4 backtrackable trail (push/pop), T1.4.5 independent congruence checker, T1.4.6 th-var lists |
 | P1.5 | CDCL(T) loop (theory-as-extension, final-check, theory propagation) **[keystone]** | TODO |
 | P1.6 | Theory combination (th_eq bus, interface equalities) | TODO |
 | P1.7 | PBLS local-search BV engine (portfolio) | TODO |
@@ -161,6 +165,11 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **T1.4.3 e-graph explanations** (commit 0c5840f). Nieuwenhuis–
+  Oliveras proof forest alongside the union-find; `merge(a,b,reason)` records edges;
+  `explain(a,b)` returns the minimal input-reason set entailing the equality
+  (explain-to-LCA, congruence premises recovered recursively). Soundness
+  property-tested (replay named merges → re-derives the equality). 9 tests.
 - **2026-06-16** — **P1.4 e-graph keystone started: T1.4.1+T1.4.2** (commit eb3e9e6).
   New dependency-free `axeyum-egraph` crate (ADR-0032): hash-consed e-node creation
   over a root-keyed signature table, path-compressing union-find, and the
