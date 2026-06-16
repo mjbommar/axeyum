@@ -559,6 +559,21 @@ fn check_auto_dispatch(
             Err(other) => return Err(other),
         }
     }
+    // Uninterpreted functions: try the lazy EUF path on the e-graph first. It
+    // decides the equality/UF structure with congruence (no Ackermann blow-up) and
+    // returns a replay-checked `sat` model or a congruence `unsat`; a result it
+    // cannot soundly settle (base-sort semantics outside congruence) comes back
+    // `unknown` and falls through to the complete bit-blasting Ackermann path. Both
+    // its `sat` (replay-checked) and `unsat` (congruence, independently re-checked)
+    // are sound for QF_UFBV, so this only ever fast-paths a correct answer.
+    if features.has_function {
+        match crate::euf_egraph::check_qf_uf(arena, assertions) {
+            CheckResult::Sat(model) => return Ok(CheckResult::Sat(model)),
+            CheckResult::Unsat => return Ok(CheckResult::Unsat),
+            CheckResult::Unknown(_) => {}
+        }
+    }
+
     let mut backend = SatBvBackend::new();
     check_with_all_theories(&mut backend, arena, assertions, DEFAULT_INT_WIDTH, config)
 }
@@ -1388,6 +1403,8 @@ struct Features {
     has_int: bool,
     /// Any datatype sort or constructor/selector/tester op (ADR-0022).
     has_datatype: bool,
+    /// Any uninterpreted-function application (`Op::Apply`).
+    has_function: bool,
 }
 
 impl Features {
@@ -1397,6 +1414,7 @@ impl Features {
             has_bitblast: false,
             has_int: false,
             has_datatype: false,
+            has_function: false,
         };
         let mut seen = BTreeSet::new();
         let mut stack = assertions.to_vec();
@@ -1419,6 +1437,7 @@ impl Features {
             if let TermNode::App { op, args } = arena.node(term) {
                 if matches!(op, Op::Apply(_)) {
                     features.has_bitblast = true;
+                    features.has_function = true;
                 }
                 if matches!(
                     op,
