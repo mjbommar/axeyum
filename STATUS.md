@@ -269,7 +269,7 @@ plan is built and committed on the current branch:
 | Phase | Title | Status |
 |---|---|---|
 | P3.0 | Reduction trust ledger (TrustId + pedantic levels) | DONE |
-| P3.1 | LRAT clausal upgrade (+ in-tree check_lrat) | WIP — **`check_lrat` (hint-based linear checker) + `elaborate_drat_to_lrat` + parse/write** landed in `axeyum-cnf`, sound (3 negative/rejection tests) + 600-CNF differential vs the DRAT path. Remaining: emit LRAT hints directly from the proof-producing CDCL core (`solve_with_drat_proof`) instead of post-hoc elaboration; RAT-step elaboration (negative hints); thread LRAT through the `UnsatProof`/evidence export so QF_BV UNSAT can ship an LRAT artifact |
+| P3.1 | LRAT clausal upgrade (+ in-tree check_lrat) | WIP — **`check_lrat` (hint-based linear checker) + `elaborate_drat_to_lrat` + parse/write** landed in `axeyum-cnf`, sound (3 negative/rejection tests) + 600-CNF differential; **threaded into the evidence export**: every `UnsatProof` (QF_BV + reduced QF_ABV/AUFBV/UF/LIA/datatype) now carries a self-checked LRAT certificate, `recheck` cross-checks it, `recheck_lrat` re-checks it in linear time, tamper-detected. Remaining: emit LRAT hints directly from the proof-producing CDCL core (vs post-hoc elaboration); RAT-step elaboration (negative hints) |
 | P3.2 | Alethe term/proof IR + emitter (`axeyum-alethe`) **[critical path]** | TODO |
 | P3.3 | Alethe for QF_BV (bitblast_* + CNF rules + resolution/drat; Carcara CI) | TODO |
 | P3.4 | Embedded Alethe checker subset (self-checking) | TODO |
