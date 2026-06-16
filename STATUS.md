@@ -166,7 +166,7 @@ plan is built and committed on the current branch:
 | P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | WIP — T1.2.1 trail + T1.2.2 propagate_values + T1.2.3 solve_eqs landed (model-sound, unit-tested, 36 tests). Next: wire the preprocessing pipeline into the solve path + measure; then elim_unconstrained / max_bv_sharing / bv_slice / AIG 2-level (T1.2.4–T1.2.9) |
 | P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | TODO |
 | P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | **DONE** — `axeyum-egraph` (ADR-0032): hash-cons + union-find + congruence cascade (T1.4.1/2), proof-forest `explain` (T1.4.3), backtrackable push/pop (T1.4.4), independent `check_congruence` (T1.4.5), per-class theory-var lists (T1.4.6). 17 tests incl. brute-force + backtracking property tests |
-| P1.5 | CDCL(T) loop (theory-as-extension, final-check, theory propagation) **[keystone]** | WIP — EUF on the e-graph: `prove_unsat_by_congruence` (conjunctive), `prove_unsat_lazy` (offline DPLL(T)), and `check_qf_uf` (full decision with **replay-checked sat models** from e-graph classes + function interps). Conflicts independently checked; **differentially validated vs Ackermann**. T1.5.5 met for the equality/UF fragment. Remaining: `TheorySolver` trait + online propagation (T1.5.1–T1.5.4 efficiency refactor), dispatch wiring; theory combination with BV (P1.6) for complete QF_UFBV |
+| P1.5 | CDCL(T) loop (theory-as-extension, final-check, theory propagation) **[keystone]** | WIP — EUF on the e-graph: `prove_unsat_by_congruence` (conjunctive), `prove_unsat_lazy` (offline DPLL(T)), and `check_qf_uf` (full decision with **replay-checked sat models** from e-graph classes + function interps). Conflicts independently checked; **differentially validated vs Ackermann**. T1.5.5 met for the equality/UF fragment. **Online `TheorySolver` trait + `EufTheory` landed** (one backtrackable e-graph, explained conflict cores, lockstep push/pop) — the online theory side of the loop. Remaining: drive it from an online CDCL search with theory propagation (T1.5.1–T1.5.4) + dispatch wiring; theory combination with BV (P1.6) for complete QF_UFBV |
 | P1.6 | Theory combination (th_eq bus, interface equalities) | TODO |
 | P1.7 | PBLS local-search BV engine (portfolio) | TODO |
 | P1.8 | Strategy & tactics (combinators + probes + per-logic scripts) | TODO |
@@ -207,7 +207,19 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
-- **2026-06-16** — **P2.6 multi-round instantiation test** (pending commit).
+- **2026-06-16** — **P1.5 online `TheorySolver` trait + `EufTheory`** (pending commit).
+  First slice of the *online* CDCL(T) theory interface (vs the offline
+  `prove_unsat_lazy` model-enumeration): `TheorySolver` (`assert(atom,value)` →
+  `Ok` or a conflicting `Vec<TheoryLit>`; `push`/`pop`) and `EufTheory`, an EUF
+  solver over **one** backtrackable keystone `EGraph` kept in sync with the search.
+  Asserting `eq` merges sides (reason = atom index, so `EGraph::explain`
+  reconstructs the conflict core); asserting `¬eq` records a disequality; conflicts
+  = a violated disequality or two distinct constants forced equal. 4 tests
+  (congruence conflict + explained core, merge backtracked on `pop`, constant
+  collision, transitivity core). Exported; lays the theory side of the CDCL(T) loop
+  that P1.6 combination builds on.
+- **2026-06-16** — **P2.6 congruence-only nested trigger test** (commit 8e0a61c).
+- **2026-06-16** — **P2.6 multi-round instantiation test** (commit 8d0a9e4).
   Added `instantiation_loop_refutes_across_multiple_rounds`: a refutation that
   only closes because round 1 (`∀x. f(x)=g(x)` over ground `f(a)`) introduces
   `g(a)`, which round 2 (`∀x. g(x)=0`) can then match — proving the fixpoint loop

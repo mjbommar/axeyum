@@ -99,7 +99,10 @@ pub use dpll_t::{
 };
 pub use enums::{EnumError, EnumSort, EnumVar};
 pub use euf::check_with_function_elimination;
-pub use euf_egraph::{EufConflict, check_qf_uf, prove_unsat_by_congruence, prove_unsat_lazy};
+pub use euf_egraph::{
+    EufConflict, EufTheory, TheoryLit, TheorySolver, check_qf_uf, prove_unsat_by_congruence,
+    prove_unsat_lazy,
+};
 pub use evidence::{
     Evidence, EvidenceReport, LayerVersions, ProofOutcome, Provenance, SEMANTICS_VERSION,
     produce_evidence, produce_lra_dpll_evidence, produce_lra_evidence, produce_qf_bv_evidence,

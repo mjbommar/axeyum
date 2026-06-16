@@ -41,6 +41,157 @@ pub struct EufConflict {
     pub core: Vec<TermId>,
 }
 
+/// A theory literal in an online CDCL(T) search: a registered atom index and the
+/// polarity it is currently asserted with. The negation of a conflict's literal
+/// conjunction is a theory lemma the SAT layer can learn.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TheoryLit {
+    /// Index into the atoms the theory was constructed with.
+    pub atom: usize,
+    /// Whether the atom is asserted true or false.
+    pub value: bool,
+}
+
+/// The online theory-solver interface a CDCL(T) loop drives (Track 1, P1.5): the
+/// SAT search asserts theory atoms as its trail grows ([`Self::assert`]) and
+/// backtracks in lockstep ([`Self::push`]/[`Self::pop`]); the theory answers with a
+/// conflict — the asserted literals whose conjunction it refutes — or `Ok(())`.
+///
+/// This is the *online* counterpart to the offline [`prove_unsat_lazy`]
+/// enumeration: instead of rebuilding the e-graph for each complete Boolean model,
+/// the theory keeps one backtrackable [`EGraph`] in sync with the search.
+pub trait TheorySolver {
+    /// Asserts `atom` at `value`. Returns the conflicting literal set if the
+    /// resulting theory state is inconsistent (so `¬⋀lits` is a valid lemma);
+    /// otherwise `Ok(())`. Assertions accumulate until the next [`Self::pop`].
+    ///
+    /// # Errors
+    ///
+    /// Returns the conflicting literals when the assertion makes the theory state
+    /// inconsistent.
+    fn assert(&mut self, atom: usize, value: bool) -> Result<(), Vec<TheoryLit>>;
+    /// Saves a backtrack point aligned with a SAT decision level.
+    fn push(&mut self);
+    /// Undoes every assertion back to the most recent [`Self::push`].
+    fn pop(&mut self);
+}
+
+/// Online EUF theory solver over the backtrackable congruence-closure e-graph
+/// (Track 1, P1.5). Atoms are equality atoms `(= s t)`: asserting one **true**
+/// merges its sides — justified by the atom index, so [`EGraph::explain`]
+/// reconstructs the conflict core — and asserting one **false** records a
+/// disequality. A conflict is an asserted disequality whose sides have become
+/// congruent, or two distinct literal constants forced equal. Non-equality atoms
+/// register as no-ops, keeping atom indices aligned with the caller's Boolean
+/// variable numbering.
+pub struct EufTheory {
+    bridge: Bridge,
+    /// Per atom index: the e-nodes of its two sides, or `None` for a non-equality
+    /// atom (asserting it is a congruence no-op).
+    atoms: Vec<Option<(ENodeId, ENodeId)>>,
+    /// Currently-asserted disequalities: (atom index, side a, side b).
+    diseqs: Vec<(usize, ENodeId, ENodeId)>,
+    /// Backtrack trail of `diseqs` lengths, one entry per [`EufTheory::push`].
+    diseq_trail: Vec<usize>,
+}
+
+impl EufTheory {
+    /// Builds an online EUF theory over the given atom terms. Each `(= s t)` atom
+    /// registers its two sides' e-nodes; any other atom registers as a no-op so
+    /// indices stay aligned with the caller's atom numbering.
+    #[must_use]
+    pub fn new(arena: &TermArena, atom_terms: &[TermId]) -> Self {
+        let mut bridge = Bridge::new();
+        let mut atoms = Vec::with_capacity(atom_terms.len());
+        for &t in atom_terms {
+            let sides = match arena.node(t) {
+                TermNode::App { op: Op::Eq, args } if args.len() == 2 => {
+                    let (l, r) = (args[0], args[1]);
+                    let a = bridge.node(arena, l);
+                    let b = bridge.node(arena, r);
+                    Some((a, b))
+                }
+                _ => None,
+            };
+            atoms.push(sides);
+        }
+        Self {
+            bridge,
+            atoms,
+            diseqs: Vec::new(),
+            diseq_trail: Vec::new(),
+        }
+    }
+
+    /// The first conflict in the current state: an asserted disequality whose sides
+    /// are congruent, or two distinct constants merged into one class. The conflict
+    /// is the asserted literals (recovered via [`EGraph::explain`]) whose
+    /// conjunction is refuted.
+    fn first_conflict(&self) -> Option<Vec<TheoryLit>> {
+        // An asserted disequality whose sides are now congruent.
+        for &(atom, a, b) in &self.diseqs {
+            if self.bridge.egraph.equal(a, b) {
+                let mut lits = self.explain_true(a, b);
+                lits.push(TheoryLit { atom, value: false });
+                return Some(lits);
+            }
+        }
+        // Two distinct literal constants forced into the same class.
+        let constants = &self.bridge.constants;
+        for i in 0..constants.len() {
+            for j in (i + 1)..constants.len() {
+                if self.bridge.egraph.equal(constants[i], constants[j]) {
+                    return Some(self.explain_true(constants[i], constants[j]));
+                }
+            }
+        }
+        None
+    }
+
+    /// The asserted-true literals (atom indices) explaining `a = b`.
+    fn explain_true(&self, a: ENodeId, b: ENodeId) -> Vec<TheoryLit> {
+        self.bridge
+            .egraph
+            .explain(a, b)
+            .into_iter()
+            .map(|reason| TheoryLit {
+                atom: reason as usize,
+                value: true,
+            })
+            .collect()
+    }
+}
+
+impl TheorySolver for EufTheory {
+    fn assert(&mut self, atom: usize, value: bool) -> Result<(), Vec<TheoryLit>> {
+        let Some((a, b)) = self.atoms[atom] else {
+            return Ok(()); // non-equality atom: nothing for congruence to do
+        };
+        if value {
+            let reason = u32::try_from(atom).expect("atom index fits u32");
+            self.bridge.egraph.merge(a, b, reason);
+        } else {
+            self.diseqs.push((atom, a, b));
+        }
+        match self.first_conflict() {
+            Some(lits) => Err(lits),
+            None => Ok(()),
+        }
+    }
+
+    fn push(&mut self) {
+        self.bridge.egraph.push();
+        self.diseq_trail.push(self.diseqs.len());
+    }
+
+    fn pop(&mut self) {
+        self.bridge.egraph.pop();
+        if let Some(len) = self.diseq_trail.pop() {
+            self.diseqs.truncate(len);
+        }
+    }
+}
+
 /// Tries to prove `assertions` UNSAT by congruence closure over their equality
 /// structure (see module docs). Returns the conflict when proven, or `None` when
 /// the abstraction is consistent (no claim about the real formula).
@@ -669,6 +820,105 @@ impl Bridge {
 mod tests {
     use super::*;
     use axeyum_ir::{Sort, TermArena};
+
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn online_euf_detects_congruence_conflict_and_explains_it() {
+        // Atoms: 0: a=b, 1: f(a)=f(b). Assert a=b true, f(a)=f(b) false.
+        // Congruence forces f(a)=f(b), contradicting the disequality. The conflict
+        // core must name atom 0 (true) and atom 1 (false) — the minimal lemma.
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(8);
+        let a = arena.bv_var("a", 8).unwrap();
+        let b = arena.bv_var("b", 8).unwrap();
+        let f = arena.declare_fun("f", &[sort], sort).unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let fb = arena.apply(f, &[b]).unwrap();
+        let a_eq_b = arena.eq(a, b).unwrap();
+        let fa_eq_fb = arena.eq(fa, fb).unwrap();
+
+        let mut theory = EufTheory::new(&arena, &[a_eq_b, fa_eq_fb]);
+        assert!(theory.assert(0, true).is_ok());
+        let conflict = theory.assert(1, false).expect_err("congruence conflict");
+        assert!(conflict.contains(&TheoryLit {
+            atom: 0,
+            value: true
+        }));
+        assert!(conflict.contains(&TheoryLit {
+            atom: 1,
+            value: false
+        }));
+    }
+
+    #[test]
+    fn online_euf_backtracks_a_merge_on_pop() {
+        // After a=b is asserted and then popped, a≠b must no longer conflict —
+        // the e-graph merge was undone in lockstep with the search.
+        let mut arena = TermArena::new();
+        let a = arena.bv_var("a", 8).unwrap();
+        let b = arena.bv_var("b", 8).unwrap();
+        let a_eq_b = arena.eq(a, b).unwrap();
+
+        let mut theory = EufTheory::new(&arena, &[a_eq_b]);
+        theory.push();
+        assert!(theory.assert(0, true).is_ok());
+        theory.pop();
+        // a=b is gone; asserting a≠b (atom 0 false) is now consistent.
+        assert!(theory.assert(0, false).is_ok());
+    }
+
+    #[test]
+    fn online_euf_detects_distinct_constant_collision() {
+        // x = 1 ∧ x = 2 forces the distinct constants 1 and 2 into one class.
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 8).unwrap();
+        let one = arena.bv_const(8, 1).unwrap();
+        let two = arena.bv_const(8, 2).unwrap();
+        let x_eq_1 = arena.eq(x, one).unwrap();
+        let x_eq_2 = arena.eq(x, two).unwrap();
+
+        let mut theory = EufTheory::new(&arena, &[x_eq_1, x_eq_2]);
+        assert!(theory.assert(0, true).is_ok());
+        let conflict = theory.assert(1, true).expect_err("1 = 2 is impossible");
+        // Both equalities are needed to force the constant collision.
+        assert!(conflict.contains(&TheoryLit {
+            atom: 0,
+            value: true
+        }));
+        assert!(conflict.contains(&TheoryLit {
+            atom: 1,
+            value: true
+        }));
+    }
+
+    #[test]
+    fn online_euf_transitivity_conflict_core_is_complete() {
+        // a=b, b=c, a≠c: the disequality conflict must cite both equalities.
+        let mut arena = TermArena::new();
+        let a = arena.bv_var("a", 8).unwrap();
+        let b = arena.bv_var("b", 8).unwrap();
+        let c = arena.bv_var("c", 8).unwrap();
+        let ab = arena.eq(a, b).unwrap();
+        let bc = arena.eq(b, c).unwrap();
+        let ac = arena.eq(a, c).unwrap();
+
+        let mut theory = EufTheory::new(&arena, &[ab, bc, ac]);
+        assert!(theory.assert(0, true).is_ok()); // a=b
+        assert!(theory.assert(1, true).is_ok()); // b=c
+        let conflict = theory.assert(2, false).expect_err("a≠c after a=b=c"); // a≠c
+        assert!(conflict.contains(&TheoryLit {
+            atom: 0,
+            value: true
+        }));
+        assert!(conflict.contains(&TheoryLit {
+            atom: 1,
+            value: true
+        }));
+        assert!(conflict.contains(&TheoryLit {
+            atom: 2,
+            value: false
+        }));
+    }
 
     #[test]
     fn congruence_contradiction_is_proven_unsat() {
