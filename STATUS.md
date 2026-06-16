@@ -45,6 +45,26 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   `FunctionElimination` now exposes `abstraction()` + `applications()` (eager
   `assertions()` byte-identical). **300-formula differential vs the eager
   `check_with_all_theories` — all jointly decided, all agreed (21 unsat).**
+  - **Nested-application coverage added** (2026-06-16): two targeted lazy-QF_UFBV
+    tests where an application's *argument is itself an abstracted application*
+    (`f(f(a))`) — a refutation by nested congruence and a SAT involution that must
+    project to a coherent function interpretation and replay. (The random
+    differential grows its term pool with `f`/`g` apps so it nests too, but these
+    pin it deterministically.)
+  - **Design finding — model-based combination ≡ lazy Ackermann (important):** a
+    full *online Nelson–Oppen* between the e-graph and BV would only add power over
+    lazy Ackermann in a **non-model-based** regime. In the **model-based** regime
+    (read a concrete BV model, check the shared-term arrangement) the model assigns
+    *concrete values*, so congruence over them collapses to value-equality —
+    including transitive chains — which the lazy path's raw model-eval already
+    detects. The e-graph's *abstract* congruence only pays off when the BV theory
+    participates in a shared CDCL(T) trail **without committing to a full model**,
+    i.e. as an **online BV theory solver** (the P2.1 "BV theory-checker"), which does
+    not exist yet. **Conclusion:** lazy Ackermann *is* the QF_UFBV combination for the
+    model-based regime, and is arguably higher-assurance than eager (explicit,
+    individually-valid functional-consistency lemmas added on demand vs a bulk
+    syntactic reduction). The fuller online N-O is genuinely **gated on P2.1**; do not
+    build a redundant model-based "combination" module.
   - **Dispatch wiring of `check_qf_ufbv_lazy` — deliberately deferred (methodology):**
     routing lazy-before-eager is a *performance* optimization (fewer up-front
     lemmas), not a correctness/capability gain — the eager `check_with_all_theories`
@@ -53,15 +73,18 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     risk (lazy abstracts functions but not arrays), it stays an available, validated
     API until a real UFBV corpus shows eager-Ackermann lemma count is the
     bottleneck. The function is exported and ready.
-  - **Next action (precise resume point):** the *fuller* **online interface-equality
-    combination** — the actual P1.6 prize that removes the Ackermann trust hole
-    (lazy Ackermann only defers it). Drive the bit-blasted BV theory and the online
-    `EufTheory` together via Nelson–Oppen equality sharing over shared BV-sorted
-    terms: from a BV model read the arrangement of shared terms, feed entailed
-    equalities/disequalities to the e-graph, split on undetermined interface
-    equalities, and let the e-graph's congruence conflicts refine — deciding
-    QF_UFBV with UF handled by the *checked* e-graph rather than a trusted reduction.
-    Validate differentially vs `check_with_all_theories`. Secondary: migrate
+  - **Next action (precise resume point):** the full online N-O is **gated on an
+    online BV theory** (per the finding above), so the productive next step is to
+    **start P2.1's BV theory-checker** — an incremental BV theory solver
+    (`assert`/`propagate`/`explain`/`push`/`pop`, mirroring the `TheorySolver` trait
+    `EufTheory` implements) that can participate in a shared CDCL(T) trail without
+    materializing a full model. With both an online BV theory and the online
+    `EufTheory`, the interface-equality combination (equality sharing over shared
+    BV-sorted terms, split on undetermined interface equalities) becomes
+    implementable and removes the Ackermann trust hole. That is a substantial new
+    track — begin with fresh context. *Alternatively*, if pivoting tracks: P2.2 lazy
+    arrays (ROW axioms on the e-graph) or P2.9 lazy datatypes (e-graph splitting)
+    also build directly on the now-complete keystone. Secondary: migrate
     `axeyum_rewrite`'s bespoke trigger closure onto the keystone.
 - **Plan authored** (2026-06-15): the full track/phase/task plan is under
   [`docs/plan/`](docs/plan/README.md), built from the five reference reviews in

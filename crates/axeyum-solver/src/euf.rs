@@ -380,6 +380,66 @@ mod tests {
     }
 
     #[test]
+    fn lazy_ufbv_refutes_nested_application_congruence() {
+        // f(f(a)) != a  AND  f(a) = a  over BV8. Here one application's argument is
+        // itself an abstracted application: f(a) -> v1, f(f(a)) -> v2, with v1 = a
+        // forced. The on-demand lemma (a = v1) => (v1 = v2) then forces v2 = a,
+        // contradicting f(f(a)) != a. Exercises lazy Ackermann over nested apps.
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("f", &[Sort::BitVec(8)], Sort::BitVec(8))
+            .unwrap();
+        let a = arena.bv_var("a", 8).unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let ffa = arena.apply(f, &[fa]).unwrap();
+        let ffa_ne_a = {
+            let eq = arena.eq(ffa, a).unwrap();
+            arena.not(eq).unwrap()
+        };
+        let fa_eq_a = arena.eq(fa, a).unwrap();
+
+        let mut backend = SatBvBackend::new();
+        let config = SolverConfig::default();
+        let result =
+            check_qf_ufbv_lazy(&mut backend, &mut arena, &[ffa_ne_a, fa_eq_a], &config).unwrap();
+        assert_eq!(result, CheckResult::Unsat);
+    }
+
+    #[test]
+    fn lazy_ufbv_nested_application_sat_replays() {
+        // f(f(a)) = a  AND  f(a) = b: satisfiable (an involution f with f(a)=b,
+        // f(b)=a, a != b). The nested application must project to a coherent
+        // function interpretation that replays.
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("f", &[Sort::BitVec(8)], Sort::BitVec(8))
+            .unwrap();
+        let a = arena.bv_var("a", 8).unwrap();
+        let b = arena.bv_var("b", 8).unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let ffa = arena.apply(f, &[fa]).unwrap();
+        let ffa_eq_a = arena.eq(ffa, a).unwrap();
+        let fa_eq_b = arena.eq(fa, b).unwrap();
+        let originals = [ffa_eq_a, fa_eq_b];
+
+        let mut backend = SatBvBackend::new();
+        let config = SolverConfig::default();
+        let CheckResult::Sat(model) =
+            check_qf_ufbv_lazy(&mut backend, &mut arena, &originals, &config).unwrap()
+        else {
+            panic!("expected SAT for the involution");
+        };
+        let assignment = model.to_assignment();
+        for &t in &originals {
+            assert_eq!(
+                eval(&arena, t, &assignment).unwrap(),
+                Value::Bool(true),
+                "nested-application sat model must replay"
+            );
+        }
+    }
+
+    #[test]
     fn lazy_ufbv_matches_eager_differential() {
         // ~300 deterministic-random small QF_UFBV formulas; the lazy verdict must
         // agree with the eager full-theory verdict whenever both decide.
