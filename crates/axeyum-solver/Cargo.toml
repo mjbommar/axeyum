@@ -15,6 +15,7 @@ publish = false
 axeyum-aig.workspace = true
 axeyum-bv.workspace = true
 axeyum-cnf.workspace = true
+axeyum-egraph.workspace = true
 axeyum-fp.workspace = true
 axeyum-ir.workspace = true
 axeyum-query.workspace = true

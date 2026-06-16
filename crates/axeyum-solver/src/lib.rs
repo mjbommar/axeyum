@@ -31,6 +31,7 @@ mod dpll_lia;
 mod dpll_t;
 mod enums;
 mod euf;
+mod euf_egraph;
 /// Floating-point (IEEE 754) formula builders — predicates, classification, sign
 /// ops, equality, ordering — re-exported from the `axeyum-fp` crate (extracted so
 /// the SMT-LIB front-end can share them without depending on the solver). FP
@@ -97,6 +98,7 @@ pub use dpll_t::{
 };
 pub use enums::{EnumError, EnumSort, EnumVar};
 pub use euf::check_with_function_elimination;
+pub use euf_egraph::{EufConflict, prove_unsat_by_congruence};
 pub use evidence::{
     Evidence, EvidenceReport, LayerVersions, ProofOutcome, Provenance, SEMANTICS_VERSION,
     produce_evidence, produce_lra_dpll_evidence, produce_lra_evidence, produce_qf_bv_evidence,
