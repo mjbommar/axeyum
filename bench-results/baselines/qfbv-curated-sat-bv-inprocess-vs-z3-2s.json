@@ -45,16 +45,16 @@
       "backend_stats": {
         "aig_inputs": 64.0,
         "aig_nodes": 65.0,
-        "bit_blast_ms": 0.291435,
+        "bit_blast_ms": 0.286513,
         "bve_clauses_added": 0.0,
         "bve_clauses_removed": 0.0,
         "bve_variables_eliminated": 0.0,
         "cnf_clauses": 1.0,
         "cnf_clauses_solved": 1.0,
-        "cnf_encode_ms": 0.068472,
+        "cnf_encode_ms": 0.075807,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 0.0,
-        "inprocess_ms": 0.013281000000000001,
+        "inprocess_ms": 0.017011000000000002,
         "subsume_clauses_subsumed": 0.0,
         "subsume_literals_strengthened": 0.0,
         "subsume_tautologies_removed": 0.0
@@ -131,16 +131,16 @@
       "backend_stats": {
         "aig_inputs": 64.0,
         "aig_nodes": 65.0,
-        "bit_blast_ms": 0.157662,
+        "bit_blast_ms": 0.166985,
         "bve_clauses_added": 0.0,
         "bve_clauses_removed": 0.0,
         "bve_variables_eliminated": 0.0,
         "cnf_clauses": 1.0,
         "cnf_clauses_solved": 1.0,
-        "cnf_encode_ms": 0.039097,
+        "cnf_encode_ms": 0.043269999999999996,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 0.0,
-        "inprocess_ms": 0.009548000000000001,
+        "inprocess_ms": 0.018131,
         "subsume_clauses_subsumed": 0.0,
         "subsume_literals_strengthened": 0.0,
         "subsume_tautologies_removed": 0.0
@@ -217,16 +217,16 @@
       "backend_stats": {
         "aig_inputs": 64.0,
         "aig_nodes": 65.0,
-        "bit_blast_ms": 0.16439600000000001,
+        "bit_blast_ms": 0.183016,
         "bve_clauses_added": 0.0,
         "bve_clauses_removed": 0.0,
         "bve_variables_eliminated": 0.0,
         "cnf_clauses": 1.0,
         "cnf_clauses_solved": 1.0,
-        "cnf_encode_ms": 0.026726,
+        "cnf_encode_ms": 0.028843,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 0.0,
-        "inprocess_ms": 0.006088,
+        "inprocess_ms": 0.008328,
         "subsume_clauses_subsumed": 0.0,
         "subsume_literals_strengthened": 0.0,
         "subsume_tautologies_removed": 0.0
@@ -303,16 +303,16 @@
       "backend_stats": {
         "aig_inputs": 64.0,
         "aig_nodes": 65.0,
-        "bit_blast_ms": 0.091601,
+        "bit_blast_ms": 0.099854,
         "bve_clauses_added": 0.0,
         "bve_clauses_removed": 0.0,
         "bve_variables_eliminated": 0.0,
         "cnf_clauses": 1.0,
         "cnf_clauses_solved": 1.0,
-        "cnf_encode_ms": 0.031180000000000003,
+        "cnf_encode_ms": 0.031392,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 0.0,
-        "inprocess_ms": 0.008388,
+        "inprocess_ms": 0.010258999999999999,
         "subsume_clauses_subsumed": 0.0,
         "subsume_literals_strengthened": 0.0,
         "subsume_tautologies_removed": 0.0
@@ -389,17 +389,17 @@
       "backend_stats": {
         "aig_inputs": 32.0,
         "aig_nodes": 68.0,
-        "bit_blast_ms": 0.053251,
-        "bve_clauses_added": 6.0,
-        "bve_clauses_removed": 50.0,
+        "bit_blast_ms": 0.058427999999999994,
+        "bve_clauses_added": 5.0,
+        "bve_clauses_removed": 48.0,
         "bve_variables_eliminated": 34.0,
         "cnf_clauses": 44.0,
         "cnf_clauses_solved": 0.0,
-        "cnf_encode_ms": 0.091834,
+        "cnf_encode_ms": 0.097359,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 35.0,
-        "inprocess_ms": 0.346354,
-        "subsume_clauses_subsumed": 0.0,
+        "inprocess_ms": 0.170745,
+        "subsume_clauses_subsumed": 1.0,
         "subsume_literals_strengthened": 1.0,
         "subsume_tautologies_removed": 0.0
       },
@@ -417,7 +417,7 @@
           "max memory": 33.97,
           "memory": 33.73,
           "mk bool var": 1.0,
-          "num allocs": 368546.0,
+          "num allocs": 368534.0,
           "num checks": 1.0,
           "rlimit count": 97.0
         },
@@ -479,18 +479,18 @@
       "backend_stats": {
         "aig_inputs": 32.0,
         "aig_nodes": 68.0,
-        "bit_blast_ms": 0.059036000000000005,
-        "bve_clauses_added": 4.0,
-        "bve_clauses_removed": 47.0,
+        "bit_blast_ms": 0.059066,
+        "bve_clauses_added": 1.0,
+        "bve_clauses_removed": 40.0,
         "bve_variables_eliminated": 34.0,
         "cnf_clauses": 45.0,
         "cnf_clauses_solved": 0.0,
-        "cnf_encode_ms": 0.096338,
+        "cnf_encode_ms": 0.094269,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 35.0,
-        "inprocess_ms": 0.34623,
-        "subsume_clauses_subsumed": 2.0,
-        "subsume_literals_strengthened": 3.0,
+        "inprocess_ms": 0.167345,
+        "subsume_clauses_subsumed": 6.0,
+        "subsume_literals_strengthened": 7.0,
         "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 4,
@@ -507,7 +507,7 @@
           "max memory": 33.97,
           "memory": 33.73,
           "mk bool var": 1.0,
-          "num allocs": 639300.0,
+          "num allocs": 639274.0,
           "num checks": 1.0,
           "rlimit count": 81.0
         },
@@ -569,16 +569,16 @@
       "backend_stats": {
         "aig_inputs": 64.0,
         "aig_nodes": 127.0,
-        "bit_blast_ms": 0.091777,
+        "bit_blast_ms": 0.096443,
         "bve_clauses_added": 0.0,
         "bve_clauses_removed": 64.0,
         "bve_variables_eliminated": 64.0,
         "cnf_clauses": 64.0,
         "cnf_clauses_solved": 0.0,
-        "cnf_encode_ms": 0.101432,
+        "cnf_encode_ms": 0.100135,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 64.0,
-        "inprocess_ms": 0.194305,
+        "inprocess_ms": 0.095875,
         "subsume_clauses_subsumed": 0.0,
         "subsume_literals_strengthened": 0.0,
         "subsume_tautologies_removed": 0.0
@@ -594,7 +594,7 @@
         "backend_stats": {
           "max memory": 33.97,
           "memory": 33.68,
-          "num allocs": 912884.0,
+          "num allocs": 912836.0,
           "rlimit count": 61.0,
           "solve-eqs-elim-vars": 2.0,
           "solve-eqs-steps": 2.0
@@ -657,16 +657,16 @@
       "backend_stats": {
         "aig_inputs": 32.0,
         "aig_nodes": 64.0,
-        "bit_blast_ms": 0.052127,
+        "bit_blast_ms": 0.054821999999999996,
         "bve_clauses_added": 0.0,
         "bve_clauses_removed": 1.0,
         "bve_variables_eliminated": 1.0,
         "cnf_clauses": 1.0,
         "cnf_clauses_solved": 0.0,
-        "cnf_encode_ms": 0.056039000000000005,
+        "cnf_encode_ms": 0.055371000000000004,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 32.0,
-        "inprocess_ms": 0.05953,
+        "inprocess_ms": 0.036354,
         "subsume_clauses_subsumed": 0.0,
         "subsume_literals_strengthened": 0.0,
         "subsume_tautologies_removed": 0.0
@@ -685,7 +685,7 @@
           "max memory": 33.97,
           "memory": 33.73,
           "mk bool var": 1.0,
-          "num allocs": 1317578.0,
+          "num allocs": 1317507.0,
           "num checks": 1.0,
           "rlimit count": 73.0
         },
@@ -747,16 +747,16 @@
       "backend_stats": {
         "aig_inputs": 0.0,
         "aig_nodes": 1.0,
-        "bit_blast_ms": 0.007663,
+        "bit_blast_ms": 0.009313,
         "bve_clauses_added": 0.0,
         "bve_clauses_removed": 0.0,
         "bve_variables_eliminated": 0.0,
         "cnf_clauses": 0.0,
         "cnf_clauses_solved": 0.0,
-        "cnf_encode_ms": 0.014361,
+        "cnf_encode_ms": 0.017968,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 0.0,
-        "inprocess_ms": 0.004161,
+        "inprocess_ms": 0.006904,
         "subsume_clauses_subsumed": 0.0,
         "subsume_literals_strengthened": 0.0,
         "subsume_tautologies_removed": 0.0
@@ -772,7 +772,7 @@
         "backend_stats": {
           "max memory": 33.97,
           "memory": 33.49,
-          "num allocs": 1651029.0,
+          "num allocs": 1650933.0,
           "rlimit count": 7.0
         },
         "decision_agrees": true,
@@ -833,16 +833,16 @@
       "backend_stats": {
         "aig_inputs": 64.0,
         "aig_nodes": 128.0,
-        "bit_blast_ms": 0.091838,
+        "bit_blast_ms": 0.112134,
         "bve_clauses_added": 0.0,
         "bve_clauses_removed": 1.0,
         "bve_variables_eliminated": 1.0,
         "cnf_clauses": 1.0,
         "cnf_clauses_solved": 0.0,
-        "cnf_encode_ms": 0.09696600000000001,
+        "cnf_encode_ms": 0.104903,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 64.0,
-        "inprocess_ms": 0.17368599999999998,
+        "inprocess_ms": 0.06654499999999999,
         "subsume_clauses_subsumed": 0.0,
         "subsume_literals_strengthened": 0.0,
         "subsume_tautologies_removed": 0.0
@@ -861,7 +861,7 @@
           "max memory": 33.97,
           "memory": 33.73,
           "mk bool var": 1.0,
-          "num allocs": 2097299.0,
+          "num allocs": 2097148.0,
           "num checks": 1.0,
           "rlimit count": 73.0
         },
@@ -923,16 +923,16 @@
       "backend_stats": {
         "aig_inputs": 32.0,
         "aig_nodes": 216.0,
-        "bit_blast_ms": 0.810837,
+        "bit_blast_ms": 0.849306,
         "bve_clauses_added": 18.0,
         "bve_clauses_removed": 50.0,
         "bve_variables_eliminated": 13.0,
         "cnf_clauses": 32.0,
         "cnf_clauses_solved": 0.0,
-        "cnf_encode_ms": 0.10126199999999999,
+        "cnf_encode_ms": 0.103479,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 14.0,
-        "inprocess_ms": 0.19939600000000002,
+        "inprocess_ms": 0.138367,
         "subsume_clauses_subsumed": 0.0,
         "subsume_literals_strengthened": 0.0,
         "subsume_tautologies_removed": 0.0
@@ -948,7 +948,7 @@
         "backend_stats": {
           "max memory": 41.89,
           "memory": 33.77,
-          "num allocs": 2634591.0,
+          "num allocs": 2634411.0,
           "rlimit count": 861.0,
           "sat decisions": 5.0,
           "sat mk clause nary": 1.0,
@@ -1016,11 +1016,19 @@
       "backend_stats": {
         "aig_inputs": 32.0,
         "aig_nodes": 2375.0,
-        "bit_blast_ms": 2.994676,
+        "bit_blast_ms": 3.048183,
+        "bve_clauses_added": 1338.0,
+        "bve_clauses_removed": 1657.0,
+        "bve_variables_eliminated": 218.0,
         "cnf_clauses": 4156.0,
-        "cnf_encode_ms": 5.505446,
-        "cnf_inprocessing_skipped_size": 1.0,
-        "cnf_variables": 1083.0
+        "cnf_clauses_solved": 3721.0,
+        "cnf_encode_ms": 7.202129,
+        "cnf_inprocessing": 1.0,
+        "cnf_variables": 1083.0,
+        "inprocess_ms": 323.651639,
+        "subsume_clauses_subsumed": 116.0,
+        "subsume_literals_strengthened": 170.0,
+        "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 44,
       "distinct_symbols": 1,
@@ -1031,9 +1039,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 42.11,
+          "max memory": 42.12,
           "memory": 33.85,
-          "num allocs": 3413212.0,
+          "num allocs": 3413007.0,
           "rlimit count": 5629.0,
           "sat backjumps": 1.0,
           "sat conflicts": 2.0,
@@ -1043,14 +1051,14 @@
           "sat mk var": 269.0,
           "sat propagations 2ary": 221.0,
           "sat propagations nary": 128.0,
-          "time": 0.003
+          "time": 0.004
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "unsat",
-        "solve_ms": 3,
+        "solve_ms": 4,
         "translate_ms": 0
       },
       "outcome": "unsat",
@@ -1094,8 +1102,8 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 23,
-      "translate_ms": 8,
+      "solve_ms": 18,
+      "translate_ms": 333,
       "tree_nodes": 105
     },
     {
@@ -1103,11 +1111,19 @@
       "backend_stats": {
         "aig_inputs": 16.0,
         "aig_nodes": 1832.0,
-        "bit_blast_ms": 1.70688,
+        "bit_blast_ms": 1.7651430000000001,
+        "bve_clauses_added": 359.0,
+        "bve_clauses_removed": 412.0,
+        "bve_variables_eliminated": 53.0,
         "cnf_clauses": 2716.0,
-        "cnf_encode_ms": 3.410184,
-        "cnf_inprocessing_skipped_size": 1.0,
-        "cnf_variables": 655.0
+        "cnf_clauses_solved": 2663.0,
+        "cnf_encode_ms": 3.391251,
+        "cnf_inprocessing": 1.0,
+        "cnf_variables": 655.0,
+        "inprocess_ms": 79.028508,
+        "subsume_clauses_subsumed": 0.0,
+        "subsume_literals_strengthened": 13.0,
+        "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 32,
       "detail": "Timeout: rustsat-batsat timeout",
@@ -1162,8 +1178,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1994,
-      "translate_ms": 5,
+      "solve_ms": 1915,
+      "translate_ms": 84,
       "tree_nodes": 80
     },
     {
@@ -1171,11 +1187,19 @@
       "backend_stats": {
         "aig_inputs": 32.0,
         "aig_nodes": 7678.0,
-        "bit_blast_ms": 7.680408,
+        "bit_blast_ms": 8.100819,
+        "bve_clauses_added": 723.0,
+        "bve_clauses_removed": 808.0,
+        "bve_variables_eliminated": 105.0,
         "cnf_clauses": 11840.0,
-        "cnf_encode_ms": 16.248282999999997,
-        "cnf_inprocessing_skipped_size": 1.0,
-        "cnf_variables": 2733.0
+        "cnf_clauses_solved": 11755.0,
+        "cnf_encode_ms": 16.583079,
+        "cnf_inprocessing": 1.0,
+        "cnf_variables": 2733.0,
+        "inprocess_ms": 993.84858,
+        "subsume_clauses_subsumed": 0.0,
+        "subsume_literals_strengthened": 33.0,
+        "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 32,
       "detail": "Timeout: rustsat-batsat timeout",
@@ -1230,8 +1254,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1976,
-      "translate_ms": 23,
+      "solve_ms": 982,
+      "translate_ms": 1018,
       "tree_nodes": 80
     },
     {
@@ -1239,11 +1263,19 @@
       "backend_stats": {
         "aig_inputs": 64.0,
         "aig_nodes": 31418.0,
-        "bit_blast_ms": 34.896172,
+        "bit_blast_ms": 34.344712,
+        "bve_clauses_added": 1451.0,
+        "bve_clauses_removed": 1600.0,
+        "bve_variables_eliminated": 209.0,
         "cnf_clauses": 49384.0,
-        "cnf_encode_ms": 75.020975,
-        "cnf_inprocessing_skipped_size": 1.0,
-        "cnf_variables": 11161.0
+        "cnf_clauses_solved": 49235.0,
+        "cnf_encode_ms": 73.93132700000001,
+        "cnf_inprocessing": 1.0,
+        "cnf_variables": 11161.0,
+        "inprocess_ms": 1000.4044809999999,
+        "subsume_clauses_subsumed": 0.0,
+        "subsume_literals_strengthened": 73.0,
+        "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 32,
       "detail": "Timeout: rustsat-batsat timeout",
@@ -1298,8 +1330,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1892,
-      "translate_ms": 109,
+      "solve_ms": 894,
+      "translate_ms": 1108,
       "tree_nodes": 80
     },
     {
@@ -1307,11 +1339,19 @@
       "backend_stats": {
         "aig_inputs": 128.0,
         "aig_nodes": 127090.0,
-        "bit_blast_ms": 154.78341500000002,
+        "bit_blast_ms": 156.232223,
+        "bve_clauses_added": 2907.0,
+        "bve_clauses_removed": 3184.0,
+        "bve_variables_eliminated": 417.0,
         "cnf_clauses": 201656.0,
-        "cnf_encode_ms": 328.897987,
-        "cnf_inprocessing_skipped_size": 1.0,
-        "cnf_variables": 45105.0
+        "cnf_clauses_solved": 201379.0,
+        "cnf_encode_ms": 324.536896,
+        "cnf_inprocessing": 1.0,
+        "cnf_variables": 45105.0,
+        "inprocess_ms": 781.6561810000001,
+        "subsume_clauses_subsumed": 0.0,
+        "subsume_literals_strengthened": 153.0,
+        "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 32,
       "detail": "Timeout: rustsat-batsat timeout",
@@ -1366,8 +1406,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1523,
-      "translate_ms": 483,
+      "solve_ms": 743,
+      "translate_ms": 1262,
       "tree_nodes": 80
     },
     {
@@ -1375,18 +1415,18 @@
       "backend_stats": {
         "aig_inputs": 84.0,
         "aig_nodes": 451.0,
-        "bit_blast_ms": 0.457019,
-        "bve_clauses_added": 445.0,
-        "bve_clauses_removed": 824.0,
+        "bit_blast_ms": 0.46785,
+        "bve_clauses_added": 442.0,
+        "bve_clauses_removed": 815.0,
         "bve_variables_eliminated": 155.0,
         "cnf_clauses": 495.0,
         "cnf_clauses_solved": 112.0,
-        "cnf_encode_ms": 0.6277290000000001,
+        "cnf_encode_ms": 0.630371,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 191.0,
-        "inprocess_ms": 34.395970999999996,
-        "subsume_clauses_subsumed": 4.0,
-        "subsume_literals_strengthened": 4.0,
+        "inprocess_ms": 15.181327,
+        "subsume_clauses_subsumed": 10.0,
+        "subsume_literals_strengthened": 8.0,
         "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 59,
@@ -1404,12 +1444,12 @@
           "conflicts": 6.0,
           "decisions": 10.0,
           "del clause": 13.0,
-          "max memory": 58.32,
+          "max memory": 58.33,
           "memory": 50.28,
           "mk bool var": 180.0,
           "mk clause": 22.0,
           "mk clause binary": 96.0,
-          "num allocs": 7517681.0,
+          "num allocs": 7517647.0,
           "num checks": 1.0,
           "propagations": 98.0,
           "rlimit count": 3216.0
@@ -1463,8 +1503,8 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 1,
-      "translate_ms": 35,
+      "solve_ms": 0,
+      "translate_ms": 16,
       "tree_nodes": 91
     },
     {
@@ -1472,18 +1512,18 @@
       "backend_stats": {
         "aig_inputs": 168.0,
         "aig_nodes": 899.0,
-        "bit_blast_ms": 0.8502,
-        "bve_clauses_added": 772.0,
-        "bve_clauses_removed": 1487.0,
+        "bit_blast_ms": 0.871627,
+        "bve_clauses_added": 766.0,
+        "bve_clauses_removed": 1475.0,
         "bve_variables_eliminated": 287.0,
         "cnf_clauses": 947.0,
         "cnf_clauses_solved": 228.0,
-        "cnf_encode_ms": 1.934245,
+        "cnf_encode_ms": 1.1678870000000001,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 363.0,
-        "inprocess_ms": 121.477677,
-        "subsume_clauses_subsumed": 4.0,
-        "subsume_literals_strengthened": 4.0,
+        "inprocess_ms": 63.3127,
+        "subsume_clauses_subsumed": 10.0,
+        "subsume_literals_strengthened": 8.0,
         "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 59,
@@ -1501,12 +1541,12 @@
           "conflicts": 6.0,
           "decisions": 30.0,
           "del clause": 112.0,
-          "max memory": 58.32,
+          "max memory": 58.33,
           "memory": 50.29,
           "mk bool var": 388.0,
           "mk clause": 121.0,
           "mk clause binary": 192.0,
-          "num allocs": 8722162.0,
+          "num allocs": 8722024.0,
           "num checks": 1.0,
           "propagations": 209.0,
           "rlimit count": 5373.0,
@@ -1562,7 +1602,7 @@
         "rule_counts": {}
       },
       "solve_ms": 13,
-      "translate_ms": 124,
+      "translate_ms": 65,
       "tree_nodes": 91
     },
     {
@@ -1570,11 +1610,19 @@
       "backend_stats": {
         "aig_inputs": 336.0,
         "aig_nodes": 1795.0,
-        "bit_blast_ms": 1.720331,
+        "bit_blast_ms": 1.83278,
+        "bve_clauses_added": 1406.0,
+        "bve_clauses_removed": 2787.0,
+        "bve_variables_eliminated": 551.0,
         "cnf_clauses": 1851.0,
-        "cnf_encode_ms": 2.392464,
-        "cnf_inprocessing_skipped_size": 1.0,
-        "cnf_variables": 707.0
+        "cnf_clauses_solved": 460.0,
+        "cnf_encode_ms": 2.484698,
+        "cnf_inprocessing": 1.0,
+        "cnf_variables": 707.0,
+        "inprocess_ms": 137.208093,
+        "subsume_clauses_subsumed": 10.0,
+        "subsume_literals_strengthened": 8.0,
+        "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 59,
       "distinct_symbols": 6,
@@ -1591,12 +1639,12 @@
           "conflicts": 6.0,
           "decisions": 51.0,
           "del clause": 215.0,
-          "max memory": 58.32,
-          "memory": 50.29,
+          "max memory": 58.33,
+          "memory": 50.28,
           "mk bool var": 769.0,
           "mk clause": 224.0,
           "mk clause binary": 384.0,
-          "num allocs": 11442927.0,
+          "num allocs": 10408432.0,
           "num checks": 1.0,
           "propagations": 416.0,
           "rlimit count": 9299.0,
@@ -1651,8 +1699,8 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 33,
-      "translate_ms": 4,
+      "solve_ms": 4,
+      "translate_ms": 141,
       "tree_nodes": 91
     },
     {
@@ -1660,18 +1708,18 @@
       "backend_stats": {
         "aig_inputs": 84.0,
         "aig_nodes": 454.0,
-        "bit_blast_ms": 0.528329,
-        "bve_clauses_added": 464.0,
-        "bve_clauses_removed": 854.0,
+        "bit_blast_ms": 0.552664,
+        "bve_clauses_added": 456.0,
+        "bve_clauses_removed": 840.0,
         "bve_variables_eliminated": 161.0,
         "cnf_clauses": 508.0,
         "cnf_clauses_solved": 114.0,
-        "cnf_encode_ms": 0.613308,
+        "cnf_encode_ms": 0.621314,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 196.0,
-        "inprocess_ms": 30.783188,
-        "subsume_clauses_subsumed": 4.0,
-        "subsume_literals_strengthened": 4.0,
+        "inprocess_ms": 9.054881,
+        "subsume_clauses_subsumed": 10.0,
+        "subsume_literals_strengthened": 8.0,
         "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 114,
@@ -1690,12 +1738,12 @@
           "conflicts": 6.0,
           "decisions": 10.0,
           "del clause": 18.0,
-          "max memory": 58.32,
-          "memory": 50.29,
+          "max memory": 58.33,
+          "memory": 50.28,
           "mk bool var": 184.0,
           "mk clause": 27.0,
           "mk clause binary": 96.0,
-          "num allocs": 12858955.0,
+          "num allocs": 11824201.0,
           "num checks": 1.0,
           "propagations": 100.0,
           "rlimit count": 4314.0
@@ -1749,8 +1797,8 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 31,
+      "solve_ms": 1,
+      "translate_ms": 10,
       "tree_nodes": 183
     },
     {
@@ -1758,11 +1806,19 @@
       "backend_stats": {
         "aig_inputs": 128.0,
         "aig_nodes": 42489.0,
-        "bit_blast_ms": 48.177532,
+        "bit_blast_ms": 48.240756000000005,
+        "bve_clauses_added": 1004.0,
+        "bve_clauses_removed": 1070.0,
+        "bve_variables_eliminated": 142.0,
         "cnf_clauses": 50309.0,
-        "cnf_encode_ms": 75.82460400000001,
-        "cnf_inprocessing_skipped_size": 1.0,
-        "cnf_variables": 11648.0
+        "cnf_clauses_solved": 50243.0,
+        "cnf_encode_ms": 75.26263399999999,
+        "cnf_inprocessing": 1.0,
+        "cnf_variables": 11648.0,
+        "inprocess_ms": 963.710042,
+        "subsume_clauses_subsumed": 0.0,
+        "subsume_literals_strengthened": 0.0,
+        "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 38,
       "detail": "Timeout: rustsat-batsat timeout",
@@ -1817,8 +1873,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1877,
-      "translate_ms": 124,
+      "solve_ms": 914,
+      "translate_ms": 1087,
       "tree_nodes": 56
     },
     {
@@ -1826,11 +1882,19 @@
       "backend_stats": {
         "aig_inputs": 260.0,
         "aig_nodes": 23594.0,
-        "bit_blast_ms": 27.101847,
+        "bit_blast_ms": 27.3373,
+        "bve_clauses_added": 3280.0,
+        "bve_clauses_removed": 3961.0,
+        "bve_variables_eliminated": 510.0,
         "cnf_clauses": 37325.0,
-        "cnf_encode_ms": 60.137068,
-        "cnf_inprocessing_skipped_size": 1.0,
-        "cnf_variables": 8795.0
+        "cnf_clauses_solved": 36644.0,
+        "cnf_encode_ms": 58.634291,
+        "cnf_inprocessing": 1.0,
+        "cnf_variables": 8795.0,
+        "inprocess_ms": 990.088956,
+        "subsume_clauses_subsumed": 0.0,
+        "subsume_literals_strengthened": 69.0,
+        "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 78,
       "detail": "Timeout: rustsat-batsat timeout",
@@ -1885,8 +1949,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1914,
-      "translate_ms": 87,
+      "solve_ms": 924,
+      "translate_ms": 1076,
       "tree_nodes": 406
     },
     {
@@ -1894,11 +1958,19 @@
       "backend_stats": {
         "aig_inputs": 25.0,
         "aig_nodes": 4734.0,
-        "bit_blast_ms": 4.756061,
+        "bit_blast_ms": 4.706859,
+        "bve_clauses_added": 545.0,
+        "bve_clauses_removed": 638.0,
+        "bve_variables_eliminated": 75.0,
         "cnf_clauses": 7236.0,
-        "cnf_encode_ms": 9.720926,
-        "cnf_inprocessing_skipped_size": 1.0,
-        "cnf_variables": 1680.0
+        "cnf_clauses_solved": 7143.0,
+        "cnf_encode_ms": 9.647988999999999,
+        "cnf_inprocessing": 1.0,
+        "cnf_variables": 1680.0,
+        "inprocess_ms": 383.089274,
+        "subsume_clauses_subsumed": 0.0,
+        "subsume_literals_strengthened": 26.0,
+        "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 36,
       "detail": "Timeout: rustsat-batsat timeout",
@@ -1953,8 +2025,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1985,
-      "translate_ms": 14,
+      "solve_ms": 1602,
+      "translate_ms": 397,
       "tree_nodes": 80
     },
     {
@@ -1962,16 +2034,16 @@
       "backend_stats": {
         "aig_inputs": 1.0,
         "aig_nodes": 2.0,
-        "bit_blast_ms": 0.03199,
+        "bit_blast_ms": 0.033109,
         "bve_clauses_added": 0.0,
         "bve_clauses_removed": 0.0,
         "bve_variables_eliminated": 0.0,
         "cnf_clauses": 1.0,
         "cnf_clauses_solved": 1.0,
-        "cnf_encode_ms": 0.023118,
+        "cnf_encode_ms": 0.024942,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 0.0,
-        "inprocess_ms": 0.009684000000000002,
+        "inprocess_ms": 0.01189,
         "subsume_clauses_subsumed": 0.0,
         "subsume_literals_strengthened": 0.0,
         "subsume_tautologies_removed": 0.0
@@ -1987,7 +2059,7 @@
         "backend_stats": {
           "max memory": 49.9,
           "memory": 49.9,
-          "num allocs": 3805245.0,
+          "num allocs": 3805115.0,
           "rlimit count": 70.0
         },
         "decision_agrees": true,
@@ -2048,16 +2120,16 @@
       "backend_stats": {
         "aig_inputs": 0.0,
         "aig_nodes": 1.0,
-        "bit_blast_ms": 0.027212,
+        "bit_blast_ms": 0.030216,
         "bve_clauses_added": 0.0,
         "bve_clauses_removed": 0.0,
         "bve_variables_eliminated": 0.0,
         "cnf_clauses": 0.0,
         "cnf_clauses_solved": 0.0,
-        "cnf_encode_ms": 0.013828,
+        "cnf_encode_ms": 0.014317,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 0.0,
-        "inprocess_ms": 0.004756,
+        "inprocess_ms": 0.006301,
         "subsume_clauses_subsumed": 0.0,
         "subsume_literals_strengthened": 0.0,
         "subsume_tautologies_removed": 0.0
@@ -2073,7 +2145,7 @@
         "backend_stats": {
           "max memory": 49.9,
           "memory": 49.89,
-          "num allocs": 3838165.0,
+          "num allocs": 3838080.0,
           "rlimit count": 11.0
         },
         "decision_agrees": true,
@@ -2134,16 +2206,16 @@
       "backend_stats": {
         "aig_inputs": 0.0,
         "aig_nodes": 1.0,
-        "bit_blast_ms": 0.026699,
+        "bit_blast_ms": 0.029550999999999997,
         "bve_clauses_added": 0.0,
         "bve_clauses_removed": 0.0,
         "bve_variables_eliminated": 0.0,
         "cnf_clauses": 1.0,
         "cnf_clauses_solved": 1.0,
-        "cnf_encode_ms": 0.012444,
+        "cnf_encode_ms": 0.012652,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 0.0,
-        "inprocess_ms": 0.00588,
+        "inprocess_ms": 0.006994,
         "subsume_clauses_subsumed": 0.0,
         "subsume_literals_strengthened": 0.0,
         "subsume_tautologies_removed": 0.0
@@ -2159,7 +2231,7 @@
         "backend_stats": {
           "max memory": 49.9,
           "memory": 49.89,
-          "num allocs": 3891773.0,
+          "num allocs": 3891702.0,
           "rlimit count": 14.0
         },
         "decision_agrees": true,
@@ -2220,16 +2292,16 @@
       "backend_stats": {
         "aig_inputs": 1.0,
         "aig_nodes": 2.0,
-        "bit_blast_ms": 0.017714,
+        "bit_blast_ms": 0.017248000000000003,
         "bve_clauses_added": 0.0,
         "bve_clauses_removed": 0.0,
         "bve_variables_eliminated": 0.0,
         "cnf_clauses": 1.0,
         "cnf_clauses_solved": 1.0,
-        "cnf_encode_ms": 0.01512,
+        "cnf_encode_ms": 0.014594,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 0.0,
-        "inprocess_ms": 0.006843,
+        "inprocess_ms": 0.008461000000000002,
         "subsume_clauses_subsumed": 0.0,
         "subsume_literals_strengthened": 0.0,
         "subsume_tautologies_removed": 0.0
@@ -2245,7 +2317,7 @@
         "backend_stats": {
           "max memory": 49.9,
           "memory": 49.9,
-          "num allocs": 3965199.0,
+          "num allocs": 3965093.0,
           "rlimit count": 14.0
         },
         "decision_agrees": true,
@@ -2306,16 +2378,16 @@
       "backend_stats": {
         "aig_inputs": 0.0,
         "aig_nodes": 1.0,
-        "bit_blast_ms": 0.060594999999999996,
+        "bit_blast_ms": 0.090044,
         "bve_clauses_added": 0.0,
         "bve_clauses_removed": 0.0,
         "bve_variables_eliminated": 0.0,
         "cnf_clauses": 1.0,
         "cnf_clauses_solved": 1.0,
-        "cnf_encode_ms": 0.015308,
+        "cnf_encode_ms": 0.018709999999999997,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 0.0,
-        "inprocess_ms": 0.006141,
+        "inprocess_ms": 0.010441,
         "subsume_clauses_subsumed": 0.0,
         "subsume_literals_strengthened": 0.0,
         "subsume_tautologies_removed": 0.0
@@ -2331,7 +2403,7 @@
         "backend_stats": {
           "max memory": 49.9,
           "memory": 49.9,
-          "num allocs": 4058336.0,
+          "num allocs": 4058192.0,
           "rlimit count": 130.0
         },
         "decision_agrees": true,
@@ -2392,16 +2464,16 @@
       "backend_stats": {
         "aig_inputs": 0.0,
         "aig_nodes": 1.0,
-        "bit_blast_ms": 0.024527,
+        "bit_blast_ms": 0.026459,
         "bve_clauses_added": 0.0,
         "bve_clauses_removed": 0.0,
         "bve_variables_eliminated": 0.0,
         "cnf_clauses": 1.0,
         "cnf_clauses_solved": 1.0,
-        "cnf_encode_ms": 0.015697,
+        "cnf_encode_ms": 0.014059,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 0.0,
-        "inprocess_ms": 0.006625,
+        "inprocess_ms": 0.00933,
         "subsume_clauses_subsumed": 0.0,
         "subsume_literals_strengthened": 0.0,
         "subsume_tautologies_removed": 0.0
@@ -2417,7 +2489,7 @@
         "backend_stats": {
           "max memory": 49.9,
           "memory": 49.9,
-          "num allocs": 4172176.0,
+          "num allocs": 4172005.0,
           "rlimit count": 30.0
         },
         "decision_agrees": true,
@@ -2478,11 +2550,19 @@
       "backend_stats": {
         "aig_inputs": 391.0,
         "aig_nodes": 11419.0,
-        "bit_blast_ms": 11.983,
+        "bit_blast_ms": 12.350935999999999,
+        "bve_clauses_added": 3161.0,
+        "bve_clauses_removed": 7785.0,
+        "bve_variables_eliminated": 3603.0,
         "cnf_clauses": 16576.0,
-        "cnf_encode_ms": 23.222555999999997,
-        "cnf_inprocessing_skipped_size": 1.0,
-        "cnf_variables": 3973.0
+        "cnf_clauses_solved": 1356.0,
+        "cnf_encode_ms": 23.164793,
+        "cnf_inprocessing": 1.0,
+        "cnf_variables": 3973.0,
+        "inprocess_ms": 983.6446410000001,
+        "subsume_clauses_subsumed": 10596.0,
+        "subsume_literals_strengthened": 10068.0,
+        "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 155,
       "distinct_symbols": 13,
@@ -2495,7 +2575,7 @@
         "backend_stats": {
           "max memory": 50.29,
           "memory": 50.29,
-          "num allocs": 4358018.0,
+          "num allocs": 4357804.0,
           "rlimit count": 1471.0
         },
         "decision_agrees": true,
@@ -2547,8 +2627,8 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 14,
-      "translate_ms": 35,
+      "solve_ms": 3,
+      "translate_ms": 1019,
       "tree_nodes": 241
     },
     {
@@ -2556,16 +2636,16 @@
       "backend_stats": {
         "aig_inputs": 32.0,
         "aig_nodes": 253.0,
-        "bit_blast_ms": 0.35280100000000003,
-        "bve_clauses_added": 463.0,
+        "bit_blast_ms": 0.37329399999999996,
+        "bve_clauses_added": 461.0,
         "bve_clauses_removed": 639.0,
         "bve_variables_eliminated": 70.0,
         "cnf_clauses": 288.0,
-        "cnf_clauses_solved": 112.0,
-        "cnf_encode_ms": 0.378485,
+        "cnf_clauses_solved": 110.0,
+        "cnf_encode_ms": 0.369751,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 98.0,
-        "inprocess_ms": 15.22006,
+        "inprocess_ms": 7.396299,
         "subsume_clauses_subsumed": 0.0,
         "subsume_literals_strengthened": 0.0,
         "subsume_tautologies_removed": 0.0
@@ -2580,9 +2660,9 @@
         "backend_kind": "z3",
         "backend_stats": {
           "elim-unconstrained": 1.0,
-          "max memory": 58.32,
+          "max memory": 58.33,
           "memory": 50.2,
-          "num allocs": 4702497.0,
+          "num allocs": 4702291.0,
           "rlimit count": 1985.0,
           "sat backjumps": 5.0,
           "sat conflicts": 6.0,
@@ -2650,7 +2730,7 @@
         "rule_counts": {}
       },
       "solve_ms": 0,
-      "translate_ms": 15,
+      "translate_ms": 8,
       "tree_nodes": 131
     },
     {
@@ -2658,18 +2738,18 @@
       "backend_stats": {
         "aig_inputs": 109.0,
         "aig_nodes": 773.0,
-        "bit_blast_ms": 0.874782,
-        "bve_clauses_added": 720.0,
-        "bve_clauses_removed": 1491.0,
+        "bit_blast_ms": 0.856472,
+        "bve_clauses_added": 501.0,
+        "bve_clauses_removed": 1121.0,
         "bve_variables_eliminated": 296.0,
         "cnf_clauses": 784.0,
         "cnf_clauses_solved": 2.0,
-        "cnf_encode_ms": 1.10427,
+        "cnf_encode_ms": 1.046025,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 299.0,
-        "inprocess_ms": 40.126803,
-        "subsume_clauses_subsumed": 11.0,
-        "subsume_literals_strengthened": 9.0,
+        "inprocess_ms": 5.079993,
+        "subsume_clauses_subsumed": 162.0,
+        "subsume_literals_strengthened": 238.0,
         "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 97,
@@ -2681,9 +2761,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 58.32,
+          "max memory": 58.33,
           "memory": 50.21,
-          "num allocs": 5073976.0,
+          "num allocs": 5073837.0,
           "rlimit count": 1770.0
         },
         "decision_agrees": true,
@@ -2736,7 +2816,7 @@
         "rule_counts": {}
       },
       "solve_ms": 0,
-      "translate_ms": 42,
+      "translate_ms": 6,
       "tree_nodes": 161
     },
     {
@@ -2744,18 +2824,18 @@
       "backend_stats": {
         "aig_inputs": 109.0,
         "aig_nodes": 773.0,
-        "bit_blast_ms": 0.82481,
-        "bve_clauses_added": 720.0,
-        "bve_clauses_removed": 1491.0,
+        "bit_blast_ms": 0.855135,
+        "bve_clauses_added": 501.0,
+        "bve_clauses_removed": 1121.0,
         "bve_variables_eliminated": 296.0,
         "cnf_clauses": 784.0,
         "cnf_clauses_solved": 2.0,
-        "cnf_encode_ms": 1.017051,
+        "cnf_encode_ms": 1.0071620000000001,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 299.0,
-        "inprocess_ms": 39.176247,
-        "subsume_clauses_subsumed": 11.0,
-        "subsume_literals_strengthened": 9.0,
+        "inprocess_ms": 5.078867,
+        "subsume_clauses_subsumed": 162.0,
+        "subsume_literals_strengthened": 238.0,
         "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 97,
@@ -2767,9 +2847,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 58.32,
+          "max memory": 58.33,
           "memory": 50.21,
-          "num allocs": 5510184.0,
+          "num allocs": 5510148.0,
           "rlimit count": 1770.0
         },
         "decision_agrees": true,
@@ -2822,7 +2902,7 @@
         "rule_counts": {}
       },
       "solve_ms": 0,
-      "translate_ms": 41,
+      "translate_ms": 6,
       "tree_nodes": 161
     },
     {
@@ -2830,18 +2910,18 @@
       "backend_stats": {
         "aig_inputs": 109.0,
         "aig_nodes": 773.0,
-        "bit_blast_ms": 0.857981,
-        "bve_clauses_added": 720.0,
-        "bve_clauses_removed": 1491.0,
+        "bit_blast_ms": 0.854553,
+        "bve_clauses_added": 501.0,
+        "bve_clauses_removed": 1121.0,
         "bve_variables_eliminated": 296.0,
         "cnf_clauses": 784.0,
         "cnf_clauses_solved": 2.0,
-        "cnf_encode_ms": 1.061675,
+        "cnf_encode_ms": 1.0092219999999998,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 299.0,
-        "inprocess_ms": 38.490981,
-        "subsume_clauses_subsumed": 11.0,
-        "subsume_literals_strengthened": 9.0,
+        "inprocess_ms": 5.14523,
+        "subsume_clauses_subsumed": 162.0,
+        "subsume_literals_strengthened": 238.0,
         "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 97,
@@ -2853,9 +2933,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 58.32,
+          "max memory": 58.33,
           "memory": 50.21,
-          "num allocs": 6011219.0,
+          "num allocs": 6011161.0,
           "rlimit count": 1770.0
         },
         "decision_agrees": true,
@@ -2908,7 +2988,7 @@
         "rule_counts": {}
       },
       "solve_ms": 0,
-      "translate_ms": 40,
+      "translate_ms": 7,
       "tree_nodes": 161
     },
     {
@@ -2916,18 +2996,18 @@
       "backend_stats": {
         "aig_inputs": 109.0,
         "aig_nodes": 773.0,
-        "bit_blast_ms": 0.842056,
-        "bve_clauses_added": 720.0,
-        "bve_clauses_removed": 1491.0,
+        "bit_blast_ms": 0.8543430000000001,
+        "bve_clauses_added": 501.0,
+        "bve_clauses_removed": 1121.0,
         "bve_variables_eliminated": 296.0,
         "cnf_clauses": 784.0,
         "cnf_clauses_solved": 2.0,
-        "cnf_encode_ms": 1.0542710000000002,
+        "cnf_encode_ms": 1.032172,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 299.0,
-        "inprocess_ms": 39.108802,
-        "subsume_clauses_subsumed": 11.0,
-        "subsume_literals_strengthened": 9.0,
+        "inprocess_ms": 5.07533,
+        "subsume_clauses_subsumed": 162.0,
+        "subsume_literals_strengthened": 238.0,
         "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 97,
@@ -2939,9 +3019,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 58.32,
+          "max memory": 58.33,
           "memory": 50.21,
-          "num allocs": 6577062.0,
+          "num allocs": 6576939.0,
           "rlimit count": 1770.0
         },
         "decision_agrees": true,
@@ -2994,7 +3074,7 @@
         "rule_counts": {}
       },
       "solve_ms": 0,
-      "translate_ms": 41,
+      "translate_ms": 6,
       "tree_nodes": 161
     },
     {
@@ -3002,11 +3082,19 @@
       "backend_stats": {
         "aig_inputs": 96.0,
         "aig_nodes": 7466.0,
-        "bit_blast_ms": 7.972047,
+        "bit_blast_ms": 8.188898,
+        "bve_clauses_added": 604.0,
+        "bve_clauses_removed": 1240.0,
+        "bve_variables_eliminated": 229.0,
         "cnf_clauses": 11635.0,
-        "cnf_encode_ms": 16.069575,
-        "cnf_inprocessing_skipped_size": 1.0,
-        "cnf_variables": 2844.0
+        "cnf_clauses_solved": 10884.0,
+        "cnf_encode_ms": 15.981294,
+        "cnf_inprocessing": 1.0,
+        "cnf_variables": 2844.0,
+        "inprocess_ms": 1003.986397,
+        "subsume_clauses_subsumed": 115.0,
+        "subsume_literals_strengthened": 164.0,
+        "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 128,
       "detail": "Timeout: rustsat-batsat timeout",
@@ -3061,8 +3149,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1976,
-      "translate_ms": 24,
+      "solve_ms": 972,
+      "translate_ms": 1028,
       "tree_nodes": 353
     },
     {
@@ -3070,11 +3158,19 @@
       "backend_stats": {
         "aig_inputs": 96.0,
         "aig_nodes": 7055.0,
-        "bit_blast_ms": 6.9309,
+        "bit_blast_ms": 7.047392,
+        "bve_clauses_added": 277.0,
+        "bve_clauses_removed": 602.0,
+        "bve_variables_eliminated": 110.0,
         "cnf_clauses": 10915.0,
-        "cnf_encode_ms": 14.810958000000001,
-        "cnf_inprocessing_skipped_size": 1.0,
-        "cnf_variables": 2635.0
+        "cnf_clauses_solved": 10578.0,
+        "cnf_encode_ms": 14.606088999999999,
+        "cnf_inprocessing": 1.0,
+        "cnf_variables": 2635.0,
+        "inprocess_ms": 993.655845,
+        "subsume_clauses_subsumed": 12.0,
+        "subsume_literals_strengthened": 44.0,
+        "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 75,
       "detail": "Timeout: rustsat-batsat timeout",
@@ -3129,8 +3225,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1978,
-      "translate_ms": 21,
+      "solve_ms": 984,
+      "translate_ms": 1015,
       "tree_nodes": 132
     },
     {
@@ -3138,16 +3234,16 @@
       "backend_stats": {
         "aig_inputs": 16.0,
         "aig_nodes": 45.0,
-        "bit_blast_ms": 0.989427,
+        "bit_blast_ms": 0.9936389999999999,
         "bve_clauses_added": 0.0,
         "bve_clauses_removed": 0.0,
         "bve_variables_eliminated": 0.0,
         "cnf_clauses": 1.0,
         "cnf_clauses_solved": 1.0,
-        "cnf_encode_ms": 0.029407000000000003,
+        "cnf_encode_ms": 0.05048,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 0.0,
-        "inprocess_ms": 0.007254,
+        "inprocess_ms": 0.016433999999999997,
         "subsume_clauses_subsumed": 0.0,
         "subsume_literals_strengthened": 0.0,
         "subsume_tautologies_removed": 0.0
@@ -3161,9 +3257,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 58.32,
-          "memory": 50.07,
-          "num allocs": 9424384.0,
+          "max memory": 58.33,
+          "memory": 50.05,
+          "num allocs": 12630354.0,
           "rlimit count": 940.0
         },
         "decision_agrees": true,
@@ -3224,16 +3320,16 @@
       "backend_stats": {
         "aig_inputs": 16.0,
         "aig_nodes": 65.0,
-        "bit_blast_ms": 0.93764,
+        "bit_blast_ms": 0.964496,
         "bve_clauses_added": 0.0,
         "bve_clauses_removed": 0.0,
         "bve_variables_eliminated": 0.0,
         "cnf_clauses": 1.0,
         "cnf_clauses_solved": 1.0,
-        "cnf_encode_ms": 0.025144,
+        "cnf_encode_ms": 0.029508,
         "cnf_inprocessing": 1.0,
         "cnf_variables": 0.0,
-        "inprocess_ms": 0.005736,
+        "inprocess_ms": 0.007728,
         "subsume_clauses_subsumed": 0.0,
         "subsume_literals_strengthened": 0.0,
         "subsume_tautologies_removed": 0.0
@@ -3247,9 +3343,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 58.32,
-          "memory": 50.07,
-          "num allocs": 9961867.0,
+          "max memory": 58.33,
+          "memory": 50.05,
+          "num allocs": 13167868.0,
           "rlimit count": 846.0
         },
         "decision_agrees": true,
@@ -3302,7 +3398,7 @@
         "rule_counts": {}
       },
       "solve_ms": 0,
-      "translate_ms": 0,
+      "translate_ms": 1,
       "tree_nodes": 646
     },
     {
@@ -3310,11 +3406,19 @@
       "backend_stats": {
         "aig_inputs": 102.0,
         "aig_nodes": 2891.0,
-        "bit_blast_ms": 2.427032,
+        "bit_blast_ms": 2.4261679999999997,
+        "bve_clauses_added": 546.0,
+        "bve_clauses_removed": 1475.0,
+        "bve_variables_eliminated": 807.0,
         "cnf_clauses": 4292.0,
-        "cnf_encode_ms": 5.416436999999999,
-        "cnf_inprocessing_skipped_size": 1.0,
-        "cnf_variables": 1132.0
+        "cnf_clauses_solved": 1300.0,
+        "cnf_encode_ms": 5.381460000000001,
+        "cnf_inprocessing": 1.0,
+        "cnf_variables": 1132.0,
+        "inprocess_ms": 64.904883,
+        "subsume_clauses_subsumed": 2063.0,
+        "subsume_literals_strengthened": 1814.0,
+        "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 47,
       "distinct_symbols": 16,
@@ -3325,9 +3429,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 58.32,
+          "max memory": 58.33,
           "memory": 50.14,
-          "num allocs": 13749242.0,
+          "num allocs": 13748571.0,
           "rlimit count": 399.0,
           "solve-eqs-elim-vars": 13.0,
           "solve-eqs-steps": 20.0
@@ -3381,8 +3485,8 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 1032,
-      "translate_ms": 7,
+      "solve_ms": 820,
+      "translate_ms": 72,
       "tree_nodes": 68
     },
     {
@@ -3390,11 +3494,19 @@
       "backend_stats": {
         "aig_inputs": 198.0,
         "aig_nodes": 11507.0,
-        "bit_blast_ms": 10.532972,
+        "bit_blast_ms": 10.519464,
+        "bve_clauses_added": 1648.0,
+        "bve_clauses_removed": 5027.0,
+        "bve_variables_eliminated": 2842.0,
         "cnf_clauses": 18296.0,
-        "cnf_encode_ms": 25.042288,
-        "cnf_inprocessing_skipped_size": 1.0,
-        "cnf_variables": 4552.0
+        "cnf_clauses_solved": 7038.0,
+        "cnf_encode_ms": 24.25403,
+        "cnf_inprocessing": 1.0,
+        "cnf_variables": 4552.0,
+        "inprocess_ms": 366.21653100000003,
+        "subsume_clauses_subsumed": 7879.0,
+        "subsume_literals_strengthened": 7006.0,
+        "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 47,
       "detail": "Timeout: rustsat-batsat timeout",
@@ -3449,8 +3561,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1964,
-      "translate_ms": 35,
+      "solve_ms": 1604,
+      "translate_ms": 400,
       "tree_nodes": 68
     },
     {
@@ -3458,11 +3570,19 @@
       "backend_stats": {
         "aig_inputs": 390.0,
         "aig_nodes": 46019.0,
-        "bit_blast_ms": 47.066342,
+        "bit_blast_ms": 46.17008,
+        "bve_clauses_added": 0.0,
+        "bve_clauses_removed": 0.0,
+        "bve_variables_eliminated": 0.0,
         "cnf_clauses": 75680.0,
-        "cnf_encode_ms": 113.73374199999999,
-        "cnf_inprocessing_skipped_size": 1.0,
-        "cnf_variables": 18304.0
+        "cnf_clauses_solved": 49131.0,
+        "cnf_encode_ms": 107.27432400000001,
+        "cnf_inprocessing": 1.0,
+        "cnf_variables": 18304.0,
+        "inprocess_ms": 971.415095,
+        "subsume_clauses_subsumed": 26549.0,
+        "subsume_literals_strengthened": 23202.0,
+        "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 47,
       "detail": "Timeout: rustsat-batsat timeout",
@@ -3517,8 +3637,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1841,
-      "translate_ms": 160,
+      "solve_ms": 879,
+      "translate_ms": 1124,
       "tree_nodes": 68
     },
     {
@@ -3526,11 +3646,19 @@
       "backend_stats": {
         "aig_inputs": 90.0,
         "aig_nodes": 1516.0,
-        "bit_blast_ms": 1.2088050000000001,
+        "bit_blast_ms": 1.355614,
+        "bve_clauses_added": 422.0,
+        "bve_clauses_removed": 880.0,
+        "bve_variables_eliminated": 356.0,
         "cnf_clauses": 2030.0,
-        "cnf_encode_ms": 2.459962,
-        "cnf_inprocessing_skipped_size": 1.0,
-        "cnf_variables": 562.0
+        "cnf_clauses_solved": 823.0,
+        "cnf_encode_ms": 2.582539,
+        "cnf_inprocessing": 1.0,
+        "cnf_variables": 562.0,
+        "inprocess_ms": 29.946289,
+        "subsume_clauses_subsumed": 749.0,
+        "subsume_literals_strengthened": 648.0,
+        "subsume_tautologies_removed": 0.0
       },
       "dag_nodes": 50,
       "distinct_symbols": 17,
@@ -3541,9 +3669,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 58.32,
+          "max memory": 58.33,
           "memory": 50.14,
-          "num allocs": 14453083.0,
+          "num allocs": 14452449.0,
           "rlimit count": 548.0,
           "solve-eqs-elim-vars": 14.0,
           "solve-eqs-steps": 22.0
@@ -3597,8 +3725,8 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 506,
-      "translate_ms": 3,
+      "solve_ms": 501,
+      "translate_ms": 33,
       "tree_nodes": 73
     }
   ],
@@ -3608,18 +3736,18 @@
     "errors": 0,
     "files": 43,
     "layer_attribution": {
-      "bit_blast_s": 0.029909249000000002,
-      "bit_blast_share": 0.017533575200899664,
-      "cnf_encode_s": 0.047661671999999995,
-      "cnf_encode_share": 0.02794050463161458,
+      "bit_blast_s": 0.030860260999999996,
+      "bit_blast_share": 0.021336226877340558,
+      "cnf_encode_s": 0.048631580999999986,
+      "cnf_encode_share": 0.033622996436088605,
       "instances": 32,
-      "model_lift_s": 0.00022725400000000003,
-      "model_lift_share": 0.00013322217146626627,
+      "model_lift_s": 0.00023843600000000002,
+      "model_lift_share": 0.00016485034237803672,
       "sat_dominates": true,
       "sat_dominates_threshold": 0.5,
-      "solve_s": 1.628028997,
-      "solve_share": 0.9543926979960196,
-      "total_pipeline_s": 1.7058271719999998
+      "solve_s": 1.366648277,
+      "solve_share": 0.9448759263441928,
+      "total_pipeline_s": 1.446378555
     },
     "model_replay_failures": 0,
     "oracle": {
@@ -3630,7 +3758,7 @@
       "enabled": true,
       "skipped": 11
     },
-    "par2_mean_s": 1.071302809,
+    "par2_mean_s": 1.0953923760465119,
     "query_plan": {
       "original_dag_nodes": 1980,
       "original_tree_nodes": 4808,

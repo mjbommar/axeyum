@@ -34,6 +34,13 @@
 
 use std::collections::VecDeque;
 
+// Monotonic clock for the optional inprocessing deadline: on wasm32 the browser
+// has no `std` clock, so use `web-time`'s drop-in `Instant` (ADR-0017).
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
+
 use crate::simplify::NormClause;
 use crate::{CnfClause, CnfFormula, CnfLit, CnfVar};
 
@@ -315,6 +322,19 @@ impl Eliminator {
 /// therefore reconstruction — stay stable.
 #[must_use]
 pub fn eliminate_variables(formula: &CnfFormula, opts: BveOptions) -> BveOutcome {
+    eliminate_variables_within(formula, opts, None)
+}
+
+/// Like [`eliminate_variables`], but stops scheduling new eliminations once
+/// `deadline` passes (checked between variables, so already-committed eliminations
+/// always complete). The partial result is still equisatisfiable with a valid
+/// reconstruction; only fewer variables are eliminated. `None` means no deadline.
+#[must_use]
+pub fn eliminate_variables_within(
+    formula: &CnfFormula,
+    opts: BveOptions,
+    deadline: Option<Instant>,
+) -> BveOutcome {
     let nvars = formula.variable_count();
     let mut stats = BveStats::default();
 
@@ -368,6 +388,11 @@ pub fn eliminate_variables(formula: &CnfFormula, opts: BveOptions) -> BveOutcome
         }
         if elim.resolutions > budget {
             break; // bounded work: stop (the partial result is still equisatisfiable)
+        }
+        // Per-variable deadline poll (`Instant::now()` is tens of ns; a single
+        // `try_eliminate` is bounded by `occurrence_limit²`, so overshoot is tiny).
+        if deadline.is_some_and(|dl| Instant::now() >= dl) {
+            break; // out of time: keep the partial (equisatisfiable) result
         }
         if elim.try_eliminate(x, opts, &mut stats) {
             elim.eliminated[x] = true;

@@ -40,6 +40,13 @@
 //! It is a pure `CnfFormula → CnfFormula` transform and does not yet emit DRAT
 //! deletion steps (the proof-pipeline integration is a separate task).
 
+// Monotonic clock for the optional inprocessing deadline: on wasm32 the browser
+// has no `std` clock, so use `web-time`'s drop-in `Instant` (ADR-0017).
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
+
 use crate::{CnfClause, CnfFormula, CnfLit};
 
 /// What a [`simplify`] pass removed, for diagnostics and benchmark accounting.
@@ -255,6 +262,7 @@ fn subsume_round(
     clauses: &mut [Option<NormClause>],
     nvars: usize,
     marks: &mut [i8],
+    deadline: Option<Instant>,
 ) -> Option<SubsumeStats> {
     let lit_slots = 2 * nvars;
     let mut noccs = vec![0u32; lit_slots];
@@ -305,8 +313,8 @@ fn subsume_round(
                 );
             }
         }
-        if checks > budget {
-            break; // bounded work: stop early (still sound)
+        if checks > budget || deadline.is_some_and(|dl| Instant::now() >= dl) {
+            break; // bounded work / out of time: stop early (still sound)
         }
     }
 
@@ -319,6 +327,17 @@ fn subsume_round(
 /// input (same variable count, same satisfying assignments).
 #[must_use]
 pub fn simplify(formula: &CnfFormula) -> (CnfFormula, SubsumeStats) {
+    simplify_within(formula, None)
+}
+
+/// Like [`simplify`], but stops starting new subsumption rounds once `deadline`
+/// passes (checked between clauses within a round). The partial result is still
+/// logically equivalent; only fewer redundancies are removed. `None` = no deadline.
+#[must_use]
+pub fn simplify_within(
+    formula: &CnfFormula,
+    deadline: Option<Instant>,
+) -> (CnfFormula, SubsumeStats) {
     let nvars = formula.variable_count();
     let mut stats = SubsumeStats::default();
 
@@ -334,7 +353,10 @@ pub fn simplify(formula: &CnfFormula) -> (CnfFormula, SubsumeStats) {
     // Rounds to a fixpoint: strengthening a clause can expose new subsumptions.
     let mut marks = vec![0i8; nvars];
     for _ in 0..SUBSUME_MAX_ROUNDS {
-        match subsume_round(&mut clauses, nvars, &mut marks) {
+        if deadline.is_some_and(|dl| Instant::now() >= dl) {
+            break;
+        }
+        match subsume_round(&mut clauses, nvars, &mut marks, deadline) {
             Some(round) => {
                 stats.clauses_subsumed += round.clauses_subsumed;
                 stats.literals_strengthened += round.literals_strengthened;

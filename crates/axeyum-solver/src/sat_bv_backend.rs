@@ -20,7 +20,7 @@ use axeyum_bv::{
 };
 use axeyum_cnf::{
     BveOptions, CnfAssignment, CnfEncoding, CnfError, CnfFormula, ProofSolveOutcome,
-    Reconstruction, SatError, SatResult, check_drat, eliminate_variables, simplify,
+    Reconstruction, SatError, SatResult, check_drat, eliminate_variables_within, simplify_within,
     solve_with_drat_proof, solve_with_rustsat_batsat_timeout, tseitin_encode,
 };
 use axeyum_ir::{
@@ -125,9 +125,12 @@ impl SatBvBackend {
         // lift, and every `sat` result still replays against the original terms.
         // The `cnf_variables`/`cnf_clauses` stats above describe the
         // un-inprocessed encoding (baseline comparability); the formula actually
-        // submitted to the SAT adapter is `solve_formula`. A size guard keeps the
-        // pass off wide formulas where it cannot finish within a solve budget.
-        let inprocessed = maybe_inprocess(config, encoding.formula(), &mut stats);
+        // submitted to the SAT adapter is `solve_formula`. Inprocessing is bounded
+        // to a fraction of the remaining solve budget (an admission size cap aside),
+        // so on a formula it cannot usefully reduce it spends only that slice and
+        // never starves the SAT solve — capping the downside while still capturing
+        // the big reductions it does find.
+        let inprocessed = maybe_inprocess(config, encoding.formula(), deadline, &mut stats);
         let solve_formula: &CnfFormula = inprocessed
             .as_ref()
             .map_or_else(|| encoding.formula(), |out| &out.formula);
@@ -240,27 +243,26 @@ struct Inprocessed {
     reconstruction: Reconstruction,
 }
 
-/// Inprocessing size guard. Both passes are correctness-first and quadratic:
-/// `axeyum_cnf::simplify` is an `O(clauses²)` subsumption sweep and
-/// `axeyum_cnf::bve` recomputes occurrence lists per candidate, costing roughly
-/// `O(variables · clauses)` per round. The committed curated `QF_BV` A/B showed
-/// this empirically — at a 5k-var / 20k-clause cap the pass took **13–22 s** on
-/// instances like `mulhs16` / `commute08`, blowing past a 2 s solve budget and
-/// turning three previously-decided instances into timeouts while deciding none
-/// of the existing unknowns (the regression is purely time, never soundness:
-/// DISAGREE=0, no replay failures). Until both passes gain occurrence-list
-/// indexing (Track 1, P1.1 continuation), inprocessing only runs when the
-/// formula is small enough that the passes are provably cheap; everything larger
-/// goes straight to the SAT adapter unchanged.
-const INPROCESS_MAX_VARIABLES: usize = 512;
-const INPROCESS_MAX_CLAUSES: usize = 2_048;
+/// Inprocessing admission bound. Since T1.1.4 both passes are occurrence-list
+/// indexed and near-linear with internal work budgets (`axeyum_cnf::simplify`
+/// forward one-watch subsumption, `axeyum_cnf::bve` full occurrence lists + a
+/// touched queue), so they no longer blow a solve budget on the wide bit-blasted
+/// CNFs that the old `O(clauses²)`/`O(variables·clauses)` versions hung on (the
+/// earlier 5k-var/20k-clause cap saw 13–22 s passes; the indexed versions run in
+/// milliseconds). This is now a generous admission ceiling covering the whole
+/// curated slice, not a hang-preventer; the passes' own budgets are the real
+/// safety net.
+const INPROCESS_MAX_VARIABLES: usize = 200_000;
+const INPROCESS_MAX_CLAUSES: usize = 1_000_000;
 
-/// Runs CNF inprocessing when it is enabled and the formula is small enough for
-/// the current (non-incremental) BVE to finish cheaply. Records `inprocess_ms`
-/// and folds it into `stats.translate`; a size skip is recorded too.
+/// Runs CNF inprocessing when it is enabled and the formula is within the
+/// admission bound. Records `inprocess_ms` and folds it into `stats.translate`; a
+/// size skip is recorded too. Inprocessing is time-bounded to (at most) half the
+/// remaining solve budget so the SAT solve always keeps the other half.
 fn maybe_inprocess(
     config: &SolverConfig,
     formula: &CnfFormula,
+    deadline: Option<Instant>,
     stats: &mut SolveStats,
 ) -> Option<Inprocessed> {
     if !config.cnf_inprocessing {
@@ -274,8 +276,13 @@ fn maybe_inprocess(
             .push(("cnf_inprocessing_skipped_size".to_owned(), 1.0));
         return None;
     }
+    // Spend at most half the remaining solve budget on inprocessing; the partial
+    // result of an interrupted pass is still sound (subsumption is model-preserving,
+    // BVE equisatisfiable with a valid reconstruction). Unbounded if there is no
+    // solve deadline.
     let start = Instant::now();
-    let out = inprocess(formula, stats);
+    let inprocess_deadline = deadline.map(|dl| start + dl.saturating_duration_since(start) / 2);
+    let out = inprocess(formula, inprocess_deadline, stats);
     let elapsed = start.elapsed();
     stats.translate += elapsed;
     push_duration_ms(stats, "inprocess_ms", elapsed);
@@ -284,10 +291,15 @@ fn maybe_inprocess(
 
 /// Runs subsumption then bounded variable elimination on `formula`, recording
 /// what each pass removed in `stats`. Subsumption is model-preserving; BVE is
-/// equisatisfiable and pairs the reduced formula with a reconstruction stack.
-fn inprocess(formula: &CnfFormula, stats: &mut SolveStats) -> Inprocessed {
-    let (simplified, subsume) = simplify(formula);
-    let bve = eliminate_variables(&simplified, BveOptions::default());
+/// equisatisfiable and pairs the reduced formula with a reconstruction stack. Both
+/// passes stop scheduling new work once `deadline` passes.
+fn inprocess(
+    formula: &CnfFormula,
+    deadline: Option<Instant>,
+    stats: &mut SolveStats,
+) -> Inprocessed {
+    let (simplified, subsume) = simplify_within(formula, deadline);
+    let bve = eliminate_variables_within(&simplified, BveOptions::default(), deadline);
 
     stats.backend.push(("cnf_inprocessing".to_owned(), 1.0));
     stats.backend.push((

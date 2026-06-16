@@ -36,6 +36,26 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   2× RTX 4060 Ti 16 GB, CUDA 12.4); `corpus/public` symlinked to NAS
   `/nas3/data/...`; z3 + rust verified; 54/54 cnf tests pass. See
   [docs/plan/host-setup.md](docs/plan/host-setup.md).
+- **T1.1.4 inprocessing made near-linear + time-bounded — DONE** (2026-06-16):
+  `axeyum_cnf::simplify` rewritten to forward one-watch occurrence-list subsumption
+  (CaDiCaL/Kissat `subsume.cpp`/`forward.c`); `axeyum_cnf::bve` rewritten to full
+  literal occurrence lists + a touched-variable queue (`elim.cpp`/`eliminate.c`);
+  both gained `_within(deadline)` variants, and `sat_bv` now bounds inprocessing to
+  ≤50% of the remaining solve budget (partial passes stay sound: subsumption
+  model-preserving, BVE equisatisfiable + valid reconstruction). The old size guard
+  was lifted (512/2048 → 200k/1M admission ceiling). Each pass adds a 400-formula
+  randomized brute-force test. **Curated A/B (sat-bv vs Z3, 2 s, s4): 8 sat / 24
+  unsat / 11 unknown, agree=32, DISAGREE=0, replay failures=0, PAR-2 1.095 s** —
+  i.e. decision-identical to baseline (32/43) with no regression; the earlier
+  13–22 s pass hangs and the 3-instance regression are gone.
+- **Why inprocessing still decides none of the 11 unknowns (gates the next lever):**
+  the unknowns are either (a) **structurally BVE-resistant multipliers** (`mulhs64`:
+  45 105 vars, BVE eliminates 417 / clauses 201 656→201 379 ≈ 0.1% — non-increasing
+  resolution cannot collapse a multiplier), so the bottleneck is the **SAT search
+  itself → P1.3 (SAT-core modernization)**; or (b) reduced-but-still-hard (e.g.
+  `commute08` 18 296→7 038 clauses) where the reduced formula still doesn't close in
+  the remaining budget. Inprocessing is now correct/fast/safe infrastructure that
+  pays off once P1.3 / P1.2 land; it stays off by default.
 - **T1.1.3 inprocessing wired into the solve pipeline — DONE (sound), measured
   net-negative with current passes** (2026-06-16):
   `SolverConfig::cnf_inprocessing` (off by default) runs `simplify` (subsumption,
@@ -77,7 +97,7 @@ plan is built and committed on the current branch:
 ### Track 1 — Engine & Performance
 | Phase | Title | Status |
 |---|---|---|
-| P1.1 | SAT inprocessing (subsumption → BVE → vivification → glue tiers) | WIP — T1.1.1 subsumption + T1.1.2 BVE landed + T1.1.3 wired into solve pipeline (sound; measured net-negative — needs occurrence-list indexing, T1.1.4) |
+| P1.1 | SAT inprocessing (subsumption → BVE → vivification → glue tiers) | WIP — subsumption+BVE landed (T1.1.1/2), wired into the solve pipeline (T1.1.3), made occurrence-list near-linear + time-bounded (T1.1.4): safe, no regression, but the curated unknowns are SAT-search-bound (→ P1.3) or BVE-resistant. Vivification / glue tiers remain |
 | P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | TODO |
 | P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | TODO |
 | P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | TODO |
@@ -122,6 +142,20 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **T1.1.4 inprocessing made near-linear + time-bounded.**
+  `simplify` → forward one-watch occurrence-list subsumption (variable-keyed
+  signature so self-subsuming witnesses aren't false-rejected); `bve` → full
+  literal occurrence lists + touched-variable queue (lazy clause removal,
+  resolution-budget safety net), running to a fixpoint in one drain. Added
+  `simplify_within`/`eliminate_variables_within` deadline variants; `sat_bv`
+  bounds inprocessing to ≤50% of the remaining solve budget and the old 512/2048
+  size guard was lifted to a 200k/1M admission ceiling. Two new 400-formula
+  randomized brute-force tests (subsumption equivalence, BVE equisatisfiability +
+  reconstruction). Curated A/B: 32/43 decided, agree=32, DISAGREE=0, 0 replay
+  failures, PAR-2 1.095 s — no regression vs baseline; the prior 13–22 s pass
+  hangs and 3-instance regression are gone. The 11 unknowns stay unknown because
+  they are multiplier-structural (BVE ≈0% on `mulhs*`) or reduced-but-still-hard,
+  i.e. SAT-search-bound (→ P1.3). Commits 4c99d7e (a), 154936d (b), this (c).
 - **2026-06-16** — **T1.1.3 inprocessing wired into the bit-blast→CNF→solve
   pipeline + measured on s4.** New `SolverConfig::cnf_inprocessing`
   (`with_cnf_inprocessing`, off by default); `sat_bv_backend` runs
