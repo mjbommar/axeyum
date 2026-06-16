@@ -140,3 +140,86 @@ fn satisfiable_disjunction_agrees() {
     let disj = arena.or(ab, ac).unwrap();
     assert_sat_agree(&mut arena, &[disj]);
 }
+
+/// Deterministic xorshift PRNG (no clock / `Math.random`).
+fn xorshift(state: &mut u64) -> u64 {
+    let mut x = *state;
+    x ^= x << 13;
+    x ^= x >> 7;
+    x ^= x << 17;
+    *state = x;
+    x
+}
+
+fn pick(state: &mut u64, n: usize) -> usize {
+    usize::try_from(xorshift(state)).unwrap_or(0) % n
+}
+
+#[test]
+fn random_qf_uf_decisions_agree_with_ackermann() {
+    // Random pure equality/UF formulas (no BV arithmetic, so the e-graph path
+    // always decides) must match the Ackermann bit-blast path on sat/unsat. This
+    // hardens the EUF fast-path now live in check_auto dispatch.
+    let mut state = 0xABCD_1234_5678_9F01u64;
+    for _ in 0..120 {
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(4);
+        // 2..=4 leaf variables and a unary + a binary function.
+        let n_vars = 2 + pick(&mut state, 3);
+        let vars: Vec<TermId> = (0..n_vars)
+            .map(|i| arena.bv_var(&format!("v{i}"), 4).unwrap())
+            .collect();
+        let f = arena.declare_fun("f", &[sort], sort).unwrap();
+        let g = arena.declare_fun("g", &[sort, sort], sort).unwrap();
+
+        // A small pool of terms: the vars plus a few applications.
+        let mut terms = vars.clone();
+        for _ in 0..3 {
+            let t = if xorshift(&mut state) & 1 == 0 {
+                let a = terms[pick(&mut state, terms.len())];
+                arena.apply(f, &[a]).unwrap()
+            } else {
+                let a = terms[pick(&mut state, terms.len())];
+                let b = terms[pick(&mut state, terms.len())];
+                arena.apply(g, &[a, b]).unwrap()
+            };
+            terms.push(t);
+        }
+
+        // Build a handful of (dis)equality literals, combined as a conjunction of
+        // random clauses (each clause a disjunction of up to 2 literals).
+        let mut assertions = Vec::new();
+        let n_clauses = 2 + pick(&mut state, 4);
+        for _ in 0..n_clauses {
+            let width = 1 + pick(&mut state, 2);
+            let mut clause: Option<TermId> = None;
+            for _ in 0..width {
+                let s = terms[pick(&mut state, terms.len())];
+                let t = terms[pick(&mut state, terms.len())];
+                let eq = arena.eq(s, t).unwrap();
+                let lit = if xorshift(&mut state) & 1 == 0 {
+                    eq
+                } else {
+                    arena.not(eq).unwrap()
+                };
+                clause = Some(match clause {
+                    None => lit,
+                    Some(acc) => arena.or(acc, lit).unwrap(),
+                });
+            }
+            assertions.push(clause.unwrap());
+        }
+
+        let euf = check_qf_uf(&mut arena, &assertions);
+        let ack = ackermann(&mut arena, &assertions);
+        // Agreement: same decision, or the e-graph path abstained (`unknown` is a
+        // missed decision for pure equality/UF, never a disagreement).
+        let agree = matches!(
+            (&euf, &ack),
+            (CheckResult::Unsat, CheckResult::Unsat)
+                | (CheckResult::Sat(_), CheckResult::Sat(_))
+                | (CheckResult::Unknown(_), _)
+        );
+        assert!(agree, "EUF {euf:?} disagrees with Ackermann {ack:?}");
+    }
+}
