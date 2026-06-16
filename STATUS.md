@@ -36,16 +36,25 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     just the online theory.
   - **Online decider wired as the QF_UF fast path — DONE** (ahead of `check_qf_uf`,
     unknown-safe fall-through; full suite green).
-  - **Next action (precise resume point): P1.6 theory combination.** Extend the
-    online DPLL(T) loop with **interface equalities** between the e-graph (UF) and
-    the bit-blasted BV theory — Nelson–Oppen-style: share the equalities each theory
-    entails over the shared BV-sorted terms, propagate them across, and split on
-    unknown interface equalities — to decide **QF_UFBV completely without the
-    Ackermann reduction** (the current `combined`/`aufbv` path eagerly Ackermannizes;
-    P1.6 removes that trust hole). Start by enumerating shared terms + a
-    case-splitting driver over interface equalities, validated differentially vs the
-    existing Ackermann path (`check_with_all_theories`). Secondary: migrate
-    `axeyum_rewrite`'s bespoke trigger closure onto the keystone.
+- **P1.6 theory combination — first slice DONE (lazy Ackermann)** (2026-06-16):
+  `check_qf_ufbv_lazy` — CEGAR/on-demand functional-consistency lemmas for QF_UFBV
+  instead of the eager up-front Ackermann. Abstract apps → fresh vars, solve, add
+  the lemma `(⋀ args_i=args_j) ⇒ fresh_i=fresh_j` only for a pair a candidate model
+  violates, re-solve to fixpoint. Sound (abstraction is a relaxation ⇒ UNSAT
+  transfers; consistent sat replays), terminating (each pair once). rewrite
+  `FunctionElimination` now exposes `abstraction()` + `applications()` (eager
+  `assertions()` byte-identical). **300-formula differential vs the eager
+  `check_with_all_theories` — all jointly decided, all agreed (21 unsat).**
+  - **Next action (precise resume point):** (1) **Wire `check_qf_ufbv_lazy` into
+    `check_auto_dispatch`** for the function+BV fragment (when `has_function` and the
+    bit-blast theories are present but no array/int), ahead of the eager
+    `check_with_all_theories`, falling through on `Unsupported`/`Unknown`; run the
+    full suite (aufbv/functions/combined) for no-regression. (2) Then the *fuller*
+    **online interface-equality combination**: drive the BV theory and the online
+    `EufTheory` together via Nelson–Oppen equality sharing over shared BV-sorted
+    terms (split on unknown interface equalities) — removing the Ackermann reduction
+    entirely, not just deferring it. Secondary: migrate `axeyum_rewrite`'s bespoke
+    trigger closure onto the keystone.
 - **Plan authored** (2026-06-15): the full track/phase/task plan is under
   [`docs/plan/`](docs/plan/README.md), built from the five reference reviews in
   [`docs/plan/references/`](docs/plan/references/README.md).
@@ -183,7 +192,7 @@ plan is built and committed on the current branch:
 | P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | TODO |
 | P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | **DONE** — `axeyum-egraph` (ADR-0032): hash-cons + union-find + congruence cascade (T1.4.1/2), proof-forest `explain` (T1.4.3), backtrackable push/pop (T1.4.4), independent `check_congruence` (T1.4.5), per-class theory-var lists (T1.4.6). 17 tests incl. brute-force + backtracking property tests |
 | P1.5 | CDCL(T) loop (theory-as-extension, final-check, theory propagation) **[keystone]** | WIP — EUF on the e-graph: `prove_unsat_by_congruence` (conjunctive), `prove_unsat_lazy` (offline DPLL(T)), and `check_qf_uf` (full decision with **replay-checked sat models** from e-graph classes + function interps). Conflicts independently checked; **differentially validated vs Ackermann**. T1.5.5 met for the equality/UF fragment. **Online `TheorySolver` trait + `EufTheory` landed** (one backtrackable e-graph, explained conflict cores, lockstep push/pop) — the online theory side of the loop. Remaining: drive it from an online CDCL search with theory propagation (T1.5.1–T1.5.4) + dispatch wiring; theory combination with BV (P1.6) for complete QF_UFBV |
-| P1.6 | Theory combination (th_eq bus, interface equalities) | TODO |
+| P1.6 | Theory combination (th_eq bus, interface equalities) | WIP — **lazy/on-demand Ackermann for QF_UFBV** (`check_qf_ufbv_lazy`): CEGAR functional-consistency lemmas (abstract apps → fresh vars; add `(⋀ args=) ⇒ result=` only on a model-observed violation; re-solve to fixpoint). Sound (relaxation ⇒ UNSAT transfers; sat replays) + terminating; 300-formula differential vs eager `check_with_all_theories` (all agree). Remaining: wire into dispatch; then the full online interface-equality (Nelson–Oppen) combination of the e-graph + BV to drop the Ackermann reduction entirely |
 | P1.7 | PBLS local-search BV engine (portfolio) | TODO |
 | P1.8 | Strategy & tactics (combinators + probes + per-logic scripts) | TODO |
 
