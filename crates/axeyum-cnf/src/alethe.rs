@@ -838,6 +838,13 @@ fn check_structural_rule(
         "not_equiv1" => Some(is_not_equiv1(premise_clauses, clause)),
         "not_equiv2" => Some(is_not_equiv2(premise_clauses, clause)),
         "refl" => Some(no_premises && is_refl(clause)),
+        // Array read-over-write axiom rules. These are axeyum-INTERNAL Alethe
+        // rules: Alethe/Carcara has NO array theory rules (see
+        // `docs/research/07-verification/array-elimination-alethe-proofs.md`), so
+        // these sound structural shapes are owned by this in-tree checker, not
+        // Carcara. Both are premise-free.
+        "read_over_write" => Some(no_premises && is_read_over_write(clause)),
+        "read_over_write_same" => Some(no_premises && is_read_over_write_same(clause)),
         "symm" => Some(is_symm(premise_clauses, clause)),
         "trans" => Some(is_trans(premise_clauses, clause)),
         "cong" => Some(is_cong(premise_clauses, clause)),
@@ -1374,6 +1381,103 @@ fn is_refl(clause: &AletheClause) -> bool {
         return false;
     }
     matches!(as_eq(&lit.atom), Some((a, b)) if a == b)
+}
+
+/// Extracts the single positive equality `(= LHS RHS)` carried by a premise-free
+/// unit-clause conclusion `(cl (= LHS RHS))`, or `None` if the clause is not
+/// exactly one positive `=` literal of arity 2. The array read-over-write axiom
+/// rules conclude such a unit equality; anything else (multiple literals, a
+/// negated literal, or a non-`=` atom) is rejected by returning `None`.
+fn conclusion_eq(clause: &AletheClause) -> Option<(&AletheTerm, &AletheTerm)> {
+    let [lit] = clause.as_slice() else {
+        return None;
+    };
+    if lit.negated {
+        return None;
+    }
+    as_eq(&lit.atom)
+}
+
+/// Structural check for axeyum's `read_over_write` array axiom rule.
+///
+/// This is an **axeyum-internal** Alethe rule: Alethe/Carcara has no array theory
+/// rules (see `docs/research/07-verification/array-elimination-alethe-proofs.md`),
+/// so this sound structural shape is owned by the in-tree checker, not Carcara.
+///
+/// Premise-free; the conclusion must be the unit clause
+/// `(cl (= (select (store a i v) j) (ite (= i j) v (select a j))))` for some
+/// subterms `a`, `i`, `v`, `j`. Accepts iff:
+///
+/// - `LHS == (select (store a i v) j)` — a `select` of a `store`, both with their
+///   exact arities (`store`: 3 args; `select`: 2 args); and
+/// - `RHS == (ite (= i j) v (select a j))` — an `ite` whose condition is the
+///   `(= i j)` equality (this orientation **exactly**, not `(= j i)`), whose then-
+///   branch is the stored value `v`, and whose else-branch is `(select a j)`.
+///
+/// The shared subterms `a`, `i`, `v`, `j` must be **structurally identical**
+/// (`==`) in their required positions on both sides. Any deviation — wrong heads,
+/// wrong arity, a mismatched `a`/`i`/`v`/`j`, the condition swapped to `(= j i)`,
+/// or anything other than a single positive equality literal — is rejected. This
+/// is SOUND: the read-over-write axiom
+/// `(select (store a i v) j) = (ite (= i j) v (select a j))` holds for all arrays,
+/// indices, and values.
+fn is_read_over_write(clause: &AletheClause) -> bool {
+    let Some((lhs, rhs)) = conclusion_eq(clause) else {
+        return false;
+    };
+    // LHS = (select (store a i v) j).
+    let Some([inner, j]) = as_app(lhs, "select") else {
+        return false;
+    };
+    let Some([a, i, v]) = as_app(inner, "store") else {
+        return false;
+    };
+    // RHS = (ite (= i j) v (select a j)).
+    let Some([cond, then_branch, else_branch]) = as_app(rhs, "ite") else {
+        return false;
+    };
+    let Some((cond_lhs, cond_rhs)) = as_eq(cond) else {
+        return false;
+    };
+    let Some([else_a, else_j]) = as_app(else_branch, "select") else {
+        return false;
+    };
+    // Condition is exactly `(= i j)` (this orientation), then-branch is `v`,
+    // else-branch is `(select a j)` over the same `a` and `j`.
+    cond_lhs == i && cond_rhs == j && then_branch == v && else_a == a && else_j == j
+}
+
+/// Structural check for axeyum's `read_over_write_same` array axiom rule.
+///
+/// This is an **axeyum-internal** Alethe rule (not a Carcara rule; see
+/// `docs/research/07-verification/array-elimination-alethe-proofs.md`). It is the
+/// collapsed same-index instance of [`is_read_over_write`] (the `i = j` case).
+///
+/// Premise-free; the conclusion must be the unit clause
+/// `(cl (= (select (store a i v) i) v))` for some subterms `a`, `i`, `v`. Accepts
+/// iff:
+///
+/// - `LHS == (select (store a i v) i)` — a `select` of a `store` whose **read
+///   index is structurally identical to the write index** `i`; and
+/// - `RHS == v` — exactly the stored value.
+///
+/// A read index that differs from the write index, a wrong RHS, a non-`store`
+/// inner term, wrong arities, or anything other than a single positive equality
+/// literal is rejected. This is SOUND: `(select (store a i v) i) = v` is the
+/// read-over-write axiom's `i = j` instance.
+fn is_read_over_write_same(clause: &AletheClause) -> bool {
+    let Some((lhs, rhs)) = conclusion_eq(clause) else {
+        return false;
+    };
+    // LHS = (select (store a i v) j) with j structurally identical to i.
+    let Some([inner, j]) = as_app(lhs, "select") else {
+        return false;
+    };
+    let Some([_a, i, v]) = as_app(inner, "store") else {
+        return false;
+    };
+    // Read index equals write index, and RHS is exactly the stored value.
+    j == i && rhs == v
 }
 
 /// Structural check for the Alethe `symm` rule.
@@ -4239,5 +4343,210 @@ mod tests {
             check_alethe(&bb_step("bitblast_sign_extend", lhs, cst("y"))),
             Err(AletheError::StepNotEntailed { id: "s".to_owned() })
         );
+    }
+
+    // --- array read-over-write axiom rules ----------------------------------
+
+    /// A premise-free unit-equality step `(cl (= lhs rhs)) :rule R`.
+    fn eq_unit_step(rule: &str, lhs: AletheTerm, rhs: AletheTerm) -> Vec<AletheCommand> {
+        vec![step(
+            "s",
+            vec![AletheLit {
+                atom: eq_term(lhs, rhs),
+                negated: false,
+            }],
+            rule,
+            &[],
+        )]
+    }
+
+    #[test]
+    fn read_over_write_accepts_the_exact_axiom_shape() {
+        // (= (select (store a i v) j) (ite (= i j) v (select a j))).
+        let lhs = app_t(
+            "select",
+            vec![app_t("store", vec![cst("a"), cst("i"), cst("v")]), cst("j")],
+        );
+        let rhs = app_t(
+            "ite",
+            vec![
+                eq_term(cst("i"), cst("j")),
+                cst("v"),
+                app_t("select", vec![cst("a"), cst("j")]),
+            ],
+        );
+        // Valid shape; no empty clause derived, so Ok(false) (checked, not UNSAT).
+        assert_eq!(
+            check_alethe(&eq_unit_step("read_over_write", lhs, rhs)),
+            Ok(false)
+        );
+    }
+
+    #[test]
+    fn read_over_write_rejects_wrong_array_in_else_branch() {
+        // Else-branch reads a DIFFERENT array `b` instead of `a`.
+        let lhs = app_t(
+            "select",
+            vec![app_t("store", vec![cst("a"), cst("i"), cst("v")]), cst("j")],
+        );
+        let rhs = app_t(
+            "ite",
+            vec![
+                eq_term(cst("i"), cst("j")),
+                cst("v"),
+                app_t("select", vec![cst("b"), cst("j")]),
+            ],
+        );
+        assert_eq!(
+            check_alethe(&eq_unit_step("read_over_write", lhs, rhs)),
+            Err(AletheError::StepNotEntailed { id: "s".to_owned() })
+        );
+    }
+
+    #[test]
+    fn read_over_write_rejects_swapped_condition_orientation() {
+        // Condition is `(= j i)`; we require `(= i j)` exactly, so this rejects.
+        let lhs = app_t(
+            "select",
+            vec![app_t("store", vec![cst("a"), cst("i"), cst("v")]), cst("j")],
+        );
+        let rhs = app_t(
+            "ite",
+            vec![
+                eq_term(cst("j"), cst("i")),
+                cst("v"),
+                app_t("select", vec![cst("a"), cst("j")]),
+            ],
+        );
+        assert_eq!(
+            check_alethe(&eq_unit_step("read_over_write", lhs, rhs)),
+            Err(AletheError::StepNotEntailed { id: "s".to_owned() })
+        );
+    }
+
+    #[test]
+    fn read_over_write_rejects_non_store_inner_term() {
+        // LHS reads directly from `a` (no `store`); not the ROW axiom shape.
+        let lhs = app_t("select", vec![cst("a"), cst("j")]);
+        let rhs = app_t(
+            "ite",
+            vec![
+                eq_term(cst("i"), cst("j")),
+                cst("v"),
+                app_t("select", vec![cst("a"), cst("j")]),
+            ],
+        );
+        assert_eq!(
+            check_alethe(&eq_unit_step("read_over_write", lhs, rhs)),
+            Err(AletheError::StepNotEntailed { id: "s".to_owned() })
+        );
+    }
+
+    #[test]
+    fn read_over_write_rejects_when_premises_present() {
+        // The rule is premise-free; any premise rejects it.
+        let lhs = app_t(
+            "select",
+            vec![app_t("store", vec![cst("a"), cst("i"), cst("v")]), cst("j")],
+        );
+        let rhs = app_t(
+            "ite",
+            vec![
+                eq_term(cst("i"), cst("j")),
+                cst("v"),
+                app_t("select", vec![cst("a"), cst("j")]),
+            ],
+        );
+        let commands = vec![
+            assume("h1", vec![lit("p")]),
+            step(
+                "s",
+                vec![AletheLit {
+                    atom: eq_term(lhs, rhs),
+                    negated: false,
+                }],
+                "read_over_write",
+                &["h1"],
+            ),
+        ];
+        assert_eq!(
+            check_alethe(&commands),
+            Err(AletheError::StepNotEntailed { id: "s".to_owned() })
+        );
+    }
+
+    #[test]
+    fn read_over_write_same_accepts_the_exact_axiom_shape() {
+        // (= (select (store a i v) i) v).
+        let lhs = app_t(
+            "select",
+            vec![app_t("store", vec![cst("a"), cst("i"), cst("v")]), cst("i")],
+        );
+        assert_eq!(
+            check_alethe(&eq_unit_step("read_over_write_same", lhs, cst("v"))),
+            Ok(false)
+        );
+    }
+
+    #[test]
+    fn read_over_write_same_rejects_differing_read_index() {
+        // Read index `j` differs from write index `i`: RHS `v` is NOT the
+        // same-index axiom (it is the general ROW form, not this collapsed one).
+        let lhs = app_t(
+            "select",
+            vec![app_t("store", vec![cst("a"), cst("i"), cst("v")]), cst("j")],
+        );
+        assert_eq!(
+            check_alethe(&eq_unit_step("read_over_write_same", lhs, cst("v"))),
+            Err(AletheError::StepNotEntailed { id: "s".to_owned() })
+        );
+    }
+
+    #[test]
+    fn read_over_write_same_rejects_wrong_rhs() {
+        // RHS is `w`, not the stored value `v`.
+        let lhs = app_t(
+            "select",
+            vec![app_t("store", vec![cst("a"), cst("i"), cst("v")]), cst("i")],
+        );
+        assert_eq!(
+            check_alethe(&eq_unit_step("read_over_write_same", lhs, cst("w"))),
+            Err(AletheError::StepNotEntailed { id: "s".to_owned() })
+        );
+    }
+
+    #[test]
+    fn read_over_write_composes_to_the_empty_clause() {
+        // End-to-end: derive the ROW equality, then refute a trivial conflict.
+        // s1: (cl (= (select (store a i v) i) v))   via read_over_write_same
+        // h1: (cl (not (= (select (store a i v) i) v)))   assumed conflict
+        // s2: (cl)   resolution of s1 against h1
+        let row = eq_term(
+            app_t(
+                "select",
+                vec![app_t("store", vec![cst("a"), cst("i"), cst("v")]), cst("i")],
+            ),
+            cst("v"),
+        );
+        let commands = vec![
+            assume(
+                "h1",
+                vec![AletheLit {
+                    atom: row.clone(),
+                    negated: true,
+                }],
+            ),
+            step(
+                "s1",
+                vec![AletheLit {
+                    atom: row,
+                    negated: false,
+                }],
+                "read_over_write_same",
+                &[],
+            ),
+            step("s2", vec![], "resolution", &["s1", "h1"]),
+        ];
+        assert_eq!(check_alethe(&commands), Ok(true));
     }
 }
