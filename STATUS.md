@@ -50,17 +50,18 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   is bidirectional (check + emit) for the EUF transitivity + depth-1-congruence
   fragment, including **nested** structural congruence (`f(g(a)) ≠ f(g(b)) ∧ a=b`)
   via a recursive `derive_eq` (transitivity-then-congruence, recursing on args). 10
-  tests, each re-checked. Remaining (P3.2/3.3): the one EUF gap left is a
-  *congruence-derived* equality participating in a *transitivity* chain (e.g.
-  `f(a)=c ∧ a=b ∧ f(b)≠c`). **The e-graph building block is now in place:
-  `EGraph::explain_steps` returns the structured proof (`Input`/`Congruence` steps,
-  randomized-consistent with flat `explain`).** Next: a `euf_alethe` converter that
-  walks `explain_steps` (recursing on congruence-step args) into
-  `eq_transitive`/`eq_congruent`/`eq_symmetric` — needs the conflict's e-graph (build
-  an `EufTheory`/`EGraph` over the core, query `explain_steps` between the
-  disequality endpoints), self-validated by `check_alethe`. Then arithmetic/BV theory
-  rules; Carcara CI cross-check; extract `axeyum-alethe` crate (ADR) when emission
-  broadens.
+  tests, each re-checked. **EUF emission is now general** (2026-06-16): `prove_qf_uf_unsat_alethe` was rebuilt
+  around `EGraph::explain_steps` — it builds an e-graph over the conflict core (all
+  terms added before merging, so congruence edges survive in the proof forest),
+  walks the structured explanation between the disequality sides, and converts each
+  `Input`→assume / `Congruence`→`eq_congruent` (recursing on args), threaded through
+  `eq_transitive`. This handles the **mixed congruence-in-transitivity** case
+  (`f(a)=c ∧ a=b ∧ f(b)≠c`) the old bfs emitter returned `None` on — any congruence
+  refutation now emits a `check_alethe`-accepted proof (self-validated). The bfs
+  helpers were removed. Remaining (P3.2/3.3): arithmetic/BV theory rules in the
+  checker + emission; emit Alethe for the *reductions* (P3.5: array/function
+  elimination, int-blasting); Carcara CI cross-check; extract `axeyum-alethe` crate
+  (ADR) now that emission is substantial.
 - **P2.9 datatypes — structural refutation DONE** (2026-06-16):
   `prove_datatype_unsat_structurally` — the three datatype structural axioms over a
   term-level union-find: **acyclicity** (`x = cons(h, x)` ⇒ unsat), **distinctness**
