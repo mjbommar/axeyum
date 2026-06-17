@@ -251,6 +251,41 @@ foundation; adding the two-watch index over its rows is the remaining optimizati
 and the only form fast enough for the hot CDCL loop. Until then `xor_cdcl` keeps
 the (incomplete but cheap) watched-literal XOR propagation.
 
+**Third measured result — the watch index landed, and it exposed that the curated
+unknowns are the WRONG target for in-search Gaussian (2026-06).** The
+watched-echelon-row index was built (commit 3ca0340): full RREF kept (echelon
+alone is incomplete for the exact-set contract), two watches as an *index* over the
+RREF rows, **~25× fewer rows examined per `assign`** (≈7 vs ≈180 on a 180-row
+system), all oracle differentials still green. Re-integrated into `xor_cdcl`
+(sound — every differential green; completeness now *strictly better*: parity
+chains and row-combination UNSATs close at level 0 with zero search conflicts).
+Yet `mulhs08` **still** regressed past 300 s. Two compounding causes, the second
+decisive:
+1. `IncrementalXorMatrix::assign` deep-clones an `O(num_vars)` journal entry every
+   assign for exact backtracking — the watch index cut rows *examined* but not this
+   per-assign clone. Fixable with an incremental undo-log.
+2. **The deeper one: `mulhs08` has ~1 XOR gate among 655 variables.** The matrix
+   therefore adds essentially *no* propagation power on it, while replacing the
+   near-free watched-literal scheme with per-assign matrix overhead — strictly
+   worse. `mulhs08` was never cracked by *XOR reasoning*; it was cracked by
+   `xor_cdcl`'s **competitive CDCL core** (VSIDS + restarts + 1-UIP learning) that
+   plain batsat's configuration lacks. The curated "decides-but-slow" unknowns
+   (`mulhs*`, `calypto`, `stp_samples`) are **not XOR-dense** — their parity
+   structure is thin — so in-search Gaussian is overhead-without-benefit there.
+
+**Course correction (measured, not guessed):** in-search Gaussian is a real,
+validated capability (the watched-row `IncrementalXorMatrix` at commit 3ca0340 is
+sound + fast-per-examination), but it pays off only on **XOR-dense** problems
+(dense parity / adder-heavy / crypto-style), which the curated multiplier slice is
+not. For *these* instances the lever that already worked is the **competitive CDCL
+core** itself (VSIDS/restarts/learning — done) plus, for the next size class,
+**broader SAT-core modernization (P1.3)**, not more XOR machinery. The matrix is
+the right tool kept on the shelf for an XOR-dense corpus; using it as a wholesale
+replacement of watched-literal propagation regresses XOR-thin instances and is not
+done. `xor_cdcl` keeps the cheap watched-literal XOR propagation; the matrix stays
+a validated, unwired component (it would be activated behind an XOR-density guard,
+with an incremental journal, when an XOR-dense workload motivates it).
+
 ## Bottom line
 
 The curated wall is multiplier-equivalence, which is provably hard for the
