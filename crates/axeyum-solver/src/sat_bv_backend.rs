@@ -20,8 +20,9 @@ use axeyum_bv::{
 };
 use axeyum_cnf::{
     BveOptions, CnfAssignment, CnfEncoding, CnfError, CnfFormula, ProofSolveOutcome,
-    Reconstruction, SatError, SatResult, check_drat, eliminate_variables_within, simplify_within,
-    solve_with_drat_proof, solve_with_rustsat_batsat_timeout, tseitin_encode,
+    Reconstruction, SatError, SatResult, XorPropagation, check_drat, eliminate_variables_within,
+    simplify_within, solve_with_drat_proof, solve_with_rustsat_batsat_timeout, tseitin_encode,
+    xor_propagate,
 };
 use axeyum_ir::{
     Assignment, IrError, Sort, TermArena, TermId, TermStats, Value, eval, well_founded_default,
@@ -255,6 +256,15 @@ struct Inprocessed {
 const INPROCESS_MAX_VARIABLES: usize = 200_000;
 const INPROCESS_MAX_CLAUSES: usize = 1_000_000;
 
+/// XOR-propagation admission bound. Unlike subsumption/BVE, `xor_propagate` runs
+/// Gaussian elimination over the recovered XOR system, which is `O(gates²·vars)`
+/// and currently carries no internal deadline — so it gets a conservative,
+/// separate clause cap so the first measured wiring cannot hang on the big
+/// multiplier CNFs (the very instances whose dense parity structure only an
+/// *in-search* Gaussian, not preprocessing, can collapse). Raised once the pass
+/// is deadline-bounded.
+const XOR_PROPAGATE_MAX_CLAUSES: usize = 20_000;
+
 /// Runs CNF inprocessing when it is enabled and the formula is within the
 /// admission bound. Records `inprocess_ms` and folds it into `stats.translate`; a
 /// size skip is recorded too. Inprocessing is time-bounded to (at most) half the
@@ -298,7 +308,45 @@ fn inprocess(
     deadline: Option<Instant>,
     stats: &mut SolveStats,
 ) -> Inprocessed {
-    let (simplified, subsume) = simplify_within(formula, deadline);
+    // XOR propagation (CDCL(XOR) preprocessing, path 2 of the multiplier wall):
+    // recover the XOR gates entailed by the formula, Gaussian-solve them, and
+    // append the implied unit clauses. Each added unit is entailed by the formula
+    // (the recognized gates are equivalent to clause-subsets of it), so it removes
+    // no models and adds none — the augmented formula is logically equivalent and
+    // needs no extra reconstruction. The contradictory-subsystem (`Unsat`) verdict
+    // is *not* trusted as a certificate here (no XOR proof emitter yet); that
+    // formula is left unchanged for the checked SAT solve to refute independently.
+    // Capped separately because Gaussian carries no internal deadline yet.
+    let xor_base: Option<CnfFormula> = if formula.clauses().len() <= XOR_PROPAGATE_MAX_CLAUSES {
+        match xor_propagate(formula) {
+            XorPropagation::Propagated {
+                formula: augmented,
+                stats: xstats,
+            } => {
+                stats.backend.push((
+                    "xor_gates_recognized".to_owned(),
+                    usize_to_f64(xstats.xors_recognized),
+                ));
+                stats.backend.push((
+                    "xor_units_added".to_owned(),
+                    usize_to_f64(xstats.units_added),
+                ));
+                (xstats.units_added > 0).then_some(augmented)
+            }
+            XorPropagation::Unsat => {
+                stats.backend.push(("xor_subsystem_unsat".to_owned(), 1.0));
+                None
+            }
+        }
+    } else {
+        stats
+            .backend
+            .push(("xor_propagate_skipped_size".to_owned(), 1.0));
+        None
+    };
+    let base: &CnfFormula = xor_base.as_ref().unwrap_or(formula);
+
+    let (simplified, subsume) = simplify_within(base, deadline);
     let bve = eliminate_variables_within(&simplified, BveOptions::default(), deadline);
 
     stats.backend.push(("cnf_inprocessing".to_owned(), 1.0));
