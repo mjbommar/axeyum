@@ -41,16 +41,17 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   checked structurally against their exact tautology shapes (strict, order-sensitive;
   broken shapes rejected). plus the entailment-checked
   clause-manipulation rules `contraction`/`reordering`/`weakening`. 16 tests.
-  **EUF proof EMISSION begun** (`prove_qf_uf_unsat_alethe`): the solver now turns a
-  **transitivity** congruence conflict into an Alethe proof (`assume`s +
-  `eq_symmetric` for reversed edges + one `eq_transitive` + `resolution` chain to
-  `(cl)`), **self-validated** — it returns `Some` only when `check_alethe` accepts,
-  so a construction bug yields `None`, never a wrong proof. The proof track is now
-  bidirectional (check + emit) for the EUF transitivity fragment. 5 tests.
-  Remaining (P3.2/3.3): extend emission to **congruence** conflicts — needs a
-  *structured* explanation from the e-graph proof forest (today `EGraph::explain`
-  flattens to a reason set; a new method must return the ordered equality/congruence
-  steps, then emit `eq_congruent` steps) — a careful `axeyum-egraph` extension; then
+  **EUF proof EMISSION** (`prove_qf_uf_unsat_alethe`): the solver turns a congruence
+  conflict into an Alethe proof — **transitivity** (`assume`s + `eq_symmetric` for
+  reversed edges + `eq_transitive` + `resolution` to `(cl)`) and **depth-1
+  congruence** (`f(x⃗) ≠ f(y⃗)` with each `xᵢ=yᵢ` derived by transitivity, then one
+  `eq_congruent` step). **Self-validated** — returns `Some` only when `check_alethe`
+  accepts, so a construction bug yields `None`, never a wrong proof. The proof track
+  is bidirectional (check + emit) for the EUF transitivity + depth-1-congruence
+  fragment. 9 tests, each re-checked. Remaining (P3.2/3.3): **nested** congruence —
+  needs a *structured* explanation from the e-graph proof forest (today
+  `EGraph::explain` flattens to a reason set; a new method must return the ordered
+  equality/congruence steps) — a careful `axeyum-egraph` extension; then
   arithmetic/BV theory rules; Carcara CI cross-check; extract `axeyum-alethe` crate
   (ADR) when emission broadens.
 - **P2.9 datatypes — structural refutation DONE** (2026-06-16):
