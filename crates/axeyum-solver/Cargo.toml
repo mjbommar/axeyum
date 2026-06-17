@@ -18,6 +18,7 @@ axeyum-cnf.workspace = true
 axeyum-egraph.workspace = true
 axeyum-fp.workspace = true
 axeyum-ir.workspace = true
+axeyum-lean-kernel = { path = "../axeyum-lean-kernel" }
 axeyum-query.workspace = true
 axeyum-rewrite = { path = "../axeyum-rewrite" }
 axeyum-smtlib = { path = "../axeyum-smtlib" }
