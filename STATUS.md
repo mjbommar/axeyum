@@ -355,6 +355,21 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-17** — **QF_BV proof driver extended to COMPOUND terms (Carcara-`valid`)**.
+  `prove_qf_bv_unsat_alethe` now reduces predicates over compound bit-vector operands
+  — bitwise, arithmetic (`bvadd`/`bvneg`/`bvmul`), `bvcomp`, structural
+  (`extract`/`concat`/`sign_extend`) — **nested to arbitrary depth, shared-DAG
+  subterms bit-blasted once**. The uniform front-end (`BbReducer`): bottom-up, every
+  term gets an `@bbterm`-form equality via `cong` (over children's equalities) +
+  `bitblast_<op>` (over the `@bbterm`-form children) + `trans`; predicates then
+  `cong`→`bitblast_<pred>`→`trans` to the bit-level Boolean, feeding the unchanged v1
+  Tseitin+LRAT refutation. Factored `bitblast_op_step` to emit a gadget over already-
+  rendered operands; switched the bitwise/`bvnot`/`bvxnor`/`extract` arms to
+  `build_term_vec` (correct for `@bbterm`-form children; no-op for the IR path). **5
+  compound unsat instances Carcara-`valid`** incl. nested `(bvand (bvor a b) c)` and
+  arithmetic `(bvadd a b)` conflicts; `None` for shift/div subterms (out of fragment).
+  Now `None` only for shifts, div/rem, zero_extend, rotates, `bvsub`/`bvnand`/`bvnor`.
+  **Next: shift/div-rem via `hole` + the in-house miter side-cert → full QF_BV.**
 - **2026-06-17** — **`prove_qf_bv_unsat_alethe` driver — first AUTOMATED full QF_BV
   `unsat` proof, Carcara-`valid` (T3.3 capstone, v1 fragment)**. New
   `qfbv_alethe.rs`: given QF_BV assertions, confirms `unsat` (SAT-BV path) then emits

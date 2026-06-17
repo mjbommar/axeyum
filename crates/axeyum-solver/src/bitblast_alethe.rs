@@ -117,7 +117,7 @@ fn bv_const_literal(width: u32, value: u128) -> String {
 /// Returns [`None`] for any other node (wide constants, non-bitwise operators,
 /// non-bit-vector terms), so the rendered `<T>` always matches what the `.smt2`
 /// declares.
-fn bv_term_to_alethe(arena: &TermArena, term: TermId) -> Option<AletheTerm> {
+pub(crate) fn bv_term_to_alethe(arena: &TermArena, term: TermId) -> Option<AletheTerm> {
     match arena.node(term) {
         TermNode::Symbol(symbol) => {
             let (name, _sort) = arena.symbol(*symbol);
@@ -318,20 +318,50 @@ fn bitblast_app(
     // including the predicates whose own result sort is Bool).
     let width = bv_width(arena, *args.first()?)? as usize;
 
+    // For `concat` the per-operand widths come from the IR; pre-compute them so
+    // the shared gadget builder needs only the rendered operands.
+    let operand_widths = args
+        .iter()
+        .map(|&arg| bv_width(arena, arg).map(|w| w as usize))
+        .collect::<Option<Vec<_>>>()?;
+
+    bitblast_op_step(op, &rendered_args, &operand_widths, lhs, width, step_id)
+}
+
+/// Emits the `bitblast_<op>` step from **already-rendered** operands, the desired
+/// left-hand side, the result width (operand-0 width), and the per-operand widths
+/// (used only by `concat`). This is the gadget core shared by [`bitblast_app`] (IR
+/// operands) and the compound-term reduction front-end in
+/// [`crate::qfbv_alethe`] (operands that are themselves `@bbterm` Alethe forms,
+/// whose `build_term_vec` returns their bit args directly — exactly how Carcara's
+/// `bitblast_<op>` rule reconstructs the gadget). Returns [`None`] for an operator
+/// outside the covered set or a malformed operand list.
+pub(crate) fn bitblast_op_step(
+    op: Op,
+    rendered_args: &[AletheTerm],
+    operand_widths: &[usize],
+    lhs: AletheTerm,
+    width: usize,
+    step_id: &str,
+) -> Option<AletheCommand> {
     match op {
         Op::BvNot => {
-            // Unary: b_i = (not ((_ @bit_of i) a)).
-            let [arg] = rendered_args.as_slice() else {
+            // Unary: b_i = (not <bit i of a>). `build_term_vec` returns a `@bbterm`
+            // operand's bit args directly, or the `((_ @bit_of i) a)` projection for a
+            // plain term — matching how Carcara's rule reconstructs the operand bits.
+            let [arg] = rendered_args else {
                 return None;
             };
+            let ab = build_term_vec(arg, width);
             let bits = (0..width)
-                .map(|i| AletheTerm::App("not".to_owned(), vec![bit_of(i, arg)]))
+                .map(|i| AletheTerm::App("not".to_owned(), vec![ab[i].clone()]))
                 .collect();
             Some(bbterm_step("bitblast_not", lhs, bits, step_id))
         }
         Op::BvAnd | Op::BvOr | Op::BvXor => {
-            // n-ary left fold matching Carcara: start from arg0's bit projections,
-            // then for each later arg fold (head prev_i arg_i) bit-by-bit.
+            // n-ary left fold matching Carcara: start from arg0's bits, then for each
+            // later arg fold (head prev_i arg_i) bit-by-bit. Operand bits come from
+            // `build_term_vec` so `@bbterm`-form children expand to their args.
             let head = match op {
                 Op::BvAnd => "and",
                 Op::BvOr => "or",
@@ -339,13 +369,11 @@ fn bitblast_app(
                 _ => unreachable!(),
             };
             let (first, rest) = rendered_args.split_first()?;
-            // Initial bits = the per-bit projections of arg0.
-            let mut bits: Vec<AletheTerm> = (0..width).map(|i| bit_of(i, first)).collect();
+            let mut bits: Vec<AletheTerm> = build_term_vec(first, width);
             for arg in rest {
+                let ab = build_term_vec(arg, width);
                 bits = (0..width)
-                    .map(|i| {
-                        AletheTerm::App(head.to_owned(), vec![bits[i].clone(), bit_of(i, arg)])
-                    })
+                    .map(|i| AletheTerm::App(head.to_owned(), vec![bits[i].clone(), ab[i].clone()]))
                     .collect();
             }
             let rule = match op {
@@ -357,30 +385,32 @@ fn bitblast_app(
             Some(bbterm_step(rule, lhs, bits, step_id))
         }
         Op::BvXnor => {
-            // Binary only (per Carcara): b_i = (= ((_ @bit_of i) x) ((_ @bit_of i) y)).
-            let [x, y] = rendered_args.as_slice() else {
+            // Binary only (per Carcara): b_i = (= <bit i of x> <bit i of y>).
+            let [x, y] = rendered_args else {
                 return None;
             };
+            let xb = build_term_vec(x, width);
+            let yb = build_term_vec(y, width);
             let bits = (0..width)
-                .map(|i| AletheTerm::App("=".to_owned(), vec![bit_of(i, x), bit_of(i, y)]))
+                .map(|i| AletheTerm::App("=".to_owned(), vec![xb[i].clone(), yb[i].clone()]))
                 .collect();
             Some(bbterm_step("bitblast_xnor", lhs, bits, step_id))
         }
-        Op::BvAdd => add_step(&rendered_args, lhs, width, step_id),
-        Op::BvMul => mult_step(&rendered_args, lhs, width, step_id),
-        Op::BvNeg => neg_step(&rendered_args, lhs, width, step_id),
-        Op::Extract { hi, lo } => extract_step(&rendered_args, lhs, hi, lo, step_id),
-        Op::Concat => concat_step(arena, args, &rendered_args, lhs, step_id),
-        Op::SignExt { by } => sign_extend_step(&rendered_args, lhs, width, by, step_id),
+        Op::BvAdd => add_step(rendered_args, lhs, width, step_id),
+        Op::BvMul => mult_step(rendered_args, lhs, width, step_id),
+        Op::BvNeg => neg_step(rendered_args, lhs, width, step_id),
+        Op::Extract { hi, lo } => extract_step(rendered_args, lhs, hi, lo, step_id),
+        Op::Concat => concat_step(operand_widths, rendered_args, lhs, step_id),
+        Op::SignExt { by } => sign_extend_step(rendered_args, lhs, width, by, step_id),
         Op::BvUlt => {
-            let [x, y] = rendered_args.as_slice() else {
+            let [x, y] = rendered_args else {
                 return None;
             };
             let result = ult_ladder(x, y, width)?;
             Some(predicate_step("bitblast_ult", lhs, result, step_id))
         }
         Op::BvSlt => {
-            let [x, y] = rendered_args.as_slice() else {
+            let [x, y] = rendered_args else {
                 return None;
             };
             let result = slt_ladder(x, y, width)?;
@@ -389,7 +419,7 @@ fn bitblast_app(
         Op::Eq => {
             // Bit-vector equality only: per-bit `(= x_i y_i)` AND-folded into a
             // single Boolean. Non-bit-vector equality is not a `bitblast_equal`.
-            let [x, y] = rendered_args.as_slice() else {
+            let [x, y] = rendered_args else {
                 return None;
             };
             let result = bitwise_equal_and(x, y, width);
@@ -398,7 +428,7 @@ fn bitblast_app(
         Op::BvComp => {
             // Same per-bit AND as equality, but the 1-bit BV result wraps the
             // single Boolean in `@bbterm`.
-            let [x, y] = rendered_args.as_slice() else {
+            let [x, y] = rendered_args else {
                 return None;
             };
             let result = bitwise_equal_and(x, y, width);
@@ -536,7 +566,10 @@ fn extract_step(
     let [x] = rendered_args else {
         return None;
     };
-    let bits = (lo..=hi).map(|i| bit_of(i as usize, x)).collect();
+    // The operand's bits via `build_term_vec` (a `@bbterm` child expands to its args);
+    // the operand width spans at least `hi + 1` bits, so size the vector to `hi + 1`.
+    let xb = build_term_vec(x, hi as usize + 1);
+    let bits = (lo..=hi).map(|i| xb[i as usize].clone()).collect();
     Some(bbterm_step("bitblast_extract", lhs, bits, step_id))
 }
 
@@ -571,22 +604,21 @@ fn sign_extend_step(
 
 /// The `bitblast_concat` step (shape 1): `(concat a1 … an)` bit-blasts to the
 /// per-bit concatenation built **last argument first** (the low/rightmost
-/// operand), then each earlier operand, matching Carcara's `concat`. `args` are
-/// the IR operand ids (for their widths); `rendered_args` their Alethe forms.
+/// operand), then each earlier operand, matching Carcara's `concat`.
+/// `operand_widths` carries each operand's bit width; `rendered_args` their
+/// Alethe forms.
 fn concat_step(
-    arena: &TermArena,
-    args: &[TermId],
+    operand_widths: &[usize],
     rendered_args: &[AletheTerm],
     lhs: AletheTerm,
     step_id: &str,
 ) -> Option<AletheCommand> {
-    if rendered_args.is_empty() {
+    if rendered_args.is_empty() || operand_widths.len() != rendered_args.len() {
         return None;
     }
     let mut bits = Vec::new();
     // Last operand (low bits) first, then towards the first (high bits).
-    for (rendered, &arg) in rendered_args.iter().zip(args.iter()).rev() {
-        let w = bv_width(arena, arg)? as usize;
+    for (rendered, &w) in rendered_args.iter().zip(operand_widths.iter()).rev() {
         bits.extend(build_term_vec(rendered, w));
     }
     Some(bbterm_step("bitblast_concat", lhs, bits, step_id))

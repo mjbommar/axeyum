@@ -111,6 +111,61 @@ fn carcara_accepts(
     carcara_accepts_smt2(bin, tag, &write_script(arena, assertions), proof)
 }
 
+/// Renders a `.smt2` whose assertions are **fully inlined** (no shared-subterm
+/// `define-fun` hoisting), so each assertion term renders verbatim and matches the
+/// proof's `assume` term. The production [`write_script`] hoists a shared interior
+/// node into a `define-fun` alias, which Carcara keeps opaque when matching an
+/// `assume` against the original premises; the compound driver's `assume` renders
+/// the full term, so the cross-check feeds Carcara the inlined form. (The emitted
+/// proof itself is identical either way — only the problem text differs.)
+fn inlined_smt2(arena: &TermArena, assertions: &[TermId]) -> String {
+    // Collect the BV-symbol declarations by walking the assertion DAG, sorted by
+    // name for a deterministic, declared-before-use script.
+    use std::collections::BTreeMap;
+    use std::fmt::Write as _;
+    let mut decls: BTreeMap<String, axeyum_ir::Sort> = BTreeMap::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    let mut seen: std::collections::HashSet<TermId> = std::collections::HashSet::new();
+    while let Some(t) = stack.pop() {
+        if !seen.insert(t) {
+            continue;
+        }
+        match arena.node(t) {
+            axeyum_ir::TermNode::Symbol(s) => {
+                let (name, sort) = arena.symbol(*s);
+                decls.insert(name.to_owned(), sort);
+            }
+            axeyum_ir::TermNode::App { args, .. } => stack.extend(args.iter().copied()),
+            _ => {}
+        }
+    }
+    let mut out = String::from("(set-logic QF_BV)\n");
+    for (name, sort) in &decls {
+        let axeyum_ir::Sort::BitVec(w) = sort else {
+            panic!("inlined_smt2 helper only declares bit-vector symbols");
+        };
+        let _ = writeln!(out, "(declare-const {name} (_ BitVec {w}))");
+    }
+    for &a in assertions {
+        let _ = writeln!(out, "(assert {})", axeyum_ir::render(arena, a));
+    }
+    out.push_str("(check-sat)\n");
+    out
+}
+
+/// Like [`carcara_accepts`] but uses the fully-inlined `.smt2` (see
+/// [`inlined_smt2`]) so a compound `assume` term over a shared subterm matches the
+/// problem premise structurally.
+fn carcara_accepts_inlined(
+    bin: &Path,
+    tag: &str,
+    arena: &TermArena,
+    assertions: &[TermId],
+    proof: &[axeyum_cnf::AletheCommand],
+) -> String {
+    carcara_accepts_smt2(bin, tag, &inlined_smt2(arena, assertions), proof)
+}
+
 fn var(arena: &mut TermArena, name: &str) -> TermId {
     let s = arena.declare(name, Sort::BitVec(8)).expect("declare");
     arena.var(s)
@@ -1313,17 +1368,162 @@ fn driver_returns_none_for_sat_instance() {
 }
 
 #[test]
-fn driver_returns_none_for_compound_term_instance() {
-    // (= (bvand a b) a) ∧ (not (= (bvand a b) a)) is unsat, but the compound
-    // operand `(bvand a b)` is outside the variable/constant fragment.
+fn driver_returns_none_for_shift_subterm_instance() {
+    // (= (bvshl a b) a) ∧ (not (= (bvshl a b) a)) is unsat, but `bvshl` is a Carcara
+    // hole (not bit-blastable), so the compound-term driver bails to None.
     let mut arena = TermArena::new();
     let a = bvw(&mut arena, "a", 2);
     let b = bvw(&mut arena, "b", 2);
-    let and = arena.bv_and(a, b).unwrap();
-    let eq = arena.eq(and, a).unwrap();
+    let shl = arena.bv_shl(a, b).unwrap();
+    let eq = arena.eq(shl, a).unwrap();
     let neq = arena.not(eq).unwrap();
     assert!(
         prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).is_none(),
-        "a compound-operand predicate is outside the v1 fragment"
+        "a shift subterm is a Carcara hole, outside the bit-blastable fragment"
     );
+}
+
+#[test]
+fn driver_returns_none_for_div_subterm_instance() {
+    // (= (bvudiv a b) a) ∧ (not …) is unsat, but `bvudiv` is a Carcara hole → None.
+    let mut arena = TermArena::new();
+    let a = bvw(&mut arena, "a", 2);
+    let b = bvw(&mut arena, "b", 2);
+    let div = arena.bv_udiv(a, b).unwrap();
+    let eq = arena.eq(div, a).unwrap();
+    let neq = arena.not(eq).unwrap();
+    assert!(
+        prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).is_none(),
+        "a division subterm is a Carcara hole, outside the bit-blastable fragment"
+    );
+}
+
+// --- Compound-term predicate fragment: cong/bitblast/trans reduction ---------
+//
+// The driver now reduces predicates over *compound* bit-vector terms by
+// bit-blasting each operand bottom-up to its `@bbterm` form, substituting via
+// `cong`, and `trans`-chaining to the bit-level Boolean — then Boolean-refuting to
+// `(cl)`. Each test builds a genuinely-unsat instance (the SAT-BV path confirms it
+// inside the driver), emits the proof, and asserts Carcara reports `valid`.
+
+#[test]
+fn driver_bitwise_compound_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // (= (bvand a b) c) ∧ (= a b) ∧ (not (= b c)) over width 2 — unsat:
+    // a = b ⇒ (bvand a b) = b; the first then forces c = b, contradicting b ≠ c.
+    let mut arena = TermArena::new();
+    let a = bvw(&mut arena, "a", 2);
+    let b = bvw(&mut arena, "b", 2);
+    let c = bvw(&mut arena, "c", 2);
+    let and = arena.bv_and(a, b).unwrap();
+    let eq_and_c = arena.eq(and, c).unwrap();
+    let eq_ab = arena.eq(a, b).unwrap();
+    let bc = arena.eq(b, c).unwrap();
+    let neq_bc = arena.not(bc).unwrap();
+    let assertions = vec![eq_and_c, eq_ab, neq_bc];
+
+    let proof = prove_qf_bv_unsat_alethe(&arena, &assertions).expect("emit QF_BV proof");
+    let report =
+        carcara_accepts_inlined(&bin, "driver_bitwise_compound", &arena, &assertions, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+#[test]
+fn driver_bvand_idempotent_compound_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // (not (= (bvand a a) a)) over width 3 — unsat since a & a = a. The shared
+    // operand `a` is bit-blasted once (DAG dedup) and both cong premises reference it.
+    let mut arena = TermArena::new();
+    let a = bvw(&mut arena, "a", 3);
+    let and = arena.bv_and(a, a).unwrap();
+    let eq = arena.eq(and, a).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let assertions = vec![neq];
+
+    let proof = prove_qf_bv_unsat_alethe(&arena, &assertions).expect("emit QF_BV proof");
+    let report = carcara_accepts_inlined(&bin, "driver_bvand_idem", &arena, &assertions, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+#[test]
+fn driver_arithmetic_compound_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // (= (bvadd a b) c) ∧ (= (bvadd a b) d) ∧ (not (= c d)) over width 3 — unsat:
+    // c = (a+b) = d contradicts c ≠ d. The shared subterm `(bvadd a b)` is reduced once.
+    let mut arena = TermArena::new();
+    let a = bvw(&mut arena, "a", 3);
+    let b = bvw(&mut arena, "b", 3);
+    let c = bvw(&mut arena, "c", 3);
+    let d = bvw(&mut arena, "d", 3);
+    let sum = arena.bv_add(a, b).unwrap();
+    let eq_c = arena.eq(sum, c).unwrap();
+    let eq_d = arena.eq(sum, d).unwrap();
+    let cd = arena.eq(c, d).unwrap();
+    let neq_cd = arena.not(cd).unwrap();
+    let assertions = vec![eq_c, eq_d, neq_cd];
+
+    let proof = prove_qf_bv_unsat_alethe(&arena, &assertions).expect("emit QF_BV proof");
+    let report =
+        carcara_accepts_inlined(&bin, "driver_arith_compound", &arena, &assertions, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+#[test]
+fn driver_nested_compound_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // (= (bvand (bvor a b) c) d) ∧ (= (bvor a b) c) ∧ (not (= c d)) over width 2 —
+    // a genuinely NESTED compound: the inner `(bvor a b)` and the outer `(bvand … c)`
+    // each reduce bottom-up. With (bvor a b) = c, the outer is (bvand c c) = c, so
+    // d = c, contradicting c ≠ d.
+    let mut arena = TermArena::new();
+    let a = bvw(&mut arena, "a", 2);
+    let b = bvw(&mut arena, "b", 2);
+    let c = bvw(&mut arena, "c", 2);
+    let d = bvw(&mut arena, "d", 2);
+    let or = arena.bv_or(a, b).unwrap();
+    let and = arena.bv_and(or, c).unwrap();
+    let eq_and_d = arena.eq(and, d).unwrap();
+    let eq_or_c = arena.eq(or, c).unwrap();
+    let cd = arena.eq(c, d).unwrap();
+    let neq_cd = arena.not(cd).unwrap();
+    let assertions = vec![eq_and_d, eq_or_c, neq_cd];
+
+    let proof = prove_qf_bv_unsat_alethe(&arena, &assertions).expect("emit QF_BV proof");
+    let report =
+        carcara_accepts_inlined(&bin, "driver_nested_compound", &arena, &assertions, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+#[test]
+fn driver_compound_in_ult_predicate_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // (bvult (bvadd a b) c) ∧ (= (bvadd a b) c) over width 3 — unsat: (a+b) < c yet
+    // (a+b) = c. A compound operand inside a `bvult` predicate (not just `=`).
+    let mut arena = TermArena::new();
+    let a = bvw(&mut arena, "a", 3);
+    let b = bvw(&mut arena, "b", 3);
+    let c = bvw(&mut arena, "c", 3);
+    let sum = arena.bv_add(a, b).unwrap();
+    let ult = arena.bv_ult(sum, c).unwrap();
+    let eq = arena.eq(sum, c).unwrap();
+    let assertions = vec![ult, eq];
+
+    let proof = prove_qf_bv_unsat_alethe(&arena, &assertions).expect("emit QF_BV proof");
+    let report = carcara_accepts_inlined(&bin, "driver_compound_ult", &arena, &assertions, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
 }

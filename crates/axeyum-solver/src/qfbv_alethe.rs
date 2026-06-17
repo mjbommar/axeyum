@@ -1,45 +1,61 @@
-//! Alethe proof **emission** for a first slice of general `QF_BV` `unsat`
-//! refutations — the **variable/constant predicate fragment** (Track 3, the
+//! Alethe proof **emission** for a slice of general `QF_BV` `unsat`
+//! refutations — the **compound-term predicate fragment** (Track 3, the
 //! producer counterpart to the bitblast-step emitter [`crate::bitblast_step`]
 //! and the EUF/LRA emitters [`crate::prove_qf_uf_unsat_alethe`] /
 //! [`crate::prove_lra_unsat_alethe`]).
 //!
 //! [`prove_qf_bv_unsat_alethe`] builds a complete, **Carcara-checkable** Alethe
 //! proof closing to the empty clause `(cl)` for a `QF_BV` conjunction whose every
-//! assertion is a *predicate over bit-vector variables/constants*:
+//! assertion is a *predicate over bit-vector terms*:
 //!
-//! - a positive predicate `(= x y)`, `(bvult x y)`, or `(bvslt x y)`, or
-//! - a negated predicate `(not (= x y))`, `(not (bvult x y))`, `(not (bvslt x y))`,
+//! - a positive predicate `(= s t)`, `(bvult s t)`, or `(bvslt s t)`, or
+//! - a negated predicate `(not (= s t))`, `(not (bvult s t))`, `(not (bvslt s t))`,
 //!
-//! where each operand is a bit-vector **variable or constant** (a
-//! [`TermNode::Symbol`] or [`TermNode::BvConst`]) — **no compound bit-vector
-//! subterms** like `(bvand a b)`. Anything outside that fragment (a compound
-//! operand, an unsupported predicate, a non-bit-vector operand, a non-predicate
-//! Boolean assertion) yields [`None`], as does a query that is **not** genuinely
-//! `unsat`.
+//! where each operand `s`, `t` is a bit-vector **variable**, **constant**, or a
+//! **compound term** built from the bit-blastable operators (bitwise
+//! `bvnot`/`bvand`/`bvor`/`bvxor`/`bvxnor`, arithmetic `bvadd`/`bvneg`/`bvmul`,
+//! the predicates as inner terms via `bvcomp`, and structural
+//! `extract`/`concat`/`sign_extend`) — nesting to arbitrary depth, e.g.
+//! `(= (bvand (bvor a b) c) d)`. Anything outside that fragment (a non-bit-blastable
+//! subterm — shifts `bvshl`/`bvlshr`/`bvashr`, division/remainder
+//! `bvudiv`/`bvurem`/`bvsdiv`/`bvsrem`/`bvsmod`, `zero_extend`, rotates,
+//! `bvnand`/`bvnor`/`bvsub`; an unsupported predicate; a non-bit-vector operand; a
+//! non-predicate Boolean assertion) yields [`None`], as does a query that is **not**
+//! genuinely `unsat`.
 //!
 //! ## How the proof is built
 //!
 //! 1. **Confirm `unsat`.** The conjunction is run through the pure-Rust
 //!    [`crate::SatBvBackend`]; a non-`unsat` (or undecided) result returns [`None`].
-//! 2. **Per assertion `φ`:** `assume φ`, then `bitblast_step` the underlying
-//!    predicate to `(= pred B)`, then derive the *Boolean form* of the assertion as
-//!    a unit clause — `(cl B)` for a positive assertion, `(cl (not B))` for a
-//!    negated one — via `equiv1`/`equiv2` + `resolution` (exactly the committed
-//!    template `tests/carcara_crosscheck.rs::full_qf_bv_unsat_proof_is_accepted_by_carcara`).
-//! 3. **Refute the bit-level Boolean problem.** Each Boolean form `B` is a
-//!    propositional formula over **bit atoms** `((_ @bit_of i) v)` (leaves, since
-//!    operands are vars/consts). The forms are Tseitin-encoded into clauses, where a
-//!    compound subterm is used directly as its own gate variable so the Carcara
-//!    CNF-introduction rules match structurally. Every Tseitin defining clause is
-//!    justified by a premise-free CNF-introduction step — `and_pos`/`and_neg` for a
-//!    conjunction, `or_pos`/`or_neg` for a disjunction, `equiv_pos1`/`equiv_pos2`/
-//!    `equiv_neg1`/`equiv_neg2` for a Boolean `=`, `xor_pos1`/`xor_pos2`/`xor_neg1`/
-//!    `xor_neg2` for an `xor`; a `not` folds into the literal polarity (with the
-//!    syntactic `(not …)` nesting kept in the emitted clause, which Carcara
-//!    resolution collapses by parity). The clause set is refuted by the in-tree
-//!    proof-producing SAT core (`solve_with_drat_proof` → `elaborate_drat_to_lrat`),
-//!    whose LRAT resolution chain is replayed as Alethe `resolution` steps to `(cl)`.
+//! 2. **Reduce each predicate to a bit-level Boolean (bottom-up `@bbterm` forms).**
+//!    For every distinct subterm `t` (deduplicated across the shared DAG), an
+//!    equality `(= t bbform(t))` to its `@bbterm` Alethe form is proved once — a
+//!    **leaf** (variable/constant) gets it directly from
+//!    `bitblast_var`/`bitblast_const`; a **compound** `op(c1..ck)` gets it by `cong`
+//!    (substituting each child's `@bbterm` form into the operator, premised on the
+//!    children's equalities), then `bitblast_<op>` over the `@bbterm`-form children
+//!    (whose `build_term_vec` returns their bit args directly, exactly as Carcara's
+//!    rule reconstructs the gadget), then `trans` to chain the two into
+//!    `(= op(c1..ck) bbform)`. The **predicate** `(pred t1 t2)` is reduced the same
+//!    way: `cong` to `(pred t1' t2')`, `bitblast_<pred>` to the bit-level Boolean
+//!    `B`, `trans` to `(= pred B)`. For an **all-leaf** predicate the v1 direct path
+//!    (`bitblast_step` on the predicate) is used, which Carcara likewise accepts.
+//! 3. **Per assertion `φ`:** from `(= pred B)`, derive the *Boolean form* of the
+//!    assertion as a unit clause — `(cl B)` for a positive assertion, `(cl (not B))`
+//!    for a negated one — via `equiv1`/`equiv2` + `resolution`.
+//! 4. **Refute the bit-level Boolean problem.** Each Boolean form `B` is a
+//!    propositional formula over **bit atoms** `((_ @bit_of i) v)`. The forms are
+//!    Tseitin-encoded into clauses, where a compound subterm is used directly as its
+//!    own gate variable so the Carcara CNF-introduction rules match structurally.
+//!    Every Tseitin defining clause is justified by a premise-free CNF-introduction
+//!    step — `and_pos`/`and_neg` for a conjunction, `or_pos`/`or_neg` for a
+//!    disjunction, `equiv_pos1`/`equiv_pos2`/`equiv_neg1`/`equiv_neg2` for a Boolean
+//!    `=`, `xor_pos1`/`xor_pos2`/`xor_neg1`/`xor_neg2` for an `xor`; a `not` folds
+//!    into the literal polarity (with the syntactic `(not …)` nesting kept in the
+//!    emitted clause, which Carcara resolution collapses by parity). The clause set
+//!    is refuted by the in-tree proof-producing SAT core (`solve_with_drat_proof` →
+//!    `elaborate_drat_to_lrat`), whose LRAT resolution chain is replayed as Alethe
+//!    `resolution` steps to `(cl)`.
 //!
 //! Every returned proof has been built deterministically (stable ids, sorted
 //! variable maps — no hash-map iteration in the output); the soundness gate is the
@@ -54,30 +70,38 @@ use axeyum_cnf::{
 use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode};
 
 use crate::backend::{CheckResult, SolverBackend, SolverConfig};
+use crate::bitblast_alethe::{bitblast_op_step, bv_term_to_alethe};
 use crate::bitblast_step;
 use crate::sat_bv_backend::SatBvBackend;
 
 /// Emits a complete, Carcara-checkable Alethe refutation for an `unsat` `QF_BV`
-/// conjunction in the **variable/constant predicate fragment**, or [`None`] when
-/// the query is outside that fragment or is not genuinely `unsat`.
+/// conjunction in the **compound-term predicate fragment**, or [`None`] when the
+/// query is outside that fragment or is not genuinely `unsat`.
 ///
-/// The supported fragment (v1): every assertion is one of
+/// The supported fragment: every assertion is one of
 ///
-/// - `(= x y)`, `(bvult x y)`, `(bvslt x y)` — a positive predicate, or
-/// - `(not (= x y))`, `(not (bvult x y))`, `(not (bvslt x y))` — its negation,
+/// - `(= s t)`, `(bvult s t)`, `(bvslt s t)` — a positive predicate, or
+/// - `(not (= s t))`, `(not (bvult s t))`, `(not (bvslt s t))` — its negation,
 ///
-/// where each operand `x`, `y` is a bit-vector **variable** ([`TermNode::Symbol`])
-/// or **constant** ([`TermNode::BvConst`]) of the same width — there are **no
-/// compound bit-vector subterms**. The returned proof closes to the empty clause
-/// `(cl)` and is accepted by the external Carcara checker (see the gated tests in
-/// `tests/carcara_crosscheck.rs`).
+/// where each operand `s`, `t` is a bit-vector **variable** ([`TermNode::Symbol`]),
+/// **constant** ([`TermNode::BvConst`]), or a **compound term** over the
+/// **bit-blastable operators** — bitwise (`bvnot`/`bvand`/`bvor`/`bvxor`/`bvxnor`),
+/// arithmetic (`bvadd`/`bvneg`/`bvmul`), `bvcomp`, and structural
+/// (`extract`/`concat`/`sign_extend`) — nested to arbitrary depth, e.g.
+/// `(= (bvand (bvor a b) c) d)`. Operands sharing the same DAG node are bit-blasted
+/// once. The returned proof closes to the empty clause `(cl)` and is accepted by the
+/// external Carcara checker (see the gated tests in `tests/carcara_crosscheck.rs`).
 ///
 /// Returns [`None`] when:
 ///
 /// - the conjunction is `sat` or undecided (so there is no refutation to emit);
-/// - any assertion is outside the fragment — a compound bit-vector operand
-///   (`(= (bvand a b) c)`), an unsupported predicate (`bvule`, `bvugt`, …), a
-///   non-bit-vector operand, or a non-predicate Boolean assertion; or
+/// - any assertion is outside the fragment — a **non-bit-blastable subterm** (a
+///   shift `bvshl`/`bvlshr`/`bvashr`, division/remainder
+///   `bvudiv`/`bvurem`/`bvsdiv`/`bvsrem`/`bvsmod`, `zero_extend`, a rotate, or
+///   `bvnand`/`bvnor`/`bvsub`, which Carcara cannot reconstruct and which need a
+///   `hole` + miter certificate, a later increment), an unsupported predicate
+///   (`bvule`, `bvugt`, …), a non-bit-vector operand, or a non-predicate Boolean
+///   assertion; or
 /// - the bit-level Boolean problem cannot be closed to `(cl)` (defensive — does not
 ///   occur for a genuinely `unsat` instance in the fragment).
 ///
@@ -109,6 +133,9 @@ pub fn prove_qf_bv_unsat_alethe(
 
     // 3. Emit the proof.
     let mut builder = Builder::new();
+    // The bottom-up bit-blasting front-end: proves `(= t bbform(t))` once per
+    // distinct subterm (deduplicated across the shared DAG) via cong/bitblast/trans.
+    let mut bb = BbReducer::new();
 
     // The propositional refutation collects each assertion's Boolean form as a
     // CNF clause over the bit atoms, keyed by the canonical atom text.
@@ -135,11 +162,10 @@ pub fn prove_qf_bv_unsat_alethe(
         let assume_id = assume_ids[k].clone();
         let pred_alethe = predicate_to_alethe(arena, pred)?;
 
-        // bitblast_step the predicate → (= pred B).
-        let bb_id = format!("bb{k}");
-        let bb = bitblast_step(arena, pred, &bb_id)?;
-        let boolean_form = bitblast_boolean_form(&bb)?;
-        builder.push(bb);
+        // Reduce the predicate to its bit-level Boolean `B`, yielding the step id of
+        // `(= pred B)`. All-leaf predicates use the v1 direct bitblast; compound
+        // operands are substituted in by cong/bitblast/trans (bottom-up @bbterm forms).
+        let (bb_id, boolean_form) = bb.reduce_predicate(arena, &mut builder, pred, k)?;
 
         // Derive the Boolean form of the assertion as a unit clause.
         // Positive: equiv1 (= pred B) → (cl (not pred) B), resolve with (cl pred) → (cl B).
@@ -223,7 +249,8 @@ fn classify_assertion(arena: &TermArena, term: TermId) -> Option<Asserted> {
 }
 
 /// Returns `term` if it is a supported predicate (`=`, `bvult`, `bvslt`) over two
-/// bit-vector **variable/constant** operands, else [`None`].
+/// bit-vector operands that are each fully **bit-blastable** (a variable, constant,
+/// or a compound term over the bit-blastable operators), else [`None`].
 fn supported_predicate(arena: &TermArena, term: TermId) -> Option<TermId> {
     let TermNode::App { op, args } = arena.node(term) else {
         return None;
@@ -234,15 +261,14 @@ fn supported_predicate(arena: &TermArena, term: TermId) -> Option<TermId> {
     let [a, b] = &args[..] else {
         return None;
     };
-    // Operands must be bit-vector vars/consts (no compound subterms).
-    if !is_leaf_bv(arena, *a) || !is_leaf_bv(arena, *b) {
+    // Each operand must be a bit-vector whose every subterm Carcara can bit-blast.
+    if !is_bitblastable_bv(arena, *a) || !is_bitblastable_bv(arena, *b) {
         return None;
     }
     Some(term)
 }
 
-/// Whether `term` is a bit-vector **variable** or **constant** (a leaf operand the
-/// fragment permits — no compound bit-vector subterm).
+/// Whether `term` is a bit-vector **variable** or **constant** (a leaf operand).
 fn is_leaf_bv(arena: &TermArena, term: TermId) -> bool {
     if !matches!(arena.sort_of(term), Sort::BitVec(_)) {
         return false;
@@ -253,8 +279,51 @@ fn is_leaf_bv(arena: &TermArena, term: TermId) -> bool {
     )
 }
 
+/// Whether `term` is a bit-vector term every operator of which Carcara can
+/// reconstruct with a `bitblast_<op>` rule — a leaf (variable/constant) or a
+/// compound built solely from the bit-blastable operators (bitwise
+/// `bvnot`/`bvand`/`bvor`/`bvxor`/`bvxnor`, arithmetic `bvadd`/`bvneg`/`bvmul`,
+/// `bvcomp`, and structural `extract`/`concat`/`sign_extend`). Any other operator —
+/// shifts, division/remainder, `zero_extend`, rotates, `bvnand`/`bvnor`/`bvsub` —
+/// makes the term out of fragment (those are Carcara holes, a later increment).
+fn is_bitblastable_bv(arena: &TermArena, term: TermId) -> bool {
+    if !matches!(arena.sort_of(term), Sort::BitVec(_)) {
+        return false;
+    }
+    match arena.node(term) {
+        TermNode::Symbol(_) | TermNode::BvConst { .. } => true,
+        TermNode::App { op, args } => {
+            is_bitblastable_op(*op) && args.iter().all(|&a| is_bitblastable_bv(arena, a))
+        }
+        _ => false,
+    }
+}
+
+/// Whether `op` is a bit-vector-producing operator the bitblast emitter (and
+/// Carcara) can reconstruct. `bvcomp` produces a 1-bit BV and is included; the
+/// predicate operators (`=`, `bvult`, `bvslt`) produce `Bool`, never appear as a
+/// bit-vector subterm, and are handled at the predicate layer instead.
+fn is_bitblastable_op(op: Op) -> bool {
+    matches!(
+        op,
+        Op::BvNot
+            | Op::BvAnd
+            | Op::BvOr
+            | Op::BvXor
+            | Op::BvXnor
+            | Op::BvAdd
+            | Op::BvNeg
+            | Op::BvMul
+            | Op::BvComp
+            | Op::Concat
+            | Op::Extract { .. }
+            | Op::SignExt { .. }
+    )
+}
+
 /// Renders the supported predicate `term` as the Alethe atom Carcara expects for the
-/// `assume` (matching the bitblast step's LHS): `(= x y)`, `(bvult x y)`, `(bvslt x y)`.
+/// `assume` (matching the bitblast step's LHS): `(= s t)`, `(bvult s t)`,
+/// `(bvslt s t)`, where `s`, `t` may be compound bit-vector terms.
 fn predicate_to_alethe(arena: &TermArena, term: TermId) -> Option<AletheTerm> {
     let TermNode::App { op, args } = arena.node(term) else {
         return None;
@@ -267,57 +336,9 @@ fn predicate_to_alethe(arena: &TermArena, term: TermId) -> Option<AletheTerm> {
     };
     let rendered = args
         .iter()
-        .map(|&a| leaf_to_alethe(arena, a))
+        .map(|&a| bv_term_to_alethe(arena, a))
         .collect::<Option<Vec<_>>>()?;
     Some(AletheTerm::App(head.to_owned(), rendered))
-}
-
-/// Renders a leaf bit-vector operand (variable or constant) as an Alethe term, the
-/// same way [`crate::bitblast_step`] renders it (so the `assume` matches the step).
-fn leaf_to_alethe(arena: &TermArena, term: TermId) -> Option<AletheTerm> {
-    match arena.node(term) {
-        TermNode::Symbol(symbol) => {
-            let (name, _sort) = arena.symbol(*symbol);
-            Some(AletheTerm::Const(name.to_owned()))
-        }
-        TermNode::BvConst { width, value } => {
-            Some(AletheTerm::Const(bv_const_literal(*width, *value)))
-        }
-        _ => None,
-    }
-}
-
-/// Renders a bit-vector constant as the SMT-LIB `#b…` binary literal (MSB-first),
-/// matching the bitblast emitter's rendering.
-fn bv_const_literal(width: u32, value: u128) -> String {
-    let mut out = String::with_capacity(2 + width as usize);
-    out.push_str("#b");
-    for i in (0..width).rev() {
-        out.push(if (value >> i) & 1 == 1 { '1' } else { '0' });
-    }
-    out
-}
-
-/// Pulls the Boolean form `B` out of a predicate bitblast step's conclusion
-/// `(= pred B)`. Returns [`None`] if the step is not the expected predicate shape.
-fn bitblast_boolean_form(step: &AletheCommand) -> Option<AletheTerm> {
-    let AletheCommand::Step { clause, .. } = step else {
-        return None;
-    };
-    let [lit] = clause.as_slice() else {
-        return None;
-    };
-    if lit.negated {
-        return None;
-    }
-    let AletheTerm::App(head, args) = &lit.atom else {
-        return None;
-    };
-    if head != "=" || args.len() != 2 {
-        return None;
-    }
-    // For a predicate the RHS is a plain Boolean (no @bbterm wrapper).
-    Some(args[1].clone())
 }
 
 /// Confirms the conjunction is `unsat` via the pure-Rust SAT-BV backend.
@@ -363,6 +384,15 @@ impl Builder {
         self.commands.push(command);
     }
 
+    /// Allocates a fresh deterministic `s<n>` step id without emitting anything —
+    /// used when a step (e.g. a `bitblast_*` command from the emitter) is built with
+    /// its id baked in, then pushed via [`Builder::push`].
+    fn fresh_step_id(&mut self) -> String {
+        let id = format!("s{}", self.next_step);
+        self.next_step += 1;
+        id
+    }
+
     /// Emits a step with a fresh `s<n>` id, no `:args`; returns the id.
     fn step(&mut self, clause: AletheClause, rule: &str, premises: &[&str]) -> String {
         self.step_args(clause, rule, premises, Vec::new())
@@ -387,6 +417,248 @@ impl Builder {
         });
         id
     }
+}
+
+// --- Bottom-up bit-blasting front-end (compound @bbterm reduction) ----------
+
+/// Proves `(= t bbform(t))` for each distinct bit-vector subterm `t`, memoized so a
+/// shared DAG node is bit-blasted once. For a leaf the equality comes straight from
+/// `bitblast_var`/`bitblast_const`; for a compound `op(c1..ck)` it is built by
+/// substituting each child's `@bbterm` form into the operator (`cong`, premised on
+/// the children's equalities), bit-blasting the operator over those `@bbterm`-form
+/// children (`bitblast_<op>`, whose `build_term_vec` returns their bit args
+/// directly), and `trans`-chaining the two.
+struct BbReducer {
+    /// `term` → (its `@bbterm` Alethe form, the step id proving `(= term bbform)`).
+    bbform: BTreeMap<TermId, (AletheTerm, String)>,
+}
+
+impl BbReducer {
+    fn new() -> Self {
+        Self {
+            bbform: BTreeMap::new(),
+        }
+    }
+
+    /// Returns `term`'s `@bbterm` Alethe form and the id of the step proving
+    /// `(= term bbform)`, building and memoizing them on first sight. [`None`] if any
+    /// subterm is outside the bit-blastable fragment.
+    fn reduce_term(
+        &mut self,
+        arena: &TermArena,
+        builder: &mut Builder,
+        term: TermId,
+    ) -> Option<(AletheTerm, String)> {
+        if let Some(cached) = self.bbform.get(&term) {
+            return Some(cached.clone());
+        }
+        let result = match arena.node(term) {
+            TermNode::Symbol(_) | TermNode::BvConst { .. } => {
+                // Leaf: bitblast_var / bitblast_const gives `(= t (@bbterm …))`.
+                let id = builder.fresh_step_id();
+                let step = bitblast_step(arena, term, &id)?;
+                let bbform = bitblast_rhs(&step)?;
+                builder.push(step);
+                (bbform, id)
+            }
+            TermNode::App { op, args } => {
+                let op = *op;
+                if !is_bitblastable_op(op) {
+                    return None;
+                }
+                // Reduce every child first (recursing; the memo dedups shared nodes).
+                let children: Vec<(AletheTerm, String)> = args
+                    .iter()
+                    .map(|&c| self.reduce_term(arena, builder, c))
+                    .collect::<Option<Vec<_>>>()?;
+                let child_forms: Vec<AletheTerm> =
+                    children.iter().map(|(form, _)| form.clone()).collect();
+                let child_eq_ids: Vec<&str> = children.iter().map(|(_, id)| id.as_str()).collect();
+
+                let lhs_orig = bv_term_to_alethe(arena, term)?;
+                let op_substituted = render_op_app(op, &child_forms)?;
+
+                // cong: (= op(c1..ck) op(c1'..ck')), premised on the child equalities.
+                let cong_id = builder.step(
+                    vec![pos(eq_term(lhs_orig.clone(), op_substituted.clone()))],
+                    "cong",
+                    &child_eq_ids,
+                );
+
+                // bitblast_<op> over the @bbterm-form children:
+                //   (= op(c1'..ck') (@bbterm gadget)).
+                let operand_widths = args
+                    .iter()
+                    .map(|&c| bv_width(arena, c))
+                    .collect::<Option<Vec<_>>>()?;
+                let result_width = bv_width(arena, *args.first()?)?;
+                let bb_id = builder.fresh_step_id();
+                let bb_step = bitblast_op_step(
+                    op,
+                    &child_forms,
+                    &operand_widths,
+                    op_substituted,
+                    result_width,
+                    &bb_id,
+                )?;
+                let bbform = bitblast_rhs(&bb_step)?;
+                builder.push(bb_step);
+
+                // trans: chain cong and bitblast → (= op(c1..ck) (@bbterm gadget)).
+                let trans_id = builder.step(
+                    vec![pos(eq_term(lhs_orig, bbform.clone()))],
+                    "trans",
+                    &[&cong_id, &bb_id],
+                );
+                (bbform, trans_id)
+            }
+            _ => return None,
+        };
+        self.bbform.insert(term, result.clone());
+        Some(result)
+    }
+
+    /// Reduces the supported predicate `pred = (pred t1 t2)` to its bit-level Boolean
+    /// `B`, returning the id of the step proving `(= pred B)` and `B` itself.
+    ///
+    /// An **all-leaf** predicate uses the v1 direct path (`bitblast_step` on the
+    /// predicate). A predicate with a **compound** operand reduces each operand to its
+    /// `@bbterm` form, substitutes via `cong` to `(pred t1' t2')`, bit-blasts that to
+    /// `B` (`bitblast_<pred>`), and `trans`-chains to `(= pred B)`.
+    fn reduce_predicate(
+        &mut self,
+        arena: &TermArena,
+        builder: &mut Builder,
+        pred: TermId,
+        k: usize,
+    ) -> Option<(String, AletheTerm)> {
+        let TermNode::App { op, args } = arena.node(pred) else {
+            return None;
+        };
+        let op = *op;
+        let [t1, t2] = args[..] else {
+            return None;
+        };
+
+        // All-leaf predicate: the committed v1 path. `bitblast_step` renders the leaf
+        // operands itself and concludes `(= pred B)` directly.
+        if is_leaf_bv(arena, t1) && is_leaf_bv(arena, t2) {
+            let id = format!("bb{k}");
+            let step = bitblast_step(arena, pred, &id)?;
+            let boolean_form = bitblast_rhs(&step)?;
+            builder.push(step);
+            return Some((id, boolean_form));
+        }
+
+        // Compound operand(s): reduce both, then cong + bitblast_<pred> + trans.
+        let (bb1, eq1) = self.reduce_term(arena, builder, t1)?;
+        let (bb2, eq2) = self.reduce_term(arena, builder, t2)?;
+        let pred_orig = predicate_to_alethe(arena, pred)?;
+        let pred_substituted = render_op_app(op, &[bb1.clone(), bb2.clone()])?;
+
+        let cong_id = builder.step(
+            vec![pos(eq_term(pred_orig.clone(), pred_substituted.clone()))],
+            "cong",
+            &[eq1.as_str(), eq2.as_str()],
+        );
+
+        let operand_widths = [bv_width(arena, t1)?, bv_width(arena, t2)?];
+        let result_width = bv_width(arena, t1)?;
+        let bb_id = builder.fresh_step_id();
+        let bb_step = bitblast_op_step(
+            op,
+            &[bb1, bb2],
+            &operand_widths,
+            pred_substituted,
+            result_width,
+            &bb_id,
+        )?;
+        let boolean_form = bitblast_rhs(&bb_step)?;
+        builder.push(bb_step);
+
+        let trans_id = builder.step(
+            vec![pos(eq_term(pred_orig, boolean_form.clone()))],
+            "trans",
+            &[&cong_id, &bb_id],
+        );
+        Some((trans_id, boolean_form))
+    }
+}
+
+/// The bit width (in bits) of a bit-vector `term`, or [`None`] if not a bit-vector.
+fn bv_width(arena: &TermArena, term: TermId) -> Option<usize> {
+    match arena.sort_of(term) {
+        Sort::BitVec(w) => Some(w as usize),
+        _ => None,
+    }
+}
+
+/// `(= a b)`.
+fn eq_term(a: AletheTerm, b: AletheTerm) -> AletheTerm {
+    AletheTerm::App("=".to_owned(), vec![a, b])
+}
+
+/// Renders the operator `op` applied to the already-rendered `children` Alethe
+/// forms (each typically a child's `@bbterm` form), matching how
+/// [`crate::bitblast_alethe::bv_term_to_alethe`] renders the corresponding IR
+/// application — App for the named operators, the indexed `((_ op i…) …)` surface
+/// syntax for `extract`/`sign_extend`. The predicate heads `=`, `bvult`, `bvslt`
+/// are included so the same helper renders a substituted predicate `(pred t1' t2')`.
+/// [`None`] for an operator this helper does not spell.
+fn render_op_app(op: Op, children: &[AletheTerm]) -> Option<AletheTerm> {
+    match op {
+        Op::Extract { hi, lo } => Some(AletheTerm::Indexed {
+            op: "extract".to_owned(),
+            indices: vec![i128::from(hi), i128::from(lo)],
+            args: children.to_vec(),
+        }),
+        Op::SignExt { by } => Some(AletheTerm::Indexed {
+            op: "sign_extend".to_owned(),
+            indices: vec![i128::from(by)],
+            args: children.to_vec(),
+        }),
+        _ => {
+            let head = match op {
+                Op::BvNot => "bvnot",
+                Op::BvAnd => "bvand",
+                Op::BvOr => "bvor",
+                Op::BvXor => "bvxor",
+                Op::BvXnor => "bvxnor",
+                Op::BvAdd => "bvadd",
+                Op::BvNeg => "bvneg",
+                Op::BvMul => "bvmul",
+                Op::BvComp => "bvcomp",
+                Op::Concat => "concat",
+                Op::Eq => "=",
+                Op::BvUlt => "bvult",
+                Op::BvSlt => "bvslt",
+                _ => return None,
+            };
+            Some(AletheTerm::App(head.to_owned(), children.to_vec()))
+        }
+    }
+}
+
+/// Pulls the right-hand side out of a `bitblast_*` (or any) step whose conclusion is
+/// a single positive equality `(= lhs rhs)` — the `@bbterm` form for a term op, or
+/// the bit-level Boolean for a predicate op. [`None`] if the shape does not match.
+fn bitblast_rhs(step: &AletheCommand) -> Option<AletheTerm> {
+    let AletheCommand::Step { clause, .. } = step else {
+        return None;
+    };
+    let [lit] = clause.as_slice() else {
+        return None;
+    };
+    if lit.negated {
+        return None;
+    }
+    let AletheTerm::App(head, args) = &lit.atom else {
+        return None;
+    };
+    if head != "=" || args.len() != 2 {
+        return None;
+    }
+    Some(args[1].clone())
 }
 
 fn pos(atom: AletheTerm) -> AletheLit {
@@ -856,13 +1128,56 @@ mod tests {
     }
 
     #[test]
-    fn compound_operand_is_none() {
-        // (= (bvand a b) a) ∧ (not …) is unsat, but the compound operand is out of fragment.
+    fn compound_operand_emits_a_closing_proof() {
+        // (= (bvand a b) a) ∧ (not …) is unsat; the compound operand `(bvand a b)`
+        // is now reduced bottom-up, so the driver emits a closing proof.
         let mut arena = TermArena::new();
         let a = bv(&mut arena, "a", 2);
         let b = bv(&mut arena, "b", 2);
         let and = arena.bv_and(a, b).unwrap();
         let eq = arena.eq(and, a).unwrap();
+        let neq = arena.not(eq).unwrap();
+        let proof = prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("unsat proof");
+        assert!(closes_to_empty(&proof));
+    }
+
+    #[test]
+    fn nested_compound_emits_a_closing_proof() {
+        // (= (bvand (bvor a b) c) (bvand (bvor a b) c)) negated is unsat; a deep,
+        // shared nested compound exercises the recursive reduction + DAG dedup.
+        let mut arena = TermArena::new();
+        let a = bv(&mut arena, "a", 2);
+        let b = bv(&mut arena, "b", 2);
+        let c = bv(&mut arena, "c", 2);
+        let or = arena.bv_or(a, b).unwrap();
+        let inner = arena.bv_and(or, c).unwrap();
+        let eq = arena.eq(inner, inner).unwrap();
+        let neq = arena.not(eq).unwrap();
+        let proof = prove_qf_bv_unsat_alethe(&arena, &[neq]).expect("unsat proof");
+        assert!(closes_to_empty(&proof));
+    }
+
+    #[test]
+    fn shift_subterm_is_none() {
+        // A `bvshl` subterm is a Carcara hole (not bit-blastable), so even an unsat
+        // instance over it is out of fragment → None.
+        let mut arena = TermArena::new();
+        let a = bv(&mut arena, "a", 2);
+        let b = bv(&mut arena, "b", 2);
+        let shl = arena.bv_shl(a, b).unwrap();
+        let eq = arena.eq(shl, a).unwrap();
+        let neq = arena.not(eq).unwrap();
+        assert!(prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).is_none());
+    }
+
+    #[test]
+    fn div_subterm_is_none() {
+        // A `bvudiv` subterm is likewise a Carcara hole → out of fragment.
+        let mut arena = TermArena::new();
+        let a = bv(&mut arena, "a", 2);
+        let b = bv(&mut arena, "b", 2);
+        let div = arena.bv_udiv(a, b).unwrap();
+        let eq = arena.eq(div, a).unwrap();
         let neq = arena.not(eq).unwrap();
         assert!(prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).is_none());
     }
