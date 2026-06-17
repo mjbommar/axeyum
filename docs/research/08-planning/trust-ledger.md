@@ -7,7 +7,7 @@ Regenerate after changing the enum and commit the result; a golden test
 Pedantic levels mirror cvc5's `TrustId` grading: 0 = hard fail … 10 = minor.
 **certified** = an independent per-query checker re-derives the step (bit-blast miter / DRAT / Farkas / enumeration); **trust hole** = a sound reduction with no per-query certificate yet (the base Track 3 P3.5 drives to zero).
 
-Trusted base: **5** reduction(s) remain trust holes.
+Trusted base: **6** reduction(s) remain trust holes.
 
 | Reduction | Meaning | Pedantic | Status | Ref |
 |---|---|---|---|---|
@@ -22,3 +22,4 @@ Trusted base: **5** reduction(s) remain trust holes.
 | term-level-enum | reduction-free exhaustive evaluation over the finite domain | 10 | certified | ADR-0005 |
 | farkas | exact-rational Farkas refutation (QF_LRA) | 10 | certified | ADR-0015 |
 | lra-dpll | lazy-SMT skeleton + Farkas-certified theory lemmas | 9 | certified | ADR-0021 |
+| xor-gaussian | CDCL(XOR) search-only UNSAT (in-search Gaussian reasoning, no DRAT) | 3 | trust hole | ADR-0035 |

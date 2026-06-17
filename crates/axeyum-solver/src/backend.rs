@@ -99,7 +99,13 @@ impl From<axeyum_ir::IrError> for SolverError {
 /// mechanism; a cooperative interrupt flag arrives with long-lived solver
 /// instances (incrementality note). Every budget exhaustion surfaces as
 /// [`CheckResult::Unknown`] with a classified reason, never a hang.
+///
+/// The several `bool` fields are independent, off-by-default opt-in performance
+/// /assurance levers (DRAT proof, CNF inprocessing, word-level preprocessing, the
+/// CDCL(XOR) fallback), not a state machine — a flat config of toggles is the
+/// intended shape, so the `struct_excessive_bools` lint is allowed here.
 #[derive(Debug, Clone, Default)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct SolverConfig {
     /// Wall-clock budget for the check; `None` means no limit.
     pub timeout: Option<Duration>,
@@ -147,6 +153,19 @@ pub struct SolverConfig {
     /// bit-blasting) and applies the identity/constant-fold rules. Off by default
     /// so recorded baselines reflect the un-preprocessed path.
     pub preprocess: bool,
+    /// When set, the bit-blasting BV backend may fall back to the CDCL(XOR)
+    /// search core ([`axeyum_cnf::solve_with_xor_cdcl`]) after the batsat solve
+    /// returns `unknown` (timeout/budget) on an XOR-structured formula
+    /// (ADR-0035, the multiplier-equivalence wall).
+    ///
+    /// A fallback `unsat` is a **trusted** result (search-only Gaussian
+    /// reasoning carries no DRAT proof — it is not RUP) and is recorded as the
+    /// [`crate::TrustId::XorGaussian`] ledger hole. A fallback `sat` carries no
+    /// trust cost: its model is replayed against the original terms exactly like
+    /// the batsat path, and a replay failure falls through to `unknown` (never a
+    /// wrong `sat`). Off by default so recorded baselines and existing behavior
+    /// are unchanged.
+    pub xor_cdcl_fallback: bool,
 }
 
 impl SolverConfig {
@@ -217,6 +236,14 @@ impl SolverConfig {
     #[must_use]
     pub fn with_preprocess(mut self, preprocess: bool) -> Self {
         self.preprocess = preprocess;
+        self
+    }
+
+    /// Enables the CDCL(XOR) search fallback on `unknown` batsat results over
+    /// XOR-structured formulas (ADR-0035). See [`SolverConfig::xor_cdcl_fallback`].
+    #[must_use]
+    pub fn with_xor_cdcl_fallback(mut self, xor_cdcl_fallback: bool) -> Self {
+        self.xor_cdcl_fallback = xor_cdcl_fallback;
         self
     }
 }

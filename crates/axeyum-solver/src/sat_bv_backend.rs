@@ -20,8 +20,9 @@ use axeyum_bv::{
 };
 use axeyum_cnf::{
     BveOptions, CnfAssignment, CnfEncoding, CnfError, CnfFormula, ProofSolveOutcome,
-    Reconstruction, SatError, SatResult, XorPropagation, check_drat, eliminate_variables_within,
-    simplify_within, solve_with_drat_proof, solve_with_rustsat_batsat_timeout, tseitin_encode,
+    Reconstruction, SatError, SatProofStatus, SatResult, SatUnsatEvidence, XorCdclResult,
+    XorPropagation, check_drat, eliminate_variables_within, extract_xors, simplify_within,
+    solve_with_drat_proof, solve_with_rustsat_batsat_timeout, solve_with_xor_cdcl, tseitin_encode,
     xor_propagate,
 };
 use axeyum_ir::{
@@ -154,11 +155,30 @@ impl SatBvBackend {
         let sat_timeout =
             deadline.map(|deadline| deadline.saturating_duration_since(Instant::now()));
         let solve_start = Instant::now();
-        let sat_result = solve_with_rustsat_batsat_timeout(solve_formula, sat_timeout)
+        let mut sat_result = solve_with_rustsat_batsat_timeout(solve_formula, sat_timeout)
             .map_err(|error| map_sat_error(&error))?;
         stats.solve = solve_start.elapsed();
 
-        if config.prove_unsat && matches!(sat_result, SatResult::Unsat(_)) {
+        // CDCL(XOR) search fallback (ADR-0035): only on an `unknown` batsat
+        // verdict (timeout/budget), only when opted in, and only on a formula
+        // carrying recognized XOR structure within the conservative clause cap.
+        // Its `unsat` is the trusted `XorGaussian` ledger hole (no DRAT — XOR
+        // reasoning is not RUP); its `sat` carries no trust cost (it threads the
+        // same reconstruction + AIG/model/term replay the batsat path uses and is
+        // discarded on replay failure). This never weakens an existing definite
+        // verdict — it can only *upgrade* an `unknown`.
+        let mut xor_cdcl_unsat = false;
+        if matches!(sat_result, SatResult::Unknown(_)) && config.xor_cdcl_fallback {
+            let fallback = maybe_xor_cdcl_fallback(solve_formula, sat_result, &mut stats);
+            sat_result = fallback.result;
+            xor_cdcl_unsat = fallback.unsat_from_xor;
+        }
+
+        // The xor-derived `unsat` is the trusted `XorGaussian` hole and is NOT
+        // RUP, so it cannot be DRAT-verified (the checker would correctly reject a
+        // synthesized proof). Skip the proof route for it; only batsat `unsat` is
+        // DRAT-checked here.
+        if config.prove_unsat && !xor_cdcl_unsat && matches!(sat_result, SatResult::Unsat(_)) {
             // The reduced formula is equisatisfiable with the original, so an
             // independent UNSAT proof of it certifies the original is UNSAT.
             verify_unsat_proof(solve_formula, &mut stats)?;
@@ -264,6 +284,23 @@ const INPROCESS_MAX_CLAUSES: usize = 1_000_000;
 /// *in-search* Gaussian, not preprocessing, can collapse). Raised once the pass
 /// is deadline-bounded.
 const XOR_PROPAGATE_MAX_CLAUSES: usize = 20_000;
+
+/// CDCL(XOR) search-fallback admission bound (ADR-0035). `solve_with_xor_cdcl`
+/// is conflict-budgeted but carries **no wall-clock budget**, so the fallback is
+/// gated by a conservative clause cap to keep it from running unbounded on very
+/// large CNFs. The cap is generous enough to cover the curated multiplier
+/// instances it is meant to crack (a few thousand clauses) while excluding the
+/// pathologically large encodings. A size skip is recorded as a stat.
+const XOR_CDCL_FALLBACK_MAX_CLAUSES: usize = 50_000;
+
+/// Outcome of [`maybe_xor_cdcl_fallback`]: the (possibly upgraded) SAT result and
+/// whether the `unsat` verdict came from the trusted CDCL(XOR) core (so the
+/// caller can skip the DRAT proof route, which cannot certify a non-RUP XOR
+/// refutation, and surface the `XorGaussian` trust hole instead).
+struct XorCdclFallback {
+    result: SatResult,
+    unsat_from_xor: bool,
+}
 
 /// Runs CNF inprocessing when it is enabled and the formula is within the
 /// admission bound. Records `inprocess_ms` and folds it into `stats.translate`; a
@@ -400,6 +437,86 @@ fn reconstruct_sat_result(result: SatResult, reconstruction: Option<&Reconstruct
             reconstruction.extend(assignment.values()),
         )),
         (result, _) => result,
+    }
+}
+
+/// Runs the CDCL(XOR) search core on `formula` as a fallback for an `unknown`
+/// batsat verdict (ADR-0035), gated by recognized XOR structure and a clause cap.
+///
+/// Called only when the caller has already confirmed the verdict is `unknown`
+/// and the `xor_cdcl_fallback` flag is set. Records what fired in `stats.backend`.
+/// The returned `result` keeps the original `unknown` unless the core reaches a
+/// definite verdict:
+///
+/// - `Unsat` upgrades to `SatResult::Unsat` (`unsat_from_xor = true`): the trusted
+///   `XorGaussian` hole, no DRAT proof.
+/// - `Sat(values)` upgrades to `SatResult::Sat` over `formula`'s variable space;
+///   it then flows through the same reconstruction + AIG/model/term replay the
+///   batsat path uses, so a wrong model is rejected at replay (never a wrong sat).
+/// - `Unknown` keeps the original batsat `unknown`.
+fn maybe_xor_cdcl_fallback(
+    formula: &CnfFormula,
+    original: SatResult,
+    stats: &mut SolveStats,
+) -> XorCdclFallback {
+    // Clause cap: the search core has no wall-clock budget, so a huge CNF could
+    // run unbounded. Skip (and record) above the cap.
+    if formula.clauses().len() > XOR_CDCL_FALLBACK_MAX_CLAUSES {
+        stats
+            .backend
+            .push(("xor_cdcl_fallback_skipped_size".to_owned(), 1.0));
+        return XorCdclFallback {
+            result: original,
+            unsat_from_xor: false,
+        };
+    }
+    // Only worth running where XOR structure was actually recognized (the parity
+    // structure the multiplier wall hides behind); otherwise it is just a slower
+    // resolution search with no algebraic edge.
+    if extract_xors(formula).num_recognized == 0 {
+        stats
+            .backend
+            .push(("xor_cdcl_fallback_no_xor".to_owned(), 1.0));
+        return XorCdclFallback {
+            result: original,
+            unsat_from_xor: false,
+        };
+    }
+
+    stats
+        .backend
+        .push(("xor_cdcl_fallback_fired".to_owned(), 1.0));
+    match solve_with_xor_cdcl(formula) {
+        XorCdclResult::Unsat => {
+            stats
+                .backend
+                .push(("xor_cdcl_fallback_unsat".to_owned(), 1.0));
+            XorCdclFallback {
+                result: SatResult::Unsat(SatUnsatEvidence {
+                    proof: SatProofStatus::Unchecked,
+                    failed_assumptions: Vec::new(),
+                }),
+                unsat_from_xor: true,
+            }
+        }
+        XorCdclResult::Sat(values) => {
+            stats
+                .backend
+                .push(("xor_cdcl_fallback_sat".to_owned(), 1.0));
+            XorCdclFallback {
+                result: SatResult::Sat(CnfAssignment::new(values)),
+                unsat_from_xor: false,
+            }
+        }
+        XorCdclResult::Unknown => {
+            stats
+                .backend
+                .push(("xor_cdcl_fallback_unknown".to_owned(), 1.0));
+            XorCdclFallback {
+                result: original,
+                unsat_from_xor: false,
+            }
+        }
     }
 }
 
@@ -586,4 +703,151 @@ fn usize_to_f64(value: usize) -> f64 {
 
 fn usize_to_u64(value: usize) -> u64 {
     u64::try_from(value).unwrap_or(u64::MAX)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axeyum_cnf::{CnfClause, CnfLit, CnfVar, SatUnknownReason};
+
+    /// A synthetic `unknown` batsat verdict, the only state the fallback acts on.
+    fn unknown() -> SatResult {
+        SatResult::Unknown(SatUnknownReason {
+            detail: "test: forced unknown".to_owned(),
+        })
+    }
+
+    fn lit(var: usize, negated: bool) -> CnfLit {
+        let base = CnfLit::positive(CnfVar::new(var).expect("var fits"));
+        if negated { base.negated() } else { base }
+    }
+
+    fn formula(num_vars: usize, clauses: &[&[(usize, bool)]]) -> CnfFormula {
+        let mut f = CnfFormula::new(num_vars);
+        for clause in clauses {
+            let lits = clause.iter().map(|&(v, n)| lit(v, n)).collect();
+            f.add_clause(CnfClause::new(lits)).expect("valid clause");
+        }
+        f
+    }
+
+    /// Complete clause encoding of `(⊕ vars) = p`, exactly as `extract_xors`
+    /// recognizes it (the forbidden assignments have parity `1 - p`).
+    fn xor_clauses(vars: &[usize], p: bool) -> Vec<Vec<(usize, bool)>> {
+        let k = vars.len();
+        let forbidden_parity = !p;
+        (0u32..(1u32 << k))
+            .filter(|assign| ((assign.count_ones() & 1) == 1) == forbidden_parity)
+            .map(|assign| {
+                vars.iter()
+                    .enumerate()
+                    .map(|(j, &v)| (v, (assign >> j) & 1 == 1))
+                    .collect()
+            })
+            .collect()
+    }
+
+    /// `x0 == x1 == … == x_{n-1}` with `x0 != x_{n-1}`: a purely XOR-structured
+    /// UNSAT (`extract_xors` fires, batsat decides it too — so it is a clean
+    /// fixture for the fallback's UNSAT path).
+    fn parity_chain_unsat(n: usize) -> CnfFormula {
+        let mut clauses: Vec<Vec<(usize, bool)>> = Vec::new();
+        for i in 0..n - 1 {
+            clauses.extend(xor_clauses(&[i, i + 1], false));
+        }
+        clauses.extend(xor_clauses(&[0, n - 1], true));
+        let refs: Vec<&[(usize, bool)]> = clauses.iter().map(Vec::as_slice).collect();
+        formula(n, &refs)
+    }
+
+    fn stat(stats: &SolveStats, name: &str) -> Option<f64> {
+        stats
+            .backend
+            .iter()
+            .find(|(n, _)| n == name)
+            .map(|(_, v)| *v)
+    }
+
+    #[test]
+    fn fallback_decides_xor_unsat_with_trust_signal() {
+        // An XOR-structured UNSAT: the fallback upgrades `unknown` to `unsat`,
+        // flags it as the trusted `XorGaussian` hole, and records the stat the
+        // evidence layer reads.
+        let f = parity_chain_unsat(6);
+        assert!(
+            extract_xors(&f).num_recognized > 0,
+            "fixture must carry XORs"
+        );
+        let mut stats = SolveStats::default();
+        let out = maybe_xor_cdcl_fallback(&f, unknown(), &mut stats);
+        assert!(matches!(out.result, SatResult::Unsat(_)));
+        assert!(out.unsat_from_xor, "unsat must be flagged as xor-derived");
+        assert_eq!(stat(&stats, "xor_cdcl_fallback_fired"), Some(1.0));
+        assert_eq!(stat(&stats, "xor_cdcl_fallback_unsat"), Some(1.0));
+    }
+
+    #[test]
+    fn fallback_decides_xor_sat_without_trust_cost() {
+        // A satisfiable XOR system: the fallback upgrades `unknown` to a `sat`
+        // CnfAssignment (which then flows through the standard replay gate), and
+        // it carries no trust signal (`unsat_from_xor` is false).
+        // x0 ⊕ x1 = 1 and x1 ⊕ x2 = 0: satisfiable (e.g. 1,0,0).
+        let mut clauses: Vec<Vec<(usize, bool)>> = Vec::new();
+        clauses.extend(xor_clauses(&[0, 1], true));
+        clauses.extend(xor_clauses(&[1, 2], false));
+        let refs: Vec<&[(usize, bool)]> = clauses.iter().map(Vec::as_slice).collect();
+        let f = formula(3, &refs);
+        assert!(extract_xors(&f).num_recognized > 0);
+
+        let mut stats = SolveStats::default();
+        let out = maybe_xor_cdcl_fallback(&f, unknown(), &mut stats);
+        let SatResult::Sat(assignment) = out.result else {
+            panic!("expected sat");
+        };
+        assert!(!out.unsat_from_xor, "sat carries no trust cost");
+        assert!(f.evaluate(assignment.values()).expect("len matches"));
+        assert_eq!(stat(&stats, "xor_cdcl_fallback_sat"), Some(1.0));
+    }
+
+    #[test]
+    fn fallback_skips_formula_without_xor_structure() {
+        // No recognized XOR gate ⇒ the fallback does not run; the original
+        // `unknown` is preserved and a skip stat is recorded.
+        let f = formula(2, &[&[(0, false), (1, false)]]); // plain (x0 ∨ x1)
+        assert_eq!(extract_xors(&f).num_recognized, 0);
+        let mut stats = SolveStats::default();
+        let out = maybe_xor_cdcl_fallback(&f, unknown(), &mut stats);
+        assert!(matches!(out.result, SatResult::Unknown(_)));
+        assert!(!out.unsat_from_xor);
+        assert_eq!(stat(&stats, "xor_cdcl_fallback_no_xor"), Some(1.0));
+        assert!(stat(&stats, "xor_cdcl_fallback_fired").is_none());
+    }
+
+    #[test]
+    fn fallback_skips_formula_over_clause_cap() {
+        // Above the clause cap the fallback never runs (it is wall-clock
+        // unbounded); the original `unknown` is preserved with a size-skip stat.
+        // Pad an XOR-structured formula past the cap with trivial unit clauses on
+        // a fresh padding variable (kept satisfiability-irrelevant).
+        let f = parity_chain_unsat(4);
+        let pad_start = f.variable_count();
+        let mut padded = CnfFormula::new(pad_start + 1);
+        for clause in f.clauses() {
+            padded.add_clause(clause.clone()).expect("re-add clause");
+        }
+        let pad_var = pad_start;
+        for _ in 0..=XOR_CDCL_FALLBACK_MAX_CLAUSES {
+            padded
+                .add_clause(CnfClause::new(vec![lit(pad_var, false)]))
+                .expect("unit clause");
+        }
+        assert!(padded.clauses().len() > XOR_CDCL_FALLBACK_MAX_CLAUSES);
+
+        let mut stats = SolveStats::default();
+        let out = maybe_xor_cdcl_fallback(&padded, unknown(), &mut stats);
+        assert!(matches!(out.result, SatResult::Unknown(_)));
+        assert!(!out.unsat_from_xor);
+        assert_eq!(stat(&stats, "xor_cdcl_fallback_skipped_size"), Some(1.0));
+        assert!(stat(&stats, "xor_cdcl_fallback_fired").is_none());
+    }
 }

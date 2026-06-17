@@ -328,9 +328,31 @@ pub fn produce_qf_bv_evidence(
 ) -> Result<EvidenceReport, SolverError> {
     let mut backend = SatBvBackend::new();
     let provenance = Provenance::for_query(config, backend.capabilities().name, assertions.len());
-    let (evidence, trusted_steps) = match backend.check(arena, assertions, config)? {
+    let check = backend.check(arena, assertions, config)?;
+    // Did the CDCL(XOR) fallback supply this `unsat` (ADR-0035)? That refutation
+    // is the trusted `XorGaussian` hole and is NOT RUP, so it must NOT be routed
+    // through term-level enumeration / Alethe / DRAT (which would fail or, for a
+    // synthesized proof, be incorrectly rejected). It is recorded as a bare
+    // `unsat` carrying the `XorGaussian` (plus bit-blast/Tseitin) trust steps.
+    let xor_cdcl_unsat = backend.last_stats().is_some_and(|s| {
+        s.backend
+            .iter()
+            .any(|(name, value)| name == "xor_cdcl_fallback_unsat" && *value > 0.0)
+    });
+    let (evidence, trusted_steps) = match check {
         CheckResult::Sat(model) => (Evidence::Sat(model), Vec::new()),
         CheckResult::Unknown(reason) => (Evidence::Unknown(reason), Vec::new()),
+        CheckResult::Unsat if xor_cdcl_unsat => (
+            // Search-only XOR refutation: bit-blast and Tseitin produced the CNF
+            // (trusted, not certified on this route), and the XOR Gaussian search
+            // refuted it without an RUP-checkable proof — the ledgered hole.
+            Evidence::Unsat(None),
+            trust_steps(&[
+                (TrustId::BitBlast, false),
+                (TrustId::Tseitin, false),
+                (TrustId::XorGaussian, false),
+            ]),
+        ),
         CheckResult::Unsat => {
             // Prefer a reduction-free term-level certificate when the instance is
             // small enough to enumerate: it trusts only the evaluator, closing the

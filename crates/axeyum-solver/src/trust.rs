@@ -46,6 +46,8 @@ pub enum TrustId {
     Farkas,
     /// Lazy-SMT skeleton + Farkas-certified theory lemmas (ADR-0021).
     LraDpll,
+    /// CDCL(XOR) search-only UNSAT via in-search Gaussian reasoning (ADR-0035).
+    XorGaussian,
 }
 
 /// Every [`TrustId`] in canonical (stable) order — the iteration source of truth.
@@ -61,6 +63,7 @@ pub const ALL_TRUST_IDS: &[TrustId] = &[
     TrustId::TermLevelEnum,
     TrustId::Farkas,
     TrustId::LraDpll,
+    TrustId::XorGaussian,
 ];
 
 impl TrustId {
@@ -79,6 +82,7 @@ impl TrustId {
             TrustId::TermLevelEnum => "term-level-enum",
             TrustId::Farkas => "farkas",
             TrustId::LraDpll => "lra-dpll",
+            TrustId::XorGaussian => "xor-gaussian",
         }
     }
 
@@ -99,6 +103,9 @@ impl TrustId {
             TrustId::TermLevelEnum => "reduction-free exhaustive evaluation over the finite domain",
             TrustId::Farkas => "exact-rational Farkas refutation (QF_LRA)",
             TrustId::LraDpll => "lazy-SMT skeleton + Farkas-certified theory lemmas",
+            TrustId::XorGaussian => {
+                "CDCL(XOR) search-only UNSAT (in-search Gaussian reasoning, no DRAT)"
+            }
         }
     }
 
@@ -111,7 +118,9 @@ impl TrustId {
             TrustId::BitBlast => 8,
             TrustId::Fpa2Bv => 5,
             TrustId::ArrayElim | TrustId::Ackermann | TrustId::DatatypeElim => 4,
-            TrustId::IntBlast => 3,
+            // Search-only XOR UNSAT has no per-query certificate and a wrong
+            // refutation is unsound with no recovery, so it grades low (ADR-0035).
+            TrustId::IntBlast | TrustId::XorGaussian => 3,
         }
     }
 
@@ -132,7 +141,8 @@ impl TrustId {
             | TrustId::Ackermann
             | TrustId::IntBlast
             | TrustId::DatatypeElim
-            | TrustId::Fpa2Bv => false,
+            | TrustId::Fpa2Bv
+            | TrustId::XorGaussian => false,
         }
     }
 
@@ -150,6 +160,7 @@ impl TrustId {
             TrustId::TermLevelEnum => "ADR-0005",
             TrustId::Farkas => "ADR-0015",
             TrustId::LraDpll => "ADR-0021",
+            TrustId::XorGaussian => "ADR-0035",
         }
     }
 }
