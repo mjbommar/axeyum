@@ -94,6 +94,36 @@ enum Edge {
     Congruence,
 }
 
+/// One step of a **structured** equality explanation ([`EGraph::explain_steps`]):
+/// a primitive justification for `a = b` along the proof path. Unlike the flat
+/// reason set from [`EGraph::explain`], the structured form exposes *how* — direct
+/// assertions and congruence applications with their argument premises — which a
+/// proof emitter (e.g. Alethe `eq_transitive`/`eq_congruent`) or an interpolator
+/// can replay.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ProofStep {
+    /// `a = b` was asserted directly, tagged with the caller's `reason` id.
+    Input {
+        /// One endpoint of the asserted equality.
+        a: ENodeId,
+        /// The other endpoint.
+        b: ENodeId,
+        /// The reason id the caller passed to [`EGraph::merge`].
+        reason: u32,
+    },
+    /// `a = b` by congruence: `a` and `b` share a `decl`, and their arguments are
+    /// pairwise equal. `args` pairs the corresponding arguments — each pair is
+    /// itself explainable by [`EGraph::explain_steps`].
+    Congruence {
+        /// One application.
+        a: ENodeId,
+        /// The other application (same `decl` and arity).
+        b: ENodeId,
+        /// The corresponding argument pairs, each equal in the e-graph.
+        args: Vec<(ENodeId, ENodeId)>,
+    },
+}
+
 /// One e-node: a `decl` applied to `args`, with its union-find root, class size,
 /// the parent nodes that reference its class, and its edge in the **proof forest**
 /// (a structure separate from the union-find, used only for explanations).
@@ -630,6 +660,101 @@ impl EGraph {
         reasons
     }
 
+    /// Explains why `a` and `b` are equal as a **structured** sequence of
+    /// [`ProofStep`]s along the proof-forest path: each step is a direct assertion
+    /// ([`ProofStep::Input`]) or a congruence ([`ProofStep::Congruence`], whose
+    /// argument pairs are themselves `explain_steps`-able). Chaining the steps'
+    /// endpoints connects `a` to `b` (modulo orientation — consecutive steps share
+    /// an endpoint, but a step may be stated in either direction). Returns empty
+    /// when `a == b`.
+    ///
+    /// This is the witness behind [`Self::explain`]: collecting the `Input` reasons
+    /// of every step (recursively through `Congruence` premises) yields exactly the
+    /// flat reason set.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `a` and `b` are not in the same class (nothing to explain).
+    #[must_use]
+    pub fn explain_steps(&self, a: ENodeId, b: ENodeId) -> Vec<ProofStep> {
+        let mut steps = Vec::new();
+        self.steps_into(a, b, &mut steps);
+        steps
+    }
+
+    /// Accumulates the structured steps along the `a`–`b` proof path.
+    fn steps_into(&self, a: ENodeId, b: ENodeId, steps: &mut Vec<ProofStep>) {
+        if a == b {
+            return;
+        }
+        let (a_path, b_path, lca) = self.proof_paths(a, b);
+        // `a` up to the LCA, then the `b` side (toward the LCA). Every node before
+        // the LCA owns a proof edge.
+        for &n in &a_path {
+            if n == lca {
+                break;
+            }
+            steps.push(self.step_for(n));
+        }
+        for &n in &b_path {
+            steps.push(self.step_for(n));
+        }
+    }
+
+    /// The single proof step justifying the edge from `n` to its proof parent.
+    fn step_for(&self, n: ENodeId) -> ProofStep {
+        let parent = self.nodes[n.index()]
+            .proof_parent
+            .expect("a node before the LCA has a proof parent");
+        match self.nodes[n.index()].proof_edge {
+            Some(Edge::Input(reason)) => ProofStep::Input {
+                a: n,
+                b: parent,
+                reason,
+            },
+            Some(Edge::Congruence) => {
+                let n_args = &self.nodes[n.index()].args;
+                let p_args = &self.nodes[parent.index()].args;
+                let args = n_args.iter().copied().zip(p_args.iter().copied()).collect();
+                ProofStep::Congruence {
+                    a: n,
+                    b: parent,
+                    args,
+                }
+            }
+            None => unreachable!("a node before the LCA has a proof edge"),
+        }
+    }
+
+    /// Computes the proof-forest paths: `a` up to its root, `b` up until it meets
+    /// `a`'s path (the LCA). Shared by the flat and structured explanations.
+    fn proof_paths(&self, a: ENodeId, b: ENodeId) -> (Vec<ENodeId>, Vec<ENodeId>, ENodeId) {
+        let mut a_path = Vec::new();
+        let mut a_seen = std::collections::HashSet::new();
+        let mut cur = Some(a);
+        while let Some(n) = cur {
+            a_path.push(n);
+            a_seen.insert(n);
+            cur = self.nodes[n.index()].proof_parent;
+        }
+        let mut b_path = Vec::new();
+        let mut cur = Some(b);
+        let mut lca = None;
+        while let Some(n) = cur {
+            if a_seen.contains(&n) {
+                lca = Some(n);
+                break;
+            }
+            b_path.push(n);
+            cur = self.nodes[n.index()].proof_parent;
+        }
+        (
+            a_path,
+            b_path,
+            lca.expect("explain called on unequal nodes"),
+        )
+    }
+
     /// Accumulates the input reasons explaining `a = b` into `reasons` (recursive
     /// for congruence edges; may contain duplicates until the caller dedups).
     fn explain_into(&self, a: ENodeId, b: ENodeId, reasons: &mut Vec<u32>) {
@@ -1115,6 +1240,78 @@ mod tests {
         assert_eq!(g.th_vars(b), &[200]);
     }
 
+    /// Endpoints of a step.
+    fn step_endpoints(step: &ProofStep) -> (ENodeId, ENodeId) {
+        match step {
+            ProofStep::Input { a, b, .. } | ProofStep::Congruence { a, b, .. } => (*a, *b),
+        }
+    }
+
+    /// Recursively collects the `Input` reason ids of a structured explanation,
+    /// descending into each congruence step's argument explanations.
+    fn collect_step_reasons(g: &EGraph, steps: &[ProofStep], out: &mut Vec<u32>) {
+        for step in steps {
+            match step {
+                ProofStep::Input { reason, .. } => out.push(*reason),
+                ProofStep::Congruence { args, .. } => {
+                    for &(x, y) in args {
+                        let sub = g.explain_steps(x, y);
+                        collect_step_reasons(g, &sub, out);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn explain_steps_matches_flat_explain_over_a_chain() {
+        // a = b = c by two input merges. The structured steps relate equal nodes,
+        // and their (recursively-collected) reasons equal the flat explanation.
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        let c = g.add(2, &[]);
+        g.merge(a, b, 11);
+        g.merge(b, c, 22);
+        let steps = g.explain_steps(a, c);
+        for step in &steps {
+            let (x, y) = step_endpoints(step);
+            assert!(g.equal(x, y), "each step relates equal nodes");
+        }
+        let mut reasons = Vec::new();
+        collect_step_reasons(&g, &steps, &mut reasons);
+        reasons.sort_unstable();
+        reasons.dedup();
+        assert_eq!(reasons, g.explain(a, c));
+    }
+
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn explain_steps_exposes_a_congruence_step() {
+        // f(a), f(b) become congruent once a = b. The structured explanation must
+        // contain a Congruence step, and its reasons still match flat explain.
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        let fa = g.add(2, &[a]);
+        let fb = g.add(2, &[b]);
+        g.merge(a, b, 7);
+        assert!(g.equal(fa, fb));
+        let steps = g.explain_steps(fa, fb);
+        assert!(
+            steps
+                .iter()
+                .any(|s| matches!(s, ProofStep::Congruence { .. })),
+            "a congruence step is exposed"
+        );
+        let mut reasons = Vec::new();
+        collect_step_reasons(&g, &steps, &mut reasons);
+        reasons.sort_unstable();
+        reasons.dedup();
+        assert_eq!(reasons, g.explain(fa, fb));
+    }
+
     #[test]
     fn theory_vars_propagate_through_congruence() {
         // A theory var on f(a)'s class is visible from f(b) once a = b makes them
@@ -1386,6 +1583,20 @@ mod tests {
                         assert!(
                             check_congruence(&g, &premises, ids[i], ids[j]),
                             "independent checker rejected a sound explanation"
+                        );
+                        // The *structured* explanation's reasons (recursively
+                        // through congruence steps) must equal the flat reason set.
+                        let mut step_reasons = Vec::new();
+                        collect_step_reasons(
+                            &g,
+                            &g.explain_steps(ids[i], ids[j]),
+                            &mut step_reasons,
+                        );
+                        step_reasons.sort_unstable();
+                        step_reasons.dedup();
+                        assert_eq!(
+                            step_reasons, reasons,
+                            "structured explain_steps reasons differ from flat explain"
                         );
                     }
                 }
