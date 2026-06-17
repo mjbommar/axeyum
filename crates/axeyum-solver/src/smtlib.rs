@@ -229,7 +229,7 @@ pub fn solve_smtlib_unsat_core(
 /// Produces a checkable **Alethe proof** for an SMT-LIB script (`get-proof`):
 /// when the conjunction of its assertions is `unsat` and falls within a supported
 /// proof fragment, returns the textual Alethe proof, re-validated by the in-tree
-/// checker before it is returned. Three fragments are tried, in order:
+/// checker before it is returned. Four fragments are tried, in order:
 ///
 /// - **`QF_BV`**: a complete `bitblast_*` → CNF-introduction → resolution
 ///   refutation deriving `(cl)` (re-checked by [`check_alethe`]).
@@ -237,11 +237,15 @@ pub fn solve_smtlib_unsat_core(
 ///   [`check_alethe`]).
 /// - **`QF_LRA`**: a Farkas `la_generic` + resolution refutation (re-checked by
 ///   [`crate::check_alethe_lra`], which decides the `la_generic` coefficients).
+/// - **`QF_LIA`**: an integer `lia_generic` refutation (re-checked by
+///   [`crate::check_alethe_lra`], which honors integrality).
 ///
 /// Each emitter is self-validating (it returns a proof only when it checks), and
-/// this re-validates again as defense in depth. Every emitted proof is also
-/// accepted by the external Carcara checker; see
-/// `crates/axeyum-solver/tests/carcara_crosscheck.rs`.
+/// this re-validates again as defense in depth. The first three fragments' proofs
+/// are also accepted by the external Carcara checker (see
+/// `crates/axeyum-solver/tests/carcara_crosscheck.rs`); the **`QF_LIA`** proof is
+/// checkable only *internally* — Carcara has no `lia_generic` rule and treats it as
+/// a hole — so it is tried LAST, after the Carcara-valid routes.
 ///
 /// Returns `Ok(None)` when no Alethe proof is available — the script is
 /// `sat`/`unknown`, or its `unsat` is outside all supported fragments (e.g. `QF_BV`
@@ -273,6 +277,16 @@ pub fn solve_smtlib_get_proof(
     // QF_LRA: a Farkas la_generic refutation (re-checked by check_alethe_lra, which
     // owns the arithmetic la_generic decision the plain check_alethe lacks).
     if let Some(proof) = crate::prove_lra_unsat_alethe(arena, assertions)
+        && matches!(crate::check_alethe_lra(&proof), Ok(true))
+    {
+        return Ok(Some(write_alethe(&proof)));
+    }
+    // QF_LIA: an integer `lia_generic` refutation, re-checked by check_alethe_lra
+    // (which honors integrality). NOTE: unlike the other three fragments, this proof
+    // is checkable only *internally* — Carcara has no `lia_generic` rule, so it
+    // treats the step as a hole. Tried last so a problem also expressible over the
+    // reals takes the Carcara-valid LRA route first.
+    if let Some(proof) = crate::prove_lia_unsat_alethe(arena, assertions)
         && matches!(crate::check_alethe_lra(&proof), Ok(true))
     {
         return Ok(Some(write_alethe(&proof)));

@@ -1059,3 +1059,33 @@ fn get_proof_serves_the_lra_fragment() {
         "LRA proof re-checks to (cl)"
     );
 }
+
+/// `(get-proof)` serves the **`QF_LIA`** fragment: `x ≤ 0 ∧ x ≥ 1` over the integers
+/// is unsat, and the returned proof is a `lia_generic` refutation (re-checked by
+/// `check_alethe_lra`; internally checkable only — Carcara holes `lia_generic`).
+#[test]
+fn get_proof_serves_the_lia_fragment() {
+    use axeyum_cnf::parse_alethe;
+    use axeyum_solver::{check_alethe_lra, solve_smtlib_get_proof};
+    let text = "\
+(set-logic QF_LIA)
+(declare-const x Int)
+(assert (<= x 0))
+(assert (>= x 1))
+(check-sat)
+(get-proof)
+";
+    let proof = solve_smtlib_get_proof(text, &config())
+        .expect("decides")
+        .expect("an Alethe proof for the integer conflict");
+    assert!(
+        proof.contains("lia_generic"),
+        "uses the integer Farkas layer:\n{proof}"
+    );
+    let parsed = parse_alethe(&proof).expect("emitted Alethe parses");
+    assert_eq!(
+        check_alethe_lra(&parsed),
+        Ok(true),
+        "LIA proof re-checks to (cl)"
+    );
+}
