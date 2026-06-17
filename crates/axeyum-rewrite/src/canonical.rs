@@ -25,6 +25,7 @@ const BOOL_XOR_SELF: &str = "bool.xor_self.v1";
 const BOOL_IMPLIES_CONST: &str = "bool.implies_const.v1";
 const BOOL_IMPLIES_REFLEXIVE: &str = "bool.implies_reflexive.v1";
 const EQ_REFLEXIVE: &str = "eq.reflexive.v1";
+const EQ_BOOL_CONST: &str = "eq.bool_const.v1";
 const BV_COMPARE_REFLEXIVE: &str = "bv.compare_reflexive.v1";
 const BV_COMPARE_SATURATE: &str = "bv.compare_saturate.v1";
 const ITE_CONST_CONDITION: &str = "ite.const_condition.v1";
@@ -332,6 +333,11 @@ fn default_rules() -> Vec<RewriteRule> {
             EQ_REFLEXIVE,
             "Equality reflexivity",
             "`=` with structurally identical operands",
+        ),
+        rule(
+            EQ_BOOL_CONST,
+            "Boolean equality with a constant",
+            "`=` of a Boolean term with a Boolean constant (`true`/`false`)",
         ),
         rule(
             BV_COMPARE_REFLEXIVE,
@@ -1238,6 +1244,21 @@ fn rewrite_eq(
 ) -> Option<LocalRewrite> {
     if enabled.contains(EQ_REFLEXIVE) && args[0] == args[1] {
         return Some(applied(arena.bool_const(true), EQ_REFLEXIVE));
+    }
+    // Boolean equality with a Boolean constant: `(= p true)` ≡ `p`, `(= p false)` ≡
+    // `(not p)` (and symmetric). A Boolean constant operand forces the other to be
+    // Boolean-sorted, so this never matches a bit-vector equality. (An equality of
+    // two constants is folded earlier by the constant-fold rule.)
+    if enabled.contains(EQ_BOOL_CONST) {
+        for (const_arg, other) in [(args[0], args[1]), (args[1], args[0])] {
+            if let Some(value) = bool_const(arena, const_arg) {
+                return if value {
+                    Some(applied(other, EQ_BOOL_CONST))
+                } else {
+                    Some(applied(arena.not(other).ok()?, EQ_BOOL_CONST))
+                };
+            }
+        }
     }
     None
 }
@@ -2279,6 +2300,55 @@ mod commutative_tests {
             c,
             "`(ite c true p)` must not collapse to `c`",
         );
+    }
+
+    /// `(= p true)` and `(= true p)` collapse to `p`; `(= p false)` to `(not p)`; a
+    /// bit-vector equality with a constant is NOT affected.
+    #[test]
+    #[allow(clippy::many_single_char_names, clippy::similar_names)]
+    fn eq_with_boolean_constant_simplifies() {
+        let mut a = TermArena::new();
+        let p = a.bool_var("p").unwrap();
+        let t = a.bool_const(true);
+        let f = a.bool_const(false);
+        let not_p = a.not(p).unwrap();
+
+        let eq_pt = a.eq(p, t).unwrap();
+        let eq_tp = a.eq(t, p).unwrap();
+        let eq_pf = a.eq(p, f).unwrap();
+        assert_eq!(canonicalize(&mut a, eq_pt).unwrap().term, p);
+        assert_eq!(canonicalize(&mut a, eq_tp).unwrap().term, p);
+        assert_eq!(canonicalize(&mut a, eq_pf).unwrap().term, not_p);
+
+        // A bit-vector `=` with a constant is a predicate, not simplified to the var.
+        let x = a.bv_var("x", 4).unwrap();
+        let five = a.bv_const(4, 5).unwrap();
+        let bv_eq = a.eq(x, five).unwrap();
+        assert_eq!(
+            canonicalize(&mut a, bv_eq).unwrap().term,
+            bv_eq,
+            "bit-vector equality with a constant must not be rewritten",
+        );
+
+        // Denotation: (= q true) ≡ q and (= q false) ≡ ¬q over both Boolean values.
+        let qs = a.declare("q", Sort::Bool).unwrap();
+        let q = a.var(qs);
+        let q_true = a.eq(q, t).unwrap();
+        let q_false = a.eq(q, f).unwrap();
+        let q_true_c = canonicalize(&mut a, q_true).unwrap().term;
+        let q_false_c = canonicalize(&mut a, q_false).unwrap().term;
+        for b in [false, true] {
+            let mut asg = Assignment::new();
+            asg.set(qs, Value::Bool(b));
+            assert_eq!(
+                eval(&a, q_true, &asg).unwrap(),
+                eval(&a, q_true_c, &asg).unwrap(),
+            );
+            assert_eq!(
+                eval(&a, q_false, &asg).unwrap(),
+                eval(&a, q_false_c, &asg).unwrap(),
+            );
+        }
     }
 
     /// A comparison of two *different* operands is never folded by reflexivity.
