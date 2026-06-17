@@ -240,6 +240,19 @@ proof to derive `(cl)` to be a refutation, exactly as for the resolution layer).
    `lrat_to_alethe`-`valid`, T3.3.3) over those clauses. The hard unknowns (the
    exact bridge rules + the `and` `:args` index) are resolved.
 
+   **Compound terms — resolved and validated** (`full_qf_bv_compound_term_proof_is_accepted_by_carcara`).
+   A predicate over a *compound* bit-vector term (e.g. `(bvand a a)` inside `(= (bvand a a) a)`)
+   does NOT project compound bits directly. Carcara has no `((_ @bit_of i) (@bbterm …))`
+   reduction rule (confirmed: `refl` and `all_simplify` both reject it). Instead each
+   operand is bitblasted bottom-up to its `@bbterm` form and **substituted into the
+   predicate by `cong`** (congruence of `=` over the two operand bitblast equalities),
+   then `trans`-chained with `bitblast_equal` on the resulting `@bbterm`-form predicate
+   to reach the bit-level Boolean. The closing Boolean refutation uses
+   `equiv1`/`equiv2`/`not_equiv1`/`not_equiv2` + `and`/`and_pos`/`and_neg` + `resolution`.
+   A complete such proof (`(not (= (bvand a a) a))`, with the `bitblast_and`/`bitblast_var`
+   steps from the production emitter) is **Carcara `valid` end-to-end**. So the rule
+   inventory for *both* the variable and compound cases is now empirically pinned.
+
 This is the third-party-checked analogue of path (B): where (B) trusts an in-house
 reference and refutes a miter with `check_drat`, this emits a proof an *external*
 checker re-derives. The two are independent and mutually reinforcing.

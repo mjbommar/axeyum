@@ -355,6 +355,19 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-17** — **Compound-term QF_BV proof is Carcara-`valid` (last bridge
+  unknown resolved)**. A predicate over a *compound* BV term (`(bvand a a)` inside
+  `(= (bvand a a) a)`) does not project compound bits directly, and Carcara has NO
+  `((_ @bit_of i) (@bbterm …))` reduction rule (`refl`/`all_simplify` both reject it).
+  The mechanism, now validated end-to-end: bitblast each operand bottom-up, **`cong`**
+  to substitute the `@bbterm` forms into the predicate, **`trans`** + `bitblast_equal`
+  to the bit-level Boolean, then `equiv*`/`not_equiv*`/`and`/`and_pos`/`and_neg` +
+  `resolution` to `(cl)`. Locked in as `full_qf_bv_compound_term_proof_is_accepted_by_carcara`
+  (the `bitblast_and`/`bitblast_var` steps from the production emitter). **Every bridge
+  rule pattern the general QF_BV driver needs is now empirically pinned against the
+  binary** — both variable and compound cases. **Next: the general
+  `prove_qf_bv_unsat_alethe` driver (bottom-up term bitblast + cong/trans reduction +
+  Tseitin-of-B with CNF-intro + the SAT refutation).**
 - **2026-06-17** — **First FULL QF_BV `unsat` proof is Carcara-`valid` end-to-end
   (T3.3 bridge validated)**. Hand-validated against the binary, then locked in as a
   committed regression test (`full_qf_bv_unsat_proof_is_accepted_by_carcara`): for

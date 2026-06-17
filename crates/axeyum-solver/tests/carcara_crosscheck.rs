@@ -1070,3 +1070,139 @@ fn full_qf_bv_unsat_proof_is_accepted_by_carcara() {
     let report = carcara_accepts(&bin, "full_qfbv", &arena, &assertions, &proof);
     assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
 }
+
+// --- Full QF_BV proof with a COMPOUND term: `cong`+`trans` operand substitution ---
+//
+// Resolves the last bridge unknown: a predicate over a compound bit-vector term
+// (here `(bvand a a)`) is reduced to a bit-level Boolean by bitblasting each
+// operand bottom-up and substituting via `cong` (congruence of `=` over the two
+// bitblast equalities) + `trans` + `bitblast_equal`, then Boolean-refuted to
+// `(cl)`. `(not (= (bvand a a) a))` is unsat since `a & a = a`.
+
+fn app(head: &str, args: Vec<AletheTerm>) -> AletheTerm {
+    AletheTerm::App(head.to_owned(), args)
+}
+
+#[test]
+#[allow(clippy::too_many_lines, clippy::similar_names)]
+fn full_qf_bv_compound_term_proof_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(1)).unwrap();
+        arena.var(s)
+    };
+    let bvand_aa = arena.bv_and(a, a).unwrap();
+    let eq = arena.eq(bvand_aa, a).unwrap();
+    let not_eq = arena.not(eq).unwrap();
+    let assertions = vec![not_eq];
+
+    // Bitblast steps from the production emitter.
+    let bb_and = bitblast_step(&arena, bvand_aa, "bb_and").expect("bitblast_and");
+    let bb_var = bitblast_step(&arena, a, "bb_var").expect("bitblast_var");
+
+    // Alethe terms.
+    let a0 = bit0("a");
+    let and_a0 = app("and", vec![a0.clone(), a0.clone()]);
+    let bbt_and = app("@bbterm", vec![and_a0.clone()]);
+    let bbt_a0 = app("@bbterm", vec![a0.clone()]);
+    let pred_orig = app(
+        "=",
+        vec![
+            app("bvand", vec![term_const("a"), term_const("a")]),
+            term_const("a"),
+        ],
+    );
+    let pred_bb = app("=", vec![bbt_and, bbt_a0]);
+    let pred_bit = app("=", vec![and_a0.clone(), a0.clone()]);
+
+    let proof = vec![
+        AletheCommand::Assume {
+            id: "h".to_owned(),
+            clause: vec![neg(pred_orig.clone())],
+        },
+        bb_and,
+        bb_var,
+        // Substitute the bitblasted operands into the predicate by congruence,
+        // then chain to the bit-level equality through the @bbterm forms.
+        step(
+            "cong1",
+            vec![pos(app("=", vec![pred_orig.clone(), pred_bb.clone()]))],
+            "cong",
+            &["bb_and", "bb_var"],
+            vec![],
+        ),
+        step(
+            "bb_eq",
+            vec![pos(app("=", vec![pred_bb, pred_bit.clone()]))],
+            "bitblast_equal",
+            &[],
+            vec![],
+        ),
+        step(
+            "trans1",
+            vec![pos(app("=", vec![pred_orig.clone(), pred_bit.clone()]))],
+            "trans",
+            &["cong1", "bb_eq"],
+            vec![],
+        ),
+        // Move the assumption to the bit level, then Boolean-refute it.
+        step(
+            "e2",
+            vec![pos(pred_orig), neg(pred_bit.clone())],
+            "equiv2",
+            &["trans1"],
+            vec![],
+        ),
+        step(
+            "nq",
+            vec![neg(pred_bit)],
+            "resolution",
+            &["e2", "h"],
+            vec![],
+        ),
+        step(
+            "nq1",
+            vec![pos(and_a0.clone()), pos(a0.clone())],
+            "not_equiv1",
+            &["nq"],
+            vec![],
+        ),
+        step(
+            "nq2",
+            vec![neg(and_a0.clone()), neg(a0.clone())],
+            "not_equiv2",
+            &["nq"],
+            vec![],
+        ),
+        step(
+            "ap",
+            vec![neg(and_a0.clone()), pos(a0.clone())],
+            "and_pos",
+            &[],
+            vec![term_const("0")],
+        ),
+        step(
+            "an",
+            vec![pos(and_a0), neg(a0.clone()), neg(a0.clone())],
+            "and_neg",
+            &[],
+            vec![],
+        ),
+        step(
+            "r1",
+            vec![pos(a0.clone())],
+            "resolution",
+            &["nq1", "ap"],
+            vec![],
+        ),
+        step("r2", vec![neg(a0)], "resolution", &["nq2", "an"], vec![]),
+        step("done", vec![], "resolution", &["r1", "r2"], vec![]),
+    ];
+
+    let report = carcara_accepts(&bin, "compound_qfbv", &arena, &assertions, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
