@@ -557,6 +557,174 @@ fn bitblast_xnor_step_is_rule_accepted_by_carcara() {
 }
 
 #[test]
+fn bitblast_add_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // width 4 (>= 2) binary bvadd.
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a", 4);
+    let b = bv_var(&mut arena, "b", 4);
+    let t = arena.bv_add(a, b).expect("bvadd");
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_add_step",
+        &arena,
+        t,
+        "(declare-const a (_ BitVec 4))\n(declare-const b (_ BitVec 4))\n",
+        "(= (bvadd a b) (bvadd a b))",
+    );
+}
+
+#[test]
+fn bitblast_add_nary_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // A nested add `(bvadd (bvadd a b) c)` exercises the left-fold: arg0 is itself
+    // a bvadd, so its bits come from the accumulator @bbterm of the first add.
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a", 3);
+    let b = bv_var(&mut arena, "b", 3);
+    let c = bv_var(&mut arena, "c", 3);
+    let ab = arena.bv_add(a, b).expect("bvadd");
+    let abc = arena.bv_add(ab, c).expect("bvadd");
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_add_nary_step",
+        &arena,
+        abc,
+        "(declare-const a (_ BitVec 3))\n(declare-const b (_ BitVec 3))\n(declare-const c (_ BitVec 3))\n",
+        "(= (bvadd (bvadd a b) c) (bvadd (bvadd a b) c))",
+    );
+}
+
+#[test]
+fn bitblast_neg_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a", 4);
+    let t = arena.bv_neg(a).expect("bvneg");
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_neg_step",
+        &arena,
+        t,
+        "(declare-const a (_ BitVec 4))\n",
+        "(= (bvneg a) (bvneg a))",
+    );
+}
+
+#[test]
+fn bitblast_ult_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // Predicate op: assert the predicate itself as the well-typed Bool formula.
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a", 4);
+    let b = bv_var(&mut arena, "b", 4);
+    let t = arena.bv_ult(a, b).expect("bvult");
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_ult_step",
+        &arena,
+        t,
+        "(declare-const a (_ BitVec 4))\n(declare-const b (_ BitVec 4))\n",
+        "(bvult a b)",
+    );
+}
+
+#[test]
+fn bitblast_slt_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // Multi-bit: the general ladder with a separate sign step.
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a", 4);
+    let b = bv_var(&mut arena, "b", 4);
+    let t = arena.bv_slt(a, b).expect("bvslt");
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_slt_step",
+        &arena,
+        t,
+        "(declare-const a (_ BitVec 4))\n(declare-const b (_ BitVec 4))\n",
+        "(bvslt a b)",
+    );
+}
+
+#[test]
+fn bitblast_slt_width1_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // Carcara special-cases size == 1: result is (and x0 (not y0)).
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a", 1);
+    let b = bv_var(&mut arena, "b", 1);
+    let t = arena.bv_slt(a, b).expect("bvslt");
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_slt_width1_step",
+        &arena,
+        t,
+        "(declare-const a (_ BitVec 1))\n(declare-const b (_ BitVec 1))\n",
+        "(bvslt a b)",
+    );
+}
+
+#[test]
+fn bitblast_equal_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a", 4);
+    let b = bv_var(&mut arena, "b", 4);
+    let t = arena.eq(a, b).expect("eq");
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_equal_step",
+        &arena,
+        t,
+        "(declare-const a (_ BitVec 4))\n(declare-const b (_ BitVec 4))\n",
+        "(= a b)",
+    );
+}
+
+#[test]
+fn bitblast_comp_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // bvcomp yields a 1-bit BV; assert a well-typed BV equation mentioning it.
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a", 4);
+    let b = bv_var(&mut arena, "b", 4);
+    let t = arena.bv_comp(a, b).expect("bvcomp");
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_comp_step",
+        &arena,
+        t,
+        "(declare-const a (_ BitVec 4))\n(declare-const b (_ BitVec 4))\n",
+        "(= (bvcomp a b) (bvcomp a b))",
+    );
+}
+
+#[test]
 fn bitblast_var_indexed_syntax_is_parseable_by_carcara() {
     use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm};
     let Some(bin) = carcara_bin() else {

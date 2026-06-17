@@ -355,6 +355,19 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-17** — **T3.3.1 step 2 (arithmetic + comparison): bitblast emitter
+  extended**. `bitblast_step` now also emits Carcara-valid steps for `bvadd`
+  (ripple-carry, n-ary left-fold), `bvneg` (two's-complement adder with verbatim
+  `false`/`true` carry-ins), `bvult`/`bvslt` (the comparison ladders, slt with its
+  sign-bit final step + width-1 special case), BV `=` (`bitblast_equal`), and
+  `bvcomp`. This added the **two further output shapes** beyond the bitwise
+  `(= t (@bbterm …))`: predicate ops conclude `(= <pred> <bool>)` (no `@bbterm`),
+  and `bvcomp` wraps its single Bool in `@bbterm`. **All six Carcara rule-accepted
+  on the first run** (gated per-operator tests; shapes transcribed directly from
+  `bitvectors.rs`). 25 cross-check cases total. Still `None` (next increments):
+  `bvmul` (shift-add multiplier), structural ops (extract/concat/sign_extend),
+  shifts, div/rem. **Next: `bvmul`, then the predicate-bitblast + Tseitin-CNF bridge
+  to close a full QF_BV refutation to `(cl)`.**
 - **2026-06-16** — **T3.3.1 step 2 (first slice): per-operator bitblast emitter
   (bitwise fragment)**. New `axeyum_solver::bitblast_step(arena, term, id)` emits the
   definitional `(= <T> (@bbterm b0…b_{n-1})) :rule bitblast_<op>` step for the
