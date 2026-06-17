@@ -790,7 +790,9 @@ pub fn check_alethe_with(
 }
 
 /// Dispatches the structurally-checked Alethe rules (the EUF `eq_*` rules, the
-/// Boolean CNF-introduction rules, and the general equality rules
+/// Boolean CNF-introduction rules — `and_pos`/`and_neg`/`or_pos`/`or_neg`, the
+/// `=`-clausification `equiv*`/`not_equiv*`, and the `xor`-clausification
+/// `xor_*` — and the general equality rules
 /// `refl`/`symm`/`trans`/`cong`). Returns `Some(true)` if `rule` is one of these
 /// and the step is valid, `Some(false)` if it is one of these but invalid, and
 /// `None` if `rule` is not a structural rule this checker handles (so the caller
@@ -811,6 +813,21 @@ fn check_structural_rule(
         "and_neg" => Some(no_premises && is_and_neg(clause)),
         "or_pos" => Some(no_premises && is_or_pos(clause)),
         "or_neg" => Some(no_premises && is_or_neg(clause)),
+        // Premise-free CNF-introduction (clausification) rules for `=`/`xor`.
+        "equiv_pos1" => Some(no_premises && is_equiv_pos1(clause)),
+        "equiv_pos2" => Some(no_premises && is_equiv_pos2(clause)),
+        "equiv_neg1" => Some(no_premises && is_equiv_neg1(clause)),
+        "equiv_neg2" => Some(no_premises && is_equiv_neg2(clause)),
+        "xor_pos1" => Some(no_premises && is_xor_pos1(clause)),
+        "xor_pos2" => Some(no_premises && is_xor_pos2(clause)),
+        "xor_neg1" => Some(no_premises && is_xor_neg1(clause)),
+        "xor_neg2" => Some(no_premises && is_xor_neg2(clause)),
+        // Premise-taking CNF-introduction rules: a single unit-clause premise
+        // carries the `(= …)` or `(not (= …))` term.
+        "equiv1" => Some(is_equiv1(premise_clauses, clause)),
+        "equiv2" => Some(is_equiv2(premise_clauses, clause)),
+        "not_equiv1" => Some(is_not_equiv1(premise_clauses, clause)),
+        "not_equiv2" => Some(is_not_equiv2(premise_clauses, clause)),
         "refl" => Some(no_premises && is_refl(clause)),
         "symm" => Some(is_symm(premise_clauses, clause)),
         "trans" => Some(is_trans(premise_clauses, clause)),
@@ -905,6 +922,238 @@ fn polarity_spread(clause: &AletheClause, head: &str, head_negated: bool) -> boo
     rest.iter()
         .zip(args)
         .all(|(lit, arg)| lit.negated != head_negated && &lit.atom == arg)
+}
+
+/// Extracts the single literal carried by a unit-clause premise (one literal,
+/// in any polarity), or `None` if the premise is not a unit clause. Mirrors
+/// Carcara's `get_premise_term`: a premise term is the sole element of the
+/// premise clause; here the literal is `(atom, negated)`.
+fn premise_unit(clause: &AletheClause) -> Option<&AletheLit> {
+    let [lit] = clause.as_slice() else {
+        return None;
+    };
+    Some(lit)
+}
+
+/// Returns the two arguments of a 2-arity `xor` application, or `None`.
+fn as_xor(term: &AletheTerm) -> Option<(&AletheTerm, &AletheTerm)> {
+    match term {
+        AletheTerm::App(head, args) if head == "xor" && args.len() == 2 => {
+            Some((&args[0], &args[1]))
+        }
+        _ => None,
+    }
+}
+
+/// Structural check for the Alethe `equiv_pos1` rule (premise-free CNF
+/// introduction): `(cl (not (= φ1 φ2)) φ1 (not φ2))`. Mirrors Carcara's
+/// `equiv_pos1`: literal 0 is the negated equality `¬(= φ1 φ2)`, literal 1 is
+/// `φ1` positive, literal 2 is `¬φ2`.
+fn is_equiv_pos1(clause: &AletheClause) -> bool {
+    let [l0, l1, l2] = clause.as_slice() else {
+        return false;
+    };
+    if !l0.negated || l1.negated || !l2.negated {
+        return false;
+    }
+    let Some((phi1, phi2)) = as_eq(&l0.atom) else {
+        return false;
+    };
+    &l1.atom == phi1 && &l2.atom == phi2
+}
+
+/// Structural check for the Alethe `equiv_pos2` rule:
+/// `(cl (not (= φ1 φ2)) (not φ1) φ2)`. Mirrors Carcara's `equiv_pos2`.
+fn is_equiv_pos2(clause: &AletheClause) -> bool {
+    let [l0, l1, l2] = clause.as_slice() else {
+        return false;
+    };
+    if !l0.negated || !l1.negated || l2.negated {
+        return false;
+    }
+    let Some((phi1, phi2)) = as_eq(&l0.atom) else {
+        return false;
+    };
+    &l1.atom == phi1 && &l2.atom == phi2
+}
+
+/// Structural check for the Alethe `equiv_neg1` rule:
+/// `(cl (= φ1 φ2) (not φ1) (not φ2))`. Mirrors Carcara's `equiv_neg1`.
+fn is_equiv_neg1(clause: &AletheClause) -> bool {
+    let [l0, l1, l2] = clause.as_slice() else {
+        return false;
+    };
+    if l0.negated || !l1.negated || !l2.negated {
+        return false;
+    }
+    let Some((phi1, phi2)) = as_eq(&l0.atom) else {
+        return false;
+    };
+    &l1.atom == phi1 && &l2.atom == phi2
+}
+
+/// Structural check for the Alethe `equiv_neg2` rule:
+/// `(cl (= φ1 φ2) φ1 φ2)`. Mirrors Carcara's `equiv_neg2`.
+fn is_equiv_neg2(clause: &AletheClause) -> bool {
+    let [l0, l1, l2] = clause.as_slice() else {
+        return false;
+    };
+    if l0.negated || l1.negated || l2.negated {
+        return false;
+    }
+    let Some((phi1, phi2)) = as_eq(&l0.atom) else {
+        return false;
+    };
+    &l1.atom == phi1 && &l2.atom == phi2
+}
+
+/// Structural check for the Alethe `xor_pos1` rule:
+/// `(cl (not (xor φ1 φ2)) φ1 φ2)`. Mirrors Carcara's `xor_pos1`.
+fn is_xor_pos1(clause: &AletheClause) -> bool {
+    let [l0, l1, l2] = clause.as_slice() else {
+        return false;
+    };
+    if !l0.negated || l1.negated || l2.negated {
+        return false;
+    }
+    let Some((phi1, phi2)) = as_xor(&l0.atom) else {
+        return false;
+    };
+    &l1.atom == phi1 && &l2.atom == phi2
+}
+
+/// Structural check for the Alethe `xor_pos2` rule:
+/// `(cl (not (xor φ1 φ2)) (not φ1) (not φ2))`. Mirrors Carcara's `xor_pos2`.
+fn is_xor_pos2(clause: &AletheClause) -> bool {
+    let [l0, l1, l2] = clause.as_slice() else {
+        return false;
+    };
+    if !l0.negated || !l1.negated || !l2.negated {
+        return false;
+    }
+    let Some((phi1, phi2)) = as_xor(&l0.atom) else {
+        return false;
+    };
+    &l1.atom == phi1 && &l2.atom == phi2
+}
+
+/// Structural check for the Alethe `xor_neg1` rule:
+/// `(cl (xor φ1 φ2) φ1 (not φ2))`. Mirrors Carcara's `xor_neg1`.
+fn is_xor_neg1(clause: &AletheClause) -> bool {
+    let [l0, l1, l2] = clause.as_slice() else {
+        return false;
+    };
+    if l0.negated || l1.negated || !l2.negated {
+        return false;
+    }
+    let Some((phi1, phi2)) = as_xor(&l0.atom) else {
+        return false;
+    };
+    &l1.atom == phi1 && &l2.atom == phi2
+}
+
+/// Structural check for the Alethe `xor_neg2` rule:
+/// `(cl (xor φ1 φ2) (not φ1) φ2)`. Mirrors Carcara's `xor_neg2`.
+fn is_xor_neg2(clause: &AletheClause) -> bool {
+    let [l0, l1, l2] = clause.as_slice() else {
+        return false;
+    };
+    if l0.negated || !l1.negated || l2.negated {
+        return false;
+    }
+    let Some((phi1, phi2)) = as_xor(&l0.atom) else {
+        return false;
+    };
+    &l1.atom == phi1 && &l2.atom == phi2
+}
+
+/// Structural check for the Alethe `equiv1` rule. One premise, the unit clause
+/// `(cl (= φ1 φ2))` (a *positive* `=` literal); conclusion `(cl (not φ1) φ2)`.
+/// Mirrors Carcara's `equiv1`.
+fn is_equiv1(premises: &[&AletheClause], clause: &AletheClause) -> bool {
+    let [premise] = premises else {
+        return false;
+    };
+    let Some((phi1, phi2)) = premise_positive_eq(premise) else {
+        return false;
+    };
+    let [l0, l1] = clause.as_slice() else {
+        return false;
+    };
+    // (not φ1) then φ2.
+    l0.negated && !l1.negated && &l0.atom == phi1 && &l1.atom == phi2
+}
+
+/// Structural check for the Alethe `equiv2` rule. One premise `(cl (= φ1 φ2))`;
+/// conclusion `(cl φ1 (not φ2))`. Mirrors Carcara's `equiv2`.
+fn is_equiv2(premises: &[&AletheClause], clause: &AletheClause) -> bool {
+    let [premise] = premises else {
+        return false;
+    };
+    let Some((phi1, phi2)) = premise_positive_eq(premise) else {
+        return false;
+    };
+    let [l0, l1] = clause.as_slice() else {
+        return false;
+    };
+    // φ1 then (not φ2).
+    !l0.negated && l1.negated && &l0.atom == phi1 && &l1.atom == phi2
+}
+
+/// Structural check for the Alethe `not_equiv1` rule. One premise, the unit
+/// clause `(cl (not (= φ1 φ2)))` (a *negated* `=` literal); conclusion
+/// `(cl φ1 φ2)`. Mirrors Carcara's `not_equiv1`.
+fn is_not_equiv1(premises: &[&AletheClause], clause: &AletheClause) -> bool {
+    let [premise] = premises else {
+        return false;
+    };
+    let Some((phi1, phi2)) = premise_negated_eq(premise) else {
+        return false;
+    };
+    let [l0, l1] = clause.as_slice() else {
+        return false;
+    };
+    // φ1 then φ2, both positive.
+    !l0.negated && !l1.negated && &l0.atom == phi1 && &l1.atom == phi2
+}
+
+/// Structural check for the Alethe `not_equiv2` rule. One premise
+/// `(cl (not (= φ1 φ2)))`; conclusion `(cl (not φ1) (not φ2))`. Mirrors
+/// Carcara's `not_equiv2`.
+fn is_not_equiv2(premises: &[&AletheClause], clause: &AletheClause) -> bool {
+    let [premise] = premises else {
+        return false;
+    };
+    let Some((phi1, phi2)) = premise_negated_eq(premise) else {
+        return false;
+    };
+    let [l0, l1] = clause.as_slice() else {
+        return false;
+    };
+    // (not φ1) then (not φ2).
+    l0.negated && l1.negated && &l0.atom == phi1 && &l1.atom == phi2
+}
+
+/// Extracts `(φ1, φ2)` from a unit-clause premise whose sole literal is the
+/// *positive* equality `(= φ1 φ2)` — i.e. the premise term `(= φ1 φ2)`.
+/// `equiv1`/`equiv2` take such a premise.
+fn premise_positive_eq(clause: &AletheClause) -> Option<(&AletheTerm, &AletheTerm)> {
+    let lit = premise_unit(clause)?;
+    if lit.negated {
+        return None;
+    }
+    as_eq(&lit.atom)
+}
+
+/// Extracts `(φ1, φ2)` from a unit-clause premise whose sole literal is the
+/// *negated* equality `(not (= φ1 φ2))` — i.e. the premise term
+/// `(not (= φ1 φ2))`. `not_equiv1`/`not_equiv2` take such a premise.
+fn premise_negated_eq(clause: &AletheClause) -> Option<(&AletheTerm, &AletheTerm)> {
+    let lit = premise_unit(clause)?;
+    if !lit.negated {
+        return None;
+    }
+    as_eq(&lit.atom)
 }
 
 /// Structural check for the EUF `eq_reflexive` rule.
@@ -1436,6 +1685,14 @@ mod tests {
     fn neq_lit(a: &str, b: &str) -> AletheLit {
         AletheLit {
             negated: true,
+            ..eq_lit(a, b)
+        }
+    }
+
+    /// An equality literal `(= a b)` with the given negation.
+    fn lit_with(a: &str, b: &str, negated: bool) -> AletheLit {
+        AletheLit {
+            negated,
             ..eq_lit(a, b)
         }
     }
@@ -2175,6 +2432,526 @@ mod tests {
             &[],
         )];
         assert_eq!(check_alethe(&or_pos), Ok(false));
+    }
+
+    /// Builds an `(= a b)` atom over two constant symbols.
+    fn eq_atom(a: &str, b: &str) -> AletheTerm {
+        AletheTerm::App(
+            "=".to_owned(),
+            vec![
+                AletheTerm::Const(a.to_owned()),
+                AletheTerm::Const(b.to_owned()),
+            ],
+        )
+    }
+
+    /// Builds an `(xor a b)` atom over two constant symbols.
+    fn xor_atom(a: &str, b: &str) -> AletheTerm {
+        AletheTerm::App(
+            "xor".to_owned(),
+            vec![
+                AletheTerm::Const(a.to_owned()),
+                AletheTerm::Const(b.to_owned()),
+            ],
+        )
+    }
+
+    #[test]
+    fn equiv_pos1_checks() {
+        // Valid: (cl (not (= a b)) a (not b)).
+        let valid = vec![step(
+            "p",
+            vec![
+                AletheLit {
+                    atom: eq_atom("a", "b"),
+                    negated: true,
+                },
+                lit("a"),
+                neg("b"),
+            ],
+            "equiv_pos1",
+            &[],
+        )];
+        assert_eq!(check_alethe(&valid), Ok(false));
+
+        // Broken: literal 1 negated (wrong polarity).
+        let bad_pol = vec![step(
+            "p",
+            vec![
+                AletheLit {
+                    atom: eq_atom("a", "b"),
+                    negated: true,
+                },
+                neg("a"),
+                neg("b"),
+            ],
+            "equiv_pos1",
+            &[],
+        )];
+        assert_eq!(
+            check_alethe(&bad_pol),
+            Err(AletheError::StepNotEntailed { id: "p".to_owned() })
+        );
+
+        // Broken: wrong term (c instead of φ1=a).
+        let bad_term = vec![step(
+            "p",
+            vec![
+                AletheLit {
+                    atom: eq_atom("a", "b"),
+                    negated: true,
+                },
+                lit("c"),
+                neg("b"),
+            ],
+            "equiv_pos1",
+            &[],
+        )];
+        assert_eq!(
+            check_alethe(&bad_term),
+            Err(AletheError::StepNotEntailed { id: "p".to_owned() })
+        );
+    }
+
+    #[test]
+    fn equiv_pos2_checks() {
+        // Valid: (cl (not (= a b)) (not a) b).
+        let valid = vec![step(
+            "p",
+            vec![
+                AletheLit {
+                    atom: eq_atom("a", "b"),
+                    negated: true,
+                },
+                neg("a"),
+                lit("b"),
+            ],
+            "equiv_pos2",
+            &[],
+        )];
+        assert_eq!(check_alethe(&valid), Ok(false));
+
+        // Broken: swapped polarity of literals 1 and 2.
+        let bad = vec![step(
+            "p",
+            vec![
+                AletheLit {
+                    atom: eq_atom("a", "b"),
+                    negated: true,
+                },
+                lit("a"),
+                neg("b"),
+            ],
+            "equiv_pos2",
+            &[],
+        )];
+        assert_eq!(
+            check_alethe(&bad),
+            Err(AletheError::StepNotEntailed { id: "p".to_owned() })
+        );
+    }
+
+    #[test]
+    fn equiv_neg1_checks() {
+        // Valid: (cl (= a b) (not a) (not b)).
+        let valid = vec![step(
+            "p",
+            vec![
+                AletheLit {
+                    atom: eq_atom("a", "b"),
+                    negated: false,
+                },
+                neg("a"),
+                neg("b"),
+            ],
+            "equiv_neg1",
+            &[],
+        )];
+        assert_eq!(check_alethe(&valid), Ok(false));
+
+        // Broken: head equality negated (should be positive).
+        let bad = vec![step(
+            "p",
+            vec![
+                AletheLit {
+                    atom: eq_atom("a", "b"),
+                    negated: true,
+                },
+                neg("a"),
+                neg("b"),
+            ],
+            "equiv_neg1",
+            &[],
+        )];
+        assert_eq!(
+            check_alethe(&bad),
+            Err(AletheError::StepNotEntailed { id: "p".to_owned() })
+        );
+    }
+
+    #[test]
+    fn equiv_neg2_checks() {
+        // Valid: (cl (= a b) a b).
+        let valid = vec![step(
+            "p",
+            vec![
+                AletheLit {
+                    atom: eq_atom("a", "b"),
+                    negated: false,
+                },
+                lit("a"),
+                lit("b"),
+            ],
+            "equiv_neg2",
+            &[],
+        )];
+        assert_eq!(check_alethe(&valid), Ok(false));
+
+        // Broken: wrong order (b before a).
+        let bad = vec![step(
+            "p",
+            vec![
+                AletheLit {
+                    atom: eq_atom("a", "b"),
+                    negated: false,
+                },
+                lit("b"),
+                lit("a"),
+            ],
+            "equiv_neg2",
+            &[],
+        )];
+        assert_eq!(
+            check_alethe(&bad),
+            Err(AletheError::StepNotEntailed { id: "p".to_owned() })
+        );
+    }
+
+    #[test]
+    fn xor_pos1_checks() {
+        // Valid: (cl (not (xor a b)) a b).
+        let valid = vec![step(
+            "p",
+            vec![
+                AletheLit {
+                    atom: xor_atom("a", "b"),
+                    negated: true,
+                },
+                lit("a"),
+                lit("b"),
+            ],
+            "xor_pos1",
+            &[],
+        )];
+        assert_eq!(check_alethe(&valid), Ok(false));
+
+        // Broken: literal 2 negated (xor_pos1 wants both positive).
+        let bad = vec![step(
+            "p",
+            vec![
+                AletheLit {
+                    atom: xor_atom("a", "b"),
+                    negated: true,
+                },
+                lit("a"),
+                neg("b"),
+            ],
+            "xor_pos1",
+            &[],
+        )];
+        assert_eq!(
+            check_alethe(&bad),
+            Err(AletheError::StepNotEntailed { id: "p".to_owned() })
+        );
+
+        // Broken: head is `=` not `xor`.
+        let wrong_head = vec![step(
+            "p",
+            vec![
+                AletheLit {
+                    atom: eq_atom("a", "b"),
+                    negated: true,
+                },
+                lit("a"),
+                lit("b"),
+            ],
+            "xor_pos1",
+            &[],
+        )];
+        assert_eq!(
+            check_alethe(&wrong_head),
+            Err(AletheError::StepNotEntailed { id: "p".to_owned() })
+        );
+    }
+
+    #[test]
+    fn xor_pos2_checks() {
+        // Valid: (cl (not (xor a b)) (not a) (not b)).
+        let valid = vec![step(
+            "p",
+            vec![
+                AletheLit {
+                    atom: xor_atom("a", "b"),
+                    negated: true,
+                },
+                neg("a"),
+                neg("b"),
+            ],
+            "xor_pos2",
+            &[],
+        )];
+        assert_eq!(check_alethe(&valid), Ok(false));
+
+        // Broken: literal 1 positive.
+        let bad = vec![step(
+            "p",
+            vec![
+                AletheLit {
+                    atom: xor_atom("a", "b"),
+                    negated: true,
+                },
+                lit("a"),
+                neg("b"),
+            ],
+            "xor_pos2",
+            &[],
+        )];
+        assert_eq!(
+            check_alethe(&bad),
+            Err(AletheError::StepNotEntailed { id: "p".to_owned() })
+        );
+    }
+
+    #[test]
+    fn xor_neg1_checks() {
+        // Valid: (cl (xor a b) a (not b)).
+        let valid = vec![step(
+            "p",
+            vec![
+                AletheLit {
+                    atom: xor_atom("a", "b"),
+                    negated: false,
+                },
+                lit("a"),
+                neg("b"),
+            ],
+            "xor_neg1",
+            &[],
+        )];
+        assert_eq!(check_alethe(&valid), Ok(false));
+
+        // Broken: literal 2 positive (should be (not b)).
+        let bad = vec![step(
+            "p",
+            vec![
+                AletheLit {
+                    atom: xor_atom("a", "b"),
+                    negated: false,
+                },
+                lit("a"),
+                lit("b"),
+            ],
+            "xor_neg1",
+            &[],
+        )];
+        assert_eq!(
+            check_alethe(&bad),
+            Err(AletheError::StepNotEntailed { id: "p".to_owned() })
+        );
+    }
+
+    #[test]
+    fn xor_neg2_checks() {
+        // Valid: (cl (xor a b) (not a) b).
+        let valid = vec![step(
+            "p",
+            vec![
+                AletheLit {
+                    atom: xor_atom("a", "b"),
+                    negated: false,
+                },
+                neg("a"),
+                lit("b"),
+            ],
+            "xor_neg2",
+            &[],
+        )];
+        assert_eq!(check_alethe(&valid), Ok(false));
+
+        // Broken: literal 1 positive (should be (not a)).
+        let bad = vec![step(
+            "p",
+            vec![
+                AletheLit {
+                    atom: xor_atom("a", "b"),
+                    negated: false,
+                },
+                lit("a"),
+                lit("b"),
+            ],
+            "xor_neg2",
+            &[],
+        )];
+        assert_eq!(
+            check_alethe(&bad),
+            Err(AletheError::StepNotEntailed { id: "p".to_owned() })
+        );
+    }
+
+    #[test]
+    fn equiv1_checks() {
+        // Valid: premise (= a b) ⊢ (cl (not a) b).
+        let valid = vec![
+            assume("h", vec![lit_with("a", "b", false)]),
+            step("p", vec![neg("a"), lit("b")], "equiv1", &["h"]),
+        ];
+        assert_eq!(check_alethe(&valid), Ok(false));
+
+        // Broken: wrong polarity — (cl a b) instead of (cl (not a) b).
+        let bad_pol = vec![
+            assume("h", vec![lit_with("a", "b", false)]),
+            step("p", vec![lit("a"), lit("b")], "equiv1", &["h"]),
+        ];
+        assert_eq!(
+            check_alethe(&bad_pol),
+            Err(AletheError::StepNotEntailed { id: "p".to_owned() })
+        );
+
+        // Broken: missing premise.
+        let no_prem = vec![step("p", vec![neg("a"), lit("b")], "equiv1", &[])];
+        assert_eq!(
+            check_alethe(&no_prem),
+            Err(AletheError::StepNotEntailed { id: "p".to_owned() })
+        );
+
+        // Broken: premise is a *negated* equality (equiv1 wants a positive one).
+        let neg_prem = vec![
+            assume("h", vec![lit_with("a", "b", true)]),
+            step("p", vec![neg("a"), lit("b")], "equiv1", &["h"]),
+        ];
+        assert_eq!(
+            check_alethe(&neg_prem),
+            Err(AletheError::StepNotEntailed { id: "p".to_owned() })
+        );
+    }
+
+    #[test]
+    fn equiv2_checks() {
+        // Valid: premise (= a b) ⊢ (cl a (not b)).
+        let valid = vec![
+            assume("h", vec![lit_with("a", "b", false)]),
+            step("p", vec![lit("a"), neg("b")], "equiv2", &["h"]),
+        ];
+        assert_eq!(check_alethe(&valid), Ok(false));
+
+        // Broken: wrong order — (cl (not b) a).
+        let bad = vec![
+            assume("h", vec![lit_with("a", "b", false)]),
+            step("p", vec![neg("b"), lit("a")], "equiv2", &["h"]),
+        ];
+        assert_eq!(
+            check_alethe(&bad),
+            Err(AletheError::StepNotEntailed { id: "p".to_owned() })
+        );
+    }
+
+    #[test]
+    fn not_equiv1_checks() {
+        // Valid: premise (not (= a b)) ⊢ (cl a b).
+        let valid = vec![
+            assume("h", vec![lit_with("a", "b", true)]),
+            step("p", vec![lit("a"), lit("b")], "not_equiv1", &["h"]),
+        ];
+        assert_eq!(check_alethe(&valid), Ok(false));
+
+        // Broken: premise is a *positive* equality (not_equiv1 wants negated).
+        let pos_prem = vec![
+            assume("h", vec![lit_with("a", "b", false)]),
+            step("p", vec![lit("a"), lit("b")], "not_equiv1", &["h"]),
+        ];
+        assert_eq!(
+            check_alethe(&pos_prem),
+            Err(AletheError::StepNotEntailed { id: "p".to_owned() })
+        );
+
+        // Broken: conclusion polarity wrong — (cl (not a) b).
+        let bad_pol = vec![
+            assume("h", vec![lit_with("a", "b", true)]),
+            step("p", vec![neg("a"), lit("b")], "not_equiv1", &["h"]),
+        ];
+        assert_eq!(
+            check_alethe(&bad_pol),
+            Err(AletheError::StepNotEntailed { id: "p".to_owned() })
+        );
+    }
+
+    #[test]
+    fn not_equiv2_checks() {
+        // Valid: premise (not (= a b)) ⊢ (cl (not a) (not b)).
+        let valid = vec![
+            assume("h", vec![lit_with("a", "b", true)]),
+            step("p", vec![neg("a"), neg("b")], "not_equiv2", &["h"]),
+        ];
+        assert_eq!(check_alethe(&valid), Ok(false));
+
+        // Broken: a literal positive — (cl a (not b)).
+        let bad = vec![
+            assume("h", vec![lit_with("a", "b", true)]),
+            step("p", vec![lit("a"), neg("b")], "not_equiv2", &["h"]),
+        ];
+        assert_eq!(
+            check_alethe(&bad),
+            Err(AletheError::StepNotEntailed { id: "p".to_owned() })
+        );
+    }
+
+    #[test]
+    fn equiv_clausification_drives_a_boolean_refutation() {
+        // End-to-end Tseitin-style Boolean refutation, internally checkable now.
+        // From h=(= a b) and equiv1 we get the clause (cl (not a) b); assume a and
+        // (not b), then resolve (cl (not a) b) ⊗ (a) ⊗ (not b) ⊨ (cl).
+        let commands = vec![
+            assume("h", vec![lit_with("a", "b", false)]),
+            assume("na", vec![lit("a")]),
+            assume("nb", vec![neg("b")]),
+            step("s1", vec![neg("a"), lit("b")], "equiv1", &["h"]),
+            // (cl (not a) b) ⊗ (a) ⊗ (not b) ⊨ (cl).
+            step("s2", vec![], "resolution", &["s1", "na", "nb"]),
+        ];
+        assert_eq!(
+            check_alethe(&commands),
+            Ok(true),
+            "the equiv1-driven Boolean refutation must derive the empty clause"
+        );
+    }
+
+    #[test]
+    fn equiv_neg_tautology_drives_a_boolean_refutation() {
+        // A refutation that also exercises a premise-free CNF-intro rule
+        // (equiv_neg2) resolving to the empty clause.
+        //   s0:  (cl (= a b) a b)          equiv_neg2  [tautology]
+        //   assume (not (= a b)), (not a), (not b); resolve s0 against all three.
+        let commands = vec![
+            assume("nq", vec![lit_with("a", "b", true)]),
+            assume("na", vec![neg("a")]),
+            assume("nb", vec![neg("b")]),
+            step(
+                "s0",
+                vec![
+                    AletheLit {
+                        atom: eq_atom("a", "b"),
+                        negated: false,
+                    },
+                    lit("a"),
+                    lit("b"),
+                ],
+                "equiv_neg2",
+                &[],
+            ),
+            // (cl (= a b) a b) ⊗ (not (= a b)) ⊗ (not a) ⊗ (not b) ⊨ (cl).
+            step("s1", vec![], "resolution", &["s0", "nq", "na", "nb"]),
+        ];
+        assert_eq!(check_alethe(&commands), Ok(true));
     }
 
     #[test]

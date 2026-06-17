@@ -355,6 +355,18 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-17** — **`check_alethe` gains the Boolean CNF-introduction rules**
+  (`equiv1`/`equiv2`/`not_equiv1`/`not_equiv2`, `equiv_pos1/2`, `equiv_neg1/2`,
+  `xor_pos1/2`, `xor_neg1/2`) — the Tseitin tautologies axeyum's QF_BV driver emits,
+  transcribed literal-for-literal from Carcara's `tautology.rs` (polarities/order
+  strict). With the `refl`/`symm`/`trans`/`cong` family from the previous commit,
+  axeyum's own checker now validates the **Boolean layer** of its QF_BV proofs
+  internally; only `bitblast_*` (BV reconstructions) and the `and` clausification
+  remain to port for full self-checking (the latter deferred: a structural `and`
+  would flip an existing `UnsupportedRule` test, so it lands with that test update).
+  12 new rules, each with positive + rejection tests, + 2 end-to-end Boolean
+  refutations to `(cl)`. 105 cnf-alethe tests green. **Next: port `bitblast_*` (+ the
+  `and` clausification) into `check_alethe` → axeyum self-checks full QF_BV proofs.**
 - **2026-06-17** — **`check_alethe` gains the general equality rules
   `refl`/`symm`/`trans`/`cong`**. axeyum's OWN Alethe checker now structurally
   verifies reflexivity, symmetry, transitivity chains, and congruence (matching
