@@ -143,16 +143,30 @@ the prediction above — multiplier parity structure forces essentially no units
 preprocessing time. **The gates are relational, so the payoff is in the
 equalities, not the units.**
 
-**Slice 5 (the data-indicated win):** apply `implied_equalities` as variable
-substitutions (merge `xi`/`xj`, needs model reconstruction since it changes
-variable structure). The 12 908-gate measurement says this is where the dense
-parity structure of the multiplier CNFs actually collapses — sum/carry bits are
-two-variable XOR relations, not unit-forced bits. **Slice 6:** full CDCL(XOR) —
-in-search Gaussian re-derivation on the trail (CryptoMiniSat `gaussian.cpp`
-style), which sees the structure the *static* system can't (the nonlinear
-AND-gate partial-product values that only the search assigns). The preprocessing
-form is the sound, bounded first cut; slices 5–6 are where the curated unknowns
-are actually attacked.
+**Slice 5 (equality substitution) — measured low-value, deprioritized
+(2026-06).** A follow-up measurement counted the implied *equalities* the GF(2)
+solve exposes (`equalities_available`): across the 20 firing files, 12 908 gates
+yield **351 equalities** — but they concentrate on the **AC-structured**
+`commute`/`distrib`/`bit-counting` instances (`commute08`=101, `commute04`=53,
+`distrib04`=40, `bit-counting`=128), **not** the core multiplier-equivalence
+unknowns: `mulhs16` has 1626 gates but **1** equality; `mulhs08`=1;
+`stp_samples`=0; `calypto_9`=1. So equality substitution would help (at most) the
+instances the AC canonicalizer already targets by another route, and is ~0 on the
+genuine multiplier wall. Building its variable-merge + model-reconstruction
+machinery is therefore low marginal value; it stays unbuilt until a corpus shows
+equality-rich *hard* instances. **The static-preprocessing investigation of path 2
+is closed: neither units nor equalities crack the curated multiplier unknowns.**
+
+**Slice 6 (the real lever) — full CDCL(XOR).** In-search Gaussian re-derivation on
+the CDCL trail (CryptoMiniSat `gaussian.cpp`/`packedmatrix.h` design): the solver
+maintains the XOR matrix as the search assigns variables, so it sees the
+structure the *static* system cannot — the nonlinear AND-gate partial-product
+values that only the search fixes. This is where multiplier parity is actually
+exploited, and it is a genuine SAT-engine capability (a new propagator alongside
+unit propagation), not a preprocessing pass. It composes with the now-validated
+`gf2`/`xor_extract` foundation (the extraction + matrix are reused on the trail).
+This is the substantial next slice; the preprocessing slices 1–4 are the sound,
+measured groundwork it builds on.
 
 ## Bottom line
 
