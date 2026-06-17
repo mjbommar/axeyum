@@ -507,6 +507,20 @@ mod tests {
             let two = a.bv_const(4, 2).unwrap();
             (a.bv_mul(x, four).unwrap(), a.bv_shl(x, two).unwrap())
         });
+        assert_rule_fires(&mut covered, "bv.udiv_pow2.v1", |a| {
+            // `bvudiv x 8` strength-reduces to `bvlshr x 3`.
+            let x = a.bv_var("x", 8).unwrap();
+            let eight = a.bv_const(8, 8).unwrap();
+            let three = a.bv_const(8, 3).unwrap();
+            (a.bv_udiv(x, eight).unwrap(), a.bv_lshr(x, three).unwrap())
+        });
+        assert_rule_fires(&mut covered, "bv.urem_pow2.v1", |a| {
+            // `bvurem x 8` strength-reduces to `bvand x 7`.
+            let x = a.bv_var("x", 8).unwrap();
+            let eight = a.bv_const(8, 8).unwrap();
+            let seven = a.bv_const(8, 7).unwrap();
+            (a.bv_urem(x, eight).unwrap(), a.bv_and(x, seven).unwrap())
+        });
         assert_rule_fires(&mut covered, "bv.and_identity.v1", |a| {
             let x = a.bv_var("x", 4).unwrap();
             let ones = a.bv_const(4, 15).unwrap();

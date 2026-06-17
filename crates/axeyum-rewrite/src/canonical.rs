@@ -38,6 +38,8 @@ const BV_SUB_SELF: &str = "bv.sub_self.v1";
 const BV_MUL_ONE: &str = "bv.mul_one.v1";
 const BV_MUL_ZERO: &str = "bv.mul_zero.v1";
 const BV_MUL_POW2: &str = "bv.mul_pow2.v1";
+const BV_UDIV_POW2: &str = "bv.udiv_pow2.v1";
+const BV_UREM_POW2: &str = "bv.urem_pow2.v1";
 const BV_AND_IDENTITY: &str = "bv.and_identity.v1";
 const BV_AND_ZERO: &str = "bv.and_zero.v1";
 const BV_AND_IDEMPOTENT: &str = "bv.and_idempotent.v1";
@@ -393,6 +395,16 @@ fn default_rules() -> Vec<RewriteRule> {
             "`bvmul` with a power-of-two constant operand",
         ),
         rule(
+            BV_UDIV_POW2,
+            "Unsigned divide by power of two",
+            "`bvudiv` whose divisor (second operand) is a power-of-two constant",
+        ),
+        rule(
+            BV_UREM_POW2,
+            "Unsigned remainder by power of two",
+            "`bvurem` whose divisor (second operand) is a power-of-two constant",
+        ),
+        rule(
             BV_AND_IDENTITY,
             "Bit-vector and all-ones identity",
             "`bvand` with one operand equal to all ones",
@@ -625,6 +637,8 @@ fn rewrite_app(
         Op::BvOr => rewrite_bv_or(arena, args, enabled),
         Op::BvXor => rewrite_bv_xor(arena, args, enabled)?,
         Op::BvShl | Op::BvLshr | Op::BvAshr => rewrite_bv_shift(arena, args, enabled),
+        Op::BvUdiv => rewrite_bv_udiv(arena, args, enabled)?,
+        Op::BvUrem => rewrite_bv_urem(arena, args, enabled)?,
         Op::BvNot => rewrite_bv_not(arena, args, enabled),
         Op::BvNeg => rewrite_bv_neg(arena, args, enabled),
         Op::Eq => rewrite_eq(arena, args, enabled),
@@ -643,8 +657,6 @@ fn rewrite_app(
         Op::BvNand
         | Op::BvNor
         | Op::BvXnor
-        | Op::BvUdiv
-        | Op::BvUrem
         | Op::BvSdiv
         | Op::BvSrem
         | Op::BvSmod
@@ -1050,6 +1062,56 @@ fn bv_mul_pow2(
         let k = value.trailing_zeros();
         let shift = arena.bv_const(width, u128::from(k))?;
         return Ok(Some(applied(arena.bv_shl(other, shift)?, BV_MUL_POW2)));
+    }
+    Ok(None)
+}
+
+/// Strength reduction: `bvudiv x 2^k -> bvlshr x k`.
+///
+/// Unsigned floor division by a power of two `2^k` (`1 <= 2^k < 2^width`) equals
+/// a logical (zero-filling) right shift by `k` for **every** value of `x`,
+/// including `x = all-ones`. The rule fires only when the *divisor* — the second
+/// operand `args[1]` — is the power-of-two constant; division is not commutative,
+/// so a power-of-two *dividend* must never trigger it. `value == 1` (`k == 0`)
+/// reduces to `bvlshr x 0`, which `bv.shift_zero.v1` then folds to `x`. The
+/// divisor `0` is not a power of two, so the SMT-LIB totality case `bvudiv x 0 =
+/// all-ones` is correctly skipped.
+fn rewrite_bv_udiv(
+    arena: &mut TermArena,
+    args: &[TermId],
+    enabled: &BTreeSet<&str>,
+) -> Result<Option<LocalRewrite>, IrError> {
+    if enabled.contains(BV_UDIV_POW2)
+        && let Some((width, value)) = bv_const(arena, args[1])
+        && value.is_power_of_two()
+    {
+        let k = value.trailing_zeros();
+        let shift = arena.bv_const(width, u128::from(k))?;
+        return Ok(Some(applied(arena.bv_lshr(args[0], shift)?, BV_UDIV_POW2)));
+    }
+    Ok(None)
+}
+
+/// Strength reduction: `bvurem x 2^k -> bvand x (2^k - 1)`.
+///
+/// The unsigned remainder of `x` modulo a power of two `2^k` (`1 <= 2^k <
+/// 2^width`) is exactly the low `k` bits of `x`, i.e. masking with `2^k - 1`, for
+/// **every** value of `x`. The rule fires only when the *divisor* (second operand
+/// `args[1]`) is the power-of-two constant; remainder is not commutative, so a
+/// power-of-two *first* operand must never trigger it. `value == 1` (`k == 0`)
+/// reduces to `bvand x 0`, i.e. `0`. The divisor `0` is not a power of two, so the
+/// SMT-LIB totality case `bvurem x 0 = x` is correctly skipped.
+fn rewrite_bv_urem(
+    arena: &mut TermArena,
+    args: &[TermId],
+    enabled: &BTreeSet<&str>,
+) -> Result<Option<LocalRewrite>, IrError> {
+    if enabled.contains(BV_UREM_POW2)
+        && let Some((width, value)) = bv_const(arena, args[1])
+        && value.is_power_of_two()
+    {
+        let mask = arena.bv_const(width, value - 1)?;
+        return Ok(Some(applied(arena.bv_and(args[0], mask)?, BV_UREM_POW2)));
     }
     Ok(None)
 }
@@ -2197,5 +2259,117 @@ mod commutative_tests {
         // `* 0` still folds to `0` via bv.mul_zero.v1.
         let mul_zero = a.bv_mul(x, zero).unwrap();
         assert_eq!(canonicalize(&mut a, mul_zero).unwrap().term, zero);
+    }
+
+    /// `bvudiv x 8` (width 8) strength-reduces to `bvlshr x 3`, and `bvurem x 8`
+    /// to `bvand x 7`.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn bv_udiv_urem_pow2_strength_reduce() {
+        let mut a = TermArena::new();
+        let x = a.bv_var("x", 8).unwrap();
+        let eight = a.bv_const(8, 8).unwrap();
+
+        let three = a.bv_const(8, 3).unwrap();
+        let expected_div = a.bv_lshr(x, three).unwrap();
+        let udiv = a.bv_udiv(x, eight).unwrap();
+        assert_eq!(canonicalize(&mut a, udiv).unwrap().term, expected_div);
+
+        let seven = a.bv_const(8, 7).unwrap();
+        let expected_rem = a.bv_and(x, seven).unwrap();
+        let urem = a.bv_urem(x, eight).unwrap();
+        assert_eq!(canonicalize(&mut a, urem).unwrap().term, expected_rem);
+    }
+
+    /// Exhaustive denotation check over all 4-bit `x` (including high-bit-set
+    /// values): `bvudiv x 4 ≡ bvlshr x 2` and `bvurem x 4 ≡ bvand x 3`.
+    #[test]
+    fn bv_udiv_urem_pow2_preserve_denotation() {
+        let mut a = TermArena::new();
+        let x_sym = a.declare("x", Sort::BitVec(4)).unwrap();
+        let x = a.var(x_sym);
+        let four = a.bv_const(4, 4).unwrap();
+
+        let udiv = a.bv_udiv(x, four).unwrap();
+        let canon_div = canonicalize(&mut a, udiv).unwrap().term;
+        let two = a.bv_const(4, 2).unwrap();
+        let expected_div = a.bv_lshr(x, two).unwrap();
+        assert_eq!(canon_div, expected_div);
+
+        let urem = a.bv_urem(x, four).unwrap();
+        let canon_rem = canonicalize(&mut a, urem).unwrap().term;
+        let three = a.bv_const(4, 3).unwrap();
+        let expected_rem = a.bv_and(x, three).unwrap();
+        assert_eq!(canon_rem, expected_rem);
+
+        for xv in 0..16u128 {
+            let mut asg = Assignment::new();
+            asg.set(
+                x_sym,
+                Value::Bv {
+                    width: 4,
+                    value: xv,
+                },
+            );
+            assert_eq!(
+                eval(&a, udiv, &asg).unwrap(),
+                eval(&a, canon_div, &asg).unwrap(),
+                "bvudiv-by-power-of-two changed denotation at x = {xv}",
+            );
+            assert_eq!(
+                eval(&a, urem, &asg).unwrap(),
+                eval(&a, canon_rem, &asg).unwrap(),
+                "bvurem-by-power-of-two changed denotation at x = {xv}",
+            );
+        }
+    }
+
+    /// Soundness guards: only the UNSIGNED ops with a power-of-two **divisor**
+    /// reduce. A non-power-of-two divisor, a power-of-two **dividend** (variable
+    /// divisor), and the signed div/rem family are all left unchanged.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn bv_udiv_urem_pow2_negatives() {
+        let mut a = TermArena::new();
+        let x = a.bv_var("x", 8).unwrap();
+        let three = a.bv_const(8, 3).unwrap();
+        let eight = a.bv_const(8, 8).unwrap();
+        let four = a.bv_const(8, 4).unwrap();
+
+        // Non-power-of-two divisor: unchanged.
+        let udiv_three = a.bv_udiv(x, three).unwrap();
+        let canon = canonicalize(&mut a, udiv_three).unwrap().term;
+        assert!(matches!(
+            a.node(canon),
+            TermNode::App { op: Op::BvUdiv, .. }
+        ));
+
+        // Power-of-two DIVIDEND, variable divisor: not reduced (only args[1] fires).
+        let udiv_const_dividend = a.bv_udiv(eight, x).unwrap();
+        let canon = canonicalize(&mut a, udiv_const_dividend).unwrap().term;
+        assert!(matches!(
+            a.node(canon),
+            TermNode::App { op: Op::BvUdiv, .. }
+        ));
+        let urem_const_first = a.bv_urem(eight, x).unwrap();
+        let canon = canonicalize(&mut a, urem_const_first).unwrap().term;
+        assert!(matches!(
+            a.node(canon),
+            TermNode::App { op: Op::BvUrem, .. }
+        ));
+
+        // Signed div/rem by a power of two: NOT reduced (unsound shift), stays signed.
+        let sdiv = a.bv_sdiv(x, four).unwrap();
+        let canon = canonicalize(&mut a, sdiv).unwrap().term;
+        assert!(matches!(
+            a.node(canon),
+            TermNode::App { op: Op::BvSdiv, .. }
+        ));
+        let srem = a.bv_srem(x, four).unwrap();
+        let canon = canonicalize(&mut a, srem).unwrap().term;
+        assert!(matches!(
+            a.node(canon),
+            TermNode::App { op: Op::BvSrem, .. }
+        ));
     }
 }
