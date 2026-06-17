@@ -51,6 +51,8 @@ const BV_XOR_SELF: &str = "bv.xor_self.v1";
 const BV_SHIFT_ZERO: &str = "bv.shift_zero.v1";
 const BV_EXTRACT_WHOLE: &str = "bv.extract_whole.v1";
 const BV_EXTRACT_CONCAT: &str = "bv.extract_concat.v1";
+const BV_EXTRACT_EXTEND: &str = "bv.extract_extend.v1";
+const BV_CONCAT_EXTRACT: &str = "bv.concat_extract.v1";
 const BV_EXTEND_ZERO: &str = "bv.extend_zero.v1";
 const BV_ROTATE_ZERO: &str = "bv.rotate_zero.v1";
 const COMMUTATIVE_ORDER: &str = "commutative.operand_order.v1";
@@ -461,6 +463,16 @@ fn default_rules() -> Vec<RewriteRule> {
             "`extract` whose range lies entirely within one side of a `concat`",
         ),
         rule(
+            BV_EXTRACT_EXTEND,
+            "Extract within the original bits of an extend",
+            "`extract` over a `zero_extend`/`sign_extend` whose high index lies below the original width",
+        ),
+        rule(
+            BV_CONCAT_EXTRACT,
+            "Concat of adjacent extracts of the same term",
+            "`concat` of two `extract`s over the same term with adjacent (gap-free, overlap-free) ranges",
+        ),
+        rule(
             BV_EXTEND_ZERO,
             "Bit-vector zero-width extension identity",
             "`zero_extend` or `sign_extend` by zero bits",
@@ -660,6 +672,7 @@ fn rewrite_app(
         Op::Extract { hi, lo } => rewrite_extract(arena, hi, lo, args, enabled)?,
         Op::ZeroExt { by } | Op::SignExt { by } => rewrite_extend(by, args, enabled),
         Op::RotateLeft { by } | Op::RotateRight { by } => rewrite_rotate(by, args, enabled),
+        Op::Concat => rewrite_concat(arena, args, enabled)?,
         Op::BvNand
         | Op::BvNor
         | Op::BvXnor
@@ -667,7 +680,6 @@ fn rewrite_app(
         | Op::BvSrem
         | Op::BvSmod
         | Op::BvComp
-        | Op::Concat
         | Op::Select
         | Op::Store
         | Op::ConstArray { .. }
@@ -1331,6 +1343,29 @@ fn rewrite_extract(
             )));
         }
     }
+    // `extract within the original bits of an extend`: both `zero_extend` and
+    // `sign_extend` keep the low `width(x)` bits exactly equal to `x`'s bits and
+    // only differ in the appended high bits. When the whole extract range lies
+    // strictly below the original width (`hi < width(x)`), it touches only those
+    // unchanged low bits, so `((_ extract hi lo) (extend x)) ≡ ((_ extract hi lo)
+    // x)` regardless of which extend — exact-denotation, identity projection. When
+    // `hi >= width(x)` the range reaches the appended bits (which differ between
+    // zero/sign extend and may straddle the boundary), so the rule is skipped.
+    if enabled.contains(BV_EXTRACT_EXTEND)
+        && let TermNode::App {
+            op: Op::ZeroExt { .. } | Op::SignExt { .. },
+            args: inner,
+        } = arena.node(args[0])
+    {
+        let x = inner[0];
+        let xw = arena
+            .sort_of(x)
+            .bv_width()
+            .expect("extend operand has BV sort");
+        if hi < xw {
+            return Ok(Some(applied(arena.extract(hi, lo, x)?, BV_EXTRACT_EXTEND)));
+        }
+    }
     Ok(None)
 }
 
@@ -1346,6 +1381,44 @@ fn rewrite_rotate(by: u32, args: &[TermId], enabled: &BTreeSet<&str>) -> Option<
         return Some(applied(args[0], BV_ROTATE_ZERO));
     }
     None
+}
+
+/// `concat of adjacent extracts of the same term`: reassemble two contiguous
+/// slices of one term into a single slice.
+///
+/// `Op::Concat` is binary: `args[0]` is the HIGH operand and `args[1]` is the
+/// LOW operand. When both are extracts over the **same** inner term `x` —
+/// `args[0] = ((_ extract hi1 lo1) x)` and `args[1] = ((_ extract hi2 lo2) x)` —
+/// and the slices are **adjacent** (`lo1 == hi2 + 1`: the high slice begins
+/// exactly one bit above the low slice, with no gap and no overlap), the
+/// concatenation reproduces the contiguous range `lo2..=hi1`, so it rewrites to
+/// `((_ extract hi1 lo2) x)`. Exact-denotation with identity model projection.
+/// A gap/overlap, or extracts over different terms, leaves the term unchanged.
+fn rewrite_concat(
+    arena: &mut TermArena,
+    args: &[TermId],
+    enabled: &BTreeSet<&str>,
+) -> Result<Option<LocalRewrite>, IrError> {
+    if enabled.contains(BV_CONCAT_EXTRACT)
+        && let TermNode::App {
+            op: Op::Extract { hi: hi1, lo: lo1 },
+            args: high_args,
+        } = arena.node(args[0])
+        && let (hi1, lo1, x_high) = (*hi1, *lo1, high_args[0])
+        && let TermNode::App {
+            op: Op::Extract { hi: hi2, lo: lo2 },
+            args: low_args,
+        } = arena.node(args[1])
+        && let (hi2, lo2, x_low) = (*hi2, *lo2, low_args[0])
+        && x_high == x_low
+        && lo1 == hi2 + 1
+    {
+        return Ok(Some(applied(
+            arena.extract(hi1, lo2, x_high)?,
+            BV_CONCAT_EXTRACT,
+        )));
+    }
+    Ok(None)
 }
 
 /// Rebuilds the application `op(args…)` via the typed arena builders, re-running
@@ -2507,6 +2580,149 @@ mod commutative_tests {
                     "extract-of-concat (high part) changed denotation at a={av}, b={bv}",
                 );
             }
+        }
+    }
+
+    /// `extract` whose high index lies strictly below the original width of a
+    /// `zero_extend`/`sign_extend` rewrites to the same `extract` over the
+    /// pre-extension term; a range reaching the extended bits is left unchanged.
+    #[test]
+    #[allow(clippy::many_single_char_names, clippy::similar_names)]
+    fn extract_within_extend_original_bits() {
+        let mut a = TermArena::new();
+        let x = a.bv_var("x", 4).unwrap();
+        let zext = a.zero_ext(4, x).unwrap();
+        let sext = a.sign_ext(4, x).unwrap();
+
+        // hi = 2 < width(x) = 4: drop the zero_extend.
+        let from_zext = a.extract(2, 0, zext).unwrap();
+        let expected = a.extract(2, 0, x).unwrap();
+        assert_eq!(canonicalize(&mut a, from_zext).unwrap().term, expected);
+
+        // Same for sign_extend (low bits are identical to x's).
+        let from_sext = a.extract(2, 0, sext).unwrap();
+        assert_eq!(canonicalize(&mut a, from_sext).unwrap().term, expected);
+
+        // hi = 5 >= width(x) = 4: range touches the extended bits, NOT rewritten.
+        let touches_ext = a.extract(5, 0, zext).unwrap();
+        let canon = canonicalize(&mut a, touches_ext).unwrap().term;
+        assert!(matches!(
+            a.node(canon),
+            TermNode::App {
+                op: Op::Extract { hi: 5, lo: 0 },
+                ..
+            }
+        ));
+    }
+
+    /// Exhaustive denotation check: over all 16 values of a 4-bit `x`,
+    /// `extract(2, 0, zero_extend(4, x))` and `extract(2, 0, sign_extend(4, x))`
+    /// both equal `extract(2, 0, x)`.
+    #[test]
+    #[allow(clippy::many_single_char_names, clippy::similar_names)]
+    fn extract_within_extend_preserves_denotation() {
+        let mut a = TermArena::new();
+        let x_sym = a.declare("x", Sort::BitVec(4)).unwrap();
+        let x = a.var(x_sym);
+        let zext = a.zero_ext(4, x).unwrap();
+        let sext = a.sign_ext(4, x).unwrap();
+
+        let from_zext = a.extract(2, 0, zext).unwrap();
+        let from_sext = a.extract(2, 0, sext).unwrap();
+        let canon_zext = canonicalize(&mut a, from_zext).unwrap().term;
+        let canon_sext = canonicalize(&mut a, from_sext).unwrap().term;
+        let expected = a.extract(2, 0, x).unwrap();
+        assert_eq!(canon_zext, expected);
+        assert_eq!(canon_sext, expected);
+
+        for xv in 0..16u128 {
+            let mut asg = Assignment::new();
+            asg.set(
+                x_sym,
+                Value::Bv {
+                    width: 4,
+                    value: xv,
+                },
+            );
+            assert_eq!(
+                eval(&a, from_zext, &asg).unwrap(),
+                eval(&a, canon_zext, &asg).unwrap(),
+                "extract-within-zero_extend changed denotation at x={xv}",
+            );
+            assert_eq!(
+                eval(&a, from_sext, &asg).unwrap(),
+                eval(&a, canon_sext, &asg).unwrap(),
+                "extract-within-sign_extend changed denotation at x={xv}",
+            );
+        }
+    }
+
+    /// `concat` of two adjacent extracts (`lo1 == hi2 + 1`) of the same term
+    /// reassembles into one `extract`; a gap, or different inner terms, is left
+    /// unchanged.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn concat_of_adjacent_extracts_reassembled() {
+        let mut a = TermArena::new();
+        let x = a.bv_var("x", 6).unwrap();
+        let y = a.bv_var("y", 6).unwrap();
+
+        // Adjacent: extract(5,3,x) over extract(2,0,x), lo1=3 == hi2+1=3.
+        let high = a.extract(5, 3, x).unwrap();
+        let low = a.extract(2, 0, x).unwrap();
+        let concat = a.concat(high, low).unwrap();
+        let expected = a.extract(5, 0, x).unwrap();
+        assert_eq!(canonicalize(&mut a, concat).unwrap().term, expected);
+
+        // Gap: extract(5,4,x) over extract(2,0,x), lo1=4 != hi2+1=3. NOT rewritten.
+        let high_gap = a.extract(5, 4, x).unwrap();
+        let concat_gap = a.concat(high_gap, low).unwrap();
+        let canon_gap = canonicalize(&mut a, concat_gap).unwrap().term;
+        assert!(matches!(
+            a.node(canon_gap),
+            TermNode::App { op: Op::Concat, .. }
+        ));
+
+        // Different inner terms: extract(5,3,x) over extract(2,0,y). NOT rewritten.
+        let low_other = a.extract(2, 0, y).unwrap();
+        let concat_other = a.concat(high, low_other).unwrap();
+        let canon_other = canonicalize(&mut a, concat_other).unwrap().term;
+        assert!(matches!(
+            a.node(canon_other),
+            TermNode::App { op: Op::Concat, .. }
+        ));
+    }
+
+    /// Exhaustive denotation check: over all 64 values of a 6-bit `x`,
+    /// `concat(extract(5,3,x), extract(2,0,x))` equals its reassembled form
+    /// `extract(5,0,x)` (which is the whole `x`).
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn concat_of_adjacent_extracts_preserves_denotation() {
+        let mut a = TermArena::new();
+        let x_sym = a.declare("x", Sort::BitVec(6)).unwrap();
+        let x = a.var(x_sym);
+        let high = a.extract(5, 3, x).unwrap();
+        let low = a.extract(2, 0, x).unwrap();
+        let concat = a.concat(high, low).unwrap();
+        let canon = canonicalize(&mut a, concat).unwrap().term;
+        let expected = a.extract(5, 0, x).unwrap();
+        assert_eq!(canon, expected);
+
+        for xv in 0..64u128 {
+            let mut asg = Assignment::new();
+            asg.set(
+                x_sym,
+                Value::Bv {
+                    width: 6,
+                    value: xv,
+                },
+            );
+            assert_eq!(
+                eval(&a, concat, &asg).unwrap(),
+                eval(&a, canon, &asg).unwrap(),
+                "concat-of-adjacent-extracts changed denotation at x={xv}",
+            );
         }
     }
 }

@@ -579,6 +579,21 @@ mod tests {
                 a.extract(2, 0, b4).unwrap(),
             )
         });
+        assert_rule_fires(&mut covered, "bv.extract_extend.v1", |a| {
+            // extract(2, 0, zero_extend(4, x4)) lies in the original 4 bits
+            // (hi=2 < 4), so it rewrites to extract(2, 0, x4).
+            let x4 = a.bv_var("x4", 4).unwrap();
+            let zext = a.zero_ext(4, x4).unwrap();
+            (a.extract(2, 0, zext).unwrap(), a.extract(2, 0, x4).unwrap())
+        });
+        assert_rule_fires(&mut covered, "bv.concat_extract.v1", |a| {
+            // concat(extract(5,3,x6), extract(2,0,x6)) — adjacent slices of the
+            // same term (lo1=3 == hi2+1) — reassemble to extract(5, 0, x6).
+            let x6 = a.bv_var("x6", 6).unwrap();
+            let high = a.extract(5, 3, x6).unwrap();
+            let low = a.extract(2, 0, x6).unwrap();
+            (a.concat(high, low).unwrap(), a.extract(5, 0, x6).unwrap())
+        });
         assert_rule_fires(&mut covered, "bv.extend_zero.v1", |a| {
             let x = a.bv_var("x", 4).unwrap();
             (a.zero_ext(0, x).unwrap(), x)
