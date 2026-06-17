@@ -762,50 +762,20 @@ pub fn check_alethe_with(
                             return Err(AletheError::StepNotEntailed { id: id.clone() });
                         }
                     }
-                    "eq_reflexive" => {
-                        if !premise_clauses.is_empty() || !is_eq_reflexive(clause) {
-                            return Err(AletheError::StepNotEntailed { id: id.clone() });
-                        }
-                    }
-                    "eq_transitive" => {
-                        if !premise_clauses.is_empty() || !is_eq_transitive(clause) {
-                            return Err(AletheError::StepNotEntailed { id: id.clone() });
-                        }
-                    }
-                    "eq_symmetric" => {
-                        if !premise_clauses.is_empty() || !is_eq_symmetric(clause) {
-                            return Err(AletheError::StepNotEntailed { id: id.clone() });
-                        }
-                    }
-                    "eq_congruent" => {
-                        if !premise_clauses.is_empty() || !is_eq_congruent(clause) {
-                            return Err(AletheError::StepNotEntailed { id: id.clone() });
-                        }
-                    }
-                    "and_pos" => {
-                        if !premise_clauses.is_empty() || !is_and_pos(clause) {
-                            return Err(AletheError::StepNotEntailed { id: id.clone() });
-                        }
-                    }
-                    "and_neg" => {
-                        if !premise_clauses.is_empty() || !is_and_neg(clause) {
-                            return Err(AletheError::StepNotEntailed { id: id.clone() });
-                        }
-                    }
-                    "or_pos" => {
-                        if !premise_clauses.is_empty() || !is_or_pos(clause) {
-                            return Err(AletheError::StepNotEntailed { id: id.clone() });
-                        }
-                    }
-                    "or_neg" => {
-                        if !premise_clauses.is_empty() || !is_or_neg(clause) {
-                            return Err(AletheError::StepNotEntailed { id: id.clone() });
-                        }
-                    }
-                    _ => match extra(rule.as_str(), clause) {
+                    // The structurally-checked theory/CNF/equality rules.
+                    other => match check_structural_rule(other, &premise_clauses, clause) {
                         Some(true) => {}
                         Some(false) => return Err(AletheError::StepNotEntailed { id: id.clone() }),
-                        None => return Err(AletheError::UnsupportedRule { rule: rule.clone() }),
+                        // Not a structural rule: defer to the caller's `extra` hook.
+                        None => match extra(other, clause) {
+                            Some(true) => {}
+                            Some(false) => {
+                                return Err(AletheError::StepNotEntailed { id: id.clone() });
+                            }
+                            None => {
+                                return Err(AletheError::UnsupportedRule { rule: rule.clone() });
+                            }
+                        },
                     },
                 }
                 if clause.is_empty() {
@@ -817,6 +787,36 @@ pub fn check_alethe_with(
     }
 
     Ok(derived_empty)
+}
+
+/// Dispatches the structurally-checked Alethe rules (the EUF `eq_*` rules, the
+/// Boolean CNF-introduction rules, and the general equality rules
+/// `refl`/`symm`/`trans`/`cong`). Returns `Some(true)` if `rule` is one of these
+/// and the step is valid, `Some(false)` if it is one of these but invalid, and
+/// `None` if `rule` is not a structural rule this checker handles (so the caller
+/// can defer to its `extra` hook). The premise-less rules additionally require an
+/// empty premise list; the equality rules consume their unit-equality premises.
+fn check_structural_rule(
+    rule: &str,
+    premise_clauses: &[&AletheClause],
+    clause: &AletheClause,
+) -> Option<bool> {
+    let no_premises = premise_clauses.is_empty();
+    match rule {
+        "eq_reflexive" => Some(no_premises && is_eq_reflexive(clause)),
+        "eq_transitive" => Some(no_premises && is_eq_transitive(clause)),
+        "eq_symmetric" => Some(no_premises && is_eq_symmetric(clause)),
+        "eq_congruent" => Some(no_premises && is_eq_congruent(clause)),
+        "and_pos" => Some(no_premises && is_and_pos(clause)),
+        "and_neg" => Some(no_premises && is_and_neg(clause)),
+        "or_pos" => Some(no_premises && is_or_pos(clause)),
+        "or_neg" => Some(no_premises && is_or_neg(clause)),
+        "refl" => Some(no_premises && is_refl(clause)),
+        "symm" => Some(is_symm(premise_clauses, clause)),
+        "trans" => Some(is_trans(premise_clauses, clause)),
+        "cong" => Some(is_cong(premise_clauses, clause)),
+        _ => None,
+    }
 }
 
 /// Returns the two arguments of a 2-arity `=` application, or `None` if the term
@@ -1042,6 +1042,182 @@ fn is_eq_congruent(clause: &AletheClause) -> bool {
         }
     }
     true
+}
+
+/// Extracts the single positive equality `(= a b)` carried by a premise clause,
+/// or `None` if the premise is not a unit clause holding one positive `=`
+/// application of arity 2. The general equality rules (`symm`/`trans`/`cong`)
+/// take their premises as such unit equality clauses; anything else rejects.
+fn premise_eq(clause: &AletheClause) -> Option<(&AletheTerm, &AletheTerm)> {
+    let [lit] = clause.as_slice() else {
+        return None;
+    };
+    if lit.negated {
+        return None;
+    }
+    as_eq(&lit.atom)
+}
+
+/// Structural check for the Alethe `refl` rule (structural subset).
+///
+/// No premises; the conclusion is the unit clause `(cl (= a b))`. Accepts iff `a`
+/// and `b` are structurally equal. This is the sound core of Carcara's `refl`
+/// (`reflexivity.rs`): Carcara's non-strict `refl` additionally permits
+/// alpha-equivalence and context-substitution normalization, but for our purely
+/// structural [`AletheTerm`]s plain structural equality is the valid subset —
+/// any other shape (non-equality, two literals, or `a != b`) is rejected.
+fn is_refl(clause: &AletheClause) -> bool {
+    let [lit] = clause.as_slice() else {
+        return false;
+    };
+    if lit.negated {
+        return false;
+    }
+    matches!(as_eq(&lit.atom), Some((a, b)) if a == b)
+}
+
+/// Structural check for the Alethe `symm` rule.
+///
+/// One premise, the unit equality `(= a b)`; the conclusion is the unit clause
+/// `(cl (= b a))`. Accepts iff the conclusion is exactly that equality with the
+/// sides swapped relative to the premise. Mirrors Carcara's `symm` (`extras.rs`),
+/// which takes one `=` premise and concludes the flipped `=`. Any other premise
+/// count, a non-unit/non-positive/non-`=` premise or conclusion, or a conclusion
+/// that is not the swap is rejected.
+fn is_symm(premises: &[&AletheClause], clause: &AletheClause) -> bool {
+    let [premise] = premises else {
+        return false;
+    };
+    let Some((a, b)) = premise_eq(premise) else {
+        return false;
+    };
+    let [lit] = clause.as_slice() else {
+        return false;
+    };
+    if lit.negated {
+        return false;
+    }
+    let Some((c, d)) = as_eq(&lit.atom) else {
+        return false;
+    };
+    // Premise `(= a b)`, conclusion `(= b a)`.
+    c == b && d == a
+}
+
+/// Structural check for the Alethe `trans` rule.
+///
+/// Premises are a chain of unit equalities `(= x0 x1)`, `(= x1 x2)`, …,
+/// `(= x_{n-1} xn)`; the conclusion is the unit clause `(cl (= x0 xn))`. Accepts
+/// iff the premises form a connected chain whose adjacent links share their
+/// linking term (premise[i] right-hand side equals premise[i+1] left-hand side)
+/// and whose endpoints are exactly the conclusion's two sides. This mirrors
+/// Carcara's `trans` (`transitivity.rs::find_chain`) *adjacency* requirement:
+/// each step extends the chain from the running endpoint. (Carcara also allows
+/// each premise to be used flipped while resolving the chain; here we require the
+/// premises to already be in chain order and orientation — a sound subset, just
+/// incomplete on reordered/flipped premises.) At least one premise is required;
+/// a broken (non-adjacent) chain or wrong endpoints are rejected.
+fn is_trans(premises: &[&AletheClause], clause: &AletheClause) -> bool {
+    let [lit] = clause.as_slice() else {
+        return false;
+    };
+    if lit.negated {
+        return false;
+    }
+    let Some((concl_lhs, concl_rhs)) = as_eq(&lit.atom) else {
+        return false;
+    };
+    if premises.is_empty() {
+        return false;
+    }
+    let mut endpoint: Option<&AletheTerm> = None;
+    let mut first_lhs: Option<&AletheTerm> = None;
+    for premise in premises {
+        let Some((lhs, rhs)) = premise_eq(premise) else {
+            return false;
+        };
+        match endpoint {
+            None => first_lhs = Some(lhs),
+            Some(expected) => {
+                if expected != lhs {
+                    return false;
+                }
+            }
+        }
+        endpoint = Some(rhs);
+    }
+    first_lhs == Some(concl_lhs) && endpoint == Some(concl_rhs)
+}
+
+/// Structural check for the Alethe `cong` rule.
+///
+/// Premises are argument equalities `(= a_i b_i)` (unit equality clauses); the
+/// conclusion is the unit clause `(cl (= (f a1 … an) (f b1 … bn)))`, where the
+/// two sides are applications of the same head with the same arity. Accepts iff:
+/// both sides share a head — same [`AletheTerm::App`] symbol, or same
+/// [`AletheTerm::Indexed`] `op`+`indices` — with equal arity, and the argument
+/// pairs are justified following Carcara's `cong` premise-consumption convention
+/// (`congruence.rs::check_cong`): iterate the zipped argument pairs and, for each
+/// pair, *prefer to consume* the next premise if it equates the pair (in either
+/// orientation); otherwise the pair must be directly structurally equal (no
+/// premise consumed); otherwise reject. At the end **every** premise must have
+/// been consumed (an unconsumed premise rejects). A head mismatch, arity
+/// mismatch, a pair neither equal nor premise-justified, or a leftover premise is
+/// rejected.
+fn is_cong(premises: &[&AletheClause], clause: &AletheClause) -> bool {
+    let [lit] = clause.as_slice() else {
+        return false;
+    };
+    if lit.negated {
+        return false;
+    }
+    let Some((lhs, rhs)) = as_eq(&lit.atom) else {
+        return false;
+    };
+    // Same head + arity: either matching `App` symbols or matching `Indexed`
+    // op+indices.
+    let (f_args, g_args): (&[AletheTerm], &[AletheTerm]) = match (lhs, rhs) {
+        (AletheTerm::App(f, fa), AletheTerm::App(g, ga)) if f == g => (fa, ga),
+        (
+            AletheTerm::Indexed {
+                op: f_op,
+                indices: f_ix,
+                args: fa,
+            },
+            AletheTerm::Indexed {
+                op: g_op,
+                indices: g_ix,
+                args: ga,
+            },
+        ) if f_op == g_op && f_ix == g_ix => (fa, ga),
+        _ => return false,
+    };
+    if f_args.len() != g_args.len() {
+        return false;
+    }
+    // Extract each premise's equality up front; any non-unit-equality rejects.
+    let mut prem_eqs: Vec<(&AletheTerm, &AletheTerm)> = Vec::with_capacity(premises.len());
+    for premise in premises {
+        let Some(pair) = premise_eq(premise) else {
+            return false;
+        };
+        prem_eqs.push(pair);
+    }
+    // Walk argument pairs, consuming premises per Carcara's `check_cong`: prefer
+    // consuming the next premise when it justifies the pair, else require direct
+    // structural equality.
+    let mut next = 0;
+    for (f_arg, g_arg) in f_args.iter().zip(g_args) {
+        match prem_eqs.get(next) {
+            Some(&(t, u)) if (f_arg == t && g_arg == u) || (f_arg == u && g_arg == t) => {
+                next += 1;
+            }
+            _ if f_arg == g_arg => {}
+            _ => return false,
+        }
+    }
+    // All premises must have been consumed.
+    next == prem_eqs.len()
 }
 
 /// Returns `true` iff `premises ⊨ conclusion`, decided as
@@ -1640,6 +1816,256 @@ mod tests {
                 id: "c1".to_owned()
             })
         );
+    }
+
+    /// An `(= a b)` literal whose sides are arbitrary terms.
+    fn eq_term_lit(a: AletheTerm, b: AletheTerm) -> AletheLit {
+        AletheLit {
+            atom: AletheTerm::App("=".to_owned(), vec![a, b]),
+            negated: false,
+        }
+    }
+
+    /// `App(head, args)` over `Const` arguments.
+    fn app(head: &str, args: &[&str]) -> AletheTerm {
+        AletheTerm::App(
+            head.to_owned(),
+            args.iter()
+                .map(|a| AletheTerm::Const((*a).to_owned()))
+                .collect(),
+        )
+    }
+
+    #[test]
+    fn refl_checks() {
+        // Accepts `(= x x)`.
+        let valid = vec![step("r", vec![eq_lit("x", "x")], "refl", &[])];
+        assert_eq!(check_alethe(&valid), Ok(false));
+
+        // Accepts a compound reflexive `(= (f a) (f a))`.
+        let compound = vec![step(
+            "r",
+            vec![eq_term_lit(app("f", &["a"]), app("f", &["a"]))],
+            "refl",
+            &[],
+        )];
+        assert_eq!(check_alethe(&compound), Ok(false));
+
+        // Rejects `(= x y)` with x != y.
+        let bad = vec![step("r", vec![eq_lit("x", "y")], "refl", &[])];
+        assert_eq!(
+            check_alethe(&bad),
+            Err(AletheError::StepNotEntailed { id: "r".to_owned() })
+        );
+
+        // Rejects a stray premise (refl takes none).
+        let with_premise = vec![
+            assume("h", vec![eq_lit("a", "b")]),
+            step("r", vec![eq_lit("x", "x")], "refl", &["h"]),
+        ];
+        assert_eq!(
+            check_alethe(&with_premise),
+            Err(AletheError::StepNotEntailed { id: "r".to_owned() })
+        );
+    }
+
+    #[test]
+    fn symm_checks() {
+        // Accepts the swap: premise `(= a b)`, conclusion `(= b a)`.
+        let valid = vec![
+            assume("h", vec![eq_lit("a", "b")]),
+            step("s", vec![eq_lit("b", "a")], "symm", &["h"]),
+        ];
+        assert_eq!(check_alethe(&valid), Ok(false));
+
+        // Rejects a non-swap: conclusion `(= a b)` (same orientation).
+        let not_swapped = vec![
+            assume("h", vec![eq_lit("a", "b")]),
+            step("s", vec![eq_lit("a", "b")], "symm", &["h"]),
+        ];
+        assert_eq!(
+            check_alethe(&not_swapped),
+            Err(AletheError::StepNotEntailed { id: "s".to_owned() })
+        );
+
+        // Rejects wrong terms: conclusion `(= c a)`.
+        let wrong = vec![
+            assume("h", vec![eq_lit("a", "b")]),
+            step("s", vec![eq_lit("c", "a")], "symm", &["h"]),
+        ];
+        assert_eq!(
+            check_alethe(&wrong),
+            Err(AletheError::StepNotEntailed { id: "s".to_owned() })
+        );
+
+        // Rejects a missing premise (symm needs exactly one).
+        let no_premise = vec![step("s", vec![eq_lit("b", "a")], "symm", &[])];
+        assert_eq!(
+            check_alethe(&no_premise),
+            Err(AletheError::StepNotEntailed { id: "s".to_owned() })
+        );
+    }
+
+    #[test]
+    fn trans_checks() {
+        // 2-link chain: (= a b), (= b c) ⊢ (= a c).
+        let two = vec![
+            assume("h1", vec![eq_lit("a", "b")]),
+            assume("h2", vec![eq_lit("b", "c")]),
+            step("t", vec![eq_lit("a", "c")], "trans", &["h1", "h2"]),
+        ];
+        assert_eq!(check_alethe(&two), Ok(false));
+
+        // 3-link chain: (= a b), (= b c), (= c d) ⊢ (= a d).
+        let three = vec![
+            assume("h1", vec![eq_lit("a", "b")]),
+            assume("h2", vec![eq_lit("b", "c")]),
+            assume("h3", vec![eq_lit("c", "d")]),
+            step("t", vec![eq_lit("a", "d")], "trans", &["h1", "h2", "h3"]),
+        ];
+        assert_eq!(check_alethe(&three), Ok(false));
+
+        // Broken chain: links are not adjacent — (= a b), (= c d) does not connect.
+        let broken = vec![
+            assume("h1", vec![eq_lit("a", "b")]),
+            assume("h2", vec![eq_lit("c", "d")]),
+            step("t", vec![eq_lit("a", "d")], "trans", &["h1", "h2"]),
+        ];
+        assert_eq!(
+            check_alethe(&broken),
+            Err(AletheError::StepNotEntailed { id: "t".to_owned() })
+        );
+
+        // Wrong endpoints: chain (= a b), (= b c) but conclusion (= a d).
+        let wrong_end = vec![
+            assume("h1", vec![eq_lit("a", "b")]),
+            assume("h2", vec![eq_lit("b", "c")]),
+            step("t", vec![eq_lit("a", "d")], "trans", &["h1", "h2"]),
+        ];
+        assert_eq!(
+            check_alethe(&wrong_end),
+            Err(AletheError::StepNotEntailed { id: "t".to_owned() })
+        );
+    }
+
+    #[test]
+    fn cong_checks() {
+        // f(a) = f(b) from a = b.
+        let unary = vec![
+            assume("h", vec![eq_lit("a", "b")]),
+            step(
+                "c",
+                vec![eq_term_lit(app("f", &["a"]), app("f", &["b"]))],
+                "cong",
+                &["h"],
+            ),
+        ];
+        assert_eq!(check_alethe(&unary), Ok(false));
+
+        // g(a, c) = g(b, c) from a = b: the unchanged 2nd argument needs no premise.
+        let binary = vec![
+            assume("h", vec![eq_lit("a", "b")]),
+            step(
+                "c",
+                vec![eq_term_lit(app("g", &["a", "c"]), app("g", &["b", "c"]))],
+                "cong",
+                &["h"],
+            ),
+        ];
+        assert_eq!(check_alethe(&binary), Ok(false));
+
+        // Indexed-head congruence: ((_ @bit_of 0) a) = ((_ @bit_of 0) b) from a = b.
+        let indexed = vec![
+            assume("h", vec![eq_lit("a", "b")]),
+            step(
+                "c",
+                vec![eq_term_lit(bit_of(0, "a"), bit_of(0, "b"))],
+                "cong",
+                &["h"],
+            ),
+        ];
+        assert_eq!(check_alethe(&indexed), Ok(false));
+
+        // Head mismatch: f(a) vs g(b).
+        let head_mismatch = vec![
+            assume("h", vec![eq_lit("a", "b")]),
+            step(
+                "c",
+                vec![eq_term_lit(app("f", &["a"]), app("g", &["b"]))],
+                "cong",
+                &["h"],
+            ),
+        ];
+        assert_eq!(
+            check_alethe(&head_mismatch),
+            Err(AletheError::StepNotEntailed { id: "c".to_owned() })
+        );
+
+        // Arity mismatch: f(a) vs f(b, c).
+        let arity_mismatch = vec![
+            assume("h", vec![eq_lit("a", "b")]),
+            step(
+                "c",
+                vec![eq_term_lit(app("f", &["a"]), app("f", &["b", "c"]))],
+                "cong",
+                &["h"],
+            ),
+        ];
+        assert_eq!(
+            check_alethe(&arity_mismatch),
+            Err(AletheError::StepNotEntailed { id: "c".to_owned() })
+        );
+
+        // A position neither equal nor justified: f(a, c) vs f(b, d) with only a = b.
+        let unjustified = vec![
+            assume("h", vec![eq_lit("a", "b")]),
+            step(
+                "c",
+                vec![eq_term_lit(app("f", &["a", "c"]), app("f", &["b", "d"]))],
+                "cong",
+                &["h"],
+            ),
+        ];
+        assert_eq!(
+            check_alethe(&unjustified),
+            Err(AletheError::StepNotEntailed { id: "c".to_owned() })
+        );
+    }
+
+    #[test]
+    fn cong_and_trans_drive_an_unsat_refutation() {
+        // End-to-end mirroring the QF_BV bridge: use cong + trans to derive an
+        // equality, then resolve it against its negation to the empty clause.
+        // h1: a = b ; cong ⊢ f(a) = f(b) ; (assumed) f(b) = c ; trans ⊢ f(a) = c ;
+        // assumed ¬(f(a) = c) ; resolve to (cl).
+        let fa = app("f", &["a"]);
+        let fb = app("f", &["b"]);
+        let c = AletheTerm::Const("c".to_owned());
+        let commands = vec![
+            assume("h1", vec![eq_lit("a", "b")]),
+            assume("h2", vec![eq_term_lit(fb.clone(), c.clone())]),
+            assume(
+                "h3",
+                vec![AletheLit {
+                    negated: true,
+                    ..eq_term_lit(fa.clone(), c.clone())
+                }],
+            ),
+            step(
+                "s1",
+                vec![eq_term_lit(fa.clone(), fb.clone())],
+                "cong",
+                &["h1"],
+            ),
+            step(
+                "s2",
+                vec![eq_term_lit(fa.clone(), c.clone())],
+                "trans",
+                &["s1", "h2"],
+            ),
+            step("s3", vec![], "resolution", &["s2", "h3"]),
+        ];
+        assert_eq!(check_alethe(&commands), Ok(true));
     }
 
     #[test]

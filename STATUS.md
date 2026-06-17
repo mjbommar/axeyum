@@ -355,6 +355,20 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-17** — **`check_alethe` gains the general equality rules
+  `refl`/`symm`/`trans`/`cong`**. axeyum's OWN Alethe checker now structurally
+  verifies reflexivity, symmetry, transitivity chains, and congruence (matching
+  Carcara's `reflexivity`/`extras`/`transitivity`/`congruence` rules: `trans` by
+  premise adjacency, `cong` by one-premise-per-differing-argument-position over a
+  shared `App`/`Indexed` head + arity). This is the step toward axeyum checking its
+  *own* QF_BV bitblast proofs internally (currently only Carcara can) — `cong`/`trans`
+  are exactly the bridge's reduction rules — and it strengthens EUF proof checking
+  too. Premises must be unit positive `(= a b)` clauses; rejects head/arity mismatch,
+  broken chains, unjustified positions. Dispatch refactored into
+  `check_structural_rule` (behavior-preserving, to stay under the clippy line cap).
+  4 new tests + an end-to-end `cong`+`trans`→`(cl)` refutation; all 91 cnf-alethe
+  tests green. **Remaining for internal QF_BV checking: the `bitblast_*` rules in
+  `check_alethe` (port Carcara's reconstructions).**
 - **2026-06-17** — **QF_BV proof driver extended to COMPOUND terms (Carcara-`valid`)**.
   `prove_qf_bv_unsat_alethe` now reduces predicates over compound bit-vector operands
   — bitwise, arithmetic (`bvadd`/`bvneg`/`bvmul`), `bvcomp`, structural
