@@ -355,6 +355,20 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **LRA Carcara cross-check now covers equality assertions**.
+  `FarkasCertificate` gained a `pub origins: Vec<usize>` field (`origins[i]` = the
+  source assertion index of atom `i`; an equality contributes two atoms sharing one
+  origin). `farkas_args` now groups multipliers by origin instead of assuming a 1:1
+  atom↔assertion map: a single-atom assertion (inequality) keeps its multiplier
+  (byte-identical output); a two-atom equality `a=b` emits the **signed** coefficient
+  `m1−m0` (confirmed sign against Carcara — the mixed equality+inequality case
+  disambiguates the global sign), rendered with negatives as `(- n)` / `(- (/ p.0
+  q.0))`. Orientation is robust (`is_negation_of` verifies the two atoms are exact
+  negatives before trusting push order, else bails to no-args). **Three new
+  equality refutations pass Carcara** (`x=1∧x=2` → `((- 1) 1)`; mixed
+  equality+inequality; coefficient-bearing equality). 8 cross-check cases total; the
+  inequality-only fragment is unchanged. Remaining LRA gap: assertions splitting into
+  >2 atoms (conjunctions) still emit no args.
 - **2026-06-16** — **LRA `la_generic` proofs now Carcara-`valid` (Farkas `:args`)**.
   The Alethe `Step` IR gained an `args: Vec<AletheTerm>` field (parse + write
   round-trip; emitted after `:premises`, only when non-empty so all ~80 existing

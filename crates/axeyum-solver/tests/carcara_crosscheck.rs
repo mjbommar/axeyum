@@ -188,3 +188,71 @@ fn lra_multivariable_proof_is_accepted_by_carcara() {
     let report = carcara_accepts(&bin, "lra_multivar", &arena, &assertions, &proof);
     assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
 }
+
+#[test]
+fn lra_equalities_proof_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // x = 1 ∧ x = 2 — pure equalities, unsat. Each `a = b` splits into two bounds,
+    // so the emitted la_generic args are signed per-assertion coefficients (e.g.
+    // `(1, (- 1))`): exactly the new case this proof emitter must cover.
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let one = real_int(&mut arena, 1);
+    let two = real_int(&mut arena, 2);
+    let a1 = arena.eq(x, one).unwrap();
+    let a2 = arena.eq(x, two).unwrap();
+    let assertions = vec![a1, a2];
+
+    let proof = prove_lra_unsat_alethe(&arena, &assertions).expect("emit LRA proof");
+    let report = carcara_accepts(&bin, "lra_equalities", &arena, &assertions, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+#[test]
+fn lra_mixed_equality_inequality_proof_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // x = 1 ∧ x + y <= 0 ∧ y >= 1 — unsat: x = 1, y ≥ 1 ⇒ x + y ≥ 2 > 0. Mixes an
+    // equality (two-atom split) with inequalities (single-atom) in one step.
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let y = arena.real_var("y").unwrap();
+    let zero = real_int(&mut arena, 0);
+    let one = real_int(&mut arena, 1);
+    let x_plus_y = arena.real_add(x, y).unwrap();
+    let a1 = arena.eq(x, one).unwrap();
+    let a2 = arena.real_le(x_plus_y, zero).unwrap();
+    let a3 = arena.real_ge(y, one).unwrap();
+    let assertions = vec![a1, a2, a3];
+
+    let proof = prove_lra_unsat_alethe(&arena, &assertions).expect("emit LRA proof");
+    let report = carcara_accepts(&bin, "lra_mixed_eq", &arena, &assertions, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+#[test]
+fn lra_coefficient_bearing_equality_proof_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // 2x = 1 ∧ x = 1 — unsat: the first forces x = 0.5, the second x = 1. The
+    // refutation needs a non-unit coefficient on an equality split.
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let two = real_int(&mut arena, 2);
+    let one = real_int(&mut arena, 1);
+    let two_x = arena.real_mul(two, x).unwrap();
+    let a1 = arena.eq(two_x, one).unwrap();
+    let a2 = arena.eq(x, one).unwrap();
+    let assertions = vec![a1, a2];
+
+    let proof = prove_lra_unsat_alethe(&arena, &assertions).expect("emit LRA proof");
+    let report = carcara_accepts(&bin, "lra_coeff_eq", &arena, &assertions, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}

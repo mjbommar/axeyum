@@ -185,7 +185,11 @@ fn decide(arena: &TermArena, assertions: &[TermId]) -> Result<Decision, SolverEr
     let nvars = ctx.vars.len();
     match solve(&ctx.constraints, nvars) {
         Feasibility::Unsat(multipliers) => {
-            let certificate = FarkasCertificate { atoms, multipliers };
+            let certificate = FarkasCertificate {
+                atoms,
+                multipliers,
+                origins: origins.clone(),
+            };
             if !certificate.verify() {
                 return Err(SolverError::Backend(
                     "lra: Farkas unsat certificate failed self-check (Fourier–Motzkin bug)"
@@ -271,6 +275,13 @@ pub struct FarkasCertificate {
     pub atoms: Vec<FarkasAtom>,
     /// Nonnegative multipliers, one per atom, in the same order.
     pub multipliers: Vec<Rational>,
+    /// `origins[i]` is the index, into the original `assertions` slice, of the
+    /// atom `atoms[i]`. An inequality assertion contributes exactly one atom; an
+    /// equality `a = b` contributes two (the `a − b ≤ 0` and `b − a ≤ 0` bounds),
+    /// so several atoms can share one origin. Indices are in atom order (the
+    /// deterministic collection order), so this stays a public determinism
+    /// promise.
+    pub origins: Vec<usize>,
 }
 
 impl FarkasCertificate {
@@ -1250,7 +1261,12 @@ pub fn check_with_lra_simplex(
             // Self-check the simplex's own Farkas certificate (no Fourier–Motzkin
             // dependency): the multipliers must independently refute the system.
             let atoms: Vec<FarkasAtom> = ctx.constraints.iter().map(FarkasAtom::from).collect();
-            let certificate = FarkasCertificate { atoms, multipliers };
+            let origins: Vec<usize> = ctx.constraints.iter().map(|c| c.origin).collect();
+            let certificate = FarkasCertificate {
+                atoms,
+                multipliers,
+                origins,
+            };
             if certificate.verify() {
                 Ok(CheckResult::Unsat)
             } else {

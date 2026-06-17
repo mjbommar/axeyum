@@ -513,10 +513,10 @@ pub fn prove_lra_unsat_alethe(
             negated: true,
         })
         .collect();
-    // Derive the per-literal Farkas `:args` from the certificate when every
-    // assertion maps to exactly one atom (the inequality-only case); leave them
-    // empty otherwise (e.g. equality splits) — our own checker still accepts the
-    // proof, but external checkers like Carcara then report it `invalid`.
+    // Derive the per-assertion Farkas `:args` from the certificate: one signed
+    // coefficient per assertion (inequalities and equalities both covered; see
+    // `farkas_args`). Empty only for shapes we cannot reduce to one coefficient —
+    // our own checker still accepts the proof, Carcara then reports it `invalid`.
     let args = farkas_args(arena, assertions);
     commands.push(AletheCommand::Step {
         id: "la".to_owned(),
@@ -545,45 +545,129 @@ pub fn prove_lra_unsat_alethe(
 }
 
 /// Computes the per-literal Farkas `:args` for the `la_generic` step over
-/// `assertions`, in assertion (= clause-literal) order.
+/// `assertions`, in assertion (= clause-literal) order — **one coefficient per
+/// assertion**.
 ///
-/// The coefficients come from [`crate::lra::lra_farkas_certificate`]: each atom's
-/// nonnegative Farkas multiplier. This is sound to emit only when every assertion
-/// contributes **exactly one** atom to the certificate — i.e. the inequality-only
-/// case — so the multiplier vector aligns one-to-one with the clause literals. An
-/// equality assertion splits into two bounds (two atoms), so the alignment is
-/// ambiguous; in that case (multiplier count ≠ assertion count) we return an empty
-/// vector and emit no args. Carcara re-derives the contradiction from these
-/// coefficients, so a wrong coefficient is caught externally — never trusted.
+/// The atom-level multipliers come from [`crate::lra::lra_farkas_certificate`];
+/// `certificate.origins[i]` names the assertion that atom `i` came from. We group
+/// the atoms by origin and reduce each assertion's atoms to its single `la_generic`
+/// coefficient:
+///
+/// - An **inequality** assertion contributes exactly one atom; its coefficient is
+///   that atom's (nonnegative) multiplier — byte-identical to the prior
+///   inequality-only output.
+/// - An **equality** `a = b` splits into two atoms in push order: `+(a − b) ≤ 0`
+///   with multiplier `m0` and `−(a − b) ≤ 0` with multiplier `m1`. Carcara negates
+///   the clause literal `(not (= a b))` to `(= a b)` and forms `a − b` with the
+///   coefficient applied **signed** (`match op { Equals => a, _ => a.abs() }`),
+///   unlike inequality literals which it negate-flips and takes `abs` of. The
+///   matching coefficient is therefore the signed `c = m1 − m0` (see the inline
+///   note at the equality arm for why; confirmed against the Carcara binary —
+///   `(1, 1, 1)` validates the mixed `x = 1 ∧ x + y ≤ 0 ∧ y ≥ 1`). `c` may be
+///   negative or zero. We confirm the two atoms are genuine negatives of each other
+///   (the equality-split structural invariant) before using order to pick `+diff`,
+///   so a future reordering cannot silently flip the sign.
+/// - **More than two atoms** for one assertion (e.g. an unsupported conjunction we
+///   cannot soundly reduce to one coefficient): we cannot align it to a single
+///   coefficient, so we fall back to emitting **no args** for the whole step (the
+///   prior behavior).
+///
+/// Carcara re-derives the contradiction from these coefficients, so a wrong
+/// coefficient is caught externally — never trusted.
 ///
 /// Returns an empty vector when the certificate is absent (not unsat through the
-/// Farkas path), when the counts do not align, or when any multiplier cannot be
-/// rendered.
+/// Farkas path), when any assertion has an unexpected atom shape, or when any
+/// coefficient cannot be rendered.
 fn farkas_args(arena: &TermArena, assertions: &[TermId]) -> Vec<AletheTerm> {
     let Ok(Some(certificate)) = crate::lra::lra_farkas_certificate(arena, assertions) else {
         return Vec::new();
     };
-    // One multiplier per assertion (in order) only when each assertion produced a
-    // single atom; otherwise the mapping is ambiguous, so emit no args.
-    if certificate.multipliers.len() != assertions.len() {
-        return Vec::new();
+    let mut args = Vec::with_capacity(assertions.len());
+    for j in 0..assertions.len() {
+        // The atoms (with their multipliers) that this assertion produced, in atom
+        // (= push) order. Determinism: origins are in atom order already.
+        let group: Vec<(&crate::lra::FarkasAtom, &Rational)> = certificate
+            .origins
+            .iter()
+            .zip(certificate.atoms.iter().zip(&certificate.multipliers))
+            .filter(|&(&origin, _)| origin == j)
+            .map(|(_, atom_mult)| atom_mult)
+            .collect();
+        match group.as_slice() {
+            // Inequality: the single atom's multiplier is the coefficient (always
+            // nonnegative here — identical to the prior inequality-only output).
+            [(_, m)] => args.push(rational_to_alethe(m)),
+            // Equality `a = b`: atoms are `+(a − b)` (mult `m0`) then `−(a − b)`
+            // (mult `m1`) in push order. Confirm they are exact negatives (the
+            // split invariant) before trusting order, then emit the signed
+            // `c = m1 − m0`.
+            //
+            // Why `m1 − m0` (not `m0 − m1`)? Carcara forms `c · (a − b)` for an `=`
+            // literal with the coefficient applied **signed** (no negate-flip),
+            // whereas it negate-flips every inequality literal and takes
+            // `coeff.abs()`. Our Farkas certificate's per-atom signs are the global
+            // negation of Carcara's per-literal signs, so to keep all variables
+            // cancelling, the equality coefficient must be `m1 − m0` (the negation
+            // of the certificate's net `(m0 − m1) · (a − b)`). Confirmed against the
+            // Carcara binary on the mixed equality/inequality case `x = 1 ∧
+            // x + y ≤ 0 ∧ y ≥ 1`, which `m1 − m0` validates and `m0 − m1` rejects.
+            [(atom0, m0), (atom1, m1)] => {
+                if !is_negation_of(atom0, atom1) {
+                    return Vec::new();
+                }
+                args.push(rational_to_alethe(&(**m1 - **m0)));
+            }
+            // No atoms (assertion did not reach the certificate) or more than two
+            // (a shape we cannot reduce to one coefficient): emit no args at all.
+            _ => return Vec::new(),
+        }
     }
-    certificate
-        .multipliers
-        .iter()
-        .map(rational_to_alethe)
-        .collect()
+    args
 }
 
-/// Renders a nonnegative Farkas multiplier as an Alethe `:args` term in the form
-/// Carcara's `la_generic` accepts: an integer `n` as the bare numeral `Const("n")`,
-/// and a proper fraction `p/q` (`q != 1`) as `(/ p.0 q.0)` (Real-typed numerals, so
-/// the division re-parses as `Real`). The multipliers are nonnegative, so no sign
-/// handling is needed.
+/// Whether `b` is the exact negation of `a`: every variable coefficient and the
+/// constant are sign-flipped, with the same strictness. This is the structural
+/// invariant of the equality split `a = b ↦ {+(a − b) ≤ 0, −(a − b) ≤ 0}`; we
+/// check it so the order-based `+diff`-first assumption is guarded rather than
+/// blindly trusted.
+fn is_negation_of(a: &crate::lra::FarkasAtom, b: &crate::lra::FarkasAtom) -> bool {
+    if a.strict != b.strict {
+        return false;
+    }
+    if a.constant != Rational::zero() - b.constant {
+        return false;
+    }
+    if a.coeffs.len() != b.coeffs.len() {
+        return false;
+    }
+    a.coeffs
+        .iter()
+        .zip(&b.coeffs)
+        .all(|(&(ia, ca), &(ib, cb))| ia == ib && ca == Rational::zero() - cb)
+}
+
+/// Renders a (possibly signed) Farkas coefficient as an Alethe `:args` term in the
+/// form Carcara's `la_generic` accepts:
+///
+/// - a nonnegative integer `n` as the bare numeral `Const("n")`;
+/// - a negative integer `-n` as the unary application `(- n)`;
+/// - a nonnegative proper fraction `p/q` (`q != 1`) as `(/ p.0 q.0)` (Real-typed
+///   numerals, so the division re-parses as `Real`);
+/// - a negative fraction `-(p/q)` as `(- (/ p.0 q.0))`.
+///
+/// Inequality multipliers are nonnegative, so for those this is identical to the
+/// prior renderer; equality coefficients (`m0 − m1`) may be negative or zero, hence
+/// the sign handling. All four forms were confirmed accepted by the Carcara binary.
 fn rational_to_alethe(value: &Rational) -> AletheTerm {
-    let num = value.numerator();
-    let den = value.denominator();
-    if den == 1 {
+    let negative = *value < Rational::zero();
+    let magnitude = if negative {
+        Rational::zero() - *value
+    } else {
+        *value
+    };
+    let num = magnitude.numerator();
+    let den = magnitude.denominator();
+    let positive_term = if den == 1 {
         AletheTerm::Const(num.to_string())
     } else {
         AletheTerm::App(
@@ -593,6 +677,11 @@ fn rational_to_alethe(value: &Rational) -> AletheTerm {
                 AletheTerm::Const(format!("{den}.0")),
             ],
         )
+    };
+    if negative {
+        AletheTerm::App("-".to_owned(), vec![positive_term])
+    } else {
+        positive_term
     }
 }
 

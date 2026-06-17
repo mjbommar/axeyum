@@ -210,6 +210,7 @@ fn tampered_certificate_is_rejected_by_the_independent_checker() {
     let zeroed = FarkasCertificate {
         atoms: cert.atoms.clone(),
         multipliers: vec![Rational::zero(), Rational::zero()],
+        origins: cert.origins.clone(),
     };
     assert!(!zeroed.verify());
 }
@@ -233,6 +234,7 @@ fn a_handmade_nonrefutation_does_not_verify() {
     let bogus = FarkasCertificate {
         atoms,
         multipliers: vec![Rational::integer(2), Rational::integer(3)],
+        origins: vec![0, 1],
     };
     assert!(!bogus.verify());
 }
