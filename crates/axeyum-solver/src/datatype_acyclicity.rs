@@ -169,10 +169,10 @@ impl Structural {
         self.find(ia) == self.find(ib)
     }
 
-    /// Closes the partition under **injectivity** (same class + same constructor ⇒
-    /// union corresponding arguments) to a fixpoint, checking **distinctness** along
-    /// the way. Returns `true` on a distinctness conflict (one class, two distinct
-    /// constructors).
+    /// Closes the partition under **congruence** (equal arguments ⇒ equal
+    /// applications) and **injectivity** (equal applications ⇒ equal arguments) to a
+    /// fixpoint, checking **distinctness** along the way. Returns `true` on a
+    /// distinctness conflict (one class, two distinct constructors).
     fn close(&mut self, arena: &TermArena) -> bool {
         loop {
             let mut changed = false;
@@ -180,19 +180,30 @@ impl Structural {
             for a in 0..ctors.len() {
                 for b in (a + 1)..ctors.len() {
                     let (na, nb) = (ctors[a], ctors[b]);
-                    if self.find(na) != self.find(nb) {
-                        continue;
-                    }
                     let (ca, args_a) = as_construction(arena, self.term_of[na])
                         .expect("ctor_nodes holds constructor terms");
                     let (cb, args_b) = as_construction(arena, self.term_of[nb])
                         .expect("ctor_nodes holds constructor terms");
-                    if ca != cb {
-                        return true; // distinctness: same value, two constructors
-                    }
-                    // Injectivity: equal constructor applications have equal fields.
-                    for (&x, &y) in args_a.iter().zip(&args_b) {
-                        if self.union(arena, x, y) {
+                    if self.find(na) == self.find(nb) {
+                        if ca != cb {
+                            return true; // distinctness: same value, two constructors
+                        }
+                        // Injectivity: equal constructor applications ⇒ equal fields.
+                        for (&x, &y) in args_a.iter().zip(&args_b) {
+                            if self.union(arena, x, y) {
+                                changed = true;
+                            }
+                        }
+                    } else if ca == cb
+                        && args_a.len() == args_b.len()
+                        && args_a
+                            .iter()
+                            .zip(&args_b)
+                            .all(|(&x, &y)| self.same_class(x, y))
+                    {
+                        // Congruence: same constructor with pairwise-equal arguments
+                        // ⇒ the two applications denote the same value.
+                        if self.union(arena, self.term_of[na], self.term_of[nb]) {
                             changed = true;
                         }
                     }
@@ -352,6 +363,32 @@ mod tests {
         let xy = arena.eq(xv, yv).unwrap();
         let ne = arena.not(xy).unwrap();
         assert!(prove_datatype_unsat_structurally(&arena, &[eq, ne]));
+    }
+
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn congruence_derives_equality_then_disequality_is_unsat() {
+        // x = cons(h, a) ∧ y = cons(h, b) ∧ a = b ∧ x ≠ y ⇒ UNSAT: congruence gives
+        // cons(h, a) = cons(h, b) from a = b, so x = y, contradicting x ≠ y. (The
+        // injectivity-only closure missed this — it needs the forward congruence.)
+        let mut arena = TermArena::new();
+        let (dt, [_nil, cons]) = int_list(&mut arena);
+        let x = arena.declare("x", Sort::Datatype(dt)).unwrap();
+        let y = arena.declare("y", Sort::Datatype(dt)).unwrap();
+        let a = arena.declare("a", Sort::Datatype(dt)).unwrap();
+        let b = arena.declare("b", Sort::Datatype(dt)).unwrap();
+        let (xv, yv, av, bv) = (arena.var(x), arena.var(y), arena.var(a), arena.var(b));
+        let h = arena.bv_var("h", 8).unwrap();
+        let cxa = arena.construct(cons, &[h, av]).unwrap();
+        let cyb = arena.construct(cons, &[h, bv]).unwrap();
+        let e1 = arena.eq(xv, cxa).unwrap();
+        let e2 = arena.eq(yv, cyb).unwrap();
+        let e3 = arena.eq(av, bv).unwrap();
+        let ne = {
+            let xy = arena.eq(xv, yv).unwrap();
+            arena.not(xy).unwrap()
+        };
+        assert!(prove_datatype_unsat_structurally(&arena, &[e1, e2, e3, ne]));
     }
 
     #[test]
