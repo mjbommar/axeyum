@@ -500,6 +500,13 @@ mod tests {
             let zero = a.bv_const(4, 0).unwrap();
             (a.bv_mul(x, zero).unwrap(), zero)
         });
+        assert_rule_fires(&mut covered, "bv.mul_pow2.v1", |a| {
+            // `bvmul x 4` strength-reduces to `bvshl x 2`.
+            let x = a.bv_var("x", 4).unwrap();
+            let four = a.bv_const(4, 4).unwrap();
+            let two = a.bv_const(4, 2).unwrap();
+            (a.bv_mul(x, four).unwrap(), a.bv_shl(x, two).unwrap())
+        });
         assert_rule_fires(&mut covered, "bv.and_identity.v1", |a| {
             let x = a.bv_var("x", 4).unwrap();
             let ones = a.bv_const(4, 15).unwrap();

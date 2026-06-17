@@ -37,6 +37,7 @@ const BV_SUB_ZERO: &str = "bv.sub_zero.v1";
 const BV_SUB_SELF: &str = "bv.sub_self.v1";
 const BV_MUL_ONE: &str = "bv.mul_one.v1";
 const BV_MUL_ZERO: &str = "bv.mul_zero.v1";
+const BV_MUL_POW2: &str = "bv.mul_pow2.v1";
 const BV_AND_IDENTITY: &str = "bv.and_identity.v1";
 const BV_AND_ZERO: &str = "bv.and_zero.v1";
 const BV_AND_IDEMPOTENT: &str = "bv.and_idempotent.v1";
@@ -385,6 +386,11 @@ fn default_rules() -> Vec<RewriteRule> {
             BV_MUL_ZERO,
             "Bit-vector multiplication zero",
             "`bvmul` with one operand equal to zero",
+        ),
+        rule(
+            BV_MUL_POW2,
+            "Bit-vector multiply by power of two",
+            "`bvmul` with a power-of-two constant operand",
         ),
         rule(
             BV_AND_IDENTITY,
@@ -1008,6 +1014,42 @@ fn rewrite_bv_mul(
         if is_bv_one(arena, b) {
             return Ok(Some(applied(a, BV_MUL_ONE)));
         }
+    }
+    // Strength reduction: `x * 2^k ≡ (x << k) (mod 2^w)` for `0 < k < w`. Both
+    // operand orders are handled (AC-normalization may have already moved the
+    // constant). `value == 1` (i.e. `k == 0`) is left to `bv.mul_one.v1`.
+    if enabled.contains(BV_MUL_POW2) {
+        if let Some(rewritten) = bv_mul_pow2(arena, a, b)? {
+            return Ok(Some(rewritten));
+        }
+        if let Some(rewritten) = bv_mul_pow2(arena, b, a)? {
+            return Ok(Some(rewritten));
+        }
+    }
+    Ok(None)
+}
+
+/// If `constant` is a power-of-two bit-vector constant greater than one,
+/// rewrites `constant * other` to `other << k` where `constant == 2^k`.
+///
+/// `value.is_power_of_two() && value > 1` selects exactly the powers of two
+/// `2^k` with `1 <= k < width` (`value = 2^k < 2^width`), so `k =
+/// value.trailing_zeros()` is always `< width` and the shift amount fits the
+/// operand width. Multiplying a width-`w` bit-vector by `2^k` is exactly a left
+/// shift by `k` with the same modular wraparound, so this is denotation-
+/// preserving with identity model projection.
+fn bv_mul_pow2(
+    arena: &mut TermArena,
+    constant: TermId,
+    other: TermId,
+) -> Result<Option<LocalRewrite>, IrError> {
+    if let Some((width, value)) = bv_const(arena, constant)
+        && value > 1
+        && value.is_power_of_two()
+    {
+        let k = value.trailing_zeros();
+        let shift = arena.bv_const(width, u128::from(k))?;
+        return Ok(Some(applied(arena.bv_shl(other, shift)?, BV_MUL_POW2)));
     }
     Ok(None)
 }
@@ -2064,5 +2106,96 @@ mod commutative_tests {
                 );
             }
         }
+    }
+
+    /// `bvmul x 2^k` strength-reduces to `bvshl x k`, regardless of which side
+    /// the power-of-two constant sits on.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn bv_mul_pow2_strength_reduces_left_shift() {
+        let mut a = TermArena::new();
+        let x = a.bv_var("x", 8).unwrap();
+        let four = a.bv_const(8, 4).unwrap();
+        let two = a.bv_const(8, 2).unwrap();
+        let expected = a.bv_shl(x, two).unwrap();
+
+        // Constant on the right.
+        let mul_right = a.bv_mul(x, four).unwrap();
+        assert_eq!(canonicalize(&mut a, mul_right).unwrap().term, expected);
+
+        // Constant on the left.
+        let mul_left = a.bv_mul(four, x).unwrap();
+        assert_eq!(canonicalize(&mut a, mul_left).unwrap().term, expected);
+    }
+
+    /// `bvmul x 4` and its canonical `bvshl x 2` agree under every 4-bit value
+    /// of `x`, including the high-bit wraparound cases where the product
+    /// overflows the width.
+    #[test]
+    fn bv_mul_pow2_preserves_denotation() {
+        let mut a = TermArena::new();
+        let x_sym = a.declare("x", Sort::BitVec(4)).unwrap();
+        let x = a.var(x_sym);
+        let four = a.bv_const(4, 4).unwrap();
+        let mul = a.bv_mul(x, four).unwrap();
+        let canon = canonicalize(&mut a, mul).unwrap().term;
+
+        // It actually strength-reduced to a left shift by 2.
+        let two = a.bv_const(4, 2).unwrap();
+        let expected = a.bv_shl(x, two).unwrap();
+        assert_eq!(canon, expected);
+
+        for xv in 0..16u128 {
+            let mut asg = Assignment::new();
+            asg.set(
+                x_sym,
+                Value::Bv {
+                    width: 4,
+                    value: xv,
+                },
+            );
+            assert_eq!(
+                eval(&a, mul, &asg).unwrap(),
+                eval(&a, canon, &asg).unwrap(),
+                "mul-by-power-of-two changed denotation at x = {xv}",
+            );
+        }
+    }
+
+    /// Negatives: non-power-of-two and constant-free multiplies are not
+    /// strength-reduced; `*1` and `*0` still go to their existing identities.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn bv_mul_pow2_negatives() {
+        let mut a = TermArena::new();
+        let x = a.bv_var("x", 8).unwrap();
+        let y = a.bv_var("y", 8).unwrap();
+        let three = a.bv_const(8, 3).unwrap();
+        let one = a.bv_const(8, 1).unwrap();
+        let zero = a.bv_const(8, 0).unwrap();
+
+        // Non-power-of-two: unchanged (still a bvmul).
+        let mul_three = a.bv_mul(x, three).unwrap();
+        let canon_three = canonicalize(&mut a, mul_three).unwrap().term;
+        assert!(matches!(
+            a.node(canon_three),
+            TermNode::App { op: Op::BvMul, .. }
+        ));
+
+        // No constant operand: unchanged (still a bvmul).
+        let mul_xy = a.bv_mul(x, y).unwrap();
+        let canon_xy = canonicalize(&mut a, mul_xy).unwrap().term;
+        assert!(matches!(
+            a.node(canon_xy),
+            TermNode::App { op: Op::BvMul, .. }
+        ));
+
+        // `* 1` still folds to `x` via bv.mul_one.v1, not a shift.
+        let mul_one = a.bv_mul(x, one).unwrap();
+        assert_eq!(canonicalize(&mut a, mul_one).unwrap().term, x);
+
+        // `* 0` still folds to `0` via bv.mul_zero.v1.
+        let mul_zero = a.bv_mul(x, zero).unwrap();
+        assert_eq!(canonicalize(&mut a, mul_zero).unwrap().term, zero);
     }
 }
