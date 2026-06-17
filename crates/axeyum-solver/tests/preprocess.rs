@@ -131,3 +131,27 @@ fn chained_definitions_all_reconstruct() {
     assert_eq!(model.get(x), Some(Value::Bv { width: 8, value: 5 }));
     assert_model_satisfies(&arena, &model, &originals);
 }
+
+/// Multiplier-commutativity is refuted by canonicalization alone — no multiplier
+/// bit-blasting. `(not (= (a*b) (b*a)))` is unsat; commutative-operand ordering
+/// makes the two products coincide, so the canonicalizer folds the equality to
+/// `true` and the negation to `false`. Wide operands (32-bit) would make a
+/// genuine multiplier blast slow; this returns immediately.
+#[test]
+fn multiplier_commutativity_is_refuted_by_canonicalization() {
+    let mut arena = TermArena::new();
+    let a = arena.declare("a", Sort::BitVec(32)).unwrap();
+    let b = arena.declare("b", Sort::BitVec(32)).unwrap();
+    let av = arena.var(a);
+    let bv = arena.var(b);
+    let ab = arena.bv_mul(av, bv).unwrap();
+    let ba = arena.bv_mul(bv, av).unwrap();
+    let eq = arena.eq(ab, ba).unwrap();
+    let neq = arena.not(eq).unwrap();
+
+    assert_eq!(
+        check(&mut arena, &[neq]),
+        CheckResult::Unsat,
+        "a*b = b*a, so its negation is unsat — decided by canonicalization, not blasting"
+    );
+}

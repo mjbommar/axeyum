@@ -355,6 +355,34 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-17** — **P1.2: canonicalizer wired into `check_with_preprocessing`**.
+  The denotation-preserving canonicalizer (`canonicalize_terms`) is now the FIRST
+  pass in `check_with_preprocessing`, ahead of `propagate_values` + `solve_eqs`. It
+  eliminates no variables (symbol-preserving), so it needs no reconstruction trail —
+  the model still replays against the original assertions. This activates the prior
+  commit's commutative-operand ordering in an actual solver path: a 32-bit
+  `(not (= (a*b) (b*a)))` is now refuted **instantly by canonicalization, with zero
+  multiplier bit-blasting** (new test returns in 0.00 s where a genuine 32×32 blast
+  would be slow). Closes the "canonicalizer dormant in the product" gap for the
+  opt-in preprocessing path. 6 preprocess tests green. (Default `solve()` still does
+  not preprocess — making it the default is a separate decision, likely an ADR.)
+- **2026-06-17** — **Research note: foundational example & benchmark suites**
+  ([docs/research/08-planning/foundational-example-suites.md](docs/research/08-planning/foundational-example-suites.md)).
+  Research-first, no code. Scopes the next wave of example suites by
+  *decidability*, not appetite: (A) a self-checking software-verification
+  "Hello, World" tier (SV-COMP `ReachSafety`/`NoOverflows` shape, hand-ported,
+  reusing BMC/k-induction/symexec — **recommended first**, satisfies the open
+  Phase 7 verification-audience criterion); (B) decidable geometry / real-closed
+  fields as the QF_NRA/P2.5 corpus that's currently missing (witness-checked
+  `sat`; `unsat` exposes the NRA-certificate evidence gap); (C) a low-cost
+  finite/modular "math 101" extension of `Family::Identity`. The prompt's
+  "Peano 101 / real analysis 101" is split out: induction-bearing arithmetic and
+  the ε–δ layer are **undecidable → Lean-horizon proof-reconstruction targets
+  (P3.6/P3.7), not benchmarks**; only the RCF-reducible fragment (geometry,
+  MetiTarski-style inequalities) is reachable now. Surveys SV-COMP, SMT-LIB
+  QF_NRA/meti-tarski, GeoCoq/Tarski, TPTP as yardsticks (mine for shape; do not
+  ingest/sweep). Proposes **ADR-0033** to ratify the A/B/C-build, D-target tier
+  split. Next: design suite A's first cut.
 - **2026-06-17** — **P1.2: commutative-operand canonicalization (word-level
   preprocessing)**. The denotation-preserving canonicalizer now sorts the operands
   of commutative ops (`and`/`or`/`xor`/`=`, `bvadd`/`bvmul`/`bvand`/`bvor`/`bvxor`/

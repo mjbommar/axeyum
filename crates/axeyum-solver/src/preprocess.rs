@@ -14,7 +14,7 @@
 //! [`crate::check_with_array_elimination`].
 
 use axeyum_ir::{TermArena, TermId, Value, eval};
-use axeyum_rewrite::{propagate_values, solve_eqs};
+use axeyum_rewrite::{canonicalize_terms, propagate_values, solve_eqs};
 
 use crate::backend::{CheckResult, SolverBackend, SolverConfig, SolverError};
 use crate::model::Model;
@@ -31,9 +31,17 @@ pub fn check_with_preprocessing<B: SolverBackend>(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    // Canonicalize first: a denotation- and symbol-preserving normalization (e.g.
+    // commutative-operand ordering, so `(bvmul a b)` and `(bvmul b a)` coincide and
+    // `(= (bvmul a b) (bvmul b a))` folds to `true` with no bit-blasting). It
+    // eliminates no variables, so it needs no reconstruction trail — the model
+    // (over the same symbols) replays against the ORIGINAL assertions below.
+    let canonical = canonicalize_terms(arena, assertions)
+        .map_err(|error| SolverError::Backend(format!("canonicalize failed: {error}")))?
+        .terms;
     // Run the model-sound passes, composing their reconstruction trails in pass
     // order (propagate_values first, then solve_eqs).
-    let (after_values, mut trail) = propagate_values(arena, assertions)
+    let (after_values, mut trail) = propagate_values(arena, &canonical)
         .map_err(|error| SolverError::Backend(format!("propagate_values failed: {error}")))?
         .into_parts();
     let (reduced, eq_trail) = solve_eqs(arena, &after_values)
