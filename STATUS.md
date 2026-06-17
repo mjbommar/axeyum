@@ -355,6 +355,23 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-17** — **P1.2: commutative-operand canonicalization (word-level
+  preprocessing)**. The denotation-preserving canonicalizer now sorts the operands
+  of commutative ops (`and`/`or`/`xor`/`=`, `bvadd`/`bvmul`/`bvand`/`bvor`/`bvxor`/
+  `bvnand`/`bvnor`/`bvxnor`) by ascending `TermId`, so `(bvmul a b)` and `(bvmul b a)`
+  hash-cons to the **same** term — composing with the existing
+  `=`-structurally-identical rule to fold `(= (bvmul a b) (bvmul b a))` → `true` with
+  no bit-blasting. Strictly excludes non-commutative ops (`bvsub`, div/rem, shifts,
+  comparisons, `concat`, and crucially `apply` — UF arg order is meaningful).
+  Denotation verified by exhaustive 3-bit evaluator equivalence. **Curated slice with
+  `--rewrite default`: 33/43 decided (was 32), 10 unknown (was 11), PAR-2 1.010 (was
+  1.062), DISAGREE=0** — a real, sound +1 (cracks `calypto_problem_9`). **Honest
+  caveat:** the targeted `wienand commute08/16` stay unknown — they are
+  associativity+commutativity over multiplier *trees* with intermediate `var`
+  bindings, not flat `a*b==b*a`; cracking them needs multiplier-tree AC-normalization
+  + intermediate-equality inlining (a larger, separate task). Also: the bench default
+  is `--rewrite Off`, so this only helps when rewriting is enabled — wiring the
+  canonicalizer into the default `sat-bv` path is a follow-up.
 - **2026-06-17** — **Benchmarking checkpoint: no regression + the perf ceiling
   diagnosed**. Re-ran axeyum (`sat-bv`, 2 s) over the committed 43-file curated QF_BV
   slice after the session's 21 proof-track commits: **32/43 decided (8 sat + 24

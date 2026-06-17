@@ -45,6 +45,7 @@ const BV_SHIFT_ZERO: &str = "bv.shift_zero.v1";
 const BV_EXTRACT_WHOLE: &str = "bv.extract_whole.v1";
 const BV_EXTEND_ZERO: &str = "bv.extend_zero.v1";
 const BV_ROTATE_ZERO: &str = "bv.rotate_zero.v1";
+const COMMUTATIVE_ORDER: &str = "commutative.operand_order.v1";
 
 /// A canonicalizer configured by a validated rewrite manifest.
 #[derive(Debug, Clone)]
@@ -421,6 +422,11 @@ fn default_rules() -> Vec<RewriteRule> {
             "Bit-vector rotate-by-zero identity",
             "`rotate_left` or `rotate_right` by zero bits",
         ),
+        rule(
+            COMMUTATIVE_ORDER,
+            "Commutative operand order",
+            "a commutative operator (`and`/`or`/`xor`/`=`/`bvadd`/`bvmul`/`bvand`/`bvor`/`bvxor`/`bvnand`/`bvnor`/`bvxnor`) with operands out of ascending `TermId` order",
+        ),
     ]
 }
 
@@ -519,6 +525,23 @@ fn rewrite_app(
         }
     }
 
+    // Commutative-operand canonicalization: for a commutative operator, reorder
+    // operands into ascending `TermId` order before applying the op-specific
+    // rules. This is denotation-preserving (the operator is commutative), and it
+    // lets structurally-identical-operand rules (e.g. `=` reflexivity) fold
+    // goals such as `(= (bvmul a b) (bvmul b a))` to `true` without bit-blasting
+    // the multiplier. The reorder is recorded only if no later rule fires and the
+    // order actually changed.
+    let mut reordered = false;
+    let sorted_args;
+    let args = if is_commutative(op) && args.len() == 2 && args[0] > args[1] {
+        sorted_args = [args[1], args[0]];
+        reordered = enabled.contains(COMMUTATIVE_ORDER);
+        if reordered { &sorted_args[..] } else { args }
+    } else {
+        args
+    };
+
     let local = match op {
         Op::BoolNot => rewrite_bool_not(arena, args, enabled),
         Op::BoolAnd => rewrite_bool_and(arena, args, enabled),
@@ -598,10 +621,39 @@ fn rewrite_app(
         return Ok(local);
     }
 
+    if reordered {
+        return Ok(applied(build_app(arena, op, args)?, COMMUTATIVE_ORDER));
+    }
+
     Ok(LocalRewrite {
         term: build_app(arena, op, args)?,
         rule_id: None,
     })
+}
+
+/// Returns `true` if `op` is commutative, so its binary operands may be reordered
+/// without changing the term's denotation.
+///
+/// Only genuinely commutative operators are listed. Non-commutative operators
+/// (`bvsub`, the div/rem family, shifts, comparisons, `concat`, `=>`, `ite`,
+/// uninterpreted `apply`, and the array ops) are deliberately excluded: their
+/// operand order is meaningful.
+fn is_commutative(op: Op) -> bool {
+    matches!(
+        op,
+        Op::BoolAnd
+            | Op::BoolOr
+            | Op::BoolXor
+            | Op::Eq
+            | Op::BvAdd
+            | Op::BvMul
+            | Op::BvAnd
+            | Op::BvOr
+            | Op::BvXor
+            | Op::BvNand
+            | Op::BvNor
+            | Op::BvXnor
+    )
 }
 
 fn rewrite_bool_not(
@@ -1154,5 +1206,187 @@ fn mask(width: u32) -> u128 {
         u128::MAX
     } else {
         (1u128 << width) - 1
+    }
+}
+
+#[cfg(test)]
+mod commutative_tests {
+    use axeyum_ir::{Assignment, Sort, TermArena, TermId, Value, eval};
+
+    use super::canonicalize;
+
+    /// Each pair of binary commutative builders must canonicalize to the same
+    /// term regardless of operand order.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn commutative_ops_canonicalize_order_independently() {
+        let mut a = TermArena::new();
+        let x = a.bv_var("x", 4).unwrap();
+        let y = a.bv_var("y", 4).unwrap();
+        let p = a.bool_var("p").unwrap();
+        let q = a.bool_var("q").unwrap();
+
+        // (builder applied as (lhs, rhs), then (rhs, lhs)) must agree.
+        let bv_cases: [fn(&mut TermArena, TermId, TermId) -> TermId; 8] = [
+            |a, l, r| a.bv_add(l, r).unwrap(),
+            |a, l, r| a.bv_mul(l, r).unwrap(),
+            |a, l, r| a.bv_and(l, r).unwrap(),
+            |a, l, r| a.bv_or(l, r).unwrap(),
+            |a, l, r| a.bv_xor(l, r).unwrap(),
+            |a, l, r| a.bv_nand(l, r).unwrap(),
+            |a, l, r| a.bv_nor(l, r).unwrap(),
+            |a, l, r| a.bv_xnor(l, r).unwrap(),
+        ];
+        for case in bv_cases {
+            let forward = case(&mut a, x, y);
+            let reverse = case(&mut a, y, x);
+            let cf = canonicalize(&mut a, forward).unwrap().term;
+            let cr = canonicalize(&mut a, reverse).unwrap().term;
+            assert_eq!(cf, cr, "bv commutative op did not canonicalize uniquely");
+        }
+
+        let bool_cases: [fn(&mut TermArena, TermId, TermId) -> TermId; 3] = [
+            |a, l, r| a.and(l, r).unwrap(),
+            |a, l, r| a.or(l, r).unwrap(),
+            |a, l, r| a.xor(l, r).unwrap(),
+        ];
+        for case in bool_cases {
+            let forward = case(&mut a, p, q);
+            let reverse = case(&mut a, q, p);
+            let cf = canonicalize(&mut a, forward).unwrap().term;
+            let cr = canonicalize(&mut a, reverse).unwrap().term;
+            assert_eq!(cf, cr, "bool commutative op did not canonicalize uniquely");
+        }
+
+        // `=` is commutative on both BV and Bool operands.
+        let eq_bv_fwd = a.eq(x, y).unwrap();
+        let eq_bv_rev = a.eq(y, x).unwrap();
+        assert_eq!(
+            canonicalize(&mut a, eq_bv_fwd).unwrap().term,
+            canonicalize(&mut a, eq_bv_rev).unwrap().term,
+        );
+        let eq_bool_fwd = a.eq(p, q).unwrap();
+        let eq_bool_rev = a.eq(q, p).unwrap();
+        assert_eq!(
+            canonicalize(&mut a, eq_bool_fwd).unwrap().term,
+            canonicalize(&mut a, eq_bool_rev).unwrap().term,
+        );
+    }
+
+    /// The headline win: `(= (bvmul a b) (bvmul b a))` folds to `true` because
+    /// both multipliers canonicalize to the same term and the `=` reflexivity
+    /// rule then fires — no multiplier bit-blasting.
+    #[test]
+    fn multiplier_commutativity_goal_folds_to_true() {
+        let mut a = TermArena::new();
+        let x = a.bv_var("x", 8).unwrap();
+        let y = a.bv_var("y", 8).unwrap();
+        let xy = a.bv_mul(x, y).unwrap();
+        let yx = a.bv_mul(y, x).unwrap();
+        let goal = a.eq(xy, yx).unwrap();
+
+        let outcome = canonicalize(&mut a, goal).unwrap();
+        assert_eq!(outcome.term, a.bool_const(true));
+    }
+
+    /// Non-commutative operators must never have their operands reordered.
+    #[test]
+    fn non_commutative_ops_are_not_reordered() {
+        let mut a = TermArena::new();
+        // Declare so that x has the larger TermId; (op x y) with x > y would be
+        // "out of ascending order" — but for non-commutative ops it must stay.
+        let y = a.bv_var("y", 8).unwrap();
+        let x = a.bv_var("x", 8).unwrap();
+        assert!(x > y, "test relies on x having the larger TermId");
+
+        let sub = a.bv_sub(x, y).unwrap();
+        assert_eq!(canonicalize(&mut a, sub).unwrap().term, sub);
+
+        let udiv = a.bv_udiv(x, y).unwrap();
+        assert_eq!(canonicalize(&mut a, udiv).unwrap().term, udiv);
+
+        let ult = a.bv_ult(x, y).unwrap();
+        assert_eq!(canonicalize(&mut a, ult).unwrap().term, ult);
+
+        let concat = a.concat(x, y).unwrap();
+        assert_eq!(canonicalize(&mut a, concat).unwrap().term, concat);
+
+        // Uninterpreted-function argument order is meaningful.
+        let f = a
+            .declare_fun("f", &[Sort::BitVec(8), Sort::BitVec(8)], Sort::BitVec(8))
+            .unwrap();
+        let fxy = a.apply(f, &[x, y]).unwrap();
+        assert_eq!(canonicalize(&mut a, fxy).unwrap().term, fxy);
+    }
+
+    /// Denotation must be preserved: original and canonicalized terms agree under
+    /// every assignment, including nested mixed terms.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn commutative_canonicalization_preserves_denotation() {
+        let mut a = TermArena::new();
+        let x_sym = a.declare("x", Sort::BitVec(3)).unwrap();
+        let y_sym = a.declare("y", Sort::BitVec(3)).unwrap();
+        let z_sym = a.declare("z", Sort::BitVec(3)).unwrap();
+        let p_sym = a.declare("p", Sort::Bool).unwrap();
+        let x = a.var(x_sym);
+        let y = a.var(y_sym);
+        let z = a.var(z_sym);
+        let p = a.var(p_sym);
+
+        // Nested mixed commutative/non-commutative terms.
+        let mul = a.bv_mul(z, x).unwrap();
+        let add = a.bv_add(mul, y).unwrap();
+        let sub = a.bv_sub(add, x).unwrap();
+        let and = a.bv_and(sub, z).unwrap();
+        let eq = a.eq(and, y).unwrap();
+        let xor = a.bv_xor(y, mul).unwrap();
+        let eq2 = a.eq(xor, z).unwrap();
+        let body = a.and(eq, eq2).unwrap();
+        let goal = a.or(p, body).unwrap();
+        let terms = [mul, add, and, goal];
+
+        let rewritten = terms
+            .iter()
+            .map(|&t| canonicalize(&mut a, t).unwrap().term)
+            .collect::<Vec<_>>();
+
+        for xv in 0..8u128 {
+            for yv in 0..8u128 {
+                for zv in 0..8u128 {
+                    for pv in [false, true] {
+                        let mut asg = Assignment::new();
+                        asg.set(
+                            x_sym,
+                            Value::Bv {
+                                width: 3,
+                                value: xv,
+                            },
+                        );
+                        asg.set(
+                            y_sym,
+                            Value::Bv {
+                                width: 3,
+                                value: yv,
+                            },
+                        );
+                        asg.set(
+                            z_sym,
+                            Value::Bv {
+                                width: 3,
+                                value: zv,
+                            },
+                        );
+                        asg.set(p_sym, Value::Bool(pv));
+                        for (&orig, &canon) in terms.iter().zip(&rewritten) {
+                            assert_eq!(
+                                eval(&a, orig, &asg).unwrap(),
+                                eval(&a, canon, &asg).unwrap(),
+                            );
+                        }
+                    }
+                }
+            }
+        }
     }
 }

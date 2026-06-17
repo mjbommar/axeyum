@@ -534,6 +534,13 @@ mod tests {
             let x = a.bv_var("x", 4).unwrap();
             (a.rotate_left(0, x).unwrap(), x)
         });
+        assert_rule_fires(&mut covered, "commutative.operand_order.v1", |a| {
+            // Declare `y` first so `y` has the smaller `TermId`; `(bvmul x y)`
+            // then reorders to `(bvmul y x)`.
+            let y = a.bv_var("y", 4).unwrap();
+            let x = a.bv_var("x", 4).unwrap();
+            (a.bv_mul(x, y).unwrap(), a.bv_mul(y, x).unwrap())
+        });
 
         let enabled = default_manifest()
             .enabled_rules()
