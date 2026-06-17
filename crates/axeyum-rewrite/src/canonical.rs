@@ -25,6 +25,7 @@ const BOOL_XOR_SELF: &str = "bool.xor_self.v1";
 const BOOL_IMPLIES_CONST: &str = "bool.implies_const.v1";
 const BOOL_IMPLIES_REFLEXIVE: &str = "bool.implies_reflexive.v1";
 const EQ_REFLEXIVE: &str = "eq.reflexive.v1";
+const BV_COMPARE_REFLEXIVE: &str = "bv.compare_reflexive.v1";
 const ITE_CONST_CONDITION: &str = "ite.const_condition.v1";
 const ITE_SAME_BRANCHES: &str = "ite.same_branches.v1";
 const BV_CONST_FOLD: &str = "bv.const_fold.v1";
@@ -325,6 +326,11 @@ fn default_rules() -> Vec<RewriteRule> {
             "`=` with structurally identical operands",
         ),
         rule(
+            BV_COMPARE_REFLEXIVE,
+            "Bit-vector comparison reflexivity",
+            "a `bvult`/`bvule`/`bvugt`/`bvuge`/`bvslt`/`bvsle`/`bvsgt`/`bvsge` with structurally identical operands",
+        ),
+        rule(
             ITE_CONST_CONDITION,
             "If-then-else constant condition",
             "`ite` with a constant Boolean condition",
@@ -610,6 +616,14 @@ fn rewrite_app(
         Op::BvNot => rewrite_bv_not(arena, args, enabled),
         Op::BvNeg => rewrite_bv_neg(arena, args, enabled),
         Op::Eq => rewrite_eq(arena, args, enabled),
+        Op::BvUlt
+        | Op::BvUgt
+        | Op::BvSlt
+        | Op::BvSgt
+        | Op::BvUle
+        | Op::BvUge
+        | Op::BvSle
+        | Op::BvSge => rewrite_bv_compare(arena, op, args, enabled),
         Op::Ite => rewrite_ite(arena, args, enabled),
         Op::Extract { hi, lo } => rewrite_extract(arena, hi, lo, args, enabled),
         Op::ZeroExt { by } | Op::SignExt { by } => rewrite_extend(by, args, enabled),
@@ -622,14 +636,6 @@ fn rewrite_app(
         | Op::BvSdiv
         | Op::BvSrem
         | Op::BvSmod
-        | Op::BvUlt
-        | Op::BvUle
-        | Op::BvUgt
-        | Op::BvUge
-        | Op::BvSlt
-        | Op::BvSle
-        | Op::BvSgt
-        | Op::BvSge
         | Op::BvComp
         | Op::Concat
         | Op::Select
@@ -1098,6 +1104,34 @@ fn rewrite_eq(
 ) -> Option<LocalRewrite> {
     if enabled.contains(EQ_REFLEXIVE) && args[0] == args[1] {
         return Some(applied(arena.bool_const(true), EQ_REFLEXIVE));
+    }
+    None
+}
+
+/// Bit-vector comparison reflexivity: `op x x` folds to a Boolean constant.
+///
+/// For structurally identical operands (the same `TermId`, since the arena
+/// hash-conses), `x ⋈ x` has the same Boolean value under every assignment,
+/// signed or unsigned:
+///
+///   * strict ordering (`bvult`/`bvugt`/`bvslt`/`bvsgt`) is always `false`;
+///   * non-strict ordering (`bvule`/`bvuge`/`bvsle`/`bvsge`) is always `true`.
+///
+/// The folded result is a `Bool` constant, so later constant-fold rules can
+/// take it from there. Exact-denotation, identity model projection.
+fn rewrite_bv_compare(
+    arena: &mut TermArena,
+    op: Op,
+    args: &[TermId],
+    enabled: &BTreeSet<&str>,
+) -> Option<LocalRewrite> {
+    if enabled.contains(BV_COMPARE_REFLEXIVE) && args[0] == args[1] {
+        let value = match op {
+            Op::BvUlt | Op::BvUgt | Op::BvSlt | Op::BvSgt => false,
+            Op::BvUle | Op::BvUge | Op::BvSle | Op::BvSge => true,
+            _ => return None,
+        };
+        return Some(applied(arena.bool_const(value), BV_COMPARE_REFLEXIVE));
     }
     None
 }
@@ -1897,5 +1931,97 @@ mod commutative_tests {
                 value: 0b1000,
             },
         );
+    }
+
+    /// All eight BV comparison ops applied to structurally identical operands
+    /// fold to the right Boolean constant: `false` for the strict orderings and
+    /// `true` for the non-strict ones.
+    #[test]
+    fn bv_compare_reflexive_folds_all_eight() {
+        let mut a = TermArena::new();
+        let x = a.bv_var("x", 4).unwrap();
+        let truth = a.bool_const(true);
+        let falsity = a.bool_const(false);
+
+        // (builder, expected folded constant).
+        let strict: [fn(&mut TermArena, TermId, TermId) -> TermId; 4] = [
+            |a, l, r| a.bv_ult(l, r).unwrap(),
+            |a, l, r| a.bv_ugt(l, r).unwrap(),
+            |a, l, r| a.bv_slt(l, r).unwrap(),
+            |a, l, r| a.bv_sgt(l, r).unwrap(),
+        ];
+        for case in strict {
+            let cmp = case(&mut a, x, x);
+            assert_eq!(
+                canonicalize(&mut a, cmp).unwrap().term,
+                falsity,
+                "strict `x ⋈ x` must fold to false",
+            );
+        }
+
+        let non_strict: [fn(&mut TermArena, TermId, TermId) -> TermId; 4] = [
+            |a, l, r| a.bv_ule(l, r).unwrap(),
+            |a, l, r| a.bv_uge(l, r).unwrap(),
+            |a, l, r| a.bv_sle(l, r).unwrap(),
+            |a, l, r| a.bv_sge(l, r).unwrap(),
+        ];
+        for case in non_strict {
+            let cmp = case(&mut a, x, x);
+            assert_eq!(
+                canonicalize(&mut a, cmp).unwrap().term,
+                truth,
+                "non-strict `x ⋈ x` must fold to true",
+            );
+        }
+    }
+
+    /// A comparison of two *different* operands is never folded by reflexivity.
+    #[test]
+    fn bv_compare_reflexive_ignores_distinct_operands() {
+        let mut a = TermArena::new();
+        let x = a.bv_var("x", 4).unwrap();
+        let y = a.bv_var("y", 4).unwrap();
+        let ult = a.bv_ult(x, y).unwrap();
+        assert_eq!(canonicalize(&mut a, ult).unwrap().term, ult);
+    }
+
+    /// Denotation cross-check: for a few comparison ops (including a signed one),
+    /// the folded constant equals the original comparison evaluated at every
+    /// 4-bit value of `x` — covering signed and unsigned semantics, including the
+    /// sign-bit-set range where signed/unsigned ordering diverge.
+    #[test]
+    fn bv_compare_reflexive_preserves_denotation() {
+        let mut a = TermArena::new();
+        let x_sym = a.declare("x", Sort::BitVec(4)).unwrap();
+        let x = a.var(x_sym);
+
+        // Unsigned strict, unsigned non-strict, signed strict, signed non-strict.
+        let ult = a.bv_ult(x, x).unwrap();
+        let uge = a.bv_uge(x, x).unwrap();
+        let slt = a.bv_slt(x, x).unwrap();
+        let sle = a.bv_sle(x, x).unwrap();
+        let terms = [ult, uge, slt, sle];
+        let rewritten = terms
+            .iter()
+            .map(|&t| canonicalize(&mut a, t).unwrap().term)
+            .collect::<Vec<_>>();
+
+        for xv in 0..16u128 {
+            let mut asg = Assignment::new();
+            asg.set(
+                x_sym,
+                Value::Bv {
+                    width: 4,
+                    value: xv,
+                },
+            );
+            for (&orig, &canon) in terms.iter().zip(&rewritten) {
+                assert_eq!(
+                    eval(&a, orig, &asg).unwrap(),
+                    eval(&a, canon, &asg).unwrap(),
+                    "compare reflexivity changed denotation at x = {xv}",
+                );
+            }
+        }
     }
 }

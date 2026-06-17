@@ -437,6 +437,11 @@ mod tests {
             let t = a.bool_const(true);
             (a.eq(x, x).unwrap(), t)
         });
+        assert_rule_fires(&mut covered, "bv.compare_reflexive.v1", |a| {
+            let x = a.bv_var("x", 4).unwrap();
+            let f = a.bool_const(false);
+            (a.bv_ult(x, x).unwrap(), f)
+        });
         assert_rule_fires(&mut covered, "ite.const_condition.v1", |a| {
             let p = a.bool_var("p").unwrap();
             let q = a.bool_var("q").unwrap();
