@@ -181,26 +181,31 @@ propagation) was measured against `rustsat-batsat` on the curated multiplier
 unknowns, on the identical Tseitin CNF (harness:
 `crates/axeyum-solver/tests/xor_cdcl_curated_measure.rs`):
 
-| instance | size | batsat (2 s) | CDCL(XOR) |
-|---|---|---|---|
-| `mulhs08` | 655 v / 2716 cl | **unknown** | **unsat** (20.1 s) |
-| `calypto_9` | 1680 v / 7236 cl | **unknown** | **sat** (62.0 s) |
+The robust result, on `mulhs08` (`655 v / 2716 cl`), reproducible across runs:
+**batsat is `unknown` at the 2 s budget; CDCL(XOR) decides it `unsat`** — a
+multiplier-equivalence instance plain CDCL cannot crack. The exponential
+resolution lower bound is real, and reasoning about the parity structure during
+search is what steps around it. (`calypto_9` also decides under CDCL(XOR), but it
+is *borderline* for batsat — batsat decides it in ~1.1 s some runs and times out
+others — so it is not a clean "batsat-can't" separator; `mulhs08` is the solid
+one.)
 
-**CDCL(XOR) decides multiplier-equivalence instances plain CDCL cannot** — the
-path-2 thesis, now empirical rather than predicted. The exponential resolution
-lower bound is real, and reasoning about the parity structure during search is
-what steps around it.
+The win was first **capability, not speed**: the initial naive core (lowest-index
+branching, no restarts) took 20.1 s on `mulhs08`. Adding the standard
+[P1.3](../../plan/track-1-engine/) modernization — **VSIDS activity branching,
+phase saving, Luby restarts** — cut that to **~5.0 s (~4×)** with the verdict and
+all ~1,500-formula soundness differentials unchanged. So the decomposition held
+and is now both *confirmed and acted on*: XOR propagation is the *capability*,
+competitive heuristics are the *speed*, and stacking them decides the small
+multipliers (still ~5 s vs a 2 s budget — closing it further is incremental
+SAT-core work).
 
-The honest qualifier: the win is **capability, not yet speed**. 20 s / 62 s
-blow the 2 s budget because `xor_cdcl` uses lowest-index branching with no VSIDS
-and no restarts — a deliberately naive core (the XOR integration was the point).
-So the decomposition is now sharp: **XOR propagation is the missing *capability*;
-[P1.3 SAT-core modernization](../../plan/track-1-engine/) (VSIDS + restarts +
-chronological BT) is the missing *speed*.** Stacking a competitive decision
-heuristic on top of XOR propagation is the path to deciding these *within* budget.
-Bigger instances (`mulhs16`, `stp_samples`) still exceed a tractable measurement
-timeout on the naive core — they need both the speed work and the complete
-Gaussian-on-trail propagator (the watched-literal scheme is incomplete).
+The honest ceiling: `mulhs16` and the larger `stp_samples` still do not decide
+within a few minutes even with VSIDS+restarts. The next size class needs more —
+the **complete Gaussian-on-trail propagator** (the watched-literal XOR scheme is
+sound but *incomplete*, missing implications only full Gaussian derives) and/or
+further SAT-core work. The small-multiplier wall is broken; scaling to the next
+size class is the continuing work.
 
 ## Bottom line
 
