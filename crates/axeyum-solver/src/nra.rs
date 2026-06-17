@@ -280,6 +280,16 @@ fn solve_relaxation(
             if r0 == prod {
                 continue;
             }
+            // Safety net: a refinement that chases an escalating witness can drive
+            // the candidate magnitudes up until the exact-rational simplex overflows
+            // `i128` (it cross-multiplies, so even sub-`i128` coefficients can blow
+            // up combining). Stop refining a product once its candidate point grows
+            // past a conservative bound — that product is left to `unknown` rather
+            // than risking a panic. The bound is far below `√i128::MAX`, leaving the
+            // simplex ample headroom.
+            if too_large_to_refine(a0) || too_large_to_refine(b0) || too_large_to_refine(prod) {
+                continue;
+            }
             let lemma = point_lemma(arena, pa, a0, pb, b0, r, prod)?;
             reduced.push(lemma);
             added = true;
@@ -481,6 +491,35 @@ fn product_lemmas(
     let either_z = arena.or(a_z, b_z)?;
     out.push(imp(arena, either_z, r_z)?);
     out.push(imp(arena, r_z, either_z)?);
+
+    // Monotonicity at threshold 1: multiplying by a factor ≥ 1 moves the other
+    // operand away from 0. Each is a sound consequence of r = a·b — e.g. a≥1 ∧ b≥0
+    // ⇒ a·b ≥ 1·b = b. These decide cases the sign/zero rules miss, such as
+    // `x≥1 ∧ y≥1 ∧ x·y < 1` (unsat: x·y ≥ y ≥ 1).
+    //
+    // Only for genuine two-operand products (`a ≠ b`): for a square these reduce to
+    // `r ≥ x`, which, on an *unbounded* square, makes the incremental-linearization
+    // refinement chase a quadratically-escalating witness (and the exact-rational
+    // simplex would overflow before the round bound). A square is already pinned by
+    // the sign rule (`x² ≥ 0`), so it loses nothing here.
+    if a == b {
+        return Ok(out);
+    }
+    let one = arena.real_const(axeyum_ir::Rational::integer(1));
+    let a_ge1 = arena.real_ge(a, one)?;
+    let b_ge1 = arena.real_ge(b, one)?;
+    let r_ge_b = arena.real_ge(r, b)?;
+    let r_le_b = arena.real_le(r, b)?;
+    let r_ge_a = arena.real_ge(r, a)?;
+    let r_le_a = arena.real_le(r, a)?;
+    let a1_bge = arena.and(a_ge1, b_ge)?;
+    out.push(imp(arena, a1_bge, r_ge_b)?); // (a≥1 ∧ b≥0) → r≥b
+    let a1_ble = arena.and(a_ge1, b_le)?;
+    out.push(imp(arena, a1_ble, r_le_b)?); // (a≥1 ∧ b≤0) → r≤b
+    let b1_age = arena.and(b_ge1, a_ge)?;
+    out.push(imp(arena, b1_age, r_ge_a)?); // (b≥1 ∧ a≥0) → r≥a
+    let b1_ale = arena.and(b_ge1, a_le)?;
+    out.push(imp(arena, b1_ale, r_le_a)?); // (b≥1 ∧ a≤0) → r≤a
     Ok(out)
 }
 
@@ -560,6 +599,16 @@ fn extract_bounds(
         }
     }
     (lo, hi)
+}
+
+/// Whether a candidate value's magnitude is large enough that feeding it to the
+/// exact-rational simplex risks an `i128` overflow (the simplex cross-multiplies,
+/// so even sub-`i128` coefficients can blow up when combined). The bound `2^31` is
+/// far below `√i128::MAX ≈ 2^63`, leaving ample headroom; a value past it is left
+/// to `unknown` instead of being refined.
+fn too_large_to_refine(q: axeyum_ir::Rational) -> bool {
+    const REFINE_BOUND: u128 = 1 << 31;
+    q.numerator().unsigned_abs() > REFINE_BOUND || q.denominator().unsigned_abs() > REFINE_BOUND
 }
 
 /// Exact rational product, `None` on i128 overflow.

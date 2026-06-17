@@ -109,6 +109,26 @@ fn sign_rule_decides_product_of_positives() {
 }
 
 #[test]
+fn monotonicity_rule_decides_product_of_at_least_ones() {
+    // x ≥ 1 ∧ y ≥ 1 ∧ x*y < 1 is unsat: x*y ≥ y ≥ 1, which the sign/zero rules
+    // miss (r ≥ 0 is consistent with r < 1) but the threshold-1 monotonicity
+    // lemma (x≥1 ∧ y≥0 → x*y ≥ y) catches.
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let y = real(&mut a, "y");
+    let one = a.real_const(Rational::integer(1));
+    let xge = a.real_ge(x, one).unwrap();
+    let yge = a.real_ge(y, one).unwrap();
+    let p = a.real_mul(x, y).unwrap();
+    let plt = a.real_lt(p, one).unwrap();
+    let r = check_with_nra(&mut a, &[xge, yge, plt], &SolverConfig::default()).unwrap();
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x≥1 ∧ y≥1 ∧ x*y<1 must be unsat, got {r:?}"
+    );
+}
+
+#[test]
 fn zero_rule_decides() {
     // x == 0 ∧ x*y == 5 is unsat (x=0 ⇒ x*y=0 ≠ 5) by the zero rule.
     let mut a = TermArena::new();
