@@ -1028,3 +1028,33 @@ fn string_sort_in_unsupported_context_is_a_clear_error() {
         "actionable msg: {msg}"
     );
 }
+
+/// The full set of standard output/query no-op commands is accepted, so a
+/// conformant SMT-LIB script using them is not rejected at parse time.
+#[test]
+fn accepts_standard_output_commands() {
+    let text = r#"
+        (set-logic QF_BV)
+        (echo "solving")
+        (declare-const x (_ BitVec 8))
+        (assert (= x #x05))
+        (check-sat)
+        (get-model)
+        (get-assignment)
+        (get-unsat-assumptions)
+        (get-assertions)
+        (echo "done")
+        (exit)
+    "#;
+    let script = parse_script(text).expect("standard output commands parse");
+    assert_eq!(script.logic.as_deref(), Some("QF_BV"));
+    assert_eq!(script.assertions.len(), 1);
+}
+
+/// A genuinely-unknown command is still a clean `Unsupported` error (not a panic).
+#[test]
+fn rejects_unknown_command() {
+    let err =
+        parse_script("(set-logic QF_BV)\n(frobnicate 3)\n").expect_err("unknown command errors");
+    assert!(matches!(err, SmtError::Unsupported(_)));
+}

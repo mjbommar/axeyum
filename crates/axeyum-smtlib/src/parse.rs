@@ -84,6 +84,8 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
     Ok(script)
 }
 
+// A flat dispatch over the SMT-LIB command keywords; one match arm per command.
+#[allow(clippy::too_many_lines)]
 fn parse_command<'a>(
     script: &mut Script,
     aliases: &mut HashMap<String, TermId>,
@@ -112,15 +114,25 @@ fn parse_command<'a>(
         // Output/query commands: accepted as no-ops at parse time. The core is
         // produced by the solver (`solve_smtlib_unsat_core`), the model by the
         // `sat` result — the parser just records a well-formed script.
-        "get-model" | "exit" | "get-unsat-core" | "get-proof" | "get-assertions" | "reset"
-        | "reset-assertions" | "get-objectives" => exact_len(items, 1, head)?,
+        "get-model"
+        | "exit"
+        | "get-unsat-core"
+        | "get-proof"
+        | "get-assertions"
+        | "get-assignment"
+        | "get-unsat-assumptions"
+        | "reset"
+        | "reset-assertions"
+        | "get-objectives" => exact_len(items, 1, head)?,
         // Optimization objectives (OMT): `(maximize t)` / `(minimize t)`.
         "maximize" | "minimize" => {
             exact_len(items, 2, head)?;
             let t = parse_term(&mut script.arena, sexpr_at(items, 1)?, aliases, macros)?;
             script.objectives.push((t, head == "maximize"));
         }
-        "get-info" => exact_len(items, 2, head)?,
+        // `(get-info k)` and `(echo "string")`: 2-token output/query commands,
+        // accepted (well-formed) and otherwise ignored so full-standard scripts parse.
+        "get-info" | "echo" => exact_len(items, 2, head)?,
         "get-value" => {
             exact_len(items, 2, head)?;
             let list = items
