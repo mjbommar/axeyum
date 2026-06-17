@@ -490,6 +490,7 @@ impl Builder {
             clause,
             rule: rule.to_owned(),
             premises: premises.iter().map(|p| (*p).to_owned()).collect(),
+            args: Vec::new(),
         });
         id
     }

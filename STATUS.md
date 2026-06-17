@@ -338,7 +338,7 @@ plan is built and committed on the current branch:
 | P3.0 | Reduction trust ledger (TrustId + pedantic levels) | DONE |
 | P3.1 | LRAT clausal upgrade (+ in-tree check_lrat) | WIP — **`check_lrat` (hint-based linear checker) + `elaborate_drat_to_lrat` + parse/write** landed in `axeyum-cnf`, sound (3 negative/rejection tests) + 600-CNF differential; **threaded into the evidence export**: every `UnsatProof` (QF_BV + reduced QF_ABV/AUFBV/UF/LIA/datatype) now carries a self-checked LRAT certificate, `recheck` cross-checks it, `recheck_lrat` re-checks it in linear time, tamper-detected. Remaining: emit LRAT hints directly from the proof-producing CDCL core (vs post-hoc elaboration); RAT-step elaboration (negative hints) |
 | P3.2 | Alethe term/proof IR + emitter (`axeyum-alethe`) **[critical path]** | WIP — **resolution-layer IR + parser/printer + sound `check_alethe`** in `axeyum-cnf::alethe`: `resolution`/`th_resolution` steps verified by `{premises,¬concl}`-UNSAT via the proof-producing core + `check_drat` re-check (entailment itself independently checked); verify-before-record; 7 tests incl. 3 rejection. Remaining: typed-term IR (vs opaque atoms), more rules, emit Alethe from solver runs, Carcara CI cross-check; extract `axeyum-alethe` crate (ADR) when the term IR lands |
-| P3.3 | Alethe for QF_BV (bitblast_* + CNF rules + resolution/drat; Carcara CI) | WIP — **arithmetic `la_generic` checking** (`check_alethe_lra`): a linear-arith tautology clause verified by `¬clause`-UNSAT via the Farkas-certified `check_with_lra`; pluggable `check_alethe_with` callback keeps `axeyum-cnf` arithmetic-free. 5 tests incl. soundness rejections. **`lia_generic` (integer) checking+emission** added via `check_with_lia_simplex` (honors integrality; integer/real distinction tested). **Carcara cross-check harness landed (T3.3.5)**: EUF transitivity+congruence proofs externally `valid`; gated test skips without the binary. Remaining: BV bitblast rules; `la_generic` Farkas `:args` (Alethe `Step` needs an `:args` field) for Carcara-valid LRA; `lia_generic` is a Carcara hole |
+| P3.3 | Alethe for QF_BV (bitblast_* + CNF rules + resolution/drat; Carcara CI) | WIP — **arithmetic `la_generic` checking** (`check_alethe_lra`): a linear-arith tautology clause verified by `¬clause`-UNSAT via the Farkas-certified `check_with_lra`; pluggable `check_alethe_with` callback keeps `axeyum-cnf` arithmetic-free. 5 tests incl. soundness rejections. **`lia_generic` (integer) checking+emission** added via `check_with_lia_simplex` (honors integrality; integer/real distinction tested). **Carcara cross-check harness landed (T3.3.5)**: EUF (transitivity+congruence) **and LRA `la_generic`** (Farkas `:args` via the certificate) proofs externally `valid`; gated test skips without the binary. Remaining: BV bitblast rules; LRA equality/`and` assertions (split bounds → no args yet); `lia_generic` is a Carcara hole |
 | P3.4 | Embedded Alethe checker subset (self-checking) | TODO |
 | P3.5 | Alethe for reductions (arrays → Ackermann → int-blast) | TODO |
 | P3.6 | In-tree Rust Lean kernel (`axeyum-lean-kernel`, from nanoda) | TODO |
@@ -355,6 +355,19 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **LRA `la_generic` proofs now Carcara-`valid` (Farkas `:args`)**.
+  The Alethe `Step` IR gained an `args: Vec<AletheTerm>` field (parse + write
+  round-trip; emitted after `:premises`, only when non-empty so all ~80 existing
+  cnf-alethe tests and EUF/LIA emission stay byte-identical).
+  `prove_lra_unsat_alethe` now attaches one Farkas coefficient per clause literal,
+  derived from `lra_farkas_certificate` (mapped 1:1 to assertions; equality/`and`
+  assertions that split into two bounds emit no args and stay axeyum-checked-only).
+  Coefficients render as bare integer numerals or `(/ p.0 q.0)` reals (verified
+  against Carcara's `as_fraction`). **Three diverse LRA refutations now pass Carcara
+  end-to-end** (unit `(1 1)`, non-unit `(1 2)`, multi-variable `(1 1 1)`) — LRA
+  joins EUF as an externally-validated proof family. Carcara re-derives the
+  contradiction from the args, so `valid` is the soundness oracle, not the
+  coefficients themselves.
 - **2026-06-16** — **Carcara third-party cross-check harness landed**
   (`crates/axeyum-solver/tests/carcara_crosscheck.rs`, plan task T3.3.5). axeyum's
   emitted Alethe proofs are now validated by the **independent Rust Carcara

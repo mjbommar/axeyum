@@ -95,6 +95,10 @@ pub enum AletheCommand {
         rule: String,
         /// Identifiers of the premise commands.
         premises: Vec<String>,
+        /// The step's `:args` rule arguments — e.g. the `la_generic` Farkas
+        /// coefficients (one per clause literal). Empty when the rule takes none;
+        /// such steps render byte-identically to a step written without `:args`.
+        args: Vec<AletheTerm>,
     },
 }
 
@@ -301,6 +305,7 @@ fn parse_step(items: &[Sexp]) -> Result<AletheCommand, AletheError> {
 
     let mut rule: Option<String> = None;
     let mut premises: Vec<String> = Vec::new();
+    let mut args: Vec<AletheTerm> = Vec::new();
     let mut index = 3;
     while index < items.len() {
         let keyword = items[index]
@@ -340,8 +345,23 @@ fn parse_step(items: &[Sexp]) -> Result<AletheCommand, AletheError> {
                     .collect::<Result<Vec<_>, _>>()?;
                 index += 2;
             }
+            ":args" => {
+                let value = items.get(index + 1).ok_or_else(|| {
+                    AletheError::Parse("`:args` missing its term list".to_owned())
+                })?;
+                let Sexp::List(terms) = value else {
+                    return Err(AletheError::Parse(
+                        "`:args` value must be a list".to_owned(),
+                    ));
+                };
+                args = terms
+                    .iter()
+                    .map(parse_term)
+                    .collect::<Result<Vec<_>, _>>()?;
+                index += 2;
+            }
             // Tolerate (and ignore) other step annotations within the
-            // resolution slice (e.g. `:args`); the rule itself gates acceptance.
+            // resolution slice; the rule itself gates acceptance.
             other if other.starts_with(':') => {
                 index += 2;
             }
@@ -359,6 +379,7 @@ fn parse_step(items: &[Sexp]) -> Result<AletheCommand, AletheError> {
         clause,
         rule,
         premises,
+        args,
     })
 }
 
@@ -447,6 +468,7 @@ pub fn write_alethe(commands: &[AletheCommand]) -> String {
                 clause,
                 rule,
                 premises,
+                args,
             } => {
                 out.push_str("(step ");
                 out.push_str(id);
@@ -457,6 +479,16 @@ pub fn write_alethe(commands: &[AletheCommand]) -> String {
                 if !premises.is_empty() {
                     out.push_str(" :premises (");
                     out.push_str(&premises.join(" "));
+                    out.push(')');
+                }
+                if !args.is_empty() {
+                    out.push_str(" :args (");
+                    for (i, arg) in args.iter().enumerate() {
+                        if i > 0 {
+                            out.push(' ');
+                        }
+                        out.push_str(&write_atom(arg));
+                    }
                     out.push(')');
                 }
                 out.push_str(")\n");
@@ -572,6 +604,7 @@ pub fn check_alethe_with(
                 clause,
                 rule,
                 premises,
+                ..
             } => {
                 // Look up each premise; a missing id is a hard error.
                 let mut premise_clauses: Vec<&AletheClause> = Vec::with_capacity(premises.len());
@@ -962,6 +995,7 @@ pub fn lrat_to_alethe(formula: &CnfFormula, proof: &[LratStep]) -> Vec<AletheCom
                 clause: alethe_clause(clause),
                 rule: "resolution".to_owned(),
                 premises: hints.iter().map(u64::to_string).collect(),
+                args: Vec::new(),
             });
         }
     }
@@ -1062,6 +1096,7 @@ mod tests {
             clause,
             rule: rule.to_owned(),
             premises: premises.iter().map(|p| (*p).to_owned()).collect(),
+            args: Vec::new(),
         }
     }
 
@@ -1549,6 +1584,37 @@ mod tests {
         // And the structured atoms survive a text round-trip.
         let reparsed = parse_alethe(&write_alethe(&commands)).unwrap();
         assert_eq!(reparsed, commands);
+    }
+
+    #[test]
+    fn step_with_args_parse_write_roundtrip() {
+        // A `la_generic` step carrying Farkas-coefficient `:args` round-trips,
+        // and its rendering places `:args` after the clause (no `:premises` here).
+        let commands = vec![step("la", vec![neg("a"), neg("b")], "la_generic", &[])];
+        // Inject `:args` into the step (the constructor helper leaves them empty).
+        let with_args = {
+            let mut cmd = commands;
+            if let AletheCommand::Step { args, .. } = &mut cmd[0] {
+                *args = vec![
+                    AletheTerm::Const("1".to_owned()),
+                    AletheTerm::App(
+                        "/".to_owned(),
+                        vec![
+                            AletheTerm::Const("1.0".to_owned()),
+                            AletheTerm::Const("3.0".to_owned()),
+                        ],
+                    ),
+                ];
+            }
+            cmd
+        };
+        let text = write_alethe(&with_args);
+        assert!(
+            text.contains(":args (1 (/ 1.0 3.0))"),
+            "args render after the clause/premises:\n{text}"
+        );
+        let parsed = parse_alethe(&text).unwrap();
+        assert_eq!(parsed, with_args);
     }
 
     #[test]

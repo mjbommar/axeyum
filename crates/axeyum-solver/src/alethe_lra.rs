@@ -513,11 +513,17 @@ pub fn prove_lra_unsat_alethe(
             negated: true,
         })
         .collect();
+    // Derive the per-literal Farkas `:args` from the certificate when every
+    // assertion maps to exactly one atom (the inequality-only case); leave them
+    // empty otherwise (e.g. equality splits) — our own checker still accepts the
+    // proof, but external checkers like Carcara then report it `invalid`.
+    let args = farkas_args(arena, assertions);
     commands.push(AletheCommand::Step {
         id: "la".to_owned(),
         clause: la_clause,
         rule: "la_generic".to_owned(),
         premises: Vec::new(),
+        args,
     });
     // Resolve the la_generic clause against every assume to the empty clause.
     let mut resolution_premises = vec!["la".to_owned()];
@@ -527,6 +533,7 @@ pub fn prove_lra_unsat_alethe(
         clause: Vec::new(),
         rule: "resolution".to_owned(),
         premises: resolution_premises,
+        args: Vec::new(),
     });
 
     // Self-validate: return the proof only if it checks (and derives `(cl)`).
@@ -534,6 +541,58 @@ pub fn prove_lra_unsat_alethe(
         Some(commands)
     } else {
         None
+    }
+}
+
+/// Computes the per-literal Farkas `:args` for the `la_generic` step over
+/// `assertions`, in assertion (= clause-literal) order.
+///
+/// The coefficients come from [`crate::lra::lra_farkas_certificate`]: each atom's
+/// nonnegative Farkas multiplier. This is sound to emit only when every assertion
+/// contributes **exactly one** atom to the certificate — i.e. the inequality-only
+/// case — so the multiplier vector aligns one-to-one with the clause literals. An
+/// equality assertion splits into two bounds (two atoms), so the alignment is
+/// ambiguous; in that case (multiplier count ≠ assertion count) we return an empty
+/// vector and emit no args. Carcara re-derives the contradiction from these
+/// coefficients, so a wrong coefficient is caught externally — never trusted.
+///
+/// Returns an empty vector when the certificate is absent (not unsat through the
+/// Farkas path), when the counts do not align, or when any multiplier cannot be
+/// rendered.
+fn farkas_args(arena: &TermArena, assertions: &[TermId]) -> Vec<AletheTerm> {
+    let Ok(Some(certificate)) = crate::lra::lra_farkas_certificate(arena, assertions) else {
+        return Vec::new();
+    };
+    // One multiplier per assertion (in order) only when each assertion produced a
+    // single atom; otherwise the mapping is ambiguous, so emit no args.
+    if certificate.multipliers.len() != assertions.len() {
+        return Vec::new();
+    }
+    certificate
+        .multipliers
+        .iter()
+        .map(rational_to_alethe)
+        .collect()
+}
+
+/// Renders a nonnegative Farkas multiplier as an Alethe `:args` term in the form
+/// Carcara's `la_generic` accepts: an integer `n` as the bare numeral `Const("n")`,
+/// and a proper fraction `p/q` (`q != 1`) as `(/ p.0 q.0)` (Real-typed numerals, so
+/// the division re-parses as `Real`). The multipliers are nonnegative, so no sign
+/// handling is needed.
+fn rational_to_alethe(value: &Rational) -> AletheTerm {
+    let num = value.numerator();
+    let den = value.denominator();
+    if den == 1 {
+        AletheTerm::Const(num.to_string())
+    } else {
+        AletheTerm::App(
+            "/".to_owned(),
+            vec![
+                AletheTerm::Const(format!("{num}.0")),
+                AletheTerm::Const(format!("{den}.0")),
+            ],
+        )
     }
 }
 
@@ -650,6 +709,7 @@ pub fn prove_lia_unsat_alethe(
         clause: lia_clause,
         rule: "lia_generic".to_owned(),
         premises: Vec::new(),
+        args: Vec::new(),
     });
     // Resolve the lia_generic clause against every assume to the empty clause.
     let mut resolution_premises = vec!["lia".to_owned()];
@@ -659,6 +719,7 @@ pub fn prove_lia_unsat_alethe(
         clause: Vec::new(),
         rule: "resolution".to_owned(),
         premises: resolution_premises,
+        args: Vec::new(),
     });
 
     // Self-validate: return the proof only if it checks (and derives `(cl)`).
@@ -797,6 +858,7 @@ mod tests {
             clause,
             rule: rule.to_owned(),
             premises: premises.iter().map(|p| (*p).to_owned()).collect(),
+            args: Vec::new(),
         }
     }
 
