@@ -227,16 +227,25 @@ pub fn solve_smtlib_unsat_core(
 }
 
 /// Produces a checkable **Alethe proof** for an SMT-LIB script (`get-proof`):
-/// when the conjunction of its assertions is `unsat` and falls within the
-/// `QF_BV` Alethe-proof fragment, returns the textual Alethe proof (a complete
-/// `bitblast_*` → CNF-introduction → resolution refutation deriving `(cl)`),
-/// re-validated by the in-tree [`check_alethe`] before it is returned.
+/// when the conjunction of its assertions is `unsat` and falls within a supported
+/// proof fragment, returns the textual Alethe proof, re-validated by the in-tree
+/// checker before it is returned. Three fragments are tried, in order:
+///
+/// - **`QF_BV`**: a complete `bitblast_*` → CNF-introduction → resolution
+///   refutation deriving `(cl)` (re-checked by [`check_alethe`]).
+/// - **`QF_UF`** (EUF): a congruence/transitivity refutation (re-checked by
+///   [`check_alethe`]).
+/// - **`QF_LRA`**: a Farkas `la_generic` + resolution refutation (re-checked by
+///   [`crate::check_alethe_lra`], which decides the `la_generic` coefficients).
+///
+/// Each emitter is self-validating (it returns a proof only when it checks), and
+/// this re-validates again as defense in depth. Every emitted proof is also
+/// accepted by the external Carcara checker; see
+/// `crates/axeyum-solver/tests/carcara_crosscheck.rs`.
 ///
 /// Returns `Ok(None)` when no Alethe proof is available — the script is
-/// `sat`/`unknown`, or its `unsat` is outside the supported fragment (non-`QF_BV`,
-/// or `QF_BV` containing shifts/division/remainder, which Carcara has no bitblast
-/// rule for). The emitted proof is also accepted by the external Carcara checker;
-/// see `crates/axeyum-solver/tests/carcara_crosscheck.rs`.
+/// `sat`/`unknown`, or its `unsat` is outside all supported fragments (e.g. `QF_BV`
+/// with shifts/division/remainder, or a theory with no Alethe emitter yet).
 ///
 /// # Errors
 ///
@@ -246,16 +255,29 @@ pub fn solve_smtlib_get_proof(
     _config: &SolverConfig,
 ) -> Result<Option<String>, SolverError> {
     let script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
-    // The driver confirms `unsat` itself and returns `None` for sat/unknown or any
-    // term outside the fragment, so this is exactly "a proof exists".
-    let Some(proof) = crate::prove_qf_bv_unsat_alethe(&script.arena, &script.assertions) else {
-        return Ok(None);
-    };
-    // Defense in depth: only hand out a proof our own checker re-validates.
-    if !matches!(check_alethe(&proof), Ok(true)) {
-        return Ok(None);
+    let arena = &script.arena;
+    let assertions = &script.assertions;
+
+    // QF_BV: the bitblast→CNF→resolution driver (re-checked by check_alethe).
+    if let Some(proof) = crate::prove_qf_bv_unsat_alethe(arena, assertions)
+        && matches!(check_alethe(&proof), Ok(true))
+    {
+        return Ok(Some(write_alethe(&proof)));
     }
-    Ok(Some(write_alethe(&proof)))
+    // QF_UF (EUF): a congruence/transitivity refutation (re-checked by check_alethe).
+    if let Some(proof) = crate::prove_qf_uf_unsat_alethe(arena, assertions)
+        && matches!(check_alethe(&proof), Ok(true))
+    {
+        return Ok(Some(write_alethe(&proof)));
+    }
+    // QF_LRA: a Farkas la_generic refutation (re-checked by check_alethe_lra, which
+    // owns the arithmetic la_generic decision the plain check_alethe lacks).
+    if let Some(proof) = crate::prove_lra_unsat_alethe(arena, assertions)
+        && matches!(crate::check_alethe_lra(&proof), Ok(true))
+    {
+        return Ok(Some(write_alethe(&proof)));
+    }
+    Ok(None)
 }
 
 /// Decides an **incremental** SMT-LIB script, returning one result per

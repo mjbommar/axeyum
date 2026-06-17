@@ -355,6 +355,17 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-17** — **`(get-proof)` now serves THREE theories (QF_BV + EUF + LRA)**.
+  `solve_smtlib_get_proof` tries, in order, the `QF_BV` bitblast driver, the EUF
+  congruence emitter (`prove_qf_uf_unsat_alethe`), and the LRA Farkas emitter
+  (`prove_lra_unsat_alethe`), returning the first that yields a proof its
+  fragment-appropriate checker re-validates (`check_alethe` for BV/EUF,
+  `check_alethe_lra` for LRA). So a standard SMT-LIB `(get-proof)` now returns a
+  checkable Alethe certificate for bit-vector, uninterpreted-function, AND
+  linear-real-arithmetic `unsat`s — the three externally-Carcara-validated proof
+  families, unified behind one front-door call. `Ok(None)` only when no supported
+  fragment can prove it (e.g. an unsat needing shift semantics: `a=1 ∧ a≪1=0`).
+  5 tests (BV/EUF/LRA proofs + sat→None + shift-semantics→None).
 - **2026-06-17** — **`(get-proof)` in the SMT-LIB front door (P4.4 + proof surface)**.
   New `solve_smtlib_get_proof(input, config) -> Result<Option<String>, SolverError>`:
   parses a script, and when the assertions are `unsat` in the QF_BV Alethe fragment,

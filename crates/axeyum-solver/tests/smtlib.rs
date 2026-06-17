@@ -982,22 +982,80 @@ fn get_proof_is_none_when_sat() {
     );
 }
 
-/// `(get-proof)` is `None` for an `unsat` script outside the Alethe fragment
-/// (here a shift, which Carcara has no bitblast rule for).
+/// `(get-proof)` is `None` for an `unsat` whose refutation needs **shift
+/// semantics** — outside every supported Alethe fragment. `a = 1 ∧ a≪1 = 0` is
+/// unsat (1≪1 = 2 ≠ 0), but the `QF_BV` driver has no `bvshl` bitblast rule and the
+/// EUF path (which treats `bvshl` as an opaque function) sees no contradiction, so
+/// no fragment can prove it even though it is genuinely unsatisfiable.
 #[test]
 fn get_proof_is_none_outside_the_fragment() {
     use axeyum_solver::solve_smtlib_get_proof;
     let text = "\
 (set-logic QF_BV)
 (declare-const a (_ BitVec 4))
-(declare-const b (_ BitVec 4))
-(assert (= (bvshl a b) a))
-(assert (not (= (bvshl a b) a)))
+(assert (= a (_ bv1 4)))
+(assert (= (bvshl a (_ bv1 4)) (_ bv0 4)))
 (check-sat)
 (get-proof)
 ";
     assert_eq!(
         solve_smtlib_get_proof(text, &config()).expect("decides"),
         None
+    );
+}
+
+/// `(get-proof)` serves the **EUF** fragment: `a=b ∧ f(a)≠f(b)` is unsat by
+/// congruence, and the returned proof closes by `eq_congruent`/resolution.
+#[test]
+fn get_proof_serves_the_euf_fragment() {
+    use axeyum_cnf::{check_alethe, parse_alethe};
+    use axeyum_solver::solve_smtlib_get_proof;
+    let text = "\
+(set-logic QF_UFBV)
+(declare-const a (_ BitVec 8))
+(declare-const b (_ BitVec 8))
+(declare-fun f ((_ BitVec 8)) (_ BitVec 8))
+(assert (= a b))
+(assert (not (= (f a) (f b))))
+(check-sat)
+(get-proof)
+";
+    let proof = solve_smtlib_get_proof(text, &config())
+        .expect("decides")
+        .expect("an Alethe proof for the EUF congruence conflict");
+    let parsed = parse_alethe(&proof).expect("emitted Alethe parses");
+    assert_eq!(
+        check_alethe(&parsed),
+        Ok(true),
+        "EUF proof re-checks to (cl)"
+    );
+}
+
+/// `(get-proof)` serves the **`QF_LRA`** fragment: `x ≤ 0 ∧ x ≥ 1` is unsat, and the
+/// returned proof is a Farkas `la_generic` refutation (re-checked by `check_alethe_lra`).
+#[test]
+fn get_proof_serves_the_lra_fragment() {
+    use axeyum_cnf::parse_alethe;
+    use axeyum_solver::{check_alethe_lra, solve_smtlib_get_proof};
+    let text = "\
+(set-logic QF_LRA)
+(declare-const x Real)
+(assert (<= x 0.0))
+(assert (>= x 1.0))
+(check-sat)
+(get-proof)
+";
+    let proof = solve_smtlib_get_proof(text, &config())
+        .expect("decides")
+        .expect("an Alethe proof for the LRA conflict");
+    assert!(
+        proof.contains("la_generic"),
+        "uses the Farkas layer:\n{proof}"
+    );
+    let parsed = parse_alethe(&proof).expect("emitted Alethe parses");
+    assert_eq!(
+        check_alethe_lra(&parsed),
+        Ok(true),
+        "LRA proof re-checks to (cl)"
     );
 }
