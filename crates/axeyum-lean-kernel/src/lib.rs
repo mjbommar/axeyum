@@ -49,6 +49,7 @@
 mod expr;
 mod level;
 mod name;
+mod tc;
 
 use std::collections::HashMap;
 use std::fmt;
@@ -56,6 +57,7 @@ use std::fmt;
 pub use expr::{BinderInfo, ExprId, ExprNode, Lit};
 pub use level::{LevelId, LevelNode};
 pub use name::{NameId, NameNode};
+pub use tc::{KernelError, LocalContext, LocalDecl};
 
 use expr::ExprMeta;
 
