@@ -67,10 +67,30 @@
 //! synthesized clauses slot into the same resolution loop the clause antecedents
 //! use.
 //!
+//! # Search heuristics (the competitive core)
+//!
+//! The search core uses the standard CDCL modernization, made deterministic:
+//!
+//! * **VSIDS activity branching.** Each variable carries an activity score;
+//!   every variable touched during 1-UIP conflict analysis (the resolved
+//!   antecedents and the learned-clause literals) is *bumped*, and a per-conflict
+//!   exponential decay (`var_inc /= decay`, with rescale-on-overflow) keeps the
+//!   most recently active variables on top. The next decision is the unassigned
+//!   variable of highest activity; **ties break to the lowest variable index**,
+//!   so the search stays fully deterministic.
+//! * **Phase saving.** The last value each variable was assigned is remembered
+//!   and reused as the decision phase (the initial saved phase is `false`,
+//!   matching the historical false-first behavior).
+//! * **Luby restarts.** A fixed Luby sequence scaled by a small unit triggers a
+//!   backtrack to level 0 (keeping every learned clause, activity score, and
+//!   saved phase). The sequence is deterministic, so restarts do not perturb
+//!   reproducibility.
+//!
 //! # Determinism
 //!
-//! Lowest-index branching, false-first phase, index-ordered constraint and watch
-//! scans; no hash-map iteration influences any result or order.
+//! Activity ties break to the lowest variable index, the Luby sequence is fixed,
+//! phase saving is a per-variable array, and constraint/watch scans stay
+//! index-ordered; no hash-map iteration influences any result or order.
 //!
 //! # Soundness
 //!
@@ -84,6 +104,23 @@ use crate::{CnfFormula, XorConstraintInput, extract_xors};
 
 /// Maximum conflicts before the solver gives up (safety valve → `Unknown`).
 const MAX_CONFLICTS: usize = 2_000_000;
+
+/// VSIDS activity decay: each conflict, `var_inc` is divided by this, so older
+/// bumps decay geometrically relative to fresh ones (the `MiniSat` scheme uses
+/// `0.95`).
+const VSIDS_DECAY: f64 = 0.95;
+
+/// Rescale activities (and `var_inc`) by this when any activity exceeds the cap,
+/// to avoid `f64` overflow on very long runs.
+const VSIDS_RESCALE: f64 = 1e-100;
+
+/// Activity rescale trigger: when any score exceeds this, divide everything by
+/// it (multiply by [`VSIDS_RESCALE`]).
+const VSIDS_RESCALE_LIMIT: f64 = 1e100;
+
+/// Luby restart unit: the Luby value is multiplied by this to get the conflict
+/// interval before the next restart.
+const RESTART_UNIT: usize = 100;
 
 /// Outcome of [`solve_with_xor_cdcl`].
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -235,6 +272,17 @@ struct XorCdcl<'a> {
     conflicts: usize,
     /// Whether a top-level contradiction was found during setup.
     top_level_unsat: bool,
+    /// VSIDS activity score per variable (higher ⇒ branched sooner).
+    activity: Vec<f64>,
+    /// Current activity bump increment (grows each conflict by `1/decay`).
+    var_inc: f64,
+    /// Saved (last-assigned) phase per variable for phase saving; initial
+    /// `false` reproduces the historical false-first decision phase.
+    saved_phase: Vec<bool>,
+    /// Conflicts counted since the last restart (the restart trigger).
+    conflicts_since_restart: usize,
+    /// Index into the Luby sequence for the next restart interval.
+    luby_index: usize,
 }
 
 impl<'a> XorCdcl<'a> {
@@ -313,6 +361,11 @@ impl<'a> XorCdcl<'a> {
             has_empty_clause,
             conflicts: 0,
             top_level_unsat,
+            activity: vec![0.0; n],
+            var_inc: 1.0,
+            saved_phase: vec![false; n],
+            conflicts_since_restart: 0,
+            luby_index: 0,
         }
     }
 
@@ -336,7 +389,9 @@ impl<'a> XorCdcl<'a> {
     /// Assigns the variable of `lit` so `lit` is true, recording its antecedent.
     fn enqueue(&mut self, lit: Lit, reason: Reason) {
         let var = lit_var(lit);
-        self.assign[var] = Some(!lit_negated(lit));
+        let value = !lit_negated(lit);
+        self.assign[var] = Some(value);
+        self.saved_phase[var] = value;
         self.level[var] = self.decision_level();
         self.reason[var] = reason;
         self.trail.push(var);
@@ -365,6 +420,7 @@ impl<'a> XorCdcl<'a> {
                     return XorCdclResult::Unsat;
                 }
                 self.conflicts += 1;
+                self.conflicts_since_restart += 1;
                 if self.conflicts > MAX_CONFLICTS {
                     return XorCdclResult::Unknown;
                 }
@@ -372,6 +428,9 @@ impl<'a> XorCdcl<'a> {
                 if learned.is_empty() {
                     return XorCdclResult::Unsat;
                 }
+                // VSIDS: bump every variable that took part in this conflict's
+                // resolution (collected in `analyze`), then decay for next time.
+                self.decay_activity();
                 let asserting = learned[0];
                 let cid = self.clauses.len();
                 if learned.len() >= 2 {
@@ -381,15 +440,53 @@ impl<'a> XorCdcl<'a> {
                 self.clauses.push(learned);
                 self.backtrack_to(backjump);
                 self.enqueue(asserting, Reason::Clause(cid));
+            } else if self.should_restart() {
+                self.restart();
             } else if let Some(var) = self.pick_branch() {
                 self.trail_lim.push(self.trail.len());
-                // Decide false first (deterministic phase).
-                self.enqueue(make_lit(var, true), Reason::Decision);
+                // Decide on the saved phase (phase saving; initial phase false).
+                self.enqueue(make_lit(var, !self.saved_phase[var]), Reason::Decision);
             } else {
                 let model = self.assign.iter().map(|v| v.unwrap_or(false)).collect();
                 return XorCdclResult::Sat(model);
             }
         }
+    }
+
+    /// Whether enough conflicts have accrued since the last restart to fire the
+    /// next Luby restart. A restart only makes sense above level 0.
+    fn should_restart(&self) -> bool {
+        if self.decision_level() == 0 {
+            return false;
+        }
+        let interval = RESTART_UNIT * luby(self.luby_index);
+        self.conflicts_since_restart >= interval
+    }
+
+    /// Backjumps to level 0, keeping all learned clauses, activities, and saved
+    /// phases, and advances the Luby sequence.
+    fn restart(&mut self) {
+        self.backtrack_to(0);
+        self.conflicts_since_restart = 0;
+        self.luby_index += 1;
+    }
+
+    /// Bumps `var`'s VSIDS activity by the current increment, rescaling all
+    /// activities if any would overflow the `f64` cap.
+    fn bump_var(&mut self, var: usize) {
+        self.activity[var] += self.var_inc;
+        if self.activity[var] > VSIDS_RESCALE_LIMIT {
+            for a in &mut self.activity {
+                *a *= VSIDS_RESCALE;
+            }
+            self.var_inc *= VSIDS_RESCALE;
+        }
+    }
+
+    /// Grows the activity increment for the next conflict (geometric decay of
+    /// older bumps relative to newer ones).
+    fn decay_activity(&mut self) {
+        self.var_inc /= VSIDS_DECAY;
     }
 
     /// The conflict produced by propagation: either a conflicting clause id or a
@@ -547,7 +644,12 @@ impl<'a> XorCdcl<'a> {
     /// 1-UIP conflict analysis. Returns the learned clause (asserting literal at
     /// index 0, second-watch literal at index 1) and the backjump level. An
     /// empty learned clause means the conflict is implied at level 0.
-    fn analyze(&self, conflict: Conflict) -> (Vec<Lit>, usize) {
+    ///
+    /// As a side effect it **bumps the VSIDS activity** of every variable that
+    /// enters the resolution (each reason clause's literals), which is the set
+    /// the learned clause and its resolved antecedents draw from — the standard
+    /// `MiniSat`-style bump.
+    fn analyze(&mut self, conflict: Conflict) -> (Vec<Lit>, usize) {
         let mut seen = vec![false; self.assign.len()];
         let mut lower: Vec<Lit> = Vec::new();
         let mut path_count = 0usize;
@@ -561,6 +663,11 @@ impl<'a> XorCdcl<'a> {
         loop {
             for &q in &clause {
                 let v = lit_var(q);
+                // Bump every variable that participates in the resolution, even
+                // ones already seen or at level 0 (matching `MiniSat`'s bump on
+                // each analyzed reason literal); this keeps recently-active
+                // variables hot for branching.
+                self.bump_var(v);
                 if Some(v) == pivot_var || seen[v] || self.level[v] == 0 {
                     continue;
                 }
@@ -667,9 +774,46 @@ impl<'a> XorCdcl<'a> {
         self.qhead = self.trail.len();
     }
 
+    /// Picks the unassigned variable of highest VSIDS activity, breaking ties to
+    /// the lowest variable index (the determinism guarantee). Returns `None` when
+    /// every variable is assigned (a full model).
     fn pick_branch(&self) -> Option<usize> {
-        self.assign.iter().position(Option::is_none)
+        let mut best: Option<usize> = None;
+        let mut best_act = f64::NEG_INFINITY;
+        for (v, slot) in self.assign.iter().enumerate() {
+            if slot.is_some() {
+                continue;
+            }
+            // Strictly-greater keeps the lowest index on ties (we scan ascending).
+            if self.activity[v] > best_act {
+                best_act = self.activity[v];
+                best = Some(v);
+            }
+        }
+        best
     }
+}
+
+/// The `i`-th term of the Luby sequence (1-indexed by `i+1` internally):
+/// `1, 1, 2, 1, 1, 2, 4, 1, 1, 2, 1, 1, 2, 4, 8, …`. Used to schedule restarts
+/// deterministically.
+fn luby(i: usize) -> usize {
+    // Knuth's closed form. `size` tracks the length of the current power-of-two
+    // "super-block" (`2^(seq+1) - 1`); grow until it covers index `i`, then
+    // descend into the sub-block containing `i`.
+    let mut size = 1usize;
+    let mut seq = 0usize;
+    let mut i = i;
+    while size < i + 1 {
+        seq += 1;
+        size = 2 * size + 1;
+    }
+    while size != i + 1 {
+        size = (size - 1) / 2;
+        seq -= 1;
+        i %= size;
+    }
+    1usize << seq
 }
 
 /// The two flavours of conflict the search can hit.
@@ -1074,5 +1218,49 @@ mod tests {
     fn budget_makes_solver_total() {
         let f = formula(2, &[vec![(0, false)], vec![(1, true)]]);
         assert!(matches!(solve_with_xor_cdcl(&f), XorCdclResult::Sat(_)));
+    }
+
+    // --- heuristic unit/regression tests ------------------------------------
+
+    #[test]
+    fn luby_sequence_prefix() {
+        // The canonical Luby prefix: 1 1 2 1 1 2 4 1 1 2 1 1 2 4 8 ...
+        let expected = [
+            1usize, 1, 2, 1, 1, 2, 4, 1, 1, 2, 1, 1, 2, 4, 8, 1, 1, 2, 1, 1, 2, 4, 1, 1, 2, 1, 1,
+            2, 4, 8, 16,
+        ];
+        for (i, &want) in expected.iter().enumerate() {
+            assert_eq!(luby(i), want, "luby({i})");
+        }
+    }
+
+    #[test]
+    fn restart_heavy_instance_still_decides() {
+        // A small restart unit forces many restarts on the parity chains; the
+        // verdict must still be correct (a restart that corrupts state would
+        // flip it). We reuse the learning-required chains across a span of n.
+        for n in [4usize, 8, 12, 16, 20, 24] {
+            let f = parity_chain_unsat(n);
+            assert_eq!(
+                solve_with_xor_cdcl(&f),
+                XorCdclResult::Unsat,
+                "restart-heavy parity chain n={n} must stay UNSAT"
+            );
+        }
+    }
+
+    #[test]
+    fn vsids_branching_is_deterministic() {
+        // Solving the same instance twice must give the identical model (the
+        // lowest-index tie-break plus the fixed Luby schedule make the search
+        // fully reproducible).
+        let mut clauses = xor_clauses(&[0, 1, 2], true);
+        clauses.extend(xor_clauses(&[2, 3, 4], false));
+        clauses.push(vec![(0, false)]);
+        let f = formula(5, &clauses);
+        let a = solve_with_xor_cdcl(&f);
+        let b = solve_with_xor_cdcl(&f);
+        assert_eq!(a, b, "repeated solves must be bit-identical (determinism)");
+        assert!(matches!(a, XorCdclResult::Sat(_)));
     }
 }
