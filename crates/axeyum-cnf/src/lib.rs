@@ -24,6 +24,7 @@ mod lrat;
 mod proof_sat;
 mod simplify;
 mod xor_extract;
+mod xor_propagate;
 
 pub use alethe::{
     AletheClause, AletheCommand, AletheError, AletheLit, AletheTerm, check_alethe,
@@ -39,6 +40,7 @@ pub use lrat::{LratError, LratStep, check_lrat, elaborate_drat_to_lrat, parse_lr
 pub use proof_sat::{ProofSolveOutcome, solve_with_drat_proof};
 pub use simplify::{SubsumeStats, simplify, simplify_within};
 pub use xor_extract::{ExtractedXors, extract_xors};
+pub use xor_propagate::{XorPropagateStats, XorPropagation, xor_propagate};
 
 use rustsat::{
     solvers::{Solve, SolveIncremental, SolverResult as RustSatSolverResult},
