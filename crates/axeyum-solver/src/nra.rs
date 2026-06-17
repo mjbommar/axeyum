@@ -520,6 +520,23 @@ fn product_lemmas(
     out.push(imp(arena, b1_age, r_ge_a)?); // (b≥1 ∧ a≥0) → r≥a
     let b1_ale = arena.and(b_ge1, a_le)?;
     out.push(imp(arena, b1_ale, r_le_a)?); // (b≥1 ∧ a≤0) → r≤a
+
+    // Shrinking at threshold 1: a factor in [0,1] moves the other operand toward 0
+    // — e.g. 0≤a≤1 ∧ b≥0 ⇒ a·b ≤ 1·b = b. These need only *one* operand bounded
+    // (a≤1), so they fire where the two-sided McCormick envelopes cannot, e.g.
+    // `0≤x≤1 ∧ y≥0 ∧ x·y > y` (unsat: x·y ≤ y).
+    let a_le1 = arena.real_le(a, one)?;
+    let b_le1 = arena.real_le(b, one)?;
+    let a01 = arena.and(a_ge, a_le1)?; // 0 ≤ a ≤ 1
+    let b01 = arena.and(b_ge, b_le1)?; // 0 ≤ b ≤ 1
+    let a01_bge = arena.and(a01, b_ge)?;
+    out.push(imp(arena, a01_bge, r_le_b)?); // (0≤a≤1 ∧ b≥0) → r≤b
+    let a01_ble = arena.and(a01, b_le)?;
+    out.push(imp(arena, a01_ble, r_ge_b)?); // (0≤a≤1 ∧ b≤0) → r≥b
+    let b01_age = arena.and(b01, a_ge)?;
+    out.push(imp(arena, b01_age, r_le_a)?); // (0≤b≤1 ∧ a≥0) → r≤a
+    let b01_ale = arena.and(b01, a_le)?;
+    out.push(imp(arena, b01_ale, r_ge_a)?); // (0≤b≤1 ∧ a≤0) → r≥a
     Ok(out)
 }
 

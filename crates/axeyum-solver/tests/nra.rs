@@ -129,6 +129,28 @@ fn monotonicity_rule_decides_product_of_at_least_ones() {
 }
 
 #[test]
+fn shrinking_rule_decides_product_below_factor() {
+    // 0 ≤ x ≤ 1 ∧ y ≥ 0 ∧ x*y > y is unsat: x*y ≤ 1*y = y. Only x is bounded
+    // above, so the two-sided McCormick envelope cannot apply — the threshold-1
+    // shrinking lemma (0≤x≤1 ∧ y≥0 → x*y ≤ y) catches it.
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let y = real(&mut a, "y");
+    let zero = a.real_const(Rational::integer(0));
+    let one = a.real_const(Rational::integer(1));
+    let xlo = a.real_ge(x, zero).unwrap();
+    let xhi = a.real_le(x, one).unwrap();
+    let ylo = a.real_ge(y, zero).unwrap();
+    let p = a.real_mul(x, y).unwrap();
+    let pgt = a.real_gt(p, y).unwrap();
+    let r = check_with_nra(&mut a, &[xlo, xhi, ylo, pgt], &SolverConfig::default()).unwrap();
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "0≤x≤1 ∧ y≥0 ∧ x*y>y must be unsat, got {r:?}"
+    );
+}
+
+#[test]
 fn zero_rule_decides() {
     // x == 0 ∧ x*y == 5 is unsat (x=0 ⇒ x*y=0 ≠ 5) by the zero rule.
     let mut a = TermArena::new();
