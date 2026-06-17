@@ -174,11 +174,43 @@ never a false DRAT proof) are designed in
 primitive `xor_search::xor_implications` (implied literals + conflicts with reasons
 under a partial assignment) is already built and brute-force-validated.
 
+## Path 2 thesis CONFIRMED — CDCL(XOR) cracks the wall (2026-06, measured)
+
+`xor_cdcl::solve_with_xor_cdcl` (CDCL + clause learning + watched-literal XOR
+propagation) was measured against `rustsat-batsat` on the curated multiplier
+unknowns, on the identical Tseitin CNF (harness:
+`crates/axeyum-solver/tests/xor_cdcl_curated_measure.rs`):
+
+| instance | size | batsat (2 s) | CDCL(XOR) |
+|---|---|---|---|
+| `mulhs08` | 655 v / 2716 cl | **unknown** | **unsat** (20.1 s) |
+| `calypto_9` | 1680 v / 7236 cl | **unknown** | **sat** (62.0 s) |
+
+**CDCL(XOR) decides multiplier-equivalence instances plain CDCL cannot** — the
+path-2 thesis, now empirical rather than predicted. The exponential resolution
+lower bound is real, and reasoning about the parity structure during search is
+what steps around it.
+
+The honest qualifier: the win is **capability, not yet speed**. 20 s / 62 s
+blow the 2 s budget because `xor_cdcl` uses lowest-index branching with no VSIDS
+and no restarts — a deliberately naive core (the XOR integration was the point).
+So the decomposition is now sharp: **XOR propagation is the missing *capability*;
+[P1.3 SAT-core modernization](../../plan/track-1-engine/) (VSIDS + restarts +
+chronological BT) is the missing *speed*.** Stacking a competitive decision
+heuristic on top of XOR propagation is the path to deciding these *within* budget.
+Bigger instances (`mulhs16`, `stp_samples`) still exceed a tractable measurement
+timeout on the naive core — they need both the speed work and the complete
+Gaussian-on-trail propagator (the watched-literal scheme is incomplete).
+
 ## Bottom line
 
 The curated wall is multiplier-equivalence, which is provably hard for the
-resolution proof system CDCL uses. Do not "tune the SAT solver"; instead (1) widen
-the sound word-level structural simplifications, then (2) add XOR+Gaussian
-reasoning, then (3) build the algebraic engine — the last two are the substance of
-the P1/P2 "custom core / algebraic BV reasoning" item, now diagnosed rather than
-guessed.
+resolution proof system CDCL uses. Do not "tune the SAT solver" in isolation;
+instead (1) widen the sound word-level structural simplifications [done, measured
+to its ceiling], then (2) add XOR+Gaussian reasoning [**done — CDCL(XOR) decides
+`mulhs08`/`calypto_9` that batsat cannot**], then (3) build the algebraic engine —
+the last is the remaining substance of the P1/P2 "custom core / algebraic BV
+reasoning" item. The immediate follow-through is P1.3 (competitive heuristics) to
+turn CDCL(XOR)'s new *capability* into *competitive* times, plus the complete
+Gaussian-on-trail propagator and the production-dispatch + `XorGaussian`
+trust-ledger wiring (ADR-0035).
