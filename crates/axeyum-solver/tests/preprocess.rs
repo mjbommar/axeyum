@@ -155,3 +155,41 @@ fn multiplier_commutativity_is_refuted_by_canonicalization() {
         "a*b = b*a, so its negation is unsat — decided by canonicalization, not blasting"
     );
 }
+
+/// AC-flattening refutes a commute-shaped instance over a multiplier *tree*,
+/// across intermediate variable bindings: `s1 = a*(b*c)`, `s2 = c*(a*b)`, and
+/// `(not (= s1 s2))`. `solve_eqs` inlines `s1`/`s2`, and the assertion is
+/// canonicalized so both products AC-normalize to the same term, fold the
+/// equality to `true`, and the negation to `false` — unsat with no 32-bit
+/// multiplier-tree bit-blasting.
+#[test]
+fn ac_multiplier_tree_commute_is_refuted_by_preprocessing() {
+    let mut arena = TermArena::new();
+    let a = arena.declare("a", Sort::BitVec(32)).unwrap();
+    let b = arena.declare("b", Sort::BitVec(32)).unwrap();
+    let c = arena.declare("c", Sort::BitVec(32)).unwrap();
+    let s1 = arena.declare("s1", Sort::BitVec(32)).unwrap();
+    let s2 = arena.declare("s2", Sort::BitVec(32)).unwrap();
+    let av = arena.var(a);
+    let bv = arena.var(b);
+    let cv = arena.var(c);
+    let s1v = arena.var(s1);
+    let s2v = arena.var(s2);
+
+    let bc = arena.bv_mul(bv, cv).unwrap();
+    let abc = arena.bv_mul(av, bc).unwrap(); // a*(b*c)
+    let ab = arena.bv_mul(av, bv).unwrap();
+    let cab = arena.bv_mul(cv, ab).unwrap(); // c*(a*b)
+
+    let s1_def = arena.eq(s1v, abc).unwrap();
+    let s2_def = arena.eq(s2v, cab).unwrap();
+    let eq = arena.eq(s1v, s2v).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let originals = [s1_def, s2_def, neq];
+
+    assert_eq!(
+        check(&mut arena, &originals),
+        CheckResult::Unsat,
+        "s1 = a*(b*c), s2 = c*(a*b); s1 != s2 is unsat by AC-normalization, not blasting"
+    );
+}

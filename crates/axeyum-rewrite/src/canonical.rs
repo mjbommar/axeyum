@@ -425,7 +425,7 @@ fn default_rules() -> Vec<RewriteRule> {
         rule(
             COMMUTATIVE_ORDER,
             "Commutative operand order",
-            "a commutative operator (`and`/`or`/`xor`/`=`/`bvadd`/`bvmul`/`bvand`/`bvor`/`bvxor`/`bvnand`/`bvnor`/`bvxnor`) with operands out of ascending `TermId` order",
+            "a commutative operator with operands out of canonical order: AC operators (`and`/`or`/`xor`/`bvadd`/`bvmul`/`bvand`/`bvor`/`bvxor`/`bvxnor`) are flattened across their nested same-op tree and the operands sorted by ascending `TermId`; commutative-only operators (`=`/`bvnand`/`bvnor`) have just their two operands sorted",
         ),
     ]
 }
@@ -525,22 +525,62 @@ fn rewrite_app(
         }
     }
 
-    // Commutative-operand canonicalization: for a commutative operator, reorder
-    // operands into ascending `TermId` order before applying the op-specific
-    // rules. This is denotation-preserving (the operator is commutative), and it
-    // lets structurally-identical-operand rules (e.g. `=` reflexivity) fold
-    // goals such as `(= (bvmul a b) (bvmul b a))` to `true` without bit-blasting
-    // the multiplier. The reorder is recorded only if no later rule fires and the
-    // order actually changed.
+    // Commutative-operand canonicalization. Two flavours, both governed by the
+    // `commutative.operand_order.v1` rule:
+    //
+    //   * AC operators (associative *and* commutative — `and`/`or`/`xor`,
+    //     `bvadd`/`bvmul`/`bvand`/`bvor`/`bvxor`/`bvxnor`): flatten the whole
+    //     nested same-op tree into one operand multiset, sort by ascending
+    //     `TermId`, and rebuild a left-associated tree over the sorted operands.
+    //     So `a*(b*c)`, `(a*b)*c`, and `c*(a*b)` all canonicalize to the SAME
+    //     term. This is denotation-preserving because the operator is both
+    //     associative (regroup freely) and commutative (reorder freely).
+    //   * Commutative-but-not-associative binary operators (`=`, `bvnand`,
+    //     `bvnor`): only the two operands are sorted, never flattened — their
+    //     grouping is meaningful, so `(= (= a b) c)` must keep its structure.
+    //
+    // The shared payoff: structurally-identical-operand rules (e.g. `=`
+    // reflexivity) then fold goals such as `(= (a*(b*c)) (c*(a*b)))` to `true`
+    // with no bit-blasting. The reorder is recorded only if no later rule fires
+    // and the rebuilt term actually differs from the input application.
     let mut reordered = false;
-    let sorted_args;
-    let args = if is_commutative(op) && args.len() == 2 && args[0] > args[1] {
-        sorted_args = [args[1], args[0]];
+    let normalized_args;
+    let args = if is_ac(op) && enabled.contains(COMMUTATIVE_ORDER) {
+        let flat = flatten_ac(arena, op, args);
+        // A single operand or already-sorted flat list of the same length is a
+        // no-op; only treat as a rewrite when the flattened/sorted operands
+        // differ from the raw `args`.
+        if flat.as_slice() == args {
+            args
+        } else {
+            normalized_args = flat;
+            reordered = true;
+            normalized_args.as_slice()
+        }
+    } else if is_commutative(op) && args.len() == 2 && args[0] > args[1] {
+        normalized_args = vec![args[1], args[0]];
         reordered = enabled.contains(COMMUTATIVE_ORDER);
-        if reordered { &sorted_args[..] } else { args }
+        if reordered {
+            normalized_args.as_slice()
+        } else {
+            args
+        }
     } else {
         args
     };
+
+    // AC flattening can yield more than two operands; the op-specific binary
+    // rules below all assume exactly two. When the flattened operand list is
+    // wider than binary, skip them and rebuild the canonical left-associated AC
+    // tree directly. (The binary const-fold/identity/idempotent rules would not
+    // fire on the multiset form anyway: constants are folded bottom-up at each
+    // binary node when the AC tree is rebuilt, and duplicates remain explicit.)
+    if reordered && args.len() != 2 {
+        return Ok(applied(
+            rebuild_left_assoc(arena, op, args)?,
+            COMMUTATIVE_ORDER,
+        ));
+    }
 
     let local = match op {
         Op::BoolNot => rewrite_bool_not(arena, args, enabled),
@@ -654,6 +694,82 @@ fn is_commutative(op: Op) -> bool {
             | Op::BvNor
             | Op::BvXnor
     )
+}
+
+/// Returns `true` if `op` is both associative **and** commutative, so a nested
+/// tree of the same operator may be flattened into one operand multiset, sorted,
+/// and rebuilt without changing the term's denotation.
+///
+/// The included set is exactly the AC operators: `and`/`or`/`xor`,
+/// `bvadd`/`bvmul`/`bvand`/`bvor`/`bvxor`, and `bvxnor` (bitwise xnor is
+/// associative — `NOT(a XOR b)` reduces to bitwise equivalence, which is
+/// associative; confirmed by exhaustive small-width evaluation). Commutative but
+/// **not** associative operators are deliberately excluded so they are never
+/// flattened: `=` (a binary predicate; `(= (= a b) c)` is a distinct term),
+/// `bvnand`, and `bvnor`. All non-commutative operators are excluded as well.
+fn is_ac(op: Op) -> bool {
+    matches!(
+        op,
+        Op::BoolAnd
+            | Op::BoolOr
+            | Op::BoolXor
+            | Op::BvAdd
+            | Op::BvMul
+            | Op::BvAnd
+            | Op::BvOr
+            | Op::BvXor
+            | Op::BvXnor
+    )
+}
+
+/// Flattens the nested same-`op` tree rooted at `op(args…)` into a single operand
+/// list (children whose op equals `op` are recursively inlined), then sorts the
+/// operands by ascending `TermId`. The result is the canonical operand multiset
+/// for an AC operator: `a*(b*c)`, `(a*b)*c`, and `c*(a*b)` all flatten to the
+/// same sorted list. Duplicate operands are kept (the multiset is preserved), so
+/// the transform is exact for every AC operator including the non-idempotent ones
+/// (`bvadd`, `bvmul`, `bvxor`, `bvxnor`).
+///
+/// `op` must be an [`is_ac`] operator (so every same-op node is binary).
+fn flatten_ac(arena: &TermArena, op: Op, args: &[TermId]) -> Vec<TermId> {
+    let mut operands = Vec::new();
+    for &arg in args {
+        collect_ac_operands(arena, op, arg, &mut operands);
+    }
+    operands.sort_unstable();
+    operands
+}
+
+/// Appends the flattened operands of `term` for AC operator `op` into `out`: if
+/// `term` is itself an application of `op`, recurse into its children; otherwise
+/// `term` is a leaf operand.
+fn collect_ac_operands(arena: &TermArena, op: Op, term: TermId, out: &mut Vec<TermId>) {
+    if let TermNode::App { op: inner, args } = arena.node(term)
+        && *inner == op
+    {
+        let args = args.clone();
+        for &arg in &args {
+            collect_ac_operands(arena, op, arg, out);
+        }
+    } else {
+        out.push(term);
+    }
+}
+
+/// Rebuilds a left-associated tree `op(…op(op(args[0], args[1]), args[2])…)` over
+/// `args` (length `>= 2`) using the typed arena builders. Used to reassemble the
+/// canonical form of an AC operator from its sorted operand list.
+///
+/// # Errors
+///
+/// Returns [`IrError`] if a rebuilt node violates the operator's sort contract,
+/// which cannot happen when reassembling operands of a well-formed AC term.
+fn rebuild_left_assoc(arena: &mut TermArena, op: Op, args: &[TermId]) -> Result<TermId, IrError> {
+    let mut acc = args[0];
+    for &arg in &args[1..] {
+        acc = build_app(arena, op, &[acc, arg])?;
+    }
+    Ok(acc)
 }
 
 fn rewrite_bool_not(
@@ -1211,7 +1327,7 @@ fn mask(width: u32) -> u128 {
 
 #[cfg(test)]
 mod commutative_tests {
-    use axeyum_ir::{Assignment, Sort, TermArena, TermId, Value, eval};
+    use axeyum_ir::{Assignment, Op, Sort, TermArena, TermId, TermNode, Value, eval};
 
     use super::canonicalize;
 
@@ -1388,5 +1504,252 @@ mod commutative_tests {
                 }
             }
         }
+    }
+
+    /// Every association of an AC operator over the same three operands must
+    /// canonicalize to one and the same term: `a*(b*c)`, `(a*b)*c`, and
+    /// `c*(a*b)` (and the reversed grouping) all coincide after AC-flattening.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn ac_ops_canonicalize_associatively() {
+        let mut a = TermArena::new();
+        let x = a.bv_var("x", 4).unwrap();
+        let y = a.bv_var("y", 4).unwrap();
+        let z = a.bv_var("z", 4).unwrap();
+        let p = a.bool_var("p").unwrap();
+        let q = a.bool_var("q").unwrap();
+        let r = a.bool_var("r").unwrap();
+
+        // Each bv builder, applied as a*(b*c), (a*b)*c, c*(a*b), must agree.
+        let bv_cases: [fn(&mut TermArena, TermId, TermId) -> TermId; 6] = [
+            |a, l, r| a.bv_add(l, r).unwrap(),
+            |a, l, r| a.bv_mul(l, r).unwrap(),
+            |a, l, r| a.bv_and(l, r).unwrap(),
+            |a, l, r| a.bv_or(l, r).unwrap(),
+            |a, l, r| a.bv_xor(l, r).unwrap(),
+            |a, l, r| a.bv_xnor(l, r).unwrap(),
+        ];
+        for case in bv_cases {
+            let bc = case(&mut a, y, z);
+            let right = case(&mut a, x, bc); // a*(b*c)
+            let ab = case(&mut a, x, y);
+            let left = case(&mut a, ab, z); // (a*b)*c
+            let ab2 = case(&mut a, x, y);
+            let rot = case(&mut a, z, ab2); // c*(a*b)
+            let cr = canonicalize(&mut a, right).unwrap().term;
+            let cl = canonicalize(&mut a, left).unwrap().term;
+            let crot = canonicalize(&mut a, rot).unwrap().term;
+            assert_eq!(cr, cl, "AC bv op: a*(b*c) != (a*b)*c");
+            assert_eq!(cl, crot, "AC bv op: (a*b)*c != c*(a*b)");
+        }
+
+        let bool_cases: [fn(&mut TermArena, TermId, TermId) -> TermId; 3] = [
+            |a, l, r| a.and(l, r).unwrap(),
+            |a, l, r| a.or(l, r).unwrap(),
+            |a, l, r| a.xor(l, r).unwrap(),
+        ];
+        for case in bool_cases {
+            let qr = case(&mut a, q, r);
+            let right = case(&mut a, p, qr);
+            let pq = case(&mut a, p, q);
+            let left = case(&mut a, pq, r);
+            let pq2 = case(&mut a, p, q);
+            let rot = case(&mut a, r, pq2);
+            let cr = canonicalize(&mut a, right).unwrap().term;
+            let cl = canonicalize(&mut a, left).unwrap().term;
+            let crot = canonicalize(&mut a, rot).unwrap().term;
+            assert_eq!(cr, cl, "AC bool op: p*(q*r) != (p*q)*r");
+            assert_eq!(cl, crot, "AC bool op: (p*q)*r != r*(p*q)");
+        }
+    }
+
+    /// The AC headline win: `(= (a*(b*c)) (c*(a*b)))` folds to `true` because
+    /// both multiplier trees AC-canonicalize to the same term and `=` reflexivity
+    /// then fires — no multiplier bit-blasting, even across the multiplier tree.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn ac_multiplier_tree_equality_folds_to_true() {
+        let mut a = TermArena::new();
+        let x = a.bv_var("x", 8).unwrap();
+        let y = a.bv_var("y", 8).unwrap();
+        let z = a.bv_var("z", 8).unwrap();
+        let bc = a.bv_mul(y, z).unwrap();
+        let lhs = a.bv_mul(x, bc).unwrap(); // a*(b*c)
+        let ab = a.bv_mul(x, y).unwrap();
+        let rhs = a.bv_mul(z, ab).unwrap(); // c*(a*b)
+        let goal = a.eq(lhs, rhs).unwrap();
+
+        let outcome = canonicalize(&mut a, goal).unwrap();
+        assert_eq!(outcome.term, a.bool_const(true));
+    }
+
+    /// AC-flattening must preserve denotation: original and canonical agree under
+    /// every 3-bit assignment, for each AC operator over a nested tree — including
+    /// `bvxnor`, whose associativity justifies its AC inclusion.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn ac_flattening_preserves_denotation() {
+        let mut a = TermArena::new();
+        let x_sym = a.declare("x", Sort::BitVec(3)).unwrap();
+        let y_sym = a.declare("y", Sort::BitVec(3)).unwrap();
+        let z_sym = a.declare("z", Sort::BitVec(3)).unwrap();
+        let w_sym = a.declare("w", Sort::BitVec(3)).unwrap();
+        let x = a.var(x_sym);
+        let y = a.var(y_sym);
+        let z = a.var(z_sym);
+        let w = a.var(w_sym);
+
+        // For each AC bv builder, build a deep mixed-association tree over 4 vars.
+        let bv_cases: [fn(&mut TermArena, TermId, TermId) -> TermId; 6] = [
+            |a, l, r| a.bv_add(l, r).unwrap(),
+            |a, l, r| a.bv_mul(l, r).unwrap(),
+            |a, l, r| a.bv_and(l, r).unwrap(),
+            |a, l, r| a.bv_or(l, r).unwrap(),
+            |a, l, r| a.bv_xor(l, r).unwrap(),
+            |a, l, r| a.bv_xnor(l, r).unwrap(),
+        ];
+        let mut terms = Vec::new();
+        for case in bv_cases {
+            // (x op (y op z)) op ((z op w) op x) — nested, repeated operands.
+            let yz = case(&mut a, y, z);
+            let left = case(&mut a, x, yz);
+            let zw = case(&mut a, z, w);
+            let right = case(&mut a, zw, x);
+            terms.push(case(&mut a, left, right));
+        }
+        let rewritten = terms
+            .iter()
+            .map(|&t| canonicalize(&mut a, t).unwrap().term)
+            .collect::<Vec<_>>();
+
+        for xv in 0..8u128 {
+            for yv in 0..8u128 {
+                for zv in 0..8u128 {
+                    for wv in 0..8u128 {
+                        let mut asg = Assignment::new();
+                        asg.set(
+                            x_sym,
+                            Value::Bv {
+                                width: 3,
+                                value: xv,
+                            },
+                        );
+                        asg.set(
+                            y_sym,
+                            Value::Bv {
+                                width: 3,
+                                value: yv,
+                            },
+                        );
+                        asg.set(
+                            z_sym,
+                            Value::Bv {
+                                width: 3,
+                                value: zv,
+                            },
+                        );
+                        asg.set(
+                            w_sym,
+                            Value::Bv {
+                                width: 3,
+                                value: wv,
+                            },
+                        );
+                        for (&orig, &canon) in terms.iter().zip(&rewritten) {
+                            assert_eq!(
+                                eval(&a, orig, &asg).unwrap(),
+                                eval(&a, canon, &asg).unwrap(),
+                                "AC flattening changed denotation",
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Operators that are commutative but NOT associative (`=`, `bvnand`,
+    /// `bvnor`) and non-commutative operators must NOT be AC-flattened: a nested
+    /// tree keeps its grouping. We assert each canonicalizes to a term that still
+    /// has the original outer op with the original (or merely binary-sorted)
+    /// grouping — never collapsed across the nesting.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn non_ac_ops_are_not_flattened() {
+        let mut a = TermArena::new();
+        let x = a.bv_var("x", 4).unwrap();
+        let y = a.bv_var("y", 4).unwrap();
+        let z = a.bv_var("z", 4).unwrap();
+        let p = a.bool_var("p").unwrap();
+        let q = a.bool_var("q").unwrap();
+
+        // bvnand: associative-looking grouping must be preserved (its denotation
+        // depends on grouping). Canonical of nand(nand(x,y), z) must still have a
+        // nand whose operand is itself a nand — i.e. NOT flattened to 3 leaves.
+        let inner = a.bv_nand(x, y).unwrap();
+        let outer = a.bv_nand(inner, z).unwrap();
+        let canon = canonicalize(&mut a, outer).unwrap().term;
+        let TermNode::App {
+            op: Op::BvNand,
+            args,
+        } = a.node(canon)
+        else {
+            panic!("bvnand canonical must remain a bvnand");
+        };
+        let has_nand_child = args
+            .iter()
+            .any(|&c| matches!(a.node(c), TermNode::App { op: Op::BvNand, .. }));
+        assert!(has_nand_child, "bvnand must not be AC-flattened");
+
+        // bvnor likewise.
+        let inner = a.bv_nor(x, y).unwrap();
+        let outer = a.bv_nor(inner, z).unwrap();
+        let canon = canonicalize(&mut a, outer).unwrap().term;
+        let TermNode::App {
+            op: Op::BvNor,
+            args,
+        } = a.node(canon)
+        else {
+            panic!("bvnor canonical must remain a bvnor");
+        };
+        assert!(
+            args.iter()
+                .any(|&c| matches!(a.node(c), TermNode::App { op: Op::BvNor, .. })),
+            "bvnor must not be AC-flattened"
+        );
+
+        // Eq-nesting: (= (= p q) (= q p)) — Eq is commutative-only. The two inner
+        // equalities canonicalize equal, so `=` reflexivity folds to true, but the
+        // point is the OUTER `=` is never AC-flattened into a 3-way structure.
+        let eq_pq = a.eq(p, q).unwrap();
+        let eq_qp = a.eq(q, p).unwrap();
+        let bool_eq = a.eq(eq_pq, eq_qp).unwrap();
+        let canon = canonicalize(&mut a, bool_eq).unwrap().term;
+        assert_eq!(
+            canon,
+            a.bool_const(true),
+            "(= (= p q) (= q p)) folds to true"
+        );
+
+        // bvsub: non-commutative, nested grouping must be untouched.
+        let sub_inner = a.bv_sub(x, y).unwrap();
+        let sub_outer = a.bv_sub(sub_inner, z).unwrap();
+        assert_eq!(canonicalize(&mut a, sub_outer).unwrap().term, sub_outer);
+
+        // A comparison is not AC-flattenable (Bool result, non-commutative).
+        let ult = a.bv_ult(x, y).unwrap();
+        assert_eq!(canonicalize(&mut a, ult).unwrap().term, ult);
+
+        // concat is non-commutative; nesting preserved.
+        let cc_inner = a.concat(x, y).unwrap();
+        let cc_outer = a.concat(cc_inner, z).unwrap();
+        assert_eq!(canonicalize(&mut a, cc_outer).unwrap().term, cc_outer);
+
+        // Uninterpreted apply argument order/grouping is meaningful.
+        let f = a
+            .declare_fun("f", &[Sort::BitVec(4), Sort::BitVec(4)], Sort::BitVec(4))
+            .unwrap();
+        let fxy = a.apply(f, &[x, y]).unwrap();
+        assert_eq!(canonicalize(&mut a, fxy).unwrap().term, fxy);
     }
 }

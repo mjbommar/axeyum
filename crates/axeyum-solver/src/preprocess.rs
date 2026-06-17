@@ -49,6 +49,19 @@ pub fn check_with_preprocessing<B: SolverBackend>(
         .into_parts();
     trail.append(eq_trail);
 
+    // Re-canonicalize after substitution. `solve_eqs` inlines `x := t` by raw
+    // structural rebuild (`replace_subterms`), so a definition like `s1 = a*(b*c)`
+    // substituted into `(not (= s1 s2))` reintroduces un-normalized operator trees
+    // (`(= (a*(b*c)) (c*(a*b)))`) that the *initial* canonicalization never saw —
+    // the symbols were still abstract then. Canonicalizing again AC-normalizes
+    // those revealed products so the equality folds to `true` and the goal to
+    // `false` with no multiplier bit-blasting. Canonicalization is denotation- and
+    // symbol-preserving, so it needs no reconstruction trail and the model still
+    // replays against the ORIGINAL assertions below.
+    let reduced = canonicalize_terms(arena, &reduced)
+        .map_err(|error| SolverError::Backend(format!("post-solve canonicalize failed: {error}")))?
+        .terms;
+
     let result = backend.check(arena, &reduced, config)?;
     let CheckResult::Sat(model) = result else {
         return Ok(result);

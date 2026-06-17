@@ -865,6 +865,15 @@ mod run {
             .expect("solve_eqs preserves IR well-formedness")
             .into_parts();
         trail.append(eq_trail);
+        // Re-canonicalize after substitution: `solve_eqs` inlines `x := t` by raw
+        // structural rebuild, reintroducing un-normalized operator trees (e.g. a
+        // multiplier tree `a*(b*c)` substituted opposite `c*(a*b)`) that the
+        // initial canonicalization never saw because the symbols were still
+        // abstract. Canonicalizing again AC-normalizes them so commute-shaped
+        // goals fold without bit-blasting. Mirrors `check_with_preprocessing`.
+        let reduced = canonicalize_terms(arena, &reduced)
+            .expect("post-solve canonicalize preserves IR well-formedness")
+            .terms;
         (reduced, trail)
     }
 
