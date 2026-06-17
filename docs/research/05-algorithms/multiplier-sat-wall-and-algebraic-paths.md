@@ -229,6 +229,28 @@ rebuild. Repeated from-scratch Gaussian is the wrong tool and was reverted. The
 small-multiplier wall is broken (`mulhs08` decides, in the product); the next size
 class is gated on the incremental matrix (and likely more SAT-core work besides).
 
+**Second measured negative — even a genuinely-incremental matrix is too slow if it
+isn't *watch-based* (2026-06).** An `IncrementalXorMatrix` was built (commit
+83b99b2): it maintains the rows in RREF over the free columns and on each `assign`
+substitutes out one column (touching only rows mentioning that variable + one
+re-pivot), cheaper than the from-scratch rebuild and **bit-for-bit validated**
+against `xor_implications` over hundreds of random systems × assign/backtrack
+sequences. Wired into `xor_cdcl` as the complete propagator (lockstep trail,
+`backtrack_to` on backjump, reasons into 1-UIP), it kept all ~1,500-formula
+differentials green — **sound** — but `mulhs08`, which decides in ~5 s with the
+watched-literal scheme, **did not finish in 280 s**. Reverted. The cause: the
+matrix is called on *every trail assignment* (not once per decision level), and
+its per-`assign` cost still **scans all rows mentioning the variable** — `O(rows ×
+words)`. Multiplied by the enormous assignment count of a multiplier solve, that
+dominates. So the requirement is now sharp and twice-confirmed: the propagator must
+be the **watched-echelon-row** scheme (CMS `gausswatched.h`) where each echelon row
+*watches two of its free variables*, so an `assign` touches only the `O(1)` rows
+actually watching it — not every row containing the variable. The validated
+`IncrementalXorMatrix` (RREF + backtrackable trail + sound reasons) is the correct
+foundation; adding the two-watch index over its rows is the remaining optimization,
+and the only form fast enough for the hot CDCL loop. Until then `xor_cdcl` keeps
+the (incomplete but cheap) watched-literal XOR propagation.
+
 ## Bottom line
 
 The curated wall is multiplier-equivalence, which is provably hard for the
