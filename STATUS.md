@@ -66,9 +66,13 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   tautology clause is verified by `¬clause`-UNSAT via the **Farkas-certified**
   `check_with_lra` (coefficients re-derived, not trusted); `axeyum-cnf` gained a
   pluggable `check_alethe_with(_, extra)` callback so it stays arithmetic-free.
-  Remaining (P3.2/3.3): more BV theory rules; emit Alethe for the *reductions*
-  (P3.5: array/function elimination, int-blasting); emit `la_generic` from a Farkas
-  certificate; Carcara CI cross-check; extract `axeyum-alethe` crate (ADR).
+  **`la_generic` EMISSION landed** (`prove_lra_unsat_alethe`): an unsat LRA
+  conjunction → an `la_generic` + resolution Alethe proof, **self-validated** by
+  `check_alethe_lra` (so axeyum both checks AND emits arithmetic proofs, the full
+  "trusted small checking" identity for LRA). Remaining (P3.2/3.3): more BV theory
+  rules; emit Alethe for the *reductions* (P3.5: array/function elimination,
+  int-blasting); `lia_generic` (integer) checking+emission; Carcara CI cross-check;
+  extract `axeyum-alethe` crate (ADR).
 - **P2.9 datatypes — structural refutation DONE** (2026-06-16):
   `prove_datatype_unsat_structurally` — the three datatype structural axioms over a
   term-level union-find: **acyclicity** (`x = cons(h, x)` ⇒ unsat), **distinctness**
