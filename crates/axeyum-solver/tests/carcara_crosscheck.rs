@@ -376,6 +376,186 @@ fn resolution_refutation_proof_is_accepted_by_carcara() {
     assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
 }
 
+/// Builds the single `bitblast_*` step for `term` via [`bitblast_step`], writes
+/// it alongside a matching `.smt2` that declares the operand symbols and asserts
+/// a well-typed equality mentioning them, runs Carcara, and asserts the **step's
+/// rule check passed**: no parser error, no `checking failed`, and the proof
+/// reaches the only remaining (expected) failure — a lone step does not conclude
+/// the empty clause. Returns Carcara's combined output for the caller to quote.
+fn carcara_rule_accepts_bitblast(
+    bin: &Path,
+    tag: &str,
+    arena: &TermArena,
+    term: TermId,
+    decls: &str,
+    assertion: &str,
+) -> String {
+    use axeyum_solver::bitblast_step;
+    let step = bitblast_step(arena, term, "s").expect("term is in the bitwise fragment");
+    let smt2 = format!("(set-logic QF_BV)\n{decls}(assert {assertion})\n(check-sat)\n");
+    let report = carcara_output(bin, tag, &smt2, std::slice::from_ref(&step));
+
+    assert!(
+        !report.contains("parser error"),
+        "carcara could not parse the {tag} bitblast step:\n{report}"
+    );
+    assert!(
+        !report.contains("checking failed"),
+        "carcara rejected the {tag} bitblast step's rule:\n{report}"
+    );
+    assert!(
+        report.contains("does not conclude empty clause"),
+        "expected only the empty-clause-conclusion failure for {tag}, got:\n{report}"
+    );
+    report
+}
+
+fn bv_var(arena: &mut TermArena, name: &str, width: u32) -> TermId {
+    let s = arena.declare(name, Sort::BitVec(width)).expect("declare");
+    arena.var(s)
+}
+
+#[test]
+fn bitblast_var_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let x = bv_var(&mut arena, "x", 3);
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_var_step",
+        &arena,
+        x,
+        "(declare-const x (_ BitVec 3))\n",
+        "(= x x)",
+    );
+}
+
+#[test]
+fn bitblast_const_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // width-4 value 0b1010 = 10: exercises both true and false bits.
+    let mut arena = TermArena::new();
+    let c = arena.bv_const(4, 10).expect("bv const");
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_const_step",
+        &arena,
+        c,
+        "(declare-const x (_ BitVec 4))\n",
+        "(= #b1010 x)",
+    );
+}
+
+#[test]
+fn bitblast_not_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a", 3);
+    let t = arena.bv_not(a).expect("bvnot");
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_not_step",
+        &arena,
+        t,
+        "(declare-const a (_ BitVec 3))\n",
+        "(= (bvnot a) (bvnot a))",
+    );
+}
+
+#[test]
+fn bitblast_and_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // width 4 (>= 2) binary bvand.
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a", 4);
+    let b = bv_var(&mut arena, "b", 4);
+    let t = arena.bv_and(a, b).expect("bvand");
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_and_step",
+        &arena,
+        t,
+        "(declare-const a (_ BitVec 4))\n(declare-const b (_ BitVec 4))\n",
+        "(= (bvand a b) (bvand a b))",
+    );
+}
+
+#[test]
+fn bitblast_or_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a", 4);
+    let b = bv_var(&mut arena, "b", 4);
+    let t = arena.bv_or(a, b).expect("bvor");
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_or_step",
+        &arena,
+        t,
+        "(declare-const a (_ BitVec 4))\n(declare-const b (_ BitVec 4))\n",
+        "(= (bvor a b) (bvor a b))",
+    );
+}
+
+#[test]
+fn bitblast_xor_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // A nested xor `(bvxor (bvxor a b) c)` exercises the fold path: arg0 is itself
+    // a bvxor, so its bit projects as ((_ @bit_of i) (bvxor a b)) — the n-ary nest.
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a", 2);
+    let b = bv_var(&mut arena, "b", 2);
+    let c = bv_var(&mut arena, "c", 2);
+    let ab = arena.bv_xor(a, b).expect("bvxor");
+    let abc = arena.bv_xor(ab, c).expect("bvxor");
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_xor_step",
+        &arena,
+        abc,
+        "(declare-const a (_ BitVec 2))\n(declare-const b (_ BitVec 2))\n(declare-const c (_ BitVec 2))\n",
+        "(= (bvxor (bvxor a b) c) (bvxor (bvxor a b) c))",
+    );
+}
+
+#[test]
+fn bitblast_xnor_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a", 4);
+    let b = bv_var(&mut arena, "b", 4);
+    let t = arena.bv_xnor(a, b).expect("bvxnor");
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_xnor_step",
+        &arena,
+        t,
+        "(declare-const a (_ BitVec 4))\n(declare-const b (_ BitVec 4))\n",
+        "(= (bvxnor a b) (bvxnor a b))",
+    );
+}
+
 #[test]
 fn bitblast_var_indexed_syntax_is_parseable_by_carcara() {
     use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm};

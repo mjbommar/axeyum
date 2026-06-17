@@ -19,6 +19,7 @@ mod alethe_lra;
 mod aufbv;
 mod auto;
 mod backend;
+mod bitblast_alethe;
 mod bitblast_miter;
 mod bmc;
 pub mod capabilities;
@@ -80,6 +81,7 @@ pub use backend::{
     Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind,
     UnknownReason,
 };
+pub use bitblast_alethe::bitblast_step;
 pub use bitblast_miter::{
     BitblastMiterOutcome, EndToEndUnsatOutcome, certify_bitblast_by_miter,
     certify_qf_bv_unsat_end_to_end,

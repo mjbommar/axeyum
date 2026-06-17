@@ -355,6 +355,21 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **T3.3.1 step 2 (first slice): per-operator bitblast emitter
+  (bitwise fragment)**. New `axeyum_solver::bitblast_step(arena, term, id)` emits the
+  definitional `(= <T> (@bbterm b0…b_{n-1})) :rule bitblast_<op>` step for the
+  bitwise QF_BV fragment — `var`, `const`, `bvnot`, `bvand`, `bvor`, `bvxor`,
+  `bvxnor` — building each bit LSB-first via `(_ @bit_of i)` projections exactly as
+  Carcara reconstructs (left-fold for n-ary and/or/xor; `(= a_i b_i)` for xnor;
+  `true`/`false` per const bit). **All seven operators are Carcara rule-accepted**
+  (gated tests: emitted step parses and the `bitblast_*` rule checks — only the
+  empty-clause conclusion is absent, since a lone definitional step is not a
+  refutation). Every shape matched the binary on the first run (derived from
+  `bitvectors.rs`). `bv_term_to_alethe` renders BV terms to matching SMT-LIB syntax
+  (`#b…` consts, `bvand`/… heads); anything outside the fragment → `None`. 6 unit
+  tests + 7 gated carcara tests. **Next: arithmetic/comparison ops (`bvadd`/`bvmult`/
+  `bvult`/`bitblast_equal`), then the predicate-bitblast + Tseitin-CNF bridge to
+  close a full QF_BV refutation to `(cl)`.**
 - **2026-06-16** — **T3.3.1 step 1: `AletheTerm` indexed-operator IR extension**.
   Added `AletheTerm::Indexed { op, indices: Vec<i128>, args }` so SMT-LIB indexed
   applications like `((_ @bit_of 0) x)` (and bare `(_ @bit_of 1)`) are first-class —
