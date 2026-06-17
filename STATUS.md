@@ -355,6 +355,20 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-17** — **T3.3.1 step 2 complete: bitblast emitter covers Carcara's
+  entire non-hole QF_BV operator set**. Added `bvmul` (shift-add multiplier,
+  transcribed from Carcara's `shift_add_multiplier` — correct on the first run incl.
+  width-1, width≥2, and n-ary left-fold), `bvextract`/`bvconcat`/`bvsign_extend`
+  (the structural ops; extract/sign_extend use the `Indexed` LHS, concat is
+  low-arg-bits-first). One oracle-forced fix: `sign_extend` with `i==0` is the plain
+  `(= ((_ sign_extend 0) x) x)` (Carcara `assert_eq(x,res)`), not a `@bbterm`.
+  32 cross-check cases, all Carcara rule-accepted. **Every QF_BV operator Carcara has
+  a structural `bitblast_*` rule for is now emitted and empirically validated.** Still
+  `None` (the Carcara *holes*): shifts (`bvshl`/`bvlshr`/`bvashr`), div/rem
+  (`bvudiv`/`bvurem`/`bvsdiv`/…), zero_extend, rotates — these get `hole` + the
+  in-house miter side-cert in a later increment. **Next: the predicate-bitblast +
+  Tseitin-CNF bridge to compose these definitional steps into a full QF_BV `unsat`
+  proof closing to `(cl)` via the Carcara-valid `lrat_to_alethe` resolution layer.**
 - **2026-06-17** — **T3.3.1 step 2 (arithmetic + comparison): bitblast emitter
   extended**. `bitblast_step` now also emits Carcara-valid steps for `bvadd`
   (ripple-carry, n-ary left-fold), `bvneg` (two's-complement adder with verbatim

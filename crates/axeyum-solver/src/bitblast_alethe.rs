@@ -27,10 +27,15 @@
 //! 3. **`bvcomp` → `(= (bvcomp x y) (@bbterm <bool>))`** — a 1-bit BV result, so
 //!    the single Boolean is wrapped in `@bbterm`.
 //!
-//! Anything still outside this set — the multiplier (`bvmul`), the structural
-//! operators (`extract`/`concat`/`sign_extend`), shifts, division/remainder,
-//! non-bit-vector terms, and the full-refutation bridge — is a later increment
-//! and yields [`None`].
+//! The emitter additionally covers the **multiplier** (`bvmul`, shift-add) and
+//! the structural operators **`extract`**, **`concat`**, and **`sign_extend`** —
+//! all of which produce conclusion shape 1 (`(= <t> (@bbterm …))`).
+//!
+//! Anything still outside this set — shifts (`bvshl`/`bvlshr`/`bvashr`),
+//! division/remainder (`bvudiv`/`bvurem`/…), `zero_extend`, rotates, non-bit-vector
+//! terms, and the full-refutation bridge — is a later increment and yields
+//! [`None`]. The shift and div/rem reconstructions are Carcara holes, deferred to
+//! the in-house miter certificate.
 
 use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm};
 use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode};
@@ -122,12 +127,28 @@ fn bv_term_to_alethe(arena: &TermArena, term: TermId) -> Option<AletheTerm> {
             Some(AletheTerm::Const(bv_const_literal(*width, *value)))
         }
         TermNode::App { op, args } => {
-            let head = covered_head(*op)?;
             let rendered = args
                 .iter()
                 .map(|&arg| bv_term_to_alethe(arena, arg))
                 .collect::<Option<Vec<_>>>()?;
-            Some(AletheTerm::App(head.to_owned(), rendered))
+            match op {
+                // Indexed operators render with the `((_ op i…) args…)` surface
+                // syntax Carcara's parser expects.
+                Op::Extract { hi, lo } => Some(AletheTerm::Indexed {
+                    op: "extract".to_owned(),
+                    indices: vec![i128::from(*hi), i128::from(*lo)],
+                    args: rendered,
+                }),
+                Op::SignExt { by } => Some(AletheTerm::Indexed {
+                    op: "sign_extend".to_owned(),
+                    indices: vec![i128::from(*by)],
+                    args: rendered,
+                }),
+                _ => {
+                    let head = covered_head(*op)?;
+                    Some(AletheTerm::App(head.to_owned(), rendered))
+                }
+            }
         }
         _ => None,
     }
@@ -149,6 +170,8 @@ fn covered_head(op: Op) -> Option<&'static str> {
         Op::BvUlt => Some("bvult"),
         Op::BvSlt => Some("bvslt"),
         Op::BvComp => Some("bvcomp"),
+        Op::BvMul => Some("bvmul"),
+        Op::Concat => Some("concat"),
         Op::Eq => Some("="),
         _ => None,
     }
@@ -228,12 +251,21 @@ fn predicate_step(rule: &str, lhs: AletheTerm, result: AletheTerm, step_id: &str
 ///   `(= x_i y_i)`; rule `bitblast_equal`.
 /// - **`bvcomp`** (1-bit BV → `(= (bvcomp x y) (@bbterm <bool>))`): the same
 ///   per-bit AND, wrapped in `@bbterm`; rule `bitblast_comp`.
+/// - **`bvmul`** (`n`-ary, left fold via the shift-add multiplier): rule
+///   `bitblast_mult`. Width-1 yields `(@bbterm (and y0 x0))`.
+/// - **`extract`** (`((_ extract i j) x)` → bits `j..=i` of `x`): rule
+///   `bitblast_extract`.
+/// - **`concat`** (`(concat a b)` with `a` high): the low operand's bits first,
+///   then the high operand's; rule `bitblast_concat`.
+/// - **`sign_extend`** (`((_ sign_extend i) x)`): `x`'s bits then `i` copies of
+///   the sign bit; rule `bitblast_sign_extend`. For `i == 0` Carcara's rule
+///   returns the operand `x` itself, so the conclusion is the plain
+///   `(= ((_ sign_extend 0) x) x)` (no `@bbterm`).
 ///
-/// Returns [`None`] for any operator still outside the covered set — the
-/// multiplier (`bvmul`), the structural ops (`extract`/`concat`/`sign_extend`),
-/// shifts, division/remainder — for a non-bit-vector, non-predicate term, for a
-/// wide (`> 128`-bit) constant, or for a malformed application. Those are later
-/// increments and deliberately not handled.
+/// Returns [`None`] for any operator still outside the covered set — the shifts
+/// (`bvshl`/`bvlshr`/`bvashr`), division/remainder, `zero_extend`, rotates — for a
+/// non-bit-vector, non-predicate term, for a wide (`> 128`-bit) constant, or for a
+/// malformed application. Those are later increments and deliberately not handled.
 ///
 /// # Panics
 ///
@@ -335,7 +367,11 @@ fn bitblast_app(
             Some(bbterm_step("bitblast_xnor", lhs, bits, step_id))
         }
         Op::BvAdd => add_step(&rendered_args, lhs, width, step_id),
+        Op::BvMul => mult_step(&rendered_args, lhs, width, step_id),
         Op::BvNeg => neg_step(&rendered_args, lhs, width, step_id),
+        Op::Extract { hi, lo } => extract_step(&rendered_args, lhs, hi, lo, step_id),
+        Op::Concat => concat_step(arena, args, &rendered_args, lhs, step_id),
+        Op::SignExt { by } => sign_extend_step(&rendered_args, lhs, width, by, step_id),
         Op::BvUlt => {
             let [x, y] = rendered_args.as_slice() else {
                 return None;
@@ -394,6 +430,166 @@ fn add_step(
         return None;
     };
     Some(bbterm_step("bitblast_add", lhs, bits, step_id))
+}
+
+/// The `bitblast_mult` step (shape 1): `(bvmul …)` folded left via the
+/// shift-add multiplier. Like `add_step`, the accumulator is a `@bbterm`, so
+/// each later fold's `build_term_vec` returns its bits directly.
+fn mult_step(
+    rendered_args: &[AletheTerm],
+    lhs: AletheTerm,
+    width: usize,
+    step_id: &str,
+) -> Option<AletheCommand> {
+    let (first, rest) = rendered_args.split_first()?;
+    let mut acc = first.clone();
+    for y in rest {
+        let bits = shift_add_multiplier_bits(&acc, y, width);
+        acc = AletheTerm::App("@bbterm".to_owned(), bits);
+    }
+    // A single-operand bvmul cannot arise from the IR builders; reject defensively.
+    let AletheTerm::App(_, bits) = acc else {
+        return None;
+    };
+    Some(bbterm_step("bitblast_mult", lhs, bits, step_id))
+}
+
+/// The shift-add multiplier result bits for `(bvmul x y)` over `size` bits,
+/// transcribing Carcara's `shift_add_multiplier` verbatim (bit order, the
+/// literal `false` fill, and the nesting all match structurally):
+///
+/// - `shift[j][i] = (and y_j x_{i-j})` when `j <= i`, else `false`;
+/// - `res[0][i] = shift[0][i]`;
+/// - for `j` in `1..size`: `carry[j][0] = false`, then for `i` in `1..size`
+///   `carry[j][i] = (or (and res[j-1][i-1] shift[j][i-1]) (and (xor …) carry[j][i-1]))`
+///   when `j < i`, else `false`; and `res[j][i]` is `shift[0][0]` at `i == 0`,
+///   `res[i][i]` when `j > i`, else `(xor (xor res[j-1][i] shift[j][i]) carry[j][i])`.
+///
+/// The result is `res[size-1]`.
+fn shift_add_multiplier_bits(x: &AletheTerm, y: &AletheTerm, size: usize) -> Vec<AletheTerm> {
+    let xb = build_term_vec(x, size);
+    let yb = build_term_vec(y, size);
+
+    let shift: Vec<Vec<AletheTerm>> = (0..size)
+        .map(|j| {
+            (0..size)
+                .map(|i| {
+                    if j <= i {
+                        and2(yb[j].clone(), xb[i - j].clone())
+                    } else {
+                        bool_const(false)
+                    }
+                })
+                .collect()
+        })
+        .collect();
+
+    let mut res: Vec<Vec<AletheTerm>> = vec![(0..size).map(|i| shift[0][i].clone()).collect()];
+
+    for j in 1..size {
+        // Carry row for round j: index 0 is false, then i in 1..size.
+        let mut carry_j = vec![bool_const(false)];
+        for i in 1..size {
+            let c = if j < i {
+                or2(
+                    and2(res[j - 1][i - 1].clone(), shift[j][i - 1].clone()),
+                    and2(
+                        xor2(res[j - 1][i - 1].clone(), shift[j][i - 1].clone()),
+                        carry_j[i - 1].clone(),
+                    ),
+                )
+            } else {
+                bool_const(false)
+            };
+            carry_j.push(c);
+        }
+        // Result row for round j.
+        let res_j: Vec<AletheTerm> = (0..size)
+            .map(|i| {
+                if i == 0 {
+                    shift[0][0].clone()
+                } else if j > i {
+                    res[i][i].clone()
+                } else {
+                    xor2(
+                        xor2(res[j - 1][i].clone(), shift[j][i].clone()),
+                        carry_j[i].clone(),
+                    )
+                }
+            })
+            .collect();
+        res.push(res_j);
+    }
+
+    res[size - 1].clone()
+}
+
+/// The `bitblast_extract` step (shape 1): `((_ extract i j) x)` bit-blasts to
+/// `x`'s bits `j..=i`, LSB-first.
+fn extract_step(
+    rendered_args: &[AletheTerm],
+    lhs: AletheTerm,
+    hi: u32,
+    lo: u32,
+    step_id: &str,
+) -> Option<AletheCommand> {
+    let [x] = rendered_args else {
+        return None;
+    };
+    let bits = (lo..=hi).map(|i| bit_of(i as usize, x)).collect();
+    Some(bbterm_step("bitblast_extract", lhs, bits, step_id))
+}
+
+/// The `bitblast_sign_extend` step: `((_ sign_extend i) x)` bit-blasts to `x`'s
+/// bits then `i` copies of the sign bit. For `i == 0` Carcara's rule returns the
+/// operand `x` itself (a plain `(= ((_ sign_extend 0) x) x)`, no `@bbterm`).
+fn sign_extend_step(
+    rendered_args: &[AletheTerm],
+    lhs: AletheTerm,
+    width: usize,
+    by: u32,
+    step_id: &str,
+) -> Option<AletheCommand> {
+    let [x] = rendered_args else {
+        return None;
+    };
+    if by == 0 {
+        return Some(predicate_step(
+            "bitblast_sign_extend",
+            lhs,
+            x.clone(),
+            step_id,
+        ));
+    }
+    let mut bits = build_term_vec(x, width);
+    let sign = bits.last()?.clone();
+    for _ in 0..by {
+        bits.push(sign.clone());
+    }
+    Some(bbterm_step("bitblast_sign_extend", lhs, bits, step_id))
+}
+
+/// The `bitblast_concat` step (shape 1): `(concat a1 … an)` bit-blasts to the
+/// per-bit concatenation built **last argument first** (the low/rightmost
+/// operand), then each earlier operand, matching Carcara's `concat`. `args` are
+/// the IR operand ids (for their widths); `rendered_args` their Alethe forms.
+fn concat_step(
+    arena: &TermArena,
+    args: &[TermId],
+    rendered_args: &[AletheTerm],
+    lhs: AletheTerm,
+    step_id: &str,
+) -> Option<AletheCommand> {
+    if rendered_args.is_empty() {
+        return None;
+    }
+    let mut bits = Vec::new();
+    // Last operand (low bits) first, then towards the first (high bits).
+    for (rendered, &arg) in rendered_args.iter().zip(args.iter()).rev() {
+        let w = bv_width(arena, arg)? as usize;
+        bits.extend(build_term_vec(rendered, w));
+    }
+    Some(bbterm_step("bitblast_concat", lhs, bits, step_id))
 }
 
 /// The `bitblast_neg` step (shape 1): the ripple-carry adder of `(not x)` and
@@ -671,26 +867,124 @@ mod tests {
     }
 
     #[test]
-    fn multiplier_is_still_outside_the_covered_set() {
+    fn width1_mult_is_a_single_and_gadget() {
+        // Width-1 (bvmul a b): the `for j in 1..n` loop is empty, so the result is
+        // just res[0][0] = shift[0][0] = (and b0 a0).
         let mut arena = TermArena::new();
-        let a = bv_var(&mut arena, "a", 4);
-        let b = bv_var(&mut arena, "b", 4);
+        let a = bv_var(&mut arena, "a", 1);
+        let b = bv_var(&mut arena, "b", 1);
         let prod = arena.bv_mul(a, b).expect("bvmul");
-        assert!(
-            bitblast_step(&arena, prod, "s").is_none(),
-            "bvmul (the multiplier) is a later increment, not handled here"
+        let cmd = bitblast_step(&arena, prod, "s").expect("bvmul width-1 is covered");
+        assert_eq!(rule_of(&cmd), "bitblast_mult");
+
+        let bit = |name: &str| AletheTerm::Indexed {
+            op: "@bit_of".to_owned(),
+            indices: vec![0],
+            args: vec![AletheTerm::Const(name.to_owned())],
+        };
+        // shift[0][0] = (and y0 x0) = (and b0 a0).
+        let expected_bit = AletheTerm::App("and".to_owned(), vec![bit("b"), bit("a")]);
+        let AletheTerm::App(_, eq_args) = conclusion(&cmd) else {
+            panic!("expected eq app");
+        };
+        let AletheTerm::App(head, bbterm_args) = &eq_args[1] else {
+            panic!("expected bbterm app");
+        };
+        assert_eq!(head, "@bbterm");
+        assert_eq!(bbterm_args, &vec![expected_bit]);
+    }
+
+    #[test]
+    fn extract_step_projects_the_requested_bit_range() {
+        // ((_ extract 2 1) x) over width 4: bits 1, 2 of x, LSB-first.
+        let mut arena = TermArena::new();
+        let x = bv_var(&mut arena, "x", 4);
+        let ex = arena.extract(2, 1, x).expect("extract");
+        let cmd = bitblast_step(&arena, ex, "s").expect("extract is covered");
+        assert_eq!(rule_of(&cmd), "bitblast_extract");
+
+        let bit = |i: i128| AletheTerm::Indexed {
+            op: "@bit_of".to_owned(),
+            indices: vec![i],
+            args: vec![AletheTerm::Const("x".to_owned())],
+        };
+        let AletheTerm::App(_, eq_args) = conclusion(&cmd) else {
+            panic!("expected eq app");
+        };
+        let AletheTerm::App(head, bbterm_args) = &eq_args[1] else {
+            panic!("expected bbterm app");
+        };
+        assert_eq!(head, "@bbterm");
+        assert_eq!(bbterm_args, &vec![bit(1), bit(2)]);
+    }
+
+    #[test]
+    fn concat_step_puts_low_operand_bits_first() {
+        // (concat a b): a is high (width 2), b is low (width 3). Bits = b0 b1 b2 a0 a1.
+        let mut arena = TermArena::new();
+        let a = bv_var(&mut arena, "a", 2);
+        let b = bv_var(&mut arena, "b", 3);
+        let cat = arena.concat(a, b).expect("concat");
+        let cmd = bitblast_step(&arena, cat, "s").expect("concat is covered");
+        assert_eq!(rule_of(&cmd), "bitblast_concat");
+
+        let bit = |i: i128, name: &str| AletheTerm::Indexed {
+            op: "@bit_of".to_owned(),
+            indices: vec![i],
+            args: vec![AletheTerm::Const(name.to_owned())],
+        };
+        let AletheTerm::App(_, eq_args) = conclusion(&cmd) else {
+            panic!("expected eq app");
+        };
+        let AletheTerm::App(head, bbterm_args) = &eq_args[1] else {
+            panic!("expected bbterm app");
+        };
+        assert_eq!(head, "@bbterm");
+        assert_eq!(
+            bbterm_args,
+            &vec![
+                bit(0, "b"),
+                bit(1, "b"),
+                bit(2, "b"),
+                bit(0, "a"),
+                bit(1, "a"),
+            ]
         );
     }
 
     #[test]
-    fn structural_op_is_still_outside_the_covered_set() {
+    fn sign_extend_repeats_the_sign_bit() {
+        // ((_ sign_extend 2) x) over width 3: x0 x1 x2, then two copies of x2.
+        let mut arena = TermArena::new();
+        let x = bv_var(&mut arena, "x", 3);
+        let se = arena.sign_ext(2, x).expect("sign_extend");
+        let cmd = bitblast_step(&arena, se, "s").expect("sign_extend is covered");
+        assert_eq!(rule_of(&cmd), "bitblast_sign_extend");
+
+        let bit = |i: i128| AletheTerm::Indexed {
+            op: "@bit_of".to_owned(),
+            indices: vec![i],
+            args: vec![AletheTerm::Const("x".to_owned())],
+        };
+        let AletheTerm::App(_, eq_args) = conclusion(&cmd) else {
+            panic!("expected eq app");
+        };
+        let AletheTerm::App(head, bbterm_args) = &eq_args[1] else {
+            panic!("expected bbterm app");
+        };
+        assert_eq!(head, "@bbterm");
+        assert_eq!(bbterm_args, &vec![bit(0), bit(1), bit(2), bit(2), bit(2)]);
+    }
+
+    #[test]
+    fn shift_is_still_outside_the_covered_set() {
         let mut arena = TermArena::new();
         let a = bv_var(&mut arena, "a", 4);
         let b = bv_var(&mut arena, "b", 4);
-        let cat = arena.concat(a, b).expect("concat");
+        let shl = arena.bv_shl(a, b).expect("bvshl");
         assert!(
-            bitblast_step(&arena, cat, "s").is_none(),
-            "concat (a structural op) is a later increment, not handled here"
+            bitblast_step(&arena, shl, "s").is_none(),
+            "shifts are a Carcara hole, not handled here"
         );
     }
 

@@ -774,3 +774,150 @@ fn bitblast_var_indexed_syntax_is_parseable_by_carcara() {
         "expected only the empty-clause-conclusion failure, got:\n{report}"
     );
 }
+
+#[test]
+fn bitblast_mult_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // width 4 (>= 2) binary bvmul: the full shift-add multiplier.
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a", 4);
+    let b = bv_var(&mut arena, "b", 4);
+    let t = arena.bv_mul(a, b).expect("bvmul");
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_mult_step",
+        &arena,
+        t,
+        "(declare-const a (_ BitVec 4))\n(declare-const b (_ BitVec 4))\n",
+        "(= (bvmul a b) (bvmul a b))",
+    );
+}
+
+#[test]
+fn bitblast_mult_width1_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // width 1: the `for j in 1..n` loop is empty, so the result is (@bbterm (and b0 a0)).
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a", 1);
+    let b = bv_var(&mut arena, "b", 1);
+    let t = arena.bv_mul(a, b).expect("bvmul");
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_mult_width1_step",
+        &arena,
+        t,
+        "(declare-const a (_ BitVec 1))\n(declare-const b (_ BitVec 1))\n",
+        "(= (bvmul a b) (bvmul a b))",
+    );
+}
+
+#[test]
+fn bitblast_mult_nary_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // A nested mul `(bvmul (bvmul a b) c)` exercises the left fold: arg0 is itself
+    // a bvmul, so its bits come from the accumulator @bbterm of the first multiply.
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a", 3);
+    let b = bv_var(&mut arena, "b", 3);
+    let c = bv_var(&mut arena, "c", 3);
+    let ab = arena.bv_mul(a, b).expect("bvmul");
+    let abc = arena.bv_mul(ab, c).expect("bvmul");
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_mult_nary_step",
+        &arena,
+        abc,
+        "(declare-const a (_ BitVec 3))\n(declare-const b (_ BitVec 3))\n(declare-const c (_ BitVec 3))\n",
+        "(= (bvmul (bvmul a b) c) (bvmul (bvmul a b) c))",
+    );
+}
+
+#[test]
+fn bitblast_extract_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // ((_ extract 2 1) x) over width 4: a sub-range (bits 1..=2).
+    let mut arena = TermArena::new();
+    let x = bv_var(&mut arena, "x", 4);
+    let t = arena.extract(2, 1, x).expect("extract");
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_extract_step",
+        &arena,
+        t,
+        "(declare-const x (_ BitVec 4))\n",
+        "(= ((_ extract 2 1) x) ((_ extract 2 1) x))",
+    );
+}
+
+#[test]
+fn bitblast_concat_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // (concat a b) with different operand widths: a high (width 2), b low (width 3).
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a", 2);
+    let b = bv_var(&mut arena, "b", 3);
+    let t = arena.concat(a, b).expect("concat");
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_concat_step",
+        &arena,
+        t,
+        "(declare-const a (_ BitVec 2))\n(declare-const b (_ BitVec 3))\n",
+        "(= (concat a b) (concat a b))",
+    );
+}
+
+#[test]
+fn bitblast_sign_extend_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // ((_ sign_extend 2) x) over width 3: i >= 1, so the sign bit is repeated.
+    let mut arena = TermArena::new();
+    let x = bv_var(&mut arena, "x", 3);
+    let t = arena.sign_ext(2, x).expect("sign_extend");
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_sign_extend_step",
+        &arena,
+        t,
+        "(declare-const x (_ BitVec 3))\n",
+        "(= ((_ sign_extend 2) x) ((_ sign_extend 2) x))",
+    );
+}
+
+#[test]
+fn bitblast_sign_extend_zero_step_is_rule_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // ((_ sign_extend 0) x): the i == 0 case degenerates to just x's bits.
+    let mut arena = TermArena::new();
+    let x = bv_var(&mut arena, "x", 3);
+    let t = arena.sign_ext(0, x).expect("sign_extend");
+    carcara_rule_accepts_bitblast(
+        &bin,
+        "bitblast_sign_extend_zero_step",
+        &arena,
+        t,
+        "(declare-const x (_ BitVec 3))\n",
+        "(= ((_ sign_extend 0) x) ((_ sign_extend 0) x))",
+    );
+}
