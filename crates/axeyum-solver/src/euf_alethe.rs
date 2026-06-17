@@ -619,7 +619,19 @@ fn term_to_alethe(arena: &TermArena, t: TermId) -> Option<AletheTerm> {
                 }
                 Some(AletheTerm::App(name, converted))
             }
-            _ => None,
+            // Any other interpreted operator is treated as an uninterpreted function
+            // symbol — matching the e-graph's congruence abstraction — so congruence
+            // over it, e.g. array `select` extensionality (`a = b ⇒ select(a,i) =
+            // select(b,i)`), emits a checkable proof. The `{op:?}` head is stable per
+            // operator kind, so two applications of the same op share a head.
+            _ => {
+                let name = format!("{op:?}");
+                let mut converted = Vec::with_capacity(args.len());
+                for &arg in args {
+                    converted.push(term_to_alethe(arena, arg)?);
+                }
+                Some(AletheTerm::App(name, converted))
+            }
         },
     }
 }
@@ -784,6 +796,28 @@ mod tests {
         let proof = prove_qf_uf_unsat_alethe(&arena, &assertions).expect("emits a proof");
         assert_eq!(check_alethe(&proof), Ok(true));
         last_is_empty_clause(&proof);
+    }
+
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn emits_proof_for_array_extensionality() {
+        // a = b ∧ select(a, i) ≠ select(b, i): congruence over `select` (treated as
+        // an uninterpreted function) refutes it, and the emitter produces a
+        // check_alethe-accepted proof — interpreted ops now convert to Alethe terms.
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 8, 8).unwrap();
+        let b = arena.array_var("b", 8, 8).unwrap();
+        let i = arena.bv_var("i", 8).unwrap();
+        let sa = arena.select(a, i).unwrap();
+        let sb = arena.select(b, i).unwrap();
+        let e1 = arena.eq(a, b).unwrap();
+        let ne = {
+            let e = arena.eq(sa, sb).unwrap();
+            arena.not(e).unwrap()
+        };
+        let proof = prove_qf_uf_unsat_alethe(&arena, &[e1, ne])
+            .expect("emits an array extensionality proof");
+        assert_eq!(check_alethe(&proof), Ok(true));
     }
 
     #[test]
