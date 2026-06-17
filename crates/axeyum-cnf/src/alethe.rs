@@ -6,13 +6,14 @@
 //! the empty clause `(cl)`. This is a SOUNDNESS-CRITICAL checker: it accepts a
 //! step only when it is genuinely valid, and rejects when in doubt.
 //!
-//! - **`resolution`/`th_resolution`** are checked by *entailment*: a step with
-//!   premises `C1..Cn` and conclusion `D` is valid iff `{C1, …, Cn, ¬D}` is
+//! - **`resolution`/`th_resolution`** and the clause-manipulation rules
+//!   **`contraction`/`reordering`/`weakening`** are checked by *entailment*: a step
+//!   with premises `C1..Cn` and conclusion `D` is valid iff `{C1, …, Cn, ¬D}` is
 //!   propositionally UNSAT (`¬D` = the unit clauses negating each literal of `D`).
 //!   That UNSAT is decided by the **proof-producing** SAT core
 //!   ([`crate::solve_with_drat_proof`]) and the resulting DRAT proof is **re-checked
 //!   by [`crate::check_drat`]**, so the entailment underpinning every accepted
-//!   resolution step is itself independently verified — not trusted to the search.
+//!   such step is itself independently verified — not trusted to the search.
 //! - The **EUF** rules `eq_reflexive`, `eq_symmetric`, `eq_transitive`, and
 //!   `eq_congruent`, and the **Boolean CNF-introduction** rules `and_pos`,
 //!   `and_neg`, `or_pos`, `or_neg` are checked *structurally* against each rule's
@@ -563,7 +564,12 @@ pub fn check_alethe(commands: &[AletheCommand]) -> Result<bool, AletheError> {
                 }
 
                 match rule.as_str() {
-                    "resolution" | "th_resolution" => {
+                    // Resolution and the clause-manipulation rules
+                    // (`contraction` = drop duplicate literals, `reordering` =
+                    // permute, `weakening` = add literals) all have a conclusion that
+                    // is a logical consequence of the premise clauses, so the same
+                    // proof-checked entailment test validates them.
+                    "resolution" | "th_resolution" | "contraction" | "reordering" | "weakening" => {
                         if !premises_entail(&premise_clauses, clause)? {
                             return Err(AletheError::StepNotEntailed { id: id.clone() });
                         }
@@ -1354,6 +1360,40 @@ mod tests {
             Err(AletheError::StepNotEntailed {
                 id: "c1".to_owned()
             })
+        );
+    }
+
+    #[test]
+    fn clause_manipulation_rules_check() {
+        // contraction: drop a duplicate literal.
+        let contraction = vec![
+            assume("h", vec![lit("a"), lit("a"), lit("b")]),
+            step("c", vec![lit("a"), lit("b")], "contraction", &["h"]),
+        ];
+        assert_eq!(check_alethe(&contraction), Ok(false));
+
+        // reordering: permute the literals.
+        let reordering = vec![
+            assume("h", vec![lit("a"), lit("b")]),
+            step("r", vec![lit("b"), lit("a")], "reordering", &["h"]),
+        ];
+        assert_eq!(check_alethe(&reordering), Ok(false));
+
+        // weakening: add a literal (the conclusion is weaker).
+        let weakening = vec![
+            assume("h", vec![lit("a")]),
+            step("w", vec![lit("a"), lit("b")], "weakening", &["h"]),
+        ];
+        assert_eq!(check_alethe(&weakening), Ok(false));
+
+        // Broken "weakening" that DROPS a literal is not entailed ⇒ rejected.
+        let bad = vec![
+            assume("h", vec![lit("a"), lit("b")]),
+            step("w", vec![lit("a")], "weakening", &["h"]),
+        ];
+        assert_eq!(
+            check_alethe(&bad),
+            Err(AletheError::StepNotEntailed { id: "w".to_owned() })
         );
     }
 
