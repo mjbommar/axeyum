@@ -23,7 +23,7 @@ use std::collections::{BTreeSet, HashMap};
 
 use axeyum_ir::{Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 use axeyum_rewrite::{
-    QuantExpandError, build_app, expand_quantifiers, instantiate_universals,
+    QuantExpandError, build_app, canonicalize_terms, expand_quantifiers, instantiate_universals,
     instantiate_with_triggers, replace_subterms,
 };
 
@@ -207,6 +207,20 @@ pub fn check_auto(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    // Optional word-level preprocessing (P1.2, off by default): the
+    // denotation- and symbol-preserving canonicalizer. It eliminates no
+    // variables, so the model returned below is unchanged and still satisfies
+    // the original assertions; it normalizes commutative-operand order and folds
+    // identities (e.g. `(= (bvmul a b) (bvmul b a))` → `true`, no bit-blasting).
+    let preprocessed;
+    let assertions: &[TermId] = if config.preprocess {
+        preprocessed = canonicalize_terms(arena, assertions)
+            .map_err(|error| SolverError::Backend(format!("canonicalize failed: {error}")))?
+            .terms;
+        &preprocessed
+    } else {
+        assertions
+    };
     // `to_real` is a ring homomorphism, so fold `to_real(a) ± to_real(b)` into
     // `to_real(a ± b)` (bottom-up): a linear combination of coerced integers
     // collapses to one coercion, which the comparison rewrites below can then

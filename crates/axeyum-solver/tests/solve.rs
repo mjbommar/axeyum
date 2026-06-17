@@ -73,3 +73,25 @@ fn refutes_infinite_domain_quantifier_via_instantiation() {
     let s_is_1 = arena.eq(sv, one).unwrap();
     assert_eq!(run(&mut arena, &[all, s_is_1]), CheckResult::Unsat);
 }
+
+/// With `with_preprocess(true)`, the `solve` façade canonicalizes first, so a wide
+/// multiplier-commutativity refutation is decided WITHOUT bit-blasting the
+/// multiplier: `(not (= (a*b) (b*a)))` over 32-bit operands returns unsat instantly.
+#[test]
+fn preprocess_flag_refutes_multiplier_commutativity_without_blasting() {
+    let mut arena = TermArena::new();
+    let a = arena.bv_var("a", 32).unwrap();
+    let b = arena.bv_var("b", 32).unwrap();
+    let ab = arena.bv_mul(a, b).unwrap();
+    let ba = arena.bv_mul(b, a).unwrap();
+    let eq = arena.eq(ab, ba).unwrap();
+    let neq = arena.not(eq).unwrap();
+
+    let cfg = SolverConfig::new()
+        .with_timeout(Duration::from_secs(30))
+        .with_preprocess(true);
+    assert_eq!(
+        solve(&mut arena, &[neq], &cfg).expect("decides"),
+        CheckResult::Unsat,
+    );
+}

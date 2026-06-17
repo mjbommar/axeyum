@@ -355,6 +355,17 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-17** — **P1.2: opt-in `preprocess` flag on the `solve`/`check_auto`
+  façade**. New `SolverConfig::preprocess` (+ `with_preprocess`), default **off** —
+  mirrors the existing `cnf_inprocessing` lever. When set, `check_auto` runs the
+  denotation- and symbol-preserving canonicalizer over the assertions before its
+  existing coercion-rewrite chain and dispatch; the returned `sat` model is
+  unchanged (no variables eliminated) and still satisfies the originals. Makes
+  word-level preprocessing reachable through the main `solve()` entry point, not
+  just `check_with_preprocessing`: a 32-bit `(not (= (a*b) (b*a)))` via
+  `solve(..with_preprocess(true))` returns unsat **instantly, no multiplier blast**
+  (new `solve` test). Default-off ⇒ zero change to existing behavior/baselines; full
+  gate green. Flipping the default remains a separate measured decision (ADR).
 - **2026-06-17** — **P1.2: canonicalizer wired into `check_with_preprocessing`**.
   The denotation-preserving canonicalizer (`canonicalize_terms`) is now the FIRST
   pass in `check_with_preprocessing`, ahead of `propagate_values` + `solve_eqs`. It

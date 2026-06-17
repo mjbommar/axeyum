@@ -138,6 +138,15 @@ pub struct SolverConfig {
     /// sound, off-by-default performance lever (Track 1, P1.1). Defaults to
     /// `false` so the recorded baselines reflect the un-inprocessed encoding.
     pub cnf_inprocessing: bool,
+    /// When set, [`crate::check_auto`]/[`crate::solve`] run the
+    /// denotation-preserving canonicalizer over the assertions before dispatch
+    /// (Track 1, P1.2 word-level preprocessing). It is symbol-preserving — no
+    /// variables are eliminated — so the returned `sat` model is unchanged and
+    /// still satisfies the original assertions; it normalizes commutative-operand
+    /// order (so e.g. `(= (bvmul a b) (bvmul b a))` folds to `true` with no
+    /// bit-blasting) and applies the identity/constant-fold rules. Off by default
+    /// so recorded baselines reflect the un-preprocessed path.
+    pub preprocess: bool,
 }
 
 impl SolverConfig {
@@ -200,6 +209,14 @@ impl SolverConfig {
     #[must_use]
     pub fn with_cnf_inprocessing(mut self, cnf_inprocessing: bool) -> Self {
         self.cnf_inprocessing = cnf_inprocessing;
+        self
+    }
+
+    /// Enables denotation-preserving word-level preprocessing (canonicalization)
+    /// before dispatch (Track 1, P1.2). See [`SolverConfig::preprocess`].
+    #[must_use]
+    pub fn with_preprocess(mut self, preprocess: bool) -> Self {
+        self.preprocess = preprocess;
         self
     }
 }
