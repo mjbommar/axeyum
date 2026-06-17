@@ -67,6 +67,36 @@ fn carcara_accepts_smt2(
     combined
 }
 
+/// Writes `smt2_text` + `proof` to a temp dir and runs `carcara check`,
+/// returning the combined stdout/stderr **without** asserting validity. Used to
+/// inspect Carcara's diagnostics — e.g. to confirm a step *parses* even when the
+/// proof as a whole is incomplete (does not conclude the empty clause).
+fn carcara_output(
+    bin: &Path,
+    tag: &str,
+    smt2_text: &str,
+    proof: &[axeyum_cnf::AletheCommand],
+) -> String {
+    let dir = std::env::temp_dir().join(format!("axeyum_carcara_{tag}"));
+    std::fs::create_dir_all(&dir).expect("create temp dir");
+    let smt2 = dir.join("problem.smt2");
+    let alethe = dir.join("proof.alethe");
+    std::fs::write(&smt2, smt2_text).expect("write smt2");
+    std::fs::write(&alethe, write_alethe(proof)).expect("write alethe");
+
+    let out = Command::new(bin)
+        .arg("check")
+        .arg(&alethe)
+        .arg(&smt2)
+        .output()
+        .expect("run carcara");
+    format!(
+        "{}{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    )
+}
+
 /// Emits `proof` + the matching IR-derived `.smt2` to a temp dir and runs
 /// `carcara check`.
 fn carcara_accepts(
@@ -344,4 +374,55 @@ fn resolution_refutation_proof_is_accepted_by_carcara() {
     let smt2 = cnf_to_smt2(&formula);
     let report = carcara_accepts_smt2(&bin, "resolution", &smt2, &proof);
     assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+#[test]
+fn bitblast_var_indexed_syntax_is_parseable_by_carcara() {
+    use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm};
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // The confirmed Carcara contract (T3.3.1): a `bitblast_var` step concludes
+    // `(= x (@bbterm ((_ @bit_of 0) x) ((_ @bit_of 1) x)))`, where each bit uses the
+    // indexed bit-extraction `(_ @bit_of i)`. Built entirely via the IR + write_alethe,
+    // this proves the new `AletheTerm::Indexed` renders syntax Carcara *parses* and the
+    // `bitblast_var` rule itself checks; only the missing empty-clause conclusion remains.
+    let bit_of = |i: i128| AletheTerm::Indexed {
+        op: "@bit_of".to_owned(),
+        indices: vec![i],
+        args: vec![AletheTerm::Const("x".to_owned())],
+    };
+    let bbterm = AletheTerm::App("@bbterm".to_owned(), vec![bit_of(0), bit_of(1)]);
+    let conclusion = AletheLit {
+        atom: AletheTerm::App(
+            "=".to_owned(),
+            vec![AletheTerm::Const("x".to_owned()), bbterm],
+        ),
+        negated: false,
+    };
+    let proof = vec![AletheCommand::Step {
+        id: "s".to_owned(),
+        clause: vec![conclusion],
+        rule: "bitblast_var".to_owned(),
+        premises: Vec::new(),
+        args: Vec::new(),
+    }];
+
+    let smt2 = "(set-logic QF_BV)\n\
+        (declare-const x (_ BitVec 2))\n\
+        (assert (= x x))\n\
+        (check-sat)\n";
+    let report = carcara_output(&bin, "bitblast_var_indexed", smt2, &proof);
+
+    // The emitted indexed-op syntax parses (no parser error) and the `bitblast_var`
+    // rule checks; the only remaining failure is that a lone step is not a refutation.
+    assert!(
+        !report.contains("parser error"),
+        "carcara could not parse the emitted indexed-op syntax:\n{report}"
+    );
+    assert!(
+        report.contains("does not conclude empty clause"),
+        "expected only the empty-clause-conclusion failure, got:\n{report}"
+    );
 }

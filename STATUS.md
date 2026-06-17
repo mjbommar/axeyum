@@ -355,6 +355,20 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **T3.3.1 step 1: `AletheTerm` indexed-operator IR extension**.
+  Added `AletheTerm::Indexed { op, indices: Vec<i128>, args }` so SMT-LIB indexed
+  applications like `((_ @bit_of 0) x)` (and bare `(_ @bit_of 1)`) are first-class —
+  the bounded prerequisite for the per-operator `bitblast_*` emitter (the old
+  `App(String, …)` head + atom-only parser couldn't represent a list-headed
+  application). `key`/`write`/`parse` handle applied vs bare forms with exact
+  round-trip; an `Indexed` term is an opaque atom to the theory rules (the only
+  match sites needing an arm were `real_term`/`int_term` in `alethe_lra.rs` →
+  `None`). Purely additive: existing `Const`/`App` output byte-identical, all ~82
+  cnf tests + EUF/LRA/resolution emission unchanged. **A gated Carcara test confirms
+  the IR renders exactly the syntax Carcara accepts**: a `bitblast_var` step built
+  via the IR + `write_alethe` parses and the rule checks (`!parser error` &&
+  "does not conclude empty clause"). 4 new IR tests + 1 carcara test (10 cross-check
+  total). **Next: T3.3.1 step 2 — per-operator bitblast emitter from `axeyum-bv`.**
 - **2026-06-16** — **QF_BV bitblast→Carcara contract reverse-engineered & recorded
   (T3.3.1 design)**. Empirically confirmed against the built Carcara binary the
   exact shape it requires for per-operator `bitblast_*` steps: the `@bbterm`

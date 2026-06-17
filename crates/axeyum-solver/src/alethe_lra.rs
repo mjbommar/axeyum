@@ -187,6 +187,9 @@ fn real_term(
             },
             _ => None,
         },
+        // An indexed-operator application (e.g. a bit-blast `(_ @bit_of i)`) has no
+        // LRA real meaning.
+        AletheTerm::Indexed { .. } => None,
     }
 }
 
@@ -394,6 +397,9 @@ fn int_term(
             },
             _ => None,
         },
+        // An indexed-operator application (e.g. a bit-blast `(_ @bit_of i)`) has no
+        // LIA integer meaning.
+        AletheTerm::Indexed { .. } => None,
     }
 }
 

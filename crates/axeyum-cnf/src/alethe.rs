@@ -35,6 +35,17 @@ pub enum AletheTerm {
     Const(String),
     /// An application `(f a1 ... an)`, e.g. `(= a b)`, `(f x)`.
     App(String, Vec<AletheTerm>),
+    /// An indexed-operator application `((_ op i0 i1 …) a0 a1 …)`, e.g.
+    /// `((_ @bit_of 0) x)`. With no `args` it is the bare indexed identifier
+    /// `(_ op i0 …)`. Indices are integer literals (SMT-LIB numerals).
+    Indexed {
+        /// The operator symbol, e.g. `@bit_of` or `extract`.
+        op: String,
+        /// The integer indices, e.g. `[0]` in `(_ @bit_of 0)`.
+        indices: Vec<i128>,
+        /// The operand terms; empty for a bare indexed identifier.
+        args: Vec<AletheTerm>,
+    },
 }
 
 impl AletheTerm {
@@ -43,7 +54,10 @@ impl AletheTerm {
     /// variable).
     ///
     /// `Const(s)` maps to `s`; `App(f, args)` maps to `(f k1 k2 ...)`, where
-    /// each `ki` is the key of the corresponding argument.
+    /// each `ki` is the key of the corresponding argument. An
+    /// `Indexed { op, indices, args }` maps to `((_ op i0 i1 …) a0key a1key …)`
+    /// with args, or the bare identifier `(_ op i0 i1 …)` without — so two
+    /// structurally-equal indexed terms share a key.
     #[must_use]
     pub fn key(&self) -> String {
         match self {
@@ -58,8 +72,37 @@ impl AletheTerm {
                 out.push(')');
                 out
             }
+            AletheTerm::Indexed { op, indices, args } => {
+                let head = indexed_head(op, indices);
+                if args.is_empty() {
+                    head
+                } else {
+                    let mut out = String::from("(");
+                    out.push_str(&head);
+                    for arg in args {
+                        out.push(' ');
+                        out.push_str(&arg.key());
+                    }
+                    out.push(')');
+                    out
+                }
+            }
         }
     }
+}
+
+/// Renders the indexed identifier head `(_ op i0 i1 …)` for an indexed-operator
+/// application. Shared by [`AletheTerm::key`] and the writer so the key and the
+/// textual form stay consistent.
+fn indexed_head(op: &str, indices: &[i128]) -> String {
+    let mut out = String::from("(_ ");
+    out.push_str(op);
+    for index in indices {
+        out.push(' ');
+        out.push_str(&index.to_string());
+    }
+    out.push(')');
+    out
 }
 
 /// A propositional literal: a [`AletheTerm`] atom, optionally negated.
@@ -428,13 +471,46 @@ fn parse_literal(sexp: &Sexp) -> Result<AletheLit, AletheError> {
     })
 }
 
-/// Parses an [`AletheTerm`]: a bare token is a [`AletheTerm::Const`]; a
-/// parenthesized list whose head is a symbol is an [`AletheTerm::App`], with the
-/// remaining elements parsed recursively as argument terms.
+/// Parses an [`AletheTerm`]:
+///
+/// - a bare token is a [`AletheTerm::Const`];
+/// - a list starting with the atom `_` — `(_ op i0 …)` — is a bare indexed
+///   identifier [`AletheTerm::Indexed`] with no `args`;
+/// - a list whose first element is itself an indexed identifier
+///   `((_ op i0 …) a0 a1 …)` is an applied [`AletheTerm::Indexed`] whose `args`
+///   are the remaining outer items;
+/// - any other list whose head is a symbol is an [`AletheTerm::App`], with the
+///   remaining elements parsed recursively as argument terms.
+///
+/// # Errors
+///
+/// Returns [`AletheError::Parse`] when an index does not parse as `i128`, when a
+/// `(_ …)` lacks an op or indices, or when an application head is not a symbol.
 fn parse_term(sexp: &Sexp) -> Result<AletheTerm, AletheError> {
     match sexp {
         Sexp::Atom(symbol) => Ok(AletheTerm::Const(symbol.clone())),
         Sexp::List(items) => {
+            // Bare indexed identifier `(_ op i0 …)`.
+            if items.first().and_then(Sexp::as_atom) == Some("_") {
+                let (op, indices) = parse_indexed_identifier(items)?;
+                return Ok(AletheTerm::Indexed {
+                    op,
+                    indices,
+                    args: Vec::new(),
+                });
+            }
+            // Applied indexed operator `((_ op i0 …) a0 a1 …)`: first element is
+            // itself a `(_ …)` list.
+            if let Some(Sexp::List(head_items)) = items.first()
+                && head_items.first().and_then(Sexp::as_atom) == Some("_")
+            {
+                let (op, indices) = parse_indexed_identifier(head_items)?;
+                let args = items[1..]
+                    .iter()
+                    .map(parse_term)
+                    .collect::<Result<Vec<_>, _>>()?;
+                return Ok(AletheTerm::Indexed { op, indices, args });
+            }
             let head = items
                 .first()
                 .and_then(Sexp::as_atom)
@@ -447,6 +523,43 @@ fn parse_term(sexp: &Sexp) -> Result<AletheTerm, AletheError> {
             Ok(AletheTerm::App(head, args))
         }
     }
+}
+
+/// Parses an indexed identifier `(_ op i0 i1 …)` into its operator symbol and
+/// integer indices. `items` is the list including the leading `_` atom.
+///
+/// # Errors
+///
+/// Returns [`AletheError::Parse`] if `op` is missing, no indices are present, an
+/// index is not an atom, or an index does not parse as `i128`.
+fn parse_indexed_identifier(items: &[Sexp]) -> Result<(String, Vec<i128>), AletheError> {
+    let op = items
+        .get(1)
+        .and_then(Sexp::as_atom)
+        .ok_or_else(|| AletheError::Parse("`(_ …)` is missing its operator symbol".to_owned()))?
+        .to_owned();
+    if items.len() < 3 {
+        return Err(AletheError::Parse(
+            "`(_ op …)` is missing its index/indices".to_owned(),
+        ));
+    }
+    let indices = items[2..]
+        .iter()
+        .map(|item| {
+            item.as_atom()
+                .ok_or_else(|| {
+                    AletheError::Parse("indexed-operator index must be an atom".to_owned())
+                })
+                .and_then(|text| {
+                    text.parse::<i128>().map_err(|_| {
+                        AletheError::Parse(format!(
+                            "indexed-operator index `{text}` is not an integer"
+                        ))
+                    })
+                })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok((op, indices))
 }
 
 /// Serializes Alethe commands to the textual format. Round-trips through
@@ -533,7 +646,9 @@ fn write_literal(lit: &AletheLit) -> String {
     }
 }
 
-/// Renders an [`AletheTerm`]: `Const(s)` as `s`; `App(f, args)` as `(f a1 ...)`.
+/// Renders an [`AletheTerm`]: `Const(s)` as `s`; `App(f, args)` as `(f a1 ...)`;
+/// `Indexed { op, indices, args }` as `((_ op i0 …) a0 …)` with args, or the bare
+/// `(_ op i0 …)` without. Round-trips through [`parse_term`].
 fn write_atom(term: &AletheTerm) -> String {
     match term {
         AletheTerm::Const(symbol) => symbol.clone(),
@@ -546,6 +661,21 @@ fn write_atom(term: &AletheTerm) -> String {
             }
             out.push(')');
             out
+        }
+        AletheTerm::Indexed { op, indices, args } => {
+            let head = indexed_head(op, indices);
+            if args.is_empty() {
+                head
+            } else {
+                let mut out = String::from("(");
+                out.push_str(&head);
+                for arg in args {
+                    out.push(' ');
+                    out.push_str(&write_atom(arg));
+                }
+                out.push(')');
+                out
+            }
         }
     }
 }
@@ -1682,5 +1812,102 @@ mod tests {
         ];
         let parsed = parse_alethe(&write_alethe(&commands)).unwrap();
         assert_eq!(parsed, commands);
+    }
+
+    /// An applied indexed bit-extraction `((_ @bit_of i) x)`.
+    fn bit_of(i: i128, x: &str) -> AletheTerm {
+        AletheTerm::Indexed {
+            op: "@bit_of".to_owned(),
+            indices: vec![i],
+            args: vec![AletheTerm::Const(x.to_owned())],
+        }
+    }
+
+    #[test]
+    fn indexed_bitblast_step_round_trips() {
+        // A `bitblast_var`-shaped step: `(= x (@bbterm ((_ @bit_of 0) x) ((_ @bit_of 1) x)))`.
+        let bbterm = AletheTerm::App("@bbterm".to_owned(), vec![bit_of(0, "x"), bit_of(1, "x")]);
+        let conclusion = AletheLit {
+            atom: AletheTerm::App(
+                "=".to_owned(),
+                vec![AletheTerm::Const("x".to_owned()), bbterm],
+            ),
+            negated: false,
+        };
+        let commands = vec![step("s", vec![conclusion], "bitblast_var", &[])];
+        let reparsed = parse_alethe(&write_alethe(&commands)).expect("indexed step round-trips");
+        assert_eq!(reparsed, commands);
+    }
+
+    #[test]
+    fn indexed_write_exact_strings() {
+        // Applied form renders `((_ @bit_of 0) x)`.
+        let applied = AletheCommand::Assume {
+            id: "h".to_owned(),
+            clause: vec![AletheLit {
+                atom: bit_of(0, "x"),
+                negated: false,
+            }],
+        };
+        assert_eq!(write_alethe(&[applied]), "(assume h ((_ @bit_of 0) x))\n");
+
+        // Bare indexed identifier renders `(_ @bit_of 1)`.
+        let bare = AletheCommand::Assume {
+            id: "h".to_owned(),
+            clause: vec![AletheLit {
+                atom: AletheTerm::Indexed {
+                    op: "@bit_of".to_owned(),
+                    indices: vec![1],
+                    args: vec![],
+                },
+                negated: false,
+            }],
+        };
+        assert_eq!(write_alethe(&[bare]), "(assume h (_ @bit_of 1))\n");
+    }
+
+    #[test]
+    fn indexed_key_distinctness() {
+        // Different index ⇒ different key.
+        assert_ne!(bit_of(0, "x").key(), bit_of(1, "x").key());
+        // Structurally-equal indexed terms share a key.
+        assert_eq!(bit_of(0, "x").key(), bit_of(0, "x").key());
+        // The applied form key is exactly the canonical s-expression.
+        assert_eq!(bit_of(0, "x").key(), "((_ @bit_of 0) x)");
+    }
+
+    #[test]
+    fn indexed_parse_from_text() {
+        // A bare indexed identifier `(_ @bit_of 1)`.
+        let bare = parse_alethe("(assume h (_ @bit_of 1))").expect("bare indexed parses");
+        let AletheCommand::Assume { clause, .. } = &bare[0] else {
+            panic!("expected assume");
+        };
+        assert_eq!(
+            clause[0].atom,
+            AletheTerm::Indexed {
+                op: "@bit_of".to_owned(),
+                indices: vec![1],
+                args: vec![],
+            }
+        );
+
+        // An applied indexed operator `((_ @bit_of 0) x)`.
+        let applied = parse_alethe("(assume h ((_ @bit_of 0) x))").expect("applied indexed parses");
+        let AletheCommand::Assume { clause, .. } = &applied[0] else {
+            panic!("expected assume");
+        };
+        assert_eq!(clause[0].atom, bit_of(0, "x"));
+
+        // A `(_ …)` with no indices is a parse error.
+        assert!(matches!(
+            parse_alethe("(assume h (_ @bit_of))"),
+            Err(AletheError::Parse(_))
+        ));
+        // A non-integer index is a parse error.
+        assert!(matches!(
+            parse_alethe("(assume h (_ @bit_of foo))"),
+            Err(AletheError::Parse(_))
+        ));
     }
 }
