@@ -548,3 +548,48 @@ fn qf_lra_unsat_reports_no_bitblast() {
     assert!(ids.contains(&TrustId::Farkas), "got {ids:?}");
     assert!(report.trusted_steps.iter().all(|s| s.certified));
 }
+
+#[test]
+fn produce_evidence_array_row_same_carries_alethe_proof() {
+    // Structural read-over-write-same: select(store(a, i, v), i) != v is unsat by
+    // the ROW-same axiom. produce_evidence now attaches the check_alethe-validated
+    // array Alethe proof directly (no array-elimination or bit-blast reduction), so
+    // it carries NO reduction trust holes.
+    let mut arena = TermArena::new();
+    let a = arena
+        .declare(
+            "a",
+            Sort::Array {
+                index: 4,
+                element: 8,
+            },
+        )
+        .unwrap();
+    let a_v = arena.var(a);
+    let i_sym = arena.declare("i", Sort::BitVec(4)).unwrap();
+    let i = arena.var(i_sym);
+    let v_sym = arena.declare("v", Sort::BitVec(8)).unwrap();
+    let v = arena.var(v_sym);
+    let stored = arena.store(a_v, i, v).unwrap();
+    let sel = arena.select(stored, i).unwrap();
+    let diseq = {
+        let eq = arena.eq(sel, v).unwrap();
+        arena.not(eq).unwrap()
+    };
+
+    let report = produce_evidence(&mut arena, &[diseq], &config()).unwrap();
+    assert!(
+        matches!(report.evidence, Evidence::UnsatAletheProof(_)),
+        "structural ROW-same unsat must carry the array Alethe proof, got {:?}",
+        report.evidence
+    );
+    assert!(
+        report.evidence.check(&arena, &[diseq]).unwrap(),
+        "proof re-checks"
+    );
+    assert!(
+        report.trusted_steps.is_empty(),
+        "the direct array Alethe proof has no reduction trust holes, got {:?}",
+        report.trusted_steps
+    );
+}

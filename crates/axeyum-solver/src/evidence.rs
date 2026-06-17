@@ -587,8 +587,20 @@ pub fn produce_evidence(
     let (evidence, trusted_steps) = match solve(arena, assertions, config)? {
         CheckResult::Sat(model) => (Evidence::Sat(model), Vec::new()),
         CheckResult::Unsat => {
-            let (cert, steps) = reduction_unsat_certificate(arena, assertions);
-            (Evidence::Unsat(cert), steps)
+            // Prefer a check_alethe-validated Alethe refutation when the problem is
+            // in the array read-over-write-same / extensionality (or EUF congruence)
+            // fragment: it proves the conflict DIRECTLY via the array axiom /
+            // congruence, with NO array-elimination or bit-blast reduction, so it
+            // carries no reduction trust holes (re-validated by check_alethe in
+            // Evidence::check). Otherwise fall back to the DRAT reduction certificate.
+            if let Some(proof) = crate::prove_qf_abv_unsat_alethe(arena, assertions)
+                && matches!(check_alethe(&proof), Ok(true))
+            {
+                (Evidence::UnsatAletheProof(proof), Vec::new())
+            } else {
+                let (cert, steps) = reduction_unsat_certificate(arena, assertions);
+                (Evidence::Unsat(cert), steps)
+            }
         }
         CheckResult::Unknown(reason) => (Evidence::Unknown(reason), Vec::new()),
     };
