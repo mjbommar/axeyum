@@ -568,6 +568,17 @@ mod tests {
             let x = a.bv_var("x", 4).unwrap();
             (a.extract(3, 0, x).unwrap(), x)
         });
+        assert_rule_fires(&mut covered, "bv.extract_concat.v1", |a| {
+            // extract(2, 0, concat(a4, b4)) selects bits within the low part b4,
+            // so it rewrites to extract(2, 0, b4).
+            let a4 = a.bv_var("a4", 4).unwrap();
+            let b4 = a.bv_var("b4", 4).unwrap();
+            let concat = a.concat(a4, b4).unwrap();
+            (
+                a.extract(2, 0, concat).unwrap(),
+                a.extract(2, 0, b4).unwrap(),
+            )
+        });
         assert_rule_fires(&mut covered, "bv.extend_zero.v1", |a| {
             let x = a.bv_var("x", 4).unwrap();
             (a.zero_ext(0, x).unwrap(), x)

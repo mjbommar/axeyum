@@ -50,6 +50,7 @@ const BV_XOR_IDENTITY: &str = "bv.xor_identity.v1";
 const BV_XOR_SELF: &str = "bv.xor_self.v1";
 const BV_SHIFT_ZERO: &str = "bv.shift_zero.v1";
 const BV_EXTRACT_WHOLE: &str = "bv.extract_whole.v1";
+const BV_EXTRACT_CONCAT: &str = "bv.extract_concat.v1";
 const BV_EXTEND_ZERO: &str = "bv.extend_zero.v1";
 const BV_ROTATE_ZERO: &str = "bv.rotate_zero.v1";
 const COMMUTATIVE_ORDER: &str = "commutative.operand_order.v1";
@@ -455,6 +456,11 @@ fn default_rules() -> Vec<RewriteRule> {
             "`extract` over the full input width",
         ),
         rule(
+            BV_EXTRACT_CONCAT,
+            "Extract of concat slice selection",
+            "`extract` whose range lies entirely within one side of a `concat`",
+        ),
+        rule(
             BV_EXTEND_ZERO,
             "Bit-vector zero-width extension identity",
             "`zero_extend` or `sign_extend` by zero bits",
@@ -651,7 +657,7 @@ fn rewrite_app(
         | Op::BvSle
         | Op::BvSge => rewrite_bv_compare(arena, op, args, enabled),
         Op::Ite => rewrite_ite(arena, args, enabled),
-        Op::Extract { hi, lo } => rewrite_extract(arena, hi, lo, args, enabled),
+        Op::Extract { hi, lo } => rewrite_extract(arena, hi, lo, args, enabled)?,
         Op::ZeroExt { by } | Op::SignExt { by } => rewrite_extend(by, args, enabled),
         Op::RotateLeft { by } | Op::RotateRight { by } => rewrite_rotate(by, args, enabled),
         Op::BvNand
@@ -1274,20 +1280,58 @@ fn rewrite_ite(
     None
 }
 
+/// `extract` simplifications.
+///
+/// `BV_EXTRACT_WHOLE`: `((_ extract (w-1) 0) x)` over the full input width `w`
+/// is `x` itself.
+///
+/// `BV_EXTRACT_CONCAT`: when the inner term is a binary `(concat a b)` (with `a`
+/// the high bits, `b` the low bits) and the `[hi:lo]` range lies entirely within
+/// one side, drop the concat and extract directly from that side. SMT-LIB places
+/// `b` in bits `0..wb` and `a` in bits `wb..`, so with `wb = width(b)`:
+///
+/// * `hi < wb` — range entirely in the low part `b`: `((_ extract hi lo) b)`;
+/// * `lo >= wb` — range entirely in the high part `a`: subtract `wb` from both
+///   indices, `((_ extract (hi - wb) (lo - wb)) a)`;
+/// * otherwise the range straddles the boundary and is left unchanged.
+///
+/// This selects exactly the same bits, so it is exact-denotation with identity
+/// model projection.
 fn rewrite_extract(
-    arena: &TermArena,
+    arena: &mut TermArena,
     hi: u32,
     lo: u32,
     args: &[TermId],
     enabled: &BTreeSet<&str>,
-) -> Option<LocalRewrite> {
+) -> Result<Option<LocalRewrite>, IrError> {
     if enabled.contains(BV_EXTRACT_WHOLE)
         && lo == 0
         && arena.sort_of(args[0]).bv_width() == Some(hi + 1)
     {
-        return Some(applied(args[0], BV_EXTRACT_WHOLE));
+        return Ok(Some(applied(args[0], BV_EXTRACT_WHOLE)));
     }
-    None
+    if enabled.contains(BV_EXTRACT_CONCAT)
+        && let TermNode::App {
+            op: Op::Concat,
+            args: concat_args,
+        } = arena.node(args[0])
+    {
+        let a = concat_args[0];
+        let b = concat_args[1];
+        let wb = arena
+            .sort_of(b)
+            .bv_width()
+            .expect("concat low operand has BV sort");
+        if hi < wb {
+            return Ok(Some(applied(arena.extract(hi, lo, b)?, BV_EXTRACT_CONCAT)));
+        } else if lo >= wb {
+            return Ok(Some(applied(
+                arena.extract(hi - wb, lo - wb, a)?,
+                BV_EXTRACT_CONCAT,
+            )));
+        }
+    }
+    Ok(None)
 }
 
 fn rewrite_extend(by: u32, args: &[TermId], enabled: &BTreeSet<&str>) -> Option<LocalRewrite> {
@@ -2371,5 +2415,98 @@ mod commutative_tests {
             a.node(canon),
             TermNode::App { op: Op::BvSrem, .. }
         ));
+    }
+
+    /// `extract` whose range lies entirely in the low part `b` of `(concat a b)`
+    /// rewrites to `extract` of `b` directly; entirely in the high part `a`
+    /// rewrites to `extract` of `a` with both indices shifted down by `width(b)`;
+    /// a straddling range is left unchanged.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn extract_of_concat_slice_selection() {
+        let mut a = TermArena::new();
+        let hi_term = a.bv_var("a", 4).unwrap();
+        let lo_term = a.bv_var("b", 4).unwrap();
+        // concat(a, b): a is the high 4 bits (4..8), b is the low 4 bits (0..4).
+        let concat = a.concat(hi_term, lo_term).unwrap();
+
+        // Low part: extract(2, 0, concat) -> extract(2, 0, b).
+        let low = a.extract(2, 0, concat).unwrap();
+        let expected_low = a.extract(2, 0, lo_term).unwrap();
+        assert_eq!(canonicalize(&mut a, low).unwrap().term, expected_low);
+
+        // High part: extract(6, 4, concat) -> extract(2, 0, a).
+        let high = a.extract(6, 4, concat).unwrap();
+        let expected_high = a.extract(2, 0, hi_term).unwrap();
+        assert_eq!(canonicalize(&mut a, high).unwrap().term, expected_high);
+
+        // Straddle: extract(5, 2, concat) crosses bit 4 and is NOT rewritten.
+        let straddle = a.extract(5, 2, concat).unwrap();
+        let canon = canonicalize(&mut a, straddle).unwrap().term;
+        assert!(matches!(
+            a.node(canon),
+            TermNode::App {
+                op: Op::Extract { hi: 5, lo: 2 },
+                ..
+            }
+        ));
+    }
+
+    /// Exhaustive denotation check: for width-3 `a` and `b` (concat width 6),
+    /// `extract(hi, lo, concat(a, b))` equals its rewritten form over ALL 64
+    /// assignments of `(a, b)`. Covers a low-part range (in `b`) and a high-part
+    /// range (in `a`, where the `- wb` index subtraction matters).
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn extract_of_concat_preserves_denotation() {
+        let mut a = TermArena::new();
+        let a_sym = a.declare("a", Sort::BitVec(3)).unwrap();
+        let b_sym = a.declare("b", Sort::BitVec(3)).unwrap();
+        let a_term = a.var(a_sym);
+        let b_term = a.var(b_sym);
+        let concat = a.concat(a_term, b_term).unwrap();
+
+        // Low-part range entirely in `b` (bits 0..3): extract(2, 1, concat).
+        let low = a.extract(2, 1, concat).unwrap();
+        let canon_low = canonicalize(&mut a, low).unwrap().term;
+        let expected_low = a.extract(2, 1, b_term).unwrap();
+        assert_eq!(canon_low, expected_low);
+
+        // High-part range entirely in `a` (bits 3..6): extract(5, 4, concat).
+        // The rewrite subtracts wb = 3 from both indices -> extract(2, 1, a).
+        let high = a.extract(5, 4, concat).unwrap();
+        let canon_high = canonicalize(&mut a, high).unwrap().term;
+        let expected_high = a.extract(2, 1, a_term).unwrap();
+        assert_eq!(canon_high, expected_high);
+
+        for av in 0..8u128 {
+            for bv in 0..8u128 {
+                let mut asg = Assignment::new();
+                asg.set(
+                    a_sym,
+                    Value::Bv {
+                        width: 3,
+                        value: av,
+                    },
+                );
+                asg.set(
+                    b_sym,
+                    Value::Bv {
+                        width: 3,
+                        value: bv,
+                    },
+                );
+                assert_eq!(
+                    eval(&a, low, &asg).unwrap(),
+                    eval(&a, canon_low, &asg).unwrap(),
+                    "extract-of-concat (low part) changed denotation at a={av}, b={bv}",
+                );
+                assert_eq!(
+                    eval(&a, high, &asg).unwrap(),
+                    eval(&a, canon_high, &asg).unwrap(),
+                    "extract-of-concat (high part) changed denotation at a={av}, b={bv}",
+                );
+            }
+        }
     }
 }
