@@ -19,6 +19,7 @@ use web_time::Instant;
 mod alethe;
 mod bve;
 mod drat;
+mod gf2;
 mod lrat;
 mod proof_sat;
 mod simplify;
@@ -32,6 +33,7 @@ pub use bve::{
     eliminate_variables_within,
 };
 pub use drat::{DratError, DratStep, check_drat, parse_drat, write_drat};
+pub use gf2::{Gf2Outcome, Gf2Solution, Gf2System};
 pub use lrat::{LratError, LratStep, check_lrat, elaborate_drat_to_lrat, parse_lrat, write_lrat};
 pub use proof_sat::{ProofSolveOutcome, solve_with_drat_proof};
 pub use simplify::{SubsumeStats, simplify, simplify_within};
