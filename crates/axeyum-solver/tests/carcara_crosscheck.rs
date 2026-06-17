@@ -18,7 +18,9 @@ use std::process::Command;
 use axeyum_cnf::{AletheClause, AletheCommand, AletheLit, AletheTerm, write_alethe};
 use axeyum_ir::{Rational, Sort, TermArena, TermId};
 use axeyum_smtlib::write_script;
-use axeyum_solver::{bitblast_step, prove_lra_unsat_alethe, prove_qf_uf_unsat_alethe};
+use axeyum_solver::{
+    bitblast_step, prove_lra_unsat_alethe, prove_qf_bv_unsat_alethe, prove_qf_uf_unsat_alethe,
+};
 
 /// Resolves the Carcara binary: `AXEYUM_CARCARA_BIN` if set, otherwise the
 /// conventional reference build path. Returns `None` (→ skip) if unavailable.
@@ -1205,4 +1207,123 @@ fn full_qf_bv_compound_term_proof_is_accepted_by_carcara() {
 
     let report = carcara_accepts(&bin, "compound_qfbv", &arena, &assertions, &proof);
     assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+// --- General QF_BV `unsat` Alethe driver: `prove_qf_bv_unsat_alethe` ---------
+//
+// The driver builds a complete refutation closing to `(cl)` for the
+// variable/constant predicate fragment, validated end-to-end by the Carcara
+// binary. Each test constructs an unsat instance in the IR, calls the driver, and
+// asserts Carcara reports `valid`.
+
+fn bvw(arena: &mut TermArena, name: &str, width: u32) -> TermId {
+    let s = arena.declare(name, Sort::BitVec(width)).expect("declare");
+    arena.var(s)
+}
+
+#[test]
+fn driver_eq_and_ult_conflict_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // (= a b) ∧ (bvult a b) over 1-bit a, b — unsat: a = b yet a < b. This is the
+    // committed template, now reproduced by the driver.
+    let mut arena = TermArena::new();
+    let a = bvw(&mut arena, "a", 1);
+    let b = bvw(&mut arena, "b", 1);
+    let eq = arena.eq(a, b).unwrap();
+    let ult = arena.bv_ult(a, b).unwrap();
+    let assertions = vec![eq, ult];
+
+    let proof = prove_qf_bv_unsat_alethe(&arena, &assertions).expect("emit QF_BV proof");
+    let report = carcara_accepts(&bin, "driver_eq_ult", &arena, &assertions, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+#[test]
+fn driver_eq_and_neq_conflict_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // (= a b) ∧ (not (= a b)) over width-2 a, b — unsat with multi-bit equality
+    // structure (the negated equality exercises the `not (and …)` refutation).
+    let mut arena = TermArena::new();
+    let a = bvw(&mut arena, "a", 2);
+    let b = bvw(&mut arena, "b", 2);
+    let eq = arena.eq(a, b).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let assertions = vec![eq, neq];
+
+    let proof = prove_qf_bv_unsat_alethe(&arena, &assertions).expect("emit QF_BV proof");
+    let report = carcara_accepts(&bin, "driver_eq_neq", &arena, &assertions, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+#[test]
+fn driver_ult_cycle_conflict_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // (bvult a b) ∧ (bvult b a) over width-2 a, b — unsat: < is antisymmetric.
+    let mut arena = TermArena::new();
+    let a = bvw(&mut arena, "a", 2);
+    let b = bvw(&mut arena, "b", 2);
+    let ab = arena.bv_ult(a, b).unwrap();
+    let ba = arena.bv_ult(b, a).unwrap();
+    let assertions = vec![ab, ba];
+
+    let proof = prove_qf_bv_unsat_alethe(&arena, &assertions).expect("emit QF_BV proof");
+    let report = carcara_accepts(&bin, "driver_ult_cycle", &arena, &assertions, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+#[test]
+fn driver_slt_and_const_conflict_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // (bvslt a b) ∧ (= a b) over width-3 a, b — unsat: a = b yet a < b (signed).
+    let mut arena = TermArena::new();
+    let a = bvw(&mut arena, "a", 3);
+    let b = bvw(&mut arena, "b", 3);
+    let slt = arena.bv_slt(a, b).unwrap();
+    let eq = arena.eq(a, b).unwrap();
+    let assertions = vec![slt, eq];
+
+    let proof = prove_qf_bv_unsat_alethe(&arena, &assertions).expect("emit QF_BV proof");
+    let report = carcara_accepts(&bin, "driver_slt_eq", &arena, &assertions, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+#[test]
+fn driver_returns_none_for_sat_instance() {
+    // (bvult a b) alone over width-2 — satisfiable, so no refutation exists.
+    let mut arena = TermArena::new();
+    let a = bvw(&mut arena, "a", 2);
+    let b = bvw(&mut arena, "b", 2);
+    let ult = arena.bv_ult(a, b).unwrap();
+    assert!(
+        prove_qf_bv_unsat_alethe(&arena, &[ult]).is_none(),
+        "a sat instance has no unsat proof"
+    );
+}
+
+#[test]
+fn driver_returns_none_for_compound_term_instance() {
+    // (= (bvand a b) a) ∧ (not (= (bvand a b) a)) is unsat, but the compound
+    // operand `(bvand a b)` is outside the variable/constant fragment.
+    let mut arena = TermArena::new();
+    let a = bvw(&mut arena, "a", 2);
+    let b = bvw(&mut arena, "b", 2);
+    let and = arena.bv_and(a, b).unwrap();
+    let eq = arena.eq(and, a).unwrap();
+    let neq = arena.not(eq).unwrap();
+    assert!(
+        prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).is_none(),
+        "a compound-operand predicate is outside the v1 fragment"
+    );
 }

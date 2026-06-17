@@ -355,8 +355,23 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
-- **2026-06-17** — **Compound-term QF_BV proof is Carcara-`valid` (last bridge
-  unknown resolved)**. A predicate over a *compound* BV term (`(bvand a a)` inside
+- **2026-06-17** — **`prove_qf_bv_unsat_alethe` driver — first AUTOMATED full QF_BV
+  `unsat` proof, Carcara-`valid` (T3.3 capstone, v1 fragment)**. New
+  `qfbv_alethe.rs`: given QF_BV assertions, confirms `unsat` (SAT-BV path) then emits
+  a complete Alethe proof an external checker accepts — no hand-construction. v1
+  fragment: predicates `=`/`bvult`/`bvslt` and their negations over bit-vector
+  **variables/constants** (any width; compound subterms → `None`, a later increment
+  via the validated `cong`/`trans` path). Pipeline: `bitblast_step` →
+  `equiv1`/`equiv2`+`resolution` (Boolean form) → hand-rolled Tseitin CNF-introduction
+  (each Boolean gate as its own variable, justified by `and_pos`/`and_neg`/`or_pos`/
+  `or_neg`/`equiv_pos*`/`equiv_neg*`/`xor_*`) → the in-tree `solve_with_drat_proof` →
+  LRAT replayed as Alethe `resolution` to `(cl)`. **4 distinct unsat instances are
+  Carcara-`valid`** (incl. a 42-step `(bvult a b) ∧ (bvult b a)` nested-ladder
+  refutation), + `None` for sat and for compound-term inputs. Deterministic
+  (BTreeMap/insertion-ordered). **This is the first time axeyum AUTOMATICALLY produces
+  a complete, externally-checkable QF_BV `unsat` certificate.** Next: extend to
+  compound terms (`cong`/`trans`, mechanism already validated) + the
+  shift/div-rem `hole`s backed by the miter cert. A predicate over a *compound* BV term (`(bvand a a)` inside
   `(= (bvand a a) a)`) does not project compound bits directly, and Carcara has NO
   `((_ @bit_of i) (@bbterm …))` reduction rule (`refl`/`all_simplify` both reject it).
   The mechanism, now validated end-to-end: bitblast each operand bottom-up, **`cong`**
