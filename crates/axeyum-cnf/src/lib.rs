@@ -26,6 +26,7 @@ mod simplify;
 mod xor_cdcl;
 mod xor_dpll;
 mod xor_extract;
+mod xor_matrix;
 mod xor_propagate;
 mod xor_search;
 
@@ -45,6 +46,7 @@ pub use simplify::{SubsumeStats, simplify, simplify_within};
 pub use xor_cdcl::{XorCdclResult, solve_with_xor_cdcl};
 pub use xor_dpll::{XorDpllResult, solve_with_xor};
 pub use xor_extract::{ExtractedXors, extract_xors};
+pub use xor_matrix::{IncrementalXorMatrix, XorMatrixStep};
 pub use xor_propagate::{XorPropagateStats, XorPropagation, xor_propagate};
 pub use xor_search::{
     XorConstraintInput, XorImplication, XorImplied, constraints_from_pairs, xor_implications,
