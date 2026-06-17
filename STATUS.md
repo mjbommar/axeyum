@@ -355,6 +355,21 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-17** — **QF_BV Alethe proof wired into the evidence pipeline (first-class
+  self-checking output)**. New `Evidence::UnsatAletheProof(Vec<AletheCommand>)` whose
+  `check` route is `check_alethe` (internal re-validation). `produce_qf_bv_evidence`
+  now, on the `>20`-bit `unsat` path that previously emitted plain DRAT (bit-blast
+  *trusted*, `BitBlast=false`), first tries `prove_qf_bv_unsat_alethe` and — if it
+  returns a proof that re-checks — emits the Alethe certificate with **`BitBlast`,
+  `Tseitin`, `SatRefutation` all CERTIFIED** (the `bitblast_*` steps check the
+  reduction itself, closing the bit-blast trust hole on that route). Precedence:
+  term-level enumeration (≤20 bits, trusts only the evaluator) > Alethe proof >
+  plain DRAT (out-of-fragment fallback unchanged). A 24-bit in-fragment `unsat`
+  (`(bvult a b)∧(bvult b c)∧(bvult c a)`) now carries an Alethe proof that re-checks
+  `Ok(true)`; a `bvshl` instance still falls back to DRAT. 20 evidence tests green.
+  **The whole session's QF_BV proof machinery is now a product output**, dual-checkable
+  (Carcara external + `check_alethe` internal). Next: shift/div-rem `hole`+miter;
+  then the P3.5 reductions (arrays/functions/int-blasting) and P3.6 Lean kernel.
 - **2026-06-17** — **axeyum SELF-CHECKS its own full QF_BV proofs (internal checker
   complete)**. Ported the `bitblast_*` reconstructions (all 17: var/const/not/
   and/or/xor/xnor/add/neg/**mult**/ult/slt/equal/comp/extract/concat/sign_extend) and

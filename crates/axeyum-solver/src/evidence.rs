@@ -11,10 +11,14 @@
 //!   exhaustive evaluation over the finite symbol domain, trusting only the
 //!   evaluator — not the bit-blaster, CNF encoder, or SAT solver); `check`
 //!   re-enumerates.
-//! - larger `QF_BV` `unsat` carries an optional [`UnsatProof`] (DIMACS + DRAT);
-//!   `check` re-parses and re-runs the trusted [`axeyum_cnf::check_drat`] kernel.
-//!   A `None` proof means the result came from the (lower-assurance) adapter
-//!   without a DRAT certificate, and is documented as such.
+//! - larger `QF_BV` `unsat` in the Alethe driver's fragment carries a complete
+//!   Alethe bitblast→CNF→resolution proof; `check` re-runs the independent
+//!   [`axeyum_cnf::check_alethe`] kernel, which re-derives the bit-blast itself
+//!   (no trusted reduction). This is the stronger upgrade over plain DRAT.
+//! - other larger `QF_BV` `unsat` carries an optional [`UnsatProof`] (DIMACS +
+//!   DRAT); `check` re-parses and re-runs the trusted [`axeyum_cnf::check_drat`]
+//!   kernel. A `None` proof means the result came from the (lower-assurance)
+//!   adapter without a DRAT certificate, and is documented as such.
 //! - `QF_LRA` `unsat` carries a [`FarkasCertificate`]; `check` re-runs the
 //!   independent [`FarkasCertificate::verify`] (the exact-arithmetic dual of the
 //!   DRAT route).
@@ -31,7 +35,7 @@
 use std::collections::BTreeSet;
 use std::time::Duration;
 
-use axeyum_cnf::{check_drat, parse_dimacs, parse_drat};
+use axeyum_cnf::{AletheCommand, check_alethe, check_drat, parse_dimacs, parse_drat};
 use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode, Value, eval};
 
 use crate::auto::solve;
@@ -183,6 +187,15 @@ pub enum Evidence {
     /// Unsatisfiable: a DRAT certificate over the bit-blasted CNF, or `None`
     /// when only a lower-assurance adapter result is available.
     Unsat(Option<UnsatProof>),
+    /// Unsatisfiable (`QF_BV`), certified by a complete Alethe bitblast→CNF→
+    /// resolution proof whose [`check_alethe`] re-validation is the evidence —
+    /// the bit-blast *reduction itself* is checked (every `bitblast_*` step), not
+    /// trusted; also externally checkable by Carcara. This is the upgrade over a
+    /// plain DRAT [`Evidence::Unsat`] for the large-instance fragment the Alethe
+    /// driver covers: the same `unsat` now carries a proof in which bit-blast,
+    /// Tseitin, and the SAT refutation are all re-derived, closing the bit-blast
+    /// trust hole.
+    UnsatAletheProof(Vec<AletheCommand>),
     /// Unsatisfiable, certified **at the term level** by exhaustive evaluation
     /// over the finite symbol domain — the strongest `QF_BV` `unsat` evidence,
     /// trusting neither the bit-blaster, CNF encoder, nor SAT solver (only the
@@ -263,6 +276,9 @@ impl Evidence {
                     }
                 }
             }
+            Evidence::UnsatAletheProof(proof) => check_alethe(proof).map_err(|e| {
+                SolverError::Backend(format!("unsat Alethe evidence re-check failed: {e}"))
+            }),
             Evidence::UnsatFarkas(certificate) => Ok(certificate.verify()),
             Evidence::UnsatLraDpll(refutation) => refutation.verify(arena),
             // No DRAT certificate (adapter-only `unsat`) or `unknown`: nothing to
@@ -279,6 +295,7 @@ impl Evidence {
             self,
             Evidence::Sat(_)
                 | Evidence::Unsat(Some(_))
+                | Evidence::UnsatAletheProof(_)
                 | Evidence::UnsatTermLevel { .. }
                 | Evidence::UnsatFarkas(_)
                 | Evidence::UnsatLraDpll(_)
@@ -287,9 +304,18 @@ impl Evidence {
 }
 
 /// Runs the pure-Rust `QF_BV` pipeline on `assertions` and packages the outcome
-/// as a self-checking [`EvidenceReport`]: a `sat` model, a DRAT-checked `unsat`
-/// certificate (or `None` if the proof core was inconclusive), or `unknown`,
-/// each with versioned [`Provenance`].
+/// as a self-checking [`EvidenceReport`]: a `sat` model, or one of the `unsat`
+/// certificates in **decreasing assurance precedence**, or `unknown`, each with
+/// versioned [`Provenance`]. The `unsat` precedence is:
+///
+/// 1. **term-level enumeration** (≤20 total symbol bits) — trusts only the
+///    evaluator, the strongest;
+/// 2. **Alethe bitblast→CNF→resolution proof** ([`Evidence::UnsatAletheProof`])
+///    when the instance is in the driver's fragment — `check_alethe` re-derives
+///    the bit-blast itself, so all of bit-blast/Tseitin/SAT-refutation are
+///    certified this run;
+/// 3. **plain DRAT** ([`Evidence::Unsat`]) otherwise — Tseitin + the SAT
+///    refutation are DRAT-checked, but the bit-blast is trusted, not certified.
 ///
 /// # Errors
 ///
@@ -325,35 +351,36 @@ pub fn produce_qf_bv_evidence(
                             .to_owned(),
                     ));
                 }
-                // Too large to enumerate (or enumeration unsupported): use DRAT.
+                // Too large to enumerate (or enumeration unsupported). First try
+                // the Alethe driver: if the query is in its fragment it yields a
+                // complete bitblast→CNF→resolution proof whose `check_alethe`
+                // re-validation *certifies* the bit-blast reduction itself (every
+                // `bitblast_*` step), upgrading the trust over the plain DRAT route
+                // (which trusts the bit-blast). Otherwise fall through to DRAT.
                 Ok(CertifyOutcome::DomainTooLarge { .. }) | Err(_) => {
-                    match export_qf_bv_unsat_proof(arena, assertions)? {
-                        // Bit-blast is recorded (a miter route exists, but this
-                        // plain DRAT export does not run it → certified:false);
-                        // Tseitin + the SAT refutation are DRAT-checked here.
-                        UnsatProofOutcome::Proved(proof) => (
-                            Evidence::Unsat(Some(proof)),
-                            trust_steps(&[
-                                (TrustId::BitBlast, false),
-                                (TrustId::Tseitin, true),
-                                (TrustId::SatRefutation, true),
-                            ]),
-                        ),
-                        UnsatProofOutcome::Inconclusive => (
-                            Evidence::Unsat(None),
-                            trust_steps(&[
-                                (TrustId::BitBlast, false),
-                                (TrustId::Tseitin, true),
-                                (TrustId::SatRefutation, false),
-                            ]),
-                        ),
-                        UnsatProofOutcome::Satisfiable => {
-                            return Err(SolverError::Backend(
-                                "soundness alarm: backend reported unsat but the proof core \
-                                 found a model"
-                                    .to_owned(),
-                            ));
+                    if let Some(proof) =
+                        crate::qfbv_alethe::prove_qf_bv_unsat_alethe(arena, assertions)
+                    {
+                        // Defense in depth: re-validate the proof internally before
+                        // trusting it as evidence. Only on a clean re-check do we
+                        // emit it (with bit-blast/Tseitin/SAT-refutation certified);
+                        // any failure falls through to the DRAT export below.
+                        if check_alethe(&proof) == Ok(true) {
+                            (
+                                Evidence::UnsatAletheProof(proof),
+                                // The Alethe proof re-derives all three layers, so
+                                // each is certified this run (bit-blast included).
+                                trust_steps(&[
+                                    (TrustId::BitBlast, true),
+                                    (TrustId::Tseitin, true),
+                                    (TrustId::SatRefutation, true),
+                                ]),
+                            )
+                        } else {
+                            drat_qf_bv_evidence(arena, assertions)?
                         }
+                    } else {
+                        drat_qf_bv_evidence(arena, assertions)?
                     }
                 }
             }
@@ -363,6 +390,48 @@ pub fn produce_qf_bv_evidence(
         evidence,
         provenance,
         trusted_steps,
+    })
+}
+
+/// The plain DRAT clausal `unsat` evidence for a `QF_BV` query: bit-blast is
+/// trusted-not-certified (`false`) on this route, while Tseitin and the SAT
+/// refutation are DRAT-checked. Used when the instance is too large to enumerate
+/// and the Alethe driver does not cover it (or its re-check fails).
+///
+/// # Errors
+///
+/// Returns [`SolverError`] from the proof export, including a soundness alarm if
+/// the proof core finds a model where the backend reported `unsat`.
+fn drat_qf_bv_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<(Evidence, Vec<TrustStep>), SolverError> {
+    Ok(match export_qf_bv_unsat_proof(arena, assertions)? {
+        // Bit-blast is recorded (a miter route exists, but this plain DRAT export
+        // does not run it → certified:false); Tseitin + the SAT refutation are
+        // DRAT-checked here.
+        UnsatProofOutcome::Proved(proof) => (
+            Evidence::Unsat(Some(proof)),
+            trust_steps(&[
+                (TrustId::BitBlast, false),
+                (TrustId::Tseitin, true),
+                (TrustId::SatRefutation, true),
+            ]),
+        ),
+        UnsatProofOutcome::Inconclusive => (
+            Evidence::Unsat(None),
+            trust_steps(&[
+                (TrustId::BitBlast, false),
+                (TrustId::Tseitin, true),
+                (TrustId::SatRefutation, false),
+            ]),
+        ),
+        UnsatProofOutcome::Satisfiable => {
+            return Err(SolverError::Backend(
+                "soundness alarm: backend reported unsat but the proof core found a model"
+                    .to_owned(),
+            ));
+        }
     })
 }
 
@@ -649,6 +718,7 @@ pub fn prove(
         // Any `unsat` evidence variant means the negation is impossible: a proof.
         // Re-check the certificate before declaring `Proved`.
         Evidence::Unsat(_)
+        | Evidence::UnsatAletheProof(_)
         | Evidence::UnsatTermLevel { .. }
         | Evidence::UnsatFarkas(_)
         | Evidence::UnsatLraDpll(_) => {

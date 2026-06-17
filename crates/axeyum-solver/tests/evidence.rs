@@ -68,6 +68,89 @@ fn unsat_evidence_carries_a_recheckable_drat_certificate() {
 }
 
 #[test]
+fn large_in_fragment_qf_bv_unsat_carries_an_alethe_proof() {
+    // (bvult a b) ∧ (bvult b c) ∧ (bvult c a) over three 8-bit vars: a strict
+    // ordering 3-cycle, unsatisfiable, every assertion in the Alethe driver's
+    // predicate fragment. 24 total bits bypasses term-level enumeration, so the
+    // new Alethe-proof route (not plain DRAT) is taken.
+    let mut arena = TermArena::new();
+    let a = arena.bv_var("a", 8).unwrap();
+    let b = arena.bv_var("b", 8).unwrap();
+    let c = arena.bv_var("c", 8).unwrap();
+    let ab = arena.bv_ult(a, b).unwrap();
+    let bc = arena.bv_ult(b, c).unwrap();
+    let ca = arena.bv_ult(c, a).unwrap();
+    let assertions = [ab, bc, ca];
+
+    let report = produce_qf_bv_evidence(&arena, &assertions, &config()).unwrap();
+    let Evidence::UnsatAletheProof(_) = &report.evidence else {
+        panic!(
+            "expected an Alethe-proof-certified unsat, got {:?}",
+            report.evidence
+        );
+    };
+    assert!(report.evidence.is_certified());
+    // The single Evidence::check re-runs check_alethe on the stored proof.
+    assert!(report.evidence.check(&arena, &assertions).unwrap());
+
+    // The Alethe proof certifies the bit-blast itself (unlike the DRAT route).
+    let ids = step_ids(&report);
+    assert!(ids.contains(&TrustId::BitBlast), "got {ids:?}");
+    let bitblast = report
+        .trusted_steps
+        .iter()
+        .find(|s| s.id == TrustId::BitBlast)
+        .unwrap();
+    assert!(
+        bitblast.certified,
+        "the Alethe proof re-derives the bit-blast, so it is certified"
+    );
+    let tseitin = report
+        .trusted_steps
+        .iter()
+        .find(|s| s.id == TrustId::Tseitin)
+        .unwrap();
+    assert!(tseitin.certified);
+    let sat = report
+        .trusted_steps
+        .iter()
+        .find(|s| s.id == TrustId::SatRefutation)
+        .unwrap();
+    assert!(sat.certified);
+}
+
+#[test]
+fn large_out_of_fragment_qf_bv_unsat_falls_back_to_drat() {
+    // (= (bvshl x one) zero) ∧ (= x mask) style: a `bvshl` subterm is outside
+    // the Alethe driver's fragment, so the >20-bit unsat falls back to the plain
+    // DRAT route, where bit-blast is recorded but not certified. We use a
+    // shift-by-zero conflict: x << 0 == x, asserted both == x and != x.
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 24).unwrap();
+    let zero = arena.bv_const(24, 0).unwrap();
+    let shifted = arena.bv_shl(x, zero).unwrap(); // x << 0 == x, but bvshl is a Carcara hole
+    let one = arena.bv_const(24, 1).unwrap();
+    let masked = arena.bv_and(x, one).unwrap();
+    let shifted_low = arena.bv_and(shifted, one).unwrap();
+    let is_one = arena.eq(masked, one).unwrap();
+    let is_zero = arena.eq(shifted_low, zero).unwrap();
+    let assertions = [is_one, is_zero];
+
+    let report = produce_qf_bv_evidence(&arena, &assertions, &config()).unwrap();
+    let Evidence::Unsat(Some(_)) = &report.evidence else {
+        panic!("expected a DRAT fallback unsat, got {:?}", report.evidence);
+    };
+    assert!(report.evidence.check(&arena, &assertions).unwrap());
+    // On the DRAT route the bit-blast is trusted, not certified.
+    let bitblast = report
+        .trusted_steps
+        .iter()
+        .find(|s| s.id == TrustId::BitBlast)
+        .unwrap();
+    assert!(!bitblast.certified, "DRAT route does not certify bit-blast");
+}
+
+#[test]
 fn tampered_sat_evidence_fails_its_own_check() {
     // A model that does not satisfy the query must fail `check` (the replay
     // guard catches a bogus "sat" certificate).
