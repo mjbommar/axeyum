@@ -355,6 +355,16 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-17** — **`(get-proof)` in the SMT-LIB front door (P4.4 + proof surface)**.
+  New `solve_smtlib_get_proof(input, config) -> Result<Option<String>, SolverError>`:
+  parses a script, and when the assertions are `unsat` in the QF_BV Alethe fragment,
+  returns the textual Alethe proof (`bitblast_*` → CNF-intro → resolution to `(cl)`),
+  re-validated by `check_alethe` before return; `Ok(None)` for sat/unknown or
+  out-of-fragment (shifts/div/rem, non-QF_BV). The parser now recognizes-and-ignores
+  the `(get-proof)` command (was rejected). This is the user-facing z3-parity entry
+  point for the whole session's proof machinery — a standard SMT-LIB `(get-proof)`
+  now yields a Carcara-and-self-checkable certificate. 3 tests (checkable proof, sat
+  → None, shift → None). Next: shift/div-rem `hole`+miter; then P3.5/P3.6.
 - **2026-06-17** — **QF_BV Alethe proof wired into the evidence pipeline (first-class
   self-checking output)**. New `Evidence::UnsatAletheProof(Vec<AletheCommand>)` whose
   `check` route is `check_alethe` (internal re-validation). `produce_qf_bv_evidence`

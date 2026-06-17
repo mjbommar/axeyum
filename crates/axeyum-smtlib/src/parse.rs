@@ -112,7 +112,7 @@ fn parse_command<'a>(
         // Output/query commands: accepted as no-ops at parse time. The core is
         // produced by the solver (`solve_smtlib_unsat_core`), the model by the
         // `sat` result — the parser just records a well-formed script.
-        "get-model" | "exit" | "get-unsat-core" | "get-assertions" | "reset"
+        "get-model" | "exit" | "get-unsat-core" | "get-proof" | "get-assertions" | "reset"
         | "reset-assertions" | "get-objectives" => exact_len(items, 1, head)?,
         // Optimization objectives (OMT): `(maximize t)` / `(minimize t)`.
         "maximize" | "minimize" => {

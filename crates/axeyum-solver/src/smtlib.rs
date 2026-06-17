@@ -11,6 +11,7 @@
 //! The trust anchor stays exactly where it is in [`crate::solve`]: a `sat` model
 //! is replayed against the original term through the ground evaluator.
 
+use axeyum_cnf::{check_alethe, write_alethe};
 use axeyum_ir::{Sort, TermArena};
 use axeyum_smtlib::{ScriptCommand, parse_script};
 
@@ -223,6 +224,38 @@ pub fn solve_smtlib_unsat_core(
         })
         .collect();
     Ok(Some(names))
+}
+
+/// Produces a checkable **Alethe proof** for an SMT-LIB script (`get-proof`):
+/// when the conjunction of its assertions is `unsat` and falls within the
+/// `QF_BV` Alethe-proof fragment, returns the textual Alethe proof (a complete
+/// `bitblast_*` → CNF-introduction → resolution refutation deriving `(cl)`),
+/// re-validated by the in-tree [`check_alethe`] before it is returned.
+///
+/// Returns `Ok(None)` when no Alethe proof is available — the script is
+/// `sat`/`unknown`, or its `unsat` is outside the supported fragment (non-`QF_BV`,
+/// or `QF_BV` containing shifts/division/remainder, which Carcara has no bitblast
+/// rule for). The emitted proof is also accepted by the external Carcara checker;
+/// see `crates/axeyum-solver/tests/carcara_crosscheck.rs`.
+///
+/// # Errors
+///
+/// [`SolverError::Parse`] for malformed/unsupported text.
+pub fn solve_smtlib_get_proof(
+    input: &str,
+    _config: &SolverConfig,
+) -> Result<Option<String>, SolverError> {
+    let script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    // The driver confirms `unsat` itself and returns `None` for sat/unknown or any
+    // term outside the fragment, so this is exactly "a proof exists".
+    let Some(proof) = crate::prove_qf_bv_unsat_alethe(&script.arena, &script.assertions) else {
+        return Ok(None);
+    };
+    // Defense in depth: only hand out a proof our own checker re-validates.
+    if !matches!(check_alethe(&proof), Ok(true)) {
+        return Ok(None);
+    }
+    Ok(Some(write_alethe(&proof)))
 }
 
 /// Decides an **incremental** SMT-LIB script, returning one result per

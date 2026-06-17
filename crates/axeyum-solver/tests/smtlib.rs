@@ -933,3 +933,71 @@ fn decides_str_concat_of_constants() {
         CheckResult::Unsat
     );
 }
+
+/// `(get-proof)` on an in-fragment `QF_BV` `unsat` returns a checkable Alethe proof
+/// that closes to the empty clause via `bitblast_*` + resolution.
+#[test]
+fn get_proof_returns_a_checkable_alethe_proof() {
+    use axeyum_cnf::{check_alethe, parse_alethe};
+    use axeyum_solver::solve_smtlib_get_proof;
+    let text = "\
+(set-logic QF_BV)
+(declare-const a (_ BitVec 4))
+(declare-const b (_ BitVec 4))
+(assert (bvult a b))
+(assert (bvult b a))
+(check-sat)
+(get-proof)
+";
+    let proof = solve_smtlib_get_proof(text, &config())
+        .expect("decides")
+        .expect("an Alethe proof for the unsat QF_BV script");
+    assert!(
+        proof.contains("bitblast_ult"),
+        "uses the bitblast layer:\n{proof}"
+    );
+    assert!(
+        proof.contains(":rule resolution"),
+        "closes by resolution:\n{proof}"
+    );
+    // The textual proof round-trips and re-validates with the in-tree checker.
+    let parsed = parse_alethe(&proof).expect("emitted Alethe parses");
+    assert_eq!(check_alethe(&parsed), Ok(true), "proof re-checks to (cl)");
+}
+
+/// `(get-proof)` is `None` when the script is satisfiable.
+#[test]
+fn get_proof_is_none_when_sat() {
+    use axeyum_solver::solve_smtlib_get_proof;
+    let text = "\
+(set-logic QF_BV)
+(declare-const a (_ BitVec 4))
+(assert (bvult a #xf))
+(check-sat)
+(get-proof)
+";
+    assert_eq!(
+        solve_smtlib_get_proof(text, &config()).expect("decides"),
+        None
+    );
+}
+
+/// `(get-proof)` is `None` for an `unsat` script outside the Alethe fragment
+/// (here a shift, which Carcara has no bitblast rule for).
+#[test]
+fn get_proof_is_none_outside_the_fragment() {
+    use axeyum_solver::solve_smtlib_get_proof;
+    let text = "\
+(set-logic QF_BV)
+(declare-const a (_ BitVec 4))
+(declare-const b (_ BitVec 4))
+(assert (= (bvshl a b) a))
+(assert (not (= (bvshl a b) a)))
+(check-sat)
+(get-proof)
+";
+    assert_eq!(
+        solve_smtlib_get_proof(text, &config()).expect("decides"),
+        None
+    );
+}
