@@ -579,11 +579,14 @@ fn check_auto_dispatch(
         // bit-blaster (whose in-range `unsat` is only `unknown`).
         let lin = axeyum_rewrite::eliminate_int_divmod(arena, assertions)
             .map_err(|e| SolverError::Backend(e.to_string()))?;
-        // GCD divisibility test: a top-level integer equation whose coefficient gcd
-        // does not divide its constant (e.g. `2x + 4y = 3`) is `unsat` — a sound
-        // refutation that decides even *unbounded* equations the simplex/B&B cannot
-        // terminate on. Cheap; only ever fast-paths a correct `unsat`.
-        if crate::lia_gcd::prove_lia_unsat_by_gcd(arena, &lin) {
+        // Diophantine system refutation: integer (fraction-free) row reduction of
+        // the *system* of top-level integer equalities. A derived contradiction row
+        // `0 = c` (c ≠ 0) or a surviving row `Σ gᵢ·xᵢ = c` with `gcd(gᵢ) ∤ c` makes
+        // the system `unsat` — a sound refutation that decides even *unbounded*
+        // systems the simplex/B&B cannot terminate on (e.g. `x+y=1 ∧ x+y=2`, or the
+        // single-equation `2x + 4y = 3`). Strictly generalizes the per-equation GCD
+        // test (a one-row system); cheap; only ever fast-paths a correct `unsat`.
+        if crate::lia_gcd::prove_lia_unsat_by_diophantine(arena, &lin) {
             return Ok(CheckResult::Unsat);
         }
         match check_with_lia_simplex(arena, &lin) {

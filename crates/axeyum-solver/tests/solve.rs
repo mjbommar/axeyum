@@ -95,3 +95,35 @@ fn preprocess_flag_refutes_multiplier_commutativity_without_blasting() {
         CheckResult::Unsat,
     );
 }
+
+/// A multi-equation Diophantine system the rational simplex accepts and unbounded
+/// branch-and-bound cannot terminate on: `x + y = 1 ∧ x + y = 2` combines to the
+/// integer contradiction `0 = 1`. The full front door decides it `unsat`.
+#[test]
+fn refutes_multi_equation_diophantine_system() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let y = arena.int_var("y").unwrap();
+    let sum = arena.int_add(x, y).unwrap();
+    let one = arena.int_const(1);
+    let two = arena.int_const(2);
+    let e1 = arena.eq(sum, one).unwrap();
+    let e2 = arena.eq(sum, two).unwrap();
+    assert_eq!(run(&mut arena, &[e1, e2]), CheckResult::Unsat);
+}
+
+/// The system where each equation passes its own GCD test but the system is
+/// integer-infeasible: `x + y = 0 ∧ x - y = 1` ⇒ `2x = 1` ⇒ no integer `x`.
+#[test]
+fn refutes_diophantine_system_each_row_gcd_feasible() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let y = arena.int_var("y").unwrap();
+    let xpy = arena.int_add(x, y).unwrap();
+    let zero = arena.int_const(0);
+    let e1 = arena.eq(xpy, zero).unwrap();
+    let xmy = arena.int_sub(x, y).unwrap();
+    let one = arena.int_const(1);
+    let e2 = arena.eq(xmy, one).unwrap();
+    assert_eq!(run(&mut arena, &[e1, e2]), CheckResult::Unsat);
+}
