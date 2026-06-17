@@ -454,6 +454,16 @@ mod tests {
             let three = a.bv_const(4, 3).unwrap();
             (a.bv_add(one, two).unwrap(), three)
         });
+        assert_rule_fires(&mut covered, "bv.double_not.v1", |a| {
+            let x = a.bv_var("x", 4).unwrap();
+            let nx = a.bv_not(x).unwrap();
+            (a.bv_not(nx).unwrap(), x)
+        });
+        assert_rule_fires(&mut covered, "bv.double_neg.v1", |a| {
+            let x = a.bv_var("x", 4).unwrap();
+            let nx = a.bv_neg(x).unwrap();
+            (a.bv_neg(nx).unwrap(), x)
+        });
         assert_rule_fires(&mut covered, "bv.add_zero.v1", |a| {
             let x = a.bv_var("x", 4).unwrap();
             let zero = a.bv_const(4, 0).unwrap();

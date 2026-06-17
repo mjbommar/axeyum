@@ -28,6 +28,8 @@ const EQ_REFLEXIVE: &str = "eq.reflexive.v1";
 const ITE_CONST_CONDITION: &str = "ite.const_condition.v1";
 const ITE_SAME_BRANCHES: &str = "ite.same_branches.v1";
 const BV_CONST_FOLD: &str = "bv.const_fold.v1";
+const BV_DOUBLE_NOT: &str = "bv.double_not.v1";
+const BV_DOUBLE_NEG: &str = "bv.double_neg.v1";
 const BV_ADD_ZERO: &str = "bv.add_zero.v1";
 const BV_SUB_ZERO: &str = "bv.sub_zero.v1";
 const BV_SUB_SELF: &str = "bv.sub_self.v1";
@@ -338,6 +340,16 @@ fn default_rules() -> Vec<RewriteRule> {
             "all operands are constants and the result sort is a bit-vector",
         ),
         rule(
+            BV_DOUBLE_NOT,
+            "Double bit-vector complement",
+            "`bvnot` applied to a `bvnot` term",
+        ),
+        rule(
+            BV_DOUBLE_NEG,
+            "Double bit-vector negation",
+            "`bvneg` applied to a `bvneg` term",
+        ),
+        rule(
             BV_ADD_ZERO,
             "Bit-vector addition identity",
             "`bvadd` with one operand equal to zero",
@@ -595,16 +607,16 @@ fn rewrite_app(
         Op::BvOr => rewrite_bv_or(arena, args, enabled),
         Op::BvXor => rewrite_bv_xor(arena, args, enabled)?,
         Op::BvShl | Op::BvLshr | Op::BvAshr => rewrite_bv_shift(arena, args, enabled),
+        Op::BvNot => rewrite_bv_not(arena, args, enabled),
+        Op::BvNeg => rewrite_bv_neg(arena, args, enabled),
         Op::Eq => rewrite_eq(arena, args, enabled),
         Op::Ite => rewrite_ite(arena, args, enabled),
         Op::Extract { hi, lo } => rewrite_extract(arena, hi, lo, args, enabled),
         Op::ZeroExt { by } | Op::SignExt { by } => rewrite_extend(by, args, enabled),
         Op::RotateLeft { by } | Op::RotateRight { by } => rewrite_rotate(by, args, enabled),
-        Op::BvNot
-        | Op::BvNand
+        Op::BvNand
         | Op::BvNor
         | Op::BvXnor
-        | Op::BvNeg
         | Op::BvUdiv
         | Op::BvUrem
         | Op::BvSdiv
@@ -784,6 +796,43 @@ fn rewrite_bool_not(
         } = arena.node(args[0])
     {
         return Some(applied(inner[0], BOOL_DOUBLE_NOT));
+    }
+    None
+}
+
+/// `bvnot(bvnot x) -> x`. Bitwise complement is an involution, so two
+/// complements cancel exactly under every assignment.
+fn rewrite_bv_not(
+    arena: &TermArena,
+    args: &[TermId],
+    enabled: &BTreeSet<&str>,
+) -> Option<LocalRewrite> {
+    if enabled.contains(BV_DOUBLE_NOT)
+        && let TermNode::App {
+            op: Op::BvNot,
+            args: inner,
+        } = arena.node(args[0])
+    {
+        return Some(applied(inner[0], BV_DOUBLE_NOT));
+    }
+    None
+}
+
+/// `bvneg(bvneg x) -> x`. Two's-complement negation is an involution
+/// (`-(-x) = x mod 2^w` for every bit-vector, including the sign-bit-only
+/// `INT_MIN` value), so two negations cancel exactly under every assignment.
+fn rewrite_bv_neg(
+    arena: &TermArena,
+    args: &[TermId],
+    enabled: &BTreeSet<&str>,
+) -> Option<LocalRewrite> {
+    if enabled.contains(BV_DOUBLE_NEG)
+        && let TermNode::App {
+            op: Op::BvNeg,
+            args: inner,
+        } = arena.node(args[0])
+    {
+        return Some(applied(inner[0], BV_DOUBLE_NEG));
     }
     None
 }
@@ -1751,5 +1800,102 @@ mod commutative_tests {
             .unwrap();
         let fxy = a.apply(f, &[x, y]).unwrap();
         assert_eq!(canonicalize(&mut a, fxy).unwrap().term, fxy);
+    }
+
+    /// `bvnot(bvnot x)` cancels to `x`; a triple `bvnot` collapses to a single
+    /// `bvnot`; a lone `bvnot x` is left untouched.
+    #[test]
+    fn bv_double_not_involution() {
+        let mut a = TermArena::new();
+        let x = a.bv_var("x", 4).unwrap();
+
+        let not_x = a.bv_not(x).unwrap();
+        let not_not_x = a.bv_not(not_x).unwrap();
+        assert_eq!(canonicalize(&mut a, not_not_x).unwrap().term, x);
+
+        let not_not_not_x = a.bv_not(not_not_x).unwrap();
+        assert_eq!(canonicalize(&mut a, not_not_not_x).unwrap().term, not_x);
+
+        // A single complement is not rewritten.
+        assert_eq!(canonicalize(&mut a, not_x).unwrap().term, not_x);
+    }
+
+    /// `bvneg(bvneg x)` cancels to `x`; a triple `bvneg` collapses to a single
+    /// `bvneg`; a lone `bvneg x` is left untouched.
+    #[test]
+    fn bv_double_neg_involution() {
+        let mut a = TermArena::new();
+        let x = a.bv_var("x", 4).unwrap();
+
+        let neg_x = a.bv_neg(x).unwrap();
+        let neg_neg_x = a.bv_neg(neg_x).unwrap();
+        assert_eq!(canonicalize(&mut a, neg_neg_x).unwrap().term, x);
+
+        let neg_neg_neg_x = a.bv_neg(neg_neg_x).unwrap();
+        assert_eq!(canonicalize(&mut a, neg_neg_neg_x).unwrap().term, neg_x);
+
+        // A single negation is not rewritten.
+        assert_eq!(canonicalize(&mut a, neg_x).unwrap().term, neg_x);
+    }
+
+    /// The double-not/double-neg involutions preserve denotation over every
+    /// 4-bit assignment, including the all-zeros, all-ones, and sign-bit-only
+    /// `INT_MIN` (`1000`) overflow corner where `bvneg` is its own value.
+    #[test]
+    fn bv_double_involutions_preserve_denotation() {
+        let mut a = TermArena::new();
+        let x_sym = a.declare("x", Sort::BitVec(4)).unwrap();
+        let x = a.var(x_sym);
+
+        let not_not_x = {
+            let n = a.bv_not(x).unwrap();
+            a.bv_not(n).unwrap()
+        };
+        let neg_neg_x = {
+            let n = a.bv_neg(x).unwrap();
+            a.bv_neg(n).unwrap()
+        };
+        let terms = [not_not_x, neg_neg_x];
+        let rewritten = terms
+            .iter()
+            .map(|&t| canonicalize(&mut a, t).unwrap().term)
+            .collect::<Vec<_>>();
+        // Both involutions collapse fully to `x`.
+        assert!(rewritten.iter().all(|&t| t == x));
+
+        for xv in 0..16u128 {
+            let mut asg = Assignment::new();
+            asg.set(
+                x_sym,
+                Value::Bv {
+                    width: 4,
+                    value: xv,
+                },
+            );
+            for (&orig, &canon) in terms.iter().zip(&rewritten) {
+                assert_eq!(
+                    eval(&a, orig, &asg).unwrap(),
+                    eval(&a, canon, &asg).unwrap(),
+                    "double involution changed denotation at x = {xv}",
+                );
+            }
+        }
+
+        // Explicit INT_MIN corner: bvneg(bvneg 0b1000) == 0b1000.
+        let mut asg = Assignment::new();
+        asg.set(
+            x_sym,
+            Value::Bv {
+                width: 4,
+                value: 0b1000,
+            },
+        );
+        assert_eq!(
+            eval(&a, neg_neg_x, &asg).unwrap(),
+            Value::Bv {
+                width: 4,
+                value: 0b1000,
+            },
+        );
     }
 }
