@@ -32,6 +32,7 @@ mod dpll_lia;
 mod dpll_t;
 mod enums;
 mod euf;
+mod euf_alethe;
 mod euf_egraph;
 /// Floating-point (IEEE 754) formula builders — predicates, classification, sign
 /// ops, equality, ordering — re-exported from the `axeyum-fp` crate (extracted so
@@ -101,6 +102,7 @@ pub use dpll_t::{
 };
 pub use enums::{EnumError, EnumSort, EnumVar};
 pub use euf::{check_qf_ufbv_lazy, check_with_function_elimination};
+pub use euf_alethe::prove_qf_uf_unsat_alethe;
 pub use euf_egraph::{
     EufConflict, EufTheory, TheoryLit, TheoryProp, TheorySolver, check_qf_uf,
     prove_unsat_by_congruence, prove_unsat_lazy, prove_unsat_qf_uf_online, solve_qf_uf_online,
