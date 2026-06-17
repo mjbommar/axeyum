@@ -1,0 +1,99 @@
+//! Lean expressions (`Expr`), interned to lifetime-free [`ExprId`]s.
+//!
+//! Expressions use a locally-nameless representation: bound variables are de
+//! Bruijn indices ([`ExprNode::BVar`]), and free/local variables carry a unique
+//! id ([`ExprNode::FVar`]). Each interned node caches metadata used to make the
+//! de Bruijn operations efficient and to short-circuit traversal:
+//!
+//! - `num_loose_bvars` — one more than the largest loose de Bruijn index that
+//!   escapes this node (`0` means the node is closed), exactly as in nanoda.
+//! - `has_fvars` — whether any free variable occurs in the node.
+//!
+//! Ported from nanoda's `expr.rs`, adapted to axeyum's interned handles instead
+//! of a lifetime-tagged arena (ADR-0036). nanoda's `Proj` and arbitrary-precision
+//! `NatLit` are simplified here: there is no `Proj` in this slice, and `Lit::Nat`
+//! holds a `u128` (arbitrary-precision `Nat` is **deferred** to a later slice —
+//! see [`Lit`]).
+
+use crate::level::LevelId;
+use crate::name::NameId;
+
+/// A lifetime-free, `Copy` handle to an interned [`ExprNode`].
+///
+/// IDs are assigned densely in insertion order by the interner (determinism
+/// rule). Using an `ExprId` with a different [`super::Kernel`] is a contract
+/// violation caught only by bounds checks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct ExprId(pub(crate) u32);
+
+impl ExprId {
+    /// The index of this expression in its owning kernel's expr table.
+    #[must_use]
+    pub fn index(self) -> usize {
+        self.0 as usize
+    }
+}
+
+/// The binder annotation on a `Lam`/`Pi`/`FVar` binder.
+///
+/// These mirror Lean's binder brackets and are used only by elaboration and
+/// pretty-printing; they do **not** affect type checking or definitional
+/// equality.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum BinderInfo {
+    /// `(x : T)` — an ordinary explicit binder.
+    Default,
+    /// `{x : T}` — an implicit binder.
+    Implicit,
+    /// `{{x : T}}` — a strict implicit binder.
+    StrictImplicit,
+    /// `[x : T]` — an instance-implicit (type-class) binder.
+    InstImplicit,
+}
+
+/// A literal value embeddable in an expression.
+///
+/// `Nat` is currently a `u128`; arbitrary-precision natural-number literals
+/// (Lean uses a bignum here) are **deferred** to a later slice. `u128` is
+/// sufficient for the data-structure and de Bruijn work in this slice, and the
+/// public shape can later widen its payload type without changing the variant.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Lit {
+    /// A natural-number literal (bignum deferred; see type docs).
+    Nat(u128),
+    /// A string literal.
+    Str(String),
+}
+
+/// Cached structural metadata recomputed once at intern time.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) struct ExprMeta {
+    /// One more than the largest loose de Bruijn index escaping this node
+    /// (`0` ⇒ closed). Matches nanoda's `num_loose_bvars`.
+    pub(crate) num_loose_bvars: u32,
+    /// Whether any free variable ([`ExprNode::FVar`]) occurs in this node.
+    pub(crate) has_fvars: bool,
+}
+
+/// The structural node of a Lean expression.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ExprNode {
+    /// A bound variable as a de Bruijn index (0 = innermost binder).
+    BVar(u32),
+    /// A free/local variable identified by a unique id.
+    FVar(u64),
+    /// A type universe at the given level.
+    Sort(LevelId),
+    /// A constant reference with universe arguments.
+    Const(NameId, Vec<LevelId>),
+    /// Function application `fun arg`.
+    App(ExprId, ExprId),
+    /// `fun (name : ty) => body` with binder info.
+    Lam(NameId, ExprId, ExprId, BinderInfo),
+    /// `(name : ty) -> body` (dependent function type) with binder info.
+    Pi(NameId, ExprId, ExprId, BinderInfo),
+    /// `let name : ty := val; body`.
+    Let(NameId, ExprId, ExprId, ExprId),
+    /// A literal value.
+    Lit(Lit),
+}
