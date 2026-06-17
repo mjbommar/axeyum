@@ -18,7 +18,7 @@
 use std::collections::BTreeMap;
 
 use axeyum_cnf::{AletheCommand, AletheError, AletheLit, AletheTerm};
-use axeyum_ir::{Rational, TermArena, TermId};
+use axeyum_ir::{Op, Rational, TermArena, TermId, TermNode};
 
 use crate::backend::CheckResult;
 use crate::lra::check_with_lra;
@@ -236,6 +236,16 @@ fn parse_rational(text: &str) -> Option<Rational> {
     if body.is_empty() {
         return None;
     }
+    // Exact fraction `p/q` (the form the LRA proof emitter produces).
+    if let Some((num, den)) = body.split_once('/') {
+        let n: i128 = num.parse().ok()?;
+        let d: i128 = den.parse().ok()?;
+        if d == 0 {
+            return None;
+        }
+        let n = if negative { n.checked_neg()? } else { n };
+        return Some(Rational::new(n, d));
+    }
     let rational = match body.split_once('.') {
         None => Rational::integer(body.parse::<i128>().ok()?),
         Some((int_part, frac_part)) => {
@@ -275,10 +285,181 @@ fn parse_rational(text: &str) -> Option<Rational> {
     })
 }
 
+/// Emits a checkable Alethe refutation of an `unsat` linear-real-arithmetic
+/// conjunction `assertions`, or `None` if they are not `unsat` (by
+/// [`check_with_lra`]) or any atom is outside the linear-real fragment the term
+/// converter covers.
+///
+/// The proof assumes each atom `φᵢ`, derives the tautology clause
+/// `(cl ¬φ1 … ¬φn)` by **`la_generic`** (valid because `⋀ φᵢ` is `unsat`), and
+/// resolves it against the assumes to the empty clause. It is **self-validated**:
+/// the assembled proof is run through [`check_alethe_lra`] and returned only if it
+/// checks — so a construction bug yields `None`, never a wrong proof. This is the
+/// emission counterpart to the `la_generic` checker (the "trusted small checking"
+/// identity for linear real arithmetic).
+#[must_use]
+pub fn prove_lra_unsat_alethe(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<Vec<AletheCommand>> {
+    // Only a genuine LRA refutation has a proof.
+    if !matches!(check_with_lra(arena, assertions), Ok(CheckResult::Unsat)) {
+        return None;
+    }
+    // Convert each atom to an Alethe comparison; bail if any is outside the fragment.
+    let atoms: Vec<AletheTerm> = assertions
+        .iter()
+        .map(|&a| real_atom_to_alethe(arena, a))
+        .collect::<Option<Vec<_>>>()?;
+    if atoms.is_empty() {
+        return None;
+    }
+
+    let mut commands = Vec::with_capacity(atoms.len() + 2);
+    let mut premise_ids: Vec<String> = Vec::with_capacity(atoms.len());
+    // Assume each atom `φᵢ` as the unit clause `(cl φᵢ)`.
+    for (i, atom) in atoms.iter().enumerate() {
+        let id = format!("h{i}");
+        commands.push(AletheCommand::Assume {
+            id: id.clone(),
+            clause: vec![AletheLit {
+                atom: atom.clone(),
+                negated: false,
+            }],
+        });
+        premise_ids.push(id);
+    }
+    // `la_generic` derives `(cl ¬φ1 … ¬φn)` — valid since `⋀ φᵢ` is unsat.
+    let la_clause: Vec<AletheLit> = atoms
+        .iter()
+        .map(|atom| AletheLit {
+            atom: atom.clone(),
+            negated: true,
+        })
+        .collect();
+    commands.push(AletheCommand::Step {
+        id: "la".to_owned(),
+        clause: la_clause,
+        rule: "la_generic".to_owned(),
+        premises: Vec::new(),
+    });
+    // Resolve the la_generic clause against every assume to the empty clause.
+    let mut resolution_premises = vec!["la".to_owned()];
+    resolution_premises.extend(premise_ids);
+    commands.push(AletheCommand::Step {
+        id: "empty".to_owned(),
+        clause: Vec::new(),
+        rule: "resolution".to_owned(),
+        premises: resolution_premises,
+    });
+
+    // Self-validate: return the proof only if it checks (and derives `(cl)`).
+    if matches!(check_alethe_lra(&commands), Ok(true)) {
+        Some(commands)
+    } else {
+        None
+    }
+}
+
+/// Converts an IR linear-real **comparison atom** to its Alethe term, or `None` if
+/// it is not a recognised comparison over linear real operands.
+fn real_atom_to_alethe(arena: &TermArena, t: TermId) -> Option<AletheTerm> {
+    let TermNode::App { op, args } = arena.node(t) else {
+        return None;
+    };
+    if args.len() != 2 {
+        return None;
+    }
+    let head = match op {
+        Op::RealLe => "<=",
+        Op::RealLt => "<",
+        Op::RealGe => ">=",
+        Op::RealGt => ">",
+        Op::Eq => "=",
+        _ => return None,
+    };
+    let a = real_subterm_to_alethe(arena, args[0])?;
+    let b = real_subterm_to_alethe(arena, args[1])?;
+    Some(AletheTerm::App(head.to_owned(), vec![a, b]))
+}
+
+/// Converts an IR linear-real term to its Alethe term (the inverse of
+/// [`real_term`]): symbols → `Const(name)`, constants → `Const("p/q")`, and the
+/// linear operators `+`/`-`/`*` to their SMT-LIB heads. `None` outside that
+/// fragment.
+fn real_subterm_to_alethe(arena: &TermArena, t: TermId) -> Option<AletheTerm> {
+    match arena.node(t) {
+        TermNode::Symbol(s) => {
+            let (name, _sort) = arena.symbol(*s);
+            Some(AletheTerm::Const(name.to_owned()))
+        }
+        TermNode::RealConst(r) => Some(AletheTerm::Const(format!(
+            "{}/{}",
+            r.numerator(),
+            r.denominator()
+        ))),
+        TermNode::App { op, args } => {
+            let head = match op {
+                Op::RealAdd => "+",
+                Op::RealSub | Op::RealNeg => "-",
+                Op::RealMul => "*",
+                _ => return None,
+            };
+            let mut converted = Vec::with_capacity(args.len());
+            for &arg in args {
+                converted.push(real_subterm_to_alethe(arena, arg)?);
+            }
+            Some(AletheTerm::App(head.to_owned(), converted))
+        }
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::check_alethe_lra;
+    use super::{check_alethe_lra, prove_lra_unsat_alethe};
     use axeyum_cnf::{AletheCommand, AletheError, AletheLit, AletheTerm};
+    use axeyum_ir::{Rational, TermArena};
+
+    #[test]
+    fn emits_checkable_lra_refutation() {
+        // x ≤ 0 ∧ 1 ≤ x is unsat; the emitter produces an la_generic proof that
+        // re-checks (Ok(true), derives the empty clause).
+        let mut arena = TermArena::new();
+        let x = arena.real_var("x").unwrap();
+        let zero = arena.real_const(Rational::integer(0));
+        let one = arena.real_const(Rational::integer(1));
+        let a1 = arena.real_le(x, zero).unwrap();
+        let a2 = arena.real_le(one, x).unwrap();
+        let proof = prove_lra_unsat_alethe(&arena, &[a1, a2]).expect("emits an LRA proof");
+        assert_eq!(check_alethe_lra(&proof), Ok(true));
+    }
+
+    #[test]
+    fn emits_checkable_lra_refutation_with_coefficients() {
+        // 2x ≤ -1 ∧ x ≥ 0 is unsat (x ≥ 0 ⇒ 2x ≥ 0 > -1); exercises a non-trivial
+        // linear combination + a negative numeral in the emitted terms.
+        let mut arena = TermArena::new();
+        let x = arena.real_var("x").unwrap();
+        let two = arena.real_const(Rational::integer(2));
+        let neg_one = arena.real_const(Rational::integer(-1));
+        let zero = arena.real_const(Rational::integer(0));
+        let two_x = arena.real_mul(two, x).unwrap();
+        let a1 = arena.real_le(two_x, neg_one).unwrap();
+        let a2 = arena.real_ge(x, zero).unwrap();
+        let proof = prove_lra_unsat_alethe(&arena, &[a1, a2]).expect("emits an LRA proof");
+        assert_eq!(check_alethe_lra(&proof), Ok(true));
+    }
+
+    #[test]
+    fn no_proof_for_satisfiable_lra() {
+        // x ≤ 5 is satisfiable — no refutation.
+        let mut arena = TermArena::new();
+        let x = arena.real_var("x").unwrap();
+        let five = arena.real_const(Rational::integer(5));
+        let a = arena.real_le(x, five).unwrap();
+        assert!(prove_lra_unsat_alethe(&arena, &[a]).is_none());
+    }
 
     fn num(value: &str) -> AletheTerm {
         AletheTerm::Const(value.to_owned())
