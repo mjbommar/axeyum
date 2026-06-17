@@ -1,36 +1,40 @@
-//! The inductive layer (ADR-0036, slice 6): the trusted [`Kernel::add_inductive`]
-//! admission gate, recursor generation (with induction hypotheses and
-//! parameters), and ι-reduction in WHNF.
+//! The inductive layer (ADR-0036, slice 7): the trusted [`Kernel::add_inductive`]
+//! admission gate, recursor generation (with induction hypotheses, parameters,
+//! and **indices**), and ι-reduction in WHNF.
 //!
-//! ## Scope — parametric, direct-recursive inductives (still non-indexed)
+//! ## Scope — parametric, direct-recursive, and (non-recursive) indexed
 //!
 //! This slice supports inductive types that are **parametric** (`m` leading
-//! parameter binders fixed across the family) and **non-indexed**, whose
-//! constructors may have **direct recursive fields**. An inductive
-//! `I : Π (p_1 … p_m), Sort u` has `m` leading *parameter* binders and then,
-//! with **`num_indices` = 0**, the remainder must be exactly a `Sort` (any
-//! binder between the parameters and the `Sort` is an *index*, which is deferred
-//! and rejected as [`KernelError::IndicesNotSupported`]).
+//! parameter binders fixed across the family) and **indexed** (`k` further
+//! binders — the *indices* — before the final `Sort`). An inductive
+//! `I : Π (p_1 … p_m) (idx_1 … idx_k), Sort u` opens the `m` parameters then the
+//! `k` indices; the remainder must be exactly a `Sort`. The backbone target is
+//! `Eq.{u} {α : Sort u} (a : α) : α → Prop` (2 params, 1 index).
 //!
-//! Each constructor is `c : Π (p_1…p_m) (fields…), I p_1…p_m`: it re-binds the
-//! **same** `m` parameters (whose types must be def-eq to the inductive's), then
-//! its fields, and its result is exactly the inductive applied to those `m`
-//! parameter binders, in order. A field is a **direct recursive field** iff its
-//! type is exactly `I p_1…p_m` (the inductive applied to the parameters); any
-//! other occurrence of `I` is rejected. This unlocks `List α`, `Option α`,
-//! `Prod α β`, `Sum α β` (on top of slice-5 `Nat`, binary trees, and the
-//! slice-4 enums/structures, all of which are now `num_params = 0`).
+//! Each constructor is `c : Π (p_1…p_m) (fields…), I p_1…p_m e_1…e_k`: it
+//! re-binds the **same** `m` parameters (whose types must be def-eq to the
+//! inductive's), then its fields, and its result is the inductive applied to
+//! those `m` parameter binders **and** `k` **index argument expressions**
+//! `e_1…e_k` that may depend on the params and fields. The recursor's motive
+//! ranges over the indices and the major
+//! (`motive : Π (indices), (I p… indices) → Sort v`); each minor applies the
+//! motive to the **constructor's own** index expressions. This unlocks `Eq`
+//! (and simple indexed enums), on top of the slice-6 parametric families
+//! (`List`, `Option`, `Prod`, `Sum`), the slice-5 recursive types (`Nat`,
+//! trees), and the slice-4 enums/structures.
 //!
-//! Direct recursive fields are trivially strictly-positive, so no positivity
-//! analysis is required here.
+//! A field is a **direct recursive field** iff its type is exactly `I p_1…p_m`
+//! (only for a **non-indexed** family, `k = 0`); direct recursive fields are
+//! trivially strictly-positive, so no positivity analysis is required here.
 //!
-//! **Deferred** (and rejected explicitly, never guessed): **indices**
-//! (`Eq`/`Vector` — `num_indices` > 0, reported as
-//! [`KernelError::IndicesNotSupported`]), **higher-order / reflexive** recursive
-//! fields (`(A → I p…)` — a field whose type is a `Pi` ending in `I`, reported as
-//! [`KernelError::ReflexiveOrNestedNotSupported`]), nested and mutual
-//! inductives, and the `Prop`-subsingleton large-elimination subtleties. The
-//! motive is always allowed to eliminate into an arbitrary `Sort v` here.
+//! **Deferred** (and rejected explicitly, never guessed): **recursive
+//! constructors on an indexed inductive** (recursion + indices together, e.g.
+//! `Vector.cons` — a field mentioning `I` when `num_indices > 0`, reported as
+//! [`KernelError::RecursiveIndexedNotSupported`]), **higher-order / reflexive**
+//! recursive fields (`(A → I p…)` — a field whose type is a `Pi` ending in `I`,
+//! reported as [`KernelError::ReflexiveOrNestedNotSupported`]), nested and
+//! mutual inductives, and the `Prop`-subsingleton large-elimination subtleties.
+//! The motive is always allowed to eliminate into an arbitrary `Sort v` here.
 //!
 //! ## What is built
 //!
@@ -67,36 +71,38 @@ use crate::{BinderInfo, Kernel};
 
 impl Kernel {
     /// Type-check and admit an inductive type together with its constructors —
-    /// the **trusted inductive gate** (ADR-0036, slice 6).
+    /// the **trusted inductive gate** (ADR-0036, slice 7).
     ///
     /// `num_params` is the number of leading binders of `ty` that are
     /// **parameters** (fixed across the family); the caller declares this,
     /// mirroring Lean's export. After opening those `m = num_params` parameter
-    /// binders the remainder of `ty` must WHNF to a `Sort` (no indices). `ctors`
-    /// pairs each constructor's name with its type, in declaration order. On
-    /// success this registers the [`Declaration::Inductive`], one
-    /// [`Declaration::Constructor`] per constructor, and the generated
-    /// [`Declaration::Recursor`] (whose type is `infer`-checked).
+    /// binders, any further binders of `ty` are **indices** (opened as fresh
+    /// index fvars), and the remainder must WHNF to a `Sort`. `ctors` pairs each
+    /// constructor's name with its type, in declaration order. On success this
+    /// registers the [`Declaration::Inductive`], one [`Declaration::Constructor`]
+    /// per constructor, and the generated [`Declaration::Recursor`] (whose type
+    /// is `infer`-checked).
     ///
     /// Admission requires:
     ///
     /// 1. no declaration with the inductive's (or any constructor's) name exists;
-    /// 2. `ty` opens `num_params` leading parameter binders and then WHNFs to a
-    ///    `Sort` (a parametric, non-indexed inductive) — a remaining `Pi` is an
-    ///    index and is rejected;
+    /// 2. `ty` opens `num_params` parameter binders then `num_indices` index
+    ///    binders and then WHNFs to a `Sort`;
     /// 3. each constructor's type re-binds the **same** `num_params` parameters
     ///    (their types def-eq to the inductive's), then a telescope of fields
-    ///    whose types type-check and whose result head is exactly the inductive
-    ///    applied to those parameters in order. A field type may be non-recursive
-    ///    (it does not mention `I`) or a **direct recursive field** (its type is
-    ///    exactly `I p_1…p_m`). Any other occurrence of `I` is rejected.
+    ///    whose types type-check and whose result head is the inductive applied
+    ///    to those parameters in order followed by `num_indices` index argument
+    ///    expressions. A field type may be non-recursive (it does not mention
+    ///    `I`) or — only for a **non-indexed** family — a **direct recursive
+    ///    field** (its type is exactly `I p_1…p_m`). A field mentioning `I` on an
+    ///    indexed family, or any other non-direct occurrence of `I`, is rejected.
     ///
     /// # Errors
     ///
     /// Returns [`KernelError::DeclarationExists`] for a duplicate name,
-    /// [`KernelError::InductiveTypeNotASort`] if `ty`'s parameter-stripped tail
-    /// is not a `Sort` for a non-`Pi` head, [`KernelError::IndicesNotSupported`]
-    /// if a binder remains between the parameters and the `Sort` (an index),
+    /// [`KernelError::InductiveTypeNotASort`] if `ty`'s param+index-stripped tail
+    /// is not a `Sort`, [`KernelError::RecursiveIndexedNotSupported`] for a
+    /// recursive field on an indexed family (deferred),
     /// [`KernelError::ReflexiveOrNestedNotSupported`] for a reflexive/nested
     /// recursive field, [`KernelError::RecursiveInductiveNotSupported`] for an
     /// ill-shaped recursive self-reference, [`KernelError::ConstructorResultMismatch`] /
@@ -108,6 +114,7 @@ impl Kernel {
     ///
     /// Does not panic on well-formed or ill-formed input; all rejections are
     /// returned as [`KernelError`]s.
+    #[allow(clippy::too_many_lines)]
     pub fn add_inductive(
         &mut self,
         name: NameId,
@@ -166,12 +173,28 @@ impl Kernel {
             cursor = self.instantiate(body, &[fv]);
             cursor = self.whnf(cursor);
         }
-        // The remainder must be exactly a `Sort` (num_indices = 0). A remaining
-        // `Pi` is an index (deferred); any other head is ill-typed.
+        // The binders remaining after the parameters are the **indices**
+        // (ADR-0036, slice 7): open them as fresh index fvars (their telescope
+        // types may reference the parameters and earlier indices). After the
+        // indices the tail must be exactly a `Sort`.
+        let mut indices: Vec<LocalDecl> = Vec::new();
+        while let ExprNode::Pi(bname, dom, body, info) = self.expr_node(cursor).clone() {
+            let fvar = ctx.fresh_fvar();
+            let decl = LocalDecl {
+                fvar,
+                name: bname,
+                ty: dom,
+                info,
+            };
+            ctx.push(decl);
+            indices.push(decl);
+            let fv = self.fvar(fvar);
+            cursor = self.instantiate(body, &[fv]);
+            cursor = self.whnf(cursor);
+        }
+        let num_indices = indices.len();
+        // The remainder must be exactly a `Sort` after params + indices.
         if !matches!(self.expr_node(cursor), ExprNode::Sort(_)) {
-            if matches!(self.expr_node(cursor), ExprNode::Pi(..)) {
-                return Err(KernelError::IndicesNotSupported { inductive: name });
-            }
             return Err(KernelError::InductiveTypeNotASort { got: cursor });
         }
 
@@ -192,13 +215,22 @@ impl Kernel {
             ctor_names,
         });
 
-        // The parameter types (the inductive's declared parameter domains), used
-        // to check each constructor re-binds parameters of the same types.
-        let param_types: Vec<ExprId> = params.iter().map(|p| p.ty).collect();
+        // The inductive's shared parameter locals, threaded into each
+        // constructor check so dependent parameter types and field/result
+        // references resolve to the same fvars as the inductive.
+        let shared_params = params.clone();
 
         let mut checked: Vec<CheckedCtor> = Vec::with_capacity(ctors.len());
         for (idx, (cn, cty)) in ctors.iter().copied().enumerate() {
-            match self.check_ctor(name, ind_const, num_params, &param_types, cn, cty) {
+            match self.check_ctor(
+                name,
+                ind_const,
+                num_params,
+                num_indices,
+                &shared_params,
+                cn,
+                cty,
+            ) {
                 Ok((fields, recursive_fields)) => checked.push(CheckedCtor {
                     name: cn,
                     ty: cty,
@@ -229,7 +261,15 @@ impl Kernel {
 
         // Generate and register the recursor (and its rec rules). Its type is
         // infer-checked here (the self-check); on failure, roll everything back.
-        match self.mk_recursor(rec_name, uparams, num_params, ty, ind_const, &checked) {
+        match self.mk_recursor(
+            rec_name,
+            uparams,
+            num_params,
+            num_indices,
+            ty,
+            ind_const,
+            &checked,
+        ) {
             Ok(rec_decl) => {
                 self.env.insert_unchecked(rec_decl);
                 Ok(())
@@ -250,31 +290,45 @@ impl Kernel {
         self.const_(name, levels)
     }
 
-    /// Check one constructor of a parametric inductive: open its leading
-    /// parameter telescope (the **same** `num_params` parameters as the
-    /// inductive, whose declared types must be def-eq to `param_types`), then its
-    /// field telescope into fresh locals, classifying each field as
-    /// non-recursive or a **direct recursive field** (its type is exactly
-    /// `I p_1…p_m`, the inductive applied to those parameter fvars in order), and
-    /// require the result head to be exactly `I p_1…p_m`. Returns the opened
-    /// **field** locals (outer-to-inner; the parameters are *not* included),
-    /// together with the field positions that are recursive (ascending).
+    /// Check one constructor of a parametric, possibly indexed inductive: open
+    /// its leading parameter telescope re-bound to the inductive's **shared**
+    /// parameter locals `params` (each binder's declared domain must be def-eq to
+    /// the shared parameter's type, so dependent parameters — e.g. `Eq`'s
+    /// `a : α` — resolve correctly), then its field telescope into fresh locals,
+    /// and require the result head to be `I p_1…p_m e_1…e_k` (the inductive
+    /// applied to the shared parameters then `num_indices` index argument
+    /// expressions). Returns the opened **field** locals (outer-to-inner; the
+    /// parameters are *not* included) together with the recursive field positions
+    /// (ascending; always empty for an indexed family).
     ///
-    /// Any occurrence of `I` in a field type that is *not* the direct field
-    /// `I p_1…p_m` is rejected: a `Pi` ending in `I` (reflexive/higher-order) ⇒
+    /// A field is a **direct recursive field** (recorded) only on a non-indexed
+    /// family (`num_indices == 0`) and only if its type is exactly `I p_1…p_m`.
+    /// On an indexed family any field mentioning `I` ⇒
+    /// [`KernelError::RecursiveIndexedNotSupported`]. Otherwise a `Pi` ending in
+    /// `I` (reflexive/higher-order) ⇒
     /// [`KernelError::ReflexiveOrNestedNotSupported`]; a self-reference applied
-    /// to the wrong arguments ⇒ [`KernelError::RecursiveInductiveNotSupported`];
-    /// any deeper occurrence ⇒ [`KernelError::ReflexiveOrNestedNotSupported`].
+    /// to the wrong arguments ⇒ [`KernelError::RecursiveInductiveNotSupported`].
+    #[allow(clippy::too_many_arguments)]
     fn check_ctor(
         &mut self,
         ind_name: NameId,
         ind_const: ExprId,
         num_params: usize,
-        param_types: &[ExprId],
+        num_indices: usize,
+        params: &[LocalDecl],
         ctor_name: NameId,
         ctor_ty: ExprId,
     ) -> Result<(Vec<LocalDecl>, Vec<usize>), KernelError> {
+        // Open the constructor's telescope in a context seeded with the
+        // inductive's **shared** parameter locals, so that dependent parameter
+        // types (e.g. `Eq`'s `a : α` referencing the earlier param `α`) and the
+        // field/result references all resolve to the same parameter fvars as the
+        // inductive itself.
         let mut ctx = LocalContext::new();
+        for p in params.iter().take(num_params) {
+            ctx.push(*p);
+            ctx.bump_fresh_above(p.fvar);
+        }
         // The constructor's type must itself type-check (to a Sort).
         let cty_ty = self.infer_core(ctor_ty, &mut ctx)?;
         let cty_ty = self.whnf(cty_ty);
@@ -284,31 +338,22 @@ impl Kernel {
 
         let mut cursor = self.whnf(ctor_ty);
 
-        // Open the `num_params` leading parameter binders. Their declared types
-        // must be def-eq to the inductive's parameter types (so the constructor
-        // re-binds the SAME parameters). The opened fvars are the parameters
-        // `p_1…p_m` used as the expected recursive-field and result head args.
-        let mut param_locals: Vec<LocalDecl> = Vec::with_capacity(num_params);
-        for &pty in param_types.iter().take(num_params) {
-            let ExprNode::Pi(bname, dom, body, info) = self.expr_node(cursor).clone() else {
+        // Open the `num_params` leading parameter binders, instantiating each
+        // with the inductive's **shared** parameter fvar (so the constructor
+        // re-binds the SAME parameters). Each binder's declared domain must be
+        // def-eq to the inductive's corresponding parameter type.
+        let param_locals: Vec<LocalDecl> = params.iter().take(num_params).copied().collect();
+        for p in &param_locals {
+            let ExprNode::Pi(_bname, dom, body, _info) = self.expr_node(cursor).clone() else {
                 // Fewer leading binders than parameters ⇒ the constructor does
                 // not re-bind all parameters.
                 return Err(KernelError::MalformedConstructorType { ctor: ctor_name });
             };
-            if !self.def_eq(dom, pty) {
+            if !self.def_eq(dom, p.ty) {
                 return Err(KernelError::MalformedConstructorType { ctor: ctor_name });
             }
-            let fvar = ctx.fresh_fvar();
-            let decl = LocalDecl {
-                fvar,
-                name: bname,
-                ty: dom,
-                info,
-            };
-            ctx.push(decl);
-            param_locals.push(decl);
-            let fv = self.fvar(fvar);
-            cursor = self.instantiate(body, &[fv]);
+            let pv = self.fvar(p.fvar);
+            cursor = self.instantiate(body, &[pv]);
             cursor = self.whnf(cursor);
         }
 
@@ -328,11 +373,34 @@ impl Kernel {
         let mut recursive_fields: Vec<usize> = Vec::new();
         while let ExprNode::Pi(bname, dom, body, info) = self.expr_node(cursor).clone() {
             // Classify the field's occurrence of `I`, if any. A direct recursive
-            // field (`dom == I p_1…p_m`) is admitted and recorded; everything
-            // else mentioning `I` is rejected with a precise error.
+            // field (`dom == I p_1…p_m`) is admitted and recorded **only for a
+            // non-indexed family** (slice 7 defers recursive constructors on an
+            // indexed inductive — recursion + indices together, e.g.
+            // `Vector.cons`); everything else mentioning `I` is rejected with a
+            // precise error.
             if self.mentions_const(dom, ind_name) {
+                if num_indices != 0 {
+                    // For an **indexed** family any field mentioning `I` is a
+                    // recursive (or reflexive) occurrence carrying index
+                    // arguments. Recursion + indices together (e.g.
+                    // `Vector.cons`) needs IH-motive applications over the
+                    // recursive occurrence's indices and is deferred. A `Pi`
+                    // ending in `I` is still reflexive/nested; a bare `I …`
+                    // application is the recursive-indexed case.
+                    let (head, _args) = self.unfold_apps(dom);
+                    if matches!(self.expr_node(head), ExprNode::Const(n, _) if *n == ind_name) {
+                        return Err(KernelError::RecursiveIndexedNotSupported {
+                            inductive: ind_name,
+                            ctor: ctor_name,
+                        });
+                    }
+                    return Err(
+                        self.classify_bad_recursive_field(ind_name, ind_const, ctor_name, dom)
+                    );
+                }
                 if dom == ind_applied {
-                    // Direct recursive field: exactly `I p_1…p_m`.
+                    // Direct recursive field: exactly `I p_1…p_m` (the inductive
+                    // applied to the parameters, no indices).
                     recursive_fields.push(fields.len());
                 } else {
                     return Err(
@@ -354,30 +422,34 @@ impl Kernel {
             cursor = self.whnf(cursor);
         }
 
-        // The telescope must end exactly in the inductive applied to the
-        // constructor's parameters: `I p_1…p_m`.
-        if cursor != ind_applied {
-            // Distinguish "wrong head inductive" from "wrong params/indices".
-            let (head, _args) = self.unfold_apps(cursor);
-            if let ExprNode::Const(n, _) = self.expr_node(head) {
-                if *n == ind_name {
-                    // Right inductive, but applied to the wrong args (wrong
-                    // params, or indices) ⇒ result mismatch / malformed.
-                    return Err(KernelError::ConstructorResultMismatch {
-                        expected: ind_name,
-                        ctor: ctor_name,
-                    });
-                }
-                return Err(KernelError::ConstructorResultMismatch {
-                    expected: ind_name,
-                    ctor: ctor_name,
-                });
-            }
+        // The telescope must end exactly in `I p_1…p_m idx_1…idx_k`: the
+        // inductive applied to the constructor's parameters (fixed) then
+        // `num_indices` **index argument expressions** (which may depend on the
+        // params and fields). Split the result's spine into head + args, require
+        // the head to be `I`, the leading `num_params` args to be exactly the
+        // parameter fvars, and collect the remaining `num_indices` index exprs.
+        let (head, args) = self.unfold_apps(cursor);
+        let head_ok = matches!(self.expr_node(head), ExprNode::Const(n, _) if *n == ind_name);
+        if !head_ok || args.len() != num_params + num_indices {
             return Err(KernelError::ConstructorResultMismatch {
                 expected: ind_name,
                 ctor: ctor_name,
             });
         }
+        for (i, p) in param_locals.iter().enumerate() {
+            let pv = self.fvar(p.fvar);
+            if args[i] != pv {
+                // The result applies `I` to a non-parameter in a parameter
+                // position (wrong params).
+                return Err(KernelError::ConstructorResultMismatch {
+                    expected: ind_name,
+                    ctor: ctor_name,
+                });
+            }
+        }
+        // The trailing `num_indices` args are the constructor's own index
+        // expressions; they are re-derived (freshly, in the recursor's own
+        // fvars) during `mk_recursor`, so they need not be returned here.
         Ok((fields, recursive_fields))
     }
 
@@ -454,6 +526,7 @@ struct CheckedCtor {
     /// are **direct recursive fields** (type exactly `I p_1…p_m`), ascending.
     /// One induction hypothesis (in the recursor's minor premise) and one
     /// recursive call (in the ι-rule) is generated per entry, in this order.
+    /// Empty for an indexed inductive (recursive-indexed is deferred).
     recursive_fields: Vec<usize>,
 }
 
@@ -492,20 +565,23 @@ impl Kernel {
 
 impl Kernel {
     /// Generate the recursor declaration (type + rec rules) for a checked
-    /// parametric inductive. The recursor's type is `infer`-checked before it is
-    /// returned (the soundness self-check).
+    /// parametric, possibly **indexed** inductive. The recursor's type is
+    /// `infer`-checked before it is returned (the soundness self-check).
     ///
     /// The recursor binds, outer-to-inner: the parameters `p_1…p_m`, the implicit
-    /// motive `{motive : (I p_1…p_m) → Sort v}`, the minor premises, and the
-    /// major `(major : I p_1…p_m)`, yielding `motive major`. The parameters are
-    /// threaded into every constructor application and recursive `motive`
-    /// application.
+    /// motive `{motive : Π (indices), (I p… indices) → Sort v}`, the minor
+    /// premises, the indices `(indices)`, and the major
+    /// `(major : I p… indices)`, yielding `motive indices major`. The parameters
+    /// are threaded into every constructor application and recursive `motive`
+    /// application; the motive in each minor is applied to the **constructor's
+    /// own index expressions** (the crux of the indexed eliminator).
     #[allow(clippy::too_many_lines, clippy::too_many_arguments)]
     fn mk_recursor(
         &mut self,
         rec_name: NameId,
         uparams: &[NameId],
         num_params: usize,
+        num_indices: usize,
         ind_ty: ExprId,
         ind_const: ExprId,
         ctors: &[CheckedCtor],
@@ -524,14 +600,16 @@ impl Kernel {
         // minor and rec-rule construction.
         let mut ctx = LocalContext::new();
 
-        // Open the parameter locals `p_1…p_m` (the recursor's leading binders)
-        // from the inductive's declared type telescope, with fresh fvars shared
-        // across the whole recursor.
-        let params = self.open_rec_params(&mut ctx, num_params, ind_ty);
+        // Open the parameter locals `p_1…p_m` and then the **index** locals
+        // `idx_1…idx_k` (the recursor's canonical shared indices) from the
+        // inductive's declared type telescope, with fresh fvars shared across the
+        // whole recursor.
+        let (params, rec_indices) =
+            self.open_rec_params_and_indices(&mut ctx, num_params, num_indices, ind_ty);
 
-        // The applied inductive `I p_1…p_m` (parameters threaded), used for the
-        // motive's domain, the major's type, and constructor/motive results.
-        let ind_applied = {
+        // `I p_1…p_m` (parameters threaded), the partial application used as the
+        // motive-domain / major head before the indices are applied.
+        let ind_applied_params = {
             let mut app = ind_const;
             for p in &params {
                 let fv = self.fvar(p.fvar);
@@ -539,13 +617,25 @@ impl Kernel {
             }
             app
         };
+        // `I p_1…p_m idx_1…idx_k` (parameters AND the recursor's shared indices
+        // threaded), used for the major's type and the motive's last domain.
+        let ind_applied = {
+            let mut app = ind_applied_params;
+            for ix in &rec_indices {
+                let fv = self.fvar(ix.fvar);
+                app = self.app(app, fv);
+            }
+            app
+        };
 
-        // motive : (I p_1…p_m) → Sort v   (implicit). No indices ⇒ a plain arrow.
+        // motive : Π (idx_1…idx_k), (I p… idx…) → Sort v   (implicit). For a
+        // non-indexed family this is the plain arrow `(I p…) → Sort v`.
         let motive_ty = {
-            // Π (_ : I p…), Sort v   — the bound var is unused, so the body is a
-            // closed `Sort v` (no BVar).
+            // Innermost: Π (_ : I p… idx…), Sort v.
             let anon = self.anon();
-            self.pi(anon, ind_applied, elim_sort, BinderInfo::Default)
+            let arrow = self.pi(anon, ind_applied, elim_sort, BinderInfo::Default);
+            // Wrap the index telescope around it (abstracting the index fvars).
+            self.abstr_pi_telescope(&rec_indices, arrow)
         };
         let motive_fvar = ctx.fresh_fvar();
         let motive_name = self.name_str_anon("motive");
@@ -564,8 +654,11 @@ impl Kernel {
         // Per-ctor: the field locals opened for the minor (used in rec rules).
         let mut ctor_fields: Vec<Vec<LocalDecl>> = Vec::with_capacity(ctors.len());
         for c in ctors {
-            let fields = self.open_ctor_fields(&mut ctx, num_params, &params, c);
-            // c_i p_1…p_m fields…  :  I p_1…p_m
+            let (fields, ctor_result) = self.open_ctor_fields(&mut ctx, num_params, &params, c);
+            // The constructor's own index argument expressions, freshly in terms
+            // of the just-opened field fvars (the crux of the indexed minor).
+            let ctor_index_args = self.ctor_index_args(ctor_result, num_indices);
+            // c_i p_1…p_m fields…  :  I p_1…p_m ctor_index_args…
             let ctor_app = {
                 let head = self.mk_ind_const_for_ctor(c.name, uparams);
                 let mut app = head;
@@ -579,8 +672,16 @@ impl Kernel {
                 }
                 app
             };
-            // motive (c_i p_1…p_m fields…)
-            let motive_app = self.app(motive, ctor_app);
+            // motive <ctor's index exprs> (c_i p_1…p_m fields…) — the motive is
+            // applied to the CONSTRUCTOR'S own index expressions, then the
+            // constructor application.
+            let motive_app = {
+                let mut app = motive;
+                for &ix in &ctor_index_args {
+                    app = self.app(app, ix);
+                }
+                self.app(app, ctor_app)
+            };
             // One induction-hypothesis binder `ih_j : motive f_j` per recursive
             // field `f_j`, in field order, opened *after* the field binders so
             // each IH's type references the already-bound field fvar.
@@ -608,7 +709,7 @@ impl Kernel {
             ctor_fields.push(fields);
         }
 
-        // major : I p_1…p_m
+        // major : I p_1…p_m idx_1…idx_k   (the recursor's shared indices).
         let major_fvar = ctx.fresh_fvar();
         let major_name = self.name_str_anon("t");
         let major_decl = LocalDecl {
@@ -619,10 +720,20 @@ impl Kernel {
         };
         let major = self.fvar(major_fvar);
 
-        // The result type `motive major`, abstracted over major, minors, motive,
-        // params (params outermost — the Lean convention: params before motive).
-        let motive_major = self.app(motive, major);
+        // The result type `motive idx_1…idx_k major` (the motive applied to the
+        // recursor's shared indices then the major), abstracted over the major,
+        // the indices, the minors, the motive, and the params (params outermost —
+        // the Lean convention: params before motive, indices before the major).
+        let motive_major = {
+            let mut app = motive;
+            for ix in &rec_indices {
+                let fv = self.fvar(ix.fvar);
+                app = self.app(app, fv);
+            }
+            self.app(app, major)
+        };
         let rec_ty = self.abstr_pi_telescope(&[major_decl], motive_major);
+        let rec_ty = self.abstr_pi_telescope(&rec_indices, rec_ty);
         let rec_ty = self.abstr_pi_telescope(&minors, rec_ty);
         let rec_ty = self.abstr_pi_telescope(&[motive_decl], rec_ty);
         let rec_ty = self.abstr_pi_telescope(&params, rec_ty);
@@ -695,24 +806,27 @@ impl Kernel {
             num_motives: 1,
             num_minors: u16::try_from(ctors.len()).expect("ctor count fits u16"),
             num_params: u16::try_from(num_params).expect("param count fits u16"),
-            num_indices: 0,
+            num_indices: u16::try_from(num_indices).expect("index count fits u16"),
         })
     }
 
-    /// Open the recursor's `num_params` parameter locals into `ctx` (pushing
-    /// each), with their types read from the inductive's declared type telescope
-    /// `ind_ty`. Returns them outer-to-inner. Each parameter type is
-    /// instantiated with the preceding parameter fvars so later parameter types
-    /// see earlier parameters.
-    fn open_rec_params(
+    /// Open the recursor's `num_params` parameter locals followed by its
+    /// `num_indices` index locals into `ctx` (pushing each), with their types
+    /// read from the inductive's declared type telescope `ind_ty`. Returns
+    /// `(params, indices)`, each outer-to-inner. Every telescope type is
+    /// instantiated with the preceding fvars so later types (including index
+    /// types) see the earlier params/indices.
+    fn open_rec_params_and_indices(
         &mut self,
         ctx: &mut LocalContext,
         num_params: usize,
+        num_indices: usize,
         ind_ty: ExprId,
-    ) -> Vec<LocalDecl> {
+    ) -> (Vec<LocalDecl>, Vec<LocalDecl>) {
         let mut params = Vec::with_capacity(num_params);
+        let mut indices = Vec::with_capacity(num_indices);
         let mut cursor = self.whnf(ind_ty);
-        for _ in 0..num_params {
+        for i in 0..(num_params + num_indices) {
             let ExprNode::Pi(bname, dom, body, info) = self.expr_node(cursor).clone() else {
                 break;
             };
@@ -724,12 +838,16 @@ impl Kernel {
                 info,
             };
             ctx.push(decl);
-            params.push(decl);
+            if i < num_params {
+                params.push(decl);
+            } else {
+                indices.push(decl);
+            }
             let fv = self.fvar(fvar);
             cursor = self.instantiate(body, &[fv]);
             cursor = self.whnf(cursor);
         }
-        params
+        (params, indices)
     }
 
     /// `Const(c, [Param(u)…])` for a constructor sharing the inductive's
@@ -740,18 +858,21 @@ impl Kernel {
     }
 
     /// Open a constructor's **field** telescope into fresh locals in `ctx`
-    /// (pushing each), returning them outer-to-inner. The constructor's leading
-    /// `num_params` parameter binders are first skipped, instantiating them with
-    /// the recursor's parameter fvars (`params`) so that field types reference
-    /// the shared parameters; later field types are instantiated as we go so they
-    /// see earlier fields as their fvars.
+    /// (pushing each), returning them outer-to-inner together with the
+    /// constructor's **result tail** `I params idx_1…idx_k` instantiated in
+    /// terms of the recursor's shared parameter fvars and these fresh field
+    /// fvars (so the caller can extract the constructor's index argument
+    /// expressions freshly). The constructor's leading `num_params` parameter
+    /// binders are first skipped, instantiating them with the recursor's
+    /// parameter fvars (`params`); later field types are instantiated as we go
+    /// so they see earlier fields as their fvars.
     fn open_ctor_fields(
         &mut self,
         ctx: &mut LocalContext,
         num_params: usize,
         params: &[LocalDecl],
         c: &CheckedCtor,
-    ) -> Vec<LocalDecl> {
+    ) -> (Vec<LocalDecl>, ExprId) {
         let mut cursor = self.whnf(c.ty);
         // Skip the leading parameter binders, instantiating each with the
         // corresponding shared recursor parameter fvar.
@@ -778,7 +899,22 @@ impl Kernel {
             cursor = self.instantiate(body, &[fv]);
             cursor = self.whnf(cursor);
         }
-        fields
+        (fields, cursor)
+    }
+
+    /// Extract a constructor's `num_indices` **index argument expressions** from
+    /// its (already field-instantiated) result tail `I params idx_1…idx_k`: the
+    /// trailing `num_indices` arguments of the spine, in natural order. The
+    /// leading `num_params` args are the parameters and are dropped.
+    fn ctor_index_args(&self, result_tail: ExprId, num_indices: usize) -> Vec<ExprId> {
+        if num_indices == 0 {
+            return Vec::new();
+        }
+        let (_head, args) = self.unfold_apps(result_tail);
+        // The spine is `params… idx…`; the last `num_indices` args are the
+        // indices (the check in `check_ctor` guarantees the arity).
+        let start = args.len().saturating_sub(num_indices);
+        args[start..].to_vec()
     }
 
     /// Open one induction-hypothesis local `ih_j : motive f_j` in `ctx` (pushing
@@ -857,10 +993,13 @@ impl Kernel {
     /// Try one ι-reduction step on `e` if its head is a recursor `Const(I.rec,
     /// levels)` applied to enough arguments and the major premise WHNFs to a
     /// constructor application of one of `I`'s constructors. Ported from
-    /// nanoda's `reduce_rec`, specialized to the parametric, non-indexed scope
-    /// (parameters are consumed by both the recursor application and the
-    /// constructor application, and threaded into recursive calls by the rule
-    /// value).
+    /// nanoda's `reduce_rec`, for the parametric, **indexed** scope: parameters
+    /// are consumed by both the recursor application and the constructor
+    /// application (and threaded into recursive calls by the rule value), while
+    /// the recursor's **index arguments** sit at `args[prefix_len..major_idx]`
+    /// (between the minors and the major) and are **dropped** — the rule value's
+    /// λ-telescope binds `params motive minors fields…`, never the indices, so
+    /// the major's actual indices need not be re-supplied.
     ///
     /// Returns `None` for non-recursor heads, too-few arguments, or a major that
     /// is not yet a constructor application (in which case the application is

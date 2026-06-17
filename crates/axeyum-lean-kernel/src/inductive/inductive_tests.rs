@@ -1,10 +1,13 @@
-//! Tests for the inductive layer (ADR-0036, slice 6): the `add_inductive`
+//! Tests for the inductive layer (ADR-0036, slice 7): the `add_inductive`
 //! admission gate, recursor generation (with the self-check that the generated
 //! recursor type infers to a `Sort`), and ι-reduction in WHNF — validated
 //! against KNOWN recursors and ι-rules. Covers the slice-4 enums/structures, the
-//! slice-5 recursive types (`Nat`, binary trees), and the slice-6 **parametric**
-//! families (`List`, `Option`, `Prod`, `Sum`), plus the rejections the trusted
-//! gate must catch (indices, wrong parameters, reflexive fields).
+//! slice-5 recursive types (`Nat`, binary trees), the slice-6 **parametric**
+//! families (`List`, `Option`, `Prod`, `Sum`), and the slice-7 **indexed**
+//! families (`Eq` — the backbone — plus a simple indexed enum), with the
+//! dependent-motive `Eq.rec` self-check, its ι-reduction on `refl`, and a
+//! transport that computes; plus the rejections the trusted gate must catch
+//! (recursive-indexed, wrong parameters, reflexive fields).
 #![allow(
     clippy::many_single_char_names,
     clippy::similar_names,
@@ -269,28 +272,36 @@ fn reject_reflexive_recursive_field() {
     assert!(!k.environment().contains(cn));
 }
 
-/// Reject: an inductive whose type has a leading `Pi` not declared as a
-/// parameter (`num_params = 0`) ⇒ the `Pi` is an **index**, which is deferred
-/// (`IndicesNotSupported`). Declaring it as a parameter (`num_params = 1`) is
-/// the supported path (see the parametric admits below).
+/// Admit: an inductive whose type has a leading `Pi` not declared as a
+/// parameter (`num_params = 0`) is now an **indexed** family (slice 7). With 0
+/// params, `ty := Π (_ : Sort 0), Sort 1` has one index of type `Sort 0` and an
+/// empty constructor list — an indexed, ctor-free type — and admits. (Declaring
+/// the binder as a parameter, `num_params = 1`, is the parametric path.)
 #[test]
-fn reject_type_not_a_sort() {
+fn indexed_ctorless_inductive_admits() {
     let mut k = Kernel::new();
     let anon = k.anon();
     let z = k.level_zero();
     let one = k.level_succ(z);
     let s1 = k.sort(one);
     let s0 = k.sort_zero();
-    // ty := Π (_ : Sort 0), Sort 1   (a binder before the Sort; with 0 params
-    // this is an index — deferred).
-    let bad_ty = k.pi(anon, s0, s1, BinderInfo::Default);
-    let ind_name = k.name_str(anon, "Param");
-    let err = k.add_inductive(ind_name, &[], 0, bad_ty, &[]).unwrap_err();
-    assert!(
-        matches!(err, KernelError::IndicesNotSupported { .. }),
-        "got {err:?}"
-    );
-    assert!(!k.environment().contains(ind_name));
+    // ty := Π (_ : Sort 0), Sort 1   (one index of type Sort 0, no params).
+    let ty = k.pi(anon, s0, s1, BinderInfo::Default);
+    let ind_name = k.name_str(anon, "Indexed0");
+    k.add_inductive(ind_name, &[], 0, ty, &[])
+        .expect("indexed ctor-free type should admit");
+    assert!(k.environment().contains(ind_name));
+    // The recursor records one index.
+    let rec_name = k.name_str(ind_name, "rec");
+    let rec_decl = k.environment().get(rec_name).unwrap().clone();
+    match &rec_decl {
+        Declaration::Recursor { num_indices, .. } => assert_eq!(*num_indices, 1),
+        _ => panic!("expected recursor"),
+    }
+    // Its type infer-checks (the self-check).
+    let rec_ty = rec_decl.ty();
+    let inferred = k.infer(rec_ty).unwrap();
+    assert!(matches!(k.expr_node(inferred), ExprNode::Sort(_)));
 }
 
 /// Reject: a duplicate inductive name.
@@ -1301,32 +1312,455 @@ fn sum_two_params_multiple_ctors() {
     );
 }
 
-/// Reject: an **indexed** inductive — a binder remains between the declared
-/// parameters and the final `Sort`. With `num_params = 1`, `ty := Π (α : Sort 1)
-/// (a : α), Sort 1` has `α` as the one parameter and `a : α` as an index ⇒
-/// `IndicesNotSupported`.
+// ---------------------------------------------------------------------------
+// Indexed inductives (slice 7): Eq is the backbone.
+// ---------------------------------------------------------------------------
+
+/// Declare `Eq.{u} {α : Sort u} (a : α) : α → Prop` (params: α, a; 1 index of
+/// type α) with `refl : Eq α a a`. Returns `(eq_name, rec_name, u, refl_name)`.
+fn declare_eq(k: &mut Kernel) -> (crate::NameId, crate::NameId, crate::NameId, crate::NameId) {
+    let anon = k.anon();
+    let u = k.name_str(anon, "u");
+    let u_lvl = k.level_param(u);
+    let sort_u = k.sort(u_lvl);
+    let eq = k.name_str(anon, "Eq");
+    let eq_const = k.const_(eq, vec![u_lvl]);
+
+    // ty := Π (α : Sort u) (a : α) (b : α), Prop.
+    //   binders outer→inner: α, a, b. The index `b : α` is under α, a → α = BVar 1.
+    //   `a : α` is under α → α = BVar 0.
+    let alpha_name = k.name_str(anon, "α");
+    let a_name = k.name_str(anon, "a");
+    let b_name = k.name_str(anon, "b");
+    let prop = k.sort_zero();
+    let ty = {
+        let a1 = k.bvar(1); // α at the b binder
+        let inner_b = k.pi(b_name, a1, prop, BinderInfo::Default);
+        let a0 = k.bvar(0); // α at the a binder
+        let inner_a = k.pi(a_name, a0, inner_b, BinderInfo::Default);
+        k.pi(alpha_name, sort_u, inner_a, BinderInfo::Default)
+    };
+
+    // refl : Π (α : Sort u) (a : α), Eq α a a.
+    //   result `Eq α a a` under binders α, a → α = BVar 1, a = BVar 0.
+    let refl = k.name_str(anon, "refl");
+    let refl_ty = {
+        let a1 = k.bvar(1); // α
+        let a0 = k.bvar(0); // a
+        let eq_app = {
+            let e = k.app(eq_const, a1);
+            let e = k.app(e, a0);
+            k.app(e, a0)
+        };
+        let inner_a = k.pi(a_name, a0, eq_app, BinderInfo::Default);
+        k.pi(alpha_name, sort_u, inner_a, BinderInfo::Default)
+    };
+
+    k.add_inductive(eq, &[u], 2, ty, &[(refl, refl_ty)])
+        .expect("Eq should admit");
+    let rec_name = k.name_str(eq, "rec");
+    (eq, rec_name, u, refl)
+}
+
+/// `Eq` admits (2 params, 1 index, non-recursive); `Eq.rec`'s generated type
+/// infer-checks (the dependent-motive self-check) and records `num_indices = 1`.
 #[test]
-fn reject_indexed_inductive() {
+fn eq_admits_and_recursor_self_checks() {
     let mut k = Kernel::new();
+    let (_eq, rec_name, _u, _refl) = declare_eq(&mut k);
+
+    let rec_decl = k.environment().get(rec_name).unwrap().clone();
+    // The dependent recursor type infer-checks to a Sort (the crux self-check).
+    let rec_ty = rec_decl.ty();
+    let inferred = k.infer(rec_ty).unwrap();
+    assert!(matches!(k.expr_node(inferred), ExprNode::Sort(_)));
+    match &rec_decl {
+        Declaration::Recursor {
+            num_params,
+            num_indices,
+            num_minors,
+            ..
+        } => {
+            assert_eq!(*num_params, 2, "Eq has 2 params (α, a)");
+            assert_eq!(*num_indices, 1, "Eq has 1 index");
+            assert_eq!(*num_minors, 1, "Eq has one ctor (refl)");
+        }
+        _ => panic!("expected recursor"),
+    }
+}
+
+/// The generated `Eq.rec` type matches the known shape
+/// `Π (α) (a) {motive : Π (b:α), Eq a b → Sort v} (refl_case : motive a refl)
+///   (b:α) (h : Eq a b), motive b h`. We walk the telescope: 2 params, then the
+/// motive, then 1 minor, then 1 index (b), then the major (h). The motive's own
+/// type is a `Π (b:α), Eq a b → Sort v`; the minor's result applies the motive
+/// to `a` (the ctor's index expr) and `refl α a` — the crux.
+#[test]
+fn eq_recursor_structure() {
+    let mut k = Kernel::new();
+    let (eq, rec_name, _u, refl) = declare_eq(&mut k);
+
+    let rec_ty = k.environment().get(rec_name).unwrap().ty();
+    // Walk: α, a (params), motive, refl_case (minor), b (index), h (major).
+    let ExprNode::Pi(_, _alpha, after_alpha, _) = k.expr_node(rec_ty).clone() else {
+        panic!("rec ty should bind param α");
+    };
+    let ExprNode::Pi(_, _a, after_a, _) = k.expr_node(after_alpha).clone() else {
+        panic!("rec ty should bind param a");
+    };
+    let ExprNode::Pi(_, motive_ty, after_motive, _) = k.expr_node(after_a).clone() else {
+        panic!("rec ty should bind the motive");
+    };
+    // motive_ty = Π (b : α), Π (_ : Eq a b), Sort v — two leading Pis.
+    let ExprNode::Pi(_, _b_dom, motive_body, _) = k.expr_node(motive_ty).clone() else {
+        panic!("motive type should bind the index b");
+    };
+    let ExprNode::Pi(_, eq_dom, motive_codom, _) = k.expr_node(motive_body).clone() else {
+        panic!("motive type should bind `Eq a b`");
+    };
+    // The motive's second domain is `Eq a b` (head `Eq`).
+    let (eq_head, eq_args) = {
+        let mut h = eq_dom;
+        let mut a = Vec::new();
+        while let ExprNode::App(f, x) = k.expr_node(h).clone() {
+            a.push(x);
+            h = f;
+        }
+        a.reverse();
+        (h, a)
+    };
+    assert!(
+        matches!(k.expr_node(eq_head), ExprNode::Const(n, _) if *n == eq),
+        "motive's second domain head should be `Eq`"
+    );
+    assert_eq!(eq_args.len(), 3, "Eq applied to α, a, b");
+    assert!(
+        matches!(k.expr_node(motive_codom), ExprNode::Sort(_)),
+        "motive codomain is a Sort"
+    );
+
+    // The minor (refl_case) result is `motive a (refl α a)` — head is the motive
+    // applied to the ctor's index expr `a` and `refl α a`.
+    let ExprNode::Pi(_, refl_case_ty, after_minor, _) = k.expr_node(after_motive).clone() else {
+        panic!("rec ty should bind the refl_case minor");
+    };
+    // refl_case_ty is directly `motive <a> (refl α a)` (refl has no fields/IHs).
+    let (minor_head, minor_args) = {
+        let mut h = refl_case_ty;
+        let mut a = Vec::new();
+        while let ExprNode::App(f, x) = k.expr_node(h).clone() {
+            a.push(x);
+            h = f;
+        }
+        a.reverse();
+        (h, a)
+    };
+    // Head is the motive (a BVar referencing the motive binder), applied to two
+    // args: the index expr and the `refl α a` application.
+    assert_eq!(
+        minor_args.len(),
+        2,
+        "minor applies the motive to the ctor index expr and `refl α a`"
+    );
+    let _ = minor_head;
+    // The second minor arg is `refl α a` (head `refl`).
+    let (refl_head, refl_args) = {
+        let mut h = minor_args[1];
+        let mut a = Vec::new();
+        while let ExprNode::App(f, x) = k.expr_node(h).clone() {
+            a.push(x);
+            h = f;
+        }
+        a.reverse();
+        (h, a)
+    };
+    assert!(
+        matches!(k.expr_node(refl_head), ExprNode::Const(n, _) if *n == refl),
+        "minor's constructor application head should be `refl`"
+    );
+    assert_eq!(refl_args.len(), 2, "refl applied to the params α, a");
+
+    // After the minor: the index b (a Pi), then the major h.
+    let ExprNode::Pi(_, _b_index, after_index, _) = k.expr_node(after_minor).clone() else {
+        panic!("rec ty should bind the index b after the minor");
+    };
+    let ExprNode::Pi(_, major_ty, _result, _) = k.expr_node(after_index).clone() else {
+        panic!("rec ty should bind the major h");
+    };
+    // The major's type is `Eq α a b` (head `Eq`).
+    let (mh, _ma) = k.unfold_apps(major_ty);
+    assert!(
+        matches!(k.expr_node(mh), ExprNode::Const(n, _) if *n == eq),
+        "major type head should be `Eq`"
+    );
+}
+
+/// `Eq.rec` ι backbone: `Eq.rec α a motive refl_case a (refl α a)` ι→ `refl_case`
+/// (the index arg before the major is dropped; the constructor major fires the
+/// rule).
+#[test]
+fn eq_rec_iota_on_refl() {
+    let mut k = Kernel::new();
+    let (eq, rec_name, u, refl) = declare_eq(&mut k);
+    let u_lvl = k.level_param(u);
+
+    let rec_decl = k.environment().get(rec_name).unwrap().clone();
+    let v = match &rec_decl {
+        Declaration::Recursor { uparams, .. } => uparams[0],
+        _ => panic!(),
+    };
+    let v_lvl = k.level_param(v);
+    let _ = eq;
+
+    // Concrete params α, a; motive; refl_case; and the index arg + major.
+    let alpha = k.fvar(1);
+    let a = k.fvar(2);
+    let motive = k.fvar(3);
+    let refl_case = k.fvar(4);
+
+    // refl α a (the major; also the index arg `a` before it).
+    let refl_c = k.const_(refl, vec![u_lvl]);
+    let refl_aa = {
+        let e = k.app(refl_c, alpha);
+        k.app(e, a)
+    };
+
+    // Eq.rec.{v,u} α a motive refl_case a (refl α a)  ι→  refl_case.
+    let rec_const = k.const_(rec_name, vec![v_lvl, u_lvl]);
+    let app = {
+        let e = k.app(rec_const, alpha);
+        let e = k.app(e, a);
+        let e = k.app(e, motive);
+        let e = k.app(e, refl_case);
+        let e = k.app(e, a); // the index arg b := a
+        k.app(e, refl_aa) // the major
+    };
+    assert_eq!(
+        k.whnf(app),
+        refl_case,
+        "Eq.rec α a motive refl_case a (refl α a) ι→ refl_case"
+    );
+}
+
+/// Eq end-to-end: a symmetry-like transport. With the motive
+/// `motive := fun (b : α) (_ : Eq α a b) => Eq α b a`, `Eq.rec`'s refl_case has
+/// type `motive a (refl α a) = Eq α a a`; supplying `refl α a` for it and
+/// applying to `a` and `refl α a` ι-reduces to that refl_case — the transport
+/// computes on `refl`.
+#[test]
+fn eq_rec_transport_computes() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let (eq, rec_name, u, refl) = declare_eq(&mut k);
+    let u_lvl = k.level_param(u);
+
+    let rec_decl = k.environment().get(rec_name).unwrap().clone();
+    let v = match &rec_decl {
+        Declaration::Recursor { uparams, .. } => uparams[0],
+        _ => panic!(),
+    };
+    let v_lvl = k.level_param(v);
+
+    // A concrete carrier A : Sort 1 (axiom) and a, the basepoint.
+    let one = {
+        let z = k.level_zero();
+        k.level_succ(z)
+    };
+    let s1 = k.sort(one);
+    let a_carrier = k.name_str(anon, "A");
+    k.add_declaration(Declaration::Axiom {
+        name: a_carrier,
+        uparams: vec![],
+        ty: s1,
+    })
+    .unwrap();
+    let big_a = k.const_(a_carrier, vec![]);
+    let a_pt = k.name_str(anon, "apt");
+    k.add_declaration(Declaration::Axiom {
+        name: a_pt,
+        uparams: vec![],
+        ty: big_a,
+    })
+    .unwrap();
+    let a = k.const_(a_pt, vec![]);
+
+    // motive := fun (b : A) (_ : Eq A a b) => Eq A b a   (symmetry's target).
+    //   Under binders b, h (innermost = 0): b = BVar 1.
+    let eq_c = k.const_(eq, vec![u_lvl]);
+    let motive = {
+        let b1 = k.bvar(1); // b
+        // Eq A b a
+        let eq_ba = {
+            let e = k.app(eq_c, big_a);
+            let e = k.app(e, b1);
+            k.app(e, a)
+        };
+        // Eq A a b  (the h domain): b = BVar 0 under the b binder only.
+        let b0 = k.bvar(0);
+        let eq_ab = {
+            let e = k.app(eq_c, big_a);
+            let e = k.app(e, a);
+            k.app(e, b0)
+        };
+        let h_name = k.name_str(anon, "h");
+        let inner_h = k.lam(h_name, eq_ab, eq_ba, BinderInfo::Default);
+        let b_name = k.name_str(anon, "b");
+        k.lam(b_name, big_a, inner_h, BinderInfo::Default)
+    };
+
+    // refl_case := refl A a  : Eq A a a  (= motive a (refl A a) after β).
+    let refl_c = k.const_(refl, vec![u_lvl]);
+    let refl_aa = {
+        let e = k.app(refl_c, big_a);
+        k.app(e, a)
+    };
+
+    // Eq.rec.{1,1} A a motive (refl A a) a (refl A a)  ι→  refl A a.
+    // Elaborate at v := 1 (motive returns a Sort 0 Prop, so v = 1 suffices for
+    // the recursor's elimination level here we just need ι to fire).
+    let rec_const = k.const_(rec_name, vec![v_lvl, u_lvl]);
+    let app = {
+        let e = k.app(rec_const, big_a);
+        let e = k.app(e, a);
+        let e = k.app(e, motive);
+        let e = k.app(e, refl_aa);
+        let e = k.app(e, a); // index arg b := a
+        k.app(e, refl_aa) // major
+    };
+    assert_eq!(
+        k.whnf(app),
+        refl_aa,
+        "transport ι-fires on refl and yields the refl_case (refl A a)"
+    );
+}
+
+/// Reject: a **recursive** field on an **indexed** inductive (recursion +
+/// indices together, e.g. a `Vector.cons`-shaped constructor) ⇒
+/// `RecursiveIndexedNotSupported`. We build a 1-index family `V : Nat → Sort 1`
+/// with `cons : Π (n : Nat), V n → V (succ n)` — the field `V n` is recursive
+/// AND the family is indexed.
+#[test]
+fn reject_recursive_indexed_field() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let (nat, _nat_rec, [_zero, succ]) = declare_nat(&mut k);
+    let nat_const = k.const_(nat, vec![]);
+
+    let z = k.level_zero();
+    let one = k.level_succ(z);
+    let s1 = k.sort(one);
+    let vname = k.name_str(anon, "V");
+    let v_const = k.const_(vname, vec![]);
+
+    // ty := Π (_ : Nat), Sort 1   (0 params, 1 index of type Nat).
+    let ty = k.pi(anon, nat_const, s1, BinderInfo::Default);
+
+    // cons : Π (n : Nat) (_ : V n), V (succ n).
+    //   binders n, (rec field). result `V (succ n)`: n = BVar 1; field `V n`:
+    //   n = BVar 0.
+    let cons = k.name_str(anon, "cons");
+    let succ_c = k.const_(succ, vec![]);
+    let cons_ty = {
+        let n1 = k.bvar(1);
+        let succ_n = k.app(succ_c, n1);
+        let v_succ_n = k.app(v_const, succ_n); // V (succ n)  (result)
+        let n0 = k.bvar(0);
+        let v_n = k.app(v_const, n0); // V n  (recursive field)
+        let inner = k.pi(anon, v_n, v_succ_n, BinderInfo::Default);
+        let n_name = k.name_str(anon, "n");
+        k.pi(n_name, nat_const, inner, BinderInfo::Default)
+    };
+    let err = k
+        .add_inductive(vname, &[], 0, ty, &[(cons, cons_ty)])
+        .unwrap_err();
+    assert!(
+        matches!(err, KernelError::RecursiveIndexedNotSupported { .. }),
+        "got {err:?}"
+    );
+    assert!(!k.environment().contains(vname));
+    assert!(!k.environment().contains(cons));
+}
+
+/// A simple **indexed enum** with two constructors landing at different index
+/// values: `Parity : Bool → Sort 1` (0 params, 1 index of type Bool) with
+/// `even : Parity tt` and `odd : Parity ff`. Admits; the recursor self-checks;
+/// ι picks the right minor by the major's index.
+#[test]
+fn indexed_enum_two_ctors() {
+    let mut k = Kernel::new();
+    // A Bool to index over.
+    let (_bool, _bool_rec, bctors) = declare_enum(&mut k, "Bool2", &["tt", "ff"]);
+    let tt = k.const_(bctors[0], vec![]);
+    let ff = k.const_(bctors[1], vec![]);
+    let bool2 = {
+        let anon = k.anon();
+        k.name_str(anon, "Bool2")
+    };
+    let bool2_const = k.const_(bool2, vec![]);
+
     let anon = k.anon();
     let z = k.level_zero();
     let one = k.level_succ(z);
     let s1 = k.sort(one);
-    // ty := Π (α : Sort 1) (a : α), Sort 1   — α is the param, `a : α` an index.
-    let ty = {
-        let a0 = k.bvar(0); // a : α  (α = BVar 0 under the α binder)
-        let a_name = k.name_str(anon, "a");
-        let inner = k.pi(a_name, a0, s1, BinderInfo::Default);
-        let alpha_name = k.name_str(anon, "α");
-        k.pi(alpha_name, s1, inner, BinderInfo::Default)
+    let parity = k.name_str(anon, "Parity");
+    let parity_const = k.const_(parity, vec![]);
+
+    // ty := Π (_ : Bool2), Sort 1   (1 index of type Bool2).
+    let ty = k.pi(anon, bool2_const, s1, BinderInfo::Default);
+
+    // even : Parity tt   (index expr tt);  odd : Parity ff   (index expr ff).
+    let even = k.name_str(anon, "even");
+    let odd = k.name_str(anon, "odd");
+    let even_ty = k.app(parity_const, tt);
+    let odd_ty = k.app(parity_const, ff);
+
+    k.add_inductive(parity, &[], 0, ty, &[(even, even_ty), (odd, odd_ty)])
+        .expect("Parity should admit");
+    let rec_name = k.name_str(parity, "rec");
+
+    let rec_decl = k.environment().get(rec_name).unwrap().clone();
+    let rec_ty = rec_decl.ty();
+    let inferred = k.infer(rec_ty).unwrap();
+    assert!(matches!(k.expr_node(inferred), ExprNode::Sort(_)));
+    let v = match &rec_decl {
+        Declaration::Recursor {
+            uparams,
+            num_indices,
+            ..
+        } => {
+            assert_eq!(*num_indices, 1);
+            uparams[0]
+        }
+        _ => panic!(),
     };
-    let ind_name = k.name_str(anon, "Indexed");
-    let err = k.add_inductive(ind_name, &[], 1, ty, &[]).unwrap_err();
-    assert!(
-        matches!(err, KernelError::IndicesNotSupported { .. }),
-        "got {err:?}"
-    );
-    assert!(!k.environment().contains(ind_name));
+    let v_lvl = k.level_param(v);
+
+    // ι: Parity.rec motive m_even m_odd tt even ι→ m_even.
+    let motive = k.fvar(1);
+    let m_even = k.fvar(2);
+    let m_odd = k.fvar(3);
+    let even_c = k.const_(even, vec![]);
+    let odd_c = k.const_(odd, vec![]);
+
+    let rec_const = k.const_(rec_name, vec![v_lvl]);
+    let app_even = {
+        let e = k.app(rec_const, motive);
+        let e = k.app(e, m_even);
+        let e = k.app(e, m_odd);
+        let e = k.app(e, tt); // index arg
+        k.app(e, even_c) // major
+    };
+    assert_eq!(k.whnf(app_even), m_even, "Parity.rec … tt even ι→ m_even");
+
+    let rec_const2 = k.const_(rec_name, vec![v_lvl]);
+    let app_odd = {
+        let e = k.app(rec_const2, motive);
+        let e = k.app(e, m_even);
+        let e = k.app(e, m_odd);
+        let e = k.app(e, ff); // index arg
+        k.app(e, odd_c) // major
+    };
+    assert_eq!(k.whnf(app_odd), m_odd, "Parity.rec … ff odd ι→ m_odd");
 }
 
 /// Reject: a constructor whose result is the inductive applied to the **wrong**

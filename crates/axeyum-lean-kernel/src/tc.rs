@@ -183,11 +183,28 @@ pub enum KernelError {
     },
     /// An inductive type's declared type had **indices**: after opening its
     /// `num_params` parameter binders, a further `Pi` remained before the final
-    /// `Sort` (a binder that is an index, not a parameter). Indexed families
-    /// (`Eq`, `Vector`) are deferred to a later slice and rejected here.
+    /// `Sort` (a binder that is an index, not a parameter).
+    ///
+    /// As of ADR-0036 slice 7, **non-recursive** indexed families (`Eq`, and
+    /// finite indexed enums) are supported; this variant is retained for
+    /// back-compatibility but is no longer produced by `add_inductive` for a
+    /// bare index. Recursive constructors on an indexed family are rejected with
+    /// [`KernelError::RecursiveIndexedNotSupported`] instead.
     IndicesNotSupported {
         /// The inductive whose type had indices.
         inductive: crate::name::NameId,
+    },
+    /// A constructor of an **indexed** inductive had a **recursive field** (a
+    /// field whose type is the inductive applied to arguments). Recursion and
+    /// indices together (e.g. `Vector.cons`) need induction-hypothesis motive
+    /// applications over the recursive occurrence's indices, deferred past
+    /// ADR-0036 slice 7. Non-recursive indexed families (`Eq`) and
+    /// recursive non-indexed families (`Nat`, `List`) are both supported.
+    RecursiveIndexedNotSupported {
+        /// The indexed inductive whose constructor was recursive.
+        inductive: crate::name::NameId,
+        /// The offending recursive constructor.
+        ctor: crate::name::NameId,
     },
 }
 
@@ -229,6 +246,15 @@ impl LocalContext {
         let id = self.next_fvar;
         self.next_fvar += 1;
         id
+    }
+
+    /// Ensure the fresh-id counter is strictly greater than `id`, so that a
+    /// subsequently minted fvar cannot collide with an externally-supplied fvar
+    /// (e.g. an inductive's shared parameter locals pushed into a fresh context).
+    pub fn bump_fresh_above(&mut self, id: u64) {
+        if self.next_fvar <= id {
+            self.next_fvar = id + 1;
+        }
     }
 
     /// Push a local declaration onto the stack.
