@@ -453,6 +453,12 @@ mod tests {
             let p = a.bool_var("p").unwrap();
             (a.ite(c, p, p).unwrap(), p)
         });
+        assert_rule_fires(&mut covered, "ite.bool_identity.v1", |a| {
+            let c = a.bool_var("c").unwrap();
+            let t = a.bool_const(true);
+            let f = a.bool_const(false);
+            (a.ite(c, t, f).unwrap(), c)
+        });
         assert_rule_fires(&mut covered, "bv.const_fold.v1", |a| {
             let one = a.bv_const(4, 1).unwrap();
             let two = a.bv_const(4, 2).unwrap();

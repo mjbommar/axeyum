@@ -28,6 +28,7 @@ const EQ_REFLEXIVE: &str = "eq.reflexive.v1";
 const BV_COMPARE_REFLEXIVE: &str = "bv.compare_reflexive.v1";
 const ITE_CONST_CONDITION: &str = "ite.const_condition.v1";
 const ITE_SAME_BRANCHES: &str = "ite.same_branches.v1";
+const ITE_BOOL_IDENTITY: &str = "ite.bool_identity.v1";
 const BV_CONST_FOLD: &str = "bv.const_fold.v1";
 const BV_DOUBLE_NOT: &str = "bv.double_not.v1";
 const BV_DOUBLE_NEG: &str = "bv.double_neg.v1";
@@ -339,6 +340,11 @@ fn default_rules() -> Vec<RewriteRule> {
             ITE_SAME_BRANCHES,
             "If-then-else same branches",
             "`ite` with structurally identical branches",
+        ),
+        rule(
+            ITE_BOOL_IDENTITY,
+            "If-then-else Boolean identity",
+            "`ite` of a Boolean condition with branches `true`/`false` is the condition",
         ),
         rule(
             BV_CONST_FOLD,
@@ -1151,6 +1157,15 @@ fn rewrite_ite(
     }
     if enabled.contains(ITE_SAME_BRANCHES) && args[1] == args[2] {
         return Some(applied(args[1], ITE_SAME_BRANCHES));
+    }
+    // `(ite c true false)` ≡ `c` for a Boolean condition `c` — the ite is just the
+    // condition. (The dual `(ite c false true)` ≡ `(not c)` needs a fresh `not`
+    // term, so it is left to the general structure rather than this immutable pass.)
+    if enabled.contains(ITE_BOOL_IDENTITY)
+        && bool_const(arena, args[1]) == Some(true)
+        && bool_const(arena, args[2]) == Some(false)
+    {
+        return Some(applied(args[0], ITE_BOOL_IDENTITY));
     }
     None
 }
@@ -1973,6 +1988,32 @@ mod commutative_tests {
                 "non-strict `x ⋈ x` must fold to true",
             );
         }
+    }
+
+    /// `(ite c true false)` collapses to the condition `c`; a non-`true`/`false`
+    /// branch pair is left alone.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn ite_bool_identity_collapses_to_condition() {
+        let mut a = TermArena::new();
+        let c = a.bool_var("c").unwrap();
+        let t = a.bool_const(true);
+        let f = a.bool_const(false);
+        let ite = a.ite(c, t, f).unwrap();
+        assert_eq!(
+            canonicalize(&mut a, ite).unwrap().term,
+            c,
+            "`(ite c true false)` is just `c`",
+        );
+
+        // Branches that are not exactly true/false do not fold to the condition.
+        let p = a.bool_var("p").unwrap();
+        let ite2 = a.ite(c, t, p).unwrap();
+        assert_ne!(
+            canonicalize(&mut a, ite2).unwrap().term,
+            c,
+            "`(ite c true p)` must not collapse to `c`",
+        );
     }
 
     /// A comparison of two *different* operands is never folded by reflexivity.
