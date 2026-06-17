@@ -61,6 +61,27 @@ impl Gf2System {
         self.rows.len()
     }
 
+    /// Returns the added constraints as `(variables, rhs)` pairs.
+    ///
+    /// Each pair is the XOR-folded variable set of a single added constraint
+    /// (duplicate variables already cancelled by parity during
+    /// [`Gf2System::add_constraint`]) together with its right-hand-side parity
+    /// bit. Variables within a pair are in ascending index order, and the pairs
+    /// are returned in the order the constraints were added, so the output is
+    /// deterministic.
+    ///
+    /// This is the `(Vec<usize>, bool)` shape consumed by
+    /// [`crate::xor_implications`], letting a search recover the per-constraint
+    /// XOR system from an [`crate::extract_xors`] result.
+    #[must_use]
+    pub fn constraints(&self) -> Vec<(Vec<usize>, bool)> {
+        self.rows
+            .iter()
+            .zip(&self.rhs)
+            .map(|(row, &rhs)| (set_bits(row, self.num_vars), rhs))
+            .collect()
+    }
+
     /// Adds the constraint `(⊕ of `vars`) = rhs`.
     ///
     /// Variables are XOR-folded into the row, so a variable listed an even
