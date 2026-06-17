@@ -55,6 +55,11 @@ pub struct XorPropagateStats {
     pub xors_recognized: usize,
     /// Number of entailed unit clauses added to the formula.
     pub units_added: usize,
+    /// Number of implied two-variable equalities the GF(2) solve exposes but this
+    /// pass does *not* apply (the substitution slice). Surfaced as a measurement
+    /// signal: it tells whether equality substitution is worth building on a given
+    /// corpus before any reconstruction machinery is written.
+    pub equalities_available: usize,
 }
 
 /// Outcome of an [`xor_propagate`] pass.
@@ -107,6 +112,7 @@ pub fn xor_propagate(formula: &CnfFormula) -> XorPropagation {
         Gf2Outcome::Sat(sol) => {
             let mut out = formula.clone();
             let mut units_added = 0usize;
+            let equalities_available = sol.implied_equalities().len();
 
             for &(var, value) in sol.implied_units() {
                 // `var` is a variable of the original system, which is sized to
@@ -128,6 +134,7 @@ pub fn xor_propagate(formula: &CnfFormula) -> XorPropagation {
                 stats: XorPropagateStats {
                     xors_recognized,
                     units_added,
+                    equalities_available,
                 },
             }
         }

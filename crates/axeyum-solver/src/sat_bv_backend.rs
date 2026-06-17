@@ -331,6 +331,10 @@ fn inprocess(
                     "xor_units_added".to_owned(),
                     usize_to_f64(xstats.units_added),
                 ));
+                stats.backend.push((
+                    "xor_equalities_available".to_owned(),
+                    usize_to_f64(xstats.equalities_available),
+                ));
                 (xstats.units_added > 0).then_some(augmented)
             }
             XorPropagation::Unsat => {
