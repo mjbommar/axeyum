@@ -422,3 +422,33 @@ fn zero_square_forces_zero_base() {
         "x*x=0 ∧ x≠0 must be unsat, got {r:?}"
     );
 }
+
+#[test]
+fn sum_of_three_unbounded_squares_plus_one_is_unsat() {
+    // x²+y²+z²+1 = 0 with NO bounds: unsat over the reals (a sum of squares is
+    // ≥ 0, so the LHS is ≥ 1 > 0). Regression coverage for *multi-variable*
+    // square infeasibility (the existing tests cover a single square): the sign
+    // rules `(x≥0∨x≤0)→x²≥0` decide it, via the Boolean solver resolving the
+    // per-variable sign splits. (A measured check confirmed the conditional rules
+    // already crack this without an unconditional `x²≥0` lemma — so no such lemma
+    // is added; this pins the behavior as a regression guard.)
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let y = real(&mut a, "y");
+    let z = real(&mut a, "z");
+    let xx = a.real_mul(x, x).unwrap();
+    let yy = a.real_mul(y, y).unwrap();
+    let zz = a.real_mul(z, z).unwrap();
+    let one = a.real_const(Rational::integer(1));
+    let s1 = a.real_add(xx, yy).unwrap();
+    let s2 = a.real_add(s1, zz).unwrap();
+    let s3 = a.real_add(s2, one).unwrap();
+    let zero = a.real_const(Rational::integer(0));
+    let eq0 = a.eq(s3, zero).unwrap();
+
+    let r = check_with_nra(&mut a, &[eq0], &SolverConfig::default()).unwrap();
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x²+y²+z²+1=0 (unbounded) must be unsat, got {r:?}"
+    );
+}
