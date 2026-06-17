@@ -62,10 +62,13 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   (not just `Apply`/`Eq`), so emission covers congruence over interpreted operators
   too — e.g. **array extensionality** (`a=b ∧ select(a,i)≠select(b,i)` ⇒ a checkable
   `eq_congruent` proof), pairing with the array-extensionality decision in dispatch.
-  Remaining (P3.2/3.3): arithmetic/BV theory rules in the
-  checker + emission; emit Alethe for the *reductions* (P3.5: array/function
-  elimination, int-blasting); Carcara CI cross-check; extract `axeyum-alethe` crate
-  (ADR) now that emission is substantial.
+  **Arithmetic `la_generic` checking landed** (`check_alethe_lra`): a linear-arith
+  tautology clause is verified by `¬clause`-UNSAT via the **Farkas-certified**
+  `check_with_lra` (coefficients re-derived, not trusted); `axeyum-cnf` gained a
+  pluggable `check_alethe_with(_, extra)` callback so it stays arithmetic-free.
+  Remaining (P3.2/3.3): more BV theory rules; emit Alethe for the *reductions*
+  (P3.5: array/function elimination, int-blasting); emit `la_generic` from a Farkas
+  certificate; Carcara CI cross-check; extract `axeyum-alethe` crate (ADR).
 - **P2.9 datatypes — structural refutation DONE** (2026-06-16):
   `prove_datatype_unsat_structurally` — the three datatype structural axioms over a
   term-level union-find: **acyclicity** (`x = cons(h, x)` ⇒ unsat), **distinctness**
@@ -325,7 +328,7 @@ plan is built and committed on the current branch:
 | P3.0 | Reduction trust ledger (TrustId + pedantic levels) | DONE |
 | P3.1 | LRAT clausal upgrade (+ in-tree check_lrat) | WIP — **`check_lrat` (hint-based linear checker) + `elaborate_drat_to_lrat` + parse/write** landed in `axeyum-cnf`, sound (3 negative/rejection tests) + 600-CNF differential; **threaded into the evidence export**: every `UnsatProof` (QF_BV + reduced QF_ABV/AUFBV/UF/LIA/datatype) now carries a self-checked LRAT certificate, `recheck` cross-checks it, `recheck_lrat` re-checks it in linear time, tamper-detected. Remaining: emit LRAT hints directly from the proof-producing CDCL core (vs post-hoc elaboration); RAT-step elaboration (negative hints) |
 | P3.2 | Alethe term/proof IR + emitter (`axeyum-alethe`) **[critical path]** | WIP — **resolution-layer IR + parser/printer + sound `check_alethe`** in `axeyum-cnf::alethe`: `resolution`/`th_resolution` steps verified by `{premises,¬concl}`-UNSAT via the proof-producing core + `check_drat` re-check (entailment itself independently checked); verify-before-record; 7 tests incl. 3 rejection. Remaining: typed-term IR (vs opaque atoms), more rules, emit Alethe from solver runs, Carcara CI cross-check; extract `axeyum-alethe` crate (ADR) when the term IR lands |
-| P3.3 | Alethe for QF_BV (bitblast_* + CNF rules + resolution/drat; Carcara CI) | TODO |
+| P3.3 | Alethe for QF_BV (bitblast_* + CNF rules + resolution/drat; Carcara CI) | WIP — **arithmetic `la_generic` checking** (`check_alethe_lra`): a linear-arith tautology clause verified by `¬clause`-UNSAT via the Farkas-certified `check_with_lra`; pluggable `check_alethe_with` callback keeps `axeyum-cnf` arithmetic-free. 5 tests incl. soundness rejections. Remaining: BV bitblast rules, Carcara CI cross-check |
 | P3.4 | Embedded Alethe checker subset (self-checking) | TODO |
 | P3.5 | Alethe for reductions (arrays → Ackermann → int-blast) | TODO |
 | P3.6 | In-tree Rust Lean kernel (`axeyum-lean-kernel`, from nanoda) | TODO |
