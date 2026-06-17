@@ -565,6 +565,13 @@ fn check_auto_dispatch(
         // bit-blaster (whose in-range `unsat` is only `unknown`).
         let lin = axeyum_rewrite::eliminate_int_divmod(arena, assertions)
             .map_err(|e| SolverError::Backend(e.to_string()))?;
+        // GCD divisibility test: a top-level integer equation whose coefficient gcd
+        // does not divide its constant (e.g. `2x + 4y = 3`) is `unsat` — a sound
+        // refutation that decides even *unbounded* equations the simplex/B&B cannot
+        // terminate on. Cheap; only ever fast-paths a correct `unsat`.
+        if crate::lia_gcd::prove_lia_unsat_by_gcd(arena, &lin) {
+            return Ok(CheckResult::Unsat);
+        }
         match check_with_lia_simplex(arena, &lin) {
             Ok(result) => return Ok(result),
             Err(SolverError::Unsupported(_)) => {}

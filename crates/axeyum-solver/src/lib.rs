@@ -45,6 +45,7 @@ mod incremental;
 mod layers;
 mod lazy_bv;
 mod lia;
+mod lia_gcd;
 mod lra;
 mod maxsat;
 mod model;
@@ -118,6 +119,7 @@ pub use incremental::{AssumptionOutcome, IncrementalBvSolver};
 pub use layers::BvLayerStats;
 pub use lazy_bv::{LazyBvOutcome, check_lazy_bv_abstraction, solve_lazy_bv_abstraction};
 pub use lia::{DEFAULT_INT_WIDTH, check_with_int_blasting};
+pub use lia_gcd::prove_lia_unsat_by_gcd;
 pub use lra::{
     FarkasAtom, FarkasCertificate, check_with_lia_simplex, check_with_lra, check_with_lra_simplex,
     lra_farkas_certificate, lra_unsat_core,
