@@ -52,11 +52,15 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   via a recursive `derive_eq` (transitivity-then-congruence, recursing on args). 10
   tests, each re-checked. Remaining (P3.2/3.3): the one EUF gap left is a
   *congruence-derived* equality participating in a *transitivity* chain (e.g.
-  `f(a)=c ∧ a=b ∧ f(b)≠c`) — needs the e-graph's congruence closure inside
-  path-finding, i.e. a **structured** explanation from the e-graph proof forest
-  (today `EGraph::explain` flattens to a reason set) — a careful `axeyum-egraph`
-  extension; then arithmetic/BV theory rules; Carcara CI cross-check; extract
-  `axeyum-alethe` crate (ADR) when emission broadens.
+  `f(a)=c ∧ a=b ∧ f(b)≠c`). **The e-graph building block is now in place:
+  `EGraph::explain_steps` returns the structured proof (`Input`/`Congruence` steps,
+  randomized-consistent with flat `explain`).** Next: a `euf_alethe` converter that
+  walks `explain_steps` (recursing on congruence-step args) into
+  `eq_transitive`/`eq_congruent`/`eq_symmetric` — needs the conflict's e-graph (build
+  an `EufTheory`/`EGraph` over the core, query `explain_steps` between the
+  disequality endpoints), self-validated by `check_alethe`. Then arithmetic/BV theory
+  rules; Carcara CI cross-check; extract `axeyum-alethe` crate (ADR) when emission
+  broadens.
 - **P2.9 datatypes — structural refutation DONE** (2026-06-16):
   `prove_datatype_unsat_structurally` — the three datatype structural axioms over a
   term-level union-find: **acyclicity** (`x = cons(h, x)` ⇒ unsat), **distinctness**
