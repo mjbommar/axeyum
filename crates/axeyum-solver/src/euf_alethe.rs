@@ -1,40 +1,52 @@
-//! Alethe proof **emission** for transitivity-based EUF refutations (Track 3,
-//! the producer counterpart to [`axeyum_cnf::check_alethe`]).
+//! Alethe proof **emission** for congruence-based EUF refutations (Track 3, the
+//! producer counterpart to [`axeyum_cnf::check_alethe`]).
 //!
-//! The solver already *checks* Alethe proofs; this module *emits* one for a
-//! class of EUF conflicts — a transitivity chain over equality atoms refuting a
-//! disequality. Emission is **self-validating**: every proof this builds is run
-//! through [`axeyum_cnf::check_alethe`] before being returned, so a buggy build
-//! is *rejected* (returns `None`), never returned wrong. The acceptance test is
-//! therefore the correctness gate: a returned proof has been independently
-//! re-checked and derives the empty clause `(cl)`.
+//! The solver already *checks* Alethe proofs; this module *emits* one for a class
+//! of EUF conflicts — an equality derivation (transitivity and/or congruence)
+//! refuting a disequality. Emission is **self-validating**: every proof this
+//! builds is run through [`axeyum_cnf::check_alethe`] before being returned, so a
+//! buggy build is *rejected* (returns `None`), never returned wrong. The
+//! acceptance test is therefore the correctness gate: a returned proof has been
+//! independently re-checked and derives the empty clause `(cl)`.
 //!
-//! The conflict core comes from [`crate::prove_unsat_by_congruence`] — a subset
-//! of the original assertions that is UNSAT by congruence. For the slice handled
-//! here that core is a set of equality terms `(= a b)` plus exactly one
-//! disequality term `(not (= s t))`. We BFS a path `s = p0, p1, …, pk = t`
-//! through the equality edges, emit oriented unit clauses for each link (with an
-//! `eq_symmetric` rewrite when an edge is stored reversed), an `eq_transitive`
-//! step over the chain, resolve to `(= s t)`, and resolve that against the
-//! disequality assume to reach `(cl)`.
+//! The conflict core comes from [`crate::prove_unsat_by_congruence`] — a subset of
+//! the original assertions that is UNSAT by congruence. For the slice handled here
+//! that core is a set of equality terms `(= a b)` plus exactly one disequality term
+//! `(not (= s t))`.
+//!
+//! Emission is driven by the e-graph's **structured explanation**
+//! ([`axeyum_egraph::EGraph::explain_steps`]). We rebuild a small e-graph over the
+//! core (a term↔node bridge), merge the asserted equalities, then walk the proof
+//! steps connecting the disequality's two sides: each [`ProofStep::Input`] is a
+//! directly-asserted equality (oriented with `eq_symmetric` when the path runs the
+//! other way), and each [`ProofStep::Congruence`] is an `eq_congruent` over its
+//! recursively-derived argument equalities. The per-step units are threaded through
+//! one `eq_transitive` into `(= s t)`, which resolves against the disequality assume
+//! to the empty clause. Because the e-graph closes *mixed* transitivity and
+//! congruence (e.g. `f(a) = c ∧ a = b ⇒ f(b) = c`), this handles conflicts the
+//! earlier edge-BFS emitter could not.
+
+use std::collections::HashMap;
 
 use axeyum_cnf::{AletheClause, AletheCommand, AletheLit, AletheTerm, check_alethe};
+use axeyum_egraph::{EGraph, ENodeId, ProofStep};
 use axeyum_ir::{Op, TermArena, TermId, TermNode};
 
-/// Emits a checkable Alethe refutation for a transitivity-based EUF conflict in
+/// Emits a checkable Alethe refutation for a congruence-based EUF conflict in
 /// `assertions`, or `None` if the query is not refuted by congruence or the
-/// conflict is not a pure transitivity chain this slice handles.
+/// conflict is not a single-disequality slice this emitter handles.
 ///
 /// The returned proof, when non-`None`, is guaranteed to pass
-/// [`axeyum_cnf::check_alethe`] (it is self-validated before return) and to
-/// derive the empty clause `(cl)`. `None` is returned when:
+/// [`axeyum_cnf::check_alethe`] (it is self-validated before return) and to derive
+/// the empty clause `(cl)`. `None` is returned when:
 ///
 /// - [`crate::prove_unsat_by_congruence`] does not refute the assertions;
 /// - the conflict core is not exactly some equality terms `(= a b)` plus one
 ///   disequality `(not (= s t))`;
-/// - no equality path connects the disequality's two sides;
-/// - a core term references an operator or constant the term→Alethe converter
-///   does not cover; or
+/// - the e-graph does not actually make the disequality's two sides equal
+///   (defensive — should not happen for a real congruence conflict);
+/// - a core term references an operator or constant the term→Alethe converter does
+///   not cover; or
 /// - the assembled proof fails its own [`axeyum_cnf::check_alethe`] re-check.
 ///
 /// The proof is deterministic: assume ids are `h0, h1, …` and step ids are
@@ -46,7 +58,8 @@ pub fn prove_qf_uf_unsat_alethe(
 ) -> Option<Vec<AletheCommand>> {
     let conflict = crate::prove_unsat_by_congruence(arena, assertions)?;
 
-    // Classify the core into equality edges and exactly one disequality.
+    // Classify the core into equality edges (with their assertion index, the
+    // e-graph `merge` reason) and exactly one disequality.
     let mut edges: Vec<(TermId, TermId)> = Vec::new();
     let mut diseq: Option<(TermId, TermId)> = None;
     for &term in &conflict.core {
@@ -62,29 +75,55 @@ pub fn prove_qf_uf_unsat_alethe(
     }
     let (s, t) = diseq?;
 
+    // Build an e-graph over the core terms. **All** terms (every equality side, the
+    // disequality sides, and their subterms) are added *before* any merge, so that
+    // congruent applications like `f(a)` and `f(b)` exist as distinct nodes and the
+    // proof forest records the congruence edge between them — otherwise hash-consing
+    // after a merge would collapse them and hide the congruence step.
+    let mut bridge = Bridge2::new();
+    let mut edge_nodes: Vec<(ENodeId, ENodeId)> = Vec::with_capacity(edges.len());
+    for &(a, b) in &edges {
+        let na = bridge.add_term(arena, a)?;
+        let nb = bridge.add_term(arena, b)?;
+        edge_nodes.push((na, nb));
+    }
+    let ns = bridge.add_term(arena, s)?;
+    let nt = bridge.add_term(arena, t)?;
+
+    // Now merge the asserted equalities. The merge reason is the edge index, which a
+    // `ProofStep::Input` carries back; we recover the IR pair from `merges[reason]`.
+    for (&(na, nb), &(a, b)) in edge_nodes.iter().zip(edges.iter()) {
+        let reason = u32::try_from(bridge.merges.len()).ok()?;
+        bridge.egraph.merge(na, nb, reason);
+        bridge.merges.push((a, b));
+    }
+    if !bridge.egraph.equal(ns, nt) {
+        return None; // not actually a congruence conflict (defensive)
+    }
+
     let s_alethe = term_to_alethe(arena, s)?;
     let t_alethe = term_to_alethe(arena, t)?;
 
     let mut builder = Builder::new();
 
-    // The disequality `(not (= s t))` assume, shared by both refutation routes.
-    // The derived `(= s t)` resolves against it to the empty clause.
-    let diseq_lit = AletheLit {
-        atom: eq_term(s_alethe.clone(), t_alethe.clone()),
-        negated: true,
+    // Derive `(= s t)` from the structured explanation, then resolve it against the
+    // `(not (= s t))` assume to the empty clause.
+    let mut ctx = StepCtx {
+        arena,
+        bridge: &bridge,
     };
-
-    // Derive `(= s t)` by transitivity and/or (nested) congruence, then resolve it
-    // against the `(not (= s t))` assume to the empty clause.
-    let st_id = derive_eq(&mut builder, arena, &edges, s, t)?;
-    let diseq_id = builder.assume(vec![diseq_lit]);
+    let st_id = derive_eq_via_steps(&mut builder, &mut ctx, ns, nt)?;
+    let diseq_id = builder.assume(vec![AletheLit {
+        atom: eq_term(s_alethe, t_alethe),
+        negated: true,
+    }]);
     builder.step(Vec::new(), "resolution", &[&st_id, &diseq_id]);
     finish(builder)
 }
 
-/// Runs the assembled proof through [`axeyum_cnf::check_alethe`] and returns it
-/// only if it checks (`Ok(true)`); any other outcome yields `None`. This is the
-/// single self-validation gate every route funnels through.
+/// Runs the assembled proof through [`axeyum_cnf::check_alethe`] and returns it only
+/// if it checks (`Ok(true)`); any other outcome yields `None`. This is the single
+/// self-validation gate every route funnels through.
 fn finish(builder: Builder) -> Option<Vec<AletheCommand>> {
     let proof = builder.into_commands();
     if matches!(check_alethe(&proof), Ok(true)) {
@@ -94,26 +133,33 @@ fn finish(builder: Builder) -> Option<Vec<AletheCommand>> {
     }
 }
 
-/// Emits the steps deriving the unit clause `(cl (= a b))` by transitivity over
-/// the core equality graph `edges`, appending its commands to `builder` and
-/// returning the id of the command whose clause is that unit (an `assume` or a
-/// `resolution`/`eq_reflexive` step). Returns `None` if `a` and `b` are not
-/// connected by an equality path (or a term fails to convert).
+/// Read-only context threaded through the recursive emitter: the IR arena and the
+/// term↔e-graph bridge whose [`EGraph::explain_steps`] drives derivation.
+struct StepCtx<'a> {
+    arena: &'a TermArena,
+    bridge: &'a Bridge2,
+}
+
+/// Emits the steps deriving the unit clause `(cl (= term(na) term(nb)))` by walking
+/// [`EGraph::explain_steps`]`(na, nb)`, appending its commands to `builder` and
+/// returning the id of the command naming that unit. Returns `None` if any e-node
+/// fails to convert back to a term/Alethe term.
 ///
-/// - `a == b`: emits an `eq_reflexive` step `(cl (= a a))` and returns its id.
-/// - single edge already oriented `(= a b)`: returns the assume id directly.
-/// - otherwise: oriented units per link, one `eq_transitive`, and a resolution
-///   chain collapsing to `(cl (= a b))`, whose id is returned.
-fn derive_eq(
+/// - `na == nb`: emits `eq_reflexive` `(cl (= t t))` and returns its id.
+/// - otherwise: for each proof step, an oriented unit `(cl (= x y))` walking
+///   `na → nb` — a [`ProofStep::Input`] is the asserted equality (flipped with
+///   `eq_symmetric` + `resolution` when the path runs the other way); a
+///   [`ProofStep::Congruence`] is an `eq_congruent` over its recursively-derived
+///   argument units. A single step is returned directly; multiple steps are
+///   threaded through one `eq_transitive` and a resolution into `(cl (= na nb))`.
+fn derive_eq_via_steps(
     builder: &mut Builder,
-    arena: &TermArena,
-    edges: &[(TermId, TermId)],
-    a: TermId,
-    b: TermId,
+    ctx: &mut StepCtx,
+    na: ENodeId,
+    nb: ENodeId,
 ) -> Option<String> {
-    if a == b {
-        // Reflexive: `(cl (= a a))`.
-        let a_alethe = term_to_alethe(arena, a)?;
+    if na == nb {
+        let a_alethe = ctx.node_alethe(na)?;
         return Some(builder.step(
             vec![AletheLit {
                 atom: eq_term(a_alethe.clone(), a_alethe),
@@ -123,65 +169,124 @@ fn derive_eq(
             &[],
         ));
     }
-    // A transitivity path over the core equalities first; otherwise (recursively)
-    // congruence — `a = f(x⃗)`, `b = f(y⃗)`, each `xᵢ = yᵢ` itself derived by this
-    // same function, so nested congruence (`f(g(a)) = f(g(b))`) is handled by the
-    // recursion. The transitivity attempt emits nothing when no path exists, so the
-    // congruence fallback starts clean.
-    if let Some(id) = derive_eq_transitivity(builder, arena, edges, a, b) {
-        return Some(id);
+
+    let steps = ctx.bridge.egraph.explain_steps(na, nb);
+    if steps.is_empty() {
+        // Distinct nodes the e-graph reports as equal but with no proof path: emit
+        // nothing and bail (the self-check would reject any fabricated unit anyway).
+        return None;
     }
-    derive_congruence(builder, arena, edges, a, b)
+
+    // `explain_steps` returns the `a`-side path (na → LCA) followed by the `b`-side
+    // path (nb → LCA), so the two halves meet at the LCA and the `b` half is stated
+    // in the opposite direction to the na → nb walk. Order the steps into a single
+    // na → nb chain by greedily following the step incident to the current node, and
+    // orient each step's unit accordingly so the `eq_transitive` middles line up.
+    let mut remaining: Vec<&ProofStep> = steps.iter().collect();
+    let mut cur = na;
+    let mut links: Vec<Link> = Vec::with_capacity(steps.len());
+    while !remaining.is_empty() {
+        // The remaining step incident to `cur` (every step relates two nodes; the
+        // chain is simple, so exactly one remaining step touches `cur`).
+        let pos = remaining.iter().position(|s| {
+            let (sa, sb) = step_endpoints(s);
+            sa == cur || sb == cur
+        })?;
+        let step = remaining.remove(pos);
+        let (sa, sb) = step_endpoints(step);
+        let (from, to) = if sa == cur { (sa, sb) } else { (sb, sa) };
+        let from_alethe = ctx.node_alethe(from)?;
+        let to_alethe = ctx.node_alethe(to)?;
+        let unit_id = emit_step_unit(builder, ctx, step, from, to, &from_alethe, &to_alethe)?;
+        links.push(Link {
+            id: unit_id,
+            lhs: from_alethe,
+            rhs: to_alethe,
+        });
+        cur = to;
+    }
+
+    if let [only] = links.as_slice() {
+        return Some(only.id.clone()); // a single oriented unit is already `(= na nb)`
+    }
+    chain_transitive(builder, &links)
 }
 
-/// Emits `(cl (= a b))` via a transitivity path over the core equality graph
-/// `edges`, returning its id, or `None` when `a` and `b` are not connected by such
-/// a path (it emits nothing in that case, so the caller can try another route).
-/// Assumes `a != b`.
-fn derive_eq_transitivity(
+/// Emits the oriented unit `(cl (= term(from) term(to)))` for one proof step,
+/// returning its command id.
+fn emit_step_unit(
     builder: &mut Builder,
-    arena: &TermArena,
-    edges: &[(TermId, TermId)],
-    a: TermId,
-    b: TermId,
+    ctx: &mut StepCtx,
+    step: &ProofStep,
+    from: ENodeId,
+    to: ENodeId,
+    from_alethe: &AletheTerm,
+    to_alethe: &AletheTerm,
 ) -> Option<String> {
-    // BFS an equality path from `a` to `b` over the undirected equality graph.
-    let path = bfs_path(a, b, edges)?;
-    if path.len() < 2 {
-        return None;
-    }
-
-    // For each consecutive pair, emit an oriented unit clause `(cl (= p_i p_{i+1}))`.
-    let mut oriented: Vec<(String, AletheTerm, AletheTerm)> = Vec::new();
-    for window in path.windows(2) {
-        let (pi, pj) = (window[0], window[1]);
-        if pi == pj {
-            continue; // no edge needed
+    match step {
+        ProofStep::Input { a, b, reason } => {
+            // The asserted equality is `edges[reason]`, an IR term pair `(= ea eb)`.
+            // Its e-nodes are `a`/`b`; the path may run either way through them.
+            let (ea, eb) = *ctx.bridge.merges.get(*reason as usize)?;
+            let lhs_alethe = term_to_alethe(ctx.arena, ea)?;
+            let rhs_alethe = term_to_alethe(ctx.arena, eb)?;
+            // Assume the stored equality `(= ea eb)`.
+            let assume_id = builder.assume(vec![AletheLit {
+                atom: eq_term(lhs_alethe.clone(), rhs_alethe.clone()),
+                negated: false,
+            }]);
+            // The assume orients `node(ea) → node(eb)`. If that already matches the
+            // path direction `from → to`, return it; otherwise flip via eq_symmetric.
+            let stored_forward = ctx.bridge.term_to_node.get(&ea).copied() == Some(from);
+            debug_assert!(
+                (*a == from && *b == to) || (*a == to && *b == from),
+                "input step endpoints are the oriented pair"
+            );
+            if stored_forward {
+                Some(assume_id)
+            } else {
+                Some(builder.flip_unit(
+                    &assume_id,
+                    &lhs_alethe,
+                    &rhs_alethe,
+                    from_alethe,
+                    to_alethe,
+                ))
+            }
         }
-        let lhs = term_to_alethe(arena, pi)?;
-        let rhs = term_to_alethe(arena, pj)?;
-        let id = builder.oriented_unit(edges, pi, pj, &lhs, &rhs)?;
-        oriented.push((id, lhs, rhs));
+        ProofStep::Congruence { args, .. } => {
+            // Derive each argument equality, oriented `from`-side arg → `to`-side arg.
+            // `from`/`to` are the two applications; pair their arguments by position.
+            let from_args = ctx.bridge.egraph.args(from).to_vec();
+            let to_args = ctx.bridge.egraph.args(to).to_vec();
+            if from_args.len() != to_args.len() || from_args.len() != args.len() {
+                return None; // arity mismatch (defensive)
+            }
+            let mut arg_units: Vec<String> = Vec::with_capacity(from_args.len());
+            let mut arg_pairs: Vec<(AletheTerm, AletheTerm)> = Vec::with_capacity(from_args.len());
+            for (&xa, &xb) in from_args.iter().zip(to_args.iter()) {
+                let unit_id = derive_eq_via_steps(builder, ctx, xa, xb)?;
+                let lhs_alethe = ctx.node_alethe(xa)?;
+                let rhs_alethe = ctx.node_alethe(xb)?;
+                arg_units.push(unit_id);
+                arg_pairs.push((lhs_alethe, rhs_alethe));
+            }
+            Some(builder.congruence(&arg_units, &arg_pairs, from_alethe, to_alethe))
+        }
     }
-    if let [(only_id, _, _)] = oriented.as_slice() {
-        // A single already-oriented link: the assume *is* `(cl (= a b))`.
-        // (`oriented_unit` returns the assume id directly for a forward edge,
-        // and a resolution-derived `(cl (= a b))` for a reversed edge.) Either
-        // way `only_id` already names the unit clause we want.
-        return Some(only_id.clone());
-    }
-    if oriented.is_empty() {
-        return None;
-    }
+}
 
-    let a_first = oriented.first().map(|(_, x, _)| x.clone())?;
-    let b_last = oriented.last().map(|(_, _, y)| y.clone())?;
+/// Threads the oriented links left-to-right through one `eq_transitive` plus a
+/// resolution, deriving `(cl (= lhs(first) rhs(last)))`. Assumes `links.len() >= 2`.
+fn chain_transitive(builder: &mut Builder, links: &[Link]) -> Option<String> {
+    let a_first = links.first()?.lhs.clone();
+    let b_last = links.last()?.rhs.clone();
 
     // eq_transitive: (cl (not (= p0 p1)) … (not (= p_{k-1} pk)) (= a b)).
-    let mut trans_clause: AletheClause = oriented
+    let mut trans_clause: AletheClause = links
         .iter()
-        .map(|(_, x, y)| AletheLit {
-            atom: eq_term(x.clone(), y.clone()),
+        .map(|l| AletheLit {
+            atom: eq_term(l.lhs.clone(), l.rhs.clone()),
             negated: true,
         })
         .collect();
@@ -191,107 +296,35 @@ fn derive_eq_transitivity(
     });
     let trans_id = builder.step(trans_clause, "eq_transitive", &[]);
 
-    // Resolve the eq_transitive clause against each oriented unit to derive (= a b).
-    let mut running_id = trans_id;
-    for (k, (unit_id, _, _)) in oriented.iter().enumerate() {
-        let mut remaining: AletheClause = oriented[(k + 1)..]
-            .iter()
-            .map(|(_, la, lb)| AletheLit {
-                atom: eq_term(la.clone(), lb.clone()),
-                negated: true,
-            })
-            .collect();
-        remaining.push(AletheLit {
-            atom: eq_term(a_first.clone(), b_last.clone()),
-            negated: false,
-        });
-        running_id = builder.step(remaining, "resolution", &[&running_id, unit_id]);
+    // Resolve the eq_transitive clause against every oriented unit in one step.
+    let mut premises: Vec<&str> = Vec::with_capacity(links.len() + 1);
+    premises.push(&trans_id);
+    for l in links {
+        premises.push(&l.id);
     }
-    Some(running_id)
+    Some(builder.step(
+        vec![AletheLit {
+            atom: eq_term(a_first, b_last),
+            negated: false,
+        }],
+        "resolution",
+        &premises,
+    ))
 }
 
-/// Emits the steps deriving `(cl (= s t))` for a congruence conflict —
-/// `s = f(x1..xn)` and `t = f(y1..yn)` with the same head `f` and arity — and
-/// returns the id of the `(cl (= s t))` step. Each argument equality `(= xi yi)` is
-/// derived by [`derive_eq`], which itself falls back to congruence, so **nested**
-/// congruence (`f(g(a)) = f(g(b))`) is handled by the recursion. Returns `None` if
-/// `s`/`t` are not same-head same-arity applications, an argument pair cannot be
-/// derived, or a term fails to convert.
-fn derive_congruence(
-    builder: &mut Builder,
-    arena: &TermArena,
-    edges: &[(TermId, TermId)],
-    s: TermId,
-    t: TermId,
-) -> Option<String> {
-    // Both sides must be applications of the same function with the same arity.
-    let (f_args, g_args): (Vec<TermId>, Vec<TermId>) = match (arena.node(s), arena.node(t)) {
-        (
-            TermNode::App {
-                op: Op::Apply(f),
-                args: fa,
-                ..
-            },
-            TermNode::App {
-                op: Op::Apply(g),
-                args: ga,
-                ..
-            },
-        ) if f == g && fa.len() == ga.len() => (fa.to_vec(), ga.to_vec()),
-        _ => return None,
-    };
-    if f_args.is_empty() {
-        return None; // nullary applications give nothing to congruence on
+/// One oriented equality link `(= lhs rhs)` along a derivation chain, with the id of
+/// the command whose unit clause is that equality.
+struct Link {
+    id: String,
+    lhs: AletheTerm,
+    rhs: AletheTerm,
+}
+
+/// Endpoints `(a, b)` of a proof step.
+fn step_endpoints(step: &ProofStep) -> (ENodeId, ENodeId) {
+    match step {
+        ProofStep::Input { a, b, .. } | ProofStep::Congruence { a, b, .. } => (*a, *b),
     }
-
-    // For each argument pair, derive its `(cl (= xi yi))` unit and record the
-    // converted argument terms for the `eq_congruent` clause.
-    let mut arg_units: Vec<String> = Vec::with_capacity(f_args.len());
-    let mut arg_pairs: Vec<(AletheTerm, AletheTerm)> = Vec::with_capacity(f_args.len());
-    for (&xi, &yi) in f_args.iter().zip(g_args.iter()) {
-        let unit_id = derive_eq(builder, arena, edges, xi, yi)?;
-        let xi_alethe = term_to_alethe(arena, xi)?;
-        let yi_alethe = term_to_alethe(arena, yi)?;
-        arg_units.push(unit_id);
-        arg_pairs.push((xi_alethe, yi_alethe));
-    }
-
-    // The two applications `f(x⃗)` and `f(y⃗)` as Alethe terms.
-    let s_alethe = term_to_alethe(arena, s)?;
-    let t_alethe = term_to_alethe(arena, t)?;
-
-    // eq_congruent: (cl (not (= x1 y1)) … (not (= xn yn)) (= (f x⃗) (f y⃗))).
-    let mut cong_clause: AletheClause = arg_pairs
-        .iter()
-        .map(|(x, y)| AletheLit {
-            atom: eq_term(x.clone(), y.clone()),
-            negated: true,
-        })
-        .collect();
-    cong_clause.push(AletheLit {
-        atom: eq_term(s_alethe.clone(), t_alethe.clone()),
-        negated: false,
-    });
-    let cong_id = builder.step(cong_clause, "eq_congruent", &[]);
-
-    // Resolve the eq_congruent clause against each per-argument unit (in order),
-    // removing one negated `(= xi yi)` each time, leaving `(cl (= s t))`.
-    let mut running_id = cong_id;
-    for (k, unit_id) in arg_units.iter().enumerate() {
-        let mut remaining: AletheClause = arg_pairs[(k + 1)..]
-            .iter()
-            .map(|(x, y)| AletheLit {
-                atom: eq_term(x.clone(), y.clone()),
-                negated: true,
-            })
-            .collect();
-        remaining.push(AletheLit {
-            atom: eq_term(s_alethe.clone(), t_alethe.clone()),
-            negated: false,
-        });
-        running_id = builder.step(remaining, "resolution", &[&running_id, unit_id]);
-    }
-    Some(running_id)
 }
 
 /// A classified core atom: an equality edge or the disequality.
@@ -323,48 +356,102 @@ fn classify(arena: &TermArena, term: TermId) -> Option<CoreAtom> {
     }
 }
 
-/// BFS an undirected equality path from `s` to `t` over `edges`, returning the
-/// node sequence `[s, …, t]`, or `None` if disconnected.
-fn bfs_path(s: TermId, t: TermId, edges: &[(TermId, TermId)]) -> Option<Vec<TermId>> {
-    use std::collections::{BTreeMap, VecDeque};
-    if s == t {
-        return Some(vec![s]);
-    }
-    // Deterministic adjacency keyed by TermId (BTreeMap; no hashmap iteration order).
-    let mut adj: BTreeMap<TermId, Vec<TermId>> = BTreeMap::new();
-    for &(a, b) in edges {
-        adj.entry(a).or_default().push(b);
-        adj.entry(b).or_default().push(a);
-    }
-    let mut prev: BTreeMap<TermId, TermId> = BTreeMap::new();
-    let mut visited: BTreeMap<TermId, bool> = BTreeMap::new();
-    let mut queue = VecDeque::new();
-    queue.push_back(s);
-    visited.insert(s, true);
-    while let Some(node) = queue.pop_front() {
-        if node == t {
-            // Reconstruct the path.
-            let mut path = vec![t];
-            let mut cur = t;
-            while cur != s {
-                let p = *prev.get(&cur)?;
-                path.push(p);
-                cur = p;
-            }
-            path.reverse();
-            return Some(path);
+/// What a `decl` identifies in the term→e-graph bridge: a symbol, an uninterpreted
+/// function, an interpreted operator (treated uninterpreted), or a literal constant.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+enum DeclKey {
+    Symbol(usize),
+    Func(usize),
+    Op(String),
+    Const(String),
+}
+
+/// Builds an e-graph over the core terms, mirroring [`crate::euf_egraph`]'s bridge:
+/// every symbol/function/operator/constant gets a distinct `decl`, so the e-graph's
+/// congruence matches the terms' structure. Keeps a term↔node map so the structured
+/// explanation can be converted back to Alethe terms.
+struct Bridge2 {
+    egraph: EGraph,
+    /// First term seen per e-node, for converting a node back to an IR term.
+    node_to_term: HashMap<ENodeId, TermId>,
+    term_to_node: HashMap<TermId, ENodeId>,
+    decls: HashMap<DeclKey, u32>,
+    /// Per merge reason index: the asserted equality's IR term pair.
+    merges: Vec<(TermId, TermId)>,
+    next_decl: u32,
+}
+
+impl Bridge2 {
+    fn new() -> Self {
+        Self {
+            egraph: EGraph::new(),
+            node_to_term: HashMap::new(),
+            term_to_node: HashMap::new(),
+            decls: HashMap::new(),
+            merges: Vec::new(),
+            next_decl: 0,
         }
-        if let Some(neighbors) = adj.get(&node) {
-            for &next in neighbors {
-                if !visited.get(&next).copied().unwrap_or(false) {
-                    visited.insert(next, true);
-                    prev.insert(next, node);
-                    queue.push_back(next);
+    }
+
+    /// A stable `decl` id for `key`.
+    fn decl(&mut self, key: DeclKey) -> u32 {
+        if let Some(&d) = self.decls.get(&key) {
+            return d;
+        }
+        let d = self.next_decl;
+        self.next_decl += 1;
+        self.decls.insert(key, d);
+        d
+    }
+
+    /// The e-node for `term`, creating it (and its subterms) on first use. Returns
+    /// `None` only for a term shape it cannot convert (kept symmetric with
+    /// [`term_to_alethe`], so a node that fails here would also fail conversion).
+    fn add_term(&mut self, arena: &TermArena, term: TermId) -> Option<ENodeId> {
+        if let Some(&n) = self.term_to_node.get(&term) {
+            return Some(n);
+        }
+        let node = match arena.node(term) {
+            TermNode::Symbol(s) => {
+                let decl = self.decl(DeclKey::Symbol(s.index()));
+                self.egraph.add(decl, &[])
+            }
+            TermNode::BoolConst(_)
+            | TermNode::BvConst { .. }
+            | TermNode::WideBvConst(_)
+            | TermNode::IntConst(_)
+            | TermNode::RealConst(_) => {
+                let key = DeclKey::Const(format!("{:?}", arena.node(term)));
+                let decl = self.decl(key);
+                self.egraph.add(decl, &[])
+            }
+            TermNode::App { op, args } => {
+                let op = *op;
+                let args = args.clone();
+                let mut child_nodes = Vec::with_capacity(args.len());
+                for &a in &args {
+                    child_nodes.push(self.add_term(arena, a)?);
                 }
+                let key = match op {
+                    Op::Apply(func) => DeclKey::Func(func.index()),
+                    other => DeclKey::Op(format!("{other:?}")),
+                };
+                let decl = self.decl(key);
+                self.egraph.add(decl, &child_nodes)
             }
-        }
+        };
+        self.term_to_node.insert(term, node);
+        self.node_to_term.entry(node).or_insert(term);
+        Some(node)
     }
-    None
+}
+
+impl StepCtx<'_> {
+    /// The Alethe term for e-node `n`, via the first term recorded for it.
+    fn node_alethe(&self, n: ENodeId) -> Option<AletheTerm> {
+        let term = *self.bridge.node_to_term.get(&n)?;
+        term_to_alethe(self.arena, term)
+    }
 }
 
 /// Accumulates Alethe commands with deterministic fresh ids.
@@ -407,59 +494,82 @@ impl Builder {
         id
     }
 
-    /// Emits the steps deriving the oriented unit clause `(cl (= pi pj))` and
-    /// returns the id naming that unit. If the core stores the edge as
-    /// `(= pi pj)`, the unit is the assume itself; if stored reversed
-    /// `(= pj pi)`, it is an `eq_symmetric` + `resolution`.
-    fn oriented_unit(
+    /// Flips a unit `(cl (= ea eb))` (named `unit_id`) into `(cl (= from to))` where
+    /// `(from, to)` is `(eb, ea)` — via `eq_symmetric` + `resolution`. Returns the id
+    /// of the flipped unit. `ea`/`eb` are the stored equality's sides as Alethe terms.
+    fn flip_unit(
         &mut self,
-        edges: &[(TermId, TermId)],
-        pi: TermId,
-        pj: TermId,
-        lhs: &AletheTerm,
-        rhs: &AletheTerm,
-    ) -> Option<String> {
-        let forward = edges.iter().any(|&(a, b)| a == pi && b == pj);
-        let reversed = edges.iter().any(|&(a, b)| a == pj && b == pi);
-        if forward {
-            // assume (= pi pj) directly; its clause is the positive unit.
-            Some(self.assume(vec![AletheLit {
-                atom: eq_term(lhs.clone(), rhs.clone()),
-                negated: false,
-            }]))
-        } else if reversed {
-            // assume (= pj pi).
-            let assume_id = self.assume(vec![AletheLit {
-                atom: eq_term(rhs.clone(), lhs.clone()),
-                negated: false,
-            }]);
-            // eq_symmetric: (cl (not (= pj pi)) (= pi pj)).
-            let sym_id = self.step(
-                vec![
-                    AletheLit {
-                        atom: eq_term(rhs.clone(), lhs.clone()),
-                        negated: true,
-                    },
-                    AletheLit {
-                        atom: eq_term(lhs.clone(), rhs.clone()),
-                        negated: false,
-                    },
-                ],
-                "eq_symmetric",
-                &[],
-            );
-            // resolution of the symmetric clause with the assume → (cl (= pi pj)).
-            Some(self.step(
-                vec![AletheLit {
-                    atom: eq_term(lhs.clone(), rhs.clone()),
+        unit_id: &str,
+        ea: &AletheTerm,
+        eb: &AletheTerm,
+        from: &AletheTerm,
+        to: &AletheTerm,
+    ) -> String {
+        // eq_symmetric: (cl (not (= ea eb)) (= eb ea)).
+        let sym_id = self.step(
+            vec![
+                AletheLit {
+                    atom: eq_term(ea.clone(), eb.clone()),
+                    negated: true,
+                },
+                AletheLit {
+                    atom: eq_term(eb.clone(), ea.clone()),
                     negated: false,
-                }],
-                "resolution",
-                &[&sym_id, &assume_id],
-            ))
-        } else {
-            None // no core edge for this pair (should not happen for a BFS link)
+                },
+            ],
+            "eq_symmetric",
+            &[],
+        );
+        // resolution of the symmetric clause with the assume → (cl (= eb ea)).
+        self.step(
+            vec![AletheLit {
+                atom: eq_term(from.clone(), to.clone()),
+                negated: false,
+            }],
+            "resolution",
+            &[&sym_id, unit_id],
+        )
+    }
+
+    /// Emits `eq_congruent` over the argument units plus a resolution, deriving
+    /// `(cl (= from to))` where `from`/`to` are the two applications and `arg_pairs`
+    /// their argument equalities (each derived by `arg_units`, in order). Returns the
+    /// id of the `(cl (= from to))` step.
+    fn congruence(
+        &mut self,
+        arg_units: &[String],
+        arg_pairs: &[(AletheTerm, AletheTerm)],
+        from: &AletheTerm,
+        to: &AletheTerm,
+    ) -> String {
+        // eq_congruent: (cl (not (= a1 b1)) … (not (= an bn)) (= from to)).
+        let mut cong_clause: AletheClause = arg_pairs
+            .iter()
+            .map(|(x, y)| AletheLit {
+                atom: eq_term(x.clone(), y.clone()),
+                negated: true,
+            })
+            .collect();
+        cong_clause.push(AletheLit {
+            atom: eq_term(from.clone(), to.clone()),
+            negated: false,
+        });
+        let cong_id = self.step(cong_clause, "eq_congruent", &[]);
+
+        // Resolve the congruence clause against every argument unit in one step.
+        let mut premises: Vec<&str> = Vec::with_capacity(arg_units.len() + 1);
+        premises.push(&cong_id);
+        for u in arg_units {
+            premises.push(u);
         }
+        self.step(
+            vec![AletheLit {
+                atom: eq_term(from.clone(), to.clone()),
+                negated: false,
+            }],
+            "resolution",
+            &premises,
+        )
     }
 
     fn into_commands(self) -> Vec<AletheCommand> {
@@ -478,8 +588,8 @@ fn eq_term(a: AletheTerm, b: AletheTerm) -> AletheTerm {
 /// - an `(= a b)` becomes `App("=", [conv(a), conv(b)])`;
 /// - an uninterpreted application `f(args)` becomes `App(f_name, conv(args))`;
 /// - a Boolean / bit-vector / integer / real constant becomes a
-///   [`AletheTerm::Const`] with a stable textual form that distinguishes
-///   distinct values (and, for bit-vectors, distinct widths);
+///   [`AletheTerm::Const`] with a stable textual form that distinguishes distinct
+///   values (and, for bit-vectors, distinct widths);
 /// - anything else (other operators) yields `None`.
 fn term_to_alethe(arena: &TermArena, t: TermId) -> Option<AletheTerm> {
     match arena.node(t) {
@@ -531,8 +641,8 @@ mod tests {
         arena.eq(a, b).expect("eq")
     }
 
-    /// Declares a function `name : (BitVec(8) × …) -> BitVec(8)` of the given
-    /// arity and returns its [`FuncId`].
+    /// Declares a function `name : (BitVec(8) × …) -> BitVec(8)` of the given arity
+    /// and returns its [`FuncId`].
     fn func(arena: &mut TermArena, name: &str, arity: usize) -> axeyum_ir::FuncId {
         let params = vec![Sort::BitVec(8); arity];
         arena
@@ -701,7 +811,7 @@ mod tests {
     #[test]
     fn emits_nested_congruence_proof() {
         // a = b ∧ f(g(a)) ≠ f(g(b)): congruence must be applied TWICE
-        // (a=b ⇒ g(a)=g(b) ⇒ f(g(a))=f(g(b))), handled by the recursive derive_eq.
+        // (a=b ⇒ g(a)=g(b) ⇒ f(g(a))=f(g(b))), handled by the recursive derivation.
         let mut arena = TermArena::new();
         let a = var(&mut arena, "a");
         let b = var(&mut arena, "b");
@@ -713,6 +823,57 @@ mod tests {
         let fgb = app(&mut arena, f, &[gb]);
         let assertions = vec![eq(&mut arena, a, b), neq(&mut arena, fga, fgb)];
         let proof = prove_qf_uf_unsat_alethe(&arena, &assertions).expect("emits a nested proof");
+        assert_eq!(check_alethe(&proof), Ok(true));
+        last_is_empty_clause(&proof);
+    }
+
+    #[test]
+    fn emits_mixed_congruence_transitivity_proof() {
+        // f(a) = c ∧ a = b ∧ f(b) ≠ c: the disequality's sides f(b) and c become
+        // equal only through MIXED congruence-in-transitivity — f(b) = f(a) (by
+        // congruence from a = b) = c (asserted). The old edge-BFS emitter returned
+        // None on this; explain_steps drives it.
+        let mut arena = TermArena::new();
+        let a = var(&mut arena, "a");
+        let b = var(&mut arena, "b");
+        let c = var(&mut arena, "c");
+        let f = func(&mut arena, "f", 1);
+        let fa = app(&mut arena, f, &[a]);
+        let fb = app(&mut arena, f, &[b]);
+        let assertions = vec![
+            eq(&mut arena, fa, c),
+            eq(&mut arena, a, b),
+            neq(&mut arena, fb, c),
+        ];
+        let proof = prove_qf_uf_unsat_alethe(&arena, &assertions).expect("emits the mixed proof");
+        assert_eq!(
+            check_alethe(&proof),
+            Ok(true),
+            "mixed congruence/transitivity proof must independently re-check"
+        );
+        last_is_empty_clause(&proof);
+    }
+
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn emits_congruence_chain() {
+        // a = b ∧ g(a) = d ∧ d = e ∧ g(b) ≠ e: congruence (g(b) = g(a) = d) then
+        // transitivity (d = e).
+        let mut arena = TermArena::new();
+        let a = var(&mut arena, "a");
+        let b = var(&mut arena, "b");
+        let d = var(&mut arena, "d");
+        let e = var(&mut arena, "e");
+        let g = func(&mut arena, "g", 1);
+        let ga = app(&mut arena, g, &[a]);
+        let gb = app(&mut arena, g, &[b]);
+        let assertions = vec![
+            eq(&mut arena, a, b),
+            eq(&mut arena, ga, d),
+            eq(&mut arena, d, e),
+            neq(&mut arena, gb, e),
+        ];
+        let proof = prove_qf_uf_unsat_alethe(&arena, &assertions).expect("emits the chain proof");
         assert_eq!(check_alethe(&proof), Ok(true));
         last_is_empty_clause(&proof);
     }
