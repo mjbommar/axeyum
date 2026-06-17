@@ -201,11 +201,33 @@ multipliers (still ~5 s vs a 2 s budget — closing it further is incremental
 SAT-core work).
 
 The honest ceiling: `mulhs16` and the larger `stp_samples` still do not decide
-within a few minutes even with VSIDS+restarts. The next size class needs more —
-the **complete Gaussian-on-trail propagator** (the watched-literal XOR scheme is
-sound but *incomplete*, missing implications only full Gaussian derives) and/or
-further SAT-core work. The small-multiplier wall is broken; scaling to the next
-size class is the continuing work.
+within a few minutes even with VSIDS+restarts.
+
+**Measured negative — the complete backstop must be *incremental*, not from-scratch
+(2026-06).** The obvious way to add completeness is to call the existing
+(complete) `xor_search::xor_implications` Gaussian at each propagation fixpoint as
+a backstop to the cheap watched-literal scheme. Tested end-to-end (the reasons are
+antecedent-valid since every reason var is on the trail when called, so it is
+sound — the ~1,500-formula differentials stayed green). But it is a **net
+performance regression**: it rebuilds a fresh `Gf2System` and runs full Gaussian
+*per decision level*, which dominates. A/B vs watched-only:
+
+| instance | watched-only | + from-scratch backstop |
+|---|---|---|
+| `mulhs08` (unsat) | 4.8 s | 11.0 s (**2.3× slower**) |
+| `calypto_9` (sat) | 9.5 s | 184 s (**~19× slower**) |
+| `stp_samples`, `mulhs16` | (don't decide) | still don't decide |
+
+It only wins outright on *pure-XOR* contradictions (parity chains refute at level
+0 with zero conflicts) — but multiplier-equivalence CNFs are not pure-XOR; their
+refutation needs branching, and every level then pays a full Gaussian over
+hundreds–thousands of variables. **Conclusion (measured, not guessed): completeness
+for the next size class requires a *true incremental* GF(2) matrix** —
+row-reduce-on-assign / restore-on-backtrack with watched rows (CryptoMiniSat
+`gausswatched.h`/`packedmatrix.h`), so the per-decision cost is an update, not a
+rebuild. Repeated from-scratch Gaussian is the wrong tool and was reverted. The
+small-multiplier wall is broken (`mulhs08` decides, in the product); the next size
+class is gated on the incremental matrix (and likely more SAT-core work besides).
 
 ## Bottom line
 
