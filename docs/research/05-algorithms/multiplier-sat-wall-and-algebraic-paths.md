@@ -98,6 +98,49 @@ exploit — so **no word-level structural rule can crack them**. Path 1 is there
 has reached its ceiling on this slice. The remaining 8 require **path 2 (CDCL(XOR))
 or path 3 (algebraic)** — there is no path-1 shortcut left for them.
 
+## Path 2 implemented: CDCL(XOR) foundation (2026-06, slices 1-3)
+
+The reasoning *engine* for path 2 now exists in `crates/axeyum-cnf`, built as
+three sound, independently-tested slices (the SAT-loop *integration* is slice 4,
+still pending — see below):
+
+1. **`gf2.rs` — GF(2) linear (XOR) system solver.** `Gf2System::new/add_constraint/
+   solve` Gaussian-eliminates a system of `(⊕ of a variable set) = parity`
+   constraints (bit-packed `Vec<u64>` rows; duplicates cancel by parity) to RREF.
+   A `0 = 1` row ⇒ `Unsat`; otherwise a satisfying assignment plus the derived
+   facts that make this useful for SAT: `implied_units` (single-variable rows) and
+   `implied_equalities` (two-variable rows: `xi == xj` or `xi == !xj`). Backbone
+   test invariant: the returned assignment satisfies every input constraint.
+2. **`xor_extract.rs` — sound XOR-gate extraction from CNF.** `extract_xors(cnf)`
+   groups clauses by their repeat-free variable set and recognizes a width-`k`
+   gate **only** when the group is exactly the `2^(k-1)`-clause complete encoding
+   of one popcount-parity class (the gate's `rhs` is derived from that parity).
+   `k` capped at `MAX_XOR_VARS = 8` (as CryptoMiniSat caps). The recognition is
+   *exact*: a missing/extra/duplicate clause, mixed parity, or over-cap group is
+   not recognized — false negatives are safe, false positives would be a soundness
+   bug. Proven by no-false-positive tests plus a brute-force truth-table parity
+   check.
+3. **`xor_propagate.rs` — preprocessing pass.** `xor_propagate(cnf) ->
+   { Unsat, Propagated { formula, stats } }`, in the pure-function idiom of
+   `simplify`/`eliminate_variables`. Each recognized gate is logically equivalent
+   to a clause-subset of the formula, so the formula entails the whole XOR
+   subsystem: a contradictory subsystem proves the formula UNSAT, and the solver's
+   implied units (entailed, hence model-preserving) are appended as unit clauses.
+   Soundness is the contract, proven by brute-force over all `2^n` assignments:
+   model-set preservation, UNSAT soundness *and its converse* (a satisfiable
+   formula is never reported UNSAT), and the no-op case.
+
+**Slice 4 (next, the part that yields measured benefit):** wire `xor_propagate`
+into the live solve/preprocess pipeline (alongside `simplify` + `eliminate_
+variables`, before bit-level CDCL), with an UNSAT short-circuit and the curated
+slice's `DISAGREE=0` / no-regression invariant measured. Then apply
+`implied_equalities` as variable substitutions (needs model reconstruction, since
+it changes variable structure) — the step that actually collapses the dense
+parity structure of the multiplier CNFs rather than only propagating forced bits.
+Full CDCL(XOR) (in-search Gaussian re-derivation on the trail, CryptoMiniSat
+`gaussian.cpp` style) is the slice after that; the preprocessing form above is the
+sound, bounded first cut that the curated multiplier slice can be measured against.
+
 ## Bottom line
 
 The curated wall is multiplier-equivalence, which is provably hard for the
