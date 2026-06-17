@@ -233,8 +233,10 @@ pub fn solve_smtlib_unsat_core(
 ///
 /// - **`QF_BV`**: a complete `bitblast_*` → CNF-introduction → resolution
 ///   refutation deriving `(cl)` (re-checked by [`check_alethe`]).
-/// - **`QF_UF`** (EUF): a congruence/transitivity refutation (re-checked by
-///   [`check_alethe`]).
+/// - **`QF_UF`** (EUF) / **`QF_ABV`**: a congruence/transitivity refutation
+///   (re-checked by [`check_alethe`]) — also proves array extensionality
+///   (`select`/`store` as UF) and the array read-over-write-same disequality (the
+///   latter via the internal-only `read_over_write_same` rule).
 /// - **`QF_LRA`**: a Farkas `la_generic` + resolution refutation (re-checked by
 ///   [`crate::check_alethe_lra`], which decides the `la_generic` coefficients).
 /// - **`QF_LIA`**: an integer `lia_generic` refutation (re-checked by
@@ -268,8 +270,13 @@ pub fn solve_smtlib_get_proof(
     {
         return Ok(Some(write_alethe(&proof)));
     }
-    // QF_UF (EUF): a congruence/transitivity refutation (re-checked by check_alethe).
-    if let Some(proof) = crate::prove_qf_uf_unsat_alethe(arena, assertions)
+    // QF_UF (EUF) and QF_ABV: the array emitter handles a read-over-write-same
+    // disequality and otherwise falls back to the EUF congruence/transitivity
+    // emitter (which also proves array extensionality, `select`/`store` as UF). All
+    // re-checked by check_alethe. NOTE: a pure-EUF proof is Carcara-valid, but the
+    // `read_over_write_same` step (array path) is checkable only *internally*
+    // (Carcara has no array rules — see the array-proof design note).
+    if let Some(proof) = crate::prove_qf_abv_unsat_alethe(arena, assertions)
         && matches!(check_alethe(&proof), Ok(true))
     {
         return Ok(Some(write_alethe(&proof)));

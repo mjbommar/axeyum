@@ -1089,3 +1089,34 @@ fn get_proof_serves_the_lia_fragment() {
         "LIA proof re-checks to (cl)"
     );
 }
+
+/// `(get-proof)` serves the **`QF_ABV`** read-over-write-same fragment: the
+/// disequality `(select (store a i v) i) != v` is unsat by the ROW-same axiom, and
+/// the returned proof re-checks in-tree (the `read_over_write_same` rule).
+#[test]
+fn get_proof_serves_the_array_row_same_fragment() {
+    use axeyum_cnf::{check_alethe, parse_alethe};
+    use axeyum_solver::solve_smtlib_get_proof;
+    let text = "\
+(set-logic QF_ABV)
+(declare-const a (Array (_ BitVec 4) (_ BitVec 8)))
+(declare-const i (_ BitVec 4))
+(declare-const v (_ BitVec 8))
+(assert (not (= (select (store a i v) i) v)))
+(check-sat)
+(get-proof)
+";
+    let proof = solve_smtlib_get_proof(text, &config())
+        .expect("decides")
+        .expect("an Alethe proof for the read-over-write-same conflict");
+    assert!(
+        proof.contains("read_over_write_same"),
+        "uses the array axiom rule:\n{proof}"
+    );
+    let parsed = parse_alethe(&proof).expect("emitted Alethe parses");
+    assert_eq!(
+        check_alethe(&parsed),
+        Ok(true),
+        "array proof re-checks to (cl)"
+    );
+}
