@@ -15,10 +15,10 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use axeyum_cnf::write_alethe;
+use axeyum_cnf::{AletheClause, AletheCommand, AletheLit, AletheTerm, write_alethe};
 use axeyum_ir::{Rational, Sort, TermArena, TermId};
 use axeyum_smtlib::write_script;
-use axeyum_solver::{prove_lra_unsat_alethe, prove_qf_uf_unsat_alethe};
+use axeyum_solver::{bitblast_step, prove_lra_unsat_alethe, prove_qf_uf_unsat_alethe};
 
 /// Resolves the Carcara binary: `AXEYUM_CARCARA_BIN` if set, otherwise the
 /// conventional reference build path. Returns `None` (→ skip) if unavailable.
@@ -920,4 +920,153 @@ fn bitblast_sign_extend_zero_step_is_rule_accepted_by_carcara() {
         "(declare-const x (_ BitVec 3))\n",
         "(= ((_ sign_extend 0) x) ((_ sign_extend 0) x))",
     );
+}
+
+// --- Full QF_BV `unsat` proof: bitblast steps + the bridge to a closing `(cl)` ---
+//
+// The bridge composition (hand-validated against the binary, then locked in here):
+//   assume φ → `bitblast_<pred>` gives `(= φ B)` → `equiv1` + `resolution` derive
+//   the Boolean form `B` → CNF-introduction (`and` with an `:args` conjunct index,
+//   `equiv2`) breaks `B` into clauses → `resolution` closes to `(cl)`.
+
+fn term_const(name: &str) -> AletheTerm {
+    AletheTerm::Const(name.to_owned())
+}
+
+fn bit0(name: &str) -> AletheTerm {
+    AletheTerm::Indexed {
+        op: "@bit_of".to_owned(),
+        indices: vec![0],
+        args: vec![term_const(name)],
+    }
+}
+
+fn pos(atom: AletheTerm) -> AletheLit {
+    AletheLit {
+        atom,
+        negated: false,
+    }
+}
+
+fn neg(atom: AletheTerm) -> AletheLit {
+    AletheLit {
+        atom,
+        negated: true,
+    }
+}
+
+fn step(
+    id: &str,
+    clause: AletheClause,
+    rule: &str,
+    premises: &[&str],
+    args: Vec<AletheTerm>,
+) -> AletheCommand {
+    AletheCommand::Step {
+        id: id.to_owned(),
+        clause,
+        rule: rule.to_owned(),
+        premises: premises.iter().map(|s| (*s).to_owned()).collect(),
+        args,
+    }
+}
+
+#[test]
+fn full_qf_bv_unsat_proof_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // (= a b) ∧ (bvult a b) over 1-bit a, b — unsat: a = b yet a < b.
+    let mut arena = TermArena::new();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(1)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(1)).unwrap();
+        arena.var(s)
+    };
+    let eq = arena.eq(a, b).unwrap();
+    let ult = arena.bv_ult(a, b).unwrap();
+    let assertions = vec![eq, ult];
+
+    // Bitblast the two predicates with the production emitter.
+    let s1 = bitblast_step(&arena, eq, "s1").expect("bitblast_equal");
+    let s2 = bitblast_step(&arena, ult, "s2").expect("bitblast_ult");
+
+    // Alethe atoms.
+    let a_eq_b = AletheTerm::App("=".to_owned(), vec![term_const("a"), term_const("b")]);
+    let a_ult_b = AletheTerm::App("bvult".to_owned(), vec![term_const("a"), term_const("b")]);
+    let a0 = bit0("a");
+    let b0 = bit0("b");
+    let a0_eq_b0 = AletheTerm::App("=".to_owned(), vec![a0.clone(), b0.clone()]);
+    let not_a0_and_b0 = AletheTerm::App(
+        "and".to_owned(),
+        vec![
+            AletheTerm::App("not".to_owned(), vec![a0.clone()]),
+            b0.clone(),
+        ],
+    );
+
+    let proof = vec![
+        AletheCommand::Assume {
+            id: "h1".to_owned(),
+            clause: vec![pos(a_eq_b.clone())],
+        },
+        AletheCommand::Assume {
+            id: "h2".to_owned(),
+            clause: vec![pos(a_ult_b.clone())],
+        },
+        s1,
+        s2,
+        // Derive the bitblasted Boolean form of each assertion.
+        step(
+            "e1",
+            vec![neg(a_eq_b), pos(a0_eq_b0.clone())],
+            "equiv1",
+            &["s1"],
+            vec![],
+        ),
+        step(
+            "b1",
+            vec![pos(a0_eq_b0)],
+            "resolution",
+            &["e1", "h1"],
+            vec![],
+        ),
+        step(
+            "e2",
+            vec![neg(a_ult_b), pos(not_a0_and_b0.clone())],
+            "equiv1",
+            &["s2"],
+            vec![],
+        ),
+        step(
+            "b2",
+            vec![pos(not_a0_and_b0)],
+            "resolution",
+            &["e2", "h2"],
+            vec![],
+        ),
+        // CNF-introduction + resolution to the empty clause.
+        step(
+            "c1",
+            vec![neg(a0.clone())],
+            "and",
+            &["b2"],
+            vec![term_const("0")],
+        ),
+        step(
+            "c2",
+            vec![pos(b0.clone())],
+            "and",
+            &["b2"],
+            vec![term_const("1")],
+        ),
+        step("c3", vec![pos(a0), neg(b0)], "equiv2", &["b1"], vec![]),
+        step("c4", vec![], "resolution", &["c3", "c1", "c2"], vec![]),
+    ];
+    let report = carcara_accepts(&bin, "full_qfbv", &arena, &assertions, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
 }

@@ -223,11 +223,22 @@ proof to derive `(cl)` to be a refutation, exactly as for the resolution layer).
    already computes). Carcara holes `bvudiv`/`bvurem`/shifts → emit `hole` for the
    structural step and attach axeyum's **miter certificate** (path B above) as the
    side justification — the place axeyum *leads* Alethe, which has no div/rem rule.
-3. **Bridge to the resolution refutation (already validated).** The top-level
+3. **Bridge to the resolution refutation (validated end-to-end).** The top-level
    predicate (e.g. an asserted `bvult`/equality) bitblasts to a Boolean formula;
-   Tseitin CNF-introduction steps (`and_pos`/`or_pos`/…, already supported by
-   `check_alethe`) connect it to the CNF variables, and the
-   `lrat_to_alethe` resolution layer (now Carcara-`valid`, T3.3.3) closes to `(cl)`.
+   CNF-introduction steps connect it to the bit atoms, and resolution closes to
+   `(cl)`. **A complete minimal proof has been hand-validated against the binary
+   and locked in** (`full_qf_bv_unsat_proof_is_accepted_by_carcara` in
+   `crates/axeyum-solver/tests/carcara_crosscheck.rs`): for `(= a b) ∧ (bvult a b)`
+   over 1-bit vars the chain is
+   `assume φ` → `bitblast_<pred>` (`(= φ B)`, from the production emitter) →
+   `equiv1` + `resolution` (derive the Boolean form `B`) →
+   CNF-intro (`and` with an `:args` conjunct index; `equiv2`) →
+   `resolution` to `(cl)` — **Carcara `valid`**. So the rule inventory for a full
+   QF_BV proof is now confirmed: the only remaining work to *automate* it is (a) the
+   Tseitin encoder that turns an arbitrary bitblasted `B` into clauses with their
+   CNF-intro justifications, and (b) wiring the SAT refutation (already
+   `lrat_to_alethe`-`valid`, T3.3.3) over those clauses. The hard unknowns (the
+   exact bridge rules + the `and` `:args` index) are resolved.
 
 This is the third-party-checked analogue of path (B): where (B) trusts an in-house
 reference and refutes a miter with `check_drat`, this emits a proof an *external*

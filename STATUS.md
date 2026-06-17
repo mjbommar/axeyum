@@ -355,6 +355,19 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-17** — **First FULL QF_BV `unsat` proof is Carcara-`valid` end-to-end
+  (T3.3 bridge validated)**. Hand-validated against the binary, then locked in as a
+  committed regression test (`full_qf_bv_unsat_proof_is_accepted_by_carcara`): for
+  `(= a b) ∧ (bvult a b)` (1-bit), the proof composes the **production
+  `bitblast_step` emitter** (the `bitblast_equal`/`bitblast_ult` steps) with the
+  bridge — `equiv1` + `resolution` to derive each assertion's Boolean form, then
+  CNF-introduction (`and` with an `:args` conjunct index; `equiv2`) + `resolution`
+  to the empty clause `(cl)`. **Carcara `valid`.** This resolves the last unknowns of
+  the bridge (the exact rule inventory + that `and` needs `:args (i)`). Remaining to
+  *automate* a general QF_BV proof: a Tseitin encoder turning an arbitrary
+  bitblasted Boolean `B` into clauses with CNF-intro justifications, wired over the
+  already-valid `lrat_to_alethe` resolution layer. **Next: the general
+  `prove_qf_bv_unsat_alethe` driver (Tseitin-of-B + the SAT refutation bridge).**
 - **2026-06-17** — **T3.3.1 step 2 complete: bitblast emitter covers Carcara's
   entire non-hole QF_BV operator set**. Added `bvmul` (shift-add multiplier,
   transcribed from Carcara's `shift_add_multiplier` — correct on the first run incl.
