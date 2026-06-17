@@ -41,14 +41,18 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   checked structurally against their exact tautology shapes (strict, order-sensitive;
   broken shapes rejected). plus the entailment-checked
   clause-manipulation rules `contraction`/`reordering`/`weakening`. 16 tests.
-  Remaining (P3.2/3.3): **EUF/SMT proof EMISSION from the solver** — the high-value
-  next step: turn an `euf_egraph` congruence conflict into an Alethe proof
-  (`assume`s + `eq_transitive`/`eq_congruent`/`eq_symmetric` + `resolution` to
-  `(cl)`), checked by `check_alethe`. This needs a **structured** explanation from
-  the e-graph proof forest (today `EGraph::explain` flattens to a reason *set*; a
-  new method must return the ordered equality/congruence steps) — a careful
-  `axeyum-egraph` extension. Also: arithmetic/BV theory rules; Carcara CI
-  cross-check; extract `axeyum-alethe` crate (ADR) when emission lands.
+  **EUF proof EMISSION begun** (`prove_qf_uf_unsat_alethe`): the solver now turns a
+  **transitivity** congruence conflict into an Alethe proof (`assume`s +
+  `eq_symmetric` for reversed edges + one `eq_transitive` + `resolution` chain to
+  `(cl)`), **self-validated** — it returns `Some` only when `check_alethe` accepts,
+  so a construction bug yields `None`, never a wrong proof. The proof track is now
+  bidirectional (check + emit) for the EUF transitivity fragment. 5 tests.
+  Remaining (P3.2/3.3): extend emission to **congruence** conflicts — needs a
+  *structured* explanation from the e-graph proof forest (today `EGraph::explain`
+  flattens to a reason set; a new method must return the ordered equality/congruence
+  steps, then emit `eq_congruent` steps) — a careful `axeyum-egraph` extension; then
+  arithmetic/BV theory rules; Carcara CI cross-check; extract `axeyum-alethe` crate
+  (ADR) when emission broadens.
 - **P2.9 datatypes — structural refutation DONE** (2026-06-16):
   `prove_datatype_unsat_structurally` — the three datatype structural axioms over a
   term-level union-find: **acyclicity** (`x = cons(h, x)` ⇒ unsat), **distinctness**
