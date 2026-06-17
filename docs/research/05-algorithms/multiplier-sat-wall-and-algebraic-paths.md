@@ -78,6 +78,26 @@ multipliers. This is a *proof-system* limitation, not an implementation one.
   **not** the answer to this slice — the lower bounds make it a dead end for
   multipliers. Invest the custom-core effort in CDCL(XOR) and the algebraic engine.
 
+## Measured: path 1 has a ceiling on this slice (2026-06)
+
+After landing the sound word-level structural rules of path 1 — strength reduction
+(`bvmul`/`bvudiv`/`bvurem` by `2^k` → shift/mask) and the BV slice family
+(extract-of-concat, extract-of-extend, concat-of-adjacent-extracts), on top of
+commutative/AC operand ordering, involutions, reflexivity, and `ite`/identity folds
+— the curated QF_BV slice (`sat-bv`, `--rewrite default --preprocess`, 2 s) measures
+**35/43 decided, 8 unknown, DISAGREE=0, replay failures=0, `rewrite_apps`=443**.
+
+That is **unchanged from the 35/43 before this batch** (the AC-normalization piece is
+what moved it 32→35 by dissolving the *commutativity* trees), even though
+`rewrite_apps` rose (the new rules fire across the corpus and are sound). This
+**empirically confirms** the diagnosis above: the remaining 8 are genuine
+**`var*var` multiplier-equivalence** instances (`mulhs`, `calypto`, `stp_samples`)
+with no constant divisor/shift and no commutativity/associativity structure to
+exploit — so **no word-level structural rule can crack them**. Path 1 is therefore
+*sound general value* (it helps other corpora and never regresses, `DISAGREE=0`) but
+has reached its ceiling on this slice. The remaining 8 require **path 2 (CDCL(XOR))
+or path 3 (algebraic)** — there is no path-1 shortcut left for them.
+
 ## Bottom line
 
 The curated wall is multiplier-equivalence, which is provably hard for the
