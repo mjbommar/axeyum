@@ -130,16 +130,29 @@ still pending — see below):
    model-set preservation, UNSAT soundness *and its converse* (a satisfiable
    formula is never reported UNSAT), and the no-op case.
 
-**Slice 4 (next, the part that yields measured benefit):** wire `xor_propagate`
-into the live solve/preprocess pipeline (alongside `simplify` + `eliminate_
-variables`, before bit-level CDCL), with an UNSAT short-circuit and the curated
-slice's `DISAGREE=0` / no-regression invariant measured. Then apply
-`implied_equalities` as variable substitutions (needs model reconstruction, since
-it changes variable structure) — the step that actually collapses the dense
-parity structure of the multiplier CNFs rather than only propagating forced bits.
-Full CDCL(XOR) (in-search Gaussian re-derivation on the trail, CryptoMiniSat
-`gaussian.cpp` style) is the slice after that; the preprocessing form above is the
-sound, bounded first cut that the curated multiplier slice can be measured against.
+**Slice 4 done & measured (2026-06, commit edf65b8):** `xor_propagate` is wired
+into `sat_bv_backend`'s `inprocess` (behind `cnf_inprocessing`, off by default),
+using only the sound Propagated branch (entailed units appended; no unchecked
+UNSAT shortcut), with a 20k-clause cap on the deadline-less Gaussian. Curated
+slice (sat-bv `--inprocess`, 2 s): **33 decided, DISAGREE=0, 0 replay failures,
+PAR-2 0.968 s vs 0.963 s plain** — sound, no regression, decides none of the
+unknowns. The informative part: **extraction fired on 20/43 files, recognizing
+12 908 XOR gates, yet derived only 1 implied unit across the whole slice** (5 big
+multipliers skipped on the cap). This is the concrete, on-corpus confirmation of
+the prediction above — multiplier parity structure forces essentially no units at
+preprocessing time. **The gates are relational, so the payoff is in the
+equalities, not the units.**
+
+**Slice 5 (the data-indicated win):** apply `implied_equalities` as variable
+substitutions (merge `xi`/`xj`, needs model reconstruction since it changes
+variable structure). The 12 908-gate measurement says this is where the dense
+parity structure of the multiplier CNFs actually collapses — sum/carry bits are
+two-variable XOR relations, not unit-forced bits. **Slice 6:** full CDCL(XOR) —
+in-search Gaussian re-derivation on the trail (CryptoMiniSat `gaussian.cpp`
+style), which sees the structure the *static* system can't (the nonlinear
+AND-gate partial-product values that only the search assigns). The preprocessing
+form is the sound, bounded first cut; slices 5–6 are where the curated unknowns
+are actually attacked.
 
 ## Bottom line
 
