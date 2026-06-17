@@ -122,6 +122,30 @@ const VSIDS_RESCALE_LIMIT: f64 = 1e100;
 /// interval before the next restart.
 const RESTART_UNIT: usize = 100;
 
+/// First clause-database reduction fires after this many conflicts; the trigger
+/// then grows arithmetically (see [`REDUCE_INCREMENT`]). The canonical
+/// `MiniSat`/Glucose scheme grows the interval so reductions thin out as the
+/// database matures, the standard `reduce` trigger.
+const REDUCE_FIRST: usize = 2_000;
+
+/// Each time the clause database is reduced, the next reduction interval grows
+/// by this many conflicts (arithmetic growth of the `reduce` trigger).
+const REDUCE_INCREMENT: usize = 300;
+
+/// Learned clauses with LBD (glue) at or below this are *never* deleted — the
+/// "glue" clauses Glucose keeps permanently. LBD ≤ 2 is the canonical cutoff.
+const GLUE_LBD: usize = 2;
+
+/// LBD sentinel marking an *original* (problem) clause: never deleted, never
+/// reduced. Larger than any real LBD (which is bounded by the variable count).
+const ORIGINAL_LBD: usize = usize::MAX;
+
+/// Activity bump applied to a learned clause when it participates in a conflict
+/// (the clause-activity analogue of VSIDS variable bumping). Constant bump with
+/// no decay keeps the policy deterministic and cheap; the dominant deletion key
+/// is LBD, with activity only the tie-break.
+const CLAUSE_ACTIVITY_BUMP: f64 = 1.0;
+
 /// Outcome of [`solve_with_xor_cdcl`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum XorCdclResult {
@@ -174,6 +198,17 @@ fn solve_with_xor_cdcl_conflicts(formula: &CnfFormula) -> (XorCdclResult, usize)
     let mut solver = XorCdcl::new(formula, &constraints);
     let result = solver.run();
     (result, solver.conflicts)
+}
+
+/// Test-only variant returning the verdict and the number of clause-database
+/// reductions performed. Used to assert that the LBD reduction path is actually
+/// exercised (a non-zero reduction count) on a reduction-forcing instance.
+#[cfg(test)]
+fn solve_with_xor_cdcl_reductions(formula: &CnfFormula) -> (XorCdclResult, usize) {
+    let constraints = extract_xors(formula).system.constraints();
+    let mut solver = XorCdcl::new(formula, &constraints);
+    let result = solver.run();
+    (result, solver.reductions)
 }
 
 /// Returns `true` iff `model` satisfies every clause of `formula` and every XOR
@@ -242,6 +277,14 @@ struct XorCdcl<'a> {
     /// Clause database (initial clauses followed by learned clauses), as lit
     /// codes. Two-watched-literal invariant on clauses of length ≥ 2.
     clauses: Vec<Vec<Lit>>,
+    /// Per-clause LBD (glue): the number of distinct decision levels among a
+    /// learned clause's literals at the moment it was learned. Original (problem)
+    /// clauses carry [`ORIGINAL_LBD`] so they are never reduced. Parallel to
+    /// `clauses` (same length, same indices).
+    clause_lbd: Vec<usize>,
+    /// Per-clause activity, bumped when a learned clause participates in a
+    /// conflict; the deletion tie-break after LBD. Parallel to `clauses`.
+    clause_activity: Vec<f64>,
     /// Per-literal clause watch lists, indexed by lit code.
     clause_watches: Vec<Vec<usize>>,
     /// XOR constraints, each as a (sorted, deduped-by-extraction) variable list
@@ -283,6 +326,12 @@ struct XorCdcl<'a> {
     conflicts_since_restart: usize,
     /// Index into the Luby sequence for the next restart interval.
     luby_index: usize,
+    /// Conflict count at which the next clause-database reduction fires. Grows
+    /// by [`REDUCE_INCREMENT`] after each reduction.
+    next_reduce: usize,
+    /// Number of clause-database reductions performed (exercised-path counter;
+    /// asserted non-zero by the reduction-fires test).
+    reductions: usize,
 }
 
 impl<'a> XorCdcl<'a> {
@@ -345,8 +394,15 @@ impl<'a> XorCdcl<'a> {
             }
         }
 
+        // Every clause built above is an *original* (problem) clause: tag each
+        // with the sentinel LBD so the reducer never deletes it.
+        let clause_lbd = vec![ORIGINAL_LBD; clauses.len()];
+        let clause_activity = vec![0.0; clauses.len()];
+
         Self {
             clauses,
+            clause_lbd,
+            clause_activity,
             clause_watches,
             constraints,
             xor_watch,
@@ -366,6 +422,8 @@ impl<'a> XorCdcl<'a> {
             saved_phase: vec![false; n],
             conflicts_since_restart: 0,
             luby_index: 0,
+            next_reduce: REDUCE_FIRST,
+            reductions: 0,
         }
     }
 
@@ -424,7 +482,12 @@ impl<'a> XorCdcl<'a> {
                 if self.conflicts > MAX_CONFLICTS {
                     return XorCdclResult::Unknown;
                 }
-                let (learned, backjump) = self.analyze(conflict);
+                // Bump the activity of every learned clause that fed this
+                // conflict's resolution (its antecedents), the clause-activity
+                // analogue of the VSIDS variable bump, before analysis backtracks
+                // off the trail. Activity is the deletion tie-break after LBD.
+                self.bump_conflict_clauses(conflict);
+                let (learned, backjump, lbd) = self.analyze(conflict);
                 if learned.is_empty() {
                     return XorCdclResult::Unsat;
                 }
@@ -438,8 +501,18 @@ impl<'a> XorCdcl<'a> {
                     self.clause_watches[learned[1]].push(cid);
                 }
                 self.clauses.push(learned);
+                self.clause_lbd.push(lbd);
+                self.clause_activity.push(0.0);
                 self.backtrack_to(backjump);
                 self.enqueue(asserting, Reason::Clause(cid));
+                // Clause-DB reduction: thin the learned clauses on the standard
+                // arithmetically-growing schedule. Reduction respects locked
+                // clauses (reasons on the current trail — including the asserting
+                // clause just enqueued), so it is safe to fire here.
+                if self.conflicts >= self.next_reduce {
+                    self.next_reduce = self.conflicts + REDUCE_INCREMENT;
+                    self.reduce_clause_db();
+                }
             } else if self.should_restart() {
                 self.restart();
             } else if let Some(var) = self.pick_branch() {
@@ -487,6 +560,133 @@ impl<'a> XorCdcl<'a> {
     /// older bumps relative to newer ones).
     fn decay_activity(&mut self) {
         self.var_inc /= VSIDS_DECAY;
+    }
+
+    /// Bumps the clause-activity of the *learned* clauses directly involved in
+    /// this conflict: the conflicting clause (if any) plus every learned-clause
+    /// reason on the current trail (the antecedents 1-UIP will resolve through).
+    /// Original clauses carry no meaningful activity (they are never deleted),
+    /// so bumping them is harmless but pointless; we bump uniformly for
+    /// simplicity. Activity is the deletion tie-break after LBD.
+    fn bump_conflict_clauses(&mut self, conflict: Conflict) {
+        if let Conflict::Clause(cid) = conflict {
+            self.clause_activity[cid] += CLAUSE_ACTIVITY_BUMP;
+        }
+        // The reasons of the literals at the conflict's decision level are the
+        // antecedents resolved through; bump any that are learned clauses.
+        for &var in &self.trail {
+            if let Reason::Clause(cid) = self.reason[var] {
+                self.clause_activity[cid] += CLAUSE_ACTIVITY_BUMP;
+            }
+        }
+    }
+
+    /// Reduces the learned-clause database: deletes the worst half of the
+    /// *deletable* learned clauses, then rebuilds the clause arena and watch
+    /// lists so every surviving clause is correctly re-watched and every clause
+    /// index (in `clause_lbd`, `clause_activity`, and the `Reason::Clause`
+    /// antecedents on the trail) is remapped consistently.
+    ///
+    /// A learned clause is **deletable** only if it is none of:
+    /// * an *original* (problem) clause — `ORIGINAL_LBD`; never deleted;
+    /// * binary (length 2) or very-low-LBD (`LBD ≤ GLUE_LBD`) — the kept "glue";
+    /// * **locked** — currently the reason (antecedent) for a literal on the
+    ///   trail; deleting a reason clause would corrupt conflict analysis.
+    ///
+    /// Among the deletable clauses the worst half goes: highest LBD first, then
+    /// (within equal LBD) lowest activity, then highest clause index — a total,
+    /// deterministic order, no hashing. This is the standard CaDiCaL/Glucose
+    /// policy. Deletion is **sound**: learned clauses are entailed by the
+    /// originals, so removing them cannot change the SAT/UNSAT verdict.
+    fn reduce_clause_db(&mut self) {
+        self.reductions += 1;
+
+        // A clause is locked iff it is the reason for some assigned variable.
+        // (The trail holds exactly the assigned variables.)
+        let mut locked = vec![false; self.clauses.len()];
+        for &var in &self.trail {
+            if let Reason::Clause(cid) = self.reason[var] {
+                locked[cid] = true;
+            }
+        }
+
+        // Collect the deletable learned clauses by index.
+        let mut deletable: Vec<usize> = (0..self.clauses.len())
+            .filter(|&cid| {
+                self.clause_lbd[cid] != ORIGINAL_LBD
+                    && self.clauses[cid].len() > 2
+                    && self.clause_lbd[cid] > GLUE_LBD
+                    && !locked[cid]
+            })
+            .collect();
+
+        // Worst-first: highest LBD, then lowest activity, then highest index.
+        // (All comparisons total and deterministic; activity ties break by the
+        // stable secondary key.)
+        deletable.sort_by(|&a, &b| {
+            self.clause_lbd[b]
+                .cmp(&self.clause_lbd[a])
+                .then_with(|| {
+                    self.clause_activity[a]
+                        .partial_cmp(&self.clause_activity[b])
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })
+                .then(b.cmp(&a))
+        });
+
+        // Delete the worst half (round down: deleting fewer is always safe).
+        let delete_count = deletable.len() / 2;
+        if delete_count == 0 {
+            return;
+        }
+        let mut remove = vec![false; self.clauses.len()];
+        for &cid in &deletable[..delete_count] {
+            remove[cid] = true;
+        }
+
+        // Compact the clause arena, building an old→new index remap. Surviving
+        // clauses keep their relative order, so original clauses (which all
+        // precede the learned ones and are never removed) stay at the front.
+        let mut remap = vec![usize::MAX; self.clauses.len()];
+        let mut new_clauses: Vec<Vec<Lit>> = Vec::with_capacity(self.clauses.len() - delete_count);
+        let mut new_lbd: Vec<usize> = Vec::with_capacity(new_clauses.capacity());
+        let mut new_activity: Vec<f64> = Vec::with_capacity(new_clauses.capacity());
+        for cid in 0..self.clauses.len() {
+            if remove[cid] {
+                continue;
+            }
+            remap[cid] = new_clauses.len();
+            // `take` leaves an empty Vec behind; the old arena is discarded next.
+            new_clauses.push(std::mem::take(&mut self.clauses[cid]));
+            new_lbd.push(self.clause_lbd[cid]);
+            new_activity.push(self.clause_activity[cid]);
+        }
+        self.clauses = new_clauses;
+        self.clause_lbd = new_lbd;
+        self.clause_activity = new_activity;
+
+        // Remap the `Reason::Clause` antecedents on the trail (locked clauses
+        // survived, so every such index has a valid new home).
+        for &var in &self.trail {
+            if let Reason::Clause(cid) = self.reason[var] {
+                debug_assert_ne!(remap[cid], usize::MAX, "a locked reason clause was deleted");
+                self.reason[var] = Reason::Clause(remap[cid]);
+            }
+        }
+
+        // Rebuild every clause watch list from scratch over the surviving
+        // clauses (the robust standard approach: no dangling watches possible).
+        // Each clause of length ≥ 2 re-watches its first two literals, matching
+        // the two-watched-literal invariant the propagator maintains.
+        for w in &mut self.clause_watches {
+            w.clear();
+        }
+        for (cid, clause) in self.clauses.iter().enumerate() {
+            if clause.len() >= 2 {
+                self.clause_watches[clause[0]].push(cid);
+                self.clause_watches[clause[1]].push(cid);
+            }
+        }
     }
 
     /// The conflict produced by propagation: either a conflicting clause id or a
@@ -642,14 +842,16 @@ impl<'a> XorCdcl<'a> {
     }
 
     /// 1-UIP conflict analysis. Returns the learned clause (asserting literal at
-    /// index 0, second-watch literal at index 1) and the backjump level. An
-    /// empty learned clause means the conflict is implied at level 0.
+    /// index 0, second-watch literal at index 1), the backjump level, and the
+    /// clause's LBD (glue) — the number of distinct decision levels among its
+    /// literals. An empty learned clause (with LBD 0) means the conflict is
+    /// implied at level 0.
     ///
     /// As a side effect it **bumps the VSIDS activity** of every variable that
     /// enters the resolution (each reason clause's literals), which is the set
     /// the learned clause and its resolved antecedents draw from — the standard
     /// `MiniSat`-style bump.
-    fn analyze(&mut self, conflict: Conflict) -> (Vec<Lit>, usize) {
+    fn analyze(&mut self, conflict: Conflict) -> (Vec<Lit>, usize, usize) {
         let mut seen = vec![false; self.assign.len()];
         let mut lower: Vec<Lit> = Vec::new();
         let mut path_count = 0usize;
@@ -688,7 +890,7 @@ impl<'a> XorCdcl<'a> {
                 }
             }
             if !found {
-                return (Vec::new(), 0);
+                return (Vec::new(), 0, 0);
             }
 
             let var = self.trail[index];
@@ -711,13 +913,35 @@ impl<'a> XorCdcl<'a> {
                     learned.swap(1, best);
                     backjump = self.level[lit_var(learned[1])];
                 }
-                return (learned, backjump);
+                let lbd = self.compute_lbd(&learned);
+                return (learned, backjump, lbd);
             }
 
             // Resolve against the antecedent of `var`, synthesizing the reason
             // clause if the antecedent is an XOR constraint.
             clause = self.reason_clause(var);
         }
+    }
+
+    /// The LBD (literal block distance / "glue") of `clause`: the number of
+    /// **distinct decision levels** among its literals at the current trail. The
+    /// canonical Glucose quality metric — a low LBD means the clause ties few
+    /// decision levels together (high-value "glue"). Deterministic: it counts
+    /// distinct values over a small bounded scratch set, no hashing.
+    fn compute_lbd(&self, clause: &[Lit]) -> usize {
+        // Decision levels are in `0..=decision_level()`; mark seen levels in a
+        // bitset-like scratch vector (cheap and deterministic). The asserting
+        // clause is short in practice, but bound the scan by the level count.
+        let mut seen = vec![false; self.decision_level() + 1];
+        let mut count = 0;
+        for &lit in clause {
+            let lvl = self.level[lit_var(lit)];
+            if lvl < seen.len() && !seen[lvl] {
+                seen[lvl] = true;
+                count += 1;
+            }
+        }
+        count
     }
 
     /// Materializes the conflicting clause/constraint as a list of literals.
@@ -1054,6 +1278,59 @@ mod tests {
             assert_eq!(ours, XorCdclResult::Unsat);
             assert!(matches!(theirs, SatResult::Unsat(_)));
         }
+    }
+
+    // --- reduction-forcing case ---------------------------------------------
+
+    /// The pigeonhole principle PHP(holes): `holes + 1` pigeons into `holes`
+    /// holes, UNSAT and famously conflict-heavy (no learning shortcut), so the
+    /// search resolves many thousands of conflicts — enough to fire several
+    /// clause-database reductions. Variable `p * holes + h` means "pigeon `p`
+    /// sits in hole `h`". Clauses: each pigeon in some hole; no two pigeons share
+    /// a hole. No XOR structure (so this exercises the pure CDCL core + reducer).
+    fn pigeonhole_unsat(holes: usize) -> CnfFormula {
+        let pigeons = holes + 1;
+        let var = |p: usize, h: usize| p * holes + h;
+        let mut clauses: Vec<Vec<(usize, bool)>> = Vec::new();
+        // Each pigeon occupies at least one hole.
+        for p in 0..pigeons {
+            clauses.push((0..holes).map(|h| (var(p, h), false)).collect());
+        }
+        // No hole holds two pigeons.
+        for h in 0..holes {
+            for p in 0..pigeons {
+                for q in (p + 1)..pigeons {
+                    clauses.push(vec![(var(p, h), true), (var(q, h), true)]);
+                }
+            }
+        }
+        formula(pigeons * holes, &clauses)
+    }
+
+    #[test]
+    fn clause_db_reduction_fires_and_still_decides() {
+        // PHP(7) (8 pigeons, 7 holes) is UNSAT and conflict-heavy: the search
+        // resolves well past the first reduction trigger, firing several
+        // clause-DB reductions. The reducer must (a) actually fire (counter > 0)
+        // and (b) leave the verdict correct (a watch/locked-clause bug would flip
+        // it or crash) — cross-checked against the production batsat adapter.
+        let f = pigeonhole_unsat(7);
+        let (result, reductions) = solve_with_xor_cdcl_reductions(&f);
+        assert_eq!(
+            result,
+            XorCdclResult::Unsat,
+            "PHP(7) is UNSAT; reduction must not corrupt the verdict"
+        );
+        assert!(
+            reductions >= 2,
+            "expected several clause-DB reductions, got {reductions}"
+        );
+        let theirs = solve_with_rustsat_batsat_timeout(&f, Some(Duration::from_secs(10)))
+            .expect("batsat solve");
+        assert!(
+            matches!(theirs, SatResult::Unsat(_)),
+            "batsat must agree PHP(7) is UNSAT"
+        );
     }
 
     // --- deterministic random generation ------------------------------------
