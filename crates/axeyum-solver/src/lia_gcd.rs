@@ -68,29 +68,211 @@ pub fn prove_lia_unsat_by_diophantine(arena: &TermArena, assertions: &[TermId]) 
     // Collect the linear form of every top-level integer equality, normalized to
     // `Σ coeffs·x = rhs` (constants moved to the right). Non-equalities,
     // non-integer, and non-linear assertions are skipped.
-    let mut rows: Vec<Row> = Vec::new();
-    for &assertion in assertions {
-        if let TermNode::App { op: Op::Eq, args } = arena.node(assertion) {
-            if args.len() == 2 && arena.sort_of(args[0]) == Sort::Int {
-                if let Some(row) = equality_row(arena, args[0], args[1]) {
-                    rows.push(row);
-                }
+    // Two indexings: `pending` holds the eligible integer equalities (term sides);
+    // `m` is their count so each row's provenance vector has the right length.
+    let pending: Vec<(TermId, TermId)> = assertions
+        .iter()
+        .filter_map(|&assertion| match arena.node(assertion) {
+            TermNode::App { op: Op::Eq, args }
+                if args.len() == 2 && arena.sort_of(args[0]) == Sort::Int =>
+            {
+                Some((args[0], args[1]))
             }
+            _ => None,
+        })
+        .collect();
+    let m = pending.len();
+    let mut rows: Vec<Row> = Vec::new();
+    for (idx, &(a, b)) in pending.iter().enumerate() {
+        if let Some(row) = equality_row(arena, a, b, idx, m) {
+            rows.push(row);
         }
     }
-    system_is_infeasible(rows)
+    system_is_infeasible(rows).is_some()
 }
 
-/// A normalized equality `Σ coeffs·xᵢ = rhs` (constant moved to the right). The
-/// coefficient map omits zero entries; an empty map is a constant row `0 = rhs`.
+/// Like [`prove_lia_unsat_by_diophantine`], but on a genuine refutation returns an
+/// **independently-checkable** [`DiophantineCertificate`] — an integer Farkas
+/// combination of the original equalities — paired with those original
+/// [`Equality`]s. Returns `None` when the system is not refuted, on `i128`
+/// overflow during the elimination, or (defensively) if the constructed
+/// certificate does not pass [`check_diophantine_certificate`].
+///
+/// The certificate is emitted **only when its own independent checker accepts it**
+/// (mirroring the self-validating Alethe emitters): a construction bug yields no
+/// certificate, never a wrong proof.
+///
+/// # Panics
+///
+/// Never panics; all arithmetic is `checked_*` and overflow yields `None`.
+#[must_use]
+pub fn prove_lia_unsat_by_diophantine_certified(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<(Vec<Equality>, DiophantineCertificate)> {
+    let pending: Vec<(TermId, TermId)> = assertions
+        .iter()
+        .filter_map(|&assertion| match arena.node(assertion) {
+            TermNode::App { op: Op::Eq, args }
+                if args.len() == 2 && arena.sort_of(args[0]) == Sort::Int =>
+            {
+                Some((args[0], args[1]))
+            }
+            _ => None,
+        })
+        .collect();
+    let m = pending.len();
+
+    // Self-contained originals (for the checker) and provenance-carrying rows (for
+    // the elimination) are built from the same normalization. We only proceed when
+    // *every* pending equality normalizes, so the certificate's multiplier indices
+    // line up one-to-one with `equalities`.
+    let mut equalities: Vec<Equality> = Vec::with_capacity(m);
+    let mut rows: Vec<Row> = Vec::with_capacity(m);
+    for (idx, &(a, b)) in pending.iter().enumerate() {
+        let eq = equality_of(arena, a, b)?;
+        let row = equality_row(arena, a, b, idx, m)?;
+        equalities.push(eq);
+        rows.push(row);
+    }
+
+    let contradiction = system_is_infeasible(rows)?;
+    debug_assert_eq!(contradiction.combo.len(), m);
+
+    let mut combined: Vec<(SymbolId, i128)> =
+        contradiction.coeffs.iter().map(|(&s, &c)| (s, c)).collect();
+    combined.sort_by_key(|&(s, _)| s); // BTreeMap already sorted; explicit for clarity.
+    let cert = DiophantineCertificate {
+        multipliers: contradiction.combo,
+        combined,
+        constant: contradiction.rhs,
+    };
+
+    // Self-validate: only bless a certificate the independent checker accepts.
+    if check_diophantine_certificate(&equalities, &cert) {
+        Some((equalities, cert))
+    } else {
+        None
+    }
+}
+
+/// Independently validates a [`DiophantineCertificate`] against the `equalities`
+/// it refers to. Re-derives the integer combination `Σ_i multipliers[i]·E_i` from
+/// the originals, checks it equals the stated `combined`/`constant` row, and checks
+/// `gcd(combined coeffs) ∤ constant` (with `gcd(∅) = 0`, so `0 = d` is infeasible
+/// iff `d ≠ 0`). Returns `true` only when all checks pass.
+///
+/// This shares no code path with the elimination that produced the certificate: it
+/// is a self-contained proof of integer infeasibility. Arithmetic is exact `i128`
+/// and `checked_*`; any overflow or mismatch conservatively returns `false`.
+///
+/// # Panics
+///
+/// Never panics.
+#[must_use]
+pub fn check_diophantine_certificate(
+    equalities: &[Equality],
+    cert: &DiophantineCertificate,
+) -> bool {
+    // One multiplier per equality.
+    if cert.multipliers.len() != equalities.len() {
+        return false;
+    }
+    // Re-derive `Σ_i λ_i · E_i` from the originals using checked arithmetic.
+    let mut coeffs: BTreeMap<SymbolId, i128> = BTreeMap::new();
+    let mut rhs: i128 = 0;
+    for (eq, &lambda) in equalities.iter().zip(&cert.multipliers) {
+        for (&sym, &c) in &eq.coeffs {
+            let Some(term) = c.checked_mul(lambda) else {
+                return false;
+            };
+            let entry = coeffs.entry(sym).or_insert(0);
+            let Some(v) = entry.checked_add(term) else {
+                return false;
+            };
+            *entry = v;
+        }
+        let Some(term) = eq.rhs.checked_mul(lambda) else {
+            return false;
+        };
+        let Some(v) = rhs.checked_add(term) else {
+            return false;
+        };
+        rhs = v;
+    }
+    coeffs.retain(|_, c| *c != 0);
+
+    // The re-derived combination must match the stated `combined`/`constant` row.
+    if rhs != cert.constant {
+        return false;
+    }
+    let stated: BTreeMap<SymbolId, i128> = cert.combined.iter().copied().collect();
+    // Reject duplicate or zero entries in `combined` (a tampered/malformed row).
+    if stated.len() != cert.combined.len() || cert.combined.iter().any(|&(_, c)| c == 0) {
+        return false;
+    }
+    if stated != coeffs {
+        return false;
+    }
+
+    // Integer infeasibility: gcd(combined coeffs) ∤ constant (gcd(∅) = 0; 0 ∤ d ⇔ d ≠ 0).
+    let mut g: i128 = 0;
+    for &(_, c) in &cert.combined {
+        g = gcd(g, c);
+    }
+    if g == 0 {
+        return cert.constant != 0;
+    }
+    cert.constant % g != 0
+}
+
+/// A normalized integer equality `Σ coeffs·xᵢ = rhs` (constant moved to the
+/// right). The coefficient map omits zero entries; an empty map is a constant row
+/// `0 = rhs`. This is the public, self-contained form the certificate refers to,
+/// so the independent checker can re-derive without trusting the term IR.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Equality {
+    /// Coefficients keyed by symbol, sorted (a `BTreeMap`), zero entries omitted.
+    pub coeffs: BTreeMap<SymbolId, i128>,
+    /// Right-hand side constant.
+    pub rhs: i128,
+}
+
+/// An independently-checkable "integer Farkas" refutation of a system of integer
+/// equalities `E_i: Σ_j a_{ij}·x_j = c_i`.
+///
+/// It certifies that the integer combination `Σ_i multipliers[i]·E_i` is the row
+/// `Σ_j combined_j·x_j = constant`, which is integer-infeasible because
+/// `gcd(combined coeffs) ∤ constant` (with `gcd(∅) = 0`, and `0 ∤ d` iff
+/// `d ≠ 0` — the all-zero `0 = d≠0` case). Validating it ([`check_diophantine_certificate`])
+/// re-derives the combination from the *original* equalities and shares no code
+/// with the elimination that produced it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DiophantineCertificate {
+    /// One integer multiplier `λ_i` per input equality (same order as `equalities`).
+    pub multipliers: Vec<i128>,
+    /// The combined row's coefficients, sorted by [`SymbolId`], zero entries omitted.
+    pub combined: Vec<(SymbolId, i128)>,
+    /// The combined row's right-hand side constant `d`.
+    pub constant: i128,
+}
+
+/// A normalized equality [`Row`] carrying its provenance: the integer combination
+/// `Σ combo_i·E_i` of the *original* equalities (by index) that produced it.
 struct Row {
     coeffs: BTreeMap<SymbolId, i128>,
     rhs: i128,
+    /// `combo[i]` is the multiplier `λ_i` of original equality `i`. Initialized to
+    /// the unit vector `eᵢ` for input row `i`; every integer row op updates it
+    /// identically to the coefficient/rhs update.
+    combo: Vec<i128>,
 }
 
 /// Builds the normalized [`Row`] for the integer equality `a = b`, or `None` if
-/// either side is non-linear or an `i128` overflow occurs while normalizing.
-fn equality_row(arena: &TermArena, a: TermId, b: TermId) -> Option<Row> {
+/// either side is non-linear or an `i128` overflow occurs while normalizing. The
+/// row's provenance `combo` is the unit vector `eᵢ` of length `m` selecting
+/// equality `idx` among the `m` originals.
+fn equality_row(arena: &TermArena, a: TermId, b: TermId, idx: usize, m: usize) -> Option<Row> {
     let (mut coeffs, ka) = int_linear(arena, a)?;
     let (cb, kb) = int_linear(arena, b)?;
     // Move `b` to the left: `Σ (ca-cb)·x = -(ka-kb)`, then flip to RHS form below.
@@ -101,24 +283,41 @@ fn equality_row(arena: &TermArena, a: TermId, b: TermId) -> Option<Row> {
     coeffs.retain(|_, c| *c != 0);
     // `Σ coeffs·x = -(ka - kb) = kb - ka`.
     let rhs = kb.checked_sub(ka)?;
-    Some(Row { coeffs, rhs })
+    let mut combo = vec![0i128; m];
+    combo[idx] = 1;
+    Some(Row { coeffs, rhs, combo })
+}
+
+/// The public, self-contained [`Equality`] for the integer equality `a = b`, or
+/// `None` if either side is non-linear or an `i128` overflow occurs. Same
+/// normalization as [`equality_row`] but without provenance — this is what the
+/// certificate's `equalities` and the checker re-derive against.
+fn equality_of(arena: &TermArena, a: TermId, b: TermId) -> Option<Equality> {
+    let (mut coeffs, ka) = int_linear(arena, a)?;
+    let (cb, kb) = int_linear(arena, b)?;
+    for (sym, c) in cb {
+        let entry = coeffs.entry(sym).or_insert(0);
+        *entry = entry.checked_sub(c)?;
+    }
+    coeffs.retain(|_, c| *c != 0);
+    let rhs = kb.checked_sub(ka)?;
+    Some(Equality { coeffs, rhs })
 }
 
 /// Decides whether a system of integer equality [`Row`]s is integer-infeasible by
-/// fraction-free GCD-based row reduction. Returns `true` only on a genuine
-/// contradiction; `false` on satisfiability-undetermined or `i128` overflow.
-fn system_is_infeasible(mut rows: Vec<Row>) -> bool {
+/// fraction-free GCD-based row reduction. Returns `Some(contradiction_row)` — a
+/// genuine integer-infeasible row carrying its provenance `combo` — on a
+/// refutation; `None` on satisfiability-undetermined or `i128` overflow.
+fn system_is_infeasible(mut rows: Vec<Row>) -> Option<Row> {
     // An empty system is trivially feasible.
     if rows.is_empty() {
-        return false;
+        return None;
     }
     // Per-row check first: a single row already infeasible (constant row `0 = c`
     // with `c ≠ 0`, or `gcd(coeffs) ∤ rhs`) refutes the whole system. This also
     // exactly reproduces the single-equation GCD test, so no regression.
-    for row in &rows {
-        if row_is_infeasible(row) {
-            return true;
-        }
+    if let Some(i) = rows.iter().position(row_is_infeasible) {
+        return Some(rows.swap_remove(i));
     }
 
     // Deterministic pivot order: columns are symbol ids in ascending order. A
@@ -167,7 +366,7 @@ fn system_is_infeasible(mut rows: Vec<Row>) -> bool {
             }
         }
         let Some(p) = pivot else {
-            continue; // no row carries this column among the unpivoted rows
+            continue; // no row carries this column among the unpivoted rows.
         };
         pivoted[p] = true;
         let pc = rows[p].coeffs[&col];
@@ -188,20 +387,20 @@ fn system_is_infeasible(mut rows: Vec<Row>) -> bool {
             // checked; on overflow we abandon the proof attempt.
             let g = gcd(pc, ic);
             let (Some(fi), Some(fp)) = (pc.checked_div(g), ic.checked_div(g)) else {
-                return false;
+                return None;
             };
             if !row_axpy(&mut rows, i, p, fi, fp) {
-                return false; // overflow during combination → not refuted
+                return None; // overflow during combination → not refuted.
             }
             // The combined row may now be a contradiction; check eagerly.
             if row_is_infeasible(&rows[i]) {
-                return true;
+                return Some(rows.swap_remove(i));
             }
         }
     }
 
     // Final sweep: any surviving row that is now a contradiction.
-    rows.iter().any(row_is_infeasible)
+    rows.into_iter().find(row_is_infeasible)
 }
 
 /// In place: `Row_i := fi·Row_i − fp·Row_p`. Returns `false` on any `i128`
@@ -212,8 +411,9 @@ fn row_axpy(rows: &mut [Row], i: usize, p: usize, fi: i128, fp: i128) -> bool {
     let pivot_coeffs: Vec<(SymbolId, i128)> =
         rows[p].coeffs.iter().map(|(&s, &c)| (s, c)).collect();
     let pivot_rhs = rows[p].rhs;
+    let pivot_combo: Vec<i128> = rows[p].combo.clone();
 
-    // Scale row i by fi.
+    // Scale row i by fi (coeffs, rhs, and the provenance vector identically).
     {
         let row = &mut rows[i];
         for c in row.coeffs.values_mut() {
@@ -226,6 +426,12 @@ fn row_axpy(rows: &mut [Row], i: usize, p: usize, fi: i128, fp: i128) -> bool {
             return false;
         };
         row.rhs = v;
+        for l in &mut row.combo {
+            let Some(v) = l.checked_mul(fi) else {
+                return false;
+            };
+            *l = v;
+        }
     }
 
     // Subtract fp·pivot.
@@ -248,6 +454,16 @@ fn row_axpy(rows: &mut [Row], i: usize, p: usize, fi: i128, fp: i128) -> bool {
             return false;
         };
         rows[i].rhs = v;
+    }
+    // Provenance: combo_i := fi·combo_i − fp·combo_p (the fi scale was applied above).
+    for (idx, &pl) in pivot_combo.iter().enumerate() {
+        let Some(term) = pl.checked_mul(fp) else {
+            return false;
+        };
+        let Some(v) = rows[i].combo[idx].checked_sub(term) else {
+            return false;
+        };
+        rows[i].combo[idx] = v;
     }
 
     rows[i].coeffs.retain(|_, c| *c != 0);
@@ -378,7 +594,10 @@ fn scale(
 
 #[cfg(test)]
 mod tests {
-    use super::{prove_lia_unsat_by_diophantine, prove_lia_unsat_by_gcd};
+    use super::{
+        DiophantineCertificate, check_diophantine_certificate, prove_lia_unsat_by_diophantine,
+        prove_lia_unsat_by_diophantine_certified, prove_lia_unsat_by_gcd,
+    };
     use axeyum_ir::{TermArena, TermId};
 
     fn ivar(arena: &mut TermArena, name: &str) -> axeyum_ir::TermId {
@@ -664,5 +883,227 @@ mod tests {
         // Must not panic; returns false (not refuted) on overflow.
         let refuted = prove_lia_unsat_by_diophantine(&arena, &[e1, e2]);
         assert!(!refuted);
+    }
+
+    // ----------------------------------------------------------------------
+    // Independently-checkable Diophantine certificates.
+    // ----------------------------------------------------------------------
+
+    /// Every refuted system from the suite above yields a certificate its
+    /// independent checker accepts (round-trip), and the combination is genuinely
+    /// `gcd ∤ const`.
+    #[test]
+    fn certificate_round_trip_accepts_all_refuted_systems() {
+        // x + y = 1 ∧ x + y = 2.
+        {
+            let mut arena = TermArena::new();
+            let x = ivar(&mut arena, "x");
+            let y = ivar(&mut arena, "y");
+            let e1 = eq_xy(&mut arena, x, y, 1);
+            let e2 = eq_xy(&mut arena, x, y, 2);
+            let (eqs, cert) =
+                prove_lia_unsat_by_diophantine_certified(&arena, &[e1, e2]).expect("refuted");
+            assert!(check_diophantine_certificate(&eqs, &cert));
+        }
+        // x + y = 0 ∧ x − y = 1 (the "each row passes gcd, system fails" win).
+        {
+            let mut arena = TermArena::new();
+            let x = ivar(&mut arena, "x");
+            let y = ivar(&mut arena, "y");
+            let xpy = arena.int_add(x, y).unwrap();
+            let zero = arena.int_const(0);
+            let e1 = arena.eq(xpy, zero).unwrap();
+            let xmy = arena.int_sub(x, y).unwrap();
+            let one = arena.int_const(1);
+            let e2 = arena.eq(xmy, one).unwrap();
+            let (eqs, cert) =
+                prove_lia_unsat_by_diophantine_certified(&arena, &[e1, e2]).expect("refuted");
+            assert!(check_diophantine_certificate(&eqs, &cert));
+        }
+        // 2x + 4y = 3 (single equation).
+        {
+            let mut arena = TermArena::new();
+            let x = ivar(&mut arena, "x");
+            let y = ivar(&mut arena, "y");
+            let tx = term(&mut arena, 2, x);
+            let fy = term(&mut arena, 4, y);
+            let lhs = arena.int_add(tx, fy).unwrap();
+            let three = arena.int_const(3);
+            let eq = arena.eq(lhs, three).unwrap();
+            let (eqs, cert) =
+                prove_lia_unsat_by_diophantine_certified(&arena, &[eq]).expect("refuted");
+            assert!(check_diophantine_certificate(&eqs, &cert));
+        }
+        // Three-variable x + y + z = 1 ∧ x + y + z = 2.
+        {
+            let mut arena = TermArena::new();
+            let x = ivar(&mut arena, "x");
+            let y = ivar(&mut arena, "y");
+            let z = ivar(&mut arena, "z");
+            let xy = arena.int_add(x, y).unwrap();
+            let xyz = arena.int_add(xy, z).unwrap();
+            let one = arena.int_const(1);
+            let two = arena.int_const(2);
+            let e1 = arena.eq(xyz, one).unwrap();
+            let e2 = arena.eq(xyz, two).unwrap();
+            let (eqs, cert) =
+                prove_lia_unsat_by_diophantine_certified(&arena, &[e1, e2]).expect("refuted");
+            assert!(check_diophantine_certificate(&eqs, &cert));
+            // The combination has gcd ∤ const (here gcd(∅)=0 ∤ 1).
+            let mut g: i128 = 0;
+            for &(_, c) in &cert.combined {
+                g = super::gcd(g, c);
+            }
+            assert!(if g == 0 {
+                cert.constant != 0
+            } else {
+                cert.constant % g != 0
+            });
+        }
+    }
+
+    /// Hand-verified small case: `x + y = 1 ∧ x + y = 2`. A valid Farkas
+    /// combination is λ = (−1, 1) giving `0 = 1`, and `gcd(∅) = 0 ∤ 1`. Several
+    /// valid λ exist (e.g. scaled), so we assert the CHECKER accepts the emitted
+    /// one and that the combination is the empty-coeff `0 = nonzero` row.
+    #[test]
+    fn certificate_hand_verified_zero_equals_one() {
+        let mut arena = TermArena::new();
+        let x = ivar(&mut arena, "x");
+        let y = ivar(&mut arena, "y");
+        let e1 = eq_xy(&mut arena, x, y, 1);
+        let e2 = eq_xy(&mut arena, x, y, 2);
+        let (eqs, cert) =
+            prove_lia_unsat_by_diophantine_certified(&arena, &[e1, e2]).expect("refuted");
+        assert!(check_diophantine_certificate(&eqs, &cert));
+        // Contradiction is a constant row: no surviving variable coefficients.
+        assert!(cert.combined.is_empty());
+        assert_ne!(cert.constant, 0);
+        // The hand multiplier (−1, +1) is itself a valid certificate the checker
+        // accepts (whatever scaling/sign the elimination happened to pick).
+        let hand = DiophantineCertificate {
+            multipliers: vec![-1, 1],
+            combined: vec![],
+            constant: 1,
+        };
+        assert!(check_diophantine_certificate(&eqs, &hand));
+    }
+
+    /// Tampering with a multiplier, a combined coefficient, or the constant makes
+    /// the independent checker reject.
+    #[test]
+    fn certificate_tamper_is_rejected() {
+        let mut arena = TermArena::new();
+        let x = ivar(&mut arena, "x");
+        let y = ivar(&mut arena, "y");
+        let tx = term(&mut arena, 2, x);
+        let fy = term(&mut arena, 4, y);
+        let lhs = arena.int_add(tx, fy).unwrap();
+        let three = arena.int_const(3);
+        let eq = arena.eq(lhs, three).unwrap();
+        let (eqs, cert) = prove_lia_unsat_by_diophantine_certified(&arena, &[eq]).expect("refuted");
+        assert!(check_diophantine_certificate(&eqs, &cert));
+
+        // Tamper a multiplier.
+        let mut t1 = cert.clone();
+        t1.multipliers[0] = t1.multipliers[0].checked_add(1).unwrap();
+        assert!(!check_diophantine_certificate(&eqs, &t1));
+
+        // Tamper a combined coefficient (if any survives).
+        if !cert.combined.is_empty() {
+            let mut t2 = cert.clone();
+            t2.combined[0].1 = t2.combined[0].1.checked_add(1).unwrap();
+            assert!(!check_diophantine_certificate(&eqs, &t2));
+        }
+
+        // Tamper the constant.
+        let mut t3 = cert.clone();
+        t3.constant = t3.constant.checked_add(1).unwrap();
+        assert!(!check_diophantine_certificate(&eqs, &t3));
+    }
+
+    /// A certificate for one system, checked against a DIFFERENT system, is
+    /// rejected — the checker is independent of the elimination's provenance.
+    #[test]
+    fn certificate_cross_system_is_rejected() {
+        // System A: x + y = 1 ∧ x + y = 2 (refuted).
+        let mut arena = TermArena::new();
+        let x = ivar(&mut arena, "x");
+        let y = ivar(&mut arena, "y");
+        let a1 = eq_xy(&mut arena, x, y, 1);
+        let a2 = eq_xy(&mut arena, x, y, 2);
+        let (_eqs_a, cert_a) =
+            prove_lia_unsat_by_diophantine_certified(&arena, &[a1, a2]).expect("refuted");
+
+        // System B: 2x + 2y = 2 ∧ 2x + 2y = 5 (also refuted, different originals).
+        let mk = |arena: &mut TermArena, rhs: i128| {
+            let tx = term(arena, 2, x);
+            let ty = term(arena, 2, y);
+            let lhs = arena.int_add(tx, ty).unwrap();
+            let c = arena.int_const(rhs);
+            arena.eq(lhs, c).unwrap()
+        };
+        let b1 = mk(&mut arena, 2);
+        let b2 = mk(&mut arena, 5);
+        let (eqs_b, _cert_b) =
+            prove_lia_unsat_by_diophantine_certified(&arena, &[b1, b2]).expect("refuted");
+
+        // A's certificate against B's equalities must not validate.
+        assert!(!check_diophantine_certificate(&eqs_b, &cert_a));
+    }
+
+    /// A satisfiable system produces no certificate (mirrors the boolean
+    /// dispatch returning `false`).
+    #[test]
+    fn certificate_satisfiable_system_yields_none() {
+        let mut arena = TermArena::new();
+        let x = ivar(&mut arena, "x");
+        let y = ivar(&mut arena, "y");
+        let xpy = arena.int_add(x, y).unwrap();
+        let two = arena.int_const(2);
+        let e1 = arena.eq(xpy, two).unwrap();
+        let xmy = arena.int_sub(x, y).unwrap();
+        let zero = arena.int_const(0);
+        let e2 = arena.eq(xmy, zero).unwrap();
+        assert!(prove_lia_unsat_by_diophantine_certified(&arena, &[e1, e2]).is_none());
+        assert!(!prove_lia_unsat_by_diophantine(&arena, &[e1, e2]));
+    }
+
+    /// Overflow during elimination yields no certificate (graceful `None`), never
+    /// a panic or a spurious certificate.
+    #[test]
+    fn certificate_overflow_yields_none() {
+        let big_a: i128 = 170_141_183_460_469_231_731;
+        let big_b: i128 = 170_141_183_460_469_231_733;
+        let mut arena = TermArena::new();
+        let x = ivar(&mut arena, "x");
+        let y = ivar(&mut arena, "y");
+        let ax = term(&mut arena, big_a, x);
+        let lhs1 = arena.int_add(ax, y).unwrap();
+        let one = arena.int_const(1);
+        let e1 = arena.eq(lhs1, one).unwrap();
+        let bx = term(&mut arena, big_b, x);
+        let lhs2 = arena.int_add(bx, y).unwrap();
+        let two = arena.int_const(2);
+        let e2 = arena.eq(lhs2, two).unwrap();
+        assert!(prove_lia_unsat_by_diophantine_certified(&arena, &[e1, e2]).is_none());
+    }
+
+    /// A malformed certificate (wrong multiplier count) is conservatively rejected.
+    #[test]
+    fn certificate_wrong_multiplier_count_is_rejected() {
+        let mut arena = TermArena::new();
+        let x = ivar(&mut arena, "x");
+        let y = ivar(&mut arena, "y");
+        let e1 = eq_xy(&mut arena, x, y, 1);
+        let e2 = eq_xy(&mut arena, x, y, 2);
+        let (eqs, cert) =
+            prove_lia_unsat_by_diophantine_certified(&arena, &[e1, e2]).expect("refuted");
+        let bad = DiophantineCertificate {
+            multipliers: vec![cert.multipliers[0]], // too few
+            combined: cert.combined.clone(),
+            constant: cert.constant,
+        };
+        assert!(!check_diophantine_certificate(&eqs, &bad));
     }
 }
