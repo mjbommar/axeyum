@@ -610,6 +610,19 @@ fn check_auto_dispatch(
         }
     }
 
+    if features.has_array {
+        // Array extensionality as congruence: `a = b ⇒ select(a, i) = select(b, i)`.
+        // `prove_unsat_by_congruence` treats `select`/`store` as uninterpreted, so it
+        // soundly refutes extensionality conflicts (e.g. `a = b ∧ select(a,i) ≠
+        // select(b,i)`) — including **wide-index array equality** the eager array
+        // elimination rejects outright. Congruence is valid for arrays, so this only
+        // ever fast-paths a correct `unsat`; otherwise it falls through to the eager
+        // read-over-write + Ackermann path below.
+        if crate::euf_egraph::prove_unsat_by_congruence(arena, assertions).is_some() {
+            return Ok(CheckResult::Unsat);
+        }
+    }
+
     let mut backend = SatBvBackend::new();
     check_with_all_theories(&mut backend, arena, assertions, DEFAULT_INT_WIDTH, config)
 }
@@ -1441,6 +1454,8 @@ struct Features {
     has_datatype: bool,
     /// Any uninterpreted-function application (`Op::Apply`).
     has_function: bool,
+    /// Any array-sorted term (`select`/`store`/array equality).
+    has_array: bool,
 }
 
 impl Features {
@@ -1451,6 +1466,7 @@ impl Features {
             has_int: false,
             has_datatype: false,
             has_function: false,
+            has_array: false,
         };
         let mut seen = BTreeSet::new();
         let mut stack = assertions.to_vec();
@@ -1464,8 +1480,12 @@ impl Features {
                     features.has_bitblast = true;
                     features.has_int = true;
                 }
-                Sort::BitVec(_) | Sort::Array { .. } | Sort::Float { .. } => {
+                Sort::BitVec(_) | Sort::Float { .. } => {
                     features.has_bitblast = true;
+                }
+                Sort::Array { .. } => {
+                    features.has_bitblast = true;
+                    features.has_array = true;
                 }
                 Sort::Datatype(_) => features.has_datatype = true,
                 Sort::Bool => {}
@@ -1499,6 +1519,30 @@ mod tests {
     /// `f(x)` at the ground `f(a)`. This pins the dispatch wiring (`solve` →
     /// keystone) in place. (UF is finite-scalar-only in the IR, so a 33-bit-plus
     /// domain is how an unbounded UF quantifier surfaces here.)
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn array_extensionality_conflict_is_unsat_via_congruence() {
+        // a = b ∧ select(a, i) ≠ select(b, i) over a 16-bit index (too wide for the
+        // eager extensionality enumeration, which refuses indices > 8 bits) ⇒ UNSAT
+        // by congruence: a = b makes select(a,i) and select(b,i) congruent.
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 16, 8).unwrap();
+        let b = arena.array_var("b", 16, 8).unwrap();
+        let i = arena.bv_var("i", 16).unwrap();
+        let sa = arena.select(a, i).unwrap();
+        let sb = arena.select(b, i).unwrap();
+        let a_eq_b = arena.eq(a, b).unwrap();
+        let sel_ne = {
+            let e = arena.eq(sa, sb).unwrap();
+            arena.not(e).unwrap()
+        };
+        let result = solve(&mut arena, &[a_eq_b, sel_ne], &SolverConfig::default()).unwrap();
+        assert!(
+            matches!(result, CheckResult::Unsat),
+            "wide-index array extensionality conflict must be unsat, got {result:?}"
+        );
+    }
+
     #[test]
     #[allow(clippy::many_single_char_names)]
     fn solve_refutes_wide_bv_quantified_euf_via_keystone() {
