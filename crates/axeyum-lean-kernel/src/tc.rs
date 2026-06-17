@@ -1,24 +1,29 @@
 //! Type-theory core: WHNF reduction, definitional equality, and type inference
-//! for the environment-free fragment of the Lean kernel (ADR-0036, slice 2).
+//! over a global declaration [`Environment`](crate::Environment) for the
+//! non-inductive fragment of the Lean kernel (ADR-0036, slice 3).
 //!
 //! This is the **trusted core**: a wrong type-checker wrongly accepts proofs.
-//! The algorithm is ported faithfully from nanoda's `tc.rs` for the in-scope
-//! fragment — `Sort`, `FVar` (locals), `App`, `Lam`, `Pi`, `Let`, `BVar` — and
-//! it stops at the environment boundary with an explicit error rather than a
-//! guess.
+//! The algorithm is ported faithfully from nanoda's `tc.rs`/`env.rs` for the
+//! in-scope fragment — `Sort`, `FVar` (locals), `App`, `Lam`, `Pi`, `Let`,
+//! `BVar`, and now `Const` referencing non-inductive declarations — and it
+//! stops at the still-deferred boundary with an explicit error, never a guess.
 //!
 //! ## Scope
 //!
-//! In scope: beta reduction, zeta/let reduction, the lazy structural
-//! definitional-equality algorithm (quick check → WHNF → case split on
-//! `Sort`/`Pi`/`Lam`/`App`), eta-expansion, proof irrelevance, and type
-//! inference for the fragment above.
+//! In scope: beta reduction, zeta/let reduction, **δ-unfolding** of
+//! `Definition`/`Theorem` constants, universe instantiation, the lazy
+//! structural definitional-equality algorithm with nanoda's
+//! **lazy-delta step** (height-driven side choice + same-const short-circuit),
+//! eta-expansion, proof irrelevance, type inference including `Const`, and the
+//! trusted [`Kernel::add_declaration`](crate::Kernel::add_declaration)
+//! admission gate.
 //!
-//! **Deferred to the next slice** (and erroring cleanly if reached):
-//! the global `Environment`/declarations, `Const` δ-unfolding, literal typing,
-//! inductive/recursor (ι) reduction, and projection reduction. A `Const`
-//! reaching inference returns [`KernelError::UnsupportedConst`]; a `Lit`
-//! reaching inference returns [`KernelError::UnsupportedLit`]. Neither panics.
+//! **Deferred to a later slice** (and erroring cleanly if reached): literal
+//! typing/reduction (`Lit` → [`KernelError::UnsupportedLit`]),
+//! inductive/recursor (ι) reduction, structure projections, and `Quotient`
+//! reduction. An unknown `Const` name returns [`KernelError::UnknownConst`].
+//! `Opaque` declarations are admitted but never δ-unfold; `Axiom`s never
+//! unfold. None of these paths panic.
 //!
 //! ## How binders are opened
 //!
@@ -39,8 +44,10 @@
 //! `replace_dbj_level` exactly, with the side table standing in for the type
 //! that nanoda packs into its `Local` node.
 
+use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::{ExprId, ExprNode};
 use crate::level::LevelId;
+use crate::name::NameId;
 use crate::{BinderInfo, Kernel};
 
 /// An error from the environment-free type-checker.
@@ -83,16 +90,52 @@ pub enum KernelError {
         /// The free-variable id that was not found.
         id: u64,
     },
-    /// A `Const` reached inference. The environment/declaration layer is
-    /// deferred to the next slice (ADR-0036), so δ-unfolding and constant
-    /// typing are unsupported here.
+    /// A `Const` reached inference but the prior, environment-free slice could
+    /// not type it. Retained for back-compatibility; the environment slice
+    /// (ADR-0036) now resolves known constants and reports unknown names via
+    /// [`KernelError::UnknownConst`] instead.
     UnsupportedConst {
         /// The constant's name id (interned in the owning kernel).
         name: crate::name::NameId,
     },
-    /// A `Lit` reached inference. Literal typing needs the environment
-    /// (`Nat`/`String` declarations), deferred to the next slice.
+    /// A `Const` named a declaration that is not present in the environment.
+    UnknownConst {
+        /// The unresolved constant's name id (interned in the owning kernel).
+        name: crate::name::NameId,
+    },
+    /// A `Const`'s universe-argument count did not match its declaration's
+    /// universe-parameter count.
+    UniverseArityMismatch {
+        /// The constant's name id (interned in the owning kernel).
+        name: crate::name::NameId,
+        /// The number of universe parameters the declaration expects.
+        expected: usize,
+        /// The number of universe arguments the `Const` supplied.
+        got: usize,
+    },
+    /// A `Lit` reached inference. Literal typing needs inductive `Nat`/`String`
+    /// declarations and their reduction rules, deferred to a later slice.
     UnsupportedLit,
+    /// A declaration with this name already exists in the environment;
+    /// re-declaration is rejected.
+    DeclarationExists {
+        /// The name that was already declared.
+        name: crate::name::NameId,
+    },
+    /// A declaration's type did not infer/WHNF to a `Sort` (every declaration's
+    /// type must itself be a type).
+    DeclarationTypeNotASort {
+        /// The non-`Sort` type that was inferred for the declaration's type.
+        got: ExprId,
+    },
+    /// A definition/theorem/opaque declaration's value did not type-check to a
+    /// type definitionally equal to its declared type.
+    DeclarationValueMismatch {
+        /// The declaration's declared type.
+        declared: ExprId,
+        /// The type inferred for the declaration's value.
+        inferred: ExprId,
+    },
 }
 
 /// A single local declaration: an opened binder's name, type, and binder info.
@@ -183,24 +226,11 @@ impl Kernel {
         head
     }
 
-    /// Weak head normal form for the in-scope fragment.
-    ///
-    /// Performs **beta** (`App(Lam, a)` → instantiate the lambda body) and
-    /// **zeta/let** (`Let` → instantiate the value into the body) reduction,
-    /// iterating to a weak-head-normal term. `Sort` levels are simplified to a
-    /// canonical form (matching nanoda's `whnf_no_unfolding`). **Eta** is *not*
-    /// performed here — it lives in [`Kernel::def_eq`], matching nanoda.
-    ///
-    /// There is no δ (no `Const` unfolding), ι (no recursor/inductive), or
-    /// projection reduction in this slice; a head `Const`/`FVar`/`Sort`/`Pi`
-    /// or `Lam` with no further arguments is already weak-head-normal.
-    ///
-    /// # Panics
-    ///
-    /// Does not panic on well-formed input. (`unwrap`s below are guarded by the
-    /// surrounding pattern match.)
-    #[must_use]
-    pub fn whnf(&mut self, e: ExprId) -> ExprId {
+    /// Weak head normal form **without** δ-unfolding: beta, zeta/let, and
+    /// `Sort`-level simplification only. Ported from nanoda's
+    /// `whnf_no_unfolding`. A head `Const`/`FVar`/`Sort`/`Pi` or `Lam` with no
+    /// further arguments is already weak-head-normal here.
+    fn whnf_no_unfolding(&mut self, e: ExprId) -> ExprId {
         let mut cursor = e;
         loop {
             let (head, args) = self.unfold_apps(cursor);
@@ -236,12 +266,175 @@ impl Kernel {
                     let level = self.simplify(level);
                     return self.sort(level);
                 }
-                // All other heads are already weak-head-normal in this slice:
-                // FVar, Const, Sort (applied — ill-typed but inert here), Pi,
-                // BVar (loose — inert), Lit, and Lam with no args.
+                // All other heads are already weak-head-normal here: FVar,
+                // Const, Sort (applied — ill-typed but inert), Pi, BVar (loose —
+                // inert), Lit, and Lam with no args.
                 _ => return cursor,
             }
         }
+    }
+
+    /// Weak head normal form for the in-scope fragment.
+    ///
+    /// Performs **beta** (`App(Lam, a)` → instantiate the lambda body),
+    /// **zeta/let** (`Let` → instantiate the value into the body), and **δ**
+    /// (unfold a `Definition`/`Theorem` `Const` head to its value with
+    /// universe parameters instantiated) reduction, iterating to a
+    /// weak-head-normal term. `Sort` levels are simplified to a canonical form.
+    /// **Eta** is *not* performed here — it lives in [`Kernel::def_eq`],
+    /// matching nanoda.
+    ///
+    /// `Opaque` and `Axiom` `Const` heads do **not** δ-unfold (matching
+    /// nanoda's `get_declar_val`). There is no ι (recursor/inductive) or
+    /// projection reduction in this slice.
+    ///
+    /// # Panics
+    ///
+    /// Does not panic on well-formed input.
+    #[must_use]
+    pub fn whnf(&mut self, e: ExprId) -> ExprId {
+        let mut cursor = e;
+        loop {
+            let whnfd = self.whnf_no_unfolding(cursor);
+            match self.unfold_def(whnfd) {
+                Some(next) => cursor = next,
+                None => return whnfd,
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// δ-reduction and the declaration/environment layer (ADR-0036, slice 3)
+// ---------------------------------------------------------------------------
+
+impl Kernel {
+    /// Build a `Param(name) ↦ level` substitution pairing each universe
+    /// parameter with its instantiating argument positionally. Callers must
+    /// have already checked `uparams.len() == level_args.len()`.
+    fn level_subst(uparams: &[NameId], level_args: &[LevelId]) -> Vec<(NameId, LevelId)> {
+        uparams
+            .iter()
+            .copied()
+            .zip(level_args.iter().copied())
+            .collect()
+    }
+
+    /// Try to **δ-unfold** the base `Const` head of `e`: if `e` is
+    /// `Const(name, levels) a1 .. an` (or a bare `Const`) whose declaration has
+    /// an unfoldable value (`Definition`/`Theorem`) and whose universe-argument
+    /// count matches, substitute the universe args into the value and re-apply
+    /// the spine. Returns `None` for non-`Const` heads, unknown constants,
+    /// `Axiom`/`Opaque` (no unfolding), or universe arity mismatch. Ported from
+    /// nanoda's `unfold_def`.
+    fn unfold_def(&mut self, e: ExprId) -> Option<ExprId> {
+        let (fun, args) = self.unfold_apps(e);
+        let ExprNode::Const(name, levels) = self.expr_node(fun).clone() else {
+            return None;
+        };
+        let decl = self.env.get(name)?;
+        let value = decl.delta_value()?;
+        let uparams = decl.uparams().to_vec();
+        if uparams.len() != levels.len() {
+            return None;
+        }
+        let subst = Self::level_subst(&uparams, &levels);
+        let instantiated = self.substitute_expr_levels(value, &subst);
+        Some(self.foldl_apps(instantiated, args))
+    }
+
+    /// For an expression whose head is a `Const` naming an unfoldable
+    /// declaration, return that declaration's name and reducibility hint
+    /// (the only data lazy-delta needs). `Theorem` reports
+    /// [`ReducibilityHint::Opaque`]; `Axiom`/`Opaque`/unknown/non-`Const`
+    /// return `None`. Ported from nanoda's `get_applied_def`.
+    fn get_applied_def(&self, e: ExprId) -> Option<(NameId, ReducibilityHint)> {
+        let (head, _) = self.unfold_apps(e);
+        let ExprNode::Const(name, _) = self.expr_node(head) else {
+            return None;
+        };
+        let name = *name;
+        let decl = self.env.get(name)?;
+        decl.delta_hint().map(|hint| (name, hint))
+    }
+
+    /// δ-unfold a single applied definition and re-normalize cheaply
+    /// (no further δ). Ported from nanoda's `delta`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `e` is not an applied unfoldable definition (callers in
+    /// lazy-delta have already established this via [`Kernel::get_applied_def`],
+    /// matching nanoda's `delta`).
+    fn delta(&mut self, e: ExprId) -> ExprId {
+        let unfolded = self
+            .unfold_def(e)
+            .expect("delta called on a non-unfoldable expression");
+        self.whnf_no_unfolding(unfolded)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// The trusted declaration-admission gate
+// ---------------------------------------------------------------------------
+
+impl Kernel {
+    /// Type-check and admit a [`Declaration`] into the global environment —
+    /// the **trusted kernel gate**.
+    ///
+    /// Admission requires (matching nanoda's `check_declar` for the
+    /// non-inductive kinds):
+    ///
+    /// 1. no declaration with the same name already exists;
+    /// 2. the declared type infers (and WHNFs) to a `Sort` (it is a type);
+    /// 3. for `Definition`/`Theorem`/`Opaque`, the value's inferred type is
+    ///    definitionally equal to the declared type.
+    ///
+    /// Inference/def-eq run under the declaration's universe parameters as
+    /// `Param`s, so universe-polymorphic declarations type-check abstractly.
+    ///
+    /// On success the declaration is inserted and `Ok(())` returned; on any
+    /// failure the environment is left unchanged and a [`KernelError`] is
+    /// returned. A wrong check here would admit a false theorem, so the checks
+    /// are genuine — never skipped.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KernelError::DeclarationExists`] for a duplicate name,
+    /// [`KernelError::DeclarationTypeNotASort`] if the type is not a type,
+    /// [`KernelError::DeclarationValueMismatch`] if a value's type does not
+    /// match the declared type, or any [`KernelError`] surfaced while inferring
+    /// the type or value (e.g. [`KernelError::UnknownConst`] for a dangling
+    /// reference).
+    pub fn add_declaration(&mut self, decl: Declaration) -> Result<(), KernelError> {
+        let name = decl.name();
+        if self.env.contains(name) {
+            return Err(KernelError::DeclarationExists { name });
+        }
+
+        // (2) The declared type must itself be a type (infer to a `Sort`).
+        let ty = decl.ty();
+        let mut ctx = LocalContext::new();
+        let ty_ty = self.infer_core(ty, &mut ctx)?;
+        let ty_ty = self.whnf(ty_ty);
+        if !matches!(self.expr_node(ty_ty), ExprNode::Sort(_)) {
+            return Err(KernelError::DeclarationTypeNotASort { got: ty_ty });
+        }
+
+        // (3) The value (if any) must check against the declared type.
+        if let Some(value) = decl.value() {
+            let mut ctx = LocalContext::new();
+            let value_ty = self.infer_core(value, &mut ctx)?;
+            if !self.def_eq_core(value_ty, ty, &mut ctx) {
+                return Err(KernelError::DeclarationValueMismatch {
+                    declared: ty,
+                    inferred: value_ty,
+                });
+            }
+        }
+
+        self.env.insert_unchecked(decl);
+        Ok(())
     }
 }
 
@@ -332,6 +525,23 @@ impl Kernel {
         )
     }
 
+    /// Two `Const`s are def-eq iff they name the same declaration with
+    /// antisymmetrically-equivalent universe arguments (nanoda's
+    /// `def_eq_const`).
+    fn def_eq_const(&mut self, x: ExprId, y: ExprId) -> bool {
+        let (ExprNode::Const(nx, lx), ExprNode::Const(ny, ly)) =
+            (self.expr_node(x).clone(), self.expr_node(y).clone())
+        else {
+            return false;
+        };
+        if nx != ny || lx.len() != ly.len() {
+            return false;
+        }
+        lx.iter()
+            .zip(ly.iter())
+            .all(|(&a, &b)| self.level_is_equiv(a, b))
+    }
+
     /// Eta-expansion (nanoda's `try_eta_expansion`): if one side is a `Lam` and
     /// the other's type WHNFs to a `Pi`, expand the non-lambda `f` into
     /// `fun (x : dom) => f x` (with a lifted `f` and a `BVar 0` argument) and
@@ -414,18 +624,120 @@ impl Kernel {
         self.def_eq_core(x, y, ctx)
     }
 
-    /// The lazy structural algorithm (nanoda's `def_eq`/`def_eq_core` for the
-    /// in-scope fragment): quick check, WHNF both sides, quick check again,
-    /// then proof irrelevance, then case-split on the WHNF'd heads
-    /// (`Sort`/binder congruence via the quick check, `FVar`, `App` spine,
-    /// eta-expansion).
+    /// The same-const short-circuit (nanoda's `try_eq_const_app`): when both
+    /// sides apply the **same** `Regular` definition with **equal** hints, try
+    /// to show equality by comparing the spine arguments and universe levels
+    /// directly, *before* unfolding either side. Returns `Some(true)` on a
+    /// match, `None` to fall through to unfolding.
+    ///
+    /// This only fires for `Regular`/`Regular` with identical hints (so that
+    /// the cheap congruence is a sound shortcut for two copies of the same
+    /// definition); `Theorem`/`Opaque` (`Opaque` hint) do not take this path.
+    ///
+    /// The argument list mirrors nanoda's `try_eq_const_app` (both heads, both
+    /// names, and both hints), hence the lint allowance.
+    #[allow(clippy::too_many_arguments)]
+    fn try_eq_const_app(
+        &mut self,
+        x: ExprId,
+        x_name: NameId,
+        x_hint: ReducibilityHint,
+        y: ExprId,
+        y_name: NameId,
+        y_hint: ReducibilityHint,
+        ctx: &mut LocalContext,
+    ) -> Option<bool> {
+        if x_name != y_name {
+            return None;
+        }
+        if !matches!(
+            (x_hint, y_hint),
+            (ReducibilityHint::Regular(_), ReducibilityHint::Regular(_))
+        ) {
+            return None;
+        }
+        if x_hint != y_hint {
+            return None;
+        }
+        let (lf, largs) = self.unfold_apps(x);
+        let (rf, rargs) = self.unfold_apps(y);
+        let (ExprNode::Const(_, llevels), ExprNode::Const(_, rlevels)) =
+            (self.expr_node(lf).clone(), self.expr_node(rf).clone())
+        else {
+            return None;
+        };
+        if largs.len() != rargs.len() || llevels.len() != rlevels.len() {
+            return None;
+        }
+        let args_eq = largs
+            .iter()
+            .zip(rargs.iter())
+            .all(|(&a, &b)| self.def_eq_core(a, b, ctx));
+        if !args_eq {
+            return None;
+        }
+        let levels_eq = llevels
+            .iter()
+            .zip(rlevels.iter())
+            .all(|(&a, &b)| self.level_is_equiv(a, b));
+        if levels_eq { Some(true) } else { None }
+    }
+
+    /// The lazy-delta loop (nanoda's `lazy_delta_step`): if either side has an
+    /// unfoldable `Const` head, unfold the **higher-height** side to bring the
+    /// two closer, short-circuiting via [`Kernel::try_eq_const_app`] when both
+    /// apply the same definition. Returns `FoundEqResult(b)` when a cheap
+    /// answer is reached, or `Exhausted(x, y)` (neither side unfoldable) to
+    /// hand back to the structural checks.
+    fn lazy_delta_step(
+        &mut self,
+        mut x: ExprId,
+        mut y: ExprId,
+        ctx: &mut LocalContext,
+    ) -> DeltaResult {
+        loop {
+            let r1 = self.get_applied_def(x);
+            let r2 = self.get_applied_def(y);
+            match (r1, r2) {
+                (None, None) => return DeltaResult::Exhausted(x, y),
+                (Some(_), None) => x = self.delta(x),
+                (None, Some(_)) => y = self.delta(y),
+                (Some((_, l_hint)), Some((_, r_hint))) if l_hint.is_lt(r_hint) => {
+                    y = self.delta(y);
+                }
+                (Some((_, l_hint)), Some((_, r_hint))) if r_hint.is_lt(l_hint) => {
+                    x = self.delta(x);
+                }
+                (Some((x_name, l_hint)), Some((y_name, r_hint))) => {
+                    if let Some(r) =
+                        self.try_eq_const_app(x, x_name, l_hint, y, y_name, r_hint, ctx)
+                    {
+                        return DeltaResult::FoundEqResult(r);
+                    }
+                    x = self.delta(x);
+                    y = self.delta(y);
+                }
+            }
+            if let Some(quick) = self.def_eq_quick(x, y, ctx) {
+                return DeltaResult::FoundEqResult(quick);
+            }
+        }
+    }
+
+    /// The lazy structural algorithm (nanoda's `def_eq`/`def_eq_core`): quick
+    /// check, WHNF-without-δ both sides, quick check again, proof irrelevance,
+    /// then the **lazy-delta step** (δ-unfolding with height-driven side
+    /// choice), and finally the structural checks (`Const`, `FVar`, `App`
+    /// spine, eta-expansion) on the delta-exhausted heads.
     fn def_eq_core(&mut self, x: ExprId, y: ExprId, ctx: &mut LocalContext) -> bool {
         if let Some(quick) = self.def_eq_quick(x, y, ctx) {
             return quick;
         }
 
-        let x_n = self.whnf(x);
-        let y_n = self.whnf(y);
+        // WHNF without δ — δ is handled lazily by `lazy_delta_step` below so
+        // that we unfold only as far as needed (matching nanoda).
+        let x_n = self.whnf_no_unfolding(x);
+        let y_n = self.whnf_no_unfolding(y);
 
         if let Some(quick) = self.def_eq_quick(x_n, y_n, ctx) {
             return quick;
@@ -435,19 +747,31 @@ impl Kernel {
             return true;
         }
 
-        // No δ here (no `Const`); the lazy-delta step of nanoda collapses to
-        // the structural checks below for this fragment.
-        if self.def_eq_fvar(x_n, y_n) {
-            return true;
+        match self.lazy_delta_step(x_n, y_n, ctx) {
+            DeltaResult::FoundEqResult(b) => b,
+            DeltaResult::Exhausted(x_n, y_n) => {
+                if self.def_eq_const(x_n, y_n) || self.def_eq_fvar(x_n, y_n) {
+                    return true;
+                }
+                if self.def_eq_app(x_n, y_n, ctx) {
+                    return true;
+                }
+                if self.try_eta_expansion(x_n, y_n, ctx) {
+                    return true;
+                }
+                false
+            }
         }
-        if self.def_eq_app(x_n, y_n, ctx) {
-            return true;
-        }
-        if self.try_eta_expansion(x_n, y_n, ctx) {
-            return true;
-        }
-        false
     }
+}
+
+/// The outcome of [`Kernel::lazy_delta_step`]: either a cheap equality verdict
+/// (`FoundEqResult`) or the delta-exhausted head pair to hand to the structural
+/// checks (`Exhausted`). Ported from nanoda's `DeltaResult`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DeltaResult {
+    FoundEqResult(bool),
+    Exhausted(ExprId, ExprId),
 }
 
 // ---------------------------------------------------------------------------
@@ -505,7 +829,7 @@ impl Kernel {
                 let succ = self.level_succ(level);
                 Ok(self.sort(succ))
             }
-            ExprNode::Const(name, _) => Err(KernelError::UnsupportedConst { name }),
+            ExprNode::Const(name, levels) => self.infer_const(name, &levels),
             ExprNode::Lit(_) => Err(KernelError::UnsupportedLit),
             ExprNode::App(..) => self.infer_app(e, ctx),
             ExprNode::Lam(name, dom, body, info) => self.infer_lambda(name, dom, body, info, ctx),
@@ -617,6 +941,32 @@ impl Kernel {
         // nanoda: `let` is reduced rather than opened as a local.
         let instd = self.instantiate(body, &[val]);
         self.infer_core(instd, ctx)
+    }
+
+    /// Infer the type of `Const(name, level_args)`: look up the declaration,
+    /// check the universe-argument count matches the declaration's universe
+    /// parameters, and return the declaration's type with `uparams ↦
+    /// level_args` substituted (universe instantiation). Ported from nanoda's
+    /// `infer_const`.
+    fn infer_const(
+        &mut self,
+        name: crate::name::NameId,
+        level_args: &[LevelId],
+    ) -> Result<ExprId, KernelError> {
+        let Some(decl) = self.env.get(name) else {
+            return Err(KernelError::UnknownConst { name });
+        };
+        let uparams = decl.uparams().to_vec();
+        let ty = decl.ty();
+        if uparams.len() != level_args.len() {
+            return Err(KernelError::UniverseArityMismatch {
+                name,
+                expected: uparams.len(),
+                got: level_args.len(),
+            });
+        }
+        let subst = Self::level_subst(&uparams, level_args);
+        Ok(self.substitute_expr_levels(ty, &subst))
     }
 }
 

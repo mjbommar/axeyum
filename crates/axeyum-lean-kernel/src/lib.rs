@@ -46,6 +46,7 @@
 
 #![forbid(unsafe_code)]
 
+mod env;
 mod expr;
 mod level;
 mod name;
@@ -54,6 +55,7 @@ mod tc;
 use std::collections::HashMap;
 use std::fmt;
 
+pub use env::{Declaration, Environment, ReducibilityHint};
 pub use expr::{BinderInfo, ExprId, ExprNode, Lit};
 pub use level::{LevelId, LevelNode};
 pub use name::{NameId, NameNode};
@@ -79,6 +81,10 @@ pub struct Kernel {
     exprs: Vec<ExprNode>,
     expr_meta: Vec<ExprMeta>,
     expr_intern: HashMap<ExprNode, ExprId>,
+
+    /// The global declaration environment (ADR-0036, slice 3). Declarations are
+    /// admitted only through the type-checked [`Kernel::add_declaration`] gate.
+    env: Environment,
 }
 
 // ---------------------------------------------------------------------------
@@ -152,6 +158,12 @@ impl Kernel {
     #[must_use]
     pub fn expr_node(&self, id: ExprId) -> &ExprNode {
         &self.exprs[id.index()]
+    }
+
+    /// A shared reference to the global declaration [`Environment`].
+    #[must_use]
+    pub fn environment(&self) -> &Environment {
+        &self.env
     }
 }
 
@@ -365,6 +377,54 @@ impl Kernel {
                     }
                 }
                 l
+            }
+        }
+    }
+
+    /// Substitute universe parameters **inside an expression** `e`, replacing
+    /// every `Param` named in `subst` wherever a level appears (`Sort` levels
+    /// and `Const` universe arguments). Bound/free variables, literals, and the
+    /// term structure are otherwise unchanged.
+    ///
+    /// This is the expression-level analogue of [`Kernel::substitute_level`],
+    /// ported from nanoda's `subst_expr_levels`. It is used for universe
+    /// instantiation: a `Const(name, level_args)` instantiates the
+    /// declaration's `uparams` with `level_args` by substituting in the
+    /// declaration's type (and, when δ-unfolding, its value).
+    pub fn substitute_expr_levels(&mut self, e: ExprId, subst: &[(NameId, LevelId)]) -> ExprId {
+        match self.expr_node(e).clone() {
+            ExprNode::BVar(_) | ExprNode::FVar(_) | ExprNode::Lit(_) => e,
+            ExprNode::Sort(level) => {
+                let level = self.substitute_level(level, subst);
+                self.sort(level)
+            }
+            ExprNode::Const(name, levels) => {
+                let levels = levels
+                    .into_iter()
+                    .map(|l| self.substitute_level(l, subst))
+                    .collect();
+                self.const_(name, levels)
+            }
+            ExprNode::App(f, a) => {
+                let f = self.substitute_expr_levels(f, subst);
+                let a = self.substitute_expr_levels(a, subst);
+                self.app(f, a)
+            }
+            ExprNode::Lam(name, ty, body, info) => {
+                let ty = self.substitute_expr_levels(ty, subst);
+                let body = self.substitute_expr_levels(body, subst);
+                self.lam(name, ty, body, info)
+            }
+            ExprNode::Pi(name, ty, body, info) => {
+                let ty = self.substitute_expr_levels(ty, subst);
+                let body = self.substitute_expr_levels(body, subst);
+                self.pi(name, ty, body, info)
+            }
+            ExprNode::Let(name, ty, val, body) => {
+                let ty = self.substitute_expr_levels(ty, subst);
+                let val = self.substitute_expr_levels(val, subst);
+                let body = self.substitute_expr_levels(body, subst);
+                self.let_(name, ty, val, body)
             }
         }
     }

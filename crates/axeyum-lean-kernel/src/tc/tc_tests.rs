@@ -316,16 +316,18 @@ fn error_lambda_domain_not_a_type() {
     assert!(matches!(err, KernelError::NotASort { .. }), "got {err:?}");
 }
 
-/// Error: a `Const` reaching inference is unsupported in this slice.
+/// Error: a `Const` naming a declaration absent from the environment is
+/// rejected with `UnknownConst` (the environment layer, ADR-0036 slice 3, now
+/// resolves known constants; an unknown name is still an error, not a panic).
 #[test]
-fn error_const_unsupported() {
+fn error_const_unknown() {
     let mut k = Kernel::new();
     let anon = k.anon();
     let cn = k.name_str(anon, "Nat");
     let c = k.const_(cn, vec![]);
     let err = k.infer(c).unwrap_err();
     assert!(
-        matches!(err, KernelError::UnsupportedConst { .. }),
+        matches!(err, KernelError::UnknownConst { .. }),
         "got {err:?}"
     );
 }
