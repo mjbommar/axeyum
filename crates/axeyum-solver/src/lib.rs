@@ -56,6 +56,7 @@ mod optimize;
 mod pb;
 mod preprocess;
 mod proof;
+mod qfabv_alethe;
 mod qfbv_alethe;
 mod qinst_egraph;
 mod records;
@@ -143,6 +144,7 @@ pub use proof::{
     export_qf_aufbv_unsat_proof, export_qf_bv_unsat_proof, export_qf_lia_unsat_proof,
     export_qf_uf_unsat_proof,
 };
+pub use qfabv_alethe::prove_qf_abv_unsat_alethe;
 pub use qfbv_alethe::prove_qf_bv_unsat_alethe;
 pub use qinst_egraph::{instantiate_forall_via_egraph, prove_quantified_unsat_via_egraph};
 pub use records::{RecordError, RecordSort};
