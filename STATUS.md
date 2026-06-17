@@ -355,6 +355,22 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **QF_BV bitblast→Carcara contract reverse-engineered & recorded
+  (T3.3.1 design)**. Empirically confirmed against the built Carcara binary the
+  exact shape it requires for per-operator `bitblast_*` steps: the `@bbterm`
+  operator + indexed `(_ @bit_of i)` bit-extraction (**spelling is `@bit_of`, not
+  `@bit`**), e.g. `bitblast_var` accepts
+  `(= x (@bbterm ((_ @bit_of 0) x) ((_ @bit_of 1) x)))` — this **parses and checks
+  valid** (a lone step only lacks the empty-clause conclusion). Recorded the full
+  rule-name set and the L-sized implementation body in
+  `docs/research/07-verification/scalable-bitblast-certification.md`: (1) extend
+  `AletheTerm` to represent the indexed `(_ @bit_of i)` head (parse/write/`key`
+  round-trip) — the current `App(String, …)` can't; (2) per-operator emitter from
+  `axeyum-bv`'s lowering, div/rem/shift as `hole` + miter side-cert; (3) bridge via
+  Tseitin CNF rules to the already-Carcara-valid `lrat_to_alethe` resolution layer.
+  This is the external-checker analogue of the in-house miter certificate (path B);
+  no code emitted this turn — deliberately scoped as design so the L-task starts
+  correct. **Next action: T3.3.1 step 1 — the `AletheTerm` indexed-op IR extension.**
 - **2026-06-16** — **Resolution/clausal layer now Carcara-`valid` (T3.3.3)** — the
   Boolean-refutation rung of a full QF_BV proof. A CNF UNSAT goes CDCL → DRAT →
   LRAT → Alethe (`lrat_to_alethe`) and is now accepted end-to-end by Carcara

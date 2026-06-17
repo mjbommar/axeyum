@@ -174,11 +174,72 @@ real bit-blasting bugs long before a verified bit-blaster exists. Tests confirm
 faithful arithmetic/bitwise and division/shift terms agree over hundreds of
 samples; integer terms report `Unsupported`.
 
+## The external-checker route (Alethe/Carcara, T3.3.1) — confirmed contract
+
+Path (B) above certifies the reduction *in-house* (a DRAT-checked miter against an
+independent reference). A **complementary** route is to emit a full QF_BV `unsat`
+proof in the **Alethe** format and have the external **Carcara** checker validate
+it end to end — the same third-party-referee assurance now in place for EUF, LRA,
+and the clausal resolution layer (see `crates/axeyum-solver/tests/carcara_crosscheck.rs`).
+This route is **not** a bounded increment; this section records the exact Carcara
+contract — *empirically confirmed against the built binary* — so the implementation
+proceeds without re-deriving it.
+
+**Carcara's bitblast rules (confirmed).** Carcara checks per-operator `bitblast_*`
+steps whose conclusion is a definitional equality `(= <op-term> <bbterm>)` where the
+bit-level term uses two special operators:
+
+- `@bbterm` — bundles the per-bit Boolean terms: `(@bbterm b0 b1 … b{n-1})`, LSB
+  first. (Carcara operator `BvBbTerm`, spelled `@bbterm`.)
+- `(_ @bit_of i) x` — the indexed bit-extraction of bit `i` of a bit-vector term
+  `x`. **The spelling is `@bit_of`, not `@bit`** (Carcara `ParamOperator::BvBitOf`);
+  `@bit` is rejected by the parser.
+
+Rule names (from `references/carcara/.../checker/shared.rs`): `bitblast_const`,
+`bitblast_var`, `bitblast_and`/`or`/`xor`/`xnor`/`not`, `bitblast_comp`,
+`bitblast_ult`/`slt`, `bitblast_add`/`mult`/`neg`, `bitblast_equal`,
+`bitblast_extract`/`concat`/`sign_extend`. Each rebuilds the expected `@bbterm`
+left-to-right from the operands' bits and checks structural equality, e.g.
+`bitblast_var` for a width-2 `x` accepts exactly
+
+```
+(step s (cl (= x (@bbterm ((_ @bit_of 0) x) ((_ @bit_of 1) x)))) :rule bitblast_var)
+```
+
+This step **parses and checks valid** against the binary (the only remaining error
+on a lone step is "proof does not conclude empty clause" — Carcara requires the
+proof to derive `(cl)` to be a refutation, exactly as for the resolution layer).
+
+**What the implementation needs (the L-sized body):**
+
+1. **IR extension.** `axeyum_cnf::AletheTerm` (`Const | App`) cannot represent a
+   list-headed/indexed application like `((_ @bit_of 0) x)` — its `App` head is a
+   plain `String` and the parser requires an atom head. Add an indexed-operator
+   representation (parse + write + `key()` round-trip) so `@bit_of`/`@bbterm` are
+   first-class. `@bbterm` itself is an ordinary `App("@bbterm", …)`; only the
+   indexed `(_ @bit_of i)` head needs new structure.
+2. **Per-operator emitter.** Mirror Carcara's left-to-right `@bbterm` construction
+   for each supported operator, driven by `axeyum-bv`'s lowering (the bits axeyum
+   already computes). Carcara holes `bvudiv`/`bvurem`/shifts → emit `hole` for the
+   structural step and attach axeyum's **miter certificate** (path B above) as the
+   side justification — the place axeyum *leads* Alethe, which has no div/rem rule.
+3. **Bridge to the resolution refutation (already validated).** The top-level
+   predicate (e.g. an asserted `bvult`/equality) bitblasts to a Boolean formula;
+   Tseitin CNF-introduction steps (`and_pos`/`or_pos`/…, already supported by
+   `check_alethe`) connect it to the CNF variables, and the
+   `lrat_to_alethe` resolution layer (now Carcara-`valid`, T3.3.3) closes to `(cl)`.
+
+This is the third-party-checked analogue of path (B): where (B) trusts an in-house
+reference and refutes a miter with `check_drat`, this emits a proof an *external*
+checker re-derives. The two are independent and mutually reinforcing.
+
 ## What "done" means for this note
 
 The bounded slice of track (a) — reduction-free term-level certification for
 small instances — is implemented and wired into the evidence envelope, and a
 scalable differential *faithfulness check* (above) guards the reduction at large
 sizes. The remaining *certification* form is recorded here as an open program
-with a concrete, sound, staged path (B → A). No part of it should be faked with
-an unsound shortcut: a wrong `unsat` would betray the project's core identity.
+with a concrete, sound, staged path (B → A), plus the external-checker
+(Alethe/Carcara) route with its confirmed contract above. No part of it should be
+faked with an unsound shortcut: a wrong `unsat` would betray the project's core
+identity.
