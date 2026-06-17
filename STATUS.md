@@ -338,7 +338,7 @@ plan is built and committed on the current branch:
 | P3.0 | Reduction trust ledger (TrustId + pedantic levels) | DONE |
 | P3.1 | LRAT clausal upgrade (+ in-tree check_lrat) | WIP — **`check_lrat` (hint-based linear checker) + `elaborate_drat_to_lrat` + parse/write** landed in `axeyum-cnf`, sound (3 negative/rejection tests) + 600-CNF differential; **threaded into the evidence export**: every `UnsatProof` (QF_BV + reduced QF_ABV/AUFBV/UF/LIA/datatype) now carries a self-checked LRAT certificate, `recheck` cross-checks it, `recheck_lrat` re-checks it in linear time, tamper-detected. Remaining: emit LRAT hints directly from the proof-producing CDCL core (vs post-hoc elaboration); RAT-step elaboration (negative hints) |
 | P3.2 | Alethe term/proof IR + emitter (`axeyum-alethe`) **[critical path]** | WIP — **resolution-layer IR + parser/printer + sound `check_alethe`** in `axeyum-cnf::alethe`: `resolution`/`th_resolution` steps verified by `{premises,¬concl}`-UNSAT via the proof-producing core + `check_drat` re-check (entailment itself independently checked); verify-before-record; 7 tests incl. 3 rejection. Remaining: typed-term IR (vs opaque atoms), more rules, emit Alethe from solver runs, Carcara CI cross-check; extract `axeyum-alethe` crate (ADR) when the term IR lands |
-| P3.3 | Alethe for QF_BV (bitblast_* + CNF rules + resolution/drat; Carcara CI) | WIP — **arithmetic `la_generic` checking** (`check_alethe_lra`): a linear-arith tautology clause verified by `¬clause`-UNSAT via the Farkas-certified `check_with_lra`; pluggable `check_alethe_with` callback keeps `axeyum-cnf` arithmetic-free. 5 tests incl. soundness rejections. **`lia_generic` (integer) checking+emission** added via `check_with_lia_simplex` (honors integrality; integer/real distinction tested). **Carcara cross-check harness landed (T3.3.5)**: EUF (transitivity+congruence) **and LRA `la_generic`** (Farkas `:args` via the certificate) proofs externally `valid`; gated test skips without the binary. Remaining: BV bitblast rules; LRA equality/`and` assertions (split bounds → no args yet); `lia_generic` is a Carcara hole |
+| P3.3 | Alethe for QF_BV (bitblast_* + CNF rules + resolution/drat; Carcara CI) | WIP — **arithmetic `la_generic` checking** (`check_alethe_lra`): a linear-arith tautology clause verified by `¬clause`-UNSAT via the Farkas-certified `check_with_lra`; pluggable `check_alethe_with` callback keeps `axeyum-cnf` arithmetic-free. 5 tests incl. soundness rejections. **`lia_generic` (integer) checking+emission** added via `check_with_lia_simplex` (honors integrality; integer/real distinction tested). **Carcara cross-check harness (T3.3.5)**: EUF (transitivity+congruence), **LRA `la_generic`** (Farkas `:args` incl. equalities), and **clausal resolution** (`lrat_to_alethe`, T3.3.3) proofs all externally `valid`; gated test skips without the binary. Remaining: BV `bitblast_*` rules (T3.3.1–2) for the full QF_BV proof; LRA >2-atom (`and`) assertions; `lia_generic` is a Carcara hole |
 | P3.4 | Embedded Alethe checker subset (self-checking) | TODO |
 | P3.5 | Alethe for reductions (arrays → Ackermann → int-blast) | TODO |
 | P3.6 | In-tree Rust Lean kernel (`axeyum-lean-kernel`, from nanoda) | TODO |
@@ -355,6 +355,19 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **Resolution/clausal layer now Carcara-`valid` (T3.3.3)** — the
+  Boolean-refutation rung of a full QF_BV proof. A CNF UNSAT goes CDCL → DRAT →
+  LRAT → Alethe (`lrat_to_alethe`) and is now accepted end-to-end by Carcara
+  against the asserted input clauses. The cross-check surfaced **two latent bugs
+  our lenient `check_alethe` masked**, now fixed in `lrat_to_alethe`: (1) command
+  ids were bare numerals (`1`, `2`) — invalid Alethe symbols; now prefixed
+  (`a{n}`/`t{n}`); (2) an `assume (or φ…)` introduces the disjunction as a *unit*
+  clause, not the clause `(cl φ…)` — each multi-literal input clause now gets an
+  explicit `:rule or` unpacking step before resolution consumes it. `check_alethe`
+  learned the `or` rule (entailment-checked, like resolution). All `assume`s emit
+  before steps (no checker warnings). 82 cnf tests + 9 cross-check cases green.
+  This is the third externally-validated proof family (EUF, LRA, now clausal
+  resolution) and the closing step a full QF_BV bitblast proof will reuse.
 - **2026-06-16** — **LRA Carcara cross-check now covers equality assertions**.
   `FarkasCertificate` gained a `pub origins: Vec<usize>` field (`origins[i]` = the
   source assertion index of atom `i`; an equality contributes two atoms sharing one

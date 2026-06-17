@@ -623,8 +623,11 @@ pub fn check_alethe_with(
                     // (`contraction` = drop duplicate literals, `reordering` =
                     // permute, `weakening` = add literals) all have a conclusion that
                     // is a logical consequence of the premise clauses, so the same
-                    // proof-checked entailment test validates them.
-                    "resolution" | "th_resolution" | "contraction" | "reordering" | "weakening" => {
+                    // proof-checked entailment test validates them. `or` unpacks an
+                    // assumed disjunction `(or φ…)` into the clause `(cl φ…)` — also a
+                    // pure entailment from the (clause-form) premise.
+                    "resolution" | "th_resolution" | "contraction" | "reordering" | "weakening"
+                    | "or" => {
                         if !premises_entail(&premise_clauses, clause)? {
                             return Err(AletheError::StepNotEntailed { id: id.clone() });
                         }
@@ -981,22 +984,70 @@ fn premises_entail(
 /// (Alethe checking does not need them). CNF variable `k` maps to the atom `vk`.
 #[must_use]
 pub fn lrat_to_alethe(formula: &CnfFormula, proof: &[LratStep]) -> Vec<AletheCommand> {
+    // Alethe command ids are SMT-LIB symbols, which may not be bare numerals;
+    // LRAT clause ids (input clauses `1..=N`, then learned clauses) are numeric,
+    // so every id is prefixed (`t` for a clause-producing step / unit assume, `a`
+    // for a disjunction assume) to stay valid Alethe.
+    //
+    // A subtlety the lenient `check_alethe` hides but an external checker enforces:
+    // an `assume (or φ…)` introduces the *formula* as a unit clause, not the clause
+    // `(cl φ…)`. So each multi-literal input clause is `assume`d and then unpacked
+    // with an explicit `:rule or` step into the clause form that resolution consumes.
+    // `clause_form[k]` maps LRAT clause id `k` to the id of its `(cl …)` form.
     let mut commands = Vec::new();
+    let mut or_steps = Vec::new();
+    let mut clause_form: BTreeMap<u64, String> = BTreeMap::new();
+    // All `assume`s first (Alethe convention; some checkers warn otherwise), with
+    // the `or`-unpacking steps for multi-literal clauses deferred until after them.
     for (i, clause) in formula.clauses().iter().enumerate() {
-        commands.push(AletheCommand::Assume {
-            id: (i + 1).to_string(),
-            clause: alethe_clause(clause.lits()),
-        });
-    }
-    for step in proof {
-        if let LratStep::Add { id, clause, hints } = step {
-            commands.push(AletheCommand::Step {
-                id: id.to_string(),
-                clause: alethe_clause(clause),
-                rule: "resolution".to_owned(),
-                premises: hints.iter().map(u64::to_string).collect(),
+        let lrat_id = i as u64 + 1;
+        let lits = clause.lits();
+        if lits.len() >= 2 {
+            // Multi-literal: assume the disjunction, then `or`-unpack to a clause.
+            let assume_id = format!("a{lrat_id}");
+            let clause_id = format!("t{lrat_id}");
+            commands.push(AletheCommand::Assume {
+                id: assume_id.clone(),
+                clause: alethe_clause(lits),
+            });
+            or_steps.push(AletheCommand::Step {
+                id: clause_id.clone(),
+                clause: alethe_clause(lits),
+                rule: "or".to_owned(),
+                premises: vec![assume_id],
                 args: Vec::new(),
             });
+            clause_form.insert(lrat_id, clause_id);
+        } else {
+            // Unit (or empty) input clause: the assume is already in clause form.
+            let id = format!("t{lrat_id}");
+            commands.push(AletheCommand::Assume {
+                id: id.clone(),
+                clause: alethe_clause(lits),
+            });
+            clause_form.insert(lrat_id, id);
+        }
+    }
+    commands.append(&mut or_steps);
+    for step in proof {
+        if let LratStep::Add { id, clause, hints } = step {
+            let step_id = format!("t{id}");
+            commands.push(AletheCommand::Step {
+                id: step_id.clone(),
+                clause: alethe_clause(clause),
+                rule: "resolution".to_owned(),
+                premises: hints
+                    .iter()
+                    .map(|&h| {
+                        clause_form
+                            .get(&h)
+                            .cloned()
+                            .unwrap_or_else(|| format!("t{h}"))
+                    })
+                    .collect(),
+                args: Vec::new(),
+            });
+            clause_form.insert(*id, step_id);
         }
     }
     commands
