@@ -86,3 +86,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0030](adr-0030-incremental-lazy-arrays.md) | Incremental arrays for symbolic memory (eager-route slice done; warm lazy deferred) | accepted |
 | [0031](adr-0031-reduction-trust-ledger.md) | Reduction trust ledger (typed, countable trust holes) | accepted |
 | [0032](adr-0032-egraph-crate.md) | Standalone congruence-closure e-graph crate (`axeyum-egraph`) | accepted |
+| [0034](adr-0034-word-level-preprocessing-default.md) | Word-level preprocessing is opt-in, default-off pending broad-corpus measurement | accepted |
