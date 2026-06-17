@@ -69,9 +69,16 @@ pub fn prove_qf_abv_unsat_alethe(
     assertions: &[TermId],
 ) -> Option<Vec<AletheCommand>> {
     // Scan for the first assertion that is a read-over-write-same disequality.
-    let (sel, rhs) = assertions
+    // If none, fall back to the congruence/extensionality route: `select`/`store`
+    // are treated as uninterpreted functions, so the EUF congruence emitter proves
+    // e.g. `a = b ∧ select(a, k) ≠ select(b, k)` (array extensionality). That
+    // emitter is itself self-validating against `check_alethe`.
+    let Some((sel, rhs)) = assertions
         .iter()
-        .find_map(|&assertion| match_row_same_diseq(arena, assertion))?;
+        .find_map(|&assertion| match_row_same_diseq(arena, assertion))
+    else {
+        return crate::prove_qf_uf_unsat_alethe(arena, assertions);
+    };
 
     // Render `(= sel rhs)` exactly as the `read_over_write_same` rule expects.
     let sel_alethe = array_term_to_alethe(arena, sel)?;
@@ -113,9 +120,11 @@ pub fn prove_qf_abv_unsat_alethe(
     ];
 
     // Self-validate: only hand back a certificate the in-tree checker accepts.
+    // If the read-over-write-same proof did not validate (e.g. a subterm outside
+    // the rendered fragment), still try the congruence/extensionality route.
     match check_alethe(&proof) {
         Ok(true) => Some(proof),
-        _ => None,
+        _ => crate::prove_qf_uf_unsat_alethe(arena, assertions),
     }
 }
 

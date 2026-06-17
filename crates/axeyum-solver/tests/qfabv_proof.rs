@@ -106,3 +106,33 @@ fn plain_bv_disequality_is_none() {
     let neq = arena.not(eq).unwrap();
     assert!(prove_qf_abv_unsat_alethe(&arena, &[neq]).is_none());
 }
+
+/// Array extensionality conflict: `a = b ∧ select(a, k) ≠ select(b, k)` is unsat by
+/// congruence over `select` (treated as an uninterpreted function). The array
+/// emitter has no read-over-write-same match here, so it routes to the EUF
+/// congruence emitter — and the result still re-checks in-tree.
+#[test]
+fn array_extensionality_conflict_is_proved_via_congruence() {
+    let mut arena = TermArena::new();
+    let a = arena.array_var("a", 4, 8).unwrap();
+    let b = arena.array_var("b", 4, 8).unwrap();
+    let k_sym = arena.declare("k", Sort::BitVec(4)).unwrap();
+    let k = arena.var(k_sym);
+    let sa = arena.select(a, k).unwrap();
+    let sb = arena.select(b, k).unwrap();
+    let a_eq_b = arena.eq(a, b).unwrap();
+    let reads_equal = arena.eq(sa, sb).unwrap();
+    let reads_differ = arena.not(reads_equal).unwrap();
+
+    let proof = prove_qf_abv_unsat_alethe(&arena, &[a_eq_b, reads_differ])
+        .expect("extensionality proof via congruence");
+    assert_eq!(
+        check_alethe(&proof),
+        Ok(true),
+        "extensionality proof re-checks"
+    );
+    assert!(
+        matches!(proof.last(), Some(AletheCommand::Step { clause, .. }) if clause.is_empty()),
+        "proof ends in the empty clause"
+    );
+}
