@@ -151,14 +151,27 @@ pub enum KernelError {
         /// The constructor whose result was wrong.
         ctor: crate::name::NameId,
     },
-    /// A constructor field mentioned the inductive type being declared — a
-    /// **recursive** constructor. Recursive inductives (the induction
-    /// hypothesis, positivity checking) are deferred to a later slice; this
-    /// slice supports only non-recursive inductives.
+    /// A constructor field mentioned the inductive type being declared in a
+    /// shape this slice does not handle. Slice 5 admits **direct** recursive
+    /// fields (a field whose type is exactly `Const(I, uparams)`); this error is
+    /// reserved for the disallowed shapes that still need the deferred recursive
+    /// machinery (positivity, parameters/indices) — e.g. a recursive occurrence
+    /// applied to arguments such as `I a` (a parametric/indexed self-reference).
     RecursiveInductiveNotSupported {
         /// The inductive whose constructor was recursive.
         inductive: crate::name::NameId,
         /// The recursive constructor.
+        ctor: crate::name::NameId,
+    },
+    /// A constructor field mentioned the inductive type being declared in a
+    /// **higher-order / reflexive** position — a field whose type is a `Pi`
+    /// ending in `I` (e.g. `(A → I) → I`), or any non-direct occurrence of `I`.
+    /// Reflexive and nested recursion are deferred to a later slice; this slice
+    /// admits only *bare* `Const(I, uparams)` recursive fields.
+    ReflexiveOrNestedNotSupported {
+        /// The inductive whose constructor used a reflexive/nested occurrence.
+        inductive: crate::name::NameId,
+        /// The offending constructor.
         ctor: crate::name::NameId,
     },
     /// A constructor's type used a `Pi` whose result was not an application of

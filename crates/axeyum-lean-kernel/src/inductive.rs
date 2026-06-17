@@ -1,37 +1,53 @@
-//! The inductive layer (ADR-0036, slice 4): the trusted [`Kernel::add_inductive`]
-//! admission gate, recursor generation, and ι-reduction in WHNF.
+//! The inductive layer (ADR-0036, slice 5): the trusted [`Kernel::add_inductive`]
+//! admission gate, recursor generation (with induction hypotheses), and
+//! ι-reduction in WHNF.
 //!
-//! ## Scope — non-recursive inductives only
+//! ## Scope — direct-recursive inductives (still non-parametric, non-indexed)
 //!
-//! This slice supports inductive types that are **non-parametric, non-indexed,
-//! and non-recursive**: an inductive `I : Sort u` whose constructors are
-//! `c : A1 → … → Ak → I` where none of the field types `Ai` mention `I`. This
-//! covers enums (`Bool`, a 3-way enum) and simple structures/products/sums
-//! (`Prod`-like, `Sum`-like, `Option`-like with a non-recursive payload).
+//! This slice supports inductive types that are **non-parametric, non-indexed**,
+//! whose constructors may have **direct recursive fields**: an inductive
+//! `I : Sort u` whose constructors are `c : T_1 → … → T_k → I` where each field
+//! type `T_i` is either non-recursive (does not mention `I`) **or** is exactly
+//! the bare recursive occurrence `Const(I, uparams)` (a direct recursive field,
+//! e.g. `Nat.succ : Nat → Nat`, or a binary tree's two `Tree` fields). This adds
+//! recursive types (`Nat`, binary trees) to the enums and simple structures of
+//! slice 4.
 //!
-//! **Deferred** (and rejected explicitly, never guessed): recursive
-//! constructors (the induction hypothesis in minor premises, positivity
-//! checking), parameters (`List α`), indices (`Vector`/`Eq`), nested and mutual
-//! inductives, and the `Prop`-subsingleton large-elimination subtleties. The
-//! motive is always allowed to eliminate into an arbitrary `Sort v` here (the
-//! "basic" rule, matching nanoda's large-elimination path for non-`Prop`
-//! types); for a `Prop`-valued inductive this is more permissive than Lean's
-//! restriction and is a known limitation of this slice.
+//! Direct recursive fields are trivially strictly-positive, so no positivity
+//! analysis is required here. Each recursive field is, however, verified to be
+//! *exactly* `Const(I, uparams)`: any other occurrence of `I` is rejected.
+//!
+//! **Deferred** (and rejected explicitly, never guessed): **higher-order /
+//! reflexive** recursive fields (`(A → I)` — a field whose type is a `Pi`
+//! ending in `I`; only a *bare* `I` field is allowed this slice, reported as
+//! [`KernelError::ReflexiveOrNestedNotSupported`]), parameters (`List α`),
+//! indices (`Vector`/`Eq`), nested and mutual inductives, and the
+//! `Prop`-subsingleton large-elimination subtleties. The motive is always
+//! allowed to eliminate into an arbitrary `Sort v` here (the "basic" rule,
+//! matching nanoda's large-elimination path for non-`Prop` types); for a
+//! `Prop`-valued inductive this is more permissive than Lean's restriction and
+//! is a known limitation of this slice.
 //!
 //! ## What is built
 //!
-//! For a checked inductive `I` with constructors `c_1 … c_n`:
+//! For a checked inductive `I` with constructors `c_1 … c_n`, where constructor
+//! `c_i` has fields `f_1 … f_k` of which `f_{j1} … f_{jr}` are recursive:
 //!
 //! - `I.rec : Π {motive : I → Sort v}
-//!            (m_1 : Π fields_1, motive (c_1 fields_1)) …
-//!            (m_n : Π fields_n, motive (c_n fields_n))
+//!            (m_1 : Π fields_1 (ih…), motive (c_1 fields_1)) …
+//!            (m_n : Π fields_n (ih…), motive (c_n fields_n))
 //!            (major : I), motive major`
+//!   where each minor premise `m_i` adds, after its `k` field binders, **one
+//!   induction-hypothesis binder `ih_j : motive f_j` per recursive field `f_j`**
+//!   (in field order; a non-recursive constructor adds none, matching slice 4).
 //! - one [`RecRule`] per constructor, with
-//!   `value = λ motive m_1 … m_n (fields_i…), m_i fields_i…` (the ι-RHS).
+//!   `value = λ motive m_1 … m_n (fields_i…), m_i fields_i… (I.rec motive m… f_j)…`
+//!   — the ι-RHS applies the minor to the fields and then to one recursive call
+//!   `I.rec motive minors… f_j` per recursive field `f_j`.
 //!
 //! The generated recursor's type is itself `infer`-checked (a self-check):
-//! a wrong recursor would wrongly accept proofs, so it is verified rather than
-//! trusted.
+//! a wrong recursor (e.g. a mis-indexed induction hypothesis) would wrongly
+//! accept proofs, so it is verified rather than trusted.
 
 use crate::env::{Declaration, RecRule};
 use crate::expr::{ExprId, ExprNode};
@@ -41,7 +57,7 @@ use crate::{BinderInfo, Kernel};
 
 impl Kernel {
     /// Type-check and admit an inductive type together with its constructors —
-    /// the **trusted inductive gate** (ADR-0036, slice 4).
+    /// the **trusted inductive gate** (ADR-0036, slice 5).
     ///
     /// `ty` is the inductive's type (a `Sort` in this slice — no parameters or
     /// indices). `ctors` pairs each constructor's name with its type, in
@@ -54,15 +70,20 @@ impl Kernel {
     /// 1. no declaration with the inductive's (or any constructor's) name exists;
     /// 2. `ty` is a `Sort` (a non-parametric, non-indexed inductive);
     /// 3. each constructor's type is a telescope `Π (fields…), I` whose field
-    ///    types type-check, do **not** mention `I` (non-recursive), and whose
-    ///    result head is exactly `Const(I, uparams)`.
+    ///    types type-check and whose result head is exactly `Const(I, uparams)`.
+    ///    A field type may be non-recursive (it does not mention `I`) or a
+    ///    **direct recursive field** (its type is exactly `Const(I, uparams)`).
+    ///    Any other occurrence of `I` in a field — a reflexive/higher-order
+    ///    field (`(A → I)`) or a parametric/indexed self-reference (`I a`) — is
+    ///    rejected.
     ///
     /// # Errors
     ///
     /// Returns [`KernelError::DeclarationExists`] for a duplicate name,
     /// [`KernelError::InductiveTypeNotASort`] if `ty` is not a `Sort`,
-    /// [`KernelError::RecursiveInductiveNotSupported`] for a recursive field,
-    /// [`KernelError::ConstructorResultMismatch`] /
+    /// [`KernelError::ReflexiveOrNestedNotSupported`] for a reflexive/nested
+    /// recursive field, [`KernelError::RecursiveInductiveNotSupported`] for a
+    /// parametric/indexed self-reference, [`KernelError::ConstructorResultMismatch`] /
     /// [`KernelError::MalformedConstructorType`] for a wrong/ill-formed
     /// constructor result, or any [`KernelError`] surfaced while inferring a
     /// field type or the generated recursor type.
@@ -129,11 +150,12 @@ impl Kernel {
         let mut checked: Vec<CheckedCtor> = Vec::with_capacity(ctors.len());
         for (idx, (cn, cty)) in ctors.iter().copied().enumerate() {
             match self.check_ctor(name, ind_const, cn, cty) {
-                Ok(fields) => checked.push(CheckedCtor {
+                Ok((fields, recursive_fields)) => checked.push(CheckedCtor {
                     name: cn,
                     ty: cty,
                     idx: u16::try_from(idx).expect("ctor count fits u16"),
                     fields,
+                    recursive_fields,
                 }),
                 Err(e) => {
                     // Roll back the inductive so the environment is unchanged.
@@ -179,16 +201,25 @@ impl Kernel {
     }
 
     /// Check one constructor: open its field telescope into fresh locals,
-    /// rejecting recursive fields, and require the result head to be exactly the
-    /// parent inductive `Const(I, uparams)`. Returns the opened field locals
-    /// (each carries the binder name/type/info), outer-to-inner.
+    /// classifying each field as non-recursive or a **direct recursive field**
+    /// (its type is exactly `Const(I, uparams)`), and require the result head to
+    /// be exactly the parent inductive `Const(I, uparams)`. Returns the opened
+    /// field locals (each carries the binder name/type/info), outer-to-inner,
+    /// together with the field positions that are recursive (ascending).
+    ///
+    /// Any occurrence of `I` in a field type that is *not* a bare direct field
+    /// is rejected: a `Pi` ending in `I` (reflexive/higher-order) ⇒
+    /// [`KernelError::ReflexiveOrNestedNotSupported`]; a self-reference applied
+    /// to arguments (`I a`, parametric/indexed) ⇒
+    /// [`KernelError::RecursiveInductiveNotSupported`]; any deeper occurrence ⇒
+    /// [`KernelError::ReflexiveOrNestedNotSupported`].
     fn check_ctor(
         &mut self,
         ind_name: NameId,
         ind_const: ExprId,
         ctor_name: NameId,
         ctor_ty: ExprId,
-    ) -> Result<Vec<LocalDecl>, KernelError> {
+    ) -> Result<(Vec<LocalDecl>, Vec<usize>), KernelError> {
         let mut ctx = LocalContext::new();
         // The constructor's type must itself type-check (to a Sort).
         let cty_ty = self.infer_core(ctor_ty, &mut ctx)?;
@@ -198,14 +229,21 @@ impl Kernel {
         }
 
         let mut fields: Vec<LocalDecl> = Vec::new();
+        let mut recursive_fields: Vec<usize> = Vec::new();
         let mut cursor = self.whnf(ctor_ty);
         while let ExprNode::Pi(bname, dom, body, info) = self.expr_node(cursor).clone() {
-            // Reject recursive fields: a field type mentioning `I`.
+            // Classify the field's occurrence of `I`, if any. A direct recursive
+            // field (`dom == Const(I, uparams)`) is admitted and recorded;
+            // everything else mentioning `I` is rejected with a precise error.
             if self.mentions_const(dom, ind_name) {
-                return Err(KernelError::RecursiveInductiveNotSupported {
-                    inductive: ind_name,
-                    ctor: ctor_name,
-                });
+                if dom == ind_const {
+                    // Direct recursive field: exactly `Const(I, uparams)`.
+                    recursive_fields.push(fields.len());
+                } else {
+                    return Err(
+                        self.classify_bad_recursive_field(ind_name, ind_const, ctor_name, dom)
+                    );
+                }
             }
             let fvar = ctx.fresh_fvar();
             let decl = LocalDecl {
@@ -242,7 +280,46 @@ impl Kernel {
                 ctor: ctor_name,
             });
         }
-        Ok(fields)
+        Ok((fields, recursive_fields))
+    }
+
+    /// Classify a field type `dom` that mentions `I` but is **not** the bare
+    /// direct field `Const(I, uparams)`, into the appropriate deferred-error.
+    ///
+    /// - a `Pi` whose telescope ends in `I` (a reflexive/higher-order field,
+    ///   e.g. `(A → I)`) ⇒ [`KernelError::ReflexiveOrNestedNotSupported`];
+    /// - a self-reference applied to arguments (`I a…`, parametric/indexed)
+    ///   ⇒ [`KernelError::RecursiveInductiveNotSupported`];
+    /// - any other occurrence (nested under another head, etc.)
+    ///   ⇒ [`KernelError::ReflexiveOrNestedNotSupported`].
+    fn classify_bad_recursive_field(
+        &mut self,
+        ind_name: NameId,
+        ind_const: ExprId,
+        ctor_name: NameId,
+        dom: ExprId,
+    ) -> KernelError {
+        // A `Pi`-headed field that ultimately yields `I` is reflexive/nested.
+        if matches!(self.expr_node(dom), ExprNode::Pi(..)) {
+            return KernelError::ReflexiveOrNestedNotSupported {
+                inductive: ind_name,
+                ctor: ctor_name,
+            };
+        }
+        // `I` applied to arguments (`Const(I, _) a…`) is a parametric/indexed
+        // self-reference: the deferred recursive-with-params machinery.
+        let (head, args) = self.unfold_apps(dom);
+        if !args.is_empty() && head == ind_const {
+            return KernelError::RecursiveInductiveNotSupported {
+                inductive: ind_name,
+                ctor: ctor_name,
+            };
+        }
+        // Anything else mentioning `I` (nested under a different head, etc.).
+        KernelError::ReflexiveOrNestedNotSupported {
+            inductive: ind_name,
+            ctor: ctor_name,
+        }
     }
 
     /// Whether the constant named `target` occurs anywhere in `e` (used for the
@@ -272,6 +349,11 @@ struct CheckedCtor {
     idx: u16,
     /// The opened field locals (outer-to-inner), each carrying name/type/info.
     fields: Vec<LocalDecl>,
+    /// The 0-based field positions that are **direct recursive fields** (a field
+    /// whose type is exactly `Const(I, uparams)`), ascending. One induction
+    /// hypothesis (in the recursor's minor premise) and one recursive call (in
+    /// the ι-rule) is generated per entry, in this order.
+    recursive_fields: Vec<usize>,
 }
 
 // ---------------------------------------------------------------------------
@@ -370,9 +452,19 @@ impl Kernel {
             };
             // motive (c_i fields…)
             let motive_app = self.app(motive, ctor_app);
-            // Π fields…, motive (c_i fields…)
-            let minor_ty = self.abstr_pi_telescope(&fields, motive_app);
-            // Pop the field locals (they were only needed to build minor_ty).
+            // One induction-hypothesis binder `ih_j : motive f_j` per recursive
+            // field `f_j`, in field order, opened *after* the field binders so
+            // each IH's type references the already-bound field fvar. These IH
+            // locals are abstracted along with the fields into the minor type, so
+            // their de Bruijn indices fall out of `abstr_pi_telescope`.
+            let ih_locals = self.open_ih_locals(&mut ctx, motive, &fields, &c.recursive_fields);
+            // Π fields… (ih…), motive (c_i fields…)
+            let minor_body = self.abstr_pi_telescope(&ih_locals, motive_app);
+            let minor_ty = self.abstr_pi_telescope(&fields, minor_body);
+            // Pop the IH locals and the field locals (only needed for minor_ty).
+            for _ in 0..ih_locals.len() {
+                ctx.pop();
+            }
             for _ in 0..fields.len() {
                 ctx.pop();
             }
@@ -408,6 +500,11 @@ impl Kernel {
 
         // Build the rec rules: value_i = λ motive m_1..m_n fields_i…, m_i fields_i…
         let mut rec_rules: Vec<RecRule> = Vec::with_capacity(ctors.len());
+        // The recursor's universe parameters, as `Param` levels, for the inner
+        // `I.rec …` calls in recursive ι-rules (instantiated to the const's
+        // actual levels by `reduce_rec`).
+        let rec_level_args: Vec<crate::level::LevelId> =
+            rec_uparams.iter().map(|&u| self.level_param(u)).collect();
         for (i, c) in ctors.iter().enumerate() {
             let minor = minors[i];
             let fields = &ctor_fields[i];
@@ -417,7 +514,21 @@ impl Kernel {
                 let fv = self.fvar(f.fvar);
                 body = self.app(body, fv);
             }
-            // λ fields_i…, (m_i fields_i…)
+            // … then one recursive call `I.rec motive minors… f_j` per recursive
+            // field `f_j`, in field order (the induction-hypothesis arguments).
+            for &rf in &c.recursive_fields {
+                let f = fields[rf];
+                let mut rec_call = self.const_(rec_name, rec_level_args.clone());
+                rec_call = self.app(rec_call, motive);
+                for m in &minors {
+                    let mv = self.fvar(m.fvar);
+                    rec_call = self.app(rec_call, mv);
+                }
+                let fv = self.fvar(f.fvar);
+                rec_call = self.app(rec_call, fv);
+                body = self.app(body, rec_call);
+            }
+            // λ fields_i…, (m_i fields_i… ih…)
             let val = self.abstr_lambda_telescope(fields, body);
             // λ motive m_1..m_n, (…)
             let val = self.abstr_lambda_telescope(&minors, val);
@@ -479,6 +590,37 @@ impl Kernel {
             cursor = self.whnf(cursor);
         }
         fields
+    }
+
+    /// Open one induction-hypothesis local `ih_j : motive f_j` in `ctx` (pushing
+    /// each) for every recursive field position in `recursive_fields`, in order.
+    /// `fields` are the already-opened constructor field locals; `motive` is the
+    /// motive fvar expression. Returns the IH locals outer-to-inner.
+    fn open_ih_locals(
+        &mut self,
+        ctx: &mut LocalContext,
+        motive: ExprId,
+        fields: &[LocalDecl],
+        recursive_fields: &[usize],
+    ) -> Vec<LocalDecl> {
+        let mut ihs = Vec::with_capacity(recursive_fields.len());
+        for &rf in recursive_fields {
+            let f = fields[rf];
+            let fv = self.fvar(f.fvar);
+            // ih_j : motive f_j
+            let ih_ty = self.app(motive, fv);
+            let fvar = ctx.fresh_fvar();
+            let name = self.name_str_anon("ih");
+            let decl = LocalDecl {
+                fvar,
+                name,
+                ty: ih_ty,
+                info: BinderInfo::Default,
+            };
+            ctx.push(decl);
+            ihs.push(decl);
+        }
+        ihs
     }
 
     /// A fresh universe parameter name for the recursor's motive level, not
