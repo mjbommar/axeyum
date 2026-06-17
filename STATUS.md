@@ -355,6 +355,20 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-17** — **Benchmarking checkpoint: no regression + the perf ceiling
+  diagnosed**. Re-ran axeyum (`sat-bv`, 2 s) over the committed 43-file curated QF_BV
+  slice after the session's 21 proof-track commits: **32/43 decided (8 sat + 24
+  unsat), 11 unknown, PAR-2 = 1.062 s** — matches the committed baseline (32/43,
+  PAR-2 ≈1.07 s) exactly, so the proof work caused **zero performance regression**.
+  All 11 unknowns are **`rustsat-batsat` SAT-solver timeouts** on multiplier-heavy
+  instances (`brummayerbiere3 mulhs08/16/32/64`, `calypto`, `wienand-cav2008
+  commute08/16`, `stp_samples`), with small-to-mid CNFs (2.7k–200k clauses) —
+  i.e. **SAT time, not encoding, dominates**. Crucially, CNF preprocessing
+  (subsumption T1.1.1 + bounded variable elimination T1.1.2) is **already wired**
+  into the `sat-bv` path (`sat_bv_backend.rs`), and these still time out — so the
+  next real perf lever is **SAT-solving power** (the custom CDCL core, ADR-0002, +
+  multiplier-aware inprocessing), whose priority the methodology gates on exactly
+  this "SAT time dominates" measurement. That gate is now met on the curated slice.
 - **2026-06-17** — **`(get-proof)` now serves THREE theories (QF_BV + EUF + LRA)**.
   `solve_smtlib_get_proof` tries, in order, the `QF_BV` bitblast driver, the EUF
   congruence emitter (`prove_qf_uf_unsat_alethe`), and the LRA Farkas emitter
