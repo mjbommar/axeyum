@@ -69,10 +69,16 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   **`la_generic` EMISSION landed** (`prove_lra_unsat_alethe`): an unsat LRA
   conjunction → an `la_generic` + resolution Alethe proof, **self-validated** by
   `check_alethe_lra` (so axeyum both checks AND emits arithmetic proofs, the full
-  "trusted small checking" identity for LRA). Remaining (P3.2/3.3): more BV theory
+  "trusted small checking" identity for LRA). **`lia_generic` (integer) checking +
+  emission landed** (`prove_lia_unsat_alethe`): the integer counterpart, decided by
+  the **integer-complete** `check_with_lia_simplex` so integrality is honored —
+  `(cl (<= x 0) (>= x 1))` is *accepted* by `lia_generic` (no integer in the open
+  interval) yet *rejected* by the real `la_generic` (`x=0.5` falsifies it), the
+  distinction enforced by a dedicated test. Linear `*` guarded to a constant factor
+  (genuine `var*var` ⇒ rejected); integer numerals parse as plain `i128`; emission
+  self-validated via `check_alethe_lra`. Remaining (P3.2/3.3): more BV theory
   rules; emit Alethe for the *reductions* (P3.5: array/function elimination,
-  int-blasting); `lia_generic` (integer) checking+emission; Carcara CI cross-check;
-  extract `axeyum-alethe` crate (ADR).
+  int-blasting); Carcara CI cross-check; extract `axeyum-alethe` crate (ADR).
 - **P2.9 datatypes — structural refutation DONE** (2026-06-16):
   `prove_datatype_unsat_structurally` — the three datatype structural axioms over a
   term-level union-find: **acyclicity** (`x = cons(h, x)` ⇒ unsat), **distinctness**
@@ -332,7 +338,7 @@ plan is built and committed on the current branch:
 | P3.0 | Reduction trust ledger (TrustId + pedantic levels) | DONE |
 | P3.1 | LRAT clausal upgrade (+ in-tree check_lrat) | WIP — **`check_lrat` (hint-based linear checker) + `elaborate_drat_to_lrat` + parse/write** landed in `axeyum-cnf`, sound (3 negative/rejection tests) + 600-CNF differential; **threaded into the evidence export**: every `UnsatProof` (QF_BV + reduced QF_ABV/AUFBV/UF/LIA/datatype) now carries a self-checked LRAT certificate, `recheck` cross-checks it, `recheck_lrat` re-checks it in linear time, tamper-detected. Remaining: emit LRAT hints directly from the proof-producing CDCL core (vs post-hoc elaboration); RAT-step elaboration (negative hints) |
 | P3.2 | Alethe term/proof IR + emitter (`axeyum-alethe`) **[critical path]** | WIP — **resolution-layer IR + parser/printer + sound `check_alethe`** in `axeyum-cnf::alethe`: `resolution`/`th_resolution` steps verified by `{premises,¬concl}`-UNSAT via the proof-producing core + `check_drat` re-check (entailment itself independently checked); verify-before-record; 7 tests incl. 3 rejection. Remaining: typed-term IR (vs opaque atoms), more rules, emit Alethe from solver runs, Carcara CI cross-check; extract `axeyum-alethe` crate (ADR) when the term IR lands |
-| P3.3 | Alethe for QF_BV (bitblast_* + CNF rules + resolution/drat; Carcara CI) | WIP — **arithmetic `la_generic` checking** (`check_alethe_lra`): a linear-arith tautology clause verified by `¬clause`-UNSAT via the Farkas-certified `check_with_lra`; pluggable `check_alethe_with` callback keeps `axeyum-cnf` arithmetic-free. 5 tests incl. soundness rejections. Remaining: BV bitblast rules, Carcara CI cross-check |
+| P3.3 | Alethe for QF_BV (bitblast_* + CNF rules + resolution/drat; Carcara CI) | WIP — **arithmetic `la_generic` checking** (`check_alethe_lra`): a linear-arith tautology clause verified by `¬clause`-UNSAT via the Farkas-certified `check_with_lra`; pluggable `check_alethe_with` callback keeps `axeyum-cnf` arithmetic-free. 5 tests incl. soundness rejections. **`lia_generic` (integer) checking+emission** added via `check_with_lia_simplex` (honors integrality; integer/real distinction tested). Remaining: BV bitblast rules, Carcara CI cross-check |
 | P3.4 | Embedded Alethe checker subset (self-checking) | TODO |
 | P3.5 | Alethe for reductions (arrays → Ackermann → int-blast) | TODO |
 | P3.6 | In-tree Rust Lean kernel (`axeyum-lean-kernel`, from nanoda) | TODO |
@@ -349,6 +355,14 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-16** — **`lia_generic` integer Alethe checking + emission**
+  (`prove_lia_unsat_alethe`, exported). Integer counterpart to `la_generic`:
+  the `la_generic_check` dispatch gained a `lia_generic` arm decided by the
+  integer-complete `check_with_lia_simplex` (honoring integrality), plus an int
+  parser (constant-factor-guarded `*`, plain-`i128` numerals) and an emitter
+  self-validated by `check_alethe_lra`. A dedicated test pins the integer/real
+  distinction: `(cl (<= x 0) (>= x 1))` is accepted by `lia_generic`, rejected
+  by `la_generic`. 4 new tests; `just check` green.
 - **2026-06-16** — **P1.5 online decider wired as the QF_UF fast path** (pending
   commit). `auto::check_auto_dispatch` now tries `solve_qf_uf_online` (online
   DPLL(T) on the backtrackable e-graph) **before** the offline `check_qf_uf`; on
