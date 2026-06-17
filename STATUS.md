@@ -58,7 +58,11 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   `eq_transitive`. This handles the **mixed congruence-in-transitivity** case
   (`f(a)=c ∧ a=b ∧ f(b)≠c`) the old bfs emitter returned `None` on — any congruence
   refutation now emits a `check_alethe`-accepted proof (self-validated). The bfs
-  helpers were removed. Remaining (P3.2/3.3): arithmetic/BV theory rules in the
+  helpers were removed. **`term_to_alethe` converts any interpreted-op application**
+  (not just `Apply`/`Eq`), so emission covers congruence over interpreted operators
+  too — e.g. **array extensionality** (`a=b ∧ select(a,i)≠select(b,i)` ⇒ a checkable
+  `eq_congruent` proof), pairing with the array-extensionality decision in dispatch.
+  Remaining (P3.2/3.3): arithmetic/BV theory rules in the
   checker + emission; emit Alethe for the *reductions* (P3.5: array/function
   elimination, int-blasting); Carcara CI cross-check; extract `axeyum-alethe` crate
   (ADR) now that emission is substantial.
