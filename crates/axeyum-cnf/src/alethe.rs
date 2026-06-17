@@ -734,7 +734,7 @@ pub fn check_alethe_with(
                 clause,
                 rule,
                 premises,
-                ..
+                args,
             } => {
                 // Look up each premise; a missing id is a hard error.
                 let mut premise_clauses: Vec<&AletheClause> = Vec::with_capacity(premises.len());
@@ -759,6 +759,15 @@ pub fn check_alethe_with(
                     "resolution" | "th_resolution" | "contraction" | "reordering" | "weakening"
                     | "or" => {
                         if !premises_entail(&premise_clauses, clause)? {
+                            return Err(AletheError::StepNotEntailed { id: id.clone() });
+                        }
+                    }
+                    // `and` clausification: the unit premise `(and t1 … tn)` and the
+                    // index `args[0] = i` (an integer numeral) conclude `(cl t_i)`.
+                    // It needs `args`, which the structural-rule dispatch does not
+                    // receive, so it is checked here.
+                    "and" => {
+                        if !is_and_clausify(&premise_clauses, clause, args) {
                             return Err(AletheError::StepNotEntailed { id: id.clone() });
                         }
                     }
@@ -832,6 +841,11 @@ fn check_structural_rule(
         "symm" => Some(is_symm(premise_clauses, clause)),
         "trans" => Some(is_trans(premise_clauses, clause)),
         "cong" => Some(is_cong(premise_clauses, clause)),
+        // The `bitblast_<op>` reconstruction rules (premise-free; structural
+        // mirror of the bit-blast emitter). Each concludes a single equality.
+        bitblast if bitblast.starts_with("bitblast_") => {
+            Some(no_premises && check_bitblast(bitblast, clause))
+        }
         _ => None,
     }
 }
@@ -845,6 +859,44 @@ fn as_eq(term: &AletheTerm) -> Option<(&AletheTerm, &AletheTerm)> {
     }
 }
 
+/// Peels every leading syntactic `(not …)` wrapper off `term`, returning the inner
+/// base term and the count of `not`s peeled. The Alethe semantics treat a literal
+/// `(not φ)` as the negation of `φ`, so this normalizes the negation **nesting**
+/// (which the proof emitter carries syntactically) to a base term + parity — the
+/// same `remove_all_negations` folding Carcara performs.
+fn peel_nots(term: &AletheTerm) -> (&AletheTerm, usize) {
+    let mut current = term;
+    let mut count = 0;
+    while let AletheTerm::App(head, args) = current {
+        if head == "not" && args.len() == 1 {
+            current = &args[0];
+            count += 1;
+        } else {
+            break;
+        }
+    }
+    (current, count)
+}
+
+/// The normalized `(base atom, parity)` of a literal: its atom with all leading
+/// syntactic `(not …)` peeled, and the overall polarity (`true` = the literal is
+/// the negation of `base`) combining the literal's own `negated` flag with an
+/// **odd** count of peeled `not`s. So `(atom = (not φ), negated = false)` and
+/// `(atom = φ, negated = true)` normalize identically — both are `¬φ`.
+fn lit_norm(lit: &AletheLit) -> (&AletheTerm, bool) {
+    let (base, nots) = peel_nots(&lit.atom);
+    (base, lit.negated ^ (nots % 2 == 1))
+}
+
+/// Whether the literal asserts `expected` with the given polarity, **modulo**
+/// syntactic-`not` nesting (parity-folded via [`lit_norm`]). `expected` must itself
+/// be a base term (no leading `not`); if it is not, its `not`s are folded too.
+fn lit_matches(lit: &AletheLit, expected: &AletheTerm, negated: bool) -> bool {
+    let (lit_base, lit_par) = lit_norm(lit);
+    let (exp_base, exp_nots) = peel_nots(expected);
+    lit_base == exp_base && lit_par == (negated ^ (exp_nots % 2 == 1))
+}
+
 /// Returns the arguments of an application with the given `head`, or `None`.
 fn as_app<'a>(term: &'a AletheTerm, head: &str) -> Option<&'a [AletheTerm]> {
     match term {
@@ -853,75 +905,112 @@ fn as_app<'a>(term: &'a AletheTerm, head: &str) -> Option<&'a [AletheTerm]> {
     }
 }
 
+/// The **term view** of a literal: its atom when positive, or the syntactic
+/// `(not atom)` when negated. This is the term Carcara's tautology/clausification
+/// rules see — the proof emitter may carry a literal as a `negated` flag or as a
+/// positive `(not …)`-atom interchangeably, and both denote the same term-level
+/// literal. Comparing term views (rather than `(atom, negated)` pairs) makes the
+/// structural checks agree with Carcara's term-level matching.
+fn term_of_lit(lit: &AletheLit) -> AletheTerm {
+    if lit.negated {
+        AletheTerm::App("not".to_owned(), vec![lit.atom.clone()])
+    } else {
+        lit.atom.clone()
+    }
+}
+
 /// Structural check for the Alethe `and_pos` rule:
 /// `(cl (not (and t1 ... tn)) ti)` — a tautology `¬(t1∧…∧tn) ∨ ti` for any
-/// conjunct `ti`. Valid iff two literals: a negated `and`-term, then a positive
-/// literal whose atom is one of the conjuncts.
+/// conjunct `ti`. Carcara matches `conclusion[0]` as the term `(not (and …))` and
+/// `conclusion[1]` as a conjunct exactly (no negation removal); both via the
+/// literal **term views** (so the emitter's positive-`(not …)` style is accepted).
+/// The `:args` conjunct index is not consulted: the clause is a tautology for any
+/// conjunct, a sound superset of Carcara's index-specific check.
 fn is_and_pos(clause: &AletheClause) -> bool {
     let [head, picked] = clause.as_slice() else {
         return false;
     };
-    if !head.negated || picked.negated {
-        return false;
-    }
-    let Some(conjuncts) = as_app(&head.atom, "and") else {
+    let head_view = term_of_lit(head);
+    let Some([inner]) = unary_arg(&head_view, "not") else {
         return false;
     };
-    conjuncts.contains(&picked.atom)
+    let Some(conjuncts) = as_app(inner, "and") else {
+        return false;
+    };
+    conjuncts.contains(&term_of_lit(picked))
 }
 
 /// Structural check for the Alethe `or_neg` rule:
 /// `(cl (or t1 ... tn) (not ti))` — a tautology `(t1∨…∨tn) ∨ ¬ti` for any
-/// disjunct `ti`. Valid iff two literals: a positive `or`-term, then a negated
-/// literal whose atom is one of the disjuncts.
+/// disjunct `ti`. Carcara matches `conclusion[0]` as the term `(or …)` and
+/// `remove_negation(conclusion[1])` as a disjunct (here via the literal term
+/// views). The `:args` index is not consulted (sound superset, as for `and_pos`).
 fn is_or_neg(clause: &AletheClause) -> bool {
     let [head, picked] = clause.as_slice() else {
         return false;
     };
-    if head.negated || !picked.negated {
-        return false;
-    }
-    let Some(disjuncts) = as_app(&head.atom, "or") else {
+    let head_view = term_of_lit(head);
+    let Some(disjuncts) = as_app(&head_view, "or") else {
         return false;
     };
-    disjuncts.contains(&picked.atom)
+    let picked_view = term_of_lit(picked);
+    let Some([inner]) = unary_arg(&picked_view, "not") else {
+        return false;
+    };
+    disjuncts.contains(inner)
 }
 
 /// Structural check for the Alethe `and_neg` rule:
 /// `(cl (and t1 ... tn) (not t1) ... (not tn))` — the tautology
-/// `(t1∧…∧tn) ∨ ¬t1 ∨ … ∨ ¬tn`. Valid iff a positive `and`-term followed by the
-/// negation of each conjunct, in order.
+/// `(t1∧…∧tn) ∨ ¬t1 ∨ … ∨ ¬tn`. The first literal's term view is `(and …)`, then
+/// each remaining literal's term view is `(not ti)` (`remove_negation` = `ti`), in
+/// order.
 fn is_and_neg(clause: &AletheClause) -> bool {
-    polarity_spread(clause, "and", false)
+    polarity_spread(clause, "and")
 }
 
 /// Structural check for the Alethe `or_pos` rule:
 /// `(cl (not (or t1 ... tn)) t1 ... tn)` — the tautology
-/// `¬(t1∨…∨tn) ∨ t1 ∨ … ∨ tn`. Valid iff a negated `or`-term followed by each
-/// disjunct, in order.
+/// `¬(t1∨…∨tn) ∨ t1 ∨ … ∨ tn`. The first literal's term view is `(not (or …))`,
+/// then each remaining literal's term view is the disjunct `ti`, in order.
 fn is_or_pos(clause: &AletheClause) -> bool {
-    polarity_spread(clause, "or", true)
-}
-
-/// Shared shape for `and_neg` / `or_pos`: the first literal is the `head`-term
-/// with `head_negated` polarity, followed by every argument as a literal of the
-/// opposite polarity, in order.
-fn polarity_spread(clause: &AletheClause, head: &str, head_negated: bool) -> bool {
     let Some((first, rest)) = clause.split_first() else {
         return false;
     };
-    if first.negated != head_negated {
+    let first_view = term_of_lit(first);
+    let Some([inner]) = unary_arg(&first_view, "not") else {
+        return false;
+    };
+    let Some(disjuncts) = as_app(inner, "or") else {
+        return false;
+    };
+    if disjuncts.len() != rest.len() {
         return false;
     }
-    let Some(args) = as_app(&first.atom, head) else {
+    rest.iter()
+        .zip(disjuncts)
+        .all(|(lit, arg)| &term_of_lit(lit) == arg)
+}
+
+/// Shared shape for `and_neg`: the first literal's term view is `(<head> t1 … tn)`,
+/// then each remaining literal's term view is `(not ti)` (`remove_negation` =
+/// `ti`), in order. Compared on **term views** so the emitter's polarity style
+/// (a `negated` flag or a positive `(not …)` atom) is accepted either way.
+fn polarity_spread(clause: &AletheClause, head: &str) -> bool {
+    let Some((first, rest)) = clause.split_first() else {
+        return false;
+    };
+    let first_view = term_of_lit(first);
+    let Some(args) = as_app(&first_view, head) else {
         return false;
     };
     if args.len() != rest.len() {
         return false;
     }
-    rest.iter()
-        .zip(args)
-        .all(|(lit, arg)| lit.negated != head_negated && &lit.atom == arg)
+    rest.iter().zip(args).all(|(lit, arg)| {
+        let view = term_of_lit(lit);
+        matches!(unary_arg(&view, "not"), Some([inner]) if inner == arg)
+    })
 }
 
 /// Extracts the single literal carried by a unit-clause premise (one literal,
@@ -950,121 +1039,81 @@ fn as_xor(term: &AletheTerm) -> Option<(&AletheTerm, &AletheTerm)> {
 /// `equiv_pos1`: literal 0 is the negated equality `¬(= φ1 φ2)`, literal 1 is
 /// `φ1` positive, literal 2 is `¬φ2`.
 fn is_equiv_pos1(clause: &AletheClause) -> bool {
-    let [l0, l1, l2] = clause.as_slice() else {
-        return false;
-    };
-    if !l0.negated || l1.negated || !l2.negated {
-        return false;
-    }
-    let Some((phi1, phi2)) = as_eq(&l0.atom) else {
-        return false;
-    };
-    &l1.atom == phi1 && &l2.atom == phi2
+    binary_clausify(clause, "=", true, false, true)
 }
 
 /// Structural check for the Alethe `equiv_pos2` rule:
 /// `(cl (not (= φ1 φ2)) (not φ1) φ2)`. Mirrors Carcara's `equiv_pos2`.
 fn is_equiv_pos2(clause: &AletheClause) -> bool {
-    let [l0, l1, l2] = clause.as_slice() else {
-        return false;
-    };
-    if !l0.negated || !l1.negated || l2.negated {
-        return false;
-    }
-    let Some((phi1, phi2)) = as_eq(&l0.atom) else {
-        return false;
-    };
-    &l1.atom == phi1 && &l2.atom == phi2
+    binary_clausify(clause, "=", true, true, false)
 }
 
 /// Structural check for the Alethe `equiv_neg1` rule:
 /// `(cl (= φ1 φ2) (not φ1) (not φ2))`. Mirrors Carcara's `equiv_neg1`.
 fn is_equiv_neg1(clause: &AletheClause) -> bool {
-    let [l0, l1, l2] = clause.as_slice() else {
-        return false;
-    };
-    if l0.negated || !l1.negated || !l2.negated {
-        return false;
-    }
-    let Some((phi1, phi2)) = as_eq(&l0.atom) else {
-        return false;
-    };
-    &l1.atom == phi1 && &l2.atom == phi2
+    binary_clausify(clause, "=", false, true, true)
 }
 
 /// Structural check for the Alethe `equiv_neg2` rule:
 /// `(cl (= φ1 φ2) φ1 φ2)`. Mirrors Carcara's `equiv_neg2`.
 fn is_equiv_neg2(clause: &AletheClause) -> bool {
-    let [l0, l1, l2] = clause.as_slice() else {
-        return false;
-    };
-    if l0.negated || l1.negated || l2.negated {
-        return false;
-    }
-    let Some((phi1, phi2)) = as_eq(&l0.atom) else {
-        return false;
-    };
-    &l1.atom == phi1 && &l2.atom == phi2
+    binary_clausify(clause, "=", false, false, false)
 }
 
 /// Structural check for the Alethe `xor_pos1` rule:
 /// `(cl (not (xor φ1 φ2)) φ1 φ2)`. Mirrors Carcara's `xor_pos1`.
 fn is_xor_pos1(clause: &AletheClause) -> bool {
-    let [l0, l1, l2] = clause.as_slice() else {
-        return false;
-    };
-    if !l0.negated || l1.negated || l2.negated {
-        return false;
-    }
-    let Some((phi1, phi2)) = as_xor(&l0.atom) else {
-        return false;
-    };
-    &l1.atom == phi1 && &l2.atom == phi2
+    binary_clausify(clause, "xor", true, false, false)
 }
 
 /// Structural check for the Alethe `xor_pos2` rule:
 /// `(cl (not (xor φ1 φ2)) (not φ1) (not φ2))`. Mirrors Carcara's `xor_pos2`.
 fn is_xor_pos2(clause: &AletheClause) -> bool {
-    let [l0, l1, l2] = clause.as_slice() else {
-        return false;
-    };
-    if !l0.negated || !l1.negated || !l2.negated {
-        return false;
-    }
-    let Some((phi1, phi2)) = as_xor(&l0.atom) else {
-        return false;
-    };
-    &l1.atom == phi1 && &l2.atom == phi2
+    binary_clausify(clause, "xor", true, true, true)
 }
 
 /// Structural check for the Alethe `xor_neg1` rule:
 /// `(cl (xor φ1 φ2) φ1 (not φ2))`. Mirrors Carcara's `xor_neg1`.
 fn is_xor_neg1(clause: &AletheClause) -> bool {
-    let [l0, l1, l2] = clause.as_slice() else {
-        return false;
-    };
-    if l0.negated || l1.negated || !l2.negated {
-        return false;
-    }
-    let Some((phi1, phi2)) = as_xor(&l0.atom) else {
-        return false;
-    };
-    &l1.atom == phi1 && &l2.atom == phi2
+    binary_clausify(clause, "xor", false, false, true)
 }
 
 /// Structural check for the Alethe `xor_neg2` rule:
 /// `(cl (xor φ1 φ2) (not φ1) φ2)`. Mirrors Carcara's `xor_neg2`.
 fn is_xor_neg2(clause: &AletheClause) -> bool {
+    binary_clausify(clause, "xor", false, true, false)
+}
+
+/// Shared shape for the binary `=`/`xor` clausification rules (`equiv_*`,
+/// `xor_*`): a 3-literal clause whose first literal is the connective term
+/// `(<head> φ1 φ2)` at polarity `head_neg`, then `φ1` at polarity `a_neg`, then
+/// `φ2` at polarity `b_neg`. All three literal polarities are compared **modulo**
+/// syntactic-`not` nesting ([`lit_matches`]/[`lit_norm`]), so the emitter's
+/// `(not φ)`-as-positive style is accepted exactly as Carcara's parity-folding
+/// does. `head` is `=` or `xor`; the connective term is read from the first
+/// literal's base atom.
+fn binary_clausify(
+    clause: &AletheClause,
+    head: &str,
+    head_neg: bool,
+    a_neg: bool,
+    b_neg: bool,
+) -> bool {
     let [l0, l1, l2] = clause.as_slice() else {
         return false;
     };
-    if l0.negated || !l1.negated || l2.negated {
+    let (base, par) = lit_norm(l0);
+    if par != head_neg {
         return false;
     }
-    let Some((phi1, phi2)) = as_xor(&l0.atom) else {
+    let Some((phi1, phi2)) = (match head {
+        "=" => as_eq(base),
+        "xor" => as_xor(base),
+        _ => None,
+    }) else {
         return false;
     };
-    &l1.atom == phi1 && &l2.atom == phi2
+    lit_matches(l1, phi1, a_neg) && lit_matches(l2, phi2, b_neg)
 }
 
 /// Structural check for the Alethe `equiv1` rule. One premise, the unit clause
@@ -1080,8 +1129,8 @@ fn is_equiv1(premises: &[&AletheClause], clause: &AletheClause) -> bool {
     let [l0, l1] = clause.as_slice() else {
         return false;
     };
-    // (not φ1) then φ2.
-    l0.negated && !l1.negated && &l0.atom == phi1 && &l1.atom == phi2
+    // (not φ1) then φ2 (parity-folded).
+    lit_matches(l0, phi1, true) && lit_matches(l1, phi2, false)
 }
 
 /// Structural check for the Alethe `equiv2` rule. One premise `(cl (= φ1 φ2))`;
@@ -1096,8 +1145,8 @@ fn is_equiv2(premises: &[&AletheClause], clause: &AletheClause) -> bool {
     let [l0, l1] = clause.as_slice() else {
         return false;
     };
-    // φ1 then (not φ2).
-    !l0.negated && l1.negated && &l0.atom == phi1 && &l1.atom == phi2
+    // φ1 then (not φ2) (parity-folded).
+    lit_matches(l0, phi1, false) && lit_matches(l1, phi2, true)
 }
 
 /// Structural check for the Alethe `not_equiv1` rule. One premise, the unit
@@ -1113,8 +1162,8 @@ fn is_not_equiv1(premises: &[&AletheClause], clause: &AletheClause) -> bool {
     let [l0, l1] = clause.as_slice() else {
         return false;
     };
-    // φ1 then φ2, both positive.
-    !l0.negated && !l1.negated && &l0.atom == phi1 && &l1.atom == phi2
+    // φ1 then φ2, both positive (parity-folded).
+    lit_matches(l0, phi1, false) && lit_matches(l1, phi2, false)
 }
 
 /// Structural check for the Alethe `not_equiv2` rule. One premise
@@ -1130,8 +1179,8 @@ fn is_not_equiv2(premises: &[&AletheClause], clause: &AletheClause) -> bool {
     let [l0, l1] = clause.as_slice() else {
         return false;
     };
-    // (not φ1) then (not φ2).
-    l0.negated && l1.negated && &l0.atom == phi1 && &l1.atom == phi2
+    // (not φ1) then (not φ2) (parity-folded).
+    lit_matches(l0, phi1, true) && lit_matches(l1, phi2, true)
 }
 
 /// Extracts `(φ1, φ2)` from a unit-clause premise whose sole literal is the
@@ -1139,10 +1188,11 @@ fn is_not_equiv2(premises: &[&AletheClause], clause: &AletheClause) -> bool {
 /// `equiv1`/`equiv2` take such a premise.
 fn premise_positive_eq(clause: &AletheClause) -> Option<(&AletheTerm, &AletheTerm)> {
     let lit = premise_unit(clause)?;
-    if lit.negated {
+    let (base, parity) = lit_norm(lit);
+    if parity {
         return None;
     }
-    as_eq(&lit.atom)
+    as_eq(base)
 }
 
 /// Extracts `(φ1, φ2)` from a unit-clause premise whose sole literal is the
@@ -1150,10 +1200,11 @@ fn premise_positive_eq(clause: &AletheClause) -> Option<(&AletheTerm, &AletheTer
 /// `(not (= φ1 φ2))`. `not_equiv1`/`not_equiv2` take such a premise.
 fn premise_negated_eq(clause: &AletheClause) -> Option<(&AletheTerm, &AletheTerm)> {
     let lit = premise_unit(clause)?;
-    if !lit.negated {
+    let (base, parity) = lit_norm(lit);
+    if !parity {
         return None;
     }
-    as_eq(&lit.atom)
+    as_eq(base)
 }
 
 /// Structural check for the EUF `eq_reflexive` rule.
@@ -1469,6 +1520,736 @@ fn is_cong(premises: &[&AletheClause], clause: &AletheClause) -> bool {
     next == prem_eqs.len()
 }
 
+/// Structural check for the Alethe `and` clausification rule (Carcara
+/// `clausification.rs::and`). The single unit-clause premise carries the term
+/// `(and t1 … tn)`; `args[0]` is the integer index `i`; the conclusion is the
+/// unit clause `(cl t_i)`. Accepts iff the premise is a positive unit `and`-term,
+/// `args` is a single integer numeral `i < n`, the conclusion is a single
+/// positive literal, and that literal's atom is exactly `t_i`.
+fn is_and_clausify(premises: &[&AletheClause], clause: &AletheClause, args: &[AletheTerm]) -> bool {
+    let [premise] = premises else {
+        return false;
+    };
+    let Some(premise_lit) = premise_unit(premise) else {
+        return false;
+    };
+    if premise_lit.negated {
+        return false;
+    }
+    let Some(conjuncts) = as_app(&premise_lit.atom, "and") else {
+        return false;
+    };
+    let [index_arg] = args else {
+        return false;
+    };
+    let Some(i) = as_numeral(index_arg) else {
+        return false;
+    };
+    let Ok(i) = usize::try_from(i) else {
+        return false;
+    };
+    let Some(expected) = conjuncts.get(i) else {
+        return false;
+    };
+    let [conclusion] = clause.as_slice() else {
+        return false;
+    };
+    !conclusion.negated && &conclusion.atom == expected
+}
+
+// --- `bitblast_<op>` reconstruction --------------------------------------------
+//
+// These rules are the soundness-critical mirror of the bit-blast emitter
+// (`axeyum-solver`'s `bitblast_alethe.rs`), which is itself Carcara-validated. A
+// `bitblast_<op>` step concludes a single positive equality `(= LHS RHS)`; the
+// checker parses `LHS`, recomputes the EXPECTED `RHS` exactly as Carcara's
+// `bitvectors.rs` rules do, and accepts iff the recomputed `RHS` is structurally
+// equal to the claimed one. Any mismatch (or malformed shape) rejects.
+
+/// Parses an integer numeral [`AletheTerm::Const`] (a decimal `i128`), or
+/// [`None`] if the term is not a bare integer literal. Used for `@bbterm` widths
+/// and the `and`-clausification index.
+fn as_numeral(term: &AletheTerm) -> Option<i128> {
+    match term {
+        AletheTerm::Const(text) => text.parse::<i128>().ok(),
+        _ => None,
+    }
+}
+
+/// The per-bit extraction `((_ @bit_of i) arg)` — Carcara's `BvBitOf`. Mirrors
+/// the emitter's `bit_of`.
+fn bit_of(i: usize, arg: &AletheTerm) -> AletheTerm {
+    AletheTerm::Indexed {
+        op: "@bit_of".to_owned(),
+        indices: vec![i128::try_from(i).expect("bit index fits i128")],
+        args: vec![arg.clone()],
+    }
+}
+
+/// The literal Boolean constant `false`/`true`.
+fn bool_const(value: bool) -> AletheTerm {
+    AletheTerm::Const(if value { "true" } else { "false" }.to_owned())
+}
+
+/// `(<head> a b)`.
+fn bin_app(head: &str, a: AletheTerm, b: AletheTerm) -> AletheTerm {
+    AletheTerm::App(head.to_owned(), vec![a, b])
+}
+
+/// `(not a)`.
+fn not_app(a: AletheTerm) -> AletheTerm {
+    AletheTerm::App("not".to_owned(), vec![a])
+}
+
+/// Carcara's `build_term_vec`: if `term` is a `(@bbterm …)` its argument bits are
+/// returned directly (which must have the expected size `n`); otherwise the
+/// `i`-th bit is the projection `((_ @bit_of i) term)`. Returns [`None`] if `term`
+/// is a `@bbterm` whose arity disagrees with `n` (a malformed operand). Mirrors
+/// the emitter's `build_term_vec`.
+fn build_term_vec(term: &AletheTerm, n: usize) -> Option<Vec<AletheTerm>> {
+    if let AletheTerm::App(head, args) = term
+        && head == "@bbterm"
+    {
+        if args.len() != n {
+            return None;
+        }
+        return Some(args.clone());
+    }
+    Some((0..n).map(|i| bit_of(i, term)).collect())
+}
+
+/// Returns the bit width carried by a `@bbterm`-form operand (its arity), or
+/// [`None`] if `operand` is not a `@bbterm` application. Used to recover the width
+/// of a `bitblast_<op>` step from its operands.
+fn bbterm_width(operand: &AletheTerm) -> Option<usize> {
+    match operand {
+        AletheTerm::App(head, args) if head == "@bbterm" => Some(args.len()),
+        _ => None,
+    }
+}
+
+/// The largest `@bit_of` index appearing anywhere in `term`, or [`None`] if none.
+/// Used to recover the bit width of a predicate `bitblast_<op>` step whose
+/// operands are bare (non-`@bbterm`) terms — the all-leaf driver path — where the
+/// width is otherwise not present in the term. The recovered width is only a
+/// candidate: the full structural reconstruction is the soundness gate, so an
+/// incorrect width simply fails the equality check.
+fn max_bit_of_index(term: &AletheTerm) -> Option<usize> {
+    match term {
+        AletheTerm::Const(_) => None,
+        AletheTerm::App(_, args) => args.iter().filter_map(max_bit_of_index).max(),
+        AletheTerm::Indexed { op, indices, args } => {
+            let here = if op == "@bit_of" {
+                indices.first().and_then(|&i| usize::try_from(i).ok())
+            } else {
+                None
+            };
+            let in_args = args.iter().filter_map(max_bit_of_index).max();
+            here.into_iter().chain(in_args).max()
+        }
+    }
+}
+
+/// Pulls `(LHS, RHS)` out of a single-positive-literal conclusion `(cl (= LHS RHS))`.
+/// [`None`] for any other clause shape.
+fn bitblast_eq(clause: &AletheClause) -> Option<(&AletheTerm, &AletheTerm)> {
+    let [lit] = clause.as_slice() else {
+        return None;
+    };
+    if lit.negated {
+        return None;
+    }
+    as_eq(&lit.atom)
+}
+
+/// Dispatches a `bitblast_<op>` rule. Returns `true` iff the conclusion is the
+/// exact structural reconstruction of `op` over its left-hand-side operands.
+/// Soundness-critical: any malformed shape or mismatch returns `false`.
+fn check_bitblast(rule: &str, clause: &AletheClause) -> bool {
+    let Some((lhs, rhs)) = bitblast_eq(clause) else {
+        return false;
+    };
+    match rule {
+        "bitblast_var" => check_bitblast_var(lhs, rhs),
+        "bitblast_const" => check_bitblast_const(lhs, rhs),
+        "bitblast_not" => check_bitblast_not(lhs, rhs),
+        "bitblast_and" => check_bitblast_fold(lhs, rhs, "bvand", "and"),
+        "bitblast_or" => check_bitblast_fold(lhs, rhs, "bvor", "or"),
+        "bitblast_xor" => check_bitblast_fold(lhs, rhs, "bvxor", "xor"),
+        "bitblast_xnor" => check_bitblast_xnor(lhs, rhs),
+        "bitblast_add" => check_bitblast_add(lhs, rhs),
+        "bitblast_neg" => check_bitblast_neg(lhs, rhs),
+        "bitblast_mult" => check_bitblast_mult(lhs, rhs),
+        "bitblast_ult" => check_bitblast_ult(lhs, rhs),
+        "bitblast_slt" => check_bitblast_slt(lhs, rhs),
+        "bitblast_equal" => check_bitblast_equal(lhs, rhs),
+        "bitblast_comp" => check_bitblast_comp(lhs, rhs),
+        "bitblast_extract" => check_bitblast_extract(lhs, rhs),
+        "bitblast_concat" => check_bitblast_concat(lhs, rhs),
+        "bitblast_sign_extend" => check_bitblast_sign_extend(lhs, rhs),
+        _ => false,
+    }
+}
+
+/// Asserts the claimed `rhs` is the `@bbterm` of `bits` (and returns `false`
+/// otherwise) — the term-op conclusion shape `(= LHS (@bbterm b0 … b_{n-1}))`.
+fn expect_bbterm(rhs: &AletheTerm, bits: &[AletheTerm]) -> bool {
+    matches!(rhs, AletheTerm::App(head, args) if head == "@bbterm" && args.as_slice() == bits)
+}
+
+/// `bitblast_var`: `LHS` any term `x`; `n = @bbterm` arity of `RHS`; expected
+/// `(@bbterm ((_ @bit_of 0) x) … ((_ @bit_of n-1) x))`.
+fn check_bitblast_var(lhs: &AletheTerm, rhs: &AletheTerm) -> bool {
+    let AletheTerm::App(head, bits) = rhs else {
+        return false;
+    };
+    if head != "@bbterm" {
+        return false;
+    }
+    let expected: Vec<AletheTerm> = (0..bits.len()).map(|i| bit_of(i, lhs)).collect();
+    bits == &expected
+}
+
+/// `bitblast_const`: `LHS` a `#b…` bit-vector literal; expected `@bbterm` of
+/// `true`/`false` per bit, LSB-first (the literal `#bXXXX` is MSB-first). Rejects
+/// if the reconstructed bits do not equal the constant value.
+fn check_bitblast_const(lhs: &AletheTerm, rhs: &AletheTerm) -> bool {
+    let AletheTerm::Const(literal) = lhs else {
+        return false;
+    };
+    let Some(bits_msb) = literal.strip_prefix("#b") else {
+        return false;
+    };
+    if bits_msb.is_empty() || !bits_msb.bytes().all(|b| b == b'0' || b == b'1') {
+        return false;
+    }
+    let width = bits_msb.len();
+    // `#bXXXX` is MSB-first; bit `i` (LSB-first) is char at position width-1-i.
+    let msb: Vec<u8> = bits_msb.bytes().collect();
+    let expected: Vec<AletheTerm> = (0..width)
+        .map(|i| bool_const(msb[width - 1 - i] == b'1'))
+        .collect();
+    expect_bbterm(rhs, &expected)
+}
+
+/// `bitblast_not`: `(= (bvnot x) (@bbterm (not x_0) … (not x_{n-1})))` with
+/// `x_i = build_term_vec(x, n)[i]`; `n` = `@bbterm` arity of `RHS`.
+fn check_bitblast_not(lhs: &AletheTerm, rhs: &AletheTerm) -> bool {
+    let Some([x]) = unary_arg(lhs, "bvnot") else {
+        return false;
+    };
+    let Some(n) = bbterm_arity(rhs) else {
+        return false;
+    };
+    let Some(xb) = build_term_vec(x, n) else {
+        return false;
+    };
+    let expected: Vec<AletheTerm> = xb.into_iter().map(not_app).collect();
+    expect_bbterm(rhs, &expected)
+}
+
+/// The `@bbterm` arity of a term, or [`None`] if it is not a `@bbterm`.
+fn bbterm_arity(term: &AletheTerm) -> Option<usize> {
+    match term {
+        AletheTerm::App(head, args) if head == "@bbterm" => Some(args.len()),
+        _ => None,
+    }
+}
+
+/// `bitblast_and`/`or`/`xor`: `LHS` an n-ary `(<bvhead> a1 … ak)` (k >= 1);
+/// per-bit left fold `(<gate> prev_i arg_i)` over `build_term_vec` of each
+/// operand. `n` = `@bbterm` arity of `RHS`. The first operand's bits seed the
+/// fold (a single-operand application would just be that operand's bits — the IR
+/// never emits that, but it is still the correct reconstruction).
+fn check_bitblast_fold(lhs: &AletheTerm, rhs: &AletheTerm, bv_head: &str, gate: &str) -> bool {
+    let Some(operands) = as_app(lhs, bv_head) else {
+        return false;
+    };
+    let Some(n) = bbterm_arity(rhs) else {
+        return false;
+    };
+    let Some((first, rest)) = operands.split_first() else {
+        return false;
+    };
+    let Some(mut bits) = build_term_vec(first, n) else {
+        return false;
+    };
+    for operand in rest {
+        let Some(ob) = build_term_vec(operand, n) else {
+            return false;
+        };
+        bits = (0..n)
+            .map(|i| bin_app(gate, bits[i].clone(), ob[i].clone()))
+            .collect();
+    }
+    expect_bbterm(rhs, &bits)
+}
+
+/// `bitblast_xnor` (binary): `(= (bvxnor x y) (@bbterm (= x_i y_i) …))`.
+fn check_bitblast_xnor(lhs: &AletheTerm, rhs: &AletheTerm) -> bool {
+    let Some([x, y]) = two_args(lhs, "bvxnor") else {
+        return false;
+    };
+    let Some(n) = bbterm_arity(rhs) else {
+        return false;
+    };
+    let (Some(xb), Some(yb)) = (build_term_vec(x, n), build_term_vec(y, n)) else {
+        return false;
+    };
+    let expected: Vec<AletheTerm> = (0..n)
+        .map(|i| bin_app("=", xb[i].clone(), yb[i].clone()))
+        .collect();
+    expect_bbterm(rhs, &expected)
+}
+
+/// Returns the two arguments of a binary application with head `head`, or [`None`].
+fn two_args<'a>(term: &'a AletheTerm, head: &str) -> Option<[&'a AletheTerm; 2]> {
+    match as_app(term, head) {
+        Some([a, b]) => Some([a, b]),
+        _ => None,
+    }
+}
+
+/// Returns the single argument of a unary application with head `head`, or [`None`].
+fn unary_arg<'a>(term: &'a AletheTerm, head: &str) -> Option<[&'a AletheTerm; 1]> {
+    match as_app(term, head) {
+        Some([a]) => Some([a]),
+        _ => None,
+    }
+}
+
+/// The ripple-carry adder result bits for `(bvadd x y)` over `size` bits,
+/// mirroring Carcara's `ripple_carry_adder`: `c_0 = false`,
+/// `c_i = (or (and x_{i-1} y_{i-1}) (and (xor x_{i-1} y_{i-1}) c_{i-1}))`,
+/// `b_i = (xor (xor x_i y_i) c_i)`. [`None`] on a malformed `@bbterm` operand.
+fn ripple_carry_bits(x: &AletheTerm, y: &AletheTerm, size: usize) -> Option<Vec<AletheTerm>> {
+    let xb = build_term_vec(x, size)?;
+    let yb = build_term_vec(y, size)?;
+    let mut carries = vec![bool_const(false)];
+    for i in 1..size {
+        let carry = bin_app(
+            "or",
+            bin_app("and", xb[i - 1].clone(), yb[i - 1].clone()),
+            bin_app(
+                "and",
+                bin_app("xor", xb[i - 1].clone(), yb[i - 1].clone()),
+                carries[i - 1].clone(),
+            ),
+        );
+        carries.push(carry);
+    }
+    Some(
+        (0..size)
+            .map(|i| {
+                bin_app(
+                    "xor",
+                    bin_app("xor", xb[i].clone(), yb[i].clone()),
+                    carries[i].clone(),
+                )
+            })
+            .collect(),
+    )
+}
+
+/// `bitblast_add`: `LHS` an n-ary `(bvadd a1 … ak)`; left fold via ripple-carry,
+/// each fold's accumulator a `@bbterm` (so the next `build_term_vec` returns its
+/// bits directly). `size` = `@bbterm` arity of `RHS`.
+fn check_bitblast_add(lhs: &AletheTerm, rhs: &AletheTerm) -> bool {
+    let Some(operands) = as_app(lhs, "bvadd") else {
+        return false;
+    };
+    let Some(size) = bbterm_arity(rhs) else {
+        return false;
+    };
+    let Some((first, rest)) = operands.split_first() else {
+        return false;
+    };
+    let mut acc = first.clone();
+    for operand in rest {
+        let Some(bits) = ripple_carry_bits(&acc, operand, size) else {
+            return false;
+        };
+        acc = AletheTerm::App("@bbterm".to_owned(), bits);
+    }
+    // `acc` must now be the result `@bbterm`; compare it directly to `rhs`.
+    &acc == rhs && matches!(&acc, AletheTerm::App(h, _) if h == "@bbterm")
+}
+
+/// `bitblast_neg` (unary): two's-complement adder of `(not x)` and `0` with
+/// carry-in `true`, emitted with verbatim `false` constants per Carcara's `neg`:
+/// `c_0 = true`,
+/// `c_i = (or (and (not x_{i-1}) false) (and (xor (not x_{i-1}) false) c_{i-1}))`,
+/// `b_i = (xor (xor (not x_i) false) c_i)`. `size` = `@bbterm` arity of `RHS`.
+fn check_bitblast_neg(lhs: &AletheTerm, rhs: &AletheTerm) -> bool {
+    let Some([x]) = unary_arg(lhs, "bvneg") else {
+        return false;
+    };
+    let Some(size) = bbterm_arity(rhs) else {
+        return false;
+    };
+    let Some(xb) = build_term_vec(x, size) else {
+        return false;
+    };
+    let mut carries = vec![bool_const(true)];
+    for i in 1..size {
+        let nx = not_app(xb[i - 1].clone());
+        let carry = bin_app(
+            "or",
+            bin_app("and", nx.clone(), bool_const(false)),
+            bin_app(
+                "and",
+                bin_app("xor", nx, bool_const(false)),
+                carries[i - 1].clone(),
+            ),
+        );
+        carries.push(carry);
+    }
+    let expected: Vec<AletheTerm> = (0..size)
+        .map(|i| {
+            bin_app(
+                "xor",
+                bin_app("xor", not_app(xb[i].clone()), bool_const(false)),
+                carries[i].clone(),
+            )
+        })
+        .collect();
+    expect_bbterm(rhs, &expected)
+}
+
+/// The shift-add multiplier result bits for `(bvmul x y)` over `size` bits,
+/// transcribing Carcara's `shift_add_multiplier` verbatim (including the
+/// `res[i][i]` self-reference for `j > i`). [`None`] on a malformed `@bbterm`.
+fn shift_add_multiplier_bits(
+    x: &AletheTerm,
+    y: &AletheTerm,
+    size: usize,
+) -> Option<Vec<AletheTerm>> {
+    let xb = build_term_vec(x, size)?;
+    let yb = build_term_vec(y, size)?;
+    let f = || bool_const(false);
+
+    let shift: Vec<Vec<AletheTerm>> = (0..size)
+        .map(|j| {
+            (0..size)
+                .map(|i| {
+                    if j <= i {
+                        bin_app("and", yb[j].clone(), xb[i - j].clone())
+                    } else {
+                        f()
+                    }
+                })
+                .collect()
+        })
+        .collect();
+
+    let mut res: Vec<Vec<AletheTerm>> = vec![(0..size).map(|i| shift[0][i].clone()).collect()];
+
+    for j in 1..size {
+        let mut carry_j = vec![f()];
+        for i in 1..size {
+            let c = if j < i {
+                bin_app(
+                    "or",
+                    bin_app("and", res[j - 1][i - 1].clone(), shift[j][i - 1].clone()),
+                    bin_app(
+                        "and",
+                        bin_app("xor", res[j - 1][i - 1].clone(), shift[j][i - 1].clone()),
+                        carry_j[i - 1].clone(),
+                    ),
+                )
+            } else {
+                f()
+            };
+            carry_j.push(c);
+        }
+        let res_j: Vec<AletheTerm> = (0..size)
+            .map(|i| {
+                if i == 0 {
+                    shift[0][0].clone()
+                } else if j > i {
+                    res[i][i].clone()
+                } else {
+                    bin_app(
+                        "xor",
+                        bin_app("xor", res[j - 1][i].clone(), shift[j][i].clone()),
+                        carry_j[i].clone(),
+                    )
+                }
+            })
+            .collect();
+        res.push(res_j);
+    }
+
+    Some(res[size - 1].clone())
+}
+
+/// `bitblast_mult`: `LHS` an n-ary `(bvmul a1 … ak)`; left fold via the shift-add
+/// multiplier. `size` = `@bbterm` arity of `RHS`.
+fn check_bitblast_mult(lhs: &AletheTerm, rhs: &AletheTerm) -> bool {
+    let Some(operands) = as_app(lhs, "bvmul") else {
+        return false;
+    };
+    let Some(size) = bbterm_arity(rhs) else {
+        return false;
+    };
+    let Some((first, rest)) = operands.split_first() else {
+        return false;
+    };
+    let mut acc = first.clone();
+    for operand in rest {
+        let Some(bits) = shift_add_multiplier_bits(&acc, operand, size) else {
+            return false;
+        };
+        acc = AletheTerm::App("@bbterm".to_owned(), bits);
+    }
+    &acc == rhs && matches!(&acc, AletheTerm::App(h, _) if h == "@bbterm")
+}
+
+/// Recovers the operand bit width for a predicate `bitblast_<op>` step over
+/// operands `x`, `y`: from a `@bbterm`-form operand's arity (the compound-reduced
+/// path the driver feeds to `bitblast_<pred>`), else from the largest `@bit_of`
+/// index across `x`, `y`, and `result` plus one (the all-leaf path over bare
+/// vars). The recovered width is only a candidate — the full reconstruction is
+/// the soundness gate. [`None`] if no width can be recovered.
+fn predicate_width(x: &AletheTerm, y: &AletheTerm, result: &AletheTerm) -> Option<usize> {
+    if let Some(w) = bbterm_width(x).or_else(|| bbterm_width(y)) {
+        return Some(w);
+    }
+    let mut max = max_bit_of_index(x);
+    max = max.max(max_bit_of_index(y));
+    max = max.max(max_bit_of_index(result));
+    max.map(|m| m + 1)
+}
+
+/// `bitblast_ult` (predicate → `(= (bvult x y) BOOL)`, no `@bbterm`): the unsigned
+/// less-than ladder, mirroring Carcara's `ult`: base `(and (not x0) y0)`, then for
+/// `i` in `1..n` `(or (and (= x_i y_i) r) (and (not x_i) y_i))`.
+fn check_bitblast_ult(lhs: &AletheTerm, rhs: &AletheTerm) -> bool {
+    let Some([x, y]) = two_args(lhs, "bvult") else {
+        return false;
+    };
+    let Some(n) = predicate_width(x, y, rhs) else {
+        return false;
+    };
+    if n == 0 {
+        return false;
+    }
+    let (Some(xb), Some(yb)) = (build_term_vec(x, n), build_term_vec(y, n)) else {
+        return false;
+    };
+    let mut r = bin_app("and", not_app(xb[0].clone()), yb[0].clone());
+    for i in 1..n {
+        r = bin_app(
+            "or",
+            bin_app("and", bin_app("=", xb[i].clone(), yb[i].clone()), r),
+            bin_app("and", not_app(xb[i].clone()), yb[i].clone()),
+        );
+    }
+    &r == rhs
+}
+
+/// `bitblast_slt` (predicate → `(= (bvslt x y) BOOL)`): the signed less-than
+/// ladder, mirroring Carcara's `slt`: width-1 is `(and x0 (not y0))`; otherwise
+/// the unsigned ladder runs over `1..n-1`, then the final sign step at `k = n-1`
+/// is `(or (and (= x_k y_k) r) (and x_k (not y_k)))`.
+#[allow(clippy::many_single_char_names)]
+fn check_bitblast_slt(lhs: &AletheTerm, rhs: &AletheTerm) -> bool {
+    let Some([x, y]) = two_args(lhs, "bvslt") else {
+        return false;
+    };
+    let Some(n) = predicate_width(x, y, rhs) else {
+        return false;
+    };
+    if n == 0 {
+        return false;
+    }
+    let (Some(xb), Some(yb)) = (build_term_vec(x, n), build_term_vec(y, n)) else {
+        return false;
+    };
+    if n == 1 {
+        let expected = bin_app("and", xb[0].clone(), not_app(yb[0].clone()));
+        return &expected == rhs;
+    }
+    let mut r = bin_app("and", not_app(xb[0].clone()), yb[0].clone());
+    for i in 1..(n - 1) {
+        r = bin_app(
+            "or",
+            bin_app("and", bin_app("=", xb[i].clone(), yb[i].clone()), r),
+            bin_app("and", not_app(xb[i].clone()), yb[i].clone()),
+        );
+    }
+    let k = n - 1;
+    r = bin_app(
+        "or",
+        bin_app("and", bin_app("=", xb[k].clone(), yb[k].clone()), r),
+        bin_app("and", xb[k].clone(), not_app(yb[k].clone())),
+    );
+    &r == rhs
+}
+
+/// The per-bit-equality AND used by `bitblast_equal` and `bitblast_comp`:
+/// `e_i = (= x_i y_i)`; the result is `(and e0 e1 …)` for `n > 1`, else `e0`.
+/// [`None`] on a malformed `@bbterm` operand or `n == 0`.
+fn bitwise_equal_and(x: &AletheTerm, y: &AletheTerm, n: usize) -> Option<AletheTerm> {
+    if n == 0 {
+        return None;
+    }
+    let xb = build_term_vec(x, n)?;
+    let yb = build_term_vec(y, n)?;
+    let es: Vec<AletheTerm> = (0..n)
+        .map(|i| bin_app("=", xb[i].clone(), yb[i].clone()))
+        .collect();
+    if es.len() > 1 {
+        Some(AletheTerm::App("and".to_owned(), es))
+    } else {
+        es.into_iter().next()
+    }
+}
+
+/// `bitblast_equal` (predicate → `(= (= x y) BOOL)`): the per-bit AND-fold of
+/// `(= x_i y_i)`.
+fn check_bitblast_equal(lhs: &AletheTerm, rhs: &AletheTerm) -> bool {
+    let Some([x, y]) = two_args(lhs, "=") else {
+        return false;
+    };
+    let Some(n) = predicate_width(x, y, rhs) else {
+        return false;
+    };
+    let Some(expected) = bitwise_equal_and(x, y, n) else {
+        return false;
+    };
+    &expected == rhs
+}
+
+/// `bitblast_comp` (`(= (bvcomp x y) (@bbterm BOOL))`): the same per-bit AND as
+/// `bitblast_equal`, wrapped in a single-element `@bbterm`.
+fn check_bitblast_comp(lhs: &AletheTerm, rhs: &AletheTerm) -> bool {
+    let Some([x, y]) = two_args(lhs, "bvcomp") else {
+        return false;
+    };
+    // The result is wrapped in `@bbterm`; recover the operand width from x/y or
+    // (for bare operands) the inner Boolean's `@bit_of` indices.
+    let inner = match rhs {
+        AletheTerm::App(head, args) if head == "@bbterm" && args.len() == 1 => &args[0],
+        _ => return false,
+    };
+    let Some(n) = predicate_width(x, y, inner) else {
+        return false;
+    };
+    let Some(expected) = bitwise_equal_and(x, y, n) else {
+        return false;
+    };
+    expect_bbterm(rhs, std::slice::from_ref(&expected))
+}
+
+/// `bitblast_extract`: `((_ extract i j) x)` bit-blasts to `x`'s bits `j..=i`,
+/// LSB-first (`build_term_vec` sized to `i + 1`, then bits `j..=i`).
+fn check_bitblast_extract(lhs: &AletheTerm, rhs: &AletheTerm) -> bool {
+    let AletheTerm::Indexed { op, indices, args } = lhs else {
+        return false;
+    };
+    if op != "extract" {
+        return false;
+    }
+    let [hi, lo] = indices.as_slice() else {
+        return false;
+    };
+    let [x] = args.as_slice() else {
+        return false;
+    };
+    let (Ok(hi), Ok(lo)) = (usize::try_from(*hi), usize::try_from(*lo)) else {
+        return false;
+    };
+    if lo > hi {
+        return false;
+    }
+    let Some(xb) = build_term_vec(x, hi + 1) else {
+        return false;
+    };
+    let expected: Vec<AletheTerm> = (lo..=hi).map(|i| xb[i].clone()).collect();
+    expect_bbterm(rhs, &expected)
+}
+
+/// `bitblast_concat`: `(concat a1 … an)` bit-blasts to the last operand's bits
+/// (low) first, then each earlier operand, mirroring Carcara's `concat`. The
+/// per-operand widths come from each operand's `@bbterm` arity, or — for a bare
+/// operand — are recovered so the bit list partitions exactly. Here every operand
+/// the driver feeds is `@bbterm`-form, so widths come from their arities; a bare
+/// operand whose width cannot be recovered is rejected.
+fn check_bitblast_concat(lhs: &AletheTerm, rhs: &AletheTerm) -> bool {
+    let Some(operands) = as_app(lhs, "concat") else {
+        return false;
+    };
+    if operands.is_empty() {
+        return false;
+    }
+    let AletheTerm::App(head, res_args) = rhs else {
+        return false;
+    };
+    if head != "@bbterm" {
+        return false;
+    }
+    // Last operand (low bits) first, then towards the first (high bits). Each
+    // operand must be `@bbterm`-form so its width (arity) is known; the emitter
+    // always feeds `@bbterm`-form operands to `bitblast_concat`.
+    let mut bits: Vec<AletheTerm> = Vec::new();
+    for operand in operands.iter().rev() {
+        let Some(w) = bbterm_width(operand) else {
+            return false;
+        };
+        let Some(ob) = build_term_vec(operand, w) else {
+            return false;
+        };
+        bits.extend(ob);
+    }
+    res_args.as_slice() == bits.as_slice()
+}
+
+/// `bitblast_sign_extend`: `((_ sign_extend i) x)` bit-blasts to `x`'s bits then
+/// `i` copies of the sign bit. For `i == 0` Carcara's rule returns the operand `x`
+/// itself (a plain `(= ((_ sign_extend 0) x) x)`, no `@bbterm`).
+fn check_bitblast_sign_extend(lhs: &AletheTerm, rhs: &AletheTerm) -> bool {
+    let AletheTerm::Indexed { op, indices, args } = lhs else {
+        return false;
+    };
+    if op != "sign_extend" {
+        return false;
+    }
+    let [by] = indices.as_slice() else {
+        return false;
+    };
+    let [x] = args.as_slice() else {
+        return false;
+    };
+    let Ok(by) = usize::try_from(*by) else {
+        return false;
+    };
+    if by == 0 {
+        // The conclusion is `(= ((_ sign_extend 0) x) x)` — `rhs` is `x` itself.
+        return rhs == x;
+    }
+    // Recover the operand width from `x`'s `@bbterm` arity, or from the `@bbterm`
+    // result minus the `by` sign copies.
+    let width = if let Some(w) = bbterm_width(x) {
+        w
+    } else {
+        match bbterm_arity(rhs) {
+            Some(total) if total > by => total - by,
+            _ => return false,
+        }
+    };
+    let Some(mut bits) = build_term_vec(x, width) else {
+        return false;
+    };
+    let Some(sign) = bits.last().cloned() else {
+        return false;
+    };
+    for _ in 0..by {
+        bits.push(sign.clone());
+    }
+    expect_bbterm(rhs, &bits)
+}
+
 /// Returns `true` iff `premises ⊨ conclusion`, decided as
 /// `{premises..., ¬conclusion}`-UNSAT via the **proof-producing** SAT core with
 /// the DRAT proof re-checked by [`crate::check_drat`].
@@ -1483,15 +2264,18 @@ fn premises_entail(
     conclusion: &AletheClause,
 ) -> Result<bool, AletheError> {
     // Map each distinct atom (over premises and conclusion) to a fresh CnfVar,
-    // deterministically by sorted atom text.
+    // deterministically by sorted atom text. Literals are normalized by folding
+    // every syntactic `(not …)` into the polarity ([`lit_norm`]) so that, e.g.,
+    // `(not φ)` (as a positive literal) and `φ` (negated) share one variable and
+    // resolution can cancel them — matching Carcara's term-level negation folding.
     let mut var_of: BTreeMap<String, CnfVar> = BTreeMap::new();
     for clause in premises {
         for lit in *clause {
-            register_atom(&mut var_of, &lit.atom)?;
+            register_atom(&mut var_of, lit_norm(lit).0)?;
         }
     }
     for lit in conclusion {
-        register_atom(&mut var_of, &lit.atom)?;
+        register_atom(&mut var_of, lit_norm(lit).0)?;
     }
 
     let mut formula = CnfFormula::new(var_of.len());
@@ -1632,14 +2416,18 @@ fn register_atom(
 }
 
 /// Maps an [`AletheLit`] to a [`CnfLit`] over the atom-variable map, keyed by the
-/// atom's canonical [`AletheTerm::key`]. The atom is guaranteed present (every
-/// atom is registered before this is called).
+/// literal's **normalized base** ([`lit_norm`]) — its atom with every leading
+/// syntactic `(not …)` peeled. The polarity combines the literal's `negated` flag
+/// with the peeled-`not` parity, so `(not φ)` and `φ`-negated map to the same
+/// variable with opposite sign. The base is guaranteed present (every literal is
+/// registered before this is called).
 fn cnf_lit(var_of: &BTreeMap<String, CnfVar>, lit: &AletheLit) -> CnfLit {
+    let (base, parity) = lit_norm(lit);
     let var = *var_of
-        .get(&lit.atom.key())
+        .get(&base.key())
         .expect("atom registered before literal lowering");
     let cnf = CnfLit::positive(var);
-    if lit.negated { cnf.negated() } else { cnf }
+    if parity { cnf.negated() } else { cnf }
 }
 
 #[cfg(test)]
@@ -1849,15 +2637,22 @@ mod tests {
 
     #[test]
     fn rejects_unsupported_rule() {
+        // `and` is now the supported clausification rule, so use a genuinely
+        // unknown rule name to exercise the unsupported-rule path.
         let commands = vec![
             assume("h1", vec![lit("a")]),
             assume("h2", vec![lit("b")]),
-            step("s1", vec![lit("a"), lit("b")], "and", &["h1", "h2"]),
+            step(
+                "s1",
+                vec![lit("a"), lit("b")],
+                "made_up_rule",
+                &["h1", "h2"],
+            ),
         ];
         assert_eq!(
             check_alethe(&commands),
             Err(AletheError::UnsupportedRule {
-                rule: "and".to_owned()
+                rule: "made_up_rule".to_owned()
             })
         );
     }
@@ -3112,5 +3907,337 @@ mod tests {
             parse_alethe("(assume h (_ @bit_of foo))"),
             Err(AletheError::Parse(_))
         ));
+    }
+
+    // --- `and` clausification + `bitblast_<op>` reconstruction tests ----------
+
+    /// `(@bbterm bits…)`.
+    fn bbterm(bits: Vec<AletheTerm>) -> AletheTerm {
+        AletheTerm::App("@bbterm".to_owned(), bits)
+    }
+
+    /// A `bitblast_<op>` step `(cl (= lhs rhs))` under id `s`, no premises.
+    fn bb_step(rule: &str, lhs: AletheTerm, rhs: AletheTerm) -> Vec<AletheCommand> {
+        vec![step(
+            "s",
+            vec![AletheLit {
+                atom: eq_term(lhs, rhs),
+                negated: false,
+            }],
+            rule,
+            &[],
+        )]
+    }
+
+    /// `(= a b)` over arbitrary terms.
+    fn eq_term(a: AletheTerm, b: AletheTerm) -> AletheTerm {
+        AletheTerm::App("=".to_owned(), vec![a, b])
+    }
+
+    /// `(<head> args…)`.
+    fn app_t(head: &str, args: Vec<AletheTerm>) -> AletheTerm {
+        AletheTerm::App(head.to_owned(), args)
+    }
+
+    fn cst(name: &str) -> AletheTerm {
+        AletheTerm::Const(name.to_owned())
+    }
+
+    #[test]
+    fn and_clausification_checks() {
+        // Premise (and a b c); args [1] ⊢ (cl b).
+        let and_abc = app_t("and", vec![cst("a"), cst("b"), cst("c")]);
+        let valid = vec![
+            assume("h", vec![lit_t(and_abc.clone())]),
+            step_args("s", vec![lit("b")], "and", &["h"], vec![cst("1")]),
+        ];
+        assert_eq!(check_alethe(&valid), Ok(false));
+
+        // Tamper: wrong conjunct in conclusion (claims `a` for index 1).
+        let bad = vec![
+            assume("h", vec![lit_t(and_abc.clone())]),
+            step_args("s", vec![lit("a")], "and", &["h"], vec![cst("1")]),
+        ];
+        assert_eq!(
+            check_alethe(&bad),
+            Err(AletheError::StepNotEntailed { id: "s".to_owned() })
+        );
+
+        // Out-of-range index is rejected.
+        let oob = vec![
+            assume("h", vec![lit_t(and_abc)]),
+            step_args("s", vec![lit("a")], "and", &["h"], vec![cst("9")]),
+        ];
+        assert_eq!(
+            check_alethe(&oob),
+            Err(AletheError::StepNotEntailed { id: "s".to_owned() })
+        );
+    }
+
+    /// A positive literal over an arbitrary atom.
+    fn lit_t(atom: AletheTerm) -> AletheLit {
+        AletheLit {
+            atom,
+            negated: false,
+        }
+    }
+
+    /// A `step` carrying `:args`.
+    fn step_args(
+        id: &str,
+        clause: AletheClause,
+        rule: &str,
+        premises: &[&str],
+        args: Vec<AletheTerm>,
+    ) -> AletheCommand {
+        AletheCommand::Step {
+            id: id.to_owned(),
+            clause,
+            rule: rule.to_owned(),
+            premises: premises.iter().map(|p| (*p).to_owned()).collect(),
+            args,
+        }
+    }
+
+    fn bit_at(i: i128, name: &str) -> AletheTerm {
+        AletheTerm::Indexed {
+            op: "@bit_of".to_owned(),
+            indices: vec![i],
+            args: vec![cst(name)],
+        }
+    }
+
+    #[test]
+    fn bitblast_var_reconstructs() {
+        // (= x (@bbterm ((_ @bit_of 0) x) ((_ @bit_of 1) x))).
+        let rhs = bbterm(vec![bit_at(0, "x"), bit_at(1, "x")]);
+        assert_eq!(
+            check_alethe(&bb_step("bitblast_var", cst("x"), rhs)),
+            Ok(false)
+        );
+        // Tamper: a wrong bit index.
+        let bad = bbterm(vec![bit_at(0, "x"), bit_at(0, "x")]);
+        assert_eq!(
+            check_alethe(&bb_step("bitblast_var", cst("x"), bad)),
+            Err(AletheError::StepNotEntailed { id: "s".to_owned() })
+        );
+    }
+
+    #[test]
+    fn bitblast_const_reconstructs() {
+        // #b101 (width 3, value 5) → LSB-first true, false, true.
+        let t = || cst("true");
+        let f = || cst("false");
+        let rhs = bbterm(vec![t(), f(), t()]);
+        assert_eq!(
+            check_alethe(&bb_step("bitblast_const", cst("#b101"), rhs)),
+            Ok(false)
+        );
+        // Tamper: bits do not match the literal value.
+        let bad = bbterm(vec![t(), t(), t()]);
+        assert_eq!(
+            check_alethe(&bb_step("bitblast_const", cst("#b101"), bad)),
+            Err(AletheError::StepNotEntailed { id: "s".to_owned() })
+        );
+    }
+
+    #[test]
+    fn bitblast_not_reconstructs() {
+        // (= (bvnot x) (@bbterm (not x0) (not x1))).
+        let lhs = app_t("bvnot", vec![cst("x")]);
+        let rhs = bbterm(vec![
+            app_t("not", vec![bit_at(0, "x")]),
+            app_t("not", vec![bit_at(1, "x")]),
+        ]);
+        assert_eq!(
+            check_alethe(&bb_step("bitblast_not", lhs.clone(), rhs)),
+            Ok(false)
+        );
+        // Tamper: a missing `not`.
+        let bad = bbterm(vec![bit_at(0, "x"), app_t("not", vec![bit_at(1, "x")])]);
+        assert_eq!(
+            check_alethe(&bb_step("bitblast_not", lhs, bad)),
+            Err(AletheError::StepNotEntailed { id: "s".to_owned() })
+        );
+    }
+
+    #[test]
+    fn bitblast_and_reconstructs() {
+        // (= (bvand a b) (@bbterm (and a0 b0) (and a1 b1))).
+        let lhs = app_t("bvand", vec![cst("a"), cst("b")]);
+        let rhs = bbterm(vec![
+            app_t("and", vec![bit_at(0, "a"), bit_at(0, "b")]),
+            app_t("and", vec![bit_at(1, "a"), bit_at(1, "b")]),
+        ]);
+        assert_eq!(
+            check_alethe(&bb_step("bitblast_and", lhs.clone(), rhs)),
+            Ok(false)
+        );
+        // Tamper: wrong gate (`or` instead of `and`).
+        let bad = bbterm(vec![
+            app_t("or", vec![bit_at(0, "a"), bit_at(0, "b")]),
+            app_t("and", vec![bit_at(1, "a"), bit_at(1, "b")]),
+        ]);
+        assert_eq!(
+            check_alethe(&bb_step("bitblast_and", lhs, bad)),
+            Err(AletheError::StepNotEntailed { id: "s".to_owned() })
+        );
+    }
+
+    #[test]
+    fn bitblast_xnor_reconstructs() {
+        // (= (bvxnor a b) (@bbterm (= a0 b0) (= a1 b1))).
+        let lhs = app_t("bvxnor", vec![cst("a"), cst("b")]);
+        let rhs = bbterm(vec![
+            eq_term(bit_at(0, "a"), bit_at(0, "b")),
+            eq_term(bit_at(1, "a"), bit_at(1, "b")),
+        ]);
+        assert_eq!(
+            check_alethe(&bb_step("bitblast_xnor", lhs.clone(), rhs)),
+            Ok(false)
+        );
+        // Tamper: swapped operands in one bit (now (= b1 a1)).
+        let bad = bbterm(vec![
+            eq_term(bit_at(0, "a"), bit_at(0, "b")),
+            eq_term(bit_at(1, "b"), bit_at(1, "a")),
+        ]);
+        assert_eq!(
+            check_alethe(&bb_step("bitblast_xnor", lhs, bad)),
+            Err(AletheError::StepNotEntailed { id: "s".to_owned() })
+        );
+    }
+
+    #[test]
+    fn bitblast_equal_reconstructs() {
+        // (= (= a b) (and (= a0 b0) (= a1 b1))) — no @bbterm wrapper.
+        let lhs = eq_term(cst("a"), cst("b"));
+        let rhs = app_t(
+            "and",
+            vec![
+                eq_term(bit_at(0, "a"), bit_at(0, "b")),
+                eq_term(bit_at(1, "a"), bit_at(1, "b")),
+            ],
+        );
+        assert_eq!(
+            check_alethe(&bb_step("bitblast_equal", lhs.clone(), rhs)),
+            Ok(false)
+        );
+        // Tamper: a wrong operand in the second bit (b0 instead of b1).
+        let bad = app_t(
+            "and",
+            vec![
+                eq_term(bit_at(0, "a"), bit_at(0, "b")),
+                eq_term(bit_at(1, "a"), bit_at(0, "b")),
+            ],
+        );
+        assert_eq!(
+            check_alethe(&bb_step("bitblast_equal", lhs, bad)),
+            Err(AletheError::StepNotEntailed { id: "s".to_owned() })
+        );
+    }
+
+    #[test]
+    fn bitblast_extract_reconstructs() {
+        // (= ((_ extract 2 1) x) (@bbterm ((_ @bit_of 1) x) ((_ @bit_of 2) x))).
+        let lhs = AletheTerm::Indexed {
+            op: "extract".to_owned(),
+            indices: vec![2, 1],
+            args: vec![cst("x")],
+        };
+        let rhs = bbterm(vec![bit_at(1, "x"), bit_at(2, "x")]);
+        assert_eq!(
+            check_alethe(&bb_step("bitblast_extract", lhs.clone(), rhs)),
+            Ok(false)
+        );
+        // Tamper: wrong bit range (bits 0,1 instead of 1,2).
+        let bad = bbterm(vec![bit_at(0, "x"), bit_at(1, "x")]);
+        assert_eq!(
+            check_alethe(&bb_step("bitblast_extract", lhs, bad)),
+            Err(AletheError::StepNotEntailed { id: "s".to_owned() })
+        );
+    }
+
+    #[test]
+    fn bitblast_concat_reconstructs() {
+        // (concat a b) with a high (@bbterm a0 a1), b low (@bbterm b0 b1 b2):
+        // bits = b0 b1 b2 a0 a1.
+        let a_bb = bbterm(vec![bit_at(0, "a"), bit_at(1, "a")]);
+        let b_bb = bbterm(vec![bit_at(0, "b"), bit_at(1, "b"), bit_at(2, "b")]);
+        let lhs = app_t("concat", vec![a_bb.clone(), b_bb.clone()]);
+        let rhs = bbterm(vec![
+            bit_at(0, "b"),
+            bit_at(1, "b"),
+            bit_at(2, "b"),
+            bit_at(0, "a"),
+            bit_at(1, "a"),
+        ]);
+        assert_eq!(
+            check_alethe(&bb_step("bitblast_concat", lhs.clone(), rhs)),
+            Ok(false)
+        );
+        // Tamper: high operand bits placed first (wrong order).
+        let bad = bbterm(vec![
+            bit_at(0, "a"),
+            bit_at(1, "a"),
+            bit_at(0, "b"),
+            bit_at(1, "b"),
+            bit_at(2, "b"),
+        ]);
+        assert_eq!(
+            check_alethe(&bb_step("bitblast_concat", lhs, bad)),
+            Err(AletheError::StepNotEntailed { id: "s".to_owned() })
+        );
+    }
+
+    #[test]
+    fn bitblast_sign_extend_reconstructs() {
+        // ((_ sign_extend 2) x) over width 3: x0 x1 x2 then two copies of x2.
+        let lhs = AletheTerm::Indexed {
+            op: "sign_extend".to_owned(),
+            indices: vec![2],
+            args: vec![bbterm(vec![bit_at(0, "x"), bit_at(1, "x"), bit_at(2, "x")])],
+        };
+        let rhs = bbterm(vec![
+            bit_at(0, "x"),
+            bit_at(1, "x"),
+            bit_at(2, "x"),
+            bit_at(2, "x"),
+            bit_at(2, "x"),
+        ]);
+        assert_eq!(
+            check_alethe(&bb_step("bitblast_sign_extend", lhs.clone(), rhs)),
+            Ok(false)
+        );
+        // Tamper: wrong repeated bit (x1 instead of the sign bit x2).
+        let bad = bbterm(vec![
+            bit_at(0, "x"),
+            bit_at(1, "x"),
+            bit_at(2, "x"),
+            bit_at(1, "x"),
+            bit_at(2, "x"),
+        ]);
+        assert_eq!(
+            check_alethe(&bb_step("bitblast_sign_extend", lhs, bad)),
+            Err(AletheError::StepNotEntailed { id: "s".to_owned() })
+        );
+    }
+
+    #[test]
+    fn bitblast_sign_extend_zero_reconstructs() {
+        // ((_ sign_extend 0) x) degenerates to x itself (no @bbterm).
+        let lhs = AletheTerm::Indexed {
+            op: "sign_extend".to_owned(),
+            indices: vec![0],
+            args: vec![cst("x")],
+        };
+        assert_eq!(
+            check_alethe(&bb_step("bitblast_sign_extend", lhs.clone(), cst("x"))),
+            Ok(false)
+        );
+        // Tamper: claims a different rhs.
+        assert_eq!(
+            check_alethe(&bb_step("bitblast_sign_extend", lhs, cst("y"))),
+            Err(AletheError::StepNotEntailed { id: "s".to_owned() })
+        );
     }
 }

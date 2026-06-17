@@ -355,6 +355,22 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-17** — **axeyum SELF-CHECKS its own full QF_BV proofs (internal checker
+  complete)**. Ported the `bitblast_*` reconstructions (all 17: var/const/not/
+  and/or/xor/xnor/add/neg/**mult**/ult/slt/equal/comp/extract/concat/sign_extend) and
+  the `and` clausification into `check_alethe`, mirroring `bitblast_alethe.rs` /
+  Carcara's `bitvectors.rs` (`build_term_vec` over `AletheTerm`, width recovered from
+  `@bbterm` arity / max `@bit_of` index). **`check_alethe(prove_qf_bv_unsat_alethe(…))
+  == Ok(true)` for ALL 9 driver instances** (eq+ult, eq+neq, ult-cycle, slt, +
+  bitwise/arith/nested compound) — new `qfbv_self_check.rs`. So a QF_BV `unsat` proof
+  is now validated by **both** the external Carcara binary AND axeyum's own in-tree
+  checker (no external dependency). One soundness-critical refinement: the resolution
+  entailment mapping (`cnf_lit`/`register_atom`) now parity-folds leading syntactic
+  `(not …)` so `(not φ)`-as-atom and `φ`-negated normalize identically (a genuine
+  logical equivalence, still anchored by the DRAT re-check; all rejection tests hold).
+  116 cnf-alethe tests + 9 self-check tests green. **The QF_BV proof system is now
+  dual-checkable end-to-end.** Next: shift/div-rem via `hole`+miter for full QF_BV;
+  wire the driver into the evidence pipeline (now that an internal checker exists).
 - **2026-06-17** — **`check_alethe` gains the Boolean CNF-introduction rules**
   (`equiv1`/`equiv2`/`not_equiv1`/`not_equiv2`, `equiv_pos1/2`, `equiv_neg1/2`,
   `xor_pos1/2`, `xor_neg1/2`) — the Tseitin tautologies axeyum's QF_BV driver emits,
