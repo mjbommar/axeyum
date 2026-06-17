@@ -166,7 +166,13 @@ exploited, and it is a genuine SAT-engine capability (a new propagator alongside
 unit propagation), not a preprocessing pass. It composes with the now-validated
 `gf2`/`xor_extract` foundation (the extraction + matrix are reused on the trail).
 This is the substantial next slice; the preprocessing slices 1–4 are the sound,
-measured groundwork it builds on.
+measured groundwork it builds on. The integration architecture and — critically —
+the proof/trust story (XOR reasoning is not resolution, so XOR-assisted `unsat` is
+a ledgered `XorGaussian` trust hole demotable via an algebraic/PAC certificate,
+never a false DRAT proof) are designed in
+[cdcl-xor-integration-design.md](cdcl-xor-integration-design.md). The propagation
+primitive `xor_search::xor_implications` (implied literals + conflicts with reasons
+under a partial assignment) is already built and brute-force-validated.
 
 ## Bottom line
 
