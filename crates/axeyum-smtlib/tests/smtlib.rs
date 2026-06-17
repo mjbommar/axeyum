@@ -1058,3 +1058,82 @@ fn rejects_unknown_command() {
         parse_script("(set-logic QF_BV)\n(frobnicate 3)\n").expect_err("unknown command errors");
     assert!(matches!(err, SmtError::Unsupported(_)));
 }
+
+/// `(define-sort Byte () (_ BitVec 8))` then `(declare-const x Byte)` declares
+/// `x` with the aliased sort `BitVec(8)`.
+#[test]
+fn define_sort_alias_is_resolved() {
+    let text = r"
+        (set-logic QF_BV)
+        (define-sort Byte () (_ BitVec 8))
+        (declare-const x Byte)
+        (assert (= x #x05))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    let sym = script.arena.find_symbol("x").unwrap();
+    assert_eq!(script.arena.symbol(sym).1, axeyum_ir::Sort::BitVec(8));
+}
+
+/// A sort alias resolves inside a compound sort (here an `Array`), exercising
+/// the recursive `parse_sort` alias lookup.
+#[test]
+fn define_sort_alias_inside_array() {
+    let text = r"
+        (set-logic QF_ABV)
+        (define-sort Idx () (_ BitVec 4))
+        (declare-const a (Array Idx Idx))
+    ";
+    let script = parse_script(text).unwrap();
+    let sym = script.arena.find_symbol("a").unwrap();
+    assert_eq!(
+        script.arena.symbol(sym).1,
+        axeyum_ir::Sort::Array {
+            index: 4,
+            element: 4
+        }
+    );
+}
+
+/// An alias may reference an earlier alias (the body is parsed through
+/// `parse_sort`, which consults the alias map).
+#[test]
+fn define_sort_chains() {
+    let text = r"
+        (set-logic QF_BV)
+        (define-sort Byte () (_ BitVec 8))
+        (define-sort Word () Byte)
+        (declare-const w Word)
+    ";
+    let script = parse_script(text).unwrap();
+    let sym = script.arena.find_symbol("w").unwrap();
+    assert_eq!(script.arena.symbol(sym).1, axeyum_ir::Sort::BitVec(8));
+}
+
+/// Redefining a builtin sort name as an alias is rejected.
+#[test]
+fn define_sort_rejects_builtin_redefinition() {
+    let err = parse_script("(set-logic QF_BV)\n(define-sort Int () Real)\n")
+        .expect_err("redefining a builtin sort errors");
+    assert!(matches!(err, SmtError::Syntax(_)));
+}
+
+/// A duplicate sort alias is rejected.
+#[test]
+fn define_sort_rejects_duplicate_alias() {
+    let text = r"
+        (set-logic QF_BV)
+        (define-sort Byte () (_ BitVec 8))
+        (define-sort Byte () (_ BitVec 16))
+    ";
+    let err = parse_script(text).expect_err("duplicate sort alias errors");
+    assert!(matches!(err, SmtError::Syntax(_)));
+}
+
+/// A parametric `define-sort` is cleanly rejected as unsupported.
+#[test]
+fn define_sort_rejects_parametric() {
+    let err = parse_script("(set-logic QF_BV)\n(define-sort P (X) X)\n")
+        .expect_err("parametric define-sort is unsupported");
+    assert!(matches!(err, SmtError::Unsupported(_)));
+}

@@ -77,9 +77,16 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
     let mut script = Script::default();
     let mut aliases: HashMap<String, TermId> = HashMap::new();
     let mut macros: HashMap<String, MacroDef<'_>> = HashMap::new();
+    let mut sort_aliases: HashMap<String, Sort> = HashMap::new();
 
     for command in &exprs {
-        parse_command(&mut script, &mut aliases, &mut macros, command)?;
+        parse_command(
+            &mut script,
+            &mut aliases,
+            &mut macros,
+            &mut sort_aliases,
+            command,
+        )?;
     }
     Ok(script)
 }
@@ -90,6 +97,7 @@ fn parse_command<'a>(
     script: &mut Script,
     aliases: &mut HashMap<String, TermId>,
     macros: &mut HashMap<String, MacroDef<'a>>,
+    sort_aliases: &mut HashMap<String, Sort>,
     command: &'a SExpr,
 ) -> Result<(), SmtError> {
     let items = command
@@ -164,11 +172,12 @@ fn parse_command<'a>(
             script.check_sats += 1;
             script.commands.push(ScriptCommand::CheckSat);
         }
-        "declare-fun" => parse_declare_fun(script, items)?,
-        "declare-const" => parse_declare_const(script, items)?,
-        "declare-datatype" => parse_declare_datatype(script, items)?,
-        "declare-datatypes" => parse_declare_datatypes(script, items)?,
-        "define-fun" => parse_define_fun(script, aliases, macros, items)?,
+        "declare-fun" => parse_declare_fun(script, sort_aliases, items)?,
+        "declare-const" => parse_declare_const(script, sort_aliases, items)?,
+        "declare-datatype" => parse_declare_datatype(script, sort_aliases, items)?,
+        "declare-datatypes" => parse_declare_datatypes(script, sort_aliases, items)?,
+        "define-fun" => parse_define_fun(script, aliases, macros, sort_aliases, items)?,
+        "define-sort" => parse_define_sort(script, sort_aliases, items)?,
         "assert" => {
             exact_len(items, 2, head)?;
             let body = sexpr_at(items, 1)?;
@@ -220,14 +229,18 @@ fn named_label(body: &SExpr) -> Option<String> {
     None
 }
 
-fn parse_declare_fun(script: &mut Script, items: &[SExpr]) -> Result<(), SmtError> {
+fn parse_declare_fun(
+    script: &mut Script,
+    sort_aliases: &HashMap<String, Sort>,
+    items: &[SExpr],
+) -> Result<(), SmtError> {
     exact_len(items, 4, "declare-fun")?;
     let name = atom_at(items, 1)?;
     let args = items
         .get(2)
         .and_then(SExpr::list)
         .ok_or_else(|| SmtError::Syntax("declare-fun args".to_owned()))?;
-    let result = parse_sort(&script.arena, sexpr_at(items, 3)?)?;
+    let result = parse_sort(&script.arena, sort_aliases, sexpr_at(items, 3)?)?;
     if args.is_empty() {
         // 0-ary: a plain constant symbol.
         script.arena.declare(name, result)?;
@@ -235,7 +248,7 @@ fn parse_declare_fun(script: &mut Script, items: &[SExpr]) -> Result<(), SmtErro
         // n-ary: an uninterpreted function (ADR-0013).
         let params = args
             .iter()
-            .map(|s| parse_sort(&script.arena, s))
+            .map(|s| parse_sort(&script.arena, sort_aliases, s))
             .collect::<Result<Vec<Sort>, SmtError>>()?;
         script.arena.declare_fun(name, &params, result)?;
     }
@@ -248,6 +261,7 @@ fn parse_declare_fun(script: &mut Script, items: &[SExpr]) -> Result<(), SmtErro
 /// declared before their constructors, supporting (mutual) recursion).
 fn add_datatype_constructors(
     script: &mut Script,
+    sort_aliases: &HashMap<String, Sort>,
     dt: axeyum_ir::DatatypeId,
     ctors: &[SExpr],
 ) -> Result<(), SmtError> {
@@ -270,7 +284,7 @@ fn add_datatype_constructors(
                 .atom()
                 .ok_or_else(|| SmtError::Syntax("selector name".to_owned()))?
                 .to_owned();
-            let fsort = parse_sort(&script.arena, &fp[1])?;
+            let fsort = parse_sort(&script.arena, sort_aliases, &fp[1])?;
             fields.push((sname, fsort));
         }
         script.arena.add_constructor(dt, &cname, &fields);
@@ -279,7 +293,11 @@ fn add_datatype_constructors(
 }
 
 /// `(declare-datatype Name (ctor …))` — a single (non-parametric) datatype.
-fn parse_declare_datatype(script: &mut Script, items: &[SExpr]) -> Result<(), SmtError> {
+fn parse_declare_datatype(
+    script: &mut Script,
+    sort_aliases: &HashMap<String, Sort>,
+    items: &[SExpr],
+) -> Result<(), SmtError> {
     exact_len(items, 3, "declare-datatype")?;
     let name = atom_at(items, 1)?;
     let ctors = items
@@ -287,14 +305,18 @@ fn parse_declare_datatype(script: &mut Script, items: &[SExpr]) -> Result<(), Sm
         .and_then(SExpr::list)
         .ok_or_else(|| SmtError::Syntax("datatype constructor list".to_owned()))?;
     let dt = script.arena.declare_datatype(name);
-    add_datatype_constructors(script, dt, ctors)
+    add_datatype_constructors(script, sort_aliases, dt, ctors)
 }
 
 /// `(declare-datatypes ((Name 0) …) ((ctors) …))` (SMT-LIB 2.6) — one or more
 /// non-parametric datatypes (mutual recursion supported; parametric `arity > 0`
 /// is rejected). All sorts are declared first, then their constructors, so a
 /// field sort may reference any datatype in the group.
-fn parse_declare_datatypes(script: &mut Script, items: &[SExpr]) -> Result<(), SmtError> {
+fn parse_declare_datatypes(
+    script: &mut Script,
+    sort_aliases: &HashMap<String, Sort>,
+    items: &[SExpr],
+) -> Result<(), SmtError> {
     exact_len(items, 3, "declare-datatypes")?;
     let sort_decls = items
         .get(1)
@@ -332,12 +354,16 @@ fn parse_declare_datatypes(script: &mut Script, items: &[SExpr]) -> Result<(), S
         let ctors = group
             .list()
             .ok_or_else(|| SmtError::Syntax("datatype constructor list".to_owned()))?;
-        add_datatype_constructors(script, dt, ctors)?;
+        add_datatype_constructors(script, sort_aliases, dt, ctors)?;
     }
     Ok(())
 }
 
-fn parse_declare_const(script: &mut Script, items: &[SExpr]) -> Result<(), SmtError> {
+fn parse_declare_const(
+    script: &mut Script,
+    sort_aliases: &HashMap<String, Sort>,
+    items: &[SExpr],
+) -> Result<(), SmtError> {
     exact_len(items, 3, "declare-const")?;
     let name = atom_at(items, 1)?;
     // String front-end (ADR-0029, first slice): a String constant is a packed
@@ -352,7 +378,7 @@ fn parse_declare_const(script: &mut Script, items: &[SExpr]) -> Result<(), SmtEr
         script.commands.push(ScriptCommand::Assert(wf));
         return Ok(());
     }
-    let sort = parse_sort(&script.arena, sexpr_at(items, 2)?)?;
+    let sort = parse_sort(&script.arena, sort_aliases, sexpr_at(items, 2)?)?;
     script.arena.declare(name, sort)?;
     Ok(())
 }
@@ -361,6 +387,7 @@ fn parse_define_fun<'a>(
     script: &mut Script,
     aliases: &mut HashMap<String, TermId>,
     macros: &mut HashMap<String, MacroDef<'a>>,
+    sort_aliases: &HashMap<String, Sort>,
     items: &'a [SExpr],
 ) -> Result<(), SmtError> {
     exact_len(items, 5, "define-fun")?;
@@ -369,7 +396,7 @@ fn parse_define_fun<'a>(
         .get(2)
         .and_then(SExpr::list)
         .ok_or_else(|| SmtError::Syntax("define-fun args".to_owned()))?;
-    let declared_sort = parse_sort(&script.arena, sexpr_at(items, 3)?)?;
+    let declared_sort = parse_sort(&script.arena, sort_aliases, sexpr_at(items, 3)?)?;
     let body_expr = sexpr_at(items, 4)?;
     if args.is_empty() {
         parse_define_fun_alias(script, aliases, macros, name, declared_sort, body_expr)
@@ -377,7 +404,7 @@ fn parse_define_fun<'a>(
         macros.insert(
             name.to_owned(),
             MacroDef {
-                params: parse_params(&script.arena, args)?,
+                params: parse_params(&script.arena, sort_aliases, args)?,
                 result_sort: declared_sort,
                 body: body_expr,
             },
@@ -418,7 +445,11 @@ struct MacroDef<'a> {
     body: &'a SExpr,
 }
 
-fn parse_params<'a>(arena: &TermArena, args: &'a [SExpr]) -> Result<Vec<Param<'a>>, SmtError> {
+fn parse_params<'a>(
+    arena: &TermArena,
+    sort_aliases: &HashMap<String, Sort>,
+    args: &'a [SExpr],
+) -> Result<Vec<Param<'a>>, SmtError> {
     let mut params = Vec::with_capacity(args.len());
     for arg in args {
         let pair = arg
@@ -435,7 +466,7 @@ fn parse_params<'a>(arena: &TermArena, args: &'a [SExpr]) -> Result<Vec<Param<'a
         }
         params.push(Param {
             name,
-            sort: parse_sort(arena, &pair[1])?,
+            sort: parse_sort(arena, sort_aliases, &pair[1])?,
         });
     }
     Ok(params)
@@ -466,7 +497,11 @@ fn sexpr_at(items: &[SExpr], i: usize) -> Result<&SExpr, SmtError> {
         .ok_or_else(|| SmtError::Syntax(format!("expected argument at position {i}")))
 }
 
-fn parse_sort(arena: &TermArena, e: &SExpr) -> Result<Sort, SmtError> {
+fn parse_sort(
+    arena: &TermArena,
+    sort_aliases: &HashMap<String, Sort>,
+    e: &SExpr,
+) -> Result<Sort, SmtError> {
     match e {
         SExpr::Atom(a) if a == "Bool" => Ok(Sort::Bool),
         SExpr::Atom(a) if a == "Int" => Ok(Sort::Int),
@@ -505,8 +540,8 @@ fn parse_sort(arena: &TermArena, e: &SExpr) -> Result<Sort, SmtError> {
                 return Ok(Sort::BitVec(w));
             }
             if items.len() == 3 && items[0].atom() == Some("Array") {
-                let index = parse_sort(arena, &items[1])?;
-                let element = parse_sort(arena, &items[2])?;
+                let index = parse_sort(arena, sort_aliases, &items[1])?;
+                let element = parse_sort(arena, sort_aliases, &items[2])?;
                 if let (Sort::BitVec(index), Sort::BitVec(element)) = (index, element) {
                     return Ok(Sort::Array { index, element });
                 }
@@ -516,12 +551,65 @@ fn parse_sort(arena: &TermArena, e: &SExpr) -> Result<Sort, SmtError> {
             }
             Err(SmtError::Unsupported(format!("sort {e:?}")))
         }
-        // A declared datatype sort (ADR-0022), referenced by name.
+        // A declared datatype sort (ADR-0022), referenced by name, or a
+        // `define-sort` alias (looked up after builtins/datatypes so a builtin
+        // sort name can never be shadowed).
         SExpr::Atom(a) => arena
             .find_datatype(a)
             .map(Sort::Datatype)
+            .or_else(|| sort_aliases.get(a).copied())
             .ok_or_else(|| SmtError::Unsupported(format!("sort `{a}`"))),
     }
+}
+
+/// `(define-sort name () body)` — a 0-arity sort alias (ADR-pending command
+/// parity): `name` resolves to `body` wherever a sort is expected. The body is
+/// parsed through [`parse_sort`], so an alias may reference an earlier alias.
+/// Parametric aliases (`(define-sort Pair (X) …)`) are not supported.
+///
+/// # Errors
+///
+/// [`SmtError::Unsupported`] for a parametric (non-empty parameter list) alias,
+/// and [`SmtError::Syntax`] for a malformed form, a name that is a builtin sort,
+/// or a duplicate alias.
+fn parse_define_sort(
+    script: &mut Script,
+    sort_aliases: &mut HashMap<String, Sort>,
+    items: &[SExpr],
+) -> Result<(), SmtError> {
+    exact_len(items, 4, "define-sort")?;
+    let name = atom_at(items, 1)?;
+    let params = items
+        .get(2)
+        .and_then(SExpr::list)
+        .ok_or_else(|| SmtError::Syntax("define-sort parameter list".to_owned()))?;
+    if !params.is_empty() {
+        return Err(SmtError::Unsupported("parametric define-sort".to_owned()));
+    }
+    if is_builtin_sort_name(name) || script.arena.find_datatype(name).is_some() {
+        return Err(SmtError::Syntax(format!(
+            "define-sort: `{name}` is a builtin or declared sort"
+        )));
+    }
+    if sort_aliases.contains_key(name) {
+        return Err(SmtError::Syntax(format!(
+            "define-sort: duplicate sort alias `{name}`"
+        )));
+    }
+    let body = parse_sort(&script.arena, sort_aliases, sexpr_at(items, 3)?)?;
+    sort_aliases.insert(name.to_owned(), body);
+    Ok(())
+}
+
+/// Whether `name` is a builtin (atom-named) sort keyword, so a `define-sort`
+/// alias may not redefine it. Indexed/compound sort heads (`BitVec`, `Array`,
+/// `FloatingPoint`) only ever appear inside a list, never as a bare alias name,
+/// so they are covered by the parser, not this guard.
+fn is_builtin_sort_name(name: &str) -> bool {
+    matches!(
+        name,
+        "Bool" | "Int" | "Real" | "Float16" | "Float32" | "Float64" | "Float128" | "String" | "Seq"
+    )
 }
 
 /// One frame of the iterative term converter.
@@ -812,7 +900,10 @@ fn queue_quantifier<'a>(
         let name = pair[0]
             .atom()
             .ok_or_else(|| SmtError::Syntax(format!("{keyword} binding name")))?;
-        let sort = parse_sort(arena, &pair[1])?;
+        // Quantifier binder sorts are parsed in term-conversion context; sort
+        // aliases are resolved at declaration sites, not threaded here.
+        let no_aliases: HashMap<String, Sort> = HashMap::new();
+        let sort = parse_sort(arena, &no_aliases, &pair[1])?;
         let sym = fresh_quantifier_symbol(arena, name, sort)?;
         bindings.push((name, arena.var(sym)));
         syms.push(sym);
@@ -2216,7 +2307,11 @@ fn apply_parameterized(
     if head.first().and_then(SExpr::atom) == Some("as") {
         if head.get(1).and_then(SExpr::atom) == Some("const") && head.len() == 3 && args.len() == 1
         {
-            let Sort::Array { index, .. } = parse_sort(arena, &head[2])? else {
+            // The `as const` sort is the explicit array form; sort aliases are
+            // resolved at declaration sites, not threaded into term conversion,
+            // so an empty alias map is correct here.
+            let no_aliases: HashMap<String, Sort> = HashMap::new();
+            let Sort::Array { index, .. } = parse_sort(arena, &no_aliases, &head[2])? else {
                 return Err(SmtError::Unsupported(format!(
                     "`as const` non-array sort {head:?}"
                 )));
