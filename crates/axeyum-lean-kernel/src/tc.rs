@@ -136,6 +136,38 @@ pub enum KernelError {
         /// The type inferred for the declaration's value.
         inferred: ExprId,
     },
+    /// An inductive type's declared type was not a (telescope ending in a)
+    /// `Sort`. In this slice (no parameters/indices) the type must be a bare
+    /// `Sort`; a `Pi`-headed type is a parametric/indexed inductive, deferred.
+    InductiveTypeNotASort {
+        /// The non-`Sort` type that was supplied for the inductive.
+        got: ExprId,
+    },
+    /// A constructor's result head was not the inductive being declared (its
+    /// telescope did not end in `I`).
+    ConstructorResultMismatch {
+        /// The inductive that the constructor should have produced.
+        expected: crate::name::NameId,
+        /// The constructor whose result was wrong.
+        ctor: crate::name::NameId,
+    },
+    /// A constructor field mentioned the inductive type being declared — a
+    /// **recursive** constructor. Recursive inductives (the induction
+    /// hypothesis, positivity checking) are deferred to a later slice; this
+    /// slice supports only non-recursive inductives.
+    RecursiveInductiveNotSupported {
+        /// The inductive whose constructor was recursive.
+        inductive: crate::name::NameId,
+        /// The recursive constructor.
+        ctor: crate::name::NameId,
+    },
+    /// A constructor's type used a `Pi` whose result was not an application of
+    /// the parent inductive's constant head, or was otherwise malformed for the
+    /// non-parametric scope (e.g. a parametric/indexed result).
+    MalformedConstructorType {
+        /// The constructor whose type was malformed.
+        ctor: crate::name::NameId,
+    },
 }
 
 /// A single local declaration: an opened binder's name, type, and binder info.
@@ -208,7 +240,7 @@ impl LocalContext {
 impl Kernel {
     /// Collect the spine of an application `f a1 a2 .. an` into the head `f`
     /// and the argument list `[a1, .., an]` (outermost-first).
-    fn unfold_apps(&self, mut e: ExprId) -> (ExprId, Vec<ExprId>) {
+    pub(crate) fn unfold_apps(&self, mut e: ExprId) -> (ExprId, Vec<ExprId>) {
         let mut args = Vec::new();
         while let ExprNode::App(f, a) = self.expr_node(e) {
             args.push(*a);
@@ -219,7 +251,11 @@ impl Kernel {
     }
 
     /// Re-apply `head` to `args` left-to-right.
-    fn foldl_apps(&mut self, mut head: ExprId, args: impl IntoIterator<Item = ExprId>) -> ExprId {
+    pub(crate) fn foldl_apps(
+        &mut self,
+        mut head: ExprId,
+        args: impl IntoIterator<Item = ExprId>,
+    ) -> ExprId {
         for a in args {
             head = self.app(head, a);
         }
@@ -261,6 +297,13 @@ impl Kernel {
                     let instd = self.instantiate(body, &[val]);
                     cursor = self.foldl_apps(instd, args.iter().copied());
                 }
+                // ι: a recursor `Const(I.rec, _)` applied to its premises and a
+                // constructor-headed major reduces to the matching minor applied
+                // to the constructor's fields (ADR-0036, slice 4).
+                ExprNode::Const(..) => match self.reduce_rec(cursor) {
+                    Some(reduced) => cursor = reduced,
+                    None => return cursor,
+                },
                 // A bare `Sort` is normal; simplify its level for canonicity.
                 ExprNode::Sort(level) if args.is_empty() => {
                     let level = self.simplify(level);
@@ -820,7 +863,11 @@ impl Kernel {
         }
     }
 
-    fn infer_core(&mut self, e: ExprId, ctx: &mut LocalContext) -> Result<ExprId, KernelError> {
+    pub(crate) fn infer_core(
+        &mut self,
+        e: ExprId,
+        ctx: &mut LocalContext,
+    ) -> Result<ExprId, KernelError> {
         match self.expr_node(e).clone() {
             ExprNode::BVar(index) => Err(KernelError::LooseBVar { index }),
             ExprNode::FVar(id) => ctx.type_of(id).ok_or(KernelError::UnboundFVar { id }),

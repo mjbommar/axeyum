@@ -48,6 +48,7 @@
 
 mod env;
 mod expr;
+mod inductive;
 mod level;
 mod name;
 mod tc;
@@ -55,7 +56,7 @@ mod tc;
 use std::collections::HashMap;
 use std::fmt;
 
-pub use env::{Declaration, Environment, ReducibilityHint};
+pub use env::{Declaration, Environment, RecRule, ReducibilityHint};
 pub use expr::{BinderInfo, ExprId, ExprNode, Lit};
 pub use level::{LevelId, LevelNode};
 pub use name::{NameId, NameNode};
