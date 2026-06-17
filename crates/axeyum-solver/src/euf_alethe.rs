@@ -74,17 +74,9 @@ pub fn prove_qf_uf_unsat_alethe(
         negated: true,
     };
 
-    // Route 1: a transitivity path connects `s` and `t` directly.
-    if let Some(st_id) = derive_eq(&mut builder, arena, &edges, s, t) {
-        let diseq_id = builder.assume(vec![diseq_lit]);
-        builder.step(Vec::new(), "resolution", &[&st_id, &diseq_id]);
-        return finish(builder);
-    }
-
-    // Route 2: depth-1 congruence — `s` and `t` are applications of the same
-    // function with the same arity, and each argument pair is connected by a
-    // transitivity path. Refute by `eq_congruent` over the per-argument units.
-    let st_id = derive_congruence(&mut builder, arena, &edges, s, t)?;
+    // Derive `(= s t)` by transitivity and/or (nested) congruence, then resolve it
+    // against the `(not (= s t))` assume to the empty clause.
+    let st_id = derive_eq(&mut builder, arena, &edges, s, t)?;
     let diseq_id = builder.assume(vec![diseq_lit]);
     builder.step(Vec::new(), "resolution", &[&st_id, &diseq_id]);
     finish(builder)
@@ -119,21 +111,40 @@ fn derive_eq(
     a: TermId,
     b: TermId,
 ) -> Option<String> {
-    let a_alethe = term_to_alethe(arena, a)?;
-    let b_alethe = term_to_alethe(arena, b)?;
-
     if a == b {
         // Reflexive: `(cl (= a a))`.
+        let a_alethe = term_to_alethe(arena, a)?;
         return Some(builder.step(
             vec![AletheLit {
-                atom: eq_term(a_alethe.clone(), b_alethe),
+                atom: eq_term(a_alethe.clone(), a_alethe),
                 negated: false,
             }],
             "eq_reflexive",
             &[],
         ));
     }
+    // A transitivity path over the core equalities first; otherwise (recursively)
+    // congruence — `a = f(x⃗)`, `b = f(y⃗)`, each `xᵢ = yᵢ` itself derived by this
+    // same function, so nested congruence (`f(g(a)) = f(g(b))`) is handled by the
+    // recursion. The transitivity attempt emits nothing when no path exists, so the
+    // congruence fallback starts clean.
+    if let Some(id) = derive_eq_transitivity(builder, arena, edges, a, b) {
+        return Some(id);
+    }
+    derive_congruence(builder, arena, edges, a, b)
+}
 
+/// Emits `(cl (= a b))` via a transitivity path over the core equality graph
+/// `edges`, returning its id, or `None` when `a` and `b` are not connected by such
+/// a path (it emits nothing in that case, so the caller can try another route).
+/// Assumes `a != b`.
+fn derive_eq_transitivity(
+    builder: &mut Builder,
+    arena: &TermArena,
+    edges: &[(TermId, TermId)],
+    a: TermId,
+    b: TermId,
+) -> Option<String> {
     // BFS an equality path from `a` to `b` over the undirected equality graph.
     let path = bfs_path(a, b, edges)?;
     if path.len() < 2 {
@@ -199,13 +210,13 @@ fn derive_eq(
     Some(running_id)
 }
 
-/// Emits the steps deriving `(cl (= s t))` for a depth-1 congruence conflict —
-/// `s = f(x1..xn)` and `t = f(y1..yn)` with the same head `f` and arity, each
-/// argument pair `(xi, yi)` connected by a transitivity path — and returns the id
-/// of the `(cl (= s t))` step. Returns `None` if `s`/`t` are not same-head
-/// same-arity applications, an argument pair is unconnected, or a term fails to
-/// convert. This slice handles only one congruence level: arguments that
-/// themselves need congruence are not covered and yield `None`.
+/// Emits the steps deriving `(cl (= s t))` for a congruence conflict —
+/// `s = f(x1..xn)` and `t = f(y1..yn)` with the same head `f` and arity — and
+/// returns the id of the `(cl (= s t))` step. Each argument equality `(= xi yi)` is
+/// derived by [`derive_eq`], which itself falls back to congruence, so **nested**
+/// congruence (`f(g(a)) = f(g(b))`) is handled by the recursion. Returns `None` if
+/// `s`/`t` are not same-head same-arity applications, an argument pair cannot be
+/// derived, or a term fails to convert.
 fn derive_congruence(
     builder: &mut Builder,
     arena: &TermArena,
@@ -683,6 +694,25 @@ mod tests {
             neq(&mut arena, gab, gcd),
         ];
         let proof = prove_qf_uf_unsat_alethe(&arena, &assertions).expect("emits a proof");
+        assert_eq!(check_alethe(&proof), Ok(true));
+        last_is_empty_clause(&proof);
+    }
+
+    #[test]
+    fn emits_nested_congruence_proof() {
+        // a = b ∧ f(g(a)) ≠ f(g(b)): congruence must be applied TWICE
+        // (a=b ⇒ g(a)=g(b) ⇒ f(g(a))=f(g(b))), handled by the recursive derive_eq.
+        let mut arena = TermArena::new();
+        let a = var(&mut arena, "a");
+        let b = var(&mut arena, "b");
+        let f = func(&mut arena, "f", 1);
+        let g = func(&mut arena, "g", 1);
+        let ga = app(&mut arena, g, &[a]);
+        let gb = app(&mut arena, g, &[b]);
+        let fga = app(&mut arena, f, &[ga]);
+        let fgb = app(&mut arena, f, &[gb]);
+        let assertions = vec![eq(&mut arena, a, b), neq(&mut arena, fga, fgb)];
+        let proof = prove_qf_uf_unsat_alethe(&arena, &assertions).expect("emits a nested proof");
         assert_eq!(check_alethe(&proof), Ok(true));
         last_is_empty_clause(&proof);
     }
