@@ -443,6 +443,19 @@ mod tests {
             // `(= p true)` ≡ `p`.
             (a.eq(p, t).unwrap(), p)
         });
+        assert_rule_fires(&mut covered, "array.select_store_same.v1", |a| {
+            let arr = a.array_var("arr", 4, 8).unwrap();
+            let i = a.bv_var("i", 4).unwrap();
+            let v = a.bv_var("v", 8).unwrap();
+            let stored = a.store(arr, i, v).unwrap();
+            (a.select(stored, i).unwrap(), v)
+        });
+        assert_rule_fires(&mut covered, "array.select_const.v1", |a| {
+            let v = a.bv_var("v", 8).unwrap();
+            let i = a.bv_var("i", 4).unwrap();
+            let ca = a.const_array(4, v).unwrap();
+            (a.select(ca, i).unwrap(), v)
+        });
         assert_rule_fires(&mut covered, "bv.compare_reflexive.v1", |a| {
             let x = a.bv_var("x", 4).unwrap();
             let f = a.bool_const(false);

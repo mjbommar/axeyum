@@ -26,6 +26,8 @@ const BOOL_IMPLIES_CONST: &str = "bool.implies_const.v1";
 const BOOL_IMPLIES_REFLEXIVE: &str = "bool.implies_reflexive.v1";
 const EQ_REFLEXIVE: &str = "eq.reflexive.v1";
 const EQ_BOOL_CONST: &str = "eq.bool_const.v1";
+const SELECT_STORE_SAME: &str = "array.select_store_same.v1";
+const SELECT_CONST_ARRAY: &str = "array.select_const.v1";
 const BV_COMPARE_REFLEXIVE: &str = "bv.compare_reflexive.v1";
 const BV_COMPARE_SATURATE: &str = "bv.compare_saturate.v1";
 const ITE_CONST_CONDITION: &str = "ite.const_condition.v1";
@@ -338,6 +340,16 @@ fn default_rules() -> Vec<RewriteRule> {
             EQ_BOOL_CONST,
             "Boolean equality with a constant",
             "`=` of a Boolean term with a Boolean constant (`true`/`false`)",
+        ),
+        rule(
+            SELECT_STORE_SAME,
+            "Array read-over-write same index",
+            "`(select (store a i v) i)` — selecting at the just-written index",
+        ),
+        rule(
+            SELECT_CONST_ARRAY,
+            "Array select of a constant array",
+            "`(select (const-array v) i)` — every index of a constant array is `v`",
         ),
         rule(
             BV_COMPARE_REFLEXIVE,
@@ -685,6 +697,7 @@ fn rewrite_app(
         Op::ZeroExt { by } | Op::SignExt { by } => rewrite_extend(by, args, enabled),
         Op::RotateLeft { by } | Op::RotateRight { by } => rewrite_rotate(by, args, enabled),
         Op::Concat => rewrite_concat(arena, args, enabled)?,
+        Op::Select => rewrite_select(arena, args, enabled),
         Op::BvNand
         | Op::BvNor
         | Op::BvXnor
@@ -692,7 +705,6 @@ fn rewrite_app(
         | Op::BvSrem
         | Op::BvSmod
         | Op::BvComp
-        | Op::Select
         | Op::Store
         | Op::ConstArray { .. }
         | Op::IntToReal
@@ -1418,6 +1430,34 @@ fn rewrite_extract(
         }
     }
     Ok(None)
+}
+
+/// `(select (store a i v) i)` → `v` (read-over-write, same index) and
+/// `(select (const-array v) i)` → `v` (constant array). Both are exact-denotation
+/// and return the stored/constant value directly.
+fn rewrite_select(
+    arena: &TermArena,
+    args: &[TermId],
+    enabled: &BTreeSet<&str>,
+) -> Option<LocalRewrite> {
+    let [array, idx] = [args[0], args[1]];
+    match arena.node(array) {
+        TermNode::App {
+            op: Op::Store,
+            args: store_args,
+        } if enabled.contains(SELECT_STORE_SAME) && store_args[1] == idx => {
+            // store_args = [a, i, v]; reading at the just-written index `i` gives `v`.
+            Some(applied(store_args[2], SELECT_STORE_SAME))
+        }
+        TermNode::App {
+            op: Op::ConstArray { .. },
+            args: const_args,
+        } if enabled.contains(SELECT_CONST_ARRAY) => {
+            // A constant array maps every index to its single value.
+            Some(applied(const_args[0], SELECT_CONST_ARRAY))
+        }
+        _ => None,
+    }
 }
 
 fn rewrite_extend(by: u32, args: &[TermId], enabled: &BTreeSet<&str>) -> Option<LocalRewrite> {
@@ -2349,6 +2389,33 @@ mod commutative_tests {
                 eval(&a, q_false_c, &asg).unwrap(),
             );
         }
+    }
+
+    /// Array select folds: read-over-write at the same index, and select of a
+    /// constant array, both return the stored/constant value; a read at a
+    /// *different* (non-identical) index is left alone.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn array_select_folds() {
+        let mut a = TermArena::new();
+        let arr = a.array_var("arr", 4, 8).unwrap();
+        let i = a.bv_var("i", 4).unwrap();
+        let j = a.bv_var("j", 4).unwrap();
+        let v = a.bv_var("v", 8).unwrap();
+
+        // (select (store arr i v) i) -> v
+        let stored = a.store(arr, i, v).unwrap();
+        let sel_same = a.select(stored, i).unwrap();
+        assert_eq!(canonicalize(&mut a, sel_same).unwrap().term, v);
+
+        // (select (store arr i v) j) with j != i (different TermId) is NOT folded.
+        let sel_other = a.select(stored, j).unwrap();
+        assert_eq!(canonicalize(&mut a, sel_other).unwrap().term, sel_other);
+
+        // (select (const-array v) j) -> v for any index.
+        let ca = a.const_array(4, v).unwrap();
+        let sel_const = a.select(ca, j).unwrap();
+        assert_eq!(canonicalize(&mut a, sel_const).unwrap().term, v);
     }
 
     /// A comparison of two *different* operands is never folded by reflexivity.
