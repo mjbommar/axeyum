@@ -1137,3 +1137,292 @@ fn define_sort_rejects_parametric() {
         .expect_err("parametric define-sort is unsupported");
     assert!(matches!(err, SmtError::Unsupported(_)));
 }
+
+// --- datatype `match` desugaring (SMT-LIB 2.6) -------------------------------
+
+/// `match` over an enum (nullary constructors): each case selects a bit-vector
+/// constant. Verified end-to-end by the ground evaluator on a concrete value.
+#[test]
+fn match_enum_nullary_cases() {
+    let text = r"
+        (set-logic QF_BV)
+        (declare-datatype Color ((red) (green) (blue)))
+        (declare-const c Color)
+        (assert (= (match c ((red #x01) (green #x02) (blue #x03))) #x02))
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+    // c = green ⇒ the match yields #x02, so the assertion is true.
+    let mut asg = Assignment::new();
+    asg.set(
+        sym_of(&script, "c"),
+        Value::Datatype {
+            datatype: dt_of(&script, "Color"),
+            constructor: ctor_of(&script, "green"),
+            fields: vec![],
+        },
+    );
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg).unwrap(),
+        Value::Bool(true)
+    );
+    // c = red ⇒ the match yields #x01, so the assertion is false.
+    let mut asg_red = Assignment::new();
+    asg_red.set(
+        sym_of(&script, "c"),
+        Value::Datatype {
+            datatype: dt_of(&script, "Color"),
+            constructor: ctor_of(&script, "red"),
+            fields: vec![],
+        },
+    );
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg_red).unwrap(),
+        Value::Bool(false)
+    );
+}
+
+/// `match` over a recursive datatype binding a constructor field: the `cons`
+/// case binds `h`/`t` to the head/tail selectors. Evaluated on a concrete list.
+#[test]
+fn match_constructor_pattern_binds_fields() {
+    let text = r"
+        (set-logic QF_UFDT)
+        (declare-datatype IntList ((nil) (cons (head Int) (tail IntList))))
+        (declare-const xs IntList)
+        (assert (= (match xs ((nil 0) ((cons h t) h))) 7))
+    ";
+    let script = parse_script(text).unwrap();
+    // xs = (cons 7 nil) ⇒ match yields head = 7, assertion holds.
+    let mut asg = Assignment::new();
+    let nil = Value::Datatype {
+        datatype: dt_of(&script, "IntList"),
+        constructor: ctor_of(&script, "nil"),
+        fields: vec![],
+    };
+    asg.set(
+        sym_of(&script, "xs"),
+        Value::Datatype {
+            datatype: dt_of(&script, "IntList"),
+            constructor: ctor_of(&script, "cons"),
+            fields: vec![Value::Int(7), nil.clone()],
+        },
+    );
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg).unwrap(),
+        Value::Bool(true)
+    );
+    // xs = nil ⇒ match yields 0, so `(= 0 7)` is false.
+    let mut asg_nil = Assignment::new();
+    asg_nil.set(sym_of(&script, "xs"), nil);
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg_nil).unwrap(),
+        Value::Bool(false)
+    );
+}
+
+/// A trailing variable (default) case catches the constructors not listed and
+/// binds the whole scrutinee.
+#[test]
+fn match_default_variable_case() {
+    let text = r"
+        (set-logic QF_UFDT)
+        (declare-datatype IntList ((nil) (cons (head Int) (tail IntList))))
+        (declare-const xs IntList)
+        (assert (= (match xs ((nil 0) (other 1))) 1))
+    ";
+    let script = parse_script(text).unwrap();
+    // xs = (cons 1 nil) ⇒ falls to the `other` default ⇒ 1, assertion holds.
+    let nil = Value::Datatype {
+        datatype: dt_of(&script, "IntList"),
+        constructor: ctor_of(&script, "nil"),
+        fields: vec![],
+    };
+    let mut asg = Assignment::new();
+    asg.set(
+        sym_of(&script, "xs"),
+        Value::Datatype {
+            datatype: dt_of(&script, "IntList"),
+            constructor: ctor_of(&script, "cons"),
+            fields: vec![Value::Int(1), nil.clone()],
+        },
+    );
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg).unwrap(),
+        Value::Bool(true)
+    );
+    // xs = nil ⇒ the `nil` case yields 0, so `(= 0 1)` is false.
+    let mut asg_nil = Assignment::new();
+    asg_nil.set(sym_of(&script, "xs"), nil);
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg_nil).unwrap(),
+        Value::Bool(false)
+    );
+}
+
+/// A wildcard `_` default matches but binds nothing.
+#[test]
+fn match_wildcard_default() {
+    let text = r"
+        (set-logic QF_BV)
+        (declare-datatype Color ((red) (green) (blue)))
+        (declare-const c Color)
+        (assert (= (match c ((red #x01) (_ #x00))) #x00))
+    ";
+    let script = parse_script(text).unwrap();
+    let mut asg = Assignment::new();
+    asg.set(
+        sym_of(&script, "c"),
+        Value::Datatype {
+            datatype: dt_of(&script, "Color"),
+            constructor: ctor_of(&script, "blue"),
+            fields: vec![],
+        },
+    );
+    // c = blue ⇒ wildcard branch ⇒ #x00, assertion holds.
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg).unwrap(),
+        Value::Bool(true)
+    );
+}
+
+/// Structural check: the parsed `match` term equals the hand-written desugaring
+/// `(ite (is-red c) #x01 (ite (is-green c) #x02 #x03))`. Term interning means
+/// identical structure shares the same `TermId`.
+#[test]
+fn match_desugars_to_nested_ite() {
+    let text = r"
+        (set-logic QF_BV)
+        (declare-datatype Color ((red) (green) (blue)))
+        (declare-const c Color)
+        (assert (= (match c ((red #x01) (green #x02) (blue #x03))) #x00))
+        (assert (= (ite ((_ is red) c) #x01 (ite ((_ is green) c) #x02 #x03)) #x00))
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 2);
+    // The two assertions are `(= <match> #x00)` and `(= <ite> #x00)`; identical
+    // desugaring ⇒ identical interned `TermId`.
+    assert_eq!(script.assertions[0], script.assertions[1]);
+}
+
+/// `match` on a non-datatype scrutinee is a clean error, not a panic.
+#[test]
+fn match_on_non_datatype_errors() {
+    let text = r"
+        (set-logic QF_BV)
+        (declare-const x (_ BitVec 8))
+        (assert (= (match x ((y #x00))) #x00))
+    ";
+    let err = parse_script(text).expect_err("match on a bit-vector is rejected");
+    assert!(matches!(err, SmtError::Syntax(_)));
+}
+
+/// An unknown constructor in a pattern is rejected.
+#[test]
+fn match_unknown_constructor_errors() {
+    let text = r"
+        (set-logic QF_BV)
+        (declare-datatype Color ((red) (green) (blue)))
+        (declare-const c Color)
+        (assert (= (match c ((red #x01) ((cons h) #x02))) #x00))
+    ";
+    let err = parse_script(text).expect_err("unknown constructor pattern is rejected");
+    assert!(matches!(
+        err,
+        SmtError::Unsupported(_) | SmtError::Syntax(_)
+    ));
+}
+
+/// A constructor pattern with the wrong field arity is rejected.
+#[test]
+fn match_wrong_arity_errors() {
+    let text = r"
+        (set-logic QF_UFDT)
+        (declare-datatype IntList ((nil) (cons (head Int) (tail IntList))))
+        (declare-const xs IntList)
+        (assert (= (match xs ((nil 0) ((cons h) 1))) 0))
+    ";
+    let err = parse_script(text).expect_err("wrong constructor field arity is rejected");
+    assert!(matches!(err, SmtError::Syntax(_)));
+}
+
+/// A non-exhaustive match (a constructor missing, no default) is rejected.
+#[test]
+fn match_non_exhaustive_errors() {
+    let text = r"
+        (set-logic QF_BV)
+        (declare-datatype Color ((red) (green) (blue)))
+        (declare-const c Color)
+        (assert (= (match c ((red #x01) (green #x02))) #x00))
+    ";
+    let err = parse_script(text).expect_err("non-exhaustive match is rejected");
+    assert!(matches!(err, SmtError::Syntax(_)));
+}
+
+/// A default (variable) case that is not last is rejected.
+#[test]
+fn match_default_not_last_errors() {
+    let text = r"
+        (set-logic QF_BV)
+        (declare-datatype Color ((red) (green) (blue)))
+        (declare-const c Color)
+        (assert (= (match c ((other #x00) (red #x01))) #x00))
+    ";
+    let err = parse_script(text).expect_err("a default before the last case is rejected");
+    assert!(matches!(err, SmtError::Syntax(_)));
+}
+
+/// The bound field variable is visible to a nested `let` in the case body
+/// (shadowing/scoping reuses the `let` machinery).
+#[test]
+fn match_body_sees_pattern_var_under_let() {
+    let text = r"
+        (set-logic QF_UFDT)
+        (declare-datatype IntList ((nil) (cons (head Int) (tail IntList))))
+        (declare-const xs IntList)
+        (assert (= (match xs ((nil 0) ((cons h t) (let ((g h)) (+ g g))))) 14))
+    ";
+    let script = parse_script(text).unwrap();
+    let nil = Value::Datatype {
+        datatype: dt_of(&script, "IntList"),
+        constructor: ctor_of(&script, "nil"),
+        fields: vec![],
+    };
+    let mut asg = Assignment::new();
+    asg.set(
+        sym_of(&script, "xs"),
+        Value::Datatype {
+            datatype: dt_of(&script, "IntList"),
+            constructor: ctor_of(&script, "cons"),
+            fields: vec![Value::Int(7), nil],
+        },
+    );
+    // h = 7 ⇒ (+ g g) with g = h = 7 ⇒ 14, assertion holds.
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg).unwrap(),
+        Value::Bool(true)
+    );
+}
+
+// --- helpers for the `match` tests ------------------------------------------
+
+fn sym_of(script: &axeyum_smtlib::Script, name: &str) -> SymbolId {
+    script
+        .arena
+        .find_symbol(name)
+        .unwrap_or_else(|| panic!("symbol `{name}` not declared"))
+}
+
+fn dt_of(script: &axeyum_smtlib::Script, name: &str) -> axeyum_ir::DatatypeId {
+    script
+        .arena
+        .find_datatype(name)
+        .unwrap_or_else(|| panic!("datatype `{name}` not declared"))
+}
+
+fn ctor_of(script: &axeyum_smtlib::Script, name: &str) -> axeyum_ir::ConstructorId {
+    script
+        .arena
+        .find_constructor(name)
+        .unwrap_or_else(|| panic!("constructor `{name}` not declared"))
+}

@@ -656,6 +656,18 @@ enum Frame<'a> {
         syms: Vec<axeyum_ir::SymbolId>,
         is_forall: bool,
     },
+    /// Pop the just-evaluated scrutinee `e` and set up the `match` desugaring
+    /// (ADR-pending datatype `match`): plan per-case testers and binding scopes,
+    /// queue each case body's evaluation under its scope, then a [`Frame::CombineMatch`]
+    /// to fold the case results into a right-nested `ite`.
+    MatchScrutinee { cases: &'a [SExpr] },
+    /// Push a precomputed binding scope (a `match` case's pattern variables →
+    /// selector terms); paired with a later [`Frame::PopScope`].
+    PushScope(HashMap<&'a str, TermId>),
+    /// Pop the `n = testers.len()` evaluated case-result terms and fold them into
+    /// a right-nested `ite`: each `Some(t)` is the `is-C` guard for that case, and
+    /// the final (innermost else) case carries `None` (unconditional, exhaustive).
+    CombineMatch { testers: Vec<Option<TermId>> },
 }
 
 fn parse_term<'a>(
@@ -741,6 +753,18 @@ fn parse_term<'a>(
             Frame::PopScope => {
                 scopes.pop();
             }
+            Frame::MatchScrutinee { cases } => {
+                let scrutinee = results
+                    .pop()
+                    .ok_or_else(|| SmtError::Syntax("match scrutinee".to_owned()))?;
+                queue_match(arena, scrutinee, cases, &mut frames)?;
+            }
+            Frame::PushScope(scope) => {
+                scopes.push(scope);
+            }
+            Frame::CombineMatch { testers } => {
+                combine_match(arena, &mut results, &testers)?;
+            }
         }
     }
     if results.len() == 1 {
@@ -790,6 +814,8 @@ fn queue_list_eval<'a>(
         frames.push(Frame::Eval(inner));
     } else if head.atom() == Some("let") {
         queue_let(items, frames)?;
+    } else if head.atom() == Some("match") {
+        queue_match_scrutinee(items, frames)?;
     } else if head.atom() == Some("forall") || head.atom() == Some("exists") {
         let is_forall = head.atom() == Some("forall");
         queue_quantifier(arena, items, is_forall, frames)?;
@@ -1062,6 +1088,278 @@ fn bind_let_scope<'a>(
         scope.insert(name, value);
     }
     scopes.push(scope);
+}
+
+// --- datatype `match` desugaring (parse-time) --------------------------------
+//
+// SMT-LIB 2.6 `(match e ((pat result) ...))` is desugared at parse time to the
+// datatype primitives the IR already has — `is-C` testers (`Op::DtTest`), field
+// selectors (`Op::DtSelect`), and `ite` — so no IR or solver change is needed.
+//
+//   (match e ((C1 x y) r1) ((C2) r2) (z r3))
+//     ⇒  (ite (is-C1 e) r1[x:=(selC1_0 e), y:=(selC1_1 e)]
+//           (ite (is-C2 e) r2
+//             r3[z := e]))
+//
+// Pattern variables bind by substitution into the case result via the same
+// scope stack `let` uses, so nested matches/lets and shadowing work. The LAST
+// case is always the unconditional `else` (SMT-LIB requires the match to be
+// exhaustive); a non-exhaustive match (no trailing default and not all
+// constructors covered) is rejected.
+
+/// Queues `(match e (case ...))`: evaluate the scrutinee `e`, then the
+/// [`Frame::MatchScrutinee`] plan that sets up the desugaring once `e`'s term
+/// (and sort) is known.
+fn queue_match_scrutinee<'a>(
+    items: &'a [SExpr],
+    frames: &mut Vec<Frame<'a>>,
+) -> Result<(), SmtError> {
+    if items.len() != 3 {
+        return Err(SmtError::Syntax(
+            "match expects `(match e (case ...))`".to_owned(),
+        ));
+    }
+    let cases = items[2]
+        .list()
+        .filter(|c| !c.is_empty())
+        .ok_or_else(|| SmtError::Syntax("match expects a non-empty case list".to_owned()))?;
+    frames.push(Frame::MatchScrutinee { cases });
+    frames.push(Frame::Eval(&items[1]));
+    Ok(())
+}
+
+/// One planned `match` case: the `is-C` guard (`None` for the unconditional,
+/// final/else case) and the pattern-variable scope to evaluate its body under.
+struct MatchCasePlan<'a> {
+    tester: Option<TermId>,
+    scope: HashMap<&'a str, TermId>,
+    body: &'a SExpr,
+}
+
+/// Sets up the `match` desugaring once the scrutinee term `scrutinee` is known:
+/// resolves its datatype, plans every case (tester + pattern-variable scope),
+/// checks exhaustiveness, and queues each case body's evaluation (under its
+/// scope) followed by a [`Frame::CombineMatch`] fold.
+///
+/// # Errors
+///
+/// [`SmtError::Syntax`]/[`SmtError::Unsupported`] for a non-datatype scrutinee,
+/// an unknown constructor, a wrong constructor field-arity, a default that is not
+/// last, or a non-exhaustive match.
+fn queue_match<'a>(
+    arena: &mut TermArena,
+    scrutinee: TermId,
+    cases: &'a [SExpr],
+    frames: &mut Vec<Frame<'a>>,
+) -> Result<(), SmtError> {
+    let dt = match arena.sort_of(scrutinee) {
+        Sort::Datatype(dt) => dt,
+        other => {
+            return Err(SmtError::Syntax(format!(
+                "match scrutinee must be a datatype value, got {other:?}"
+            )));
+        }
+    };
+    let plans = plan_match_cases(arena, scrutinee, dt, cases)?;
+    let testers: Vec<Option<TermId>> = plans.iter().map(|p| p.tester).collect();
+    frames.push(Frame::CombineMatch { testers });
+    // Push each case's [PushScope, Eval(body), PopScope] block in reverse case
+    // order so the results land case0, case1, … on the stack for CombineMatch.
+    for plan in plans.into_iter().rev() {
+        frames.push(Frame::PopScope);
+        frames.push(Frame::Eval(plan.body));
+        frames.push(Frame::PushScope(plan.scope));
+    }
+    Ok(())
+}
+
+/// Plans each `match` case over datatype `dt`: builds the `is-C` tester and the
+/// pattern-variable → selector-term bindings, and validates the case set.
+fn plan_match_cases<'a>(
+    arena: &mut TermArena,
+    scrutinee: TermId,
+    dt: axeyum_ir::DatatypeId,
+    cases: &'a [SExpr],
+) -> Result<Vec<MatchCasePlan<'a>>, SmtError> {
+    let mut plans: Vec<MatchCasePlan<'a>> = Vec::with_capacity(cases.len());
+    let mut covered: Vec<axeyum_ir::ConstructorId> = Vec::new();
+    let mut has_default = false;
+    for (idx, case) in cases.iter().enumerate() {
+        let parts = case
+            .list()
+            .filter(|p| p.len() == 2)
+            .ok_or_else(|| SmtError::Syntax("match case `(pattern result)`".to_owned()))?;
+        let pattern = &parts[0];
+        let body = &parts[1];
+        if has_default {
+            return Err(SmtError::Syntax(
+                "match: a default (variable/wildcard) pattern must be the last case".to_owned(),
+            ));
+        }
+        let is_last = idx + 1 == cases.len();
+        match plan_one_case(arena, scrutinee, dt, pattern)? {
+            CasePattern::Default { scope } => {
+                has_default = true;
+                plans.push(MatchCasePlan {
+                    tester: None,
+                    scope,
+                    body,
+                });
+            }
+            CasePattern::Constructor { ctor, scope } => {
+                if covered.contains(&ctor) {
+                    return Err(SmtError::Syntax(format!(
+                        "match: duplicate case for constructor `{}`",
+                        arena.constructor_name(ctor)
+                    )));
+                }
+                covered.push(ctor);
+                // The final case is the unconditional `else` of the right-nested
+                // `ite`; for an exhaustive match its `is-C` guard is redundant.
+                let tester = if is_last {
+                    None
+                } else {
+                    Some(arena.dt_test(ctor, scrutinee)?)
+                };
+                plans.push(MatchCasePlan {
+                    tester,
+                    scope,
+                    body,
+                });
+            }
+        }
+    }
+    // Exhaustiveness: either a trailing default, or every constructor covered.
+    if !has_default && covered.len() != arena.datatype_constructors(dt).len() {
+        return Err(SmtError::Syntax(format!(
+            "non-exhaustive match on `{}`: add the missing constructor cases or a default",
+            arena.datatype_name(dt)
+        )));
+    }
+    Ok(plans)
+}
+
+/// A single resolved `match` pattern.
+enum CasePattern<'a> {
+    /// A constructor pattern `(C x …)` or nullary `C`: matched by `is-C`, with
+    /// each field variable bound to its selector applied to the scrutinee.
+    Constructor {
+        ctor: axeyum_ir::ConstructorId,
+        scope: HashMap<&'a str, TermId>,
+    },
+    /// A variable `x` or wildcard `_` default: binds the whole scrutinee to `x`
+    /// (`_` binds nothing) and always matches.
+    Default { scope: HashMap<&'a str, TermId> },
+}
+
+/// Resolves one `match` pattern against datatype `dt`, building its binding scope.
+fn plan_one_case<'a>(
+    arena: &mut TermArena,
+    scrutinee: TermId,
+    dt: axeyum_ir::DatatypeId,
+    pattern: &'a SExpr,
+) -> Result<CasePattern<'a>, SmtError> {
+    match pattern {
+        // Bare symbol: a nullary constructor of `dt`, or a variable/wildcard.
+        SExpr::Atom(name) => {
+            if name == "_" {
+                return Ok(CasePattern::Default {
+                    scope: HashMap::new(),
+                });
+            }
+            match arena.find_constructor(name) {
+                Some(ctor) if arena.constructor_datatype(ctor) == dt => {
+                    if !arena.constructor_fields(ctor).is_empty() {
+                        return Err(SmtError::Syntax(format!(
+                            "match: constructor `{name}` takes fields; use `({name} x …)`"
+                        )));
+                    }
+                    Ok(CasePattern::Constructor {
+                        ctor,
+                        scope: HashMap::new(),
+                    })
+                }
+                // A constructor of a *different* datatype is a name clash, not a
+                // valid variable binder here; reject it.
+                Some(_) => Err(SmtError::Syntax(format!(
+                    "match: `{name}` is a constructor of another datatype, not a valid pattern \
+                     for `{}`",
+                    arena.datatype_name(dt)
+                ))),
+                // Not a constructor: a variable pattern binding the whole scrutinee.
+                None => {
+                    let mut scope = HashMap::new();
+                    scope.insert(name.as_str(), scrutinee);
+                    Ok(CasePattern::Default { scope })
+                }
+            }
+        }
+        // Constructor pattern `(C x1 … xk)`: bind each field variable to its
+        // selector applied to the scrutinee.
+        SExpr::List(parts) => {
+            let cname = parts
+                .first()
+                .and_then(SExpr::atom)
+                .ok_or_else(|| SmtError::Syntax("match constructor pattern head".to_owned()))?;
+            let ctor = arena
+                .find_constructor(cname)
+                .filter(|&c| arena.constructor_datatype(c) == dt)
+                .ok_or_else(|| {
+                    SmtError::Unsupported(format!(
+                        "match: unknown constructor `{cname}` for `{}`",
+                        arena.datatype_name(dt)
+                    ))
+                })?;
+            let field_count = arena.constructor_fields(ctor).len();
+            let vars = &parts[1..];
+            if vars.len() != field_count {
+                return Err(SmtError::Syntax(format!(
+                    "match: constructor `{cname}` binds {field_count} field(s), pattern has {}",
+                    vars.len()
+                )));
+            }
+            let mut scope = HashMap::new();
+            for (i, var) in vars.iter().enumerate() {
+                let vname = var
+                    .atom()
+                    .ok_or_else(|| SmtError::Syntax("match pattern variable".to_owned()))?;
+                let sel =
+                    arena.dt_select(ctor, u32::try_from(i).expect("field fits u32"), scrutinee)?;
+                if vname != "_" && scope.insert(vname, sel).is_some() {
+                    return Err(SmtError::Syntax(format!(
+                        "match: duplicate pattern variable `{vname}`"
+                    )));
+                }
+            }
+            Ok(CasePattern::Constructor { ctor, scope })
+        }
+    }
+}
+
+/// Folds the `match` case results (top `testers.len()` results, in case order)
+/// into the right-nested `ite`: each guarded case `Some(t)` becomes
+/// `(ite t result <rest>)`, and the final case (`None`) is the innermost else.
+fn combine_match(
+    arena: &mut TermArena,
+    results: &mut Vec<TermId>,
+    testers: &[Option<TermId>],
+) -> Result<(), SmtError> {
+    let n = testers.len();
+    let case_results = results.split_off(results.len() - n);
+    // Fold from the last case inward. The last case is the unconditional else.
+    let mut acc = *case_results
+        .last()
+        .ok_or_else(|| SmtError::Syntax("match has no cases".to_owned()))?;
+    for i in (0..n - 1).rev() {
+        let tester = testers[i].ok_or_else(|| {
+            SmtError::Syntax(
+                "match: only the final case may be an unconditional default".to_owned(),
+            )
+        })?;
+        acc = arena.ite(tester, case_results[i], acc)?;
+    }
+    results.push(acc);
+    Ok(())
 }
 
 // --- bounded string front-end (ADR-0029, first slice) ------------------------
