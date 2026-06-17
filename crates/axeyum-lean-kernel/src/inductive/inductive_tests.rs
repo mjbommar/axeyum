@@ -1,8 +1,10 @@
-//! Tests for the inductive layer (ADR-0036, slice 4): the `add_inductive`
+//! Tests for the inductive layer (ADR-0036, slice 6): the `add_inductive`
 //! admission gate, recursor generation (with the self-check that the generated
 //! recursor type infers to a `Sort`), and ι-reduction in WHNF — validated
-//! against KNOWN recursors and ι-rules (`Bool`, a 3-way enum, a structure with
-//! fields), plus the rejections the trusted gate must catch.
+//! against KNOWN recursors and ι-rules. Covers the slice-4 enums/structures, the
+//! slice-5 recursive types (`Nat`, binary trees), and the slice-6 **parametric**
+//! families (`List`, `Option`, `Prod`, `Sum`), plus the rejections the trusted
+//! gate must catch (indices, wrong parameters, reflexive fields).
 #![allow(
     clippy::many_single_char_names,
     clippy::similar_names,
@@ -33,7 +35,7 @@ fn declare_enum(
     let ctors: Vec<(crate::NameId, crate::ExprId)> =
         ctor_names.iter().map(|&cn| (cn, ind_const)).collect();
 
-    k.add_inductive(ind_name, &[], ty, &ctors)
+    k.add_inductive(ind_name, &[], 0, ty, &ctors)
         .expect("enum should admit");
     let rec_name = k.name_str(ind_name, "rec");
     (ind_name, rec_name, ctor_names)
@@ -168,7 +170,7 @@ fn structure_with_fields_iota_passes_fields() {
         let inner = k.pi(anon, b_ty, p_const, BinderInfo::Default);
         k.pi(anon, a_ty, inner, BinderInfo::Default)
     };
-    k.add_inductive(p_name, &[], s1, &[(mk_name, mk_ty)])
+    k.add_inductive(p_name, &[], 0, s1, &[(mk_name, mk_ty)])
         .expect("structure should admit");
     let rec_name = k.name_str(p_name, "rec");
 
@@ -229,7 +231,7 @@ fn reject_wrong_result_head() {
     let s0 = k.sort_zero();
     let bad_ctor = k.name_str(anon, "bad");
     let err = k
-        .add_inductive(ind_name, &[], s1, &[(bad_ctor, s0)])
+        .add_inductive(ind_name, &[], 0, s1, &[(bad_ctor, s0)])
         .unwrap_err();
     assert!(
         matches!(err, KernelError::ConstructorResultMismatch { .. }),
@@ -257,7 +259,7 @@ fn reject_reflexive_recursive_field() {
     let field_ty = k.pi(anon, ind_const, ind_const, BinderInfo::Default);
     let cty = k.pi(anon, field_ty, ind_const, BinderInfo::Default);
     let err = k
-        .add_inductive(ind_name, &[], s1, &[(cn, cty)])
+        .add_inductive(ind_name, &[], 0, s1, &[(cn, cty)])
         .unwrap_err();
     assert!(
         matches!(err, KernelError::ReflexiveOrNestedNotSupported { .. }),
@@ -267,8 +269,10 @@ fn reject_reflexive_recursive_field() {
     assert!(!k.environment().contains(cn));
 }
 
-/// Reject: an inductive whose type is not a `Sort` (e.g. a `Pi` ⇒ parametric,
-/// deferred).
+/// Reject: an inductive whose type has a leading `Pi` not declared as a
+/// parameter (`num_params = 0`) ⇒ the `Pi` is an **index**, which is deferred
+/// (`IndicesNotSupported`). Declaring it as a parameter (`num_params = 1`) is
+/// the supported path (see the parametric admits below).
 #[test]
 fn reject_type_not_a_sort() {
     let mut k = Kernel::new();
@@ -277,12 +281,13 @@ fn reject_type_not_a_sort() {
     let one = k.level_succ(z);
     let s1 = k.sort(one);
     let s0 = k.sort_zero();
-    // ty := Π (_ : Sort 0), Sort 1   (a parametric inductive's type — deferred).
+    // ty := Π (_ : Sort 0), Sort 1   (a binder before the Sort; with 0 params
+    // this is an index — deferred).
     let bad_ty = k.pi(anon, s0, s1, BinderInfo::Default);
     let ind_name = k.name_str(anon, "Param");
-    let err = k.add_inductive(ind_name, &[], bad_ty, &[]).unwrap_err();
+    let err = k.add_inductive(ind_name, &[], 0, bad_ty, &[]).unwrap_err();
     assert!(
-        matches!(err, KernelError::InductiveTypeNotASort { .. }),
+        matches!(err, KernelError::IndicesNotSupported { .. }),
         "got {err:?}"
     );
     assert!(!k.environment().contains(ind_name));
@@ -297,7 +302,7 @@ fn reject_duplicate_name() {
     let z = k.level_zero();
     let one = k.level_succ(z);
     let s1 = k.sort(one);
-    let err = k.add_inductive(ind_name, &[], s1, &[]).unwrap_err();
+    let err = k.add_inductive(ind_name, &[], 0, s1, &[]).unwrap_err();
     assert!(
         matches!(err, KernelError::DeclarationExists { .. }),
         "got {err:?}"
@@ -363,7 +368,7 @@ fn declare_nat(k: &mut Kernel) -> (crate::NameId, crate::NameId, [crate::NameId;
     let succ = k.name_str(anon, "succ");
     // succ : Nat → Nat  (a direct recursive field).
     let succ_ty = k.pi(anon, nat_const, nat_const, BinderInfo::Default);
-    k.add_inductive(nat, &[], s1, &[(zero, nat_const), (succ, succ_ty)])
+    k.add_inductive(nat, &[], 0, s1, &[(zero, nat_const), (succ, succ_ty)])
         .expect("Nat should admit");
     let rec_name = k.name_str(nat, "rec");
     (nat, rec_name, [zero, succ])
@@ -604,7 +609,7 @@ fn tree_two_recursive_fields() {
         let inner = k.pi(anon, tree_const, tree_const, BinderInfo::Default);
         k.pi(anon, tree_const, inner, BinderInfo::Default)
     };
-    k.add_inductive(tree, &[], s1, &[(leaf, tree_const), (node, node_ty)])
+    k.add_inductive(tree, &[], 0, s1, &[(leaf, tree_const), (node, node_ty)])
         .expect("Tree should admit");
     let rec_name = k.name_str(tree, "rec");
 
@@ -694,6 +699,725 @@ fn determinism_inductive() {
     fn build() -> usize {
         let mut k = Kernel::new();
         let (_ind, rec_name, _ctors) = declare_enum(&mut k, "Det", &["p", "q"]);
+        k.environment().get(rec_name).unwrap().ty().index()
+    }
+    assert_eq!(build(), build());
+}
+
+// ---------------------------------------------------------------------------
+// Parametric inductives (slice 6): List, Option, Prod, Sum.
+// ---------------------------------------------------------------------------
+
+/// Declare `List.{u} (α : Sort u) : Sort u` with `nil : List α` and
+/// `cons : α → List α → List α`. Returns `(list_name, rec_name, u_param,
+/// [nil_name, cons_name])`.
+fn declare_list(
+    k: &mut Kernel,
+) -> (
+    crate::NameId,
+    crate::NameId,
+    crate::NameId,
+    [crate::NameId; 2],
+) {
+    let anon = k.anon();
+    let u = k.name_str(anon, "u");
+    let u_lvl = k.level_param(u);
+    let sort_u = k.sort(u_lvl);
+    let list = k.name_str(anon, "List");
+
+    // ty := Π (α : Sort u), Sort u   (the body is closed: Sort u, no α reference).
+    let alpha_name = k.name_str(anon, "α");
+    let ty = k.pi(alpha_name, sort_u, sort_u, BinderInfo::Default);
+
+    // List α  (the inductive const applied to the param BVar 0, used in ctor
+    // telescope bodies). In the constructor types we build below, `α` is BVar 0
+    // at the parameter binder, then shifts under further field binders.
+    let list_const = k.const_(list, vec![u_lvl]);
+
+    let nil = k.name_str(anon, "nil");
+    let cons = k.name_str(anon, "cons");
+
+    // nil : Π (α : Sort u), List α   — `List α` = `List` applied to BVar 0.
+    let nil_ty = {
+        let a0 = k.bvar(0);
+        let list_a = k.app(list_const, a0);
+        k.pi(alpha_name, sort_u, list_a, BinderInfo::Default)
+    };
+
+    // cons : Π (α : Sort u) (a : α) (l : List α), List α.
+    //   Under binders, de Bruijn indices (innermost = 0):
+    //   - param α: BVar 2 at the result, BVar 1 in `l`'s type, BVar 0 in `a`'s type.
+    //   Build inside-out: result `List α` with α = BVar 2; then bind `l : List α`
+    //   with α = BVar 1; then bind `a : α` with α = BVar 0; then bind param α.
+    let cons_ty = {
+        let a2 = k.bvar(2);
+        let list_a_res = k.app(list_const, a2); // List α (result)
+        let a1 = k.bvar(1);
+        let list_a_l = k.app(list_const, a1); // l : List α
+        let l_name = k.name_str(anon, "l");
+        let inner_l = k.pi(l_name, list_a_l, list_a_res, BinderInfo::Default);
+        let a0 = k.bvar(0); // a : α
+        let a_name = k.name_str(anon, "a");
+        let inner_a = k.pi(a_name, a0, inner_l, BinderInfo::Default);
+        k.pi(alpha_name, sort_u, inner_a, BinderInfo::Default)
+    };
+
+    k.add_inductive(list, &[u], 1, ty, &[(nil, nil_ty), (cons, cons_ty)])
+        .expect("List should admit");
+    let rec_name = k.name_str(list, "rec");
+    (list, rec_name, u, [nil, cons])
+}
+
+/// List admits (parametric, num_params = 1); its recursor type infer-checks (the
+/// param de Bruijn self-check); and the `cons` minor has the shape
+/// `Π (a : α) (l : List α) (ih : motive l), motive (cons α a l)` — the parameter
+/// `α` threaded into both the `motive` IH argument and the `cons` application.
+#[test]
+fn list_admits_and_cons_minor_threads_param() {
+    let mut k = Kernel::new();
+    let (list, rec_name, _u, [_nil, cons]) = declare_list(&mut k);
+
+    // The recursor type infer-checks to a Sort (also done internally).
+    let rec_decl = k.environment().get(rec_name).unwrap().clone();
+    let rec_ty = rec_decl.ty();
+    let inferred = k.infer(rec_ty).unwrap();
+    assert!(matches!(k.expr_node(inferred), ExprNode::Sort(_)));
+
+    // num_params is recorded as 1.
+    match &rec_decl {
+        Declaration::Recursor { num_params, .. } => assert_eq!(*num_params, 1),
+        _ => panic!("expected recursor"),
+    }
+
+    // Telescope: Π (α) {motive} (m_nil) (m_cons) (major), motive major.
+    // Walk: param α, motive, m_nil, then m_cons.
+    let ExprNode::Pi(_, _alpha_ty, after_param, _) = k.expr_node(rec_ty).clone() else {
+        panic!("rec ty should start with the param α Pi");
+    };
+    let ExprNode::Pi(_, _motive_ty, after_motive, _) = k.expr_node(after_param).clone() else {
+        panic!("expected the motive Pi");
+    };
+    let ExprNode::Pi(_, _m_nil_ty, after_nil, _) = k.expr_node(after_motive).clone() else {
+        panic!("expected the nil minor Pi");
+    };
+    let ExprNode::Pi(_, m_cons_ty, _after_cons, _) = k.expr_node(after_nil).clone() else {
+        panic!("expected the cons minor Pi");
+    };
+    // m_cons_ty = Π (a : α) (l : List α) (ih : motive l), motive (cons α a l).
+    // Count binders: 2 fields (a, l) + 1 IH = 3 leading Pis, then the body.
+    let mut binders = Vec::new();
+    let mut cur = m_cons_ty;
+    while let ExprNode::Pi(_, dom, body, _) = k.expr_node(cur).clone() {
+        binders.push(dom);
+        cur = body;
+    }
+    assert_eq!(binders.len(), 3, "cons minor: 2 fields (a, l) + 1 IH");
+    // The third binder (the IH) is a `motive _` application.
+    assert!(
+        matches!(k.expr_node(binders[2]), ExprNode::App(..)),
+        "cons IH binder should be a `motive l` application"
+    );
+    // The minor result is `motive (cons α a l)` — head `cons`, applied to 3 args
+    // (the threaded param α and the two fields a, l).
+    let ExprNode::App(_m, cons_app) = k.expr_node(cur).clone() else {
+        panic!("cons minor result should be `motive (cons α a l)`");
+    };
+    let (head, args) = {
+        let mut h = cons_app;
+        let mut a = Vec::new();
+        while let ExprNode::App(f, x) = k.expr_node(h).clone() {
+            a.push(x);
+            h = f;
+        }
+        a.reverse();
+        (h, a)
+    };
+    assert!(
+        matches!(k.expr_node(head), ExprNode::Const(n, _) if *n == cons),
+        "minor result head should be `cons`"
+    );
+    assert_eq!(args.len(), 3, "cons applied to the param α and two fields");
+    let _ = list;
+}
+
+/// List ι backbone: `List.rec α C cnil ccons (nil α)` ι→ `cnil`, and
+/// `List.rec α C cnil ccons (cons α a l)` ι→
+/// `ccons a l (List.rec α C cnil ccons l)` (param α threaded into the recursive
+/// call; the inner rec is left stuck by single-step whnf).
+#[test]
+fn list_rec_iota_backbone() {
+    let mut k = Kernel::new();
+    let (list, rec_name, u, [nil, cons]) = declare_list(&mut k);
+    let u_lvl = k.level_param(u);
+
+    let rec_decl = k.environment().get(rec_name).unwrap().clone();
+    let v = match &rec_decl {
+        Declaration::Recursor { uparams, .. } => uparams[0],
+        _ => panic!(),
+    };
+    let v_lvl = k.level_param(v);
+
+    // Concrete param α, motive C, minors cnil/ccons, and field fvars a, l.
+    let alpha = k.fvar(1);
+    let big_c = k.fvar(2);
+    let cnil = k.fvar(3);
+    let ccons = k.fvar(4);
+    let a = k.fvar(5);
+    let l = k.fvar(6);
+    let _ = list;
+
+    // nil α
+    let nil_c = k.const_(nil, vec![u_lvl]);
+    let nil_alpha = k.app(nil_c, alpha);
+
+    // List.rec.{v,u} α C cnil ccons (nil α)  ι→  cnil
+    let rec_const = k.const_(rec_name, vec![v_lvl, u_lvl]);
+    let app_nil = {
+        let e = k.app(rec_const, alpha);
+        let e = k.app(e, big_c);
+        let e = k.app(e, cnil);
+        let e = k.app(e, ccons);
+        k.app(e, nil_alpha)
+    };
+    assert_eq!(
+        k.whnf(app_nil),
+        cnil,
+        "List.rec α C cnil ccons (nil α) ι→ cnil"
+    );
+
+    // cons α a l
+    let cons_c = k.const_(cons, vec![u_lvl]);
+    let cons_aal = {
+        let e = k.app(cons_c, alpha);
+        let e = k.app(e, a);
+        k.app(e, l)
+    };
+    // List.rec α C cnil ccons (cons α a l)
+    //   ι→  ccons a l (List.rec α C cnil ccons l)
+    let rec_const2 = k.const_(rec_name, vec![v_lvl, u_lvl]);
+    let app_cons = {
+        let e = k.app(rec_const2, alpha);
+        let e = k.app(e, big_c);
+        let e = k.app(e, cnil);
+        let e = k.app(e, ccons);
+        k.app(e, cons_aal)
+    };
+    let inner_rec = {
+        let rc = k.const_(rec_name, vec![v_lvl, u_lvl]);
+        let e = k.app(rc, alpha);
+        let e = k.app(e, big_c);
+        let e = k.app(e, cnil);
+        let e = k.app(e, ccons);
+        k.app(e, l)
+    };
+    let expected = {
+        let e = k.app(ccons, a);
+        let e = k.app(e, l);
+        k.app(e, inner_rec)
+    };
+    assert_eq!(
+        k.whnf(app_cons),
+        expected,
+        "List.rec α C cnil ccons (cons α a l) ι→ ccons a l (List.rec … l)"
+    );
+}
+
+/// End-to-end parametric computation: with `α := Nat`, `C := fun _ => Nat`,
+/// `cnil := zero`, `ccons := fun (_a : Nat) (_l : List Nat) (ih : Nat) => succ ih`,
+/// the length-like recursion over `cons Nat a (cons Nat b (nil Nat))` computes to
+/// `succ (succ zero)` — multi-step parametric ι + β actually computes.
+#[test]
+fn list_rec_computes_length() {
+    let mut k = Kernel::new();
+    let (list, rec_name, u, [nil, cons]) = declare_list(&mut k);
+    let u_lvl = k.level_param(u);
+    let anon = k.anon();
+
+    // A Nat to recurse into (independent inductive, num_params = 0).
+    let (nat, _nat_rec, [zero, succ]) = declare_nat(&mut k);
+    let nat_const = k.const_(nat, vec![]);
+    let zero_c = k.const_(zero, vec![]);
+    let succ_c = k.const_(succ, vec![]);
+
+    // Elaborate List.rec at v := 1 (so C : List Nat → Sort 1 is well-typed) and
+    // u := 1 (Nat : Sort 1).
+    let lz = k.level_zero();
+    let one = k.level_succ(lz);
+    let v_lvl = one;
+    // α := Nat lives at Sort 1, so instantiate the List family's `u` to 1 too.
+    let u_arg = one;
+    let _ = u_lvl;
+
+    // C := fun (_ : List Nat) => Nat.   List Nat = List.{1} applied to Nat.
+    let list_nat = {
+        let list_c = k.const_(list, vec![u_arg]);
+        k.app(list_c, nat_const)
+    };
+    let big_c = k.lam(anon, list_nat, nat_const, BinderInfo::Default);
+    // cnil := zero.
+    let cnil = zero_c;
+    // ccons := fun (_a : Nat) (_l : List Nat) (ih : Nat) => succ ih  (ih = BVar 0).
+    let ccons = {
+        let v0 = k.bvar(0);
+        let succ_ih = k.app(succ_c, v0);
+        let inner_ih = k.lam(anon, nat_const, succ_ih, BinderInfo::Default);
+        let inner_l = k.lam(anon, list_nat, inner_ih, BinderInfo::Default);
+        k.lam(anon, nat_const, inner_l, BinderInfo::Default)
+    };
+
+    // The list `cons Nat a (cons Nat b (nil Nat))` with concrete element fvars.
+    let a = k.fvar(100);
+    let b = k.fvar(101);
+    let nil_c = k.const_(nil, vec![u_arg]);
+    let cons_c = k.const_(cons, vec![u_arg]);
+    let nil_nat = k.app(nil_c, nat_const);
+    let cons_b = {
+        let e = k.app(cons_c, nat_const);
+        let e = k.app(e, b);
+        k.app(e, nil_nat)
+    };
+    let cons_a = {
+        let e = k.app(cons_c, nat_const);
+        let e = k.app(e, a);
+        k.app(e, cons_b)
+    };
+
+    // List.rec.{1,1} Nat C cnil ccons (cons Nat a (cons Nat b (nil Nat))).
+    let rec_const = k.const_(rec_name, vec![v_lvl, u_arg]);
+    let app = {
+        let e = k.app(rec_const, nat_const);
+        let e = k.app(e, big_c);
+        let e = k.app(e, cnil);
+        let e = k.app(e, ccons);
+        k.app(e, cons_a)
+    };
+    let computed = whnf_deep(&mut k, app);
+    // Expected: succ (succ zero).
+    let two = {
+        let s1 = k.app(succ_c, zero_c);
+        k.app(succ_c, s1)
+    };
+    assert_eq!(
+        computed, two,
+        "List length-by-recursion over [a, b] computes to 2"
+    );
+}
+
+/// `Option.{u} (α : Sort u) : Sort u` with `none : Option α` and
+/// `some : α → Option α` (1 param, non-recursive): admits, recursor self-checks,
+/// and ι passes the field through (param threaded).
+#[test]
+fn option_admits_and_iota() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let u = k.name_str(anon, "u");
+    let u_lvl = k.level_param(u);
+    let sort_u = k.sort(u_lvl);
+    let opt = k.name_str(anon, "Option");
+    let alpha_name = k.name_str(anon, "α");
+    let ty = k.pi(alpha_name, sort_u, sort_u, BinderInfo::Default);
+    let opt_const = k.const_(opt, vec![u_lvl]);
+
+    let none = k.name_str(anon, "none");
+    let some = k.name_str(anon, "some");
+    // none : Π (α : Sort u), Option α.
+    let none_ty = {
+        let a0 = k.bvar(0);
+        let opt_a = k.app(opt_const, a0);
+        k.pi(alpha_name, sort_u, opt_a, BinderInfo::Default)
+    };
+    // some : Π (α : Sort u) (a : α), Option α.
+    let some_ty = {
+        let a1 = k.bvar(1);
+        let opt_a = k.app(opt_const, a1); // result, α = BVar 1
+        let a0 = k.bvar(0); // a : α
+        let a_name = k.name_str(anon, "a");
+        let inner = k.pi(a_name, a0, opt_a, BinderInfo::Default);
+        k.pi(alpha_name, sort_u, inner, BinderInfo::Default)
+    };
+    k.add_inductive(opt, &[u], 1, ty, &[(none, none_ty), (some, some_ty)])
+        .expect("Option should admit");
+    let rec_name = k.name_str(opt, "rec");
+
+    let rec_decl = k.environment().get(rec_name).unwrap().clone();
+    let rec_ty = rec_decl.ty();
+    let inferred = k.infer(rec_ty).unwrap();
+    assert!(matches!(k.expr_node(inferred), ExprNode::Sort(_)));
+    let v = match &rec_decl {
+        Declaration::Recursor { uparams, .. } => uparams[0],
+        _ => panic!(),
+    };
+    let v_lvl = k.level_param(v);
+
+    // ι: Option.rec α C cnone csome (some α x) ι→ csome x.
+    let alpha = k.fvar(1);
+    let big_c = k.fvar(2);
+    let cnone = k.fvar(3);
+    let csome = k.fvar(4);
+    let x = k.fvar(5);
+    let some_c = k.const_(some, vec![u_lvl]);
+    let some_ax = {
+        let e = k.app(some_c, alpha);
+        k.app(e, x)
+    };
+    let rec_const = k.const_(rec_name, vec![v_lvl, u_lvl]);
+    let app = {
+        let e = k.app(rec_const, alpha);
+        let e = k.app(e, big_c);
+        let e = k.app(e, cnone);
+        let e = k.app(e, csome);
+        k.app(e, some_ax)
+    };
+    let expected = k.app(csome, x);
+    assert_eq!(k.whnf(app), expected, "Option.rec … (some α x) ι→ csome x");
+}
+
+/// `Prod.{u,w} (α : Sort u) (β : Sort w) : Sort (max u w)` with
+/// `mk : α → β → Prod α β` (2 params, non-recursive): admits, recursor
+/// self-checks, and ι passes both fields (both params threaded into the result).
+#[test]
+fn prod_two_params_admits_and_iota() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let u = k.name_str(anon, "u");
+    let w = k.name_str(anon, "w");
+    let u_lvl = k.level_param(u);
+    let w_lvl = k.level_param(w);
+    let sort_u = k.sort(u_lvl);
+    let sort_w = k.sort(w_lvl);
+    let max_uw = k.level_max(u_lvl, w_lvl);
+    let sort_max = k.sort(max_uw);
+    let prod = k.name_str(anon, "Prod");
+    let prod_const = k.const_(prod, vec![u_lvl, w_lvl]);
+
+    // ty := Π (α : Sort u) (β : Sort w), Sort (max u w).
+    let alpha_name = k.name_str(anon, "α");
+    let beta_name = k.name_str(anon, "β");
+    let ty = {
+        let inner = k.pi(beta_name, sort_w, sort_max, BinderInfo::Default);
+        k.pi(alpha_name, sort_u, inner, BinderInfo::Default)
+    };
+
+    // mk : Π (α : Sort u) (β : Sort w) (a : α) (b : β), Prod α β.
+    //   At the result, α = BVar 3, β = BVar 2; in `b`'s type β = BVar 1 (no, β is
+    //   the inner param); let's compute carefully (innermost binder = 0):
+    //   binders outer→inner: α(param), β(param), a(field), b(field).
+    //   At result depth (under all 4): α = BVar 3, β = BVar 2.
+    //   `b : β`  is under α, β, a  → β = BVar 1.
+    //   `a : α`  is under α, β     → α = BVar 1.
+    let mk = k.name_str(anon, "mk");
+    let mk_ty = {
+        let a3 = k.bvar(3);
+        let b2 = k.bvar(2);
+        let prod_ab = {
+            let e = k.app(prod_const, a3);
+            k.app(e, b2)
+        }; // Prod α β (result)
+        let b1 = k.bvar(1); // b : β
+        let b_name = k.name_str(anon, "b");
+        let inner_b = k.pi(b_name, b1, prod_ab, BinderInfo::Default);
+        let a1 = k.bvar(1); // a : α  (under α, β)
+        let a_name = k.name_str(anon, "a");
+        let inner_a = k.pi(a_name, a1, inner_b, BinderInfo::Default);
+        let inner_beta = k.pi(beta_name, sort_w, inner_a, BinderInfo::Default);
+        k.pi(alpha_name, sort_u, inner_beta, BinderInfo::Default)
+    };
+
+    k.add_inductive(prod, &[u, w], 2, ty, &[(mk, mk_ty)])
+        .expect("Prod should admit");
+    let rec_name = k.name_str(prod, "rec");
+
+    let rec_decl = k.environment().get(rec_name).unwrap().clone();
+    let rec_ty = rec_decl.ty();
+    let inferred = k.infer(rec_ty).unwrap();
+    assert!(matches!(k.expr_node(inferred), ExprNode::Sort(_)));
+    match &rec_decl {
+        Declaration::Recursor { num_params, .. } => assert_eq!(*num_params, 2),
+        _ => panic!(),
+    }
+    let v = match &rec_decl {
+        Declaration::Recursor { uparams, .. } => uparams[0],
+        _ => panic!(),
+    };
+    let v_lvl = k.level_param(v);
+
+    // ι: Prod.rec α β C cmk (mk α β a b) ι→ cmk a b.
+    let alpha = k.fvar(1);
+    let beta = k.fvar(2);
+    let big_c = k.fvar(3);
+    let cmk = k.fvar(4);
+    let a = k.fvar(5);
+    let b = k.fvar(6);
+    let mk_c = k.const_(mk, vec![u_lvl, w_lvl]);
+    let mk_abab = {
+        let e = k.app(mk_c, alpha);
+        let e = k.app(e, beta);
+        let e = k.app(e, a);
+        k.app(e, b)
+    };
+    let rec_const = k.const_(rec_name, vec![v_lvl, u_lvl, w_lvl]);
+    let app = {
+        let e = k.app(rec_const, alpha);
+        let e = k.app(e, beta);
+        let e = k.app(e, big_c);
+        let e = k.app(e, cmk);
+        k.app(e, mk_abab)
+    };
+    let expected = {
+        let e = k.app(cmk, a);
+        k.app(e, b)
+    };
+    assert_eq!(
+        k.whnf(app),
+        expected,
+        "Prod.rec α β C cmk (mk α β a b) ι→ cmk a b"
+    );
+}
+
+/// `Sum.{u,w} (α : Sort u) (β : Sort w) : Sort (max u w)` with
+/// `inl : α → Sum α β` and `inr : β → Sum α β` (2 params, multiple ctors): admits,
+/// recursor self-checks, and ι picks the right minor (param-threaded).
+#[test]
+#[allow(clippy::too_many_lines)]
+fn sum_two_params_multiple_ctors() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let u = k.name_str(anon, "u");
+    let w = k.name_str(anon, "w");
+    let u_lvl = k.level_param(u);
+    let w_lvl = k.level_param(w);
+    let sort_u = k.sort(u_lvl);
+    let sort_w = k.sort(w_lvl);
+    let max_uw = k.level_max(u_lvl, w_lvl);
+    let sort_max = k.sort(max_uw);
+    let sum = k.name_str(anon, "Sum");
+    let sum_const = k.const_(sum, vec![u_lvl, w_lvl]);
+
+    let alpha_name = k.name_str(anon, "α");
+    let beta_name = k.name_str(anon, "β");
+    let ty = {
+        let inner = k.pi(beta_name, sort_w, sort_max, BinderInfo::Default);
+        k.pi(alpha_name, sort_u, inner, BinderInfo::Default)
+    };
+
+    // inl : Π (α : Sort u) (β : Sort w) (a : α), Sum α β.
+    //   binders: α, β, a; result Sum α β → α = BVar 2, β = BVar 1; `a : α` → α = BVar 1.
+    let inl = k.name_str(anon, "inl");
+    let inl_ty = {
+        let a2 = k.bvar(2);
+        let b1 = k.bvar(1);
+        let sum_ab = {
+            let e = k.app(sum_const, a2);
+            k.app(e, b1)
+        };
+        let a1 = k.bvar(1); // a : α
+        let a_name = k.name_str(anon, "a");
+        let inner_a = k.pi(a_name, a1, sum_ab, BinderInfo::Default);
+        let inner_beta = k.pi(beta_name, sort_w, inner_a, BinderInfo::Default);
+        k.pi(alpha_name, sort_u, inner_beta, BinderInfo::Default)
+    };
+    // inr : Π (α : Sort u) (β : Sort w) (b : β), Sum α β.
+    //   `b : β` is under α, β → β = BVar 0.
+    let inr = k.name_str(anon, "inr");
+    let inr_ty = {
+        let a2 = k.bvar(2);
+        let b1 = k.bvar(1);
+        let sum_ab = {
+            let e = k.app(sum_const, a2);
+            k.app(e, b1)
+        };
+        let b0 = k.bvar(0); // b : β
+        let b_name = k.name_str(anon, "b");
+        let inner_b = k.pi(b_name, b0, sum_ab, BinderInfo::Default);
+        let inner_beta = k.pi(beta_name, sort_w, inner_b, BinderInfo::Default);
+        k.pi(alpha_name, sort_u, inner_beta, BinderInfo::Default)
+    };
+
+    k.add_inductive(sum, &[u, w], 2, ty, &[(inl, inl_ty), (inr, inr_ty)])
+        .expect("Sum should admit");
+    let rec_name = k.name_str(sum, "rec");
+
+    let rec_decl = k.environment().get(rec_name).unwrap().clone();
+    let rec_ty = rec_decl.ty();
+    let inferred = k.infer(rec_ty).unwrap();
+    assert!(matches!(k.expr_node(inferred), ExprNode::Sort(_)));
+    let v = match &rec_decl {
+        Declaration::Recursor { uparams, .. } => uparams[0],
+        _ => panic!(),
+    };
+    let v_lvl = k.level_param(v);
+
+    let alpha = k.fvar(1);
+    let beta = k.fvar(2);
+    let big_c = k.fvar(3);
+    let cinl = k.fvar(4);
+    let cinr = k.fvar(5);
+    let x = k.fvar(6);
+
+    // ι: Sum.rec α β C cinl cinr (inl α β x) ι→ cinl x.
+    let inl_c = k.const_(inl, vec![u_lvl, w_lvl]);
+    let inl_abx = {
+        let e = k.app(inl_c, alpha);
+        let e = k.app(e, beta);
+        k.app(e, x)
+    };
+    let rec_const = k.const_(rec_name, vec![v_lvl, u_lvl, w_lvl]);
+    let app_inl = {
+        let e = k.app(rec_const, alpha);
+        let e = k.app(e, beta);
+        let e = k.app(e, big_c);
+        let e = k.app(e, cinl);
+        let e = k.app(e, cinr);
+        k.app(e, inl_abx)
+    };
+    let expected_inl = k.app(cinl, x);
+    assert_eq!(
+        k.whnf(app_inl),
+        expected_inl,
+        "Sum.rec … (inl α β x) ι→ cinl x"
+    );
+
+    // ι: Sum.rec α β C cinl cinr (inr α β x) ι→ cinr x.
+    let inr_c = k.const_(inr, vec![u_lvl, w_lvl]);
+    let inr_abx = {
+        let e = k.app(inr_c, alpha);
+        let e = k.app(e, beta);
+        k.app(e, x)
+    };
+    let rec_const2 = k.const_(rec_name, vec![v_lvl, u_lvl, w_lvl]);
+    let app_inr = {
+        let e = k.app(rec_const2, alpha);
+        let e = k.app(e, beta);
+        let e = k.app(e, big_c);
+        let e = k.app(e, cinl);
+        let e = k.app(e, cinr);
+        k.app(e, inr_abx)
+    };
+    let expected_inr = k.app(cinr, x);
+    assert_eq!(
+        k.whnf(app_inr),
+        expected_inr,
+        "Sum.rec … (inr α β x) ι→ cinr x"
+    );
+}
+
+/// Reject: an **indexed** inductive — a binder remains between the declared
+/// parameters and the final `Sort`. With `num_params = 1`, `ty := Π (α : Sort 1)
+/// (a : α), Sort 1` has `α` as the one parameter and `a : α` as an index ⇒
+/// `IndicesNotSupported`.
+#[test]
+fn reject_indexed_inductive() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let z = k.level_zero();
+    let one = k.level_succ(z);
+    let s1 = k.sort(one);
+    // ty := Π (α : Sort 1) (a : α), Sort 1   — α is the param, `a : α` an index.
+    let ty = {
+        let a0 = k.bvar(0); // a : α  (α = BVar 0 under the α binder)
+        let a_name = k.name_str(anon, "a");
+        let inner = k.pi(a_name, a0, s1, BinderInfo::Default);
+        let alpha_name = k.name_str(anon, "α");
+        k.pi(alpha_name, s1, inner, BinderInfo::Default)
+    };
+    let ind_name = k.name_str(anon, "Indexed");
+    let err = k.add_inductive(ind_name, &[], 1, ty, &[]).unwrap_err();
+    assert!(
+        matches!(err, KernelError::IndicesNotSupported { .. }),
+        "got {err:?}"
+    );
+    assert!(!k.environment().contains(ind_name));
+}
+
+/// Reject: a constructor whose result is the inductive applied to the **wrong**
+/// parameter. For `Box.{u} (α : Sort u)` with `mk : Π (α : Sort u) (β : Sort u),
+/// Box β` (the result uses the *second* bound `β`, not the parameter `α`), the
+/// result is not `Box α` ⇒ `ConstructorResultMismatch` (the wrong-args path).
+#[test]
+fn reject_ctor_wrong_param() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let u = k.name_str(anon, "u");
+    let u_lvl = k.level_param(u);
+    let sort_u = k.sort(u_lvl);
+    let boxn = k.name_str(anon, "Box");
+    let box_const = k.const_(boxn, vec![u_lvl]);
+    let alpha_name = k.name_str(anon, "α");
+    let ty = k.pi(alpha_name, sort_u, sort_u, BinderInfo::Default);
+
+    // mk : Π (α : Sort u) (β : Sort u), Box β  — result applies Box to BVar 0
+    // (β), but the single parameter is α (BVar 1). The check opens ONE param (α)
+    // then a field (β : Sort u); the result `Box β` ≠ `Box α`.
+    let mk = k.name_str(anon, "mk");
+    let beta_name = k.name_str(anon, "β");
+    let mk_ty = {
+        let b0 = k.bvar(0); // β
+        let box_beta = k.app(box_const, b0);
+        let inner = k.pi(beta_name, sort_u, box_beta, BinderInfo::Default);
+        k.pi(alpha_name, sort_u, inner, BinderInfo::Default)
+    };
+    let err = k
+        .add_inductive(boxn, &[u], 1, ty, &[(mk, mk_ty)])
+        .unwrap_err();
+    assert!(
+        matches!(err, KernelError::ConstructorResultMismatch { .. }),
+        "got {err:?}"
+    );
+    assert!(!k.environment().contains(boxn));
+    assert!(!k.environment().contains(mk));
+}
+
+/// Reject: a reflexive recursive field in a parametric inductive — a field whose
+/// type is a `Pi` ending in `I α` (`(Nat → List α) → List α` shape). Direct
+/// recursive fields (`List α`) are admitted (slice 6); reflexive ones are still
+/// deferred.
+#[test]
+fn reject_parametric_reflexive_field() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let u = k.name_str(anon, "u");
+    let u_lvl = k.level_param(u);
+    let sort_u = k.sort(u_lvl);
+    let refl = k.name_str(anon, "PRefl");
+    let refl_const = k.const_(refl, vec![u_lvl]);
+    let alpha_name = k.name_str(anon, "α");
+    let ty = k.pi(alpha_name, sort_u, sort_u, BinderInfo::Default);
+
+    // node : Π (α : Sort u) (f : (α → PRefl α)), PRefl α — the field `f` is a Pi
+    // ending in `PRefl α` (reflexive). Build inside-out under binders α, f.
+    let node = k.name_str(anon, "node");
+    let node_ty = {
+        let a1 = k.bvar(1); // α at result
+        let refl_a_res = k.app(refl_const, a1);
+        // field f : (α → PRefl α). Under the param binder only (before f),
+        // α = BVar 0. The arrow's body PRefl α has α = BVar 1 (under the arrow's
+        // own binder).
+        let a0_dom = k.bvar(0); // α (arrow domain)
+        let a1_body = k.bvar(1); // α (arrow body, under arrow binder)
+        let refl_a_body = k.app(refl_const, a1_body);
+        let f_ty = k.pi(anon, a0_dom, refl_a_body, BinderInfo::Default);
+        let f_name = k.name_str(anon, "f");
+        let inner = k.pi(f_name, f_ty, refl_a_res, BinderInfo::Default);
+        k.pi(alpha_name, sort_u, inner, BinderInfo::Default)
+    };
+    let err = k
+        .add_inductive(refl, &[u], 1, ty, &[(node, node_ty)])
+        .unwrap_err();
+    assert!(
+        matches!(err, KernelError::ReflexiveOrNestedNotSupported { .. }),
+        "got {err:?}"
+    );
+    assert!(!k.environment().contains(refl));
+    assert!(!k.environment().contains(node));
+}
+
+/// Determinism for a parametric inductive: building `List` twice yields the same
+/// recursor type id.
+#[test]
+fn determinism_parametric_inductive() {
+    fn build() -> usize {
+        let mut k = Kernel::new();
+        let (_list, rec_name, _u, _ctors) = declare_list(&mut k);
         k.environment().get(rec_name).unwrap().ty().index()
     }
     assert_eq!(build(), build());

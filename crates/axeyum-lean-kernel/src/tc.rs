@@ -176,10 +176,18 @@ pub enum KernelError {
     },
     /// A constructor's type used a `Pi` whose result was not an application of
     /// the parent inductive's constant head, or was otherwise malformed for the
-    /// non-parametric scope (e.g. a parametric/indexed result).
+    /// parametric scope (e.g. a wrong parameter prefix or an indexed result).
     MalformedConstructorType {
         /// The constructor whose type was malformed.
         ctor: crate::name::NameId,
+    },
+    /// An inductive type's declared type had **indices**: after opening its
+    /// `num_params` parameter binders, a further `Pi` remained before the final
+    /// `Sort` (a binder that is an index, not a parameter). Indexed families
+    /// (`Eq`, `Vector`) are deferred to a later slice and rejected here.
+    IndicesNotSupported {
+        /// The inductive whose type had indices.
+        inductive: crate::name::NameId,
     },
 }
 
