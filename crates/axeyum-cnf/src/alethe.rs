@@ -536,6 +536,28 @@ fn write_atom(term: &AletheTerm) -> String {
 /// and [`AletheError::StepNotEntailed`] for a step whose conclusion does not
 /// follow from its premises.
 pub fn check_alethe(commands: &[AletheCommand]) -> Result<bool, AletheError> {
+    check_alethe_with(commands, &|_, _| None)
+}
+
+/// Like [`check_alethe`] but consults `extra` for any rule this checker does not
+/// natively handle: `extra(rule, clause)` returns `Some(true)` to accept the step,
+/// `Some(false)` to reject it ([`AletheError::StepNotEntailed`]), or `None` if it
+/// too does not know the rule (then [`AletheError::UnsupportedRule`]). Used to plug
+/// in theory-rule checkers (e.g. `la_generic` via an arithmetic solver) without
+/// giving this crate an arithmetic dependency.
+///
+/// With `extra = &|_, _| None` this is byte-identical to [`check_alethe`].
+///
+/// # Errors
+///
+/// Returns [`AletheError::UnknownPremise`] for a missing premise id,
+/// [`AletheError::UnsupportedRule`] for a rule neither this checker nor `extra`
+/// handles, and [`AletheError::StepNotEntailed`] for a step whose conclusion does
+/// not follow (natively, or as reported by `extra`).
+pub fn check_alethe_with(
+    commands: &[AletheCommand],
+    extra: &dyn Fn(&str, &[AletheLit]) -> Option<bool>,
+) -> Result<bool, AletheError> {
     // Deterministic id -> clause map (BTreeMap; no hashmap iteration).
     let mut clauses: BTreeMap<String, AletheClause> = BTreeMap::new();
     let mut derived_empty = false;
@@ -614,7 +636,11 @@ pub fn check_alethe(commands: &[AletheCommand]) -> Result<bool, AletheError> {
                             return Err(AletheError::StepNotEntailed { id: id.clone() });
                         }
                     }
-                    _ => return Err(AletheError::UnsupportedRule { rule: rule.clone() }),
+                    _ => match extra(rule.as_str(), clause) {
+                        Some(true) => {}
+                        Some(false) => return Err(AletheError::StepNotEntailed { id: id.clone() }),
+                        None => return Err(AletheError::UnsupportedRule { rule: rule.clone() }),
+                    },
                 }
                 if clause.is_empty() {
                     derived_empty = true;
@@ -980,7 +1006,7 @@ fn cnf_lit(var_of: &BTreeMap<String, CnfVar>, lit: &AletheLit) -> CnfLit {
 mod tests {
     use super::{
         AletheClause, AletheCommand, AletheError, AletheLit, AletheTerm, check_alethe,
-        lrat_to_alethe, parse_alethe, write_alethe,
+        check_alethe_with, lrat_to_alethe, parse_alethe, write_alethe,
     };
     use crate::{
         CnfClause, CnfFormula, CnfLit, CnfVar, ProofSolveOutcome, elaborate_drat_to_lrat,
@@ -1069,6 +1095,43 @@ mod tests {
         // The bridged proof also survives a text round-trip and still checks.
         let reparsed = parse_alethe(&write_alethe(&alethe)).expect("bridged Alethe round-trips");
         assert_eq!(check_alethe(&reparsed), Ok(true));
+    }
+
+    #[test]
+    fn extra_callback_gates_unknown_rules() {
+        // A made-up rule `foo` is dispatched to the `extra` callback: accepted iff
+        // it returns Some(true), rejected on Some(false), unsupported on None.
+        let proof = vec![step("s1", vec![lit("a")], "foo", &[])];
+
+        // Some(true): the step is recorded; no empty clause, so Ok(false).
+        assert_eq!(
+            check_alethe_with(&proof, &|rule, _| (rule == "foo").then_some(true)),
+            Ok(false)
+        );
+
+        // Some(false): rejected as not entailed.
+        assert_eq!(
+            check_alethe_with(&proof, &|rule, _| (rule == "foo").then_some(false)),
+            Err(AletheError::StepNotEntailed {
+                id: "s1".to_owned()
+            })
+        );
+
+        // None: the callback does not know the rule either => unsupported.
+        assert_eq!(
+            check_alethe_with(&proof, &|_, _| None),
+            Err(AletheError::UnsupportedRule {
+                rule: "foo".to_owned()
+            })
+        );
+
+        // Some(true) on the empty clause derives UNSAT (Ok(true)).
+        let empty = vec![step("s1", vec![], "foo", &[])];
+        assert_eq!(
+            check_alethe_with(&empty, &|_, _| Some(true)),
+            Ok(true),
+            "an accepted empty-clause step establishes UNSAT"
+        );
     }
 
     #[test]

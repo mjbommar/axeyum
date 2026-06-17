@@ -15,6 +15,7 @@
 //! `07-verification/evidence-and-checking.md` in the repository.
 
 mod abv;
+mod alethe_lra;
 mod aufbv;
 mod auto;
 mod backend;
@@ -69,6 +70,7 @@ pub mod trust;
 mod z3_backend;
 
 pub use abv::{check_qf_abv_lazy, check_with_array_elimination};
+pub use alethe_lra::check_alethe_lra;
 pub use aufbv::check_with_arrays_and_functions;
 pub use auto::{
     check_auto, check_with_quantifiers, prove_unsat_by_ematching, prove_unsat_by_instantiation,
