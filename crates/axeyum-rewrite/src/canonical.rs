@@ -26,6 +26,7 @@ const BOOL_IMPLIES_CONST: &str = "bool.implies_const.v1";
 const BOOL_IMPLIES_REFLEXIVE: &str = "bool.implies_reflexive.v1";
 const EQ_REFLEXIVE: &str = "eq.reflexive.v1";
 const BV_COMPARE_REFLEXIVE: &str = "bv.compare_reflexive.v1";
+const BV_COMPARE_SATURATE: &str = "bv.compare_saturate.v1";
 const ITE_CONST_CONDITION: &str = "ite.const_condition.v1";
 const ITE_SAME_BRANCHES: &str = "ite.same_branches.v1";
 const ITE_BOOL_IDENTITY: &str = "ite.bool_identity.v1";
@@ -336,6 +337,11 @@ fn default_rules() -> Vec<RewriteRule> {
             BV_COMPARE_REFLEXIVE,
             "Bit-vector comparison reflexivity",
             "a `bvult`/`bvule`/`bvugt`/`bvuge`/`bvslt`/`bvsle`/`bvsgt`/`bvsge` with structurally identical operands",
+        ),
+        rule(
+            BV_COMPARE_SATURATE,
+            "Bit-vector unsigned comparison saturation",
+            "an unsigned `bvult`/`bvule`/`bvugt`/`bvuge` against 0 or all-ones that is a tautology/contradiction",
         ),
         rule(
             ITE_CONST_CONDITION,
@@ -1261,6 +1267,30 @@ fn rewrite_bv_compare(
         };
         return Some(applied(arena.bool_const(value), BV_COMPARE_REFLEXIVE));
     }
+    // Unsigned comparison saturation against 0 (the unsigned min) and all-ones (the
+    // unsigned max). Only the extreme-end direction is a tautology/contradiction
+    // (e.g. `x ≤ MAX` is always true, but `x < MAX` is NOT); see each arm.
+    if enabled.contains(BV_COMPARE_SATURATE) {
+        let (za, zb) = (is_bv_zero(arena, args[0]), is_bv_zero(arena, args[1]));
+        let (oa, ob) = (
+            is_bv_all_ones(arena, args[0]),
+            is_bv_all_ones(arena, args[1]),
+        );
+        let saturated = match op {
+            // a < b: false if b == 0 (nothing < 0) or a == MAX (MAX < nothing).
+            Op::BvUlt if zb || oa => Some(false),
+            // a ≤ b: true if a == 0 (0 ≤ all) or b == MAX (all ≤ MAX).
+            Op::BvUle if za || ob => Some(true),
+            // a > b: false if a == 0 (0 > nothing) or b == MAX (nothing > MAX).
+            Op::BvUgt if za || ob => Some(false),
+            // a ≥ b: true if b == 0 (all ≥ 0) or a == MAX (MAX ≥ all).
+            Op::BvUge if zb || oa => Some(true),
+            _ => None,
+        };
+        if let Some(value) = saturated {
+            return Some(applied(arena.bool_const(value), BV_COMPARE_SATURATE));
+        }
+    }
     None
 }
 
@@ -1626,6 +1656,20 @@ fn bv_const(arena: &TermArena, term: TermId) -> Option<(u32, u128)> {
 
 fn is_bv_zero(arena: &TermArena, term: TermId) -> bool {
     bv_const(arena, term).is_some_and(|(_, value)| value == 0)
+}
+
+/// Whether `term` is the all-ones bit-vector constant (the unsigned maximum) of its
+/// width. Wide (>128-bit) constants return `None` from [`bv_const`] and so are not
+/// detected here — the rule simply does not fire on them.
+fn is_bv_all_ones(arena: &TermArena, term: TermId) -> bool {
+    bv_const(arena, term).is_some_and(|(width, value)| {
+        let all_ones = if width >= 128 {
+            u128::MAX
+        } else {
+            (1u128 << width) - 1
+        };
+        value == all_ones
+    })
 }
 
 fn is_bv_one(arena: &TermArena, term: TermId) -> bool {
@@ -2245,6 +2289,79 @@ mod commutative_tests {
         let y = a.bv_var("y", 4).unwrap();
         let ult = a.bv_ult(x, y).unwrap();
         assert_eq!(canonicalize(&mut a, ult).unwrap().term, ult);
+    }
+
+    /// Unsigned comparison saturation against 0 / all-ones folds the tautologies and
+    /// contradictions, and — crucially — leaves the non-extreme directions alone.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn bv_compare_saturation_folds_only_the_extremes() {
+        let mut a = TermArena::new();
+        let x = a.bv_var("x", 4).unwrap();
+        let y = a.bv_var("y", 4).unwrap();
+        let zero = a.bv_const(4, 0).unwrap();
+        let ones = a.bv_const(4, 15).unwrap();
+        let f = a.bool_const(false);
+        let t = a.bool_const(true);
+
+        // (comparison term, expected folded constant).
+        let folds: [(TermId, TermId); 8] = [
+            (a.bv_ult(x, zero).unwrap(), f), // x < 0 -> false
+            (a.bv_ule(x, ones).unwrap(), t), // x <= MAX -> true
+            (a.bv_ugt(x, ones).unwrap(), f), // x > MAX -> false
+            (a.bv_uge(x, zero).unwrap(), t), // x >= 0 -> true
+            (a.bv_ult(ones, y).unwrap(), f), // MAX < y -> false
+            (a.bv_ule(zero, y).unwrap(), t), // 0 <= y -> true
+            (a.bv_ugt(zero, y).unwrap(), f), // 0 > y -> false
+            (a.bv_uge(ones, y).unwrap(), t), // MAX >= y -> true
+        ];
+        for (cmp, expected) in folds {
+            assert_eq!(canonicalize(&mut a, cmp).unwrap().term, expected);
+        }
+
+        // Must NOT fold (genuine non-tautologies + a signed case + no extreme const).
+        let not_folded: [TermId; 4] = [
+            a.bv_ult(x, ones).unwrap(), // x < MAX: false only when x == MAX
+            a.bv_ule(x, zero).unwrap(), // x <= 0: true only when x == 0
+            a.bv_slt(x, zero).unwrap(), // signed: not handled (extremes differ)
+            a.bv_ult(x, y).unwrap(),    // no extreme constant
+        ];
+        for cmp in not_folded {
+            assert_eq!(
+                canonicalize(&mut a, cmp).unwrap().term,
+                cmp,
+                "non-extreme comparison must not be saturated",
+            );
+        }
+    }
+
+    /// Exhaustive denotation gate: each saturation fold must match the original
+    /// comparison at every 4-bit value of `x`.
+    #[test]
+    fn bv_compare_saturation_preserves_denotation() {
+        let mut a = TermArena::new();
+        let x_sym = a.declare("x", Sort::BitVec(4)).unwrap();
+        let x = a.var(x_sym);
+        let zero = a.bv_const(4, 0).unwrap();
+        let ones = a.bv_const(4, 15).unwrap();
+
+        let cases: [(TermId, bool); 4] = [
+            (a.bv_ult(x, zero).unwrap(), false),
+            (a.bv_ule(x, ones).unwrap(), true),
+            (a.bv_ugt(x, ones).unwrap(), false),
+            (a.bv_uge(x, zero).unwrap(), true),
+        ];
+        for (cmp, expected) in cases {
+            for v in 0..16u128 {
+                let mut asg = Assignment::new();
+                asg.set(x_sym, Value::Bv { width: 4, value: v });
+                assert_eq!(
+                    eval(&a, cmp, &asg).unwrap(),
+                    Value::Bool(expected),
+                    "saturation fold must match the comparison at every value",
+                );
+            }
+        }
     }
 
     /// Denotation cross-check: for a few comparison ops (including a signed one),
