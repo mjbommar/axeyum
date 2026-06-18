@@ -40,31 +40,91 @@
 //! assert!(matches!(unsat.expectation, Expectation::Unsat { .. }));
 //! ```
 
+mod algebra;
 mod arithmetic;
+mod concept;
+mod counting;
+mod coverage;
+mod exercise;
 mod functions;
 mod identities;
 mod integers;
+mod linear_algebra;
+mod logic;
 mod machine;
+mod mathtour;
 mod memory;
 mod mixing;
+mod number_system;
+mod number_theory;
+mod polynomial;
+mod predicate;
 mod reals;
+mod render;
 mod rng;
+mod sets;
+mod verification;
 
 use axeyum_ir::{Assignment, IrError, Sort, SymbolId, TermArena, Value, eval};
 use axeyum_query::Query;
 
+pub use algebra::{
+    addition_associative, additive_inverse, algebra_catalog, composite_modulus_non_invertible,
+    field_failure_even, prime_field_all_invertible, subtraction_not_associative, zero_divisor,
+};
 pub use arithmetic::{
     distributivity_identity, division_roundtrip_identity, division_target, factor_target,
 };
+pub use concept::{Concept, all as all_concepts, concepts_for_family, frontier, topological_order};
+pub use counting::{counting_catalog, permutation_exists, pigeonhole};
+pub use coverage::{
+    ConceptCoverage, all_catalog_scenarios, audit as coverage_audit, report as coverage_report,
+    uncovered_concepts,
+};
+pub use exercise::{Answer, Difficulty, DifficultyTier, Exercise, Grade};
 pub use functions::{function_binary_merge, function_catalog, function_chain, function_lookup};
 pub use identities::{
     de_morgan_identity, full_adder_identity, twos_complement_identity, xor_swap_identity,
 };
 pub use integers::{integer_catalog, integer_equation, integer_system};
+pub use linear_algebra::{
+    det_product_2x2, det_product_3x3_f2, linear_algebra_catalog, linear_solve_2x2,
+    mult_associative_2x2, transpose_product_2x2,
+};
+pub use logic::{
+    contradiction, de_morgan_law, excluded_middle, logic_catalog, modus_ponens, satisfiable_clause,
+};
 pub use machine::{conflicting_path, register_machine_path};
+pub use mathtour::{
+    Decidability, MathNode, NODES as MATH_NODES, Status, node as math_node,
+    topological_order as math_topological_order,
+};
 pub use memory::{memory_catalog, memory_trace};
 pub use mixing::mixing_inversion;
+pub use number_system::{
+    number_system_catalog, order_transitivity, signed_trichotomy, successor_injective,
+    unsigned_non_negative,
+};
+pub use number_theory::{
+    bezout_identity, consecutive_product_even, crt_witness, modular_inverse, number_theory_catalog,
+    pythagorean_triple, quadratic_nonresidue_unsat, quadratic_residue_sat, rsa_roundtrip,
+    square_parity, sum_of_two_squares_none, sum_of_two_squares_sat,
+};
+pub use polynomial::{
+    binomial_square, difference_of_squares, division_with_remainder_identity,
+    factorization_identity, polynomial_catalog, quadratic_root,
+};
+pub use predicate::{
+    exists_square_root, fermat_little_theorem, forall_additive_identity, forall_exists_inverse,
+    predicate_catalog,
+};
 pub use reals::{real_catalog, real_ratio_equation, real_system};
+pub use render::Renderable;
+pub use sets::{absorption, complement_union_is_universe, distributivity, sets_catalog};
+pub use verification::{
+    abs_non_negative_bug, max_is_an_upper_bound, midpoint_overflow_bug, saturating_add_safe,
+    unsigned_overflow_idiom, verification_catalog,
+};
 
 pub(crate) use rng::SplitMix64;
 
@@ -79,8 +139,11 @@ pub const EXHAUSTIVE_BIT_LIMIT: u32 = 20;
 pub const SAMPLE_COUNT: u64 = 4096;
 
 /// The family a scenario belongs to, for grouping and reporting.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Family {
+    /// Propositional-logic tautologies/contradictions over Boolean variables,
+    /// proven by exhaustive truth tables (the curriculum's bottom rung).
+    Logic,
     /// Crypto-style mixing-function inversion (satisfiable by construction).
     Mixing,
     /// Straight-line register-machine path condition.
@@ -101,12 +164,39 @@ pub enum Family {
     /// Linear real arithmetic (`QF_LRA`) constraint systems (satisfiable by
     /// construction).
     Real,
+    /// Number theory: gcd/Bézout, modular inverses, and parity identities (the
+    /// first destination of the formal mathematics tour).
+    NumberTheory,
+    /// Linear algebra: fixed-size matrix identities and linear-system solving
+    /// over bit-vector arithmetic.
+    LinearAlgebra,
+    /// Counting & combinatorics: the pigeonhole principle and counting
+    /// identities.
+    Counting,
+    /// Abstract algebra: finite-group/ring/field axiom checks over Cayley tables.
+    Algebra,
+    /// Polynomials: fixed-degree polynomial identities and roots over bit-vector
+    /// arithmetic.
+    Polynomial,
+    /// Software verification: bounded safety theorems and bug counterexamples
+    /// (abs/max/swap/overflow), the "Hello, World" of verification.
+    Verification,
+    /// Finite sets: set-algebra laws (distributivity, absorption, complement)
+    /// over subset bitmasks.
+    Sets,
+    /// Predicate logic: closed quantified (`∀`/`∃`) theorems over a finite
+    /// bit-vector domain, including quantifier alternation.
+    Predicate,
+    /// Number systems: signed-order (trichotomy, transitivity) and naturals
+    /// (non-negativity, successor injectivity) theorems.
+    NumberSystem,
 }
 
 impl Family {
     /// A short, stable slug for names and artifacts.
     pub fn slug(self) -> &'static str {
         match self {
+            Family::Logic => "logic",
             Family::Mixing => "mixing",
             Family::Machine => "machine",
             Family::Identity => "identity",
@@ -115,6 +205,15 @@ impl Family {
             Family::Function => "function",
             Family::Integer => "integer",
             Family::Real => "real",
+            Family::NumberTheory => "number_theory",
+            Family::LinearAlgebra => "linear_algebra",
+            Family::Counting => "counting",
+            Family::Algebra => "algebra",
+            Family::Polynomial => "polynomial",
+            Family::Verification => "verification",
+            Family::Sets => "sets",
+            Family::Predicate => "predicate",
+            Family::NumberSystem => "number_system",
         }
     }
 }
@@ -267,6 +366,23 @@ impl Scenario {
                 seed,
             })
         }
+    }
+
+    /// Returns whether `assignment` satisfies every query term, judged purely by
+    /// the evaluator.
+    ///
+    /// This is the **sound grading primitive**: a candidate answer is accepted
+    /// only because the evaluator (a small, trusted checker) confirms it
+    /// satisfies the original constraints — never because a search returned
+    /// `sat`. See [`Exercise`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SelfCheckError::Eval`] if a term fails to evaluate (for example,
+    /// the assignment leaves an input symbol unbound) and
+    /// [`SelfCheckError::NonBoolean`] if a query term is not Boolean.
+    pub fn is_satisfied_by(&self, assignment: &Assignment) -> Result<bool, SelfCheckError> {
+        self.is_model(assignment)
     }
 
     /// Returns `true` if `assignment` satisfies every query term.

@@ -310,7 +310,7 @@ plan is built and committed on the current branch:
 ### Track 1 — Engine & Performance
 | Phase | Title | Status |
 |---|---|---|
-| P1.1 | SAT inprocessing (subsumption → BVE → vivification → glue tiers) | WIP — subsumption+BVE landed (T1.1.1/2), wired into the solve pipeline (T1.1.3), made occurrence-list near-linear + time-bounded (T1.1.4): safe, no regression, but the curated unknowns are SAT-search-bound (→ P1.3) or BVE-resistant. Vivification / glue tiers remain |
+| P1.1 | SAT inprocessing (subsumption → BVE → vivification → glue tiers) | WIP — subsumption+BVE landed (T1.1.1/2), wired into the solve pipeline (T1.1.3), made occurrence-list near-linear + time-bounded (T1.1.4): safe, no regression, but the curated unknowns are SAT-search-bound (→ P1.3) or BVE-resistant. **CDCL(XOR) foundation landed** (`gf2`/`xor_extract`/`xor_propagate` in `axeyum-cnf`) — the path-2 multiplier-wall attack: a sound GF(2) Gaussian engine + exact XOR-gate extraction + an entailment-checked propagation pass; slice 4 wires it into the live preprocess pipeline (measured). Vivification / glue tiers remain |
 | P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | WIP — T1.2.1 trail + T1.2.2 propagate_values + T1.2.3 solve_eqs landed (model-sound, unit-tested, 36 tests). Next: wire the preprocessing pipeline into the solve path + measure; then elim_unconstrained / max_bv_sharing / bv_slice / AIG 2-level (T1.2.4–T1.2.9) |
 | P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | TODO |
 | P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | **DONE** — `axeyum-egraph` (ADR-0032): hash-cons + union-find + congruence cascade (T1.4.1/2), proof-forest `explain` (T1.4.3), backtrackable push/pop (T1.4.4), independent `check_congruence` (T1.4.5), per-class theory-var lists (T1.4.6). 17 tests incl. brute-force + backtracking property tests |
@@ -325,7 +325,7 @@ plan is built and committed on the current branch:
 | P2.1 | BV lazy blasting + word-level slicing + BV theory-checker | TODO |
 | P2.2 | Arrays: lazy ROW axioms + extensionality + func_interp models | WIP — **lazy select-congruence** (`check_qf_abv_lazy`): read-over-read consistency added on demand (CEGAR) vs the eager O(n²) per-array pairing; sound (post-ROW abstraction relaxation ⇒ UNSAT transfers; sat replays) + terminating; 200-formula differential vs eager `check_with_array_elimination` (all agree). `eliminate_arrays` exposes `abstraction()`/`selects()`. **Array-extensionality refutation via congruence** wired into dispatch (`has_array` flag): `a=b ∧ select(a,i)≠select(b,i)` (incl. **wide-index** array equality the eager 2^iw enumeration refuses) is `unsat` by `prove_unsat_by_congruence` (select/store as UF; congruence valid for arrays). Remaining: **lazy ROW (on-demand store axioms)** for the SAT side of wide-index arrays; func_interp model polish |
 | P2.3 | EUF on the e-graph (from Ackermann to incremental) | TODO |
-| P2.4 | LIA cut portfolio (GCD, Gomory, HNF, cube, Diophantine) | WIP — **GCD divisibility test** (`prove_lia_unsat_by_gcd`): a top-level integer equation with `gcd(coeffs) ∤ const` is UNSAT (e.g. `2x+4y=3`) — a sound refutation the rational simplex misses and that B&B can't terminate on for unbounded vars; wired into dispatch ahead of the simplex. 5 tests. Remaining: Gomory/HNF/cube/multi-equation Diophantine (Smith normal form) cuts |
+| P2.4 | LIA cut portfolio (GCD, Gomory, HNF, cube, Diophantine) | WIP — **multi-equation Diophantine infeasibility** (`prove_lia_unsat_by_diophantine`, commit 96f07a3): a conjunction of integer equalities that is rational-feasible but **integer-infeasible** is UNSAT — fraction-free Hermite-style integer Gaussian elimination reports a contradiction row (`0=c` or per-row `gcd ∤ rhs`), deciding the case B&B can't terminate on for unbounded vars and the single-equation GCD misses (e.g. `x+y=0 ∧ x−y=1 → 2x=1`). **Strictly generalizes & replaced** the single-equation `prove_lia_unsat_by_gcd` in dispatch (no regression). Sound (only integer-preserving row ops; `checked_*` → "not refuted" on overflow, never a wrong unsat; SAT systems never refuted, negative-tested). 11+2 tests. Remaining: Gomory/cube cuts; inequality-integrated cuts |
 | P2.5 | NRA: incremental linearization → nlsat/CAD | WIP — linear-abstraction + sign/zero lemmas + McCormick + spatial B&B + point-lemma refinement already shipped. **Added threshold-1 monotonicity lemmas** — growing (`a≥1 ∧ b≥0 ⇒ r≥b`, decides `x≥1 ∧ y≥1 ∧ x·y<1`) and shrinking (`0≤a≤1 ∧ b≥0 ⇒ r≤b`, decides `0≤x≤1 ∧ y≥0 ∧ x·y>y` where only one operand is bounded so McCormick can't apply); two-operand only — **plus a refinement overflow safety net** (`too_large_to_refine`: stop refining past a 2³¹ magnitude bound, → `unknown` not a panic; hardens the exact-rational simplex against escalating witnesses). 21 NRA tests. Remaining: nlsat/CAD for completeness |
 | P2.6 | Quantifiers (MAM e-matching, trigger inference, MBQI, QE/MBP) | WIP — full e-matching vertical slice on the keystone: `enumerate_apps` + `ematch` engine + `instantiate_forall_via_egraph` (congruence-aware, single/multi-var, nested/joint triggers) + `prove_quantified_unsat_via_egraph` (the **instantiation loop**: instantiate → re-solve via `check_auto` → fixpoint, sound UNSAT). trigger *inference* (single + multi-pattern set cover) landed; loop **wired into `solve`** (infinite/too-wide-domain fallback → keystone before MBQI). Next: MBQI on the keystone (model-guided instance selection over the congruence), then migrate `axeyum_rewrite`'s bespoke closure onto the keystone. (Verified: the multi-pattern join is already congruence-correct — `ematch` binds variables to canonical e-class roots and `trigger_to_pattern` never mutates the union-find, so raw `ENodeId` equality in `merge_substitutions` *is* root equality.) |
 | P2.7 | Strings (unbounded, full `str.*`, regex) | TODO |
@@ -338,11 +338,11 @@ plan is built and committed on the current branch:
 | P3.0 | Reduction trust ledger (TrustId + pedantic levels) | DONE |
 | P3.1 | LRAT clausal upgrade (+ in-tree check_lrat) | WIP — **`check_lrat` (hint-based linear checker) + `elaborate_drat_to_lrat` + parse/write** landed in `axeyum-cnf`, sound (3 negative/rejection tests) + 600-CNF differential; **threaded into the evidence export**: every `UnsatProof` (QF_BV + reduced QF_ABV/AUFBV/UF/LIA/datatype) now carries a self-checked LRAT certificate, `recheck` cross-checks it, `recheck_lrat` re-checks it in linear time, tamper-detected. Remaining: emit LRAT hints directly from the proof-producing CDCL core (vs post-hoc elaboration); RAT-step elaboration (negative hints) |
 | P3.2 | Alethe term/proof IR + emitter (`axeyum-alethe`) **[critical path]** | WIP — **resolution-layer IR + parser/printer + sound `check_alethe`** in `axeyum-cnf::alethe`: `resolution`/`th_resolution` steps verified by `{premises,¬concl}`-UNSAT via the proof-producing core + `check_drat` re-check (entailment itself independently checked); verify-before-record; 7 tests incl. 3 rejection. Remaining: typed-term IR (vs opaque atoms), more rules, emit Alethe from solver runs, Carcara CI cross-check; extract `axeyum-alethe` crate (ADR) when the term IR lands |
-| P3.3 | Alethe for QF_BV (bitblast_* + CNF rules + resolution/drat; Carcara CI) | WIP — **arithmetic `la_generic` checking** (`check_alethe_lra`): a linear-arith tautology clause verified by `¬clause`-UNSAT via the Farkas-certified `check_with_lra`; pluggable `check_alethe_with` callback keeps `axeyum-cnf` arithmetic-free. 5 tests incl. soundness rejections. **`lia_generic` (integer) checking+emission** added via `check_with_lia_simplex` (honors integrality; integer/real distinction tested). **Carcara cross-check harness (T3.3.5)**: EUF (transitivity+congruence), **LRA `la_generic`** (Farkas `:args` incl. equalities), and **clausal resolution** (`lrat_to_alethe`, T3.3.3) proofs all externally `valid`; gated test skips without the binary. Remaining: BV `bitblast_*` rules (T3.3.1–2) for the full QF_BV proof; LRA >2-atom (`and`) assertions; `lia_generic` is a Carcara hole |
+| P3.3 | Alethe for QF_BV (bitblast_* + CNF rules + resolution/drat; Carcara CI) | WIP — **arithmetic `la_generic` checking** (`check_alethe_lra`): a linear-arith tautology clause verified by `¬clause`-UNSAT via the Farkas-certified `check_with_lra`; pluggable `check_alethe_with` callback keeps `axeyum-cnf` arithmetic-free. 5 tests incl. soundness rejections. **`lia_generic` (integer) checking+emission** added via `check_with_lia_simplex` (honors integrality; integer/real distinction tested). **Carcara cross-check harness (T3.3.5)**: EUF (transitivity+congruence), **LRA `la_generic`** (Farkas `:args` incl. equalities), and **clausal resolution** (`lrat_to_alethe`, T3.3.3) proofs all externally `valid`; gated test skips without the binary. Remaining: BV `bitblast_*` rules (T3.3.1–2) for the full QF_BV proof; LRA >2-atom (`and`) assertions; `lia_generic` is a Carcara hole. **Integer-systems certificate added** (commit c19f3ce): the multi-equation Diophantine refutation (P2.4) now emits an "integer Farkas" `DiophantineCertificate` (multipliers λ s.t. `Σ λᵢ·Eᵢ` is a `gcd ∤ const` contradiction row) with an independent `check_diophantine_certificate` re-deriving it from the originals — self-validated, tamper-tested. This is the in-tree route for integer-systems infeasibility that `lia_generic`/Carcara can't check |
 | P3.4 | Embedded Alethe checker subset (self-checking) | TODO |
 | P3.5 | Alethe for reductions (arrays → Ackermann → int-blast) | TODO |
-| P3.6 | In-tree Rust Lean kernel (`axeyum-lean-kernel`, from nanoda) | TODO |
-| P3.7 | Alethe→Lean reconstruction (proof terms) | TODO |
+| P3.6 | In-tree Rust Lean kernel (`axeyum-lean-kernel`, from nanoda) | WIP — **crate started (ADR-0036, commit db18886)**: destination-3 (Lean parity) foundation. `Name`/`Level`/`Expr` + de Bruijn ops (instantiate/abstract/lift) ported from `references/nanoda_lib`, adapted to axeyum's **lifetime-free Copy-id interning** (no `'a` leaks). Faithful level `leq`/`is_equiv`/`simplify` + param subst; Expr with `BinderInfo`; cached `num_loose_bvars`/`has_fvars`. 27 tests incl. translated nanoda level tests + de Bruijn laws. **Type-theory core landed (slice 2, commit e37da7b)**: `whnf` (beta/zeta), `def_eq` (lazy structural + Pi/Lam congruence + eta + proof irrelevance), and checking-mode `infer` (Sort/FVar/App/Lam/Pi/Let, IMax impredicativity) over the **environment-free fragment** — the kernel now TYPE-CHECKS terms (polymorphic identity infers `Π(α:Sort 0),α→α`, etc.). Faithful nanoda port; the env boundary (`Const`/δ, inductives/ι, projections, literal typing) errors explicitly (`KernelError`), never a wrong accept. 52 kernel tests. **Environment + Const δ landed (slice 3, commit f0f6e0d)**: non-inductive declarations (Axiom/Definition/Theorem/Opaque) with `ReducibilityHint`; `Environment` (deterministic `BTreeMap`); `add_declaration` is the trusted gate (type-checks each decl's type-is-a-sort + value `def_eq` declared type); universe instantiation; `infer(Const)`; δ-unfolding in `whnf`; faithful `lazy_delta_step` (height-based side choice, same-const short-circuit, Opaque/Axiom non-unfolding). The kernel now type-checks terms referencing globals (`id := λαx,x` admits + δ+β-reduces under application). 68 kernel tests. **Inductive layer started (slice 4, commit 4457594)**: `Declaration::{Inductive,Constructor,Recursor}` + `RecRule`; `add_inductive` (trusted gate: type whnf's to a Sort, constructor telescopes type-check + end in `I` + **non-recursive** field restriction); **recursor generation** (`I.rec : Π {motive}(minors…)(major), motive major`, with the generated type infer-self-checked) + **ι-reduction** (`I.rec … (c_i flds) → m_i flds`). Scoped to **non-recursive, non-parametric, non-indexed** inductives — enums (`Bool.rec` ι picks the right minor) + structures (`P.rec C m (mk x y) → m x y`); param/indexed/mutual + Prop-subsingleton large-elim DEFERRED (reject explicitly). **Recursive inductives landed (slice 5, commit 24607a9)**: DIRECT recursive fields (field type exactly `I`, e.g. `Nat.succ : Nat→Nat`) now admitted; `mk_recursor` adds one IH binder `motive f_j` per recursive field to each minor (`Nat.succ`'s minor = `Π(n:Nat)(ih:motive n), motive (succ n)`); recursive ι appends a recursive `I.rec … f_j` call per recursive field (`Nat.rec C z s (succ k) → s k (Nat.rec C z s k)`). **The kernel checks AND computes with `Nat` and binary trees** (end-to-end recursive normalization verified; recursor type infer-self-checks). Higher-order/reflexive fields, params, indices still rejected. 82 kernel tests. **Parametric inductives landed (slice 6, commit bc95c21)**: `add_inductive(num_params)` — leading binders are params (fixed across the family), recursive field = `I params` (generalizing bare `I`); recursor abstracts params before the motive and threads them through minors/IH/ctor-apps + recursive ι calls. **`List`/`Option`/`Prod`/`Sum` check + compute** (`List.rec α C cnil ccons (cons α a l) → ccons a l (List.rec … l)`; a length recursion normalizes; recursor types infer-self-check). Indices (`Eq`/`Vector`, a binder between params and the `Sort`) → `IndicesNotSupported` (deferred). 92 kernel tests. **Indexed inductives landed (slice 7, commit 223e81c)**: indices after params; the dependent motive ranges over indices + major; each minor applies the motive to the constructor's OWN index exprs; index-matching ι. **`Eq.rec` (the dependent eliminator used in every equality proof) generates, infer-self-checks, and ι-reduces on `refl`** (`Eq.rec α a motive m a (refl α a) → m`); an end-to-end transport/symmetry normalizes; a 2-ctor indexed family picks the right minor by index. Recursive-indexed (`Vector.cons`) → `RecursiveIndexedNotSupported` (deferred). 97 kernel tests. **The inductive layer now covers non-recursive + recursive + parametric + indexed — essentially all of Lean's inductive families** (bar recursive-indexed/nested/mutual + projections + literal typing + Prop-subsingleton elim). Next: **P3.7 Alethe→Lean reconstruction** (where this kernel finally checks reconstructed solver proofs — the destination-3 payoff) + the remaining minor inductive cases. |
+| P3.7 | Alethe→Lean reconstruction (proof terms) | WIP — **foundation laid (commit ab2e615)**: `axeyum_lean_kernel::build_logic_prelude` declares the standard Lean logical foundation (`True`/`False`/`And`/`Or`/`Iff`/`Eq`/`Not`) through the trusted gates, and the kernel **type-checks real proof terms** — And.intro, and-elim (via And.rec), Or case analysis, Eq symmetry transport (checks + ι-reduces on refl), modus ponens, ex-falso (False.rec), and a composite `And A B → And B A`. 15 proof tests. The kernel is a Lean-grade checker of real proofs. **Reconstruction started — Eq fragment (slice 1, commit 56709ef)**: `axeyum-solver` gained a dep on the leaf `axeyum-lean-kernel`; the new `reconstruct` module translates Alethe equality terms to Lean `Expr` (`(= a b)` → `Eq.{1} α a b`) and the **`eq_reflexive`/`eq_symmetric`/`eq_transitive`** Alethe rules into `Eq.rec` proof terms the **kernel type-checks** (`def_eq` against the translated conclusion — the kernel is the checker; a wrong term is rejected). End-to-end transitivity chain reconstructs + kernel-checks; 2 negative soundness tests (wrong conclusion rejected). 11 tests. **End-to-end EUF refutation reconstructed (slice 2, commit 7267b2d):** `reconstruct_qf_uf_proof` walks a REAL `prove_qf_uf_unsat_alethe` proof — `assume` (eq → `h:Eq`, diseq → `h:Not(Eq)`), `eq_transitive`/`eq_symmetric` (n-ary fold + reversed-edge flip), `eq_congruent` (unary, congrArg via `Eq.rec`), and the closing resolution to the empty clause → `h_ne h_eq : False` — into a Lean term the **kernel checks to `False`**. 7 end-to-end instances (transitivity `a=b∧b=c∧a≠c`, longer chain, reversed edge, depth-1 congruence `f(a)≠f(b)`) + 2 negative tests. 17 tests. **Propositional resolution reconstructed (slice 3, commit fc23d4c):** the clausal layer — atom → opaque `Prop`, `(cl l…)` → right-nested `Or`, `(cl)` → `False`; `reconstruct_resolution_proof` builds the resolvent via iterated `Or.rec` (constructive case-split; `em` declared for the classical commitment but unconsumed), pivot-scheduled for the emitter's arbitrary-order RUP hints. **A REAL emitted clausal proof reconstructs end-to-end** (UNSAT CNF → `solve_with_drat_proof` → LRAT → Alethe → kernel-checked `False`). 26 tests. **Both the EUF and the clausal-resolution fragments now close to kernel-checked `False`.** **Tseitin CNF-intro rules reconstructed (slice 4, commit 237d13b):** `reconstruct_cnf_intro_rule` builds all 12 gate-definitional tautologies (`and_pos/neg`, `or_pos/neg`, `equiv_pos1/2`+`neg1/2`, `xor_pos1/2`+`neg1/2`; `xor a b := Not(Iff a b)`) as kernel-checked classical-tautology proofs (em + Or.rec case-split + prelude eliminators); a composite feeds a reconstructed `and_neg` clause through the slice-3 resolution to `False`. 43 reconstruct tests. **P3.7 now covers EUF + clausal resolution + the Tseitin Boolean-gate layer.** **Bitwise QF_BV bitblast reconstructed (slice 5, commit 4b356b3):** bit model — each bit a Lean Prop, variable bit → opaque `((_ @bit_of i) x)`, const → `True`/`False`, `bvnot/and/or/xor` pointwise (`xor` = `Not(Iff)`), `@bit_of i (@bbterm bs)` → `bs[i]`. `reconstruct_bitblast_step` kernel-checks all 7 bitwise rules (`var`/`const`/`not`/`and`/`or`/`xor`/`equal`; the bit-iffs are reflexive under the pointwise model); non-bitwise → `UnsupportedRule`. `reconstruct_qf_bv_proof` walks a REAL `prove_qf_bv_unsat_alethe` bitwise proof → **kernel-checked `False`** (1-bit bvand w/ full cong/trans/`@bbterm` plumbing + width-2 eq). 55 reconstruct tests. **HONEST soundness boundary:** the bit-level Boolean refutation + each bitblast step's bit-iffs are GENUINELY kernel-checked, but the term-level `cong`/`trans`/`equiv` bridge (`(= bvterm @bbterm)` transport) enters resolution as out-of-band-verified clause hypotheses, not yet fused into the single `False` term. **Eq-transport bridge FUSED (slice 6, commit 8c19e23):** the bitwise QF_BV reconstruction is now a CLOSED proof — `False` derived from ONLY the input assumptions + prelude + `em`, **no bridge axioms** (asserted via `declared_axiom_roles()` = `[assume,assume,em]`). Input `(= s t)` → hypothesis `h:⟦B⟧` directly; equiv1/2 → genuine `¬B∨B` tautologies (not assumed); term-level cong/trans deferred (never load-bearing); bit-iffs kernel-checked up front. 58 reconstruct tests. **The bitwise QF_BV unsat fragment reconstructs to a fully-kernel-checked, axiom-free Lean `False` proof.** Remaining for full QF_BV: arithmetic bitblast (`bvadd`/`bvmul` carries); `la_generic`/`lia_generic` needs an arithmetic prelude. |
 
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
@@ -350,11 +350,390 @@ plan is built and committed on the current branch:
 | P4.1 | Warm lazy arrays / symbolic memory (ADR-0030 deferred half) | TODO |
 | P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | TODO |
 | P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | TODO |
-| P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | TODO |
+| P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | WIP — broad command surface already parsed (declare-const/fun/datatype(s), define-fun/sort, push/pop, reset(-assertions), check-sat(-assuming), get-proof/model/value/unsat-core/assignment, set-option/info, echo/exit); term forms let/forall/exists/`!`/`as` handled. **`match` datatype pattern-matching added** (commit d404794, P4.4): parse-time desugaring to nested `ite`/`DtTest`/`DtSelect`, exhaustiveness + arity checked, 11 tests. Remaining: `declare-sort` (needs first-class uninterpreted sorts the IR lacks — deep), `define-fun-rec`, full `match` for parametric datatypes |
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed slice + baseline (32/43 decided, agree=32, DISAGREE=0) |
 
 ## Changelog
 
+- **2026-06-17** — **Fair public-QF_BV measurement + graceful oversized-encoding
+  refusal (the "1/113" gap, diagnosed)**. The headline "sat-bv decides ~1/113 on
+  public QF_BV" was an artifact of `--node-budget 1000` (refusing 112/113 at the
+  DAG gate, all 1.3k–340k nodes), itself forced by a robustness bug.
+  - **Fix (sat_bv_backend, P1.2 robustness):** a pre-lowering bit-blast-size
+    *estimate* (per-op cost in result width: mul ~`w²`, div/rem ~`4w²`, shifts
+    ~`w·log w`, else linear; `~3×` for Tseitin) now refuses oversized queries as
+    `Unknown(EncodingBudget)` **before `lower_terms` allocates** — so a wide
+    multiply degrades cleanly instead of OOMing. Absolute 64M-clause ceiling for
+    the no-budget case. Regression test `oversized_multiply_is_refused_gracefully_not_oom`.
+  - **Fetched the real 113-file public slice** (SMT-LIB 2024 QF_BV, Zenodo 11061097,
+    `20221214-p4dfa-XiaoqiChen`) and ran the fair head-to-head vs Z3 4.13.3.
+  - **Result (node 200k, 5M-clause cap, 3s):** **2 sat decided, 0 disagreements,
+    0 replay failures, 111 unknown** = 88 **Timeout** (admitted + bit-blasted to
+    140k–4.6M-clause CNFs, BatSat can't solve in 3s), 13 EncodingBudget, 10
+    NodeBudget. **101/113 lowered without OOM** (RSS ~1.5GB — fix works).
+  - **Ceiling (node 300k, 8M-clause cap, 20s):** **3 sat decided**, 110 unknown
+    (99 Timeout, 10 EncodingBudget, 1 NodeBudget). 6.7× more time + bigger budgets
+    moved decided only 2→3.
+  - **Diagnosis:** the gap is **architectural, not robustness (fixed) and not a
+    timeout/budget knob.** Eager bit-blasting these word-level instances yields
+    ~million-clause CNFs our SAT path can't crack in seconds, while Z3 reasons at
+    the word level (~1s each). The honest fair number is **2–3 / 113**, with the
+    bottleneck precisely located → Track 1: word-level preprocessing (P1.2), lazy/
+    word-level bit-blasting (P2.1), SAT-core modernization (P1.3). Baselines:
+    `bench-results/baselines/qf-bv-p4dfa-fair-sat-bv-vs-z3-{3s-n200k-cnf5M,20s-n300k-cnf8M}.json`.
+- **2026-06-17** — **Curriculum backlog Tier A–D built (19 items): NT/poly/algebra/LA
+  families + 2 sound NRA engine fixes**. Worked the curriculum
+  [BACKLOG.md](docs/curriculum/BACKLOG.md) end to end; drawn from Stein/Shoup/VMLS
+  (see [foundational-books/source-tocs.md](docs/curriculum/foundational-books/source-tocs.md)).
+  - **Tier A (decidable, #1–8):** `Family::NumberTheory` += CRT-witness, quadratic
+    residue (SAT) / non-residue (UNSAT), sum-of-two-squares (SAT + `n≡3 mod 4`
+    UNSAT), Pythagorean triple; `Family::Polynomial` += factor-theorem identity;
+    `Family::Algebra` += 𝔽ₚ-all-invertible (UNSAT) / composite-modulus
+    non-invertible (SAT, via a `∀b` finite-domain quantifier). Solver/LRA tests:
+    **linear algebra over ℚ** (`Ax=b` solvability + Farkas-refuted inconsistency,
+    `tests/linear_algebra_rational.rs`); **rationals node** (density/antisymmetry/
+    transitivity, Farkas-certified, `tests/rationals.rs`); **proofs node via
+    pigeonhole** (`PHP(5,4)` UNSAT with a re-checked certificate + permutation SAT,
+    `tests/pigeonhole_proof.rs`).
+  - **Tier B (#9–13):** `Family::Predicate` += Fermat's little theorem at fixed
+    `p∈{3,5}` (`∀a`); `Family::Polynomial` += division-with-remainder identity;
+    `Family::NumberTheory` += RSA round-trip (`(mᵉ)ᵈ≡m mod 33`, modular-exp with
+    per-step reduction); `Family::LinearAlgebra` += 3×3 `det(AB)=detA·detB` over 𝔽₂;
+    #13 ("watch a formula become CNF→SAT") realized by the existing
+    `scenario_pipeline_report`/`curriculum_demo`/`BvLayerStats` observability.
+  - **Tier C — NRA/prove engine (#14–16), measured & sound:** **#14** the
+    `prove`/`produce_evidence` front door now **dispatches nonlinear real goals to
+    NRA** (`produce_nra_evidence`) instead of hard-erroring `Unsupported`;
+    soundness-probed (NRA does not claim `x²<0` Sat). **#15** NRA now honors a
+    **wall-clock deadline** threaded through `branch_and_bound` + the refinement
+    loop (the `a²+b²≥2ab` case returns `Unknown` in ~5s instead of hanging 60s+;
+    the Spivak SOS-frontier test is now active, not `#[ignore]`d). **#16** a real
+    SOS/positivstellensatz that *proves* the SOS inequalities is genuine P2.5/L
+    work — **designed and deferred** (sketch in spivak.md), not faked.
+  - **Tier D (#17–19):** decidable-geometry node — the *linear* slice (midpoint
+    equidistance/betweenness, LRA Farkas, `tests/decidable_geometry.rs`; polynomial
+    geometry is #16-gated); Peano-induction **reconstruction-target stubs**
+    (`docs/curriculum/reconstruction-targets/`: `.smt2` + Lean, *targets not
+    benchmarks*); **"fill the proof step" grader** — `check_alethe` accepts a
+    complete proof and rejects one missing its closing step
+    (`tests/proof_step_grading.rs`).
+  - **Verified:** 57 `axeyum-scenarios` tests + new solver tests (decidable_geometry
+    2, proof_step_grading 2, linear_algebra_rational 3, rationals 3, pigeonhole_proof
+    3, spivak 5) all green; fmt/clippy/doc/link-check clean. (Transient: the
+    concurrent CDCL(XOR) WIP in `axeyum-cnf` intermittently blocked the solver build;
+    re-ran green once fixed.)
+  - **References noted:** Software Foundations being translated to Lean + Verso
+    (`docs/curriculum/foundational-books/proof-assistants.md`) — the Lean-horizon
+    curriculum to align with.
+- **2026-06-17** — **Spivak *Calculus* Ch.1 benchmark + the "decidability-ceiling"
+  curriculum docs**. Engaged Spivak (and foundational texts) honestly: most of the
+  book is ε-δ (Lean-horizon), but **Chapter 1 — the ordered-field axioms P1–P12 and
+  the foundational inequalities — is the decidable shadow** where axeyum's LRA/NRA
+  live. New (Opus-research-driven):
+  - **`crates/axeyum-solver/tests/spivak_inequalities.rs`** — a certificate-bearing
+    benchmark. **Order transitivity** proved via the `prove` front door (Farkas,
+    re-checked); a **monotonicity inequality** (`x≥1 ∧ y≥1 ⇒ xy≥1`) proved by NRA.
+    The **sum-of-squares inequalities** (`a²+b²≥2ab`, AM–GM₂, Cauchy–Schwarz) are
+    the **NRA frontier** — kept `#[ignore]`d (they don't terminate promptly). 3
+    active tests pass, 1 ignored.
+  - **Two measured engine findings** (recorded in
+    [formal-mathematics-tour.md](docs/research/08-planning/formal-mathematics-tour.md)):
+    (1) `prove` has **no LRA→NRA dispatch** (rejects nonlinear real goals as
+    `Unsupported`); (2) the linearization NRA (ADR-0024) **cannot prove SOS
+    inequalities — even `a²+b²≥2ab`** — because it abstracts the squares to
+    independent variables; sharp motivation for an SOS/positivstellensatz/CAD path
+    in P2.5. (The initial assumption that NRA proves these was *wrong*; the probe
+    corrected it — what a benchmark is for.)
+  - **Curriculum honesty docs**: `docs/curriculum/DEPTH.md` (the map-vs-territory
+    scope ceiling — `covered` ≠ textbook depth; the decidability ceiling) and
+    `docs/curriculum/foundational-books/` (README + `spivak.md`: how canonical texts
+    project onto the LRA/NRA/Lean-horizon split).
+  - **`Family::NumberTheory` extended**: `pythagorean_triple` (`a²+b²=c²`, witness
+    (3,4,5)) — number theory meets geometry, SAT-by-witness.
+  - 57 scenarios tests green; Spivak suite green; clippy/doc/link-check clean in
+    isolation.
+- **2026-06-17** — **CDCL(XOR) foundation — path 2 of the multiplier wall, 3 sound
+  slices + design record** (commits b745772, 8a3415a, 8b21359, 3099964). The
+  diagnosed perf lever for the curated unknowns (var*var multiplier-equivalence with
+  exponential resolution lower bounds — no path-1 rewrite cracks them) is now an
+  *engine*, built in `axeyum-cnf` as three independently-tested slices:
+  - **`gf2.rs`** — GF(2) linear (XOR) system solver: `Gf2System` Gaussian-eliminates
+    `(⊕ of a var set) = parity` constraints (bit-packed `Vec<u64>` rows, duplicates
+    cancel by parity) to RREF; `0=1` row ⇒ `Unsat`, else a satisfying assignment +
+    `implied_units` (single-var rows) + `implied_equalities` (two-var rows). 16 tests,
+    backbone invariant "the assignment satisfies every input constraint."
+  - **`xor_extract.rs`** — sound XOR-gate extraction: `extract_xors(cnf)` recognizes a
+    width-`k` gate **only** when a variable-set group is the exact `2^(k-1)`-clause
+    complete one-parity encoding (rhs derived from that parity; `k≤8`). Exact ⇒ false
+    positives impossible (missing/extra/dup/mixed-parity/over-cap ⇒ not recognized).
+    19 tests incl. a brute-force truth-table parity check + the no-false-positive set.
+  - **`xor_propagate.rs`** — preprocessing pass in the `simplify`/`eliminate_variables`
+    idiom: `xor_propagate(cnf) -> { Unsat, Propagated { formula, stats } }`. A
+    contradictory entailed XOR subsystem proves the formula UNSAT; the solver's implied
+    units (entailed ⇒ model-preserving) are appended. Brute-forced over all `2^n`
+    assignments: model-set preservation, UNSAT soundness **and its converse** (a sat
+    formula is never reported unsat), no-op. `implied_equalities` substitution deferred.
+  - **Slice 4 DONE & measured** (commits edf65b8, 160408c): `xor_propagate` wired into
+    `sat_bv_backend`'s `inprocess` (behind `cnf_inprocessing`, off by default; sound
+    Propagated branch only, 20k-clause Gaussian cap). Curated slice (`--inprocess`, 2 s):
+    **33 decided, DISAGREE=0, 0 replay failures, PAR-2 0.968 vs 0.963 plain** — sound, no
+    regression. **Extraction fired on 20/43 files → 12 908 XOR gates but only 1 implied
+    unit** ⇒ on-corpus proof that multiplier parity forces ~no units at preprocessing.
+    **Slice 5 (equality substitution) measured & deprioritized** (commit 2a6190d): the
+    gates expose **351 equalities** but they concentrate on the AC-structured commute/
+    distrib/bit-counting instances (commute08=101, distrib04=40), **~0 on the genuine
+    multiplier unknowns** (mulhs16=1, stp_samples=0, calypto_9=1) — they'd only help
+    instances the AC canonicalizer already targets. **Static-preprocessing path 2 is
+    closed: neither units nor equalities crack the curated multiplier unknowns.**
+    **Slice 6 (the real lever):** full CDCL(XOR) — in-search Gaussian on the CDCL trail
+    (CryptoMiniSat `gaussian.cpp`), the only form that sees the nonlinear AND-gate
+    partial-product structure static preprocessing can't; reuses the validated `gf2`/
+    `xor_extract` foundation. Design note has the full measurement.
+  - **Slice 6 primitive DONE** (commit 9b449b7): `xor_search::xor_implications(constraints,
+    num_vars, assignment: &[Option<bool>]) -> { Conflict{reason}, Implied{lits+reasons} }`
+    — the pure propagation primitive the in-search Gaussian calls at each CDCL node. Folds
+    the partial assignment into the system and reuses `gf2.rs` (Unsat ⇒ Conflict; reduced
+    `implied_units` ⇒ forced literals); reasons are a sound (non-minimal) component
+    over-approximation. 18 brute-force tests (conflict/implication soundness over all
+    completions, completeness on small systems, reason soundness, 3^n exhaustive
+    cross-check, empty-assignment vs `Gf2System::solve`). 187 cnf tests green.
+  - **Slice 6 integration validated** (commits 858a644 design, d7a8cd0 decider): the
+    proof/trust crux is resolved in
+    [cdcl-xor-integration-design.md](docs/research/05-algorithms/cdcl-xor-integration-design.md)
+    — XOR reasoning isn't resolution, so XOR-assisted `unsat` becomes a ledgered
+    **`TrustId::XorGaussian`** hole (no false DRAT), demotable via an algebraic/PAC
+    certificate (path 3); `sat` is already free (model replays). First integration landed:
+    `xor_dpll::solve_with_xor` — a correctness-first XOR-aware DPLL (clause-UP ⇄
+    `xor_implications` fixpoint, chronological backtrack, no learning/proof yet, step-budget
+    → Unknown). **400 brute-force-oracle + 300 batsat differential checks, zero
+    disagreement**; every `Sat` model satisfies clauses AND XOR constraints. 196 cnf tests.
+  - **Decision ratified — ADR-0035 accepted** (commit 2ea892e): CDCL(XOR) search
+    acceleration with a ledgered `XorGaussian` trust hole (no false DRAT; `sat` free;
+    demotable via path-3 PAC certificate). The protocol gate is cleared.
+  - **Competitive CDCL(XOR) solver DONE** (commit 024596b): `xor_cdcl::solve_with_xor_cdcl`
+    — conflict-driven search with clause learning + **watched-literal XOR propagation**
+    (CMS `gausswatched` style: a constraint forces its last unassigned var with a minimal,
+    **antecedent-valid** reason — the other vars of that constraint, all pre-assigned — which
+    is what 1-UIP needs; the Gaussian `xor_implications` component-reasons are not
+    antecedent-valid, so the watched scheme is used in-search). XOR antecedents enter 1-UIP as
+    synthesized reason clauses. Search-only (no DRAT); isolated (models on `proof_sat`, does
+    not touch it). **1,500-formula differential (brute oracle + batsat + `xor_dpll`), zero
+    disagreement**; parity-chain UNSAT cases confirm learning fires. 209 cnf tests. Complete
+    Gaussian-on-trail (row-provenance reasons) for the parities the watched scheme misses is
+    the deferred enhancement.
+  - **PATH-2 THESIS CONFIRMED + sped up — CDCL(XOR) cracks the small multiplier wall**
+    (commits 577c973 harness, b863d1c note, fea810a VSIDS, aadd0da correction). Robust win on
+    `mulhs08` (655 v/2716 cl): **batsat `unknown`@2s (reproducibly) → `solve_with_xor_cdcl`
+    UNSAT** — a multiplier-equivalence instance plain CDCL provably cannot crack. Adding the
+    P1.3 modernization (**VSIDS + phase saving + Luby restarts**) cut it **20.1 s → ~5.0 s
+    (~4×)**, verdict + all ~1,500-formula soundness differentials unchanged. So the
+    decomposition is confirmed AND acted on: XOR propagation = the capability, competitive
+    heuristics = the speed. (Correction: `calypto_9` is *borderline* for batsat — ~1.1 s some
+    runs — so not a clean separator; `mulhs08` is the solid one.) **Honest ceiling:** `mulhs16`
+    / larger `stp_samples` still don't decide in minutes even with VSIDS — the next size class
+    needs the **complete Gaussian-on-trail propagator** (watched-literal XOR is sound but
+    incomplete) and/or more SAT-core work. 212 cnf tests; clippy/fmt clean.
+  - **Wired into the product `solve()` path** (commit 6505441, ADR-0035): new
+    `SolverConfig::xor_cdcl_fallback` (default OFF) — on a batsat `Unknown` over an
+    XOR-structured formula (≤50k clauses), runs `solve_with_xor_cdcl`; **`unsat` = the new
+    `TrustId::XorGaussian` ledgered hole** (no DRAT — XOR isn't RUP; backed by the differential
+    validation), **`sat` replays** through the existing AIG/model/term path (no trust cost).
+    Default-off ⇒ zero baseline change. **`mulhs08` now returns UNSAT through `SatBvBackend`
+    with the flag on** — the breakthrough is reachable through the product, not just a test.
+    Trust ledger now has 6 holes (added `xor-gaussian`); 8 new tests; full solver suite green.
+  - **Measured negative — complete backstop must be incremental** (commit ca19a5f): calling
+    the complete `xor_implications` Gaussian as a fixpoint backstop is sound (differentials
+    green) but a net regression — from-scratch Gaussian per decision level makes `mulhs08`
+    2.3× and `calypto_9` 19× slower and still doesn't crack `mulhs16`/`stp_samples`. Reverted.
+    The next size class needs a **true incremental GF(2) matrix** (row-reduce-on-assign /
+    restore-on-backtrack, CMS `gausswatched.h`/`packedmatrix.h`), not repeated rebuilds.
+  - **Incremental matrix built + 2nd measured negative** (commits 83b99b2 matrix, 6c4407a
+    note): `IncrementalXorMatrix` (RREF over free columns, per-assign column-substitution,
+    backtrackable, **bit-for-bit oracle-validated** vs `xor_implications` over 100s of random
+    systems×sequences; 14 tests) is built and committed as the foundation. But wiring it into
+    `xor_cdcl` (sound — all differentials green) made `mulhs08` go 5 s → **>280 s**: it's
+    called on every trail assignment and still scans all rows mentioning the var
+    (`O(rows·words)`). Reverted. **Twice-confirmed sharp requirement: the propagator must be
+    the watched-echelon-row scheme** (CMS `gausswatched.h` — each echelon row watches two free
+    vars, so an assign touches only `O(1)` rows). The validated matrix is the foundation; the
+    two-watch index over its rows is the remaining decisive optimization. `xor_cdcl` keeps the
+    cheap incomplete watched-literal XOR prop until then.
+  - **Watched-echelon-row index DONE + 3rd result = course correction** (commits 3ca0340
+    matrix watch index, 9c49437 note): the watch index landed (**~25× fewer rows examined per
+    assign**, full RREF for completeness, all oracle differentials green). Re-integrated into
+    `xor_cdcl` — **sound** (every differential green; parity chains close at level 0) but
+    `mulhs08` **still** regressed past 300 s. Decisive cause: **`mulhs08` has ~1 XOR gate among
+    655 vars** — the matrix adds no propagation power while replacing the near-free
+    watched-literal scheme with overhead. **`mulhs08` was cracked by `xor_cdcl`'s competitive
+    CDCL core (VSIDS/restarts/1-UIP), NOT by XOR reasoning.** The curated unknowns are *not
+    XOR-dense*, so in-search Gaussian is the wrong lever for them. Integration reverted; the
+    watched-row matrix stays a **validated, unwired component** for an XOR-dense corpus (behind
+    a density guard + incremental journal). **For the curated next size class the lever is
+    P1.3 SAT-core modernization, not more XOR machinery.**
+  - **P1.3 clause deletion DONE + localizes the next blocker** (commit 839518e): LBD-based
+    learned-clause deletion added to `xor_cdcl` (the standard missing piece — clause DB grew
+    unboundedly before). Sound (differentials green), `mulhs08` 5.3 s **no regression**, DB now
+    memory-bounded. Honest measurement: `mulhs16`/`stp_samples` still UNKNOWN — they exhaust the
+    **2M-conflict budget** (182 s/433 s), i.e. hit the conflict CEILING, not a clause-DB wall.
+    So the curated next-size-class blocker is **branching/restart strength / the conflict
+    ceiling**, not clause management.
+  - **Next options (fresh context):** (a) more P1.3 — stronger branching/restarts (the now-
+    localized curated blocker), though Kissat-class is a long road with diminishing per-step
+    returns; (b) **Lean kernel inductive layer** (deepest open destination-3 slice — studied,
+    soundness-careful port of nanoda's 1677-LOC inductive.rs); (c) broaden Track 2/3/4 (e.g.
+    wire the integer-systems Diophantine certificate into evidence/get-proof).
+  - **Next (fresh context, ADR-cleared):** wire `xor_implications` into the *production*
+    proof-producing CDCL core (`proof_sat`, which has 1-UIP + watched literals) as a
+    search-only theory propagator — DRAT suppressed when an XOR reason participates, the
+    `unsat` carrying the new `XorGaussian` trust id (land `trust.rs` + golden ledger +
+    trust-ledger.md **with** this producer, not before it). Then dispatch wiring +
+    curated-multiplier measurement (`DISAGREE=0`) — the first technique that *can* reach
+    `mulhs*`/`stp_samples`/`calypto`. The naive `xor_dpll` decider validates soundness; the
+    production core (learned clauses) is what makes it competitive. Soundness-critical
+    proof-core surgery ⇒ fresh context.
+  - All verified **per-crate** (`axeyum-cnf`: 168 tests; `axeyum-solver`: full suite
+    green; clippy `-D warnings` + fmt clean) — and now the **full workspace builds +
+    test-compiles** (the concurrent math-tour errors resolved). std only, no new deps.
+- **2026-06-17** — **Math-tour curriculum — Predicate logic + Number systems;
+  coverage now 14/23 nodes**. Two more research→build cycles, oracle-free (ADR-0008):
+  - **`Family::Predicate`** (`predicate`): closed quantified theorems the evaluator
+    decides by finite-domain expansion — `forall_additive_identity` (∀x. x+0=x),
+    `forall_exists_inverse` (∀x ∃y. x+y=0, genuine **quantifier alternation**),
+    `exists_square_root` (∃x. x²=4, SAT). Exercises the finite-domain quantifier
+    path. → mathtour `predicate-logic` Covered.
+  - **`Family::NumberSystem`** (`number_system`): order + Peano structure —
+    `signed_trichotomy`, `order_transitivity` (→ `integers`), `unsigned_non_negative`,
+    `successor_injective` (→ `naturals`). Exhaustive UNSAT-of-negation over signed/
+    unsigned BV. → mathtour `integers` + `naturals` Covered.
+  - mathtour.rs ↔ curriculum.toml ↔ node markdown synced (invariant test enforces).
+    Curriculum coverage **11 → 14 of 23 nodes** (added predicate-logic, naturals,
+    integers). 57 `axeyum-scenarios` tests green; fmt/clippy/doc/link-check clean in
+    isolation.
+  - Remaining gaps: SAT/CNF, bit-blasting, proofs, decidable-geometry, calculus,
+    sequences-limits, cardinality, complex, rationals, reals (number-systems upper
+    rungs + lean-horizon analysis). NEXT high-value: ℚ/NRA (linear algebra solving,
+    calculus RCF inequalities) → the corpus P2.5 lacks; proofs via a DRAT/Alethe demo.
+- **2026-06-17** — **Math-tour curriculum — 3 more families (Polynomials,
+  Verification, Sets) + ring/field structure; coverage now 11/23 nodes**. Continued
+  the research→build cycles; all oracle-free (ADR-0008), inside the BV subset:
+  - **`Family::Polynomial`** (`polynomial`): `binomial_square` ((x+y)²=x²+2xy+y²),
+    `difference_of_squares`, `quadratic_root` (x²−5x+6=0, root `x=2` witness). →
+    mathtour `polynomials` Covered.
+  - **`Family::Verification`** (`verification`, Opus-research-driven): the
+    "Hello, World" of program safety — `abs_non_negative_bug` (SAT, `INT_MIN`
+    counterexample), `midpoint_overflow_bug` (SAT, the Bloch binary-search bug,
+    witness `lo=hi=2^(w−2)`), `max_is_an_upper_bound`, `unsigned_overflow_idiom`,
+    `saturating_add_safe` (UNSAT-of-negation theorems). → flips the **solver-capability
+    concept `SoftwareVerification`** from gap to Covered (concept.rs).
+  - **`Family::Sets`** (`sets`): set-algebra laws over subset bitmasks —
+    `distributivity`, `absorption`, `complement_union_is_universe` (set algebra IS
+    Boolean algebra). → mathtour `sets` Covered.
+  - **`Family::Algebra` extended**: `zero_divisor` (SAT — ℤ/2ʷ is a ring but not an
+    integral domain) and `field_failure_even` (UNSAT — even elements have no inverse,
+    so ℤ/2ʷ is not a field). → mathtour `rings` + `fields` Covered.
+  - **mathtour.rs ↔ curriculum.toml ↔ node markdown synced** (the
+    `covered_nodes_have_a_family_realized` invariant test enforces it). Curriculum
+    coverage **7 → 11 of 23 nodes** (now: propositional-logic, sets, divisibility,
+    modular-arithmetic, groups, rings, fields, polynomials, counting, number-theory,
+    linear-algebra).
+  - **54 `axeyum-scenarios` tests green; fmt/clippy(pedantic)/doc/link-check clean in
+    isolation.** Each family doubles as theory coverage (BV bitwise/arith, signed/
+    unsigned comparisons, div/mul, ite) on structured, scalable, oracle-free instances.
+  - NEXT (still gaps): SAT/CNF, bit-blasting, proofs, decidable-geometry, calculus,
+    sequences-limits — plus ℚ/NRA variants (the corpus P2.5 lacks).
+- **2026-06-17** — **Math-tour curriculum advanced — 3 more families built (Opus
+  sub-agent + web research)**. Three Opus research sub-agents (pigeonhole/proof
+  complexity, finite-algebra/quasigroup encodings, linear-algebra-over-finite-fields)
+  informed three new self-checking families, all oracle-free (ADR-0008) and inside
+  the BV subset:
+  - **`Family::LinearAlgebra`** (`linear_algebra` module): `2×2` matrix identities
+    over `BitVec` — `det_product_2x2` (det(AB)=detA·detB), `transpose_product_2x2`
+    ((AB)ᵀ=BᵀAᵀ), `mult_associative_2x2` (over 𝔽₂), exhaustive UNSAT of the negation;
+    `linear_solve_2x2` (Ax=b, solution as witness). Covers mathtour `linear-algebra`.
+  - **`Family::Counting`** (`counting` module): the **pigeonhole principle**
+    (`pigeonhole`, n+1 pigeons → distinct hole indices is UNSAT, PHP(5,4)=1024 cases
+    exhaustive) + `permutation_exists` (n→n distinct is SAT, identity witness). A
+    proof-complexity landmark (Haken 1985; Beame–Pitassi–Impagliazzo 1993). Covers
+    mathtour `counting`.
+  - **`Family::Algebra`** (`algebra` module): group axioms over ℤ/2ʷ —
+    `addition_associative`, `additive_inverse` (exhaustive UNSAT of negation) +
+    `subtraction_not_associative` (SAT counterexample, witness `(0,1,1)` — shows
+    subtraction is not a group operation). Covers mathtour `groups`.
+  - **mathtour/TOML/markdown synced:** `groups`, `counting`, `linear-algebra` flipped
+    to `covered` in both `curriculum.toml` and `mathtour.rs` (the invariant test
+    `covered_nodes_have_a_family_realized_by_a_self_checking_scenario` enforces the
+    sync). Curriculum coverage now **7 of 23 nodes** with a self-checking exercise.
+  - **48 `axeyum-scenarios` tests green; fmt/clippy(pedantic)/doc/link-check clean in
+    isolation.** (Full `just check` still blocked only by the other agent's in-progress
+    `axeyum-smtlib`/`axeyum-rewrite` WIP — transient.)
+  - **Each family doubles as theory test coverage:** number theory + counting + algebra
+    + linear algebra stress BV multiply/add/sub and the bit-blast→SAT path on
+    structured, scalable, oracle-free instances. NEXT: ℚ/NRA linear algebra
+    (Farkas-certified solving, det identities) and calculus RCF inequalities → the
+    NRA corpus P2.5 lacks.
+- **2026-06-17** — **Formal Mathematics Tour — curriculum knowledge graph + first
+  destination built**. A structured, machine-readable curriculum derived by working
+  *backward* from calculus / number theory / linear algebra to foundations, with
+  axeyum's decidable/computable fragment per node.
+  - **Knowledge graph** at [`docs/curriculum/`](docs/curriculum/README.md): an
+    authoritative `curriculum.toml` (23 nodes, prerequisite edges, decidability +
+    family + status metadata) + a README index (DAG, decidability/status legends)
+    + **one markdown file per node** across `00-foundations/` (7), `01-number-systems/`
+    (5), `02-structures/` (8), `03-destinations/` (3), each with summary · role ·
+    prerequisites/unlocks · *testable in axeyum* (with example exercises) ·
+    Lean-horizon · references. Grounded in Lean Mathlib, Metamath set.mm, and
+    bridge-course canon.
+  - **Decidability lens (the load-bearing filter):** each node's testable slice maps
+    to an axeyum theory (number theory → BV/LIA, linear algebra → LRA/NRA, calculus
+    → NRA); ∀-general theorems (infinitude of primes, ℝ-completeness, ε–δ) are
+    flagged `lean-horizon`, never benchmarks. So building math-tour exercises *also*
+    grows the arithmetic-theory corpora axeyum lacks (esp. NRA / P2.5).
+  - **Code mirror:** `axeyum-scenarios::mathtour` — a queryable `MathNode` table
+    mirroring the TOML, with topological teaching order and invariant tests (acyclic,
+    prerequisites exist, every `Covered` node's family is realized by a self-checking
+    scenario). 6 tests.
+  - **First destination built:** `Family::NumberTheory` (`number_theory` module) —
+    Bézout's identity (witness from extended Euclid), modular inverse (Hensel-lifted),
+    "product of consecutive integers is even", "x² ≡ x (mod 2)". Oracle-free
+    (SAT-by-witness / UNSAT-by-exhaustive), inside the BV subset. 4 tests; wired into
+    the coverage aggregator and the mathtour `Covered` mapping.
+  - Research note: [formal-mathematics-tour.md](docs/research/08-planning/formal-mathematics-tour.md).
+  - **41 `axeyum-scenarios` tests green; fmt/clippy(pedantic)/doc/link-check clean
+    in isolation.** (Full `just check` still blocked only by the other agent's
+    in-progress `axeyum-smtlib` parse.rs — transient.)
+- **2026-06-17** — **Double-duty educational layer — FIRST CUT BUILT (ADR-0033)**.
+  The self-checking scenarios now double as curriculum, built bottom-up across
+  ADR + 5 modules + an integration demo, all within `axeyum-scenarios`' existing
+  deps (no new solver surface, no DAG change):
+  - **ADR-0033** ratifies the double-duty artifact contract (concept-DAG node +
+    statement/solution renderers + *measured* difficulty; grading via the trusted
+    checker, never the search) and the crate boundary (extend `axeyum-scenarios`;
+    extract `axeyum-edu` later per ADR-0001).
+  - **`concept`** — a 15-node curriculum DAG derived from `foundational-dag.md`:
+    acyclicity-checked `prerequisites`, deterministic `topological_order`,
+    `frontier(mastered)`. 6 tests.
+  - **`render`** — `Renderable` (problem statement + worked solution from the
+    witness/UNSAT evidence). 2 tests.
+  - **`exercise`** — `Exercise` with curriculum placement, measured `Difficulty`,
+    and a **sound auto-grader**: a candidate is judged by `Scenario::is_satisfied_by`
+    (the evaluator), so a wrong/empty witness is *rejected by evaluation*, never
+    silently accepted. 5 tests.
+  - **`coverage`** — the concept DAG as a test-coverage map; the key test
+    (`every_declared_family_is_realized_by_a_self_checking_scenario`) fails if a
+    concept claims coverage no self-checking scenario provides. 8/15 concepts
+    covered; 7 gaps tracked honestly. 5 tests.
+  - **`logic`** — propositional `Family::Logic` (modus ponens, excluded middle,
+    De Morgan, contradiction, a SAT clause) proven by exhaustive truth tables —
+    closes the bottom-rung `PropositionalLogic` concept. 2 tests.
+  - **`axeyum-bench` `curriculum_demo` example** — ties it together end to end and,
+    for the De Morgan BV identity, emits a **136-command Alethe proof re-checked
+    VALID in-tree by `check_alethe`** (proof as worked solution; length as a
+    proof-level difficulty signal). Demonstrates the whole thesis in one run.
+  - **31 `axeyum-scenarios` tests green; fmt/clippy(pedantic)/doc clean in
+    isolation.** Full `just check` is red only on the *other agent's* in-progress
+    `axeyum-smtlib` parse.rs (concurrent PLAN build) — transient, not from this work.
+  - Docs: rev-2 example-suites note (educational lens), ADR-0033, and a new
+    "Curriculum / Educational Layer" section in consumer-scenario-models.md.
 - **2026-06-17** — **P1.2: opt-in `preprocess` flag on the `solve`/`check_auto`
   façade**. New `SolverConfig::preprocess` (+ `with_preprocess`), default **off** —
   mirrors the existing `cnf_inprocessing` lever. When set, `check_auto` runs the
@@ -394,6 +773,28 @@ plan is built and committed on the current branch:
   QF_NRA/meti-tarski, GeoCoq/Tarski, TPTP as yardsticks (mine for shape; do not
   ingest/sweep). Proposes **ADR-0033** to ratify the A/B/C-build, D-target tier
   split. Next: design suite A's first cut.
+- **2026-06-17** — **Educational/double-duty lens added (rev 2 of the example-suites
+  note)**. Thesis: the architecture that makes an artifact a good *test* is the same
+  that makes it good *educational content* — a self-checking, seeded,
+  evidence-exhibiting scenario placed in a concept DAG **is** a homework problem
+  with a sound auto-grader and a worked solution. axeyum has the four otherwise-hard
+  assets: (1) **sound auto-grading for free** because grading is *trusted checking*
+  (`eval`/`evidence.check`/`check_alethe`), not search; (2) **certified procedural
+  generation** (ADR-0008's SAT-by-execution / UNSAT-by-identity are the two
+  procedural-content patterns, with machine-checked answer keys); (3) **measured
+  difficulty** (CDCL conflicts, CNF size, Alethe/LRAT proof length); (4) **the
+  concept DAG already exists** as the engineering gate (`foundational-dag.md`) —
+  formalizing it gives curriculum order + a test-coverage audit + the gate (triple
+  duty). Angle 1 (generate): homework banks from generators, a `check_alethe`-graded
+  "fill the proof step" tutor, DAG-frontier sequencing — solver
+  generates/grades/certifies/sequences *formal* exercises only, narrative stays
+  human/LLM. Angle 2 (teach about): glass-box pipeline → a course map keyed to
+  axeyum's own layers, with suite D reframed as a *lesson on undecidability*. Adds
+  three thin, ADR-gated, no-solver-surface capabilities (rendering layer,
+  machine-usable concept-DAG, concrete-execution trace = worked solution). Hard
+  rules recorded: education is a consumer/lens that must not starve a foundation
+  phase; grading must route through the trusted checker, never the search. ADR-0033
+  scope extended to ratify the double-duty artifact contract.
 - **2026-06-17** — **P1.2: commutative-operand canonicalization (word-level
   preprocessing)**. The denotation-preserving canonicalizer now sorts the operands
   of commutative ops (`and`/`or`/`xor`/`=`, `bvadd`/`bvmul`/`bvand`/`bvor`/`bvxor`/

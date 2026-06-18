@@ -1,0 +1,342 @@
+# Formal Mathematics Tour — machine-readable knowledge graph.
+#
+# Authoritative node/edge list for the curriculum. Per-node prose lives in the
+# sibling markdown files (path = "<area-folder>/<id>.md"); this file is the
+# graph (prerequisites = edges) plus the axeyum decidability/testability
+# metadata. See README.md.
+#
+# Invariants (validated by axeyum-scenarios::mathtour tests, which mirror this
+# graph): every `prerequisites` id exists; the graph is acyclic; every
+# `unlocks` is the inverse of some `prerequisites`.
+#
+# Field legend:
+#   layer         0 foundations · 1 number systems · 2 structures · 3 destinations
+#   decidability  decidable | computable | bounded | undecidable
+#                   decidable  — a complete decision procedure (e.g. propositional)
+#                   computable — answer is computed then checked (e.g. gcd)
+#                   bounded    — only finite/fixed instances are decided
+#                   undecidable— general case is Lean-horizon, not a benchmark
+#   axeyum_theory the theory whose testable fragment this node maps to
+#   family        the axeyum-scenarios Family that exercises it ("" = not yet)
+#   status        covered | planned | lean-horizon
+
+[meta]
+title = "Formal Mathematics Tour"
+description = "Backward-derived prerequisite DAG from calculus / number theory / linear algebra to foundations, with axeyum's testable fragment per node."
+adr = "adr-0033-double-duty-educational-artifacts"
+note = "docs/research/08-planning/formal-mathematics-tour.md"
+
+# ---------------------------------------------------------------------------
+# Layer 0 — Foundations (the "bridge")
+# ---------------------------------------------------------------------------
+
+[[node]]
+id = "propositional-logic"
+title = "Propositional Logic"
+layer = 0
+area = "foundations"
+prerequisites = []
+unlocks = ["predicate-logic", "proof-methods"]
+decidability = "decidable"
+axeyum_theory = "Bool / SAT"
+family = "Logic"
+status = "covered"
+summary = "Boolean variables, connectives, validity and satisfiability."
+
+[[node]]
+id = "predicate-logic"
+title = "Predicate Logic"
+layer = 0
+area = "foundations"
+prerequisites = ["propositional-logic", "sets"]
+unlocks = ["proof-methods"]
+decidability = "bounded"
+axeyum_theory = "Quantifiers (finite domain)"
+family = "Predicate"
+status = "covered"
+summary = "Quantifiers over a domain; validity is undecidable in general, decidable over finite domains."
+
+[[node]]
+id = "proof-methods"
+title = "Proof Methods"
+layer = 0
+area = "foundations"
+prerequisites = ["propositional-logic", "predicate-logic"]
+unlocks = ["induction"]
+decidability = "bounded"
+axeyum_theory = "Refutation (negate-and-decide)"
+family = ""
+status = "planned"
+summary = "Direct, contrapositive, and contradiction proofs; refutation is exactly what a solver does."
+
+[[node]]
+id = "induction"
+title = "Mathematical Induction"
+layer = 0
+area = "foundations"
+prerequisites = ["proof-methods", "naturals"]
+unlocks = ["number-theory"]
+decidability = "bounded"
+axeyum_theory = "LIA / BV (base + step instances)"
+family = ""
+status = "planned"
+summary = "The induction schema is undecidable; individual base/step obligations are decidable."
+
+[[node]]
+id = "sets"
+title = "Sets"
+layer = 0
+area = "foundations"
+prerequisites = ["propositional-logic"]
+unlocks = ["relations-and-functions", "predicate-logic"]
+decidability = "bounded"
+axeyum_theory = "BV / enumeration (finite sets)"
+family = "Sets"
+status = "covered"
+summary = "Membership, subset, union/intersection; finite-set identities are exhaustively checkable."
+
+[[node]]
+id = "relations-and-functions"
+title = "Relations & Functions"
+layer = 0
+area = "foundations"
+prerequisites = ["sets"]
+unlocks = ["cardinality", "groups", "linear-algebra"]
+decidability = "bounded"
+axeyum_theory = "BV / EUF (finite domains)"
+family = ""
+status = "planned"
+summary = "Relations, equivalence, functions; properties (injective/surjective) decidable on finite domains."
+
+[[node]]
+id = "cardinality"
+title = "Cardinality"
+layer = 0
+area = "foundations"
+prerequisites = ["relations-and-functions"]
+unlocks = []
+decidability = "bounded"
+axeyum_theory = "Counting / enumeration"
+family = ""
+status = "lean-horizon"
+summary = "Counting and bijections; finite cardinality is checkable, infinite cardinality is Lean-horizon."
+
+# ---------------------------------------------------------------------------
+# Layer 1 — Number systems
+# ---------------------------------------------------------------------------
+
+[[node]]
+id = "naturals"
+title = "Natural Numbers (Peano)"
+layer = 1
+area = "number-systems"
+prerequisites = ["sets"]
+unlocks = ["integers", "induction"]
+decidability = "bounded"
+axeyum_theory = "LIA / BV"
+family = "NumberSystem"
+status = "covered"
+summary = "Peano successor arithmetic; concrete arithmetic decidable, the induction axiom is not."
+
+[[node]]
+id = "integers"
+title = "Integers"
+layer = 1
+area = "number-systems"
+prerequisites = ["naturals"]
+unlocks = ["rationals", "divisibility-and-euclid", "rings"]
+decidability = "computable"
+axeyum_theory = "LIA / BV"
+family = "NumberSystem"
+status = "covered"
+summary = "Signed arithmetic and ordering; linear integer facts decided by simplex + branch-and-bound."
+
+[[node]]
+id = "rationals"
+title = "Rational Numbers"
+layer = 1
+area = "number-systems"
+prerequisites = ["integers"]
+unlocks = ["reals", "fields"]
+decidability = "computable"
+axeyum_theory = "LRA (exact rationals)"
+family = ""
+status = "planned"
+summary = "Exact fractions; linear rational facts decided by the exact-rational simplex."
+
+[[node]]
+id = "reals"
+title = "Real Numbers"
+layer = 1
+area = "number-systems"
+prerequisites = ["rationals"]
+unlocks = ["sequences-and-limits", "calculus", "complex"]
+decidability = "bounded"
+axeyum_theory = "LRA / NRA (real-closed fields)"
+family = ""
+status = "planned"
+summary = "Ordered complete field; the elementary (algebraic) theory is decidable (Tarski), completeness is not."
+
+[[node]]
+id = "complex"
+title = "Complex Numbers"
+layer = 1
+area = "number-systems"
+prerequisites = ["reals"]
+unlocks = []
+decidability = "bounded"
+axeyum_theory = "NRA over pairs"
+family = ""
+status = "lean-horizon"
+summary = "Pairs of reals with field structure; algebraic identities checkable, analysis is Lean-horizon."
+
+# ---------------------------------------------------------------------------
+# Layer 2 — Core structures & tools
+# ---------------------------------------------------------------------------
+
+[[node]]
+id = "divisibility-and-euclid"
+title = "Divisibility & the Euclidean Algorithm"
+layer = 2
+area = "structures"
+prerequisites = ["integers"]
+unlocks = ["modular-arithmetic", "number-theory"]
+decidability = "computable"
+axeyum_theory = "BV / LIA + GCD test"
+family = "NumberTheory"
+status = "covered"
+summary = "Divisibility, gcd, Bézout's identity, unique factorization; gcd/Bézout are compute-and-check."
+
+[[node]]
+id = "modular-arithmetic"
+title = "Modular Arithmetic & Congruences"
+layer = 2
+area = "structures"
+prerequisites = ["divisibility-and-euclid"]
+unlocks = ["number-theory", "fields"]
+decidability = "bounded"
+axeyum_theory = "BV / LIA"
+family = "NumberTheory"
+status = "covered"
+summary = "Congruences mod n, inverses, CRT; modular identities exhaustively checkable over fixed moduli."
+
+[[node]]
+id = "groups"
+title = "Groups"
+layer = 2
+area = "structures"
+prerequisites = ["relations-and-functions"]
+unlocks = ["rings"]
+decidability = "bounded"
+axeyum_theory = "BV / enumeration (finite groups)"
+family = "Algebra"
+status = "covered"
+summary = "Closure/associativity/identity/inverse; finite-group axiom checks via Cayley tables."
+
+[[node]]
+id = "rings"
+title = "Rings"
+layer = 2
+area = "structures"
+prerequisites = ["groups", "integers"]
+unlocks = ["fields", "polynomials"]
+decidability = "bounded"
+axeyum_theory = "BV / enumeration"
+family = "Algebra"
+status = "covered"
+summary = "Two operations with distributivity; finite-ring identities checkable; ℤ as the motivating ring."
+
+[[node]]
+id = "fields"
+title = "Fields"
+layer = 2
+area = "structures"
+prerequisites = ["rings", "rationals", "modular-arithmetic"]
+unlocks = ["linear-algebra", "polynomials"]
+decidability = "bounded"
+axeyum_theory = "LRA (ℚ) / BV (𝔽ₚ)"
+family = "Algebra"
+status = "covered"
+summary = "Rings with multiplicative inverses; ℚ and 𝔽ₚ give concrete, checkable arithmetic."
+
+[[node]]
+id = "polynomials"
+title = "Polynomials"
+layer = 2
+area = "structures"
+prerequisites = ["rings", "fields"]
+unlocks = ["calculus", "linear-algebra"]
+decidability = "computable"
+axeyum_theory = "BV (fixed-degree) / NRA"
+family = "Polynomial"
+status = "covered"
+summary = "Polynomial arithmetic, identities, roots, factoring; fixed-degree identities are decidable."
+
+[[node]]
+id = "sequences-and-limits"
+title = "Sequences & Limits"
+layer = 2
+area = "structures"
+prerequisites = ["reals"]
+unlocks = ["calculus"]
+decidability = "bounded"
+axeyum_theory = "LRA / NRA"
+family = ""
+status = "lean-horizon"
+summary = "Convergence and limits; specific algebraic limit values are checkable, the ε–N definition is Lean-horizon."
+
+[[node]]
+id = "counting"
+title = "Counting & Combinatorics"
+layer = 2
+area = "structures"
+prerequisites = ["sets", "naturals"]
+unlocks = ["number-theory"]
+decidability = "computable"
+axeyum_theory = "LIA / enumeration"
+family = "Counting"
+status = "covered"
+summary = "Permutations, combinations, the pigeonhole principle; finite counting identities are checkable."
+
+# ---------------------------------------------------------------------------
+# Layer 3 — Destinations
+# ---------------------------------------------------------------------------
+
+[[node]]
+id = "number-theory"
+title = "Number Theory"
+layer = 3
+area = "destinations"
+prerequisites = ["divisibility-and-euclid", "modular-arithmetic", "induction", "counting"]
+unlocks = []
+decidability = "bounded"
+axeyum_theory = "BV / LIA"
+family = "NumberTheory"
+status = "covered"
+summary = "Primes, factorization, congruences, Diophantine equations; bounded instances are self-checkable."
+
+[[node]]
+id = "linear-algebra"
+title = "Linear Algebra"
+layer = 3
+area = "destinations"
+prerequisites = ["fields", "relations-and-functions", "polynomials"]
+unlocks = []
+decidability = "computable"
+axeyum_theory = "BV (fixed-size) / LRA / NRA"
+family = "LinearAlgebra"
+status = "covered"
+summary = "Vector spaces, matrices, determinants, eigenvalues; fixed-size identities over ℚ are decidable."
+
+[[node]]
+id = "calculus"
+title = "Calculus"
+layer = 3
+area = "destinations"
+prerequisites = ["reals", "sequences-and-limits", "polynomials"]
+unlocks = []
+decidability = "bounded"
+axeyum_theory = "NRA"
+family = ""
+status = "lean-horizon"
+summary = "Limits, derivatives, integrals, series; derivative-rule and polynomial-identity checks are decidable, ε–δ is Lean-horizon."

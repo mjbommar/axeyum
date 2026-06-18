@@ -39,6 +39,7 @@ version = "0.1.0"
 name = "axeyum-bench"
 version = "0.1.0"
 dependencies = [
+ "axeyum-cnf",
  "axeyum-ir",
  "axeyum-query",
  "axeyum-rewrite",
@@ -86,6 +87,10 @@ name = "axeyum-ir"
 version = "0.1.0"
 
 [[package]]
+name = "axeyum-lean-kernel"
+version = "0.1.0"
+
+[[package]]
 name = "axeyum-query"
 version = "0.1.0"
 dependencies = [
@@ -125,6 +130,7 @@ dependencies = [
  "axeyum-egraph",
  "axeyum-fp",
  "axeyum-ir",
+ "axeyum-lean-kernel",
  "axeyum-query",
  "axeyum-rewrite",
  "axeyum-scenarios",

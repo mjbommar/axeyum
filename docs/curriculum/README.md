@@ -1,0 +1,109 @@
+# Formal Mathematics Tour — Curriculum Knowledge Graph
+
+A structured, machine-readable curriculum for a *formal* tour of mathematics,
+derived by working **backward** from three destinations — calculus, number
+theory, and linear algebra — to their foundational prerequisites. It exists to
+serve axeyum's double-duty thesis
+([ADR-0033](../research/09-decisions/adr-0033-double-duty-educational-artifacts.md)):
+the same artifacts that teach a concept also test an axeyum theory.
+
+- **The graph:** [`curriculum.toml`](curriculum.toml) is the authoritative
+  node/edge list (prerequisites = edges) plus per-node decidability/testability
+  metadata. The `axeyum-scenarios::mathtour` module mirrors it and a test fails
+  if they drift.
+- **The prose:** one markdown file per node, organized by layer (below). Each
+  follows the same template (summary · role · prerequisites/unlocks · *testable
+  in axeyum* · Lean-horizon · references).
+- **The design rationale:** the
+  [formal-mathematics-tour note](../research/08-planning/formal-mathematics-tour.md).
+- **The scope ceiling (read this):** [DEPTH.md](DEPTH.md) — what `covered` does
+  and does *not* mean (map vs. textbook depth; the decidability ceiling).
+- **Canonical texts mapped:** [foundational-books/](foundational-books/README.md)
+  — how Spivak and others project onto the LRA / NRA / Lean-horizon split.
+- **What to build next:** [BACKLOG.md](BACKLOG.md) — the prioritized 10–20-item
+  build list, by yield × readiness.
+- **Lean-horizon targets:** [reconstruction-targets/](reconstruction-targets/README.md)
+  — `∀`-theorems (Peano induction) frozen as proof-track goals, not benchmarks.
+
+## How to read this
+
+The graph is a DAG; a *teaching order* is any topological sort of it. Read
+bottom-up (foundations first) to build, or top-down from a destination to see
+what it presupposes. Every node names the **decidable/computable fragment**
+axeyum can self-check — that fragment is the testable, benchmarkable content;
+the rest is flagged Lean-horizon.
+
+### Decidability legend
+
+| Class | Meaning | axeyum handling |
+|---|---|---|
+| `decidable` | a complete decision procedure exists | self-checked end to end |
+| `computable` | the answer is computed, then independently checked | compute-and-verify / witness |
+| `bounded` | only finite/fixed instances are decided | exhaustive/sampled, marked |
+| `undecidable` | the general case is proof-assistant territory | **Lean-horizon**, never a benchmark |
+
+### Status legend
+
+`covered` — has a self-checking exercise family today · `planned` — testable
+fragment identified, family not yet built · `lean-horizon` — primarily a
+proof-reconstruction target (P3.6/P3.7), not a benchmark.
+
+## The layers
+
+### Layer 0 — Foundations (the "bridge")
+- [Propositional Logic](00-foundations/propositional-logic.md) · `covered`
+- [Predicate Logic](00-foundations/predicate-logic.md) · `covered`
+- [Proof Methods](00-foundations/proof-methods.md) · `planned`
+- [Mathematical Induction](00-foundations/induction.md) · `planned`
+- [Sets](00-foundations/sets.md) · `covered`
+- [Relations & Functions](00-foundations/relations-and-functions.md) · `planned`
+- [Cardinality](00-foundations/cardinality.md) · `lean-horizon`
+
+### Layer 1 — Number systems
+- [Natural Numbers (Peano)](01-number-systems/naturals.md) · `covered`
+- [Integers](01-number-systems/integers.md) · `covered`
+- [Rational Numbers](01-number-systems/rationals.md) · `planned`
+- [Real Numbers](01-number-systems/reals.md) · `planned`
+- [Complex Numbers](01-number-systems/complex.md) · `lean-horizon`
+
+### Layer 2 — Core structures & tools
+- [Divisibility & the Euclidean Algorithm](02-structures/divisibility-and-euclid.md) · `covered`
+- [Modular Arithmetic & Congruences](02-structures/modular-arithmetic.md) · `covered`
+- [Groups](02-structures/groups.md) · `covered`
+- [Rings](02-structures/rings.md) · `covered`
+- [Fields](02-structures/fields.md) · `covered`
+- [Polynomials](02-structures/polynomials.md) · `covered`
+- [Sequences & Limits](02-structures/sequences-and-limits.md) · `lean-horizon`
+- [Counting & Combinatorics](02-structures/counting.md) · `covered`
+
+### Layer 3 — Destinations
+- [Number Theory](03-destinations/number-theory.md) · `covered`
+- [Linear Algebra](03-destinations/linear-algebra.md) · `covered`
+- [Calculus](03-destinations/calculus.md) · `lean-horizon`
+
+## The DAG (prerequisite edges)
+
+```text
+propositional-logic ─┬─> predicate-logic ─┐
+                     ├─> proof-methods ────┴─> induction ─┐
+                     └─> sets ─┬─> relations-and-functions ─┬─> cardinality
+                               │                            ├─> groups ─> rings ─┬─> fields ──┐
+                               └─> naturals ─> integers ─┬─> rationals ─> reals ─┤            │
+                                                         ├─> divisibility-and-euclid ─> modular-arithmetic
+                                                         └─> rings                                  │
+  reals ─> sequences-and-limits ──────────────┐                                                    │
+  rings/fields ─> polynomials ────────────────┼─> calculus                                         │
+  divisibility + modular + induction + counting ─> number-theory                                   │
+  fields + relations-and-functions + polynomials ─────────────────────────────> linear-algebra ◄───┘
+```
+
+(Authoritative edges are in `curriculum.toml`; this ASCII is a reading aid.)
+
+## Why this doubles as testing coverage
+
+The testable fragment of each node maps onto an axeyum arithmetic theory:
+number theory → BV/LIA (decided today), linear algebra → LRA/NRA, calculus →
+NRA. Building the curriculum's self-checking exercises therefore *also* grows the
+comprehensive corpora those theories need — most pointedly NRA, which the
+[example-suites note](../research/08-planning/foundational-example-suites.md) and
+P2.5 record as lacking one.

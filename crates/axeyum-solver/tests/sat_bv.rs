@@ -222,7 +222,15 @@ fn cnf_budget_refuses_before_sat_solve() {
         panic!("expected encoding-budget unknown, got {result:?}");
     };
     assert_eq!(reason.kind, UnknownKind::EncodingBudget);
-    assert!(reason.detail.contains("CNF has"));
+    // The clause budget is now enforced *before lowering* via the pre-lowering
+    // size estimate (graceful oversized refusal), so the refusal reports the
+    // estimated clause count rather than the post-encoding "CNF has N clauses".
+    // Either way it is an EncodingBudget refusal that mentions clauses.
+    assert!(
+        reason.detail.contains("clauses"),
+        "expected a clause-budget refusal mentioning clauses, got: {}",
+        reason.detail
+    );
 }
 
 #[test]
@@ -486,4 +494,33 @@ fn wide_bit_vector_contradiction_is_unsat() {
     let c1 = arena.eq(sum, five).unwrap();
     let c2 = arena.eq(xv, ten).unwrap();
     assert_eq!(check(&arena, &[c1, c2]), CheckResult::Unsat);
+}
+
+#[test]
+fn oversized_multiply_is_refused_gracefully_not_oom() {
+    // A single wide multiply bit-blasts to ~width² gates. The pre-lowering
+    // estimate must refuse it as Unknown(EncodingBudget) WITHOUT allocating the
+    // AIG/CNF — degrading cleanly instead of aborting out of memory. 8192-bit
+    // `a·b` is ~8192²·3 ≈ 200M estimated clauses, over the 64M absolute ceiling
+    // that applies when no explicit CNF budget is set.
+    let mut arena = TermArena::new();
+    let w = 8192;
+    let a = arena
+        .declare("a", Sort::BitVec(w))
+        .map(|s| arena.var(s))
+        .unwrap();
+    let b = arena
+        .declare("b", Sort::BitVec(w))
+        .map(|s| arena.var(s))
+        .unwrap();
+    let prod = arena.bv_mul(a, b).unwrap();
+    let zero = arena.bv_const(w, 0).unwrap();
+    let goal = arena.eq(prod, zero).unwrap();
+    let result = SatBvBackend::new()
+        .check(&arena, &[goal], &SolverConfig::default())
+        .unwrap();
+    assert!(
+        matches!(&result, CheckResult::Unknown(r) if matches!(r.kind, UnknownKind::EncodingBudget)),
+        "wide multiply must degrade to an EncodingBudget unknown, got {result:?}"
+    );
 }

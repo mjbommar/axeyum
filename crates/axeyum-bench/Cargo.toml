@@ -12,6 +12,7 @@ categories.workspace = true
 publish = false
 
 [dependencies]
+axeyum-cnf = { path = "../axeyum-cnf" }
 axeyum-ir.workspace = true
 axeyum-query.workspace = true
 axeyum-rewrite = { path = "../axeyum-rewrite" }

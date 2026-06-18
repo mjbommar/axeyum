@@ -104,6 +104,42 @@ or SAT-cost optimizations should move.
 Reproduce with `cargo run -p axeyum-bench --example scenario_pipeline_report`
 and `cargo run -p axeyum-bench --example scenario_scaling`.
 
+## Curriculum / Educational Layer (ADR-0033)
+
+The self-checking scenarios double as educational content
+([ADR-0033](../09-decisions/adr-0033-double-duty-educational-artifacts.md),
+[example-suites note](../08-planning/foundational-example-suites.md)): the same
+artifact is a test, a benchmark instance, and a graded homework problem. The
+first cut lives as additive, solver-surface-free modules of `axeyum-scenarios`:
+
+- **`concept`** — the curriculum concept DAG (15 concepts derived from the
+  [foundational DAG](../08-planning/foundational-dag.md)), with acyclicity-checked
+  `prerequisites`, a deterministic `topological_order` (teaching sequence), and
+  `frontier` (next learnable concepts given a mastered set).
+- **`render`** — a `Renderable` trait turning a scenario into a problem
+  statement and a worked solution (the solution is the witness for `sat` and the
+  exhaustive/sampled evidence for `unsat`).
+- **`exercise`** — an `Exercise` view adding curriculum placement, a *measured*
+  `Difficulty` (symbol/constraint counts, enumeration-domain bits), and a
+  **sound auto-grader** `grade`. Grading routes a candidate answer through the
+  evaluator (`Scenario::is_satisfied_by`), never a search: a wrong witness is
+  *rejected by evaluation*, never silently accepted (the central soundness
+  property; a grader defect yields a failed check, not a wrong pass).
+- **`coverage`** — the concept DAG as a test-coverage map: `audit` records which
+  concepts' declared exercise families are actually realized by self-checking
+  scenarios, and a regression test fails if a concept claims coverage no
+  self-checking scenario provides. 8 of 15 concepts are covered; the 7 gaps
+  (SAT/CNF, bit-blasting, proofs, software verification, decidable geometry, …)
+  are tracked honestly, matching the example-suites roadmap.
+- **`logic`** — a propositional `Family::Logic` (modus ponens, excluded middle,
+  De Morgan, a contradiction, a satisfiable clause) proven by exhaustive truth
+  tables, closing the bottom-rung `PropositionalLogic` concept.
+
+The `axeyum-bench` `curriculum_demo` example ties these together end to end and,
+for an UNSAT bit-vector identity, emits an Alethe proof re-checked in-tree by
+`check_alethe` — the proof as worked solution, its length as a proof-level
+difficulty signal (`cargo run -p axeyum-bench --example curriculum_demo`).
+
 ## Risks
 
 - Generators can encode a wrong "known" status. Mitigation: exhaustive
