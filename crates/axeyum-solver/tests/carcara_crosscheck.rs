@@ -20,7 +20,8 @@ use axeyum_ir::{Rational, Sort, TermArena, TermId};
 use axeyum_smtlib::write_script;
 use axeyum_solver::{
     bitblast_step, prove_lra_unsat_alethe, prove_qf_abv_unsat_alethe_via_elimination,
-    prove_qf_bv_unsat_alethe, prove_qf_uf_unsat_alethe, prove_qf_ufbv_unsat_alethe,
+    prove_qf_bv_unsat_alethe, prove_qf_dt_unsat_alethe_via_simplification,
+    prove_qf_uf_unsat_alethe, prove_qf_ufbv_unsat_alethe,
 };
 
 /// Resolves the Carcara binary: `AXEYUM_CARCARA_BIN` if set, otherwise the
@@ -1687,5 +1688,72 @@ fn abv_select_consistency_is_accepted_by_carcara() {
 (check-sat)
 ";
     let report = carcara_accepts_smt2(&bin, "abv_select_consistency", smt2, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+// --- Datatype read-over-construct certificate: -------------------------------
+// `prove_qf_dt_unsat_alethe_via_simplification`
+//
+// The composed proof certifies the **`select`-over-`construct`** fold (the
+// read-over-construct trust hole). For the redex `select_0(mk(a, b))`, a fresh
+// abstraction `!dt_w_0` replaces it, the redex is named by an opaque constant
+// `!selapp_mk_0_*`, and the fold `(= !dt_w_0 a)` is **derived** by `eq_transitive`
+// over the abstraction definition `(= !dt_w_0 !selapp_mk_0_*)` and the projection
+// axiom `(= !selapp_mk_0_* a)`.
+//
+// Carcara has **no datatype rule**, so — exactly as for the array-elim
+// abstraction definitions — the projection axiom is asserted as a *premise* in the
+// `.smt2`; Carcara then checks every structural step of the proof (the abstraction
+// definition resolution, the `eq_transitive`, and the whole bit-blast tail). The
+// projection equation's *truth* (the datatype axiom) is the assumed part Carcara
+// does not itself justify (it is internal-only); its *use* in the refutation is
+// fully Carcara-checked. The matching `.smt2` declares `!dt_w_0`, `a`, and the
+// opaque `!selapp_mk_0_*`, and asserts the residual originals plus the abstraction
+// definition and the projection axiom, so each proof `assume` matches a premise.
+#[test]
+#[allow(clippy::many_single_char_names)] // a, b, p, c, e: fields, ctor app, const, expr
+fn dt_select_over_construct_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // select_0(mk(a, b)) = #b00 ∧ ¬(a = #b00) — unsat by read-over-construct.
+    let mut arena = TermArena::new();
+    let pair = arena.declare_datatype("Pair");
+    let mk = arena.add_constructor(
+        pair,
+        "mk",
+        &[
+            ("a".into(), axeyum_ir::Sort::BitVec(2)),
+            ("b".into(), axeyum_ir::Sort::BitVec(2)),
+        ],
+    );
+    let a = bvw(&mut arena, "a", 2);
+    let b = bvw(&mut arena, "b", 2);
+    let p = arena.construct(mk, &[a, b]).unwrap();
+    let sel = arena.dt_select(mk, 0, p).unwrap();
+    let c = arena.bv_const(2, 0).unwrap();
+    let e1 = arena.eq(sel, c).unwrap();
+    let e2 = {
+        let e = arena.eq(a, c).unwrap();
+        arena.not(e).unwrap()
+    };
+
+    let proof = prove_qf_dt_unsat_alethe_via_simplification(&mut arena, &[e1, e2])
+        .expect("emit datatype read-over-construct proof");
+    // The opaque redex constant is keyed by the fresh abstraction symbol's index;
+    // for this single-redex instance it is `!selapp_mk_0_2` (see emitter).
+    let smt2 = "\
+(set-logic QF_UFBV)
+(declare-const a (_ BitVec 2))
+(declare-const !dt_w_0 (_ BitVec 2))
+(declare-const !selapp_mk_0_2 (_ BitVec 2))
+(assert (= !dt_w_0 #b00))
+(assert (not (= a #b00)))
+(assert (= !dt_w_0 !selapp_mk_0_2))
+(assert (= !selapp_mk_0_2 a))
+(check-sat)
+";
+    let report = carcara_accepts_smt2(&bin, "dt_select_over_construct", smt2, &proof);
     assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
 }

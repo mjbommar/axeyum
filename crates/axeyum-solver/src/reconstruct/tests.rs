@@ -516,6 +516,107 @@ fn end_to_end_qf_abv_array_elimination_certificate_to_false() {
     assert_infers_false(&mut ctx, term);
 }
 
+/// **Datatype read-over-construct certificate end-to-end (ADR-0022 task #21)**:
+/// take a REAL `prove_qf_dt_unsat_alethe_via_simplification` certificate for
+/// `select_0(mk(a, b)) = #b00 ∧ ¬(a = #b00)` — decided via read-over-construct
+/// simplification (`select_0(mk(a, b)) → a`) — and reconstruct it through the
+/// **shared** `reconstruct_qf_ufbv_proof` to a kernel-checked `False`. The
+/// `select`-over-`construct` fold is made explicit as a `!cong_*` block:
+/// abstraction definition `(= w (sel_mk_0 (mk a b)))` + projection axiom
+/// `(= (sel_mk_0 (mk a b)) a)`, chained by `eq_transitive` (the EUF head,
+/// kernel-checked), and consumed by the bit-blast refutation (the tail,
+/// kernel-checked). The projection axiom is the single assumed lemma (route B),
+/// discharged by the kernel as a hypothesis axiom.
+#[test]
+fn end_to_end_qf_dt_read_over_construct_certificate_to_false() {
+    let mut arena = TermArena::new();
+    let pair = arena.declare_datatype("Pair");
+    let mk = arena.add_constructor(
+        pair,
+        "mk",
+        &[("a".into(), Sort::BitVec(2)), ("b".into(), Sort::BitVec(2))],
+    );
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let p = arena.construct(mk, &[a, b]).unwrap();
+    let sel = arena.dt_select(mk, 0, p).unwrap(); // select_0(mk(a,b)) -> a
+    let c00 = arena.bv_const(2, 0).unwrap();
+    let e1 = arena.eq(sel, c00).unwrap(); // select_0(mk(a,b)) = 0
+    let e2 = {
+        let e = arena.eq(a, c00).unwrap();
+        arena.not(e).unwrap() // a != 0
+    };
+
+    let proof = crate::prove_qf_dt_unsat_alethe_via_simplification(&mut arena, &[e1, e2])
+        .expect("emitter produces the datatype simplification certificate");
+    let mut ctx = ReconstructCtx::new();
+    let term = super::reconstruct_qf_ufbv_proof(&mut ctx, &proof)
+        .expect("the datatype certificate reconstructs to a kernel-checked term");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// **Datatype certificate with a second field selected (ADR-0022 task #21)**:
+/// `select_1(mk(a, b)) = #b01 ∧ ¬(b = #b01)` — exercises a non-zero index and a
+/// distinct constant. Reconstructs to a kernel-checked `False`.
+#[test]
+fn end_to_end_qf_dt_second_field_certificate_to_false() {
+    let mut arena = TermArena::new();
+    let pair = arena.declare_datatype("Pair");
+    let mk = arena.add_constructor(
+        pair,
+        "mk",
+        &[("a".into(), Sort::BitVec(2)), ("b".into(), Sort::BitVec(2))],
+    );
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let p = arena.construct(mk, &[a, b]).unwrap();
+    let sel = arena.dt_select(mk, 1, p).unwrap(); // select_1(mk(a,b)) -> b
+    let c01 = arena.bv_const(2, 1).unwrap();
+    let e1 = arena.eq(sel, c01).unwrap(); // select_1(mk(a,b)) = 1
+    let e2 = {
+        let e = arena.eq(b, c01).unwrap();
+        arena.not(e).unwrap() // b != 1
+    };
+
+    let proof = crate::prove_qf_dt_unsat_alethe_via_simplification(&mut arena, &[e1, e2])
+        .expect("emitter produces the datatype simplification certificate");
+    let mut ctx = ReconstructCtx::new();
+    let term = super::reconstruct_qf_ufbv_proof(&mut ctx, &proof)
+        .expect("the datatype certificate reconstructs to a kernel-checked term");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// The emitter declines (returns `None`) when there is no
+/// `select`-over-`construct` redex — a pure-residual problem belongs to the plain
+/// `QF_BV` emitter, not this datatype path.
+#[test]
+fn qf_dt_emitter_declines_without_redex() {
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a");
+    let b = bv_var(&mut arena, "b");
+    let c = bv_var(&mut arena, "c");
+    let assertions = vec![arena.eq(a, b).unwrap(), arena.eq(b, c).unwrap(), {
+        let e = arena.eq(a, c).unwrap();
+        arena.not(e).unwrap()
+    }];
+    assert!(
+        crate::prove_qf_dt_unsat_alethe_via_simplification(&mut arena, &assertions).is_none(),
+        "no select-over-construct redex: the datatype emitter must decline"
+    );
+}
+
 /// **NEGATIVE soundness check**: corrupt a REAL emitted proof — swap the closing
 /// resolution's disequality to a non-complementary one — and confirm
 /// reconstruction REJECTS it (no complementary unit pair → error), never a wrong
