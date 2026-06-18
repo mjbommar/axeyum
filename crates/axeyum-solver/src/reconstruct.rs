@@ -160,6 +160,19 @@ pub struct ReconstructCtx {
     atoms: BTreeMap<String, NameId>,
     /// Function symbol name → its `α → α` constant `NameId`.
     funcs: BTreeMap<String, NameId>,
+    /// Deterministic propositional-atom name → `Prop` constant `NameId`. These are
+    /// the Boolean atoms of the **clausal** layer (a CNF variable / SAT atom), each
+    /// an opaque `Axiom : Prop` — distinct from the EUF carrier-sort `atoms` above.
+    prop_atoms: BTreeMap<String, NameId>,
+    /// The classical excluded-middle axiom `em : Π (p : Prop), Or p (Not p)`,
+    /// declared lazily on first use by the resolution layer (`None` until then).
+    /// This is the *only* addition to the trusted base for propositional
+    /// resolution; it is the honest, faithful encoding because axeyum's solver is
+    /// classical. Note: the binary-resolution reconstruction this module builds is
+    /// in fact constructive (it case-splits on a premise it already holds), so it
+    /// does not consume `em`; `em` is declared to make the classical commitment
+    /// explicit and available for the general (pivot-free) shape.
+    em: Option<NameId>,
     /// Monotone counter for generating fresh, collision-free declaration names
     /// under a private namespace, so reconstructed atoms never clash with the
     /// prelude's names.
@@ -218,6 +231,8 @@ impl ReconstructCtx {
             alpha,
             atoms: BTreeMap::new(),
             funcs: BTreeMap::new(),
+            prop_atoms: BTreeMap::new(),
+            em: None,
             next_id: 0,
         }
     }
@@ -1230,6 +1245,638 @@ fn fresh_axiom(
             detail: format!("hypothesis axiom did not admit: {e:?}"),
         })?;
     Ok(ctx.kernel.const_(name, vec![]))
+}
+
+// ===========================================================================
+// Propositional resolution (P3.7 slice 3) — the clausal-layer foundation.
+//
+// Clauses are encoded as Lean `Prop`s and resolution is reconstructed into a
+// kernel-checked proof term, ultimately of type `False` for a refutation.
+//
+// ## The encoding
+//
+// - A propositional **atom** `p` (a CNF variable / Boolean atom) ⇒ an opaque
+//   `Axiom : Prop` (declared lazily, deterministically, in `prop_atoms`).
+// - A **literal** `p` ⇒ the Prop `p`; `(not p)` ⇒ `Not p` (= `p → False`).
+// - A **clause** `(cl l1 … ln)` ⇒ the right-nested disjunction
+//   `l1 ∨ (l2 ∨ … ∨ ln)`; the **empty clause `(cl)`** ⇒ `False`; a unit clause
+//   `(cl l)` ⇒ just `Enc(l)`.
+//
+// ## Excluded middle
+//
+// The classical axiom `em : Π (p : Prop), Or p (Not p)` (Lean's `Classical.em`)
+// is declared in the context. axeyum's solver is classical, so this is the
+// faithful encoding. NOTE: the *binary* resolution reconstruction below is in
+// fact constructive — it case-splits (via `Or.rec`) on a premise proof we
+// already hold and discharges the pivot branch with `Not l : l → False`, so it
+// never consumes `em`. `em` is declared (and reported) to make the classical
+// commitment explicit and to back the general pivot-free shape if reached.
+//
+// ## Soundness
+//
+// Every reconstructed term is `infer`-checked by the trusted kernel against its
+// claimed clause Prop (and the final refutation against `False`). A wrong
+// resolvent fails to infer to the claimed type ⇒ `ReconstructError`, never a
+// wrong `False`. The only addition to the trusted base is the `em` axiom.
+// ===========================================================================
+
+impl ReconstructCtx {
+    /// Get (declaring lazily) the `Prop` constant `NameId` for a propositional
+    /// atom of the clausal layer. Idempotent: the same atom name always maps to
+    /// the same opaque `Axiom : Prop`.
+    fn prop_atom_const(&mut self, name: &str) -> NameId {
+        if let Some(&id) = self.prop_atoms.get(name) {
+            return id;
+        }
+        let decl_name = self.fresh_name("prop");
+        let prop = self.kernel.sort_zero();
+        self.kernel
+            .add_declaration(Declaration::Axiom {
+                name: decl_name,
+                uparams: vec![],
+                ty: prop,
+            })
+            .expect("propositional atom axiom (_ : Prop) should admit");
+        self.prop_atoms.insert(name.to_owned(), decl_name);
+        decl_name
+    }
+
+    /// Build the Lean proposition `Or a b` (the prelude's `Or`, in `Prop`).
+    fn mk_or(&mut self, a: ExprId, b: ExprId) -> ExprId {
+        let or = self.kernel.const_(self.prelude.or, vec![]);
+        let e = self.kernel.app(or, a);
+        self.kernel.app(e, b)
+    }
+
+    /// Declare (lazily) and return the excluded-middle axiom
+    /// `em : Π (p : Prop), Or p (Not p)`.
+    ///
+    /// # Panics
+    ///
+    /// Panics only if the fixed, known-good `em` axiom fails to admit, which would
+    /// indicate a kernel/prelude regression rather than a caller error.
+    fn em_axiom(&mut self) -> NameId {
+        if let Some(id) = self.em {
+            return id;
+        }
+        let anon = self.kernel.anon();
+        let prop = self.kernel.sort_zero();
+        // Π (p : Prop), Or p (Not p)  — under the binder `p` = BVar 0.
+        let ty = {
+            let p0 = self.kernel.bvar(0);
+            let not_p = self.mk_not(p0);
+            let p0b = self.kernel.bvar(0);
+            let or_p = self.mk_or(p0b, not_p);
+            self.kernel.pi(anon, prop, or_p, BinderInfo::Default)
+        };
+        let name = self.fresh_name("em");
+        self.kernel
+            .add_declaration(Declaration::Axiom {
+                name,
+                uparams: vec![],
+                ty,
+            })
+            .expect("excluded-middle axiom em : Π (p : Prop), Or p (Not p) should admit");
+        self.em = Some(name);
+        name
+    }
+
+    /// Translate a propositional **literal** into its Lean `Prop`:
+    /// a positive literal `p` ⇒ the atom Prop `p`; a negated `(not p)` ⇒ `Not p`.
+    fn lit_to_prop(&mut self, lit: &AletheLit) -> ExprId {
+        let atom = self.atom_to_prop(&lit.atom);
+        if lit.negated { self.mk_not(atom) } else { atom }
+    }
+
+    /// Translate a literal **atom** term into its Lean `Prop`. A bare symbol is an
+    /// opaque propositional atom; a `(not φ)` application folds to `Not (atom φ)`
+    /// so the clausal `negated` flag and a syntactic `(not …)` agree.
+    fn atom_to_prop(&mut self, term: &AletheTerm) -> ExprId {
+        match term {
+            AletheTerm::App(head, args) if head == "not" && args.len() == 1 => {
+                let inner = self.atom_to_prop(&args[0]);
+                self.mk_not(inner)
+            }
+            AletheTerm::Const(symbol) => {
+                let name = self.prop_atom_const(symbol);
+                self.kernel.const_(name, vec![])
+            }
+            // Any compound atom (e.g. `(= a b)`, `(f x)`) is treated opaquely as a
+            // single propositional atom keyed by its s-expression — sound for the
+            // clausal layer, where atoms are uninterpreted Props.
+            other => {
+                let name = self.prop_atom_const(&other.key());
+                self.kernel.const_(name, vec![])
+            }
+        }
+    }
+
+    /// Translate a whole **clause** into its Lean `Prop` encoding: the empty
+    /// clause ⇒ `False`; a unit clause ⇒ its single literal's Prop; otherwise the
+    /// right-nested disjunction `l1 ∨ (l2 ∨ … ∨ ln)`.
+    fn clause_to_prop(&mut self, clause: &[AletheLit]) -> ExprId {
+        let Some((last, rest)) = clause.split_last() else {
+            // Empty clause ⇒ False.
+            return self.kernel.const_(self.prelude.false_, vec![]);
+        };
+        let mut acc = self.lit_to_prop(last);
+        for lit in rest.iter().rev() {
+            let head = self.lit_to_prop(lit);
+            acc = self.mk_or(head, acc);
+        }
+        acc
+    }
+}
+
+/// A clausal premise during the resolution walk: its literals (for computing the
+/// pivot and resolvent structurally) and a kernel proof term of the clause's
+/// `Prop` encoding.
+#[derive(Clone)]
+struct Clause {
+    lits: Vec<AletheLit>,
+    proof: ExprId,
+}
+
+/// Reconstruct a propositional-**resolution** Alethe proof into a Lean proof term
+/// of type `False` that the trusted [`Kernel`] type-checks.
+///
+/// This is the clausal-layer foundation shared by all clausal proofs (`QF_BV`,
+/// SAT).
+/// It walks the `Vec<AletheCommand>` shape the clausal emitter produces:
+///
+/// - **`assume (cl l1 … ln)`** ⇒ a fresh hypothesis `Axiom` of the clause's `Prop`
+///   encoding (`l1 ∨ … ∨ ln`, or `False` for `(cl)`, or `Enc(l)` for a unit), and
+///   the assumption is recorded under its id.
+/// - **`or`** (the emitter's unpacking of an `assume (or φ…)` disjunction into the
+///   clause `(cl φ…)`) ⇒ the premise's proof is reused verbatim: the disjunction
+///   `(or φ…)` and the clause `(cl φ…)` have the **same** right-nested `Or`
+///   encoding, so the unpacking is the identity on the proof term (checked by the
+///   kernel against the conclusion).
+/// - **`resolution` / `th_resolution`** ⇒ reconstructed by repeated **binary
+///   resolution**: the step's premises are resolved pairwise (left fold) on the
+///   unique complementary literal of each successive pair, building the conclusion
+///   clause's proof; a conclusion of the empty clause `(cl)` yields a term of type
+///   `False`. See [`binary_resolve`].
+///
+/// The final term — the proof of the conclusion of the step deriving `(cl)` — is
+/// `infer`-checked against the prelude's `False`. A wrong reconstruction makes
+/// that gate fail, so this returns an error, never a wrong `False`.
+///
+/// # Errors
+///
+/// Returns a [`ReconstructError`] for an unknown premise id, an unsupported
+/// command/rule shape, a resolution whose premises do not have the expected
+/// single complementary pivot, a proof that never derives the empty clause, or a
+/// kernel rejection. It never panics on malformed or out-of-scope input.
+pub fn reconstruct_resolution_proof(
+    ctx: &mut ReconstructCtx,
+    commands: &[AletheCommand],
+) -> Result<ExprId, ReconstructError> {
+    // Declare `em` up front so the classical commitment is recorded even when the
+    // (constructive) binary path does not consume it.
+    let _ = ctx.em_axiom();
+
+    let mut env: BTreeMap<String, Clause> = BTreeMap::new();
+
+    for cmd in commands {
+        match cmd {
+            AletheCommand::Assume { id, clause } => {
+                let prop = ctx.clause_to_prop(clause);
+                let proof = fresh_axiom(ctx, prop, "assume")?;
+                env.insert(
+                    id.clone(),
+                    Clause {
+                        lits: clause.clone(),
+                        proof,
+                    },
+                );
+            }
+            AletheCommand::Step {
+                id,
+                clause,
+                rule,
+                premises,
+                ..
+            } => match rule.as_str() {
+                // `or` unpacks an assumed disjunction into clause form; the `Prop`
+                // encodings coincide, so the proof passes through unchanged (and is
+                // kernel-checked against the conclusion encoding).
+                "or" => {
+                    let [p] = premises.as_slice() else {
+                        return Err(ReconstructError::UnsupportedResolution {
+                            detail: format!(
+                                "`or` step expects exactly one premise, found {}",
+                                premises.len()
+                            ),
+                        });
+                    };
+                    let premise = lookup(&env, p)?;
+                    let expected = ctx.clause_to_prop(clause);
+                    let proof = check_against(ctx, "or", premise.proof, expected)?;
+                    env.insert(
+                        id.clone(),
+                        Clause {
+                            lits: clause.clone(),
+                            proof,
+                        },
+                    );
+                }
+                "resolution" | "th_resolution" => {
+                    let resolved = reconstruct_resolution_step(ctx, clause, premises, &env)?;
+                    if clause.is_empty() {
+                        // The empty clause: this is the refutation close. Validate the
+                        // term against `False` and return it.
+                        return check_false_prop(ctx, resolved.proof);
+                    }
+                    // A non-empty resolvent: kernel-check it against the stated
+                    // conclusion encoding, then record it for later steps.
+                    let expected = ctx.clause_to_prop(clause);
+                    let proof = check_against(ctx, rule, resolved.proof, expected)?;
+                    env.insert(
+                        id.clone(),
+                        Clause {
+                            lits: clause.clone(),
+                            proof,
+                        },
+                    );
+                }
+                other => {
+                    return Err(ReconstructError::UnsupportedRule {
+                        rule: other.to_owned(),
+                    });
+                }
+            },
+        }
+    }
+
+    Err(ReconstructError::NoEmptyClause)
+}
+
+/// Look up a premise clause by id, erroring with [`ReconstructError::UnknownPremise`]
+/// when it was never defined.
+fn lookup<'a>(env: &'a BTreeMap<String, Clause>, id: &str) -> Result<&'a Clause, ReconstructError> {
+    env.get(id)
+        .ok_or_else(|| ReconstructError::UnknownPremise { id: id.to_owned() })
+}
+
+/// Reconstruct one `resolution`/`th_resolution` step by folding **binary
+/// resolution** across its premises.
+///
+/// A single premise passes through. For ≥2 premises the running accumulator is
+/// resolved against the premises one at a time — but **not** strictly in premise
+/// order: Alethe/LRAT resolution chains (the real emitter's RUP-hint order) do not
+/// guarantee that consecutive premises share a pivot. So at each step we pick, from
+/// the remaining premises, one that *is* complementary-resolvable with the current
+/// accumulator (a greedy unit-propagation-style schedule). This reorders the chain
+/// into a resolvable sequence without changing the constructive binary core; if no
+/// remaining premise resolves with the accumulator, the step is rejected.
+///
+/// The returned [`Clause`] carries the resolvent literals and its kernel proof term.
+fn reconstruct_resolution_step(
+    ctx: &mut ReconstructCtx,
+    conclusion: &[AletheLit],
+    premises: &[String],
+    env: &BTreeMap<String, Clause>,
+) -> Result<Clause, ReconstructError> {
+    let Some((first, rest)) = premises.split_first() else {
+        return Err(ReconstructError::UnsupportedResolution {
+            detail: "resolution step has no premises".to_owned(),
+        });
+    };
+    let mut acc = lookup(env, first)?.clone();
+    // Remaining premises to fold in; pulled out as they become resolvable.
+    let mut remaining: Vec<Clause> = rest
+        .iter()
+        .map(|p| lookup(env, p).cloned())
+        .collect::<Result<_, _>>()?;
+
+    while !remaining.is_empty() {
+        // Pick a remaining premise that shares a complementary pivot with `acc`.
+        let Some(idx) = remaining
+            .iter()
+            .position(|cl| find_pivot(&acc.lits, &cl.lits).is_some())
+        else {
+            return Err(ReconstructError::UnsupportedResolution {
+                detail: format!(
+                    "no remaining premise resolves with the accumulator `{}`",
+                    clause_key(&acc.lits)
+                ),
+            });
+        };
+        let next = remaining.remove(idx);
+        acc = binary_resolve(ctx, &acc, &next)?;
+    }
+
+    // A closing step must have folded down to the empty clause; otherwise the
+    // kernel gate at the call site validates the (non-empty) resolvent.
+    if conclusion.is_empty() && !acc.lits.is_empty() {
+        return Err(ReconstructError::UnsupportedResolution {
+            detail: format!(
+                "closing resolution did not fold to the empty clause; residual `{}`",
+                clause_key(&acc.lits)
+            ),
+        });
+    }
+    Ok(acc)
+}
+
+/// The complementary-literal **pivot** of two clauses: the unique atom occurring
+/// positively in one and negatively in the other. Returns the pivot's atom Prop
+/// key and which side (`c`/`d`) holds it positively.
+fn find_pivot(c: &[AletheLit], d: &[AletheLit]) -> Option<(String, bool)> {
+    for lit in c {
+        let key = lit.atom.key();
+        let want_neg = !lit.negated;
+        if d.iter()
+            .any(|o| o.atom.key() == key && o.negated == want_neg)
+        {
+            // `lit` in C is complementary to a literal in D.
+            return Some((key, !lit.negated));
+        }
+    }
+    None
+}
+
+/// Push `lit` onto `out` unless a literal of the same atom key and polarity is
+/// already present (first-seen-order de-duplication for the resolvent).
+fn push_unique(lit: &AletheLit, out: &mut Vec<AletheLit>) {
+    let k = (lit.atom.key(), lit.negated);
+    if !out.iter().any(|o| (o.atom.key(), o.negated) == k) {
+        out.push(lit.clone());
+    }
+}
+
+/// Build `binary_resolve(C, D)`: given clause proofs `hC : Enc(C)` and
+/// `hD : Enc(D)` with a unique complementary pivot literal `l` (positive in one,
+/// `¬l` in the other), produce a proof of `Enc(R)` where
+/// `R = (C \ {l}) ∪ (D \ {¬l})` (in C-order then D-order, de-duplicated).
+///
+/// This is **constructive**: we case-split (via `Or.rec`) on the premise that
+/// carries `l` positively, then on its complement discharge the pivot branch with
+/// `¬l : l → False` (`False.rec`) and inject every surviving literal into `Enc(R)`
+/// with `Or.inl`/`Or.inr`. No excluded middle is needed.
+fn binary_resolve(
+    ctx: &mut ReconstructCtx,
+    c: &Clause,
+    d: &Clause,
+) -> Result<Clause, ReconstructError> {
+    let Some((pivot_key, c_has_pos)) = find_pivot(&c.lits, &d.lits) else {
+        return Err(ReconstructError::UnsupportedResolution {
+            detail: format!(
+                "no unique complementary pivot between `{}` and `{}`",
+                clause_key(&c.lits),
+                clause_key(&d.lits)
+            ),
+        });
+    };
+    // Orient: `pos` is the clause with the pivot positive, `neg` with `¬pivot`.
+    let (pos, neg) = if c_has_pos { (c, d) } else { (d, c) };
+
+    // The resolvent literal list: survivors of `pos` (drop positive pivot) then
+    // survivors of `neg` (drop negative pivot), de-duplicated by key+polarity in
+    // first-seen order.
+    let mut resolvent: Vec<AletheLit> = Vec::new();
+    for lit in &pos.lits {
+        if lit.atom.key() != pivot_key || lit.negated {
+            push_unique(lit, &mut resolvent);
+        }
+    }
+    for lit in &neg.lits {
+        if lit.atom.key() != pivot_key || !lit.negated {
+            push_unique(lit, &mut resolvent);
+        }
+    }
+
+    // The target Prop `Enc(R)`.
+    let r_prop = ctx.clause_to_prop(&resolvent);
+
+    // `neg`-handler: a proof of the pivot `hp : pivot` produces a proof of
+    // `Enc(R)` from `neg`'s proof, by case-splitting on `Enc(neg)`. For neg's
+    // pivot literal `¬pivot : pivot → False` we get `False`, discharged by
+    // `False.rec` into `Enc(R)`; every other literal is injected into `Enc(R)`.
+    //
+    // We build it as a closed term consuming `hp` and `neg.proof` directly (no
+    // binder games): `neg_to_r(hp) : Enc(R)`.
+    let neg_to_r = |ctx: &mut ReconstructCtx, hp: ExprId| -> Result<ExprId, ReconstructError> {
+        clause_elim(
+            ctx,
+            neg,
+            r_prop,
+            &resolvent,
+            &|ctx, lit, lit_proof, resolvent| {
+                if lit.atom.key() == pivot_key && lit.negated {
+                    // lit_proof : Not pivot = pivot → False. Apply to hp, then False.rec.
+                    let false_app = ctx.kernel.app(lit_proof, hp);
+                    Ok(ex_falso(ctx, r_prop, false_app))
+                } else {
+                    inject_lit(ctx, lit, lit_proof, resolvent)
+                }
+            },
+        )
+    };
+
+    // `pos`-handler: case-split on `Enc(pos)`. For pos's pivot literal
+    // `hp : pivot` we run `neg_to_r(hp)`; every other literal is injected.
+    let proof = clause_elim(
+        ctx,
+        pos,
+        r_prop,
+        &resolvent,
+        &|ctx, lit, lit_proof, resolvent| {
+            if lit.atom.key() == pivot_key && !lit.negated {
+                neg_to_r(ctx, lit_proof)
+            } else {
+                inject_lit(ctx, lit, lit_proof, resolvent)
+            }
+        },
+    )?;
+
+    Ok(Clause {
+        lits: resolvent,
+        proof,
+    })
+}
+
+/// `False.rec`-eliminate a `False` proof into the target Prop `target`:
+/// `False.rec.{0} (fun _ => target) h_false : target`.
+fn ex_falso(ctx: &mut ReconstructCtx, target: ExprId, h_false: ExprId) -> ExprId {
+    let anon = ctx.kernel.anon();
+    let false_const = ctx.kernel.const_(ctx.prelude.false_, vec![]);
+    // motive := fun (_ : False) => target.
+    let motive = ctx
+        .kernel
+        .lam(anon, false_const, target, BinderInfo::Default);
+    let z = ctx.kernel.level_zero();
+    let rec = ctx.kernel.const_(ctx.prelude.false_rec, vec![z]);
+    let e = ctx.kernel.app(rec, motive);
+    ctx.kernel.app(e, h_false)
+}
+
+/// Inject a single literal proof `lit_proof : Enc(lit)` into the resolvent's `Or`
+/// encoding `Enc(resolvent)`, by the `Or.inl`/`Or.inr` nesting that reaches
+/// `lit`'s position. `lit` must occur in `resolvent` (matched by key+polarity);
+/// otherwise this is a malformed reconstruction and a [`ReconstructError`] fires.
+fn inject_lit(
+    ctx: &mut ReconstructCtx,
+    lit: &AletheLit,
+    lit_proof: ExprId,
+    resolvent: &[AletheLit],
+) -> Result<ExprId, ReconstructError> {
+    let want = (lit.atom.key(), lit.negated);
+    let idx = resolvent
+        .iter()
+        .position(|o| (o.atom.key(), o.negated) == want)
+        .ok_or_else(|| ReconstructError::UnsupportedResolution {
+            detail: format!("literal `{}` not found in resolvent", lit.atom.key()),
+        })?;
+
+    // The resolvent is right-nested: `l0 ∨ (l1 ∨ (… ∨ l_{n-1}))`. At index `idx`,
+    // the sub-encoding `tail_i = Enc(resolvent[i..])` is reached by `idx` `Or.inr`s,
+    // then (if `idx` is not the last literal) a final `Or.inl` carries `lit`.
+    let n = resolvent.len();
+    debug_assert!(n >= 1);
+
+    // Build the proof bottom-up over the tail suffixes. We need, for each suffix
+    // starting at `i`, the Props of `head_i = Enc(resolvent[i])` and
+    // `tail_{i+1} = Enc(resolvent[i+1..])` to type the `Or.inl`/`Or.inr` ctors.
+    let mut proof = lit_proof;
+    // `i` walks from `idx` back to 0, wrapping the running proof.
+    for i in (0..=idx).rev() {
+        if i == idx {
+            // Innermost: place `lit_proof` at position `idx`.
+            if idx == n - 1 {
+                // Last literal: the suffix `Enc(resolvent[idx..])` is just `Enc(lit)`.
+                // proof already has that type; nothing to wrap.
+            } else {
+                // `Enc(resolvent[idx..]) = head_idx ∨ tail_{idx+1}`; use `Or.inl`.
+                let a = ctx.lit_to_prop(&resolvent[idx]);
+                let b = ctx.clause_to_prop(&resolvent[idx + 1..]);
+                proof = or_inl(ctx, a, b, proof);
+            }
+        } else {
+            // Wrap: `Enc(resolvent[i..]) = head_i ∨ tail_{i+1}`; we have a proof of
+            // `tail_{i+1}` (the running `proof`); use `Or.inr`.
+            let a = ctx.lit_to_prop(&resolvent[i]);
+            let b = ctx.clause_to_prop(&resolvent[i + 1..]);
+            proof = or_inr(ctx, a, b, proof);
+        }
+    }
+    Ok(proof)
+}
+
+/// `Or.inl.{0} a b h : Or a b` from `h : a`.
+fn or_inl(ctx: &mut ReconstructCtx, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+    let inl = ctx.kernel.const_(ctx.prelude.or_inl, vec![]);
+    let e = ctx.kernel.app(inl, a);
+    let e = ctx.kernel.app(e, b);
+    ctx.kernel.app(e, h)
+}
+
+/// `Or.inr.{0} a b h : Or a b` from `h : b`.
+fn or_inr(ctx: &mut ReconstructCtx, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+    let inr = ctx.kernel.const_(ctx.prelude.or_inr, vec![]);
+    let e = ctx.kernel.app(inr, a);
+    let e = ctx.kernel.app(e, b);
+    ctx.kernel.app(e, h)
+}
+
+/// Eliminate a clause proof `clause.proof : Enc(clause)` into the target Prop
+/// `target`, by running `per_lit` on each literal's hypothesis to produce a proof
+/// of `target`, threaded through the right-nested `Or` via `Or.rec`.
+///
+/// For a unit clause this is `per_lit(l0, clause.proof)`. For `l0 ∨ rest`, it is
+/// `Or.rec.{0} A B (fun _ => target) (fun (h0 : A) => per_lit(l0, h0))
+///   (fun (hr : B) => <recurse on rest>) clause.proof`, where the minor premises
+/// are built as closed lambdas (so the hypothesis flows in as `BVar 0`, then is
+/// instantiated through `per_lit`/recursion as an `fvar`-free term).
+///
+/// `per_lit(ctx, lit, lit_proof, resolvent)` receives the literal, a proof term
+/// of `Enc(lit)`, and the resolvent literal list (so it can inject), and returns a
+/// proof of `target`.
+fn clause_elim(
+    ctx: &mut ReconstructCtx,
+    clause: &Clause,
+    target: ExprId,
+    resolvent: &[AletheLit],
+    per_lit: &PerLit<'_>,
+) -> Result<ExprId, ReconstructError> {
+    clause_elim_inner(ctx, &clause.lits, clause.proof, target, resolvent, per_lit)
+}
+
+/// The per-literal handler for [`clause_elim`]: given the literal, a proof of its
+/// `Enc(lit)`, and the resolvent literal list, produce a proof of the target Prop.
+type PerLit<'a> = dyn Fn(&mut ReconstructCtx, &AletheLit, ExprId, &[AletheLit]) -> Result<ExprId, ReconstructError>
+    + 'a;
+
+/// The recursive worker for [`clause_elim`] over a literal suffix with proof
+/// `proof : Enc(lits)`.
+fn clause_elim_inner(
+    ctx: &mut ReconstructCtx,
+    lits: &[AletheLit],
+    proof: ExprId,
+    target: ExprId,
+    resolvent: &[AletheLit],
+    per_lit: &PerLit<'_>,
+) -> Result<ExprId, ReconstructError> {
+    match lits {
+        [] => Err(ReconstructError::UnsupportedResolution {
+            detail: "empty clause has no literal to eliminate".to_owned(),
+        }),
+        // Unit suffix: `proof : Enc(l0)` directly.
+        [l0] => per_lit(ctx, l0, proof, resolvent),
+        // `l0 ∨ rest`: case-split with `Or.rec`.
+        [l0, rest @ ..] => {
+            let anon = ctx.kernel.anon();
+            let a = ctx.lit_to_prop(l0); // Enc(l0)
+            let b = ctx.clause_to_prop(rest); // Enc(rest)
+
+            // minor_inl := fun (h0 : A) => per_lit(l0, h0).
+            // Build the body with the hypothesis as a free variable so `per_lit`
+            // produces a closed term, then abstract it back to a `BVar 0` lambda.
+            let fvar_id = fresh_fvar_id(ctx);
+            let h0 = ctx.kernel.fvar(fvar_id);
+            let body_inl = per_lit(ctx, l0, h0, resolvent)?;
+            let body_inl = ctx.kernel.abstract_fvars(body_inl, &[fvar_id]);
+            let minor_inl = ctx.kernel.lam(anon, a, body_inl, BinderInfo::Default);
+
+            // minor_inr := fun (hr : B) => <recurse on rest with hr>.
+            let fvar_id2 = fresh_fvar_id(ctx);
+            let hr = ctx.kernel.fvar(fvar_id2);
+            let body_inr = clause_elim_inner(ctx, rest, hr, target, resolvent, per_lit)?;
+            let body_inr = ctx.kernel.abstract_fvars(body_inr, &[fvar_id2]);
+            let minor_inr = ctx.kernel.lam(anon, b, body_inr, BinderInfo::Default);
+
+            // motive := fun (_ : Or A B) => target.
+            let or_ab = ctx.mk_or(a, b);
+            let motive = ctx.kernel.lam(anon, or_ab, target, BinderInfo::Default);
+
+            // Or.rec.{0} A B motive minor_inl minor_inr proof : target.
+            let z = ctx.kernel.level_zero();
+            let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![z]);
+            let e = ctx.kernel.app(rec, a);
+            let e = ctx.kernel.app(e, b);
+            let e = ctx.kernel.app(e, motive);
+            let e = ctx.kernel.app(e, minor_inl);
+            let e = ctx.kernel.app(e, minor_inr);
+            Ok(ctx.kernel.app(e, proof))
+        }
+    }
+}
+
+/// Mint a fresh free-variable id for building open `Or.rec` minor-premise bodies.
+/// Reuses the deterministic `next_id` counter, offset into a private range so it
+/// never collides with declaration-name numbering semantics.
+fn fresh_fvar_id(ctx: &mut ReconstructCtx) -> u64 {
+    let id = ctx.next_id;
+    ctx.next_id += 1;
+    id
+}
+
+/// The soundness gate for the final propositional refutation term: `infer` it and
+/// require the inferred type to be [`Kernel::def_eq`] to the prelude's `False`.
+fn check_false_prop(ctx: &mut ReconstructCtx, proof: ExprId) -> Result<ExprId, ReconstructError> {
+    let false_ = ctx.kernel.const_(ctx.prelude.false_, vec![]);
+    check_against(ctx, "resolution", proof, false_)
 }
 
 #[cfg(test)]

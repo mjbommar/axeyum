@@ -515,3 +515,250 @@ fn end_to_end_corrupted_theory_clause_rejected() {
         "corruption must surface as a sound rejection, got {err:?}"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Propositional resolution (P3.7 slice 3) — the clausal-layer foundation.
+// ---------------------------------------------------------------------------
+
+use super::reconstruct_resolution_proof;
+use axeyum_cnf::AletheCommand;
+
+/// A positive propositional literal `p`.
+fn p_lit(name: &str) -> AletheLit {
+    AletheLit {
+        atom: atom(name),
+        negated: false,
+    }
+}
+
+/// A negated propositional literal `(not p)`.
+fn n_lit(name: &str) -> AletheLit {
+    AletheLit {
+        atom: atom(name),
+        negated: true,
+    }
+}
+
+/// An `assume` command of a clause.
+fn assume(id: &str, clause: Vec<AletheLit>) -> AletheCommand {
+    AletheCommand::Assume {
+        id: id.to_owned(),
+        clause,
+    }
+}
+
+/// A `resolution` step.
+fn res_step(id: &str, clause: Vec<AletheLit>, premises: &[&str]) -> AletheCommand {
+    AletheCommand::Step {
+        id: id.to_owned(),
+        clause,
+        rule: "resolution".to_owned(),
+        premises: premises.iter().map(|s| (*s).to_owned()).collect(),
+        args: Vec::new(),
+    }
+}
+
+/// The clause→Or encoding: a unit clause `(cl a)` ⇒ the atom Prop; `(cl a b)` ⇒
+/// `Or a b`; the empty clause ⇒ `False`.
+#[test]
+fn clause_encoding_shapes() {
+    let mut ctx = ReconstructCtx::new();
+
+    // Unit clause `(cl a)` ⇒ the propositional atom `a` (infers to Prop).
+    let unit = ctx.clause_to_prop(&[p_lit("a")]);
+    let ty = ctx.kernel_mut().infer(unit).unwrap();
+    assert!(matches!(ctx.kernel().expr_node(ty), ExprNode::Sort(_)));
+
+    // Empty clause ⇒ `False`.
+    let empty = ctx.clause_to_prop(&[]);
+    let false_ = {
+        let name = ctx.prelude().false_;
+        ctx.kernel_mut().const_(name, vec![])
+    };
+    assert!(ctx.kernel_mut().def_eq(empty, false_));
+
+    // `(cl a b)` ⇒ `Or a b`, a Prop.
+    let two = ctx.clause_to_prop(&[p_lit("a"), p_lit("b")]);
+    let two_ty = ctx.kernel_mut().infer(two).unwrap();
+    assert!(matches!(ctx.kernel().expr_node(two_ty), ExprNode::Sort(_)));
+}
+
+/// **Smallest refutation**: `(cl a)`, `(cl (not a))` ⇒ resolution to `(cl)` ⇒
+/// reconstruct to a kernel-checked `False`.
+#[test]
+fn smallest_refutation_reconstructs() {
+    let commands = vec![
+        assume("h1", vec![p_lit("a")]),
+        assume("h2", vec![n_lit("a")]),
+        res_step("empty", vec![], &["h1", "h2"]),
+    ];
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_resolution_proof(&mut ctx, &commands)
+        .expect("a and not-a refutes to a kernel-checked False");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// The closing resolution works regardless of premise order: `(cl (not a))`,
+/// `(cl a)` ⇒ `(cl)`.
+#[test]
+fn smallest_refutation_swapped_order() {
+    let commands = vec![
+        assume("h1", vec![n_lit("a")]),
+        assume("h2", vec![p_lit("a")]),
+        res_step("empty", vec![], &["h1", "h2"]),
+    ];
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_resolution_proof(&mut ctx, &commands).unwrap();
+    assert_infers_false(&mut ctx, term);
+}
+
+/// **Multi-step refutation**: `(a ∨ b)`, `(¬a)`, `(¬b)` ⇒ resolve `(a∨b)` with
+/// `(¬a)` to get `(b)`, then with `(¬b)` to the empty clause. End-to-end to a
+/// kernel-checked `False`.
+#[test]
+fn three_clause_refutation_reconstructs() {
+    let commands = vec![
+        assume("c1", vec![p_lit("a"), p_lit("b")]),
+        assume("c2", vec![n_lit("a")]),
+        assume("c3", vec![n_lit("b")]),
+        // (a ∨ b) resolved with ¬a yields (b).
+        res_step("s1", vec![p_lit("b")], &["c1", "c2"]),
+        // (b) resolved with ¬b yields the empty clause.
+        res_step("s2", vec![], &["s1", "c3"]),
+    ];
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_resolution_proof(&mut ctx, &commands)
+        .expect("the 3-clause refutation reconstructs");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// A larger refutation exercising an intermediate **two-literal resolvent**:
+/// `(a ∨ b)`, `(¬a ∨ c)`, `(¬b)`, `(¬c)`. Resolve clause 1 and 2 on `a` to get
+/// `(b ∨ c)`, then peel `b` (¬b) → `(c)`, then `c` (¬c) → `(cl)`.
+#[test]
+fn two_literal_resolvent_refutation() {
+    let commands = vec![
+        assume("c1", vec![p_lit("a"), p_lit("b")]),
+        assume("c2", vec![n_lit("a"), p_lit("c")]),
+        assume("c3", vec![n_lit("b")]),
+        assume("c4", vec![n_lit("c")]),
+        // (a ∨ b) ⊗ (¬a ∨ c) on a ⇒ (b ∨ c).
+        res_step("s1", vec![p_lit("b"), p_lit("c")], &["c1", "c2"]),
+        // (b ∨ c) ⊗ (¬b) ⇒ (c).
+        res_step("s2", vec![p_lit("c")], &["s1", "c3"]),
+        // (c) ⊗ (¬c) ⇒ (cl).
+        res_step("s3", vec![], &["s2", "c4"]),
+    ];
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_resolution_proof(&mut ctx, &commands)
+        .expect("the two-literal-resolvent refutation reconstructs");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// **The `em` axiom is declared** in the resolution context (the classical
+/// commitment), even though the constructive binary reconstruction never consumes
+/// it. Confirm the reconstruction succeeds (so `em` admitted) and that the final
+/// term still kernel-checks to `False`.
+#[test]
+fn em_axiom_is_declared_and_classical_commitment_noted() {
+    let commands = vec![
+        assume("h1", vec![p_lit("a")]),
+        assume("h2", vec![n_lit("a")]),
+        res_step("empty", vec![], &["h1", "h2"]),
+    ];
+    let mut ctx = ReconstructCtx::new();
+    // `em_axiom` admits Π (p : Prop), Or p (Not p) — exercised inside the driver.
+    let term = reconstruct_resolution_proof(&mut ctx, &commands).unwrap();
+    assert_infers_false(&mut ctx, term);
+}
+
+/// **End-to-end from the REAL emitter**: take a small UNSAT CNF, run the clausal
+/// proof pipeline (`solve_with_drat_proof` → `elaborate_drat_to_lrat` →
+/// `lrat_to_alethe`), and reconstruct the emitted resolution proof to a
+/// kernel-checked `False`.
+#[test]
+fn real_emitter_unsat_cnf_reconstructs() {
+    use axeyum_cnf::{
+        CnfClause, CnfFormula, CnfLit, CnfVar, ProofSolveOutcome, elaborate_drat_to_lrat,
+        lrat_to_alethe, solve_with_drat_proof,
+    };
+
+    // A tiny UNSAT formula: (a ∨ b) ∧ (¬a) ∧ (¬b)  with a = v0, b = v1.
+    let mut formula = CnfFormula::new(2);
+    let a = CnfVar::new(0).unwrap();
+    let b = CnfVar::new(1).unwrap();
+    formula
+        .add_clause(CnfClause::new(vec![
+            CnfLit::positive(a),
+            CnfLit::positive(b),
+        ]))
+        .unwrap();
+    formula
+        .add_clause(CnfClause::new(vec![CnfLit::positive(a).negated()]))
+        .unwrap();
+    formula
+        .add_clause(CnfClause::new(vec![CnfLit::positive(b).negated()]))
+        .unwrap();
+
+    let drat = match solve_with_drat_proof(&formula) {
+        ProofSolveOutcome::Unsat(proof) => proof,
+        other => panic!("expected UNSAT with proof, got {other:?}"),
+    };
+    let lrat = elaborate_drat_to_lrat(&formula, &drat).expect("DRAT elaborates to LRAT");
+    let alethe = lrat_to_alethe(&formula, &lrat);
+
+    let mut ctx = ReconstructCtx::new();
+    match reconstruct_resolution_proof(&mut ctx, &alethe) {
+        Ok(term) => assert_infers_false(&mut ctx, term),
+        Err(e) => {
+            panic!("real emitter resolution proof did not reconstruct: {e:?}\nemitted: {alethe:#?}")
+        }
+    }
+}
+
+/// **NEGATIVE soundness check**: a bogus resolution — resolving two clauses with
+/// **no** complementary literal (`(cl a)` and `(cl b)`) cannot yield the empty
+/// clause; reconstruction must REJECT, never produce a wrong `False`.
+#[test]
+fn bogus_resolution_no_pivot_rejected() {
+    let commands = vec![
+        assume("h1", vec![p_lit("a")]),
+        assume("h2", vec![p_lit("b")]),
+        // Claim the empty clause from two non-complementary units: unsound.
+        res_step("empty", vec![], &["h1", "h2"]),
+    ];
+    let mut ctx = ReconstructCtx::new();
+    let err = reconstruct_resolution_proof(&mut ctx, &commands)
+        .expect_err("a pivot-free resolution to `(cl)` must be rejected");
+    assert!(
+        matches!(err, ReconstructError::UnsupportedResolution { .. }),
+        "got {err:?}"
+    );
+}
+
+/// **NEGATIVE soundness at the kernel gate**: a resolution that DOES have a pivot
+/// but claims a WRONG resolvent (`(cl c)` from `(a ∨ b) ⊗ (¬a)`, whose true
+/// resolvent is `(b)`) must be rejected — the reconstructed term infers to `(b)`,
+/// not `(c)`, so the `check_against` kernel gate fires.
+#[test]
+fn wrong_resolvent_rejected_by_kernel() {
+    let commands = vec![
+        assume("c1", vec![p_lit("a"), p_lit("b")]),
+        assume("c2", vec![n_lit("a")]),
+        // True resolvent is (b); we lie and claim (c).
+        res_step("s1", vec![p_lit("c")], &["c1", "c2"]),
+        assume("c3", vec![n_lit("c")]),
+        res_step("s2", vec![], &["s1", "c3"]),
+    ];
+    let mut ctx = ReconstructCtx::new();
+    let err = reconstruct_resolution_proof(&mut ctx, &commands)
+        .expect_err("a wrong resolvent must be rejected by the kernel");
+    assert!(
+        matches!(
+            err,
+            ReconstructError::KernelRejected { .. }
+                | ReconstructError::UnsupportedResolution { .. }
+        ),
+        "got {err:?}"
+    );
+}
