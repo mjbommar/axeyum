@@ -4756,6 +4756,12 @@ impl LraReconstructCtx {
         self.kernel.app(e, y)
     }
 
+    fn mk_lt(&mut self, x: ExprId, y: ExprId) -> ExprId {
+        let lt = self.kernel.const_(self.arith.lt, vec![]);
+        let e = self.kernel.app(lt, x);
+        self.kernel.app(e, y)
+    }
+
     /// Build the `R` expression for a [`LinR`], restricted to the slice-1 small
     /// subset: integer coefficients in `{-1, 0, +1}` and a constant in `{0, 1}`.
     ///
@@ -4938,6 +4944,13 @@ fn reconstruct_transitivity_refutation(
         }
     }
 
+    // Strict-`<` antisymmetry `e0 < e1 ∧ e1 < e0` has its own (cleaner) refutation.
+    if let Some(proof) =
+        try_strict_antisymmetry(ctx, arena, assertions[*lo_or_hi_a], assertions[*lo_or_hi_b])?
+    {
+        return Ok(proof);
+    }
+
     // Re-linearize the two participating assertion atoms into `le L R` shape, as
     // (L − R ≤ 0)-style `LinR`s, but keeping the original two sides so we can match
     // `e ≤ 0` and `1 ≤ e` structurally.
@@ -5032,6 +5045,82 @@ fn as_le_constraint(arena: &TermArena, term: TermId) -> Option<(LinR, LinR)> {
         IrOp::RealLe => Some((l, r)),
         IrOp::RealGe => Some((r, l)),
         _ => None,
+    }
+}
+
+/// Parse a strict real comparison `(< L R)` / `(> L R)` into `(L, R)` with the
+/// relation `L < R` (`>` swapped), each side a [`LinR`]. Returns `None` for a
+/// non-strict or non-real-comparison term.
+fn as_lt_constraint(arena: &TermArena, term: TermId) -> Option<(LinR, LinR)> {
+    let IrTermNode::App { op, args } = arena.node(term) else {
+        return None;
+    };
+    if args.len() != 2 {
+        return None;
+    }
+    let (l, r) = (real_to_lin(arena, args[0])?, real_to_lin(arena, args[1])?);
+    match op {
+        IrOp::RealLt => Some((l, r)),
+        IrOp::RealGt => Some((r, l)),
+        _ => None,
+    }
+}
+
+/// Reconstruct a strict-`<` antisymmetry refutation: two assertions `e0 < e1` and
+/// `e1 < e0`. The proof is `lt_irrefl e0 (lt_trans e0 e1 e0 h0 h1) : False`. Returns
+/// `Ok(None)` if the two assertions are not this strict antisymmetric shape (caller
+/// falls back to the `≤` baby-Farkas path); the result is kernel-gated (`infer` +
+/// `def_eq False`), so a wrong term is rejected, never accepted.
+fn try_strict_antisymmetry(
+    ctx: &mut LraReconstructCtx,
+    arena: &TermArena,
+    ta: TermId,
+    tb: TermId,
+) -> Result<Option<ExprId>, ReconstructError> {
+    let (Some(s0), Some(s1)) = (as_lt_constraint(arena, ta), as_lt_constraint(arena, tb)) else {
+        return Ok(None);
+    };
+    // s0 = e0 < e1, s1 = e1' < e0'; antisymmetric iff e1' = e1 and e0' = e0.
+    if !(s1.0 == s0.1 && s1.1 == s0.0) {
+        return Ok(None);
+    }
+    let e0 = ctx.lin_to_r(&s0.0)?;
+    let e1 = ctx.lin_to_r(&s0.1)?;
+    // h0 : lt e0 e1 ; h1 : lt e1 e0.
+    let p0 = ctx.mk_lt(e0, e1);
+    let h0 = ctx.hyp_axiom(p0)?;
+    let p1 = ctx.mk_lt(e1, e0);
+    let h1 = ctx.hyp_axiom(p1)?;
+    // step := lt_trans e0 e1 e0 h0 h1 : lt e0 e0.
+    let step = {
+        let tr = ctx.kernel.const_(ctx.arith.lt_trans, vec![]);
+        let e = ctx.kernel.app(tr, e0);
+        let e = ctx.kernel.app(e, e1);
+        let e = ctx.kernel.app(e, e0);
+        let e = ctx.kernel.app(e, h0);
+        ctx.kernel.app(e, h1)
+    };
+    // refute := lt_irrefl e0 step : False.
+    let proof = {
+        let irrefl = ctx.kernel.const_(ctx.arith.lt_irrefl, vec![]);
+        let e = ctx.kernel.app(irrefl, e0);
+        ctx.kernel.app(e, step)
+    };
+    let inferred = ctx
+        .kernel
+        .infer(proof)
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "la_generic".to_owned(),
+            detail: format!("infer failed: {e:?}"),
+        })?;
+    let false_ = ctx.kernel.const_(ctx.arith.logic.false_, vec![]);
+    if ctx.kernel.def_eq(inferred, false_) {
+        Ok(Some(proof))
+    } else {
+        Err(ReconstructError::KernelRejected {
+            rule: "la_generic".to_owned(),
+            detail: "strict-antisymmetry refutation did not infer to False".to_owned(),
+        })
     }
 }
 
