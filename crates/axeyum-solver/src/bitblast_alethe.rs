@@ -93,6 +93,22 @@ fn eq2(a: AletheTerm, b: AletheTerm) -> AletheTerm {
     AletheTerm::App("=".to_owned(), vec![a, b])
 }
 
+/// A **canonical** bit equality `(= a b)`, operands ordered by their s-expression
+/// key. Bit equalities `(= x_i y_i)` are emitted from both operand orders (e.g.
+/// `(bvult a b)`'s ladder vs `(bvult b a)`'s), and `=` is commutative, but the two
+/// spellings are distinct terms — so a later resolution can't cancel `(= a b)`
+/// against `¬(= b a)`. Canonicalizing the operand order makes every bit equality
+/// over the same pair identical, which is what lets genuine refutations resolve.
+/// (Only for the symmetric *bit* equalities — not the bit-blast conclusion's
+/// `(= term (@bbterm …))`, whose operand order is load-bearing.)
+fn eq2_canon(a: AletheTerm, b: AletheTerm) -> AletheTerm {
+    if a.key() <= b.key() {
+        AletheTerm::App("=".to_owned(), vec![a, b])
+    } else {
+        AletheTerm::App("=".to_owned(), vec![b, a])
+    }
+}
+
 /// Renders a bit-vector `BvConst { width, value }` as the SMT-LIB `#b…` binary
 /// literal, MSB-first (e.g. width-2 value 1 → `#b01`).
 fn bv_const_literal(width: u32, value: u128) -> String {
@@ -693,7 +709,7 @@ fn ult_ladder(x: &AletheTerm, y: &AletheTerm, size: usize) -> Option<AletheTerm>
     let mut r = and2(not1(xb.first()?.clone()), yb[0].clone());
     for i in 1..size {
         r = or2(
-            and2(eq2(xb[i].clone(), yb[i].clone()), r),
+            and2(eq2_canon(xb[i].clone(), yb[i].clone()), r),
             and2(not1(xb[i].clone()), yb[i].clone()),
         );
     }
@@ -713,13 +729,13 @@ fn slt_ladder(x: &AletheTerm, y: &AletheTerm, size: usize) -> Option<AletheTerm>
     let mut r = and2(not1(xb[0].clone()), yb[0].clone());
     for i in 1..(size - 1) {
         r = or2(
-            and2(eq2(xb[i].clone(), yb[i].clone()), r),
+            and2(eq2_canon(xb[i].clone(), yb[i].clone()), r),
             and2(not1(xb[i].clone()), yb[i].clone()),
         );
     }
     let k = size - 1;
     r = or2(
-        and2(eq2(xb[k].clone(), yb[k].clone()), r),
+        and2(eq2_canon(xb[k].clone(), yb[k].clone()), r),
         and2(xb[k].clone(), not1(yb[k].clone())),
     );
     Some(r)
@@ -731,7 +747,7 @@ fn bitwise_equal_and(x: &AletheTerm, y: &AletheTerm, size: usize) -> AletheTerm 
     let xb = build_term_vec(x, size);
     let yb = build_term_vec(y, size);
     let es: Vec<AletheTerm> = (0..size)
-        .map(|i| eq2(xb[i].clone(), yb[i].clone()))
+        .map(|i| eq2_canon(xb[i].clone(), yb[i].clone()))
         .collect();
     if es.len() > 1 {
         AletheTerm::App("and".to_owned(), es)
@@ -742,9 +758,26 @@ fn bitwise_equal_and(x: &AletheTerm, y: &AletheTerm, size: usize) -> AletheTerm 
 
 #[cfg(test)]
 mod tests {
-    use super::bitblast_step;
+    use super::{bitblast_step, eq2_canon};
     use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm};
     use axeyum_ir::{Sort, TermArena};
+
+    /// The canonical bit equality is operand-order independent: `(bvult a b)`'s
+    /// ladder spells `(= a_i b_i)` and `(bvult b a)`'s spells `(= b_i a_i)`, and
+    /// commutative `=` makes them logically equal — `eq2_canon` makes them the
+    /// **same term** so a later resolution can cancel one against the other's
+    /// negation. (Without this, genuine refutations like bvult antisymmetry can't
+    /// resolve; see the reconstruction end-to-end status note.)
+    #[test]
+    fn eq2_canon_is_operand_order_independent() {
+        let a = AletheTerm::Const("a".to_owned());
+        let b = AletheTerm::Const("b".to_owned());
+        assert_eq!(
+            eq2_canon(a.clone(), b.clone()),
+            eq2_canon(b, a),
+            "canonical bit equality must not depend on operand order"
+        );
+    }
 
     fn bv_var(arena: &mut TermArena, name: &str, width: u32) -> axeyum_ir::TermId {
         let s = arena.declare(name, Sort::BitVec(width)).expect("declare");
