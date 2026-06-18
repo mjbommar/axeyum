@@ -145,9 +145,9 @@ impl core::error::Error for ReconstructError {}
 /// EUF carrier sort `α : Type`, and a deterministic map from Alethe atom/function
 /// names to their interned constant [`NameId`].
 ///
-/// Atom constants have type `α`; function constants have type `α → α` (unary, the
-/// only function arity this slice translates). Declarations are added to the
-/// kernel's environment lazily, the first time an atom/function name is seen.
+/// Atom constants have type `α`; an arity-`n` function constant has type
+/// `α → … → α` (`n` arrows). Declarations are added to the kernel's environment
+/// lazily, the first time an atom/function name is seen.
 pub struct ReconstructCtx {
     kernel: Kernel,
     prelude: LogicPrelude,
@@ -341,27 +341,55 @@ impl ReconstructCtx {
         decl_name
     }
 
-    /// Get (declaring lazily) the constant `NameId` for an uninterpreted unary
-    /// function symbol of type `α → α`. Idempotent.
-    fn func_const(&mut self, name: &str) -> NameId {
+    /// Get (declaring lazily) the constant `NameId` for an uninterpreted
+    /// function symbol of arity `arity`, type `α → … → α`. Idempotent (the arity
+    /// is fixed per name in well-formed input, so the first declaration wins).
+    fn func_const(&mut self, name: &str, arity: usize) -> NameId {
         if let Some(&id) = self.funcs.get(name) {
             return id;
         }
         let anon = self.kernel.anon();
-        // α → α  (= Π (_ : α), α).
-        let arrow = self
-            .kernel
-            .pi(anon, self.alpha, self.alpha, BinderInfo::Default);
+        // α → α → … → α  (`arity` arrows), i.e. Π (_ : α)^arity, α.
+        let mut ty = self.alpha;
+        for _ in 0..arity {
+            ty = self.kernel.pi(anon, self.alpha, ty, BinderInfo::Default);
+        }
         let decl_name = self.fresh_name("func");
         self.kernel
             .add_declaration(Declaration::Axiom {
                 name: decl_name,
                 uparams: vec![],
-                ty: arrow,
+                ty,
             })
-            .expect("function axiom (_ : α → α) should admit");
+            .expect("function axiom (_ : α → … → α) should admit");
         self.funcs.insert(name.to_owned(), decl_name);
         decl_name
+    }
+
+    /// `f` applied to `args` (left-nested application `f a0 a1 … a_{n-1}`).
+    fn apply_func(&mut self, f_name: NameId, args: &[ExprId]) -> ExprId {
+        let mut e = self.kernel.const_(f_name, vec![]);
+        for &a in args {
+            e = self.kernel.app(e, a);
+        }
+        e
+    }
+
+    /// `f` applied to `args` with position `hole` replaced by `hole_expr` (used to
+    /// build the per-argument congruence motive's right-hand application).
+    fn apply_func_with_hole(
+        &mut self,
+        f_name: NameId,
+        args: &[ExprId],
+        hole: usize,
+        hole_expr: ExprId,
+    ) -> ExprId {
+        let mut e = self.kernel.const_(f_name, vec![]);
+        for (j, &a) in args.iter().enumerate() {
+            let arg = if j == hole { hole_expr } else { a };
+            e = self.kernel.app(e, arg);
+        }
+        e
     }
 
     /// Build the Lean proposition `Eq.{1} α l r`.
@@ -383,7 +411,8 @@ impl ReconstructCtx {
     ///
     /// - an atom `Const(s)` → the constant of the axiom `s : α`;
     /// - an equality `App("=", [s, t])` → `Eq.{1} α ⟦s⟧ ⟦t⟧`;
-    /// - a unary function application `App(f, [x])` → `f ⟦x⟧` where `f : α → α`.
+    /// - an n-ary function application `App(f, [x1,…,xn])` → `f ⟦x1⟧ … ⟦xn⟧`
+    ///   where `f : α → … → α`.
     ///
     /// # Errors
     ///
@@ -404,15 +433,18 @@ impl ReconstructCtx {
                 let r = self.alethe_term_to_expr(r)?;
                 Ok(self.mk_eq(l, r))
             }
-            // A unary uninterpreted function application `(f x)`.
-            AletheTerm::App(head, args) if args.len() == 1 => {
-                let arg = self.alethe_term_to_expr(&args[0])?;
-                let f_name = self.func_const(head);
-                let f = self.kernel.const_(f_name, vec![]);
-                Ok(self.kernel.app(f, arg))
+            // An n-ary uninterpreted function application `(f x1 … xn)`, n ≥ 1.
+            // (The `=` arm above already consumed equalities, so `head != "="`.)
+            AletheTerm::App(head, args) if !args.is_empty() => {
+                let f_name = self.func_const(head, args.len());
+                let mut e = self.kernel.const_(f_name, vec![]);
+                for arg in args {
+                    let a = self.alethe_term_to_expr(arg)?;
+                    e = self.kernel.app(e, a);
+                }
+                Ok(e)
             }
-            // Higher-arity functions, indexed operators, and any other shape are
-            // out of this slice's scope.
+            // Indexed operators and any other shape are out of this slice's scope.
             AletheTerm::App(..) | AletheTerm::Indexed { .. } => {
                 Err(ReconstructError::UnsupportedTerm { term: term.key() })
             }
@@ -739,85 +771,111 @@ fn check_against(
     }
 }
 
-/// Reconstruct a unary `eq_congruent` step into a kernel-checked proof term.
+/// Reconstruct an **n-ary** `eq_congruent` step into a kernel-checked proof term.
 ///
-/// `eq_congruent` ⊢ `(cl (not (= a b)) (= (f a) (f b)))` with one premise
-/// `h : Eq α a b` proves the congruence of a unary uninterpreted function `f`.
-/// Reconstruction is a `congrArg`-style transport: with `h : Eq α a b`, the
-/// motive `fun (x : α) (_ : Eq α a x) => Eq α (f a) (f x)` and refl-case
-/// `Eq.refl α (f a)`, `Eq.rec` yields `Eq α (f a) (f b)`.
-///
-/// Only the **unary** shape is reconstructed (the arity the EUF emitter uses for
-/// `f(a)=f(b)`); a multi-argument `eq_congruent` clause (several leading negated
-/// equalities, or applications whose heads are not a 1-ary function symbol) is
-/// rejected with [`ReconstructError::UnsupportedRule`] rather than guessed.
+/// `eq_congruent` ⊢ `(cl (not (= a1 b1)) … (not (= an bn)) (= (f a1…an) (f b1…bn)))`
+/// with premises `h_i : Eq α a_i b_i` proves the congruence of an arity-`n`
+/// uninterpreted function `f`. Reconstruction transports one argument at a time:
+/// starting from `Eq.refl α (f a…)`, each `h_i` drives an `Eq.rec` over the motive
+/// `fun (x : α) (_ : Eq α a_i x) => Eq α (f a…) (f a1…a_{i-1} x b_{i+1}…)` (the
+/// running accumulator is exactly that step's refl-case), ending at
+/// `Eq α (f a1…an) (f b1…bn)`. The unary `f(a)=f(b)` shape is the `n = 1` case.
 ///
 /// # Errors
 ///
-/// Returns [`ReconstructError::MalformedStep`] for a clause whose two literals are
-/// not `(cl (not (= a b)) (= (f a) (f b)))` with matching argument, and
-/// [`ReconstructError::UnsupportedRule`] for a non-unary congruence; the kernel
-/// gate fires through [`ReconstructError::KernelRejected`].
+/// Returns [`ReconstructError::MalformedStep`] for a clause whose literals are not
+/// `(cl (not (= a1 b1)) … (not (= an bn)) (= (f a1…an) (f b1…bn)))` with matching
+/// head/arity/arguments, and [`ReconstructError::UnsupportedRule`] when the
+/// conclusion sides are not function applications; the kernel gate fires through
+/// [`ReconstructError::KernelRejected`].
 fn reconstruct_eq_congruent(
     ctx: &mut ReconstructCtx,
     premises: &[ExprId],
     conclusion: &[AletheLit],
 ) -> Result<ExprId, ReconstructError> {
-    // This slice reconstructs only the single-argument shape.
-    let [hyp, concl] = conclusion else {
+    // `(cl (not (= a1 b1)) … (not (= an bn)) (= (f a1…an) (f b1…bn)))`: a leading
+    // negated equality per argument, then the positive application equality.
+    let Some((concl, hyp_lits)) = conclusion.split_last() else {
+        return Err(ReconstructError::MalformedStep {
+            rule: "eq_congruent".to_owned(),
+            detail: "empty conclusion clause".to_owned(),
+        });
+    };
+    let Some((fa_t, fb_t)) = as_positive_eq(concl) else {
+        return Err(ReconstructError::MalformedStep {
+            rule: "eq_congruent".to_owned(),
+            detail: "last literal is not the positive `(= (f a…) (f b…))` conclusion".to_owned(),
+        });
+    };
+    let (Some((f1, a_args)), Some((f2, b_args))) = (as_nary_app(fa_t), as_nary_app(fb_t)) else {
         return Err(ReconstructError::UnsupportedRule {
-            rule: "eq_congruent (only unary single-premise is reconstructed)".to_owned(),
+            rule: "eq_congruent (conclusion sides are not function applications)".to_owned(),
         });
     };
-    let (Some((a_t, b_t)), Some((fa_t, fb_t))) = (as_negated_eq(hyp), as_positive_eq(concl)) else {
+    if f1 != f2 || a_args.len() != b_args.len() || a_args.len() != hyp_lits.len() {
         return Err(ReconstructError::MalformedStep {
             rule: "eq_congruent".to_owned(),
-            detail: "expected `(cl (not (= a b)) (= (f a) (f b)))`".to_owned(),
-        });
-    };
-    // The conclusion sides must be `(f a)` and `(f b)` of the same unary head `f`.
-    let (f1, a2) = as_unary_app(fa_t).ok_or_else(|| ReconstructError::UnsupportedRule {
-        rule: "eq_congruent (conclusion lhs is not a unary application)".to_owned(),
-    })?;
-    let (f2, b2) = as_unary_app(fb_t).ok_or_else(|| ReconstructError::UnsupportedRule {
-        rule: "eq_congruent (conclusion rhs is not a unary application)".to_owned(),
-    })?;
-    if f1 != f2 || a2 != a_t || b2 != b_t {
-        return Err(ReconstructError::MalformedStep {
-            rule: "eq_congruent".to_owned(),
-            detail: "congruence applications do not match the hypothesis argument".to_owned(),
+            detail: "head, arity, or hypothesis count mismatch".to_owned(),
         });
     }
+    let arity = a_args.len();
+    // Each hypothesis `i` is `(not (= a_i b_i))` for the i-th application argument.
+    for (i, lit) in hyp_lits.iter().enumerate() {
+        let Some((a_i, b_i)) = as_negated_eq(lit) else {
+            return Err(ReconstructError::MalformedStep {
+                rule: "eq_congruent".to_owned(),
+                detail: "hypothesis is not a negated equality".to_owned(),
+            });
+        };
+        if a_i != &a_args[i] || b_i != &b_args[i] {
+            return Err(ReconstructError::MalformedStep {
+                rule: "eq_congruent".to_owned(),
+                detail: "hypothesis argument does not match the application argument".to_owned(),
+            });
+        }
+    }
 
-    let a = ctx.alethe_term_to_expr(a_t)?;
-    let b = ctx.alethe_term_to_expr(b_t)?;
-    let fa = ctx.alethe_term_to_expr(fa_t)?;
+    let a_exprs: Vec<ExprId> = a_args
+        .iter()
+        .map(|t| ctx.alethe_term_to_expr(t))
+        .collect::<Result<_, _>>()?;
+    let b_exprs: Vec<ExprId> = b_args
+        .iter()
+        .map(|t| ctx.alethe_term_to_expr(t))
+        .collect::<Result<_, _>>()?;
+    let f_name = ctx.func_const(f1, arity);
 
-    // Premise `h : Eq α a b` (explicit, or a self-contained inline axiom).
-    let h = premise_or_axiom(ctx, premises, 0, a, b, "eq_congruent")?;
+    // Transport one argument at a time: `acc : Eq α (f a…) (f current)`, where
+    // `current` starts as `a…` and position `i` is rewritten `a_i → b_i` each step.
+    // The previous `acc` is exactly `motive_i a_i (refl)` (`current[i]` is still
+    // `a_i`), so it serves as the Eq.rec refl-case.
+    let fa = ctx.apply_func(f_name, &a_exprs);
+    let mut acc = ctx.mk_eq_refl(fa);
+    let mut current = a_exprs.clone();
+    for i in 0..arity {
+        // h_i : Eq α a_i b_i (explicit premise or self-contained inline axiom).
+        let h = premise_or_axiom(ctx, premises, i, a_exprs[i], b_exprs[i], "eq_congruent")?;
+        // motive := fun (x : α) (_ : Eq α a_i x) => Eq α (f a…) (f current[i := x]).
+        //   Body: x = BVar 1; Eq-domain `Eq α a_i x`: x = BVar 0.
+        let motive = {
+            let x1 = ctx.kernel.bvar(1);
+            let rhs = ctx.apply_func_with_hole(f_name, &current, i, x1);
+            let eq_body = ctx.mk_eq(fa, rhs);
+            let x0 = ctx.kernel.bvar(0);
+            let eq_dom = ctx.mk_eq(a_exprs[i], x0);
+            let anon = ctx.kernel.anon();
+            let inner = ctx.kernel.lam(anon, eq_dom, eq_body, BinderInfo::Default);
+            ctx.kernel.lam(anon, ctx.alpha, inner, BinderInfo::Default)
+        };
+        // Eq.rec α a_i motive acc b_i h : Eq α (f a…) (f current[i := b_i]).
+        acc = ctx.mk_eq_rec_transport(a_exprs[i], motive, acc, b_exprs[i], h);
+        current[i] = b_exprs[i];
+    }
 
-    // motive := fun (x : α) (_ : Eq α a x) => Eq α (f a) (f x).
-    //   Body `Eq α (f a) (f x)`: x = BVar 1; hx domain `Eq α a x`: x = BVar 0.
-    let f_name = ctx.func_const(f1);
-    let motive = {
-        let f = ctx.kernel.const_(f_name, vec![]);
-        let x1 = ctx.kernel.bvar(1);
-        let f_x = ctx.kernel.app(f, x1);
-        let eq_fa_fx = ctx.mk_eq(fa, f_x);
-        let x0 = ctx.kernel.bvar(0);
-        let eq_a_x = ctx.mk_eq(a, x0);
-        let anon = ctx.kernel.anon();
-        let inner = ctx.kernel.lam(anon, eq_a_x, eq_fa_fx, BinderInfo::Default);
-        ctx.kernel.lam(anon, ctx.alpha, inner, BinderInfo::Default)
-    };
-    // refl_case : motive a (Eq.refl α a) = Eq α (f a) (f a), proved by Eq.refl α (f a).
-    let refl_case = ctx.mk_eq_refl(fa);
-    // Eq.rec α a motive refl_case b h  :  motive b h  =  Eq α (f a) (f b).
-    let proof = ctx.mk_eq_rec_transport(a, motive, refl_case, b, h);
-
-    let fb = ctx.alethe_term_to_expr(fb_t)?;
+    // acc : Eq α (f a1…an) (f b1…bn).
+    let fb = ctx.apply_func(f_name, &b_exprs);
     let expected = ctx.mk_eq(fa, fb);
-    check_against(ctx, "eq_congruent", proof, expected)
+    check_against(ctx, "eq_congruent", acc, expected)
 }
 
 /// Reconstruct an **n-hypothesis** `eq_transitive` chain into a kernel-checked
@@ -922,12 +980,12 @@ fn reconstruct_eq_transitive_n(
     check_against(ctx, "eq_transitive", acc, expected)
 }
 
-/// Extract `(head, arg)` of a unary application `(head arg)` that is **not** an
+/// Extract `(head, args)` of an n-ary application `(head arg…)` that is **not** an
 /// equality (so a genuine function application, not `(= a b)` mis-parsed).
-fn as_unary_app(term: &AletheTerm) -> Option<(&str, &AletheTerm)> {
+fn as_nary_app(term: &AletheTerm) -> Option<(&str, &[AletheTerm])> {
     match term {
-        AletheTerm::App(head, args) if head != "=" && args.len() == 1 => {
-            Some((head.as_str(), &args[0]))
+        AletheTerm::App(head, args) if head != "=" && !args.is_empty() => {
+            Some((head.as_str(), args.as_slice()))
         }
         _ => None,
     }

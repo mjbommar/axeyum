@@ -91,13 +91,18 @@ fn term_translation_nested_and_sharing() {
     );
 }
 
-/// An out-of-scope term — a higher-arity application `(g a b)` (arity 2, not `=`)
-/// — yields a clear `UnsupportedTerm` error, not a panic.
+/// An out-of-scope term — an indexed operator `((_ @bit_of 0) x)` (n-ary plain
+/// applications are now in scope, but indexed operators are not) — yields a clear
+/// `UnsupportedTerm` error, not a panic.
 #[test]
 fn term_translation_out_of_scope_errors() {
     let mut ctx = ReconstructCtx::new();
-    let g = AletheTerm::App("g".to_owned(), vec![atom("a"), atom("b")]);
-    let err = ctx.alethe_term_to_expr(&g).unwrap_err();
+    let bit = AletheTerm::Indexed {
+        op: "@bit_of".to_owned(),
+        indices: vec![0],
+        args: vec![atom("x")],
+    };
+    let err = ctx.alethe_term_to_expr(&bit).unwrap_err();
     assert!(matches!(err, ReconstructError::UnsupportedTerm { .. }));
 }
 
@@ -451,6 +456,55 @@ fn end_to_end_qf_ufbv_ackermann_certificate_to_false() {
     let mut ctx = ReconstructCtx::new();
     let term = super::reconstruct_qf_ufbv_proof(&mut ctx, &proof)
         .expect("the QF_UFBV certificate reconstructs to a kernel-checked term");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// **n-ary EUF congruence end-to-end (task #22)**: a BINARY uninterpreted function
+/// `g`. Its Ackermann consistency constraint `(a=b ∧ c=d) → g(a,c)=g(b,d)` is a
+/// TWO-argument `eq_congruent`, which the unary-only reconstruction rejected
+/// (`UnsupportedRule`). The n-ary `reconstruct_eq_congruent` derives it by folding
+/// one `Eq.rec` transport per argument, so
+/// `g(a,c) = #b00 ∧ a = b ∧ c = d ∧ ¬(g(b,d) = #b00)` reconstructs to a
+/// kernel-checked `False` — completing the `QF_UFBV` certificate for multi-arg
+/// functions.
+#[test]
+fn end_to_end_qf_ufbv_binary_congruence_to_false() {
+    let mut arena = TermArena::new();
+    let g = arena
+        .declare_fun("g", &[Sort::BitVec(2), Sort::BitVec(2)], Sort::BitVec(2))
+        .unwrap();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let c = {
+        let s = arena.declare("c", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let d = {
+        let s = arena.declare("d", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let gac = arena.apply(g, &[a, c]).unwrap();
+    let gbd = arena.apply(g, &[b, d]).unwrap();
+    let c00 = arena.bv_const(2, 0).unwrap();
+    let e1 = arena.eq(gac, c00).unwrap();
+    let e2 = arena.eq(a, b).unwrap();
+    let e3 = arena.eq(c, d).unwrap();
+    let e4 = {
+        let e = arena.eq(gbd, c00).unwrap();
+        arena.not(e).unwrap()
+    };
+
+    let proof = crate::prove_qf_ufbv_unsat_alethe(&mut arena, &[e1, e2, e3, e4])
+        .expect("emitter produces the binary Ackermann certificate");
+    let mut ctx = ReconstructCtx::new();
+    let term = super::reconstruct_qf_ufbv_proof(&mut ctx, &proof)
+        .expect("the binary QF_UFBV certificate reconstructs to a kernel-checked term");
     assert_infers_false(&mut ctx, term);
 }
 
