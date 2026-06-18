@@ -1,8 +1,28 @@
 # Bit-blast reconstruction — honest end-to-end status (P3.7)
 
-Status: **measured 2026-06-18.** Corrects the "QF_BV operator set complete"
-framing (`58e9062`) with what genuinely reconstructs end-to-end vs. what does not,
-found by validating *nested / genuinely-unsat* proofs (not just `eq ∧ ¬eq`).
+Status: **RESOLVED 2026-06-18 (`f08c189`).** Genuine multi-clause QF_BV `unsat`
+proofs now reconstruct end-to-end to kernel-checked `False` — the three blockers
+below are all fixed. Kept as the record of how it was diagnosed and closed.
+
+## Outcome
+
+All three resolution blockers fixed and shipped this session:
+1. negation spelling — `normalize_lit_polarity` (`356f3e3`);
+2. commutative `=` arg-order — `eq2_canon` in the emitter (`6f0fd2c`);
+3. resolution order/non-confluence — **Davis–Putnam variable elimination**
+   (`f08c189`), replacing the dead-ending accumulator/greedy/pool/chain folds.
+
+`(bvult a b) ∧ (bvult b a)` (antisymmetry, a genuine resolution DAG) reconstructs
+to kernel-checked `False` (`end_to_end_ult_antisymmetry_reconstructs`). Because
+`reconstruct_resolution_step` serves every theory's proof reconstruction, the DP
+resolution fixed this universally — all 244 lib tests green.
+
+---
+
+The original diagnosis (kept for the record); each blocker above corresponds to a
+numbered item below.
+
+Found by validating *nested / genuinely-unsat* proofs (not just `eq ∧ ¬eq`).
 
 ## What is actually true
 
