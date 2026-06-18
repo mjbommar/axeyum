@@ -199,3 +199,40 @@ impl<B: SolverBackend> Solver<B> {
         self.backend
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use axeyum_ir::{Sort, TermArena};
+
+    use crate::{CheckResult, ProofFragment, SatBvBackend, Solver};
+
+    /// End-to-end on the façade: assert an UNSAT bit-vector query, confirm the
+    /// backend decides `Unsat`, then reconstruct a kernel-checked Lean proof of it
+    /// via [`Solver::prove_unsat_to_lean`] — the full solve → machine-checkable-proof
+    /// flow on the public API.
+    #[test]
+    fn facade_solve_then_prove_unsat_to_lean() {
+        let mut arena = TermArena::new();
+        let a = {
+            let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+            arena.var(s)
+        };
+        let b = {
+            let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+            arena.var(s)
+        };
+        let sub = arena.bv_sub(a, b).unwrap(); // a - b
+        let e1 = arena.eq(sub, a).unwrap(); // a - b = a  ⇒ b = 0
+        let e2 = arena.bv_ult(a, b).unwrap(); // a < b, with b = 0 ⇒ a < 0, impossible
+
+        let mut solver = Solver::new(SatBvBackend::new());
+        solver.assert(e1);
+        solver.assert(e2);
+        assert!(matches!(solver.check(&arena).unwrap(), CheckResult::Unsat));
+
+        let fragment = solver
+            .prove_unsat_to_lean(&mut arena)
+            .expect("the UNSAT bit-vector query reconstructs to a kernel-checked Lean `False`");
+        assert_eq!(fragment, ProofFragment::QfBv);
+    }
+}
