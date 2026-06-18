@@ -2994,3 +2994,168 @@ fn lra_general_engine_handles_unit_baby_shape() {
         .expect("general engine reconstructs the unit baby shape");
     assert_lra_infers_false(&mut ctx, proof);
 }
+
+// ---------------------------------------------------------------------------
+// Quantifier instantiation: a REAL `prove_quant_unsat_alethe` proof for a
+// universally-quantified `unsat` reconstructed to a kernel-checked `False` via
+// `forall_elim` (application of a `Pi (x:α), ⟦P x⟧` axiom to the witness).
+// ---------------------------------------------------------------------------
+
+use super::reconstruct_quant_unsat_proof;
+
+/// **THE QUANTIFIER DELIVERABLE (minimal, one instance)**: take a REAL emitted
+/// proof for `∀x. (f x = c) ∧ ¬(f a = c)`, reconstruct it, and assert the result
+/// kernel-checks to `False`. The universal is modeled as a dependent product
+/// `Pi (x:α), Eq α (f x) c`; the single `x := a` instantiation is `forall_elim`
+/// (apply the axiom to `⟦a⟧`), feeding the ground EUF close.
+#[test]
+fn end_to_end_forall_one_instance_to_false() {
+    let mut arena = TermArena::new();
+    let alpha = Sort::BitVec(8);
+    let x = arena.declare("x", alpha).unwrap();
+    let a = arena.declare("a", alpha).unwrap();
+    let c = arena.declare("c", alpha).unwrap();
+    let f = arena.declare_fun("f", &[alpha], alpha).unwrap();
+
+    let xv = arena.var(x);
+    let cv = arena.var(c);
+    let fx = arena.apply(f, &[xv]).unwrap();
+    let fx_eq_c = arena.eq(fx, cv).unwrap();
+    let forall = arena.forall(x, fx_eq_c).unwrap();
+    let av = arena.var(a);
+    let fa = arena.apply(f, &[av]).unwrap();
+    let fa_eq_c = arena.eq(fa, cv).unwrap();
+    let not_fa_eq_c = arena.not(fa_eq_c).unwrap();
+
+    let proof = crate::prove_quant_unsat_alethe(&mut arena, &[forall, not_fa_eq_c])
+        .expect("emitter produces the quantifier-instantiation refutation");
+
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_quant_unsat_proof(&mut ctx, &proof)
+        .expect("the quantifier refutation reconstructs to a kernel-checked term");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// **Two genuine instances**: `∀x. (f x = c) ∧ f a ≠ f b`. Both `x := a` and
+/// `x := b` are `forall_elim`'d, giving `f a = c` and `f b = c`; the ground EUF
+/// tail derives `f a = f b` and closes against `f a ≠ f b` to `False`.
+#[test]
+fn end_to_end_forall_two_instances_to_false() {
+    let mut arena = TermArena::new();
+    let alpha = Sort::BitVec(8);
+    let x = arena.declare("x", alpha).unwrap();
+    let a = arena.declare("a", alpha).unwrap();
+    let b = arena.declare("b", alpha).unwrap();
+    let c = arena.declare("c", alpha).unwrap();
+    let f = arena.declare_fun("f", &[alpha], alpha).unwrap();
+
+    let xv = arena.var(x);
+    let cv = arena.var(c);
+    let fx = arena.apply(f, &[xv]).unwrap();
+    let fx_eq_c = arena.eq(fx, cv).unwrap();
+    let forall = arena.forall(x, fx_eq_c).unwrap();
+    let av = arena.var(a);
+    let bv = arena.var(b);
+    let fa = arena.apply(f, &[av]).unwrap();
+    let fb = arena.apply(f, &[bv]).unwrap();
+    let fa_eq_fb = arena.eq(fa, fb).unwrap();
+    let not_fa_eq_fb = arena.not(fa_eq_fb).unwrap();
+
+    let proof = crate::prove_quant_unsat_alethe(&mut arena, &[forall, not_fa_eq_fb])
+        .expect("emitter produces the two-instance refutation");
+
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_quant_unsat_proof(&mut ctx, &proof)
+        .expect("the two-instance refutation reconstructs");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// The reconstructed universal axiom is a genuine dependent product
+/// `Pi (x:α), Eq α (f x) c` — confirm its declared type is a `Pi`, so
+/// `forall_elim` (application) is type-correct.
+#[test]
+fn forall_axiom_is_dependent_product() {
+    use axeyum_cnf::AletheTerm;
+    use axeyum_lean_kernel::ExprNode;
+
+    let mut ctx = ReconstructCtx::new();
+    // body: (= (f x) c).
+    let body = AletheTerm::App(
+        "=".to_owned(),
+        vec![
+            AletheTerm::App("f".to_owned(), vec![AletheTerm::Const("x".to_owned())]),
+            AletheTerm::Const("c".to_owned()),
+        ],
+    );
+    let proof = super::declare_forall_axiom(&mut ctx, "x", &body).expect("axiom declares");
+    let ty = ctx.kernel_mut().infer(proof).expect("infer axiom type");
+    assert!(
+        matches!(ctx.kernel().expr_node(ty), ExprNode::Pi { .. }),
+        "the universal axiom must be a dependent product `Pi (x:α), …`"
+    );
+}
+
+/// A malformed `forall_inst` whose instance is **not** a consistent substitution
+/// of the body is rejected (no wrong `False`): the body `(= (g x) x)` has `x`
+/// twice, but the instance `(= (g a) b)` maps it to two different witnesses.
+#[test]
+fn forall_inst_inconsistent_witness_rejected() {
+    use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm};
+
+    let forall_atom = AletheTerm::App(
+        "forall".to_owned(),
+        vec![
+            AletheTerm::Const("x".to_owned()),
+            AletheTerm::App(
+                "=".to_owned(),
+                vec![
+                    AletheTerm::App("g".to_owned(), vec![AletheTerm::Const("x".to_owned())]),
+                    AletheTerm::Const("x".to_owned()),
+                ],
+            ),
+        ],
+    );
+    let bad_inst = AletheTerm::App(
+        "=".to_owned(),
+        vec![
+            AletheTerm::App("g".to_owned(), vec![AletheTerm::Const("a".to_owned())]),
+            AletheTerm::Const("b".to_owned()),
+        ],
+    );
+    let commands = vec![
+        AletheCommand::Assume {
+            id: "q_forall".to_owned(),
+            clause: vec![AletheLit {
+                atom: forall_atom.clone(),
+                negated: false,
+            }],
+        },
+        AletheCommand::Step {
+            id: "q_inst0".to_owned(),
+            clause: vec![
+                AletheLit {
+                    atom: forall_atom,
+                    negated: true,
+                },
+                AletheLit {
+                    atom: bad_inst,
+                    negated: false,
+                },
+            ],
+            rule: "forall_inst".to_owned(),
+            premises: Vec::new(),
+            args: Vec::new(),
+        },
+        AletheCommand::Step {
+            id: "q_res0".to_owned(),
+            clause: Vec::new(),
+            rule: "resolution".to_owned(),
+            premises: vec!["q_forall".to_owned(), "q_inst0".to_owned()],
+            args: Vec::new(),
+        },
+    ];
+    let mut ctx = ReconstructCtx::new();
+    let err = reconstruct_quant_unsat_proof(&mut ctx, &commands)
+        .expect_err("inconsistent witness must be rejected");
+    assert!(matches!(err, ReconstructError::MalformedStep { .. }));
+}

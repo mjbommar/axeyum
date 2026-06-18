@@ -1357,6 +1357,429 @@ fn fresh_axiom(
 }
 
 // ===========================================================================
+// Quantifier instantiation (the first quantified-`unsat` slice) — reconstruct
+// a `forall_inst`-driven refutation to a kernel-checked `False`.
+//
+// ## Kernel modeling of ∀
+//
+// A universal `∀(x : α). P(x)` over the EUF carrier `α` is the **dependent
+// product** `Pi (x : α), ⟦P x⟧`, where `⟦P x⟧ : Prop` is the body's translation
+// with the bound variable rendered as the de-Bruijn `bvar(0)` (this slice's
+// bodies are quantifier-free, so `x` is always at index 0). The universal
+// hypothesis is declared as an axiom `h_forall : Pi (x : α), ⟦P x⟧`.
+//
+// **Instantiation is application** (`forall_elim`): for a witness `t`,
+// `h_forall ⟦t⟧ : ⟦P x⟧[bvar 0 := ⟦t⟧]`, and the kernel's `infer` β/Pi-reduces
+// that to `⟦P t⟧` — exactly the ground instance equality. The reconstructed
+// instance is therefore an ordinary [`ClauseProof::EqUnit`] whose proof term is
+// the application, and the **ground tail** (the EUF resolution to the empty
+// clause) is the existing [`reconstruct_qf_uf_proof`] machinery threaded with
+// these instance units.
+//
+// ## Soundness
+//
+// Every instance application is `infer`/`def_eq`-checked against the translated
+// instance equality before it enters the ground walk, and the final `False` goes
+// through [`check_false`] — so a wrong witness, a wrong Pi body, or a mis-shaped
+// `forall_inst` makes the kernel reject it (a `ReconstructError`), never a wrong
+// `False`. The only addition to the trusted base is one axiom per quantified
+// assertion — the honest encoding of the input universal.
+// ===========================================================================
+
+impl ReconstructCtx {
+    /// Translate an Alethe term into a Lean [`ExprId`] in the EUF model, with the
+    /// quantified variable `var_name` rendered as the de-Bruijn `bvar(0)` (the
+    /// binder this body sits under in a `Pi (x : α), …`). For bodies without their
+    /// own binders (this slice) the bound variable is always at index 0.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::alethe_term_to_expr`]: [`ReconstructError::UnsupportedTerm`] for
+    /// an out-of-scope shape.
+    fn alethe_term_to_expr_bound(
+        &mut self,
+        term: &AletheTerm,
+        var_name: &str,
+    ) -> Result<ExprId, ReconstructError> {
+        match term {
+            AletheTerm::Const(symbol) if symbol == var_name => Ok(self.kernel.bvar(0)),
+            AletheTerm::Const(symbol) => {
+                let name = self.atom_const(symbol);
+                Ok(self.kernel.const_(name, vec![]))
+            }
+            AletheTerm::App(head, args) if head == "=" => {
+                let [l, r] = args.as_slice() else {
+                    return Err(ReconstructError::UnsupportedTerm { term: term.key() });
+                };
+                let l = self.alethe_term_to_expr_bound(l, var_name)?;
+                let r = self.alethe_term_to_expr_bound(r, var_name)?;
+                Ok(self.mk_eq(l, r))
+            }
+            AletheTerm::App(head, args) if !args.is_empty() => {
+                let f_name = self.func_const(head, args.len());
+                let mut e = self.kernel.const_(f_name, vec![]);
+                for arg in args {
+                    let a = self.alethe_term_to_expr_bound(arg, var_name)?;
+                    e = self.kernel.app(e, a);
+                }
+                Ok(e)
+            }
+            AletheTerm::App(..) | AletheTerm::Indexed { .. } => {
+                Err(ReconstructError::UnsupportedTerm { term: term.key() })
+            }
+        }
+    }
+}
+
+/// What a parsed Alethe `(forall (x) body)` atom carries: the bound variable name
+/// and the body term, ready for translation.
+struct ForallAtom<'a> {
+    var_name: &'a str,
+    body: &'a AletheTerm,
+}
+
+/// Parse a `(forall (x) body)` Alethe atom — the opaque universal the quantifier
+/// emitter `assume`s. The encoding is `App("forall", [Const(x), body])`.
+fn as_forall_atom(atom: &AletheTerm) -> Option<ForallAtom<'_>> {
+    let AletheTerm::App(head, args) = atom else {
+        return None;
+    };
+    if head != "forall" || args.len() != 2 {
+        return None;
+    }
+    let AletheTerm::Const(var_name) = &args[0] else {
+        return None;
+    };
+    Some(ForallAtom {
+        var_name,
+        body: &args[1],
+    })
+}
+
+/// Infer the witness term `t` by matching the instance `inst` against
+/// `body[x := ?]`: the first `Const(x)` position fixes `t`, later occurrences must
+/// agree, and all other structure must match verbatim. Returns the witness Alethe
+/// term, or `None` if `inst` is not a consistent instance of `body` (so a malformed
+/// `forall_inst` is rejected rather than mis-reconstructed). A body that does not
+/// mention `x` yields `None` here (no witness to apply) — out of this slice.
+fn infer_witness<'a>(
+    var_name: &str,
+    body: &AletheTerm,
+    inst: &'a AletheTerm,
+) -> Option<&'a AletheTerm> {
+    fn go<'a>(
+        var_name: &str,
+        body: &AletheTerm,
+        inst: &'a AletheTerm,
+        witness: &mut Option<&'a AletheTerm>,
+    ) -> bool {
+        match body {
+            AletheTerm::Const(c) if c == var_name => {
+                if let Some(w) = witness {
+                    *w == inst
+                } else {
+                    *witness = Some(inst);
+                    true
+                }
+            }
+            AletheTerm::Const(_) => body == inst,
+            AletheTerm::App(bh, ba) => {
+                let AletheTerm::App(ih, ia) = inst else {
+                    return false;
+                };
+                bh == ih
+                    && ba.len() == ia.len()
+                    && ba.iter().zip(ia).all(|(b, i)| go(var_name, b, i, witness))
+            }
+            AletheTerm::Indexed {
+                op: bo,
+                indices: bi,
+                args: ba,
+            } => {
+                let AletheTerm::Indexed {
+                    op: io,
+                    indices: ii,
+                    args: ia,
+                } = inst
+                else {
+                    return false;
+                };
+                bo == io
+                    && bi == ii
+                    && ba.len() == ia.len()
+                    && ba.iter().zip(ia).all(|(b, i)| go(var_name, b, i, witness))
+            }
+        }
+    }
+    let mut witness = None;
+    if go(var_name, body, inst, &mut witness) {
+        witness
+    } else {
+        None
+    }
+}
+
+/// A `forall_inst` clause `(cl (not (forall (x) body)) inst)` recorded for lazy
+/// reconstruction: it is turned into a ground-instance unit when a `resolution`
+/// resolves it against the universal axiom.
+#[derive(Clone)]
+struct ForallInstClause {
+    /// The bound variable name of the universal it instantiates.
+    var_name: String,
+    /// The universal body (with `x` free, as a `Const(x)`).
+    body: AletheTerm,
+    /// The instance literal `inst = body[x := t]` (positive).
+    inst: AletheTerm,
+}
+
+/// The reconstruction environment for the quantifier walk: a per-id map to either
+/// a ground [`ClauseProof`] (reusing the EUF machinery), a universal axiom, or a
+/// pending `forall_inst` clause.
+enum QuantProof {
+    /// A ground clause proof (unit equality/disequality or EUF theory clause),
+    /// reconstructed exactly as the EUF walk does.
+    Ground(ClauseProof),
+    /// A universal `assume`: the dependent-product axiom `h : Pi (x:α), ⟦body⟧`,
+    /// with its body kept for witness translation.
+    ForallAxiom {
+        /// The bound variable name.
+        var_name: String,
+        /// The universal body (Alethe, `x` free).
+        body: AletheTerm,
+        /// The axiom proof term `h_forall : Pi (x:α), ⟦body⟧`.
+        proof: ExprId,
+    },
+    /// A pending `forall_inst` theory clause, reconstructed on resolution.
+    Inst(ForallInstClause),
+}
+
+/// Reconstruct a **complete** quantifier-instantiation `unsat` Alethe proof (the
+/// shape [`crate::prove_quant_unsat_alethe`] emits) into a Lean proof term of type
+/// `False` that the trusted [`Kernel`] type-checks.
+///
+/// The proof's quantifier layer is an `assume` of the universal over an opaque
+/// `(forall (x) body)` atom, one `forall_inst` step per witness, and a
+/// `resolution` of each `forall_inst` against the universal to the ground instance
+/// unit; the ground tail is the EUF refutation of those instances plus the side
+/// assertions (the `prove_qf_uf_unsat_alethe` shape, here with ids prefixed `g_`).
+///
+/// ## How each command maps
+///
+/// - **`assume (cl (forall (x) body))`** ⇒ an axiom `h : Pi (x:α), ⟦body⟧` (the
+///   universal as a dependent product; `forall_elim` is its application).
+/// - **`assume (cl …)`** (an equality / disequality side fact) ⇒ the EUF
+///   `reconstruct_assume` unit hypothesis.
+/// - **`forall_inst (cl (not (forall (x) body)) inst)`** ⇒ recorded pending.
+/// - **`resolution [forall-axiom, forall_inst]`** ⇒ `h ⟦t⟧ : ⟦inst⟧` (the witness
+///   `t` inferred from `inst = body[x:=t]`), an `infer`-checked ground unit.
+/// - **`eq_*`/`resolution`/`th_resolution`/empty clause** ⇒ the EUF
+///   `reconstruct_resolution` machinery, closing to `False`.
+///
+/// # Errors
+///
+/// Returns a [`ReconstructError`] for any out-of-scope command shape, an unknown
+/// premise id, a malformed `forall_inst`/resolution, a missing empty-clause
+/// derivation, or a kernel rejection. It never panics on malformed input.
+pub fn reconstruct_quant_unsat_proof(
+    ctx: &mut ReconstructCtx,
+    commands: &[AletheCommand],
+) -> Result<ExprId, ReconstructError> {
+    let mut env: BTreeMap<String, QuantProof> = BTreeMap::new();
+
+    for cmd in commands {
+        match cmd {
+            AletheCommand::Assume { id, clause } => {
+                // A universal `(cl (forall (x) body))`, or an ordinary EUF unit.
+                if let [l] = clause.as_slice() {
+                    if !l.negated {
+                        if let Some(fa) = as_forall_atom(&l.atom) {
+                            let var_name = fa.var_name.to_owned();
+                            let body = fa.body.clone();
+                            let proof = declare_forall_axiom(ctx, &var_name, &body)?;
+                            env.insert(
+                                id.clone(),
+                                QuantProof::ForallAxiom {
+                                    var_name,
+                                    body,
+                                    proof,
+                                },
+                            );
+                            continue;
+                        }
+                    }
+                }
+                let cp = reconstruct_assume(ctx, clause)?;
+                env.insert(id.clone(), QuantProof::Ground(cp));
+            }
+            AletheCommand::Step {
+                id,
+                clause,
+                rule,
+                premises,
+                ..
+            } => match rule.as_str() {
+                "forall_inst" => {
+                    let inst_clause = parse_forall_inst(clause)?;
+                    env.insert(id.clone(), QuantProof::Inst(inst_clause));
+                }
+                "eq_reflexive" | "eq_symmetric" | "eq_transitive" | "eq_congruent" => {
+                    env.insert(
+                        id.clone(),
+                        QuantProof::Ground(ClauseProof::TheoryClause {
+                            rule: rule.clone(),
+                            clause: clause.clone(),
+                        }),
+                    );
+                }
+                "resolution" | "th_resolution" => {
+                    // A quantifier resolution (forall-axiom against a forall_inst)
+                    // yields the ground instance unit; otherwise it is a ground EUF
+                    // resolution / the closing empty clause.
+                    if let Some(unit) = try_instance_resolution(ctx, premises, &env)? {
+                        env.insert(id.clone(), QuantProof::Ground(unit));
+                        continue;
+                    }
+                    let ground_env = ground_view(&env);
+                    match reconstruct_resolution(ctx, clause, premises, &ground_env)? {
+                        ResolutionResult::Clause(cp) => {
+                            env.insert(id.clone(), QuantProof::Ground(cp));
+                        }
+                        ResolutionResult::FalseProof(proof) => {
+                            return check_false(ctx, proof);
+                        }
+                    }
+                }
+                other => {
+                    return Err(ReconstructError::UnsupportedRule {
+                        rule: other.to_owned(),
+                    });
+                }
+            },
+        }
+    }
+
+    Err(ReconstructError::NoEmptyClause)
+}
+
+/// Declare the universal axiom `h : Pi (x : α), ⟦body⟧` and return its `Const`.
+fn declare_forall_axiom(
+    ctx: &mut ReconstructCtx,
+    var_name: &str,
+    body: &AletheTerm,
+) -> Result<ExprId, ReconstructError> {
+    let body_expr = ctx.alethe_term_to_expr_bound(body, var_name)?;
+    let anon = ctx.kernel.anon();
+    let pi = ctx
+        .kernel
+        .pi(anon, ctx.alpha, body_expr, BinderInfo::Default);
+    fresh_axiom(ctx, pi, "forall")
+}
+
+/// Parse a `forall_inst` step's clause `(cl (not (forall (x) body)) inst)`.
+fn parse_forall_inst(clause: &[AletheLit]) -> Result<ForallInstClause, ReconstructError> {
+    let [neg, pos] = clause else {
+        return Err(ReconstructError::MalformedStep {
+            rule: "forall_inst".to_owned(),
+            detail: "expected exactly two literals `(not (forall …)) inst`".to_owned(),
+        });
+    };
+    if !neg.negated || pos.negated {
+        return Err(ReconstructError::MalformedStep {
+            rule: "forall_inst".to_owned(),
+            detail: "literal polarities are not `(not (forall …))` then positive `inst`".to_owned(),
+        });
+    }
+    let Some(fa) = as_forall_atom(&neg.atom) else {
+        return Err(ReconstructError::MalformedStep {
+            rule: "forall_inst".to_owned(),
+            detail: "first literal is not a `(forall (x) body)` atom".to_owned(),
+        });
+    };
+    Ok(ForallInstClause {
+        var_name: fa.var_name.to_owned(),
+        body: fa.body.clone(),
+        inst: pos.atom.clone(),
+    })
+}
+
+/// If `premises` are exactly a universal axiom and a pending `forall_inst` over the
+/// same universal, reconstruct the instance unit `h ⟦t⟧ : ⟦inst⟧` (`forall_elim`).
+/// Returns `Ok(Some(unit))` on a quantifier resolution, `Ok(None)` when it is not
+/// one (so the caller falls back to the EUF resolution path).
+fn try_instance_resolution(
+    ctx: &mut ReconstructCtx,
+    premises: &[String],
+    env: &BTreeMap<String, QuantProof>,
+) -> Result<Option<ClauseProof>, ReconstructError> {
+    // Find an axiom premise and an inst premise (order-independent).
+    let mut axiom: Option<(&str, &AletheTerm, ExprId)> = None;
+    let mut inst: Option<&ForallInstClause> = None;
+    for p in premises {
+        match env.get(p) {
+            Some(QuantProof::ForallAxiom {
+                var_name,
+                body,
+                proof,
+            }) => axiom = Some((var_name, body, *proof)),
+            Some(QuantProof::Inst(ic)) => inst = Some(ic),
+            _ => {}
+        }
+    }
+    let (Some((ax_var, ax_body, ax_proof)), Some(ic)) = (axiom, inst) else {
+        return Ok(None);
+    };
+    // The inst clause must instantiate this very universal.
+    if ic.var_name != ax_var || &ic.body != ax_body {
+        return Err(ReconstructError::UnsupportedResolution {
+            detail: "forall_inst resolves against a different universal".to_owned(),
+        });
+    }
+    // Infer the witness `t` from `inst = body[x := t]`, translate it, and apply.
+    let witness = infer_witness(ax_var, ax_body, &ic.inst).ok_or_else(|| {
+        ReconstructError::MalformedStep {
+            rule: "forall_inst".to_owned(),
+            detail: "instance is not a consistent substitution of the universal body".to_owned(),
+        }
+    })?;
+    let t_expr = ctx.alethe_term_to_expr(witness)?;
+    // forall_elim: h_forall ⟦t⟧ : ⟦body⟧[bvar 0 := ⟦t⟧]  (≡ ⟦inst⟧ after reduce).
+    let app = ctx.kernel.app(ax_proof, t_expr);
+    // Validate against the translated instance and package as the matching unit.
+    if let Some((l, r)) = as_positive_eq(&AletheLit {
+        atom: ic.inst.clone(),
+        negated: false,
+    }) {
+        let le = ctx.alethe_term_to_expr(l)?;
+        let re = ctx.alethe_term_to_expr(r)?;
+        let expected = ctx.mk_eq(le, re);
+        let proof = check_against(ctx, "forall_inst", app, expected)?;
+        Ok(Some(ClauseProof::EqUnit {
+            l: l.clone(),
+            r: r.clone(),
+            proof,
+        }))
+    } else {
+        Err(ReconstructError::UnsupportedResolution {
+            detail: "forall_inst instance is not an equality (outside this EUF slice)".to_owned(),
+        })
+    }
+}
+
+/// A read-only [`ClauseProof`] view of the quantifier environment for the EUF
+/// resolution machinery: ground entries pass through; an axiom / pending inst is
+/// not a ground clause and is omitted (a resolution citing one as a ground premise
+/// is a real shape error the EUF path will surface).
+fn ground_view(env: &BTreeMap<String, QuantProof>) -> BTreeMap<String, ClauseProof> {
+    let mut out = BTreeMap::new();
+    for (id, qp) in env {
+        if let QuantProof::Ground(cp) = qp {
+            out.insert(id.clone(), cp.clone());
+        }
+    }
+    out
+}
+
+// ===========================================================================
 // Propositional resolution (P3.7 slice 3) — the clausal-layer foundation.
 //
 // Clauses are encoded as Lean `Prop`s and resolution is reconstructed into a

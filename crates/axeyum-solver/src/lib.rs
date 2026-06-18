@@ -63,6 +63,7 @@ mod qfbv_alethe;
 mod qfdt_simp_alethe;
 mod qfufbv_alethe;
 mod qinst_egraph;
+mod quant_alethe;
 mod reconstruct;
 mod records;
 mod sat_bv_backend;
@@ -163,11 +164,12 @@ pub use qfbv_alethe::{prove_qf_bv_unsat_alethe, prove_qf_bv_unsat_alethe_lowered
 pub use qfdt_simp_alethe::prove_qf_dt_unsat_alethe_via_simplification;
 pub use qfufbv_alethe::prove_qf_ufbv_unsat_alethe;
 pub use qinst_egraph::{instantiate_forall_via_egraph, prove_quantified_unsat_via_egraph};
+pub use quant_alethe::prove_quant_unsat_alethe;
 pub use reconstruct::{
     LraReconstructCtx, ReconstructCtx, ReconstructError, reconstruct_bitblast_step,
     reconstruct_cnf_intro_rule, reconstruct_eq_step, reconstruct_lra_proof,
     reconstruct_qf_bv_proof, reconstruct_qf_uf_proof, reconstruct_qf_ufbv_proof,
-    reconstruct_resolution_proof,
+    reconstruct_quant_unsat_proof, reconstruct_resolution_proof,
 };
 pub use records::{RecordError, RecordSort};
 pub use sat_bv_backend::SatBvBackend;
