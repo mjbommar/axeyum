@@ -1186,6 +1186,41 @@ fn bitblast_wrong_gadget_rejected() {
     );
 }
 
+/// `bitblast_extract` (`((_ extract 2 1) x)` → `x`'s bits 1..=2): result bit `i`
+/// is bit `lo + i` of `x`, so `(= ((_ extract 2 1) x) (@bbterm x1 x2))`
+/// reconstructs to `(x1 ↔ x1) ∧ (x2 ↔ x2)`.
+#[test]
+fn bitblast_extract_reconstructs() {
+    let extract = AletheTerm::Indexed {
+        op: "extract".to_owned(),
+        indices: vec![2, 1],
+        args: vec![atom("x")],
+    };
+    let concl = bb_concl(extract, bbterm(vec![bit_of("x", 1), bit_of("x", 2)]));
+    assert_bitblast_ok("bitblast_extract", &concl);
+}
+
+/// **NEGATIVE soundness at the kernel gate** for `extract`: claiming bit 0 of
+/// `((_ extract 2 1) x)` is `@bit_of 0` (it must be `@bit_of 1 = lo`) makes the
+/// reflexive iff ill-typed, so reconstruction is REJECTED.
+#[test]
+fn bitblast_extract_wrong_offset_rejected() {
+    let mut ctx = ReconstructCtx::new();
+    let extract = AletheTerm::Indexed {
+        op: "extract".to_owned(),
+        indices: vec![2, 1],
+        args: vec![atom("x")],
+    };
+    // Wrong: bit 0 spelled `@bit_of 0` instead of `@bit_of 1` (= lo).
+    let concl = bb_concl(extract, bbterm(vec![bit_of("x", 0), bit_of("x", 2)]));
+    let err = reconstruct_bitblast_step(&mut ctx, "bitblast_extract", &concl)
+        .expect_err("a wrong extract offset must be rejected by the kernel");
+    assert!(
+        matches!(err, ReconstructError::KernelRejected { .. }),
+        "got {err:?}"
+    );
+}
+
 /// A non-bitwise bitblast rule (here `bitblast_add`, a carry chain) is rejected
 /// with a clear `UnsupportedRule`, never a panic — it is a later slice.
 #[test]

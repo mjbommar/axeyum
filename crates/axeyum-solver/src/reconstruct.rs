@@ -2873,9 +2873,11 @@ impl ReconstructCtx {
 ///
 /// # Errors
 ///
-/// Returns [`ReconstructError::UnsupportedTerm`] for any non-bitwise operator
-/// (`bvadd`/`bvmul`/`bvneg`, shifts, div/rem, `extract`/`concat`/`sign_extend`,
-/// …), a non-bit-vector shape, or an out-of-range bit of a known-width constant.
+/// Returns [`ReconstructError::UnsupportedTerm`] for any operator outside the
+/// bitwise + `extract` fragment (`bvadd`/`bvmul`/`bvneg`, shifts, div/rem,
+/// `concat`/`sign_extend`, …), a non-bit-vector shape, or an out-of-range bit of
+/// a known-width constant. `extract` is supported (bit `i` → bit `lo + i` of the
+/// operand).
 fn bv_bit(
     ctx: &mut ReconstructCtx,
     term: &AletheTerm,
@@ -2940,9 +2942,37 @@ fn bv_bit(
                 term: format!("non-bitwise bit-blast operand `{}`", term.key()),
             }),
         },
+        // `((_ extract hi lo) x)`: bit `i` of the result is bit `lo + i` of `x`
+        // (pure bit routing — no carry/structural logic), matching the emitter's
+        // `bitblast_extract` (bits `lo..=hi` of `x`, LSB-first). Reflexive against
+        // the gadget bit by construction; the kernel gate catches any divergence.
+        AletheTerm::Indexed { op, indices, args } if op == "extract" => {
+            let [hi, lo] = indices.as_slice() else {
+                return Err(ReconstructError::UnsupportedTerm {
+                    term: format!("extract needs two indices `{}`", term.key()),
+                });
+            };
+            let [x] = args.as_slice() else {
+                return Err(ReconstructError::UnsupportedTerm {
+                    term: format!("extract needs one operand `{}`", term.key()),
+                });
+            };
+            let lo = usize::try_from(*lo).map_err(|_| ReconstructError::UnsupportedTerm {
+                term: format!("extract low index out of range `{}`", term.key()),
+            })?;
+            let hi = usize::try_from(*hi).map_err(|_| ReconstructError::UnsupportedTerm {
+                term: format!("extract high index out of range `{}`", term.key()),
+            })?;
+            if hi < lo || i > hi - lo {
+                return Err(ReconstructError::UnsupportedTerm {
+                    term: format!("bit {i} out of range of extract `{}`", term.key()),
+                });
+            }
+            bv_bit(ctx, x, lo + i)
+        }
         AletheTerm::Indexed { .. } => Err(ReconstructError::UnsupportedTerm {
             term: format!(
-                "indexed operand outside the bitwise fragment `{}`",
+                "indexed operand outside the bitwise + extract fragment `{}`",
                 term.key()
             ),
         }),
@@ -2987,9 +3017,10 @@ fn parse_bv_literal(symbol: &str) -> Option<Vec<bool>> {
 ///
 /// # Errors
 ///
-/// Returns [`ReconstructError::UnsupportedRule`] for a non-bitwise bitblast rule
-/// (`bitblast_add`/`_mult`/`_neg`/`_extract`/`_concat`/`_sign_extend`/`_comp`/`_ult`/
-/// `_slt`/`_xnor`, …), [`ReconstructError::MalformedStep`] for a conclusion that is
+/// Returns [`ReconstructError::UnsupportedRule`] for a bitblast rule outside the
+/// bitwise + `extract` fragment (`bitblast_add`/`_mult`/`_neg`/`_concat`/
+/// `_sign_extend`/`_comp`/`_ult`/`_slt`/`_xnor`, …),
+/// [`ReconstructError::MalformedStep`] for a conclusion that is
 /// not the expected `(= lhs rhs)` shape, [`ReconstructError::UnsupportedTerm`] for
 /// a non-bitwise operand, and [`ReconstructError::KernelRejected`] at the gate.
 pub fn reconstruct_bitblast_step(
@@ -2997,13 +3028,16 @@ pub fn reconstruct_bitblast_step(
     rule: &str,
     conclusion: &[AletheLit],
 ) -> Result<ExprId, ReconstructError> {
-    // Only the bitwise fragment; reject the carry/shift/structural rules cleanly.
+    // The bitwise fragment plus `extract` (pure bit-routing, no carry); reject the
+    // remaining carry/shift/structural rules cleanly.
     match rule {
         "bitblast_var" | "bitblast_const" | "bitblast_not" | "bitblast_and" | "bitblast_or"
-        | "bitblast_xor" | "bitblast_equal" => {}
+        | "bitblast_xor" | "bitblast_extract" | "bitblast_equal" => {}
         other => {
             return Err(ReconstructError::UnsupportedRule {
-                rule: format!("{other} (only the bitwise bit-blast fragment is reconstructed)"),
+                rule: format!(
+                    "{other} (only the bitwise + extract bit-blast fragment is reconstructed)"
+                ),
             });
         }
     }
