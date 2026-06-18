@@ -78,20 +78,32 @@ literals) **confirmed** the root cause and **disproved an earlier guess** (it is
    binary-resolution proof term following the `pivot_trace` order via the existing
    `binary_resolve`.
 
-   **Empirically ruled out (2026-06-18):** pairwise-pool variants do NOT work,
-   confirming the sweep is necessary:
+   **Exhaustively ruled out (2026-06-18) — ALL local/sequential binary variants
+   fail** (each: all existing tests stayed green, antisymmetry still stuck, then
+   reverted):
    - acc-centered greedy — dead-ends (consumes a needed clause);
    - unrestricted pool — same;
-   - **single-pivot pool** (only resolve pairs sharing exactly one complementary
-     literal, i.e. no-tautology) — added `complementary_pivot_count`, all 92 tests
-     stayed green, but antisymmetry **still** stalls on the same two clauses
-     (`¬G2 ∨ ¬b0`, `¬G1 ∨ a1`): the pool had already resolved away the
-     gate-definition clauses (`and_pos`/`and_neg` for `G1`/`G2`) those two need.
-   So the dead-end is *premature consumption of a globally-needed clause*, which no
-   local pairwise heuristic avoids — only the global, in-premise-order,
-   conclusion-guided sweep does. The single-pivot experiment was reverted (no
-   demonstrating test; doesn't close the target). **Next:** implement the sweep +
-   `pivot_trace`-ordered `binary_resolve`, with bvult antisymmetry as the test.
+   - single-pivot pool (`complementary_pivot_count == 1`, no-tautology) — same two
+     stuck clauses;
+   - strict premise-order fold — regresses `real_emitter_unsat_cnf`;
+   - conclusion-guided greedy (`find_pivot_avoiding` skips conclusion atoms) — no
+     help, because the failing step's conclusion is empty (the closing refutation),
+     so *every* literal is a pivot and guidance doesn't constrain.
+
+   **Why they all fail — the root structure.** The refutation is a resolution
+   **TREE, not a chain**: a pivot introduced by premise *i* cancels against a
+   literal in premise *j* (not against the running accumulator), so any
+   accumulator-centered fold consumes a clause a different subtree needs. Carcara
+   succeeds because its sweep accumulates pivots **globally** ("one pivot per
+   clause", in premise order) — it never commits to an accumulator.
+
+   **The implementation (now fully understood).** Mirror `greedy_resolution`'s
+   global sweep to recover, for each pivot, the **pair of premises** holding its
+   complementary literals; that pairing is the resolution-tree edge set. Build the
+   tree bottom-up, emitting `binary_resolve` per internal node (kernel-checked), to
+   get the Lean proof. This is the one remaining piece — a ~tree-construction over
+   the global pivot pairing, not another accumulator heuristic. Land it with bvult
+   antisymmetry as the end-to-end test.
 
 So **no genuine QF_BV `unsat` (beyond `x ∧ ¬x`) closes to `False` yet**, but two of
 the three blockers are **fixed and shipped** (negation `356f3e3`, `=` canon
