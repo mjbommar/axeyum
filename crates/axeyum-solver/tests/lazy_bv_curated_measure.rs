@@ -85,6 +85,55 @@ fn lazy_on_curated_multipliers() {
     println!("(essential-multiplier: lazy refines the gadget — no shortcut vs eager)");
 }
 
+#[test]
+#[ignore = "measurement; run with --ignored --nocapture"]
+fn lazy_vs_eager_on_small_public_files() {
+    // The two public QF_BV files (real SMT-LIB 2024 Z3-benchmark data) small enough
+    // for a standalone harness; the rest (250 KB–17 MB) need the bench's
+    // parallelism/memory caps + a lazy-bv backend (the enabling next step).
+    let base = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join("corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen");
+    let picks = [
+        "Composition/simple_bit8_na1_nr1_twocond.smt2",
+        "MobileDevice/mobiledevice_bit8_na1_nr1_twocond.smt2",
+    ];
+    println!();
+    println!("LAZY vs EAGER on small PUBLIC QF_BV files:");
+    for rel in picks {
+        let path = base.join(rel);
+        if !path.exists() {
+            println!("  {rel}: MISSING");
+            continue;
+        }
+        let text = std::fs::read_to_string(&path).unwrap();
+        let mut s1 = match axeyum_smtlib::parse_script(&text) {
+            Ok(s) => s,
+            Err(e) => {
+                println!("  {rel}: parse-error {e:?}");
+                continue;
+            }
+        };
+        let t0 = Instant::now();
+        let eager = solve(&mut s1.arena, &s1.assertions, &cfg()).unwrap();
+        let eager_ms = t0.elapsed().as_secs_f64() * 1000.0;
+        let mut s2 = axeyum_smtlib::parse_script(&text).unwrap();
+        let t1 = Instant::now();
+        let lazy = solve_lazy_bv_abstraction(&mut s2.arena, &s2.assertions, &cfg()).unwrap();
+        let lazy_ms = t1.elapsed().as_secs_f64() * 1000.0;
+        let (ev, lv) = (verdict(&eager), verdict(&lazy.result));
+        assert!(
+            ev == "unknown" || lv == "unknown" || ev == lv,
+            "DISAGREE on {rel}: eager={ev} lazy={lv}"
+        );
+        println!(
+            "  {rel}\n    eager={ev} ({eager_ms:.0}ms)  lazy={lv} ({lazy_ms:.0}ms, ops={}, refined={})",
+            lazy.ops_total, lazy.ops_refined
+        );
+    }
+}
+
 /// `x = 1 ∧ x = 2` (the real contradiction) ∧ `r = p*q` (incidental 64-bit mul).
 fn build_incidental(a: &mut TermArena, width: u32) -> Vec<TermId> {
     let xs = a.declare("x", Sort::BitVec(width)).unwrap();
