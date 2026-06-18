@@ -88,10 +88,67 @@ the *measurement* path (steps 1–2) and the default-on decision (the tail of 3)
    to shrink before abstracting, and P1.3 (competitive CDCL) for the bits that do
    get blasted.
 
+## Measured on the public 113 (2026-06-17): the slice has NO heavy arithmetic — lazy is a measured no-op here
+
+Steps 1–2 are now done: `BackendKind::LazyBv` (`f6cb39c`) ran the lazy backend
+over the full 113-file public slice (`just bench-public-qfbv-lazy-vs-z3`'s
+no-budget config, 1 s/file). Result:
+
+```
+lazy-bv:        files=113 sat=2 unsat=0 unknown=111 DISAGREE=0 replay_failures=0
+eager (n1000):  files=113 sat=1 unsat=0 unknown=112 DISAGREE=0   (committed baseline)
+```
+
+**The hypothesis above was falsified by measurement.** Per-file telemetry shows
+`lazy_ops_total == 0` for **all 113 files** — the slice contains *none* of the
+six heavy arithmetic gadgets (`bvmul`/`bvudiv`/`bvurem`/`bvsdiv`/`bvsrem`/
+`bvsmod`) the abstraction targets, so `solve_lazy_bv_abstraction` falls straight
+through to the eager path on every file. Lazy-bv **is** eager here; the 2 decided
+are the two trivially-eager files. Confirmed across every family by operator
+census:
+
+| family | heavy-arith ops | `ite` count | size |
+|---|---|---|---|
+| Composition | **0** | 40 338 | 3.2 MB |
+| MobileDevice | **0** | 2 850 | 270 KB |
+| StringMatching | **0** | 25 730 | 2.0 MB |
+| TCP | **0** | 6 972 | 690 KB |
+| VideoConf | **0** | 7 968 | 715 KB |
+
+So the bottleneck on this corpus is **formula size/structure** — gigantic
+`ite`-nests plus `bvadd`/`bvsub`/`bvxor`/`bvand`/`bvor`/`distinct` blasting over
+many variables — **not** the multiplier mountain. The eager CNF drowns the SAT
+solver by sheer width, and arithmetic-CEGAR has nothing to abstract.
+
+### What this redirects (destination-2 lever, corrected)
+
+The lazy infrastructure is **correct, sound, committed, and the right tool for
+arithmetic-heavy corpora** (the curated multiplier slice, crypto/SMT-COMP BV
+families) — it is *not wasted*. It is simply **not the lever for this
+ite/size-bound public slice.** The measured next levers, in priority order:
+
+1. **`ite` / word-level reasoning** — `ite` is the dominant op (40 k in one
+   file). Word-level `ite`-chain simplification and selective/shared blasting,
+   not per-bit mux explosion, is where the size lives.
+2. **P1.2 word-level preprocessing on this slice** — measure the committed
+   `--preprocess` (AC-tree normalization) decided-count here; shrink before
+   blasting. This is the already-built knob whose effect on *these* files is
+   now the open question.
+3. **Broader abstraction (the real P2.1 step 4)** — abstract *any* expensive
+   subterm (wide `ite`-nests, adder chains, `distinct` cliques), not just the
+   six arithmetic gadgets. The CEGAR machinery generalizes; the heavy-op set
+   does not.
+4. **P1.3 competitive CDCL** — for the large-but-arithmetic-free CNFs these
+   produce, raw SAT throughput (VSIDS/restarts/LBD already landed for XOR) is
+   the floor.
+
 ## Bottom line
 
-The single highest-leverage performance move is **not a new algorithm** — it is
-wiring + measuring an already-built CEGAR bit-blaster that provably sidesteps the
-multiplier mountain on the incidental-heavy-op problems that dominate real
-corpora. Measured here to work and to be safe (zero overhead when nothing to
-abstract); the wiring is the next focused, coordinated build.
+Lazy arithmetic-CEGAR bit-blasting is now wired end-to-end (opt-in dispatch
+`10a412e`, read-only entry point `3b4d390`, `LazyBvBackend` `3baa0dc`, bench
+backend `f6cb39c`) with `DISAGREE=0` preserved — sound and ready for the corpora
+it fits. **But the public 113 measurement proves that slice is `ite`/size-bound,
+not multiplier-bound: lazy is a no-op there (2/113 = eager).** The honest
+destination-2 lever for *this* corpus is formula-size reduction (word-level `ite`
+handling + P1.2 preprocessing + broader-than-arithmetic abstraction), not
+multiplier CEGAR. Measure `--preprocess` on this slice next.
