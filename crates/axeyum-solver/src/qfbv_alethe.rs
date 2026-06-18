@@ -205,6 +205,15 @@ pub fn prove_qf_bv_unsat_alethe(
         input_clause_ids.push((vec![root_lit.to_cnf(&tseitin)], bool_unit));
     }
 
+    // Register every compound subterm's **bit-definition** `(cl B_t)` (built in
+    // `BbReducer::emit_bit_definition`) as an input unit clause. These tie each
+    // `((_ @bit_of i) t)` projection atom to its gadget bits, supplying the
+    // cross-term connection the projection-based gadget would otherwise drop.
+    for (b_form, def_id) in &bb.defs {
+        let root_lit = tseitin.encode(&mut builder, b_form)?;
+        input_clause_ids.push((vec![root_lit.to_cnf(&tseitin)], def_id.clone()));
+    }
+
     // Add every Tseitin defining clause (each already an emitted Alethe step) as an
     // input clause for the SAT core.
     for gate in &tseitin.gate_clauses {
@@ -454,12 +463,21 @@ impl Builder {
 struct BbReducer {
     /// `term` → (its `@bbterm` Alethe form, the step id proving `(= term bbform)`).
     bbform: BTreeMap<TermId, (AletheTerm, String)>,
+    /// One **bit-definition** per compound subterm: a bit-level Boolean `B_t`
+    /// connecting the term's bit projections `((_ @bit_of i) t)` to its gadget bits,
+    /// paired with the step id proving the unit clause `(cl B_t)`. The propositional
+    /// refutation needs these because the projection-based gadget makes
+    /// `((_ @bit_of i) t)` an *opaque* SAT atom — `B_t` is the Tseitin definition tying
+    /// it back to the children's bits (the cross-term connection the old inlined
+    /// gadget made implicitly). Emitted in DAG-dedup order.
+    defs: Vec<(AletheTerm, String)>,
 }
 
 impl BbReducer {
     fn new() -> Self {
         Self {
             bbform: BTreeMap::new(),
+            defs: Vec::new(),
         }
     }
 
@@ -490,26 +508,26 @@ impl BbReducer {
                     return None;
                 }
                 // Reduce every child first (recursing; the memo dedups shared nodes).
-                let children: Vec<(AletheTerm, String)> = args
+                // The child equalities `(= child bbform(child))` are still emitted and
+                // (in the end-to-end flow) separately kernel-checked, but they are NOT
+                // substituted into this op's bit-blast step — that inlining is exactly
+                // the exponential blowup for nested arithmetic.
+                for &c in args {
+                    self.reduce_term(arena, builder, c)?;
+                }
+
+                // Carcara's `bitblast_<op>` recomputes the gadget from the LHS operands
+                // directly: `build_term_vec(child)` returns `((_ @bit_of i) child)`
+                // PROJECTIONS for a plain (compound or leaf) operand term, inlining only
+                // a literal `@bbterm`. So we bit-blast on the ORIGINAL child terms — the
+                // conclusion is `(= op(orig children) (@bbterm projections-over-@bit_of))`,
+                // an O(size²) shape Carcara accepts (its own incremental scheme), with no
+                // `cong`/`@bbterm`-form substitution and no exponential bit-tree.
+                let rendered_args = args
                     .iter()
-                    .map(|&c| self.reduce_term(arena, builder, c))
+                    .map(|&c| bv_term_to_alethe(arena, c))
                     .collect::<Option<Vec<_>>>()?;
-                let child_forms: Vec<AletheTerm> =
-                    children.iter().map(|(form, _)| form.clone()).collect();
-                let child_eq_ids: Vec<&str> = children.iter().map(|(_, id)| id.as_str()).collect();
-
                 let lhs_orig = bv_term_to_alethe(arena, term)?;
-                let op_substituted = render_op_app(op, &child_forms)?;
-
-                // cong: (= op(c1..ck) op(c1'..ck')), premised on the child equalities.
-                let cong_id = builder.step(
-                    vec![pos(eq_term(lhs_orig.clone(), op_substituted.clone()))],
-                    "cong",
-                    &child_eq_ids,
-                );
-
-                // bitblast_<op> over the @bbterm-form children:
-                //   (= op(c1'..ck') (@bbterm gadget)).
                 let operand_widths = args
                     .iter()
                     .map(|&c| bv_width(arena, c))
@@ -518,27 +536,83 @@ impl BbReducer {
                 let bb_id = builder.fresh_step_id();
                 let bb_step = bitblast_op_step(
                     op,
-                    &child_forms,
+                    &rendered_args,
                     &operand_widths,
-                    op_substituted,
+                    lhs_orig.clone(),
                     result_width,
                     &bb_id,
                 )?;
                 let bbform = bitblast_rhs(&bb_step)?;
                 builder.push(bb_step);
 
-                // trans: chain cong and bitblast → (= op(c1..ck) (@bbterm gadget)).
-                let trans_id = builder.step(
-                    vec![pos(eq_term(lhs_orig, bbform.clone()))],
-                    "trans",
-                    &[&cong_id, &bb_id],
-                );
-                (bbform, trans_id)
+                // Emit the term's **bit-definition** `B_t`, tying `((_ @bit_of i) t)`
+                // back to its gadget bits, so the projection-based gadget stays
+                // connected in the propositional refutation (the gadget makes
+                // `((_ @bit_of i) t)` an opaque SAT atom). `bitblast_equal` over
+                // `(= t bbform)` yields `B_t = (and (= ((_ @bit_of i) t) g_i) …)`
+                // (`build_term_vec(t)` projects; `build_term_vec(bbform)` returns `g`
+                // directly) — a Carcara-valid step. Since `(= t bbform)` is *proven*
+                // (`bb_id`), `equiv1` + `resolution` derive the unit `(cl B_t)`.
+                self.emit_bit_definition(builder, lhs_orig, &bbform, &bb_id)?;
+
+                (bbform, bb_id)
             }
             _ => return None,
         };
         self.bbform.insert(term, result.clone());
         Some(result)
+    }
+
+    /// Emits a compound term's **bit-definition** clause `(cl B_t)` and records it in
+    /// [`BbReducer::defs`]. `lhs` is the term `t`, `bbform = (@bbterm g…)` its gadget,
+    /// `width` its bit width, and `pt_id` the step proving `(= t bbform)`.
+    ///
+    /// `bitblast_equal` over the proven equality `(= t bbform)` concludes
+    /// `(= (= t bbform) B_t)` with `B_t = (and (= ((_ @bit_of i) t) g_i) …)` (a single
+    /// `(= … g_0)` for width 1) — Carcara recomputes `B_t` via `build_term_vec`, which
+    /// projects the plain term `t` and inlines the literal `bbform`. Then `equiv1`
+    /// gives `(cl (not (= t bbform)) B_t)`, and `resolution` against `pt_id` (the unit
+    /// `(cl (= t bbform))`) gives `(cl B_t)`.
+    fn emit_bit_definition(
+        &mut self,
+        builder: &mut Builder,
+        lhs: AletheTerm,
+        bbform: &AletheTerm,
+        pt_id: &str,
+    ) -> Option<()> {
+        // The term's actual bit width is the number of gadget bits — NOT the
+        // operand-0 width (they differ for `extract`/`concat`/`sign_extend`). When the
+        // bit-blast result is NOT a `@bbterm` (e.g. `sign_extend 0`, whose conclusion
+        // is `(= ((_ sign_extend 0) x) x)`), the term has no opaque projection atom to
+        // tie back, so no definition is needed — skip it.
+        let AletheTerm::App(head, bits) = bbform else {
+            return Some(());
+        };
+        if head != "@bbterm" {
+            return Some(());
+        }
+        let width = bits.len();
+        // The proven term equality `(= t bbform)` as an Alethe atom.
+        let eq_atom = AletheTerm::App("=".to_owned(), vec![lhs.clone(), bbform.clone()]);
+        // `bitblast_equal`: (= (= t bbform) B_t).
+        let be_id = builder.fresh_step_id();
+        let be_step = bitblast_op_step(
+            Op::Eq,
+            &[lhs, bbform.clone()],
+            &[width, width],
+            eq_atom.clone(),
+            width,
+            &be_id,
+        )?;
+        let b_t = bitblast_rhs(&be_step)?;
+        builder.push(be_step);
+
+        // equiv1 (= (= t bbform) B_t) → (cl (not (= t bbform)) B_t).
+        let e_id = builder.step(vec![neg(eq_atom), pos(b_t.clone())], "equiv1", &[&be_id]);
+        // resolution with the proven (cl (= t bbform)) → (cl B_t).
+        let def_id = builder.step(vec![pos(b_t.clone())], "resolution", &[&e_id, pt_id]);
+        self.defs.push((b_t, def_id));
+        Some(())
     }
 
     /// Reduces the supported predicate `pred = (pred t1 t2)` to its bit-level Boolean
@@ -573,38 +647,33 @@ impl BbReducer {
             return Some((id, boolean_form));
         }
 
-        // Compound operand(s): reduce both, then cong + bitblast_<pred> + trans.
-        let (bb1, eq1) = self.reduce_term(arena, builder, t1)?;
-        let (bb2, eq2) = self.reduce_term(arena, builder, t2)?;
+        // Compound operand(s): emit each operand's bit-blast equality (recursively,
+        // for the separate slice-5 kernel check), then bit-blast the predicate
+        // DIRECTLY on the original operand terms. Carcara's `bitblast_<pred>` rule
+        // recomputes the ladder from the LHS operands via `build_term_vec`, which
+        // projects `((_ @bit_of i) operand)` for a plain term — so the conclusion is
+        // `(= (pred t1 t2) B)` with `B` over `@bit_of` projections of `t1`/`t2`
+        // (O(size²)), no `cong`/`@bbterm`-form substitution, no inlined bit-tree.
+        self.reduce_term(arena, builder, t1)?;
+        self.reduce_term(arena, builder, t2)?;
         let pred_orig = predicate_to_alethe(arena, pred)?;
-        let pred_substituted = render_op_app(op, &[bb1.clone(), bb2.clone()])?;
-
-        let cong_id = builder.step(
-            vec![pos(eq_term(pred_orig.clone(), pred_substituted.clone()))],
-            "cong",
-            &[eq1.as_str(), eq2.as_str()],
-        );
+        let r1 = bv_term_to_alethe(arena, t1)?;
+        let r2 = bv_term_to_alethe(arena, t2)?;
 
         let operand_widths = [bv_width(arena, t1)?, bv_width(arena, t2)?];
         let result_width = bv_width(arena, t1)?;
         let bb_id = builder.fresh_step_id();
         let bb_step = bitblast_op_step(
             op,
-            &[bb1, bb2],
+            &[r1, r2],
             &operand_widths,
-            pred_substituted,
+            pred_orig,
             result_width,
             &bb_id,
         )?;
         let boolean_form = bitblast_rhs(&bb_step)?;
         builder.push(bb_step);
-
-        let trans_id = builder.step(
-            vec![pos(eq_term(pred_orig, boolean_form.clone()))],
-            "trans",
-            &[&cong_id, &bb_id],
-        );
-        Some((trans_id, boolean_form))
+        Some((bb_id, boolean_form))
     }
 }
 
@@ -613,52 +682,6 @@ fn bv_width(arena: &TermArena, term: TermId) -> Option<usize> {
     match arena.sort_of(term) {
         Sort::BitVec(w) => Some(w as usize),
         _ => None,
-    }
-}
-
-/// `(= a b)`.
-fn eq_term(a: AletheTerm, b: AletheTerm) -> AletheTerm {
-    AletheTerm::App("=".to_owned(), vec![a, b])
-}
-
-/// Renders the operator `op` applied to the already-rendered `children` Alethe
-/// forms (each typically a child's `@bbterm` form), matching how
-/// [`crate::bitblast_alethe::bv_term_to_alethe`] renders the corresponding IR
-/// application — App for the named operators, the indexed `((_ op i…) …)` surface
-/// syntax for `extract`/`sign_extend`. The predicate heads `=`, `bvult`, `bvslt`
-/// are included so the same helper renders a substituted predicate `(pred t1' t2')`.
-/// [`None`] for an operator this helper does not spell.
-fn render_op_app(op: Op, children: &[AletheTerm]) -> Option<AletheTerm> {
-    match op {
-        Op::Extract { hi, lo } => Some(AletheTerm::Indexed {
-            op: "extract".to_owned(),
-            indices: vec![i128::from(hi), i128::from(lo)],
-            args: children.to_vec(),
-        }),
-        Op::SignExt { by } => Some(AletheTerm::Indexed {
-            op: "sign_extend".to_owned(),
-            indices: vec![i128::from(by)],
-            args: children.to_vec(),
-        }),
-        _ => {
-            let head = match op {
-                Op::BvNot => "bvnot",
-                Op::BvAnd => "bvand",
-                Op::BvOr => "bvor",
-                Op::BvXor => "bvxor",
-                Op::BvXnor => "bvxnor",
-                Op::BvAdd => "bvadd",
-                Op::BvNeg => "bvneg",
-                Op::BvMul => "bvmul",
-                Op::BvComp => "bvcomp",
-                Op::Concat => "concat",
-                Op::Eq => "=",
-                Op::BvUlt => "bvult",
-                Op::BvSlt => "bvslt",
-                _ => return None,
-            };
-            Some(AletheTerm::App(head.to_owned(), children.to_vec()))
-        }
     }
 }
 

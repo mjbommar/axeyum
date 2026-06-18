@@ -2192,6 +2192,38 @@ fn end_to_end_mul_reconstructs() {
         .expect("a bvmul QF_BV proof must reconstruct to kernel-checked False");
 }
 
+/// **End-to-end (projection-encoding win, P3.7).** A **nested** multiply
+/// `(= (bvmul (bvmul a b) c) (bvmul (bvmul a b) c))` (negated → unsat) over **width
+/// 4**. Under the old *inlined* `@bbterm`-form reduction the outer `bvmul`'s gadget
+/// embedded the inner `(bvmul a b)`'s full bit-tree, squaring the node count per
+/// nesting level — so a nested multiply blew up emission/reconstruction at ~width 3.
+/// With the **projection** encoding (Carcara's own `build_term_vec` scheme), the
+/// outer step references `((_ @bit_of i) (bvmul a b))` projections and the inner
+/// multiply is a *separate*, bounded `bitblast_equal` bit-definition — so the proof
+/// stays `O(size²)` per term and this nested width-4 case reconstructs to a
+/// kernel-checked `False`. If the inlining regresses, this hangs the suite.
+#[test]
+fn end_to_end_nested_mul_projection_reconstructs() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let mk = |a: &mut TermArena, n: &str| {
+        let s = a.declare(n, Sort::BitVec(4)).unwrap();
+        a.var(s)
+    };
+    let a = mk(&mut arena, "a");
+    let b = mk(&mut arena, "b");
+    let c = mk(&mut arena, "c");
+    let ab = arena.bv_mul(a, b).unwrap();
+    let abc = arena.bv_mul(ab, c).unwrap();
+    let eq = arena.eq(abc, abc).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[neq]).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_bv_proof(&mut ctx, &proof)
+        .expect("a nested-bvmul QF_BV proof must reconstruct to kernel-checked False");
+    assert_infers_false(&mut ctx, term);
+}
+
 /// **End-to-end**: a `(= (concat a b) d) ∧ ¬…` `QF_BV` unsat proof — bit-blasted
 /// via `bitblast_concat`, with operand widths recovered from the `bitblast_var`
 /// leaves — reconstructs to a kernel-checked `False`.

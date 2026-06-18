@@ -2161,6 +2161,33 @@ impl ReconstructCtx {
             // directly or embedded in a gate.
             AletheTerm::Const(s) if s == "true" => self.kernel.const_(self.prelude.true_, vec![]),
             AletheTerm::Const(s) if s == "false" => self.kernel.const_(self.prelude.false_, vec![]),
+            // A bit projection `((_ @bit_of i) operand)`. When `operand` is a COMPOUND
+            // bit-vector term (the projection-based emission's gadget bits, e.g.
+            // `((_ @bit_of i) (bvor a b))`), resolve it through the faithful bit model
+            // `bv_bit` so it agrees structurally with the LHS expansion — this is the
+            // reconstruction half of Carcara's projection (`build_term_vec`) scheme. A
+            // bare-symbol / `#b…`-literal operand keeps the opaque/`True`/`False` leaf
+            // (matching `bv_bit`'s own leaf handling), so the two sides still coincide.
+            AletheTerm::Indexed { op, indices, args }
+                if op == "@bit_of"
+                    && indices.len() == 1
+                    && args.len() == 1
+                    && bit_of_operand_resolves(&args[0]) =>
+            {
+                if let Ok(i) = usize::try_from(indices[0]) {
+                    // Reuse the `bv_bit` faithful model — for a compound operand it
+                    // expands structurally; for a `#b…` literal operand it yields the
+                    // constant `True`/`False` bit. (The emitter's `build_term_vec`
+                    // projects `((_ @bit_of i) #b…)` for a constant concat operand.)
+                    // Any failure (out-of-range bit, unsupported op) falls through to
+                    // the opaque atom below.
+                    if let Ok(prop) = bv_bit(self, &args[0], i) {
+                        return prop;
+                    }
+                }
+                let name = self.prop_atom_const(&term.key());
+                self.kernel.const_(name, vec![])
+            }
             // A bare symbol or any opaque compound: an uninterpreted Prop atom.
             other => {
                 let name = self.prop_atom_const(&other.key());
@@ -3614,6 +3641,37 @@ fn bv_bit(
                 let bit_term = mult_bit_term(a, b, i);
                 Ok(ctx.gate_term_to_prop(&bit_term))
             }
+            // `(concat a b)` (a high, b low): result bit `i` is `b_i` for
+            // `i < width(b)`, else `a_{i - width(b)}` — the emitter emits the low
+            // operand's bits first. Handled here (not only in `lhs_bit_prop`) so a
+            // `concat` nested inside a projection gadget resolves structurally.
+            ("concat", [hi, lo]) => {
+                let width_lo =
+                    alethe_bv_width(ctx, lo).ok_or_else(|| ReconstructError::UnsupportedTerm {
+                        term: format!("concat low-operand width unknown `{}`", term.key()),
+                    })?;
+                if i < width_lo {
+                    bv_bit(ctx, lo, i)
+                } else {
+                    bv_bit(ctx, hi, i - width_lo)
+                }
+            }
+            // `(bvcomp x y)`: a 1-bit result, its only bit the per-bit-equality AND.
+            ("bvcomp", [x, y]) if i == 0 => {
+                let width = alethe_bv_width(ctx, x)
+                    .or_else(|| alethe_bv_width(ctx, y))
+                    .ok_or_else(|| ReconstructError::UnsupportedTerm {
+                        term: format!("bvcomp operand width unknown `{}`", term.key()),
+                    })?;
+                if width == 0 {
+                    return Err(ReconstructError::MalformedStep {
+                        rule: "bitblast_comp".to_owned(),
+                        detail: "zero-width bvcomp operand".to_owned(),
+                    });
+                }
+                let bit_term = comp_bit_term(x, y, width);
+                Ok(ctx.gate_term_to_prop(&bit_term))
+            }
             _ => Err(ReconstructError::UnsupportedTerm {
                 term: format!("non-bitwise bit-blast operand `{}`", term.key()),
             }),
@@ -3646,12 +3704,110 @@ fn bv_bit(
             }
             bv_bit(ctx, x, lo + i)
         }
+        // `((_ sign_extend by) x)`: bit `i` is `x_i` for `i < width(x)`, else the
+        // sign bit `x_{width(x)-1}`. Handled here so a `sign_extend` nested inside a
+        // projection gadget resolves structurally (the top-level case stays in
+        // `lhs_bit_prop`, which already knows `result_width`).
+        AletheTerm::Indexed { op, indices, args } if op == "sign_extend" => {
+            let [by] = indices.as_slice() else {
+                return Err(ReconstructError::UnsupportedTerm {
+                    term: format!("sign_extend needs one index `{}`", term.key()),
+                });
+            };
+            let [x] = args.as_slice() else {
+                return Err(ReconstructError::UnsupportedTerm {
+                    term: format!("sign_extend needs one operand `{}`", term.key()),
+                });
+            };
+            let _ = by;
+            let width_x =
+                alethe_bv_width(ctx, x).ok_or_else(|| ReconstructError::UnsupportedTerm {
+                    term: format!("sign_extend operand width unknown `{}`", term.key()),
+                })?;
+            if width_x == 0 {
+                return Err(ReconstructError::MalformedStep {
+                    rule: "bitblast_sign_extend".to_owned(),
+                    detail: "zero-width sign_extend operand".to_owned(),
+                });
+            }
+            let src = if i < width_x { i } else { width_x - 1 };
+            bv_bit(ctx, x, src)
+        }
         AletheTerm::Indexed { .. } => Err(ReconstructError::UnsupportedTerm {
             term: format!(
                 "indexed operand outside the bitwise + extract fragment `{}`",
                 term.key()
             ),
         }),
+    }
+}
+
+/// The bit width of an Alethe bit-vector **term**, recovering it structurally so a
+/// nested compound operand (in the projection-based gadget) can be bit-routed:
+///
+/// - `@bbterm b…` / `#b…` literal: the bit count, directly;
+/// - a bare symbol: the width recorded by its `bitblast_var`/`bitblast_const` step
+///   (via [`ReconstructCtx::bv_widths`]);
+/// - `bvnot`/`bvand`/`bvor`/`bvxor`/`bvxnor`/`bvadd`/`bvneg`/`bvmul`: operand-0's
+///   width (width-preserving ops);
+/// - `((_ extract hi lo) x)`: `hi - lo + 1`;
+/// - `((_ sign_extend by) x)`: `width(x) + by`;
+/// - `(concat hi lo)`: `width(hi) + width(lo)`;
+/// - `(bvcomp _ _)`: 1.
+///
+/// Returns [`None`] for an unrecognized / undeclared shape.
+fn alethe_bv_width(ctx: &ReconstructCtx, term: &AletheTerm) -> Option<usize> {
+    match term {
+        AletheTerm::App(head, args) if head == "@bbterm" => Some(args.len()),
+        AletheTerm::Const(name) => parse_bv_literal(name)
+            .map_or_else(|| ctx.bv_widths.get(name).copied(), |b| Some(b.len())),
+        AletheTerm::App(head, args) => match (head.as_str(), args.as_slice()) {
+            // Width-preserving ops: operand-0's width.
+            (
+                "bvnot" | "bvand" | "bvor" | "bvxor" | "bvxnor" | "bvadd" | "bvmul" | "bvneg",
+                [a, ..],
+            ) => alethe_bv_width(ctx, a),
+            ("bvcomp", [_, _]) => Some(1),
+            ("concat", [hi, lo]) => Some(alethe_bv_width(ctx, hi)? + alethe_bv_width(ctx, lo)?),
+            _ => None,
+        },
+        AletheTerm::Indexed { op, indices, args } if op == "extract" => {
+            let [hi, lo] = indices.as_slice() else {
+                return None;
+            };
+            let hi = usize::try_from(*hi).ok()?;
+            let lo = usize::try_from(*lo).ok()?;
+            (hi >= lo).then(|| hi - lo + 1)
+        }
+        AletheTerm::Indexed { op, indices, args } if op == "sign_extend" => {
+            let [by] = indices.as_slice() else {
+                return None;
+            };
+            let [x] = args.as_slice() else {
+                return None;
+            };
+            let by = usize::try_from(*by).ok()?;
+            Some(alethe_bv_width(ctx, x)? + by)
+        }
+        AletheTerm::Indexed { .. } => None,
+    }
+}
+
+/// Whether a `((_ @bit_of i) operand)` projection should be resolved through the
+/// faithful bit model [`bv_bit`] (rather than kept as an opaque atom).
+///
+/// - A **compound** bit-vector term (`@bbterm`, any `bv…`/`concat` application, or an
+///   `extract`/`sign_extend`) → resolve, so the projection agrees structurally with
+///   the LHS expansion in the projection-based emission.
+/// - A `#b…` **literal** → resolve, so `((_ @bit_of i) #b…)` (which the emitter's
+///   `build_term_vec` projects for a constant operand) becomes the constant `True`/
+///   `False` bit, matching the LHS constant model.
+/// - A **bare symbol** → do NOT resolve: `bv_bit` models a symbol's bit as the same
+///   opaque `@bit_of` atom, so resolving would recurse; keeping it opaque is correct.
+fn bit_of_operand_resolves(operand: &AletheTerm) -> bool {
+    match operand {
+        AletheTerm::Const(name) => parse_bv_literal(name).is_some(),
+        AletheTerm::App(..) | AletheTerm::Indexed { .. } => true,
     }
 }
 
@@ -4053,15 +4209,16 @@ fn lhs_bit_prop(
                 });
             };
             let width_lo =
-                bv_operand_width(ctx, lo).ok_or_else(|| ReconstructError::UnsupportedTerm {
+                alethe_bv_width(ctx, lo).ok_or_else(|| ReconstructError::UnsupportedTerm {
                     term: format!("concat low-operand width unknown `{}`", lhs.key()),
                 })?;
-            let bit_term = if i < width_lo {
-                operand_bit_term(lo, i)
+            // Bit-route into the operand structurally (`bv_bit`), so a compound concat
+            // operand expands rather than becoming an opaque `@bit_of` projection.
+            return if i < width_lo {
+                bv_bit(ctx, lo, i)
             } else {
-                operand_bit_term(hi, i - width_lo)
+                bv_bit(ctx, hi, i - width_lo)
             };
-            return Ok(ctx.gate_term_to_prop(&bit_term));
         }
         if head == "bvcomp" {
             // `(bvcomp x y)`: a 1-bit result whose only bit is the per-bit-equality
@@ -4071,8 +4228,8 @@ fn lhs_bit_prop(
                     term: format!("bvcomp needs two operands `{}`", lhs.key()),
                 });
             };
-            let width = bv_operand_width(ctx, x)
-                .or_else(|| bv_operand_width(ctx, y))
+            let width = alethe_bv_width(ctx, x)
+                .or_else(|| alethe_bv_width(ctx, y))
                 .ok_or_else(|| ReconstructError::UnsupportedTerm {
                     term: format!("bvcomp operand width unknown `{}`", lhs.key()),
                 })?;
@@ -4106,19 +4263,6 @@ fn comp_bit_term(x: &AletheTerm, y: &AletheTerm, width: usize) -> AletheTerm {
         AletheTerm::App("and".to_owned(), es)
     } else {
         es.into_iter().next().expect("a bit-vector has width >= 1")
-    }
-}
-
-/// The width of a bit-blast operand, when recoverable without type context: a
-/// `(@bbterm b…)` has `len` bits, a `#b…` literal has its digit count, and a
-/// recorded bit-blasted symbol uses [`ReconstructCtx::bv_widths`]. Returns
-/// [`None`] for a compound or undeclared operand (the caller then rejects).
-fn bv_operand_width(ctx: &ReconstructCtx, operand: &AletheTerm) -> Option<usize> {
-    match operand {
-        AletheTerm::App(head, args) if head == "@bbterm" => Some(args.len()),
-        AletheTerm::Const(name) => parse_bv_literal(name)
-            .map_or_else(|| ctx.bv_widths.get(name).copied(), |b| Some(b.len())),
-        _ => None,
     }
 }
 
@@ -4403,9 +4547,22 @@ fn reconstruct_bitwise_step(
 ) -> Result<Option<Clause>, ReconstructError> {
     match rule {
         // Slice-3 resolution core (also closes to `(cl)`).
-        "resolution" | "th_resolution" => Ok(Some(reconstruct_resolution_step(
-            ctx, clause, premises, env,
-        )?)),
+        "resolution" | "th_resolution" => {
+            // A compound term's **bit-definition** unit `(cl B_t)` is emitted as
+            // `equiv1` + `resolution` against the (deferred) `bitblast_*` term-equality
+            // step, so one premise is not in `env`. Under the faithful bit model the
+            // definition `B_t = (and (= ((_ @bit_of i) t) g_i) …)` is a conjunction of
+            // *reflexive* iffs (`((_ @bit_of i) t)` resolves structurally to the same
+            // Prop as `g_i`), hence a tautology proved directly — no premise needed.
+            if premises.iter().any(|p| !env.contains_key(p)) {
+                if let Some(def) = try_reconstruct_bit_definition(ctx, clause)? {
+                    return Ok(Some(def));
+                }
+            }
+            Ok(Some(reconstruct_resolution_step(
+                ctx, clause, premises, env,
+            )?))
+        }
         // Slice-4 Tseitin CNF-introduction tautologies, proved structurally.
         "and_pos" | "and_neg" | "or_pos" | "or_neg" | "equiv_pos1" | "equiv_pos2"
         | "equiv_neg1" | "equiv_neg2" | "xor_pos1" | "xor_pos2" | "xor_neg1" | "xor_neg2" => {
@@ -4429,6 +4586,94 @@ fn reconstruct_bitwise_step(
             rule: other.to_owned(),
         }),
     }
+}
+
+/// Try to reconstruct a compound term's **bit-definition** unit clause `(cl B_t)`,
+/// where `B_t = (and (= ((_ @bit_of i) t) g_i) …)` (or the single `(= … g_0)` for a
+/// width-1 term) ties each projection `((_ @bit_of i) t)` to its gadget bit `g_i`.
+///
+/// Under the faithful bit model, `((_ @bit_of i) t)` for a compound `t` resolves
+/// structurally (via [`bv_bit`], the same path the gadget `g_i` takes), so each
+/// conjunct `(= ((_ @bit_of i) t) g_i)` is `Iff P P` — a reflexive identity. The
+/// whole `B_t` is therefore an `And`-fold of `Iff.refl`s, proved directly with no
+/// premise. The result is `check_against`-gated: if any conjunct is NOT reflexive
+/// (a wrong gadget bit), the kernel rejects.
+///
+/// Returns `Ok(None)` if `clause` is not a single positive bit-definition literal,
+/// so the caller falls back to ordinary resolution.
+fn try_reconstruct_bit_definition(
+    ctx: &mut ReconstructCtx,
+    clause: &[AletheLit],
+) -> Result<Option<Clause>, ReconstructError> {
+    // Must be a single positive literal `B_t`.
+    let [lit] = clause else {
+        return Ok(None);
+    };
+    if lit.negated {
+        return Ok(None);
+    }
+    // Collect the conjuncts of `B_t`: either `(and c0 c1 …)` or a single `c0`.
+    let conjuncts: Vec<&AletheTerm> = match &lit.atom {
+        AletheTerm::App(head, args) if head == "and" && !args.is_empty() => args.iter().collect(),
+        single @ AletheTerm::App(head, _) if head == "=" => vec![single],
+        _ => return Ok(None),
+    };
+    // Every conjunct must be a bit-definition equality `(= ((_ @bit_of i) t) g_i)`
+    // whose left side projects a COMPOUND term (not a bare symbol — that would be an
+    // ordinary predicate's bit form, not a definition).
+    let mut defines_compound = false;
+    for c in &conjuncts {
+        let AletheTerm::App(head, args) = c else {
+            return Ok(None);
+        };
+        if head != "=" || args.len() != 2 {
+            return Ok(None);
+        }
+        match &args[0] {
+            AletheTerm::Indexed {
+                op, args: pargs, ..
+            } if op == "@bit_of" && pargs.len() == 1 => {
+                if !matches!(pargs[0], AletheTerm::Const(_)) {
+                    defines_compound = true;
+                }
+            }
+            _ => return Ok(None),
+        }
+    }
+    if !defines_compound {
+        return Ok(None);
+    }
+
+    // Build the proof: each conjunct's `Prop` is `Iff ⟦lhs⟧ ⟦rhs⟧`; under the model
+    // `⟦lhs⟧` and `⟦rhs⟧` coincide, so its proof is `mk_iff_refl(⟦lhs⟧)`. `And.intro`
+    // fold (right-nested) the per-conjunct refl proofs.
+    let mut props: Vec<ExprId> = Vec::with_capacity(conjuncts.len());
+    let mut proofs: Vec<ExprId> = Vec::with_capacity(conjuncts.len());
+    for c in &conjuncts {
+        let AletheTerm::App(_, args) = c else {
+            return Ok(None);
+        };
+        let lhs_prop = ctx.gate_term_to_prop(&args[0]);
+        let rhs_prop = ctx.gate_term_to_prop(&args[1]);
+        props.push(ctx.mk_iff(lhs_prop, rhs_prop));
+        // The reflexive proof of `Iff lhs rhs` is well-typed only if `lhs`/`rhs`
+        // coincide as Props; the final `check_against` is the gate.
+        proofs.push(ctx.mk_iff_refl(lhs_prop));
+    }
+    // Right-fold `And.intro`.
+    let n = props.len();
+    let mut acc_prop = props[n - 1];
+    let mut acc_proof = proofs[n - 1];
+    for i in (0..n - 1).rev() {
+        acc_proof = and_intro(ctx, props[i], acc_prop, proofs[i], acc_proof);
+        acc_prop = ctx.mk_and(props[i], acc_prop);
+    }
+    let target = ctx.gate_clause_to_prop(clause);
+    let proof = check_against(ctx, "bit_definition", acc_proof, target)?;
+    Ok(Some(Clause {
+        lits: clause.to_vec(),
+        proof,
+    }))
 }
 
 /// Reconstruct an `equiv1`/`equiv2` bridge clause as a genuine bit-level `Prop`

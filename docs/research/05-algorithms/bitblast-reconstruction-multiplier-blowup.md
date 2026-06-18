@@ -110,3 +110,42 @@ This is the prerequisite for wide `bvmul`/`bvudiv`/… and removes both the emis
 *and* reconstruction blowup (the kernel `check_against` over large Props goes away
 because the Props become `O(size)` per bit). ADR-level, Carcara-sensitive — a focused
 fresh-session change, but now precisely specified rather than "share it somehow".
+
+## Landed: projection encoding for compound operands (2026-06-18)
+
+The projection encoding above is **implemented** in `qfbv_alethe.rs` (`BbReducer`),
+`bitblast_alethe.rs`, and `reconstruct.rs`, and is **Carcara-validated** (all 46
+`carcara_crosscheck` tests pass, including the compound/nested/arithmetic drivers).
+
+- **Emitter.** `BbReducer::reduce_term`/`reduce_predicate` now bit-blast each compound
+  op **directly on its original child terms**, so `build_term_vec` projects
+  `((_ @bit_of i) child)` — the conclusion is `(= op(orig children) (@bbterm
+  projections))`, `O(size²)`, no `cong`/`trans`/`@bbterm`-form substitution.
+- **The cross-term connection.** Projecting `((_ @bit_of i) t)` makes it an *opaque*
+  SAT atom, breaking the link to a compound operand's bits. We restore it with a
+  per-compound **bit-definition**: `bitblast_equal` over the proven `(= t (@bbterm
+  g…))` yields `B_t = (and (= ((_ @bit_of i) t) g_i) …)` — a Carcara-valid step —
+  then `equiv1` + `resolution` derive the unit `(cl B_t)`, fed into the refutation.
+  (There is **no** Carcara rule to project a bit out of an `@bbterm`, so this
+  `bitblast_equal` bridge is the only Carcara-valid way to tie the projection to its
+  gadget; confirmed by exhaustively testing `evaluate`/`cong`/`refl`/… against the
+  binary.)
+- **Reconstruction.** `gate_term_to_prop` resolves `((_ @bit_of i) compound)` (and a
+  `#b…` literal) through the faithful bit model `bv_bit`, so the projection agrees
+  structurally with the LHS; `bv_bit`/`alethe_bv_width` gained `concat`/`sign_extend`/
+  `bvcomp` cases for nested operands; the bit-definition `(cl B_t)` reconstructs as a
+  reflexive `And`-fold of `Iff.refl`s (`try_reconstruct_bit_definition`).
+
+**Effect (measured).** *Nested* multiply `((a·b)·c)` now reconstructs to a
+kernel-checked `False` at **width 6** (≈115 s) and emits to width 8, vs the old
+inlined blowup at ~width 3–4. A committed regression test exercises width 4
+(`end_to_end_nested_mul_projection_reconstructs`).
+
+**Still open — the single-multiplier term.** A *single* wide `bvmul` over leaf
+operands is unchanged: its gadget is one `bitblast_mult` step whose result bit `i`
+is still an inlined ~4.5×/bit tree, so reconstruction's `mult_bit_term` hits
+`MULT_BIT_NODE_BUDGET` at ~width 7 (the guard still fires; raising it, width-8
+reconstruction exceeds 150 s). Likewise deep `bvudiv` lowering (nested multipliers)
+reconstructs only at width 2 in practical time. Closing these needs the
+**reconstruction-side sharing** of the multiplier DAG (item 1 above) — a separate
+follow-up; the projection encoding is the prerequisite, now landed.
