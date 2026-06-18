@@ -2204,6 +2204,110 @@ impl Assignment {
     }
 }
 
+/// The right-nested `And` `Prop` of `props` (non-empty), matching how
+/// [`ReconstructCtx::gate_term_to_prop`] renders `(and φ…)` via `fold_right`.
+fn and_chain_prop_of(ctx: &mut ReconstructCtx, props: &[ExprId]) -> ExprId {
+    let mut it = props.iter().rev().copied();
+    let mut acc = it.next().expect("and has at least one operand");
+    for p in it {
+        acc = ctx.mk_and(p, acc);
+    }
+    acc
+}
+
+/// Project the `i`-th conjunct from `h : ⟦and φ_0 … φ_{k-1}⟧` (the right-nested
+/// `And` of `props`), proving `props[i]`, via `i` `And.right` peels then (unless it
+/// is the last operand) one `And.left`. `O(k)` — the polynomial replacement for
+/// the `2^atoms` truth-table on `and_pos`. Reuses [`and_project`] (the `And.left`/
+/// `And.right` primitive).
+fn project_nth_conjunct(ctx: &mut ReconstructCtx, h: ExprId, props: &[ExprId], i: usize) -> ExprId {
+    let mut cur = h;
+    for j in 0..i {
+        let a = props[j];
+        let b = and_chain_prop_of(ctx, &props[j + 1..]);
+        cur = and_project(ctx, a, b, cur, false); // take the right component
+    }
+    if i == props.len() - 1 {
+        cur // the last operand is the innermost right component — no further proj
+    } else {
+        let a = props[i];
+        let b = and_chain_prop_of(ctx, &props[i + 1..]);
+        and_project(ctx, a, b, cur, true) // take the left component
+    }
+}
+
+/// Rule-specific `O(k)` reconstruction of `and_pos`: `(cl (not (and φ…)) φ_i)`.
+/// `em ⟦and φ…⟧`; on the positive branch project `⟦φ_i⟧` out of the conjunction and
+/// `Or.inr`, on the negative branch `Or.inl`. Returns `Ok(None)` if the clause is
+/// not this shape (caller falls back to the truth-table). The result is
+/// `check_against`-gated, so a wrong term is rejected, never accepted.
+fn try_and_pos(
+    ctx: &mut ReconstructCtx,
+    conclusion: &[AletheLit],
+) -> Result<Option<ExprId>, ReconstructError> {
+    let [l0, l1] = conclusion else {
+        return Ok(None);
+    };
+    if !l0.negated || l1.negated {
+        return Ok(None);
+    }
+    let AletheTerm::App(head, operands) = &l0.atom else {
+        return Ok(None);
+    };
+    if head != "and" || operands.is_empty() {
+        return Ok(None);
+    }
+    let phi_key = l1.atom.key();
+    let Some(i) = operands.iter().position(|op| op.key() == phi_key) else {
+        return Ok(None);
+    };
+
+    let _ = ctx.em_axiom();
+    let operands = operands.clone();
+    let operand_props: Vec<ExprId> = operands
+        .iter()
+        .map(|op| ctx.gate_term_to_prop(op))
+        .collect();
+    let g_prop = and_chain_prop_of(ctx, &operand_props);
+    let phi_prop = operand_props[i];
+    let not_g = ctx.mk_not(g_prop);
+    let target = ctx.mk_or(not_g, phi_prop);
+
+    let anon = ctx.kernel.anon();
+
+    // minor_inl := fun (hG : ⟦G⟧) => Or.inr not_g phi_prop (project_i hG).
+    let fvar_g = fresh_fvar_id(ctx);
+    let hg = ctx.kernel.fvar(fvar_g);
+    let proj = project_nth_conjunct(ctx, hg, &operand_props, i);
+    let inl_body = or_inr(ctx, not_g, phi_prop, proj);
+    let inl_body = ctx.kernel.abstract_fvars(inl_body, &[fvar_g]);
+    let minor_inl = ctx.kernel.lam(anon, g_prop, inl_body, BinderInfo::Default);
+
+    // minor_inr := fun (hnG : Not ⟦G⟧) => Or.inl not_g phi_prop hnG.
+    let fvar_ng = fresh_fvar_id(ctx);
+    let hng = ctx.kernel.fvar(fvar_ng);
+    let inr_body = or_inl(ctx, not_g, phi_prop, hng);
+    let inr_body = ctx.kernel.abstract_fvars(inr_body, &[fvar_ng]);
+    let minor_inr = ctx.kernel.lam(anon, not_g, inr_body, BinderInfo::Default);
+
+    // Or.rec.{0} ⟦G⟧ (Not ⟦G⟧) (fun _ => target) minor_inl minor_inr (em ⟦G⟧).
+    let or_g = ctx.mk_or(g_prop, not_g);
+    let motive = ctx.kernel.lam(anon, or_g, target, BinderInfo::Default);
+    let em_name = ctx.em_axiom();
+    let em = ctx.kernel.const_(em_name, vec![]);
+    let em_g = ctx.kernel.app(em, g_prop);
+    let z = ctx.kernel.level_zero();
+    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![z]);
+    let e = ctx.kernel.app(rec, g_prop);
+    let e = ctx.kernel.app(e, not_g);
+    let e = ctx.kernel.app(e, motive);
+    let e = ctx.kernel.app(e, minor_inl);
+    let e = ctx.kernel.app(e, minor_inr);
+    let proof = ctx.kernel.app(e, em_g);
+
+    Ok(Some(check_against(ctx, "and_pos", proof, target)?))
+}
+
 /// Reconstruct a Tseitin **CNF-introduction** rule into a kernel-checked Lean
 /// proof term of its conclusion clause's `Prop` encoding.
 ///
@@ -2216,11 +2320,11 @@ impl Assignment {
 /// [`Kernel::def_eq`]-compared to the clause's [`ReconstructCtx::gate_clause_to_prop`]
 /// encoding — the kernel is the gate.
 ///
-/// The proof is assembled uniformly: a classical case-split (via the context's
-/// `em`) over every distinct operand atom, with the satisfied literal injected
-/// into the conclusion's `Or` encoding in each leaf. A wrong conclusion makes the
-/// satisfied-literal search fail (no literal holds in some assignment) or the
-/// kernel reject — never a wrong "checked".
+/// Rules with a direct polynomial proof (`and_pos`) are handled rule-specifically;
+/// the rest fall back to a classical case-split (via the context's `em`) over every
+/// distinct operand atom, injecting the satisfied literal into the conclusion's
+/// `Or` encoding in each leaf. A wrong conclusion makes the satisfied-literal
+/// search fail or the kernel reject — never a wrong "checked".
 ///
 /// # Errors
 ///
@@ -2242,6 +2346,14 @@ pub fn reconstruct_cnf_intro_rule(
             return Err(ReconstructError::UnsupportedRule {
                 rule: other.to_owned(),
             });
+        }
+    }
+
+    // Rule-specific polynomial proofs (replacing the `2^atoms` truth-table) where
+    // available; fall back to `prove_clause_by_cases` for the rest.
+    if rule_name == "and_pos" {
+        if let Some(proof) = try_and_pos(ctx, conclusion)? {
+            return Ok(proof);
         }
     }
 
