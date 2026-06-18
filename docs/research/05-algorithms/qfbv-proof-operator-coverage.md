@@ -57,9 +57,26 @@ all-sign for `bvashr`). Exhaustively denotation-checked over **all** `(x, s)` pa
 for widths 2/3/4 (every overflow corner), and a variable `bvshl a s` query
 reconstructs end-to-end to a kernel-checked `False`.
 
-**Remaining:** `bvudiv`/`bvurem` (long division) and the signed div family, plus the
-route-2 `bv_poly_simp` upgrade (certify the *un-lowered* original). The rest of this
-note is the original analysis.
+**Unsigned division LOWERED (end-to-end blocked).** `lower_derived_bv` now reduces
+`bvudiv`/`bvurem` to core via one unrolled long-division (shift-subtract) pass —
+`divide` — exhaustively denotation-checked over **all** `(x, y)` for widths 2/3/4,
+including `y = 0` (SMT-LIB totality `udiv = all-ones`, `urem = x` falls out for free).
+The lowering is sound and usable (e.g. the SAT path), but **end-to-end proof
+reconstruction is blocked** by two separate issues:
+1. **`cnf_intro` over Boolean constants.** The divider's adders/subtracters over the
+   zero-const bits produce `xor`/`equiv` Tseitin clauses whose operands are the
+   literals `false`/`(not false)`; the truth-table case-split treats them as free
+   atoms and explores the impossible `(not false) = false` world, raising a spurious
+   `MalformedStep`. Fix: `collect_atoms`/`try_equiv_xor` must treat `true`/`false` as
+   evaluated constants, not case-split atoms (and `prove_term` must discharge them).
+2. **Term blowup.** The unrolled divider is a large term; its proof reconstruction is
+   intractable beyond tiny widths — the same representation problem as the multiplier
+   ([[bitblast-reconstruction-multiplier-blowup]]), wanting the shared/`let` encoding.
+
+**Remaining:** the two div-reconstruction blockers above; the signed div family
+(`bvsdiv`/`bvsrem`/`bvsmod`, reducible to unsigned + sign logic); and the route-2
+`bv_poly_simp` upgrade (certify the *un-lowered* original). The rest of this note is
+the original analysis.
 
 ## The gap: derived operators are rejected (confirmed by probe)
 

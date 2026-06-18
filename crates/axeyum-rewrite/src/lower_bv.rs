@@ -3,11 +3,19 @@
 //! reconstruction all support
 //! (see `docs/research/05-algorithms/qfbv-proof-operator-coverage.md`).
 //!
-//! Reducing `bvsub`/`bvnand`/`bvnor`, the six non-core comparisons, and the
-//! structural `zero_extend`/`rotate_left`/`rotate_right` to core lets the proof track
-//! cover them: lower first, then emit a proof over core ops only. Every rule is a
-//! standard SMT-LIB identity, and each is checked denotation-preserving by the ground
-//! evaluator in the tests below.
+//! Reducing `bvsub`/`bvnand`/`bvnor`, the six non-core comparisons, the structural
+//! `zero_extend`/`rotate_left`/`rotate_right`, the shifts (`bvshl`/`bvlshr`/`bvashr`,
+//! constant *and* variable amount), and unsigned division/remainder
+//! (`bvudiv`/`bvurem`) to core lets the proof track cover them: lower first, then emit
+//! a proof over core ops only. Every rule is a standard SMT-LIB identity, and each is
+//! checked denotation-preserving by the ground evaluator in the tests below.
+//!
+//! Coverage caveat: the *lowering* of every operator here is denotation-preserving
+//! and exhaustively tested. Most reconstruct end-to-end, but the unrolled long
+//! `divide` produces a large term whose proof reconstruction is intractable beyond
+//! tiny widths (the multiplier-style term blowup) and currently also trips
+//! `cnf_intro` over Boolean-constant operands — see
+//! `docs/research/05-algorithms/qfbv-proof-operator-coverage.md`.
 
 use axeyum_ir::{IrError, Op, TermArena, TermId, TermNode};
 
@@ -23,6 +31,9 @@ use axeyum_ir::{IrError, Op, TermArena, TermId, TermNode};
 /// - `bvsgt a b → bvslt b a`, `bvsle a b → ¬(bvslt b a)`, `bvsge a b → ¬(bvslt a b)`
 /// - `zero_extend k x → concat (0:k) x`
 /// - `rotate_left`/`rotate_right` → `concat` of two `extract`s
+/// - `bvshl`/`bvlshr`/`bvashr`: constant amount → `concat`/`extract`/`sign_extend`;
+///   variable amount → a barrel-shifter (mux) network
+/// - `bvudiv`/`bvurem` → one unrolled long-division pass (shift-subtract)
 ///
 /// # Errors
 ///
@@ -109,6 +120,20 @@ pub fn lower_derived_bv(arena: &mut TermArena, term: TermId) -> Result<TermId, I
             match shift {
                 Some(s) => lower_const_shift(arena, op, largs[0], s, w)?,
                 None => lower_var_shift(arena, op, largs[0], largs[1], w)?,
+            }
+        }
+        // Unsigned division/remainder: one unrolled long-division pass yields both;
+        // SMT-LIB's `y = 0` totality (udiv = all-ones, urem = x) falls out for free.
+        Op::BvUdiv | Op::BvUrem => {
+            let w = arena
+                .sort_of(largs[0])
+                .bv_width()
+                .expect("div operand has BV sort");
+            let (quotient, remainder) = divide(arena, largs[0], largs[1], w)?;
+            if matches!(op, Op::BvUdiv) {
+                quotient
+            } else {
+                remainder
             }
         }
         // Not a lowered operator: rebuild with lowered children (sort preserved).
@@ -209,6 +234,17 @@ fn lower_const_shift(
     }
 }
 
+/// Zero-extend `a` by `by` bits using **core** ops only (`concat` of a zero const) —
+/// unlike `TermArena::zero_ext`, which builds a derived `ZeroExt` node that would
+/// reach the emitter unlowered.
+fn zext_core(arena: &mut TermArena, by: u32, a: TermId) -> Result<TermId, IrError> {
+    if by == 0 {
+        return Ok(a);
+    }
+    let z = arena.bv_const(by, 0)?;
+    arena.concat(z, a)
+}
+
 /// Bitwise mux `mask ? a : b` over width-`w` operands where `mask` is all-ones or
 /// all-zeros: `(mask ∧ a) ∨ (¬mask ∧ b)`. Core ops only.
 fn select(arena: &mut TermArena, mask: TermId, a: TermId, b: TermId) -> Result<TermId, IrError> {
@@ -253,6 +289,50 @@ fn lower_var_shift(
         arena.bv_const(w, 0)?
     };
     select(arena, ov_mask, fallback, cur)
+}
+
+/// Unsigned long division of width-`w` `x` by `y`, returning `(quotient, remainder)`
+/// as core-operator terms. The classic restoring shift-subtract loop, fully unrolled
+/// over `w` steps and computed in `w+1`/`w+2`-bit intermediates so the shift-in and
+/// the `≥` borrow never lose information. SMT-LIB totality is automatic: for `y = 0`
+/// every step subtracts (the `≥ 0` test is always true) ⇒ `quotient` is all-ones and
+/// `remainder` is `x`.
+#[allow(clippy::many_single_char_names)] // x/y operands, w width, t/i step/bit indices
+fn divide(
+    arena: &mut TermArena,
+    x: TermId,
+    y: TermId,
+    w: u32,
+) -> Result<(TermId, TermId), IrError> {
+    let mut rem = arena.bv_const(w, 0)?; // width w
+    let mut quo_bits: Vec<TermId> = Vec::with_capacity(w as usize); // MSB-first
+    for t in 0..w {
+        let i = w - 1 - t; // process x bit `i` (MSB first)
+        // shifted = (rem << 1) | x[i] = concat(rem, x[i])  [w+1 bits, no loss].
+        let xi = arena.extract(i, i, x)?;
+        let shifted = arena.concat(rem, xi)?; // w+1 bits
+        let y_ext = zext_core(arena, 1, y)?; // w+1 bits
+        // cond (1-bit) = shifted ≥ y_ext, via the borrow of a w+2-bit subtraction.
+        let sa = zext_core(arena, 1, shifted)?; // w+2
+        let sb = zext_core(arena, 1, y_ext)?; // w+2
+        let neg_sb = arena.bv_neg(sb)?;
+        let d = arena.bv_add(sa, neg_sb)?; // w+2; top bit = borrow
+        let borrow = arena.extract(w + 1, w + 1, d)?; // 1 bit
+        let cond = arena.bv_not(borrow)?; // 1 bit: shifted ≥ y_ext
+        // subtracted = shifted - y_ext (w+1 bits); keep it iff cond.
+        let neg_y = arena.bv_neg(y_ext)?;
+        let subtracted = arena.bv_add(shifted, neg_y)?;
+        let cond_mask = arena.sign_ext(w, cond)?; // splat cond to w+1 bits
+        let rem_ext_new = select(arena, cond_mask, subtracted, shifted)?;
+        rem = arena.extract(w - 1, 0, rem_ext_new)?; // back to w bits
+        quo_bits.push(cond);
+    }
+    // quotient: quo_bits[t] is bit `w-1-t`, so concat MSB-first reproduces it.
+    let mut q = quo_bits[w as usize - 1];
+    for t in (0..w as usize - 1).rev() {
+        q = arena.concat(quo_bits[t], q)?;
+    }
+    Ok((q, rem))
 }
 
 #[cfg(test)]
@@ -355,10 +435,11 @@ mod tests {
         }
     }
 
-    /// Exhaustively confirm a lowered variable (two-operand) shift agrees with the
-    /// original on every `(x, s)` pair of `width`-bit inputs — the barrel-shifter
-    /// soundness obligation, including every `s ≥ width` overflow case.
-    fn assert_var_shift_preserves(
+    /// Exhaustively confirm a lowered two-operand op (variable shift, div/rem) agrees
+    /// with the original on every `(x, y)` pair of `width`-bit inputs — the
+    /// barrel-shifter / long-division soundness obligation, including every overflow
+    /// and `y = 0` corner.
+    fn assert_lowered_binary_preserves(
         width: u32,
         build: impl Fn(&mut TermArena, TermId, TermId) -> TermId,
     ) {
@@ -369,8 +450,8 @@ mod tests {
         let s = arena.var(ss);
         let orig = build(&mut arena, x, s);
         let low = lower_derived_bv(&mut arena, orig).unwrap();
-        // The lowering must actually have rewritten the variable shift.
-        assert_ne!(low, orig, "variable shift was not lowered");
+        // The lowering must actually have rewritten the operator.
+        assert_ne!(low, orig, "two-operand op was not lowered");
         let n = 1u128 << width;
         for xv in 0..n {
             for sv in 0..n {
@@ -388,9 +469,18 @@ mod tests {
     fn variable_shifts_preserve_denotation() {
         // Non-power-of-two and power-of-two widths exercise the overflow corners.
         for w in [2u32, 3, 4] {
-            assert_var_shift_preserves(w, |a, x, s| a.bv_shl(x, s).unwrap());
-            assert_var_shift_preserves(w, |a, x, s| a.bv_lshr(x, s).unwrap());
-            assert_var_shift_preserves(w, |a, x, s| a.bv_ashr(x, s).unwrap());
+            assert_lowered_binary_preserves(w, |a, x, s| a.bv_shl(x, s).unwrap());
+            assert_lowered_binary_preserves(w, |a, x, s| a.bv_lshr(x, s).unwrap());
+            assert_lowered_binary_preserves(w, |a, x, s| a.bv_ashr(x, s).unwrap());
+        }
+    }
+
+    #[test]
+    fn div_rem_preserve_denotation() {
+        // Exhaustive over all (x, y) incl. y = 0 (SMT-LIB: udiv→all-ones, urem→x).
+        for w in [2u32, 3, 4] {
+            assert_lowered_binary_preserves(w, |a, x, y| a.bv_udiv(x, y).unwrap());
+            assert_lowered_binary_preserves(w, |a, x, y| a.bv_urem(x, y).unwrap());
         }
     }
 
