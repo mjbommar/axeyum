@@ -1588,6 +1588,12 @@ fn lookup<'a>(env: &'a BTreeMap<String, Clause>, id: &str) -> Result<&'a Clause,
 /// remaining premise resolves with the accumulator, the step is rejected.
 ///
 /// The returned [`Clause`] carries the resolvent literals and its kernel proof term.
+///
+/// Pool-size budget for the Davis–Putnam working set: DP is worst-case exponential,
+/// so cap the pool and degrade to a clean error rather than hang/OOM on a
+/// pathological proof.
+const DP_POOL_BUDGET: usize = 4096;
+
 fn reconstruct_resolution_step(
     ctx: &mut ReconstructCtx,
     conclusion: &[AletheLit],
@@ -1624,10 +1630,6 @@ fn reconstruct_resolution_step(
     let mut pool: Vec<Clause> = std::iter::once(Ok(normalized(lookup(env, first)?)))
         .chain(rest.iter().map(|p| Ok(normalized(lookup(env, p)?))))
         .collect::<Result<_, ReconstructError>>()?;
-
-    // Pool-size budget: DP is worst-case exponential, so cap the working set and
-    // degrade to a clean error rather than hang/OOM on a pathological proof.
-    const DP_POOL_BUDGET: usize = 4096;
 
     loop {
         // Count, for each non-conclusion variable, how many pool clauses hold it
@@ -3441,6 +3443,7 @@ impl ReconstructCtx {
 /// `concat`/`sign_extend`, n-ary `bvadd`/`bvmul`, …), a non-bit-vector shape, or
 /// an out-of-range bit of a known-width constant. `extract` (bit `i` → bit
 /// `lo + i`) and binary `bvadd`/`bvneg`/`bvmul` (carry chains) are supported.
+#[allow(clippy::too_many_lines)] // a flat per-operator bit dispatch; clearer inline
 fn bv_bit(
     ctx: &mut ReconstructCtx,
     term: &AletheTerm,
@@ -3675,6 +3678,7 @@ const MULT_BIT_NODE_BUDGET: u128 = 20_000;
 /// same `shift_add_multiplier` recurrence — used to guard against the exponential
 /// blowup before allocating. Mirrors the term shapes (`and`/`or`/`xor` = 1 + two
 /// operands, `false` = 1, `and(y,x)` shift leaf = 3).
+#[allow(clippy::needless_range_loop)] // the shift-add recurrence reads clearer with explicit j/k indices
 fn mult_bit_node_count(i: usize) -> u128 {
     let size = i + 1;
     let shift = |j: usize, k: usize| -> u128 { if j <= k { 3 } else { 1 } };
