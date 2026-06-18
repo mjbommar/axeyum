@@ -355,6 +355,27 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **P3.7 destination-3 milestone: reconstructed refutations checked
+  by a REAL Lean 4 kernel.** Installed a real Lean toolchain (elan + `leanprover/lean4`
+  stable 4.31; the gold-standard checker, analogue of the Z3 oracle — a CI/cross-check
+  tool, not a build dependency) and made the in-tree reconstruction externally
+  verifiable end-to-end:
+  - **`Kernel::render_lean_module`** (`axeyum-lean-kernel::lean_pp`): renders a
+    self-contained `prelude`-mode Lean 4 module — every environment declaration
+    reachable from goal+proof (transitive const-closure + topological sort;
+    inductive/ctor/recursor emitted as `axiom`s carrying their kernel types), then
+    `theorem axeyum_refutation : False := <proof>` + `#print axioms`. Numeric name
+    components sanitized (`atom.0`→`atom._0`); `Succ` chains collapsed to numerals.
+  - **`prove_unsat_to_lean_module`** (solver + façade): like `prove_unsat_to_lean`
+    but also returns the Lean source. Same soundness gate (kernel-checks to `False`).
+  - **Gated cross-check** (`tests/lean_crosscheck.rs`, skips without `lean`): the
+    QF_UFBV (congruence), LRA (Farkas), ∀ (instantiation), and ∃ (skolemization)
+    refutations each **type-check in real Lean 4** with `#print axioms` showing only
+    the axeyum-declared logical/carrier/uninterpreted/`em`/hypothesis axioms — **no
+    `sorryAx`**. The real Lean kernel independently corroborates the in-tree check.
+    Honest boundary: inductive recursors are rendered as axioms (their generation is
+    trusted, same as in-tree); a later slice can render real `inductive` commands to
+    let Lean *derive* the recursors.
 - **2026-06-17** — **Track-1 complement sweep (four lanes, alongside the proof/Lean
   agent).** Non-colliding Track-1 increments, each its own sound + tested + pedantic-
   clippy-clean commit:

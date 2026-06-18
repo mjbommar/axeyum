@@ -167,6 +167,21 @@ impl<B: SolverBackend> Solver<B> {
         crate::prove_unsat_to_lean(arena, &self.assertions)
     }
 
+    /// Like [`Solver::prove_unsat_to_lean`], but also returns a **self-contained
+    /// Lean 4 module** (`prelude`-mode source) that re-proves the refutation and is
+    /// checkable by an independent `lean` binary (see
+    /// [`crate::prove_unsat_to_lean_module`]).
+    ///
+    /// # Errors
+    ///
+    /// Same as [`Solver::prove_unsat_to_lean`].
+    pub fn prove_unsat_to_lean_module(
+        &self,
+        arena: &mut TermArena,
+    ) -> Result<(crate::ProofFragment, String), crate::ReconstructError> {
+        crate::prove_unsat_to_lean_module(arena, &self.assertions)
+    }
+
     /// Checks the active assertions together with one-shot `assumptions`.
     ///
     /// The assumptions hold only for this check and are not retained, matching

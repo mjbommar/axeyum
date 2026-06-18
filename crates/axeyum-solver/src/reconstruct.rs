@@ -1221,30 +1221,71 @@ pub fn prove_unsat_to_lean(
     arena: &mut TermArena,
     assertions: &[TermId],
 ) -> Result<ProofFragment, ReconstructError> {
+    prove_unsat_to_lean_module(arena, assertions).map(|(fragment, _)| fragment)
+}
+
+/// The theorem name used for the exported refutation in a rendered Lean module.
+const LEAN_MODULE_THEOREM: &str = "axeyum_refutation";
+
+/// Render the [`ReconstructCtx`]'s kernel state as a self-contained Lean module
+/// proving `proof : False` (the shared closing step of the non-LRA branches).
+fn render_ctx_module(ctx: &mut ReconstructCtx, proof: ExprId) -> String {
+    let false_ = {
+        let n = ctx.prelude().false_;
+        ctx.kernel_mut().const_(n, vec![])
+    };
+    ctx.kernel()
+        .render_lean_module(LEAN_MODULE_THEOREM, false_, proof)
+}
+
+/// **Like [`prove_unsat_to_lean`], but also returns a self-contained Lean 4
+/// module** (`prelude`-mode source) that re-proves the refutation and can be
+/// checked by an independent `lean` binary.
+///
+/// The string is [`Kernel::render_lean_module`] over the same kernel state the
+/// in-tree checker accepted: it declares every reachable constant (logical
+/// prelude, carrier, uninterpreted symbols, `em`) and closes with
+/// `theorem axeyum_refutation : False := <proof>` plus a `#print axioms` audit.
+/// A successful return means the refutation was emitted, kernel-checked to
+/// `False`, **and** rendered to externally-checkable Lean source — never a wrong
+/// `False`.
+///
+/// # Errors
+///
+/// Same as [`prove_unsat_to_lean`]: an [`ReconstructError`] when no reconstructor
+/// covers the fragment, the emitter declines (not UNSAT through that fragment), or
+/// a reconstruction fails to kernel-check to `False`.
+pub fn prove_unsat_to_lean_module(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<(ProofFragment, String), ReconstructError> {
     let fragment = scan_proof_fragment(arena, assertions);
     let declined = || ReconstructError::MalformedStep {
         rule: "prove_unsat_to_lean".to_owned(),
         detail: "emitter declined: not unsat through this fragment".to_owned(),
     };
-    match fragment {
+    let source = match fragment {
         ProofFragment::QfBv => {
             let p =
                 crate::prove_qf_bv_unsat_alethe_lowered(arena, assertions).ok_or_else(declined)?;
             let mut ctx = ReconstructCtx::new();
             let t = reconstruct_qf_bv_proof(&mut ctx, &p)?;
             require_infers_false(&mut ctx, t)?;
+            render_ctx_module(&mut ctx, t)
         }
         ProofFragment::QfUf => {
             let p = crate::prove_qf_uf_unsat_alethe(arena, assertions).ok_or_else(declined)?;
             let mut ctx = ReconstructCtx::new();
             let t = reconstruct_qf_uf_proof(&mut ctx, &p)?;
             require_infers_false(&mut ctx, t)?;
+            render_ctx_module(&mut ctx, t)
         }
         ProofFragment::QfUfBv => {
             let p = crate::prove_qf_ufbv_unsat_alethe(arena, assertions).ok_or_else(declined)?;
             let mut ctx = ReconstructCtx::new();
             let t = reconstruct_qf_ufbv_proof(&mut ctx, &p)?;
             require_infers_false(&mut ctx, t)?;
+            render_ctx_module(&mut ctx, t)
         }
         ProofFragment::QfAbv => {
             let p = crate::prove_qf_abv_unsat_alethe_via_elimination(arena, assertions)
@@ -1252,6 +1293,7 @@ pub fn prove_unsat_to_lean(
             let mut ctx = ReconstructCtx::new();
             let t = reconstruct_qf_ufbv_proof(&mut ctx, &p)?;
             require_infers_false(&mut ctx, t)?;
+            render_ctx_module(&mut ctx, t)
         }
         ProofFragment::Datatype => {
             let p = crate::prove_qf_dt_unsat_alethe_via_simplification(arena, assertions)
@@ -1259,18 +1301,21 @@ pub fn prove_unsat_to_lean(
             let mut ctx = ReconstructCtx::new();
             let t = reconstruct_qf_ufbv_proof(&mut ctx, &p)?;
             require_infers_false(&mut ctx, t)?;
+            render_ctx_module(&mut ctx, t)
         }
         ProofFragment::Forall => {
             let p = crate::prove_quant_unsat_alethe(arena, assertions).ok_or_else(declined)?;
             let mut ctx = ReconstructCtx::new();
             let t = reconstruct_quant_unsat_proof(&mut ctx, &p)?;
             require_infers_false(&mut ctx, t)?;
+            render_ctx_module(&mut ctx, t)
         }
         ProofFragment::Exists => {
             let cert = crate::prove_skolem_unsat_alethe(arena, assertions).ok_or_else(declined)?;
             let mut ctx = ReconstructCtx::new();
             let t = reconstruct_skolem_unsat_proof(&mut ctx, &cert)?;
             require_infers_false(&mut ctx, t)?;
+            render_ctx_module(&mut ctx, t)
         }
         ProofFragment::Lra => {
             let mut ctx = LraReconstructCtx::new();
@@ -1292,14 +1337,16 @@ pub fn prove_unsat_to_lean(
                     detail: "reconstructed LRA term did not infer to False".to_owned(),
                 });
             }
+            ctx.kernel()
+                .render_lean_module(LEAN_MODULE_THEOREM, false_, t)
         }
         ProofFragment::Unsupported => {
             return Err(ReconstructError::UnsupportedRule {
                 rule: "prove_unsat_to_lean: no reconstructable content".to_owned(),
             });
         }
-    }
-    Ok(fragment)
+    };
+    Ok((fragment, source))
 }
 
 /// Reconstruct a **complete** EUF `unsat` Alethe proof into a Lean proof term of
