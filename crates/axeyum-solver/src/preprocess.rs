@@ -2,7 +2,8 @@
 //!
 //! [`check_with_preprocessing`] shrinks a conjunction *before* it reaches a
 //! backend by running the model-sound term-level passes — `propagate_values`
-//! (pin `x = c`) then `solve_eqs` (substitute `x = t`) — composing their
+//! (pin `x = c`), `solve_eqs` (substitute `x = t`), then `elim_unconstrained`
+//! (drop invertible-op layers off single-use variables) — composing their
 //! [`ModelReconstructionTrail`]s. The backend then solves the smaller,
 //! variable-reduced problem; on `sat` the trail reconstructs the eliminated
 //! variables and the result is replayed against the **original** assertions, so
@@ -14,7 +15,7 @@
 //! [`crate::check_with_array_elimination`].
 
 use axeyum_ir::{TermArena, TermId, Value, eval};
-use axeyum_rewrite::{canonicalize_terms, propagate_values, solve_eqs};
+use axeyum_rewrite::{canonicalize_terms, elim_unconstrained, propagate_values, solve_eqs};
 
 use crate::backend::{CheckResult, SolverBackend, SolverConfig, SolverError};
 use crate::model::Model;
@@ -48,6 +49,18 @@ pub fn check_with_preprocessing<B: SolverBackend>(
         .map_err(|error| SolverError::Backend(format!("solve_eqs failed: {error}")))?
         .into_parts();
     trail.append(eq_trail);
+
+    // Eliminate unconstrained single-use invertible-operator layers (T1.2.4):
+    // a variable occurring once under `bvadd`/`bvsub`/`bvxor`/`bvnot`/`bvneg` makes
+    // that subterm unconstrained, so it is replaced by a fresh variable and the
+    // operator dropped (recovered on `sat` via the appended trail). Runs after
+    // `solve_eqs` so it sees the already-reduced form; its inverses reference only
+    // surviving symbols and freshly-minted ones, so appending its trail last
+    // (reconstructed first on reverse replay) resolves cleanly.
+    let (reduced, unconstrained_trail) = elim_unconstrained(arena, &reduced)
+        .map_err(|error| SolverError::Backend(format!("elim_unconstrained failed: {error}")))?
+        .into_parts();
+    trail.append(unconstrained_trail);
 
     // Re-canonicalize after substitution. `solve_eqs` inlines `x := t` by raw
     // structural rebuild (`replace_subterms`), so a definition like `s1 = a*(b*c)`

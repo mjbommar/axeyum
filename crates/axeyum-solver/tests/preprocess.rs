@@ -193,3 +193,50 @@ fn ac_multiplier_tree_commute_is_refuted_by_preprocessing() {
         "s1 = a*(b*c), s2 = c*(a*b); s1 != s2 is unsat by AC-normalization, not blasting"
     );
 }
+
+/// `elim_unconstrained` (T1.2.4) fires end-to-end: in `(bvult (bvadd x y) 100) ∧
+/// (bvugt y 1)`, `x` occurs once, so the `bvadd` is unconstrained and dropped; the
+/// `sat` model must still recover `x` and satisfy the original assertions.
+#[test]
+fn unconstrained_layer_is_eliminated_and_sat_model_reconstructs() {
+    let mut arena = TermArena::new();
+    let x = arena.declare("x", Sort::BitVec(8)).unwrap();
+    let y = arena.declare("y", Sort::BitVec(8)).unwrap();
+    let (xv, yv) = (arena.var(x), arena.var(y));
+    let sum = arena.bv_add(xv, yv).unwrap();
+    let hundred = arena.bv_const(8, 100).unwrap();
+    let a1 = arena.bv_ult(sum, hundred).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let a2 = arena.bv_ugt(yv, one).unwrap();
+    let originals = [a1, a2];
+
+    let CheckResult::Sat(model) = check(&mut arena, &originals) else {
+        panic!("expected sat");
+    };
+    assert!(model.get(x).is_some(), "eliminated x must be reconstructed");
+    assert_model_satisfies(&arena, &model, &originals);
+}
+
+/// `elim_unconstrained` must not change an `unsat` verdict: the contradiction
+/// lives in the surviving variable `y` (`y > 200 ∧ y < 50`), while `x`'s `bvadd`
+/// layer is unconstrained and eliminated. Still unsat.
+#[test]
+fn unconstrained_elimination_preserves_unsat() {
+    let mut arena = TermArena::new();
+    let x = arena.declare("x", Sort::BitVec(8)).unwrap();
+    let y = arena.declare("y", Sort::BitVec(8)).unwrap();
+    let (xv, yv) = (arena.var(x), arena.var(y));
+    let sum = arena.bv_add(xv, yv).unwrap();
+    let hundred = arena.bv_const(8, 100).unwrap();
+    let a1 = arena.bv_ult(sum, hundred).unwrap();
+    let two_hundred = arena.bv_const(8, 200).unwrap();
+    let fifty = arena.bv_const(8, 50).unwrap();
+    let a2 = arena.bv_ugt(yv, two_hundred).unwrap();
+    let a3 = arena.bv_ult(yv, fifty).unwrap();
+
+    assert_eq!(
+        check(&mut arena, &[a1, a2, a3]),
+        CheckResult::Unsat,
+        "y > 200 ∧ y < 50 is unsat; eliminating x's add must not change that"
+    );
+}

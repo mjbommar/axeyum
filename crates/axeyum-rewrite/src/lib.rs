@@ -11,6 +11,7 @@ use std::collections::BTreeSet;
 mod arrays;
 mod canonical;
 mod datatypes;
+mod elim_unconstrained;
 mod functions;
 mod int_blast;
 mod int_divmod;
@@ -26,6 +27,7 @@ pub use canonical::{
     replace_subterms,
 };
 pub use datatypes::simplify_datatypes;
+pub use elim_unconstrained::{UnconstrainedElimination, elim_unconstrained};
 pub use functions::{FuncElimError, FunctionElimination, eliminate_functions};
 pub use int_blast::{IntBlastError, IntBlasting, MAX_INT_BLAST_WIDTH, blast_integers};
 pub use int_divmod::eliminate_int_divmod;
