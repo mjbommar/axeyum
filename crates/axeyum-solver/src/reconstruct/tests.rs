@@ -1881,6 +1881,55 @@ fn end_to_end_mixed_derived_ops_compose() {
     assert_infers_false(&mut ctx, term);
 }
 
+/// Composition: a constant **shift** feeding a **comparison** pair.
+/// `bvult (bvshl a 1) c ∧ bvule c (bvshl a 1)` is `Q ∧ ¬Q` (`bvule c x = ¬bvult x c`);
+/// both the shift and the two comparisons lower to core and reconstruct to `False`.
+#[test]
+fn end_to_end_shift_into_comparison_composes() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let mk = |a: &mut TermArena, n: &str| {
+        let s = a.declare(n, Sort::BitVec(3)).unwrap();
+        a.var(s)
+    };
+    let a = mk(&mut arena, "a");
+    let c = mk(&mut arena, "c");
+    let one = arena.bv_const(3, 1).unwrap();
+    let sh = arena.bv_shl(a, one).unwrap();
+    let q = arena.bv_ult(sh, c).unwrap(); // bvult (a<<1) c
+    let nq = arena.bv_ule(c, sh).unwrap(); // bvule c (a<<1) = ¬q
+    let proof = crate::prove_qf_bv_unsat_alethe_lowered(&mut arena, &[q, nq])
+        .expect("emitter accepts lowered core");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_bv_proof(&mut ctx, &proof).expect("reconstructs");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// Composition: **nested** derived ops — a `bvnand` inside a `rotate`, equated.
+/// `(rotate_left (bvnand a b) 1) = d ∧ ¬(…)` exercises a derived op feeding another
+/// derived op (the rotate lowers to `concat`/`extract` over the lowered `bvnand`).
+#[test]
+fn end_to_end_nested_derived_ops_compose() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let mk = |a: &mut TermArena, n: &str| {
+        let s = a.declare(n, Sort::BitVec(4)).unwrap();
+        a.var(s)
+    };
+    let a = mk(&mut arena, "a");
+    let b = mk(&mut arena, "b");
+    let d = mk(&mut arena, "d");
+    let nand = arena.bv_nand(a, b).unwrap();
+    let rot = arena.rotate_left(1, nand).unwrap();
+    let eq = arena.eq(rot, d).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe_lowered(&mut arena, &[eq, neq])
+        .expect("emitter accepts lowered core");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_bv_proof(&mut ctx, &proof).expect("reconstructs");
+    assert_infers_false(&mut ctx, term);
+}
+
 /// ops). A `(rotate_left a 1) = b ∧ ¬(…)` query reconstructs to a kernel-checked
 /// `False`.
 #[test]
