@@ -67,6 +67,7 @@ mod quant_alethe;
 mod reconstruct;
 mod records;
 mod sat_bv_backend;
+mod skolem_alethe;
 mod smtlib;
 mod solver;
 mod strategy;
@@ -173,10 +174,11 @@ pub use reconstruct::{
     LraReconstructCtx, ReconstructCtx, ReconstructError, reconstruct_bitblast_step,
     reconstruct_cnf_intro_rule, reconstruct_eq_step, reconstruct_lra_proof,
     reconstruct_qf_bv_proof, reconstruct_qf_uf_proof, reconstruct_qf_ufbv_proof,
-    reconstruct_quant_unsat_proof, reconstruct_resolution_proof,
+    reconstruct_quant_unsat_proof, reconstruct_resolution_proof, reconstruct_skolem_unsat_proof,
 };
 pub use records::{RecordError, RecordSort};
 pub use sat_bv_backend::SatBvBackend;
+pub use skolem_alethe::{SkolemCert, SkolemRecord, prove_skolem_unsat_alethe};
 pub use smtlib::{
     SmtLibOutcome, optimize_smtlib, optimize_smtlib_lexicographic, solve_smtlib,
     solve_smtlib_get_proof, solve_smtlib_get_value, solve_smtlib_incremental,

@@ -46,11 +46,12 @@
 // that without improving clarity here.
 #![allow(clippy::similar_names, clippy::many_single_char_names)]
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm};
 use axeyum_lean_kernel::{
-    BinderInfo, Declaration, ExprId, Kernel, LevelId, LogicPrelude, NameId, build_logic_prelude,
+    BinderInfo, Declaration, ExprId, ExprNode, Kernel, LevelId, LogicPrelude, NameId,
+    build_logic_prelude,
 };
 
 /// An error from Alethe → Lean reconstruction. Every out-of-scope shape, unknown
@@ -1817,6 +1818,387 @@ fn ground_view(env: &BTreeMap<String, QuantProof>) -> BTreeMap<String, ClausePro
         }
     }
     out
+}
+
+// ===========================================================================
+// Existential skolemization (P3.7) — CERTIFY the trusted skolemization step.
+//
+// ## The certificate and what it certifies
+//
+// [`crate::solve`] replaces a top-level `∃x. P(x)` with `P(sk)` for a fresh
+// constant `sk` and refutes the skolemized query — a *trusted* step. The
+// emitter [`crate::prove_skolem_unsat_alethe`] produces a [`crate::SkolemCert`]: an
+// Alethe proof of the **skolemized** refutation (where each `sk_k` is an
+// ordinary uninterpreted constant and each `P(sk_k)` is an `assume`d EUF unit)
+// plus, per existential, the bound-variable name, the single-equality body `P`
+// (bound variable free), and the skolem name `sk_k`.
+//
+// ## Kernel modeling of ∃ and the `Exists.elim` wrapping
+//
+// `∃(x : α). P(x)` is the prelude inductive `Exists.{1} α p` with
+// `p := fun (x : α) => ⟦P x⟧ : α → Prop`. The existential hypothesis is the
+// honest axiom `h_∃ : Exists α p` (mirroring how a universal becomes a `Pi`
+// axiom).
+//
+// The skolemized refutation `R : False` is reconstructed by the existing
+// quantifier walk; it mentions `Const(sk_k)` (the skolem atom) and
+// `Const(hyp_k)` (the `P(sk_k)` assumption axiom). `R` is **parametric** in
+// these: it refutes `P(sk_k) ∧ Rest` for the *arbitrary* constant `sk_k`. So,
+// replacing each `Const(sk_k) ↦ w_k` and `Const(hyp_k) ↦ hw_k` turns `R` into
+// the minor premise `fun (w_k : α) (hw_k : p_k w_k) => R'` and
+//
+//     Exists.rec.{0,1} α p_k (fun _ => False) (fun w_k hw_k => R') h_∃_k : False
+//
+// is the `Exists.elim`. Several existentials nest (innermost-out). The skolem
+// atom and assumption are turned into fresh **fvars** first, then the standard
+// `abstract_fvars` + `lam` machinery handles binder depth.
+//
+// ## Soundness
+//
+// The minor's body is the same kernel-checked refutation `R`; the
+// `Exists.rec` applications and the final term are `infer`/`def_eq False`-gated
+// through [`check_false`]. The only additions to the trusted base are the per-`∃`
+// axiom `h_∃_k` (the honest encoding of the input existential) and whatever the
+// inner refutation already adds (the universal axioms / side `assume`s). A wrong
+// body `p_k`, a mis-identified skolem/assumption, or a wrong nesting makes the
+// kernel reject the `Exists.rec` application — never a wrong `False`.
+// ===========================================================================
+
+impl ReconstructCtx {
+    /// The constant [`NameId`] previously declared (lazily) for the EUF atom
+    /// `name`, if any. Used by the skolem reconstruction to locate a skolem
+    /// constant after the inner refutation has been reconstructed.
+    fn atom_name_id(&self, name: &str) -> Option<NameId> {
+        self.atoms.get(name).copied()
+    }
+
+    /// Replace every `Const(target, _)` in `e` with the expression `repl`,
+    /// **correctly shifting** `repl` under intervening binders. Here `repl` is
+    /// always a loose `BVar` (the `Exists.elim`-bound variable), so passing
+    /// through a binder lifts it by one. A pure structural rewrite over the public
+    /// expression constructors — no reduction.
+    fn replace_const(&mut self, e: ExprId, target: NameId, repl: ExprId) -> ExprId {
+        self.replace_const_aux(e, target, repl, 0)
+    }
+
+    fn replace_const_aux(&mut self, e: ExprId, target: NameId, repl: ExprId, depth: u32) -> ExprId {
+        match self.kernel.expr_node(e).clone() {
+            ExprNode::Const(n, _) if n == target => {
+                // Lift the (loose-bvar) replacement to the current binder depth.
+                self.kernel.lift_loose_bvars(repl, 0, depth)
+            }
+            ExprNode::BVar(_)
+            | ExprNode::FVar(_)
+            | ExprNode::Sort(_)
+            | ExprNode::Const(..)
+            | ExprNode::Lit(_) => e,
+            ExprNode::App(f, a) => {
+                let f = self.replace_const_aux(f, target, repl, depth);
+                let a = self.replace_const_aux(a, target, repl, depth);
+                self.kernel.app(f, a)
+            }
+            ExprNode::Lam(name, ty, body, info) => {
+                let ty = self.replace_const_aux(ty, target, repl, depth);
+                let body = self.replace_const_aux(body, target, repl, depth + 1);
+                self.kernel.lam(name, ty, body, info)
+            }
+            ExprNode::Pi(name, ty, body, info) => {
+                let ty = self.replace_const_aux(ty, target, repl, depth);
+                let body = self.replace_const_aux(body, target, repl, depth + 1);
+                self.kernel.pi(name, ty, body, info)
+            }
+            ExprNode::Let(name, ty, val, body) => {
+                let ty = self.replace_const_aux(ty, target, repl, depth);
+                let val = self.replace_const_aux(val, target, repl, depth);
+                let body = self.replace_const_aux(body, target, repl, depth + 1);
+                self.kernel.let_(name, ty, val, body)
+            }
+        }
+    }
+
+    /// Build the existential predicate `p := fun (x : α) => ⟦body x⟧ : α → Prop`
+    /// and the proposition `Exists.{1} α p`, from a single-equality `body` whose
+    /// bound variable is `bound_var`.
+    fn mk_exists(
+        &mut self,
+        bound_var: &str,
+        body: &AletheTerm,
+    ) -> Result<(ExprId, ExprId), ReconstructError> {
+        // ⟦body⟧ with the bound variable at de-Bruijn 0 (a one-binder context).
+        let body_expr = self.alethe_term_to_expr_bound(body, &[bound_var])?;
+        let anon = self.kernel.anon();
+        // p := fun (x : α) => ⟦body⟧.
+        let p = self
+            .kernel
+            .lam(anon, self.alpha, body_expr, BinderInfo::Default);
+        // Exists.{1} α p.
+        let exists_const = self.kernel.const_(self.prelude.exists_, vec![self.one]);
+        let e = self.kernel.app(exists_const, self.alpha);
+        let exists_ap = self.kernel.app(e, p);
+        Ok((p, exists_ap))
+    }
+
+    /// `Exists.rec.{0,1} α p (fun _ => False) minor major : False` — the
+    /// `Exists.elim` at a constant `False` motive.
+    fn mk_exists_elim_false(
+        &mut self,
+        p: ExprId,
+        exists_ap: ExprId,
+        minor: ExprId,
+        major: ExprId,
+    ) -> ExprId {
+        let z = self.kernel.level_zero();
+        let anon = self.kernel.anon();
+        let false_ = self.kernel.const_(self.prelude.false_, vec![]);
+        // motive := fun (_ : Exists α p) => False.
+        let motive = self
+            .kernel
+            .lam(anon, exists_ap, false_, BinderInfo::Default);
+        let rec = self
+            .kernel
+            .const_(self.prelude.exists_rec, vec![z, self.one]);
+        let e = self.kernel.app(rec, self.alpha);
+        let e = self.kernel.app(e, p);
+        let e = self.kernel.app(e, motive);
+        let e = self.kernel.app(e, minor);
+        self.kernel.app(e, major)
+    }
+}
+
+/// One skolemized existential prepared for the `Exists.elim` wrapping: the
+/// predicate `p_k`, the proposition `Exists α p_k`, the existential hypothesis
+/// axiom `h_∃_k`, and the skolem-constant / `P(sk_k)`-assumption `NameId`s.
+///
+/// The `NameId`s are `Option`: when the skolemized refutation does **not** use
+/// the witness (the inner refutation closes from the side facts alone — possible
+/// only when the existential was *vacuous* to the contradiction), the skolem
+/// atom and/or its assumption are never interned/declared by the inner walk, and
+/// the corresponding `Exists.elim` minor binder is simply unused. The resulting
+/// `False` is still sound over the original `∃` assertion.
+struct PreparedExists {
+    p: ExprId,
+    exists_ap: ExprId,
+    h_exists: ExprId,
+    skolem: Option<NameId>,
+    assumption: Option<NameId>,
+}
+
+/// Reconstruct a **top-level existential skolemization** refutation
+/// ([`crate::prove_skolem_unsat_alethe`]'s [`crate::SkolemCert`]) into a Lean proof term
+/// of type `False` that the trusted [`Kernel`] type-checks — certifying the
+/// otherwise-trusted skolemization step over the **original** `∃` assertions.
+///
+/// The embedded Alethe (the skolemized refutation) is reconstructed by the
+/// existing quantifier walk to `R : False`; each existential `∃x. (= l r)`
+/// becomes `Exists.{1} α p_k` (with `p_k := fun x => ⟦(= l r) x⟧`) and an honest
+/// axiom `h_∃_k : Exists α p_k`. `R` is parametric in each skolem constant
+/// `sk_k` and its `P(sk_k)` assumption, so it is wrapped (innermost existential
+/// out) as
+/// `Exists.rec α p_k (fun _ => False) (fun w hw => R[sk_k:=w, P(sk_k):=hw]) h_∃_k`.
+///
+/// # Errors
+///
+/// Returns a [`ReconstructError`] if the embedded refutation does not
+/// reconstruct, if a skolem constant or its `P(sk)` assumption cannot be located
+/// in the reconstructed term's environment, or if the assembled `Exists.elim`
+/// term is rejected by the kernel. Never panics on malformed input.
+pub fn reconstruct_skolem_unsat_proof(
+    ctx: &mut ReconstructCtx,
+    cert: &crate::SkolemCert,
+) -> Result<ExprId, ReconstructError> {
+    if cert.skolems.is_empty() {
+        return Err(ReconstructError::MalformedStep {
+            rule: "skolemize".to_owned(),
+            detail: "certificate has no existential to certify".to_owned(),
+        });
+    }
+
+    // Pre-declare each existential's predicate / proposition / honest hypothesis
+    // axiom, and the **expected** `P(sk_k)` assumption proposition (used to locate
+    // the assumption axiom the inner walk will declare). We declare these before
+    // the inner walk so the skolem atoms are interned consistently; the inner walk
+    // declares the `P(sk_k)` assumption itself.
+    let mut expected_assumption: Vec<ExprId> = Vec::with_capacity(cert.skolems.len());
+    let mut exists_data: Vec<(ExprId, ExprId, ExprId, String)> =
+        Vec::with_capacity(cert.skolems.len());
+    for rec in &cert.skolems {
+        let (p, exists_ap) = ctx.mk_exists(&rec.bound_var, &rec.body)?;
+        let h_exists = fresh_axiom(ctx, exists_ap, "exists")?;
+        // The skolemized assumption `P(sk_k) = body[x := sk_k]`, as a closed
+        // proposition `Eq α ⟦l[x:=sk]⟧ ⟦r[x:=sk]⟧`.
+        let assume_prop = skolemized_assumption_prop(ctx, rec)?;
+        expected_assumption.push(assume_prop);
+        exists_data.push((p, exists_ap, h_exists, rec.skolem_name.clone()));
+    }
+
+    // Snapshot the "assume" axioms before the inner walk so we can identify the
+    // ones the walk declares for the `P(sk_k)` units.
+    let before: BTreeSet<NameId> = ctx
+        .axiom_roles
+        .iter()
+        .filter(|(_, role)| role.as_str() == "assume")
+        .map(|(&n, _)| n)
+        .collect();
+
+    // Reconstruct the skolemized refutation `R : False`.
+    let refutation = reconstruct_quant_unsat_proof(ctx, &cert.commands)?;
+
+    // Identify, per existential, the skolem-constant `NameId` (interned by the
+    // walk's atom translation) and the `P(sk_k)` assumption axiom (a freshly-added
+    // "assume" axiom whose type is def-eq to the expected `P(sk_k)` proposition).
+    let mut prepared: Vec<PreparedExists> = Vec::with_capacity(cert.skolems.len());
+    for (idx, (p, exists_ap, h_exists, skolem_name)) in exists_data.into_iter().enumerate() {
+        // The skolem atom / `P(sk_k)` assumption are present iff the inner
+        // refutation actually used the witness. An absent one (a vacuous
+        // existential) leaves the corresponding `Exists.elim` binder unused.
+        let skolem = ctx.atom_name_id(&skolem_name);
+        let assumption = find_assumption_axiom(ctx, &before, expected_assumption[idx]);
+        prepared.push(PreparedExists {
+            p,
+            exists_ap,
+            h_exists,
+            skolem,
+            assumption,
+        });
+    }
+
+    // Wrap `R` in nested `Exists.elim`s, innermost existential first. For each, a
+    // fresh `w` fvar (the witness) replaces `Const(skolem)` and a fresh `hw` fvar
+    // (the `p w` proof) replaces `Const(assumption)`; then `abstract_fvars` turns
+    // them into the minor's two binders (unused binders are fine — a vacuous
+    // existential simply does not mention `w`/`hw`).
+    let mut acc = refutation;
+    for pe in prepared.into_iter().rev() {
+        let w_fvar = ctx.fresh_local_fvar();
+        let hw_fvar = ctx.fresh_local_fvar();
+        let w = ctx.kernel.fvar(w_fvar);
+        let hw = ctx.kernel.fvar(hw_fvar);
+        // R[skolem := w, assumption := hw] (each substitution a no-op when the
+        // corresponding constant is absent).
+        if let Some(skolem) = pe.skolem {
+            acc = ctx.replace_const(acc, skolem, w);
+        }
+        if let Some(assumption) = pe.assumption {
+            acc = ctx.replace_const(acc, assumption, hw);
+        }
+        // minor := fun (w : α) (hw : p w) => acc.
+        //   `hw`'s domain `p w` is under the `w` binder ⇒ `w` is BVar 0 there.
+        let w_bvar0 = ctx.kernel.bvar(0);
+        let p_w_dom = ctx.kernel.app(pe.p, w_bvar0);
+        // Abstract the two fvars: innermost-first ⇒ [w_fvar, hw_fvar] makes
+        // `hw_fvar → BVar 0`, `w_fvar → BVar 1` in the body.
+        let body = ctx.kernel.abstract_fvars(acc, &[w_fvar, hw_fvar]);
+        let anon = ctx.kernel.anon();
+        let inner = ctx.kernel.lam(anon, p_w_dom, body, BinderInfo::Default);
+        let minor = ctx.kernel.lam(anon, ctx.alpha, inner, BinderInfo::Default);
+        // Exists.rec α p (fun _ => False) minor h_∃ : False.
+        acc = ctx.mk_exists_elim_false(pe.p, pe.exists_ap, minor, pe.h_exists);
+    }
+
+    check_false(ctx, acc)
+}
+
+/// The closed proposition `Eq α ⟦l[x:=sk]⟧ ⟦r[x:=sk]⟧` for a single-equality
+/// existential body `(= l r)` with bound variable `x` and skolem constant `sk` —
+/// the type of the `P(sk)` assumption the inner walk declares.
+fn skolemized_assumption_prop(
+    ctx: &mut ReconstructCtx,
+    rec: &crate::SkolemRecord,
+) -> Result<ExprId, ReconstructError> {
+    let AletheTerm::App(head, args) = &rec.body else {
+        return Err(ReconstructError::MalformedStep {
+            rule: "skolemize".to_owned(),
+            detail: "existential body is not an application".to_owned(),
+        });
+    };
+    if head != "=" || args.len() != 2 {
+        return Err(ReconstructError::MalformedStep {
+            rule: "skolemize".to_owned(),
+            detail: "existential body is not a single equality `(= l r)`".to_owned(),
+        });
+    }
+    // Translate each operand with `bound_var ↦ Const(skolem_name)`.
+    let l = subst_bound_to_skolem(ctx, &args[0], &rec.bound_var, &rec.skolem_name)?;
+    let r = subst_bound_to_skolem(ctx, &args[1], &rec.bound_var, &rec.skolem_name)?;
+    Ok(ctx.mk_eq(l, r))
+}
+
+/// Translate an Alethe term to a Lean `ExprId`, rendering each `Const(bound_var)`
+/// as the skolem constant `Const(skolem_name)` (an EUF atom). Otherwise identical
+/// to [`ReconstructCtx::alethe_term_to_expr`].
+fn subst_bound_to_skolem(
+    ctx: &mut ReconstructCtx,
+    term: &AletheTerm,
+    bound_var: &str,
+    skolem_name: &str,
+) -> Result<ExprId, ReconstructError> {
+    match term {
+        AletheTerm::Const(s) if s == bound_var => {
+            let name = ctx.atom_const(skolem_name);
+            Ok(ctx.kernel.const_(name, vec![]))
+        }
+        AletheTerm::Const(s) => {
+            let name = ctx.atom_const(s);
+            Ok(ctx.kernel.const_(name, vec![]))
+        }
+        AletheTerm::App(head, args) if head == "=" => {
+            let [l, r] = args.as_slice() else {
+                return Err(ReconstructError::UnsupportedTerm { term: term.key() });
+            };
+            let l = subst_bound_to_skolem(ctx, l, bound_var, skolem_name)?;
+            let r = subst_bound_to_skolem(ctx, r, bound_var, skolem_name)?;
+            Ok(ctx.mk_eq(l, r))
+        }
+        AletheTerm::App(head, args) if !args.is_empty() => {
+            let f_name = ctx.func_const(head, args.len());
+            let mut e = ctx.kernel.const_(f_name, vec![]);
+            for arg in args {
+                let a = subst_bound_to_skolem(ctx, arg, bound_var, skolem_name)?;
+                e = ctx.kernel.app(e, a);
+            }
+            Ok(e)
+        }
+        AletheTerm::App(..) | AletheTerm::Indexed { .. } => {
+            Err(ReconstructError::UnsupportedTerm { term: term.key() })
+        }
+    }
+}
+
+/// Find the "assume" axiom — declared by the inner refutation walk (i.e. *not*
+/// already in `before`) — whose declared type is [`Kernel::def_eq`] to `expected`
+/// (the `P(sk)` proposition). The skolem constants are fresh, so each `P(sk_k)`
+/// type is unique among the assumptions, giving an unambiguous match.
+fn find_assumption_axiom(
+    ctx: &mut ReconstructCtx,
+    before: &BTreeSet<NameId>,
+    expected: ExprId,
+) -> Option<NameId> {
+    // Collect candidates deterministically (BTreeMap iteration order is by id).
+    let candidates: Vec<NameId> = ctx
+        .axiom_roles
+        .iter()
+        .filter(|(n, role)| role.as_str() == "assume" && !before.contains(*n))
+        .map(|(&n, _)| n)
+        .collect();
+    for n in candidates {
+        let ty = ctx.kernel.environment().get(n)?.ty();
+        if ctx.kernel.def_eq(ty, expected) {
+            return Some(n);
+        }
+    }
+    None
+}
+
+impl ReconstructCtx {
+    /// Mint a fresh free-variable id for transient `Exists.elim` binders, from the
+    /// context's deterministic counter (kept well above any kernel-internal fvar
+    /// by a large offset, since reconstruction otherwise builds closed terms).
+    fn fresh_local_fvar(&mut self) -> u64 {
+        let id = self.next_id;
+        self.next_id += 1;
+        // Offset into a private high range so these never alias a kernel fvar.
+        id.wrapping_add(1 << 48)
+    }
 }
 
 // ===========================================================================

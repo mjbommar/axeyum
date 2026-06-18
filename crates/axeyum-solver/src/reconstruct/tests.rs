@@ -3327,6 +3327,149 @@ fn forall_inst_inconsistent_witness_rejected() {
     assert!(matches!(err, ReconstructError::MalformedStep { .. }));
 }
 
+// ---------------------------------------------------------------------------
+// Existential skolemization (P3.7): a top-level `∃` certificate reconstructs to
+// a kernel-checked `False` over the ORIGINAL `∃` assertions, via `Exists.elim`
+// wrapping the (parametric-in-`sk`) skolemized refutation.
+// ---------------------------------------------------------------------------
+
+use super::reconstruct_skolem_unsat_proof;
+
+/// **THE EXISTENTIAL DELIVERABLE (∃ + ∀ end-to-end)**: take a REAL emitted
+/// certificate for `∃x.(f x = c) ∧ ∀y.(f y = d) ∧ (c ≠ d)`, reconstruct it, and
+/// assert the result kernel-checks to `False`. The existential is modeled as
+/// `Exists.{1} α (fun x => Eq α (f x) c)`; skolemizing gives `f(!skq_0) = c`, the
+/// universal instantiates at `!skq_0` to `f(!skq_0) = d`, so by congruence
+/// `c = d`, contradicting `c ≠ d`. That whole EUF refutation is **parametric in
+/// the skolem** `!skq_0`, so it is wrapped in `Exists.elim` over the honest `∃`
+/// hypothesis — kernel-checked `False` over the ORIGINAL `∃` assertion.
+#[test]
+fn end_to_end_exists_forall_to_false() {
+    let mut arena = TermArena::new();
+    let alpha = Sort::BitVec(8);
+    let x = arena.declare("x", alpha).unwrap();
+    let y = arena.declare("y", alpha).unwrap();
+    let c = arena.declare("c", alpha).unwrap();
+    let d = arena.declare("d", alpha).unwrap();
+    let f = arena.declare_fun("f", &[alpha], alpha).unwrap();
+
+    // ∃x. f(x) = c.
+    let xv = arena.var(x);
+    let cv = arena.var(c);
+    let fx = arena.apply(f, &[xv]).unwrap();
+    let fx_eq_c = arena.eq(fx, cv).unwrap();
+    let exists = arena.exists(x, fx_eq_c).unwrap();
+    // ∀y. f(y) = d.
+    let yv = arena.var(y);
+    let dv = arena.var(d);
+    let fy = arena.apply(f, &[yv]).unwrap();
+    let fy_eq_d = arena.eq(fy, dv).unwrap();
+    let forall = arena.forall(y, fy_eq_d).unwrap();
+    // c ≠ d.
+    let c_eq_d = arena.eq(cv, dv).unwrap();
+    let not_c_eq_d = arena.not(c_eq_d).unwrap();
+
+    let cert = crate::prove_skolem_unsat_alethe(&mut arena, &[exists, forall, not_c_eq_d])
+        .expect("emitter produces the skolemization refutation certificate");
+
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_skolem_unsat_proof(&mut ctx, &cert)
+        .expect("the existential skolemization reconstructs to a kernel-checked term");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// **Pure-`∃` (no universal) wrapped in `Exists.elim`**:
+/// `∃x.(g x = a) ∧ (g b = a) ∧ ¬(g b = a)`. A single-equality existential body
+/// over a *fresh* skolem can never itself force a clash (the model is free to set
+/// `g(sk) = a` and leave the rest arbitrary), so a genuinely-unsat pure-`∃`
+/// derives its contradiction from the **ground** facts — here directly from
+/// `g(b) = a` vs `¬(g(b) = a)`. The skolemized refutation thus does not use the
+/// witness, and the `Exists.elim` minor `fun w hw => R` ignores both binders.
+/// This still kernel-checks to a sound `False` over the original `∃` assertion,
+/// exercising the no-universal `Exists.elim` wrapping path end-to-end.
+#[test]
+fn end_to_end_pure_exists_ground_clash_to_false() {
+    let mut arena = TermArena::new();
+    let alpha = Sort::BitVec(8);
+    let x = arena.declare("x", alpha).unwrap();
+    let a = arena.declare("a", alpha).unwrap();
+    let b = arena.declare("b", alpha).unwrap();
+    let g = arena.declare_fun("g", &[alpha], alpha).unwrap();
+
+    // ∃x. g(x) = a.
+    let xv = arena.var(x);
+    let av = arena.var(a);
+    let gx = arena.apply(g, &[xv]).unwrap();
+    let gx_eq_a = arena.eq(gx, av).unwrap();
+    let exists = arena.exists(x, gx_eq_a).unwrap();
+    // g(b) = a  and  ¬(g(b) = a) — a ground contradiction independent of x.
+    let bv = arena.var(b);
+    let gb = arena.apply(g, &[bv]).unwrap();
+    let gb_eq_a = arena.eq(gb, av).unwrap();
+    let not_gb_eq_a = arena.not(gb_eq_a).unwrap();
+
+    let cert = crate::prove_skolem_unsat_alethe(&mut arena, &[exists, gb_eq_a, not_gb_eq_a])
+        .expect("emitter produces a skolemization certificate for the pure-∃ clash");
+
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_skolem_unsat_proof(&mut ctx, &cert)
+        .expect("the pure-existential refutation reconstructs to a kernel-checked term");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// **Two existentials, both essential — nested `Exists.elim`**:
+/// `∃x.(f x = c) ∧ ∃z.(f z = e) ∧ ∀y.(f y = d) ∧ ¬(c = e)`. Instantiating `∀y`
+/// at both skolems gives `f(!skq_0) = d` and `f(!skq_1) = d`; with the two
+/// existential facts `f(!skq_0) = c` and `f(!skq_1) = e` this forces `c = d` and
+/// `e = d`, hence `c = e` — contradicting `¬(c = e)`. BOTH witnesses are used, so
+/// the reconstruction nests two `Exists.elim`s (innermost-out), threading each
+/// skolem to its bound witness. Kernel-checked `False` over the two original `∃`s.
+#[test]
+fn end_to_end_two_existentials_nested_to_false() {
+    let mut arena = TermArena::new();
+    let alpha = Sort::BitVec(8);
+    let x = arena.declare("x", alpha).unwrap();
+    let z = arena.declare("z", alpha).unwrap();
+    let y = arena.declare("y", alpha).unwrap();
+    let c = arena.declare("c", alpha).unwrap();
+    let d = arena.declare("d", alpha).unwrap();
+    let e = arena.declare("e", alpha).unwrap();
+    let f = arena.declare_fun("f", &[alpha], alpha).unwrap();
+
+    let cv = arena.var(c);
+    let dv = arena.var(d);
+    let ev = arena.var(e);
+
+    // ∃x. f(x) = c.
+    let xv = arena.var(x);
+    let fx = arena.apply(f, &[xv]).unwrap();
+    let fx_eq_c = arena.eq(fx, cv).unwrap();
+    let exists_x = arena.exists(x, fx_eq_c).unwrap();
+    // ∃z. f(z) = e.
+    let zv = arena.var(z);
+    let fz = arena.apply(f, &[zv]).unwrap();
+    let fz_eq_e = arena.eq(fz, ev).unwrap();
+    let exists_z = arena.exists(z, fz_eq_e).unwrap();
+    // ∀y. f(y) = d.
+    let yv = arena.var(y);
+    let fy = arena.apply(f, &[yv]).unwrap();
+    let fy_eq_d = arena.eq(fy, dv).unwrap();
+    let forall = arena.forall(y, fy_eq_d).unwrap();
+    // ¬(c = e).
+    let c_eq_e = arena.eq(cv, ev).unwrap();
+    let not_c_eq_e = arena.not(c_eq_e).unwrap();
+
+    let cert =
+        crate::prove_skolem_unsat_alethe(&mut arena, &[exists_x, exists_z, forall, not_c_eq_e])
+            .expect("emitter produces the two-existential skolemization certificate");
+    assert_eq!(cert.skolems.len(), 2, "two existentials skolemized");
+
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_skolem_unsat_proof(&mut ctx, &cert)
+        .expect("the two-existential refutation reconstructs to a kernel-checked term");
+    assert_infers_false(&mut ctx, term);
+}
+
 /// **Mixed strict/non-strict, not a cycle** (Task #16): `x < 0 ∧ 0 ≤ x`. The Farkas
 /// refutation is `1·(x < 0) + 1·(0 ≤ x)`: summing the strict `x < 0` with the
 /// non-strict `−x ≤ 0` gives `0 < 0` (`K = 0`), refuted directly by `lt_irrefl`. This
