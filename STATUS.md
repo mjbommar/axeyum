@@ -311,12 +311,12 @@ plan is built and committed on the current branch:
 | Phase | Title | Status |
 |---|---|---|
 | P1.1 | SAT inprocessing (subsumption → BVE → vivification → glue tiers) | WIP — subsumption+BVE landed (T1.1.1/2), wired into the solve pipeline (T1.1.3), made occurrence-list near-linear + time-bounded (T1.1.4): safe, no regression, but the curated unknowns are SAT-search-bound (→ P1.3) or BVE-resistant. **CDCL(XOR) foundation landed** (`gf2`/`xor_extract`/`xor_propagate` in `axeyum-cnf`) — the path-2 multiplier-wall attack: a sound GF(2) Gaussian engine + exact XOR-gate extraction + an entailment-checked propagation pass; slice 4 wires it into the live preprocess pipeline (measured). Vivification / glue tiers remain |
-| P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | WIP — T1.2.1 trail + T1.2.2 propagate_values + T1.2.3 solve_eqs landed (model-sound, unit-tested, 36 tests). Next: wire the preprocessing pipeline into the solve path + measure; then elim_unconstrained / max_bv_sharing / bv_slice / AIG 2-level (T1.2.4–T1.2.9) |
-| P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | TODO |
+| P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | WIP — T1.2.1 trail + T1.2.2 propagate_values + T1.2.3 solve_eqs landed (model-sound, unit-tested, 36 tests). **T1.2.4 elim_unconstrained landed** (`axeyum-rewrite::elim_unconstrained`): a variable occurring once under an invertible BV op (`bvadd`/`bvsub`/`bvxor`/`bvnot`/`bvneg`) makes that subterm unconstrained → replaced by a fresh var, operator dropped (Z3's `elim_unconstr`); peels nested layers, terminates. Model-sound via the trail (`x := op⁻¹(u,w…)`; orphaned operands defaulted, sound by the inverse identity); wired into `check_with_preprocessing` after solve_eqs (opt-in, default-off per ADR-0034). 6 unit (incl. 300-trial randomized reconstruction) + 2 solver end-to-end. Next: measure on the public p4dfa slice; then max_bv_sharing / bv_slice / AIG 2-level (T1.2.5–T1.2.9) |
+| P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | WIP — the proof-producing core `solve_with_drat_proof` (`proof_sat.rs`) modernized: **VSIDS activity branching** (bump conflict-side vars, MiniSat-style decay, rescale-on-overflow; highest-activity unassigned var, ties to lowest index), **phase saving**, and **Luby restarts**. Sound by construction — every emitted clause is RUP and the proof is DRAT-checked, so a heuristic bug only slows search. All 231 cnf tests pass (incl. the 400-CNF differential vs BatSat + a new pigeonhole-4→3). NB the modern CDCL(XOR) core in `xor_cdcl.rs` already has VSIDS/Luby/LBD. Remaining: arena + packed watches, chronological backtracking; wire a modern core into the default path |
 | P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | **DONE** — `axeyum-egraph` (ADR-0032): hash-cons + union-find + congruence cascade (T1.4.1/2), proof-forest `explain` (T1.4.3), backtrackable push/pop (T1.4.4), independent `check_congruence` (T1.4.5), per-class theory-var lists (T1.4.6). 17 tests incl. brute-force + backtracking property tests |
 | P1.5 | CDCL(T) loop (theory-as-extension, final-check, theory propagation) **[keystone]** | WIP — EUF on the e-graph: `prove_unsat_by_congruence` (conjunctive), `prove_unsat_lazy` (offline DPLL(T)), and `check_qf_uf` (full decision with **replay-checked sat models** from e-graph classes + function interps). Conflicts independently checked; **differentially validated vs Ackermann**. T1.5.5 met for the equality/UF fragment. **Online `TheorySolver` trait + `EufTheory` landed** (one backtrackable e-graph, explained conflict cores, lockstep push/pop) — the online theory side of the loop. Remaining: drive it from an online CDCL search with theory propagation (T1.5.1–T1.5.4) + dispatch wiring; theory combination with BV (P1.6) for complete QF_UFBV |
 | P1.6 | Theory combination (th_eq bus, interface equalities) | WIP — **lazy/on-demand Ackermann for QF_UFBV** (`check_qf_ufbv_lazy`): CEGAR functional-consistency lemmas (abstract apps → fresh vars; add `(⋀ args=) ⇒ result=` only on a model-observed violation; re-solve to fixpoint). Sound (relaxation ⇒ UNSAT transfers; sat replays) + terminating; 300-formula differential vs eager `check_with_all_theories` (all agree). Remaining: wire into dispatch; then the full online interface-equality (Nelson–Oppen) combination of the e-graph + BV to drop the Ackermann reduction entirely |
-| P1.7 | PBLS local-search BV engine (portfolio) | TODO |
+| P1.7 | PBLS local-search BV engine (portfolio) | WIP — **word-level WalkSAT landed** (`solve_local_search` + `PblsBackend`, `pbls.rs`): keeps a concrete Bool/BitVec(≤128) assignment, scores by evaluator-falsified assertions, nudges a variable in an unsatisfied assertion (greedy + WalkSAT noise + random restarts) toward a model. One-sided + sound: `Sat` only with an evaluator-verified model, never `Unsat`, `Unknown` (incl. out-of-scope sorts) otherwise. Read-only on the arena (fits the trait); deterministic (fixed seed, explicit budgets). 4 unit + an ignored 150-formula differential vs the eager backend (never contradicts). Remaining: integrate as a portfolio strategy; tune moves/budgets; measure on satisfiable corpora |
 | P1.8 | Strategy & tactics (combinators + probes + per-logic scripts) | TODO |
 
 ### Track 2 — Theories & Breadth
@@ -355,6 +355,20 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-17** — **Track-1 complement sweep (four lanes, alongside the proof/Lean
+  agent).** Non-colliding Track-1 increments, each its own sound + tested + pedantic-
+  clippy-clean commit:
+  - **Differential soundness net** (`tests/differential_qfbv_backends.rs`): seeded
+    random QF_BV cross-check across eager `SatBvBackend`, the new `LazyBvBackend`,
+    and (feature `z3`) the oracle — DISAGREE=0 + every-`sat`-replays, 200 always-on +
+    1500 ignored, 3-way clean. Guards both agents' solver churn.
+  - **P1.2 / T1.2.4 `elim_unconstrained`** (`axeyum-rewrite`): unconstrained single-
+    use invertible-op elimination, trail-reconstructed, wired into the opt-in
+    `check_with_preprocessing`.
+  - **P1.7 PBLS** (`pbls.rs`): word-level WalkSAT portfolio engine, one-sided sound
+    (`Sat`/`Unknown`, never `Unsat`), deterministic.
+  - **P1.3 SAT-core modernization** (`proof_sat.rs`): VSIDS + phase saving + Luby
+    restarts on the proof-producing CDCL core (DRAT-checked ⇒ sound regardless).
 - **2026-06-17** — **Fair public-QF_BV measurement + graceful oversized-encoding
   refusal (the "1/113" gap, diagnosed)**. The headline "sat-bv decides ~1/113 on
   public QF_BV" was an artifact of `--node-budget 1000` (refusing 112/113 at the
