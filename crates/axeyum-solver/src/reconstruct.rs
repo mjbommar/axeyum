@@ -2308,6 +2308,112 @@ fn try_and_pos(
     Ok(Some(check_against(ctx, "and_pos", proof, target)?))
 }
 
+/// Right-nested `And.intro` of `witnesses` (proofs of `props[i]`) into a proof of
+/// `⟦and props⟧` — the inverse of [`project_nth_conjunct`].
+fn and_intro_fold(ctx: &mut ReconstructCtx, props: &[ExprId], witnesses: &[ExprId]) -> ExprId {
+    let n = props.len();
+    let mut acc = witnesses[n - 1];
+    for i in (0..n - 1).rev() {
+        let a = props[i];
+        let b = and_chain_prop_of(ctx, &props[i + 1..]);
+        acc = and_intro(ctx, a, b, witnesses[i], acc);
+    }
+    acc
+}
+
+/// Recursive core of [`try_and_neg`]: case-split `em ⟦φ_j⟧` for each operand; on
+/// the first false operand inject its negated literal, and when all hold build
+/// `⟦and φ…⟧` by [`and_intro_fold`] and inject it at position 0. `target` is the
+/// fixed clause `Prop`; `witnesses` accumulates the positive-operand fvars.
+fn build_and_neg(
+    ctx: &mut ReconstructCtx,
+    clause: &[AletheLit],
+    props: &[ExprId],
+    j: usize,
+    target: ExprId,
+    witnesses: &mut Vec<ExprId>,
+) -> ExprId {
+    if j == props.len() {
+        let g = and_intro_fold(ctx, props, witnesses);
+        return inject_gate_lit(ctx, clause, 0, g);
+    }
+    let anon = ctx.kernel.anon();
+    let p = props[j];
+    let not_p = ctx.mk_not(p);
+
+    // inl: φ_j holds — record the witness and recurse.
+    let fv = fresh_fvar_id(ctx);
+    let h = ctx.kernel.fvar(fv);
+    witnesses.push(h);
+    let body_inl = build_and_neg(ctx, clause, props, j + 1, target, witnesses);
+    witnesses.pop();
+    let body_inl = ctx.kernel.abstract_fvars(body_inl, &[fv]);
+    let minor_inl = ctx.kernel.lam(anon, p, body_inl, BinderInfo::Default);
+
+    // inr: ¬φ_j — inject the negated operand at clause position j+1.
+    let fv2 = fresh_fvar_id(ctx);
+    let hn = ctx.kernel.fvar(fv2);
+    let inj = inject_gate_lit(ctx, clause, j + 1, hn);
+    let body_inr = ctx.kernel.abstract_fvars(inj, &[fv2]);
+    let minor_inr = ctx.kernel.lam(anon, not_p, body_inr, BinderInfo::Default);
+
+    let or_p_notp = ctx.mk_or(p, not_p);
+    let motive = ctx.kernel.lam(anon, or_p_notp, target, BinderInfo::Default);
+    let em_name = ctx.em_axiom();
+    let em = ctx.kernel.const_(em_name, vec![]);
+    let em_p = ctx.kernel.app(em, p);
+    let z = ctx.kernel.level_zero();
+    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![z]);
+    let e = ctx.kernel.app(rec, p);
+    let e = ctx.kernel.app(e, not_p);
+    let e = ctx.kernel.app(e, motive);
+    let e = ctx.kernel.app(e, minor_inl);
+    let e = ctx.kernel.app(e, minor_inr);
+    ctx.kernel.app(e, em_p)
+}
+
+/// Rule-specific `O(k)` reconstruction of `and_neg`:
+/// `(cl (and φ…) (not φ_0) … (not φ_{k-1}))`. Nested `em` over the operands; the
+/// first false operand discharges its negated literal, all-true builds the
+/// conjunction. Returns `Ok(None)` for an unexpected shape (caller falls back).
+fn try_and_neg(
+    ctx: &mut ReconstructCtx,
+    conclusion: &[AletheLit],
+) -> Result<Option<ExprId>, ReconstructError> {
+    let Some((l0, rest)) = conclusion.split_first() else {
+        return Ok(None);
+    };
+    if l0.negated {
+        return Ok(None);
+    }
+    let AletheTerm::App(head, operands) = &l0.atom else {
+        return Ok(None);
+    };
+    if head != "and" || operands.len() != rest.len() || operands.is_empty() {
+        return Ok(None);
+    }
+    // Each tail literal must be `¬φ_j` for the j-th operand (peel a `(not …)` atom
+    // or a `negated` flag; either spelling denotes `Not ⟦φ_j⟧`).
+    for (op, lit) in operands.iter().zip(rest) {
+        let neg = normalize_lit_polarity(lit);
+        if !neg.negated || neg.atom.key() != op.key() {
+            return Ok(None);
+        }
+    }
+
+    let _ = ctx.em_axiom();
+    let operands = operands.clone();
+    let conclusion = conclusion.to_vec();
+    let props: Vec<ExprId> = operands
+        .iter()
+        .map(|op| ctx.gate_term_to_prop(op))
+        .collect();
+    let target = ctx.gate_clause_to_prop(&conclusion);
+    let mut witnesses: Vec<ExprId> = Vec::new();
+    let proof = build_and_neg(ctx, &conclusion, &props, 0, target, &mut witnesses);
+    Ok(Some(check_against(ctx, "and_neg", proof, target)?))
+}
+
 /// Reconstruct a Tseitin **CNF-introduction** rule into a kernel-checked Lean
 /// proof term of its conclusion clause's `Prop` encoding.
 ///
@@ -2353,6 +2459,11 @@ pub fn reconstruct_cnf_intro_rule(
     // available; fall back to `prove_clause_by_cases` for the rest.
     if rule_name == "and_pos" {
         if let Some(proof) = try_and_pos(ctx, conclusion)? {
+            return Ok(proof);
+        }
+    }
+    if rule_name == "and_neg" {
+        if let Some(proof) = try_and_neg(ctx, conclusion)? {
             return Ok(proof);
         }
     }
