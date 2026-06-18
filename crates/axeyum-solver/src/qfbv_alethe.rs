@@ -218,6 +218,29 @@ pub fn prove_qf_bv_unsat_alethe(
     refute(&mut builder, &tseitin, &input_clause_ids)
 }
 
+/// Like [`prove_qf_bv_unsat_alethe`], but first lowers any **derived** bit-vector
+/// operators — `bvsub`, `bvnand`/`bvnor`, and the six non-core comparisons
+/// (`bvugt`/`bvule`/`bvuge`/`bvsgt`/`bvsle`/`bvsge`) — to the bitblast core via
+/// [`axeyum_rewrite::lower_derived_bv`]. This lets a conjunction that mentions those
+/// operators still produce a proof: the emitter has no `bitblast_*` rule for them, but
+/// their core reductions do. The lowering is denotation- and sort-preserving (so the
+/// refutation certifies the original conjunction's unsatisfiability up to that
+/// rewrite); it needs `&mut TermArena` to intern the core sub-terms.
+///
+/// Returns `None` if a lowering fails, or if the lowered conjunction is still outside
+/// the supported fragment (e.g. shifts or division, which have no core reduction).
+#[must_use]
+pub fn prove_qf_bv_unsat_alethe_lowered(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Option<Vec<AletheCommand>> {
+    let lowered = assertions
+        .iter()
+        .map(|&t| axeyum_rewrite::lower_derived_bv(arena, t).ok())
+        .collect::<Option<Vec<_>>>()?;
+    prove_qf_bv_unsat_alethe(arena, &lowered)
+}
+
 /// A parsed in-fragment assertion: the (possibly inner) predicate term and whether
 /// the assertion negated it.
 struct Asserted {

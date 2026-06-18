@@ -155,7 +155,7 @@ pub use proof::{
     export_qf_uf_unsat_proof,
 };
 pub use qfabv_alethe::prove_qf_abv_unsat_alethe;
-pub use qfbv_alethe::prove_qf_bv_unsat_alethe;
+pub use qfbv_alethe::{prove_qf_bv_unsat_alethe, prove_qf_bv_unsat_alethe_lowered};
 pub use qinst_egraph::{instantiate_forall_via_egraph, prove_quantified_unsat_via_egraph};
 pub use reconstruct::{
     LraReconstructCtx, ReconstructCtx, ReconstructError, reconstruct_bitblast_step,

@@ -1797,11 +1797,10 @@ fn end_to_end_bvsub_via_lowering_reconstructs() {
     let sub = arena.bv_sub(a, b).unwrap();
     let eq = arena.eq(sub, a).unwrap();
     let neq = arena.not(eq).unwrap();
-    // Lower derived ops so the emitter (which has no bitblast_sub) sees core ops only.
-    let eq = axeyum_rewrite::lower_derived_bv(&mut arena, eq).unwrap();
-    let neq = axeyum_rewrite::lower_derived_bv(&mut arena, neq).unwrap();
-    let proof =
-        crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("emitter accepts lowered core");
+    // `prove_…_lowered` lowers bvsub→add+neg internally; the emitter (no bitblast_sub)
+    // then sees core ops only.
+    let proof = crate::prove_qf_bv_unsat_alethe_lowered(&mut arena, &[eq, neq])
+        .expect("emitter accepts lowered core");
     let mut ctx = ReconstructCtx::new();
     let term = reconstruct_qf_bv_proof(&mut ctx, &proof).expect("reconstructs");
     assert_infers_false(&mut ctx, term);
@@ -1822,10 +1821,9 @@ fn end_to_end_bvule_via_lowering_reconstructs() {
     let b = mk(&mut arena, "b");
     let le = arena.bv_ule(a, b).unwrap();
     let gt = arena.bv_ult(b, a).unwrap();
-    let le = axeyum_rewrite::lower_derived_bv(&mut arena, le).unwrap();
-    let gt = axeyum_rewrite::lower_derived_bv(&mut arena, gt).unwrap();
-    let proof =
-        crate::prove_qf_bv_unsat_alethe(&arena, &[le, gt]).expect("emitter accepts lowered core");
+    // `bvule a b` lowers to `¬(bvult b a)`; paired with `bvult b a` this is `¬Q ∧ Q`.
+    let proof = crate::prove_qf_bv_unsat_alethe_lowered(&mut arena, &[le, gt])
+        .expect("emitter accepts lowered core");
     let mut ctx = ReconstructCtx::new();
     let term = reconstruct_qf_bv_proof(&mut ctx, &proof).expect("reconstructs");
     assert_infers_false(&mut ctx, term);
