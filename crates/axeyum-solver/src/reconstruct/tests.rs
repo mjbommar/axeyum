@@ -3328,3 +3328,45 @@ fn lra_mixed_three_constraint_nonunit_strict_reconstructs() {
         .expect("mixed 3-constraint non-unit-strict Farkas reconstructs to False");
     assert_lra_infers_false(&mut ctx, proof);
 }
+
+/// **Route 2** (Task #15): the `bvsub`-rewrite refutation reconstructs to a
+/// kernel-checked `False` over the ORIGINAL `bvsub` assertions.
+///
+/// `(= (bvsub a b) a) ∧ (bvult a b)` is unsat (`a - b = a` forces `b = 0`, then
+/// `a < b = a < 0` is impossible). `prove_qf_bv_unsat_alethe_route2` keeps `bvsub` at
+/// the term level — it emits a Carcara-valid `bv_poly_simp` step
+/// `(= (bvsub a b) (bvadd a (bvneg b)))` and bit-blasts the `bvadd`/`bvneg`. The
+/// reconstruction's faithful `bv_bit` model of `bvsub a b` IS the `bvadd a (bvneg b)`
+/// ripple-carry, so the `bvsub` bit-definition is reflexive and the closing `(cl)`
+/// `infer`-checks against `False` — certifying the un-lowered formula.
+#[test]
+fn end_to_end_route2_bvsub_refutation_to_false() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let sub = arena.bv_sub(a, b).unwrap();
+    let eq = arena.eq(sub, a).unwrap();
+    let lt = arena.bv_ult(a, b).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe_route2(&mut arena, &[eq, lt])
+        .expect("Route-2 emitter produces the bvsub refutation");
+    // The emitted proof keeps `bvsub` at the term level via a `bv_poly_simp` step.
+    assert!(
+        proof.iter().any(|c| matches!(
+            c,
+            axeyum_cnf::AletheCommand::Step { rule, .. } if rule == "bv_poly_simp"
+        )),
+        "Route-2 proof must contain the bvsub→bvadd∘bvneg bv_poly_simp step"
+    );
+
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_bv_proof(&mut ctx, &proof)
+        .expect("the Route-2 bvsub refutation reconstructs to a kernel-checked term");
+    assert_infers_false(&mut ctx, term);
+}

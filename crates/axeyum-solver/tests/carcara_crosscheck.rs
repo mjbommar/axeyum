@@ -20,8 +20,9 @@ use axeyum_ir::{Rational, Sort, TermArena, TermId};
 use axeyum_smtlib::write_script;
 use axeyum_solver::{
     bitblast_step, prove_lra_unsat_alethe, prove_qf_abv_unsat_alethe_via_elimination,
-    prove_qf_bv_unsat_alethe, prove_qf_dt_unsat_alethe_via_simplification,
-    prove_qf_uf_unsat_alethe, prove_qf_ufbv_unsat_alethe,
+    prove_qf_bv_unsat_alethe, prove_qf_bv_unsat_alethe_route2,
+    prove_qf_dt_unsat_alethe_via_simplification, prove_qf_uf_unsat_alethe,
+    prove_qf_ufbv_unsat_alethe,
 };
 
 /// Resolves the Carcara binary: `AXEYUM_CARCARA_BIN` if set, otherwise the
@@ -1755,5 +1756,45 @@ fn dt_select_over_construct_is_accepted_by_carcara() {
 (check-sat)
 ";
     let report = carcara_accepts_smt2(&bin, "dt_select_over_construct", smt2, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+// --- Route 2: certify the UN-LOWERED `bvsub` original (Task #15) -------------
+//
+// `prove_qf_bv_unsat_alethe_route2` keeps `(bvsub a b)` at the term level and bridges
+// it to `(bvadd a (bvneg b))` with a Carcara-valid `bv_poly_simp` step, then bit-blasts
+// the `bvadd`/`bvneg`. Carcara validates the whole refutation — INCLUDING the
+// `bv_poly_simp` `bvsub`-rewrite step — over an `.smt2` whose assertions literally
+// contain `bvsub`. This is the third-party trust anchor for the un-lowered cert.
+
+#[test]
+fn route2_bvsub_rewrite_proof_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // (= (bvsub a b) a) ∧ (bvult a b) over width-2 a, b — unsat: `a - b = a` forces
+    // `b = 0`, then `a < b = a < 0` is impossible (unsigned). All-variable, exercising
+    // the two's-complement subtract carry semantics. The original assertions contain
+    // `bvsub` verbatim.
+    let mut arena = TermArena::new();
+    let a = bvw(&mut arena, "a", 2);
+    let b = bvw(&mut arena, "b", 2);
+    let sub = arena.bv_sub(a, b).unwrap();
+    let eq = arena.eq(sub, a).unwrap();
+    let ult = arena.bv_ult(a, b).unwrap();
+    let assertions = vec![eq, ult];
+
+    let proof =
+        prove_qf_bv_unsat_alethe_route2(&mut arena, &assertions).expect("emit Route-2 proof");
+    // The proof must contain the Carcara `bv_poly_simp` bvsub-rewrite step.
+    assert!(
+        proof.iter().any(|c| matches!(
+            c,
+            axeyum_cnf::AletheCommand::Step { rule, .. } if rule == "bv_poly_simp"
+        )),
+        "Route-2 proof must contain a bv_poly_simp step"
+    );
+    let report = carcara_accepts(&bin, "route2_bvsub", &arena, &assertions, &proof);
     assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
 }

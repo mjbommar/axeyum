@@ -167,6 +167,10 @@ fn covered_head(op: Op) -> Option<&'static str> {
         Op::BvXnor => Some("bvxnor"),
         Op::BvAdd => Some("bvadd"),
         Op::BvNeg => Some("bvneg"),
+        // `bvsub` is rendered so it can appear in a Route-2 `bv_poly_simp` rewrite
+        // step's LHS and in the original predicate atoms; it has NO `bitblast_<op>`
+        // gadget (it is bit-blasted only via its `(bvadd a (bvneg b))` rewrite).
+        Op::BvSub => Some("bvsub"),
         Op::BvUlt => Some("bvult"),
         Op::BvSlt => Some("bvslt"),
         Op::BvComp => Some("bvcomp"),

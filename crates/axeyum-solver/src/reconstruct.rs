@@ -4141,6 +4141,20 @@ fn bv_bit(
                 let bit_term = neg_bit_term(x, i);
                 Ok(ctx.gate_term_to_prop(&bit_term))
             }
+            // Two's-complement subtract: by the SMT-LIB definition `bvsub a b` =
+            // `bvadd a (bvneg b)`, so bit `i` is the ripple-carry sum of `a` and
+            // `(bvneg b)`. This is the FAITHFUL bit model of `bvsub` (the same
+            // definitional reduction Carcara's `bv_poly_simp` validates at the term
+            // level); modeling it here makes the Route-2 `bvsub`-rewrite proof's
+            // projection `((_ @bit_of i) (bvsub a b))` resolve to exactly the
+            // `bvadd a (bvneg b)` gadget bit the emitter wrote — so the bit-definition
+            // is reflexive (`Iff.refl`) and the certified `False` is over the ORIGINAL
+            // `bvsub` assertion, not a pre-lowered one.
+            ("bvsub", [a, b]) => {
+                let neg_b = AletheTerm::App("bvneg".to_owned(), vec![b.clone()]);
+                let bit_term = ripple_carry_bit_term(a, &neg_b, i);
+                Ok(ctx.gate_term_to_prop(&bit_term))
+            }
             // Shift-add multiplier (binary). Result bit `i` is `res[i][i]` of the
             // emitter's triangle, width-free. Same reflexive build-and-gate.
             //
@@ -5283,11 +5297,26 @@ fn reconstruct_bitwise_step(
         // `equiv1`/`equiv2` clause `(¬pred ∨ B)` / `(pred ∨ ¬B)` is a genuine
         // `Prop` tautology — proved classically (via `em`), not assumed.
         "equiv1" | "equiv2" => Ok(Some(reconstruct_equiv_bridge(ctx, rule, clause)?)),
+        // The Boolean-constant pins the emitter feeds into the SAT refutation when a
+        // carry-chain gadget (`bvadd`/`bvneg`/`bvmul`, the Route-2 `bvsub` rewrite)
+        // embeds a literal `true`/`false` operand:
+        //   `true`  → `(cl true)`      : Prop `True`,     proved by `True.intro`.
+        //   `false` → `(cl (not false))`: Prop `Not False`, proved by `fun h => h`.
+        // Both are closed tautologies (no axiom enters the `False` term).
+        "true" | "false" => Ok(Some(reconstruct_bool_const_pin(ctx, rule, clause)?)),
         // Term-level bridge steps that the refutation never consumes (only the
         // predicate-level `equiv` clauses feed resolution). Defer them: no proof is
         // built, so no axiom is introduced. Their bit-iff content is separately
         // kernel-checked in `reconstruct_qf_bv_proof`.
-        "cong" | "trans" => Ok(None),
+        //
+        // `bv_poly_simp` is the Route-2 `bvsub`-rewrite bridge: the term equality
+        // `(= (bvsub a b) (bvadd a (bvneg b)))` Carcara validates (polynomial-equal
+        // mod 2^w). The refutation consumes it only via the `trans`-chained term
+        // equality `(= (bvsub a b) bbform)`, whose bit content is the `bvsub`
+        // bit-definition (reflexive under the faithful `bv_bit` model, where
+        // `bvsub a b` bit `i` IS the `bvadd a (bvneg b)` bit). So, like `cong`/`trans`,
+        // it is deferred: no axiom enters the `False` term.
+        "cong" | "trans" | "bv_poly_simp" => Ok(None),
         r if r.starts_with("bitblast_") => Ok(None),
         other => Err(ReconstructError::UnsupportedRule {
             rule: other.to_owned(),
@@ -5440,6 +5469,43 @@ fn reconstruct_equiv_bridge(
     let mut assignment = Assignment::new();
     let proof = prove_clause_by_cases(ctx, &atom_keys, 0, &mut assignment, &substituted, target)?;
     let proof = check_against(ctx, rule, proof, target)?;
+    Ok(Clause {
+        lits: clause.to_vec(),
+        proof,
+    })
+}
+
+/// Reconstruct a Boolean-constant pin clause — the Carcara `true`/`false` tautology
+/// the emitter feeds into the SAT refutation to fix a carry-chain gadget's literal
+/// `true`/`false` operand:
+///
+/// - `true` → clause `(cl true)`, Prop `True`, proof `True.intro`;
+/// - `false` → clause `(cl (not false))`, Prop `Not False` (i.e. `False → False`),
+///   proof the identity `fun (h : False) => h`.
+///
+/// Both are closed (no axiom/hypothesis), `check_against`-gated to the clause's `Prop`.
+fn reconstruct_bool_const_pin(
+    ctx: &mut ReconstructCtx,
+    rule: &str,
+    clause: &[AletheLit],
+) -> Result<Clause, ReconstructError> {
+    let target = ctx.gate_clause_to_prop(clause);
+    let raw = match rule {
+        "true" => ctx.kernel.const_(ctx.prelude.true_intro, vec![]),
+        "false" => {
+            // `fun (h : False) => h : False → False`, defeq `Not False`.
+            let anon = ctx.kernel.anon();
+            let false_const = ctx.kernel.const_(ctx.prelude.false_, vec![]);
+            let body = ctx.kernel.bvar(0);
+            ctx.kernel.lam(anon, false_const, body, BinderInfo::Default)
+        }
+        _ => {
+            return Err(ReconstructError::UnsupportedRule {
+                rule: rule.to_owned(),
+            });
+        }
+    };
+    let proof = check_against(ctx, rule, raw, target)?;
     Ok(Clause {
         lits: clause.to_vec(),
         proof,

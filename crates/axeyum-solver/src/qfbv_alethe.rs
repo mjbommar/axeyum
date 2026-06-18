@@ -116,11 +116,83 @@ pub fn prove_qf_bv_unsat_alethe(
     arena: &TermArena,
     assertions: &[TermId],
 ) -> Option<Vec<AletheCommand>> {
+    prove_with_rewrites(arena, assertions, &BTreeMap::new())
+}
+
+/// **Route 2**: emit a Carcara-checkable Alethe refutation that certifies the
+/// **original** conjunction — `bvsub` subterms kept verbatim, *not* pre-lowered.
+///
+/// This closes the small "trusted reduction" gap for `bvsub`: rather than rewriting
+/// the formula to the core via [`axeyum_rewrite::lower_derived_bv`] and certifying the
+/// *lowered* result (as [`prove_qf_bv_unsat_alethe_lowered`] does), Route 2 keeps each
+/// `(bvsub a b)` at the term level and bridges it to `(bvadd a (bvneg b))` with a
+/// **Carcara-valid `bv_poly_simp` step** — the polynomial-simplification rule that
+/// validates `(= (bvsub a b) (bvadd a (bvneg b)))` (the two are equal modulo `2^w`).
+/// The `bvsub` term's bits are then taken from the bit-blasted `bvadd`/`bvneg` via the
+/// `trans`-chained term equality, so the emitted refutation — and its kernel
+/// reconstruction ([`crate::reconstruct_qf_bv_proof`], whose faithful `bv_bit` model
+/// of `bvsub a b` *is* the `bvadd a (bvneg b)` ripple-carry) — close to `False` over
+/// assertions that literally contain `bvsub`.
+///
+/// Needs `&mut TermArena` to intern each `(bvadd a (bvneg b))` rewrite. Returns the
+/// same fragment as [`prove_qf_bv_unsat_alethe`] **extended with `bvsub`**: a `bvsub`
+/// may appear anywhere a bit-blastable operand may. Returns [`None`] for a non-`unsat`
+/// or otherwise out-of-fragment query (e.g. shifts/division, still Carcara holes), or
+/// if a rewrite interning fails.
+#[must_use]
+pub fn prove_qf_bv_unsat_alethe_route2(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Option<Vec<AletheCommand>> {
+    // Pre-pass: intern `(bvadd a (bvneg b))` for every `bvsub` subterm reachable from
+    // the assertions, recording `bvsub-term → bvadd-rewrite`. Interning needs `&mut`,
+    // so collect the rewrites up front, then run the (shared, `&`-only) emitter.
+    let mut sub_rewrites: BTreeMap<TermId, TermId> = BTreeMap::new();
+    for &t in assertions {
+        collect_sub_rewrites(arena, t, &mut sub_rewrites)?;
+    }
+    prove_with_rewrites(arena, assertions, &sub_rewrites)
+}
+
+/// Interns `(bvadd a (bvneg b))` for every `(bvsub a b)` subterm reachable from
+/// `term`, recording each in `sub_rewrites`. Returns [`None`] if a rewrite cannot be
+/// interned (a malformed bit-vector term — never for well-formed input).
+fn collect_sub_rewrites(
+    arena: &mut TermArena,
+    term: TermId,
+    sub_rewrites: &mut BTreeMap<TermId, TermId>,
+) -> Option<()> {
+    let (op, args) = match arena.node(term) {
+        TermNode::App { op, args } => (*op, args.clone()),
+        _ => return Some(()),
+    };
+    for &c in &args {
+        collect_sub_rewrites(arena, c, sub_rewrites)?;
+    }
+    if op == Op::BvSub {
+        let [a, b] = args[..] else { return None };
+        if let std::collections::btree_map::Entry::Vacant(e) = sub_rewrites.entry(term) {
+            let neg_b = arena.bv_neg(b).ok()?;
+            let rewrite = arena.bv_add(a, neg_b).ok()?;
+            e.insert(rewrite);
+        }
+    }
+    Some(())
+}
+
+/// Shared emitter core for [`prove_qf_bv_unsat_alethe`] (no rewrites — the committed
+/// fragment, `bvsub` rejected) and [`prove_qf_bv_unsat_alethe_route2`] (`sub_rewrites`
+/// maps each `(bvsub a b)` to its interned `(bvadd a (bvneg b))`, admitting `bvsub`).
+fn prove_with_rewrites(
+    arena: &TermArena,
+    assertions: &[TermId],
+    sub_rewrites: &BTreeMap<TermId, TermId>,
+) -> Option<Vec<AletheCommand>> {
     // 1. Parse every assertion into the supported fragment up front; bail on any
     //    out-of-fragment assertion before doing any solving.
     let parsed: Vec<Asserted> = assertions
         .iter()
-        .map(|&t| classify_assertion(arena, t))
+        .map(|&t| classify_assertion(arena, t, sub_rewrites))
         .collect::<Option<Vec<_>>>()?;
     if parsed.is_empty() {
         return None;
@@ -135,7 +207,8 @@ pub fn prove_qf_bv_unsat_alethe(
     let mut builder = Builder::new();
     // The bottom-up bit-blasting front-end: proves `(= t bbform(t))` once per
     // distinct subterm (deduplicated across the shared DAG) via cong/bitblast/trans.
-    let mut bb = BbReducer::new();
+    // In Route 2 it also carries the `bvsub → (bvadd a (bvneg b))` rewrites.
+    let mut bb = BbReducer::new(sub_rewrites);
 
     // The propositional refutation collects each assertion's Boolean form as a
     // CNF clause over the bit atoms, keyed by the canonical atom text.
@@ -223,8 +296,21 @@ pub fn prove_qf_bv_unsat_alethe(
         ));
     }
 
+    // Boolean-constant pins for the SAT refutation. The carry-chain gadgets
+    // (`bvadd`/`bvneg`/`bvmul`, hence the Route-2 `bvsub` rewrite) embed literal
+    // `true`/`false` operands (the `false` carry seed, the `true` carry-in of
+    // `bvneg`). The Tseitin layer registers each as a propositional atom, but nothing
+    // forces its value — so without a pin the SAT core may flip a `false` seed and
+    // miss the refutation. We supply the Carcara `true`/`false` tautology units
+    // `(cl true)` / `(cl (not false))` to the solver; `refute` emits each pin's Alethe
+    // step ONLY if the LRAT proof actually uses it, so a congruence-style refutation
+    // (which never depends on the constant) stays pin-free and our in-tree
+    // `check_alethe` (no `true`/`false` rule) still accepts it. Bitwise-only Route-1
+    // proofs register neither constant, so this is a no-op there.
+    let pins = tseitin.boolean_const_pins();
+
     // 4. Build the propositional formula and refute it.
-    refute(&mut builder, &tseitin, &input_clause_ids)
+    refute(&mut builder, &tseitin, &input_clause_ids, &pins)
 }
 
 /// Like [`prove_qf_bv_unsat_alethe`], but first lowers any **derived** bit-vector
@@ -258,8 +344,14 @@ struct Asserted {
 }
 
 /// Classifies an assertion into the supported fragment, returning the inner
-/// predicate and its polarity, or [`None`] if out of fragment.
-fn classify_assertion(arena: &TermArena, term: TermId) -> Option<Asserted> {
+/// predicate and its polarity, or [`None`] if out of fragment. `sub_rewrites`
+/// (non-empty only in Route 2) admits each `(bvsub a b)` it keys as a bit-blastable
+/// operand (bridged to its `(bvadd a (bvneg b))` rewrite).
+fn classify_assertion(
+    arena: &TermArena,
+    term: TermId,
+    sub_rewrites: &BTreeMap<TermId, TermId>,
+) -> Option<Asserted> {
     // Peel a single `not`.
     if let TermNode::App {
         op: Op::BoolNot,
@@ -267,13 +359,13 @@ fn classify_assertion(arena: &TermArena, term: TermId) -> Option<Asserted> {
     } = arena.node(term)
     {
         let inner = *args.first()?;
-        let pred = supported_predicate(arena, inner)?;
+        let pred = supported_predicate(arena, inner, sub_rewrites)?;
         return Some(Asserted {
             predicate: pred,
             negated: true,
         });
     }
-    let pred = supported_predicate(arena, term)?;
+    let pred = supported_predicate(arena, term, sub_rewrites)?;
     Some(Asserted {
         predicate: pred,
         negated: false,
@@ -282,8 +374,13 @@ fn classify_assertion(arena: &TermArena, term: TermId) -> Option<Asserted> {
 
 /// Returns `term` if it is a supported predicate (`=`, `bvult`, `bvslt`) over two
 /// bit-vector operands that are each fully **bit-blastable** (a variable, constant,
-/// or a compound term over the bit-blastable operators), else [`None`].
-fn supported_predicate(arena: &TermArena, term: TermId) -> Option<TermId> {
+/// or a compound term over the bit-blastable operators — including `bvsub` when keyed
+/// in `sub_rewrites`), else [`None`].
+fn supported_predicate(
+    arena: &TermArena,
+    term: TermId,
+    sub_rewrites: &BTreeMap<TermId, TermId>,
+) -> Option<TermId> {
     let TermNode::App { op, args } = arena.node(term) else {
         return None;
     };
@@ -294,7 +391,8 @@ fn supported_predicate(arena: &TermArena, term: TermId) -> Option<TermId> {
         return None;
     };
     // Each operand must be a bit-vector whose every subterm Carcara can bit-blast.
-    if !is_bitblastable_bv(arena, *a) || !is_bitblastable_bv(arena, *b) {
+    if !is_bitblastable_bv(arena, *a, sub_rewrites) || !is_bitblastable_bv(arena, *b, sub_rewrites)
+    {
         return None;
     }
     Some(term)
@@ -315,17 +413,26 @@ fn is_leaf_bv(arena: &TermArena, term: TermId) -> bool {
 /// reconstruct with a `bitblast_<op>` rule — a leaf (variable/constant) or a
 /// compound built solely from the bit-blastable operators (bitwise
 /// `bvnot`/`bvand`/`bvor`/`bvxor`/`bvxnor`, arithmetic `bvadd`/`bvneg`/`bvmul`,
-/// `bvcomp`, and structural `extract`/`concat`/`sign_extend`). Any other operator —
-/// shifts, division/remainder, `zero_extend`, rotates, `bvnand`/`bvnor`/`bvsub` —
-/// makes the term out of fragment (those are Carcara holes, a later increment).
-fn is_bitblastable_bv(arena: &TermArena, term: TermId) -> bool {
+/// `bvcomp`, and structural `extract`/`concat`/`sign_extend`). A `(bvsub a b)` keyed
+/// in `sub_rewrites` (Route 2) is admitted too — it is bridged to its
+/// `(bvadd a (bvneg b))` rewrite by a Carcara `bv_poly_simp` step. Any other operator
+/// — shifts, division/remainder, `zero_extend`, rotates, `bvnand`/`bvnor`, or an
+/// un-keyed `bvsub` — makes the term out of fragment (Carcara holes).
+fn is_bitblastable_bv(
+    arena: &TermArena,
+    term: TermId,
+    sub_rewrites: &BTreeMap<TermId, TermId>,
+) -> bool {
     if !matches!(arena.sort_of(term), Sort::BitVec(_)) {
         return false;
     }
     match arena.node(term) {
         TermNode::Symbol(_) | TermNode::BvConst { .. } => true,
         TermNode::App { op, args } => {
-            is_bitblastable_op(*op) && args.iter().all(|&a| is_bitblastable_bv(arena, a))
+            (is_bitblastable_op(*op) || (*op == Op::BvSub && sub_rewrites.contains_key(&term)))
+                && args
+                    .iter()
+                    .all(|&a| is_bitblastable_bv(arena, a, sub_rewrites))
         }
         _ => false,
     }
@@ -460,7 +567,7 @@ impl Builder {
 /// the children's equalities), bit-blasting the operator over those `@bbterm`-form
 /// children (`bitblast_<op>`, whose `build_term_vec` returns their bit args
 /// directly), and `trans`-chaining the two.
-struct BbReducer {
+struct BbReducer<'r> {
     /// `term` → (its `@bbterm` Alethe form, the step id proving `(= term bbform)`).
     bbform: BTreeMap<TermId, (AletheTerm, String)>,
     /// One **bit-definition** per compound subterm: a bit-level Boolean `B_t`
@@ -471,13 +578,19 @@ struct BbReducer {
     /// it back to the children's bits (the cross-term connection the old inlined
     /// gadget made implicitly). Emitted in DAG-dedup order.
     defs: Vec<(AletheTerm, String)>,
+    /// Route-2 `bvsub → (bvadd a (bvneg b))` rewrites (empty in Route 1, where
+    /// `bvsub` is rejected). When `reduce_term` meets a keyed `(bvsub a b)` it emits a
+    /// `bv_poly_simp` equality to the rewrite, reduces the rewrite, and `trans`-chains
+    /// them — so the `bvsub` term's bits come from the `bvadd`/`bvneg` bit-blast.
+    sub_rewrites: &'r BTreeMap<TermId, TermId>,
 }
 
-impl BbReducer {
-    fn new() -> Self {
+impl<'r> BbReducer<'r> {
+    fn new(sub_rewrites: &'r BTreeMap<TermId, TermId>) -> Self {
         Self {
             bbform: BTreeMap::new(),
             defs: Vec::new(),
+            sub_rewrites,
         }
     }
 
@@ -492,6 +605,15 @@ impl BbReducer {
     ) -> Option<(AletheTerm, String)> {
         if let Some(cached) = self.bbform.get(&term) {
             return Some(cached.clone());
+        }
+        // Route-2 `bvsub` bridge. A `(bvsub a b)` keyed in `sub_rewrites` is bit-blasted
+        // through its `(bvadd a (bvneg b))` rewrite, with a Carcara-valid `bv_poly_simp`
+        // term equality threading the two — so the proof keeps `bvsub` at the term level
+        // and certifies the ORIGINAL assertion.
+        if let Some(&rewrite) = self.sub_rewrites.get(&term) {
+            let result = self.reduce_sub(arena, builder, term, rewrite)?;
+            self.bbform.insert(term, result.clone());
+            return Some(result);
         }
         let result = match arena.node(term) {
             TermNode::Symbol(_) | TermNode::BvConst { .. } => {
@@ -561,6 +683,60 @@ impl BbReducer {
         };
         self.bbform.insert(term, result.clone());
         Some(result)
+    }
+
+    /// Route-2 reduction of a `(bvsub a b)` term (id `sub`) via its interned
+    /// `(bvadd a (bvneg b))` rewrite (id `rewrite`). Emits, in order:
+    ///
+    /// 1. **`bv_poly_simp`**: `(= (bvsub a b) (bvadd a (bvneg b)))` — the Carcara-valid
+    ///    polynomial-simplification step (the two sides are equal modulo `2^w`).
+    /// 2. The rewrite's own reduction `(= (bvadd a (bvneg b)) bbform)` (recursing into
+    ///    [`BbReducer::reduce_term`], which bit-blasts the `bvadd` and the inner `bvneg`
+    ///    and emits their bit-definitions).
+    /// 3. **`trans`**: `(= (bvsub a b) bbform)` — chaining (1) and (2).
+    /// 4. The `bvsub` term's own **bit-definition**, tying `((_ @bit_of i) (bvsub a b))`
+    ///    to `bbform`'s gadget bits (so the projection stays connected in the
+    ///    propositional refutation; reconstruction's `bv_bit` models `bvsub a b` bit `i`
+    ///    as exactly that `bvadd a (bvneg b)` ripple-carry, making the tie reflexive).
+    ///
+    /// Returns `(bbform, trans_id)`: the `bvsub`'s `@bbterm` form and the id of the
+    /// `trans` step proving `(= (bvsub a b) bbform)`.
+    fn reduce_sub(
+        &mut self,
+        arena: &TermArena,
+        builder: &mut Builder,
+        sub: TermId,
+        rewrite: TermId,
+    ) -> Option<(AletheTerm, String)> {
+        // 1. The bvsub→bvadd∘bvneg rewrite equality (Carcara `bv_poly_simp`).
+        let sub_alethe = bv_term_to_alethe(arena, sub)?;
+        let rewrite_alethe = bv_term_to_alethe(arena, rewrite)?;
+        let sub_eq_id = builder.step(
+            vec![pos(AletheTerm::App(
+                "=".to_owned(),
+                vec![sub_alethe.clone(), rewrite_alethe.clone()],
+            ))],
+            "bv_poly_simp",
+            &[],
+        );
+
+        // 2. Reduce the rewrite `(bvadd a (bvneg b))` to its `@bbterm` form.
+        let (bbform, rewrite_id) = self.reduce_term(arena, builder, rewrite)?;
+
+        // 3. trans: `(= (bvsub a b) bbform)` from the two equalities.
+        let trans_id = builder.step(
+            vec![pos(AletheTerm::App(
+                "=".to_owned(),
+                vec![sub_alethe.clone(), bbform.clone()],
+            ))],
+            "trans",
+            &[&sub_eq_id, &rewrite_id],
+        );
+
+        // 4. The bvsub term's bit-definition, tying its projections to `bbform`.
+        self.emit_bit_definition(builder, sub_alethe, &bbform, &trans_id)?;
+
+        Some((bbform, trans_id))
     }
 
     /// Emits a compound term's **bit-definition** clause `(cl B_t)` and records it in
@@ -841,6 +1017,36 @@ impl Tseitin {
         self.var_of.len()
     }
 
+    /// The Boolean-constant pins to feed the SAT refutation, one per `true`/`false`
+    /// constant actually registered as an atom (so a pin-free fragment yields an empty
+    /// list). Each carries the SAT input clause and the Alethe `(step … :rule true)` /
+    /// `(step … :rule false)` to emit — but only if the LRAT proof references it
+    /// ([`refute`] decides). `true` → `(cl true)` (unit `[var]`); `false` →
+    /// `(cl (not false))` (unit `[¬var]`).
+    fn boolean_const_pins(&self) -> Vec<Pin> {
+        let mut pins = Vec::new();
+        let true_key = AletheTerm::Const("true".to_owned()).key();
+        if let Some(&var) = self.var_of.get(&true_key) {
+            pins.push(Pin {
+                clause: vec![CnfLit::positive(var)],
+                rule: "true",
+                alethe_clause: vec![pos(AletheTerm::Const("true".to_owned()))],
+            });
+        }
+        let false_key = AletheTerm::Const("false".to_owned()).key();
+        if let Some(&var) = self.var_of.get(&false_key) {
+            pins.push(Pin {
+                clause: vec![CnfLit::positive(var).negated()],
+                rule: "false",
+                alethe_clause: vec![pos(AletheTerm::App(
+                    "not".to_owned(),
+                    vec![AletheTerm::Const("false".to_owned())],
+                ))],
+            });
+        }
+        pins
+    }
+
     /// Encodes `term` (a Boolean formula), returning the literal equivalent to it.
     /// Leaves (bit projections) return themselves; a `(not …)` wraps its inner
     /// literal syntactically (no new variable); compound gates introduce the gate
@@ -1033,28 +1239,95 @@ enum GateKind {
 
 // --- Propositional refutation: SAT core → LRAT → Alethe resolution ----------
 
-/// Refutes the collected input clauses (each already an emitted Alethe step) with
-/// the proof-producing SAT core, replaying the LRAT resolution chain as Alethe
-/// `resolution` steps down to `(cl)`. Returns the full command list, or [`None`] if
-/// the formula is unexpectedly not refuted.
+/// A Boolean-constant pin candidate: its SAT input clause, the Alethe rule
+/// (`"true"`/`"false"`) and clause to emit. Emitted into the proof only if the LRAT
+/// refutation references it (see [`refute`]).
+struct Pin {
+    clause: Vec<CnfLit>,
+    rule: &'static str,
+    alethe_clause: AletheClause,
+}
+
+/// Refutes the collected input clauses (each already an emitted Alethe step), plus the
+/// Boolean-constant `pins`, with the proof-producing SAT core, replaying the LRAT
+/// resolution chain as Alethe `resolution` steps down to `(cl)`. A pin's `:rule
+/// true`/`:rule false` step is emitted **only if** the LRAT proof references that pin
+/// clause — keeping a refutation that never depends on a `true`/`false` value
+/// completely pin-free. Returns the full command list, or [`None`] if the formula is
+/// unexpectedly not refuted.
 fn refute(
     builder: &mut Builder,
     tseitin: &Tseitin,
     input_clause_ids: &[(Vec<CnfLit>, String)],
+    pins: &[Pin],
 ) -> Option<Vec<AletheCommand>> {
-    let mut formula = CnfFormula::new(tseitin.total_vars());
-    // clause index in formula → Alethe step id of its (cl …) form.
+    // First attempt the refutation WITHOUT the Boolean-constant pins: most fragments
+    // (every bitwise/congruence-style one) are unsat over the bit atoms alone, so the
+    // proof stays pin-free and our in-tree `check_alethe` (which has no `true`/`false`
+    // rule) still accepts it. Only when the bit atoms alone are satisfiable — the
+    // carry-chain-semantics case, e.g. the Route-2 `bvsub` refutation — do we add the
+    // pins and retry, fixing the `true`/`false` seeds the gadgets depend on.
+    let build_formula = |with_pins: bool| -> Option<CnfFormula> {
+        let mut formula = CnfFormula::new(tseitin.total_vars());
+        for (lits, _) in input_clause_ids {
+            formula.add_clause(CnfClause::new(lits.clone())).ok()?;
+        }
+        if with_pins {
+            for pin in pins {
+                formula
+                    .add_clause(CnfClause::new(pin.clause.clone()))
+                    .ok()?;
+            }
+        }
+        Some(formula)
+    };
+    let pin_base = input_clause_ids.len();
+
+    // Whether the refutation used the pinned formula (so the pin clauses are present
+    // as input clauses `pin_base+1..`); a bare-unsat fragment never includes them.
+    let used_pins;
+    let lrat = {
+        let bare = build_formula(false)?;
+        match solve_with_drat_proof(&bare) {
+            ProofSolveOutcome::Unsat(drat) => {
+                used_pins = false;
+                elaborate_drat_to_lrat(&bare, &drat).ok()?
+            }
+            _ if !pins.is_empty() => {
+                // Bit atoms alone are satisfiable; retry with the constant pins.
+                let pinned = build_formula(true)?;
+                let ProofSolveOutcome::Unsat(drat) = solve_with_drat_proof(&pinned) else {
+                    return None;
+                };
+                used_pins = true;
+                elaborate_drat_to_lrat(&pinned, &drat).ok()?
+            }
+            _ => return None,
+        }
+    };
+
+    // clause index in formula (1-based) → Alethe step id of its (cl …) form.
     let mut clause_step: BTreeMap<u64, String> = BTreeMap::new();
-    for (i, (lits, step_id)) in input_clause_ids.iter().enumerate() {
-        formula.add_clause(CnfClause::new(lits.clone())).ok()?;
-        // LRAT numbers input clauses 1..=N.
+    for (i, (_, step_id)) in input_clause_ids.iter().enumerate() {
         clause_step.insert(i as u64 + 1, step_id.clone());
     }
-
-    let ProofSolveOutcome::Unsat(drat) = solve_with_drat_proof(&formula) else {
-        return None;
-    };
-    let lrat = elaborate_drat_to_lrat(&formula, &drat).ok()?;
+    // Emit each pin's tautology step iff the pinned formula was used AND its clause is
+    // referenced by an LRAT hint; wire its id. (Only meaningful when `used_pins`.)
+    if used_pins {
+        let mut used: std::collections::BTreeSet<u64> = std::collections::BTreeSet::new();
+        for step in &lrat {
+            if let LratStep::Add { hints, .. } = step {
+                used.extend(hints.iter().copied());
+            }
+        }
+        for (j, pin) in pins.iter().enumerate() {
+            let clause_no = (pin_base + j) as u64 + 1;
+            if used.contains(&clause_no) {
+                let id = builder.step(pin.alethe_clause.clone(), pin.rule, &[]);
+                clause_step.insert(clause_no, id);
+            }
+        }
+    }
 
     // Replay each LRAT addition as an Alethe resolution step over the antecedent
     // clauses' Alethe ids. The learned clause is RUP from its hints, so the
@@ -1244,5 +1517,75 @@ mod tests {
     fn empty_assertions_is_none() {
         let arena = TermArena::new();
         assert!(prove_qf_bv_unsat_alethe(&arena, &[]).is_none());
+    }
+
+    // --- Route 2 (bvsub kept at the term level) -----------------------------
+
+    #[test]
+    fn route1_still_rejects_bvsub() {
+        // The committed Route-1 emitter keeps `bvsub` OUT of fragment, even for an
+        // unsat instance — this is the gap Route 2 closes.
+        use super::prove_qf_bv_unsat_alethe;
+        let mut arena = TermArena::new();
+        let a = bv(&mut arena, "a", 2);
+        let b = bv(&mut arena, "b", 2);
+        let sub = arena.bv_sub(a, b).unwrap();
+        let eq1 = arena.eq(sub, a).unwrap();
+        let lt = arena.bv_ult(a, b).unwrap();
+        assert!(prove_qf_bv_unsat_alethe(&arena, &[eq1, lt]).is_none());
+    }
+
+    #[test]
+    fn route2_bvsub_emits_a_closing_proof() {
+        use super::prove_qf_bv_unsat_alethe_route2;
+        // (= (bvsub a b) a) ∧ (bvult a b): `a - b = a` forces `b = 0`, but then
+        // `a < b = a < 0` is impossible (unsigned) — unsat over the ORIGINAL `bvsub`
+        // assertion, all-variable (no constant operands), genuinely exercising the
+        // two's-complement subtract carry semantics.
+        let mut arena = TermArena::new();
+        let a = bv(&mut arena, "a", 2);
+        let b = bv(&mut arena, "b", 2);
+        let sub = arena.bv_sub(a, b).unwrap();
+        let eq1 = arena.eq(sub, a).unwrap();
+        let lt = arena.bv_ult(a, b).unwrap();
+        let proof = prove_qf_bv_unsat_alethe_route2(&mut arena, &[eq1, lt]).expect("unsat proof");
+        assert!(closes_to_empty(&proof), "Route-2 proof must close to (cl)");
+        // The proof must keep `bvsub` at the term level: a `bv_poly_simp` rewrite step
+        // bridging it to `(bvadd a (bvneg b))` is present.
+        assert!(
+            proof.iter().any(|c| matches!(
+                c,
+                AletheCommand::Step { rule, .. } if rule == "bv_poly_simp"
+            )),
+            "Route-2 must emit a bv_poly_simp bvsub-rewrite step"
+        );
+    }
+
+    #[test]
+    fn route2_without_bvsub_matches_route1() {
+        use super::{prove_qf_bv_unsat_alethe, prove_qf_bv_unsat_alethe_route2};
+        // With no bvsub, Route 2 collects no rewrites and emits the same proof as
+        // Route 1 (the rewrites map is empty).
+        let mut arena = TermArena::new();
+        let a = bv(&mut arena, "a", 2);
+        let b = bv(&mut arena, "b", 2);
+        let eq = arena.eq(a, b).unwrap();
+        let neq = arena.not(eq).unwrap();
+        let p1 = prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("route1");
+        let p2 = prove_qf_bv_unsat_alethe_route2(&mut arena, &[eq, neq]).expect("route2");
+        assert_eq!(p1, p2);
+    }
+
+    #[test]
+    fn route2_sat_instance_is_none() {
+        use super::prove_qf_bv_unsat_alethe_route2;
+        let mut arena = TermArena::new();
+        let a = bv(&mut arena, "a", 2);
+        let b = bv(&mut arena, "b", 2);
+        let c = bv(&mut arena, "c", 2);
+        let sub = arena.bv_sub(a, b).unwrap();
+        let eq = arena.eq(sub, c).unwrap();
+        // (bvsub a b) = c alone is satisfiable.
+        assert!(prove_qf_bv_unsat_alethe_route2(&mut arena, &[eq]).is_none());
     }
 }
