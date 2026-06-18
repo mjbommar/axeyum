@@ -54,6 +54,7 @@ mod model;
 mod nra;
 mod optimize;
 mod pb;
+mod pbls;
 mod preprocess;
 mod proof;
 mod qfabv_alethe;
@@ -146,6 +147,7 @@ pub use optimize::{
     minimize_lia,
 };
 pub use pb::{pb_eq, pb_ge, pb_le};
+pub use pbls::{LocalSearchOutcome, PblsBackend, solve_local_search};
 pub use preprocess::check_with_preprocessing;
 pub use proof::{
     UnsatProof, UnsatProofOutcome, export_datatype_unsat_proof, export_qf_abv_unsat_proof,
@@ -157,8 +159,8 @@ pub use qfbv_alethe::prove_qf_bv_unsat_alethe;
 pub use qinst_egraph::{instantiate_forall_via_egraph, prove_quantified_unsat_via_egraph};
 pub use reconstruct::{
     LraReconstructCtx, ReconstructCtx, ReconstructError, reconstruct_bitblast_step,
-    reconstruct_cnf_intro_rule, reconstruct_eq_step, reconstruct_lra_proof, reconstruct_qf_bv_proof,
-    reconstruct_qf_uf_proof, reconstruct_resolution_proof,
+    reconstruct_cnf_intro_rule, reconstruct_eq_step, reconstruct_lra_proof,
+    reconstruct_qf_bv_proof, reconstruct_qf_uf_proof, reconstruct_resolution_proof,
 };
 pub use records::{RecordError, RecordSort};
 pub use sat_bv_backend::SatBvBackend;
