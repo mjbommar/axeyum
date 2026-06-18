@@ -2481,6 +2481,84 @@ fn try_or_pos(
     Ok(Some(check_against(ctx, "or_pos", proof, target)?))
 }
 
+/// Rule-specific `O(k)` reconstruction of `or_neg`: `(cl (or φ…) (not φ_i))`.
+/// `em ⟦φ_i⟧`; on the positive branch inject the witness into the or-chain `⟦G⟧`
+/// at position `i` (`inject_gate_lit` over the operands-as-clause) and `Or.inl`, on
+/// the negative branch `Or.inr`. Returns `Ok(None)` for an unexpected shape.
+fn try_or_neg(
+    ctx: &mut ReconstructCtx,
+    conclusion: &[AletheLit],
+) -> Result<Option<ExprId>, ReconstructError> {
+    let [l0, l1] = conclusion else {
+        return Ok(None);
+    };
+    if l0.negated {
+        return Ok(None);
+    }
+    let neg = normalize_lit_polarity(l1);
+    if !neg.negated {
+        return Ok(None);
+    }
+    let AletheTerm::App(head, operands) = &l0.atom else {
+        return Ok(None);
+    };
+    if head != "or" || operands.is_empty() {
+        return Ok(None);
+    }
+    let Some(i) = operands.iter().position(|op| op.key() == neg.atom.key()) else {
+        return Ok(None);
+    };
+
+    let _ = ctx.em_axiom();
+    let operands = operands.clone();
+    let conclusion = conclusion.to_vec();
+    // The operands as a positive clause: its encoding is `⟦G⟧` (the or-chain).
+    let operand_clause: Vec<AletheLit> = operands
+        .iter()
+        .map(|op| AletheLit {
+            atom: op.clone(),
+            negated: false,
+        })
+        .collect();
+    let g_prop = ctx.gate_clause_to_prop(&operand_clause);
+    let phi_prop = ctx.gate_term_to_prop(&operands[i]);
+    let not_phi = ctx.mk_not(phi_prop);
+    let target = ctx.gate_clause_to_prop(&conclusion); // Or(⟦G⟧, Not ⟦φ_i⟧)
+
+    let anon = ctx.kernel.anon();
+    // minor_inl := fun (h : ⟦φ_i⟧) => Or.inl ⟦G⟧ not_phi (inject_i h).
+    let fv = fresh_fvar_id(ctx);
+    let h = ctx.kernel.fvar(fv);
+    let g_proof = inject_gate_lit(ctx, &operand_clause, i, h);
+    let inl_body = or_inl(ctx, g_prop, not_phi, g_proof);
+    let inl_body = ctx.kernel.abstract_fvars(inl_body, &[fv]);
+    let minor_inl = ctx
+        .kernel
+        .lam(anon, phi_prop, inl_body, BinderInfo::Default);
+    // minor_inr := fun (hn : Not ⟦φ_i⟧) => Or.inr ⟦G⟧ not_phi hn.
+    let fv2 = fresh_fvar_id(ctx);
+    let hn = ctx.kernel.fvar(fv2);
+    let inr_body = or_inr(ctx, g_prop, not_phi, hn);
+    let inr_body = ctx.kernel.abstract_fvars(inr_body, &[fv2]);
+    let minor_inr = ctx.kernel.lam(anon, not_phi, inr_body, BinderInfo::Default);
+
+    let or_phi = ctx.mk_or(phi_prop, not_phi);
+    let motive = ctx.kernel.lam(anon, or_phi, target, BinderInfo::Default);
+    let em_name = ctx.em_axiom();
+    let em = ctx.kernel.const_(em_name, vec![]);
+    let em_phi = ctx.kernel.app(em, phi_prop);
+    let z = ctx.kernel.level_zero();
+    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![z]);
+    let e = ctx.kernel.app(rec, phi_prop);
+    let e = ctx.kernel.app(e, not_phi);
+    let e = ctx.kernel.app(e, motive);
+    let e = ctx.kernel.app(e, minor_inl);
+    let e = ctx.kernel.app(e, minor_inr);
+    let proof = ctx.kernel.app(e, em_phi);
+
+    Ok(Some(check_against(ctx, "or_neg", proof, target)?))
+}
+
 /// Reconstruct a Tseitin **CNF-introduction** rule into a kernel-checked Lean
 /// proof term of its conclusion clause's `Prop` encoding.
 ///
@@ -2536,6 +2614,11 @@ pub fn reconstruct_cnf_intro_rule(
     }
     if rule_name == "or_pos" {
         if let Some(proof) = try_or_pos(ctx, conclusion)? {
+            return Ok(proof);
+        }
+    }
+    if rule_name == "or_neg" {
+        if let Some(proof) = try_or_neg(ctx, conclusion)? {
             return Ok(proof);
         }
     }
