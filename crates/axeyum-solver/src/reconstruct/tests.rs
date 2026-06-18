@@ -2622,14 +2622,15 @@ fn lra_satisfiable_is_rejected() {
     );
 }
 
-/// An `unsat` instance OUTSIDE slice 1 (here `2x ≤ -1 ∧ x ≥ 0`, whose Farkas
-/// refutation needs a `2`-coefficient term, not the `e ≤ 0 ∧ 1 ≤ e` shape) is
-/// rejected, honestly reporting the boundary rather than guessing a `False`.
+/// What used to be "out of slice 1" — `2x ≤ -1 ∧ x ≥ 0`, whose Farkas refutation
+/// needs a `2`-coefficient term (`1·(2x+1) + 2·(−x) = 1 > 0`) — is now reconstructed
+/// by the general ring engine to a kernel-checked `False`. (This was previously a
+/// rejection test; the general Farkas path subsumes it.)
 #[test]
-fn lra_out_of_scope_shape_is_rejected() {
+fn lra_general_two_coeff_with_constant_reconstructs() {
     use axeyum_ir::{Rational, TermArena};
 
-    use super::{LraReconstructCtx, ReconstructError, reconstruct_lra_proof};
+    use super::{LraReconstructCtx, reconstruct_lra_proof};
 
     let mut arena = TermArena::new();
     let x = arena.real_var("x").unwrap();
@@ -2641,8 +2642,33 @@ fn lra_out_of_scope_shape_is_rejected() {
     let a2 = arena.real_ge(x, zero).unwrap(); // x ≥ 0
 
     let mut ctx = LraReconstructCtx::new();
+    let proof = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2])
+        .expect("integer-coefficient Farkas shape reconstructs via the general engine");
+    assert_lra_infers_false(&mut ctx, proof);
+}
+
+/// A genuinely out-of-scope `unsat` instance — `(1/2)·x ≤ -1 ∧ x ≥ 0`, whose Farkas
+/// atom `(1/2)x + 1 ≤ 0` carries a **non-integer** coefficient — is rejected (the
+/// additive ring engine only models integer-coefficient atoms), honestly reporting
+/// the boundary rather than guessing a `False`.
+#[test]
+fn lra_noninteger_coefficient_is_rejected() {
+    use axeyum_ir::{Rational, TermArena};
+
+    use super::{LraReconstructCtx, ReconstructError, reconstruct_lra_proof};
+
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let half = arena.real_const(Rational::new(1, 2));
+    let neg_one = arena.real_const(Rational::integer(-1));
+    let zero = arena.real_const(Rational::integer(0));
+    let half_x = arena.real_mul(half, x).unwrap();
+    let a1 = arena.real_le(half_x, neg_one).unwrap(); // (1/2)x ≤ -1
+    let a2 = arena.real_ge(x, zero).unwrap(); // x ≥ 0
+
+    let mut ctx = LraReconstructCtx::new();
     let err = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2])
-        .expect_err("a non-transitivity Farkas shape is out of slice 1");
+        .expect_err("a non-integer-coefficient atom is outside the additive ring engine");
     assert!(
         matches!(
             err,
@@ -2695,4 +2721,121 @@ fn lra_reconstruction_is_deterministic() {
         reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2]).unwrap()
     };
     assert_eq!(build(), build(), "LRA reconstruction must be deterministic");
+}
+
+/// Assert that a reconstructed LRA term's inferred type is `def_eq` to `False`.
+fn assert_lra_infers_false(ctx: &mut super::LraReconstructCtx, proof: super::ExprId) {
+    let inferred = ctx.kernel_mut().infer(proof).unwrap();
+    let false_ = {
+        let f = ctx.arith().logic.false_;
+        ctx.kernel_mut().const_(f, vec![])
+    };
+    assert!(
+        ctx.kernel_mut().def_eq(inferred, false_),
+        "reconstructed LRA term must infer to False"
+    );
+}
+
+/// **Non-unit multipliers, 2 constraints**: `2x ≤ 0 ∧ 1 ≤ x`. The Farkas
+/// refutation needs `λ = (1, 2)`: `1·(2x) + 2·(1 - x) = 2 > 0`. This is the first
+/// case beyond the unit-multiplier / `{-1,0,+1}` slice, exercising the general
+/// ring engine (scale `1 ≤ x` by 2, sum, cancel `2x` against `-2x`, leave `2`).
+#[test]
+fn lra_general_two_constraint_nonunit_reconstructs() {
+    use axeyum_ir::{Rational, TermArena};
+
+    use super::{LraReconstructCtx, reconstruct_lra_proof};
+
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let zero = arena.real_const(Rational::integer(0));
+    let one = arena.real_const(Rational::integer(1));
+    let two_x = arena.real_mul(two, x).unwrap();
+    let a1 = arena.real_le(two_x, zero).unwrap(); // 2x ≤ 0
+    let a2 = arena.real_le(one, x).unwrap(); // 1 ≤ x
+
+    let mut ctx = LraReconstructCtx::new();
+    let proof = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2])
+        .expect("non-unit-multiplier 2-constraint Farkas reconstructs to False");
+    assert_lra_infers_false(&mut ctx, proof);
+}
+
+/// **N-constraint general Farkas** (3 constraints, multiple variables):
+/// `x + y ≤ 0 ∧ 1 ≤ x ∧ 1 ≤ y`. The refutation is `1·(x+y) + 1·(1-x) + 1·(1-y) = 2 > 0`;
+/// the variables cancel across three constraints. Exercises the multi-constraint,
+/// multi-variable cancellation path of the ring engine.
+#[test]
+fn lra_general_three_constraint_multivar_reconstructs() {
+    use axeyum_ir::{Rational, TermArena};
+
+    use super::{LraReconstructCtx, reconstruct_lra_proof};
+
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let y = arena.real_var("y").unwrap();
+    let zero = arena.real_const(Rational::integer(0));
+    let one = arena.real_const(Rational::integer(1));
+    let x_plus_y = arena.real_add(x, y).unwrap();
+    let a1 = arena.real_le(x_plus_y, zero).unwrap(); // x + y ≤ 0
+    let a2 = arena.real_le(one, x).unwrap(); // 1 ≤ x
+    let a3 = arena.real_le(one, y).unwrap(); // 1 ≤ y
+
+    let mut ctx = LraReconstructCtx::new();
+    let proof = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2, a3])
+        .expect("3-constraint multivar Farkas reconstructs to False");
+    assert_lra_infers_false(&mut ctx, proof);
+}
+
+/// **N-constraint with larger non-unit multipliers**: `3x ≤ 0 ∧ 2 ≤ 2x`. The
+/// refutation is `2·(3x) + 3·(2 - 2x) = 6 > 0` (multipliers `(2, 3)`, coefficients
+/// `> 1` on both the variable and the scaling), stressing repeated scaling and a
+/// larger constant `K = 6` (a six-`one` sum in the `lt zero K` builder).
+#[test]
+fn lra_general_larger_multipliers_reconstructs() {
+    use axeyum_ir::{Rational, TermArena};
+
+    use super::{LraReconstructCtx, reconstruct_lra_proof};
+
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let three = arena.real_const(Rational::integer(3));
+    let zero = arena.real_const(Rational::integer(0));
+    let three_x = arena.real_mul(three, x).unwrap();
+    let two_x = arena.real_mul(two, x).unwrap();
+    let a1 = arena.real_le(three_x, zero).unwrap(); // 3x ≤ 0
+    let a2 = arena.real_le(two, two_x).unwrap(); // 2 ≤ 2x
+
+    let mut ctx = LraReconstructCtx::new();
+    let proof = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2])
+        .expect("larger-multiplier Farkas reconstructs to False");
+    assert_lra_infers_false(&mut ctx, proof);
+}
+
+/// The general path keeps the slice-1 baby shape `x ≤ 0 ∧ 1 ≤ x` reconstructing
+/// (it is just the `λ = (1, 1)`, `K = 1` instance of the general engine — though in
+/// practice the dedicated transitivity path handles it first; this confirms the
+/// general engine ALSO closes it when reached).
+#[test]
+fn lra_general_engine_handles_unit_baby_shape() {
+    use axeyum_ir::{Rational, TermArena};
+
+    use super::{LraReconstructCtx, try_general_farkas};
+
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let zero = arena.real_const(Rational::integer(0));
+    let one = arena.real_const(Rational::integer(1));
+    let a1 = arena.real_le(x, zero).unwrap();
+    let a2 = arena.real_le(one, x).unwrap();
+
+    let cert = crate::lra_farkas_certificate(&arena, &[a1, a2])
+        .unwrap()
+        .expect("unsat");
+    let mut ctx = LraReconstructCtx::new();
+    let proof = try_general_farkas(&mut ctx, &cert)
+        .expect("no error")
+        .expect("general engine reconstructs the unit baby shape");
+    assert_lra_infers_false(&mut ctx, proof);
 }

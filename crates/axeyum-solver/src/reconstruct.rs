@@ -5265,6 +5265,679 @@ impl LraReconstructCtx {
             })?;
         Ok(self.kernel.const_(name, vec![]))
     }
+
+    // -----------------------------------------------------------------------
+    // General-Farkas ring engine.
+    //
+    // The general la_generic reconstruction (any nonneg integer multipliers over
+    // integer-coefficient `≤`-constraints) needs to manipulate linear `R`
+    // expressions up to the ordered-field axioms. Since `R` is axiomatic the kernel
+    // never *computes* `λ·L = c`; every cancellation is an explicit `Eq`-rewrite
+    // built from `add_comm`/`add_assoc`/`add_neg`/`add_zero`. The helpers below are
+    // that explicit ring layer: `Eq R`-combinators (`refl`/`symm`/`trans`/`congr_add`),
+    // a canonical additive normal form, and a normalizer that *proves* every linear
+    // expression equal to the canonical form of its [`LinR`]. Two ring-equal
+    // expressions then normalize to the **same** interned canonical term, so their
+    // equality is `trans normA (symm normB)` — kernel-checked end to end.
+    // -----------------------------------------------------------------------
+
+    /// `Eq R x y` (the carrier-level equality proposition).
+    fn mk_eq_r(&mut self, x: ExprId, y: ExprId) -> ExprId {
+        let one_lvl = {
+            let z = self.kernel.level_zero();
+            self.kernel.level_succ(z)
+        };
+        let eq = self.kernel.const_(self.arith.logic.eq, vec![one_lvl]);
+        let r_ty = self.kernel.const_(self.arith.r, vec![]);
+        let e = self.kernel.app(eq, r_ty);
+        let e = self.kernel.app(e, x);
+        self.kernel.app(e, y)
+    }
+
+    /// `Eq.refl R a : Eq R a a`.
+    fn eq_refl_r(&mut self, a: ExprId) -> ExprId {
+        let one_lvl = {
+            let z = self.kernel.level_zero();
+            self.kernel.level_succ(z)
+        };
+        let refl = self.kernel.const_(self.arith.logic.eq_refl, vec![one_lvl]);
+        let r_ty = self.kernel.const_(self.arith.r, vec![]);
+        let e = self.kernel.app(refl, r_ty);
+        self.kernel.app(e, a)
+    }
+
+    /// `Eq.rec`-based transport over the `R` carrier: given `h : Eq R p q` and a
+    /// `refl_case : motive p (Eq.refl R p)`, builds `motive q h`. Mirrors the EUF
+    /// [`ReconstructCtx::mk_eq_rec_transport`] but at the `R` (`Sort 1`) carrier.
+    fn eq_rec_transport_r(
+        &mut self,
+        p: ExprId,
+        motive: ExprId,
+        refl_case: ExprId,
+        q: ExprId,
+        h: ExprId,
+    ) -> ExprId {
+        let z = self.kernel.level_zero();
+        let one_lvl = self.kernel.level_succ(z);
+        let rec = self
+            .kernel
+            .const_(self.arith.logic.eq_rec, vec![z, one_lvl]);
+        let r_ty = self.kernel.const_(self.arith.r, vec![]);
+        let e = self.kernel.app(rec, r_ty);
+        let e = self.kernel.app(e, p);
+        let e = self.kernel.app(e, motive);
+        let e = self.kernel.app(e, refl_case);
+        let e = self.kernel.app(e, q);
+        self.kernel.app(e, h)
+    }
+
+    /// `Eq.symm`: given `h : Eq R a b`, build a proof of `Eq R b a`.
+    ///
+    /// `Eq.rec R a (fun x _ => Eq R x a) (Eq.refl R a) b h`.
+    fn eq_symm_r(&mut self, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+        let motive = {
+            let x1 = self.kernel.bvar(1);
+            let eq_x_a = self.mk_eq_r(x1, a);
+            let x0 = self.kernel.bvar(0);
+            let eq_a_x = self.mk_eq_r(a, x0);
+            let anon = self.kernel.anon();
+            let inner = self.kernel.lam(anon, eq_a_x, eq_x_a, BinderInfo::Default);
+            let r_ty = self.kernel.const_(self.arith.r, vec![]);
+            self.kernel.lam(anon, r_ty, inner, BinderInfo::Default)
+        };
+        let refl_case = self.eq_refl_r(a);
+        self.eq_rec_transport_r(a, motive, refl_case, b, h)
+    }
+
+    /// `Eq.trans`: given `h1 : Eq R a b` and `h2 : Eq R b c`, build `Eq R a c`.
+    ///
+    /// `Eq.rec R b (fun x _ => Eq R a x) h1 c h2`.
+    fn eq_trans_r(&mut self, a: ExprId, b: ExprId, c: ExprId, h1: ExprId, h2: ExprId) -> ExprId {
+        let motive = {
+            let x1 = self.kernel.bvar(1);
+            let eq_a_x = self.mk_eq_r(a, x1);
+            let x0 = self.kernel.bvar(0);
+            let eq_b_x = self.mk_eq_r(b, x0);
+            let anon = self.kernel.anon();
+            let inner = self.kernel.lam(anon, eq_b_x, eq_a_x, BinderInfo::Default);
+            let r_ty = self.kernel.const_(self.arith.r, vec![]);
+            self.kernel.lam(anon, r_ty, inner, BinderInfo::Default)
+        };
+        self.eq_rec_transport_r(b, motive, h1, c, h2)
+    }
+
+    /// Congruence on the *left* argument of `add`: given `h : Eq R a a'`, build
+    /// `Eq R (add a b) (add a' b)`.
+    fn congr_add_left(&mut self, a: ExprId, ap: ExprId, b: ExprId, h: ExprId) -> ExprId {
+        // motive := fun (x : R) (_ : Eq R a x) => Eq R (add a b) (add x b).
+        let motive = {
+            let a_b = self.mk_add(a, b);
+            let x1 = self.kernel.bvar(1);
+            let x_b = self.mk_add(x1, b);
+            let eq_body = self.mk_eq_r(a_b, x_b);
+            let x0 = self.kernel.bvar(0);
+            let eq_a_x = self.mk_eq_r(a, x0);
+            let anon = self.kernel.anon();
+            let inner = self.kernel.lam(anon, eq_a_x, eq_body, BinderInfo::Default);
+            let r_ty = self.kernel.const_(self.arith.r, vec![]);
+            self.kernel.lam(anon, r_ty, inner, BinderInfo::Default)
+        };
+        let refl_case = {
+            let a_b = self.mk_add(a, b);
+            self.eq_refl_r(a_b)
+        };
+        self.eq_rec_transport_r(a, motive, refl_case, ap, h)
+    }
+
+    /// Congruence on the *right* argument of `add`: given `h : Eq R b b'`, build
+    /// `Eq R (add a b) (add a b')`.
+    fn congr_add_right(&mut self, a: ExprId, b: ExprId, bp: ExprId, h: ExprId) -> ExprId {
+        // motive := fun (x : R) (_ : Eq R b x) => Eq R (add a b) (add a x).
+        let motive = {
+            let a_b = self.mk_add(a, b);
+            let x1 = self.kernel.bvar(1);
+            let a_x = self.mk_add(a, x1);
+            let eq_body = self.mk_eq_r(a_b, a_x);
+            let x0 = self.kernel.bvar(0);
+            let eq_b_x = self.mk_eq_r(b, x0);
+            let anon = self.kernel.anon();
+            let inner = self.kernel.lam(anon, eq_b_x, eq_body, BinderInfo::Default);
+            let r_ty = self.kernel.const_(self.arith.r, vec![]);
+            self.kernel.lam(anon, r_ty, inner, BinderInfo::Default)
+        };
+        let refl_case = {
+            let a_b = self.mk_add(a, b);
+            self.eq_refl_r(a_b)
+        };
+        self.eq_rec_transport_r(b, motive, refl_case, bp, h)
+    }
+
+    /// `add_assoc a b c : Eq R (add (add a b) c) (add a (add b c))`.
+    fn add_assoc_eq(&mut self, a: ExprId, b: ExprId, c: ExprId) -> ExprId {
+        let ax = self.kernel.const_(self.arith.add_assoc, vec![]);
+        let e = self.kernel.app(ax, a);
+        let e = self.kernel.app(e, b);
+        self.kernel.app(e, c)
+    }
+
+    /// `add_comm a b : Eq R (add a b) (add b a)`.
+    fn add_comm_eq(&mut self, a: ExprId, b: ExprId) -> ExprId {
+        let ax = self.kernel.const_(self.arith.add_comm, vec![]);
+        let e = self.kernel.app(ax, a);
+        self.kernel.app(e, b)
+    }
+
+    /// `add_zero a : Eq R (add a zero) a`.
+    fn add_zero_eq(&mut self, a: ExprId) -> ExprId {
+        let ax = self.kernel.const_(self.arith.add_zero, vec![]);
+        self.kernel.app(ax, a)
+    }
+
+    /// `add_neg a : Eq R (add a (neg a)) zero`.
+    fn add_neg_eq(&mut self, a: ExprId) -> ExprId {
+        let ax = self.kernel.const_(self.arith.add_neg, vec![]);
+        self.kernel.app(ax, a)
+    }
+}
+
+/// A signed unit **generator** in the canonical additive normal form: either a
+/// bare variable `±xⱼ` or the unit `±1`. The canonical form of a linear expression
+/// is a right-nested `add` over a flat list of generators (terminated by `zero`),
+/// with variables ascending by index and the constant last. Repeated generators
+/// model integer coefficients (`coeff = 3` ⇒ three `+xⱼ` generators).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Gen {
+    /// `+xⱼ` (variable at dense index).
+    Var(usize),
+    /// `-xⱼ`.
+    NegVar(usize),
+    /// `+one`.
+    One,
+    /// `-one` (= `neg one`).
+    NegOne,
+}
+
+impl Gen {
+    /// The negation of this generator (so `Var` ↔ `NegVar`, `One` ↔ `NegOne`).
+    fn negate(self) -> Self {
+        match self {
+            Gen::Var(i) => Gen::NegVar(i),
+            Gen::NegVar(i) => Gen::Var(i),
+            Gen::One => Gen::NegOne,
+            Gen::NegOne => Gen::One,
+        }
+    }
+
+    /// A total sort key putting variables (ascending by index, `+` before `−`)
+    /// ahead of the constant generators. The exact order only needs to be total
+    /// and to keep a generator adjacent to its negation after bubbling, so the
+    /// merge can cancel; this key does both.
+    fn sort_key(self) -> (usize, u8) {
+        match self {
+            Gen::Var(i) => (i, 0),
+            Gen::NegVar(i) => (i, 1),
+            Gen::One => (usize::MAX, 0),
+            Gen::NegOne => (usize::MAX, 1),
+        }
+    }
+}
+
+/// The carrier of the general-Farkas additive ring engine, on top of
+/// [`LraReconstructCtx`]. Builds generator expressions, the canonical right-nested
+/// normal form, and the per-rewrite `Eq R` proofs that drive normalization.
+#[allow(dead_code)]
+impl LraReconstructCtx {
+    /// The `R` expression for a single generator.
+    fn gen_expr(&mut self, g: Gen) -> ExprId {
+        match g {
+            Gen::Var(i) => {
+                let name = self.var_const(i);
+                self.kernel.const_(name, vec![])
+            }
+            Gen::NegVar(i) => {
+                let name = self.var_const(i);
+                let v = self.kernel.const_(name, vec![]);
+                self.mk_neg(v)
+            }
+            Gen::One => self.mk_one(),
+            Gen::NegOne => {
+                let one = self.mk_one();
+                self.mk_neg(one)
+            }
+        }
+    }
+
+    /// The canonical right-nested additive expression `g0 + (g1 + … + (g_{k-1} + zero))`
+    /// over `gens`; an empty list is `zero`.
+    fn gens_to_expr(&mut self, gens: &[Gen]) -> ExprId {
+        let mut acc = self.mk_zero();
+        for &g in gens.iter().rev() {
+            let ge = self.gen_expr(g);
+            acc = self.mk_add(ge, acc);
+        }
+        acc
+    }
+
+    /// Lift a tail rewrite `tail_proof : Eq R tail tail'` up through the `prefix`
+    /// leading generators, yielding `Eq R (prefix ++ tail) (prefix ++ tail')` where
+    /// both sides are the right-nested canonical forms. Each leading generator is
+    /// re-attached with [`Self::congr_add_right`].
+    fn lift_tail_rewrite(
+        &mut self,
+        prefix: &[Gen],
+        tail: &[Gen],
+        tail2: &[Gen],
+        mut proof: ExprId,
+    ) -> ExprId {
+        // Build proof bottom-up: at each step we have `proof : Eq R T T2` for the
+        // current tail `T = (prefix[i+1..] ++ tail)`; prepend prefix[i].
+        for k in (0..prefix.len()).rev() {
+            let g = self.gen_expr(prefix[k]);
+            let mut sub_tail: Vec<Gen> = prefix[k + 1..].to_vec();
+            sub_tail.extend_from_slice(tail);
+            let mut sub_tail2: Vec<Gen> = prefix[k + 1..].to_vec();
+            sub_tail2.extend_from_slice(tail2);
+            let t = self.gens_to_expr(&sub_tail);
+            let t2 = self.gens_to_expr(&sub_tail2);
+            proof = self.congr_add_right(g, t, t2, proof);
+        }
+        proof
+    }
+
+    /// Prove `Eq R (g0 + (g1 + tail)) (g1 + (g0 + tail))` — an adjacent swap at the
+    /// head of a right-nested sum. `t` is the canonical expr of `tail`.
+    fn swap_head_eq(&mut self, g0: Gen, g1: Gen, tail: &[Gen]) -> ExprId {
+        let e0 = self.gen_expr(g0);
+        let e1 = self.gen_expr(g1);
+        let t = self.gens_to_expr(tail);
+        // add e0 (add e1 t) =[symm assoc] add (add e0 e1) t
+        let assoc1 = self.add_assoc_eq(e0, e1, t); // (e0+e1)+t = e0+(e1+t)
+        let lhs = {
+            let inner = self.mk_add(e1, t);
+            self.mk_add(e0, inner)
+        };
+        let mid1 = {
+            let inner = self.mk_add(e0, e1);
+            self.mk_add(inner, t)
+        };
+        let step1 = self.eq_symm_r(mid1, lhs, assoc1); // add e0 (add e1 t) = add (add e0 e1) t
+        // congr_left (add_comm e0 e1) : add (add e0 e1) t = add (add e1 e0) t
+        let comm = self.add_comm_eq(e0, e1); // add e0 e1 = add e1 e0
+        let e0e1 = self.mk_add(e0, e1);
+        let e1e0 = self.mk_add(e1, e0);
+        let step2 = self.congr_add_left(e0e1, e1e0, t, comm);
+        // assoc : add (add e1 e0) t = add e1 (add e0 t)
+        let step3 = self.add_assoc_eq(e1, e0, t);
+        // chain: lhs = mid1 = mid2 = rhs
+        let mid2 = self.mk_add(e1e0, t);
+        let rhs = {
+            let inner = self.mk_add(e0, t);
+            self.mk_add(e1, inner)
+        };
+        let t01 = self.eq_trans_r(lhs, mid1, mid2, step1, step2);
+        self.eq_trans_r(lhs, mid2, rhs, t01, step3)
+    }
+
+    /// Prove `Eq R (g + (g.negate() + tail)) tail` — cancel an adjacent
+    /// generator/anti-generator pair at the head. `t` is the canonical expr of `tail`.
+    fn cancel_head_eq(&mut self, g: Gen, tail: &[Gen]) -> ExprId {
+        let gn = g.negate();
+        let e = self.gen_expr(g);
+        let en = self.gen_expr(gn);
+        let t = self.gens_to_expr(tail);
+        // add e (add en t) =[symm assoc] add (add e en) t
+        let assoc = self.add_assoc_eq(e, en, t);
+        let lhs = {
+            let inner = self.mk_add(en, t);
+            self.mk_add(e, inner)
+        };
+        let mid1 = {
+            let inner = self.mk_add(e, en);
+            self.mk_add(inner, t)
+        };
+        let step1 = self.eq_symm_r(mid1, lhs, assoc);
+        // Prove `add e en = zero`. add_neg gives `add p (neg p) = zero`. For a
+        // `+`-generator g (e = p, en = neg p) this is direct; for a `−`-generator
+        // (e = neg p, en = p) commute first.
+        let (e_e_en_zero, e_en) = match g {
+            Gen::Var(_) | Gen::One => {
+                // e = p, en = neg p  ⇒ add_neg p.
+                let p = e;
+                let an = self.add_neg_eq(p); // add p (neg p) = zero
+                let e_en = self.mk_add(e, en);
+                (an, e_en)
+            }
+            Gen::NegVar(_) | Gen::NegOne => {
+                // e = neg p, en = p ⇒ add (neg p) p = zero via comm + add_neg.
+                let p = en; // the positive form
+                let np = e; // neg p
+                // add (neg p) p =[comm] add p (neg p) =[add_neg] zero.
+                let comm = self.add_comm_eq(np, p); // add np p = add p np
+                let an = self.add_neg_eq(p); // add p np = zero
+                let lhs_c = self.mk_add(np, p);
+                let mid_c = self.mk_add(p, np);
+                let zero = self.mk_zero();
+                let chained = self.eq_trans_r(lhs_c, mid_c, zero, comm, an);
+                let e_en = self.mk_add(e, en);
+                (chained, e_en)
+            }
+        };
+        // congr_left (add e en = zero) : add (add e en) t = add zero t
+        let zero = self.mk_zero();
+        let step2 = self.congr_add_left(e_en, zero, t, e_e_en_zero);
+        // add zero t =[comm] add t zero =[add_zero] t
+        let comm0 = self.add_comm_eq(zero, t); // add zero t = add t zero
+        let addz = self.add_zero_eq(t); // add t zero = t
+        let zt = self.mk_add(zero, t);
+        let tz = self.mk_add(t, zero);
+        let step3 = self.eq_trans_r(zt, tz, t, comm0, addz);
+        // chain lhs = mid1 = (add zero t) = t
+        let t01 = self.eq_trans_r(lhs, mid1, zt, step1, step2);
+        self.eq_trans_r(lhs, zt, t, t01, step3)
+    }
+
+    /// Normalize a generator list to the canonical sorted-and-cancelled list,
+    /// returning the canonical generators and a proof
+    /// `Eq R (gens_to_expr gens) (gens_to_expr canonical)`.
+    ///
+    /// Implemented as a bubble pass with cancellation: repeatedly find the first
+    /// adjacent pair that is either out of sort order (swap) or a cancelling
+    /// generator/anti-generator pair (cancel), apply the corresponding head rewrite
+    /// lifted to that position, and post-compose into the running proof. Terminates
+    /// because every swap strictly decreases the inversion count and every cancel
+    /// strictly decreases the length.
+    fn normalize_gens(&mut self, gens: &[Gen]) -> (Vec<Gen>, ExprId) {
+        let mut cur: Vec<Gen> = gens.to_vec();
+        let start = self.gens_to_expr(&cur);
+        // proof : Eq R start (gens_to_expr cur), initially refl.
+        let mut proof = self.eq_refl_r(start);
+        loop {
+            // Find first actionable adjacent pair.
+            let mut action: Option<(usize, bool)> = None; // (index, is_cancel)
+            for i in 0..cur.len().saturating_sub(1) {
+                if cur[i].negate() == cur[i + 1] {
+                    action = Some((i, true));
+                    break;
+                }
+                if cur[i].sort_key() > cur[i + 1].sort_key() {
+                    action = Some((i, false));
+                    break;
+                }
+            }
+            let Some((i, is_cancel)) = action else {
+                break;
+            };
+            let prefix = cur[..i].to_vec();
+            let before = self.gens_to_expr(&cur);
+            if is_cancel {
+                let g = cur[i];
+                let tail = cur[i + 2..].to_vec();
+                let head_proof = self.cancel_head_eq(g, &tail);
+                // tail of the lifted rewrite: [g, g.negate()] ++ tail → tail.
+                let mut from_tail = vec![g, g.negate()];
+                from_tail.extend_from_slice(&tail);
+                let lifted = self.lift_tail_rewrite(&prefix, &from_tail, &tail, head_proof);
+                let mut next = prefix.clone();
+                next.extend_from_slice(&tail);
+                let after = self.gens_to_expr(&next);
+                proof = self.eq_trans_r(start, before, after, proof, lifted);
+                cur = next;
+            } else {
+                let g0 = cur[i];
+                let g1 = cur[i + 1];
+                let tail = cur[i + 2..].to_vec();
+                let head_proof = self.swap_head_eq(g0, g1, &tail);
+                let mut from_tail = vec![g0, g1];
+                from_tail.extend_from_slice(&tail);
+                let mut to_tail = vec![g1, g0];
+                to_tail.extend_from_slice(&tail);
+                let lifted = self.lift_tail_rewrite(&prefix, &from_tail, &to_tail, head_proof);
+                let mut next = prefix.clone();
+                next.push(g1);
+                next.push(g0);
+                next.extend_from_slice(&tail);
+                let after = self.gens_to_expr(&next);
+                proof = self.eq_trans_r(start, before, after, proof, lifted);
+                cur = next;
+            }
+        }
+        (cur, proof)
+    }
+
+    /// Prove `Eq R (add canonA canonB) (gens_to_expr(gensA ++ gensB))` where
+    /// `canonA`/`canonB` are the canonical exprs of `gensA`/`gensB`. This "absorbs"
+    /// the trailing `zero` of `canonA`, splicing `canonB` in its place, by induction
+    /// over `gensA` with `add_assoc` (and `add_comm`+`add_zero` at the base).
+    fn append_eq(&mut self, gens_a: &[Gen], gens_b: &[Gen]) -> ExprId {
+        let canon_b = self.gens_to_expr(gens_b);
+        if gens_a.is_empty() {
+            // add zero canon_b =[comm] add canon_b zero =[add_zero] canon_b.
+            let zero = self.mk_zero();
+            let comm = self.add_comm_eq(zero, canon_b);
+            let addz = self.add_zero_eq(canon_b);
+            let zt = self.mk_add(zero, canon_b);
+            let tz = self.mk_add(canon_b, zero);
+            return self.eq_trans_r(zt, tz, canon_b, comm, addz);
+        }
+        // gens_a = g :: rest. canonA = add g canonRest.
+        // add (add g canonRest) canon_b =[assoc] add g (add canonRest canon_b)
+        //   =[congr_right (append_eq rest gens_b)] add g (gens_to_expr(rest++gens_b)).
+        let g = self.gen_expr(gens_a[0]);
+        let rest = &gens_a[1..].to_vec();
+        let canon_rest = self.gens_to_expr(rest);
+        let assoc = self.add_assoc_eq(g, canon_rest, canon_b);
+        let lhs = {
+            let ca = self.mk_add(g, canon_rest);
+            self.mk_add(ca, canon_b)
+        };
+        let mid = {
+            let inner = self.mk_add(canon_rest, canon_b);
+            self.mk_add(g, inner)
+        };
+        // recursive: add canonRest canon_b = gens_to_expr(rest ++ gens_b)
+        let rec = self.append_eq(rest, gens_b);
+        let mut rest_b: Vec<Gen> = rest.clone();
+        rest_b.extend_from_slice(gens_b);
+        let rest_b_expr = self.gens_to_expr(&rest_b);
+        let inner_from = self.mk_add(canon_rest, canon_b);
+        let step2 = self.congr_add_right(g, inner_from, rest_b_expr, rec);
+        let rhs = self.mk_add(g, rest_b_expr);
+        self.eq_trans_r(lhs, mid, rhs, assoc, step2)
+    }
+
+    /// Cast the right operand of a `le`: given `h_le : le l r` and
+    /// `h_eq : Eq R r r'`, build `le l r'`.
+    fn le_cast_right(
+        &mut self,
+        l: ExprId,
+        r: ExprId,
+        rp: ExprId,
+        h_le: ExprId,
+        h_eq: ExprId,
+    ) -> ExprId {
+        // motive := fun (x : R) (_ : Eq R r x) => le l x.
+        let motive = {
+            let x1 = self.kernel.bvar(1);
+            let le_l_x = self.mk_le(l, x1);
+            let x0 = self.kernel.bvar(0);
+            let eq_r_x = self.mk_eq_r(r, x0);
+            let anon = self.kernel.anon();
+            let inner = self.kernel.lam(anon, eq_r_x, le_l_x, BinderInfo::Default);
+            let r_ty = self.kernel.const_(self.arith.r, vec![]);
+            self.kernel.lam(anon, r_ty, inner, BinderInfo::Default)
+        };
+        self.eq_rec_transport_r(r, motive, h_le, rp, h_eq)
+    }
+
+    /// Cast the left operand of a `le`: given `h_le : le l r` and
+    /// `h_eq : Eq R l l'`, build `le l' r`.
+    fn le_cast_left(
+        &mut self,
+        l: ExprId,
+        lp: ExprId,
+        r: ExprId,
+        h_le: ExprId,
+        h_eq: ExprId,
+    ) -> ExprId {
+        // motive := fun (x : R) (_ : Eq R l x) => le x r.
+        let motive = {
+            let x1 = self.kernel.bvar(1);
+            let le_x_r = self.mk_le(x1, r);
+            let x0 = self.kernel.bvar(0);
+            let eq_l_x = self.mk_eq_r(l, x0);
+            let anon = self.kernel.anon();
+            let inner = self.kernel.lam(anon, eq_l_x, le_x_r, BinderInfo::Default);
+            let r_ty = self.kernel.const_(self.arith.r, vec![]);
+            self.kernel.lam(anon, r_ty, inner, BinderInfo::Default)
+        };
+        self.eq_rec_transport_r(l, motive, h_le, lp, h_eq)
+    }
+
+    /// `add_le_add a b c d h1 h2 : le (add a c) (add b d)`.
+    fn add_le_add_app(
+        &mut self,
+        a: ExprId,
+        b: ExprId,
+        c: ExprId,
+        d: ExprId,
+        h1: ExprId,
+        h2: ExprId,
+    ) -> ExprId {
+        let ax = self.kernel.const_(self.arith.add_le_add, vec![]);
+        let e = self.kernel.app(ax, a);
+        let e = self.kernel.app(e, b);
+        let e = self.kernel.app(e, c);
+        let e = self.kernel.app(e, d);
+        let e = self.kernel.app(e, h1);
+        self.kernel.app(e, h2)
+    }
+
+    /// `lt_of_lt_of_le a b c h1 h2 : lt a c` from `h1 : lt a b`, `h2 : le b c`.
+    fn lt_of_lt_of_le_app(
+        &mut self,
+        a: ExprId,
+        b: ExprId,
+        c: ExprId,
+        h1: ExprId,
+        h2: ExprId,
+    ) -> ExprId {
+        let ax = self.kernel.const_(self.arith.lt_of_lt_of_le, vec![]);
+        let e = self.kernel.app(ax, a);
+        let e = self.kernel.app(e, b);
+        let e = self.kernel.app(e, c);
+        let e = self.kernel.app(e, h1);
+        self.kernel.app(e, h2)
+    }
+
+    /// Build a proof `lt zero K` where `K = gens_to_expr` of `n ≥ 1` `One` generators,
+    /// i.e. `K = one + (one + … + (one + zero))`. Built by partial-sum induction:
+    /// `lt zero one` (`zero_lt_one`), then for each extra `one`, extend `lt zero S` to
+    /// `lt zero (one + S)` via `le S (one + S)` and `lt_of_lt_of_le`.
+    fn lt_zero_ones(&mut self, n: i128) -> ExprId {
+        debug_assert!(n >= 1);
+        // S_1 = one + zero ; prove lt zero S_1 from zero_lt_one : lt zero one and
+        // one =[symm add_zero one] one + zero.
+        let one = self.mk_one();
+        let zero = self.mk_zero();
+        let one_zero = self.mk_add(one, zero); // gens_to_expr([One]) = one + zero
+        let zlo = self.kernel.const_(self.arith.zero_lt_one, vec![]); // lt zero one
+        // cast the rhs `one → one+zero` using symm (add_zero one) : Eq one (one+zero).
+        let addz = self.add_zero_eq(one); // add one zero = one
+        let eq_one_onezero = self.eq_symm_r(one_zero, one, addz); // one = one+zero
+        // le_cast_right on lt? We only have le_cast for `le`. Build a lt-cast.
+        let mut acc = self.lt_cast_right(zero, one, one_zero, zlo, eq_one_onezero); // lt zero (one+zero)
+        let mut s_gens = vec![Gen::One];
+        for _ in 1..n {
+            // Extend acc : lt zero S to lt zero (one + S).
+            let s = self.gens_to_expr(&s_gens);
+            let mut new_gens = vec![Gen::One];
+            new_gens.extend_from_slice(&s_gens);
+            let new_s = self.gens_to_expr(&new_gens); // one + S
+            // Need le S (one + S). Build via add_le_add: le zero one (le_of_lt zlo)
+            //   and le S S (le_refl S) ⇒ le (zero + S)(one + S); then cast lhs zero+S → S.
+            let le_zero_one = {
+                let lo = self.kernel.const_(self.arith.le_of_lt, vec![]);
+                let zlo2 = self.kernel.const_(self.arith.zero_lt_one, vec![]);
+                let e = self.kernel.app(lo, zero);
+                let e = self.kernel.app(e, one);
+                self.kernel.app(e, zlo2)
+            }; // le zero one
+            let le_s_s = {
+                let lr = self.kernel.const_(self.arith.le_refl, vec![]);
+                self.kernel.app(lr, s)
+            }; // le S S
+            // add_le_add zero one S S : le (add zero S)(add one S)
+            let combined = self.add_le_add_app(zero, one, s, s, le_zero_one, le_s_s);
+            // cast lhs (add zero S) → S via add_comm + add_zero.
+            let zs = self.mk_add(zero, s);
+            let comm = self.add_comm_eq(zero, s); // add zero S = add S zero
+            let addz_s = self.add_zero_eq(s); // add S zero = S
+            let sz = self.mk_add(s, zero);
+            let eq_zs_s = self.eq_trans_r(zs, sz, s, comm, addz_s); // add zero S = S
+            let le_s_news = self.le_cast_left(zs, s, new_s, combined, eq_zs_s); // le S (one+S)
+            // lt_of_lt_of_le zero S (one+S) acc le_s_news : lt zero (one+S).
+            acc = self.lt_of_lt_of_le_app(zero, s, new_s, acc, le_s_news);
+            s_gens = new_gens;
+        }
+        acc
+    }
+
+    /// Cast the right operand of a `lt`: `h_lt : lt l r`, `h_eq : Eq R r r'` ⇒ `lt l r'`.
+    fn lt_cast_right(
+        &mut self,
+        l: ExprId,
+        r: ExprId,
+        rp: ExprId,
+        h_lt: ExprId,
+        h_eq: ExprId,
+    ) -> ExprId {
+        let motive = {
+            let x1 = self.kernel.bvar(1);
+            let lt_l_x = self.mk_lt(l, x1);
+            let x0 = self.kernel.bvar(0);
+            let eq_r_x = self.mk_eq_r(r, x0);
+            let anon = self.kernel.anon();
+            let inner = self.kernel.lam(anon, eq_r_x, lt_l_x, BinderInfo::Default);
+            let r_ty = self.kernel.const_(self.arith.r, vec![]);
+            self.kernel.lam(anon, r_ty, inner, BinderInfo::Default)
+        };
+        self.eq_rec_transport_r(r, motive, h_lt, rp, h_eq)
+    }
+
+    /// Build the generator list of a [`LinR`] whose coefficients and constant are all
+    /// integers: each variable `(i, c)` contributes `|c|` copies of `Var(i)`/`NegVar(i)`,
+    /// then the constant contributes `|k|` copies of `One`/`NegOne`. Returns `None` if
+    /// any coefficient or the constant is not an integer (outside this engine's scope).
+    fn lin_to_gens(lin: &LinR) -> Option<Vec<Gen>> {
+        let mut gens = Vec::new();
+        for &(index, coeff) in &lin.coeffs {
+            if coeff.denominator() != 1 {
+                return None;
+            }
+            let n = coeff.numerator();
+            let (g, count) = if n >= 0 {
+                (Gen::Var(index), n)
+            } else {
+                (Gen::NegVar(index), -n)
+            };
+            for _ in 0..count {
+                gens.push(g);
+            }
+        }
+        if lin.constant.denominator() != 1 {
+            return None;
+        }
+        let k = lin.constant.numerator();
+        let (g, count) = if k >= 0 {
+            (Gen::One, k)
+        } else {
+            (Gen::NegOne, -k)
+        };
+        for _ in 0..count {
+            gens.push(g);
+        }
+        Some(gens)
+    }
 }
 
 /// Reconstruct a small real `QF_LRA` `unsat` instance into a Lean proof term of
@@ -5321,7 +5994,216 @@ pub fn reconstruct_lra_proof(
     if let Some(proof) = try_strict_cycle(ctx, arena, assertions, &certificate)? {
         return Ok(proof);
     }
+    // General Farkas over non-strict integer-coefficient constraints with arbitrary
+    // nonnegative (rational, denominator-cleared) multipliers: scale every used
+    // `Eᵢ ≤ 0` atom by an integer `μᵢ`, sum with `add_le_add`, normalize the sum's
+    // variable terms to cancel (the ring engine), and close `K ≤ 0` against `0 < K`.
+    if let Some(proof) = try_general_farkas(ctx, &certificate)? {
+        return Ok(proof);
+    }
     reconstruct_transitivity_refutation(ctx, arena, assertions, &certificate)
+}
+
+/// Reconstruct the **general** non-strict Farkas refutation. Given the certificate's
+/// `≤`-atoms `Eᵢ ≤ 0` (with integer coefficients) and nonnegative rational
+/// multipliers `λᵢ`, this:
+///
+/// 1. clears the multipliers' denominators to integers `μᵢ ≥ 0` (the scaled
+///    certificate is an equally-valid refutation);
+/// 2. for each used atom declares the hypothesis axiom `hᵢ : le Eᵢ zero`, where `Eᵢ`
+///    is the atom's expression in canonical generator form;
+/// 3. scales `hᵢ` by `μᵢ` and sums all of them with `add_le_add`, renormalizing the
+///    right-hand side back to `zero` at each step, to reach `le Lsum zero`;
+/// 4. proves `Eq R Lsum K` with the ring engine (all variable generators cancel,
+///    leaving the positive constant `K = Σ μᵢ cᵢ` as a sum of `one`s) and casts to
+///    `le K zero`;
+/// 5. builds `lt zero K` and closes `lt_of_lt_of_le zero K zero (lt zero K)(le K zero)
+///    : lt zero zero`, refuted by `lt_irrefl zero`.
+///
+/// Returns `Ok(None)` (to fall through to the other shapes) when an atom is strict,
+/// has a non-integer coefficient/constant, or the combined constant is not a positive
+/// integer — those are outside this engine's non-strict integer scope. The result is
+/// kernel-gated (`infer` + `def_eq False`).
+#[allow(dead_code, clippy::too_many_lines)]
+fn try_general_farkas(
+    ctx: &mut LraReconstructCtx,
+    certificate: &crate::FarkasCertificate,
+) -> Result<Option<ExprId>, ReconstructError> {
+    // Used atoms (positive multiplier) with their LinR forms; reject strict /
+    // non-integer atoms by falling through.
+    let mut used: Vec<(LinR, Rational)> = Vec::new();
+    for (atom, m) in certificate.atoms.iter().zip(&certificate.multipliers) {
+        if m.is_zero() {
+            continue;
+        }
+        if atom.strict {
+            return Ok(None); // mixed/strict combination is not this engine's shape
+        }
+        let lin = LinR {
+            coeffs: atom.coeffs.clone(),
+            constant: atom.constant,
+        };
+        // Integer coefficients/constant only.
+        if lin.coeffs.iter().any(|(_, c)| c.denominator() != 1) || lin.constant.denominator() != 1 {
+            return Ok(None);
+        }
+        used.push((lin, *m));
+    }
+    if used.is_empty() {
+        return Ok(None);
+    }
+
+    // Clear multiplier denominators: μ = λ · L where L = lcm of denominators.
+    let mut lcm: i128 = 1;
+    for (_, m) in &used {
+        lcm = lcm_i128(lcm, m.denominator());
+    }
+    let factor = Rational::integer(lcm);
+    let mut scaled: Vec<(LinR, i128)> = Vec::with_capacity(used.len());
+    for (lin, m) in &used {
+        let mu = *m * factor;
+        // mu is a nonnegative integer by construction.
+        if mu.denominator() != 1 || mu.numerator() <= 0 {
+            return Ok(None);
+        }
+        scaled.push((lin.clone(), mu.numerator()));
+    }
+
+    // The combined constant K = Σ μᵢ · constantᵢ (variables provably cancel). The
+    // refutation needs K to be a positive integer.
+    let mut k_total = Rational::zero();
+    let mut combined = LinR::default();
+    for (lin, mu) in &scaled {
+        let s = scale_lin(lin, Rational::integer(*mu));
+        combined = combined.add(&s);
+        k_total = k_total + lin.constant * Rational::integer(*mu);
+    }
+    if !combined.coeffs.is_empty() {
+        // Variables did not cancel — not a genuine Farkas refutation shape.
+        return Ok(None);
+    }
+    if k_total.denominator() != 1 || k_total.numerator() <= 0 {
+        return Ok(None);
+    }
+    let k_int = k_total.numerator();
+
+    // Build the scaled-and-summed `le Lsum zero`, carrying `acc_gens` (the canonical
+    // generators of `Lsum`) and `acc_canon_proof : Eq R Lsum (gens_to_expr acc_gens)`.
+    let zero = ctx.mk_zero();
+    let mut acc: Option<(ExprId, Vec<Gen>, ExprId)> = None; // (le-proof, gens, canon-proof)
+    for (lin, mu) in &scaled {
+        let Some(base_gens) = LraReconstructCtx::lin_to_gens(lin) else {
+            return Ok(None);
+        };
+        let base_expr = ctx.gens_to_expr(&base_gens);
+        // hypothesis hᵢ : le base_expr zero.
+        let prop = ctx.mk_le(base_expr, zero);
+        let h = ctx.hyp_axiom(prop)?;
+        // Scale by μᵢ: combine hᵢ with itself μᵢ times, keeping RHS = zero and the
+        // LHS in canonical generator form.
+        let mut s_proof = h;
+        let mut s_gens = base_gens.clone();
+        let mut s_expr = base_expr; // canonical (= gens_to_expr s_gens)
+        for _ in 1..*mu {
+            // add_le_add s_expr zero base_expr zero s_proof h : le (add s_expr base_expr)(add zero zero)
+            let combined_le = ctx.add_le_add_app(s_expr, zero, base_expr, zero, s_proof, h);
+            let lhs = ctx.mk_add(s_expr, base_expr);
+            // RHS (add zero zero) → zero via add_zero zero.
+            let azz = ctx.add_zero_eq(zero); // add zero zero = zero
+            let add_zz = ctx.mk_add(zero, zero);
+            let combined_le = ctx.le_cast_right(lhs, add_zz, zero, combined_le, azz);
+            // LHS (add s_expr base_expr) → canonical (s_gens ++ base_gens).
+            let mut next_gens = s_gens.clone();
+            next_gens.extend_from_slice(&base_gens);
+            let append_proof = ctx.append_eq(&s_gens, &base_gens);
+            let next_canon = ctx.gens_to_expr(&next_gens);
+            s_proof = ctx.le_cast_left(lhs, next_canon, zero, combined_le, append_proof);
+            s_gens = next_gens;
+            s_expr = next_canon;
+        }
+        // Fold this scaled constraint into the accumulator.
+        acc = Some(match acc {
+            None => (s_proof, s_gens, {
+                // canon-proof is refl since s_expr is already canonical.
+                ctx.eq_refl_r(s_expr)
+            }),
+            Some((acc_proof, acc_gens, _acc_canon_proof)) => {
+                let acc_expr = ctx.gens_to_expr(&acc_gens);
+                // add_le_add acc_expr zero s_expr zero acc_proof s_proof
+                let combined_le =
+                    ctx.add_le_add_app(acc_expr, zero, s_expr, zero, acc_proof, s_proof);
+                let azz = ctx.add_zero_eq(zero);
+                let add_zz = ctx.mk_add(zero, zero);
+                let lhs = ctx.mk_add(acc_expr, s_expr);
+                let combined_le = ctx.le_cast_right(lhs, add_zz, zero, combined_le, azz);
+                // LHS (add acc_expr s_expr) → canonical (acc_gens ++ s_gens).
+                let mut next_gens = acc_gens.clone();
+                next_gens.extend_from_slice(&s_gens);
+                let append_proof = ctx.append_eq(&acc_gens, &s_gens);
+                let next_canon = ctx.gens_to_expr(&next_gens);
+                let new_proof = ctx.le_cast_left(lhs, next_canon, zero, combined_le, append_proof);
+                (new_proof, next_gens, ctx.eq_refl_r(next_canon))
+            }
+        });
+    }
+
+    let (le_lsum_zero, all_gens, _canon) = acc.expect("at least one used atom");
+    // Normalize all_gens: variables cancel, leaving exactly k_int `One`s.
+    let lsum_canon = ctx.gens_to_expr(&all_gens);
+    let (norm_gens, norm_proof) = ctx.normalize_gens(&all_gens); // Eq R lsum_canon (gens_to_expr norm_gens)
+    // The normalized generators must be exactly `k_int` `One`s (positive constant).
+    if norm_gens.len() as i128 != k_int || norm_gens.iter().any(|g| *g != Gen::One) {
+        return Ok(None);
+    }
+    let k_expr = ctx.gens_to_expr(&norm_gens);
+    // Cast `le lsum_canon zero` along `lsum_canon = k_expr` ⇒ `le k_expr zero`.
+    let le_k_zero = ctx.le_cast_left(lsum_canon, k_expr, zero, le_lsum_zero, norm_proof);
+    // lt zero K.
+    let lt_zero_k = ctx.lt_zero_ones(k_int);
+    // lt_of_lt_of_le zero K zero (lt zero K)(le K zero) : lt zero zero.
+    let lt_zero_zero = ctx.lt_of_lt_of_le_app(zero, k_expr, zero, lt_zero_k, le_k_zero);
+    // lt_irrefl zero : Not (lt zero zero); apply ⇒ False.
+    let proof = {
+        let irrefl = ctx.kernel.const_(ctx.arith.lt_irrefl, vec![]);
+        let e = ctx.kernel.app(irrefl, zero);
+        ctx.kernel.app(e, lt_zero_zero)
+    };
+    // Soundness gate.
+    let inferred = ctx
+        .kernel
+        .infer(proof)
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "la_generic".to_owned(),
+            detail: format!("general-Farkas infer failed: {e:?}"),
+        })?;
+    let false_ = ctx.kernel.const_(ctx.arith.logic.false_, vec![]);
+    if ctx.kernel.def_eq(inferred, false_) {
+        Ok(Some(proof))
+    } else {
+        Err(ReconstructError::KernelRejected {
+            rule: "la_generic".to_owned(),
+            detail: "general-Farkas refutation did not infer to False".to_owned(),
+        })
+    }
+}
+
+/// `lcm(a, b)` over `i128` (positive inputs; denominators are positive).
+fn lcm_i128(a: i128, b: i128) -> i128 {
+    if a == 0 || b == 0 {
+        return 0;
+    }
+    let g = gcd_i128(a.abs(), b.abs());
+    (a.abs() / g) * b.abs()
+}
+
+/// `gcd(a, b)` over nonnegative `i128`.
+fn gcd_i128(mut a: i128, mut b: i128) -> i128 {
+    while b != 0 {
+        let t = b;
+        b = a % b;
+        a = t;
+    }
+    a
 }
 
 /// Reconstruct a strict-`<` **cycle** refutation: the `n ≥ 2` participating
