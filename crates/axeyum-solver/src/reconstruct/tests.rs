@@ -762,3 +762,297 @@ fn wrong_resolvent_rejected_by_kernel() {
         "got {err:?}"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Tseitin CNF-introduction rules (P3.7 slice 4) — the Boolean-gate layer.
+//
+// Each test BUILDS a CNF-intro rule's conclusion clause over fresh atom Props,
+// reconstructs it via `reconstruct_cnf_intro_rule`, and confirms the trusted
+// kernel `infer`s the proof term to the clause's gate `Or`-encoding. Green =
+// the kernel genuinely accepting the tautology proof.
+// ---------------------------------------------------------------------------
+
+use super::reconstruct_cnf_intro_rule;
+
+/// `(and t…)` term over named atoms.
+fn and_t(names: &[&str]) -> AletheTerm {
+    AletheTerm::App("and".to_owned(), names.iter().map(|n| atom(n)).collect())
+}
+
+/// `(or t…)` term over named atoms.
+fn or_t(names: &[&str]) -> AletheTerm {
+    AletheTerm::App("or".to_owned(), names.iter().map(|n| atom(n)).collect())
+}
+
+/// `(xor a b)` term.
+fn xor_t(a: &str, b: &str) -> AletheTerm {
+    AletheTerm::App("xor".to_owned(), vec![atom(a), atom(b)])
+}
+
+/// A positive literal of a term.
+fn pos(atom: AletheTerm) -> AletheLit {
+    AletheLit {
+        atom,
+        negated: false,
+    }
+}
+
+/// A negated literal of a term.
+fn neg(atom: AletheTerm) -> AletheLit {
+    AletheLit {
+        atom,
+        negated: true,
+    }
+}
+
+/// Reconstruct a CNF-intro rule and confirm the kernel infers its proof to the
+/// gate `Or`-encoding of the conclusion clause.
+fn assert_cnf_intro_ok(rule: &str, conclusion: &[AletheLit]) {
+    let mut ctx = ReconstructCtx::new();
+    let proof = reconstruct_cnf_intro_rule(&mut ctx, rule, conclusion)
+        .unwrap_or_else(|e| panic!("{rule} should reconstruct, got {e:?}"));
+    let inferred = ctx.kernel_mut().infer(proof).unwrap();
+    let expected = ctx.gate_clause_to_prop(conclusion);
+    assert!(
+        ctx.kernel_mut().def_eq(inferred, expected),
+        "{rule} proof must infer to the gate Or-encoding of its clause"
+    );
+}
+
+/// `and_pos`: `(cl (not (and a b)) a)` — `¬(a∧b) ∨ a`, and the other conjunct.
+#[test]
+fn and_pos_reconstructs() {
+    // Conjunct `a` selected.
+    assert_cnf_intro_ok("and_pos", &[neg(and_t(&["a", "b"])), pos(atom("a"))]);
+    // Conjunct `b` selected.
+    assert_cnf_intro_ok("and_pos", &[neg(and_t(&["a", "b"])), pos(atom("b"))]);
+    // A 3-ary conjunction, middle conjunct.
+    assert_cnf_intro_ok("and_pos", &[neg(and_t(&["a", "b", "c"])), pos(atom("b"))]);
+}
+
+/// `and_neg`: `(cl (and a b) (not a) (not b))` — `(a∧b) ∨ ¬a ∨ ¬b`.
+#[test]
+fn and_neg_reconstructs() {
+    assert_cnf_intro_ok(
+        "and_neg",
+        &[pos(and_t(&["a", "b"])), neg(atom("a")), neg(atom("b"))],
+    );
+    // 3-ary.
+    assert_cnf_intro_ok(
+        "and_neg",
+        &[
+            pos(and_t(&["a", "b", "c"])),
+            neg(atom("a")),
+            neg(atom("b")),
+            neg(atom("c")),
+        ],
+    );
+}
+
+/// `or_pos`: `(cl (not (or a b)) a b)` — `¬(a∨b) ∨ a ∨ b`.
+#[test]
+fn or_pos_reconstructs() {
+    assert_cnf_intro_ok(
+        "or_pos",
+        &[neg(or_t(&["a", "b"])), pos(atom("a")), pos(atom("b"))],
+    );
+    // 3-ary.
+    assert_cnf_intro_ok(
+        "or_pos",
+        &[
+            neg(or_t(&["a", "b", "c"])),
+            pos(atom("a")),
+            pos(atom("b")),
+            pos(atom("c")),
+        ],
+    );
+}
+
+/// `or_neg`: `(cl (or a b) (not a))` — `(a∨b) ∨ ¬a`, and the other disjunct.
+#[test]
+fn or_neg_reconstructs() {
+    assert_cnf_intro_ok("or_neg", &[pos(or_t(&["a", "b"])), neg(atom("a"))]);
+    assert_cnf_intro_ok("or_neg", &[pos(or_t(&["a", "b"])), neg(atom("b"))]);
+    assert_cnf_intro_ok("or_neg", &[pos(or_t(&["a", "b", "c"])), neg(atom("c"))]);
+}
+
+/// `equiv_pos1`: `(cl (not (= a b)) a (not b))` — `¬(a↔b) ∨ a ∨ ¬b`.
+#[test]
+fn equiv_pos1_reconstructs() {
+    assert_cnf_intro_ok(
+        "equiv_pos1",
+        &[neg(eq_term("a", "b")), pos(atom("a")), neg(atom("b"))],
+    );
+}
+
+/// `equiv_pos2`: `(cl (not (= a b)) (not a) b)` — `¬(a↔b) ∨ ¬a ∨ b`.
+#[test]
+fn equiv_pos2_reconstructs() {
+    assert_cnf_intro_ok(
+        "equiv_pos2",
+        &[neg(eq_term("a", "b")), neg(atom("a")), pos(atom("b"))],
+    );
+}
+
+/// `equiv_neg1`: `(cl (= a b) (not a) (not b))` — `(a↔b) ∨ ¬a ∨ ¬b`.
+#[test]
+fn equiv_neg1_reconstructs() {
+    assert_cnf_intro_ok(
+        "equiv_neg1",
+        &[pos(eq_term("a", "b")), neg(atom("a")), neg(atom("b"))],
+    );
+}
+
+/// `equiv_neg2`: `(cl (= a b) a b)` — `(a↔b) ∨ a ∨ b`.
+#[test]
+fn equiv_neg2_reconstructs() {
+    assert_cnf_intro_ok(
+        "equiv_neg2",
+        &[pos(eq_term("a", "b")), pos(atom("a")), pos(atom("b"))],
+    );
+}
+
+/// `xor_pos1`: `(cl (not (xor a b)) a b)` — `¬(a⊕b) ∨ a ∨ b`. xor modeled as
+/// `Not (Iff a b)`.
+#[test]
+fn xor_pos1_reconstructs() {
+    assert_cnf_intro_ok(
+        "xor_pos1",
+        &[neg(xor_t("a", "b")), pos(atom("a")), pos(atom("b"))],
+    );
+}
+
+/// `xor_pos2`: `(cl (not (xor a b)) (not a) (not b))` — `¬(a⊕b) ∨ ¬a ∨ ¬b`.
+#[test]
+fn xor_pos2_reconstructs() {
+    assert_cnf_intro_ok(
+        "xor_pos2",
+        &[neg(xor_t("a", "b")), neg(atom("a")), neg(atom("b"))],
+    );
+}
+
+/// `xor_neg1`: `(cl (xor a b) a (not b))` — `(a⊕b) ∨ a ∨ ¬b`.
+#[test]
+fn xor_neg1_reconstructs() {
+    assert_cnf_intro_ok(
+        "xor_neg1",
+        &[pos(xor_t("a", "b")), pos(atom("a")), neg(atom("b"))],
+    );
+}
+
+/// `xor_neg2`: `(cl (xor a b) (not a) b)` — `(a⊕b) ∨ ¬a ∨ b`.
+#[test]
+fn xor_neg2_reconstructs() {
+    assert_cnf_intro_ok(
+        "xor_neg2",
+        &[pos(xor_t("a", "b")), neg(atom("a")), pos(atom("b"))],
+    );
+}
+
+/// **NEGATIVE soundness**: a deliberately WRONG `and_pos` conclusion — claiming
+/// `¬(a∧b) ∨ b` is true while selecting the wrong-shaped clause `¬(a∧b) ∨ c`
+/// (where `c` is NOT a conjunct) — is NOT a tautology and must be REJECTED. In the
+/// assignment `a=T, b=T, c=F` neither `¬(a∧b)` nor `c` holds.
+#[test]
+fn negative_wrong_and_pos_rejected() {
+    let mut ctx = ReconstructCtx::new();
+    // `¬(a∧b) ∨ c` — `c` is not a conjunct of `a∧b`, so this is not a tautology.
+    let conclusion = vec![neg(and_t(&["a", "b"])), pos(atom("c"))];
+    let err = reconstruct_cnf_intro_rule(&mut ctx, "and_pos", &conclusion).unwrap_err();
+    assert!(
+        matches!(
+            err,
+            ReconstructError::MalformedStep { .. } | ReconstructError::KernelRejected { .. }
+        ),
+        "a non-tautological and_pos clause must be rejected, got {err:?}"
+    );
+}
+
+/// **NEGATIVE soundness at the kernel gate**: a correctly-reconstructed `and_pos`
+/// for conjunct `a` does NOT infer to a clause claiming conjunct `b` was selected.
+#[test]
+fn negative_and_pos_wrong_conjunct_kernel_gate() {
+    let mut ctx = ReconstructCtx::new();
+    // Reconstruct the correct `¬(a∧b) ∨ a`.
+    let conclusion_a = vec![neg(and_t(&["a", "b"])), pos(atom("a"))];
+    let proof = reconstruct_cnf_intro_rule(&mut ctx, "and_pos", &conclusion_a).unwrap();
+    let inferred = ctx.kernel_mut().infer(proof).unwrap();
+    // The encoding of the WRONG clause `¬(a∧b) ∨ b`.
+    let conclusion_b = vec![neg(and_t(&["a", "b"])), pos(atom("b"))];
+    let wrong = ctx.gate_clause_to_prop(&conclusion_b);
+    assert!(
+        !ctx.kernel_mut().def_eq(inferred, wrong),
+        "the and_pos proof for conjunct a must NOT match the clause for conjunct b"
+    );
+    // And the correct encoding IS accepted.
+    let right = ctx.gate_clause_to_prop(&conclusion_a);
+    assert!(ctx.kernel_mut().def_eq(inferred, right));
+}
+
+/// An out-of-scope rule (here `resolution`) is rejected with a clear
+/// `UnsupportedRule`, never a panic.
+#[test]
+fn cnf_intro_unsupported_rule_rejected() {
+    let mut ctx = ReconstructCtx::new();
+    let conclusion = vec![neg(and_t(&["a", "b"])), pos(atom("a"))];
+    let err = reconstruct_cnf_intro_rule(&mut ctx, "resolution", &conclusion).unwrap_err();
+    assert!(matches!(err, ReconstructError::UnsupportedRule { .. }));
+}
+
+/// **Determinism**: reconstructing the same CNF-intro clause twice (in two fresh
+/// contexts) yields structurally-identical proof terms.
+#[test]
+fn cnf_intro_is_deterministic() {
+    let conclusion = vec![pos(and_t(&["a", "b"])), neg(atom("a")), neg(atom("b"))];
+    let mut ctx1 = ReconstructCtx::new();
+    let p1 = reconstruct_cnf_intro_rule(&mut ctx1, "and_neg", &conclusion).unwrap();
+    let mut ctx2 = ReconstructCtx::new();
+    let p2 = reconstruct_cnf_intro_rule(&mut ctx2, "and_neg", &conclusion).unwrap();
+    assert_eq!(p1, p2, "CNF-intro reconstruction must be deterministic");
+}
+
+/// **COMPOSITE**: combine two reconstructed CNF-intro clauses with the slice-3
+/// resolution layer to refute. Take `and_neg` ⊢ `(a∧b) ∨ ¬a ∨ ¬b` and the units
+/// `a`, `b`, `¬(a∧b)`: resolving them all yields the empty clause. We reconstruct
+/// the `and_neg` tautology, assume the units, and drive
+/// `reconstruct_resolution_proof` to a kernel-checked `False`.
+///
+/// Note the resolution layer treats `(and a b)` as an OPAQUE atom (keyed by its
+/// s-expression) — consistent with `and_neg`'s clause, where `(and a b)` is one
+/// literal. The gate-structured `and_neg` proof's *type* is the same right-nested
+/// `Or`, so feeding the clause through the opaque clausal layer is sound: both
+/// layers agree on the clause's `Or` shape; only the leaf atom `(and a b)` is
+/// interpreted opaquely there (its internal structure is not needed for the
+/// resolution refutation).
+#[test]
+fn composite_and_neg_feeds_resolution_refutation() {
+    // The `and_neg` clause `(cl (and a b) (not a) (not b))`.
+    let and_ab = and_t(&["a", "b"]);
+    let and_neg_clause = vec![pos(and_ab.clone()), neg(atom("a")), neg(atom("b"))];
+
+    // First confirm the gate reconstruction itself kernel-checks.
+    assert_cnf_intro_ok("and_neg", &and_neg_clause);
+
+    // Now drive a clausal refutation using the SAME clause shape as an assumption:
+    //   c0: (cl (and a b) (not a) (not b))   [the and_neg tautology, as a clause]
+    //   c1: (cl a)                            [unit]
+    //   c2: (cl b)                            [unit]
+    //   c3: (cl (not (and a b)))              [unit]
+    // Resolve c0 ⊗ c1 on a ⇒ ((and a b) ∨ ¬b); ⊗ c2 on b ⇒ (and a b);
+    // ⊗ c3 on (and a b) ⇒ (cl). The clausal layer (opaque atoms) refutes.
+    let lit_and = pos(and_ab.clone());
+    let lit_nand = neg(and_ab);
+    let commands = vec![
+        assume("c0", and_neg_clause.clone()),
+        assume("c1", vec![pos(atom("a"))]),
+        assume("c2", vec![pos(atom("b"))]),
+        assume("c3", vec![lit_nand.clone()]),
+        res_step("s1", vec![lit_and.clone(), neg(atom("b"))], &["c0", "c1"]),
+        res_step("s2", vec![lit_and], &["s1", "c2"]),
+        res_step("empty", vec![], &["s2", "c3"]),
+    ];
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_resolution_proof(&mut ctx, &commands)
+        .expect("the and_neg-fed clausal refutation reconstructs");
+    assert_infers_false(&mut ctx, term);
+}

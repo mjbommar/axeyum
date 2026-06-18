@@ -1879,5 +1879,873 @@ fn check_false_prop(ctx: &mut ReconstructCtx, proof: ExprId) -> Result<ExprId, R
     check_against(ctx, "resolution", proof, false_)
 }
 
+// ===========================================================================
+// Tseitin CNF-introduction rules (P3.7 slice 4) — the Boolean-gate layer.
+//
+// These are the premise-free Alethe rules `and_pos`/`and_neg`/`or_pos`/`or_neg`,
+// `equiv_pos1`/`equiv_pos2`/`equiv_neg1`/`equiv_neg2`, and
+// `xor_pos1`/`xor_pos2`/`xor_neg1`/`xor_neg2`. Each concludes a propositional
+// **tautology** clause over the structured logical gate (`And`/`Or`/`Iff`/`Not`)
+// of its operand atoms — the clauses a Tseitin encoding emits to connect a
+// Boolean gate to its defining clauses. axeyum's QF_BV proofs use these to link
+// the bit-blasted gate layer to the clausal (resolution) layer.
+//
+// ## The gate encoding
+//
+// Unlike the opaque clausal `atom_to_prop`, these rules are *about* gate
+// structure, so a gate literal is translated **structurally**:
+//
+// - `(and t…)` ⇒ `And ⟦t0⟧ (And ⟦t1⟧ …)` (right-nested for n-ary);
+// - `(or t…)`  ⇒ `Or  ⟦t0⟧ (Or  ⟦t1⟧ …)` (right-nested);
+// - `(not t)`  ⇒ `Not ⟦t⟧`;
+// - `(= a b)`  ⇒ `Iff ⟦a⟧ ⟦b⟧` (a Boolean equality, i.e. an iff — the gate
+//   operands in the Tseitin layer are bits);
+// - `(xor a b)` ⇒ `Not (Iff ⟦a⟧ ⟦b⟧)` — **the xor modeling choice** (xor is the
+//   negation of iff). This is consistent across all four `xor_*` rules.
+// - anything else (a bare symbol, or a compound axeyum keys opaquely, e.g.
+//   `((_ @bit_of i) x)`) ⇒ an opaque propositional atom (via `prop_atoms`).
+//
+// ## How each tautology is proved
+//
+// Every conclusion clause is a propositional tautology over its operand atoms.
+// We prove it **uniformly**: case-split (classically, via `em`) on every
+// distinct operand atom of the clause, and in each of the resulting truth
+// assignments find a clause literal that is satisfied and inject its proof into
+// the right-nested `Or` encoding. The per-literal proof is a structural
+// truth/falsity evaluator over the gate (`prove_term_true`/`prove_term_false`):
+// e.g. `And A B` is true by `And.intro` when both hold, and false by
+// `fun h => hnA (And.rec … h)` when an operand is false.
+//
+// ## Soundness
+//
+// The kernel is the gate: the assembled proof term is `infer`-checked and
+// `def_eq`-compared against the clause's `Or`-encoding (`gate_clause_to_prop`).
+// A wrong conclusion (a mis-selected conjunct, a swapped polarity) makes the
+// satisfied-literal search fail in some leaf, or the final `infer`/`def_eq`
+// reject — never a wrong "checked". `em` (already in the context) is the only
+// classical addition.
+// ===========================================================================
+
+impl ReconstructCtx {
+    /// Build the Lean proposition `And a b` (the prelude's `And`, in `Prop`).
+    fn mk_and(&mut self, a: ExprId, b: ExprId) -> ExprId {
+        let and = self.kernel.const_(self.prelude.and, vec![]);
+        let e = self.kernel.app(and, a);
+        self.kernel.app(e, b)
+    }
+
+    /// Build the Lean proposition `Iff a b` (the prelude's `Iff`, in `Prop`).
+    fn mk_iff(&mut self, a: ExprId, b: ExprId) -> ExprId {
+        let iff = self.kernel.const_(self.prelude.iff, vec![]);
+        let e = self.kernel.app(iff, a);
+        self.kernel.app(e, b)
+    }
+
+    /// Translate a **gate** term into its *structured* Lean `Prop`. Boolean
+    /// connectives map to the prelude connectives applied to the translated
+    /// operands; everything else is an opaque propositional atom (shared with the
+    /// clausal layer's `prop_atoms`).
+    ///
+    /// `(and …)`/`(or …)` are right-nested for n-ary arity; `(= a b)` is `Iff`;
+    /// `(xor a b)` is `Not (Iff a b)`.
+    fn gate_term_to_prop(&mut self, term: &AletheTerm) -> ExprId {
+        match term {
+            AletheTerm::App(head, args) if head == "not" && args.len() == 1 => {
+                let inner = self.gate_term_to_prop(&args[0]);
+                self.mk_not(inner)
+            }
+            AletheTerm::App(head, args) if head == "and" && !args.is_empty() => {
+                self.fold_right(args, ReconstructCtx::mk_and)
+            }
+            AletheTerm::App(head, args) if head == "or" && !args.is_empty() => {
+                self.fold_right(args, ReconstructCtx::mk_or)
+            }
+            AletheTerm::App(head, args) if head == "=" && args.len() == 2 => {
+                let a = self.gate_term_to_prop(&args[0]);
+                let b = self.gate_term_to_prop(&args[1]);
+                self.mk_iff(a, b)
+            }
+            AletheTerm::App(head, args) if head == "xor" && args.len() == 2 => {
+                let a = self.gate_term_to_prop(&args[0]);
+                let b = self.gate_term_to_prop(&args[1]);
+                let iff = self.mk_iff(a, b);
+                self.mk_not(iff)
+            }
+            // A bare symbol or any opaque compound: an uninterpreted Prop atom.
+            other => {
+                let name = self.prop_atom_const(&other.key());
+                self.kernel.const_(name, vec![])
+            }
+        }
+    }
+
+    /// Right-fold a non-empty operand slice with a binary connective builder:
+    /// `[t0, t1, …, tn]` ⇒ `op(⟦t0⟧, op(⟦t1⟧, … ⟦tn⟧))`.
+    fn fold_right(
+        &mut self,
+        args: &[AletheTerm],
+        op: fn(&mut ReconstructCtx, ExprId, ExprId) -> ExprId,
+    ) -> ExprId {
+        let (last, rest) = args
+            .split_last()
+            .expect("fold_right requires a non-empty operand slice");
+        let mut acc = self.gate_term_to_prop(last);
+        for t in rest.iter().rev() {
+            let head = self.gate_term_to_prop(t);
+            acc = op(self, head, acc);
+        }
+        acc
+    }
+
+    /// Translate a gate **literal** into its Lean `Prop`: a positive literal `t`
+    /// ⇒ `⟦t⟧`; a negated `(not t)` ⇒ `Not ⟦t⟧`.
+    fn gate_lit_to_prop(&mut self, lit: &AletheLit) -> ExprId {
+        let atom = self.gate_term_to_prop(&lit.atom);
+        if lit.negated { self.mk_not(atom) } else { atom }
+    }
+
+    /// Translate a whole gate **clause** into its right-nested `Or` encoding —
+    /// the same shape as `clause_to_prop`, but with gate literals translated
+    /// structurally (`gate_lit_to_prop`) rather than opaquely. The empty clause ⇒
+    /// `False`; a unit clause ⇒ its single literal's Prop.
+    fn gate_clause_to_prop(&mut self, clause: &[AletheLit]) -> ExprId {
+        let Some((last, rest)) = clause.split_last() else {
+            return self.kernel.const_(self.prelude.false_, vec![]);
+        };
+        let mut acc = self.gate_lit_to_prop(last);
+        for lit in rest.iter().rev() {
+            let head = self.gate_lit_to_prop(lit);
+            acc = self.mk_or(head, acc);
+        }
+        acc
+    }
+}
+
+/// A truth assignment over operand atoms: each atom's s-expression key maps to
+/// its structured `Prop` and a witness — either a proof of the Prop (`true`) or a
+/// proof of its `Not` (`false`).
+struct Assignment {
+    /// atom key → (its `Prop`, witness proof, whether the witness proves the Prop
+    /// (`true`) or its negation (`false`)).
+    map: BTreeMap<String, (ExprId, ExprId, bool)>,
+}
+
+impl Assignment {
+    fn new() -> Self {
+        Self {
+            map: BTreeMap::new(),
+        }
+    }
+}
+
+/// Reconstruct a Tseitin **CNF-introduction** rule into a kernel-checked Lean
+/// proof term of its conclusion clause's `Prop` encoding.
+///
+/// `rule_name` is the Alethe rule (`and_pos`/`and_neg`/`or_pos`/`or_neg`,
+/// `equiv_pos1`/`equiv_pos2`/`equiv_neg1`/`equiv_neg2`,
+/// `xor_pos1`/`xor_pos2`/`xor_neg1`/`xor_neg2`); `conclusion` is the rule's
+/// conclusion clause. Each such clause is a propositional **tautology** over the
+/// structured gate (`And`/`Or`/`Iff`/`Not`, with `xor` modeled as `Not Iff`) of
+/// its operand atoms. The returned proof term is `infer`-checked and
+/// [`Kernel::def_eq`]-compared to the clause's [`ReconstructCtx::gate_clause_to_prop`]
+/// encoding — the kernel is the gate.
+///
+/// The proof is assembled uniformly: a classical case-split (via the context's
+/// `em`) over every distinct operand atom, with the satisfied literal injected
+/// into the conclusion's `Or` encoding in each leaf. A wrong conclusion makes the
+/// satisfied-literal search fail (no literal holds in some assignment) or the
+/// kernel reject — never a wrong "checked".
+///
+/// # Errors
+///
+/// Returns [`ReconstructError::UnsupportedRule`] for a rule outside the
+/// CNF-introduction set, [`ReconstructError::MalformedStep`] for a clause that is
+/// not a tautology under the gate model (some truth assignment satisfies no
+/// literal), and [`ReconstructError::KernelRejected`] when the kernel's `infer`
+/// fails or the inferred proposition is not `def_eq` to the conclusion. It never
+/// panics on malformed or out-of-scope input.
+pub fn reconstruct_cnf_intro_rule(
+    ctx: &mut ReconstructCtx,
+    rule_name: &str,
+    conclusion: &[AletheLit],
+) -> Result<ExprId, ReconstructError> {
+    match rule_name {
+        "and_pos" | "and_neg" | "or_pos" | "or_neg" | "equiv_pos1" | "equiv_pos2"
+        | "equiv_neg1" | "equiv_neg2" | "xor_pos1" | "xor_pos2" | "xor_neg1" | "xor_neg2" => {}
+        other => {
+            return Err(ReconstructError::UnsupportedRule {
+                rule: other.to_owned(),
+            });
+        }
+    }
+
+    // Ensure `em` is available for the classical case-split.
+    let _ = ctx.em_axiom();
+
+    // Collect the distinct operand atoms (the case-split variables) in a stable
+    // order (s-expression key order via the BTreeSet-like collection below).
+    let mut atom_keys: Vec<(String, AletheTerm)> = Vec::new();
+    for lit in conclusion {
+        collect_atoms(&lit.atom, &mut atom_keys);
+    }
+
+    let target = ctx.gate_clause_to_prop(conclusion);
+    let conclusion = conclusion.to_vec();
+
+    // Recursively case-split on each atom; at the leaf, inject the satisfied lit.
+    let mut assignment = Assignment::new();
+    let proof = prove_clause_by_cases(ctx, &atom_keys, 0, &mut assignment, &conclusion, target)?;
+
+    check_against(ctx, rule_name, proof, target)
+}
+
+/// Collect the distinct **operand atoms** of a gate term — the leaves that are
+/// not Boolean connectives — keyed by s-expression, in first-seen order.
+fn collect_atoms(term: &AletheTerm, out: &mut Vec<(String, AletheTerm)>) {
+    match term {
+        AletheTerm::App(head, args)
+            if (head == "not" && args.len() == 1)
+                || ((head == "and" || head == "or") && !args.is_empty())
+                || ((head == "=" || head == "xor") && args.len() == 2) =>
+        {
+            for a in args {
+                collect_atoms(a, out);
+            }
+        }
+        other => {
+            let key = other.key();
+            if !out.iter().any(|(k, _)| k == &key) {
+                out.push((key, other.clone()));
+            }
+        }
+    }
+}
+
+/// Case-split on `atoms[idx..]` via `em`, accumulating each atom's truth witness
+/// in `assignment`; at the leaf (`idx == atoms.len()`) build the satisfied
+/// literal's proof and inject it into the clause's `Or` encoding `target`.
+fn prove_clause_by_cases(
+    ctx: &mut ReconstructCtx,
+    atoms: &[(String, AletheTerm)],
+    idx: usize,
+    assignment: &mut Assignment,
+    conclusion: &[AletheLit],
+    target: ExprId,
+) -> Result<ExprId, ReconstructError> {
+    if idx == atoms.len() {
+        return prove_clause_leaf(ctx, conclusion, target, assignment);
+    }
+
+    let (key, atom_term) = atoms[idx].clone();
+    let p = ctx.gate_term_to_prop(&atom_term);
+
+    // `em p : Or p (Not p)`. Case-split with `Or.rec` into `target`.
+    let em_name = ctx.em_axiom();
+    let em = ctx.kernel.const_(em_name, vec![]);
+    let em_p = ctx.kernel.app(em, p);
+
+    let not_p = ctx.mk_not(p);
+    let anon = ctx.kernel.anon();
+
+    // minor_inl := fun (hp : p) => <recurse with key ↦ true>.
+    let fvar_true = fresh_fvar_id(ctx);
+    let hp = ctx.kernel.fvar(fvar_true);
+    assignment.map.insert(key.clone(), (p, hp, true));
+    let body_true = prove_clause_by_cases(ctx, atoms, idx + 1, assignment, conclusion, target)?;
+    assignment.map.remove(&key);
+    let body_true = ctx.kernel.abstract_fvars(body_true, &[fvar_true]);
+    let minor_inl = ctx.kernel.lam(anon, p, body_true, BinderInfo::Default);
+
+    // minor_inr := fun (hnp : Not p) => <recurse with key ↦ false>.
+    let fvar_false = fresh_fvar_id(ctx);
+    let hnp = ctx.kernel.fvar(fvar_false);
+    assignment.map.insert(key.clone(), (p, hnp, false));
+    let body_false = prove_clause_by_cases(ctx, atoms, idx + 1, assignment, conclusion, target)?;
+    assignment.map.remove(&key);
+    let body_false = ctx.kernel.abstract_fvars(body_false, &[fvar_false]);
+    let minor_inr = ctx.kernel.lam(anon, not_p, body_false, BinderInfo::Default);
+
+    // motive := fun (_ : Or p (Not p)) => target.
+    let or_p_notp = ctx.mk_or(p, not_p);
+    let motive = ctx.kernel.lam(anon, or_p_notp, target, BinderInfo::Default);
+
+    // Or.rec.{0} p (Not p) motive minor_inl minor_inr (em p) : target.
+    let z = ctx.kernel.level_zero();
+    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![z]);
+    let e = ctx.kernel.app(rec, p);
+    let e = ctx.kernel.app(e, not_p);
+    let e = ctx.kernel.app(e, motive);
+    let e = ctx.kernel.app(e, minor_inl);
+    let e = ctx.kernel.app(e, minor_inr);
+    Ok(ctx.kernel.app(e, em_p))
+}
+
+/// At a complete truth assignment, find a satisfied clause literal and inject its
+/// proof into the right-nested `Or` encoding `target = gate_clause_to_prop(conclusion)`.
+fn prove_clause_leaf(
+    ctx: &mut ReconstructCtx,
+    conclusion: &[AletheLit],
+    target: ExprId,
+    assignment: &Assignment,
+) -> Result<ExprId, ReconstructError> {
+    let _ = target;
+    // Find the first literal satisfied under the assignment, with its proof.
+    for (idx, lit) in conclusion.iter().enumerate() {
+        if let Some(lit_proof) = prove_lit(ctx, lit, assignment)? {
+            return Ok(inject_gate_lit(ctx, conclusion, idx, lit_proof));
+        }
+    }
+    // No literal holds in this assignment ⇒ the clause is NOT a tautology.
+    Err(ReconstructError::MalformedStep {
+        rule: "cnf_intro".to_owned(),
+        detail: "conclusion clause is not a tautology under the gate model".to_owned(),
+    })
+}
+
+/// Inject a proof `lit_proof : gate_lit_to_prop(conclusion[idx])` into the
+/// right-nested `Or` encoding `target` at position `idx` via `Or.inl`/`Or.inr`.
+fn inject_gate_lit(
+    ctx: &mut ReconstructCtx,
+    conclusion: &[AletheLit],
+    idx: usize,
+    lit_proof: ExprId,
+) -> ExprId {
+    let n = conclusion.len();
+    debug_assert!(idx < n);
+    let mut proof = lit_proof;
+    for i in (0..=idx).rev() {
+        if i == idx {
+            if idx == n - 1 {
+                // Last literal: the suffix is just `Enc(lit)`; nothing to wrap.
+            } else {
+                let a = ctx.gate_lit_to_prop(&conclusion[idx]);
+                let b = ctx.gate_clause_to_prop(&conclusion[idx + 1..]);
+                proof = or_inl(ctx, a, b, proof);
+            }
+        } else {
+            let a = ctx.gate_lit_to_prop(&conclusion[i]);
+            let b = ctx.gate_clause_to_prop(&conclusion[i + 1..]);
+            proof = or_inr(ctx, a, b, proof);
+        }
+    }
+    proof
+}
+
+/// Build a proof of a gate **literal** under the assignment, or `None` if the
+/// literal is not satisfied. A positive literal `t` needs `⟦t⟧` (so `t` evaluates
+/// true); a negated `(not t)` needs `Not ⟦t⟧` (so `t` evaluates false).
+fn prove_lit(
+    ctx: &mut ReconstructCtx,
+    lit: &AletheLit,
+    assignment: &Assignment,
+) -> Result<Option<ExprId>, ReconstructError> {
+    if lit.negated {
+        prove_term_false(ctx, &lit.atom, assignment)
+    } else {
+        prove_term_true(ctx, &lit.atom, assignment)
+    }
+}
+
+/// Build a proof of `⟦term⟧` (the structured gate Prop) under the assignment, or
+/// `None` if `term` evaluates to false there. Recurses structurally over the
+/// gate; atoms are looked up in the assignment.
+#[allow(clippy::too_many_lines)]
+fn prove_term_true(
+    ctx: &mut ReconstructCtx,
+    term: &AletheTerm,
+    assignment: &Assignment,
+) -> Result<Option<ExprId>, ReconstructError> {
+    match term {
+        // (not t) is true ⇔ t is false ⇒ a `Not ⟦t⟧` proof.
+        AletheTerm::App(head, args) if head == "not" && args.len() == 1 => {
+            prove_term_false(ctx, &args[0], assignment)
+        }
+        // (and t…) is true ⇔ every operand is true; fold `And.intro` right-nested.
+        AletheTerm::App(head, args) if head == "and" && !args.is_empty() => {
+            // Build the proof from the last operand inward. At each step `acc`
+            // proves the And of the operands *after* index `i`; `And.intro` of the
+            // operand at `i` extends it leftward.
+            let n = args.len();
+            let Some(mut acc) = prove_term_true(ctx, &args[n - 1], assignment)? else {
+                return Ok(None);
+            };
+            for i in (0..n - 1).rev() {
+                let Some(ht) = prove_term_true(ctx, &args[i], assignment)? else {
+                    return Ok(None);
+                };
+                // acc : ⟦args[i+1..]⟧ ; ht : ⟦args[i]⟧ ⇒ And.intro a b ht acc.
+                let a = ctx.gate_term_to_prop(&args[i]);
+                let b = and_chain_prop(ctx, &args[i + 1..]);
+                acc = and_intro(ctx, a, b, ht, acc);
+            }
+            Ok(Some(acc))
+        }
+        // (or t…) is true ⇔ some operand is true; inject with Or.inl/Or.inr.
+        AletheTerm::App(head, args) if head == "or" && !args.is_empty() => {
+            prove_or_true(ctx, args, assignment)
+        }
+        // (= a b) (boolean iff) is true ⇔ a, b have the SAME truth value.
+        AletheTerm::App(head, args) if head == "=" && args.len() == 2 => {
+            prove_iff_true(ctx, &args[0], &args[1], assignment)
+        }
+        // (xor a b) = Not (Iff a b) is true ⇔ a, b DIFFER ⇒ a `Not (Iff a b)` proof.
+        AletheTerm::App(head, args) if head == "xor" && args.len() == 2 => {
+            prove_iff_false(ctx, &args[0], &args[1], assignment)
+        }
+        // An atom: look it up.
+        other => {
+            let key = other.key();
+            match assignment.map.get(&key) {
+                Some(&(_, proof, true)) => Ok(Some(proof)),
+                _ => Ok(None),
+            }
+        }
+    }
+}
+
+/// Build a proof of `Not ⟦term⟧` under the assignment, or `None` if `term`
+/// evaluates true there. Recurses structurally over the gate.
+fn prove_term_false(
+    ctx: &mut ReconstructCtx,
+    term: &AletheTerm,
+    assignment: &Assignment,
+) -> Result<Option<ExprId>, ReconstructError> {
+    match term {
+        // Not (not t) ⇔ t is true. We have a proof `ht : ⟦t⟧`; build a proof of
+        // `Not (Not ⟦t⟧)` = `(⟦t⟧ → False) → False` as `fun hnt => hnt ht`.
+        AletheTerm::App(head, args) if head == "not" && args.len() == 1 => {
+            let Some(ht) = prove_term_true(ctx, &args[0], assignment)? else {
+                return Ok(None);
+            };
+            let inner = ctx.gate_term_to_prop(&args[0]);
+            let not_inner = ctx.mk_not(inner);
+            // fun (hnt : Not ⟦t⟧) => hnt ht : Not (Not ⟦t⟧).
+            let anon = ctx.kernel.anon();
+            let fv = fresh_fvar_id(ctx);
+            let hnt = ctx.kernel.fvar(fv);
+            let body = ctx.kernel.app(hnt, ht);
+            let body = ctx.kernel.abstract_fvars(body, &[fv]);
+            Ok(Some(ctx.kernel.lam(
+                anon,
+                not_inner,
+                body,
+                BinderInfo::Default,
+            )))
+        }
+        // Not (and t…) ⇔ some operand is false. With `hnf : Not ⟦tᵢ⟧`, build
+        // `fun (h : ⟦and⟧) => hnf (project tᵢ from h)`.
+        AletheTerm::App(head, args) if head == "and" && !args.is_empty() => {
+            prove_and_false(ctx, args, assignment)
+        }
+        // Not (or t…) ⇔ every operand is false. With each `hnf_i : Not ⟦tᵢ⟧`,
+        // build `fun (h : ⟦or⟧) => Or.rec … h` discharging each branch.
+        AletheTerm::App(head, args) if head == "or" && !args.is_empty() => {
+            prove_or_false(ctx, args, assignment)
+        }
+        // Not (= a b) ⇔ a, b differ.
+        AletheTerm::App(head, args) if head == "=" && args.len() == 2 => {
+            prove_iff_false(ctx, &args[0], &args[1], assignment)
+        }
+        // Not (xor a b) = Not (Not (Iff a b)) ⇔ a, b agree ⇒ `Not (Not (Iff))`.
+        AletheTerm::App(head, args) if head == "xor" && args.len() == 2 => {
+            let Some(iff_proof) = prove_iff_true(ctx, &args[0], &args[1], assignment)? else {
+                return Ok(None);
+            };
+            let a = ctx.gate_term_to_prop(&args[0]);
+            let b = ctx.gate_term_to_prop(&args[1]);
+            let iff = ctx.mk_iff(a, b);
+            let not_iff = ctx.mk_not(iff);
+            // fun (hn : Not (Iff a b)) => hn iff_proof : Not (Not (Iff a b)).
+            let anon = ctx.kernel.anon();
+            let fv = fresh_fvar_id(ctx);
+            let hn = ctx.kernel.fvar(fv);
+            let body = ctx.kernel.app(hn, iff_proof);
+            let body = ctx.kernel.abstract_fvars(body, &[fv]);
+            Ok(Some(ctx.kernel.lam(
+                anon,
+                not_iff,
+                body,
+                BinderInfo::Default,
+            )))
+        }
+        // An atom: look it up for a `Not`-witness.
+        other => {
+            let key = other.key();
+            match assignment.map.get(&key) {
+                Some(&(_, proof, false)) => Ok(Some(proof)),
+                _ => Ok(None),
+            }
+        }
+    }
+}
+
+/// `And.intro a b ha hb : And a b`.
+fn and_intro(ctx: &mut ReconstructCtx, a: ExprId, b: ExprId, ha: ExprId, hb: ExprId) -> ExprId {
+    let intro = ctx.kernel.const_(ctx.prelude.and_intro, vec![]);
+    let e = ctx.kernel.app(intro, a);
+    let e = ctx.kernel.app(e, b);
+    let e = ctx.kernel.app(e, ha);
+    ctx.kernel.app(e, hb)
+}
+
+/// `And.rec`-project: from `h : And a b` produce a proof of the projection at
+/// `select` (`true` = left operand `a`, `false` = right operand `b`).
+fn and_project(
+    ctx: &mut ReconstructCtx,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    select_left: bool,
+) -> ExprId {
+    let anon = ctx.kernel.anon();
+    let target = if select_left { a } else { b };
+    // motive := fun (_ : And a b) => target.
+    let and_ab = ctx.mk_and(a, b);
+    let motive = ctx.kernel.lam(anon, and_ab, target, BinderInfo::Default);
+    // minor := fun (ha : a) (hb : b) => (ha | hb).
+    //   Under binders ha, hb: ha = BVar 1, hb = BVar 0.
+    let chosen = if select_left {
+        ctx.kernel.bvar(1)
+    } else {
+        ctx.kernel.bvar(0)
+    };
+    let inner = ctx.kernel.lam(anon, b, chosen, BinderInfo::Default);
+    let minor = ctx.kernel.lam(anon, a, inner, BinderInfo::Default);
+    // And.rec.{0} a b motive minor h : target.
+    let z = ctx.kernel.level_zero();
+    let rec = ctx.kernel.const_(ctx.prelude.and_rec, vec![z]);
+    let e = ctx.kernel.app(rec, a);
+    let e = ctx.kernel.app(e, b);
+    let e = ctx.kernel.app(e, motive);
+    let e = ctx.kernel.app(e, minor);
+    ctx.kernel.app(e, h)
+}
+
+/// Build a proof of `Or ⟦t0⟧ (Or … ⟦tn⟧)` when some operand is true.
+fn prove_or_true(
+    ctx: &mut ReconstructCtx,
+    args: &[AletheTerm],
+    assignment: &Assignment,
+) -> Result<Option<ExprId>, ReconstructError> {
+    // Find the first true operand and inject; the Or is right-nested.
+    let n = args.len();
+    for (idx, t) in args.iter().enumerate() {
+        if let Some(t_proof) = prove_term_true(ctx, t, assignment)? {
+            // Inject `t_proof` at position `idx` into the right-nested Or of `args`.
+            let mut proof = t_proof;
+            for i in (0..=idx).rev() {
+                if i == idx {
+                    if idx == n - 1 {
+                        // last operand: the suffix is `⟦t⟧`; nothing to wrap.
+                    } else {
+                        let a = ctx.gate_term_to_prop(&args[idx]);
+                        let b = or_chain_prop(ctx, &args[idx + 1..]);
+                        proof = or_inl(ctx, a, b, proof);
+                    }
+                } else {
+                    let a = ctx.gate_term_to_prop(&args[i]);
+                    let b = or_chain_prop(ctx, &args[i + 1..]);
+                    proof = or_inr(ctx, a, b, proof);
+                }
+            }
+            return Ok(Some(proof));
+        }
+    }
+    Ok(None)
+}
+
+/// The `Prop` of the right-nested `Or` chain of a non-empty operand slice.
+fn or_chain_prop(ctx: &mut ReconstructCtx, args: &[AletheTerm]) -> ExprId {
+    let (last, rest) = args.split_last().expect("non-empty Or chain");
+    let mut acc = ctx.gate_term_to_prop(last);
+    for t in rest.iter().rev() {
+        let head = ctx.gate_term_to_prop(t);
+        acc = ctx.mk_or(head, acc);
+    }
+    acc
+}
+
+/// Build a proof of `Not (Or ⟦t0⟧ …)` when every operand is false. We have
+/// `hnf_i : Not ⟦tᵢ⟧` for each; `fun (h : Or …) => Or.rec … h` discharges each
+/// branch into `False` by applying the matching `hnf`.
+fn prove_or_false(
+    ctx: &mut ReconstructCtx,
+    args: &[AletheTerm],
+    assignment: &Assignment,
+) -> Result<Option<ExprId>, ReconstructError> {
+    // Collect a `Not ⟦tᵢ⟧` proof for every operand; bail if any is true.
+    let mut neg_proofs: Vec<ExprId> = Vec::with_capacity(args.len());
+    for t in args {
+        let Some(p) = prove_term_false(ctx, t, assignment)? else {
+            return Ok(None);
+        };
+        neg_proofs.push(p);
+    }
+    // Build `fun (h : ⟦or⟧) => elim(h) : False`, then it is the `Not ⟦or⟧` proof.
+    let or_prop = or_chain_prop(ctx, args);
+    let anon = ctx.kernel.anon();
+    let fv = fresh_fvar_id(ctx);
+    let h = ctx.kernel.fvar(fv);
+    let false_const = ctx.kernel.const_(ctx.prelude.false_, vec![]);
+    let body = or_chain_to_false(ctx, args, h, &neg_proofs, false_const);
+    let body = ctx.kernel.abstract_fvars(body, &[fv]);
+    Ok(Some(ctx.kernel.lam(
+        anon,
+        or_prop,
+        body,
+        BinderInfo::Default,
+    )))
+}
+
+/// Eliminate `h : Or ⟦args[0]⟧ (Or … )` into `False`, given a `Not ⟦argsᵢ⟧` proof
+/// for each operand. Recurses over the right-nested `Or` via `Or.rec`.
+fn or_chain_to_false(
+    ctx: &mut ReconstructCtx,
+    args: &[AletheTerm],
+    h: ExprId,
+    neg_proofs: &[ExprId],
+    false_const: ExprId,
+) -> ExprId {
+    match args {
+        [_t] => {
+            // h : ⟦t⟧; neg_proofs[0] : Not ⟦t⟧ = ⟦t⟧ → False.
+            ctx.kernel.app(neg_proofs[0], h)
+        }
+        [t0, rest @ ..] => {
+            let anon = ctx.kernel.anon();
+            let a = ctx.gate_term_to_prop(t0);
+            let b = or_chain_prop(ctx, rest);
+            // motive := fun (_ : Or a b) => False.
+            let or_ab = ctx.mk_or(a, b);
+            let motive = ctx
+                .kernel
+                .lam(anon, or_ab, false_const, BinderInfo::Default);
+            // minor_inl := fun (h0 : a) => neg_proofs[0] h0.
+            let fv0 = fresh_fvar_id(ctx);
+            let h0 = ctx.kernel.fvar(fv0);
+            let body0 = ctx.kernel.app(neg_proofs[0], h0);
+            let body0 = ctx.kernel.abstract_fvars(body0, &[fv0]);
+            let minor_inl = ctx.kernel.lam(anon, a, body0, BinderInfo::Default);
+            // minor_inr := fun (hr : b) => <recurse on rest>.
+            let fvr = fresh_fvar_id(ctx);
+            let hr = ctx.kernel.fvar(fvr);
+            let body_r = or_chain_to_false(ctx, rest, hr, &neg_proofs[1..], false_const);
+            let body_r = ctx.kernel.abstract_fvars(body_r, &[fvr]);
+            let minor_inr = ctx.kernel.lam(anon, b, body_r, BinderInfo::Default);
+            // Or.rec.{0} a b motive minor_inl minor_inr h : False.
+            let z = ctx.kernel.level_zero();
+            let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![z]);
+            let e = ctx.kernel.app(rec, a);
+            let e = ctx.kernel.app(e, b);
+            let e = ctx.kernel.app(e, motive);
+            let e = ctx.kernel.app(e, minor_inl);
+            let e = ctx.kernel.app(e, minor_inr);
+            ctx.kernel.app(e, h)
+        }
+        [] => false_const,
+    }
+}
+
+/// Build a proof of `Not (And ⟦args[0]⟧ …)` when some operand is false. With
+/// `hnf : Not ⟦tᵢ⟧`, the proof is `fun (h : ⟦and⟧) => hnf (project tᵢ from h)`.
+fn prove_and_false(
+    ctx: &mut ReconstructCtx,
+    args: &[AletheTerm],
+    assignment: &Assignment,
+) -> Result<Option<ExprId>, ReconstructError> {
+    // Find a false operand; project it out of the And and feed it to its `Not`.
+    let n = args.len();
+    let mut false_idx = None;
+    for (idx, t) in args.iter().enumerate() {
+        if prove_term_false(ctx, t, assignment)?.is_some() {
+            false_idx = Some(idx);
+            break;
+        }
+    }
+    let Some(idx) = false_idx else {
+        return Ok(None);
+    };
+    let hnf = prove_term_false(ctx, &args[idx], assignment)?.expect("operand was just shown false");
+
+    // and_prop = And a0 (And a1 (… an)); project operand `idx` out of `h`.
+    let and_prop = and_chain_prop(ctx, args);
+    let anon = ctx.kernel.anon();
+    let fv = fresh_fvar_id(ctx);
+    let h = ctx.kernel.fvar(fv);
+    // Walk down the right-nested And to reach operand `idx`: take `.right` `idx`
+    // times to reach the And of `args[idx..]`, then `.left` (unless it is the
+    // last operand, where the residual IS `args[idx]`).
+    let mut cur = h;
+    for i in 0..idx {
+        let a = ctx.gate_term_to_prop(&args[i]);
+        let b = and_chain_prop(ctx, &args[i + 1..]);
+        cur = and_project(ctx, a, b, cur, false); // take right
+    }
+    let proj = if idx == n - 1 {
+        cur
+    } else {
+        let a = ctx.gate_term_to_prop(&args[idx]);
+        let b = and_chain_prop(ctx, &args[idx + 1..]);
+        and_project(ctx, a, b, cur, true) // take left
+    };
+    let body = ctx.kernel.app(hnf, proj);
+    let body = ctx.kernel.abstract_fvars(body, &[fv]);
+    Ok(Some(ctx.kernel.lam(
+        anon,
+        and_prop,
+        body,
+        BinderInfo::Default,
+    )))
+}
+
+/// The `Prop` of the right-nested `And` chain of a non-empty operand slice.
+fn and_chain_prop(ctx: &mut ReconstructCtx, args: &[AletheTerm]) -> ExprId {
+    let (last, rest) = args.split_last().expect("non-empty And chain");
+    let mut acc = ctx.gate_term_to_prop(last);
+    for t in rest.iter().rev() {
+        let head = ctx.gate_term_to_prop(t);
+        acc = ctx.mk_and(head, acc);
+    }
+    acc
+}
+
+/// Build a proof of `Iff ⟦a⟧ ⟦b⟧` when `a`, `b` have the same truth value, else
+/// `None`. `Iff.intro a b mp mpr` with both directions; the direction not taken
+/// by the live branch is discharged ex-falso (it is never reached, but must
+/// type-check), so we build it from the operand witnesses directly.
+fn prove_iff_true(
+    ctx: &mut ReconstructCtx,
+    a_t: &AletheTerm,
+    b_t: &AletheTerm,
+    assignment: &Assignment,
+) -> Result<Option<ExprId>, ReconstructError> {
+    let a_true = prove_term_true(ctx, a_t, assignment)?;
+    let b_true = prove_term_true(ctx, b_t, assignment)?;
+    let a = ctx.gate_term_to_prop(a_t);
+    let b = ctx.gate_term_to_prop(b_t);
+    let anon = ctx.kernel.anon();
+
+    match (a_true, b_true) {
+        // Both true: mp := fun (_ : a) => hb; mpr := fun (_ : b) => ha.
+        (Some(ha), Some(hb)) => {
+            let mp = ctx.kernel.lam(anon, a, hb, BinderInfo::Default);
+            let mpr = ctx.kernel.lam(anon, b, ha, BinderInfo::Default);
+            Ok(Some(iff_intro(ctx, a, b, mp, mpr)))
+        }
+        // Both false: mp := fun (ha : a) => absurd; mpr := fun (hb : b) => absurd.
+        (None, None) => {
+            let hna = prove_term_false(ctx, a_t, assignment)?.expect("a is false");
+            let hnb = prove_term_false(ctx, b_t, assignment)?.expect("b is false");
+            // mp : a → b := fun (ha : a) => False.rec (fun _ => b) (hna ha).
+            let fv = fresh_fvar_id(ctx);
+            let ha = ctx.kernel.fvar(fv);
+            let false_app = ctx.kernel.app(hna, ha);
+            let ex = ex_falso(ctx, b, false_app);
+            let mp_body = ctx.kernel.abstract_fvars(ex, &[fv]);
+            let mp = ctx.kernel.lam(anon, a, mp_body, BinderInfo::Default);
+            // mpr : b → a := fun (hb : b) => False.rec (fun _ => a) (hnb hb).
+            let fv2 = fresh_fvar_id(ctx);
+            let hb = ctx.kernel.fvar(fv2);
+            let false_app2 = ctx.kernel.app(hnb, hb);
+            let ex2 = ex_falso(ctx, a, false_app2);
+            let mpr_body = ctx.kernel.abstract_fvars(ex2, &[fv2]);
+            let mpr = ctx.kernel.lam(anon, b, mpr_body, BinderInfo::Default);
+            Ok(Some(iff_intro(ctx, a, b, mp, mpr)))
+        }
+        // Differ: not an Iff.
+        _ => Ok(None),
+    }
+}
+
+/// Build a proof of `Not (Iff ⟦a⟧ ⟦b⟧)` when `a`, `b` differ, else `None`. With
+/// (say) `ha : a`, `hnb : Not b`: `fun (hiff : Iff a b) => hnb (hiff.mp ha)`.
+fn prove_iff_false(
+    ctx: &mut ReconstructCtx,
+    a_t: &AletheTerm,
+    b_t: &AletheTerm,
+    assignment: &Assignment,
+) -> Result<Option<ExprId>, ReconstructError> {
+    let a_true = prove_term_true(ctx, a_t, assignment)?;
+    let b_true = prove_term_true(ctx, b_t, assignment)?;
+    let a = ctx.gate_term_to_prop(a_t);
+    let b = ctx.gate_term_to_prop(b_t);
+    let iff = ctx.mk_iff(a, b);
+    let anon = ctx.kernel.anon();
+
+    // We need exactly one of a,b true and the other false.
+    let (mp_dir, hpos, hneg) = match (a_true, b_true) {
+        (Some(ha), None) => {
+            // a true, b false: hiff.mp ha : b, contradict with hnb.
+            let hnb = prove_term_false(ctx, b_t, assignment)?.expect("b is false");
+            (true, ha, hnb)
+        }
+        (None, Some(hb)) => {
+            // a false, b true: hiff.mpr hb : a, contradict with hna.
+            let hna = prove_term_false(ctx, a_t, assignment)?.expect("a is false");
+            (false, hb, hna)
+        }
+        _ => return Ok(None),
+    };
+
+    // fun (hiff : Iff a b) => hneg ((Iff.rec … hiff) hpos) : False.
+    let fv = fresh_fvar_id(ctx);
+    let hiff = ctx.kernel.fvar(fv);
+    // Extract the chosen direction from hiff via Iff.rec.
+    let dir = iff_project(ctx, a, b, hiff, mp_dir);
+    // Apply the direction to hpos to get the other side, then contradict.
+    let other = ctx.kernel.app(dir, hpos);
+    let body = ctx.kernel.app(hneg, other);
+    let body = ctx.kernel.abstract_fvars(body, &[fv]);
+    Ok(Some(ctx.kernel.lam(anon, iff, body, BinderInfo::Default)))
+}
+
+/// `Iff.intro a b mp mpr : Iff a b`.
+fn iff_intro(ctx: &mut ReconstructCtx, a: ExprId, b: ExprId, mp: ExprId, mpr: ExprId) -> ExprId {
+    let intro = ctx.kernel.const_(ctx.prelude.iff_intro, vec![]);
+    let e = ctx.kernel.app(intro, a);
+    let e = ctx.kernel.app(e, b);
+    let e = ctx.kernel.app(e, mp);
+    ctx.kernel.app(e, mpr)
+}
+
+/// `Iff.rec`-project the `mp : a → b` (`select_mp = true`) or `mpr : b → a`
+/// (`false`) direction out of `h : Iff a b`.
+fn iff_project(
+    ctx: &mut ReconstructCtx,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    select_mp: bool,
+) -> ExprId {
+    let anon = ctx.kernel.anon();
+    // The projection's type: `a → b` (mp) or `b → a` (mpr).
+    let (dom, cod) = if select_mp { (a, b) } else { (b, a) };
+    let arrow = ctx.kernel.pi(anon, dom, cod, BinderInfo::Default);
+    // motive := fun (_ : Iff a b) => arrow.
+    let iff_ab = ctx.mk_iff(a, b);
+    let motive = ctx.kernel.lam(anon, iff_ab, arrow, BinderInfo::Default);
+    // minor := fun (mp : a → b) (mpr : b → a) => (mp | mpr).
+    //   Under binders mp, mpr: mp = BVar 1, mpr = BVar 0.
+    let chosen = if select_mp {
+        ctx.kernel.bvar(1)
+    } else {
+        ctx.kernel.bvar(0)
+    };
+    // mpr : b → a (inner binder).
+    let mpr_ty = ctx.kernel.pi(anon, b, a, BinderInfo::Default);
+    let inner = ctx.kernel.lam(anon, mpr_ty, chosen, BinderInfo::Default);
+    // mp : a → b (outer binder).
+    let mp_ty = ctx.kernel.pi(anon, a, b, BinderInfo::Default);
+    let minor = ctx.kernel.lam(anon, mp_ty, inner, BinderInfo::Default);
+    // Iff.rec.{0} a b motive minor h : arrow.
+    let z = ctx.kernel.level_zero();
+    let rec = ctx.kernel.const_(ctx.prelude.iff_rec, vec![z]);
+    let e = ctx.kernel.app(rec, a);
+    let e = ctx.kernel.app(e, b);
+    let e = ctx.kernel.app(e, motive);
+    let e = ctx.kernel.app(e, minor);
+    ctx.kernel.app(e, h)
+}
+
 #[cfg(test)]
 mod tests;
