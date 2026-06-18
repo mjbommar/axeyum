@@ -44,21 +44,45 @@ the scoreboard, and where Z3's word-level reasoning wins today.
 
 ## The wiring plan (the high-ROL next step — likely a real jump, no new algorithm)
 
-1. **Make it measurable (bench backend).** Add `BackendKind::LazyBv` to
-   `axeyum-bench` (enum + `as_str` + `parse_backend` + the solve dispatch calling
-   `solve_lazy_bv_abstraction`), and a `just bench-public-qfbv-lazy-vs-z3` recipe
-   over the committed public slice. **Coordinate:** `axeyum-bench/src/main.rs` is
-   shared with the concurrent agent — additive edits only, commit promptly, no
-   crate-wide fmt / destructive git (see the clobber post-mortem).
+**Status update (2026-06-17): step 3's opt-in dispatch landed** in commit
+`10a412e`. `SolverConfig::lazy_bv` (off by default) + `with_lazy_bv` route the
+quantifier-free path through `solve_lazy_bv_abstraction`; the hook is
+recursion-safe (inner abstraction solves run with the flag cleared) and a safe
+no-op when no heavy ops are present. Verified by `tests/lazy_bv_dispatch.rs`
+(routes-and-decides incidental UNSAT with 0 ops materialized; flag-off unchanged;
+lazy agrees with eager on a sat model needing the heavy op). The remaining work is
+the *measurement* path (steps 1–2) and the default-on decision (the tail of 3).
+
+1. **Make it measurable (bench backend) — blocked on an arena-mutability
+   impedance.** `solve_lazy_bv_abstraction` takes `arena: &mut TermArena` (it adds
+   fresh abstraction symbols to the arena), but `SolverBackend::check` exposes only
+   `&TermArena` and the whole bench pipeline (`solve_planned`, oracle compare,
+   preprocessing) is built around the immutable-arena trait. So a drop-in
+   `BackendKind::LazyBv` that just calls `solve_lazy_bv_abstraction` does **not**
+   typecheck. Two clean resolutions, to be chosen in its own turn (not hacked into
+   the shared `axeyum-bench/src/main.rs` mid-flight):
+   - **(a) read-only entry point.** Add `check_lazy_bv_abstraction_ro(arena:
+     &TermArena, …)` that copies the queried terms into a scratch `TermArena`, runs
+     the existing mutable strategy there, and lifts the model back over the original
+     symbols. Self-contained in `lazy_bv.rs` (not shared); the bench backend then
+     fits the trait unchanged. Cost: a cross-arena term/model copy with its own
+     replay test.
+   - **(b) mutable-arena bench branch.** Special-case the lazy kind in `run_one`
+     (which owns `mut script.arena`) to call `solve_lazy_bv_abstraction` directly,
+     bypassing the `&TermArena` trait path. Smaller code, but forks the bench's
+     solve/replay/oracle plumbing for one backend — more shared-file churn.
+   Prefer (a): it keeps the bench's single solve path and the trait honest. Either
+   way: additive edits only, commit promptly, no crate-wide fmt / destructive git
+   (see the clobber post-mortem).
 2. **Measure the public 113** (the big files need the bench's parallelism + memory
    caps; standalone harness only handles the 2 small ones). Headline metric: lazy
    decided-count vs the eager 2–3, with `DISAGREE=0` / 0 replay-failures the hard
    invariant. Record the per-family delta + `ops_refined` distribution.
-3. **Wire into the product as a strategy.** `SolverConfig::lazy_bv` (opt-in first),
-   routed in dispatch when QF_BV carries heavy ops; a portfolio/strategy (try lazy
-   when heavy ops present, eager otherwise). Default-on only after the public
-   measurement shows net benefit (an ADR, like ADR-0034 for word-level
-   preprocessing default).
+3. **Wire into the product as a strategy.** `SolverConfig::lazy_bv` (opt-in first
+   — **done**, `10a412e`), routed in dispatch when QF_BV carries heavy ops; next, a
+   portfolio/strategy (try lazy when heavy ops present, eager otherwise). Default-on
+   only after the public measurement (step 2) shows net benefit (an ADR, like
+   ADR-0034 for word-level preprocessing default).
 4. **Then deepen P2.1:** abstract *any* expensive subterm (not just mul/div),
    smarter refinement (refine the fewest ops), word-level slicing/sharing (P1.2)
    to shrink before abstracting, and P1.3 (competitive CDCL) for the bits that do
