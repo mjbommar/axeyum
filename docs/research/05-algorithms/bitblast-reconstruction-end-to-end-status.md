@@ -31,33 +31,36 @@ Instrumented probing (2-bit, fast — dumping the stuck clauses' `(±atom-key)`
 literals) **confirmed** the root cause and **disproved an earlier guess** (it is
 *not* the predicate↔B bridge). Two real issues:
 
-1. **Inconsistent negation spelling (confirmed bug).** The upstream CNF spells a
-   negation sometimes as the literal `negated` flag and sometimes as a `(not X)`
-   *atom*: a clause held `+((_ @bit_of 0) a)` while another held
-   `+(not ((_ @bit_of 0) a))` — logically `a0` and `¬a0`, but `find_pivot` matches
-   syntactically and missed them. Fix: `normalize_lit_polarity` peels leading
-   `(not …)` atoms into the `negated` flag. Soundness-safe — `+(not X)` and `-X`
-   encode to the identical `Not ⟦X⟧` Prop, so clause `proof` types are unchanged.
-   Measured effect: the stuck set shrank 5 → 3 clauses. Real, but **not
-   sufficient**.
-2. **Greedy resolution is non-confluent (the deeper blocker).** After
-   normalization the residual 3 clauses are **not jointly unsatisfiable**
-   (`a1=⊤` satisfies two, `b1=⊤` the third) — proof that the greedy
-   "resolve any complementary pair" loop *already went wrong earlier*, consuming a
-   clause some later step needed and leaving an unrefutable remnant. Binary
-   resolution is refutation-complete only for *some* order; arbitrary pair-picking
-   dead-ends. Alethe's basic `resolution` does **not** list pivots, so the checker
-   must reconstruct a valid order. The fix is **structure-following resolution** —
-   fold in the proof's intended (premise) order with correct pivot selection, or
-   reconstruct via RUP over the premises — not greedy pairing.
+1. **Inconsistent negation spelling — FIXED (`356f3e3`).** The upstream CNF
+   spelled a negation sometimes as the literal `negated` flag and sometimes as a
+   `(not X)` *atom*: a clause held `+((_ @bit_of 0) a)` while another held
+   `+(not ((_ @bit_of 0) a))` — logically `a0` and `¬a0`, which `find_pivot`
+   (syntactic) missed. `normalize_lit_polarity` peels leading `(not …)` atoms into
+   the flag; applied to every clause entering resolution. Soundness-safe (`+(not
+   X)` and `-X` are the same `Not ⟦X⟧` Prop, so clause `proof` types are
+   unchanged); all existing tests green + a unit test. Effect: the antisymmetry
+   stuck set shrank 5 → 3 — real progress, but **not the whole fix**.
+2. **Commutative `=` arg-order spelled both ways (the next blocker).** With
+   negation normalized, the antisymmetry fold stalls at `acc = (cl ¬G2 a1)` where
+   `G2 = (and (= b1 a1) (and (¬b0) a0))`. The bit-equality gate appears as both
+   `(= a1 b1)` and `(= b1 a1)` across the proof; these are **distinct kernel Props**
+   (`Iff a b ≠ Iff b a` definitionally), so a `¬(= b1 a1)` literal cannot resolve
+   against a `+(= a1 b1)` one. Unlike negation, this is **not** freely normalizable
+   on the reconstruction side (it would change `clause_to_prop` and break the proof
+   term); the clean fix is **emitter-side**: spell every bit-equality with a
+   canonical operand order in `bitblast_alethe.rs`. (Or carry an `Iff`-symmetry
+   lemma in reconstruction — more invasive.)
+3. **Resolution order / greedy non-confluence (possible, still open).** The
+   acc-centered greedy fold may also need to follow the proof's premise order
+   rather than picking the first resolvable premise. Strict premise-order fold was
+   tried and **regressed** `real_emitter_unsat_cnf_reconstructs`, so the order
+   handling is subtler than a pure left fold — to be settled after (2), since (2)
+   currently masks whether order alone suffices.
 
-So **no genuine QF_BV `unsat` (beyond `x ∧ ¬x`) closes to `False` yet**. Both the
-normalization and pool experiments were **reverted** (they get 5 → 3 but don't
-close, and have no demonstrating end-to-end test — undemonstrated change to
-soundness-critical resolution code is not committed). The confirmed diagnosis is
-the deliverable; the fix is a focused next piece.
-
-This is the highest-priority Track-3 fix.
+So **no genuine QF_BV `unsat` (beyond `x ∧ ¬x`) closes to `False` yet**, but the
+path is now concrete: negation done; next the emitter-side `=` canonicalization,
+then re-check whether resolution order needs work. This is the highest-priority
+Track-3 fix; land each with the bvult-antisymmetry case as the end-to-end test.
 
 ### 2. Reconstruction is slow even at tiny widths
 
