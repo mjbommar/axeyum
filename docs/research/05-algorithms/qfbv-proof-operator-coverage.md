@@ -40,9 +40,18 @@ the constant to Boolean literals in the `@bbterm` — a `TypeMismatch` (atom vs
 bit value (`true`/`false`) for a `#b…` literal, and `gate_term_to_prop` maps the
 Boolean literals to the prelude `True`/`False` (so an embedded const bit renders
 identically in arithmetic gadgets too). `zero_extend` and `rotate` now both
-reconstruct end-to-end (`axeyum-solver` tests). **Remaining:** the route-2
-`bv_poly_simp` upgrade (certify the *un-lowered* original), and shifts/division (no
-cheap reduction). The rest of this note is the original analysis.
+reconstruct end-to-end (`axeyum-solver` tests).
+
+**Constant-amount shifts LANDED.** `bvshl`/`bvlshr`/`bvashr` by a **constant** amount
+reduce to core: `shl k → concat x[w-1-k:0] (0:k)`, `lshr k → concat (0:k) x[w-1:k]`,
+`ashr k → sign_extend x[w-1:k] by k` (with the SMT-LIB `k ≥ w` / `k = 0` edge cases).
+Exhaustively denotation-checked (amounts `0..=w` and `> w`); a `bvshl a 1` query
+reconstructs end-to-end. A **variable** shift amount is left unlowered (the emitter
+rejects it) — it needs a barrel-shifter (mux) network, the remaining hard case.
+
+**Remaining:** variable-amount shifts (barrel shifter), `bvudiv`/`bvurem` (long
+division), the signed div family, and the route-2 `bv_poly_simp` upgrade (certify the
+*un-lowered* original). The rest of this note is the original analysis.
 
 ## The gap: derived operators are rejected (confirmed by probe)
 

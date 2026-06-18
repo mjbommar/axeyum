@@ -1879,6 +1879,33 @@ fn end_to_end_rotate_via_lowering_reconstructs() {
     assert_infers_false(&mut ctx, term);
 }
 
+/// Constant-amount shift lowering: `bvshl a #b0001 → concat (extract 2 0 a) (0:1)`
+/// (core ops). A `(bvshl a 1) = b ∧ ¬(…)` query reconstructs to a kernel-checked
+/// `False` — covers a constant shift end to end (exercises `concat` with a constant
+/// low operand).
+#[test]
+fn end_to_end_const_shift_via_lowering_reconstructs() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(4)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(4)).unwrap();
+        arena.var(s)
+    };
+    let one = arena.bv_const(4, 1).unwrap();
+    let shl = arena.bv_shl(a, one).unwrap();
+    let eq = arena.eq(shl, b).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe_lowered(&mut arena, &[eq, neq])
+        .expect("emitter accepts lowered core");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_bv_proof(&mut ctx, &proof).expect("reconstructs");
+    assert_infers_false(&mut ctx, term);
+}
+
 /// **NEGATIVE soundness (slice 6)**: corrupt the closing resolution of a REAL
 /// bitwise proof — drop a premise so it can no longer fold to `(cl)` — and confirm
 /// the fused walk REJECTS it rather than producing a `False` from a non-refutation.
