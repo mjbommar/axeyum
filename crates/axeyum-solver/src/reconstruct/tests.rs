@@ -1906,6 +1906,31 @@ fn end_to_end_const_shift_via_lowering_reconstructs() {
     assert_infers_false(&mut ctx, term);
 }
 
+/// Variable-amount shift lowering: `bvshl a s` (non-constant `s`) → a barrel-shifter
+/// network of constant shifts + `and`/`or`/`not` muxes (all core). A `(bvshl a s) =
+/// b ∧ ¬(…)` query reconstructs to a kernel-checked `False` — the "hard" shift case
+/// now closes end to end.
+#[test]
+fn end_to_end_variable_shift_via_lowering_reconstructs() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let mk = |a: &mut TermArena, n: &str| {
+        let s = a.declare(n, Sort::BitVec(4)).unwrap();
+        a.var(s)
+    };
+    let a = mk(&mut arena, "a");
+    let s = mk(&mut arena, "s");
+    let b = mk(&mut arena, "b");
+    let shl = arena.bv_shl(a, s).unwrap();
+    let eq = arena.eq(shl, b).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe_lowered(&mut arena, &[eq, neq])
+        .expect("emitter accepts lowered core");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_bv_proof(&mut ctx, &proof).expect("reconstructs");
+    assert_infers_false(&mut ctx, term);
+}
+
 /// **NEGATIVE soundness (slice 6)**: corrupt the closing resolution of a REAL
 /// bitwise proof — drop a premise so it can no longer fold to `(cl)` — and confirm
 /// the fused walk REJECTS it rather than producing a `False` from a non-refutation.

@@ -95,22 +95,20 @@ pub fn lower_derived_bv(arena: &mut TermArena, term: TermId) -> Result<TermId, I
         Op::RotateLeft { by } => rotate_via_concat(arena, largs[0], by, true)?,
         // rotate_right by k ≡ concat x[k-1:0] x[w-1:k].
         Op::RotateRight { by } => rotate_via_concat(arena, largs[0], by, false)?,
-        // Shifts by a CONSTANT amount reduce to concat/extract/sign_extend (core); a
-        // variable amount needs a barrel shifter, so leave it (the emitter rejects it).
+        // Shifts reduce to core: a CONSTANT amount via concat/extract/sign_extend, a
+        // VARIABLE amount via a barrel-shifter (mux) network.
         Op::BvShl | Op::BvLshr | Op::BvAshr => {
             let shift = match arena.node(largs[1]) {
                 TermNode::BvConst { value, .. } => Some(*value),
                 _ => None,
             };
+            let w = arena
+                .sort_of(largs[0])
+                .bv_width()
+                .expect("shift operand has BV sort");
             match shift {
-                Some(s) => {
-                    let w = arena
-                        .sort_of(largs[0])
-                        .bv_width()
-                        .expect("shift operand has BV sort");
-                    lower_const_shift(arena, op, largs[0], s, w)?
-                }
-                None => arena.rebuild_with_args(term, &largs),
+                Some(s) => lower_const_shift(arena, op, largs[0], s, w)?,
+                None => lower_var_shift(arena, op, largs[0], largs[1], w)?,
             }
         }
         // Not a lowered operator: rebuild with lowered children (sort preserved).
@@ -209,6 +207,52 @@ fn lower_const_shift(
         }
         _ => unreachable!("lower_const_shift only handles bvshl/bvlshr/bvashr"),
     }
+}
+
+/// Bitwise mux `mask ? a : b` over width-`w` operands where `mask` is all-ones or
+/// all-zeros: `(mask ∧ a) ∨ (¬mask ∧ b)`. Core ops only.
+fn select(arena: &mut TermArena, mask: TermId, a: TermId, b: TermId) -> Result<TermId, IrError> {
+    let nm = arena.bv_not(mask)?;
+    let ta = arena.bv_and(mask, a)?;
+    let tb = arena.bv_and(nm, b)?;
+    arena.bv_or(ta, tb)
+}
+
+/// A by-`s` (a width-`w` term, not a constant) `bvshl`/`bvlshr`/`bvashr` of `x`,
+/// expressed in core operators as a **barrel shifter**: stage `i` (for `2^i < w`)
+/// conditionally applies the constant shift by `2^i`, selected by bit `i` of `s`
+/// (splatted to width `w` via `sign_extend` of the 1-bit slice). Shift amounts
+/// `s ≥ w` — detected as any high bit of `s` at/above `⌈log₂ w⌉` being set — force the
+/// SMT-LIB result (`0` for `bvshl`/`bvlshr`, all-sign for `bvashr`).
+fn lower_var_shift(
+    arena: &mut TermArena,
+    op: Op,
+    x: TermId,
+    s: TermId,
+    w: u32,
+) -> Result<TermId, IrError> {
+    let mut cur = x;
+    let mut stage = 0u32;
+    while (1u32 << stage) < w {
+        let cond = arena.extract(stage, stage, s)?; // bit s[stage]
+        let mask = arena.sign_ext(w - 1, cond)?; // splat to width w
+        let shifted = lower_const_shift(arena, op, cur, 1u128 << stage, w)?;
+        cur = select(arena, mask, shifted, cur)?;
+        stage += 1;
+    }
+    // Overflow: s ≥ w iff any bit s[w-1 : stage] is set (stage = ⌈log₂ w⌉ ≤ w-1).
+    let s_high = arena.extract(w - 1, stage, s)?;
+    let zero_high = arena.bv_const(w - stage, 0)?;
+    let is_zero = arena.bv_comp(s_high, zero_high)?; // 1-bit: 1 iff s_high == 0
+    let overflow_bit = arena.bv_not(is_zero)?; // 1-bit: s_high != 0
+    let ov_mask = arena.sign_ext(w - 1, overflow_bit)?; // splat
+    let fallback = if matches!(op, Op::BvAshr) {
+        let sign = arena.extract(w - 1, w - 1, x)?;
+        arena.sign_ext(w - 1, sign)? // all sign bits
+    } else {
+        arena.bv_const(w, 0)?
+    };
+    select(arena, ov_mask, fallback, cur)
 }
 
 #[cfg(test)]
@@ -311,17 +355,43 @@ mod tests {
         }
     }
 
-    #[test]
-    fn variable_shift_is_left_unlowered() {
-        // A shift by a non-constant amount has no cheap core reduction; lowering
-        // leaves it intact (the proof emitter then rejects it cleanly).
+    /// Exhaustively confirm a lowered variable (two-operand) shift agrees with the
+    /// original on every `(x, s)` pair of `width`-bit inputs — the barrel-shifter
+    /// soundness obligation, including every `s ≥ width` overflow case.
+    fn assert_var_shift_preserves(
+        width: u32,
+        build: impl Fn(&mut TermArena, TermId, TermId) -> TermId,
+    ) {
         let mut arena = TermArena::new();
-        let s = arena.declare("a", Sort::BitVec(4)).unwrap();
-        let t = arena.declare("b", Sort::BitVec(4)).unwrap();
-        let a = arena.var(s);
-        let b = arena.var(t);
-        let shl = arena.bv_shl(a, b).unwrap();
-        assert_eq!(lower_derived_bv(&mut arena, shl).unwrap(), shl);
+        let sx = arena.declare("x", Sort::BitVec(width)).unwrap();
+        let ss = arena.declare("s", Sort::BitVec(width)).unwrap();
+        let x = arena.var(sx);
+        let s = arena.var(ss);
+        let orig = build(&mut arena, x, s);
+        let low = lower_derived_bv(&mut arena, orig).unwrap();
+        // The lowering must actually have rewritten the variable shift.
+        assert_ne!(low, orig, "variable shift was not lowered");
+        let n = 1u128 << width;
+        for xv in 0..n {
+            for sv in 0..n {
+                let mut asn = Assignment::new();
+                asn.set(sx, Value::Bv { width, value: xv });
+                asn.set(ss, Value::Bv { width, value: sv });
+                let eo = axeyum_ir::eval(&arena, orig, &asn).unwrap();
+                let el = axeyum_ir::eval(&arena, low, &asn).unwrap();
+                assert_eq!(eo, el, "barrel shift differs at x={xv}, s={sv}");
+            }
+        }
+    }
+
+    #[test]
+    fn variable_shifts_preserve_denotation() {
+        // Non-power-of-two and power-of-two widths exercise the overflow corners.
+        for w in [2u32, 3, 4] {
+            assert_var_shift_preserves(w, |a, x, s| a.bv_shl(x, s).unwrap());
+            assert_var_shift_preserves(w, |a, x, s| a.bv_lshr(x, s).unwrap());
+            assert_var_shift_preserves(w, |a, x, s| a.bv_ashr(x, s).unwrap());
+        }
     }
 
     #[test]

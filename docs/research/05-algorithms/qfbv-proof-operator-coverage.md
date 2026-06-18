@@ -46,12 +46,20 @@ reconstruct end-to-end (`axeyum-solver` tests).
 reduce to core: `shl k → concat x[w-1-k:0] (0:k)`, `lshr k → concat (0:k) x[w-1:k]`,
 `ashr k → sign_extend x[w-1:k] by k` (with the SMT-LIB `k ≥ w` / `k = 0` edge cases).
 Exhaustively denotation-checked (amounts `0..=w` and `> w`); a `bvshl a 1` query
-reconstructs end-to-end. A **variable** shift amount is left unlowered (the emitter
-rejects it) — it needs a barrel-shifter (mux) network, the remaining hard case.
+reconstructs end-to-end.
 
-**Remaining:** variable-amount shifts (barrel shifter), `bvudiv`/`bvurem` (long
-division), the signed div family, and the route-2 `bv_poly_simp` upgrade (certify the
-*un-lowered* original). The rest of this note is the original analysis.
+**Variable-amount shifts LANDED (barrel shifter).** `lower_var_shift` expresses a
+non-constant `bvshl`/`bvlshr`/`bvashr` as a barrel network: stage `i` (`2^i < w`)
+applies the constant shift by `2^i` selected by bit `i` of `s` (splatted via
+`sign_extend` of a 1-bit slice), through an `and`/`or`/`not` mux; the high bits of
+`s` (`≥ ⌈log₂ w⌉`) drive an overflow mux to the SMT-LIB `s ≥ w` result (`0`, or
+all-sign for `bvashr`). Exhaustively denotation-checked over **all** `(x, s)` pairs
+for widths 2/3/4 (every overflow corner), and a variable `bvshl a s` query
+reconstructs end-to-end to a kernel-checked `False`.
+
+**Remaining:** `bvudiv`/`bvurem` (long division) and the signed div family, plus the
+route-2 `bv_poly_simp` upgrade (certify the *un-lowered* original). The rest of this
+note is the original analysis.
 
 ## The gap: derived operators are rejected (confirmed by probe)
 
