@@ -1428,6 +1428,25 @@ fn bitblast_neg_wrong_carry_in_rejected() {
     );
 }
 
+/// The inlined multiplier term is exponential in width; an 8-bit `bvmul` (top
+/// bit ~41 k un-shared nodes) must be GUARDED — a clean `UnsupportedTerm`, never
+/// an OOM. (Reconstruction starts at the top bit, which trips the node budget.)
+#[test]
+fn bitblast_mult_wide_is_guarded_not_oom() {
+    let mut ctx = ReconstructCtx::new();
+    let bvmul = AletheTerm::App("bvmul".to_owned(), vec![atom("a"), atom("b")]);
+    // 8-bit result: the gadget bits are placeholders — the guard fires on the
+    // lhs bvmul bit before any large term is built or compared.
+    let bits: Vec<AletheTerm> = (0..8).map(|i| bit_of("z", i128::from(i))).collect();
+    let concl = bb_concl(bvmul, bbterm(bits));
+    let err = reconstruct_bitblast_step(&mut ctx, "bitblast_mult", &concl)
+        .expect_err("a wide multiplier must be guarded, not OOM");
+    assert!(
+        matches!(err, ReconstructError::UnsupportedTerm { .. }),
+        "got {err:?}"
+    );
+}
+
 /// `bitblast_mult` (binary, width 2): shift-add multiplier result bits are
 ///   bit0 = `(and b0 a0)`
 ///   bit1 = `(xor (xor (and b0 a1) (and b1 a0)) false)`

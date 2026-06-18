@@ -2986,7 +2986,22 @@ fn bv_bit(
             }
             // Shift-add multiplier (binary). Result bit `i` is `res[i][i]` of the
             // emitter's triangle, width-free. Same reflexive build-and-gate.
+            //
+            // The inlined (un-shared) result term grows ~4.5x per bit, so a wide
+            // multiplier explodes memory. Guard with a node-count budget: beyond it
+            // we return a clean `UnsupportedTerm` rather than OOM. (A shared/`let`
+            // encoding — emitter and reconstruction both — is the real fix; see the
+            // findings note.)
             ("bvmul", [a, b]) => {
+                let nodes = mult_bit_node_count(i);
+                if nodes > MULT_BIT_NODE_BUDGET {
+                    return Err(ReconstructError::UnsupportedTerm {
+                        term: format!(
+                            "bvmul bit {i} reconstructs to ~{nodes} inlined nodes \
+                             (> {MULT_BIT_NODE_BUDGET}); needs a shared encoding"
+                        ),
+                    });
+                }
                 let bit_term = mult_bit_term(a, b, i);
                 Ok(ctx.gate_term_to_prop(&bit_term))
             }
@@ -3110,6 +3125,48 @@ fn neg_bit_term(x: &AletheTerm, i: usize) -> AletheTerm {
 /// computable from rounds `0..=i` alone (running the emitter's triangle at
 /// `size = i + 1`), hence width-free like the adders. Gated through
 /// `gate_term_to_prop` for reflexivity with the gadget bit.
+/// Node-count budget for an inlined `bvmul` result bit. Beyond this the un-shared
+/// term (and the kernel `Expr`/`def_eq` over it) blows memory; ~width 7 is the
+/// last bit under budget (width-8 bit-7 is ~41 k nodes). Reconstruction returns a
+/// clean error past this; the durable fix is a shared/`let` encoding.
+const MULT_BIT_NODE_BUDGET: u128 = 20_000;
+
+/// Node count of `mult_bit_term(_, _, i)` *without building the term*, via the
+/// same `shift_add_multiplier` recurrence — used to guard against the exponential
+/// blowup before allocating. Mirrors the term shapes (`and`/`or`/`xor` = 1 + two
+/// operands, `false` = 1, `and(y,x)` shift leaf = 3).
+fn mult_bit_node_count(i: usize) -> u128 {
+    let size = i + 1;
+    let shift = |j: usize, k: usize| -> u128 { if j <= k { 3 } else { 1 } };
+    let mut res = vec![vec![0u128; size]; size];
+    for k in 0..size {
+        res[0][k] = shift(0, k);
+    }
+    for j in 1..size {
+        let mut carry = vec![0u128; size];
+        carry[0] = 1;
+        for k in 1..size {
+            carry[k] = if j < k {
+                let r = res[j - 1][k - 1];
+                let s = shift(j, k - 1);
+                1 + (1 + r + s) + (1 + (1 + r + s) + carry[k - 1])
+            } else {
+                1
+            };
+        }
+        for k in 0..size {
+            res[j][k] = if k == 0 {
+                shift(0, 0)
+            } else if j > k {
+                res[k][k]
+            } else {
+                1 + (1 + res[j - 1][k] + shift(j, k)) + carry[k]
+            };
+        }
+    }
+    res[size - 1][size - 1]
+}
+
 fn mult_bit_term(x: &AletheTerm, y: &AletheTerm, i: usize) -> AletheTerm {
     let size = i + 1;
     let app = |head: &str, args: Vec<AletheTerm>| AletheTerm::App(head.to_owned(), args);
