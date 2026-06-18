@@ -141,16 +141,178 @@ fn eval_bool(arena: &TermArena, term: TermId, asg: &Assignment) -> Option<bool> 
     }
 }
 
-/// Number of assertions currently falsified (a `None` evaluation counts as
-/// unsatisfied so the search keeps moving; the final `Sat` gate still requires a
-/// genuine all-true model).
-fn unsatisfied(arena: &TermArena, assertions: &[TermId], asg: &Assignment) -> Vec<usize> {
-    assertions
-        .iter()
-        .enumerate()
-        .filter(|&(_, &t)| eval_bool(arena, t, asg) != Some(true))
-        .map(|(i, _)| i)
-        .collect()
+/// Result of one local-search step.
+enum Step {
+    /// A variable was changed (a flip).
+    Moved,
+    /// The chosen unsatisfied assertion has no searchable variable — this try
+    /// cannot fix it, so the caller should restart.
+    Stuck,
+}
+
+/// Incremental local-search state: a current assignment, the per-assertion
+/// satisfaction cache, the unsatisfied count, and a variable→assertions index so
+/// a flip only re-evaluates the assertions that mention the moved variable
+/// (rather than the whole formula).
+struct Search<'a> {
+    arena: &'a TermArena,
+    assertions: &'a [TermId],
+    vars: &'a [Var],
+    /// For each variable (index into `vars`), the assertions that mention it.
+    var_assertions: Vec<Vec<usize>>,
+    /// For each assertion, the searchable variables (indices into `vars`) in it.
+    assertion_vars: Vec<Vec<usize>>,
+    /// Per-assertion current satisfaction under `asg`.
+    sat: Vec<bool>,
+    /// Count of currently-falsified assertions.
+    unsat_count: usize,
+    asg: Assignment,
+    state: u64,
+}
+
+impl<'a> Search<'a> {
+    fn new(arena: &'a TermArena, assertions: &'a [TermId], vars: &'a [Var]) -> Self {
+        let assertion_vars: Vec<Vec<usize>> = assertions
+            .iter()
+            .map(|&t| {
+                let mut v = Vec::new();
+                collect_clause_vars(arena, t, vars, &mut v);
+                v
+            })
+            .collect();
+        let mut var_assertions = vec![Vec::new(); vars.len()];
+        for (a, vis) in assertion_vars.iter().enumerate() {
+            for &vi in vis {
+                var_assertions[vi].push(a);
+            }
+        }
+        Self {
+            arena,
+            assertions,
+            vars,
+            var_assertions,
+            assertion_vars,
+            sat: vec![false; assertions.len()],
+            unsat_count: 0,
+            asg: Assignment::new(),
+            state: SEED,
+        }
+    }
+
+    /// Recomputes the full satisfaction cache (after a fresh random assignment).
+    fn recompute(&mut self) {
+        self.unsat_count = 0;
+        for (a, &t) in self.assertions.iter().enumerate() {
+            let s = eval_bool(self.arena, t, &self.asg) == Some(true);
+            self.sat[a] = s;
+            if !s {
+                self.unsat_count += 1;
+            }
+        }
+    }
+
+    /// Independent full re-verification (the sound `Sat` gate, robust to any
+    /// incremental-cache drift).
+    fn all_satisfied(&self) -> bool {
+        self.assertions
+            .iter()
+            .all(|&t| eval_bool(self.arena, t, &self.asg) == Some(true))
+    }
+
+    /// A random currently-unsatisfied assertion, or `None` if all are satisfied.
+    fn random_unsat(&mut self) -> Option<usize> {
+        let unsat: Vec<usize> = (0..self.assertions.len())
+            .filter(|&a| !self.sat[a])
+            .collect();
+        if unsat.is_empty() {
+            return None;
+        }
+        Some(unsat[pick(&mut self.state, unsat.len())])
+    }
+
+    /// The unsatisfied count that would result from setting `vars[vi] := cand`,
+    /// re-evaluating only the affected assertions (the variable's incidence set).
+    fn score(&mut self, vi: usize, cand: &Value) -> usize {
+        let sym = self.vars[vi].sym;
+        let old = self.asg.get(sym).expect("searched variable is assigned");
+        self.asg.set(sym, cand.clone());
+        let mut count = self.unsat_count;
+        for &a in &self.var_assertions[vi] {
+            let now = eval_bool(self.arena, self.assertions[a], &self.asg) == Some(true);
+            if now != self.sat[a] {
+                if now {
+                    count -= 1;
+                } else {
+                    count += 1;
+                }
+            }
+        }
+        self.asg.set(sym, old);
+        count
+    }
+
+    /// Commits `vars[vi] := cand`, updating the affected assertions' cache and the
+    /// unsatisfied count.
+    fn commit(&mut self, vi: usize, cand: Value) {
+        let sym = self.vars[vi].sym;
+        self.asg.set(sym, cand);
+        let affected = self.var_assertions[vi].clone();
+        for a in affected {
+            let now = eval_bool(self.arena, self.assertions[a], &self.asg) == Some(true);
+            if now != self.sat[a] {
+                if now {
+                    self.unsat_count -= 1;
+                } else {
+                    self.unsat_count += 1;
+                }
+                self.sat[a] = now;
+            }
+        }
+    }
+
+    /// One `WalkSAT` step on a random unsatisfied assertion: a random flip with
+    /// [`NOISE_PCT`] probability, otherwise the greedy move (over the in-clause
+    /// variables' candidates) minimizing the unsatisfied count, ties broken
+    /// randomly. Incremental scoring touches only affected assertions.
+    fn step(&mut self) -> Step {
+        let Some(a) = self.random_unsat() else {
+            return Step::Moved;
+        };
+        let in_clause = self.assertion_vars[a].clone();
+        if in_clause.is_empty() {
+            return Step::Stuck;
+        }
+        if xorshift(&mut self.state) % 100 < NOISE_PCT {
+            let vi = in_clause[pick(&mut self.state, in_clause.len())];
+            let current = self.asg.get(self.vars[vi].sym).expect("assigned");
+            let cands = candidate_values(self.vars[vi].kind, &current, &mut self.state);
+            if !cands.is_empty() {
+                let c = cands[pick(&mut self.state, cands.len())].clone();
+                self.commit(vi, c);
+            }
+            return Step::Moved;
+        }
+        let mut best: Option<(usize, usize, Value)> = None; // (score, vi, value)
+        for &vi in &in_clause {
+            let current = self.asg.get(self.vars[vi].sym).expect("assigned");
+            for cand in candidate_values(self.vars[vi].kind, &current, &mut self.state) {
+                let sc = self.score(vi, &cand);
+                let better = match &best {
+                    None => true,
+                    Some((bs, _, _)) => {
+                        sc < *bs || (sc == *bs && xorshift(&mut self.state) & 1 == 0)
+                    }
+                };
+                if better {
+                    best = Some((sc, vi, cand));
+                }
+            }
+        }
+        if let Some((_, vi, value)) = best {
+            self.commit(vi, value);
+        }
+        Step::Moved
+    }
 }
 
 /// Assigns every variable a fresh random value.
@@ -285,33 +447,27 @@ pub fn solve_local_search(
     let max_tries = 25usize;
     let max_flips = 200 + 40 * span;
 
-    let mut state = SEED;
-    let mut asg = Assignment::new();
+    let mut search = Search::new(arena, assertions, &vars);
     let mut flips = 0usize;
 
     for restart in 0..max_tries {
-        randomize(&mut asg, &vars, &mut state);
+        randomize(&mut search.asg, &vars, &mut search.state);
+        search.recompute();
         for _ in 0..max_flips {
             if past(deadline) {
                 return Ok(unknown("timeout", flips, restart));
             }
-            let unsat = unsatisfied(arena, assertions, &asg);
-            if unsat.is_empty() {
+            if search.unsat_count == 0 && search.all_satisfied() {
                 return Ok(LocalSearchOutcome {
-                    result: CheckResult::Sat(model_from(&asg, &vars)),
+                    result: CheckResult::Sat(model_from(&search.asg, &vars)),
                     flips,
                     restarts: restart,
                 });
             }
-            // Pick a random unsatisfied assertion and the searchable variables in it.
-            let chosen = unsat[pick(&mut state, unsat.len())];
-            let mut in_clause: Vec<usize> = Vec::new();
-            collect_clause_vars(arena, assertions[chosen], &vars, &mut in_clause);
-            if in_clause.is_empty() {
-                break; // ground-false assertion; this try cannot fix it — restart.
+            match search.step() {
+                Step::Moved => flips += 1,
+                Step::Stuck => break, // ground-false assertion — restart.
             }
-            flips += 1;
-            apply_move(arena, assertions, &vars, &in_clause, &mut asg, &mut state);
         }
     }
     Ok(unknown("flip/restart budget exhausted", flips, max_tries))
@@ -345,51 +501,6 @@ fn collect_clause_vars(arena: &TermArena, term: TermId, vars: &[Var], out: &mut 
             }
             _ => {}
         }
-    }
-}
-
-/// Applies one move: with [`NOISE_PCT`] probability a random flip of a random
-/// in-clause variable, otherwise the greedy move (over all in-clause variables'
-/// candidates) minimizing the total unsatisfied count, ties broken randomly.
-fn apply_move(
-    arena: &TermArena,
-    assertions: &[TermId],
-    vars: &[Var],
-    in_clause: &[usize],
-    asg: &mut Assignment,
-    state: &mut u64,
-) {
-    if xorshift(state) % 100 < NOISE_PCT {
-        let vi = in_clause[pick(state, in_clause.len())];
-        let var = &vars[vi];
-        let current = asg.get(var.sym).expect("searched variable is assigned");
-        let cands = candidate_values(var.kind, &current, state);
-        if !cands.is_empty() {
-            let c = cands[pick(state, cands.len())].clone();
-            asg.set(var.sym, c);
-        }
-        return;
-    }
-    // Greedy: evaluate every candidate of every in-clause variable.
-    let mut best: Option<(usize, SymbolId, Value)> = None; // (score, sym, value)
-    for &vi in in_clause {
-        let var = &vars[vi];
-        let current = asg.get(var.sym).expect("searched variable is assigned");
-        for cand in candidate_values(var.kind, &current, state) {
-            asg.set(var.sym, cand.clone());
-            let score = unsatisfied(arena, assertions, asg).len();
-            asg.set(var.sym, current.clone());
-            let better = match &best {
-                None => true,
-                Some((bs, _, _)) => score < *bs || (score == *bs && xorshift(state) & 1 == 0),
-            };
-            if better {
-                best = Some((score, var.sym, cand));
-            }
-        }
-    }
-    if let Some((_, sym, value)) = best {
-        asg.set(sym, value);
     }
 }
 
