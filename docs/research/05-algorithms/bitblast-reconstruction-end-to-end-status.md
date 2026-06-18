@@ -56,15 +56,28 @@ literals) **confirmed** the root cause and **disproved an earlier guess** (it is
    strict premise-order left fold **regressed** `real_emitter_unsat_cnf` (so it is
    not a clean chain either). Binary resolution reconstruction from an unordered
    premise set with implicit pivots is genuinely order-sensitive.
-   **Principled fix:** the emitted proofs are **Carcara-valid by construction**, so
-   mirror **Carcara's own resolution-checking algorithm** (see
-   `references/` — the `bitvectors`/`resolution` checker) rather than an ad-hoc
-   greedy. Carcara resolves with a specific deterministic strategy (e.g. treat the
-   premises as an ordered chain with the correct pivot/`Or` handling and
-   tautology avoidance); reproducing it guarantees the reconstruction follows the
-   same derivation the emitter/Carcara accept. Likely also needs: resolve only
-   single-pivot pairs (avoid tautology-creating resolutions) and honor the chain
-   order.
+   **Principled fix — mirror Carcara's `greedy_resolution`** (read from
+   `references/carcara/carcara/src/resolution.rs`). Its algorithm is *not*
+   sequential binary resolution; it is **conclusion-guided and set-based**:
+   - Normalize each literal to `(negation_count, inner_term)` via
+     `remove_all_negations` (peel *all* leading `not`s; complementarity is a
+     parity difference of 1 on the same inner term — a superset of our
+     `normalize_lit_polarity`).
+   - Pre-collect the **conclusion** literals. Then sweep every premise literal:
+     if it is in the conclusion, put it in the `working_clause`; otherwise it is a
+     **pivot** that must be eliminated against its complement.
+   - **"Only one pivot eliminated per clause"** — at most one pivot per premise;
+     this is the soundness guard that makes the check confluent (it rejects the
+     `equiv_neg1`+`equiv_neg2` unsound example).
+   - At the end every pivot must be eliminated (special cases: a leftover
+     `false` for an empty conclusion; a single term with even extra negations).
+   For **reconstruction** (we need the Lean proof term, not just a yes/no) the
+   plan is: run Carcara's sweep to obtain the pivots + their pairing (the
+   `pivot_trace`), then build the binary-resolution proof term in *that* order via
+   the existing `binary_resolve`. This replaces both the greedy accumulator and
+   the pool, and is exactly the derivation Carcara/the emitter accept — so it
+   closes the bvult-antisymmetry closing step (empty conclusion ⇒ all literals are
+   pivots that pairwise cancel) without dead-ending.
 
 So **no genuine QF_BV `unsat` (beyond `x ∧ ¬x`) closes to `False` yet**, but two of
 the three blockers are **fixed and shipped** (negation `356f3e3`, `=` canon
