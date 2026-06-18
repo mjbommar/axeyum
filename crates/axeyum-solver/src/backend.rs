@@ -176,6 +176,16 @@ pub struct SolverConfig {
     /// `unsat`; every `sat` replays) and a safe no-op when no heavy ops are
     /// present. Off by default so recorded baselines are unchanged.
     pub lazy_bv: bool,
+
+    /// Extend lazy bit-blasting (`lazy_bv`) to also abstract `ite` — the
+    /// dominant operator on control-heavy `QF_BV` (software/protocol verification),
+    /// where the public measurement showed there are no heavy arithmetic gadgets
+    /// to abstract but hundreds of thousands of `ite`s. Abstracting a BV-sorted
+    /// `ite` by a fresh variable is the same sound over-approximation (refining
+    /// `fresh == ite(c,t,e)` only when a model violates it), pruning the abstracted
+    /// branches from the eager circuit. Only meaningful with `lazy_bv`; off by
+    /// default (experimental, gated on a measured win).
+    pub lazy_bv_abstract_ite: bool,
 }
 
 impl SolverConfig {
@@ -262,6 +272,14 @@ impl SolverConfig {
     #[must_use]
     pub fn with_lazy_bv(mut self, lazy_bv: bool) -> Self {
         self.lazy_bv = lazy_bv;
+        self
+    }
+
+    /// Extends lazy bit-blasting to also abstract `ite`.
+    /// See [`SolverConfig::lazy_bv_abstract_ite`].
+    #[must_use]
+    pub fn with_lazy_bv_abstract_ite(mut self, abstract_ite: bool) -> Self {
+        self.lazy_bv_abstract_ite = abstract_ite;
         self
     }
 }

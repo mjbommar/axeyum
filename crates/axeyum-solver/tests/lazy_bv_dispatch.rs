@@ -186,3 +186,144 @@ fn lazy_bv_backend_via_trait_reports_telemetry() {
         "incidental multiplier never materialized"
     );
 }
+
+// --- ite abstraction (P2.1 lever #3: broaden beyond arithmetic) ---------------
+
+/// With `lazy_bv_abstract_ite` ON, a BV-sorted `ite` incidental to a non-ite
+/// contradiction (`x=1 ∧ x=2`) is abstracted and never materialized: UNSAT with
+/// `ops_total == 1` (the ite) and `ops_refined == 0`.
+#[test]
+#[allow(clippy::many_single_char_names)] // x, c, p, q, y are natural names here
+fn lazy_ite_incidental_unsat_abstracts_the_ite() {
+    let mut a = TermArena::new();
+    let xs = a.declare("x", Sort::BitVec(8)).unwrap();
+    let cs = a.declare("c", Sort::Bool).unwrap();
+    let ps = a.declare("p", Sort::BitVec(8)).unwrap();
+    let qs = a.declare("q", Sort::BitVec(8)).unwrap();
+    let ys = a.declare("y", Sort::BitVec(8)).unwrap();
+    let x = a.var(xs);
+    let c = a.var(cs);
+    let p = a.var(ps);
+    let q = a.var(qs);
+    let y = a.var(ys);
+    let ite = a.ite(c, p, q).unwrap();
+    let one = a.bv_const(8, 1).unwrap();
+    let two = a.bv_const(8, 2).unwrap();
+    let e1 = a.eq(y, ite).unwrap();
+    let e2 = a.eq(x, one).unwrap();
+    let e3 = a.eq(x, two).unwrap();
+
+    let cfg = SolverConfig::default().with_lazy_bv_abstract_ite(true);
+    let outcome = check_lazy_bv_abstraction_ro(&a, &[e1, e2, e3], &cfg).unwrap();
+    assert!(
+        matches!(outcome.result, CheckResult::Unsat),
+        "must decide UNSAT, got {:?}",
+        outcome.result
+    );
+    assert_eq!(outcome.ops_total, 1, "the BV ite is the one heavy op");
+    assert_eq!(outcome.ops_refined, 0, "incidental ite never materialized");
+}
+
+/// With the flag OFF, the same `ite`-only formula has no heavy ops to abstract
+/// (`ops_total == 0`) — the default behavior is unchanged.
+#[test]
+#[allow(clippy::many_single_char_names)]
+fn lazy_ite_flag_off_does_not_abstract_ite() {
+    let mut a = TermArena::new();
+    let cs = a.declare("c", Sort::Bool).unwrap();
+    let ps = a.declare("p", Sort::BitVec(8)).unwrap();
+    let qs = a.declare("q", Sort::BitVec(8)).unwrap();
+    let ys = a.declare("y", Sort::BitVec(8)).unwrap();
+    let c = a.var(cs);
+    let p = a.var(ps);
+    let q = a.var(qs);
+    let y = a.var(ys);
+    let ite = a.ite(c, p, q).unwrap();
+    let e1 = a.eq(y, ite).unwrap();
+    let five = a.bv_const(8, 5).unwrap();
+    let e2 = a.eq(p, five).unwrap();
+
+    let cfg = SolverConfig::default(); // abstract_ite off
+    let outcome = check_lazy_bv_abstraction_ro(&a, &[e1, e2], &cfg).unwrap();
+    assert_eq!(
+        outcome.ops_total, 0,
+        "ite must not be abstracted when the flag is off"
+    );
+    assert!(
+        matches!(outcome.result, CheckResult::Sat(_)),
+        "trivially sat, got {:?}",
+        outcome.result
+    );
+}
+
+/// An `ite` whose value is essential to the verdict forces a refinement:
+/// `y = ite(c,1,2) ∧ y = 99` is UNSAT, reachable only after the abstract `ite`
+/// is refined to its exact definition. `ops_refined == 1`.
+#[test]
+#[allow(clippy::many_single_char_names)]
+fn lazy_ite_essential_unsat_via_refinement() {
+    let mut a = TermArena::new();
+    let cs = a.declare("c", Sort::Bool).unwrap();
+    let ys = a.declare("y", Sort::BitVec(8)).unwrap();
+    let c = a.var(cs);
+    let y = a.var(ys);
+    let one = a.bv_const(8, 1).unwrap();
+    let two = a.bv_const(8, 2).unwrap();
+    let ninety_nine = a.bv_const(8, 99).unwrap();
+    let ite = a.ite(c, one, two).unwrap();
+    let e1 = a.eq(y, ite).unwrap();
+    let e2 = a.eq(y, ninety_nine).unwrap();
+
+    let cfg = SolverConfig::default().with_lazy_bv_abstract_ite(true);
+    let outcome = check_lazy_bv_abstraction_ro(&a, &[e1, e2], &cfg).unwrap();
+    assert!(
+        matches!(outcome.result, CheckResult::Unsat),
+        "y=ite(c,1,2) ∧ y=99 is UNSAT, got {:?}",
+        outcome.result
+    );
+    assert_eq!(outcome.ops_total, 1, "one BV ite");
+    assert_eq!(
+        outcome.ops_refined, 1,
+        "the ite is essential and must be refined"
+    );
+}
+
+/// On a sat instance whose model exercises the `ite`, ite-abstraction agrees with
+/// eager (both sat) and yields a replayed model.
+#[test]
+#[allow(clippy::many_single_char_names)]
+fn lazy_ite_sat_agrees_with_eager() {
+    fn build(a: &mut TermArena) -> Vec<axeyum_ir::TermId> {
+        let cs = a.declare("c", Sort::Bool).unwrap();
+        let p = a.declare("p", Sort::BitVec(8)).unwrap();
+        let q = a.declare("q", Sort::BitVec(8)).unwrap();
+        let ys = a.declare("y", Sort::BitVec(8)).unwrap();
+        let c = a.var(cs);
+        let pv = a.var(p);
+        let qv = a.var(q);
+        let y = a.var(ys);
+        let ite = a.ite(c, pv, qv).unwrap();
+        let seven = a.bv_const(8, 7).unwrap();
+        let e1 = a.eq(y, ite).unwrap();
+        let e2 = a.eq(pv, seven).unwrap();
+        let e3 = a.eq(y, seven).unwrap();
+        vec![c, e1, e2, e3] // c forces the then-branch; y=p=7 is sat
+    }
+    let mut a1 = TermArena::new();
+    let asserts1 = build(&mut a1);
+    let eager = solve(&mut a1, &asserts1, &SolverConfig::default()).unwrap();
+    let mut a2 = TermArena::new();
+    let asserts2 = build(&mut a2);
+    let lazy = check_lazy_bv_abstraction_ro(
+        &a2,
+        &asserts2,
+        &SolverConfig::default().with_lazy_bv_abstract_ite(true),
+    )
+    .unwrap();
+    assert!(matches!(eager, CheckResult::Sat(_)), "eager sat: {eager:?}");
+    assert!(
+        matches!(lazy.result, CheckResult::Sat(_)),
+        "ite-lazy must be sat, got {:?}",
+        lazy.result
+    );
+}

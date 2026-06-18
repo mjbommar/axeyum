@@ -107,7 +107,7 @@ pub fn solve_lazy_bv_abstraction(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<LazyBvOutcome, SolverError> {
-    let ops = collect_heavy_ops(arena, assertions);
+    let ops = collect_heavy_ops(arena, assertions, config.lazy_bv_abstract_ite);
     if ops.is_empty() {
         // Nothing to abstract; the eager strategy is already minimal here.
         let result = solve(arena, assertions, config)?;
@@ -213,7 +213,7 @@ fn outcome(
 }
 
 /// The eager problem for one refinement round: the abstraction plus the exact
-/// `fresh == op(lhs, rhs)` definition of every already-refined heavy op.
+/// `fresh == op(args…)` definition of every already-refined heavy op.
 fn round_constraints(
     arena: &mut TermArena,
     abstracted: &[TermId],
@@ -226,34 +226,42 @@ fn round_constraints(
         if !refined.contains(&op_term) {
             continue;
         }
-        let (op, lhs, rhs) = operands(arena, op_term);
+        let (op, args) = op_and_args(arena, op_term);
         let mut rmemo: HashMap<TermId, TermId> = HashMap::new();
-        let abs_lhs = replace_subterms(arena, lhs, replacements, &mut rmemo)?;
-        let abs_rhs = replace_subterms(arena, rhs, replacements, &mut rmemo)?;
-        let exact = rebuild_binary(arena, op, abs_lhs, abs_rhs)?;
+        let mut abs_args = Vec::with_capacity(args.len());
+        for &arg in &args {
+            abs_args.push(replace_subterms(arena, arg, replacements, &mut rmemo)?);
+        }
+        let exact = rebuild_op(arena, op, &abs_args)?;
         let fresh = replacements[&op_term];
         constraints.push(arena.eq(fresh, exact)?);
     }
     Ok(constraints)
 }
 
-/// Whether `op` is a heavy gadget worth abstracting.
-fn is_heavy(op: Op) -> bool {
+/// Whether `op` is a heavy gadget worth abstracting. `include_ite` extends the
+/// set to `ite` (gated by [`SolverConfig::lazy_bv_abstract_ite`]); the BV-sort
+/// restriction is applied by the caller ([`collect_heavy_ops`]).
+fn is_heavy(op: Op, include_ite: bool) -> bool {
     matches!(
         op,
         Op::BvMul | Op::BvUdiv | Op::BvUrem | Op::BvSdiv | Op::BvSrem | Op::BvSmod
-    )
+    ) || (include_ite && matches!(op, Op::Ite))
 }
 
-/// Whether `assertions` contain any heavy gadget (`bvmul`/`bvudiv`/…) — the
-/// signal the [`crate::Strategy::Auto`] selector uses to prefer the low-memory
-/// abstraction strategy.
+/// Whether `assertions` contain any heavy *arithmetic* gadget (`bvmul`/`bvudiv`/
+/// …) — the signal the [`crate::Strategy::Auto`] selector uses to prefer the
+/// low-memory abstraction strategy. (`ite` is never counted here: it is the
+/// opt-in experimental extension, not an auto-selection trigger.)
 pub(crate) fn has_heavy_ops(arena: &TermArena, assertions: &[TermId]) -> bool {
-    !collect_heavy_ops(arena, assertions).is_empty()
+    !collect_heavy_ops(arena, assertions, false).is_empty()
 }
 
 /// Distinct heavy-op subterms in `assertions`, in deterministic first-seen order.
-fn collect_heavy_ops(arena: &TermArena, assertions: &[TermId]) -> Vec<TermId> {
+/// Only BV-sorted terms are abstracted (a fresh BV variable stands in for them);
+/// this also keeps `ite` abstraction to the bit-vector branches, never Boolean
+/// `ite` (whose blasting is already cheap).
+fn collect_heavy_ops(arena: &TermArena, assertions: &[TermId], include_ite: bool) -> Vec<TermId> {
     let mut seen: HashSet<TermId> = HashSet::new();
     let mut ops = Vec::new();
     let mut stack: Vec<TermId> = assertions.iter().rev().copied().collect();
@@ -262,7 +270,7 @@ fn collect_heavy_ops(arena: &TermArena, assertions: &[TermId]) -> Vec<TermId> {
             continue;
         }
         if let TermNode::App { op, args } = arena.node(term) {
-            if is_heavy(*op) {
+            if is_heavy(*op, include_ite) && arena.sort_of(term).bv_width().is_some() {
                 ops.push(term);
             }
             for &arg in args.iter().rev() {
@@ -273,29 +281,26 @@ fn collect_heavy_ops(arena: &TermArena, assertions: &[TermId]) -> Vec<TermId> {
     ops
 }
 
-/// The operator and two operands of an abstractable heavy-op term.
-fn operands(arena: &TermArena, term: TermId) -> (Op, TermId, TermId) {
+/// The operator and operands of an abstractable heavy-op term (binary for the
+/// arithmetic gadgets, ternary for `ite`).
+fn op_and_args(arena: &TermArena, term: TermId) -> (Op, Vec<TermId>) {
     match arena.node(term) {
-        TermNode::App { op, args } if is_heavy(*op) => (*op, args[0], args[1]),
-        _ => unreachable!("operands called on a non-heavy term"),
+        TermNode::App { op, args } => (*op, args.to_vec()),
+        _ => unreachable!("op_and_args called on a non-application term"),
     }
 }
 
 /// Rebuilds the exact heavy operation over (possibly abstracted) operands.
-fn rebuild_binary(
-    arena: &mut TermArena,
-    op: Op,
-    lhs: TermId,
-    rhs: TermId,
-) -> Result<TermId, SolverError> {
+fn rebuild_op(arena: &mut TermArena, op: Op, args: &[TermId]) -> Result<TermId, SolverError> {
     let result = match op {
-        Op::BvMul => arena.bv_mul(lhs, rhs)?,
-        Op::BvUdiv => arena.bv_udiv(lhs, rhs)?,
-        Op::BvUrem => arena.bv_urem(lhs, rhs)?,
-        Op::BvSdiv => arena.bv_sdiv(lhs, rhs)?,
-        Op::BvSrem => arena.bv_srem(lhs, rhs)?,
-        Op::BvSmod => arena.bv_smod(lhs, rhs)?,
-        _ => unreachable!("rebuild_binary called on a non-heavy op"),
+        Op::BvMul => arena.bv_mul(args[0], args[1])?,
+        Op::BvUdiv => arena.bv_udiv(args[0], args[1])?,
+        Op::BvUrem => arena.bv_urem(args[0], args[1])?,
+        Op::BvSdiv => arena.bv_sdiv(args[0], args[1])?,
+        Op::BvSrem => arena.bv_srem(args[0], args[1])?,
+        Op::BvSmod => arena.bv_smod(args[0], args[1])?,
+        Op::Ite => arena.ite(args[0], args[1], args[2])?,
+        _ => unreachable!("rebuild_op called on a non-heavy op"),
     };
     Ok(result)
 }
