@@ -96,9 +96,13 @@ pub fn prove_quant_unsat_alethe(
     }
 
     // Jointly find the witness instances across all universals by deciding the
-    // ground instantiation (the read-only EUF emitter). We keep the minimal
-    // refuting subset so the emitted proof carries no redundant instantiation.
-    let chosen = witness_instances_multi(arena, &universals, &ground)?;
+    // ground instantiation (the read-only EUF emitter). Prefer the brute-force
+    // cartesian/subset search for tiny inputs (it yields the minimal refuting
+    // subset); when that would exceed the candidate cap — many ground terms or
+    // several binders — fall back to the solver's trigger-driven e-matching, which
+    // scales to real quantified queries.
+    let chosen = witness_instances_multi(arena, &universals, &ground)
+        .or_else(|| witness_instances_via_ematch(arena, &universals, &ground))?;
     if chosen.iter().all(Vec::is_empty) {
         return None;
     }
@@ -501,6 +505,117 @@ fn witness_instances_multi(
 /// the cap is large enough to admit a couple of binders over a handful of ground
 /// leaves while keeping the worst-case subset enumeration (2^cap) bounded.
 const WITNESS_CANDIDATE_CAP: usize = 16;
+
+/// Sources the witness tuples from the solver's **trigger-driven e-matching**
+/// (`crate::witness_tuples_via_egraph`) instead of the brute-force cartesian/subset
+/// search, so a quantified `unsat` the solver decides scalably also gets an
+/// emitted, kernel-reconstructible proof. This is the fallback when
+/// [`witness_instances_multi`] declines (the cartesian candidate set exceeds
+/// [`WITNESS_CANDIDATE_CAP`], or a binder has no ground leaf of its sort).
+///
+/// For each universal it e-matches the body's trigger(s) against the ground
+/// assertions to get candidate witness tuples (one ground term per binder, in
+/// binder order). It then **validates** that those instances actually refute: the
+/// full e-matched instance set plus the side assertions must be `unsat` under the
+/// read-only EUF/`QF_BV` emitter. If so, a small minimal-subset trim keeps the
+/// emitted proof tidy when it is cheap (few candidates); otherwise the full,
+/// validated set is used. The validation makes a wrong/insufficient match set fail
+/// cleanly (`None`) rather than ever producing a bad proof.
+///
+/// Returns the per-universal witness tuples (parallel to `universals`), or `None`
+/// when e-matching finds no tuple for some universal or no refuting instance set.
+fn witness_instances_via_ematch(
+    arena: &mut TermArena,
+    universals: &[Universal],
+    ground: &[TermId],
+) -> Option<Vec<Vec<Vec<TermId>>>> {
+    // E-match each universal independently against the ground assertions. A
+    // universal that contributes no tuple stays empty (it may not be needed).
+    let mut per_universal: Vec<Vec<Vec<TermId>>> = Vec::with_capacity(universals.len());
+    for u in universals {
+        // Reconstruct the universal's `forall` term so the e-matcher can peel it.
+        let forall_term = rebuild_forall_term(arena, u)?;
+        let tuples = match crate::witness_tuples_via_egraph(arena, ground, forall_term) {
+            Some((_, _, tuples)) => tuples,
+            None => Vec::new(),
+        };
+        per_universal.push(tuples);
+    }
+    if per_universal.iter().all(Vec::is_empty) {
+        return None;
+    }
+
+    // Validate the full e-matched instance set refutes; if not, this shape is not
+    // (yet) decided by e-matching here — decline cleanly.
+    if !refutes(arena, universals, &per_universal, ground)? {
+        return None;
+    }
+
+    // Optional minimal-subset trim: greedily drop tuples whose removal keeps the
+    // ground set unsat, so the emitted proof carries no redundant instantiation.
+    // Bounded by the small e-matched candidate count, so it stays cheap.
+    let total: usize = per_universal.iter().map(Vec::len).sum();
+    if total <= WITNESS_CANDIDATE_CAP {
+        trim_minimal(arena, universals, &mut per_universal, ground)?;
+    }
+    Some(per_universal)
+}
+
+/// Whether the instances obtained by substituting `chosen` into the universals,
+/// together with the side assertions, are refuted by the read-only EUF/`QF_BV`
+/// emitter. `None` on a substitution/IR error.
+fn refutes(
+    arena: &mut TermArena,
+    universals: &[Universal],
+    chosen: &[Vec<Vec<TermId>>],
+    ground: &[TermId],
+) -> Option<bool> {
+    let mut probe: Vec<TermId> = Vec::new();
+    for (u, tuples) in universals.iter().zip(chosen) {
+        for tuple in tuples {
+            probe.push(substitute_tuple(arena, u, tuple)?);
+        }
+    }
+    probe.extend_from_slice(ground);
+    Some(crate::prove_qf_uf_unsat_alethe(arena, &probe).is_some())
+}
+
+/// Greedily removes any single witness tuple whose deletion preserves the
+/// refutation, leaving a (locally) minimal refuting set. Mutates `chosen` in place.
+/// `None` on a substitution/IR error.
+fn trim_minimal(
+    arena: &mut TermArena,
+    universals: &[Universal],
+    chosen: &mut [Vec<Vec<TermId>>],
+    ground: &[TermId],
+) -> Option<()> {
+    let mut changed = true;
+    while changed {
+        changed = false;
+        'outer: for j in 0..chosen.len() {
+            for i in 0..chosen[j].len() {
+                let removed = chosen[j].remove(i);
+                if refutes(arena, universals, chosen, ground)? {
+                    changed = true;
+                    break 'outer; // restart the scan after a successful removal
+                }
+                chosen[j].insert(i, removed);
+            }
+        }
+    }
+    Some(())
+}
+
+/// Rebuilds the IR `forall` term `∀x.∀y.… body` for a peeled [`Universal`], so the
+/// e-matcher (which peels a `forall` term) can be driven from the emitter's
+/// already-peeled representation. `None` on an IR builder error.
+fn rebuild_forall_term(arena: &mut TermArena, u: &Universal) -> Option<TermId> {
+    let mut term = u.body;
+    for &var in u.vars.iter().rev() {
+        term = arena.forall(var, term).ok()?;
+    }
+    Some(term)
+}
 
 /// The cartesian product of `per_binder[0] × per_binder[1] × …`, in
 /// lexicographic order with the first binder varying slowest. With no binders
@@ -917,5 +1032,65 @@ mod tests {
         let fa = arena.apply(f, &[av]).unwrap();
         let fa_eq_c = arena.eq(fa, cv).unwrap();
         assert!(prove_quant_unsat_alethe(&mut arena, &[forall, fa_eq_c]).is_none());
+    }
+
+    /// **Scale past the brute-force cap via e-matching**: `∀x.(f x = c)` with the
+    /// single refuting fact `f a ≠ c`, but buried among **far more ground leaves of
+    /// the binder's sort** than [`super::WITNESS_CANDIDATE_CAP`]. The cartesian
+    /// candidate count (one per leaf) overflows the cap, so the brute-force
+    /// `witness_instances_multi` returns `None`; the trigger `f(x)` only matches the
+    /// lone `f`-application `f(a)`, so the e-matching path picks `x := a` and the
+    /// proof still emits + self-checks. The decoys never enter the proof.
+    #[test]
+    fn ematch_sources_witness_past_cap() {
+        let mut arena = TermArena::new();
+        let alpha = Sort::BitVec(8);
+        let x = arena.declare("x", alpha).unwrap();
+        let a = arena.declare("a", alpha).unwrap();
+        let c = arena.declare("c", alpha).unwrap();
+        let f = arena.declare_fun("f", &[alpha], alpha).unwrap();
+
+        let xv = arena.var(x);
+        let cv = arena.var(c);
+        let fx = arena.apply(f, &[xv]).unwrap();
+        let fx_eq_c = arena.eq(fx, cv).unwrap();
+        let forall = arena.forall(x, fx_eq_c).unwrap();
+
+        // The single refuting fact.
+        let av = arena.var(a);
+        let fa = arena.apply(f, &[av]).unwrap();
+        let fa_eq_c = arena.eq(fa, cv).unwrap();
+        let not_fa_eq_c = arena.not(fa_eq_c).unwrap();
+
+        // Many decoy ground leaves of the binder's sort `alpha`, all summed into one
+        // harmless ground equality so they are collected as instantiation
+        // candidates. 24 decoys ≫ the cap of 16, so the cartesian search bails.
+        let mut decoys: Vec<TermId> = Vec::new();
+        for i in 0..24u32 {
+            let s = arena.declare(&format!("d{i}"), alpha).unwrap();
+            decoys.push(arena.var(s));
+        }
+        let mut acc = decoys[0];
+        for &d in &decoys[1..] {
+            acc = arena.bv_add(acc, d).unwrap();
+        }
+        let sum_eq_self = arena.eq(acc, acc).unwrap();
+
+        // Confirm the brute-force path alone would decline (cap exceeded).
+        let universals = vec![super::Universal {
+            vars: vec![x],
+            body: fx_eq_c,
+        }];
+        let ground = vec![not_fa_eq_c, sum_eq_self];
+        assert!(
+            super::witness_instances_multi(&mut arena, &universals, &ground).is_none(),
+            "brute-force must bail past the candidate cap"
+        );
+
+        // The full emitter sources the witness from e-matching and still proves it.
+        let proof = prove_quant_unsat_alethe(&mut arena, &[forall, not_fa_eq_c, sum_eq_self])
+            .expect("e-matching sources the witness past the brute-force cap");
+        recheck(&arena, &proof, "x", fx_eq_c);
+        assert_eq!(count_inst(&proof), 1, "only the relevant f(a) instance");
     }
 }

@@ -3151,6 +3151,57 @@ fn end_to_end_nested_universal_to_false() {
     assert_infers_false(&mut ctx, term);
 }
 
+/// **Scaling deliverable — e-matching-sourced witness reconstructs to `False`**:
+/// `∀x.(f x = c) ∧ f a ≠ c`, but with **24 decoy ground leaves of the binder's
+/// sort** — far past the emitter's brute-force candidate cap. The cartesian
+/// witness search bails, so the witness `x := a` is sourced from the solver's
+/// trigger-driven e-matching (only `f(a)` matches `f(x)`). The emitted proof's
+/// lone `forall_elim` still reconstructs to a kernel-checked `False`, so a
+/// quantified `unsat` the *solver* decides scalably also gets a trusted proof.
+#[test]
+fn end_to_end_ematch_sourced_witness_to_false() {
+    let mut arena = TermArena::new();
+    let alpha = Sort::BitVec(8);
+    let x = arena.declare("x", alpha).unwrap();
+    let a = arena.declare("a", alpha).unwrap();
+    let c = arena.declare("c", alpha).unwrap();
+    let f = arena.declare_fun("f", &[alpha], alpha).unwrap();
+
+    let xv = arena.var(x);
+    let cv = arena.var(c);
+    let fx = arena.apply(f, &[xv]).unwrap();
+    let fx_eq_c = arena.eq(fx, cv).unwrap();
+    let forall = arena.forall(x, fx_eq_c).unwrap();
+
+    let av = arena.var(a);
+    let fa = arena.apply(f, &[av]).unwrap();
+    let fa_eq_c = arena.eq(fa, cv).unwrap();
+    let not_fa_eq_c = arena.not(fa_eq_c).unwrap();
+
+    // 24 decoy leaves of `alpha`, summed into one harmless ground equality; ≫ the
+    // brute-force cap of 16, so the cartesian search returns None and e-matching
+    // must supply the witness.
+    let mut acc: Option<axeyum_ir::TermId> = None;
+    for i in 0..24u32 {
+        let s = arena.declare(&format!("d{i}"), alpha).unwrap();
+        let dv = arena.var(s);
+        acc = Some(match acc {
+            None => dv,
+            Some(prev) => arena.bv_add(prev, dv).unwrap(),
+        });
+    }
+    let sum = acc.unwrap();
+    let sum_eq_self = arena.eq(sum, sum).unwrap();
+
+    let proof = crate::prove_quant_unsat_alethe(&mut arena, &[forall, not_fa_eq_c, sum_eq_self])
+        .expect("e-matching sources the witness past the brute-force cap");
+
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_quant_unsat_proof(&mut ctx, &proof)
+        .expect("the e-matching-sourced refutation reconstructs");
+    assert_infers_false(&mut ctx, term);
+}
+
 /// The reconstructed nested universal axiom is an iterated dependent product
 /// `Pi (x:α), Pi (y:α), Eq α (h x y) c` — confirm its declared type is a `Pi`
 /// whose body is itself a `Pi`, so the two `forall_elim` applications type-check.

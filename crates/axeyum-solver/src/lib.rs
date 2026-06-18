@@ -165,7 +165,9 @@ pub use qfbv_alethe::{
 };
 pub use qfdt_simp_alethe::prove_qf_dt_unsat_alethe_via_simplification;
 pub use qfufbv_alethe::prove_qf_ufbv_unsat_alethe;
-pub use qinst_egraph::{instantiate_forall_via_egraph, prove_quantified_unsat_via_egraph};
+pub use qinst_egraph::{
+    instantiate_forall_via_egraph, prove_quantified_unsat_via_egraph, witness_tuples_via_egraph,
+};
 pub use quant_alethe::prove_quant_unsat_alethe;
 pub use reconstruct::{
     LraReconstructCtx, ReconstructCtx, ReconstructError, reconstruct_bitblast_step,

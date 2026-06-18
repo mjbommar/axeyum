@@ -109,10 +109,59 @@ pub fn instantiate_forall_via_egraph(
     ground: &[TermId],
     forall_term: TermId,
 ) -> Vec<TermId> {
+    let Some((vars, body, tuples)) = witness_tuples_via_egraph(arena, ground, forall_term) else {
+        return Vec::new();
+    };
+    let var_terms: Vec<TermId> = vars.iter().map(|&v| arena.var(v)).collect();
+    let mut instances = Vec::new();
+    for tuple in &tuples {
+        let replacements: HashMap<TermId, TermId> = var_terms
+            .iter()
+            .copied()
+            .zip(tuple.iter().copied())
+            .collect();
+        let mut memo = HashMap::new();
+        if let Ok(instance) = replace_subterms(arena, body, &replacements, &mut memo) {
+            instances.push(instance);
+        }
+    }
+    instances.sort_by_key(|t| t.index());
+    instances.dedup();
+    instances
+}
+
+/// E-matches the universal `forall_term`'s trigger(s) against the `ground` terms
+/// and returns, in addition to the bound variables and quantifier-free body, the
+/// **witness tuples** — one ground term per bound variable, in binder order
+/// (outermost first) — that the e-matching selects. Tuples are deterministically
+/// ordered and de-duplicated.
+///
+/// This is the witness-tuple source the Alethe quantifier emitter
+/// ([`crate::prove_quant_unsat_alethe`]) consumes when the brute-force cartesian
+/// search would blow its candidate cap: e-matching is trigger-driven, so it scales
+/// to many ground terms / multiple binders where the cartesian product does not.
+/// The returned tuples are *candidates* — the caller validates that some subset
+/// actually refutes the ground set before emitting a proof, so an unhelpful match
+/// set is rejected cleanly, never turned into a bad proof.
+///
+/// Returns `None` when `forall_term` is not a universal, has no trigger covering
+/// all bound variables, or no complete witness tuple is found (the trigger's
+/// symbols do not occur in the ground terms).
+///
+/// # Panics
+///
+/// Panics only if the quantifier binds more than `u32::MAX` variables (which no
+/// real input does).
+#[must_use]
+pub fn witness_tuples_via_egraph(
+    arena: &mut TermArena,
+    ground: &[TermId],
+    forall_term: TermId,
+) -> Option<(Vec<SymbolId>, TermId, Vec<Vec<TermId>>)> {
     // Peel the (possibly nested) universal prefix `∀x. ∀y. … body`.
     let (vars, body) = peel_foralls(arena, forall_term);
     if vars.is_empty() {
-        return Vec::new();
+        return None;
     }
     let var_index: HashMap<SymbolId, u32> = vars
         .iter()
@@ -126,7 +175,7 @@ pub fn instantiate_forall_via_egraph(
     // and joined below) handles patterns like `∀x,y. f(x) = g(y)`.
     let triggers = select_triggers(arena, body, &var_index);
     if triggers.is_empty() {
-        return Vec::new();
+        return None;
     }
 
     let mut bridge = InstBridge::new();
@@ -161,35 +210,36 @@ pub fn instantiate_forall_via_egraph(
         }
         joined = next;
         if joined.is_empty() {
-            return Vec::new();
+            return None;
         }
     }
 
-    let var_terms: Vec<TermId> = vars.iter().map(|&v| arena.var(v)).collect();
-    let mut instances = Vec::new();
+    let mut tuples: Vec<Vec<TermId>> = Vec::new();
     for subst in joined {
-        // Build the substitution from every bound variable to a ground witness of
-        // its matched class; skip incomplete matches.
-        let mut replacements = HashMap::new();
-        let complete = (0..vars.len()).all(|i| {
-            subst
+        // Build the witness tuple from every bound variable's matched class
+        // representative; skip incomplete matches.
+        let mut tuple: Vec<TermId> = Vec::with_capacity(nvars);
+        let complete = (0..nvars).all(|i| {
+            if let Some(repr) = subst
                 .get(i)
                 .copied()
                 .flatten()
                 .and_then(|class| bridge.repr_term.get(&class).copied())
-                .is_some_and(|repr| replacements.insert(var_terms[i], repr).is_none())
+            {
+                tuple.push(repr);
+                true
+            } else {
+                false
+            }
         });
-        if !complete {
-            continue;
-        }
-        let mut memo = HashMap::new();
-        if let Ok(instance) = replace_subterms(arena, body, &replacements, &mut memo) {
-            instances.push(instance);
+        if complete {
+            tuples.push(tuple);
         }
     }
-    instances.sort_by_key(|t| t.index());
-    instances.dedup();
-    instances
+    // Deterministic order and de-dup (tuples compare lexicographically by index).
+    tuples.sort_by(|x, y| x.iter().map(|t| t.index()).cmp(y.iter().map(|t| t.index())));
+    tuples.dedup();
+    Some((vars, body, tuples))
 }
 
 /// Peels the universal prefix `∀v1. ∀v2. … body`, returning the bound variables
@@ -512,6 +562,20 @@ mod tests {
         assert!(instances.contains(&want_a), "instance for a missing");
         assert!(instances.contains(&want_b), "instance for b missing");
         assert_eq!(instances.len(), 2);
+    }
+
+    #[test]
+    fn witness_tuples_expose_the_matched_witnesses() {
+        // The witness-tuple variant returns the binder→ground-term tuples (in
+        // binder order) the e-matching selects: here `[a]` and `[b]` for the two
+        // f-applications. This is what the Alethe quantifier emitter consumes.
+        let (mut arena, forall, [a, b], _c, ground0, _f, _x) = setup();
+        let (vars, _body, tuples) =
+            witness_tuples_via_egraph(&mut arena, &[ground0], forall).expect("matches");
+        assert_eq!(vars.len(), 1, "one binder");
+        assert!(tuples.contains(&vec![a]), "witness a missing: {tuples:?}");
+        assert!(tuples.contains(&vec![b]), "witness b missing: {tuples:?}");
+        assert_eq!(tuples.len(), 2);
     }
 
     #[test]
