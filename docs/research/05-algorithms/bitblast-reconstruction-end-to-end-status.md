@@ -142,11 +142,27 @@ the three blockers are **fixed and shipped** (negation `356f3e3`, `=` canon
 resolution checker). Land it with the bvult-antisymmetry case as the end-to-end
 test — at which point genuine QF_BV refutations close to kernel-checked `False`.
 
-### 2. Reconstruction is slow even at tiny widths
+### 2. Reconstruction slowness — RESOLVED (2026-06-18)
 
-`(bvadd (bvmul a b) (bvneg c)) = a ∧ ¬…` at **3-bit** reconstructs correctly but
-takes **> 120 s** (with the Davis–Putnam resolution; the committed width-2 cases
-stay ~ms). 3-bit is tiny, so this is a real bottleneck.
+**Status: FIXED.** `(bvadd (bvmul a b) (bvneg c)) = a ∧ ¬…` at 3-bit went from
+**> 120 s → 60 ms**; 4-bit `bvmul` from **26 s → 79 ms** (330×). The fix was
+**polynomial CNF-introduction + bridge proofs** (commits `97f083a` … `7becf04`):
+`prove_clause_by_cases` proved every Tseitin tautology by a `2^atoms` truth-table
+that recursed into the gates' bit leaves. Replaced by:
+- `and_pos`/`and_neg`/`or_pos`/`or_neg`: direct `O(k)` proofs (`em` + `And.rec`
+  projection / `And.intro` fold / `Or` injection).
+- `equiv_*`/`xor_*`: case-split only the gate's **two operands** `{a,b}` (4 cases),
+  not their leaves.
+- the equiv1/equiv2 **bridge**: the substituted clause is `¬⟦B⟧ ∨ ⟦B⟧`, proved by a
+  single `em ⟦B⟧` instead of a `2^leaves` split.
+All enabled by an assignment-first lookup in `prove_term_true/false` (treat a
+case-split atom as opaque) and gated by `check_against` (soundness unchanged). The
+residual ~5×/bit `bvmul` growth is the inherent multiplier-**term** blowup
+([[bitblast-reconstruction-multiplier-blowup]], guarded at width 7), not the proof
+search. Historical note on what did NOT work follows.
+
+The Davis–Putnam resolution path (the historical >120 s figure) was profiled and
+RULED OUT as the bottleneck:
 
 **Two candidate fixes were tried and empirically RULED OUT (2026-06-18):**
 - **DP elimination order** — added a min-cost (`min pos×neg`) pivot heuristic +
