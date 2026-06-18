@@ -1857,14 +1857,50 @@ fn end_to_end_concat_reconstructs() {
         .expect("a concat QF_BV proof must reconstruct to kernel-checked False");
 }
 
-// NOTE: end-to-end `bvult`/`bvslt` reconstruction is not yet closed. The
-// `bitblast_ult`/`_slt` *step* reconstructs (see the unit tests above), but the
-// full proof's Tseitin `cnf_intro` clauses over the less-than *ladder*'s nested
-// Boolean structure are not all recognized as tautologies by the current
-// `reconstruct_cnf_intro_rule` (it returns MalformedStep). Extending CNF-intro to
-// the ladder shapes is the next slice; the step handler landed here is the
-// prerequisite. (Bitwise/arith/structural ops, whose `B` is shallower, do close
-// end-to-end — see the tests above.)
+/// **End-to-end**: `(bvult a b) ∧ ¬(bvult a b)` — bit-blasted via the unsigned
+/// less-than `bitblast_ult`, the predicate bridged to its ladder `B` — reconstructs
+/// to a kernel-checked `False`.
+#[test]
+fn end_to_end_ult_reconstructs() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let ult = arena.bv_ult(a, b).unwrap();
+    let nult = arena.not(ult).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[ult, nult]).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    reconstruct_qf_bv_proof(&mut ctx, &proof)
+        .expect("a bvult QF_BV proof must reconstruct to kernel-checked False");
+}
+
+/// **End-to-end**: `(bvslt a b) ∧ ¬(bvslt a b)` — bit-blasted via the signed
+/// less-than `bitblast_slt` — reconstructs to a kernel-checked `False`.
+#[test]
+fn end_to_end_slt_reconstructs() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let slt = arena.bv_slt(a, b).unwrap();
+    let nslt = arena.not(slt).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[slt, nslt]).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    reconstruct_qf_bv_proof(&mut ctx, &proof)
+        .expect("a bvslt QF_BV proof must reconstruct to kernel-checked False");
+}
 
 /// **NEGATIVE soundness**: a `QF_BV` proof whose bit-blast needs `bvcomp`
 /// (`bitblast_comp`, still outside the reconstructed fragment) is rejected by

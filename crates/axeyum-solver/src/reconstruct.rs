@@ -2265,9 +2265,26 @@ fn prove_clause_leaf(
         }
     }
     // No literal holds in this assignment ⇒ the clause is NOT a tautology.
+    let clause_keys: Vec<String> = conclusion
+        .iter()
+        .map(|l| {
+            let neg = if l.negated { "¬" } else { "" };
+            format!("{neg}{}", l.atom.key())
+        })
+        .collect();
+    let assign_keys: Vec<String> = assignment
+        .map
+        .iter()
+        .map(|(k, &(_, _, v))| format!("{k}={v}"))
+        .collect();
     Err(ReconstructError::MalformedStep {
         rule: "cnf_intro".to_owned(),
-        detail: "conclusion clause is not a tautology under the gate model".to_owned(),
+        detail: format!(
+            "conclusion clause is not a tautology under the gate model; \
+             clause = [{}] falsified by {{{}}}",
+            clause_keys.join(", "),
+            assign_keys.join(", ")
+        ),
     })
 }
 
@@ -3570,7 +3587,13 @@ fn collect_bitblast_bridge(commands: &[AletheCommand]) -> BTreeMap<String, Aleth
 /// gate / Boolean constant): a genuine bit-vector term.
 fn is_bv_predicate_atom(term: &AletheTerm) -> bool {
     match term {
-        AletheTerm::App(head, args) if head == "=" && args.len() == 2 => {
+        // Bit-vector equality (`=` over BV operands) and the comparison predicates
+        // (`bvult`/`bvslt`) whose bit-level form `B` is a ladder. Each carries a
+        // `pred ↔ B` bridge entry so its `equiv1`/`equiv2` clause is reconstructed
+        // as the tautology `¬B ∨ B` over the bit atoms.
+        AletheTerm::App(head, args)
+            if (head == "=" || head == "bvult" || head == "bvslt") && args.len() == 2 =>
+        {
             args.iter().any(is_bitvector_operand)
         }
         _ => false,
