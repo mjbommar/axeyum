@@ -5316,7 +5316,113 @@ pub fn reconstruct_lra_proof(
             });
         }
     };
+    // Strict-`<` cycle `e0<e1<…<e_{n-1}<e0` (n≥2): fold `lt_trans` to `lt e0 e0`,
+    // then `lt_irrefl`. Tried first; falls through to the `≤` baby-Farkas shape.
+    if let Some(proof) = try_strict_cycle(ctx, arena, assertions, &certificate)? {
+        return Ok(proof);
+    }
     reconstruct_transitivity_refutation(ctx, arena, assertions, &certificate)
+}
+
+/// Reconstruct a strict-`<` **cycle** refutation: the `n ≥ 2` participating
+/// constraints (unit multipliers) form a directed cycle `e0 < e1 < … < e_{n-1} < e0`.
+/// Fold `lt_trans` around it to `lt e0 e0`, then `lt_irrefl e0` ⇒ `False`. Generalizes
+/// the `n = 2` antisymmetry. Returns `Ok(None)` if the participating constraints are
+/// not all strict-`<` or do not form a single cycle; kernel-gated (`infer` + `def_eq
+/// False`), so a wrong term is `KernelRejected`, never accepted.
+fn try_strict_cycle(
+    ctx: &mut LraReconstructCtx,
+    arena: &TermArena,
+    assertions: &[TermId],
+    certificate: &crate::FarkasCertificate,
+) -> Result<Option<ExprId>, ReconstructError> {
+    let mut participating: Vec<usize> = certificate
+        .origins
+        .iter()
+        .zip(&certificate.multipliers)
+        .filter(|(_, m)| !m.is_zero())
+        .map(|(&o, _)| o)
+        .collect();
+    participating.sort_unstable();
+    participating.dedup();
+    if participating.len() < 2 {
+        return Ok(None);
+    }
+    // Cycles use each constraint once (unit multiplier).
+    for (o, m) in certificate.origins.iter().zip(&certificate.multipliers) {
+        if participating.contains(o) && !m.is_zero() && *m != Rational::integer(1) {
+            return Ok(None);
+        }
+    }
+    // Parse each participating assertion as a strict edge `l < r`.
+    let mut edges: Vec<(LinR, LinR)> = Vec::with_capacity(participating.len());
+    for &i in &participating {
+        match as_lt_constraint(arena, assertions[i]) {
+            Some(c) => edges.push(c),
+            None => return Ok(None),
+        }
+    }
+    // Order into one cycle: from edge 0, follow `r → next edge whose l == r`.
+    let n = edges.len();
+    let mut used = vec![false; n];
+    let mut order: Vec<usize> = vec![0];
+    used[0] = true;
+    let mut cur_rhs = edges[0].1.clone();
+    for _ in 1..n {
+        let Some(j) = (0..n).find(|&j| !used[j] && edges[j].0 == cur_rhs) else {
+            return Ok(None);
+        };
+        used[j] = true;
+        order.push(j);
+        cur_rhs = edges[j].1.clone();
+    }
+    // Must close: last RHS == first edge's LHS.
+    if cur_rhs != edges[order[0]].0 {
+        return Ok(None);
+    }
+    // Nodes e_k = LHS of the k-th edge in cycle order; edge k is `e_k < e_{(k+1)%n}`.
+    let nodes: Vec<ExprId> = order
+        .iter()
+        .map(|&k| ctx.lin_to_r(&edges[k].0))
+        .collect::<Result<_, _>>()?;
+    let e0 = nodes[0];
+    // h_k : lt e_k e_{(k+1)%n}; fold lt_trans into `acc : lt e0 e_{(k+1)%n}`.
+    let mut acc = {
+        let p = ctx.mk_lt(nodes[0], nodes[1 % n]);
+        ctx.hyp_axiom(p)?
+    };
+    for k in 1..n {
+        let mid = nodes[k];
+        let to = nodes[(k + 1) % n];
+        let p = ctx.mk_lt(mid, to);
+        let hk = ctx.hyp_axiom(p)?;
+        let tr = ctx.kernel.const_(ctx.arith.lt_trans, vec![]);
+        let e = ctx.kernel.app(tr, e0);
+        let e = ctx.kernel.app(e, mid);
+        let e = ctx.kernel.app(e, to);
+        let e = ctx.kernel.app(e, acc);
+        acc = ctx.kernel.app(e, hk);
+    }
+    // acc : lt e0 e0 ; lt_irrefl e0 acc : False.
+    let irrefl = ctx.kernel.const_(ctx.arith.lt_irrefl, vec![]);
+    let e = ctx.kernel.app(irrefl, e0);
+    let proof = ctx.kernel.app(e, acc);
+    let inferred = ctx
+        .kernel
+        .infer(proof)
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "la_generic".to_owned(),
+            detail: format!("infer failed: {e:?}"),
+        })?;
+    let false_ = ctx.kernel.const_(ctx.arith.logic.false_, vec![]);
+    if ctx.kernel.def_eq(inferred, false_) {
+        Ok(Some(proof))
+    } else {
+        Err(ReconstructError::KernelRejected {
+            rule: "la_generic".to_owned(),
+            detail: "strict-cycle refutation did not infer to False".to_owned(),
+        })
+    }
 }
 
 /// Reconstruct the transitivity-reducible (`e ≤ 0 ∧ 1 ≤ e`) baby-Farkas shape.
@@ -5375,12 +5481,7 @@ fn reconstruct_transitivity_refutation(
         }
     }
 
-    // Strict-`<` antisymmetry `e0 < e1 ∧ e1 < e0` has its own (cleaner) refutation.
-    if let Some(proof) =
-        try_strict_antisymmetry(ctx, arena, assertions[*lo_or_hi_a], assertions[*lo_or_hi_b])?
-    {
-        return Ok(proof);
-    }
+    // (Strict-`<` antisymmetry is handled upstream by `try_strict_cycle`, the n=2 case.)
 
     // Re-linearize the two participating assertion atoms into `le L R` shape, as
     // (L − R ≤ 0)-style `LinR`s, but keeping the original two sides so we can match
@@ -5494,64 +5595,6 @@ fn as_lt_constraint(arena: &TermArena, term: TermId) -> Option<(LinR, LinR)> {
         IrOp::RealLt => Some((l, r)),
         IrOp::RealGt => Some((r, l)),
         _ => None,
-    }
-}
-
-/// Reconstruct a strict-`<` antisymmetry refutation: two assertions `e0 < e1` and
-/// `e1 < e0`. The proof is `lt_irrefl e0 (lt_trans e0 e1 e0 h0 h1) : False`. Returns
-/// `Ok(None)` if the two assertions are not this strict antisymmetric shape (caller
-/// falls back to the `≤` baby-Farkas path); the result is kernel-gated (`infer` +
-/// `def_eq False`), so a wrong term is rejected, never accepted.
-fn try_strict_antisymmetry(
-    ctx: &mut LraReconstructCtx,
-    arena: &TermArena,
-    ta: TermId,
-    tb: TermId,
-) -> Result<Option<ExprId>, ReconstructError> {
-    let (Some(s0), Some(s1)) = (as_lt_constraint(arena, ta), as_lt_constraint(arena, tb)) else {
-        return Ok(None);
-    };
-    // s0 = e0 < e1, s1 = e1' < e0'; antisymmetric iff e1' = e1 and e0' = e0.
-    if !(s1.0 == s0.1 && s1.1 == s0.0) {
-        return Ok(None);
-    }
-    let e0 = ctx.lin_to_r(&s0.0)?;
-    let e1 = ctx.lin_to_r(&s0.1)?;
-    // h0 : lt e0 e1 ; h1 : lt e1 e0.
-    let p0 = ctx.mk_lt(e0, e1);
-    let h0 = ctx.hyp_axiom(p0)?;
-    let p1 = ctx.mk_lt(e1, e0);
-    let h1 = ctx.hyp_axiom(p1)?;
-    // step := lt_trans e0 e1 e0 h0 h1 : lt e0 e0.
-    let step = {
-        let tr = ctx.kernel.const_(ctx.arith.lt_trans, vec![]);
-        let e = ctx.kernel.app(tr, e0);
-        let e = ctx.kernel.app(e, e1);
-        let e = ctx.kernel.app(e, e0);
-        let e = ctx.kernel.app(e, h0);
-        ctx.kernel.app(e, h1)
-    };
-    // refute := lt_irrefl e0 step : False.
-    let proof = {
-        let irrefl = ctx.kernel.const_(ctx.arith.lt_irrefl, vec![]);
-        let e = ctx.kernel.app(irrefl, e0);
-        ctx.kernel.app(e, step)
-    };
-    let inferred = ctx
-        .kernel
-        .infer(proof)
-        .map_err(|e| ReconstructError::KernelRejected {
-            rule: "la_generic".to_owned(),
-            detail: format!("infer failed: {e:?}"),
-        })?;
-    let false_ = ctx.kernel.const_(ctx.arith.logic.false_, vec![]);
-    if ctx.kernel.def_eq(inferred, false_) {
-        Ok(Some(proof))
-    } else {
-        Err(ReconstructError::KernelRejected {
-            rule: "la_generic".to_owned(),
-            detail: "strict-antisymmetry refutation did not infer to False".to_owned(),
-        })
     }
 }
 

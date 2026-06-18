@@ -2528,6 +2528,37 @@ fn lra_strict_antisymmetry_reconstructs() {
     );
 }
 
+/// **Strict-`<` 3-cycle** `x < y ∧ y < z ∧ z < x` reconstructs to a kernel-checked
+/// `False` via `lt_trans` folded around the cycle → `lt x x` → `lt_irrefl`. Exercises
+/// the N-constraint generalization (`try_strict_cycle`) beyond the 2-constraint case.
+#[test]
+fn lra_strict_3cycle_reconstructs() {
+    use axeyum_ir::TermArena;
+
+    use super::{LraReconstructCtx, reconstruct_lra_proof};
+
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let y = arena.real_var("y").unwrap();
+    let z = arena.real_var("z").unwrap();
+    let a1 = arena.real_lt(x, y).unwrap(); // x < y
+    let a2 = arena.real_lt(y, z).unwrap(); // y < z
+    let a3 = arena.real_lt(z, x).unwrap(); // z < x
+
+    let mut ctx = LraReconstructCtx::new();
+    let proof = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2, a3])
+        .expect("strict 3-cycle LRA unsat reconstructs to False");
+    let inferred = ctx.kernel_mut().infer(proof).unwrap();
+    let false_ = {
+        let f = ctx.arith().logic.false_;
+        ctx.kernel_mut().const_(f, vec![])
+    };
+    assert!(
+        ctx.kernel_mut().def_eq(inferred, false_),
+        "strict-3-cycle LRA term must infer to False"
+    );
+}
+
 /// A **satisfiable** instance has no Farkas refutation, so reconstruction is
 /// rejected (a `MalformedStep`, never a wrong `False`).
 #[test]
