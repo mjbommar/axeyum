@@ -3211,7 +3211,7 @@ fn parse_bv_literal(symbol: &str) -> Option<Vec<bool>> {
 ///
 /// Returns [`ReconstructError::UnsupportedRule`] for a bitblast rule outside the
 /// bitwise + `extract`/`sign_extend`/`concat` + `add`/`neg`/`mult` +
-/// `ult`/`slt` fragment (`bitblast_comp`, shifts, div/rem, …),
+/// `ult`/`slt`/`comp` fragment (shifts, div/rem, …),
 /// [`ReconstructError::MalformedStep`] for a conclusion that is
 /// not the expected `(= lhs rhs)` shape, [`ReconstructError::UnsupportedTerm`] for
 /// a non-bitwise operand, and [`ReconstructError::KernelRejected`] at the gate.
@@ -3235,6 +3235,7 @@ pub fn reconstruct_bitblast_step(
         | "bitblast_extract"
         | "bitblast_sign_extend"
         | "bitblast_concat"
+        | "bitblast_comp"
         | "bitblast_add"
         | "bitblast_neg"
         | "bitblast_mult"
@@ -3314,10 +3315,10 @@ fn gadget_bit_to_prop(ctx: &mut ReconstructCtx, bit: &AletheTerm) -> ExprId {
 }
 
 /// The `Prop` for bit `i` of a term-op `lhs`. Routes through [`bv_bit`], except
-/// for the width-needing top-level structural ops: `sign_extend` (operand width
-/// recovered as `result_width - by`) and `concat` (low-operand width recovered
-/// via [`bv_operand_width`]). These appear only at the top of their own step,
-/// never nested, so the width is known exactly here.
+/// for the width-needing top-level ops: `sign_extend` (operand width recovered as
+/// `result_width - by`), `concat` (low-operand width via [`bv_operand_width`]), and
+/// `bvcomp` (operand width via [`bv_operand_width`]). These appear only at the top
+/// of their own step, never nested, so the width is known exactly here.
 fn lhs_bit_prop(
     ctx: &mut ReconstructCtx,
     lhs: &AletheTerm,
@@ -3383,8 +3384,50 @@ fn lhs_bit_prop(
             };
             return Ok(ctx.gate_term_to_prop(&bit_term));
         }
+        if head == "bvcomp" {
+            // `(bvcomp x y)`: a 1-bit result whose only bit is the per-bit-equality
+            // AND over the operand bits. Needs the operand width (via `bv_widths`).
+            let [x, y] = args.as_slice() else {
+                return Err(ReconstructError::UnsupportedTerm {
+                    term: format!("bvcomp needs two operands `{}`", lhs.key()),
+                });
+            };
+            let width = bv_operand_width(ctx, x)
+                .or_else(|| bv_operand_width(ctx, y))
+                .ok_or_else(|| ReconstructError::UnsupportedTerm {
+                    term: format!("bvcomp operand width unknown `{}`", lhs.key()),
+                })?;
+            if width == 0 {
+                return Err(ReconstructError::MalformedStep {
+                    rule: "bitblast_comp".to_owned(),
+                    detail: "zero-width bvcomp operand".to_owned(),
+                });
+            }
+            let bit_term = comp_bit_term(x, y, width);
+            return Ok(ctx.gate_term_to_prop(&bit_term));
+        }
     }
     bv_bit(ctx, lhs, i)
+}
+
+/// Bit 0 of `(bvcomp x y)` as an [`AletheTerm`]: the per-bit-equality AND
+/// `(and (= x0 y0) … (= x_{w-1} y_{w-1}))` (or the single `(= x0 y0)` for width 1),
+/// transcribing the emitter's `bitwise_equal_and`. `bvcomp` is a 1-bit result, so
+/// this is its only bit.
+fn comp_bit_term(x: &AletheTerm, y: &AletheTerm, width: usize) -> AletheTerm {
+    let es: Vec<AletheTerm> = (0..width)
+        .map(|i| {
+            AletheTerm::App(
+                "=".to_owned(),
+                vec![operand_bit_term(x, i), operand_bit_term(y, i)],
+            )
+        })
+        .collect();
+    if es.len() > 1 {
+        AletheTerm::App("and".to_owned(), es)
+    } else {
+        es.into_iter().next().expect("a bit-vector has width >= 1")
+    }
 }
 
 /// The width of a bit-blast operand, when recoverable without type context: a

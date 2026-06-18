@@ -1514,20 +1514,34 @@ fn bitblast_concat_wrong_order_rejected() {
     );
 }
 
-/// `bitblast_comp` (`bvcomp` → 1-bit equality reduction) remains outside the
-/// reconstructed fragment — rejected with a clear `UnsupportedRule`.
+/// `bitblast_comp` (width 2): `(bvcomp a b)` is a 1-bit result whose only bit is
+/// the per-bit-equality AND `(and (= a0 b0) (= a1 b1))`. Operand width comes from
+/// the `@bbterm` operands here.
 #[test]
-fn bitblast_comp_is_unsupported() {
-    let mut ctx = ReconstructCtx::new();
-    let bvcomp = AletheTerm::App("bvcomp".to_owned(), vec![atom("a"), atom("b")]);
-    let concl = bb_concl(
-        bvcomp,
-        bbterm(vec![AletheTerm::App(
-            "=".to_owned(),
-            vec![bit_of("a", 0), bit_of("b", 0)],
-        )]),
+fn bitblast_comp_reconstructs() {
+    let a = bbterm(vec![bit_of("a", 0), bit_of("a", 1)]);
+    let b = bbterm(vec![bit_of("b", 0), bit_of("b", 1)]);
+    let bvcomp = AletheTerm::App("bvcomp".to_owned(), vec![a, b]);
+    let g = AletheTerm::App(
+        "and".to_owned(),
+        vec![
+            AletheTerm::App("=".to_owned(), vec![bit_of("a", 0), bit_of("b", 0)]),
+            AletheTerm::App("=".to_owned(), vec![bit_of("a", 1), bit_of("b", 1)]),
+        ],
     );
-    let err = reconstruct_bitblast_step(&mut ctx, "bitblast_comp", &concl).unwrap_err();
+    let concl = bb_concl(bvcomp, bbterm(vec![g]));
+    assert_bitblast_ok("bitblast_comp", &concl);
+}
+
+/// A bitblast rule still outside the reconstructed fragment (`bitblast_shl`, a
+/// shift — a Carcara hole the emitter never produces) is rejected with a clear
+/// `UnsupportedRule`, never a panic.
+#[test]
+fn bitblast_shl_is_unsupported() {
+    let mut ctx = ReconstructCtx::new();
+    let shl = AletheTerm::App("bvshl".to_owned(), vec![atom("a"), atom("b")]);
+    let concl = bb_concl(shl, bbterm(vec![bit_of("a", 0)]));
+    let err = reconstruct_bitblast_step(&mut ctx, "bitblast_shl", &concl).unwrap_err();
     assert!(
         matches!(err, ReconstructError::UnsupportedRule { .. }),
         "got {err:?}"
@@ -1902,11 +1916,11 @@ fn end_to_end_slt_reconstructs() {
         .expect("a bvslt QF_BV proof must reconstruct to kernel-checked False");
 }
 
-/// **NEGATIVE soundness**: a `QF_BV` proof whose bit-blast needs `bvcomp`
-/// (`bitblast_comp`, still outside the reconstructed fragment) is rejected by
-/// `reconstruct_qf_bv_proof`, never silently accepted.
+/// **End-to-end**: a `(= (bvcomp a b) c) ∧ ¬…` `QF_BV` unsat proof — bit-blasted
+/// via `bitblast_comp` (the per-bit-equality AND, operand width from the
+/// `bitblast_var` leaves) — reconstructs to a kernel-checked `False`.
 #[test]
-fn end_to_end_non_bitwise_rejected() {
+fn end_to_end_comp_reconstructs() {
     use axeyum_ir::TermArena;
     let mut arena = TermArena::new();
     let a = {
@@ -1924,15 +1938,10 @@ fn end_to_end_non_bitwise_rejected() {
     };
     let eq = arena.eq(comp, c).unwrap();
     let neq = arena.not(eq).unwrap();
-    // `(= (bvcomp a b) c) ∧ ¬…` is unsat, but `bvcomp` is not yet reconstructed.
     let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("emitter");
     let mut ctx = ReconstructCtx::new();
-    let err = reconstruct_qf_bv_proof(&mut ctx, &proof)
-        .expect_err("a bvcomp bitblast step must be rejected");
-    assert!(
-        matches!(err, ReconstructError::UnsupportedRule { .. }),
-        "got {err:?}"
-    );
+    reconstruct_qf_bv_proof(&mut ctx, &proof)
+        .expect("a bvcomp QF_BV proof must reconstruct to kernel-checked False");
 }
 
 // ===========================================================================
