@@ -1625,13 +1625,39 @@ fn reconstruct_resolution_step(
         .chain(rest.iter().map(|p| Ok(normalized(lookup(env, p)?))))
         .collect::<Result<_, ReconstructError>>()?;
 
+    // Pool-size budget: DP is worst-case exponential, so cap the working set and
+    // degrade to a clean error rather than hang/OOM on a pathological proof.
+    const DP_POOL_BUDGET: usize = 4096;
+
     loop {
-        // Pick any variable present in the pool that is NOT a conclusion literal.
-        let pivot = pool
+        // Count, for each non-conclusion variable, how many pool clauses hold it
+        // positively vs negatively (each clause counted once per variable).
+        let mut counts: std::collections::BTreeMap<String, (usize, usize)> =
+            std::collections::BTreeMap::new();
+        for c in &pool {
+            let mut seen: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+            for l in &c.lits {
+                let k = l.atom.key();
+                if conclusion_keys.contains(&k) || !seen.insert(k.clone()) {
+                    continue;
+                }
+                let e = counts.entry(k).or_insert((0, 0));
+                if l.negated {
+                    e.1 += 1;
+                } else {
+                    e.0 += 1;
+                }
+            }
+        }
+        // Eliminate the variable with the fewest resolvents (`pos × neg`) — the
+        // standard Davis–Putnam ordering heuristic that keeps the working set small
+        // on structured proofs. Order does not affect correctness (DP is complete),
+        // only cost.
+        let pivot = counts
             .iter()
-            .flat_map(|c| c.lits.iter())
-            .map(|l| l.atom.key())
-            .find(|k| !conclusion_keys.contains(k));
+            .filter(|(_, (p, n))| *p > 0 && *n > 0)
+            .min_by_key(|(_, (p, n))| p * n)
+            .map(|(k, _)| k.clone());
         let Some(pivot) = pivot else { break };
 
         let mut pos: Vec<Clause> = Vec::new();
@@ -1655,6 +1681,14 @@ fn reconstruct_resolution_step(
                     }
                 }
             }
+        }
+        if pool.len() > DP_POOL_BUDGET {
+            return Err(ReconstructError::UnsupportedResolution {
+                detail: format!(
+                    "Davis–Putnam working set exceeded {DP_POOL_BUDGET} clauses \
+                     (proof too large for inlined resolution reconstruction)"
+                ),
+            });
         }
         if pool.is_empty() {
             return Err(ReconstructError::UnsupportedResolution {
