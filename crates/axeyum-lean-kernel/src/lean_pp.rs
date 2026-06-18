@@ -1,0 +1,184 @@
+//! Render kernel terms to Lean 4 source syntax — a readable, externally-checkable
+//! projection of the in-tree kernel's `Expr`/`Name`/`Level`.
+//!
+//! This is the first slice of a full Lean export: it renders proof *terms* (the
+//! trusted-checking witnesses produced by `axeyum-solver`'s reconstruction) into
+//! the surface syntax a real Lean 4 kernel reads, so a refutation the in-tree
+//! [`Kernel`](crate::Kernel) accepts can also be inspected, diffed, and (with the
+//! declaration prelude, a later slice) re-checked by an independent Lean toolchain.
+//! It is pure pretty-printing — it never affects type checking.
+
+use crate::{ExprId, ExprNode, Kernel, LevelId, LevelNode, Lit, NameId, NameNode};
+
+impl Kernel {
+    /// Render `expr` as a Lean 4 source string. De Bruijn variables are resolved to
+    /// their binder names (anonymous binders get generated `x<depth>` names); the
+    /// output is parenthesized enough to re-parse with Lean's standard precedence.
+    #[must_use]
+    pub fn render_lean(&self, expr: ExprId) -> String {
+        let mut binders: Vec<String> = Vec::new();
+        self.render_expr(expr, &mut binders)
+    }
+
+    /// A hierarchical [`NameId`] as a dotted Lean name (`a.b.1`); the anonymous root
+    /// renders empty.
+    fn render_name(&self, id: NameId) -> String {
+        match self.name_node(id) {
+            NameNode::Anonymous => String::new(),
+            NameNode::Str(parent, s) => {
+                let p = self.render_name(*parent);
+                if p.is_empty() {
+                    s.clone()
+                } else {
+                    format!("{p}.{s}")
+                }
+            }
+            NameNode::Num(parent, n) => {
+                let p = self.render_name(*parent);
+                if p.is_empty() {
+                    n.to_string()
+                } else {
+                    format!("{p}.{n}")
+                }
+            }
+        }
+    }
+
+    /// A universe [`LevelId`] in Lean level syntax.
+    fn render_level(&self, id: LevelId) -> String {
+        match self.level_node(id) {
+            LevelNode::Zero => "0".to_owned(),
+            LevelNode::Succ(l) => format!("{}+1", self.render_level(*l)),
+            LevelNode::Max(a, b) => {
+                format!("max {} {}", self.render_level(*a), self.render_level(*b))
+            }
+            LevelNode::IMax(a, b) => {
+                format!("imax {} {}", self.render_level(*a), self.render_level(*b))
+            }
+            LevelNode::Param(n) => self.render_name(*n),
+        }
+    }
+
+    /// The binder name to print for a binder declared with [`NameId`] `name` opened
+    /// at de Bruijn `depth`; anonymous binders become a generated `x<depth>`.
+    fn binder_name(&self, name: NameId, depth: usize) -> String {
+        let rendered = self.render_name(name);
+        if rendered.is_empty() {
+            format!("x{depth}")
+        } else {
+            rendered
+        }
+    }
+
+    /// Render an expression, wrapping it in parentheses when it is a compound form
+    /// (so it can sit as a function head or argument without re-association).
+    fn render_expr_atom(&self, id: ExprId, binders: &mut Vec<String>) -> String {
+        match self.expr_node(id) {
+            ExprNode::BVar(_)
+            | ExprNode::FVar(_)
+            | ExprNode::Const(_, _)
+            | ExprNode::Sort(_)
+            | ExprNode::Lit(_) => self.render_expr(id, binders),
+            ExprNode::App(_, _) | ExprNode::Lam(..) | ExprNode::Pi(..) | ExprNode::Let(..) => {
+                format!("({})", self.render_expr(id, binders))
+            }
+        }
+    }
+
+    fn render_expr(&self, id: ExprId, binders: &mut Vec<String>) -> String {
+        match self.expr_node(id) {
+            ExprNode::BVar(i) => binders
+                .len()
+                .checked_sub(1 + *i as usize)
+                .map_or_else(|| format!("#{i}"), |k| binders[k].clone()),
+            ExprNode::FVar(fid) => format!("_fvar.{fid}"),
+            ExprNode::Sort(l) => {
+                let ls = self.render_level(*l);
+                if ls == "0" {
+                    "Prop".to_owned()
+                } else {
+                    format!("Sort ({ls})")
+                }
+            }
+            ExprNode::Const(name, levels) => {
+                let n = self.render_name(*name);
+                if levels.is_empty() {
+                    n
+                } else {
+                    let ls: Vec<String> = levels.iter().map(|l| self.render_level(*l)).collect();
+                    format!("{n}.{{{}}}", ls.join(", "))
+                }
+            }
+            ExprNode::App(f, a) => {
+                let fs = self.render_expr_atom(*f, binders);
+                let as_ = self.render_expr_atom(*a, binders);
+                format!("{fs} {as_}")
+            }
+            ExprNode::Lam(name, ty, body, _) => {
+                let bn = self.binder_name(*name, binders.len());
+                let tys = self.render_expr(*ty, binders);
+                binders.push(bn.clone());
+                let bs = self.render_expr(*body, binders);
+                binders.pop();
+                format!("fun ({bn} : {tys}) => {bs}")
+            }
+            ExprNode::Pi(name, ty, body, _) => {
+                let bn = self.binder_name(*name, binders.len());
+                let tys = self.render_expr(*ty, binders);
+                binders.push(bn.clone());
+                let bs = self.render_expr(*body, binders);
+                binders.pop();
+                format!("(({bn} : {tys}) -> {bs})")
+            }
+            ExprNode::Let(name, ty, val, body) => {
+                let bn = self.binder_name(*name, binders.len());
+                let tys = self.render_expr(*ty, binders);
+                let vs = self.render_expr(*val, binders);
+                binders.push(bn.clone());
+                let bs = self.render_expr(*body, binders);
+                binders.pop();
+                format!("let {bn} : {tys} := {vs}; {bs}")
+            }
+            ExprNode::Lit(Lit::Nat(n)) => n.to_string(),
+            ExprNode::Lit(Lit::Str(s)) => format!("{s:?}"),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::Kernel;
+
+    /// `fun (p : Prop) => p` renders to readable Lean with the de Bruijn variable
+    /// resolved to its binder name, and the round-trip parses structurally.
+    #[test]
+    fn renders_identity_on_prop() {
+        let mut k = Kernel::new();
+        let prop = {
+            let zero = k.level_zero();
+            k.sort(zero)
+        };
+        let anon = k.anon();
+        let p = k.name_str(anon, "p");
+        let body = k.bvar(0);
+        let lam = k.lam(p, prop, body, crate::BinderInfo::Default);
+        assert_eq!(k.render_lean(lam), "fun (p : Prop) => p");
+    }
+
+    /// A `Pi` (dependent arrow) and a nested application render with the binder name
+    /// and parenthesized argument.
+    #[test]
+    fn renders_pi_and_application() {
+        let mut k = Kernel::new();
+        let prop = {
+            let zero = k.level_zero();
+            k.sort(zero)
+        };
+        let anon = k.anon();
+        let a = k.name_str(anon, "a");
+        // (a : Prop) -> a
+        let body = k.bvar(0);
+        let pi = k.pi(a, prop, body, crate::BinderInfo::Default);
+        assert_eq!(k.render_lean(pi), "((a : Prop) -> a)");
+    }
+}

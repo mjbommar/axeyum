@@ -50,6 +50,7 @@ mod arith_prelude;
 mod env;
 mod expr;
 mod inductive;
+mod lean_pp;
 mod level;
 mod name;
 mod prelude;
