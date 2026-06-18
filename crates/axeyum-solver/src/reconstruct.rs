@@ -2874,10 +2874,10 @@ impl ReconstructCtx {
 /// # Errors
 ///
 /// Returns [`ReconstructError::UnsupportedTerm`] for any operator outside the
-/// bitwise + `extract` + binary-`bvadd` fragment (`bvmul`/`bvneg`, shifts,
-/// div/rem, `concat`/`sign_extend`, n-ary `bvadd`, …), a non-bit-vector shape, or
-/// an out-of-range bit of a known-width constant. `extract` (bit `i` → bit
-/// `lo + i`) and binary `bvadd` (ripple carry) are supported.
+/// bitwise + `extract` + `bvadd`/`bvneg` fragment (`bvmul`, shifts, div/rem,
+/// `concat`/`sign_extend`, n-ary `bvadd`, …), a non-bit-vector shape, or an
+/// out-of-range bit of a known-width constant. `extract` (bit `i` → bit
+/// `lo + i`), binary `bvadd`, and `bvneg` (ripple carry) are supported.
 fn bv_bit(
     ctx: &mut ReconstructCtx,
     term: &AletheTerm,
@@ -2946,6 +2946,12 @@ fn bv_bit(
             // rendering can never diverge — both sides take the identical path).
             ("bvadd", [a, b]) => {
                 let bit_term = ripple_carry_bit_term(a, b, i);
+                Ok(ctx.gate_term_to_prop(&bit_term))
+            }
+            // Two's-complement negate: `-x = (not x) + 1`, a width-free ripple
+            // carry (carry-in `true`). Same reflexive build-and-gate as `bvadd`.
+            ("bvneg", [x]) => {
+                let bit_term = neg_bit_term(x, i);
                 Ok(ctx.gate_term_to_prop(&bit_term))
             }
             _ => Err(ReconstructError::UnsupportedTerm {
@@ -3040,6 +3046,28 @@ fn ripple_carry_bit_term(x: &AletheTerm, y: &AletheTerm, i: usize) -> AletheTerm
     app("xor", vec![sum, carry])
 }
 
+/// Bit `i` of `(bvneg x)` as an [`AletheTerm`], transcribing the emitter's
+/// `neg_step` verbatim: the ripple-carry adder of `(not x)` and `0` with carry-in
+/// `true` (`c_0 = true`;
+/// `c_k = (or (and (not x_{k-1}) false) (and (xor (not x_{k-1}) false) c_{k-1}))`;
+/// `bit_i = (xor (xor (not x_i) false) c_i)`). Width-free (bits `0..=i` only) and
+/// gated through `gate_term_to_prop` for reflexivity, like [`ripple_carry_bit_term`].
+fn neg_bit_term(x: &AletheTerm, i: usize) -> AletheTerm {
+    let app = |head: &str, args: Vec<AletheTerm>| AletheTerm::App(head.to_owned(), args);
+    let not_bit = |j: usize| app("not", vec![operand_bit_term(x, j)]);
+    let false_ = || AletheTerm::Const("false".to_owned());
+    let mut carry = AletheTerm::Const("true".to_owned());
+    for k in 1..=i {
+        let nx = not_bit(k - 1);
+        let and_false = app("and", vec![nx.clone(), false_()]);
+        let xor_false = app("xor", vec![nx, false_()]);
+        let and_carry = app("and", vec![xor_false, carry]);
+        carry = app("or", vec![and_false, and_carry]);
+    }
+    let sum = app("xor", vec![not_bit(i), false_()]);
+    app("xor", vec![sum, carry])
+}
+
 /// Parse an SMT-LIB `#b…` binary bit-vector literal into its LSB-first bit
 /// values, or [`None`] if `symbol` is not such a literal (e.g. a variable name).
 fn parse_bv_literal(symbol: &str) -> Option<Vec<bool>> {
@@ -3069,7 +3097,7 @@ fn parse_bv_literal(symbol: &str) -> Option<Vec<bool>> {
 /// # Errors
 ///
 /// Returns [`ReconstructError::UnsupportedRule`] for a bitblast rule outside the
-/// bitwise + `extract` + `add` fragment (`bitblast_mult`/`_neg`/`_concat`/
+/// bitwise + `extract` + `add`/`neg` fragment (`bitblast_mult`/`_concat`/
 /// `_sign_extend`/`_comp`/`_ult`/`_slt`/`_xnor`, …),
 /// [`ReconstructError::MalformedStep`] for a conclusion that is
 /// not the expected `(= lhs rhs)` shape, [`ReconstructError::UnsupportedTerm`] for
@@ -3079,16 +3107,19 @@ pub fn reconstruct_bitblast_step(
     rule: &str,
     conclusion: &[AletheLit],
 ) -> Result<ExprId, ReconstructError> {
-    // The bitwise fragment, `extract` (bit-routing), and binary `bitblast_add`
-    // (ripple carry); reject the remaining carry/shift/structural rules cleanly.
-    // (`bitblast_add` over >2 operands surfaces as `UnsupportedTerm` from `bv_bit`.)
+    // The bitwise fragment, `extract` (bit-routing), and the ripple-carry
+    // `bitblast_add` (binary) / `bitblast_neg`; reject the remaining
+    // shift/mult/structural rules cleanly. (`bitblast_add` over >2 operands
+    // surfaces as `UnsupportedTerm` from `bv_bit`.)
     match rule {
         "bitblast_var" | "bitblast_const" | "bitblast_not" | "bitblast_and" | "bitblast_or"
-        | "bitblast_xor" | "bitblast_extract" | "bitblast_add" | "bitblast_equal" => {}
+        | "bitblast_xor" | "bitblast_extract" | "bitblast_add" | "bitblast_neg"
+        | "bitblast_equal" => {}
         other => {
             return Err(ReconstructError::UnsupportedRule {
                 rule: format!(
-                    "{other} (only the bitwise + extract + add bit-blast fragment is reconstructed)"
+                    "{other} (only the bitwise + extract + add/neg bit-blast fragment is \
+                     reconstructed)"
                 ),
             });
         }

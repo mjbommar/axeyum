@@ -1280,6 +1280,42 @@ fn bitblast_add_nary_unsupported() {
     );
 }
 
+/// `bitblast_neg` (width 2): two's-complement `-x = (not x) + 1` as a ripple
+/// carry with carry-in `true`:
+///   bit0 = `(xor (xor (not x0) false) true)`
+///   bit1 = `(xor (xor (not x1) false)
+///               (or (and (not x0) false) (and (xor (not x0) false) true)))`
+#[test]
+fn bitblast_neg_width2_reconstructs() {
+    let bvneg = AletheTerm::App("bvneg".to_owned(), vec![atom("x")]);
+    let nx = |i: i128| AletheTerm::App("not".to_owned(), vec![bit_of("x", i)]);
+    let f = || atom("false");
+    let t = || atom("true");
+    let bit0 = xor2(xor2(nx(0), f()), t());
+    let carry1 = or2(and2(nx(0), f()), and2(xor2(nx(0), f()), t()));
+    let bit1 = xor2(xor2(nx(1), f()), carry1);
+    let concl = bb_concl(bvneg, bbterm(vec![bit0, bit1]));
+    assert_bitblast_ok("bitblast_neg", &concl);
+}
+
+/// **NEGATIVE soundness** for `neg`: a wrong carry-in (`false` instead of `true`)
+/// makes the reflexive iff ill-typed and is REJECTED at the kernel gate.
+#[test]
+fn bitblast_neg_wrong_carry_in_rejected() {
+    let mut ctx = ReconstructCtx::new();
+    let bvneg = AletheTerm::App("bvneg".to_owned(), vec![atom("x")]);
+    let nx0 = AletheTerm::App("not".to_owned(), vec![bit_of("x", 0)]);
+    // Wrong: carry-in `false` (must be `true` for two's complement +1).
+    let wrong0 = xor2(xor2(nx0, atom("false")), atom("false"));
+    let concl = bb_concl(bvneg, bbterm(vec![wrong0]));
+    let err = reconstruct_bitblast_step(&mut ctx, "bitblast_neg", &concl)
+        .expect_err("a wrong neg carry-in must be rejected by the kernel");
+    assert!(
+        matches!(err, ReconstructError::KernelRejected { .. }),
+        "got {err:?}"
+    );
+}
+
 /// `bitblast_mult` (a shift-add multiplier) remains outside the reconstructed
 /// fragment — rejected with a clear `UnsupportedRule`, never a panic.
 #[test]
@@ -1497,6 +1533,26 @@ fn end_to_end_add_reconstructs() {
     let mut ctx = ReconstructCtx::new();
     reconstruct_qf_bv_proof(&mut ctx, &proof)
         .expect("a binary-add QF_BV proof must reconstruct to kernel-checked False");
+}
+
+/// **End-to-end**: a `(= (bvneg a) a) ∧ ¬…` `QF_BV` unsat proof — bit-blasted via
+/// the two's-complement ripple-carry `bitblast_neg` — reconstructs to a
+/// kernel-checked `False`.
+#[test]
+fn end_to_end_neg_reconstructs() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let neg = arena.bv_neg(a).unwrap();
+    let eq = arena.eq(neg, a).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    reconstruct_qf_bv_proof(&mut ctx, &proof)
+        .expect("a bvneg QF_BV proof must reconstruct to kernel-checked False");
 }
 
 /// **NEGATIVE soundness**: a `QF_BV` proof whose bit-blast needs the multiplier
