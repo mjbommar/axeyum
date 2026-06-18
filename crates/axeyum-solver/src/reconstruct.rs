@@ -6293,6 +6293,74 @@ impl LraReconstructCtx {
         self.kernel.app(e, h2)
     }
 
+    /// `add_lt_add_of_le_of_lt a b c d h1 h2 : lt (add a c)(add b d)` from
+    /// `h1 : le a b`, `h2 : lt c d`. Summing a non-strict with a strict ⇒ strict.
+    fn add_lt_add_of_le_of_lt_app(
+        &mut self,
+        a: ExprId,
+        b: ExprId,
+        c: ExprId,
+        d: ExprId,
+        h1: ExprId,
+        h2: ExprId,
+    ) -> ExprId {
+        let ax = self
+            .kernel
+            .const_(self.arith.add_lt_add_of_le_of_lt, vec![]);
+        let e = self.kernel.app(ax, a);
+        let e = self.kernel.app(e, b);
+        let e = self.kernel.app(e, c);
+        let e = self.kernel.app(e, d);
+        let e = self.kernel.app(e, h1);
+        self.kernel.app(e, h2)
+    }
+
+    /// `le_of_lt a b h : le a b` from `h : lt a b`.
+    fn le_of_lt_app(&mut self, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+        let ax = self.kernel.const_(self.arith.le_of_lt, vec![]);
+        let e = self.kernel.app(ax, a);
+        let e = self.kernel.app(e, b);
+        self.kernel.app(e, h)
+    }
+
+    /// Derived `add_lt_add a b c d h1 h2 : lt (add a c)(add b d)` from
+    /// `h1 : lt a b`, `h2 : lt c d`. No new axiom: weaken `h1` to `le a b`
+    /// (`le_of_lt`) and apply [`Self::add_lt_add_of_le_of_lt_app`].
+    fn add_lt_add_app(
+        &mut self,
+        a: ExprId,
+        b: ExprId,
+        c: ExprId,
+        d: ExprId,
+        h1: ExprId,
+        h2: ExprId,
+    ) -> ExprId {
+        let h1_le = self.le_of_lt_app(a, b, h1);
+        self.add_lt_add_of_le_of_lt_app(a, b, c, d, h1_le, h2)
+    }
+
+    /// Cast the left operand of a `lt`: `h_lt : lt l r`, `h_eq : Eq R l l'` ⇒ `lt l' r`.
+    fn lt_cast_left(
+        &mut self,
+        l: ExprId,
+        lp: ExprId,
+        r: ExprId,
+        h_lt: ExprId,
+        h_eq: ExprId,
+    ) -> ExprId {
+        let motive = {
+            let x1 = self.kernel.bvar(1);
+            let lt_x_r = self.mk_lt(x1, r);
+            let x0 = self.kernel.bvar(0);
+            let eq_l_x = self.mk_eq_r(l, x0);
+            let anon = self.kernel.anon();
+            let inner = self.kernel.lam(anon, eq_l_x, lt_x_r, BinderInfo::Default);
+            let r_ty = self.kernel.const_(self.arith.r, vec![]);
+            self.kernel.lam(anon, r_ty, inner, BinderInfo::Default)
+        };
+        self.eq_rec_transport_r(l, motive, h_lt, lp, h_eq)
+    }
+
     /// `lt_of_lt_of_le a b c h1 h2 : lt a c` from `h1 : lt a b`, `h2 : le b c`.
     fn lt_of_lt_of_le_app(
         &mut self,
@@ -6385,6 +6453,103 @@ impl LraReconstructCtx {
         self.eq_rec_transport_r(r, motive, h_lt, rp, h_eq)
     }
 
+    /// Scale-and-sum a list of integer-coefficient atoms `(Eᵢ, μᵢ)` (`μᵢ ≥ 1`) into a
+    /// single `rel Lsum zero` proof, where `rel` is `le` when `strict == false` and
+    /// `lt` when `strict == true`. Mirrors the non-strict summation inside
+    /// [`try_general_farkas`], but routes through the strict combinators when `strict`:
+    /// `add_lt_add` for the scale/fold steps and `lt_cast_*` for the renormalizations.
+    /// The per-atom hypothesis is `hᵢ : rel Eᵢ zero` (same relation).
+    ///
+    /// Returns `(proof, gens)` where `gens` is the canonical generator list of `Lsum`
+    /// (so `gens_to_expr(gens)` is the proof's LHS), or `None` if any atom has a
+    /// non-integer coefficient/constant. The caller normalizes `gens` to the combined
+    /// constant. `atoms` must be non-empty.
+    fn sum_scaled_atoms(
+        &mut self,
+        atoms: &[(LinR, i128)],
+        strict: bool,
+    ) -> Result<Option<(ExprId, Vec<Gen>)>, ReconstructError> {
+        let zero = self.mk_zero();
+        let mut acc: Option<(ExprId, Vec<Gen>)> = None; // (rel-proof, gens)
+        for (lin, mu) in atoms {
+            let Some(base_gens) = LraReconstructCtx::lin_to_gens(lin) else {
+                return Ok(None);
+            };
+            let base_expr = self.gens_to_expr(&base_gens);
+            // hypothesis hᵢ : rel base_expr zero.
+            let prop = if strict {
+                self.mk_lt(base_expr, zero)
+            } else {
+                self.mk_le(base_expr, zero)
+            };
+            let h = self.hyp_axiom(prop)?;
+            // Scale by μᵢ: fold hᵢ with itself μᵢ times, keeping RHS = zero and the LHS
+            // in canonical generator form.
+            let mut s_proof = h;
+            let mut s_gens = base_gens.clone();
+            let mut s_expr = base_expr;
+            for _ in 1..*mu {
+                let combined = if strict {
+                    self.add_lt_add_app(s_expr, zero, base_expr, zero, s_proof, h)
+                } else {
+                    self.add_le_add_app(s_expr, zero, base_expr, zero, s_proof, h)
+                };
+                let lhs = self.mk_add(s_expr, base_expr);
+                // RHS (add zero zero) → zero.
+                let azz = self.add_zero_eq(zero);
+                let add_zz = self.mk_add(zero, zero);
+                let combined = if strict {
+                    self.lt_cast_right(lhs, add_zz, zero, combined, azz)
+                } else {
+                    self.le_cast_right(lhs, add_zz, zero, combined, azz)
+                };
+                // LHS (add s_expr base_expr) → canonical (s_gens ++ base_gens).
+                let mut next_gens = s_gens.clone();
+                next_gens.extend_from_slice(&base_gens);
+                let append_proof = self.append_eq(&s_gens, &base_gens);
+                let next_canon = self.gens_to_expr(&next_gens);
+                s_proof = if strict {
+                    self.lt_cast_left(lhs, next_canon, zero, combined, append_proof)
+                } else {
+                    self.le_cast_left(lhs, next_canon, zero, combined, append_proof)
+                };
+                s_gens = next_gens;
+                s_expr = next_canon;
+            }
+            // Fold this scaled constraint into the accumulator.
+            acc = Some(match acc {
+                None => (s_proof, s_gens),
+                Some((acc_proof, acc_gens)) => {
+                    let acc_expr = self.gens_to_expr(&acc_gens);
+                    let combined = if strict {
+                        self.add_lt_add_app(acc_expr, zero, s_expr, zero, acc_proof, s_proof)
+                    } else {
+                        self.add_le_add_app(acc_expr, zero, s_expr, zero, acc_proof, s_proof)
+                    };
+                    let azz = self.add_zero_eq(zero);
+                    let add_zz = self.mk_add(zero, zero);
+                    let lhs = self.mk_add(acc_expr, s_expr);
+                    let combined = if strict {
+                        self.lt_cast_right(lhs, add_zz, zero, combined, azz)
+                    } else {
+                        self.le_cast_right(lhs, add_zz, zero, combined, azz)
+                    };
+                    let mut next_gens = acc_gens.clone();
+                    next_gens.extend_from_slice(&s_gens);
+                    let append_proof = self.append_eq(&acc_gens, &s_gens);
+                    let next_canon = self.gens_to_expr(&next_gens);
+                    let new_proof = if strict {
+                        self.lt_cast_left(lhs, next_canon, zero, combined, append_proof)
+                    } else {
+                        self.le_cast_left(lhs, next_canon, zero, combined, append_proof)
+                    };
+                    (new_proof, next_gens)
+                }
+            });
+        }
+        Ok(acc)
+    }
+
     /// Build the generator list of a [`LinR`] whose coefficients and constant are all
     /// integers: each variable `(i, c)` contributes `|c|` copies of `Var(i)`/`NegVar(i)`,
     /// then the constant contributes `|k|` copies of `One`/`NegOne`. Returns `None` if
@@ -6473,6 +6638,15 @@ pub fn reconstruct_lra_proof(
     // Strict-`<` cycle `e0<e1<…<e_{n-1}<e0` (n≥2): fold `lt_trans` to `lt e0 e0`,
     // then `lt_irrefl`. Tried first; falls through to the `≤` baby-Farkas shape.
     if let Some(proof) = try_strict_cycle(ctx, arena, assertions, &certificate)? {
+        return Ok(proof);
+    }
+    // Mixed strict/non-strict Farkas: at least one used atom is strict (`<`) and the
+    // combination is not a pure strict cycle. Sum the strict atoms into `lt Lst 0`, the
+    // non-strict into `le Lne 0`, combine to `lt (Lst+Lne) 0`, normalize to the constant
+    // `K ≥ 0`, and close (`lt_irrefl` directly for `K = 0`, or via `lt_trans` with
+    // `0 < K` otherwise). Tried before the pure non-strict engine, which rejects strict
+    // atoms.
+    if let Some(proof) = try_mixed_farkas(ctx, &certificate)? {
         return Ok(proof);
     }
     // General Farkas over non-strict integer-coefficient constraints with arbitrary
@@ -6664,6 +6838,173 @@ fn try_general_farkas(
         Err(ReconstructError::KernelRejected {
             rule: "la_generic".to_owned(),
             detail: "general-Farkas refutation did not infer to False".to_owned(),
+        })
+    }
+}
+
+/// Reconstruct a **mixed** strict/non-strict Farkas refutation: the certificate uses
+/// at least one strict (`<`) atom with a positive multiplier and is *not* a pure strict
+/// cycle (which [`try_strict_cycle`] handles). All used atoms have integer coefficients;
+/// multipliers are nonnegative rationals.
+///
+/// 1. Clear all used multipliers' denominators to integers `μᵢ ≥ 1`.
+/// 2. Partition the used atoms by strictness. Sum the non-strict ones (if any) into
+///    `le Lne zero` and the strict ones into `lt Lst zero`, each via
+///    [`LraReconstructCtx::sum_scaled_atoms`].
+/// 3. Combine into one strict inequality `lt Lsum zero`: with both groups present,
+///    `add_lt_add_of_le_of_lt (Lne) zero (Lst) zero hle hlt : lt (add Lne Lst)(add zero
+///    zero)`, renormalized to `lt (Lne++Lst) zero`; with only strict atoms, `Lsum = Lst`.
+/// 4. Normalize `Lsum`'s generators (variables cancel) to the combined constant
+///    `K = Σ μᵢ cᵢ`, which must be a **nonnegative** integer (a strict `Σ < 0` with
+///    `Σ = K ≥ 0` is the contradiction).
+/// 5. Close: `K = 0` gives `lt zero zero` directly (refuted by `lt_irrefl zero`); `K > 0`
+///    gives `lt K zero`, and with `lt zero K` (`lt_zero_ones`) `lt_trans zero K zero`
+///    yields `lt zero zero`, again refuted by `lt_irrefl zero`.
+///
+/// Returns `Ok(None)` (fall through) when **no** used atom is strict (the pure non-strict
+/// engine owns that), an atom has a non-integer coefficient/constant, variables do not
+/// cancel, or `K` is negative. Kernel-gated (`infer` + `def_eq False`).
+#[allow(dead_code, clippy::too_many_lines)]
+fn try_mixed_farkas(
+    ctx: &mut LraReconstructCtx,
+    certificate: &crate::FarkasCertificate,
+) -> Result<Option<ExprId>, ReconstructError> {
+    // Used atoms (positive multiplier) with their LinR + strictness; reject
+    // non-integer atoms by falling through.
+    let mut used: Vec<(LinR, Rational, bool)> = Vec::new();
+    let mut any_strict = false;
+    for (atom, m) in certificate.atoms.iter().zip(&certificate.multipliers) {
+        if m.is_zero() {
+            continue;
+        }
+        let lin = LinR {
+            coeffs: atom.coeffs.clone(),
+            constant: atom.constant,
+        };
+        if lin.coeffs.iter().any(|(_, c)| c.denominator() != 1) || lin.constant.denominator() != 1 {
+            return Ok(None);
+        }
+        any_strict |= atom.strict;
+        used.push((lin, *m, atom.strict));
+    }
+    // This engine only owns the mixed case (≥1 used strict atom). Pure non-strict
+    // certificates fall through to `try_general_farkas`.
+    if !any_strict || used.is_empty() {
+        return Ok(None);
+    }
+
+    // Clear all multiplier denominators: μ = λ · L where L = lcm of denominators.
+    let mut lcm: i128 = 1;
+    for (_, m, _) in &used {
+        lcm = lcm_i128(lcm, m.denominator());
+    }
+    let factor = Rational::integer(lcm);
+    let mut strict_atoms: Vec<(LinR, i128)> = Vec::new();
+    let mut nonstrict_atoms: Vec<(LinR, i128)> = Vec::new();
+    let mut k_total = Rational::zero();
+    let mut combined_coeffs = LinR::default();
+    for (lin, m, strict) in &used {
+        let mu = *m * factor;
+        if mu.denominator() != 1 || mu.numerator() <= 0 {
+            return Ok(None);
+        }
+        let mu = mu.numerator();
+        let s = scale_lin(lin, Rational::integer(mu));
+        combined_coeffs = combined_coeffs.add(&s);
+        k_total = k_total + lin.constant * Rational::integer(mu);
+        if *strict {
+            strict_atoms.push((lin.clone(), mu));
+        } else {
+            nonstrict_atoms.push((lin.clone(), mu));
+        }
+    }
+    // A genuine refutation cancels all variables, and the strict combined constant must
+    // satisfy `K ≥ 0` (the strict sum says `Σ < 0`, refuting `Σ = K ≥ 0`).
+    if !combined_coeffs.coeffs.is_empty() {
+        return Ok(None);
+    }
+    if k_total.denominator() != 1 || k_total.numerator() < 0 {
+        return Ok(None);
+    }
+    let k_int = k_total.numerator();
+    // `any_strict` ⇒ there is at least one strict atom to sum.
+    if strict_atoms.is_empty() {
+        return Ok(None);
+    }
+
+    let zero = ctx.mk_zero();
+    // Strict sub-sum: lt Lst zero (+ its canonical generators).
+    let Some((mut lt_proof, mut sum_gens)) = ctx.sum_scaled_atoms(&strict_atoms, true)? else {
+        return Ok(None);
+    };
+    // Fold in the non-strict sub-sum (if any) to keep the result strict.
+    if !nonstrict_atoms.is_empty() {
+        let Some((le_proof, ne_gens)) = ctx.sum_scaled_atoms(&nonstrict_atoms, false)? else {
+            return Ok(None);
+        };
+        let ne_expr = ctx.gens_to_expr(&ne_gens);
+        let st_expr = ctx.gens_to_expr(&sum_gens);
+        // add_lt_add_of_le_of_lt ne zero st zero (le ne 0)(lt st 0)
+        //   : lt (add ne st)(add zero zero).
+        let combined =
+            ctx.add_lt_add_of_le_of_lt_app(ne_expr, zero, st_expr, zero, le_proof, lt_proof);
+        let azz = ctx.add_zero_eq(zero);
+        let add_zz = ctx.mk_add(zero, zero);
+        let lhs = ctx.mk_add(ne_expr, st_expr);
+        let combined = ctx.lt_cast_right(lhs, add_zz, zero, combined, azz);
+        // LHS (add ne st) → canonical (ne_gens ++ st_gens).
+        let mut next_gens = ne_gens.clone();
+        next_gens.extend_from_slice(&sum_gens);
+        let append_proof = ctx.append_eq(&ne_gens, &sum_gens);
+        let next_canon = ctx.gens_to_expr(&next_gens);
+        lt_proof = ctx.lt_cast_left(lhs, next_canon, zero, combined, append_proof);
+        sum_gens = next_gens;
+    }
+
+    // Normalize the combined sum: variables cancel, leaving exactly `k_int` `One`s.
+    let lsum_canon = ctx.gens_to_expr(&sum_gens);
+    let (norm_gens, norm_proof) = ctx.normalize_gens(&sum_gens); // Eq R lsum_canon (gens_to_expr norm_gens)
+    if norm_gens.len() as i128 != k_int || norm_gens.iter().any(|g| *g != Gen::One) {
+        return Ok(None);
+    }
+    let k_expr = ctx.gens_to_expr(&norm_gens); // `zero` when k_int == 0.
+    // Cast `lt lsum_canon zero` along `lsum_canon = k_expr` ⇒ `lt k_expr zero`.
+    let lt_k_zero = ctx.lt_cast_left(lsum_canon, k_expr, zero, lt_proof, norm_proof);
+    // Reach `lt zero zero`.
+    let lt_zero_zero = if k_int == 0 {
+        // k_expr is `zero` (gens_to_expr([]) = zero), so `lt_k_zero : lt zero zero`.
+        lt_k_zero
+    } else {
+        // lt zero K (lt_zero_ones) and lt K zero ⇒ lt_trans zero K zero : lt zero zero.
+        let lt_zero_k = ctx.lt_zero_ones(k_int);
+        let ax = ctx.kernel.const_(ctx.arith.lt_trans, vec![]);
+        let e = ctx.kernel.app(ax, zero);
+        let e = ctx.kernel.app(e, k_expr);
+        let e = ctx.kernel.app(e, zero);
+        let e = ctx.kernel.app(e, lt_zero_k);
+        ctx.kernel.app(e, lt_k_zero)
+    };
+    // lt_irrefl zero : Not (lt zero zero); apply ⇒ False.
+    let proof = {
+        let irrefl = ctx.kernel.const_(ctx.arith.lt_irrefl, vec![]);
+        let e = ctx.kernel.app(irrefl, zero);
+        ctx.kernel.app(e, lt_zero_zero)
+    };
+    // Soundness gate.
+    let inferred = ctx
+        .kernel
+        .infer(proof)
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "la_generic".to_owned(),
+            detail: format!("mixed-Farkas infer failed: {e:?}"),
+        })?;
+    let false_ = ctx.kernel.const_(ctx.arith.logic.false_, vec![]);
+    if ctx.kernel.def_eq(inferred, false_) {
+        Ok(Some(proof))
+    } else {
+        Err(ReconstructError::KernelRejected {
+            rule: "la_generic".to_owned(),
+            detail: "mixed-Farkas refutation did not infer to False".to_owned(),
         })
     }
 }

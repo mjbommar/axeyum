@@ -106,6 +106,16 @@ pub struct ArithPrelude {
     // --- constant axiom ------------------------------------------------------
     /// `zero_lt_one : lt zero one`.
     pub zero_lt_one: NameId,
+
+    // --- mixed strict/non-strict additive axiom (Task #16) -------------------
+    /// `add_lt_add_of_le_of_lt :
+    /// ∀ (a b c d : R), le a b → lt c d → lt (add a c) (add b d)`.
+    ///
+    /// Summing a non-strict inequality with a strict one yields a strict result.
+    /// This is the single combinator the mixed-Farkas reconstruction needs; the
+    /// pure-strict variant `lt a b → lt c d → lt (add a c)(add b d)` is *derived*
+    /// from it via [`Self::le_of_lt`], so no further axiom is added.
+    pub add_lt_add_of_le_of_lt: NameId,
 }
 
 /// Declare the axiomatized **linear ordered field** into `kernel`'s environment,
@@ -401,6 +411,33 @@ pub fn build_arith_prelude(kernel: &mut Kernel) -> ArithPrelude {
         declare_axiom(kernel, anon, "zero_lt_one", ty)
     };
 
+    // --- add_lt_add_of_le_of_lt (Task #16) -----------------------------------
+    //   ∀ (a b c d : R), le a b → lt c d → lt (add a c)(add b d).
+    // Same telescope/de-Bruijn shape as `add_le_add`, but the second hypothesis
+    // and the conclusion are `lt`.
+    let add_lt_add_of_le_of_lt = {
+        // Under a,b,c,d,h1,h2 the result references: a=5,b=4,c=3,d=2.
+        let a5 = kernel.bvar(5);
+        let b4 = kernel.bvar(4);
+        let c3 = kernel.bvar(3);
+        let d2 = kernel.bvar(2);
+        let add_ac = app2(kernel, add, a5, c3);
+        let add_bd = app2(kernel, add, b4, d2);
+        let result = app2(kernel, lt, add_ac, add_bd);
+        // h2 : lt c d — under a,b,c,d,h1 → c=2,d=1.
+        let c2 = kernel.bvar(2);
+        let d1 = kernel.bvar(1);
+        let h2_dom = app2(kernel, lt, c2, d1);
+        let after_h2 = kernel.pi(anon, h2_dom, result, BinderInfo::Default);
+        // h1 : le a b — under a,b,c,d → a=3,b=2.
+        let a3 = kernel.bvar(3);
+        let b2 = kernel.bvar(2);
+        let h1_dom = app2(kernel, le, a3, b2);
+        let after_h1 = kernel.pi(anon, h1_dom, after_h2, BinderInfo::Default);
+        let ty = telescope_r(kernel, anon, r_ty, 4, after_h1);
+        declare_axiom(kernel, anon, "add_lt_add_of_le_of_lt", ty)
+    };
+
     ArithPrelude {
         logic,
         r,
@@ -425,6 +462,7 @@ pub fn build_arith_prelude(kernel: &mut Kernel) -> ArithPrelude {
         add_neg,
         mul_le_mul_of_nonneg_left,
         zero_lt_one,
+        add_lt_add_of_le_of_lt,
     }
 }
 

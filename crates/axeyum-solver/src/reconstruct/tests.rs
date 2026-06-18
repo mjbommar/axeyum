@@ -3159,3 +3159,56 @@ fn forall_inst_inconsistent_witness_rejected() {
         .expect_err("inconsistent witness must be rejected");
     assert!(matches!(err, ReconstructError::MalformedStep { .. }));
 }
+
+/// **Mixed strict/non-strict, not a cycle** (Task #16): `x < 0 ∧ 0 ≤ x`. The Farkas
+/// refutation is `1·(x < 0) + 1·(0 ≤ x)`: summing the strict `x < 0` with the
+/// non-strict `−x ≤ 0` gives `0 < 0` (`K = 0`), refuted directly by `lt_irrefl`. This
+/// is neither a pure strict cycle (`try_strict_cycle`) nor pure non-strict
+/// (`try_general_farkas` rejects strict atoms), so only the mixed engine closes it.
+#[test]
+fn lra_mixed_strict_nonstrict_reconstructs() {
+    use axeyum_ir::{Rational, TermArena};
+
+    use super::{LraReconstructCtx, reconstruct_lra_proof};
+
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let zero = arena.real_const(Rational::integer(0));
+    let a1 = arena.real_lt(x, zero).unwrap(); // x < 0  (strict)
+    let a2 = arena.real_le(zero, x).unwrap(); // 0 ≤ x  (non-strict)
+
+    let mut ctx = LraReconstructCtx::new();
+    let proof = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2])
+        .expect("mixed strict/non-strict Farkas reconstructs to False");
+    assert_lra_infers_false(&mut ctx, proof);
+}
+
+/// **Mixed, 3 constraints, non-unit multiplier on the strict atom** (Task #16):
+/// `2x < 0 ∧ 1 ≤ x ∧ 1 ≤ y` with the strict atom carrying weight. The Farkas
+/// refutation is `1·(2x < 0) + 2·(1 − x ≤ 0) + 0·…` → `2x + 2 − 2x = 2`, a strict
+/// `2 < 0` (`K = 2 > 0`), closed via `0 < 2` and `lt_trans` → `0 < 0` → `lt_irrefl`.
+/// Here the strict atom `2x < 0` is summed (its scaling exercises repeated
+/// `add_lt_add`) with the non-strict `2·(1 − x) ≤ 0`. The `1 ≤ y` is a decoy the
+/// certificate gives a zero multiplier, confirming the engine only sums used atoms.
+#[test]
+fn lra_mixed_three_constraint_nonunit_strict_reconstructs() {
+    use axeyum_ir::{Rational, TermArena};
+
+    use super::{LraReconstructCtx, reconstruct_lra_proof};
+
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let y = arena.real_var("y").unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let one = arena.real_const(Rational::integer(1));
+    let zero = arena.real_const(Rational::integer(0));
+    let two_x = arena.real_mul(two, x).unwrap();
+    let a1 = arena.real_lt(two_x, zero).unwrap(); // 2x < 0  (strict)
+    let a2 = arena.real_le(one, x).unwrap(); // 1 ≤ x   (non-strict)
+    let a3 = arena.real_le(one, y).unwrap(); // 1 ≤ y   (decoy, unused)
+
+    let mut ctx = LraReconstructCtx::new();
+    let proof = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2, a3])
+        .expect("mixed 3-constraint non-unit-strict Farkas reconstructs to False");
+    assert_lra_infers_false(&mut ctx, proof);
+}
