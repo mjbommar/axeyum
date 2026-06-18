@@ -2559,6 +2559,44 @@ fn try_or_neg(
     Ok(Some(check_against(ctx, "or_neg", proof, target)?))
 }
 
+/// Rule-specific `O(1)` reconstruction of the `equiv_*` / `xor_*` rules, whose gate
+/// `(= a b)` (or `(xor a b) = Not Iff`) has exactly **two** operands `a, b`. Instead
+/// of the `2^leaves` truth-table over the operands' bit leaves, case-split only over
+/// `{a, b}` (the four `em ⟦a⟧ × em ⟦b⟧` cases) via the shared `prove_clause_by_cases`
+/// engine — `prove_term_true/false` now treats `a, b` as opaque atoms. Polynomial
+/// regardless of how large the operand gates are. Returns `Ok(None)` if no `=`/`xor`
+/// gate literal is present (caller falls back).
+fn try_equiv_xor(
+    ctx: &mut ReconstructCtx,
+    rule_name: &str,
+    conclusion: &[AletheLit],
+) -> Result<Option<ExprId>, ReconstructError> {
+    let mut operands: Option<(AletheTerm, AletheTerm)> = None;
+    for lit in conclusion {
+        if let AletheTerm::App(head, args) = &lit.atom {
+            if (head == "=" || head == "xor") && args.len() == 2 {
+                operands = Some((args[0].clone(), args[1].clone()));
+                break;
+            }
+        }
+    }
+    let Some((a, b)) = operands else {
+        return Ok(None);
+    };
+
+    let _ = ctx.em_axiom();
+    // Case-split atoms: the two operands, deduplicated by key (handles `(= a a)`).
+    let mut atoms: Vec<(String, AletheTerm)> = vec![(a.key(), a)];
+    if b.key() != atoms[0].0 {
+        atoms.push((b.key(), b));
+    }
+    let target = ctx.gate_clause_to_prop(conclusion);
+    let conclusion = conclusion.to_vec();
+    let mut assignment = Assignment::new();
+    let proof = prove_clause_by_cases(ctx, &atoms, 0, &mut assignment, &conclusion, target)?;
+    Ok(Some(check_against(ctx, rule_name, proof, target)?))
+}
+
 /// Reconstruct a Tseitin **CNF-introduction** rule into a kernel-checked Lean
 /// proof term of its conclusion clause's `Prop` encoding.
 ///
@@ -2619,6 +2657,21 @@ pub fn reconstruct_cnf_intro_rule(
     }
     if rule_name == "or_neg" {
         if let Some(proof) = try_or_neg(ctx, conclusion)? {
+            return Ok(proof);
+        }
+    }
+    if matches!(
+        rule_name,
+        "equiv_pos1"
+            | "equiv_pos2"
+            | "equiv_neg1"
+            | "equiv_neg2"
+            | "xor_pos1"
+            | "xor_pos2"
+            | "xor_neg1"
+            | "xor_neg2"
+    ) {
+        if let Some(proof) = try_equiv_xor(ctx, rule_name, conclusion)? {
             return Ok(proof);
         }
     }
@@ -2816,6 +2869,13 @@ fn prove_term_true(
     term: &AletheTerm,
     assignment: &Assignment,
 ) -> Result<Option<ExprId>, ReconstructError> {
+    // If `term` itself is a case-split atom, use its witness directly rather than
+    // recursing into its gate structure. For the leaf-atom truth-table this never
+    // fires on a compound term (only leaves are atoms); it lets a coarser case-split
+    // (e.g. over a predicate's two operands) treat those operands as opaque.
+    if let Some(&(_, proof, val)) = assignment.map.get(&term.key()) {
+        return Ok(val.then_some(proof));
+    }
     match term {
         // (not t) is true ⇔ t is false ⇒ a `Not ⟦t⟧` proof.
         AletheTerm::App(head, args) if head == "not" && args.len() == 1 => {
@@ -2871,6 +2931,11 @@ fn prove_term_false(
     term: &AletheTerm,
     assignment: &Assignment,
 ) -> Result<Option<ExprId>, ReconstructError> {
+    // Symmetric to `prove_term_true`: a case-split atom uses its `Not`-witness
+    // directly (stored for the `false` branch) instead of recursing into the gate.
+    if let Some(&(_, proof, val)) = assignment.map.get(&term.key()) {
+        return Ok((!val).then_some(proof));
+    }
     match term {
         // Not (not t) ⇔ t is true. We have a proof `ht : ⟦t⟧`; build a proof of
         // `Not (Not ⟦t⟧)` = `(⟦t⟧ → False) → False` as `fun hnt => hnt ht`.
