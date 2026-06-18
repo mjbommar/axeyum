@@ -26,14 +26,31 @@ UnsupportedResolution: no remaining premise resolves with the accumulator
                        `(cl (not (@bit_of 0 a)) (@bit_of 1 b))`
 ```
 
-The bit-blasting all reconstructs; the failure is in `reconstruct_resolution_step`,
-which follows a **linear greedy accumulator** (resolve the running clause with the
-next premise that shares a pivot). Real refutations have a resolution **DAG** the
-linear walk can't follow. So **no genuine QF_BV `unsat` (beyond `x ∧ ¬x`) closes
-to `False` yet** — the operators are ready, the proof *combinator* is not.
+The bit-blasting all reconstructs; the failure is in `reconstruct_resolution_step`.
+Probing (2-bit, fast) shows it needs **two** fixes, found by attempting each:
 
-This is the highest-priority Track-3 fix: a general resolution reconstruction that
-follows the Alethe step's premise structure (pivots/DAG), not a linear scan.
+1. **Tree-shaped resolution.** The current code folds linearly into one
+   accumulator (`acc`); it is stuck whenever two premises must resolve with *each
+   other* first. Generalizing to a pairwise pool (resolve any complementary pair to
+   a fixpoint) is a correct, soundness-safe superset (every `binary_resolve` is
+   kernel-checked) and keeps all 91 existing resolution tests green — but it is
+   **not sufficient** alone.
+2. **Bridge-aware resolution (the deeper blocker).** With the pool change the
+   error becomes "*no complementary pair among the 5 remaining clauses*": some
+   clauses carry the raw predicate atom `(bvult a b)` while others carry its
+   bit-level form `B`, and as **opaque** atoms they don't resolve. The bridge
+   (`pred ↔ B`) is applied in `gate_*`/the equiv steps but **not** when matching
+   resolution pivots, so a predicate literal never cancels its bit-form
+   counterpart. Resolution pivot-matching (`find_pivot`) must canonicalize
+   through the bridge.
+
+So **no genuine QF_BV `unsat` (beyond `x ∧ ¬x`) closes to `False` yet** — the
+operators are ready, the proof *combinator* needs both (1) tree resolution and
+(2) bridge-canonicalized pivots. (The pool change was reverted pending (2), since
+on its own it adds generality with no test that exercises it — undemonstrated
+change to soundness-critical code is not committed.)
+
+This is the highest-priority Track-3 fix.
 
 ### 2. Reconstruction is slow even at tiny widths
 
@@ -60,9 +77,12 @@ removed).
 
 ## Next steps, in priority order
 
-1. **General resolution reconstruction** — follow the Alethe `resolution`/
-   `th_resolution` premise+pivot structure as a DAG, so genuine QF_BV (and EUF/LRA)
-   refutations close to `False`. This unblocks *real* end-to-end QF_BV certificates.
+1. **General resolution reconstruction** — both parts together: (a) tree/pool
+   resolution (resolve any complementary pair to a fixpoint) and (b)
+   bridge-canonicalized pivot matching (a predicate literal cancels its bit-form
+   counterpart), so genuine QF_BV (and EUF/LRA) refutations close to `False`. This
+   unblocks *real* end-to-end QF_BV certificates and is the single highest-leverage
+   Track-3 fix. Land it with the bvult-antisymmetry case as the demonstrating test.
 2. **Sharing/memoization** — hash-cons `gate_term_to_prop` results and ensure the
    kernel shares `Expr`s, so `def_eq`/`infer` are polynomial; pairs with the
    shared/`let` multiplier encoding for width.
