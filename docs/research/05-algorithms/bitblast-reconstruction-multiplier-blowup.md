@@ -141,11 +141,20 @@ kernel-checked `False` at **width 6** (≈115 s) and emits to width 8, vs the ol
 inlined blowup at ~width 3–4. A committed regression test exercises width 4
 (`end_to_end_nested_mul_projection_reconstructs`).
 
-**Still open — the single-multiplier term.** A *single* wide `bvmul` over leaf
-operands is unchanged: its gadget is one `bitblast_mult` step whose result bit `i`
-is still an inlined ~4.5×/bit tree, so reconstruction's `mult_bit_term` hits
-`MULT_BIT_NODE_BUDGET` at ~width 7 (the guard still fires; raising it, width-8
-reconstruction exceeds 150 s). Likewise deep `bvudiv` lowering (nested multipliers)
-reconstructs only at width 2 in practical time. Closing these needs the
-**reconstruction-side sharing** of the multiplier DAG (item 1 above) — a separate
-follow-up; the projection encoding is the prerequisite, now landed.
+**The single-multiplier term — resolved by lowering (`#17`, 2026-06-18).** The
+`mult_bit_term` blowup above is a property of the **`bitblast_mult` gadget**. The
+durable fix taken was not reconstruction-side DAG sharing but **eliminating the
+gadget entirely**: `lower_bv.rs` now lowers `bvmul` to a shift-add network of core
+ops (`Σ_i splat(y[i]) ∧ (x<<i)`), so `prove_qf_bv_unsat_alethe_lowered` +
+`reconstruct_qf_bv_proof` reconstruct a wide multiplier as `O(width²)` adder/and
+gates (each adder bit embeds its carry once — polynomial) rather than one
+exponential `mult_bit_term`. A single `bvmul` then reconstructs at the same widths
+as the adder. Deep `bvudiv` lowering (a long divider built from these multipliers
+and adders) likewise reconstructs polynomially in representation, though its step
+*count* grows — see the per-step reconstruction-cost note (`#18`), which is
+step-count-bound, not representation-bound, after this change.
+
+The original `bitblast_mult` gadget path (and its `MULT_BIT_NODE_BUDGET` guard)
+remains for the **non-lowered** direct emitter; reconstruction-side DAG sharing is
+no longer on the critical path for wide multipliers, since the lowered route avoids
+the inlined tree in the first place.
