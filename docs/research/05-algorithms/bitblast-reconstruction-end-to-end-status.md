@@ -27,28 +27,35 @@ UnsupportedResolution: no remaining premise resolves with the accumulator
 ```
 
 The bit-blasting all reconstructs; the failure is in `reconstruct_resolution_step`.
-Probing (2-bit, fast) shows it needs **two** fixes, found by attempting each:
+Instrumented probing (2-bit, fast — dumping the stuck clauses' `(±atom-key)`
+literals) **confirmed** the root cause and **disproved an earlier guess** (it is
+*not* the predicate↔B bridge). Two real issues:
 
-1. **Tree-shaped resolution.** The current code folds linearly into one
-   accumulator (`acc`); it is stuck whenever two premises must resolve with *each
-   other* first. Generalizing to a pairwise pool (resolve any complementary pair to
-   a fixpoint) is a correct, soundness-safe superset (every `binary_resolve` is
-   kernel-checked) and keeps all 91 existing resolution tests green — but it is
-   **not sufficient** alone.
-2. **Bridge-aware resolution (the deeper blocker).** With the pool change the
-   error becomes "*no complementary pair among the 5 remaining clauses*": some
-   clauses carry the raw predicate atom `(bvult a b)` while others carry its
-   bit-level form `B`, and as **opaque** atoms they don't resolve. The bridge
-   (`pred ↔ B`) is applied in `gate_*`/the equiv steps but **not** when matching
-   resolution pivots, so a predicate literal never cancels its bit-form
-   counterpart. Resolution pivot-matching (`find_pivot`) must canonicalize
-   through the bridge.
+1. **Inconsistent negation spelling (confirmed bug).** The upstream CNF spells a
+   negation sometimes as the literal `negated` flag and sometimes as a `(not X)`
+   *atom*: a clause held `+((_ @bit_of 0) a)` while another held
+   `+(not ((_ @bit_of 0) a))` — logically `a0` and `¬a0`, but `find_pivot` matches
+   syntactically and missed them. Fix: `normalize_lit_polarity` peels leading
+   `(not …)` atoms into the `negated` flag. Soundness-safe — `+(not X)` and `-X`
+   encode to the identical `Not ⟦X⟧` Prop, so clause `proof` types are unchanged.
+   Measured effect: the stuck set shrank 5 → 3 clauses. Real, but **not
+   sufficient**.
+2. **Greedy resolution is non-confluent (the deeper blocker).** After
+   normalization the residual 3 clauses are **not jointly unsatisfiable**
+   (`a1=⊤` satisfies two, `b1=⊤` the third) — proof that the greedy
+   "resolve any complementary pair" loop *already went wrong earlier*, consuming a
+   clause some later step needed and leaving an unrefutable remnant. Binary
+   resolution is refutation-complete only for *some* order; arbitrary pair-picking
+   dead-ends. Alethe's basic `resolution` does **not** list pivots, so the checker
+   must reconstruct a valid order. The fix is **structure-following resolution** —
+   fold in the proof's intended (premise) order with correct pivot selection, or
+   reconstruct via RUP over the premises — not greedy pairing.
 
-So **no genuine QF_BV `unsat` (beyond `x ∧ ¬x`) closes to `False` yet** — the
-operators are ready, the proof *combinator* needs both (1) tree resolution and
-(2) bridge-canonicalized pivots. (The pool change was reverted pending (2), since
-on its own it adds generality with no test that exercises it — undemonstrated
-change to soundness-critical code is not committed.)
+So **no genuine QF_BV `unsat` (beyond `x ∧ ¬x`) closes to `False` yet**. Both the
+normalization and pool experiments were **reverted** (they get 5 → 3 but don't
+close, and have no demonstrating end-to-end test — undemonstrated change to
+soundness-critical resolution code is not committed). The confirmed diagnosis is
+the deliverable; the fix is a focused next piece.
 
 This is the highest-priority Track-3 fix.
 
@@ -77,12 +84,14 @@ removed).
 
 ## Next steps, in priority order
 
-1. **General resolution reconstruction** — both parts together: (a) tree/pool
-   resolution (resolve any complementary pair to a fixpoint) and (b)
-   bridge-canonicalized pivot matching (a predicate literal cancels its bit-form
-   counterpart), so genuine QF_BV (and EUF/LRA) refutations close to `False`. This
-   unblocks *real* end-to-end QF_BV certificates and is the single highest-leverage
-   Track-3 fix. Land it with the bvult-antisymmetry case as the demonstrating test.
+1. **General resolution reconstruction** — both parts together: (a)
+   `normalize_lit_polarity` (peel `(not …)` atoms into the flag — a confirmed,
+   self-contained bug fix; could land on its own with a `find_pivot` unit test),
+   and (b) **structure-following resolution** (fold in the proof's premise order
+   with correct pivots, or RUP-reconstruct) to replace the non-confluent greedy
+   pairing. Together these close genuine QF_BV (and EUF/LRA) refutations to
+   `False`. Single highest-leverage Track-3 fix; land it with the
+   bvult-antisymmetry case as the demonstrating end-to-end test.
 2. **Sharing/memoization** — hash-cons `gate_term_to_prop` results and ensure the
    kernel shares `Expr`s, so `def_eq`/`infer` are polynomial; pairs with the
    shared/`let` multiplier encoding for width.
