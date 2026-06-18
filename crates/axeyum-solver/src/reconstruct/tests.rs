@@ -1316,14 +1316,51 @@ fn bitblast_neg_wrong_carry_in_rejected() {
     );
 }
 
-/// `bitblast_mult` (a shift-add multiplier) remains outside the reconstructed
-/// fragment — rejected with a clear `UnsupportedRule`, never a panic.
+/// `bitblast_mult` (binary, width 2): shift-add multiplier result bits are
+///   bit0 = `(and b0 a0)`
+///   bit1 = `(xor (xor (and b0 a1) (and b1 a0)) false)`
+/// reconstructed (result bit `i` = `res[i][i]`) and kernel-checked.
 #[test]
-fn bitblast_mult_is_unsupported() {
+fn bitblast_mult_binary_width2_reconstructs() {
+    let bvmul = AletheTerm::App("bvmul".to_owned(), vec![atom("a"), atom("b")]);
+    let bit0 = and2(bit_of("b", 0), bit_of("a", 0));
+    let bit1 = xor2(
+        xor2(
+            and2(bit_of("b", 0), bit_of("a", 1)),
+            and2(bit_of("b", 1), bit_of("a", 0)),
+        ),
+        atom("false"),
+    );
+    let concl = bb_concl(bvmul, bbterm(vec![bit0, bit1]));
+    assert_bitblast_ok("bitblast_mult", &concl);
+}
+
+/// **NEGATIVE soundness** for `mult`: a wrong bit0 (`(and a0 b0)` operands
+/// swapped relative to the emitter's `(and b0 a0)`) is REJECTED at the kernel
+/// gate — the AND's operand order is part of the Prop identity.
+#[test]
+fn bitblast_mult_wrong_bit_rejected() {
     let mut ctx = ReconstructCtx::new();
     let bvmul = AletheTerm::App("bvmul".to_owned(), vec![atom("a"), atom("b")]);
-    let concl = bb_concl(bvmul, bbterm(vec![and2(bit_of("a", 0), bit_of("b", 0))]));
-    let err = reconstruct_bitblast_step(&mut ctx, "bitblast_mult", &concl).unwrap_err();
+    // Wrong: `(and a0 b0)` — the emitter spells bit0 as `(and b0 a0)`.
+    let wrong0 = and2(bit_of("a", 0), bit_of("b", 0));
+    let concl = bb_concl(bvmul, bbterm(vec![wrong0]));
+    let err = reconstruct_bitblast_step(&mut ctx, "bitblast_mult", &concl)
+        .expect_err("a wrong mult bit must be rejected by the kernel");
+    assert!(
+        matches!(err, ReconstructError::KernelRejected { .. }),
+        "got {err:?}"
+    );
+}
+
+/// `bitblast_concat` (a structural op needing operand widths) remains outside the
+/// reconstructed fragment — rejected with a clear `UnsupportedRule`.
+#[test]
+fn bitblast_concat_is_unsupported() {
+    let mut ctx = ReconstructCtx::new();
+    let concat = AletheTerm::App("concat".to_owned(), vec![atom("a"), atom("b")]);
+    let concl = bb_concl(concat, bbterm(vec![bit_of("b", 0)]));
+    let err = reconstruct_bitblast_step(&mut ctx, "bitblast_concat", &concl).unwrap_err();
     assert!(
         matches!(err, ReconstructError::UnsupportedRule { .. }),
         "got {err:?}"
@@ -1555,11 +1592,10 @@ fn end_to_end_neg_reconstructs() {
         .expect("a bvneg QF_BV proof must reconstruct to kernel-checked False");
 }
 
-/// **NEGATIVE soundness**: a `QF_BV` proof whose bit-blast needs the multiplier
-/// (`bitblast_mult`, still outside the reconstructed fragment) is rejected by
-/// `reconstruct_qf_bv_proof`, never silently accepted.
+/// **End-to-end**: a `(= (bvmul a b) a) ∧ ¬…` `QF_BV` unsat proof — bit-blasted
+/// via the shift-add `bitblast_mult` — reconstructs to a kernel-checked `False`.
 #[test]
-fn end_to_end_non_bitwise_rejected() {
+fn end_to_end_mul_reconstructs() {
     use axeyum_ir::TermArena;
     let mut arena = TermArena::new();
     let a = {
@@ -1573,11 +1609,39 @@ fn end_to_end_non_bitwise_rejected() {
     let mul = arena.bv_mul(a, b).unwrap();
     let eq = arena.eq(mul, a).unwrap();
     let neq = arena.not(eq).unwrap();
-    // `(= (bvmul a b) a) ∧ ¬…` is unsat, but `bvmul` is a shift-add → rejected.
+    let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    reconstruct_qf_bv_proof(&mut ctx, &proof)
+        .expect("a bvmul QF_BV proof must reconstruct to kernel-checked False");
+}
+
+/// **NEGATIVE soundness**: a `QF_BV` proof whose bit-blast needs `concat`
+/// (a structural op still outside the reconstructed fragment) is rejected by
+/// `reconstruct_qf_bv_proof`, never silently accepted.
+#[test]
+fn end_to_end_non_bitwise_rejected() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let cat = arena.concat(a, b).unwrap();
+    let d = {
+        let s = arena.declare("d", Sort::BitVec(4)).unwrap();
+        arena.var(s)
+    };
+    let eq = arena.eq(cat, d).unwrap();
+    let neq = arena.not(eq).unwrap();
+    // `(= (concat a b) d) ∧ ¬…` is unsat, but `concat` needs operand widths → rejected.
     let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("emitter");
     let mut ctx = ReconstructCtx::new();
     let err = reconstruct_qf_bv_proof(&mut ctx, &proof)
-        .expect_err("a multiplier bitblast step must be rejected");
+        .expect_err("a concat bitblast step must be rejected");
     assert!(
         matches!(err, ReconstructError::UnsupportedRule { .. }),
         "got {err:?}"
