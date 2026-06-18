@@ -3,7 +3,9 @@
 //! no-op when off. (Non-ignored: fast — the cases decide in milliseconds.)
 
 use axeyum_ir::{Sort, TermArena};
-use axeyum_solver::{CheckResult, SolverConfig, check_lazy_bv_abstraction_ro, solve};
+use axeyum_solver::{
+    CheckResult, LazyBvBackend, SolverBackend, SolverConfig, check_lazy_bv_abstraction_ro, solve,
+};
 
 /// `x = 1 ∧ x = 2` (contradiction) ∧ `r = p*q` (incidental 64-bit multiplier):
 /// with `lazy_bv` on, `solve()` routes to the lazy strategy and decides UNSAT
@@ -137,5 +139,50 @@ fn lazy_bv_ro_decides_without_mutating_caller_arena() {
     assert_eq!(
         len_before, len_after,
         "caller's arena must be untouched (the strategy ran on a clone)"
+    );
+}
+
+/// `LazyBvBackend` decides through the `SolverBackend` trait (the bench's
+/// consumer interface) and reports refinement telemetry in `last_stats`.
+#[test]
+#[allow(clippy::many_single_char_names)] // x, p, q, r are natural BV-variable names
+fn lazy_bv_backend_via_trait_reports_telemetry() {
+    let mut a = TermArena::new();
+    let xs = a.declare("x", Sort::BitVec(16)).unwrap();
+    let ps = a.declare("p", Sort::BitVec(16)).unwrap();
+    let qs = a.declare("q", Sort::BitVec(16)).unwrap();
+    let rs = a.declare("r", Sort::BitVec(16)).unwrap();
+    let x = a.var(xs);
+    let p = a.var(ps);
+    let q = a.var(qs);
+    let r = a.var(rs);
+    let one = a.bv_const(16, 1).unwrap();
+    let two = a.bv_const(16, 2).unwrap();
+    let mul = a.bv_mul(p, q).unwrap();
+    let c1 = a.eq(x, one).unwrap();
+    let c2 = a.eq(x, two).unwrap();
+    let c3 = a.eq(r, mul).unwrap();
+
+    let mut backend = LazyBvBackend::new();
+    let result = backend
+        .check(&a, &[c1, c2, c3], &SolverConfig::default())
+        .unwrap();
+    assert!(
+        matches!(result, CheckResult::Unsat),
+        "trait check must decide UNSAT, got {result:?}"
+    );
+    let stats = backend.last_stats().expect("lazy backend records stats");
+    let counter = |name: &str| {
+        stats
+            .backend
+            .iter()
+            .find(|(k, _)| k == name)
+            .map(|(_, v)| *v)
+    };
+    assert_eq!(counter("lazy_ops_total"), Some(1.0), "one heavy op present");
+    assert_eq!(
+        counter("lazy_ops_refined"),
+        Some(0.0),
+        "incidental multiplier never materialized"
     );
 }

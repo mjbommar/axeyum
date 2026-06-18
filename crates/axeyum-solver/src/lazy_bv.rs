@@ -32,7 +32,10 @@ use axeyum_ir::{Op, TermArena, TermId, TermNode, Value, eval};
 use axeyum_rewrite::replace_subterms;
 
 use crate::auto::solve;
-use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
+use crate::backend::{
+    Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind,
+    UnknownReason,
+};
 use crate::model::Model;
 
 const FRESH_PREFIX: &str = "!lazy_op_";
@@ -326,4 +329,83 @@ fn restrict_model(arena: &TermArena, model: &Model) -> Model {
         out.set_function(func, value.clone());
     }
     out
+}
+
+/// A [`SolverBackend`] that decides via the P2.1 lazy abstraction-refinement
+/// (CEGAR) bit-blasting strategy (ADR-0019) instead of eager bit-blasting:
+/// heavy gadgets (`bvmul`/`bvudiv`/…) are abstracted by fresh variables, the
+/// small abstraction is solved, and only the operations a candidate model
+/// violates are exactly bit-blasted, to a fixpoint.
+///
+/// It runs through [`check_lazy_bv_abstraction_ro`], so it honors the
+/// `&TermArena` trait contract (no caller-arena mutation). The refinement
+/// telemetry (`lazy_ops_total`/`lazy_ops_refined`/`lazy_rounds`) is exposed via
+/// [`SolverBackend::last_stats`] for the bench. This is the measurement vehicle
+/// for the public-QF_BV lazy-vs-eager comparison; it is sound for the same
+/// reasons as the strategy (over-approximation `unsat`, replay-checked `sat`).
+#[derive(Debug, Default)]
+pub struct LazyBvBackend {
+    stats: Option<SolveStats>,
+}
+
+impl LazyBvBackend {
+    /// Creates a lazy-bit-blasting backend.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl SolverBackend for LazyBvBackend {
+    fn capabilities(&self) -> Capabilities {
+        Capabilities {
+            name: "axeyum-lazy-bv (CEGAR abstraction-refinement)".to_owned(),
+            produces_models: true,
+            complete: true,
+        }
+    }
+
+    fn check(
+        &mut self,
+        arena: &TermArena,
+        assertions: &[TermId],
+        config: &SolverConfig,
+    ) -> Result<CheckResult, SolverError> {
+        // Clear the lazy flag on the inner config so the eager sub-solves inside
+        // the strategy never re-enter the `auto::solve` lazy dispatch.
+        let inner = config.clone().with_lazy_bv(false);
+        let outcome = check_lazy_bv_abstraction_ro(arena, assertions, &inner)?;
+        let mut stats = SolveStats {
+            assertion_count: usize_to_u64(assertions.len()),
+            ..SolveStats::default()
+        };
+        stats
+            .backend
+            .push(("lazy_ops_total".to_owned(), usize_to_f64(outcome.ops_total)));
+        stats.backend.push((
+            "lazy_ops_refined".to_owned(),
+            usize_to_f64(outcome.ops_refined),
+        ));
+        stats
+            .backend
+            .push(("lazy_rounds".to_owned(), usize_to_f64(outcome.rounds)));
+        self.stats = Some(stats);
+        Ok(outcome.result)
+    }
+
+    fn last_stats(&self) -> Option<&SolveStats> {
+        self.stats.as_ref()
+    }
+}
+
+/// Telemetry-count conversion (a count never loses meaningful precision in `f64`).
+#[allow(clippy::cast_precision_loss)]
+fn usize_to_f64(value: usize) -> f64 {
+    value as f64
+}
+
+/// Telemetry-count conversion (`usize` ≤ `u64` on supported targets).
+#[allow(clippy::cast_possible_truncation)]
+fn usize_to_u64(value: usize) -> u64 {
+    value as u64
 }
