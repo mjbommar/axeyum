@@ -20,6 +20,7 @@ use axeyum_ir::{Rational, Sort, TermArena, TermId};
 use axeyum_smtlib::write_script;
 use axeyum_solver::{
     bitblast_step, prove_lra_unsat_alethe, prove_qf_bv_unsat_alethe, prove_qf_uf_unsat_alethe,
+    prove_qf_ufbv_unsat_alethe,
 };
 
 /// Resolves the Carcara binary: `AXEYUM_CARCARA_BIN` if set, otherwise the
@@ -1525,5 +1526,107 @@ fn driver_compound_in_ult_predicate_is_accepted_by_carcara() {
 
     let proof = prove_qf_bv_unsat_alethe(&arena, &assertions).expect("emit QF_BV proof");
     let report = carcara_accepts_inlined(&bin, "driver_compound_ult", &arena, &assertions, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+// --- QF_UFBV Ackermann certificate: `prove_qf_ufbv_unsat_alethe` -------------
+//
+// The composed proof refutes the *reduced* problem — the rewritten originals
+// (function applications abstracted to fresh `!fn_app_*` symbols) plus the
+// abstraction's defining equations `(= !fn_app_i (f a_i))` — with every
+// functional-consistency constraint **derived** by `eq_congruent` rather than
+// assumed. The matching `.smt2` therefore declares the fresh symbols and asserts
+// the rewritten originals together with the (conservative) abstraction
+// definitions, so each proof `assume` matches an original problem premise.
+
+#[test]
+fn ufbv_unary_congruence_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // f(a) = #b00 ∧ a = b ∧ ¬(f(b) = #b00) — unsat by congruence over `f`.
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(2)], Sort::BitVec(2))
+        .unwrap();
+    let a = bvw(&mut arena, "a", 2);
+    let b = bvw(&mut arena, "b", 2);
+    let fa = arena.apply(f, &[a]).unwrap();
+    let fb = arena.apply(f, &[b]).unwrap();
+    let c00 = arena.bv_const(2, 0).unwrap();
+    let e1 = arena.eq(fa, c00).unwrap();
+    let e2 = arena.eq(a, b).unwrap();
+    let e3 = {
+        let e = arena.eq(fb, c00).unwrap();
+        arena.not(e).unwrap()
+    };
+
+    let proof = prove_qf_ufbv_unsat_alethe(&mut arena, &[e1, e2, e3]).expect("emit QF_UFBV proof");
+    let smt2 = "\
+(set-logic QF_UFBV)
+(declare-fun f ((_ BitVec 2)) (_ BitVec 2))
+(declare-const a (_ BitVec 2))
+(declare-const b (_ BitVec 2))
+(declare-const !fn_app_0 (_ BitVec 2))
+(declare-const !fn_app_1 (_ BitVec 2))
+(assert (= !fn_app_0 #b00))
+(assert (= a b))
+(assert (not (= !fn_app_1 #b00)))
+(assert (= !fn_app_0 (f a)))
+(assert (= (f b) !fn_app_1))
+(check-sat)
+";
+    let report = carcara_accepts_smt2(&bin, "ufbv_unary", smt2, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+#[test]
+#[allow(clippy::many_single_char_names)]
+fn ufbv_binary_congruence_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // g(a, b) = #b00 ∧ a = c ∧ b = d ∧ ¬(g(c, d) = #b00) — two-argument congruence.
+    let mut arena = TermArena::new();
+    let g = arena
+        .declare_fun("g", &[Sort::BitVec(2), Sort::BitVec(2)], Sort::BitVec(2))
+        .unwrap();
+    let a = bvw(&mut arena, "a", 2);
+    let b = bvw(&mut arena, "b", 2);
+    let c = bvw(&mut arena, "c", 2);
+    let d = bvw(&mut arena, "d", 2);
+    let gab = arena.apply(g, &[a, b]).unwrap();
+    let gcd = arena.apply(g, &[c, d]).unwrap();
+    let c00 = arena.bv_const(2, 0).unwrap();
+    let e1 = arena.eq(gab, c00).unwrap();
+    let e2 = arena.eq(a, c).unwrap();
+    let e3 = arena.eq(b, d).unwrap();
+    let e4 = {
+        let e = arena.eq(gcd, c00).unwrap();
+        arena.not(e).unwrap()
+    };
+
+    let proof =
+        prove_qf_ufbv_unsat_alethe(&mut arena, &[e1, e2, e3, e4]).expect("emit QF_UFBV proof");
+    let smt2 = "\
+(set-logic QF_UFBV)
+(declare-fun g ((_ BitVec 2) (_ BitVec 2)) (_ BitVec 2))
+(declare-const a (_ BitVec 2))
+(declare-const b (_ BitVec 2))
+(declare-const c (_ BitVec 2))
+(declare-const d (_ BitVec 2))
+(declare-const !fn_app_0 (_ BitVec 2))
+(declare-const !fn_app_1 (_ BitVec 2))
+(assert (= !fn_app_0 #b00))
+(assert (= a c))
+(assert (= b d))
+(assert (not (= !fn_app_1 #b00)))
+(assert (= !fn_app_0 (g a b)))
+(assert (= (g c d) !fn_app_1))
+(check-sat)
+";
+    let report = carcara_accepts_smt2(&bin, "ufbv_binary", smt2, &proof);
     assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
 }
