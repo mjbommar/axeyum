@@ -19,8 +19,8 @@ use axeyum_cnf::{AletheClause, AletheCommand, AletheLit, AletheTerm, write_aleth
 use axeyum_ir::{Rational, Sort, TermArena, TermId};
 use axeyum_smtlib::write_script;
 use axeyum_solver::{
-    bitblast_step, prove_lra_unsat_alethe, prove_qf_bv_unsat_alethe, prove_qf_uf_unsat_alethe,
-    prove_qf_ufbv_unsat_alethe,
+    bitblast_step, prove_lra_unsat_alethe, prove_qf_abv_unsat_alethe_via_elimination,
+    prove_qf_bv_unsat_alethe, prove_qf_uf_unsat_alethe, prove_qf_ufbv_unsat_alethe,
 };
 
 /// Resolves the Carcara binary: `AXEYUM_CARCARA_BIN` if set, otherwise the
@@ -1628,5 +1628,64 @@ fn ufbv_binary_congruence_is_accepted_by_carcara() {
 (check-sat)
 ";
     let report = carcara_accepts_smt2(&bin, "ufbv_binary", smt2, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+// --- QF_ABV array-elimination certificate: ----------------------------------
+// `prove_qf_abv_unsat_alethe_via_elimination`
+//
+// The composed proof certifies the **read-consistency** (Ackermann-over-select)
+// trust hole: an array variable `a` is the unary uninterpreted function
+// `!sel_a := λ idx. select(a, idx)`, each abstracted select `select(a, idx)`
+// becomes a fresh `!arr_sel_*` symbol with defining equation
+// `(= !arr_sel_i (!sel_a idx_i))`, and the read-consistency constraint
+// `(= idx_i idx_j) -> (= !arr_sel_i !arr_sel_j)` is **derived** by `eq_congruent`
+// over `!sel_a` rather than assumed. The certificate uses **no array theory rule**
+// (`!sel_a` is a plain uninterpreted function), so Carcara checks the proof in
+// full — `eq_congruent`, `eq_transitive`, and every bit-blast step. The matching
+// `.smt2` declares `!sel_a`, the fresh select symbols, and asserts the rewritten
+// originals plus the (conservative) abstraction definitions, so each proof
+// `assume` matches an original premise.
+
+#[test]
+#[allow(clippy::many_single_char_names)] // a, i, j, c, e: array, indices, const, expr
+fn abv_select_consistency_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // select(a, i) = #b0…0 ∧ i = j ∧ ¬(select(a, j) = #b0…0) — unsat by
+    // read-consistency over `select(a, ·)`.
+    let mut arena = TermArena::new();
+    let a = arena.array_var("a", 4, 8).unwrap();
+    let i = bvw(&mut arena, "i", 4);
+    let j = bvw(&mut arena, "j", 4);
+    let c = arena.bv_const(8, 0).unwrap();
+    let sa = arena.select(a, i).unwrap();
+    let sb = arena.select(a, j).unwrap();
+    let e1 = arena.eq(sa, c).unwrap();
+    let e2 = arena.eq(i, j).unwrap();
+    let e3 = {
+        let e = arena.eq(sb, c).unwrap();
+        arena.not(e).unwrap()
+    };
+
+    let proof = prove_qf_abv_unsat_alethe_via_elimination(&mut arena, &[e1, e2, e3])
+        .expect("emit QF_ABV array-elimination proof");
+    let smt2 = "\
+(set-logic QF_AUFBV)
+(declare-fun !sel_a ((_ BitVec 4)) (_ BitVec 8))
+(declare-const i (_ BitVec 4))
+(declare-const j (_ BitVec 4))
+(declare-const !arr_sel_0 (_ BitVec 8))
+(declare-const !arr_sel_1 (_ BitVec 8))
+(assert (= !arr_sel_0 #b00000000))
+(assert (= i j))
+(assert (not (= !arr_sel_1 #b00000000)))
+(assert (= !arr_sel_0 (!sel_a i)))
+(assert (= (!sel_a j) !arr_sel_1))
+(check-sat)
+";
+    let report = carcara_accepts_smt2(&bin, "abv_select_consistency", smt2, &proof);
     assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
 }

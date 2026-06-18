@@ -58,6 +58,7 @@ mod pbls;
 mod preprocess;
 mod proof;
 mod qfabv_alethe;
+mod qfabv_elim_alethe;
 mod qfbv_alethe;
 mod qfufbv_alethe;
 mod qinst_egraph;
@@ -156,6 +157,7 @@ pub use proof::{
     export_qf_uf_unsat_proof,
 };
 pub use qfabv_alethe::prove_qf_abv_unsat_alethe;
+pub use qfabv_elim_alethe::prove_qf_abv_unsat_alethe_via_elimination;
 pub use qfbv_alethe::{prove_qf_bv_unsat_alethe, prove_qf_bv_unsat_alethe_lowered};
 pub use qfufbv_alethe::prove_qf_ufbv_unsat_alethe;
 pub use qinst_egraph::{instantiate_forall_via_egraph, prove_quantified_unsat_via_egraph};

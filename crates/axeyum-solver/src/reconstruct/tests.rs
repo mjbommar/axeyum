@@ -475,6 +475,47 @@ fn qf_ufbv_reconstruct_rejects_non_certificate() {
     ));
 }
 
+/// **`QF_ABV` array-elimination certificate end-to-end (ADR-0010 task #20)**: take
+/// a REAL `prove_qf_abv_unsat_alethe_via_elimination` certificate for
+/// `select(a, i) = #b0…0 ∧ i = j ∧ ¬(select(a, j) = #b0…0)` — decided via the
+/// array-elimination reduction — and reconstruct it through the **shared**
+/// `reconstruct_qf_ufbv_proof` to a kernel-checked `False`. An array variable `a`
+/// is the unary uninterpreted function `sel_a := λ idx. select(a, idx)`, so the
+/// **read-consistency** (Ackermann-over-select) constraint is **derived** by
+/// `eq_congruent` over `sel_a` (the EUF head, kernel-checked) and consumed by the
+/// bit-blast refutation (the tail, kernel-checked). The previously-trusted
+/// Ackermann-over-select step is now validated by the Lean kernel — no trusted
+/// reduction step remains.
+#[test]
+fn end_to_end_qf_abv_array_elimination_certificate_to_false() {
+    let mut arena = TermArena::new();
+    let a = arena.array_var("a", 4, 8).unwrap();
+    let i = {
+        let s = arena.declare("i", Sort::BitVec(4)).unwrap();
+        arena.var(s)
+    };
+    let j = {
+        let s = arena.declare("j", Sort::BitVec(4)).unwrap();
+        arena.var(s)
+    };
+    let c = arena.bv_const(8, 0).unwrap();
+    let sa = arena.select(a, i).unwrap();
+    let sb = arena.select(a, j).unwrap();
+    let e1 = arena.eq(sa, c).unwrap();
+    let e2 = arena.eq(i, j).unwrap();
+    let e3 = {
+        let e = arena.eq(sb, c).unwrap();
+        arena.not(e).unwrap()
+    };
+
+    let proof = crate::prove_qf_abv_unsat_alethe_via_elimination(&mut arena, &[e1, e2, e3])
+        .expect("emitter produces the array-elimination certificate");
+    let mut ctx = ReconstructCtx::new();
+    let term = super::reconstruct_qf_ufbv_proof(&mut ctx, &proof)
+        .expect("the QF_ABV certificate reconstructs to a kernel-checked term");
+    assert_infers_false(&mut ctx, term);
+}
+
 /// **NEGATIVE soundness check**: corrupt a REAL emitted proof — swap the closing
 /// resolution's disequality to a non-complementary one — and confirm
 /// reconstruction REJECTS it (no complementary unit pair → error), never a wrong
