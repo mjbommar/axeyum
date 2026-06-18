@@ -1829,6 +1829,33 @@ fn end_to_end_bvule_via_lowering_reconstructs() {
     assert_infers_false(&mut ctx, term);
 }
 
+/// Structural lowering: `rotate_left k a → concat (extract …) (extract …)` (core
+/// ops). A `(rotate_left a 1) = b ∧ ¬(…)` query reconstructs to a kernel-checked
+/// `False`. (NOTE: `zero_extend` also lowers correctly — `concat (0:k) a` — but its
+/// end-to-end reconstruction is currently blocked by a separate `bitblast_concat`
+/// gap when the high operand is a **constant**; see the operator-coverage note.)
+#[test]
+fn end_to_end_rotate_via_lowering_reconstructs() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(4)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(4)).unwrap();
+        arena.var(s)
+    };
+    let r = arena.rotate_left(1, a).unwrap();
+    let eq = arena.eq(r, b).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe_lowered(&mut arena, &[eq, neq])
+        .expect("emitter accepts lowered core");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_bv_proof(&mut ctx, &proof).expect("reconstructs");
+    assert_infers_false(&mut ctx, term);
+}
+
 /// **NEGATIVE soundness (slice 6)**: corrupt the closing resolution of a REAL
 /// bitwise proof — drop a premise so it can no longer fold to `(cl)` — and confirm
 /// the fused walk REJECTS it rather than producing a `False` from a non-refutation.

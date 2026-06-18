@@ -21,14 +21,26 @@ this list.
 
 ## Status update (2026-06-18): route 1 LANDED for the cleanly-reducible ops
 
-`axeyum_rewrite::lower_derived_bv` (`40e679b`) implements the front-end
-denotation-preserving lowering for `bvsub`, `bvnand`, `bvnor`, and the six
-unsigned/signed comparisons (`bvugt`/`bvule`/`bvuge`/`bvsgt`/`bvsle`/`bvsge`) → core.
-Each rule is exhaustively checked denotation-preserving over all 3-bit inputs, and
-`bvsub`/`bvule` queries now reconstruct end-to-end to a kernel-checked `False`
-(`axeyum-solver` tests). **Remaining:** the route-2 `bv_poly_simp` upgrade (to certify
-the *un-lowered* original), and shifts/division (no cheap reduction). The rest of this
-note is the original analysis.
+`axeyum_rewrite::lower_derived_bv` (`40e679b`, extended) implements the front-end
+denotation-preserving lowering for the derived operators that reduce cleanly to core:
+- arithmetic/logical: `bvsub`, `bvnand`, `bvnor`;
+- comparisons: `bvugt`/`bvule`/`bvuge`/`bvsgt`/`bvsle`/`bvsge` → `bvult`/`bvslt` forms;
+- structural: `zero_extend → concat (0:k) x`, `rotate_left`/`rotate_right` →
+  `concat` of two `extract`s.
+
+Each rule is exhaustively checked denotation-preserving over all small inputs, and
+`bvsub`/`bvule`/`rotate_left` queries reconstruct end-to-end to a kernel-checked
+`False` (`axeyum-solver` tests).
+
+**Found gap (blocks `zero_extend` end-to-end):** `zero_extend` lowers correctly to
+`concat (bvconst 0:k) x`, the emitter emits a valid proof, but **reconstruction** of
+`bitblast_concat` fails with a `KernelRejected`/`TypeMismatch` when the high operand
+is a **constant** (`concat (#b…) x`). `rotate` (whose operands are `extract`s, never
+constants) reconstructs fine, isolating the bug to constant `concat` operands. The
+lowering is sound; this is a separate reconstruction fix. **Remaining:** that
+const-`concat` reconstruction fix (to unlock `zero_extend`), the route-2
+`bv_poly_simp` upgrade (certify the *un-lowered* original), and shifts/division (no
+cheap reduction). The rest of this note is the original analysis.
 
 ## The gap: derived operators are rejected (confirmed by probe)
 

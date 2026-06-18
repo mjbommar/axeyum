@@ -3,10 +3,11 @@
 //! reconstruction all support
 //! (see `docs/research/05-algorithms/qfbv-proof-operator-coverage.md`).
 //!
-//! Reducing `bvsub`/`bvnand`/`bvnor` and the four unsigned/signed "other"
-//! comparisons to core lets the proof track cover them: lower first, then emit a
-//! proof over core ops only. Every rule is a standard SMT-LIB identity, and each is
-//! checked denotation-preserving by the ground evaluator in the tests below.
+//! Reducing `bvsub`/`bvnand`/`bvnor`, the six non-core comparisons, and the
+//! structural `zero_extend`/`rotate_left`/`rotate_right` to core lets the proof track
+//! cover them: lower first, then emit a proof over core ops only. Every rule is a
+//! standard SMT-LIB identity, and each is checked denotation-preserving by the ground
+//! evaluator in the tests below.
 
 use axeyum_ir::{IrError, Op, TermArena, TermId, TermNode};
 
@@ -20,6 +21,8 @@ use axeyum_ir::{IrError, Op, TermArena, TermId, TermNode};
 /// - `bvnand a b → bvnot (bvand a b)`, `bvnor a b → bvnot (bvor a b)`
 /// - `bvugt a b → bvult b a`, `bvule a b → ¬(bvult b a)`, `bvuge a b → ¬(bvult a b)`
 /// - `bvsgt a b → bvslt b a`, `bvsle a b → ¬(bvslt b a)`, `bvsge a b → ¬(bvslt a b)`
+/// - `zero_extend k x → concat (0:k) x`
+/// - `rotate_left`/`rotate_right` → `concat` of two `extract`s
 ///
 /// # Errors
 ///
@@ -73,9 +76,53 @@ pub fn lower_derived_bv(arena: &mut TermArena, term: TermId) -> Result<TermId, I
             let lt = arena.bv_slt(largs[0], largs[1])?;
             arena.not(lt)?
         }
+        // zero_extend by k ≡ concat (0:k) x  (k zero bits in the high end).
+        Op::ZeroExt { by } => {
+            if by == 0 {
+                largs[0]
+            } else {
+                let z = arena.bv_const(by, 0)?;
+                arena.concat(z, largs[0])?
+            }
+        }
+        // rotate_left by k on width w ≡ concat x[w-k-1:0] x[w-1:w-k]  (low w-k bits to
+        // the high end, high k bits to the low end). k is taken mod w.
+        Op::RotateLeft { by } => rotate_via_concat(arena, largs[0], by, true)?,
+        // rotate_right by k ≡ concat x[k-1:0] x[w-1:k].
+        Op::RotateRight { by } => rotate_via_concat(arena, largs[0], by, false)?,
         // Not a lowered operator: rebuild with lowered children (sort preserved).
         _ => arena.rebuild_with_args(term, &largs),
     })
+}
+
+/// `rotate_left`/`rotate_right` of `x` by `by` (taken mod the operand width),
+/// expressed as a `concat` of two `extract`s — both core operators. `left` selects
+/// the rotate direction. A zero effective amount is the identity.
+fn rotate_via_concat(
+    arena: &mut TermArena,
+    x: TermId,
+    by: u32,
+    left: bool,
+) -> Result<TermId, IrError> {
+    let w = arena
+        .sort_of(x)
+        .bv_width()
+        .expect("rotate operand has BV sort");
+    let k = if w == 0 { 0 } else { by % w };
+    if k == 0 {
+        return Ok(x);
+    }
+    // left:  high = x[w-k-1:0]  (low w-k bits),  low = x[w-1:w-k] (high k bits)
+    // right: high = x[k-1:0]    (low k bits),    low = x[w-1:k]   (high w-k bits)
+    let (hi, lo) = if left {
+        (
+            arena.extract(w - k - 1, 0, x)?,
+            arena.extract(w - 1, w - k, x)?,
+        )
+    } else {
+        (arena.extract(k - 1, 0, x)?, arena.extract(w - 1, k, x)?)
+    };
+    arena.concat(hi, lo)
 }
 
 #[cfg(test)]
@@ -125,6 +172,38 @@ mod tests {
         assert_lowering_preserves(3, |a, x, y| a.bv_sle(x, y).unwrap());
         assert_lowering_preserves(3, |a, x, y| a.bv_sge(x, y).unwrap());
         assert_lowering_preserves(3, |a, x, y| a.bv_sgt(x, y).unwrap());
+    }
+
+    /// Exhaustively confirm a lowered unary BV op agrees with the original on every
+    /// `width`-bit input.
+    fn assert_unary_lowering_preserves(
+        width: u32,
+        build: impl Fn(&mut TermArena, TermId) -> TermId,
+    ) {
+        let mut arena = TermArena::new();
+        let sa = arena.declare("a", Sort::BitVec(width)).unwrap();
+        let a = arena.var(sa);
+        let orig = build(&mut arena, a);
+        let low = lower_derived_bv(&mut arena, orig).unwrap();
+        for av in 0..(1u128 << width) {
+            let mut asn = Assignment::new();
+            asn.set(sa, Value::Bv { width, value: av });
+            let eo = axeyum_ir::eval(&arena, orig, &asn).unwrap();
+            let el = axeyum_ir::eval(&arena, low, &asn).unwrap();
+            assert_eq!(eo, el, "unary lowering changed denotation at a={av}");
+        }
+    }
+
+    #[test]
+    fn structural_ops_preserve_denotation() {
+        assert_unary_lowering_preserves(3, |a, x| a.zero_ext(2, x).unwrap());
+        assert_unary_lowering_preserves(4, |a, x| a.rotate_left(1, x).unwrap());
+        assert_unary_lowering_preserves(4, |a, x| a.rotate_left(3, x).unwrap());
+        assert_unary_lowering_preserves(4, |a, x| a.rotate_right(1, x).unwrap());
+        assert_unary_lowering_preserves(4, |a, x| a.rotate_right(3, x).unwrap());
+        // by ≡ 0 mod w and by > w (wrap) are identities / well-defined.
+        assert_unary_lowering_preserves(4, |a, x| a.rotate_left(4, x).unwrap());
+        assert_unary_lowering_preserves(4, |a, x| a.rotate_left(5, x).unwrap());
     }
 
     #[test]
