@@ -70,6 +70,13 @@ bench-public-qfbv-sat-bv-compare:
     mkdir -p bench-results/baselines
     cargo run -p axeyum-bench --features z3 -- corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen --backend sat-bv --compare-z3 --timeout-ms 1000 --node-budget 1000 --out bench-results/baselines/qf-bv-20221214-p4dfa-sat-bv-z3-compare-1s-n1000.json --corpus-source 'SMT-LIB 2024 non-incremental QF_BV archive, Zenodo record 11061097, file QF_BV.tar.zst' --logic QF_BV --families '20221214-p4dfa-XiaoqiChen/Composition,20221214-p4dfa-XiaoqiChen/MobileDevice,20221214-p4dfa-XiaoqiChen/StringMatching,20221214-p4dfa-XiaoqiChen/TCP,20221214-p4dfa-XiaoqiChen/VideoConf'
 
+# Public QF_BV: P2.1 lazy bit-blasting (CEGAR) vs Z3 on the supported slice.
+# No CNF/node budget — the abstraction sidesteps the eager mountain itself; the
+# timeout bounds each file. DISAGREE must stay 0 (the hard soundness invariant).
+bench-public-qfbv-lazy-vs-z3:
+    mkdir -p bench-results/baselines
+    cargo run -p axeyum-bench --features z3 -- corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen --backend lazy-bv --compare-z3 --timeout-ms 1000 --out bench-results/baselines/qf-bv-20221214-p4dfa-lazy-bv-z3-compare-1s.json --corpus-source 'SMT-LIB 2024 non-incremental QF_BV archive, Zenodo record 11061097, file QF_BV.tar.zst' --logic QF_BV --families '20221214-p4dfa-XiaoqiChen/Composition,20221214-p4dfa-XiaoqiChen/MobileDevice,20221214-p4dfa-XiaoqiChen/StringMatching,20221214-p4dfa-XiaoqiChen/TCP,20221214-p4dfa-XiaoqiChen/VideoConf'
+
 # Reproduce the Phase 5 guarded admission run with explicit CNF budgets.
 bench-public-qfbv-sat-bv-guarded:
     mkdir -p bench-results/baselines

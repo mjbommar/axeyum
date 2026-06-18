@@ -38,8 +38,8 @@ mod run {
     #[cfg(feature = "z3")]
     use axeyum_solver::Z3Backend;
     use axeyum_solver::{
-        BvLayerStats, CheckResult, Model, SatBvBackend, SolveStats, SolverBackend, SolverConfig,
-        SolverError, UnknownKind,
+        BvLayerStats, CheckResult, LazyBvBackend, Model, SatBvBackend, SolveStats, SolverBackend,
+        SolverConfig, SolverError, UnknownKind,
     };
     use rayon::prelude::*;
     use serde_json::{Value as JsonValue, json};
@@ -71,6 +71,8 @@ mod run {
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     enum BackendKind {
         SatBv,
+        /// P2.1 lazy abstraction-refinement (CEGAR) bit-blasting (ADR-0019).
+        LazyBv,
         #[cfg(feature = "z3")]
         Z3,
     }
@@ -79,6 +81,7 @@ mod run {
         fn as_str(self) -> &'static str {
             match self {
                 BackendKind::SatBv => "sat-bv",
+                BackendKind::LazyBv => "lazy-bv",
                 #[cfg(feature = "z3")]
                 BackendKind::Z3 => "z3",
             }
@@ -364,6 +367,7 @@ mod run {
     fn parse_backend(value: &str) -> Result<BackendKind, String> {
         match value {
             "sat-bv" => Ok(BackendKind::SatBv),
+            "lazy-bv" => Ok(BackendKind::LazyBv),
             "z3" => {
                 #[cfg(feature = "z3")]
                 {
@@ -606,6 +610,7 @@ mod run {
     fn make_backend(kind: BackendKind) -> Box<dyn SolverBackend> {
         match kind {
             BackendKind::SatBv => Box::new(SatBvBackend::new()),
+            BackendKind::LazyBv => Box::new(LazyBvBackend::new()),
             #[cfg(feature = "z3")]
             BackendKind::Z3 => Box::new(Z3Backend::new()),
         }
