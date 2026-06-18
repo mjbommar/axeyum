@@ -1855,6 +1855,32 @@ fn end_to_end_zero_extend_via_lowering_reconstructs() {
 }
 
 /// Structural lowering: `rotate_left k a → concat (extract …) (extract …)` (core
+/// **Composition guard.** Several derived operators in one formula must lower and
+/// reconstruct together. `bvule (bvsub a b) c ∧ bvult c (bvsub a b)` is `¬Q ∧ Q`
+/// (where `Q = bvult c (a-b)`): it nests `bvsub` inside both a `bvule` and a `bvult`.
+/// Lowering rewrites all three to core; the conjunction reconstructs to a
+/// kernel-checked `False`.
+#[test]
+fn end_to_end_mixed_derived_ops_compose() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let mk = |a: &mut TermArena, n: &str| {
+        let s = a.declare(n, Sort::BitVec(3)).unwrap();
+        a.var(s)
+    };
+    let a = mk(&mut arena, "a");
+    let b = mk(&mut arena, "b");
+    let c = mk(&mut arena, "c");
+    let diff = arena.bv_sub(a, b).unwrap();
+    let le = arena.bv_ule(diff, c).unwrap(); // a-b ≤ c
+    let gt = arena.bv_ult(c, diff).unwrap(); // c < a-b  (= ¬(a-b ≤ c))
+    let proof = crate::prove_qf_bv_unsat_alethe_lowered(&mut arena, &[le, gt])
+        .expect("emitter accepts lowered core");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_bv_proof(&mut ctx, &proof).expect("reconstructs");
+    assert_infers_false(&mut ctx, term);
+}
+
 /// ops). A `(rotate_left a 1) = b ∧ ¬(…)` query reconstructs to a kernel-checked
 /// `False`.
 #[test]
