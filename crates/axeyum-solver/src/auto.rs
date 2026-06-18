@@ -61,6 +61,16 @@ pub fn solve(
     let skolemized = skolemize_top_existentials(arena, assertions)?;
     let assertions = &skolemized;
 
+    // Lazy bit-blasting strategy (P2.1, opt-in via `SolverConfig::lazy_bv`):
+    // abstract heavy BV gadgets and CEGAR-refine instead of eager-blasting the
+    // multiplier "mountain" up front. Quantifier-free path only; the inner
+    // abstraction solves run with the flag cleared so this hook is not re-entered,
+    // and it is a safe no-op (just the heavy-op scan) when none are present.
+    if config.lazy_bv && !has_quantifier(arena, assertions) {
+        let inner = config.clone().with_lazy_bv(false);
+        return Ok(crate::lazy_bv::solve_lazy_bv_abstraction(arena, assertions, &inner)?.result);
+    }
+
     if !has_quantifier(arena, assertions) {
         return check_auto(arena, assertions, config);
     }

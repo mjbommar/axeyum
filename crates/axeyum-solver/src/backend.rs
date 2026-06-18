@@ -166,6 +166,16 @@ pub struct SolverConfig {
     /// wrong `sat`). Off by default so recorded baselines and existing behavior
     /// are unchanged.
     pub xor_cdcl_fallback: bool,
+
+    /// Use the lazy abstraction-refinement (CEGAR) bit-blasting strategy (P2.1,
+    /// ADR-0019) for the quantifier-free path instead of eager bit-blasting:
+    /// abstract heavy BV gadgets (`bvmul`/`bvudiv`/…) by fresh variables, solve
+    /// the small abstraction, and refine only the operations a candidate model
+    /// violates — sidestepping the eager multiplier "mountain" on problems whose
+    /// heavy ops are incidental to the verdict. Sound (over-approximation for
+    /// `unsat`; every `sat` replays) and a safe no-op when no heavy ops are
+    /// present. Off by default so recorded baselines are unchanged.
+    pub lazy_bv: bool,
 }
 
 impl SolverConfig {
@@ -244,6 +254,14 @@ impl SolverConfig {
     #[must_use]
     pub fn with_xor_cdcl_fallback(mut self, xor_cdcl_fallback: bool) -> Self {
         self.xor_cdcl_fallback = xor_cdcl_fallback;
+        self
+    }
+
+    /// Enables the lazy abstraction-refinement bit-blasting strategy (P2.1).
+    /// See [`SolverConfig::lazy_bv`].
+    #[must_use]
+    pub fn with_lazy_bv(mut self, lazy_bv: bool) -> Self {
+        self.lazy_bv = lazy_bv;
         self
     }
 }
