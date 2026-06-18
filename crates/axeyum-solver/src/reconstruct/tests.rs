@@ -3722,4 +3722,33 @@ fn unified_dispatcher_routes_each_fragment_to_kernel_false() {
             .expect("∀ unsat dispatches + kernel-checks to False");
         assert_eq!(frag, ProofFragment::Forall);
     }
+
+    // Existential ∃: ∃x.(f x = c) ∧ ∀y.(f y = d) ∧ c ≠ d — top-level existential
+    // (skolemized), routed ahead of the ∀.
+    {
+        let mut arena = TermArena::new();
+        let alpha = Sort::BitVec(8);
+        let x = arena.declare("x", alpha).unwrap();
+        let y = arena.declare("y", alpha).unwrap();
+        let c = arena.declare("c", alpha).unwrap();
+        let d = arena.declare("d", alpha).unwrap();
+        let f = arena.declare_fun("f", &[alpha], alpha).unwrap();
+        let xv = arena.var(x);
+        let cv = arena.var(c);
+        let fx = arena.apply(f, &[xv]).unwrap();
+        let fx_eq_c = arena.eq(fx, cv).unwrap();
+        let exists = arena.exists(x, fx_eq_c).unwrap();
+        let yv = arena.var(y);
+        let dv = arena.var(d);
+        let fy = arena.apply(f, &[yv]).unwrap();
+        let fy_eq_d = arena.eq(fy, dv).unwrap();
+        let forall = arena.forall(y, fy_eq_d).unwrap();
+        let not_c_eq_d = {
+            let e = arena.eq(cv, dv).unwrap();
+            arena.not(e).unwrap()
+        };
+        let frag = prove_unsat_to_lean(&mut arena, &[exists, forall, not_c_eq_d])
+            .expect("∃ unsat dispatches + kernel-checks to False");
+        assert_eq!(frag, ProofFragment::Exists);
+    }
 }
