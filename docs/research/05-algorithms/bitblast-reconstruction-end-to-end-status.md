@@ -73,11 +73,25 @@ literals) **confirmed** the root cause and **disproved an earlier guess** (it is
      `false` for an empty conclusion; a single term with even extra negations).
    For **reconstruction** (we need the Lean proof term, not just a yes/no) the
    plan is: run Carcara's sweep to obtain the pivots + their pairing (the
-   `pivot_trace`), then build the binary-resolution proof term in *that* order via
-   the existing `binary_resolve`. This replaces both the greedy accumulator and
-   the pool, and is exactly the derivation Carcara/the emitter accept — so it
-   closes the bvult-antisymmetry closing step (empty conclusion ⇒ all literals are
-   pivots that pairwise cancel) without dead-ending.
+   `pivot_trace` — Carcara's *elaborator*, `src/elaborator/resolution.rs`, calls
+   `greedy_resolution(.., tracing=true)` and emits exactly this), then build the
+   binary-resolution proof term following the `pivot_trace` order via the existing
+   `binary_resolve`.
+
+   **Empirically ruled out (2026-06-18):** pairwise-pool variants do NOT work,
+   confirming the sweep is necessary:
+   - acc-centered greedy — dead-ends (consumes a needed clause);
+   - unrestricted pool — same;
+   - **single-pivot pool** (only resolve pairs sharing exactly one complementary
+     literal, i.e. no-tautology) — added `complementary_pivot_count`, all 92 tests
+     stayed green, but antisymmetry **still** stalls on the same two clauses
+     (`¬G2 ∨ ¬b0`, `¬G1 ∨ a1`): the pool had already resolved away the
+     gate-definition clauses (`and_pos`/`and_neg` for `G1`/`G2`) those two need.
+   So the dead-end is *premature consumption of a globally-needed clause*, which no
+   local pairwise heuristic avoids — only the global, in-premise-order,
+   conclusion-guided sweep does. The single-pivot experiment was reverted (no
+   demonstrating test; doesn't close the target). **Next:** implement the sweep +
+   `pivot_trace`-ordered `binary_resolve`, with bvult antisymmetry as the test.
 
 So **no genuine QF_BV `unsat` (beyond `x ∧ ¬x`) closes to `False` yet**, but two of
 the three blockers are **fixed and shipped** (negation `356f3e3`, `=` canon
