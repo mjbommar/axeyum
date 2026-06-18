@@ -78,6 +78,49 @@ core form. Two relevant rule families exist in Carcara:
    **hardest** and should come last (and likely want the shared/`let` encoding from
    [[bitblast-reconstruction-multiplier-blowup]] to stay polynomial).
 
+## Implementation findings (2026-06-18, code-level investigation)
+
+Confirmed against the actual code in all three subsystems:
+
+- **Carcara accepts the `bvsub` bridge.** `bv_poly_simp` (→ `polynomial::poly_simp`)
+  checks `(= t s)` when both sides normalize to the same polynomial mod 2^width, and
+  `Polynomial::from_term` parses `BvAdd`/`BvNeg`/`BvSub`/`BvMul`
+  (`references/carcara/.../rules/polynomial.rs:44-58`). So
+  `(= (bvsub a b) (bvadd a (bvneg b)))` is a valid `bv_poly_simp` step — the rewrite
+  vehicle is confirmed available, not hypothetical.
+- **The emitter rejects derived ops at the RENDERING level**, earlier than the
+  bitblast dispatch. `bv_term_to_alethe` → `op_smt_name` maps only the 15 covered
+  `Op` variants (`_ => None`), so `bv_term_to_alethe(bvsub …)` returns `None` and the
+  whole step fails before `bitblast_op_step`. Supporting `bvsub` therefore needs a
+  **driver-level rewrite** (in `qfbv_alethe.rs`, where the formula is walked and steps
+  assembled), not just a new `bitblast_op_step` arm.
+- **The canonicalizer does NOT do the general expansion.** `axeyum-rewrite`'s
+  `canonical.rs` has `rewrite_bv_sub` (only `bvsub-zero` / `bvsub-self` simps) and
+  `rewrite_bv_compare` (comparison normalization), but no general
+  `bvsub → bvadd a (bvneg b)` / `bvnand → bvnot (bvand …)` lowering. So
+  "canonicalize-then-prove" does **not** cover derived ops out of the box.
+
+### Two implementation routes (pick per soundness bar)
+
+1. **Front-end expansion (lighter, trusted transform).** Add a denotation-preserving
+   `bvsub → bvadd a (bvneg b)` (and the nand/nor/compare reductions) lowering pass —
+   either extend the canonicalizer or a dedicated pre-pass — applied before
+   `prove_qf_bv_unsat_alethe`. The Lean certificate then certifies the *expanded*
+   formula; soundness for the original rests on the expansion being
+   denotation-preserving (test it via the ground evaluator over all small inputs).
+   Fastest path to coverage; weaker guarantee (the expansion is not itself
+   Lean-checked).
+2. **In-proof `bv_poly_simp` bridge (heavier, fully Lean-checked).** The emitter emits
+   the `(= (bvsub a b) (bvadd a (bvneg b)))` step (Carcara-valid per above), threads it
+   into the bbterm chain via `cong`/`trans`, and reconstruction lifts that equality to
+   a kernel-checked Lean equality (both sides share a bit form → `def_eq`). Certifies
+   the *original* formula end-to-end. The right destination; more emitter + reconstruct
+   surgery.
+
+Recommended: do route 1 first for breadth (cover `bvsub`/`nand`/`nor`/comparisons via a
+tested denotation-preserving lowering), then upgrade `bvsub` to route 2 to prove the
+fully-checked pattern, then generalize.
+
 ## Reconstruction-side note
 
 Every reduction adds a **rewrite/definition step** to the proof; reconstruction must
