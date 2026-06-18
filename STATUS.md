@@ -369,6 +369,12 @@ plan is built and committed on the current branch:
     (`Sat`/`Unknown`, never `Unsat`), deterministic.
   - **P1.3 SAT-core modernization** (`proof_sat.rs`): VSIDS + phase saving + Luby
     restarts on the proof-producing CDCL core (DRAT-checked ⇒ sound regardless).
+  - **Round 2** (one more increment per lane): `elim_unconstrained` now peels
+    `bvmul` by an odd constant (2-adic inverse); the CDCL core gained local
+    learned-clause minimization (self-subsumption); PBLS switched to incremental
+    scoring (re-eval only the moved variable's incidence set); and the soundness
+    net's larger sweep now includes `PblsBackend` (one-sided `Sat` verdicts
+    replayed + cross-checked at scale). All DRAT/replay-guarded, clippy clean.
 - **2026-06-17** — **Fair public-QF_BV measurement + graceful oversized-encoding
   refusal (the "1/113" gap, diagnosed)**. The headline "sat-bv decides ~1/113 on
   public QF_BV" was an artifact of `--node-budget 1000` (refusing 112/113 at the
