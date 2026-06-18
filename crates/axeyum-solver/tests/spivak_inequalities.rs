@@ -17,7 +17,7 @@
 //!     the gap that SOS/CAD (P2.5) must close. **Do not un-ignore until NRA gains
 //!     an SOS/positivstellensatz path** (they would hang the gate).
 //!
-//! Findings pinned down: `prove` routes real goals to QF_LRA and *rejects*
+//! Findings pinned down: `prove` routes real goals to `QF_LRA` and *rejects*
 //! nonlinear multiplication (no LRA→NRA dispatch); and axeyum's NRA proves
 //! monotonicity-shaped facts but not the degree-2 SOS inequalities.
 

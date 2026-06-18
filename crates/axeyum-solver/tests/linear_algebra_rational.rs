@@ -39,7 +39,7 @@ fn consistent_2x2_system_is_sat() {
     let lhs2 = a.real_add(x, three_y).unwrap(); // x + 3y
     let ten = int(&mut a, 10);
     let eq2 = a.eq(lhs2, ten).unwrap();
-    let r = check_with_lra(&mut a, &[eq1, eq2]).unwrap();
+    let r = check_with_lra(&a, &[eq1, eq2]).unwrap();
     assert!(
         matches!(r, CheckResult::Sat(_)),
         "consistent system should be sat, got {r:?}"

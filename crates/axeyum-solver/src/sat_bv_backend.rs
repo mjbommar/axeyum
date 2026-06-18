@@ -96,25 +96,8 @@ impl SatBvBackend {
             }));
         }
 
-        // Pre-lowering oversized-encoding refusal: a small DAG can bit-blast to a
-        // gigantic AIG/CNF (a single wide multiply is ~width² gates), and the
-        // CNF-budget check below only fires *after* `lower_terms` has already
-        // allocated it. Estimate the blasted clause count up front and bail to a
-        // graceful `unknown` BEFORE lowering, so an oversized query degrades
-        // cleanly instead of aborting the process out of memory. The estimate is a
-        // conservative over-approximation; an absolute ceiling guards the
-        // no-explicit-budget case so a runaway can never OOM the host.
-        const ABSOLUTE_CLAUSE_CEILING: u64 = 64_000_000;
-        let estimated_clauses = estimate_blast_clauses(arena, assertions);
-        let clause_cap = config.cnf_clause_budget.unwrap_or(ABSOLUTE_CLAUSE_CEILING);
-        if estimated_clauses > clause_cap {
-            return Ok(CheckResult::Unknown(UnknownReason {
-                kind: UnknownKind::EncodingBudget,
-                detail: format!(
-                    "estimated {estimated_clauses} CNF clauses before lowering exceeds budget \
-                     {clause_cap} (oversized encoding refused gracefully)"
-                ),
-            }));
+        if let Some(result) = oversized_encoding_refusal(arena, assertions, config) {
+            return Ok(result);
         }
 
         let mut stats = SolveStats {
@@ -632,6 +615,35 @@ fn replay_model(
         }
     }
     Ok(())
+}
+
+/// Pre-lowering oversized-encoding refusal: a small DAG can bit-blast to a
+/// gigantic AIG/CNF (a single wide multiply is ~width² gates), and the
+/// `check_cnf_budgets` gate only fires *after* `lower_terms` has already
+/// allocated it. Estimate the blasted clause count up front and return a graceful
+/// `Unknown` BEFORE lowering, so an oversized query degrades cleanly instead of
+/// aborting the process out of memory. The estimate is a conservative
+/// over-approximation; an absolute ceiling guards the no-explicit-budget case so
+/// a runaway can never OOM the host. Returns `None` when the query is within
+/// budget and lowering should proceed.
+fn oversized_encoding_refusal(
+    arena: &TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Option<CheckResult> {
+    const ABSOLUTE_CLAUSE_CEILING: u64 = 64_000_000;
+    let estimated_clauses = estimate_blast_clauses(arena, assertions);
+    let clause_cap = config.cnf_clause_budget.unwrap_or(ABSOLUTE_CLAUSE_CEILING);
+    if estimated_clauses > clause_cap {
+        return Some(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::EncodingBudget,
+            detail: format!(
+                "estimated {estimated_clauses} CNF clauses before lowering exceeds budget \
+                 {clause_cap} (oversized encoding refused gracefully)"
+            ),
+        }));
+    }
+    None
 }
 
 /// A cheap, pre-lowering **over-estimate** of the bit-blasted CNF clause count,

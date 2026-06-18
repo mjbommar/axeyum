@@ -135,6 +135,7 @@ fn lazy_vs_eager_on_small_public_files() {
 }
 
 /// `x = 1 ∧ x = 2` (the real contradiction) ∧ `r = p*q` (incidental 64-bit mul).
+#[allow(clippy::many_single_char_names)] // x, p, q, r are natural BV-variable names
 fn build_incidental(a: &mut TermArena, width: u32) -> Vec<TermId> {
     let xs = a.declare("x", Sort::BitVec(width)).unwrap();
     let ps = a.declare("p", Sort::BitVec(width)).unwrap();
