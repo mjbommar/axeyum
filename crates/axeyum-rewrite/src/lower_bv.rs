@@ -5,10 +5,11 @@
 //!
 //! Reducing `bvsub`/`bvnand`/`bvnor`, the six non-core comparisons, the structural
 //! `zero_extend`/`rotate_left`/`rotate_right`, the shifts (`bvshl`/`bvlshr`/`bvashr`,
-//! constant *and* variable amount), and unsigned division/remainder
-//! (`bvudiv`/`bvurem`) to core lets the proof track cover them: lower first, then emit
-//! a proof over core ops only. Every rule is a standard SMT-LIB identity, and each is
-//! checked denotation-preserving by the ground evaluator in the tests below.
+//! constant *and* variable amount), and the full division family
+//! (`bvudiv`/`bvurem`, `bvsdiv`/`bvsrem`/`bvsmod`) to core lets the proof track cover
+//! them: lower first, then emit a proof over core ops only. This is the **entire**
+//! `QF_BV` operator set beyond the 17-op bitblast core. Every rule is a standard
+//! SMT-LIB identity, checked denotation-preserving by the ground evaluator below.
 //!
 //! Coverage caveat: the *lowering* of every operator here is denotation-preserving
 //! and exhaustively tested. Most reconstruct end-to-end, but the unrolled long
@@ -34,6 +35,7 @@ use axeyum_ir::{IrError, Op, TermArena, TermId, TermNode};
 /// - `bvshl`/`bvlshr`/`bvashr`: constant amount → `concat`/`extract`/`sign_extend`;
 ///   variable amount → a barrel-shifter (mux) network
 /// - `bvudiv`/`bvurem` → one unrolled long-division pass (shift-subtract)
+/// - `bvsdiv`/`bvsrem`/`bvsmod` → unsigned division of the magnitudes + sign logic
 ///
 /// # Errors
 ///
@@ -135,6 +137,15 @@ pub fn lower_derived_bv(arena: &mut TermArena, term: TermId) -> Result<TermId, I
             } else {
                 remainder
             }
+        }
+        // Signed division/remainder/modulo: unsigned `divide` of the magnitudes plus
+        // sign adjustments (SMT-LIB definitions).
+        Op::BvSdiv | Op::BvSrem | Op::BvSmod => {
+            let w = arena
+                .sort_of(largs[0])
+                .bv_width()
+                .expect("signed div operand has BV sort");
+            lower_signed_divrem(arena, op, largs[0], largs[1], w)?
         }
         // Not a lowered operator: rebuild with lowered children (sort preserved).
         _ => arena.rebuild_with_args(term, &largs),
@@ -245,6 +256,20 @@ fn zext_core(arena: &mut TermArena, by: u32, a: TermId) -> Result<TermId, IrErro
     arena.concat(z, a)
 }
 
+/// The sign bit of width-`w` `t`, splatted to a width-`w` all-ones/all-zeros mask via
+/// `sign_extend` of the 1-bit MSB slice.
+fn splat_sign(arena: &mut TermArena, t: TermId, w: u32) -> Result<TermId, IrError> {
+    let sign = arena.extract(w - 1, w - 1, t)?;
+    arena.sign_ext(w - 1, sign)
+}
+
+/// Two's-complement absolute value `|t| = sign(t) ? -t : t` in core ops.
+fn bv_abs(arena: &mut TermArena, t: TermId, w: u32) -> Result<TermId, IrError> {
+    let mask = splat_sign(arena, t, w)?;
+    let nt = arena.bv_neg(t)?;
+    select(arena, mask, nt, t)
+}
+
 /// Bitwise mux `mask ? a : b` over width-`w` operands where `mask` is all-ones or
 /// all-zeros: `(mask ∧ a) ∨ (¬mask ∧ b)`. Core ops only.
 fn select(arena: &mut TermArena, mask: TermId, a: TermId, b: TermId) -> Result<TermId, IrError> {
@@ -333,6 +358,57 @@ fn divide(
         q = arena.concat(quo_bits[t], q)?;
     }
     Ok((q, rem))
+}
+
+/// The **signed** division family, reduced to the unsigned [`divide`] of the operand
+/// magnitudes plus sign adjustments — all SMT-LIB definitions, in core ops.
+/// `bvsdiv`: `|x|/|y|` negated iff the signs differ. `bvsrem`: `|x| rem |y|`, sign of
+/// the dividend. `bvsmod`: modulo with the sign of the divisor (the 5-way SMT-LIB
+/// rule, including the `u = 0` and sign-quadrant cases).
+#[allow(clippy::many_single_char_names)] // x/y operands, w width, q/u div results
+fn lower_signed_divrem(
+    arena: &mut TermArena,
+    op: Op,
+    x: TermId,
+    y: TermId,
+    w: u32,
+) -> Result<TermId, IrError> {
+    let abs_x = bv_abs(arena, x, w)?;
+    let abs_y = bv_abs(arena, y, w)?;
+    let (q, u) = divide(arena, abs_x, abs_y, w)?;
+    let sx = splat_sign(arena, x, w)?;
+    let sy = splat_sign(arena, y, w)?;
+    match op {
+        // |x|/|y|, negated iff sign(x) ≠ sign(y).
+        Op::BvSdiv => {
+            let x_msb = arena.extract(w - 1, w - 1, x)?;
+            let y_msb = arena.extract(w - 1, w - 1, y)?;
+            let diff = arena.bv_xor(x_msb, y_msb)?;
+            let mask = arena.sign_ext(w - 1, diff)?;
+            let neg_q = arena.bv_neg(q)?;
+            select(arena, mask, neg_q, q)
+        }
+        // |x| rem |y|, taking the sign of the dividend x.
+        Op::BvSrem => {
+            let neg_u = arena.bv_neg(u)?;
+            select(arena, sx, neg_u, u)
+        }
+        // bvsmod: sign of the divisor; the SMT-LIB 5-way rule.
+        Op::BvSmod => {
+            let zero = arena.bv_const(w, 0)?;
+            let u_zero = arena.bv_comp(u, zero)?; // 1-bit: u == 0
+            let neg_u = arena.bv_neg(u)?;
+            let neg_u_plus_y = arena.bv_add(neg_u, y)?;
+            let u_plus_y = arena.bv_add(u, y)?;
+            // inner = sign(x) ? (sign(y) ? -u : -u+y) : (sign(y) ? u+y : u)
+            let inner_sx1 = select(arena, sy, neg_u, neg_u_plus_y)?;
+            let inner_sx0 = select(arena, sy, u_plus_y, u)?;
+            let inner = select(arena, sx, inner_sx1, inner_sx0)?;
+            let uz_mask = arena.sign_ext(w - 1, u_zero)?;
+            select(arena, uz_mask, u, inner) // u == 0 ⇒ result 0
+        }
+        _ => unreachable!("lower_signed_divrem only handles bvsdiv/bvsrem/bvsmod"),
+    }
 }
 
 #[cfg(test)]
@@ -481,6 +557,16 @@ mod tests {
         for w in [2u32, 3, 4] {
             assert_lowered_binary_preserves(w, |a, x, y| a.bv_udiv(x, y).unwrap());
             assert_lowered_binary_preserves(w, |a, x, y| a.bv_urem(x, y).unwrap());
+        }
+    }
+
+    #[test]
+    fn signed_div_rem_mod_preserve_denotation() {
+        // Exhaustive over all (x, y) incl. y = 0 and the sign quadrants / INT_MIN.
+        for w in [2u32, 3, 4] {
+            assert_lowered_binary_preserves(w, |a, x, y| a.bv_sdiv(x, y).unwrap());
+            assert_lowered_binary_preserves(w, |a, x, y| a.bv_srem(x, y).unwrap());
+            assert_lowered_binary_preserves(w, |a, x, y| a.bv_smod(x, y).unwrap());
         }
     }
 

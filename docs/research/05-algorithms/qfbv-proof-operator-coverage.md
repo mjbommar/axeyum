@@ -77,10 +77,18 @@ at width 2** (committed test). Two notes:
    ([[bitblast-reconstruction-multiplier-blowup]]), wanting the shared/`let` encoding.
    That is why the committed div test is pinned at width 2.
 
-**Remaining:** the div term-blowup (shared encoding); the signed div family
-(`bvsdiv`/`bvsrem`/`bvsmod`, reducible to unsigned + sign logic); and the route-2
-`bv_poly_simp` upgrade (certify the *un-lowered* original). The rest of this note is
-the original analysis.
+**Signed division family LOWERED.** `bvsdiv`/`bvsrem`/`bvsmod` reduce to the unsigned
+`divide` of the operand magnitudes plus sign adjustments (the SMT-LIB definitions,
+incl. `bvsmod`'s 5-way rule), exhaustively denotation-checked over all `(x, y)` for
+widths 2/3/4 (sign quadrants, `y = 0`, `INT_MIN`). With this, **the entire `QF_BV`
+operator set now lowers to the 17-op core** — every derived operator is covered by a
+tested denotation-preserving lowering. End-to-end *reconstruction* works for all
+except the multiply/divide family at non-tiny widths (the term-blowup below).
+
+**Remaining:** the multiply/divide **term-blowup** (the shared/`let` encoding — the
+one representation fix that makes wide `bvmul`/`bvudiv`/… reconstructible), and the
+route-2 `bv_poly_simp` upgrade (certify the *un-lowered* original). The rest of this
+note is the original analysis.
 
 ## The gap: derived operators are rejected (confirmed by probe)
 
