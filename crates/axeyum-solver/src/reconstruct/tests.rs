@@ -1260,6 +1260,127 @@ fn end_to_end_bitwise_eq_refutation_to_false() {
     assert_infers_false(&mut ctx, term);
 }
 
+/// Assert the reconstruction declared **only** the input-assumption hypotheses and
+/// `em` — no bridge axiom (`cong`/`trans`/`equiv`/`bitblast`). `expected_assumes` is
+/// how many input `assume` clauses the proof has. This is the slice-6 closedness bar.
+fn assert_closed_over_assumptions(ctx: &ReconstructCtx, expected_assumes: usize) {
+    let roles = ctx.declared_axiom_roles();
+    let assumes = roles.iter().filter(|r| r.as_str() == "assume").count();
+    let ems = roles.iter().filter(|r| r.as_str() == "em").count();
+    assert_eq!(
+        assumes, expected_assumes,
+        "expected {expected_assumes} input-assumption hypotheses, got roles {roles:?}"
+    );
+    assert!(ems <= 1, "at most one `em` axiom, got roles {roles:?}");
+    // The crux: nothing else. No `cong`/`trans`/`equiv*`/`bitblast_*` bridge axiom.
+    let bridge: Vec<&String> = roles
+        .iter()
+        .filter(|r| r.as_str() != "assume" && r.as_str() != "em")
+        .collect();
+    assert!(
+        bridge.is_empty(),
+        "the fused `False` must be closed over only input assumptions + `em`; \
+         found extra axiom roles {bridge:?}"
+    );
+}
+
+/// **THE SLICE-6 BAR — closed bitwise proof**: the `(= (bvand a b) a) ∧ ¬…`
+/// refutation reconstructs to a `False` term **closed over only the two input
+/// `assume` hypotheses and `em`** — there is NO bridge axiom for
+/// `cong`/`trans`/`equiv1`/`equiv2`/`bitblast_*`. The bridge is fused by modeling
+/// each predicate directly in its bit-level `Prop` form.
+#[test]
+fn end_to_end_bitwise_bvand_is_closed_over_assumptions() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(1)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(1)).unwrap();
+        arena.var(s)
+    };
+    let and = arena.bv_and(a, b).unwrap();
+    let eq = arena.eq(and, a).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("emitter");
+
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_bv_proof(&mut ctx, &proof).expect("reconstructs");
+    assert_infers_false(&mut ctx, term);
+    // The new soundness bar: closed over only the input assumptions + em.
+    assert_closed_over_assumptions(&ctx, 2);
+}
+
+/// The same closedness bar for the width-2 direct-`bitblast_equal` path
+/// (`(= a b) ∧ ¬(= a b)`): a fused `False`, no bridge axioms.
+#[test]
+fn end_to_end_bitwise_eq_is_closed_over_assumptions() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let eq = arena.eq(a, b).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_bv_proof(&mut ctx, &proof).expect("reconstructs");
+    assert_infers_false(&mut ctx, term);
+    assert_closed_over_assumptions(&ctx, 2);
+}
+
+/// **NEGATIVE soundness (slice 6)**: corrupt the closing resolution of a REAL
+/// bitwise proof — drop a premise so it can no longer fold to `(cl)` — and confirm
+/// the fused walk REJECTS it rather than producing a `False` from a non-refutation.
+#[test]
+fn end_to_end_bitwise_corrupted_close_rejected() {
+    use axeyum_cnf::AletheCommand;
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(1)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(1)).unwrap();
+        arena.var(s)
+    };
+    let and = arena.bv_and(a, b).unwrap();
+    let eq = arena.eq(and, a).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let mut proof = crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("emitter");
+
+    // Corrupt the final `(cl)` step: keep only its first premise, so it can no
+    // longer resolve to the empty clause.
+    if let Some(AletheCommand::Step {
+        clause, premises, ..
+    }) = proof.last_mut()
+    {
+        if clause.is_empty() && premises.len() >= 2 {
+            premises.truncate(1);
+        }
+    }
+
+    let mut ctx = ReconstructCtx::new();
+    let err = reconstruct_qf_bv_proof(&mut ctx, &proof)
+        .expect_err("a corrupted closing resolution must be rejected, never a wrong False");
+    assert!(
+        matches!(
+            err,
+            ReconstructError::UnsupportedResolution { .. }
+                | ReconstructError::KernelRejected { .. }
+        ),
+        "corruption must surface as a sound rejection, got {err:?}"
+    );
+}
+
 /// **NEGATIVE soundness**: a non-bitwise `QF_BV` proof (here `bvadd`) is rejected
 /// by `reconstruct_qf_bv_proof` — its `bitblast_add` step is out of the bitwise
 /// fragment — never silently accepted.

@@ -173,6 +173,27 @@ pub struct ReconstructCtx {
     /// does not consume `em`; `em` is declared to make the classical commitment
     /// explicit and available for the general (pivot-free) shape.
     em: Option<NameId>,
+    /// The **bit-blast bridge** for the fused bitwise `QF_BV` walk (slice 6).
+    ///
+    /// When `Some`, the clausal/gate translation runs in **bit mode**: a key is the
+    /// s-expression of a bit-vector predicate atom (e.g. `(= (bvand a b) a)`) and
+    /// its value is that predicate's bit-level Boolean form `B` (e.g.
+    /// `(= (and ((_ @bit_of 0) a) ((_ @bit_of 0) b)) ((_ @bit_of 0) a))`), learned
+    /// from the proof's `equiv1`/`equiv2` bridge clauses. Any atom whose key is in
+    /// the map is translated as its `B` form, so a predicate's `Prop` is
+    /// *definitionally* its bit-level form. This makes the `bitblast_*`/`cong`/
+    /// `trans`/`equiv1`/`equiv2` bridge **reflexive**: the bridge clauses become
+    /// genuine `Prop` tautologies (`¬B ∨ B`) rather than opaque axioms, so the
+    /// reconstructed `False` is closed over only the input-assumption hypotheses.
+    ///
+    /// When `None` (the default, EUF/propositional/per-step paths) the clausal
+    /// translation is the original opaque one — atoms are uninterpreted Props.
+    bridge: Option<BTreeMap<String, AletheTerm>>,
+    /// Roles under which hypothesis/`em` axioms were declared during a
+    /// reconstruction, keyed by the declared `NameId`. Used to *audit* closedness:
+    /// after a fused bitwise walk the only non-prelude axioms must be the input
+    /// `assume` hypotheses and `em` — no `bridge`/`cong`/`trans`/`bitblast` axiom.
+    axiom_roles: BTreeMap<NameId, String>,
     /// Monotone counter for generating fresh, collision-free declaration names
     /// under a private namespace, so reconstructed atoms never clash with the
     /// prelude's names.
@@ -233,6 +254,8 @@ impl ReconstructCtx {
             funcs: BTreeMap::new(),
             prop_atoms: BTreeMap::new(),
             em: None,
+            bridge: None,
+            axiom_roles: BTreeMap::new(),
             next_id: 0,
         }
     }
@@ -259,6 +282,21 @@ impl ReconstructCtx {
     #[must_use]
     pub fn alpha(&self) -> ExprId {
         self.alpha
+    }
+
+    /// The multiset of **roles** under which hypothesis/`em` axioms have been
+    /// declared so far (e.g. `"assume"`, `"em"`, or a bridge rule name). This is the
+    /// closedness-audit surface for the fused bitwise walk: after
+    /// [`reconstruct_qf_bv_proof`] the only roles present must be `"assume"` (the
+    /// input `QF_BV` predicate hypotheses) and `"em"` — never a `"cong"`/`"trans"`/
+    /// `"equiv1"`/`"equiv2"`/`"bitblast_*"` bridge axiom.
+    ///
+    /// The roles are returned sorted for determinism.
+    #[must_use]
+    pub fn declared_axiom_roles(&self) -> Vec<String> {
+        let mut roles: Vec<String> = self.axiom_roles.values().cloned().collect();
+        roles.sort();
+        roles
     }
 
     /// Mint a fresh private name component under the anonymous root, used to
@@ -1244,6 +1282,7 @@ fn fresh_axiom(
             rule: role.to_owned(),
             detail: format!("hypothesis axiom did not admit: {e:?}"),
         })?;
+    ctx.axiom_roles.insert(name, role.to_owned());
     Ok(ctx.kernel.const_(name, vec![]))
 }
 
@@ -1337,6 +1376,7 @@ impl ReconstructCtx {
                 ty,
             })
             .expect("excluded-middle axiom em : Π (p : Prop), Or p (Not p) should admit");
+        self.axiom_roles.insert(name, "em".to_owned());
         self.em = Some(name);
         name
     }
@@ -1351,7 +1391,17 @@ impl ReconstructCtx {
     /// Translate a literal **atom** term into its Lean `Prop`. A bare symbol is an
     /// opaque propositional atom; a `(not φ)` application folds to `Not (atom φ)`
     /// so the clausal `negated` flag and a syntactic `(not …)` agree.
+    ///
+    /// In **bit mode** (the fused bitwise `QF_BV` walk, `bridge` is `Some`) the
+    /// translation is *structural* and bridge-substituting: an atom whose key names a
+    /// bit-vector predicate maps to that predicate's bit-level Boolean form, and the
+    /// Boolean connectives over bits (`and`/`or`/`=`/`xor`/`not`) map to the prelude
+    /// connectives — so a predicate's `Prop` is definitionally its bit-level form and
+    /// the bridge rules become reflexive. Outside bit mode, atoms are opaque Props.
     fn atom_to_prop(&mut self, term: &AletheTerm) -> ExprId {
+        if self.bridge.is_some() {
+            return self.gate_term_to_prop(term);
+        }
         match term {
             AletheTerm::App(head, args) if head == "not" && args.len() == 1 => {
                 let inner = self.atom_to_prop(&args[0]);
@@ -1948,7 +1998,20 @@ impl ReconstructCtx {
     ///
     /// `(and …)`/`(or …)` are right-nested for n-ary arity; `(= a b)` is `Iff`;
     /// `(xor a b)` is `Not (Iff a b)`.
+    ///
+    /// In **bit mode** an atom whose s-expression key is a registered bit-vector
+    /// predicate is first rewritten to its bit-level Boolean form `B` (via the
+    /// `bridge` map) and then translated structurally — so the predicate `Prop`
+    /// *is* its bit form. The substitution fires before the structural match, so
+    /// e.g. `(= (bvand a b) a)` becomes `B`'s `And`/`Iff` tree, not an `Iff` over
+    /// the opaque bit-vector terms.
     fn gate_term_to_prop(&mut self, term: &AletheTerm) -> ExprId {
+        if let Some(bridge) = &self.bridge {
+            if let Some(b_form) = bridge.get(&term.key()) {
+                let b_form = b_form.clone();
+                return self.gate_term_to_prop(&b_form);
+            }
+        }
         match term {
             AletheTerm::App(head, args) if head == "not" && args.len() == 1 => {
                 let inner = self.gate_term_to_prop(&args[0]);
@@ -3077,25 +3140,36 @@ fn bbterm_bits(term: &AletheTerm) -> Option<&[AletheTerm]> {
 ///    `equiv_*`/`xor_*`) over the bit-level gates (slice 4);
 /// 3. the **clausal resolution** refutation down to `(cl)` (slice 3).
 ///
-/// ### What is soundly reconstructed, and the honest boundary
+/// ### What is reconstructed — the fully-fused closed proof (slice 6)
 ///
-/// The bit-level Boolean refutation (strata 2 and 3, plus the `equiv1`/`equiv2`
-/// bridge into clause form) is reconstructed genuinely: every bit-level atom
-/// (`((_ @bit_of i) x)`, a gate `(and …)`, a Boolean `(= …)`) is a Prop, the
-/// CNF-intro tautologies are proved structurally (slice 4), and resolution is the
-/// constructive binary core (slice 3). The closing `(cl)` is `infer`-checked
-/// against `False` — the trusted gate.
+/// The whole bitwise refutation is reconstructed genuinely, and the final `False`
+/// term is **closed over only the input-assumption hypotheses and `em`** — there is
+/// **no** bridge axiom for `cong`/`trans`/`equiv1`/`equiv2`/`bitblast_*`.
 ///
-/// The **bit-blast bridge equalities** (`bitblast_*`, `cong`, `trans`) conclude a
-/// unit `(= lhs rhs)` over bit-vector *terms*. Under the pointwise bit model these
-/// are reflexive (each is justified by the [`reconstruct_bitblast_step`] bit-iff
-/// reconstruction, kernel-checked), but in *this* clausal driver they enter the
-/// resolution layer as opaque unit atoms keyed by their s-expression. Their
-/// bit-iff justification is verified out-of-band (each `bitblast_*` step's
-/// conclusion is reconstructed and kernel-checked here) but is not yet *fused*
-/// into the single `False` term — fusing the term-level `Eq` transport with the
-/// bit-level `Prop` refutation is the remaining slice. See the module tests for
-/// exactly how far the end-to-end reaches.
+/// The fusion models each input bit-vector **predicate** directly in its bit-level
+/// `Prop` form. From the proof's `equiv1`/`equiv2` bridge clauses we learn, for each
+/// predicate atom `pred = (= s t)`, its bit-level Boolean form `B` (the `equiv`
+/// clause literally pairs `pred` with `B`). We register `pred ↦ B` in the context's
+/// `bridge`, putting the clausal/gate translation into **bit mode**: every
+/// occurrence of `pred` now translates to `⟦B⟧` (its `Prop` *is* its bit form). Then:
+///
+/// - an input `assume (= s t)` becomes a hypothesis `h : ⟦B⟧` directly — the bit
+///   unit the refutation needs, no `equiv1`/`cong`/`trans` axiom;
+/// - `equiv1` (clause `¬pred ∨ B`) and `equiv2` (clause `pred ∨ ¬B`) translate to
+///   `¬⟦B⟧ ∨ ⟦B⟧` / `⟦B⟧ ∨ ¬⟦B⟧`, which are genuine `Prop` tautologies — proved
+///   classically via `em`, not assumed;
+/// - the `bitblast_*`/`cong`/`trans` steps conclude term-level `(= t bbform)`
+///   equalities that are *never consumed by the refutation* (only the predicate-level
+///   `equiv` clauses feed resolution), so they need no proof at all — their bit-iff
+///   content is still separately kernel-checked up front (the slice-5 obligation);
+/// - the CNF-introduction tautologies are slice-4 structural proofs and resolution
+///   is the slice-3 constructive binary core, both now operating on the *same*
+///   bit-level `Prop`s as the assumptions.
+///
+/// The closing `(cl)` is `infer`-checked against `False` — the trusted gate — and
+/// (the new bar) [`ReconstructCtx::declared_axiom_roles`] then contains only
+/// `"assume"` and `"em"`. A wrong gadget bit, wrong resolvent, or non-tautological
+/// `equiv` clause makes a per-step kernel gate fire — never a wrong `False`.
 ///
 /// # Errors
 ///
@@ -3108,7 +3182,8 @@ pub fn reconstruct_qf_bv_proof(
 ) -> Result<ExprId, ReconstructError> {
     // First, verify every BITWISE `bitblast_*` step's conclusion reconstructs to a
     // kernel-checked bit-iff term (the slice-5 soundness obligation). A non-bitwise
-    // `bitblast_*` rule (carry chain, shift, structural) is rejected here.
+    // `bitblast_*` rule (carry chain, shift, structural) is rejected here. This is
+    // also where a non-bitwise `QF_BV` proof is cleanly rejected.
     for cmd in commands {
         if let AletheCommand::Step { rule, clause, .. } = cmd {
             if rule.starts_with("bitblast_") {
@@ -3118,25 +3193,90 @@ pub fn reconstruct_qf_bv_proof(
         }
     }
 
-    // The bit-level Boolean refutation (strata 2+3) is the clausal layer. Walk the
-    // commands with the slice-3 resolution machinery, extended so the bridge rules
-    // (`bitblast_*`, `cong`, `trans`, `equiv1`, `equiv2`) thread their unit/binary
-    // clauses through. Bit-level gate clauses (CNF-intro) are reconstructed
-    // structurally (slice 4); everything else is the constructive resolution core.
-    reconstruct_bitwise_clausal(ctx, commands)
+    // Learn the predicate → bit-form bridge from the `equiv1`/`equiv2` steps, then
+    // run the clausal walk in bit mode so every predicate is its bit-level `Prop`.
+    let bridge = collect_bitblast_bridge(commands);
+    ctx.bridge = Some(bridge);
+    let result = reconstruct_bitwise_clausal(ctx, commands);
+    ctx.bridge = None;
+    result
 }
 
-/// The clausal walk for a bitwise `QF_BV` proof: a superset of
-/// [`reconstruct_resolution_proof`] that also threads the bit-blast bridge rules.
+/// Scan the proof for `equiv1`/`equiv2` bridge clauses and learn, for each
+/// bit-vector predicate atom, its bit-level Boolean form `B`.
 ///
-/// Each command becomes a [`Clause`] (its literals + a kernel proof of the
-/// clause's `Prop` encoding). `assume`/`resolution` are the slice-3 core; the
-/// CNF-introduction rules are the slice-4 structural tautologies; the bridge rules
-/// (`bitblast_*`, `cong`, `trans`, `equiv1`, `equiv2`) conclude clauses whose
-/// literals are taken as opaque Props and whose proof is a fresh hypothesis axiom
-/// of that clause's encoding (sound *as a clause-level assumption*; the bit-iff
-/// content of `bitblast_*` is separately kernel-checked in
-/// [`reconstruct_qf_bv_proof`]). The final `(cl)` is checked against `False`.
+/// The emitter's `equiv1` concludes `(cl (not pred) B)` and `equiv2` concludes
+/// `(cl pred (not B))` — each clause pairs the predicate atom `pred` (a `(= s t)`
+/// over bit-vector terms) with its bit form `B` (a Boolean over bit projections).
+/// We read `pred ↦ B` straight from the clause: the predicate is the literal whose
+/// atom is a `(= …)` over non-bit operands (it carries a `bvand`/`bvor`/… or a bare
+/// bit-vector symbol), and `B` is the other literal's atom. This avoids tracing the
+/// `cong`/`trans` chain — the `equiv` clause already exhibits the correspondence.
+fn collect_bitblast_bridge(commands: &[AletheCommand]) -> BTreeMap<String, AletheTerm> {
+    let mut bridge: BTreeMap<String, AletheTerm> = BTreeMap::new();
+    for cmd in commands {
+        let AletheCommand::Step { rule, clause, .. } = cmd else {
+            continue;
+        };
+        if rule != "equiv1" && rule != "equiv2" {
+            continue;
+        }
+        // The equiv clause is a 2-literal pairing of `pred` and `B`. Identify which
+        // literal is the bit-vector predicate (it mentions a `@bit_of`-free
+        // bit-vector operand) and which is the bit-level form.
+        let [l0, l1] = clause.as_slice() else {
+            continue;
+        };
+        let (pred, b_form) = if is_bv_predicate_atom(&l0.atom) {
+            (&l0.atom, &l1.atom)
+        } else if is_bv_predicate_atom(&l1.atom) {
+            (&l1.atom, &l0.atom)
+        } else {
+            continue;
+        };
+        bridge.insert(pred.key(), b_form.clone());
+    }
+    bridge
+}
+
+/// Whether an atom is a bit-vector **predicate** `(= s t)` whose operands are
+/// bit-vector *terms* (a bare symbol or a `bv…`/structural application), as opposed
+/// to a bit-level Boolean `(= a_i b_i)` over `@bit_of` projections. The discriminator
+/// is that at least one operand is **not** an `@bit_of` projection (nor a Boolean
+/// gate / Boolean constant): a genuine bit-vector term.
+fn is_bv_predicate_atom(term: &AletheTerm) -> bool {
+    match term {
+        AletheTerm::App(head, args) if head == "=" && args.len() == 2 => {
+            args.iter().any(is_bitvector_operand)
+        }
+        _ => false,
+    }
+}
+
+/// Whether a term is a bit-vector operand (a bare symbol that is not a Boolean
+/// literal, or a `bv…` application), distinguishing a predicate's BV operand from a
+/// bit-level Boolean leaf (`@bit_of` projection, `and`/`or`/`xor`/`not`/`=` gate).
+fn is_bitvector_operand(term: &AletheTerm) -> bool {
+    match term {
+        AletheTerm::Const(s) => s != "true" && s != "false" && !s.starts_with("#b"),
+        AletheTerm::App(head, _) => head.starts_with("bv") || head == "concat" || head == "@bbterm",
+        AletheTerm::Indexed { .. } => false,
+    }
+}
+
+/// The fused clausal walk for a bitwise `QF_BV` proof: a superset of
+/// [`reconstruct_resolution_proof`] that threads the bit-blast bridge rules under
+/// the context's **bit mode** (`bridge` set), so the reconstructed `False` is closed
+/// over only the input-assumption hypotheses and `em`.
+///
+/// Each command becomes a [`Clause`] (its literals + a kernel proof of the clause's
+/// bit-level `Prop` encoding). `assume` is the input predicate hypothesis (its
+/// `Prop` is the predicate's bit form, via the bridge); `resolution` is the slice-3
+/// constructive core; the CNF-introduction rules are the slice-4 structural
+/// tautologies; `equiv1`/`equiv2` are genuine `¬B ∨ B` tautologies; the
+/// `cong`/`trans`/`bitblast_*` term-equality steps are deferred (never consumed by
+/// the refutation, so never forced into the `False` term). The final `(cl)` is
+/// checked against `False`.
 fn reconstruct_bitwise_clausal(
     ctx: &mut ReconstructCtx,
     commands: &[AletheCommand],
@@ -3165,59 +3305,126 @@ fn reconstruct_bitwise_clausal(
                 ..
             } => {
                 let recovered = reconstruct_bitwise_step(ctx, rule, clause, premises, &env)?;
-                if clause.is_empty() {
-                    return check_false_prop(ctx, recovered.proof);
+                if let Some(recovered) = recovered {
+                    if clause.is_empty() {
+                        return check_false_prop(ctx, recovered.proof);
+                    }
+                    env.insert(id.clone(), recovered);
                 }
-                env.insert(id.clone(), recovered);
             }
         }
     }
     Err(ReconstructError::NoEmptyClause)
 }
 
-/// Reconstruct one step of the bitwise clausal walk into a [`Clause`].
+/// Reconstruct one step of the fused bitwise clausal walk.
+///
+/// Returns `Ok(Some(clause))` for a step that contributes a clause to the
+/// refutation, or `Ok(None)` for a **deferred** term-level bridge step
+/// (`cong`/`trans`/`bitblast_*`) that the refutation never consumes — those carry no
+/// reconstructed proof, so they introduce no axiom into the final `False` term.
 fn reconstruct_bitwise_step(
     ctx: &mut ReconstructCtx,
     rule: &str,
     clause: &[AletheLit],
     premises: &[String],
     env: &BTreeMap<String, Clause>,
-) -> Result<Clause, ReconstructError> {
+) -> Result<Option<Clause>, ReconstructError> {
     match rule {
         // Slice-3 resolution core (also closes to `(cl)`).
-        "resolution" | "th_resolution" => reconstruct_resolution_step(ctx, clause, premises, env),
+        "resolution" | "th_resolution" => Ok(Some(reconstruct_resolution_step(
+            ctx, clause, premises, env,
+        )?)),
         // Slice-4 Tseitin CNF-introduction tautologies, proved structurally.
         "and_pos" | "and_neg" | "or_pos" | "or_neg" | "equiv_pos1" | "equiv_pos2"
         | "equiv_neg1" | "equiv_neg2" | "xor_pos1" | "xor_pos2" | "xor_neg1" | "xor_neg2" => {
             let proof = reconstruct_cnf_intro_rule(ctx, rule, clause)?;
-            Ok(Clause {
+            Ok(Some(Clause {
                 lits: clause.to_vec(),
                 proof,
-            })
+            }))
         }
-        // The bit-blast bridge rules. `bitblast_*` are separately kernel-checked
-        // (their bit-iff content) in `reconstruct_qf_bv_proof`; here, and for the
-        // `cong`/`trans`/`equiv1`/`equiv2` plumbing, the concluded clause enters the
-        // clausal layer as a fresh typed hypothesis of its `Prop` encoding.
-        "cong" | "trans" | "equiv1" | "equiv2" => {
-            let prop = ctx.clause_to_prop(clause);
-            let proof = fresh_axiom(ctx, prop, rule)?;
-            Ok(Clause {
-                lits: clause.to_vec(),
-                proof,
-            })
-        }
-        r if r.starts_with("bitblast_") => {
-            let prop = ctx.clause_to_prop(clause);
-            let proof = fresh_axiom(ctx, prop, rule)?;
-            Ok(Clause {
-                lits: clause.to_vec(),
-                proof,
-            })
-        }
+        // The predicate↔bit-form bridge. Under bit mode `⟦pred⟧ ≡ ⟦B⟧`, so the
+        // `equiv1`/`equiv2` clause `(¬pred ∨ B)` / `(pred ∨ ¬B)` is a genuine
+        // `Prop` tautology — proved classically (via `em`), not assumed.
+        "equiv1" | "equiv2" => Ok(Some(reconstruct_equiv_bridge(ctx, rule, clause)?)),
+        // Term-level bridge steps that the refutation never consumes (only the
+        // predicate-level `equiv` clauses feed resolution). Defer them: no proof is
+        // built, so no axiom is introduced. Their bit-iff content is separately
+        // kernel-checked in `reconstruct_qf_bv_proof`.
+        "cong" | "trans" => Ok(None),
+        r if r.starts_with("bitblast_") => Ok(None),
         other => Err(ReconstructError::UnsupportedRule {
             rule: other.to_owned(),
         }),
+    }
+}
+
+/// Reconstruct an `equiv1`/`equiv2` bridge clause as a genuine bit-level `Prop`
+/// tautology under bit mode.
+///
+/// In bit mode the predicate atom `pred` translates to its bit form `⟦B⟧`, so the
+/// `equiv1` clause `(cl (not pred) B)` is `¬⟦B⟧ ∨ ⟦B⟧` and the `equiv2` clause
+/// `(cl pred (not B))` is `⟦B⟧ ∨ ¬⟦B⟧` — both `Prop` tautologies. We prove them with
+/// the same classical case-split engine the CNF-introduction tautologies use
+/// ([`prove_clause_by_cases`]): the clause is a tautology over its (bit-level) atoms,
+/// so the engine finds a satisfied literal in every assignment. The result is
+/// `check_against`-gated to the clause's bit-level `Prop` encoding.
+///
+/// If the clause is not a `¬X ∨ X` tautology under bit mode (e.g. the bridge map did
+/// not identify the predicate, so the two literals are unrelated atoms), the
+/// case-split engine fails and a [`ReconstructError::MalformedStep`] surfaces — never
+/// a silently-assumed bridge.
+fn reconstruct_equiv_bridge(
+    ctx: &mut ReconstructCtx,
+    rule: &str,
+    clause: &[AletheLit],
+) -> Result<Clause, ReconstructError> {
+    let _ = ctx.em_axiom();
+
+    // The case-split atoms: the distinct gate leaves of the (bridge-substituted)
+    // clause. Substitute each literal's atom through the bridge so `collect_atoms`
+    // (which is not itself bridge-aware) decomposes the bit form, not the opaque
+    // predicate.
+    let substituted: Vec<AletheLit> = clause
+        .iter()
+        .map(|lit| AletheLit {
+            atom: ctx.bridge_substitute(&lit.atom),
+            negated: lit.negated,
+        })
+        .collect();
+
+    let mut atom_keys: Vec<(String, AletheTerm)> = Vec::new();
+    for lit in &substituted {
+        collect_atoms(&lit.atom, &mut atom_keys);
+    }
+
+    // The target is the ORIGINAL clause's bit-level `Prop` (predicate atoms route
+    // through the bridge inside `gate_clause_to_prop`); the substituted clause has
+    // the identical `Prop`, so proving over the substituted form yields a term of
+    // the target type.
+    let target = ctx.gate_clause_to_prop(clause);
+    let mut assignment = Assignment::new();
+    let proof = prove_clause_by_cases(ctx, &atom_keys, 0, &mut assignment, &substituted, target)?;
+    let proof = check_against(ctx, rule, proof, target)?;
+    Ok(Clause {
+        lits: clause.to_vec(),
+        proof,
+    })
+}
+
+impl ReconstructCtx {
+    /// Rewrite an atom term through the bit-blast bridge: if its key names a
+    /// registered bit-vector predicate, return its bit-level Boolean form `B`;
+    /// otherwise return the term unchanged. Used to expose the bit-level structure
+    /// to the (non-bridge-aware) tautology case-split engine.
+    fn bridge_substitute(&self, term: &AletheTerm) -> AletheTerm {
+        if let Some(bridge) = &self.bridge {
+            if let Some(b_form) = bridge.get(&term.key()) {
+                return b_form.clone();
+            }
+        }
+        term.clone()
     }
 }
 
