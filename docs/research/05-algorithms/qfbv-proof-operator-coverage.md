@@ -61,19 +61,23 @@ reconstructs end-to-end to a kernel-checked `False`.
 `bvudiv`/`bvurem` to core via one unrolled long-division (shift-subtract) pass —
 `divide` — exhaustively denotation-checked over **all** `(x, y)` for widths 2/3/4,
 including `y = 0` (SMT-LIB totality `udiv = all-ones`, `urem = x` falls out for free).
-The lowering is sound and usable (e.g. the SAT path), but **end-to-end proof
-reconstruction is blocked** by two separate issues:
-1. **`cnf_intro` over Boolean constants.** The divider's adders/subtracters over the
+The lowering is sound and usable, and **`bvudiv`/`bvurem` now reconstruct end-to-end
+at width 2** (committed test). Two notes:
+1. **`cnf_intro` over Boolean constants — FIXED.** The divider's adders over the
    zero-const bits produce `xor`/`equiv` Tseitin clauses whose operands are the
-   literals `false`/`(not false)`; the truth-table case-split treats them as free
-   atoms and explores the impossible `(not false) = false` world, raising a spurious
-   `MalformedStep`. Fix: `collect_atoms`/`try_equiv_xor` must treat `true`/`false` as
-   evaluated constants, not case-split atoms (and `prove_term` must discharge them).
-2. **Term blowup.** The unrolled divider is a large term; its proof reconstruction is
-   intractable beyond tiny widths — the same representation problem as the multiplier
+   literals `false`/`(not false)`; the truth-table case-split had treated them as
+   free atoms and explored the impossible `(not false) = false` world, raising a
+   spurious `MalformedStep`. Fix: `collect_atoms` and `try_equiv_xor` skip the
+   Boolean literals (they are fixed values, not free atoms), and `prove_term_true`/
+   `_false` discharge them (`True.intro` / `id : False → False`). General reconstruction
+   robustness, not div-specific.
+2. **Term blowup (still open).** The unrolled divider is a large term; reconstruction
+   is intractable beyond tiny widths (width 3 already exceeds an 8 GB / 120 s bound) —
+   the same representation problem as the multiplier
    ([[bitblast-reconstruction-multiplier-blowup]]), wanting the shared/`let` encoding.
+   That is why the committed div test is pinned at width 2.
 
-**Remaining:** the two div-reconstruction blockers above; the signed div family
+**Remaining:** the div term-blowup (shared encoding); the signed div family
 (`bvsdiv`/`bvsrem`/`bvsmod`, reducible to unsigned + sign logic); and the route-2
 `bv_poly_simp` upgrade (certify the *un-lowered* original). The rest of this note is
 the original analysis.

@@ -2593,10 +2593,22 @@ fn try_equiv_xor(
     };
 
     let _ = ctx.em_axiom();
-    // Case-split atoms: the two operands, deduplicated by key (handles `(= a a)`).
-    let mut atoms: Vec<(String, AletheTerm)> = vec![(a.key(), a)];
-    if b.key() != atoms[0].0 {
-        atoms.push((b.key(), b));
+    // Case-split atoms: the two operands, deduplicated by key. A **constant-valued**
+    // operand (one with no free atoms, e.g. `false` or `(not false)` — common in
+    // bit-blasted adders over constant operands) is NOT case-split: it is a fixed
+    // truth value, so `prove_term` evaluates it at the leaf. Case-splitting it would
+    // explore impossible worlds and falsely reject a valid clause.
+    let mut atoms: Vec<(String, AletheTerm)> = Vec::new();
+    for op in [a, b] {
+        let mut leaves = Vec::new();
+        collect_atoms(&op, &mut leaves);
+        if leaves.is_empty() {
+            continue; // constant-valued operand
+        }
+        let key = op.key();
+        if !atoms.iter().any(|(k, _)| k == &key) {
+            atoms.push((key, op));
+        }
     }
     let target = ctx.gate_clause_to_prop(conclusion);
     let conclusion = conclusion.to_vec();
@@ -2717,6 +2729,11 @@ fn collect_atoms(term: &AletheTerm, out: &mut Vec<(String, AletheTerm)>) {
                 collect_atoms(a, out);
             }
         }
+        // The Boolean literals are FIXED values, not free atoms — never case-split
+        // them (doing so explores impossible worlds, e.g. `(not false) = false`, and
+        // a real tautology then looks falsified). `prove_term_true/false` evaluate
+        // them directly.
+        AletheTerm::Const(s) if s == "true" || s == "false" => {}
         other => {
             let key = other.key();
             if !out.iter().any(|(k, _)| k == &key) {
@@ -2884,6 +2901,15 @@ fn prove_term_true(
     if let Some(&(_, proof, val)) = assignment.map.get(&term.key()) {
         return Ok(val.then_some(proof));
     }
+    // The Boolean literals: `true` is provable (`True.intro`), `false` is not.
+    if let AletheTerm::Const(s) = term {
+        if s == "true" {
+            return Ok(Some(ctx.kernel.const_(ctx.prelude.true_intro, vec![])));
+        }
+        if s == "false" {
+            return Ok(None);
+        }
+    }
     match term {
         // (not t) is true ⇔ t is false ⇒ a `Not ⟦t⟧` proof.
         AletheTerm::App(head, args) if head == "not" && args.len() == 1 => {
@@ -2943,6 +2969,24 @@ fn prove_term_false(
     // directly (stored for the `false` branch) instead of recursing into the gate.
     if let Some(&(_, proof, val)) = assignment.map.get(&term.key()) {
         return Ok((!val).then_some(proof));
+    }
+    // The Boolean literals: `false` is refutable (`Not False` = `id : False → False`),
+    // `true` is not.
+    if let AletheTerm::Const(s) = term {
+        if s == "false" {
+            let false_ = ctx.kernel.const_(ctx.prelude.false_, vec![]);
+            let anon = ctx.kernel.anon();
+            let body = ctx.kernel.bvar(0);
+            return Ok(Some(ctx.kernel.lam(
+                anon,
+                false_,
+                body,
+                BinderInfo::Default,
+            )));
+        }
+        if s == "true" {
+            return Ok(None);
+        }
     }
     match term {
         // Not (not t) ⇔ t is true. We have a proof `ht : ⟦t⟧`; build a proof of

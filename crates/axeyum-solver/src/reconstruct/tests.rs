@@ -1931,6 +1931,33 @@ fn end_to_end_variable_shift_via_lowering_reconstructs() {
     assert_infers_false(&mut ctx, term);
 }
 
+/// Unsigned division lowering: `bvudiv` → an unrolled long-division network of core
+/// ops. At width 2 this reconstructs end-to-end to a kernel-checked `False`. It
+/// exercises the `cnf_intro`-over-Boolean-constant fix (the divider's adders over
+/// zero-const bits produce `xor` clauses whose operands are `false`/`(not false)`).
+/// NOTE: larger widths are blocked by the multiplier-style term blowup (coverage
+/// note), so this is kept at width 2.
+#[test]
+fn end_to_end_udiv_width2_via_lowering_reconstructs() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let mk = |a: &mut TermArena, n: &str| {
+        let s = a.declare(n, Sort::BitVec(2)).unwrap();
+        a.var(s)
+    };
+    let a = mk(&mut arena, "a");
+    let y = mk(&mut arena, "y");
+    let b = mk(&mut arena, "b");
+    let d = arena.bv_udiv(a, y).unwrap();
+    let eq = arena.eq(d, b).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe_lowered(&mut arena, &[eq, neq])
+        .expect("emitter accepts lowered core");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_bv_proof(&mut ctx, &proof).expect("reconstructs");
+    assert_infers_false(&mut ctx, term);
+}
+
 /// **NEGATIVE soundness (slice 6)**: corrupt the closing resolution of a REAL
 /// bitwise proof — drop a premise so it can no longer fold to `(cl)` — and confirm
 /// the fused walk REJECTS it rather than producing a `False` from a non-refutation.
