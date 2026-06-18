@@ -1599,12 +1599,21 @@ fn reconstruct_resolution_step(
             detail: "resolution step has no premises".to_owned(),
         });
     };
-    let mut acc = lookup(env, first)?.clone();
+    // Polarity-normalize every clause first so a `+(not X)` literal and a `-X`
+    // literal — the same `Not ⟦X⟧` Prop, spelled inconsistently by the upstream CNF
+    // — match as complementary pivots in `find_pivot`. Soundness is unchanged:
+    // normalization preserves `clause_to_prop`, so each clause `proof` stays
+    // well-typed, and every `binary_resolve` below is kernel-checked.
+    let normalized = |c: &Clause| Clause {
+        lits: c.lits.iter().map(normalize_lit_polarity).collect(),
+        proof: c.proof,
+    };
+    let mut acc = normalized(lookup(env, first)?);
     // Remaining premises to fold in; pulled out as they become resolvable.
     let mut remaining: Vec<Clause> = rest
         .iter()
-        .map(|p| lookup(env, p).cloned())
-        .collect::<Result<_, _>>()?;
+        .map(|p| Ok(normalized(lookup(env, p)?)))
+        .collect::<Result<_, ReconstructError>>()?;
 
     while !remaining.is_empty() {
         // Pick a remaining premise that shares a complementary pivot with `acc`.
@@ -1634,6 +1643,27 @@ fn reconstruct_resolution_step(
         });
     }
     Ok(acc)
+}
+
+/// Canonicalize a literal's polarity by peeling leading `(not …)` atoms into the
+/// `negated` flag: `+(not X)` becomes `-X`, `-(not X)` becomes `+X`. The upstream
+/// CNF spells some negations as the flag and some as a `(not …)` atom; a positive
+/// `(not X)` literal and a negative `X` literal denote the same Prop (`Not ⟦X⟧`),
+/// so this leaves [`ReconstructCtx::clause_to_prop`] (and the clause `proof` type)
+/// unchanged while letting complementary literals match in [`find_pivot`].
+fn normalize_lit_polarity(lit: &AletheLit) -> AletheLit {
+    let mut atom = lit.atom.clone();
+    let mut negated = lit.negated;
+    while let AletheTerm::App(head, args) = &atom {
+        if head == "not" && args.len() == 1 {
+            let inner = args[0].clone();
+            atom = inner;
+            negated = !negated;
+        } else {
+            break;
+        }
+    }
+    AletheLit { atom, negated }
 }
 
 /// The complementary-literal **pivot** of two clauses: the unique atom occurring

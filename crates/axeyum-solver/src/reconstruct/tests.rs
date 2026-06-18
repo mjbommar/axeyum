@@ -736,6 +736,53 @@ fn bogus_resolution_no_pivot_rejected() {
     );
 }
 
+/// `normalize_lit_polarity` peels `(not …)` atoms into the `negated` flag, so a
+/// `+(not X)` literal and a `-X` literal canonicalize identically — letting
+/// `find_pivot` recognize them as complementary. The upstream CNF spells some
+/// negations as the flag and some as a `(not …)` atom, which previously made
+/// `find_pivot` miss genuinely-complementary literals.
+#[test]
+fn normalize_polarity_lets_not_atoms_resolve() {
+    use super::{find_pivot, normalize_lit_polarity};
+    let x = AletheTerm::Const("x".to_owned());
+    let not_x = AletheTerm::App("not".to_owned(), vec![x.clone()]);
+
+    // `+(not x)` normalizes to `-x`; `-(not x)` normalizes to `+x`.
+    let plus_not_x = AletheLit {
+        atom: not_x.clone(),
+        negated: false,
+    };
+    let n = normalize_lit_polarity(&plus_not_x);
+    assert_eq!(n.atom.key(), x.key());
+    assert!(n.negated, "`+(not x)` must normalize to `-x`");
+    let minus_not_x = AletheLit {
+        atom: not_x,
+        negated: true,
+    };
+    let n2 = normalize_lit_polarity(&minus_not_x);
+    assert_eq!(n2.atom.key(), x.key());
+    assert!(!n2.negated, "`-(not x)` must normalize to `+x`");
+
+    // Raw `+x` vs `+(not x)` are NOT syntactically complementary; after
+    // normalization (`+x` vs `-x`) they resolve.
+    let plus_x = AletheLit {
+        atom: x,
+        negated: false,
+    };
+    assert!(
+        find_pivot(
+            std::slice::from_ref(&plus_x),
+            std::slice::from_ref(&plus_not_x)
+        )
+        .is_none(),
+        "raw `+x` vs `+(not x)` are not syntactically complementary"
+    );
+    assert!(
+        find_pivot(std::slice::from_ref(&plus_x), std::slice::from_ref(&n)).is_some(),
+        "after normalization, `+x` vs `-x` resolve"
+    );
+}
+
 /// **NEGATIVE soundness at the kernel gate**: a resolution that DOES have a pivot
 /// but claims a WRONG resolvent (`(cl c)` from `(a ∨ b) ⊗ (¬a)`, whose true
 /// resolvent is `(b)`) must be rejected — the reconstructed term infers to `(b)`,
