@@ -153,9 +153,9 @@ pub use qfabv_alethe::prove_qf_abv_unsat_alethe;
 pub use qfbv_alethe::prove_qf_bv_unsat_alethe;
 pub use qinst_egraph::{instantiate_forall_via_egraph, prove_quantified_unsat_via_egraph};
 pub use reconstruct::{
-    ReconstructCtx, ReconstructError, reconstruct_bitblast_step, reconstruct_cnf_intro_rule,
-    reconstruct_eq_step, reconstruct_qf_bv_proof, reconstruct_qf_uf_proof,
-    reconstruct_resolution_proof,
+    LraReconstructCtx, ReconstructCtx, ReconstructError, reconstruct_bitblast_step,
+    reconstruct_cnf_intro_rule, reconstruct_eq_step, reconstruct_lra_proof, reconstruct_qf_bv_proof,
+    reconstruct_qf_uf_proof, reconstruct_resolution_proof,
 };
 pub use records::{RecordError, RecordSort};
 pub use sat_bv_backend::SatBvBackend;

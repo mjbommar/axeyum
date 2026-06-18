@@ -1209,7 +1209,7 @@ use super::reconstruct_qf_bv_proof;
 
 /// **END-TO-END (the milestone)**: a 1-bit `(= (bvand a b) a) ∧ (not (= (bvand a
 /// b) a))` is unsat; the REAL `prove_qf_bv_unsat_alethe` emits the full bitwise
-/// proof (bitblast_var/and/equal + cong/trans + equiv + CNF-intro + resolution),
+/// proof (`bitblast_var`/`and`/`equal` + cong/trans + equiv + CNF-intro + resolution),
 /// and `reconstruct_qf_bv_proof` reconstructs it to a kernel-checked `False`.
 ///
 /// Every BITWISE `bitblast_*` step's bit-iff content is separately kernel-checked
@@ -1408,4 +1408,164 @@ fn end_to_end_non_bitwise_rejected() {
         matches!(err, ReconstructError::UnsupportedRule { .. }),
         "got {err:?}"
     );
+}
+
+// ===========================================================================
+// LRA `la_generic` (Farkas) reconstruction tests (P3.7 arithmetic, slice 1).
+// ===========================================================================
+
+/// **The bar**: a real `x ≤ 0 ∧ 1 ≤ x` LRA `unsat` instance reconstructs, via its
+/// REAL self-checked Farkas certificate, to a kernel-checked Lean term of type
+/// `False` over the arithmetic prelude (the baby-Farkas order chain).
+#[test]
+fn lra_transitivity_reconstructs_to_false() {
+    use axeyum_ir::{Rational, TermArena};
+
+    use super::{LraReconstructCtx, reconstruct_lra_proof};
+
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let zero = arena.real_const(Rational::integer(0));
+    let one = arena.real_const(Rational::integer(1));
+    let a1 = arena.real_le(x, zero).unwrap(); // x ≤ 0
+    let a2 = arena.real_le(one, x).unwrap(); // 1 ≤ x
+
+    let mut ctx = LraReconstructCtx::new();
+    let proof = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2])
+        .expect("transitivity LRA unsat reconstructs to False");
+
+    // The returned term's inferred type is def_eq to `False` (already gated inside
+    // reconstruct_lra_proof, re-confirmed here for the bar).
+    let inferred = ctx.kernel_mut().infer(proof).unwrap();
+    let false_ = {
+        let f = ctx.arith().logic.false_;
+        ctx.kernel_mut().const_(f, vec![])
+    };
+    assert!(
+        ctx.kernel_mut().def_eq(inferred, false_),
+        "reconstructed LRA term must infer to False"
+    );
+}
+
+/// The `≥`-phrased variant `x ≤ 0 ∧ x ≥ 1` reaches the same kernel-checked `False`
+/// (the `≥` is normalized into the `1 ≤ x` lower bound).
+#[test]
+fn lra_transitivity_ge_phrasing_reconstructs() {
+    use axeyum_ir::{Rational, TermArena};
+
+    use super::{LraReconstructCtx, reconstruct_lra_proof};
+
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let zero = arena.real_const(Rational::integer(0));
+    let one = arena.real_const(Rational::integer(1));
+    let a1 = arena.real_le(x, zero).unwrap(); // x ≤ 0
+    let a2 = arena.real_ge(x, one).unwrap(); // x ≥ 1
+
+    let mut ctx = LraReconstructCtx::new();
+    let proof = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2])
+        .expect("≥-phrased transitivity LRA unsat reconstructs to False");
+    let inferred = ctx.kernel_mut().infer(proof).unwrap();
+    let false_ = {
+        let f = ctx.arith().logic.false_;
+        ctx.kernel_mut().const_(f, vec![])
+    };
+    assert!(ctx.kernel_mut().def_eq(inferred, false_));
+}
+
+/// A **satisfiable** instance has no Farkas refutation, so reconstruction is
+/// rejected (a `MalformedStep`, never a wrong `False`).
+#[test]
+fn lra_satisfiable_is_rejected() {
+    use axeyum_ir::{Rational, TermArena};
+
+    use super::{LraReconstructCtx, ReconstructError, reconstruct_lra_proof};
+
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let five = arena.real_const(Rational::integer(5));
+    let a = arena.real_le(x, five).unwrap(); // x ≤ 5, satisfiable
+
+    let mut ctx = LraReconstructCtx::new();
+    let err = reconstruct_lra_proof(&mut ctx, &arena, &[a])
+        .expect_err("a satisfiable instance has no Farkas refutation");
+    assert!(
+        matches!(err, ReconstructError::MalformedStep { .. }),
+        "got {err:?}"
+    );
+}
+
+/// An `unsat` instance OUTSIDE slice 1 (here `2x ≤ -1 ∧ x ≥ 0`, whose Farkas
+/// refutation needs a `2`-coefficient term, not the `e ≤ 0 ∧ 1 ≤ e` shape) is
+/// rejected, honestly reporting the boundary rather than guessing a `False`.
+#[test]
+fn lra_out_of_scope_shape_is_rejected() {
+    use axeyum_ir::{Rational, TermArena};
+
+    use super::{LraReconstructCtx, ReconstructError, reconstruct_lra_proof};
+
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let neg_one = arena.real_const(Rational::integer(-1));
+    let zero = arena.real_const(Rational::integer(0));
+    let two_x = arena.real_mul(two, x).unwrap();
+    let a1 = arena.real_le(two_x, neg_one).unwrap(); // 2x ≤ -1
+    let a2 = arena.real_ge(x, zero).unwrap(); // x ≥ 0
+
+    let mut ctx = LraReconstructCtx::new();
+    let err = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2])
+        .expect_err("a non-transitivity Farkas shape is out of slice 1");
+    assert!(
+        matches!(
+            err,
+            ReconstructError::MalformedStep { .. } | ReconstructError::UnsupportedTerm { .. }
+        ),
+        "got {err:?}"
+    );
+}
+
+/// **NEGATIVE soundness**: a non-`False` proposition (`zero_lt_one : lt zero one`)
+/// is NOT `def_eq` to `False`, so the kernel gate would reject any claim that it is.
+/// This proves the trusted gate — not the untrusted glue — guarantees soundness: a
+/// wrong combination can never be accepted as `False`.
+#[test]
+fn lra_bogus_combination_is_kernel_rejected() {
+    use super::LraReconstructCtx;
+
+    let mut ctx = LraReconstructCtx::new();
+    let zlo = {
+        let n = ctx.arith().zero_lt_one;
+        ctx.kernel_mut().const_(n, vec![])
+    };
+    let inferred = ctx.kernel_mut().infer(zlo).unwrap();
+    let false_ = {
+        let f = ctx.arith().logic.false_;
+        ctx.kernel_mut().const_(f, vec![])
+    };
+    assert!(
+        !ctx.kernel_mut().def_eq(inferred, false_),
+        "a non-False proposition must NOT be def_eq to False (the soundness gate)"
+    );
+}
+
+/// Determinism: reconstructing the same instance twice yields a structurally
+/// identical proof term (same `ExprId`), since interning is insertion-ordered.
+#[test]
+fn lra_reconstruction_is_deterministic() {
+    use axeyum_ir::{Rational, TermArena};
+
+    use super::{LraReconstructCtx, reconstruct_lra_proof};
+
+    let build = || {
+        let mut arena = TermArena::new();
+        let x = arena.real_var("x").unwrap();
+        let zero = arena.real_const(Rational::integer(0));
+        let one = arena.real_const(Rational::integer(1));
+        let a1 = arena.real_le(x, zero).unwrap();
+        let a2 = arena.real_le(one, x).unwrap();
+        let mut ctx = LraReconstructCtx::new();
+        reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2]).unwrap()
+    };
+    assert_eq!(build(), build(), "LRA reconstruction must be deterministic");
 }

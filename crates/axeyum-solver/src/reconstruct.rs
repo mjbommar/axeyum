@@ -3428,5 +3428,649 @@ impl ReconstructCtx {
     }
 }
 
+// ===========================================================================
+// LRA `la_generic` (Farkas) reconstruction (P3.7 arithmetic fragment, slice 1).
+//
+// A small real `QF_LRA` `unsat` instance's Farkas certificate is reconstructed
+// into a Lean term of type `False` that the trusted kernel type-checks, over the
+// axiomatized linear ordered field of `build_arith_prelude` (carrier `R`, ops
+// `add`/`mul`/`neg`/`zero`/`one`, relations `le`/`lt`, the order/ring axioms).
+//
+// ## The model
+//
+// - Each real variable `xⱼ` ⇒ an opaque `R`-typed `Axiom` (declared lazily,
+//   deterministically, by dense variable index).
+// - A linear term `Σ aⱼ xⱼ + c` ⇒ an `R` expression built from `add`/`neg`/
+//   `one`/`zero`. **Coefficient restriction (slice 1):** only small integer
+//   coefficients in `{-1, 0, +1}` and a constant in `{0, 1}` are modelled (no
+//   general rationals); a `±1` coefficient is `xⱼ` / `neg xⱼ`, and the constant
+//   `1` is the prelude's `one`. Anything outside this is rejected, not guessed.
+// - A constraint atom `t ⋈ c` (`≤`/`<`) ⇒ `le`/`lt` over the `R` expressions; an
+//   input assumption is a hypothesis axiom of that exact `Prop`.
+//
+// ## What is reconstructed (slice 1): the transitivity-reducible refutation
+//
+// The bar is the baby-Farkas / order-chaining shape: a two-constraint instance
+// `e ≤ 0 ∧ 1 ≤ e` (`e` a shared `R` expression). The refutation is **pure order
+// chaining**, with NO ring sum:
+//
+//   step1 := le_trans one e zero h_lo h_hi : le one zero
+//   step2 := lt_of_le_of_lt one zero one step1 zero_lt_one : lt one one
+//   refute := lt_irrefl one step2 : False
+//
+// where `h_hi : le e zero` and `h_lo : le one e` are the input-constraint
+// hypotheses. The general multi-variable / arbitrary-rational Farkas normalizer
+// (scaling by `λ` and a ring cancellation `Σ λᵢ tᵢ = const`) is a LATER slice;
+// out-of-scope cert shapes are rejected with a clear [`ReconstructError`].
+//
+// ## Soundness
+//
+// The kernel `infer`s the final term and requires it `def_eq` `False`. A wrong
+// combination ⇒ the kernel rejects ⇒ [`ReconstructError::KernelRejected`], never
+// a wrong `False`. The arith-prelude axioms are the (kernel-type-checked) trusted
+// base; the only added axioms are the input-constraint hypotheses.
+// ===========================================================================
+
+use axeyum_ir::{Op as IrOp, Rational, Sort as IrSort, TermArena, TermId, TermNode as IrTermNode};
+use axeyum_lean_kernel::{ArithPrelude, build_arith_prelude};
+
+// The LRA reconstruction items below are the public API surface a `lib.rs`
+// re-export will expose (mirroring the EUF `reconstruct_qf_uf_proof` re-export);
+// until that re-export lands they are reachable only from this module's tests, so
+// the crate-level dead-code lint flags them. The `allow(dead_code)` markers are
+// scoped to these items (not the module) and become inert once re-exported.
+
+/// A linear real expression `Σ aⱼ xⱼ + c` over dense variable indices, the
+/// reconstruction-side mirror of the LRA collector's linear form. Coefficients and
+/// the constant are exact [`Rational`]s; slice 1 only *reconstructs* the small
+/// `{-1,0,+1}` coefficient / `{0,1}` constant subset into `R` (see [`LinR`]).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[allow(dead_code)]
+struct LinR {
+    /// `(variable index, coefficient)` pairs, ascending, all coefficients nonzero.
+    coeffs: Vec<(usize, Rational)>,
+    /// The constant term.
+    constant: Rational,
+}
+
+#[allow(dead_code)]
+impl LinR {
+    fn constant(value: Rational) -> Self {
+        Self {
+            coeffs: Vec::new(),
+            constant: value,
+        }
+    }
+
+    fn var(index: usize) -> Self {
+        Self {
+            coeffs: vec![(index, Rational::integer(1))],
+            constant: Rational::zero(),
+        }
+    }
+
+    fn neg(&self) -> Self {
+        Self {
+            coeffs: self
+                .coeffs
+                .iter()
+                .map(|&(i, c)| (i, Rational::zero() - c))
+                .collect(),
+            constant: Rational::zero() - self.constant,
+        }
+    }
+
+    fn add(&self, other: &Self) -> Self {
+        let mut map: BTreeMap<usize, Rational> = BTreeMap::new();
+        for &(i, c) in self.coeffs.iter().chain(&other.coeffs) {
+            let e = map.entry(i).or_insert_with(Rational::zero);
+            *e = *e + c;
+        }
+        let coeffs = map.into_iter().filter(|(_, c)| !c.is_zero()).collect();
+        Self {
+            coeffs,
+            constant: self.constant + other.constant,
+        }
+    }
+
+    fn sub(&self, other: &Self) -> Self {
+        self.add(&other.neg())
+    }
+
+    /// Whether this is the linear expression of a single bare variable `xⱼ`
+    /// (coefficient `+1`, no constant), returning its index.
+    fn as_bare_var(&self) -> Option<usize> {
+        match self.coeffs.as_slice() {
+            [(i, c)] if *c == Rational::integer(1) && self.constant.is_zero() => Some(*i),
+            _ => None,
+        }
+    }
+
+    /// Whether this is the constant `value` (no variables).
+    fn is_constant_eq(&self, value: Rational) -> bool {
+        self.coeffs.is_empty() && self.constant == value
+    }
+}
+
+/// The reconstruction context for LRA Farkas proofs: a [`Kernel`] seeded with the
+/// arithmetic prelude (linear ordered field `R`), plus a deterministic map from a
+/// dense real-variable index to its opaque `R`-typed [`NameId`].
+///
+/// Distinct from [`ReconstructCtx`] (the EUF carrier `α`): the carrier here is the
+/// ordered field `R` and the trusted base is [`build_arith_prelude`]'s axioms.
+#[allow(dead_code)]
+pub struct LraReconstructCtx {
+    kernel: Kernel,
+    arith: ArithPrelude,
+    /// Dense variable index → its opaque `R`-typed constant `NameId`.
+    vars: BTreeMap<usize, NameId>,
+    /// Monotone counter for fresh, collision-free declaration names.
+    next_id: u64,
+}
+
+impl core::fmt::Debug for LraReconstructCtx {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("LraReconstructCtx")
+            .field("vars", &self.vars.keys().collect::<Vec<_>>())
+            .finish_non_exhaustive()
+    }
+}
+
+impl Default for LraReconstructCtx {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[allow(dead_code)]
+impl LraReconstructCtx {
+    /// Build a fresh LRA reconstruction context: a kernel with the arithmetic
+    /// prelude declared and an empty variable map.
+    #[must_use]
+    pub fn new() -> Self {
+        let mut kernel = Kernel::new();
+        let arith = build_arith_prelude(&mut kernel);
+        Self {
+            kernel,
+            arith,
+            vars: BTreeMap::new(),
+            next_id: 0,
+        }
+    }
+
+    /// A shared reference to the underlying kernel (e.g. to `infer`/`def_eq` an
+    /// externally-built term, or to inspect the environment).
+    #[must_use]
+    pub fn kernel(&self) -> &Kernel {
+        &self.kernel
+    }
+
+    /// A mutable reference to the underlying kernel.
+    pub fn kernel_mut(&mut self) -> &mut Kernel {
+        &mut self.kernel
+    }
+
+    /// The arithmetic prelude names (`R`, `le`, `lt`, `le_trans`, …).
+    #[must_use]
+    pub fn arith(&self) -> &ArithPrelude {
+        &self.arith
+    }
+
+    /// Mint a fresh private name component under the anonymous root.
+    fn fresh_name(&mut self, base: &str) -> NameId {
+        let anon = self.kernel.anon();
+        let ns = self.kernel.name_str(anon, "axeyum.reconstruct.lra");
+        let id = self.next_id;
+        self.next_id += 1;
+        let with_base = self.kernel.name_str(ns, base);
+        self.kernel.name_num(with_base, id)
+    }
+
+    /// Get (declaring lazily) the opaque `R`-typed constant for variable `index`.
+    /// Idempotent: the same index always maps to the same constant.
+    fn var_const(&mut self, index: usize) -> NameId {
+        if let Some(&id) = self.vars.get(&index) {
+            return id;
+        }
+        let r_ty = self.kernel.const_(self.arith.r, vec![]);
+        let decl_name = self.fresh_name("x");
+        self.kernel
+            .add_declaration(Declaration::Axiom {
+                name: decl_name,
+                uparams: vec![],
+                ty: r_ty,
+            })
+            .expect("real variable axiom (_ : R) should admit");
+        self.vars.insert(index, decl_name);
+        decl_name
+    }
+
+    /// `add x y : R`.
+    fn mk_add(&mut self, x: ExprId, y: ExprId) -> ExprId {
+        let add = self.kernel.const_(self.arith.add, vec![]);
+        let e = self.kernel.app(add, x);
+        self.kernel.app(e, y)
+    }
+
+    /// `neg x : R`.
+    fn mk_neg(&mut self, x: ExprId) -> ExprId {
+        let neg = self.kernel.const_(self.arith.neg, vec![]);
+        self.kernel.app(neg, x)
+    }
+
+    /// `zero : R`.
+    fn mk_zero(&mut self) -> ExprId {
+        self.kernel.const_(self.arith.zero, vec![])
+    }
+
+    /// `one : R`.
+    fn mk_one(&mut self) -> ExprId {
+        self.kernel.const_(self.arith.one, vec![])
+    }
+
+    /// `le x y : Prop`.
+    fn mk_le(&mut self, x: ExprId, y: ExprId) -> ExprId {
+        let le = self.kernel.const_(self.arith.le, vec![]);
+        let e = self.kernel.app(le, x);
+        self.kernel.app(e, y)
+    }
+
+    /// Build the `R` expression for a [`LinR`], restricted to the slice-1 small
+    /// subset: integer coefficients in `{-1, 0, +1}` and a constant in `{0, 1}`.
+    ///
+    /// `Σ ±xⱼ (+ 1)` is a left-nested `add` over `xⱼ` / `neg xⱼ` terms (and a
+    /// trailing `one` when the constant is `1`); a bare constant `0` is `zero`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ReconstructError::UnsupportedTerm`] for any coefficient outside
+    /// `{-1,0,+1}` or a constant outside `{0,1}` — the boundary of this slice.
+    fn lin_to_r(&mut self, lin: &LinR) -> Result<ExprId, ReconstructError> {
+        let one = Rational::integer(1);
+        let neg_one = Rational::integer(-1);
+        let mut terms: Vec<ExprId> = Vec::new();
+        for &(index, coeff) in &lin.coeffs {
+            let var_name = self.var_const(index);
+            let var = self.kernel.const_(var_name, vec![]);
+            if coeff == one {
+                terms.push(var);
+            } else if coeff == neg_one {
+                let neg = self.mk_neg(var);
+                terms.push(neg);
+            } else {
+                return Err(ReconstructError::UnsupportedTerm {
+                    term: format!(
+                        "LRA reconstruction (slice 1) only models ±1 coefficients; \
+                         got {}/{} on variable {index}",
+                        coeff.numerator(),
+                        coeff.denominator()
+                    ),
+                });
+            }
+        }
+        if lin.constant == one {
+            let one_r = self.mk_one();
+            terms.push(one_r);
+        } else if !lin.constant.is_zero() {
+            return Err(ReconstructError::UnsupportedTerm {
+                term: format!(
+                    "LRA reconstruction (slice 1) only models a constant of 0 or 1; got {}/{}",
+                    lin.constant.numerator(),
+                    lin.constant.denominator()
+                ),
+            });
+        }
+        // Fold the terms with `add`; an empty term list is `zero`.
+        let mut iter = terms.into_iter();
+        let Some(first) = iter.next() else {
+            return Ok(self.mk_zero());
+        };
+        let mut acc = first;
+        for t in iter {
+            acc = self.mk_add(acc, t);
+        }
+        Ok(acc)
+    }
+
+    /// Declare a fresh hypothesis axiom `h : prop` and return its `Const` proof.
+    fn hyp_axiom(&mut self, prop: ExprId) -> Result<ExprId, ReconstructError> {
+        let name = self.fresh_name("hyp");
+        self.kernel
+            .add_declaration(Declaration::Axiom {
+                name,
+                uparams: vec![],
+                ty: prop,
+            })
+            .map_err(|e| ReconstructError::KernelRejected {
+                rule: "la_generic".to_owned(),
+                detail: format!("hypothesis axiom did not admit: {e:?}"),
+            })?;
+        Ok(self.kernel.const_(name, vec![]))
+    }
+}
+
+/// Reconstruct a small real `QF_LRA` `unsat` instance into a Lean proof term of
+/// type `False` that the trusted [`Kernel`] type-checks, by way of its Farkas
+/// (`la_generic`) certificate.
+///
+/// The instance is `assertions` over `arena`, a conjunction of linear-real order
+/// constraints. The certificate is obtained from [`crate::lra_farkas_certificate`]
+/// (the real, self-checked Fourier–Motzkin Farkas refutation), so this only
+/// returns a term when the instance is genuinely `unsat`. The returned
+/// [`ExprId`]'s inferred type is [`Kernel::def_eq`] to the prelude's `False`.
+///
+/// **Scope (slice 1):** only the *transitivity-reducible* two-constraint shape is
+/// reconstructed — an instance equivalent to `e ≤ 0 ∧ 1 ≤ e` over a shared `R`
+/// expression `e` with small `{-1,0,+1}` coefficients. This is the baby-Farkas
+/// order chain (`le_trans` → `lt_of_le_of_lt` with `zero_lt_one` → `lt_irrefl`),
+/// needing no ring sum. Any other cert shape (general multipliers, a ring
+/// cancellation, more than two participating constraints, non-`{-1,0,+1}`
+/// coefficients) is rejected with a clear error — a later slice.
+///
+/// # Errors
+///
+/// Returns [`ReconstructError::MalformedStep`] if `assertions` is not `unsat`
+/// through the Farkas path or its shape is outside slice 1,
+/// [`ReconstructError::UnsupportedTerm`] for a constraint outside the small linear
+/// subset this slice models, and [`ReconstructError::KernelRejected`] when the
+/// kernel's `infer` fails or the inferred proposition is not `def_eq` to `False`.
+/// It never panics on out-of-scope input.
+#[allow(dead_code)]
+pub fn reconstruct_lra_proof(
+    ctx: &mut LraReconstructCtx,
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<ExprId, ReconstructError> {
+    // Obtain the REAL, self-checked Farkas certificate. `None` ⇒ the instance is
+    // not unsat through the Farkas path (sat, or a trivially-false assertion).
+    let certificate = match crate::lra_farkas_certificate(arena, assertions) {
+        Ok(Some(cert)) => cert,
+        Ok(None) => {
+            return Err(ReconstructError::MalformedStep {
+                rule: "la_generic".to_owned(),
+                detail: "instance is not unsat through the Farkas path (sat or trivial)".to_owned(),
+            });
+        }
+        Err(e) => {
+            return Err(ReconstructError::MalformedStep {
+                rule: "la_generic".to_owned(),
+                detail: format!("LRA decision failed: {e}"),
+            });
+        }
+    };
+    reconstruct_transitivity_refutation(ctx, arena, assertions, &certificate)
+}
+
+/// Reconstruct the transitivity-reducible (`e ≤ 0 ∧ 1 ≤ e`) baby-Farkas shape.
+///
+/// The two participating constraints (those with a positive Farkas multiplier) are
+/// re-linearized from the *original* assertion atoms into [`LinR`] form. The shape
+/// is accepted only when, for a shared expression `e`, one constraint is `e ≤ 0`
+/// and the other is `1 ≤ e` (equivalently `1 - e ≤ 0`), with the multipliers
+/// witnessing the same refutation. The reconstruction is the pure order chain.
+#[allow(dead_code)]
+fn reconstruct_transitivity_refutation(
+    ctx: &mut LraReconstructCtx,
+    arena: &TermArena,
+    assertions: &[TermId],
+    certificate: &crate::FarkasCertificate,
+) -> Result<ExprId, ReconstructError> {
+    // The participating assertion indices: those whose atoms carry a nonzero
+    // multiplier. Determinism: origins/multipliers are in atom order.
+    let mut participating: Vec<usize> = certificate
+        .origins
+        .iter()
+        .zip(&certificate.multipliers)
+        .filter(|(_, m)| !m.is_zero())
+        .map(|(&origin, _)| origin)
+        .collect();
+    participating.sort_unstable();
+    participating.dedup();
+
+    let [lo_or_hi_a, lo_or_hi_b] = participating.as_slice() else {
+        return Err(ReconstructError::MalformedStep {
+            rule: "la_generic".to_owned(),
+            detail: format!(
+                "slice 1 reconstructs the two-constraint transitivity shape; \
+                 {} constraints participate in the certificate",
+                participating.len()
+            ),
+        });
+    };
+
+    // Slice 1 reconstructs all-unit (`λ = 1`) multipliers (the baby-Farkas chain
+    // does not scale). A non-unit multiplier needs the (deferred) ring normalizer.
+    for (origin, m) in certificate.origins.iter().zip(&certificate.multipliers) {
+        if (*origin == *lo_or_hi_a || *origin == *lo_or_hi_b)
+            && !m.is_zero()
+            && *m != Rational::integer(1)
+        {
+            return Err(ReconstructError::MalformedStep {
+                rule: "la_generic".to_owned(),
+                detail: format!(
+                    "slice 1 reconstructs unit (λ=1) multipliers only; got {}/{} \
+                     (the scaling/ring-cancellation normalizer is a later slice)",
+                    m.numerator(),
+                    m.denominator()
+                ),
+            });
+        }
+    }
+
+    // Re-linearize the two participating assertion atoms into `le L R` shape, as
+    // (L − R ≤ 0)-style `LinR`s, but keeping the original two sides so we can match
+    // `e ≤ 0` and `1 ≤ e` structurally.
+    let (lo_t, hi_t) = (assertions[*lo_or_hi_a], assertions[*lo_or_hi_b]);
+    let c0 = as_le_constraint(arena, lo_t).ok_or_else(|| ReconstructError::MalformedStep {
+        rule: "la_generic".to_owned(),
+        detail: "a participating assertion is not a non-strict `(<= L R)` constraint".to_owned(),
+    })?;
+    let c1 = as_le_constraint(arena, hi_t).ok_or_else(|| ReconstructError::MalformedStep {
+        rule: "la_generic".to_owned(),
+        detail: "a participating assertion is not a non-strict `(<= L R)` constraint".to_owned(),
+    })?;
+
+    // Identify which is the upper bound `e ≤ 0` and which the lower `1 ≤ e`.
+    // c = (left, right) with the relation `left ≤ right`.
+    let (e_expr, _matched) =
+        match_transitivity_pair(&c0, &c1).ok_or_else(|| ReconstructError::MalformedStep {
+            rule: "la_generic".to_owned(),
+            detail: "the two constraints are not the transitivity shape `e ≤ 0 ∧ 1 ≤ e`".to_owned(),
+        })?;
+
+    // Build the shared `R` expression `e` and the hypothesis Props.
+    let e = ctx.lin_to_r(&e_expr)?;
+    let zero = ctx.mk_zero();
+    let one = ctx.mk_one();
+
+    // h_hi : le e zero  (the upper bound `e ≤ 0`).
+    let le_e_zero = ctx.mk_le(e, zero);
+    let h_hi = ctx.hyp_axiom(le_e_zero)?;
+    // h_lo : le one e   (the lower bound `1 ≤ e`).
+    let le_one_e = ctx.mk_le(one, e);
+    let h_lo = ctx.hyp_axiom(le_one_e)?;
+
+    // step1 := le_trans one e zero h_lo h_hi : le one zero.
+    let step1 = {
+        let tr = ctx.kernel.const_(ctx.arith.le_trans, vec![]);
+        let e1 = ctx.kernel.app(tr, one);
+        let e1 = ctx.kernel.app(e1, e);
+        let e1 = ctx.kernel.app(e1, zero);
+        let e1 = ctx.kernel.app(e1, h_lo);
+        ctx.kernel.app(e1, h_hi)
+    };
+    // step2 := lt_of_le_of_lt one zero one step1 zero_lt_one : lt one one.
+    let step2 = {
+        let ax = ctx.kernel.const_(ctx.arith.lt_of_le_of_lt, vec![]);
+        let e2 = ctx.kernel.app(ax, one);
+        let e2 = ctx.kernel.app(e2, zero);
+        let e2 = ctx.kernel.app(e2, one);
+        let e2 = ctx.kernel.app(e2, step1);
+        let zlo = ctx.kernel.const_(ctx.arith.zero_lt_one, vec![]);
+        ctx.kernel.app(e2, zlo)
+    };
+    // refute := lt_irrefl one step2 : False.
+    let proof = {
+        let irrefl = ctx.kernel.const_(ctx.arith.lt_irrefl, vec![]);
+        let e3 = ctx.kernel.app(irrefl, one); // Not (lt one one)
+        ctx.kernel.app(e3, step2) // applied to (lt one one) ⇒ False
+    };
+
+    // Soundness gate: infer the term and require it `def_eq` to `False`.
+    let inferred = ctx
+        .kernel
+        .infer(proof)
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "la_generic".to_owned(),
+            detail: format!("infer failed: {e:?}"),
+        })?;
+    let false_ = ctx.kernel.const_(ctx.arith.logic.false_, vec![]);
+    if ctx.kernel.def_eq(inferred, false_) {
+        Ok(proof)
+    } else {
+        Err(ReconstructError::KernelRejected {
+            rule: "la_generic".to_owned(),
+            detail: "inferred proposition is not def-eq to `False`".to_owned(),
+        })
+    }
+}
+
+/// A non-strict `(<= left right)` constraint as `(left_lin, right_lin)` linear
+/// forms, or `None` if `term` is not a real `≤`/`≥` over the linear subset this
+/// slice handles. A `≥` is normalized by swapping sides into `≤` form.
+#[allow(dead_code)]
+fn as_le_constraint(arena: &TermArena, term: TermId) -> Option<(LinR, LinR)> {
+    let IrTermNode::App { op, args } = arena.node(term) else {
+        return None;
+    };
+    if args.len() != 2 {
+        return None;
+    }
+    let (l, r) = (real_to_lin(arena, args[0])?, real_to_lin(arena, args[1])?);
+    match op {
+        IrOp::RealLe => Some((l, r)),
+        IrOp::RealGe => Some((r, l)),
+        _ => None,
+    }
+}
+
+/// Lower an IR real term to a [`LinR`] over dense variable indices keyed by symbol,
+/// for the linear subset (`Symbol`, `RealConst`, `RealNeg`, `RealAdd`, `RealSub`,
+/// and `RealMul` with a constant factor). Returns `None` outside that fragment.
+#[allow(dead_code)]
+fn real_to_lin(arena: &TermArena, term: TermId) -> Option<LinR> {
+    real_to_lin_inner(arena, term, &mut BTreeMap::new())
+}
+
+/// As [`real_to_lin`], threading the (symbol → dense index) memo so repeated
+/// variables share an index, in first-seen order.
+#[allow(dead_code)]
+fn real_to_lin_inner(
+    arena: &TermArena,
+    term: TermId,
+    vars: &mut BTreeMap<axeyum_ir::SymbolId, usize>,
+) -> Option<LinR> {
+    match arena.node(term) {
+        IrTermNode::RealConst(value) => Some(LinR::constant(*value)),
+        IrTermNode::Symbol(symbol) if arena.sort_of(term) == IrSort::Real => {
+            let next = vars.len();
+            let index = *vars.entry(*symbol).or_insert(next);
+            Some(LinR::var(index))
+        }
+        IrTermNode::App {
+            op: IrOp::RealNeg,
+            args,
+        } => Some(real_to_lin_inner(arena, args[0], vars)?.neg()),
+        IrTermNode::App {
+            op: IrOp::RealAdd,
+            args,
+        } => {
+            let a = real_to_lin_inner(arena, args[0], vars)?;
+            let b = real_to_lin_inner(arena, args[1], vars)?;
+            Some(a.add(&b))
+        }
+        IrTermNode::App {
+            op: IrOp::RealSub,
+            args,
+        } => {
+            let a = real_to_lin_inner(arena, args[0], vars)?;
+            let b = real_to_lin_inner(arena, args[1], vars)?;
+            Some(a.sub(&b))
+        }
+        IrTermNode::App {
+            op: IrOp::RealMul,
+            args,
+        } => {
+            let a = real_to_lin_inner(arena, args[0], vars)?;
+            let b = real_to_lin_inner(arena, args[1], vars)?;
+            // Linear: one factor must be a bare constant.
+            if a.coeffs.is_empty() {
+                Some(scale_lin(&b, a.constant))
+            } else if b.coeffs.is_empty() {
+                Some(scale_lin(&a, b.constant))
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
+/// Scale a [`LinR`] by a constant factor.
+#[allow(dead_code)]
+fn scale_lin(lin: &LinR, factor: Rational) -> LinR {
+    if factor.is_zero() {
+        return LinR::constant(Rational::zero());
+    }
+    LinR {
+        coeffs: lin.coeffs.iter().map(|&(i, c)| (i, c * factor)).collect(),
+        constant: lin.constant * factor,
+    }
+}
+
+/// Match two `≤`-constraints `(l0 ≤ r0)`, `(l1 ≤ r1)` as the transitivity shape
+/// `e ≤ 0 ∧ 1 ≤ e` for a shared bare-variable expression `e`. Returns `(e, ())`
+/// (the shared expression as a [`LinR`]) when matched, else `None`.
+///
+/// Slice 1 fixes `e` to a single bare variable so the order chain stays the literal
+/// baby-Farkas shape (`le one e`, `le e zero`); the general affine `e` and scaled
+/// multipliers are a later slice.
+#[allow(dead_code)]
+fn match_transitivity_pair(c0: &(LinR, LinR), c1: &(LinR, LinR)) -> Option<(LinR, ())> {
+    // Normalize each constraint `l ≤ r` to `(e, role)` where role is upper bound
+    // `e ≤ 0` (r is 0, l is the bare var) or lower bound `1 ≤ e` (l is 1, r is the
+    // bare var).
+    let classify = |c: &(LinR, LinR)| -> Option<(usize, Bound)> {
+        let (l, r) = c;
+        if let Some(v) = l.as_bare_var() {
+            if r.is_constant_eq(Rational::zero()) {
+                return Some((v, Bound::Upper)); // v ≤ 0
+            }
+        }
+        if let Some(v) = r.as_bare_var() {
+            if l.is_constant_eq(Rational::integer(1)) {
+                return Some((v, Bound::Lower)); // 1 ≤ v
+            }
+        }
+        None
+    };
+    let (v0, b0) = classify(c0)?;
+    let (v1, b1) = classify(c1)?;
+    if v0 != v1 || b0 == b1 {
+        return None; // must be the SAME variable, one upper and one lower bound
+    }
+    Some((LinR::var(v0), ()))
+}
+
+/// Which bound a transitivity constraint plays in `e ≤ 0 ∧ 1 ≤ e`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
+enum Bound {
+    /// `e ≤ 0` (an upper bound on `e`).
+    Upper,
+    /// `1 ≤ e` (a lower bound on `e`).
+    Lower,
+}
+
 #[cfg(test)]
 mod tests;
