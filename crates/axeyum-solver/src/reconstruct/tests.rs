@@ -1248,6 +1248,58 @@ fn bitblast_extract_wrong_offset_rejected() {
     );
 }
 
+/// `bitblast_sign_extend` (`((_ sign_extend 2) x)` over width(x)=3): result bits
+/// are `x0 x1 x2` then two copies of the sign bit `x2`. width(x) is recovered as
+/// `result_width - by = 5 - 2 = 3`.
+#[test]
+fn bitblast_sign_extend_reconstructs() {
+    let se = AletheTerm::Indexed {
+        op: "sign_extend".to_owned(),
+        indices: vec![2],
+        args: vec![atom("x")],
+    };
+    let concl = bb_concl(
+        se,
+        bbterm(vec![
+            bit_of("x", 0),
+            bit_of("x", 1),
+            bit_of("x", 2),
+            bit_of("x", 2),
+            bit_of("x", 2),
+        ]),
+    );
+    assert_bitblast_ok("bitblast_sign_extend", &concl);
+}
+
+/// **NEGATIVE soundness** for `sign_extend`: an extended bit spelled `x1` instead
+/// of the sign bit `x2` is REJECTED at the kernel gate.
+#[test]
+fn bitblast_sign_extend_wrong_sign_rejected() {
+    let mut ctx = ReconstructCtx::new();
+    let se = AletheTerm::Indexed {
+        op: "sign_extend".to_owned(),
+        indices: vec![2],
+        args: vec![atom("x")],
+    };
+    // Wrong: bit 3 is `x1` (must be the sign bit `x2`).
+    let concl = bb_concl(
+        se,
+        bbterm(vec![
+            bit_of("x", 0),
+            bit_of("x", 1),
+            bit_of("x", 2),
+            bit_of("x", 1),
+            bit_of("x", 2),
+        ]),
+    );
+    let err = reconstruct_bitblast_step(&mut ctx, "bitblast_sign_extend", &concl)
+        .expect_err("a wrong sign bit must be rejected by the kernel");
+    assert!(
+        matches!(err, ReconstructError::KernelRejected { .. }),
+        "got {err:?}"
+    );
+}
+
 /// `bitblast_add` (binary, width 2): the ripple-carry result bits are
 ///   bit0 = `(xor (xor a0 b0) false)`
 ///   bit1 = `(xor (xor a1 b1) (or (and a0 b0) (and (xor a0 b0) false)))`
@@ -1640,6 +1692,30 @@ fn end_to_end_xnor_reconstructs() {
     let mut ctx = ReconstructCtx::new();
     reconstruct_qf_bv_proof(&mut ctx, &proof)
         .expect("a bvxnor QF_BV proof must reconstruct to kernel-checked False");
+}
+
+/// **End-to-end**: a `(= ((_ sign_extend 2) a) d) ∧ ¬…` `QF_BV` unsat proof —
+/// bit-blasted via `bitblast_sign_extend` — reconstructs to a kernel-checked
+/// `False`.
+#[test]
+fn end_to_end_sign_extend_reconstructs() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let se = arena.sign_ext(2, a).unwrap(); // width 4
+    let d = {
+        let s = arena.declare("d", Sort::BitVec(4)).unwrap();
+        arena.var(s)
+    };
+    let eq = arena.eq(se, d).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    reconstruct_qf_bv_proof(&mut ctx, &proof)
+        .expect("a sign_extend QF_BV proof must reconstruct to kernel-checked False");
 }
 
 /// **End-to-end**: a `(= (bvmul a b) a) ∧ ¬…` `QF_BV` unsat proof — bit-blasted

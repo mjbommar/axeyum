@@ -3188,8 +3188,8 @@ fn parse_bv_literal(symbol: &str) -> Option<Vec<bool>> {
 /// # Errors
 ///
 /// Returns [`ReconstructError::UnsupportedRule`] for a bitblast rule outside the
-/// bitwise + `extract` + `add`/`neg`/`mult` fragment (`bitblast_concat`/
-/// `_sign_extend`/`_comp`/`_ult`/`_slt`, …),
+/// bitwise + `extract`/`sign_extend` + `add`/`neg`/`mult` fragment
+/// (`bitblast_concat`/`_comp`/`_ult`/`_slt`, …),
 /// [`ReconstructError::MalformedStep`] for a conclusion that is
 /// not the expected `(= lhs rhs)` shape, [`ReconstructError::UnsupportedTerm`] for
 /// a non-bitwise operand, and [`ReconstructError::KernelRejected`] at the gate.
@@ -3203,9 +3203,19 @@ pub fn reconstruct_bitblast_step(
     // (binary); reject the remaining shift/structural rules cleanly. (`add`/`mult`
     // over >2 operands surface as `UnsupportedTerm` from `bv_bit`.)
     match rule {
-        "bitblast_var" | "bitblast_const" | "bitblast_not" | "bitblast_and" | "bitblast_or"
-        | "bitblast_xor" | "bitblast_xnor" | "bitblast_extract" | "bitblast_add"
-        | "bitblast_neg" | "bitblast_mult" | "bitblast_equal" => {}
+        "bitblast_var"
+        | "bitblast_const"
+        | "bitblast_not"
+        | "bitblast_and"
+        | "bitblast_or"
+        | "bitblast_xor"
+        | "bitblast_xnor"
+        | "bitblast_extract"
+        | "bitblast_sign_extend"
+        | "bitblast_add"
+        | "bitblast_neg"
+        | "bitblast_mult"
+        | "bitblast_equal" => {}
         other => {
             return Err(ReconstructError::UnsupportedRule {
                 rule: format!(
@@ -3243,11 +3253,11 @@ pub fn reconstruct_bitblast_step(
         // two sides coincide as Props, so the reflexive `Iff` type-checks. Fold
         // right with `And.intro` into the conjunction.
         let n = bits.len();
-        let mut target = bit_iff_prop(ctx, lhs, &bits[n - 1], n - 1)?;
-        let mut proof = bit_iff_refl(ctx, lhs, &bits[n - 1], n - 1)?;
+        let mut target = bit_iff_prop(ctx, lhs, &bits[n - 1], n - 1, n)?;
+        let mut proof = bit_iff_refl(ctx, lhs, &bits[n - 1], n - 1, n)?;
         for i in (0..n - 1).rev() {
-            let head_prop = bit_iff_prop(ctx, lhs, &bits[i], i)?;
-            let head_proof = bit_iff_refl(ctx, lhs, &bits[i], i)?;
+            let head_prop = bit_iff_prop(ctx, lhs, &bits[i], i, n)?;
+            let head_proof = bit_iff_refl(ctx, lhs, &bits[i], i, n)?;
             proof = and_intro(ctx, head_prop, target, head_proof, proof);
             target = ctx.mk_and(head_prop, target);
         }
@@ -3269,28 +3279,81 @@ fn gadget_bit_to_prop(ctx: &mut ReconstructCtx, bit: &AletheTerm) -> ExprId {
     }
 }
 
-/// The `Prop` `Iff (bv_bit lhs i) ⟦gadget_i⟧` for bit `i` of a term op.
+/// The `Prop` for bit `i` of a term-op `lhs`. Routes through [`bv_bit`], except
+/// for the width-needing top-level structural ops (`sign_extend`) whose operand
+/// width is recovered from `result_width` (the conclusion's `@bbterm` length) —
+/// `sign_extend` only ever appears at the top of its own step, never nested, so
+/// the width is known exactly here.
+fn lhs_bit_prop(
+    ctx: &mut ReconstructCtx,
+    lhs: &AletheTerm,
+    i: usize,
+    result_width: usize,
+) -> Result<ExprId, ReconstructError> {
+    if let AletheTerm::Indexed { op, indices, args } = lhs {
+        if op == "sign_extend" {
+            // `((_ sign_extend by) x)`: result width = width(x) + by, so
+            // width(x) = result_width - by. Bit `i` is `x_i` for `i < width(x)`,
+            // else the sign bit `x_{width(x)-1}`. Matches the emitter
+            // (`build_term_vec(x, width)` then `by` copies of the last bit).
+            let [by] = indices.as_slice() else {
+                return Err(ReconstructError::UnsupportedTerm {
+                    term: format!("sign_extend needs one index `{}`", lhs.key()),
+                });
+            };
+            let [x] = args.as_slice() else {
+                return Err(ReconstructError::UnsupportedTerm {
+                    term: format!("sign_extend needs one operand `{}`", lhs.key()),
+                });
+            };
+            let by = usize::try_from(*by).map_err(|_| ReconstructError::UnsupportedTerm {
+                term: format!("sign_extend amount out of range `{}`", lhs.key()),
+            })?;
+            let width_x =
+                result_width
+                    .checked_sub(by)
+                    .ok_or_else(|| ReconstructError::MalformedStep {
+                        rule: "bitblast_sign_extend".to_owned(),
+                        detail: "sign_extend amount exceeds result width".to_owned(),
+                    })?;
+            if width_x == 0 {
+                return Err(ReconstructError::MalformedStep {
+                    rule: "bitblast_sign_extend".to_owned(),
+                    detail: "zero-width sign_extend operand".to_owned(),
+                });
+            }
+            let src = if i < width_x { i } else { width_x - 1 };
+            let bit_term = operand_bit_term(x, src);
+            return Ok(ctx.gate_term_to_prop(&bit_term));
+        }
+    }
+    bv_bit(ctx, lhs, i)
+}
+
+/// The `Prop` `Iff (lhs_bit i) ⟦gadget_i⟧` for bit `i` of a term op.
 fn bit_iff_prop(
     ctx: &mut ReconstructCtx,
     lhs: &AletheTerm,
     gadget_i: &AletheTerm,
     i: usize,
+    result_width: usize,
 ) -> Result<ExprId, ReconstructError> {
-    let lhs_bit = bv_bit(ctx, lhs, i)?;
+    let lhs_bit = lhs_bit_prop(ctx, lhs, i, result_width)?;
     let gadget = gadget_bit_to_prop(ctx, gadget_i);
     Ok(ctx.mk_iff(lhs_bit, gadget))
 }
 
-/// The reflexive proof of [`bit_iff_prop`]. Sound only because `bv_bit(lhs, i)`
-/// and `⟦gadget_i⟧` are the **same** Prop under the pointwise bit model; the
-/// kernel gate at the call site rejects if they ever diverge.
+/// The reflexive proof of [`bit_iff_prop`]. Sound only because `lhs_bit(i)` and
+/// `⟦gadget_i⟧` are the **same** Prop under the pointwise bit model; the kernel
+/// gate at the call site rejects if they ever diverge.
 fn bit_iff_refl(
     ctx: &mut ReconstructCtx,
     lhs: &AletheTerm,
     gadget_i: &AletheTerm,
     i: usize,
+    result_width: usize,
 ) -> Result<ExprId, ReconstructError> {
-    let lhs_bit = bv_bit(ctx, lhs, i)?;
+    let lhs_bit = lhs_bit_prop(ctx, lhs, i, result_width)?;
     let _ = gadget_i;
     Ok(ctx.mk_iff_refl(lhs_bit))
 }
