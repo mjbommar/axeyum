@@ -142,6 +142,34 @@ ite/size-bound public slice.** The measured next levers, in priority order:
    produce, raw SAT throughput (VSIDS/restarts/LBD already landed for XOR) is
    the floor.
 
+## The corrected lever's first blocker: the word-level preprocessor is unbounded (2026-06-17)
+
+Acting on lever #2 (measure `--preprocess` on these 113) immediately hit a wall
+that is itself the finding. Single-file timing under a hard OS cap:
+
+| file | size | `ite` | `--preprocess` |
+|---|---|---|---|
+| `mobiledevice_…_twocond` | 270 KB | 2 850 | completes < 45 s |
+| `compose.p2._…_paired` | 1.0 MB | 13 446 | completes < 60 s |
+| `compose.s4._…_paired` | **17.6 MB** | **215 784** | **> 90 s — killed** |
+
+The slice ranges up to a **17.6 MB / 215 k-`ite`** file; `--preprocess` has **no
+time/work/fuel budget** (`grep` of `preprocess.rs` finds none), so on the giant
+ite-DAGs it runs unboundedly. A `--jobs 8` run schedules several giants at once
+and never finishes (observed: 14 small-family files ground 34 min with no
+output). The non-preprocess path completes on the same files, so the blow-up is
+*in preprocessing*, and — since canonicalization also runs in the non-preprocess
+path — the suspect is **`solve_eqs`’ raw structural rebuild** (its own code
+comment warns it inlines `x := t` by structural rebuild; on a heavily-shared DAG
+that expands sharing toward an exponential tree).
+
+**Next concrete code increment (Track 1):** give the preprocessing pass a
+*deterministic* work budget (node-count / step fuel, not wall-clock — determinism
+rule) so it bails to the un-reduced (or partially-reduced) problem instead of
+hanging, and/or make `solve_eqs` sharing-preserving. Only then is word-level
+reduction a measurable, shippable lever on this corpus. Until then `--preprocess`
+is unusable at this scale.
+
 ## Bottom line
 
 Lazy arithmetic-CEGAR bit-blasting is now wired end-to-end (opt-in dispatch
