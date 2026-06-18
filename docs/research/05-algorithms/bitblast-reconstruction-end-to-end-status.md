@@ -40,27 +40,37 @@ literals) **confirmed** the root cause and **disproved an earlier guess** (it is
    X)` and `-X` are the same `Not ⟦X⟧` Prop, so clause `proof` types are
    unchanged); all existing tests green + a unit test. Effect: the antisymmetry
    stuck set shrank 5 → 3 — real progress, but **not the whole fix**.
-2. **Commutative `=` arg-order spelled both ways (the next blocker).** With
-   negation normalized, the antisymmetry fold stalls at `acc = (cl ¬G2 a1)` where
-   `G2 = (and (= b1 a1) (and (¬b0) a0))`. The bit-equality gate appears as both
-   `(= a1 b1)` and `(= b1 a1)` across the proof; these are **distinct kernel Props**
-   (`Iff a b ≠ Iff b a` definitionally), so a `¬(= b1 a1)` literal cannot resolve
-   against a `+(= a1 b1)` one. Unlike negation, this is **not** freely normalizable
-   on the reconstruction side (it would change `clause_to_prop` and break the proof
-   term); the clean fix is **emitter-side**: spell every bit-equality with a
-   canonical operand order in `bitblast_alethe.rs`. (Or carry an `Iff`-symmetry
-   lemma in reconstruction — more invasive.)
-3. **Resolution order / greedy non-confluence (possible, still open).** The
-   acc-centered greedy fold may also need to follow the proof's premise order
-   rather than picking the first resolvable premise. Strict premise-order fold was
-   tried and **regressed** `real_emitter_unsat_cnf_reconstructs`, so the order
-   handling is subtler than a pure left fold — to be settled after (2), since (2)
-   currently masks whether order alone suffices.
+2. **Commutative `=` arg-order spelled both ways — FIXED (`6f0fd2c`).** The
+   bit-equality gate appeared as both `(= a1 b1)` and `(= b1 a1)` (from
+   `(bvult a b)`'s ladder vs `(bvult b a)`'s); these are **distinct kernel Props**
+   (`Iff a b ≠ Iff b a`), so `¬(= b1 a1)` couldn't resolve against `+(= a1 b1)`.
+   Not normalizable on the reconstruction side (would change `clause_to_prop`), so
+   the fix is **emitter-side**: `eq2_canon` orders the operands by key in the
+   ult/slt ladders and `bitwise_equal_and`. Proofs stay check_alethe-valid.
+   Effect: antisymmetry stuck set 3 → 2.
+3. **Resolution order / non-confluence — the LAST blocker (open).** With (1) and
+   (2) fixed, antisymmetry stalls on two clauses that are **not jointly
+   unsatisfiable** (`C0 = ¬G2 ∨ ¬b0`, `C1 = ¬G1 ∨ a1`): an earlier resolution
+   consumed a clause a later step needed. **Both** strategies tried are
+   non-confluent — acc-centered greedy *and* pairwise pool dead-end this way; and a
+   strict premise-order left fold **regressed** `real_emitter_unsat_cnf` (so it is
+   not a clean chain either). Binary resolution reconstruction from an unordered
+   premise set with implicit pivots is genuinely order-sensitive.
+   **Principled fix:** the emitted proofs are **Carcara-valid by construction**, so
+   mirror **Carcara's own resolution-checking algorithm** (see
+   `references/` — the `bitvectors`/`resolution` checker) rather than an ad-hoc
+   greedy. Carcara resolves with a specific deterministic strategy (e.g. treat the
+   premises as an ordered chain with the correct pivot/`Or` handling and
+   tautology avoidance); reproducing it guarantees the reconstruction follows the
+   same derivation the emitter/Carcara accept. Likely also needs: resolve only
+   single-pivot pairs (avoid tautology-creating resolutions) and honor the chain
+   order.
 
-So **no genuine QF_BV `unsat` (beyond `x ∧ ¬x`) closes to `False` yet**, but the
-path is now concrete: negation done; next the emitter-side `=` canonicalization,
-then re-check whether resolution order needs work. This is the highest-priority
-Track-3 fix; land each with the bvult-antisymmetry case as the end-to-end test.
+So **no genuine QF_BV `unsat` (beyond `x ∧ ¬x`) closes to `False` yet**, but two of
+the three blockers are **fixed and shipped** (negation `356f3e3`, `=` canon
+`6f0fd2c`) and the last is isolated with a principled direction (mirror Carcara's
+resolution checker). Land it with the bvult-antisymmetry case as the end-to-end
+test — at which point genuine QF_BV refutations close to kernel-checked `False`.
 
 ### 2. Reconstruction is slow even at tiny widths
 
