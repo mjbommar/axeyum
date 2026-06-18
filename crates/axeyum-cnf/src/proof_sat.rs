@@ -18,6 +18,38 @@ use crate::{CnfAssignment, CnfFormula, CnfLit, CnfVar};
 /// Maximum conflicts before the core gives up (safety valve).
 const MAX_CONFLICTS: usize = 2_000_000;
 
+/// VSIDS activity decay: each conflict `var_inc` is divided by this, so older
+/// activity bumps decay geometrically relative to fresh ones (the `MiniSat`
+/// scheme).
+const VSIDS_DECAY: f64 = 0.95;
+/// Rescale all activities (and `var_inc`) by this when any exceeds the cap, to
+/// avoid `f64` overflow without changing their relative order.
+const VSIDS_RESCALE: f64 = 1e-100;
+/// Activity ceiling that triggers a rescale.
+const VSIDS_RESCALE_LIMIT: f64 = 1e100;
+/// Conflict-interval unit multiplied by the Luby value to set each restart's
+/// length.
+const LUBY_UNIT: usize = 100;
+
+/// The `i`-th term (1-indexed) of the Luby sequence `1,1,2,1,1,2,4,1,…`, used to
+/// space restarts (Knuth's reluctant-doubling formulation, iterative).
+fn luby(mut i: u64) -> u64 {
+    let mut k = 1u64;
+    loop {
+        let pow = 1u64 << k; // 2^k
+        if i == pow - 1 {
+            return 1u64 << (k - 1); // 2^(k-1)
+        }
+        let half = 1u64 << (k - 1); // 2^(k-1)
+        if half <= i && i < pow - 1 {
+            i = i - half + 1;
+            k = 1;
+        } else {
+            k += 1;
+        }
+    }
+}
+
 /// Outcome of [`solve_with_drat_proof`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ProofSolveOutcome {
@@ -52,6 +84,16 @@ struct Cdcl {
     has_empty_clause: bool,
     proof: Vec<DratStep>,
     conflicts: usize,
+    /// VSIDS activity per variable (higher ⇒ branched sooner).
+    activity: Vec<f64>,
+    /// Current activity bump increment (grows each conflict by `1/decay`).
+    var_inc: f64,
+    /// Saved decision polarity per variable (phase saving).
+    phase: Vec<bool>,
+    /// Conflicts since the last restart (the Luby restart trigger).
+    conflicts_since_restart: usize,
+    /// Index into the Luby sequence (1-based; advances on each restart).
+    restart_count: u64,
 }
 
 impl Cdcl {
@@ -88,7 +130,34 @@ impl Cdcl {
             has_empty_clause,
             proof: Vec::new(),
             conflicts: 0,
+            activity: vec![0.0; n],
+            var_inc: 1.0,
+            phase: vec![false; n],
+            conflicts_since_restart: 0,
+            restart_count: 1,
         }
+    }
+
+    /// Bumps `var`'s VSIDS activity, rescaling all activities if it overflows the
+    /// cap (preserving their relative order).
+    fn bump_var(&mut self, var: usize) {
+        self.activity[var] += self.var_inc;
+        if self.activity[var] > VSIDS_RESCALE_LIMIT {
+            for a in &mut self.activity {
+                *a *= VSIDS_RESCALE;
+            }
+            self.var_inc *= VSIDS_RESCALE;
+        }
+    }
+
+    /// Decays activity by growing the bump increment (the `MiniSat` trick).
+    fn decay(&mut self) {
+        self.var_inc /= VSIDS_DECAY;
+    }
+
+    /// Conflicts allowed before the next restart, per the Luby schedule.
+    fn restart_limit(&self) -> usize {
+        usize::try_from(luby(self.restart_count)).unwrap_or(usize::MAX) * LUBY_UNIT
     }
 
     fn decision_level(&self) -> usize {
@@ -110,7 +179,9 @@ impl Cdcl {
 
     fn enqueue(&mut self, lit: CnfLit, reason: Option<usize>) {
         let var = lit.var().index();
-        self.assign[var] = Some(!lit.is_negated());
+        let value = !lit.is_negated();
+        self.assign[var] = Some(value);
+        self.phase[var] = value; // phase saving: remember the last polarity
         self.level[var] = self.decision_level();
         self.reason[var] = reason;
         self.trail.push(var);
@@ -156,13 +227,32 @@ impl Cdcl {
                 self.clauses.push(learned);
                 self.backtrack_to(backjump);
                 self.enqueue(asserting, Some(clause_id));
-            } else if let Some(var) = self.pick_branch() {
-                self.trail_lim.push(self.trail.len());
-                let decision = CnfLit::positive(CnfVar::new(var).expect("variable index in range"));
-                self.enqueue(decision, None);
+                self.conflicts_since_restart += 1;
+                self.decay();
             } else {
-                let values = self.assign.iter().map(|v| v.unwrap_or(false)).collect();
-                return ProofSolveOutcome::Sat(CnfAssignment::new(values));
+                // No conflict: consider a Luby restart, then make a decision.
+                if self.decision_level() > 0 && self.conflicts_since_restart >= self.restart_limit()
+                {
+                    self.conflicts_since_restart = 0;
+                    self.restart_count += 1;
+                    self.backtrack_to(0);
+                    continue;
+                }
+                if let Some(var) = self.pick_branch() {
+                    self.trail_lim.push(self.trail.len());
+                    let positive =
+                        CnfLit::positive(CnfVar::new(var).expect("variable index in range"));
+                    // Phase saving: decide the variable's last-seen polarity.
+                    let decision = if self.phase[var] {
+                        positive
+                    } else {
+                        positive.negated()
+                    };
+                    self.enqueue(decision, None);
+                } else {
+                    let values = self.assign.iter().map(|v| v.unwrap_or(false)).collect();
+                    return ProofSolveOutcome::Sat(CnfAssignment::new(values));
+                }
             }
         }
     }
@@ -225,7 +315,7 @@ impl Cdcl {
     /// 1-UIP conflict analysis: returns the learned clause (asserting literal at
     /// index 0, second-watch literal at index 1) and the backjump level. An
     /// empty result means the conflict is implied at level 0 (the empty clause).
-    fn analyze(&self, conflict: usize) -> (Vec<CnfLit>, usize) {
+    fn analyze(&mut self, conflict: usize) -> (Vec<CnfLit>, usize) {
         let mut seen = vec![false; self.assign.len()];
         let mut lower: Vec<CnfLit> = Vec::new();
         let mut path_count = 0usize;
@@ -235,12 +325,17 @@ impl Cdcl {
         let current = self.decision_level();
 
         loop {
-            for &q in &self.clauses[clause_id] {
+            // Clone the reason clause's literals so we can bump activities while
+            // walking it (the borrow checker forbids reading `self.clauses` and
+            // mutating `self.activity` at once; reason clauses are short).
+            let lits = self.clauses[clause_id].clone();
+            for q in lits {
                 let v = q.var().index();
                 if Some(v) == pivot_var || seen[v] || self.level[v] == 0 {
                     continue;
                 }
                 seen[v] = true;
+                self.bump_var(v); // VSIDS: bump every variable in the conflict side
                 if self.level[v] >= current {
                     path_count += 1;
                 } else {
@@ -305,7 +400,21 @@ impl Cdcl {
     }
 
     fn pick_branch(&self) -> Option<usize> {
-        self.assign.iter().position(Option::is_none)
+        // The unassigned variable of highest VSIDS activity; ties break to the
+        // lowest index (only a strictly greater activity replaces the best), so
+        // the choice is deterministic.
+        let mut best: Option<usize> = None;
+        for v in 0..self.assign.len() {
+            if self.assign[v].is_some() {
+                continue;
+            }
+            match best {
+                None => best = Some(v),
+                Some(b) if self.activity[v] > self.activity[b] => best = Some(v),
+                _ => {}
+            }
+        }
+        best
     }
 }
 
@@ -374,6 +483,27 @@ mod tests {
     #[test]
     fn empty_clause_is_immediately_unsat() {
         assert_unsat_with_checked_proof(&formula(1, &[&[]]));
+    }
+
+    #[test]
+    fn pigeonhole_4_into_3_is_unsat_with_checked_proof() {
+        // 4 pigeons, 3 holes: x_{p,h} = var 3*(p-1)+h. Each pigeon in some hole
+        // (4 clauses) + no two pigeons share a hole (3 holes × C(4,2)=6 pairs).
+        // Enough conflicts to exercise VSIDS branching and a Luby restart.
+        let v = |p: i64, h: i64| 3 * (p - 1) + h;
+        let mut clauses: Vec<Vec<i64>> = Vec::new();
+        for p in 1..=4 {
+            clauses.push(vec![v(p, 1), v(p, 2), v(p, 3)]);
+        }
+        for h in 1..=3 {
+            for p1 in 1..=4 {
+                for p2 in (p1 + 1)..=4 {
+                    clauses.push(vec![-v(p1, h), -v(p2, h)]);
+                }
+            }
+        }
+        let refs: Vec<&[i64]> = clauses.iter().map(Vec::as_slice).collect();
+        assert_unsat_with_checked_proof(&formula(12, &refs));
     }
 
     #[test]
