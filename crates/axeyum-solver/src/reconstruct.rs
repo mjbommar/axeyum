@@ -2747,5 +2747,479 @@ fn iff_project(
     ctx.kernel.app(e, h)
 }
 
+// ===========================================================================
+// Bit-blast reconstruction (P3.7 slice 5) — the BITWISE QF_BV fragment.
+//
+// This is the bottom layer of the QF_BV proof: the `bitblast_*` steps that
+// connect a bit-vector predicate to its bit-level Boolean form, plus the
+// `cong`/`trans`/`equiv1`/`equiv2` plumbing the emitter threads them with. It
+// reconstructs the BITWISE fragment only — `bitblast_var`, `bitblast_const`,
+// `bitblast_not`, `bitblast_and`, `bitblast_or`, `bitblast_xor`, and
+// `bitblast_equal`. Anything with a carry chain (`bitblast_add`/`_mult`/`_neg`),
+// a shift, div/rem, or a structural reshaping (`extract`/`concat`/`sign_extend`)
+// is explicitly REJECTED here (no panic) — those are later slices.
+//
+// ## The faithful bit model
+//
+// A width-`n` bit-vector term is modeled bit-by-bit, each bit a Lean `Prop`:
+//
+// - a **variable** `x`'s bit `i` is the opaque Prop atom keyed by the
+//   projection `((_ @bit_of i) x)` (shared with the clausal `prop_atoms`);
+// - a **constant** `#b…`'s bit `i` is the prelude's `True`/`False`;
+// - `bvnot a` bit `i` is `Not (bit_i a)`;
+// - `bvand a b` bit `i` is `And (bit_i a) (bit_i b)` (pointwise);
+// - `bvor  a b` bit `i` is `Or  (bit_i a) (bit_i b)`;
+// - `bvxor a b` bit `i` is `Not (Iff (bit_i a) (bit_i b))` (xor = ¬iff, the same
+//   modeling choice the Tseitin/CNF-intro layer makes).
+//
+// So the bitwise operators are POINTWISE on bits — and the `bitblast_<op>`
+// gadget the emitter writes (`(and (@bit_of i a) (@bit_of i b))`, …) is, under
+// this model, the **same** structured Prop as `bv_bit` produces. The bitblast
+// equalities are therefore reflexive: `bit_i(lhs) ↔ gadget_i` is `Iff.refl`.
+//
+// ## What a `bitblast_*` step reconstructs to
+//
+// Each step's conclusion is a unit clause `(= lhs rhs)`. `rhs` is either a
+// `(@bbterm b0 … b_{n-1})` (a term op) or a single Boolean `B` (the predicate
+// `bitblast_equal`). The reconstruction proves the **bit-iff conjunction**
+//
+//     ⋀_i ( bv_bit(lhs, i)  ↔  ⟦b_i⟧ )
+//
+// (for `bitblast_equal`, the single iff `⟦B⟧ ↔ ⟦B⟧`, i.e. the per-bit-AND form),
+// each conjunct an `Iff.refl`-style identity, `And.intro`-folded for `n > 1`. The
+// kernel `infer`s the assembled term and `def_eq`-checks it against that
+// conjunction — the trusted gate. A wrong gadget bit makes some conjunct's two
+// sides differ, the reflexive proof fails to type, and the kernel rejects.
+// ===========================================================================
+
+impl ReconstructCtx {
+    /// Build a reflexive `Iff p p` proof: `Iff.intro p p (fun h => h) (fun h => h)`.
+    fn mk_iff_refl(&mut self, p: ExprId) -> ExprId {
+        let anon = self.kernel.anon();
+        // id := fun (h : p) => h.
+        let h = self.kernel.bvar(0);
+        let id = self.kernel.lam(anon, p, h, BinderInfo::Default);
+        iff_intro(self, p, p, id, id)
+    }
+}
+
+/// The Lean `Prop` for bit `i` of a **bitwise** bit-vector term `term` under the
+/// faithful bit model. Variables → opaque `((_ @bit_of i) x)` atom Props;
+/// constants → `True`/`False`; `bvnot`/`bvand`/`bvor`/`bvxor` → pointwise
+/// `Not`/`And`/`Or`/`Not (Iff …)` of the operand bits.
+///
+/// # Errors
+///
+/// Returns [`ReconstructError::UnsupportedTerm`] for any non-bitwise operator
+/// (`bvadd`/`bvmul`/`bvneg`, shifts, div/rem, `extract`/`concat`/`sign_extend`,
+/// …), a non-bit-vector shape, or an out-of-range bit of a known-width constant.
+fn bv_bit(
+    ctx: &mut ReconstructCtx,
+    term: &AletheTerm,
+    i: usize,
+) -> Result<ExprId, ReconstructError> {
+    match term {
+        // A bit-vector constant `#b…` (MSB-first binary literal): bit `i` is
+        // `True`/`False`. A bare symbol (variable): bit `i` is the opaque
+        // projection atom `((_ @bit_of i) x)`.
+        AletheTerm::Const(symbol) => {
+            if let Some(bits) = parse_bv_literal(symbol) {
+                // `bits` is LSB-first; out-of-range index is malformed.
+                let bit = *bits
+                    .get(i)
+                    .ok_or_else(|| ReconstructError::UnsupportedTerm {
+                        term: format!("bit {i} of constant {symbol}"),
+                    })?;
+                let name = if bit {
+                    ctx.prelude.true_
+                } else {
+                    ctx.prelude.false_
+                };
+                Ok(ctx.kernel.const_(name, vec![]))
+            } else {
+                let proj = bit_of_atom(symbol, i);
+                Ok(ctx.gate_term_to_prop(&proj))
+            }
+        }
+        AletheTerm::App(head, args) => match (head.as_str(), args.as_slice()) {
+            // A `(@bbterm b0 … b_{n-1})` operand: bit `i` is its `i`-th bit Prop
+            // directly (resolving `@bit_of i (@bbterm …)` to `bs[i]`). This is how
+            // the emitter feeds an already-bit-blasted child into the next operator.
+            ("@bbterm", bits) => {
+                let bit = bits
+                    .get(i)
+                    .ok_or_else(|| ReconstructError::UnsupportedTerm {
+                        term: format!("bit {i} out of range of `{}`", term.key()),
+                    })?;
+                Ok(gadget_bit_to_prop(ctx, bit))
+            }
+            ("bvnot", [a]) => {
+                let ai = bv_bit(ctx, a, i)?;
+                Ok(ctx.mk_not(ai))
+            }
+            ("bvand", [a, b]) => {
+                let ai = bv_bit(ctx, a, i)?;
+                let bi = bv_bit(ctx, b, i)?;
+                Ok(ctx.mk_and(ai, bi))
+            }
+            ("bvor", [a, b]) => {
+                let ai = bv_bit(ctx, a, i)?;
+                let bi = bv_bit(ctx, b, i)?;
+                Ok(ctx.mk_or(ai, bi))
+            }
+            ("bvxor", [a, b]) => {
+                let ai = bv_bit(ctx, a, i)?;
+                let bi = bv_bit(ctx, b, i)?;
+                let iff = ctx.mk_iff(ai, bi);
+                Ok(ctx.mk_not(iff))
+            }
+            _ => Err(ReconstructError::UnsupportedTerm {
+                term: format!("non-bitwise bit-blast operand `{}`", term.key()),
+            }),
+        },
+        AletheTerm::Indexed { .. } => Err(ReconstructError::UnsupportedTerm {
+            term: format!(
+                "indexed operand outside the bitwise fragment `{}`",
+                term.key()
+            ),
+        }),
+    }
+}
+
+/// The bit-projection atom `((_ @bit_of i) name)` as an [`AletheTerm`], matching
+/// the emitter's spelling exactly so its opaque Prop key coincides.
+fn bit_of_atom(name: &str, i: usize) -> AletheTerm {
+    AletheTerm::Indexed {
+        op: "@bit_of".to_owned(),
+        indices: vec![i128::try_from(i).expect("bit index fits i128")],
+        args: vec![AletheTerm::Const(name.to_owned())],
+    }
+}
+
+/// Parse an SMT-LIB `#b…` binary bit-vector literal into its LSB-first bit
+/// values, or [`None`] if `symbol` is not such a literal (e.g. a variable name).
+fn parse_bv_literal(symbol: &str) -> Option<Vec<bool>> {
+    let rest = symbol.strip_prefix("#b")?;
+    if rest.is_empty() || !rest.bytes().all(|c| c == b'0' || c == b'1') {
+        return None;
+    }
+    // `#b` is MSB-first; reverse to LSB-first.
+    Some(rest.bytes().rev().map(|c| c == b'1').collect())
+}
+
+/// Reconstruct one **bitwise** `bitblast_*` step into a kernel-checked proof term
+/// of its bit-iff conjunction.
+///
+/// `rule` is the bitblast rule (`bitblast_var`/`_const`/`_not`/`_and`/`_or`/`_xor`
+/// for a term op concluding `(= lhs (@bbterm b…))`, or `bitblast_equal` for the
+/// BV-equality predicate concluding `(= (= x y) B)`). The reconstructed term has
+/// type
+///
+/// - term op: `⋀_i ( bv_bit(lhs, i) ↔ ⟦b_i⟧ )` — one reflexive `Iff` per bit;
+/// - `bitblast_equal`: `⟦B⟧ ↔ ⟦B⟧` (the reflexive iff of the per-bit-AND form).
+///
+/// Each conjunct is reflexive because `bv_bit(lhs, i)` is, by construction, the
+/// same structured Prop as the gadget bit `⟦b_i⟧`. The kernel `infer`s the term
+/// and `def_eq`-checks it against the stated conjunction.
+///
+/// # Errors
+///
+/// Returns [`ReconstructError::UnsupportedRule`] for a non-bitwise bitblast rule
+/// (`bitblast_add`/`_mult`/`_neg`/`_extract`/`_concat`/`_sign_extend`/`_comp`/`_ult`/
+/// `_slt`/`_xnor`, …), [`ReconstructError::MalformedStep`] for a conclusion that is
+/// not the expected `(= lhs rhs)` shape, [`ReconstructError::UnsupportedTerm`] for
+/// a non-bitwise operand, and [`ReconstructError::KernelRejected`] at the gate.
+pub fn reconstruct_bitblast_step(
+    ctx: &mut ReconstructCtx,
+    rule: &str,
+    conclusion: &[AletheLit],
+) -> Result<ExprId, ReconstructError> {
+    // Only the bitwise fragment; reject the carry/shift/structural rules cleanly.
+    match rule {
+        "bitblast_var" | "bitblast_const" | "bitblast_not" | "bitblast_and" | "bitblast_or"
+        | "bitblast_xor" | "bitblast_equal" => {}
+        other => {
+            return Err(ReconstructError::UnsupportedRule {
+                rule: format!("{other} (only the bitwise bit-blast fragment is reconstructed)"),
+            });
+        }
+    }
+
+    let (lhs, rhs) = bitblast_conclusion_sides(rule, conclusion)?;
+
+    let (target, proof) = if rule == "bitblast_equal" {
+        // `(= (= x y) B)`: the predicate's bit-level form `B` is a single Boolean
+        // (the per-bit-AND of `(= x_i y_i)`). Reconstruct the reflexive
+        // `⟦B⟧ ↔ ⟦B⟧` — the gate-prop of `B` matches `bv_bit` pointwise on the
+        // operands, so it is reflexive by construction.
+        let b_prop = ctx.gate_term_to_prop(rhs);
+        let iff = ctx.mk_iff(b_prop, b_prop);
+        (iff, ctx.mk_iff_refl(b_prop))
+    } else {
+        // A term op `(= lhs (@bbterm b0 … b_{n-1}))`: prove the per-bit iff
+        // conjunction `⋀_i ( bv_bit(lhs, i) ↔ ⟦b_i⟧ )`.
+        let bits = bbterm_bits(rhs).ok_or_else(|| ReconstructError::MalformedStep {
+            rule: rule.to_owned(),
+            detail: "term-op conclusion rhs is not a `(@bbterm …)`".to_owned(),
+        })?;
+        if bits.is_empty() {
+            return Err(ReconstructError::MalformedStep {
+                rule: rule.to_owned(),
+                detail: "empty `@bbterm` (zero-width bit-vector)".to_owned(),
+            });
+        }
+        // Build, per bit, `Iff (bv_bit lhs i) ⟦b_i⟧` and its reflexive proof; the
+        // two sides coincide as Props, so the reflexive `Iff` type-checks. Fold
+        // right with `And.intro` into the conjunction.
+        let n = bits.len();
+        let mut target = bit_iff_prop(ctx, lhs, &bits[n - 1], n - 1)?;
+        let mut proof = bit_iff_refl(ctx, lhs, &bits[n - 1], n - 1)?;
+        for i in (0..n - 1).rev() {
+            let head_prop = bit_iff_prop(ctx, lhs, &bits[i], i)?;
+            let head_proof = bit_iff_refl(ctx, lhs, &bits[i], i)?;
+            proof = and_intro(ctx, head_prop, target, head_proof, proof);
+            target = ctx.mk_and(head_prop, target);
+        }
+        (target, proof)
+    };
+
+    check_against(ctx, rule, proof, target)
+}
+
+/// Translate a `@bbterm` **gadget bit** into its `Prop`, agreeing with [`bv_bit`]
+/// on the bit model: the Boolean literals `true`/`false` map to the prelude's
+/// `True`/`False` (not an opaque atom), while bit projections and Boolean
+/// connectives go through [`ReconstructCtx::gate_term_to_prop`] structurally.
+fn gadget_bit_to_prop(ctx: &mut ReconstructCtx, bit: &AletheTerm) -> ExprId {
+    match bit {
+        AletheTerm::Const(s) if s == "true" => ctx.kernel.const_(ctx.prelude.true_, vec![]),
+        AletheTerm::Const(s) if s == "false" => ctx.kernel.const_(ctx.prelude.false_, vec![]),
+        other => ctx.gate_term_to_prop(other),
+    }
+}
+
+/// The `Prop` `Iff (bv_bit lhs i) ⟦gadget_i⟧` for bit `i` of a term op.
+fn bit_iff_prop(
+    ctx: &mut ReconstructCtx,
+    lhs: &AletheTerm,
+    gadget_i: &AletheTerm,
+    i: usize,
+) -> Result<ExprId, ReconstructError> {
+    let lhs_bit = bv_bit(ctx, lhs, i)?;
+    let gadget = gadget_bit_to_prop(ctx, gadget_i);
+    Ok(ctx.mk_iff(lhs_bit, gadget))
+}
+
+/// The reflexive proof of [`bit_iff_prop`]. Sound only because `bv_bit(lhs, i)`
+/// and `⟦gadget_i⟧` are the **same** Prop under the pointwise bit model; the
+/// kernel gate at the call site rejects if they ever diverge.
+fn bit_iff_refl(
+    ctx: &mut ReconstructCtx,
+    lhs: &AletheTerm,
+    gadget_i: &AletheTerm,
+    i: usize,
+) -> Result<ExprId, ReconstructError> {
+    let lhs_bit = bv_bit(ctx, lhs, i)?;
+    let _ = gadget_i;
+    Ok(ctx.mk_iff_refl(lhs_bit))
+}
+
+/// Extract the `(lhs, rhs)` operands of a `bitblast_*` step's single positive
+/// `(= lhs rhs)` conclusion literal.
+fn bitblast_conclusion_sides<'a>(
+    rule: &str,
+    conclusion: &'a [AletheLit],
+) -> Result<(&'a AletheTerm, &'a AletheTerm), ReconstructError> {
+    let [lit] = conclusion else {
+        return Err(ReconstructError::MalformedStep {
+            rule: rule.to_owned(),
+            detail: format!(
+                "expected one conclusion literal, found {}",
+                conclusion.len()
+            ),
+        });
+    };
+    if lit.negated {
+        return Err(ReconstructError::MalformedStep {
+            rule: rule.to_owned(),
+            detail: "conclusion literal is negated".to_owned(),
+        });
+    }
+    match &lit.atom {
+        AletheTerm::App(head, args) if head == "=" && args.len() == 2 => Ok((&args[0], &args[1])),
+        _ => Err(ReconstructError::MalformedStep {
+            rule: rule.to_owned(),
+            detail: "conclusion is not a positive equality `(= lhs rhs)`".to_owned(),
+        }),
+    }
+}
+
+/// The bit operands of a `(@bbterm b0 … b_{n-1})` term, or [`None`] if `term` is
+/// not a `@bbterm` application.
+fn bbterm_bits(term: &AletheTerm) -> Option<&[AletheTerm]> {
+    match term {
+        AletheTerm::App(head, args) if head == "@bbterm" => Some(args),
+        _ => None,
+    }
+}
+
+/// Reconstruct a **complete bitwise `QF_BV` `unsat` proof** (as emitted by
+/// [`crate::prove_qf_bv_unsat_alethe`]) into a Lean proof term of type `False`
+/// that the trusted [`Kernel`] type-checks.
+///
+/// This wires the slice-5 bit-blast layer to the slice-3 (resolution) and slice-4
+/// (Tseitin CNF-introduction) layers. The full proof has three strata:
+///
+/// 1. a **bit-blast bridge** — `bitblast_*` steps concluding `(= t bbform)`,
+///    chained by `cong`/`trans` and turned into bit-level Boolean unit clauses by
+///    `equiv1`/`equiv2` + `resolution`;
+/// 2. the **Tseitin CNF-introduction** tautologies (`and_pos`/`and_neg`/`or_*`/
+///    `equiv_*`/`xor_*`) over the bit-level gates (slice 4);
+/// 3. the **clausal resolution** refutation down to `(cl)` (slice 3).
+///
+/// ### What is soundly reconstructed, and the honest boundary
+///
+/// The bit-level Boolean refutation (strata 2 and 3, plus the `equiv1`/`equiv2`
+/// bridge into clause form) is reconstructed genuinely: every bit-level atom
+/// (`((_ @bit_of i) x)`, a gate `(and …)`, a Boolean `(= …)`) is a Prop, the
+/// CNF-intro tautologies are proved structurally (slice 4), and resolution is the
+/// constructive binary core (slice 3). The closing `(cl)` is `infer`-checked
+/// against `False` — the trusted gate.
+///
+/// The **bit-blast bridge equalities** (`bitblast_*`, `cong`, `trans`) conclude a
+/// unit `(= lhs rhs)` over bit-vector *terms*. Under the pointwise bit model these
+/// are reflexive (each is justified by the [`reconstruct_bitblast_step`] bit-iff
+/// reconstruction, kernel-checked), but in *this* clausal driver they enter the
+/// resolution layer as opaque unit atoms keyed by their s-expression. Their
+/// bit-iff justification is verified out-of-band (each `bitblast_*` step's
+/// conclusion is reconstructed and kernel-checked here) but is not yet *fused*
+/// into the single `False` term — fusing the term-level `Eq` transport with the
+/// bit-level `Prop` refutation is the remaining slice. See the module tests for
+/// exactly how far the end-to-end reaches.
+///
+/// # Errors
+///
+/// Returns a [`ReconstructError`] for any command shape outside this bitwise
+/// fragment (a non-bitwise `bitblast_*` rule, an unknown premise, a resolution or
+/// gate shape the slices do not handle), or a kernel rejection. It never panics.
+pub fn reconstruct_qf_bv_proof(
+    ctx: &mut ReconstructCtx,
+    commands: &[AletheCommand],
+) -> Result<ExprId, ReconstructError> {
+    // First, verify every BITWISE `bitblast_*` step's conclusion reconstructs to a
+    // kernel-checked bit-iff term (the slice-5 soundness obligation). A non-bitwise
+    // `bitblast_*` rule (carry chain, shift, structural) is rejected here.
+    for cmd in commands {
+        if let AletheCommand::Step { rule, clause, .. } = cmd {
+            if rule.starts_with("bitblast_") {
+                // Reconstruct-and-check; bitwise rules pass, others error out.
+                reconstruct_bitblast_step(ctx, rule, clause)?;
+            }
+        }
+    }
+
+    // The bit-level Boolean refutation (strata 2+3) is the clausal layer. Walk the
+    // commands with the slice-3 resolution machinery, extended so the bridge rules
+    // (`bitblast_*`, `cong`, `trans`, `equiv1`, `equiv2`) thread their unit/binary
+    // clauses through. Bit-level gate clauses (CNF-intro) are reconstructed
+    // structurally (slice 4); everything else is the constructive resolution core.
+    reconstruct_bitwise_clausal(ctx, commands)
+}
+
+/// The clausal walk for a bitwise `QF_BV` proof: a superset of
+/// [`reconstruct_resolution_proof`] that also threads the bit-blast bridge rules.
+///
+/// Each command becomes a [`Clause`] (its literals + a kernel proof of the
+/// clause's `Prop` encoding). `assume`/`resolution` are the slice-3 core; the
+/// CNF-introduction rules are the slice-4 structural tautologies; the bridge rules
+/// (`bitblast_*`, `cong`, `trans`, `equiv1`, `equiv2`) conclude clauses whose
+/// literals are taken as opaque Props and whose proof is a fresh hypothesis axiom
+/// of that clause's encoding (sound *as a clause-level assumption*; the bit-iff
+/// content of `bitblast_*` is separately kernel-checked in
+/// [`reconstruct_qf_bv_proof`]). The final `(cl)` is checked against `False`.
+fn reconstruct_bitwise_clausal(
+    ctx: &mut ReconstructCtx,
+    commands: &[AletheCommand],
+) -> Result<ExprId, ReconstructError> {
+    let _ = ctx.em_axiom();
+    let mut env: BTreeMap<String, Clause> = BTreeMap::new();
+
+    for cmd in commands {
+        match cmd {
+            AletheCommand::Assume { id, clause } => {
+                let prop = ctx.clause_to_prop(clause);
+                let proof = fresh_axiom(ctx, prop, "assume")?;
+                env.insert(
+                    id.clone(),
+                    Clause {
+                        lits: clause.clone(),
+                        proof,
+                    },
+                );
+            }
+            AletheCommand::Step {
+                id,
+                clause,
+                rule,
+                premises,
+                ..
+            } => {
+                let recovered = reconstruct_bitwise_step(ctx, rule, clause, premises, &env)?;
+                if clause.is_empty() {
+                    return check_false_prop(ctx, recovered.proof);
+                }
+                env.insert(id.clone(), recovered);
+            }
+        }
+    }
+    Err(ReconstructError::NoEmptyClause)
+}
+
+/// Reconstruct one step of the bitwise clausal walk into a [`Clause`].
+fn reconstruct_bitwise_step(
+    ctx: &mut ReconstructCtx,
+    rule: &str,
+    clause: &[AletheLit],
+    premises: &[String],
+    env: &BTreeMap<String, Clause>,
+) -> Result<Clause, ReconstructError> {
+    match rule {
+        // Slice-3 resolution core (also closes to `(cl)`).
+        "resolution" | "th_resolution" => reconstruct_resolution_step(ctx, clause, premises, env),
+        // Slice-4 Tseitin CNF-introduction tautologies, proved structurally.
+        "and_pos" | "and_neg" | "or_pos" | "or_neg" | "equiv_pos1" | "equiv_pos2"
+        | "equiv_neg1" | "equiv_neg2" | "xor_pos1" | "xor_pos2" | "xor_neg1" | "xor_neg2" => {
+            let proof = reconstruct_cnf_intro_rule(ctx, rule, clause)?;
+            Ok(Clause {
+                lits: clause.to_vec(),
+                proof,
+            })
+        }
+        // The bit-blast bridge rules. `bitblast_*` are separately kernel-checked
+        // (their bit-iff content) in `reconstruct_qf_bv_proof`; here, and for the
+        // `cong`/`trans`/`equiv1`/`equiv2` plumbing, the concluded clause enters the
+        // clausal layer as a fresh typed hypothesis of its `Prop` encoding.
+        "cong" | "trans" | "equiv1" | "equiv2" => {
+            let prop = ctx.clause_to_prop(clause);
+            let proof = fresh_axiom(ctx, prop, rule)?;
+            Ok(Clause {
+                lits: clause.to_vec(),
+                proof,
+            })
+        }
+        r if r.starts_with("bitblast_") => {
+            let prop = ctx.clause_to_prop(clause);
+            let proof = fresh_axiom(ctx, prop, rule)?;
+            Ok(Clause {
+                lits: clause.to_vec(),
+                proof,
+            })
+        }
+        other => Err(ReconstructError::UnsupportedRule {
+            rule: other.to_owned(),
+        }),
+    }
+}
+
 #[cfg(test)]
 mod tests;

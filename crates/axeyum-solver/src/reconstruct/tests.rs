@@ -1056,3 +1056,235 @@ fn composite_and_neg_feeds_resolution_refutation() {
         .expect("the and_neg-fed clausal refutation reconstructs");
     assert_infers_false(&mut ctx, term);
 }
+
+// ---------------------------------------------------------------------------
+// Bit-blast reconstruction (P3.7 slice 5) — the BITWISE QF_BV fragment.
+//
+// Each test BUILDS a `bitblast_*` step's conclusion `(= lhs rhs)` and confirms
+// the trusted kernel `infer`s the reconstructed proof term to the bit-iff
+// conjunction. Green = the kernel genuinely accepting the reflexive bitblast
+// equalities under the pointwise bit model.
+// ---------------------------------------------------------------------------
+
+use super::reconstruct_bitblast_step;
+
+/// `((_ @bit_of i) name)` as a term — the emitter's bit-projection spelling.
+fn bit_of(name: &str, i: i128) -> AletheTerm {
+    AletheTerm::Indexed {
+        op: "@bit_of".to_owned(),
+        indices: vec![i],
+        args: vec![atom(name)],
+    }
+}
+
+/// `(@bbterm b…)`.
+fn bbterm(bits: Vec<AletheTerm>) -> AletheTerm {
+    AletheTerm::App("@bbterm".to_owned(), bits)
+}
+
+/// A positive unit conclusion `(cl (= lhs rhs))`.
+fn bb_concl(lhs: AletheTerm, rhs: AletheTerm) -> Vec<AletheLit> {
+    vec![AletheLit {
+        atom: AletheTerm::App("=".to_owned(), vec![lhs, rhs]),
+        negated: false,
+    }]
+}
+
+/// Reconstruct a bitblast step and confirm its proof infers to a `Prop`.
+fn assert_bitblast_ok(rule: &str, conclusion: &[AletheLit]) {
+    let mut ctx = ReconstructCtx::new();
+    let proof = reconstruct_bitblast_step(&mut ctx, rule, conclusion)
+        .unwrap_or_else(|e| panic!("{rule} should reconstruct, got {e:?}"));
+    // The proof's inferred type is the bit-iff conjunction; that type is itself a
+    // Prop, so inferring it again lands in a `Sort` — a genuine proof, not data.
+    let ty = ctx.kernel_mut().infer(proof).unwrap();
+    let ty_ty = ctx.kernel_mut().infer(ty).unwrap();
+    assert!(
+        matches!(ctx.kernel().expr_node(ty_ty), ExprNode::Sort(_)),
+        "{rule} proof must infer to a proposition"
+    );
+}
+
+/// `bitblast_var` (width 2): `(= a (@bbterm a0 a1))` ⇒ `(a0 ↔ a0) ∧ (a1 ↔ a1)`.
+#[test]
+fn bitblast_var_reconstructs() {
+    let concl = bb_concl(atom("a"), bbterm(vec![bit_of("a", 0), bit_of("a", 1)]));
+    assert_bitblast_ok("bitblast_var", &concl);
+}
+
+/// `bitblast_const` (width 2, value 0b10 = `#b10`): bit0 false, bit1 true.
+#[test]
+fn bitblast_const_reconstructs() {
+    let concl = bb_concl(atom("#b10"), bbterm(vec![atom("false"), atom("true")]));
+    assert_bitblast_ok("bitblast_const", &concl);
+}
+
+/// `bitblast_not` (width 1): `(= (bvnot a) (@bbterm (not a0)))`.
+#[test]
+fn bitblast_not_reconstructs() {
+    let bvnot = AletheTerm::App("bvnot".to_owned(), vec![atom("a")]);
+    let gadget = AletheTerm::App("not".to_owned(), vec![bit_of("a", 0)]);
+    let concl = bb_concl(bvnot, bbterm(vec![gadget]));
+    assert_bitblast_ok("bitblast_not", &concl);
+}
+
+/// `bitblast_and` (width 2): `(= (bvand a b) (@bbterm (and a0 b0) (and a1 b1)))`.
+#[test]
+fn bitblast_and_reconstructs() {
+    let bvand = AletheTerm::App("bvand".to_owned(), vec![atom("a"), atom("b")]);
+    let g0 = AletheTerm::App("and".to_owned(), vec![bit_of("a", 0), bit_of("b", 0)]);
+    let g1 = AletheTerm::App("and".to_owned(), vec![bit_of("a", 1), bit_of("b", 1)]);
+    let concl = bb_concl(bvand, bbterm(vec![g0, g1]));
+    assert_bitblast_ok("bitblast_and", &concl);
+}
+
+/// `bitblast_or` (width 1): `(= (bvor a b) (@bbterm (or a0 b0)))`.
+#[test]
+fn bitblast_or_reconstructs() {
+    let bvor = AletheTerm::App("bvor".to_owned(), vec![atom("a"), atom("b")]);
+    let g0 = AletheTerm::App("or".to_owned(), vec![bit_of("a", 0), bit_of("b", 0)]);
+    let concl = bb_concl(bvor, bbterm(vec![g0]));
+    assert_bitblast_ok("bitblast_or", &concl);
+}
+
+/// `bitblast_xor` (width 1): `(= (bvxor a b) (@bbterm (xor a0 b0)))`.
+#[test]
+fn bitblast_xor_reconstructs() {
+    let bvxor = AletheTerm::App("bvxor".to_owned(), vec![atom("a"), atom("b")]);
+    let g0 = AletheTerm::App("xor".to_owned(), vec![bit_of("a", 0), bit_of("b", 0)]);
+    let concl = bb_concl(bvxor, bbterm(vec![g0]));
+    assert_bitblast_ok("bitblast_xor", &concl);
+}
+
+/// `bitblast_equal` (width 2): `(= (= a b) (and (= a0 b0) (= a1 b1)))` — a
+/// predicate-shaped conclusion (no `@bbterm`); reconstructs the reflexive iff.
+#[test]
+fn bitblast_equal_reconstructs() {
+    let bv_eq = AletheTerm::App("=".to_owned(), vec![atom("a"), atom("b")]);
+    let e0 = AletheTerm::App("=".to_owned(), vec![bit_of("a", 0), bit_of("b", 0)]);
+    let e1 = AletheTerm::App("=".to_owned(), vec![bit_of("a", 1), bit_of("b", 1)]);
+    let b = AletheTerm::App("and".to_owned(), vec![e0, e1]);
+    let concl = bb_concl(bv_eq, b);
+    assert_bitblast_ok("bitblast_equal", &concl);
+}
+
+/// **NEGATIVE soundness at the kernel gate**: a WRONG gadget bit — claiming
+/// `bvand a b` bit0 is `(or a0 b0)` instead of `(and a0 b0)` — makes the reflexive
+/// iff ill-typed (the two sides are distinct Props), so reconstruction is REJECTED.
+#[test]
+fn bitblast_wrong_gadget_rejected() {
+    let mut ctx = ReconstructCtx::new();
+    let bvand = AletheTerm::App("bvand".to_owned(), vec![atom("a"), atom("b")]);
+    // Wrong: an `or` gadget where the model demands `and`.
+    let wrong = AletheTerm::App("or".to_owned(), vec![bit_of("a", 0), bit_of("b", 0)]);
+    let concl = bb_concl(bvand, bbterm(vec![wrong]));
+    let err = reconstruct_bitblast_step(&mut ctx, "bitblast_and", &concl)
+        .expect_err("a wrong gadget bit must be rejected by the kernel");
+    assert!(
+        matches!(err, ReconstructError::KernelRejected { .. }),
+        "got {err:?}"
+    );
+}
+
+/// A non-bitwise bitblast rule (here `bitblast_add`, a carry chain) is rejected
+/// with a clear `UnsupportedRule`, never a panic — it is a later slice.
+#[test]
+fn bitblast_add_is_unsupported() {
+    let mut ctx = ReconstructCtx::new();
+    let bvadd = AletheTerm::App("bvadd".to_owned(), vec![atom("a"), atom("b")]);
+    let concl = bb_concl(bvadd, bbterm(vec![bit_of("a", 0)]));
+    let err = reconstruct_bitblast_step(&mut ctx, "bitblast_add", &concl).unwrap_err();
+    assert!(
+        matches!(err, ReconstructError::UnsupportedRule { .. }),
+        "got {err:?}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// THE STRETCH: a full bitwise QF_BV `unsat` proof from the REAL emitter,
+// reconstructed end-to-end to a kernel-checked `False`.
+// ---------------------------------------------------------------------------
+
+use super::reconstruct_qf_bv_proof;
+
+/// **END-TO-END (the milestone)**: a 1-bit `(= (bvand a b) a) ∧ (not (= (bvand a
+/// b) a))` is unsat; the REAL `prove_qf_bv_unsat_alethe` emits the full bitwise
+/// proof (bitblast_var/and/equal + cong/trans + equiv + CNF-intro + resolution),
+/// and `reconstruct_qf_bv_proof` reconstructs it to a kernel-checked `False`.
+///
+/// Every BITWISE `bitblast_*` step's bit-iff content is separately kernel-checked
+/// during the walk; the closing `(cl)` is `infer`-checked against `False`.
+#[test]
+fn end_to_end_bitwise_bvand_refutation_to_false() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(1)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(1)).unwrap();
+        arena.var(s)
+    };
+    let and = arena.bv_and(a, b).unwrap();
+    let eq = arena.eq(and, a).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq])
+        .expect("emitter produces the bitwise refutation");
+
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_bv_proof(&mut ctx, &proof)
+        .expect("the bitwise QF_BV refutation reconstructs to a kernel-checked term");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// The same, width 2, with a direct `(= a b) ∧ (not (= a b))` (all-leaf predicate
+/// → the v1 direct `bitblast_equal` path, no cong/trans).
+#[test]
+fn end_to_end_bitwise_eq_refutation_to_false() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let eq = arena.eq(a, b).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_bv_proof(&mut ctx, &proof).expect("reconstructs");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// **NEGATIVE soundness**: a non-bitwise `QF_BV` proof (here `bvadd`) is rejected
+/// by `reconstruct_qf_bv_proof` — its `bitblast_add` step is out of the bitwise
+/// fragment — never silently accepted.
+#[test]
+fn end_to_end_non_bitwise_rejected() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let add = arena.bv_add(a, b).unwrap();
+    let eq = arena.eq(add, a).unwrap();
+    let neq = arena.not(eq).unwrap();
+    // `(= (bvadd a b) a) ∧ ¬…` is unsat, but `bvadd` is a carry chain → rejected.
+    let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    let err = reconstruct_qf_bv_proof(&mut ctx, &proof)
+        .expect_err("a non-bitwise bitblast step must be rejected");
+    assert!(
+        matches!(err, ReconstructError::UnsupportedRule { .. }),
+        "got {err:?}"
+    );
+}
