@@ -67,6 +67,31 @@ pub fn check_lazy_bv_abstraction(
     Ok(solve_lazy_bv_abstraction(arena, assertions, config)?.result)
 }
 
+/// Read-only variant of [`solve_lazy_bv_abstraction`]: decides `assertions`
+/// without mutating the caller's arena, so it fits the `&TermArena` consumers
+/// (the [`crate::SolverBackend`] trait, the bench pipeline) that cannot hand out
+/// a `&mut` arena.
+///
+/// The strategy needs to declare fresh abstraction symbols, so this runs it on a
+/// disposable [`TermArena::clone`] (an identical arena where the input
+/// `TermId`s/`SymbolId`s stay valid). The returned model is already restricted
+/// to the original (non-`!lazy_op_*`) symbols, so it replays against the caller's
+/// arena unchanged. Sound for the same reasons as the mutable version:
+/// over-approximation for `unsat`, replay-checked `sat`.
+///
+/// # Errors
+///
+/// Returns [`SolverError`] from the eager sub-solver or on a replay soundness
+/// alarm.
+pub fn check_lazy_bv_abstraction_ro(
+    arena: &TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<LazyBvOutcome, SolverError> {
+    let mut scratch = arena.clone();
+    solve_lazy_bv_abstraction(&mut scratch, assertions, config)
+}
+
 /// Decides `assertions` with the lazy abstraction-refinement strategy, returning
 /// the full [`LazyBvOutcome`] (verdict + telemetry).
 ///

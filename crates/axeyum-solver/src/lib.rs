@@ -124,7 +124,10 @@ pub use faithfulness::{FaithfulnessOutcome, check_qf_bv_faithfulness};
 pub use fp::FloatFormat;
 pub use incremental::{AssumptionOutcome, IncrementalBvSolver};
 pub use layers::BvLayerStats;
-pub use lazy_bv::{LazyBvOutcome, check_lazy_bv_abstraction, solve_lazy_bv_abstraction};
+pub use lazy_bv::{
+    LazyBvOutcome, check_lazy_bv_abstraction, check_lazy_bv_abstraction_ro,
+    solve_lazy_bv_abstraction,
+};
 pub use lia::{DEFAULT_INT_WIDTH, check_with_int_blasting};
 pub use lia_gcd::{
     DiophantineCertificate, Equality, check_diophantine_certificate,

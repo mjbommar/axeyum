@@ -13,7 +13,15 @@ use crate::term::{ConstructorId, DatatypeId, FuncId, Op, SymbolId, TermId, TermN
 /// identical IDs (determinism rule). Term handles carry no lifetimes; using
 /// a `TermId` from a different arena is a contract violation caught only by
 /// bounds checks.
-#[derive(Debug, Default)]
+///
+/// `Clone` produces an identical arena — same symbols, functions, and
+/// hash-consed nodes at the same dense IDs — so every `TermId`/`SymbolId` from
+/// the original remains valid in the clone (and vice versa). This is the
+/// intended way to obtain a disposable scratch arena for additive, in-place
+/// transformations (e.g. the lazy bit-blasting abstraction, which declares
+/// fresh symbols) without mutating a caller's `&TermArena`. Clones are deep;
+/// use deliberately, not in hot loops.
+#[derive(Debug, Default, Clone)]
 pub struct TermArena {
     symbols: Vec<(String, Sort)>,
     symbol_lookup: HashMap<String, SymbolId>,

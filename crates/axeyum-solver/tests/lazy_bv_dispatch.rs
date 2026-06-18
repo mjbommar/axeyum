@@ -3,7 +3,7 @@
 //! no-op when off. (Non-ignored: fast — the cases decide in milliseconds.)
 
 use axeyum_ir::{Sort, TermArena};
-use axeyum_solver::{CheckResult, SolverConfig, solve};
+use axeyum_solver::{CheckResult, SolverConfig, check_lazy_bv_abstraction_ro, solve};
 
 /// `x = 1 ∧ x = 2` (contradiction) ∧ `r = p*q` (incidental 64-bit multiplier):
 /// with `lazy_bv` on, `solve()` routes to the lazy strategy and decides UNSAT
@@ -70,7 +70,7 @@ fn lazy_bv_sat_agrees_with_eager() {
         let e2 = a.eq(p, two).unwrap(); // p=2 ∧ p*q=6 ⇒ q=3, sat
         vec![e1, e2]
     };
-    // TermArena is not Clone — rebuild the assertions in a fresh arena per run.
+    // Rebuild the assertions in a fresh arena per run (distinct `&mut` borrows).
     let mut a1 = TermArena::new();
     let asserts1 = build(&mut a1);
     let eager = solve(&mut a1, &asserts1, &SolverConfig::default()).unwrap();
@@ -89,5 +89,53 @@ fn lazy_bv_sat_agrees_with_eager() {
     assert!(
         matches!(lazy, CheckResult::Sat(_)),
         "lazy must find the model (p=2,q=3), got {lazy:?}"
+    );
+}
+
+/// The read-only entry point decides correctly via a scratch-arena clone and
+/// leaves the caller's `&TermArena` unmutated — the property the bench/trait
+/// (`&TermArena` only) needs. `x=1 ∧ x=2 ∧ r=p·q`: UNSAT with the multiplier
+/// never materialized (`ops_refined == 0`).
+#[test]
+#[allow(clippy::many_single_char_names)] // x, p, q, r are natural BV-variable names
+fn lazy_bv_ro_decides_without_mutating_caller_arena() {
+    let mut a = TermArena::new();
+    let xs = a.declare("x", Sort::BitVec(32)).unwrap();
+    let ps = a.declare("p", Sort::BitVec(32)).unwrap();
+    let qs = a.declare("q", Sort::BitVec(32)).unwrap();
+    let rs = a.declare("r", Sort::BitVec(32)).unwrap();
+    let x = a.var(xs);
+    let p = a.var(ps);
+    let q = a.var(qs);
+    let r = a.var(rs);
+    let one = a.bv_const(32, 1).unwrap();
+    let two = a.bv_const(32, 2).unwrap();
+    let mul = a.bv_mul(p, q).unwrap();
+    let c1 = a.eq(x, one).unwrap();
+    let c2 = a.eq(x, two).unwrap();
+    let c3 = a.eq(r, mul).unwrap();
+    let assertions = [c1, c2, c3];
+
+    let len_before = a.len();
+    // `&a` — immutable borrow, mirroring the `SolverBackend::check` contract.
+    let outcome = check_lazy_bv_abstraction_ro(&a, &assertions, &SolverConfig::default()).unwrap();
+    let len_after = a.len();
+
+    assert!(
+        matches!(outcome.result, CheckResult::Unsat),
+        "RO lazy must decide UNSAT, got {:?}",
+        outcome.result
+    );
+    assert_eq!(
+        outcome.ops_refined, 0,
+        "incidental multiplier must never be materialized"
+    );
+    assert_eq!(
+        outcome.ops_total, 1,
+        "exactly one heavy op (the bvmul) present"
+    );
+    assert_eq!(
+        len_before, len_after,
+        "caller's arena must be untouched (the strategy ran on a clone)"
     );
 }
