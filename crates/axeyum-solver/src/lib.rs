@@ -162,7 +162,8 @@ pub use qinst_egraph::{instantiate_forall_via_egraph, prove_quantified_unsat_via
 pub use reconstruct::{
     LraReconstructCtx, ReconstructCtx, ReconstructError, reconstruct_bitblast_step,
     reconstruct_cnf_intro_rule, reconstruct_eq_step, reconstruct_lra_proof,
-    reconstruct_qf_bv_proof, reconstruct_qf_uf_proof, reconstruct_resolution_proof,
+    reconstruct_qf_bv_proof, reconstruct_qf_uf_proof, reconstruct_qf_ufbv_proof,
+    reconstruct_resolution_proof,
 };
 pub use records::{RecordError, RecordSort};
 pub use sat_bv_backend::SatBvBackend;

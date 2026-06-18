@@ -4411,6 +4411,192 @@ pub fn reconstruct_qf_bv_proof(
     result
 }
 
+/// Reconstruct a **`QF_UFBV` Ackermann certificate** (the shape
+/// [`crate::prove_qf_ufbv_unsat_alethe`] emits) into a kernel-checked `False`,
+/// with **no trusted reduction step**.
+///
+/// The certificate composes an EUF congruence head — deriving each
+/// functional-consistency consequent `(= v_i v_j)` from the abstraction's
+/// defining equations and the argument equalities via `eq_congruent` +
+/// `eq_transitive` — with a bit-blast tail that refutes the reduced `QF_BV`
+/// problem. Both strata are reconstructed and gated by the **trusted kernel**:
+///
+/// 1. **Head (EUF, the closed trust hole).** For each spliced congruence block
+///    (`!cong_*` ids concluding a consequent `(= v_i v_j)` under a tail-assume
+///    id), a standalone EUF refutation `{defs, arg-eqs, ¬(= v_i v_j)}` is
+///    reconstructed via [`reconstruct_qf_uf_proof`] to a kernel-checked `False`.
+///    This is the certificate's new content: the previously-*trusted*
+///    consistency constraint is now **kernel-derived** by congruence — a wrong
+///    congruence makes the kernel reject (never a wrong "checked").
+/// 2. **Tail (bit-blast).** The congruence blocks are collapsed back to plain
+///    `assume`s of their consequents, and the resulting reduced `QF_BV`
+///    refutation is reconstructed via [`reconstruct_qf_bv_proof`] to a
+///    kernel-checked `False` — the returned term.
+///
+/// The two strata meet at the consequent atoms `(= v_i v_j)`: the head proves
+/// them (kernel-checked) and the tail consumes them (kernel-checked), so an
+/// Ackermann-decided `QF_UFBV` `unsat` carries a machine-checkable proof with no
+/// trusted reduction. The returned `ExprId` is the tail's `False`; the head
+/// obligations are kernel-verified as a precondition (an `Err` if any fails).
+///
+/// # Errors
+///
+/// Returns a [`ReconstructError`] if the proof is not in the certificate shape
+/// (no `!cong_*` congruence blocks), if any EUF head obligation fails to
+/// reconstruct/kernel-check, or if the bit-blast tail fails — never panics.
+pub fn reconstruct_qf_ufbv_proof(
+    ctx: &mut ReconstructCtx,
+    commands: &[AletheCommand],
+) -> Result<ExprId, ReconstructError> {
+    let blocks = collect_congruence_blocks(commands);
+    if blocks.is_empty() {
+        return Err(ReconstructError::UnsupportedRule {
+            rule: "reconstruct_qf_ufbv_proof: no `!cong_*` Ackermann congruence \
+                   blocks (not a QF_UFBV certificate)"
+                .to_owned(),
+        });
+    }
+
+    // 1. Kernel-check each congruence head: the consistency constraint is derived
+    //    by congruence, not trusted. A fresh ctx per obligation keeps the EUF
+    //    α-world atoms from colliding with the bit-blast tail's bit atoms.
+    for block in &blocks {
+        let euf = block.euf_refutation();
+        let mut head_ctx = ReconstructCtx::new();
+        reconstruct_qf_uf_proof(&mut head_ctx, &euf)?;
+    }
+
+    // 2. Collapse the congruence blocks to plain consequent `assume`s and
+    //    reconstruct the bit-blast tail to `False`.
+    let tail = collapse_congruence_blocks(commands, &blocks);
+    reconstruct_qf_bv_proof(ctx, &tail)
+}
+
+/// One spliced congruence block: the `!cong_*` head commands deriving a
+/// consequent `(= v_i v_j)`, plus the tail consequent step's id/clause/premises.
+struct CongruenceBlock {
+    /// The tail id (e.g. `h3`) of the step concluding `(cl (= v_i v_j))`.
+    consequent_id: String,
+    /// The consequent equality literals `(= v_i v_j)`.
+    consequent: Vec<AletheLit>,
+    /// The `!cong_*` head commands (assumes + `eq_*`/`resolution` steps).
+    head: Vec<AletheCommand>,
+    /// The premise ids of the final consequent-producing resolution (the
+    /// `eq_transitive` step plus its threaded unit equalities).
+    final_premises: Vec<String>,
+}
+
+impl CongruenceBlock {
+    /// A standalone EUF refutation of this congruence: the head's `assume`s
+    /// (defs + arg-eqs), its `eq_*` theory steps and threading resolutions, plus
+    /// a `¬(= v_i v_j)` assume and a closing resolution to `(cl)`. Reconstructable
+    /// by [`reconstruct_qf_uf_proof`].
+    fn euf_refutation(&self) -> Vec<AletheCommand> {
+        let mut out = self.head.clone();
+        // Re-emit the consequent-producing resolution under a private id (the
+        // original tail id is not present in this standalone sub-proof).
+        let consequent_step_id = "!cong_consequent".to_owned();
+        out.push(AletheCommand::Step {
+            id: consequent_step_id.clone(),
+            clause: self.consequent.clone(),
+            rule: "resolution".to_owned(),
+            premises: self.final_premises.clone(),
+            args: Vec::new(),
+        });
+        let negated: Vec<AletheLit> = self
+            .consequent
+            .iter()
+            .map(|l| AletheLit {
+                atom: l.atom.clone(),
+                negated: !l.negated,
+            })
+            .collect();
+        let diseq_id = "!cong_diseq".to_owned();
+        out.push(AletheCommand::Assume {
+            id: diseq_id.clone(),
+            clause: negated,
+        });
+        out.push(AletheCommand::Step {
+            id: "!cong_close".to_owned(),
+            clause: Vec::new(),
+            rule: "resolution".to_owned(),
+            premises: vec![consequent_step_id, diseq_id],
+            args: Vec::new(),
+        });
+        out
+    }
+}
+
+/// Scan a certificate proof for the spliced congruence blocks: contiguous runs of
+/// `!cong_*` commands followed by the consequent step (a non-`!cong_*` `Step`
+/// whose premises reference a `!cong_trans_*`).
+fn collect_congruence_blocks(commands: &[AletheCommand]) -> Vec<CongruenceBlock> {
+    let mut blocks: Vec<CongruenceBlock> = Vec::new();
+    let mut head: Vec<AletheCommand> = Vec::new();
+    for cmd in commands {
+        let (id, premises): (&str, Vec<String>) = match cmd {
+            AletheCommand::Assume { id, .. } => (id.as_str(), Vec::new()),
+            AletheCommand::Step { id, premises, .. } => (id.as_str(), premises.clone()),
+        };
+        if id.starts_with("!cong_") {
+            head.push(cmd.clone());
+            continue;
+        }
+        // A non-`!cong_*` command. If it is the consequent step (references a
+        // `!cong_trans_*` premise), it closes the current head block.
+        let closes = premises.iter().any(|p| p.starts_with("!cong_trans_"));
+        if closes
+            && !head.is_empty()
+            && let AletheCommand::Step {
+                id,
+                clause,
+                premises,
+                ..
+            } = cmd
+        {
+            blocks.push(CongruenceBlock {
+                consequent_id: id.clone(),
+                consequent: clause.clone(),
+                head: std::mem::take(&mut head),
+                final_premises: premises.clone(),
+            });
+        }
+    }
+    blocks
+}
+
+/// Rebuild the proof with every congruence block collapsed to a plain `assume`
+/// of its consequent (under the original tail id), yielding the reduced `QF_BV`
+/// refutation that [`reconstruct_qf_bv_proof`] reconstructs.
+fn collapse_congruence_blocks(
+    commands: &[AletheCommand],
+    blocks: &[CongruenceBlock],
+) -> Vec<AletheCommand> {
+    let consequent_ids: BTreeMap<&str, &CongruenceBlock> = blocks
+        .iter()
+        .map(|b| (b.consequent_id.as_str(), b))
+        .collect();
+    let mut out: Vec<AletheCommand> = Vec::with_capacity(commands.len());
+    for cmd in commands {
+        let id = match cmd {
+            AletheCommand::Assume { id, .. } | AletheCommand::Step { id, .. } => id.as_str(),
+        };
+        if id.starts_with("!cong_") {
+            continue; // head command, dropped
+        }
+        if let Some(block) = consequent_ids.get(id) {
+            // The consequent step becomes a plain assume of `(= v_i v_j)`.
+            out.push(AletheCommand::Assume {
+                id: block.consequent_id.clone(),
+                clause: block.consequent.clone(),
+            });
+        } else {
+            out.push(cmd.clone());
+        }
+    }
+    out
+}
+
 /// Scan the proof for `equiv1`/`equiv2` bridge clauses and learn, for each
 /// bit-vector predicate atom, its bit-level Boolean form `B`.
 ///

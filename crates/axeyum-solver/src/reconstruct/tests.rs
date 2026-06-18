@@ -413,6 +413,68 @@ fn end_to_end_congruence_refutation_to_false() {
     assert_infers_false(&mut ctx, term);
 }
 
+/// **`QF_UFBV` Ackermann certificate end-to-end (ADR-0013 task #19)**: take a REAL
+/// `prove_qf_ufbv_unsat_alethe` certificate for
+/// `f(a) = #b00 ∧ a = b ∧ ¬(f(b) = #b00)` — decided via the Ackermann reduction —
+/// and reconstruct it through `reconstruct_qf_ufbv_proof` to a kernel-checked
+/// `False`. The certificate's functional-consistency constraint is **derived** by
+/// `eq_congruent` (the EUF head, kernel-checked) and consumed by the bit-blast
+/// refutation (the tail, kernel-checked), so the result has **no trusted
+/// reduction step** — the previously-trusted Ackermann congruence is now validated
+/// by the Lean kernel.
+#[test]
+fn end_to_end_qf_ufbv_ackermann_certificate_to_false() {
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(2)], Sort::BitVec(2))
+        .unwrap();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let fa = arena.apply(f, &[a]).unwrap();
+    let fb = arena.apply(f, &[b]).unwrap();
+    let c00 = arena.bv_const(2, 0).unwrap();
+    let e1 = arena.eq(fa, c00).unwrap();
+    let e2 = arena.eq(a, b).unwrap();
+    let e3 = {
+        let e = arena.eq(fb, c00).unwrap();
+        arena.not(e).unwrap()
+    };
+
+    let proof = crate::prove_qf_ufbv_unsat_alethe(&mut arena, &[e1, e2, e3])
+        .expect("emitter produces the Ackermann certificate");
+    let mut ctx = ReconstructCtx::new();
+    let term = super::reconstruct_qf_ufbv_proof(&mut ctx, &proof)
+        .expect("the QF_UFBV certificate reconstructs to a kernel-checked term");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// A `QF_UFBV` proof with no Ackermann congruence blocks (not a certificate from
+/// `prove_qf_ufbv_unsat_alethe`) is cleanly rejected, never mis-reconstructed.
+#[test]
+fn qf_ufbv_reconstruct_rejects_non_certificate() {
+    // A plain EUF proof carries no `!cong_*` congruence blocks.
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a");
+    let b = bv_var(&mut arena, "b");
+    let c = bv_var(&mut arena, "c");
+    let assertions = vec![arena.eq(a, b).unwrap(), arena.eq(b, c).unwrap(), {
+        let e = arena.eq(a, c).unwrap();
+        arena.not(e).unwrap()
+    }];
+    let proof = crate::prove_qf_uf_unsat_alethe(&arena, &assertions).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    assert!(matches!(
+        super::reconstruct_qf_ufbv_proof(&mut ctx, &proof),
+        Err(ReconstructError::UnsupportedRule { .. })
+    ));
+}
+
 /// **NEGATIVE soundness check**: corrupt a REAL emitted proof — swap the closing
 /// resolution's disequality to a non-complementary one — and confirm
 /// reconstruction REJECTS it (no complementary unit pair → error), never a wrong
