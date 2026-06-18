@@ -737,13 +737,13 @@ fn bogus_resolution_no_pivot_rejected() {
 }
 
 /// `normalize_lit_polarity` peels `(not …)` atoms into the `negated` flag, so a
-/// `+(not X)` literal and a `-X` literal canonicalize identically — letting
-/// `find_pivot` recognize them as complementary. The upstream CNF spells some
-/// negations as the flag and some as a `(not …)` atom, which previously made
-/// `find_pivot` miss genuinely-complementary literals.
+/// `+(not X)` literal and a `-X` literal canonicalize identically, so resolution's
+/// pivot matching (same atom key, opposite polarity) recognizes them as
+/// complementary. The upstream CNF spells some negations as the flag and some as a
+/// `(not …)` atom, which previously made the matching miss them.
 #[test]
 fn normalize_polarity_lets_not_atoms_resolve() {
-    use super::{find_pivot, normalize_lit_polarity};
+    use super::normalize_lit_polarity;
     let x = AletheTerm::Const("x".to_owned());
     let not_x = AletheTerm::App("not".to_owned(), vec![x.clone()]);
 
@@ -763,23 +763,21 @@ fn normalize_polarity_lets_not_atoms_resolve() {
     assert_eq!(n2.atom.key(), x.key());
     assert!(!n2.negated, "`-(not x)` must normalize to `+x`");
 
-    // Raw `+x` vs `+(not x)` are NOT syntactically complementary; after
-    // normalization (`+x` vs `-x`) they resolve.
+    // Raw `+x` and `+(not x)` are NOT syntactically complementary (different atom
+    // keys); after normalization (`+x` and `-x`) they share an atom key with
+    // opposite polarity — the pivot condition resolution partitions on.
     let plus_x = AletheLit {
         atom: x,
         negated: false,
     };
-    assert!(
-        find_pivot(
-            std::slice::from_ref(&plus_x),
-            std::slice::from_ref(&plus_not_x)
-        )
-        .is_none(),
+    assert_ne!(
+        plus_x.atom.key(),
+        plus_not_x.atom.key(),
         "raw `+x` vs `+(not x)` are not syntactically complementary"
     );
     assert!(
-        find_pivot(std::slice::from_ref(&plus_x), std::slice::from_ref(&n)).is_some(),
-        "after normalization, `+x` vs `-x` resolve"
+        n.atom.key() == plus_x.atom.key() && n.negated != plus_x.negated,
+        "after normalization, `+x` vs `-x` are complementary"
     );
 }
 
@@ -1980,6 +1978,30 @@ fn end_to_end_slt_reconstructs() {
     let mut ctx = ReconstructCtx::new();
     reconstruct_qf_bv_proof(&mut ctx, &proof)
         .expect("a bvslt QF_BV proof must reconstruct to kernel-checked False");
+}
+
+/// **End-to-end, GENUINELY unsat (not `x ∧ ¬x`)**: `(bvult a b) ∧ (bvult b a)` is
+/// unsatisfiable by antisymmetry. Its refutation is a real resolution DAG — the
+/// case the Davis–Putnam resolution reconstruction was built for (greedy/pool/
+/// chain folds all dead-end here). It reconstructs to a kernel-checked `False`.
+#[test]
+fn end_to_end_ult_antisymmetry_reconstructs() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let ab = arena.bv_ult(a, b).unwrap();
+    let ba = arena.bv_ult(b, a).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[ab, ba]).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    reconstruct_qf_bv_proof(&mut ctx, &proof)
+        .expect("bvult antisymmetry must reconstruct to kernel-checked False");
 }
 
 /// **End-to-end**: a `(= (bvcomp a b) c) ∧ ¬…` `QF_BV` unsat proof — bit-blasted

@@ -1608,41 +1608,84 @@ fn reconstruct_resolution_step(
         lits: c.lits.iter().map(normalize_lit_polarity).collect(),
         proof: c.proof,
     };
-    let mut acc = normalized(lookup(env, first)?);
-    // Remaining premises to fold in; pulled out as they become resolvable.
-    let mut remaining: Vec<Clause> = rest
+    // **Davis–Putnam resolution.** The refutation is a resolution DAG, not a chain
+    // (a pivot from one premise cancels against another, not a running
+    // accumulator), so any accumulator/greedy/pool fold dead-ends by consuming a
+    // clause another subtree needs. Instead, eliminate every **non-conclusion**
+    // variable: partition the pool on the variable and replace it with all
+    // `pos × neg` resolvents (dropping tautologies). DP is complete for the
+    // implied clause, so what remains is the conclusion (the empty clause for a
+    // closing refutation). Every `binary_resolve_on` is kernel-checked.
+    let conclusion_keys: std::collections::BTreeSet<String> = conclusion
         .iter()
-        .map(|p| Ok(normalized(lookup(env, p)?)))
+        .map(|l| normalize_lit_polarity(l).atom.key())
+        .collect();
+
+    let mut pool: Vec<Clause> = std::iter::once(Ok(normalized(lookup(env, first)?)))
+        .chain(rest.iter().map(|p| Ok(normalized(lookup(env, p)?))))
         .collect::<Result<_, ReconstructError>>()?;
 
-    while !remaining.is_empty() {
-        // Pick a remaining premise that shares a complementary pivot with `acc`.
-        let Some(idx) = remaining
+    loop {
+        // Pick any variable present in the pool that is NOT a conclusion literal.
+        let pivot = pool
             .iter()
-            .position(|cl| find_pivot(&acc.lits, &cl.lits).is_some())
-        else {
+            .flat_map(|c| c.lits.iter())
+            .map(|l| l.atom.key())
+            .find(|k| !conclusion_keys.contains(k));
+        let Some(pivot) = pivot else { break };
+
+        let mut pos: Vec<Clause> = Vec::new();
+        let mut neg: Vec<Clause> = Vec::new();
+        let mut without: Vec<Clause> = Vec::new();
+        for c in std::mem::take(&mut pool) {
+            match c.lits.iter().find(|l| l.atom.key() == pivot) {
+                Some(l) if !l.negated => pos.push(c),
+                Some(_) => neg.push(c),
+                None => without.push(c),
+            }
+        }
+        pool = without;
+        for p in &pos {
+            for n in &neg {
+                if let Some(r) = binary_resolve_on(ctx, p, n, &pivot, true)? {
+                    // Skip a resolvent already present (cheap subsumption-of-equals).
+                    let key = clause_key(&r.lits);
+                    if !pool.iter().any(|c| clause_key(&c.lits) == key) {
+                        pool.push(r);
+                    }
+                }
+            }
+        }
+        if pool.is_empty() {
             return Err(ReconstructError::UnsupportedResolution {
-                detail: format!(
-                    "no remaining premise resolves with the accumulator `{}`",
-                    clause_key(&acc.lits)
-                ),
+                detail: format!("eliminating `{pivot}` left no clauses"),
             });
-        };
-        let next = remaining.remove(idx);
-        acc = binary_resolve(ctx, &acc, &next)?;
+        }
     }
 
-    // A closing step must have folded down to the empty clause; otherwise the
-    // kernel gate at the call site validates the (non-empty) resolvent.
-    if conclusion.is_empty() && !acc.lits.is_empty() {
-        return Err(ReconstructError::UnsupportedResolution {
-            detail: format!(
-                "closing resolution did not fold to the empty clause; residual `{}`",
-                clause_key(&acc.lits)
-            ),
-        });
-    }
-    Ok(acc)
+    // Every remaining clause has only conclusion literals. Return the one whose
+    // literal set matches the conclusion (the empty clause for a closing step).
+    let want = normalize_clause_key(conclusion);
+    pool.into_iter()
+        .find(|c| normalize_clause_key(&c.lits) == want)
+        .ok_or_else(|| ReconstructError::UnsupportedResolution {
+            detail: format!("resolution did not derive the conclusion `{want}`"),
+        })
+}
+
+/// A clause's identity key under polarity-normalization, order-independent (sorted
+/// `±atom-key` set) — used to compare a derived clause against the step conclusion.
+fn normalize_clause_key(lits: &[AletheLit]) -> String {
+    let mut parts: Vec<String> = lits
+        .iter()
+        .map(|l| {
+            let n = normalize_lit_polarity(l);
+            format!("{}{}", if n.negated { "-" } else { "+" }, n.atom.key())
+        })
+        .collect();
+    parts.sort();
+    parts.dedup();
+    parts.join(",")
 }
 
 /// Canonicalize a literal's polarity by peeling leading `(not …)` atoms into the
@@ -1666,23 +1709,6 @@ fn normalize_lit_polarity(lit: &AletheLit) -> AletheLit {
     AletheLit { atom, negated }
 }
 
-/// The complementary-literal **pivot** of two clauses: the unique atom occurring
-/// positively in one and negatively in the other. Returns the pivot's atom Prop
-/// key and which side (`c`/`d`) holds it positively.
-fn find_pivot(c: &[AletheLit], d: &[AletheLit]) -> Option<(String, bool)> {
-    for lit in c {
-        let key = lit.atom.key();
-        let want_neg = !lit.negated;
-        if d.iter()
-            .any(|o| o.atom.key() == key && o.negated == want_neg)
-        {
-            // `lit` in C is complementary to a literal in D.
-            return Some((key, !lit.negated));
-        }
-    }
-    None
-}
-
 /// Push `lit` onto `out` unless a literal of the same atom key and polarity is
 /// already present (first-seen-order de-duplication for the resolvent).
 fn push_unique(lit: &AletheLit, out: &mut Vec<AletheLit>) {
@@ -1692,29 +1718,25 @@ fn push_unique(lit: &AletheLit, out: &mut Vec<AletheLit>) {
     }
 }
 
-/// Build `binary_resolve(C, D)`: given clause proofs `hC : Enc(C)` and
-/// `hD : Enc(D)` with a unique complementary pivot literal `l` (positive in one,
-/// `¬l` in the other), produce a proof of `Enc(R)` where
-/// `R = (C \ {l}) ∪ (D \ {¬l})` (in C-order then D-order, de-duplicated).
+/// Build the binary resolvent of clause proofs `hC : Enc(C)` and `hD : Enc(D)` on
+/// a **specific** pivot atom (`pivot_key`; `c_has_pos` says `c` holds it
+/// positively), proving `Enc(R)` where `R = (C \ {l}) ∪ (D \ {¬l})`.
 ///
 /// This is **constructive**: we case-split (via `Or.rec`) on the premise that
 /// carries `l` positively, then on its complement discharge the pivot branch with
 /// `¬l : l → False` (`False.rec`) and inject every surviving literal into `Enc(R)`
 /// with `Or.inl`/`Or.inr`. No excluded middle is needed.
-fn binary_resolve(
+///
+/// Returns `Ok(None)` when the resolvent is a tautology (contains some atom both
+/// positively and negatively) — useless, and dropped by Davis–Putnam. Otherwise
+/// builds the kernel-checked resolvent clause and its proof.
+fn binary_resolve_on(
     ctx: &mut ReconstructCtx,
     c: &Clause,
     d: &Clause,
-) -> Result<Clause, ReconstructError> {
-    let Some((pivot_key, c_has_pos)) = find_pivot(&c.lits, &d.lits) else {
-        return Err(ReconstructError::UnsupportedResolution {
-            detail: format!(
-                "no unique complementary pivot between `{}` and `{}`",
-                clause_key(&c.lits),
-                clause_key(&d.lits)
-            ),
-        });
-    };
+    pivot_key: &str,
+    c_has_pos: bool,
+) -> Result<Option<Clause>, ReconstructError> {
     // Orient: `pos` is the clause with the pivot positive, `neg` with `¬pivot`.
     let (pos, neg) = if c_has_pos { (c, d) } else { (d, c) };
 
@@ -1731,6 +1753,17 @@ fn binary_resolve(
         if lit.atom.key() != pivot_key || !lit.negated {
             push_unique(lit, &mut resolvent);
         }
+    }
+
+    // A tautological resolvent (some atom appears both `+` and `-`) is dropped.
+    let tautological = resolvent.iter().any(|l| {
+        let k = l.atom.key();
+        resolvent
+            .iter()
+            .any(|o| o.atom.key() == k && o.negated != l.negated)
+    });
+    if tautological {
+        return Ok(None);
     }
 
     // The target Prop `Enc(R)`.
@@ -1777,10 +1810,10 @@ fn binary_resolve(
         },
     )?;
 
-    Ok(Clause {
+    Ok(Some(Clause {
         lits: resolvent,
         proof,
-    })
+    }))
 }
 
 /// `False.rec`-eliminate a `False` proof into the target Prop `target`:
