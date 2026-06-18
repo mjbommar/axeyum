@@ -147,6 +147,16 @@ pub fn lower_derived_bv(arena: &mut TermArena, term: TermId) -> Result<TermId, I
                 .expect("signed div operand has BV sort");
             lower_signed_divrem(arena, op, largs[0], largs[1], w)?
         }
+        // `bvmul` lowered to a shift-add network of CORE ops avoids the single inlined
+        // multiplier-gadget tree (`mult_bit_term`) that blows up reconstruction at wide
+        // widths; with the projection encoding the resulting O(w²) adds stay small.
+        Op::BvMul => {
+            let w = arena
+                .sort_of(largs[0])
+                .bv_width()
+                .expect("bvmul operand has BV sort");
+            multiply(arena, largs[0], largs[1], w)?
+        }
         // Not a lowered operator: rebuild with lowered children (sort preserved).
         _ => arena.rebuild_with_args(term, &largs),
     })
@@ -411,6 +421,27 @@ fn lower_signed_divrem(
     }
 }
 
+/// `bvmul x y` as a width-`w` shift-add network in core ops:
+/// `Σ_{i<w} ( splat(y[i]) ∧ (x << i) )`. Each partial product is a constant left
+/// shift masked by the splat of bit `i` of `y` (all-ones / all-zeros via
+/// `sign_extend` of the 1-bit slice), summed with `bvadd`. All-core, so the
+/// projection encoding keeps the O(w²) adds small — no inlined multiplier tree.
+#[allow(clippy::many_single_char_names)] // x/y operands, w width, i bit index
+fn multiply(arena: &mut TermArena, x: TermId, y: TermId, w: u32) -> Result<TermId, IrError> {
+    let mut acc: Option<TermId> = None;
+    for i in 0..w {
+        let shifted = lower_const_shift(arena, Op::BvShl, x, u128::from(i), w)?; // x << i
+        let yi = arena.extract(i, i, y)?; // bit i of y
+        let mask = arena.sign_ext(w - 1, yi)?; // splat to width w
+        let partial = arena.bv_and(mask, shifted)?;
+        acc = Some(match acc {
+            None => partial,
+            Some(a) => arena.bv_add(a, partial)?,
+        });
+    }
+    Ok(acc.expect("bvmul width is ≥ 1"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -448,6 +479,15 @@ mod tests {
         assert_lowering_preserves(3, |a, x, y| a.bv_sub(x, y).unwrap());
         assert_lowering_preserves(3, |a, x, y| a.bv_nand(x, y).unwrap());
         assert_lowering_preserves(3, |a, x, y| a.bv_nor(x, y).unwrap());
+    }
+
+    #[test]
+    fn bvmul_shift_add_preserves_denotation() {
+        // Exhaustive over all (x, y) for widths 1..=4 — the shift-add network must
+        // agree with native bvmul (mod 2^w), incl. overflow/wraparound.
+        for w in [1u32, 2, 3, 4] {
+            assert_lowering_preserves(w, |a, x, y| a.bv_mul(x, y).unwrap());
+        }
     }
 
     #[test]

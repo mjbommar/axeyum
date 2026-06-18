@@ -2006,6 +2006,31 @@ fn end_to_end_variable_shift_via_lowering_reconstructs() {
     assert_infers_false(&mut ctx, term);
 }
 
+/// `bvmul` lowered to a **shift-add** core network (no inlined `mult_bit_term` tree)
+/// reconstructs end-to-end to a kernel-checked `False` via the projection encoding.
+/// The lowering is polynomial-size (vs the exponential multiplier gadget), so it
+/// scales to widths the gadget cannot — kept at width 3 here only for suite speed.
+#[test]
+fn end_to_end_bvmul_shift_add_via_lowering_reconstructs() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let mk = |a: &mut TermArena, n: &str| {
+        let s = a.declare(n, Sort::BitVec(3)).unwrap();
+        a.var(s)
+    };
+    let a = mk(&mut arena, "a");
+    let b = mk(&mut arena, "b");
+    let c = mk(&mut arena, "c");
+    let m = arena.bv_mul(a, b).unwrap();
+    let eq = arena.eq(m, c).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe_lowered(&mut arena, &[eq, neq])
+        .expect("emitter accepts lowered core");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_bv_proof(&mut ctx, &proof).expect("reconstructs");
+    assert_infers_false(&mut ctx, term);
+}
+
 /// Unsigned division lowering: `bvudiv` → an unrolled long-division network of core
 /// ops. At width 2 this reconstructs end-to-end to a kernel-checked `False`. It
 /// exercises the `cnf_intro`-over-Boolean-constant fix (the divider's adders over
