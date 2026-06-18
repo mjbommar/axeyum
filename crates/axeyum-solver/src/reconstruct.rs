@@ -198,6 +198,11 @@ pub struct ReconstructCtx {
     /// under a private namespace, so reconstructed atoms never clash with the
     /// prelude's names.
     next_id: u64,
+    /// Bit-vector symbol/literal name → width, learned from each `bitblast_var` /
+    /// `bitblast_const` step (its `@bbterm` conclusion has exactly width bits).
+    /// Bit-blasting is bottom-up, so a structural consumer (`concat`) sees its
+    /// operands' widths recorded by the time its own step is reconstructed.
+    bv_widths: BTreeMap<String, usize>,
 }
 
 impl core::fmt::Debug for ReconstructCtx {
@@ -257,6 +262,7 @@ impl ReconstructCtx {
             bridge: None,
             axiom_roles: BTreeMap::new(),
             next_id: 0,
+            bv_widths: BTreeMap::new(),
         }
     }
 
@@ -3188,8 +3194,8 @@ fn parse_bv_literal(symbol: &str) -> Option<Vec<bool>> {
 /// # Errors
 ///
 /// Returns [`ReconstructError::UnsupportedRule`] for a bitblast rule outside the
-/// bitwise + `extract`/`sign_extend` + `add`/`neg`/`mult` fragment
-/// (`bitblast_concat`/`_comp`/`_ult`/`_slt`, …),
+/// bitwise + `extract`/`sign_extend`/`concat` + `add`/`neg`/`mult` fragment
+/// (`bitblast_comp`/`_ult`/`_slt`, …),
 /// [`ReconstructError::MalformedStep`] for a conclusion that is
 /// not the expected `(= lhs rhs)` shape, [`ReconstructError::UnsupportedTerm`] for
 /// a non-bitwise operand, and [`ReconstructError::KernelRejected`] at the gate.
@@ -3212,6 +3218,7 @@ pub fn reconstruct_bitblast_step(
         | "bitblast_xnor"
         | "bitblast_extract"
         | "bitblast_sign_extend"
+        | "bitblast_concat"
         | "bitblast_add"
         | "bitblast_neg"
         | "bitblast_mult"
@@ -3249,6 +3256,14 @@ pub fn reconstruct_bitblast_step(
                 detail: "empty `@bbterm` (zero-width bit-vector)".to_owned(),
             });
         }
+        // Record a freshly bit-blasted leaf's width so structural consumers
+        // (`concat`) can recover operand widths (bottom-up order: the leaf step
+        // precedes its consumer's step).
+        if matches!(rule, "bitblast_var" | "bitblast_const") {
+            if let AletheTerm::Const(name) = lhs {
+                ctx.bv_widths.insert(name.clone(), bits.len());
+            }
+        }
         // Build, per bit, `Iff (bv_bit lhs i) ⟦b_i⟧` and its reflexive proof; the
         // two sides coincide as Props, so the reflexive `Iff` type-checks. Fold
         // right with `And.intro` into the conjunction.
@@ -3280,10 +3295,10 @@ fn gadget_bit_to_prop(ctx: &mut ReconstructCtx, bit: &AletheTerm) -> ExprId {
 }
 
 /// The `Prop` for bit `i` of a term-op `lhs`. Routes through [`bv_bit`], except
-/// for the width-needing top-level structural ops (`sign_extend`) whose operand
-/// width is recovered from `result_width` (the conclusion's `@bbterm` length) —
-/// `sign_extend` only ever appears at the top of its own step, never nested, so
-/// the width is known exactly here.
+/// for the width-needing top-level structural ops: `sign_extend` (operand width
+/// recovered as `result_width - by`) and `concat` (low-operand width recovered
+/// via [`bv_operand_width`]). These appear only at the top of their own step,
+/// never nested, so the width is known exactly here.
 fn lhs_bit_prop(
     ctx: &mut ReconstructCtx,
     lhs: &AletheTerm,
@@ -3327,7 +3342,43 @@ fn lhs_bit_prop(
             return Ok(ctx.gate_term_to_prop(&bit_term));
         }
     }
+    if let AletheTerm::App(head, args) = lhs {
+        if head == "concat" {
+            // `(concat a b)` (a high, b low): result bit `i` is `b_i` for
+            // `i < width(b)`, else `a_{i - width(b)}` — the emitter emits the low
+            // operand's bits first. Needs width(b), recovered from a recorded
+            // bit-blasted leaf width or a literal's length.
+            let [hi, lo] = args.as_slice() else {
+                return Err(ReconstructError::UnsupportedTerm {
+                    term: format!("concat needs two operands `{}`", lhs.key()),
+                });
+            };
+            let width_lo =
+                bv_operand_width(ctx, lo).ok_or_else(|| ReconstructError::UnsupportedTerm {
+                    term: format!("concat low-operand width unknown `{}`", lhs.key()),
+                })?;
+            let bit_term = if i < width_lo {
+                operand_bit_term(lo, i)
+            } else {
+                operand_bit_term(hi, i - width_lo)
+            };
+            return Ok(ctx.gate_term_to_prop(&bit_term));
+        }
+    }
     bv_bit(ctx, lhs, i)
+}
+
+/// The width of a bit-blast operand, when recoverable without type context: a
+/// `(@bbterm b…)` has `len` bits, a `#b…` literal has its digit count, and a
+/// recorded bit-blasted symbol uses [`ReconstructCtx::bv_widths`]. Returns
+/// [`None`] for a compound or undeclared operand (the caller then rejects).
+fn bv_operand_width(ctx: &ReconstructCtx, operand: &AletheTerm) -> Option<usize> {
+    match operand {
+        AletheTerm::App(head, args) if head == "@bbterm" => Some(args.len()),
+        AletheTerm::Const(name) => parse_bv_literal(name)
+            .map_or_else(|| ctx.bv_widths.get(name).copied(), |b| Some(b.len())),
+        _ => None,
+    }
 }
 
 /// The `Prop` `Iff (lhs_bit i) ⟦gadget_i⟧` for bit `i` of a term op.

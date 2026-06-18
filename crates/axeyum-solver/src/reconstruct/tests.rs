@@ -1432,14 +1432,69 @@ fn bitblast_mult_wrong_bit_rejected() {
     );
 }
 
-/// `bitblast_concat` (a structural op needing operand widths) remains outside the
+/// `bitblast_concat` (width 2 high `a`, width 3 low `b`): result bits are the low
+/// operand's first, then the high operand's — `b0 b1 b2 a0 a1`. Operand widths
+/// come from the `@bbterm` operands here (the recorded-width path is exercised
+/// end-to-end).
+#[test]
+fn bitblast_concat_reconstructs() {
+    let hi = bbterm(vec![bit_of("a", 0), bit_of("a", 1)]);
+    let lo = bbterm(vec![bit_of("b", 0), bit_of("b", 1), bit_of("b", 2)]);
+    let concat = AletheTerm::App("concat".to_owned(), vec![hi, lo]);
+    let concl = bb_concl(
+        concat,
+        bbterm(vec![
+            bit_of("b", 0),
+            bit_of("b", 1),
+            bit_of("b", 2),
+            bit_of("a", 0),
+            bit_of("a", 1),
+        ]),
+    );
+    assert_bitblast_ok("bitblast_concat", &concl);
+}
+
+/// **NEGATIVE soundness** for `concat`: putting the high operand's bits first
+/// (`a0 …` instead of the low operand `b0 …`) is REJECTED at the kernel gate.
+#[test]
+fn bitblast_concat_wrong_order_rejected() {
+    let mut ctx = ReconstructCtx::new();
+    let hi = bbterm(vec![bit_of("a", 0), bit_of("a", 1)]);
+    let lo = bbterm(vec![bit_of("b", 0), bit_of("b", 1), bit_of("b", 2)]);
+    let concat = AletheTerm::App("concat".to_owned(), vec![hi, lo]);
+    // Wrong: bit 0 is `a0` (must be the low operand's `b0`).
+    let concl = bb_concl(
+        concat,
+        bbterm(vec![
+            bit_of("a", 0),
+            bit_of("b", 1),
+            bit_of("b", 2),
+            bit_of("a", 0),
+            bit_of("a", 1),
+        ]),
+    );
+    let err = reconstruct_bitblast_step(&mut ctx, "bitblast_concat", &concl)
+        .expect_err("a wrong concat order must be rejected by the kernel");
+    assert!(
+        matches!(err, ReconstructError::KernelRejected { .. }),
+        "got {err:?}"
+    );
+}
+
+/// `bitblast_comp` (`bvcomp` → 1-bit equality reduction) remains outside the
 /// reconstructed fragment — rejected with a clear `UnsupportedRule`.
 #[test]
-fn bitblast_concat_is_unsupported() {
+fn bitblast_comp_is_unsupported() {
     let mut ctx = ReconstructCtx::new();
-    let concat = AletheTerm::App("concat".to_owned(), vec![atom("a"), atom("b")]);
-    let concl = bb_concl(concat, bbterm(vec![bit_of("b", 0)]));
-    let err = reconstruct_bitblast_step(&mut ctx, "bitblast_concat", &concl).unwrap_err();
+    let bvcomp = AletheTerm::App("bvcomp".to_owned(), vec![atom("a"), atom("b")]);
+    let concl = bb_concl(
+        bvcomp,
+        bbterm(vec![AletheTerm::App(
+            "=".to_owned(),
+            vec![bit_of("a", 0), bit_of("b", 0)],
+        )]),
+    );
+    let err = reconstruct_bitblast_step(&mut ctx, "bitblast_comp", &concl).unwrap_err();
     assert!(
         matches!(err, ReconstructError::UnsupportedRule { .. }),
         "got {err:?}"
@@ -1741,8 +1796,36 @@ fn end_to_end_mul_reconstructs() {
         .expect("a bvmul QF_BV proof must reconstruct to kernel-checked False");
 }
 
-/// **NEGATIVE soundness**: a `QF_BV` proof whose bit-blast needs `concat`
-/// (a structural op still outside the reconstructed fragment) is rejected by
+/// **End-to-end**: a `(= (concat a b) d) ∧ ¬…` `QF_BV` unsat proof — bit-blasted
+/// via `bitblast_concat`, with operand widths recovered from the `bitblast_var`
+/// leaves — reconstructs to a kernel-checked `False`.
+#[test]
+fn end_to_end_concat_reconstructs() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let cat = arena.concat(a, b).unwrap(); // width 4
+    let d = {
+        let s = arena.declare("d", Sort::BitVec(4)).unwrap();
+        arena.var(s)
+    };
+    let eq = arena.eq(cat, d).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    reconstruct_qf_bv_proof(&mut ctx, &proof)
+        .expect("a concat QF_BV proof must reconstruct to kernel-checked False");
+}
+
+/// **NEGATIVE soundness**: a `QF_BV` proof whose bit-blast needs `bvcomp`
+/// (`bitblast_comp`, still outside the reconstructed fragment) is rejected by
 /// `reconstruct_qf_bv_proof`, never silently accepted.
 #[test]
 fn end_to_end_non_bitwise_rejected() {
@@ -1756,18 +1839,18 @@ fn end_to_end_non_bitwise_rejected() {
         let s = arena.declare("b", Sort::BitVec(2)).unwrap();
         arena.var(s)
     };
-    let cat = arena.concat(a, b).unwrap();
-    let d = {
-        let s = arena.declare("d", Sort::BitVec(4)).unwrap();
+    let comp = arena.bv_comp(a, b).unwrap(); // 1-bit result
+    let c = {
+        let s = arena.declare("c", Sort::BitVec(1)).unwrap();
         arena.var(s)
     };
-    let eq = arena.eq(cat, d).unwrap();
+    let eq = arena.eq(comp, c).unwrap();
     let neq = arena.not(eq).unwrap();
-    // `(= (concat a b) d) ∧ ¬…` is unsat, but `concat` needs operand widths → rejected.
+    // `(= (bvcomp a b) c) ∧ ¬…` is unsat, but `bvcomp` is not yet reconstructed.
     let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("emitter");
     let mut ctx = ReconstructCtx::new();
     let err = reconstruct_qf_bv_proof(&mut ctx, &proof)
-        .expect_err("a concat bitblast step must be rejected");
+        .expect_err("a bvcomp bitblast step must be rejected");
     assert!(
         matches!(err, ReconstructError::UnsupportedRule { .. }),
         "got {err:?}"
