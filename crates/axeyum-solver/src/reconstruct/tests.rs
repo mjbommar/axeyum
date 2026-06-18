@@ -3070,6 +3070,122 @@ fn end_to_end_forall_two_instances_to_false() {
     assert_infers_false(&mut ctx, term);
 }
 
+/// **Two top-level universals**: `∀x.(f x = a) ∧ ∀y.(f y = b) ∧ a ≠ b`. Each
+/// universal is its own dependent-product axiom `Pi (x:α), Eq α (f x) a` /
+/// `Pi (y:α), Eq α (f y) b`; instantiating both at the shared witness `a` gives
+/// `f a = a` and `f a = b`, whence the ground EUF tail derives `a = b` and closes
+/// against `a ≠ b` to a kernel-checked `False`. Each `forall_inst` is a
+/// `forall_elim` on the *matching* axiom.
+#[test]
+fn end_to_end_two_universals_to_false() {
+    let mut arena = TermArena::new();
+    let alpha = Sort::BitVec(8);
+    let x = arena.declare("x", alpha).unwrap();
+    let y = arena.declare("y", alpha).unwrap();
+    let a = arena.declare("a", alpha).unwrap();
+    let b = arena.declare("b", alpha).unwrap();
+    let f = arena.declare_fun("f", &[alpha], alpha).unwrap();
+
+    let av = arena.var(a);
+    let bv = arena.var(b);
+    // ∀x. f(x) = a
+    let xv = arena.var(x);
+    let fx = arena.apply(f, &[xv]).unwrap();
+    let fx_eq_a = arena.eq(fx, av).unwrap();
+    let f1 = arena.forall(x, fx_eq_a).unwrap();
+    // ∀y. f(y) = b
+    let yv = arena.var(y);
+    let fy = arena.apply(f, &[yv]).unwrap();
+    let fy_eq_b = arena.eq(fy, bv).unwrap();
+    let f2 = arena.forall(y, fy_eq_b).unwrap();
+    // a ≠ b
+    let a_eq_b = arena.eq(av, bv).unwrap();
+    let not_a_eq_b = arena.not(a_eq_b).unwrap();
+
+    let proof = crate::prove_quant_unsat_alethe(&mut arena, &[f1, f2, not_a_eq_b])
+        .expect("emitter produces the two-universal refutation");
+
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_quant_unsat_proof(&mut ctx, &proof)
+        .expect("the two-universal refutation reconstructs");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// **Nested universal**: `∀x.∀y.(h x y = c) ∧ ¬(h s t = c)`. The chain is modeled
+/// as the iterated dependent product `Pi (x:α), Pi (y:α), Eq α (h x y) c`;
+/// instantiating it at `x := s, y := t` is **two** `forall_elim` applications
+/// `(axiom ⟦s⟧) ⟦t⟧`, whose `infer`'d type Pi-reduces to `h s t = c`, contradicting
+/// `¬(h s t = c)` and closing to a kernel-checked `False`.
+#[test]
+fn end_to_end_nested_universal_to_false() {
+    let mut arena = TermArena::new();
+    let alpha = Sort::BitVec(8);
+    let x = arena.declare("x", alpha).unwrap();
+    let y = arena.declare("y", alpha).unwrap();
+    let s = arena.declare("s", alpha).unwrap();
+    let t = arena.declare("t", alpha).unwrap();
+    let c = arena.declare("c", alpha).unwrap();
+    let h = arena.declare_fun("h", &[alpha, alpha], alpha).unwrap();
+
+    let xv = arena.var(x);
+    let yv = arena.var(y);
+    let cv = arena.var(c);
+    let hxy = arena.apply(h, &[xv, yv]).unwrap();
+    let hxy_eq_c = arena.eq(hxy, cv).unwrap();
+    // ∀x.∀y. h(x, y) = c
+    let inner = arena.forall(y, hxy_eq_c).unwrap();
+    let forall = arena.forall(x, inner).unwrap();
+    // ¬(h(s, t) = c)
+    let sv = arena.var(s);
+    let tv = arena.var(t);
+    let hst = arena.apply(h, &[sv, tv]).unwrap();
+    let hst_eq_c = arena.eq(hst, cv).unwrap();
+    let not_hst = arena.not(hst_eq_c).unwrap();
+
+    let proof = crate::prove_quant_unsat_alethe(&mut arena, &[forall, not_hst])
+        .expect("emitter produces the nested-universal refutation");
+
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_quant_unsat_proof(&mut ctx, &proof)
+        .expect("the nested-universal refutation reconstructs");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// The reconstructed nested universal axiom is an iterated dependent product
+/// `Pi (x:α), Pi (y:α), Eq α (h x y) c` — confirm its declared type is a `Pi`
+/// whose body is itself a `Pi`, so the two `forall_elim` applications type-check.
+#[test]
+fn nested_forall_axiom_is_iterated_product() {
+    use axeyum_cnf::AletheTerm;
+    use axeyum_lean_kernel::ExprNode;
+
+    let mut ctx = ReconstructCtx::new();
+    // body: (= (h x y) c).
+    let body = AletheTerm::App(
+        "=".to_owned(),
+        vec![
+            AletheTerm::App(
+                "h".to_owned(),
+                vec![
+                    AletheTerm::Const("x".to_owned()),
+                    AletheTerm::Const("y".to_owned()),
+                ],
+            ),
+            AletheTerm::Const("c".to_owned()),
+        ],
+    );
+    let proof = super::declare_forall_axiom(&mut ctx, &["x", "y"], &body).expect("axiom declares");
+    let ty = ctx.kernel_mut().infer(proof).expect("infer axiom type");
+    let ExprNode::Pi(_, _, inner, _) = ctx.kernel().expr_node(ty) else {
+        panic!("the nested universal axiom must be a dependent product `Pi (x:α), …`");
+    };
+    let inner = *inner;
+    assert!(
+        matches!(ctx.kernel().expr_node(inner), ExprNode::Pi(..)),
+        "the nested axiom body must itself be a `Pi (y:α), …`"
+    );
+}
+
 /// The reconstructed universal axiom is a genuine dependent product
 /// `Pi (x:α), Eq α (f x) c` — confirm its declared type is a `Pi`, so
 /// `forall_elim` (application) is type-correct.
@@ -3087,7 +3203,7 @@ fn forall_axiom_is_dependent_product() {
             AletheTerm::Const("c".to_owned()),
         ],
     );
-    let proof = super::declare_forall_axiom(&mut ctx, "x", &body).expect("axiom declares");
+    let proof = super::declare_forall_axiom(&mut ctx, &["x"], &body).expect("axiom declares");
     let ty = ctx.kernel_mut().infer(proof).expect("infer axiom type");
     assert!(
         matches!(ctx.kernel().expr_node(ty), ExprNode::Pi { .. }),

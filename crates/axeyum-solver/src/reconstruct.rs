@@ -1387,10 +1387,12 @@ fn fresh_axiom(
 // ===========================================================================
 
 impl ReconstructCtx {
-    /// Translate an Alethe term into a Lean [`ExprId`] in the EUF model, with the
-    /// quantified variable `var_name` rendered as the de-Bruijn `bvar(0)` (the
-    /// binder this body sits under in a `Pi (x : α), …`). For bodies without their
-    /// own binders (this slice) the bound variable is always at index 0.
+    /// Translate an Alethe term into a Lean [`ExprId`] in the EUF model, with each
+    /// quantified variable in `var_names` rendered as a de-Bruijn `bvar`. The list
+    /// is outermost-first, matching the binder chain `Pi (x₀:α), … Pi (xₙ:α), …`;
+    /// variable `var_names[i]` therefore sits at de-Bruijn index
+    /// `var_names.len() - 1 - i` (the **innermost** binder is index 0). For a single
+    /// universal (`var_names = [x]`) this is `bvar(0)`, as before.
     ///
     /// # Errors
     ///
@@ -1399,27 +1401,33 @@ impl ReconstructCtx {
     fn alethe_term_to_expr_bound(
         &mut self,
         term: &AletheTerm,
-        var_name: &str,
+        var_names: &[&str],
     ) -> Result<ExprId, ReconstructError> {
         match term {
-            AletheTerm::Const(symbol) if symbol == var_name => Ok(self.kernel.bvar(0)),
             AletheTerm::Const(symbol) => {
-                let name = self.atom_const(symbol);
-                Ok(self.kernel.const_(name, vec![]))
+                if let Some(i) = var_names.iter().position(|v| v == symbol) {
+                    // de-Bruijn index: innermost binder (last in `var_names`) is 0.
+                    let index = u32::try_from(var_names.len() - 1 - i)
+                        .map_err(|_| ReconstructError::UnsupportedTerm { term: term.key() })?;
+                    Ok(self.kernel.bvar(index))
+                } else {
+                    let name = self.atom_const(symbol);
+                    Ok(self.kernel.const_(name, vec![]))
+                }
             }
             AletheTerm::App(head, args) if head == "=" => {
                 let [l, r] = args.as_slice() else {
                     return Err(ReconstructError::UnsupportedTerm { term: term.key() });
                 };
-                let l = self.alethe_term_to_expr_bound(l, var_name)?;
-                let r = self.alethe_term_to_expr_bound(r, var_name)?;
+                let l = self.alethe_term_to_expr_bound(l, var_names)?;
+                let r = self.alethe_term_to_expr_bound(r, var_names)?;
                 Ok(self.mk_eq(l, r))
             }
             AletheTerm::App(head, args) if !args.is_empty() => {
                 let f_name = self.func_const(head, args.len());
                 let mut e = self.kernel.const_(f_name, vec![]);
                 for arg in args {
-                    let a = self.alethe_term_to_expr_bound(arg, var_name)?;
+                    let a = self.alethe_term_to_expr_bound(arg, var_names)?;
                     e = self.kernel.app(e, a);
                 }
                 Ok(e)
@@ -1431,54 +1439,65 @@ impl ReconstructCtx {
     }
 }
 
-/// What a parsed Alethe `(forall (x) body)` atom carries: the bound variable name
-/// and the body term, ready for translation.
+/// What a parsed (possibly nested) Alethe `(forall (x) … body)` atom carries: the
+/// ordered bound-variable names (outermost first) and the quantifier-free inner
+/// body, ready for translation.
 struct ForallAtom<'a> {
-    var_name: &'a str,
+    var_names: Vec<&'a str>,
     body: &'a AletheTerm,
 }
 
-/// Parse a `(forall (x) body)` Alethe atom — the opaque universal the quantifier
-/// emitter `assume`s. The encoding is `App("forall", [Const(x), body])`.
+/// Parse a (possibly nested) `(forall (x) (forall (y) … body))` Alethe atom — the
+/// opaque universal the quantifier emitter `assume`s. Each level is encoded as
+/// `App("forall", [Const(x), inner])`; this peels the chain, collecting the bound
+/// variables outermost-first and returning the innermost quantifier-free body.
+/// `None` if `atom` is not a `forall` chain.
 fn as_forall_atom(atom: &AletheTerm) -> Option<ForallAtom<'_>> {
-    let AletheTerm::App(head, args) = atom else {
-        return None;
-    };
-    if head != "forall" || args.len() != 2 {
+    let mut var_names = Vec::new();
+    let mut cur = atom;
+    while let AletheTerm::App(head, args) = cur {
+        if head != "forall" || args.len() != 2 {
+            break;
+        }
+        let AletheTerm::Const(var_name) = &args[0] else {
+            return None;
+        };
+        var_names.push(var_name.as_str());
+        cur = &args[1];
+    }
+    if var_names.is_empty() {
         return None;
     }
-    let AletheTerm::Const(var_name) = &args[0] else {
-        return None;
-    };
     Some(ForallAtom {
-        var_name,
-        body: &args[1],
+        var_names,
+        body: cur,
     })
 }
 
-/// Infer the witness term `t` by matching the instance `inst` against
-/// `body[x := ?]`: the first `Const(x)` position fixes `t`, later occurrences must
-/// agree, and all other structure must match verbatim. Returns the witness Alethe
-/// term, or `None` if `inst` is not a consistent instance of `body` (so a malformed
-/// `forall_inst` is rejected rather than mis-reconstructed). A body that does not
-/// mention `x` yields `None` here (no witness to apply) — out of this slice.
+/// Infer the witness **tuple** `[t₀, …]` (one per bound variable in `var_names`,
+/// in that order) by matching the instance `inst` against `body[xᵢ := ?]`: the
+/// first occurrence of each `Const(xᵢ)` fixes `tᵢ`, later occurrences must agree,
+/// and all other structure must match verbatim. Returns the witnesses, or `None`
+/// if `inst` is not a consistent instance of `body` (so a malformed `forall_inst`
+/// is rejected rather than mis-reconstructed), or if any bound variable does not
+/// occur in `body` (no witness to apply) — out of this slice.
 fn infer_witness<'a>(
-    var_name: &str,
+    var_names: &[&str],
     body: &AletheTerm,
     inst: &'a AletheTerm,
-) -> Option<&'a AletheTerm> {
+) -> Option<Vec<&'a AletheTerm>> {
     fn go<'a>(
-        var_name: &str,
+        var_names: &[&str],
         body: &AletheTerm,
         inst: &'a AletheTerm,
-        witness: &mut Option<&'a AletheTerm>,
+        witnesses: &mut BTreeMap<String, &'a AletheTerm>,
     ) -> bool {
         match body {
-            AletheTerm::Const(c) if c == var_name => {
-                if let Some(w) = witness {
+            AletheTerm::Const(c) if var_names.iter().any(|v| v == c) => {
+                if let Some(w) = witnesses.get(c) {
                     *w == inst
                 } else {
-                    *witness = Some(inst);
+                    witnesses.insert(c.clone(), inst);
                     true
                 }
             }
@@ -1489,7 +1508,10 @@ fn infer_witness<'a>(
                 };
                 bh == ih
                     && ba.len() == ia.len()
-                    && ba.iter().zip(ia).all(|(b, i)| go(var_name, b, i, witness))
+                    && ba
+                        .iter()
+                        .zip(ia)
+                        .all(|(b, i)| go(var_names, b, i, witnesses))
             }
             AletheTerm::Indexed {
                 op: bo,
@@ -1507,28 +1529,34 @@ fn infer_witness<'a>(
                 bo == io
                     && bi == ii
                     && ba.len() == ia.len()
-                    && ba.iter().zip(ia).all(|(b, i)| go(var_name, b, i, witness))
+                    && ba
+                        .iter()
+                        .zip(ia)
+                        .all(|(b, i)| go(var_names, b, i, witnesses))
             }
         }
     }
-    let mut witness = None;
-    if go(var_name, body, inst, &mut witness) {
-        witness
-    } else {
-        None
+    let mut witnesses: BTreeMap<String, &'a AletheTerm> = BTreeMap::new();
+    if !go(var_names, body, inst, &mut witnesses) {
+        return None;
     }
+    // Every bound variable must have been bound (occur in the body).
+    var_names
+        .iter()
+        .map(|v| witnesses.get(*v).copied())
+        .collect()
 }
 
-/// A `forall_inst` clause `(cl (not (forall (x) body)) inst)` recorded for lazy
+/// A `forall_inst` clause `(cl (not (forall (x) … body)) inst)` recorded for lazy
 /// reconstruction: it is turned into a ground-instance unit when a `resolution`
 /// resolves it against the universal axiom.
 #[derive(Clone)]
 struct ForallInstClause {
-    /// The bound variable name of the universal it instantiates.
-    var_name: String,
-    /// The universal body (with `x` free, as a `Const(x)`).
+    /// The bound variable names of the universal it instantiates (outermost first).
+    var_names: Vec<String>,
+    /// The universal inner body (with the bound variables free, as `Const(x)`).
     body: AletheTerm,
-    /// The instance literal `inst = body[x := t]` (positive).
+    /// The instance literal `inst = body[xᵢ := tᵢ]` (positive).
     inst: AletheTerm,
 }
 
@@ -1539,14 +1567,15 @@ enum QuantProof {
     /// A ground clause proof (unit equality/disequality or EUF theory clause),
     /// reconstructed exactly as the EUF walk does.
     Ground(ClauseProof),
-    /// A universal `assume`: the dependent-product axiom `h : Pi (x:α), ⟦body⟧`,
-    /// with its body kept for witness translation.
+    /// A universal `assume`: the dependent-product axiom
+    /// `h : Pi (x:α), … Pi (xₙ:α), ⟦body⟧`, with its binder names and body kept for
+    /// witness translation.
     ForallAxiom {
-        /// The bound variable name.
-        var_name: String,
-        /// The universal body (Alethe, `x` free).
+        /// The bound variable names (outermost first).
+        var_names: Vec<String>,
+        /// The universal inner body (Alethe, the bound variables free).
         body: AletheTerm,
-        /// The axiom proof term `h_forall : Pi (x:α), ⟦body⟧`.
+        /// The axiom proof term `h_forall : Pi (x:α), … ⟦body⟧`.
         proof: ExprId,
     },
     /// A pending `forall_inst` theory clause, reconstructed on resolution.
@@ -1593,13 +1622,14 @@ pub fn reconstruct_quant_unsat_proof(
                 if let [l] = clause.as_slice() {
                     if !l.negated {
                         if let Some(fa) = as_forall_atom(&l.atom) {
-                            let var_name = fa.var_name.to_owned();
+                            let var_names: Vec<String> =
+                                fa.var_names.iter().map(|&s| s.to_owned()).collect();
                             let body = fa.body.clone();
-                            let proof = declare_forall_axiom(ctx, &var_name, &body)?;
+                            let proof = declare_forall_axiom(ctx, &fa.var_names, &body)?;
                             env.insert(
                                 id.clone(),
                                 QuantProof::ForallAxiom {
-                                    var_name,
+                                    var_names,
                                     body,
                                     proof,
                                 },
@@ -1661,21 +1691,25 @@ pub fn reconstruct_quant_unsat_proof(
     Err(ReconstructError::NoEmptyClause)
 }
 
-/// Declare the universal axiom `h : Pi (x : α), ⟦body⟧` and return its `Const`.
+/// Declare the universal axiom `h : Pi (x : α), … Pi (xₙ : α), ⟦body⟧` (one binder
+/// per name in `var_names`, outermost first) and return its `Const`.
 fn declare_forall_axiom(
     ctx: &mut ReconstructCtx,
-    var_name: &str,
+    var_names: &[&str],
     body: &AletheTerm,
 ) -> Result<ExprId, ReconstructError> {
-    let body_expr = ctx.alethe_term_to_expr_bound(body, var_name)?;
+    let mut ty = ctx.alethe_term_to_expr_bound(body, var_names)?;
     let anon = ctx.kernel.anon();
-    let pi = ctx
-        .kernel
-        .pi(anon, ctx.alpha, body_expr, BinderInfo::Default);
-    fresh_axiom(ctx, pi, "forall")
+    // Wrap one `Pi (· : α)` per bound variable. Each wrap adds an outer binder, so
+    // the count is what matters; `alethe_term_to_expr_bound` already placed each
+    // variable at its de-Bruijn index for this nesting depth.
+    for _ in var_names {
+        ty = ctx.kernel.pi(anon, ctx.alpha, ty, BinderInfo::Default);
+    }
+    fresh_axiom(ctx, ty, "forall")
 }
 
-/// Parse a `forall_inst` step's clause `(cl (not (forall (x) body)) inst)`.
+/// Parse a `forall_inst` step's clause `(cl (not (forall (x) … body)) inst)`.
 fn parse_forall_inst(clause: &[AletheLit]) -> Result<ForallInstClause, ReconstructError> {
     let [neg, pos] = clause else {
         return Err(ReconstructError::MalformedStep {
@@ -1692,58 +1726,64 @@ fn parse_forall_inst(clause: &[AletheLit]) -> Result<ForallInstClause, Reconstru
     let Some(fa) = as_forall_atom(&neg.atom) else {
         return Err(ReconstructError::MalformedStep {
             rule: "forall_inst".to_owned(),
-            detail: "first literal is not a `(forall (x) body)` atom".to_owned(),
+            detail: "first literal is not a `(forall (x) … body)` atom".to_owned(),
         });
     };
     Ok(ForallInstClause {
-        var_name: fa.var_name.to_owned(),
+        var_names: fa.var_names.iter().map(|&s| s.to_owned()).collect(),
         body: fa.body.clone(),
         inst: pos.atom.clone(),
     })
 }
 
 /// If `premises` are exactly a universal axiom and a pending `forall_inst` over the
-/// same universal, reconstruct the instance unit `h ⟦t⟧ : ⟦inst⟧` (`forall_elim`).
-/// Returns `Ok(Some(unit))` on a quantifier resolution, `Ok(None)` when it is not
-/// one (so the caller falls back to the EUF resolution path).
+/// same universal, reconstruct the instance unit `(h ⟦t₀⟧ …) : ⟦inst⟧`
+/// (`forall_elim`, one application per bound variable). Returns `Ok(Some(unit))` on
+/// a quantifier resolution, `Ok(None)` when it is not one (so the caller falls back
+/// to the EUF resolution path).
 fn try_instance_resolution(
     ctx: &mut ReconstructCtx,
     premises: &[String],
     env: &BTreeMap<String, QuantProof>,
 ) -> Result<Option<ClauseProof>, ReconstructError> {
     // Find an axiom premise and an inst premise (order-independent).
-    let mut axiom: Option<(&str, &AletheTerm, ExprId)> = None;
+    let mut axiom: Option<(&[String], &AletheTerm, ExprId)> = None;
     let mut inst: Option<&ForallInstClause> = None;
     for p in premises {
         match env.get(p) {
             Some(QuantProof::ForallAxiom {
-                var_name,
+                var_names,
                 body,
                 proof,
-            }) => axiom = Some((var_name, body, *proof)),
+            }) => axiom = Some((var_names, body, *proof)),
             Some(QuantProof::Inst(ic)) => inst = Some(ic),
             _ => {}
         }
     }
-    let (Some((ax_var, ax_body, ax_proof)), Some(ic)) = (axiom, inst) else {
+    let (Some((ax_vars, ax_body, ax_proof)), Some(ic)) = (axiom, inst) else {
         return Ok(None);
     };
     // The inst clause must instantiate this very universal.
-    if ic.var_name != ax_var || &ic.body != ax_body {
+    if ic.var_names != ax_vars || &ic.body != ax_body {
         return Err(ReconstructError::UnsupportedResolution {
             detail: "forall_inst resolves against a different universal".to_owned(),
         });
     }
-    // Infer the witness `t` from `inst = body[x := t]`, translate it, and apply.
-    let witness = infer_witness(ax_var, ax_body, &ic.inst).ok_or_else(|| {
+    // Infer the witness tuple from `inst = body[xᵢ := tᵢ]`, translate each, and
+    // apply the axiom to them in binder order (outermost first).
+    let ax_var_refs: Vec<&str> = ax_vars.iter().map(String::as_str).collect();
+    let witnesses = infer_witness(&ax_var_refs, ax_body, &ic.inst).ok_or_else(|| {
         ReconstructError::MalformedStep {
             rule: "forall_inst".to_owned(),
             detail: "instance is not a consistent substitution of the universal body".to_owned(),
         }
     })?;
-    let t_expr = ctx.alethe_term_to_expr(witness)?;
-    // forall_elim: h_forall ⟦t⟧ : ⟦body⟧[bvar 0 := ⟦t⟧]  (≡ ⟦inst⟧ after reduce).
-    let app = ctx.kernel.app(ax_proof, t_expr);
+    // forall_elim chain: (((h ⟦t₀⟧) ⟦t₁⟧) …) : ⟦body⟧[xᵢ := ⟦tᵢ⟧]  (≡ ⟦inst⟧).
+    let mut app = ax_proof;
+    for witness in witnesses {
+        let t_expr = ctx.alethe_term_to_expr(witness)?;
+        app = ctx.kernel.app(app, t_expr);
+    }
     // Validate against the translated instance and package as the matching unit.
     if let Some((l, r)) = as_positive_eq(&AletheLit {
         atom: ic.inst.clone(),

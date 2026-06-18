@@ -33,50 +33,57 @@
 //! dependent `Pi (x : α), ⟦P x⟧` axiom and each `forall_inst` is `forall_elim`
 //! (application of that axiom to the witness `⟦t_i⟧`).
 
+use std::collections::BTreeMap;
+
 use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm, check_alethe_with};
 use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode};
 
 /// Emits a checkable Alethe refutation for a quantifier-instantiation `unsat`,
-/// or `None` if the query is not a single top-level universal (plus
+/// or `None` if the query is not one or more top-level universals (plus
 /// quantifier-free side assertions) refuted by finitely many ground
 /// instantiations within this slice.
+///
+/// Each top-level universal `∀x. body` (with a quantifier-free `body`) becomes
+/// its own opaque `forall` atom and its own `assume`d axiom; the universals may
+/// share a bound-variable name (they are distinguished by body). Every ground
+/// instance — over every universal — flows into a single shared EUF/`QF_BV` ground
+/// refutation. Nested universals (`∀x.∀y. body`) are out of this slice (the body
+/// carries its own quantifier) and yield `None`.
 ///
 /// The returned proof, when non-`None`, is guaranteed to pass
 /// [`axeyum_cnf::check_alethe_with`] (with the `forall_inst` hook; self-validated
 /// before return) and to derive the empty clause `(cl)`. `None` is returned when:
 ///
-/// - `assertions` does not contain exactly one top-level `∀x. body` with a
-///   quantifier-free `body` (nested/multiple universals, existentials, or a
-///   non-prenex residual are out of this slice);
+/// - `assertions` contains no top-level `∀x. body`, or a body / side assertion
+///   carries a nested quantifier (existential or buried quantifier);
 /// - the body / a side assertion uses an IR shape the translator does not cover;
 /// - no finite ground instantiation refutes the query (the read-only EUF emitter
 ///   does not refute the instantiated query); or
 /// - the ground EUF tail or the assembled proof fails its own self-check.
 ///
-/// The proof is deterministic: ids are `q_forall`, `q_inst<i>`, `q_res<i>` for
-/// the quantifier layer, then the spliced ground tail's ids are prefixed `g_`.
+/// The proof is deterministic: per universal `j` the ids are `q_forall<j>`,
+/// `q_inst<j>_<i>`, `q_res<j>_<i>` for the quantifier layer, then the spliced
+/// ground tail's ids are prefixed `g_`.
 #[must_use]
 pub fn prove_quant_unsat_alethe(
     arena: &mut TermArena,
     assertions: &[TermId],
 ) -> Option<Vec<AletheCommand>> {
-    // Exactly one top-level universal; the rest are quantifier-free side facts.
-    let mut universal: Option<(SymbolId, TermId)> = None;
+    // Partition into top-level universals and quantifier-free side facts. A
+    // universal may be a chain `∀x.∀y. body` — peel the chain to a list of bound
+    // variables and a quantifier-free inner body.
+    let mut universals: Vec<Universal> = Vec::new();
     let mut ground: Vec<TermId> = Vec::new();
     for &a in assertions {
-        if let TermNode::App {
-            op: Op::Forall(var),
-            args,
-        } = arena.node(a)
-        {
-            if universal.is_some() {
-                return None; // more than one top-level universal: outside this slice
+        if matches!(
+            arena.node(a),
+            TermNode::App {
+                op: Op::Forall(_),
+                ..
             }
-            let (var, body) = (*var, args[0]);
-            if contains_quantifier(arena, body) {
-                return None; // nested/non-prenex body
-            }
-            universal = Some((var, body));
+        ) {
+            let u = peel_universal(arena, a)?;
+            universals.push(u);
         } else {
             if contains_quantifier(arena, a) {
                 return None; // an existential or buried quantifier
@@ -84,96 +91,158 @@ pub fn prove_quant_unsat_alethe(
             ground.push(a);
         }
     }
-    let (var, body) = universal?;
-
-    // Find the witness instances by deciding the ground instantiation (the
-    // read-only EUF emitter). We keep the minimal refuting prefix so the emitted
-    // proof carries no redundant instantiation.
-    let witnesses = witness_instances(arena, var, body, &ground)?;
-    if witnesses.is_empty() {
+    if universals.is_empty() {
         return None;
     }
 
-    // The Alethe form of the universal body and its bound variable.
-    let var_name = arena.symbol(var).0.to_owned();
-    let body_alethe = term_to_alethe(arena, body)?;
-    let forall_atom = AletheTerm::App(
-        "forall".to_owned(),
-        vec![AletheTerm::Const(var_name.clone()), body_alethe.clone()],
-    );
+    // Jointly find the witness instances across all universals by deciding the
+    // ground instantiation (the read-only EUF emitter). We keep the minimal
+    // refuting subset so the emitted proof carries no redundant instantiation.
+    let chosen = witness_instances_multi(arena, &universals, &ground)?;
+    if chosen.iter().all(Vec::is_empty) {
+        return None;
+    }
 
     let mut commands: Vec<AletheCommand> = Vec::new();
 
-    // 1. assume the universal as a unit clause over the opaque `forall` atom.
-    commands.push(AletheCommand::Assume {
-        id: "q_forall".to_owned(),
-        clause: vec![lit(forall_atom.clone(), false)],
-    });
+    // 1. assume each universal as a unit clause over its opaque (possibly nested)
+    //    `forall` atom `(forall (x) (forall (y) … body))`.
+    let mut forall_atoms: Vec<AletheTerm> = Vec::with_capacity(universals.len());
+    for (j, u) in universals.iter().enumerate() {
+        let forall_atom = forall_atom_of(arena, u)?;
+        commands.push(AletheCommand::Assume {
+            id: format!("q_forall{j}"),
+            clause: vec![lit(forall_atom.clone(), false)],
+        });
+        forall_atoms.push(forall_atom);
+    }
 
-    // 2/3. per witness: forall_inst lemma, then resolve it against the universal.
-    let mut instance_ground: Vec<TermId> = Vec::with_capacity(witnesses.len());
-    for (i, &t) in witnesses.iter().enumerate() {
-        // P[x := t] in the IR (for the ground tail) and its Alethe form.
-        let inst = substitute(arena, body, var, t)?;
-        let inst_alethe = term_to_alethe(arena, inst)?;
-        let inst_id = format!("q_inst{i}");
-        let res_id = format!("q_res{i}");
-        // forall_inst: (cl (not (forall (x) body)) body[x:=t]).
-        commands.push(AletheCommand::Step {
-            id: inst_id.clone(),
-            clause: vec![
-                lit(forall_atom.clone(), true),
-                lit(inst_alethe.clone(), false),
-            ],
-            rule: "forall_inst".to_owned(),
-            premises: Vec::new(),
-            args: Vec::new(),
-        });
-        // resolution with the assumed universal: (cl body[x:=t]).
-        commands.push(AletheCommand::Step {
-            id: res_id,
-            clause: vec![lit(inst_alethe, false)],
-            rule: "resolution".to_owned(),
-            premises: vec!["q_forall".to_owned(), inst_id],
-            args: Vec::new(),
-        });
-        instance_ground.push(inst);
+    // 2/3. per universal, per witness tuple: forall_inst lemma, then resolve it
+    //      against the matching universal axiom. We keep each instance paired with
+    //      the `q_res<j>_<i>` id that proves its unit, for splicing the ground tail.
+    let mut instance_ground: Vec<(TermId, String)> = Vec::new();
+    for (j, u) in universals.iter().enumerate() {
+        for (i, tuple) in chosen[j].iter().enumerate() {
+            // body[x:=s, y:=t, …] in the IR (for the ground tail) and its Alethe.
+            let inst = substitute_tuple(arena, u, tuple)?;
+            let inst_alethe = term_to_alethe(arena, inst)?;
+            let inst_id = format!("q_inst{j}_{i}");
+            let res_id = format!("q_res{j}_{i}");
+            // forall_inst: (cl (not (forall (x) … body)) body[x:=s, …]).
+            commands.push(AletheCommand::Step {
+                id: inst_id.clone(),
+                clause: vec![
+                    lit(forall_atoms[j].clone(), true),
+                    lit(inst_alethe.clone(), false),
+                ],
+                rule: "forall_inst".to_owned(),
+                premises: Vec::new(),
+                args: Vec::new(),
+            });
+            // resolution with the assumed universal: (cl body[x:=s, …]).
+            commands.push(AletheCommand::Step {
+                id: res_id.clone(),
+                clause: vec![lit(inst_alethe, false)],
+                rule: "resolution".to_owned(),
+                premises: vec![format!("q_forall{j}"), inst_id],
+                args: Vec::new(),
+            });
+            instance_ground.push((inst, res_id));
+        }
     }
 
     // 4. ground EUF refutation of the instances + side assertions, spliced in. The
     //    EUF emitter assumes its own units; we feed it the instances and `ground`,
     //    and prefix its ids so they do not collide with the quantifier layer.
-    let mut tail_inputs = instance_ground.clone();
+    let mut tail_inputs: Vec<TermId> = instance_ground.iter().map(|&(t, _)| t).collect();
     tail_inputs.extend_from_slice(&ground);
     let tail = crate::prove_qf_uf_unsat_alethe(arena, &tail_inputs)?;
     // The EUF tail re-`assume`s the instance units; replace those re-assumptions
-    // with references to our `q_res<i>` resolvents so the ground instances are
-    // *derived from the universal*, not re-introduced as fresh hypotheses.
+    // with references to our `q_res<j>_<i>` resolvents so the ground instances are
+    // *derived from the universals*, not re-introduced as fresh hypotheses.
     splice_ground_tail(&mut commands, &tail, &instance_ground, arena);
 
-    finish(arena, &commands, &var_name, body)
+    finish(arena, &commands, &universals)
+}
+
+/// A top-level universal as a (possibly nested) **binder chain** `∀x.∀y.… body`:
+/// the ordered bound variables and the quantifier-free inner body (with the bound
+/// variables free as `Symbol`s). A single universal `∀x. body` is the one-variable
+/// case (`vars = [x]`).
+struct Universal {
+    /// The bound variables, outermost first.
+    vars: Vec<SymbolId>,
+    /// The quantifier-free inner body.
+    body: TermId,
+}
+
+/// Peel a top-level `∀x.∀y.… body` chain into its [`Universal`]. Returns `None`
+/// if, after peeling all leading universals, the inner body still contains a
+/// quantifier (a non-prenex residual or an existential) — out of this slice.
+fn peel_universal(arena: &TermArena, mut term: TermId) -> Option<Universal> {
+    let mut vars = Vec::new();
+    while let TermNode::App {
+        op: Op::Forall(var),
+        args,
+    } = arena.node(term)
+    {
+        vars.push(*var);
+        term = args[0];
+    }
+    if vars.is_empty() || contains_quantifier(arena, term) {
+        return None;
+    }
+    Some(Universal { vars, body: term })
+}
+
+/// Build the opaque Alethe `forall` atom for a (nested) universal:
+/// `(forall (x) (forall (y) … ⟦body⟧))`, one `forall` wrapper per bound variable
+/// outermost-first.
+fn forall_atom_of(arena: &TermArena, u: &Universal) -> Option<AletheTerm> {
+    let mut atom = term_to_alethe(arena, u.body)?;
+    for &var in u.vars.iter().rev() {
+        let var_name = arena.symbol(var).0.to_owned();
+        atom = AletheTerm::App("forall".to_owned(), vec![AletheTerm::Const(var_name), atom]);
+    }
+    Some(atom)
+}
+
+/// Substitute a witness tuple `[s, t, …]` for the bound variables `[x, y, …]` of a
+/// universal, yielding the ground instance `body[x:=s, y:=t, …]`. The tuple length
+/// must match the binder count.
+fn substitute_tuple(arena: &mut TermArena, u: &Universal, tuple: &[TermId]) -> Option<TermId> {
+    if tuple.len() != u.vars.len() {
+        return None;
+    }
+    let mut t = u.body;
+    for (&var, &val) in u.vars.iter().zip(tuple) {
+        t = substitute(arena, t, var, val)?;
+    }
+    Some(t)
 }
 
 /// Splices the EUF ground tail onto the quantifier layer: each tail command is
 /// re-emitted with its id prefixed `g_` (and its premise references likewise),
 /// **except** an `assume` whose unit clause is one of the derived ground
 /// instances `(cl ⟦P(t_i)⟧)` — that is dropped, and any later reference to it is
-/// redirected to the corresponding `q_res<i>` resolvent. This makes the ground
+/// redirected to the corresponding `q_res<j>_<i>` resolvent. This makes the ground
 /// instances flow from the quantifier instantiation rather than being
-/// re-assumed, so the final empty clause depends only on `q_forall` and the side
-/// assertions.
+/// re-assumed, so the final empty clause depends only on the universal axioms and
+/// the side assertions.
+///
+/// Each instance is paired with the id of the resolvent that proves its unit, so
+/// instances from different universals redirect to the right `q_res<j>_<i>`.
 fn splice_ground_tail(
     commands: &mut Vec<AletheCommand>,
     tail: &[AletheCommand],
-    instances: &[TermId],
+    instances: &[(TermId, String)],
     arena: &TermArena,
 ) {
     use std::collections::BTreeMap;
-    // Alethe key of each instance → the `q_res<i>` id that proves its unit clause.
+    // Alethe key of each instance → the `q_res<j>_<i>` id that proves its unit.
     let inst_keys: BTreeMap<String, String> = instances
         .iter()
-        .enumerate()
-        .filter_map(|(i, &t)| Some((term_to_alethe(arena, t)?.key(), format!("q_res{i}"))))
+        .filter_map(|(t, res_id)| Some((term_to_alethe(arena, *t)?.key(), res_id.clone())))
         .collect();
     // Tail id → the id later references should resolve to (prefixed, or a q_res).
     let mut remap: BTreeMap<String, String> = BTreeMap::new();
@@ -224,21 +293,37 @@ fn splice_ground_tail(
 /// Runs the assembled proof through [`axeyum_cnf::check_alethe_with`] with the
 /// `forall_inst` `extra` hook and returns it only if it checks (`Ok(true)`); any
 /// other outcome yields `None`. This is the single self-validation gate.
+///
+/// The hook closes over the bound-variable names and inner body of **every**
+/// universal in the query (a chain `∀x.∀y.…` carries all its variables), so a
+/// `forall_inst` step is validated against whichever universal its literal-0
+/// (possibly nested) `(forall (x) … body)` atom identifies.
 fn finish(
     arena: &TermArena,
     commands: &[AletheCommand],
-    var_name: &str,
-    body: TermId,
+    universals: &[Universal],
 ) -> Option<Vec<AletheCommand>> {
-    // The Alethe form of the body, used to re-check each `forall_inst` step's
-    // substitution structurally.
-    let body_alethe = term_to_alethe(arena, body)?;
-    let var_name = var_name.to_owned();
+    // The bound-variable names and inner body of each universal, used to re-check
+    // each `forall_inst` step's substitution structurally.
+    let mut forms: Vec<(Vec<String>, AletheTerm)> = Vec::with_capacity(universals.len());
+    for u in universals {
+        let names: Vec<String> = u
+            .vars
+            .iter()
+            .map(|&v| arena.symbol(v).0.to_owned())
+            .collect();
+        forms.push((names, term_to_alethe(arena, u.body)?));
+    }
     let hook = move |rule: &str, clause: &[AletheLit]| -> Option<bool> {
         if rule != "forall_inst" {
             return None;
         }
-        Some(check_forall_inst(&var_name, &body_alethe, clause))
+        // Accept the step iff it is a sound instantiation of some universal.
+        Some(
+            forms
+                .iter()
+                .any(|(names, body)| check_forall_inst(names, body, clause)),
+        )
     };
     match check_alethe_with(commands, &hook) {
         Ok(true) => Some(commands.to_vec()),
@@ -246,49 +331,60 @@ fn finish(
     }
 }
 
-/// Validates a `forall_inst` clause `(cl (not (forall (x) body)) body[x:=t])`:
-/// literal 0 is the negated universal atom `(forall (x) body)` with the expected
-/// `body`, and literal 1 is the positive body with every `Const(x)` replaced by
-/// the **same** witness term `t` (i.e. the result equals `body[x := t]` for some
-/// consistent `t`). Returns `true` iff the instantiation is structurally sound.
-fn check_forall_inst(var_name: &str, body: &AletheTerm, clause: &[AletheLit]) -> bool {
+/// Validates a `forall_inst` clause `(cl (not (forall (x) … body)) body[x:=s, …])`:
+/// literal 0 is the negated (possibly nested) universal atom `(forall (x) …
+/// body)`, whose peeled binder names must equal `var_names` and whose inner body
+/// must equal `body`; literal 1 is the positive body with each bound `Const(x_i)`
+/// replaced by a **consistent** witness `t_i` (i.e. the result equals
+/// `body[x_1:=t_1, …]` for some witness tuple). Returns `true` iff the
+/// instantiation is structurally sound for **this** universal chain.
+fn check_forall_inst(var_names: &[String], body: &AletheTerm, clause: &[AletheLit]) -> bool {
     let [neg, pos] = clause else {
         return false;
     };
     if !neg.negated || pos.negated {
         return false;
     }
-    // Literal 0 must be the universal atom over exactly this body.
-    let AletheTerm::App(head, qargs) = &neg.atom else {
-        return false;
-    };
-    if head != "forall" || qargs.len() != 2 {
+    // Literal 0 must be the (nested) universal atom over exactly these binders and
+    // this inner body.
+    let mut atom = &neg.atom;
+    for name in var_names {
+        let AletheTerm::App(head, qargs) = atom else {
+            return false;
+        };
+        if head != "forall" || qargs.len() != 2 {
+            return false;
+        }
+        if qargs[0] != AletheTerm::Const(name.clone()) {
+            return false;
+        }
+        atom = &qargs[1];
+    }
+    if atom != body {
         return false;
     }
-    if qargs[0] != AletheTerm::Const(var_name.to_owned()) || &qargs[1] != body {
-        return false;
-    }
-    // Literal 1 must be `body[x := t]` for one consistent witness `t`: infer `t`
-    // from where `x` occurs in `body`, then verify the whole substitution.
-    let mut witness: Option<AletheTerm> = None;
-    match_substitution(var_name, body, &pos.atom, &mut witness)
+    // Literal 1 must be `body[x_i := t_i]` for a consistent witness tuple: infer
+    // each `t_i` from where `x_i` occurs in `body`, then verify the substitution.
+    let mut witnesses: BTreeMap<String, AletheTerm> = BTreeMap::new();
+    match_substitution(var_names, body, &pos.atom, &mut witnesses)
 }
 
-/// Structurally matches `inst` against `body[x := ?]`, binding the witness on the
-/// first `Const(x)` encountered and requiring every later `Const(x)` to map to the
-/// same term. Non-`x` constants and heads must match verbatim; arities must agree.
+/// Structurally matches `inst` against `body[x_i := ?]`, binding each bound
+/// variable's witness on its first occurrence and requiring every later occurrence
+/// to map to the same term. Non-bound constants and heads must match verbatim;
+/// arities must agree.
 fn match_substitution(
-    var_name: &str,
+    var_names: &[String],
     body: &AletheTerm,
     inst: &AletheTerm,
-    witness: &mut Option<AletheTerm>,
+    witnesses: &mut BTreeMap<String, AletheTerm>,
 ) -> bool {
     match body {
-        AletheTerm::Const(c) if c == var_name => {
-            if let Some(w) = witness {
+        AletheTerm::Const(c) if var_names.iter().any(|v| v == c) => {
+            if let Some(w) = witnesses.get(c) {
                 w == inst
             } else {
-                *witness = Some(inst.clone());
+                witnesses.insert(c.clone(), inst.clone());
                 true
             }
         }
@@ -302,7 +398,7 @@ fn match_substitution(
                 && bargs
                     .iter()
                     .zip(iargs)
-                    .all(|(b, i)| match_substitution(var_name, b, i, witness))
+                    .all(|(b, i)| match_substitution(var_names, b, i, witnesses))
         }
         AletheTerm::Indexed {
             op: bo,
@@ -323,44 +419,72 @@ fn match_substitution(
                 && ba
                     .iter()
                     .zip(ia)
-                    .all(|(b, i)| match_substitution(var_name, b, i, witness))
+                    .all(|(b, i)| match_substitution(var_names, b, i, witnesses))
         }
     }
 }
 
-/// Finds the finite witness terms `t_i` whose instances `P(t_i)` (with the side
-/// assertions) are `unsat`. Uses the enumerative-instantiation universe — the
-/// ground leaves of the bound variable's sort appearing in the side assertions —
-/// and keeps the **minimal** prefix of them whose instances already refute the
-/// query, so the emitted proof carries no redundant instantiation.
+/// Jointly finds the finite witness **tuples** for **every** universal whose
+/// instances (with the side assertions) are `unsat`. Each universal `j` draws
+/// each binder's witness from the enumerative-instantiation universe of that
+/// binder's sort — the ground leaves appearing in the side assertions — and its
+/// candidate witness tuples are the cartesian product over the binders. The search
+/// returns the **minimal** refuting subset across all universals (smallest total
+/// instance count first), so the emitted proof carries no redundant instantiation.
 ///
-/// Returns `None` if no finite ground prefix refutes the query within this slice.
-fn witness_instances(
+/// The return value is one list of witness tuples per universal (parallel to
+/// `universals`); each tuple has one term per binder. Some lists may be empty when
+/// that universal is not needed for the refutation.
+///
+/// Returns `None` if no finite ground subset refutes the query within this slice.
+fn witness_instances_multi(
     arena: &mut TermArena,
-    var: SymbolId,
-    body: TermId,
+    universals: &[Universal],
     ground: &[TermId],
-) -> Option<Vec<TermId>> {
-    let sort = arena.symbol(var).1;
-    let mut candidates = ground_terms_of_sort(arena, ground, sort);
-    candidates.sort_by_key(|t| t.index());
-    candidates.dedup();
+) -> Option<Vec<Vec<Vec<TermId>>>> {
+    // The flat candidate list: each entry is `(universal_index, witness_tuple)`,
+    // labelled so the chosen subset can be projected back per universal.
+    let mut candidates: Vec<(usize, Vec<TermId>)> = Vec::new();
+    for (j, u) in universals.iter().enumerate() {
+        // Per binder, the ground leaves of its sort; then the cartesian product.
+        let mut per_binder: Vec<Vec<TermId>> = Vec::with_capacity(u.vars.len());
+        for &var in &u.vars {
+            let sort = arena.symbol(var).1;
+            let mut leaves = ground_terms_of_sort(arena, ground, sort);
+            leaves.sort_by_key(|t| t.index());
+            leaves.dedup();
+            if leaves.is_empty() {
+                return None; // a binder with no candidate witness: no instance
+            }
+            per_binder.push(leaves);
+        }
+        for tuple in cartesian_product(&per_binder) {
+            candidates.push((j, tuple));
+        }
+    }
     if candidates.is_empty() || candidates.len() > WITNESS_CANDIDATE_CAP {
         return None;
     }
-    // Find the smallest refuting *subset*: try every combination of size `k`,
-    // `k` increasing, so the emitted proof carries no redundant instantiation.
-    // (Candidate counts in this slice are tiny; the cap bounds the search.)
+    // Find the smallest refuting *subset* of labelled candidates: try every
+    // combination of size `k`, `k` increasing, so the emitted proof carries no
+    // redundant instantiation. (Candidate counts in this slice are tiny; the cap
+    // bounds the search.)
     for k in 1..=candidates.len() {
         let mut combo = (0..k).collect::<Vec<usize>>();
         loop {
-            let chosen: Vec<TermId> = combo.iter().map(|&i| candidates[i]).collect();
-            let mut probe: Vec<TermId> = Vec::with_capacity(chosen.len() + ground.len());
-            for &t in &chosen {
-                probe.push(substitute(arena, body, var, t)?);
+            let mut probe: Vec<TermId> = Vec::with_capacity(k + ground.len());
+            for &idx in &combo {
+                let (j, tuple) = &candidates[idx];
+                probe.push(substitute_tuple(arena, &universals[*j], tuple)?);
             }
             probe.extend_from_slice(ground);
             if crate::prove_qf_uf_unsat_alethe(arena, &probe).is_some() {
+                // Project the chosen labelled candidates back per universal.
+                let mut chosen: Vec<Vec<Vec<TermId>>> = vec![Vec::new(); universals.len()];
+                for &idx in &combo {
+                    let (j, tuple) = &candidates[idx];
+                    chosen[*j].push(tuple.clone());
+                }
                 return Some(chosen);
             }
             if !next_combination(&mut combo, candidates.len()) {
@@ -372,8 +496,30 @@ fn witness_instances(
 }
 
 /// The cap on instantiation candidates the subset search will consider, bounding
-/// the combinatorial witness search to this slice's small inputs.
-const WITNESS_CANDIDATE_CAP: usize = 8;
+/// the combinatorial witness search to this slice's small inputs. Nested
+/// universals form witness *tuples* (a cartesian product over their binders), so
+/// the cap is large enough to admit a couple of binders over a handful of ground
+/// leaves while keeping the worst-case subset enumeration (2^cap) bounded.
+const WITNESS_CANDIDATE_CAP: usize = 16;
+
+/// The cartesian product of `per_binder[0] × per_binder[1] × …`, in
+/// lexicographic order with the first binder varying slowest. With no binders
+/// (empty input) yields a single empty tuple; with any empty factor yields none.
+fn cartesian_product(per_binder: &[Vec<TermId>]) -> Vec<Vec<TermId>> {
+    let mut out: Vec<Vec<TermId>> = vec![Vec::new()];
+    for factor in per_binder {
+        let mut next = Vec::with_capacity(out.len() * factor.len());
+        for prefix in &out {
+            for &t in factor {
+                let mut tuple = prefix.clone();
+                tuple.push(t);
+                next.push(tuple);
+            }
+        }
+        out = next;
+    }
+    out
+}
 
 /// Advance `combo` (a strictly-increasing index vector into `0..n`) to the next
 /// lexicographic combination of the same size, returning `false` when exhausted.
@@ -522,12 +668,12 @@ mod tests {
     /// gate), asserting it derives the empty clause.
     fn recheck(arena: &TermArena, proof: &[AletheCommand], var_name: &str, body: TermId) {
         let body_alethe = super::term_to_alethe(arena, body).expect("body translates");
-        let var_name = var_name.to_owned();
+        let var_names = vec![var_name.to_owned()];
         let hook = move |rule: &str, clause: &[AletheLit]| -> Option<bool> {
             if rule != "forall_inst" {
                 return None;
             }
-            Some(super::check_forall_inst(&var_name, &body_alethe, clause))
+            Some(super::check_forall_inst(&var_names, &body_alethe, clause))
         };
         assert_eq!(
             check_alethe_with(proof, &hook),
@@ -599,33 +745,67 @@ mod tests {
         assert_eq!(count_inst(&proof), 1);
     }
 
-    /// Two top-level universals are out of this single-universal slice: the
-    /// emitter returns `None` rather than guessing.
+    /// **Two top-level universals**: `∀x.(f x = a) ∧ ∀y.(f y = b) ∧ a ≠ b`.
+    /// Instantiating both at the same witness `w` gives `f w = a` and `f w = b`,
+    /// hence `a = b`, contradicting `a ≠ b`. Each universal becomes its own
+    /// `forall` axiom; each `forall_inst` cites the matching one.
     #[test]
-    fn two_universals_is_out_of_slice() {
+    fn two_universals_both_instantiated() {
         let mut arena = TermArena::new();
         let alpha = Sort::BitVec(8);
         let x = arena.declare("x", alpha).unwrap();
         let y = arena.declare("y", alpha).unwrap();
         let a = arena.declare("a", alpha).unwrap();
-        let c = arena.declare("c", alpha).unwrap();
+        let b = arena.declare("b", alpha).unwrap();
         let f = arena.declare_fun("f", &[alpha], alpha).unwrap();
 
+        let av = arena.var(a);
+        let bv = arena.var(b);
+
+        // ∀x. f(x) = a
         let xv = arena.var(x);
         let fx = arena.apply(f, &[xv]).unwrap();
-        let cv = arena.var(c);
-        let fx_eq_c = arena.eq(fx, cv).unwrap();
-        let f1 = arena.forall(x, fx_eq_c).unwrap();
+        let fx_eq_a = arena.eq(fx, av).unwrap();
+        let f1 = arena.forall(x, fx_eq_a).unwrap();
+        // ∀y. f(y) = b
         let yv = arena.var(y);
         let fy = arena.apply(f, &[yv]).unwrap();
-        let fy_eq_c = arena.eq(fy, cv).unwrap();
-        let f2 = arena.forall(y, fy_eq_c).unwrap();
-        let av = arena.var(a);
-        let fa = arena.apply(f, &[av]).unwrap();
-        let fa_eq_c = arena.eq(fa, cv).unwrap();
-        let not_fa = arena.not(fa_eq_c).unwrap();
+        let fy_eq_b = arena.eq(fy, bv).unwrap();
+        let f2 = arena.forall(y, fy_eq_b).unwrap();
+        // a ≠ b  (the witness comes from these leaves; both universals share it)
+        let a_eq_b = arena.eq(av, bv).unwrap();
+        let not_a_eq_b = arena.not(a_eq_b).unwrap();
 
-        assert!(prove_quant_unsat_alethe(&mut arena, &[f1, f2, not_fa]).is_none());
+        let proof = prove_quant_unsat_alethe(&mut arena, &[f1, f2, not_a_eq_b])
+            .expect("emits a two-universal refutation");
+        // Re-check with a hook that accepts an instantiation of either universal.
+        let forms = [("x", fx_eq_a), ("y", fy_eq_b)];
+        let alethe_forms: Vec<(Vec<String>, _)> = forms
+            .iter()
+            .map(|&(n, body)| {
+                (
+                    vec![n.to_owned()],
+                    super::term_to_alethe(&arena, body).expect("body translates"),
+                )
+            })
+            .collect();
+        let hook = move |rule: &str, clause: &[AletheLit]| -> Option<bool> {
+            if rule != "forall_inst" {
+                return None;
+            }
+            Some(
+                alethe_forms
+                    .iter()
+                    .any(|(n, body)| super::check_forall_inst(n, body, clause)),
+            )
+        };
+        assert_eq!(
+            check_alethe_with(&proof, &hook),
+            Ok(true),
+            "two-universal proof must independently re-check to the empty clause"
+        );
+        // Two universals, each instantiated once at the shared witness.
+        assert_eq!(count_inst(&proof), 2, "one instantiation per universal");
     }
 
     /// Two genuine instances of one universal: `∀x. f(x) = c`, with
@@ -658,6 +838,54 @@ mod tests {
             .expect("emits a two-instance proof");
         recheck(&arena, &proof, "x", fx_eq_c);
         assert_eq!(count_inst(&proof), 2, "two instantiations");
+    }
+
+    /// **Nested universal**: `∀x.∀y.(h x y = c) ∧ ¬(h s t = c)`. Instantiating the
+    /// chain at `x := s, y := t` gives `h s t = c`, contradicting `¬(h s t = c)`.
+    /// One `forall_inst` over the nested `(forall (x) (forall (y) …))` atom.
+    #[test]
+    fn nested_universal_one_instance() {
+        let mut arena = TermArena::new();
+        let alpha = Sort::BitVec(8);
+        let x = arena.declare("x", alpha).unwrap();
+        let y = arena.declare("y", alpha).unwrap();
+        let s = arena.declare("s", alpha).unwrap();
+        let t = arena.declare("t", alpha).unwrap();
+        let c = arena.declare("c", alpha).unwrap();
+        let h = arena.declare_fun("h", &[alpha, alpha], alpha).unwrap();
+
+        let xv = arena.var(x);
+        let yv = arena.var(y);
+        let cv = arena.var(c);
+        let hxy = arena.apply(h, &[xv, yv]).unwrap();
+        let hxy_eq_c = arena.eq(hxy, cv).unwrap();
+        // ∀x.∀y. h(x, y) = c
+        let inner = arena.forall(y, hxy_eq_c).unwrap();
+        let forall = arena.forall(x, inner).unwrap();
+        // ¬(h(s, t) = c)
+        let sv = arena.var(s);
+        let tv = arena.var(t);
+        let hst = arena.apply(h, &[sv, tv]).unwrap();
+        let hst_eq_c = arena.eq(hst, cv).unwrap();
+        let not_hst = arena.not(hst_eq_c).unwrap();
+
+        let proof = prove_quant_unsat_alethe(&mut arena, &[forall, not_hst])
+            .expect("emits a nested-universal proof");
+        // Re-check with a hook over the two-binder chain `[x, y]` and inner body.
+        let body_alethe = super::term_to_alethe(&arena, hxy_eq_c).expect("body translates");
+        let names = vec!["x".to_owned(), "y".to_owned()];
+        let hook = move |rule: &str, clause: &[AletheLit]| -> Option<bool> {
+            if rule != "forall_inst" {
+                return None;
+            }
+            Some(super::check_forall_inst(&names, &body_alethe, clause))
+        };
+        assert_eq!(
+            check_alethe_with(&proof, &hook),
+            Ok(true),
+            "nested-universal proof must independently re-check to the empty clause"
+        );
+        assert_eq!(count_inst(&proof), 1, "one nested instantiation");
     }
 
     /// Not a quantified query: the emitter declines (returns `None`).
