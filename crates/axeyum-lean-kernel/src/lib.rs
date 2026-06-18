@@ -46,6 +46,7 @@
 
 #![forbid(unsafe_code)]
 
+mod arith_prelude;
 mod env;
 mod expr;
 mod inductive;
@@ -57,6 +58,7 @@ mod tc;
 use std::collections::HashMap;
 use std::fmt;
 
+pub use arith_prelude::{ArithPrelude, build_arith_prelude};
 pub use env::{Declaration, Environment, RecRule, ReducibilityHint};
 pub use expr::{BinderInfo, ExprId, ExprNode, Lit};
 pub use level::{LevelId, LevelNode};
