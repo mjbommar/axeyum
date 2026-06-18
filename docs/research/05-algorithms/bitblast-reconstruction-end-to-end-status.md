@@ -6,16 +6,27 @@ below are all fixed. Kept as the record of how it was diagnosed and closed.
 
 ## Outcome
 
-All three resolution blockers fixed and shipped this session:
+Closed with **exactly two** fixes (the emitter is untouched and stays
+Carcara-valid):
 1. negation spelling — `normalize_lit_polarity` (`356f3e3`);
-2. commutative `=` arg-order — `eq2_canon` in the emitter (`6f0fd2c`);
-3. resolution order/non-confluence — **Davis–Putnam variable elimination**
+2. resolution order/non-confluence — **Davis–Putnam variable elimination**
    (`f08c189`), replacing the dead-ending accumulator/greedy/pool/chain folds.
 
 `(bvult a b) ∧ (bvult b a)` (antisymmetry, a genuine resolution DAG) reconstructs
 to kernel-checked `False` (`end_to_end_ult_antisymmetry_reconstructs`). Because
 `reconstruct_resolution_step` serves every theory's proof reconstruction, the DP
-resolution fixed this universally — all 244 lib tests green.
+resolution fixed this universally — all 243 lib tests + 46 `carcara_crosscheck`
+tests green.
+
+**Note on the `=` arg-order detour.** A third "fix" — `eq2_canon`, canonicalizing
+the emitter's bit-equality operand order (`6f0fd2c`) — was both **unnecessary and
+harmful**, and was reverted (`710d7e6`). Harmful: it made the proof
+Carcara-INVALID (Carcara's `bitblast_ult` recomputes the ladder in operand order
+and rejects a canonicalized `=`); the lesson is to **run `carcara_crosscheck`
+before committing any emitter change**. Unnecessary: DP closes antisymmetry without
+it — both `=` spellings are distinct CNF variables, but the `cnf_intro`/`equiv`
+clauses tie each to the same bits, so DP eliminates them independently and still
+derives the empty clause.
 
 ---
 
