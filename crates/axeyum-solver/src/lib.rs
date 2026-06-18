@@ -117,8 +117,8 @@ pub use euf_egraph::{
 };
 pub use evidence::{
     Evidence, EvidenceReport, LayerVersions, ProofOutcome, Provenance, SEMANTICS_VERSION,
-    produce_evidence, produce_lra_dpll_evidence, produce_lra_evidence, produce_qf_bv_evidence,
-    prove,
+    produce_evidence, produce_lra_dpll_evidence, produce_lra_evidence, produce_nra_evidence,
+    produce_qf_bv_evidence, prove,
 };
 pub use faithfulness::{FaithfulnessOutcome, check_qf_bv_faithfulness};
 pub use fp::FloatFormat;

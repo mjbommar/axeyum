@@ -552,6 +552,45 @@ pub fn produce_lra_dpll_evidence(
     })
 }
 
+/// Runs the **nonlinear** real-arithmetic engine ([`check_with_nra`]) on
+/// `assertions` and packages an [`EvidenceReport`]. NRA is sound but incomplete
+/// (ADR-0024): a `sat` model is replay-checkable; an `unsat` is recorded as a
+/// *bare* `Evidence::Unsat(None)` (a documented trust gap — no transferable
+/// certificate yet); `unknown` is the NRA frontier. This is the fallback the
+/// front door takes when the linear-real route rejects a nonlinear product.
+///
+/// # Errors
+///
+/// Returns [`SolverError`] from the NRA engine.
+pub fn produce_nra_evidence(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<EvidenceReport, SolverError> {
+    let provenance = Provenance {
+        semantics_version: SEMANTICS_VERSION,
+        layers: LayerVersions::CURRENT,
+        backend: "nra-linear-abstraction".to_owned(),
+        assertion_count: assertions.len(),
+        timeout: config.timeout,
+        resource_limit: config.resource_limit,
+        node_budget: config.node_budget,
+        cnf_variable_budget: config.cnf_variable_budget,
+        cnf_clause_budget: config.cnf_clause_budget,
+        prove_unsat: true,
+    };
+    let evidence = match crate::nra::check_with_nra(arena, assertions, config)? {
+        CheckResult::Sat(model) => Evidence::Sat(model),
+        CheckResult::Unsat => Evidence::Unsat(None),
+        CheckResult::Unknown(reason) => Evidence::Unknown(reason),
+    };
+    Ok(EvidenceReport {
+        evidence,
+        provenance,
+        trusted_steps: Vec::new(),
+    })
+}
+
 /// The unified evidence front door: decides any supported query with [`solve`]'s
 /// routing and packages a self-checking [`EvidenceReport`].
 ///
@@ -585,7 +624,18 @@ pub fn produce_evidence(
         EvidenceRoute::QfBv => return produce_qf_bv_evidence(arena, assertions, config),
         // Pure linear real arithmetic (any Boolean structure): the lazy-SMT /
         // Farkas refutation route.
-        EvidenceRoute::PureReal => return produce_lra_dpll_evidence(arena, assertions, config),
+        // Pure real arithmetic: the lazy-SMT / Farkas linear route first; if it
+        // rejects a *nonlinear* product, fall back to the NRA engine (#14: the
+        // front door now dispatches nonlinear real goals to NRA instead of
+        // hard-erroring `Unsupported`).
+        EvidenceRoute::PureReal => {
+            return match produce_lra_dpll_evidence(arena, assertions, config) {
+                Err(SolverError::Unsupported(msg)) if msg.contains("nonlinear") => {
+                    produce_nra_evidence(arena, assertions, config)
+                }
+                other => other,
+            };
+        }
         EvidenceRoute::Other => {}
     }
 

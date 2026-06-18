@@ -38,6 +38,26 @@ use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, Unknow
 use crate::dpll_t::check_with_lra_dpll;
 use crate::model::Model;
 
+// Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
+
+/// An `unknown` result attributed to the wall-clock timeout (a resource limit,
+/// not fundamental incompleteness).
+fn timed_out() -> CheckResult {
+    CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::ResourceLimit,
+        detail: "nonlinear abstraction: wall-clock timeout reached".to_owned(),
+    })
+}
+
+/// Whether `deadline` (if set) has passed.
+fn past_deadline(deadline: Option<Instant>) -> bool {
+    deadline.is_some_and(|d| Instant::now() >= d)
+}
+
 /// Bound on the incremental-linearization refinement rounds before returning
 /// `unknown` (the loop adds exact point lemmas for inconsistent leaf products).
 const MAX_REFINE_ROUNDS: usize = 12;
@@ -123,8 +143,12 @@ pub fn check_with_nra(
         }
     }
 
+    // Wall-clock deadline (only when a timeout is configured): bounds the spatial
+    // branch-and-bound, which can otherwise explore ~2^depth boxes × refinement
+    // rounds and run far past the configured budget (#15).
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     branch_and_bound(
-        arena, &base, &triples, &products, assertions, config, &bounds, 0,
+        arena, &base, &triples, &products, assertions, config, &bounds, 0, deadline,
     )
 }
 
@@ -145,7 +169,12 @@ fn branch_and_bound(
     config: &SolverConfig,
     bounds: &Bounds,
     depth: usize,
+    deadline: Option<Instant>,
 ) -> Result<CheckResult, SolverError> {
+    // Wall-clock bound: bail to `unknown` rather than keep exploring (#15).
+    if past_deadline(deadline) {
+        return Ok(timed_out());
+    }
     // Hitting the (tunable) branch-and-bound depth budget is a ResourceLimit —
     // a deeper search could still decide — not fundamental incompleteness.
     let unknown = || {
@@ -155,7 +184,9 @@ fn branch_and_bound(
         }))
     };
 
-    match solve_relaxation(arena, base, triples, products, original, bounds, config)? {
+    match solve_relaxation(
+        arena, base, triples, products, original, bounds, config, deadline,
+    )? {
         CheckResult::Sat(model) => Ok(CheckResult::Sat(model)),
         CheckResult::Unsat => Ok(CheckResult::Unsat),
         CheckResult::Unknown(reason) => {
@@ -182,6 +213,7 @@ fn branch_and_bound(
                     config,
                     &child,
                     depth + 1,
+                    deadline,
                 )? {
                     CheckResult::Sat(model) => return Ok(CheckResult::Sat(model)),
                     CheckResult::Unsat => {}
@@ -210,6 +242,7 @@ fn solve_relaxation(
     original: &[TermId],
     bounds: &Bounds,
     config: &SolverConfig,
+    deadline: Option<Instant>,
 ) -> Result<CheckResult, SolverError> {
     let mut reduced = base.to_vec();
     // Interval constraints `lo ≤ v ≤ hi` for this box.
@@ -238,6 +271,10 @@ fn solve_relaxation(
     // deciding" (fundamental for this relaxation → Incomplete).
     let mut hit_round_bound = true;
     for _ in 0..MAX_REFINE_ROUNDS {
+        // Wall-clock bound inside the (potentially expensive) refinement loop (#15).
+        if past_deadline(deadline) {
+            return Ok(timed_out());
+        }
         let result = check_with_lra_dpll(arena, &reduced, config)?;
         let CheckResult::Sat(model) = result else {
             return Ok(result); // unsat/unknown transfer (the box is a relaxation)

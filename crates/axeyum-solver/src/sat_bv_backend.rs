@@ -96,6 +96,27 @@ impl SatBvBackend {
             }));
         }
 
+        // Pre-lowering oversized-encoding refusal: a small DAG can bit-blast to a
+        // gigantic AIG/CNF (a single wide multiply is ~width² gates), and the
+        // CNF-budget check below only fires *after* `lower_terms` has already
+        // allocated it. Estimate the blasted clause count up front and bail to a
+        // graceful `unknown` BEFORE lowering, so an oversized query degrades
+        // cleanly instead of aborting the process out of memory. The estimate is a
+        // conservative over-approximation; an absolute ceiling guards the
+        // no-explicit-budget case so a runaway can never OOM the host.
+        const ABSOLUTE_CLAUSE_CEILING: u64 = 64_000_000;
+        let estimated_clauses = estimate_blast_clauses(arena, assertions);
+        let clause_cap = config.cnf_clause_budget.unwrap_or(ABSOLUTE_CLAUSE_CEILING);
+        if estimated_clauses > clause_cap {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::EncodingBudget,
+                detail: format!(
+                    "estimated {estimated_clauses} CNF clauses before lowering exceeds budget \
+                     {clause_cap} (oversized encoding refused gracefully)"
+                ),
+            }));
+        }
+
         let mut stats = SolveStats {
             assertion_count: assertions.len() as u64,
             terms_translated: shape.dag_nodes,
@@ -611,6 +632,56 @@ fn replay_model(
         }
     }
     Ok(())
+}
+
+/// A cheap, pre-lowering **over-estimate** of the bit-blasted CNF clause count,
+/// used to refuse oversized encodings before `lower_terms` allocates them
+/// (graceful `unknown` instead of an out-of-memory abort). Walks the shared term
+/// DAG once; each node contributes a per-operator cost in its result width —
+/// multiplies are ~`w²`, divides/remainders ~`4w²`, shifts ~`w·log w`, and
+/// everything else linear in `w` — then `~3×` the gate total approximates the
+/// Tseitin clause count.
+fn estimate_blast_clauses(arena: &TermArena, assertions: &[TermId]) -> u64 {
+    use std::collections::HashSet;
+
+    use axeyum_ir::{Op, TermNode};
+
+    let width = |t: TermId| -> u64 {
+        match arena.sort_of(t) {
+            Sort::Bool => 1,
+            Sort::BitVec(w) => u64::from(w),
+            _ => 0,
+        }
+    };
+    let mut visited: HashSet<TermId> = HashSet::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    let mut gates: u64 = 0;
+    while let Some(t) = stack.pop() {
+        if !visited.insert(t) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(t) {
+            let w = width(t);
+            let cost = match op {
+                Op::BvMul => w.saturating_mul(w),
+                Op::BvUdiv | Op::BvUrem | Op::BvSdiv | Op::BvSrem | Op::BvSmod => {
+                    w.saturating_mul(w).saturating_mul(4)
+                }
+                Op::BvShl | Op::BvLshr | Op::BvAshr => {
+                    let log_w = 64u64 - u64::from(w.leading_zeros());
+                    w.saturating_mul(log_w.max(1))
+                }
+                _ => w.max(1),
+            };
+            gates = gates.saturating_add(cost);
+            for &a in &**args {
+                stack.push(a);
+            }
+        } else {
+            gates = gates.saturating_add(width(t).max(1));
+        }
+    }
+    gates.saturating_mul(3)
 }
 
 fn check_cnf_budgets(
