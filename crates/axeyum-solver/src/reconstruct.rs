@@ -4381,9 +4381,19 @@ fn reconstruct_equiv_bridge(
         })
         .collect();
 
+    // The bridge clause is `¬pred ∨ B` (equiv1) / `pred ∨ ¬B` (equiv2); after
+    // substitution both literals share the atom `B`, so the tautology is just
+    // `¬⟦B⟧ ∨ ⟦B⟧`, provable by `em ⟦B⟧`. Case-split over the substituted literal
+    // atoms THEMSELVES (treated as opaque via `prove_term`'s assignment-first
+    // lookup), not their bit leaves — `collect_atoms` would recurse into `B` and
+    // give a `2^leaves` split over the ladder.
     let mut atom_keys: Vec<(String, AletheTerm)> = Vec::new();
+    let mut seen = std::collections::BTreeSet::new();
     for lit in &substituted {
-        collect_atoms(&lit.atom, &mut atom_keys);
+        let k = lit.atom.key();
+        if seen.insert(k.clone()) {
+            atom_keys.push((k, lit.atom.clone()));
+        }
     }
 
     // The target is the ORIGINAL clause's bit-level `Prop` (predicate atoms route
