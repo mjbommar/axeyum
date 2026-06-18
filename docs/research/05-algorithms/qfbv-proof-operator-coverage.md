@@ -19,6 +19,17 @@ checks, and reconstruction only lifts what the emitter emits. Carcara's register
 bitblast rules (`grep -rhoE 'bitblast_[a-z_]+' references/carcara/src`) are exactly
 this list.
 
+## Status update (2026-06-18): route 1 LANDED for the cleanly-reducible ops
+
+`axeyum_rewrite::lower_derived_bv` (`40e679b`) implements the front-end
+denotation-preserving lowering for `bvsub`, `bvnand`, `bvnor`, and the six
+unsigned/signed comparisons (`bvugt`/`bvule`/`bvuge`/`bvsgt`/`bvsle`/`bvsge`) → core.
+Each rule is exhaustively checked denotation-preserving over all 3-bit inputs, and
+`bvsub`/`bvule` queries now reconstruct end-to-end to a kernel-checked `False`
+(`axeyum-solver` tests). **Remaining:** the route-2 `bv_poly_simp` upgrade (to certify
+the *un-lowered* original), and shifts/division (no cheap reduction). The rest of this
+note is the original analysis.
+
 ## The gap: derived operators are rejected (confirmed by probe)
 
 The IR (`axeyum-ir`) has many operators with **no** core bitblast rule. A probe
