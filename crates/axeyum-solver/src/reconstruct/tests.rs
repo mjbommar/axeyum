@@ -1221,14 +1221,73 @@ fn bitblast_extract_wrong_offset_rejected() {
     );
 }
 
-/// A non-bitwise bitblast rule (here `bitblast_add`, a carry chain) is rejected
-/// with a clear `UnsupportedRule`, never a panic — it is a later slice.
+/// `bitblast_add` (binary, width 2): the ripple-carry result bits are
+///   bit0 = `(xor (xor a0 b0) false)`
+///   bit1 = `(xor (xor a1 b1) (or (and a0 b0) (and (xor a0 b0) false)))`
+/// reconstructed reflexively and kernel-checked.
+fn and2(a: AletheTerm, b: AletheTerm) -> AletheTerm {
+    AletheTerm::App("and".to_owned(), vec![a, b])
+}
+fn or2(a: AletheTerm, b: AletheTerm) -> AletheTerm {
+    AletheTerm::App("or".to_owned(), vec![a, b])
+}
+fn xor2(a: AletheTerm, b: AletheTerm) -> AletheTerm {
+    AletheTerm::App("xor".to_owned(), vec![a, b])
+}
+
 #[test]
-fn bitblast_add_is_unsupported() {
+fn bitblast_add_binary_width2_reconstructs() {
+    let bvadd = AletheTerm::App("bvadd".to_owned(), vec![atom("a"), atom("b")]);
+    let false_ = atom("false");
+    let bit0 = xor2(xor2(bit_of("a", 0), bit_of("b", 0)), false_.clone());
+    let carry1 = or2(
+        and2(bit_of("a", 0), bit_of("b", 0)),
+        and2(xor2(bit_of("a", 0), bit_of("b", 0)), false_),
+    );
+    let bit1 = xor2(xor2(bit_of("a", 1), bit_of("b", 1)), carry1);
+    let concl = bb_concl(bvadd, bbterm(vec![bit0, bit1]));
+    assert_bitblast_ok("bitblast_add", &concl);
+}
+
+/// **NEGATIVE soundness at the kernel gate** for `add`: a wrong bit0 (dropping
+/// the `b0` term) makes the reflexive iff ill-typed, so it is REJECTED.
+#[test]
+fn bitblast_add_wrong_bit_rejected() {
     let mut ctx = ReconstructCtx::new();
     let bvadd = AletheTerm::App("bvadd".to_owned(), vec![atom("a"), atom("b")]);
-    let concl = bb_concl(bvadd, bbterm(vec![bit_of("a", 0)]));
+    // Wrong: bit0 = (xor a0 false), missing the b0 operand.
+    let wrong0 = xor2(bit_of("a", 0), atom("false"));
+    let concl = bb_concl(bvadd, bbterm(vec![wrong0]));
+    let err = reconstruct_bitblast_step(&mut ctx, "bitblast_add", &concl)
+        .expect_err("a wrong add bit must be rejected by the kernel");
+    assert!(
+        matches!(err, ReconstructError::KernelRejected { .. }),
+        "got {err:?}"
+    );
+}
+
+/// An n-ary `bitblast_add` (3 operands) is outside the binary slice and surfaces
+/// as `UnsupportedTerm` from `bv_bit` — never a panic or a wrong proof.
+#[test]
+fn bitblast_add_nary_unsupported() {
+    let mut ctx = ReconstructCtx::new();
+    let bvadd = AletheTerm::App("bvadd".to_owned(), vec![atom("a"), atom("b"), atom("c")]);
+    let concl = bb_concl(bvadd, bbterm(vec![atom("false")]));
     let err = reconstruct_bitblast_step(&mut ctx, "bitblast_add", &concl).unwrap_err();
+    assert!(
+        matches!(err, ReconstructError::UnsupportedTerm { .. }),
+        "got {err:?}"
+    );
+}
+
+/// `bitblast_mult` (a shift-add multiplier) remains outside the reconstructed
+/// fragment — rejected with a clear `UnsupportedRule`, never a panic.
+#[test]
+fn bitblast_mult_is_unsupported() {
+    let mut ctx = ReconstructCtx::new();
+    let bvmul = AletheTerm::App("bvmul".to_owned(), vec![atom("a"), atom("b")]);
+    let concl = bb_concl(bvmul, bbterm(vec![and2(bit_of("a", 0), bit_of("b", 0))]));
+    let err = reconstruct_bitblast_step(&mut ctx, "bitblast_mult", &concl).unwrap_err();
     assert!(
         matches!(err, ReconstructError::UnsupportedRule { .. }),
         "got {err:?}"
@@ -1416,11 +1475,11 @@ fn end_to_end_bitwise_corrupted_close_rejected() {
     );
 }
 
-/// **NEGATIVE soundness**: a non-bitwise `QF_BV` proof (here `bvadd`) is rejected
-/// by `reconstruct_qf_bv_proof` — its `bitblast_add` step is out of the bitwise
-/// fragment — never silently accepted.
+/// **End-to-end**: a real `(= (bvadd a b) a) ∧ ¬…` `QF_BV` unsat proof — whose
+/// bit-blast goes through the ripple-carry `bitblast_add` — now reconstructs all
+/// the way to a kernel-checked `False`.
 #[test]
-fn end_to_end_non_bitwise_rejected() {
+fn end_to_end_add_reconstructs() {
     use axeyum_ir::TermArena;
     let mut arena = TermArena::new();
     let a = {
@@ -1434,11 +1493,35 @@ fn end_to_end_non_bitwise_rejected() {
     let add = arena.bv_add(a, b).unwrap();
     let eq = arena.eq(add, a).unwrap();
     let neq = arena.not(eq).unwrap();
-    // `(= (bvadd a b) a) ∧ ¬…` is unsat, but `bvadd` is a carry chain → rejected.
+    let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    reconstruct_qf_bv_proof(&mut ctx, &proof)
+        .expect("a binary-add QF_BV proof must reconstruct to kernel-checked False");
+}
+
+/// **NEGATIVE soundness**: a `QF_BV` proof whose bit-blast needs the multiplier
+/// (`bitblast_mult`, still outside the reconstructed fragment) is rejected by
+/// `reconstruct_qf_bv_proof`, never silently accepted.
+#[test]
+fn end_to_end_non_bitwise_rejected() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let mul = arena.bv_mul(a, b).unwrap();
+    let eq = arena.eq(mul, a).unwrap();
+    let neq = arena.not(eq).unwrap();
+    // `(= (bvmul a b) a) ∧ ¬…` is unsat, but `bvmul` is a shift-add → rejected.
     let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("emitter");
     let mut ctx = ReconstructCtx::new();
     let err = reconstruct_qf_bv_proof(&mut ctx, &proof)
-        .expect_err("a non-bitwise bitblast step must be rejected");
+        .expect_err("a multiplier bitblast step must be rejected");
     assert!(
         matches!(err, ReconstructError::UnsupportedRule { .. }),
         "got {err:?}"
