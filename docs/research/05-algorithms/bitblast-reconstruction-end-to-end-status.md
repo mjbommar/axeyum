@@ -158,15 +158,40 @@ stay ~ms). 3-bit is tiny, so this is a real bottleneck.
   did **not** move, so the cost is not re-processing gate Props. Reverted (no
   measured benefit).
 
-So the bottleneck is **deeper** — most likely the kernel `infer`/`def_eq` over the
-large accumulated proof terms (each `binary_resolve_on` builds a `clause_elim`
-case-split term; `check_against` then `infer`s + `def_eq`s it), or the cumulative
-proof-term size. **Needs profiling** (which kernel op dominates) before the right
-fix is clear — candidates: a `def_eq`/`infer` result cache keyed on `ExprId`, or
-restructuring the resolution proof to share the clause-elimination skeletons.
-Combined with the multiplier blowup
-([[bitblast-reconstruction-multiplier-blowup]]) the through-line is **no
-sharing/memoization in the kernel-term layer**.
+**PROFILED (2026-06-18) — the bottleneck is the CNF-intro truth-table.** Phase
+timing on a 3-bit `bvmul` proof (release): bitblast phase 1.5 ms, **clausal phase
+6.0 s**. Per-step: the slow steps are all CNF-intro / equiv rules — `and_pos`
+(242 ms), `equiv_pos1/2`, `xor_pos/neg`, `equiv1` (373 ms) — each only 2–4
+literals, but `reconstruct_cnf_intro_rule` proves them via
+`prove_clause_by_cases`, a **2^atoms truth-table case-split**, and `collect_atoms`
+recurses into the gates down to the bit leaves. A clause `¬(and φ…) ∨ φ_i` whose
+gate has *k* leaves costs 2^k. (Release is ~6× over debug — confirmed — but the
+exponential remains: 3-bit `bvmul` 1 s, 4-bit 26 s, 3-bit nested 68 s.)
+
+**The fix — rule-specific polynomial proofs** (each CNF-intro tautology has a
+direct O(clause) proof; no case-split). The kernel primitives are all present
+(`prelude.and_rec`/`or_rec`/`or_inl`/`or_inr`, `em_axiom`), and the `Or.rec`+`em`
+pattern is already in `prove_term_by_cases`. Shapes:
+- `and_pos` `(cl ¬G φ_i)`, `G=(and φ…)`: `em ⟦G⟧`; on `⟦G⟧` project `⟦φ_i⟧` out of
+  the right-nested `And` (`And.right` `i−1` times via `and_rec`, then `And.left`)
+  and `Or.inr`; on `Not ⟦G⟧`, `Or.inl`. O(k).
+- `and_neg` `(cl G ¬φ1 … ¬φk)`: if all `φ_i` hold, `And.intro`-fold → `Or.inl G`;
+  else some `¬φ_j` → inject. Drive by `em` per operand (O(k)).
+- `or_pos` `(cl ¬G φ1 … φk)`, `G=(or φ…)`: `Or.rec` (`or_rec`) on `⟦G⟧` injecting
+  the matching `φ_i`; on `Not ⟦G⟧`, `Or.inl`.
+- `or_neg` `(cl G ¬φ_i)`: `em ⟦φ_i⟧`; on `⟦φ_i⟧` build `Or`-inject into `⟦G⟧`.
+- `equiv_pos1/2`,`equiv_neg1/2`,`xor_pos/neg`: direct from the `Iff` (`= a b` →
+  `mk_iff`) / `Not (Iff a b)` structure, `em` on `a`/`b` (O(1)).
+Implement behind a per-rule dispatch with `prove_clause_by_cases` as the fallback
+for any unported rule (correctness preserved; speedup is incremental). Soundness
+stays kernel-gated by `check_against` — a wrong constructor is `KernelRejected`,
+never an accepted bad proof. This removes the exponential; with the release 6× the
+clausal phase drops from seconds to milliseconds.
+
+The committed width-2 proofs are unaffected (fast); this is the scalability unlock
+for real widths. Pairs with the multiplier-term blowup
+([[bitblast-reconstruction-multiplier-blowup]]) — both are **no-sharing /
+exponential-construction** in the kernel-term layer.
 
 ## Honest milestone correction
 
