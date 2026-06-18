@@ -32,13 +32,15 @@ Each rule is exhaustively checked denotation-preserving over all small inputs, a
 `bvsub`/`bvule`/`rotate_left` queries reconstruct end-to-end to a kernel-checked
 `False` (`axeyum-solver` tests).
 
-**Found gap (blocks `zero_extend` end-to-end):** `zero_extend` lowers correctly to
-`concat (bvconst 0:k) x`, the emitter emits a valid proof, but **reconstruction** of
-`bitblast_concat` fails with a `KernelRejected`/`TypeMismatch` when the high operand
-is a **constant** (`concat (#b…) x`). `rotate` (whose operands are `extract`s, never
-constants) reconstructs fine, isolating the bug to constant `concat` operands. The
-lowering is sound; this is a separate reconstruction fix. **Remaining:** that
-const-`concat` reconstruction fix (to unlock `zero_extend`), the route-2
+**Const-`concat` reconstruction bug — FIXED.** `zero_extend` lowers to
+`concat (bvconst 0:k) x`; reconstruction of `bitblast_concat` had used an opaque
+`@bit_of` projection for a **constant** operand's bits, while the emitter bit-blasts
+the constant to Boolean literals in the `@bbterm` — a `TypeMismatch` (atom vs
+`False`). Fixed in two places: `operand_bit_term` now returns the constant's actual
+bit value (`true`/`false`) for a `#b…` literal, and `gate_term_to_prop` maps the
+Boolean literals to the prelude `True`/`False` (so an embedded const bit renders
+identically in arithmetic gadgets too). `zero_extend` and `rotate` now both
+reconstruct end-to-end (`axeyum-solver` tests). **Remaining:** the route-2
 `bv_poly_simp` upgrade (certify the *un-lowered* original), and shifts/division (no
 cheap reduction). The rest of this note is the original analysis.
 

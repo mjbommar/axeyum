@@ -2139,6 +2139,12 @@ impl ReconstructCtx {
                 let iff = self.mk_iff(a, b);
                 self.mk_not(iff)
             }
+            // The Boolean literals map to the prelude `True`/`False` (agreeing with
+            // `gadget_bit_to_prop`), so a constant operand's bit — `true`/`false` from
+            // `operand_bit_term` — renders identically whether it reaches here
+            // directly or embedded in a gate.
+            AletheTerm::Const(s) if s == "true" => self.kernel.const_(self.prelude.true_, vec![]),
+            AletheTerm::Const(s) if s == "false" => self.kernel.const_(self.prelude.false_, vec![]),
             // A bare symbol or any opaque compound: an uninterpreted Prop atom.
             other => {
                 let name = self.prop_atom_const(&other.key());
@@ -3607,6 +3613,18 @@ fn operand_bit_term(operand: &AletheTerm, j: usize) -> AletheTerm {
         if head == "@bbterm" {
             if let Some(bit) = args.get(j) {
                 return bit.clone();
+            }
+        }
+    }
+    // A binary-literal constant `#b<MSB…LSB>`: bit `j` (LSB-first) is its actual
+    // Boolean value, matching how the emitter bit-blasts a constant operand (bool
+    // literals in the `@bbterm`), NOT an opaque `@bit_of` projection.
+    if let AletheTerm::Const(lit) = operand {
+        if let Some(bits) = lit.strip_prefix("#b") {
+            let n = bits.len();
+            if j < n {
+                let is_one = bits.as_bytes()[n - 1 - j] == b'1';
+                return AletheTerm::Const(if is_one { "true" } else { "false" }.to_owned());
             }
         }
     }
