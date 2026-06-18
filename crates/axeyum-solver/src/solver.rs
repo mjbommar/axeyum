@@ -145,6 +145,28 @@ impl<B: SolverBackend> Solver<B> {
         self.backend.check(arena, &self.assertions, &self.config)
     }
 
+    /// Reconstruct a kernel-checked Lean proof that the active assertions are UNSAT,
+    /// dispatching to the matching theory emitter+reconstructor (see
+    /// [`crate::prove_unsat_to_lean`]); returns the [`crate::ProofFragment`] routed.
+    ///
+    /// Call after [`Solver::check`] reports [`CheckResult::Unsat`]: this re-derives
+    /// the refutation as a machine-checkable Lean term the trusted kernel accepts,
+    /// over the supported fragments (`QF_BV`/`QF_UF`/`QF_UFBV`/`QF_ABV`, datatypes,
+    /// `LRA`, `∀`/`∃`).
+    /// `arena` is taken mutably because the emitters introduce fresh terms (skolems,
+    /// lowered operators) during proof construction.
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`crate::ReconstructError`] when the fragment is unsupported, the
+    /// instance is not UNSAT through it, or reconstruction does not kernel-check.
+    pub fn prove_unsat_to_lean(
+        &self,
+        arena: &mut TermArena,
+    ) -> Result<crate::ProofFragment, crate::ReconstructError> {
+        crate::prove_unsat_to_lean(arena, &self.assertions)
+    }
+
     /// Checks the active assertions together with one-shot `assumptions`.
     ///
     /// The assumptions hold only for this check and are not retained, matching
