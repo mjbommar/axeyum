@@ -3179,13 +3179,12 @@ fn parse_bv_literal(symbol: &str) -> Option<Vec<bool>> {
 /// Reconstruct one **bitwise** `bitblast_*` step into a kernel-checked proof term
 /// of its bit-iff conjunction.
 ///
-/// `rule` is the bitblast rule (`bitblast_var`/`_const`/`_not`/`_and`/`_or`/`_xor`
-/// for a term op concluding `(= lhs (@bbterm b…))`, or `bitblast_equal` for the
-/// BV-equality predicate concluding `(= (= x y) B)`). The reconstructed term has
-/// type
+/// `rule` is the bitblast rule (a term op concluding `(= lhs (@bbterm b…))`, or a
+/// predicate — `bitblast_equal`/`bitblast_ult`/`bitblast_slt` — concluding
+/// `(= <pred> B)` with `B` a single Boolean). The reconstructed term has type
 ///
 /// - term op: `⋀_i ( bv_bit(lhs, i) ↔ ⟦b_i⟧ )` — one reflexive `Iff` per bit;
-/// - `bitblast_equal`: `⟦B⟧ ↔ ⟦B⟧` (the reflexive iff of the per-bit-AND form).
+/// - predicate: `⟦B⟧ ↔ ⟦B⟧` (the reflexive iff of the bit-level form `B`).
 ///
 /// Each conjunct is reflexive because `bv_bit(lhs, i)` is, by construction, the
 /// same structured Prop as the gadget bit `⟦b_i⟧`. The kernel `infer`s the term
@@ -3194,8 +3193,8 @@ fn parse_bv_literal(symbol: &str) -> Option<Vec<bool>> {
 /// # Errors
 ///
 /// Returns [`ReconstructError::UnsupportedRule`] for a bitblast rule outside the
-/// bitwise + `extract`/`sign_extend`/`concat` + `add`/`neg`/`mult` fragment
-/// (`bitblast_comp`/`_ult`/`_slt`, …),
+/// bitwise + `extract`/`sign_extend`/`concat` + `add`/`neg`/`mult` +
+/// `ult`/`slt` fragment (`bitblast_comp`, shifts, div/rem, …),
 /// [`ReconstructError::MalformedStep`] for a conclusion that is
 /// not the expected `(= lhs rhs)` shape, [`ReconstructError::UnsupportedTerm`] for
 /// a non-bitwise operand, and [`ReconstructError::KernelRejected`] at the gate.
@@ -3222,7 +3221,9 @@ pub fn reconstruct_bitblast_step(
         | "bitblast_add"
         | "bitblast_neg"
         | "bitblast_mult"
-        | "bitblast_equal" => {}
+        | "bitblast_equal"
+        | "bitblast_ult"
+        | "bitblast_slt" => {}
         other => {
             return Err(ReconstructError::UnsupportedRule {
                 rule: format!(
@@ -3235,11 +3236,12 @@ pub fn reconstruct_bitblast_step(
 
     let (lhs, rhs) = bitblast_conclusion_sides(rule, conclusion)?;
 
-    let (target, proof) = if rule == "bitblast_equal" {
-        // `(= (= x y) B)`: the predicate's bit-level form `B` is a single Boolean
-        // (the per-bit-AND of `(= x_i y_i)`). Reconstruct the reflexive
-        // `⟦B⟧ ↔ ⟦B⟧` — the gate-prop of `B` matches `bv_bit` pointwise on the
-        // operands, so it is reflexive by construction.
+    let (target, proof) = if matches!(rule, "bitblast_equal" | "bitblast_ult" | "bitblast_slt") {
+        // `(= <pred> B)`: a bit-vector predicate (`=`/`bvult`/`bvslt`) whose
+        // bit-level form `B` is a single Boolean (the per-bit-AND for `=`, the
+        // unsigned/signed less-than ladder for `bvult`/`bvslt`). Reconstruct the
+        // reflexive `⟦B⟧ ↔ ⟦B⟧`; the predicate's lhs connects to `B` via the bridge
+        // in the end-to-end flow, exactly as for `bitblast_equal`.
         let b_prop = ctx.gate_term_to_prop(rhs);
         let iff = ctx.mk_iff(b_prop, b_prop);
         (iff, ctx.mk_iff_refl(b_prop))

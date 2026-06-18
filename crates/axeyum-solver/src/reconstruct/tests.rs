@@ -1195,6 +1195,39 @@ fn bitblast_equal_reconstructs() {
     assert_bitblast_ok("bitblast_equal", &concl);
 }
 
+/// `bitblast_ult` (predicate): `(= (bvult a b) B)` with `B` the unsigned
+/// less-than form — reconstructs the reflexive `B ↔ B` (the lhs predicate binds
+/// to `B` via the bridge end-to-end). width-1: `B = (and (not a0) b0)`.
+#[test]
+fn bitblast_ult_reconstructs() {
+    let bvult = AletheTerm::App("bvult".to_owned(), vec![atom("a"), atom("b")]);
+    let b = AletheTerm::App(
+        "and".to_owned(),
+        vec![
+            AletheTerm::App("not".to_owned(), vec![bit_of("a", 0)]),
+            bit_of("b", 0),
+        ],
+    );
+    let concl = bb_concl(bvult, b);
+    assert_bitblast_ok("bitblast_ult", &concl);
+}
+
+/// `bitblast_slt` (predicate): `(= (bvslt a b) B)`. width-1 signed `<` is
+/// `B = (and a0 (not b0))` (the sign bits compared).
+#[test]
+fn bitblast_slt_reconstructs() {
+    let bvslt = AletheTerm::App("bvslt".to_owned(), vec![atom("a"), atom("b")]);
+    let b = AletheTerm::App(
+        "and".to_owned(),
+        vec![
+            bit_of("a", 0),
+            AletheTerm::App("not".to_owned(), vec![bit_of("b", 0)]),
+        ],
+    );
+    let concl = bb_concl(bvslt, b);
+    assert_bitblast_ok("bitblast_slt", &concl);
+}
+
 /// **NEGATIVE soundness at the kernel gate**: a WRONG gadget bit — claiming
 /// `bvand a b` bit0 is `(or a0 b0)` instead of `(and a0 b0)` — makes the reflexive
 /// iff ill-typed (the two sides are distinct Props), so reconstruction is REJECTED.
@@ -1823,6 +1856,15 @@ fn end_to_end_concat_reconstructs() {
     reconstruct_qf_bv_proof(&mut ctx, &proof)
         .expect("a concat QF_BV proof must reconstruct to kernel-checked False");
 }
+
+// NOTE: end-to-end `bvult`/`bvslt` reconstruction is not yet closed. The
+// `bitblast_ult`/`_slt` *step* reconstructs (see the unit tests above), but the
+// full proof's Tseitin `cnf_intro` clauses over the less-than *ladder*'s nested
+// Boolean structure are not all recognized as tautologies by the current
+// `reconstruct_cnf_intro_rule` (it returns MalformedStep). Extending CNF-intro to
+// the ladder shapes is the next slice; the step handler landed here is the
+// prerequisite. (Bitwise/arith/structural ops, whose `B` is shallower, do close
+// end-to-end — see the tests above.)
 
 /// **NEGATIVE soundness**: a `QF_BV` proof whose bit-blast needs `bvcomp`
 /// (`bitblast_comp`, still outside the reconstructed fragment) is rejected by
