@@ -63,7 +63,7 @@ pub use env::{Declaration, Environment, RecRule, ReducibilityHint};
 pub use expr::{BinderInfo, ExprId, ExprNode, Lit};
 pub use level::{LevelId, LevelNode};
 pub use name::{NameId, NameNode};
-pub use prelude::{LogicPrelude, build_logic_prelude};
+pub use prelude::{DatatypeInductive, LogicPrelude, build_logic_prelude};
 pub use tc::{KernelError, LocalContext, LocalDecl};
 
 use expr::ExprMeta;

@@ -50,8 +50,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm};
 use axeyum_lean_kernel::{
-    BinderInfo, Declaration, ExprId, ExprNode, Kernel, LevelId, LogicPrelude, NameId,
-    build_logic_prelude,
+    BinderInfo, DatatypeInductive, Declaration, ExprId, ExprNode, Kernel, LevelId, LogicPrelude,
+    NameId, build_logic_prelude,
 };
 
 /// An error from Alethe → Lean reconstruction. Every out-of-scope shape, unknown
@@ -209,6 +209,16 @@ pub struct ReconstructCtx {
     /// shared subterms heavily; without this the CNF-intro rules rebuild them every
     /// time. **Cleared on any `bridge` change** (the result depends on the bridge).
     gate_memo: BTreeMap<String, ExprId>,
+    /// **Route-A datatype registry.** Maps a datatype constructor key
+    /// `"<arity>_<ctorname>"` (parsed from the reserved `!dtcon_n_c` /
+    /// `!dtsel_n_i_c` heads the datatype-elim emitter renders) to the kernel
+    /// inductive `D` modeling that constructor: `D : α` (the EUF carrier sort)
+    /// with one constructor `D.mk : α → … → D` of the recorded arity. Declared
+    /// lazily on the first datatype term seen. Modeling the SMT datatype as a
+    /// kernel inductive makes the read-over-construct projection `select_i(C a…)`
+    /// an **ι-reduction** (`Eq.refl`), so the datatype-elim certificate carries
+    /// **no assumed projection axiom** (zero-trust datatypes).
+    datatypes: BTreeMap<String, DatatypeInductive>,
 }
 
 impl core::fmt::Debug for ReconstructCtx {
@@ -270,6 +280,7 @@ impl ReconstructCtx {
             next_id: 0,
             bv_widths: BTreeMap::new(),
             gate_memo: BTreeMap::new(),
+            datatypes: BTreeMap::new(),
         }
     }
 
@@ -367,6 +378,41 @@ impl ReconstructCtx {
         decl_name
     }
 
+    /// Get (declaring lazily) the **route-A datatype inductive** for the reserved
+    /// head `head` (a `!dtcon_n_c` / `!dtsel_n_i_c` name) of constructor arity
+    /// `arity`. Idempotent per constructor key `"<arity>_<ctorname>"`, so the
+    /// constructor and all its selectors share one kernel inductive `D : α` with a
+    /// single constructor `D.mk : α → … → D`.
+    ///
+    /// Modeling the SMT datatype constructor as a kernel constructor makes the
+    /// selector a recursor application, so `select_i(C a…)` ι-reduces to `a_i` —
+    /// the read-over-construct projection is **ι-reduction**, not an assumed axiom.
+    fn datatype_inductive(
+        &mut self,
+        head: &str,
+        arity: usize,
+    ) -> Result<DatatypeInductive, ReconstructError> {
+        // Key by arity + ctor name so a constructor and its selectors coincide.
+        let key = datatype_key(head).ok_or_else(|| ReconstructError::UnsupportedTerm {
+            term: head.to_owned(),
+        })?;
+        if let Some(&dt) = self.datatypes.get(&key) {
+            return Ok(dt);
+        }
+        let decl_name = self.fresh_name("dt");
+        let alpha = self.alpha;
+        let one = self.one;
+        let dt = self
+            .kernel
+            .add_datatype_inductive(decl_name, alpha, one, arity)
+            .map_err(|e| ReconstructError::KernelRejected {
+                rule: "datatype".to_owned(),
+                detail: format!("datatype inductive did not admit: {e:?}"),
+            })?;
+        self.datatypes.insert(key, dt);
+        Ok(dt)
+    }
+
     /// `f` applied to `args` (left-nested application `f a0 a1 … a_{n-1}`).
     fn apply_func(&mut self, f_name: NameId, args: &[ExprId]) -> ExprId {
         let mut e = self.kernel.const_(f_name, vec![]);
@@ -433,6 +479,35 @@ impl ReconstructCtx {
                 let l = self.alethe_term_to_expr(l)?;
                 let r = self.alethe_term_to_expr(r)?;
                 Ok(self.mk_eq(l, r))
+            }
+            // Route-A datatype constructor `(!dtcon_n_c x0 … x_{n-1})`: the kernel
+            // inductive's constructor applied to the field translations.
+            AletheTerm::App(head, args) if parse_dtcon(head).is_some() => {
+                let (arity, _key) = parse_dtcon(head)
+                    .filter(|(arity, _)| *arity == args.len())
+                    .ok_or_else(|| ReconstructError::UnsupportedTerm { term: term.key() })?;
+                let dt = self.datatype_inductive(head, arity)?;
+                let mut e = self.kernel.const_(dt.ctor, vec![]);
+                for arg in args {
+                    let a = self.alethe_term_to_expr(arg)?;
+                    e = self.kernel.app(e, a);
+                }
+                Ok(e)
+            }
+            // Route-A datatype selector `(!dtsel_n_i_c operand)`: the recursor-based
+            // field selector applied to the operand translation. When the operand
+            // is a matching constructor application this `def_eq`-reduces (ι) to the
+            // selected field — the read-over-construct projection as a theorem.
+            AletheTerm::App(head, args) if parse_dtsel(head).is_some() => {
+                let (arity, index, _key) = parse_dtsel(head)
+                    .filter(|_| args.len() == 1)
+                    .ok_or_else(|| ReconstructError::UnsupportedTerm { term: term.key() })?;
+                let operand = self.alethe_term_to_expr(&args[0])?;
+                let dt = self.datatype_inductive(head, arity)?;
+                let alpha = self.alpha;
+                let one = self.one;
+                let sel = self.kernel.datatype_selector(dt, alpha, one, index);
+                Ok(self.kernel.app(sel, operand))
             }
             // An n-ary uninterpreted function application `(f x1 … xn)`, n ≥ 1.
             // (The `=` arm above already consumed equalities, so `head != "="`.)
@@ -1125,11 +1200,21 @@ fn reconstruct_assume(
         });
     };
     if let Some((l, r)) = as_positive_eq(lit) {
-        // `(= a b)` ⇒ a fresh axiom `h : Eq α a b`.
+        // `(= a b)` ⇒ normally a fresh axiom `h : Eq α a b`.
         let le = ctx.alethe_term_to_expr(l)?;
         let re = ctx.alethe_term_to_expr(r)?;
-        let eq_prop = ctx.mk_eq(le, re);
-        let proof = fresh_axiom(ctx, eq_prop, "assume")?;
+        // **Route-A datatype discharge**: if the two sides are already
+        // definitionally equal (`def_eq`) — the read-over-construct case, where the
+        // selector application `select_i(C a…)` ι-reduces to its field `a_i` over
+        // the kernel inductive — the equation is a *theorem*, proven by `Eq.refl`,
+        // NOT an assumed axiom. This is sound for any `def_eq` pair (reflexivity)
+        // and is the zero-trust datatype projection: no `fresh_axiom` is minted.
+        let proof = if ctx.kernel.def_eq(le, re) {
+            ctx.mk_eq_refl(le)
+        } else {
+            let eq_prop = ctx.mk_eq(le, re);
+            fresh_axiom(ctx, eq_prop, "assume")?
+        };
         Ok(ClauseProof::EqUnit {
             l: l.clone(),
             r: r.clone(),
@@ -1334,6 +1419,47 @@ impl ReconstructCtx {
         let not = self.kernel.const_(self.prelude.not, vec![]);
         self.kernel.app(not, p)
     }
+}
+
+/// Parse a route-A **datatype constructor** head `!dtcon_<n>_<ctorname>`, where
+/// `<n>` is the constructor arity. Returns `(arity, ctorname)`, or [`None`] for
+/// any non-`!dtcon_` head or a malformed arity. The constructor name may itself
+/// contain `_`, so only the leading numeric segment is parsed as the arity.
+fn parse_dtcon(head: &str) -> Option<(usize, &str)> {
+    let rest = head.strip_prefix("!dtcon_")?;
+    let (arity_str, ctor) = rest.split_once('_')?;
+    let arity = arity_str.parse::<usize>().ok()?;
+    Some((arity, ctor))
+}
+
+/// Parse a route-A **datatype selector** head `!dtsel_<n>_<i>_<ctorname>`, where
+/// `<n>` is the constructor arity and `<i>` the selected field index. Returns
+/// `(arity, index, ctorname)`, or [`None`] for a non-`!dtsel_` head or a
+/// malformed arity/index. The constructor name may contain `_`; only the two
+/// leading numeric segments are parsed.
+fn parse_dtsel(head: &str) -> Option<(usize, usize, &str)> {
+    let rest = head.strip_prefix("!dtsel_")?;
+    let (arity_str, rest) = rest.split_once('_')?;
+    let (index_str, ctor) = rest.split_once('_')?;
+    let arity = arity_str.parse::<usize>().ok()?;
+    let index = index_str.parse::<usize>().ok()?;
+    if index >= arity {
+        return None;
+    }
+    Some((arity, index, ctor))
+}
+
+/// The datatype-inductive registry key `"<arity>_<ctorname>"` shared by a
+/// constructor `!dtcon_n_c` and all its selectors `!dtsel_n_i_c`, so they map to
+/// one kernel inductive.
+fn datatype_key(head: &str) -> Option<String> {
+    if let Some((arity, ctor)) = parse_dtcon(head) {
+        return Some(format!("{arity}_{ctor}"));
+    }
+    if let Some((arity, _index, ctor)) = parse_dtsel(head) {
+        return Some(format!("{arity}_{ctor}"));
+    }
+    None
 }
 
 /// Declare a fresh axiom of proposition `prop` and return a `Const` proof of it.
@@ -5480,6 +5606,13 @@ fn collect_congruence_blocks(commands: &[AletheCommand]) -> Vec<CongruenceBlock>
         }
     }
     blocks
+}
+
+/// Test-only accessor for a congruence block's standalone EUF head refutation
+/// (the route-A audit reconstructs it directly to inspect its declared axioms).
+#[cfg(test)]
+fn euf_refutation_for_test(block: &CongruenceBlock) -> Vec<AletheCommand> {
+    block.euf_refutation()
 }
 
 /// Rebuild the proof with every congruence block collapsed to a plain `assume`

@@ -1696,21 +1696,27 @@ fn abv_select_consistency_is_accepted_by_carcara() {
 // `prove_qf_dt_unsat_alethe_via_simplification`
 //
 // The composed proof certifies the **`select`-over-`construct`** fold (the
-// read-over-construct trust hole). For the redex `select_0(mk(a, b))`, a fresh
-// abstraction `!dt_w_0` replaces it, the redex is named by an opaque constant
-// `!selapp_mk_0_*`, and the fold `(= !dt_w_0 a)` is **derived** by `eq_transitive`
-// over the abstraction definition `(= !dt_w_0 !selapp_mk_0_*)` and the projection
-// axiom `(= !selapp_mk_0_* a)`.
+// read-over-construct fragment). For the redex `select_0(mk(a, b))`, a fresh
+// abstraction `!dt_w_0` replaces it, the redex is rendered **structurally** as the
+// selector application `(!dtsel_2_0_mk (!dtcon_2_mk a b))` over an uninterpreted
+// datatype sort `Pair`, and the fold `(= !dt_w_0 a)` is **derived** by
+// `eq_transitive` over the abstraction definition
+// `(= !dt_w_0 (!dtsel_2_0_mk (!dtcon_2_mk a b)))` and the projection equation
+// `(= (!dtsel_2_0_mk (!dtcon_2_mk a b)) a)`.
 //
-// Carcara has **no datatype rule**, so — exactly as for the array-elim
-// abstraction definitions — the projection axiom is asserted as a *premise* in the
-// `.smt2`; Carcara then checks every structural step of the proof (the abstraction
-// definition resolution, the `eq_transitive`, and the whole bit-blast tail). The
-// projection equation's *truth* (the datatype axiom) is the assumed part Carcara
-// does not itself justify (it is internal-only); its *use* in the refutation is
-// fully Carcara-checked. The matching `.smt2` declares `!dt_w_0`, `a`, and the
-// opaque `!selapp_mk_0_*`, and asserts the residual originals plus the abstraction
-// definition and the projection axiom, so each proof `assume` matches a premise.
+// Carcara has **no datatype rule**, so the two reserved heads are plain
+// uninterpreted functions and the projection equation is asserted as a *premise*
+// in the `.smt2` (exactly like the array-elim abstraction definitions); Carcara
+// then checks every structural step of the proof (the abstraction-definition
+// resolution, the `eq_transitive`, and the whole bit-blast tail). The projection
+// equation's *truth* is what Carcara takes as a premise (internal-only); its *use*
+// in the refutation is fully Carcara-checked. **The kernel reconstruction is the
+// checker that discharges the projection by ι-reduction** (route A): there it is
+// `Eq.refl` over a kernel inductive `Pair` with constructor `Pair.mk`, not an
+// assumed axiom. The matching `.smt2` declares the `Pair` sort, the `mk`/`sel`
+// functions, `!dt_w_0`, and `a`, and asserts the residual originals plus the
+// abstraction definition and the projection equation, so each proof `assume`
+// matches a premise.
 #[test]
 #[allow(clippy::many_single_char_names)] // a, b, p, c, e: fields, ctor app, const, expr
 fn dt_select_over_construct_is_accepted_by_carcara() {
@@ -1742,17 +1748,21 @@ fn dt_select_over_construct_is_accepted_by_carcara() {
 
     let proof = prove_qf_dt_unsat_alethe_via_simplification(&mut arena, &[e1, e2])
         .expect("emit datatype read-over-construct proof");
-    // The opaque redex constant is keyed by the fresh abstraction symbol's index;
-    // for this single-redex instance it is `!selapp_mk_0_2` (see emitter).
+    // The redex is rendered structurally as `(!dtsel_2_0_mk (!dtcon_2_mk a b))`,
+    // with `Pair` an uninterpreted sort and the two reserved heads uninterpreted
+    // functions for Carcara (which has no datatype rule).
     let smt2 = "\
 (set-logic QF_UFBV)
+(declare-sort Pair 0)
 (declare-const a (_ BitVec 2))
+(declare-const b (_ BitVec 2))
 (declare-const !dt_w_0 (_ BitVec 2))
-(declare-const !selapp_mk_0_2 (_ BitVec 2))
+(declare-fun !dtcon_2_mk ((_ BitVec 2) (_ BitVec 2)) Pair)
+(declare-fun !dtsel_2_0_mk (Pair) (_ BitVec 2))
 (assert (= !dt_w_0 #b00))
 (assert (not (= a #b00)))
-(assert (= !dt_w_0 !selapp_mk_0_2))
-(assert (= !selapp_mk_0_2 a))
+(assert (= !dt_w_0 (!dtsel_2_0_mk (!dtcon_2_mk a b))))
+(assert (= (!dtsel_2_0_mk (!dtcon_2_mk a b)) a))
 (check-sat)
 ";
     let report = carcara_accepts_smt2(&bin, "dt_select_over_construct", smt2, &proof);

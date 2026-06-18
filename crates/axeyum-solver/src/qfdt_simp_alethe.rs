@@ -27,8 +27,8 @@
 //! 2. each such `assume` is spliced into a `!cong_*` derivation block:
 //!
 //!    ```text
-//!    (assume !cong_defi_*  (= w (sel_c (C a…))))    ; abstraction definition (conservative)
-//!    (assume !cong_proj_*  (= (sel_c (C a…)) a_i))  ; the DATATYPE PROJECTION AXIOM
+//!    (assume !cong_defi_*  (= w (!dtsel_n_i_c (!dtcon_n_c a…))))   ; abstraction definition (conservative)
+//!    (assume !cong_proj_*  (= (!dtsel_n_i_c (!dtcon_n_c a…)) a_i)) ; the projection equation (ι-reduction)
 //!    (step   !cong_trans_* (cl … (= w a_i)) :rule eq_transitive)
 //!    (step   <assume_id>   (cl (= w a_i))   :rule resolution …)
 //!    ```
@@ -38,23 +38,28 @@
 //!    [`crate::reconstruct_qf_ufbv_proof`] reconstructs the result to a
 //!    kernel-checked `False`.
 //!
-//! **The projection equation `(= (sel_c (C a…)) a_i)` is an assumed lemma.**
-//! Unlike the Ackermann abstraction definition `(= v_i (f a))` (a conservative
-//! fresh-variable introduction), this one is the datatype axiom itself — it is
-//! *not* a theorem of pure EUF. `sel_c(C(a…)) = a_i` holds only because `sel_c` is
-//! the recursor-defined `i`-th projection of `C`, which the EUF head does not
-//! know. The reconstructor discharges it as a **kernel hypothesis axiom**
-//! ([`crate::reconstruct_qf_ufbv_proof`] → `reconstruct_assume`), so the final
-//! `False` is kernel-checked **relative to that projection lemma**. This is the
-//! single trust point of the certificate (route B in the task taxonomy);
-//! `check_alethe` has no datatype rule and Carcara has none either, so the
-//! projection `assume` is internal-only — every *other* step (the abstraction
-//! definition, the `eq_transitive`, the bit-blast tail) is Carcara-checkable.
+//! ## Route A — the projection is **ι-reduction**, not an assumed axiom
 //!
-//! A future route-A certificate would model each datatype as a kernel inductive
-//! and discharge the projection by ι-reduction (`Eq.refl`), removing this trust
-//! point; the block shape here is chosen to make that swap local to the
-//! reconstructor.
+//! The selector application `sel_c(C a…)` is rendered **structurally** as a
+//! reserved-named selector application `!dtsel_n_i_c` over a reserved-named
+//! constructor application `!dtcon_n_c` (the heads carry the constructor arity
+//! `n` and selected index `i`). The reconstructor's route-A datatype section
+//! ([`crate::reconstruct_qf_ufbv_proof`] head path → `reconstruct_assume`)
+//! recognises these heads, models the datatype `C` as a **kernel inductive** `D`
+//! with one constructor `D.mk` of arity `n`, and models `select_i` as the
+//! recursor application `λ t, D.rec (λ _ => α) (λ f… => f_i) t`. Then
+//! `select_i(C a…)` ι-reduces (kernel `whnf`/`def_eq`) to `a_i`, so the
+//! projection equation `(= (sel_c (C a…)) a_i)` is discharged by `Eq.refl` — it
+//! is **derived, kernel-computed, not assumed**. The certificate carries **no
+//! assumed datatype axiom**; its only axioms are the input assumptions (and `em`
+//! from the bit-blast resolution layer), exactly like the other certificates.
+//!
+//! `check_alethe` and Carcara have no datatype rule, so for those checkers the
+//! two reserved heads are plain uninterpreted functions and the projection
+//! `assume` is an asserted premise (internal-only); every *other* step (the
+//! abstraction definition, the `eq_transitive`, the bit-blast tail) is
+//! Carcara-checkable. The kernel reconstruction is the checker that actually
+//! discharges the projection by ι-reduction.
 //!
 //! Emission is **self-validating**: the assembled proof is run through
 //! [`axeyum_cnf::check_alethe`] before return, so a returned certificate is always
@@ -77,6 +82,10 @@ struct ProjectionCert {
     constructor: ConstructorId,
     /// The selected field index.
     index: u32,
+    /// The constructor's full field argument terms `a0 … a_{n-1}` (so the
+    /// selector application `select_i(C a0…a_{n-1})` is rendered **structurally**
+    /// for route-A reconstruction, where its projection ι-reduces).
+    ctor_fields: Vec<TermId>,
 }
 
 /// Emits a complete, checkable Alethe refutation for an `unsat` datatype
@@ -91,9 +100,10 @@ struct ProjectionCert {
 /// projection / residual equalities.
 ///
 /// The certificate reconstructs through [`crate::reconstruct_qf_ufbv_proof`] to a
-/// kernel-checked `False`, **relative to** the per-fold projection lemma
-/// `(= (sel_c (C a…)) a_i)` (module docs). The returned proof closes to `(cl)` and
-/// has been accepted by [`axeyum_cnf::check_alethe`] before return.
+/// kernel-checked `False` with **no assumed datatype axiom** — each per-fold
+/// projection `(= (sel_c (C a…)) a_i)` is discharged by ι-reduction (`Eq.refl`)
+/// over a kernel inductive (route A, module docs). The returned proof closes to
+/// `(cl)` and has been accepted by [`axeyum_cnf::check_alethe`] before return.
 ///
 /// Returns [`None`] when:
 ///
@@ -139,6 +149,7 @@ pub fn prove_qf_dt_unsat_alethe_via_simplification(
             field: redex.field,
             constructor: redex.constructor,
             index: redex.index,
+            ctor_fields: redex.ctor_fields.clone(),
         });
     }
 
@@ -181,6 +192,8 @@ struct ProjectionRedex {
     constructor: ConstructorId,
     /// The field index `i`.
     index: u32,
+    /// The constructor's full field argument terms `a0 … a_{n-1}`.
+    ctor_fields: Vec<TermId>,
 }
 
 /// Collects every distinct `select_i(construct_c(..))` redex whose selector
@@ -206,6 +219,7 @@ fn collect_projection_redexes(arena: &TermArena, roots: &[TermId]) -> Vec<Projec
                         field: fields[index as usize],
                         constructor,
                         index,
+                        ctor_fields: fields,
                     });
                 }
             }
@@ -321,11 +335,18 @@ fn consequent_clause_key(arena: &TermArena, cert: &ProjectionCert) -> Option<Str
 }
 
 /// Emits, under `assume_id`, the steps deriving `(cl (= w a_i))` from the
-/// abstraction definition `(= w (sel_c (C a…)))` and the projection axiom
+/// abstraction definition `(= w (sel_c (C a…)))` and the projection equation
 /// `(= (sel_c (C a…)) a_i)`, chained by a single `eq_transitive`.
 ///
-/// The projection axiom is the **assumed datatype lemma** (module docs); every
-/// other step is Carcara-checkable.
+/// `sel_c(C a…)` is rendered **structurally** as a reserved-named selector
+/// application over a reserved-named constructor application
+/// (`(!dtsel_n_i_c (!dtcon_n_c a0 … a_{n-1}))`) so the **route-A** reconstructor
+/// recognises it, models the datatype as a kernel inductive, and discharges the
+/// projection equation by **ι-reduction** (`Eq.refl`) — *not* an assumed axiom
+/// (module docs). For Carcara (which has no datatype rule) the two reserved
+/// heads are plain uninterpreted functions and the projection is an asserted
+/// premise; every other step (the abstraction-definition resolution, the
+/// `eq_transitive`, the bit-blast tail) is Carcara-checked structurally.
 fn emit_projection_derivation(
     arena: &TermArena,
     out: &mut Vec<AletheCommand>,
@@ -336,13 +357,12 @@ fn emit_projection_derivation(
     let w = sym_alethe(arena, cert.fresh);
     let field = term_to_alethe(arena, cert.field)?;
 
-    // `sel_c(C a…)` is rendered as a single **opaque constant** naming the redex
-    // `select_index(C(a…))`. Its internal structure (the constructor and its
-    // fields) is irrelevant to the head derivation — it is the shared middle term
-    // of the transitive chain `w = sel = a_i`, so it cancels. An opaque const
-    // keeps the EUF head reconstructor's term translation in scope (it models
-    // `Const`/unary apps) and is Carcara-checkable as a plain symbol.
-    let sel = AletheTerm::Const(selector_redex_name(arena, cert));
+    // `sel_c(C a…)` rendered structurally: `(!dtsel_n_i_c (!dtcon_n_c a0 … an))`.
+    // The reserved heads carry the constructor arity `n` and selected index `i`
+    // so the route-A reconstructor can build the kernel inductive `D` (one ctor
+    // `D.mk` of arity `n`) and the selector recursor application; the projection
+    // then ι-reduces.
+    let sel = selector_application_alethe(arena, cert)?;
 
     // Abstraction definition `(= w (sel_c (C a…)))` — a conservative fresh-variable
     // introduction (the fresh `w` set equal to the selector application).
@@ -352,8 +372,9 @@ fn emit_projection_derivation(
         clause: vec![pos(eq_term(w.clone(), sel.clone()))],
     });
 
-    // Projection axiom `(= (sel_c (C a…)) a_i)` — the DATATYPE AXIOM (assumed
-    // lemma; discharged by the reconstructor as a kernel hypothesis axiom).
+    // Projection equation `(= (sel_c (C a…)) a_i)` — DERIVED by ι-reduction in the
+    // route-A reconstructor (the selector application is `def_eq` to `a_i`), so it
+    // is `Eq.refl`, not an assumed datatype axiom.
     let proj_id = next_id(fresh, "proj");
     out.push(AletheCommand::Assume {
         id: proj_id.clone(),
@@ -387,13 +408,28 @@ fn emit_projection_derivation(
     Some(())
 }
 
-/// The synthetic opaque-constant name `!selapp_<ctor>_<index>_<redex>` standing
-/// for the redex `select_index(C(a…))`. Keyed by the fresh abstraction symbol's
-/// index so distinct redexes (distinct `w`) get distinct opaque names even when
-/// they share a constructor and index.
-fn selector_redex_name(arena: &TermArena, cert: &ProjectionCert) -> String {
+/// The structural selector application `(!dtsel_n_i_c (!dtcon_n_c a0 … a_{n-1}))`
+/// for the redex `select_i(C(a0…a_{n-1}))`, as an [`AletheTerm`].
+///
+/// The reserved heads name the constructor `c`, its arity `n`, and the selected
+/// index `i`; the route-A reconstructor parses them ([`crate::reconstruct`]
+/// `parse_dtcon`/`parse_dtsel`) to build the kernel inductive and prove the
+/// projection by ι-reduction. Returns [`None`] if a field is not a renderable
+/// residual leaf (the emitter already restricts fields to BV/Bool).
+fn selector_application_alethe(arena: &TermArena, cert: &ProjectionCert) -> Option<AletheTerm> {
     let name = arena.constructor_name(cert.constructor);
-    format!("!selapp_{name}_{}_{}", cert.index, cert.fresh.index())
+    let n = cert.ctor_fields.len();
+    // (!dtcon_n_c a0 … a_{n-1}).
+    let mut con_args = Vec::with_capacity(n);
+    for &f in &cert.ctor_fields {
+        con_args.push(term_to_alethe(arena, f)?);
+    }
+    let con = AletheTerm::App(format!("!dtcon_{n}_{name}"), con_args);
+    // (!dtsel_n_i_c <con>).
+    Some(AletheTerm::App(
+        format!("!dtsel_{n}_{}_{name}", cert.index),
+        vec![con],
+    ))
 }
 
 /// A fresh, namespaced derivation-step id (`!cong_<base>_<n>`), matching the

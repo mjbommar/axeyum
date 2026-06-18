@@ -42,6 +42,7 @@
 
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
+use crate::level::LevelId;
 use crate::name::NameId;
 use crate::{BinderInfo, Kernel};
 
@@ -445,6 +446,130 @@ pub fn build_logic_prelude(kernel: &mut Kernel) -> LogicPrelude {
         exists_rec,
         exists_uparam,
         not,
+    }
+}
+
+/// The interned names of a **datatype inductive** declared by
+/// [`Kernel::add_datatype_inductive`]: a single-constructor, non-recursive,
+/// non-indexed inductive `D : Sort u` whose constructor `D.mk` takes `num_fields`
+/// fields all of one fixed carrier type, plus the generated recursor `D.rec`.
+///
+/// This is the kernel foundation for **route-A datatype-elim** (zero-trust
+/// datatypes): modeling an SMT datatype constructor as a kernel constructor makes
+/// the SMT selector a recursor application, so the read-over-construct projection
+/// `select_i(mk(a…)) = a_i` is **ι-reduction** (`Eq.refl`, kernel-computed by
+/// `def_eq`) rather than an assumed datatype axiom.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DatatypeInductive {
+    /// `D : Sort u` (the carrier-modeling inductive sort).
+    pub ind: NameId,
+    /// `D.mk : carrier → … → D` (`num_fields` carrier arrows).
+    pub ctor: NameId,
+    /// `D.rec` — the eliminator, used to define the field selectors.
+    pub rec: NameId,
+    /// The number of constructor fields (selector index range).
+    pub num_fields: usize,
+}
+
+impl Kernel {
+    /// Declare a **single-constructor datatype inductive** `D : Sort u` whose
+    /// constructor `D.mk` takes `num_fields` fields, each of the fixed
+    /// `carrier` type (an already-declared `Sort u` expression, e.g. the EUF
+    /// reconstruction carrier `α : Type`), and return the interned
+    /// [`DatatypeInductive`] names.
+    ///
+    /// `name` is the (fresh) inductive name; `D.mk` and `D.rec` are derived from
+    /// it (`name.mk`, `name.rec`). `carrier_sort` is the universe level `u` of the
+    /// carrier (so `D : Sort u` lives at the same level and the eliminator can
+    /// produce a `carrier`). The constructor result `D` is closed (no field
+    /// reference), so the fields are non-recursive and the slice-7 inductive gate
+    /// admits it directly.
+    ///
+    /// With this declared, the `i`-th selector is the recursor application
+    /// `λ (t : D), D.rec.{u} (motive := λ _ => carrier) (λ f₀ … f_{n-1} => f_i) t`
+    /// (see [`Kernel::datatype_selector`]); `selector_i (D.mk x₀ … x_{n-1})`
+    /// ι-reduces to `x_i`, so the projection equation is `Eq.refl`.
+    ///
+    /// # Errors
+    ///
+    /// Returns the [`KernelError`](crate::tc::KernelError) from
+    /// [`Kernel::add_inductive`] if the declaration fails to admit (e.g. a name
+    /// clash, or a malformed carrier).
+    pub fn add_datatype_inductive(
+        &mut self,
+        name: NameId,
+        carrier: ExprId,
+        carrier_sort: LevelId,
+        num_fields: usize,
+    ) -> Result<DatatypeInductive, crate::tc::KernelError> {
+        let ctor = self.name_str(name, "mk");
+        let anon = self.anon();
+        // ty := Sort u (the datatype's own sort, closed — no params, no indices).
+        let ind_ty = self.sort(carrier_sort);
+        let ind_const = self.const_(name, vec![]);
+        // ctor type := Π (_ : carrier)^num_fields, D   (the result `D` is closed).
+        let mut ctor_ty = ind_const;
+        for _ in 0..num_fields {
+            ctor_ty = self.pi(anon, carrier, ctor_ty, BinderInfo::Default);
+        }
+        self.add_inductive(name, &[], 0, ind_ty, &[(ctor, ctor_ty)])?;
+        let rec = self.name_str(name, "rec");
+        Ok(DatatypeInductive {
+            ind: name,
+            ctor,
+            rec,
+            num_fields,
+        })
+    }
+
+    /// Build the `index`-th **field selector** of a [`DatatypeInductive`] as a
+    /// closed recursor application term
+    /// `λ (t : D), D.rec.{u} (motive := λ _ => carrier) (λ f₀ … f_{n-1} => f_index) t`.
+    ///
+    /// Applying it to a constructor application `D.mk x₀ … x_{n-1}` ι-reduces
+    /// (kernel `whnf`/`def_eq`) to `x_index`, so the projection equation
+    /// `Eq carrier (selector (D.mk x…)) x_index` is `Eq.refl carrier x_index`.
+    ///
+    /// `carrier_sort` is the carrier's universe level `u` (the recursor's
+    /// elimination universe is instantiated to `u` so the motive can yield
+    /// `carrier`). `index` must be `< dt.num_fields`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index >= dt.num_fields` (a caller bug; selectors are bounded by
+    /// the constructor's field count).
+    #[must_use]
+    pub fn datatype_selector(
+        &mut self,
+        dt: DatatypeInductive,
+        carrier: ExprId,
+        carrier_sort: LevelId,
+        index: usize,
+    ) -> ExprId {
+        assert!(index < dt.num_fields, "selector index out of field range");
+        let anon = self.anon();
+        let ind_const = self.const_(dt.ind, vec![]);
+        // motive := λ (_ : D), carrier   (constant motive `λ _ => carrier`).
+        let motive = self.lam(anon, ind_const, carrier, BinderInfo::Default);
+        // minor := λ (f₀ … f_{n-1} : carrier), f_index.
+        // Under the n field binders the `index`-th field (outer-to-inner f₀…f_{n-1})
+        // is `BVar (n - 1 - index)`.
+        let minor = {
+            let mut body = self.bvar(u32::try_from(dt.num_fields - 1 - index).expect("fits u32"));
+            for _ in 0..dt.num_fields {
+                body = self.lam(anon, carrier, body, BinderInfo::Default);
+            }
+            body
+        };
+        // λ (t : D), D.rec.{u} motive minor t.
+        let rec_const = self.const_(dt.rec, vec![carrier_sort]);
+        let applied = {
+            let e = self.app(rec_const, motive);
+            let e = self.app(e, minor);
+            let t = self.bvar(0);
+            self.app(e, t)
+        };
+        self.lam(anon, ind_const, applied, BinderInfo::Default)
     }
 }
 

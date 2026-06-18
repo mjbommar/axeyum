@@ -570,17 +570,23 @@ fn end_to_end_qf_abv_array_elimination_certificate_to_false() {
     assert_infers_false(&mut ctx, term);
 }
 
-/// **Datatype read-over-construct certificate end-to-end (ADR-0022 task #21)**:
+/// **Datatype read-over-construct certificate end-to-end (ROUTE A, zero-trust)**:
 /// take a REAL `prove_qf_dt_unsat_alethe_via_simplification` certificate for
 /// `select_0(mk(a, b)) = #b00 ∧ ¬(a = #b00)` — decided via read-over-construct
 /// simplification (`select_0(mk(a, b)) → a`) — and reconstruct it through the
 /// **shared** `reconstruct_qf_ufbv_proof` to a kernel-checked `False`. The
 /// `select`-over-`construct` fold is made explicit as a `!cong_*` block:
-/// abstraction definition `(= w (sel_mk_0 (mk a b)))` + projection axiom
-/// `(= (sel_mk_0 (mk a b)) a)`, chained by `eq_transitive` (the EUF head,
-/// kernel-checked), and consumed by the bit-blast refutation (the tail,
-/// kernel-checked). The projection axiom is the single assumed lemma (route B),
-/// discharged by the kernel as a hypothesis axiom.
+/// abstraction definition `(= w (!dtsel_2_0_mk (!dtcon_2_mk a b)))` + projection
+/// equation `(= (!dtsel_2_0_mk (!dtcon_2_mk a b)) a)`, chained by `eq_transitive`
+/// (the EUF head, kernel-checked), and consumed by the bit-blast refutation (the
+/// tail, kernel-checked).
+///
+/// **ROUTE A:** the projection equation is **DERIVED by ι-reduction** (`Eq.refl`)
+/// over a kernel inductive — NOT an assumed datatype axiom — so the certificate
+/// carries no datatype trust point. [`assert_no_assumed_dt_projection_axiom`]
+/// confirms the EUF head's only axioms are the input-assumption hypotheses (the
+/// abstraction definition + the disequality), with the projection discharged by
+/// reflexivity.
 #[test]
 fn end_to_end_qf_dt_read_over_construct_certificate_to_false() {
     let mut arena = TermArena::new();
@@ -613,11 +619,87 @@ fn end_to_end_qf_dt_read_over_construct_certificate_to_false() {
     let term = super::reconstruct_qf_ufbv_proof(&mut ctx, &proof)
         .expect("the datatype certificate reconstructs to a kernel-checked term");
     assert_infers_false(&mut ctx, term);
+    // Route-A audit: the projection is ι-reduction, not an assumed axiom.
+    assert_no_assumed_dt_projection_axiom(&proof);
 }
 
-/// **Datatype certificate with a second field selected (ADR-0022 task #21)**:
+/// **ROUTE-A audit helper.** Reconstruct each `!cong_*` congruence block's EUF
+/// head refutation in an inspectable [`ReconstructCtx`] and confirm it carries
+/// **no assumed datatype-projection axiom**: every declared hypothesis axiom is
+/// role `"assume"` (the input-assumption hypotheses — the abstraction definition
+/// and the disequality), and the projection equation `(= (sel (C a…)) a_i)` is
+/// instead discharged by `Eq.refl` (ι-reduction over the kernel inductive), so it
+/// declares **no** extra axiom. Concretely: the block has exactly two assumed
+/// equalities (def + diseq) under route A, vs. three under route B (def + proj +
+/// diseq); we assert the projection did not mint an axiom by checking that the
+/// number of `"assume"` axioms equals the number of *non-projection* assumes in
+/// the block.
+fn assert_no_assumed_dt_projection_axiom(proof: &[axeyum_cnf::AletheCommand]) {
+    use axeyum_cnf::{AletheCommand, AletheTerm};
+    let blocks = super::collect_congruence_blocks(proof);
+    assert!(
+        !blocks.is_empty(),
+        "datatype certificate must have `!cong_*` congruence blocks"
+    );
+    for block in &blocks {
+        let euf = super::euf_refutation_for_test(block);
+        // Count the block's `assume`d equalities, splitting the projection
+        // (whose asserted equality's LHS is a `!dtsel_*` selector application) from
+        // the rest.
+        let mut projection_assumes = 0usize;
+        let mut other_assumes = 0usize;
+        for cmd in &euf {
+            if let AletheCommand::Assume { clause, .. } = cmd
+                && let [lit] = clause.as_slice()
+            {
+                let is_proj = matches!(
+                    &lit.atom,
+                    AletheTerm::App(h, args)
+                        if h == "="
+                            && matches!(
+                                args.first(),
+                                Some(AletheTerm::App(head, _)) if head.starts_with("!dtsel_")
+                            )
+                );
+                if is_proj {
+                    projection_assumes += 1;
+                } else {
+                    other_assumes += 1;
+                }
+            }
+        }
+        assert!(
+            projection_assumes >= 1,
+            "the EUF head must contain a projection assume to discharge"
+        );
+
+        let mut head_ctx = ReconstructCtx::new();
+        super::reconstruct_qf_uf_proof(&mut head_ctx, &euf)
+            .expect("EUF head reconstructs to False");
+        let roles = head_ctx.declared_axiom_roles();
+        // Every declared axiom is an input `"assume"` hypothesis; NONE is a
+        // datatype-projection axiom. Under route A the projection assumes are
+        // discharged by `Eq.refl`, so the axiom count equals the NON-projection
+        // assume count (the abstraction def + the disequality), not the total.
+        assert!(
+            roles.iter().all(|r| r == "assume"),
+            "route A: only `assume` hypothesis axioms expected, got {roles:?}"
+        );
+        assert_eq!(
+            roles.len(),
+            other_assumes,
+            "route A: the {projection_assumes} projection assume(s) must be \
+             discharged by ι-reduction (Eq.refl), minting NO axiom — only the \
+             {other_assumes} non-projection assume(s) become axioms (got {} axioms)",
+            roles.len()
+        );
+    }
+}
+
+/// **Datatype certificate with a second field selected (ROUTE A)**:
 /// `select_1(mk(a, b)) = #b01 ∧ ¬(b = #b01)` — exercises a non-zero index and a
-/// distinct constant. Reconstructs to a kernel-checked `False`.
+/// distinct constant. Reconstructs to a kernel-checked `False` with the
+/// projection discharged by ι-reduction (no assumed datatype axiom).
 #[test]
 fn end_to_end_qf_dt_second_field_certificate_to_false() {
     let mut arena = TermArena::new();
@@ -650,6 +732,8 @@ fn end_to_end_qf_dt_second_field_certificate_to_false() {
     let term = super::reconstruct_qf_ufbv_proof(&mut ctx, &proof)
         .expect("the datatype certificate reconstructs to a kernel-checked term");
     assert_infers_false(&mut ctx, term);
+    // Route-A audit: the field-1 projection is ι-reduction, not an assumed axiom.
+    assert_no_assumed_dt_projection_axiom(&proof);
 }
 
 /// The emitter declines (returns `None`) when there is no

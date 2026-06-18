@@ -1035,3 +1035,95 @@ fn exists_elim_checks() {
         "Exists.elim : (Exists α p) → C"
     );
 }
+
+/// **Datatype inductive selector ι-reduces (route-A foundation).** Declare a
+/// carrier `α : Type` and a 2-field datatype `Pair : Type` with
+/// `Pair.mk : α → α → Pair` via [`Kernel::add_datatype_inductive`]; then for
+/// concrete carrier atoms `x, y : α`, the selectors built by
+/// [`Kernel::datatype_selector`] satisfy `select_0 (mk x y)` `def_eq` `x` and
+/// `select_1 (mk x y)` `def_eq` `y` — the read-over-construct projection is
+/// **ι-reduction**, not an axiom. This is the zero-trust datatype foundation:
+/// the projection equation `Eq α (select_i (mk x y)) x_i` is `Eq.refl`.
+#[test]
+fn datatype_selector_iota_reduces_to_field() {
+    let mut k = Kernel::new();
+    let p = build_logic_prelude(&mut k);
+    let anon = k.anon();
+
+    // α : Sort 1 (= Type) as an axiom carrier.
+    let z = k.level_zero();
+    let one = k.level_succ(z);
+    let type_ = k.sort(one);
+    let alpha_name = k.name_str(anon, "α");
+    k.add_declaration(Declaration::Axiom {
+        name: alpha_name,
+        uparams: vec![],
+        ty: type_,
+    })
+    .unwrap();
+    let alpha = k.const_(alpha_name, vec![]);
+
+    // Pair : Type with mk : α → α → Pair.
+    let pair_name = k.name_str(anon, "Pair");
+    let dt = k
+        .add_datatype_inductive(pair_name, alpha, one, 2)
+        .expect("Pair datatype should admit");
+
+    // Concrete carrier atoms x, y : α.
+    let x = {
+        let n = k.name_str(anon, "x");
+        k.add_declaration(Declaration::Axiom {
+            name: n,
+            uparams: vec![],
+            ty: alpha,
+        })
+        .unwrap();
+        k.const_(n, vec![])
+    };
+    let y = {
+        let n = k.name_str(anon, "y");
+        k.add_declaration(Declaration::Axiom {
+            name: n,
+            uparams: vec![],
+            ty: alpha,
+        })
+        .unwrap();
+        k.const_(n, vec![])
+    };
+
+    // mk x y : Pair.
+    let mk_xy = {
+        let mk = k.const_(dt.ctor, vec![]);
+        let e = k.app(mk, x);
+        k.app(e, y)
+    };
+
+    // select_0 (mk x y) def_eq x ;  select_1 (mk x y) def_eq y.
+    for (index, field) in [(0usize, x), (1usize, y)] {
+        let sel = k.datatype_selector(dt, alpha, one, index);
+        let applied = k.app(sel, mk_xy);
+        assert!(
+            k.def_eq(applied, field),
+            "select_{index}(mk x y) must ι-reduce to field {index}"
+        );
+
+        // The projection equation Eq α (select_i (mk x y)) field is Eq.refl.
+        let eq_lhs = applied;
+        let eq_prop = {
+            let eq = k.const_(p.eq, vec![one]);
+            let e = k.app(eq, alpha);
+            let e = k.app(e, eq_lhs);
+            k.app(e, field)
+        };
+        let refl = {
+            let r = k.const_(p.eq_refl, vec![one]);
+            let e = k.app(r, alpha);
+            k.app(e, field)
+        };
+        let inferred = k.infer(refl).expect("Eq.refl infers");
+        assert!(
+            k.def_eq(inferred, eq_prop),
+            "Eq.refl proves the select_{index} projection (ι-reduction)"
+        );
+    }
+}
