@@ -982,7 +982,7 @@ enum ClauseProof {
 ///   (= `Eq α a b → False`).
 /// - **`eq_reflexive`/`eq_symmetric`/`eq_transitive`/`eq_congruent`** ⇒ recorded
 ///   as a Horn theory clause; reconstructed via the slice-1
-///   [`reconstruct_eq_step`] (plus [`reconstruct_eq_congruent`]) when a resolution
+///   [`reconstruct_eq_step`] (plus `reconstruct_eq_congruent`) when a resolution
 ///   resolves it against its hypotheses' unit proofs.
 /// - **`resolution`/`th_resolution`** with a theory clause and its hypotheses'
 ///   unit proofs ⇒ the reconstructed positive equality unit.
@@ -1478,7 +1478,7 @@ struct Clause {
 ///   resolution**: the step's premises are resolved pairwise (left fold) on the
 ///   unique complementary literal of each successive pair, building the conclusion
 ///   clause's proof; a conclusion of the empty clause `(cl)` yields a term of type
-///   `False`. See [`binary_resolve`].
+///   `False` (via `binary_resolve_on`, the Davis–Putnam pairwise resolvent).
 ///
 /// The final term — the proof of the conclusion of the step deriving `(cl)` — is
 /// `infer`-checked against the prelude's `False`. A wrong reconstruction makes
@@ -2642,7 +2642,7 @@ fn try_equiv_xor(
 /// conclusion clause. Each such clause is a propositional **tautology** over the
 /// structured gate (`And`/`Or`/`Iff`/`Not`, with `xor` modeled as `Not Iff`) of
 /// its operand atoms. The returned proof term is `infer`-checked and
-/// [`Kernel::def_eq`]-compared to the clause's [`ReconstructCtx::gate_clause_to_prop`]
+/// [`Kernel::def_eq`]-compared to the clause's `gate_clause_to_prop`
 /// encoding — the kernel is the gate.
 ///
 /// Rules with a direct polynomial proof (`and_pos`) are handled rule-specifically;
