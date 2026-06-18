@@ -3698,4 +3698,28 @@ fn unified_dispatcher_routes_each_fragment_to_kernel_false() {
             .expect("LRA unsat dispatches + kernel-checks to False");
         assert_eq!(frag, ProofFragment::Lra);
     }
+
+    // Quantifier ∀: ∀x.(f x = c) ∧ ¬(f a = c) — top-level universal.
+    {
+        let mut arena = TermArena::new();
+        let alpha = Sort::BitVec(8);
+        let x = arena.declare("x", alpha).unwrap();
+        let a = arena.declare("a", alpha).unwrap();
+        let c = arena.declare("c", alpha).unwrap();
+        let f = arena.declare_fun("f", &[alpha], alpha).unwrap();
+        let xv = arena.var(x);
+        let cv = arena.var(c);
+        let fx = arena.apply(f, &[xv]).unwrap();
+        let fx_eq_c = arena.eq(fx, cv).unwrap();
+        let forall = arena.forall(x, fx_eq_c).unwrap();
+        let av = arena.var(a);
+        let fa = arena.apply(f, &[av]).unwrap();
+        let not_fa_eq_c = {
+            let e = arena.eq(fa, cv).unwrap();
+            arena.not(e).unwrap()
+        };
+        let frag = prove_unsat_to_lean(&mut arena, &[forall, not_fa_eq_c])
+            .expect("∀ unsat dispatches + kernel-checks to False");
+        assert_eq!(frag, ProofFragment::Forall);
+    }
 }
