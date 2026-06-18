@@ -183,6 +183,28 @@ fn prelude_admits_all_declarations() {
         }
         _ => panic!("Eq.rec should be a recursor"),
     }
+    // Exists is declared with its constructor and recursor.
+    for name in [p.exists_, p.exists_intro, p.exists_rec] {
+        assert!(
+            k.environment().contains(name),
+            "prelude should declare {}",
+            k.display_name(name)
+        );
+    }
+    // Exists has 2 params, 0 indices, 1 minor (intro).
+    match k.environment().get(p.exists_rec).unwrap() {
+        Declaration::Recursor {
+            num_params,
+            num_indices,
+            num_minors,
+            ..
+        } => {
+            assert_eq!(*num_params, 2);
+            assert_eq!(*num_indices, 0);
+            assert_eq!(*num_minors, 1);
+        }
+        _ => panic!("Exists.rec should be a recursor"),
+    }
 }
 
 /// `False.rec` (zero-constructor recursor) exists and its generated type
@@ -833,5 +855,183 @@ fn iff_intro_checks() {
     assert!(
         f.k.def_eq(inferred, expected),
         "Iff.intro A B mp mpr : Iff A B"
+    );
+}
+
+/// **`Exists.intro`**: with `α : Type`, `p : α → Prop`, a witness `a : α` and a
+/// proof `hpa : p a`, the term `Exists.intro.{1} α p a hpa : Exists.{1} α p`
+/// type-checks — the existential introduction rule.
+#[test]
+fn exists_intro_checks() {
+    let mut k = Kernel::new();
+    let p = build_logic_prelude(&mut k);
+    let anon = k.anon();
+    let one = {
+        let z = k.level_zero();
+        k.level_succ(z)
+    };
+
+    // α : Sort 1, p : α → Prop, a : α, hpa : p a.
+    let s1 = k.sort(one);
+    let alpha_n = k.name_str(anon, "α");
+    k.add_declaration(Declaration::Axiom {
+        name: alpha_n,
+        uparams: vec![],
+        ty: s1,
+    })
+    .unwrap();
+    let alpha = k.const_(alpha_n, vec![]);
+    let prop = k.sort_zero();
+    let p_ty = k.pi(anon, alpha, prop, BinderInfo::Default);
+    let pred_n = k.name_str(anon, "p");
+    k.add_declaration(Declaration::Axiom {
+        name: pred_n,
+        uparams: vec![],
+        ty: p_ty,
+    })
+    .unwrap();
+    let pred = k.const_(pred_n, vec![]);
+    let a_n = k.name_str(anon, "a");
+    k.add_declaration(Declaration::Axiom {
+        name: a_n,
+        uparams: vec![],
+        ty: alpha,
+    })
+    .unwrap();
+    let a = k.const_(a_n, vec![]);
+    // p a : Prop.
+    let pa = k.app(pred, a);
+    let hpa_n = k.name_str(anon, "hpa");
+    k.add_declaration(Declaration::Axiom {
+        name: hpa_n,
+        uparams: vec![],
+        ty: pa,
+    })
+    .unwrap();
+    let hpa = k.const_(hpa_n, vec![]);
+
+    // Exists.intro.{1} α p a hpa.
+    let intro = k.const_(p.exists_intro, vec![one]);
+    let proof = {
+        let e = k.app(intro, alpha);
+        let e = k.app(e, pred);
+        let e = k.app(e, a);
+        k.app(e, hpa)
+    };
+    let inferred = k.infer(proof).unwrap();
+    // Expected: Exists.{1} α p.
+    let exists_const = k.const_(p.exists_, vec![one]);
+    let expected = {
+        let e = k.app(exists_const, alpha);
+        k.app(e, pred)
+    };
+    assert!(
+        k.def_eq(inferred, expected),
+        "Exists.intro α p a hpa : Exists α p"
+    );
+}
+
+/// **`Exists.elim`** (= `Exists.rec` with a constant `Prop` motive): given
+/// `h : Exists.{1} α p` and `f : ∀ (w : α), p w → C`, the term
+/// `Exists.rec.{0,1} α p (fun _ => C) (fun w hw => f w hw) h : C` type-checks.
+/// This is THE eliminator used to certify existential skolemization: the
+/// skolemized refutation `R(sk)` becomes the minor `fun w hw => …`, wrapped over
+/// the existential hypothesis to land in `C` (here `C := False` in practice).
+#[test]
+fn exists_elim_checks() {
+    let mut k = Kernel::new();
+    let p = build_logic_prelude(&mut k);
+    let anon = k.anon();
+    let one = {
+        let z = k.level_zero();
+        k.level_succ(z)
+    };
+    let z = k.level_zero();
+
+    // α : Sort 1, p : α → Prop, C : Prop.
+    let s1 = k.sort(one);
+    let alpha_n = k.name_str(anon, "α");
+    k.add_declaration(Declaration::Axiom {
+        name: alpha_n,
+        uparams: vec![],
+        ty: s1,
+    })
+    .unwrap();
+    let alpha = k.const_(alpha_n, vec![]);
+    let prop = k.sort_zero();
+    let p_ty = k.pi(anon, alpha, prop, BinderInfo::Default);
+    let pred_n = k.name_str(anon, "p");
+    k.add_declaration(Declaration::Axiom {
+        name: pred_n,
+        uparams: vec![],
+        ty: p_ty,
+    })
+    .unwrap();
+    let pred = k.const_(pred_n, vec![]);
+    let c_n = k.name_str(anon, "C");
+    k.add_declaration(Declaration::Axiom {
+        name: c_n,
+        uparams: vec![],
+        ty: prop,
+    })
+    .unwrap();
+    let c = k.const_(c_n, vec![]);
+
+    // f : Π (w : α), p w → C.   Under w, `p w` = App(p, BVar 0); under w + the
+    // arrow's domain binder, `C` is closed (a Const), so it does not shift.
+    let f_ty = {
+        let w0 = k.bvar(0);
+        let pw = k.app(pred, w0);
+        let arrow = k.pi(anon, pw, c, BinderInfo::Default);
+        k.pi(anon, alpha, arrow, BinderInfo::Default)
+    };
+    let f_n = k.name_str(anon, "f");
+    k.add_declaration(Declaration::Axiom {
+        name: f_n,
+        uparams: vec![],
+        ty: f_ty,
+    })
+    .unwrap();
+    let f = k.const_(f_n, vec![]);
+
+    // Exists.{1} α p.
+    let exists_ap = {
+        let exists_const = k.const_(p.exists_, vec![one]);
+        let e = k.app(exists_const, alpha);
+        k.app(e, pred)
+    };
+    // motive := fun (_ : Exists α p) => C.
+    let motive = k.lam(anon, exists_ap, c, BinderInfo::Default);
+    // minor := fun (w : α) (hw : p w) => f w hw.   w = BVar 1, hw = BVar 0.
+    let minor = {
+        let w1 = k.bvar(1);
+        let hw0 = k.bvar(0);
+        let app = k.app(f, w1);
+        let app = k.app(app, hw0);
+        // domain of the inner binder `hw : p w` — w = BVar 0 here.
+        let w0 = k.bvar(0);
+        let pw = k.app(pred, w0);
+        let inner = k.lam(anon, pw, app, BinderInfo::Default);
+        k.lam(anon, alpha, inner, BinderInfo::Default)
+    };
+
+    // proof := fun (h : Exists α p) =>
+    //          Exists.rec.{0,1} α p motive minor h : C.
+    let proof = {
+        let rec = k.const_(p.exists_rec, vec![z, one]);
+        let e = k.app(rec, alpha);
+        let e = k.app(e, pred);
+        let e = k.app(e, motive);
+        let e = k.app(e, minor);
+        let h = k.bvar(0);
+        let body = k.app(e, h);
+        k.lam(anon, exists_ap, body, BinderInfo::Default)
+    };
+    let inferred = k.infer(proof).unwrap();
+    // Expected: Exists α p → C.
+    let expected = k.pi(anon, exists_ap, c, BinderInfo::Default);
+    assert!(
+        k.def_eq(inferred, expected),
+        "Exists.elim : (Exists α p) → C"
     );
 }

@@ -27,12 +27,17 @@
 //! - **`Iff (a b : Prop) : Prop`** — `Iff.intro : (a → b) → (b → a) → Iff a b`.
 //! - **`Eq.{u} {α : Sort u} (a : α) : α → Prop`** — `Eq.refl : Eq a a`
 //!   (the slice-7 indexed inductive).
+//! - **`Exists.{u} (α : Sort u) (p : α → Prop) : Prop`** —
+//!   `Exists.intro : ∀ (w : α), p w → Exists α p` (the existential, a parametric
+//!   non-indexed inductive). Its generated recursor `Exists.rec` is the
+//!   eliminator `(∃ x, p x) → (∀ w, p w → C) → C` for any motive `C` — the
+//!   foundation for certifying **existential skolemization** (P3.7).
 //! - **`Not (a : Prop) : Prop := a → False`** — a [`Declaration::Definition`],
 //!   not an inductive.
 //!
 //! Every inductive's generated recursor (`True.rec`, `False.rec`, `And.rec`,
-//! `Or.rec`, `Iff.rec`, `Eq.rec`) is registered too and is the eliminator used
-//! by the proof terms.
+//! `Or.rec`, `Iff.rec`, `Eq.rec`, `Exists.rec`) is registered too and is the
+//! eliminator used by the proof terms.
 #![allow(clippy::similar_names, clippy::many_single_char_names)]
 
 use crate::env::{Declaration, ReducibilityHint};
@@ -92,6 +97,16 @@ pub struct LogicPrelude {
     pub eq_rec: NameId,
     /// The universe parameter `u` shared by `Eq`/`Eq.refl`/`Eq.rec`.
     pub eq_uparam: NameId,
+
+    /// `Exists.{u} : ∀ (α : Sort u), (α → Prop) → Prop`.
+    pub exists_: NameId,
+    /// `Exists.intro.{u} : ∀ (α : Sort u) (p : α → Prop) (w : α), p w → Exists α p`.
+    pub exists_intro: NameId,
+    /// `Exists.rec` — the existential eliminator
+    /// (`(∃ x, p x) → (∀ w, p w → C) → C`).
+    pub exists_rec: NameId,
+    /// The universe parameter `u` shared by `Exists`/`Exists.intro`/`Exists.rec`.
+    pub exists_uparam: NameId,
 
     /// `Not : Prop → Prop` (the definition `fun a => a → False`).
     pub not: NameId,
@@ -313,6 +328,73 @@ pub fn build_logic_prelude(kernel: &mut Kernel) -> LogicPrelude {
     }
     let eq_rec = kernel.name_str(eq, "rec");
 
+    // --- Exists.{u} (α : Sort u) (p : α → Prop) : Prop -------------------
+    // The existential: a parametric, NON-indexed inductive (2 params, 0
+    // indices), with one constructor
+    //   Exists.intro : Π (α) (p) (w : α) (h : p w), Exists α p.
+    // The field `h : p w` mentions the PARAMETER `p` (not the inductive), so
+    // it is non-recursive — the slice-7 parametric machinery admits it. The
+    // generated `Exists.rec` is the eliminator
+    //   Exists.rec : Π (α) (p) {motive : Exists α p → Sort v}
+    //                (Π (w : α) (h : p w), motive (Exists.intro α p w h))
+    //                (major : Exists α p), motive major,
+    // and `Exists.rec` with `motive := fun _ => C` is `Exists.elim`.
+    let exists_uparam = kernel.name_str(anon, "u");
+    let exists_ = kernel.name_str(anon, "Exists");
+    let exists_intro = kernel.name_str(exists_, "intro");
+    {
+        let u_lvl = kernel.level_param(exists_uparam);
+        let sort_u = kernel.sort(u_lvl);
+        let exists_const = kernel.const_(exists_, vec![u_lvl]);
+        let prop = kernel.prop();
+        // ty := Π (α : Sort u) (p : α → Prop), Prop.
+        //   `p : α → Prop` under α → its domain `α` = BVar 0 (Π (_ : α), Prop).
+        let exists_ty = {
+            let a0 = kernel.bvar(0);
+            let p_ty = kernel.pi(anon, a0, prop, BinderInfo::Default);
+            let inner_p = kernel.pi(anon, p_ty, prop, BinderInfo::Default);
+            kernel.pi(anon, sort_u, inner_p, BinderInfo::Default)
+        };
+        // Exists.intro : Π (α : Sort u) (p : α → Prop) (w : α) (h : p w),
+        //                Exists α p.
+        //   binders outer→inner: α(param), p(param), w(field), h(field).
+        //   result `Exists α p` (under all 4): α = BVar 3, p = BVar 2.
+        //   `h : p w`   under α, p, w → p = BVar 1, w = BVar 0 ⇒ App(BVar 1, BVar 0).
+        //   `w : α`     under α, p     → α = BVar 1.
+        //   `p : α → Prop` under α     → α = BVar 0.
+        let intro_ty = {
+            let a3 = kernel.bvar(3);
+            let p2 = kernel.bvar(2);
+            let exists_ap = {
+                let e = kernel.app(exists_const, a3);
+                kernel.app(e, p2)
+            };
+            // h : p w   (under α, p, w).
+            let p1 = kernel.bvar(1);
+            let w0 = kernel.bvar(0);
+            let p_w = kernel.app(p1, w0);
+            let inner_h = kernel.pi(anon, p_w, exists_ap, BinderInfo::Default);
+            // w : α   (under α, p).
+            let a1 = kernel.bvar(1);
+            let inner_w = kernel.pi(anon, a1, inner_h, BinderInfo::Default);
+            // p : α → Prop   (under α).
+            let a0 = kernel.bvar(0);
+            let p_ty = kernel.pi(anon, a0, prop, BinderInfo::Default);
+            let inner_p = kernel.pi(anon, p_ty, inner_w, BinderInfo::Default);
+            kernel.pi(anon, sort_u, inner_p, BinderInfo::Default)
+        };
+        kernel
+            .add_inductive(
+                exists_,
+                &[exists_uparam],
+                2,
+                exists_ty,
+                &[(exists_intro, intro_ty)],
+            )
+            .expect("Exists should admit");
+    }
+    let exists_rec = kernel.name_str(exists_, "rec");
+
     // --- Not (a : Prop) : Prop := fun a => a → False ---------------------
     // A Definition (not an inductive). Type: Prop → Prop. Value: λ a, a → False.
     let not = kernel.name_str(anon, "Not");
@@ -358,6 +440,10 @@ pub fn build_logic_prelude(kernel: &mut Kernel) -> LogicPrelude {
         eq_refl,
         eq_rec,
         eq_uparam,
+        exists_,
+        exists_intro,
+        exists_rec,
+        exists_uparam,
         not,
     }
 }
