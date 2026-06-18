@@ -364,6 +364,10 @@ impl Cdcl {
                 let mut learned = Vec::with_capacity(lower.len() + 1);
                 learned.push(self.true_literal(var).negated());
                 learned.extend(lower);
+                // Local (self-subsumption) minimization: drop literals already
+                // implied by the rest of the clause. Shrinks the learned clause —
+                // smaller proof steps, faster propagation, lower backjumps.
+                self.minimize(&mut learned);
                 // Put the highest-level non-asserting literal at index 1 so the
                 // clause watches correctly after backjumping.
                 let mut backjump = 0;
@@ -384,6 +388,36 @@ impl Cdcl {
 
             clause_id = self.reason[var].expect("implied literal has a reason clause");
         }
+    }
+
+    /// Local self-subsumption minimization of a learned clause: a non-asserting,
+    /// non-decision literal is redundant when every literal in its reason clause
+    /// is already present in the learned clause (or fixed at level 0), so its
+    /// negation is implied by the rest. Reasons point to strictly earlier trail
+    /// positions, so the membership test (against the original clause) is
+    /// acyclic-safe and the minimized clause is still RUP — and DRAT-checked.
+    fn minimize(&self, learned: &mut Vec<CnfLit>) {
+        if learned.len() <= 1 {
+            return;
+        }
+        let mut in_learned = vec![false; self.assign.len()];
+        for &l in learned.iter() {
+            in_learned[l.var().index()] = true;
+        }
+        let asserting_var = learned[0].var().index();
+        learned.retain(|&l| {
+            let v = l.var().index();
+            if v == asserting_var {
+                return true;
+            }
+            match self.reason[v] {
+                None => true, // a decision literal is never redundant
+                Some(rid) => !self.clauses[rid].iter().all(|&q| {
+                    let qv = q.var().index();
+                    qv == v || in_learned[qv] || self.level[qv] == 0
+                }),
+            }
+        });
     }
 
     fn backtrack_to(&mut self, level: usize) {
