@@ -22,7 +22,9 @@
 use std::time::Duration;
 
 use axeyum_ir::{Assignment, Sort, TermArena, TermId, Value, eval};
-use axeyum_solver::{CheckResult, LazyBvBackend, SatBvBackend, SolverBackend, SolverConfig};
+use axeyum_solver::{
+    CheckResult, LazyBvBackend, PblsBackend, SatBvBackend, SolverBackend, SolverConfig,
+};
 
 const WIDTH: u32 = 4;
 
@@ -168,11 +170,13 @@ fn verdict(r: &CheckResult) -> &'static str {
     }
 }
 
-/// Runs the eager + lazy backends (and Z3 when the feature is on) on the shared
-/// arena. Both pure-Rust backends take `&TermArena`, so one build serves all.
-fn run_backends(arena: &TermArena, assertions: &[TermId]) -> Vec<Run> {
+/// Runs the eager + lazy + local-search backends (and Z3 when the feature is on)
+/// on the shared arena. The pure-Rust backends take `&TermArena`, so one build
+/// serves all. PBLS is one-sided (`Sat`/`Unknown`, never `Unsat`), so it can only
+/// add `Sat` verdicts the harness then replays and cross-checks against the
+/// complete backends.
+fn run_backends(arena: &TermArena, assertions: &[TermId], include_pbls: bool) -> Vec<Run> {
     let config = cfg();
-    #[allow(unused_mut)] // `runs` is mutated only under the `z3` feature
     let mut runs = vec![
         Run {
             name: "eager",
@@ -187,6 +191,18 @@ fn run_backends(arena: &TermArena, assertions: &[TermId]) -> Vec<Run> {
                 .expect("lazy backend invocation succeeds"),
         },
     ];
+    if include_pbls {
+        // Local search burns its whole budget on the unsatisfiable instances it
+        // cannot refute, so cap it tightly — it only ever contributes `Sat`
+        // verdicts (replayed + cross-checked) or `Unknown` (no disagreement).
+        let pbls_config = SolverConfig::default().with_timeout(Duration::from_millis(100));
+        runs.push(Run {
+            name: "pbls",
+            result: PblsBackend::new()
+                .check(arena, assertions, &pbls_config)
+                .expect("local-search backend invocation succeeds"),
+        });
+    }
     #[cfg(feature = "z3")]
     runs.push(Run {
         name: "z3",
@@ -197,7 +213,7 @@ fn run_backends(arena: &TermArena, assertions: &[TermId]) -> Vec<Run> {
     runs
 }
 
-fn run_batch(seed: u64, n: usize) {
+fn run_batch(seed: u64, n: usize, include_pbls: bool) {
     let mut state = seed;
     let mut decided = 0usize;
     for _ in 0..n {
@@ -205,7 +221,7 @@ fn run_batch(seed: u64, n: usize) {
         let instance_seed = state;
         let mut arena = TermArena::new();
         let assertions = random_formula(&mut state, &mut arena);
-        let runs = run_backends(&arena, &assertions);
+        let runs = run_backends(&arena, &assertions, include_pbls);
         if runs
             .iter()
             .any(|r| !matches!(r.result, CheckResult::Unknown(_)))
@@ -224,14 +240,16 @@ fn run_batch(seed: u64, n: usize) {
 
 #[test]
 fn eager_and_lazy_agree_on_random_qfbv_small_batch() {
-    run_batch(0x5EED_0BAD_1234_9F01, 200);
+    // Always-on: the complete backends only, so it stays fast.
+    run_batch(0x5EED_0BAD_1234_9F01, 200, false);
 }
 
 #[test]
-#[ignore = "larger soundness sweep; run with --ignored"]
-fn eager_and_lazy_agree_on_random_qfbv_large_batch() {
-    // Three independent seeds, 1500 total.
-    run_batch(0xA11C_E5DE_FEC8_ED01_u64, 500);
-    run_batch(0x0FF1_CEC0_FFEE_9931_u64, 500);
-    run_batch(0xDEAD_BEEF_FEED_5AFE, 500);
+#[ignore = "larger soundness sweep (incl. local search); run with --ignored"]
+fn eager_lazy_pbls_agree_on_random_qfbv_large_batch() {
+    // Three independent seeds, 1500 total, with the local-search engine included
+    // so its one-sided `Sat` verdicts are replayed and cross-checked at scale.
+    run_batch(0xA11C_E5DE_FEC8_ED01_u64, 500, true);
+    run_batch(0x0FF1_CEC0_FFEE_9931_u64, 500, true);
+    run_batch(0xDEAD_BEEF_FEED_5AFE, 500, true);
 }
