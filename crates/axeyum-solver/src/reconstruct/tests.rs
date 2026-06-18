@@ -1779,6 +1779,58 @@ fn end_to_end_nested_arith_reconstructs_polynomially() {
     assert_infers_false(&mut ctx, term);
 }
 
+/// **Derived-operator coverage via lowering (P3.7).** `bvsub` has no core bitblast
+/// rule, but `axeyum_rewrite::lower_derived_bv` rewrites it to `bvadd a (bvneg b)`
+/// (denotation-preserving, exhaustively tested in `axeyum-rewrite`). After lowering,
+/// `(bvsub a b) = a ∧ ¬(…)` emits a core-only proof that reconstructs to a
+/// kernel-checked `False` — the proof track now covers `bvsub` end to end.
+#[test]
+fn end_to_end_bvsub_via_lowering_reconstructs() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let mk = |a: &mut TermArena, n: &str| {
+        let s = a.declare(n, Sort::BitVec(2)).unwrap();
+        a.var(s)
+    };
+    let a = mk(&mut arena, "a");
+    let b = mk(&mut arena, "b");
+    let sub = arena.bv_sub(a, b).unwrap();
+    let eq = arena.eq(sub, a).unwrap();
+    let neq = arena.not(eq).unwrap();
+    // Lower derived ops so the emitter (which has no bitblast_sub) sees core ops only.
+    let eq = axeyum_rewrite::lower_derived_bv(&mut arena, eq).unwrap();
+    let neq = axeyum_rewrite::lower_derived_bv(&mut arena, neq).unwrap();
+    let proof =
+        crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("emitter accepts lowered core");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_bv_proof(&mut ctx, &proof).expect("reconstructs");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// The comparison family lowers too: `bvule a b → ¬(bvult b a)`. The unsat pair
+/// `bvule a b ∧ bvult b a` (`a ≤ b` and `b < a`) lowers to `¬(bvult b a) ∧ bvult b a`
+/// — core ops only — and reconstructs to a kernel-checked `False`.
+#[test]
+fn end_to_end_bvule_via_lowering_reconstructs() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let mk = |a: &mut TermArena, n: &str| {
+        let s = a.declare(n, Sort::BitVec(2)).unwrap();
+        a.var(s)
+    };
+    let a = mk(&mut arena, "a");
+    let b = mk(&mut arena, "b");
+    let le = arena.bv_ule(a, b).unwrap();
+    let gt = arena.bv_ult(b, a).unwrap();
+    let le = axeyum_rewrite::lower_derived_bv(&mut arena, le).unwrap();
+    let gt = axeyum_rewrite::lower_derived_bv(&mut arena, gt).unwrap();
+    let proof =
+        crate::prove_qf_bv_unsat_alethe(&arena, &[le, gt]).expect("emitter accepts lowered core");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_bv_proof(&mut ctx, &proof).expect("reconstructs");
+    assert_infers_false(&mut ctx, term);
+}
+
 /// **NEGATIVE soundness (slice 6)**: corrupt the closing resolution of a REAL
 /// bitwise proof — drop a premise so it can no longer fold to `(cl)` — and confirm
 /// the fused walk REJECTS it rather than producing a `False` from a non-refutation.

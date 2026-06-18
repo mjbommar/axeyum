@@ -319,6 +319,25 @@ impl TermArena {
         )
     }
 
+    /// Rebuild an `App` term with `new_args`, preserving its operator and sort.
+    ///
+    /// Intended for structural rewrites that replace children with subterms of the
+    /// **same sort** (e.g. denotation-preserving lowering); the result sort is taken
+    /// from `term` unchanged, so the caller must keep arg sorts compatible. A
+    /// non-`App` term (symbol/const/…) is returned unchanged. If `new_args` equals the
+    /// original children the interner returns `term` itself.
+    #[must_use]
+    pub fn rebuild_with_args(&mut self, term: TermId, new_args: &[TermId]) -> TermId {
+        match self.node(term) {
+            TermNode::App { op, .. } => {
+                let op = *op;
+                let sort = self.sort_of(term);
+                self.app(op, new_args, sort)
+            }
+            _ => term,
+        }
+    }
+
     // ----- datatypes (ADR-0022) -----------------------------------------
 
     /// Declares a datatype with no constructors yet, returning its id. Add
