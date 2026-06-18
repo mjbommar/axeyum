@@ -78,3 +78,35 @@ Until (2) lands, multiplier proofs are reconstructable only at small widths
 (`≤ ~7-bit`), which is sufficient for the unit/integration coverage but not for
 production QF_BV. Adder/`neg`/bitwise/structural/comparison ops are unaffected and
 reconstruct at any width the SAT layer can handle.
+
+## Concrete fix mechanism (2026-06-18, Carcara-grounded)
+
+Reading Carcara's actual rules pins the exact fix — it is **not** an exotic `let`
+encoding, it is Carcara's own incremental scheme that our emitter bypasses:
+
+- Carcara's `bitblast::add` (and `mult`, …) computes the expected `res` via
+  `ripple_carry_adder(arg_i, …)`, which calls **`build_term_vec(arg, size, pool)`**.
+  That helper returns the operand's bits as **`((_ @bit_of i) arg)` projections** when
+  `arg` is a *plain term*, and only inlines when `arg` is itself a literal `@bbterm`
+  (`references/carcara/.../rules/bitvectors.rs`). So `(= (bvadd (bvadd a b) c) res)`
+  with `res` built over `@bit_of i (bvadd a b)` is **`O(size²)`** and Carcara-valid.
+- **Our emitter inlines.** `BbReducer::reduce_term` (`qfbv_alethe.rs:497–528`) reduces
+  each child to its `@bbterm` **form** (`child_forms`), `cong`-substitutes the op to
+  `op(child_forms…)`, and calls `bitblast_op_step` over those `@bbterm` forms — so our
+  `build_term_vec` takes the inlined-args branch and the bit expressions embed the
+  children's full bit trees → exponential for nested arithmetic.
+
+**The fix (both sides):**
+1. *Emitter:* bitblast each compound op **directly on its original term**
+   (`= op(orig children) (@bbterm projections)`), dropping the `cong`+`@bbterm`-form
+   substitution — operands stay as terms so `build_term_vec` projects. Validate with
+   `carcara_crosscheck`.
+2. *Reconstruction:* resolve `@bit_of i child` for a **compound** `child` via that
+   child's own `@bbterm` definition (today `operand_bit_term` only projects leaves /
+   inlines `@bbterm` args), so the per-bit iffs stay small. The bridge / `bv_widths`
+   already track the needed child definitions.
+
+This is the prerequisite for wide `bvmul`/`bvudiv`/… and removes both the emission
+*and* reconstruction blowup (the kernel `check_against` over large Props goes away
+because the Props become `O(size)` per bit). ADR-level, Carcara-sensitive — a focused
+fresh-session change, but now precisely specified rather than "share it somehow".
