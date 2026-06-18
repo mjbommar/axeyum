@@ -144,14 +144,29 @@ test — at which point genuine QF_BV refutations close to kernel-checked `False
 
 ### 2. Reconstruction is slow even at tiny widths
 
-`(bvadd (bvmul a b) (bvneg c)) = a ∧ ¬…` and `(concat (bvadd a b) c) = d ∧ ¬…` at
-**3-bit** each reconstruct correctly but take **~60 s** (the suite with them ran
-376 s). 3-bit is tiny — this points to the kernel `infer`/`def_eq` (and/or
-`gate_term_to_prop`) doing non-shared, super-linear work over the accumulated proof
-terms. Combined with the multiplier blowup
-([[bitblast-reconstruction-multiplier-blowup]]), the through-line is the same:
-**no sharing** — terms and Props are inlined trees, and kernel operations over them
-are not memoized.
+`(bvadd (bvmul a b) (bvneg c)) = a ∧ ¬…` at **3-bit** reconstructs correctly but
+takes **> 120 s** (with the Davis–Putnam resolution; the committed width-2 cases
+stay ~ms). 3-bit is tiny, so this is a real bottleneck.
+
+**Two candidate fixes were tried and empirically RULED OUT (2026-06-18):**
+- **DP elimination order** — added a min-cost (`min pos×neg`) pivot heuristic +
+  pool-size guard (`db9effe`). The heuristic did **not** move the 3-bit time, so
+  the cost is not the DP combinatorics. (The guard stays — it degrades a
+  pathological blowup to a clean error instead of OOM.)
+- **`gate_term_to_prop` memoization** — a ctx-level `AletheTerm`-key → `ExprId`
+  cache (cleared on bridge change). All 243 tests stayed green but the 3-bit time
+  did **not** move, so the cost is not re-processing gate Props. Reverted (no
+  measured benefit).
+
+So the bottleneck is **deeper** — most likely the kernel `infer`/`def_eq` over the
+large accumulated proof terms (each `binary_resolve_on` builds a `clause_elim`
+case-split term; `check_against` then `infer`s + `def_eq`s it), or the cumulative
+proof-term size. **Needs profiling** (which kernel op dominates) before the right
+fix is clear — candidates: a `def_eq`/`infer` result cache keyed on `ExprId`, or
+restructuring the resolution proof to share the clause-elimination skeletons.
+Combined with the multiplier blowup
+([[bitblast-reconstruction-multiplier-blowup]]) the through-line is **no
+sharing/memoization in the kernel-term layer**.
 
 ## Honest milestone correction
 
