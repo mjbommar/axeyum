@@ -171,10 +171,11 @@ pub use qinst_egraph::{
 };
 pub use quant_alethe::prove_quant_unsat_alethe;
 pub use reconstruct::{
-    LraReconstructCtx, ReconstructCtx, ReconstructError, reconstruct_bitblast_step,
-    reconstruct_cnf_intro_rule, reconstruct_eq_step, reconstruct_lra_proof,
-    reconstruct_qf_bv_proof, reconstruct_qf_uf_proof, reconstruct_qf_ufbv_proof,
-    reconstruct_quant_unsat_proof, reconstruct_resolution_proof, reconstruct_skolem_unsat_proof,
+    LraReconstructCtx, ProofFragment, ReconstructCtx, ReconstructError, prove_unsat_to_lean,
+    reconstruct_bitblast_step, reconstruct_cnf_intro_rule, reconstruct_eq_step,
+    reconstruct_lra_proof, reconstruct_qf_bv_proof, reconstruct_qf_uf_proof,
+    reconstruct_qf_ufbv_proof, reconstruct_quant_unsat_proof, reconstruct_resolution_proof,
+    reconstruct_skolem_unsat_proof, scan_proof_fragment,
 };
 pub use records::{RecordError, RecordSort};
 pub use sat_bv_backend::SatBvBackend;

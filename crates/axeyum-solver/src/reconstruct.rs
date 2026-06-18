@@ -1097,6 +1097,211 @@ enum ClauseProof {
     },
 }
 
+/// The proof fragment a goal falls into, for [`prove_unsat_to_lean`] routing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProofFragment {
+    /// Bit-vectors and/or Booleans (the `QF_BV` core).
+    QfBv,
+    /// Uninterpreted functions over a single sort (no bit-vectors).
+    QfUf,
+    /// Uninterpreted functions combined with bit-vectors.
+    QfUfBv,
+    /// Arrays (read-over-write + Ackermann over `select`).
+    QfAbv,
+    /// Algebraic datatypes (read-over-construct).
+    Datatype,
+    /// Linear real/integer arithmetic (Farkas).
+    Lra,
+    /// A top-level universal quantifier.
+    Forall,
+    /// A top-level existential quantifier (skolemized).
+    Exists,
+    /// Empty / no reconstructable content.
+    Unsupported,
+}
+
+/// Classify `assertions` into the [`ProofFragment`] whose emitter+reconstructor
+/// pair handles it, by scanning the operators and sorts that appear. Precedence:
+/// a top-level quantifier wraps any ground theory (`∃` skolemized before `∀`),
+/// then the reduction theories (datatype/array), then the mixed/ground cores.
+#[must_use]
+pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFragment {
+    let mut has_bv = false;
+    let mut has_func = false;
+    let mut has_array = false;
+    let mut has_datatype = false;
+    let mut has_arith = false;
+    let mut has_forall = false;
+    let mut has_exists = false;
+    let mut seen = std::collections::BTreeSet::new();
+    let mut stack = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        match arena.sort_of(term) {
+            IrSort::BitVec(_) => has_bv = true,
+            IrSort::Array { .. } => has_array = true,
+            IrSort::Datatype(_) => has_datatype = true,
+            IrSort::Int | IrSort::Real => has_arith = true,
+            _ => {}
+        }
+        if let IrTermNode::App { op, args } = arena.node(term) {
+            match op {
+                IrOp::Apply(_) => has_func = true,
+                IrOp::Select | IrOp::Store => has_array = true,
+                IrOp::DtSelect { .. } => has_datatype = true,
+                IrOp::Forall(_) => has_forall = true,
+                IrOp::Exists(_) => has_exists = true,
+                _ => {}
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
+    if has_exists {
+        ProofFragment::Exists
+    } else if has_forall {
+        ProofFragment::Forall
+    } else if has_datatype {
+        ProofFragment::Datatype
+    } else if has_array {
+        ProofFragment::QfAbv
+    } else if has_func && has_bv {
+        ProofFragment::QfUfBv
+    } else if has_func {
+        ProofFragment::QfUf
+    } else if has_arith {
+        ProofFragment::Lra
+    } else if assertions.is_empty() {
+        ProofFragment::Unsupported
+    } else {
+        ProofFragment::QfBv
+    }
+}
+
+/// Confirm `term` kernel-infers to `False` under `ctx` — the soundness gate shared
+/// by every [`prove_unsat_to_lean`] branch that uses a [`ReconstructCtx`].
+fn require_infers_false(ctx: &mut ReconstructCtx, term: ExprId) -> Result<(), ReconstructError> {
+    let inferred = ctx
+        .kernel_mut()
+        .infer(term)
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "prove_unsat_to_lean".to_owned(),
+            detail: format!("infer failed: {e:?}"),
+        })?;
+    let false_ = {
+        let name = ctx.prelude().false_;
+        ctx.kernel_mut().const_(name, vec![])
+    };
+    if ctx.kernel_mut().def_eq(inferred, false_) {
+        Ok(())
+    } else {
+        Err(ReconstructError::KernelRejected {
+            rule: "prove_unsat_to_lean".to_owned(),
+            detail: "reconstructed term did not infer to False".to_owned(),
+        })
+    }
+}
+
+/// **The unified Alethe→Lean entry point.** Prove `assertions` UNSAT and reconstruct
+/// the refutation to a Lean `False` that the trusted [`Kernel`] accepts, dispatching
+/// by [`scan_proof_fragment`] to the matching theory emitter + reconstructor. On
+/// success returns the [`ProofFragment`] routed — the proof was both emitted AND
+/// kernel-checked to `False`, so a successful return is a machine-checkable refutation
+/// of the original assertions across the covered fragments (`QF_BV`/`QF_UF`/`QF_UFBV`/
+/// `QF_ABV`, datatypes, `LRA`, and `∀`/`∃` quantifiers).
+///
+/// # Errors
+///
+/// [`ReconstructError::UnsupportedRule`] when no reconstructor covers the fragment;
+/// [`ReconstructError::MalformedStep`] when the emitter declines (the instance is not
+/// UNSAT through that fragment); [`ReconstructError::KernelRejected`] when a
+/// reconstruction does not kernel-check to `False`. Never returns a wrong `False`.
+pub fn prove_unsat_to_lean(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<ProofFragment, ReconstructError> {
+    let fragment = scan_proof_fragment(arena, assertions);
+    let declined = || ReconstructError::MalformedStep {
+        rule: "prove_unsat_to_lean".to_owned(),
+        detail: "emitter declined: not unsat through this fragment".to_owned(),
+    };
+    match fragment {
+        ProofFragment::QfBv => {
+            let p =
+                crate::prove_qf_bv_unsat_alethe_lowered(arena, assertions).ok_or_else(declined)?;
+            let mut ctx = ReconstructCtx::new();
+            let t = reconstruct_qf_bv_proof(&mut ctx, &p)?;
+            require_infers_false(&mut ctx, t)?;
+        }
+        ProofFragment::QfUf => {
+            let p = crate::prove_qf_uf_unsat_alethe(arena, assertions).ok_or_else(declined)?;
+            let mut ctx = ReconstructCtx::new();
+            let t = reconstruct_qf_uf_proof(&mut ctx, &p)?;
+            require_infers_false(&mut ctx, t)?;
+        }
+        ProofFragment::QfUfBv => {
+            let p = crate::prove_qf_ufbv_unsat_alethe(arena, assertions).ok_or_else(declined)?;
+            let mut ctx = ReconstructCtx::new();
+            let t = reconstruct_qf_ufbv_proof(&mut ctx, &p)?;
+            require_infers_false(&mut ctx, t)?;
+        }
+        ProofFragment::QfAbv => {
+            let p = crate::prove_qf_abv_unsat_alethe_via_elimination(arena, assertions)
+                .ok_or_else(declined)?;
+            let mut ctx = ReconstructCtx::new();
+            let t = reconstruct_qf_ufbv_proof(&mut ctx, &p)?;
+            require_infers_false(&mut ctx, t)?;
+        }
+        ProofFragment::Datatype => {
+            let p = crate::prove_qf_dt_unsat_alethe_via_simplification(arena, assertions)
+                .ok_or_else(declined)?;
+            let mut ctx = ReconstructCtx::new();
+            let t = reconstruct_qf_ufbv_proof(&mut ctx, &p)?;
+            require_infers_false(&mut ctx, t)?;
+        }
+        ProofFragment::Forall => {
+            let p = crate::prove_quant_unsat_alethe(arena, assertions).ok_or_else(declined)?;
+            let mut ctx = ReconstructCtx::new();
+            let t = reconstruct_quant_unsat_proof(&mut ctx, &p)?;
+            require_infers_false(&mut ctx, t)?;
+        }
+        ProofFragment::Exists => {
+            let cert = crate::prove_skolem_unsat_alethe(arena, assertions).ok_or_else(declined)?;
+            let mut ctx = ReconstructCtx::new();
+            let t = reconstruct_skolem_unsat_proof(&mut ctx, &cert)?;
+            require_infers_false(&mut ctx, t)?;
+        }
+        ProofFragment::Lra => {
+            let mut ctx = LraReconstructCtx::new();
+            let t = reconstruct_lra_proof(&mut ctx, arena, assertions)?;
+            let inferred =
+                ctx.kernel_mut()
+                    .infer(t)
+                    .map_err(|e| ReconstructError::KernelRejected {
+                        rule: "prove_unsat_to_lean".to_owned(),
+                        detail: format!("infer failed: {e:?}"),
+                    })?;
+            let false_ = {
+                let f = ctx.arith().logic.false_;
+                ctx.kernel_mut().const_(f, vec![])
+            };
+            if !ctx.kernel_mut().def_eq(inferred, false_) {
+                return Err(ReconstructError::KernelRejected {
+                    rule: "prove_unsat_to_lean".to_owned(),
+                    detail: "reconstructed LRA term did not infer to False".to_owned(),
+                });
+            }
+        }
+        ProofFragment::Unsupported => {
+            return Err(ReconstructError::UnsupportedRule {
+                rule: "prove_unsat_to_lean: no reconstructable content".to_owned(),
+            });
+        }
+    }
+    Ok(fragment)
+}
+
 /// Reconstruct a **complete** EUF `unsat` Alethe proof into a Lean proof term of
 /// type `False` that the trusted [`Kernel`] type-checks.
 ///

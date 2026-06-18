@@ -3648,3 +3648,54 @@ fn end_to_end_route2_bvsub_refutation_to_false() {
         .expect("the Route-2 bvsub refutation reconstructs to a kernel-checked term");
     assert_infers_false(&mut ctx, term);
 }
+
+/// **The unified dispatcher (#29)**: `prove_unsat_to_lean` is the single entry that
+/// classifies a goal's fragment, routes to the matching emitter+reconstructor, and
+/// kernel-checks the result — returning the `ProofFragment` it used. Each theory
+/// reaches a kernel-verified `False` through one call.
+#[test]
+fn unified_dispatcher_routes_each_fragment_to_kernel_false() {
+    use axeyum_ir::{Rational, Sort, TermArena};
+
+    use super::{ProofFragment, prove_unsat_to_lean};
+
+    // QF_UFBV: f(a)=#b00 ∧ a=b ∧ ¬(f(b)=#b00) — has both Apply and BitVec.
+    {
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("f", &[Sort::BitVec(2)], Sort::BitVec(2))
+            .unwrap();
+        let a = {
+            let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+            arena.var(s)
+        };
+        let b = {
+            let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+            arena.var(s)
+        };
+        let fa = arena.apply(f, &[a]).unwrap();
+        let fb = arena.apply(f, &[b]).unwrap();
+        let c00 = arena.bv_const(2, 0).unwrap();
+        let e1 = arena.eq(fa, c00).unwrap();
+        let e2 = arena.eq(a, b).unwrap();
+        let e3 = {
+            let e = arena.eq(fb, c00).unwrap();
+            arena.not(e).unwrap()
+        };
+        let frag = prove_unsat_to_lean(&mut arena, &[e1, e2, e3])
+            .expect("QF_UFBV unsat dispatches + kernel-checks to False");
+        assert_eq!(frag, ProofFragment::QfUfBv);
+    }
+
+    // LRA: x < 0 ∧ 0 ≤ x — Int/Real sorts, no functions.
+    {
+        let mut arena = TermArena::new();
+        let x = arena.real_var("x").unwrap();
+        let zero = arena.real_const(Rational::integer(0));
+        let a1 = arena.real_lt(x, zero).unwrap();
+        let a2 = arena.real_le(zero, x).unwrap();
+        let frag = prove_unsat_to_lean(&mut arena, &[a1, a2])
+            .expect("LRA unsat dispatches + kernel-checks to False");
+        assert_eq!(frag, ProofFragment::Lra);
+    }
+}
