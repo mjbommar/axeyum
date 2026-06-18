@@ -203,6 +203,11 @@ pub struct ReconstructCtx {
     /// Bit-blasting is bottom-up, so a structural consumer (`concat`) sees its
     /// operands' widths recorded by the time its own step is reconstructed.
     bv_widths: BTreeMap<String, usize>,
+    /// Memoization for [`ReconstructCtx::gate_term_to_prop`]: `AletheTerm` key → its
+    /// `Prop` `ExprId`. The bit-blast gates (esp. lowered multipliers/dividers) repeat
+    /// shared subterms heavily; without this the CNF-intro rules rebuild them every
+    /// time. **Cleared on any `bridge` change** (the result depends on the bridge).
+    gate_memo: BTreeMap<String, ExprId>,
 }
 
 impl core::fmt::Debug for ReconstructCtx {
@@ -263,6 +268,7 @@ impl ReconstructCtx {
             axiom_roles: BTreeMap::new(),
             next_id: 0,
             bv_widths: BTreeMap::new(),
+            gate_memo: BTreeMap::new(),
         }
     }
 
@@ -2111,6 +2117,16 @@ impl ReconstructCtx {
     /// e.g. `(= (bvand a b) a)` becomes `B`'s `And`/`Iff` tree, not an `Iff` over
     /// the opaque bit-vector terms.
     fn gate_term_to_prop(&mut self, term: &AletheTerm) -> ExprId {
+        let key = term.key();
+        if let Some(&cached) = self.gate_memo.get(&key) {
+            return cached;
+        }
+        let result = self.gate_term_to_prop_inner(term);
+        self.gate_memo.insert(key, result);
+        result
+    }
+
+    fn gate_term_to_prop_inner(&mut self, term: &AletheTerm) -> ExprId {
         if let Some(bridge) = &self.bridge {
             if let Some(b_form) = bridge.get(&term.key()) {
                 let b_form = b_form.clone();
@@ -4244,8 +4260,10 @@ pub fn reconstruct_qf_bv_proof(
     // run the clausal walk in bit mode so every predicate is its bit-level `Prop`.
     let bridge = collect_bitblast_bridge(commands);
     ctx.bridge = Some(bridge);
+    ctx.gate_memo.clear(); // gate Props depend on the bridge; invalidate the cache.
     let result = reconstruct_bitwise_clausal(ctx, commands);
     ctx.bridge = None;
+    ctx.gate_memo.clear();
     result
 }
 
