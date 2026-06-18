@@ -1748,6 +1748,37 @@ fn end_to_end_bitwise_eq_is_closed_over_assumptions() {
     assert_closed_over_assumptions(&ctx, 2);
 }
 
+/// **Scalability regression guard (P3.7).** A nested 3-bit arithmetic refutation
+/// `(bvadd (bvmul a b) (bvneg c)) = a ∧ ¬(…)` exercises every gate kind (multiplier
+/// and-trees, ripple-carry adder, the equiv1/equiv2 bridge over the full bit
+/// equality). Before the polynomial CNF-introduction + bridge proofs this took
+/// **> 60 s** (a `2^leaves` truth-table per Tseitin tautology); it now reconstructs
+/// in tens of ms. If the exponential case-split ever returns, THIS test hangs the
+/// suite — that is the intended canary. It must still close to a kernel-checked
+/// `False`.
+#[test]
+fn end_to_end_nested_arith_reconstructs_polynomially() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let mk = |a: &mut TermArena, n: &str| {
+        let s = a.declare(n, Sort::BitVec(3)).unwrap();
+        a.var(s)
+    };
+    let a = mk(&mut arena, "a");
+    let b = mk(&mut arena, "b");
+    let c = mk(&mut arena, "c");
+    let mul = arena.bv_mul(a, b).unwrap();
+    let neg = arena.bv_neg(c).unwrap();
+    let add = arena.bv_add(mul, neg).unwrap();
+    let eq = arena.eq(add, a).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_bv_proof(&mut ctx, &proof)
+        .expect("nested arithmetic refutation must reconstruct to kernel-checked False");
+    assert_infers_false(&mut ctx, term);
+}
+
 /// **NEGATIVE soundness (slice 6)**: corrupt the closing resolution of a REAL
 /// bitwise proof — drop a premise so it can no longer fold to `(cl)` — and confirm
 /// the fused walk REJECTS it rather than producing a `False` from a non-refutation.
