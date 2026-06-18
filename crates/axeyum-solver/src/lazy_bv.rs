@@ -351,13 +351,22 @@ fn restrict_model(arena: &TermArena, model: &Model) -> Model {
 #[derive(Debug, Default)]
 pub struct LazyBvBackend {
     stats: Option<SolveStats>,
+    abstract_ite: bool,
 }
 
 impl LazyBvBackend {
-    /// Creates a lazy-bit-blasting backend.
+    /// Creates a lazy-bit-blasting backend (arithmetic gadgets only).
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Also abstract BV-sorted `ite` (P2.1 lever #3). See
+    /// [`SolverConfig::lazy_bv_abstract_ite`].
+    #[must_use]
+    pub fn with_abstract_ite(mut self, abstract_ite: bool) -> Self {
+        self.abstract_ite = abstract_ite;
+        self
     }
 }
 
@@ -377,8 +386,12 @@ impl SolverBackend for LazyBvBackend {
         config: &SolverConfig,
     ) -> Result<CheckResult, SolverError> {
         // Clear the lazy flag on the inner config so the eager sub-solves inside
-        // the strategy never re-enter the `auto::solve` lazy dispatch.
-        let inner = config.clone().with_lazy_bv(false);
+        // the strategy never re-enter the `auto::solve` lazy dispatch; carry the
+        // backend's ite-abstraction choice (OR'd with whatever the config asked).
+        let inner = config
+            .clone()
+            .with_lazy_bv(false)
+            .with_lazy_bv_abstract_ite(self.abstract_ite || config.lazy_bv_abstract_ite);
         let outcome = check_lazy_bv_abstraction_ro(arena, assertions, &inner)?;
         let mut stats = SolveStats {
             assertion_count: usize_to_u64(assertions.len()),

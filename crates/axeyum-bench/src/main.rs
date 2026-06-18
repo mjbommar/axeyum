@@ -73,6 +73,8 @@ mod run {
         SatBv,
         /// P2.1 lazy abstraction-refinement (CEGAR) bit-blasting (ADR-0019).
         LazyBv,
+        /// Lazy bit-blasting that also abstracts `ite` (P2.1 lever #3).
+        LazyBvIte,
         #[cfg(feature = "z3")]
         Z3,
     }
@@ -82,6 +84,7 @@ mod run {
             match self {
                 BackendKind::SatBv => "sat-bv",
                 BackendKind::LazyBv => "lazy-bv",
+                BackendKind::LazyBvIte => "lazy-bv-ite",
                 #[cfg(feature = "z3")]
                 BackendKind::Z3 => "z3",
             }
@@ -368,6 +371,7 @@ mod run {
         match value {
             "sat-bv" => Ok(BackendKind::SatBv),
             "lazy-bv" => Ok(BackendKind::LazyBv),
+            "lazy-bv-ite" => Ok(BackendKind::LazyBvIte),
             "z3" => {
                 #[cfg(feature = "z3")]
                 {
@@ -611,6 +615,7 @@ mod run {
         match kind {
             BackendKind::SatBv => Box::new(SatBvBackend::new()),
             BackendKind::LazyBv => Box::new(LazyBvBackend::new()),
+            BackendKind::LazyBvIte => Box::new(LazyBvBackend::new().with_abstract_ite(true)),
             #[cfg(feature = "z3")]
             BackendKind::Z3 => Box::new(Z3Backend::new()),
         }

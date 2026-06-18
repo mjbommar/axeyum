@@ -170,6 +170,34 @@ hanging, and/or make `solve_eqs` sharing-preserving. Only then is word-level
 reduction a measurable, shippable lever on this corpus. Until then `--preprocess`
 is unusable at this scale.
 
+## Lever #3 tested too: abstracting `ite` is sound but MEASURED INEFFECTIVE here (2026-06-17)
+
+Broadened the lazy abstraction to BV-sorted `ite` (`SolverConfig::lazy_bv_abstract_ite`,
+`LazyBvBackend::with_abstract_ite`, bench `--backend lazy-bv-ite`; commit
+`5b7a82d` + the backend/bench variant). Sound (same over-approximation; UNSAT
+sound, SAT replay-checked) and verified by unit tests. Measured on a small
+MobileDevice file (270 KB, 2 850 `ite`), no node budget, 5 s:
+
+```
+sat-bv (eager):  unknown
+lazy-bv-ite:     unknown   — ite_total=1254  ite_refined=1213 (97%)  rounds=4
+```
+
+**The `ite`s are essential, not incidental.** The abstraction refined **97 %** of
+them (the candidate models violate nearly every abstracted `ite` — unsurprising
+for control-flow verification, where the `ite` nest *is* the logic), so after
+refinement the problem collapses back to the full eager circuit and still times
+out. Same shape as essential multipliers: CEGAR only wins when the heavy op is
+*incidental* to the verdict, and on this corpus neither arithmetic (absent) nor
+`ite` (essential) is incidental.
+
+The `ite`-abstraction code stays (sound, tested, and the right tool for a corpus
+with *incidental* `ite`s), but it is **not** the destination-2 lever for this
+software-verification slice. That leaves **word-level simplification** — shrinking
+the `ite`/adder structure before blasting, as Z3 does — i.e. the (currently
+unbounded) preprocessor, owned in `axeyum-rewrite`. Abstraction is exhausted as a
+lever here; the remaining lever is reduction.
+
 ## Bottom line
 
 Lazy arithmetic-CEGAR bit-blasting is now wired end-to-end (opt-in dispatch
