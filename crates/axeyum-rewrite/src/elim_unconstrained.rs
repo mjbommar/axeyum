@@ -4,7 +4,8 @@
 //! *unconstrained*: nothing else pins it, so as it ranges over all values, any
 //! invertible operation applied to it ranges over all values too. So if `x`
 //! occurs once and its sole parent is an invertible bit-vector op
-//! `p = op(x, w…)` (`bvadd`/`bvsub`/`bvxor`/`bvnot`/`bvneg`), then `p` itself is
+//! `p = op(x, w…)` (`bvadd`/`bvsub`/`bvxor`/`bvnot`/`bvneg`, or `bvmul` by an odd
+//! constant — invertible mod `2^w`), then `p` itself is
 //! unconstrained: replace it everywhere by a single fresh variable `u` and drop
 //! the operation. This is Z3's `elim_unconstr` tactic — it peels expensive
 //! operator layers off single-use variables before bit-blasting.
@@ -24,13 +25,16 @@
 //! the inverse term lives in the trail, never re-entering the assertions.
 //! Peeling can chain (`u`'s parent may now be a single-use invertible op).
 //!
-//! Scope (first slice): the exactly-invertible operators above. Non-injective
-//! ops (`bvand`/`bvor`/`bvmul`/`bvudiv`/…) are left alone — refining them is not
-//! sound by simple inversion.
+//! Scope: the invertible operators above. `bvmul` fires only when the other
+//! factor is an odd constant (then it has a 2-adic inverse); `bvmul` by an even
+//! or non-constant factor, and the non-injective `bvand`/`bvor`/`bvudiv`/…, are
+//! left alone — refining them is not sound by simple inversion.
 
 use std::collections::{HashMap, HashSet};
 
-use axeyum_ir::{IrError, Op, Sort, SymbolId, TermArena, TermId, TermNode};
+use axeyum_ir::{
+    Assignment, IrError, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval,
+};
 
 use crate::canonical::replace_subterms;
 use crate::reconstruct::ModelReconstructionTrail;
@@ -233,16 +237,33 @@ fn find_elimination(
             continue;
         };
         let (op, args) = (*op, args.clone());
-        if !invertible(op, args.len(), idx) {
-            continue;
-        }
         let Sort::BitVec(width) = arena.sort_of(parent) else {
             continue;
         };
-        let name = format!("!unconstr!{next_fresh}");
-        *next_fresh += 1;
-        let u_sym = arena.declare(&name, Sort::BitVec(width))?;
-        let u = arena.var(u_sym);
+
+        // `bvmul` by an odd ground constant is invertible: `p = c·x ⇒ x = c⁻¹·u`,
+        // with `c⁻¹` the 2-adic inverse mod `2^width`. This peels a multiplier
+        // layer off a single-use variable when the other factor is an odd
+        // constant — the exact shape that otherwise bit-blasts to a large CNF.
+        if op == Op::BvMul && args.len() == 2 {
+            if let Some(inv_value) = odd_factor_inverse(arena, args[1 - idx], width) {
+                let u = mint_fresh(arena, width, next_fresh)?;
+                let inv_const = arena.bv_const(width, inv_value)?;
+                let inverse = arena.bv_mul(inv_const, u)?;
+                return Ok(Some(Elimination {
+                    sym,
+                    parent,
+                    u,
+                    inverse,
+                }));
+            }
+            continue;
+        }
+
+        if !invertible(op, args.len(), idx) {
+            continue;
+        }
+        let u = mint_fresh(arena, width, next_fresh)?;
         let inverse = invert(arena, op, &args, idx, u)?;
         return Ok(Some(Elimination {
             sym,
@@ -252,6 +273,45 @@ fn find_elimination(
         }));
     }
     Ok(None)
+}
+
+/// Mints a fresh `width`-bit replacement variable (`!unconstr!N`, outside the
+/// SMT-LIB user identifier space).
+fn mint_fresh(arena: &mut TermArena, width: u32, next_fresh: &mut u64) -> Result<TermId, IrError> {
+    let name = format!("!unconstr!{next_fresh}");
+    *next_fresh += 1;
+    let sym = arena.declare(&name, Sort::BitVec(width))?;
+    Ok(arena.var(sym))
+}
+
+/// If `term` is an odd ground bit-vector constant of `width` bits, returns its
+/// multiplicative inverse mod `2^width`; otherwise `None` (a non-ground operand,
+/// a wider value, or an even constant — none invertible by this rule).
+fn odd_factor_inverse(arena: &TermArena, term: TermId, width: u32) -> Option<u128> {
+    match eval(arena, term, &Assignment::new()) {
+        Ok(Value::Bv { width: w, value }) if w == width && value & 1 == 1 => {
+            Some(mod_inverse_pow2(value, width))
+        }
+        _ => None,
+    }
+}
+
+/// The multiplicative inverse of an odd `c` modulo `2^width` (`width ≤ 128`), by
+/// 2-adic Newton iteration `x ← x·(2 − c·x)`: each step doubles the number of
+/// correct low bits, and `x₀ = c` is already correct mod 8, so seven steps cover
+/// 128 bits.
+fn mod_inverse_pow2(c: u128, width: u32) -> u128 {
+    let m = if width >= 128 {
+        u128::MAX
+    } else {
+        (1u128 << width) - 1
+    };
+    let c = c & m;
+    let mut inv = c;
+    for _ in 0..7 {
+        inv = inv.wrapping_mul(2u128.wrapping_sub(c.wrapping_mul(inv))) & m;
+    }
+    inv & m
 }
 
 /// Eliminates unconstrained single-use invertible-operator layers (see module
@@ -483,6 +543,46 @@ mod tests {
         assert_satisfies(&arena, &originals, &full);
     }
 
+    #[test]
+    fn eliminates_single_use_under_odd_constant_multiply() {
+        // (bvult (bvmul 3 x) 100): x single-use, 3 odd ⇒ x := 3⁻¹·u (3⁻¹ = 171
+        // mod 256). The multiplier layer is peeled with no bit-blasting.
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::BitVec(8)).unwrap();
+        let xv = arena.var(x);
+        let three = arena.bv_const(8, 3).unwrap();
+        let prod = arena.bv_mul(three, xv).unwrap();
+        let hundred = arena.bv_const(8, 100).unwrap();
+        let a1 = arena.bv_ult(prod, hundred).unwrap();
+        let originals = [a1];
+
+        let out = elim_unconstrained(&mut arena, &originals).unwrap();
+        assert_eq!(out.eliminated(), 1);
+        let u = arena.find_symbol("!unconstr!0").unwrap();
+        let mut reduced = Assignment::new();
+        reduced.set(u, bv8(30)); // 30 < 100
+        let full = out.trail().reconstruct(&arena, &reduced).unwrap();
+        // 3⁻¹·30 = 171·30 mod 256 = 10, and 3·10 = 30 ✓.
+        assert_eq!(full.get(x), Some(bv8(10)));
+        assert_satisfies(&arena, &originals, &full);
+    }
+
+    #[test]
+    fn does_not_fire_on_even_constant_multiply() {
+        // (bvult (bvmul 4 x) 100): 4 is even ⇒ not invertible mod 2^w, no
+        // elimination.
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::BitVec(8)).unwrap();
+        let xv = arena.var(x);
+        let four = arena.bv_const(8, 4).unwrap();
+        let prod = arena.bv_mul(four, xv).unwrap();
+        let hundred = arena.bv_const(8, 100).unwrap();
+        let a1 = arena.bv_ult(prod, hundred).unwrap();
+
+        let out = elim_unconstrained(&mut arena, &[a1]).unwrap();
+        assert_eq!(out.eliminated(), 0);
+    }
+
     /// Deterministic xorshift PRNG (no clock/RNG service).
     fn xorshift(state: &mut u64) -> u64 {
         let mut v = *state;
@@ -507,7 +607,7 @@ mod tests {
             let depth = 1 + (xorshift(&mut state) % 4) as usize; // 1..=4 layers
             for _ in 0..depth {
                 let c = u128::from(xorshift(&mut state) % 256);
-                cur = match xorshift(&mut state) % 5 {
+                cur = match xorshift(&mut state) % 6 {
                     0 => arena.bv_neg(cur).unwrap(),
                     1 => arena.bv_not(cur).unwrap(),
                     2 => {
@@ -518,9 +618,14 @@ mod tests {
                         let k = arena.bv_const(8, c).unwrap();
                         arena.bv_sub(cur, k).unwrap()
                     }
-                    _ => {
+                    4 => {
                         let k = arena.bv_const(8, c).unwrap();
                         arena.bv_xor(cur, k).unwrap()
+                    }
+                    _ => {
+                        // Force an odd factor so the multiply is invertible.
+                        let k = arena.bv_const(8, c | 1).unwrap();
+                        arena.bv_mul(k, cur).unwrap()
                     }
                 };
             }
