@@ -1156,6 +1156,33 @@ fn bitblast_xor_reconstructs() {
     assert_bitblast_ok("bitblast_xor", &concl);
 }
 
+/// `bitblast_xnor` (width 2): `(= (bvxnor a b) (@bbterm (= a0 b0) (= a1 b1)))` —
+/// pointwise `a_i ↔ b_i`.
+#[test]
+fn bitblast_xnor_reconstructs() {
+    let bvxnor = AletheTerm::App("bvxnor".to_owned(), vec![atom("a"), atom("b")]);
+    let g0 = AletheTerm::App("=".to_owned(), vec![bit_of("a", 0), bit_of("b", 0)]);
+    let g1 = AletheTerm::App("=".to_owned(), vec![bit_of("a", 1), bit_of("b", 1)]);
+    let concl = bb_concl(bvxnor, bbterm(vec![g0, g1]));
+    assert_bitblast_ok("bitblast_xnor", &concl);
+}
+
+/// **NEGATIVE soundness** for `xnor`: a `(xor a0 b0)` gadget where the rule
+/// demands `(= a0 b0)` is REJECTED at the kernel gate.
+#[test]
+fn bitblast_xnor_wrong_gadget_rejected() {
+    let mut ctx = ReconstructCtx::new();
+    let bvxnor = AletheTerm::App("bvxnor".to_owned(), vec![atom("a"), atom("b")]);
+    let wrong = AletheTerm::App("xor".to_owned(), vec![bit_of("a", 0), bit_of("b", 0)]);
+    let concl = bb_concl(bvxnor, bbterm(vec![wrong]));
+    let err = reconstruct_bitblast_step(&mut ctx, "bitblast_xnor", &concl)
+        .expect_err("a wrong xnor gadget must be rejected by the kernel");
+    assert!(
+        matches!(err, ReconstructError::KernelRejected { .. }),
+        "got {err:?}"
+    );
+}
+
 /// `bitblast_equal` (width 2): `(= (= a b) (and (= a0 b0) (= a1 b1)))` — a
 /// predicate-shaped conclusion (no `@bbterm`); reconstructs the reflexive iff.
 #[test]
@@ -1590,6 +1617,29 @@ fn end_to_end_neg_reconstructs() {
     let mut ctx = ReconstructCtx::new();
     reconstruct_qf_bv_proof(&mut ctx, &proof)
         .expect("a bvneg QF_BV proof must reconstruct to kernel-checked False");
+}
+
+/// **End-to-end**: a `(= (bvxnor a b) a) ∧ ¬…` `QF_BV` unsat proof — bit-blasted
+/// via the pointwise `bitblast_xnor` — reconstructs to a kernel-checked `False`.
+#[test]
+fn end_to_end_xnor_reconstructs() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let xnor = arena.bv_xnor(a, b).unwrap();
+    let eq = arena.eq(xnor, a).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    reconstruct_qf_bv_proof(&mut ctx, &proof)
+        .expect("a bvxnor QF_BV proof must reconstruct to kernel-checked False");
 }
 
 /// **End-to-end**: a `(= (bvmul a b) a) ∧ ¬…` `QF_BV` unsat proof — bit-blasted

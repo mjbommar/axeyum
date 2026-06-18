@@ -2868,8 +2868,8 @@ impl ReconstructCtx {
 
 /// The Lean `Prop` for bit `i` of a **bitwise** bit-vector term `term` under the
 /// faithful bit model. Variables → opaque `((_ @bit_of i) x)` atom Props;
-/// constants → `True`/`False`; `bvnot`/`bvand`/`bvor`/`bvxor` → pointwise
-/// `Not`/`And`/`Or`/`Not (Iff …)` of the operand bits.
+/// constants → `True`/`False`; `bvnot`/`bvand`/`bvor`/`bvxor`/`bvxnor` → pointwise
+/// `Not`/`And`/`Or`/`Not (Iff …)`/`Iff` of the operand bits.
 ///
 /// # Errors
 ///
@@ -2937,6 +2937,13 @@ fn bv_bit(
                 let bi = bv_bit(ctx, b, i)?;
                 let iff = ctx.mk_iff(ai, bi);
                 Ok(ctx.mk_not(iff))
+            }
+            // Bitwise XNOR (binary): bit `i` is `(= a_i b_i)`, i.e. `a_i ↔ b_i`,
+            // matching the emitter's `bitblast_xnor`. Pointwise, width-free.
+            ("bvxnor", [a, b]) => {
+                let ai = bv_bit(ctx, a, i)?;
+                let bi = bv_bit(ctx, b, i)?;
+                Ok(ctx.mk_iff(ai, bi))
             }
             // Ripple-carry adder (binary). Bit `i` of `(bvadd a b)` is
             // `a_i ⊕ b_i ⊕ carry_i`, needing only bits `0..=i` (no operand width).
@@ -3182,7 +3189,7 @@ fn parse_bv_literal(symbol: &str) -> Option<Vec<bool>> {
 ///
 /// Returns [`ReconstructError::UnsupportedRule`] for a bitblast rule outside the
 /// bitwise + `extract` + `add`/`neg`/`mult` fragment (`bitblast_concat`/
-/// `_sign_extend`/`_comp`/`_ult`/`_slt`/`_xnor`, …),
+/// `_sign_extend`/`_comp`/`_ult`/`_slt`, …),
 /// [`ReconstructError::MalformedStep`] for a conclusion that is
 /// not the expected `(= lhs rhs)` shape, [`ReconstructError::UnsupportedTerm`] for
 /// a non-bitwise operand, and [`ReconstructError::KernelRejected`] at the gate.
@@ -3197,8 +3204,8 @@ pub fn reconstruct_bitblast_step(
     // over >2 operands surface as `UnsupportedTerm` from `bv_bit`.)
     match rule {
         "bitblast_var" | "bitblast_const" | "bitblast_not" | "bitblast_and" | "bitblast_or"
-        | "bitblast_xor" | "bitblast_extract" | "bitblast_add" | "bitblast_neg"
-        | "bitblast_mult" | "bitblast_equal" => {}
+        | "bitblast_xor" | "bitblast_xnor" | "bitblast_extract" | "bitblast_add"
+        | "bitblast_neg" | "bitblast_mult" | "bitblast_equal" => {}
         other => {
             return Err(ReconstructError::UnsupportedRule {
                 rule: format!(
