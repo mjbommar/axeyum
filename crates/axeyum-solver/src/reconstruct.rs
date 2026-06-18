@@ -48,7 +48,7 @@
 
 use std::collections::BTreeMap;
 
-use axeyum_cnf::{AletheLit, AletheTerm};
+use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm};
 use axeyum_lean_kernel::{
     BinderInfo, Declaration, ExprId, Kernel, LevelId, LogicPrelude, NameId, build_logic_prelude,
 };
@@ -89,6 +89,23 @@ pub enum ReconstructError {
         /// A diagnostic describing the rejection (infer error or type mismatch).
         detail: String,
     },
+    /// A `resolution`/`th_resolution` step whose premise/conclusion shape this
+    /// EUF slice does not reconstruct (e.g. a premise id is unknown, a non-Horn
+    /// theory clause, or a closing resolution whose premises are not a
+    /// complementary equality/disequality unit pair).
+    UnsupportedResolution {
+        /// What was wrong, for diagnostics.
+        detail: String,
+    },
+    /// A reference to a step/assume id that the proof never defined before its
+    /// use (premise ordering or a typo in the emitted proof).
+    UnknownPremise {
+        /// The undefined premise identifier.
+        id: String,
+    },
+    /// The proof walked to completion without a resolution step deriving the
+    /// empty clause `(cl)` — so there is no `False` to return.
+    NoEmptyClause,
 }
 
 impl core::fmt::Display for ReconstructError {
@@ -105,6 +122,18 @@ impl core::fmt::Display for ReconstructError {
             }
             ReconstructError::KernelRejected { rule, detail } => {
                 write!(f, "kernel rejected reconstructed `{rule}` term: {detail}")
+            }
+            ReconstructError::UnsupportedResolution { detail } => {
+                write!(
+                    f,
+                    "unsupported resolution shape for reconstruction: {detail}"
+                )
+            }
+            ReconstructError::UnknownPremise { id } => {
+                write!(f, "reference to undefined premise `{id}`")
+            }
+            ReconstructError::NoEmptyClause => {
+                write!(f, "proof does not derive the empty clause `(cl)`")
             }
         }
     }
@@ -643,6 +672,564 @@ fn check_against(
             detail: "inferred proposition is not def-eq to the conclusion".to_owned(),
         })
     }
+}
+
+/// Reconstruct a unary `eq_congruent` step into a kernel-checked proof term.
+///
+/// `eq_congruent` ⊢ `(cl (not (= a b)) (= (f a) (f b)))` with one premise
+/// `h : Eq α a b` proves the congruence of a unary uninterpreted function `f`.
+/// Reconstruction is a `congrArg`-style transport: with `h : Eq α a b`, the
+/// motive `fun (x : α) (_ : Eq α a x) => Eq α (f a) (f x)` and refl-case
+/// `Eq.refl α (f a)`, `Eq.rec` yields `Eq α (f a) (f b)`.
+///
+/// Only the **unary** shape is reconstructed (the arity the EUF emitter uses for
+/// `f(a)=f(b)`); a multi-argument `eq_congruent` clause (several leading negated
+/// equalities, or applications whose heads are not a 1-ary function symbol) is
+/// rejected with [`ReconstructError::UnsupportedRule`] rather than guessed.
+///
+/// # Errors
+///
+/// Returns [`ReconstructError::MalformedStep`] for a clause whose two literals are
+/// not `(cl (not (= a b)) (= (f a) (f b)))` with matching argument, and
+/// [`ReconstructError::UnsupportedRule`] for a non-unary congruence; the kernel
+/// gate fires through [`ReconstructError::KernelRejected`].
+fn reconstruct_eq_congruent(
+    ctx: &mut ReconstructCtx,
+    premises: &[ExprId],
+    conclusion: &[AletheLit],
+) -> Result<ExprId, ReconstructError> {
+    // This slice reconstructs only the single-argument shape.
+    let [hyp, concl] = conclusion else {
+        return Err(ReconstructError::UnsupportedRule {
+            rule: "eq_congruent (only unary single-premise is reconstructed)".to_owned(),
+        });
+    };
+    let (Some((a_t, b_t)), Some((fa_t, fb_t))) = (as_negated_eq(hyp), as_positive_eq(concl)) else {
+        return Err(ReconstructError::MalformedStep {
+            rule: "eq_congruent".to_owned(),
+            detail: "expected `(cl (not (= a b)) (= (f a) (f b)))`".to_owned(),
+        });
+    };
+    // The conclusion sides must be `(f a)` and `(f b)` of the same unary head `f`.
+    let (f1, a2) = as_unary_app(fa_t).ok_or_else(|| ReconstructError::UnsupportedRule {
+        rule: "eq_congruent (conclusion lhs is not a unary application)".to_owned(),
+    })?;
+    let (f2, b2) = as_unary_app(fb_t).ok_or_else(|| ReconstructError::UnsupportedRule {
+        rule: "eq_congruent (conclusion rhs is not a unary application)".to_owned(),
+    })?;
+    if f1 != f2 || a2 != a_t || b2 != b_t {
+        return Err(ReconstructError::MalformedStep {
+            rule: "eq_congruent".to_owned(),
+            detail: "congruence applications do not match the hypothesis argument".to_owned(),
+        });
+    }
+
+    let a = ctx.alethe_term_to_expr(a_t)?;
+    let b = ctx.alethe_term_to_expr(b_t)?;
+    let fa = ctx.alethe_term_to_expr(fa_t)?;
+
+    // Premise `h : Eq α a b` (explicit, or a self-contained inline axiom).
+    let h = premise_or_axiom(ctx, premises, 0, a, b, "eq_congruent")?;
+
+    // motive := fun (x : α) (_ : Eq α a x) => Eq α (f a) (f x).
+    //   Body `Eq α (f a) (f x)`: x = BVar 1; hx domain `Eq α a x`: x = BVar 0.
+    let f_name = ctx.func_const(f1);
+    let motive = {
+        let f = ctx.kernel.const_(f_name, vec![]);
+        let x1 = ctx.kernel.bvar(1);
+        let f_x = ctx.kernel.app(f, x1);
+        let eq_fa_fx = ctx.mk_eq(fa, f_x);
+        let x0 = ctx.kernel.bvar(0);
+        let eq_a_x = ctx.mk_eq(a, x0);
+        let anon = ctx.kernel.anon();
+        let inner = ctx.kernel.lam(anon, eq_a_x, eq_fa_fx, BinderInfo::Default);
+        ctx.kernel.lam(anon, ctx.alpha, inner, BinderInfo::Default)
+    };
+    // refl_case : motive a (Eq.refl α a) = Eq α (f a) (f a), proved by Eq.refl α (f a).
+    let refl_case = ctx.mk_eq_refl(fa);
+    // Eq.rec α a motive refl_case b h  :  motive b h  =  Eq α (f a) (f b).
+    let proof = ctx.mk_eq_rec_transport(a, motive, refl_case, b, h);
+
+    let fb = ctx.alethe_term_to_expr(fb_t)?;
+    let expected = ctx.mk_eq(fa, fb);
+    check_against(ctx, "eq_congruent", proof, expected)
+}
+
+/// Reconstruct an **n-hypothesis** `eq_transitive` chain into a kernel-checked
+/// proof term. The emitter folds a whole equality chain into a single
+/// `eq_transitive` clause `(cl (not (= x0 x1)) … (not (= x_{k-1} xk)) (= x0 xk))`,
+/// so the 2-hypothesis [`reconstruct_eq_transitive`] is not enough.
+///
+/// With ordered premise proofs `premises[i] : Eq α x_i x_{i+1}` (in clause order),
+/// fold from the left: `acc : Eq α x0 x_{i}` is transported along
+/// `premises[i] : Eq α x_i x_{i+1}` (motive `fun y _ => Eq α x0 y`) to
+/// `Eq α x0 x_{i+1}`, ending at `Eq α x0 xk`.
+///
+/// # Errors
+///
+/// Returns [`ReconstructError::MalformedStep`] for a clause whose `k` leading
+/// negated literals do not form a consecutive chain ending at the positive
+/// conclusion `(= x0 xk)`, or a premise count that does not match the chain
+/// length; [`ReconstructError::KernelRejected`] on the kernel gate.
+fn reconstruct_eq_transitive_n(
+    ctx: &mut ReconstructCtx,
+    premises: &[ExprId],
+    conclusion: &[AletheLit],
+) -> Result<ExprId, ReconstructError> {
+    // Split into the leading negated chain links and the trailing positive concl.
+    let Some((concl, links)) = conclusion.split_last() else {
+        return Err(ReconstructError::MalformedStep {
+            rule: "eq_transitive".to_owned(),
+            detail: "empty conclusion clause".to_owned(),
+        });
+    };
+    let Some((c0_t, ck_t)) = as_positive_eq(concl) else {
+        return Err(ReconstructError::MalformedStep {
+            rule: "eq_transitive".to_owned(),
+            detail: "last literal is not the positive `(= x0 xk)` conclusion".to_owned(),
+        });
+    };
+    if links.is_empty() || premises.len() != links.len() {
+        return Err(ReconstructError::MalformedStep {
+            rule: "eq_transitive".to_owned(),
+            detail: format!(
+                "chain has {} links but {} premise proofs",
+                links.len(),
+                premises.len()
+            ),
+        });
+    }
+
+    // Collect the chain nodes `x0, x1, …, xk` from the consecutive negated links,
+    // checking that each link starts where the previous ended.
+    let mut nodes: Vec<&AletheTerm> = Vec::with_capacity(links.len() + 1);
+    for (i, lit) in links.iter().enumerate() {
+        let Some((l, r)) = as_negated_eq(lit) else {
+            return Err(ReconstructError::MalformedStep {
+                rule: "eq_transitive".to_owned(),
+                detail: format!("link {i} is not a negated equality `(not (= _ _))`"),
+            });
+        };
+        if i == 0 {
+            nodes.push(l);
+        } else if nodes[i] != l {
+            return Err(ReconstructError::MalformedStep {
+                rule: "eq_transitive".to_owned(),
+                detail: format!("chain break: link {i} does not start at the previous endpoint"),
+            });
+        }
+        nodes.push(r);
+    }
+    // Endpoints must match the conclusion `(= x0 xk)`.
+    if nodes[0] != c0_t || nodes[nodes.len() - 1] != ck_t {
+        return Err(ReconstructError::MalformedStep {
+            rule: "eq_transitive".to_owned(),
+            detail: "chain endpoints do not match the conclusion".to_owned(),
+        });
+    }
+
+    // x0 is the fixed left operand of the accumulated equality.
+    let x0 = ctx.alethe_term_to_expr(nodes[0])?;
+    // acc : Eq α x0 x1  (the first premise proof).
+    let mut acc = premises[0];
+    // Fold links 1..k: transport acc : Eq α x0 x_i along premises[i] : Eq α x_i x_{i+1}.
+    for i in 1..links.len() {
+        let xi = ctx.alethe_term_to_expr(nodes[i])?;
+        let xi1 = ctx.alethe_term_to_expr(nodes[i + 1])?;
+        let h = premises[i];
+        // motive := fun (y : α) (_ : Eq α x_i y) => Eq α x0 y.
+        //   Body `Eq α x0 y`: y = BVar 1; hy domain `Eq α x_i y`: y = BVar 0.
+        let motive = {
+            let y1 = ctx.kernel.bvar(1);
+            let eq_x0_y = ctx.mk_eq(x0, y1);
+            let y0 = ctx.kernel.bvar(0);
+            let eq_xi_y = ctx.mk_eq(xi, y0);
+            let anon = ctx.kernel.anon();
+            let inner = ctx.kernel.lam(anon, eq_xi_y, eq_x0_y, BinderInfo::Default);
+            ctx.kernel.lam(anon, ctx.alpha, inner, BinderInfo::Default)
+        };
+        // Eq.rec α x_i motive acc x_{i+1} h : Eq α x0 x_{i+1}.
+        acc = ctx.mk_eq_rec_transport(xi, motive, acc, xi1, h);
+    }
+
+    let ck = ctx.alethe_term_to_expr(ck_t)?;
+    let expected = ctx.mk_eq(x0, ck);
+    check_against(ctx, "eq_transitive", acc, expected)
+}
+
+/// Extract `(head, arg)` of a unary application `(head arg)` that is **not** an
+/// equality (so a genuine function application, not `(= a b)` mis-parsed).
+fn as_unary_app(term: &AletheTerm) -> Option<(&str, &AletheTerm)> {
+    match term {
+        AletheTerm::App(head, args) if head != "=" && args.len() == 1 => {
+            Some((head.as_str(), &args[0]))
+        }
+        _ => None,
+    }
+}
+
+/// What a step/assume id reconstructs to in the clausal EUF walk.
+///
+/// Every command the EUF emitter produces is either a **unit** equality /
+/// disequality clause (carrying a kernel proof of its single literal), or a Horn
+/// **theory clause** (`eq_*`/`eq_congruent`: some leading `(not (= …))`
+/// hypotheses and one positive `(= …)` conclusion) reconstructed lazily when a
+/// `resolution` step resolves it against unit proofs of its hypotheses.
+#[derive(Clone)]
+enum ClauseProof {
+    /// A unit positive equality `(cl (= l r))` with proof `p : Eq α l r`.
+    EqUnit {
+        l: AletheTerm,
+        r: AletheTerm,
+        proof: ExprId,
+    },
+    /// A unit disequality `(cl (not (= l r)))` with proof `p : Not (Eq α l r)`.
+    DiseqUnit {
+        l: AletheTerm,
+        r: AletheTerm,
+        proof: ExprId,
+    },
+    /// A Horn theory clause (`rule` is `eq_transitive`/`eq_symmetric`/
+    /// `eq_reflexive`/`eq_congruent`): the full clause, reconstructed into the
+    /// proof of its positive literal only when resolved against unit hypotheses.
+    TheoryClause {
+        rule: String,
+        clause: Vec<AletheLit>,
+    },
+}
+
+/// Reconstruct a **complete** EUF `unsat` Alethe proof into a Lean proof term of
+/// type `False` that the trusted [`Kernel`] type-checks.
+///
+/// This walks the `Vec<AletheCommand>` shape that
+/// [`crate::prove_qf_uf_unsat_alethe`] emits — `assume` unit clauses (the input
+/// equalities/disequalities), self-contained `eq_*`/`eq_congruent` theory clauses,
+/// and `resolution` steps threading them — and produces an [`ExprId`] whose
+/// inferred type is [`Kernel::def_eq`] to the prelude's `False`. The trusted
+/// checker is the gate: a wrong reconstruction makes the final `infer`/`def_eq`
+/// fail, so this returns an error, never a wrong `False`.
+///
+/// ## How each command maps
+///
+/// - **`assume (cl (= a b))`** ⇒ a fresh axiom `h : Eq α a b` (the input
+///   hypothesis as a typed Lean proof).
+/// - **`assume (cl (not (= a b)))`** ⇒ a fresh axiom `h : Not (Eq α a b)`
+///   (= `Eq α a b → False`).
+/// - **`eq_reflexive`/`eq_symmetric`/`eq_transitive`/`eq_congruent`** ⇒ recorded
+///   as a Horn theory clause; reconstructed via the slice-1
+///   [`reconstruct_eq_step`] (plus [`reconstruct_eq_congruent`]) when a resolution
+///   resolves it against its hypotheses' unit proofs.
+/// - **`resolution`/`th_resolution`** with a theory clause and its hypotheses'
+///   unit proofs ⇒ the reconstructed positive equality unit.
+/// - **`resolution`/`th_resolution`** to the empty clause `(cl)` from a positive
+///   equality `h_eq : Eq α a b` and its complementary disequality
+///   `h_ne : Not (Eq α a b)` ⇒ `h_ne h_eq : False` (the refutation close).
+///
+/// # Errors
+///
+/// Returns a [`ReconstructError`] for any out-of-scope command shape, an unknown
+/// premise id, a non-Horn/over-arity theory clause, a resolution shape outside
+/// this EUF slice, a missing empty-clause derivation, or a kernel rejection. It
+/// never panics on malformed or out-of-scope input.
+pub fn reconstruct_qf_uf_proof(
+    ctx: &mut ReconstructCtx,
+    commands: &[AletheCommand],
+) -> Result<ExprId, ReconstructError> {
+    let mut env: BTreeMap<String, ClauseProof> = BTreeMap::new();
+
+    for cmd in commands {
+        match cmd {
+            AletheCommand::Assume { id, clause } => {
+                let proof = reconstruct_assume(ctx, clause)?;
+                env.insert(id.clone(), proof);
+            }
+            AletheCommand::Step {
+                id,
+                clause,
+                rule,
+                premises,
+                ..
+            } => {
+                match rule.as_str() {
+                    "eq_reflexive" | "eq_symmetric" | "eq_transitive" | "eq_congruent" => {
+                        // A self-contained Horn theory clause; reconstructed lazily.
+                        env.insert(
+                            id.clone(),
+                            ClauseProof::TheoryClause {
+                                rule: rule.clone(),
+                                clause: clause.clone(),
+                            },
+                        );
+                    }
+                    "resolution" | "th_resolution" => {
+                        let result = reconstruct_resolution(ctx, clause, premises, &env)?;
+                        match result {
+                            ResolutionResult::Clause(cp) => {
+                                env.insert(id.clone(), cp);
+                            }
+                            ResolutionResult::FalseProof(proof) => {
+                                // The empty clause: this is the refutation. Validate
+                                // and return it as the final `False` term.
+                                return check_false(ctx, proof);
+                            }
+                        }
+                    }
+                    other => {
+                        return Err(ReconstructError::UnsupportedRule {
+                            rule: other.to_owned(),
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    Err(ReconstructError::NoEmptyClause)
+}
+
+/// Reconstruct an `assume` unit clause into a typed hypothesis axiom.
+fn reconstruct_assume(
+    ctx: &mut ReconstructCtx,
+    clause: &[AletheLit],
+) -> Result<ClauseProof, ReconstructError> {
+    let [lit] = clause else {
+        return Err(ReconstructError::UnsupportedResolution {
+            detail: format!(
+                "this EUF slice only assumes unit clauses; found {} literals",
+                clause.len()
+            ),
+        });
+    };
+    if let Some((l, r)) = as_positive_eq(lit) {
+        // `(= a b)` ⇒ a fresh axiom `h : Eq α a b`.
+        let le = ctx.alethe_term_to_expr(l)?;
+        let re = ctx.alethe_term_to_expr(r)?;
+        let eq_prop = ctx.mk_eq(le, re);
+        let proof = fresh_axiom(ctx, eq_prop, "assume")?;
+        Ok(ClauseProof::EqUnit {
+            l: l.clone(),
+            r: r.clone(),
+            proof,
+        })
+    } else if let Some((l, r)) = as_negated_eq(lit) {
+        // `(not (= a b))` ⇒ a fresh axiom `h : Not (Eq α a b)`.
+        let le = ctx.alethe_term_to_expr(l)?;
+        let re = ctx.alethe_term_to_expr(r)?;
+        let eq_prop = ctx.mk_eq(le, re);
+        let not_prop = ctx.mk_not(eq_prop);
+        let proof = fresh_axiom(ctx, not_prop, "assume")?;
+        Ok(ClauseProof::DiseqUnit {
+            l: l.clone(),
+            r: r.clone(),
+            proof,
+        })
+    } else {
+        Err(ReconstructError::UnsupportedTerm {
+            term: lit.atom.key(),
+        })
+    }
+}
+
+/// The outcome of reconstructing a `resolution` step.
+enum ResolutionResult {
+    /// A reconstructed unit clause (a positive equality or a disequality).
+    Clause(ClauseProof),
+    /// The empty clause `(cl)` reached: a Lean term of type `False`.
+    FalseProof(ExprId),
+}
+
+/// Reconstruct a `resolution`/`th_resolution` step over the EUF shapes the emitter
+/// produces:
+///
+/// - **theory-clause resolution**: the first premise is a Horn `eq_*`/`eq_congruent`
+///   [`ClauseProof::TheoryClause`]; the remaining premises are unit equality proofs
+///   for its negated hypotheses (in any order). Reconstruct the theory clause via the
+///   slice-1 helpers with those unit proofs as premises, yielding the positive
+///   equality unit.
+/// - **closing resolution** (conclusion is the empty clause): a positive equality
+///   unit `h_eq : Eq α a b` and its complementary disequality unit
+///   `h_ne : Not (Eq α a b)` ⇒ `h_ne h_eq : False`.
+fn reconstruct_resolution(
+    ctx: &mut ReconstructCtx,
+    clause: &[AletheLit],
+    premises: &[String],
+    env: &BTreeMap<String, ClauseProof>,
+) -> Result<ResolutionResult, ReconstructError> {
+    // Gather premise reconstructions in order.
+    let mut prems: Vec<ClauseProof> = Vec::with_capacity(premises.len());
+    for p in premises {
+        let cp = env
+            .get(p)
+            .ok_or_else(|| ReconstructError::UnknownPremise { id: p.clone() })?;
+        prems.push(cp.clone());
+    }
+
+    // Theory-clause resolution: exactly one TheoryClause premise + unit eq premises.
+    if let Some(pos) = prems
+        .iter()
+        .position(|p| matches!(p, ClauseProof::TheoryClause { .. }))
+    {
+        let ClauseProof::TheoryClause { rule, clause: tc } = prems[pos].clone() else {
+            unreachable!("position matched a TheoryClause");
+        };
+        // The other premises supply unit proofs for the theory clause's negated
+        // hypotheses. Order the unit proofs to match the leading `(not (= …))`
+        // literals of the theory clause.
+        let mut unit_proofs: Vec<ExprId> = Vec::new();
+        for lit in &tc {
+            if let Some((hl, hr)) = as_negated_eq(lit) {
+                let proof = find_eq_unit(&prems, hl, hr).ok_or_else(|| {
+                    ReconstructError::UnsupportedResolution {
+                        detail: format!(
+                            "no unit equality premise for hypothesis `(= {} {})` of `{rule}`",
+                            hl.key(),
+                            hr.key()
+                        ),
+                    }
+                })?;
+                unit_proofs.push(proof);
+            }
+        }
+        let proof = match rule.as_str() {
+            "eq_congruent" => reconstruct_eq_congruent(ctx, &unit_proofs, &tc)?,
+            // The emitter folds a whole chain into ONE `eq_transitive` clause with
+            // `k` hypotheses; reconstruct it as a `k`-step transport fold (slice-1's
+            // `reconstruct_eq_step` only handles the 2-hypothesis case).
+            "eq_transitive" => reconstruct_eq_transitive_n(ctx, &unit_proofs, &tc)?,
+            _ => reconstruct_eq_step(ctx, &rule, &unit_proofs, &tc)?,
+        };
+        // The reconstructed positive equality is the theory clause's last literal.
+        let (l, r) = positive_literal(&tc).ok_or_else(|| ReconstructError::MalformedStep {
+            rule: rule.clone(),
+            detail: "theory clause has no positive equality literal".to_owned(),
+        })?;
+        return Ok(ResolutionResult::Clause(ClauseProof::EqUnit {
+            l: l.clone(),
+            r: r.clone(),
+            proof,
+        }));
+    }
+
+    // Closing resolution to the empty clause: a positive eq unit against its
+    // complementary disequality unit.
+    if clause.is_empty() {
+        let proof = close_to_false(ctx, &prems)?;
+        return Ok(ResolutionResult::FalseProof(proof));
+    }
+
+    Err(ReconstructError::UnsupportedResolution {
+        detail: format!(
+            "resolution with no theory-clause premise and non-empty conclusion `{}`",
+            clause_key(clause)
+        ),
+    })
+}
+
+/// Find the proof of a unit equality `(= l r)` among `prems` (matched
+/// structurally on both operands, in the stated orientation).
+fn find_eq_unit(prems: &[ClauseProof], l: &AletheTerm, r: &AletheTerm) -> Option<ExprId> {
+    prems.iter().find_map(|p| match p {
+        ClauseProof::EqUnit {
+            l: pl,
+            r: pr,
+            proof,
+        } if pl == l && pr == r => Some(*proof),
+        _ => None,
+    })
+}
+
+/// The two operands of a theory clause's single positive equality literal.
+fn positive_literal(clause: &[AletheLit]) -> Option<(&AletheTerm, &AletheTerm)> {
+    clause.iter().find_map(as_positive_eq)
+}
+
+/// Close a refutation: among the premises find a positive equality unit
+/// `h_eq : Eq α a b` and a complementary disequality unit
+/// `h_ne : Not (Eq α a b)` of the **same** equality, and build `h_ne h_eq : False`.
+fn close_to_false(
+    ctx: &mut ReconstructCtx,
+    prems: &[ClauseProof],
+) -> Result<ExprId, ReconstructError> {
+    for p in prems {
+        let ClauseProof::DiseqUnit {
+            l: nl,
+            r: nr,
+            proof: ne_proof,
+        } = p
+        else {
+            continue;
+        };
+        // Find the matching positive equality `Eq α nl nr`.
+        let eq_proof = prems.iter().find_map(|q| match q {
+            ClauseProof::EqUnit {
+                l: el,
+                r: er,
+                proof,
+            } if el == nl && er == nr => Some(*proof),
+            _ => None,
+        });
+        if let Some(eq_proof) = eq_proof {
+            // `h_ne h_eq : False` — Not (Eq α a b) whnf-unfolds to Eq α a b → False.
+            let app = ctx.kernel.app(*ne_proof, eq_proof);
+            return Ok(app);
+        }
+    }
+    Err(ReconstructError::UnsupportedResolution {
+        detail: "closing resolution has no complementary equality/disequality unit pair".to_owned(),
+    })
+}
+
+/// The soundness gate for the final refutation term: `infer` it and require the
+/// inferred type to be [`Kernel::def_eq`] to the prelude's `False`.
+fn check_false(ctx: &mut ReconstructCtx, proof: ExprId) -> Result<ExprId, ReconstructError> {
+    let false_ = ctx.kernel.const_(ctx.prelude.false_, vec![]);
+    check_against(ctx, "resolution", proof, false_)
+}
+
+/// Render a clause as a stable diagnostic key.
+fn clause_key(clause: &[AletheLit]) -> String {
+    let mut out = String::from("(cl");
+    for lit in clause {
+        out.push(' ');
+        if lit.negated {
+            out.push_str("(not ");
+            out.push_str(&lit.atom.key());
+            out.push(')');
+        } else {
+            out.push_str(&lit.atom.key());
+        }
+    }
+    out.push(')');
+    out
+}
+
+impl ReconstructCtx {
+    /// Build the Lean proposition `Not p` (the prelude's `Not`, which unfolds to
+    /// `p → False`).
+    fn mk_not(&mut self, p: ExprId) -> ExprId {
+        let not = self.kernel.const_(self.prelude.not, vec![]);
+        self.kernel.app(not, p)
+    }
+}
+
+/// Declare a fresh axiom of proposition `prop` and return a `Const` proof of it.
+fn fresh_axiom(
+    ctx: &mut ReconstructCtx,
+    prop: ExprId,
+    role: &str,
+) -> Result<ExprId, ReconstructError> {
+    let name = ctx.fresh_name("hyp");
+    ctx.kernel
+        .add_declaration(Declaration::Axiom {
+            name,
+            uparams: vec![],
+            ty: prop,
+        })
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: role.to_owned(),
+            detail: format!("hypothesis axiom did not admit: {e:?}"),
+        })?;
+    Ok(ctx.kernel.const_(name, vec![]))
 }
 
 #[cfg(test)]

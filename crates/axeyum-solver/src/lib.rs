@@ -152,7 +152,9 @@ pub use proof::{
 pub use qfabv_alethe::prove_qf_abv_unsat_alethe;
 pub use qfbv_alethe::prove_qf_bv_unsat_alethe;
 pub use qinst_egraph::{instantiate_forall_via_egraph, prove_quantified_unsat_via_egraph};
-pub use reconstruct::{ReconstructCtx, ReconstructError, reconstruct_eq_step};
+pub use reconstruct::{
+    ReconstructCtx, ReconstructError, reconstruct_eq_step, reconstruct_qf_uf_proof,
+};
 pub use records::{RecordError, RecordSort};
 pub use sat_bv_backend::SatBvBackend;
 pub use smtlib::{

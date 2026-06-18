@@ -279,3 +279,239 @@ fn unsupported_rule_rejected() {
     let err = reconstruct_eq_step(&mut ctx, "resolution", &[], &conclusion).unwrap_err();
     assert!(matches!(err, ReconstructError::UnsupportedRule { .. }));
 }
+
+// ---------------------------------------------------------------------------
+// Full EUF refutation: a REAL `prove_qf_uf_unsat_alethe` proof reconstructed to
+// a kernel-checked `False`. This is the slice-2 deliverable.
+// ---------------------------------------------------------------------------
+
+use super::reconstruct_qf_uf_proof;
+use axeyum_ir::{Sort, TermArena};
+
+/// Confirm a reconstructed term `infer`s to a `Sort` (its type is a proposition),
+/// and specifically that it is the prelude's `False`.
+fn assert_infers_false(ctx: &mut ReconstructCtx, proof: axeyum_lean_kernel::ExprId) {
+    let inferred = ctx
+        .kernel_mut()
+        .infer(proof)
+        .expect("False term must infer");
+    let false_ = {
+        let name = ctx.prelude().false_;
+        ctx.kernel_mut().const_(name, vec![])
+    };
+    assert!(
+        ctx.kernel_mut().def_eq(inferred, false_),
+        "the reconstructed refutation must kernel-check to `False`"
+    );
+    // And `False` itself is a Prop, so the term is a genuine proof, not data.
+    let false_ty = {
+        let name = ctx.prelude().false_;
+        let f = ctx.kernel_mut().const_(name, vec![]);
+        ctx.kernel_mut().infer(f).unwrap()
+    };
+    assert!(matches!(
+        ctx.kernel().expr_node(false_ty),
+        ExprNode::Sort(_)
+    ));
+}
+
+fn bv_var(arena: &mut TermArena, name: &str) -> axeyum_ir::TermId {
+    let sym = arena.declare(name, Sort::BitVec(8)).expect("declare");
+    arena.var(sym)
+}
+
+/// **THE END-TO-END DELIVERABLE**: take a REAL axeyum-emitted EUF `unsat` Alethe
+/// proof for `a = b ∧ b = c ∧ a ≠ c`, reconstruct it through
+/// `reconstruct_qf_uf_proof`, and assert the result kernel-checks to `False`.
+///
+/// This is a complete solver proof → Lean-kernel-verified term: the solver emits
+/// the Alethe commands, reconstruction translates them into a Lean proof term, and
+/// the trusted kernel `infer`s that term to `False`.
+#[test]
+fn end_to_end_transitivity_refutation_to_false() {
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a");
+    let b = bv_var(&mut arena, "b");
+    let c = bv_var(&mut arena, "c");
+    let assertions = vec![arena.eq(a, b).unwrap(), arena.eq(b, c).unwrap(), {
+        let e = arena.eq(a, c).unwrap();
+        arena.not(e).unwrap()
+    }];
+    // REAL emitted proof (self-validated by check_alethe inside the emitter).
+    let proof = crate::prove_qf_uf_unsat_alethe(&arena, &assertions)
+        .expect("emitter produces the transitivity refutation");
+
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_uf_proof(&mut ctx, &proof)
+        .expect("the EUF refutation reconstructs to a kernel-checked term");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// A longer chain `a=b ∧ b=c ∧ c=d ∧ a≠d` reconstructs end-to-end to `False`.
+#[test]
+fn end_to_end_longer_chain_refutation_to_false() {
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a");
+    let b = bv_var(&mut arena, "b");
+    let c = bv_var(&mut arena, "c");
+    let d = bv_var(&mut arena, "d");
+    let assertions = vec![
+        arena.eq(a, b).unwrap(),
+        arena.eq(b, c).unwrap(),
+        arena.eq(c, d).unwrap(),
+        {
+            let e = arena.eq(a, d).unwrap();
+            arena.not(e).unwrap()
+        },
+    ];
+    let proof = crate::prove_qf_uf_unsat_alethe(&arena, &assertions).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_uf_proof(&mut ctx, &proof).expect("reconstructs");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// A reversed-edge instance `a=b stored as b=a ∧ b=c ∧ a≠c`: the emitter inserts
+/// an `eq_symmetric` flip resolution, which the walker reconstructs end-to-end.
+#[test]
+fn end_to_end_reversed_edge_refutation_to_false() {
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a");
+    let b = bv_var(&mut arena, "b");
+    let c = bv_var(&mut arena, "c");
+    let assertions = vec![arena.eq(b, a).unwrap(), arena.eq(b, c).unwrap(), {
+        let e = arena.eq(a, c).unwrap();
+        arena.not(e).unwrap()
+    }];
+    let proof = crate::prove_qf_uf_unsat_alethe(&arena, &assertions).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_uf_proof(&mut ctx, &proof).expect("reconstructs");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// **Congruence end-to-end**: `a = b ∧ f(a) ≠ f(b)` is refuted by a depth-1
+/// `eq_congruent` step; reconstruction transports `Eq.refl` through `Eq.rec`
+/// (`congrArg`-style) and closes to `False`.
+#[test]
+fn end_to_end_congruence_refutation_to_false() {
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a");
+    let b = bv_var(&mut arena, "b");
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(8)], Sort::BitVec(8))
+        .unwrap();
+    let fa = arena.apply(f, &[a]).unwrap();
+    let fb = arena.apply(f, &[b]).unwrap();
+    let assertions = vec![arena.eq(a, b).unwrap(), {
+        let e = arena.eq(fa, fb).unwrap();
+        arena.not(e).unwrap()
+    }];
+    let proof = crate::prove_qf_uf_unsat_alethe(&arena, &assertions)
+        .expect("emitter produces the congruence refutation");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_uf_proof(&mut ctx, &proof)
+        .expect("the congruence refutation reconstructs to a kernel-checked term");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// **NEGATIVE soundness check**: corrupt a REAL emitted proof — swap the closing
+/// resolution's disequality to a non-complementary one — and confirm
+/// reconstruction REJECTS it (no complementary unit pair → error), never a wrong
+/// `False`.
+#[test]
+fn end_to_end_corrupted_proof_rejected() {
+    use axeyum_cnf::{AletheCommand, AletheTerm};
+
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a");
+    let b = bv_var(&mut arena, "b");
+    let c = bv_var(&mut arena, "c");
+    let assertions = vec![arena.eq(a, b).unwrap(), arena.eq(b, c).unwrap(), {
+        let e = arena.eq(a, c).unwrap();
+        arena.not(e).unwrap()
+    }];
+    let mut proof = crate::prove_qf_uf_unsat_alethe(&arena, &assertions).expect("emitter");
+
+    // Corrupt the assumed disequality `(not (= a c))` into `(not (= a d))`, so the
+    // closing resolution no longer has a complementary equality unit.
+    for cmd in &mut proof {
+        if let AletheCommand::Assume { clause, .. } = cmd {
+            if let [lit] = clause.as_mut_slice() {
+                if lit.negated {
+                    lit.atom = AletheTerm::App(
+                        "=".to_owned(),
+                        vec![
+                            AletheTerm::Const("a".to_owned()),
+                            AletheTerm::Const("d".to_owned()),
+                        ],
+                    );
+                }
+            }
+        }
+    }
+
+    let mut ctx = ReconstructCtx::new();
+    let err = reconstruct_qf_uf_proof(&mut ctx, &proof)
+        .expect_err("a corrupted proof must be rejected, never a wrong False");
+    // Either the closing resolution finds no complementary pair, or the kernel
+    // rejects the malformed final term — both are sound rejections.
+    assert!(
+        matches!(
+            err,
+            ReconstructError::UnsupportedResolution { .. }
+                | ReconstructError::KernelRejected { .. }
+        ),
+        "corruption must surface as a sound rejection, got {err:?}"
+    );
+}
+
+/// **NEGATIVE soundness check at the kernel gate**: hand-build a proof whose
+/// closing resolution pairs `h_eq : Eq α a c` with a disequality of a DIFFERENT
+/// equality `Not (Eq α a c')` won't even match; instead corrupt the *theory*
+/// clause so the reconstructed equality is wrong, and confirm the kernel rejects
+/// the final term. Here we corrupt `eq_transitive`'s conclusion endpoint, which
+/// the slice-1 structural check catches before the kernel — a sound rejection.
+#[test]
+fn end_to_end_corrupted_theory_clause_rejected() {
+    use axeyum_cnf::{AletheCommand, AletheTerm};
+
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a");
+    let b = bv_var(&mut arena, "b");
+    let c = bv_var(&mut arena, "c");
+    let assertions = vec![arena.eq(a, b).unwrap(), arena.eq(b, c).unwrap(), {
+        let e = arena.eq(a, c).unwrap();
+        arena.not(e).unwrap()
+    }];
+    let mut proof = crate::prove_qf_uf_unsat_alethe(&arena, &assertions).expect("emitter");
+
+    // Corrupt the eq_transitive step's positive conclusion `(= a c)` into `(= a b)`
+    // so the chain endpoints no longer match.
+    for cmd in &mut proof {
+        if let AletheCommand::Step { rule, clause, .. } = cmd {
+            if rule == "eq_transitive" {
+                if let Some(last) = clause.last_mut() {
+                    last.atom = AletheTerm::App(
+                        "=".to_owned(),
+                        vec![
+                            AletheTerm::Const("a".to_owned()),
+                            AletheTerm::Const("b".to_owned()),
+                        ],
+                    );
+                }
+            }
+        }
+    }
+
+    let mut ctx = ReconstructCtx::new();
+    let err = reconstruct_qf_uf_proof(&mut ctx, &proof)
+        .expect_err("a corrupted theory clause must be rejected");
+    assert!(
+        matches!(
+            err,
+            ReconstructError::MalformedStep { .. }
+                | ReconstructError::KernelRejected { .. }
+                | ReconstructError::UnsupportedResolution { .. }
+        ),
+        "corruption must surface as a sound rejection, got {err:?}"
+    );
+}
