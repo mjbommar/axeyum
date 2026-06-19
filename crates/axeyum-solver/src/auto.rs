@@ -905,7 +905,26 @@ fn check_auto_dispatch(
         // strictly additive — `DEFAULT_INT_WIDTH` is in the ladder, so any width-32
         // answer is still reachable — and a definite `Unsat`/`Unknown` from the
         // exact LIA engines above already short-circuited before here.
-        return dispatch_int_blast_width_ladder(arena, assertions, config);
+        let ladder = dispatch_int_blast_width_ladder(arena, assertions, config)?;
+        if let CheckResult::Unknown(_) = ladder {
+            // Real-relaxation refutation (G3): the integers are a subset of the
+            // reals, so an integer query has *no model* whenever its faithful real
+            // relaxation has none. Integer-nonlinear goals that are unsat for sign
+            // reasons (`x*x < 0`, `x*x + 1 <= 0`) are refuted by the NRA sign rules
+            // over that relaxation, which the bounded bit-blast width ladder only
+            // ever reports as `Unknown`. The relaxation maps every `Int`
+            // var/const/op faithfully onto the reals; `unsat` of it transfers
+            // soundly to the integer query (integer solutions ⊆ real solutions),
+            // and it *only* ever returns `Unsat` (a real model need not be
+            // integral), so this is strictly additive — it never overturns the
+            // ladder's `Sat`/`Unsat` and only sharpens its `Unknown` to `Unsat` for
+            // the real-refutable cases. The relaxation runs on a clone of the arena
+            // and never leaks a symbol or term back.
+            if crate::int_real_relax::refute_int_via_real_relaxation(arena, assertions, config)? {
+                return Ok(CheckResult::Unsat);
+            }
+        }
+        return Ok(ladder);
     }
 
     let mut backend = SatBvBackend::new();

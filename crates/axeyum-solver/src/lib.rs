@@ -45,6 +45,7 @@ pub use axeyum_fp as fp;
 mod evidence;
 mod faithfulness;
 mod incremental;
+mod int_real_relax;
 mod layers;
 mod lazy_bv;
 mod lia;

@@ -412,6 +412,25 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P2.5: integer nonlinear UNSAT via real relaxation (gap G3).**
+  Sign-based integer-NIA goals (`x*x<0`, `x*x+1≤0` over Int) returned `Unknown`, and
+  consequently `∀x:Int. x*x≥0` stayed `Unknown` (the valid-universal pass's `c*c<0` witness is
+  integer-NIA). Fix: new `int_real_relax.rs` (`refute_int_via_real_relaxation`) + a fallback at
+  the tail of the `has_int` dispatch branch, *after* the exact LIA refuters and the int-blast
+  width ladder, fired only when the ladder is `Unknown`. On an isolated arena clone it builds
+  the **faithful real reinterpretation** of the query — each `Int` var→a fresh memoized `Real`
+  var (same int symbol ⇒ same real var), `int_const`→`real_const`, `IntAdd/Sub/Mul/Neg/Lt/Le/
+  Gt/Ge`→the `Real*` counterparts, Bool/`Ite`/`Eq` rebuilt — and runs `check_with_nra`. Since
+  integer solutions ⊆ real solutions, **real-`Unsat` ⇒ integer-`Unsat`** (sound); it returns
+  *only* `Unsat` (a real model need not be integral), so strictly additive. **Conservative
+  allow-list:** any `div`/`mod`/`abs`/coercion/`bv2nat`/BV/array/UF/datatype/quantifier subterm
+  aborts the whole relaxation (→ unchanged) — never a guessed translation. One bounded NRA call,
+  clone-scoped (no leakage/OOM). Decides `x*x<0`/`x*x+1≤0` → Unsat and **`∀x:Int. x*x≥0` → Sat**
+  (the valid-universal sub-check now refutes `c*c<0`); `x*x==2` stays `Unknown` (real-sat √2, no
+  wrong unsat), `x*x==4 ∧ x>0` stays `Sat` (width ladder). New `tests/nia_real_relaxation.rs`
+  (5); fmt + clippy + full suite green. Final tractable gap from the 2nd capability-gap pass;
+  sub-agent + soundness review.
+
 - **2026-06-19** — **P2.4: `bv2nat` out-of-range now refuted UNSAT (gap G2).** `bv2nat(b)` of
   a W-bit `b` is provably in `[0, 2^W-1]`, but `bv2nat(4-bit) >= 16` / `== 20` returned
   `Unknown`: the exact LIA refuters reject a raw `Op::Bv2Nat` (`lra.rs` `Collector::linearize`
