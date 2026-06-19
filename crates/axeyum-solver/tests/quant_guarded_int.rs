@@ -120,12 +120,12 @@ fn one_point_range_decides() {
 }
 
 #[test]
-fn too_large_range_is_unknown_not_wrong() {
-    // ∀x:Int. (0 <= x ∧ x <= 1_000_000) => x+1 >= x. The body is valid (so it
-    // cannot be refuted by instantiation either), and the range is far over the
-    // expansion cap, so the guarded pass declines to expand and the solver returns
-    // a sound `Unknown` — never a wrong sat/unsat, never an OOM. This isolates the
-    // cap: a smaller range over the same body decides `sat` (checked below).
+fn too_large_range_never_wrong_and_no_oom() {
+    // ∀x:Int. (0 <= x ∧ x <= 1_000_000) => x+1 >= x. The range is far over the
+    // guarded-expansion cap, so the *guarded* pass declines to expand (never an
+    // OOM). The body is nonetheless valid, so the valid-universal pass decides it
+    // `sat` without expansion (`¬body[x:=c]` is LIA-UNSAT) — a sound improvement
+    // over the previous `Unknown`. Either way it is never a wrong sat/unsat.
     let mut arena = TermArena::new();
     let build = |arena: &mut TermArena, x: TermId| {
         let one = arena.int_const(1);
@@ -135,12 +135,12 @@ fn too_large_range_is_unknown_not_wrong() {
     let all = guarded_forall(&mut arena, 0, 1_000_000, build);
     let result = decide(&mut arena, &[all]);
     assert!(
-        matches!(result, CheckResult::Unknown(_)),
-        "over-cap range must be Unknown (never a wrong answer / OOM), got {result:?}"
+        matches!(result, CheckResult::Sat(_) | CheckResult::Unknown(_)),
+        "over-cap range must be sat-by-validity or a sound Unknown (never wrong / OOM), got {result:?}"
     );
 
-    // The SAME body over a small in-cap range *does* decide sat: confirms it is
-    // the range size, not the body, that gates expansion.
+    // The SAME body over a small in-cap range decides sat (here the guarded
+    // expansion suffices); confirms the body itself is satisfiable.
     let mut arena = TermArena::new();
     let small = guarded_forall(&mut arena, 0, 3, build);
     assert!(

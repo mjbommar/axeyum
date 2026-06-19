@@ -412,6 +412,25 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P2.6: sat-side universal-validity elimination — valid `∀` now decided
+  (were `Unknown`).** A standalone `∀x. body` with a quantifier-free body is **valid** (hence
+  the assertion is satisfiable — true in every model) **iff** `¬body[x:=c]` is UNSAT for a
+  fresh constant `c`. New `quant_valid_universal.rs` (`eliminate_valid_universals`), hooked in
+  `solve` before `check_with_quantifiers`: for each top-level `∀x. body` (QF body; nested
+  quantifiers skipped), mint a fresh `!vu_*` constant of `x`'s sort, substitute via
+  `replace_subterms`, and decide `¬body[x:=c]` with the **quantifier-free** `check_auto`
+  (no re-entry → terminates in one bounded QF solve). `Unsat` ⇒ the universal is valid ⇒
+  replace with `true` (exact); `Sat`/`Unknown` ⇒ leave it for the existing instantiation/MBQI
+  path. Sound + strictly additive (only `Unknown`→decided; a proven-valid universal is `true`
+  everywhere, an unprovable one is never dropped). Leverages the existing exact deciders:
+  `c+0≠c`/`c·0≠0` (LIA), `f(c)≠f(c)` (EUF), `c·c<0` (NRA sign rule). Now decides
+  `∀x:Int. x+0=x`, `x·0=0`, `x≥0 ∨ x<0`, `∀x. f(x)=f(x)`, `∀x:Real. x²≥0`. UNSAT-by-
+  instantiation (`∀x. f(x)=0 ∧ f(a)=1`) and non-valid universals unaffected (verified). New
+  `tests/quant_valid_universal.rs` (8); one guarded-int test relaxed (its formula is validly
+  `Sat` now — a sound improvement). fmt + clippy + full suite green. Capability-gap pass;
+  sub-agent + independent soundness review (the alarming compile diagnostics were a stale
+  analyzer cache — the code builds and the suite is green).
+
 - **2026-06-19** — **QF_NIA: ground-vs-`∃` inconsistency fixed (small nonlinear-int SAT
   now decided).** `x*x==4 ∧ x>0` (ground) returned `Unknown` ("overflowed at width 32") while
   the equivalent `∃x. x*x==4` returned `Sat` (skolemize → bounded blast finds x=2) — same

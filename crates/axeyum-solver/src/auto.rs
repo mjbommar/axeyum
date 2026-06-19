@@ -76,6 +76,26 @@ pub fn solve(
     if !has_quantifier(arena, assertions) {
         return check_auto(arena, assertions, config);
     }
+
+    // Valid-universal elimination (sat-side universal-closure validity check):
+    // a top-level `∀x. body` with a quantifier-free body is *valid* (hence the
+    // assertion is satisfiable) iff `¬body[x := c]` is UNSAT for a fresh
+    // constant `c`. Proven-valid universals are replaced by `true` — exact (a
+    // valid universal is true in every model) and strictly additive (a universal
+    // we cannot prove valid is left untouched, so the problem is never weakened).
+    // This decides standalone valid universals over Int/Real/UF that the
+    // instantiation/MBQI fallback — which can only conclude `unsat`/`unknown` —
+    // never reaches. The sub-checks dispatch to the quantifier-free decider only,
+    // so this hook cannot re-enter itself.
+    let eliminated =
+        crate::quant_valid_universal::eliminate_valid_universals(arena, assertions, config)?;
+    let assertions: &[TermId] = &eliminated.0;
+    // If every universal was eliminated, the residual is quantifier-free and the
+    // ordinary QF dispatch decides it directly.
+    if eliminated.1 && !has_quantifier(arena, assertions) {
+        return check_auto(arena, assertions, config);
+    }
+
     match check_with_quantifiers(arena, assertions, config) {
         // An infinite quantifier domain defeats finite expansion; fall back to
         // sound refutation. Try congruence-aware e-matching on the e-graph keystone

@@ -1,0 +1,169 @@
+//! Valid-universal elimination (sat-side universal-closure validity check).
+//!
+//! The finite-domain quantifier path ([`crate::check_with_quantifiers`]) is
+//! complete for `Bool`/`BitVec` bound variables, and the infinite-domain
+//! fallback ([`crate::prove_unsat_by_instantiation`] / MBQI) can only ever
+//! conclude `unsat` or `unknown` — it has no *sat-side* decision. So a
+//! standalone **valid** universal over `Int`/`Real`/an uninterpreted sort —
+//! e.g. `∀x:Int. x + 0 == x`, `∀x. f(x) == f(x)`, `∀x:Real. x*x >= 0` — comes
+//! back `unknown` even though it is satisfiable (true in *every* model).
+//!
+//! This pass closes that gap with the **universal-closure validity check**:
+//!
+//! > A top-level universally-quantified assertion `∀x. body(x)` is **valid**
+//! > (true in every model — hence the assertion is satisfiable) **iff**
+//! > `¬body[x := c]` is **UNSAT**, for a fresh uninterpreted constant `c` of
+//! > `x`'s sort.
+//!
+//! *Soundness.* `c` is a fresh, otherwise-unconstrained constant, so it ranges
+//! over every element of the sort across models. No model falsifies `body(c)`
+//! ⟺ `body` holds for all `x` in all models ⟺ the universal is valid. A valid
+//! universal is `true` in every model, so replacing the assertion with `true`
+//! is **exact** (changes no model). When the body is quantifier-free, `¬body(c)`
+//! is quantifier-free, so the existing QF deciders ([`crate::check_auto`])
+//! decide it — and they already prove `c*c < 0` UNSAT (NRA sign rule),
+//! `c + 0 != c` UNSAT (LIA), `f(c) != f(c)` UNSAT (EUF).
+//!
+//! The pass is **strictly additive**: a universal it *cannot prove valid* is
+//! left untouched (it falls through to the existing instantiation/MBQI path),
+//! so the problem is never weakened. Only an otherwise-`unknown` verdict can
+//! become decided.
+//!
+//! *Termination.* The validity sub-check dispatches to the quantifier-free
+//! decider [`crate::check_auto`] on the (quantifier-free) negated body. That
+//! decider never re-enters the quantifier front door, and bodies that still
+//! contain a nested quantifier are skipped, so there is exactly one bounded QF
+//! solve per candidate universal and no recursion.
+
+use std::collections::HashMap;
+
+use axeyum_ir::{Op, TermArena, TermId, TermNode};
+use axeyum_rewrite::replace_subterms;
+
+use crate::auto::check_auto;
+use crate::backend::{CheckResult, SolverConfig, SolverError};
+
+/// Rewrites every top-level universal `∀x. body` whose body is quantifier-free
+/// and which this pass can **prove valid** into the trivially-true constant
+/// `true`, leaving every other assertion unchanged.
+///
+/// A universal is proven valid when `¬body[x := c]` is *definitively* `unsat`
+/// for a fresh uninterpreted constant `c` (see the module docs). A universal
+/// whose validity sub-check returns `sat`/`unknown`, or whose body carries a
+/// nested quantifier, is passed through untouched — so the caller may continue
+/// to the existing instantiation/MBQI path for it.
+///
+/// Returns the (possibly) rewritten assertions and whether any universal was
+/// eliminated. The rewrite is exact (a valid universal is `true` in every
+/// model), so the caller may trust both `sat` and `unsat` of the result.
+///
+/// # Errors
+///
+/// Returns [`SolverError`] only from an internal IR builder failure or the QF
+/// validity sub-solve; a sub-check that cannot decide is *not* an error — the
+/// assertion is simply passed through unchanged.
+pub fn eliminate_valid_universals(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<(Vec<TermId>, bool), SolverError> {
+    let mut out = Vec::with_capacity(assertions.len());
+    let mut rewrote = false;
+    let mut fresh = 0u32;
+    for &assertion in assertions {
+        match try_eliminate(arena, assertion, config, &mut fresh)? {
+            Some(simplified) => {
+                rewrote = true;
+                out.push(simplified);
+            }
+            None => out.push(assertion),
+        }
+    }
+    Ok((out, rewrote))
+}
+
+/// Attempts the valid-universal rewrite on a single top-level assertion.
+///
+/// Returns `Ok(Some(true))` when the assertion is a top-level `∀x. body` with a
+/// quantifier-free body that is **proven valid** (so the caller substitutes the
+/// trivially-true constant); `Ok(None)` otherwise (not a matching universal, a
+/// nested-quantifier body, or a sub-check that did not establish validity), in
+/// which case the assertion is left unchanged.
+fn try_eliminate(
+    arena: &mut TermArena,
+    assertion: TermId,
+    config: &SolverConfig,
+    fresh: &mut u32,
+) -> Result<Option<TermId>, SolverError> {
+    // Must be a top-level `forall x. body`.
+    let TermNode::App {
+        op: Op::Forall(var),
+        args,
+    } = arena.node(assertion)
+    else {
+        return Ok(None);
+    };
+    let var = *var;
+    let body = args[0];
+
+    // A nested quantifier in the body is out of scope: the validity sub-check
+    // would no longer be a quantifier-free solve (and the bound variable could
+    // be shadowed), so leave it for the existing quantifier path.
+    if contains_quantifier(arena, body) {
+        return Ok(None);
+    }
+
+    // Mint a *fresh* uninterpreted constant `c` of `x`'s sort. The name carries
+    // a reserved prefix and a per-pass counter so it cannot collide with a
+    // user/Skolem symbol. `c` is otherwise unconstrained — exactly what makes it
+    // an arbitrary representative of the sort.
+    let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
+    let sort = arena.symbol(var).1;
+    let name = format!("!vu_{fresh}");
+    *fresh += 1;
+    let constant = arena.declare(&name, sort).map_err(err)?;
+
+    // Form `body[x := c]`. Substituting a fresh constant for the (QF-body) bound
+    // variable is capture-free.
+    let var_term = arena.var(var);
+    let const_term = arena.var(constant);
+    let mut replacements: HashMap<TermId, TermId> = HashMap::new();
+    replacements.insert(var_term, const_term);
+    let mut memo: HashMap<TermId, TermId> = HashMap::new();
+    let instance = replace_subterms(arena, body, &replacements, &mut memo).map_err(err)?;
+
+    // The negated body `¬body[x := c]` is the validity witness: the universal is
+    // valid iff this is unsatisfiable.
+    let negated = arena.not(instance).map_err(err)?;
+
+    // Decide `¬body(c)` with the *quantifier-free* dispatch. It carries no
+    // quantifier (the body was QF and `c` is a plain constant), so `check_auto`
+    // cannot re-enter the quantifier front door — guaranteeing termination with
+    // a single bounded QF solve. We pass the sub-query alone (the only thing
+    // whose validity we are testing); other assertions never constrain `c`, so
+    // including them could only mask validity, not create it.
+    match check_auto(arena, &[negated], config)? {
+        // Definitively UNSAT ⇒ the universal is valid ⇒ replace with `true`.
+        CheckResult::Unsat => Ok(Some(arena.bool_const(true))),
+        // Sat/Unknown ⇒ could not prove validity ⇒ leave the universal untouched.
+        _ => Ok(None),
+    }
+}
+
+/// Whether `term` contains any quantifier operator.
+fn contains_quantifier(arena: &TermArena, term: TermId) -> bool {
+    let mut seen = std::collections::BTreeSet::new();
+    let mut stack = vec![term];
+    while let Some(t) = stack.pop() {
+        if !seen.insert(t) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(t) {
+            if matches!(op, Op::Forall(_) | Op::Exists(_)) {
+                return true;
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
+    false
+}
