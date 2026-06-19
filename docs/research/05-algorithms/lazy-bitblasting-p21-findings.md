@@ -238,6 +238,40 @@ giants, recorded above). That blocker — a deterministic work budget on the
 preprocessing passes — is the next concrete destination-2 code increment, not more
 abstraction machinery.
 
+## The corrected lever, unblocked and measured (2026-06-18): word-level preprocessing **doubles** the eager decided count
+
+The unbounded-preprocessor blocker (above) is fixed: `solve_eqs` — measured as the
+sole hog (the 17.6 MB / 340 k-node giant spent **>150 s** there while every other
+pass finished in <0.5 s) — now takes a **deterministic node-fuel budget**
+(`solve_eqs_bounded` / `DEFAULT_SOLVE_EQS_FUEL`, commit `96e55b6`) and bails to a
+sound *partial* reduction (un-eliminated equalities stay ordinary assertions; the
+trail still reconstructs). The giant now clears the whole pipeline in ~1.5 s.
+
+With the preprocessor usable at scale, the fair `--preprocess` measurement (sat-bv
+backend, **identical budgets to the eager fair 3 s baseline**, Z3 4.13.3 oracle,
+`--jobs 2`):
+
+| run (3 s, node 200k, cnf 2M/5M) | decided | EncodingBudget | Timeout | NodeBudget | DISAGREE | replay fail |
+|---|---|---|---|---|---|---|
+| eager sat-bv (baseline) | **2 sat** | 13 | 88 | 10 | 0 | 0 |
+| **sat-bv `--preprocess`** | **4 sat** | **11** | 88 | 10 | **0** | 0 |
+
+Baseline: `bench-results/baselines/qf-bv-p4dfa-fair-sat-bv-preprocess-vs-z3-3s-n200k-cnf5M.json`
+(`just bench-public-qfbv-preprocess-fair-3s`).
+
+**Word-level preprocessing genuinely moves the public number (2 → 4 decided at
+3 s), and the mechanism is exactly the predicted one:** the two newly-decided
+instances (`compose.p2._…na6_nr3_paired`, `mobiledevice_…na6_nr3_twocond`) are the
+two that drop *out of* `EncodingBudget` (13 → 11) — `solve_eqs`/canonicalize shrink
+them below the bit-blast-size ceiling so they encode and solve where the eager path
+refused them. DISAGREE=0, 0 replay failures (the partial-reduction trail
+reconstructs soundly). This is the first measured destination-2 gain on this corpus
+from *reduction* rather than abstraction — confirming the "not-building-the-mountain"
+direction over arithmetic-CEGAR (inert here) and over a faster SAT core (which would
+only climb the same mountain). Full parity still needs far deeper word-level
+reasoning (Z3 decides ~113), but the lever is now real, sound, scale-safe, and
+pointed the right way.
+
 ## Bottom line
 
 Lazy arithmetic-CEGAR bit-blasting is now wired end-to-end (opt-in dispatch

@@ -355,6 +355,23 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **Destination-2 lever found & measured: word-level preprocessing
+  doubles the eager decided count (2 → 4 of 113), after fixing the unbounded
+  preprocessor.** Acting on the lazy-bv null result below, profiled the preprocessing
+  passes on the 17.6 MB / 340 k-node giant: `solve_eqs` was the sole hog (**>150 s**
+  there; every other pass <0.5 s). Added a **deterministic node-fuel budget**
+  (`axeyum_rewrite::solve_eqs_bounded` / `DEFAULT_SOLVE_EQS_FUEL`, commit `96e55b6`) —
+  charges per-round rebuild work (shared-memo node count, never wall-clock), bails to
+  a **sound partial reduction** (un-eliminated equalities stay assertions; trail
+  reconstructs). Giant now clears the whole pipeline in ~1.5 s. Wired into
+  `check_with_preprocessing` + the bench. **Fair `--preprocess` measurement** (sat-bv,
+  same 3 s/budget as the eager baseline, Z3 oracle): **4 sat / 109 unknown, DISAGREE=0,
+  0 replay failures** vs eager **2/111** — the two newly-decided instances drop out of
+  `EncodingBudget` (13 → 11), i.e. preprocessing shrinks them below the bit-blast-size
+  ceiling so they encode + solve. First measured destination-2 gain on this corpus from
+  *reduction* (the "not-building-the-mountain" lever), not abstraction. Baseline
+  `bench-results/baselines/qf-bv-p4dfa-fair-sat-bv-preprocess-vs-z3-3s-n200k-cnf5M.json`,
+  `just bench-public-qfbv-preprocess-fair-3s`. Probe: `axeyum-bench/examples/preprocess_timing.rs`.
 - **2026-06-18** — **Destination-2 fair re-measurement: lazy-bv vs Z3 on the public
   p4dfa 113 at the standing budgets — confirmed a no-op on this corpus.** Ran the
   built-but-fair-unmeasured `LazyBvBackend` head-to-head vs Z3 4.13.3 on the
