@@ -19,6 +19,13 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     assertions. Strictly additive (existing certs byte-unchanged), validated at **all three
     levels**: in-tree `check_alethe`, external **Carcara**, and **Lean-kernel**
     reconstruction to `False`.
+  - **Zero-trust certs WIRED into `produce_evidence` (Ackermann + array + datatype)** — a
+    QF_UFBV / QF_ABV / QF_DT `unsat` in the covered fragment now carries a zero-trust-hole
+    Alethe certificate (reductions *proven* via `eq_congruent`/`eq_transitive`, not trusted
+    DRAT) via `zero_trust_alethe_certificate`. Retires the Ackermann / ArrayElim /
+    DatatypeElim trust holes **in practice** for those fragments (the ledger stays
+    binary "trust hole" — coverage is fragment-level, not universal). Also fixed
+    `evidence_route` misrouting datatype queries to the BV path (see changelog).
   - **Next proof-track task (resume) — certify general read-over-write (ROW-distinct)**
     for the array-elim trust hole: `select(store(a,i,v),j) → ite(i=j, v, select(a,j))`,
     `i≠j`. **Dependency chain mapped this session:** (1) the checker rule **already exists**
