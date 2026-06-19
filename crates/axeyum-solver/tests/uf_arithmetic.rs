@@ -196,3 +196,24 @@ fn quantified_uf_lia_solve_decides_without_crashing() {
         "instantiate x=5: f(5)=0 ∧ f(5)≠0; got {r:?}"
     );
 }
+
+/// Value conflict via congruence: `f(a) = 1 ∧ f(b) = 2 ∧ a = b` is UNSAT —
+/// `a = b` ⇒ `f(a) = f(b)`, so `1 = 2`.
+#[test]
+fn uflia_value_conflict_via_congruence_unsat() {
+    let mut a = TermArena::new();
+    let u = decl_int(&mut a, "u");
+    let v = decl_int(&mut a, "v");
+    let f = a.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let fu = a.apply(f, &[u]).unwrap();
+    let fv = a.apply(f, &[v]).unwrap();
+    let one = a.int_const(1);
+    let two = a.int_const(2);
+    let e1 = a.eq(fu, one).unwrap();
+    let e2 = a.eq(fv, two).unwrap();
+    let e3 = a.eq(u, v).unwrap();
+    assert!(matches!(
+        check_with_uf_arithmetic(&mut a, &[e1, e2, e3], &SolverConfig::default()).unwrap(),
+        CheckResult::Unsat
+    ));
+}
