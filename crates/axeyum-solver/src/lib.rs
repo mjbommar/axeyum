@@ -144,7 +144,10 @@ pub use lra::{
     FarkasAtom, FarkasCertificate, check_with_lia_simplex, check_with_lra, check_with_lra_simplex,
     lra_farkas_certificate, lra_unsat_core,
 };
-pub use maxsat::{max_satisfiable, max_satisfiable_weighted};
+pub use maxsat::{
+    MaxSatOutcome, max_satisfiable, max_satisfiable_model, max_satisfiable_weighted,
+    max_satisfiable_weighted_model,
+};
 pub use model::Model;
 pub use nra::check_with_nra;
 pub use optimize::{
