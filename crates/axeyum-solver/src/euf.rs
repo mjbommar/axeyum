@@ -166,15 +166,23 @@ pub fn check_qf_ufbv_lazy<B: SolverBackend>(
     })
 }
 
-/// EUF + arithmetic (`QF_UFLIA` / `QF_UFLRA`) by the **same** functional-consistency
-/// CEGAR as [`check_qf_ufbv_lazy`], but the abstraction is solved by the general
-/// dispatcher [`crate::check_auto`] instead of a bit-vector backend — so
-/// uninterpreted functions over `Int`/`Real` are decided by EUF + linear-arithmetic
-/// combination (Ackermann abstraction → the arithmetic solver), never bit-blasting.
+/// EUF + arithmetic (`QF_UFLIA` / `QF_UFLRA`): eliminate uninterpreted functions by
+/// **eager Ackermann** congruence reduction (so the consistency constraints
+/// `(⋀ argsᵢ = argsⱼ) ⇒ resultᵢ = resultⱼ` are asserted up front for *all*
+/// same-function application pairs), then solve the function-free arithmetic result
+/// with the general dispatcher [`crate::check_auto`] — never bit-blasting.
 ///
-/// The classic combination instance `f(a) ≠ f(b) ∧ a ≤ b ∧ b ≤ a` decides UNSAT:
-/// the arithmetic solver forces `a = b`, a functional-consistency lemma then forces
-/// `f(a) = f(b)`, contradicting the disequality.
+/// Eager (vs the lazy CEGAR of [`check_qf_ufbv_lazy`]) because the lazy refinement
+/// needs the abstracted model to assign every application's result, but an
+/// arithmetic solver leaves variables that do not appear in the (post-abstraction)
+/// assertions unconstrained — e.g. the *intermediate* result of `g` in `f(g(a))`.
+/// Asserting all congruence constraints up front sidesteps that, giving a **complete**
+/// decision for the combined conjunction (the classic `f(a)≠f(b) ∧ a≤b ∧ b≤a`,
+/// `f(x+0)≠f(x)`, and nested `f(g(a))≠f(g(b)) ∧ a=b` all decide UNSAT).
+///
+/// `sat` projects the model back and replays it; for an arithmetic-sorted function
+/// the witnessing model is not yet built (scalar-keyed function tables) so `sat`
+/// degrades to a sound [`CheckResult::Unknown`] — never a wrong answer.
 ///
 /// # Errors
 ///
@@ -184,9 +192,14 @@ pub fn check_with_uf_arithmetic(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
-    check_with_function_consistency(arena, assertions, |a, asserts| {
-        crate::check_auto(a, asserts, config)
-    })
+    let elimination = eliminate_functions(arena, assertions).map_err(map_elim_error)?;
+    let eliminated = elimination.assertions().to_vec();
+    let result = crate::check_auto(arena, &eliminated, config)?;
+    let CheckResult::Sat(model) = result else {
+        return Ok(result);
+    };
+    let assignment = model.to_assignment();
+    project_replay_build(arena, &elimination, assertions, &assignment)
 }
 
 /// The shared functional-consistency CEGAR loop: abstract each uninterpreted

@@ -103,13 +103,12 @@ fn solve_dispatches_uflia_combination() {
     ));
 }
 
-/// An argument that references a symbol the abstracted model leaves unconstrained
-/// (it appears only inside the abstracted applications) must not error — the
-/// functional-consistency check degrades gracefully. `f(x+0) ≠ f(x)` is genuinely
-/// unsat (x+0 = x), but with x unconstrained the value-blind check returns a sound
-/// non-`Unsat` result rather than crashing.
+/// Congruence over an arithmetic argument term: `f(x+0) ≠ f(x)` is UNSAT because
+/// `x+0 = x`, so `f(x+0) = f(x)`. The eager Ackermann constraint `(x+0 = x) ⇒
+/// (f(x+0) = f(x))` over the arithmetic solver decides it (no unbound-intermediate
+/// issue the lazy refinement would have).
 #[test]
-fn unconstrained_argument_is_graceful_not_an_error() {
+fn uflia_congruence_over_arith_argument_unsat() {
     let mut a = TermArena::new();
     let x = decl_int(&mut a, "x");
     let zero = a.int_const(0);
@@ -121,12 +120,10 @@ fn unconstrained_argument_is_graceful_not_an_error() {
         let e = a.eq(f1, f2).unwrap();
         a.not(e).unwrap()
     };
-    // The key property: it returns Ok(_) (no error/panic), never a wrong Unsat-vs-Sat.
-    let r = check_with_uf_arithmetic(&mut a, &[ne], &SolverConfig::default()).unwrap();
-    assert!(
-        !matches!(r, CheckResult::Sat(_)),
-        "must not claim sat for an unsat query"
-    );
+    assert!(matches!(
+        check_with_uf_arithmetic(&mut a, &[ne], &SolverConfig::default()).unwrap(),
+        CheckResult::Unsat
+    ));
 }
 
 /// The UF result feeding arithmetic: `f(a) + 1 = f(b) ∧ a = b` is UNSAT — `a = b`
@@ -145,6 +142,30 @@ fn uflia_result_in_arithmetic_unsat() {
     let eq2 = a.eq(p, q).unwrap(); // p = q
     assert!(matches!(
         check_with_uf_arithmetic(&mut a, &[eq1, eq2], &SolverConfig::default()).unwrap(),
+        CheckResult::Unsat
+    ));
+}
+
+/// Nested UF over Int: `f(g(a)) ≠ f(g(b)) ∧ a = b` is UNSAT — `a=b` ⇒ `g(a)=g(b)`
+/// ⇒ `f(g(a))=f(g(b))` (two rounds of functional-consistency refinement).
+#[test]
+fn uflia_nested_congruence_unsat() {
+    let mut a = TermArena::new();
+    let s = decl_int(&mut a, "s");
+    let t = decl_int(&mut a, "t");
+    let g = a.declare_fun("g", &[Sort::Int], Sort::Int).unwrap();
+    let f = a.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let gs = a.apply(g, &[s]).unwrap();
+    let gt = a.apply(g, &[t]).unwrap();
+    let fgs = a.apply(f, &[gs]).unwrap();
+    let fgt = a.apply(f, &[gt]).unwrap();
+    let ne = {
+        let e = a.eq(fgs, fgt).unwrap();
+        a.not(e).unwrap()
+    };
+    let eq = a.eq(s, t).unwrap();
+    assert!(matches!(
+        check_with_uf_arithmetic(&mut a, &[ne, eq], &SolverConfig::default()).unwrap(),
         CheckResult::Unsat
     ));
 }
