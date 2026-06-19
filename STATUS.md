@@ -375,6 +375,10 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **Solver façade OMT/MaxSAT methods**: `Solver::{maximize_lia,
+  minimize_lia, optimize_lexicographic, optimize_pareto, max_satisfiable}` optimize over
+  the active assertions — the optimization work is now reachable via the high-level API.
+
 - **2026-06-18** — **PB strict comparisons** (`pb_lt`/`pb_gt`, pseudo-Boolean `<`/`>`):
   compose the non-strict forms (≤k-1 / ≥k+1, with sound k-edge handling). 2 tests.
 
