@@ -242,6 +242,31 @@ impl EGraph {
         &self.nodes[root.index()].th_vars
     }
 
+    /// Every congruence class that carries at least one theory variable, as
+    /// `(class root, its theory variables)` — the readout the **`th_eq` bus**
+    /// (Track 1, P1.6 T1.6.2) consumes: a class holding theory variables from two
+    /// different theories means those variables have become **equal**, an interface
+    /// equality to propagate. Results are in class-root-id order (deterministic).
+    ///
+    /// # Panics
+    ///
+    /// Panics only if the e-graph holds more than `u32::MAX` nodes (unreachable: node
+    /// ids are `u32`, so the graph cannot grow that large in the first place).
+    #[must_use]
+    pub fn theory_var_classes(&self) -> Vec<(ENodeId, Vec<u32>)> {
+        (0..self.nodes.len())
+            .filter_map(|i| {
+                let id = ENodeId(u32::try_from(i).expect("node count fits u32"));
+                // Roots only (th_vars are merged up to the root); skip empty classes.
+                if self.root(id) == id && !self.nodes[i].th_vars.is_empty() {
+                    Some((id, self.nodes[i].th_vars.clone()))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
     /// Enumerates the distinct applications of function symbol `decl` in the
     /// e-graph **modulo congruence** — the single-symbol e-matching trigger that
     /// drives quantifier instantiation (P2.6): one [`AppMatch`] per congruence
@@ -1238,6 +1263,43 @@ mod tests {
         assert!(!g.equal(a, b));
         assert_eq!(g.th_vars(a), &[100], "theory-var lists restored on pop");
         assert_eq!(g.th_vars(b), &[200]);
+    }
+
+    #[test]
+    fn theory_var_classes_reports_the_th_eq_bus() {
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        let c = g.add(2, &[]);
+        g.attach_th_var(a, 100);
+        g.attach_th_var(b, 200);
+        g.attach_th_var(c, 300);
+
+        // Before any merge: three singleton classes, each with one theory var.
+        let mut before = g.theory_var_classes();
+        for (_, vs) in &mut before {
+            vs.sort_unstable();
+        }
+        assert_eq!(before.len(), 3, "three classes carry theory vars");
+        assert!(before.iter().all(|(_, vs)| vs.len() == 1));
+
+        // Merge a = b: now one class holds {100, 200} (an interface equality), and
+        // c's class is unchanged → two theory-carrying classes.
+        g.merge(a, b, 0);
+        let classes = g.theory_var_classes();
+        assert_eq!(classes.len(), 2, "a=b collapses two classes into one");
+        let multi: Vec<Vec<u32>> = classes
+            .into_iter()
+            .map(|(_, mut vs)| {
+                vs.sort_unstable();
+                vs
+            })
+            .collect();
+        assert!(
+            multi.contains(&vec![100, 200]),
+            "the merged class exposes both theory vars to the bus: {multi:?}"
+        );
+        assert!(multi.contains(&vec![300]), "c's class is untouched");
     }
 
     /// Endpoints of a step.
