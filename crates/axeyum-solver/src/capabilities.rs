@@ -189,16 +189,21 @@ pub const CAPABILITIES: &[Capability] = &[
         area: "QF_S (strings)",
         feature: "bounded strings + regex (BV-lowered); SMT-LIB front end wired for \
                   declare/literal/=/distinct + str.prefixof/suffixof/contains + str.at (const idx) \
-                  + str.++ (const fold) + str.len (sat; unsat may be unknown — BV+LIA gap), rest via API",
+                  + str.++ (const fold) + str.len (sat; unsat may be unknown — BV+LIA gap), \
+                  str.to_code/from_code + substr/indexof/replace/replace_all/lex-compare/\
+                  take/drop/to_int/from_int/is_digit + regex membership via API",
         assurance: Assurance::Experimental,
         evidence: "model replay through BV path; canonical-padding equality; length bound explicit",
         reference: "ADR-0025/0029",
     },
     Capability {
         area: "optimization",
-        feature: "MaxSAT / OMT / MILP (branch-and-bound over the arithmetic cores)",
+        feature: "OMT — all three z3 modes (box, lexicographic, Pareto) over LIA + BV; \
+                  weighted MaxSAT with a witnessing model; MILP (branch-and-bound over the \
+                  arithmetic cores)",
         assurance: Assurance::Experimental,
-        evidence: "optimum certified by the underlying decision procedure per step",
+        evidence: "each optimum/Pareto point certified by the underlying decision procedure \
+                   per step (a confirmed-unsat domination query); deterministic point/push caps",
         reference: "ADR-0027",
     },
     Capability {
