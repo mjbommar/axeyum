@@ -21,9 +21,11 @@
 //! vice versa. Downstream tasks (T1.6.2 `th_eq` bus, T1.6.3 interface-equality
 //! case-splitting) propose and split on equalities *between* these shared terms.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
-use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode};
+use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode, Value, eval};
+
+use crate::model::Model;
 
 /// Which theory owns an operator, for EUF + bit-vector combination.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -95,6 +97,48 @@ pub fn shared_terms(arena: &TermArena, assertions: &[TermId]) -> Vec<TermId> {
         }
     }
     euf.intersection(&bv).copied().collect()
+}
+
+/// Propose **interface equalities** between `shared` terms that take the **same
+/// value** in `model` — the *propose* step of Z3-style model-based combination
+/// (P1.6, toward T1.6.3).
+///
+/// Given a model produced by one theory (e.g. the bit-vector solver assigning a
+/// value to each shared term), two shared terms with equal model values are
+/// candidate equalities the **other** theory (the congruence closure) should be
+/// asked to confirm or refute — by asserting them and re-checking, or case-splitting
+/// when undetermined. We return a **spanning chain** within each equal-value group
+/// (consecutive pairs of the group's [`TermId`]-sorted members), which is enough:
+/// transitivity over the chain induces every pairwise equality in the group, so a
+/// quadratic blow-up is avoided. The result is deterministic (groups keyed by the
+/// `(width, value)` bit pattern, members and groups sorted).
+///
+/// Terms that do not evaluate to a bit-vector value under `model` are skipped (a
+/// complete model over the bit-vector-sorted shared terms evaluates them all).
+#[must_use]
+pub fn propose_interface_equalities(
+    arena: &TermArena,
+    shared: &[TermId],
+    model: &Model,
+) -> Vec<(TermId, TermId)> {
+    let assignment = model.to_assignment();
+    // Group the shared terms by their concrete value (the bit pattern is the key).
+    let mut by_value: BTreeMap<(u32, u128), Vec<TermId>> = BTreeMap::new();
+    for &t in shared {
+        if let Ok(Value::Bv { width, value }) = eval(arena, t, &assignment) {
+            by_value.entry((width, value)).or_default().push(t);
+        }
+    }
+    let mut pairs = Vec::new();
+    for members in by_value.values() {
+        // `members` is in insertion order; sort for determinism, then chain.
+        let mut sorted = members.clone();
+        sorted.sort_unstable();
+        for window in sorted.windows(2) {
+            pairs.push((window[0], window[1]));
+        }
+    }
+    pairs
 }
 
 #[cfg(test)]
@@ -169,5 +213,33 @@ mod tests {
         let ffx = arena.apply(f, &[fx]).unwrap();
         let e = arena.eq(fx, ffx).unwrap();
         assert!(shared_terms(&arena, &[e]).is_empty());
+    }
+
+    #[test]
+    fn proposes_equalities_between_equal_valued_shared_terms() {
+        let mut arena = TermArena::new();
+        let xs = arena.declare("x", Sort::BitVec(8)).unwrap();
+        let ys = arena.declare("y", Sort::BitVec(8)).unwrap();
+        let zs = arena.declare("z", Sort::BitVec(8)).unwrap();
+        let ws = arena.declare("w", Sort::BitVec(8)).unwrap();
+        let (x, y, z, w) = (arena.var(xs), arena.var(ys), arena.var(zs), arena.var(ws));
+        // Model: x = y = z = 5, w = 3.
+        let mut model = Model::new();
+        model.set(xs, Value::Bv { width: 8, value: 5 });
+        model.set(ys, Value::Bv { width: 8, value: 5 });
+        model.set(zs, Value::Bv { width: 8, value: 5 });
+        model.set(ws, Value::Bv { width: 8, value: 3 });
+
+        // The 5-group {x,y,z} yields the spanning chain (x,y),(y,z); w is alone.
+        assert_eq!(
+            propose_interface_equalities(&arena, &[x, y, z, w], &model),
+            vec![(x, y), (y, z)],
+        );
+
+        // All-distinct values → no proposed equalities.
+        let mut distinct = Model::new();
+        distinct.set(xs, Value::Bv { width: 8, value: 1 });
+        distinct.set(ys, Value::Bv { width: 8, value: 2 });
+        assert!(propose_interface_equalities(&arena, &[x, y], &distinct).is_empty());
     }
 }
