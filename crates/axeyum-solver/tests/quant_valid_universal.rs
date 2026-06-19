@@ -159,3 +159,64 @@ fn satisfiable_but_not_valid_universal_is_never_wrongly_decided() {
         "must never wrongly refute"
     );
 }
+
+#[test]
+fn nested_forall_int_add_comm_is_sat() {
+    // ∀x.∀y. x + y == y + x — valid (LIA), but written as a NESTED universal, so
+    // the validity pass must peel the whole `∀x.∀y.` prefix and substitute both
+    // bound variables with fresh constants before the QF validity sub-check.
+    let mut arena = TermArena::new();
+    let x_sym = arena.declare("x", Sort::Int).unwrap();
+    let y_sym = arena.declare("y", Sort::Int).unwrap();
+    let x = arena.var(x_sym);
+    let y = arena.var(y_sym);
+    let xy = arena.int_add(x, y).unwrap();
+    let yx = arena.int_add(y, x).unwrap();
+    let body = arena.eq(xy, yx).unwrap();
+    let inner = arena.forall(y_sym, body).unwrap();
+    let outer = arena.forall(x_sym, inner).unwrap();
+    assert_sat(&mut arena, &[outer]);
+}
+
+#[test]
+fn nested_forall_uf_reflexivity_is_sat() {
+    // ∀x.∀y. (x == y) => (f(x) == f(y)) — valid by congruence, nested universals.
+    let mut arena = TermArena::new();
+    let f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let x_sym = arena.declare("x", Sort::Int).unwrap();
+    let y_sym = arena.declare("y", Sort::Int).unwrap();
+    let x = arena.var(x_sym);
+    let y = arena.var(y_sym);
+    let xy = arena.eq(x, y).unwrap();
+    let fx = arena.apply(f, &[x]).unwrap();
+    let fy = arena.apply(f, &[y]).unwrap();
+    let fxy = arena.eq(fx, fy).unwrap();
+    let body = arena.implies(xy, fxy).unwrap();
+    let inner = arena.forall(y_sym, body).unwrap();
+    let outer = arena.forall(x_sym, inner).unwrap();
+    assert_sat(&mut arena, &[outer]);
+}
+
+#[test]
+fn nested_forall_nonvalid_is_not_wrongly_decided() {
+    // ∀x.∀y. x == y is NOT valid (false for x≠y); the pass must NOT prove it valid
+    // (¬(cx==cy) is sat), and the query must never be wrongly Sat-by-validity. It
+    // is genuinely unsatisfiable-as-an-assertion only if forced; here we just pin
+    // that the validity pass does not mis-fire (result is not produced by a bogus
+    // validity proof — never a wrong answer).
+    let mut arena = TermArena::new();
+    let x_sym = arena.declare("x", Sort::Int).unwrap();
+    let y_sym = arena.declare("y", Sort::Int).unwrap();
+    let x = arena.var(x_sym);
+    let y = arena.var(y_sym);
+    let body = arena.eq(x, y).unwrap();
+    let inner = arena.forall(y_sym, body).unwrap();
+    let outer = arena.forall(x_sym, inner).unwrap();
+    // ∀x∀y. x=y is unsatisfiable (no model: pick x=0,y=1). The instantiation path
+    // refutes it; crucially the validity pass must not have falsely proven it valid.
+    let result = check(&mut arena, &[outer]);
+    assert!(
+        !matches!(result, CheckResult::Sat(_)),
+        "∀x∀y. x=y must never be wrongly Sat, got {result:?}"
+    );
+}

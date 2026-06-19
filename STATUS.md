@@ -412,6 +412,17 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P2.6: valid-universal elimination handles NESTED `∀` prefixes (gap G4).**
+  `eliminate_valid_universals` previously bailed when a `∀x. body` had a quantifier in its
+  body, so `∀x.∀y. x+y==y+x` (valid) stayed `Unknown`. `try_eliminate` now **peels the entire
+  leading `∀` prefix** (`∀x.∀y.…` ⇒ vars `[x,y]`, innermost body), substitutes *all* bound
+  vars with fresh `!vu_*` constants at once, and checks the negated innermost (QF) body unsat
+  — sound by the same closure argument (`∀x.∀y. b` valid iff `¬b[x:=cx,y:=cy]` unsat). Now
+  decides `∀x.∀y. x+y==y+x` and `∀x.∀y. x=y ⇒ f(x)=f(y)` (Sat); a non-valid nested universal
+  (`∀x.∀y. x=y`) is not mis-proven valid (verified — never wrongly Sat). 3 new tests; fmt +
+  clippy + full suite green. (Remaining from the 2nd gap pass: G1 EUF-over-Real hard `Err`,
+  G2 `bv2nat` width bound, G3 nonlinear-body validity, G5 `∃∀` skolem-then-validity.)
+
 - **2026-06-19** — **P2.6: sat-side universal-validity elimination — valid `∀` now decided
   (were `Unknown`).** A standalone `∀x. body` with a quantifier-free body is **valid** (hence
   the assertion is satisfiable — true in every model) **iff** `¬body[x:=c]` is UNSAT for a

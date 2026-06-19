@@ -84,64 +84,75 @@ pub fn eliminate_valid_universals(
 
 /// Attempts the valid-universal rewrite on a single top-level assertion.
 ///
-/// Returns `Ok(Some(true))` when the assertion is a top-level `∀x. body` with a
-/// quantifier-free body that is **proven valid** (so the caller substitutes the
-/// trivially-true constant); `Ok(None)` otherwise (not a matching universal, a
-/// nested-quantifier body, or a sub-check that did not establish validity), in
-/// which case the assertion is left unchanged.
+/// Returns `Ok(Some(true))` when the assertion is a (possibly nested) universal
+/// prefix `∀x₁.…∀xₙ. body` with a quantifier-free `body` that is **proven valid**
+/// (so the caller substitutes the trivially-true constant); `Ok(None)` otherwise
+/// (not a universal, an innermost body that still carries a quantifier, or a
+/// sub-check that did not establish validity), in which case the assertion is left
+/// unchanged.
+///
+/// A *prefix* of `∀` binders is peeled — `∀x.∀y. body` is valid iff
+/// `¬body[x:=cx, y:=cy]` is unsat for fresh constants `cx`, `cy` — so a flattened
+/// multi-variable universal is handled in one sound QF sub-check.
 fn try_eliminate(
     arena: &mut TermArena,
     assertion: TermId,
     config: &SolverConfig,
     fresh: &mut u32,
 ) -> Result<Option<TermId>, SolverError> {
-    // Must be a top-level `forall x. body`.
-    let TermNode::App {
+    // Peel the leading `∀` prefix into its bound variables, with the innermost
+    // body. (`∀x.∀y. body` ⇒ vars = [x, y], body.)
+    let mut vars: Vec<axeyum_ir::SymbolId> = Vec::new();
+    let mut body = assertion;
+    while let TermNode::App {
         op: Op::Forall(var),
         args,
-    } = arena.node(assertion)
-    else {
-        return Ok(None);
-    };
-    let var = *var;
-    let body = args[0];
+    } = arena.node(body)
+    {
+        vars.push(*var);
+        body = args[0];
+    }
+    if vars.is_empty() {
+        return Ok(None); // not a universal
+    }
 
-    // A nested quantifier in the body is out of scope: the validity sub-check
-    // would no longer be a quantifier-free solve (and the bound variable could
-    // be shadowed), so leave it for the existing quantifier path.
+    // The innermost body must be quantifier-free: a remaining quantifier (an `∃`,
+    // or a `∀` not in the prefix) would make the validity sub-check itself
+    // quantified. Leave such assertions for the existing quantifier path.
     if contains_quantifier(arena, body) {
         return Ok(None);
     }
 
-    // Mint a *fresh* uninterpreted constant `c` of `x`'s sort. The name carries
-    // a reserved prefix and a per-pass counter so it cannot collide with a
-    // user/Skolem symbol. `c` is otherwise unconstrained — exactly what makes it
-    // an arbitrary representative of the sort.
+    // Mint a *fresh* uninterpreted constant for each prefix variable (reserved
+    // `!vu_*` prefix + per-pass counter, so no collision with a user/Skolem
+    // symbol). Each constant is otherwise unconstrained — an arbitrary
+    // representative of its sort — so `¬body` over them being unsat means `body`
+    // holds for *all* values of the bound variables.
     let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
-    let sort = arena.symbol(var).1;
-    let name = format!("!vu_{fresh}");
-    *fresh += 1;
-    let constant = arena.declare(&name, sort).map_err(err)?;
-
-    // Form `body[x := c]`. Substituting a fresh constant for the (QF-body) bound
-    // variable is capture-free.
-    let var_term = arena.var(var);
-    let const_term = arena.var(constant);
     let mut replacements: HashMap<TermId, TermId> = HashMap::new();
-    replacements.insert(var_term, const_term);
+    for &var in &vars {
+        let sort = arena.symbol(var).1;
+        let name = format!("!vu_{fresh}");
+        *fresh += 1;
+        let constant = arena.declare(&name, sort).map_err(err)?;
+        replacements.insert(arena.var(var), arena.var(constant));
+    }
+
+    // Form `body[xᵢ := cᵢ]` (all substitutions at once; capture-free since the
+    // `cᵢ` are fresh and the `xᵢ` are distinct symbols).
     let mut memo: HashMap<TermId, TermId> = HashMap::new();
     let instance = replace_subterms(arena, body, &replacements, &mut memo).map_err(err)?;
 
-    // The negated body `¬body[x := c]` is the validity witness: the universal is
-    // valid iff this is unsatisfiable.
+    // The negated body is the validity witness: the universal is valid iff this is
+    // unsatisfiable.
     let negated = arena.not(instance).map_err(err)?;
 
-    // Decide `¬body(c)` with the *quantifier-free* dispatch. It carries no
-    // quantifier (the body was QF and `c` is a plain constant), so `check_auto`
-    // cannot re-enter the quantifier front door — guaranteeing termination with
-    // a single bounded QF solve. We pass the sub-query alone (the only thing
-    // whose validity we are testing); other assertions never constrain `c`, so
-    // including them could only mask validity, not create it.
+    // Decide `¬body(c⃗)` with the *quantifier-free* dispatch. It carries no
+    // quantifier (the body was QF and each `cᵢ` is a plain constant), so
+    // `check_auto` cannot re-enter the quantifier front door — guaranteeing
+    // termination with a single bounded QF solve. We pass the sub-query alone (the
+    // only thing whose validity we are testing); other assertions never constrain
+    // the `cᵢ`, so including them could only mask validity, not create it.
     match check_auto(arena, &[negated], config)? {
         // Definitively UNSAT ⇒ the universal is valid ⇒ replace with `true`.
         CheckResult::Unsat => Ok(Some(arena.bool_const(true))),
