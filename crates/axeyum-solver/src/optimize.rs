@@ -16,16 +16,56 @@
 //! when one exists, [`OptOutcome::Unbounded`] when the objective grows past the
 //! magnitude cap, [`OptOutcome::Infeasible`] when the constraints are `unsat`, and
 //! [`OptOutcome::Unknown`] if a probe is undecided. `minimize` is `maximize` of
-//! the negated objective. Feasibility probes go through the Boolean-structured
-//! integer oracle ([`crate::check_with_lia_dpll`]), so the constraints may be
-//! arbitrary Boolean structure over integer atoms (disjunctions, implications),
-//! not just conjunctions.
+//! the negated objective. Feasibility probes go through the full dispatcher
+//! ([`crate::check_auto`]: preprocessing, div/mod elimination, and all theory
+//! routing), so the constraints may be arbitrary Boolean structure over integer
+//! atoms (disjunctions, implications) and use `div`/`mod`-by-constant — and an
+//! objective or constraint outside the deciding fragment makes the optimizer
+//! return a graceful [`OptOutcome::Unknown`], never a hard error.
 
 use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
 
 use crate::auto::check_auto;
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
-use crate::dpll_lia::check_with_lia_dpll;
+
+// Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
+
+/// Whether `deadline` (if set) has passed.
+fn past_deadline(deadline: Option<Instant>) -> bool {
+    deadline.is_some_and(|d| Instant::now() >= d)
+}
+
+/// An [`UnknownReason`] attributed to the wall-clock timeout (a resource limit,
+/// not fundamental incompleteness).
+fn timed_out_reason() -> UnknownReason {
+    UnknownReason {
+        kind: UnknownKind::ResourceLimit,
+        detail: "optimization: wall-clock timeout reached".to_owned(),
+    }
+}
+
+/// A deadline derived from `config.timeout`, or `None` when no timeout is set.
+fn deadline_from(config: &SolverConfig) -> Option<Instant> {
+    config.timeout.and_then(|t| Instant::now().checked_add(t))
+}
+
+/// Maps a feasibility-probe error to a graceful optimizer outcome: a
+/// fragment-`Unsupported` becomes an `Unknown` reason (the probe could not decide
+/// this fragment, so the optimizer reports `Unknown` rather than a wrong optimum),
+/// while a genuine internal `Backend` (or other) error still propagates as `Err`.
+fn probe_unsupported_to_unknown(err: SolverError) -> Result<UnknownReason, SolverError> {
+    match err {
+        SolverError::Unsupported(detail) => Ok(UnknownReason {
+            kind: UnknownKind::Incomplete,
+            detail,
+        }),
+        other => Err(other),
+    }
+}
 
 /// Doubling steps before the objective is declared unbounded. `2^126` overflows
 /// `i128` magnitude, so this is effectively an overflow guard, not a real bound.
@@ -56,8 +96,26 @@ pub fn maximize_lia(
     assertions: &[TermId],
     objective: TermId,
 ) -> Result<OptOutcome, SolverError> {
+    maximize_lia_with_config(arena, assertions, objective, &SolverConfig::default())
+}
+
+/// Like [`maximize_lia`], but honoring `config` (notably `config.timeout`):
+/// every feasibility probe is decided under `config`, and the bound-search loop
+/// checks a wall-clock deadline, returning the best value found so far as
+/// [`OptOutcome::Unknown`] (a [`UnknownKind::ResourceLimit`]) on expiry.
+///
+/// # Errors
+///
+/// See [`maximize_lia`].
+pub fn maximize_lia_with_config(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objective: TermId,
+    config: &SolverConfig,
+) -> Result<OptOutcome, SolverError> {
+    let deadline = deadline_from(config);
     // Starting point: any feasible value of the objective.
-    let mut lo = match objective_value(arena, assertions, objective)? {
+    let mut lo = match objective_value(arena, assertions, objective, config)? {
         Probe::Sat(value) => value,
         Probe::Unsat => return Ok(OptOutcome::Infeasible),
         Probe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
@@ -68,10 +126,13 @@ pub fn maximize_lia(
     let mut delta: i128 = 1;
     let mut doublings: u32 = 0;
     let mut hi = loop {
+        if past_deadline(deadline) {
+            return Ok(OptOutcome::Unknown(timed_out_reason()));
+        }
         let Some(probe_point) = lo.checked_add(delta) else {
             return Ok(OptOutcome::Unbounded);
         };
-        match objective_ge(arena, assertions, objective, probe_point)? {
+        match objective_ge(arena, assertions, objective, probe_point, config)? {
             Probe::Sat(value) => lo = value.max(probe_point),
             Probe::Unsat => break probe_point,
             Probe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
@@ -88,8 +149,13 @@ pub fn maximize_lia(
 
     // Binary search in [lo, hi): objective >= lo is sat, objective >= hi is unsat.
     while hi - lo > 1 {
+        if past_deadline(deadline) {
+            // `lo` is a probe-verified feasible value but not certified optimal;
+            // report it as undecided rather than a wrong optimum.
+            return Ok(OptOutcome::Unknown(timed_out_reason()));
+        }
         let mid = lo + (hi - lo) / 2;
-        match objective_ge(arena, assertions, objective, mid)? {
+        match objective_ge(arena, assertions, objective, mid, config)? {
             Probe::Sat(value) => lo = value.max(mid),
             Probe::Unsat => hi = mid,
             Probe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
@@ -108,14 +174,30 @@ pub fn minimize_lia(
     assertions: &[TermId],
     objective: TermId,
 ) -> Result<OptOutcome, SolverError> {
+    minimize_lia_with_config(arena, assertions, objective, &SolverConfig::default())
+}
+
+/// Like [`minimize_lia`], but honoring `config` (notably `config.timeout`).
+///
+/// # Errors
+///
+/// See [`maximize_lia`].
+pub fn minimize_lia_with_config(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objective: TermId,
+    config: &SolverConfig,
+) -> Result<OptOutcome, SolverError> {
     let negated = arena.int_neg(objective)?;
-    Ok(match maximize_lia(arena, assertions, negated)? {
-        OptOutcome::Optimal(max_of_neg) => match max_of_neg.checked_neg() {
-            Some(min) => OptOutcome::Optimal(min),
-            None => OptOutcome::Unbounded,
+    Ok(
+        match maximize_lia_with_config(arena, assertions, negated, config)? {
+            OptOutcome::Optimal(max_of_neg) => match max_of_neg.checked_neg() {
+                Some(min) => OptOutcome::Optimal(min),
+                None => OptOutcome::Unbounded,
+            },
+            other => other,
         },
-        other => other,
-    })
+    )
 }
 
 /// One objective in a lexicographic optimization (P4.3): the integer-linear
@@ -170,13 +252,38 @@ pub fn optimize_lia_lexicographic(
     assertions: &[TermId],
     objectives: &[LexObjective],
 ) -> Result<LexOutcome, SolverError> {
+    optimize_lia_lexicographic_with_config(arena, assertions, objectives, &SolverConfig::default())
+}
+
+/// Like [`optimize_lia_lexicographic`], honoring `config` (notably
+/// `config.timeout`): the deadline is checked before each objective and threaded
+/// into the single-objective optimizer, so a timeout stops the chain with a
+/// [`LexOutcome::Stopped`] carrying an [`OptOutcome::Unknown`].
+///
+/// # Errors
+///
+/// See [`optimize_lia_lexicographic`].
+pub fn optimize_lia_lexicographic_with_config(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objectives: &[LexObjective],
+    config: &SolverConfig,
+) -> Result<LexOutcome, SolverError> {
+    let deadline = deadline_from(config);
     let mut constraints = assertions.to_vec();
     let mut values: Vec<i128> = Vec::with_capacity(objectives.len());
     for (index, obj) in objectives.iter().enumerate() {
+        if past_deadline(deadline) {
+            return Ok(LexOutcome::Stopped {
+                index,
+                prefix: values,
+                outcome: OptOutcome::Unknown(timed_out_reason()),
+            });
+        }
         let outcome = if obj.maximize {
-            maximize_lia(arena, &constraints, obj.objective)?
+            maximize_lia_with_config(arena, &constraints, obj.objective, config)?
         } else {
-            minimize_lia(arena, &constraints, obj.objective)?
+            minimize_lia_with_config(arena, &constraints, obj.objective, config)?
         };
         match outcome {
             OptOutcome::Optimal(value) => {
@@ -224,12 +331,33 @@ pub fn optimize_lia_box(
     assertions: &[TermId],
     objectives: &[LexObjective],
 ) -> Result<Vec<OptOutcome>, SolverError> {
+    optimize_lia_box_with_config(arena, assertions, objectives, &SolverConfig::default())
+}
+
+/// Like [`optimize_lia_box`], honoring `config` (notably `config.timeout`): once
+/// the deadline passes, the remaining objectives report [`OptOutcome::Unknown`]
+/// (a [`UnknownKind::ResourceLimit`]) rather than running on.
+///
+/// # Errors
+///
+/// See [`optimize_lia_box`].
+pub fn optimize_lia_box_with_config(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objectives: &[LexObjective],
+    config: &SolverConfig,
+) -> Result<Vec<OptOutcome>, SolverError> {
+    let deadline = deadline_from(config);
     let mut out = Vec::with_capacity(objectives.len());
     for obj in objectives {
+        if past_deadline(deadline) {
+            out.push(OptOutcome::Unknown(timed_out_reason()));
+            continue;
+        }
         let outcome = if obj.maximize {
-            maximize_lia(arena, assertions, obj.objective)?
+            maximize_lia_with_config(arena, assertions, obj.objective, config)?
         } else {
-            minimize_lia(arena, assertions, obj.objective)?
+            minimize_lia_with_config(arena, assertions, obj.objective, config)?
         };
         out.push(outcome);
     }
@@ -322,25 +450,34 @@ fn pareto_probe(
     arena: &mut TermArena,
     constraints: &[TermId],
     objectives: &[LexObjective],
+    config: &SolverConfig,
 ) -> Result<MultiProbe, SolverError> {
-    match check_with_lia_dpll(arena, constraints, &SolverConfig::default())? {
-        CheckResult::Sat(model) => {
+    // Route through the full dispatcher (decides div/mod, all theories) and map a
+    // fragment-`Unsupported` to a graceful `MultiProbe::Unknown` (never a hard
+    // error on an out-of-fragment objective/constraint).
+    let result = check_auto(arena, constraints, config);
+    match result {
+        Ok(CheckResult::Sat(model)) => {
             let assignment = model.to_assignment();
             let mut vals = Vec::with_capacity(objectives.len());
             for obj in objectives {
                 match eval(arena, obj.objective, &assignment)? {
                     Value::Int(v) => vals.push(v),
                     other => {
-                        return Err(SolverError::Unsupported(format!(
-                            "pareto objective is not integer-valued (got {other:?})"
-                        )));
+                        return Ok(MultiProbe::Unknown(UnknownReason {
+                            kind: UnknownKind::Incomplete,
+                            detail: format!(
+                                "pareto objective is not integer-valued (got {other:?})"
+                            ),
+                        }));
                     }
                 }
             }
             Ok(MultiProbe::Sat(vals))
         }
-        CheckResult::Unsat => Ok(MultiProbe::Unsat),
-        CheckResult::Unknown(reason) => Ok(MultiProbe::Unknown(reason)),
+        Ok(CheckResult::Unsat) => Ok(MultiProbe::Unsat),
+        Ok(CheckResult::Unknown(reason)) => Ok(MultiProbe::Unknown(reason)),
+        Err(err) => Ok(MultiProbe::Unknown(probe_unsupported_to_unknown(err)?)),
     }
 }
 
@@ -367,16 +504,38 @@ pub fn optimize_lia_pareto(
     assertions: &[TermId],
     objectives: &[LexObjective],
 ) -> Result<ParetoOutcome, SolverError> {
+    optimize_lia_pareto_with_config(arena, assertions, objectives, &SolverConfig::default())
+}
+
+/// Like [`optimize_lia_pareto`], honoring `config` (notably `config.timeout`): a
+/// wall-clock deadline is checked at the top of each enumeration round and on each
+/// guided-improvement push, returning the points verified so far as
+/// [`ParetoOutcome::Truncated`] on expiry (the `MAX_PARETO_POINTS` /
+/// `MAX_PARETO_PUSH` caps remain as secondary deterministic bounds).
+///
+/// # Errors
+///
+/// See [`optimize_lia_pareto`].
+pub fn optimize_lia_pareto_with_config(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objectives: &[LexObjective],
+    config: &SolverConfig,
+) -> Result<ParetoOutcome, SolverError> {
+    let deadline = deadline_from(config);
     let mut front: Vec<Vec<i128>> = Vec::new();
     let mut exclusions: Vec<TermId> = Vec::new();
     loop {
         if front.len() >= MAX_PARETO_POINTS {
             return Ok(ParetoOutcome::Truncated(front));
         }
+        if past_deadline(deadline) {
+            return Ok(ParetoOutcome::Truncated(front));
+        }
         // A fresh candidate must not be weakly dominated by any recorded point.
         let mut query = assertions.to_vec();
         query.extend_from_slice(&exclusions);
-        let candidate = match pareto_probe(arena, &query, objectives)? {
+        let candidate = match pareto_probe(arena, &query, objectives, config)? {
             MultiProbe::Sat(v) => v,
             MultiProbe::Unsat => return Ok(ParetoOutcome::Complete(front)),
             MultiProbe::Unknown(reason) => {
@@ -390,12 +549,15 @@ pub fn optimize_lia_pareto(
         let mut v = candidate;
         let mut certified = false;
         for _ in 0..MAX_PARETO_PUSH {
+            if past_deadline(deadline) {
+                return Ok(ParetoOutcome::Truncated(front));
+            }
             let mut dom = assertions.to_vec();
             for (obj, &vi) in objectives.iter().zip(&v) {
                 dom.push(pareto_better_eq(arena, *obj, vi)?);
             }
             dom.push(pareto_improves_somewhere(arena, objectives, &v)?);
-            match pareto_probe(arena, &dom, objectives)? {
+            match pareto_probe(arena, &dom, objectives, config)? {
                 MultiProbe::Sat(w) => v = w, // w dominates v; keep climbing
                 MultiProbe::Unsat => {
                     certified = true; // nothing dominates v → Pareto-optimal
@@ -725,8 +887,9 @@ fn objective_value(
     arena: &mut TermArena,
     assertions: &[TermId],
     objective: TermId,
+    config: &SolverConfig,
 ) -> Result<Probe, SolverError> {
-    decide_with_objective(arena, assertions, objective, None)
+    decide_with_objective(arena, assertions, objective, None, config)
 }
 
 /// Decides `assertions AND objective >= bound` and returns the objective value.
@@ -735,8 +898,9 @@ fn objective_ge(
     assertions: &[TermId],
     objective: TermId,
     bound: i128,
+    config: &SolverConfig,
 ) -> Result<Probe, SolverError> {
-    decide_with_objective(arena, assertions, objective, Some(bound))
+    decide_with_objective(arena, assertions, objective, Some(bound), config)
 }
 
 fn decide_with_objective(
@@ -744,27 +908,35 @@ fn decide_with_objective(
     assertions: &[TermId],
     objective: TermId,
     bound: Option<i128>,
+    config: &SolverConfig,
 ) -> Result<Probe, SolverError> {
     let mut query = assertions.to_vec();
     if let Some(bound) = bound {
         let bound_term = arena.int_const(bound);
         query.push(arena.int_ge(objective, bound_term)?);
     }
-    // Use the Boolean-structured integer oracle so optimization works over
-    // disjunctive/implicative constraints, not just conjunctions. (On a pure
-    // conjunction it reduces to the same simplex decision.)
-    match check_with_lia_dpll(arena, &query, &SolverConfig::default())? {
-        CheckResult::Sat(model) => {
+    // Route every feasibility probe through the full dispatcher (`check_auto`):
+    // preprocessing + div/mod elimination + all theory routing. This decides
+    // objectives/constraints the bare LIA oracle declines (e.g. `x mod 2 = 0`,
+    // `x / 3 <= 5`) and, crucially, never hard-errors on an out-of-fragment
+    // query — an `Unsupported` fragment is mapped to a graceful `Probe::Unknown`
+    // so the optimizer yields `OptOutcome::Unknown`, never a wrong optimum
+    // (soundness: `check_auto` decides the same feasibility query).
+    let result = check_auto(arena, &query, config);
+    match result {
+        Ok(CheckResult::Sat(model)) => {
             let assignment = model.to_assignment();
             match eval(arena, objective, &assignment)? {
                 Value::Int(value) => Ok(Probe::Sat(value)),
-                other => Err(SolverError::Unsupported(format!(
-                    "optimization objective is not integer-valued (got {other:?})"
-                ))),
+                other => Ok(Probe::Unknown(UnknownReason {
+                    kind: UnknownKind::Incomplete,
+                    detail: format!("optimization objective is not integer-valued (got {other:?})"),
+                })),
             }
         }
-        CheckResult::Unsat => Ok(Probe::Unsat),
-        CheckResult::Unknown(reason) => Ok(Probe::Unknown(reason)),
+        Ok(CheckResult::Unsat) => Ok(Probe::Unsat),
+        Ok(CheckResult::Unknown(reason)) => Ok(Probe::Unknown(reason)),
+        Err(err) => Ok(Probe::Unknown(probe_unsupported_to_unknown(err)?)),
     }
 }
 

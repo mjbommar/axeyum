@@ -412,6 +412,25 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P4.3 OMT robustness + completeness: optimizer honors timeout, decides
+  div/mod, never errors (gaps A/B/D).** The optimizer's feasibility probes called
+  `check_with_lia_dpll` directly and no path threaded `config.timeout`. Three fixes in
+  `optimize.rs`: (B, completeness) reroute the LIA bound-search + Pareto probes
+  (`decide_with_objective`, `pareto_probe`) through the full `check_auto` dispatcher, so
+  objectives/constraints with `mod`/`div`-by-constant now optimize (`x∈[0,10] ∧ x mod 2=0`,
+  max x → **10**; `x/3≤5`, max x → 17 — were hard `Err`); (D, hard rule "unknown is never an
+  error") `probe_unsupported_to_unknown` maps a fragment-`Unsupported` (objective over a
+  UF/`bv2nat`/nonlinear term) to a graceful `OptOutcome::Unknown` / `LexOutcome::Stopped{Unknown}`
+  / `ParetoOutcome::Unknown` instead of propagating the error (min `x*x` → Optimal(0) via NRA;
+  max `f(x)` → Unknown, no Err); (A, resource-limit promise) new `*_with_config` variants
+  (`maximize_lia_with_config`, …, `optimize_lia_pareto_with_config`) thread a wall-clock
+  deadline (Instant + `past_deadline`, wasm-shimmed) into the bound-doubling/binary-search and
+  the Pareto/box/lex point loops, returning best-so-far as `Truncated`/`Unknown` on expiry
+  (a 101-point Pareto front with a 2 s budget now returns in ~2 s, was minutes); the original
+  no-config functions delegate with `SolverConfig::default()`, so all ~54 existing call sites
+  and optima are unchanged. New `tests/optimize_robustness.rs` (6); 24 existing optimize tests
+  + full suite + clippy + fmt green. From the 4th capability-gap pass (solver surfaces); sub-agent.
+
 - **2026-06-19** — **ROBUSTNESS: integer-NIA solve HANG fixed (regression from the width
   ladder).** `a*b ≠ b*a` (ground integer nonlinear, UNSAT by commutativity) **livelocked**,
   ignoring `config.timeout` — a "never hang" contract violation caught by the 3rd capability
