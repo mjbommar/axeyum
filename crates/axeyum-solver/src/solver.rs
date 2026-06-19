@@ -207,6 +207,34 @@ impl<B: SolverBackend> Solver<B> {
         crate::maximize_lia(arena, &self.assertions, objective)
     }
 
+    /// Maximizes the unsigned bit-vector `objective` subject to the active
+    /// assertions (see [`crate::maximize_bv`]).
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`SolverError`] from the optimizer.
+    pub fn maximize_bv(
+        &self,
+        arena: &mut TermArena,
+        objective: TermId,
+    ) -> Result<crate::OptOutcome, SolverError> {
+        crate::maximize_bv(arena, &self.assertions, objective)
+    }
+
+    /// Minimizes the unsigned bit-vector `objective` subject to the active
+    /// assertions (see [`crate::minimize_bv`]).
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`SolverError`] from the optimizer.
+    pub fn minimize_bv(
+        &self,
+        arena: &mut TermArena,
+        objective: TermId,
+    ) -> Result<crate::OptOutcome, SolverError> {
+        crate::minimize_bv(arena, &self.assertions, objective)
+    }
+
     /// Minimizes the integer-linear `objective` subject to the active assertions
     /// (see [`crate::minimize_lia`]).
     ///
