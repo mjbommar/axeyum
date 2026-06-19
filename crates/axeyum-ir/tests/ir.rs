@@ -1406,3 +1406,28 @@ fn wide_bit_vector_evaluation() {
         }
     );
 }
+
+#[test]
+fn bv_repeat_concatenates_copies() {
+    let mut a = TermArena::new();
+    let asg = Assignment::new();
+    // repeat(3, 0b10 : BV2) = 0b101010 : BV6 = 42.
+    let x = a.bv_const(2, 0b10).unwrap();
+    let r = a.bv_repeat(3, x).unwrap();
+    assert_eq!(a.sort_of(r), axeyum_ir::Sort::BitVec(6));
+    assert_eq!(eval(&a, r, &asg).unwrap(), bv(6, 0b10_1010));
+    // repeat(1, x) = x.
+    let r1 = a.bv_repeat(1, x).unwrap();
+    assert_eq!(eval(&a, r1, &asg).unwrap(), bv(2, 0b10));
+    // count 0 is an error (no zero-width result).
+    assert!(a.bv_repeat(0, x).is_err());
+    // Symbolic: repeat(2, y:BV4) = concat(y, y) — every value duplicates.
+    let y = a.declare("y", axeyum_ir::Sort::BitVec(4)).unwrap();
+    let yv = a.var(y);
+    let r2 = a.bv_repeat(2, yv).unwrap();
+    for v in 0..16u128 {
+        let mut asg2 = Assignment::new();
+        asg2.set(y, bv(4, v));
+        assert_eq!(eval(&a, r2, &asg2).unwrap(), bv(8, (v << 4) | v), "y={v}");
+    }
+}

@@ -714,6 +714,27 @@ impl TermArena {
         let out = checked_output_width(wa, wb)?;
         Ok(self.app(Op::Concat, &[a, b], Sort::BitVec(out)))
     }
+
+    /// `(_ repeat count) a`: concatenate `a` with itself `count` times (the high
+    /// copy first; `count` ≥ 1). A derived form over [`Self::concat`], so it needs
+    /// no new operator and lowers/evaluates through the existing `concat`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] if `a` is not a bit-vector,
+    /// [`IrError::InvalidWidth`] if `count` is 0, or [`IrError::ConcatTooWide`] if
+    /// the `count·width` result exceeds [`MAX_BV_WIDTH`].
+    pub fn bv_repeat(&mut self, count: u32, a: TermId) -> Result<TermId, IrError> {
+        let _ = self.expect_bv(a)?;
+        if count == 0 {
+            return Err(IrError::InvalidWidth(0));
+        }
+        let mut acc = a;
+        for _ in 1..count {
+            acc = self.concat(acc, a)?;
+        }
+        Ok(acc)
+    }
 }
 
 impl TermArena {
