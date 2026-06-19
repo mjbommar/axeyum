@@ -19,15 +19,20 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     assertions. Strictly additive (existing certs byte-unchanged), validated at **all three
     levels**: in-tree `check_alethe`, external **Carcara**, and **Lean-kernel**
     reconstruction to `False`.
-  - **Precise next proof-track task (resume):** **certify general read-over-write
-    (ROW-distinct)** for the array-elim trust hole — `select(store(a,i,v),j) →
-    ite(i=j, v, select(a,j))` with `i≠j`. The cert currently *declines* when a store
-    rewrite is load-bearing (`qfabv_elim_alethe.rs` module doc); the ROW-*same* fragment is
-    already certified (`prove_qf_abv_unsat_alethe`), and the Alethe checker has partial `ite`
-    support (`axeyum-cnf/src/alethe.rs:1436`, rules ~4371–4453) to build on. This is the
-    other half of the `array-elim` (and, by analogy, `ackermann`) reduction certification.
-    Other open trust holes (lowest pedantic first): `int-blast` (3), `xor-gaussian` (3),
-    `datatype-elim` (4), `fpa2bv` (5) — each needs a from-scratch certificate.
+  - **Next proof-track task (resume) — certify general read-over-write (ROW-distinct)**
+    for the array-elim trust hole: `select(store(a,i,v),j) → ite(i=j, v, select(a,j))`,
+    `i≠j`. **Dependency chain mapped this session:** (1) the checker rule **already exists**
+    and is tested — `read_over_write` in `axeyum-cnf/src/alethe.rs` (`is_read_over_write`
+    L1424, tests L4364); (2) the **emitter** `prove_qf_abv_unsat_alethe_via_elimination`
+    declines store rewrites because `ArrayElimination` (`axeyum-rewrite/src/arrays.rs`)
+    exposes only `selects()`/`abstraction()`, **not the ROW redexes/expansions it performed**
+    — so emitting `read_over_write` steps needs `eliminate_arrays` to expose them
+    (**coordinate with the `axeyum-rewrite` agent**) or fragile re-derivation from the
+    originals; (3) **Lean reconstruction has no `ite`/`read_over_write` support** yet
+    (`reconstruct.rs`), so closing the Lean loop needs that too. So ROW-distinct is a
+    cross-crate, partly-coordination-gated, multi-slice effort — not a clean in-`solver`
+    increment. Other open trust holes (lowest pedantic first): `int-blast` (3),
+    `xor-gaussian` (3), `datatype-elim` (4), `fpa2bv` (5) — each a from-scratch certificate.
 
 - **Destination-2 advanced & a destination-3 milestone landed (2026-06-18).** See
   the two 2026-06-18 changelog entries for detail. In short:
