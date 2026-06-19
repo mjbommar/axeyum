@@ -7,30 +7,46 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 ## Current focus
 
 - **Session 2026-06-19 — robustness + proof certs + capability-gap sweep (resume here).**
-  **28 validated commits**; whole `axeyum-solver` crate green on test/clippy/doc/fmt (977
-  tests; the workspace fmt gate, previously red on committed `axeyum-scenarios` drift, is now
-  clean). Method: 4 read-only *capability-gap probe* passes (each found concrete reproducing
-  queries; see the per-commit changelog), closing every tractable in-`solver` finding, plus
-  the proof-cert widening below. Highlights beyond the proof track:
+  **36 validated commits**; whole `axeyum-solver` crate green on test/clippy/doc/fmt (999
+  tests) + Carcara (54) + workspace build + links — confirmed cohesively gate-green at session
+  end (the consolidation caught and fixed a doc-link regression clippy/tests had missed).
+  Method: **6 read-only *capability-gap probe* passes** (theory decidability; arrays/mixed/
+  strings/FP-via-BV; optimization/incremental/evidence/smtlib; Track-4 BMC/symexec/k-induction
+  + FP builders; proof-completeness map) — each found concrete reproducing queries (see the
+  per-commit changelog), closing **every tractable in-`solver` finding**, plus the proof-cert
+  work below. Highlights beyond the proof track:
   - **Robustness (the no-OOM/no-hang rules):** NRA OOM bound (below); the **integer-NIA solve
     HANG fixed** (a regression from the new int-blast width ladder — `a*b≠b*a` livelocked
     ignoring the timeout; now deadline-threaded + trimmed ladder + commutative canonicalization
     → fast `Unsat`); the **optimizer** now honors `config.timeout` (`*_with_config` variants),
     decides `mod`/`div` objectives, and degrades fragment-out-of-scope objectives to graceful
-    `OptOutcome::Unknown` (never `Err`). Probing found **no OOM/panic/unsoundness** anywhere.
+    `OptOutcome::Unknown` (never `Err`); **BMC + symexec** now map a backend `Unsupported`
+    (an `Apply`/UF in the unrolling or branch condition) to graceful `Unknown`, honoring the
+    "unknown is never an error" rule + BMC's own docstring. The 5th/6th passes found **no
+    OOM/panic/wrong-answer/false-certification** anywhere — FP arithmetic is bit-exact, the
+    trust discipline holds across every fragment.
   - **z3 feature breadth — measured gaps closed:** datatype Int/Real fields (was a hard `Err`),
-    guarded-finite Int `∀`, sat-side **valid-universal** elimination (incl. nested `∀`), the
+    guarded-finite Int `∀`, sat-side **valid-universal** elimination (incl. nested `∀`),
+    **vacuous-`∀` elimination** (a first sound cut into `∃∀`: `∃y.∀x. x+y≥x` → Sat), the
     NIA ground-vs-`∃` inconsistency, **EUF-over-Real (QF_UFLRA)** routing (was a hard `Err`),
-    `bv2nat` out-of-range UNSAT, integer-NIA UNSAT via real relaxation, and the QF_LIA evidence
-    certificate (E). The solver is now solid across arrays, mixed theories, strings, FP-via-BV,
-    and most quantifier shapes (verified by the 3rd/4th passes).
+    `bv2nat` out-of-range UNSAT, and integer-NIA UNSAT via real relaxation. The solver is now
+    solid across arrays, mixed theories, strings, FP-via-BV, and most quantifier shapes.
+  - **Proof / Lean parity — certs widened + extended:** reduction certs widened to transitive +
+    congruence closure and wired into `produce_evidence`, now covering QF_BV, QF_UFBV (Ackermann
+    zero-trust), QF_ABV, QF_DT, QF_LIA (`lia_generic`, gap E), QF_LRA (Farkas/LRA-DPLL), and
+    **mixed QF_UFLIA/UFLRA (gap C — the zero-trust Ackermann family extended from BV to arith)**;
+    each tamper-tested + validated at up to three levels (in-tree `check_alethe`/`check_alethe_lra`,
+    Carcara, Lean kernel). The 6th pass's proof-completeness map (see below) shows the remaining
+    uncertified unsat fragments are NRA sign/square (gap A — needs `nra.rs`, concurrent lane),
+    bv2nat-bound (gap D — partial-trust, self-contained, the next in-`solver` cert), and the
+    NRA-Positivstellensatz / quantifier-proof **keystones**.
   - **Process note:** re-validate sub-agent work with the FULL gate — clippy does NOT catch
     **`cargo fmt --all --check`** drift NOR **`cargo doc -D warnings`** broken/private intra-doc
     links (both slipped through clippy-only checks this session and were caught later); use an
     **OS `timeout` guard** to PROVE termination (not trust it); rust-analyzer diagnostics after
     a sub-agent run are frequently STALE — verify with a real build, not the diagnostics. Whole
     workspace confirmed gate-green at session end (fmt + workspace build + solver doc + links +
-    977-test solver suite + clippy).
+    999-test solver suite + clippy + Carcara 54).
   - **NRA OOM gap CLOSED** — deterministic `MAX_CROSS_PRODUCTS` admission bound (graceful
     `unknown`, never OOM, bounded *or* unbounded). The standing-rule violation is retired.
     See the 2026-06-19 changelog + `scripts/mem-run.sh` / `just test-guarded` (64 GiB cap).
