@@ -29,7 +29,7 @@ use axeyum_ir::{TermArena, TermId};
 #[cfg(feature = "z3")]
 use axeyum_ir::{Value, eval};
 
-use crate::backend::{CheckResult, SolverConfig, SolverError};
+use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 
 /// A named solving policy; see the module-level documentation.
 ///
@@ -122,6 +122,68 @@ pub fn solve_with_strategy(
         }
         #[cfg(feature = "z3")]
         Strategy::Oracle => solve_with_oracle(arena, assertions, config),
+    }
+}
+
+/// Run `strategies` in order, returning the **first that decides** (`Sat`/`Unsat`);
+/// if none decides, return an `Unknown` (or, if every strategy errored and none even
+/// returned `Unknown`, the last error). This is Z3's `or-else` tactic combinator:
+/// because every strategy is sound and a later one runs *only* when earlier ones
+/// returned `Unknown`/errored, the first decided verdict is sound and trying more
+/// never trades correctness for coverage.
+///
+/// Use [`recommended_portfolio`] to order strategies by the query's shape, or pass an
+/// explicit list. A `sat` result has already been replayed by the deciding strategy.
+///
+/// # Errors
+///
+/// Returns [`SolverError`] only when *every* strategy errored without any returning a
+/// verdict or `Unknown` (the last error is surfaced); an empty `strategies` list
+/// yields `Unknown`, never an error.
+pub fn solve_with_portfolio(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    strategies: &[Strategy],
+) -> Result<CheckResult, SolverError> {
+    let mut last_unknown: Option<CheckResult> = None;
+    let mut last_error: Option<SolverError> = None;
+    for &strategy in strategies {
+        match solve_with_strategy(arena, assertions, config, strategy) {
+            Ok(decided @ (CheckResult::Sat(_) | CheckResult::Unsat)) => return Ok(decided),
+            Ok(unknown) => last_unknown = Some(unknown),
+            Err(error) => last_error = Some(error),
+        }
+    }
+    last_unknown.map_or_else(
+        || {
+            last_error.map_or_else(
+                || {
+                    Ok(CheckResult::Unknown(UnknownReason {
+                        kind: UnknownKind::Incomplete,
+                        detail: "empty strategy portfolio".to_owned(),
+                    }))
+                },
+                Err,
+            )
+        },
+        Ok,
+    )
+}
+
+/// Order strategies by the query's shape for [`solve_with_portfolio`]: a query with
+/// heavy arithmetic gadgets tries the low-memory [`Strategy::LazyBvAbstraction`]
+/// first (it sidesteps multiplier bit-blasting) and falls back to the complete
+/// [`Strategy::EagerPureRust`]; an arithmetic-free *structural* query uses
+/// [`Strategy::Auto`] (eager with word-level preprocessing). Both are pure-Rust and
+/// sound; the portfolio's fallback adds power over a single [`Strategy::Auto`] pick
+/// when the first choice exhausts its budget and returns `Unknown`.
+#[must_use]
+pub fn recommended_portfolio(arena: &TermArena, assertions: &[TermId]) -> Vec<Strategy> {
+    if crate::lazy_bv::has_heavy_ops(arena, assertions) {
+        vec![Strategy::LazyBvAbstraction, Strategy::EagerPureRust]
+    } else {
+        vec![Strategy::Auto]
     }
 }
 

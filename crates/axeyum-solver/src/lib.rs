@@ -186,7 +186,7 @@ pub use smtlib::{
     solve_smtlib_unsat_core,
 };
 pub use solver::Solver;
-pub use strategy::{Strategy, solve_with_strategy};
+pub use strategy::{Strategy, recommended_portfolio, solve_with_portfolio, solve_with_strategy};
 pub use symexec::{Branch, PathStatus, SymbolicExecutor};
 pub use trust::{ALL_TRUST_IDS, TrustId, TrustStep, trust_ledger_markdown};
 #[cfg(feature = "z3")]

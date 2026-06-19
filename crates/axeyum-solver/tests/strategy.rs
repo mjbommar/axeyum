@@ -242,3 +242,69 @@ fn auto_strategy_preprocesses_structural_queries_soundly() {
     );
     assert_eq!(assignment.get(y), Some(Value::Bv { width: 8, value: 9 }));
 }
+
+/// An empty portfolio decides nothing — it returns `Unknown`, never an error.
+#[test]
+fn empty_portfolio_is_unknown() {
+    use axeyum_solver::solve_with_portfolio;
+    let mut arena = TermArena::new();
+    let t = arena.bool_const(true);
+    let r = solve_with_portfolio(&mut arena, &[t], &SolverConfig::default(), &[]).unwrap();
+    assert!(matches!(r, CheckResult::Unknown(_)));
+}
+
+/// `recommended_portfolio` routes by query shape: heavy arithmetic tries lazy-bv
+/// first then eager; an arithmetic-free structural query uses `Auto`.
+#[test]
+fn recommended_portfolio_routes_by_query_shape() {
+    use axeyum_ir::Sort;
+    use axeyum_solver::recommended_portfolio;
+
+    // Heavy: x * y = 6 → [LazyBvAbstraction, EagerPureRust].
+    let mut arena = TermArena::new();
+    let x = arena.declare("x", Sort::BitVec(8)).unwrap();
+    let y = arena.declare("y", Sort::BitVec(8)).unwrap();
+    let (xv, yv) = (arena.var(x), arena.var(y));
+    let prod = arena.bv_mul(xv, yv).unwrap();
+    let six = arena.bv_const(8, 6).unwrap();
+    let goal = arena.eq(prod, six).unwrap();
+    assert_eq!(
+        recommended_portfolio(&arena, &[goal]),
+        vec![Strategy::LazyBvAbstraction, Strategy::EagerPureRust]
+    );
+
+    // Structural: x & y = x → [Auto].
+    let mut arena2 = TermArena::new();
+    let a = arena2.declare("a", Sort::BitVec(8)).unwrap();
+    let b = arena2.declare("b", Sort::BitVec(8)).unwrap();
+    let (av, bv) = (arena2.var(a), arena2.var(b));
+    let and = arena2.bv_and(av, bv).unwrap();
+    let eq = arena2.eq(and, av).unwrap();
+    assert_eq!(recommended_portfolio(&arena2, &[eq]), vec![Strategy::Auto]);
+}
+
+/// The recommended portfolio decides a known-sat query and the model replays.
+#[test]
+fn recommended_portfolio_decides_and_replays() {
+    use axeyum_ir::{Sort, Value, eval};
+    use axeyum_solver::{recommended_portfolio, solve_with_portfolio};
+
+    let mut arena = TermArena::new();
+    let x = arena.declare("x", Sort::BitVec(8)).unwrap();
+    let y = arena.declare("y", Sort::BitVec(8)).unwrap();
+    let (xv, yv) = (arena.var(x), arena.var(y));
+    let prod = arena.bv_mul(xv, yv).unwrap();
+    let six = arena.bv_const(8, 6).unwrap();
+    let goal = arena.eq(prod, six).unwrap();
+
+    let portfolio = recommended_portfolio(&arena, &[goal]);
+    let CheckResult::Sat(model) =
+        solve_with_portfolio(&mut arena, &[goal], &SolverConfig::default(), &portfolio).unwrap()
+    else {
+        panic!("x*y=6 is sat");
+    };
+    assert_eq!(
+        eval(&arena, goal, &model.to_assignment()).unwrap(),
+        Value::Bool(true)
+    );
+}
