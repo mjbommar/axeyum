@@ -64,6 +64,7 @@ mod qfabv_elim_alethe;
 mod qfbv_alethe;
 mod qfdt_simp_alethe;
 mod qfufbv_alethe;
+mod qfuflia_alethe;
 mod qinst_egraph;
 mod quant_alethe;
 mod quant_guarded_int;
@@ -178,6 +179,7 @@ pub use qfbv_alethe::{
 };
 pub use qfdt_simp_alethe::prove_qf_dt_unsat_alethe_via_simplification;
 pub use qfufbv_alethe::prove_qf_ufbv_unsat_alethe;
+pub use qfuflia_alethe::prove_qf_uflia_unsat_alethe;
 pub use qinst_egraph::{
     instantiate_forall_via_egraph, prove_quantified_unsat_via_egraph, witness_tuples_via_egraph,
 };

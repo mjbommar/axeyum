@@ -48,17 +48,22 @@ use axeyum_ir::{FuncId, Op, SymbolId, TermArena, TermId, TermNode};
 
 /// One functional-consistency constraint whose consequent `(= v_i v_j)` the
 /// reduced refutation assumes, with the data to derive it by `eq_congruent`.
-struct CongruenceCert {
+///
+/// Shared with the arithmetic-residual emitter `crate::qfuflia_alethe`
+/// (`QF_UFLIA`/`QF_UFLRA`), which builds the same Ackermann congruence units but
+/// hands the residual to the `lia_generic`/`la_generic` arithmetic emitters
+/// instead of the bit-blast emitter.
+pub(crate) struct CongruenceCert {
     /// The fresh abstraction symbol for application `i` (renders as `v_i`).
-    fresh_i: SymbolId,
+    pub(crate) fresh_i: SymbolId,
     /// The fresh abstraction symbol for application `j`.
-    fresh_j: SymbolId,
+    pub(crate) fresh_j: SymbolId,
     /// The (rewritten) argument terms of application `i`.
-    args_i: Vec<TermId>,
+    pub(crate) args_i: Vec<TermId>,
     /// The (rewritten) argument terms of application `j`.
-    args_j: Vec<TermId>,
+    pub(crate) args_j: Vec<TermId>,
     /// The uninterpreted function shared by both applications.
-    func: FuncId,
+    pub(crate) func: FuncId,
 }
 
 /// Emits a complete, Carcara-checkable Alethe refutation for an `unsat`
@@ -96,6 +101,96 @@ pub fn prove_qf_ufbv_unsat_alethe(
     arena: &mut TermArena,
     assertions: &[TermId],
 ) -> Option<Vec<AletheCommand>> {
+    let congruence = build_ackermann_congruence(arena, assertions)?;
+
+    // The reduced QF_BV problem: rewritten originals plus the consistency
+    // *consequents* `(= v_i v_j)` (the antecedents are discharged by the asserted
+    // argument equalities, so the unconditional consequent is sound to add).
+    let bv_assertions = congruence.reduced_assertions();
+
+    // Bit-blast refutation of the reduced QF_BV problem (lowered first so derived
+    // operators in the originals still reduce). It `assume`s each consequent.
+    let bv_proof = crate::prove_qf_bv_unsat_alethe_lowered(arena, &bv_assertions)?;
+
+    // Splice: replace each consequent's `Assume` with its `eq_congruent`
+    // derivation under the same id, so the consistency constraint is proven.
+    let spliced = congruence.splice(arena, &bv_proof)?;
+
+    // Self-validate before returning.
+    if matches!(check_alethe(&spliced), Ok(true)) {
+        Some(spliced)
+    } else {
+        None
+    }
+}
+
+/// The reusable Ackermann-congruence building blocks for a `QF_UF*` refutation:
+/// the rewritten-only (abstraction) assertions, the derivable functional-
+/// consistency consequents `(= v_i v_j)`, and the asserted-equality / congruence-
+/// closure structures used to *prove* each consequent by `eq_congruent`.
+///
+/// Both the bit-blast emitter ([`prove_qf_ufbv_unsat_alethe`]) and the arithmetic
+/// emitter (`crate::qfuflia_alethe`, `QF_UFLIA`/`QF_UFLRA`) share this prefix and
+/// differ only in which residual emitter refutes the reduced (Ackermannized)
+/// problem and which checker re-validates the spliced proof — so the otherwise-
+/// *trusted* functional-consistency reduction is proven identically on both paths.
+pub(crate) struct AckermannCongruence {
+    /// The rewritten-only assertions (each UF application abstracted to a fresh
+    /// same-sorted constant), before the consistency consequents are appended.
+    rewritten: Vec<TermId>,
+    /// The functional-consistency certificates whose consequents are derivable.
+    certs: Vec<CongruenceCert>,
+    /// Per consequent, its interned `(= v_i v_j)` term and the two fresh symbols.
+    consequent_terms: Vec<(TermId, SymbolId, SymbolId)>,
+    /// The asserted-equality adjacency graph (transitive closure of argument eqs).
+    adjacency: BTreeMap<TermId, Vec<TermId>>,
+    /// The congruence-closure bridge (the e-graph fallback), if it built.
+    cong: Option<CongBridge>,
+}
+
+impl AckermannCongruence {
+    /// The reduced (Ackermannized) assertions: the rewritten originals plus each
+    /// derivable consistency *consequent* `(= v_i v_j)`. For a `QF_UFLIA`/
+    /// `QF_UFLRA` query whose only UF applications are arithmetic-sorted, this is a
+    /// pure linear-integer/real conjunction the arithmetic emitter can refute.
+    pub(crate) fn reduced_assertions(&self) -> Vec<TermId> {
+        let mut out = self.rewritten.clone();
+        out.extend(self.consequent_terms.iter().map(|&(eq, _, _)| eq));
+        out
+    }
+
+    /// Splices each consequent's `Assume` in `residual_proof` with its
+    /// `eq_congruent` derivation under the same id (so the consistency constraint
+    /// is proven, not assumed), returning the assembled proof. The residual proof
+    /// may be a bit-blast refutation or an `lia_generic`/`la_generic` refutation;
+    /// the splice only rewrites the consequent assumes, leaving the rest intact.
+    pub(crate) fn splice(
+        &self,
+        arena: &TermArena,
+        residual_proof: &[AletheCommand],
+    ) -> Option<Vec<AletheCommand>> {
+        splice_congruence_derivations(
+            arena,
+            residual_proof,
+            &self.certs,
+            &self.consequent_terms,
+            &self.adjacency,
+            self.cong.as_ref(),
+        )
+    }
+}
+
+/// Builds the [`AckermannCongruence`] prefix shared by the `QF_UFBV` and
+/// `QF_UFLIA`/`QF_UFLRA` emitters: Ackermann-abstracts every UF application to a
+/// fresh same-sorted constant, collects the derivable functional-consistency
+/// consequents, and interns each consequent equality `(= v_i v_j)`. Returns
+/// [`None`] when the query has no uninterpreted functions or no consequent is
+/// derivable (the antecedent of every consistency constraint fails to discharge),
+/// so the caller declines the cert.
+pub(crate) fn build_ackermann_congruence(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Option<AckermannCongruence> {
     let elim = axeyum_rewrite::eliminate_functions(arena, assertions).ok()?;
     if !elim.had_functions() {
         return None;
@@ -167,40 +262,24 @@ pub fn prove_qf_ufbv_unsat_alethe(
         return None;
     }
 
-    // The reduced QF_BV problem: rewritten originals plus the consistency
-    // *consequents* `(= v_i v_j)` (the antecedents are discharged by the asserted
-    // argument equalities, so the unconditional consequent is sound to add).
-    let mut bv_assertions = rewritten.clone();
+    // Intern each consistency *consequent* `(= v_i v_j)` (the antecedents are
+    // discharged by the asserted argument equalities, so the unconditional
+    // consequent is sound to add to the residual problem).
     let mut consequent_terms: Vec<(TermId, SymbolId, SymbolId)> = Vec::new();
     for cert in &certs {
         let vi = arena.var(cert.fresh_i);
         let vj = arena.var(cert.fresh_j);
         let eq = arena.eq(vi, vj).ok()?;
-        bv_assertions.push(eq);
         consequent_terms.push((eq, cert.fresh_i, cert.fresh_j));
     }
 
-    // Bit-blast refutation of the reduced QF_BV problem (lowered first so derived
-    // operators in the originals still reduce). It `assume`s each consequent.
-    let bv_proof = crate::prove_qf_bv_unsat_alethe_lowered(arena, &bv_assertions)?;
-
-    // Splice: replace each consequent's `Assume` with its `eq_congruent`
-    // derivation under the same id, so the consistency constraint is proven.
-    let spliced = splice_congruence_derivations(
-        arena,
-        &bv_proof,
-        &certs,
-        &consequent_terms,
-        &adjacency,
-        cong.as_ref(),
-    )?;
-
-    // Self-validate before returning.
-    if matches!(check_alethe(&spliced), Ok(true)) {
-        Some(spliced)
-    } else {
-        None
-    }
+    Some(AckermannCongruence {
+        rewritten,
+        certs,
+        consequent_terms,
+        adjacency,
+        cong,
+    })
 }
 
 /// Collects the directly-asserted equalities among the rewritten originals as an

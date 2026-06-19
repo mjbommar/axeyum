@@ -458,6 +458,28 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P3.3: zero-trust certificate for mixed QF_UFLIA/UFLRA `unsat` (gap C) —
+  the Ackermann cert family extends from UF-over-BV to UF-over-arithmetic.** A mixed
+  `f(x)=1 ∧ f(y)=2 ∧ x=y` (f:Int→Int and the Real twin) was a bare `Evidence::Unsat(None)`;
+  it now carries an independently-checkable, **zero-trust-hole** certificate. New module
+  `qfuflia_alethe.rs` (`prove_qf_uflia_unsat_alethe`): gates on every UF application being
+  arithmetic-sorted (BV-sorted UF → `None`, leaving the BV path; arrays/datatypes/quantifiers
+  → `None`), Ackermann-abstracts each app to a fresh same-sorted constant, derives the
+  functional-consistency consequents `(= vᵢ vⱼ)` via `eq_congruent`/`eq_transitive`/`symm`,
+  and hands the pure-LIA/LRA residual to `prove_lia_unsat_alethe`/`prove_lra_unsat_alethe`;
+  the congruence steps are spliced over the residual's `assume`s into one proof re-checked
+  end-to-end by `check_alethe_lra` (base congruence rules + the `lia_generic`/`la_generic`
+  arith clause). Self-validates (emit only if the re-check passes). **Refactor:** the
+  Ackermann-congruence prefix of `prove_qf_ufbv_unsat_alethe` was extracted into a shared
+  `AckermannCongruence` (`build_ackermann_congruence`) — a pure refactor, QF_UFBV emission
+  byte-identical (**Carcara cross-check confirms**). Wired into `produce_evidence` after
+  `zero_trust_alethe_certificate` (QF_UFBV keeps its BV cert) and before
+  `arith_alethe_certificate` (LIA/LRA emitters decline any UF app); `trusted_steps` empty
+  (congruence + arith both re-derived — no trusted reduction). Tamper test (drop the closing
+  step → `check` rejects) proves the verification is real. New `tests/evidence_uflia_cert.rs`
+  (7); 999-test suite + clippy + doc + fmt + Carcara (54) green. Strictly additive. From the
+  6th capability-gap pass (proof-completeness map); sub-agent + soundness review.
+
 - **2026-06-19** — **ROBUSTNESS: BMC honors its own "unsupported is not an error" contract.**
   `run_bounded_model_check` drives the warm `IncrementalBvSolver`, which rejects `Op::Apply`;
   a transition relation with an uninterpreted step function (`x' = f(x)`) made the

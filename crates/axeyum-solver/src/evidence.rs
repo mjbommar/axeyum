@@ -692,6 +692,18 @@ pub fn produce_evidence(
             // trusted reduction steps it went through).
             if let Some(proof) = zero_trust_alethe_certificate(arena, assertions) {
                 (Evidence::UnsatAletheProof(proof), Vec::new())
+            } else if let Some(proof) = uflia_alethe_certificate(arena, assertions) {
+                // A MIXED arithmetic-sorted UF + linear-arith `unsat` (QF_UFLIA /
+                // QF_UFLRA), e.g. `f(x)=1 ∧ f(y)=2 ∧ x=y` (f:Int→Int): the
+                // congruence-then-arithmetic refutation derives the functional-
+                // consistency conflict by `eq_congruent` (the congruence half) and
+                // the residual contradiction by `lia_generic`/`la_generic` (the
+                // arithmetic half), so the proof carries ZERO trust holes. Ordered
+                // AFTER `zero_trust_alethe_certificate` (so pure QF_UFBV keeps its
+                // BV cert — `prove_qf_uflia_unsat_alethe` declines BV-sorted UF) and
+                // BEFORE the pure LIA/LRA `arith_alethe_certificate` (whose emitters
+                // decline any UF application, so they never reach this mixed case).
+                (Evidence::UnsatArithAletheProof(proof), Vec::new())
             } else if let Some(proof) = arith_alethe_certificate(arena, assertions) {
                 // A pure linear-integer (or otherwise-LRA) `unsat` that reached the
                 // `Other` route (e.g. QF_LIA, which `evidence_route` sends here):
@@ -758,6 +770,33 @@ fn zero_trust_alethe_certificate(
     }
     if let Some(proof) = crate::prove_qf_dt_unsat_alethe_via_simplification(arena, assertions)
         && matches!(check_alethe(&proof), Ok(true))
+    {
+        return Some(proof);
+    }
+    None
+}
+
+/// Tries the **mixed arithmetic-sorted UF + linear-arithmetic** zero-trust-hole
+/// Alethe emitter ([`crate::prove_qf_uflia_unsat_alethe`]), returning a
+/// [`crate::check_alethe_lra`]-validated refutation for a `QF_UFLIA`/`QF_UFLRA`
+/// `unsat` whose conflict is congruence-then-arithmetic (e.g. `f(x)=1 ∧ f(y)=2 ∧
+/// x=y`). It needs `&mut TermArena` because the Ackermann reduction interns fresh
+/// abstraction symbols, so it sits between [`zero_trust_alethe_certificate`] (the
+/// `&mut` array/UF-bitvector path) and [`arith_alethe_certificate`] (the `&` pure
+/// LIA/LRA path).
+///
+/// The emitter is self-validating (returns `Some` only after `check_alethe_lra`
+/// accepts) and declines cheaply outside its fragment — BV-sorted UF (owned by the
+/// bit-vector path), arrays/datatypes/quantifiers, and any non-`unsat` residual —
+/// so trying it after [`zero_trust_alethe_certificate`] never shadows the BV
+/// zero-trust cert, and the defensive `check_alethe_lra` re-gate mirrors the other
+/// arithmetic call sites. A returned proof carries **no trusted reduction step**.
+fn uflia_alethe_certificate(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Option<Vec<AletheCommand>> {
+    if let Some(proof) = crate::prove_qf_uflia_unsat_alethe(arena, assertions)
+        && matches!(crate::check_alethe_lra(&proof), Ok(true))
     {
         return Some(proof);
     }
