@@ -278,3 +278,75 @@ fn check_auto_preprocess_eliminates_and_reconstructs_on_the_product_path() {
         Some(Value::Bv { width: 8, value: 9 })
     );
 }
+
+/// **Default-flip soundness guard (ADR-0034/0037):** with `preprocess` now default-on,
+/// the `solve()` path with preprocessing must agree with preprocessing-off on every
+/// instance — same verdict, no DISAGREE. A battery of `QF_BV` + `LIA` sat/unsat cases is
+/// solved both ways and the verdicts compared (an `Unknown` from either side is not a
+/// disagreement). Guards the global default flip against any reduction-induced unsoundness.
+#[test]
+fn preprocess_on_off_agree_on_a_battery() {
+    use axeyum_solver::{CheckResult, solve};
+
+    fn verdict(r: &CheckResult) -> Option<bool> {
+        match r {
+            CheckResult::Sat(_) => Some(true),
+            CheckResult::Unsat => Some(false),
+            CheckResult::Unknown(_) => None,
+        }
+    }
+
+    let mut arena = TermArena::new();
+    // Build a battery of (name, assertions) with mixed sat/unsat over BV and Int.
+    let mut cases: Vec<(&str, Vec<TermId>)> = Vec::new();
+    {
+        // BV: x = y + 1 ∧ x = 10  (sat, y=9).
+        let x = arena.declare("bx", Sort::BitVec(8)).unwrap();
+        let y = arena.declare("by", Sort::BitVec(8)).unwrap();
+        let (xv, yv) = (arena.var(x), arena.var(y));
+        let one = arena.bv_const(8, 1).unwrap();
+        let y1 = arena.bv_add(yv, one).unwrap();
+        let xdef = arena.eq(xv, y1).unwrap();
+        let ten = arena.bv_const(8, 10).unwrap();
+        let x10 = arena.eq(xv, ten).unwrap();
+        cases.push(("bv_sat", vec![xdef, x10]));
+        // BV unsat: x = 5 ∧ x = 6.
+        let five = arena.bv_const(8, 5).unwrap();
+        let six = arena.bv_const(8, 6).unwrap();
+        let x5 = arena.eq(xv, five).unwrap();
+        let x6 = arena.eq(xv, six).unwrap();
+        cases.push(("bv_unsat", vec![x5, x6]));
+        // Int unsat: 5 ≤ z ≤ 2.
+        let z = arena.declare("iz", Sort::Int).unwrap();
+        let zv = arena.var(z);
+        let two = arena.int_const(2);
+        let fivei = arena.int_const(5);
+        let lo = arena.int_ge(zv, fivei).unwrap();
+        let hi = arena.int_le(zv, two).unwrap();
+        cases.push(("int_unsat", vec![lo, hi]));
+        // Int sat: 0 ≤ w ≤ 3 ∧ w = 2.
+        let w = arena.declare("iw", Sort::Int).unwrap();
+        let wv = arena.var(w);
+        let zero = arena.int_const(0);
+        let threei = arena.int_const(3);
+        let twoi = arena.int_const(2);
+        let wlo = arena.int_ge(wv, zero).unwrap();
+        let whi = arena.int_le(wv, threei).unwrap();
+        let weq = arena.eq(wv, twoi).unwrap();
+        cases.push(("int_sat", vec![wlo, whi, weq]));
+    }
+
+    let on = SolverConfig::default(); // preprocess defaults ON now
+    assert!(on.preprocess, "this guard assumes preprocess defaults on");
+    let off = SolverConfig::default().with_preprocess(false);
+    for (name, asserts) in &cases {
+        let r_on = solve(&mut arena, asserts, &on).unwrap();
+        let r_off = solve(&mut arena, asserts, &off).unwrap();
+        if let (Some(a), Some(b)) = (verdict(&r_on), verdict(&r_off)) {
+            assert_eq!(
+                a, b,
+                "{name}: preprocess on/off DISAGREE ({r_on:?} vs {r_off:?})"
+            );
+        }
+    }
+}
