@@ -199,3 +199,46 @@ fn eager_and_oracle_strategies_agree() {
     assert_eq!(Strategy::Oracle.name(), "oracle-z3");
     assert!(!Strategy::Oracle.is_pure_rust());
 }
+
+/// `Strategy::Auto` on a *structural* (no heavy-op) query routes through the
+/// word-level preprocessing path (ADR-0037): a top-level variable definition is
+/// eliminated by `solve_eqs`, and the returned model still reconstructs the
+/// eliminated variable and satisfies the original assertions. (No `bvmul`/div, so
+/// Auto takes the structural→preprocess branch, not the lazy branch.)
+#[test]
+fn auto_strategy_preprocesses_structural_queries_soundly() {
+    use axeyum_ir::{Sort, Value, eval};
+
+    let mut arena = TermArena::new();
+    let x = arena.declare("x", Sort::BitVec(8)).unwrap();
+    let y = arena.declare("y", Sort::BitVec(8)).unwrap();
+    let (xv, yv) = (arena.var(x), arena.var(y));
+    let one = arena.bv_const(8, 1).unwrap();
+    let y1 = arena.bv_add(yv, one).unwrap();
+    let x_def = arena.eq(xv, y1).unwrap(); // x = y + 1  (eliminable)
+    let ten = arena.bv_const(8, 10).unwrap();
+    let x_is_10 = arena.eq(xv, ten).unwrap(); // ⇒ y = 9
+    let originals = [x_def, x_is_10];
+
+    let config = SolverConfig::default();
+    let result = solve_with_strategy(&mut arena, &originals, &config, Strategy::Auto).unwrap();
+    let CheckResult::Sat(model) = result else {
+        panic!("x = y+1 ∧ x = 10 is sat");
+    };
+    let assignment = model.to_assignment();
+    for &a in &originals {
+        assert_eq!(
+            eval(&arena, a, &assignment).unwrap(),
+            Value::Bool(true),
+            "Auto's reconstructed model must satisfy the original assertion"
+        );
+    }
+    assert_eq!(
+        assignment.get(x),
+        Some(Value::Bv {
+            width: 8,
+            value: 10
+        })
+    );
+    assert_eq!(assignment.get(y), Some(Value::Bv { width: 8, value: 9 }));
+}

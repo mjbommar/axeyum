@@ -47,10 +47,15 @@ pub enum Strategy {
     /// dividers are bit-blasted only when they affect the verdict (ADR-0019).
     /// Sound and complete; `sat` replayed, `unsat` sound by over-approximation.
     LazyBvAbstraction,
-    /// Heuristic selector: use [`Strategy::LazyBvAbstraction`] when the query
-    /// contains heavy gadgets (`bvmul`/`bvudiv`/…), else [`Strategy::EagerPureRust`].
-    /// Both are sound, so the choice only trades memory against refinement
-    /// rounds; this is a first heuristic, not a cost model.
+    /// Feature-routed selector composing both measured destination-2 levers
+    /// (ADR-0037): when the query contains heavy arithmetic gadgets
+    /// (`bvmul`/`bvudiv`/…) use [`Strategy::LazyBvAbstraction`] (CEGAR over the
+    /// multipliers); otherwise the query is *structural* bit-logic, where the
+    /// eager-CNF-size wall is the bottleneck — so run eager **with word-level
+    /// preprocessing on** (the full model-sound reduction pipeline), which on the
+    /// public p4dfa slice decided 4/113 @3s and 7/113 @20s vs eager's 2/3.
+    /// Both branches are sound (`sat` replayed, `unsat` sound); this routes by the
+    /// measured shape of the bottleneck, not a cost model.
     Auto,
     /// Low-memory reference oracle (Z3); `sat` is replayed for parity.
     #[cfg(feature = "z3")]
@@ -106,7 +111,13 @@ pub fn solve_with_strategy(
             if crate::lazy_bv::has_heavy_ops(arena, assertions) {
                 crate::lazy_bv::check_lazy_bv_abstraction(arena, assertions, config)
             } else {
-                crate::auto::solve(arena, assertions, config)
+                // Structural bit-logic: the eager-CNF-size wall is the bottleneck,
+                // and word-level reduction is the measured lever (ADR-0037). Turn
+                // preprocessing on for this branch (idempotent if already set);
+                // it is model-sound and replay-checked, so `sat`/`unsat` are
+                // unaffected — only the encoding shrinks.
+                let preprocessed = config.clone().with_preprocess(true);
+                crate::auto::solve(arena, assertions, &preprocessed)
             }
         }
         #[cfg(feature = "z3")]
