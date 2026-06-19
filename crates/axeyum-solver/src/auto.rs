@@ -726,7 +726,18 @@ fn check_auto_dispatch(
         // propositional and this is a complete combination. Routed through the
         // NRA layer, which abstracts any nonlinear products (relaxation + replay,
         // ADR-pending) and otherwise delegates straight to the LRA loop.
-        return crate::nra::check_with_nra(arena, assertions, config);
+        //
+        // A *real-sorted uninterpreted function* application (`f(x) : Real`) is
+        // outside the pure-real linearizer and surfaces as `Unsupported`. Mirror
+        // the integer branch below: when a function is present, fall through to the
+        // EUF + linear-arithmetic combination (`check_with_uf_arithmetic`, which
+        // decides QF_UFLRA the same way it does QF_UFLIA) instead of propagating the
+        // error — upholding "`unknown` is never an error" and unlocking EUF+LRA.
+        match crate::nra::check_with_nra(arena, assertions, config) {
+            Ok(result) => return Ok(result),
+            Err(SolverError::Unsupported(_)) if features.has_function => {}
+            Err(e) => return Err(e),
+        }
     }
     if features.has_int {
         // Conjunctive pure-integer queries are decided soundly for *both* sat and
@@ -798,6 +809,16 @@ fn check_auto_dispatch(
             match crate::check_with_uf_arithmetic(arena, assertions, config)? {
                 CheckResult::Sat(model) => return Ok(CheckResult::Sat(model)),
                 CheckResult::Unsat => return Ok(CheckResult::Unsat),
+                // A *real*-sorted arithmetic UF cannot be bit-blasted by the eager
+                // fallback below (it errors on `Real`), so the combination's
+                // `Unknown` (e.g. a QF_UFLRA sat model that cannot yet be projected)
+                // is the best available result — return it rather than fall through
+                // to a Real-incompatible path that would surface a hard error
+                // ("`unknown` is never an error"). An *integer*-only arithmetic UF
+                // can still fall through to the int-blast + Ackermann fallback.
+                CheckResult::Unknown(reason) if features.has_real => {
+                    return Ok(CheckResult::Unknown(reason));
+                }
                 CheckResult::Unknown(_) => {}
             }
         }

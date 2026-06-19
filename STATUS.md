@@ -412,6 +412,25 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P1.6: EUF over the reals (QF_UFLRA) — hard `Err` fixed, now routed
+  through the combination (gap G1).** A real-sorted UF application `f(x):Real` returned
+  `Err Unsupported("QF_LRA: non-linear or non-real subterm …")` — the pure-real linearizer
+  rejects the `Apply` and the dispatch's `has_real` branch *unconditionally returned*
+  `check_with_nra`, so it never reached the function handling. The **integer** branch already
+  catches `Unsupported` and falls through to `check_with_uf_arithmetic` (that asymmetry is why
+  QF_UFLIA worked but QF_UFLRA didn't). Fix (`check_auto_dispatch`): when a function is present,
+  the `has_real` branch now falls through on `Unsupported` to the EUF + linear-arithmetic
+  combination (`check_with_uf_arithmetic` decides QF_UFLRA the same way as QF_UFLIA). A second
+  fix: a Real arith-UF query whose combination result is `Unknown` (the QF_UFLRA *sat-model
+  projection* for an arithmetic-sorted UF is not yet built) now **returns that `Unknown`**
+  instead of falling through to the eager bit-blast fallback, which errors on `Real` (an Int
+  arith-UF can still fall through to int-blast). Upholds "`unknown` is never an error" and
+  unlocks EUF+LRA. Now: `f(x)=1 ∧ f(y)=2 ∧ x=y` → **Unsat** (congruence), the Nelson-Oppen
+  squeeze `f(a)≤b ∧ b≤f(a) ∧ a=c ∧ f(c)≠b` → **Unsat**, and `f(x)=1.0` → graceful **Unknown**
+  (was a hard `Err`; sat-model projection for an arithmetic UF is the remaining follow-up).
+  Surgical (only the function-present Real case changes). New `tests/euf_real.rs` (3); fmt +
+  clippy + full suite green. From the 2nd capability-gap pass (highest-value finding).
+
 - **2026-06-19** — **P2.6: valid-universal elimination handles NESTED `∀` prefixes (gap G4).**
   `eliminate_valid_universals` previously bailed when a `∀x. body` had a quantifier in its
   body, so `∀x.∀y. x+y==y+x` (valid) stayed `Unknown`. `try_eliminate` now **peels the entire
