@@ -61,12 +61,13 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     `xor-gaussian` (3), `datatype-elim` (4), `fpa2bv` (5) — each a from-scratch certificate.
   - **Remaining frontier (the in-`solver` tractable gap-cycle is exhausted; these are the hard
     keystones / coordination-gated items the 4 passes surfaced):**
-    - **arith-UF SAT model (gap C, keystone, in-`solver`):** QF_UFLIA/UFLRA `sat` returns
-      `Unknown` because the function-table model for an `Int`/`Real`-sorted UF can't be
-      projected (`project_model` keys tables by scalar codes; `euf.rs::project_replay_build`
-      degrades to `Unknown`). UNSAT is decided; only the SAT-side model build is missing.
-      Needs a `Model` function-table representation keyed by Int/Real arg values (check
-      `model.rs` — may be doable in-`solver` without touching `axeyum-rewrite`'s `project_model`).
+    - **arith-UF SAT model (gap C, keystone, COORDINATION-GATED on `axeyum-ir`):** QF_UFLIA/
+      UFLRA `sat` returns `Unknown` because an `Int`/`Real`-sorted UF's function-table model
+      can't be built — `FuncValue` and the ground evaluator key function applications by
+      `Value::scalar_code()` (`axeyum-ir/src/eval.rs:232`, panics on Int/Real), so both the
+      table representation AND `eval`'s lookup need Int/Real-value keys (an `axeyum-ir` change),
+      then `euf.rs::project_replay_build` can build + replay it. UNSAT is decided; only the
+      SAT-side model build is blocked. NOT a clean in-`solver` increment.
     - **`∃∀` alternation (keystone):** `∃y.∀x. x+y≥x` → `Unknown` (should be SAT, y=0). After
       skolemizing `∃y→c`, `∀x. x+c≥x` is NOT valid for arbitrary `c` (valid only when `c≥0`),
       so the valid-universal pass can't decide it; needs `∃`-witness selection over the
