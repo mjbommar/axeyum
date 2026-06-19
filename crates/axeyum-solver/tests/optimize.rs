@@ -495,3 +495,36 @@ fn pareto_single_objective_is_the_optimum() {
         ParetoOutcome::Complete(vec![vec![10]])
     );
 }
+
+use axeyum_solver::optimize_bv_box;
+
+/// BV box (independent): `max x`/`max y` over BV8 s.t. `x,y ≤u 10 ∧ x+y ≤u 12`
+/// each reach 10 independently (unlike lex, which pins x first → [10,2]).
+#[test]
+fn box_bv_is_independent() {
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 8).unwrap();
+    let y = arena.bv_var("y", 8).unwrap();
+    let ten = arena.bv_const(8, 10).unwrap();
+    let twelve = arena.bv_const(8, 12).unwrap();
+    let xh = arena.bv_ule(x, ten).unwrap();
+    let yh = arena.bv_ule(y, ten).unwrap();
+    let sum = arena.bv_add(x, y).unwrap();
+    let cap = arena.bv_ule(sum, twelve).unwrap();
+    let objs = [
+        BvLexObjective {
+            objective: x,
+            signed: false,
+            maximize: true,
+        },
+        BvLexObjective {
+            objective: y,
+            signed: false,
+            maximize: true,
+        },
+    ];
+    assert_eq!(
+        optimize_bv_box(&mut arena, &[xh, yh, cap], &objs).unwrap(),
+        vec![OptOutcome::Optimal(10), OptOutcome::Optimal(10)]
+    );
+}

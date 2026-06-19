@@ -500,6 +500,34 @@ pub fn optimize_bv_lexicographic(
     Ok(LexOutcome::Optimal(values))
 }
 
+/// **Box (independent) optimization over bit-vector objectives** — the BV analogue
+/// of [`optimize_lia_box`]. Each objective is optimized independently over the same
+/// `assertions` (no pinning), with its own signed/unsigned + max/min direction.
+/// Sound and terminating by construction (a `map` of the checked single-objective
+/// BV optimizers).
+///
+/// # Errors
+///
+/// Propagates any per-objective [`SolverError`] (e.g. a non-bit-vector or >64-bit
+/// objective).
+pub fn optimize_bv_box(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objectives: &[BvLexObjective],
+) -> Result<Vec<OptOutcome>, SolverError> {
+    let mut out = Vec::with_capacity(objectives.len());
+    for obj in objectives {
+        let outcome = match (obj.signed, obj.maximize) {
+            (false, true) => maximize_bv(arena, assertions, obj.objective)?,
+            (false, false) => minimize_bv(arena, assertions, obj.objective)?,
+            (true, true) => maximize_bv_signed(arena, assertions, obj.objective)?,
+            (true, false) => minimize_bv_signed(arena, assertions, obj.objective)?,
+        };
+        out.push(outcome);
+    }
+    Ok(out)
+}
+
 /// The result of one feasibility probe.
 enum Probe {
     /// Satisfiable, carrying the objective's value in the found model.
