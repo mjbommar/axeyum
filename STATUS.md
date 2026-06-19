@@ -388,7 +388,11 @@ plan is built and committed on the current branch:
   (`abv_select_consistency_transitive_is_accepted_by_carcara`). Index-unit derivation
   factored into `emit_index_equality_unit`. Widens the array-elim trust-hole certificate
   (Track 3, ADR-0010). New self-check + Carcara tests; solver clippy + qfabv_elim_proof +
-  carcara crosscheck green (53 carcara tests).
+  carcara crosscheck green (53 carcara tests). **Lean loop closed for the widened
+  fragment:** the transitive Ackermann cert also reconstructs to a kernel-checked Lean
+  `False` (`end_to_end_qf_ufbv_transitive_congruence_to_false`), so the transitive certs
+  validate at all three levels (in-tree `check_alethe`, external Carcara, Lean kernel).
+  Full solver suite green (77 results, 0 failures).
 
 - **2026-06-19** — **P3.5: Ackermann Alethe certificate widened to transitive
   argument-equalities.** `prove_qf_ufbv_unsat_alethe` previously discharged a

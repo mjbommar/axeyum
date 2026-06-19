@@ -508,6 +508,50 @@ fn end_to_end_qf_ufbv_binary_congruence_to_false() {
     assert_infers_false(&mut ctx, term);
 }
 
+/// **Transitive-argument Ackermann certificate end-to-end**: the consistency
+/// constraint's argument equality `a = c` holds only by transitive closure
+/// `a = b = c` (not a direct assertion), so the certificate derives it with an
+/// `eq_transitive` chain. Reconstructing `f(a) = #b00 ∧ a = b ∧ b = c ∧
+/// ¬(f(c) = #b00)` exercises that chain through `reconstruct_qf_ufbv_proof` to a
+/// kernel-checked Lean `False`, confirming the widened fragment closes the Lean
+/// loop (not just `check_alethe` / Carcara).
+#[test]
+fn end_to_end_qf_ufbv_transitive_congruence_to_false() {
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(2)], Sort::BitVec(2))
+        .unwrap();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let c = {
+        let s = arena.declare("c", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let fa = arena.apply(f, &[a]).unwrap();
+    let fc = arena.apply(f, &[c]).unwrap();
+    let c00 = arena.bv_const(2, 0).unwrap();
+    let e1 = arena.eq(fa, c00).unwrap();
+    let e2 = arena.eq(a, b).unwrap();
+    let e3 = arena.eq(b, c).unwrap();
+    let e4 = {
+        let e = arena.eq(fc, c00).unwrap();
+        arena.not(e).unwrap()
+    };
+
+    let proof = crate::prove_qf_ufbv_unsat_alethe(&mut arena, &[e1, e2, e3, e4])
+        .expect("emitter produces the transitive Ackermann certificate");
+    let mut ctx = ReconstructCtx::new();
+    let term = super::reconstruct_qf_ufbv_proof(&mut ctx, &proof)
+        .expect("the transitive QF_UFBV certificate reconstructs to a kernel-checked term");
+    assert_infers_false(&mut ctx, term);
+}
+
 /// A `QF_UFBV` proof with no Ackermann congruence blocks (not a certificate from
 /// `prove_qf_ufbv_unsat_alethe`) is cleanly rejected, never mis-reconstructed.
 #[test]
