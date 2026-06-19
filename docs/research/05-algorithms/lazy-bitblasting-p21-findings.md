@@ -251,16 +251,18 @@ With the preprocessor usable at scale, the fair `--preprocess` measurement (sat-
 backend, **identical budgets to the eager fair 3 s baseline**, Z3 4.13.3 oracle,
 `--jobs 2`):
 
-| run (3 s, node 200k, cnf 2M/5M) | decided | EncodingBudget | Timeout | NodeBudget | DISAGREE | replay fail |
+| run | budgets | eager decided | **`--preprocess` decided** | DISAGREE | replay fail | PAR-2 (pp vs eager) |
 |---|---|---|---|---|---|---|
-| eager sat-bv (baseline) | **2 sat** | 13 | 88 | 10 | 0 | 0 |
-| **sat-bv `--preprocess`** | **4 sat** | **11** | 88 | 10 | **0** | 0 |
+| 3 s | node 200k, cnf 2M/5M | 2 sat | **4 sat** (EncodingBudget 13→11) | 0 | 0 | 5.84 vs 5.90 |
+| 20 s | node 300k, cnf 3M/8M | 3 sat | **7 sat** | 0 | 0 | 37.89 vs 39.02 |
 
-Baseline: `bench-results/baselines/qf-bv-p4dfa-fair-sat-bv-preprocess-vs-z3-3s-n200k-cnf5M.json`
-(`just bench-public-qfbv-preprocess-fair-3s`).
+Baselines: `bench-results/baselines/qf-bv-p4dfa-fair-sat-bv-preprocess-vs-z3-{3s-n200k-cnf5M,20s-n300k-cnf8M}.json`
+(`just bench-public-qfbv-preprocess-fair-{3s,20s}`).
 
-**Word-level preprocessing genuinely moves the public number (2 → 4 decided at
-3 s), and the mechanism is exactly the predicted one:** the two newly-decided
+**Word-level preprocessing genuinely moves the public number (2 → 4 at 3 s, and
+3 → 7 at 20 s — more than doubling eager at both budgets, the gain *growing* with
+the budget as reduced-but-still-hard formulas come into reach), and the mechanism
+is exactly the predicted one:** the newly-decided 3 s
 instances (`compose.p2._…na6_nr3_paired`, `mobiledevice_…na6_nr3_twocond`) are the
 two that drop *out of* `EncodingBudget` (13 → 11) — `solve_eqs`/canonicalize shrink
 them below the bit-blast-size ceiling so they encode and solve where the eager path

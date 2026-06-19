@@ -365,13 +365,19 @@ plan is built and committed on the current branch:
   a **sound partial reduction** (un-eliminated equalities stay assertions; trail
   reconstructs). Giant now clears the whole pipeline in ~1.5 s. Wired into
   `check_with_preprocessing` + the bench. **Fair `--preprocess` measurement** (sat-bv,
-  same 3 s/budget as the eager baseline, Z3 oracle): **4 sat / 109 unknown, DISAGREE=0,
-  0 replay failures** vs eager **2/111** — the two newly-decided instances drop out of
-  `EncodingBudget` (13 → 11), i.e. preprocessing shrinks them below the bit-blast-size
-  ceiling so they encode + solve. First measured destination-2 gain on this corpus from
-  *reduction* (the "not-building-the-mountain" lever), not abstraction. Baseline
-  `bench-results/baselines/qf-bv-p4dfa-fair-sat-bv-preprocess-vs-z3-3s-n200k-cnf5M.json`,
-  `just bench-public-qfbv-preprocess-fair-3s`. Probe: `axeyum-bench/examples/preprocess_timing.rs`.
+  same budgets as the eager baselines, Z3 oracle, DISAGREE=0, 0 replay failures
+  throughout): **3 s → 4 sat vs eager 2; 20 s → 7 sat vs eager 3** — more than doubling
+  eager at both tiers, the gain *growing* with budget. The newly-decided instances drop
+  out of `EncodingBudget` (13 → 11 at 3 s), i.e. preprocessing shrinks them below the
+  bit-blast-size ceiling. First (and decisive) destination-2 gain on this corpus from
+  *reduction* (the "not-building-the-mountain" lever), not abstraction — ratified in
+  **ADR-0037** (reduction is the destination-2 priority; batsat stays default; custom
+  cores specialized). Baselines
+  `bench-results/baselines/qf-bv-p4dfa-fair-sat-bv-preprocess-vs-z3-{3s,20s}-*.json`,
+  `just bench-public-qfbv-preprocess-fair-{3s,20s}`. Probe:
+  `axeyum-bench/examples/preprocess_timing.rs`. **Next: route the full model-sound
+  pipeline into the default `solve()` path (currently canonicalize-only) → flip
+  `preprocess` default-on (meets ADR-0034's criterion).**
 - **2026-06-18** — **Destination-2 fair re-measurement: lazy-bv vs Z3 on the public
   p4dfa 113 at the standing budgets — confirmed a no-op on this corpus.** Ran the
   built-but-fair-unmeasured `LazyBvBackend` head-to-head vs Z3 4.13.3 on the
