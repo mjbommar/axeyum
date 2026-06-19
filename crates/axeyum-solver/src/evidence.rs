@@ -196,6 +196,17 @@ pub enum Evidence {
     /// Tseitin, and the SAT refutation are all re-derived, closing the bit-blast
     /// trust hole.
     UnsatAletheProof(Vec<AletheCommand>),
+    /// Unsatisfiable (`QF_LIA`/`QF_LRA` via an Alethe `lia_generic`/`la_generic`
+    /// refutation), certified by an **arithmetic-aware** Alethe proof whose
+    /// re-validation is the evidence. Unlike [`Evidence::UnsatAletheProof`] (the
+    /// bit-blast fragment, checked by the plain [`check_alethe`] kernel), this
+    /// proof's `lia_generic`/`la_generic` arithmetic clauses require the
+    /// arithmetic checker callback, so `check` runs
+    /// [`crate::check_alethe_lra`] (= [`axeyum_cnf::check_alethe_with`] + the
+    /// integer/linear Farkas re-derivation). Emitted only when that checker
+    /// already accepts the proof (the emitters are self-validating), and the
+    /// Farkas/`lia_generic` reduction is **certified** (re-derived), not trusted.
+    UnsatArithAletheProof(Vec<AletheCommand>),
     /// Unsatisfiable, certified **at the term level** by exhaustive evaluation
     /// over the finite symbol domain — the strongest `QF_BV` `unsat` evidence,
     /// trusting neither the bit-blaster, CNF encoder, nor SAT solver (only the
@@ -279,6 +290,16 @@ impl Evidence {
             Evidence::UnsatAletheProof(proof) => check_alethe(proof).map_err(|e| {
                 SolverError::Backend(format!("unsat Alethe evidence re-check failed: {e}"))
             }),
+            // Arithmetic Alethe proof: the `lia_generic`/`la_generic` clauses need
+            // the arithmetic-aware checker (plain `check_alethe` would reject the
+            // arithmetic rule), so re-validate with the integer/linear Farkas
+            // callback. A failed re-derivation (or tampered proof) is a clean
+            // `Ok(false)`/`Err`, never a silently-accepted bad cert.
+            Evidence::UnsatArithAletheProof(proof) => crate::check_alethe_lra(proof).map_err(|e| {
+                SolverError::Backend(format!(
+                    "unsat arithmetic Alethe evidence re-check failed: {e}"
+                ))
+            }),
             Evidence::UnsatFarkas(certificate) => Ok(certificate.verify()),
             Evidence::UnsatLraDpll(refutation) => refutation.verify(arena),
             // No DRAT certificate (adapter-only `unsat`) or `unknown`: nothing to
@@ -296,6 +317,7 @@ impl Evidence {
             Evidence::Sat(_)
                 | Evidence::Unsat(Some(_))
                 | Evidence::UnsatAletheProof(_)
+                | Evidence::UnsatArithAletheProof(_)
                 | Evidence::UnsatTermLevel { .. }
                 | Evidence::UnsatFarkas(_)
                 | Evidence::UnsatLraDpll(_)
@@ -670,6 +692,18 @@ pub fn produce_evidence(
             // trusted reduction steps it went through).
             if let Some(proof) = zero_trust_alethe_certificate(arena, assertions) {
                 (Evidence::UnsatAletheProof(proof), Vec::new())
+            } else if let Some(proof) = arith_alethe_certificate(arena, assertions) {
+                // A pure linear-integer (or otherwise-LRA) `unsat` that reached the
+                // `Other` route (e.g. QF_LIA, which `evidence_route` sends here):
+                // the `lia_generic`/`la_generic` Alethe proof is re-checked by the
+                // arithmetic-aware checker, so the Farkas reduction is CERTIFIED.
+                // Ordered AFTER `zero_trust_alethe_certificate` (so UF/array/
+                // datatype keep their zero-trust cert); the LIA/LRA emitters return
+                // `None` for those fragments, so this never shadows them.
+                (
+                    Evidence::UnsatArithAletheProof(proof),
+                    trust_steps(&[(TrustId::Farkas, true)]),
+                )
             } else {
                 let (cert, steps) = reduction_unsat_certificate(arena, assertions);
                 (Evidence::Unsat(cert), steps)
@@ -724,6 +758,37 @@ fn zero_trust_alethe_certificate(
     }
     if let Some(proof) = crate::prove_qf_dt_unsat_alethe_via_simplification(arena, assertions)
         && matches!(check_alethe(&proof), Ok(true))
+    {
+        return Some(proof);
+    }
+    None
+}
+
+/// Tries the **arithmetic** Alethe certificate emitters in turn, returning the
+/// first that produces a [`crate::check_alethe_lra`]-validated refutation:
+///
+/// 1. [`crate::prove_lia_unsat_alethe`] — the linear-integer (`QF_LIA`)
+///    `lia_generic` cert (e.g. `x >= 1 ∧ x <= -1`);
+/// 2. [`crate::prove_lra_unsat_alethe`] — the linear-real (`QF_LRA`) `la_generic`
+///    cert, for any conjunctive LRA `unsat` that reaches the `Other` route.
+///
+/// Each emitter is self-validating (returns `Some` only after `check_alethe_lra`
+/// accepts) and returns `None` cheaply outside its fragment — in particular for
+/// UF / array / datatype / quantifier queries — so trying them after
+/// [`zero_trust_alethe_certificate`] never shadows those zero-trust certs, and a
+/// returned proof is genuinely re-checkable by the arithmetic-aware checker.
+/// The defensive `check_alethe_lra` re-gate mirrors the historical call sites.
+fn arith_alethe_certificate(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<Vec<AletheCommand>> {
+    if let Some(proof) = crate::prove_lia_unsat_alethe(arena, assertions)
+        && matches!(crate::check_alethe_lra(&proof), Ok(true))
+    {
+        return Some(proof);
+    }
+    if let Some(proof) = crate::prove_lra_unsat_alethe(arena, assertions)
+        && matches!(crate::check_alethe_lra(&proof), Ok(true))
     {
         return Some(proof);
     }
@@ -850,6 +915,7 @@ pub fn prove(
         // Re-check the certificate before declaring `Proved`.
         Evidence::Unsat(_)
         | Evidence::UnsatAletheProof(_)
+        | Evidence::UnsatArithAletheProof(_)
         | Evidence::UnsatTermLevel { .. }
         | Evidence::UnsatFarkas(_)
         | Evidence::UnsatLraDpll(_) => {

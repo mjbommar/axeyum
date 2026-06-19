@@ -412,6 +412,25 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P3.3: QF_LIA `unsat` now carries a checkable certificate in
+  `produce_evidence` (gap E).** A pure-integer `unsat` (`x>0 ∧ x<0`) reached the `Other`
+  evidence route and ended as a bare `Evidence::Unsat(None)` (`is_certified()==false`), even
+  though `prove_lia_unsat_alethe` emits a checkable `lia_generic` Alethe proof (used on the
+  SMT-LIB get-proof path). Fix: new `Evidence::UnsatArithAletheProof(Vec<AletheCommand>)`
+  variant whose `Evidence::check` re-validates via the **arithmetic-aware**
+  `check_alethe_lra` (= `axeyum_cnf::check_alethe_with` + the `la_generic` callback, which
+  re-derives the integer/linear Farkas refutation — plain `check_alethe` can't decide
+  `lia_generic`). A new `arith_alethe_certificate` helper tries `prove_lia_unsat_alethe` then
+  `prove_lra_unsat_alethe` (each self-validating) in `produce_evidence`'s `Other`/`Unsat` arm,
+  **after** `zero_trust_alethe_certificate` and **before** the bare/DRAT fallback (the arith
+  emitters return `None` for UF/array/datatype, so ordering is safe). `trusted_steps =
+  [(Farkas, certified)]` (the reduction is re-derived, not a trust hole). **Tamper test**
+  (`tampered_lia_arith_evidence_fails_its_own_check`: drop the closing step → `check` rejects)
+  proves the verification is real. Now certifies `x>0 ∧ x<0` and `x+y≥3 ∧ x≤1 ∧ y≤1`; QF_BV /
+  QF_UFBV evidence paths unchanged (asserted). Strictly additive (only bare LIA `unsat` →
+  certified). New `tests/evidence_lia_cert.rs` (5); full suite (977) + clippy + fmt green.
+  From the 4th capability-gap pass; sub-agent + soundness review.
+
 - **2026-06-19** — **P4.3 OMT robustness + completeness: optimizer honors timeout, decides
   div/mod, never errors (gaps A/B/D).** The optimizer's feasibility probes called
   `check_with_lia_dpll` directly and no path threaded `config.timeout`. Three fixes in
