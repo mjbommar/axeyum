@@ -182,6 +182,17 @@ impl<B: SolverBackend> Solver<B> {
         crate::prove_unsat_to_lean_module(arena, &self.assertions)
     }
 
+    /// Computes a (deletion-minimized) unsat core of the active assertions as
+    /// indices into them, or `None` if they are not `unsat` (see
+    /// [`crate::unsat_core`]).
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`SolverError`] from the underlying solve.
+    pub fn unsat_core(&self, arena: &mut TermArena) -> Result<Option<Vec<usize>>, SolverError> {
+        crate::unsat_core(arena, &self.assertions, &self.config)
+    }
+
     /// Maximizes the integer-linear `objective` subject to the active assertions
     /// (see [`crate::maximize_lia`]).
     ///
@@ -344,6 +355,42 @@ mod tests {
         assert_eq!(
             solver.maximize_lia(&mut arena, x).unwrap(),
             OptOutcome::Optimal(7)
+        );
+    }
+    /// The façade exposes unsat-core extraction: of three assertions where two
+    /// conflict (`x=5`, `x=6`) plus an irrelevant one, the core is a subset that
+    /// excludes the irrelevant assertion.
+    #[test]
+    fn facade_unsat_core() {
+        let mut arena = TermArena::new();
+        let x = {
+            let s = arena.declare("x", Sort::BitVec(8)).unwrap();
+            arena.var(s)
+        };
+        let five = arena.bv_const(8, 5).unwrap();
+        let six = arena.bv_const(8, 6).unwrap();
+        let y = {
+            let s = arena.declare("y", Sort::BitVec(8)).unwrap();
+            arena.var(s)
+        };
+        let one = arena.bv_const(8, 1).unwrap();
+        let x5 = arena.eq(x, five).unwrap();
+        let x6 = arena.eq(x, six).unwrap();
+        let irrelevant = arena.eq(y, one).unwrap();
+
+        let mut solver = Solver::new(SatBvBackend::new());
+        solver.assert(x5);
+        solver.assert(irrelevant);
+        solver.assert(x6);
+        let core = solver
+            .unsat_core(&mut arena)
+            .unwrap()
+            .expect("the query is unsat, so it has a core");
+        // The conflict is x5 (index 0) and x6 (index 2); index 1 (irrelevant) is out.
+        assert!(core.contains(&0) && core.contains(&2));
+        assert!(
+            !core.contains(&1),
+            "irrelevant assertion must not be in the core"
         );
     }
 }
