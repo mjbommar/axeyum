@@ -64,6 +64,29 @@ fn select_consistency_distinct_indices() {
 }
 
 #[test]
+fn select_consistency_transitive_indices() {
+    // select(a, i) = #b0…0 ∧ i = k ∧ k = j ∧ ¬(select(a, j) = #b0…0).
+    // unsat by read-consistency where the index equality i = j holds only by
+    // transitive closure i = k = j — exercises the eq_transitive index chain.
+    let mut arena = TermArena::new();
+    let a = arena.array_var("a", 4, 8).unwrap();
+    let i = bv(&mut arena, "i", 4);
+    let k = bv(&mut arena, "k", 4);
+    let j = bv(&mut arena, "j", 4);
+    let c = arena.bv_const(8, 0).unwrap();
+    let sa = arena.select(a, i).unwrap();
+    let sb = arena.select(a, j).unwrap();
+    let e1 = arena.eq(sa, c).unwrap();
+    let e2 = arena.eq(i, k).unwrap();
+    let e3 = arena.eq(k, j).unwrap();
+    let e4 = {
+        let e = arena.eq(sb, c).unwrap();
+        arena.not(e).unwrap()
+    };
+    self_checks(&mut arena, &[e1, e2, e3, e4]);
+}
+
+#[test]
 fn select_consistency_symmetric_diseq() {
     // Same, but the disequality is written `¬(#b0…0 = select(a, j))`.
     let mut arena = TermArena::new();

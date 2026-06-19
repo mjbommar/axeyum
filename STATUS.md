@@ -377,6 +377,19 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P3.5: array-elimination (read-consistency) Alethe certificate
+  widened to transitive index-equalities.** Same generalization as the Ackermann cert,
+  applied to `prove_qf_abv_unsat_alethe_via_elimination`: a read-consistency constraint
+  `i=j ⇒ select(a,i)=select(a,j)` is now discharged when the index equality `i=j` holds
+  by **transitive closure** of asserted equalities (`i=k ∧ k=j`), via an `eq_transitive`
+  chain over the `!sel_a` unary select function — previously only direct index equalities
+  were certified. Strictly additive (direct/identical indices unchanged), `check_alethe`
+  self-validated, and externally **Carcara-validated**
+  (`abv_select_consistency_transitive_is_accepted_by_carcara`). Index-unit derivation
+  factored into `emit_index_equality_unit`. Widens the array-elim trust-hole certificate
+  (Track 3, ADR-0010). New self-check + Carcara tests; solver clippy + qfabv_elim_proof +
+  carcara crosscheck green (53 carcara tests).
+
 - **2026-06-19** — **P3.5: Ackermann Alethe certificate widened to transitive
   argument-equalities.** `prove_qf_ufbv_unsat_alethe` previously discharged a
   functional-consistency constraint's antecedent only when each argument pair was

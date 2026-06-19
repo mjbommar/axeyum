@@ -123,12 +123,15 @@ pub fn prove_qf_abv_unsat_alethe_via_elimination(
     }
 
     // The index equalities the rewritten originals directly assert, as an
-    // unordered set of `{a, b}` term-id pairs.
+    // unordered set of `{a, b}` term-id pairs, and the undirected graph they induce
+    // (so an index equality holding only by *transitive closure* — `i=k ∧ k=j` —
+    // still discharges a read-consistency antecedent, via an `eq_transitive` chain).
     let asserted_eqs = collect_asserted_eqs(arena, &rewritten);
+    let adjacency = asserted_eq_adjacency(&asserted_eqs);
 
-    // For every pair of selects on the **same array** whose indices are
-    // asserted-equal (or identical), the consequent `(= s_i s_j)` is
-    // `eq_congruent`-derivable over the unary function `sel_<array>`.
+    // For every pair of selects on the **same array** whose indices are equal
+    // (identically, directly, or by transitive closure), the consequent
+    // `(= s_i s_j)` is `eq_congruent`-derivable over the unary function `sel_<array>`.
     let mut certs: Vec<SelectCongruenceCert> = Vec::new();
     for i in 0..selects.len() {
         for j in (i + 1)..selects.len() {
@@ -138,7 +141,7 @@ pub fn prove_qf_abv_unsat_alethe_via_elimination(
                 continue;
             }
             let indices_equal =
-                index_i == index_j || asserted_eqs.contains(&ordered(index_i, index_j));
+                index_i == index_j || eq_path(&adjacency, index_i, index_j).is_some();
             if indices_equal {
                 let (array_name, _) = arena.symbol(array_i);
                 certs.push(SelectCongruenceCert {
@@ -174,7 +177,8 @@ pub fn prove_qf_abv_unsat_alethe_via_elimination(
 
     // Splice: replace each consequent's `Assume` with its `eq_congruent`
     // derivation under the same id, so the read-consistency constraint is proven.
-    let spliced = splice_select_congruence(arena, &bv_proof, &certs, &consequent_terms)?;
+    let spliced =
+        splice_select_congruence(arena, &bv_proof, &certs, &consequent_terms, &adjacency)?;
 
     // Self-validate before returning.
     if matches!(check_alethe(&spliced), Ok(true)) {
@@ -207,6 +211,56 @@ fn ordered(a: TermId, b: TermId) -> (TermId, TermId) {
     }
 }
 
+/// The undirected adjacency map induced by a set of asserted equalities, for
+/// transitive-closure index reasoning (mirrors the `QF_UFBV` certificate helper).
+fn asserted_eq_adjacency(asserted: &BTreeSet<(TermId, TermId)>) -> BTreeMap<TermId, Vec<TermId>> {
+    let mut adj: BTreeMap<TermId, Vec<TermId>> = BTreeMap::new();
+    for &(a, b) in asserted {
+        adj.entry(a).or_default().push(b);
+        adj.entry(b).or_default().push(a);
+    }
+    adj
+}
+
+/// The shortest path `from = t0, …, tn = to` of asserted-equality edges (BFS), or
+/// [`None`] if disconnected. A returned path has `len() >= 2` (never the trivial
+/// `from == to` path; identical indices are handled separately by the caller).
+fn eq_path(
+    adjacency: &BTreeMap<TermId, Vec<TermId>>,
+    from: TermId,
+    to: TermId,
+) -> Option<Vec<TermId>> {
+    if from == to {
+        return None;
+    }
+    let mut prev: BTreeMap<TermId, TermId> = BTreeMap::new();
+    let mut queue: std::collections::VecDeque<TermId> = std::collections::VecDeque::new();
+    let mut seen: BTreeSet<TermId> = BTreeSet::new();
+    queue.push_back(from);
+    seen.insert(from);
+    while let Some(node) = queue.pop_front() {
+        if node == to {
+            let mut path = vec![to];
+            let mut cur = to;
+            while cur != from {
+                cur = prev[&cur];
+                path.push(cur);
+            }
+            path.reverse();
+            return Some(path);
+        }
+        if let Some(neighbours) = adjacency.get(&node) {
+            for &next in neighbours {
+                if seen.insert(next) {
+                    prev.insert(next, node);
+                    queue.push_back(next);
+                }
+            }
+        }
+    }
+    None
+}
+
 /// Replaces each consequent `(= s_i s_j)` `Assume` in `bv_proof` with an
 /// `eq_congruent` derivation of `(cl (= s_i s_j))` under the same id, so the
 /// read-consistency constraint is proven from the index equality and the
@@ -218,6 +272,7 @@ fn splice_select_congruence(
     bv_proof: &[AletheCommand],
     certs: &[SelectCongruenceCert],
     consequents: &[(TermId, SymbolId, SymbolId)],
+    adjacency: &BTreeMap<TermId, Vec<TermId>>,
 ) -> Option<Vec<AletheCommand>> {
     // Map each consequent's `(= s_i s_j)` clause key to its cert.
     let mut by_consequent: BTreeMap<String, &SelectCongruenceCert> = BTreeMap::new();
@@ -233,7 +288,7 @@ fn splice_select_congruence(
         match cmd {
             AletheCommand::Assume { id, clause } => {
                 if let Some(cert) = clause_consequent_cert(clause, &by_consequent) {
-                    emit_select_congruence(arena, &mut out, &mut fresh, id, cert)?;
+                    emit_select_congruence(arena, &mut out, &mut fresh, id, cert, adjacency)?;
                 } else {
                     out.push(cmd.clone());
                 }
@@ -286,6 +341,7 @@ fn emit_select_congruence(
     fresh: &mut usize,
     assume_id: &str,
     cert: &SelectCongruenceCert,
+    adjacency: &BTreeMap<TermId, Vec<TermId>>,
 ) -> Option<()> {
     let si = sym_alethe(arena, cert.fresh_i);
     let sj = sym_alethe(arena, cert.fresh_j);
@@ -310,25 +366,9 @@ fn emit_select_congruence(
         clause: vec![pos(eq_term(sel_j.clone(), sj.clone()))],
     });
 
-    // The index equality unit (asserted, or reflexive for an identical index).
-    let idx_eq_id = if cert.index_i == cert.index_j {
-        let r = next_id(fresh, "refl");
-        out.push(AletheCommand::Step {
-            id: r.clone(),
-            clause: vec![pos(eq_term(idx_i.clone(), idx_j.clone()))],
-            rule: "eq_reflexive".to_owned(),
-            premises: Vec::new(),
-            args: Vec::new(),
-        });
-        r
-    } else {
-        let g = next_id(fresh, "idx");
-        out.push(AletheCommand::Assume {
-            id: g.clone(),
-            clause: vec![pos(eq_term(idx_i.clone(), idx_j.clone()))],
-        });
-        g
-    };
+    // The index equality unit `(cl (= i j))`: reflexive, a direct asserted edge, or
+    // an `eq_transitive` chain over the transitive closure of asserted equalities.
+    let idx_eq_id = emit_index_equality_unit(arena, out, fresh, cert, &idx_i, &idx_j, adjacency)?;
 
     // eq_congruent: (cl (not (= i j)) (= (sel_a i) (sel_a j))), resolved against
     // the index-equality unit → (cl (= (sel_a i) (sel_a j))).
@@ -378,6 +418,86 @@ fn emit_select_congruence(
     });
 
     Some(())
+}
+
+/// Emits the index-equality unit `(cl (= i j))` and returns its step id:
+///
+/// - `eq_reflexive` for an identical index (`index_i == index_j`);
+/// - a direct `assume` of `(= i j)` for a single asserted edge; or
+/// - an `eq_transitive` chain (each asserted edge `assume`d, chained with shared
+///   middle terms and resolved to `(= i j)`) when `i` and `j` are equal only by
+///   transitive closure of the asserted index equalities.
+///
+/// Returns [`None`] if a transitive-path node is outside the renderable fragment.
+fn emit_index_equality_unit(
+    arena: &TermArena,
+    out: &mut Vec<AletheCommand>,
+    fresh: &mut usize,
+    cert: &SelectCongruenceCert,
+    idx_i: &AletheTerm,
+    idx_j: &AletheTerm,
+    adjacency: &BTreeMap<TermId, Vec<TermId>>,
+) -> Option<String> {
+    if cert.index_i == cert.index_j {
+        let r = next_id(fresh, "refl");
+        out.push(AletheCommand::Step {
+            id: r.clone(),
+            clause: vec![pos(eq_term(idx_i.clone(), idx_j.clone()))],
+            rule: "eq_reflexive".to_owned(),
+            premises: Vec::new(),
+            args: Vec::new(),
+        });
+        return Some(r);
+    }
+    let path = eq_path(adjacency, cert.index_i, cert.index_j)?;
+    if path.len() == 2 {
+        // A single asserted edge `(= i j)`: assume it directly (unchanged).
+        let g = next_id(fresh, "idx");
+        out.push(AletheCommand::Assume {
+            id: g.clone(),
+            clause: vec![pos(eq_term(idx_i.clone(), idx_j.clone()))],
+        });
+        return Some(g);
+    }
+    // Transitive closure `i = m_1 = … = j`: assume each edge and chain them with one
+    // `eq_transitive` step (shared middle terms) resolved to `(= i j)`.
+    let nodes: Vec<AletheTerm> = path
+        .iter()
+        .map(|&n| term_to_alethe(arena, n))
+        .collect::<Option<_>>()?;
+    let mut edge_ids = Vec::with_capacity(nodes.len() - 1);
+    for w in nodes.windows(2) {
+        let e = next_id(fresh, "edge");
+        out.push(AletheCommand::Assume {
+            id: e.clone(),
+            clause: vec![pos(eq_term(w[0].clone(), w[1].clone()))],
+        });
+        edge_ids.push(e);
+    }
+    let mut trans_clause: AletheClause = nodes
+        .windows(2)
+        .map(|w| neg(eq_term(w[0].clone(), w[1].clone())))
+        .collect();
+    trans_clause.push(pos(eq_term(idx_i.clone(), idx_j.clone())));
+    let idx_trans = next_id(fresh, "idxtrans");
+    out.push(AletheCommand::Step {
+        id: idx_trans.clone(),
+        clause: trans_clause,
+        rule: "eq_transitive".to_owned(),
+        premises: Vec::new(),
+        args: Vec::new(),
+    });
+    let derived = next_id(fresh, "idxeq");
+    let mut prems = vec![idx_trans];
+    prems.extend(edge_ids);
+    out.push(AletheCommand::Step {
+        id: derived.clone(),
+        clause: vec![pos(eq_term(idx_i.clone(), idx_j.clone()))],
+        rule: "resolution".to_owned(),
+        premises: prems,
+        args: Vec::new(),
+    });
+    Some(derived)
 }
 
 /// A fresh, namespaced derivation-step id (`!cong_<base>_<n>`), matching the

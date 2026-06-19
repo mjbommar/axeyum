@@ -1743,6 +1743,54 @@ fn abv_select_consistency_is_accepted_by_carcara() {
     assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
 }
 
+#[test]
+#[allow(clippy::many_single_char_names)]
+fn abv_select_consistency_transitive_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // select(a, i) = #b0…0 ∧ i = k ∧ k = j ∧ ¬(select(a, j) = #b0…0): the index
+    // equality i = j holds only by transitive closure i = k = j, so the certificate
+    // derives it with an `eq_transitive` chain. Carcara must accept that chain.
+    let mut arena = TermArena::new();
+    let a = arena.array_var("a", 4, 8).unwrap();
+    let i = bvw(&mut arena, "i", 4);
+    let k = bvw(&mut arena, "k", 4);
+    let j = bvw(&mut arena, "j", 4);
+    let c = arena.bv_const(8, 0).unwrap();
+    let sa = arena.select(a, i).unwrap();
+    let sb = arena.select(a, j).unwrap();
+    let e1 = arena.eq(sa, c).unwrap();
+    let e2 = arena.eq(i, k).unwrap();
+    let e3 = arena.eq(k, j).unwrap();
+    let e4 = {
+        let e = arena.eq(sb, c).unwrap();
+        arena.not(e).unwrap()
+    };
+
+    let proof = prove_qf_abv_unsat_alethe_via_elimination(&mut arena, &[e1, e2, e3, e4])
+        .expect("emit QF_ABV array-elimination proof");
+    let smt2 = "\
+(set-logic QF_AUFBV)
+(declare-fun !sel_a ((_ BitVec 4)) (_ BitVec 8))
+(declare-const i (_ BitVec 4))
+(declare-const k (_ BitVec 4))
+(declare-const j (_ BitVec 4))
+(declare-const !arr_sel_0 (_ BitVec 8))
+(declare-const !arr_sel_1 (_ BitVec 8))
+(assert (= !arr_sel_0 #b00000000))
+(assert (= i k))
+(assert (= k j))
+(assert (not (= !arr_sel_1 #b00000000)))
+(assert (= !arr_sel_0 (!sel_a i)))
+(assert (= (!sel_a j) !arr_sel_1))
+(check-sat)
+";
+    let report = carcara_accepts_smt2(&bin, "abv_select_consistency_transitive", smt2, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
 // --- Datatype read-over-construct certificate: -------------------------------
 // `prove_qf_dt_unsat_alethe_via_simplification`
 //
