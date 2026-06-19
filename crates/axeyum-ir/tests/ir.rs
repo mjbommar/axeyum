@@ -756,7 +756,8 @@ fn apply_rejects_bad_signatures_and_arguments() {
         arena.apply(f, &[y]),
         Err(IrError::SortsDiffer(..))
     ));
-    // Array sort in a signature is rejected.
+    // Array sort in a signature is rejected (Int/Real are now allowed, but arrays
+    // and datatypes are not — see uf_argument_sorts_admit_arithmetic_but_not_arrays).
     assert!(matches!(
         arena.declare_fun(
             "g",
@@ -766,10 +767,7 @@ fn apply_rejects_bad_signatures_and_arguments() {
             }],
             Sort::Bool
         ),
-        Err(IrError::SortMismatch {
-            expected: "Bool or BitVec",
-            ..
-        })
+        Err(IrError::SortMismatch { .. })
     ));
     // Re-declaring a name with a different signature conflicts.
     assert!(matches!(
@@ -950,11 +948,28 @@ fn int_const_and_negative_evaluate() {
 }
 
 #[test]
-fn int_is_not_a_function_argument_sort() {
-    // Functions are finite scalar (Bool/BitVec); integers are rejected.
+fn uf_argument_sorts_admit_arithmetic_but_not_arrays() {
+    // Uninterpreted functions now admit Int/Real params/results (QF_UFLIA/UFLRA,
+    // decided by EUF+arithmetic combination, not bit-blasting); Array/Datatype stay
+    // rejected.
     let mut arena = TermArena::new();
+    assert!(
+        arena.declare_fun("f", &[Sort::Int], Sort::Int).is_ok(),
+        "Int is a valid UF sort now"
+    );
+    assert!(
+        arena.declare_fun("g", &[Sort::Real], Sort::Bool).is_ok(),
+        "Real is a valid UF sort now"
+    );
+    let elem = arena.declare_fun("h", &[Sort::BitVec(8)], Sort::BitVec(8));
+    assert!(elem.is_ok(), "BitVec UF still valid");
+    // An array-sorted parameter remains unsupported.
+    let array = Sort::Array {
+        index: 4,
+        element: 8,
+    };
     assert!(matches!(
-        arena.declare_fun("f", &[Sort::Int], Sort::Bool),
+        arena.declare_fun("arr", &[array], Sort::Bool),
         Err(IrError::SortMismatch { .. })
     ));
 }

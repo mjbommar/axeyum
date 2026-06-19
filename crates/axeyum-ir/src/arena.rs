@@ -1288,9 +1288,9 @@ impl TermArena {
         result: Sort,
     ) -> Result<FuncId, IrError> {
         for &sort in params {
-            check_scalar_width(sort)?;
+            check_uf_sort(sort)?;
         }
-        check_scalar_width(result)?;
+        check_uf_sort(result)?;
         if let Some(&existing) = self.function_lookup.get(name) {
             let decl = &self.functions[existing.index()];
             if decl.params == params && decl.result == result {
@@ -1728,6 +1728,23 @@ fn check_scalar_width(sort: Sort) -> Result<(), IrError> {
                 found,
             })
         }
+    }
+}
+
+/// Sort admissibility for an uninterpreted-function parameter or result. Wider than
+/// [`check_scalar_width`]: in addition to the finite scalars (`Bool`/`BitVec`/
+/// `Float`) it admits the **arithmetic** sorts `Int`/`Real`, so `QF_UFLIA`/`QF_UFLRA`
+/// functions can be declared (decided by EUF+arithmetic combination, not bit-blasting
+/// — the lowering path never sees an arithmetic-sorted application). `Array`/
+/// `Datatype` arguments remain unsupported.
+fn check_uf_sort(sort: Sort) -> Result<(), IrError> {
+    match sort {
+        Sort::Int | Sort::Real => Ok(()),
+        Sort::Bool | Sort::BitVec(_) | Sort::Float { .. } => check_scalar_width(sort),
+        found @ (Sort::Array { .. } | Sort::Datatype(_)) => Err(IrError::SortMismatch {
+            expected: "Bool, BitVec, Float, Int, or Real",
+            found,
+        }),
     }
 }
 
