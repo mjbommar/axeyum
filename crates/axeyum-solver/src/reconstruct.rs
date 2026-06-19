@@ -715,6 +715,73 @@ fn reconstruct_eq_symmetric(
     check_against(ctx, "eq_symmetric", proof, expected)
 }
 
+/// Reconstruct the Alethe `symm` rule: one premise `h : Eq α a b`, conclusion
+/// `(cl (= b a))`.
+///
+/// Unlike the clause-form `eq_symmetric` tautology (`(cl (not (= a b)) (= b a))`,
+/// premise-free), `symm` is a *premise-consuming* step: it takes the prior unit
+/// equality proof and concludes the flipped unit equality. The mathematical
+/// content is identical, so the proof term is the same `Eq.rec` transport as
+/// [`reconstruct_eq_symmetric`] (motive `fun x _ => Eq α x a`, refl-case
+/// `Eq.refl α a`), built over the premise's operands.
+///
+/// Returns the swapped operands `(b, a)` alongside the kernel-checked proof so the
+/// caller can record the resulting `(= b a)` unit.
+///
+/// # Errors
+///
+/// [`ReconstructError::MalformedStep`] when the conclusion is not a single positive
+/// equality `(cl (= b a))` swapping the premise's `(= a b)`, and
+/// [`ReconstructError::KernelRejected`] through the [`check_against`] gate.
+fn reconstruct_symm(
+    ctx: &mut ReconstructCtx,
+    premise_l: &AletheTerm,
+    premise_r: &AletheTerm,
+    premise_proof: ExprId,
+    conclusion: &[AletheLit],
+) -> Result<ExprId, ReconstructError> {
+    // Conclusion clause: the single positive `(= b a)`.
+    let [concl] = conclusion else {
+        return Err(ReconstructError::MalformedStep {
+            rule: "symm".to_owned(),
+            detail: format!("expected one literal, found {}", conclusion.len()),
+        });
+    };
+    let Some((c_t, d_t)) = as_positive_eq(concl) else {
+        return Err(ReconstructError::MalformedStep {
+            rule: "symm".to_owned(),
+            detail: "conclusion is not a positive equality `(= b a)`".to_owned(),
+        });
+    };
+    // The conclusion `(= b a)` must swap the premise `(= a b)`.
+    if c_t != premise_r || d_t != premise_l {
+        return Err(ReconstructError::MalformedStep {
+            rule: "symm".to_owned(),
+            detail: "conclusion is not the swapped premise equality".to_owned(),
+        });
+    }
+
+    let a = ctx.alethe_term_to_expr(premise_l)?;
+    let b = ctx.alethe_term_to_expr(premise_r)?;
+
+    // Same `Eq.rec` transport as `eq_symmetric`: motive `fun x _ => Eq α x a`,
+    // refl-case `Eq.refl α a`, transported along `premise_proof : Eq α a b`.
+    let motive = {
+        let x1 = ctx.kernel.bvar(1);
+        let eq_x_a = ctx.mk_eq(x1, a);
+        let x0 = ctx.kernel.bvar(0);
+        let eq_a_x = ctx.mk_eq(a, x0);
+        let anon = ctx.kernel.anon();
+        let inner = ctx.kernel.lam(anon, eq_a_x, eq_x_a, BinderInfo::Default);
+        ctx.kernel.lam(anon, ctx.alpha, inner, BinderInfo::Default)
+    };
+    let refl_case = ctx.mk_eq_refl(a);
+    let proof = ctx.mk_eq_rec_transport(a, motive, refl_case, b, premise_proof);
+
+    let expected = ctx.mk_eq(b, a);
+    check_against(ctx, "symm", proof, expected)
+}
+
 /// `eq_transitive` ⊢ `(cl (not (= a b)) (not (= b c)) (= a c))` with premises
 /// `h1 : Eq α a b`, `h2 : Eq α b c`
 /// ⇒ `Eq.rec.{0,1} α b (fun x _ => Eq α a x) h1 c h2 : Eq α a c`.
@@ -1370,6 +1437,10 @@ pub fn prove_unsat_to_lean_module(
 ///   as a Horn theory clause; reconstructed via the slice-1
 ///   [`reconstruct_eq_step`] (plus `reconstruct_eq_congruent`) when a resolution
 ///   resolves it against its hypotheses' unit proofs.
+/// - **`symm`** (the premise-consuming Alethe flip: premise the unit `(= a b)`,
+///   conclusion the unit `(cl (= b a))`) ⇒ reconstructed eagerly via
+///   [`reconstruct_symm_step`] into the swapped unit equality (same `Eq.rec`
+///   transport as `eq_symmetric`). Emitted by the congruence-closure fallback.
 /// - **`resolution`/`th_resolution`** with a theory clause and its hypotheses'
 ///   unit proofs ⇒ the reconstructed positive equality unit.
 /// - **`resolution`/`th_resolution`** to the empty clause `(cl)` from a positive
@@ -1411,6 +1482,15 @@ pub fn reconstruct_qf_uf_proof(
                                 clause: clause.clone(),
                             },
                         );
+                    }
+                    "symm" => {
+                        // Premise-consuming flip: one unit-equality premise `(= a b)`
+                        // ⊢ the unit `(cl (= b a))`. Reconstruct eagerly into the
+                        // swapped `EqUnit`, reusing the `eq_symmetric` `Eq.rec`
+                        // transport. (The emitter's congruence-closure fallback flips
+                        // an argument-equality unit this way.)
+                        let cp = reconstruct_symm_step(ctx, premises, clause, &env)?;
+                        env.insert(id.clone(), cp);
                     }
                     "resolution" | "th_resolution" => {
                         let result = reconstruct_resolution(ctx, clause, premises, &env)?;
@@ -1602,6 +1682,42 @@ fn find_eq_unit(prems: &[ClauseProof], l: &AletheTerm, r: &AletheTerm) -> Option
 /// The two operands of a theory clause's single positive equality literal.
 fn positive_literal(clause: &[AletheLit]) -> Option<(&AletheTerm, &AletheTerm)> {
     clause.iter().find_map(as_positive_eq)
+}
+
+/// Reconstruct an Alethe `symm` step in the EUF clausal walk: resolve its single
+/// premise id to a [`ClauseProof::EqUnit`] `(= a b)` from `env`, build the flipped
+/// `(= b a)` proof via [`reconstruct_symm`], and return it as a new unit-equality
+/// [`ClauseProof::EqUnit`] with the operands swapped.
+fn reconstruct_symm_step(
+    ctx: &mut ReconstructCtx,
+    premises: &[String],
+    clause: &[AletheLit],
+    env: &BTreeMap<String, ClauseProof>,
+) -> Result<ClauseProof, ReconstructError> {
+    let [premise_id] = premises else {
+        return Err(ReconstructError::MalformedStep {
+            rule: "symm".to_owned(),
+            detail: format!("expected exactly one premise, found {}", premises.len()),
+        });
+    };
+    let cp = env
+        .get(premise_id)
+        .ok_or_else(|| ReconstructError::UnknownPremise {
+            id: premise_id.clone(),
+        })?;
+    let ClauseProof::EqUnit { l, r, proof } = cp else {
+        return Err(ReconstructError::MalformedStep {
+            rule: "symm".to_owned(),
+            detail: "premise is not a positive unit equality `(= a b)`".to_owned(),
+        });
+    };
+    let (l, r, proof) = (l.clone(), r.clone(), *proof);
+    let flipped = reconstruct_symm(ctx, &l, &r, proof, clause)?;
+    Ok(ClauseProof::EqUnit {
+        l: r,
+        r: l,
+        proof: flipped,
+    })
 }
 
 /// Close a refutation: among the premises find a positive equality unit

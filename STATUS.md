@@ -427,9 +427,12 @@ plan is built and committed on the current branch:
   (`ufbv_nested_congruence_is_accepted_by_carcara`; the EUF `eq_symmetric`+resolution flip
   was swapped for the `symm` rule which both `check_alethe` and Carcara accept). Done via a
   focused sub-agent; independently re-validated (clippy clean, qfufbv_proof 7, carcara 54,
-  full solver suite 920). **Follow-ups (noted):** `reconstruct_qf_ufbv_proof` doesn't yet
-  handle `symm`, so the congruence fragment doesn't reconstruct to Lean (teach it `symm`, or
-  orient the assumed input to the path direction); and the array-elim index fragment
+  full solver suite 920). **Lean loop now CLOSED for the congruence fragment** (follow-on):
+  `reconstruct.rs` gained `symm`-rule reconstruction (`reconstruct_symm`, mirroring
+  `reconstruct_eq_symmetric`'s kernel-gated `Eq.rec` transport), so
+  `end_to_end_qf_ufbv_congruence_derived_to_false` reconstructs `f(g(a))=k ∧ a=b ∧ f(g(b))≠k`
+  to a kernel-checked Lean `False` — the congruence fragment is now validated at all three
+  levels. **Remaining follow-up:** the array-elim index fragment
   (`term_to_alethe` renders only symbols/bv-consts) would need application-valued indices to
   benefit, left untouched to protect the validated array cert.
 

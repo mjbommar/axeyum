@@ -552,6 +552,52 @@ fn end_to_end_qf_ufbv_transitive_congruence_to_false() {
     assert_infers_false(&mut ctx, term);
 }
 
+/// **Congruence-derived argument equality end-to-end (`symm`)**: nested
+/// applications `f(g(a))` / `f(g(b))` whose outer congruence needs the *inner*
+/// argument equality `g(a) = g(b)`. That inner equality is itself derived by
+/// congruence over `a = b`, and the emitter's congruence-closure fallback may flip
+/// the derived unit via the Alethe `symm` rule (premise the unit `(= e_a e_b)`,
+/// conclusion the swapped `(= e_b e_a)`) to orient it for the outer step.
+/// Reconstructing `f(g(a)) = #b00 ∧ a = b ∧ ¬(f(g(b)) = #b00)` exercises that
+/// `symm` reconstruction through `reconstruct_qf_ufbv_proof` to a kernel-checked
+/// Lean `False`, closing the Lean loop for the congruence-fallback fragment.
+#[test]
+fn end_to_end_qf_ufbv_congruence_derived_to_false() {
+    let mut arena = TermArena::new();
+    let g = arena
+        .declare_fun("g", &[Sort::BitVec(2)], Sort::BitVec(2))
+        .unwrap();
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(2)], Sort::BitVec(2))
+        .unwrap();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let ga = arena.apply(g, &[a]).unwrap();
+    let gb = arena.apply(g, &[b]).unwrap();
+    let fga = arena.apply(f, &[ga]).unwrap();
+    let fgb = arena.apply(f, &[gb]).unwrap();
+    let c00 = arena.bv_const(2, 0).unwrap();
+    let e1 = arena.eq(fga, c00).unwrap();
+    let e2 = arena.eq(a, b).unwrap();
+    let e3 = {
+        let e = arena.eq(fgb, c00).unwrap();
+        arena.not(e).unwrap()
+    };
+
+    let proof = crate::prove_qf_ufbv_unsat_alethe(&mut arena, &[e1, e2, e3])
+        .expect("emitter produces the nested-congruence Ackermann certificate");
+    let mut ctx = ReconstructCtx::new();
+    let term = super::reconstruct_qf_ufbv_proof(&mut ctx, &proof)
+        .expect("the congruence-derived QF_UFBV certificate reconstructs to a kernel-checked term");
+    assert_infers_false(&mut ctx, term);
+}
+
 /// A `QF_UFBV` proof with no Ackermann congruence blocks (not a certificate from
 /// `prove_qf_ufbv_unsat_alethe`) is cleanly rejected, never mis-reconstructed.
 #[test]
