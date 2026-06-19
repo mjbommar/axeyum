@@ -377,6 +377,13 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **Crash-hardening sweep: never panic on arithmetic-sorted UF sat-model
+  projection.** `Value::scalar_code` panics on Int/Real; all three solver callers of
+  `project_model` (euf / combined / aufbv) now degrade to a sound `Unknown` for an
+  arithmetic-sorted uninterpreted function instead of crashing. Found via `solve` on a
+  quantified UF+LIA query (now decides UNSAT, was a panic). Upholds 'graceful unknown,
+  never crash'. Full solver suite green (77 binaries).
+
 - **2026-06-18** — **QF_UFLIA / QF_UFLRA complete (conjunctive UNSAT) via eager EUF+arith
   combination.** `check_with_uf_arithmetic` switched to eager Ackermann elimination →
   `check_auto`: all congruence constraints asserted up front, so nested `f(g(a))≠f(g(b))∧a=b`,
