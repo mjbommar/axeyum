@@ -375,6 +375,9 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **PB strict comparisons** (`pb_lt`/`pb_gt`, pseudo-Boolean `<`/`>`):
+  compose the non-strict forms (≤k-1 / ≥k+1, with sound k-edge handling). 2 tests.
+
 - **2026-06-18** — **MaxSAT model-returning variant** (`max_satisfiable_model` /
   `_weighted_model`, commit `daced10`). Returns `MaxSatOutcome::Optimal { weight, model,
   satisfied }` — the witnessing assignment + which soft constraints hold, the actual
