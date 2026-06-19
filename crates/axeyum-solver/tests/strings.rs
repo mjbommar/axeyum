@@ -811,3 +811,44 @@ fn is_digit_symbolic_constrains_to_single_digit() {
         "is_digit(x) ∧ x=\"a\" unsat, got {unsat:?}"
     );
 }
+
+/// `str.to_code` reports the byte of a single-char string (and `is_single`
+/// false otherwise); `str.from_code` builds the matching single-char string.
+#[test]
+fn to_code_and_from_code_round_trip() {
+    let mut arena = TermArena::new();
+    let s = BoundedString::new(8);
+
+    // to_code("A") = (is_single = true, code = 65).
+    let a = s.literal(&mut arena, "A").unwrap();
+    let (single_a, code_a) = s.to_code(&mut arena, &a).unwrap();
+    assert!(eval_bool(&arena, single_a), "\"A\" is a single char");
+    assert!(eval_bv(&arena, code_a, 65), "code of 'A' is 65");
+
+    // to_code("") and to_code("AB") are not single-char.
+    let empty = s.literal(&mut arena, "").unwrap();
+    let (single_empty, _) = s.to_code(&mut arena, &empty).unwrap();
+    assert!(
+        !eval_bool(&arena, single_empty),
+        "\"\" is not a single char"
+    );
+    let ab = s.literal(&mut arena, "AB").unwrap();
+    let (single_ab, _) = s.to_code(&mut arena, &ab).unwrap();
+    assert!(!eval_bool(&arena, single_ab), "\"AB\" is not a single char");
+
+    // from_code(66) == "B", with length 1.
+    let code_b = arena.bv_const(8, 66).unwrap();
+    let from_b = s.from_code(&mut arena, code_b).unwrap();
+    assert!(
+        eval_bv(&arena, s.length(&from_b), 1),
+        "from_code length is 1"
+    );
+    let b = s.literal(&mut arena, "B").unwrap();
+    let eq = s.equal(&mut arena, &from_b, &b).unwrap();
+    assert!(eval_bool(&arena, eq), "from_code(66) == \"B\"");
+
+    // Round-trip: to_code(from_code(c)).code == c for a sample byte.
+    let (single_rt, code_rt) = s.to_code(&mut arena, &from_b).unwrap();
+    assert!(eval_bool(&arena, single_rt));
+    assert!(eval_bv(&arena, code_rt, 66), "round-trip code is 66");
+}

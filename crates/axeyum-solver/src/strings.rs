@@ -889,6 +889,56 @@ impl BoundedString {
         arena.and(len_one, in_range)
     }
 
+    /// `str.to_code` — the code of a single-character string. Returns
+    /// `(is_single, code)`: `code` is byte 0 as a `BitVec(8)` and `is_single` is
+    /// `len == 1`. SMT-LIB `str.to_code` yields `-1` for a non-length-1 string; a
+    /// caller wanting that takes `ite(is_single, code, -1)`. (Codes are bytes here,
+    /// matching the byte-string fragment.)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] from the builders.
+    pub fn to_code(&self, arena: &mut TermArena, x: &StrTerm) -> Result<(TermId, TermId), IrError> {
+        let one = arena.bv_const(self.len_width(), 1)?;
+        let is_single = arena.eq(x.len, one)?;
+        let code = self.char_at(arena, x, 0)?; // BitVec(8); 0 when empty
+        Ok((is_single, code))
+    }
+
+    /// `str.from_code` — the single-character string whose byte code is `code` (a
+    /// `BitVec`; only the low 8 bits matter). In this byte fragment every byte is a
+    /// valid code, so the result always has length 1.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] if `code` is not a bit-vector, or
+    /// [`IrError`] from the builders.
+    pub fn from_code(&self, arena: &mut TermArena, code: TermId) -> Result<StrTerm, IrError> {
+        let w = match arena.sort_of(code) {
+            Sort::BitVec(w) => w,
+            found => {
+                return Err(IrError::SortMismatch {
+                    expected: "BitVec",
+                    found,
+                });
+            }
+        };
+        let byte = match w.cmp(&8) {
+            std::cmp::Ordering::Equal => code,
+            std::cmp::Ordering::Greater => arena.extract(7, 0, code)?,
+            std::cmp::Ordering::Less => arena.zero_ext(8 - w, code)?,
+        };
+        let content = if self.content_width() == 8 {
+            byte
+        } else {
+            arena.zero_ext(self.content_width() - 8, byte)?
+        };
+        Ok(StrTerm {
+            len: arena.bv_const(self.len_width(), 1)?,
+            content,
+        })
+    }
+
     /// `str.to_int` — decimal parse. Returns `(valid, value)`: `value` is a
     /// `BitVec(64)` holding the decimal number the string denotes, and `valid` is
     /// the Boolean "the string is a non-empty run of ASCII digits `'0'..='9'`".
