@@ -72,6 +72,18 @@ pub fn refute_int_via_real_relaxation(
     ))
 }
 
+/// Orders the two operands of a commutative operator by interned `TermId` index so
+/// that `op(a, b)` and `op(b, a)` build the *same* node. Deterministic (a `TermId`
+/// index is stable within an arena) and sound for `+`/`*` over the reals, which
+/// genuinely commute.
+fn sort_commutative(a: TermId, b: TermId) -> (TermId, TermId) {
+    if a.index() <= b.index() {
+        (a, b)
+    } else {
+        (b, a)
+    }
+}
+
 /// Carries the deterministic `Int` symbol → fresh `Real` symbol mapping and a
 /// memo of translated terms.
 #[derive(Default)]
@@ -153,9 +165,23 @@ impl Relax {
                     // Integer linear operators → their real counterparts (a faithful
                     // reinterpretation over the reals).
                     Op::IntNeg => arena.real_neg(low[0]).map_err(err)?,
-                    Op::IntAdd => arena.real_add(low[0], low[1]).map_err(err)?,
+                    // `+` and `*` are commutative over the reals, so canonicalize the
+                    // operand order (by interned `TermId` index — deterministic and
+                    // stable in the scratch arena) before building the real node. This
+                    // makes `a+b`/`b+a` and `a*b`/`b*a` translate to the **same** real
+                    // term, so a commutativity disequality `a*b ≠ b*a` relaxes to
+                    // `p ≠ p` ≡ `false` and is refuted by the NRA layer. Sound: real
+                    // `+`/`*` genuinely commute, so the canonicalized term denotes the
+                    // same real value in every model.
+                    Op::IntAdd => {
+                        let (l, r) = sort_commutative(low[0], low[1]);
+                        arena.real_add(l, r).map_err(err)?
+                    }
                     Op::IntSub => arena.real_sub(low[0], low[1]).map_err(err)?,
-                    Op::IntMul => arena.real_mul(low[0], low[1]).map_err(err)?,
+                    Op::IntMul => {
+                        let (l, r) = sort_commutative(low[0], low[1]);
+                        arena.real_mul(l, r).map_err(err)?
+                    }
                     Op::IntLt => arena.real_lt(low[0], low[1]).map_err(err)?,
                     Op::IntLe => arena.real_le(low[0], low[1]).map_err(err)?,
                     Op::IntGt => arena.real_gt(low[0], low[1]).map_err(err)?,

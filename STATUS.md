@@ -412,6 +412,26 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **ROBUSTNESS: integer-NIA solve HANG fixed (regression from the width
+  ladder).** `a*b ≠ b*a` (ground integer nonlinear, UNSAT by commutativity) **livelocked**,
+  ignoring `config.timeout` — a "never hang" contract violation caught by the 3rd capability
+  pass. Root cause: pure-Int nonlinear never reaches the deadline-honoring `check_with_nra`
+  (gated on `has_real`), so it fell to `dispatch_int_blast_width_ladder`, which ran ~31
+  bit-blast+SAT solves over a hard multiplier-equivalence **with no timeout check between
+  widths**; the real relaxation ran only after and abstracted `a*b`/`b*a` as distinct vars.
+  Three fixes in `auto.rs`/`int_real_relax.rs`: (1) **deadline** — the ladder now threads
+  `config.timeout` (Instant + `past_deadline`, wasm-shimmed) and bails to `Unknown(ResourceLimit)`
+  before each width; (2) **trimmed ladder** — dense `4..=16` (where small witnesses live) +
+  a sparse coarse tail to `DEFAULT_INT_WIDTH=32` (dropped the 36/40 tail + thinned 17..=31),
+  so the no-timeout case is fast and `nia_ground_consistency` (x*x=4/9/25) still passes; (3)
+  **commutative canonicalization + reorder** — `int_real_relax` sorts `mul`/`add` operands so
+  `a*b` and `b*a` translate to the SAME real term (sound — real `*`/`+` commute), and the
+  relaxation now runs **before** the ladder (it only ever returns `Unsat`, so reordering is
+  sound and SAT cases like `x*x=4` still reach the ladder). Result: `a*b≠b*a` → **Unsat fast**
+  (was a >100s hang), `∀x. x*k=k*x` → Sat, timeout honored. New `tests/nia_commutativity.rs`
+  (4, incl. a 500ms-timeout-returns check); fmt + clippy + full suite green under an OS-timeout
+  guard. Sub-agent + careful soundness/termination review.
+
 - **2026-06-19** — **P2.5: integer nonlinear UNSAT via real relaxation (gap G3).**
   Sign-based integer-NIA goals (`x*x<0`, `x*x+1≤0` over Int) returned `Unknown`, and
   consequently `∀x:Int. x*x≥0` stayed `Unknown` (the valid-universal pass's `c*c<0` witness is

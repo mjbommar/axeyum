@@ -38,6 +38,12 @@ use crate::qinst_egraph::prove_quantified_unsat_via_egraph;
 use crate::quant_guarded_int::expand_guarded_int_universals;
 use crate::sat_bv_backend::SatBvBackend;
 
+// Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
+
 /// The unified front door: decides any supported query — quantifier-free or
 /// quantified, over any combination of the supported theories.
 ///
@@ -905,30 +911,36 @@ fn check_auto_dispatch(
         // strictly additive — `DEFAULT_INT_WIDTH` is in the ladder, so any width-32
         // answer is still reachable — and a definite `Unsat`/`Unknown` from the
         // exact LIA engines above already short-circuited before here.
-        let ladder = dispatch_int_blast_width_ladder(arena, assertions, config)?;
-        if let CheckResult::Unknown(_) = ladder {
-            // Real-relaxation refutation (G3): the integers are a subset of the
-            // reals, so an integer query has *no model* whenever its faithful real
-            // relaxation has none. Integer-nonlinear goals that are unsat for sign
-            // reasons (`x*x < 0`, `x*x + 1 <= 0`) are refuted by the NRA sign rules
-            // over that relaxation, which the bounded bit-blast width ladder only
-            // ever reports as `Unknown`. The relaxation maps every `Int`
-            // var/const/op faithfully onto the reals; `unsat` of it transfers
-            // soundly to the integer query (integer solutions ⊆ real solutions),
-            // and it *only* ever returns `Unsat` (a real model need not be
-            // integral), so this is strictly additive — it never overturns the
-            // ladder's `Sat`/`Unsat` and only sharpens its `Unknown` to `Unsat` for
-            // the real-refutable cases. The relaxation runs on a clone of the arena
-            // and never leaks a symbol or term back.
-            if crate::int_real_relax::refute_int_via_real_relaxation(arena, assertions, config)? {
-                return Ok(CheckResult::Unsat);
-            }
+        // Real-relaxation refutation (G3): the integers are a subset of the reals,
+        // so an integer query has *no model* whenever its faithful real relaxation
+        // has none. Integer-nonlinear goals that are unsat for sign reasons (`x*x <
+        // 0`, `x*x + 1 <= 0`) — and, with commutative-operand canonicalization,
+        // commutativity goals like `a*b ≠ b*a` (both products relax to the *same*
+        // real term, so the disequality becomes `p ≠ p`, i.e. `false`) — are refuted
+        // by the NRA layer over that relaxation, which the bounded bit-blast width
+        // ladder only ever reports as `Unknown` (and, for the multiplier-equivalence
+        // shape, only after a slow per-width blast). The relaxation maps every `Int`
+        // var/const/op faithfully onto the reals; `unsat` of it transfers soundly to
+        // the integer query (integer solutions ⊆ real solutions), and it *only* ever
+        // returns `Unsat` (a real model need not be integral) — returning `false`
+        // for sat/unknown, which then fall to the ladder. So running it *before* the
+        // ladder is sound and changes nothing for the sat cases (`x*x = 4`, …) the
+        // ladder still decides; it only fast-paths (and avoids hanging on) the
+        // real-refutable cases. The relaxation runs on a clone of the arena and
+        // never leaks a symbol or term back.
+        if crate::int_real_relax::refute_int_via_real_relaxation(arena, assertions, config)? {
+            return Ok(CheckResult::Unsat);
         }
-        return Ok(ladder);
+        return dispatch_int_blast_width_ladder(arena, assertions, config);
     }
 
     let mut backend = SatBvBackend::new();
     check_with_all_theories(&mut backend, arena, assertions, DEFAULT_INT_WIDTH, config)
+}
+
+/// Whether `deadline` (if set) has passed.
+fn past_deadline(deadline: Option<Instant>) -> bool {
+    deadline.is_some_and(|d| Instant::now() >= d)
 }
 
 /// Smallest integer bit-blast width tried by the ladder. A narrow width leaves no
@@ -936,15 +948,36 @@ fn check_auto_dispatch(
 /// `x*x = 4`) is the only model and replays exactly.
 const INT_BLAST_MIN_WIDTH: u32 = 4;
 
+/// Top of the **dense** part of the ladder: every width in `[MIN, DENSE_MAX]` is
+/// tried. Small witnesses (and the constants/products around them) live here —
+/// e.g. `x = 5` for `x*x = 25` first replays at width 8 — so the dense range must
+/// reach comfortably past the small-witness cases while staying cheap (the
+/// multiplier blast grows steeply with width).
+const INT_BLAST_DENSE_MAX_WIDTH: u32 = 16;
+
 /// Largest integer bit-blast width tried by the ladder — a deterministic work cap.
-/// A genuinely large or unbounded nonlinear integer goal degrades to `Unknown`
-/// here rather than blasting an ever-wider (and ever-heavier) multiplier mountain.
-const INT_BLAST_MAX_WIDTH: u32 = 40;
+/// Above [`INT_BLAST_DENSE_MAX_WIDTH`] only a couple of coarse widths are tried
+/// (the wide-width multiplier solves are the expensive ones). A genuinely large or
+/// unbounded nonlinear integer goal degrades to `Unknown` here rather than blasting
+/// an ever-wider (and ever-heavier) multiplier mountain.
+const INT_BLAST_MAX_WIDTH: u32 = DEFAULT_INT_WIDTH;
 
 /// Decides a pure-integer-arithmetic fallback query (the LIA engines above could
-/// not settle it) by **iterating the bounded bit-blast width** from
-/// [`INT_BLAST_MIN_WIDTH`] up through [`DEFAULT_INT_WIDTH`] and on to
-/// [`INT_BLAST_MAX_WIDTH`], returning the first replay-checked `Sat`.
+/// not settle it) by **iterating the bounded bit-blast width** over a deterministic,
+/// trimmed ladder, returning the first replay-checked `Sat`.
+///
+/// The ladder is the dense range `[INT_BLAST_MIN_WIDTH, INT_BLAST_DENSE_MAX_WIDTH]`
+/// (where small witnesses live and the narrow-width blast is cheap) followed by a
+/// short coarse tail up to [`INT_BLAST_MAX_WIDTH`] (`= DEFAULT_INT_WIDTH`, always
+/// reached, preserving the previous single-width default). The wide-width
+/// multiplier solves are the expensive ones, so the tail is intentionally sparse —
+/// this is the difference between a few-second bound and the old `~31`-width
+/// multiplier-mountain hang.
+///
+/// When `config.timeout` is set, a wall-clock **deadline** is checked *before* each
+/// width's solve; an exceeded deadline returns a graceful `Unknown(ResourceLimit)`
+/// rather than spinning (the per-width multiplier blast can run far past the budget
+/// otherwise — the timeout-honouring guarantee).
 ///
 /// Soundness: [`check_with_all_theories`] only ever returns `Sat` after replaying
 /// the projected model against the **original** assertions through the ground
@@ -960,16 +993,28 @@ fn dispatch_int_blast_width_ladder(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
-    // Deterministic, finite ladder: every width in `[MIN, DEFAULT]` (so the small
-    // widths that exclude wrapping witnesses are tried, and `DEFAULT_INT_WIDTH` is
-    // always reached — preserving the previous single-width behaviour) followed by
-    // a coarse tail up to `MAX` for goals whose genuine witness needs more bits.
-    let mut widths: Vec<u32> = (INT_BLAST_MIN_WIDTH..=DEFAULT_INT_WIDTH).collect();
-    let mut w = DEFAULT_INT_WIDTH + 4;
+    // Deterministic, finite ladder: a dense narrow range (small witnesses, cheap
+    // blasts) plus a sparse coarse tail up to `MAX = DEFAULT_INT_WIDTH` (always
+    // reached, so the previous single-width-32 behaviour is preserved). The middle
+    // is intentionally thinned and the old `36`/`40` tail dropped — the wide
+    // multiplier solves dominate the cost.
+    let mut widths: Vec<u32> = (INT_BLAST_MIN_WIDTH..=INT_BLAST_DENSE_MAX_WIDTH).collect();
+    let mut w = INT_BLAST_DENSE_MAX_WIDTH + 8;
     while w <= INT_BLAST_MAX_WIDTH {
         widths.push(w);
-        w += 4;
+        w += 8;
     }
+    // `DEFAULT_INT_WIDTH` must always be in the ladder (it is the historical single
+    // width); add it if the coarse stride skipped it.
+    if !widths.contains(&DEFAULT_INT_WIDTH) {
+        widths.push(DEFAULT_INT_WIDTH);
+    }
+
+    // Wall-clock deadline (only when a timeout is configured): each per-width
+    // multiplier blast can otherwise run far past the configured budget. Checked
+    // before each solve so the loop always terminates near the deadline with a
+    // graceful `Unknown(ResourceLimit)` instead of hanging (mirrors nra.rs).
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
 
     let mut last = CheckResult::Unknown(UnknownReason {
         kind: UnknownKind::Incomplete,
@@ -978,6 +1023,12 @@ fn dispatch_int_blast_width_ladder(
             .to_owned(),
     });
     for width in widths {
+        if past_deadline(deadline) {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail: "integer bit-blast width ladder: wall-clock timeout reached".to_owned(),
+            }));
+        }
         // Each width's bit-blast declares fresh `!int_bv_*` bit-vector symbols, whose
         // names collide across widths if reused on the same arena. Run every width on
         // an isolated **clone** of the arena: the original assertion `TermId`s and the
