@@ -375,6 +375,10 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **BV `repeat`** (`bv_repeat`, z3 `(_ repeat n)`): derived concat fold,
+  no new IR Op/lowering. Completes the common z3 BV op set (nand/nor/xnor/comp/rotate
+  already present). Test incl. exhaustive BV4 symbolic duplication.
+
 - **2026-06-18** — **BV Pareto** (`optimize_bv_pareto`): completes the OMT trio across
   both theories — box, lexicographic, and Pareto now all span LIA + BV. Test: BV8 front
   {(1,3),(2,2),(3,1)}. 24 OMT tests.
