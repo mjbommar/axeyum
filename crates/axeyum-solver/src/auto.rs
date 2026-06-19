@@ -23,8 +23,9 @@ use std::collections::{BTreeSet, HashMap};
 
 use axeyum_ir::{Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 use axeyum_rewrite::{
-    QuantExpandError, build_app, canonicalize_terms, expand_quantifiers, instantiate_universals,
-    instantiate_with_triggers, replace_subterms,
+    DEFAULT_SOLVE_EQS_FUEL, QuantExpandError, build_app, canonicalize_terms, elim_unconstrained,
+    expand_quantifiers, instantiate_universals, instantiate_with_triggers, propagate_values,
+    replace_subterms, solve_eqs_bounded,
 };
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
@@ -217,20 +218,94 @@ pub fn check_auto(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
-    // Optional word-level preprocessing (P1.2, off by default): the
-    // denotation- and symbol-preserving canonicalizer. It eliminates no
-    // variables, so the model returned below is unchanged and still satisfies
-    // the original assertions; it normalizes commutative-operand order and folds
-    // identities (e.g. `(= (bvmul a b) (bvmul b a))` → `true`, no bit-blasting).
-    let preprocessed;
-    let assertions: &[TermId] = if config.preprocess {
-        preprocessed = canonicalize_terms(arena, assertions)
-            .map_err(|error| SolverError::Backend(format!("canonicalize failed: {error}")))?
-            .terms;
-        &preprocessed
+    // Word-level preprocessing (P1.2) is owned here, at the default-path entry, when
+    // `config.preprocess` is set; otherwise dispatch directly. The full model-sound
+    // pipeline (not just canonicalization) is what moves the public QF_BV number —
+    // it shrinks formulas below the bit-blast-size ceiling (ADR-0037; fair p4dfa
+    // measurement: 3 s 2→4, 20 s 3→7 decided, DISAGREE=0).
+    if config.preprocess {
+        check_auto_preprocessed(arena, assertions, config)
     } else {
-        assertions
+        check_auto_inner(arena, assertions, config)
+    }
+}
+
+/// Run the model-sound word-level preprocessing pipeline (`canonicalize` →
+/// `propagate_values` → fuel-bounded `solve_eqs` → `elim_unconstrained` →
+/// re-`canonicalize`), dispatch the reduced query through [`check_auto_inner`]
+/// (with preprocessing cleared, so it is not re-applied), and on `sat` reconstruct
+/// the eliminated variables and replay against the **original** assertions — the
+/// same checkable-`sat` discipline as [`crate::check_with_preprocessing`]. `unsat`
+/// of the reduced (equisatisfiable) problem transfers directly.
+fn check_auto_preprocessed(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    let canonical = canonicalize_terms(arena, assertions)
+        .map_err(|error| SolverError::Backend(format!("canonicalize failed: {error}")))?
+        .terms;
+    let (after_values, mut trail) = propagate_values(arena, &canonical)
+        .map_err(|error| SolverError::Backend(format!("propagate_values failed: {error}")))?
+        .into_parts();
+    let (reduced, eq_trail) = solve_eqs_bounded(arena, &after_values, DEFAULT_SOLVE_EQS_FUEL)
+        .map_err(|error| SolverError::Backend(format!("solve_eqs failed: {error}")))?
+        .into_parts();
+    trail.append(eq_trail);
+    let (reduced, unconstrained_trail) = elim_unconstrained(arena, &reduced)
+        .map_err(|error| SolverError::Backend(format!("elim_unconstrained failed: {error}")))?
+        .into_parts();
+    trail.append(unconstrained_trail);
+    let reduced = canonicalize_terms(arena, &reduced)
+        .map_err(|error| SolverError::Backend(format!("post-solve canonicalize failed: {error}")))?
+        .terms;
+
+    let inner_config = {
+        let mut c = config.clone();
+        c.preprocess = false;
+        c
     };
+    let result = check_auto_inner(arena, &reduced, &inner_config)?;
+    let CheckResult::Sat(model) = result else {
+        return Ok(result);
+    };
+
+    // Reconstruct eliminated variables, then replay against the ORIGINAL assertions.
+    let reconstructed = trail
+        .reconstruct(arena, &model.to_assignment())
+        .map_err(|error| {
+            SolverError::Backend(format!(
+                "preprocessing model reconstruction failed: {error}"
+            ))
+        })?;
+    for &assertion in assertions {
+        if !matches!(
+            eval(arena, assertion, &reconstructed),
+            Ok(Value::Bool(true))
+        ) {
+            return Err(SolverError::Backend(format!(
+                "preprocessed sat model replay failed: assertion #{} did not evaluate to true",
+                assertion.index()
+            )));
+        }
+    }
+    let mut out = Model::new();
+    for (symbol, _name, _sort) in arena.symbols() {
+        if let Some(value) = reconstructed.get(symbol) {
+            out.set(symbol, value);
+        }
+    }
+    Ok(CheckResult::Sat(out))
+}
+
+/// The core auto-dispatcher (coercion handling + theory routing), preprocessing
+/// already applied by [`check_auto`]. Callers must not rely on `config.preprocess`
+/// here; it is cleared by [`check_auto_preprocessed`] before dispatch.
+fn check_auto_inner(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
     // `to_real` is a ring homomorphism, so fold `to_real(a) ± to_real(b)` into
     // `to_real(a ± b)` (bottom-up): a linear combination of coerced integers
     // collapses to one coercion, which the comparison rewrites below can then

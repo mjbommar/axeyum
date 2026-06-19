@@ -4,7 +4,9 @@
 //! the *original* assertions.
 
 use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
-use axeyum_solver::{CheckResult, SatBvBackend, SolverConfig, check_with_preprocessing};
+use axeyum_solver::{
+    CheckResult, SatBvBackend, SolverConfig, check_auto, check_with_preprocessing,
+};
 
 fn check(arena: &mut TermArena, assertions: &[TermId]) -> CheckResult {
     let mut backend = SatBvBackend::new();
@@ -238,5 +240,41 @@ fn unconstrained_elimination_preserves_unsat() {
         check(&mut arena, &[a1, a2, a3]),
         CheckResult::Unsat,
         "y > 200 ∧ y < 50 is unsat; eliminating x's add must not change that"
+    );
+}
+
+/// The **product path** (`check_auto` / `solve`) honors `config.preprocess` by
+/// running the full model-sound pipeline (not just canonicalization, ADR-0037):
+/// `solve_eqs` eliminates `x = y + 1`, the reduced problem is solved, and the
+/// returned model reconstructs `x` and satisfies the ORIGINAL assertions.
+#[test]
+fn check_auto_preprocess_eliminates_and_reconstructs_on_the_product_path() {
+    let mut arena = TermArena::new();
+    let x = arena.declare("x", Sort::BitVec(8)).unwrap();
+    let y = arena.declare("y", Sort::BitVec(8)).unwrap();
+    let (xv, yv) = (arena.var(x), arena.var(y));
+    let one = arena.bv_const(8, 1).unwrap();
+    let y_plus_1 = arena.bv_add(yv, one).unwrap();
+    let x_def = arena.eq(xv, y_plus_1).unwrap(); // x = y + 1  (solve_eqs eliminates x)
+    let ten = arena.bv_const(8, 10).unwrap();
+    let x_is_10 = arena.eq(xv, ten).unwrap(); // x = 10  ⇒  y = 9
+    let originals = [x_def, x_is_10];
+
+    let config = SolverConfig::default().with_preprocess(true);
+    let CheckResult::Sat(model) = check_auto(&mut arena, &originals, &config).unwrap() else {
+        panic!("x = y+1 ∧ x = 10 is sat (y=9, x=10)");
+    };
+    // The reconstructed model assigns the eliminated `x` and satisfies the originals.
+    assert_model_satisfies(&arena, &model, &originals);
+    assert_eq!(
+        model.to_assignment().get(x),
+        Some(Value::Bv {
+            width: 8,
+            value: 10
+        })
+    );
+    assert_eq!(
+        model.to_assignment().get(y),
+        Some(Value::Bv { width: 8, value: 9 })
     );
 }
