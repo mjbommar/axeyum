@@ -162,6 +162,45 @@ fn qf_ufbv_unsat_carries_a_zero_trust_alethe_certificate() {
 }
 
 #[test]
+#[allow(clippy::many_single_char_names)]
+fn qf_abv_read_consistency_unsat_carries_a_zero_trust_alethe_certificate() {
+    // select(a, i) = #b0…0 ∧ i = j ∧ ¬(select(a, j) = #b0…0): unsat by read
+    // consistency over the array `a`. produce_evidence must now certify it with a
+    // check_alethe-validated Alethe proof that DERIVES the read-consistency reduction
+    // by eq_congruent over the unary select function — so the evidence carries NO
+    // trusted reduction step, not the old DRAT cert recording TrustId::ArrayElim.
+    let mut arena = TermArena::new();
+    let a = arena.array_var("a", 4, 8).unwrap();
+    let i = arena.bv_var("i", 4).unwrap();
+    let j = arena.bv_var("j", 4).unwrap();
+    let c = arena.bv_const(8, 0).unwrap();
+    let sa = arena.select(a, i).unwrap();
+    let sb = arena.select(a, j).unwrap();
+    let e1 = arena.eq(sa, c).unwrap();
+    let e2 = arena.eq(i, j).unwrap();
+    let e3 = {
+        let e = arena.eq(sb, c).unwrap();
+        arena.not(e).unwrap()
+    };
+    let assertions = [e1, e2, e3];
+
+    let report = produce_evidence(&mut arena, &assertions, &config()).unwrap();
+    let Evidence::UnsatAletheProof(_) = &report.evidence else {
+        panic!(
+            "expected a zero-trust Alethe-certified array unsat, got {:?}",
+            report.evidence
+        );
+    };
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&arena, &assertions).unwrap());
+    assert!(
+        report.trusted_steps.is_empty(),
+        "expected zero trust holes (read consistency proven via eq_congruent), got {:?}",
+        step_ids(&report)
+    );
+}
+
+#[test]
 fn large_out_of_fragment_qf_bv_unsat_falls_back_to_drat() {
     // (= (bvshl x one) zero) ∧ (= x mask) style: a `bvshl` subterm is outside
     // the Alethe driver's fragment, so the >20-bit unsat falls back to the plain

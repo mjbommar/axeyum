@@ -719,6 +719,12 @@ fn zero_trust_alethe_certificate(
     {
         return Some(proof);
     }
+    // NB: the datatype read-over-construct cert
+    // (`prove_qf_dt_unsat_alethe_via_simplification`) is NOT tried here — the
+    // generic `solve` on this path errors on a raw `DtSelect`/`DtConstruct` (it
+    // does not run datatype simplification), so a datatype query never reaches this
+    // helper. Wiring that cert needs `produce_evidence` to route datatypes through
+    // their simplification first (tracked in STATUS).
     None
 }
 
