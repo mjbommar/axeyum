@@ -11,7 +11,11 @@ use axeyum_solver::{CheckResult, Evidence, SolverConfig, produce_evidence, solve
 /// `a`, `b`; returns `(mk_ctor, a_var, b_var)`.
 fn pair_sort(
     arena: &mut TermArena,
-) -> (axeyum_ir::ConstructorId, axeyum_ir::TermId, axeyum_ir::TermId) {
+) -> (
+    axeyum_ir::ConstructorId,
+    axeyum_ir::TermId,
+    axeyum_ir::TermId,
+) {
     let pair = arena.declare_datatype("Pair");
     let mk = arena.add_constructor(
         pair,

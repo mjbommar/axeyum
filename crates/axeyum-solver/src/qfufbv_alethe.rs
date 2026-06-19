@@ -255,9 +255,7 @@ fn args_pairwise_connected(
     b: &[TermId],
 ) -> bool {
     a.iter().zip(b.iter()).all(|(&x, &y)| {
-        x == y
-            || eq_path(adjacency, x, y).is_some()
-            || cong.is_some_and(|c| c.terms_equal(x, y))
+        x == y || eq_path(adjacency, x, y).is_some() || cong.is_some_and(|c| c.terms_equal(x, y))
     })
 }
 
@@ -992,7 +990,13 @@ fn emit_step_unit(
                 Some(assume_id)
             } else {
                 Some(flip_unit(
-                    out, fresh, &assume_id, &lhs, &rhs, from_alethe, to_alethe,
+                    out,
+                    fresh,
+                    &assume_id,
+                    &lhs,
+                    &rhs,
+                    from_alethe,
+                    to_alethe,
                 ))
             }
         }
@@ -1012,7 +1016,12 @@ fn emit_step_unit(
                 arg_pairs.push((lhs, rhs));
             }
             Some(emit_congruence_step(
-                out, fresh, &arg_units, &arg_pairs, from_alethe, to_alethe,
+                out,
+                fresh,
+                &arg_units,
+                &arg_pairs,
+                from_alethe,
+                to_alethe,
             ))
         }
     }
