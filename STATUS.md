@@ -6,6 +6,29 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-19 — robustness + proof-cert widening (resume here).** Seven
+  validated commits; whole `axeyum-solver` crate green on test/clippy/doc/fmt (and the
+  workspace fmt gate, previously red on committed `axeyum-scenarios` drift, is now clean).
+  - **NRA OOM gap CLOSED** — deterministic `MAX_CROSS_PRODUCTS` admission bound (graceful
+    `unknown`, never OOM, bounded *or* unbounded). The standing-rule violation is retired.
+    See the 2026-06-19 changelog + `scripts/mem-run.sh` / `just test-guarded` (64 GiB cap).
+  - **Transitive-closure cert widening DONE & fully validated** — both the Ackermann
+    (`prove_qf_ufbv_unsat_alethe`) and array-elim (`prove_qf_abv_unsat_alethe_via_elimination`)
+    certificates now discharge argument/index equalities holding by *transitive closure*
+    of asserted equalities (`a=b ∧ b=c ⊢ a=c`) via `eq_transitive` chains, not only direct
+    assertions. Strictly additive (existing certs byte-unchanged), validated at **all three
+    levels**: in-tree `check_alethe`, external **Carcara**, and **Lean-kernel**
+    reconstruction to `False`.
+  - **Precise next proof-track task (resume):** **certify general read-over-write
+    (ROW-distinct)** for the array-elim trust hole — `select(store(a,i,v),j) →
+    ite(i=j, v, select(a,j))` with `i≠j`. The cert currently *declines* when a store
+    rewrite is load-bearing (`qfabv_elim_alethe.rs` module doc); the ROW-*same* fragment is
+    already certified (`prove_qf_abv_unsat_alethe`), and the Alethe checker has partial `ite`
+    support (`axeyum-cnf/src/alethe.rs:1436`, rules ~4371–4453) to build on. This is the
+    other half of the `array-elim` (and, by analogy, `ackermann`) reduction certification.
+    Other open trust holes (lowest pedantic first): `int-blast` (3), `xor-gaussian` (3),
+    `datatype-elim` (4), `fpa2bv` (5) — each needs a from-scratch certificate.
+
 - **Destination-2 advanced & a destination-3 milestone landed (2026-06-18).** See
   the two 2026-06-18 changelog entries for detail. In short:
   - **Real Lean 4 kernel now checks reconstructed refutations** (`render_lean_module`
