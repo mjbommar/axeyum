@@ -9,13 +9,13 @@
 //!   * **A monotonicity inequality (NRA):** axeyum's NRA proves
 //!     `x ≥ 1 ∧ y ≥ 1 ⇒ x·y ≥ 1` (threshold-1 lemma) — see
 //!     [`nra_proves_a_monotonicity_inequality`].
-//!   * **The sum-of-squares inequalities (NRA frontier):** `a²+b² ≥ 2ab`,
-//!     AM–GM₂, Bernoulliₙ₌₂, Cauchy–Schwarz — axeyum's linearization NRA
-//!     (ADR-0024) abstracts `a²,b²,ab` to *independent* variables, losing the SOS
-//!     correlation, so it does **not** prove these (and the search does not
-//!     promptly terminate). They are kept as `#[ignore]`d benchmarks documenting
-//!     the gap that SOS/CAD (P2.5) must close. **Do not un-ignore until NRA gains
-//!     an SOS/positivstellensatz path** (they would hang the gate).
+//!   * **Sum-of-squares inequalities:** `a²+b² ≥ 2ab` / AM–GM₂ is now **proved**
+//!     ([`square_nonnegativity_is_proved_by_sos`]) — NRA gained pairwise
+//!     **sum-of-squares lemmas** (`sos_lemmas`) that add `(a±b)² ≥ 0` over the
+//!     abstracted products, restoring the cross-product correlation the independent
+//!     abstraction drops. The higher-degree / multi-variable SOS cases
+//!     (Bernoulliₙ₌₂, general Cauchy–Schwarz) still need the broader
+//!     SOS/positivstellensatz/CAD path (P2.5) and are not yet covered.
 //!
 //! Findings pinned down: `prove` routes real goals to `QF_LRA` and *rejects*
 //! nonlinear multiplication (no LRA→NRA dispatch); and axeyum's NRA proves
@@ -125,13 +125,13 @@ fn nra_proves_a_monotonicity_inequality() {
 // --- The sum-of-squares frontier (ignored: documents the NRA gap) -------------
 
 #[test]
-fn square_nonnegativity_is_the_nra_frontier() {
-    // a² + b² ≥ 2ab — true (it is (a−b)² ≥ 0), but axeyum's NRA cannot *prove* it:
-    // abstracting a², b², ab to independent variables drops the correlation. With
-    // #15 (NRA honors the wall-clock deadline) it now returns `Unknown` promptly
-    // instead of running away — so the frontier is recorded as an active test
-    // (was previously `#[ignore]`d for non-termination). It must never be Sat
-    // (soundness) and is not yet Unsat (would mean NRA gained SOS/CAD → promote).
+fn square_nonnegativity_is_proved_by_sos() {
+    // a² + b² ≥ 2ab — true (it is (a−b)² ≥ 0). PROMOTED from the old "frontier"
+    // (prompt `Unknown`): NRA now carries **sum-of-squares lemmas** (`sos_lemmas`),
+    // which add `r_aa + r_bb − 2·r_ab ≥ 0` over the abstracted products, so the
+    // negation `a² + b² < 2ab` is refuted `Unsat`. The independent-product
+    // abstraction alone could not (it drops the cross-product correlation); the SOS
+    // lemma restores exactly that coupling.
     let mut a = TermArena::new();
     let x = real(&mut a, "a");
     let y = real(&mut a, "b");
@@ -144,7 +144,7 @@ fn square_nonnegativity_is_the_nra_frontier() {
     let strict = a.real_lt(lhs, rhs).unwrap();
     let verdict = check_with_nra(&mut a, &[strict], &config()).unwrap();
     assert!(
-        matches!(verdict, CheckResult::Unknown(_)),
-        "SOS frontier: expected a prompt Unknown (NRA can't prove it, must not be Sat), got {verdict:?}"
+        matches!(verdict, CheckResult::Unsat),
+        "a²+b² < 2ab is unsat (it is −(a−b)² < 0); the SOS lemma must refute it, got {verdict:?}"
     );
 }

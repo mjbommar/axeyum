@@ -452,3 +452,49 @@ fn sum_of_three_unbounded_squares_plus_one_is_unsat() {
         "x²+y²+z²+1=0 (unbounded) must be unsat, got {r:?}"
     );
 }
+
+/// **Sum-of-squares lemma (AM–GM₂).** `a²+b² ≥ 2ab` holds for all reals (it is
+/// `(a−b)² ≥ 0`), so its negation `a²+b² < 2ab` is UNSAT. Plain product abstraction
+/// abstracts `a²`, `b²`, `ab` independently and leaves this `unknown`; the SOS lemma
+/// `r_aa + r_bb − 2·r_ab ≥ 0` closes it.
+#[test]
+fn sum_of_squares_am_gm_is_unsat() {
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let y = real(&mut a, "y");
+    let xx = a.real_mul(x, x).unwrap();
+    let yy = a.real_mul(y, y).unwrap();
+    let xy = a.real_mul(x, y).unwrap();
+    let sum = a.real_add(xx, yy).unwrap(); // x² + y²
+    let two = a.real_const(Rational::integer(2));
+    let two_xy = a.real_mul(two, xy).unwrap(); // 2xy
+    let neg = a.real_lt(sum, two_xy).unwrap(); // x² + y² < 2xy  (negation of AM–GM)
+
+    let r = check_with_nra(&mut a, &[neg], &SolverConfig::default()).unwrap();
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x²+y² < 2xy must be unsat (it is −(x−y)² < 0), got {r:?}"
+    );
+}
+
+/// The SOS lemma must not over-claim: `x²+y² = 2xy` IS satisfiable (any `x=y`), so
+/// the solver must not wrongly refute it.
+#[test]
+fn sum_of_squares_equality_is_satisfiable() {
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let y = real(&mut a, "y");
+    let xx = a.real_mul(x, x).unwrap();
+    let yy = a.real_mul(y, y).unwrap();
+    let xy = a.real_mul(x, y).unwrap();
+    let sum = a.real_add(xx, yy).unwrap();
+    let two = a.real_const(Rational::integer(2));
+    let two_xy = a.real_mul(two, xy).unwrap();
+    let eq = a.eq(sum, two_xy).unwrap(); // x² + y² = 2xy  (true iff x = y)
+
+    let r = check_with_nra(&mut a, &[eq], &SolverConfig::default()).unwrap();
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "x²+y² = 2xy is sat (x=y), must not be refuted, got {r:?}"
+    );
+}

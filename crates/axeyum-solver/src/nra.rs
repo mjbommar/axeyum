@@ -126,6 +126,11 @@ pub fn check_with_nra(
             base.push(rewritten);
         }
     }
+    // Sum-of-squares lemmas coupling the per-pair products (a², b², ab). These are
+    // already stated over the result vars, so they bypass the operand→var remap.
+    for lemma in sos_lemmas(arena, &triples)? {
+        base.push(lemma);
+    }
 
     // Initial box: constant bounds on each product-operand *variable*, read off
     // the top-level assertions. These are assertion-implied, so the root box
@@ -574,6 +579,53 @@ fn product_lemmas(
     out.push(imp(arena, b01_age, r_le_a)?); // (0≤b≤1 ∧ a≥0) → r≤a
     let b01_ale = arena.and(b01, a_le)?;
     out.push(imp(arena, b01_ale, r_ge_a)?); // (0≤b≤1 ∧ a≤0) → r≥a
+    Ok(out)
+}
+
+/// **Sum-of-squares lemmas** linking the abstracted products of a variable *pair*.
+///
+/// For operands `a`, `b` whose squares `a·a`, `b·b` and cross product `a·b` are all
+/// abstracted (to result vars `r_aa`, `r_bb`, `r_ab`), the identities `(a−b)² ≥ 0`
+/// and `(a+b)² ≥ 0` expand to two **sound linear facts over the abstraction vars**:
+///
+/// ```text
+///   r_aa + r_bb − 2·r_ab ≥ 0     (from (a−b)² = a² − 2ab + b²)
+///   r_aa + r_bb + 2·r_ab ≥ 0     (from (a+b)² = a² + 2ab + b²)
+/// ```
+///
+/// They hold in *every* real model (`r_aa = a²`, etc.), so adding them keeps the
+/// abstraction a relaxation — but they capture the cross-product coupling that
+/// independent product abstraction throws away, so the LRA relaxation can now refute
+/// AM–GM-class goals (`a²+b² ≥ 2ab`, the 2-variable Cauchy–Schwarz) that the
+/// sign/monotonicity/McCormick lemmas leave `unknown`. The lemmas are over the
+/// result vars already, so they need no operand→var remap.
+fn sos_lemmas(
+    arena: &mut TermArena,
+    triples: &[(TermId, TermId, TermId)],
+) -> Result<Vec<TermId>, IrError> {
+    // square_of[x] = the result var abstracting x·x.
+    let mut square_of: HashMap<TermId, TermId> = HashMap::new();
+    for &(a, b, r) in triples {
+        if a == b {
+            square_of.insert(a, r);
+        }
+    }
+    let zero = arena.real_const(axeyum_ir::Rational::integer(0));
+    let mut out = Vec::new();
+    for &(a, b, r_ab) in triples {
+        if a == b {
+            continue; // a square is its own operand; the SOS pair is a≠b
+        }
+        let (Some(&r_aa), Some(&r_bb)) = (square_of.get(&a), square_of.get(&b)) else {
+            continue; // need both squares abstracted to state the identity
+        };
+        let sum = arena.real_add(r_aa, r_bb)?; // a² + b²
+        let two_ab = arena.real_add(r_ab, r_ab)?; // 2·ab
+        let diff_sq = arena.real_sub(sum, two_ab)?; // (a−b)²
+        out.push(arena.real_ge(diff_sq, zero)?);
+        let sum_sq = arena.real_add(sum, two_ab)?; // (a+b)²
+        out.push(arena.real_ge(sum_sq, zero)?);
+    }
     Ok(out)
 }
 
