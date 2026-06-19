@@ -182,6 +182,77 @@ impl<B: SolverBackend> Solver<B> {
         crate::prove_unsat_to_lean_module(arena, &self.assertions)
     }
 
+    /// Maximizes the integer-linear `objective` subject to the active assertions
+    /// (see [`crate::maximize_lia`]).
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`SolverError`] from the optimizer.
+    pub fn maximize_lia(
+        &self,
+        arena: &mut TermArena,
+        objective: TermId,
+    ) -> Result<crate::OptOutcome, SolverError> {
+        crate::maximize_lia(arena, &self.assertions, objective)
+    }
+
+    /// Minimizes the integer-linear `objective` subject to the active assertions
+    /// (see [`crate::minimize_lia`]).
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`SolverError`] from the optimizer.
+    pub fn minimize_lia(
+        &self,
+        arena: &mut TermArena,
+        objective: TermId,
+    ) -> Result<crate::OptOutcome, SolverError> {
+        crate::minimize_lia(arena, &self.assertions, objective)
+    }
+
+    /// Lexicographic multi-objective optimization over the active assertions (see
+    /// [`crate::optimize_lia_lexicographic`]).
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`SolverError`] from the optimizer.
+    pub fn optimize_lexicographic(
+        &self,
+        arena: &mut TermArena,
+        objectives: &[crate::LexObjective],
+    ) -> Result<crate::LexOutcome, SolverError> {
+        crate::optimize_lia_lexicographic(arena, &self.assertions, objectives)
+    }
+
+    /// Pareto-front multi-objective optimization over the active assertions (see
+    /// [`crate::optimize_lia_pareto`]).
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`SolverError`] from the optimizer.
+    pub fn optimize_pareto(
+        &self,
+        arena: &mut TermArena,
+        objectives: &[crate::LexObjective],
+    ) -> Result<crate::ParetoOutcome, SolverError> {
+        crate::optimize_lia_pareto(arena, &self.assertions, objectives)
+    }
+
+    /// Maximizes the number of satisfied `soft` constraints subject to the active
+    /// assertions (`MaxSAT`), returning the witnessing model (see
+    /// [`crate::max_satisfiable_model`]).
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`SolverError`] from the optimizer.
+    pub fn max_satisfiable(
+        &self,
+        arena: &mut TermArena,
+        soft: &[TermId],
+    ) -> Result<crate::MaxSatOutcome, SolverError> {
+        crate::max_satisfiable_model(arena, &self.assertions, soft)
+    }
+
     /// Checks the active assertions together with one-shot `assumptions`.
     ///
     /// The assumptions hold only for this check and are not retained, matching
@@ -249,5 +320,30 @@ mod tests {
             .prove_unsat_to_lean(&mut arena)
             .expect("the UNSAT bit-vector query reconstructs to a kernel-checked Lean `False`");
         assert_eq!(fragment, ProofFragment::QfBv);
+    }
+
+    /// The façade exposes optimization end-to-end: assert `0 ≤ x ≤ 7`, then
+    /// `maximize_lia` over the active assertions → 7.
+    #[test]
+    fn facade_maximize_lia() {
+        use crate::OptOutcome;
+
+        let mut arena = TermArena::new();
+        let x = {
+            let s = arena.declare("x", Sort::Int).unwrap();
+            arena.var(s)
+        };
+        let zero = arena.int_const(0);
+        let seven = arena.int_const(7);
+        let lo = arena.int_ge(x, zero).unwrap();
+        let hi = arena.int_le(x, seven).unwrap();
+
+        let mut solver = Solver::new(SatBvBackend::new());
+        solver.assert(lo);
+        solver.assert(hi);
+        assert_eq!(
+            solver.maximize_lia(&mut arena, x).unwrap(),
+            OptOutcome::Optimal(7)
+        );
     }
 }
