@@ -375,6 +375,10 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **BV Pareto** (`optimize_bv_pareto`): completes the OMT trio across
+  both theories — box, lexicographic, and Pareto now all span LIA + BV. Test: BV8 front
+  {(1,3),(2,2),(3,1)}. 24 OMT tests.
+
 - **2026-06-18** — **Cardinality convenience**: `between(lo,hi)`, `at_most_one`,
   `exactly_one` (one-hot) — compose the existing at-most/at-least/exactly forms. 2 tests.
 
