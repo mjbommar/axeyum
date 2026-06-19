@@ -395,9 +395,14 @@ plan is built and committed on the current branch:
   cores specialized). Baselines
   `bench-results/baselines/qf-bv-p4dfa-fair-sat-bv-preprocess-vs-z3-{3s,20s}-*.json`,
   `just bench-public-qfbv-preprocess-fair-{3s,20s}`. Probe:
-  `axeyum-bench/examples/preprocess_timing.rs`. **Next: route the full model-sound
-  pipeline into the default `solve()` path (currently canonicalize-only) → flip
-  `preprocess` default-on (meets ADR-0034's criterion).**
+  `axeyum-bench/examples/preprocess_timing.rs`. **Wired into the product:** the full
+  model-sound pipeline now runs on the default `solve()`/`check_auto` path when
+  `preprocess` is set (`check_auto_preprocessed`, reconstructs + replays), and
+  **`Strategy::Auto` composes both levers** — lazy-bv for arithmetic-heavy queries,
+  eager-with-preprocessing for structural ones. Full solver suite green. **Next:
+  deeper word-level reduction (the 6 EncodingBudget + 99 Timeout instances; the
+  concurrent agent's `axeyum-rewrite` P1.2 area — coordinate); flip `preprocess`
+  default-on after a full-suite behavior check (ADR-0034 criterion met).**
 - **2026-06-18** — **Destination-2 fair re-measurement: lazy-bv vs Z3 on the public
   p4dfa 113 at the standing budgets — confirmed a no-op on this corpus.** Ran the
   built-but-fair-unmeasured `LazyBvBackend` head-to-head vs Z3 4.13.3 on the
