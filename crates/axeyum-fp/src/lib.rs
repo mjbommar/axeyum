@@ -1149,13 +1149,20 @@ pub fn from_real(
     mode: RoundingMode,
     r: Rational,
 ) -> Result<Option<TermId>, IrError> {
-    match round_rational_to_format(
-        dst.exp_bits,
-        dst.sig_bits,
-        r.numerator(),
-        r.denominator(),
-        mode,
-    ) {
+    let (eb, sb) = (dst.exp_bits, dst.sig_bits);
+    let num = r.numerator();
+    let den = r.denominator();
+    let bits = round_rational_to_format(eb, sb, num, den, mode).or_else(|| {
+        // Non-dyadic (or out of the exact-f64 window): round the exact rational by
+        // pure-integer RNE — no double-rounding. NearestEven only; directed modes
+        // over a non-dyadic value decline.
+        if mode == RoundingMode::NearestEven && num != 0 && den > 0 {
+            round_rational_rne(eb, sb, num < 0, num.unsigned_abs(), den.unsigned_abs())
+        } else {
+            None
+        }
+    });
+    match bits {
         Some(bits) => Ok(Some(arena.bv_const(dst.width(), bits)?)),
         None => Ok(None),
     }
@@ -2611,7 +2618,7 @@ pub fn round_rational_to_format(
         return Some(round_to_format(eb, sb, 0.0, mode)); // +0
     }
     let uden = den as u128; // den > 0 checked
-    if uden & (uden - 1) != 0 {
+    if !uden.is_power_of_two() {
         return None; // denominator not a power of two → non-dyadic
     }
     if num.unsigned_abs() >= (1u128 << 53) {
@@ -2624,6 +2631,118 @@ pub fn round_rational_to_format(
     // a power-of-two scale in range, so this division is exact.
     let v = (num as f64) / (den as f64);
     Some(round_to_format(eb, sb, v, mode))
+}
+
+/// `a << s` as a `u128`, or `None` if it would overflow 128 bits.
+fn shl_u128_checked(a: u128, s: u32) -> Option<u128> {
+    if a == 0 {
+        return Some(0);
+    }
+    if s >= 128 || a.leading_zeros() < s {
+        return None;
+    }
+    Some(a << s)
+}
+
+/// Whether `a/den ≥ 2^e` for `a, den > 0` and any `e`, computed without overflow.
+fn ratio_ge_pow2(a: u128, den: u128, e: i64) -> bool {
+    if e >= 0 {
+        // a ≥ den·2^e; an overflowing `den·2^e` exceeds `a`, so the answer is no.
+        match shl_u128_checked(den, u32::try_from(e).unwrap_or(u32::MAX)) {
+            Some(t) => a >= t,
+            None => false,
+        }
+    } else {
+        // a·2^(-e) ≥ den; an overflowing `a·2^(-e)` exceeds `den`, so the answer is yes.
+        match shl_u128_checked(a, u32::try_from(-e).unwrap_or(u32::MAX)) {
+            Some(t) => t >= den,
+            None => true,
+        }
+    }
+}
+
+/// `floor(log2(a/den))` for `a, den > 0`.
+fn floor_log2_ratio(a: u128, den: u128) -> i64 {
+    let la = 128 - i64::from(a.leading_zeros());
+    let ld = 128 - i64::from(den.leading_zeros());
+    let mut e = la - ld; // within ±1 of the true value
+    while ratio_ge_pow2(a, den, e + 1) {
+        e += 1;
+    }
+    while !ratio_ge_pow2(a, den, e) {
+        e -= 1;
+    }
+    e
+}
+
+/// Exact **round-to-nearest-even** of `a/den` (sign `neg`; `a, den > 0`) to an
+/// `(eb, sb)` IEEE float by pure-integer arithmetic — correct for non-dyadic
+/// rationals, with no f64 double-rounding. `sb` counts the implicit bit. Returns
+/// `None` if an intermediate would exceed `u128` (the caller then declines).
+fn round_rational_rne(eb: u32, sb: u32, neg: bool, a: u128, den: u128) -> Option<u128> {
+    if a == 0 {
+        return None; // num == 0 is handled by the caller (→ +0)
+    }
+    let total = eb + sb;
+    let bias = (1i64 << (eb - 1)) - 1;
+    let emax = bias; // largest normal unbiased exponent
+    let emin = 1 - bias; // smallest normal unbiased exponent
+    let sign_bit: u128 = if neg { 1u128 << (total - 1) } else { 0 };
+    let implicit = 1u128 << (sb - 1);
+
+    // RNE significand `round(a/den · 2^(sb-1-exp))` as an integer, or None on overflow.
+    let round_at = |exp: i64| -> Option<u128> {
+        let shift = i64::from(sb) - 1 - exp;
+        let (numer, denom) = if shift >= 0 {
+            (shl_u128_checked(a, u32::try_from(shift).ok()?)?, den)
+        } else {
+            (a, shl_u128_checked(den, u32::try_from(-shift).ok()?)?)
+        };
+        let q = numer / denom;
+        let rem = numer % denom;
+        // Round-nearest-even: compare 2·rem with denom via rem vs denom−rem.
+        let up = if rem == 0 {
+            false
+        } else {
+            match rem.cmp(&(denom - rem)) {
+                core::cmp::Ordering::Greater => true,
+                core::cmp::Ordering::Less => false,
+                core::cmp::Ordering::Equal => (q & 1) == 1, // tie → to even
+            }
+        };
+        Some(q + u128::from(up))
+    };
+
+    let e = floor_log2_ratio(a, den);
+
+    if e < emin {
+        // Subnormal: significand aligned at the fixed exponent `emin`.
+        let m = round_at(emin)?;
+        if m == 0 {
+            return Some(sign_bit); // rounds to ±0
+        }
+        if m >= implicit {
+            // Rounded up into the smallest normal (exponent field 1).
+            return Some(sign_bit | implicit | (m - implicit));
+        }
+        return Some(sign_bit | m); // exponent field 0, trailing = m
+    }
+
+    let mut m = round_at(e)?;
+    let mut e_adj = e;
+    if m == (1u128 << sb) {
+        // Significand carried past the top bit; renormalize up one exponent.
+        m = implicit;
+        e_adj += 1;
+    }
+    if e_adj > emax {
+        // Overflow → ±∞.
+        let exp_ones = ((1u128 << eb) - 1) << (sb - 1);
+        return Some(sign_bit | exp_ones);
+    }
+    #[allow(clippy::cast_sign_loss)]
+    let expfield = (e_adj + bias) as u128; // in [1, 2^eb − 2]
+    Some(sign_bit | (expfield << (sb - 1)) | (m - implicit))
 }
 
 /// Constant-folds `fp.to_real` (FP → mathematical Real, ADR-0015) for a finite
@@ -3134,8 +3253,9 @@ mod tests {
             round_rational_to_format(8, 24, 0, 1, RoundingMode::NearestEven),
             Some(0)
         );
-        // Non-dyadic and out-of-range rationals are reported unsupported (None),
-        // never double-rounded.
+        // `round_rational_to_format` stays dyadic-only and sound: non-dyadic and
+        // out-of-(f64-)window rationals report `None` (never double-rounded). The
+        // exact integer RNE path lives separately (see `from_real`).
         assert_eq!(
             round_rational_to_format(8, 24, 1, 3, RoundingMode::NearestEven),
             None,
@@ -3159,9 +3279,9 @@ mod tests {
     }
 
     /// `from_real` builds an `F32` constant whose evaluated bits equal the native
-    /// cast for dyadic rationals, and declines (`None`) for non-dyadic ones.
+    /// cast — for both dyadic and round-nearest-even non-dyadic rationals.
     #[test]
-    fn from_real_builds_dyadic_constants_and_declines_non_dyadic() {
+    fn from_real_builds_f32_constants_matching_native() {
         let read = |a: &TermArena, t| match eval(a, t, &Assignment::new()) {
             Ok(Value::Bv { value, .. }) => value,
             other => panic!("expected a bit-vector value, got {other:?}"),
@@ -3175,6 +3295,10 @@ mod tests {
             (3, 1),
             (255, 256),
             ((1i128 << 24) + 1, 1i128 << 24), // 25-bit numerator → rounds
+            (1, 3),                           // non-dyadic, rounded (RNE)
+            (1, 10),
+            (-2, 7),
+            (22, 7),
         ] {
             let mut a = TermArena::new();
             let bits = from_real(
@@ -3192,19 +3316,58 @@ mod tests {
                 "from_real F32 {num}/{den}",
             );
         }
-        // Non-dyadic denominators decline (a future slice rounds them exactly).
-        for &(num, den) in &[(1i128, 3i128), (1, 10), (2, 7)] {
-            let mut a = TermArena::new();
+        // A directed mode over a non-dyadic value declines (only RNE is supported).
+        let mut a = TermArena::new();
+        assert_eq!(
+            from_real(
+                &mut a,
+                FloatFormat::F32,
+                RoundingMode::TowardZero,
+                Rational::new(1, 3)
+            )
+            .unwrap(),
+            None,
+            "non-dyadic + directed mode declines",
+        );
+    }
+
+    /// The pure-integer RNE rational rounder agrees with the validated f64 path on
+    /// dyadic rationals (normal / rounding / tie / F16-subnormal), and rounds
+    /// non-dyadic values to the native cast.
+    #[test]
+    fn round_rational_rne_matches_validated_path() {
+        let dyadic: &[(u32, u32, i128, i128)] = &[
+            (8, 24, 3, 2),
+            (8, 24, -5, 4),
+            (8, 24, (1 << 24) + 1, 1 << 24),
+            (8, 24, (1 << 25) + 1, 1 << 25),
+            (8, 24, (1 << 24) + 3, 1 << 24),
+            (5, 11, 1, 1),
+            (5, 11, 1, 1024),
+            (5, 11, 1, 32768), // F16 subnormal (2^-15)
+            (5, 11, 3, 32768), // F16 subnormal, rounds
+            (5, 11, (1 << 11) + 1, 1 << 11),
+            (11, 53, 7, 8),
+            (11, 53, -1, 1024),
+        ];
+        for &(eb, sb, num, den) in dyadic {
+            let oracle = round_rational_to_format(eb, sb, num, den, RoundingMode::NearestEven);
+            let got = round_rational_rne(eb, sb, num < 0, num.unsigned_abs(), den as u128);
+            assert_eq!(got, oracle, "dyadic {num}/{den} fmt({eb},{sb})");
+        }
+        // Non-dyadic RNE (via the integer path directly) vs the (non-midpoint, hence
+        // correct) f64 bridge.
+        for &(num, den) in &[(1i128, 3i128), (1, 10), (2, 7), (-1, 3), (22, 7)] {
+            let v = num as f64 / den as f64;
             assert_eq!(
-                from_real(
-                    &mut a,
-                    FloatFormat::F32,
-                    RoundingMode::NearestEven,
-                    Rational::new(num, den)
-                )
-                .unwrap(),
-                None,
-                "non-dyadic {num}/{den} declines",
+                round_rational_rne(8, 24, num < 0, num.unsigned_abs(), den as u128),
+                Some(u128::from((v as f32).to_bits())),
+                "non-dyadic F32 {num}/{den}",
+            );
+            assert_eq!(
+                round_rational_rne(11, 53, num < 0, num.unsigned_abs(), den as u128),
+                Some(u128::from(v.to_bits())),
+                "non-dyadic F64 {num}/{den}",
             );
         }
     }
