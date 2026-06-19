@@ -377,6 +377,13 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **P1.6 combination — model-based interface-equality proposal**
+  (`propose_interface_equalities`). Given a one-theory model, proposes equalities between
+  equal-valued shared terms (spanning chain per value group, deterministic) — the
+  *propose* half of Z3-style model-based combination, building on T1.6.1's `shared_terms`.
+  Next: assert/confirm-or-split the proposed equalities against the congruence closure
+  (T1.6.3), which needs the online CDCL(T) drive (P1.5 T1.5.1–4 — a substantial slice).
+
 - **2026-06-18** — **P1.6 theory combination — T1.6.1 shared-term discovery**
   (`theory_combination::shared_terms`, the plan's named next task). Identifies the
   bit-vector-sorted Nelson–Oppen interface terms between the EUF and BV theories
