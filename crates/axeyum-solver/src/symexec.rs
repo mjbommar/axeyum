@@ -28,7 +28,7 @@
 
 use axeyum_ir::{SymbolId, TermArena, TermId};
 
-use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownReason};
+use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::incremental::IncrementalBvSolver;
 use crate::model::Model;
 use crate::optimize::{
@@ -184,8 +184,8 @@ impl SymbolicExecutor {
     /// Returns [`SolverError`] if building `¬cond` or a feasibility check fails.
     pub fn branch(&mut self, arena: &mut TermArena, cond: TermId) -> Result<Branch, SolverError> {
         let not_cond = arena.not(cond)?;
-        let if_true = status_of(self.solver.check_assuming(arena, &[cond])?);
-        let if_false = status_of(self.solver.check_assuming(arena, &[not_cond])?);
+        let if_true = status_or_unknown(self.solver.check_assuming(arena, &[cond]))?;
+        let if_false = status_or_unknown(self.solver.check_assuming(arena, &[not_cond]))?;
         Ok(Branch { if_true, if_false })
     }
 
@@ -195,7 +195,7 @@ impl SymbolicExecutor {
     ///
     /// Returns [`SolverError`] from the underlying check.
     pub fn status(&mut self, arena: &TermArena) -> Result<PathStatus, SolverError> {
-        Ok(status_of(self.solver.check(arena)?))
+        status_or_unknown(self.solver.check(arena))
     }
 
     /// A concrete assignment satisfying the current path condition — a runnable
@@ -348,13 +348,62 @@ fn status_of(result: CheckResult) -> PathStatus {
     }
 }
 
+/// Maps a feasibility-check result to a [`PathStatus`], turning a backend
+/// `Unsupported` (the warm BV solver cannot represent an operator in the path
+/// condition — e.g. an uninterpreted `Apply` from an unmodeled call) into a sound
+/// [`PathStatus::Unknown`] rather than a hard error. `Unknown` is treated as "may
+/// be feasible" (not pruned), so this never wrongly cuts a branch; it honors the
+/// "unknown is never an error" rule for these feasibility *decision* queries. Any
+/// other [`SolverError`] (a genuine internal failure) still propagates.
+fn status_or_unknown(result: Result<CheckResult, SolverError>) -> Result<PathStatus, SolverError> {
+    match result {
+        Ok(r) => Ok(status_of(r)),
+        Err(SolverError::Unsupported(detail)) => Ok(PathStatus::Unknown(UnknownReason {
+            kind: UnknownKind::Incomplete,
+            detail,
+        })),
+        Err(other) => Err(other),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axeyum_ir::{Assignment, Value, eval};
+    use axeyum_ir::{Assignment, Sort, Value, eval};
 
     fn x(arena: &mut TermArena) -> TermId {
         arena.bv_var("x", 8).unwrap()
+    }
+
+    #[test]
+    fn branch_over_uninterpreted_call_is_unknown_not_error() {
+        // Modeling an unmodeled library/syscall as an uninterpreted `g`: branching
+        // on `g(x) == 5` must yield a graceful three-valued verdict (Unknown — "may
+        // be feasible, do not prune"), NOT a hard `Err` — the warm BV backend can't
+        // represent `Apply`, but a feasibility *decision* query honors "unknown is
+        // never an error".
+        let mut arena = TermArena::new();
+        let xv = x(&mut arena);
+        let g = arena
+            .declare_fun("g", &[Sort::BitVec(8)], Sort::BitVec(8))
+            .unwrap();
+        let gx = arena.apply(g, &[xv]).unwrap();
+        let five = arena.bv_const(8, 5).unwrap();
+        let cond = arena.eq(gx, five).unwrap();
+        let mut exec = SymbolicExecutor::new();
+        let branch = exec
+            .branch(&mut arena, cond)
+            .expect("branch must not error on a UF condition");
+        assert!(
+            matches!(branch.if_true, PathStatus::Unknown(_)),
+            "UF branch then-direction must be Unknown, got {:?}",
+            branch.if_true
+        );
+        assert!(
+            matches!(branch.if_false, PathStatus::Unknown(_)),
+            "UF branch else-direction must be Unknown, got {:?}",
+            branch.if_false
+        );
     }
 
     #[test]

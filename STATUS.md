@@ -465,8 +465,13 @@ plan is built and committed on the current branch:
   in-module test (`UfStepper`: `x'=f(x)` → `Ok(Unknown)`, not `Err`); full suite + clippy + fmt
   green. From the 5th capability-gap pass (Track-4 + FP surfaces — which found NO soundness
   issues: FP arithmetic/conversions are bit-exact, BMC/k-induction/symexec decide correctly).
-  (Symexec has the same `Apply`→`Err` shape and the FP conversions are constant-fold-only —
-  both noted in the frontier as coordination-gated `axeyum-fp`/incremental-UF work.)
+  **Symexec given the same treatment:** `SymbolicExecutor::branch`/`status` (feasibility
+  *decision* queries) now map a backend `Unsupported` (a branch over an uninterpreted
+  `Apply` — the canonical way to model an unmodeled call) to the existing
+  `PathStatus::Unknown` ("may be feasible, not pruned") via a `status_or_unknown` helper,
+  instead of a hard `Err`; new in-module test (`branch_over_uninterpreted_call_is_unknown_not_error`).
+  `assume` (a stateful constraint-add, not a decision) keeps propagating. The FP conversions
+  being constant-fold-only stays a coordination-gated `axeyum-fp` follow-up.
 
 - **2026-06-19** — **P2.6: vacuous-`∀` elimination — a first sound cut into `∃∀`.**
   `∃y.∀x. x+y≥x` returned `Unknown` (after skolemizing `∃y→c`, `∀x. x+c≥x` is valid only
