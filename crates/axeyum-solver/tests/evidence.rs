@@ -201,6 +201,55 @@ fn qf_abv_read_consistency_unsat_carries_a_zero_trust_alethe_certificate() {
 }
 
 #[test]
+fn qf_dt_read_over_construct_unsat_carries_a_zero_trust_alethe_certificate() {
+    // select_0(mk(a, b)) = #b00 ∧ ¬(a = #b00): unsat by read-over-construct
+    // (select_0(mk(a, b)) → a). Now that evidence_route sends datatype queries
+    // through `solve`, produce_evidence reaches the zero-trust cert helper, which
+    // emits a check_alethe-validated Alethe proof that folds the projection by
+    // eq_transitive (the projection discharged by ι-reduction) — so the evidence
+    // carries NO trusted datatype reduction step, not the old DRAT/DatatypeElim cert.
+    let mut arena = TermArena::new();
+    let pair = arena.declare_datatype("Pair");
+    let mk = arena.add_constructor(
+        pair,
+        "mk",
+        &[("a".into(), Sort::BitVec(2)), ("b".into(), Sort::BitVec(2))],
+    );
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let p = arena.construct(mk, &[a, b]).unwrap();
+    let sel = arena.dt_select(mk, 0, p).unwrap();
+    let c00 = arena.bv_const(2, 0).unwrap();
+    let e1 = arena.eq(sel, c00).unwrap();
+    let e2 = {
+        let e = arena.eq(a, c00).unwrap();
+        arena.not(e).unwrap()
+    };
+    let assertions = [e1, e2];
+
+    let report = produce_evidence(&mut arena, &assertions, &config()).unwrap();
+    let Evidence::UnsatAletheProof(_) = &report.evidence else {
+        panic!(
+            "expected a zero-trust Alethe-certified datatype unsat, got {:?}",
+            report.evidence
+        );
+    };
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&arena, &assertions).unwrap());
+    assert!(
+        report.trusted_steps.is_empty(),
+        "expected zero trust holes (datatype fold proven), got {:?}",
+        step_ids(&report)
+    );
+}
+
+#[test]
 fn large_out_of_fragment_qf_bv_unsat_falls_back_to_drat() {
     // (= (bvshl x one) zero) ∧ (= x mask) style: a `bvshl` subterm is outside
     // the Alethe driver's fragment, so the >20-bit unsat falls back to the plain

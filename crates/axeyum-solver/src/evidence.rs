@@ -692,7 +692,10 @@ pub fn produce_evidence(
 /// 2. [`crate::prove_qf_ufbv_unsat_alethe`] — the Ackermann (`QF_UFBV`) cert (derives
 ///    each functional-consistency constraint by `eq_congruent`);
 /// 3. [`crate::prove_qf_abv_unsat_alethe_via_elimination`] — the array-elimination
-///    (`QF_ABV`) cert (derives each read-consistency constraint by `eq_congruent`).
+///    (`QF_ABV`) cert (derives each read-consistency constraint by `eq_congruent`);
+/// 4. [`crate::prove_qf_dt_unsat_alethe_via_simplification`] — the datatype
+///    read-over-construct cert (folds each `select`-over-`construct` by
+///    `eq_transitive`, the projection discharged by ι-reduction — no datatype axiom).
 ///
 /// Each emitter is self-validating (returns `Some` only after `check_alethe`
 /// accepts), and outside its fragment returns `None` cheaply — so trying them in
@@ -719,12 +722,11 @@ fn zero_trust_alethe_certificate(
     {
         return Some(proof);
     }
-    // NB: the datatype read-over-construct cert
-    // (`prove_qf_dt_unsat_alethe_via_simplification`) is NOT tried here — the
-    // generic `solve` on this path errors on a raw `DtSelect`/`DtConstruct` (it
-    // does not run datatype simplification), so a datatype query never reaches this
-    // helper. Wiring that cert needs `produce_evidence` to route datatypes through
-    // their simplification first (tracked in STATUS).
+    if let Some(proof) = crate::prove_qf_dt_unsat_alethe_via_simplification(arena, assertions)
+        && matches!(check_alethe(&proof), Ok(true))
+    {
+        return Some(proof);
+    }
     None
 }
 

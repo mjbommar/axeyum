@@ -405,6 +405,19 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **Datatype evidence routing fixed + datatype zero-trust cert wired.**
+  `evidence_route` (the `produce_evidence` classifier) ignored datatype sorts/ops, so a
+  datatype query whose top-level terms are all Bool/BitVec (e.g. `select_0(mk(a,b))=#b00
+  ∧ a≠#b00`) misrouted to `EvidenceRoute::QfBv` → `produce_qf_bv_evidence` → raw `DtSelect`
+  to the BV backend → `Unsupported` error. Fixed: detect `Sort::Datatype` +
+  `DtConstruct`/`DtSelect`/`DtTest` in `evidence_route` so datatype queries route through
+  `solve` (which has the datatype dispatch). New `tests/datatype_solve_path.rs` (UNSAT via
+  solve / via produce_evidence / SAT via solve). **With routing fixed, the datatype
+  read-over-construct cert (`prove_qf_dt_unsat_alethe_via_simplification`) is now also wired
+  into `zero_trust_alethe_certificate`** — so QF_DT unsat carries a zero-trust-hole Alethe
+  proof too (projection folded by `eq_transitive`/ι-reduction). Found while wiring the
+  evidence certs; fixed via a focused sub-agent. Full solver suite (917 tests) + clippy green.
+
 - **2026-06-19** — **P3.5: zero-trust-hole Alethe certs WIRED into the evidence path.**
   `produce_evidence`'s `unsat` branch previously tried only the array
   read-over-write-same direct cert, then fell back to a *trusted* DRAT reduction
