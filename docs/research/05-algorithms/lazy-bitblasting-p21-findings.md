@@ -326,10 +326,10 @@ but search-hard* (a stronger SAT core would crack them) or *genuinely too large*
 (`axeyum-bench/examples/dump_dimacs.rs`, same preprocessing pipeline) and run the
 state-of-the-art **kissat 4.0.4** on what batsat times out on at 20 s.
 
-| instance | CNF clauses | batsat @20s | **kissat** | xor_cdcl (in-tree) |
-|---|---|---|---|---|
-| `mobiledevice_…na6_nr3_paired` | 217 k | timeout | **SAT 2.1 s** | — |
-| `string1x8.4` | 150 k | timeout | **SAT 8.3 s** | **>120 s, no result** |
+| instance | CNF clauses | batsat @20s | **kissat** | xor_cdcl (in-tree) | PBLS (word-level LS) |
+|---|---|---|---|---|---|
+| `mobiledevice_…na6_nr3_paired` | 217 k | timeout | **SAT 2.1 s** | — | timeout (2.5k flips) |
+| `string1x8.4` | 150 k | timeout | **SAT 8.3 s** | **>120 s, no result** | timeout (2.7k flips) |
 | `string1x8.7` | 150 k | timeout | **SAT 14.7 s** |
 | `string1x8.1` | 291 k | timeout | **SAT 18.0 s** |
 | `string2x8.6` | 651 k | timeout | timeout (25 s) |
@@ -352,17 +352,28 @@ state-of-the-art **kissat 4.0.4** on what batsat times out on at 20 s.
 competitive SAT core for the small-CNF Timeouts; word-level reduction for the
 large-CNF bulk (and the `EncodingBudget` set).
 
-**But the core bar is kissat-class, not what axeyum has today (measured).** Running
-the in-tree competitive CDCL core (`solve_with_xor_cdcl` — VSIDS/Luby/LBD/1-UIP,
-`examples/xor_cdcl_probe.rs`) on `string1x8.4` **did not finish in 120 s** — where
-kissat 4.0.4 solved it in 8.3 s and batsat times out at 20 s. So *both* of axeyum's
-current cores (batsat and xor_cdcl) miss the SAT-search-bound band; converting it
-needs a **kissat-class** solver, which is a major P1.3 effort (Kissat is years of
-tuned C), and is **out of scope as a default** under the pure-Rust/no-C++ rule
-(kissat can serve only as a feature-gated benchmark oracle, like Z3). **Practical
-consequence:** even for the search-bound Timeouts, **word-level reduction is the more
-tractable near-term lever** — shrinking the CNF brings it within reach of the weaker
-core we actually ship, the same mechanism that converted the `EncodingBudget` set.
+**But the core bar is kissat-class, and ALL THREE of axeyum's pure-Rust engines miss
+it (measured).** On `string1x8.4` (a 150 k-clause *satisfiable* instance kissat solves
+in 8.3 s): the in-tree competitive CDCL core (`solve_with_xor_cdcl` — VSIDS/Luby/LBD/
+1-UIP, `examples/xor_cdcl_probe.rs`) **did not finish in 120 s**; the word-level
+local-search engine (PBLS, P1.7, `examples/pbls_probe.rs`) — which *should* excel on
+satisfiable structural instances — also timed out, managing only **~2 700 flips in
+20 s (~135 flips/s)**: pathologically slow for WalkSAT (competitive engines do
+10⁵–10⁶/s). Its bottleneck is that each candidate's `score()` re-evaluates the
+assertion term *from scratch* (no memoized/incremental term evaluation), so on the
+deep `ite`-nests every step costs ~8 ms. So neither CDCL (batsat), XOR-CDCL, nor
+local search reaches this band — converting it needs a **kissat-class** solver, which
+is a major P1.3 effort (Kissat is years of tuned C), and is **out of scope as a
+default** under the pure-Rust/no-C++ rule (kissat can serve only as a feature-gated
+benchmark oracle, like Z3). **Two collision-free pure-Rust optimization openings this
+exposes:** (a) PBLS's per-flip cost is dominated by full-term re-evaluation — a
+*memoized/incremental* term evaluator (dirty-propagate only the changed variable's
+cone) could raise the flip rate by orders of magnitude and is self-contained in
+`pbls.rs`; (b) the CDCL gap to kissat (data structures / inprocessing / restarts) is
+the long-game. **Practical consequence:** even for the search-bound Timeouts,
+**word-level reduction is the more tractable near-term lever** — shrinking the CNF
+brings it within reach of the weaker core we actually ship, the same mechanism that
+converted the `EncodingBudget` set.
 The custom-core question is genuinely reopened (ADR-0037), but the honest bar it must
 clear (kissat-class) makes reduction the higher-ROI near-term work. The pulse to
 track: **Timeout→decided**, primarily via reduction, with the core gap measured
