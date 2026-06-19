@@ -377,6 +377,12 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **QF_ABV refutations now checked by the real Lean kernel** (destination-3).
+  Added a gated real-lean cross-check for arrays (read-consistency unsat, reconstructed via
+  array elimination → QF_UFBV); `#print axioms` shows no `sorryAx`. The independent-kernel
+  validation now spans QF_UFBV / LRA / ∀ / ∃ / **QF_ABV**. (Pure-QF_BV-value and direct ROW
+  reconstruction to Lean remain frontier gaps — the Lean emitter is narrower than the Alethe one.)
+
 - **2026-06-18** — **Bounded strings: `str.to_code` / `str.from_code`** (SMT-LIB 2.6
   char-code ops) added to the byte-string theory. `to_code` → (is_single, byte-as-BV8);
   `from_code` → the length-1 string for a byte. Bounded BV formulas; tested incl.
