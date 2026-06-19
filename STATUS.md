@@ -377,6 +377,11 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **Bounded strings: `str.to_code` / `str.from_code`** (SMT-LIB 2.6
+  char-code ops) added to the byte-string theory. `to_code` → (is_single, byte-as-BV8);
+  `from_code` → the length-1 string for a byte. Bounded BV formulas; tested incl.
+  round-trip. Narrows the string-theory gap vs z3 within the bounded fragment.
+
 - **2026-06-18** — **FP `to_real` confirmed format-general** (F16/BF16/TF32/FP8 E5M2,
   not just F32/F64): corrected the stale doc and added small-format coverage (incl.
   subnormals and ∞/NaN→None). With `from_real` (all modes) and the int/bv→fp conversions,
