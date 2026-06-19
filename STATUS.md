@@ -412,6 +412,23 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P2.4: `bv2nat` out-of-range now refuted UNSAT (gap G2).** `bv2nat(b)` of
+  a W-bit `b` is provably in `[0, 2^W-1]`, but `bv2nat(4-bit) >= 16` / `== 20` returned
+  `Unknown`: the exact LIA refuters reject a raw `Op::Bv2Nat` (`lra.rs` `Collector::linearize`
+  catch-all), so the query fell to the bounded int-blast which returns `Unknown` (never
+  `Unsat`) for an in-range integer no-model. Fix: new `bv2nat_bound.rs`
+  (`abstract_bv2nat_for_refutation`) + a `refute_bv2nat_out_of_range` hook at the top of the
+  `has_int` dispatch branch. On an **isolated arena clone**, each distinct `bv2nat(b)` term is
+  replaced by a fresh Int var `n` with the true bound `0 ≤ n ≤ 2^W-1` (hash-consing ⇒ the same
+  `bv2nat(b)` ⇒ one var; distinct `b` ⇒ independent), and the exact refuters
+  (Diophantine/simplex/DPLL) decide the **relaxation** — `unsat` of the relaxation transfers
+  (sound). Returns `Unsat` only on a refutation; otherwise falls through to the original (SAT
+  decided by the native int-blast `Bv2Nat` handling, `bv2nat` intact). Width guard
+  `MAX_BOUND_WIDTH=62` keeps `2^W-1` exact in `i128` (wider ⇒ unabstracted, graceful). No
+  leakage/OOM (clone-scoped). Decides `bv2nat(4-bit)≥16`/`==20`/same-`b` `==5 ∧ ==6` → Unsat;
+  preserves `≥8` → Sat and distinct-vector `==5 ∧ ==6` → Sat. New `tests/bv2nat_bound.rs` (6);
+  fmt + clippy + full suite green. From the 2nd capability-gap pass; sub-agent + soundness review.
+
 - **2026-06-19** — **P1.6: EUF over the reals (QF_UFLRA) — hard `Err` fixed, now routed
   through the combination (gap G1).** A real-sorted UF application `f(x):Real` returned
   `Err Unsupported("QF_LRA: non-linear or non-real subterm …")` — the pure-real linearizer

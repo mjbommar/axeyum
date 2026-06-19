@@ -671,6 +671,46 @@ fn milp_out_of_fragment() -> SolverError {
     SolverError::Unsupported("term outside the linear mixed integer/real fragment".to_owned())
 }
 
+/// Tries to refute an out-of-range `bv2nat` constraint (G2). Abstracts each
+/// distinct `bv2nat(b)` to a fresh `Int` variable with its true range bound
+/// `0 <= n <= 2^W - 1` and runs the exact integer refuters on the relaxation; an
+/// `unsat` of the (range-bounded) relaxation transfers soundly to the original
+/// (every model induces one of the relaxation, taking `n := bv2nat(b)`).
+///
+/// Returns `Ok(true)` only when the original is **provably** `unsat`; `Ok(false)`
+/// for "no abstractable `bv2nat`" or "could not refute" (the caller proceeds on
+/// the original assertions, where the bit-blaster handles `bv2nat` natively).
+///
+/// The abstraction declares fresh `!bv2nat.*` symbols and is only ever used to
+/// derive `unsat`, so it runs on an isolated **clone** of the arena: the original
+/// assertion `TermId`s are index-stable in the clone, and nothing (no fresh
+/// symbol, no rewritten term) leaks back into the caller's arena or any sat model.
+fn refute_bv2nat_out_of_range(
+    arena: &TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<bool, SolverError> {
+    let mut scratch = arena.clone();
+    let Some(relaxed) =
+        crate::bv2nat_bound::abstract_bv2nat_for_refutation(&mut scratch, assertions)?
+    else {
+        return Ok(false);
+    };
+    let lin = axeyum_rewrite::eliminate_int_divmod(&mut scratch, &relaxed)
+        .map_err(|e| SolverError::Backend(e.to_string()))?;
+    Ok(
+        crate::lia_gcd::prove_lia_unsat_by_diophantine(&scratch, &lin)
+            || matches!(
+                check_with_lia_simplex(&scratch, &lin),
+                Ok(CheckResult::Unsat)
+            )
+            || matches!(
+                check_with_lia_dpll(&mut scratch, &lin, config),
+                Ok(CheckResult::Unsat)
+            ),
+    )
+}
+
 /// The theory dispatcher (coercions already relaxed away by [`check_auto`]).
 fn check_auto_dispatch(
     arena: &mut TermArena,
@@ -740,6 +780,21 @@ fn check_auto_dispatch(
         }
     }
     if features.has_int {
+        // `bv2nat(b)` finite-range refutation (G2): a `bv2nat(b)` of a `W`-bit
+        // vector is in `[0, 2^W - 1]`, but the exact integer refuters below only
+        // linearize integer *symbols* and reject a raw `bv2nat` subterm, so an
+        // unsatisfiable range constraint (`bv2nat(b) >= 2^W`, `bv2nat(b) = k` with
+        // `k >= 2^W`, …) never becomes `unsat` here — it degrades to the bounded
+        // bit-blaster's `unknown`. Abstract each distinct `bv2nat(b)` to a fresh
+        // `Int` var plus its true range bound and try the exact refuters on the
+        // relaxation: an `unsat` of the (range-bounded) relaxation transfers
+        // soundly to the original (every model induces one of the relaxation). A
+        // non-`unsat` outcome is discarded — the original query (with `bv2nat`
+        // intact, which the bit-blaster handles natively) decides sat below. This
+        // is strictly additive: it only ever turns a prior `unknown` into `unsat`.
+        if refute_bv2nat_out_of_range(arena, assertions, config)? {
+            return Ok(CheckResult::Unsat);
+        }
         // Conjunctive pure-integer queries are decided soundly for *both* sat and
         // unsat by branch-and-bound over the simplex (ADR-0020); the bounded
         // bit-blasting fallback is sat-only. Boolean-structured pure-integer

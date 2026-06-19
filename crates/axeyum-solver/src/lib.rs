@@ -22,6 +22,7 @@ mod backend;
 mod bitblast_alethe;
 mod bitblast_miter;
 mod bmc;
+mod bv2nat_bound;
 pub mod capabilities;
 mod cardinality;
 mod certify;
