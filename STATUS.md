@@ -474,6 +474,30 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P3.3: certified finite-`∀` `unsat` — a first checkable quantifier proof
+  (Lean-parity quantifier-proof keystone, scoped slice).** A finite-expansion guarded-`Int`
+  universal `∀x:Int. (lo≤x≤hi) ⇒ inner` decided `unsat` (e.g. `∀x:Int.(0≤x≤2)⇒x≥5`) was a bare
+  `Evidence::Unsat(None)`; it now carries an independently-checkable certificate. **Feasibility
+  finding:** the in-tree `check_alethe` base kernel has NO native quantifier-instantiation rule,
+  but `check_alethe_with`'s `extra` hook lets a custom rule be re-checked by a callback (the
+  pattern `prove_quant_unsat_alethe` already uses for EUF). New `quant_finite_cert.rs`
+  (`prove_finite_int_quant_unsat_alethe`): emits an `assume` of the universal, a
+  `forall_inst_guarded` step per `v∈[lo,hi]` delivering `inner[x:=v]`, `resolution` to the
+  instance unit, and the `lia_generic` ground tail spliced from `prove_lia_unsat_alethe`;
+  `check_alethe_lra_guarded_inst` chains a hook that re-derives **both** the structural
+  substitution **and** the guard truth (`lo≤v≤hi`) with the arith checker — so the
+  instantiation is **certified, not trusted** (zero-trust on the quantifier step; the ground
+  refutation records the certified `Farkas` step). New
+  `Evidence::UnsatGuardedQuantAletheProof { proof, universal }` (carries the form to re-check
+  arena-free), wired into `produce_evidence` after all ground certs (which decline on
+  quantifiers). **Tamper test** with two mutations (out-of-range witness → guard re-check
+  fails; non-instance literal → structural match fails) proves the check is real. New
+  `tests/evidence_quant_cert.rs` (7); QF_LIA/QF_BV ground certs unchanged. The custom
+  `forall_inst_guarded` is in-tree-checked (not a standard Alethe rule, so outside Carcara/Lean
+  cross-check — a lower assurance tier than the standard emitters, noted). General `forall_inst`
+  over infinite domains / arbitrary bodies stays the keystone (needs the rule in the
+  `axeyum-cnf` kernel — coordination-gated). From the 6th pass; sub-agent + soundness review.
+
 - **2026-06-19** — **P3.3: zero-trust certificate for mixed QF_UFLIA/UFLRA `unsat` (gap C) —
   the Ackermann cert family extends from UF-over-BV to UF-over-arithmetic.** A mixed
   `f(x)=1 ∧ f(y)=2 ∧ x=y` (f:Int→Int and the Real twin) was a bare `Evidence::Unsat(None)`;

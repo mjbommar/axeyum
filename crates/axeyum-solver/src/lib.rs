@@ -67,6 +67,7 @@ mod qfufbv_alethe;
 mod qfuflia_alethe;
 mod qinst_egraph;
 mod quant_alethe;
+mod quant_finite_cert;
 mod quant_guarded_int;
 mod quant_vacuous_universal;
 mod quant_valid_universal;
@@ -184,6 +185,10 @@ pub use qinst_egraph::{
     instantiate_forall_via_egraph, prove_quantified_unsat_via_egraph, witness_tuples_via_egraph,
 };
 pub use quant_alethe::prove_quant_unsat_alethe;
+pub use quant_finite_cert::{
+    GuardedUniversalForm, check_alethe_lra_guarded_inst, guarded_universal_form_for_test,
+    prove_finite_int_quant_unsat_alethe,
+};
 pub use reconstruct::{
     LraReconstructCtx, ProofFragment, ReconstructCtx, ReconstructError, prove_unsat_to_lean,
     prove_unsat_to_lean_module, reconstruct_bitblast_step, reconstruct_cnf_intro_rule,

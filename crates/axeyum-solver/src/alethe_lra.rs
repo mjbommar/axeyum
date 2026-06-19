@@ -63,6 +63,14 @@ fn la_generic_check(rule: &str, clause: &[AletheLit]) -> Option<bool> {
     }
 }
 
+/// Crate-internal accessor for [`la_generic_check`]: lets the finite-quantifier
+/// certificate checker ([`crate::quant_finite_cert`]) chain the arithmetic rule
+/// validation behind its own `forall_inst_guarded` hook, so one checker validates
+/// both the instantiation lemma and the `lia_generic` ground refutation.
+pub(crate) fn la_generic_check_pub(rule: &str, clause: &[AletheLit]) -> Option<bool> {
+    la_generic_check(rule, clause)
+}
+
 /// Returns `true` iff the linear-arithmetic clause `l1 ∨ … ∨ ln` is valid, decided
 /// as `¬l1 ∧ … ∧ ¬ln` being UNSAT. Returns `false` on satisfiable, unknown, or any
 /// parse/fragment failure (the sound default for a proof checker).
@@ -823,6 +831,14 @@ pub fn prove_lia_unsat_alethe(
     } else {
         None
     }
+}
+
+/// Crate-internal accessor for [`int_atom_to_alethe`]: lets the finite-quantifier
+/// certificate emitter ([`crate::quant_finite_cert`]) translate a bare integer
+/// comparison instance to the **same** Alethe atom shape the `lia_generic` ground
+/// tail produces, so the spliced instance literals key-match exactly.
+pub(crate) fn int_atom_to_alethe_pub(arena: &TermArena, t: TermId) -> Option<AletheTerm> {
+    int_atom_to_alethe(arena, t)
 }
 
 /// Integer counterpart of [`real_atom_to_alethe`]: converts an IR linear-integer
