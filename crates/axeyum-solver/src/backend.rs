@@ -104,7 +104,7 @@ impl From<axeyum_ir::IrError> for SolverError {
 /// /assurance levers (DRAT proof, CNF inprocessing, word-level preprocessing, the
 /// CDCL(XOR) fallback), not a state machine — a flat config of toggles is the
 /// intended shape, so the `struct_excessive_bools` lint is allowed here.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct SolverConfig {
     /// Wall-clock budget for the check; `None` means no limit.
@@ -186,6 +186,31 @@ pub struct SolverConfig {
     /// branches from the eager circuit. Only meaningful with `lazy_bv`; off by
     /// default (experimental, gated on a measured win).
     pub lazy_bv_abstract_ite: bool,
+}
+
+impl Default for SolverConfig {
+    /// All assurance/perf levers off and no budgets, **except** word-level
+    /// `preprocess`, which defaults **on** (ADR-0037/0034): denotation-preserving
+    /// reduction before dispatch is a measured net win on the public corpus
+    /// (`+preprocess`: 4/113 @3s, 7/113 @20s vs eager 2/3; `DISAGREE=0`) and
+    /// model-sound + replay-checked, so it is safe as the default. Other levers stay
+    /// off so baselines/behaviour are otherwise unchanged.
+    fn default() -> Self {
+        Self {
+            timeout: None,
+            resource_limit: None,
+            memory_limit_mb: None,
+            node_budget: None,
+            cnf_variable_budget: None,
+            cnf_clause_budget: None,
+            prove_unsat: false,
+            cnf_inprocessing: false,
+            preprocess: true,
+            xor_cdcl_fallback: false,
+            lazy_bv: false,
+            lazy_bv_abstract_ite: false,
+        }
+    }
 }
 
 impl SolverConfig {

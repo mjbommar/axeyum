@@ -23,9 +23,9 @@ use std::collections::{BTreeSet, HashMap};
 
 use axeyum_ir::{Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 use axeyum_rewrite::{
-    DEFAULT_SOLVE_EQS_FUEL, QuantExpandError, build_app, canonicalize_terms, elim_unconstrained,
-    expand_quantifiers, instantiate_universals, instantiate_with_triggers, propagate_values,
-    replace_subterms, solve_eqs_bounded,
+    DEFAULT_SOLVE_EQS_FUEL, ModelReconstructionTrail, QuantExpandError, build_app,
+    canonicalize_terms, elim_unconstrained, expand_quantifiers, instantiate_universals,
+    instantiate_with_triggers, propagate_values, replace_subterms, solve_eqs_bounded,
 };
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
@@ -223,11 +223,41 @@ pub fn check_auto(
     // pipeline (not just canonicalization) is what moves the public QF_BV number —
     // it shrinks formulas below the bit-blast-size ceiling (ADR-0037; fair p4dfa
     // measurement: 3 s 2→4, 20 s 3→7 decided, DISAGREE=0).
-    if config.preprocess {
-        check_auto_preprocessed(arena, assertions, config)
+    // The word-level pipeline (`solve_eqs`/`elim_unconstrained`) is a
+    // quantifier-free transform — it treats the assertion list as ground. On a
+    // query carrying a quantifier it is skipped (the quantifier path needs the
+    // original structure for trigger/e-matching); only quantifier-free queries are
+    // preprocessed.
+    if config.preprocess && !contains_quantifier(arena, assertions) {
+        // Best-effort: if the reduction passes can't handle this query (e.g.
+        // canonicalize cannot fold an uninterpreted-function application), fall
+        // back to solving the ORIGINAL unreduced query — preprocessing is only ever
+        // an optimization, never a correctness dependency.
+        match preprocess_reduce(arena, assertions) {
+            Ok((reduced, trail)) => dispatch_reduced(arena, assertions, &reduced, &trail, config),
+            Err(_) => check_auto_inner(arena, assertions, config),
+        }
     } else {
         check_auto_inner(arena, assertions, config)
     }
+}
+
+/// Whether any assertion's term tree contains a `forall`/`exists` binder.
+fn contains_quantifier(arena: &TermArena, assertions: &[TermId]) -> bool {
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    let mut seen: BTreeSet<TermId> = BTreeSet::new();
+    while let Some(t) = stack.pop() {
+        if !seen.insert(t) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(t) {
+            if matches!(op, Op::Forall(_) | Op::Exists(_)) {
+                return true;
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
+    false
 }
 
 /// Run the model-sound word-level preprocessing pipeline (`canonicalize` →
@@ -237,11 +267,10 @@ pub fn check_auto(
 /// the eliminated variables and replay against the **original** assertions — the
 /// same checkable-`sat` discipline as [`crate::check_with_preprocessing`]. `unsat`
 /// of the reduced (equisatisfiable) problem transfers directly.
-fn check_auto_preprocessed(
+fn preprocess_reduce(
     arena: &mut TermArena,
     assertions: &[TermId],
-    config: &SolverConfig,
-) -> Result<CheckResult, SolverError> {
+) -> Result<(Vec<TermId>, ModelReconstructionTrail), SolverError> {
     let canonical = canonicalize_terms(arena, assertions)
         .map_err(|error| SolverError::Backend(format!("canonicalize failed: {error}")))?
         .terms;
@@ -259,13 +288,27 @@ fn check_auto_preprocessed(
     let reduced = canonicalize_terms(arena, &reduced)
         .map_err(|error| SolverError::Backend(format!("post-solve canonicalize failed: {error}")))?
         .terms;
+    Ok((reduced, trail))
+}
 
+/// Dispatch the `reduced` query through [`check_auto_inner`] (preprocessing
+/// cleared), and on `sat` reconstruct the eliminated variables via `trail` and
+/// replay against the **original** assertions — the checkable-`sat` discipline of
+/// [`crate::check_with_preprocessing`]. `unsat` of the equisatisfiable reduction
+/// transfers directly.
+fn dispatch_reduced(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    reduced: &[TermId],
+    trail: &ModelReconstructionTrail,
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
     let inner_config = {
         let mut c = config.clone();
         c.preprocess = false;
         c
     };
-    let result = check_auto_inner(arena, &reduced, &inner_config)?;
+    let result = check_auto_inner(arena, reduced, &inner_config)?;
     let CheckResult::Sat(model) = result else {
         return Ok(result);
     };
