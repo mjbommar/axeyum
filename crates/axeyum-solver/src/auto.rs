@@ -229,12 +229,17 @@ pub fn check_auto(
     // original structure for trigger/e-matching); only quantifier-free queries are
     // preprocessed.
     if config.preprocess && !contains_quantifier(arena, assertions) {
-        // Best-effort: if the reduction passes can't handle this query (e.g.
-        // canonicalize cannot fold an uninterpreted-function application), fall
-        // back to solving the ORIGINAL unreduced query — preprocessing is only ever
-        // an optimization, never a correctness dependency.
-        match preprocess_reduce(arena, assertions) {
+        // Best-effort: if *any* step of the preprocessed path fails — a reduction
+        // pass (e.g. canonicalize cannot fold an uninterpreted-function application)
+        // or the reduced solve / model reconstruction — fall back to solving the
+        // ORIGINAL unreduced query. Preprocessing is only ever an optimization, never
+        // a correctness dependency, so a failure must degrade, not propagate.
+        let preprocessed = match preprocess_reduce(arena, assertions) {
             Ok((reduced, trail)) => dispatch_reduced(arena, assertions, &reduced, &trail, config),
+            Err(error) => Err(error),
+        };
+        match preprocessed {
+            Ok(result) => Ok(result),
             Err(_) => check_auto_inner(arena, assertions, config),
         }
     } else {

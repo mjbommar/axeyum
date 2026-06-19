@@ -128,3 +128,23 @@ fn unconstrained_argument_is_graceful_not_an_error() {
         "must not claim sat for an unsat query"
     );
 }
+
+/// The UF result feeding arithmetic: `f(a) + 1 = f(b) ∧ a = b` is UNSAT — `a = b`
+/// forces `f(a) = f(b)` by congruence, so `f(a) + 1 = f(a)`, i.e. `1 = 0`.
+#[test]
+fn uflia_result_in_arithmetic_unsat() {
+    let mut a = TermArena::new();
+    let p = decl_int(&mut a, "p");
+    let q = decl_int(&mut a, "q");
+    let f = a.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let fp = a.apply(f, &[p]).unwrap();
+    let fq = a.apply(f, &[q]).unwrap();
+    let one = a.int_const(1);
+    let fp1 = a.int_add(fp, one).unwrap();
+    let eq1 = a.eq(fp1, fq).unwrap(); // f(p) + 1 = f(q)
+    let eq2 = a.eq(p, q).unwrap(); // p = q
+    assert!(matches!(
+        check_with_uf_arithmetic(&mut a, &[eq1, eq2], &SolverConfig::default()).unwrap(),
+        CheckResult::Unsat
+    ));
+}
