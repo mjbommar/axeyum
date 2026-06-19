@@ -7,7 +7,7 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 ## Current focus
 
 - **Session 2026-06-19 — robustness + proof certs + capability-gap sweep (resume here).**
-  **36 validated commits**; whole `axeyum-solver` crate green on test/clippy/doc/fmt (999
+  **38 validated commits**; whole `axeyum-solver` crate green on test/clippy/doc/fmt (999
   tests) + Carcara (54) + workspace build + links — confirmed cohesively gate-green at session
   end (the consolidation caught and fixed a doc-link regression clippy/tests had missed).
   Method: **6 read-only *capability-gap probe* passes** (theory decidability; arrays/mixed/
@@ -36,10 +36,21 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     zero-trust), QF_ABV, QF_DT, QF_LIA (`lia_generic`, gap E), QF_LRA (Farkas/LRA-DPLL), and
     **mixed QF_UFLIA/UFLRA (gap C — the zero-trust Ackermann family extended from BV to arith)**;
     each tamper-tested + validated at up to three levels (in-tree `check_alethe`/`check_alethe_lra`,
-    Carcara, Lean kernel). The 6th pass's proof-completeness map (see below) shows the remaining
-    uncertified unsat fragments are NRA sign/square (gap A — needs `nra.rs`, concurrent lane),
-    bv2nat-bound (gap D — partial-trust, self-contained, the next in-`solver` cert), and the
-    NRA-Positivstellensatz / quantifier-proof **keystones**.
+    Carcara, Lean kernel). **Finite-expansion guarded-`Int` `∀` `unsat` is now certified too**
+    (a first checkable quantifier proof — `forall_inst_guarded` re-checks substitution + guard
+    truth + the LIA tail; in-tree-checked custom rule, a tier below the Carcara/Lean-validated
+    standard emitters). The 6th pass's proof-completeness map shows the remaining uncertified
+    unsat fragments are NRA sign/square (gap A — needs `nra.rs`, concurrent lane), bv2nat-bound
+    (gap D — partial-trust, self-contained, the next in-`solver` cert), and the
+    NRA-Positivstellensatz / general-`forall_inst` (needs the rule in the `axeyum-cnf` kernel) /
+    online-theory-combination **keystones**.
+  - **Environment note:** validation builds accumulate a LARGE `target/` (this session's
+    axeyum-solver test binaries reached ~44 GiB and filled the 439 G disk to 100%).
+    `cargo clean -p axeyum-solver` safely reclaims it (regenerable; does NOT touch the
+    concurrent agent's other-crate deps) at the cost of one full axeyum-solver recompile.
+    Prefer targeted `--test <name>` runs over repeated full `--all-features` suites (the
+    `z3-static` build is especially slow + disk-heavy); the no-z3 suite is representative since
+    solver code is not `#[cfg(feature="z3")]`-conditional.
   - **Process note:** re-validate sub-agent work with the FULL gate — clippy does NOT catch
     **`cargo fmt --all --check`** drift NOR **`cargo doc -D warnings`** broken/private intra-doc
     links (both slipped through clippy-only checks this session and were caught later); use an
