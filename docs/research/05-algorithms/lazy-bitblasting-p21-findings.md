@@ -274,6 +274,35 @@ only climb the same mountain). Full parity still needs far deeper word-level
 reasoning (Z3 decides ~113), but the lever is now real, sound, scale-safe, and
 pointed the right way.
 
+## Where the win came from, and the next lever (2026-06-18)
+
+The 20 s unknown breakdown isolates exactly what reduction did and what is left:
+
+| reason | eager 20 s | `--preprocess` 20 s | change |
+|---|---|---|---|
+| Timeout | 99 | 99 | **0** |
+| EncodingBudget | 10 | **6** | **−4** |
+| NodeBudget | 1 | 1 | 0 |
+| **decided** | **3** | **7** | **+4** |
+
+**The entire +4 is the `EncodingBudget` → decided transition** — preprocessing
+shrank 4 instances below the bit-blast-size ceiling so they encoded and solved. The
+**99 Timeouts are untouched**: those encode fine either way, and the reduced CNF
+still drowns the SAT solver in 20 s. So the two remaining levers, precisely scoped:
+
+1. **6 still-`EncodingBudget` instances** — too big to encode *even after* the
+   current reduction. Lever: **deeper word-level reduction** (AC-tree flattening
+   across bindings, `ite`-chain simplification / shared muxing, `bv_slice`/bounds,
+   `max_bv_sharing`) to pull them below the ceiling, exactly as the first 4 were.
+2. **99 Timeouts (the bulk)** — encode but don't solve. These need either *much*
+   deeper reduction (shrink the CNF itself, the Z3 route) or, secondarily, a
+   stronger SAT search on the blasted residue. Per ADR-0037 reduction leads; a faster
+   default core is gated on showing these are SAT-search-bound after reduction.
+
+The decided count now scales with both budget (3 s → 4, 20 s → 7) and reduction
+depth (each `EncodingBudget` instance pulled under the ceiling is a new decision),
+which is the tractable, measured growth path.
+
 ## Bottom line
 
 Lazy arithmetic-CEGAR bit-blasting is now wired end-to-end (opt-in dispatch
