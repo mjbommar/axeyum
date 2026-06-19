@@ -1040,6 +1040,92 @@ pub fn to_fp(
     arena.ite(nan, qnan, if_inf)
 }
 
+/// `((_ to_fp eb sb) RM bv)` reading `x` as an **unsigned** integer: round its
+/// value to the nearest `dst`-format float under `mode`. The integer `n` is the
+/// value `n · 2⁰`, so its magnitude is the significand and the exponent is 0;
+/// [`pack_value`] does the rounding. Exact `0` maps to `+0`. (z3's `to_fp` over a
+/// bit-vector source; the unsigned reading is `to_fp_unsigned`.)
+///
+/// # Errors
+///
+/// [`IrError::SortMismatch`] if `x` is not a bit-vector, [`IrError::InvalidWidth`]
+/// if the working width exceeds 128, or builder errors.
+pub fn from_ubv(
+    arena: &mut TermArena,
+    dst: FloatFormat,
+    mode: RoundingMode,
+    x: TermId,
+) -> Result<TermId, IrError> {
+    let Sort::BitVec(wi) = arena.sort_of(x) else {
+        return Err(IrError::SortMismatch {
+            expected: "BitVec",
+            found: arena.sort_of(x),
+        });
+    };
+    from_int_bits(arena, dst, mode, x, wi, false)
+}
+
+/// `((_ to_fp eb sb) RM bv)` reading `x` as a **signed (two's-complement)**
+/// integer. Like [`from_ubv`] but the sign comes from the top bit and the
+/// magnitude is `|x|` (the two's-complement negation read unsigned, which is
+/// correct even for `INT_MIN`).
+///
+/// # Errors
+///
+/// As [`from_ubv`].
+pub fn from_sbv(
+    arena: &mut TermArena,
+    dst: FloatFormat,
+    mode: RoundingMode,
+    x: TermId,
+) -> Result<TermId, IrError> {
+    let Sort::BitVec(wi) = arena.sort_of(x) else {
+        return Err(IrError::SortMismatch {
+            expected: "BitVec",
+            found: arena.sort_of(x),
+        });
+    };
+    from_int_bits(arena, dst, mode, x, wi, true)
+}
+
+/// Shared integer→float core: round the `wi`-bit integer `x` (signed or unsigned)
+/// to the `dst` format under `mode`.
+fn from_int_bits(
+    arena: &mut TermArena,
+    dst: FloatFormat,
+    mode: RoundingMode,
+    x: TermId,
+    wi: u32,
+    signed: bool,
+) -> Result<TermId, IrError> {
+    let w = wi.max(dst.sig_bits) + 4;
+    if w > 128 {
+        return Err(IrError::InvalidWidth(w));
+    }
+    let total = dst.width();
+    // Sign + `wi`-bit magnitude. For a signed source the magnitude is the
+    // two's-complement negation read as unsigned (|x|, correct for `INT_MIN` too).
+    let (sign, mag_wi) = if signed {
+        let msb = arena.extract(wi - 1, wi - 1, x)?;
+        let one1 = arena.bv_const(1, 1)?;
+        let sign = arena.eq(msb, one1)?;
+        let neg = arena.bv_neg(x)?;
+        let mag = arena.ite(sign, neg, x)?;
+        (sign, mag)
+    } else {
+        (arena.bool_const(false), x)
+    };
+    // Significand m = magnitude (value · 2⁰), exponent e = 0; pack_value rounds.
+    let m = arena.zero_ext(w - wi, mag_wi)?;
+    let e = arena.bv_const(w, 0)?;
+    let packed = pack_value(arena, dst.exp_bits, dst.sig_bits, sign, m, e, mode)?;
+    // Exact zero → +0 (all-zero bits): bypass the nonzero-significand pack path.
+    let zero_wi = arena.bv_const(wi, 0)?;
+    let is_zero = arena.eq(x, zero_wi)?;
+    let pos_zero = arena.bv_const(total, 0)?;
+    arena.ite(is_zero, pos_zero, packed)
+}
+
 /// Symbolic `fp.div` (round-nearest-ties-to-even): the IEEE 754 division
 /// bit-blaster. Computes the quotient of the significands to `sb + 3` fractional
 /// bits via `bv_udiv` (with the `bv_urem` remainder folded into a sticky bit),
@@ -6091,5 +6177,102 @@ mod fp_to_int_symbolic_tests {
     #[test]
     fn symbolic_to_sbv_matches_fold_in_range_and_fresh_out_of_range() {
         check(true);
+    }
+
+    /// `from_sbv`/`from_ubv` (integer→float, round-nearest-even) match Rust's own
+    /// `as f32`/`as f64` integer-to-float casts — the IEEE-754 ground truth — over
+    /// edge values and a pseudo-random sweep. Confirms the SMT-LIB
+    /// `(_ to_fp eb sb) RM bv` conversion (both signed and unsigned readings).
+    #[test]
+    #[allow(clippy::cast_precision_loss, clippy::similar_names)] // the rounding cast IS the oracle
+    fn int_to_float_matches_native_casts() {
+        let mut a = TermArena::new();
+        let rne = RoundingMode::NearestEven;
+        let bits = |a: &mut TermArena, t| match eval(a, t, &Assignment::new()) {
+            Ok(Value::Bv { value, .. }) => value,
+            other => panic!("expected Bv, got {other:?}"),
+        };
+
+        // Signed 32→F32 against `i32 as f32`.
+        let chk_s32 = |a: &mut TermArena, v: i32| {
+            #[allow(clippy::cast_sign_loss)]
+            let xt = a.bv_const(32, u128::from(v as u32)).unwrap();
+            let r = from_sbv(a, FloatFormat::F32, rne, xt).unwrap();
+            assert_eq!(
+                bits(a, r),
+                u128::from((v as f32).to_bits()),
+                "i32 {v} as f32"
+            );
+        };
+        for v in [
+            0i32,
+            1,
+            -1,
+            2,
+            -2,
+            5,
+            -5,
+            16_777_217,
+            -16_777_217,
+            i32::MIN,
+            i32::MAX,
+            123_456_789,
+        ] {
+            chk_s32(&mut a, v);
+        }
+        // Unsigned 32→F32 against `u32 as f32`.
+        let chk_u32 = |a: &mut TermArena, v: u32| {
+            let xt = a.bv_const(32, u128::from(v)).unwrap();
+            let r = from_ubv(a, FloatFormat::F32, rne, xt).unwrap();
+            assert_eq!(
+                bits(a, r),
+                u128::from((v as f32).to_bits()),
+                "u32 {v} as f32"
+            );
+        };
+        for v in [0u32, 1, 2, 16_777_217, u32::MAX, 0x8000_0000, 3_000_000_001] {
+            chk_u32(&mut a, v);
+        }
+        // Signed 64→F64 against `i64 as f64`.
+        let chk_s64 = |a: &mut TermArena, v: i64| {
+            #[allow(clippy::cast_sign_loss)]
+            let xt = a.bv_const(64, u128::from(v as u64)).unwrap();
+            let r = from_sbv(a, FloatFormat::F64, rne, xt).unwrap();
+            assert_eq!(
+                bits(a, r),
+                u128::from((v as f64).to_bits()),
+                "i64 {v} as f64"
+            );
+        };
+        for v in [
+            0i64,
+            1,
+            -1,
+            i64::MIN,
+            i64::MAX,
+            9_007_199_254_740_993,
+            -9_007_199_254_740_993,
+        ] {
+            chk_s64(&mut a, v);
+        }
+
+        // Pseudo-random sweep (signed 32→F32 and unsigned 64→F64).
+        let mut state = 0x1234_5678_9abc_def0u64;
+        for _ in 0..3000 {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+            let s = state as u32 as i32;
+            chk_s32(&mut a, s);
+            let u = state; // full u64
+            let xt = a.bv_const(64, u128::from(u)).unwrap();
+            let r = from_ubv(&mut a, FloatFormat::F64, rne, xt).unwrap();
+            assert_eq!(
+                bits(&mut a, r),
+                u128::from((u as f64).to_bits()),
+                "u64 {u} as f64"
+            );
+        }
     }
 }
