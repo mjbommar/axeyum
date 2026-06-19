@@ -1154,10 +1154,16 @@ pub fn from_real(
     let den = r.denominator();
     let bits = round_rational_to_format(eb, sb, num, den, mode).or_else(|| {
         // Non-dyadic (or out of the exact-f64 window): round the exact rational by
-        // pure-integer RNE — no double-rounding. NearestEven only; directed modes
-        // over a non-dyadic value decline.
-        if mode == RoundingMode::NearestEven && num != 0 && den > 0 {
-            round_rational_rne(eb, sb, num < 0, num.unsigned_abs(), den.unsigned_abs())
+        // pure-integer arithmetic under `mode` — no double-rounding.
+        if num != 0 && den > 0 {
+            round_rational_rne(
+                eb,
+                sb,
+                mode,
+                num < 0,
+                num.unsigned_abs(),
+                den.unsigned_abs(),
+            )
         } else {
             None
         }
@@ -2675,11 +2681,64 @@ fn floor_log2_ratio(a: u128, den: u128) -> i64 {
     e
 }
 
-/// Exact **round-to-nearest-even** of `a/den` (sign `neg`; `a, den > 0`) to an
-/// `(eb, sb)` IEEE float by pure-integer arithmetic — correct for non-dyadic
-/// rationals, with no f64 double-rounding. `sb` counts the implicit bit. Returns
-/// `None` if an intermediate would exceed `u128` (the caller then declines).
-fn round_rational_rne(eb: u32, sb: u32, neg: bool, a: u128, den: u128) -> Option<u128> {
+/// Whether to round the truncated quotient `q` up, given the remainder `rem` of
+/// `numer/denom` (`rem < denom`), the rounding `mode`, and the value's sign `neg`.
+fn round_up_decision(q: u128, rem: u128, denom: u128, mode: RoundingMode, neg: bool) -> bool {
+    if rem == 0 {
+        return false;
+    }
+    match mode {
+        // Compare 2·rem with denom via rem vs denom−rem (no overflow).
+        RoundingMode::NearestEven => match rem.cmp(&(denom - rem)) {
+            core::cmp::Ordering::Greater => true,
+            core::cmp::Ordering::Less => false,
+            core::cmp::Ordering::Equal => (q & 1) == 1, // tie → to even
+        },
+        RoundingMode::NearestAway => rem >= denom - rem, // 2·rem ≥ denom
+        RoundingMode::TowardZero => false,
+        RoundingMode::TowardPositive => !neg, // up == away-from-zero for a positive value
+        RoundingMode::TowardNegative => neg,
+    }
+}
+
+/// The bits an overflowing magnitude rounds to under `mode`: `±∞` for the nearest
+/// modes, the max finite magnitude for truncation, and direction-dependent for the
+/// directed modes.
+fn overflow_bits(eb: u32, sb: u32, neg: bool, mode: RoundingMode, sign_bit: u128) -> u128 {
+    let inf = sign_bit | (((1u128 << eb) - 1) << (sb - 1));
+    let max_finite = sign_bit | (((1u128 << eb) - 2) << (sb - 1)) | ((1u128 << (sb - 1)) - 1);
+    match mode {
+        RoundingMode::NearestEven | RoundingMode::NearestAway => inf,
+        RoundingMode::TowardZero => max_finite,
+        RoundingMode::TowardPositive => {
+            if neg {
+                max_finite
+            } else {
+                inf
+            }
+        }
+        RoundingMode::TowardNegative => {
+            if neg {
+                inf
+            } else {
+                max_finite
+            }
+        }
+    }
+}
+
+/// Exact rounding of `a/den` (sign `neg`; `a, den > 0`) to an `(eb, sb)` IEEE float
+/// under `mode`, by pure-integer arithmetic — correct for non-dyadic rationals,
+/// with no f64 double-rounding. `sb` counts the implicit bit. Returns `None` if an
+/// intermediate would exceed `u128` (the caller then declines).
+fn round_rational_rne(
+    eb: u32,
+    sb: u32,
+    mode: RoundingMode,
+    neg: bool,
+    a: u128,
+    den: u128,
+) -> Option<u128> {
     if a == 0 {
         return None; // num == 0 is handled by the caller (→ +0)
     }
@@ -2690,7 +2749,7 @@ fn round_rational_rne(eb: u32, sb: u32, neg: bool, a: u128, den: u128) -> Option
     let sign_bit: u128 = if neg { 1u128 << (total - 1) } else { 0 };
     let implicit = 1u128 << (sb - 1);
 
-    // RNE significand `round(a/den · 2^(sb-1-exp))` as an integer, or None on overflow.
+    // Significand `round(a/den · 2^(sb-1-exp))` as an integer, or None on overflow.
     let round_at = |exp: i64| -> Option<u128> {
         let shift = i64::from(sb) - 1 - exp;
         let (numer, denom) = if shift >= 0 {
@@ -2700,17 +2759,7 @@ fn round_rational_rne(eb: u32, sb: u32, neg: bool, a: u128, den: u128) -> Option
         };
         let q = numer / denom;
         let rem = numer % denom;
-        // Round-nearest-even: compare 2·rem with denom via rem vs denom−rem.
-        let up = if rem == 0 {
-            false
-        } else {
-            match rem.cmp(&(denom - rem)) {
-                core::cmp::Ordering::Greater => true,
-                core::cmp::Ordering::Less => false,
-                core::cmp::Ordering::Equal => (q & 1) == 1, // tie → to even
-            }
-        };
-        Some(q + u128::from(up))
+        Some(q + u128::from(round_up_decision(q, rem, denom, mode, neg)))
     };
 
     let e = floor_log2_ratio(a, den);
@@ -2736,9 +2785,7 @@ fn round_rational_rne(eb: u32, sb: u32, neg: bool, a: u128, den: u128) -> Option
         e_adj += 1;
     }
     if e_adj > emax {
-        // Overflow → ±∞.
-        let exp_ones = ((1u128 << eb) - 1) << (sb - 1);
-        return Some(sign_bit | exp_ones);
+        return Some(overflow_bits(eb, sb, neg, mode, sign_bit));
     }
     #[allow(clippy::cast_sign_loss)]
     let expfield = (e_adj + bias) as u128; // in [1, 2^eb − 2]
@@ -3282,6 +3329,8 @@ mod tests {
     /// cast — for both dyadic and round-nearest-even non-dyadic rationals.
     #[test]
     fn from_real_builds_f32_constants_matching_native() {
+        use rustc_apfloat::Float;
+        use rustc_apfloat::ieee::Single;
         let read = |a: &TermArena, t| match eval(a, t, &Assignment::new()) {
             Ok(Value::Bv { value, .. }) => value,
             other => panic!("expected a bit-vector value, got {other:?}"),
@@ -3316,19 +3365,37 @@ mod tests {
                 "from_real F32 {num}/{den}",
             );
         }
-        // A directed mode over a non-dyadic value declines (only RNE is supported).
-        let mut a = TermArena::new();
-        assert_eq!(
-            from_real(
-                &mut a,
-                FloatFormat::F32,
+        // All five rounding modes over a non-dyadic value match `rustc_apfloat`'s
+        // correctly-rounded division (the independent IEEE reference).
+        let ap_round = |mode: RoundingMode| match mode {
+            RoundingMode::NearestEven => rustc_apfloat::Round::NearestTiesToEven,
+            RoundingMode::NearestAway => rustc_apfloat::Round::NearestTiesToAway,
+            RoundingMode::TowardZero => rustc_apfloat::Round::TowardZero,
+            RoundingMode::TowardPositive => rustc_apfloat::Round::TowardPositive,
+            RoundingMode::TowardNegative => rustc_apfloat::Round::TowardNegative,
+        };
+        for &(num, den) in &[(1i128, 3i128), (-1, 3), (1, 10), (22, 7), (-22, 7), (2, 7)] {
+            for mode in [
+                RoundingMode::NearestEven,
+                RoundingMode::NearestAway,
                 RoundingMode::TowardZero,
-                Rational::new(1, 3)
-            )
-            .unwrap(),
-            None,
-            "non-dyadic + directed mode declines",
-        );
+                RoundingMode::TowardPositive,
+                RoundingMode::TowardNegative,
+            ] {
+                let p = Single::from_i128(num).value;
+                let q = Single::from_i128(den).value;
+                let oracle = p.div_r(q, ap_round(mode)).value.to_bits();
+                let mut a = TermArena::new();
+                let bits = from_real(&mut a, FloatFormat::F32, mode, Rational::new(num, den))
+                    .unwrap()
+                    .expect("representable in F32");
+                assert_eq!(
+                    read(&a, bits),
+                    oracle,
+                    "from_real {num}/{den} mode {mode:?}"
+                );
+            }
+        }
     }
 
     /// The pure-integer RNE rational rounder agrees with the validated f64 path on
@@ -3352,7 +3419,14 @@ mod tests {
         ];
         for &(eb, sb, num, den) in dyadic {
             let oracle = round_rational_to_format(eb, sb, num, den, RoundingMode::NearestEven);
-            let got = round_rational_rne(eb, sb, num < 0, num.unsigned_abs(), den as u128);
+            let got = round_rational_rne(
+                eb,
+                sb,
+                RoundingMode::NearestEven,
+                num < 0,
+                num.unsigned_abs(),
+                den as u128,
+            );
             assert_eq!(got, oracle, "dyadic {num}/{den} fmt({eb},{sb})");
         }
         // Non-dyadic RNE (via the integer path directly) vs the (non-midpoint, hence
@@ -3360,12 +3434,26 @@ mod tests {
         for &(num, den) in &[(1i128, 3i128), (1, 10), (2, 7), (-1, 3), (22, 7)] {
             let v = num as f64 / den as f64;
             assert_eq!(
-                round_rational_rne(8, 24, num < 0, num.unsigned_abs(), den as u128),
+                round_rational_rne(
+                    8,
+                    24,
+                    RoundingMode::NearestEven,
+                    num < 0,
+                    num.unsigned_abs(),
+                    den as u128
+                ),
                 Some(u128::from((v as f32).to_bits())),
                 "non-dyadic F32 {num}/{den}",
             );
             assert_eq!(
-                round_rational_rne(11, 53, num < 0, num.unsigned_abs(), den as u128),
+                round_rational_rne(
+                    11,
+                    53,
+                    RoundingMode::NearestEven,
+                    num < 0,
+                    num.unsigned_abs(),
+                    den as u128
+                ),
                 Some(u128::from(v.to_bits())),
                 "non-dyadic F64 {num}/{den}",
             );
