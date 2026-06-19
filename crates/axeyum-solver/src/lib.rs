@@ -67,6 +67,7 @@ mod qfufbv_alethe;
 mod qinst_egraph;
 mod quant_alethe;
 mod quant_guarded_int;
+mod quant_vacuous_universal;
 mod quant_valid_universal;
 mod reconstruct;
 mod records;

@@ -102,6 +102,20 @@ pub fn solve(
         return check_auto(arena, assertions, config);
     }
 
+    // Vacuous-universal elimination: a top-level `∀x. body` (QF body) in which the
+    // bound variable `x` is *truth-irrelevant* — every arithmetic atom mentioning
+    // `x` has net `x`-coefficient `0` after linear normalization, and `x` appears
+    // nowhere else — is logically equivalent to `body[x := 0]`. This decides the
+    // residual `∀x. x + c >= x` (⟺ `c >= 0`) that skolemizing `∃y.∀x. x + y >= x`
+    // leaves, which the *valid*-universal pass cannot (it is not valid). Exact
+    // (changes no model) and strictly additive (a universal not proven vacuous is
+    // left untouched), so it never weakens the problem nor risks a wrong verdict.
+    let vacuous = crate::quant_vacuous_universal::eliminate_vacuous_universals(arena, assertions)?;
+    let assertions: &[TermId] = &vacuous.0;
+    if vacuous.1 && !has_quantifier(arena, assertions) {
+        return check_auto(arena, assertions, config);
+    }
+
     match check_with_quantifiers(arena, assertions, config) {
         // An infinite quantifier domain defeats finite expansion; fall back to
         // sound refutation. Try congruence-aware e-matching on the e-graph keystone

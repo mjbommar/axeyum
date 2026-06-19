@@ -450,6 +450,24 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P2.6: vacuous-`∀` elimination — a first sound cut into `∃∀`.**
+  `∃y.∀x. x+y≥x` returned `Unknown` (after skolemizing `∃y→c`, `∀x. x+c≥x` is valid only
+  when `c≥0`, so the valid-universal pass can't decide it; instantiation only refutes). New
+  `quant_vacuous_universal.rs` (`eliminate_vacuous_universals`), hooked in `solve` after
+  `eliminate_valid_universals`: for a top-level `∀x. body` (QF body, `x:Int`/`Real`), a Boolean
+  descent (`not`/`and`/`or`/`implies`/`xor`/`ite`) reaches the atoms, and a self-contained
+  affine collector (over `Rational`; handles `+`/`-`/neg/`*`-by-const + the `to_real` embed)
+  declares `x` **vacuous** iff *every* arithmetic atom's net `x`-coefficient of `lhs−rhs` is 0
+  **and** `x` occurs in no non-linear / UF-arg / array / BV / `div`/`mod`/`abs` position
+  (any such occurrence bails). Then `∀x. body ⟺ body[x:=0]` (the bound var can't change any
+  atom's truth), substituted via `replace_subterms` → the QF dispatch decides. Sound +
+  conservative (any doubt ⇒ untouched). Decides `∃y.∀x. x+y≥x` → Sat, `∀x. x*0+y=y` → Sat;
+  **soundness-negatives verified** — `∃y.∀x. x≤y`, `∀x. x≥0`, mixed-dependent bodies, and
+  `∀x. f(x)=f(x)` (UF arg) are NOT wrongly Sat (the last still decides via the valid-universal
+  pass). New `tests/quant_vacuous.rs` (8, incl. 4 soundness-negatives); full suite + clippy +
+  fmt green (OS-timeout guarded). Strictly additive. A first slice of the `∃∀` keystone (full
+  `∃∀` still needs LIA/LRA quantifier elimination); sub-agent + soundness review.
+
 - **2026-06-19** — **P3.3: QF_LIA `unsat` now carries a checkable certificate in
   `produce_evidence` (gap E).** A pure-integer `unsat` (`x>0 ∧ x<0`) reached the `Other`
   evidence route and ended as a bare `Evidence::Unsat(None)` (`is_certified()==false`), even
