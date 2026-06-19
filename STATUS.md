@@ -377,6 +377,11 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **Datatype refutations checked by the real Lean kernel** (destination-3).
+  Added a gated real-lean cross-check for algebraic datatypes (read-over-construct unsat,
+  via datatype simplification → QF_UFBV); `#print axioms` shows no `sorryAx`. Real-kernel
+  validation now spans **6 fragments**: QF_UFBV / LRA / ∀ / ∃ / QF_ABV / datatypes.
+
 - **2026-06-18** — **QF_ABV refutations now checked by the real Lean kernel** (destination-3).
   Added a gated real-lean cross-check for arrays (read-consistency unsat, reconstructed via
   array elimination → QF_UFBV); `#print axioms` shows no `sorryAx`. The independent-kernel
