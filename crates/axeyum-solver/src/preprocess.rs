@@ -15,7 +15,10 @@
 //! [`crate::check_with_array_elimination`].
 
 use axeyum_ir::{TermArena, TermId, Value, eval};
-use axeyum_rewrite::{canonicalize_terms, elim_unconstrained, propagate_values, solve_eqs};
+use axeyum_rewrite::{
+    DEFAULT_SOLVE_EQS_FUEL, canonicalize_terms, elim_unconstrained, propagate_values,
+    solve_eqs_bounded,
+};
 
 use crate::backend::{CheckResult, SolverBackend, SolverConfig, SolverError};
 use crate::model::Model;
@@ -45,7 +48,12 @@ pub fn check_with_preprocessing<B: SolverBackend>(
     let (after_values, mut trail) = propagate_values(arena, &canonical)
         .map_err(|error| SolverError::Backend(format!("propagate_values failed: {error}")))?
         .into_parts();
-    let (reduced, eq_trail) = solve_eqs(arena, &after_values)
+    // `solve_eqs_bounded`: the substitution loop is `O(eliminations × nodes)` and
+    // runs effectively unbounded on the large public ite-DAGs (a 17.6 MB / 215 k-`ite`
+    // instance never returns). The deterministic node-fuel bail keeps preprocessing
+    // usable at that scale, returning a sound *partial* reduction (the un-eliminated
+    // equalities stay as ordinary assertions; the trail still reconstructs).
+    let (reduced, eq_trail) = solve_eqs_bounded(arena, &after_values, DEFAULT_SOLVE_EQS_FUEL)
         .map_err(|error| SolverError::Backend(format!("solve_eqs failed: {error}")))?
         .into_parts();
     trail.append(eq_trail);

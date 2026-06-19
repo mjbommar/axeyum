@@ -31,8 +31,8 @@ mod run {
     use axeyum_ir::{TermArena, TermId, TermStats, Value, eval};
     use axeyum_query::{Query, QueryPlan, StructuralCacheKey};
     use axeyum_rewrite::{
-        ModelReconstructionTrail, RewriteReport, canonicalize_terms, default_manifest,
-        propagate_values, solve_eqs,
+        DEFAULT_SOLVE_EQS_FUEL, ModelReconstructionTrail, RewriteReport, canonicalize_terms,
+        default_manifest, propagate_values, solve_eqs_bounded,
     };
     use axeyum_smtlib::{Script, SmtError, parse_script};
     #[cfg(feature = "z3")]
@@ -871,7 +871,10 @@ mod run {
         let (after_values, mut trail) = propagate_values(arena, assertions)
             .expect("propagate_values preserves IR well-formedness")
             .into_parts();
-        let (reduced, eq_trail) = solve_eqs(arena, &after_values)
+        // Deterministic node-fuel bail (see `axeyum_rewrite::solve_eqs_bounded`): the
+        // substitution loop runs effectively unbounded on the large public ite-DAGs,
+        // so cap it to a sound partial reduction instead of hanging the harness.
+        let (reduced, eq_trail) = solve_eqs_bounded(arena, &after_values, DEFAULT_SOLVE_EQS_FUEL)
             .expect("solve_eqs preserves IR well-formedness")
             .into_parts();
         trail.append(eq_trail);

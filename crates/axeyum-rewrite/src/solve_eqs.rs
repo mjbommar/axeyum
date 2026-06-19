@@ -29,12 +29,25 @@ use axeyum_ir::{IrError, Op, SymbolId, TermArena, TermId, TermNode};
 use crate::canonical::replace_subterms;
 use crate::reconstruct::ModelReconstructionTrail;
 
+/// Default deterministic work budget for [`solve_eqs_bounded`] when called from
+/// the preprocessing pipeline: the cumulative count of distinct DAG nodes touched
+/// across all substitution rounds. The substitution loop is `O(eliminations ×
+/// surviving-assertion-nodes)`, which on the large public `QF_BV` ite-DAGs (28 k
+/// assertions / 340 k nodes) runs effectively unbounded; this caps it to a few
+/// seconds, bailing to a *partial* (still sound) reduction. Generous enough that
+/// the small/medium instances reduce fully (their total work is well under a
+/// million nodes). Deterministic — node count, never wall-clock. (~5M node-visits
+/// is ≈1.2 s on the 17.6 MB / 340 k-node giant; small/medium instances finish far
+/// under it, so their reduction is unaffected.)
+pub const DEFAULT_SOLVE_EQS_FUEL: u64 = 5_000_000;
+
 /// The result of [`solve_eqs`]: the variable-reduced assertions plus the trail
 /// that rebuilds eliminated variables for model reconstruction.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EqSolution {
     assertions: Vec<TermId>,
     trail: ModelReconstructionTrail,
+    bailed: bool,
 }
 
 impl EqSolution {
@@ -54,6 +67,15 @@ impl EqSolution {
     #[must_use]
     pub fn eliminated(&self) -> usize {
         self.trail.len()
+    }
+
+    /// Whether the pass stopped early on the deterministic fuel budget (see
+    /// [`solve_eqs_bounded`]) rather than reaching the elimination fixpoint. When
+    /// `true` the reduction is *partial* (some solvable equalities remain in
+    /// [`Self::assertions`]) — still sound, just not maximal.
+    #[must_use]
+    pub fn bailed(&self) -> bool {
+        self.bailed
     }
 
     /// Consumes into `(reduced assertions, trail)`.
@@ -116,18 +138,52 @@ fn detect_solvable(
     None
 }
 
-/// Solves top-level equalities by variable substitution (see module docs).
+/// Solves top-level equalities by variable substitution to a **fixpoint** (see
+/// module docs). Equivalent to [`solve_eqs_bounded`] with an unbounded budget.
 ///
 /// # Errors
 ///
 /// Returns [`IrError`] only if rebuilding a substituted term fails sort checking,
 /// which cannot happen here (`x` and its equal term `t` share a sort).
 pub fn solve_eqs(arena: &mut TermArena, assertions: &[TermId]) -> Result<EqSolution, IrError> {
+    solve_eqs_bounded(arena, assertions, u64::MAX)
+}
+
+/// Like [`solve_eqs`], but stops early once `fuel` distinct DAG-node visits have
+/// been spent across substitution rounds, returning a **partial** (still sound)
+/// reduction with [`EqSolution::bailed`] set.
+///
+/// The substitution loop costs `O(eliminations × surviving-assertion-nodes)`; on
+/// the large public ite-DAGs that is effectively unbounded (the pass never
+/// returns). `fuel` is charged the number of distinct subterms rewritten each
+/// round (the shared memo's size — a cheap, deterministic proxy for the round's
+/// rebuild work, never wall-clock), and the loop bails after the round that
+/// crosses the budget. Bailing early is sound: each eliminated `x := t` is already
+/// recorded in the trail and dropped from the assertions, and every *un*-eliminated
+/// equality simply remains a normal assertion — so the reduced problem is
+/// equisatisfiable and the trail reconstructs exactly the variables it removed.
+/// Use [`DEFAULT_SOLVE_EQS_FUEL`] from the preprocessing pipeline.
+///
+/// # Errors
+///
+/// Returns [`IrError`] only if rebuilding a substituted term fails sort checking,
+/// which cannot happen here (`x` and its equal term `t` share a sort).
+pub fn solve_eqs_bounded(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    fuel: u64,
+) -> Result<EqSolution, IrError> {
     let mut current: Vec<TermId> = assertions.to_vec();
     let mut trail = ModelReconstructionTrail::new();
     let mut defined: HashSet<SymbolId> = HashSet::new();
+    let mut spent: u64 = 0;
+    let mut bailed = false;
 
     loop {
+        if spent >= fuel {
+            bailed = true;
+            break;
+        }
         let found = current
             .iter()
             .enumerate()
@@ -145,11 +201,15 @@ pub fn solve_eqs(arena: &mut TermArena, assertions: &[TermId]) -> Result<EqSolut
         for a in &mut current {
             *a = replace_subterms(arena, *a, &replacements, &mut memo)?;
         }
+        // Charge the round's rebuild work: the shared memo holds one entry per
+        // distinct subterm visited across all surviving assertions this round.
+        spent = spent.saturating_add(memo.len() as u64);
     }
 
     Ok(EqSolution {
         assertions: current,
         trail,
+        bailed,
     })
 }
 
@@ -222,6 +282,54 @@ mod tests {
         let out = solve_eqs(&mut arena, &[cyclic]).unwrap();
         assert_eq!(out.eliminated(), 0, "cyclic equality must not be solved");
         assert_eq!(out.assertions(), &[cyclic]);
+    }
+
+    /// The deterministic fuel budget bails to a *partial* reduction without hanging,
+    /// and the partial result is still sound (un-eliminated equalities remain and
+    /// the trail reconstructs the variables it did eliminate). `fuel = 0` eliminates
+    /// nothing; an unbounded budget matches [`solve_eqs`].
+    #[test]
+    #[allow(clippy::similar_names)]
+    fn bounded_fuel_bails_to_a_sound_partial_reduction() {
+        // x = y + 1, z = x + 1, and a goal (= (bvadd x z) 9). Two solvable defs.
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::BitVec(8)).unwrap();
+        let y = arena.declare("y", Sort::BitVec(8)).unwrap();
+        let z = arena.declare("z", Sort::BitVec(8)).unwrap();
+        let (xv, yv, zv) = (arena.var(x), arena.var(y), arena.var(z));
+        let one = arena.bv_const(8, 1).unwrap();
+        let y1 = arena.bv_add(yv, one).unwrap();
+        let x_def = arena.eq(xv, y1).unwrap();
+        let x1 = arena.bv_add(xv, one).unwrap();
+        let z_def = arena.eq(zv, x1).unwrap();
+        let sum = arena.bv_add(xv, zv).unwrap();
+        let nine = arena.bv_const(8, 9).unwrap();
+        let goal = arena.eq(sum, nine).unwrap();
+        let originals = [x_def, z_def, goal];
+
+        // fuel = 0: bails before any elimination; assertions unchanged.
+        let none = solve_eqs_bounded(&mut arena, &originals, 0).unwrap();
+        assert!(none.bailed(), "zero fuel must bail");
+        assert_eq!(none.eliminated(), 0);
+        assert_eq!(none.assertions().len(), 3);
+
+        // Unbounded == solve_eqs: both defs eliminated, only the goal survives.
+        let full = solve_eqs(&mut arena, &originals).unwrap();
+        assert!(!full.bailed(), "unbounded budget never bails");
+        assert_eq!(full.eliminated(), 2);
+        assert_eq!(full.assertions().len(), 1);
+
+        // The fully-reduced goal is over y alone: y=3 → x=4, z=5, x+z=9. ✓
+        let mut reduced = Assignment::new();
+        reduced.set(y, Value::Bv { width: 8, value: 3 });
+        assert_eq!(
+            eval(&arena, full.assertions()[0], &reduced).unwrap(),
+            Value::Bool(true)
+        );
+        let model = full.trail().reconstruct(&arena, &reduced).unwrap();
+        assert_eq!(model.get(x), Some(Value::Bv { width: 8, value: 4 }));
+        assert_eq!(model.get(z), Some(Value::Bv { width: 8, value: 5 }));
+        assert_satisfies(&arena, &originals, &model);
     }
 
     #[test]

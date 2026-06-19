@@ -39,7 +39,7 @@ pub use quantifiers::{
     instantiate_universals, instantiate_with_triggers,
 };
 pub use reconstruct::ModelReconstructionTrail;
-pub use solve_eqs::{EqSolution, solve_eqs};
+pub use solve_eqs::{DEFAULT_SOLVE_EQS_FUEL, EqSolution, solve_eqs, solve_eqs_bounded};
 
 /// Stable rewrite rule identifier used in logs and future certificates.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
