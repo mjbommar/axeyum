@@ -377,6 +377,24 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P3.5: Ackermann Alethe certificate widened to transitive
+  argument-equalities.** `prove_qf_ufbv_unsat_alethe` previously discharged a
+  functional-consistency constraint's antecedent only when each argument pair was
+  *directly* asserted equal (or identical). It now also discharges pairs equal by
+  **transitive closure** of the asserted equalities (`a=b ∧ b=c ⊢ a=c`): a BFS over
+  the asserted-equality graph finds the chain, each edge (an original assertion) is
+  `assume`d, and one `eq_transitive` step + resolution derives the argument equality
+  feeding `eq_congruent` — so `f(a)=k ∧ a=b ∧ b=c ∧ f(c)≠k` now emits a checkable
+  certificate (previously declined → `None`). Strictly additive: directly-asserted
+  and identical pairs keep their exact prior steps (no change to the existing
+  Carcara-validated certs), and the new path is gated by `check_alethe`
+  self-validation (a non-derivable chain ⇒ `None`, never a wrong proof). 2 new
+  self-check tests (unary chain; binary with one direct + one chained arg) + a new
+  **Carcara crosscheck** (`ufbv_transitive_congruence_is_accepted_by_carcara`) so the
+  transitive fragment is externally validated. Widens the Ackermann trust-hole
+  certificate coverage (Track 3, ADR-0013). Full solver clippy + qfufbv_proof +
+  carcara crosscheck green.
+
 - **2026-06-19** — **NRA OOM gap CLOSED: deterministic cross-product admission bound
   (graceful `unknown`, never OOM).** `check_with_nra` now refuses any query with > 2
   distinct-operand cross-products (`a·b`, `a ≠ b`) up front — *before* building lemmas or

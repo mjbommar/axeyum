@@ -1633,6 +1633,57 @@ fn ufbv_binary_congruence_is_accepted_by_carcara() {
     assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
 }
 
+#[test]
+#[allow(clippy::many_single_char_names)]
+fn ufbv_transitive_congruence_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // f(a) = #b00 ∧ a = b ∧ b = c ∧ ¬(f(c) = #b00). The argument equality a = c is
+    // NOT directly asserted — only derivable by transitive closure a = b = c — so
+    // the certificate proves it with an `eq_transitive` chain over the two asserted
+    // edges. Carcara must accept that chain.
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(2)], Sort::BitVec(2))
+        .unwrap();
+    let a = bvw(&mut arena, "a", 2);
+    let b = bvw(&mut arena, "b", 2);
+    let c = bvw(&mut arena, "c", 2);
+    let fa = arena.apply(f, &[a]).unwrap();
+    let fc = arena.apply(f, &[c]).unwrap();
+    let c00 = arena.bv_const(2, 0).unwrap();
+    let e1 = arena.eq(fa, c00).unwrap();
+    let e2 = arena.eq(a, b).unwrap();
+    let e3 = arena.eq(b, c).unwrap();
+    let e4 = {
+        let e = arena.eq(fc, c00).unwrap();
+        arena.not(e).unwrap()
+    };
+
+    let proof =
+        prove_qf_ufbv_unsat_alethe(&mut arena, &[e1, e2, e3, e4]).expect("emit QF_UFBV proof");
+    let smt2 = "\
+(set-logic QF_UFBV)
+(declare-fun f ((_ BitVec 2)) (_ BitVec 2))
+(declare-const a (_ BitVec 2))
+(declare-const b (_ BitVec 2))
+(declare-const c (_ BitVec 2))
+(declare-const !fn_app_0 (_ BitVec 2))
+(declare-const !fn_app_1 (_ BitVec 2))
+(assert (= !fn_app_0 #b00))
+(assert (= a b))
+(assert (= b c))
+(assert (not (= !fn_app_1 #b00)))
+(assert (= !fn_app_0 (f a)))
+(assert (= (f c) !fn_app_1))
+(check-sat)
+";
+    let report = carcara_accepts_smt2(&bin, "ufbv_transitive", smt2, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
 // --- QF_ABV array-elimination certificate: ----------------------------------
 // `prove_qf_abv_unsat_alethe_via_elimination`
 //

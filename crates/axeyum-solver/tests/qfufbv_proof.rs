@@ -87,6 +87,62 @@ fn binary_congruence_two_argument_equalities() {
 }
 
 #[test]
+#[allow(clippy::many_single_char_names)]
+fn transitive_argument_equality_unary() {
+    // f(a) = #b00 ∧ a = b ∧ b = c ∧ ¬(f(c) = #b00).
+    // unsat: a = b = c (by transitivity) ⇒ f(a) = f(c) ⇒ f(c) = #b00, contradiction.
+    // The argument equality a = c is NOT directly asserted — only derivable through
+    // the chain a = b = c — so this exercises the eq_transitive arg-chain.
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(2)], Sort::BitVec(2))
+        .unwrap();
+    let a = bv(&mut arena, "a", 2);
+    let b = bv(&mut arena, "b", 2);
+    let c = bv(&mut arena, "c", 2);
+    let fa = arena.apply(f, &[a]).unwrap();
+    let fc = arena.apply(f, &[c]).unwrap();
+    let c00 = arena.bv_const(2, 0).unwrap();
+    let e1 = arena.eq(fa, c00).unwrap();
+    let e2 = arena.eq(a, b).unwrap();
+    let e3 = arena.eq(b, c).unwrap();
+    let e4 = {
+        let e = arena.eq(fc, c00).unwrap();
+        arena.not(e).unwrap()
+    };
+    self_checks(&mut arena, &[e1, e2, e3, e4]);
+}
+
+#[test]
+#[allow(clippy::many_single_char_names)]
+fn transitive_argument_equality_binary_one_chained() {
+    // g(a, b) = #b00 ∧ a = c ∧ b = d ∧ d = e ∧ ¬(g(c, e) = #b00).
+    // unsat: a = c (direct) and b = d = e (chained) ⇒ g(a, b) = g(c, e). Mixes a
+    // direct argument equality with a transitively-derived one in one congruence.
+    let mut arena = TermArena::new();
+    let g = arena
+        .declare_fun("g", &[Sort::BitVec(2), Sort::BitVec(2)], Sort::BitVec(2))
+        .unwrap();
+    let a = bv(&mut arena, "a", 2);
+    let b = bv(&mut arena, "b", 2);
+    let c = bv(&mut arena, "c", 2);
+    let d = bv(&mut arena, "d", 2);
+    let e = bv(&mut arena, "e", 2);
+    let gab = arena.apply(g, &[a, b]).unwrap();
+    let gce = arena.apply(g, &[c, e]).unwrap();
+    let c00 = arena.bv_const(2, 0).unwrap();
+    let a1 = arena.eq(gab, c00).unwrap();
+    let a2 = arena.eq(a, c).unwrap();
+    let a3 = arena.eq(b, d).unwrap();
+    let a4 = arena.eq(d, e).unwrap();
+    let a5 = {
+        let eq = arena.eq(gce, c00).unwrap();
+        arena.not(eq).unwrap()
+    };
+    self_checks(&mut arena, &[a1, a2, a3, a4, a5]);
+}
+
+#[test]
 fn no_functions_returns_none() {
     // Pure QF_BV (no applications): the dedicated QF_BV emitter handles it; the
     // QF_UFBV certificate emitter declines.

@@ -115,6 +115,11 @@ pub fn prove_qf_ufbv_unsat_alethe(
     // constraint's antecedent: a pair of applications whose arguments are
     // pairwise asserted-equal (or identical) has a derivable consequent.
     let asserted_eqs = collect_asserted_eqs(arena, &rewritten);
+    // The undirected graph those equalities induce, so an argument equality that
+    // holds by *transitive closure* (`a = b ∧ b = c ⊢ a = c`) — not only by a
+    // direct assertion — can still discharge a consistency antecedent, with the
+    // chain proven by `eq_transitive` in `emit_arg_units`.
+    let adjacency = asserted_eq_adjacency(&asserted_eqs);
 
     // For every pair of same-function applications with pairwise-derivable
     // argument equalities, the consequent `(= v_i v_j)` is `eq_congruent`-derivable.
@@ -126,7 +131,7 @@ pub fn prove_qf_ufbv_unsat_alethe(
             if fi != fj || ai.len() != aj.len() {
                 continue;
             }
-            if args_pairwise_equal(&asserted_eqs, ai, aj) {
+            if args_pairwise_connected(&adjacency, ai, aj) {
                 certs.push(CongruenceCert {
                     fresh_i: *vi,
                     fresh_j: *vj,
@@ -160,7 +165,8 @@ pub fn prove_qf_ufbv_unsat_alethe(
 
     // Splice: replace each consequent's `Assume` with its `eq_congruent`
     // derivation under the same id, so the consistency constraint is proven.
-    let spliced = splice_congruence_derivations(arena, &bv_proof, &certs, &consequent_terms)?;
+    let spliced =
+        splice_congruence_derivations(arena, &bv_proof, &certs, &consequent_terms, &adjacency)?;
 
     // Self-validate before returning.
     if matches!(check_alethe(&spliced), Ok(true)) {
@@ -197,13 +203,72 @@ fn ordered(a: TermId, b: TermId) -> (TermId, TermId) {
     }
 }
 
-/// Whether every positional argument pair `(a_k, b_k)` is asserted-equal or
-/// structurally identical — the antecedent of the consistency constraint is then
-/// directly discharged.
-fn args_pairwise_equal(asserted: &BTreeSet<(TermId, TermId)>, a: &[TermId], b: &[TermId]) -> bool {
+/// The undirected adjacency map induced by a set of asserted equalities: each
+/// `{a, b}` becomes edges `a—b` and `b—a`. Used to test whether two argument
+/// terms are connected (equal by transitive closure) and to recover the path.
+fn asserted_eq_adjacency(asserted: &BTreeSet<(TermId, TermId)>) -> BTreeMap<TermId, Vec<TermId>> {
+    let mut adj: BTreeMap<TermId, Vec<TermId>> = BTreeMap::new();
+    for &(a, b) in asserted {
+        adj.entry(a).or_default().push(b);
+        adj.entry(b).or_default().push(a);
+    }
+    adj
+}
+
+/// Whether every positional argument pair `(a_k, b_k)` is structurally identical
+/// or **connected** in the asserted-equality graph (equal by transitive closure)
+/// — the antecedent of the consistency constraint is then discharged, directly or
+/// through an `eq_transitive` chain emitted by [`emit_arg_units`].
+fn args_pairwise_connected(
+    adjacency: &BTreeMap<TermId, Vec<TermId>>,
+    a: &[TermId],
+    b: &[TermId],
+) -> bool {
     a.iter()
         .zip(b.iter())
-        .all(|(&x, &y)| x == y || asserted.contains(&ordered(x, y)))
+        .all(|(&x, &y)| x == y || eq_path(adjacency, x, y).is_some())
+}
+
+/// The shortest path of terms `from = t0, t1, …, tn = to` such that each
+/// consecutive pair `{t_i, t_{i+1}}` is an asserted equality (a BFS over the
+/// asserted-equality graph), or [`None`] if `from` and `to` are not connected.
+/// A returned path always has `len() >= 2` (it never returns the trivial path for
+/// `from == to`; callers handle identical terms separately).
+fn eq_path(
+    adjacency: &BTreeMap<TermId, Vec<TermId>>,
+    from: TermId,
+    to: TermId,
+) -> Option<Vec<TermId>> {
+    if from == to {
+        return None;
+    }
+    let mut prev: BTreeMap<TermId, TermId> = BTreeMap::new();
+    let mut queue: std::collections::VecDeque<TermId> = std::collections::VecDeque::new();
+    let mut seen: BTreeSet<TermId> = BTreeSet::new();
+    queue.push_back(from);
+    seen.insert(from);
+    while let Some(node) = queue.pop_front() {
+        if node == to {
+            // Reconstruct the path from `to` back to `from`.
+            let mut path = vec![to];
+            let mut cur = to;
+            while cur != from {
+                cur = prev[&cur];
+                path.push(cur);
+            }
+            path.reverse();
+            return Some(path);
+        }
+        if let Some(neighbours) = adjacency.get(&node) {
+            for &next in neighbours {
+                if seen.insert(next) {
+                    prev.insert(next, node);
+                    queue.push_back(next);
+                }
+            }
+        }
+    }
+    None
 }
 
 /// Replaces each consequent `(= v_i v_j)` `Assume` in `bv_proof` with an
@@ -215,6 +280,7 @@ fn splice_congruence_derivations(
     bv_proof: &[AletheCommand],
     certs: &[CongruenceCert],
     consequents: &[(TermId, SymbolId, SymbolId)],
+    adjacency: &BTreeMap<TermId, Vec<TermId>>,
 ) -> Option<Vec<AletheCommand>> {
     // Map each consequent's `(= v_i v_j)` clause key to its cert.
     let mut by_consequent: BTreeMap<String, &CongruenceCert> = BTreeMap::new();
@@ -232,7 +298,7 @@ fn splice_congruence_derivations(
         match cmd {
             AletheCommand::Assume { id, clause } => {
                 if let Some(cert) = clause_consequent_cert(clause, &by_consequent) {
-                    emit_congruence_derivation(arena, &mut out, &mut fresh, id, cert)?;
+                    emit_congruence_derivation(arena, &mut out, &mut fresh, id, cert, adjacency)?;
                 } else {
                     out.push(cmd.clone());
                 }
@@ -283,6 +349,7 @@ fn emit_congruence_derivation(
     fresh: &mut usize,
     assume_id: &str,
     cert: &CongruenceCert,
+    adjacency: &BTreeMap<TermId, Vec<TermId>>,
 ) -> Option<()> {
     let (fname, _params, _result) = arena.function(cert.func);
     let fname = fname.to_owned();
@@ -319,15 +386,18 @@ fn emit_congruence_derivation(
         clause: vec![pos(eq_term(fb.clone(), vj.clone()))],
     });
 
-    // The per-argument equality units (asserted, or reflexive for identical args).
+    // The per-argument equality units (asserted, reflexive for identical args, or
+    // an `eq_transitive` chain when the equality holds only by transitive closure).
     let arg_eq_ids = emit_arg_units(
+        arena,
         out,
         fresh,
         &args_i_alethe,
         &args_j_alethe,
         &cert.args_i,
         &cert.args_j,
-    );
+        adjacency,
+    )?;
     let arg_pairs: Vec<(AletheTerm, AletheTerm)> = args_i_alethe
         .iter()
         .cloned()
@@ -401,17 +471,29 @@ fn next_id(fresh: &mut usize, base: &str) -> String {
     id
 }
 
-/// Emits one unit equality `(cl (= a_k b_k))` per argument position — an `assume`
-/// of the asserted argument equality, or an `eq_reflexive` for an identical pair —
-/// returning the ids in position order (the `eq_congruent` resolution premises).
+/// Emits one unit equality `(cl (= a_k b_k))` per argument position, returning the
+/// ids in position order (the `eq_congruent` resolution premises). Each unit is:
+///
+/// - an `eq_reflexive` step for an identical pair (`a_k == b_k`);
+/// - a direct `assume` of the asserted argument equality (a single asserted edge);
+/// - or, when the equality holds only by **transitive closure** of the asserted
+///   equalities, an `eq_transitive` chain: each edge of the BFS path is `assume`d
+///   (it *is* an original assertion) and chained to the derived `(= a_k b_k)`.
+///
+/// Returns [`None`] if a path node or a non-direct pair cannot be rendered to an
+/// [`AletheTerm`] (outside the argument fragment), so the caller declines the cert
+/// rather than emit an unprovable step.
+#[allow(clippy::too_many_arguments)]
 fn emit_arg_units(
+    arena: &TermArena,
     out: &mut Vec<AletheCommand>,
     fresh: &mut usize,
     args_i_alethe: &[AletheTerm],
     args_j_alethe: &[AletheTerm],
     args_i: &[TermId],
     args_j: &[TermId],
-) -> Vec<String> {
+    adjacency: &BTreeMap<TermId, Vec<TermId>>,
+) -> Option<Vec<String>> {
     let mut ids = Vec::with_capacity(args_i_alethe.len());
     for ((&ax, &bx), (aa, bb)) in args_i
         .iter()
@@ -429,16 +511,64 @@ fn emit_arg_units(
                 args: Vec::new(),
             });
             ids.push(r);
-        } else {
+            continue;
+        }
+        let path = eq_path(adjacency, ax, bx)?;
+        if path.len() == 2 {
+            // A single asserted edge `(= a_k b_k)`: assume it directly (unchanged).
             let g = next_id(fresh, "arg");
             out.push(AletheCommand::Assume {
                 id: g.clone(),
                 clause: vec![pos(eq_term(aa.clone(), bb.clone()))],
             });
             ids.push(g);
+        } else {
+            // Transitive closure `a_k = m_1 = … = b_k`: assume each edge and chain
+            // them with one `eq_transitive` step (shared middle terms) resolved to
+            // `(= a_k b_k)`.
+            let nodes: Vec<AletheTerm> = path
+                .iter()
+                .map(|&n| term_to_alethe(arena, n))
+                .collect::<Option<_>>()?;
+            // Assume every edge `(= n_i n_{i+1})` — each is an original assertion.
+            let mut edge_ids = Vec::with_capacity(nodes.len() - 1);
+            for w in nodes.windows(2) {
+                let e = next_id(fresh, "edge");
+                out.push(AletheCommand::Assume {
+                    id: e.clone(),
+                    clause: vec![pos(eq_term(w[0].clone(), w[1].clone()))],
+                });
+                edge_ids.push(e);
+            }
+            // eq_transitive tautology: (cl (not (= n0 n1)) … (not (= n_{m-1} nm)) (= n0 nm)).
+            let mut trans_clause: AletheClause = nodes
+                .windows(2)
+                .map(|w| neg(eq_term(w[0].clone(), w[1].clone())))
+                .collect();
+            trans_clause.push(pos(eq_term(aa.clone(), bb.clone())));
+            let trans = next_id(fresh, "argtrans");
+            out.push(AletheCommand::Step {
+                id: trans.clone(),
+                clause: trans_clause,
+                rule: "eq_transitive".to_owned(),
+                premises: Vec::new(),
+                args: Vec::new(),
+            });
+            // Resolve the tautology against the edge units → (cl (= a_k b_k)).
+            let derived = next_id(fresh, "argeq");
+            let mut prems = vec![trans];
+            prems.extend(edge_ids);
+            out.push(AletheCommand::Step {
+                id: derived.clone(),
+                clause: vec![pos(eq_term(aa.clone(), bb.clone()))],
+                rule: "resolution".to_owned(),
+                premises: prems,
+                args: Vec::new(),
+            });
+            ids.push(derived);
         }
     }
-    ids
+    Some(ids)
 }
 
 /// A symbol rendered as an Alethe `Const` of its declared name.
