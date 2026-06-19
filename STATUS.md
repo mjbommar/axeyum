@@ -23,9 +23,11 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     the 6 remaining `EncodingBudget` instances below the encode ceiling and shrink the
     99 timeout CNFs (AC-tree flattening / `ite`-chain simplification / `bv_slice` /
     `max_bv_sharing`) — *this is `axeyum-rewrite` P1.2, the concurrent agent's active
-    area; coordinate to avoid collision*; (2) flip `SolverConfig::preprocess`
-    default-on (ADR-0034 criterion met; ADR-0037 staged it after a full-suite
-    behavior check on `solve()` consumers).
+    area; coordinate to avoid collision*; (2) ~~flip `SolverConfig::preprocess`
+    default-on~~ **DONE (2026-06-18, commit `6cb2f1b`)** — `preprocess` now defaults
+    on; the default `solve()` path runs the full reduction pipeline, guarded
+    (skip-on-quantifier + best-effort fall-back to the original on any pass error);
+    full-workspace behaviour check green (103 binaries). ADR-0034 updated.
 - **P2.6 quantifier e-matching vertical — keystone-complete, wired & validated**
   (2026-06-16): trigger *inference* (single-cover + greedy multi-pattern set
   cover), congruence-aware multi-pattern join, the instantiation fixpoint loop
@@ -374,6 +376,15 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed slice + baseline (32/43 decided, agree=32, DISAGREE=0) |
 
 ## Changelog
+
+- **2026-06-18** — **Word-level preprocessing flipped default-ON** (commit `6cb2f1b`,
+  ADR-0034/0037 staged step). `SolverConfig::default().preprocess == true`; the default
+  `solve()`/`check_auto` path runs the model-sound reduction pipeline. Guarded so it is
+  never a correctness dependency: skipped on quantified queries (QF transform), and
+  best-effort (any reduction-pass error → solve the ORIGINAL). Validated by a
+  full-workspace behaviour check (103 test binaries green) — the gate ADR-0037 required.
+  Caught + fixed a real regression in the check: preprocessing errored on
+  uninterpreted-function applications (canonicalize fold) → the best-effort fallback.
 
 - **2026-06-18** — **BV `repeat`** (`bv_repeat`, z3 `(_ repeat n)`): derived concat fold,
   no new IR Op/lowering. Completes the common z3 BV op set (nand/nor/xnor/comp/rotate

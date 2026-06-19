@@ -1,7 +1,19 @@
 # ADR-0034: Word-level preprocessing is opt-in, default-off (for now)
 
-Status: accepted
+Status: accepted — **default flipped to ON (2026-06-18)**, see the update below
 Date: 2026-06-17
+
+> **Update (2026-06-18): the ratification criterion is met; `preprocess` now
+> defaults ON.** The full model-sound pipeline (`solve_eqs`/`elim_unconstrained`,
+> not just canonicalization) on the public p4dfa slice decides **4/113 @3s and
+> 7/113 @20s vs eager 2/3, `DISAGREE=0`, PAR-2 non-worse** — the net-non-negative
+> decided-delta criterion below, on the public corpus. `SolverConfig::default()` now
+> sets `preprocess: true` (commit `6cb2f1b`), with two safety guards added so it is
+> never a correctness dependency: it is **skipped on quantified queries** (a QF
+> transform) and is **best-effort** (any reduction-pass error → solve the original
+> query). Validated by a full-workspace behaviour check (103 test binaries green).
+> The unbounded-`solve_eqs` hazard the original note worried about is fixed by the
+> deterministic `solve_eqs_bounded` fuel (ADR-0037).
 
 ## Context
 
