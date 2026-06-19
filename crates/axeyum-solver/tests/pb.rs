@@ -68,3 +68,59 @@ fn weighted_eq_pins_the_sum() {
         Ok(CheckResult::Unsat)
     ));
 }
+
+use axeyum_solver::{pb_gt, pb_lt};
+
+/// Strict PB: `a+b+c < 2` ∧ require `a` ⇒ b,c both false (else sum ≥ 2). And
+/// `a+b+c > 1` ∧ `¬a` ⇒ b and c both true (need ≥ 2 from {b,c}).
+#[test]
+fn strict_pb_lt_and_gt() {
+    let mut arena = TermArena::new();
+    let a = bool_var(&mut arena, "a");
+    let b = bool_var(&mut arena, "b");
+    let c = bool_var(&mut arena, "c");
+    let terms = [(a, 1u64), (b, 1), (c, 1)];
+
+    // a + b + c < 2, with a required.
+    let lt = pb_lt(&mut arena, &terms, 2).unwrap();
+    let nb = arena.not(b).unwrap();
+    let nc = arena.not(c).unwrap();
+    // sat: a ∧ ¬b ∧ ¬c (sum 1 < 2)
+    assert!(matches!(
+        solve(&mut arena, &[lt, a, nb, nc], &SolverConfig::default()).unwrap(),
+        CheckResult::Sat(_)
+    ));
+    // unsat: a ∧ b ∧ c (sum 3, not < 2)
+    let lt2 = pb_lt(&mut arena, &terms, 2).unwrap();
+    assert!(matches!(
+        solve(&mut arena, &[lt2, a, b, c], &SolverConfig::default()).unwrap(),
+        CheckResult::Unsat
+    ));
+
+    // a + b + c > 1, with ¬a → need b ∧ c.
+    let gt = pb_gt(&mut arena, &terms, 1).unwrap();
+    let na = arena.not(a).unwrap();
+    assert!(matches!(
+        solve(&mut arena, &[gt, na, b, c], &SolverConfig::default()).unwrap(),
+        CheckResult::Sat(_)
+    ));
+    let gt2 = pb_gt(&mut arena, &terms, 1).unwrap();
+    let nb2 = arena.not(b).unwrap();
+    // ¬a ∧ ¬b ⇒ at most c (sum ≤ 1), not > 1.
+    assert!(matches!(
+        solve(&mut arena, &[gt2, na, nb2], &SolverConfig::default()).unwrap(),
+        CheckResult::Unsat
+    ));
+}
+
+/// `pb_lt(_, 0)` is unconstrained-false (a sum of non-negative weights is never < 0).
+#[test]
+fn strict_pb_lt_zero_is_false() {
+    let mut arena = TermArena::new();
+    let a = bool_var(&mut arena, "a");
+    let lt0 = pb_lt(&mut arena, &[(a, 1)], 0).unwrap();
+    assert!(matches!(
+        solve(&mut arena, &[lt0], &SolverConfig::default()).unwrap(),
+        CheckResult::Unsat
+    ));
+}

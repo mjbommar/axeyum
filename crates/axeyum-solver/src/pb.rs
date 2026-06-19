@@ -57,6 +57,33 @@ pub fn pb_eq(arena: &mut TermArena, terms: &[(TermId, u64)], k: u64) -> Result<T
     arena.eq(sum, bound)
 }
 
+/// `Σ wᵢ·bᵢ < k` over the `(literal, weight)` pairs `terms`. Weights are
+/// non-negative, so `< 0` is unsatisfiable; otherwise it is `≤ k−1`.
+///
+/// # Errors
+///
+/// Returns [`IrError`] from the IR builders.
+pub fn pb_lt(arena: &mut TermArena, terms: &[(TermId, u64)], k: u64) -> Result<TermId, IrError> {
+    match k.checked_sub(1) {
+        Some(km1) => pb_le(arena, terms, km1),
+        None => Ok(arena.bool_const(false)), // sum < 0 is impossible (weights ≥ 0)
+    }
+}
+
+/// `Σ wᵢ·bᵢ > k` over the `(literal, weight)` pairs `terms`. Equivalent to
+/// `≥ k+1`; if `k+1` overflows `u64` the sum (bounded by the total weight) cannot
+/// exceed it, so the result is `false`.
+///
+/// # Errors
+///
+/// Returns [`IrError`] from the IR builders.
+pub fn pb_gt(arena: &mut TermArena, terms: &[(TermId, u64)], k: u64) -> Result<TermId, IrError> {
+    match k.checked_add(1) {
+        Some(kp1) => pb_ge(arena, terms, kp1),
+        None => Ok(arena.bool_const(false)),
+    }
+}
+
 /// Builds `Σ ite(bᵢ, wᵢ, 0)` as a bit-vector wide enough to hold both the total
 /// weight and the bound `k`, returning it with its width.
 fn weighted_sum(

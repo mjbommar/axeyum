@@ -156,7 +156,7 @@ pub use optimize::{
     optimize_bv_box, optimize_bv_lexicographic, optimize_lia_box, optimize_lia_lexicographic,
     optimize_lia_pareto,
 };
-pub use pb::{pb_eq, pb_ge, pb_le};
+pub use pb::{pb_eq, pb_ge, pb_gt, pb_le, pb_lt};
 pub use pbls::{LocalSearchOutcome, PblsBackend, solve_local_search};
 pub use preprocess::check_with_preprocessing;
 pub use proof::{
