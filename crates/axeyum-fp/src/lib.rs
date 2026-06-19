@@ -2793,10 +2793,13 @@ fn round_rational_rne(
 }
 
 /// Constant-folds `fp.to_real` (FP → mathematical Real, ADR-0015) for a finite
-/// F32/F64 constant. FP→Real is **exact** (no rounding), so when the exact value
-/// fits the `i128`-based [`Rational`] this folds to a `Real` constant; `NaN`/`∞`
-/// (not real numbers) and values whose exact rational exceeds `i128` return
-/// `Ok(None)`. Bridges FP into the linear-real-arithmetic theory.
+/// constant in **any IEEE-style format** (F16, BF16, TF32, F32, F64, FP8 E5M2, …):
+/// the decode below is generic in `(exp_bits, sig_bits)`. FP→Real is **exact** (no
+/// rounding), so when the exact value fits the `i128`-based [`Rational`] this folds
+/// to a `Real` constant; `NaN`/`∞` (not real numbers) and values whose exact
+/// rational exceeds `i128` return `Ok(None)`. Bridges FP into the linear-real-
+/// arithmetic theory. (Non-IEEE formats like E4M3/E2M1 reuse the all-ones exponent
+/// for finite values, so the `∞`/NaN short-circuit here is not valid for them.)
 pub fn to_real(
     arena: &mut TermArena,
     fmt: FloatFormat,
@@ -3456,6 +3459,49 @@ mod tests {
                 ),
                 Some(u128::from(v.to_bits())),
                 "non-dyadic F64 {num}/{den}",
+            );
+        }
+    }
+
+    /// `to_real` decodes finite constants of the small (ML) IEEE-style formats
+    /// exactly — not just F32/F64 — and rejects ∞/NaN.
+    #[test]
+    fn to_real_decodes_small_ieee_formats() {
+        let real = |a: &TermArena, t| match a.node(t) {
+            TermNode::RealConst(r) => *r,
+            other => panic!("expected RealConst, got {other:?}"),
+        };
+        // F16: 1.5=0x3E00, 0.5=0x3800, smallest subnormal=0x0001 (2^-24), +0=0x0000.
+        for &(bits, n, d) in &[
+            (0x3E00u128, 3i128, 2i128),
+            (0x3800, 1, 2),
+            (0x0001, 1, 1 << 24),
+            (0x0000, 0, 1),
+        ] {
+            let mut a = TermArena::new();
+            let x = a.bv_const(16, bits).unwrap();
+            let r = to_real(&mut a, FloatFormat::F16, x)
+                .unwrap()
+                .expect("finite F16 → real");
+            assert_eq!(real(&a, r), Rational::new(n, d), "F16 {bits:#06x}");
+        }
+        // FP8 E5M2 (8-bit): 1.0=0x3C, 1.5=0x3E, smallest subnormal=0x01 (2^-16).
+        for &(bits, n, d) in &[(0x3Cu128, 1i128, 1i128), (0x3E, 3, 2), (0x01, 1, 1 << 16)] {
+            let mut a = TermArena::new();
+            let x = a.bv_const(8, bits).unwrap();
+            let r = to_real(&mut a, FloatFormat::FP8_E5M2, x)
+                .unwrap()
+                .expect("finite E5M2 → real");
+            assert_eq!(real(&a, r), Rational::new(n, d), "E5M2 {bits:#04x}");
+        }
+        // ∞ / NaN are not real numbers (F16 +∞=0x7C00, NaN=0x7E00).
+        for bits in [0x7C00u128, 0x7E00] {
+            let mut a = TermArena::new();
+            let x = a.bv_const(16, bits).unwrap();
+            assert_eq!(
+                to_real(&mut a, FloatFormat::F16, x).unwrap(),
+                None,
+                "F16 {bits:#06x} is not real",
             );
         }
     }
