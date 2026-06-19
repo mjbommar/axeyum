@@ -377,6 +377,13 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **P1.6 T1.6.2 th_eq bus** — `EGraph::theory_var_classes` (e-graph
+  readout of classes carrying theory vars) + `interface_th_eqs` (solver-side: emit
+  cross-theory interface equalities, spanning chains over classes spanning ≥2 theories).
+  The bus a merge in one theory uses to propagate an equality to another. With the four
+  combination primitives, P1.6's machinery (shared / propose / classify / arrangement /
+  th_eq-bus) is in place; the remaining slice is the online multi-theory loop that drives it.
+
 - **2026-06-18** — **P1.6 combination — arrangement-consistency check**
   (`combination_conflict`): one model-based-combination iteration — does a BV model's
   equal/distinct arrangement of the shared terms agree with the EUF congruence? Returns the
