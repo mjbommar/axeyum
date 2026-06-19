@@ -377,6 +377,12 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **FP `from_real`** (`axeyum_fp::from_real`): `to_fp` from a rational
+  constant. Dyadic rationals (power-of-two denominator, <2^53 numerator) round soundly via
+  the validated `round_rational_to_format` (exact f64 → `round_to_format`); non-dyadic
+  (1/3, 1/10) return `Ok(None)` (decline — exact rational rounding needs >i128, a planned
+  follow-up). Completes the `to_fp` source set for the dyadic case (int→fp, bv→fp, real→fp).
+
 - **2026-06-18** — **Optimization/constraint API feature-complete + full Solver façade.**
   Session run (all green, committed): FP integer→float (`from_ubv`/`from_sbv`); all 3 z3
   OMT modes (box, lexicographic, Pareto) across **LIA + BV**; model-returning MaxSAT;
