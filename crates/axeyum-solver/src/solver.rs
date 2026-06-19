@@ -263,6 +263,20 @@ impl<B: SolverBackend> Solver<B> {
         crate::optimize_lia_lexicographic(arena, &self.assertions, objectives)
     }
 
+    /// Box (independent) multi-objective optimization over the active assertions
+    /// (see [`crate::optimize_lia_box`]).
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`SolverError`] from the optimizer.
+    pub fn optimize_box(
+        &self,
+        arena: &mut TermArena,
+        objectives: &[crate::LexObjective],
+    ) -> Result<Vec<crate::OptOutcome>, SolverError> {
+        crate::optimize_lia_box(arena, &self.assertions, objectives)
+    }
+
     /// Pareto-front multi-objective optimization over the active assertions (see
     /// [`crate::optimize_lia_pareto`]).
     ///
