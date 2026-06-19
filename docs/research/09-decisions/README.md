@@ -90,3 +90,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0034](adr-0034-word-level-preprocessing-default.md) | Word-level preprocessing is opt-in, default-off pending broad-corpus measurement | accepted |
 | [0035](adr-0035-cdcl-xor-search-acceleration.md) | CDCL(XOR) search acceleration with a ledgered `XorGaussian` trust hole | accepted |
 | [0036](adr-0036-lean-kernel-crate.md) | Standalone in-tree Lean kernel crate (`axeyum-lean-kernel`), ported from nanoda | accepted |
+| [0037](adr-0037-destination-2-reduction-over-custom-core.md) | Destination-2 priority is word-level reduction, not a custom default SAT core | accepted |
