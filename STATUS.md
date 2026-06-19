@@ -375,6 +375,19 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **Known robustness gap found (NRA can OOM on unbounded multi-product
+  nonlinear queries).** Probing whether the SOS lemmas generalize to 3 variables
+  (`a²+b²+c² ≥ ab+bc+ca`) revealed that `check_with_nra` on an **unbounded** 3-variable
+  nonlinear query **OOMs** rather than degrading to `Unknown`. Diagnosis: unbounded vars
+  can't be box-split (`widest_split` → `None`), so it never branches — the blowup is in
+  the **root refinement loop**, where the ~6-product case generates a much larger boolean
+  product-lemma set and/or escalating exact-rational witnesses that the existing
+  wall-clock deadline + `too_large_to_refine` (2³¹) guards don't bound *as memory*. The
+  2-variable SOS win is unaffected (committed, green). A correct fix needs a deterministic
+  memory/work bound that does **not** regress currently-working *bounded* multi-product
+  cases (those terminate via McCormick) — scoped as future work, to be developed against a
+  controlled small repro (NOT the 123 GB-OOMing 3-var case). Multi-variable SOS is gated on
+  this. **Do not run unbounded ≥3-variable nonlinear NRA queries without a memory bound.**
 - **2026-06-18** — **P2.5 NRA breadth: sum-of-squares lemmas prove AM–GM₂**
   (commit `8a7d31f`). `nra::sos_lemmas` adds `(a±b)² ≥ 0` (= `r_aa+r_bb∓2·r_ab ≥ 0`)
   over the abstracted products of each variable pair — sound (true in every real
