@@ -170,7 +170,7 @@ fn exists_refutation_checks_in_real_lean() {
 
 /// `QF_ABV`: `select(a, i) = 0 ∧ i = j ∧ ¬(select(a, j) = 0)` is unsat by read
 /// consistency (`i = j ⇒ select(a, i) = select(a, j)`). The reconstructed array
-/// refutation (via array elimination → QF_UFBV) must type-check in real Lean.
+/// refutation (via array elimination → `QF_UFBV`) must type-check in real Lean.
 #[test]
 fn qf_abv_read_consistency_refutation_checks_in_real_lean() {
     let mut arena = TermArena::new();
