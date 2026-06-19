@@ -6,9 +6,28 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
-- **Session 2026-06-19 — robustness + proof-cert widening (resume here).** Seven
-  validated commits; whole `axeyum-solver` crate green on test/clippy/doc/fmt (and the
-  workspace fmt gate, previously red on committed `axeyum-scenarios` drift, is now clean).
+- **Session 2026-06-19 — robustness + proof certs + capability-gap sweep (resume here).**
+  **28 validated commits**; whole `axeyum-solver` crate green on test/clippy/doc/fmt (977
+  tests; the workspace fmt gate, previously red on committed `axeyum-scenarios` drift, is now
+  clean). Method: 4 read-only *capability-gap probe* passes (each found concrete reproducing
+  queries; see the per-commit changelog), closing every tractable in-`solver` finding, plus
+  the proof-cert widening below. Highlights beyond the proof track:
+  - **Robustness (the no-OOM/no-hang rules):** NRA OOM bound (below); the **integer-NIA solve
+    HANG fixed** (a regression from the new int-blast width ladder — `a*b≠b*a` livelocked
+    ignoring the timeout; now deadline-threaded + trimmed ladder + commutative canonicalization
+    → fast `Unsat`); the **optimizer** now honors `config.timeout` (`*_with_config` variants),
+    decides `mod`/`div` objectives, and degrades fragment-out-of-scope objectives to graceful
+    `OptOutcome::Unknown` (never `Err`). Probing found **no OOM/panic/unsoundness** anywhere.
+  - **z3 feature breadth — measured gaps closed:** datatype Int/Real fields (was a hard `Err`),
+    guarded-finite Int `∀`, sat-side **valid-universal** elimination (incl. nested `∀`), the
+    NIA ground-vs-`∃` inconsistency, **EUF-over-Real (QF_UFLRA)** routing (was a hard `Err`),
+    `bv2nat` out-of-range UNSAT, integer-NIA UNSAT via real relaxation, and the QF_LIA evidence
+    certificate (E). The solver is now solid across arrays, mixed theories, strings, FP-via-BV,
+    and most quantifier shapes (verified by the 3rd/4th passes).
+  - **Process note:** sub-agents must be re-validated with **`cargo fmt --all --check`** (clippy
+    doesn't catch fmt drift) and an **OS `timeout` guard** (to prove termination, not trust it);
+    rust-analyzer diagnostics after a sub-agent run are frequently STALE — verify with a real
+    build/clippy, not the diagnostics.
   - **NRA OOM gap CLOSED** — deterministic `MAX_CROSS_PRODUCTS` admission bound (graceful
     `unknown`, never OOM, bounded *or* unbounded). The standing-rule violation is retired.
     See the 2026-06-19 changelog + `scripts/mem-run.sh` / `just test-guarded` (64 GiB cap).
@@ -40,6 +59,24 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     cross-crate, partly-coordination-gated, multi-slice effort — not a clean in-`solver`
     increment. Other open trust holes (lowest pedantic first): `int-blast` (3),
     `xor-gaussian` (3), `datatype-elim` (4), `fpa2bv` (5) — each a from-scratch certificate.
+  - **Remaining frontier (the in-`solver` tractable gap-cycle is exhausted; these are the hard
+    keystones / coordination-gated items the 4 passes surfaced):**
+    - **arith-UF SAT model (gap C, keystone, in-`solver`):** QF_UFLIA/UFLRA `sat` returns
+      `Unknown` because the function-table model for an `Int`/`Real`-sorted UF can't be
+      projected (`project_model` keys tables by scalar codes; `euf.rs::project_replay_build`
+      degrades to `Unknown`). UNSAT is decided; only the SAT-side model build is missing.
+      Needs a `Model` function-table representation keyed by Int/Real arg values (check
+      `model.rs` — may be doable in-`solver` without touching `axeyum-rewrite`'s `project_model`).
+    - **`∃∀` alternation (keystone):** `∃y.∀x. x+y≥x` → `Unknown` (should be SAT, y=0). After
+      skolemizing `∃y→c`, `∀x. x+c≥x` is NOT valid for arbitrary `c` (valid only when `c≥0`),
+      so the valid-universal pass can't decide it; needs `∃`-witness selection over the
+      universal's validity condition (LIA/LRA quantifier elimination, or model-based).
+    - **Irrational NRA roots / CAD-lite (keystone):** `x*x==2 ∧ x>0` (Real) → `Unknown`
+      (witness √2); the linear-abstraction + point-lemma NRA never finds irrational witnesses.
+    - **Coordination-gated (other lanes):** array-of-array / datatype-element arrays (needs
+      `Sort::Array` to carry element *sorts* — `axeyum-ir`); first-class `(declare-fun x Float…)`
+      through `solve`/SMT-LIB (front-end wiring, `Sort::Float` exists); `(reset)` clearing +
+      `(declare-sort)` (`axeyum-smtlib`); ROW-distinct emitter exposure (`axeyum-rewrite`).
 
 - **Destination-2 advanced & a destination-3 milestone landed (2026-06-18).** See
   the two 2026-06-18 changelog entries for detail. In short:
