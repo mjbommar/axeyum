@@ -412,6 +412,23 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P2.6: guarded-finite Int universals now decided (were `Unknown`).**
+  A universal `∀x:Int. (lo≤x≤hi) ⇒ body` is logically *equivalent* to the finite conjunction
+  `⋀_{v=lo}^{hi} body[x:=v]` (outside `[lo,hi]` the implication is vacuously true), so it is an
+  exact, sound rewrite — both sat and unsat transfer. New `quant_guarded_int.rs`
+  (`expand_guarded_int_universals`), hooked into `check_with_quantifiers` as a pre-pass before
+  `axeyum_rewrite::expand_quantifiers` (which rejects Int domains): detects `∀x:Int.(⇒ guard
+  inner)` where `guard` is a conjunction of a lower- and upper-bound atom isolating the bare
+  bound var against **literal** Int constants (all `≤`/`≥` orientations), substitutes each `v∈
+  [lo,hi]` via `replace_subterms`, and decides the resulting QF conjunction. A deterministic
+  `RANGE_SIZE_CAP = 4096` (checked arithmetic) means an inverted/unbounded/huge range never
+  expands → graceful `Unknown` (never OOM); nested quantifiers / non-literal bounds / escaping
+  var → passthrough. Sat replay anchors on the equivalence-preserving `guard_expanded` (the
+  ground evaluator can't evaluate a raw Int `∀`). Strictly additive (only `Unknown`→decided).
+  Decides `∀x.1≤x≤3⇒x²≤9` (Sat), `∀x.1≤x≤3⇒x≤2` (Unsat), `≥`-oriented, one-point range, and
+  over-cap → Unknown. New `tests/quant_guarded_int.rs` (5); full solver suite + clippy + fmt
+  green. Driven by the capability-gap pass; done via a focused sub-agent.
+
 - **2026-06-19** — **P2.9/P1.6: datatypes with Int/Real fields now decided (were a hard
   `Err`).** The native datatype solver (`datatype_native.rs`) rejected any datatype carrying
   an `Int`/`Real` field with `SolverError::Unsupported` — blocking `List Int`, `Tree Int`,

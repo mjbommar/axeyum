@@ -64,6 +64,7 @@ mod qfdt_simp_alethe;
 mod qfufbv_alethe;
 mod qinst_egraph;
 mod quant_alethe;
+mod quant_guarded_int;
 mod reconstruct;
 mod records;
 mod sat_bv_backend;

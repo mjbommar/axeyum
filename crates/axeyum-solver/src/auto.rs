@@ -35,6 +35,7 @@ use crate::lia::DEFAULT_INT_WIDTH;
 use crate::lra::{check_with_lia_simplex, check_with_lra};
 use crate::model::Model;
 use crate::qinst_egraph::prove_quantified_unsat_via_egraph;
+use crate::quant_guarded_int::expand_guarded_int_universals;
 use crate::sat_bv_backend::SatBvBackend;
 
 /// The unified front door: decides any supported query — quantifier-free or
@@ -818,7 +819,17 @@ pub fn check_with_quantifiers(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
-    let expanded = expand_quantifiers(arena, assertions).map_err(|error| match error {
+    // Guarded-finite-`Int` pre-pass: a universal `∀x:Int. (lo<=x<=hi) => inner`
+    // is *logically equivalent* to the finite conjunction `⋀_{v=lo}^{hi}
+    // inner[x:=v]` (outside the range the implication is vacuously true), so this
+    // exact rewrite lets the ordinary dispatch decide an `Int` universal that
+    // finite-domain expansion alone rejects. It is strictly additive — only the
+    // matched guarded shape is touched, every other assertion is passed through —
+    // and equivalence-preserving, so both `sat` and `unsat` transfer. The trust
+    // anchor below still replays the *original* (unrewritten) `assertions`.
+    let (guard_expanded, _) = expand_guarded_int_universals(arena, assertions)?;
+
+    let expanded = expand_quantifiers(arena, &guard_expanded).map_err(|error| match error {
         QuantExpandError::UnsupportedDomain(sort) => {
             SolverError::Unsupported(format!("quantifier over non-enumerable domain {sort}"))
         }
@@ -832,10 +843,17 @@ pub fn check_with_quantifiers(
         other => return Ok(other),
     };
 
-    // Replay the original *quantified* assertions through the enumerating
-    // evaluator — the trust anchor for a quantified `sat`.
+    // Replay the *quantified* assertions through the enumerating evaluator — the
+    // trust anchor for a quantified `sat`. We replay `guard_expanded`, which is
+    // the equivalence-preserving guarded-`Int` rewrite of the originals: it is
+    // the **same** `TermId`s as `assertions` wherever no guarded rewrite fired
+    // (so unchanged for the existing Bool/BitVec quantifier path), and where a
+    // guarded-`Int` universal *was* rewritten it is the equivalent quantifier-free
+    // conjunction — which the enumerating evaluator can actually evaluate (the
+    // evaluator has no `Int`-domain quantifier enumeration). Equivalence makes
+    // this just as strong a trust anchor as replaying the original `forall`.
     let assignment = model.to_assignment();
-    for &assertion in assertions {
+    for &assertion in &guard_expanded {
         match eval(arena, assertion, &assignment) {
             Ok(Value::Bool(true)) => {}
             Ok(_) => {
