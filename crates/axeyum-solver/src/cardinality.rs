@@ -63,6 +63,45 @@ pub fn exactly(arena: &mut TermArena, bools: &[TermId], k: u32) -> Result<TermId
     arena.eq(sum, bound)
 }
 
+/// `between-lo-hi`: at least `lo` and at most `hi` of `bools` are true. Equivalent
+/// to `at_least(lo) ∧ at_most(hi)`; an empty range (`lo > hi`) is `false`.
+///
+/// # Errors
+///
+/// Returns [`IrError`] from the IR builders.
+pub fn between(
+    arena: &mut TermArena,
+    bools: &[TermId],
+    lo: u32,
+    hi: u32,
+) -> Result<TermId, IrError> {
+    if lo > hi {
+        return Ok(arena.bool_const(false));
+    }
+    let lower = at_least(arena, bools, lo)?;
+    let upper = at_most(arena, bools, hi)?;
+    arena.and(lower, upper)
+}
+
+/// `at-most-one`: at most one of `bools` is true (the common AMO constraint).
+///
+/// # Errors
+///
+/// Returns [`IrError`] from the IR builders.
+pub fn at_most_one(arena: &mut TermArena, bools: &[TermId]) -> Result<TermId, IrError> {
+    at_most(arena, bools, 1)
+}
+
+/// `exactly-one`: exactly one of `bools` is true (the common EO / one-hot
+/// constraint).
+///
+/// # Errors
+///
+/// Returns [`IrError`] from the IR builders.
+pub fn exactly_one(arena: &mut TermArena, bools: &[TermId]) -> Result<TermId, IrError> {
+    exactly(arena, bools, 1)
+}
+
 /// Builds the bit-vector sum `Σ ite(bᵢ, 1, 0)` and returns it with its width.
 /// The width is the minimal one that can hold `bools.len()`.
 fn sum_of_bools(arena: &mut TermArena, bools: &[TermId]) -> Result<(TermId, u32), IrError> {
