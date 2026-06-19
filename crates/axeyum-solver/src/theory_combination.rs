@@ -354,6 +354,7 @@ pub fn interface_th_eqs(egraph: &EGraph, theory_of: &[u8]) -> Vec<(u32, u32)> {
 }
 
 #[cfg(test)]
+#[allow(clippy::many_single_char_names)]
 mod tests {
     use super::*;
     use axeyum_egraph::EGraph;

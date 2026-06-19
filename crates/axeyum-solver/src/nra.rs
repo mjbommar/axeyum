@@ -66,6 +66,28 @@ const MAX_REFINE_ROUNDS: usize = 12;
 /// `unknown` (each level halves one variable's interval).
 const MAX_BNB_DEPTH: usize = 6;
 
+/// Deterministic admission bound on **distinct-operand cross-products** — genuine
+/// products `a·b` with `a ≠ b`. Each cross-product contributes the dense
+/// disjunctive monotonicity/sign/zero lemma set (≈14 clauses) *and* couples to the
+/// others through the sum-of-squares lemmas, so a handful of them produce a hard
+/// Boolean+arithmetic combination the DPLL(T)/exact-rational LRA relaxation chokes
+/// on — exhausting memory *inside a single solve call* (so neither the per-round
+/// nor the per-node wall-clock check can intercept it). This is measured: the
+/// 3-variable case `a²+b²+c² ⋈ ab+bc+ca` (three cross-products `ab`, `bc`, `ca`)
+/// blows up the relaxation **whether or not the variables are bounded** — bounds do
+/// *not* tame it (`McCormick` adds yet more lemmas). Above this bound we therefore
+/// refuse with a deterministic `Unknown` rather than risk an OOM, upholding the
+/// standing rule "graceful `unknown`, never OOM/crash."
+///
+/// The bound counts **only** cross-products: squares (`a == b`, which skip the
+/// monotonicity lemmas and the SOS coupling) are cheap and never counted — the
+/// square-only multi-variable cases (e.g. `x²+y²+z²+1 = 0`) stay decidable. The
+/// value `2` is the documented boundary between the working 2-variable SOS frontier
+/// (`a²+b² < 2ab`, one cross-product `ab`) and the blowing-up 3-variable case (three
+/// cross-products). Multi-variable SOS / Cauchy–Schwarz over more cross-products is
+/// gated on a future principled engine (nlsat/CAD or an exact-rational work budget).
+const MAX_CROSS_PRODUCTS: usize = 2;
+
 type Bounds = HashMap<TermId, (axeyum_ir::Rational, axeyum_ir::Rational)>;
 
 /// Decides a (possibly nonlinear) real-arithmetic query by linear abstraction of
@@ -109,9 +131,9 @@ pub fn check_with_nra(
     }
     let mut memo: HashMap<TermId, TermId> = HashMap::new();
 
-    // `base`: the abstracted assertions plus the sign/zero product lemmas (valid
-    // for `r = a·b`). McCormick envelopes and interval bounds are added per
-    // branch-and-bound node, since they depend on the (shrinking) variable box.
+    // `base`: start with the abstracted assertions (each nonlinear product replaced
+    // by its fresh var). Product/sign/SOS lemmas and per-box McCormick envelopes are
+    // added below; the bare abstraction is a pure-linear *relaxation* of the original.
     let mut base = Vec::with_capacity(assertions.len());
     for &assertion in assertions {
         base.push(
@@ -119,6 +141,40 @@ pub fn check_with_nra(
                 .map_err(|e| SolverError::Backend(e.to_string()))?,
         );
     }
+
+    // Cheap, sound pre-check on the bare abstraction (no product lemmas yet, so it is
+    // pure linear arithmetic and cannot blow up): if even this relaxation is already
+    // `unsat`, the original is `unsat` (a relaxation only enlarges the model space).
+    // This decides the same-product-contradiction class (e.g. `x·y=5 ∧ x·y=6 ∧ …`)
+    // for *any* number of products, so the cross-product admission bound below does
+    // not cost us those easy refutations. A `sat`/`unknown` here is just a candidate
+    // (the abstraction is too weak), so only `unsat` is acted on.
+    if let CheckResult::Unsat = check_with_lra_dpll(arena, &base, config)? {
+        return Ok(CheckResult::Unsat);
+    }
+
+    // Deterministic memory guard (graceful `unknown`, never OOM): refuse instances
+    // with too many distinct-operand cross-products *before* building the dense
+    // product lemmas or entering the relaxation. These products carry the disjunctive
+    // monotonicity lemmas and the sum-of-squares coupling that drive the DPLL(T)/LRA
+    // relaxation to OOM inside a single solve call — bounded or not (see
+    // `MAX_CROSS_PRODUCTS`). Squares are cheap and excluded, so square-only
+    // multi-variable instances stay decidable.
+    let cross_products = triples.iter().filter(|&&(pa, pb, _)| pa != pb).count();
+    if cross_products > MAX_CROSS_PRODUCTS {
+        return Ok(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::ResourceLimit,
+            detail: format!(
+                "nonlinear abstraction: {cross_products} cross-products exceed the deterministic \
+                 admission bound of {MAX_CROSS_PRODUCTS} (the multi-variable nonlinear case can OOM \
+                 the relaxation; this needs a nlsat/CAD engine)"
+            ),
+        }));
+    }
+
+    // Add the sign/zero product lemmas (valid for `r = a·b`) to `base`. McCormick
+    // envelopes and interval bounds are added per branch-and-bound node, since they
+    // depend on the (shrinking) variable box.
     for &(pa, pb, r) in &triples {
         for lemma in product_lemmas(arena, pa, pb, r)? {
             let rewritten = replace_subterms(arena, lemma, &map, &mut memo)

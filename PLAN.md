@@ -86,14 +86,18 @@ plan is built on).
 - `unknown` is a first-class result; never a wrong `sat`/`unsat`.
 - **Graceful `unknown`, never OOM/crash.** Every solving path must degrade to
   `Unknown` under a *deterministic* resource bound — no unbounded memory/time on
-  adversarial input. Precedent: sat_bv's pre-lowering oversized-encoding refusal.
-  Known open gaps to harden: NRA on unbounded multi-product nonlinear queries OOMs
-  (2026-06-18; see STATUS). Add a bound before adding a feature that can blow up.
+  adversarial input. Precedent: sat_bv's pre-lowering oversized-encoding refusal;
+  NRA's `MAX_CROSS_PRODUCTS` admission bound (2026-06-19, refuses ≥3 distinct-operand
+  cross-products before building lemmas — bounded *or* unbounded, since the blowup is
+  inside a single LRA solve call that the wall-clock checks can't intercept). Add a
+  bound before adding a feature that can blow up.
 - Every `sat` replay-checks; every new `unsat` route gets an independent checker
   or an explicit, ledgered trust note.
 - **Build caps:** `CARGO_BUILD_JOBS=4` / `-j4`. Default 16-way parallelism and
-  high-`--jobs` benches OOM-kill this host. **Never run unbounded ≥3-variable
-  nonlinear NRA queries without a memory bound** (OOMs the host).
+  high-`--jobs` benches OOM-kill this host. **Run test/build/bench under the 64 GiB
+  memory cap** — `scripts/mem-run.sh <cmd>` (or `just test-guarded`) applies a
+  `ulimit -v` so a runaway allocation aborts *that process* instead of OOM-killing
+  the host. Override the cap with `MEM_LIMIT_GB=N`.
 - **Coordination (multi-agent):** a second agent works `axeyum-rewrite` /
   `axeyum-smtlib` (word-level reduction, P1.2 — the destination-2 near-term lever).
   Treat those crates as theirs; this agent covers measurement, proof/Lean

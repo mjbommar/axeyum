@@ -15,6 +15,13 @@ clippy:
 test:
     cargo test --workspace --all-features
 
+# Same as `test`, but under a hard 64 GiB memory cap (scripts/mem-run.sh) so a
+# runaway allocation (e.g. an unbounded NRA / wide bit-blast blowup) aborts the
+# test process instead of OOM-killing the host. Prefer this when touching solving
+# paths. Override the cap with MEM_LIMIT_GB=N.
+test-guarded:
+    MEM_LIMIT_GB=64 ./scripts/mem-run.sh cargo test --workspace --all-features
+
 doc:
     RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps
 

@@ -2,7 +2,7 @@
 #![allow(clippy::many_single_char_names)]
 
 use axeyum_ir::{Rational, Sort, TermArena};
-use axeyum_solver::{CheckResult, SolverConfig, check_with_nra};
+use axeyum_solver::{CheckResult, SolverConfig, UnknownKind, check_with_nra};
 
 fn real(arena: &mut TermArena, name: &str) -> axeyum_ir::TermId {
     let s = arena.declare(name, Sort::Real).unwrap();
@@ -496,5 +496,114 @@ fn sum_of_squares_equality_is_satisfiable() {
     assert!(
         !matches!(r, CheckResult::Unsat),
         "x²+y² = 2xy is sat (x=y), must not be refuted, got {r:?}"
+    );
+}
+
+/// Build `a²+b²+c² ⋈ ab+bc+ca` (three squares + three cross-products `ab`,`bc`,`ca`)
+/// optionally with `[-1,1]` bounds on each variable, returning the assertion list.
+/// `op` builds the top-level comparison (e.g. `real_lt`).
+fn three_var_cross_query(bounded: bool) -> (TermArena, Vec<axeyum_ir::TermId>) {
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let y = real(&mut a, "y");
+    let z = real(&mut a, "z");
+    let mut assertions = Vec::new();
+    if bounded {
+        let neg_one = a.real_const(Rational::integer(-1));
+        let one = a.real_const(Rational::integer(1));
+        for v in [x, y, z] {
+            assertions.push(a.real_ge(v, neg_one).unwrap());
+            assertions.push(a.real_le(v, one).unwrap());
+        }
+    }
+    let xx = a.real_mul(x, x).unwrap();
+    let yy = a.real_mul(y, y).unwrap();
+    let zz = a.real_mul(z, z).unwrap();
+    let xy = a.real_mul(x, y).unwrap();
+    let yz = a.real_mul(y, z).unwrap();
+    let zx = a.real_mul(z, x).unwrap();
+    let s1 = a.real_add(xx, yy).unwrap();
+    let lhs = a.real_add(s1, zz).unwrap();
+    let r1 = a.real_add(xy, yz).unwrap();
+    let rhs = a.real_add(r1, zx).unwrap();
+    let lt = a.real_lt(lhs, rhs).unwrap();
+    assertions.push(lt);
+    (a, assertions)
+}
+
+/// Assert a three-cross-product NRA query degrades to a `ResourceLimit` `Unknown`
+/// via the cross-product admission bound — promptly, never exhausting memory.
+fn assert_cross_product_bound_fires(arena: &mut TermArena, assertions: &[axeyum_ir::TermId]) {
+    let r = check_with_nra(arena, assertions, &SolverConfig::default()).unwrap();
+    match r {
+        CheckResult::Unknown(reason) => {
+            assert!(
+                matches!(reason.kind, UnknownKind::ResourceLimit),
+                "expected a ResourceLimit Unknown, got kind {:?}",
+                reason.kind
+            );
+            assert!(
+                reason.detail.contains("cross-products exceed"),
+                "expected the cross-product admission bound to fire, got: {}",
+                reason.detail
+            );
+        }
+        other => panic!("expected a graceful Unknown (never an OOM), got {other:?}"),
+    }
+}
+
+/// Controlled small repro for the multi-variable OOM (the standing "graceful
+/// `unknown`, never OOM/crash" rule). `a²+b²+c² < ab+bc+ca` over **unbounded** reals
+/// has three cross-products (`ab`, `bc`, `ca`) whose coupled disjunctive lemma set
+/// used to drive the DPLL(T)/LRA relaxation to OOM. The deterministic admission
+/// bound (`MAX_CROSS_PRODUCTS`) must now refuse it with a `ResourceLimit` `Unknown`
+/// — promptly, never exhausting memory. (Before the bound, this OOM-killed the host;
+/// it is safe only because the guard fires before any lemma is built.)
+#[test]
+fn unbounded_three_variable_cross_products_degrade_to_unknown_not_oom() {
+    let (mut a, assertions) = three_var_cross_query(false);
+    assert_cross_product_bound_fires(&mut a, &assertions);
+}
+
+/// The same three-cross-product query with **every variable bounded** to `[-1,1]`.
+/// Measured reality: bounds do *not* tame this — the `McCormick` path adds yet more
+/// lemmas and the relaxation still blows up *inside a single solve call* (the
+/// per-round / per-node wall-clock checks never get a turn). Before the bound, this
+/// exact case hit a memory-allocation abort under the 64 GiB cap; the cross-product
+/// admission bound must catch it **regardless of bounds**, deterministically. This
+/// is the test that pins the guard's bound-independence.
+#[test]
+fn bounded_three_variable_cross_products_also_degrade_not_oom() {
+    let (mut a, assertions) = three_var_cross_query(true);
+    assert_cross_product_bound_fires(&mut a, &assertions);
+}
+
+/// Selectivity: the guard counts **cross-products**, not squares. A square-only
+/// multi-variable instance (`x²+y²+z²+1 = 0`, three squares, zero cross-products) is
+/// **not** gated and is still decided `unsat` (also covered by
+/// `sum_of_three_unbounded_squares_plus_one_is_unsat`; pinned here against the bound
+/// to document that squares never trip it). The 2-variable SOS frontier
+/// (`a²+b² < 2ab`, one cross-product) likewise stays decidable — see
+/// `sum_of_squares_am_gm_is_unsat`.
+#[test]
+fn square_only_multivariable_is_not_gated_by_cross_product_bound() {
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let y = real(&mut a, "y");
+    let z = real(&mut a, "z");
+    let xx = a.real_mul(x, x).unwrap();
+    let yy = a.real_mul(y, y).unwrap();
+    let zz = a.real_mul(z, z).unwrap();
+    let one = a.real_const(Rational::integer(1));
+    let s1 = a.real_add(xx, yy).unwrap();
+    let s2 = a.real_add(s1, zz).unwrap();
+    let s3 = a.real_add(s2, one).unwrap();
+    let zero = a.real_const(Rational::integer(0));
+    let eq0 = a.eq(s3, zero).unwrap();
+
+    let r = check_with_nra(&mut a, &[eq0], &SolverConfig::default()).unwrap();
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "square-only x²+y²+z²+1=0 must stay decidable (unsat), not be gated, got {r:?}"
     );
 }

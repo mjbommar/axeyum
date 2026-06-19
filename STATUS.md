@@ -377,6 +377,24 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **NRA OOM gap CLOSED: deterministic cross-product admission bound
+  (graceful `unknown`, never OOM).** `check_with_nra` now refuses any query with > 2
+  distinct-operand cross-products (`a·b`, `a ≠ b`) up front — *before* building lemmas or
+  solving — returning `Unknown(ResourceLimit)`. Root cause (measured under the new 64 GiB
+  `ulimit` cap): the 3-variable case `a²+b²+c² ⋈ ab+bc+ca` (three cross-products) blows up
+  the DPLL(T)/exact-rational LRA relaxation *inside a single solve call* — so the per-round
+  and per-node wall-clock checks never get a turn — and **bounds do not tame it** (the
+  bounded variant `SIGABRT`ed at the memory cap; McCormick just adds more lemmas). The bound
+  counts **only** cross-products: squares are cheap (no monotonicity/SOS lemmas) so
+  square-only multi-variable instances (`x²+y²+z²+1=0`) and the 2-var SOS frontier
+  (`a²+b²<2ab`, one cross) stay decidable — verified, no regression. 3 new tests (unbounded
+  + bounded both degrade; square-only not gated); all 27 NRA + 5 Spivak tests green. Updates
+  the standing `Graceful unknown` rule; multi-variable SOS / Cauchy–Schwarz is now explicitly
+  gated on a future nlsat/CAD (or exact-rational work-budget) engine. Also landed
+  `scripts/mem-run.sh` + `just test-guarded` (64 GiB `ulimit -v` wrapper) so build/test/bench
+  can never OOM the host, and fixed a pre-existing `clippy::many_single_char_names` lint in
+  the `theory_combination` test module (the P1.6 commits had left `clippy --all-targets` red).
+
 - **2026-06-18** — **Crash-hardening sweep: never panic on arithmetic-sorted UF sat-model
   projection.** `Value::scalar_code` panics on Int/Real; all three solver callers of
   `project_model` (euf / combined / aufbv) now degrade to a sound `Unknown` for an
