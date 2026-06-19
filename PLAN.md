@@ -24,9 +24,18 @@ untrusted search and validated by small independent checkers.
 ## The two load-bearing fronts
 
 1. **Performance, measured head-to-head (Track 1).** There is no parity claim
-   without a clean Z3 comparison on real corpora. The single highest-leverage
-   item is **SAT inprocessing (bounded variable elimination) + word-level
-   preprocessing** on the bit-blasted path.
+   without a clean Z3 comparison on real corpora. **Measured reframe (2026-06-18,
+   public p4dfa 113 vs Z3 — see [findings](docs/research/05-algorithms/lazy-bitblasting-p21-findings.md)
+   + ADR-0037):** the lever is **word-level *reduction* before bit-blasting**
+   (`solve_eqs`/canonicalize/`ite`-handling), *not* lazy bit-blasting — that slice
+   is arithmetic-free, so lazy-bv CEGAR is inert (0/113 heavy ops). Reduction moved
+   the number 2→7/113. The remaining gap **partitions** into: ~6 *EncodingBudget*
+   (deeper reduction pulls them under the encode ceiling — the proven mechanism),
+   ~9 *search-bound* (kissat-class CDCL cracks them; batsat/`xor_cdcl`/PBLS all
+   miss), and ~90 *large-CNF* (reduction + genuinely hard). **Decision (both in
+   parallel):** reduction leads near-term; the proof-producing CDCL core is
+   incrementally modernized toward competitive as a slower parallel track. Track
+   the honest pulse: **Timeout→decided**.
 2. **Reduction certificates (Track 3).** Today only the clausal layer (DRAT) and
    the bit-blast reduction (miter) are independently checked; every other
    reduction is trusted. Certifying them — via an **Alethe emitter** checked by
@@ -75,10 +84,21 @@ plan is built on).
 - Default build is **pure Rust, no C/C++**; native/feature-gated leaves only.
 - `unsafe_code` is denied workspace-wide; exceptions need an ADR.
 - `unknown` is a first-class result; never a wrong `sat`/`unsat`.
+- **Graceful `unknown`, never OOM/crash.** Every solving path must degrade to
+  `Unknown` under a *deterministic* resource bound — no unbounded memory/time on
+  adversarial input. Precedent: sat_bv's pre-lowering oversized-encoding refusal.
+  Known open gaps to harden: NRA on unbounded multi-product nonlinear queries OOMs
+  (2026-06-18; see STATUS). Add a bound before adding a feature that can blow up.
 - Every `sat` replay-checks; every new `unsat` route gets an independent checker
   or an explicit, ledgered trust note.
 - **Build caps:** `CARGO_BUILD_JOBS=4` / `-j4`. Default 16-way parallelism and
-  high-`--jobs` benches OOM-kill this host.
+  high-`--jobs` benches OOM-kill this host. **Never run unbounded ≥3-variable
+  nonlinear NRA queries without a memory bound** (OOMs the host).
+- **Coordination (multi-agent):** a second agent works `axeyum-rewrite` /
+  `axeyum-smtlib` (word-level reduction, P1.2 — the destination-2 near-term lever).
+  Treat those crates as theirs; this agent covers measurement, proof/Lean
+  (Track 3), breadth/feature-parity (Track 2), and incremental SAT-core
+  modernization. Do not edit `canonical.rs` etc. without coordinating.
 - **Do not sweep the 41GB public corpus** to "make progress." Measure once on a
   committed slice, then stop.
 - Decisions are recorded as ADRs in `docs/research/09-decisions/`.
