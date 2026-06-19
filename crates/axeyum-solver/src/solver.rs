@@ -291,6 +291,48 @@ impl<B: SolverBackend> Solver<B> {
         crate::optimize_lia_pareto(arena, &self.assertions, objectives)
     }
 
+    /// Lexicographic multi-objective optimization over **bit-vector** objectives
+    /// (see [`crate::optimize_bv_lexicographic`]).
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`SolverError`] from the optimizer.
+    pub fn optimize_lexicographic_bv(
+        &self,
+        arena: &mut TermArena,
+        objectives: &[crate::BvLexObjective],
+    ) -> Result<crate::LexOutcome, SolverError> {
+        crate::optimize_bv_lexicographic(arena, &self.assertions, objectives)
+    }
+
+    /// Box (independent) multi-objective optimization over **bit-vector**
+    /// objectives (see [`crate::optimize_bv_box`]).
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`SolverError`] from the optimizer.
+    pub fn optimize_box_bv(
+        &self,
+        arena: &mut TermArena,
+        objectives: &[crate::BvLexObjective],
+    ) -> Result<Vec<crate::OptOutcome>, SolverError> {
+        crate::optimize_bv_box(arena, &self.assertions, objectives)
+    }
+
+    /// Pareto-front multi-objective optimization over **bit-vector** objectives
+    /// (see [`crate::optimize_bv_pareto`]).
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`SolverError`] from the optimizer.
+    pub fn optimize_pareto_bv(
+        &self,
+        arena: &mut TermArena,
+        objectives: &[crate::BvLexObjective],
+    ) -> Result<crate::ParetoOutcome, SolverError> {
+        crate::optimize_bv_pareto(arena, &self.assertions, objectives)
+    }
+
     /// Maximizes the number of satisfied `soft` constraints subject to the active
     /// assertions (`MaxSAT`), returning the witnessing model (see
     /// [`crate::max_satisfiable_model`]).
