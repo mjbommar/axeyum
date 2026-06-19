@@ -169,3 +169,30 @@ fn uflia_nested_congruence_unsat() {
         CheckResult::Unsat
     ));
 }
+
+/// Regression: `solve` on a quantified UF+LIA query must not crash. `∀x:Int. f(x)=0`
+/// instantiated at `f(5)` contradicts `f(5)≠0`, and the combined path used to panic
+/// (`scalar_code` on an Int in function-model projection) — now it decides UNSAT.
+#[test]
+fn quantified_uf_lia_solve_decides_without_crashing() {
+    use axeyum_solver::solve;
+    let mut a = TermArena::new();
+    let f = a.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let xsym = a.declare("x", Sort::Int).unwrap();
+    let xv = a.var(xsym);
+    let fx = a.apply(f, &[xv]).unwrap();
+    let zero = a.int_const(0);
+    let body = a.eq(fx, zero).unwrap();
+    let forall = a.forall(xsym, body).unwrap();
+    let five = a.int_const(5);
+    let f5 = a.apply(f, &[five]).unwrap();
+    let ne = {
+        let e = a.eq(f5, zero).unwrap();
+        a.not(e).unwrap()
+    };
+    let r = solve(&mut a, &[forall, ne], &SolverConfig::default()).unwrap();
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "instantiate x=5: f(5)=0 ∧ f(5)≠0; got {r:?}"
+    );
+}

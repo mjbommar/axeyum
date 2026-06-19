@@ -96,6 +96,18 @@ pub fn check_with_all_theories<B: SolverBackend>(
         CheckResult::Unknown(reason) => return Ok(CheckResult::Unknown(reason)),
     };
 
+    // A `sat` model for an **arithmetic-sorted** uninterpreted function cannot yet be
+    // projected: `project_model` keys function tables by scalar codes, which do not
+    // exist for `Int`/`Real`. Degrade to a sound `Unknown` rather than panic (UNSAT
+    // through this path is unaffected — it returns before model projection).
+    if func_elim.had_functions() && has_arithmetic_function(arena) {
+        return Ok(unknown(
+            "sat model for an arithmetic-sorted uninterpreted function is unsupported \
+             (combined path)"
+                .to_owned(),
+        ));
+    }
+
     // Project the model back in reverse reduction order: integers (read-back),
     // then functions (their args are post-array, pre-integer scalars), then
     // arrays (a `select` index may mention a function application).
@@ -163,6 +175,16 @@ pub fn check_with_all_theories<B: SolverBackend>(
         }
     }
     Ok(CheckResult::Sat(out))
+}
+
+/// Whether any declared uninterpreted function has an `Int`/`Real` parameter or
+/// result — for such a function the `sat`-model projection (scalar-keyed function
+/// tables) is not yet representable.
+fn has_arithmetic_function(arena: &TermArena) -> bool {
+    let is_arith = |s: &axeyum_ir::Sort| matches!(s, axeyum_ir::Sort::Int | axeyum_ir::Sort::Real);
+    arena
+        .functions()
+        .any(|(_f, _n, params, result)| params.iter().any(is_arith) || is_arith(&result))
 }
 
 fn unknown(detail: String) -> CheckResult {
