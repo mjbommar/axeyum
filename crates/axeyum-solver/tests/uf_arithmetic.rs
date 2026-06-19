@@ -217,3 +217,28 @@ fn uflia_value_conflict_via_congruence_unsat() {
         CheckResult::Unsat
     ));
 }
+
+/// Regression (graceful): `solve` on a *satisfiable* Int-domain quantifier
+/// `∀x:Int. f(x)=0` must return `Ok` (a sound `Unknown` — arith-UF sat model
+/// unsupported), never an error or panic.
+#[test]
+fn sat_int_domain_quantifier_is_graceful() {
+    use axeyum_solver::solve;
+    let mut a = TermArena::new();
+    let f = a.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let xsym = a.declare("x", Sort::Int).unwrap();
+    let xv = a.var(xsym);
+    let fx = a.apply(f, &[xv]).unwrap();
+    let zero = a.int_const(0);
+    let body = a.eq(fx, zero).unwrap();
+    let forall = a.forall(xsym, body).unwrap();
+    let r = solve(&mut a, &[forall], &SolverConfig::default());
+    assert!(
+        r.is_ok(),
+        "sat Int-domain quantifier must be graceful, got {r:?}"
+    );
+    assert!(
+        !matches!(r, Ok(CheckResult::Unsat)),
+        "satisfiable: must not claim unsat"
+    );
+}
