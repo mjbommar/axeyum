@@ -242,6 +242,16 @@ pub fn check_auto(
     }
 }
 
+/// Whether any declared uninterpreted function has an `Int`/`Real` parameter or
+/// result — the signal to route through EUF + arithmetic combination
+/// ([`crate::check_with_uf_arithmetic`]) rather than the bit-blasting fallback.
+fn has_arithmetic_function(arena: &TermArena) -> bool {
+    let is_arith = |s: &axeyum_ir::Sort| matches!(s, axeyum_ir::Sort::Int | axeyum_ir::Sort::Real);
+    arena
+        .functions()
+        .any(|(_func, _name, params, result)| params.iter().any(is_arith) || is_arith(&result))
+}
+
 /// Whether any assertion's term tree contains a `forall`/`exists` binder.
 fn contains_quantifier(arena: &TermArena, assertions: &[TermId]) -> bool {
     let mut stack: Vec<TermId> = assertions.to_vec();
@@ -752,6 +762,18 @@ fn check_auto_dispatch(
             CheckResult::Sat(model) => return Ok(CheckResult::Sat(model)),
             CheckResult::Unsat => return Ok(CheckResult::Unsat),
             CheckResult::Unknown(_) => {}
+        }
+        // Arithmetic-sorted uninterpreted functions (QF_UFLIA / QF_UFLRA) cannot be
+        // bit-blasted by the eager path below; decide them by EUF + linear-arithmetic
+        // combination (functional-consistency CEGAR over the dispatcher). Sound
+        // either way — its `unsat` is a relaxation refutation, its `sat`/`unknown`
+        // fall through.
+        if has_arithmetic_function(arena) {
+            match crate::check_with_uf_arithmetic(arena, assertions, config)? {
+                CheckResult::Sat(model) => return Ok(CheckResult::Sat(model)),
+                CheckResult::Unsat => return Ok(CheckResult::Unsat),
+                CheckResult::Unknown(_) => {}
+            }
         }
     }
 

@@ -79,3 +79,26 @@ fn decl_int(a: &mut TermArena, name: &str) -> axeyum_ir::TermId {
     let s = a.declare(name, Sort::Int).unwrap();
     a.var(s)
 }
+
+/// The dispatcher (`solve`) routes `QF_UFLIA` automatically: the squeeze refutation
+/// is decided without naming the combination procedure explicitly.
+#[test]
+fn solve_dispatches_uflia_combination() {
+    use axeyum_solver::solve;
+    let mut a = TermArena::new();
+    let x = decl_int(&mut a, "x");
+    let y = decl_int(&mut a, "y");
+    let f = a.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let fx = a.apply(f, &[x]).unwrap();
+    let fy = a.apply(f, &[y]).unwrap();
+    let ne = {
+        let e = a.eq(fx, fy).unwrap();
+        a.not(e).unwrap()
+    };
+    let le1 = a.int_le(x, y).unwrap();
+    let le2 = a.int_le(y, x).unwrap();
+    assert!(matches!(
+        solve(&mut a, &[ne, le1, le2], &SolverConfig::default()).unwrap(),
+        CheckResult::Unsat
+    ));
+}
