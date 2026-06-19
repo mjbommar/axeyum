@@ -117,6 +117,92 @@ pub fn minimize_lia(
     })
 }
 
+/// One objective in a lexicographic optimization (P4.3): the integer-linear
+/// `objective` term and its direction.
+#[derive(Debug, Clone, Copy)]
+pub struct LexObjective {
+    /// The integer-sorted objective term.
+    pub objective: TermId,
+    /// `true` to maximize, `false` to minimize.
+    pub maximize: bool,
+}
+
+/// The result of a lexicographic optimization.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LexOutcome {
+    /// Every objective was optimized; the lexicographically-optimal value of each,
+    /// in the input order.
+    Optimal(Vec<i128>),
+    /// Optimization stopped at objective `index` (it was unbounded, infeasible, or
+    /// undecided). `prefix` holds the optimal values of the objectives before it.
+    Stopped {
+        /// The index of the objective that did not yield a finite optimum.
+        index: usize,
+        /// Optimal values of the strictly-earlier objectives.
+        prefix: Vec<i128>,
+        /// Why this objective stopped the chain.
+        outcome: OptOutcome,
+    },
+}
+
+/// **Lexicographic multi-objective optimization** over integer-linear objectives
+/// (z3 `(maximize …)`/`(minimize …)` with the default lexicographic combination).
+///
+/// Optimizes `objectives` in order: each is optimized (via the checked
+/// single-objective [`maximize_lia`]/[`minimize_lia`]) subject to `assertions`
+/// **plus** the earlier objectives pinned at their optima (`objᵢ ≥ vᵢ` for a
+/// maximized objective, `objᵢ ≤ vᵢ` for a minimized one — which, at the optimum,
+/// pins `objᵢ = vᵢ`). So later objectives range only over the optimal face of the
+/// earlier ones — exactly lexicographic semantics. Sound and terminating: it is a
+/// bounded composition of the single-objective optimizer (each value is its exact,
+/// probe-verified optimum), adding no unbounded search.
+///
+/// Returns [`LexOutcome::Stopped`] at the first objective that is unbounded /
+/// infeasible / undecided (the chain cannot continue past it).
+///
+/// # Errors
+///
+/// [`SolverError::Unsupported`] if an objective is not integer-sorted, or
+/// [`SolverError`] from a feasibility probe / term builder.
+pub fn optimize_lia_lexicographic(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objectives: &[LexObjective],
+) -> Result<LexOutcome, SolverError> {
+    let mut constraints = assertions.to_vec();
+    let mut values: Vec<i128> = Vec::with_capacity(objectives.len());
+    for (index, obj) in objectives.iter().enumerate() {
+        let outcome = if obj.maximize {
+            maximize_lia(arena, &constraints, obj.objective)?
+        } else {
+            minimize_lia(arena, &constraints, obj.objective)?
+        };
+        match outcome {
+            OptOutcome::Optimal(value) => {
+                values.push(value);
+                // Pin this objective at its optimum before optimizing the next, so
+                // the chain ranges only over the current optimal face.
+                let vc = arena.int_const(value);
+                let pin = if obj.maximize {
+                    arena.int_ge(obj.objective, vc)
+                } else {
+                    arena.int_le(obj.objective, vc)
+                }
+                .map_err(|e| SolverError::Backend(e.to_string()))?;
+                constraints.push(pin);
+            }
+            other => {
+                return Ok(LexOutcome::Stopped {
+                    index,
+                    prefix: values,
+                    outcome: other,
+                });
+            }
+        }
+    }
+    Ok(LexOutcome::Optimal(values))
+}
+
 /// The result of one feasibility probe.
 enum Probe {
     /// Satisfiable, carrying the objective's value in the found model.

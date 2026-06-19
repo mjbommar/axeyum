@@ -209,3 +209,136 @@ fn bv_signed_unconstrained_spans_the_signed_range() {
         OptOutcome::Optimal(-128)
     );
 }
+
+// --- Lexicographic multi-objective optimization (P4.3) ------------------------
+
+use axeyum_solver::{LexObjective, LexOutcome, optimize_lia_lexicographic};
+
+/// Helper: `0 <= v <= 10`.
+fn bound_0_10(arena: &mut TermArena, v: TermId) -> [TermId; 2] {
+    let zero = arena.int_const(0);
+    let ten = arena.int_const(10);
+    [
+        arena.int_ge(v, zero).unwrap(),
+        arena.int_le(v, ten).unwrap(),
+    ]
+}
+
+/// `max x` then `max y` subject to `0≤x,y≤10 ∧ x+y≤12`: x pins to 10, then y≤2.
+#[test]
+fn lexicographic_max_then_max() {
+    let mut arena = TermArena::new();
+    let x = int_var(&mut arena, "x");
+    let y = int_var(&mut arena, "y");
+    let [xl, xh] = bound_0_10(&mut arena, x);
+    let [yl, yh] = bound_0_10(&mut arena, y);
+    let sum = arena.int_add(x, y).unwrap();
+    let twelve = arena.int_const(12);
+    let cap = arena.int_le(sum, twelve).unwrap();
+    let asserts = [xl, xh, yl, yh, cap];
+    let objs = [
+        LexObjective {
+            objective: x,
+            maximize: true,
+        },
+        LexObjective {
+            objective: y,
+            maximize: true,
+        },
+    ];
+    assert_eq!(
+        optimize_lia_lexicographic(&mut arena, &asserts, &objs).unwrap(),
+        LexOutcome::Optimal(vec![10, 2])
+    );
+}
+
+/// Order matters: `max y` then `max x` on the same problem gives y=10, x=2.
+#[test]
+fn lexicographic_order_matters() {
+    let mut arena = TermArena::new();
+    let x = int_var(&mut arena, "x");
+    let y = int_var(&mut arena, "y");
+    let [xl, xh] = bound_0_10(&mut arena, x);
+    let [yl, yh] = bound_0_10(&mut arena, y);
+    let sum = arena.int_add(x, y).unwrap();
+    let twelve = arena.int_const(12);
+    let cap = arena.int_le(sum, twelve).unwrap();
+    let asserts = [xl, xh, yl, yh, cap];
+    let objs = [
+        LexObjective {
+            objective: y,
+            maximize: true,
+        },
+        LexObjective {
+            objective: x,
+            maximize: true,
+        },
+    ];
+    assert_eq!(
+        optimize_lia_lexicographic(&mut arena, &asserts, &objs).unwrap(),
+        LexOutcome::Optimal(vec![10, 2]) // y=10 first, then x=2
+    );
+}
+
+/// Mixed direction: `max x` then `min y` → x=10, y=0 (min y under x+y≤12, y≥0).
+#[test]
+fn lexicographic_max_then_min() {
+    let mut arena = TermArena::new();
+    let x = int_var(&mut arena, "x");
+    let y = int_var(&mut arena, "y");
+    let [xl, xh] = bound_0_10(&mut arena, x);
+    let [yl, yh] = bound_0_10(&mut arena, y);
+    let sum = arena.int_add(x, y).unwrap();
+    let twelve = arena.int_const(12);
+    let cap = arena.int_le(sum, twelve).unwrap();
+    let asserts = [xl, xh, yl, yh, cap];
+    let objs = [
+        LexObjective {
+            objective: x,
+            maximize: true,
+        },
+        LexObjective {
+            objective: y,
+            maximize: false,
+        },
+    ];
+    assert_eq!(
+        optimize_lia_lexicographic(&mut arena, &asserts, &objs).unwrap(),
+        LexOutcome::Optimal(vec![10, 0])
+    );
+}
+
+/// A lexicographic chain stops at the first non-finite objective: maximizing an
+/// upward-unbounded `x` (only `x ≥ 0`) stops at index 0 with no prefix.
+#[test]
+fn lexicographic_stops_on_unbounded() {
+    let mut arena = TermArena::new();
+    let x = int_var(&mut arena, "x");
+    let y = int_var(&mut arena, "y");
+    let zero = arena.int_const(0);
+    let xl = arena.int_ge(x, zero).unwrap(); // x ≥ 0, no upper bound
+    let objs = [
+        LexObjective {
+            objective: x,
+            maximize: true,
+        },
+        LexObjective {
+            objective: y,
+            maximize: true,
+        },
+    ];
+    match optimize_lia_lexicographic(&mut arena, &[xl], &objs).unwrap() {
+        LexOutcome::Stopped {
+            index,
+            prefix,
+            outcome,
+        } => {
+            assert_eq!(index, 0);
+            assert!(prefix.is_empty());
+            assert_eq!(outcome, OptOutcome::Unbounded);
+        }
+        LexOutcome::Optimal(vals) => {
+            panic!("expected Stopped at unbounded objective, got Optimal({vals:?})")
+        }
+    }
+}
