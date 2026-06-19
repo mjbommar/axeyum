@@ -614,6 +614,47 @@ fn end_to_end_qf_abv_array_elimination_certificate_to_false() {
     assert_infers_false(&mut ctx, term);
 }
 
+/// **Transitive array-elimination certificate end-to-end**: the read-consistency
+/// constraint's index equality `i = j` holds only by transitive closure
+/// `i = k = j`, so the cert derives it with an `eq_transitive` index chain.
+/// `select(a,i)=#b00 ∧ i=k ∧ k=j ∧ ¬(select(a,j)=#b00)` reconstructs through the
+/// shared `reconstruct_qf_ufbv_proof` to a kernel-checked Lean `False`, closing the
+/// Lean loop for the widened array-elim fragment too.
+#[test]
+fn end_to_end_qf_abv_transitive_index_certificate_to_false() {
+    let mut arena = TermArena::new();
+    let a = arena.array_var("a", 4, 8).unwrap();
+    let i = {
+        let s = arena.declare("i", Sort::BitVec(4)).unwrap();
+        arena.var(s)
+    };
+    let k = {
+        let s = arena.declare("k", Sort::BitVec(4)).unwrap();
+        arena.var(s)
+    };
+    let j = {
+        let s = arena.declare("j", Sort::BitVec(4)).unwrap();
+        arena.var(s)
+    };
+    let c = arena.bv_const(8, 0).unwrap();
+    let sa = arena.select(a, i).unwrap();
+    let sb = arena.select(a, j).unwrap();
+    let e1 = arena.eq(sa, c).unwrap();
+    let e2 = arena.eq(i, k).unwrap();
+    let e3 = arena.eq(k, j).unwrap();
+    let e4 = {
+        let e = arena.eq(sb, c).unwrap();
+        arena.not(e).unwrap()
+    };
+
+    let proof = crate::prove_qf_abv_unsat_alethe_via_elimination(&mut arena, &[e1, e2, e3, e4])
+        .expect("emitter produces the transitive array-elimination certificate");
+    let mut ctx = ReconstructCtx::new();
+    let term = super::reconstruct_qf_ufbv_proof(&mut ctx, &proof)
+        .expect("the transitive QF_ABV certificate reconstructs to a kernel-checked term");
+    assert_infers_false(&mut ctx, term);
+}
+
 /// **Datatype read-over-construct certificate end-to-end (ROUTE A, zero-trust)**:
 /// take a REAL `prove_qf_dt_unsat_alethe_via_simplification` certificate for
 /// `select_0(mk(a, b)) = #b00 ∧ ¬(a = #b00)` — decided via read-over-construct
