@@ -377,6 +377,15 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **P1.6 combination — arrangement-consistency check**
+  (`combination_conflict`): one model-based-combination iteration — does a BV model's
+  equal/distinct arrangement of the shared terms agree with the EUF congruence? Returns the
+  first conflicting pair (model-distinct vs congruence-equal, or model-equal vs
+  congruence-refuted), else `None`. Composes `shared_terms`+`classify` into the core
+  combination step. Four P1.6 combination primitives now exist (shared / propose / classify
+  / arrangement-check); the remaining slice is the online loop that blocks a conflicting
+  arrangement and re-solves (P1.5 T1.5.1–4 online drive).
+
 - **2026-06-18** — **P1.6 combination — interface-equality classification against
   congruence** (`classify_interface_equalities` + `InterfaceStatus`). Decides each
   proposed equality Entailed/Refuted/Undetermined via the e-graph congruence closure of
