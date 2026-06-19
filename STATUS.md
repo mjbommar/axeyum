@@ -377,6 +377,12 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **Foundational QF_BV refutation checked by the real Lean kernel**
+  (destination-3). Added a gated real-lean cross-check for the bit-blasting → resolution
+  path (`a≤b ∧ b<a`); `#print axioms` shows no `sorryAx`. Independent-kernel validation now
+  spans **7 fragments**: QF_BV / QF_UFBV / QF_ABV / datatypes / LRA / ∀ / ∃ — the core
+  bit-level path plus the theory fragments.
+
 - **2026-06-18** — **Datatype refutations checked by the real Lean kernel** (destination-3).
   Added a gated real-lean cross-check for algebraic datatypes (read-over-construct unsat,
   via datatype simplification → QF_UFBV); `#print axioms` shows no `sorryAx`. Real-kernel
