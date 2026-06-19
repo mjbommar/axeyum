@@ -377,6 +377,11 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **FP `to_real` confirmed format-general** (F16/BF16/TF32/FP8 E5M2,
+  not just F32/F64): corrected the stale doc and added small-format coverage (incl.
+  subnormals and ∞/NaN→None). With `from_real` (all modes) and the int/bv→fp conversions,
+  the FP↔Real/Int conversion surface is complete across the supported IEEE formats.
+
 - **2026-06-18** — **FP `from_real`: all five rounding modes** (RNE/RNA/RTZ/RTP/RTN).
   `round_rational_rne` gained per-mode rounding (`round_up_decision`) and overflow
   (`overflow_bits`, ±inf vs max-finite, direction-aware). Validated against
