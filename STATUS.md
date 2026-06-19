@@ -369,12 +369,19 @@ plan is built and committed on the current branch:
 |---|---|---|
 | P4.1 | Warm lazy arrays / symbolic memory (ADR-0030 deferred half) | TODO |
 | P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | TODO |
-| P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | TODO |
+| P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | WIP — single-objective `maximize/minimize_lia` + `_bv`/`_bv_signed` already shipped (exponential+binary bound search, Boolean-structured oracle). **Lexicographic multi-objective landed** (`optimize_lia_lexicographic`, 2026-06-18): optimize objectives in order, pinning each at its optimum (`obj≥v`/`obj≤v`) before the next so later ones range over the optimal face — z3's default lex combination. Sound + terminating (bounded composition of the checked single-objective optimizer); `LexOutcome::Stopped` at the first unbounded/infeasible/unknown objective. 4 tests (order-matters, mixed max/min, stop-on-unbounded). Remaining: Pareto front enumeration; MILP hardening; BV lexicographic |
 | P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | WIP — broad command surface already parsed (declare-const/fun/datatype(s), define-fun/sort, push/pop, reset(-assertions), check-sat(-assuming), get-proof/model/value/unsat-core/assignment, set-option/info, echo/exit); term forms let/forall/exists/`!`/`as` handled. **`match` datatype pattern-matching added** (commit d404794, P4.4): parse-time desugaring to nested `ite`/`DtTest`/`DtSelect`, exhaustiveness + arity checked, 11 tests. Remaining: `declare-sort` (needs first-class uninterpreted sorts the IR lacks — deep), `define-fun-rec`, full `match` for parametric datatypes |
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed slice + baseline (32/43 decided, agree=32, DISAGREE=0) |
 
 ## Changelog
 
+- **2026-06-18** — **P4.3 OMT breadth: lexicographic multi-objective optimization**
+  (`optimize_lia_lexicographic`, commit `b852ddf`). Optimizes integer-linear objectives
+  in order, pinning each at its optimum before the next (z3's default lexicographic
+  combination); sound + terminating (bounded composition of the checked
+  `maximize/minimize_lia`); `LexOutcome::Stopped` at the first non-finite objective.
+  4 API-level tests (order-dependence, mixed max/min, stop-on-unbounded). Reachable via
+  the solver API. Second breadth increment of the new working-agreement loop.
 - **2026-06-18** — **Plan revised from measured learnings + breadth pivot.** Per a
   strategy check-in: revised PLAN.md (front #1 reframed to word-level *reduction* as
   the destination-2 lever with the EncodingBudget/search-bound/large-CNF partition;
