@@ -377,6 +377,10 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **Solver façade `unsat_core`**: `Solver::unsat_core(arena)` returns a
+  deletion-minimized unsat core (assertion indices) — the z3 get-unsat-core API on the
+  high-level façade. Test verifies the irrelevant assertion is excluded.
+
 - **2026-06-18** — **Word-level preprocessing flipped default-ON** (commit `6cb2f1b`,
   ADR-0034/0037 staged step). `SolverConfig::default().preprocess == true`; the default
   `solve()`/`check_auto` path runs the model-sound reduction pipeline. Guarded so it is
