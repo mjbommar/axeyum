@@ -377,6 +377,12 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **FP `from_real`: all five rounding modes** (RNE/RNA/RTZ/RTP/RTN).
+  `round_rational_rne` gained per-mode rounding (`round_up_decision`) and overflow
+  (`overflow_bits`, ±inf vs max-finite, direction-aware). Validated against
+  `rustc_apfloat`'s correctly-rounded division for every mode and sign — an independent
+  IEEE oracle. `to_fp` from real is now complete for all SMT-LIB rounding modes.
+
 - **2026-06-18** — **FP `from_real` now rounds non-dyadic rationals** (exact-integer RNE,
   `round_rational_rne`): 1/3, 1/10, 22/7 → correctly-rounded F32/F64, no f64
   double-rounding. `round_rational_to_format` kept dyadic-only (smtlib parser depends on
