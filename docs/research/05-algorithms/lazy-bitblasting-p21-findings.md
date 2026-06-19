@@ -198,6 +198,46 @@ the `ite`/adder structure before blasting, as Z3 does — i.e. the (currently
 unbounded) preprocessor, owned in `axeyum-rewrite`. Abstraction is exhausted as a
 lever here; the remaining lever is reduction.
 
+## Fair-budget re-measurement (2026-06-18): apples-to-apples vs the eager fair baselines
+
+The earlier public measurement (above) used the no-budget 1 s config. This is the
+**fair re-run at the same standing node/CNF budgets and timeouts as the committed
+eager `qf-bv-p4dfa-fair-sat-bv-vs-z3-*` baselines**, so lazy-bv and eager sat-bv
+are compared on identical terms. Backend `lazy-bv`, `--compare-z3` (Z3 4.13.3),
+`--jobs 2`, on all 113 files.
+
+| run | budgets | lazy-bv decided | eager sat-bv decided (baseline) | DISAGREE | replay fail |
+|---|---|---|---|---|---|
+| **3 s** | node 200k, cnf-var 2M, cnf-clause 5M | **3 sat / 110 unknown** (PAR-2 5.84) | 2 sat / 111 unknown | **0** | 0 |
+| **20 s** | node 300k, cnf-var 3M, cnf-clause 8M | **4 sat / 109 unknown** (PAR-2 38.58) | 3 sat / 110 unknown (PAR-2 39.02) | **0** | 0 |
+
+Baselines committed at
+`bench-results/baselines/qf-bv-p4dfa-fair-lazy-bv-vs-z3-{3s-n200k-cnf5M,20s-n300k-cnf8M}.json`.
+
+**The fair budgets confirm the no-op finding decisively.** Per-instance telemetry:
+`lazy_ops_total == 0` on **all 113 files** (re-confirmed by an operator census —
+`grep` finds **0/113** files containing any of `bvmul`/`bvudiv`/`bvsdiv`/`bvurem`/
+`bvsrem`/`bvsmod`); **0 instances refined a single op**; every decided instance had
+`ops_total = 0` (i.e. plain bit-blast, the abstraction was inert). The 110
+unknowns break down (3 s) as **87 Timeout** (admitted, bit-blasted to large CNFs
+batsat can't crack) + **13 EncodingBudget** + **10 NodeBudget** (refused at the
+gate); at 20 s the bigger budgets shift it to **98 Timeout / 10 EncodingBudget /
+1 NodeBudget**. The extra instances lazy decides over eager (`mobiledevice_…na6_nr3`
+at 3 s, `compose.p2._…na6_nr3_paired` at 20 s) all have `ops_total = 0` and are
+decided by the plain bit-blast path, not by CEGAR — a solve-path margin, within
+noise, not an architectural win.
+
+**Conclusion (the number the user asked for): lazy-bv does not — and on this
+corpus structurally cannot — move the public QF_BV scoreboard.** The p4dfa slice is
+arithmetic-free DFA/protocol bit-logic (`bvadd`/`bvand`/`bvxor` over wide vectors,
+huge `ite`-nests); lazy arithmetic-CEGAR has nothing to abstract. The destination-2
+wall on *this* corpus is **eager-bit-blast CNF size**, addressable only by
+**word-level reduction before blasting** — which is gated on the **unbounded
+preprocessor** (the `solve_eqs`/canonicalize blow-up on the 17.6 MB / 215k-`ite`
+giants, recorded above). That blocker — a deterministic work budget on the
+preprocessing passes — is the next concrete destination-2 code increment, not more
+abstraction machinery.
+
 ## Bottom line
 
 Lazy arithmetic-CEGAR bit-blasting is now wired end-to-end (opt-in dispatch

@@ -355,6 +355,31 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **Destination-2 fair re-measurement: lazy-bv vs Z3 on the public
+  p4dfa 113 at the standing budgets — confirmed a no-op on this corpus.** Ran the
+  built-but-fair-unmeasured `LazyBvBackend` head-to-head vs Z3 4.13.3 on the
+  committed 113-file `20221214-p4dfa` public QF_BV slice at **identical node/CNF
+  budgets to the eager `qf-bv-p4dfa-fair` baselines**, both tiers, `--jobs 2`:
+  - **3 s** (node 200k, cnf 2M/5M): **lazy 3 sat / 110 unknown, DISAGREE=0, 0 replay
+    failures** (eager 2/111). **20 s** (node 300k, cnf 3M/8M): **lazy 4 sat / 109
+    unknown, DISAGREE=0, 0 replay failures** (eager 3/110). Baselines committed:
+    `bench-results/baselines/qf-bv-p4dfa-fair-lazy-bv-vs-z3-{3s-n200k-cnf5M,20s-n300k-cnf8M}.json`;
+    reproduce via `just bench-public-qfbv-lazy-fair-{3s,20s}`.
+  - **Honest finding:** `lazy_ops_total == 0` on **all 113** files (`grep` census:
+    **0/113** contain any of `bvmul/bvudiv/bvsdiv/bvurem/bvsrem/bvsmod`); **0
+    instances refined any op**; every decided instance was plain bit-blast. The
+    consistent +1 over eager is a solve-path margin (the extra instances have
+    `ops_total=0`), **not** a CEGAR win. lazy arithmetic-CEGAR is **structurally
+    inert** on this arithmetic-free DFA/protocol slice. The 109–110 unknowns are
+    87–98 Timeout (huge CNFs batsat can't crack) + 10–13 EncodingBudget + 1–10
+    NodeBudget — the **eager-CNF-size wall**, not the multiplier wall.
+  - **The number says:** the destination-2 lever for this corpus is **word-level
+    reduction before blasting** (P1.2), which is blocked on the **unbounded
+    preprocessor** (`solve_eqs`/canonicalize blow-up on the 17.6 MB / 215k-`ite`
+    giants). NEXT: give the preprocessing passes a deterministic work budget so
+    `--preprocess` bails instead of hanging → then measure `--preprocess` on the 113
+    (the second committed measurement) → then the batsat-vs-custom-core ADR. See
+    [lazy-bitblasting-p21-findings.md](docs/research/05-algorithms/lazy-bitblasting-p21-findings.md).
 - **2026-06-18** — **P3.7 destination-3 milestone: reconstructed refutations checked
   by a REAL Lean 4 kernel.** Installed a real Lean toolchain (elan + `leanprover/lean4`
   stable 4.31; the gold-standard checker, analogue of the Z3 oracle — a CI/cross-check
