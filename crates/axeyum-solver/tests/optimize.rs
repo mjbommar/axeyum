@@ -441,3 +441,57 @@ fn box_optimization_is_independent_unlike_lex() {
         LexOutcome::Optimal(vec![10, 2])
     );
 }
+
+use axeyum_solver::{ParetoOutcome, optimize_lia_pareto};
+
+/// Pareto front of `max x, max y` s.t. `0≤x,y≤3 ∧ x+y≤4`: the non-dominated tuples
+/// are exactly {(3,1),(2,2),(1,3)} (on the x+y=4 frontier within the box).
+#[test]
+fn pareto_front_two_objectives() {
+    let mut arena = TermArena::new();
+    let x = int_var(&mut arena, "x");
+    let y = int_var(&mut arena, "y");
+    let zero = arena.int_const(0);
+    let three = arena.int_const(3);
+    let four = arena.int_const(4);
+    let xl = arena.int_ge(x, zero).unwrap();
+    let xh = arena.int_le(x, three).unwrap();
+    let yl = arena.int_ge(y, zero).unwrap();
+    let yh = arena.int_le(y, three).unwrap();
+    let sum = arena.int_add(x, y).unwrap();
+    let cap = arena.int_le(sum, four).unwrap();
+    let asserts = [xl, xh, yl, yh, cap];
+    let objs = [
+        LexObjective {
+            objective: x,
+            maximize: true,
+        },
+        LexObjective {
+            objective: y,
+            maximize: true,
+        },
+    ];
+    let ParetoOutcome::Complete(mut points) =
+        optimize_lia_pareto(&mut arena, &asserts, &objs).unwrap()
+    else {
+        panic!("expected a complete Pareto front");
+    };
+    points.sort();
+    assert_eq!(points, vec![vec![1, 3], vec![2, 2], vec![3, 1]]);
+}
+
+/// A single objective has a one-point Pareto front: just its optimum.
+#[test]
+fn pareto_single_objective_is_the_optimum() {
+    let mut arena = TermArena::new();
+    let x = int_var(&mut arena, "x");
+    let [xl, xh] = bound_0_10(&mut arena, x);
+    let objs = [LexObjective {
+        objective: x,
+        maximize: true,
+    }];
+    assert_eq!(
+        optimize_lia_pareto(&mut arena, &[xl, xh], &objs).unwrap(),
+        ParetoOutcome::Complete(vec![vec![10]])
+    );
+}

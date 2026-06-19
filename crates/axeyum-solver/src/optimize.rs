@@ -23,7 +23,7 @@
 
 use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
 
-use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownReason};
+use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::dpll_lia::check_with_lia_dpll;
 
 /// Doubling steps before the objective is declared unbounded. `2^126` overflows
@@ -233,6 +233,194 @@ pub fn optimize_lia_box(
         out.push(outcome);
     }
     Ok(out)
+}
+
+/// Deterministic caps for [`optimize_lia_pareto`] (resource discipline): the most
+/// Pareto points enumerated, and the most guided-improvement steps spent certifying
+/// one point as maximal. Exceeding either yields a truncated / `Unknown` result
+/// rather than unbounded work.
+const MAX_PARETO_POINTS: usize = 256;
+const MAX_PARETO_PUSH: usize = 64;
+
+/// The result of a Pareto-front enumeration.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ParetoOutcome {
+    /// The complete Pareto front: every objective-value tuple that is
+    /// Pareto-optimal (each point verified maximal; the set covers the front).
+    Complete(Vec<Vec<i128>>),
+    /// The point cap was hit; `points` are verified-optimal but the front may have
+    /// more.
+    Truncated(Vec<Vec<i128>>),
+    /// Enumeration could not be certified (a probe was undecided, or a point's
+    /// maximality could not be confirmed within the push cap); `found` are the
+    /// verified-optimal points discovered before the stop.
+    Unknown {
+        /// Pareto-optimal points verified before the stop.
+        found: Vec<Vec<i128>>,
+        /// Why enumeration stopped.
+        reason: UnknownReason,
+    },
+}
+
+/// `objective` better-than-or-equal to constant `c` in its direction
+/// (`≥ c` for a maximized objective, `≤ c` for a minimized one).
+fn pareto_better_eq(
+    arena: &mut TermArena,
+    obj: LexObjective,
+    c: i128,
+) -> Result<TermId, SolverError> {
+    let cc = arena.int_const(c);
+    let t = if obj.maximize {
+        arena.int_ge(obj.objective, cc)
+    } else {
+        arena.int_le(obj.objective, cc)
+    }?;
+    Ok(t)
+}
+
+/// `objective` strictly better than constant `c` in its direction.
+fn pareto_strict_better(
+    arena: &mut TermArena,
+    obj: LexObjective,
+    c: i128,
+) -> Result<TermId, SolverError> {
+    let cc = arena.int_const(c);
+    let t = if obj.maximize {
+        arena.int_gt(obj.objective, cc)
+    } else {
+        arena.int_lt(obj.objective, cc)
+    }?;
+    Ok(t)
+}
+
+/// `⋁ᵢ strict_better(objᵢ, vᵢ)` — "improves on `v` in at least one objective".
+fn pareto_improves_somewhere(
+    arena: &mut TermArena,
+    objectives: &[LexObjective],
+    v: &[i128],
+) -> Result<TermId, SolverError> {
+    let mut acc: Option<TermId> = None;
+    for (obj, &vi) in objectives.iter().zip(v) {
+        let sb = pareto_strict_better(arena, *obj, vi)?;
+        acc = Some(match acc {
+            None => sb,
+            Some(prev) => arena.or(prev, sb)?,
+        });
+    }
+    acc.ok_or_else(|| SolverError::Unsupported("pareto needs at least one objective".to_owned()))
+}
+
+/// Solve `constraints` and read each objective's value from the model.
+enum MultiProbe {
+    Sat(Vec<i128>),
+    Unsat,
+    Unknown(UnknownReason),
+}
+
+fn pareto_probe(
+    arena: &mut TermArena,
+    constraints: &[TermId],
+    objectives: &[LexObjective],
+) -> Result<MultiProbe, SolverError> {
+    match check_with_lia_dpll(arena, constraints, &SolverConfig::default())? {
+        CheckResult::Sat(model) => {
+            let assignment = model.to_assignment();
+            let mut vals = Vec::with_capacity(objectives.len());
+            for obj in objectives {
+                match eval(arena, obj.objective, &assignment)? {
+                    Value::Int(v) => vals.push(v),
+                    other => {
+                        return Err(SolverError::Unsupported(format!(
+                            "pareto objective is not integer-valued (got {other:?})"
+                        )));
+                    }
+                }
+            }
+            Ok(MultiProbe::Sat(vals))
+        }
+        CheckResult::Unsat => Ok(MultiProbe::Unsat),
+        CheckResult::Unknown(reason) => Ok(MultiProbe::Unknown(reason)),
+    }
+}
+
+/// **Pareto-front multi-objective optimization** over integer-linear objectives —
+/// z3's `pareto` OMT mode. Enumerates the Pareto-optimal objective-value tuples (no
+/// objective can improve without another worsening) by *guided improvement* (Rayside
+/// et al.): find a feasible candidate not dominated by any point found so far, push
+/// it to a maximal (Pareto-optimal) point, record it, exclude everything it weakly
+/// dominates, and repeat until no fresh candidate remains.
+///
+/// Each recorded point is **verified** Pareto-optimal (no feasible point dominates
+/// it — a confirmed-`unsat` domination query), and the exclusions guarantee
+/// distinct, mutually-non-dominated points whose set covers the front. Bounded by
+/// [`MAX_PARETO_POINTS`] (→ [`ParetoOutcome::Truncated`]) and [`MAX_PARETO_PUSH`]
+/// (→ [`ParetoOutcome::Unknown`] if a point's maximality can't be confirmed within
+/// the budget), so it always terminates with a deterministic result — never
+/// unbounded enumeration.
+///
+/// # Errors
+///
+/// [`SolverError`] from a probe / term builder (e.g. a non-integer objective).
+pub fn optimize_lia_pareto(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objectives: &[LexObjective],
+) -> Result<ParetoOutcome, SolverError> {
+    let mut front: Vec<Vec<i128>> = Vec::new();
+    let mut exclusions: Vec<TermId> = Vec::new();
+    loop {
+        if front.len() >= MAX_PARETO_POINTS {
+            return Ok(ParetoOutcome::Truncated(front));
+        }
+        // A fresh candidate must not be weakly dominated by any recorded point.
+        let mut query = assertions.to_vec();
+        query.extend_from_slice(&exclusions);
+        let candidate = match pareto_probe(arena, &query, objectives)? {
+            MultiProbe::Sat(v) => v,
+            MultiProbe::Unsat => return Ok(ParetoOutcome::Complete(front)),
+            MultiProbe::Unknown(reason) => {
+                return Ok(ParetoOutcome::Unknown {
+                    found: front,
+                    reason,
+                });
+            }
+        };
+        // Guided improvement: climb to a point no feasible point dominates.
+        let mut v = candidate;
+        let mut certified = false;
+        for _ in 0..MAX_PARETO_PUSH {
+            let mut dom = assertions.to_vec();
+            for (obj, &vi) in objectives.iter().zip(&v) {
+                dom.push(pareto_better_eq(arena, *obj, vi)?);
+            }
+            dom.push(pareto_improves_somewhere(arena, objectives, &v)?);
+            match pareto_probe(arena, &dom, objectives)? {
+                MultiProbe::Sat(w) => v = w, // w dominates v; keep climbing
+                MultiProbe::Unsat => {
+                    certified = true; // nothing dominates v → Pareto-optimal
+                    break;
+                }
+                MultiProbe::Unknown(reason) => {
+                    return Ok(ParetoOutcome::Unknown {
+                        found: front,
+                        reason,
+                    });
+                }
+            }
+        }
+        if !certified {
+            return Ok(ParetoOutcome::Unknown {
+                found: front,
+                reason: UnknownReason {
+                    kind: UnknownKind::ResourceLimit,
+                    detail: "pareto: guided-improvement push budget reached".to_owned(),
+                },
+            });
+        }
+        let exclude = pareto_improves_somewhere(arena, objectives, &v)?;
+        front.push(v);
+        exclusions.push(exclude);
+    }
 }
 
 /// One objective in a bit-vector lexicographic optimization: the BV `objective`,
