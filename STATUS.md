@@ -377,6 +377,15 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **P1.6 combination — interface-equality classification against
+  congruence** (`classify_interface_equalities` + `InterfaceStatus`). Decides each
+  proposed equality Entailed/Refuted/Undetermined via the e-graph congruence closure of
+  the EUF assertions — Entailed covers congruence-derived equalities (`f(a)=f(b)` from
+  `a=b`), Refuted uses asserted disequalities. With `shared_terms` (T1.6.1) +
+  `propose_interface_equalities`, the model-based-combination core (shared → propose from
+  a BV model → confirm/refute against EUF) is now in place; remaining is the online
+  CDCL(T) drive that loops propose↔split↔re-solve (P1.5 T1.5.1–4).
+
 - **2026-06-18** — **P1.6 combination — model-based interface-equality proposal**
   (`propose_interface_equalities`). Given a one-theory model, proposes equalities between
   equal-valued shared terms (spanning chain per value group, deterministic) — the
