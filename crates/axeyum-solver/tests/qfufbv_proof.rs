@@ -143,6 +143,38 @@ fn transitive_argument_equality_binary_one_chained() {
 }
 
 #[test]
+#[allow(clippy::many_single_char_names)]
+fn congruence_derived_argument_equality() {
+    // f(g(a)) = #b00 ∧ a = b ∧ ¬(f(g(b)) = #b00).
+    // unsat: a = b ⇒ g(a) = g(b) (congruence over g) ⇒ f(g(a)) = f(g(b)) ⇒
+    // f(g(b)) = #b00, contradiction. The two f-applications' arguments g(a) and
+    // g(b) are equal NOT by a chain of asserted edges but by CONGRUENCE over g, so
+    // the asserted-edge BFS declines and the e-graph congruence fallback derives
+    // (= g(a) g(b)) via eq_congruent on a = b.
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(2)], Sort::BitVec(2))
+        .unwrap();
+    let g = arena
+        .declare_fun("g", &[Sort::BitVec(2)], Sort::BitVec(2))
+        .unwrap();
+    let a = bv(&mut arena, "a", 2);
+    let b = bv(&mut arena, "b", 2);
+    let ga = arena.apply(g, &[a]).unwrap();
+    let gb = arena.apply(g, &[b]).unwrap();
+    let fga = arena.apply(f, &[ga]).unwrap();
+    let fgb = arena.apply(f, &[gb]).unwrap();
+    let c00 = arena.bv_const(2, 0).unwrap();
+    let e1 = arena.eq(fga, c00).unwrap();
+    let e2 = arena.eq(a, b).unwrap();
+    let e3 = {
+        let e = arena.eq(fgb, c00).unwrap();
+        arena.not(e).unwrap()
+    };
+    self_checks(&mut arena, &[e1, e2, e3]);
+}
+
+#[test]
 fn no_functions_returns_none() {
     // Pure QF_BV (no applications): the dedicated QF_BV emitter handles it; the
     // QF_UFBV certificate emitter declines.

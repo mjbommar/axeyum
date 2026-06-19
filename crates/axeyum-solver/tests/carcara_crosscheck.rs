@@ -1684,6 +1684,66 @@ fn ufbv_transitive_congruence_is_accepted_by_carcara() {
     assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
 }
 
+#[test]
+#[allow(clippy::many_single_char_names)]
+fn ufbv_nested_congruence_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // f(g(a)) = #b00 ∧ a = b ∧ ¬(f(g(b)) = #b00). The two f-applications' arguments
+    // are g(a) and g(b) — equal NOT by a chain of asserted equalities but by
+    // CONGRUENCE over g (from a = b). The asserted-edge BFS declines; the e-graph
+    // congruence fallback derives the argument equality with eq_congruent over g.
+    // The Ackermann reduction abstracts every application:
+    //   g(a) → !fn_app_0, g(b) → !fn_app_2, f(!fn_app_0) → !fn_app_1,
+    //   f(!fn_app_2) → !fn_app_3.
+    // Carcara must accept the spliced eq_congruent/eq_transitive derivation.
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(2)], Sort::BitVec(2))
+        .unwrap();
+    let g = arena
+        .declare_fun("g", &[Sort::BitVec(2)], Sort::BitVec(2))
+        .unwrap();
+    let a = bvw(&mut arena, "a", 2);
+    let b = bvw(&mut arena, "b", 2);
+    let ga = arena.apply(g, &[a]).unwrap();
+    let gb = arena.apply(g, &[b]).unwrap();
+    let fga = arena.apply(f, &[ga]).unwrap();
+    let fgb = arena.apply(f, &[gb]).unwrap();
+    let c00 = arena.bv_const(2, 0).unwrap();
+    let e1 = arena.eq(fga, c00).unwrap();
+    let e2 = arena.eq(a, b).unwrap();
+    let e3 = {
+        let e = arena.eq(fgb, c00).unwrap();
+        arena.not(e).unwrap()
+    };
+
+    let proof = prove_qf_ufbv_unsat_alethe(&mut arena, &[e1, e2, e3]).expect("emit QF_UFBV proof");
+    let smt2 = "\
+(set-logic QF_UFBV)
+(declare-fun f ((_ BitVec 2)) (_ BitVec 2))
+(declare-fun g ((_ BitVec 2)) (_ BitVec 2))
+(declare-const a (_ BitVec 2))
+(declare-const b (_ BitVec 2))
+(declare-const !fn_app_0 (_ BitVec 2))
+(declare-const !fn_app_1 (_ BitVec 2))
+(declare-const !fn_app_2 (_ BitVec 2))
+(declare-const !fn_app_3 (_ BitVec 2))
+(assert (= !fn_app_1 #b00))
+(assert (= a b))
+(assert (not (= !fn_app_3 #b00)))
+(assert (= !fn_app_0 (g a)))
+(assert (= (g b) !fn_app_2))
+(assert (= !fn_app_1 (f !fn_app_0)))
+(assert (= (f !fn_app_2) !fn_app_3))
+(check-sat)
+";
+    let report = carcara_accepts_smt2(&bin, "ufbv_nested", smt2, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
 // --- QF_ABV array-elimination certificate: ----------------------------------
 // `prove_qf_abv_unsat_alethe_via_elimination`
 //

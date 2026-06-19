@@ -412,6 +412,27 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P3.5: Ackermann cert widened to congruence-closure arg-equalities
+  (e-graph fallback).** `prove_qf_ufbv_unsat_alethe` now discharges an argument pair equal
+  by **congruence** (not just transitive closure of asserted edges) — e.g.
+  `f(g(a))=k ∧ a=b ∧ f(g(b))≠k`, where the args `g(a)`, `g(b)` are equal because `a=b`.
+  A new `CongBridge` builds an `axeyum_egraph::EGraph` over the rewritten assertions + the
+  abstraction defining equations `v_i=f(args_i)` (all nodes added before any merge, so
+  congruence edges survive); when the asserted-edge BFS declines, `emit_arg_units` walks
+  `EGraph::explain_steps` and converts `Input`→assume / `Congruence`→`eq_congruent`
+  (recursing on args) threaded through `eq_transitive` — exactly the `prove_qf_uf_unsat_alethe`
+  pattern. **Strictly additive**: the identical / direct-assert / transitive-BFS paths are
+  byte-unchanged, and the whole emitter is self-validated by `check_alethe` (a bad fallback
+  ⇒ `None`, never a wrong proof). Carcara accepts the nested-congruence proof
+  (`ufbv_nested_congruence_is_accepted_by_carcara`; the EUF `eq_symmetric`+resolution flip
+  was swapped for the `symm` rule which both `check_alethe` and Carcara accept). Done via a
+  focused sub-agent; independently re-validated (clippy clean, qfufbv_proof 7, carcara 54,
+  full solver suite 920). **Follow-ups (noted):** `reconstruct_qf_ufbv_proof` doesn't yet
+  handle `symm`, so the congruence fragment doesn't reconstruct to Lean (teach it `symm`, or
+  orient the assumed input to the path direction); and the array-elim index fragment
+  (`term_to_alethe` renders only symbols/bv-consts) would need application-valued indices to
+  benefit, left untouched to protect the validated array cert.
+
 - **2026-06-19** — **Datatype evidence routing fixed + datatype zero-trust cert wired.**
   `evidence_route` (the `produce_evidence` classifier) ignored datatype sorts/ops, so a
   datatype query whose top-level terms are all Bool/BitVec (e.g. `select_0(mk(a,b))=#b00
