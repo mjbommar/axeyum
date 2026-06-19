@@ -1126,6 +1126,41 @@ fn from_int_bits(
     arena.ite(is_zero, pos_zero, packed)
 }
 
+/// `((_ to_fp eb sb) RM r)` for a **rational constant** `r` (z3's `to_fp` from a
+/// `Real`). When `r` is **dyadic** — its reduced denominator is a power of two —
+/// the value is exactly `|num|·2^(−k)` with `den == 2^k`, so the integer magnitude
+/// is the significand and `−k` the exponent; [`pack_value`] does the rounding
+/// (including subnormal/overflow) under `mode`, reusing the validated packer. `0`
+/// maps to `+0`.
+///
+/// Returns `Ok(None)` for a **non-dyadic** `r` (e.g. `1/3`, `1/10`): correctly
+/// rounding a general rational needs wider-than-`i128` arithmetic and is a planned
+/// follow-up (the f64 bridge would double-round for sub-`f64` formats, so it is not
+/// used). `Ok(None)` is also returned if the working width would exceed 128 bits.
+/// `None` is a *decline*, never a wrong answer — every `Some` value is exact-then-
+/// `pack_value`-rounded.
+///
+/// # Errors
+///
+/// Builder [`IrError`]s (well-formed input does not fail).
+pub fn from_real(
+    arena: &mut TermArena,
+    dst: FloatFormat,
+    mode: RoundingMode,
+    r: Rational,
+) -> Result<Option<TermId>, IrError> {
+    match round_rational_to_format(
+        dst.exp_bits,
+        dst.sig_bits,
+        r.numerator(),
+        r.denominator(),
+        mode,
+    ) {
+        Some(bits) => Ok(Some(arena.bv_const(dst.width(), bits)?)),
+        None => Ok(None),
+    }
+}
+
 /// Symbolic `fp.div` (round-nearest-ties-to-even): the IEEE 754 division
 /// bit-blaster. Computes the quotient of the significands to `sb + 3` fractional
 /// bits via `bv_udiv` (with the `bv_urem` remainder folded into a sticky bit),
@@ -3121,6 +3156,57 @@ mod tests {
             None,
             "denominator scale too small",
         );
+    }
+
+    /// `from_real` builds an `F32` constant whose evaluated bits equal the native
+    /// cast for dyadic rationals, and declines (`None`) for non-dyadic ones.
+    #[test]
+    fn from_real_builds_dyadic_constants_and_declines_non_dyadic() {
+        let read = |a: &TermArena, t| match eval(a, t, &Assignment::new()) {
+            Ok(Value::Bv { value, .. }) => value,
+            other => panic!("expected a bit-vector value, got {other:?}"),
+        };
+        for &(num, den) in &[
+            (1i128, 1i128),
+            (-1, 1),
+            (1, 2),
+            (-5, 2),
+            (1, 4),
+            (3, 1),
+            (255, 256),
+            ((1i128 << 24) + 1, 1i128 << 24), // 25-bit numerator → rounds
+        ] {
+            let mut a = TermArena::new();
+            let bits = from_real(
+                &mut a,
+                FloatFormat::F32,
+                RoundingMode::NearestEven,
+                Rational::new(num, den),
+            )
+            .unwrap()
+            .expect("dyadic rational is representable");
+            let v = num as f64 / den as f64;
+            assert_eq!(
+                read(&a, bits),
+                u128::from((v as f32).to_bits()),
+                "from_real F32 {num}/{den}",
+            );
+        }
+        // Non-dyadic denominators decline (a future slice rounds them exactly).
+        for &(num, den) in &[(1i128, 3i128), (1, 10), (2, 7)] {
+            let mut a = TermArena::new();
+            assert_eq!(
+                from_real(
+                    &mut a,
+                    FloatFormat::F32,
+                    RoundingMode::NearestEven,
+                    Rational::new(num, den)
+                )
+                .unwrap(),
+                None,
+                "non-dyadic {num}/{den} declines",
+            );
+        }
     }
 
     fn to_signed(v: u128, w: u32) -> i128 {
