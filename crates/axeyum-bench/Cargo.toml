@@ -29,3 +29,8 @@ z3-static = ["axeyum-solver/z3-static"]
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+# For the `dump_dimacs` diagnostic example only (bit-blast a query to DIMACS so a
+# reference SAT solver can probe whether the Timeout instances are SAT-search-bound).
+axeyum-bv = { path = "../axeyum-bv" }

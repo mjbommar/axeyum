@@ -399,10 +399,18 @@ plan is built and committed on the current branch:
   model-sound pipeline now runs on the default `solve()`/`check_auto` path when
   `preprocess` is set (`check_auto_preprocessed`, reconstructs + replays), and
   **`Strategy::Auto` composes both levers** — lazy-bv for arithmetic-heavy queries,
-  eager-with-preprocessing for structural ones. Full solver suite green. **Next:
-  deeper word-level reduction (the 6 EncodingBudget + 99 Timeout instances; the
-  concurrent agent's `axeyum-rewrite` P1.2 area — coordinate); flip `preprocess`
-  default-on after a full-suite behavior check (ADR-0034 criterion met).**
+  eager-with-preprocessing for structural ones. Full solver suite green.
+  **Timeout-boundedness measured (kissat probe):** the 99 Timeouts split by CNF size —
+  **~9 (≤300k clauses) are SAT-search-bound** (kissat 4.0.4 cracks them 2–18 s where
+  batsat times out @20s; `mobiledevice_paired` 2 s vs >20 s), the **~90 larger
+  (≥~650k) defeat even kissat** (reduction-bound). So **both levers are data-justified,
+  partitioned by size** (ADR-0037 trigger partially fired): a competitive default SAT
+  core (P1.3) for the small-CNF Timeouts, word-level reduction for the large-CNF bulk +
+  6 EncodingBudget. Probe: `axeyum-bench/examples/dump_dimacs.rs`. **Next:** (a) deeper
+  reduction — `axeyum-rewrite` P1.2, the **other agent's active area; do not edit
+  `canonical.rs`**; (b) a competitive default core (P1.3) for small-CNF Timeouts;
+  (c) flip `preprocess` default-on after a full-suite check. Track **Timeout→decided**
+  as the destination-2 pulse.
 - **2026-06-18** — **Destination-2 fair re-measurement: lazy-bv vs Z3 on the public
   p4dfa 113 at the standing budgets — confirmed a no-op on this corpus.** Ran the
   built-but-fair-unmeasured `LazyBvBackend` head-to-head vs Z3 4.13.3 on the

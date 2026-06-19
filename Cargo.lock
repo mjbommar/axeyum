@@ -39,6 +39,7 @@ version = "0.1.0"
 name = "axeyum-bench"
 version = "0.1.0"
 dependencies = [
+ "axeyum-bv",
  "axeyum-cnf",
  "axeyum-ir",
  "axeyum-query",

@@ -70,12 +70,20 @@ Baselines:
    does **not** abandon the custom-core identity (ADR-0002) — it sequences it after
    reduction.
 
-3. **Reconsideration trigger.** Revisit "make a custom core the default path" only
-   when a measured corpus shows that, *after* aggressive reduction, the still-undecided
-   instances are **SAT-search-bound** (not encoding-size-bound) — e.g. the curated
-   multiplier-equivalence slice, where `xor_cdcl` already demonstrably beats batsat
-   (`mulhs08`). That regime is real but is a *different* corpus from the structural
-   public slice this ADR is about.
+3. **Reconsideration trigger — PARTIALLY FIRED by measurement (2026-06-18).** The
+   trigger was: revisit "make a custom core the default path" when a corpus shows the
+   still-undecided instances are **SAT-search-bound**. A direct kissat-4.0.4 probe of
+   the 99 public Timeouts (bit-blast to DIMACS, run a state-of-the-art core on what
+   batsat times out on) shows this **is true for the small-CNF subset**: kissat solves
+   every Timeout ≤ ~300 k clauses (2–18 s; `mobiledevice_paired` 2 s vs batsat > 20 s)
+   — **~9 of 99 are SAT-search-bound**. The larger ~90 (≥ ~650 k clauses) defeat even
+   kissat in 30 s and remain reduction-bound. **Consequence:** a competitive default
+   SAT core (P1.3 — VSIDS/restarts/LBD, already prototyped in `xor_cdcl`) is now a
+   *data-justified* lever for the small-CNF Timeout band, complementary to reduction
+   (which leads for the large-CNF bulk + `EncodingBudget` set). The "reduction first"
+   priority stands for the bulk; the core work is no longer purely deferred — it has
+   an earned, measured target. (See the kissat table in
+   [lazy-bitblasting-p21-findings.md](../05-algorithms/lazy-bitblasting-p21-findings.md).)
 
 4. **Word-level preprocessing moves toward default-on (extends ADR-0034).** The public
    measurement **meets ADR-0034's own ratification criterion** for flipping the
