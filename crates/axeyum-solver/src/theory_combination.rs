@@ -321,9 +321,42 @@ pub fn combination_conflict(
     None
 }
 
+/// Read the **`th_eq` bus** off a live e-graph (P1.6 T1.6.2): the interface
+/// equalities to broadcast — pairs of theory variables that have become equal
+/// (share a congruence class) **and** belong to different theories per
+/// `theory_of` (indexed by theory-variable id).
+///
+/// A class whose theory variables all belong to one theory carries no interface
+/// news (that theory already knows they are equal); a class spanning two or more
+/// theories yields a spanning chain of its variables (sorted, consecutive pairs) —
+/// enough for the receiving theories to learn the equality by transitivity. Result
+/// is deterministic (classes in root order, members sorted).
+#[must_use]
+pub fn interface_th_eqs(egraph: &EGraph, theory_of: &[u8]) -> Vec<(u32, u32)> {
+    let mut out = Vec::new();
+    for (_root, mut vars) in egraph.theory_var_classes() {
+        vars.sort_unstable();
+        vars.dedup();
+        // Does this class span two or more theories? (Only then is there bus news.)
+        let spans_two = vars
+            .iter()
+            .filter_map(|&v| theory_of.get(v as usize).copied())
+            .collect::<BTreeSet<_>>()
+            .len()
+            >= 2;
+        if spans_two {
+            for window in vars.windows(2) {
+                out.push((window[0], window[1]));
+            }
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axeyum_egraph::EGraph;
     use axeyum_ir::Sort;
 
     fn bv(arena: &mut TermArena, name: &str, w: u32) -> TermId {
@@ -501,5 +534,30 @@ mod tests {
         m3.set(cs, Value::Bv { width: 8, value: 1 });
         m3.set(ds, Value::Bv { width: 8, value: 2 });
         assert_eq!(combination_conflict(&arena, &euf, &[a, b, c, d], &m3), None);
+    }
+
+    #[test]
+    fn th_eq_bus_reports_cross_theory_equalities_only() {
+        // theory_of maps theory-variable id → theory id:
+        // vars 0,1,3 → theory 0; var 2 → theory 1.
+        let theory_of = [0u8, 0, 1, 0];
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        let c = g.add(2, &[]);
+        g.attach_th_var(a, 0); // var 0, theory 0
+        g.attach_th_var(b, 2); // var 2, theory 1
+        g.attach_th_var(c, 3); // var 3, theory 0
+
+        // No merges yet → no class spans two theories.
+        assert!(interface_th_eqs(&g, &theory_of).is_empty());
+
+        // Merge a = b: class {var 0 (th0), var 2 (th1)} spans two theories → (0,2).
+        g.merge(a, b, 0);
+        assert_eq!(interface_th_eqs(&g, &theory_of), vec![(0, 2)]);
+
+        // Merge in c (var 3, theory 0): class {0,2,3} still spans th0+th1 → chain.
+        g.merge(b, c, 1);
+        assert_eq!(interface_th_eqs(&g, &theory_of), vec![(0, 2), (2, 3)]);
     }
 }
