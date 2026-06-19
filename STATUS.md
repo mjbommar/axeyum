@@ -375,6 +375,14 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **P1.8 tactics: or-else portfolio combinator** (`solve_with_portfolio`
+  + `recommended_portfolio`, commit `cda1f55`). Runs strategies in order, first to
+  decide wins, falls through `Unknown`/errors (Z3's `or-else`; sound — a later strategy
+  runs only when earlier ones returned `Unknown`). `recommended_portfolio` routes by
+  query shape (heavy-arith → `[LazyBvAbstraction, EagerPureRust]`; structural → `[Auto]`),
+  composing the destination-2 levers with fallback power over a single `Auto` pick.
+  Pure-Rust, collision-free, 3 tests. Full workspace suite green (103 test binaries, 0
+  failures).
 - **2026-06-18** — **Destination-2 lever found & measured: word-level preprocessing
   doubles the eager decided count (2 → 4 of 113), after fixing the unbounded
   preprocessor.** Acting on the lazy-bv null result below, profiled the preprocessing
