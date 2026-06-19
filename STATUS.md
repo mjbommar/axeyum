@@ -375,6 +375,9 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **Cardinality convenience**: `between(lo,hi)`, `at_most_one`,
+  `exactly_one` (one-hot) — compose the existing at-most/at-least/exactly forms. 2 tests.
+
 - **2026-06-18** — **Solver façade OMT/MaxSAT methods**: `Solver::{maximize_lia,
   minimize_lia, optimize_lexicographic, optimize_pareto, max_satisfiable}` optimize over
   the active assertions — the optimization work is now reachable via the high-level API.
