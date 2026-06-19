@@ -196,3 +196,36 @@ fn qf_abv_read_consistency_refutation_checks_in_real_lean() {
         .expect("QF_ABV read-consistency unsat reconstructs");
     lean_accepts("qf_abv", &source);
 }
+
+/// Datatypes: `select_0(mk(a, b)) = #b00 ∧ ¬(a = #b00)` is unsat by
+/// read-over-construct. Reconstructed via datatype simplification → `QF_UFBV`;
+/// the refutation must type-check in real Lean.
+#[test]
+fn datatype_read_over_construct_checks_in_real_lean() {
+    let mut arena = TermArena::new();
+    let pair = arena.declare_datatype("Pair");
+    let mk = arena.add_constructor(
+        pair,
+        "mk",
+        &[("a".into(), Sort::BitVec(2)), ("b".into(), Sort::BitVec(2))],
+    );
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let p = arena.construct(mk, &[a, b]).unwrap();
+    let sel = arena.dt_select(mk, 0, p).unwrap();
+    let c = arena.bv_const(2, 0).unwrap();
+    let e1 = arena.eq(sel, c).unwrap();
+    let e2 = {
+        let e = arena.eq(a, c).unwrap();
+        arena.not(e).unwrap()
+    };
+    let (_frag, source) = prove_unsat_to_lean_module(&mut arena, &[e1, e2])
+        .expect("datatype read-over-construct unsat reconstructs");
+    lean_accepts("datatype", &source);
+}
