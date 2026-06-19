@@ -377,6 +377,13 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **FP `from_real` now rounds non-dyadic rationals** (exact-integer RNE,
+  `round_rational_rne`): 1/3, 1/10, 22/7 → correctly-rounded F32/F64, no f64
+  double-rounding. `round_rational_to_format` kept dyadic-only (smtlib parser depends on
+  its contract); `from_real` falls back to the integer path. Cross-checked vs the f64
+  path on dyadic (incl. F16 subnormal/tie) and vs native casts on non-dyadic. The `to_fp`
+  source set (int→fp, bv→fp, real→fp) is complete for NearestEven.
+
 - **2026-06-18** — **FP `from_real`** (`axeyum_fp::from_real`): `to_fp` from a rational
   constant. Dyadic rationals (power-of-two denominator, <2^53 numerator) round soundly via
   the validated `round_rational_to_format` (exact f64 → `round_to_format`); non-dyadic
