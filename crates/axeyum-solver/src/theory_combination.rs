@@ -21,8 +21,9 @@
 //! vice versa. Downstream tasks (T1.6.2 `th_eq` bus, T1.6.3 interface-equality
 //! case-splitting) propose and split on equalities *between* these shared terms.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
+use axeyum_egraph::{EGraph, ENodeId};
 use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode, Value, eval};
 
 use crate::model::Model;
@@ -141,6 +142,137 @@ pub fn propose_interface_equalities(
     pairs
 }
 
+/// The congruence closure's verdict on a proposed interface equality.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InterfaceStatus {
+    /// Already entailed — the two terms are in the same congruence class, so the
+    /// other theory's equality is consistent with the EUF side (no split needed).
+    Entailed,
+    /// Refuted — the EUF side has a disequality forcing the two classes apart, so
+    /// the other theory's equality is inconsistent (a conflict / lemma to learn).
+    Refuted,
+    /// Neither entailed nor refuted by the current EUF assertions — a genuine
+    /// interface equality to **case-split** on.
+    Undetermined,
+}
+
+/// A minimal term→e-node interner: assigns a stable decl id per symbol / constant /
+/// operator and hash-conses the term DAG into an [`EGraph`], so congruence holds.
+struct Interner {
+    egraph: EGraph,
+    decls: HashMap<String, u32>,
+    nodes: HashMap<TermId, ENodeId>,
+}
+
+impl Interner {
+    fn new() -> Self {
+        Self {
+            egraph: EGraph::new(),
+            decls: HashMap::new(),
+            nodes: HashMap::new(),
+        }
+    }
+
+    fn decl(&mut self, key: String) -> u32 {
+        let next = u32::try_from(self.decls.len()).expect("decl count fits u32");
+        *self.decls.entry(key).or_insert(next)
+    }
+
+    fn node(&mut self, arena: &TermArena, term: TermId) -> ENodeId {
+        if let Some(&n) = self.nodes.get(&term) {
+            return n;
+        }
+        let n = match arena.node(term) {
+            TermNode::App { op, args } => {
+                let args: Vec<TermId> = args.to_vec();
+                let kids: Vec<ENodeId> = args.iter().map(|&a| self.node(arena, a)).collect();
+                let decl = self.decl(format!("op:{op:?}"));
+                self.egraph.add(decl, &kids)
+            }
+            TermNode::Symbol(s) => {
+                let decl = self.decl(format!("sym:{}", s.index()));
+                self.egraph.add(decl, &[])
+            }
+            other => {
+                // Each distinct literal value is a distinct nullary constant.
+                let decl = self.decl(format!("const:{other:?}"));
+                self.egraph.add(decl, &[])
+            }
+        };
+        self.nodes.insert(term, n);
+        n
+    }
+}
+
+/// Classify each `proposed` interface equality against the **congruence closure** of
+/// `euf_assertions` — the confirm/refute step of model-based combination (P1.6,
+/// toward T1.6.3).
+///
+/// `euf_assertions` are the EUF-side literals (a conjunctive theory state); top-level
+/// `(= a b)` merge classes (congruence cascades), and `(not (= a b))` record
+/// disequalities. A proposed equality `(x, y)` is then [`InterfaceStatus::Entailed`]
+/// if congruence already makes them equal, [`InterfaceStatus::Refuted`] if an
+/// asserted disequality separates their classes, else
+/// [`InterfaceStatus::Undetermined`]. Sound: it uses the same backtrackable e-graph
+/// as the EUF theory, so an `Entailed`/`Refuted` verdict is a genuine congruence
+/// fact, and `Undetermined` is the safe default (a split, never a guess).
+#[must_use]
+pub fn classify_interface_equalities(
+    arena: &TermArena,
+    euf_assertions: &[TermId],
+    proposed: &[(TermId, TermId)],
+) -> Vec<((TermId, TermId), InterfaceStatus)> {
+    let mut intern = Interner::new();
+    let mut diseqs: Vec<(ENodeId, ENodeId)> = Vec::new();
+
+    for &assertion in euf_assertions {
+        if let TermNode::App { op, args } = arena.node(assertion) {
+            match op {
+                Op::Eq => {
+                    let (l, r) = (args[0], args[1]);
+                    let nl = intern.node(arena, l);
+                    let nr = intern.node(arena, r);
+                    intern.egraph.merge(nl, nr, 0);
+                }
+                Op::BoolNot => {
+                    let inner = args[0];
+                    if let TermNode::App {
+                        op: Op::Eq,
+                        args: eq_args,
+                    } = arena.node(inner)
+                    {
+                        let (l, r) = (eq_args[0], eq_args[1]);
+                        let nl = intern.node(arena, l);
+                        let nr = intern.node(arena, r);
+                        diseqs.push((nl, nr));
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    proposed
+        .iter()
+        .map(|&(x, y)| {
+            let nx = intern.node(arena, x);
+            let ny = intern.node(arena, y);
+            let (rx, ry) = (intern.egraph.root(nx), intern.egraph.root(ny));
+            let status = if rx == ry {
+                InterfaceStatus::Entailed
+            } else if diseqs.iter().any(|&(a, b)| {
+                let (ra, rb) = (intern.egraph.root(a), intern.egraph.root(b));
+                (ra == rx && rb == ry) || (ra == ry && rb == rx)
+            }) {
+                InterfaceStatus::Refuted
+            } else {
+                InterfaceStatus::Undetermined
+            };
+            ((x, y), status)
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -241,5 +373,41 @@ mod tests {
         distinct.set(xs, Value::Bv { width: 8, value: 1 });
         distinct.set(ys, Value::Bv { width: 8, value: 2 });
         assert!(propose_interface_equalities(&arena, &[x, y], &distinct).is_empty());
+    }
+
+    #[test]
+    fn classifies_proposed_equalities_against_congruence() {
+        let mut arena = TermArena::new();
+        let a = bv(&mut arena, "a", 8);
+        let b = bv(&mut arena, "b", 8);
+        let c = bv(&mut arena, "c", 8);
+        let d = bv(&mut arena, "d", 8);
+        let f = arena
+            .declare_fun("f", &[Sort::BitVec(8)], Sort::BitVec(8))
+            .unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let fb = arena.apply(f, &[b]).unwrap();
+
+        // EUF state: a = b, and c ≠ d.
+        let eq_ab = arena.eq(a, b).unwrap();
+        let ne_cd = {
+            let e = arena.eq(c, d).unwrap();
+            arena.not(e).unwrap()
+        };
+
+        let result = classify_interface_equalities(
+            &arena,
+            &[eq_ab, ne_cd],
+            &[(a, b), (c, d), (a, c), (fa, fb)],
+        );
+        assert_eq!(
+            result,
+            vec![
+                ((a, b), InterfaceStatus::Entailed),     // asserted directly
+                ((c, d), InterfaceStatus::Refuted),      // asserted disequality
+                ((a, c), InterfaceStatus::Undetermined), // neither
+                ((fa, fb), InterfaceStatus::Entailed),   // by CONGRUENCE (a=b ⇒ f a=f b)
+            ],
+        );
     }
 }
