@@ -148,12 +148,12 @@ pub const CAPABILITIES: &[Capability] = &[
     Capability {
         area: "QF_UFLIA/UFLRA",
         feature: "uninterpreted functions over Int/Real, by EUF + linear-arithmetic \
-                  combination (functional-consistency CEGAR over the arithmetic dispatcher)",
+                  combination (eager Ackermann elimination → the arithmetic dispatcher)",
         assurance: Assurance::SoundIncomplete,
-        evidence: "UNSAT is a relaxation refutation (Ackermann abstraction → LIA/LRA solver \
-                   + congruence lemmas; the classic f(a)≠f(b) ∧ a≤b ∧ b≤a decides); SAT model \
-                   for an arithmetic-sorted function not yet built (scalar-keyed func tables) \
-                   → sound Unknown; never a wrong sat/unsat",
+        evidence: "complete for the conjunctive fragment's UNSAT — eager congruence \
+                   constraints + LIA/LRA decide f(a)≠f(b)∧a≤b∧b≤a, f(x+0)≠f(x), and nested \
+                   f(g(a))≠f(g(b))∧a=b; SAT model for an arithmetic-sorted function not yet \
+                   built (scalar-keyed func tables) → sound Unknown; never a wrong sat/unsat",
         reference: "ADR-0013/0015 (P1.6)",
     },
     Capability {
