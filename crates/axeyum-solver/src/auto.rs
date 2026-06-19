@@ -796,8 +796,93 @@ fn check_auto_dispatch(
         }
     }
 
+    if features.has_int {
+        // Bounded integer bit-blasting at a single width is fragile for *nonlinear*
+        // integer goals: a modular witness (e.g. `x` with `x*x ≡ 4 (mod 2^32)` but
+        // `x*x ≠ 4` over the integers) satisfies the blasted query yet fails the
+        // exact-integer replay, so the single fixed width reports `Unknown` even when
+        // a small genuine witness exists (x = 2). Try a **width ladder** small→large:
+        // at a narrow width there is no room for a wrapping witness, so the SAT
+        // solver is forced onto the genuine small solution. The first width whose
+        // model **replays against the originals** (the only way
+        // `check_with_all_theories` ever returns `Sat`) is a sound `Sat`. This is
+        // strictly additive — `DEFAULT_INT_WIDTH` is in the ladder, so any width-32
+        // answer is still reachable — and a definite `Unsat`/`Unknown` from the
+        // exact LIA engines above already short-circuited before here.
+        return dispatch_int_blast_width_ladder(arena, assertions, config);
+    }
+
     let mut backend = SatBvBackend::new();
     check_with_all_theories(&mut backend, arena, assertions, DEFAULT_INT_WIDTH, config)
+}
+
+/// Smallest integer bit-blast width tried by the ladder. A narrow width leaves no
+/// room for a wraparound witness, so a small genuine solution (e.g. `x = 2` for
+/// `x*x = 4`) is the only model and replays exactly.
+const INT_BLAST_MIN_WIDTH: u32 = 4;
+
+/// Largest integer bit-blast width tried by the ladder — a deterministic work cap.
+/// A genuinely large or unbounded nonlinear integer goal degrades to `Unknown`
+/// here rather than blasting an ever-wider (and ever-heavier) multiplier mountain.
+const INT_BLAST_MAX_WIDTH: u32 = 40;
+
+/// Decides a pure-integer-arithmetic fallback query (the LIA engines above could
+/// not settle it) by **iterating the bounded bit-blast width** from
+/// [`INT_BLAST_MIN_WIDTH`] up through [`DEFAULT_INT_WIDTH`] and on to
+/// [`INT_BLAST_MAX_WIDTH`], returning the first replay-checked `Sat`.
+///
+/// Soundness: [`check_with_all_theories`] only ever returns `Sat` after replaying
+/// the projected model against the **original** assertions through the ground
+/// evaluator, so accepting the first `Sat` from any width is sound regardless of
+/// where it came from. A definite `Unsat` (only possible when no integers are
+/// present, which is not this branch) transfers; an `Unknown` at every width
+/// (including the genuinely-unbounded / no-integer-root cases like `x*x = 2`)
+/// leaves the result `Unknown` — never a wrong `unsat`. The width set is fixed and
+/// finite, so the work is deterministically bounded (no OOM-risking unbounded
+/// widening).
+fn dispatch_int_blast_width_ladder(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    // Deterministic, finite ladder: every width in `[MIN, DEFAULT]` (so the small
+    // widths that exclude wrapping witnesses are tried, and `DEFAULT_INT_WIDTH` is
+    // always reached — preserving the previous single-width behaviour) followed by
+    // a coarse tail up to `MAX` for goals whose genuine witness needs more bits.
+    let mut widths: Vec<u32> = (INT_BLAST_MIN_WIDTH..=DEFAULT_INT_WIDTH).collect();
+    let mut w = DEFAULT_INT_WIDTH + 4;
+    while w <= INT_BLAST_MAX_WIDTH {
+        widths.push(w);
+        w += 4;
+    }
+
+    let mut last = CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail: "bounded integer bit-blasting found no replaying model within the width ladder; \
+                 widen the bound"
+            .to_owned(),
+    });
+    for width in widths {
+        // Each width's bit-blast declares fresh `!int_bv_*` bit-vector symbols, whose
+        // names collide across widths if reused on the same arena. Run every width on
+        // an isolated **clone** of the arena: the original assertion `TermId`s and the
+        // original (pre-clone) symbol `SymbolId`s are index-stable in the clone, so a
+        // returned `Sat` model — keyed only by the originals — is valid in the caller's
+        // arena unchanged.
+        let mut scratch = arena.clone();
+        let mut backend = SatBvBackend::new();
+        match check_with_all_theories(&mut backend, &mut scratch, assertions, width, config)? {
+            // Replay-checked by `check_with_all_theories`: a sound `Sat`.
+            sat @ CheckResult::Sat(_) => return Ok(sat),
+            // A definite `Unsat` (no integers present) transfers immediately. With
+            // integers, the combined path reports `Unknown` for an in-range `unsat`,
+            // so this arm only fires for the integer-free residue and is exact.
+            CheckResult::Unsat => return Ok(CheckResult::Unsat),
+            // Out of range at this width / overflowed replay: remember and widen.
+            other @ CheckResult::Unknown(_) => last = other,
+        }
+    }
+    Ok(last)
 }
 
 /// Decides a (possibly quantified) query by **finite-domain quantifier

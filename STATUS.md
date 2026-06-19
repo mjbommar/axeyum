@@ -412,6 +412,26 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **QF_NIA: ground-vs-`∃` inconsistency fixed (small nonlinear-int SAT
+  now decided).** `x*x==4 ∧ x>0` (ground) returned `Unknown` ("overflowed at width 32") while
+  the equivalent `∃x. x*x==4` returned `Sat` (skolemize → bounded blast finds x=2) — same
+  satisfiability, two answers. Root cause: the integer bit-blast fallback used a single fixed
+  width (`DEFAULT_INT_WIDTH=32`), and at width 32 the SAT solver may pick a *wrapping* witness
+  (`x` with `x*x ≡ 4 mod 2^32` but `x*x ≠ 4`) that fails the exact-integer replay → `Unknown`.
+  Fix (`auto.rs::dispatch_int_blast_width_ladder`): for a pure-integer fallback query, iterate
+  the blast width small→large (4..=32, then 36, 40 — a deterministic, finite ladder that
+  still includes the old width 32) on an arena clone per width, returning the **first
+  replay-checked `Sat`**. **Sound by construction:** `check_with_all_theories` returns `Sat`
+  only after replaying the model against the originals, and returns `Unknown` (never `Unsat`)
+  for an integer query with no model within a width (`combined.rs:88`), so the ladder never
+  produces a wrong `unsat` and a too-narrow width simply climbs. Strictly additive (only
+  `Unknown`→`Sat`); `x*x==2` (no integer root) stays soundly `Unknown` (out of scope —
+  needs genuine NIA unsat reasoning). New `tests/nia_ground_consistency.rs` (6, replay-verified).
+  **Follow-up:** the ladder runs up to ~31 solves for an integer query that is `Unknown` at
+  every width — bounded and OOM-safe (one arena clone at a time, width cap 40) but worth a
+  smarter width schedule / shared budget later. Driven by the capability-gap pass; sub-agent +
+  independent soundness review.
+
 - **2026-06-19** — **P2.6: guarded-finite Int universals now decided (were `Unknown`).**
   A universal `∀x:Int. (lo≤x≤hi) ⇒ body` is logically *equivalent* to the finite conjunction
   `⋀_{v=lo}^{hi} body[x:=v]` (outside `[lo,hi]` the implication is vacuously true), so it is an
