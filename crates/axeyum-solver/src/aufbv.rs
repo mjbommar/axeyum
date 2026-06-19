@@ -60,6 +60,27 @@ pub fn check_with_arrays_and_functions<B: SolverBackend>(
         return Ok(result);
     };
 
+    // Defense-in-depth: an arithmetic-sorted (Int/Real) uninterpreted function has
+    // no scalar-keyed sat-model projection, so degrade to a sound `Unknown` rather
+    // than risk a `scalar_code` panic in `project_model`. (Reaching here with such a
+    // function is unlikely — the bit-vector `backend` would not return `sat` on its
+    // Int constraints — but the guard keeps the "never crash" invariant total.)
+    if func_elim.had_functions() {
+        let is_arith =
+            |s: &axeyum_ir::Sort| matches!(s, axeyum_ir::Sort::Int | axeyum_ir::Sort::Real);
+        if arena
+            .functions()
+            .any(|(_f, _n, params, result)| params.iter().any(is_arith) || is_arith(&result))
+        {
+            return Ok(CheckResult::Unknown(crate::backend::UnknownReason {
+                kind: crate::backend::UnknownKind::Incomplete,
+                detail: "sat model for an arithmetic-sorted uninterpreted function is \
+                         unsupported (aufbv path)"
+                    .to_owned(),
+            }));
+        }
+    }
+
     // Project functions first: their eliminated argument terms are
     // post-array-elimination (no `select` remains), so they evaluate under the
     // base `QF_BV` model directly. Then project arrays: a `select` index may
