@@ -6612,4 +6612,53 @@ mod fp_to_int_symbolic_tests {
             );
         }
     }
+
+    /// Integer→float under **all five rounding modes** matches `rustc_apfloat`'s
+    /// correctly-rounded `from_i128_r` (Rust's `as` casts only cover round-nearest).
+    /// Uses values whose magnitude exceeds 24 bits so the mode actually matters.
+    #[test]
+    fn int_to_float_directed_modes_match_apfloat() {
+        use rustc_apfloat::Float;
+        use rustc_apfloat::ieee::Single;
+        let bits = |a: &mut TermArena, t| match eval(a, t, &Assignment::new()) {
+            Ok(Value::Bv { value, .. }) => value,
+            other => panic!("expected Bv, got {other:?}"),
+        };
+        let ap_round = |mode: RoundingMode| match mode {
+            RoundingMode::NearestEven => rustc_apfloat::Round::NearestTiesToEven,
+            RoundingMode::NearestAway => rustc_apfloat::Round::NearestTiesToAway,
+            RoundingMode::TowardZero => rustc_apfloat::Round::TowardZero,
+            RoundingMode::TowardPositive => rustc_apfloat::Round::TowardPositive,
+            RoundingMode::TowardNegative => rustc_apfloat::Round::TowardNegative,
+        };
+        let modes = [
+            RoundingMode::NearestEven,
+            RoundingMode::NearestAway,
+            RoundingMode::TowardZero,
+            RoundingMode::TowardPositive,
+            RoundingMode::TowardNegative,
+        ];
+        for &v in &[
+            16_777_217i32, // 2^24 + 1, needs rounding to F32
+            16_777_219,
+            -16_777_217,
+            33_554_435,
+            2_147_483_647,  // i32::MAX
+            -2_147_483_648, // i32::MIN
+            123_456_789,
+            -123_456_789,
+        ] {
+            for mode in modes {
+                let mut a = TermArena::new();
+                #[allow(clippy::cast_sign_loss)]
+                let xt = a.bv_const(32, u128::from(v as u32)).unwrap();
+                let r = from_sbv(&mut a, FloatFormat::F32, mode, xt).unwrap();
+                let got = bits(&mut a, r);
+                let oracle = Single::from_i128_r(i128::from(v), ap_round(mode))
+                    .value
+                    .to_bits();
+                assert_eq!(got, oracle, "i32 {v} → F32 mode {mode:?}");
+            }
+        }
+    }
 }
