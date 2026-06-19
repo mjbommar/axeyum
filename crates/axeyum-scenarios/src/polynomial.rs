@@ -160,9 +160,15 @@ pub fn quadratic_root(width: u32) -> Scenario {
 ///
 /// Panics if `width` exceeds the exhaustive budget or on arena corruption.
 pub fn factorization_identity(width: u32) -> Scenario {
-    assert!(width <= 20, "factorization_identity stays inside the budget");
+    assert!(
+        width <= 20,
+        "factorization_identity stays inside the budget"
+    );
     let mut arena = TermArena::new();
-    let x = arena.declare("x", Sort::BitVec(width)).map(|s| arena.var(s)).unwrap();
+    let x = arena
+        .declare("x", Sort::BitVec(width))
+        .map(|s| arena.var(s))
+        .unwrap();
     let x2 = arena.bv_mul(x, x).unwrap();
     let five = arena.bv_const(width, 5).unwrap();
     let five_x = arena.bv_mul(five, x).unwrap();
@@ -189,7 +195,9 @@ pub fn factorization_identity(width: u32) -> Scenario {
         arena,
         query,
         expectation: Expectation::Unsat {
-            evidence: UnsatEvidence::Exhaustive { cases: 1u64 << width },
+            evidence: UnsatEvidence::Exhaustive {
+                cases: 1u64 << width,
+            },
         },
     }
 }
@@ -203,9 +211,15 @@ pub fn factorization_identity(width: u32) -> Scenario {
 ///
 /// Panics if `width` exceeds the exhaustive budget or on arena corruption.
 pub fn division_with_remainder_identity(width: u32) -> Scenario {
-    assert!(width <= 20, "division_with_remainder stays inside the budget");
+    assert!(
+        width <= 20,
+        "division_with_remainder stays inside the budget"
+    );
     let mut arena = TermArena::new();
-    let x = arena.declare("x", Sort::BitVec(width)).map(|s| arena.var(s)).unwrap();
+    let x = arena
+        .declare("x", Sort::BitVec(width))
+        .map(|s| arena.var(s))
+        .unwrap();
     let x2 = arena.bv_mul(x, x).unwrap();
     let one = arena.bv_const(width, 1).unwrap();
     let lhs = arena.bv_add(x2, one).unwrap(); // x² + 1
@@ -231,7 +245,9 @@ pub fn division_with_remainder_identity(width: u32) -> Scenario {
         arena,
         query,
         expectation: Expectation::Unsat {
-            evidence: UnsatEvidence::Exhaustive { cases: 1u64 << width },
+            evidence: UnsatEvidence::Exhaustive {
+                cases: 1u64 << width,
+            },
         },
     }
 }

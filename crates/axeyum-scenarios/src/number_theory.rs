@@ -343,7 +343,10 @@ pub fn crt_witness(width: u32) -> Scenario {
 ///
 /// Panics if `width` is outside `6..=16` or on arena corruption.
 pub fn quadratic_residue_sat(width: u32) -> Scenario {
-    assert!((6..=16).contains(&width), "quadratic_residue needs width 6..=16");
+    assert!(
+        (6..=16).contains(&width),
+        "quadratic_residue needs width 6..=16"
+    );
     let mut arena = TermArena::new();
     let x_sym = arena.declare("x", Sort::BitVec(width)).unwrap();
     let x = arena.var(x_sym);
@@ -381,7 +384,10 @@ pub fn quadratic_residue_sat(width: u32) -> Scenario {
 ///
 /// Panics if `width` is outside `6..=10` or on arena corruption.
 pub fn quadratic_nonresidue_unsat(width: u32) -> Scenario {
-    assert!((6..=10).contains(&width), "quadratic_nonresidue stays in budget");
+    assert!(
+        (6..=10).contains(&width),
+        "quadratic_nonresidue stays in budget"
+    );
     let mut arena = TermArena::new();
     let x_sym = arena.declare("x", Sort::BitVec(width)).unwrap();
     let x = arena.var(x_sym);
@@ -406,7 +412,9 @@ pub fn quadratic_nonresidue_unsat(width: u32) -> Scenario {
         arena,
         query,
         expectation: Expectation::Unsat {
-            evidence: UnsatEvidence::Exhaustive { cases: 1u64 << width },
+            evidence: UnsatEvidence::Exhaustive {
+                cases: 1u64 << width,
+            },
         },
     }
 }
@@ -417,7 +425,10 @@ pub fn quadratic_nonresidue_unsat(width: u32) -> Scenario {
 ///
 /// Panics if `width` is outside `6..=32` or on arena corruption.
 pub fn sum_of_two_squares_sat(width: u32) -> Scenario {
-    assert!((6..=32).contains(&width), "sum_of_two_squares_sat needs width 6..=32");
+    assert!(
+        (6..=32).contains(&width),
+        "sum_of_two_squares_sat needs width 6..=32"
+    );
     let mut arena = TermArena::new();
     let a_sym = arena.declare("a", Sort::BitVec(width)).unwrap();
     let b_sym = arena.declare("b", Sort::BitVec(width)).unwrap();
@@ -486,7 +497,9 @@ pub fn sum_of_two_squares_none() -> Scenario {
         arena,
         query,
         expectation: Expectation::Unsat {
-            evidence: UnsatEvidence::Exhaustive { cases: 1u64 << (2 * width) },
+            evidence: UnsatEvidence::Exhaustive {
+                cases: 1u64 << (2 * width),
+            },
         },
     }
 }
@@ -536,7 +549,9 @@ pub fn rsa_roundtrip() -> Scenario {
         arena,
         query,
         expectation: Expectation::Unsat {
-            evidence: UnsatEvidence::Exhaustive { cases: 1u64 << width },
+            evidence: UnsatEvidence::Exhaustive {
+                cases: 1u64 << width,
+            },
         },
     }
 }

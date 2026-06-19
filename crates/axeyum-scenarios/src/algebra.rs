@@ -249,7 +249,10 @@ pub fn field_failure_even(width: u32) -> Scenario {
 ///
 /// Panics if `width` is outside `6..=10` or on arena corruption.
 pub fn prime_field_all_invertible(width: u32) -> Scenario {
-    assert!((6..=10).contains(&width), "prime_field stays inside the budget");
+    assert!(
+        (6..=10).contains(&width),
+        "prime_field stays inside the budget"
+    );
     let (_a_sym, query, arena) = no_inverse_query(width, 7);
     Scenario {
         name: format!("algebra/prime_field_all_invertible_w{width}"),
@@ -259,7 +262,9 @@ pub fn prime_field_all_invertible(width: u32) -> Scenario {
         arena,
         query,
         expectation: Expectation::Unsat {
-            evidence: UnsatEvidence::Exhaustive { cases: 1u64 << width },
+            evidence: UnsatEvidence::Exhaustive {
+                cases: 1u64 << width,
+            },
         },
     }
 }
@@ -271,7 +276,10 @@ pub fn prime_field_all_invertible(width: u32) -> Scenario {
 ///
 /// Panics if `width` is outside `6..=10` or on arena corruption.
 pub fn composite_modulus_non_invertible(width: u32) -> Scenario {
-    assert!((6..=10).contains(&width), "composite_modulus stays inside the budget");
+    assert!(
+        (6..=10).contains(&width),
+        "composite_modulus stays inside the budget"
+    );
     let (a_sym, query, arena) = no_inverse_query(width, 6);
     let mut witness = Assignment::new();
     witness.set(a_sym, Value::Bv { width, value: 2 });

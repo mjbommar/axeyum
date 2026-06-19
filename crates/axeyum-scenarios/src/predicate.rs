@@ -145,7 +145,12 @@ pub fn fermat_little_theorem(p: u128) -> Scenario {
     let body = arena.implies(in_units, is_one).unwrap();
     let claim = arena.forall(a_sym, body).unwrap();
     let negation = arena.not(claim).unwrap();
-    closed_unsat(arena, format!("predicate/fermat_little_p{p}"), width, negation)
+    closed_unsat(
+        arena,
+        format!("predicate/fermat_little_p{p}"),
+        width,
+        negation,
+    )
 }
 
 /// Packages a closed Boolean term (the negation of a quantified theorem) as an
