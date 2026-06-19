@@ -291,9 +291,23 @@ shrank 4 instances below the bit-blast-size ceiling so they encoded and solved. 
 still drowns the SAT solver in 20 s. So the two remaining levers, precisely scoped:
 
 1. **6 still-`EncodingBudget` instances** — too big to encode *even after* the
-   current reduction. Lever: **deeper word-level reduction** (AC-tree flattening
-   across bindings, `ite`-chain simplification / shared muxing, `bv_slice`/bounds,
-   `max_bv_sharing`) to pull them below the ceiling, exactly as the first 4 were.
+   current reduction. **Diagnosed (2026-06-18):** all 6 are the `string4x16_bit16`
+   family, and a term-level op census of the closest one (`string4x16.4`, est.
+   3.1 M vars vs the 3 M budget — only ~3 % over) shows it is **overwhelmingly
+   `ite`-driven: 129 870 `ite` over 16-bit vectors** (6× the next op; 9 548
+   `BitVec(16)` vars, plus ~19 k each `bvadd`/`bvsub`, 22 k `=`, 9 k each
+   `bvand`/`bvor`/`bvxor`). Each 16-bit `ite` bit-blasts to ~16 muxes, so the ~130 k
+   `ite`s *are* the multi-million-clause encoding. The **basic `ite` rules already
+   exist and ran** in this `--preprocess` measurement (`ite.const_condition`,
+   `ite.same_branches`, `ite.bool_identity` in `canonical.rs`) — so the survivors are
+   *genuine distinct-branch, symbolic-condition 3-way muxes*, not low-hanging
+   redundancy. The remaining lever is therefore **deeper `ite`-aware reduction/
+   encoding**: nested same-condition collapse (`ite(c, ite(c,x,y), z) → ite(c,x,z)`,
+   common in string/automaton branching on a repeated character test), shared-mux
+   encoding, and `ite`-lifting — *not* abstraction (the prior lazy-`ite` measurement
+   found ~97 % essential, so CEGAR collapses to eager). A ~3 % encoding cut decides
+   `string4x16.4`; larger cuts reach the rest. This is the precise next
+   destination-2 effort (a focused `axeyum-rewrite`/encoding project), now scoped.
 2. **99 Timeouts (the bulk)** — encode but don't solve. These need either *much*
    deeper reduction (shrink the CNF itself, the Z3 route) or, secondarily, a
    stronger SAT search on the blasted residue. Per ADR-0037 reduction leads; a faster
