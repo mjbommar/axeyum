@@ -80,7 +80,12 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     - **Coordination-gated (other lanes):** array-of-array / datatype-element arrays (needs
       `Sort::Array` to carry element *sorts* — `axeyum-ir`); first-class `(declare-fun x Float…)`
       through `solve`/SMT-LIB (front-end wiring, `Sort::Float` exists); `(reset)` clearing +
-      `(declare-sort)` (`axeyum-smtlib`); ROW-distinct emitter exposure (`axeyum-rewrite`).
+      `(declare-sort)` (`axeyum-smtlib`); ROW-distinct emitter exposure (`axeyum-rewrite`);
+      symbolic FP→int/real conversions (`fp::to_ubv`/`to_sbv`/`to_real` are constant-fold-only,
+      silently `Ok(None)` on a symbolic float) and a symbolic-operand `fp::from_real` (takes a
+      `Rational` value, not a `TermId`) — both `axeyum-fp` (5th pass). The warm-incremental UF
+      story (symexec/BMC over `Apply` now degrade to graceful `Unknown`, but to *decide* such
+      paths needs the incremental solver to route UF — a larger effort).
 
 - **Destination-2 advanced & a destination-3 milestone landed (2026-06-18).** See
   the two 2026-06-18 changelog entries for detail. In short:
