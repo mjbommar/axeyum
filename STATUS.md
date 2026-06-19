@@ -453,6 +453,21 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **ROBUSTNESS: BMC honors its own "unsupported is not an error" contract.**
+  `run_bounded_model_check` drives the warm `IncrementalBvSolver`, which rejects `Op::Apply`;
+  a transition relation with an uninterpreted step function (`x' = f(x)`) made the
+  `SolverError::Unsupported` escape via `?` as a hard `Err`, even though the module docstring
+  promises "a solver timeout/unsupported at some depth is not an error — it is reported as
+  `BmcOutcome::Unknown`" (and the "unknown is never an error" hard rule). Fix: a
+  `unsupported_to_unknown(err, steps)` helper maps `Unsupported` → `BmcOutcome::Unknown { steps,
+  Incomplete }` at the per-depth solver operations (init/bad/trans asserts + the check), popping
+  the scope first to keep the solver warm; any other `SolverError` still propagates. New
+  in-module test (`UfStepper`: `x'=f(x)` → `Ok(Unknown)`, not `Err`); full suite + clippy + fmt
+  green. From the 5th capability-gap pass (Track-4 + FP surfaces — which found NO soundness
+  issues: FP arithmetic/conversions are bit-exact, BMC/k-induction/symexec decide correctly).
+  (Symexec has the same `Apply`→`Err` shape and the FP conversions are constant-fold-only —
+  both noted in the frontier as coordination-gated `axeyum-fp`/incremental-UF work.)
+
 - **2026-06-19** — **P2.6: vacuous-`∀` elimination — a first sound cut into `∃∀`.**
   `∃y.∀x. x+y≥x` returned `Unknown` (after skolemizing `∃y→c`, `∀x. x+c≥x` is valid only
   when `c≥0`, so the valid-universal pass can't decide it; instantiation only refutes). New

@@ -32,7 +32,7 @@
 
 use axeyum_ir::{SymbolId, TermArena, TermId};
 
-use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownReason};
+use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::incremental::IncrementalBvSolver;
 use crate::model::Model;
 use crate::proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};
@@ -168,6 +168,24 @@ pub fn bounded_model_check_with_memory(
 /// Shared BMC unrolling for [`bounded_model_check`] and
 /// [`bounded_model_check_with_memory`]; `use_memory` selects the array-aware
 /// `check_with_memory` decision procedure for memory-bearing systems.
+/// Maps a backend `Unsupported` (the warm BV solver cannot represent an operator
+/// in the unrolling — e.g. an uninterpreted `Apply` in the transition relation) to
+/// a first-class [`BmcOutcome::Unknown`] at depth `steps`, honoring this module's
+/// contract that an unsupported query "is not an error". Any other [`SolverError`]
+/// (a genuine internal failure) still propagates.
+fn unsupported_to_unknown(err: SolverError, steps: usize) -> Result<BmcOutcome, SolverError> {
+    match err {
+        SolverError::Unsupported(detail) => Ok(BmcOutcome::Unknown {
+            steps,
+            reason: UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail,
+            },
+        }),
+        other => Err(other),
+    }
+}
+
 fn run_bounded_model_check(
     arena: &mut TermArena,
     system: &impl TransitionSystem,
@@ -180,7 +198,9 @@ fn run_bounded_model_check(
     // Step 0: declare s0 and pin the initial-state constraint permanently.
     let s0 = system.state_vars(arena, 0)?;
     let init = system.init(arena, &s0)?;
-    solver.assert(arena, init)?;
+    if let Err(e) = solver.assert(arena, init) {
+        return unsupported_to_unknown(e, 0);
+    }
 
     let mut states: Vec<Vec<SymbolId>> = vec![s0];
 
@@ -189,13 +209,24 @@ fn run_bounded_model_check(
         // Push a temporary scope so the bad assertion is dropped after the check.
         let bad = system.bad(arena, &states[k])?;
         solver.push()?;
-        solver.assert(arena, bad)?;
-        let result = if use_memory {
-            solver.check_with_memory(arena)?
-        } else {
-            solver.check(arena)?
+        // A backend `Unsupported` from asserting/checking this depth (e.g. an
+        // uninterpreted `Apply` in `bad`/the unrolling) is reported as `Unknown`,
+        // not propagated as an error — pop the scope first to keep the solver warm.
+        let checked = match solver.assert(arena, bad) {
+            Ok(()) => {
+                if use_memory {
+                    solver.check_with_memory(arena)
+                } else {
+                    solver.check(arena)
+                }
+            }
+            Err(e) => Err(e),
         };
         solver.pop();
+        let result = match checked {
+            Ok(result) => result,
+            Err(e) => return unsupported_to_unknown(e, k),
+        };
 
         match result {
             CheckResult::Sat(model) => {
@@ -211,7 +242,9 @@ fn run_bounded_model_check(
         if k < bound {
             let next = system.state_vars(arena, k + 1)?;
             let trans = system.trans(arena, &states[k], &next)?;
-            solver.assert(arena, trans)?;
+            if let Err(e) = solver.assert(arena, trans) {
+                return unsupported_to_unknown(e, k);
+            }
             states.push(next);
         }
     }
@@ -574,6 +607,63 @@ mod tests {
             let x = arena.var(s[0]);
             let c = arena.bv_const(8, self.target)?;
             Ok(arena.eq(x, c)?)
+        }
+    }
+
+    /// An 8-bit system whose step function is an **uninterpreted** `f`:
+    /// `x@0 = 0`, `x@{k+1} = f(x@k)`, bad when `x = 42`. The warm BV backend
+    /// cannot represent `Apply`, so per the module contract the run must report
+    /// `Unknown` (a graceful first-class result), never an `Err`.
+    struct UfStepper;
+
+    impl TransitionSystem for UfStepper {
+        fn state_vars(
+            &self,
+            arena: &mut TermArena,
+            step: usize,
+        ) -> Result<Vec<SymbolId>, SolverError> {
+            Ok(vec![counter_var(arena, step)])
+        }
+
+        fn init(&self, arena: &mut TermArena, s0: &[SymbolId]) -> Result<TermId, SolverError> {
+            let x = arena.var(s0[0]);
+            let c = arena.bv_const(8, 0)?;
+            Ok(arena.eq(x, c)?)
+        }
+
+        fn trans(
+            &self,
+            arena: &mut TermArena,
+            pre: &[SymbolId],
+            post: &[SymbolId],
+        ) -> Result<TermId, SolverError> {
+            let f = arena
+                .declare_fun("f", &[Sort::BitVec(8)], Sort::BitVec(8))
+                .unwrap();
+            let x = arena.var(pre[0]);
+            let fx = arena.apply(f, &[x])?;
+            let x_next = arena.var(post[0]);
+            Ok(arena.eq(x_next, fx)?)
+        }
+
+        fn bad(&self, arena: &mut TermArena, s: &[SymbolId]) -> Result<TermId, SolverError> {
+            let x = arena.var(s[0]);
+            let c = arena.bv_const(8, 42)?;
+            Ok(arena.eq(x, c)?)
+        }
+    }
+
+    #[test]
+    fn unsupported_uf_transition_is_unknown_not_error() {
+        let mut arena = TermArena::new();
+        // The transition relation uses an uninterpreted `Apply`, which the warm BV
+        // solver rejects. The run must surface that as a first-class `Unknown`,
+        // honoring the documented "unsupported is not an error" contract — NOT a
+        // hard `Err` (the prior behavior that violated the hard rule).
+        let outcome = bounded_model_check(&mut arena, &UfStepper, 3, &SolverConfig::default());
+        match outcome {
+            Ok(BmcOutcome::Unknown { .. }) => {}
+            other => panic!("expected Ok(Unknown) for a UF transition, got {other:?}"),
         }
     }
 
