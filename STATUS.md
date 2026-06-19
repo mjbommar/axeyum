@@ -375,6 +375,13 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **MaxSAT model-returning variant** (`max_satisfiable_model` /
+  `_weighted_model`, commit `daced10`). Returns `MaxSatOutcome::Optimal { weight, model,
+  satisfied }` — the witnessing assignment + which soft constraints hold, the actual
+  solution z3's MaxSAT yields (previously only the optimal weight). Sound: pins the
+  weight-sum at the optimum, witnesses a model via `check_auto`, re-evaluates each soft
+  constraint; surprise unsat/unknown folds to `Unknown`. Test cross-checks `satisfied`
+  flags against the model. Working-agreement loop increment 7.
 - **2026-06-18** — **P4.3 OMT: Pareto + box modes complete the z3 OMT trio.**
   `optimize_lia_pareto` (commit `75205b7`) enumerates the Pareto front by guided
   improvement, each point *verified* Pareto-optimal (confirmed-unsat domination query),
