@@ -195,7 +195,8 @@ pub use solver::Solver;
 pub use strategy::{Strategy, recommended_portfolio, solve_with_portfolio, solve_with_strategy};
 pub use symexec::{Branch, PathStatus, SymbolicExecutor};
 pub use theory_combination::{
-    InterfaceStatus, classify_interface_equalities, propose_interface_equalities, shared_terms,
+    InterfaceStatus, classify_interface_equalities, combination_conflict,
+    propose_interface_equalities, shared_terms,
 };
 pub use trust::{ALL_TRUST_IDS, TrustId, TrustStep, trust_ledger_markdown};
 #[cfg(feature = "z3")]

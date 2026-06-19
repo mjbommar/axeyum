@@ -273,6 +273,54 @@ pub fn classify_interface_equalities(
         .collect()
 }
 
+/// Check whether a one-theory `model`'s **arrangement** of the `shared` terms (which
+/// pairs it makes equal vs distinct, by value) is consistent with the EUF congruence
+/// of `euf_assertions` — one iteration of model-based combination (P1.6).
+///
+/// Returns the first **conflicting** shared pair `(x, y)`:
+/// - the model gives `x`, `y` *distinct* values but EUF congruence makes them
+///   [`InterfaceStatus::Entailed`] equal, or
+/// - the model gives them *equal* values but EUF [`InterfaceStatus::Refuted`]s the
+///   equality (an asserted disequality separates them).
+///
+/// Such a conflict means the bit-vector model is not extensible to a combined model;
+/// the combination loop blocks this arrangement (a lemma over the shared terms) and
+/// re-solves. `None` means the arrangement is EUF-consistent (the model survives the
+/// combination check). Sound: every verdict is a genuine congruence fact from the
+/// shared e-graph, and undetermined pairs are never reported as conflicts.
+#[must_use]
+pub fn combination_conflict(
+    arena: &TermArena,
+    euf_assertions: &[TermId],
+    shared: &[TermId],
+    model: &Model,
+) -> Option<(TermId, TermId)> {
+    let assignment = model.to_assignment();
+    let value = |t: TermId| match eval(arena, t, &assignment) {
+        Ok(Value::Bv { width, value }) => Some((width, value)),
+        _ => None,
+    };
+    // All unordered shared pairs (shared is small — the interface, not the query).
+    let mut pairs: Vec<(TermId, TermId)> = Vec::new();
+    for (i, &x) in shared.iter().enumerate() {
+        for &y in &shared[i + 1..] {
+            pairs.push((x, y));
+        }
+    }
+    for ((x, y), status) in classify_interface_equalities(arena, euf_assertions, &pairs) {
+        let bv_equal = match (value(x), value(y)) {
+            (Some(a), Some(b)) => a == b,
+            _ => continue, // a shared term without a concrete value: skip the pair
+        };
+        match status {
+            InterfaceStatus::Entailed if !bv_equal => return Some((x, y)),
+            InterfaceStatus::Refuted if bv_equal => return Some((x, y)),
+            _ => {}
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -409,5 +457,49 @@ mod tests {
                 ((fa, fb), InterfaceStatus::Entailed),   // by CONGRUENCE (a=b ⇒ f a=f b)
             ],
         );
+    }
+
+    #[test]
+    fn arrangement_conflict_detected_both_directions() {
+        let mut arena = TermArena::new();
+        let as_ = arena.declare("a", Sort::BitVec(8)).unwrap();
+        let bs = arena.declare("b", Sort::BitVec(8)).unwrap();
+        let cs = arena.declare("c", Sort::BitVec(8)).unwrap();
+        let ds = arena.declare("d", Sort::BitVec(8)).unwrap();
+        let (a, b, c, d) = (arena.var(as_), arena.var(bs), arena.var(cs), arena.var(ds));
+        // EUF: a = b (forced equal), c ≠ d (forced distinct).
+        let eq_ab = arena.eq(a, b).unwrap();
+        let ne_cd = {
+            let e = arena.eq(c, d).unwrap();
+            arena.not(e).unwrap()
+        };
+        let euf = [eq_ab, ne_cd];
+
+        // Model 1: a=5, b=3 — EUF entails a=b but the model splits them → conflict.
+        let mut m1 = Model::new();
+        m1.set(as_, Value::Bv { width: 8, value: 5 });
+        m1.set(bs, Value::Bv { width: 8, value: 3 });
+        assert_eq!(
+            combination_conflict(&arena, &euf, &[a, b], &m1),
+            Some((a, b)),
+        );
+
+        // Model 2: c=7, d=7 — EUF refutes c=d but the model equates them → conflict.
+        let mut m2 = Model::new();
+        m2.set(cs, Value::Bv { width: 8, value: 7 });
+        m2.set(ds, Value::Bv { width: 8, value: 7 });
+        assert_eq!(
+            combination_conflict(&arena, &euf, &[c, d], &m2),
+            Some((c, d)),
+        );
+
+        // Model 3: a=b=4 (consistent with a=b) and c=1,d=2 (consistent with c≠d) →
+        // no conflict, the arrangement survives.
+        let mut m3 = Model::new();
+        m3.set(as_, Value::Bv { width: 8, value: 4 });
+        m3.set(bs, Value::Bv { width: 8, value: 4 });
+        m3.set(cs, Value::Bv { width: 8, value: 1 });
+        m3.set(ds, Value::Bv { width: 8, value: 2 });
+        assert_eq!(combination_conflict(&arena, &euf, &[a, b, c, d], &m3), None);
     }
 }
