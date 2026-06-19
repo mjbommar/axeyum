@@ -552,7 +552,7 @@ pub fn produce_lra_dpll_evidence(
     })
 }
 
-/// Runs the **nonlinear** real-arithmetic engine ([`check_with_nra`]) on
+/// Runs the **nonlinear** real-arithmetic engine ([`crate::check_with_nra`]) on
 /// `assertions` and packages an [`EvidenceReport`]. NRA is sound but incomplete
 /// (ADR-0024): a `sat` model is replay-checkable; an `unsat` is recorded as a
 /// *bare* `Evidence::Unsat(None)` (a documented trust gap — no transferable

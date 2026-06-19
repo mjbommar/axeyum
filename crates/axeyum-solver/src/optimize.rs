@@ -354,7 +354,7 @@ fn pareto_probe(
 /// Each recorded point is **verified** Pareto-optimal (no feasible point dominates
 /// it — a confirmed-`unsat` domination query), and the exclusions guarantee
 /// distinct, mutually-non-dominated points whose set covers the front. Bounded by
-/// [`MAX_PARETO_POINTS`] (→ [`ParetoOutcome::Truncated`]) and [`MAX_PARETO_PUSH`]
+/// `MAX_PARETO_POINTS` (→ [`ParetoOutcome::Truncated`]) and `MAX_PARETO_PUSH`
 /// (→ [`ParetoOutcome::Unknown`] if a point's maximality can't be confirmed within
 /// the budget), so it always terminates with a deterministic result — never
 /// unbounded enumeration.
@@ -645,7 +645,7 @@ fn pareto_bv_probe(
 
 /// **Pareto-front optimization over bit-vector objectives** — the BV analogue of
 /// [`optimize_lia_pareto`] (guided improvement, each point verified Pareto-optimal,
-/// the same deterministic [`MAX_PARETO_POINTS`]/[`MAX_PARETO_PUSH`] caps). Each
+/// the same deterministic `MAX_PARETO_POINTS`/`MAX_PARETO_PUSH` caps). Each
 /// objective carries its own signed/unsigned + max/min direction.
 ///
 /// # Errors
