@@ -24,10 +24,13 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     `bv2nat` out-of-range UNSAT, integer-NIA UNSAT via real relaxation, and the QF_LIA evidence
     certificate (E). The solver is now solid across arrays, mixed theories, strings, FP-via-BV,
     and most quantifier shapes (verified by the 3rd/4th passes).
-  - **Process note:** sub-agents must be re-validated with **`cargo fmt --all --check`** (clippy
-    doesn't catch fmt drift) and an **OS `timeout` guard** (to prove termination, not trust it);
-    rust-analyzer diagnostics after a sub-agent run are frequently STALE — verify with a real
-    build/clippy, not the diagnostics.
+  - **Process note:** re-validate sub-agent work with the FULL gate — clippy does NOT catch
+    **`cargo fmt --all --check`** drift NOR **`cargo doc -D warnings`** broken/private intra-doc
+    links (both slipped through clippy-only checks this session and were caught later); use an
+    **OS `timeout` guard** to PROVE termination (not trust it); rust-analyzer diagnostics after
+    a sub-agent run are frequently STALE — verify with a real build, not the diagnostics. Whole
+    workspace confirmed gate-green at session end (fmt + workspace build + solver doc + links +
+    977-test solver suite + clippy).
   - **NRA OOM gap CLOSED** — deterministic `MAX_CROSS_PRODUCTS` admission bound (graceful
     `unknown`, never OOM, bounded *or* unbounded). The standing-rule violation is retired.
     See the 2026-06-19 changelog + `scripts/mem-run.sh` / `just test-guarded` (64 GiB cap).

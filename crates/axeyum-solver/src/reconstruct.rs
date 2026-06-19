@@ -1439,7 +1439,7 @@ pub fn prove_unsat_to_lean_module(
 ///   resolves it against its hypotheses' unit proofs.
 /// - **`symm`** (the premise-consuming Alethe flip: premise the unit `(= a b)`,
 ///   conclusion the unit `(cl (= b a))`) ⇒ reconstructed eagerly via
-///   [`reconstruct_symm_step`] into the swapped unit equality (same `Eq.rec`
+///   `reconstruct_symm_step` into the swapped unit equality (same `Eq.rec`
 ///   transport as `eq_symmetric`). Emitted by the congruence-closure fallback.
 /// - **`resolution`/`th_resolution`** with a theory clause and its hypotheses'
 ///   unit proofs ⇒ the reconstructed positive equality unit.
