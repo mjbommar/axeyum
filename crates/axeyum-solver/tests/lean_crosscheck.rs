@@ -229,3 +229,22 @@ fn datatype_read_over_construct_checks_in_real_lean() {
         .expect("datatype read-over-construct unsat reconstructs");
     lean_accepts("datatype", &source);
 }
+
+/// `QF_BV` (the foundational bit-blasting path): `bvule a b ∧ bvult b a`
+/// (`a ≤ b ∧ b < a`, `BitVec(2)`) is unsat. It lowers to core ops and the
+/// bit-level resolution refutation must type-check in real Lean.
+#[test]
+fn qf_bv_comparison_refutation_checks_in_real_lean() {
+    let mut arena = TermArena::new();
+    let mk = |a: &mut TermArena, n: &str| {
+        let s = a.declare(n, Sort::BitVec(2)).unwrap();
+        a.var(s)
+    };
+    let a = mk(&mut arena, "a");
+    let b = mk(&mut arena, "b");
+    let le = arena.bv_ule(a, b).unwrap();
+    let gt = arena.bv_ult(b, a).unwrap();
+    let (_frag, source) = prove_unsat_to_lean_module(&mut arena, &[le, gt])
+        .expect("QF_BV comparison unsat reconstructs");
+    lean_accepts("qf_bv", &source);
+}
