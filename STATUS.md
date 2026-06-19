@@ -405,6 +405,25 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P3.5: zero-trust-hole Alethe certs WIRED into the evidence path.**
+  `produce_evidence`'s `unsat` branch previously tried only the array
+  read-over-write-same direct cert, then fell back to a *trusted* DRAT reduction
+  certificate (recording `TrustId::Ackermann` / `ArrayElim` as trust holes). It now
+  also tries the Ackermann (`prove_qf_ufbv_unsat_alethe`) and array-elimination
+  (`prove_qf_abv_unsat_alethe_via_elimination`) certs via a new
+  `zero_trust_alethe_certificate` helper — so a QF_UFBV / QF_ABV `unsat` in the
+  covered fragment now carries a `check_alethe`-validated Alethe proof that *derives*
+  the functional/read-consistency reduction by `eq_congruent` (`trusted_steps` empty —
+  **no reduction trust hole**), instead of the trusted DRAT. The certs were previously
+  only test-exercised; they are now actually USED on the evidence path, retiring the
+  Ackermann/ArrayElim trust holes **in practice** for the covered fragment. Each emitter
+  self-validates and returns `None` cheaply outside its fragment, so trying them in
+  order is sound and changes nothing for other fragments. New test
+  (`qf_ufbv_unsat_carries_a_zero_trust_alethe_certificate`: `UnsatAletheProof` evidence,
+  zero `trusted_steps`, self-`check`s). (Ledger stays "trust hole" — coverage is the
+  derivable-equality fragment, not universal; ROW-distinct / non-derivable equalities
+  still fall to trusted DRAT.)
+
 - **2026-06-19** — **P3.5: array-elimination (read-consistency) Alethe certificate
   widened to transitive index-equalities.** Same generalization as the Ackermann cert,
   applied to `prove_qf_abv_unsat_alethe_via_elimination`: a read-consistency constraint

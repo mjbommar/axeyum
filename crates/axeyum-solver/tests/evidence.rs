@@ -120,6 +120,48 @@ fn large_in_fragment_qf_bv_unsat_carries_an_alethe_proof() {
 }
 
 #[test]
+fn qf_ufbv_unsat_carries_a_zero_trust_alethe_certificate() {
+    // f(a) = #b00 ∧ a = b ∧ ¬(f(b) = #b00): unsat by Ackermann congruence over `f`.
+    // produce_evidence must now certify it with a check_alethe-validated Alethe proof
+    // that DERIVES the functional-consistency reduction by eq_congruent — so the
+    // evidence carries NO trusted reduction step, rather than the old trusted DRAT
+    // certificate that recorded TrustId::Ackermann as a trust hole.
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(2)], Sort::BitVec(2))
+        .unwrap();
+    let a = arena.bv_var("a", 2).unwrap();
+    let b = arena.bv_var("b", 2).unwrap();
+    let fa = arena.apply(f, &[a]).unwrap();
+    let fb = arena.apply(f, &[b]).unwrap();
+    let c00 = arena.bv_const(2, 0).unwrap();
+    let e1 = arena.eq(fa, c00).unwrap();
+    let e2 = arena.eq(a, b).unwrap();
+    let e3 = {
+        let e = arena.eq(fb, c00).unwrap();
+        arena.not(e).unwrap()
+    };
+    let assertions = [e1, e2, e3];
+
+    let report = produce_evidence(&mut arena, &assertions, &config()).unwrap();
+    let Evidence::UnsatAletheProof(_) = &report.evidence else {
+        panic!(
+            "expected a zero-trust Alethe-certified unsat, got {:?}",
+            report.evidence
+        );
+    };
+    assert!(report.evidence.is_certified());
+    // The single Evidence::check re-runs check_alethe on the stored proof.
+    assert!(report.evidence.check(&arena, &assertions).unwrap());
+    // No trusted reduction step: the Ackermann congruence is PROVEN, not trusted.
+    assert!(
+        report.trusted_steps.is_empty(),
+        "expected zero trust holes (Ackermann proven via eq_congruent), got {:?}",
+        step_ids(&report)
+    );
+}
+
+#[test]
 fn large_out_of_fragment_qf_bv_unsat_falls_back_to_drat() {
     // (= (bvshl x one) zero) ∧ (= x mask) style: a `bvshl` subterm is outside
     // the Alethe driver's fragment, so the >20-bit unsat falls back to the plain

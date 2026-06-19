@@ -659,15 +659,16 @@ pub fn produce_evidence(
     let (evidence, trusted_steps) = match solve(arena, assertions, config)? {
         CheckResult::Sat(model) => (Evidence::Sat(model), Vec::new()),
         CheckResult::Unsat => {
-            // Prefer a check_alethe-validated Alethe refutation when the problem is
-            // in the array read-over-write-same / extensionality (or EUF congruence)
-            // fragment: it proves the conflict DIRECTLY via the array axiom /
-            // congruence, with NO array-elimination or bit-blast reduction, so it
-            // carries no reduction trust holes (re-validated by check_alethe in
-            // Evidence::check). Otherwise fall back to the DRAT reduction certificate.
-            if let Some(proof) = crate::prove_qf_abv_unsat_alethe(arena, assertions)
-                && matches!(check_alethe(&proof), Ok(true))
-            {
+            // Prefer a check_alethe-validated, ZERO-TRUST-HOLE Alethe refutation when
+            // the problem is in a fragment a certifying emitter covers: the array
+            // read-over-write-same / extensionality DIRECT cert, the Ackermann
+            // (QF_UFBV) functional-consistency cert, or the array-elimination (QF_ABV)
+            // read-consistency cert. Each derives the otherwise-*trusted* reduction
+            // (functional/read consistency) by `eq_congruent`, so the proof carries no
+            // reduction trust hole (re-validated by check_alethe in Evidence::check).
+            // Otherwise fall back to the DRAT reduction certificate (which records the
+            // trusted reduction steps it went through).
+            if let Some(proof) = zero_trust_alethe_certificate(arena, assertions) {
                 (Evidence::UnsatAletheProof(proof), Vec::new())
             } else {
                 let (cert, steps) = reduction_unsat_certificate(arena, assertions);
@@ -681,6 +682,44 @@ pub fn produce_evidence(
         provenance,
         trusted_steps,
     })
+}
+
+/// Tries each **zero-trust-hole** Alethe certificate emitter in turn, returning the
+/// first that produces a [`check_alethe`]-validated refutation closing to `(cl)`:
+///
+/// 1. [`crate::prove_qf_abv_unsat_alethe`] — the array read-over-write-same /
+///    extensionality DIRECT cert (proves the conflict via the array axiom);
+/// 2. [`crate::prove_qf_ufbv_unsat_alethe`] — the Ackermann (`QF_UFBV`) cert (derives
+///    each functional-consistency constraint by `eq_congruent`);
+/// 3. [`crate::prove_qf_abv_unsat_alethe_via_elimination`] — the array-elimination
+///    (`QF_ABV`) cert (derives each read-consistency constraint by `eq_congruent`).
+///
+/// Each emitter is self-validating (returns `Some` only after `check_alethe`
+/// accepts), and outside its fragment returns `None` cheaply — so trying them in
+/// order is sound and a returned proof is genuinely checkable with **no trusted
+/// reduction step**: its `eq_congruent` derivations replace the previously-trusted
+/// Ackermann / array-elimination reductions. The defensive `check_alethe` re-gate
+/// mirrors the historical call site (a belt-and-braces re-validation).
+fn zero_trust_alethe_certificate(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Option<Vec<AletheCommand>> {
+    if let Some(proof) = crate::prove_qf_abv_unsat_alethe(arena, assertions)
+        && matches!(check_alethe(&proof), Ok(true))
+    {
+        return Some(proof);
+    }
+    if let Some(proof) = crate::prove_qf_ufbv_unsat_alethe(arena, assertions)
+        && matches!(check_alethe(&proof), Ok(true))
+    {
+        return Some(proof);
+    }
+    if let Some(proof) = crate::prove_qf_abv_unsat_alethe_via_elimination(arena, assertions)
+        && matches!(check_alethe(&proof), Ok(true))
+    {
+        return Some(proof);
+    }
+    None
 }
 
 /// Best-effort re-checkable certificate for an `unsat` over a BV-reducible
