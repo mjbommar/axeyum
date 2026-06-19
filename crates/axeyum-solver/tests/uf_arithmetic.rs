@@ -102,3 +102,29 @@ fn solve_dispatches_uflia_combination() {
         CheckResult::Unsat
     ));
 }
+
+/// An argument that references a symbol the abstracted model leaves unconstrained
+/// (it appears only inside the abstracted applications) must not error — the
+/// functional-consistency check degrades gracefully. `f(x+0) ≠ f(x)` is genuinely
+/// unsat (x+0 = x), but with x unconstrained the value-blind check returns a sound
+/// non-`Unsat` result rather than crashing.
+#[test]
+fn unconstrained_argument_is_graceful_not_an_error() {
+    let mut a = TermArena::new();
+    let x = decl_int(&mut a, "x");
+    let zero = a.int_const(0);
+    let xp0 = a.int_add(x, zero).unwrap();
+    let f = a.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let f1 = a.apply(f, &[xp0]).unwrap();
+    let f2 = a.apply(f, &[x]).unwrap();
+    let ne = {
+        let e = a.eq(f1, f2).unwrap();
+        a.not(e).unwrap()
+    };
+    // The key property: it returns Ok(_) (no error/panic), never a wrong Unsat-vs-Sat.
+    let r = check_with_uf_arithmetic(&mut a, &[ne], &SolverConfig::default()).unwrap();
+    assert!(
+        !matches!(r, CheckResult::Sat(_)),
+        "must not claim sat for an unsat query"
+    );
+}

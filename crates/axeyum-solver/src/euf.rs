@@ -259,7 +259,7 @@ where
                     if added.contains(&(i, j)) {
                         continue;
                     }
-                    if args_tuples_equal(arena, args_i, args_j, &assignment)?
+                    if args_tuples_equal(arena, args_i, args_j, &assignment)
                         && results_differ(&assignment, *fresh_i, *fresh_j)
                     {
                         new_lemmas.push((i, j));
@@ -287,32 +287,30 @@ where
     }
 }
 
-/// Whether every argument of two applications evaluates to the same scalar code
-/// under `assignment`.
+/// Whether every argument of two applications evaluates to the **same value** under
+/// `assignment`. Compares whole [`Value`]s (works for `Int`/`Real` too, unlike
+/// `scalar_code`, which only encodes finite scalars).
 ///
-/// # Errors
-///
-/// Returns [`SolverError::Backend`] if an argument term fails to evaluate.
+/// If an argument cannot be evaluated — e.g. it references a symbol the abstracted
+/// model left unconstrained (the arg appears only inside abstracted applications, so
+/// nothing pins it) — the pair is treated as **not provably equal**, so no
+/// functional-consistency lemma is added. This is sound (a lemma is only ever added
+/// for genuinely equal argument tuples) and graceful (never an error); it can leave
+/// a `sat`/`unknown` where a value-dependent congruence would refute, which the
+/// `sat`-model replay / arithmetic-`Unknown` guard then handles.
 fn args_tuples_equal(
     arena: &TermArena,
     args_i: &[TermId],
     args_j: &[TermId],
     assignment: &Assignment,
-) -> Result<bool, SolverError> {
+) -> bool {
     for (&a, &b) in args_i.iter().zip(args_j) {
-        // Compare whole values (works for Int/Real too, unlike `scalar_code`, which
-        // only encodes finite scalars and panics on arithmetic sorts).
-        let va = eval(arena, a, assignment).map_err(|error| {
-            SolverError::Backend(format!("lazy congruence eval failed: {error}"))
-        })?;
-        let vb = eval(arena, b, assignment).map_err(|error| {
-            SolverError::Backend(format!("lazy congruence eval failed: {error}"))
-        })?;
-        if va != vb {
-            return Ok(false);
+        match (eval(arena, a, assignment), eval(arena, b, assignment)) {
+            (Ok(va), Ok(vb)) if va == vb => {}
+            _ => return false,
         }
     }
-    Ok(true)
+    true
 }
 
 /// Whether the two fresh result symbols hold different values under `assignment`
