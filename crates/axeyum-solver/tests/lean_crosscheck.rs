@@ -167,3 +167,32 @@ fn exists_refutation_checks_in_real_lean() {
         .expect("∃ unsat reconstructs");
     lean_accepts("exists", &source);
 }
+
+/// `QF_ABV`: `select(a, i) = 0 ∧ i = j ∧ ¬(select(a, j) = 0)` is unsat by read
+/// consistency (`i = j ⇒ select(a, i) = select(a, j)`). The reconstructed array
+/// refutation (via array elimination → QF_UFBV) must type-check in real Lean.
+#[test]
+fn qf_abv_read_consistency_refutation_checks_in_real_lean() {
+    let mut arena = TermArena::new();
+    let a = arena.array_var("a", 4, 8).unwrap();
+    let i = {
+        let s = arena.declare("i", Sort::BitVec(4)).unwrap();
+        arena.var(s)
+    };
+    let j = {
+        let s = arena.declare("j", Sort::BitVec(4)).unwrap();
+        arena.var(s)
+    };
+    let c = arena.bv_const(8, 0).unwrap();
+    let sa = arena.select(a, i).unwrap();
+    let sb = arena.select(a, j).unwrap();
+    let e1 = arena.eq(sa, c).unwrap();
+    let e2 = arena.eq(i, j).unwrap();
+    let e3 = {
+        let e = arena.eq(sb, c).unwrap();
+        arena.not(e).unwrap()
+    };
+    let (_frag, source) = prove_unsat_to_lean_module(&mut arena, &[e1, e2, e3])
+        .expect("QF_ABV read-consistency unsat reconstructs");
+    lean_accepts("qf_abv", &source);
+}
