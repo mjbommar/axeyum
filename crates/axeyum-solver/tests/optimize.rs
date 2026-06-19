@@ -528,3 +528,39 @@ fn box_bv_is_independent() {
         vec![OptOutcome::Optimal(10), OptOutcome::Optimal(10)]
     );
 }
+
+use axeyum_solver::optimize_bv_pareto;
+
+/// BV Pareto front of `max x, max y` (unsigned BV8) s.t. `x,y ≤u 3 ∧ x+y ≤u 4`:
+/// the non-dominated tuples are {(3,1),(2,2),(1,3)} (same shape as the LIA case).
+#[test]
+fn pareto_bv_front() {
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 8).unwrap();
+    let y = arena.bv_var("y", 8).unwrap();
+    let three = arena.bv_const(8, 3).unwrap();
+    let four = arena.bv_const(8, 4).unwrap();
+    let xh = arena.bv_ule(x, three).unwrap();
+    let yh = arena.bv_ule(y, three).unwrap();
+    let sum = arena.bv_add(x, y).unwrap();
+    let cap = arena.bv_ule(sum, four).unwrap();
+    let objs = [
+        BvLexObjective {
+            objective: x,
+            signed: false,
+            maximize: true,
+        },
+        BvLexObjective {
+            objective: y,
+            signed: false,
+            maximize: true,
+        },
+    ];
+    let ParetoOutcome::Complete(mut points) =
+        optimize_bv_pareto(&mut arena, &[xh, yh, cap], &objs).unwrap()
+    else {
+        panic!("expected a complete BV Pareto front");
+    };
+    points.sort();
+    assert_eq!(points, vec![vec![1, 3], vec![2, 2], vec![3, 1]]);
+}

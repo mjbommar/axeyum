@@ -23,6 +23,7 @@
 
 use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
 
+use crate::auto::check_auto;
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::dpll_lia::check_with_lia_dpll;
 
@@ -526,6 +527,189 @@ pub fn optimize_bv_box(
         out.push(outcome);
     }
     Ok(out)
+}
+
+/// A width-`w` two's-complement constant of `value` (low `w` bits).
+fn pareto_bv_const(arena: &mut TermArena, w: u32, value: i128) -> Result<TermId, SolverError> {
+    let mask = if w >= 128 {
+        u128::MAX
+    } else {
+        (1u128 << w) - 1
+    };
+    #[allow(clippy::cast_sign_loss)]
+    arena
+        .bv_const(w, (value as u128) & mask)
+        .map_err(|e| SolverError::Backend(e.to_string()))
+}
+
+/// `objective` better-than-or-equal to `c` in its (signed/unsigned, max/min)
+/// direction.
+fn pareto_bv_better_eq(
+    arena: &mut TermArena,
+    obj: BvLexObjective,
+    w: u32,
+    c: i128,
+) -> Result<TermId, SolverError> {
+    let cc = pareto_bv_const(arena, w, c)?;
+    let t = match (obj.signed, obj.maximize) {
+        (false, true) => arena.bv_uge(obj.objective, cc),
+        (false, false) => arena.bv_ule(obj.objective, cc),
+        (true, true) => arena.bv_sge(obj.objective, cc),
+        (true, false) => arena.bv_sle(obj.objective, cc),
+    }
+    .map_err(|e| SolverError::Backend(e.to_string()))?;
+    Ok(t)
+}
+
+/// `objective` strictly better than `c` in its direction.
+fn pareto_bv_strict_better(
+    arena: &mut TermArena,
+    obj: BvLexObjective,
+    w: u32,
+    c: i128,
+) -> Result<TermId, SolverError> {
+    let cc = pareto_bv_const(arena, w, c)?;
+    let t = match (obj.signed, obj.maximize) {
+        (false, true) => arena.bv_ugt(obj.objective, cc),
+        (false, false) => arena.bv_ult(obj.objective, cc),
+        (true, true) => arena.bv_sgt(obj.objective, cc),
+        (true, false) => arena.bv_slt(obj.objective, cc),
+    }
+    .map_err(|e| SolverError::Backend(e.to_string()))?;
+    Ok(t)
+}
+
+/// The bit-width of a BV objective (the optimizers cap it at ≤64).
+fn pareto_bv_width(arena: &TermArena, obj: BvLexObjective) -> Result<u32, SolverError> {
+    match arena.sort_of(obj.objective) {
+        Sort::BitVec(w) => Ok(w),
+        other => Err(SolverError::Unsupported(format!(
+            "pareto bit-vector objective is not a bit-vector (got {other:?})"
+        ))),
+    }
+}
+
+/// `⋁ᵢ strict_better(objᵢ, vᵢ)` over BV objectives.
+fn pareto_bv_improves_somewhere(
+    arena: &mut TermArena,
+    objectives: &[BvLexObjective],
+    v: &[i128],
+) -> Result<TermId, SolverError> {
+    let mut acc: Option<TermId> = None;
+    for (obj, &vi) in objectives.iter().zip(v) {
+        let w = pareto_bv_width(arena, *obj)?;
+        let sb = pareto_bv_strict_better(arena, *obj, w, vi)?;
+        acc = Some(match acc {
+            None => sb,
+            Some(prev) => arena
+                .or(prev, sb)
+                .map_err(|e| SolverError::Backend(e.to_string()))?,
+        });
+    }
+    acc.ok_or_else(|| SolverError::Unsupported("pareto needs at least one objective".to_owned()))
+}
+
+/// Solve `constraints` and read each BV objective's value (signed or unsigned per
+/// the objective) from the model.
+fn pareto_bv_probe(
+    arena: &mut TermArena,
+    constraints: &[TermId],
+    objectives: &[BvLexObjective],
+) -> Result<MultiProbe, SolverError> {
+    match check_auto(arena, constraints, &SolverConfig::default())? {
+        CheckResult::Sat(model) => {
+            let assignment = model.to_assignment();
+            let mut vals = Vec::with_capacity(objectives.len());
+            for obj in objectives {
+                match eval(arena, obj.objective, &assignment)? {
+                    Value::Bv { width, value } => vals.push(if obj.signed {
+                        bv_signed(value, width)
+                    } else {
+                        i128::try_from(value).map_err(|_| {
+                            SolverError::Backend("BV objective exceeds i128 range".to_owned())
+                        })?
+                    }),
+                    other => {
+                        return Err(SolverError::Unsupported(format!(
+                            "pareto BV objective is not a bit-vector value (got {other:?})"
+                        )));
+                    }
+                }
+            }
+            Ok(MultiProbe::Sat(vals))
+        }
+        CheckResult::Unsat => Ok(MultiProbe::Unsat),
+        CheckResult::Unknown(reason) => Ok(MultiProbe::Unknown(reason)),
+    }
+}
+
+/// **Pareto-front optimization over bit-vector objectives** — the BV analogue of
+/// [`optimize_lia_pareto`] (guided improvement, each point verified Pareto-optimal,
+/// the same deterministic [`MAX_PARETO_POINTS`]/[`MAX_PARETO_PUSH`] caps). Each
+/// objective carries its own signed/unsigned + max/min direction.
+///
+/// # Errors
+///
+/// [`SolverError`] from a probe / builder (e.g. a non-bit-vector objective).
+pub fn optimize_bv_pareto(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objectives: &[BvLexObjective],
+) -> Result<ParetoOutcome, SolverError> {
+    let mut front: Vec<Vec<i128>> = Vec::new();
+    let mut exclusions: Vec<TermId> = Vec::new();
+    loop {
+        if front.len() >= MAX_PARETO_POINTS {
+            return Ok(ParetoOutcome::Truncated(front));
+        }
+        let mut query = assertions.to_vec();
+        query.extend_from_slice(&exclusions);
+        let candidate = match pareto_bv_probe(arena, &query, objectives)? {
+            MultiProbe::Sat(v) => v,
+            MultiProbe::Unsat => return Ok(ParetoOutcome::Complete(front)),
+            MultiProbe::Unknown(reason) => {
+                return Ok(ParetoOutcome::Unknown {
+                    found: front,
+                    reason,
+                });
+            }
+        };
+        let mut v = candidate;
+        let mut certified = false;
+        for _ in 0..MAX_PARETO_PUSH {
+            let mut dom = assertions.to_vec();
+            for (obj, &vi) in objectives.iter().zip(&v) {
+                let w = pareto_bv_width(arena, *obj)?;
+                dom.push(pareto_bv_better_eq(arena, *obj, w, vi)?);
+            }
+            dom.push(pareto_bv_improves_somewhere(arena, objectives, &v)?);
+            match pareto_bv_probe(arena, &dom, objectives)? {
+                MultiProbe::Sat(w) => v = w,
+                MultiProbe::Unsat => {
+                    certified = true;
+                    break;
+                }
+                MultiProbe::Unknown(reason) => {
+                    return Ok(ParetoOutcome::Unknown {
+                        found: front,
+                        reason,
+                    });
+                }
+            }
+        }
+        if !certified {
+            return Ok(ParetoOutcome::Unknown {
+                found: front,
+                reason: UnknownReason {
+                    kind: UnknownKind::ResourceLimit,
+                    detail: "pareto (bv): guided-improvement push budget reached".to_owned(),
+                },
+            });
+        }
+        let exclude = pareto_bv_improves_somewhere(arena, objectives, &v)?;
+        front.push(v);
+        exclusions.push(exclude);
+    }
 }
 
 /// The result of one feasibility probe.
