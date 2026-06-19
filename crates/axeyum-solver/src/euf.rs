@@ -61,6 +61,23 @@ fn project_replay_build(
     assertions: &[TermId],
     assignment: &Assignment,
 ) -> Result<CheckResult, SolverError> {
+    // The SAT-model projection encodes function-table entries via scalar codes,
+    // which exist only for finite-scalar sorts. For an arithmetic-sorted (Int/Real)
+    // uninterpreted function we cannot yet build a witnessing model, so the SAT case
+    // degrades to a sound `Unknown` (UNSAT — the combination refutation — is decided
+    // without any model and is unaffected).
+    for (_func, _name, params, result) in arena.functions() {
+        let is_arith =
+            |s: &axeyum_ir::Sort| matches!(s, axeyum_ir::Sort::Int | axeyum_ir::Sort::Real);
+        if params.iter().any(is_arith) || is_arith(&result) {
+            return Ok(CheckResult::Unknown(crate::backend::UnknownReason {
+                kind: crate::backend::UnknownKind::Incomplete,
+                detail: "sat model for an arithmetic-sorted uninterpreted function is \
+                         unsupported (UNSAT is decided)"
+                    .to_owned(),
+            }));
+        }
+    }
     let projected = elimination
         .project_model(arena, assignment)
         .map_err(|error| {
@@ -144,10 +161,55 @@ pub fn check_qf_ufbv_lazy<B: SolverBackend>(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    check_with_function_consistency(arena, assertions, |a, asserts| {
+        backend.check(a, asserts, config)
+    })
+}
+
+/// EUF + arithmetic (`QF_UFLIA` / `QF_UFLRA`) by the **same** functional-consistency
+/// CEGAR as [`check_qf_ufbv_lazy`], but the abstraction is solved by the general
+/// dispatcher [`crate::check_auto`] instead of a bit-vector backend — so
+/// uninterpreted functions over `Int`/`Real` are decided by EUF + linear-arithmetic
+/// combination (Ackermann abstraction → the arithmetic solver), never bit-blasting.
+///
+/// The classic combination instance `f(a) ≠ f(b) ∧ a ≤ b ∧ b ≤ a` decides UNSAT:
+/// the arithmetic solver forces `a = b`, a functional-consistency lemma then forces
+/// `f(a) = f(b)`, contradicting the disequality.
+///
+/// # Errors
+///
+/// Propagates [`SolverError`] from the dispatcher / IR builders.
+pub fn check_with_uf_arithmetic(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    check_with_function_consistency(arena, assertions, |a, asserts| {
+        crate::check_auto(a, asserts, config)
+    })
+}
+
+/// The shared functional-consistency CEGAR loop: abstract each uninterpreted
+/// application to a fresh result variable, solve the abstraction with `solve`, and
+/// add a congruence lemma `(⋀ argsᵢ = argsⱼ) ⇒ freshᵢ = freshⱼ` for each
+/// model-observed violation, to a fixpoint. Sound (the abstraction is a relaxation,
+/// so its UNSAT transfers; a `sat` model is projected and replayed against the
+/// originals) and terminating (finitely many application pairs; each lemma added
+/// once). `solve` decides the abstracted, function-free query — a bit-vector backend
+/// ([`check_qf_ufbv_lazy`]) or the arithmetic dispatcher
+/// ([`check_with_uf_arithmetic`]).
+fn check_with_function_consistency<F>(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    mut solve: F,
+) -> Result<CheckResult, SolverError>
+where
+    F: FnMut(&mut TermArena, &[TermId]) -> Result<CheckResult, SolverError>,
+{
     let elim = eliminate_functions(arena, assertions).map_err(map_elim_error)?;
     if !elim.had_functions() {
         // No uninterpreted functions: nothing to abstract, solve directly.
-        return backend.check(arena, assertions, config);
+        return solve(arena, assertions);
     }
 
     // The application metadata is borrowed from `arena` (the arg slices), so
@@ -174,7 +236,7 @@ pub fn check_qf_ufbv_lazy<B: SolverBackend>(
     let mut added: HashSet<(usize, usize)> = HashSet::new();
 
     loop {
-        let assignment = match backend.check(arena, &working, config)? {
+        let assignment = match solve(arena, &working)? {
             // The abstraction is a relaxation; its UNSAT implies the original's.
             CheckResult::Unsat => return Ok(CheckResult::Unsat),
             CheckResult::Unknown(reason) => return Ok(CheckResult::Unknown(reason)),
@@ -238,12 +300,14 @@ fn args_tuples_equal(
     assignment: &Assignment,
 ) -> Result<bool, SolverError> {
     for (&a, &b) in args_i.iter().zip(args_j) {
-        let va = eval(arena, a, assignment)
-            .map_err(|error| SolverError::Backend(format!("lazy congruence eval failed: {error}")))?
-            .scalar_code();
-        let vb = eval(arena, b, assignment)
-            .map_err(|error| SolverError::Backend(format!("lazy congruence eval failed: {error}")))?
-            .scalar_code();
+        // Compare whole values (works for Int/Real too, unlike `scalar_code`, which
+        // only encodes finite scalars and panics on arithmetic sorts).
+        let va = eval(arena, a, assignment).map_err(|error| {
+            SolverError::Backend(format!("lazy congruence eval failed: {error}"))
+        })?;
+        let vb = eval(arena, b, assignment).map_err(|error| {
+            SolverError::Backend(format!("lazy congruence eval failed: {error}"))
+        })?;
         if va != vb {
             return Ok(false);
         }
@@ -260,7 +324,7 @@ fn results_differ(
     fresh_j: axeyum_ir::SymbolId,
 ) -> bool {
     match (assignment.get(fresh_i), assignment.get(fresh_j)) {
-        (Some(vi), Some(vj)) => vi.scalar_code() != vj.scalar_code(),
+        (Some(vi), Some(vj)) => vi != vj,
         _ => false,
     }
 }
