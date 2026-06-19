@@ -405,12 +405,17 @@ plan is built and committed on the current branch:
   batsat times out @20s; `mobiledevice_paired` 2 s vs >20 s), the **~90 larger
   (≥~650k) defeat even kissat** (reduction-bound). So **both levers are data-justified,
   partitioned by size** (ADR-0037 trigger partially fired): a competitive default SAT
-  core (P1.3) for the small-CNF Timeouts, word-level reduction for the large-CNF bulk +
-  6 EncodingBudget. Probe: `axeyum-bench/examples/dump_dimacs.rs`. **Next:** (a) deeper
-  reduction — `axeyum-rewrite` P1.2, the **other agent's active area; do not edit
-  `canonical.rs`**; (b) a competitive default core (P1.3) for small-CNF Timeouts;
-  (c) flip `preprocess` default-on after a full-suite check. Track **Timeout→decided**
-  as the destination-2 pulse.
+  core for the small-CNF Timeouts, word-level reduction for the large-CNF bulk +
+  6 EncodingBudget. **But the core bar is kissat-class:** the in-tree `xor_cdcl` core
+  *also* fails `string1x8.4` (>120 s vs kissat 8.3 s), so converting the search-bound
+  band needs a kissat-class solver (major P1.3; out of scope as a pure-Rust *default*,
+  kissat is only a benchmark oracle). **Practical upshot: reduction is the higher-ROI
+  near-term lever even for the search-bound band** (shrinking the CNF brings it within
+  reach of the core we ship). Probes: `axeyum-bench/examples/{dump_dimacs,xor_cdcl_probe}.rs`.
+  **Next:** (a) deeper reduction — `axeyum-rewrite` P1.2, the **other agent's active
+  area; do not edit `canonical.rs`**; (b) flip `preprocess` default-on after a
+  full-suite check; (c) long-term, close the SAT-core gap to kissat-class. Track
+  **Timeout→decided** as the destination-2 pulse.
 - **2026-06-18** — **Destination-2 fair re-measurement: lazy-bv vs Z3 on the public
   p4dfa 113 at the standing budgets — confirmed a no-op on this corpus.** Ran the
   built-but-fair-unmeasured `LazyBvBackend` head-to-head vs Z3 4.13.3 on the
