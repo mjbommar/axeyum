@@ -48,7 +48,7 @@ pub use bits::{
     value_to_lsb_bits,
 };
 pub use error::IrError;
-pub use eval::{Assignment, eval, well_founded_default};
+pub use eval::{Assignment, eval, eval_with_memo, well_founded_default};
 pub use fmt::render;
 pub use rational::Rational;
 pub use sort::{MAX_BV_WIDTH, Sort};

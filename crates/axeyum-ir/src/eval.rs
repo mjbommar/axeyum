@@ -146,9 +146,37 @@ fn well_founded_default_rec(
 /// Panics if `term` does not belong to `arena`, or on arena corruption
 /// (internal invariant violations).
 pub fn eval(arena: &TermArena, term: TermId, assignment: &Assignment) -> Result<Value, IrError> {
+    let mut memo: HashMap<TermId, Value> = HashMap::new();
+    eval_with_memo(arena, term, assignment, &mut memo)
+}
+
+/// Like [`eval`], but evaluates against a caller-supplied `memo` of already-known
+/// subterm values, leaving every newly-computed subterm value in it.
+///
+/// This is the primitive for **incremental** re-evaluation: a caller that keeps a
+/// persistent `memo` across many assignments — invalidating (removing) only the
+/// subterms whose value depends on a changed symbol — recomputes just those nodes,
+/// reusing every unchanged subterm from `memo`. The values left in `memo` are valid
+/// only for `assignment`; **the caller owns invalidation** when the assignment
+/// changes (a stale entry is silently trusted). With an empty `memo` this is exactly
+/// [`eval`].
+///
+/// # Errors
+///
+/// Same as [`eval`] ([`IrError::UnboundSymbol`] for an unbound symbol).
+///
+/// # Panics
+///
+/// Same as [`eval`].
+#[allow(clippy::implicit_hasher)] // callers pass the default-hasher `HashMap<TermId, Value>`.
+pub fn eval_with_memo(
+    arena: &TermArena,
+    term: TermId,
+    assignment: &Assignment,
+    memo: &mut HashMap<TermId, Value>,
+) -> Result<Value, IrError> {
     // Iterative post-order evaluation with memoization, so deep terms cannot
     // overflow the call stack and shared subterms evaluate once.
-    let mut memo: HashMap<TermId, Value> = HashMap::new();
     let mut stack: Vec<(TermId, bool)> = vec![(term, false)];
 
     while let Some((t, children_ready)) = stack.pop() {
@@ -842,4 +870,50 @@ fn rotate(val: &Value, by: u32, left: bool) -> Value {
         ((v << k) | (v >> (w - k))) & mask(w)
     };
     Value::Bv { width: w, value }
+}
+
+#[cfg(test)]
+mod eval_with_memo_tests {
+    use std::collections::HashMap;
+
+    use super::{Assignment, eval, eval_with_memo};
+    use crate::{Sort, TermArena, Value};
+
+    /// `eval_with_memo` with an empty memo equals `eval`; and reusing a persistent
+    /// memo across an assignment change — with the changed symbol's dependent
+    /// subterms invalidated — yields the same value as a fresh `eval` (the
+    /// incremental contract).
+    #[test]
+    fn incremental_memo_matches_fresh_eval() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::BitVec(8)).unwrap();
+        let y = arena.declare("y", Sort::BitVec(8)).unwrap();
+        let (xv, yv) = (arena.var(x), arena.var(y));
+        let sum = arena.bv_add(xv, yv).unwrap(); // depends on x and y
+        let ten = arena.bv_const(8, 10).unwrap();
+        let goal = arena.eq(sum, ten).unwrap(); // (x + y) == 10
+
+        let mut asg = Assignment::new();
+        asg.set(x, Value::Bv { width: 8, value: 3 });
+        asg.set(y, Value::Bv { width: 8, value: 7 });
+
+        // Empty memo == eval; memo is populated with subterm values.
+        let mut memo: HashMap<_, _> = HashMap::new();
+        let inc = eval_with_memo(&arena, goal, &asg, &mut memo).unwrap();
+        assert_eq!(inc, eval(&arena, goal, &asg).unwrap());
+        assert_eq!(inc, Value::Bool(true)); // 3 + 7 == 10
+
+        // Change x := 4. Invalidate the cone of x — its own symbol node `xv` PLUS
+        // every subterm depending on it (`sum`, `goal`); `y` and the constant are
+        // reused. (Forgetting `xv` would silently reuse the stale x=3 value — the
+        // invalidation contract includes the changed symbol's own node.) The
+        // incremental result must equal a fresh eval over the new assignment.
+        asg.set(x, Value::Bv { width: 8, value: 4 });
+        memo.remove(&xv);
+        memo.remove(&sum);
+        memo.remove(&goal);
+        let inc2 = eval_with_memo(&arena, goal, &asg, &mut memo).unwrap();
+        assert_eq!(inc2, eval(&arena, goal, &asg).unwrap());
+        assert_eq!(inc2, Value::Bool(false)); // 4 + 7 == 11 ≠ 10
+    }
 }
