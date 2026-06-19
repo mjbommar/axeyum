@@ -404,3 +404,40 @@ fn lexicographic_bv_signed() {
         LexOutcome::Optimal(vec![-5, 7])
     );
 }
+
+use axeyum_solver::optimize_lia_box;
+
+/// Box (independent) optimization differs from lexicographic: for
+/// `0≤x,y≤10 ∧ x+y≤12`, box `max x`/`max y` each reach 10 independently ([10,10]),
+/// whereas lex pins x first → [10,2].
+#[test]
+fn box_optimization_is_independent_unlike_lex() {
+    let mut arena = TermArena::new();
+    let x = int_var(&mut arena, "x");
+    let y = int_var(&mut arena, "y");
+    let [xl, xh] = bound_0_10(&mut arena, x);
+    let [yl, yh] = bound_0_10(&mut arena, y);
+    let sum = arena.int_add(x, y).unwrap();
+    let twelve = arena.int_const(12);
+    let cap = arena.int_le(sum, twelve).unwrap();
+    let asserts = [xl, xh, yl, yh, cap];
+    let objs = [
+        LexObjective {
+            objective: x,
+            maximize: true,
+        },
+        LexObjective {
+            objective: y,
+            maximize: true,
+        },
+    ];
+    assert_eq!(
+        optimize_lia_box(&mut arena, &asserts, &objs).unwrap(),
+        vec![OptOutcome::Optimal(10), OptOutcome::Optimal(10)]
+    );
+    // Same problem, lexicographic: x pins to 10, then y ≤ 2.
+    assert_eq!(
+        optimize_lia_lexicographic(&mut arena, &asserts, &objs).unwrap(),
+        LexOutcome::Optimal(vec![10, 2])
+    );
+}

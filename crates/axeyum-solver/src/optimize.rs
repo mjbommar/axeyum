@@ -203,6 +203,38 @@ pub fn optimize_lia_lexicographic(
     Ok(LexOutcome::Optimal(values))
 }
 
+/// **Box (independent) multi-objective optimization** over integer-linear
+/// objectives — z3's `box` OMT mode. Each objective is optimized *independently*
+/// over the same `assertions` (no pinning between them), so the result is the
+/// per-objective optimum as if each were solved alone. Contrast
+/// [`optimize_lia_lexicographic`], where earlier objectives constrain later ones:
+/// for `0≤x,y≤10 ∧ x+y≤12`, box `max x`/`max y` is `[10, 10]` (each reachable
+/// alone) while lex is `[10, 2]`.
+///
+/// Returns each objective's [`OptOutcome`] in input order. Sound and terminating
+/// by construction (a `map` of the checked single-objective optimizer; no shared
+/// state, no extra search).
+///
+/// # Errors
+///
+/// Propagates any per-objective [`SolverError`] (e.g. a non-integer objective).
+pub fn optimize_lia_box(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objectives: &[LexObjective],
+) -> Result<Vec<OptOutcome>, SolverError> {
+    let mut out = Vec::with_capacity(objectives.len());
+    for obj in objectives {
+        let outcome = if obj.maximize {
+            maximize_lia(arena, assertions, obj.objective)?
+        } else {
+            minimize_lia(arena, assertions, obj.objective)?
+        };
+        out.push(outcome);
+    }
+    Ok(out)
+}
+
 /// One objective in a bit-vector lexicographic optimization: the BV `objective`,
 /// whether to read it as **signed** (two's-complement) vs unsigned, and whether to
 /// maximize vs minimize.
