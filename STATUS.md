@@ -412,6 +412,25 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P2.9/P1.6: datatypes with Int/Real fields now decided (were a hard
+  `Err`).** The native datatype solver (`datatype_native.rs`) rejected any datatype carrying
+  an `Int`/`Real` field with `SolverError::Unsupported` — blocking `List Int`, `Tree Int`,
+  records with numeric fields, and the whole numeric-payload datatype space, even for pure
+  congruence with no arithmetic. Fix: `register_datatype` admits `Int`/`Real` field sorts;
+  `build_sym_vars` already declares a field var of the field's own sort with the
+  well-founded-default guard (`well_founded_default` returns `Int(0)`/`Real(0)`);
+  `value_to_term` renders `Int`/`Real` defaults. The datatype-free residual (tags as BV,
+  field vars as Int/Real + the original arithmetic) re-dispatches through the existing
+  `solve → check_auto` path, which routes Int/Real to the LIA/LRA deciders and BV to
+  bit-blasting — no new wiring. Sound: `unsat` equisatisfiable, `sat` projects to
+  `Value::Datatype` and **replays** (a projection bug ⇒ replay failure → Unknown, never a
+  wrong sat). Now decides: `v(x)=1 ∧ v(y)=2 ∧ x=y` (UNSAT, congruence), `is-cons(l) ∧
+  head(l)=5` (SAT), `v(x)+1=4` (SAT), recursive `List Int`, multi-ctor `Either Int`. New
+  `tests/datatype_int_fields.rs` (5); existing datatype tests + full solver suite (926) +
+  clippy + fmt green. Driven by a measured capability-gap pass; done via a focused sub-agent.
+  Closes the P0 finding from that pass (also upholds "unknown is first-class, never an error"
+  — the hard `Err` is gone).
+
 - **2026-06-19** — **P3.5: Ackermann cert widened to congruence-closure arg-equalities
   (e-graph fallback).** `prove_qf_ufbv_unsat_alethe` now discharges an argument pair equal
   by **congruence** (not just transitive closure of asserted edges) — e.g.

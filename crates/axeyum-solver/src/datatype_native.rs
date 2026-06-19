@@ -8,7 +8,8 @@
 //!
 //! - a **tag** bit-vector `tag_o` (which constructor `o` uses), constrained to
 //!   the constructor range, and
-//! - a **field variable** `f_{o,c,i}` for every constructor `c` and field `i`,
+//! - a **field variable** `f_{o,c,i}` for every constructor `c` and field `i`
+//!   (`Bool`/`BitVec`/`Int`/`Real`-sorted, matching the field's sort),
 //!
 //! then replacing `is-c(o)` with `tag_o == c` and `select_{c,i}(o)` with
 //! `f_{o,c,i}`. Structural equality `o == o'` of two datatype variables reduces
@@ -17,8 +18,11 @@
 //! convention ([`well_founded_default`]), each non-active field is pinned to its
 //! sort's well-founded default by a guard `tag_o == c \/ f_{o,c,i} == default`,
 //! so `select_{c,i}(o)` when `o`'s constructor is not `c` yields the same default
-//! the evaluator does. The residual is datatype-free and goes to the normal
-//! dispatcher.
+//! the evaluator does. The residual is datatype-free and goes back through the
+//! normal dispatcher ([`solve`] → `check_auto`), which routes its now-mixed
+//! Bool/BitVec + Int/Real content to the bit-blaster and the arithmetic DPLL
+//! respectively — so `Int`/`Real` field variables decided in congruence with the
+//! rest of the query, not just bit-blasted.
 //!
 //! Soundness. The expansion is equisatisfiable with the input: from a model of
 //! the input, set `tag_o` to `o`'s constructor and the field variables to `o`'s
@@ -432,7 +436,7 @@ fn expect_dt_symbol(arena: &TermArena, term: TermId) -> Result<SymbolId, SolverE
 
 /// Records `dt`'s constructor/field layout.
 ///
-/// Scalar (`Bool`/`BitVec`) fields are expanded to field variables; datatype and
+/// Scalar (`Bool`/`BitVec`/`Int`/`Real`) fields are expanded to field variables; datatype and
 /// array fields are recorded too (kept in `field_sorts`) but get no expansion
 /// variable — they are sound only as long as they are never traversed by a
 /// `select` or compared by `==`, which the scan enforces, so they are projected
@@ -453,15 +457,15 @@ fn register_datatype(
         let mut field_sorts = Vec::new();
         for (_, sort) in arena.constructor_fields(ctor) {
             match sort {
-                Sort::Bool | Sort::BitVec(_) => field_sorts.push(*sort),
+                Sort::Bool | Sort::BitVec(_) | Sort::Int | Sort::Real => field_sorts.push(*sort),
                 Sort::Datatype(inner) => {
                     register_datatype(arena, *inner, layouts)?;
                     field_sorts.push(*sort);
                 }
                 _ => {
                     return Err(unsupported(
-                        "native datatype solving supports scalar and datatype fields; \
-                         array/UF datatype fields are not yet supported",
+                        "native datatype solving supports scalar (Bool/BitVec/Int/Real) and \
+                         datatype fields; array/UF datatype fields are not yet supported",
                     ));
                 }
             }
@@ -736,7 +740,9 @@ fn value_to_term(arena: &mut TermArena, value: &Value) -> Result<TermId, axeyum_
     match value {
         Value::Bool(b) => Ok(arena.bool_const(*b)),
         Value::Bv { width, value } => arena.bv_const(*width, *value),
-        _ => unreachable!("scalar field defaults are Bool/BitVec"),
+        Value::Int(v) => Ok(arena.int_const(*v)),
+        Value::Real(r) => Ok(arena.real_const(*r)),
+        _ => unreachable!("scalar field defaults are Bool/BitVec/Int/Real"),
     }
 }
 
