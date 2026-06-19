@@ -6,6 +6,26 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Destination-2 advanced & a destination-3 milestone landed (2026-06-18).** See
+  the two 2026-06-18 changelog entries for detail. In short:
+  - **Real Lean 4 kernel now checks reconstructed refutations** (`render_lean_module`
+    / `prove_unsat_to_lean_module`, gated `tests/lean_crosscheck.rs`): QF_UFBV/LRA/∀/∃
+    refutations type-check in a real `lean` toolchain with `#print axioms` showing no
+    `sorryAx`. (Toolchain installed via `elan`; analogue of the Z3 oracle.)
+  - **Destination-2 lever found, fixed, measured, decided.** Fair public-slice
+    head-to-heads vs Z3 (committed baselines): lazy-bv is **inert** on p4dfa (0/113
+    heavy ops); **word-level reduction is the lever** — after fixing the unbounded
+    `solve_eqs` (deterministic fuel, `solve_eqs_bounded`), `--preprocess` decides
+    **4/113 @3s and 7/113 @20s vs eager 2/3**, DISAGREE=0. Ratified in **ADR-0037**
+    (reduction is the destination-2 priority; batsat stays default; custom cores
+    specialized). The full pipeline is now wired into the default `solve()` path.
+  - **Precise next steps (resume here):** (1) **deeper word-level reduction** to pull
+    the 6 remaining `EncodingBudget` instances below the encode ceiling and shrink the
+    99 timeout CNFs (AC-tree flattening / `ite`-chain simplification / `bv_slice` /
+    `max_bv_sharing`) — *this is `axeyum-rewrite` P1.2, the concurrent agent's active
+    area; coordinate to avoid collision*; (2) flip `SolverConfig::preprocess`
+    default-on (ADR-0034 criterion met; ADR-0037 staged it after a full-suite
+    behavior check on `solve()` consumers).
 - **P2.6 quantifier e-matching vertical — keystone-complete, wired & validated**
   (2026-06-16): trigger *inference* (single-cover + greedy multi-pattern set
   cover), congruence-aware multi-pattern join, the instantiation fixpoint loop
