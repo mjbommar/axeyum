@@ -342,3 +342,65 @@ fn lexicographic_stops_on_unbounded() {
         }
     }
 }
+
+use axeyum_solver::{BvLexObjective, optimize_bv_lexicographic};
+
+/// BV lexicographic (unsigned): `max x` then `max y` s.t. `x,y ≤u 10 ∧ x+y ≤u 12`
+/// over BV8 → x=10, y=2.
+#[test]
+fn lexicographic_bv_unsigned() {
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 8).unwrap();
+    let y = arena.bv_var("y", 8).unwrap();
+    let ten = arena.bv_const(8, 10).unwrap();
+    let twelve = arena.bv_const(8, 12).unwrap();
+    let xh = arena.bv_ule(x, ten).unwrap();
+    let yh = arena.bv_ule(y, ten).unwrap();
+    let sum = arena.bv_add(x, y).unwrap(); // no wrap: x,y ≤ 10 ⇒ sum ≤ 20 < 256
+    let cap = arena.bv_ule(sum, twelve).unwrap();
+    let objs = [
+        BvLexObjective {
+            objective: x,
+            signed: false,
+            maximize: true,
+        },
+        BvLexObjective {
+            objective: y,
+            signed: false,
+            maximize: true,
+        },
+    ];
+    assert_eq!(
+        optimize_bv_lexicographic(&mut arena, &[xh, yh, cap], &objs).unwrap(),
+        LexOutcome::Optimal(vec![10, 2])
+    );
+}
+
+/// BV lexicographic (signed): `min x` then `max y` over BV8 s.t. `x ≥s -5 ∧ y ≤s 7`
+/// → x=-5, y=7 (independent objectives, signed pinning).
+#[test]
+fn lexicographic_bv_signed() {
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 8).unwrap();
+    let y = arena.bv_var("y", 8).unwrap();
+    let neg5 = arena.bv_const(8, 251).unwrap(); // -5 in two's complement (BV8)
+    let seven = arena.bv_const(8, 7).unwrap();
+    let xlo = arena.bv_sge(x, neg5).unwrap();
+    let yhi = arena.bv_sle(y, seven).unwrap();
+    let objs = [
+        BvLexObjective {
+            objective: x,
+            signed: true,
+            maximize: false,
+        },
+        BvLexObjective {
+            objective: y,
+            signed: true,
+            maximize: true,
+        },
+    ];
+    assert_eq!(
+        optimize_bv_lexicographic(&mut arena, &[xlo, yhi], &objs).unwrap(),
+        LexOutcome::Optimal(vec![-5, 7])
+    );
+}

@@ -203,6 +203,83 @@ pub fn optimize_lia_lexicographic(
     Ok(LexOutcome::Optimal(values))
 }
 
+/// One objective in a bit-vector lexicographic optimization: the BV `objective`,
+/// whether to read it as **signed** (two's-complement) vs unsigned, and whether to
+/// maximize vs minimize.
+#[derive(Debug, Clone, Copy)]
+pub struct BvLexObjective {
+    /// The bit-vector objective term.
+    pub objective: TermId,
+    /// Read the value as signed two's-complement (else unsigned).
+    pub signed: bool,
+    /// `true` to maximize, `false` to minimize.
+    pub maximize: bool,
+}
+
+/// **Lexicographic multi-objective optimization over bit-vector objectives** — the
+/// BV analogue of [`optimize_lia_lexicographic`], pinning each objective at its
+/// optimum (with the matching signed/unsigned, max/min comparison) before
+/// optimizing the next. Sound + terminating for the same reason (a bounded
+/// composition of the checked single-objective BV optimizers).
+///
+/// # Errors
+///
+/// [`SolverError::Unsupported`] if an objective is not a (≤64-bit) bit-vector, or
+/// [`SolverError`] from a probe / builder.
+pub fn optimize_bv_lexicographic(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objectives: &[BvLexObjective],
+) -> Result<LexOutcome, SolverError> {
+    let mut constraints = assertions.to_vec();
+    let mut values: Vec<i128> = Vec::with_capacity(objectives.len());
+    for (index, obj) in objectives.iter().enumerate() {
+        let outcome = match (obj.signed, obj.maximize) {
+            (false, true) => maximize_bv(arena, &constraints, obj.objective)?,
+            (false, false) => minimize_bv(arena, &constraints, obj.objective)?,
+            (true, true) => maximize_bv_signed(arena, &constraints, obj.objective)?,
+            (true, false) => minimize_bv_signed(arena, &constraints, obj.objective)?,
+        };
+        match outcome {
+            OptOutcome::Optimal(value) => {
+                values.push(value);
+                let Sort::BitVec(w) = arena.sort_of(obj.objective) else {
+                    return Err(SolverError::Unsupported(
+                        "bit-vector lexicographic objective must be a bit-vector".to_owned(),
+                    ));
+                };
+                // Width-`w` two's-complement constant of the optimum (the optimizers
+                // cap `w ≤ 64`, so the low-`w` bits of `value` are exact).
+                let mask = if w >= 128 {
+                    u128::MAX
+                } else {
+                    (1u128 << w) - 1
+                };
+                #[allow(clippy::cast_sign_loss)]
+                let vc = arena
+                    .bv_const(w, (value as u128) & mask)
+                    .map_err(|e| SolverError::Backend(e.to_string()))?;
+                let pin = match (obj.signed, obj.maximize) {
+                    (false, true) => arena.bv_uge(obj.objective, vc),
+                    (false, false) => arena.bv_ule(obj.objective, vc),
+                    (true, true) => arena.bv_sge(obj.objective, vc),
+                    (true, false) => arena.bv_sle(obj.objective, vc),
+                }
+                .map_err(|e| SolverError::Backend(e.to_string()))?;
+                constraints.push(pin);
+            }
+            other => {
+                return Ok(LexOutcome::Stopped {
+                    index,
+                    prefix: values,
+                    outcome: other,
+                });
+            }
+        }
+    }
+    Ok(LexOutcome::Optimal(values))
+}
+
 /// The result of one feasibility probe.
 enum Probe {
     /// Satisfiable, carrying the objective's value in the found model.

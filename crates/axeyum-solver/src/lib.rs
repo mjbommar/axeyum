@@ -148,8 +148,9 @@ pub use maxsat::{max_satisfiable, max_satisfiable_weighted};
 pub use model::Model;
 pub use nra::check_with_nra;
 pub use optimize::{
-    LexObjective, LexOutcome, OptOutcome, maximize_bv, maximize_bv_signed, maximize_lia,
-    minimize_bv, minimize_bv_signed, minimize_lia, optimize_lia_lexicographic,
+    BvLexObjective, LexObjective, LexOutcome, OptOutcome, maximize_bv, maximize_bv_signed,
+    maximize_lia, minimize_bv, minimize_bv_signed, minimize_lia, optimize_bv_lexicographic,
+    optimize_lia_lexicographic,
 };
 pub use pb::{pb_eq, pb_ge, pb_le};
 pub use pbls::{LocalSearchOutcome, PblsBackend, solve_local_search};
