@@ -877,6 +877,7 @@ fn evidence_route(arena: &TermArena, assertions: &[TermId]) -> EvidenceRoute {
     let (mut has_real, mut has_bitvec) = (false, false);
     let (mut has_array, mut has_int) = (false, false);
     let (mut has_func, mut has_quantifier) = (false, false);
+    let mut has_datatype = false;
     let mut seen = BTreeSet::new();
     let mut stack = assertions.to_vec();
     while let Some(term) = stack.pop() {
@@ -888,19 +889,29 @@ fn evidence_route(arena: &TermArena, assertions: &[TermId]) -> EvidenceRoute {
             Sort::BitVec(_) | Sort::Float { .. } => has_bitvec = true,
             Sort::Array { .. } => has_array = true,
             Sort::Int => has_int = true,
-            Sort::Bool | Sort::Datatype(_) => {}
+            // A datatype-sorted subterm signals a datatype query even when every
+            // top-level asserted term is Bool/BitVec (e.g. `select(mk(a,b), 0) =
+            // #b00`): it must route to `solve`, not the raw BV bit-blaster.
+            Sort::Datatype(_) => has_datatype = true,
+            Sort::Bool => {}
         }
         if let TermNode::App { op, args } = arena.node(term) {
             match op {
                 Op::Apply(_) => has_func = true,
                 Op::Forall(_) | Op::Exists(_) => has_quantifier = true,
+                // Constructor/selector/tester ops are datatype features even when
+                // their result sort is BitVec/Bool (a `select`/`is-c` over a
+                // datatype): route to `solve`, which has the datatype dispatch.
+                Op::DtConstruct { .. } | Op::DtSelect { .. } | Op::DtTest(_) => {
+                    has_datatype = true;
+                }
                 _ => {}
             }
             stack.extend(args.iter().copied());
         }
     }
 
-    let extra = has_array || has_int || has_func || has_quantifier;
+    let extra = has_array || has_int || has_func || has_quantifier || has_datatype;
     if !has_real && !extra {
         EvidenceRoute::QfBv // only bit-vectors and Booleans
     } else if has_real && !has_bitvec && !extra {
