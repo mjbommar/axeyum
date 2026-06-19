@@ -377,6 +377,17 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-18** — **Optimization/constraint API feature-complete + full Solver façade.**
+  Session run (all green, committed): FP integer→float (`from_ubv`/`from_sbv`); all 3 z3
+  OMT modes (box, lexicographic, Pareto) across **LIA + BV**; model-returning MaxSAT;
+  strict PB (`pb_lt`/`pb_gt`); cardinality `between`/`at_most_one`/`exactly_one`; BV
+  `repeat`; and `Solver` façade methods for the whole optimization/MaxSAT/unsat-core
+  surface. `preprocess` flipped default-on (guarded, validated). **Next frontiers** (all
+  larger / coordination-gated): deeper word-level reduction (other agent's `axeyum-rewrite`
+  lane); a kissat-class SAT core (long game, the search-bound Timeout band); unbounded
+  strings / uninterpreted sorts / full MBQI / NRA-CAD; and `to_fp`-from-real (needs exact
+  rational rounding — f64 bridge is unsound for sub-f64 formats).
+
 - **2026-06-18** — **Solver façade `unsat_core`**: `Solver::unsat_core(arena)` returns a
   deletion-minimized unsat core (assertion indices) — the z3 get-unsat-core API on the
   high-level façade. Test verifies the irrelevant assertion is excluded.
