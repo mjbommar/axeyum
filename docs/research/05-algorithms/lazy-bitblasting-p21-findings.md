@@ -368,9 +368,17 @@ default** under the pure-Rust/no-C++ rule (kissat can serve only as a feature-ga
 benchmark oracle, like Z3). **Two collision-free pure-Rust optimization openings this
 exposes:** (a) PBLS's per-flip cost is dominated by full-term re-evaluation — a
 *memoized/incremental* term evaluator (dirty-propagate only the changed variable's
-cone) could raise the flip rate by orders of magnitude and is self-contained in
-`pbls.rs`; (b) the CDCL gap to kissat (data structures / inprocessing / restarts) is
-the long-game. **Practical consequence:** even for the search-bound Timeouts,
+cone); (b) the CDCL gap to kissat (data structures / inprocessing / restarts) is
+the long-game. **(a) was implemented and measured** (`eval_with_memo` in `axeyum-ir`
++ a persistent memo with per-variable cone invalidation in `pbls.rs`, sound — the
+150-formula differential vs the eager backend still passes): on `string1x8.4` it
+lifts the flip rate only **~1.5×** (2 700 → 3 985 flips/20 s), *not* the hoped
+orders of magnitude — because in this `ite`-dense structure each variable's cone is
+*large* (a var feeds much of the assertion), so "incremental" recomputes most of it
+anyway. **So WalkSAT is confirmed not the lever for this corpus** (large cones +
+weak word-level local search on structured SAT); the improvement is real and sound
+(and pays off on *localized-cone* corpora) but does not convert the search-bound
+band. The band remains kissat-class-CDCL territory. **Practical consequence:** even for the search-bound Timeouts,
 **word-level reduction is the more tractable near-term lever** — shrinking the CNF
 brings it within reach of the weaker core we actually ship, the same mechanism that
 converted the `EncodingBudget` set.

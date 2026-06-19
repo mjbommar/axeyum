@@ -26,7 +26,9 @@ use std::collections::{HashMap, HashSet};
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::Instant;
 
-use axeyum_ir::{Assignment, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
+use axeyum_ir::{
+    Assignment, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval, eval_with_memo,
+};
 
 use crate::backend::{
     Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind,
@@ -168,6 +170,21 @@ struct Search<'a> {
     unsat_count: usize,
     asg: Assignment,
     state: u64,
+    /// **Incremental evaluation cache**: every assertion subterm's value under the
+    /// current `asg`. A flip recomputes only the changed variable's *cone* (the
+    /// subterms that transitively depend on it) instead of re-walking whole
+    /// assertions — the dominant per-flip cost otherwise. Valid for `asg`; the cone
+    /// invalidation below keeps it so.
+    memo: HashMap<TermId, Value>,
+    /// Child→parent edges over the union assertion DAG, for cone discovery.
+    parents: HashMap<TermId, Vec<TermId>>,
+    /// The interned symbol `TermId` of each variable (root of its cone).
+    var_term: Vec<TermId>,
+    /// Lazily-computed cone (the variable's symbol node + all transitive ancestors)
+    /// per variable — the exact set of `memo` entries a flip of that variable
+    /// invalidates. Computed on first flip of each variable (so setup stays
+    /// `O(dag)`, not `O(vars × dag)`).
+    var_cone: Vec<Option<Vec<TermId>>>,
 }
 
 impl<'a> Search<'a> {
@@ -186,6 +203,37 @@ impl<'a> Search<'a> {
                 var_assertions[vi].push(a);
             }
         }
+        // Child→parent edges over the union assertion DAG (one O(dag) pass), so a
+        // flip's cone can be discovered by walking up from the variable's node; the
+        // same pass records each symbol's (already-interned) `TermId`.
+        let mut parents: HashMap<TermId, Vec<TermId>> = HashMap::new();
+        let mut sym_term: HashMap<SymbolId, TermId> = HashMap::new();
+        {
+            let mut visited: HashSet<TermId> = HashSet::new();
+            let mut stack: Vec<TermId> = assertions.to_vec();
+            while let Some(t) = stack.pop() {
+                if !visited.insert(t) {
+                    continue;
+                }
+                match arena.node(t) {
+                    TermNode::Symbol(s) => {
+                        sym_term.insert(*s, t);
+                    }
+                    TermNode::App { args, .. } => {
+                        for &a in &args.clone() {
+                            parents.entry(a).or_default().push(t);
+                            stack.push(a);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        let var_term: Vec<TermId> = vars
+            .iter()
+            .map(|v| sym_term[&v.sym]) // every searchable var occurs in the assertions
+            .collect();
+        let var_cone = vec![None; vars.len()];
         Self {
             arena,
             assertions,
@@ -196,14 +244,46 @@ impl<'a> Search<'a> {
             unsat_count: 0,
             asg: Assignment::new(),
             state: SEED,
+            memo: HashMap::new(),
+            parents,
+            var_term,
+            var_cone,
         }
+    }
+
+    /// The cone of variable `vi`: its symbol node plus every subterm that
+    /// transitively depends on it (discovered by walking parent edges up from the
+    /// variable's node). Computed once per variable and cached. This is exactly the
+    /// set of `memo` entries a flip of `vi` invalidates.
+    fn cone(&mut self, vi: usize) -> &[TermId] {
+        if self.var_cone[vi].is_none() {
+            let mut seen: HashSet<TermId> = HashSet::new();
+            let mut out: Vec<TermId> = Vec::new();
+            let mut stack = vec![self.var_term[vi]];
+            while let Some(t) = stack.pop() {
+                if !seen.insert(t) {
+                    continue;
+                }
+                out.push(t);
+                if let Some(ps) = self.parents.get(&t) {
+                    stack.extend(ps.iter().copied());
+                }
+            }
+            self.var_cone[vi] = Some(out);
+        }
+        self.var_cone[vi].as_deref().expect("cone just computed")
     }
 
     /// Recomputes the full satisfaction cache (after a fresh random assignment).
     fn recompute(&mut self) {
+        // A fresh assignment invalidates the whole cache; rebuild it in one pass
+        // (each assertion root, sharing subterms through the memo).
+        self.memo.clear();
         self.unsat_count = 0;
-        for (a, &t) in self.assertions.iter().enumerate() {
-            let s = eval_bool(self.arena, t, &self.asg) == Some(true);
+        for a in 0..self.assertions.len() {
+            let t = self.assertions[a];
+            let s =
+                eval_with_memo(self.arena, t, &self.asg, &mut self.memo) == Ok(Value::Bool(true));
             self.sat[a] = s;
             if !s {
                 self.unsat_count += 1;
@@ -235,10 +315,24 @@ impl<'a> Search<'a> {
     fn score(&mut self, vi: usize, cand: &Value) -> usize {
         let sym = self.vars[vi].sym;
         let old = self.asg.get(sym).expect("searched variable is assigned");
+        // Save the cone's current cached values, apply the candidate, recompute only
+        // the cone (incrementally, through the persistent memo), tally the affected
+        // assertions' satisfaction delta, then restore exactly — `score` is a
+        // hypothetical, so it must leave `asg`/`memo` untouched.
+        let cone: Vec<TermId> = self.cone(vi).to_vec();
+        let saved: Vec<(TermId, Option<Value>)> = cone
+            .iter()
+            .map(|&t| (t, self.memo.get(&t).cloned()))
+            .collect();
+        for &t in &cone {
+            self.memo.remove(&t);
+        }
         self.asg.set(sym, cand.clone());
         let mut count = self.unsat_count;
         for &a in &self.var_assertions[vi] {
-            let now = eval_bool(self.arena, self.assertions[a], &self.asg) == Some(true);
+            let t = self.assertions[a];
+            let now =
+                eval_with_memo(self.arena, t, &self.asg, &mut self.memo) == Ok(Value::Bool(true));
             if now != self.sat[a] {
                 if now {
                     count -= 1;
@@ -248,6 +342,16 @@ impl<'a> Search<'a> {
             }
         }
         self.asg.set(sym, old);
+        for (t, v) in saved {
+            match v {
+                Some(v) => {
+                    self.memo.insert(t, v);
+                }
+                None => {
+                    self.memo.remove(&t);
+                }
+            }
+        }
         count
     }
 
@@ -255,10 +359,19 @@ impl<'a> Search<'a> {
     /// unsatisfied count.
     fn commit(&mut self, vi: usize, cand: Value) {
         let sym = self.vars[vi].sym;
+        // Invalidate the variable's cone in the persistent memo, apply the move, and
+        // re-evaluate the affected assertions — `eval_with_memo` recomputes only the
+        // invalidated cone, reusing every other subterm from the cache.
+        let cone: Vec<TermId> = self.cone(vi).to_vec();
+        for &t in &cone {
+            self.memo.remove(&t);
+        }
         self.asg.set(sym, cand);
         let affected = self.var_assertions[vi].clone();
         for a in affected {
-            let now = eval_bool(self.arena, self.assertions[a], &self.asg) == Some(true);
+            let t = self.assertions[a];
+            let now =
+                eval_with_memo(self.arena, t, &self.asg, &mut self.memo) == Ok(Value::Bool(true));
             if now != self.sat[a] {
                 if now {
                     self.unsat_count -= 1;
