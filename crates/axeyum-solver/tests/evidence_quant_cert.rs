@@ -318,6 +318,62 @@ fn assume_independent_check_rejects_non_fresh_definition() {
 }
 
 #[test]
+fn assume_independent_check_rejects_forged_carried_universal() {
+    // SOUNDNESS-NEGATIVE (carried-universal class): the carried `GuardedUniversalForm`
+    // itself must correspond to a guarded universal in the original assertions. A
+    // forged form — one whose `body`/`inner` does NOT match any original assertion's
+    // rendering — would otherwise pass the class-1 `assume` test (which compares the
+    // proof's `q_forall` assume against the *carried* form, not the query). The
+    // strengthened check cross-verifies the carried universal against the query and
+    // must reject the forgery.
+    let mut arena = TermArena::new();
+    let forall = forall_x_ge_5(&mut arena);
+
+    let proof = prove_finite_int_quant_unsat_alethe(&mut arena, &[forall])
+        .expect("emits a guarded-quantifier proof");
+    let genuine =
+        guarded_universal_form_for_test(&arena, &[forall]).expect("detects the universal form");
+
+    // Forge a carried form by bumping the constants in the body/inner (so the
+    // structure is self-consistent with the proof's `forall_inst_guarded` steps' own
+    // atoms, but no original assertion renders to this body). `bump_consts` rewrites
+    // in-range numerals to `99`, changing `x>=5`'s guard range `[0,2]`/threshold off
+    // the query's universal.
+    let forged = axeyum_solver::GuardedUniversalForm {
+        var_name: genuine.var_name.clone(),
+        inner: bump_consts(&genuine.inner),
+        body: bump_consts(&genuine.body),
+        lo: genuine.lo,
+        hi: genuine.hi,
+    };
+    // `forged.body` is not the rendering of any assertion in the query, so the carried
+    // universal is not in the query → reject (cannot certify a refutation of THIS
+    // query). It must specifically NOT accept.
+    assert_ne!(
+        check_alethe_lra_guarded_inst_against(&forged, &proof, &arena, &[forall]),
+        Ok(true),
+        "a forged carried universal not derived from the query must be rejected"
+    );
+
+    // Sanity: the GENUINE carried form against the same query still checks — the
+    // strengthening is purely additive and rejects only the forgery.
+    assert_eq!(
+        check_alethe_lra_guarded_inst_against(&genuine, &proof, &arena, &[forall]),
+        Ok(true),
+        "the genuine carried universal against its own query must still certify"
+    );
+
+    // A second angle: even a GENUINE carried form fails to certify when the original
+    // assertions slice OMITS the universal — there is then nothing in the query the
+    // carried universal corresponds to.
+    assert_ne!(
+        check_alethe_lra_guarded_inst_against(&genuine, &proof, &arena, &[]),
+        Ok(true),
+        "an empty assertions slice cannot contain the carried universal → reject"
+    );
+}
+
+#[test]
 fn guarded_int_universal_sat_not_reported_unsat() {
     // `∀x:Int. (0<=x<=2) => x>=0` — every instance true, so SAT. Must NOT certify
     // unsat (no false report).

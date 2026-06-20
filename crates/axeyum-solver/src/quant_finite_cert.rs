@@ -676,6 +676,14 @@ pub fn check_alethe_lra_guarded_inst(
 /// sound premise *of the original `assertions`*, so the check no longer trusts the
 /// emitter for its premises.
 ///
+/// The carried `universal` is **also** cross-verified against the query: it must be
+/// the rendering of a guarded-finite-`Int` universal that is genuinely one of the
+/// original `assertions` (re-derived by the same guarded-universal detection and
+/// re-rendered by the same emitter renderers). A forged `GuardedUniversalForm` not corresponding
+/// to any original assertion is rejected — the check is independent of the carried
+/// form as well as of the proof's `assume`s, so the certificate is verified
+/// end-to-end against the original query.
+///
 /// On top of the rule-structure / `forall_inst_guarded` / `la_generic` checks, each
 /// `assume` clause must classify as exactly one of:
 ///
@@ -727,6 +735,12 @@ pub fn check_alethe_lra_guarded_inst_against(
 /// shapes documented on [`check_alethe_lra_guarded_inst_against`]. Returns `false`
 /// the moment any `assume` matches none of them.
 ///
+/// Before classifying the `assume`s, the carried `universal` itself is cross-verified
+/// against the query by [`carried_universal_in_assertions`]: it must be the rendering
+/// of a guarded universal that is actually one of `assertions`. This forecloses a
+/// forged carried form that the class-1 `assume` test (which compares against the
+/// carried form, not the query) would otherwise let through.
+///
 /// The original assertions are rendered with the **same** [`term_to_alethe_uf`] the
 /// emitters use, so an "original assertion" premise matches syntactically (compared
 /// by [`AletheTerm::key`]). The freshness test for a definition's introduced constant
@@ -739,6 +753,16 @@ fn verify_assumes_against(
     assertions: &[TermId],
 ) -> bool {
     use std::collections::BTreeSet;
+
+    // First, cross-verify the carried `universal` itself: it must be the rendering of
+    // a guarded universal that is actually one of the original `assertions`. Without
+    // this a forged `GuardedUniversalForm` (e.g. a different bound-variable body) would
+    // be accepted by the class-1 `assume` test below, since that test compares the
+    // `assume` to the carried form rather than to the query. A carried universal not
+    // derived from the query cannot certify a refutation of THIS query, so reject it.
+    if !carried_universal_in_assertions(universal, arena, assertions) {
+        return false;
+    }
 
     // The rendered original assertions, keyed for syntactic comparison.
     let mut assertion_keys: BTreeSet<String> = BTreeSet::new();
@@ -786,6 +810,36 @@ fn verify_assumes_against(
         return false; // unclassifiable premise ⇒ not a sound refutation of THIS query
     }
     true
+}
+
+/// Verifies that the carried `universal` corresponds to a guarded-finite-`Int`
+/// universal that is genuinely one of the original `assertions` — making the premise
+/// verification fully assume-independent (the carried form is no longer trusted from
+/// the emitter either).
+///
+/// For each assertion `a`, [`detect_guarded_universal`] re-derives the guarded
+/// structure; when present, both renderers the emitters use are applied
+/// ([`universal_form`] for the pure-`Int` body and [`universal_form_uf`] for the
+/// UF-aware body — a carried form was produced by exactly one of them) and compared
+/// to `universal` by `==`. The check accepts iff some assertion renders (in either
+/// fragment) to exactly the carried form; otherwise the carried universal is not in
+/// the query and the certificate is rejected.
+fn carried_universal_in_assertions(
+    universal: &GuardedUniversalForm,
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> bool {
+    for &a in assertions {
+        let Some(u) = detect_guarded_universal(arena, a) else {
+            continue;
+        };
+        if universal_form(arena, &u).as_ref() == Some(universal)
+            || universal_form_uf(arena, &u).as_ref() == Some(universal)
+        {
+            return true;
+        }
+    }
+    false
 }
 
 /// Classifies one `assume` atom against the four accepted premise shapes, recording a

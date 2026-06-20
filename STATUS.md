@@ -94,19 +94,17 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     QF_LIA (gap E), `bv2nat`-bound (gap D, partial-trust w/ recorded `IntBlast` step), and
     finite-`∀` quantifier (LIA + UF tails, custom in-tree `forall_inst_guarded`). The remaining
     uncertified fragments are gap A (NRA sign — needs `nra.rs`, concurrent lane) and the keystones.
-  - **Assume-independence: main gap CLOSED, one residual.** The custom-rule quantifier certs
-    (finite-`∀` LIA + UF) now re-check every **ground-fact and abstraction-definition `assume`**
-    against the original query via `check_alethe_lra_guarded_inst_against` (class 2 = rendered
-    original assertion; class 3 = genuinely-fresh `(= !fn_app_N (f t))` Ackermann def; class 4 =
-    abstracted original via a class-3 def) — anything else ⇒ `Ok(false)`. Soundness-negative
-    tests confirm a fabricated premise that the OLD checker accepted is now rejected. **Residual
-    follow-up:** the carried `universal` itself (class 1) is matched structurally to the cert's
-    `GuardedUniversalForm` but NOT yet cross-verified to be one of the original `assertions`
-    (`term_to_alethe_uf` doesn't render `∀` binders, so the clean fix is to re-run
-    `detect_guarded_universal` over `assertions` and require a match — a small, careful addition).
-    Until then a forged carried universal could pass class 1 (not reachable via `produce_evidence`,
-    which builds the universal from the query, but a gap in full checker-vs-producer independence).
-    These remain in-tree-checked (no Carcara/Lean backstop — `forall_inst`-in-kernel is coordination-gated).
+  - **Assume-independence: COMPLETE.** The custom-rule quantifier certs (finite-`∀` LIA + UF)
+    now re-check EVERY `assume` against the original query via
+    `check_alethe_lra_guarded_inst_against` — the carried `universal` (re-detected from
+    `assertions` via `detect_guarded_universal` + the emitters' `universal_form`/`universal_form_uf`
+    renderers and compared), the ground facts (rendered original assertions), the fresh Ackermann
+    defs (`(= !fn_app_N (f t))`, the introduced const must not occur in the query), and abstracted
+    originals bridged through a def — anything else ⇒ `Ok(false)`. Four soundness-negative tests
+    (fabricated premise LIA/UF, non-fresh def, forged carried universal) confirm each hole the old
+    checker had is closed; no false negatives (all genuine certs + tampers pass). The check is now
+    fully checker-vs-producer independent. (Still in-tree-checked — no Carcara/Lean backstop, since
+    `forall_inst`-in-kernel is coordination-gated; but the in-tree check is now complete.)
   - **Remaining frontier (the in-`solver` tractable gap-cycle is exhausted; these are the hard
     keystones / coordination-gated items the 6 passes surfaced):**
     - **arith-UF SAT model (gap C, keystone, COORDINATION-GATED on `axeyum-ir`):** QF_UFLIA/
