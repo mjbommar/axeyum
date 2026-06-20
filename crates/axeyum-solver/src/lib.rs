@@ -166,9 +166,12 @@ pub use model::Model;
 pub use nra::check_with_nra;
 pub use optimize::{
     BvLexObjective, LexObjective, LexOutcome, OptOutcome, ParetoOutcome, maximize_bv,
-    maximize_bv_signed, maximize_lia, maximize_lia_with_config, minimize_bv, minimize_bv_signed,
-    minimize_lia, minimize_lia_with_config, optimize_bv_box, optimize_bv_lexicographic,
-    optimize_bv_pareto, optimize_lia_box, optimize_lia_box_with_config, optimize_lia_lexicographic,
+    maximize_bv_signed, maximize_bv_signed_with_config, maximize_bv_with_config, maximize_lia,
+    maximize_lia_with_config, minimize_bv, minimize_bv_signed, minimize_bv_signed_with_config,
+    minimize_bv_with_config, minimize_lia, minimize_lia_with_config, optimize_bv_box,
+    optimize_bv_box_with_config, optimize_bv_lexicographic, optimize_bv_lexicographic_with_config,
+    optimize_bv_pareto, optimize_bv_pareto_with_config, optimize_lia_box,
+    optimize_lia_box_with_config, optimize_lia_lexicographic,
     optimize_lia_lexicographic_with_config, optimize_lia_pareto, optimize_lia_pareto_with_config,
 };
 pub use pb::{pb_eq, pb_ge, pb_gt, pb_le, pb_lt};

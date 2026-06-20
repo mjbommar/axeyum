@@ -218,7 +218,7 @@ impl<B: SolverBackend> Solver<B> {
         arena: &mut TermArena,
         objective: TermId,
     ) -> Result<crate::OptOutcome, SolverError> {
-        crate::maximize_bv(arena, &self.assertions, objective)
+        crate::maximize_bv_with_config(arena, &self.assertions, objective, &self.config)
     }
 
     /// Minimizes the unsigned bit-vector `objective` subject to the active
@@ -232,7 +232,7 @@ impl<B: SolverBackend> Solver<B> {
         arena: &mut TermArena,
         objective: TermId,
     ) -> Result<crate::OptOutcome, SolverError> {
-        crate::minimize_bv(arena, &self.assertions, objective)
+        crate::minimize_bv_with_config(arena, &self.assertions, objective, &self.config)
     }
 
     /// Minimizes the integer-linear `objective` subject to the active assertions
@@ -302,7 +302,12 @@ impl<B: SolverBackend> Solver<B> {
         arena: &mut TermArena,
         objectives: &[crate::BvLexObjective],
     ) -> Result<crate::LexOutcome, SolverError> {
-        crate::optimize_bv_lexicographic(arena, &self.assertions, objectives)
+        crate::optimize_bv_lexicographic_with_config(
+            arena,
+            &self.assertions,
+            objectives,
+            &self.config,
+        )
     }
 
     /// Box (independent) multi-objective optimization over **bit-vector**
@@ -316,7 +321,7 @@ impl<B: SolverBackend> Solver<B> {
         arena: &mut TermArena,
         objectives: &[crate::BvLexObjective],
     ) -> Result<Vec<crate::OptOutcome>, SolverError> {
-        crate::optimize_bv_box(arena, &self.assertions, objectives)
+        crate::optimize_bv_box_with_config(arena, &self.assertions, objectives, &self.config)
     }
 
     /// Pareto-front multi-objective optimization over **bit-vector** objectives
@@ -330,7 +335,7 @@ impl<B: SolverBackend> Solver<B> {
         arena: &mut TermArena,
         objectives: &[crate::BvLexObjective],
     ) -> Result<crate::ParetoOutcome, SolverError> {
-        crate::optimize_bv_pareto(arena, &self.assertions, objectives)
+        crate::optimize_bv_pareto_with_config(arena, &self.assertions, objectives, &self.config)
     }
 
     /// Maximizes the number of satisfied `soft` constraints subject to the active

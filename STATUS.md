@@ -538,6 +538,23 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **ROBUSTNESS: BV optimization honors `config.timeout` (closes an unbounded
+  hang).** Found by the non-arith deep hunt: every bit-vector optimizer ran its feasibility
+  probes with a hardcoded `SolverConfig::default()` (no timeout), and the `Solver` façade dropped
+  `self.config` — so a hard BV probe (e.g. maximizing over a 64-bit Euclid-reconstruction UNSAT
+  core) ran forever regardless of the caller's budget. Symmetric to the LIA/Real `*_with_config`
+  fix done earlier (which the BV path never got). Fix: `bv_value`/`pareto_bv_probe` now take and
+  thread `config`; new `*_bv_with_config` variants for all 7 optimizers (`maximize_bv` …
+  `optimize_bv_pareto`) derive a deadline and bail gracefully in the search/point loops
+  (`OptOutcome::Unknown(ResourceLimit)` / `LexOutcome::Stopped` / `ParetoOutcome::Truncated`
+  best-so-far); the no-config functions delegate with `default()` (existing call sites + optima
+  byte-identical); the `Solver` façade passes `self.config`. The Euclid core via
+  `maximize_bv_with_config(timeout=2s)` now returns in ~2s (was unbounded). New
+  `tests/optimize_bv_timeout.rs` (3, incl. optima-unchanged + façade); existing optimize (24) +
+  robustness (6) optima unchanged; full suite + clippy + doc + fmt green. **With this, both deep
+  hunts (arith + non-arith) give a clean bill — no hangs, no wrong answers across all theories.**
+  Sub-agent + soundness review.
+
 - **2026-06-19** — **P2.5: single-variable integer square `x*x ⋈ c` decided exactly (`x*x=2` →
   Unsat).** Closes a hunt-flagged NIA gap. New `nia_square.rs` (`decide_int_square_constraint`):
   fires only when the WHOLE query is exactly one assertion `(x*x) ⋈ c` — `x*x` is `IntMul` of the

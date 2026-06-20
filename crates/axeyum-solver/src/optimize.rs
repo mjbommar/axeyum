@@ -614,14 +614,43 @@ pub fn optimize_bv_lexicographic(
     assertions: &[TermId],
     objectives: &[BvLexObjective],
 ) -> Result<LexOutcome, SolverError> {
+    optimize_bv_lexicographic_with_config(arena, assertions, objectives, &SolverConfig::default())
+}
+
+/// Like [`optimize_bv_lexicographic`], honoring `config` (notably
+/// `config.timeout`): the deadline is checked before each objective and threaded
+/// into the single-objective BV optimizer, so a timeout stops the chain with a
+/// [`LexOutcome::Stopped`] carrying an [`OptOutcome::Unknown`].
+///
+/// # Errors
+///
+/// See [`optimize_bv_lexicographic`].
+pub fn optimize_bv_lexicographic_with_config(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objectives: &[BvLexObjective],
+    config: &SolverConfig,
+) -> Result<LexOutcome, SolverError> {
+    let deadline = deadline_from(config);
     let mut constraints = assertions.to_vec();
     let mut values: Vec<i128> = Vec::with_capacity(objectives.len());
     for (index, obj) in objectives.iter().enumerate() {
+        if past_deadline(deadline) {
+            return Ok(LexOutcome::Stopped {
+                index,
+                prefix: values,
+                outcome: OptOutcome::Unknown(timed_out_reason()),
+            });
+        }
         let outcome = match (obj.signed, obj.maximize) {
-            (false, true) => maximize_bv(arena, &constraints, obj.objective)?,
-            (false, false) => minimize_bv(arena, &constraints, obj.objective)?,
-            (true, true) => maximize_bv_signed(arena, &constraints, obj.objective)?,
-            (true, false) => minimize_bv_signed(arena, &constraints, obj.objective)?,
+            (false, true) => maximize_bv_with_config(arena, &constraints, obj.objective, config)?,
+            (false, false) => minimize_bv_with_config(arena, &constraints, obj.objective, config)?,
+            (true, true) => {
+                maximize_bv_signed_with_config(arena, &constraints, obj.objective, config)?
+            }
+            (true, false) => {
+                minimize_bv_signed_with_config(arena, &constraints, obj.objective, config)?
+            }
         };
         match outcome {
             OptOutcome::Optimal(value) => {
@@ -678,13 +707,38 @@ pub fn optimize_bv_box(
     assertions: &[TermId],
     objectives: &[BvLexObjective],
 ) -> Result<Vec<OptOutcome>, SolverError> {
+    optimize_bv_box_with_config(arena, assertions, objectives, &SolverConfig::default())
+}
+
+/// Like [`optimize_bv_box`], honoring `config` (notably `config.timeout`): once the
+/// deadline passes, the remaining objectives report [`OptOutcome::Unknown`] (a
+/// [`UnknownKind::ResourceLimit`]) rather than running on.
+///
+/// # Errors
+///
+/// See [`optimize_bv_box`].
+pub fn optimize_bv_box_with_config(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objectives: &[BvLexObjective],
+    config: &SolverConfig,
+) -> Result<Vec<OptOutcome>, SolverError> {
+    let deadline = deadline_from(config);
     let mut out = Vec::with_capacity(objectives.len());
     for obj in objectives {
+        if past_deadline(deadline) {
+            out.push(OptOutcome::Unknown(timed_out_reason()));
+            continue;
+        }
         let outcome = match (obj.signed, obj.maximize) {
-            (false, true) => maximize_bv(arena, assertions, obj.objective)?,
-            (false, false) => minimize_bv(arena, assertions, obj.objective)?,
-            (true, true) => maximize_bv_signed(arena, assertions, obj.objective)?,
-            (true, false) => minimize_bv_signed(arena, assertions, obj.objective)?,
+            (false, true) => maximize_bv_with_config(arena, assertions, obj.objective, config)?,
+            (false, false) => minimize_bv_with_config(arena, assertions, obj.objective, config)?,
+            (true, true) => {
+                maximize_bv_signed_with_config(arena, assertions, obj.objective, config)?
+            }
+            (true, false) => {
+                minimize_bv_signed_with_config(arena, assertions, obj.objective, config)?
+            }
         };
         out.push(outcome);
     }
@@ -777,8 +831,9 @@ fn pareto_bv_probe(
     arena: &mut TermArena,
     constraints: &[TermId],
     objectives: &[BvLexObjective],
+    config: &SolverConfig,
 ) -> Result<MultiProbe, SolverError> {
-    match check_auto(arena, constraints, &SolverConfig::default())? {
+    match check_auto(arena, constraints, config)? {
         CheckResult::Sat(model) => {
             let assignment = model.to_assignment();
             let mut vals = Vec::with_capacity(objectives.len());
@@ -818,15 +873,37 @@ pub fn optimize_bv_pareto(
     assertions: &[TermId],
     objectives: &[BvLexObjective],
 ) -> Result<ParetoOutcome, SolverError> {
+    optimize_bv_pareto_with_config(arena, assertions, objectives, &SolverConfig::default())
+}
+
+/// Like [`optimize_bv_pareto`], honoring `config` (notably `config.timeout`): a
+/// wall-clock deadline is checked at the top of each enumeration round and on each
+/// guided-improvement push, returning the points verified so far as
+/// [`ParetoOutcome::Truncated`] on expiry (the `MAX_PARETO_POINTS` /
+/// `MAX_PARETO_PUSH` caps remain as secondary deterministic bounds).
+///
+/// # Errors
+///
+/// See [`optimize_bv_pareto`].
+pub fn optimize_bv_pareto_with_config(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objectives: &[BvLexObjective],
+    config: &SolverConfig,
+) -> Result<ParetoOutcome, SolverError> {
+    let deadline = deadline_from(config);
     let mut front: Vec<Vec<i128>> = Vec::new();
     let mut exclusions: Vec<TermId> = Vec::new();
     loop {
         if front.len() >= MAX_PARETO_POINTS {
             return Ok(ParetoOutcome::Truncated(front));
         }
+        if past_deadline(deadline) {
+            return Ok(ParetoOutcome::Truncated(front));
+        }
         let mut query = assertions.to_vec();
         query.extend_from_slice(&exclusions);
-        let candidate = match pareto_bv_probe(arena, &query, objectives)? {
+        let candidate = match pareto_bv_probe(arena, &query, objectives, config)? {
             MultiProbe::Sat(v) => v,
             MultiProbe::Unsat => return Ok(ParetoOutcome::Complete(front)),
             MultiProbe::Unknown(reason) => {
@@ -839,13 +916,16 @@ pub fn optimize_bv_pareto(
         let mut v = candidate;
         let mut certified = false;
         for _ in 0..MAX_PARETO_PUSH {
+            if past_deadline(deadline) {
+                return Ok(ParetoOutcome::Truncated(front));
+            }
             let mut dom = assertions.to_vec();
             for (obj, &vi) in objectives.iter().zip(&v) {
                 let w = pareto_bv_width(arena, *obj)?;
                 dom.push(pareto_bv_better_eq(arena, *obj, w, vi)?);
             }
             dom.push(pareto_bv_improves_somewhere(arena, objectives, &v)?);
-            match pareto_bv_probe(arena, &dom, objectives)? {
+            match pareto_bv_probe(arena, &dom, objectives, config)? {
                 MultiProbe::Sat(w) => v = w,
                 MultiProbe::Unsat => {
                     certified = true;
@@ -962,8 +1042,26 @@ pub fn maximize_bv(
     assertions: &[TermId],
     objective: TermId,
 ) -> Result<OptOutcome, SolverError> {
+    maximize_bv_with_config(arena, assertions, objective, &SolverConfig::default())
+}
+
+/// Like [`maximize_bv`], but honoring `config` (notably `config.timeout`): every
+/// feasibility probe is decided under `config`, and the binary search checks a
+/// wall-clock deadline, returning [`OptOutcome::Unknown`] (a
+/// [`UnknownKind::ResourceLimit`]) on expiry rather than running unbounded.
+///
+/// # Errors
+///
+/// See [`maximize_bv`].
+pub fn maximize_bv_with_config(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objective: TermId,
+    config: &SolverConfig,
+) -> Result<OptOutcome, SolverError> {
+    let deadline = deadline_from(config);
     let max = bv_objective_max(arena, objective)?;
-    let v0 = match bv_value(arena, assertions, objective, None)? {
+    let v0 = match bv_value(arena, assertions, objective, None, config)? {
         BvProbe::Sat(value) => value,
         BvProbe::Unsat => return Ok(OptOutcome::Infeasible),
         BvProbe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
@@ -972,8 +1070,17 @@ pub fn maximize_bv(
     let mut lo = v0;
     let mut hi = max;
     while lo < hi {
+        if past_deadline(deadline) {
+            return Ok(OptOutcome::Unknown(timed_out_reason()));
+        }
         let mid = lo + (hi - lo).div_ceil(2);
-        match bv_value(arena, assertions, objective, Some((BvRel::Uge, mid)))? {
+        match bv_value(
+            arena,
+            assertions,
+            objective,
+            Some((BvRel::Uge, mid)),
+            config,
+        )? {
             BvProbe::Sat(value) => lo = value.max(mid),
             BvProbe::Unsat => hi = mid - 1,
             BvProbe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
@@ -993,8 +1100,26 @@ pub fn minimize_bv(
     assertions: &[TermId],
     objective: TermId,
 ) -> Result<OptOutcome, SolverError> {
+    minimize_bv_with_config(arena, assertions, objective, &SolverConfig::default())
+}
+
+/// Like [`minimize_bv`], but honoring `config` (notably `config.timeout`): every
+/// feasibility probe is decided under `config`, and the binary search checks a
+/// wall-clock deadline, returning [`OptOutcome::Unknown`] (a
+/// [`UnknownKind::ResourceLimit`]) on expiry rather than running unbounded.
+///
+/// # Errors
+///
+/// See [`maximize_bv`].
+pub fn minimize_bv_with_config(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objective: TermId,
+    config: &SolverConfig,
+) -> Result<OptOutcome, SolverError> {
+    let deadline = deadline_from(config);
     bv_objective_max(arena, objective)?; // width check
-    let v0 = match bv_value(arena, assertions, objective, None)? {
+    let v0 = match bv_value(arena, assertions, objective, None, config)? {
         BvProbe::Sat(value) => value,
         BvProbe::Unsat => return Ok(OptOutcome::Infeasible),
         BvProbe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
@@ -1003,8 +1128,17 @@ pub fn minimize_bv(
     let mut lo = 0u128;
     let mut hi = v0;
     while lo < hi {
+        if past_deadline(deadline) {
+            return Ok(OptOutcome::Unknown(timed_out_reason()));
+        }
         let mid = lo + (hi - lo) / 2;
-        match bv_value(arena, assertions, objective, Some((BvRel::Ule, mid)))? {
+        match bv_value(
+            arena,
+            assertions,
+            objective,
+            Some((BvRel::Ule, mid)),
+            config,
+        )? {
             BvProbe::Sat(value) => hi = value.min(mid),
             BvProbe::Unsat => lo = mid + 1,
             BvProbe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
@@ -1025,21 +1159,43 @@ pub fn maximize_bv_signed(
     assertions: &[TermId],
     objective: TermId,
 ) -> Result<OptOutcome, SolverError> {
+    maximize_bv_signed_with_config(arena, assertions, objective, &SolverConfig::default())
+}
+
+/// Like [`maximize_bv_signed`], but honoring `config` (notably `config.timeout`):
+/// every feasibility probe is decided under `config`, and the binary search checks
+/// a wall-clock deadline, returning [`OptOutcome::Unknown`] (a
+/// [`UnknownKind::ResourceLimit`]) on expiry rather than running unbounded.
+///
+/// # Errors
+///
+/// See [`maximize_bv_signed`].
+pub fn maximize_bv_signed_with_config(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objective: TermId,
+    config: &SolverConfig,
+) -> Result<OptOutcome, SolverError> {
+    let deadline = deadline_from(config);
     let width = bv_signed_width(arena, objective)?;
     let (_, max_s) = bv_signed_range(width);
-    let mut lo = match bv_value(arena, assertions, objective, None)? {
+    let mut lo = match bv_value(arena, assertions, objective, None, config)? {
         BvProbe::Sat(raw) => bv_signed(raw, width),
         BvProbe::Unsat => return Ok(OptOutcome::Infeasible),
         BvProbe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
     };
     let mut hi = max_s;
     while lo < hi {
+        if past_deadline(deadline) {
+            return Ok(OptOutcome::Unknown(timed_out_reason()));
+        }
         let mid = lo + (hi - lo + 1) / 2; // upper mid; width <= 64 avoids overflow
         match bv_value(
             arena,
             assertions,
             objective,
             Some((BvRel::Sge, signed_to_bits(mid, width))),
+            config,
         )? {
             BvProbe::Sat(raw) => lo = bv_signed(raw, width).max(mid),
             BvProbe::Unsat => hi = mid - 1,
@@ -1060,21 +1216,43 @@ pub fn minimize_bv_signed(
     assertions: &[TermId],
     objective: TermId,
 ) -> Result<OptOutcome, SolverError> {
+    minimize_bv_signed_with_config(arena, assertions, objective, &SolverConfig::default())
+}
+
+/// Like [`minimize_bv_signed`], but honoring `config` (notably `config.timeout`):
+/// every feasibility probe is decided under `config`, and the binary search checks
+/// a wall-clock deadline, returning [`OptOutcome::Unknown`] (a
+/// [`UnknownKind::ResourceLimit`]) on expiry rather than running unbounded.
+///
+/// # Errors
+///
+/// See [`maximize_bv_signed`].
+pub fn minimize_bv_signed_with_config(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objective: TermId,
+    config: &SolverConfig,
+) -> Result<OptOutcome, SolverError> {
+    let deadline = deadline_from(config);
     let width = bv_signed_width(arena, objective)?;
     let (min_s, _) = bv_signed_range(width);
-    let mut hi = match bv_value(arena, assertions, objective, None)? {
+    let mut hi = match bv_value(arena, assertions, objective, None, config)? {
         BvProbe::Sat(raw) => bv_signed(raw, width),
         BvProbe::Unsat => return Ok(OptOutcome::Infeasible),
         BvProbe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
     };
     let mut lo = min_s;
     while lo < hi {
+        if past_deadline(deadline) {
+            return Ok(OptOutcome::Unknown(timed_out_reason()));
+        }
         let mid = lo + (hi - lo) / 2; // lower mid
         match bv_value(
             arena,
             assertions,
             objective,
             Some((BvRel::Sle, signed_to_bits(mid, width))),
+            config,
         )? {
             BvProbe::Sat(raw) => hi = bv_signed(raw, width).min(mid),
             BvProbe::Unsat => lo = mid + 1,
@@ -1177,6 +1355,7 @@ fn bv_value(
     assertions: &[TermId],
     objective: TermId,
     bound: Option<(BvRel, u128)>,
+    config: &SolverConfig,
 ) -> Result<BvProbe, SolverError> {
     let Sort::BitVec(width) = arena.sort_of(objective) else {
         unreachable!("bv_value called on a non-bit-vector objective")
@@ -1192,7 +1371,7 @@ fn bv_value(
         };
         query.push(constraint);
     }
-    match crate::auto::solve(arena, &query, &SolverConfig::default())? {
+    match crate::auto::solve(arena, &query, config)? {
         CheckResult::Sat(model) => {
             let assignment = model.to_assignment();
             match eval(arena, objective, &assignment)? {
