@@ -7,7 +7,7 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 ## Current focus
 
 - **Session 2026-06-19 — robustness + proof certs + capability-gap sweep (resume here).**
-  **38 validated commits**; whole `axeyum-solver` crate green on test/clippy/doc/fmt (999
+  **41 validated commits**; whole `axeyum-solver` crate green on test/clippy/doc/fmt (999
   tests) + Carcara (54) + workspace build + links — confirmed cohesively gate-green at session
   end (the consolidation caught and fixed a doc-link regression clippy/tests had missed).
   Method: **6 read-only *capability-gap probe* passes** (theory decidability; arrays/mixed/
@@ -89,8 +89,13 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     cross-crate, partly-coordination-gated, multi-slice effort — not a clean in-`solver`
     increment. Other open trust holes (lowest pedantic first): `int-blast` (3),
     `xor-gaussian` (3), `datatype-elim` (4), `fpa2bv` (5) — each a from-scratch certificate.
+  - **Certification sweep COMPLETE (in-`solver`):** every self-contained certification gap the
+    6th-pass proof-completeness map surfaced is now closed — QF_UFLIA/UFLRA (gap C, zero-trust),
+    QF_LIA (gap E), `bv2nat`-bound (gap D, partial-trust w/ recorded `IntBlast` step), and
+    finite-`∀` quantifier (custom in-tree `forall_inst_guarded`). The remaining uncertified
+    fragments are gap A (NRA sign — needs `nra.rs`, concurrent lane) and the keystones below.
   - **Remaining frontier (the in-`solver` tractable gap-cycle is exhausted; these are the hard
-    keystones / coordination-gated items the 4 passes surfaced):**
+    keystones / coordination-gated items the 6 passes surfaced):**
     - **arith-UF SAT model (gap C, keystone, COORDINATION-GATED on `axeyum-ir`):** QF_UFLIA/
       UFLRA `sat` returns `Unknown` because an `Int`/`Real`-sorted UF's function-table model
       can't be built — `FuncValue` and the ground evaluator key function applications by
