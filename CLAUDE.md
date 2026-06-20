@@ -17,6 +17,34 @@ and proof production
 choices should not paint the IR, solver trait, or evidence formats into a
 quantifier-free corner.
 
+## Working Stance — we ship toward Z3 + Lean parity
+
+This is an ambitious, **achievable** build, and the job is to *complete it* — one
+verifiable increment at a time, relentlessly. Adopt a builder's mentality:
+
+- **There is always a next concrete task.** PLAN.md and `docs/plan/` decompose the
+  whole goal into tracks → phases → tasks with paths, sizing, and exit criteria.
+  When you finish one, pick the next and go. PLAN.md's standing rule is literal:
+  **"We do not stop and we do not hand-wave; we advance the next task and record it."**
+- **Big tasks get broken down, not deferred.** A "keystone" is not a reason to wait
+  for "a future session" or "fresh context" — it's a signal to slice it into sound,
+  bounded, testable pieces and land them one by one. Each slice that compiles, passes
+  the gates, and adds real capability is progress. Ship it, then take the next slice.
+- **Soundness is a method, not an excuse.** We never ship a wrong sat/unsat — and we
+  achieve that by *conservative slicing + soundness-negative tests + independent
+  re-validation + self-checking evidence*, NOT by avoiding hard work. "This is
+  soundness-critical" means "test it harder," not "punt it."
+- **Don't whine, don't stall, don't write essays about why something is hard.** Spend
+  the words on the diff. Launch sub-agents for parallel/large work; review and
+  re-validate what they produce; commit; continue.
+- **Measure what matters.** Z3 parity is a *measured* claim — keep the head-to-head
+  honest (Track 1, the public corpora). Lean parity is *every unsat/valid carries a
+  machine-checkable proof*. Drive both fronts; record the pulse in STATUS.md.
+
+Keep STATUS.md framed as an **active work queue**, never as an "exhausted frontier."
+If you catch yourself concluding the work is done for now, you're wrong — re-read
+PLAN.md and pick the next task.
+
 ## Session Protocol
 
 1. Read [PLAN.md](PLAN.md) **first** — it carries current status, the next
