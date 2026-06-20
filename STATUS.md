@@ -26,14 +26,19 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     (6) **packed clause arena** (Vec<Vec> → flat arena + headers + CRef; cache-local BCP) — BCP
     74s→67s (−9%), total 87s→81s, decisions/conflicts/propagations bit-identical (trajectory
     invariant; CRef-safe via append-only + tombstone deletion); (7) **Glucose LBD restarts —
-    REVERTED** (negative result: DISAGREE=0 but Luby solves string1x8.4 in 75s while LBD variants
-    fail in 140s — the well-known "LBD restarts hurt SAT-crafted instances" mode; these are
-    SAT/propagation-bound on the path-to-model, not restart-bound). **Native now 230s→81s on
-    string1x8.3, ~19x over batsat's 4.2s.** **NEXT (profile FIRST — heap-v1 + LBD-restarts were
-    guessed-and-missed): measure whether batsat does FEWER propagations (→ heuristic lever) or the
-    SAME props FASTER (→ BCP micro-opt / vivification) on the identical reduced CNF — that scopes
-    slice 8.** The SAT instances are propagation-bound, so restart-quality is the WRONG tool here.
-    5 slices committed, 2 reverted — the revert discipline is working.
+    REVERTED** (DISAGREE=0 but regressed the SAT instance — the "LBD restarts hurt SAT-crafted"
+    mode); (8) **recursive learned-clause minimization** (MiniSat ccmin_mode=2: iterative
+    lit_redundant + abstract-levels, RUP-preserving so DRAT stays valid) — **the big win**.
+    **Profiling corrected the gap: it was never ~20× — on the identical reduced CNF the real gap
+    was 2.3× (native 94s vs batsat 40s), SEARCH-quality-bound (native did ~2× the conflicts from
+    weaker minimization), NOT BCP-bound.** Slice 8 closed it: conflicts 960k→505k (≈batsat's
+    504k), props 914M→511M, wall 94s→48s — **native is now ~1.2× of batsat** (search-quality gap
+    essentially closed; residual ~20% is per-propagation BCP overhead). **A genuinely competitive
+    pure-Rust proof-emitting core.** 6 slices committed, 2 reverted — the revert discipline held.
+    **NEXT: the assurance payoff is now viable — wire `native_cdcl` as the primary engine when
+    `prove_unsat` is set, so an unsat carries its DRAT proof BY CONSTRUCTION (no separate
+    budget-bounded re-derivation that can fail-closed to Unknown).** Then optionally slice 9 = the
+    residual ~20% BCP/per-prop lever (vivification), lower priority.
   - **Codex-review correctness items — ALL CLOSED (each with soundness tests):** `prove_unsat`
     fail-closed (no unverified-unsat-as-checked); **eval graceful arithmetic overflow** (bv2nat
     ≥128-bit no longer wraps negative; Int/Real overflow → `Err`→`Unknown`, never crash/wrong —
