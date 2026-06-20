@@ -895,6 +895,22 @@ fn lia_simplex_within(
     }
     let nvars = ctx.vars.len();
     let mut constraints = ctx.constraints;
+    // Integer tightening: a *strict* constraint `expr < 0` over an integer-valued
+    // `expr` (all coefficients integral; the variables are integers) is equivalent to
+    // `expr ≤ -1`, i.e. `expr + 1 ≤ 0`. Tightening to a non-strict bound makes the LP
+    // relaxation EXACT for it — so `c > y ∧ c < y+1` (⇒ `c−y ≥ 1 ∧ c−y ≤ 0`) is
+    // immediately LP-infeasible (`unsat`) instead of branch-and-bound grinding forever
+    // on the real-feasible `0 < c−y < 1`. Only applied when `expr` is provably
+    // integer-valued (else left strict — sound, the simplex still handles it).
+    for constraint in &mut constraints {
+        if constraint.strict
+            && constraint.expr.constant.is_integer()
+            && constraint.expr.coeffs.values().all(|r| r.is_integer())
+        {
+            constraint.expr.constant = constraint.expr.constant + Rational::integer(1);
+            constraint.strict = false;
+        }
+    }
     let mut budget = MAX_LIA_BNB_NODES;
     match lia_branch_and_bound(&mut constraints, nvars, &mut budget, deadline) {
         LiaBnb::Unsat => Ok(CheckResult::Unsat),

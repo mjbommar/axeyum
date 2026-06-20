@@ -530,6 +530,20 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P2.x COMPLETENESS: integer strict-inequality tightening — `c>y ∧ c<y+1`
+  decides UNSAT instantly (and the open-`∀` decides Sat).** The follow-up to the LIA-hang
+  deadline below: rather than merely *not hang*, the LIA solver now *decides* these. A strict
+  constraint `expr < 0` over an integer-valued `expr` (all coefficients integral; vars integer)
+  is equivalent to `expr ≤ -1` ≡ `expr + 1 ≤ 0`; `lia_simplex_within` tightens every such
+  constraint to non-strict before branch-and-bound, making the LP relaxation EXACT. So
+  `c > y ∧ c < y+1` ⇒ `c−y ≥ 1 ∧ c−y ≤ 0` is immediately LP-infeasible → instant UNSAT (no
+  grind, no deadline needed), and therefore `∀x:Int.(x≤y ∨ x≥y+1)` (valid — no integer between
+  consecutive integers) now decides **Sat** via the valid-universal pass, fast. Only applied
+  when `expr` is provably integer-valued (else left strict — sound). Equisatisfiable, so no
+  existing LIA verdict changes (lia_simplex + full suite green). Tests:
+  `qf_strict_between_consecutive_is_unsat_fast` (→ Unsat) and
+  `open_disjunctive_universal_is_valid_and_fast` (→ Sat), both in 0.00s.
+
 - **2026-06-19** — **ROBUSTNESS: QF-LIA branch-and-bound honors `config.timeout` (root of the
   open-`∀` hang).** The real root: a QF-LIA query `c > y ∧ c < y+1` (real-feasible at c=y+0.5,
   integer-infeasible — no integer strictly between consecutive integers) sent
