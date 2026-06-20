@@ -569,6 +569,29 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-20** — **PERF: SAT-core investigation — the residual gap is propagation-bound + the
+  recommended "preprocess-default" slice is ALREADY DONE (verified).** A read-only, data-backed
+  SAT-core investigation (pure-Rust constraint): (1) batsat 0.6.0 via rustsat-batsat 0.7.5 is
+  **config-locked** — the wrapper's opts field is private with no setter; tuning batsat's exposed
+  knobs (var_decay/restart/luby/learntsize/random_var_freq) is **net-neutral**, A/B-measured. (2)
+  The ~99 timeouts are **propagation-bound, not restart-bound**: `string1x8.4` burns ~205k
+  conflicts but **169M propagations** (~770/conflict) across 5 configs, all timeout; `tcp_open`
+  ~102k conflicts / 125M props. (3) **Genuinely hard**, not a batsat-vs-Z3 gap — Z3's bit-blast
+  tactic also times out; Z3's full pipeline needs **42 s** on the smallest. (4) The investigation's
+  #1 rec ("route the full word-level pipeline into the default `solve()` path + flip
+  `preprocess` default-on") is **STALE — already implemented**: `solve()`→`check_auto` already runs
+  `preprocess_reduce` (canonicalize→propagate_values→solve_eqs_bounded→elim_unconstrained→
+  re-canonicalize) under `preprocess: true` default (ADR-0037/0034); the `--preprocess` flag only
+  gates the *bench harness*, not the product. **Verified by reading auto.rs:82/381 + backend.rs:208
+  before acting** (caught the stale rec — did not redo done work). **Honest conclusion:** the cheap
+  perf levers on the QF_BV public corpus are exhausted/landed (word-level preprocessing default-on
+  2→7/113; CNF inprocessing+compaction +1). The remaining SAT-core lever is a **multi-week
+  pure-Rust kissat-class core** (fast watch-literal propagation + LBD clause deletion + vivification/
+  on-the-fly subsumption + propagation-reducing preprocessing) that caps at the **~9 small-CNF**
+  timeouts (the in-tree `xor_cdcl` with VSIDS/Luby/LBD also fails `string1x8.4`); the other ~90 are
+  ≥650k-clause CNFs that defeat kissat itself in 30 s. kissat/CaDiCaL (C/C++) are barred from the
+  default path by the no-C-dependency hard rule (feature-gated oracle at most).
+
 - **2026-06-20** — **PERF measured: slice 1+2 = 3→4/113 (the inprocessing conversion); the
   remaining gap is SAT-search-bound, not encoding-bound.** Full A/B on the public p4dfa 113
   (DISAGREE=0, 0 replay failures throughout): `--preprocess` 3/113 @3s, 7/113 @20s;
