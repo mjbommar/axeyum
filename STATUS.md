@@ -569,6 +569,22 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-20** — **PERF measured: slice 1+2 = 3→4/113 (the inprocessing conversion); the
+  remaining gap is SAT-search-bound, not encoding-bound.** Full A/B on the public p4dfa 113
+  (DISAGREE=0, 0 replay failures throughout): `--preprocess` 3/113 @3s, 7/113 @20s;
+  `--preprocess --inprocess` (slice 1+2) **4/113 @3s** (par2 5.864→5.837), **7/113 @20s**
+  (par2 37.874→37.840). So CNF inprocessing captured exactly its one encoding-reachable
+  conversion (slice 1's `compose.p2`) and **compaction is net-neutral on decided-count** on this
+  corpus: at 3s BVE truncates before dropping a 2.1M-var case below the 2M ceiling *and* solving
+  it; at 20s the var-bound cases are **already admitted** (3M ceiling) and BVE shrinking them ~28%
+  **still doesn't make them solve** — proving the bottleneck for the residual ~106 is the SAT
+  *search*, not the encoding. Compaction stays (sound, tested, un-refuses var-bound cases per the
+  admission unit test, marginal par2 win) but is correctly not overclaimed. **Conclusion / next
+  lever: the SAT core.** CNF inprocessing (subsumption+BVE+compaction) is now fully exploited; the
+  large-CNF + search-bound band (ADR-0037's ~88 "defeat even kissat" + ~9 search-bound) needs an
+  in-search technique — in-search inprocessing / a stronger CDCL / word-level reduction
+  (`axeyum-rewrite`) — not more preprocessing. This is the measured handoff to the SAT-core slice.
+
 - **2026-06-20** — **PERF (Track 1, #1) slice 2: CNF variable compaction — un-refuses var-bound
   EncodingBudget cases (sound model lift).** BVE removes variables but does NOT renumber, so the
   reduced formula's `variable_count()` still reports the original max index — and `check_cnf_budgets`
