@@ -140,10 +140,29 @@ pub fn solve(
     // replaces the universal with an equivalent `x`-free term that re-dispatches.
     // Strictly additive — every shape outside the exactly-eliminable real
     // fragment declines and is left byte-identical.
+    //
+    // Integer universals get a *sound one-directional* extension: a top-level
+    // `∀x:Int. φ` is run through the same FM core treating `x` as a real, and
+    // rewritten to `true` *iff* the real relaxation `∀x:Real. φ` is **valid**
+    // (`Int ⊆ Real`, so a real-valid universal is integer-valid). This is the
+    // ONLY verdict the integer path may act on: a real-`unsat` or a non-trivial
+    // real-residual would be *unsound* on `ℤ` (the integer universal can still
+    // hold in the gaps between integers, e.g. `∀x:Int. (x ≤ 0 ∨ x ≥ 1)`), so
+    // those decline and the integer universal is left to the other passes. The
+    // integer path runs *after* `quant_unsat_universal` above, so an
+    // integer-false *single-atom* universal (`∀x:Int. x > 0`) is already
+    // decided `unsat` there and never reaches here. Strictly additive: only
+    // ever `unknown` → `true`-rewrite, never an `unsat`, never a wrong `sat`.
     let mut fm_rewritten: Vec<TermId> = Vec::with_capacity(assertions.len());
     let mut fm_changed = false;
     for &assertion in assertions {
-        match crate::quant_fourier_motzkin::eliminate_real_universal(arena, assertion) {
+        let outcome = crate::quant_fourier_motzkin::eliminate_real_universal(arena, assertion)
+            // The real path declines `Sort::Int` universals; try the sound
+            // integer relaxation (valid-only ⇒ `true`-rewrite) on that decline.
+            .or_else(|| {
+                crate::quant_fourier_motzkin::eliminate_int_universal_valid(arena, assertion)
+            });
+        match outcome {
             Some(crate::quant_fourier_motzkin::FmOutcome::Unsat) => {
                 return Ok(CheckResult::Unsat);
             }

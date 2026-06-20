@@ -507,6 +507,25 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P2.6: sound integer `∀`-elimination via real-validity (one-directional).**
+  Extends the FM pass to decide `∀x:Int. φ` using ONLY the sound direction: integers ⊆ reals, so
+  `∀x:Real. φ` valid ⇒ `∀x:Int. φ` valid (the converse is FALSE — e.g. `∀x:Int.(x≤0∨x≥1)` is
+  integer-valid but real-invalid, x=0.5). `eliminate_real_universal`'s body was factored into
+  `eliminate_core(…, relax_int)` returning a `Verdict` enum (`Valid` / `Unsat` / `Rewrite(χ)`) —
+  cleanly isolating the "valid" verdict. New `eliminate_int_universal_valid` runs the core with
+  `relax_int=true` (admitting `IntLt/Le/Gt/Ge` + Int `Eq`) and returns a `true`-rewrite **iff and
+  only iff** the verdict is `Valid`; `Unsat` and any `Rewrite(_)` ⇒ DECLINE (concluding unsat
+  would be unsound — the integer universal may hold in the inter-integer gaps; rewriting to the
+  stronger real-χ would under-approximate). The Int path can therefore NEVER emit `Unsat` or a
+  non-`true` rewrite. Hooked after the real path (`.or_else`), and after `unsat_universal` (so
+  `∀x:Int. x>0` still → Unsat there). Decides `∀x:Int.(x≤0∨x>0)`, `∀x:Int.(x<5∨x≥5)` → Sat.
+  **Soundness-negatives verified:** `∀x:Int.(x≤0∨x≥1)` (int-valid, real-invalid) declines → NOT
+  mis-decided unsat; `∀x:Int.(x≥0∧x≤10)` (int-false) declines → does NOT become Sat (stays Unsat
+  via other passes). Real path byte-identical (15 FM tests unchanged). New
+  `tests/quant_int_fm_valid.rs` (7); full suite + clippy + doc + fmt green. Strictly additive +
+  conservative. The full integer-Omega (deciding the inter-gap cases) remains the keystone.
+  Sub-agent + careful soundness review.
+
 - **2026-06-19** — **P2.6: single-variable real Fourier-Motzkin `∀`-elimination — first true
   quantifier elimination (keystone slice).** Decides multi-atom `∀x:Real. φ` universals the
   single-atom/vacuous passes decline, via exact real QE. New `quant_fourier_motzkin.rs`

@@ -100,6 +100,26 @@ pub enum FmOutcome {
     Rewrite(TermId),
 }
 
+/// The internal, sign-precise verdict of running the FM elimination core on a
+/// single `∀x. φ`. Distinguishes the three structurally-distinct outcomes the
+/// core can reach so each caller can act on exactly the ones it is allowed to:
+///
+/// - [`Verdict::Valid`] — `∃x. ¬φ` is *identically false*, so `∀x. φ` is
+///   identically **true** over the relaxation domain (the reals). This is the
+///   *only* verdict the integer-relaxation entry point may act on.
+/// - [`Verdict::Unsat`] — `∃x. ¬φ` is *identically true*, so the real universal
+///   is **false** in every model.
+/// - [`Verdict::Rewrite`] — a non-trivial `x`-free residual `χ` equivalent to
+///   the *real* universal.
+enum Verdict {
+    /// The real universal is valid (`∀x:Real. φ` is identically `true`).
+    Valid,
+    /// The real universal is false in every model.
+    Unsat,
+    /// A non-trivial `x`-free term `χ` equivalent to the *real* universal.
+    Rewrite(TermId),
+}
+
 /// Attempts single-variable real FM elimination on a top-level `∀x:Real. φ`.
 ///
 /// Returns [`FmOutcome::Unsat`] when `∀x. φ` is identically false, or
@@ -119,23 +139,105 @@ pub fn eliminate_real_universal(arena: &mut TermArena, assertion: TermId) -> Opt
     };
 
     // `Sort::Real` only — integer FM is not exact (decline `Int` universals).
+    // (The integer-relaxation entry point [`eliminate_int_universal_valid`]
+    // owns the `Sort::Int` case and acts on the `Valid` verdict only.)
     if arena.symbol(var).1 != Sort::Real {
         return None;
     }
 
+    // Run the shared elimination core over the reals (no Int-atom relaxation).
+    match eliminate_core(arena, var, body, /* relax_int = */ false)? {
+        // The real universal is valid ⇒ rewrite the assertion to `true`.
+        Verdict::Valid => {
+            let t = arena.bool_const(true);
+            Some(FmOutcome::Rewrite(t))
+        }
+        // The real universal is false in every model ⇒ the query is `unsat`.
+        Verdict::Unsat => Some(FmOutcome::Unsat),
+        // A non-trivial `x`-free residual equivalent to the real universal.
+        Verdict::Rewrite(chi) => Some(FmOutcome::Rewrite(chi)),
+    }
+}
+
+/// Attempts the **sound, one-directional real relaxation** of a top-level
+/// `∀x:Int. φ`.
+///
+/// Integers are a subset of the reals, so `∀x:Real. φ` *valid* ⇒ `∀x:Int. φ`
+/// *valid* — but **not** the converse (an integer universal can hold where the
+/// real universal fails, the real counterexample landing in a gap between
+/// integers, e.g. `∀x:Int. (x ≤ 0 ∨ x ≥ 1)`). So this entry point runs the
+/// same FM elimination core, **treating `x` as a real**, and returns a
+/// rewrite-to-`true` **iff and only iff** the core's verdict is
+/// [`Verdict::Valid`]. Every other outcome — [`Verdict::Unsat`] (the real
+/// universal is false, but the integer one might still hold in the gaps) and
+/// [`Verdict::Rewrite`] (a residual equivalent to the *stronger* real
+/// universal, which would *under-approximate* the integer one) — **declines**
+/// (`None`), leaving the assertion byte-identical for the other passes / the
+/// quantifier front door.
+///
+/// Soundness: this path can only ever turn an otherwise-`unknown` integer
+/// universal into a *provably-true* `true`-rewrite. It **never** returns
+/// `Unsat` and **never** rewrites to a non-`true` term, so it cannot weaken
+/// the problem nor risk a wrong sat/unsat. All the real path's structural
+/// declines (non-linear `x`, nested quantifier, `x` in a UF, `x`-disequality,
+/// DNF caps, unsupported atoms) apply unchanged.
+pub fn eliminate_int_universal_valid(
+    arena: &mut TermArena,
+    assertion: TermId,
+) -> Option<FmOutcome> {
+    // Must be a top-level `∀x. body`.
+    let (var, body) = match arena.node(assertion) {
+        TermNode::App {
+            op: Op::Forall(var),
+            args,
+        } => (*var, args[0]),
+        _ => return None,
+    };
+
+    // `Sort::Int` only — the real path owns `Sort::Real`.
+    if arena.symbol(var).1 != Sort::Int {
+        return None;
+    }
+
+    // Run the shared elimination core, relaxing `x` to the reals (admitting Int
+    // comparison/equality atoms). Accept ONLY the `Valid` verdict.
+    match eliminate_core(arena, var, body, /* relax_int = */ true)? {
+        Verdict::Valid => {
+            // `∀x:Real. φ` is valid ⇒ `∀x:Int. φ` is valid ⇒ rewrite to `true`.
+            let t = arena.bool_const(true);
+            Some(FmOutcome::Rewrite(t))
+        }
+        // `Unsat` (real-false) and any non-trivial `Rewrite` would be unsound on
+        // `ℤ` (the real verdict is strictly stronger than the integer one), so
+        // decline and leave the integer universal to the other passes.
+        Verdict::Unsat | Verdict::Rewrite(_) => None,
+    }
+}
+
+/// The shared FM elimination core for a top-level `∀x. body`. Computes the DNF
+/// of `¬φ`, eliminates `x` from each clause over the reals, and returns the
+/// sign-precise [`Verdict`]. With `relax_int`, the bound variable is treated as
+/// a real and Int comparison/equality atoms are admitted (the integer
+/// relaxation); otherwise only real atoms are in scope (the exact real path).
+/// Returns `None` to decline for any shape outside the eliminable fragment.
+fn eliminate_core(
+    arena: &mut TermArena,
+    var: SymbolId,
+    body: TermId,
+    relax_int: bool,
+) -> Option<Verdict> {
     // A nested quantifier under `∀x` is out of scope.
     if contains_quantifier(arena, body) {
         return None;
     }
 
-    // Build the DNF of `¬φ` as conjunctive clauses of linear-real literals in
-    // `x`. Any non-linear `x`, non-real atom, or unsupported connective makes
+    // Build the DNF of `¬φ` as conjunctive clauses of linear literals in `x`.
+    // Any non-linear `x`, out-of-scope atom, or unsupported connective makes
     // this `None` (decline).
-    let dnf = dnf_of_negation(arena, body)?;
+    let dnf = dnf_of_negation(arena, body, relax_int)?;
     if dnf.is_empty() {
-        // `¬φ` is identically false ⇒ `∃x. ¬φ` is false ⇒ `∀x. φ` is `true`.
-        let t = arena.bool_const(true);
-        return Some(FmOutcome::Rewrite(t));
+        // `¬φ` is identically false ⇒ `∃x. ¬φ` is false ⇒ `∀x. φ` is valid.
+        return Some(Verdict::Valid);
     }
     if dnf.len() > MAX_DNF_CLAUSES {
         return None;
@@ -155,7 +257,7 @@ pub fn eliminate_real_universal(arena: &mut TermArena, assertion: TermId) -> Opt
     // `∃x. ¬φ = ⋁ disjuncts`. If any disjunct is definitely `true`, the whole
     // existential is valid ⇒ `∀x. φ` is `false` ⇒ **unsat**.
     if disjuncts.iter().any(|d| matches!(d, ClauseElim::True)) {
-        return Some(FmOutcome::Unsat);
+        return Some(Verdict::Unsat);
     }
     // Drop the definitely-`false` disjuncts (they contribute nothing to the ∨).
     let residuals: Vec<TermId> = disjuncts
@@ -170,14 +272,13 @@ pub fn eliminate_real_universal(arena: &mut TermArena, assertion: TermId) -> Opt
     if residuals.is_empty() {
         // `∃x. ¬φ` is identically `false` ⇒ `∀x. φ` is identically `true`.
         // (This is the *valid* universal, e.g. `∀x. (x ≤ 0 ∨ x > 0)`.)
-        let t = arena.bool_const(true);
-        return Some(FmOutcome::Rewrite(t));
+        return Some(Verdict::Valid);
     }
 
     // `∃x. ¬φ` = OR(residuals); `χ = ∀x. φ = ¬(∃x. ¬φ)`.
     let exists_not_phi = fold_or(arena, &residuals)?;
     let chi = arena.not(exists_not_phi).ok()?;
-    Some(FmOutcome::Rewrite(chi))
+    Some(Verdict::Rewrite(chi))
 }
 
 /// The result of FM-eliminating `x` from one conjunctive clause `∃x. ⋀ ℓᵢ`.
@@ -389,30 +490,31 @@ fn fold_or(arena: &mut TermArena, terms: &[TermId]) -> Option<TermId> {
 /// `¬body`). `not` flips the sign; `and`/`or` combine per the sign (an `and`
 /// under negation is an `or` of negations, etc.). Each leaf atom yields a
 /// single literal (or its negation), normalized to `expr ⋈ 0`.
-fn dnf_of_negation(arena: &TermArena, body: TermId) -> Option<Vec<Clause>> {
-    dnf(arena, body, true)
+fn dnf_of_negation(arena: &TermArena, body: TermId, relax_int: bool) -> Option<Vec<Clause>> {
+    dnf(arena, body, true, relax_int)
 }
 
 /// DNF of `body` (or `¬body` when `negate`), as `⋁ (⋀ literals)`. The empty
 /// `Vec` (no clauses) denotes **false**; a clause with no literals denotes a
-/// **true** conjunct.
-fn dnf(arena: &TermArena, body: TermId, negate: bool) -> Option<Vec<Clause>> {
+/// **true** conjunct. `relax_int` admits Int comparison/equality atoms (the
+/// integer-relaxation path); see [`atom_literal`].
+fn dnf(arena: &TermArena, body: TermId, negate: bool, relax_int: bool) -> Option<Vec<Clause>> {
     if let TermNode::App { op, args } = arena.node(body) {
         match op {
-            Op::BoolNot => return dnf(arena, args[0], !negate),
+            Op::BoolNot => return dnf(arena, args[0], !negate, relax_int),
             // Constant `true`/`false` short-circuits.
-            Op::BoolAnd if !negate => return dnf_conjunction(arena, args, false),
-            Op::BoolAnd if negate => return dnf_disjunction(arena, args, true),
-            Op::BoolOr if !negate => return dnf_disjunction(arena, args, false),
-            Op::BoolOr if negate => return dnf_conjunction(arena, args, true),
+            Op::BoolAnd if !negate => return dnf_conjunction(arena, args, false, relax_int),
+            Op::BoolAnd if negate => return dnf_disjunction(arena, args, true, relax_int),
+            Op::BoolOr if !negate => return dnf_disjunction(arena, args, false, relax_int),
+            Op::BoolOr if negate => return dnf_conjunction(arena, args, true, relax_int),
             // `implies(a, b) ≡ ¬a ∨ b`; the helper desugars under `negate`.
             Op::BoolImplies if args.len() == 2 => {
-                return dnf_implies(arena, args[0], args[1], negate);
+                return dnf_implies(arena, args[0], args[1], negate, relax_int);
             }
             _ => {}
         }
     }
-    // A leaf: try to read a `Bool` constant, else a linear-real atom literal.
+    // A leaf: try to read a `Bool` constant, else a linear atom literal.
     if let TermNode::BoolConst(b) = arena.node(body) {
         let truth = b ^ negate;
         return Some(if truth {
@@ -421,33 +523,44 @@ fn dnf(arena: &TermArena, body: TermId, negate: bool) -> Option<Vec<Clause>> {
             Vec::new() // no clauses = false
         });
     }
-    let lit = atom_literal(arena, body, negate)?;
+    let lit = atom_literal(arena, body, negate, relax_int)?;
     Some(vec![vec![lit]])
 }
 
 /// DNF of `implies(a, b)` (or its negation). `implies(a,b) ≡ ¬a ∨ b`; under
 /// `negate` we want `a ∧ ¬b`.
-fn dnf_implies(arena: &TermArena, a: TermId, b: TermId, negate: bool) -> Option<Vec<Clause>> {
+fn dnf_implies(
+    arena: &TermArena,
+    a: TermId,
+    b: TermId,
+    negate: bool,
+    relax_int: bool,
+) -> Option<Vec<Clause>> {
     if negate {
         // a ∧ ¬b
-        let da = dnf(arena, a, false)?;
-        let dnb = dnf(arena, b, true)?;
+        let da = dnf(arena, a, false, relax_int)?;
+        let dnb = dnf(arena, b, true, relax_int)?;
         cross_and(&da, &dnb)
     } else {
         // ¬a ∨ b
-        let dna = dnf(arena, a, true)?;
-        let db = dnf(arena, b, false)?;
+        let dna = dnf(arena, a, true, relax_int)?;
+        let db = dnf(arena, b, false, relax_int)?;
         Some(union_clauses(dna, db))
     }
 }
 
 /// DNF of `⋀ args` (or, with `negate`, the *conjunction* arising from a negated
 /// `or`): cross-product (AND) of the per-argument DNFs.
-fn dnf_conjunction(arena: &TermArena, args: &[TermId], negate: bool) -> Option<Vec<Clause>> {
+fn dnf_conjunction(
+    arena: &TermArena,
+    args: &[TermId],
+    negate: bool,
+    relax_int: bool,
+) -> Option<Vec<Clause>> {
     // Start from `true` (single empty clause) and AND each argument in.
     let mut acc: Vec<Clause> = vec![Vec::new()];
     for &arg in args {
-        let d = dnf(arena, arg, negate)?;
+        let d = dnf(arena, arg, negate, relax_int)?;
         acc = cross_and(&acc, &d)?;
     }
     Some(acc)
@@ -455,10 +568,15 @@ fn dnf_conjunction(arena: &TermArena, args: &[TermId], negate: bool) -> Option<V
 
 /// DNF of `⋁ args` (or, with `negate`, the *disjunction* arising from a negated
 /// `and`): union of the per-argument DNFs.
-fn dnf_disjunction(arena: &TermArena, args: &[TermId], negate: bool) -> Option<Vec<Clause>> {
+fn dnf_disjunction(
+    arena: &TermArena,
+    args: &[TermId],
+    negate: bool,
+    relax_int: bool,
+) -> Option<Vec<Clause>> {
     let mut acc: Vec<Clause> = Vec::new();
     for &arg in args {
-        let d = dnf(arena, arg, negate)?;
+        let d = dnf(arena, arg, negate, relax_int)?;
         acc = union_clauses(acc, d);
         if acc.len() > MAX_DNF_CLAUSES {
             return None;
@@ -511,7 +629,7 @@ fn union_clauses(mut left: Vec<Clause>, mut right: Vec<Clause>) -> Vec<Clause> {
 /// The relation is normalized to `<`, `≤`, `=`, or `≠`:
 /// `a < b ⇒ a-b < 0`; `a ≤ b ⇒ a-b ≤ 0`; `a > b ⇒ b-a < 0`; `a ≥ b ⇒ b-a ≤ 0`;
 /// `a = b ⇒ a-b = 0`. Negation flips: `¬(<) = (≥)`, `¬(≤) = (>)`, `¬(=) = (≠)`.
-fn atom_literal(arena: &TermArena, atom: TermId, negate: bool) -> Option<Literal> {
+fn atom_literal(arena: &TermArena, atom: TermId, negate: bool, relax_int: bool) -> Option<Literal> {
     let TermNode::App { op, args } = arena.node(atom) else {
         return None;
     };
@@ -519,23 +637,29 @@ fn atom_literal(arena: &TermArena, atom: TermId, negate: bool) -> Option<Literal
         return None;
     }
     let (lhs, rhs) = (args[0], args[1]);
-    // Only real comparisons / real equalities are in scope. An `Eq` must be
-    // over reals (a Bool/BV/Int `Eq` is not a linear-real atom).
+    // Real comparisons / real equalities are always in scope. Under the integer
+    // relaxation, the Int order comparisons and Int equalities are *also* in
+    // scope (treated over the reals): `Int ⊆ Real`, so a real-valid `∀x:Real. φ`
+    // implies the integer universal — the only verdict the relaxation acts on.
     let is_real_cmp = matches!(op, Op::RealLt | Op::RealLe | Op::RealGt | Op::RealGe);
     let is_real_eq = matches!(op, Op::Eq) && arena.sort_of(lhs) == Sort::Real;
-    if !is_real_cmp && !is_real_eq {
+    let is_int_cmp = relax_int && matches!(op, Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe);
+    let is_int_eq = relax_int && matches!(op, Op::Eq) && arena.sort_of(lhs) == Sort::Int;
+    if !is_real_cmp && !is_real_eq && !is_int_cmp && !is_int_eq {
         return None;
     }
     let left = affine(arena, lhs)?;
     let right = affine(arena, rhs)?;
 
     // Build `expr` and base relation so the atom is `expr ⋈ 0` (pre-negation).
+    // The Int and Real order/equality ops share the same affine normalization
+    // (the relaxation treats Int atoms over the reals).
     let (expr, rel) = match op {
-        Op::RealLt => (left.sub(&right), Rel::Lt), // a - b < 0
-        Op::RealLe => (left.sub(&right), Rel::Le), // a - b ≤ 0
-        Op::RealGt => (right.sub(&left), Rel::Lt), // b - a < 0
-        Op::RealGe => (right.sub(&left), Rel::Le), // b - a ≤ 0
-        Op::Eq => (left.sub(&right), Rel::Eq),     // a - b = 0
+        Op::RealLt | Op::IntLt => (left.sub(&right), Rel::Lt), // a - b < 0
+        Op::RealLe | Op::IntLe => (left.sub(&right), Rel::Le), // a - b ≤ 0
+        Op::RealGt | Op::IntGt => (right.sub(&left), Rel::Lt), // b - a < 0
+        Op::RealGe | Op::IntGe => (right.sub(&left), Rel::Le), // b - a ≤ 0
+        Op::Eq => (left.sub(&right), Rel::Eq),                 // a - b = 0
         _ => return None,
     };
     if !negate {
