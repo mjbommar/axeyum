@@ -28,6 +28,20 @@ decisions do not foreclose tomorrow's rungs.
 yet Lean/angr-class (the symbolic-execution consumer is a test-only register
 VM). Destinations 2 then 3 are the work ahead.
 
+**Measured update (2026-06-20) — destination 2 is NEAR-PARITY on the first
+public corpus, not an open chasm.** On the public p4dfa QF_BV slice @20s, axeyum
+decides **8/113** and Z3 4.13.3 decides **8/113** — *different* sets, DISAGREE=0:
+both get 6 (compose.p2/.s2, mobiledevice×3, simple), axeyum uniquely decides
+`string1x8.3` (z3 times out @20.5s) + `string1x8.6`, z3 uniquely decides
+`compose.p3`/`compose.s2_nr4`, and the other ~105 defeat **both** (the
+"defeats-even-kissat" reduction-bound bulk). So the destination-2 gate is best
+read as **per-fragment milestones** — on *this* corpus we are at parity with Z3,
+both hard-capped — rather than a monolithic "Z3 sweeps everything" chasm. The
+earlier "Z3 decides essentially all in ~1s" premise was never measured and is
+false at second-scale (corrected; baselines committed under
+`bench-results/baselines/qf-bv-p4dfa-*`). Frame progress as *which fragments
+reach parity*, corpus by corpus, not a single global percentage.
+
 ## Scope
 
 In scope:
