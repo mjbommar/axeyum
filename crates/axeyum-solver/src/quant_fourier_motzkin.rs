@@ -214,6 +214,261 @@ pub fn eliminate_int_universal_valid(
     }
 }
 
+/// Attempts the **exact** decision of a **closed** top-level `∀x:Int. φ` —
+/// a universal whose body mentions *only* the bound variable `x` (no other
+/// symbol, no free variable), so every Fourier-Motzkin bound on `x` is a
+/// concrete [`Rational`] constant.
+///
+/// ## Why closed integer universals can be decided exactly
+///
+/// `∀x:Int. φ ⟺ ¬∃x:Int. ¬φ`. We DNF `¬φ` exactly as the real path does; each
+/// clause of `¬φ` reduces to a concrete real interval `(Lmax, Umin)` (per-
+/// endpoint strict/non-strict, or unbounded on a side). The integer
+/// existential `∃x:Int` of that clause holds **iff the interval contains an
+/// integer** — a question decided *exactly* by integer ceil/floor of the
+/// rational endpoints (see [`clause_has_integer`]). Then:
+///
+/// - if **any** clause contains an integer, `∃x:Int. ¬φ` is true ⇒
+///   `∀x:Int. φ` is false ⇒ [`FmOutcome::Unsat`];
+/// - if **no** clause contains an integer, `∃x:Int. ¬φ` is false ⇒
+///   `∀x:Int. φ` is valid ⇒ rewrite to `true`.
+///
+/// This *closes the inter-integer-gap* cases the real-validity relaxation
+/// declines: `∀x:Int. (x ≤ 0 ∨ x ≥ 1)` is real-invalid (the real hole `(0,1)`)
+/// yet integer-valid (no integer in `(0,1)`), so this path returns the
+/// `true`-rewrite the relaxation could not.
+///
+/// ## The closedness requirement (soundness-critical)
+///
+/// The integer-emptiness test is exact **only** when both interval endpoints
+/// are concrete rationals. If any FM bound or any `x`-free atom carries a
+/// *symbolic* residual (another symbol survives the affine), the clause is an
+/// *open* universal: its truth depends on the free variable, and the integer
+/// ceil/floor test does not apply. Such a universal **declines** (`None`) and
+/// is left to [`eliminate_int_universal_valid`] / the other passes. Closedness
+/// is enforced structurally — [`clause_has_integer`] returns `None` the moment
+/// a non-constant residual appears, so an open universal can never reach a
+/// verdict here.
+///
+/// Soundness: every verdict is exact for the closed single-variable integer
+/// fragment, and every shape outside it declines byte-identically. Strictly
+/// additive — only ever turns an `unknown` integer universal into a
+/// provably-correct `unsat` or a `true`-rewrite.
+pub fn eliminate_int_universal_closed(
+    arena: &mut TermArena,
+    assertion: TermId,
+) -> Option<FmOutcome> {
+    // Must be a top-level `∀x. body`.
+    let (var, body) = match arena.node(assertion) {
+        TermNode::App {
+            op: Op::Forall(var),
+            args,
+        } => (*var, args[0]),
+        _ => return None,
+    };
+
+    // `Sort::Int` only — the real path owns `Sort::Real`.
+    if arena.symbol(var).1 != Sort::Int {
+        return None;
+    }
+
+    // A nested quantifier under `∀x` is out of scope.
+    if contains_quantifier(arena, body) {
+        return None;
+    }
+
+    // Build the DNF of `¬φ`, relaxing Int atoms (treated as linear over the
+    // arena symbols). Any non-linear `x`, unsupported atom, or wide DNF declines.
+    let dnf = dnf_of_negation(arena, body, /* relax_int = */ true)?;
+    if dnf.is_empty() {
+        // `¬φ` is identically false ⇒ `∃x:Int. ¬φ` is false ⇒ `∀x:Int. φ` valid.
+        let t = arena.bool_const(true);
+        return Some(FmOutcome::Rewrite(t));
+    }
+    if dnf.len() > MAX_DNF_CLAUSES {
+        return None;
+    }
+
+    // `∃x:Int. ¬φ = ⋁_k (∃x:Int. clause_k)`. Each clause's integer existential
+    // is decided exactly by integer-emptiness of its concrete real interval. If
+    // ANY clause carries a non-constant (symbolic) residual the universal is
+    // *open* — decline the whole assertion (no partial verdict).
+    let mut any_clause_has_integer = false;
+    for clause in &dnf {
+        if clause.len() > MAX_CLAUSE_LITERALS {
+            return None;
+        }
+        // `None` ⇒ non-constant residual (open universal) ⇒ decline exactly.
+        if clause_has_integer(var, clause)? {
+            any_clause_has_integer = true;
+        }
+    }
+
+    if any_clause_has_integer {
+        // `∃x:Int. ¬φ` is true ⇒ `∀x:Int. φ` is false in every model ⇒ unsat.
+        Some(FmOutcome::Unsat)
+    } else {
+        // No clause of `¬φ` contains an integer ⇒ `∀x:Int. φ` is valid ⇒ `true`.
+        let t = arena.bool_const(true);
+        Some(FmOutcome::Rewrite(t))
+    }
+}
+
+/// Decides, **exactly**, whether the integer existential `∃x:Int. ⋀ literals`
+/// of one DNF clause holds — i.e. whether the clause's concrete real interval
+/// `(Lmax, Umin)` contains an integer.
+///
+/// Returns:
+/// - `Some(true)`  — the clause admits an integer `x`;
+/// - `Some(false)` — the clause admits no integer (empty over `ℤ`, e.g. the
+///   open hole `(0,1)` or a constant `x`-free contradiction);
+/// - `None`        — **decline**: a bound or `x`-free atom has a *non-constant*
+///   residual (another symbol survives), so the universal is *open* and the
+///   integer-emptiness test does not apply.
+///
+/// The bound extraction mirrors [`eliminate_clause`], but instead of building
+/// residual terms it requires every residual to be a concrete [`Rational`] and
+/// runs the **integer** ceil/floor emptiness test:
+///
+/// - a lower bound `L` (rational) admits integers `x ≥ ceil(L)` (non-strict) or
+///   `x ≥ floor(L)+1` (strict). The tightest lower over all lower bounds is the
+///   max of these `lo_int`s; with no lower bound, `x` is unbounded below (`-∞`).
+/// - an upper bound `U` admits integers `x ≤ floor(U)` (non-strict) or
+///   `x ≤ ceil(U)−1` (strict). The tightest upper is the min of these
+///   `hi_int`s; with no upper bound, `x` is unbounded above (`+∞`).
+/// - the clause admits an integer iff `lo_int ≤ hi_int` (an unbounded side never
+///   binds: `ℤ` is unbounded both ways, so a one-sided clause always has an
+///   integer once its `x`-free atoms hold).
+fn clause_has_integer(var: SymbolId, clause: &Clause) -> Option<bool> {
+    // The tightest admissible integer lower (`None` ⇒ unbounded below) and upper
+    // (`None` ⇒ unbounded above). Tracked as concrete `i128` integers.
+    let mut lo_int: Option<i128> = None;
+    let mut hi_int: Option<i128> = None;
+
+    for lit in clause {
+        let a = lit.expr.coeff(var);
+        if a.is_zero() {
+            // `x`-free atom: must be a concrete constant (closedness). A
+            // non-constant residual ⇒ open universal ⇒ decline.
+            if !lit.expr.coeffs.values().all(|c| c.is_zero()) {
+                return None;
+            }
+            let c = lit.expr.constant;
+            let z = Rational::zero();
+            let holds = match lit.rel {
+                Rel::Lt => c < z,
+                Rel::Le => c <= z,
+                Rel::Eq => c == z,
+                Rel::Ne => c != z,
+            };
+            if !holds {
+                // `x`-free contradiction ⇒ the clause is empty ⇒ no integer.
+                return Some(false);
+            }
+            continue;
+        }
+
+        // `x` appears. Bound `x = -r/a`; `r` is the `x`-free part, which must be
+        // a concrete constant for a closed universal.
+        let r = without_var(&lit.expr, var);
+        if !r.coeffs.values().all(|c| c.is_zero()) {
+            // A symbolic residual on the bound ⇒ open universal ⇒ decline.
+            return None;
+        }
+        let neg_inv_a = Rational::zero() - Rational::integer(1) / a;
+        let bound = r.constant * neg_inv_a; // -r/a, a concrete rational
+        let a_pos = a > Rational::zero();
+
+        match lit.rel {
+            Rel::Lt => {
+                if a_pos {
+                    tighten_upper(&mut hi_int, int_upper(bound, /* strict = */ true));
+                } else {
+                    tighten_lower(&mut lo_int, int_lower(bound, /* strict = */ true));
+                }
+            }
+            Rel::Le => {
+                if a_pos {
+                    tighten_upper(&mut hi_int, int_upper(bound, /* strict = */ false));
+                } else {
+                    tighten_lower(&mut lo_int, int_lower(bound, /* strict = */ false));
+                }
+            }
+            Rel::Eq => {
+                // x = bound: a non-strict lower *and* upper.
+                tighten_lower(&mut lo_int, int_lower(bound, false));
+                tighten_upper(&mut hi_int, int_upper(bound, false));
+            }
+            // `x ≠ c`: a single-point hole, not a simple FM bound — decline.
+            Rel::Ne => return None,
+        }
+    }
+
+    // The clause admits an integer iff the tightest integer lower ≤ the tightest
+    // integer upper. An unbounded side never binds (`ℤ` is unbounded both ways).
+    Some(match (lo_int, hi_int) {
+        (Some(lo), Some(hi)) => lo <= hi,
+        // Unbounded below or above (or both) ⇒ an integer always exists.
+        _ => true,
+    })
+}
+
+/// The smallest integer admitted by a lower bound `x ⋈ bound` (`>` if `strict`,
+/// else `≥`): `ceil(bound)` when non-strict, `floor(bound)+1` when strict.
+fn int_lower(bound: Rational, strict: bool) -> i128 {
+    if strict {
+        // `x > bound` ⇒ smallest integer is `floor(bound) + 1`.
+        rational_floor(bound).saturating_add(1)
+    } else {
+        // `x ≥ bound` ⇒ smallest integer is `ceil(bound)`.
+        rational_ceil(bound)
+    }
+}
+
+/// The largest integer admitted by an upper bound `x ⋈ bound` (`<` if `strict`,
+/// else `≤`): `floor(bound)` when non-strict, `ceil(bound)−1` when strict.
+fn int_upper(bound: Rational, strict: bool) -> i128 {
+    if strict {
+        // `x < bound` ⇒ largest integer is `ceil(bound) − 1`.
+        rational_ceil(bound).saturating_sub(1)
+    } else {
+        // `x ≤ bound` ⇒ largest integer is `floor(bound)`.
+        rational_floor(bound)
+    }
+}
+
+/// Tightens the running integer lower bound (the **max** of admissible lowers).
+fn tighten_lower(lo: &mut Option<i128>, candidate: i128) {
+    *lo = Some(match *lo {
+        None => candidate,
+        Some(prev) => prev.max(candidate),
+    });
+}
+
+/// Tightens the running integer upper bound (the **min** of admissible uppers).
+fn tighten_upper(hi: &mut Option<i128>, candidate: i128) {
+    *hi = Some(match *hi {
+        None => candidate,
+        Some(prev) => prev.min(candidate),
+    });
+}
+
+/// `floor(r)` for a rational `r = num/den` with `den > 0`. Euclidean division
+/// by the positive denominator yields the floor exactly.
+fn rational_floor(r: Rational) -> i128 {
+    r.numerator().div_euclid(r.denominator())
+}
+
+/// `ceil(r)` for a rational `r`. An integer is its own ceiling; otherwise
+/// `ceil(r) = floor(r) + 1`.
+fn rational_ceil(r: Rational) -> i128 {
+    if r.is_integer() {
+        r.numerator()
+    } else {
+        rational_floor(r).saturating_add(1)
+    }
+}
+
 /// The shared FM elimination core for a top-level `∀x. body`. Computes the DNF
 /// of `¬φ`, eliminates `x` from each clause over the reals, and returns the
 /// sign-precise [`Verdict`]. With `relax_int`, the bound variable is treated as
@@ -866,4 +1121,121 @@ fn contains_quantifier(arena: &TermArena, term: TermId) -> bool {
         }
     }
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The closed integer path must **decline** an *open* universal — one whose
+    /// FM bounds carry a free symbol — because its exact integer-emptiness test
+    /// applies only to concrete rational endpoints. This is checked directly
+    /// (returns `None`) rather than end-to-end through `solve`, whose downstream
+    /// quantifier search does not terminate quickly on this shape.
+    #[test]
+    fn closed_path_declines_open_disjunctive_universal() {
+        // ∀x:Int. (x ≤ y ∨ x ≥ y + 1) with a FREE integer `y`: an open universal
+        // (symbolic bounds `y`, `y+1`) ⇒ the closed path declines (`None`).
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let y = arena.declare("y", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let yv = arena.var(y);
+        let one = arena.int_const(1);
+        let y_plus_1 = arena.int_add(yv, one).unwrap();
+        let le_y = arena.int_le(xv, yv).unwrap();
+        let ge_y1 = arena.int_ge(xv, y_plus_1).unwrap();
+        let body = arena.or(le_y, ge_y1).unwrap();
+        let forall = arena.forall(x, body).unwrap();
+        assert!(
+            eliminate_int_universal_closed(&mut arena, forall).is_none(),
+            "open universal (symbolic bounds) must DECLINE the closed path"
+        );
+    }
+
+    /// The closed path also declines an open *single-atom* universal — a
+    /// symbolic bound on a lone comparison — for the same reason.
+    #[test]
+    fn closed_path_declines_open_single_atom_universal() {
+        // ∀x:Int. x ≤ y with a free `y`: symbolic upper bound ⇒ decline.
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let y = arena.declare("y", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let yv = arena.var(y);
+        let body = arena.int_le(xv, yv).unwrap();
+        let forall = arena.forall(x, body).unwrap();
+        assert!(eliminate_int_universal_closed(&mut arena, forall).is_none());
+    }
+
+    /// A *closed* gap universal `∀x:Int. (x ≤ 0 ∨ x ≥ 1)` is decided exactly:
+    /// no integer lies in the real hole `(0,1)`, so the closed path rewrites the
+    /// assertion to the constant `true`.
+    #[test]
+    fn closed_path_rewrites_gap_universal_to_true() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        let le0 = arena.int_le(xv, zero).unwrap();
+        let ge1 = arena.int_ge(xv, one).unwrap();
+        let body = arena.or(le0, ge1).unwrap();
+        let forall = arena.forall(x, body).unwrap();
+        match eliminate_int_universal_closed(&mut arena, forall) {
+            Some(FmOutcome::Rewrite(t)) => {
+                assert!(matches!(arena.node(t), TermNode::BoolConst(true)));
+            }
+            other => panic!("expected Rewrite(true), got {other:?}"),
+        }
+    }
+
+    /// A *closed* universal whose negation's hole contains an integer
+    /// (`∀x:Int. (x ≤ 0 ∨ x ≥ 2)`, hole `(0,2)` ∋ 1) is decided **unsat**.
+    #[test]
+    fn closed_path_decides_hole_with_integer_unsat() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let zero = arena.int_const(0);
+        let two = arena.int_const(2);
+        let le0 = arena.int_le(xv, zero).unwrap();
+        let ge2 = arena.int_ge(xv, two).unwrap();
+        let body = arena.or(le0, ge2).unwrap();
+        let forall = arena.forall(x, body).unwrap();
+        assert!(matches!(
+            eliminate_int_universal_closed(&mut arena, forall),
+            Some(FmOutcome::Unsat)
+        ));
+    }
+
+    /// Integer ceil/floor of rational endpoints, with strictness.
+    #[test]
+    fn integer_endpoint_rounding_is_exact() {
+        // floor / ceil on a non-integer rational 1/2.
+        let half = Rational::new(1, 2);
+        assert_eq!(rational_floor(half), 0);
+        assert_eq!(rational_ceil(half), 1);
+        // negative non-integer -3/2: floor = -2, ceil = -1.
+        let neg = Rational::new(-3, 2);
+        assert_eq!(rational_floor(neg), -2);
+        assert_eq!(rational_ceil(neg), -1);
+        // an integer is its own floor and ceil.
+        let two = Rational::integer(2);
+        assert_eq!(rational_floor(two), 2);
+        assert_eq!(rational_ceil(two), 2);
+        // lower bound: `x ≥ 1/2` admits ceil = 1; `x > 1/2` admits floor+1 = 1.
+        assert_eq!(int_lower(half, false), 1);
+        assert_eq!(int_lower(half, true), 1);
+        // `x ≥ 1` admits 1; `x > 1` admits 2 (floor(1)+1).
+        let one = Rational::integer(1);
+        assert_eq!(int_lower(one, false), 1);
+        assert_eq!(int_lower(one, true), 2);
+        // upper bound: `x ≤ 1/2` admits floor = 0; `x < 1/2` admits ceil-1 = 0.
+        assert_eq!(int_upper(half, false), 0);
+        assert_eq!(int_upper(half, true), 0);
+        // `x ≤ 1` admits 1; `x < 1` admits 0 (ceil(1)-1).
+        assert_eq!(int_upper(one, false), 1);
+        assert_eq!(int_upper(one, true), 0);
+    }
 }

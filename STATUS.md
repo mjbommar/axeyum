@@ -127,8 +127,13 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
       validated by **measured DISAGREE=0 + per-benchmark wall-clock**, never node count alone. The
       `axeyum-rewrite` reduction *algorithms* are the concurrent agent's lane — own the solver-side
       `preprocess.rs` orchestration (fixpoint/order) + measure on the scenarios/micro corpus (no z3).
-    - **QUANT: integer-Omega + open-gap + general-boolean QE + MBQI** (in-`solver`, infra in place:
-      FM `Verdict` enum + `relax_int`).
+    - **HANG (hard-rule "never hang"): open disjunctive `∀x:Int.(x≤y∨x≥y+1)` tarpits the downstream
+      MBQI/e-matching (~600s, ignores `config.timeout`).** Pre-existing (exposed when the FM
+      int-closed pass declines the symbolic-bound shape — it declines correctly). Fix the
+      quantifier front door (`qinst_egraph`/`check_with_quantifiers`) to honor `config.timeout` /
+      a deterministic round bound, same posture as the NIA-hang fix. HIGH priority.
+    - **QUANT: open-gap integer-Omega (symbolic bounds), general-boolean QE beyond DNF cap, MBQI**
+      (in-`solver`, infra in place: FM `Verdict` enum + `relax_int` + closed-universal exactness).
     - **Then the items below (drive the in-`solver` part; for coordination-gated ones, build the
       solver-side interface and hand off):**
     - **arith-UF SAT model (gap C, keystone, COORDINATION-GATED on `axeyum-ir`):** QF_UFLIA/
@@ -524,6 +529,40 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed slice + baseline (32/43 decided, agree=32, DISAGREE=0) |
 
 ## Changelog
+
+- **2026-06-19** — **P1.2 PERF: word-level preprocessing now runs to a FIXPOINT (the proven
+  reduction lever, not AIG node-count).** `check_with_preprocessing` ran the model-sound passes
+  (`canonicalize` → `propagate_values` → `solve_eqs_bounded` → `elim_unconstrained` →
+  re-`canonicalize`) exactly ONCE. But one pass is not enough: `elim_unconstrained` can expose a
+  fresh constant that `propagate_values`/`solve_eqs` then eliminate, and the re-canonicalization
+  AC-normalizes substituted product trees that reveal further folds. Now it iterates the passes to
+  a fixpoint (a round eliminating nothing stops; `MAX_PREPROCESS_ROUNDS=8` guards oscillation),
+  composing each round's `ModelReconstructionTrail` in pass/round order. Removes more variables
+  before bit-blasting → relieves the encode budget (the mechanism PLAN.md credits for public p4dfa
+  2→7/113). **Sound by construction:** every pass is model-sound (equisatisfiable, so `unsat`
+  transfers), and the `sat` model is still replayed against the ORIGINAL assertions — any trail/round
+  composition bug surfaces there as an `Err`, never a wrong `sat`. New
+  `fixpoint_resolves_a_deep_definition_chain` test (deep `w=2 → x1 → x2 → x3=5` chain: sat replays,
+  contradicted-chain unsat agrees with no-preprocess); existing `preprocess_on_off_agree_on_a_battery`
+  + suite green. Validated by measured DISAGREE=0, NOT node count (per the AIG finding above).
+
+- **2026-06-19** — **P2.6: integer-Omega exactness for CLOSED universals — decides the
+  inter-integer-gap cases.** `∀x:Int.(x≤0∨x≥1)` is integer-VALID but real-INVALID (x=0.5), so the
+  real-validity relaxation declines it; the new `eliminate_int_universal_closed` decides it EXACTLY.
+  For a CLOSED universal (φ mentions only x — every FM bound is a concrete `Rational`), `∀x:Int. φ
+  ⟺ ¬∃x:Int. ¬φ`; each DNF clause of `¬φ` is a concrete real interval, and `clause_has_integer`
+  runs the exact integer-emptiness test: lower L admits `ceil(L)` (non-strict) / `floor(L)+1`
+  (strict), upper U admits `floor(U)` / `ceil(U)-1`, clause has an integer iff `lo_int ≤ hi_int`
+  (unbounded side ⇒ trivially yes); `floor` via `div_euclid`, ±1 saturating at i128 extremes. Any
+  clause with an integer ⇒ Unsat; none ⇒ rewrite to `true` (Sat). Any non-constant residual ⇒
+  DECLINE (open universal — left to the real-validity path / front door). Hooked after the real
+  path + the closed path, before `eliminate_int_universal_valid`. Decides `∀x:Int.(x≤0∨x≥1)`→Sat,
+  `∀x:Int.(x≤0∨x≥2)`→Unsat (hole `(0,2)`∋1), `∀x:Int.(x<0∨x>0)`→Unsat. Soundness-negatives: open
+  universals decline (unit-tested `is_none`), non-linear declines. New `tests/quant_int_fm_closed.rs`
+  (11) + 5 in-source unit tests; full suite (1071) + clippy + doc + fmt green. (Flagged: an open
+  disjunctive universal, once declined, tarpits the downstream MBQI/e-matching ~600s — pre-existing
+  "never hang" item, now in the work queue.) Sub-agent + soundness review (verified the ceil/floor
+  strictness by hand).
 
 - **2026-06-19** — **P2.6: sound integer `∀`-elimination via real-validity (one-directional).**
   Extends the FM pass to decide `∀x:Int. φ` using ONLY the sound direction: integers ⊆ reals, so

@@ -157,8 +157,17 @@ pub fn solve(
     let mut fm_changed = false;
     for &assertion in assertions {
         let outcome = crate::quant_fourier_motzkin::eliminate_real_universal(arena, assertion)
-            // The real path declines `Sort::Int` universals; try the sound
-            // integer relaxation (valid-only ⇒ `true`-rewrite) on that decline.
+            // The real path declines `Sort::Int` universals. For a *closed*
+            // integer universal (body mentions only `x`), the exact integer-
+            // emptiness decision below decides BOTH verdicts — including the
+            // inter-integer-gap cases the real relaxation declines (e.g.
+            // `∀x:Int. (x ≤ 0 ∨ x ≥ 1)` is real-invalid but integer-valid).
+            .or_else(|| {
+                crate::quant_fourier_motzkin::eliminate_int_universal_closed(arena, assertion)
+            })
+            // On a decline from the closed path (an *open* integer universal,
+            // whose bounds are symbolic), fall back to the sound one-directional
+            // relaxation (valid-only ⇒ `true`-rewrite) the open case still needs.
             .or_else(|| {
                 crate::quant_fourier_motzkin::eliminate_int_universal_valid(arena, assertion)
             });
