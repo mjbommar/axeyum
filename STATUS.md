@@ -7,7 +7,7 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 ## Current focus
 
 - **Session 2026-06-19 — robustness + proof certs + capability-gap sweep (resume here).**
-  **41 validated commits**; whole `axeyum-solver` crate green on test/clippy/doc/fmt (999
+  **45 validated commits**; whole `axeyum-solver` crate green on test/clippy/doc/fmt (999
   tests) + Carcara (54) + workspace build + links — confirmed cohesively gate-green at session
   end (the consolidation caught and fixed a doc-link regression clippy/tests had missed).
   Method: **6 read-only *capability-gap probe* passes** (theory decidability; arrays/mixed/
