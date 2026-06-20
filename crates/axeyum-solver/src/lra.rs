@@ -25,10 +25,21 @@
 
 use std::collections::BTreeMap;
 
+// Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
+
 use axeyum_ir::{Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 
 use crate::backend::{CheckResult, SolverError, UnknownKind, UnknownReason};
 use crate::model::Model;
+
+/// Whether `deadline` (if set) has passed.
+fn past_deadline(deadline: Option<Instant>) -> bool {
+    deadline.is_some_and(|d| Instant::now() >= d)
+}
 
 /// Checks a conjunctive `QF_LRA` query by exact-rational Fourier–Motzkin
 /// elimination. The returned [`Model`] assigns each real variable a
@@ -854,6 +865,27 @@ pub fn check_with_lia_simplex(
     arena: &TermArena,
     assertions: &[TermId],
 ) -> Result<CheckResult, SolverError> {
+    lia_simplex_within(arena, assertions, None)
+}
+
+/// Like [`check_with_lia_simplex`], but bailing to `unknown` once `deadline` (a
+/// wall-clock budget, typically derived from `SolverConfig::timeout`) passes — so a
+/// branch-and-bound grinding on an unbounded integer difference constraint
+/// (`c > y ∧ c < y+1`) honors the caller's timeout instead of running to the node
+/// budget. `deadline == None` is exactly [`check_with_lia_simplex`].
+pub fn check_with_lia_simplex_within(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<CheckResult, SolverError> {
+    lia_simplex_within(arena, assertions, deadline)
+}
+
+fn lia_simplex_within(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<CheckResult, SolverError> {
     let mut ctx = IntCollector::default();
     for &assertion in assertions {
         ctx.collect(arena, assertion, false)?;
@@ -864,7 +896,7 @@ pub fn check_with_lia_simplex(
     let nvars = ctx.vars.len();
     let mut constraints = ctx.constraints;
     let mut budget = MAX_LIA_BNB_NODES;
-    match lia_branch_and_bound(&mut constraints, nvars, &mut budget) {
+    match lia_branch_and_bound(&mut constraints, nvars, &mut budget, deadline) {
         LiaBnb::Unsat => Ok(CheckResult::Unsat),
         LiaBnb::Unknown => Ok(CheckResult::Unknown(UnknownReason {
             kind: UnknownKind::Incomplete,
@@ -918,8 +950,14 @@ fn lia_branch_and_bound(
     constraints: &mut Vec<Constraint>,
     nvars: usize,
     budget: &mut u64,
+    deadline: Option<Instant>,
 ) -> LiaBnb {
-    if *budget == 0 {
+    // A 2-variable unbounded difference constraint (e.g. `c > y ∧ c < y+1`) is
+    // integer-infeasible but real-feasible, and branch-and-bound keeps finding
+    // shifted fractional points — grinding toward the node budget with each node's
+    // simplex over an ever-deeper constraint stack. The wall-clock deadline keeps it
+    // honoring `config.timeout` (the node budget alone is the deterministic backstop).
+    if *budget == 0 || past_deadline(deadline) {
         return LiaBnb::Unknown;
     }
     *budget -= 1;
@@ -942,7 +980,7 @@ fn lia_branch_and_bound(
         Rational::integer(1),
         Rational::integer(-floor),
     ));
-    let left = lia_branch_and_bound(constraints, nvars, budget);
+    let left = lia_branch_and_bound(constraints, nvars, budget, deadline);
     constraints.pop();
     if let LiaBnb::Sat(_) | LiaBnb::Unknown = left {
         return left;
@@ -955,7 +993,7 @@ fn lia_branch_and_bound(
         Rational::integer(-1),
         Rational::integer(next),
     ));
-    let right = lia_branch_and_bound(constraints, nvars, budget);
+    let right = lia_branch_and_bound(constraints, nvars, budget, deadline);
     constraints.pop();
     right
 }

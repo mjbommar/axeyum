@@ -32,7 +32,7 @@ use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, Unknow
 use crate::combined::check_with_all_theories;
 use crate::dpll_lia::{check_with_arith_dpll, check_with_lia_dpll};
 use crate::lia::DEFAULT_INT_WIDTH;
-use crate::lra::{check_with_lia_simplex, check_with_lra};
+use crate::lra::{check_with_lia_simplex_within, check_with_lra};
 use crate::model::Model;
 use crate::qinst_egraph::prove_quantified_unsat_via_egraph;
 use crate::quant_guarded_int::expand_guarded_int_universals;
@@ -797,7 +797,11 @@ fn refute_bv2nat_out_of_range(
     Ok(
         crate::lia_gcd::prove_lia_unsat_by_diophantine(&scratch, &lin)
             || matches!(
-                check_with_lia_simplex(&scratch, &lin),
+                check_with_lia_simplex_within(
+                    &scratch,
+                    &lin,
+                    config.timeout.and_then(|t| Instant::now().checked_add(t)),
+                ),
                 Ok(CheckResult::Unsat)
             )
             || matches!(
@@ -915,7 +919,14 @@ fn check_auto_dispatch(
         if crate::lia_gcd::prove_lia_unsat_by_diophantine(arena, &lin) {
             return Ok(CheckResult::Unsat);
         }
-        match check_with_lia_simplex(arena, &lin) {
+        // Deadline-aware: branch-and-bound on an unbounded integer difference
+        // constraint (`c > y ∧ c < y+1`) grinds toward the node budget, so honor
+        // `config.timeout` here rather than spinning past it.
+        match check_with_lia_simplex_within(
+            arena,
+            &lin,
+            config.timeout.and_then(|t| Instant::now().checked_add(t)),
+        ) {
             Ok(result) => return Ok(result),
             Err(SolverError::Unsupported(_)) => {}
             Err(other) => return Err(other),
@@ -1217,6 +1228,11 @@ pub fn check_with_quantifiers(
 /// Maximum model-based instantiation rounds before reporting `unknown`.
 const MAX_MBQI_ROUNDS: usize = 16;
 
+/// Deterministic cap on accumulated MBQI instances: a universal whose instantiation
+/// generates ever-deeper ground terms can grow each round's solve without bound, so
+/// the loop bails to `unknown` past this many instances even with no wall-clock budget.
+const MAX_MBQI_INSTANCES: usize = 4096;
+
 /// A `Value` as a constant term (scalar sorts only).
 fn value_to_const(arena: &mut TermArena, value: &Value) -> Option<TermId> {
     match value {
@@ -1275,8 +1291,19 @@ pub fn prove_unsat_by_mbqi(
     }
     let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
 
+    // Honor the wall-clock budget and a deterministic instance cap: a universal whose
+    // instantiation generates ever-deeper ground terms (e.g. `∀x.(x≤y ∨ x≥y+1)`) can
+    // grow the per-round `check_auto` without bound, so the loop must degrade to a
+    // graceful `Unknown`, never spin (the "unknown is never an error / never hang" rule).
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     let mut instances: Vec<TermId> = Vec::new();
     for _ in 0..MAX_MBQI_ROUNDS {
+        if past_deadline(deadline) || instances.len() > MAX_MBQI_INSTANCES {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail: "MBQI: instantiation budget (time or instance count) exhausted".to_owned(),
+            }));
+        }
         let mut query = ground.clone();
         query.extend(instances.iter().copied());
         // The query is now quantifier-free (ground + instances).

@@ -23,11 +23,23 @@ use axeyum_egraph::{EGraph, ENodeId, Pattern};
 use axeyum_ir::{FuncId, Op, SymbolId, TermArena, TermId, TermNode};
 use axeyum_rewrite::replace_subterms;
 
+// Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
+
 use crate::auto::check_auto;
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 
 /// Default e-matching instantiation rounds before giving up (`unknown`).
 const MAX_INSTANTIATION_ROUNDS: usize = 8;
+
+/// Deterministic cap on accumulated ground terms: e-matching a universal whose
+/// instances generate ever-deeper terms (e.g. `∀x.(x≤y ∨ x≥y+1)` ⇒ `y, y+1, y+2, …`)
+/// can explode a single round's `check_auto`, so the loop bails to `unknown` past this
+/// many ground terms even with no wall-clock budget (the "never hang" rule).
+const MAX_GROUND_TERMS: usize = 8192;
 
 /// Tries to refute a (possibly quantified) conjunction by **e-matching
 /// instantiation on the e-graph** (Track 2, P2.6): it separates the ground
@@ -63,8 +75,21 @@ pub fn prove_quantified_unsat_via_egraph(
         return check_auto(arena, &ground, config);
     }
 
+    // Honor the wall-clock budget + a deterministic ground-size cap so an exploding
+    // instantiation degrades to a graceful `unknown`, never spins (the "never hang" rule).
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    let budget_exhausted = |ground: &[TermId]| {
+        deadline.is_some_and(|d| Instant::now() >= d) || ground.len() > MAX_GROUND_TERMS
+    };
     let mut seen: HashSet<TermId> = ground.iter().copied().collect();
     for _ in 0..MAX_INSTANTIATION_ROUNDS {
+        if budget_exhausted(&ground) {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail: "e-matching: instantiation budget (time or ground-term count) exhausted"
+                    .to_owned(),
+            }));
+        }
         // A ground refutation at any point is a refutation of the whole problem.
         if matches!(check_auto(arena, &ground, config)?, CheckResult::Unsat) {
             return Ok(CheckResult::Unsat);

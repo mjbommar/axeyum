@@ -530,6 +530,33 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **ROBUSTNESS: QF-LIA branch-and-bound honors `config.timeout` (root of the
+  open-`∀` hang).** The real root: a QF-LIA query `c > y ∧ c < y+1` (real-feasible at c=y+0.5,
+  integer-infeasible — no integer strictly between consecutive integers) sent
+  `lia_branch_and_bound` (`lra.rs`) grinding toward its 50 000-node budget — each node a simplex
+  over an ever-deeper constraint stack as it kept finding shifted fractional points — with **no
+  wall-clock check**, ~minutes ignoring the budget. (Triggered pre-existingly by
+  `eliminate_valid_universals` testing `∀x:Int.(x≤y ∨ x≥y+1)` for validity via `¬body[x:=c]`
+  UNSAT.) Fix: `lia_branch_and_bound` takes an `Option<Instant>` deadline checked per node
+  (alongside the node budget); new `check_with_lia_simplex_within(arena, assertions, deadline)`
+  threads it (`check_with_lia_simplex` = the `None` case, signature unchanged so the
+  function-pointer callbacks in `dpll_lia` are untouched); the two `auto.rs` integer-dispatch
+  sites derive the deadline from `config.timeout`. Now `∀x:Int.(x≤y ∨ x≥y+1)` returns in ~2 s at
+  a 2 s budget (was ~600 s). Belt-and-suspenders from the same investigation: `prove_unsat_by_mbqi`
+  (`MAX_MBQI_INSTANCES=4096` + deadline) and `prove_quantified_unsat_via_egraph`
+  (`MAX_GROUND_TERMS=8192` + deadline) also bail gracefully. Sound — only `Unknown` (the budget
+  case) is added; no verdict changes. New `tests/quant_open_disjunctive_no_hang.rs` (OS-timeout
+  guarded, never a wrong `Unsat`). Diagnosed by marker + panic bisection down to the QF subquery. `∀x:Int.(x≤y ∨ x≥y+1)` (open, symbolic `y`) is declined
+  by the FM int-closed pass and reaches the instantiation search, which generates ever-deeper
+  ground terms (`y, y+1, y+2, …`); the per-round `check_auto` grew without a `config.timeout`
+  check, so the query tarpitted ~600s ignoring the budget. Both loops now bail to a graceful
+  `Unknown(ResourceLimit)`: `prove_quantified_unsat_via_egraph` (a `config.timeout` deadline +
+  `MAX_GROUND_TERMS=8192` cap, checked at the top of each round) and `prove_unsat_by_mbqi`
+  (deadline + `MAX_MBQI_INSTANCES=4096`). Sound — both only ever returned `Unsat` from a ground
+  refutation, so degrading the non-refuting path to `Unknown` changes no verdict. New
+  `tests/quant_open_disjunctive_no_hang.rs` (2 s budget returns, never a wrong `Unsat`),
+  OS-timeout-guarded. Same posture as the NIA-hang fix. Found via the int-closed work.
+
 - **2026-06-19** — **P1.2 PERF: word-level preprocessing now runs to a FIXPOINT (the proven
   reduction lever, not AIG node-count).** `check_with_preprocessing` ran the model-sound passes
   (`canonicalize` → `propagate_values` → `solve_eqs_bounded` → `elim_unconstrained` →
