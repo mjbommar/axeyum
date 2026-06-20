@@ -6,10 +6,28 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
-- **Session 2026-06-19 — robustness + proof certs + capability-gap sweep (resume here).**
-  **51 validated commits**; whole `axeyum-solver` crate green on test/clippy/doc/fmt (1054
-  tests) + Carcara (54) + workspace build + links — confirmed cohesively gate-green at session
-  end (the consolidation caught and fixed a doc-link regression clippy/tests had missed).
+- **Session 2026-06-19 — robustness + proof certs + capability/hang sweep (resume here).**
+  **65 validated commits**; whole `axeyum-solver` crate green on test/clippy/doc/fmt (1122+
+  tests) + Carcara (54). **Two deep hunts (arithmetic+quantifier, then non-arithmetic) now give
+  a CLEAN BILL — no hangs, no wrong answers across every theory.** Highlights of the latter
+  stretch (after a course-correction to stop punting / keep shipping — see
+  [[no-giving-up-ship-relentlessly]] and CLAUDE.md "Working Stance"):
+  - **A hidden QF-LIA hang found + fixed at the root** (`c>y ∧ c<y+1` branch-and-bound grinding,
+    bisected from a misleading open-`∀` symptom): deadline-threaded `lia_branch_and_bound` +
+    `check_with_lia_simplex_within`, AND integer strict-inequality tightening (gcd-aware) so it
+    decides UNSAT *instantly*; **BV-OMT timeout hang fixed** (symmetric to the LIA-OMT fix).
+  - **Quantifier completeness broadened both directions:** `∃∀` (skolemize + vacuous/valid/
+    unsat/guarded/real-FM/int-FM/int-closed/**open-constant-width-gap**) and **`∀∃` by
+    Skolem-witness synthesis**; **NIA single-var squares** (`x*x=2`→Unsat). All sound, bounded,
+    replay-checked where applicable.
+  - **Perf measured honestly:** the fixpoint preprocessing is sound at scale (DISAGREE=0 on the
+    public p4dfa 113) but decides the same 4 as single-pass — solver-side preprocess is maxed;
+    the lever is stronger reduction *algorithms* (`axeyum-rewrite`) or the SAT-core, not iterating.
+  - Earlier this session (commits 1–51): NRA OOM + 64 GB guard, the integer-NIA hang regression,
+    the optimizer A/B/D fix, the full proof-cert sweep (UF/array/datatype/LIA/UFLIA/finite-`∀`,
+    assume-independent), and six capability-gap probe passes.
+  Method note (unchanged): 51-commit checkpoint detail follows; the original gate-green
+  consolidation caught a doc-link regression clippy/tests had missed.
   Method: **6 read-only *capability-gap probe* passes** (theory decidability; arrays/mixed/
   strings/FP-via-BV; optimization/incremental/evidence/smtlib; Track-4 BMC/symexec/k-induction
   + FP builders; proof-completeness map) — each found concrete reproducing queries (see the
