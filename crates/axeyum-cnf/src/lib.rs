@@ -367,6 +367,10 @@ pub struct SatUnsatEvidence {
 pub enum SatProofStatus {
     /// No proof artifact is available through this adapter.
     Unchecked,
+    /// An independent DRAT proof of this unsat was produced and verified
+    /// (the empty clause was derived and the proof passed `check_drat`).
+    /// An unsat carrying this status is checked **by construction**.
+    Checked,
 }
 
 /// Unknown result metadata.

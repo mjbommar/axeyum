@@ -51,8 +51,10 @@ fn supported_bv_formula_solves_and_replays() {
 
 #[test]
 fn unsat_is_drat_proof_checked_when_requested() {
-    // `x != x` is unsatisfiable; with `prove_unsat`, the backend re-derives the
-    // UNSAT with the proof core and verifies its DRAT proof end to end.
+    // `x != x` is unsatisfiable; with `prove_unsat`, the backend now uses the
+    // native proof-producing core as the primary engine and verifies its INLINE
+    // DRAT proof in a single solve — no separate re-derivation. The accepted
+    // `unsat` is backed by a checked proof by construction.
     let mut arena = TermArena::new();
     let x = arena.bv_var("x", 4).unwrap();
     let eq_self = arena.eq(x, x).unwrap();
@@ -68,14 +70,122 @@ fn unsat_is_drat_proof_checked_when_requested() {
         CheckResult::Unsat
     );
     let stats = backend.last_stats().expect("stats recorded");
+    let inline = stats.backend.iter().any(|(name, value)| {
+        name == "unsat_proof_checked_inline" && (*value - 1.0).abs() < f64::EPSILON
+    });
     assert!(
-        stats
-            .backend
-            .iter()
-            .any(|(name, value)| name == "unsat_proof_checked"
-                && (*value - 1.0).abs() < f64::EPSILON),
-        "unsat should be recorded as DRAT-proof-checked"
+        inline,
+        "unsat should be recorded as inline-DRAT-proof-checked (one solve), \
+         got stats: {:?}",
+        stats.backend
     );
+    // The single-solve inline path must NOT trigger the separate re-derivation.
+    let rederived = stats
+        .backend
+        .iter()
+        .any(|(name, _)| name == "unsat_proof_checked");
+    assert!(
+        !rederived,
+        "the native inline path must not re-derive the proof via verify_unsat_proof; \
+         got stats: {:?}",
+        stats.backend
+    );
+}
+
+#[test]
+fn prove_unsat_native_inline_proof_matches_batsat_verdict() {
+    // DISAGREE=0 sanity: a small BV corpus must reach the same sat/unsat verdict
+    // whether prove_unsat (native inline-proof engine) or the default batsat
+    // engine is used. The native unsat additionally carries a checked proof.
+    fn build(arena: &mut TermArena, idx: usize) -> (TermId, bool) {
+        let x = arena.bv_var(&format!("x{idx}"), 4).unwrap();
+        let y = arena.bv_var(&format!("y{idx}"), 4).unwrap();
+        match idx {
+            // unsat: x < 0 (unsigned) is never satisfiable.
+            0 => {
+                let zero = arena.bv_const(4, 0).unwrap();
+                (arena.bv_ult(x, zero).unwrap(), false)
+            }
+            // unsat: x != x.
+            1 => {
+                let e = arena.eq(x, x).unwrap();
+                (arena.not(e).unwrap(), false)
+            }
+            // unsat: x = 1 AND x = 2.
+            2 => {
+                let one = arena.bv_const(4, 1).unwrap();
+                let two = arena.bv_const(4, 2).unwrap();
+                let a = arena.eq(x, one).unwrap();
+                let b = arena.eq(x, two).unwrap();
+                (arena.and(a, b).unwrap(), false)
+            }
+            // sat: x + y = 5.
+            3 => {
+                let five = arena.bv_const(4, 5).unwrap();
+                let sum = arena.bv_add(x, y).unwrap();
+                (arena.eq(sum, five).unwrap(), true)
+            }
+            // sat: x = 3.
+            _ => {
+                let three = arena.bv_const(4, 3).unwrap();
+                (arena.eq(x, three).unwrap(), true)
+            }
+        }
+    }
+
+    for idx in 0..5usize {
+        let mut arena = TermArena::new();
+        let (term, expected_sat) = build(&mut arena, idx);
+
+        let prove_cfg = SolverConfig {
+            prove_unsat: true,
+            ..SolverConfig::default()
+        };
+        let native = SatBvBackend::new()
+            .check(&arena, &[term], &prove_cfg)
+            .unwrap();
+        let batsat = SatBvBackend::new()
+            .check(&arena, &[term], &SolverConfig::default())
+            .unwrap();
+
+        if expected_sat {
+            assert!(
+                matches!(native, CheckResult::Sat(_)),
+                "case {idx}: prove_unsat (native) should be sat, got {native:?}"
+            );
+            assert!(
+                matches!(batsat, CheckResult::Sat(_)),
+                "case {idx}: batsat should be sat, got {batsat:?}"
+            );
+        } else {
+            assert_eq!(native, CheckResult::Unsat, "case {idx}: native verdict");
+            assert_eq!(batsat, CheckResult::Unsat, "case {idx}: batsat verdict");
+        }
+    }
+}
+
+#[test]
+fn prove_unsat_sat_query_returns_sat_via_native() {
+    // Auto-enabling native for prove_unsat must not break SAT prove_unsat
+    // queries: a satisfiable formula simply returns Sat (no proof needed), with
+    // a model that checks against the original terms.
+    let mut arena = TermArena::new();
+    let x_sym = arena.declare("x", Sort::BitVec(4)).unwrap();
+    let x = arena.var(x_sym);
+    let three = arena.bv_const(4, 3).unwrap();
+    let x_is_three = arena.eq(x, three).unwrap();
+    let config = SolverConfig {
+        prove_unsat: true,
+        ..SolverConfig::default()
+    };
+
+    let CheckResult::Sat(model) = SatBvBackend::new()
+        .check(&arena, &[x_is_three], &config)
+        .unwrap()
+    else {
+        panic!("prove_unsat over a satisfiable formula should return Sat");
+    };
+    assert_eq!(model.get(x_sym), Some(Value::Bv { width: 4, value: 3 }));
 }
 
 #[test]
@@ -455,8 +565,10 @@ fn cnf_inprocessing_records_stats_and_eliminates_variables() {
 
 #[test]
 fn cnf_inprocessing_unsat_is_drat_proof_checked() {
-    // Inprocessing + prove_unsat: the reduced (equisatisfiable) formula is the
-    // one independently re-derived and DRAT-checked.
+    // Inprocessing + prove_unsat: the reduced (equisatisfiable) formula is solved
+    // by the native proof-producing core, whose inline DRAT proof is verified in
+    // a single solve. The reduced-formula unsat is still DRAT-checked (now via the
+    // inline path rather than a separate re-derivation).
     let mut arena = TermArena::new();
     let x = arena.bv_var("x", 6).unwrap();
     let zero = arena.bv_const(6, 0).unwrap();
@@ -475,9 +587,11 @@ fn cnf_inprocessing_unsat_is_drat_proof_checked() {
         stats
             .backend
             .iter()
-            .any(|(name, value)| name == "unsat_proof_checked"
+            .any(|(name, value)| name == "unsat_proof_checked_inline"
                 && (*value - 1.0).abs() < f64::EPSILON),
-        "reduced-formula unsat should be DRAT-proof-checked"
+        "reduced-formula unsat should be DRAT-proof-checked inline (single solve), \
+         got stats: {:?}",
+        stats.backend
     );
 }
 

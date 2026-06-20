@@ -181,18 +181,14 @@ impl SatBvBackend {
 
         // The xor-derived `unsat` is the trusted `XorGaussian` hole and is NOT
         // RUP, so it cannot be DRAT-verified (the checker would correctly reject a
-        // synthesized proof). Skip the proof route for it; only batsat `unsat` is
-        // DRAT-checked here.
-        if config.prove_unsat && !xor_cdcl_unsat && matches!(sat_result, SatResult::Unsat(_)) {
-            // The reduced formula is equisatisfiable with the original, so an
-            // independent UNSAT proof of it certifies the original is UNSAT.
-            // Fail CLOSED: the user asked for a checked `unsat`, so if the proof
-            // core could not produce a checkable proof within budget, downgrade
-            // to `unknown` rather than return an unverified `unsat`.
-            if let Some(reason) = verify_unsat_proof(solve_formula, &mut stats)? {
-                self.stats = Some(stats);
-                return Ok(CheckResult::Unknown(reason));
-            }
+        // synthesized proof). Skip the proof route for it; only batsat/native
+        // `unsat` is DRAT-checked here.
+        let prove = config.prove_unsat && !xor_cdcl_unsat;
+        if let Some(reason) =
+            ensure_unsat_proof_checked(prove, &sat_result, solve_formula, &mut stats)?
+        {
+            self.stats = Some(stats);
+            return Ok(CheckResult::Unknown(reason));
         }
 
         // Lift a compacted `sat` model back to the original CNF variables (no-op
@@ -850,16 +846,28 @@ fn map_sat_error(error: &SatError) -> SolverError {
 }
 
 /// Dispatches the primary SAT search: the deadline-bounded native CDCL core when
-/// `config.native_cdcl` is set, otherwise the default `rustsat-batsat` adapter.
-/// Both produce a [`SatResult`] consumed identically downstream.
+/// `config.native_cdcl` is set — or when `config.prove_unsat` is set, since the
+/// native core is the proof-producing engine and its inline proof lets a checked
+/// `unsat` fall out of a **single** solve. Otherwise the default `rustsat-batsat`
+/// adapter. Both produce a [`SatResult`] consumed identically downstream.
+///
+/// When the native core runs for `prove_unsat`, `check_proof` is set so any
+/// `unsat` it returns is verified inline (`SatProofStatus::Checked`) and the
+/// downstream re-derivation is skipped (see the call site in
+/// [`SatBvBackend::check_with_replay`]). batsat stays the default engine when
+/// `prove_unsat` is not requested.
 fn primary_sat_search(
     config: &SolverConfig,
     formula: &CnfFormula,
     deadline: Option<Instant>,
     sat_timeout: Option<Duration>,
 ) -> Result<SatResult, SolverError> {
-    if config.native_cdcl {
-        Ok(solve_with_native_cdcl(formula, deadline))
+    if config.native_cdcl || config.prove_unsat {
+        Ok(solve_with_native_cdcl(
+            formula,
+            deadline,
+            config.prove_unsat,
+        ))
     } else {
         solve_with_rustsat_batsat_timeout(formula, sat_timeout)
             .map_err(|error| map_sat_error(&error))
@@ -872,18 +880,47 @@ fn primary_sat_search(
 ///
 /// - `Sat` → [`SatResult::Sat`]; the model then flows through the standard
 ///   reconstruction + AIG/model/term replay (a wrong model is rejected there).
-/// - `Unsat` → [`SatResult::Unsat`] with an `Unchecked` proof status; the
-///   DRAT proof is re-derived and verified downstream when `prove_unsat` is set
-///   (the same route batsat `unsat` takes).
+/// - `Unsat` → [`SatResult::Unsat`]. The native core already produced a DRAT
+///   proof inline; when `check_proof` is set we verify it **here, in place**
+///   (one solve) and stamp the result `Checked` so a downstream re-derivation is
+///   unnecessary. A proof that fails to check — or fails to derive the empty
+///   clause — is a should-never-happen native-core bug: we conservatively
+///   **downgrade to `Unknown`** rather than accept an unverified `unsat`. When
+///   `check_proof` is unset we stamp `Unchecked` (no verification cost), matching
+///   the prior behaviour.
 /// - `ResourceOut`/`Interrupted` → [`SatResult::Unknown`]; an undecided verdict
 ///   is never reported as `sat`/`unsat`.
-fn solve_with_native_cdcl(formula: &CnfFormula, deadline: Option<Instant>) -> SatResult {
+fn solve_with_native_cdcl(
+    formula: &CnfFormula,
+    deadline: Option<Instant>,
+    check_proof: bool,
+) -> SatResult {
     match solve_with_drat_proof_within(formula, deadline) {
         ProofSolveOutcome::Sat(assignment) => SatResult::Sat(assignment),
-        ProofSolveOutcome::Unsat(_) => SatResult::Unsat(SatUnsatEvidence {
-            proof: SatProofStatus::Unchecked,
-            failed_assumptions: Vec::new(),
-        }),
+        ProofSolveOutcome::Unsat(proof) => {
+            if !check_proof {
+                return SatResult::Unsat(SatUnsatEvidence {
+                    proof: SatProofStatus::Unchecked,
+                    failed_assumptions: Vec::new(),
+                });
+            }
+            // Verify the inline proof in place. Only a checked proof yields an
+            // accepted `unsat`; anything else is a conservative downgrade — we
+            // never pass off an unverified `unsat` as checked.
+            match check_drat(formula, &proof) {
+                Ok(true) => SatResult::Unsat(SatUnsatEvidence {
+                    proof: SatProofStatus::Checked,
+                    failed_assumptions: Vec::new(),
+                }),
+                Ok(false) => SatResult::Unknown(SatUnknownReason {
+                    detail: "native unsat proof failed to check: did not derive the empty clause"
+                        .to_owned(),
+                }),
+                Err(error) => SatResult::Unknown(SatUnknownReason {
+                    detail: format!("native unsat proof failed to check: {error}"),
+                }),
+            }
+        }
         ProofSolveOutcome::ResourceOut => SatResult::Unknown(SatUnknownReason {
             detail: "native CDCL core exhausted its conflict budget".to_owned(),
         }),
@@ -891,6 +928,44 @@ fn solve_with_native_cdcl(formula: &CnfFormula, deadline: Option<Instant>) -> Sa
             detail: "native CDCL core timeout".to_owned(),
         }),
     }
+}
+
+/// Ensures the `unsat` in `sat_result` is backed by a checked DRAT proof,
+/// returning `Ok(None)` when it is (so the caller may accept the `unsat`) and
+/// `Ok(Some(reason))` when it must fail closed to `unknown`. A no-op (`Ok(None)`)
+/// unless `prove` is set and `sat_result` is `Unsat`.
+///
+/// Two routes reach here, both yielding the same guarantee:
+/// - The native proof-producing core (used for `prove_unsat`) already produced
+///   and verified its DRAT proof inline; its `Checked` status means the `unsat`
+///   is backed by a checked proof BY CONSTRUCTION, so no re-derivation runs.
+///   This is the single-solve path.
+/// - The batsat fallback (or any config still routing to batsat) lands here
+///   `Unchecked`; re-derive and verify with the proof core, failing closed if no
+///   checkable proof can be produced within budget.
+fn ensure_unsat_proof_checked(
+    prove: bool,
+    sat_result: &SatResult,
+    formula: &CnfFormula,
+    stats: &mut SolveStats,
+) -> Result<Option<UnknownReason>, SolverError> {
+    if !prove || !matches!(sat_result, SatResult::Unsat(_)) {
+        return Ok(None);
+    }
+    let already_checked = matches!(
+        sat_result,
+        SatResult::Unsat(evidence) if evidence.proof == SatProofStatus::Checked
+    );
+    if already_checked {
+        stats
+            .backend
+            .push(("unsat_proof_checked_inline".to_owned(), 1.0));
+        return Ok(None);
+    }
+    // The reduced formula is equisatisfiable with the original, so an independent
+    // UNSAT proof of it certifies the original is UNSAT. Fail CLOSED for the
+    // batsat path.
+    verify_unsat_proof(formula, stats)
 }
 
 /// Independently re-derives `unsat` with the proof-producing SAT core and
@@ -1139,6 +1214,96 @@ mod tests {
             reason.detail.contains("could not be verified"),
             "unexpected reason: {}",
             reason.detail
+        );
+    }
+
+    /// The native core, when asked to check its proof, returns an `unsat`
+    /// stamped `Checked` for a genuinely unsatisfiable formula — the checked
+    /// proof falls out of a SINGLE solve.
+    #[test]
+    fn native_cdcl_checks_inline_proof_for_unsat() {
+        // `x ∧ ¬x` is unsat.
+        let f = formula(1, &[&[(0, false)], &[(0, true)]]);
+        let result = solve_with_native_cdcl(&f, None, true);
+        assert_eq!(
+            result,
+            SatResult::Unsat(SatUnsatEvidence {
+                proof: SatProofStatus::Checked,
+                failed_assumptions: Vec::new(),
+            }),
+            "native unsat with check_proof must be Checked"
+        );
+    }
+
+    /// Without `check_proof`, the native core stamps `Unchecked` (no verification
+    /// cost) — the prior behaviour, now opt-in.
+    #[test]
+    fn native_cdcl_skips_inline_check_when_not_requested() {
+        let f = formula(1, &[&[(0, false)], &[(0, true)]]);
+        let result = solve_with_native_cdcl(&f, None, false);
+        assert_eq!(
+            result,
+            SatResult::Unsat(SatUnsatEvidence {
+                proof: SatProofStatus::Unchecked,
+                failed_assumptions: Vec::new(),
+            })
+        );
+    }
+
+    /// A `Checked` unsat is accepted with no re-derivation: `ensure_unsat_proof_checked`
+    /// returns `Ok(None)` and records only the inline stat, never the
+    /// re-derivation stat.
+    #[test]
+    fn ensure_proof_accepts_checked_without_rederivation() {
+        let f = formula(1, &[&[(0, false)], &[(0, true)]]);
+        let checked = SatResult::Unsat(SatUnsatEvidence {
+            proof: SatProofStatus::Checked,
+            failed_assumptions: Vec::new(),
+        });
+        let mut stats = SolveStats::default();
+        let outcome = ensure_unsat_proof_checked(true, &checked, &f, &mut stats)
+            .expect("checked proof must not error");
+        assert!(outcome.is_none(), "a Checked unsat must be accepted");
+        assert!(
+            stats
+                .backend
+                .iter()
+                .any(|(n, _)| n == "unsat_proof_checked_inline"),
+            "the inline stat must be recorded"
+        );
+        assert!(
+            !stats
+                .backend
+                .iter()
+                .any(|(n, _)| n == "unsat_proof_checked"),
+            "a Checked unsat must NOT re-derive the proof"
+        );
+    }
+
+    /// The batsat fallback (`Unchecked`) route still fails closed / certifies via
+    /// re-derivation: on a genuinely unsat formula `ensure_unsat_proof_checked`
+    /// re-derives, checks, and accepts (`Ok(None)`) recording the re-derivation
+    /// stat — never accepting an unsat without a checked proof.
+    #[test]
+    fn ensure_proof_rederives_for_unchecked_batsat_path() {
+        let f = formula(1, &[&[(0, false)], &[(0, true)]]);
+        let unchecked = SatResult::Unsat(SatUnsatEvidence {
+            proof: SatProofStatus::Unchecked,
+            failed_assumptions: Vec::new(),
+        });
+        let mut stats = SolveStats::default();
+        let outcome = ensure_unsat_proof_checked(true, &unchecked, &f, &mut stats)
+            .expect("re-derivation of a genuine unsat must certify");
+        assert!(
+            outcome.is_none(),
+            "a re-derived + checked unsat must be accepted"
+        );
+        assert!(
+            stats
+                .backend
+                .iter()
+                .any(|(n, _)| n == "unsat_proof_checked"),
+            "the batsat fallback must re-derive + check the proof"
         );
     }
 }
