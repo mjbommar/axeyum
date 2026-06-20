@@ -189,7 +189,7 @@ pub use qinst_egraph::{
 pub use quant_alethe::prove_quant_unsat_alethe;
 pub use quant_finite_cert::{
     GuardedUniversalForm, check_alethe_lra_guarded_inst, guarded_universal_form_for_test,
-    prove_finite_int_quant_unsat_alethe,
+    prove_finite_int_quant_unsat_alethe, prove_finite_int_quant_unsat_uf_alethe,
 };
 pub use reconstruct::{
     LraReconstructCtx, ProofFragment, ReconstructCtx, ReconstructError, prove_unsat_to_lean,

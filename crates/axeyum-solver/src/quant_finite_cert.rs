@@ -44,7 +44,7 @@
 use std::collections::HashMap;
 
 use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm, check_alethe_with};
-use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode};
+use axeyum_ir::{FuncId, Op, Sort, SymbolId, TermArena, TermId, TermNode};
 use axeyum_rewrite::replace_subterms;
 
 use crate::alethe_lra::{int_atom_to_alethe_pub, la_generic_check_pub};
@@ -175,6 +175,443 @@ pub fn prove_finite_int_quant_unsat_alethe(
 
     // Self-validate with the combined (arithmetic + guarded-inst) checker.
     finish(arena, &u, commands)
+}
+
+/// Emits a checkable Alethe refutation for a finite-expansion guarded-`Int`
+/// universal `unsat` whose inner body **uses an uninterpreted function** over an
+/// arithmetic-sorted residual — e.g. `∀x:Int. (0<=x<=1) => f(x)=0` together with
+/// `f(0)=1` (the instances `f(0)=0, f(1)=0` clash with `f(0)=1`). Returns `None`
+/// outside this slice (no UF in the residual, not `unsat`, or a non-arith-sorted
+/// UF), leaving the bare-`unsat` behaviour untouched.
+///
+/// This is the UF sibling of [`prove_finite_int_quant_unsat_alethe`]: the ground
+/// tail residual contains arith-sorted UF applications, so it cannot be refuted by
+/// the plain `lia_generic` emitter. Instead the residual is **Ackermann-abstracted**
+/// (each application `f(v)` to a fresh same-sorted symbol `v_k`, the same `unsat`
+/// because identical applications share a symbol) and refuted over the pure-LIA
+/// abstraction; each universal instance is then bridged from the abstraction by
+/// `eq_transitive` through the abstraction's defining equation `v_k = f(v)` (a
+/// conservative fresh-variable introduction, assumed as a checkable hypothesis —
+/// the same trust posture as the Ackermann congruence certs). The combined proof
+/// uses three rule families — `forall_inst_guarded` (the custom instantiation
+/// lemma), `eq_transitive`/`symm` (the bridge), and `lia_generic` (the residual) —
+/// all re-validated by [`check_alethe_lra_guarded_inst`].
+///
+/// The returned proof, when non-`None`, is guaranteed to pass
+/// [`check_alethe_lra_guarded_inst`] and to derive the empty clause `(cl)`.
+#[must_use]
+pub fn prove_finite_int_quant_unsat_uf_alethe(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Option<Vec<AletheCommand>> {
+    // Partition into the (single) guarded universal and quantifier-free side facts.
+    let mut universal: Option<GuardedUniversal> = None;
+    let mut ground: Vec<TermId> = Vec::new();
+    for &a in assertions {
+        if matches!(
+            arena.node(a),
+            TermNode::App {
+                op: Op::Forall(_),
+                ..
+            }
+        ) {
+            if universal.is_some() {
+                return None;
+            }
+            universal = Some(detect_guarded_universal(arena, a)?);
+        } else {
+            if contains_quantifier(arena, a) {
+                return None;
+            }
+            ground.push(a);
+        }
+    }
+    let u = universal?;
+
+    // Build the ground instances `inner[x:=v]` for v ∈ [lo, hi].
+    let instances = build_instances(arena, &u)?;
+
+    // The expanded residual `(instances ∧ ground)`.
+    let mut expanded: Vec<TermId> = instances.clone();
+    expanded.extend_from_slice(&ground);
+
+    // This sibling owns the UF case: the residual MUST contain at least one
+    // uninterpreted-function application, and EVERY application must be
+    // arithmetic-sorted (`Int`/`Real`) so the Ackermann abstraction is pure
+    // LIA/LRA. A residual with no UF is the plain-LIA path's job (decline here);
+    // a non-arith-sorted application is out of slice.
+    if !residual_has_arith_uf(arena, &expanded) {
+        return None;
+    }
+
+    // Ackermann-abstract the residual: each application `f(v)` → fresh same-sorted
+    // `v_k`. Identical applications share a symbol, so the abstraction is `unsat`
+    // exactly when the residual is. The `applications()` give the `f(v) → v_k` map
+    // the per-instance bridge needs.
+    let elim = axeyum_rewrite::eliminate_functions(arena, &expanded).ok()?;
+    if !elim.had_functions() {
+        return None;
+    }
+    let abstraction: Vec<TermId> = elim.abstraction().to_vec();
+    // Map `(func, args) → fresh symbol` for each abstracted application.
+    let app_map: HashMap<(FuncId, Vec<TermId>), SymbolId> = elim
+        .applications()
+        .into_iter()
+        .map(|(func, args, fresh)| ((func, args.to_vec()), fresh))
+        .collect();
+
+    // The abstraction must be a genuine LIA `unsat`; only then is there a residual
+    // to refute. (Real residuals are out of this integer slice.)
+    if !matches!(
+        check_with_lia_simplex(arena, &abstraction),
+        Ok(CheckResult::Unsat)
+    ) {
+        return None;
+    }
+
+    // For each instance `f(v)=c`, locate its abstracted symbol `v_k` and the
+    // rewritten instance atom (the EXACT term the LIA tail assumes — taken from the
+    // abstraction so orientation matches verbatim). An instance whose UF
+    // application is not abstractable, or whose rewritten form is not the matching
+    // `(= v_k c)`, is out of slice → decline.
+    if abstraction.len() < instances.len() {
+        return None;
+    }
+    let mut bridges: Vec<UfInstanceBridge> = Vec::with_capacity(instances.len());
+    for (i, &inst) in instances.iter().enumerate() {
+        bridges.push(uf_instance_bridge(arena, inst, abstraction[i], &app_map)?);
+    }
+
+    // 1. assume the universal as a unit clause over its opaque `forall` atom (the
+    //    UF-aware body/inner rendering).
+    let forall_atom = forall_atom_of_uf(arena, &u)?;
+    let mut commands: Vec<AletheCommand> = vec![AletheCommand::Assume {
+        id: "q_forall".to_owned(),
+        clause: vec![lit(forall_atom.clone(), false)],
+    }];
+
+    // 2/3/bridge. per instance: forall_inst_guarded → resolve to the bare instance
+    //     `(= (f v) c)`, assume the defining equation `(= v_k (f v))`, then
+    //     `eq_transitive` to the abstracted `(= v_k c)` (keyed to splice the tail).
+    let mut instance_ground: Vec<(TermId, String)> = Vec::with_capacity(instances.len());
+    for (i, bridge) in bridges.iter().enumerate() {
+        let final_id = emit_uf_instance(&mut commands, &forall_atom, bridge, i);
+        instance_ground.push((bridge.abstract_term, final_id));
+    }
+
+    // 4. lia_generic ground refutation of the pure-LIA abstraction, spliced in: the
+    //    tail re-assumes the abstracted atoms; redirect each abstracted instance's
+    //    assume to our bridge resolvent so the instance flows from the universal.
+    let tail = crate::prove_lia_unsat_alethe(arena, &abstraction)?;
+    splice_ground_tail(&mut commands, &tail, &instance_ground, arena);
+
+    // Self-validate with the combined checker (the UF-aware universal form).
+    finish_uf(arena, &u, commands)
+}
+
+/// Emits the per-instance command block for instance `i`: the `forall_inst_guarded`
+/// step, its resolution against the assumed universal, the defining-equation
+/// `Assume`, the `eq_transitive` bridge tautology, and the resolution to the
+/// abstracted instance unit `(cl (= v_k c))`. Returns the id of that final unit (the
+/// splice redirect target). The block proves `(= v_k c)` from the universal and the
+/// (assumed, conservative) abstraction definition — no trusted reduction.
+fn emit_uf_instance(
+    commands: &mut Vec<AletheCommand>,
+    forall_atom: &AletheTerm,
+    bridge: &UfInstanceBridge,
+    i: usize,
+) -> String {
+    let inst_id = format!("q_inst{i}");
+    let res_id = format!("q_res{i}");
+    let def_id = format!("q_def{i}");
+    let bridge_id = format!("q_brg{i}");
+    let final_id = format!("q_fin{i}");
+
+    // forall_inst_guarded: (cl (not (forall (x) body)) (= (f v) c)).
+    commands.push(AletheCommand::Step {
+        id: inst_id.clone(),
+        clause: vec![
+            lit(forall_atom.clone(), true),
+            lit(bridge.inst_atom.clone(), false),
+        ],
+        rule: "forall_inst_guarded".to_owned(),
+        premises: Vec::new(),
+        args: Vec::new(),
+    });
+    // resolution with the assumed universal: (cl (= (f v) c)).
+    commands.push(AletheCommand::Step {
+        id: res_id.clone(),
+        clause: vec![lit(bridge.inst_atom.clone(), false)],
+        rule: "resolution".to_owned(),
+        premises: vec!["q_forall".to_owned(), inst_id],
+        args: Vec::new(),
+    });
+    // assume the defining equation `(= v_k (f v))` (a conservative fresh-var
+    // introduction, the same checkable-hypothesis posture as the Ackermann
+    // congruence certs).
+    commands.push(AletheCommand::Assume {
+        id: def_id.clone(),
+        clause: vec![lit(bridge.def_atom.clone(), false)],
+    });
+    // eq_transitive tautology: (cl (not (= v_k (f v))) (not (= (f v) c)) (= v_k c)).
+    commands.push(AletheCommand::Step {
+        id: bridge_id.clone(),
+        clause: vec![
+            lit(bridge.def_atom.clone(), true),
+            lit(bridge.inst_atom.clone(), true),
+            lit(bridge.abstract_atom.clone(), false),
+        ],
+        rule: "eq_transitive".to_owned(),
+        premises: Vec::new(),
+        args: Vec::new(),
+    });
+    // resolve the tautology against the defining-eq assume and the derived instance
+    // to the abstracted unit (cl (= v_k c)).
+    commands.push(AletheCommand::Step {
+        id: final_id.clone(),
+        clause: vec![lit(bridge.abstract_atom.clone(), false)],
+        rule: "resolution".to_owned(),
+        premises: vec![bridge_id, def_id, res_id],
+        args: Vec::new(),
+    });
+    final_id
+}
+
+/// The data linking one universal instance `f(v)=c` to the LIA tail's abstracted
+/// assume `v_k=c`, used to bridge the two by `eq_transitive` through the defining
+/// equation `v_k = f(v)`.
+struct UfInstanceBridge {
+    /// The instance literal `(= (f v) c)` (the `forall_inst_guarded` consequent).
+    inst_atom: AletheTerm,
+    /// The abstraction's defining equation `(= v_k (f v))` (assumed).
+    def_atom: AletheTerm,
+    /// The abstracted instance atom `(= v_k c)` (the tail's assume key).
+    abstract_atom: AletheTerm,
+    /// The abstracted instance IR term `(= v_k c)` (for the splice key).
+    abstract_term: TermId,
+}
+
+/// Builds the [`UfInstanceBridge`] linking one universal instance `inst` to its
+/// `rewritten` abstraction `(= v_k c)` (taken verbatim from the abstraction, so the
+/// orientation matches the tail's assume exactly). `None` unless `inst` is
+/// `(= (f v) c)` / `(= c (f v))` for an abstractable application and `rewritten` is
+/// the matching abstracted equality `(= v_k c)` / `(= c v_k)`.
+fn uf_instance_bridge(
+    arena: &TermArena,
+    inst: TermId,
+    rewritten: TermId,
+    app_map: &HashMap<(FuncId, Vec<TermId>), SymbolId>,
+) -> Option<UfInstanceBridge> {
+    // The instance must be `(= (f v) c)` — the canonical inner-body shape with the
+    // abstractable UF application `f(v)` on the LEFT and the value `c` on the right.
+    // (A value-on-left instance is a sound decline; the eq_transitive bridge below
+    // is built for the app-left orientation only.)
+    let (app_term, value_term) = eq_operands(arena, inst)?;
+    let (func, app_args) = uf_apply(arena, app_term)?;
+    if uf_apply(arena, value_term).is_some() {
+        return None; // both sides applications — out of this canonical slice
+    }
+    let fresh = *app_map.get(&(func, app_args))?;
+
+    // The rewritten instance MUST be the abstracted equality `(= v_k c)` with `f(v)`
+    // replaced by the SAME fresh symbol `v_k` in the SAME (left) position and the
+    // value side unchanged. Verifying this against the abstraction's own term
+    // forecloses any keying mismatch that would leave the tail's assume
+    // unredirected (and thus an unjustified hypothesis).
+    let (rewritten_app, rewritten_value) = eq_operands(arena, rewritten)?;
+    if !matches!(arena.node(rewritten_app), TermNode::Symbol(s) if *s == fresh) {
+        return None;
+    }
+    if rewritten_value != value_term {
+        return None;
+    }
+
+    // Render the atoms. The instance keeps `(f v)`; the abstracted form and the
+    // defining equation use `v_k`. The chain `v_k = (f v) = c ⊢ v_k = c` shares its
+    // middle term `(f v)`.
+    let app_alethe = term_to_alethe_uf(arena, app_term)?;
+    let value_alethe = term_to_alethe_uf(arena, value_term)?;
+    let fresh_alethe = term_to_alethe_uf(arena, rewritten_app)?;
+    let inst_atom = eq_alethe(app_alethe.clone(), value_alethe.clone());
+    let def_atom = eq_alethe(fresh_alethe.clone(), app_alethe);
+    let abstract_atom = eq_alethe(fresh_alethe, value_alethe);
+
+    Some(UfInstanceBridge {
+        inst_atom,
+        def_atom,
+        abstract_atom,
+        abstract_term: rewritten,
+    })
+}
+
+/// The two operands of an `(= a b)` term, or `None` if `t` is not a binary
+/// equality.
+fn eq_operands(arena: &TermArena, t: TermId) -> Option<(TermId, TermId)> {
+    let TermNode::App { op: Op::Eq, args } = arena.node(t) else {
+        return None;
+    };
+    let [a, b] = args[..] else {
+        return None;
+    };
+    Some((a, b))
+}
+
+/// If `t` is an uninterpreted-function application `f(args)`, returns
+/// `(func, args)`; otherwise `None`.
+fn uf_apply(arena: &TermArena, t: TermId) -> Option<(FuncId, Vec<TermId>)> {
+    match arena.node(t) {
+        TermNode::App {
+            op: Op::Apply(func),
+            args,
+        } => Some((*func, args.to_vec())),
+        _ => None,
+    }
+}
+
+/// Whether `residual` contains at least one uninterpreted-function application AND
+/// every application is arithmetic-sorted (`Int`/`Real`). A non-arith-sorted
+/// application means the abstraction would not be pure LIA/LRA — out of slice.
+fn residual_has_arith_uf(arena: &TermArena, residual: &[TermId]) -> bool {
+    let mut seen = std::collections::BTreeSet::new();
+    let mut stack = residual.to_vec();
+    let mut found = false;
+    while let Some(t) = stack.pop() {
+        if !seen.insert(t) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(t) {
+            if matches!(op, Op::Apply(_)) {
+                if !matches!(arena.sort_of(t), Sort::Int | Sort::Real) {
+                    return false;
+                }
+                found = true;
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
+    found
+}
+
+/// Translates an IR term to Alethe for the UF-aware body fragment: integer
+/// comparisons / linear terms (delegating to [`int_atom_to_alethe_pub`] where it
+/// applies), plus uninterpreted applications `f(args)` rendered head-first. `None`
+/// outside this fragment.
+fn term_to_alethe_uf(arena: &TermArena, t: TermId) -> Option<AletheTerm> {
+    match arena.node(t) {
+        TermNode::Symbol(s) => {
+            let (name, _sort) = arena.symbol(*s);
+            Some(AletheTerm::Const(name.to_owned()))
+        }
+        TermNode::IntConst(n) => Some(AletheTerm::Const(n.to_string())),
+        TermNode::App {
+            op: Op::Apply(func),
+            args,
+        } => {
+            let (name, _params, _result) = arena.function(*func);
+            let name = name.to_owned();
+            let converted = args
+                .iter()
+                .map(|&a| term_to_alethe_uf(arena, a))
+                .collect::<Option<Vec<_>>>()?;
+            Some(AletheTerm::App(name, converted))
+        }
+        TermNode::App { op, args } => {
+            let head = match op {
+                Op::IntLe => "<=",
+                Op::IntLt => "<",
+                Op::IntGe => ">=",
+                Op::IntGt => ">",
+                Op::Eq => "=",
+                Op::IntAdd => "+",
+                Op::IntSub | Op::IntNeg => "-",
+                Op::IntMul => "*",
+                _ => return None,
+            };
+            let converted = args
+                .iter()
+                .map(|&a| term_to_alethe_uf(arena, a))
+                .collect::<Option<Vec<_>>>()?;
+            Some(AletheTerm::App(head.to_owned(), converted))
+        }
+        _ => None,
+    }
+}
+
+/// `(= a b)`.
+fn eq_alethe(a: AletheTerm, b: AletheTerm) -> AletheTerm {
+    AletheTerm::App("=".to_owned(), vec![a, b])
+}
+
+/// The opaque Alethe `forall` atom `(forall (x) ⟦(=> guard inner)⟧)` for the UF
+/// case (the inner consequent is rendered UF-aware).
+fn forall_atom_of_uf(arena: &TermArena, u: &GuardedUniversal) -> Option<AletheTerm> {
+    let body = forall_body_to_alethe_uf(arena, u)?;
+    let var_name = arena.symbol(u.var).0.to_owned();
+    Some(AletheTerm::App(
+        "forall".to_owned(),
+        vec![AletheTerm::Const(var_name), body],
+    ))
+}
+
+/// The UF-aware guarded body `⟦(=> guard inner)⟧` (the guard is pure-int, the inner
+/// may use an uninterpreted application).
+fn forall_body_to_alethe_uf(arena: &TermArena, u: &GuardedUniversal) -> Option<AletheTerm> {
+    let guard = int_bool_to_alethe(arena, u.guard)?;
+    let inner = term_to_alethe_uf(arena, u.inner)?;
+    Some(AletheTerm::App("=>".to_owned(), vec![guard, inner]))
+}
+
+/// The [`GuardedUniversalForm`] for a UF-bodied detected universal (the inner /
+/// body rendered UF-aware), carried on the [`crate::Evidence`].
+fn universal_form_uf(arena: &TermArena, u: &GuardedUniversal) -> Option<GuardedUniversalForm> {
+    Some(GuardedUniversalForm {
+        var_name: arena.symbol(u.var).0.to_owned(),
+        inner: term_to_alethe_uf(arena, u.inner)?,
+        body: forall_body_to_alethe_uf(arena, u)?,
+        lo: u.lo,
+        hi: u.hi,
+    })
+}
+
+/// Self-validation gate for the UF emitter: runs the assembled proof through
+/// [`check_alethe_lra_guarded_inst`] with the UF-aware universal form, returning it
+/// only on a clean re-check (`Ok(true)`, deriving the empty clause).
+fn finish_uf(
+    arena: &TermArena,
+    u: &GuardedUniversal,
+    commands: Vec<AletheCommand>,
+) -> Option<Vec<AletheCommand>> {
+    let form = universal_form_uf(arena, u)?;
+    match check_alethe_lra_guarded_inst(&form, &commands) {
+        Ok(true) => Some(commands),
+        _ => None,
+    }
+}
+
+/// Detects whether `assertions` are in the UF-bodied finite-`Int` quantifier slice
+/// and, if so, returns the [`GuardedUniversalForm`] the [`crate::Evidence`] should
+/// carry. Shared with the emitter so the evidence form matches the proof's hook.
+pub(crate) fn guarded_universal_form_uf(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<GuardedUniversalForm> {
+    let mut found: Option<GuardedUniversalForm> = None;
+    for &a in assertions {
+        if matches!(
+            arena.node(a),
+            TermNode::App {
+                op: Op::Forall(_),
+                ..
+            }
+        ) {
+            if found.is_some() {
+                return None;
+            }
+            let u = detect_guarded_universal(arena, a)?;
+            found = Some(universal_form_uf(arena, &u)?);
+        }
+    }
+    found
 }
 
 /// Checks an Alethe proof that may use the **`forall_inst_guarded`** rule (the

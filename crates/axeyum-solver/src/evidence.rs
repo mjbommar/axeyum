@@ -47,7 +47,8 @@ use crate::model::Model;
 use crate::proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};
 use crate::quant_finite_cert::{
     GuardedUniversalForm, check_alethe_lra_guarded_inst, guarded_universal_form,
-    prove_finite_int_quant_unsat_alethe,
+    guarded_universal_form_uf, prove_finite_int_quant_unsat_alethe,
+    prove_finite_int_quant_unsat_uf_alethe,
 };
 use crate::sat_bv_backend::SatBvBackend;
 use crate::trust::{TrustId, TrustStep};
@@ -768,6 +769,24 @@ pub fn produce_evidence(
                     Evidence::UnsatGuardedQuantAletheProof { proof, universal },
                     trust_steps(&[(TrustId::Farkas, true)]),
                 )
+            } else if let Some((proof, universal)) =
+                guarded_quant_uf_alethe_certificate(arena, assertions)
+            {
+                // A finite-expansion guarded-`Int` universal whose body uses an
+                // uninterpreted function (e.g. `∀x:Int. (0<=x<=1) => f(x)=0` with
+                // `f(0)=1`): the `forall_inst_guarded` + `eq_transitive` (defining-eq
+                // bridge) + `lia_generic` refutation re-checks each instantiation's
+                // substitution AND concrete guard truth, the bridge to the Ackermann
+                // abstraction, and the pure-LIA residual — so the quantifier-
+                // instantiation reduction is CERTIFIED. Ordered AFTER the pure-LIA
+                // finite-`∀` cert (whose emitter declines a UF body) and the ground
+                // certs, BEFORE the bare fallback. Reuses the same
+                // `Evidence::UnsatGuardedQuantAletheProof` variant: its combined
+                // checker already validates all three rule families.
+                (
+                    Evidence::UnsatGuardedQuantAletheProof { proof, universal },
+                    trust_steps(&[(TrustId::Farkas, true)]),
+                )
             } else if let Some((proof, steps)) = bv2nat_bound_certificate(arena, assertions) {
                 // A `bv2nat`-bound contradiction (e.g. `bv2nat(x) >= 16` for a 4-bit
                 // `x`): the exact integer refuters reject a raw `bv2nat(b)` subterm,
@@ -918,6 +937,31 @@ fn guarded_quant_alethe_certificate(
 ) -> Option<(Vec<AletheCommand>, GuardedUniversalForm)> {
     let proof = prove_finite_int_quant_unsat_alethe(arena, assertions)?;
     let universal = guarded_universal_form(arena, assertions)?;
+    if matches!(check_alethe_lra_guarded_inst(&universal, &proof), Ok(true)) {
+        Some((proof, universal))
+    } else {
+        None
+    }
+}
+
+/// Tries the **UF-bodied** finite-expansion guarded-`Int` quantifier Alethe emitter
+/// ([`prove_finite_int_quant_unsat_uf_alethe`]), returning a
+/// [`check_alethe_lra_guarded_inst`]-validated refutation together with the
+/// [`GuardedUniversalForm`] the [`Evidence::UnsatGuardedQuantAletheProof`] carries.
+///
+/// The emitter is self-validating (returns `Some` only after the combined checker
+/// accepts) and declines cheaply outside its slice — anything that is not exactly
+/// one guarded-finite-`Int` universal `∀x:Int. (lo<=x<=hi) => (= (f x) c)` whose
+/// expanded residual contains an arithmetic-sorted uninterpreted application and is
+/// LIA-`unsat` after Ackermann abstraction. Ordered AFTER the pure-LIA finite-`∀`
+/// cert (which declines a UF body), so it never shadows it, and the matching
+/// `universal` form is re-derived by the shared UF-aware detection.
+fn guarded_quant_uf_alethe_certificate(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Option<(Vec<AletheCommand>, GuardedUniversalForm)> {
+    let proof = prove_finite_int_quant_unsat_uf_alethe(arena, assertions)?;
+    let universal = guarded_universal_form_uf(arena, assertions)?;
     if matches!(check_alethe_lra_guarded_inst(&universal, &proof), Ok(true)) {
         Some((proof, universal))
     } else {

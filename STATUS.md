@@ -92,8 +92,17 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   - **Certification sweep COMPLETE (in-`solver`):** every self-contained certification gap the
     6th-pass proof-completeness map surfaced is now closed — QF_UFLIA/UFLRA (gap C, zero-trust),
     QF_LIA (gap E), `bv2nat`-bound (gap D, partial-trust w/ recorded `IntBlast` step), and
-    finite-`∀` quantifier (custom in-tree `forall_inst_guarded`). The remaining uncertified
-    fragments are gap A (NRA sign — needs `nra.rs`, concurrent lane) and the keystones below.
+    finite-`∀` quantifier (LIA + UF tails, custom in-tree `forall_inst_guarded`). The remaining
+    uncertified fragments are gap A (NRA sign — needs `nra.rs`, concurrent lane) and the keystones.
+  - **Assurance follow-up (in-`solver`, real):** the custom-rule quantifier certs (finite-`∀`
+    LIA + UF, via `forall_inst_guarded`) are **in-tree-checked only** and their
+    `check_alethe_lra_guarded_inst` re-check **trusts the emitter's ground-fact/abstraction-def
+    `assume`s** (no cross-verification against the original assertions, and no Carcara/Lean
+    backstop). Strengthen the check to take the original `assertions` (`Evidence::check` already
+    receives them) and verify each non-universal `assume` is either an original assertion or a
+    sound fresh-var definition `(= fresh (f args))` — lifting these certs to fully
+    assume-independent. (Standard certs close this via Carcara/Lean; these custom rules need this
+    in-tree strengthening or `forall_inst`-in-kernel = coordination-gated.)
   - **Remaining frontier (the in-`solver` tractable gap-cycle is exhausted; these are the hard
     keystones / coordination-gated items the 6 passes surfaced):**
     - **arith-UF SAT model (gap C, keystone, COORDINATION-GATED on `axeyum-ir`):** QF_UFLIA/
@@ -489,6 +498,28 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed slice + baseline (32/43 decided, agree=32, DISAGREE=0) |
 
 ## Changelog
+
+- **2026-06-19** — **P3.3: finite-`∀`-over-UF `unsat` certified (quantifier proof extended to
+  a UF+arith tail).** The finite-`∀` cert only handled a pure-LIA ground tail, so
+  `∀x:Int.(0≤x≤1) ⇒ f(x)=0` with `f(0)=1` (a finite-`∀` whose body uses an uninterpreted `f`,
+  unsat by EUF on the instances) stayed `Unsat(None)`. New `prove_finite_int_quant_unsat_uf_alethe`
+  (`quant_finite_cert.rs`): builds the ground instances, **Ackermann-abstracts** the UF residual
+  via `eliminate_functions` (fresh same-sorted `v_k = f(v)`), gates on `check_with_lia_simplex(abstraction) == Unsat`,
+  emits the `lia_generic` tail over the abstraction, and splices per-instance `forall_inst_guarded`
+  → `resolution` → (assume the fresh `v_k=f(v)` definition) → `eq_transitive` (`v_k=f(v)=c ⊢ v_k=c`),
+  so each abstracted instance flows from the universal. Reuses `Evidence::UnsatGuardedQuantAletheProof`
+  + `check_alethe_lra_guarded_inst` (validates all three rule families: the custom
+  `forall_inst_guarded` hook, base `eq_transitive`/`symm`, and `lia_generic`). Self-validating
+  (emit only on re-check) + tamper test (out-of-range witness AND corrupted `eq_transitive`
+  bridge both rejected). Ordered after the pure-LIA finite-`∀` path; strictly additive. Certifies
+  the target + a wider-range twin; pure-LIA finite-`∀`, gap-C UFLIA, and a SAT UF-universal all
+  unregressed. fmt + clippy + doc + full suite + Carcara (54) green. **Assurance (honest):** same
+  tier as the finite-`∀` cert — in-tree-checked custom rule, NOT Carcara/Lean cross-checked, and
+  the `check_alethe_lra_guarded_inst` re-check verifies the instantiation + rule structure but
+  **trusts the emitter's ground-fact/abstraction-def `assume`s** (it doesn't cross-verify them
+  against the original assertions). Sound in practice (the emitter uses the original assertions +
+  genuinely-fresh `eliminate_functions` vars), but closing this to a fully assume-independent
+  check is a real follow-up (see frontier). Sub-agent + soundness review.
 
 - **2026-06-19** — **P3.3: certified `bv2nat`-bound `unsat` (gap D) — last self-contained
   certification gap from the proof-completeness map.** `bv2nat(x) ≥ 16` for a 4-bit `x` (and
