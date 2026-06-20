@@ -556,6 +556,22 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-20** — **P2.5: single-variable integer QUADRATIC `a·x²+b·x+c ⋈ 0` decided exactly
+  (generalizes `x*x ⋈ c`).** `nia_square.rs` matcher generalized to a degree-2 single-variable
+  integer polynomial (`Poly{c0,c1,c2}` via a checked-arithmetic recursive collector; degree>2 /
+  multi-var / non-Int / `|coeff|≥2^40`-overflow all decline). Decided exactly via discriminant +
+  convexity, downward parabolas (`a<0`) reduced to `a>0` by negating `f` and flipping `⋈`: `=0` ⇒
+  perfect-square `D=b²−4ac` AND integer root `(−b±s)/(2a)` (rejects `4x²−1=0`); `≠0` ⇒ always Sat;
+  `<0`/`≤0` ⇒ convexity puts the integer minimum at `⌊x*⌋`/`⌈x*⌉` (`x*=−b/2a`), so it evaluates
+  `f` at the two straddling integers — **never constructing an irrational root** — getting the
+  strict/non-strict boundary exact (`x²−3x+2<0`→Unsat, `≤0`→Sat at x=1); `>0`/`≥0` ⇒ always Sat
+  (bounded outward scan). Every Sat is **replay-checked** against the original assertion — any
+  logic slip degrades to a sound decline, never a wrong verdict. Decides `x²−5x+6=0`→Sat,
+  `x²+1=0`→Unsat, `x²−4x+4=0`→Sat (double root), `2x²−4=0`→Unsat, `x²−4<0`→Sat, `x²+x+1>0`→Sat.
+  Soundness-negatives decline: `x²+y`, `x³`, Real, 2nd assertion. New `tests/nia_quadratic.rs`
+  (29 + 3 unit); legacy `nia_square` (27) subsumed; full suite + clippy + doc + fmt green. Sub-agent
+  + soundness review (verified the convexity/straddling-integer test + boundaries by hand).
+
 - **2026-06-19** — **P2.6: guarded-finite `∀` over an inner `∃` decided (`∀x:Int.(0≤x≤3)⇒∃y.y=x*x`
   → Sat).** Two pipeline steps dropped the inner `∃`: (1) `expand_guarded_int_universals` declined
   on ANY quantifier in the body, and (2) even when expanded, the exposed `⋀_v ∃y.P(v,y)` existentials

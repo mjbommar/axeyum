@@ -1,60 +1,91 @@
-//! Sound, bounded NIA capability: decide a single-variable integer **square
-//! constraint** `x*x ⋈ c` (constant `c`, `⋈ ∈ {=, ≠, <, ≤, >, ≥}`) *exactly*.
+//! Sound, bounded NIA capability: decide a single-variable integer **quadratic
+//! constraint** `a·x² + b·x + c ⋈ 0` (one `Int` variable `x`, integer constants
+//! `a ≠ 0`, `b`, `c`, and `⋈ ∈ {=, ≠, <, ≤, >, ≥}`) *exactly*.
 //!
-//! This closes the hunt-flagged gap `int x*x = 2` → **Unsat** (`2` is not a
-//! perfect square), which the bounded bit-blast width ladder and the real
-//! relaxation only ever report as `Unknown`.
+//! This generalizes the original single-square decider `x*x ⋈ c` (the `a = 1,
+//! b = 0` subcase, which is still decided here verbatim) and closes the
+//! hunt-flagged gap `int x*x = 2` → **Unsat** (`2` is not a perfect square),
+//! which the bounded bit-blast width ladder and the real relaxation only ever
+//! report as `Unknown`.
 //!
 //! # Scope (deliberately narrow — correctness over reach)
 //!
 //! The pass fires *only* when the **whole** query (after the dispatcher's
-//! preprocessing) is exactly one assertion of the shape
+//! preprocessing) is exactly **one** assertion that normalizes to a comparison
+//! between a single-variable integer polynomial of **degree exactly 2** and a
+//! constant — i.e. `p(x) ⋈ q(x)` where `p − q` collects to `a·x² + b·x + c`
+//! with `a ≠ 0`, integer coefficients, and `x` the only variable.
 //!
-//! ```text
-//! (x * x) ⋈ c      or      c ⋈ (x * x)
-//! ```
+//! Everything else declines (`None`), leaving `x` to the existing NIA dispatch:
 //!
-//! where `x` is a single `Int` **variable** (the same symbol on both factors),
-//! `x*x` is the `IntMul` of that variable with itself, and `c` is an integer
-//! **constant**. Everything else — two distinct variables (`x*y`), a cube
-//! (`x*x*x`), an extra term (`x*x + x = c`), a non-constant right-hand side
-//! (`x*x = y`), a `Real`-sorted square, or any query with *more than one*
-//! assertion (which could otherwise constrain `x`) — **declines** by returning
-//! `None`, leaving the value of `x` to the existing NIA dispatch. A wrong
-//! `sat`/`unsat` is unacceptable; declining is always sound.
+//! - more than one variable (`x² + y`, `x·y`),
+//! - degree `> 2` (`x³`, `x²·x`),
+//! - degree `< 2` after collection (linear / constant — exact LIA handles it),
+//! - non-`Int` sort (a `Real` square is the NRA √ case),
+//! - any operator outside `{+, −, ·, neg, const, var}` (e.g. `div`, `mod`,
+//!   `abs`) — they could hide non-polynomial behavior,
+//! - any coefficient (or intermediate product) that overflows the `i128`
+//!   collection or the safe magnitude guard,
+//! - any query with a number of assertions other than one (a second assertion
+//!   could otherwise constrain `x`).
+//!
+//! A wrong `sat`/`unsat` is unacceptable; declining is always sound, and every
+//! `Sat` is additionally **replay-checked** against the original assertion.
 //!
 //! # The math
 //!
-//! Let `r = isqrt(c)` (the integer square root, for `c ≥ 0`):
+//! Normalize the comparison to `f(x) = a·x² + b·x + c ⋈ 0` (moving the
+//! right-hand side across; `≠` is `¬(= 0)`; a constant on the left flips the
+//! comparator). We always reduce the **downward** parabola `a < 0` to the
+//! **upward** case by negating `f` *and* flipping `⋈` (e.g. `f < 0` with `a < 0`
+//! becomes `−f > 0` with `−a > 0`). So below assume `a > 0`.
 //!
-//! - `x*x = c`: `c < 0` ⇒ Unsat (squares are `≥ 0`); else Sat iff `r*r == c`
-//!   (witness `x = r`), otherwise Unsat.
-//! - `x*x ≠ c`: always Sat — `x` ranges freely, so it can always avoid the
-//!   single value `c` (e.g. `x = r + 1`, or `x = 0` when `c ≠ 0`).
-//! - `x*x < c`: `c ≤ 0` ⇒ Unsat (`x*x ≥ 0`); `c > 0` ⇒ Sat (`x = 0`).
-//! - `x*x ≤ c`: `c < 0` ⇒ Unsat; `c ≥ 0` ⇒ Sat (`x = 0`).
-//! - `x*x > c`: always Sat (`c < 0` ⇒ `x = 0`; `c ≥ 0` ⇒ `x = r + 1`, since
-//!   `(r+1)² > c`).
-//! - `x*x ≥ c`: always Sat (`x = 0` when `c ≤ 0`; large `x` otherwise — in fact
-//!   `x = r + 1` works for any `c`).
+//! Discriminant `D = b² − 4·a·c`. Real roots exist iff `D ≥ 0`; the vertex is at
+//! `x* = −b/(2a)`, where `f` attains its (convex) minimum.
+//!
+//! - **`f = 0`** (equality): an *integer* root exists iff `D ≥ 0`, `D` is a
+//!   perfect square (`s = isqrt(D)`, `s·s == D`), and `(−b + s)` or `(−b − s)`
+//!   is divisible by `2a` (so a root `(−b ± s)/(2a)` is an integer). Sat with
+//!   that witness, else Unsat.
+//! - **`f ≠ 0`**: a degree-2 polynomial has at most 2 roots, so it is nonzero at
+//!   all but ≤ 2 integers — **always Sat**. We exhibit a concrete non-root.
+//! - **`f < 0`** / **`f ≤ 0`**: `f` is convex, so its minimum over the integers
+//!   is at `⌊x*⌋` or `⌈x*⌉` (the two integers straddling the real vertex). Sat
+//!   iff `min(f(⌊x*⌋), f(⌈x*⌉))` is `< 0` (resp. `≤ 0`). This needs **no
+//!   irrational root**: we only evaluate `f` at integers. (Soundness: convexity
+//!   ⇒ the integer minimizer is one of the two vertex neighbors; if no integer
+//!   makes `f` negative, the global integer minimum is `≥ 0`.)
+//! - **`f > 0`** / **`f ≥ 0`**: `f → +∞` as `x → ±∞`, so these are **always
+//!   Sat**; a witness far from the vertex works, found by scanning outward and
+//!   replay-checking. (For `≥`, even the vertex neighbors suffice when the
+//!   minimum is `≥ 0`.)
 //!
 //! Every `Sat` returns a **replay-checked** witness model: the witness is set on
-//! `x` and the *original* assertion is re-evaluated through the ground
-//! evaluator; the `Sat` is emitted only if it evaluates to `true`. `Unsat` cases
-//! are exact by the case analysis above.
+//! `x`, the *original* assertion is re-evaluated through the ground evaluator,
+//! and the `Sat` is emitted only if it evaluates to `true`. Any internal logic
+//! slip therefore degrades to a sound *decline*, never a wrong `sat`.
 
-use axeyum_ir::{Assignment, Op, TermArena, TermId, TermNode, Value, eval};
+use axeyum_ir::{Assignment, Op, SymbolId, TermArena, TermId, TermNode, Value, eval};
 
 use crate::backend::{CheckResult, SolverError};
 use crate::model::Model;
 
-/// Above this magnitude for `|c|` the pass declines (returns `None`) rather than
-/// risk `i128` overflow in the `isqrt` verification `(r+1)*(r+1)`. `2^100` is far
-/// below `i128::MAX ≈ 1.7·10^38`, so `(r+1)²` for `r ≈ 2^50` stays well in range,
-/// and any larger constant is left to the existing NIA dispatch (sound).
-const MAX_ABS_C: i128 = 1i128 << 100;
+/// Above this magnitude for any of `|a|, |b|, |c|` the pass declines (returns
+/// `None`) rather than risk `i128` overflow in `b²`, `4·a·c`, `isqrt`, or the
+/// `f(k)` evaluations. `2^40` keeps `b² ≤ 2^80`, `4·a·c ≤ 2^82`, and (for the
+/// witnesses we probe, `|x|` bounded by the search) `a·x² + b·x + c` far inside
+/// `i128` (`≈ 2^127`). Larger coefficients are left to the existing NIA dispatch
+/// (sound).
+const MAX_ABS_COEFF: i128 = 1i128 << 40;
 
-/// The six integer comparison shapes the square pass decides.
+/// Outward scan bound (in integer steps from a vertex neighbor) for finding a
+/// witness in the "always Sat" tail cases (`f > 0` / `f ≥ 0` / `f ≠ 0`). `f`
+/// grows quadratically, so a handful of steps always clears any bounded gap, but
+/// we cap the scan and *decline* if no witness replays — soundness over reach.
+const TAIL_SCAN: i128 = 64;
+
+/// The six integer comparison shapes the quadratic pass decides, oriented as
+/// `f(x) ⋈ 0`.
 #[derive(Clone, Copy)]
 enum Cmp {
     Eq,
@@ -65,13 +96,139 @@ enum Cmp {
     Ge,
 }
 
-/// Decides a single-assertion integer **square constraint** `x*x ⋈ c` exactly.
+impl Cmp {
+    /// Flip the comparator for the `a < 0` → `a > 0` reduction (negating `f`):
+    /// `f ⋈ 0 ⟺ −f (flip ⋈) 0`. Equality / disequality are unchanged.
+    fn flip(self) -> Self {
+        match self {
+            Cmp::Eq => Cmp::Eq,
+            Cmp::Ne => Cmp::Ne,
+            Cmp::Lt => Cmp::Gt,
+            Cmp::Le => Cmp::Ge,
+            Cmp::Gt => Cmp::Lt,
+            Cmp::Ge => Cmp::Le,
+        }
+    }
+}
+
+/// Result of merging the variable identity of two operands: either the merged
+/// (sole, possibly absent) variable, or a `Conflict` (two distinct variables),
+/// which forces the collector to decline.
+enum MergeVar {
+    Ok(Option<SymbolId>),
+    Conflict,
+}
+
+/// A single-variable integer polynomial of degree `≤ 2`: `c2·x² + c1·x + c0`.
+/// `var` is the (sole) variable; `None` only when the polynomial is constant.
+#[derive(Clone, Copy)]
+struct Poly {
+    var: Option<SymbolId>,
+    c0: i128,
+    c1: i128,
+    c2: i128,
+}
+
+impl Poly {
+    fn constant(n: i128) -> Self {
+        Poly {
+            var: None,
+            c0: n,
+            c1: 0,
+            c2: 0,
+        }
+    }
+
+    fn var_of(s: SymbolId) -> Self {
+        Poly {
+            var: Some(s),
+            c0: 0,
+            c1: 1,
+            c2: 0,
+        }
+    }
+
+    /// Merge the variable identity of two operands. Two distinct variables force
+    /// a *decline* ([`MergeVar::Conflict`]); otherwise the merged (possibly
+    /// `None`) variable is carried through.
+    fn merge_var(a: Option<SymbolId>, b: Option<SymbolId>) -> MergeVar {
+        match (a, b) {
+            (None, v) | (v, None) => MergeVar::Ok(v),
+            (Some(x), Some(y)) if x == y => MergeVar::Ok(Some(x)),
+            _ => MergeVar::Conflict, // two different variables → not single-variable
+        }
+    }
+
+    fn neg(self) -> Option<Self> {
+        Some(Poly {
+            var: self.var,
+            c0: self.c0.checked_neg()?,
+            c1: self.c1.checked_neg()?,
+            c2: self.c2.checked_neg()?,
+        })
+    }
+
+    fn add(self, other: Self) -> Option<Self> {
+        let MergeVar::Ok(var) = Poly::merge_var(self.var, other.var) else {
+            return None;
+        };
+        Some(Poly {
+            var,
+            c0: self.c0.checked_add(other.c0)?,
+            c1: self.c1.checked_add(other.c1)?,
+            c2: self.c2.checked_add(other.c2)?,
+        })
+    }
+
+    fn sub(self, other: Self) -> Option<Self> {
+        self.add(other.neg()?)
+    }
+
+    /// Multiply two degree-`≤ 2` polynomials, **declining** if the product would
+    /// exceed degree 2 (a genuine cubic/quartic) or overflow `i128`.
+    fn mul(self, other: Self) -> Option<Self> {
+        // (a2 x² + a1 x + a0)·(b2 x² + b1 x + b0). The product exceeds degree 2 iff
+        // some pair of terms with combined degree > 2 is nonzero:
+        //   self.c2·other.c1 (deg 3), self.c2·other.c2 (deg 4), self.c1·other.c2 (deg 3).
+        let degree_too_high =
+            (self.c2 != 0 && (other.c1 != 0 || other.c2 != 0)) || (self.c1 != 0 && other.c2 != 0);
+        if degree_too_high {
+            return None;
+        }
+        // Surviving terms: x²·1, x·x, x·1, 1·x², 1·x, 1·1.
+        let c0 = self.c0.checked_mul(other.c0)?;
+        let c1 = self
+            .c0
+            .checked_mul(other.c1)?
+            .checked_add(self.c1.checked_mul(other.c0)?)?;
+        let c2 = self
+            .c0
+            .checked_mul(other.c2)?
+            .checked_add(self.c2.checked_mul(other.c0)?)?
+            .checked_add(self.c1.checked_mul(other.c1)?)?;
+        let MergeVar::Ok(var) = Poly::merge_var(self.var, other.var) else {
+            return None;
+        };
+        Some(Poly { var, c0, c1, c2 })
+    }
+
+    /// Evaluate `f(k)` exactly, declining on `i128` overflow.
+    fn eval_at(&self, k: i128) -> Option<i128> {
+        let k2 = k.checked_mul(k)?;
+        let t2 = self.c2.checked_mul(k2)?;
+        let t1 = self.c1.checked_mul(k)?;
+        t2.checked_add(t1)?.checked_add(self.c0)
+    }
+}
+
+/// Decides a single-assertion integer **quadratic constraint**
+/// `a·x² + b·x + c ⋈ 0` exactly.
 ///
 /// Returns `Some(Sat(model))` / `Some(Unsat)` for the exact pattern (every `Sat`
 /// model replay-checked against the original assertion), and `None` for anything
-/// outside it — a two-variable product, a cube, an extra term, a non-constant
-/// right-hand side, a non-`Int` square, a constant out of the safe range, or a
-/// query with any number of assertions other than one. Declining is always sound.
+/// outside it — multiple variables, degree `≠ 2`, a non-`Int` square, an
+/// unsupported operator, a coefficient out of the safe range, or a query with
+/// any number of assertions other than one. Declining is always sound.
 ///
 /// # Errors
 ///
@@ -88,22 +245,31 @@ pub fn decide_int_square_constraint(
 ) -> Result<Option<CheckResult>, SolverError> {
     // The pass fires only when the WHOLE query is exactly one assertion. A second
     // assertion could otherwise constrain `x` (e.g. `x*x = 4 ∧ x = 2`), so we must
-    // not decide the square in isolation — decline and let the NIA dispatch see all
-    // constraints together.
+    // not decide the polynomial in isolation — decline and let the NIA dispatch see
+    // all constraints together.
     let [assertion] = assertions else {
         return Ok(None);
     };
-    let Some((var, cmp, c)) = match_square_constraint(arena, *assertion) else {
+    let Some((var, cmp, poly)) = match_quadratic_constraint(arena, *assertion) else {
         return Ok(None);
     };
 
-    // Overflow guard: only decide constants whose magnitude keeps `(r+1)²` within
-    // `i128`. Larger constants decline (sound) to the existing NIA path.
-    if c.abs() >= MAX_ABS_C {
+    // Degree must be exactly 2 with a nonzero leading coefficient (`a ≠ 0`).
+    // Degree < 2 (linear / constant) is exact LIA territory — decline.
+    let (a, b, c) = (poly.c2, poly.c1, poly.c0);
+    if a == 0 {
         return Ok(None);
     }
 
-    let verdict = decide(cmp, c);
+    // Overflow guard: only decide coefficients whose magnitude keeps `b²`, `4ac`,
+    // `isqrt`, and the probed `f(k)` within `i128`. Larger ones decline (sound).
+    if a.abs() >= MAX_ABS_COEFF || b.abs() >= MAX_ABS_COEFF || c.abs() >= MAX_ABS_COEFF {
+        return Ok(None);
+    }
+
+    let Some(verdict) = decide(cmp, poly) else {
+        return Ok(None);
+    };
     match verdict {
         Verdict::Unsat => Ok(Some(CheckResult::Unsat)),
         Verdict::SatWith(witness) => {
@@ -130,75 +296,147 @@ enum Verdict {
     SatWith(i128),
 }
 
-/// Exact case analysis for `x*x ⋈ c` (see the module docs).
-fn decide(cmp: Cmp, c: i128) -> Verdict {
+/// Exact case analysis for `f(x) ⋈ 0` (see the module docs). Returns `None` to
+/// **decline** (any case we cannot make airtight, e.g. an overflow in the
+/// witness search), which the caller turns into a sound `None` dispatch.
+fn decide(cmp: Cmp, poly: Poly) -> Option<Verdict> {
+    // Reduce the downward parabola to the upward case: `f ⋈ 0 ⟺ −f (flip) 0`,
+    // so the analysis below may assume `a > 0`.
+    if poly.c2 < 0 {
+        return decide(cmp.flip(), poly.neg()?);
+    }
+    let (a, b, c) = (poly.c2, poly.c1, poly.c0);
+    debug_assert!(a > 0);
+
     match cmp {
-        Cmp::Eq => {
-            if c < 0 {
-                Verdict::Unsat // squares are ≥ 0
-            } else {
-                let r = isqrt(c);
-                if r * r == c {
-                    Verdict::SatWith(r) // perfect square: x = r
-                } else {
-                    Verdict::Unsat // c ≥ 0 but not a perfect square
-                }
-            }
-        }
-        // `x*x ≠ c` is always satisfiable: x ranges freely, so it can avoid the
-        // single value c. Use x = 0 when c ≠ 0, else x = 1 (1 ≠ 0).
-        Cmp::Ne => Verdict::SatWith(i128::from(c == 0)),
-        // `x*x < c`: needs c > 0 (x*x ≥ 0); witness x = 0 gives 0 < c.
-        Cmp::Lt => {
-            if c <= 0 {
-                Verdict::Unsat
-            } else {
-                Verdict::SatWith(0)
-            }
-        }
-        // `x*x ≤ c`: needs c ≥ 0; witness x = 0 gives 0 ≤ c.
-        Cmp::Le => {
-            if c < 0 {
-                Verdict::Unsat
-            } else {
-                Verdict::SatWith(0)
-            }
-        }
-        // `x*x > c`: always sat. c < 0 ⇒ x = 0 (0 > c); c ≥ 0 ⇒ x = r+1 with
-        // (r+1)² > c (r = isqrt(c) so (r+1)² > c by the isqrt postcondition).
-        Cmp::Gt => {
-            if c < 0 {
-                Verdict::SatWith(0)
-            } else {
-                Verdict::SatWith(isqrt(c) + 1)
-            }
-        }
-        // `x*x ≥ c`: always sat. x = r+1 works for every c (for c ≤ 0, x = 0 also
-        // works, but r+1 is uniformly correct since (r+1)² ≥ 0 ≥ c there, and
-        // (r+1)² > c ≥ ... for c ≥ 0).
-        Cmp::Ge => {
-            if c <= 0 {
-                Verdict::SatWith(0)
-            } else {
-                Verdict::SatWith(isqrt(c) + 1)
-            }
-        }
+        Cmp::Eq => decide_eq(poly, a, b, c),
+        // A degree-2 polynomial is zero at ≤ 2 integers, so `f ≠ 0` is always
+        // Sat: scan for a concrete non-root.
+        Cmp::Ne => find_witness(&poly, |v| v != 0),
+        // `f < 0` (a > 0, convex): Sat iff some integer makes f negative; the
+        // minimizer is a vertex neighbor.
+        Cmp::Lt => decide_min_negative(poly, a, b, /* strict */ true),
+        Cmp::Le => decide_min_negative(poly, a, b, /* strict */ false),
+        // `f > 0` / `f ≥ 0` (a > 0): f → +∞, always Sat. Find a witness.
+        Cmp::Gt => find_witness(&poly, |v| v > 0),
+        Cmp::Ge => find_witness(&poly, |v| v >= 0),
     }
 }
 
-/// The binary-search ceiling for [`isqrt`]: `2^51`. The caller guards
-/// `|c| < 2^100`, so `r = ⌊√c⌋ < 2^50 ≤ 2^51 = HI`, and every probed `mid` is
-/// `≤ 2^51`, keeping `mid*mid ≤ 2^102` (and the final `(r+1)*(r+1) < 2^102`) well
-/// within `i128` (`≈ 2^127`). Starting `hi` at `c` would overflow `mid*mid` for
-/// large `c`; this fixed safe ceiling never does.
+/// `f(x) = 0` with `a > 0`: integer root iff `D = b² − 4ac` is a non-negative
+/// perfect square and some `(−b ± s)/(2a)` is an integer.
+fn decide_eq(poly: Poly, a: i128, b: i128, c: i128) -> Option<Verdict> {
+    let b2 = b.checked_mul(b)?;
+    let four_ac = 4i128.checked_mul(a)?.checked_mul(c)?;
+    let disc = b2.checked_sub(four_ac)?;
+    if disc < 0 {
+        return Some(Verdict::Unsat); // no real root
+    }
+    let s = isqrt(disc);
+    if s.checked_mul(s)? != disc {
+        return Some(Verdict::Unsat); // irrational roots → no integer root
+    }
+    let two_a = 2i128.checked_mul(a)?;
+    // Try both `(−b + s)` and `(−b − s)`; either divisible by 2a gives a root.
+    for num in [(-b).checked_add(s)?, (-b).checked_sub(s)?] {
+        if num % two_a == 0 {
+            let root = num / two_a;
+            // Replay belt-and-braces: confirm f(root) == 0 exactly.
+            if poly.eval_at(root)? == 0 {
+                return Some(Verdict::SatWith(root));
+            }
+        }
+    }
+    Some(Verdict::Unsat)
+}
+
+/// `f < 0` (`strict`) or `f ≤ 0` over the integers, with `a > 0` (convex). The
+/// integer minimum is at a vertex neighbor `⌊x*⌋` or `⌈x*⌉`, `x* = −b/(2a)`. Sat
+/// iff that minimum clears the threshold.
+fn decide_min_negative(poly: Poly, a: i128, b: i128, strict: bool) -> Option<Verdict> {
+    let two_a = 2i128.checked_mul(a)?;
+    // x* = −b / (2a). The two straddling integers are floor and ceil of this
+    // rational; with `two_a > 0`, floor-div in Rust rounds toward −∞ only for
+    // exact non-negative numerators, so compute floor/ceil explicitly.
+    let neg_b = b.checked_neg()?;
+    let floor = floor_div(neg_b, two_a)?;
+    let ceil = ceil_div(neg_b, two_a)?;
+    // Evaluate at both straddling integers (they coincide when x* is integral).
+    let mut best: Option<(i128, i128)> = None; // (value, witness)
+    for k in [floor, ceil] {
+        let v = poly.eval_at(k)?;
+        match best {
+            Some((bv, _)) if bv <= v => {}
+            _ => best = Some((v, k)),
+        }
+    }
+    let (min_val, witness) = best?;
+    let sat = if strict { min_val < 0 } else { min_val <= 0 };
+    if sat {
+        Some(Verdict::SatWith(witness))
+    } else {
+        Some(Verdict::Unsat)
+    }
+}
+
+/// Find an integer witness satisfying `pred(f(k))`, scanning vertex neighbors and
+/// then outward (both directions). Returns `Some(SatWith)` on success or `None`
+/// to decline if no witness is found within the bounded scan (sound — these are
+/// only ever called for genuinely-always-Sat shapes, where the scan succeeds
+/// immediately for `a > 0`; a miss can only come from an overflow, where
+/// declining is correct).
+fn find_witness(poly: &Poly, pred: impl Fn(i128) -> bool) -> Option<Verdict> {
+    let a = poly.c2;
+    let b = poly.c1;
+    let two_a = 2i128.checked_mul(a)?;
+    let center = if two_a == 0 {
+        0
+    } else {
+        floor_div(b.checked_neg()?, two_a)?
+    };
+    // Probe the vertex and a symmetric outward band. For `a > 0` and a "tail"
+    // predicate (`> 0`, `≥ 0`, `≠ 0`) at least one of these always satisfies.
+    for d in 0..=TAIL_SCAN {
+        for k in [center.checked_add(d)?, center.checked_sub(d)?] {
+            if let Some(v) = poly.eval_at(k)
+                && pred(v)
+            {
+                return Some(Verdict::SatWith(k));
+            }
+        }
+    }
+    None
+}
+
+/// Floor of `n / d` for `d > 0` (rounds toward −∞), overflow-safe.
+fn floor_div(n: i128, d: i128) -> Option<i128> {
+    debug_assert!(d > 0);
+    let q = n.checked_div(d)?;
+    let r = n.checked_rem(d)?;
+    if r < 0 { q.checked_sub(1) } else { Some(q) }
+}
+
+/// Ceil of `n / d` for `d > 0` (rounds toward +∞), overflow-safe.
+fn ceil_div(n: i128, d: i128) -> Option<i128> {
+    debug_assert!(d > 0);
+    let q = n.checked_div(d)?;
+    let r = n.checked_rem(d)?;
+    if r > 0 { q.checked_add(1) } else { Some(q) }
+}
+
+/// The binary-search ceiling for [`isqrt`]: `2^51`. The caller guards the
+/// coefficients below `2^40`, so the discriminant `D = b² − 4ac` stays below
+/// `2^83`, giving `⌊√D⌋ < 2^42 ≤ 2^51 = HI`; every probed `mid` is `≤ 2^51`,
+/// keeping `mid*mid ≤ 2^102` (and the final `(r+1)*(r+1) < 2^102`) well within
+/// `i128` (`≈ 2^127`).
 const ISQRT_HI: i128 = 1i128 << 51;
 
 /// Integer square root of `c ≥ 0`: the unique `r ≥ 0` with
 /// `r*r ≤ c < (r+1)*(r+1)`.
 ///
-/// Overflow-safe by construction: the caller guards `|c| < 2^100`, so `r < 2^50`,
-/// and the binary search is capped at [`ISQRT_HI`] = `2^51`, keeping every
-/// `mid*mid` (and the final `r*r` / `(r+1)*(r+1)`) far inside `i128`.
+/// Overflow-safe by construction: the binary search is capped at [`ISQRT_HI`]
+/// (`2^51`), keeping every `mid*mid` (and the final `r*r` / `(r+1)*(r+1)`) far
+/// inside `i128` for any discriminant the coefficient guard admits.
 ///
 /// # Panics
 ///
@@ -209,8 +447,6 @@ fn isqrt(c: i128) -> i128 {
         return c; // isqrt(0)=0, isqrt(1)=1
     }
     let (mut lo, mut hi) = (0i128, ISQRT_HI);
-    // Invariant: every kept `lo` satisfies `(lo-1)² ≤ c`. Find the largest `r`
-    // with `r*r ≤ c`; `hi` converges to it.
     while lo <= hi {
         let mid = lo + (hi - lo) / 2;
         let sq = mid * mid; // safe: mid ≤ 2^51 ⇒ sq ≤ 2^102 < i128::MAX
@@ -224,13 +460,14 @@ fn isqrt(c: i128) -> i128 {
     hi
 }
 
-/// Matches `x*x ⋈ c` / `c ⋈ x*x` for a single `Int` variable `x` and integer
-/// constant `c`. Returns `(x_symbol, comparison, c)` (the comparison already
-/// oriented as `square ⋈ c`) or `None`.
-fn match_square_constraint(
+/// Matches a single integer comparison/equality `lhs ⋈ rhs` (or `¬(lhs = rhs)`
+/// for `≠`) where `lhs − rhs` collects to a single-variable integer polynomial.
+/// Returns `(x_symbol, comparison-as-`f ⋈ 0`, polynomial f = lhs − rhs)` or
+/// `None` to decline.
+fn match_quadratic_constraint(
     arena: &TermArena,
     assertion: TermId,
-) -> Option<(axeyum_ir::SymbolId, Cmp, i128)> {
+) -> Option<(SymbolId, Cmp, Poly)> {
     let TermNode::App { op, args } = arena.node(assertion) else {
         return None;
     };
@@ -245,118 +482,63 @@ fn match_square_constraint(
         else {
             return None;
         };
-        let (a, b) = (eq_args[0], eq_args[1]);
-        let (var, c, _square_left) = match_square_vs_const(arena, a, b)?;
-        return Some((var, Cmp::Ne, c));
+        let poly = collect_diff(arena, eq_args[0], eq_args[1])?;
+        let var = poly.var?; // must actually contain the variable
+        return Some((var, Cmp::Ne, poly));
     }
 
-    // Direct comparison / equality. Each binary comparator orients the square
-    // relative to the constant; flipping the comparator when the constant is on
-    // the left keeps the semantics `square ⋈ c`.
-    let (a, b) = (args[0], args[1]);
-    let cmp_for = |square_left: bool| -> Option<Cmp> {
-        Some(match op {
-            Op::Eq => Cmp::Eq,
-            Op::IntLt => {
-                if square_left {
-                    Cmp::Lt
-                } else {
-                    Cmp::Gt
-                }
-            }
-            Op::IntLe => {
-                if square_left {
-                    Cmp::Le
-                } else {
-                    Cmp::Ge
-                }
-            }
-            Op::IntGt => {
-                if square_left {
-                    Cmp::Gt
-                } else {
-                    Cmp::Lt
-                }
-            }
-            Op::IntGe => {
-                if square_left {
-                    Cmp::Ge
-                } else {
-                    Cmp::Le
-                }
-            }
-            _ => return None,
-        })
-    };
-    // Only proceed for a comparison/equality op.
     if !matches!(op, Op::Eq | Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe) {
         return None;
     }
-    let (var, c, square_left) = match_square_vs_const(arena, a, b)?;
-    let cmp = cmp_for(square_left)?;
-    Some((var, cmp, c))
-}
-
-/// Given the two operands of a binary comparison, identifies which side is `x*x`
-/// (a single `Int` variable squared) and which is an integer constant. Returns
-/// `(x_symbol, c, square_on_left)` or `None` if the operands are not exactly one
-/// square and one constant.
-fn match_square_vs_const(
-    arena: &TermArena,
-    a: TermId,
-    b: TermId,
-) -> Option<(axeyum_ir::SymbolId, i128, bool)> {
-    if let (Some(var), Some(c)) = (match_square(arena, a), int_const(arena, b)) {
-        return Some((var, c, true));
-    }
-    if let (Some(c), Some(var)) = (int_const(arena, a), match_square(arena, b)) {
-        return Some((var, c, false));
-    }
-    None
-}
-
-/// Matches `x * x` where both factors are the *same* `Int` variable; returns that
-/// variable's symbol, else `None`. Declines `x*y` (distinct vars), `x*x*x` (a
-/// nested product, not a leaf variable), constants, and non-`Int` squares.
-fn match_square(arena: &TermArena, t: TermId) -> Option<axeyum_ir::SymbolId> {
-    let TermNode::App {
-        op: Op::IntMul,
-        args,
-    } = arena.node(t)
-    else {
-        return None;
+    let cmp = match op {
+        Op::Eq => Cmp::Eq,
+        Op::IntLt => Cmp::Lt,
+        Op::IntLe => Cmp::Le,
+        Op::IntGt => Cmp::Gt,
+        Op::IntGe => Cmp::Ge,
+        _ => return None,
     };
-    if args.len() != 2 {
+    // `lhs ⋈ rhs ⟺ (lhs − rhs) ⋈ 0`, so collect `f = lhs − rhs` and keep the
+    // comparator as `f ⋈ 0`.
+    let poly = collect_diff(arena, args[0], args[1])?;
+    let var = poly.var?;
+    Some((var, cmp, poly))
+}
+
+/// Collect `lhs − rhs` into a single-variable degree-`≤ 2` polynomial, or `None`
+/// to decline.
+fn collect_diff(arena: &TermArena, lhs: TermId, rhs: TermId) -> Option<Poly> {
+    let l = collect(arena, lhs)?;
+    let r = collect(arena, rhs)?;
+    l.sub(r)
+}
+
+/// Recursively collect an `Int`-sorted term into a single-variable degree-`≤ 2`
+/// polynomial over `{+, −, ·, neg, const, var}`. Any other operator, a non-`Int`
+/// term, a second variable, degree `> 2`, or an arithmetic overflow declines.
+fn collect(arena: &TermArena, t: TermId) -> Option<Poly> {
+    // Only collect Int-sorted terms (a Real square is out of scope).
+    if arena.sort_of(t) != axeyum_ir::Sort::Int {
         return None;
     }
-    let (l, r) = (args[0], args[1]);
-    let ls = symbol_of(arena, l)?;
-    let rs = symbol_of(arena, r)?;
-    // Same variable on both sides — and it is the `IntMul` of two leaf symbols,
-    // so `x*x*x` (whose operand is itself a product) and `x*y` both decline.
-    if ls == rs { Some(ls) } else { None }
-}
-
-/// The symbol of `t` iff `t` is a plain `Int`-sorted variable; else `None`.
-fn symbol_of(arena: &TermArena, t: TermId) -> Option<axeyum_ir::SymbolId> {
     match arena.node(t) {
-        TermNode::Symbol(s) if arena.sort_of(t) == axeyum_ir::Sort::Int => Some(*s),
-        _ => None,
-    }
-}
-
-/// The integer value of `t` iff `t` is an `IntConst`; else `None`. A wider or
-/// non-integer constant (or any non-constant term) declines.
-fn int_const(arena: &TermArena, t: TermId) -> Option<i128> {
-    match arena.node(t) {
-        TermNode::IntConst(n) => Some(*n),
+        TermNode::IntConst(n) => Some(Poly::constant(*n)),
+        TermNode::Symbol(s) => Some(Poly::var_of(*s)),
+        TermNode::App { op, args } => match op {
+            Op::IntNeg if args.len() == 1 => collect(arena, args[0])?.neg(),
+            Op::IntAdd if args.len() == 2 => collect(arena, args[0])?.add(collect(arena, args[1])?),
+            Op::IntSub if args.len() == 2 => collect(arena, args[0])?.sub(collect(arena, args[1])?),
+            Op::IntMul if args.len() == 2 => collect(arena, args[0])?.mul(collect(arena, args[1])?),
+            // div / mod / abs / anything else: not a polynomial we model.
+            _ => None,
+        },
         _ => None,
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::isqrt;
+    use super::{Poly, ceil_div, floor_div, isqrt};
 
     #[test]
     fn isqrt_perfect_and_nonperfect() {
@@ -369,9 +551,46 @@ mod tests {
         assert_eq!(isqrt(9), 3);
         assert_eq!(isqrt(1_000_000), 1000);
         assert_eq!(isqrt(999_999), 999);
-        // Large but within the guard.
         let big = 1i128 << 80;
         let r = isqrt(big);
         assert!(r * r <= big && (r + 1) * (r + 1) > big);
+    }
+
+    #[test]
+    fn floor_ceil_div_signs() {
+        assert_eq!(floor_div(7, 2), Some(3));
+        assert_eq!(ceil_div(7, 2), Some(4));
+        assert_eq!(floor_div(-7, 2), Some(-4));
+        assert_eq!(ceil_div(-7, 2), Some(-3));
+        assert_eq!(floor_div(6, 2), Some(3));
+        assert_eq!(ceil_div(6, 2), Some(3));
+        assert_eq!(floor_div(-6, 2), Some(-3));
+        assert_eq!(ceil_div(-6, 2), Some(-3));
+    }
+
+    #[test]
+    fn poly_mul_degree_guard() {
+        // `tests` is a child module, so it may use the private `Poly` fields. Build
+        // x, x², x³-would-be directly (var = None is irrelevant to the degree guard).
+        let x = Poly {
+            var: None,
+            c0: 0,
+            c1: 1,
+            c2: 0,
+        };
+        // x · x = x² (degree 2, ok)
+        let x2 = x.mul(x).unwrap();
+        assert_eq!((x2.c0, x2.c1, x2.c2), (0, 0, 1));
+        // x² · x would be degree 3 → decline.
+        assert!(x2.mul(x).is_none());
+        // (x + 1)² = x² + 2x + 1.
+        let xp1 = Poly {
+            var: None,
+            c0: 1,
+            c1: 1,
+            c2: 0,
+        };
+        let sq = xp1.mul(xp1).unwrap();
+        assert_eq!((sq.c0, sq.c1, sq.c2), (1, 2, 1));
     }
 }
