@@ -22,11 +22,18 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     (3) blocking-literal BCP; (4) VSIDS heap v1 **reverted** (2.36x regression); (5) **VSIDS heap
     done right** — profiled `pick_branch` O(n) scan was 61% of time → canonical MiniSat
     lazy-deletion order_heap collapsed it to 3.3%, **2.6x faster (230s→87s on string1x8.3),
-    decisions/propagations bit-identical** (caught+fixed a VSIDS-rescale heap-invariant bug).
-    **NEXT: slice 6 = BCP / arena-packed clause storage** (BCP is now the #1 phase at ~34%; native
-    still ~20x over batsat's 4.2s on the reduced CNF → close it via cache-local clause storage,
-    then vivification). Profile FIRST, never guess (reduceDB + heap-v1 were guessed-and-missed).
-    Re-target the bench to the ~9 crackable ≤300k instances, not the StringMatching 90.
+    decisions/propagations bit-identical** (caught+fixed a VSIDS-rescale heap-invariant bug);
+    (6) **packed clause arena** (Vec<Vec> → flat arena + headers + CRef; cache-local BCP) — BCP
+    74s→67s (−9%), total 87s→81s, decisions/conflicts/propagations bit-identical (trajectory
+    invariant; CRef-safe via append-only + tombstone deletion); (7) **Glucose LBD restarts —
+    REVERTED** (negative result: DISAGREE=0 but Luby solves string1x8.4 in 75s while LBD variants
+    fail in 140s — the well-known "LBD restarts hurt SAT-crafted instances" mode; these are
+    SAT/propagation-bound on the path-to-model, not restart-bound). **Native now 230s→81s on
+    string1x8.3, ~19x over batsat's 4.2s.** **NEXT (profile FIRST — heap-v1 + LBD-restarts were
+    guessed-and-missed): measure whether batsat does FEWER propagations (→ heuristic lever) or the
+    SAME props FASTER (→ BCP micro-opt / vivification) on the identical reduced CNF — that scopes
+    slice 8.** The SAT instances are propagation-bound, so restart-quality is the WRONG tool here.
+    5 slices committed, 2 reverted — the revert discipline is working.
   - **Codex-review correctness items — ALL CLOSED (each with soundness tests):** `prove_unsat`
     fail-closed (no unverified-unsat-as-checked); **eval graceful arithmetic overflow** (bv2nat
     ≥128-bit no longer wraps negative; Int/Real overflow → `Err`→`Unknown`, never crash/wrong —
