@@ -485,6 +485,25 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P3.3: certified `bv2nat`-bound `unsat` (gap D) — last self-contained
+  certification gap from the proof-completeness map.** `bv2nat(x) ≥ 16` for a 4-bit `x` (and
+  similar int-blast bound contradictions) was a bare `Evidence::Unsat(None)`; it now carries an
+  independently-checkable `lia_generic` certificate. `bv2nat_bound_certificate` clones the arena,
+  abstracts each `bv2nat(b)` (w-bit) to a fresh Int `n` with the range axiom `0 ≤ n ≤ 2^w−1`
+  (parity with `auto`'s divmod elimination), and emits `prove_lia_unsat_alethe` over the pure-LIA
+  abstracted query (re-checked by `check_alethe_lra`), attached as `Evidence::UnsatArithAletheProof`.
+  **Honest partial-trust** (zero-trust would need a `bv2nat`→bit-literal emitter, which doesn't
+  exist — not forced): `trusted_steps = [(IntBlast, false), (Farkas, true)]` — the LIA refutation
+  is certified, only the `bv2nat`-range/width-bridge axiom (ADR-0014) is trusted (reused the
+  existing `IntBlast` TrustId — no new ADR). Wired after `guarded_quant_alethe_certificate` and
+  before the bare fallback; declines (`None`) without an abstractable `bv2nat`, so plain
+  LIA/UFLIA/zero-trust paths are never shadowed. Tamper test (drop closing step → reject) proves
+  the check is real. New `tests/evidence_bv2nat_cert.rs`; plain QF_LIA keeps its Farkas-only cert
+  (no spurious IntBlast hole), QF_BV unchanged, SAT `bv2nat=7` never reported unsat. fmt + clippy +
+  doc (z3-feature) + full suite + Carcara green. Strictly additive. From the 6th pass. (Sub-agent
+  used `git stash` once against protocol to confirm a pre-existing Z3Backend doc error — verified
+  contained, stash empty, concurrent `nra.rs` unclobbered; noted, not repeated.)
+
 - **2026-06-19** — **P3.3: certified finite-`∀` `unsat` — a first checkable quantifier proof
   (Lean-parity quantifier-proof keystone, scoped slice).** A finite-expansion guarded-`Int`
   universal `∀x:Int. (lo≤x≤hi) ⇒ inner` decided `unsat` (e.g. `∀x:Int.(0≤x≤2)⇒x≥5`) was a bare

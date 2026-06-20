@@ -768,6 +768,17 @@ pub fn produce_evidence(
                     Evidence::UnsatGuardedQuantAletheProof { proof, universal },
                     trust_steps(&[(TrustId::Farkas, true)]),
                 )
+            } else if let Some((proof, steps)) = bv2nat_bound_certificate(arena, assertions) {
+                // A `bv2nat`-bound contradiction (e.g. `bv2nat(x) >= 16` for a 4-bit
+                // `x`): the exact integer refuters reject a raw `bv2nat(b)` subterm,
+                // so this was a bare `Unsat(None)`. Abstract each `bv2nat(b)` to a
+                // fresh `Int` with its trusted range axiom `0 <= n <= 2^W-1` and emit
+                // a `lia_generic` cert over the pure-LIA abstraction: the refutation
+                // is re-derived (Farkas certified), only the range axiom is trusted
+                // (`IntBlast`). Ordered AFTER the arithmetic certs (which decline a
+                // raw `bv2nat` subterm) and BEFORE the bare fallback, so it never
+                // shadows the zero-trust certs and a `bv2nat`-free query is untouched.
+                (Evidence::UnsatArithAletheProof(proof), steps)
             } else {
                 let (cert, steps) = reduction_unsat_certificate(arena, assertions);
                 (Evidence::Unsat(cert), steps)
@@ -912,6 +923,56 @@ fn guarded_quant_alethe_certificate(
     } else {
         None
     }
+}
+
+/// Tries the **`bv2nat`-bound** refutation cert: a query whose `unsat` rests on
+/// the provable range `0 <= bv2nat_W(b) <= 2^W - 1` of a `W`-bit bit-vector (e.g.
+/// `bv2nat(x) >= 16` for a 4-bit `x`). The exact integer refuters reject a raw
+/// `bv2nat(b)` subterm, so such a query is otherwise a bare `Evidence::Unsat(None)`.
+///
+/// It mirrors [`crate::auto`]'s `refute_bv2nat_out_of_range`: on an isolated clone
+/// of the arena it [`abstract_bv2nat_for_refutation`]s each distinct `bv2nat(b)`
+/// to a fresh `Int` symbol `n` plus the **trusted** range axiom `0 <= n <= 2^W-1`
+/// (the int↔BV-width bridge — ledgered as [`TrustId::IntBlast`]). The resulting
+/// query is a sound relaxation (every model of the original induces one of the
+/// abstraction), so an `unsat` of the abstraction transfers to the original. The
+/// abstraction is **pure LIA**, so [`crate::prove_lia_unsat_alethe`] emits a
+/// `lia_generic` cert over it — the bulk of the refutation is **certified**
+/// (re-derived by [`crate::check_alethe_lra`]); only the range axiom is trusted.
+///
+/// Returns the checked proof together with its [`TrustStep`]s
+/// (`IntBlast`: trusted/`false`, `Farkas`: certified/`true`), or `None` when there
+/// is no abstractable `bv2nat` (so the plain LIA/UFLIA paths own their queries —
+/// this declines for them) or the abstraction is not LIA-`unsat`. Ordered AFTER
+/// [`arith_alethe_certificate`] (which declines a raw `bv2nat` subterm) so it
+/// never shadows the zero-trust certs.
+///
+/// The returned proof is over the **abstracted** assertions (the fresh `!bv2nat.*`
+/// symbols), so [`Evidence::check`] re-checks the LIA proof self-containedly
+/// (`check_alethe_lra` reads only the carried Alethe commands, not the arena).
+fn bv2nat_bound_certificate(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<(Vec<AletheCommand>, Vec<TrustStep>)> {
+    use crate::bv2nat_bound::abstract_bv2nat_for_refutation;
+
+    // Abstract on an isolated clone: the fresh `!bv2nat.*` symbols and rewritten
+    // terms must never leak into the caller's arena (or any later sat model).
+    let mut scratch = arena.clone();
+    let relaxed = abstract_bv2nat_for_refutation(&mut scratch, assertions).ok()??;
+    // The abstraction is pure LIA after divmod elimination (parity with the
+    // refuter in `auto`); emit the `lia_generic` cert over it. `prove_lia_unsat_alethe`
+    // self-validates and internally re-runs `check_with_lia_simplex`, so a non-`unsat`
+    // abstraction (or one outside the LIA fragment) yields `None`.
+    let linear = axeyum_rewrite::eliminate_int_divmod(&mut scratch, &relaxed).ok()?;
+    let proof = crate::prove_lia_unsat_alethe(&scratch, &linear)?;
+    if !matches!(crate::check_alethe_lra(&proof), Ok(true)) {
+        return None;
+    }
+    // The LIA refutation is re-derived (certified); the `bv2nat`-range abstraction
+    // is the one trusted step (the int↔BV-width bridge, ledgered as `IntBlast`).
+    let steps = trust_steps(&[(TrustId::IntBlast, false), (TrustId::Farkas, true)]);
+    Some((proof, steps))
 }
 
 /// Best-effort re-checkable certificate for an `unsat` over a BV-reducible
