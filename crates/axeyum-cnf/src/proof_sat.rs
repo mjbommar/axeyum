@@ -125,10 +125,24 @@ fn lit_code(lit: CnfLit) -> usize {
     2 * lit.var().index() + usize::from(lit.is_negated())
 }
 
+/// One entry in a literal's watch list (the `MiniSat`/`BatSat` blocking-literal
+/// scheme). `clause` is the watched clause's id; `blocker` is a *cached* literal
+/// of that clause OTHER than the watched one. In `propagate`, if `blocker` is
+/// already true under the current assignment the clause is satisfied and is
+/// skipped *without dereferencing the clause array* — the cache hit that makes
+/// BCP fast. The blocker is purely a performance hint: it never changes which
+/// propagations or conflicts are derived.
+#[derive(Clone, Copy)]
+struct Watch {
+    clause: usize,
+    blocker: CnfLit,
+}
+
 struct Cdcl {
     clauses: Vec<Vec<CnfLit>>,
-    /// Per-literal watch lists, indexed by [`lit_code`].
-    watches: Vec<Vec<usize>>,
+    /// Per-literal watch lists, indexed by [`lit_code`]. Each entry carries a
+    /// blocking literal (see [`Watch`]).
+    watches: Vec<Vec<Watch>>,
     assign: Vec<Option<bool>>,
     level: Vec<usize>,
     reason: Vec<Option<usize>>,
@@ -186,8 +200,16 @@ impl Cdcl {
                 0 => has_empty_clause = true,
                 1 => initial_units.push(clause[0]),
                 _ => {
-                    watches[lit_code(clause[0])].push(cid);
-                    watches[lit_code(clause[1])].push(cid);
+                    // Watch the first two literals; each watch's blocker is the
+                    // OTHER watched literal of the same clause.
+                    watches[lit_code(clause[0])].push(Watch {
+                        clause: cid,
+                        blocker: clause[1],
+                    });
+                    watches[lit_code(clause[1])].push(Watch {
+                        clause: cid,
+                        blocker: clause[0],
+                    });
                 }
             }
         }
@@ -312,8 +334,14 @@ impl Cdcl {
                 let clause_id = self.clauses.len();
                 let asserting = learned[0];
                 if learned.len() >= 2 {
-                    self.watches[lit_code(learned[0])].push(clause_id);
-                    self.watches[lit_code(learned[1])].push(clause_id);
+                    self.watches[lit_code(learned[0])].push(Watch {
+                        clause: clause_id,
+                        blocker: learned[1],
+                    });
+                    self.watches[lit_code(learned[1])].push(Watch {
+                        clause: clause_id,
+                        blocker: learned[0],
+                    });
                 }
                 self.clauses.push(learned);
                 // Register the new learned clause's deletion metadata.
@@ -366,8 +394,29 @@ impl Cdcl {
         }
     }
 
-    /// Two-watched-literal unit propagation; returns a conflicting clause id.
+    /// Two-watched-literal unit propagation with **blocking literals** (the
+    /// `MiniSat`/`BatSat` BCP). Returns a conflicting clause id, or `None` if the
+    /// queue drains with no conflict.
+    ///
+    /// The watch list of the now-false literal is scanned with an in-place `i`
+    /// (read) / `j` (write) compaction (mirroring `BatSat`'s `propagate`):
+    ///
+    /// 1. If a watch's cached `blocker` is already true, the clause is satisfied;
+    ///    keep the watch and skip *without touching the clause array* — the fast
+    ///    path that most watches take.
+    /// 2. Otherwise dereference the clause, put the false literal at index 1, and:
+    ///    - if the other watched literal (index 0) is true, keep the watch
+    ///      (refreshing its blocker to that literal) and continue;
+    ///    - else look for a non-false replacement literal to watch — if found,
+    ///      move the watch to that literal's list (blocker = index-0 literal);
+    ///    - else the clause is unit/conflicting: keep the watch (blocker = the
+    ///      index-0 literal). If index 0 is false → conflict; otherwise enqueue
+    ///      index 0 as a unit implication.
+    ///
+    /// Blocking literals only reduce the *work* to find propagations/conflicts;
+    /// the derived implications and conflicts are identical to the plain scheme.
     fn propagate(&mut self) -> Option<usize> {
+        let mut conflict = None;
         while self.qhead < self.trail.len() {
             let var = self.trail[self.qhead];
             self.qhead += 1;
@@ -375,44 +424,76 @@ impl Cdcl {
             let code = lit_code(false_lit);
 
             let mut watchers = std::mem::take(&mut self.watches[code]);
-            let mut i = 0;
-            let mut conflict = None;
-            while i < watchers.len() {
-                let cid = watchers[i];
+            let end = watchers.len();
+            let mut i = 0usize;
+            let mut j = 0usize;
+            'clauses: while i < end {
+                // (1) Fast path: a true blocker means the clause is satisfied;
+                // keep the watch and move on without inspecting the clause.
+                let blocker = watchers[i].blocker;
+                if self.value(blocker) == Some(true) {
+                    watchers[j] = watchers[i];
+                    j += 1;
+                    i += 1;
+                    continue;
+                }
+
+                let cid = watchers[i].clause;
                 // Keep the falsified literal at index 1.
                 if self.clauses[cid][0] == false_lit {
                     self.clauses[cid].swap(0, 1);
                 }
-                let other = self.clauses[cid][0];
-                if self.value(other) == Some(true) {
-                    i += 1;
+                i += 1;
+
+                // (2) If the other watched literal is true, the clause is
+                // satisfied; keep this watch with its blocker refreshed to it.
+                let first = self.clauses[cid][0];
+                if first != blocker && self.value(first) == Some(true) {
+                    watchers[j] = Watch {
+                        clause: cid,
+                        blocker: first,
+                    };
+                    j += 1;
                     continue;
                 }
-                // Look for a non-false literal to watch instead.
-                let mut moved = false;
+
+                // Look for a non-false literal to watch instead of `false_lit`.
                 for k in 2..self.clauses[cid].len() {
                     if self.value(self.clauses[cid][k]) != Some(false) {
                         self.clauses[cid].swap(1, k);
+                        // Move the watch to the new literal's list; its blocker
+                        // is the surviving (index-0) watched literal. This watch
+                        // is dropped from the current list (not copied to `j`).
                         let new_code = lit_code(self.clauses[cid][1]);
-                        self.watches[new_code].push(cid);
-                        watchers.swap_remove(i);
-                        moved = true;
-                        break;
+                        self.watches[new_code].push(Watch {
+                            clause: cid,
+                            blocker: first,
+                        });
+                        continue 'clauses;
                     }
                 }
-                if moved {
-                    continue;
-                }
-                // No replacement: `other` is unit or the clause is in conflict.
-                // Either way the clause keeps watching `false_lit` (stays in
-                // `watchers`).
-                if self.value(other) == Some(false) {
+
+                // No replacement: the clause is unit or conflicting under the
+                // current assignment. Keep this watch (blocker = index-0 lit).
+                watchers[j] = Watch {
+                    clause: cid,
+                    blocker: first,
+                };
+                j += 1;
+                if self.value(first) == Some(false) {
+                    // Conflict: stop scanning, but preserve the remaining (not
+                    // yet visited) watches by copying them down to `j`.
                     conflict = Some(cid);
+                    while i < end {
+                        watchers[j] = watchers[i];
+                        j += 1;
+                        i += 1;
+                    }
                     break;
                 }
-                self.enqueue(other, Some(cid));
-                i += 1;
+                self.enqueue(first, Some(cid));
             }
+            watchers.truncate(j);
             self.watches[code] = watchers;
             if conflict.is_some() {
                 return conflict;
@@ -646,9 +727,16 @@ impl Cdcl {
             }
             let clause = &self.clauses[cid];
             if clause.len() >= 2 {
-                let (a, b) = (lit_code(clause[0]), lit_code(clause[1]));
-                self.watches[a].push(cid);
-                self.watches[b].push(cid);
+                let (l0, l1) = (clause[0], clause[1]);
+                // Each watch's blocker is the other watched literal.
+                self.watches[lit_code(l0)].push(Watch {
+                    clause: cid,
+                    blocker: l1,
+                });
+                self.watches[lit_code(l1)].push(Watch {
+                    clause: cid,
+                    blocker: l0,
+                });
             }
         }
     }
@@ -688,7 +776,7 @@ impl Cdcl {
 #[cfg(test)]
 mod tests {
     use super::{
-        Cdcl, Instant, ProofSolveOutcome, lit_code, solve_with_drat_proof,
+        Cdcl, Instant, ProofSolveOutcome, Watch, lit_code, solve_with_drat_proof,
         solve_with_drat_proof_within,
     };
     use crate::{
@@ -957,6 +1045,60 @@ mod tests {
         }
     }
 
+    /// Blocking-literal BCP is a pure propagation optimization: it must NOT
+    /// change any verdict. This battery re-affirms that — over a fresh seed of
+    /// many random CNFs the blocking-literal core agrees with `BatSat` on every
+    /// instance (`DISAGREE = 0`), every `sat` model satisfies, and every `unsat`
+    /// proof (derived via the new `Watch`/blocker propagate) DRAT-checks. A
+    /// blocker is a performance hint only; the implications and conflicts derived
+    /// are identical to the plain two-watched scheme.
+    #[test]
+    fn blocking_literal_bcp_preserves_verdicts_disagree_zero() {
+        let mut state = 0xb10c_11ad_5a7b_eef0u64;
+        let mut next = || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state
+        };
+        let below = |n: &mut dyn FnMut() -> u64, bound: u64| usize::try_from(n() % bound).unwrap();
+        for _ in 0..300 {
+            let vars = 3 + below(&mut next, 8); // 3..=10 variables
+            let clause_count = 4 + below(&mut next, 28);
+            let mut f = CnfFormula::new(vars);
+            let vars_bound = u64::try_from(vars).unwrap();
+            for _ in 0..clause_count {
+                let width = 1 + below(&mut next, 4); // 1..=4 literals (varied widths)
+                let mut lits = Vec::new();
+                for _ in 0..width {
+                    let v = i64::try_from(next() % vars_bound).unwrap() + 1;
+                    let signed = if next() & 1 == 0 { v } else { -v };
+                    lits.push(lit(signed));
+                }
+                f.add_clause(CnfClause::new(lits)).unwrap();
+            }
+            let batsat = solve_with_rustsat_batsat(&f).unwrap();
+            match (solve_with_drat_proof(&f), batsat) {
+                (ProofSolveOutcome::Sat(model), SatResult::Sat(_)) => {
+                    assert!(
+                        model.satisfies(&f).unwrap(),
+                        "native sat model must satisfy"
+                    );
+                }
+                (ProofSolveOutcome::Unsat(proof), SatResult::Unsat(_)) => {
+                    assert_eq!(
+                        check_drat(&f, &proof),
+                        Ok(true),
+                        "native unsat must DRAT-check"
+                    );
+                }
+                (native, other) => {
+                    panic!("DISAGREE (blocking-literal BCP): native={native:?} batsat={other:?}");
+                }
+            }
+        }
+    }
+
     /// Builds an unsatisfiable pigeonhole formula: `pigeons` pigeons into
     /// `pigeons - 1` holes. PHP is exponentially hard for resolution, so larger
     /// instances generate many conflicts/learned clauses — enough to drive
@@ -1052,8 +1194,14 @@ mod tests {
         // Add a learned clause that implies d, watched on its first two lits.
         let learned = vec![lit(4), lit(-1), lit(-2), lit(-3)]; // d ∨ ¬a ∨ ¬b ∨ ¬c
         let cid = cdcl.clauses.len();
-        cdcl.watches[lit_code(learned[0])].push(cid);
-        cdcl.watches[lit_code(learned[1])].push(cid);
+        cdcl.watches[lit_code(learned[0])].push(Watch {
+            clause: cid,
+            blocker: learned[1],
+        });
+        cdcl.watches[lit_code(learned[1])].push(Watch {
+            clause: cid,
+            blocker: learned[0],
+        });
         cdcl.clauses.push(learned);
         cdcl.lbd.push(4); // distinct levels among ¬a,¬b,¬c,d (d will be @3)
         cdcl.cla_activity.push(0.0);
