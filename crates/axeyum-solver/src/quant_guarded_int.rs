@@ -22,6 +22,14 @@
 //! already-decided one. A range whose size exceeds [`RANGE_SIZE_CAP`], or that
 //! is inverted/unbounded, is left unexpanded (a graceful `unknown` via the
 //! existing fallback) rather than risking a memory blow-up.
+//!
+//! The `inner` body need *not* be quantifier-free: substituting a ground `Int`
+//! constant for `x` is capture-free as long as no inner quantifier re-binds `x`
+//! itself (which would be unsound shadowing — such a body is declined). An inner
+//! `∃y. …` is carried through into each instance verbatim; the caller
+//! re-skolemizes the exposed top-level existentials and re-dispatches, so e.g.
+//! `∀x:Int. (0≤x≤3) ⇒ ∃y. y = x*x` expands to `⋀_{v=0}^{3} ∃y. y = v*v` and is
+//! then decided.
 
 use std::collections::HashMap;
 
@@ -66,6 +74,123 @@ pub fn expand_guarded_int_universals(
     Ok((out, rewrote))
 }
 
+/// Skolemizes every existential `∃y. body` that sits in a **strictly positive**
+/// Boolean position of each assertion — reachable from the assertion root through
+/// only `∧`/`∨` connectives (and nested positive existentials) — replacing it with
+/// `body[y := s]` for a fresh constant `s` of `y`'s sort.
+///
+/// This is the exact shape the guarded-`Int` expansion exposes: expanding
+/// `∀x:Int. (lo≤x≤hi) ⇒ ∃y. P(x, y)` yields `⋀_{v} ∃y. P(v, y)`, a conjunction of
+/// top-level (positive) existentials that [`skolemize_top_existentials`] (which
+/// only matches an assertion whose *root* is `∃`) cannot reach.
+///
+/// Soundness: under `∧`/`∨` an existential occurs positively, so `… ∃y.P(y) …`
+/// is equisatisfiable with `… P(s) …` for a fresh `s` (the solver chooses the
+/// witness). Quantifiers reached through any *other* operator (a negation, the
+/// antecedent of `⇒`, the test of an `ite`, an equality, …) may be in a negative
+/// or mixed position where naive skolemization is unsound, so the descent **stops
+/// at every non-`∧`/`∨` node** and leaves that subterm untouched — a residual
+/// quantifier there simply routes to the sound refutation/`unknown` fallback,
+/// never to a wrong verdict. Universals are likewise left in place. Returns the
+/// rewritten assertions and whether any existential was skolemized.
+///
+/// `next_skolem` seeds (and is advanced past) the fresh-constant counter so the
+/// names never collide with the top-level skolemizer's `!sk_*` constants.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Backend`] only on an internal IR builder failure.
+pub fn skolemize_positive_existentials(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    next_skolem: &mut u32,
+) -> Result<(Vec<TermId>, bool), SolverError> {
+    let mut out = Vec::with_capacity(assertions.len());
+    let mut changed = false;
+    for &assertion in assertions {
+        let (rewritten, hit) = skolemize_positive(arena, assertion, next_skolem)?;
+        changed |= hit;
+        out.push(rewritten);
+    }
+    Ok((out, changed))
+}
+
+/// Recursive worker for [`skolemize_positive_existentials`]. Descends only through
+/// `∧`/`∨` (positive connectives) and positive existentials; every other node is
+/// returned unchanged.
+fn skolemize_positive(
+    arena: &mut TermArena,
+    term: TermId,
+    next_skolem: &mut u32,
+) -> Result<(TermId, bool), SolverError> {
+    let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
+    match arena.node(term).clone() {
+        TermNode::App {
+            op: Op::Exists(sym),
+            args,
+        } => {
+            // Positive existential: replace the bound variable with a fresh
+            // constant of its sort, then continue skolemizing positively into the
+            // (now-substituted) body.
+            let sort = arena.symbol(sym).1;
+            let skolem = arena
+                .declare(&format!("!gk_{}", *next_skolem), sort)
+                .map_err(err)?;
+            *next_skolem += 1;
+            let bound = arena.var(sym);
+            let fresh = arena.var(skolem);
+            let mut map: HashMap<TermId, TermId> = HashMap::new();
+            map.insert(bound, fresh);
+            let mut memo: HashMap<TermId, TermId> = HashMap::new();
+            let substituted = replace_subterms(arena, args[0], &map, &mut memo).map_err(err)?;
+            let (inner, _) = skolemize_positive(arena, substituted, next_skolem)?;
+            Ok((inner, true))
+        }
+        TermNode::App {
+            op: op @ (Op::BoolAnd | Op::BoolOr),
+            args,
+        } => {
+            // Both children of `∧`/`∨` are positive positions; recurse.
+            let mut new_args = Vec::with_capacity(args.len());
+            let mut changed = false;
+            for &arg in &args {
+                let (rewritten, hit) = skolemize_positive(arena, arg, next_skolem)?;
+                changed |= hit;
+                new_args.push(rewritten);
+            }
+            if !changed {
+                return Ok((term, false));
+            }
+            let rebuilt = match op {
+                Op::BoolAnd => new_args
+                    .into_iter()
+                    .try_fold(None::<TermId>, |acc, a| {
+                        Ok::<_, SolverError>(Some(match acc {
+                            Some(prev) => arena.and(prev, a).map_err(err)?,
+                            None => a,
+                        }))
+                    })?
+                    .expect("non-empty and"),
+                Op::BoolOr => new_args
+                    .into_iter()
+                    .try_fold(None::<TermId>, |acc, a| {
+                        Ok::<_, SolverError>(Some(match acc {
+                            Some(prev) => arena.or(prev, a).map_err(err)?,
+                            None => a,
+                        }))
+                    })?
+                    .expect("non-empty or"),
+                _ => unreachable!("matched only BoolAnd/BoolOr"),
+            };
+            Ok((rebuilt, true))
+        }
+        // Any other node (negation, implication, ite, equality, comparison, a
+        // universal, a leaf, …) is a position where positive skolemization is not
+        // sound (or not applicable). Leave it byte-identical.
+        _ => Ok((term, false)),
+    }
+}
+
 /// Attempts the guarded-`Int` rewrite on a single top-level assertion. Returns
 /// `Ok(None)` when the assertion is not a matching guarded universal (left
 /// unchanged by the caller).
@@ -98,10 +223,14 @@ fn try_expand_assertion(
     let guard = imp_args[0];
     let inner = imp_args[1];
 
-    // A nested quantifier anywhere in the body is out of scope: the bound var
-    // could be re-bound/shadowed and the substitution would be unsound, so fall
-    // back rather than guess.
-    if contains_quantifier(arena, body) {
+    // A nested quantifier that *re-binds the outer variable* `x` (same
+    // `SymbolId`) is out of scope: substituting `x := v` would capture the
+    // inner-bound occurrences and be unsound, so fall back rather than guess.
+    // Inner quantifiers over *other* variables are fine — the substitution of a
+    // ground `Int` constant for `x` is capture-free regardless of body shape
+    // (`x` is not bound by them), and the resulting `∃y. …` instances are
+    // handled by re-skolemizing the exposed top-level existentials downstream.
+    if rebinds_var(arena, body, var) {
         return Ok(None);
     }
 
@@ -123,7 +252,9 @@ fn try_expand_assertion(
     }
 
     // Expand to ⋀_{v=lo}^{hi} inner[x := v]. Substituting a *ground* Int constant
-    // for the (quantifier-free-body) bound variable is capture-free.
+    // for the bound variable is capture-free: `x` is not re-bound anywhere in the
+    // body (checked above), so no inner binder can shadow the occurrences we
+    // rewrite. Any inner `∃y. …` in `inner` is carried through verbatim.
     let var_term = arena.var(var);
     let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
     let mut conjunction: Option<TermId> = None;
@@ -244,8 +375,13 @@ fn int_literal(arena: &TermArena, term: TermId) -> Option<i128> {
     }
 }
 
-/// Whether `term` contains any quantifier operator.
-fn contains_quantifier(arena: &TermArena, term: TermId) -> bool {
+/// Whether any inner quantifier in `term` re-binds the outer bound variable
+/// `var` (the same [`SymbolId`]). Substituting `var := v` into a body that
+/// shadows `var` would capture the inner-bound occurrences and be unsound, so
+/// the guarded expansion declines for such a body. Inner quantifiers over *other*
+/// variables are not a problem (the substitution of `var` is capture-free w.r.t.
+/// them), so they do not trigger a decline.
+fn rebinds_var(arena: &TermArena, term: TermId, var: SymbolId) -> bool {
     let mut seen = std::collections::BTreeSet::new();
     let mut stack = vec![term];
     while let Some(t) = stack.pop() {
@@ -253,8 +389,10 @@ fn contains_quantifier(arena: &TermArena, term: TermId) -> bool {
             continue;
         }
         if let TermNode::App { op, args } = arena.node(t) {
-            if matches!(op, Op::Forall(_) | Op::Exists(_)) {
-                return true;
+            if let Op::Forall(bound) | Op::Exists(bound) = op {
+                if *bound == var {
+                    return true;
+                }
             }
             stack.extend(args.iter().copied());
         }

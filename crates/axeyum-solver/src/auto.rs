@@ -35,7 +35,7 @@ use crate::lia::DEFAULT_INT_WIDTH;
 use crate::lra::{check_with_lia_simplex_within, check_with_lra};
 use crate::model::Model;
 use crate::qinst_egraph::prove_quantified_unsat_via_egraph;
-use crate::quant_guarded_int::expand_guarded_int_universals;
+use crate::quant_guarded_int::{expand_guarded_int_universals, skolemize_positive_existentials};
 use crate::sat_bv_backend::SatBvBackend;
 
 // Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
@@ -1226,9 +1226,31 @@ pub fn check_with_quantifiers(
     // matched guarded shape is touched, every other assertion is passed through —
     // and equivalence-preserving, so both `sat` and `unsat` transfer. The trust
     // anchor below still replays the *original* (unrewritten) `assertions`.
-    let (guard_expanded, _) = expand_guarded_int_universals(arena, assertions)?;
+    let (guard_expanded, guard_changed) = expand_guarded_int_universals(arena, assertions)?;
 
-    let expanded = expand_quantifiers(arena, &guard_expanded).map_err(|error| match error {
+    // Inner-existential exposure: expanding `∀x:Int. (lo≤x≤hi) ⇒ ∃y. P(x, y)`
+    // yields `⋀_{v} ∃y. P(v, y)` — a conjunction of *positive* existentials that
+    // skolemization at the assertion root (`skolemize_top_existentials`, run once
+    // near the top of `solve`) cannot reach, and which the finite-domain
+    // `expand_quantifiers` cannot enumerate (the `∃y` is `Int`-sorted). Skolemize
+    // these positive existentials to `P(v, gk_v)` for fresh constants — equisat
+    // and equivalence-preserving for the `sat`/`unsat` verdict — so the ordinary
+    // QF dispatch decides them. This runs **only** when the guarded pass actually
+    // fired *and* a quantifier remains (strictly additive, no re-entry into the
+    // quantifier dispatch — the work is inline), so it cannot loop. A quantifier
+    // left un-skolemized (an existential in a non-positive position, or a residual
+    // universal) keeps the original `expand_quantifiers` route and its sound
+    // `Unsupported`-→-refutation fallback, never a wrong verdict.
+    let mut skolem_counter = 0u32;
+    let replay_base = if guard_changed && has_quantifier(arena, &guard_expanded) {
+        let (skolemized, _) =
+            skolemize_positive_existentials(arena, &guard_expanded, &mut skolem_counter)?;
+        skolemized
+    } else {
+        guard_expanded
+    };
+
+    let expanded = expand_quantifiers(arena, &replay_base).map_err(|error| match error {
         QuantExpandError::UnsupportedDomain(sort) => {
             SolverError::Unsupported(format!("quantifier over non-enumerable domain {sort}"))
         }
@@ -1243,16 +1265,19 @@ pub fn check_with_quantifiers(
     };
 
     // Replay the *quantified* assertions through the enumerating evaluator — the
-    // trust anchor for a quantified `sat`. We replay `guard_expanded`, which is
-    // the equivalence-preserving guarded-`Int` rewrite of the originals: it is
-    // the **same** `TermId`s as `assertions` wherever no guarded rewrite fired
-    // (so unchanged for the existing Bool/BitVec quantifier path), and where a
+    // trust anchor for a quantified `sat`. We replay `replay_base`, the
+    // equivalence/equisatisfiability-preserving rewrite of the originals: it is
+    // the **same** `TermId`s as `assertions` wherever no rewrite fired (so
+    // unchanged for the existing Bool/BitVec quantifier path), and where a
     // guarded-`Int` universal *was* rewritten it is the equivalent quantifier-free
-    // conjunction — which the enumerating evaluator can actually evaluate (the
-    // evaluator has no `Int`-domain quantifier enumeration). Equivalence makes
-    // this just as strong a trust anchor as replaying the original `forall`.
+    // conjunction (with any exposed inner `∃y` skolemized to a fresh witness the
+    // model assigns) — which the enumerating evaluator can actually evaluate (it
+    // has no `Int`-domain quantifier enumeration). The model satisfying
+    // `⋀_v P(v, gk_v)` witnesses `⋀_v ∃y. P(v, y)`, i.e. the original
+    // `∀x.(guard ⇒ ∃y. P)`, so this is just as strong a trust anchor as replaying
+    // the original `forall`.
     let assignment = model.to_assignment();
-    for &assertion in &guard_expanded {
+    for &assertion in &replay_base {
         match eval(arena, assertion, &assignment) {
             Ok(Value::Bool(true)) => {}
             Ok(_) => {

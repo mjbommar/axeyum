@@ -556,6 +556,23 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P2.6: guarded-finite `∀` over an inner `∃` decided (`∀x:Int.(0≤x≤3)⇒∃y.y=x*x`
+  → Sat).** Two pipeline steps dropped the inner `∃`: (1) `expand_guarded_int_universals` declined
+  on ANY quantifier in the body, and (2) even when expanded, the exposed `⋀_v ∃y.P(v,y)` existentials
+  sit inside `∧` (not at an assertion root), so the top-level skolemizer never reached them and
+  `Int`-domain expansion failed → Unknown. Fix: the guarded pass now declines only when an inner
+  quantifier RE-BINDS the outer `x` (capture — `rebinds_var`); other inner quantifiers pass through
+  (substituting a ground `Int` const for `x` is capture-free). New `skolemize_positive_existentials`
+  skolemizes every `∃` in a STRICTLY POSITIVE Boolean position (reachable through only `∧`/`∨`) to a
+  fresh `!gk_N` constant — stopping at negation / `⇒`-antecedent / `ite` / `=` / `∀`, where naive
+  skolemization is unsound (left to the refutation fallback). `check_with_quantifiers` applies this
+  INLINE (no recursion — guard: the guarded pass fired AND a quantifier remains, so strictly closer
+  to QF) and uses the skolemized form as both dispatch and sat-replay base (equisatisfiable, so the
+  original-assertion replay anchor holds). Decides the target + `∀x.(0≤x≤2)⇒∃y.y>x` → Sat.
+  **Soundness-negatives:** `∀x.(0≤x≤2)⇒∃y.(y>x∧y<x)` and `…⇒∃y.(y=x*x∧y<4)` → Unsat (inner `∃`
+  unsatisfiable per x ⇒ universal false), never a wrong Sat. New `tests/quant_guarded_inner_exists.rs`
+  (5); full suite + clippy + doc + fmt green, no hangs. Sub-agent + soundness review.
+
 - **2026-06-19** — **ROBUSTNESS: BV optimization honors `config.timeout` (closes an unbounded
   hang).** Found by the non-arith deep hunt: every bit-vector optimizer ran its feasibility
   probes with a hardcoded `SolverConfig::default()` (no timeout), and the `Solver` façade dropped
