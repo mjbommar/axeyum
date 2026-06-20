@@ -350,3 +350,50 @@ fn preprocess_on_off_agree_on_a_battery() {
         }
     }
 }
+
+#[test]
+fn fixpoint_resolves_a_deep_definition_chain() {
+    use axeyum_solver::{CheckResult, solve};
+    // A definitional chain whose layers collapse fully only when the reductions are
+    // ITERATED: w = 2 ∧ x1 = w+1 ∧ x2 = x1+1 ∧ x3 = x2+1 forces x3 = 5. The fixpoint
+    // must resolve the whole chain (not just one layer) so the goal decides without
+    // bit-blasting a wide search; the result is replay-checked against the originals.
+    let mut arena = TermArena::new();
+    let w = arena.declare("cw", Sort::BitVec(8)).unwrap();
+    let x1 = arena.declare("cx1", Sort::BitVec(8)).unwrap();
+    let x2 = arena.declare("cx2", Sort::BitVec(8)).unwrap();
+    let x3 = arena.declare("cx3", Sort::BitVec(8)).unwrap();
+    let (wv, x1v, x2v, x3v) = (arena.var(w), arena.var(x1), arena.var(x2), arena.var(x3));
+    let one = arena.bv_const(8, 1).unwrap();
+    let two = arena.bv_const(8, 2).unwrap();
+    let w_is_2 = arena.eq(wv, two).unwrap();
+    let w1 = arena.bv_add(wv, one).unwrap();
+    let x1_def = arena.eq(x1v, w1).unwrap();
+    let x1p1 = arena.bv_add(x1v, one).unwrap();
+    let x2_def = arena.eq(x2v, x1p1).unwrap();
+    let x2p1 = arena.bv_add(x2v, one).unwrap();
+    let x3_def = arena.eq(x3v, x2p1).unwrap();
+
+    // Consistent (x3 = 5): sat, model replays against the originals.
+    let five = arena.bv_const(8, 5).unwrap();
+    let x3_is_5 = arena.eq(x3v, five).unwrap();
+    let sat_case = [w_is_2, x1_def, x2_def, x3_def, x3_is_5];
+    let CheckResult::Sat(model) = check(&mut arena, &sat_case) else {
+        panic!("consistent definition chain must be sat");
+    };
+    assert_eq!(model.get(x3), Some(Value::Bv { width: 8, value: 5 }));
+    assert_model_satisfies(&arena, &model, &sat_case);
+
+    // Contradictory (x3 = 9 ≠ 5): unsat, and preprocess agrees with no-preprocess.
+    let nine = arena.bv_const(8, 9).unwrap();
+    let x3_is_9 = arena.eq(x3v, nine).unwrap();
+    let unsat_case = [w_is_2, x1_def, x2_def, x3_def, x3_is_9];
+    assert!(
+        matches!(check(&mut arena, &unsat_case), CheckResult::Unsat),
+        "contradicted chain must be unsat after fixpoint preprocessing"
+    );
+    assert!(matches!(
+        solve(&mut arena, &unsat_case, &SolverConfig::default()),
+        Ok(CheckResult::Unsat)
+    ));
+}

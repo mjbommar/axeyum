@@ -16,12 +16,18 @@
 
 use axeyum_ir::{TermArena, TermId, Value, eval};
 use axeyum_rewrite::{
-    DEFAULT_SOLVE_EQS_FUEL, canonicalize_terms, elim_unconstrained, propagate_values,
-    solve_eqs_bounded,
+    DEFAULT_SOLVE_EQS_FUEL, ModelReconstructionTrail, canonicalize_terms, elim_unconstrained,
+    propagate_values, solve_eqs_bounded,
 };
 
 use crate::backend::{CheckResult, SolverBackend, SolverConfig, SolverError};
 use crate::model::Model;
+
+/// Maximum word-level reduction rounds before bit-blasting. Each round runs the
+/// model-sound passes once; the loop stops early at a fixpoint (a round that
+/// eliminates nothing). A small deterministic cap bounds the cost — fixpoints on
+/// real corpora converge in 2–3 rounds; this only guards a pathological oscillation.
+const MAX_PREPROCESS_ROUNDS: usize = 8;
 
 /// Checks `assertions` with `backend` after model-sound word-level preprocessing.
 ///
@@ -35,53 +41,71 @@ pub fn check_with_preprocessing<B: SolverBackend>(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    // Iterate the model-sound reductions to a FIXPOINT (Track 1 perf lever — deeper
+    // reduction removes more variables before bit-blasting, which is what relieves
+    // the encode budget on real corpora). One pass is not enough: `elim_unconstrained`
+    // can expose a fresh constant that `propagate_values`/`solve_eqs` then eliminate,
+    // and the re-canonicalization AC-normalizes substituted product trees that reveal
+    // further folds. Each pass is model-sound and contributes a reconstruction trail;
+    // they compose in pass/round order (reconstructed in reverse). The final replay
+    // against the ORIGINAL assertions (below) is the trust anchor — any trail/round
+    // composition bug surfaces there as an `Err`, never a wrong `sat`.
+    //
     // Canonicalize first: a denotation- and symbol-preserving normalization (e.g.
-    // commutative-operand ordering, so `(bvmul a b)` and `(bvmul b a)` coincide and
-    // `(= (bvmul a b) (bvmul b a))` folds to `true` with no bit-blasting). It
-    // eliminates no variables, so it needs no reconstruction trail — the model
-    // (over the same symbols) replays against the ORIGINAL assertions below.
-    let canonical = canonicalize_terms(arena, assertions)
+    // commutative-operand ordering, so `(= (bvmul a b) (bvmul b a))` folds to `true`
+    // with no bit-blasting). It eliminates no variables, so it needs no trail.
+    let mut reduced = canonicalize_terms(arena, assertions)
         .map_err(|error| SolverError::Backend(format!("canonicalize failed: {error}")))?
         .terms;
-    // Run the model-sound passes, composing their reconstruction trails in pass
-    // order (propagate_values first, then solve_eqs).
-    let (after_values, mut trail) = propagate_values(arena, &canonical)
-        .map_err(|error| SolverError::Backend(format!("propagate_values failed: {error}")))?
-        .into_parts();
-    // `solve_eqs_bounded`: the substitution loop is `O(eliminations × nodes)` and
-    // runs effectively unbounded on the large public ite-DAGs (a 17.6 MB / 215 k-`ite`
-    // instance never returns). The deterministic node-fuel bail keeps preprocessing
-    // usable at that scale, returning a sound *partial* reduction (the un-eliminated
-    // equalities stay as ordinary assertions; the trail still reconstructs).
-    let (reduced, eq_trail) = solve_eqs_bounded(arena, &after_values, DEFAULT_SOLVE_EQS_FUEL)
-        .map_err(|error| SolverError::Backend(format!("solve_eqs failed: {error}")))?
-        .into_parts();
-    trail.append(eq_trail);
+    let mut trail = ModelReconstructionTrail::new();
+    for _round in 0..MAX_PREPROCESS_ROUNDS {
+        // `propagate_values` (pin `x = c`).
+        let values = propagate_values(arena, &reduced)
+            .map_err(|error| SolverError::Backend(format!("propagate_values failed: {error}")))?;
+        let eliminated_values = values.eliminated();
+        let (after_values, values_trail) = values.into_parts();
+        trail.append(values_trail);
 
-    // Eliminate unconstrained single-use invertible-operator layers (T1.2.4):
-    // a variable occurring once under `bvadd`/`bvsub`/`bvxor`/`bvnot`/`bvneg` makes
-    // that subterm unconstrained, so it is replaced by a fresh variable and the
-    // operator dropped (recovered on `sat` via the appended trail). Runs after
-    // `solve_eqs` so it sees the already-reduced form; its inverses reference only
-    // surviving symbols and freshly-minted ones, so appending its trail last
-    // (reconstructed first on reverse replay) resolves cleanly.
-    let (reduced, unconstrained_trail) = elim_unconstrained(arena, &reduced)
-        .map_err(|error| SolverError::Backend(format!("elim_unconstrained failed: {error}")))?
-        .into_parts();
-    trail.append(unconstrained_trail);
+        // `solve_eqs_bounded` (substitute `x = t`): the substitution loop is
+        // `O(eliminations × nodes)` and runs effectively unbounded on the large public
+        // ite-DAGs; the deterministic node-fuel bail keeps it usable at that scale,
+        // returning a sound *partial* reduction (un-eliminated equalities stay as
+        // ordinary assertions; the trail still reconstructs).
+        let eqs = solve_eqs_bounded(arena, &after_values, DEFAULT_SOLVE_EQS_FUEL)
+            .map_err(|error| SolverError::Backend(format!("solve_eqs failed: {error}")))?;
+        let eliminated_eqs = eqs.eliminated();
+        let (after_eqs, eq_trail) = eqs.into_parts();
+        trail.append(eq_trail);
 
-    // Re-canonicalize after substitution. `solve_eqs` inlines `x := t` by raw
-    // structural rebuild (`replace_subterms`), so a definition like `s1 = a*(b*c)`
-    // substituted into `(not (= s1 s2))` reintroduces un-normalized operator trees
-    // (`(= (a*(b*c)) (c*(a*b)))`) that the *initial* canonicalization never saw —
-    // the symbols were still abstract then. Canonicalizing again AC-normalizes
-    // those revealed products so the equality folds to `true` and the goal to
-    // `false` with no multiplier bit-blasting. Canonicalization is denotation- and
-    // symbol-preserving, so it needs no reconstruction trail and the model still
-    // replays against the ORIGINAL assertions below.
-    let reduced = canonicalize_terms(arena, &reduced)
-        .map_err(|error| SolverError::Backend(format!("post-solve canonicalize failed: {error}")))?
-        .terms;
+        // `elim_unconstrained` (T1.2.4): a variable occurring once under
+        // `bvadd`/`bvsub`/`bvxor`/`bvnot`/`bvneg` makes that subterm unconstrained, so
+        // it is replaced by a fresh variable and the operator dropped (recovered on
+        // `sat` via the appended trail). Runs after `solve_eqs` so it sees the reduced
+        // form; its inverses reference only surviving + freshly-minted symbols, so
+        // appending its trail last (reconstructed first on reverse replay) resolves.
+        let unconstrained = elim_unconstrained(arena, &after_eqs)
+            .map_err(|error| SolverError::Backend(format!("elim_unconstrained failed: {error}")))?;
+        let eliminated_unconstrained = unconstrained.eliminated();
+        let (after_unconstrained, unconstrained_trail) = unconstrained.into_parts();
+        trail.append(unconstrained_trail);
+
+        // Re-canonicalize after substitution. `solve_eqs` inlines `x := t` by raw
+        // structural rebuild (`replace_subterms`), so a definition like `s1 = a*(b*c)`
+        // substituted into `(not (= s1 s2))` reintroduces un-normalized operator trees
+        // that AC-normalize here so the equality folds. Denotation- and
+        // symbol-preserving ⇒ no trail.
+        reduced = canonicalize_terms(arena, &after_unconstrained)
+            .map_err(|error| {
+                SolverError::Backend(format!("post-solve canonicalize failed: {error}"))
+            })?
+            .terms;
+
+        // Fixpoint: a round that eliminates no variable means no further reduction is
+        // available (the next round would reproduce this one) — stop.
+        if eliminated_values + eliminated_eqs + eliminated_unconstrained == 0 {
+            break;
+        }
+    }
 
     let result = backend.check(arena, &reduced, config)?;
     let CheckResult::Sat(model) = result else {
