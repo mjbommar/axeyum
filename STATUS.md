@@ -538,6 +538,20 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P2.6: `∀∃` by Skolem-witness synthesis — `∀x:Int.∃z:Int. z>x` → Sat.** First
+  cut into the `∀∃` direction (previously all `Unknown`). New `quant_exists_witness.rs`
+  (`decide_forall_exists_by_witness`): for a prenex `∀x⃗.∃z. body` (one inner `∃`, `z`:Int/Real,
+  QF body), synthesize a Skolem witness `g(x⃗)` from a single bound on `z` (coefficient ±1
+  required) — `z>t ⇒ t+1`, `z≥t ⇒ t`, `z<t ⇒ t−1`, `z≤t ⇒ t`, `z=t ⇒ t` — substitute `z:=g`,
+  and check `∀x⃗. body[z:=g]` VALID via `check_auto` (the substituted body is QF, so exactly one
+  bounded solve, terminating). UNSAT-of-`¬body[z:=g,x⃗:=c⃗]` ⇒ valid ⇒ original **Sat**.
+  **Sound one-directional:** the synthesis only PROPOSES; the validity check DECIDES — a wrong
+  proposal can only fail to validate, so this NEVER returns Unsat and NEVER a wrong Sat (the
+  no-witness case declines to Unknown). Decides `∀x:Int.∃z. z>x`, `∃z. z=x+1`, the Real twin,
+  `∃z. z≥x∧z≤x`, `∀x,y.∃z. z>x+y`. Soundness-negatives decline: inconsistent `z>x∧z<x`, no-gap
+  `z>x∧z<x+1` (truly Unsat but Unknown sound), non-±1 `2z>x`. New `tests/quant_exists_witness.rs`
+  (10); full suite + clippy + doc + fmt green, no hangs. Sub-agent + soundness review.
+
 - **2026-06-19** — **P2.6: open constant-width-gap integer `∀` decided (`∀x:Int.(x≤y∨x≥y+2)` →
   Unsat).** Closes the one completeness item the hunt flagged. New
   `eliminate_int_universal_open_gap` (`quant_fourier_motzkin.rs`): for an OPEN integer universal

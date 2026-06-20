@@ -208,6 +208,23 @@ pub fn solve(
     }
     let assertions = fm_assertions;
 
+    // Bounded `∀∃` witness synthesis (sat-side, one-directional): a prenex
+    // `∀x⃗. ∃z. body` query whose inner existential `z` (Int/Real) is bounded by
+    // clean `±1`-coefficient linear atoms is decided **Sat** by synthesizing a
+    // Skolem witness `z := g(x⃗)` and verifying `∀x⃗. body[z:=g]` is valid via the
+    // quantifier-free validity check. This decides `∀x:Int. ∃z:Int. z > x`
+    // (g = x + 1) and similar shapes the finite-expansion / MBQI / e-matching
+    // fallbacks — which have no sat-side ∀∃ decision — only ever report `unknown`.
+    // Strictly additive and strictly one-directional: it returns `Sat` only for a
+    // validated witness and otherwise declines (never `unsat`, never a wrong `sat`),
+    // so it is safe to try before the refutation fallbacks. The validity sub-check
+    // dispatches to the quantifier-free decider only, so it cannot re-enter here.
+    if let Some(result) =
+        crate::quant_exists_witness::decide_forall_exists_by_witness(arena, assertions, config)?
+    {
+        return Ok(result);
+    }
+
     match check_with_quantifiers(arena, assertions, config) {
         // An infinite quantifier domain defeats finite expansion; fall back to
         // sound refutation. Try congruence-aware e-matching on the e-graph keystone
