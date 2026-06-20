@@ -20,10 +20,10 @@ use axeyum_bv::{
 };
 use axeyum_cnf::{
     BveOptions, CnfAssignment, CnfEncoding, CnfError, CnfFormula, CompactMap, ProofSolveOutcome,
-    Reconstruction, SatError, SatProofStatus, SatResult, SatUnsatEvidence, XorCdclResult,
-    XorPropagation, check_drat, compact, eliminate_variables_within, extract_xors, simplify_within,
-    solve_with_drat_proof, solve_with_rustsat_batsat_timeout, solve_with_xor_cdcl, tseitin_encode,
-    xor_propagate,
+    Reconstruction, SatError, SatProofStatus, SatResult, SatUnknownReason, SatUnsatEvidence,
+    XorCdclResult, XorPropagation, check_drat, compact, eliminate_variables_within, extract_xors,
+    simplify_within, solve_with_drat_proof, solve_with_drat_proof_within,
+    solve_with_rustsat_batsat_timeout, solve_with_xor_cdcl, tseitin_encode, xor_propagate,
 };
 use axeyum_ir::{
     Assignment, IrError, Sort, TermArena, TermId, TermStats, Value, eval, well_founded_default,
@@ -158,8 +158,10 @@ impl SatBvBackend {
         let sat_timeout =
             deadline.map(|deadline| deadline.saturating_duration_since(Instant::now()));
         let solve_start = Instant::now();
-        let mut sat_result = solve_with_rustsat_batsat_timeout(solve_formula, sat_timeout)
-            .map_err(|error| map_sat_error(&error))?;
+        // Primary SAT search: the deadline-bounded native CDCL core when
+        // `native_cdcl` is set, else the default `rustsat-batsat` adapter. Both
+        // feed the same reconstruction + replay below (see `solve_with_native_cdcl`).
+        let mut sat_result = primary_sat_search(config, solve_formula, deadline, sat_timeout)?;
         stats.solve = solve_start.elapsed();
 
         // CDCL(XOR) search fallback (ADR-0035): only on an `unknown` batsat
@@ -803,6 +805,50 @@ fn map_sat_error(error: &SatError) -> SolverError {
     SolverError::Backend(error.to_string())
 }
 
+/// Dispatches the primary SAT search: the deadline-bounded native CDCL core when
+/// `config.native_cdcl` is set, otherwise the default `rustsat-batsat` adapter.
+/// Both produce a [`SatResult`] consumed identically downstream.
+fn primary_sat_search(
+    config: &SolverConfig,
+    formula: &CnfFormula,
+    deadline: Option<Instant>,
+    sat_timeout: Option<Duration>,
+) -> Result<SatResult, SolverError> {
+    if config.native_cdcl {
+        Ok(solve_with_native_cdcl(formula, deadline))
+    } else {
+        solve_with_rustsat_batsat_timeout(formula, sat_timeout)
+            .map_err(|error| map_sat_error(&error))
+    }
+}
+
+/// Runs the in-tree proof-producing CDCL core as the primary SAT search,
+/// mapping its [`ProofSolveOutcome`] onto the [`SatResult`] the batsat path
+/// produces so the rest of the pipeline is unchanged.
+///
+/// - `Sat` → [`SatResult::Sat`]; the model then flows through the standard
+///   reconstruction + AIG/model/term replay (a wrong model is rejected there).
+/// - `Unsat` → [`SatResult::Unsat`] with an `Unchecked` proof status; the
+///   DRAT proof is re-derived and verified downstream when `prove_unsat` is set
+///   (the same route batsat `unsat` takes).
+/// - `ResourceOut`/`Interrupted` → [`SatResult::Unknown`]; an undecided verdict
+///   is never reported as `sat`/`unsat`.
+fn solve_with_native_cdcl(formula: &CnfFormula, deadline: Option<Instant>) -> SatResult {
+    match solve_with_drat_proof_within(formula, deadline) {
+        ProofSolveOutcome::Sat(assignment) => SatResult::Sat(assignment),
+        ProofSolveOutcome::Unsat(_) => SatResult::Unsat(SatUnsatEvidence {
+            proof: SatProofStatus::Unchecked,
+            failed_assumptions: Vec::new(),
+        }),
+        ProofSolveOutcome::ResourceOut => SatResult::Unknown(SatUnknownReason {
+            detail: "native CDCL core exhausted its conflict budget".to_owned(),
+        }),
+        ProofSolveOutcome::Interrupted => SatResult::Unknown(SatUnknownReason {
+            detail: "native CDCL core timeout".to_owned(),
+        }),
+    }
+}
+
 /// Independently re-derives `unsat` with the proof-producing SAT core and
 /// verifies its DRAT proof (ADR-0011/0012). A disagreement (the proof core
 /// finds the formula satisfiable) or a failed proof is a soundness alarm.
@@ -823,9 +869,11 @@ fn verify_unsat_proof(formula: &CnfFormula, stats: &mut SolveStats) -> Result<()
         ProofSolveOutcome::Sat(_) => Err(SolverError::Backend(
             "soundness alarm: adapter reported unsat but the proof core found a model".to_owned(),
         )),
-        // The reference proof core exhausted its budget; the adapter's `unsat`
-        // still stands, it is simply not DRAT-proof-checked.
-        ProofSolveOutcome::ResourceOut => Ok(()),
+        // The reference proof core exhausted its budget (or, with a deadline,
+        // was interrupted); the adapter's `unsat` still stands, it is simply not
+        // DRAT-proof-checked. `verify_unsat_proof` calls the deadline-less entry,
+        // so `Interrupted` is unreachable here, but the match stays exhaustive.
+        ProofSolveOutcome::ResourceOut | ProofSolveOutcome::Interrupted => Ok(()),
     }
 }
 

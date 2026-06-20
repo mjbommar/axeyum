@@ -43,7 +43,7 @@ pub use compact::{CompactMap, compact};
 pub use drat::{DratError, DratStep, check_drat, parse_drat, write_drat};
 pub use gf2::{Gf2Outcome, Gf2Solution, Gf2System};
 pub use lrat::{LratError, LratStep, check_lrat, elaborate_drat_to_lrat, parse_lrat, write_lrat};
-pub use proof_sat::{ProofSolveOutcome, solve_with_drat_proof};
+pub use proof_sat::{ProofSolveOutcome, solve_with_drat_proof, solve_with_drat_proof_within};
 pub use simplify::{SubsumeStats, simplify, simplify_within};
 pub use xor_cdcl::{XorCdclResult, solve_with_xor_cdcl};
 pub use xor_dpll::{XorDpllResult, solve_with_xor};

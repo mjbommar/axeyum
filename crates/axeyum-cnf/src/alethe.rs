@@ -2409,8 +2409,12 @@ fn premises_entail(
         crate::ProofSolveOutcome::Unsat(proof) => crate::check_drat(&formula, &proof)
             .map_err(|error| AletheError::Parse(error.to_string())),
         // Sat => a model satisfies the premises but falsifies D => not entailed.
-        // ResourceOut => cannot establish entailment => reject (sound default).
-        crate::ProofSolveOutcome::Sat(_) | crate::ProofSolveOutcome::ResourceOut => Ok(false),
+        // ResourceOut/Interrupted => cannot establish entailment => reject (sound
+        // default). The deadline-less `solve_with_drat_proof` never returns
+        // `Interrupted`, but the match must stay exhaustive.
+        crate::ProofSolveOutcome::Sat(_)
+        | crate::ProofSolveOutcome::ResourceOut
+        | crate::ProofSolveOutcome::Interrupted => Ok(false),
     }
 }
 

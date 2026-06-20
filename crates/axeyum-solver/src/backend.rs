@@ -177,6 +177,18 @@ pub struct SolverConfig {
     /// present. Off by default so recorded baselines are unchanged.
     pub lazy_bv: bool,
 
+    /// Use the in-tree proof-producing CDCL core
+    /// ([`axeyum_cnf::solve_with_drat_proof_within`]) as the **primary** SAT
+    /// search for the bit-blasting BV backend, instead of the default
+    /// `rustsat-batsat` adapter.
+    ///
+    /// The native core is deadline-bounded (it returns an undecided verdict on
+    /// timeout, never `sat`/`unsat` by timeout), every `sat` model is replayed
+    /// against the original terms exactly like the batsat path, and every `unsat`
+    /// is DRAT-backed. It is currently slower than batsat — this flag exists to
+    /// measure and close that gap. Off by default so baselines are unchanged.
+    pub native_cdcl: bool,
+
     /// Extend lazy bit-blasting (`lazy_bv`) to also abstract `ite` — the
     /// dominant operator on control-heavy `QF_BV` (software/protocol verification),
     /// where the public measurement showed there are no heavy arithmetic gadgets
@@ -209,6 +221,7 @@ impl Default for SolverConfig {
             xor_cdcl_fallback: false,
             lazy_bv: false,
             lazy_bv_abstract_ite: false,
+            native_cdcl: false,
         }
     }
 }
@@ -305,6 +318,14 @@ impl SolverConfig {
     #[must_use]
     pub fn with_lazy_bv_abstract_ite(mut self, abstract_ite: bool) -> Self {
         self.lazy_bv_abstract_ite = abstract_ite;
+        self
+    }
+
+    /// Selects the in-tree proof-producing CDCL core as the primary SAT search.
+    /// See [`SolverConfig::native_cdcl`].
+    #[must_use]
+    pub fn with_native_cdcl(mut self, native_cdcl: bool) -> Self {
+        self.native_cdcl = native_cdcl;
         self
     }
 }

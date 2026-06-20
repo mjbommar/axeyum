@@ -122,7 +122,9 @@ pub fn certify_bitblast_by_miter(
     let formula = encoding.formula();
     match solve_with_drat_proof(formula) {
         ProofSolveOutcome::Sat(_) => Ok(BitblastMiterOutcome::Diverged),
-        ProofSolveOutcome::ResourceOut => Ok(BitblastMiterOutcome::Inconclusive),
+        ProofSolveOutcome::ResourceOut | ProofSolveOutcome::Interrupted => {
+            Ok(BitblastMiterOutcome::Inconclusive)
+        }
         ProofSolveOutcome::Unsat(proof) => match check_drat(formula, &proof) {
             Ok(true) => Ok(BitblastMiterOutcome::Certified {
                 dimacs: formula.to_dimacs(),

@@ -162,7 +162,9 @@ pub fn export_qf_bv_unsat_proof(
 
     match solve_with_drat_proof(formula) {
         ProofSolveOutcome::Sat(_) => Ok(UnsatProofOutcome::Satisfiable),
-        ProofSolveOutcome::ResourceOut => Ok(UnsatProofOutcome::Inconclusive),
+        ProofSolveOutcome::ResourceOut | ProofSolveOutcome::Interrupted => {
+            Ok(UnsatProofOutcome::Inconclusive)
+        }
         ProofSolveOutcome::Unsat(proof) => match check_drat(formula, &proof) {
             Ok(true) => {
                 // Elaborate the (RUP) DRAT proof to LRAT for linear re-checking; if

@@ -680,3 +680,126 @@ fn oversized_multiply_is_refused_gracefully_not_oom() {
         "wide multiply must degrade to an EncodingBudget unknown, got {result:?}"
     );
 }
+
+/// End-to-end checks of the flag-gated native CDCL primary search (slice 1):
+/// the native core decides BV queries, its `sat` models still replay against the
+/// original terms, and its verdicts agree with the default `BatSat` path.
+mod native_cdcl {
+    use super::{CheckResult, SatBvBackend, SolverBackend, SolverConfig, Value};
+    use axeyum_ir::{Sort, TermArena, TermId, eval};
+
+    fn native_config() -> SolverConfig {
+        SolverConfig {
+            native_cdcl: true,
+            ..SolverConfig::default()
+        }
+    }
+
+    fn check_native(arena: &TermArena, assertions: &[TermId]) -> CheckResult {
+        SatBvBackend::new()
+            .check(arena, assertions, &native_config())
+            .expect("native CDCL backend invocation succeeds")
+    }
+
+    fn check_batsat(arena: &TermArena, assertions: &[TermId]) -> CheckResult {
+        SatBvBackend::new()
+            .check(arena, assertions, &SolverConfig::default())
+            .expect("batsat backend invocation succeeds")
+    }
+
+    /// A satisfiable BV query solved by the native core must produce a model that
+    /// replays against the original terms (replay runs inside `check`, and we
+    /// re-evaluate here for belt-and-suspenders).
+    #[test]
+    fn native_sat_model_replays() {
+        let mut arena = TermArena::new();
+        let x_sym = arena.declare("x", Sort::BitVec(4)).unwrap();
+        let y_sym = arena.declare("y", Sort::BitVec(4)).unwrap();
+        let x = arena.var(x_sym);
+        let y = arena.var(y_sym);
+        let two = arena.bv_const(4, 2).unwrap();
+        let five = arena.bv_const(4, 5).unwrap();
+        let x_is_two = arena.eq(x, two).unwrap();
+        let sum = arena.bv_add(x, y).unwrap();
+        let sum_is_five = arena.eq(sum, five).unwrap();
+
+        let CheckResult::Sat(model) = check_native(&arena, &[x_is_two, sum_is_five]) else {
+            panic!("native core should find this satisfiable");
+        };
+        let assignment = model.to_assignment();
+        for &term in &[x_is_two, sum_is_five] {
+            assert_eq!(eval(&arena, term, &assignment).unwrap(), Value::Bool(true));
+        }
+        assert_eq!(model.get(x_sym), Some(Value::Bv { width: 4, value: 2 }));
+        assert_eq!(model.get(y_sym), Some(Value::Bv { width: 4, value: 3 }));
+    }
+
+    /// An unsatisfiable BV query is reported `unsat` by the native core (its DRAT
+    /// proof is independently re-checked when `prove_unsat` is also set).
+    #[test]
+    fn native_unsat_agrees_and_proof_checks() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 4).unwrap();
+        let eq_self = arena.eq(x, x).unwrap();
+        let contradiction = arena.not(eq_self).unwrap();
+
+        assert_eq!(
+            check_native(&arena, &[contradiction]),
+            CheckResult::Unsat,
+            "native core must decide x != x unsat"
+        );
+
+        let config = SolverConfig {
+            prove_unsat: true,
+            ..native_config()
+        };
+        assert_eq!(
+            SatBvBackend::new()
+                .check(&arena, &[contradiction], &config)
+                .unwrap(),
+            CheckResult::Unsat
+        );
+    }
+
+    /// The native core and the default `BatSat` path agree (sat-vs-unsat) on a
+    /// spread of small BV queries — the soundness agreement gate for the wiring.
+    #[test]
+    fn native_agrees_with_batsat_on_bv_queries() {
+        // (a) sat: x = 3 over 4 bits.
+        let mut a = TermArena::new();
+        let xa = a.bv_var("x", 4).unwrap();
+        let three = a.bv_const(4, 3).unwrap();
+        let q_a = a.eq(xa, three).unwrap();
+
+        // (b) unsat: x < 1 and x > 0 over unsigned 4-bit (no value strictly
+        // between, since `bvult`).
+        let mut b = TermArena::new();
+        let xb = b.bv_var("x", 4).unwrap();
+        let zero = b.bv_const(4, 0).unwrap();
+        let one = b.bv_const(4, 1).unwrap();
+        let lt_one = b.bv_ult(xb, one).unwrap();
+        let gt_zero = b.bv_ult(zero, xb).unwrap();
+
+        // (c) sat: bitwise — x & 0b1010 = 0b1010 over 4 bits.
+        let mut c = TermArena::new();
+        let xc = c.bv_var("x", 4).unwrap();
+        let mask = c.bv_const(4, 0b1010).unwrap();
+        let anded = c.bv_and(xc, mask).unwrap();
+        let q_c = c.eq(anded, mask).unwrap();
+
+        for (arena, terms) in [
+            (&a, vec![q_a]),
+            (&b, vec![lt_one, gt_zero]),
+            (&c, vec![q_c]),
+        ] {
+            let native = check_native(arena, &terms);
+            let batsat = check_batsat(arena, &terms);
+            let agree = matches!(
+                (&native, &batsat),
+                (CheckResult::Sat(_), CheckResult::Sat(_))
+                    | (CheckResult::Unsat, CheckResult::Unsat)
+            );
+            assert!(agree, "native={native:?} batsat={batsat:?} must agree");
+        }
+    }
+}

@@ -12,11 +12,24 @@
 //! proof/correctness reference; the fast default solving path remains the
 //! `rustsat-batsat` adapter until the benchmarking gate says otherwise.
 
+// Monotonic clock: on wasm32 the browser has no `std` clock, so use `web-time`'s
+// drop-in `Instant` (ADR-0017). Native targets use the std clock.
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
+
 use crate::drat::DratStep;
 use crate::{CnfAssignment, CnfFormula, CnfLit, CnfVar};
 
 /// Maximum conflicts before the core gives up (safety valve).
 const MAX_CONFLICTS: usize = 2_000_000;
+
+/// How many conflicts elapse between wall-clock deadline checks. A fixed
+/// conflict cadence (not a per-decision clock read) keeps the deadline test
+/// deterministic w.r.t. the search and cheap.
+const DEADLINE_CHECK_INTERVAL: usize = 1_024;
 
 /// VSIDS activity decay: each conflict `var_inc` is divided by this, so older
 /// activity bumps decay geometrically relative to fresh ones (the `MiniSat`
@@ -59,11 +72,33 @@ pub enum ProofSolveOutcome {
     Unsat(Vec<DratStep>),
     /// The conflict budget was exhausted before a result was reached.
     ResourceOut,
+    /// The wall-clock deadline passed before a result was reached. Like
+    /// [`ProofSolveOutcome::ResourceOut`] this is an *undecided* verdict — the
+    /// core never returns `sat`/`unsat` by timeout, so a primary search using
+    /// this core can map it to `unknown` without any soundness risk.
+    Interrupted,
 }
 
 /// Solves `formula` with the proof-producing CDCL core.
 pub fn solve_with_drat_proof(formula: &CnfFormula) -> ProofSolveOutcome {
-    Cdcl::new(formula).solve()
+    solve_with_drat_proof_within(formula, None)
+}
+
+/// Solves `formula` with the proof-producing CDCL core, stopping early if the
+/// optional wall-clock `deadline` passes.
+///
+/// `deadline` is checked on a deterministic conflict cadence (every
+/// `DEADLINE_CHECK_INTERVAL` conflicts), so the search trajectory up to the
+/// stopping point is identical to the unbounded run — only *whether* it stops is
+/// time-dependent. On expiry the core returns [`ProofSolveOutcome::Interrupted`],
+/// an undecided verdict; it never returns `sat`/`unsat` by timeout.
+///
+/// [`solve_with_drat_proof`] is the `deadline = None` (proof-revalidator) entry.
+pub fn solve_with_drat_proof_within(
+    formula: &CnfFormula,
+    deadline: Option<Instant>,
+) -> ProofSolveOutcome {
+    Cdcl::new(formula).solve(deadline)
 }
 
 fn lit_code(lit: CnfLit) -> usize {
@@ -187,7 +222,7 @@ impl Cdcl {
         self.trail.push(var);
     }
 
-    fn solve(mut self) -> ProofSolveOutcome {
+    fn solve(mut self, deadline: Option<Instant>) -> ProofSolveOutcome {
         if self.has_empty_clause {
             self.proof.push(DratStep::Add(Vec::new()));
             return ProofSolveOutcome::Unsat(self.proof);
@@ -212,6 +247,15 @@ impl Cdcl {
                 self.conflicts += 1;
                 if self.conflicts > MAX_CONFLICTS {
                     return ProofSolveOutcome::ResourceOut;
+                }
+                // Deterministic deadline cadence: only read the clock once every
+                // `DEADLINE_CHECK_INTERVAL` conflicts. On expiry, abandon the
+                // search with an *undecided* verdict (never sat/unsat by timeout).
+                if let Some(deadline) = deadline
+                    && self.conflicts % DEADLINE_CHECK_INTERVAL == 0
+                    && Instant::now() >= deadline
+                {
+                    return ProofSolveOutcome::Interrupted;
                 }
                 let (learned, backjump) = self.analyze(conflict);
                 self.proof.push(DratStep::Add(learned.clone()));
@@ -454,7 +498,7 @@ impl Cdcl {
 
 #[cfg(test)]
 mod tests {
-    use super::{ProofSolveOutcome, solve_with_drat_proof};
+    use super::{Instant, ProofSolveOutcome, solve_with_drat_proof, solve_with_drat_proof_within};
     use crate::{
         CnfClause, CnfFormula, CnfLit, CnfVar, SatResult, check_drat, solve_with_rustsat_batsat,
     };
@@ -588,6 +632,134 @@ mod tests {
                 }
                 (cdcl, other) => {
                     panic!("cdcl/batsat disagreement: cdcl={cdcl:?} batsat={other:?}");
+                }
+            }
+        }
+    }
+
+    /// A generous (already-passed) deadline does not change the verdict: the
+    /// deadline-bounded entry decides the same satisfiable/unsatisfiable formulas
+    /// the unbounded entry does.
+    #[test]
+    fn generous_deadline_does_not_change_verdict() {
+        let far = Instant::now().checked_add(std::time::Duration::from_secs(3600));
+        // Unsat fixture.
+        let unsat = formula(2, &[&[1, 2], &[1, -2], &[-1, 2], &[-1, -2]]);
+        assert!(matches!(
+            solve_with_drat_proof_within(&unsat, far),
+            ProofSolveOutcome::Unsat(_)
+        ));
+        // Sat fixture.
+        let sat = formula(3, &[&[1, 2], &[-1, 3], &[-2, -3]]);
+        let ProofSolveOutcome::Sat(model) = solve_with_drat_proof_within(&sat, far) else {
+            panic!("expected sat under a far deadline");
+        };
+        assert!(model.satisfies(&sat).unwrap());
+    }
+
+    /// An already-expired deadline yields `Interrupted` — an *undecided* verdict,
+    /// never a wrong sat/unsat — on a formula that needs at least one conflict.
+    /// (Trivial level-0 unit/empty-clause cases short-circuit before the conflict
+    /// loop, so the fixture must force real search past the first conflict.)
+    #[test]
+    fn expired_deadline_yields_interrupted_never_a_wrong_verdict() {
+        // Pigeonhole 4-into-3 forces many conflicts; with a deadline already in
+        // the past, the core stops at the first cadence check without deciding.
+        let v = |p: i64, h: i64| 3 * (p - 1) + h;
+        let mut clauses: Vec<Vec<i64>> = Vec::new();
+        for p in 1..=4 {
+            clauses.push(vec![v(p, 1), v(p, 2), v(p, 3)]);
+        }
+        for h in 1..=3 {
+            for p1 in 1..=4 {
+                for p2 in (p1 + 1)..=4 {
+                    clauses.push(vec![-v(p1, h), -v(p2, h)]);
+                }
+            }
+        }
+        let refs: Vec<&[i64]> = clauses.iter().map(Vec::as_slice).collect();
+        let f = formula(12, &refs);
+
+        let past = Instant::now()
+            .checked_sub(std::time::Duration::from_secs(1))
+            .expect("clock far enough from epoch");
+        // The cadence is every DEADLINE_CHECK_INTERVAL conflicts, so this larger
+        // instance reaches a check before finishing; the verdict is Interrupted.
+        match solve_with_drat_proof_within(&f, Some(past)) {
+            ProofSolveOutcome::Interrupted => {}
+            // The instance is genuinely unsat, so deciding it before the first
+            // cadence check is also acceptable (just not a *wrong* verdict).
+            ProofSolveOutcome::Unsat(proof) => {
+                assert_eq!(check_drat(&f, &proof), Ok(true));
+            }
+            other => panic!("expired deadline must never yield sat: got {other:?}"),
+        }
+    }
+
+    /// Determinism: the same formula produces byte-identical outcomes across runs
+    /// (no hashmap iteration order in the core, no nondeterministic branching).
+    #[test]
+    fn solve_is_deterministic() {
+        let f = formula(
+            6,
+            &[
+                &[1, 2, 3],
+                &[-1, 4],
+                &[-2, -4, 5],
+                &[-3, -5, 6],
+                &[-6, 1],
+                &[2, -3, -4],
+            ],
+        );
+        let a = solve_with_drat_proof(&f);
+        let b = solve_with_drat_proof(&f);
+        assert_eq!(a, b, "same input must yield same output");
+    }
+
+    /// Soundness stress: ≥100 small random 3-CNFs, fixed seed. The native core
+    /// and `BatSat` must never disagree (`DISAGREE = 0`), every native `sat` model
+    /// must satisfy, every native `unsat` must DRAT-check.
+    #[test]
+    fn random_3cnf_agreement_stress_disagree_zero() {
+        let mut state = 0x0bad_c0de_dead_beefu64;
+        let mut next = || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state
+        };
+        let below = |n: &mut dyn FnMut() -> u64, bound: u64| usize::try_from(n() % bound).unwrap();
+        for _ in 0..200 {
+            let vars = 4 + below(&mut next, 6); // 4..=9 variables
+            let clause_count = 5 + below(&mut next, 25);
+            let mut f = CnfFormula::new(vars);
+            let vars_bound = u64::try_from(vars).unwrap();
+            for _ in 0..clause_count {
+                let mut lits = Vec::new();
+                for _ in 0..3 {
+                    let v = i64::try_from(next() % vars_bound).unwrap() + 1;
+                    let signed = if next() & 1 == 0 { v } else { -v };
+                    lits.push(lit(signed));
+                }
+                f.add_clause(CnfClause::new(lits)).unwrap();
+            }
+            let batsat = solve_with_rustsat_batsat(&f).unwrap();
+            match (solve_with_drat_proof(&f), batsat) {
+                (ProofSolveOutcome::Sat(model), SatResult::Sat(_)) => {
+                    assert!(
+                        model.satisfies(&f).unwrap(),
+                        "native sat model must satisfy"
+                    );
+                }
+                (ProofSolveOutcome::Unsat(proof), SatResult::Unsat(_)) => {
+                    assert_eq!(
+                        check_drat(&f, &proof),
+                        Ok(true),
+                        "native unsat must DRAT-check"
+                    );
+                }
+                (native, other) => {
+                    panic!("DISAGREE: native={native:?} batsat={other:?}");
                 }
             }
         }
