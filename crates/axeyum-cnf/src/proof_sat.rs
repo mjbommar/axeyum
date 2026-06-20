@@ -44,6 +44,26 @@ const VSIDS_RESCALE_LIMIT: f64 = 1e100;
 /// length.
 const LUBY_UNIT: usize = 100;
 
+/// Number of learned clauses tolerated before the first `reduce_db`
+/// (MiniSat/Glucose geometric schedule, scaled down for our smaller working
+/// instances so reduction actually triggers on real corpora).
+const REDUCE_FIRST: usize = 2_000;
+/// Additive growth of the learned-clause budget after each `reduce_db`. The
+/// budget is `REDUCE_FIRST + REDUCE_INC * reductions`, so reductions become
+/// less frequent over time (the standard schedule shape).
+const REDUCE_INC: usize = 300;
+/// Learned clauses with literal-block distance at or below this are "glue"
+/// clauses and are never deleted (the canonical Glucose protection rule).
+const GLUE_LBD: usize = 2;
+/// Clause-activity decay: each conflict the clause bump increment grows by
+/// `1/CLAUSE_DECAY`, so older clause bumps decay relative to fresh ones.
+const CLAUSE_DECAY: f64 = 0.999;
+/// Rescale all clause activities (and `cla_inc`) when one exceeds this cap, to
+/// avoid `f64` overflow without changing their relative order.
+const CLAUSE_RESCALE_LIMIT: f64 = 1e20;
+/// Multiplier applied on a clause-activity rescale.
+const CLAUSE_RESCALE: f64 = 1e-20;
+
 /// The `i`-th term (1-indexed) of the Luby sequence `1,1,2,1,1,2,4,1,…`, used to
 /// space restarts (Knuth's reluctant-doubling formulation, iterative).
 fn luby(mut i: u64) -> u64 {
@@ -129,6 +149,25 @@ struct Cdcl {
     conflicts_since_restart: usize,
     /// Index into the Luby sequence (1-based; advances on each restart).
     restart_count: u64,
+    /// Number of original (problem) clauses; clause ids `< num_original` are
+    /// never deletable. Learned clauses are appended at id `>= num_original`.
+    num_original: usize,
+    /// Literal-block distance per clause (distinct decision levels among its
+    /// literals at learning time). Meaningful for learned clauses only.
+    lbd: Vec<usize>,
+    /// Clause activity per clause (bumped when the clause participates in a
+    /// conflict). Meaningful for learned clauses only.
+    cla_activity: Vec<f64>,
+    /// Tombstone flag: a deleted learned clause keeps its id (so reasons and
+    /// later clause ids stay valid) but is removed from the watch lists and
+    /// skipped everywhere. Original clauses are never tombstoned.
+    deleted: Vec<bool>,
+    /// Current clause-activity bump increment (grows each conflict).
+    cla_inc: f64,
+    /// Number of `reduce_db` reductions performed so far (drives the budget).
+    reductions: usize,
+    /// Number of live (non-deleted) learned clauses. Drives the reduce trigger.
+    learned_live: usize,
 }
 
 impl Cdcl {
@@ -152,6 +191,7 @@ impl Cdcl {
                 }
             }
         }
+        let num_clauses = clauses.len();
         Self {
             clauses,
             watches,
@@ -170,6 +210,13 @@ impl Cdcl {
             phase: vec![false; n],
             conflicts_since_restart: 0,
             restart_count: 1,
+            num_original: num_clauses,
+            lbd: vec![0; num_clauses],
+            cla_activity: vec![0.0; num_clauses],
+            deleted: vec![false; num_clauses],
+            cla_inc: 1.0,
+            reductions: 0,
+            learned_live: 0,
         }
     }
 
@@ -257,7 +304,7 @@ impl Cdcl {
                 {
                     return ProofSolveOutcome::Interrupted;
                 }
-                let (learned, backjump) = self.analyze(conflict);
+                let (learned, backjump, lbd) = self.analyze(conflict);
                 self.proof.push(DratStep::Add(learned.clone()));
                 if learned.is_empty() {
                     return ProofSolveOutcome::Unsat(self.proof);
@@ -269,10 +316,28 @@ impl Cdcl {
                     self.watches[lit_code(learned[1])].push(clause_id);
                 }
                 self.clauses.push(learned);
+                // Register the new learned clause's deletion metadata.
+                self.lbd.push(lbd);
+                self.cla_activity.push(0.0);
+                self.deleted.push(false);
+                self.learned_live += 1;
+                self.bump_clause(clause_id);
                 self.backtrack_to(backjump);
                 self.enqueue(asserting, Some(clause_id));
                 self.conflicts_since_restart += 1;
                 self.decay();
+                self.decay_clause();
+                // Learned-clause-database reduction (Glucose/MiniSat schedule):
+                // when the live learned-clause count exceeds the growing budget,
+                // delete the worst half (sound: see `reduce_db`). Must run at a
+                // point where no decisions are pending so the trail/reasons are
+                // consistent; here we are immediately after a backjump+enqueue
+                // and before propagation, which is safe (locked-clause check
+                // reads the current trail).
+                if self.learned_live > self.reduce_budget() {
+                    self.reduce_db();
+                    self.reductions += 1;
+                }
             } else {
                 // No conflict: consider a Luby restart, then make a decision.
                 if self.decision_level() > 0 && self.conflicts_since_restart >= self.restart_limit()
@@ -357,9 +422,11 @@ impl Cdcl {
     }
 
     /// 1-UIP conflict analysis: returns the learned clause (asserting literal at
-    /// index 0, second-watch literal at index 1) and the backjump level. An
-    /// empty result means the conflict is implied at level 0 (the empty clause).
-    fn analyze(&mut self, conflict: usize) -> (Vec<CnfLit>, usize) {
+    /// index 0, second-watch literal at index 1), the backjump level, and the
+    /// learned clause's literal-block distance (the number of distinct decision
+    /// levels among its literals — the LBD/glue measure). An empty result means
+    /// the conflict is implied at level 0 (the empty clause).
+    fn analyze(&mut self, conflict: usize) -> (Vec<CnfLit>, usize, usize) {
         let mut seen = vec![false; self.assign.len()];
         let mut lower: Vec<CnfLit> = Vec::new();
         let mut path_count = 0usize;
@@ -369,6 +436,9 @@ impl Cdcl {
         let current = self.decision_level();
 
         loop {
+            // Bump the activity of any learned clause that participates in this
+            // conflict, so frequently-useful learned clauses survive reduceDB.
+            self.bump_clause(clause_id);
             // Clone the reason clause's literals so we can bump activities while
             // walking it (the borrow checker forbids reading `self.clauses` and
             // mutating `self.activity` at once; reason clauses are short).
@@ -396,7 +466,7 @@ impl Cdcl {
                 }
             }
             if !found {
-                return (Vec::new(), 0);
+                return (Vec::new(), 0, 0);
             }
 
             let var = self.trail[index];
@@ -427,7 +497,8 @@ impl Cdcl {
                     learned.swap(1, best);
                     backjump = self.level[learned[1].var().index()];
                 }
-                return (learned, backjump);
+                let lbd = self.compute_lbd(&learned);
+                return (learned, backjump, lbd);
             }
 
             clause_id = self.reason[var].expect("implied literal has a reason clause");
@@ -464,6 +535,124 @@ impl Cdcl {
         });
     }
 
+    /// Literal-block distance of a clause: the number of distinct decision
+    /// levels among its literals' current assignments. Computed at learning
+    /// time (every literal of a freshly learned clause is assigned). LBD = 2
+    /// "glue" clauses are the most valuable and are kept permanently.
+    fn compute_lbd(&self, clause: &[CnfLit]) -> usize {
+        // Small clauses dominate; a stack-free de-dup over a bounded set of
+        // levels via a sorted scratch vec keeps this deterministic and cheap.
+        let mut levels: Vec<usize> = clause.iter().map(|l| self.level[l.var().index()]).collect();
+        levels.sort_unstable();
+        levels.dedup();
+        levels.len()
+    }
+
+    /// Bumps a learned clause's activity, rescaling all clause activities (and
+    /// `cla_inc`) if it overflows the cap (preserving their relative order).
+    fn bump_clause(&mut self, cid: usize) {
+        if cid < self.num_original {
+            return; // only learned clauses carry activity
+        }
+        self.cla_activity[cid] += self.cla_inc;
+        if self.cla_activity[cid] > CLAUSE_RESCALE_LIMIT {
+            for a in &mut self.cla_activity[self.num_original..] {
+                *a *= CLAUSE_RESCALE;
+            }
+            self.cla_inc *= CLAUSE_RESCALE;
+        }
+    }
+
+    /// Decays clause activity by growing the bump increment (the `MiniSat`
+    /// trick, mirrored for clauses).
+    fn decay_clause(&mut self) {
+        self.cla_inc /= CLAUSE_DECAY;
+    }
+
+    /// The learned-clause budget for the current reduction round (geometric
+    /// schedule: grows by `REDUCE_INC` after each reduction).
+    fn reduce_budget(&self) -> usize {
+        REDUCE_FIRST + REDUCE_INC * self.reductions
+    }
+
+    /// Is learned clause `cid` currently the reason (antecedent) for an assigned
+    /// literal? Such a clause is LOCKED: deleting it would corrupt the
+    /// implication graph, so it must be protected.
+    fn is_locked(&self, cid: usize) -> bool {
+        let clause = &self.clauses[cid];
+        if clause.is_empty() {
+            return false;
+        }
+        let v = clause[0].var().index();
+        self.assign[v].is_some() && self.reason[v] == Some(cid)
+    }
+
+    /// Glucose/MiniSat `reduceDB`: delete the worst (low-activity) half of the
+    /// deletable learned clauses, protecting originals, locked clauses, and
+    /// glue (LBD ≤ [`GLUE_LBD`]) clauses. Each deleted clause emits a DRAT
+    /// deletion step so the proof stays checkable, and the watch lists are
+    /// rebuilt over the surviving clauses (no dangling ids).
+    ///
+    /// Soundness/completeness: every learned clause was RUP-derived, so the
+    /// formula's models are unchanged by deletion; protecting locked clauses
+    /// keeps the implication graph intact; the search can re-derive any deleted
+    /// clause, so completeness is preserved.
+    fn reduce_db(&mut self) {
+        // Candidates for deletion: live, learned, non-glue, non-locked clauses.
+        let mut candidates: Vec<usize> = (self.num_original..self.clauses.len())
+            .filter(|&cid| {
+                !self.deleted[cid]
+                    && self.clauses[cid].len() > 2
+                    && self.lbd[cid] > GLUE_LBD
+                    && !self.is_locked(cid)
+            })
+            .collect();
+        if candidates.is_empty() {
+            return;
+        }
+        // Sort worst-first: lower activity is worse. Tie-break by clause id so
+        // the order is total and deterministic (no hashmap iteration).
+        candidates.sort_by(|&x, &y| {
+            self.cla_activity[x]
+                .partial_cmp(&self.cla_activity[y])
+                .unwrap_or(core::cmp::Ordering::Equal)
+                .then(x.cmp(&y))
+        });
+        // Delete the worst half (the standard fraction).
+        let to_delete = candidates.len() / 2;
+        for &cid in candidates.iter().take(to_delete) {
+            self.deleted[cid] = true;
+            self.learned_live -= 1;
+            // Emit a DRAT deletion so the proof replays consistently. The
+            // checker matches clauses as sets, and this clause was added
+            // verbatim, so the stored literals delete it.
+            self.proof.push(DratStep::Delete(self.clauses[cid].clone()));
+        }
+        if to_delete > 0 {
+            self.rebuild_watches();
+        }
+    }
+
+    /// Rebuilds every watch list from scratch over the live (non-deleted)
+    /// clauses, watching the first two literals of each. Called after
+    /// `reduce_db` so no watch list references a tombstoned clause id.
+    fn rebuild_watches(&mut self) {
+        for w in &mut self.watches {
+            w.clear();
+        }
+        for cid in 0..self.clauses.len() {
+            if self.deleted[cid] {
+                continue;
+            }
+            let clause = &self.clauses[cid];
+            if clause.len() >= 2 {
+                let (a, b) = (lit_code(clause[0]), lit_code(clause[1]));
+                self.watches[a].push(cid);
+                self.watches[b].push(cid);
+            }
+        }
+    }
+
     fn backtrack_to(&mut self, level: usize) {
         if level < self.trail_lim.len() {
             let bound = self.trail_lim[level];
@@ -498,7 +687,10 @@ impl Cdcl {
 
 #[cfg(test)]
 mod tests {
-    use super::{Instant, ProofSolveOutcome, solve_with_drat_proof, solve_with_drat_proof_within};
+    use super::{
+        Cdcl, Instant, ProofSolveOutcome, lit_code, solve_with_drat_proof,
+        solve_with_drat_proof_within,
+    };
     use crate::{
         CnfClause, CnfFormula, CnfLit, CnfVar, SatResult, check_drat, solve_with_rustsat_batsat,
     };
@@ -756,6 +948,188 @@ mod tests {
                         check_drat(&f, &proof),
                         Ok(true),
                         "native unsat must DRAT-check"
+                    );
+                }
+                (native, other) => {
+                    panic!("DISAGREE: native={native:?} batsat={other:?}");
+                }
+            }
+        }
+    }
+
+    /// Builds an unsatisfiable pigeonhole formula: `pigeons` pigeons into
+    /// `pigeons - 1` holes. PHP is exponentially hard for resolution, so larger
+    /// instances generate many conflicts/learned clauses — enough to drive
+    /// `reduce_db` at least once with the test-scaled budget.
+    fn pigeonhole(pigeons: i64) -> CnfFormula {
+        let holes = pigeons - 1;
+        let v = |p: i64, h: i64| (p - 1) * holes + h; // var id, 1-based
+        let nvars = usize::try_from(pigeons * holes).unwrap();
+        let mut clauses: Vec<Vec<i64>> = Vec::new();
+        for p in 1..=pigeons {
+            clauses.push((1..=holes).map(|h| v(p, h)).collect());
+        }
+        for h in 1..=holes {
+            for p1 in 1..=pigeons {
+                for p2 in (p1 + 1)..=pigeons {
+                    clauses.push(vec![-v(p1, h), -v(p2, h)]);
+                }
+            }
+        }
+        let refs: Vec<&[i64]> = clauses.iter().map(Vec::as_slice).collect();
+        formula(nvars, &refs)
+    }
+
+    /// Counts the clause-deletion (`d`) steps in a proof.
+    fn deletion_count(proof: &[crate::DratStep]) -> usize {
+        proof
+            .iter()
+            .filter(|s| matches!(s, crate::DratStep::Delete(_)))
+            .count()
+    }
+
+    /// A pigeonhole instance large enough to trigger at least one `reduce_db`
+    /// produces a proof containing DRAT deletion (`d`) lines, and that proof —
+    /// WITH the deletions — still passes the independent checker and derives the
+    /// empty clause. This is the core soundness gate for clause-DB reduction.
+    #[test]
+    fn reduce_db_emits_deletions_and_proof_still_checks() {
+        // PHP(8→7): 56 vars, ~196 clauses; resolution-hard, so the core learns
+        // far more than REDUCE_FIRST clauses and reduces at least once.
+        let f = pigeonhole(8);
+        match solve_with_drat_proof(&f) {
+            ProofSolveOutcome::Unsat(proof) => {
+                assert!(
+                    deletion_count(&proof) > 0,
+                    "a reducing run must emit DRAT deletions; got none"
+                );
+                assert_eq!(
+                    check_drat(&f, &proof),
+                    Ok(true),
+                    "proof with deletion lines must DRAT-check and derive the empty clause"
+                );
+            }
+            other => panic!("expected unsat, got {other:?}"),
+        }
+    }
+
+    /// Determinism with reduction active: the same reducing instance produces a
+    /// byte-identical proof (same learned clauses, same deletions, same order)
+    /// across runs. The reduce trigger is by deterministic conflict/learned
+    /// count, the sort is total (tie-broken by clause id), and no hashmap
+    /// iteration leaks into the output.
+    #[test]
+    fn reduce_db_is_deterministic() {
+        let f = pigeonhole(8);
+        let a = solve_with_drat_proof(&f);
+        let b = solve_with_drat_proof(&f);
+        assert_eq!(a, b, "reducing run must be deterministic");
+        if let ProofSolveOutcome::Unsat(proof) = &a {
+            assert!(deletion_count(proof) > 0, "expected reduction to fire");
+        } else {
+            panic!("expected unsat");
+        }
+    }
+
+    /// A clause currently serving as the reason (antecedent) for an assigned
+    /// literal is LOCKED and must never be deleted by `reduce_db`. We construct a
+    /// state with a learned, non-glue, locked clause and assert `reduce_db`
+    /// leaves it live.
+    #[test]
+    fn reduce_db_never_deletes_a_locked_clause() {
+        // Decisions assign a=T, b=T, c=T at three distinct levels; the learned
+        // clause (¬a ∨ ¬b ∨ ¬c ∨ d) over those gives LBD 4 (> GLUE_LBD) and is
+        // the reason for d, so it is both deletable-by-shape and locked.
+        let mut cdcl = Cdcl::new(&formula(4, &[&[1]])); // 4 vars; dummy clause
+        // Manually drive three decision levels.
+        let dlit = |sign: i64| lit(sign);
+        cdcl.trail_lim.push(cdcl.trail.len());
+        cdcl.enqueue(dlit(1), None); // a@1
+        cdcl.trail_lim.push(cdcl.trail.len());
+        cdcl.enqueue(dlit(2), None); // b@2
+        cdcl.trail_lim.push(cdcl.trail.len());
+        cdcl.enqueue(dlit(3), None); // c@3
+        // Add a learned clause that implies d, watched on its first two lits.
+        let learned = vec![lit(4), lit(-1), lit(-2), lit(-3)]; // d ∨ ¬a ∨ ¬b ∨ ¬c
+        let cid = cdcl.clauses.len();
+        cdcl.watches[lit_code(learned[0])].push(cid);
+        cdcl.watches[lit_code(learned[1])].push(cid);
+        cdcl.clauses.push(learned);
+        cdcl.lbd.push(4); // distinct levels among ¬a,¬b,¬c,d (d will be @3)
+        cdcl.cla_activity.push(0.0);
+        cdcl.deleted.push(false);
+        cdcl.learned_live += 1;
+        cdcl.enqueue(dlit(4), Some(cid)); // d@3, reason = cid → cid is LOCKED
+        assert!(cdcl.is_locked(cid), "setup: the clause must be locked");
+        // Force reduce_db to run regardless of budget.
+        cdcl.reduce_db();
+        assert!(
+            !cdcl.deleted[cid],
+            "reduce_db must never delete a locked reason clause"
+        );
+    }
+
+    /// Reduction stress: many random CNFs solved with reduction active. The
+    /// native core and `BatSat` must never disagree, every native `sat` model
+    /// must satisfy, and every native `unsat` proof — including its deletion
+    /// lines — must DRAT-check. This is the completeness+soundness gate: no UNSAT
+    /// is ever reported SAT or vice-versa even as the clause DB churns.
+    #[test]
+    fn reduce_db_stress_agrees_with_batsat_and_proof_checks() {
+        // A spread of resolution-hard pigeonhole instances guarantees several
+        // reductions; the random suite guarantees breadth.
+        for pigeons in [6, 7, 8] {
+            let f = pigeonhole(pigeons);
+            let batsat = solve_with_rustsat_batsat(&f).unwrap();
+            match (solve_with_drat_proof(&f), batsat) {
+                (ProofSolveOutcome::Unsat(proof), SatResult::Unsat(_)) => {
+                    assert_eq!(
+                        check_drat(&f, &proof),
+                        Ok(true),
+                        "PHP({pigeons}) proof with deletions must DRAT-check"
+                    );
+                }
+                (native, other) => {
+                    panic!("DISAGREE on PHP({pigeons}): native={native:?} batsat={other:?}");
+                }
+            }
+        }
+
+        let mut state = 0xfeed_face_cafe_b0ddu64;
+        let mut next = || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state
+        };
+        let below = |n: &mut dyn FnMut() -> u64, bound: u64| usize::try_from(n() % bound).unwrap();
+        for _ in 0..200 {
+            let vars = 5 + below(&mut next, 8); // 5..=12 variables
+            let clause_count = 8 + below(&mut next, 30);
+            let mut f = CnfFormula::new(vars);
+            let vars_bound = u64::try_from(vars).unwrap();
+            for _ in 0..clause_count {
+                let mut lits = Vec::new();
+                for _ in 0..3 {
+                    let v = i64::try_from(next() % vars_bound).unwrap() + 1;
+                    let signed = if next() & 1 == 0 { v } else { -v };
+                    lits.push(lit(signed));
+                }
+                f.add_clause(CnfClause::new(lits)).unwrap();
+            }
+            let batsat = solve_with_rustsat_batsat(&f).unwrap();
+            match (solve_with_drat_proof(&f), batsat) {
+                (ProofSolveOutcome::Sat(model), SatResult::Sat(_)) => {
+                    assert!(
+                        model.satisfies(&f).unwrap(),
+                        "native sat model must satisfy"
+                    );
+                }
+                (ProofSolveOutcome::Unsat(proof), SatResult::Unsat(_)) => {
+                    assert_eq!(
+                        check_drat(&f, &proof),
+                        Ok(true),
+                        "native unsat (with any deletions) must DRAT-check"
                     );
                 }
                 (native, other) => {
