@@ -799,10 +799,16 @@ impl Cdcl {
                 let mut learned = Vec::with_capacity(lower.len() + 1);
                 learned.push(self.true_literal(var).negated());
                 learned.extend(lower);
-                // Local (self-subsumption) minimization: drop literals already
-                // implied by the rest of the clause. Shrinks the learned clause —
-                // smaller proof steps, faster propagation, lower backjumps.
-                self.minimize(&mut learned);
+                // Recursive (self-subsuming) minimization: drop literals whose
+                // negation is implied — through their reason chains — by the rest
+                // of the clause. Shrinks the learned clause more aggressively than
+                // one-level subsumption (MiniSat ccmin_mode=2): smaller proof
+                // steps, faster propagation, lower backjumps, fewer conflicts.
+                //
+                // At this point `seen[v]` is true exactly for the non-asserting
+                // learned-clause variables (`lower`), and false for the asserting
+                // literal's variable — the same precondition BatSat relies on.
+                self.minimize(&mut learned, &mut seen);
                 // Put the highest-level non-asserting literal at index 1 so the
                 // clause watches correctly after backjumping.
                 let mut backjump = 0;
@@ -826,34 +832,117 @@ impl Cdcl {
         }
     }
 
-    /// Local self-subsumption minimization of a learned clause: a non-asserting,
-    /// non-decision literal is redundant when every literal in its reason clause
-    /// is already present in the learned clause (or fixed at level 0), so its
-    /// negation is implied by the rest. Reasons point to strictly earlier trail
-    /// positions, so the membership test (against the original clause) is
-    /// acyclic-safe and the minimized clause is still RUP — and DRAT-checked.
-    fn minimize(&self, learned: &mut Vec<CnfLit>) {
+    /// An abstraction of a variable's decision level as a single-bit mask
+    /// (`MiniSat`'s `abstractLevel`). The union of these masks over a clause's
+    /// literals lets [`Self::lit_redundant`] short-circuit: a reason literal
+    /// whose level-bit is absent from the clause's mask comes from a decision
+    /// level unrelated to the clause and therefore cannot be resolved away.
+    #[inline]
+    fn abstract_level(&self, var: usize) -> u32 {
+        1u32 << (self.level[var] & 31)
+    }
+
+    /// Recursive (self-subsuming) minimization of a learned clause — `MiniSat`
+    /// `ccmin_mode = 2`, mirroring `BatSat`'s `minimize_conflict`.
+    ///
+    /// A non-asserting literal `l` is dropped when its negation is already
+    /// entailed by the remaining clause literals through `l`'s reason chain:
+    /// every literal in `reason(l)` must be in the clause (`seen`), fixed at
+    /// level 0, or itself recursively redundant. Resolving the clause against
+    /// those reason chains keeps it entailed, so the minimized clause is still
+    /// RUP and the emitted DRAT step stays checkable. Decision literals (no
+    /// reason) are never redundant, and the asserting literal (index 0) is
+    /// always kept.
+    ///
+    /// Precondition: `seen[v]` is true exactly for the non-asserting
+    /// learned-clause variables (and false for the asserting literal's
+    /// variable). `seen` is owned by [`Self::analyze`] (a per-conflict local)
+    /// and discarded when that frame returns, so no state leaks across
+    /// conflicts; the result depends only on this conflict's `seen` state, the
+    /// reason graph, and the input clause order, hence is deterministic
+    /// (identical input ⇒ identical clause ⇒ identical proof structure).
+    fn minimize(&self, learned: &mut Vec<CnfLit>, seen: &mut [bool]) {
         if learned.len() <= 1 {
             return;
         }
-        let mut in_learned = vec![false; self.assign.len()];
-        for &l in learned.iter() {
-            in_learned[l.var().index()] = true;
+        // Mask of the decision levels present among the non-asserting literals.
+        let mut abstract_levels = 0u32;
+        for &l in &learned[1..] {
+            abstract_levels |= self.abstract_level(l.var().index());
         }
-        let asserting_var = learned[0].var().index();
-        learned.retain(|&l| {
-            let v = l.var().index();
-            if v == asserting_var {
-                return true;
+        // Scratch reused across the `lit_redundant` calls in this minimization.
+        // `seen` marks set during a *successful* probe are kept (those literals
+        // are now known to be in/implied by the clause, which is sound for
+        // later probes); a *failed* probe rolls back its own marks. Removed
+        // literals stay marked, which is correct and matches BatSat — `seen` is
+        // never read again after this conflict.
+        let mut stack: Vec<CnfLit> = Vec::new();
+        let mut to_clear: Vec<usize> = Vec::new();
+        let mut write = 1usize;
+        for read in 1..learned.len() {
+            let lit = learned[read];
+            let v = lit.var().index();
+            // Keep `lit` if it is a decision (no reason) or not redundant.
+            if self.reason[v].is_none()
+                || !self.lit_redundant(lit, abstract_levels, seen, &mut stack, &mut to_clear)
+            {
+                learned[write] = lit;
+                write += 1;
             }
-            match self.reason[v] {
-                None => true, // a decision literal is never redundant
-                Some(rid) => !self.lits(rid).iter().all(|&q| {
-                    let qv = q.var().index();
-                    qv == v || in_learned[qv] || self.level[qv] == 0
-                }),
+        }
+        learned.truncate(write);
+    }
+
+    /// Can literal `p` be removed from the learned clause? Iterative
+    /// self-subsumption check (no recursion — an explicit `stack` avoids stack
+    /// overflow on deep reason chains), mirroring `BatSat`'s `lit_redundant`.
+    ///
+    /// `p` is redundant iff, walking its reason chain, every encountered
+    /// literal is fixed at level 0, already in the clause (`seen`), or has a
+    /// reason and a level present in `abstract_levels` (so it can in turn be
+    /// resolved away). The first literal that has no reason, or whose level is
+    /// outside `abstract_levels`, makes `p` irredundant — and we roll back every
+    /// `seen` mark this call set (recorded in `to_clear`) before returning
+    /// `false`, so a failed probe leaves no state behind. On success the marks
+    /// set during the walk are retained (the literals are now known redundant),
+    /// recorded in `to_clear` for the caller to clear once minimization ends.
+    fn lit_redundant(
+        &self,
+        p: CnfLit,
+        abstract_levels: u32,
+        seen: &mut [bool],
+        stack: &mut Vec<CnfLit>,
+        to_clear: &mut Vec<usize>,
+    ) -> bool {
+        stack.clear();
+        stack.push(p);
+        let top = to_clear.len();
+        while let Some(q) = stack.pop() {
+            let qv = q.var().index();
+            let rid = self.reason[qv].expect("lit_redundant only walks literals with a reason");
+            // Skip the propagated literal itself (slot 0 of its reason clause).
+            for &l in &self.lits(rid)[1..] {
+                let lv = l.var().index();
+                if self.level[lv] == 0 || seen[lv] {
+                    continue;
+                }
+                if self.reason[lv].is_some() && (self.abstract_level(lv) & abstract_levels) != 0 {
+                    // `l` may itself be redundant: mark it and recurse.
+                    seen[lv] = true;
+                    stack.push(l);
+                    to_clear.push(lv);
+                } else {
+                    // `l` has no reason or comes from an unrelated decision
+                    // level: `p` cannot be removed. Roll back this probe.
+                    for &v in &to_clear[top..] {
+                        seen[v] = false;
+                    }
+                    to_clear.truncate(top);
+                    return false;
+                }
             }
-        });
+        }
+        true
     }
 
     /// Literal-block distance of a clause: the number of distinct decision
@@ -1240,6 +1329,128 @@ mod tests {
         let a = solve_with_drat_proof(&f);
         let b = solve_with_drat_proof(&f);
         assert_eq!(a, b, "same input must yield same output");
+    }
+
+    /// One-level reference for the comparison test below: a literal is dropped
+    /// only if *every* literal of its reason is already in the learned clause
+    /// (or level 0). This is the pre-recursion behavior; recursive minimization
+    /// must remove a (strict) superset of these literals.
+    fn minimize_one_level(cdcl: &Cdcl, learned: &mut Vec<CnfLit>) {
+        if learned.len() <= 1 {
+            return;
+        }
+        let mut in_learned = vec![false; cdcl.assign.len()];
+        for &l in learned.iter() {
+            in_learned[l.var().index()] = true;
+        }
+        let asserting_var = learned[0].var().index();
+        learned.retain(|&l| {
+            let v = l.var().index();
+            if v == asserting_var {
+                return true;
+            }
+            match cdcl.reason[v] {
+                None => true,
+                Some(rid) => !cdcl.lits(rid).iter().all(|&q| {
+                    let qv = q.var().index();
+                    qv == v || in_learned[qv] || cdcl.level[qv] == 0
+                }),
+            }
+        });
+    }
+
+    /// Recursive minimization must remove *more* literals than one-level
+    /// self-subsumption on a clause whose redundancy is only visible through a
+    /// two-step reason chain — and the literal it removes must genuinely be
+    /// implied (verified by replaying the resulting unsat proof end-to-end in
+    /// the companion test). Reason graph (all at level 1, the same decision):
+    ///   uip=v0, a=v1, b=v2, c=v3, learned = [~v0, ~v1, ~v2].
+    ///   reason(v2) = [~v2, v3]   (so b is implied by ¬c, c ∉ clause)
+    ///   reason(v3) = [~v3, v1]   (so c is implied by ¬a, a ∈ clause)
+    /// One-level keeps ~v2 (its reason contains c ∉ clause). Recursive sees that
+    /// c is itself redundant (its only non-clause reason literal, a, is in the
+    /// clause), so ~v2 is redundant too.
+    #[test]
+    fn recursive_minimization_removes_more_than_one_level() {
+        // The clauses double as the reason clauses; literal at slot 0 of each is
+        // the propagated literal that `lit_redundant` skips.
+        let neg = |v: usize| CnfLit::positive(CnfVar::new(v).unwrap()).negated();
+        // clause 0: reason(v2) = [~v2, v3]; clause 1: reason(v3) = [~v3, v1].
+        let f = formula(4, &[&[-3, 4], &[-4, 2]]);
+        let mut cdcl = Cdcl::new(&f);
+        // Hand-build the implication graph at decision level 1 (minimize reads
+        // only `level` and `reason`, so leaving `assign` untouched is fine).
+        for v in 0..4 {
+            cdcl.level[v] = 1;
+        }
+        cdcl.reason[0] = None; // uip: kept regardless
+        cdcl.reason[1] = None; // a: a decision literal — never redundant, always kept
+        cdcl.reason[2] = Some(0); // b's reason is clause 0 = [~v2, v3]
+        cdcl.reason[3] = Some(1); // c's reason is clause 1 = [~v3, v1]
+
+        let learned_init = vec![neg(0), neg(1), neg(2)];
+
+        // One-level keeps ~v2 (3 literals remain).
+        let mut one = learned_init.clone();
+        minimize_one_level(&cdcl, &mut one);
+        assert_eq!(one.len(), 3, "one-level cannot remove ~v2 here");
+
+        // Recursive removes ~v2 (2 literals remain: ~v0, ~v1).
+        let mut rec = learned_init.clone();
+        // `seen` precondition: non-asserting learned vars (1,2) marked.
+        let mut seen = vec![false; cdcl.assign.len()];
+        seen[1] = true;
+        seen[2] = true;
+        cdcl.minimize(&mut rec, &mut seen);
+        assert_eq!(
+            rec,
+            vec![neg(0), neg(1)],
+            "recursive minimization must drop ~v2 via the v3 reason chain"
+        );
+        assert!(
+            rec.len() < one.len(),
+            "recursive must remove strictly more than one-level"
+        );
+    }
+
+    /// End-to-end soundness for recursive minimization: a battery of random
+    /// unsat CNFs (where the recursive scheme is exercised) must still produce
+    /// DRAT proofs that the independent checker accepts — i.e. recursively
+    /// minimized learned clauses stay RUP. Pairs with the disagree-zero
+    /// batteries above (which already run the recursive path on every conflict).
+    #[test]
+    fn recursive_minimization_keeps_proofs_drat_checkable() {
+        let mut state = 0x05ee_d5a7_1234_abcdu64;
+        let mut next = || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state
+        };
+        let mut unsat_seen = 0u32;
+        for _ in 0..400 {
+            let vars = 3 + usize::try_from(next() % 5).unwrap(); // 3..=7
+            let clause_count = 6 + usize::try_from(next() % 20).unwrap();
+            let mut f = CnfFormula::new(vars);
+            let vb = u64::try_from(vars).unwrap();
+            for _ in 0..clause_count {
+                let mut lits = Vec::new();
+                for _ in 0..3 {
+                    let v = i64::try_from(next() % vb).unwrap() + 1;
+                    lits.push(lit(if next() & 1 == 0 { v } else { -v }));
+                }
+                f.add_clause(CnfClause::new(lits)).unwrap();
+            }
+            if let ProofSolveOutcome::Unsat(proof) = solve_with_drat_proof(&f) {
+                assert_eq!(
+                    check_drat(&f, &proof),
+                    Ok(true),
+                    "recursively minimized proof must DRAT-check"
+                );
+                unsat_seen += 1;
+            }
+        }
+        assert!(unsat_seen > 0, "battery must include unsat instances");
     }
 
     /// Soundness stress: ≥100 small random 3-CNFs, fixed seed. The native core
