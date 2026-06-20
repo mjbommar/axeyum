@@ -46,9 +46,22 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     MORE of the corpus than batsat (which already gets 8/113) — the native core's value is
     ASSURANCE (proofs), now achieved, NOT beating batsat's decided-count. Remaining SAT-core
     levers (slice 9 = vivification / BCP per-prop ~20%) are diminishing and won't change that.
-    **The next big z3-parity work is the OTHER keystones, not more SAT-core perf:** NRA/CAD
-    (algebraic-number `Value` in `axeyum-ir`), general MBQI / quantifier proofs, the Lean
-    reconstruction frontier (P3.7), and broader theory completeness.
+    **The next big z3-parity work is the OTHER keystones, not more SAT-core perf.**
+  - **NRA/CAD keystone OPENED (slice 1 landed, ADR-0038):** `Value::RealAlgebraic{poly,lo,hi}`
+    (defining integer polynomial + isolating interval) + single-variable real-root isolation
+    (`nra_real_root.rs`, mirrors `nia_square`) → **`x*x=2` over ℝ now decides Sat(√2)**, the first
+    IRRATIONAL witness, replay-checked EXACTLY (`sign_at` reports Zero only via exact poly
+    divisibility `poly|q` — the only sound zero-test at an irrational α; nonzero only when
+    constant-sign across the bracket; else decline; NO float). `eval` comparisons handle algebraic
+    operands exactly; Real field ops on an algebraic operand → graceful Err (field arithmetic
+    DEFERRED). Decides `x*x=2/3`→Sat(algebraic), `x*x=4`→Sat(2 rational), `x*x<0/=-1`→Unsat,
+    `x*x>2`→Sat(rational), declines multivariate/2nd-assertion to the unchanged NRA abstraction.
+    **NEXT NRA slices (per ADR-0038, deferred-then-advance): (2)** Sturm sequences for robust
+    multi-root isolation + bigint when i128 overflows; **(3)** algebraic FIELD arithmetic
+    (resultant/min-poly — needed once two algebraic numbers combine); **(4)** multivariate CAD /
+    nlsat (the full decidable-NRA engine, T2.5.4, XL/research-scale).
+  - Also open: general MBQI / quantifier proofs, the Lean reconstruction frontier (P3.7), and
+    broader theory completeness.
   - **Codex-review correctness items — ALL CLOSED (each with soundness tests):** `prove_unsat`
     fail-closed (no unverified-unsat-as-checked); **eval graceful arithmetic overflow** (bv2nat
     ≥128-bit no longer wraps negative; Int/Real overflow → `Err`→`Unknown`, never crash/wrong —
