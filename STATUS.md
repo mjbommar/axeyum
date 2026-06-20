@@ -569,6 +569,30 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-20** — **PERF (Track 1, #1) slice 2: CNF variable compaction — un-refuses var-bound
+  EncodingBudget cases (sound model lift).** BVE removes variables but does NOT renumber, so the
+  reduced formula's `variable_count()` still reports the original max index — and `check_cnf_budgets`
+  (which reads it) kept refusing the var-bound EncodingBudget cases even after they eliminated 1M+
+  variables. New `axeyum-cnf/src/compact.rs`: `compact(&formula) -> (CnfFormula, CompactMap)`
+  collects the live variables (sorted `BTreeSet`, deterministic), densely renumbers `0..m`
+  (sign-preserving clause rewrite), and reports `variable_count()==m` (strictly `<` whenever a var
+  is dead). `CompactMap::expand(compact_model)` lifts a compacted model to original width:
+  `out[new_to_old[i]] = compact_model[i]`, placeholders `false`. **Sound lift order:**
+  solve(compacted) → `expand` (→ original-width, BVE-reduced model) → `Reconstruction::extend`
+  (→ full original model). Placeholder soundness: a placeholder index appears in no clause of the
+  compacted/reduced formula (compaction only renumbers), so its value is free there; `extend` then
+  overwrites the BVE-eliminated indices; any still-dead index is in no clause of the original
+  either (BVE only removes). Wired into `sat_bv_backend.rs` (`Inprocessed` carries the `CompactMap`;
+  `reconstruct_sat_result` does `expand`∘`extend`; `check_cnf_budgets` sees the lower count). The
+  no-inprocessing path is byte-identical. **Soundness tests:** 7 in-crate (deterministic, sat-preserving,
+  a BVE-eliminates-AND-renumbers round-trip, a 400-iter random BVE+compact stress) + 2 backend
+  (var-count drops + model replays; a budget split between compacted and un-compacted counts is
+  admitted+solves+replays with inprocessing on, refused `Unknown(EncodingBudget)` with it off —
+  proving admission actually changes); `cnf_inprocessing_agrees_with_baseline_and_replays` unchanged.
+  fmt + clippy(cnf+solver) + solver-doc + full suite (FULL_EXIT=0) green. (Pending: measure the
+  decided-count delta on the public 113 at 3s/20s with slice 1+2.) Sub-agent + soundness review
+  (verified the `expand`∘`extend` lift by hand).
+
 - **2026-06-20** — **PERF (Track 1, #1) slice 1: CNF inprocessing un-gated — public p4dfa 3→4/113,
   DISAGREE=0.** A read-only perf investigation found the highest-value sound lever already exists,
   is plumbed, and is soundness-tested — but was OFF/mis-gated: `axeyum-cnf`'s `simplify`

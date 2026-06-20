@@ -19,9 +19,9 @@ use axeyum_bv::{
     BitLowerError, BitLowering, first_unsupported_op, first_unsupported_sort, lower_terms,
 };
 use axeyum_cnf::{
-    BveOptions, CnfAssignment, CnfEncoding, CnfError, CnfFormula, ProofSolveOutcome,
+    BveOptions, CnfAssignment, CnfEncoding, CnfError, CnfFormula, CompactMap, ProofSolveOutcome,
     Reconstruction, SatError, SatProofStatus, SatResult, SatUnsatEvidence, XorCdclResult,
-    XorPropagation, check_drat, eliminate_variables_within, extract_xors, simplify_within,
+    XorPropagation, check_drat, compact, eliminate_variables_within, extract_xors, simplify_within,
     solve_with_drat_proof, solve_with_rustsat_batsat_timeout, solve_with_xor_cdcl, tseitin_encode,
     xor_propagate,
 };
@@ -140,7 +140,6 @@ impl SatBvBackend {
         let solve_formula: &CnfFormula = inprocessed
             .as_ref()
             .map_or_else(|| encoding.formula(), |out| &out.formula);
-        let reconstruction = inprocessed.as_ref().map(|out| &out.reconstruction);
 
         if let Some(result) = check_cnf_budgets(config, solve_formula, &mut stats) {
             self.stats = Some(stats);
@@ -188,9 +187,10 @@ impl SatBvBackend {
             verify_unsat_proof(solve_formula, &mut stats)?;
         }
 
-        // Lift a reduced `sat` model back to the original CNF variables (no-op
-        // without inprocessing) so the AIG/model lift uses the original encoding.
-        let sat_result = reconstruct_sat_result(sat_result, reconstruction);
+        // Lift a compacted `sat` model back to the original CNF variables (no-op
+        // without inprocessing) so the AIG/model lift uses the original encoding:
+        // `compaction.expand` (→ BVE-reduced width) then `reconstruction.extend`.
+        let sat_result = reconstruct_sat_result(sat_result, inprocessed.as_ref());
 
         let result = handle_sat_result(
             arena,
@@ -261,10 +261,23 @@ fn record_encoding_stats(stats: &mut SolveStats, lowering: &BitLowering, formula
     ));
 }
 
-/// A Tseitin formula after CNF inprocessing, plus the stack that lifts a model
-/// of the reduced formula back to the original CNF variables.
+/// A Tseitin formula after CNF inprocessing, plus the maps that lift a model of
+/// the reduced formula back to the original CNF variables.
+///
+/// The lift is a two-step composition. BVE removes clauses/variables but does
+/// not renumber, so its reduced formula keeps the original (wide) variable count;
+/// [`compact`] then densely renumbers the live variables, lowering
+/// [`CnfFormula::variable_count`] so the variable-bound admission gate admits
+/// cases that eliminated millions of variables. The `formula` field is the
+/// *compacted* formula (the one submitted to the SAT solver); a `sat` model of it
+/// is lifted by `compaction.expand` (→ original-width, BVE-reduced model) and then
+/// `reconstruction.extend` (→ full original model), in that order.
 struct Inprocessed {
+    /// The compacted, BVE-reduced formula submitted to the SAT adapter.
     formula: CnfFormula,
+    /// Lifts a compacted model up to the BVE-reduced (original-width) variables.
+    compaction: CompactMap,
+    /// Lifts a BVE-reduced model back to the original pre-BVE variables.
     reconstruction: Reconstruction,
 }
 
@@ -427,27 +440,62 @@ fn inprocess(
         "bve_clauses_added".to_owned(),
         usize_to_f64(bve.stats.clauses_added),
     ));
-    // The variable count is preserved by both passes (an eliminated variable
-    // simply occurs in no clause), so only the clause count moves here.
+    // Compact: BVE removes clauses/variables but never renumbers, so its reduced
+    // formula still reports the original (wide) `variable_count`. Densely
+    // renumber the live variables so the var-bound admission gate sees the real
+    // (much lower) count. Compaction is a pure renumbering bijection on the live
+    // set — it cannot change sat/unsat — and a compacted `sat` model is lifted
+    // back up by `compaction.expand` before the BVE `reconstruction.extend`.
+    let bve_variable_count = bve.formula.variable_count();
+    let (compacted, compaction) = compact(&bve.formula);
+    let compacted_variable_count = compacted.variable_count();
+
+    stats.backend.push((
+        "cnf_compaction_variables_before".to_owned(),
+        usize_to_f64(bve_variable_count),
+    ));
+    stats.backend.push((
+        "cnf_compaction_variables_after".to_owned(),
+        usize_to_f64(compacted_variable_count),
+    ));
+    stats.backend.push((
+        "cnf_compaction_variables_dropped".to_owned(),
+        usize_to_f64(bve_variable_count.saturating_sub(compacted_variable_count)),
+    ));
+    // The clause count is unchanged by compaction (renumbering only), so the
+    // submitted clause count is the BVE-reduced count.
     stats.backend.push((
         "cnf_clauses_solved".to_owned(),
-        usize_to_f64(bve.formula.clauses().len()),
+        usize_to_f64(compacted.clauses().len()),
+    ));
+    stats.backend.push((
+        "cnf_variables_solved".to_owned(),
+        usize_to_f64(compacted_variable_count),
     ));
 
     Inprocessed {
-        formula: bve.formula,
+        formula: compacted,
+        compaction,
         reconstruction: bve.reconstruction,
     }
 }
 
-/// Lifts a reduced `sat` assignment back to the original CNF variable space via
-/// the BVE reconstruction stack. A no-op (identity) when inprocessing was off or
-/// for non-`sat` results.
-fn reconstruct_sat_result(result: SatResult, reconstruction: Option<&Reconstruction>) -> SatResult {
-    match (result, reconstruction) {
-        (SatResult::Sat(assignment), Some(reconstruction)) => SatResult::Sat(CnfAssignment::new(
-            reconstruction.extend(assignment.values()),
-        )),
+/// Lifts a compacted `sat` assignment back to the original CNF variable space.
+///
+/// The lift composes the two inprocessing maps in order: `compaction.expand`
+/// raises a compacted model up to the BVE-reduced (original-width) variable space
+/// (placing live values and `false` placeholders for never-occurring indices),
+/// then `reconstruction.extend` replays the BVE-eliminated variables to produce a
+/// model of the pre-inprocessing formula. A no-op (identity) when inprocessing was
+/// off or for non-`sat` results.
+fn reconstruct_sat_result(result: SatResult, inprocessed: Option<&Inprocessed>) -> SatResult {
+    match (result, inprocessed) {
+        (SatResult::Sat(assignment), Some(inprocessed)) => {
+            let reduced = inprocessed.compaction.expand(assignment.values());
+            SatResult::Sat(CnfAssignment::new(
+                inprocessed.reconstruction.extend(&reduced),
+            ))
+        }
         (result, _) => result,
     }
 }

@@ -482,6 +482,162 @@ fn cnf_inprocessing_unsat_is_drat_proof_checked() {
 }
 
 #[test]
+fn cnf_compaction_lowers_variable_count_and_replays() {
+    // Compaction (after BVE) densely renumbers the live CNF variables, so the
+    // formula submitted to the SAT solver reports a strictly lower
+    // `variable_count` than the un-compacted Tseitin encoding. This test asserts
+    // BOTH halves of the soundness contract:
+    //   1. the var-count actually drops (compaction_variables_after <= before,
+    //      and below the un-inprocessed cnf_variables), and
+    //   2. a `sat` model lifted through expand→extend still satisfies every
+    //      original assertion (the backend replays it before returning `sat`, so
+    //      a bad lift would surface as a backend error, never a wrong `sat`).
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 8).unwrap();
+    let y = arena.bv_var("y", 8).unwrap();
+    let sum = arena.bv_add(x, y).unwrap();
+    let seven = arena.bv_const(8, 7).unwrap();
+    let x_is_seven = arena.eq(x, seven).unwrap();
+    let ten = arena.bv_const(8, 10).unwrap();
+    let sum_is_ten = arena.eq(sum, ten).unwrap();
+    let assertions = vec![x_is_seven, sum_is_ten];
+
+    let mut backend = SatBvBackend::new();
+    let result = backend
+        .check(
+            &arena,
+            &assertions,
+            &SolverConfig::default().with_cnf_inprocessing(true),
+        )
+        .unwrap();
+
+    let stats = backend.last_stats().expect("stats recorded");
+    let stat = |key: &str| {
+        stats
+            .backend
+            .iter()
+            .find(|(name, _)| name == key)
+            .map(|(_, value)| *value)
+    };
+    let before = stat("cnf_compaction_variables_before").expect("before recorded");
+    let after = stat("cnf_compaction_variables_after").expect("after recorded");
+    let dropped = stat("cnf_compaction_variables_dropped").expect("dropped recorded");
+    let baseline_vars = stat("cnf_variables").expect("un-inprocessed var count recorded");
+    assert!(after <= before, "compaction must not raise the var count");
+    assert!(
+        after < baseline_vars,
+        "compacted var count {after} must be below the un-inprocessed count {baseline_vars}"
+    );
+    assert!(
+        (dropped - (before - after)).abs() < f64::EPSILON,
+        "dropped stat must equal before - after"
+    );
+
+    // The lifted sat model replays against the original terms.
+    let CheckResult::Sat(model) = result else {
+        panic!("expected sat");
+    };
+    let assignment = model.to_assignment();
+    for &term in &assertions {
+        assert_eq!(
+            eval(&arena, term, &assignment).unwrap(),
+            Value::Bool(true),
+            "compacted+reconstructed model must satisfy every original assertion"
+        );
+    }
+}
+
+#[test]
+fn cnf_compaction_admits_a_var_budget_the_uncompacted_count_exceeds() {
+    // Soundness + the admission-change point: pick a CNF variable budget that the
+    // un-inprocessed Tseitin var count EXCEEDS but the compacted count clears.
+    // Without compaction the backend would refuse with Unknown(EncodingBudget);
+    // with inprocessing+compaction it is admitted, solves, and the lifted model
+    // replays.
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 8).unwrap();
+    let y = arena.bv_var("y", 8).unwrap();
+    let sum = arena.bv_add(x, y).unwrap();
+    let nine = arena.bv_const(8, 9).unwrap();
+    let x_is_nine = arena.eq(x, nine).unwrap();
+    let twenty = arena.bv_const(8, 20).unwrap();
+    let sum_is_twenty = arena.eq(sum, twenty).unwrap();
+    let assertions = vec![x_is_nine, sum_is_twenty];
+
+    // Measure the un-inprocessed var count and the compacted var count first.
+    let mut probe = SatBvBackend::new();
+    let _ = probe
+        .check(
+            &arena,
+            &assertions,
+            &SolverConfig::default().with_cnf_inprocessing(true),
+        )
+        .unwrap();
+    let pstats = probe.last_stats().expect("stats recorded");
+    let stat = |key: &str| {
+        pstats
+            .backend
+            .iter()
+            .find(|(name, _)| name == key)
+            .map(|(_, value)| *value)
+    };
+    // The stat values are small non-negative integer counts stored as f64. The
+    // cast is guarded by the bounds assert: non-negative, integral, well under
+    // u64::MAX, so neither truncation nor sign loss can occur.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let to_count = |v: f64| -> u64 {
+        assert!(
+            v >= 0.0 && v.fract() == 0.0 && v < 1e18,
+            "count stat must be a small non-negative integer"
+        );
+        v.round() as u64
+    };
+    let baseline_vars = to_count(stat("cnf_variables").expect("un-inprocessed var count"));
+    let compacted_vars =
+        to_count(stat("cnf_compaction_variables_after").expect("compacted var count"));
+
+    // Only meaningful if compaction actually moved the count below the baseline.
+    if compacted_vars < baseline_vars {
+        // A budget strictly between the compacted and un-inprocessed counts: the
+        // un-compacted formula would be refused, the compacted one admitted.
+        let budget = compacted_vars + (baseline_vars - compacted_vars) / 2;
+        assert!(budget >= compacted_vars && budget < baseline_vars);
+
+        let config = SolverConfig::default()
+            .with_cnf_inprocessing(true)
+            .with_cnf_variable_budget(budget);
+        let result = SatBvBackend::new()
+            .check(&arena, &assertions, &config)
+            .unwrap();
+        let CheckResult::Sat(model) = result else {
+            panic!("compacted formula within budget must solve to sat, not be refused");
+        };
+        let assignment = model.to_assignment();
+        for &term in &assertions {
+            assert_eq!(
+                eval(&arena, term, &assignment).unwrap(),
+                Value::Bool(true),
+                "admitted-via-compaction model must satisfy every original assertion"
+            );
+        }
+
+        // And confirm the un-compacted (inprocessing off) path is refused at this
+        // budget, proving admission actually changed.
+        let no_inprocess = SolverConfig::default().with_cnf_variable_budget(budget);
+        let refused = SatBvBackend::new()
+            .check(&arena, &assertions, &no_inprocess)
+            .unwrap();
+        assert!(
+            matches!(
+                refused,
+                CheckResult::Unknown(ref r) if r.kind == UnknownKind::EncodingBudget
+            ),
+            "without compaction the var-bound budget must refuse the encoding, got {refused:?}"
+        );
+    }
+}
+
+#[test]
 fn wide_bit_vector_contradiction_is_unsat() {
     // x + 1 = 5 (so x = 4) and x = 10 contradict, at 200 bits.
     let mut arena = TermArena::new();

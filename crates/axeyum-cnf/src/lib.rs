@@ -18,6 +18,7 @@ use web_time::Instant;
 
 mod alethe;
 mod bve;
+mod compact;
 mod drat;
 mod gf2;
 mod lrat;
@@ -38,6 +39,7 @@ pub use bve::{
     BveOptions, BveOutcome, BveStats, Reconstruction, eliminate_variables,
     eliminate_variables_within,
 };
+pub use compact::{CompactMap, compact};
 pub use drat::{DratError, DratStep, check_drat, parse_drat, write_drat};
 pub use gf2::{Gf2Outcome, Gf2Solution, Gf2System};
 pub use lrat::{LratError, LratStep, check_lrat, elaborate_drat_to_lrat, parse_lrat, write_lrat};
