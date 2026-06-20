@@ -7,7 +7,7 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 ## Current focus
 
 - **Session 2026-06-19 — robustness + proof certs + capability-gap sweep (resume here).**
-  **45 validated commits**; whole `axeyum-solver` crate green on test/clippy/doc/fmt (999
+  **47 validated commits**; whole `axeyum-solver` crate green on test/clippy/doc/fmt (999
   tests) + Carcara (54) + workspace build + links — confirmed cohesively gate-green at session
   end (the consolidation caught and fixed a doc-link regression clippy/tests had missed).
   Method: **6 read-only *capability-gap probe* passes** (theory decidability; arrays/mixed/
@@ -27,7 +27,10 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     trust discipline holds across every fragment.
   - **z3 feature breadth — measured gaps closed:** datatype Int/Real fields (was a hard `Err`),
     guarded-finite Int `∀`, sat-side **valid-universal** elimination (incl. nested `∀`),
-    **vacuous-`∀` elimination** (a first sound cut into `∃∀`: `∃y.∀x. x+y≥x` → Sat), the
+    **vacuous-`∀`** (`∃y.∀x. x+y≥x` → Sat) and **unsatisfiable-`∀`** (`∀x. x>0`, `∃y.∀x. x≤y`
+    → Unsat) — the sound bounded `∃∀`/quantifier slices are now largely complete (vacuous /
+    valid / guarded-finite / unsat-`∀` + the finite-`∀` certs); general LIA/LRA quantifier
+    elimination + MBQI remain the keystone. Also the
     NIA ground-vs-`∃` inconsistency, **EUF-over-Real (QF_UFLRA)** routing (was a hard `Err`),
     `bv2nat` out-of-range UNSAT, and integer-NIA UNSAT via real relaxation. The solver is now
     solid across arrays, mixed theories, strings, FP-via-BV, and most quantifier shapes.
