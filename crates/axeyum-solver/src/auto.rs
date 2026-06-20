@@ -116,6 +116,20 @@ pub fn solve(
         return check_auto(arena, assertions, config);
     }
 
+    // Unsatisfiable-universal detection: a top-level `∀x. (c·x ⋈ t)` whose body
+    // is a *single* linear arithmetic atom in which `x` genuinely appears (net
+    // coefficient `c ≠ 0`), `t` is `x`-free, and `⋈ ∈ {<, ≤, >, ≥, =}` (never
+    // `≠`) is **false in every model** — an unbounded linear function of `x`
+    // cannot satisfy a one-sided bound or an equality for *all* `x`. So such an
+    // assertion makes the whole query `unsat`. This runs *after* the vacuous
+    // pass so the complementary `c = 0` case is already rewritten away (no
+    // overlap), and decides standalone `∀x. x > 0`, `∀x. 2·x = 5`, `∀x. x ≤ y`,
+    // and the residual of `∃y.∀x. x ≤ y` (after `∃`-skolemization). Strictly
+    // additive: only ever `unknown` → `unsat` for the proven-always-false shape.
+    if crate::quant_unsat_universal::detect_unsatisfiable_universal(arena, assertions) {
+        return Ok(CheckResult::Unsat);
+    }
+
     match check_with_quantifiers(arena, assertions, config) {
         // An infinite quantifier domain defeats finite expansion; fall back to
         // sound refutation. Try congruence-aware e-matching on the e-graph keystone

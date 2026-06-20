@@ -501,6 +501,23 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P2.6: unsatisfiable-`∀` detection — another sound `∃∀` slice.** A top-level
+  `∀x. body` where `x:Int`/`Real`, `body` is a SINGLE arithmetic atom that normalizes to
+  `c·x ⋈ t` with `c≠0` (x genuinely appears), `t` x-free, and `⋈∈{<,≤,>,≥,=}` is
+  **unconditionally UNSAT** (a linear function of an unbounded x can't satisfy a one-sided
+  constraint for all x). New `quant_unsat_universal.rs` (`detect_unsatisfiable_universal`),
+  hooked in `solve` AFTER `eliminate_vacuous_universals` (which owns the `c=0` case — no overlap)
+  and before `check_with_quantifiers`, returning `CheckResult::Unsat` on a match. Reuses the
+  vacuous pass's `Affine`-over-`Rational` collector (so `c≠0` ⇒ the residual is exactly `c·x ⋈ t`,
+  t x-free; `affine` returns `None` on any non-linear/UF/array/`bv2nat` x-occurrence ⇒ decline).
+  Decides `∀x:Int. x>0`, `∀x:Int. 2x=5`, `∀x:Real. x≤y`, and (with the existing `∃`-skolemization)
+  `∃y:Int.∀x:Int. x≤y` — all → Unsat (were Unknown). **Soundness-negatives verified:** `∀x. 2x≠5`
+  (true; `≠` is `not(eq)` = `BoolNot`, declined structurally → not Unsat), `∀x. x+y≥x` (c=0 →
+  vacuous pass, not this one), `∀x.(x>0 ∨ x≤0)` (valid disjunction, multi-atom → declined),
+  guarded `∀x.(0≤x≤2)⇒x≥5` (implication → declined, still Unsat via the guarded path). New
+  `tests/quant_unsat_universal.rs` (9); the quant sibling suites all green. Strictly additive.
+  Sub-agent + soundness review.
+
 - **2026-06-19** — **P3.3: quantifier certs made assume-independent (closes the main
   emitter-trust gap).** The finite-`∀` cert re-check (`check_alethe_lra_guarded_inst`) verified
   the `forall_inst_guarded` instantiation + rule structure but **accepted the proof's

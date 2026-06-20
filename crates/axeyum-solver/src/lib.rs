@@ -71,6 +71,7 @@ mod qinst_egraph;
 mod quant_alethe;
 mod quant_finite_cert;
 mod quant_guarded_int;
+mod quant_unsat_universal;
 mod quant_vacuous_universal;
 mod quant_valid_universal;
 mod reconstruct;
