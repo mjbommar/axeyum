@@ -31,11 +31,9 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     → Unsat), and **single-variable real Fourier-Motzkin `∀`-elimination** (the FIRST true QE —
     decides multi-atom `∀x:Real. φ`, e.g. `∀x.(x≥0∧x≤10)`→Unsat, `∃y.∀x.(x≤y∨x≥y)`→Sat). The
     plus **integer `∀`-elim via real-validity** (the sound one-direction: real-valid ⇒ int-valid).
-    The sound bounded `∃∀`/quantifier slices are now **exhausted** (vacuous / valid / guarded-finite
-    / unsat-`∀` / real-FM-QE / int-FM-valid + the finite-`∀` certs); what remains is the genuinely
-    *subtle* keystone core — **integer-Omega** exactness (the inter-integer-gap cases: dark shadow +
-    splinters, where unsoundness hides), general-boolean QE beyond the DNF cap, and MBQI /
-    ∃-witness — best taken on with dedicated fresh-context care, not rushed. Also the
+    ACTIVE quantifier work: **integer-Omega exactness for closed universals** (exact — numeric
+    interval integer-emptiness check decides the inter-gap cases like `∀x:Int.(x≤0∨x≥1)`→Sat), then
+    open-universal integer-gap, general-boolean QE beyond the DNF cap, MBQI / ∃-witness. Also the
     NIA ground-vs-`∃` inconsistency, **EUF-over-Real (QF_UFLRA)** routing (was a hard `Err`),
     `bv2nat` out-of-range UNSAT, and integer-NIA UNSAT via real relaxation. The solver is now
     solid across arrays, mixed theories, strings, FP-via-BV, and most quantifier shapes.
@@ -113,8 +111,19 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     checker had is closed; no false negatives (all genuine certs + tampers pass). The check is now
     fully checker-vs-producer independent. (Still in-tree-checked — no Carcara/Lean backstop, since
     `forall_inst`-in-kernel is coordination-gated; but the in-tree check is now complete.)
-  - **Remaining frontier (the in-`solver` tractable gap-cycle is exhausted; these are the hard
-    keystones / coordination-gated items the 6 passes surfaced):**
+  - **ACTIVE WORK QUEUE — advance the next item, never stop (per PLAN.md). The #1 load-bearing
+    front is measured perf vs Z3 via word-level *reduction* (PLAN: moved public p4dfa 2→7/113; ~6
+    more *EncodingBudget* cases are gettable by deeper reduction — the proven mechanism). Pick the
+    next concrete task here or from `docs/plan/track-{1,2,3}` and ship it:**
+    - **PERF (Track 1, #1): deeper word-level reduction → pull EncodingBudget cases under the encode
+      ceiling.** In-`solver` levers: the `preprocess.rs` pipeline (which reductions, order, fixpoint),
+      `axeyum-bv` lowering (smaller AIG), `axeyum-cnf` Tseitin (smaller CNF). Measure with
+      `just bench-public-qfbv-sat-bv-preprocess-*`. (The `axeyum-rewrite` reduction *algorithms* are
+      the concurrent agent's lane — coordinate or work the solver-side pipeline + bv/cnf encoders.)
+    - **QUANT: integer-Omega + open-gap + general-boolean QE + MBQI** (in-`solver`, infra in place:
+      FM `Verdict` enum + `relax_int`).
+    - **Then the items below (drive the in-`solver` part; for coordination-gated ones, build the
+      solver-side interface and hand off):**
     - **arith-UF SAT model (gap C, keystone, COORDINATION-GATED on `axeyum-ir`):** QF_UFLIA/
       UFLRA `sat` returns `Unknown` because an `Int`/`Real`-sorted UF's function-table model
       can't be built — `FuncValue` and the ground evaluator key function applications by
