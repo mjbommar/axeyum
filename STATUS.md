@@ -7,7 +7,7 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 ## Current focus
 
 - **Session 2026-06-19 — robustness + proof certs + capability-gap sweep (resume here).**
-  **49 validated commits**; whole `axeyum-solver` crate green on test/clippy/doc/fmt (1047
+  **51 validated commits**; whole `axeyum-solver` crate green on test/clippy/doc/fmt (1054
   tests) + Carcara (54) + workspace build + links — confirmed cohesively gate-green at session
   end (the consolidation caught and fixed a doc-link regression clippy/tests had missed).
   Method: **6 read-only *capability-gap probe* passes** (theory decidability; arrays/mixed/
@@ -30,10 +30,12 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     **vacuous-`∀`** (`∃y.∀x. x+y≥x` → Sat) and **unsatisfiable-`∀`** (`∀x. x>0`, `∃y.∀x. x≤y`
     → Unsat), and **single-variable real Fourier-Motzkin `∀`-elimination** (the FIRST true QE —
     decides multi-atom `∀x:Real. φ`, e.g. `∀x.(x≥0∧x≤10)`→Unsat, `∃y.∀x.(x≤y∨x≥y)`→Sat). The
-    sound bounded `∃∀`/quantifier slices are now broad (vacuous / valid / guarded-finite /
-    unsat-`∀` / real-FM-QE + the finite-`∀` certs); the **integer-Omega** QE (real FM isn't
-    exact over ℤ), general-boolean QE beyond the DNF cap, and MBQI remain the keystone core.
-    Also the
+    plus **integer `∀`-elim via real-validity** (the sound one-direction: real-valid ⇒ int-valid).
+    The sound bounded `∃∀`/quantifier slices are now **exhausted** (vacuous / valid / guarded-finite
+    / unsat-`∀` / real-FM-QE / int-FM-valid + the finite-`∀` certs); what remains is the genuinely
+    *subtle* keystone core — **integer-Omega** exactness (the inter-integer-gap cases: dark shadow +
+    splinters, where unsoundness hides), general-boolean QE beyond the DNF cap, and MBQI /
+    ∃-witness — best taken on with dedicated fresh-context care, not rushed. Also the
     NIA ground-vs-`∃` inconsistency, **EUF-over-Real (QF_UFLRA)** routing (was a hard `Err`),
     `bv2nat` out-of-range UNSAT, and integer-NIA UNSAT via real relaxation. The solver is now
     solid across arrays, mixed theories, strings, FP-via-BV, and most quantifier shapes.
