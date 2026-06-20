@@ -94,15 +94,19 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     QF_LIA (gap E), `bv2nat`-bound (gap D, partial-trust w/ recorded `IntBlast` step), and
     finite-`∀` quantifier (LIA + UF tails, custom in-tree `forall_inst_guarded`). The remaining
     uncertified fragments are gap A (NRA sign — needs `nra.rs`, concurrent lane) and the keystones.
-  - **Assurance follow-up (in-`solver`, real):** the custom-rule quantifier certs (finite-`∀`
-    LIA + UF, via `forall_inst_guarded`) are **in-tree-checked only** and their
-    `check_alethe_lra_guarded_inst` re-check **trusts the emitter's ground-fact/abstraction-def
-    `assume`s** (no cross-verification against the original assertions, and no Carcara/Lean
-    backstop). Strengthen the check to take the original `assertions` (`Evidence::check` already
-    receives them) and verify each non-universal `assume` is either an original assertion or a
-    sound fresh-var definition `(= fresh (f args))` — lifting these certs to fully
-    assume-independent. (Standard certs close this via Carcara/Lean; these custom rules need this
-    in-tree strengthening or `forall_inst`-in-kernel = coordination-gated.)
+  - **Assume-independence: main gap CLOSED, one residual.** The custom-rule quantifier certs
+    (finite-`∀` LIA + UF) now re-check every **ground-fact and abstraction-definition `assume`**
+    against the original query via `check_alethe_lra_guarded_inst_against` (class 2 = rendered
+    original assertion; class 3 = genuinely-fresh `(= !fn_app_N (f t))` Ackermann def; class 4 =
+    abstracted original via a class-3 def) — anything else ⇒ `Ok(false)`. Soundness-negative
+    tests confirm a fabricated premise that the OLD checker accepted is now rejected. **Residual
+    follow-up:** the carried `universal` itself (class 1) is matched structurally to the cert's
+    `GuardedUniversalForm` but NOT yet cross-verified to be one of the original `assertions`
+    (`term_to_alethe_uf` doesn't render `∀` binders, so the clean fix is to re-run
+    `detect_guarded_universal` over `assertions` and require a match — a small, careful addition).
+    Until then a forged carried universal could pass class 1 (not reachable via `produce_evidence`,
+    which builds the universal from the query, but a gap in full checker-vs-producer independence).
+    These remain in-tree-checked (no Carcara/Lean backstop — `forall_inst`-in-kernel is coordination-gated).
   - **Remaining frontier (the in-`solver` tractable gap-cycle is exhausted; these are the hard
     keystones / coordination-gated items the 6 passes surfaced):**
     - **arith-UF SAT model (gap C, keystone, COORDINATION-GATED on `axeyum-ir`):** QF_UFLIA/
@@ -498,6 +502,27 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed slice + baseline (32/43 decided, agree=32, DISAGREE=0) |
 
 ## Changelog
+
+- **2026-06-19** — **P3.3: quantifier certs made assume-independent (closes the main
+  emitter-trust gap).** The finite-`∀` cert re-check (`check_alethe_lra_guarded_inst`) verified
+  the `forall_inst_guarded` instantiation + rule structure but **accepted the proof's
+  ground-fact and abstraction-definition `assume`s as given** — so a proof could `assume` a fact
+  not in the query and still pass. New `check_alethe_lra_guarded_inst_against(universal, proof,
+  arena, assertions)` (threaded from `Evidence::check`, which already has `assertions`) now
+  classifies every `assume` and REJECTS (`Ok(false)`) anything that is not: (1) the carried
+  universal, (2) an original assertion (rendered via the same `term_to_alethe_uf` the emitter
+  uses — exact key match), (3) a genuinely-fresh Ackermann definition `(= !fn_app_N (f t))`
+  (the introduced const must not occur in the rendered query — the load-bearing freshness
+  guard), or (4) an abstracted original assertion bridged through a class-3 definition. Both
+  emitters self-validate through the strengthened checker so emission and consumer re-check
+  agree. **Soundness-negative tests** (`assume_independent_check_rejects_fabricated_premise`
+  LIA/UF, `..._rejects_non_fresh_definition`) assert the OLD checker returns `Ok(true)` on a
+  fabricated `(= a 5)` / non-fresh `(= x (g x))` assume while the new check + `Evidence::check`
+  reject it — proving the gap is closed. All genuine LIA/UF/pure-LIA-`∀`/UFLIA certs + existing
+  tamper tests still pass (no false negatives; class 4 was required to keep UF certs green).
+  One residual remains (the carried universal isn't yet cross-verified ∈ `assertions` — see
+  frontier). fmt + clippy + doc + full suite + Carcara (54) green. Sub-agent + soundness review
+  (I traced and recorded the residual).
 
 - **2026-06-19** — **P3.3: finite-`∀`-over-UF `unsat` certified (quantifier proof extended to
   a UF+arith tail).** The finite-`∀` cert only handled a pure-LIA ground tail, so

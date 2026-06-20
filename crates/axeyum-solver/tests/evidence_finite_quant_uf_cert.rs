@@ -15,8 +15,8 @@
 use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm};
 use axeyum_ir::{Sort, TermArena, TermId};
 use axeyum_solver::{
-    Evidence, SolverConfig, check_alethe_lra_guarded_inst, produce_evidence,
-    prove_finite_int_quant_unsat_uf_alethe,
+    Evidence, SolverConfig, check_alethe_lra_guarded_inst, check_alethe_lra_guarded_inst_against,
+    produce_evidence, prove_finite_int_quant_unsat_uf_alethe,
 };
 
 /// `∀x:Int. (0<=x<=1) => f(x)=0`, with `f : Int -> Int`. Returns the universal.
@@ -194,6 +194,74 @@ fn tamper_rejects_guarded_quant_uf_certificate() {
         check_alethe_lra_guarded_inst(&universal, &tampered2),
         Ok(true),
         "a broken eq_transitive bridge must be rejected"
+    );
+}
+
+#[test]
+fn assume_independent_check_rejects_fabricated_uf_premise() {
+    // SOUNDNESS-NEGATIVE (UF case): build a genuine UF proof, then INJECT a bogus
+    // `assume` `(= a 5)` not among the original assertions. The old, emitter-trusting
+    // checker still accepts it (an unused extra hypothesis); the assume-independent
+    // checker must REJECT it, since the premise is not a consequence of THIS query.
+    // This exercises the gap on the UF tail whose premises include fresh-var
+    // definitions and abstracted side facts.
+    let mut arena = TermArena::new();
+    let f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let forall = forall_fx_eq_0(&mut arena, f);
+    let zero = arena.int_const(0);
+    let one = arena.int_const(1);
+    let f0 = arena.apply(f, &[zero]).unwrap();
+    let f0_eq_1 = arena.eq(f0, one).unwrap();
+    let asserts = [forall, f0_eq_1];
+
+    let proof = prove_finite_int_quant_unsat_uf_alethe(&mut arena, &asserts)
+        .expect("emits a UF guarded-quantifier proof");
+    // Re-derive the carried universal form via a produce_evidence pass.
+    let universal = {
+        let config = SolverConfig::default();
+        let report = produce_evidence(&mut arena, &asserts, &config).expect("decides");
+        match report.evidence {
+            Evidence::UnsatGuardedQuantAletheProof { universal, .. } => universal,
+            other => panic!("expected UF guarded cert, got {other:?}"),
+        }
+    };
+
+    let mut tampered = proof;
+    tampered.push(AletheCommand::Assume {
+        id: "bogus".to_owned(),
+        clause: vec![AletheLit {
+            atom: AletheTerm::App(
+                "=".to_owned(),
+                vec![
+                    AletheTerm::Const("a".to_owned()),
+                    AletheTerm::Const("5".to_owned()),
+                ],
+            ),
+            negated: false,
+        }],
+    });
+
+    // The OLD checker trusts the injected premise and still accepts (the gap).
+    assert_eq!(
+        check_alethe_lra_guarded_inst(&universal, &tampered),
+        Ok(true),
+        "the emitter-trusting checker accepts the fabricated premise (the gap)"
+    );
+    // The STRENGTHENED checker rejects it.
+    assert_ne!(
+        check_alethe_lra_guarded_inst_against(&universal, &tampered, &arena, &asserts),
+        Ok(true),
+        "the assume-independent checker must reject a fabricated UF premise"
+    );
+
+    let evidence = Evidence::UnsatGuardedQuantAletheProof {
+        proof: tampered,
+        universal,
+    };
+    assert_ne!(
+        evidence.check(&arena, &asserts),
+        Ok(true),
+        "Evidence::check must reject the fabricated-premise UF proof"
     );
 }
 

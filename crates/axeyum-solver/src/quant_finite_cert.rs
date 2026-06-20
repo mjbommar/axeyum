@@ -30,11 +30,19 @@
 //!    with renamed ids.
 //!
 //! Emission is **self-validating**: the assembled proof is run through
-//! [`check_alethe_lra_guarded_inst`] — the arithmetic-aware Alethe checker plus the
-//! `forall_inst_guarded` hook — before being returned, so a buggy build is
-//! *rejected* (`None`), never returned wrong. The same checker re-validates the
-//! attached [`crate::Evidence::UnsatGuardedQuantAletheProof`] in
-//! [`crate::Evidence::check`].
+//! [`check_alethe_lra_guarded_inst_against`] — the arithmetic-aware Alethe checker,
+//! the `forall_inst_guarded` hook, AND the assume-independent premise verification —
+//! before being returned, so a buggy build is *rejected* (`None`), never returned
+//! wrong. The same checker re-validates the attached
+//! [`crate::Evidence::UnsatGuardedQuantAletheProof`] in [`crate::Evidence::check`].
+//!
+//! The premise verification is what makes the check **independent of this emitter**:
+//! every `assume` in the proof must be re-justified against the original query — the
+//! quantified universal, an original assertion's rendering, a genuinely-fresh
+//! Ackermann definition `c = f(t)`, or the abstracted form of an original side fact
+//! (which follows from such a definition plus the original by transitivity). A proof
+//! that assumes a fact *not* a consequence of the query is rejected, so the
+//! certificate is verified end-to-end, not trusted from the emitter that built it.
 //!
 //! This slice is deliberately narrow: a **single** guarded-finite-`Int` universal
 //! with a quantifier-free body whose inner is a linear-integer comparison, plus
@@ -173,8 +181,10 @@ pub fn prove_finite_int_quant_unsat_alethe(
     let tail = crate::prove_lia_unsat_alethe(arena, &tail_inputs)?;
     splice_ground_tail(&mut commands, &tail, &instance_ground, arena);
 
-    // Self-validate with the combined (arithmetic + guarded-inst) checker.
-    finish(arena, &u, commands)
+    // Self-validate with the combined (arithmetic + guarded-inst) checker, in its
+    // **assume-independent** form: every premise is re-verified against `assertions`
+    // exactly as `Evidence::check` will, so emission and consumer re-check agree.
+    finish(arena, &u, commands, assertions)
 }
 
 /// Emits a checkable Alethe refutation for a finite-expansion guarded-`Int`
@@ -305,8 +315,11 @@ pub fn prove_finite_int_quant_unsat_uf_alethe(
     let tail = crate::prove_lia_unsat_alethe(arena, &abstraction)?;
     splice_ground_tail(&mut commands, &tail, &instance_ground, arena);
 
-    // Self-validate with the combined checker (the UF-aware universal form).
-    finish_uf(arena, &u, commands)
+    // Self-validate with the combined checker (the UF-aware universal form), in its
+    // **assume-independent** form: every premise — the universal, the fresh-var
+    // abstraction definitions, and the abstracted side facts — is re-verified against
+    // `assertions`, so emission and consumer re-check agree.
+    finish_uf(arena, &u, commands, assertions)
 }
 
 /// Emits the per-instance command block for instance `i`: the `forall_inst_guarded`
@@ -574,15 +587,18 @@ fn universal_form_uf(arena: &TermArena, u: &GuardedUniversal) -> Option<GuardedU
 }
 
 /// Self-validation gate for the UF emitter: runs the assembled proof through
-/// [`check_alethe_lra_guarded_inst`] with the UF-aware universal form, returning it
-/// only on a clean re-check (`Ok(true)`, deriving the empty clause).
+/// [`check_alethe_lra_guarded_inst_against`] with the UF-aware universal form and the
+/// original `assertions`, returning it only on a clean re-check (`Ok(true)`, deriving
+/// the empty clause AND every premise verified against the query) — so the emitted
+/// proof passes the exact assume-independent check [`crate::Evidence::check`] runs.
 fn finish_uf(
     arena: &TermArena,
     u: &GuardedUniversal,
     commands: Vec<AletheCommand>,
+    assertions: &[TermId],
 ) -> Option<Vec<AletheCommand>> {
     let form = universal_form_uf(arena, u)?;
-    match check_alethe_lra_guarded_inst(&form, &commands) {
+    match check_alethe_lra_guarded_inst_against(&form, &commands, arena, assertions) {
         Ok(true) => Some(commands),
         _ => None,
     }
@@ -626,6 +642,17 @@ pub(crate) fn guarded_universal_form_uf(
 ///
 /// Returns `Ok(true)` only when a fully re-checked proof derives the empty clause.
 ///
+/// # Soundness scope
+///
+/// This entry point validates every *rule application* but **trusts the proof's
+/// `assume` commands as given** — it cannot, without the original query, tell a
+/// genuine premise from a fabricated one. Use it only where the premises are known
+/// good (the emitters' own self-validation, where the proof was just built from the
+/// query). Consumer re-checking of an attached
+/// [`crate::Evidence::UnsatGuardedQuantAletheProof`] goes through
+/// [`check_alethe_lra_guarded_inst_against`], which **also verifies every `assume`
+/// against the original assertions** (the assume-independent check).
+///
 /// # Errors
 ///
 /// Mirrors [`axeyum_cnf::check_alethe_with`]: a missing premise, an unsupported
@@ -642,6 +669,235 @@ pub fn check_alethe_lra_guarded_inst(
         guarded(rule, clause).or_else(|| la_generic_check_pub(rule, clause))
     };
     check_alethe_with(commands, &hook)
+}
+
+/// The **assume-independent** strengthening of [`check_alethe_lra_guarded_inst`]:
+/// re-validates every rule application AND verifies that every `assume` command is a
+/// sound premise *of the original `assertions`*, so the check no longer trusts the
+/// emitter for its premises.
+///
+/// On top of the rule-structure / `forall_inst_guarded` / `la_generic` checks, each
+/// `assume` clause must classify as exactly one of:
+///
+/// 1. **the universal** — the opaque `(forall (x) body)` unit clause matching
+///    `universal` (the quantified premise being instantiated);
+/// 2. **an original assertion** — a unit clause `(cl φ)` whose atom is the Alethe
+///    rendering (the *same* `term_to_alethe_uf` the emitters use) of one of
+///    `assertions`;
+/// 3. **a fresh-var definition** — `(= c (f t…))` where `c` is a `Const` whose name
+///    does **not** occur (as a symbol) anywhere in `assertions`/`universal` (a
+///    genuinely fresh Ackermann constant — the `!`-prefixed `eliminate_functions`
+///    naming), defining it equal to an application. A fresh `c = app` is a
+///    conservative definitional extension: it can never make a satisfiable query
+///    unsat;
+/// 4. **an abstracted original assertion** — `(= c value)` / `(= value c)` where `c`
+///    is a fresh constant introduced by a class-3 definition `(= c app)` in this same
+///    proof, and `(= app value)` (either orientation) is the rendering of an original
+///    assertion. This is the Ackermann-abstracted form of an original ground fact:
+///    it follows from the conservative definition `c = app` and the original
+///    `app = value` by transitivity (the bridge the UF emitter's splice elides), so
+///    it is a sound premise — re-derived here rather than trusted.
+///
+/// Any `assume` that classifies as none of these means the proof rests on a premise
+/// that is **not** a consequence of this query, so it is not a sound refutation of
+/// it: the check returns `Ok(false)`. This closes the emitter-trust gap — the
+/// certificate is now verified end-to-end against the original query, independent of
+/// the emitter that produced it.
+///
+/// # Errors
+///
+/// Mirrors [`axeyum_cnf::check_alethe_with`]: a missing premise, an unsupported
+/// rule, or a non-entailed step.
+pub fn check_alethe_lra_guarded_inst_against(
+    universal: &GuardedUniversalForm,
+    commands: &[AletheCommand],
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<bool, axeyum_cnf::AletheError> {
+    // First: every `assume` must be a sound premise of THIS query (no emitter trust).
+    if !verify_assumes_against(universal, commands, arena, assertions) {
+        return Ok(false);
+    }
+    // Then: every rule application re-checks exactly as before.
+    check_alethe_lra_guarded_inst(universal, commands)
+}
+
+/// Verifies that every `assume` in `commands` is a sound premise of `assertions`
+/// (plus the quantified `universal`), classifying each against the four accepted
+/// shapes documented on [`check_alethe_lra_guarded_inst_against`]. Returns `false`
+/// the moment any `assume` matches none of them.
+///
+/// The original assertions are rendered with the **same** [`term_to_alethe_uf`] the
+/// emitters use, so an "original assertion" premise matches syntactically (compared
+/// by [`AletheTerm::key`]). The freshness test for a definition's introduced constant
+/// rejects any name that occurs as a symbol in the rendered assertions or the
+/// universal — only a genuinely fresh (`!`-prefixed) Ackermann constant qualifies.
+fn verify_assumes_against(
+    universal: &GuardedUniversalForm,
+    commands: &[AletheCommand],
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> bool {
+    use std::collections::BTreeSet;
+
+    // The rendered original assertions, keyed for syntactic comparison.
+    let mut assertion_keys: BTreeSet<String> = BTreeSet::new();
+    // Every symbol/`Const` name occurring in the rendered assertions or the
+    // universal — the "not fresh" set a definition's introduced constant must avoid.
+    let mut query_consts: BTreeSet<String> = BTreeSet::new();
+    collect_consts(&universal.body, &mut query_consts);
+    query_consts.insert(universal.var_name.clone());
+    // An original-assertion rendering that fails (outside the UF/int fragment) cannot
+    // be matched against, so the corresponding `assume` will simply not classify as
+    // class 2 — still sound (it falls through to rejection unless another class fits).
+    let mut rendered_assertions: Vec<AletheTerm> = Vec::with_capacity(assertions.len());
+    for &a in assertions {
+        if let Some(rendered) = term_to_alethe_uf(arena, a) {
+            collect_consts(&rendered, &mut query_consts);
+            assertion_keys.insert(rendered.key());
+            rendered_assertions.push(rendered);
+        }
+    }
+
+    // The fresh constants introduced by accepted class-3 definitions, paired with the
+    // application they were defined equal to — so a class-4 abstracted assertion can
+    // bridge `c = value` through `c = app` and the original `app = value`.
+    let mut definitions: Vec<(String, AletheTerm)> = Vec::new();
+
+    for cmd in commands {
+        let AletheCommand::Assume { clause, .. } = cmd else {
+            continue;
+        };
+        let [l] = clause.as_slice() else {
+            return false; // an assume must be a unit clause (every emitter shape is)
+        };
+        if l.negated {
+            return false; // a negated assume is never one of the accepted premises
+        }
+        if classify_assume(
+            &l.atom,
+            universal,
+            &assertion_keys,
+            &query_consts,
+            &mut definitions,
+        ) {
+            continue;
+        }
+        return false; // unclassifiable premise ⇒ not a sound refutation of THIS query
+    }
+    true
+}
+
+/// Classifies one `assume` atom against the four accepted premise shapes, recording a
+/// fresh-var definition into `definitions` when it is class 3. Returns `true` iff the
+/// atom is an accepted premise.
+fn classify_assume(
+    atom: &AletheTerm,
+    universal: &GuardedUniversalForm,
+    assertion_keys: &std::collections::BTreeSet<String>,
+    query_consts: &std::collections::BTreeSet<String>,
+    definitions: &mut Vec<(String, AletheTerm)>,
+) -> bool {
+    // Class 1: the universal `(forall (x) body)`.
+    if let AletheTerm::App(head, qargs) = atom
+        && head == "forall"
+        && qargs.len() == 2
+        && qargs[0] == AletheTerm::Const(universal.var_name.clone())
+        && qargs[1] == universal.body
+    {
+        return true;
+    }
+    // Class 2: an original assertion's rendering.
+    if assertion_keys.contains(&atom.key()) {
+        return true;
+    }
+    // Equality-shaped premises (classes 3 and 4) inspect `(= a b)`.
+    if let AletheTerm::App(head, eq_args) = atom
+        && head == "="
+        && let [lhs, rhs] = eq_args.as_slice()
+    {
+        // Class 3: a fresh-var definition `(= c (f t…))` (or `(= (f t…) c)`) — `c`
+        // fresh (not in the query) and the other side an application.
+        if let Some((fresh, app)) = fresh_definition(lhs, rhs, query_consts) {
+            definitions.push((fresh, app));
+            return true;
+        }
+        // Class 4: an abstracted original assertion `(= c value)` / `(= value c)` —
+        // `c` introduced by a prior class-3 definition `(= c app)`, and `(= app value)`
+        // (either orientation) is the rendering of an original assertion.
+        if abstracted_assertion(lhs, rhs, assertion_keys, definitions)
+            || abstracted_assertion(rhs, lhs, assertion_keys, definitions)
+        {
+            return true;
+        }
+    }
+    false
+}
+
+/// Recognises a fresh-variable definition `(= lhs rhs)` (in either orientation): one
+/// side is a `Const` whose name is **not** in `query_consts` (a genuinely fresh
+/// Ackermann constant) and the other side is an application. Returns
+/// `(fresh_name, application)`, or `None` if neither orientation fits.
+fn fresh_definition(
+    lhs: &AletheTerm,
+    rhs: &AletheTerm,
+    query_consts: &std::collections::BTreeSet<String>,
+) -> Option<(String, AletheTerm)> {
+    let is_fresh_const = |t: &AletheTerm| -> Option<String> {
+        match t {
+            AletheTerm::Const(name) if !query_consts.contains(name) => Some(name.clone()),
+            _ => None,
+        }
+    };
+    let is_app = |t: &AletheTerm| matches!(t, AletheTerm::App(..) | AletheTerm::Indexed { .. });
+    if let Some(name) = is_fresh_const(lhs)
+        && is_app(rhs)
+    {
+        return Some((name, rhs.clone()));
+    }
+    if let Some(name) = is_fresh_const(rhs)
+        && is_app(lhs)
+    {
+        return Some((name, lhs.clone()));
+    }
+    None
+}
+
+/// Whether `(= fresh value)` is the abstracted form of an original assertion: `fresh`
+/// is a `Const` introduced by a class-3 definition `(= fresh app)` in `definitions`,
+/// and `(= app value)` (either orientation) is the rendering of an original assertion
+/// (its `key` is in `assertion_keys`). When so, the assume follows from the
+/// conservative definition and the original assertion by transitivity.
+fn abstracted_assertion(
+    fresh: &AletheTerm,
+    value: &AletheTerm,
+    assertion_keys: &std::collections::BTreeSet<String>,
+    definitions: &[(String, AletheTerm)],
+) -> bool {
+    let AletheTerm::Const(name) = fresh else {
+        return false;
+    };
+    definitions.iter().any(|(def_name, app)| {
+        def_name == name
+            && (assertion_keys.contains(&eq_alethe(app.clone(), value.clone()).key())
+                || assertion_keys.contains(&eq_alethe(value.clone(), app.clone()).key()))
+    })
+}
+
+/// Collects every `Const` name appearing anywhere in `term` into `out` (the symbols
+/// the query already uses, so a definition's introduced constant can be tested for
+/// genuine freshness against them).
+fn collect_consts(term: &AletheTerm, out: &mut std::collections::BTreeSet<String>) {
+    match term {
+        AletheTerm::Const(name) => {
+            out.insert(name.clone());
+        }
+        AletheTerm::App(_, args) | AletheTerm::Indexed { args, .. } => {
+            for arg in args {
+                collect_consts(arg, out);
+            }
+        }
+    }
 }
 
 /// The closed-over data the [`check_alethe_lra_guarded_inst`] hook re-checks a
@@ -795,16 +1051,20 @@ fn universal_form(arena: &TermArena, u: &GuardedUniversal) -> Option<GuardedUniv
     })
 }
 
-/// Runs the assembled proof through [`check_alethe_lra_guarded_inst`] and returns
-/// it only if it checks (`Ok(true)`, deriving the empty clause); any other outcome
-/// yields `None`. The single self-validation gate.
+/// Runs the assembled proof through [`check_alethe_lra_guarded_inst_against`] with the
+/// original `assertions` and returns it only if it checks (`Ok(true)`, deriving the
+/// empty clause AND every premise verified against the query); any other outcome
+/// yields `None`. The single self-validation gate — it runs the exact
+/// assume-independent check [`crate::Evidence::check`] will, so emission and consumer
+/// re-check agree.
 fn finish(
     arena: &TermArena,
     u: &GuardedUniversal,
     commands: Vec<AletheCommand>,
+    assertions: &[TermId],
 ) -> Option<Vec<AletheCommand>> {
     let form = universal_form(arena, u)?;
-    match check_alethe_lra_guarded_inst(&form, &commands) {
+    match check_alethe_lra_guarded_inst_against(&form, &commands, arena, assertions) {
         Ok(true) => Some(commands),
         _ => None,
     }

@@ -10,8 +10,8 @@
 use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm};
 use axeyum_ir::{Sort, TermArena};
 use axeyum_solver::{
-    Evidence, SolverConfig, check_alethe_lra_guarded_inst, guarded_universal_form_for_test,
-    produce_evidence, prove_finite_int_quant_unsat_alethe,
+    Evidence, SolverConfig, check_alethe_lra_guarded_inst, check_alethe_lra_guarded_inst_against,
+    guarded_universal_form_for_test, produce_evidence, prove_finite_int_quant_unsat_alethe,
 };
 
 /// Replaces every in-range integer numeral (`0..=2`) in `t` with an out-of-range
@@ -218,6 +218,102 @@ fn tamper_rejects_guarded_quant_certificate() {
         check_alethe_lra_guarded_inst(&universal, &tampered2),
         Ok(true),
         "a non-instance (structural-mismatch) proof must be rejected"
+    );
+}
+
+#[test]
+fn assume_independent_check_rejects_fabricated_premise() {
+    // SOUNDNESS-NEGATIVE: build a genuine proof, then INJECT a bogus `assume`
+    // (`(= a 5)`) that is NOT among the original assertions. The old, emitter-trusting
+    // checker (`check_alethe_lra_guarded_inst`) still accepts the proof — an unused
+    // extra hypothesis does not break the empty-clause derivation — but the
+    // assume-independent checker (`check_alethe_lra_guarded_inst_against`) must REJECT
+    // it: the fabricated premise is not a consequence of THIS query, so the proof is
+    // not a sound refutation of it. This is exactly the emitter-trust gap being closed.
+    let mut arena = TermArena::new();
+    let forall = forall_x_ge_5(&mut arena);
+
+    let proof = prove_finite_int_quant_unsat_alethe(&mut arena, &[forall])
+        .expect("emits a guarded-quantifier proof");
+    let universal =
+        guarded_universal_form_for_test(&arena, &[forall]).expect("detects the universal form");
+
+    // Inject an unrelated `(= a 5)` assume not in the query.
+    let mut tampered = proof.clone();
+    tampered.push(AletheCommand::Assume {
+        id: "bogus".to_owned(),
+        clause: vec![AletheLit {
+            atom: AletheTerm::App(
+                "=".to_owned(),
+                vec![
+                    AletheTerm::Const("a".to_owned()),
+                    AletheTerm::Const("5".to_owned()),
+                ],
+            ),
+            negated: false,
+        }],
+    });
+
+    // The OLD checker trusts the injected premise and still accepts (the gap).
+    assert_eq!(
+        check_alethe_lra_guarded_inst(&universal, &tampered),
+        Ok(true),
+        "the emitter-trusting checker accepts the fabricated premise (the gap)"
+    );
+    // The STRENGTHENED checker verifies every assume against the query and rejects.
+    assert_ne!(
+        check_alethe_lra_guarded_inst_against(&universal, &tampered, &arena, &[forall]),
+        Ok(true),
+        "the assume-independent checker must reject a fabricated premise"
+    );
+
+    // And via the consumer-facing `Evidence::check` (which now uses the strengthened
+    // route): the tampered proof packaged as evidence must not re-check `true`.
+    let evidence = Evidence::UnsatGuardedQuantAletheProof {
+        proof: tampered,
+        universal,
+    };
+    assert_ne!(
+        evidence.check(&arena, &[forall]),
+        Ok(true),
+        "Evidence::check must reject the fabricated-premise proof"
+    );
+}
+
+#[test]
+fn assume_independent_check_rejects_non_fresh_definition() {
+    // SOUNDNESS-NEGATIVE (definition class): inject a definition-shaped `assume`
+    // `(= x (g x))` keyed on a NON-fresh constant — `x` occurs in the query, so this
+    // is a genuine constraint, not a conservative fresh-var extension. The
+    // assume-independent checker must reject it (it is neither an original assertion
+    // nor a fresh-var definition).
+    let mut arena = TermArena::new();
+    let forall = forall_x_ge_5(&mut arena);
+
+    let proof = prove_finite_int_quant_unsat_alethe(&mut arena, &[forall])
+        .expect("emits a guarded-quantifier proof");
+    let universal =
+        guarded_universal_form_for_test(&arena, &[forall]).expect("detects the universal form");
+
+    let mut tampered = proof;
+    tampered.push(AletheCommand::Assume {
+        id: "bad_def".to_owned(),
+        clause: vec![AletheLit {
+            // `x` is the universal's binder name (in the query), so NOT fresh.
+            atom: AletheTerm::App(
+                "=".to_owned(),
+                vec![
+                    AletheTerm::Const("x".to_owned()),
+                    AletheTerm::App("g".to_owned(), vec![AletheTerm::Const("x".to_owned())]),
+                ],
+            ),
+            negated: false,
+        }],
+    });
+    assert_ne!(
+        check_alethe_lra_guarded_inst_against(&universal, &tampered, &arena, &[forall]),
+        Ok(true),
+        "a definition keyed on a non-fresh (query) constant must be rejected"
     );
 }
 

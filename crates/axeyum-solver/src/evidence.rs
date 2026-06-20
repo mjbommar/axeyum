@@ -46,7 +46,7 @@ use crate::lra::{FarkasCertificate, lra_farkas_certificate};
 use crate::model::Model;
 use crate::proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};
 use crate::quant_finite_cert::{
-    GuardedUniversalForm, check_alethe_lra_guarded_inst, guarded_universal_form,
+    GuardedUniversalForm, check_alethe_lra_guarded_inst_against, guarded_universal_form,
     guarded_universal_form_uf, prove_finite_int_quant_unsat_alethe,
     prove_finite_int_quant_unsat_uf_alethe,
 };
@@ -216,13 +216,17 @@ pub enum Evidence {
     /// an Alethe refutation whose instantiation steps are the `forall_inst_guarded`
     /// rule (the finite-`Int` instantiation lemma `∀x.(g⇒i) ∧ g[v] ⊢ i[v]` at each
     /// in-range `v`) and whose ground tail is a `lia_generic` refutation. `check`
-    /// re-runs [`crate::check_alethe_lra_guarded_inst`] with the carried
-    /// [`GuardedUniversalForm`], which re-derives **both** halves of each
-    /// instantiation step — the structural substitution and the concrete guard
-    /// truth — so the quantifier-instantiation reduction is *certified, not
-    /// trusted*. This is the first quantified-`unsat` evidence variant: it upgrades
-    /// the otherwise-bare `Evidence::Unsat(None)` for the guarded-finite-`Int`
-    /// fragment to an independently re-checkable certificate.
+    /// re-runs [`crate::check_alethe_lra_guarded_inst_against`] with the carried
+    /// [`GuardedUniversalForm`] and the original assertions, which re-derives **both**
+    /// halves of each instantiation step — the structural substitution and the
+    /// concrete guard truth — so the quantifier-instantiation reduction is *certified,
+    /// not trusted*. It additionally verifies that **every `assume` is a sound premise
+    /// of the original query** (the universal, an original assertion, a genuinely-fresh
+    /// Ackermann definition, or the abstracted form of an original side fact), so the
+    /// certificate is **assume-independent**: no premise is trusted from the emitter.
+    /// This is the first quantified-`unsat` evidence variant: it upgrades the
+    /// otherwise-bare `Evidence::Unsat(None)` for the guarded-finite-`Int` fragment to
+    /// an independently re-checkable certificate.
     UnsatGuardedQuantAletheProof {
         /// The `forall_inst_guarded` + `lia_generic` refutation closing to `(cl)`.
         proof: Vec<AletheCommand>,
@@ -328,14 +332,20 @@ impl Evidence {
             // instantiation steps need the combined checker (the arithmetic-aware
             // `lia_generic` kernel PLUS the `forall_inst_guarded` hook closing over
             // the carried universal form, which re-derives each step's substitution
-            // and concrete guard truth). A failed re-derivation or tampered proof is
-            // a clean `Ok(false)`/`Err`, never a silently-accepted bad cert.
+            // and concrete guard truth). The **assume-independent** entry point ALSO
+            // verifies every `assume` against the original `assertions` (the universal,
+            // each fresh-var abstraction definition, and each original/abstracted side
+            // fact) — so the premises are no longer trusted from the emitter; a
+            // fabricated premise (or tampered proof) is a clean `Ok(false)`/`Err`,
+            // never a silently-accepted bad cert.
             Evidence::UnsatGuardedQuantAletheProof { proof, universal } => {
-                check_alethe_lra_guarded_inst(universal, proof).map_err(|e| {
-                    SolverError::Backend(format!(
-                        "unsat guarded-quantifier Alethe evidence re-check failed: {e}"
-                    ))
-                })
+                check_alethe_lra_guarded_inst_against(universal, proof, arena, assertions).map_err(
+                    |e| {
+                        SolverError::Backend(format!(
+                            "unsat guarded-quantifier Alethe evidence re-check failed: {e}"
+                        ))
+                    },
+                )
             }
             Evidence::UnsatFarkas(certificate) => Ok(certificate.verify()),
             Evidence::UnsatLraDpll(refutation) => refutation.verify(arena),
@@ -937,7 +947,10 @@ fn guarded_quant_alethe_certificate(
 ) -> Option<(Vec<AletheCommand>, GuardedUniversalForm)> {
     let proof = prove_finite_int_quant_unsat_alethe(arena, assertions)?;
     let universal = guarded_universal_form(arena, assertions)?;
-    if matches!(check_alethe_lra_guarded_inst(&universal, &proof), Ok(true)) {
+    if matches!(
+        check_alethe_lra_guarded_inst_against(&universal, &proof, arena, assertions),
+        Ok(true)
+    ) {
         Some((proof, universal))
     } else {
         None
@@ -962,7 +975,10 @@ fn guarded_quant_uf_alethe_certificate(
 ) -> Option<(Vec<AletheCommand>, GuardedUniversalForm)> {
     let proof = prove_finite_int_quant_unsat_uf_alethe(arena, assertions)?;
     let universal = guarded_universal_form_uf(arena, assertions)?;
-    if matches!(check_alethe_lra_guarded_inst(&universal, &proof), Ok(true)) {
+    if matches!(
+        check_alethe_lra_guarded_inst_against(&universal, &proof, arena, assertions),
+        Ok(true)
+    ) {
         Some((proof, universal))
     } else {
         None
