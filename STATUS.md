@@ -569,6 +569,22 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-20** — **P2.5: single-variable integer polynomial EQUATIONS `p(x)=0` (any degree)
+  decided via the rational root theorem.** Generalizes the quadratic path (deg≤2 incl.
+  inequalities unchanged) to arbitrary-degree `p(x)=0`/`≠0` in `nia_square.rs`: `Poly` collects a
+  general single-var integer polynomial (checked arithmetic; `MAX_DEGREE=64`, `|coeff|≥2^40` or
+  any overflow → decline). For degree≥3 equality: if `a₀=0`, x=0 is a root (Sat); else every
+  integer root divides `a₀` (rational root theorem, q=1 for an integer unknown) — enumerate
+  divisors of `|a₀|` (both signs, magnitude-guarded), evaluate `p` by overflow-safe Horner, return
+  Sat (first root, replay-checked) or **Unsat only when EVERY divisor is checked and none is a
+  root** (exact). `≠0` ⇒ Sat (≤n roots; bounded non-root scan). Degree≥3 inequalities DECLINE (no
+  exact bounded method). Decides `x³−1=0`→Sat, `x³−2=0`→Unsat, `x³−6x²+11x−6=0`→Sat (x∈{1,2,3}),
+  `x⁴−5x²+4=0`→Sat, `x³+x+1=0`→Unsat, `x⁵−x=0`→Sat (x=0). Soundness-negatives decline: `x³+y`,
+  non-int coeff, `x³<0`, `|a₀|≥2^40`, 2nd assertion, Real. The UNSAT direction is exact only after
+  the exhaustive no-overflow divisor check; any slip → decline (+ Sat replay-check backstop). New
+  `tests/nia_polynomial.rs` (15); deg≤2 (`nia_quadratic` 29, `nia_square` 27) unchanged. Sub-agent
+  + soundness review (rational-root logic + all four guards verified by hand).
+
 - **2026-06-20** — **P2.5: single-variable integer QUADRATIC `a·x²+b·x+c ⋈ 0` decided exactly
   (generalizes `x*x ⋈ c`).** `nia_square.rs` matcher generalized to a degree-2 single-variable
   integer polynomial (`Poly{c0,c1,c2}` via a checked-arithmetic recursive collector; degree>2 /
