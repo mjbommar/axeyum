@@ -116,7 +116,15 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     more *EncodingBudget* cases are gettable by deeper reduction — the proven mechanism). Pick the
     next concrete task here or from `docs/plan/track-{1,2,3}` and ship it:**
     - **PERF (Track 1, #1): deeper word-level reduction → pull EncodingBudget cases under the encode
-      ceiling.** In-`solver` levers: the `preprocess.rs` pipeline (which reductions, order, fixpoint).
+      ceiling. MEASURED (2026-06-19, fixpoint vs single-pass, public p4dfa 113 @ 3s):** the
+      `preprocess.rs` FIXPOINT change is sound at scale (**DISAGREE=0**) but decides the SAME 4
+      instances as single-pass with identical par2 (5.836 s) — these instances converge in 1–2
+      reduction passes, so iterating to fixpoint ≈ single-pass. **Conclusion: the solver-side
+      preprocess orchestration is maxed; the EncodingBudget cases need STRONGER reduction
+      *algorithms* (`solve_eqs`/`elim_unconstrained`/canonicalize depth + the `ite`/structural lever
+      PLAN names — `axeyum-rewrite` lane, coordinate) or the SAT-core modernization for the
+      ~9 search-bound cases, not more iterating.** The fixpoint stays (correct + the right shape).
+      In-`solver` levers: the `preprocess.rs` pipeline (now fixpoint — done).
       **MEASURED FINDING (2026-06-19):** the cheap AIG tier in `axeyum-aig` is already saturated
       (constants, structural-hash w/ canonical order, OR-absorption/consensus, XOR/MUX); adding
       AND-substructure node rewrites (`a∧(a∧b)=a∧b`, `¬a∧(a∧b)=0`) shrank node count but **regressed**
