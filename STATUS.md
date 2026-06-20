@@ -116,10 +116,17 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     more *EncodingBudget* cases are gettable by deeper reduction — the proven mechanism). Pick the
     next concrete task here or from `docs/plan/track-{1,2,3}` and ship it:**
     - **PERF (Track 1, #1): deeper word-level reduction → pull EncodingBudget cases under the encode
-      ceiling.** In-`solver` levers: the `preprocess.rs` pipeline (which reductions, order, fixpoint),
-      `axeyum-bv` lowering (smaller AIG), `axeyum-cnf` Tseitin (smaller CNF). Measure with
-      `just bench-public-qfbv-sat-bv-preprocess-*`. (The `axeyum-rewrite` reduction *algorithms* are
-      the concurrent agent's lane — coordinate or work the solver-side pipeline + bv/cnf encoders.)
+      ceiling.** In-`solver` levers: the `preprocess.rs` pipeline (which reductions, order, fixpoint).
+      **MEASURED FINDING (2026-06-19):** the cheap AIG tier in `axeyum-aig` is already saturated
+      (constants, structural-hash w/ canonical order, OR-absorption/consensus, XOR/MUX); adding
+      AND-substructure node rewrites (`a∧(a∧b)=a∧b`, `¬a∧(a∧b)=0`) shrank node count but **regressed**
+      `decides_symbolic_float128_fma` (10.5s→timeout) — local AIG node-count reduction is NOT monotone
+      in CDCL solve time (it reshapes the Tseitin CNF and defeats variable-ordering/clause-learning).
+      So **node-count is the wrong proxy**; the lever is *word-level reduction that removes variables/
+      structure* (`solve_eqs`/`propagate_values`/`elim_unconstrained` to fixpoint in `preprocess.rs`),
+      validated by **measured DISAGREE=0 + per-benchmark wall-clock**, never node count alone. The
+      `axeyum-rewrite` reduction *algorithms* are the concurrent agent's lane — own the solver-side
+      `preprocess.rs` orchestration (fixpoint/order) + measure on the scenarios/micro corpus (no z3).
     - **QUANT: integer-Omega + open-gap + general-boolean QE + MBQI** (in-`solver`, infra in place:
       FM `Verdict` enum + `relax_int`).
     - **Then the items below (drive the in-`solver` part; for coordination-gated ones, build the
