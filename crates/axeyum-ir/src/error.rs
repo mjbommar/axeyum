@@ -76,6 +76,18 @@ pub enum IrError {
     /// A datatype selector was applied to a value built by a different
     /// constructor (ADR-0022); the selection is undefined.
     DatatypeConstructorMismatch,
+    /// An arithmetic evaluation result fell outside the `i128` reference range
+    /// (e.g. `IntMul` overflow, `abs(i128::MIN)`, a rational whose normalized
+    /// numerator/denominator overflows, or `bv2nat` of a value `> i128::MAX`).
+    ///
+    /// The evaluator is the soundness trust anchor (sat models are accepted only
+    /// after replaying against it), so it must never panic or return a wrapped
+    /// (wrong) value: an out-of-range result is reported as this error and a
+    /// dependent sat model is conservatively *not* accepted (graceful unknown).
+    ArithmeticOverflow {
+        /// The operator whose evaluation overflowed (a short static label).
+        op: &'static str,
+    },
     /// A construction is well-typed but not supported by the current encoding
     /// (e.g. a regex Boolean operator nested where only an automaton-expressible
     /// sub-expression is allowed). The string explains the limitation.
@@ -128,6 +140,12 @@ impl core::fmt::Display for IrError {
             }
             IrError::DatatypeConstructorMismatch => {
                 write!(f, "datatype selector applied to a different constructor")
+            }
+            IrError::ArithmeticOverflow { op } => {
+                write!(
+                    f,
+                    "arithmetic overflow evaluating `{op}` (outside i128 range)"
+                )
             }
             IrError::Unsupported(why) => write!(f, "unsupported construction: {why}"),
         }

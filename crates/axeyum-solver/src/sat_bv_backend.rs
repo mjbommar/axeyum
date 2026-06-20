@@ -28,7 +28,7 @@ use axeyum_cnf::{
 use axeyum_ir::{
     Assignment, IrError, Sort, TermArena, TermId, TermStats, Value, eval, well_founded_default,
 };
-use axeyum_query::{Query, QueryPlan};
+use axeyum_query::{Query, QueryPlan, QueryReplayFailure};
 
 use crate::backend::{
     Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind,
@@ -624,7 +624,14 @@ fn handle_sat_result(
                 .assignment_from_aig_values(&aig_values)
                 .map_err(map_lower_error)?;
             let model = complete_model(arena, &assignment);
-            replay_model(arena, assertions, replay_plan, &model)?;
+            // Replay is the soundness gate: a sat model is accepted only if it
+            // satisfies the original query. If replay can't *evaluate* (e.g. an
+            // arithmetic overflow in the trust-anchor evaluator), we cannot
+            // confirm the model — the sound answer is a graceful `Unknown`, never
+            // an accepted (unverified) sat and never a crash.
+            if let Some(reason) = replay_model(arena, assertions, replay_plan, &model)? {
+                return Ok(CheckResult::Unknown(reason));
+            }
             stats.model_lift = lift_start.elapsed();
             Ok(CheckResult::Sat(model))
         }
@@ -643,17 +650,36 @@ fn handle_sat_result(
     }
 }
 
+/// Replays the candidate `model` against the original query.
+///
+/// Returns:
+/// - `Ok(None)` when the model is verified (every original term is `true`).
+/// - `Ok(Some(reason))` when the model cannot be *evaluated* (the trust-anchor
+///   evaluator returned an [`IrError`], e.g. an arithmetic overflow): the model
+///   is conservatively *not* accepted and the caller degrades to a graceful
+///   `Unknown` — never a crash, never an unverified sat.
+/// - `Err(..)` only for a genuine soundness violation: an original Boolean term
+///   evaluated to `false` (the model is wrong) or to a non-Boolean value (an
+///   internal invariant breach). These must surface, not be swallowed.
 fn replay_model(
     arena: &TermArena,
     assertions: &[TermId],
     replay_plan: Option<&QueryPlan>,
     model: &Model,
-) -> Result<(), SolverError> {
+) -> Result<Option<UnknownReason>, SolverError> {
     let assignment = model.to_assignment();
     if let Some(plan) = replay_plan {
-        return plan
-            .replay_original(arena, &assignment)
-            .map_err(|error| SolverError::Backend(format!("sat model replay failed: {error}")));
+        return match plan.replay_original(arena, &assignment) {
+            Ok(()) => Ok(None),
+            // Could not evaluate the original term (e.g. overflow): graceful Unknown.
+            Err(QueryReplayFailure::Evaluation { term, error, .. }) => {
+                Ok(Some(eval_unverifiable_unknown(term, &error)))
+            }
+            // A genuine wrong/ill-typed model: must surface as an error.
+            Err(failure) => Err(SolverError::Backend(format!(
+                "sat model replay failed: {failure}"
+            ))),
+        };
     }
     for &term in assertions {
         match eval(arena, term, &assignment) {
@@ -670,15 +696,27 @@ fn replay_model(
                     term.index()
                 )));
             }
+            // Could not evaluate (e.g. arithmetic overflow in the evaluator): the
+            // model is unverifiable, so degrade to a graceful `Unknown` rather
+            // than accepting it or crashing.
             Err(error) => {
-                return Err(SolverError::Backend(format!(
-                    "sat model replay failed: assertion #{} failed evaluation: {error}",
-                    term.index()
-                )));
+                return Ok(Some(eval_unverifiable_unknown(term, &error)));
             }
         }
     }
-    Ok(())
+    Ok(None)
+}
+
+/// The `Unknown` reason for a sat model whose replay could not be evaluated.
+fn eval_unverifiable_unknown(term: TermId, error: &IrError) -> UnknownReason {
+    UnknownReason {
+        kind: UnknownKind::Other,
+        detail: format!(
+            "sat model could not be verified: assertion #{} failed evaluation: {error} \
+             (model conservatively not accepted)",
+            term.index()
+        ),
+    }
 }
 
 /// Pre-lowering oversized-encoding refusal: a small DAG can bit-blast to a
@@ -1060,5 +1098,47 @@ mod tests {
         assert!(!out.unsat_from_xor);
         assert_eq!(stat(&stats, "xor_cdcl_fallback_skipped_size"), Some(1.0));
         assert!(stat(&stats, "xor_cdcl_fallback_fired").is_none());
+    }
+
+    /// A sat model whose replay cannot be *evaluated* (an arithmetic overflow in
+    /// the trust-anchor evaluator) must degrade to a graceful `Unknown` reason —
+    /// never a panic, never an accepted (unverified) sat, never a hard error. The
+    /// sound stance: if we can't confirm the model, we don't accept it.
+    #[test]
+    fn replay_eval_overflow_yields_graceful_unknown_not_panic_or_accept() {
+        let mut arena = TermArena::new();
+        // x : Int, model-bound to i128::MAX. The assertion `(x * 2) >= 0` is
+        // Bool-sorted but its evaluation overflows (`i128::MAX * 2`), so the
+        // model is unverifiable.
+        let x = arena.int_var("x").expect("declare x");
+        let two = arena.int_const(2);
+        let prod = arena.int_mul(x, two).expect("x*2");
+        let zero = arena.int_const(0);
+        let assertion = arena.int_ge(prod, zero).expect("x*2 >= 0");
+
+        let mut model = Model::new();
+        let x_sym = match arena.node(x) {
+            axeyum_ir::TermNode::Symbol(s) => *s,
+            _ => unreachable!("int_var builds a Symbol node"),
+        };
+        model.set(x_sym, Value::Int(i128::MAX));
+
+        // Sanity: eval of the assertion really does overflow.
+        assert_eq!(
+            eval(&arena, assertion, &model.to_assignment()),
+            Err(IrError::ArithmeticOverflow { op: "int_mul" })
+        );
+
+        // The replay boundary must map that to `Ok(Some(Unknown))`: not an Err
+        // (which would surface as a hard error), not Ok(None) (which would accept
+        // an unverified sat).
+        let reason = replay_model(&arena, &[assertion], None, &model)
+            .expect("replay must not return a hard error on an overflow");
+        let reason = reason.expect("overflow must yield an Unknown reason, not an accepted model");
+        assert!(
+            reason.detail.contains("could not be verified"),
+            "unexpected reason: {}",
+            reason.detail
+        );
     }
 }

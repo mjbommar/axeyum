@@ -105,9 +105,11 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "QF_BV",
-        feature: "arbitrary width up to 2^16 (wide bit-vectors)",
+        feature: "arbitrary width up to 2^16 (wide bit-vectors); bv2nat exact \
+                  in the i128 reference range, wider → graceful unknown",
         assurance: Assurance::Validated,
-        evidence: "WideUint vs u128/i128; model replay",
+        evidence: "WideUint vs u128/i128; model replay (an Int-crossing bv2nat \
+                   beyond i128 is reported, not wrapped)",
         reference: "ADR-0006",
     },
     Capability {

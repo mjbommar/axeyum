@@ -271,7 +271,7 @@ pub fn eval_with_memo(
                                 } => Value::Bool(built == constructor),
                                 _ => unreachable!("builder guaranteed datatype operand"),
                             },
-                            _ => apply(*op, &vals),
+                            _ => apply(*op, &vals)?,
                         };
                         memo.insert(t, value);
                     } else {
@@ -351,23 +351,29 @@ fn eval_quantifier(
 /// Applies an operator to already-evaluated operand values.
 ///
 /// Operand sorts are guaranteed by the typed builders, so mismatches here
-/// are internal invariant violations and panic.
+/// are internal invariant violations and panic. By contrast, arithmetic
+/// *overflow* (an `i128`-range result for Int/Real/bv2nat) is user-triggerable,
+/// not an invariant violation, so it is reported as
+/// [`IrError::ArithmeticOverflow`] (never a panic, never a wrapped wrong value):
+/// the evaluator is the soundness trust anchor.
 // A flat dispatch over the whole operator enum reads better than an
 // artificial split; length is inherent to the operator count.
 #[allow(clippy::too_many_lines)]
-fn apply(op: Op, vals: &[Value]) -> Value {
+fn apply(op: Op, vals: &[Value]) -> Result<Value, IrError> {
     // Bit-vectors wider than 128 bits take a separate path; the `u128` fast path
     // below is unchanged for the common case. This triggers when an operand is
     // already wide, or when a width-*growing* op produces a `> 128`-bit result
     // from `≤ 128`-bit operands (zero/sign-extend, concat, int2bv).
     if vals.iter().any(|v| matches!(v, Value::WideBv(_))) || result_exceeds_128(op, vals) {
-        return apply_wide(op, vals);
+        // The wide path is all mod-2^width bit-vector arithmetic (no Int/Real
+        // crossing), so it is infallible: no overflow can occur there.
+        return Ok(apply_wide(op, vals));
     }
     let b = |v: &Value| v.as_bool().expect("builder guaranteed Bool operand");
     let bv = |v: &Value| v.as_bv().expect("builder guaranteed BitVec operand");
     let int = |v: &Value| v.as_int().expect("builder guaranteed Int operand");
     let real = |v: &Value| v.as_real().expect("builder guaranteed Real operand");
-    match op {
+    Ok(match op {
         // --- Boolean ------------------------------------------------------
         Op::BoolNot => Value::Bool(!b(&vals[0])),
         Op::BoolAnd => Value::Bool(b(&vals[0]) && b(&vals[1])),
@@ -560,8 +566,14 @@ fn apply(op: Op, vals: &[Value]) -> Value {
         Op::Bv2Nat => {
             let (_, value) = bv(&vals[0]);
             // Unsigned BV value as a non-negative integer (within the i128
-            // reference range; widths up to 127 are exact).
-            #[allow(clippy::cast_possible_wrap)]
+            // reference range; widths up to 127 are exact). A `u128` with the
+            // high bit set is `> i128::MAX` and has no non-negative `i128`
+            // representation: report overflow rather than wrapping to a (wrong)
+            // negative integer — bv2nat is always non-negative.
+            if value > i128::MAX as u128 {
+                return Err(IrError::ArithmeticOverflow { op: "bv2nat" });
+            }
+            #[allow(clippy::cast_possible_wrap)] // guarded: value <= i128::MAX.
             Value::Int(value as i128)
         }
         Op::Int2Bv { width } => {
@@ -586,11 +598,15 @@ fn apply(op: Op, vals: &[Value]) -> Value {
         // intermediate values are a usage error (the bounded-LIA contract).
         Op::IntNeg => {
             let x = int(&vals[0]);
-            Value::Int(x.checked_neg().expect("integer negation within i128 range"))
+            // abs(i128::MIN) has no i128 representation: overflow, not a panic.
+            Value::Int(
+                x.checked_neg()
+                    .ok_or(IrError::ArithmeticOverflow { op: "int_neg" })?,
+            )
         }
-        Op::IntAdd => int_bin(vals, "addition", i128::checked_add),
-        Op::IntSub => int_bin(vals, "subtraction", i128::checked_sub),
-        Op::IntMul => int_bin(vals, "multiplication", i128::checked_mul),
+        Op::IntAdd => int_bin(vals, "int_add", i128::checked_add)?,
+        Op::IntSub => int_bin(vals, "int_sub", i128::checked_sub)?,
+        Op::IntMul => int_bin(vals, "int_mul", i128::checked_mul)?,
         // Euclidean div/mod (SMT-LIB): `mod` always in `0..|b|`; by convention
         // `div a 0 = 0` and `mod a 0 = a`. `div_euclid`/`rem_euclid` implement
         // exactly the Euclidean semantics for `b ≠ 0`.
@@ -600,8 +616,9 @@ fn apply(op: Op, vals: &[Value]) -> Value {
             let q = if y == 0 {
                 0
             } else {
+                // i128::MIN / -1 overflows: report it rather than panic.
                 x.checked_div_euclid(y)
-                    .expect("integer division within i128 range")
+                    .ok_or(IrError::ArithmeticOverflow { op: "int_div" })?
             };
             Value::Int(q)
         }
@@ -613,31 +630,56 @@ fn apply(op: Op, vals: &[Value]) -> Value {
         }
         Op::IntAbs => {
             let x = vals[0].as_int().expect("builder guaranteed Int operand");
-            Value::Int(x.checked_abs().expect("integer abs within i128 range"))
+            // abs(i128::MIN) has no i128 representation: overflow, not a panic.
+            Value::Int(
+                x.checked_abs()
+                    .ok_or(IrError::ArithmeticOverflow { op: "int_abs" })?,
+            )
         }
         Op::IntLt => int_cmp(vals, |x, y| x < y),
         Op::IntLe => int_cmp(vals, |x, y| x <= y),
         Op::IntGt => int_cmp(vals, |x, y| x > y),
         Op::IntGe => int_cmp(vals, |x, y| x >= y),
         // --- linear real arithmetic (ADR-0015) -----------------------------------
-        // Exact rational arithmetic; overflow within `Rational` is a usage error.
-        Op::RealNeg => Value::Real(-real(&vals[0])),
-        Op::RealAdd => Value::Real(real(&vals[0]) + real(&vals[1])),
-        Op::RealSub => Value::Real(real(&vals[0]) - real(&vals[1])),
-        Op::RealMul => Value::Real(real(&vals[0]) * real(&vals[1])),
+        // Exact rational arithmetic. An `i128`-range overflow inside `Rational`
+        // (a huge numerator/denominator, or `abs(i128::MIN)`) is reported as
+        // `ArithmeticOverflow` rather than panicking — the evaluator never crashes.
+        Op::RealNeg => Value::Real(
+            real(&vals[0])
+                .checked_neg()
+                .ok_or(IrError::ArithmeticOverflow { op: "real_neg" })?,
+        ),
+        Op::RealAdd => Value::Real(
+            real(&vals[0])
+                .checked_add(real(&vals[1]))
+                .ok_or(IrError::ArithmeticOverflow { op: "real_add" })?,
+        ),
+        Op::RealSub => Value::Real(
+            real(&vals[0])
+                .checked_sub(real(&vals[1]))
+                .ok_or(IrError::ArithmeticOverflow { op: "real_sub" })?,
+        ),
+        Op::RealMul => Value::Real(
+            real(&vals[0])
+                .checked_mul(real(&vals[1]))
+                .ok_or(IrError::ArithmeticOverflow { op: "real_mul" })?,
+        ),
         Op::RealDiv => {
             let (a, b) = (real(&vals[0]), real(&vals[1]));
             // Convention: x / 0 = 0 (SMT-LIB leaves it unspecified).
             if b == crate::rational::Rational::integer(0) {
                 Value::Real(crate::rational::Rational::integer(0))
             } else {
-                Value::Real(a / b)
+                Value::Real(
+                    a.checked_div(b)
+                        .ok_or(IrError::ArithmeticOverflow { op: "real_div" })?,
+                )
             }
         }
-        Op::RealLt => Value::Bool(real(&vals[0]) < real(&vals[1])),
-        Op::RealLe => Value::Bool(real(&vals[0]) <= real(&vals[1])),
-        Op::RealGt => Value::Bool(real(&vals[0]) > real(&vals[1])),
-        Op::RealGe => Value::Bool(real(&vals[0]) >= real(&vals[1])),
+        Op::RealLt => Value::Bool(real_cmp(&vals[0], &vals[1])?.is_lt()),
+        Op::RealLe => Value::Bool(real_cmp(&vals[0], &vals[1])?.is_le()),
+        Op::RealGt => Value::Bool(real_cmp(&vals[0], &vals[1])?.is_gt()),
+        Op::RealGe => Value::Bool(real_cmp(&vals[0], &vals[1])?.is_ge()),
         // Handled in `eval` (they bind a variable and enumerate its domain).
         Op::Forall(_) | Op::Exists(_) => {
             unreachable!("quantifiers are evaluated by enumeration in `eval`")
@@ -646,7 +688,16 @@ fn apply(op: Op, vals: &[Value]) -> Value {
         Op::DtConstruct { .. } | Op::DtSelect { .. } | Op::DtTest(_) => {
             unreachable!("datatype ops are evaluated in `eval`")
         }
-    }
+    })
+}
+
+/// Compares two `Real` operands, reporting `ArithmeticOverflow` if the
+/// cross-multiplication comparison overflows `i128` (instead of panicking).
+fn real_cmp(a: &Value, b: &Value) -> Result<core::cmp::Ordering, IrError> {
+    let x = a.as_real().expect("builder guaranteed Real operand");
+    let y = b.as_real().expect("builder guaranteed Real operand");
+    x.checked_cmp(&y)
+        .ok_or(IrError::ArithmeticOverflow { op: "real_cmp" })
 }
 
 /// The bit-vector width an operand value carries (`Bv`/`WideBv`), else `None`.
@@ -848,10 +899,18 @@ fn cmp_signed(vals: &[Value], f: impl Fn(i128, i128) -> bool) -> Value {
     Value::Bool(f(to_signed(w, x), to_signed(w, y)))
 }
 
-fn int_bin(vals: &[Value], what: &str, f: impl Fn(i128, i128) -> Option<i128>) -> Value {
+fn int_bin(
+    vals: &[Value],
+    what: &'static str,
+    f: impl Fn(i128, i128) -> Option<i128>,
+) -> Result<Value, IrError> {
     let x = vals[0].as_int().expect("builder guaranteed Int operand");
     let y = vals[1].as_int().expect("builder guaranteed Int operand");
-    Value::Int(f(x, y).unwrap_or_else(|| panic!("integer {what} within i128 range")))
+    // An out-of-range result (e.g. `i128::MAX + 1`) is reported as overflow
+    // rather than panicking — the evaluator is the soundness trust anchor.
+    f(x, y)
+        .map(Value::Int)
+        .ok_or(IrError::ArithmeticOverflow { op: what })
 }
 
 fn int_cmp(vals: &[Value], f: impl Fn(i128, i128) -> bool) -> Value {
@@ -870,6 +929,175 @@ fn rotate(val: &Value, by: u32, left: bool) -> Value {
         ((v << k) | (v >> (w - k))) & mask(w)
     };
     Value::Bv { width: w, value }
+}
+
+#[cfg(test)]
+mod overflow_tests {
+    //! The evaluator is the soundness trust anchor: an out-of-range arithmetic
+    //! result must become a graceful `Err(ArithmeticOverflow)` — never a panic,
+    //! never a wrapped (wrong) value. Correct in-range results are unchanged.
+
+    use super::{Assignment, eval};
+    use crate::error::IrError;
+    use crate::rational::Rational;
+    use crate::{Sort, TermArena, Value};
+
+    fn overflow(op: &'static str) -> IrError {
+        IrError::ArithmeticOverflow { op }
+    }
+
+    #[test]
+    fn bv2nat_128bit_high_bit_set_is_graceful_overflow() {
+        // value = 2^127: a 128-bit BV with the high bit set. As a non-negative
+        // integer this is > i128::MAX, so there is no i128 representation —
+        // overflow, NOT a wrapped negative integer, NOT a panic.
+        let mut arena = TermArena::new();
+        let v = arena.bv_const(128, 1u128 << 127).unwrap();
+        let t = arena.bv2nat(v).unwrap();
+        assert_eq!(eval(&arena, t, &Assignment::new()), Err(overflow("bv2nat")));
+    }
+
+    #[test]
+    fn bv2nat_127bit_max_is_correct_positive() {
+        // A 127-bit all-ones value = 2^127 - 1 = i128::MAX: still exactly
+        // representable, so bv2nat must succeed with the correct positive Int.
+        let mut arena = TermArena::new();
+        let v = arena.bv_const(127, (1u128 << 127) - 1).unwrap();
+        let t = arena.bv2nat(v).unwrap();
+        assert_eq!(
+            eval(&arena, t, &Assignment::new()),
+            Ok(Value::Int(i128::MAX))
+        );
+    }
+
+    #[test]
+    fn bv2nat_small_value_unchanged() {
+        let mut arena = TermArena::new();
+        let v = arena.bv_const(8, 200).unwrap();
+        let t = arena.bv2nat(v).unwrap();
+        assert_eq!(eval(&arena, t, &Assignment::new()), Ok(Value::Int(200)));
+    }
+
+    #[test]
+    fn int_mul_overflow_is_graceful() {
+        let mut arena = TermArena::new();
+        let a = arena.int_const(i128::MAX);
+        let b = arena.int_const(2);
+        let t = arena.int_mul(a, b).unwrap();
+        assert_eq!(
+            eval(&arena, t, &Assignment::new()),
+            Err(overflow("int_mul"))
+        );
+    }
+
+    #[test]
+    fn int_add_overflow_is_graceful() {
+        let mut arena = TermArena::new();
+        let a = arena.int_const(i128::MAX);
+        let b = arena.int_const(1);
+        let t = arena.int_add(a, b).unwrap();
+        assert_eq!(
+            eval(&arena, t, &Assignment::new()),
+            Err(overflow("int_add"))
+        );
+    }
+
+    #[test]
+    fn int_neg_of_min_is_graceful() {
+        let mut arena = TermArena::new();
+        let a = arena.int_const(i128::MIN);
+        let t = arena.int_neg(a).unwrap();
+        assert_eq!(
+            eval(&arena, t, &Assignment::new()),
+            Err(overflow("int_neg"))
+        );
+    }
+
+    #[test]
+    fn int_abs_of_min_is_graceful() {
+        let mut arena = TermArena::new();
+        let a = arena.int_const(i128::MIN);
+        let t = arena.int_abs(a).unwrap();
+        assert_eq!(
+            eval(&arena, t, &Assignment::new()),
+            Err(overflow("int_abs"))
+        );
+    }
+
+    #[test]
+    fn int_arithmetic_in_range_unchanged() {
+        let mut arena = TermArena::new();
+        let a = arena.int_const(6);
+        let b = arena.int_const(7);
+        let t = arena.int_mul(a, b).unwrap();
+        assert_eq!(eval(&arena, t, &Assignment::new()), Ok(Value::Int(42)));
+    }
+
+    #[test]
+    fn real_mul_overflow_is_graceful() {
+        // (i128::MAX / 1) * (i128::MAX / 1): numerator overflows i128.
+        let mut arena = TermArena::new();
+        let a = arena.real_const(Rational::integer(i128::MAX));
+        let b = arena.real_const(Rational::integer(i128::MAX));
+        let t = arena.real_mul(a, b).unwrap();
+        assert_eq!(
+            eval(&arena, t, &Assignment::new()),
+            Err(overflow("real_mul"))
+        );
+    }
+
+    #[test]
+    fn real_neg_of_min_is_graceful() {
+        let mut arena = TermArena::new();
+        let a = arena.real_const(Rational::integer(i128::MIN));
+        let t = arena.real_neg(a).unwrap();
+        assert_eq!(
+            eval(&arena, t, &Assignment::new()),
+            Err(overflow("real_neg"))
+        );
+    }
+
+    #[test]
+    fn real_add_overflow_is_graceful() {
+        // 1/(i128::MAX) + 1/2 cross-multiplies a huge denominator → overflow.
+        let mut arena = TermArena::new();
+        let a = arena.real_const(Rational::new(1, i128::MAX));
+        let b = arena.real_const(Rational::new(1, 2));
+        let t = arena.real_add(a, b).unwrap();
+        assert_eq!(
+            eval(&arena, t, &Assignment::new()),
+            Err(overflow("real_add"))
+        );
+    }
+
+    #[test]
+    fn real_arithmetic_in_range_unchanged() {
+        let mut arena = TermArena::new();
+        let a = arena.real_const(Rational::new(1, 3));
+        let b = arena.real_const(Rational::new(1, 6));
+        let t = arena.real_add(a, b).unwrap();
+        assert_eq!(
+            eval(&arena, t, &Assignment::new()),
+            Ok(Value::Real(Rational::new(1, 2)))
+        );
+    }
+
+    #[test]
+    fn wide_bv_arithmetic_does_not_overflow() {
+        // A 200-bit add is mod-2^200: still infallible (no Int crossing), so it
+        // must succeed (the Ok-wrapping of the wide path didn't break it).
+        let mut arena = TermArena::new();
+        let a = arena.bv_const(200, 5).unwrap();
+        let b = arena.bv_const(200, 7).unwrap();
+        let t = arena.bv_add(a, b).unwrap();
+        let result = eval(&arena, t, &Assignment::new()).unwrap();
+        // 5 + 7 = 12 at width 200.
+        let expected = arena.bv_const(200, 12).unwrap();
+        let expected_v = eval(&arena, expected, &Assignment::new()).unwrap();
+        assert_eq!(result, expected_v);
+        // Sanity: it is a bit-vector of width 200.
+        assert!(matches!(arena.sort_of(t), Sort::BitVec(200)));
+    }
 }
 
 #[cfg(test)]

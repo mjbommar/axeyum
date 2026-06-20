@@ -447,7 +447,13 @@ impl IncrementalBvSolver {
                     .assignment_from_aig_values(&node_values)
                     .map_err(map_lower_error)?;
                 let model = complete_model(arena, &reconstructed);
-                self.replay(arena, assumptions, &model)?;
+                // Replay is the soundness gate. If the trust-anchor evaluator
+                // cannot evaluate a term (e.g. an arithmetic overflow), the model
+                // is unverifiable: degrade to a graceful `Unknown` rather than
+                // accepting an unchecked sat or crashing.
+                if let Some(reason) = self.replay(arena, assumptions, &model)? {
+                    return Ok((CheckResult::Unknown(reason), Vec::new()));
+                }
                 Ok((CheckResult::Sat(model), Vec::new()))
             }
             SatResult::Unsat(evidence) => {
@@ -485,13 +491,19 @@ impl IncrementalBvSolver {
     }
 
     /// Replays the model against every active assertion plus the one-shot
-    /// assumptions, the level-1 evidence check; a failure is a soundness bug.
+    /// assumptions, the level-1 evidence check.
+    ///
+    /// Returns `Ok(None)` when verified. Returns `Ok(Some(reason))` when a term
+    /// could not be *evaluated* (an [`IrError`] such as an arithmetic overflow in
+    /// the trust-anchor evaluator): the model is conservatively not accepted and
+    /// the caller degrades to `Unknown`. Returns `Err(..)` only for a genuine
+    /// soundness violation (a term evaluating to `false`/non-Boolean).
     fn replay(
         &self,
         arena: &TermArena,
         assumptions: &[TermId],
         model: &Model,
-    ) -> Result<(), SolverError> {
+    ) -> Result<Option<UnknownReason>, SolverError> {
         let assignment = model.to_assignment();
         let active = self
             .frames
@@ -513,14 +525,18 @@ impl IncrementalBvSolver {
                     )));
                 }
                 Err(error) => {
-                    return Err(SolverError::Backend(format!(
-                        "incremental sat model replay failed: term #{} failed evaluation: {error}",
-                        term.index()
-                    )));
+                    return Ok(Some(UnknownReason {
+                        kind: UnknownKind::Other,
+                        detail: format!(
+                            "incremental sat model could not be verified: term #{} failed \
+                             evaluation: {error} (model conservatively not accepted)",
+                            term.index()
+                        ),
+                    }));
                 }
             }
         }
-        Ok(())
+        Ok(None)
     }
 }
 

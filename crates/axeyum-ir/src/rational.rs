@@ -52,6 +52,37 @@ impl Rational {
         Self { num, den }
     }
 
+    /// Creates `num/den` normalized to lowest terms, returning `None` instead of
+    /// panicking on `i128` overflow during normalization (`den` zero is a usage
+    /// error and still panics).
+    ///
+    /// This is the overflow-graceful counterpart of [`Rational::new`], used by the
+    /// ground evaluator (the soundness trust anchor) so an out-of-range rational
+    /// becomes a graceful error rather than a panic or a wrong wrapped value.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `den` is zero (a denominator-zero rational is a usage error, not
+    /// an overflow). `i128` overflow during normalization returns `None`.
+    #[must_use]
+    pub fn checked_new(num: i128, den: i128) -> Option<Self> {
+        assert!(den != 0, "rational denominator must be non-zero");
+        let mut num = num;
+        let mut den = den;
+        if den < 0 {
+            num = num.checked_neg()?;
+            den = den.checked_neg()?;
+        }
+        let g = gcd(num.unsigned_abs(), den.unsigned_abs());
+        if g > 1 {
+            #[allow(clippy::cast_possible_wrap)]
+            let g = g as i128;
+            num /= g;
+            den /= g;
+        }
+        Some(Self { num, den })
+    }
+
     /// The integer `n` as `n/1`.
     pub fn integer(n: i128) -> Self {
         Self { num: n, den: 1 }
@@ -91,6 +122,58 @@ impl Rational {
     pub fn recip(self) -> Self {
         assert!(self.num != 0, "reciprocal of zero rational");
         Self::new(self.den, self.num)
+    }
+
+    /// Exact negation, returning `None` on `i128` overflow (`num == i128::MIN`).
+    #[must_use]
+    pub fn checked_neg(self) -> Option<Self> {
+        Some(Self {
+            num: self.num.checked_neg()?,
+            den: self.den,
+        })
+    }
+
+    /// Exact addition, returning `None` on `i128` overflow.
+    #[must_use]
+    pub fn checked_add(self, other: Self) -> Option<Self> {
+        // a/b + c/d = (a*d + c*b) / (b*d)
+        let ad = self.num.checked_mul(other.den)?;
+        let cb = other.num.checked_mul(self.den)?;
+        let num = ad.checked_add(cb)?;
+        let den = self.den.checked_mul(other.den)?;
+        Self::checked_new(num, den)
+    }
+
+    /// Exact subtraction, returning `None` on `i128` overflow.
+    #[must_use]
+    pub fn checked_sub(self, other: Self) -> Option<Self> {
+        self.checked_add(other.checked_neg()?)
+    }
+
+    /// Exact multiplication, returning `None` on `i128` overflow.
+    #[must_use]
+    pub fn checked_mul(self, other: Self) -> Option<Self> {
+        let num = self.num.checked_mul(other.num)?;
+        let den = self.den.checked_mul(other.den)?;
+        Self::checked_new(num, den)
+    }
+
+    /// Exact division, returning `None` on division by zero or `i128` overflow.
+    #[must_use]
+    pub fn checked_div(self, other: Self) -> Option<Self> {
+        if other.num == 0 {
+            return None;
+        }
+        self.checked_mul(Self::checked_new(other.den, other.num)?)
+    }
+
+    /// Total ordering that returns `None` on `i128` overflow during the
+    /// cross-multiplication comparison, instead of panicking.
+    #[must_use]
+    pub fn checked_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        let lhs = self.num.checked_mul(other.den)?;
+        let rhs = other.num.checked_mul(self.den)?;
+        Some(lhs.cmp(&rhs))
     }
 }
 

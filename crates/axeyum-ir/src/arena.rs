@@ -1206,6 +1206,10 @@ impl TermArena {
 
     /// `bv2nat`: the unsigned integer value of a bit-vector (result sort `Int`).
     ///
+    /// The ground evaluator is exact for widths up to 127 (values `<= i128::MAX`);
+    /// a `>= 128`-bit value exceeding `i128::MAX` is reported as
+    /// [`IrError::ArithmeticOverflow`] at evaluation rather than wrapped.
+    ///
     /// # Errors
     ///
     /// Returns [`IrError::SortMismatch`] unless `x` is a bit-vector.

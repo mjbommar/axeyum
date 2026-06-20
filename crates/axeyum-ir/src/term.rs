@@ -202,7 +202,14 @@ pub enum Op {
     /// `is_int`: whether a real is an integer (`Real → Bool`).
     RealIsInt,
     /// `bv2nat`: the unsigned integer value of a bit-vector (result sort `Int`,
-    /// always in `0..2^w`).
+    /// mathematically in `0..2^w`).
+    ///
+    /// The ground evaluator's integers are the `i128` reference range, so the
+    /// result is exact for widths up to 127 (and any value `<= i128::MAX`). A
+    /// `>= 128`-bit value whose high bits make it exceed `i128::MAX` has no
+    /// non-negative `i128` representation; the evaluator reports
+    /// [`crate::IrError::ArithmeticOverflow`] (never a wrapped negative integer),
+    /// and a dependent sat model degrades to a graceful `unknown`.
     Bv2Nat,
     /// `(_ int2bv n)`: the bit-vector of width `n` whose value is the operand
     /// integer reduced mod `2^n` (result sort `BitVec(n)`).
