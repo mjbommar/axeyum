@@ -43,7 +43,7 @@ pub fn value_to_lsb_bits(value: Value) -> Result<Vec<bool>, IrError> {
             expected: "Bool or BitVec",
             found: Sort::Int,
         }),
-        Value::Real(_) => Err(IrError::SortMismatch {
+        Value::Real(_) | Value::RealAlgebraic(_) => Err(IrError::SortMismatch {
             expected: "Bool or BitVec",
             found: Sort::Real,
         }),

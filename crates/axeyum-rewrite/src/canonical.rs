@@ -1684,6 +1684,12 @@ fn value_to_term(arena: &mut TermArena, value: Value) -> Result<TermId, IrError>
         }),
         Value::Int(value) => Ok(arena.int_const(value)),
         Value::Real(value) => Ok(arena.real_const(value)),
+        // A real-algebraic value has no constant-term encoding (ADR-0038): it is
+        // produced by the NRA decider's witness model and is never folded back
+        // into a term here.
+        Value::RealAlgebraic(_) => Err(IrError::Unsupported(
+            "real-algebraic value has no constant term (ADR-0038)",
+        )),
     }
 }
 

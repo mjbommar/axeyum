@@ -92,6 +92,15 @@ pub enum IrError {
     /// (e.g. a regex Boolean operator nested where only an automaton-expressible
     /// sub-expression is allowed). The string explains the limitation.
     Unsupported(&'static str),
+    /// A real-arithmetic operator (`Real{Add,Sub,Mul,Neg,Div}`) was applied to a
+    /// [`crate::Value::RealAlgebraic`] operand. Algebraic *field arithmetic* is
+    /// deferred past ADR-0038 slice 1, so the evaluator declines exactly (a
+    /// graceful error surfaced as `unknown` by callers) rather than returning a
+    /// wrong value. The static label names the operator.
+    AlgebraicArithmeticUnsupported {
+        /// The operator that could not be evaluated (a short static label).
+        op: &'static str,
+    },
 }
 
 impl core::fmt::Display for IrError {
@@ -148,6 +157,12 @@ impl core::fmt::Display for IrError {
                 )
             }
             IrError::Unsupported(why) => write!(f, "unsupported construction: {why}"),
+            IrError::AlgebraicArithmeticUnsupported { op } => {
+                write!(
+                    f,
+                    "real-algebraic field arithmetic for `{op}` is not supported (ADR-0038 slice 1)"
+                )
+            }
         }
     }
 }

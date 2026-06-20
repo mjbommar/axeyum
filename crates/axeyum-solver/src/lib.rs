@@ -57,6 +57,7 @@ mod maxsat;
 mod model;
 mod nia_square;
 mod nra;
+mod nra_real_root;
 mod optimize;
 mod pb;
 mod pbls;

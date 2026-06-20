@@ -478,6 +478,14 @@ fn apply(op: Op, vals: &[Value]) -> Result<Value, IrError> {
         Op::BvSgt => cmp_signed(vals, |x, y| x > y),
         Op::BvSge => cmp_signed(vals, |x, y| x >= y),
         // --- polymorphic ---------------------------------------------------------
+        // Real-sorted equality may involve an *algebraic* operand, which is not
+        // comparable by the derived structural `==` against a rational (and two
+        // algebraic numbers need root-aware equality). Route any pair with a real
+        // operand through the exact `real_cmp` (which handles
+        // rational/algebraic/mixed); everything else uses structural equality.
+        Op::Eq if is_real_value(&vals[0]) || is_real_value(&vals[1]) => {
+            Value::Bool(real_cmp(&vals[0], &vals[1])?.is_eq())
+        }
         Op::Eq => Value::Bool(vals[0] == vals[1]),
         Op::Ite => {
             if b(&vals[0]) {
@@ -644,27 +652,43 @@ fn apply(op: Op, vals: &[Value]) -> Result<Value, IrError> {
         // Exact rational arithmetic. An `i128`-range overflow inside `Rational`
         // (a huge numerator/denominator, or `abs(i128::MIN)`) is reported as
         // `ArithmeticOverflow` rather than panicking — the evaluator never crashes.
-        Op::RealNeg => Value::Real(
-            real(&vals[0])
-                .checked_neg()
-                .ok_or(IrError::ArithmeticOverflow { op: "real_neg" })?,
-        ),
-        Op::RealAdd => Value::Real(
-            real(&vals[0])
-                .checked_add(real(&vals[1]))
-                .ok_or(IrError::ArithmeticOverflow { op: "real_add" })?,
-        ),
-        Op::RealSub => Value::Real(
-            real(&vals[0])
-                .checked_sub(real(&vals[1]))
-                .ok_or(IrError::ArithmeticOverflow { op: "real_sub" })?,
-        ),
-        Op::RealMul => Value::Real(
-            real(&vals[0])
-                .checked_mul(real(&vals[1]))
-                .ok_or(IrError::ArithmeticOverflow { op: "real_mul" })?,
-        ),
+        // Real field arithmetic over an *algebraic* operand is deferred past
+        // ADR-0038 slice 1: decline exactly (graceful error → caller's `unknown`)
+        // rather than return a wrong value. The rational fast path is unchanged.
+        Op::RealNeg => {
+            reject_algebraic(vals, "real_neg")?;
+            Value::Real(
+                real(&vals[0])
+                    .checked_neg()
+                    .ok_or(IrError::ArithmeticOverflow { op: "real_neg" })?,
+            )
+        }
+        Op::RealAdd => {
+            reject_algebraic(vals, "real_add")?;
+            Value::Real(
+                real(&vals[0])
+                    .checked_add(real(&vals[1]))
+                    .ok_or(IrError::ArithmeticOverflow { op: "real_add" })?,
+            )
+        }
+        Op::RealSub => {
+            reject_algebraic(vals, "real_sub")?;
+            Value::Real(
+                real(&vals[0])
+                    .checked_sub(real(&vals[1]))
+                    .ok_or(IrError::ArithmeticOverflow { op: "real_sub" })?,
+            )
+        }
+        Op::RealMul => {
+            reject_algebraic(vals, "real_mul")?;
+            Value::Real(
+                real(&vals[0])
+                    .checked_mul(real(&vals[1]))
+                    .ok_or(IrError::ArithmeticOverflow { op: "real_mul" })?,
+            )
+        }
         Op::RealDiv => {
+            reject_algebraic(vals, "real_div")?;
             let (a, b) = (real(&vals[0]), real(&vals[1]));
             // Convention: x / 0 = 0 (SMT-LIB leaves it unspecified).
             if b == crate::rational::Rational::integer(0) {
@@ -691,13 +715,80 @@ fn apply(op: Op, vals: &[Value]) -> Result<Value, IrError> {
     })
 }
 
-/// Compares two `Real` operands, reporting `ArithmeticOverflow` if the
-/// cross-multiplication comparison overflows `i128` (instead of panicking).
+/// Whether `v` is a real-sorted value (rational or algebraic).
+fn is_real_value(v: &Value) -> bool {
+    matches!(v, Value::Real(_) | Value::RealAlgebraic(_))
+}
+
+/// If any operand is a [`Value::RealAlgebraic`], decline real *field arithmetic*
+/// exactly (ADR-0038 slice 1 defers algebraic add/mul/inv).
+fn reject_algebraic(vals: &[Value], op: &'static str) -> Result<(), IrError> {
+    if vals.iter().any(|v| matches!(v, Value::RealAlgebraic(_))) {
+        return Err(IrError::AlgebraicArithmeticUnsupported { op });
+    }
+    Ok(())
+}
+
+/// Compares two real-sorted operands exactly, supporting *algebraic* operands
+/// (ADR-0038): rational vs rational uses cross-multiplication; an algebraic
+/// number vs a rational refines its isolating interval ([`crate::RealAlgebraic::compare_rational`]);
+/// two algebraic numbers compare equal via root-aware [`PartialEq`] and otherwise
+/// by refining both isolating intervals until disjoint.
+///
+/// Reports [`IrError::ArithmeticOverflow`] (`op: "real_cmp"`) on any `i128`
+/// overflow or a refinement that does not converge — never a panic, never a wrong
+/// order. The evaluator is the soundness trust anchor.
 fn real_cmp(a: &Value, b: &Value) -> Result<core::cmp::Ordering, IrError> {
-    let x = a.as_real().expect("builder guaranteed Real operand");
-    let y = b.as_real().expect("builder guaranteed Real operand");
-    x.checked_cmp(&y)
-        .ok_or(IrError::ArithmeticOverflow { op: "real_cmp" })
+    let overflow = || IrError::ArithmeticOverflow { op: "real_cmp" };
+    match (a, b) {
+        (Value::Real(x), Value::Real(y)) => x.checked_cmp(y).ok_or_else(overflow),
+        (Value::RealAlgebraic(x), Value::Real(y)) => x.compare_rational(y).ok_or_else(overflow),
+        (Value::Real(x), Value::RealAlgebraic(y)) => {
+            // α (y) vs c (x): flip the orientation of (c vs α).
+            y.compare_rational(x)
+                .map(core::cmp::Ordering::reverse)
+                .ok_or_else(overflow)
+        }
+        (Value::RealAlgebraic(x), Value::RealAlgebraic(y)) => {
+            algebraic_cmp(x, y).ok_or_else(overflow)
+        }
+        _ => panic!("real_cmp on non-real operands"),
+    }
+}
+
+/// Exact ordering of two real algebraic numbers: equal (root-aware) ⇒ `Equal`;
+/// otherwise refine both isolating intervals until disjoint and order by position.
+/// Returns `None` on overflow or non-convergence (caller maps to overflow).
+fn algebraic_cmp(
+    x: &crate::real_algebraic::RealAlgebraic,
+    y: &crate::real_algebraic::RealAlgebraic,
+) -> Option<core::cmp::Ordering> {
+    if x == y {
+        return Some(core::cmp::Ordering::Equal);
+    }
+    // Distinct values: compare `x` against each endpoint of `y`'s interval to
+    // locate it. `x` is one fixed root; `y`'s interval brackets a *different*
+    // value, so comparing `x` to `y`'s rational endpoints decides the order once
+    // `x` falls cleanly on one side. We refine `y`'s bracket via its endpoints.
+    let (ylo, yhi) = y.interval();
+    // If x ≤ ylo then x < y (x is below y's whole bracket); if x ≥ yhi then x > y.
+    match x.compare_rational(&ylo)? {
+        core::cmp::Ordering::Less | core::cmp::Ordering::Equal => {
+            return Some(core::cmp::Ordering::Less);
+        }
+        core::cmp::Ordering::Greater => {}
+    }
+    match x.compare_rational(&yhi)? {
+        core::cmp::Ordering::Greater | core::cmp::Ordering::Equal => {
+            return Some(core::cmp::Ordering::Greater);
+        }
+        core::cmp::Ordering::Less => {}
+    }
+    // x lies strictly inside y's bracket but x != y: the values are distinct yet
+    // both inside (lo, hi). Decline (overflow path) rather than guess — slice 1
+    // does not need this case (the decider compares an algebraic witness only to
+    // rationals). Sound: returns None → caller reports overflow → graceful unknown.
+    None
 }
 
 /// The bit-vector width an operand value carries (`Bv`/`WideBv`), else `None`.

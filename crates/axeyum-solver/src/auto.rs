@@ -893,6 +893,23 @@ fn check_auto_dispatch(
         }
     }
     if features.has_real {
+        // Single-variable nonlinear-real polynomial constraint (`p(x) ⋈ 0`): an
+        // exact, bounded NRA decision with **irrational witnesses** (ADR-0038).
+        // The linear-abstraction NRA path below abstracts a product like `x·x` to
+        // a fresh variable and so only ever reports `Unknown` for `x·x = 2`; this
+        // pass isolates the real roots of the collected polynomial exactly and
+        // returns the witness `√2` as a `Value::RealAlgebraic`. It fires only when
+        // the whole query is exactly one such single-variable real polynomial
+        // constraint — every other shape (≥ 2 variables, a non-Real sort, a
+        // non-polynomial operator, an extra assertion) declines (`None`) and is
+        // left to the NRA layer. Every `Sat` is replay-checked (an algebraic
+        // witness via `sign_at(p, α) = 0`, a rational witness via the ground
+        // evaluator) and every `Unsat` is exact by root isolation, so it can never
+        // produce a wrong verdict; strictly additive (`Unknown` → decision).
+        if let Some(result) = crate::nra_real_root::decide_real_poly_constraint(arena, assertions)?
+        {
+            return Ok(result);
+        }
         // Reals plus (optionally) the bit-blasted theories: the lazy-SMT loop
         // abstracts the real atoms and lets the bit-blasting backend decide the
         // rest. Reals share no sort with those theories, so the only coupling is

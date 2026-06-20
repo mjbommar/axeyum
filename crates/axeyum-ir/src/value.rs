@@ -32,6 +32,12 @@ pub enum Value {
     Int(i128),
     /// A mathematical real value as an exact rational (ADR-0015).
     Real(Rational),
+    /// A real *algebraic* value — possibly irrational — as a defining integer
+    /// polynomial plus an isolating interval (ADR-0038). The denoted value is the
+    /// unique real root of the polynomial inside the interval; e.g. `√2` is the
+    /// root of `x² − 2` in `(1, 2)`. Slice 1 supports sign/comparison only; field
+    /// arithmetic on this variant is deferred.
+    RealAlgebraic(crate::real_algebraic::RealAlgebraic),
     /// A datatype value: its constructor and field values (a `Clone` tree, like
     /// [`ArrayValue`]); ADR-0022.
     Datatype {
@@ -253,6 +259,8 @@ impl Value {
             },
             Sort::Array { .. } => panic!("scalar decoding of an array sort"),
             Sort::Int => panic!("scalar decoding of an integer sort"),
+            // A real sort never decodes from a scalar code (real values — rational
+            // or algebraic — are not scalar bit patterns).
             Sort::Real => panic!("scalar decoding of a real sort"),
             Sort::Datatype(_) => panic!("scalar decoding of a datatype sort"),
         }
@@ -272,6 +280,7 @@ impl Value {
             Value::Array(_) => panic!("scalar encoding of an array value"),
             Value::Int(_) => panic!("scalar encoding of an integer value"),
             Value::Real(_) => panic!("scalar encoding of a real value"),
+            Value::RealAlgebraic(_) => panic!("scalar encoding of a real-algebraic value"),
             Value::Datatype { .. } => panic!("scalar encoding of a datatype value"),
         }
     }
@@ -287,7 +296,7 @@ impl Value {
                 element: array.element_width,
             },
             Value::Int(_) => Sort::Int,
-            Value::Real(_) => Sort::Real,
+            Value::Real(_) | Value::RealAlgebraic(_) => Sort::Real,
             Value::Datatype { datatype, .. } => Sort::Datatype(*datatype),
         }
     }
@@ -300,6 +309,7 @@ impl Value {
             | Value::Array(_)
             | Value::Int(_)
             | Value::Real(_)
+            | Value::RealAlgebraic(_)
             | Value::Datatype { .. }
             | Value::WideBv(_) => None,
         }
@@ -313,6 +323,7 @@ impl Value {
             | Value::Array(_)
             | Value::Int(_)
             | Value::Real(_)
+            | Value::RealAlgebraic(_)
             | Value::Datatype { .. }
             | Value::WideBv(_) => None,
         }
@@ -326,6 +337,7 @@ impl Value {
             | Value::Bv { .. }
             | Value::Int(_)
             | Value::Real(_)
+            | Value::RealAlgebraic(_)
             | Value::Datatype { .. }
             | Value::WideBv(_) => None,
         }
@@ -339,12 +351,17 @@ impl Value {
             | Value::Bv { .. }
             | Value::Array(_)
             | Value::Real(_)
+            | Value::RealAlgebraic(_)
             | Value::Datatype { .. }
             | Value::WideBv(_) => None,
         }
     }
 
     /// Returns the real (rational) payload, or `None` for non-real values.
+    ///
+    /// A [`Value::RealAlgebraic`] is real-sorted but *not* a plain rational, so
+    /// this returns `None` for it — callers needing exact handling of an algebraic
+    /// real must dispatch on [`Value::as_real_algebraic`] instead.
     pub fn as_real(&self) -> Option<Rational> {
         match self {
             Value::Real(value) => Some(*value),
@@ -352,8 +369,18 @@ impl Value {
             | Value::Bv { .. }
             | Value::Array(_)
             | Value::Int(_)
+            | Value::RealAlgebraic(_)
             | Value::Datatype { .. }
             | Value::WideBv(_) => None,
+        }
+    }
+
+    /// Returns the real-algebraic payload, or `None` for any other value
+    /// (including a plain rational [`Value::Real`]).
+    pub fn as_real_algebraic(&self) -> Option<&crate::real_algebraic::RealAlgebraic> {
+        match self {
+            Value::RealAlgebraic(a) => Some(a),
+            _ => None,
         }
     }
 
@@ -390,6 +417,7 @@ impl core::fmt::Display for Value {
             }
             Value::Int(value) => write!(f, "{value}"),
             Value::Real(value) => write!(f, "{value}"),
+            Value::RealAlgebraic(value) => write!(f, "{value}"),
             Value::Datatype {
                 constructor,
                 fields,
