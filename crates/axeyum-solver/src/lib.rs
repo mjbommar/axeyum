@@ -6,9 +6,11 @@
 //! Native backends are feature-gated adapters implementing this contract;
 //! the default build has no C or C++ dependency (ADR-0002).
 //!
-//! Enable the `z3` feature for the [`Z3Backend`] oracle (system libz3 via
+//! Enable the `z3` feature for the `Z3Backend` oracle (system libz3 via
 //! pkg-config) or `z3-static` for a hermetic prebuilt libz3. The milestone
-//! M0 doctest lives on the `Z3Backend` module.
+//! M0 doctest lives on the `Z3Backend` module. (Rendered as plain code, not an
+//! intra-doc link, so the crate docs build with or without the `z3` feature —
+//! the type only exists when that feature is enabled.)
 //!
 //! Design notes: `docs/research/03-architecture/backend-model.md`,
 //! `incrementality-and-solver-lifecycle.md`, and
