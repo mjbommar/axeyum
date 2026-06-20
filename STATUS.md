@@ -6,6 +6,16 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-20 — Codex comprehensive review completed.**
+  Review artifacts live in `docs/reviews/codex-20260620/`:
+  `diary.md` records the exploration log and `report.md` synthesizes findings.
+  Targeted validation passed for fmt, docs links, IR, solver lib, SAT-BV,
+  SMT-LIB, evidence, CNF, Lean-kernel, and the committed micro benchmark corpus.
+  The report recommends immediate hardening around `prove_unsat` fail-closed
+  semantics, `bv2nat` >=128-bit behavior, arithmetic overflow panic paths,
+  scalar-only UF function models, SMT-LIB `reset` semantics, and an explicit
+  tactic/support-matrix plan. The hard-keystone focus below remains unchanged.
+
 - **Session 2026-06-19/20 — robustness + proof certs + capability/hang sweep (resume here).**
   **68 validated commits**; whole `axeyum-solver` crate green on test/clippy/doc/fmt (1150+
   tests) + Carcara (54) + workspace build + links. **Two deep hunts (arithmetic+quantifier, then
@@ -531,7 +541,7 @@ plan is built and committed on the current branch:
 | P1.5 | CDCL(T) loop (theory-as-extension, final-check, theory propagation) **[keystone]** | WIP — EUF on the e-graph: `prove_unsat_by_congruence` (conjunctive), `prove_unsat_lazy` (offline DPLL(T)), and `check_qf_uf` (full decision with **replay-checked sat models** from e-graph classes + function interps). Conflicts independently checked; **differentially validated vs Ackermann**. T1.5.5 met for the equality/UF fragment. **Online `TheorySolver` trait + `EufTheory` landed** (one backtrackable e-graph, explained conflict cores, lockstep push/pop) — the online theory side of the loop. Remaining: drive it from an online CDCL search with theory propagation (T1.5.1–T1.5.4) + dispatch wiring; theory combination with BV (P1.6) for complete QF_UFBV |
 | P1.6 | Theory combination (th_eq bus, interface equalities) | WIP — **EUF+LIA/LRA combination landed & dispatched (QF_UFLIA/UFLRA), complete for conjunctive UNSAT**: `declare_fun` admits Int/Real UF sorts, and `check_with_uf_arithmetic` (eager Ackermann → `check_auto`) decides the squeeze + `f(x+0)≠f(x)` + nested `f(g(a))≠f(g(b))∧a=b` UNSAT; `check_auto` routes arithmetic UF there. SAT model for arith UF degrades to sound Unknown (project_model scalar-keys). Plus the combination primitives `theory_combination` (shared/propose/classify/arrangement) + `th_eq` bus (`theory_var_classes`/`interface_th_eqs`). Earlier: **T1.6.1 shared-term discovery landed** (`theory_combination::shared_terms`): the BV-sorted EUF/BV interface terms (arg-or-result of `Op::Apply` ∩ operand-or-result of an interpreted BV op), deterministic, the foundation for the `th_eq` bus + interface-equality case-splitting. Plus the earlier **lazy/on-demand Ackermann for QF_UFBV** (`check_qf_ufbv_lazy`): CEGAR functional-consistency lemmas (abstract apps → fresh vars; add `(⋀ args=) ⇒ result=` only on a model-observed violation; re-solve to fixpoint). Sound (relaxation ⇒ UNSAT transfers; sat replays) + terminating; 300-formula differential vs eager `check_with_all_theories` (all agree). Remaining: wire into dispatch; then the full online interface-equality (Nelson–Oppen) combination of the e-graph + BV to drop the Ackermann reduction entirely |
 | P1.7 | PBLS local-search BV engine (portfolio) | WIP — **word-level WalkSAT landed** (`solve_local_search` + `PblsBackend`, `pbls.rs`): keeps a concrete Bool/BitVec(≤128) assignment, scores by evaluator-falsified assertions, nudges a variable in an unsatisfied assertion (greedy + WalkSAT noise + random restarts) toward a model. One-sided + sound: `Sat` only with an evaluator-verified model, never `Unsat`, `Unknown` (incl. out-of-scope sorts) otherwise. Read-only on the arena (fits the trait); deterministic (fixed seed, explicit budgets). 4 unit + an ignored 150-formula differential vs the eager backend (never contradicts). Remaining: integrate as a portfolio strategy; tune moves/budgets; measure on satisfiable corpora |
-| P1.8 | Strategy & tactics (combinators + probes + per-logic scripts) | TODO |
+| P1.8 | Strategy & tactics (combinators + probes + per-logic scripts) | TODO — Codex review recommends promoting this from cleanup to risk control: split `solve()` into explicit tactic contracts with fragment predicates, transformation class, replay/proof obligation, resource behavior, and benchmark-visible per-step metrics |
 
 ### Track 2 — Theories & Breadth
 | Phase | Title | Status |
@@ -564,10 +574,28 @@ plan is built and committed on the current branch:
 | P4.1 | Warm lazy arrays / symbolic memory (ADR-0030 deferred half) | TODO |
 | P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | TODO |
 | P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | WIP — single-objective `maximize/minimize_lia` + `_bv`/`_bv_signed` already shipped (exponential+binary bound search, Boolean-structured oracle). **Lexicographic multi-objective landed** (`optimize_lia_lexicographic`, 2026-06-18): optimize objectives in order, pinning each at its optimum (`obj≥v`/`obj≤v`) before the next so later ones range over the optimal face — z3's default lex combination. Sound + terminating (bounded composition of the checked single-objective optimizer); `LexOutcome::Stopped` at the first unbounded/infeasible/unknown objective. **BV lexicographic also landed** (`optimize_bv_lexicographic`, signed/unsigned, `bv_uge/ule/sge/sle` pinning) — lexicographic OMT now covers both LIA and BV. **Box** (`optimize_lia_box`, independent) **and Pareto** (`optimize_lia_pareto`, guided-improvement front enumeration, deterministic point/push caps, each point verified Pareto-optimal) modes also landed — **axeyum now has all 3 of z3's OMT modes (box, lexicographic, pareto)**. 23 OMT tests (incl. the {(1,3),(2,2),(3,1)} front). **BV box** (`optimize_bv_box`) also landed — box + lexicographic now span LIA+BV; Pareto is LIA. MaxSAT returns the witnessing model (`max_satisfiable_model`). Remaining: BV Pareto; MILP hardening |
-| P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | WIP — broad command surface already parsed (declare-const/fun/datatype(s), define-fun/sort, push/pop, reset(-assertions), check-sat(-assuming), get-proof/model/value/unsat-core/assignment, set-option/info, echo/exit); term forms let/forall/exists/`!`/`as` handled. **`match` datatype pattern-matching added** (commit d404794, P4.4): parse-time desugaring to nested `ite`/`DtTest`/`DtSelect`, exhaustiveness + arity checked, 11 tests. Remaining: `declare-sort` (needs first-class uninterpreted sorts the IR lacks — deep), `define-fun-rec`, full `match` for parametric datatypes |
+| P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | WIP — broad command surface already parsed (declare-const/fun/datatype(s), define-fun/sort, push/pop, reset(-assertions), check-sat(-assuming), get-proof/model/value/unsat-core/assignment, set-option/info, echo/exit); term forms let/forall/exists/`!`/`as` handled. **Codex review gap:** `reset` / `reset-assertions` currently parse as no-op commands rather than represented incremental commands, so implement their semantics or reject them before claiming command-surface completeness. **`match` datatype pattern-matching added** (commit d404794, P4.4): parse-time desugaring to nested `ite`/`DtTest`/`DtSelect`, exhaustiveness + arity checked, 11 tests. Remaining: `declare-sort` (needs first-class uninterpreted sorts the IR lacks — deep), `define-fun-rec`, full `match` for parametric datatypes |
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed slice + baseline (32/43 decided, agree=32, DISAGREE=0) |
 
 ## Changelog
+
+- **2026-06-20** — **REVIEW: Codex comprehensive design/implementation/benchmark review.**
+  Added `docs/reviews/codex-20260620/diary.md` and
+  `docs/reviews/codex-20260620/report.md`. Scope covered session state,
+  roadmap/ADRs, crate/API inventory, IR/evaluator/model representation,
+  solver dispatch, SAT-BV path, SMT-LIB front door, proof/evidence stack,
+  committed benchmark artifacts, and targeted validation. Commands passed:
+  `cargo fmt --all --check`, `./scripts/check-links.sh`, `cargo test -p
+  axeyum-ir --lib`, `cargo test -p axeyum-solver --lib`, solver integration
+  tests `capabilities`/`evidence`/`sat_bv`/`smtlib`, `cargo test -p axeyum-cnf
+  --lib`, `cargo test -p axeyum-lean-kernel --lib`, and the committed micro
+  benchmark corpus through `axeyum-bench`. Public corpus reruns were not run
+  because `corpus/public` is absent in this checkout and disk is tight. Key
+  review findings: make `prove_unsat` fail closed on proof-core resource
+  exhaustion; fix `bv2nat` at and beyond 128 bits; remove evaluator overflow
+  panic paths; replace scalar-only UF function models; implement or reject
+  SMT-LIB `reset`; split `solve()` into explicit tactic contracts; make support
+  claims exact by parser/IR/solver/model/proof layer.
 
 - **2026-06-20** — **PERF: SAT-core investigation — the residual gap is propagation-bound + the
   recommended "preprocess-default" slice is ALREADY DONE (verified).** A read-only, data-backed
