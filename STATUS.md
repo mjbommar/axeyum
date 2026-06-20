@@ -530,6 +530,23 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P2.6: open constant-width-gap integer `∀` decided (`∀x:Int.(x≤y∨x≥y+2)` →
+  Unsat).** Closes the one completeness item the hunt flagged. New
+  `eliminate_int_universal_open_gap` (`quant_fourier_motzkin.rs`): for an OPEN integer universal
+  (symbolic parameters), per DNF clause of `¬φ` it extracts the (one lower, one upper) symbolic
+  bounds and applies the exact integer-content test WHEN the gap is translation-invariant — the
+  lower endpoint `L` is integer-valued (integer coefficients + constant; `x≤y` type-forces Int
+  parameters) and the width `w = U − L` is a CONSTANT integer (the symbolic parts cancel). Then
+  the integer content `= w − [lo strict] − [hi strict] + 1` is the same for every parameter
+  assignment: any clause that ALWAYS contains an integer ⇒ `∃x.¬φ` always holds ⇒ the universal
+  is **Unsat**; all clauses NEVER contain ⇒ **rewrite-to-`true`** (valid); otherwise DECLINE.
+  Decides `∀x:Int.(x≤y∨x≥y+2)`/`+3`/`(x≤y−1∨x≥y+1)` → Unsat and `(x≤y∨x≥y+1)`/`(x≤2y∨x≥2y+1)`
+  → Sat. **Soundness-negatives verified:** distinct-param `(x≤y∨x≥z+2)` (symbolic width `z−y+2`)
+  declines (not-Unsat AND not-Sat); width-1 multiple-coefficient `(2y,2y+1)` → Sat (never wrongly
+  Unsat); non-linear `x*x≥0` declines. Hooked after the closed/real/valid FM paths; strictly
+  additive. New `tests/quant_int_open_gap.rs` (9); full suite + clippy + doc + fmt green.
+  Sub-agent + soundness review (verified the content formula + the disjunction logic by hand).
+
 - **2026-06-19** — **P2.x COMPLETENESS: gcd-aware integer tightening + a hang/wrong-answer hunt
   (clean bill).** Refined the strict-inequality tightening to be gcd-exact: `L + c0 < 0` (L a
   multiple of `g = gcd(aᵢ)`) ⟺ `L ≤ g·⌊(-c0-1)/g⌋`, so `2x < 2y` ⟹ `2x-2y ≤ -2` (not the loose

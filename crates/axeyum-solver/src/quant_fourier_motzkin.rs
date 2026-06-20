@@ -314,6 +314,269 @@ pub fn eliminate_int_universal_closed(
     }
 }
 
+/// Attempts the **exact** decision of an **open, constant-width-gap** top-level
+/// `∀x:Int. φ` — a universal whose Fourier-Motzkin bounds on `x` are *symbolic*
+/// (mention free parameters), but where every clause of `¬φ` carves out an
+/// integer interval `[L, U]` whose **width `U − L` is a constant** and whose
+/// endpoints are **integer-valued** linear expressions in the parameters.
+///
+/// ## Why a constant-width symbolic gap can still be decided exactly
+///
+/// `∀x:Int. φ ⟺ ¬∃x:Int. ¬φ`. We DNF `¬φ` exactly as the closed path does; each
+/// clause reduces to an interval `[L, U]` over `x`, where `L`/`U` are now affine
+/// expressions over the free parameters (`+ strictness`). The integer
+/// *content* of `[L, U]` — the number of integers it admits — is governed by the
+/// **width** `w = U − L` and the strictness alone, **provided** both endpoints
+/// are integer-valued: integer content of an interval is *translation-invariant*,
+/// so sliding `[L, U]` by an integer offset (which an integer parameter
+/// assignment does, when `L` is integer-valued) preserves the count. Concretely,
+/// for an integer-valued `L` (so `L` is some integer `n` at every assignment) and
+/// `U = L + w` with `w` a constant integer, the admissible integers run from
+/// `n + [lo strict]` to `n + w − [hi strict]`, a count of
+/// `w − [lo strict] − [hi strict] + 1` that does **not** depend on `n`. So:
+///
+/// - if **any** clause's interval **always** admits an integer (count ≥ 1 for
+///   every parameter assignment) ⇒ `∃x:Int. ¬φ` is true for all parameters ⇒
+///   `∀x:Int. φ` is false in every model ⇒ [`FmOutcome::Unsat`];
+/// - else if **every** clause's interval **never** admits an integer (count ≤ 0
+///   for all parameters) ⇒ `∃x:Int. ¬φ` is false for all parameters ⇒
+///   `∀x:Int. φ` is valid ⇒ rewrite to `true`.
+///
+/// This decides the open gap the closed and real-relaxation paths both decline,
+/// e.g. `∀x:Int. (x ≤ y ∨ x ≥ y + 2)`: `¬φ = (x > y ∧ x < y + 2)`, the **open**
+/// interval `(y, y + 2)` of constant width `2`, which contains `y + 1` for every
+/// integer `y` ⇒ `unsat`. The `k = 1` sibling `∀x:Int. (x ≤ y ∨ x ≥ y + 1)`
+/// (open `(y, y + 1)`, width `1`, no integer) is valid ⇒ rewrites to `true`.
+///
+/// ## Soundness-critical restrictions
+///
+/// Each restriction below keeps the constant-width / translation-invariance
+/// argument *airtight*; any clause that fails a check makes the clause
+/// **indeterminate**, and an indeterminate clause that is not overridden by an
+/// always-contains clause declines the whole assertion (`None`):
+///
+/// - **One lower and one upper bound per clause.** With two symbolic lowers (or
+///   uppers) the tightest is parameter-dependent (no `max`/`min` of symbolic
+///   affines), so the interval is not a single `[L, U]` — indeterminate.
+/// - **Both sides bounded.** A clause with only a lower (or only an upper) is an
+///   unbounded interval; that is the single-bound shape owned by other passes —
+///   indeterminate here (declined, never decided).
+/// - **Constant width.** `U − L` must have *all* symbolic coefficients cancel to
+///   a constant; otherwise the count is parameter-dependent — indeterminate.
+/// - **Integer-valued endpoints.** Every coefficient *and* the constant of `L`
+///   (equivalently `U`) must be an integer, so `L` lands on an integer at every
+///   integer parameter assignment (translation-invariance) — otherwise
+///   indeterminate.
+/// - **No `x`-disequality, no symbolic `x`-free atom.** A clause carrying an
+///   `x`-disequality (single-point hole) or a non-constant `x`-free atom (whose
+///   truth depends on the parameters) is indeterminate.
+/// - **No nested quantifier, non-linear `x`, or unsupported atom.** Inherited
+///   from the shared DNF machinery (decline the whole assertion).
+///
+/// Soundness: every verdict is exact for the open constant-width-gap fragment,
+/// and every shape outside it declines. Strictly additive — only ever turns an
+/// `unknown` integer universal into a provably-correct `unsat` or `true`-rewrite.
+pub fn eliminate_int_universal_open_gap(
+    arena: &mut TermArena,
+    assertion: TermId,
+) -> Option<FmOutcome> {
+    // Must be a top-level `∀x. body`.
+    let (var, body) = match arena.node(assertion) {
+        TermNode::App {
+            op: Op::Forall(var),
+            args,
+        } => (*var, args[0]),
+        _ => return None,
+    };
+
+    // `Sort::Int` only — the real path owns `Sort::Real`.
+    if arena.symbol(var).1 != Sort::Int {
+        return None;
+    }
+
+    // A nested quantifier under `∀x` is out of scope.
+    if contains_quantifier(arena, body) {
+        return None;
+    }
+
+    // Build the DNF of `¬φ`, relaxing Int atoms. Any non-linear `x`, unsupported
+    // atom, or wide DNF declines the whole assertion.
+    let dnf = dnf_of_negation(arena, body, /* relax_int = */ true)?;
+    if dnf.is_empty() {
+        // `¬φ` identically false ⇒ `∃x:Int. ¬φ` false ⇒ `∀x:Int. φ` valid.
+        let t = arena.bool_const(true);
+        return Some(FmOutcome::Rewrite(t));
+    }
+    if dnf.len() > MAX_DNF_CLAUSES {
+        return None;
+    }
+
+    // Classify every clause's interval. `∃x:Int. ¬φ = ⋁_k (∃x:Int. clause_k)`:
+    // - if ANY clause always contains an integer ⇒ the existential is true for
+    //   all parameters ⇒ `∀x:Int. φ` false in every model ⇒ unsat;
+    // - else if EVERY clause never contains an integer ⇒ the existential is false
+    //   for all parameters ⇒ `∀x:Int. φ` valid ⇒ rewrite to `true`;
+    // - else (some indeterminate clause, no always-contains) ⇒ decline.
+    let mut all_never = true;
+    for clause in &dnf {
+        if clause.len() > MAX_CLAUSE_LITERALS {
+            return None;
+        }
+        match clause_gap_content(var, clause) {
+            GapContent::AlwaysContains => {
+                // One clause always-contains is enough to force `unsat`.
+                return Some(FmOutcome::Unsat);
+            }
+            GapContent::NeverContains => {}
+            GapContent::Indeterminate => all_never = false,
+        }
+    }
+
+    if all_never {
+        // Every clause's interval never admits an integer ⇒ `∀x:Int. φ` valid.
+        let t = arena.bool_const(true);
+        Some(FmOutcome::Rewrite(t))
+    } else {
+        // Some clause could not be classified and none always-contained ⇒ decline.
+        None
+    }
+}
+
+/// The classification of one DNF clause's interval for the open constant-width
+/// gap decision: whether its integer content is provably ≥ 1 for *every*
+/// parameter assignment, provably 0 for every assignment, or indeterminate
+/// (a shape outside the constant-width / integer-valued / single-bound-pair
+/// fragment).
+enum GapContent {
+    /// The clause's interval admits an integer for every parameter assignment.
+    AlwaysContains,
+    /// The clause's interval admits no integer for any parameter assignment.
+    NeverContains,
+    /// Outside the decidable fragment — the whole assertion declines unless an
+    /// always-contains clause overrides.
+    Indeterminate,
+}
+
+/// Classifies one DNF clause's interval `[L, U]` over `x` (see [`GapContent`]).
+///
+/// Extracts the clause's lower/upper bounds (mirroring [`eliminate_clause`]) but
+/// keeps the bounds as *symbolic* [`Affine`]s. It then requires the
+/// constant-width-gap shape: exactly one lower and one upper bound, an
+/// integer-valued lower endpoint, and a constant width `w = U − L`. From `w` and
+/// the strictness it computes the (translation-invariant) integer content and
+/// reports `AlwaysContains` (content ≥ 1) or `NeverContains` (content ≤ 0); any
+/// shape outside the fragment is `Indeterminate`.
+fn clause_gap_content(var: SymbolId, clause: &Clause) -> GapContent {
+    // Symbolic lower/upper bounds (`x = bound` form) with strictness.
+    let mut lowers: Vec<(Affine, bool)> = Vec::new();
+    let mut uppers: Vec<(Affine, bool)> = Vec::new();
+
+    for lit in clause {
+        let a = lit.expr.coeff(var);
+        if a.is_zero() {
+            // `x`-free atom. Must be a concrete constant (its truth is otherwise
+            // parameter-dependent). A non-constant residual ⇒ indeterminate.
+            if !lit.expr.coeffs.values().all(|c| c.is_zero()) {
+                return GapContent::Indeterminate;
+            }
+            let c = lit.expr.constant;
+            let z = Rational::zero();
+            let holds = match lit.rel {
+                Rel::Lt => c < z,
+                Rel::Le => c <= z,
+                Rel::Eq => c == z,
+                Rel::Ne => c != z,
+            };
+            if !holds {
+                // `x`-free contradiction ⇒ the clause is empty ⇒ no integer.
+                return GapContent::NeverContains;
+            }
+            continue;
+        }
+
+        // `x` appears: bound `x = -r/a`, keeping `r`'s symbolic part.
+        let r = without_var(&lit.expr, var);
+        let neg_inv_a = Rational::zero() - Rational::integer(1) / a;
+        let bound = r.scale(neg_inv_a);
+        let a_pos = a > Rational::zero();
+
+        match lit.rel {
+            Rel::Lt => {
+                if a_pos {
+                    uppers.push((bound, true));
+                } else {
+                    lowers.push((bound, true));
+                }
+            }
+            Rel::Le => {
+                if a_pos {
+                    uppers.push((bound, false));
+                } else {
+                    lowers.push((bound, false));
+                }
+            }
+            Rel::Eq => {
+                // x = bound: a non-strict lower *and* upper.
+                lowers.push((bound.clone(), false));
+                uppers.push((bound, false));
+            }
+            // `x ≠ c`: a single-point hole, not a simple FM bound ⇒ indeterminate.
+            Rel::Ne => return GapContent::Indeterminate,
+        }
+    }
+
+    // The constant-width-gap shape needs exactly one lower and one upper bound:
+    // with two symbolic lowers (or uppers) the tightest is parameter-dependent,
+    // and an unbounded side is the single-bound shape owned by the other passes.
+    if lowers.len() != 1 || uppers.len() != 1 {
+        return GapContent::Indeterminate;
+    }
+    let (lo, lo_strict) = &lowers[0];
+    let (up, up_strict) = &uppers[0];
+
+    // The lower endpoint must be integer-valued for translation-invariance: every
+    // coefficient *and* the constant of `lo` must be an integer.
+    if !affine_is_integer_valued(lo) {
+        return GapContent::Indeterminate;
+    }
+
+    // The width `w = U − L` must be a constant (all symbolic coefficients cancel).
+    let width = up.sub(lo);
+    if !width.coeffs.values().all(|c| c.is_zero()) {
+        return GapContent::Indeterminate;
+    }
+    // With `lo` integer-valued and `up = lo + w`, `up` is integer-valued iff `w`
+    // is an integer; a non-integer width admits no integer-valued translation
+    // argument here ⇒ indeterminate (declined, never guessed).
+    let w = width.constant;
+    if !w.is_integer() {
+        return GapContent::Indeterminate;
+    }
+    let w = w.numerator();
+
+    // Translation-invariant integer content of `[L, U]` (`U − L = w` constant,
+    // `L` integer-valued): admissible integers run from `L + [lo strict]` to
+    // `L + w − [hi strict]`, a count of `w − [lo strict] − [hi strict] + 1`.
+    let lo_adj = i128::from(*lo_strict);
+    let hi_adj = i128::from(*up_strict);
+    let content = w - lo_adj - hi_adj + 1;
+
+    if content >= 1 {
+        GapContent::AlwaysContains
+    } else {
+        GapContent::NeverContains
+    }
+}
+
+/// Whether an affine `Σ cᵢ·sᵢ + k` is **integer-valued** at every integer
+/// assignment of its symbols — i.e. every coefficient `cᵢ` and the constant `k`
+/// is an integer. (Conversely, a non-integer coefficient `c` is witnessed by
+/// setting its symbol to `1` and the rest to `0`, giving a non-integer value, so
+/// this is exactly the integer-valued condition for integer parameters.)
+fn affine_is_integer_valued(expr: &Affine) -> bool {
+    expr.constant.is_integer() && expr.coeffs.values().all(|c| c.is_integer())
+}
+
 /// Decides, **exactly**, whether the integer existential `∃x:Int. ⋀ literals`
 /// of one DNF clause holds — i.e. whether the clause's concrete real interval
 /// `(Lmax, Umin)` contains an integer.

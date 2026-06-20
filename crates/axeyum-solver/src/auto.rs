@@ -170,6 +170,22 @@ pub fn solve(
             // relaxation (valid-only ⇒ `true`-rewrite) the open case still needs.
             .or_else(|| {
                 crate::quant_fourier_motzkin::eliminate_int_universal_valid(arena, assertion)
+            })
+            // Finally, the open *constant-width-gap* path: an `∀x:Int. φ` whose
+            // `¬φ` clauses are symbolic intervals `[L, U]` of *constant* width
+            // `U − L` over *integer-valued* endpoints. Integer content of such an
+            // interval is translation-invariant, so it is the same for every
+            // (integer) parameter assignment — decided exactly from the width and
+            // strictness. Decides the gap the closed and relaxation paths both
+            // decline, e.g. `∀x:Int. (x ≤ y ∨ x ≥ y + 2)` (open `(y, y + 2)`,
+            // width 2, always holds `y + 1`) ⇒ `unsat`; `∀x:Int. (x ≤ y ∨ x ≥
+            // y + 1)` (open `(y, y + 1)`, width 1, no integer) ⇒ `true`-rewrite.
+            // Strictly additive: only ever `unknown` → a provably-correct verdict;
+            // any clause outside the constant-width / integer-valued fragment (a
+            // symbolic-width interval like `(y, z + 2)` with distinct params)
+            // declines and is left byte-identical.
+            .or_else(|| {
+                crate::quant_fourier_motzkin::eliminate_int_universal_open_gap(arena, assertion)
             });
         match outcome {
             Some(crate::quant_fourier_motzkin::FmOutcome::Unsat) => {
