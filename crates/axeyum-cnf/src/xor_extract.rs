@@ -69,7 +69,7 @@ pub struct ExtractedXors {
 /// order, and gates are emitted in ascending order of their variable sets, so
 /// the output is deterministic. Recognizing zero gates yields an empty system.
 ///
-/// Only gates of width `2..=`[`MAX_XOR_VARS`] are attempted. Clauses with a
+/// Only gates of width `2..=MAX_XOR_VARS` are attempted. Clauses with a
 /// repeated variable (e.g. `x ∨ ¬x ∨ y`) cannot be part of a clean gate and are
 /// skipped during grouping.
 #[must_use]

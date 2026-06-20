@@ -85,7 +85,7 @@ pub enum XorDpllResult {
 ///    decision whose other phase is untried, flip it, and continue; if none
 ///    remains the formula is [`XorDpllResult::Unsat`].
 /// 4. **Budget.** Each propagation/decision step is counted; exceeding
-///    [`STEP_BUDGET`] returns [`XorDpllResult::Unknown`].
+///    `STEP_BUDGET` returns [`XorDpllResult::Unknown`].
 ///
 /// Because the recovered XOR gates are clauses already in `formula`, every
 /// returned [`XorDpllResult::Sat`] model satisfies both the clauses and the XOR
