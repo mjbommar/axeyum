@@ -420,6 +420,14 @@ mod run {
         agree: u64,
         disagree: u64,
         model_replay_failures: u64,
+        /// Root-cause "leaderboard of blockers": for every non-decided instance
+        /// (`unknown`/`unsupported`/error), a count keyed by the precise reason —
+        /// `unknown:Timeout`, `unknown:EncodingBudget`, `unknown:NodeBudget`,
+        /// `unknown:ResourceLimit`, `unknown:Incomplete`, `unsupported`,
+        /// `solver-error`, `model-replay-error`, … — so a run says *why* the
+        /// undecided instances were not solved, not just how many. Deterministic
+        /// (`BTreeMap` key order).
+        blocker_buckets: BTreeMap<String, u64>,
         rewrite_changed_instances: u64,
         rewrite_applications: u64,
         rewrite_input_dag_nodes: u64,
@@ -541,6 +549,12 @@ mod run {
             summary.query_slice_dropped_terms,
             summary.par2_seconds / decided_denominator(&summary)
         );
+        if !summary.blocker_buckets.is_empty() {
+            eprintln!(
+                "blockers: {}",
+                blocker_leaderboard(&summary.blocker_buckets)
+            );
+        }
         if summary.disagree > 0 {
             eprintln!("SOUNDNESS ALARM: results disagree with benchmark :status ground truth");
             return ExitCode::FAILURE;
@@ -1669,6 +1683,36 @@ mod run {
         if record.model_replay_failure && record.outcome != "model-replay-error" {
             summary.model_replay_failures += 1;
         }
+        // Root-cause bucket for every non-decided instance. For `unknown`, the
+        // precise `UnknownKind` is the prefix of the detail string (recorded as
+        // `"{:?}: {}"`, e.g. `"Timeout: ..."`); fall back to the bare outcome.
+        if !matches!(record.outcome, "sat" | "unsat") {
+            let key = if record.outcome == "unknown" {
+                let kind = record
+                    .detail
+                    .as_deref()
+                    .and_then(|d| d.split(':').next())
+                    .map(str::trim)
+                    .filter(|k| !k.is_empty())
+                    .unwrap_or("Unclassified");
+                format!("unknown:{kind}")
+            } else {
+                record.outcome.to_owned()
+            };
+            *summary.blocker_buckets.entry(key).or_insert(0) += 1;
+        }
+    }
+
+    /// Formats the blocker buckets most-frequent-first (ties broken by key) into a
+    /// compact `key=count …` leaderboard line.
+    fn blocker_leaderboard(buckets: &BTreeMap<String, u64>) -> String {
+        let mut ranked: Vec<(&String, &u64)> = buckets.iter().collect();
+        ranked.sort_by(|a, b| b.1.cmp(a.1).then_with(|| a.0.cmp(b.0)));
+        ranked
+            .iter()
+            .map(|(k, n)| format!("{k}={n}"))
+            .collect::<Vec<_>>()
+            .join(" ")
     }
 
     /// Rolls a decided pure-Rust instance into the corpus layer attribution.
@@ -1729,6 +1773,9 @@ mod run {
         total.agree += next.agree;
         total.disagree += next.disagree;
         total.model_replay_failures += next.model_replay_failures;
+        for (key, count) in &next.blocker_buckets {
+            *total.blocker_buckets.entry(key.clone()).or_insert(0) += count;
+        }
         total.rewrite_changed_instances += next.rewrite_changed_instances;
         total.rewrite_applications += next.rewrite_applications;
         total.rewrite_input_dag_nodes += next.rewrite_input_dag_nodes;
@@ -2018,6 +2065,7 @@ mod run {
                 "disagree": s.disagree,
                 "model_replay_failures": s.model_replay_failures,
                 "par2_mean_s": s.par2_seconds / decided_denominator(s),
+                "blocker_buckets": s.blocker_buckets,
                 "rewrite": rewrite_summary_record(s, args),
                 "query_plan": {
                     "slice_changed_instances": s.query_slice_changed_instances,
@@ -2360,6 +2408,36 @@ mod run {
         use axeyum_ir::{Sort, Value};
 
         use super::*;
+
+        #[test]
+        fn blocker_buckets_categorize_undecided_by_root_cause() {
+            fn rec(outcome: &'static str, detail: Option<&str>) -> SolveRecord {
+                SolveRecord {
+                    outcome,
+                    detail: detail.map(str::to_owned),
+                    stats: SolveStats::default(),
+                    model_replay_failure: false,
+                }
+            }
+            let mut s = Summary::default();
+            // unknowns carry the UnknownKind as the detail prefix ("Kind: …").
+            accumulate_primary(&rec("unknown", Some("Timeout: ran out of time")), &mut s);
+            accumulate_primary(&rec("unknown", Some("Timeout: ran out of time")), &mut s);
+            accumulate_primary(&rec("unknown", Some("EncodingBudget: too big")), &mut s);
+            accumulate_primary(&rec("unsupported", Some("arrays")), &mut s);
+            accumulate_primary(&rec("sat", None), &mut s); // decided → not a blocker
+            accumulate_primary(&rec("unsat", None), &mut s);
+
+            assert_eq!(s.blocker_buckets.get("unknown:Timeout"), Some(&2));
+            assert_eq!(s.blocker_buckets.get("unknown:EncodingBudget"), Some(&1));
+            assert_eq!(s.blocker_buckets.get("unsupported"), Some(&1));
+            assert_eq!(s.blocker_buckets.len(), 3, "sat/unsat are not blockers");
+            // Leaderboard ranks most-frequent first (ties by key).
+            assert_eq!(
+                blocker_leaderboard(&s.blocker_buckets),
+                "unknown:Timeout=2 unknown:EncodingBudget=1 unsupported=1"
+            );
+        }
 
         #[test]
         fn replay_refinement_adds_rewritten_target_for_original_replay_failure() {
