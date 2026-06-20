@@ -186,7 +186,13 @@ impl SatBvBackend {
         if config.prove_unsat && !xor_cdcl_unsat && matches!(sat_result, SatResult::Unsat(_)) {
             // The reduced formula is equisatisfiable with the original, so an
             // independent UNSAT proof of it certifies the original is UNSAT.
-            verify_unsat_proof(solve_formula, &mut stats)?;
+            // Fail CLOSED: the user asked for a checked `unsat`, so if the proof
+            // core could not produce a checkable proof within budget, downgrade
+            // to `unknown` rather than return an unverified `unsat`.
+            if let Some(reason) = verify_unsat_proof(solve_formula, &mut stats)? {
+                self.stats = Some(stats);
+                return Ok(CheckResult::Unknown(reason));
+            }
         }
 
         // Lift a compacted `sat` model back to the original CNF variables (no-op
@@ -850,14 +856,24 @@ fn solve_with_native_cdcl(formula: &CnfFormula, deadline: Option<Instant>) -> Sa
 }
 
 /// Independently re-derives `unsat` with the proof-producing SAT core and
-/// verifies its DRAT proof (ADR-0011/0012). A disagreement (the proof core
-/// finds the formula satisfiable) or a failed proof is a soundness alarm.
-fn verify_unsat_proof(formula: &CnfFormula, stats: &mut SolveStats) -> Result<(), SolverError> {
+/// verifies its DRAT proof (ADR-0011/0012).
+///
+/// Returns `Ok(None)` when the `unsat` was independently re-derived and its DRAT
+/// proof checked (certified). Returns `Ok(Some(reason))` when the proof core
+/// exhausted its conflict budget (or was interrupted) before deriving the empty
+/// clause: no checkable proof exists, so the caller must **fail closed** —
+/// downgrade to `unknown` rather than pass off an unverified `unsat` as a checked
+/// one. A disagreement (the proof core finds a model) or a failed proof is a
+/// soundness alarm (`Err`).
+fn verify_unsat_proof(
+    formula: &CnfFormula,
+    stats: &mut SolveStats,
+) -> Result<Option<UnknownReason>, SolverError> {
     match solve_with_drat_proof(formula) {
         ProofSolveOutcome::Unsat(proof) => match check_drat(formula, &proof) {
             Ok(true) => {
                 stats.backend.push(("unsat_proof_checked".to_owned(), 1.0));
-                Ok(())
+                Ok(None)
             }
             Ok(false) => Err(SolverError::Backend(
                 "unsat proof did not derive the empty clause".to_owned(),
@@ -869,11 +885,19 @@ fn verify_unsat_proof(formula: &CnfFormula, stats: &mut SolveStats) -> Result<()
         ProofSolveOutcome::Sat(_) => Err(SolverError::Backend(
             "soundness alarm: adapter reported unsat but the proof core found a model".to_owned(),
         )),
-        // The reference proof core exhausted its budget (or, with a deadline,
-        // was interrupted); the adapter's `unsat` still stands, it is simply not
-        // DRAT-proof-checked. `verify_unsat_proof` calls the deadline-less entry,
-        // so `Interrupted` is unreachable here, but the match stays exhaustive.
-        ProofSolveOutcome::ResourceOut | ProofSolveOutcome::Interrupted => Ok(()),
+        // Budget exhausted before the empty clause: the adapter's `unsat` stands
+        // as a best-effort verdict but is NOT proof-checked. Fail closed.
+        ProofSolveOutcome::ResourceOut | ProofSolveOutcome::Interrupted => {
+            stats
+                .backend
+                .push(("unsat_proof_unavailable".to_owned(), 1.0));
+            Ok(Some(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail: "unsat found but the proof core exhausted its budget before producing a \
+                         checkable proof; prove_unsat requested a checked unsat"
+                    .to_owned(),
+            }))
+        }
     }
 }
 
