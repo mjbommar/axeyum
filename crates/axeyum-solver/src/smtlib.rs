@@ -352,6 +352,13 @@ pub fn solve_smtlib_incremental(
                 with.extend_from_slice(assumptions);
                 results.push(solve(&mut script.arena, &with, config)?);
             }
+            ScriptCommand::ResetAssertions => {
+                // Remove all assertions and open scopes (declarations stay interned
+                // in the arena). Subsequent `check-sat`s see only assertions made
+                // after the reset — the SMT-LIB `reset-assertions` semantics.
+                stack.clear();
+                scopes.clear();
+            }
         }
     }
     Ok(results)

@@ -33,6 +33,10 @@ pub enum ScriptCommand {
     /// `(check-sat-assuming (l ...))` — decide the active assertions together with
     /// the assumption literals `l`, without retaining them afterwards.
     CheckSatAssuming(Vec<TermId>),
+    /// `(reset-assertions)` — remove **all** assertions (and open scopes), keeping
+    /// declarations and definitions. Modeled explicitly because treating it as a
+    /// no-op would silently solve a *different* problem than the script asked.
+    ResetAssertions,
 }
 
 /// A parsed benchmark script.
@@ -129,9 +133,27 @@ fn parse_command<'a>(
         | "get-assertions"
         | "get-assignment"
         | "get-unsat-assumptions"
-        | "reset"
-        | "reset-assertions"
         | "get-objectives" => exact_len(items, 1, head)?,
+        // `(reset-assertions)` clears assertions but keeps declarations — modeled
+        // explicitly (a no-op here would silently keep stale assertions across the
+        // reset, solving a different problem than the script asked).
+        "reset-assertions" => {
+            exact_len(items, 1, head)?;
+            script.commands.push(ScriptCommand::ResetAssertions);
+        }
+        // `(reset)` is a FULL reset (assertions + declarations + options back to the
+        // initial state). In this parse-then-execute model declarations are interned
+        // into a single shared arena, so clearing them mid-script is not soundly
+        // supported — reject explicitly rather than silently ignore (which would
+        // leave stale declarations/assertions in effect).
+        "reset" => {
+            exact_len(items, 1, head)?;
+            return Err(SmtError::Unsupported(
+                "reset (full reset of declarations + assertions); use reset-assertions, or run \
+                 each benchmark in a fresh solver instance"
+                    .to_owned(),
+            ));
+        }
         // Optimization objectives (OMT): `(maximize t)` / `(minimize t)`.
         "maximize" | "minimize" => {
             exact_len(items, 2, head)?;

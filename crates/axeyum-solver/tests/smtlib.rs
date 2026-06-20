@@ -1120,3 +1120,50 @@ fn get_proof_serves_the_array_row_same_fragment() {
         "array proof re-checks to (cl)"
     );
 }
+
+#[test]
+fn reset_assertions_clears_assertions_not_a_no_op() {
+    use axeyum_solver::solve_smtlib_incremental;
+    // Without honoring reset-assertions, the third check-sat would see
+    // x=5 ∧ x=6 ∧ x=7 and report UNSAT — solving a DIFFERENT problem than the
+    // script asked. With it cleared, only `x=7` is active → sat.
+    let text = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (= x #x05))
+(check-sat)
+(assert (= x #x06))
+(check-sat)
+(reset-assertions)
+(assert (= x #x07))
+(check-sat)
+";
+    let results = solve_smtlib_incremental(text, &config()).expect("script decides");
+    assert_eq!(results.len(), 3, "one result per check-sat");
+    assert!(matches!(results[0], CheckResult::Sat(_)), "x=5 is sat");
+    assert_eq!(results[1], CheckResult::Unsat, "x=5 ∧ x=6 is unsat");
+    assert!(
+        matches!(results[2], CheckResult::Sat(_)),
+        "after reset-assertions, only x=7 is active → sat (not the stale contradiction)"
+    );
+}
+
+#[test]
+fn full_reset_is_rejected_not_silently_ignored() {
+    use axeyum_solver::solve_smtlib_incremental;
+    // `(reset)` (full reset incl. declarations) is not soundly supported in the
+    // shared-arena model, so it must be REJECTED rather than treated as a no-op
+    // (which would silently keep stale state).
+    let text = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (= x #x05))
+(reset)
+(check-sat)
+";
+    let result = solve_smtlib_incremental(text, &config());
+    assert!(
+        result.is_err(),
+        "full (reset) must be rejected, not silently ignored; got {result:?}"
+    );
+}
