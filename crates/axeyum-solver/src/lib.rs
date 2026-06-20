@@ -55,6 +55,7 @@ mod lia_gcd;
 mod lra;
 mod maxsat;
 mod model;
+mod nia_square;
 mod nra;
 mod optimize;
 mod pb;

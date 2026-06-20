@@ -66,10 +66,11 @@ fn forall_int_square_nonnegative_is_sat() {
 }
 
 #[test]
-fn int_square_equals_two_stays_unknown() {
-    // x*x == 2 over the integers: integer-unsat (no integer root of 2) but
-    // real-SAT (x = √2), so the relaxation cannot refute it. Must stay unknown —
-    // never a wrong unsat.
+fn int_square_equals_two_is_unsat() {
+    // x*x == 2 over the integers: integer-unsat (2 is not a perfect square). The
+    // real relaxation cannot refute it (real-SAT at x = √2), but the exact
+    // single-variable integer square decider (`nia_square`) does — the headline
+    // hunt-flagged gap. Must now be Unsat, never a wrong sat/unknown.
     let mut a = TermArena::new();
     let x = a.int_var("x").unwrap();
     let xx = a.int_mul(x, x).unwrap();
@@ -78,8 +79,8 @@ fn int_square_equals_two_stays_unknown() {
 
     let r = check_auto(&mut a, &[eq], &SolverConfig::default()).unwrap();
     assert!(
-        matches!(r, CheckResult::Unknown(_)),
-        "x*x == 2 (Int) must stay unknown (real-sat), got {r:?}"
+        matches!(r, CheckResult::Unsat),
+        "x*x == 2 (Int) must be Unsat (2 is not a perfect square), got {r:?}"
     );
 }
 

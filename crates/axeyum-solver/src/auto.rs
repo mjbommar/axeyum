@@ -1033,6 +1033,20 @@ fn check_auto_dispatch(
     }
 
     if features.has_int {
+        // Single-variable integer SQUARE constraint (`x*x ⋈ c`, constant `c`): an
+        // exact, bounded NIA decision. The bounded bit-blast width ladder and the
+        // real relaxation both only ever report `Unknown` for a non-perfect-square
+        // equality (`x*x = 2` ⇒ should be Unsat). This pass fires *only* when the
+        // whole query is exactly one such square constraint over one `Int` variable
+        // and an integer constant — every other shape (`x*y`, `x*x*x`, `x*x + x =
+        // c`, `x*x = y`, a Real square, or any extra assertion constraining `x`)
+        // declines (`None`) and is left to the engines below. Every `Sat` it returns
+        // is replay-checked against the original assertion, and its `Unsat` is exact
+        // by the perfect-square / sign analysis, so it can never produce a wrong
+        // verdict; strictly additive (`Unknown` → decision).
+        if let Some(result) = crate::nia_square::decide_int_square_constraint(arena, assertions)? {
+            return Ok(result);
+        }
         // Bounded integer bit-blasting at a single width is fragile for *nonlinear*
         // integer goals: a modular witness (e.g. `x` with `x*x ≡ 4 (mod 2^32)` but
         // `x*x ≠ 4` over the integers) satisfies the blasted query yet fails the

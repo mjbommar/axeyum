@@ -538,6 +538,20 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P2.5: single-variable integer square `x*x ⋈ c` decided exactly (`x*x=2` →
+  Unsat).** Closes a hunt-flagged NIA gap. New `nia_square.rs` (`decide_int_square_constraint`):
+  fires only when the WHOLE query is exactly one assertion `(x*x) ⋈ c` — `x*x` is `IntMul` of the
+  SAME leaf Int-variable symbol, `c` an `IntConst`. Then decided exactly: `=` ⇒ `c<0` Unsat else
+  Sat iff `isqrt(c)²==c` (witness `r`) else Unsat; `<`/`≤` ⇒ Unsat for `c≤0`/`c<0` else Sat (x=0);
+  `>`/`≥`/`≠` ⇒ always Sat. `isqrt` is overflow-safe (binary search; constants `|c|≥2^100` decline
+  → left to the existing NIA path). Hooked in the `has_int` branch BEFORE `int_real_relax`/the
+  width ladder (which return Unknown for `x*x=2`). Every Sat **replay-checks** the witness against
+  the original assertion (`eval`). **Conservative DECLINE** (verified not-mis-decided): `x*y`,
+  `x*x*x`, `x*x+x`, `x*x=y` (rhs non-constant), Real square (NRA √ case), and any 2nd assertion on
+  x. Decides `x*x=2`→Unsat, `x*x=4`→Sat, `x*x=1000000`→Sat (x=1000), `x*x<0`→Unsat. New
+  `tests/nia_square.rs` (27) + corrected the now-stale `int_square_equals_two_stays_unknown`
+  assertion (→ `_is_unsat`); full suite (1122) + clippy + doc + fmt green. Sub-agent + soundness review.
+
 - **2026-06-19** — **P2.6: `∀∃` by Skolem-witness synthesis — `∀x:Int.∃z:Int. z>x` → Sat.** First
   cut into the `∀∃` direction (previously all `Unknown`). New `quant_exists_witness.rs`
   (`decide_forall_exists_by_witness`): for a prenex `∀x⃗.∃z. body` (one inner `∃`, `z`:Int/Real,
