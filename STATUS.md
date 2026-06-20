@@ -6,15 +6,36 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
-- **Session 2026-06-20 — Codex comprehensive review completed.**
-  Review artifacts live in `docs/reviews/codex-20260620/`:
-  `diary.md` records the exploration log and `report.md` synthesizes findings.
-  Targeted validation passed for fmt, docs links, IR, solver lib, SAT-BV,
-  SMT-LIB, evidence, CNF, Lean-kernel, and the committed micro benchmark corpus.
-  The report recommends immediate hardening around `prove_unsat` fail-closed
-  semantics, `bv2nat` >=128-bit behavior, arithmetic overflow panic paths,
-  scalar-only UF function models, SMT-LIB `reset` semantics, and an explicit
-  tactic/support-matrix plan. The hard-keystone focus below remains unchanged.
+- **Session 2026-06-20 — SAT-core keystone (in progress) + codex-review correctness sweep
+  (RESUME HERE).** **85 validated commits**; whole workspace green (fmt + clippy `--workspace`
+  + doc + tests). **The destination-2 record is CORRECTED: measured axeyum 8/113 = PARITY with
+  Z3 4.13.3 8/113 on the public p4dfa @20s** (different sets; axeyum uniquely decides string1x8.3
+  where z3 times out @20.5s; z3 uniquely gets compose.p3/.s2_nr4; the other 105 defeat both —
+  near-parity, both hard-capped, NOT "Z3 sweeps all"). Baselines committed
+  (`bench-results/baselines/qf-bv-p4dfa-axeyum-vs-z3-20s-*.json`).
+  - **Building a competitive PURE-RUST SAT core** (the user's chosen keystone). The reviewer's
+    reframe (correct): `native_cdcl` IS the proof-producing `proof_sat` core, so a fast primary
+    native core closes the `prove_unsat` fail-open BY CONSTRUCTION — that ASSURANCE value is the
+    real justification, not the ~9-instance perf ceiling. Slices landed (all sound, DISAGREE=0,
+    DRAT-checked, verdict/trajectory-invariant, `SolverConfig::native_cdcl` opt-in, batsat still
+    default): (1) deadline-bounded flag-gated primary engine; (2) LBD clause-DB reduction;
+    (3) blocking-literal BCP; (4) VSIDS heap v1 **reverted** (2.36x regression); (5) **VSIDS heap
+    done right** — profiled `pick_branch` O(n) scan was 61% of time → canonical MiniSat
+    lazy-deletion order_heap collapsed it to 3.3%, **2.6x faster (230s→87s on string1x8.3),
+    decisions/propagations bit-identical** (caught+fixed a VSIDS-rescale heap-invariant bug).
+    **NEXT: slice 6 = BCP / arena-packed clause storage** (BCP is now the #1 phase at ~34%; native
+    still ~20x over batsat's 4.2s on the reduced CNF → close it via cache-local clause storage,
+    then vivification). Profile FIRST, never guess (reduceDB + heap-v1 were guessed-and-missed).
+    Re-target the bench to the ~9 crackable ≤300k instances, not the StringMatching 90.
+  - **Codex-review correctness items — ALL CLOSED (each with soundness tests):** `prove_unsat`
+    fail-closed (no unverified-unsat-as-checked); **eval graceful arithmetic overflow** (bv2nat
+    ≥128-bit no longer wraps negative; Int/Real overflow → `Err`→`Unknown`, never crash/wrong —
+    the trust-anchor evaluator; `false`→soundness-alarm distinction preserved); **smtlib
+    reset/reset-assertions** (honor reset-assertions / reject full reset — no silent no-op).
+  - **Remaining review items (lower-priority observability/docs, not correctness):** per-unknown
+    root-cause buckets in bench artifacts; the 4-column support matrix (parser/IR/solver/proof);
+    north-star reframe to fragment-specific parity milestones.
+  - Full codex review preserved at `docs/reviews/codex-20260620/` (report.md + diary.md).
 
 - **Session 2026-06-19/20 — robustness + proof certs + capability/hang sweep (resume here).**
   **68 validated commits**; whole `axeyum-solver` crate green on test/clippy/doc/fmt (1150+
