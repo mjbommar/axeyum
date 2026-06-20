@@ -130,6 +130,40 @@ pub fn solve(
         return Ok(CheckResult::Unsat);
     }
 
+    // Single-variable real Fourier-Motzkin: a top-level `∀x:Real. φ` with a
+    // quantifier-free body over linear real atoms is decided *exactly* by
+    // eliminating `x` from `¬φ` (since `∀x. φ ⟺ ¬∃x. ¬φ`, and real FM is exact).
+    // This decides the *multi-atom* real universals the vacuous and
+    // unsat-single-atom passes above decline — e.g. `∀x. (x ≥ 0 ∧ x ≤ 10)`
+    // (false ⇒ unsat) and `∀x. (x ≤ 0 ∨ x > 0)` (valid ⇒ rewrites to `true`).
+    // Per-assertion: an `unsat` result decides the whole query; a `Rewrite`
+    // replaces the universal with an equivalent `x`-free term that re-dispatches.
+    // Strictly additive — every shape outside the exactly-eliminable real
+    // fragment declines and is left byte-identical.
+    let mut fm_rewritten: Vec<TermId> = Vec::with_capacity(assertions.len());
+    let mut fm_changed = false;
+    for &assertion in assertions {
+        match crate::quant_fourier_motzkin::eliminate_real_universal(arena, assertion) {
+            Some(crate::quant_fourier_motzkin::FmOutcome::Unsat) => {
+                return Ok(CheckResult::Unsat);
+            }
+            Some(crate::quant_fourier_motzkin::FmOutcome::Rewrite(chi)) => {
+                fm_changed = true;
+                fm_rewritten.push(chi);
+            }
+            None => fm_rewritten.push(assertion),
+        }
+    }
+    let fm_assertions: &[TermId] = if fm_changed {
+        &fm_rewritten
+    } else {
+        assertions
+    };
+    if fm_changed && !has_quantifier(arena, fm_assertions) {
+        return check_auto(arena, fm_assertions, config);
+    }
+    let assertions = fm_assertions;
+
     match check_with_quantifiers(arena, assertions, config) {
         // An infinite quantifier domain defeats finite expansion; fall back to
         // sound refutation. Try congruence-aware e-matching on the e-graph keystone

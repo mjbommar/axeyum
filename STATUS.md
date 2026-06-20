@@ -504,6 +504,27 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P2.6: single-variable real Fourier-Motzkin `∀`-elimination — first true
+  quantifier elimination (keystone slice).** Decides multi-atom `∀x:Real. φ` universals the
+  single-atom/vacuous passes decline, via exact real QE. New `quant_fourier_motzkin.rs`
+  (`eliminate_real_universal`), hooked in `solve` after the vacuous + unsat-single-atom passes.
+  Method: `∀x. φ ⟺ ¬∃x. ¬φ`; `¬φ` → DNF (De Morgan + `⇒`-desugar, capped at 64
+  clauses/literals); `∃x` distributes, each conjunctive clause FM-eliminated — collect lower
+  (`a<0`) / upper (`a>0`) bounds `-r/a` from `a·x+r ⋈ 0` (equality = both; x-free pass through),
+  join `Lᵢ ⋈ Uⱼ` with **`<` iff either bound strict** else `≤` (the subtle correctness point:
+  `∀x.(x≤0 ∨ x>0)` is valid — join `0<0` false — while `∀x.(x<0 ∨ x>0)` is unsat — join `0≤0`
+  true at x=0); unbounded side ⇒ vacuously satisfiable. A clause eliminating to `true` ⇒ the
+  universal is **Unsat**; else negate the residual disjunction → an x-free `χ` and **rewrite**
+  the assertion to it (then re-dispatch). Real FM is EXACT, so in-scope verdicts are exact.
+  **Conservative declines (sound — leave byte-identical):** Int universals (real FM isn't exact
+  over ℤ — the load-bearing guard), nested quantifiers, non-linear x (`x·x`/`div`/`abs`/x-in-UF/
+  array → opaque affine), non-real atoms, x-disequalities (single-point hole), over-cap DNF.
+  Decides `∀x.(x≥0∧x≤10)`→Unsat, `∀x.(x≤0∨x>0)`→Sat, `∃y.∀x.(x≤y∨x≥y)`→Sat,
+  `∀x.(x<0∨x≥y)`→`y≤0`. Soundness-negatives verified (non-linear `x·x` and Int both declined,
+  no real universal mis-decided). New `tests/quant_fourier_motzkin.rs` (15); full suite (1047) +
+  clippy + doc + fmt green. Strictly additive. The harder integer-Omega + general-boolean cases
+  remain the keystone core. Sub-agent + careful soundness review.
+
 - **2026-06-19** — **P2.6: unsatisfiable-`∀` detection — another sound `∃∀` slice.** A top-level
   `∀x. body` where `x:Int`/`Real`, `body` is a SINGLE arithmetic atom that normalizes to
   `c·x ⋈ t` with `c≠0` (x genuinely appears), `t` x-free, and `⋈∈{<,≤,>,≥,=}` is

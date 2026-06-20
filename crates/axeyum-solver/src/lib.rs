@@ -70,6 +70,7 @@ mod qfuflia_alethe;
 mod qinst_egraph;
 mod quant_alethe;
 mod quant_finite_cert;
+mod quant_fourier_motzkin;
 mod quant_guarded_int;
 mod quant_unsat_universal;
 mod quant_vacuous_universal;
