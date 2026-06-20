@@ -1,0 +1,68 @@
+# Support matrix (4-column)
+
+Generated from `axeyum_solver::support_matrix::SUPPORT_MATRIX` — do not edit by hand.
+Regenerate after changing the source of truth and commit the result; a golden test
+(`tests/support_matrix.rs`) fails if this file drifts from the code.
+
+Four **independent** axes per SMT-LIB fragment, so "the parser accepts it" is never conflated with "the solver decides it" or "the result carries a proof". The companion [capability matrix](capability-matrix.md) gives the *assurance* of a result; this one gives the per-stage *status*.
+
+## Legend
+
+**parser-accepts** (does `axeyum-smtlib` parse it?):
+- **accepted** — parsed and acted on.
+- **accepted-but-ignored** — parsed but a deliberate no-op (e.g. `set-option`, `get-model`, `get-unsat-core`, `get-proof`, `echo`, `exit`).
+- **accepted (bounded)** — parsed only over a bounded/restricted shape (bounded strings; arrays restricted to bit-vector index/element; constant-operand-only ops; non-parametric datatypes).
+- **rejected** — deliberately refused (full `reset`, parametric datatypes, the unbounded `String`/`Seq` sort).
+
+**IR-semantics** (does `axeyum-ir` model its semantics?):
+- **modeled** — first-class IR sort(s)/op(s) with ground-evaluator semantics.
+- **partial** — a subset of operations / only a bounded shape.
+- **lowered (no IR sort)** — no native sort; semantics via bit-vector/Boolean lowering (strings, floating-point values).
+- **absent** — not modeled.
+
+**solver-decides** (definite `sat`/`unsat` for the core queries?):
+- **decides** — returns both `sat` and `unsat` for the core fragment.
+- **unsat decided; sat→unknown** — `unsat` is decided but a satisfying model is not built, so `sat` degrades to a sound `unknown` (arithmetic-sorted UF; the `str.len` BV+LIA gap). First-class — never a wrong answer.
+- **sound, incomplete (unknown-safe)** — may return `unknown` in general (nonlinear arithmetic, quantifiers outside finite/guarded domains, optimization).
+- **unsupported** — not decided.
+
+**proof-supports** (does an `unsat` carry a checkable proof?):
+- **checked** — self-contained certificate re-checkable with no access to the producing solver (DRAT recheck, Farkas verify, a re-derived congruence closure, end-to-end faithfulness miter).
+- **partial-trust** — a certificate exists modulo a trusted reduction layer (clausal DRAT after a trusted elimination/bit-blast) or only for covered sub-cases.
+- **none** — no proof artifact (`sat` model replay / conflict core only).
+
+## Matrix
+
+| Fragment | parser-accepts | IR-semantics | solver-decides | proof-supports |
+|---|---|---|---|---|
+| QF_BV (scalar bit-vectors) | accepted | modeled | decides | checked |
+| QF_ABV (arrays) | accepted (bounded) | modeled | decides | partial-trust |
+| QF_UF (EUF / congruence) | accepted | modeled | decides | checked |
+| QF_LIA (linear integer) | accepted | modeled | decides | partial-trust |
+| QF_LRA (linear real) | accepted | modeled | decides | checked |
+| QF_NIA (nonlinear integer) | accepted | modeled | sound, incomplete (unknown-safe) | none |
+| QF_NRA (nonlinear real) | accepted | modeled | sound, incomplete (unknown-safe) | none |
+| QF_UFLIA / QF_UFLRA (UF + arithmetic) | accepted | modeled | unsat decided; sat→unknown | partial-trust |
+| QF_FP (floating-point) | accepted | lowered (no IR sort) | decides | partial-trust |
+| quantifiers (∃/∀, finite-domain + instantiation) | accepted | modeled | sound, incomplete (unknown-safe) | partial-trust |
+| datatypes (algebraic) | accepted (bounded) | modeled | decides | partial-trust |
+| strings (bounded) | accepted (bounded) | lowered (no IR sort) | unsat decided; sat→unknown | none |
+| optimization (OMT: box/lex/Pareto, MaxSAT, MILP) | accepted | modeled | sound, incomplete (unknown-safe) | none |
+| incremental (push/pop, reset-assertions) | accepted | modeled | decides | none |
+
+## Notes (per row)
+
+- **QF_BV (scalar bit-vectors)** — full scalar op set parsed and modeled; bit-blast to SAT decides both directions; unsat carries a DRAT proof + an end-to-end faithfulness miter (Alethe/Lean too). ADR-0006/0011/0012
+- **QF_ABV (arrays)** — Array sort restricted to bit-vector index/element; eager read-over-write + Ackermann elimination decides; unsat DRAT is modulo the trusted (replay-validatable) elimination. ADR-0010
+- **QF_UF (EUF / congruence)** — declare-fun + congruence closure on a backtrackable e-graph decides; unsat carries a congruence explanation re-derived by an independent union-find checker (Alethe + Lean too). ADR-0013/0032
+- **QF_LIA (linear integer)** — Int sort + div/mod/abs eliminated exactly; Diophantine refutation + branch-and-bound simplex decide (degrade to unknown on node budget); unsat DRAT is bounded (refutes at the chosen bit-blast width). ADR-0014/0020/0021
+- **QF_LRA (linear real)** — exact-rational simplex is complete for QF_LRA; unsat carries a Farkas certificate with a from-scratch independent verifier (Alethe la_generic + Lean too). ADR-0015
+- **QF_NIA (nonlinear integer)** — general NIA is sound-incomplete (linear abstraction + sign lemmas, unknown otherwise); the single-variable integer polynomial decider (nia_square) is exact for that shape (e.g. x*x=2 → unsat). No proof artifact. ADR-0024
+- **QF_NRA (nonlinear real)** — linear abstraction + replay + McCormick spatial branch-and-bound; relaxation-unsat is sound, sat is replay-checked, unknown otherwise. No proof artifact. ADR-0024
+- **QF_UFLIA / QF_UFLRA (UF + arithmetic)** — eager Ackermann congruence → arithmetic; complete for the conjunctive fragment's UNSAT, but a sat model for an arithmetic-sorted function is not built (scalar-keyed tables) → sound unknown. Alethe proof covers the conjunctive sub-cases modulo trusted Ackermann. ADR-0013/0015
+- **QF_FP (floating-point)** — FP sorts/ops parsed (some conversions constant-only); FP values are BitVec (no IR sort), lowered to circuits differentially validated vs native/apfloat; unsat DRAT is modulo the trusted FP circuit. ADR-0023/0026/0028
+- **quantifiers (∃/∀, finite-domain + instantiation)** — complete over finite (Bool/BV) domains, guarded-finite Int expansion, and single-variable real Fourier-Motzkin; otherwise sound refutation by e-matching/MBQI instantiation (ground unsat transfers; sat/no-progress is unknown). Checkable Alethe/Lean for the refutation slices. ADR-0016/0032
+- **datatypes (algebraic)** — non-parametric declare-datatype(s) parsed (parametric rejected); structural acyclicity/injectivity + elimination/native expansion decide; unsat DRAT modulo trusted datatype folding (Alethe/Lean too). ADR-0022
+- **strings (bounded)** — no String IR sort — declare-const lowered to a bounded packed BV (len ≤ 16); ops parsed within the bound; sat decided through the BV path but str.len unsat may be unknown (BV+LIA gap). Model replay only, no unsat proof. ADR-0025/0029
+- **optimization (OMT: box/lex/Pareto, MaxSAT, MILP)** — maximize/minimize parsed and acted on; each optimum is certified only by an internal confirmed-unsat domination query (no exported artifact) and degrades to a sound OptOutcome::Unknown when a probe is undecided. ADR-0027
+- **incremental (push/pop, reset-assertions)** — push/pop and reset-assertions parsed (full `reset` is rejected); warm QF_BV/Bool with assumption-core pruning + all-SAT decides; sat replay + a SAT conflict core, but no DRAT/Alethe across push/pop; warm path refuses arrays. ADR-0009

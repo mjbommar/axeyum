@@ -94,6 +94,9 @@ the Lean proof-export ladder — is the followable roadmap in [PLAN.md](PLAN.md)
   to 100% Z3 + Lean parity. The single entry point for resuming work.
 - [docs/research/08-planning/capability-matrix.md](docs/research/08-planning/capability-matrix.md) —
   the authoritative, golden-tested inventory: capability × assurance × evidence.
+- [docs/research/08-planning/support-matrix.md](docs/research/08-planning/support-matrix.md) —
+  the golden-tested 4-column support matrix: per fragment, the independent status
+  on each pipeline stage (parser-accepts × IR-semantics × solver-decides × proof-supports).
 - [docs/research/](docs/research/README.md) — the research foundation:
   notes covering foundations, architecture, data structures, algorithms,
   verification strategy, and planning.

@@ -1,0 +1,413 @@
+//! The **support matrix**: a four-column, machine-checked report of what the
+//! stack does with each SMT-LIB fragment, split into *four independent axes* so
+//! "the parser accepts it" is never silently conflated with "the solver decides
+//! it" or "the result carries a proof".
+//!
+//! The [`capabilities`](crate::capabilities) ledger answers *how much to trust a
+//! result* (one assurance level per capability). This module answers a different,
+//! orthogonal question the README prose used to bury: **per fragment, what is the
+//! status on each of four pipeline stages?**
+//!
+//! 1. **parser-accepts** — does `axeyum-smtlib` parse it? (and is it acted on,
+//!    accepted-but-ignored, bounded, or rejected)
+//! 2. **IR-semantics** — does `axeyum-ir` model its semantics (sorts/ops/evaluator)?
+//! 3. **solver-decides** — does the solver return a definite `sat`/`unsat` for the
+//!    fragment's core queries, or degrade to `unknown`?
+//! 4. **proof-supports** — does an `unsat` carry an independently checkable proof?
+//!
+//! The crucial honesty wins are the *non-binary* statuses: "accepted-but-ignored"
+//! is a first-class parser status (the `reset` family, `get-model` and friends),
+//! and "unsat-supported, sat→unknown" is a first-class solver status (the
+//! arithmetic-sorted UF case, where `unsat` is decided but a satisfying model is
+//! not built, so `sat` degrades to a sound `unknown`).
+//!
+//! [`SUPPORT_MATRIX`] is the source of truth; [`support_matrix_markdown`] renders
+//! it, and a golden test (`tests/support_matrix.rs`) fails if the committed
+//! `docs/research/08-planning/support-matrix.md` drifts from this code.
+//! Iteration is in source order (no hash-map nondeterminism — determinism is a
+//! public promise). Each cell is derived from a real code path; the most
+//! load-bearing solver/proof cells are additionally exercised by probes in the
+//! golden test (see that file's `probe_*` tests).
+
+use core::fmt::Write as _;
+
+/// **parser-accepts** axis: what the SMT-LIB front end (`axeyum-smtlib`) does
+/// with the construct.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ParserStatus {
+    /// Parsed and acted on (builds IR / mutates script state).
+    Accepted,
+    /// Parsed (and arity-checked) but a deliberate no-op — e.g. `set-option`,
+    /// `get-model`, `get-unsat-core`, `get-proof`, `echo`, `exit`.
+    AcceptedIgnored,
+    /// Parsed but only over a bounded/restricted shape (e.g. bounded strings,
+    /// arrays restricted to bit-vector index/element sorts, constant-operand-only ops).
+    AcceptedBounded,
+    /// Deliberately refused with `Unsupported` (e.g. full `reset`, parametric
+    /// datatypes, the unbounded `String`/`Seq` sort).
+    Rejected,
+}
+
+impl ParserStatus {
+    /// Short stable label for the rendered matrix.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            ParserStatus::Accepted => "accepted",
+            ParserStatus::AcceptedIgnored => "accepted-but-ignored",
+            ParserStatus::AcceptedBounded => "accepted (bounded)",
+            ParserStatus::Rejected => "rejected",
+        }
+    }
+}
+
+/// **IR-semantics** axis: whether `axeyum-ir` models the construct's semantics
+/// (a sort/op the typed IR and ground evaluator understand).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IrStatus {
+    /// First-class IR sort(s)/op(s) with ground-evaluator semantics.
+    Modeled,
+    /// Partially modeled (a subset of operations, or modeled only for a bounded shape).
+    Partial,
+    /// No native IR sort — semantics carried by lowering to bit-vectors/Booleans
+    /// (e.g. strings, floating-point values are `BitVec`).
+    Lowered,
+    /// Not modeled in the IR.
+    Absent,
+}
+
+impl IrStatus {
+    /// Short stable label for the rendered matrix.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            IrStatus::Modeled => "modeled",
+            IrStatus::Partial => "partial",
+            IrStatus::Lowered => "lowered (no IR sort)",
+            IrStatus::Absent => "absent",
+        }
+    }
+}
+
+/// **solver-decides** axis: whether the solver returns a definite `sat`/`unsat`
+/// for the fragment's core queries.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SolverStatus {
+    /// Returns both `sat` and `unsat` definitively for the core fragment.
+    Decides,
+    /// `unsat` is decided but a satisfying model is not built, so `sat` degrades
+    /// to a sound `unknown` (the arithmetic-sorted UF case; the string-length
+    /// BV+LIA gap). First-class — never a wrong answer, just an honest `unknown`.
+    UnsatSatUnknown,
+    /// Sound but incomplete: may return `unknown` in general (nonlinear
+    /// arithmetic, quantifiers outside finite/guarded domains, optimization).
+    SoundIncomplete,
+    /// The solver does not decide this fragment.
+    Unsupported,
+}
+
+impl SolverStatus {
+    /// Short stable label for the rendered matrix.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            SolverStatus::Decides => "decides",
+            SolverStatus::UnsatSatUnknown => "unsat decided; sat→unknown",
+            SolverStatus::SoundIncomplete => "sound, incomplete (unknown-safe)",
+            SolverStatus::Unsupported => "unsupported",
+        }
+    }
+}
+
+/// **proof-supports** axis: whether an `unsat` carries an independently checkable
+/// artifact (DRAT, Farkas, Alethe/Carcara, Lean reconstruction, or a re-derived
+/// congruence explanation).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProofStatus {
+    /// `unsat` carries a self-contained certificate re-checkable with no access to
+    /// the producing solver (DRAT recheck, Farkas verify, a re-derived congruence
+    /// closure, or an end-to-end faithfulness miter).
+    Checked,
+    /// A certificate exists but only modulo a trusted reduction layer (DRAT at the
+    /// clausal layer after a trusted elimination/bit-blast) or only for covered
+    /// sub-cases.
+    PartialTrust,
+    /// No proof artifact — `unsat` is trust-the-solver, or only a `sat` model
+    /// replay / conflict core exists.
+    NoProof,
+}
+
+impl ProofStatus {
+    /// Short stable label for the rendered matrix.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            ProofStatus::Checked => "checked",
+            ProofStatus::PartialTrust => "partial-trust",
+            ProofStatus::NoProof => "none",
+        }
+    }
+}
+
+/// One fragment/feature row of the support matrix: the four independent statuses
+/// plus a short, code-grounded note on *why* each cell is what it is.
+#[derive(Debug, Clone, Copy)]
+pub struct SupportRow {
+    /// The logic fragment / feature (the row key).
+    pub fragment: &'static str,
+    /// parser-accepts status.
+    pub parser: ParserStatus,
+    /// IR-semantics status.
+    pub ir: IrStatus,
+    /// solver-decides status.
+    pub solver: SolverStatus,
+    /// proof-supports status.
+    pub proof: ProofStatus,
+    /// A short note grounding the cells in the real code paths / caveats.
+    pub note: &'static str,
+}
+
+/// The support matrix. Ordered deliberately (theories, then features); iteration
+/// is in source order for a stable rendered table.
+///
+/// Keep this honest: a cell asserts the *actual* behavior of the code path named
+/// in `note`. Mark conservatively (`partial`/`unknown`/`partial-trust`) rather
+/// than overstate — an honest matrix is the whole point.
+pub const SUPPORT_MATRIX: &[SupportRow] = &[
+    SupportRow {
+        fragment: "QF_BV (scalar bit-vectors)",
+        parser: ParserStatus::Accepted,
+        ir: IrStatus::Modeled,
+        solver: SolverStatus::Decides,
+        proof: ProofStatus::Checked,
+        note: "full scalar op set parsed and modeled; bit-blast to SAT decides both \
+               directions; unsat carries a DRAT proof + an end-to-end faithfulness \
+               miter (Alethe/Lean too). ADR-0006/0011/0012",
+    },
+    SupportRow {
+        fragment: "QF_ABV (arrays)",
+        parser: ParserStatus::AcceptedBounded,
+        ir: IrStatus::Modeled,
+        solver: SolverStatus::Decides,
+        proof: ProofStatus::PartialTrust,
+        note: "Array sort restricted to bit-vector index/element; eager \
+               read-over-write + Ackermann elimination decides; unsat DRAT is modulo \
+               the trusted (replay-validatable) elimination. ADR-0010",
+    },
+    SupportRow {
+        fragment: "QF_UF (EUF / congruence)",
+        parser: ParserStatus::Accepted,
+        ir: IrStatus::Modeled,
+        solver: SolverStatus::Decides,
+        proof: ProofStatus::Checked,
+        note: "declare-fun + congruence closure on a backtrackable e-graph decides; \
+               unsat carries a congruence explanation re-derived by an independent \
+               union-find checker (Alethe + Lean too). ADR-0013/0032",
+    },
+    SupportRow {
+        fragment: "QF_LIA (linear integer)",
+        parser: ParserStatus::Accepted,
+        ir: IrStatus::Modeled,
+        solver: SolverStatus::Decides,
+        proof: ProofStatus::PartialTrust,
+        note: "Int sort + div/mod/abs eliminated exactly; Diophantine refutation + \
+               branch-and-bound simplex decide (degrade to unknown on node budget); \
+               unsat DRAT is bounded (refutes at the chosen bit-blast width). \
+               ADR-0014/0020/0021",
+    },
+    SupportRow {
+        fragment: "QF_LRA (linear real)",
+        parser: ParserStatus::Accepted,
+        ir: IrStatus::Modeled,
+        solver: SolverStatus::Decides,
+        proof: ProofStatus::Checked,
+        note: "exact-rational simplex is complete for QF_LRA; unsat carries a Farkas \
+               certificate with a from-scratch independent verifier (Alethe la_generic \
+               + Lean too). ADR-0015",
+    },
+    SupportRow {
+        fragment: "QF_NIA (nonlinear integer)",
+        parser: ParserStatus::Accepted,
+        ir: IrStatus::Modeled,
+        solver: SolverStatus::SoundIncomplete,
+        proof: ProofStatus::NoProof,
+        note: "general NIA is sound-incomplete (linear abstraction + sign lemmas, \
+               unknown otherwise); the single-variable integer polynomial decider \
+               (nia_square) is exact for that shape (e.g. x*x=2 → unsat). No proof \
+               artifact. ADR-0024",
+    },
+    SupportRow {
+        fragment: "QF_NRA (nonlinear real)",
+        parser: ParserStatus::Accepted,
+        ir: IrStatus::Modeled,
+        solver: SolverStatus::SoundIncomplete,
+        proof: ProofStatus::NoProof,
+        note: "linear abstraction + replay + McCormick spatial branch-and-bound; \
+               relaxation-unsat is sound, sat is replay-checked, unknown otherwise. \
+               No proof artifact. ADR-0024",
+    },
+    SupportRow {
+        fragment: "QF_UFLIA / QF_UFLRA (UF + arithmetic)",
+        parser: ParserStatus::Accepted,
+        ir: IrStatus::Modeled,
+        solver: SolverStatus::UnsatSatUnknown,
+        proof: ProofStatus::PartialTrust,
+        note: "eager Ackermann congruence → arithmetic; complete for the conjunctive \
+               fragment's UNSAT, but a sat model for an arithmetic-sorted function is \
+               not built (scalar-keyed tables) → sound unknown. Alethe proof covers \
+               the conjunctive sub-cases modulo trusted Ackermann. ADR-0013/0015",
+    },
+    SupportRow {
+        fragment: "QF_FP (floating-point)",
+        parser: ParserStatus::Accepted,
+        ir: IrStatus::Lowered,
+        solver: SolverStatus::Decides,
+        proof: ProofStatus::PartialTrust,
+        note: "FP sorts/ops parsed (some conversions constant-only); FP values are \
+               BitVec (no IR sort), lowered to circuits differentially validated vs \
+               native/apfloat; unsat DRAT is modulo the trusted FP circuit. \
+               ADR-0023/0026/0028",
+    },
+    SupportRow {
+        fragment: "quantifiers (∃/∀, finite-domain + instantiation)",
+        parser: ParserStatus::Accepted,
+        ir: IrStatus::Modeled,
+        solver: SolverStatus::SoundIncomplete,
+        proof: ProofStatus::PartialTrust,
+        note: "complete over finite (Bool/BV) domains, guarded-finite Int expansion, \
+               and single-variable real Fourier-Motzkin; otherwise sound refutation by \
+               e-matching/MBQI instantiation (ground unsat transfers; sat/no-progress \
+               is unknown). Checkable Alethe/Lean for the refutation slices. \
+               ADR-0016/0032",
+    },
+    SupportRow {
+        fragment: "datatypes (algebraic)",
+        parser: ParserStatus::AcceptedBounded,
+        ir: IrStatus::Modeled,
+        solver: SolverStatus::Decides,
+        proof: ProofStatus::PartialTrust,
+        note: "non-parametric declare-datatype(s) parsed (parametric rejected); \
+               structural acyclicity/injectivity + elimination/native expansion \
+               decide; unsat DRAT modulo trusted datatype folding (Alethe/Lean too). \
+               ADR-0022",
+    },
+    SupportRow {
+        fragment: "strings (bounded)",
+        parser: ParserStatus::AcceptedBounded,
+        ir: IrStatus::Lowered,
+        solver: SolverStatus::UnsatSatUnknown,
+        proof: ProofStatus::NoProof,
+        note: "no String IR sort — declare-const lowered to a bounded packed BV \
+               (len ≤ 16); ops parsed within the bound; sat decided through the BV \
+               path but str.len unsat may be unknown (BV+LIA gap). Model replay only, \
+               no unsat proof. ADR-0025/0029",
+    },
+    SupportRow {
+        fragment: "optimization (OMT: box/lex/Pareto, MaxSAT, MILP)",
+        parser: ParserStatus::Accepted,
+        ir: IrStatus::Modeled,
+        solver: SolverStatus::SoundIncomplete,
+        proof: ProofStatus::NoProof,
+        note: "maximize/minimize parsed and acted on; each optimum is certified only \
+               by an internal confirmed-unsat domination query (no exported artifact) \
+               and degrades to a sound OptOutcome::Unknown when a probe is undecided. \
+               ADR-0027",
+    },
+    SupportRow {
+        fragment: "incremental (push/pop, reset-assertions)",
+        parser: ParserStatus::Accepted,
+        ir: IrStatus::Modeled,
+        solver: SolverStatus::Decides,
+        proof: ProofStatus::NoProof,
+        note: "push/pop and reset-assertions parsed (full `reset` is rejected); warm \
+               QF_BV/Bool with assumption-core pruning + all-SAT decides; sat replay + \
+               a SAT conflict core, but no DRAT/Alethe across push/pop; warm path \
+               refuses arrays. ADR-0009",
+    },
+];
+
+/// Renders [`SUPPORT_MATRIX`] as the canonical support-matrix markdown document.
+///
+/// Golden-tested against `docs/research/08-planning/support-matrix.md`; that file
+/// is regenerated from here, never hand-edited.
+#[must_use]
+pub fn support_matrix_markdown() -> String {
+    let mut out = String::new();
+    out.push_str("# Support matrix (4-column)\n\n");
+    out.push_str(
+        "Generated from `axeyum_solver::support_matrix::SUPPORT_MATRIX` — do not edit by hand.\n\
+         Regenerate after changing the source of truth and commit the result; a golden test\n\
+         (`tests/support_matrix.rs`) fails if this file drifts from the code.\n\n",
+    );
+    out.push_str(
+        "Four **independent** axes per SMT-LIB fragment, so \"the parser accepts it\" is never \
+         conflated with \"the solver decides it\" or \"the result carries a proof\". The \
+         companion [capability matrix](capability-matrix.md) gives the *assurance* of a \
+         result; this one gives the per-stage *status*.\n\n",
+    );
+
+    out.push_str("## Legend\n\n");
+    out.push_str(
+        "**parser-accepts** (does `axeyum-smtlib` parse it?):\n\
+         - **accepted** — parsed and acted on.\n\
+         - **accepted-but-ignored** — parsed but a deliberate no-op (e.g. `set-option`, \
+           `get-model`, `get-unsat-core`, `get-proof`, `echo`, `exit`).\n\
+         - **accepted (bounded)** — parsed only over a bounded/restricted shape (bounded \
+           strings; arrays restricted to bit-vector index/element; constant-operand-only ops; \
+           non-parametric datatypes).\n\
+         - **rejected** — deliberately refused (full `reset`, parametric datatypes, the \
+           unbounded `String`/`Seq` sort).\n\n",
+    );
+    out.push_str(
+        "**IR-semantics** (does `axeyum-ir` model its semantics?):\n\
+         - **modeled** — first-class IR sort(s)/op(s) with ground-evaluator semantics.\n\
+         - **partial** — a subset of operations / only a bounded shape.\n\
+         - **lowered (no IR sort)** — no native sort; semantics via bit-vector/Boolean lowering \
+           (strings, floating-point values).\n\
+         - **absent** — not modeled.\n\n",
+    );
+    out.push_str(
+        "**solver-decides** (definite `sat`/`unsat` for the core queries?):\n\
+         - **decides** — returns both `sat` and `unsat` for the core fragment.\n\
+         - **unsat decided; sat→unknown** — `unsat` is decided but a satisfying model is not \
+           built, so `sat` degrades to a sound `unknown` (arithmetic-sorted UF; the `str.len` \
+           BV+LIA gap). First-class — never a wrong answer.\n\
+         - **sound, incomplete (unknown-safe)** — may return `unknown` in general (nonlinear \
+           arithmetic, quantifiers outside finite/guarded domains, optimization).\n\
+         - **unsupported** — not decided.\n\n",
+    );
+    out.push_str(
+        "**proof-supports** (does an `unsat` carry a checkable proof?):\n\
+         - **checked** — self-contained certificate re-checkable with no access to the producing \
+           solver (DRAT recheck, Farkas verify, a re-derived congruence closure, end-to-end \
+           faithfulness miter).\n\
+         - **partial-trust** — a certificate exists modulo a trusted reduction layer (clausal \
+           DRAT after a trusted elimination/bit-blast) or only for covered sub-cases.\n\
+         - **none** — no proof artifact (`sat` model replay / conflict core only).\n\n",
+    );
+
+    out.push_str("## Matrix\n\n");
+    out.push_str(
+        "| Fragment | parser-accepts | IR-semantics | solver-decides | proof-supports |\n",
+    );
+    out.push_str("|---|---|---|---|---|\n");
+    for r in SUPPORT_MATRIX {
+        // `write!` to a String is infallible; the result is intentionally ignored.
+        let _ = writeln!(
+            out,
+            "| {} | {} | {} | {} | {} |",
+            r.fragment,
+            r.parser.label(),
+            r.ir.label(),
+            r.solver.label(),
+            r.proof.label(),
+        );
+    }
+
+    out.push_str("\n## Notes (per row)\n\n");
+    for r in SUPPORT_MATRIX {
+        let _ = writeln!(out, "- **{}** — {}", r.fragment, r.note);
+    }
+
+    out
+}

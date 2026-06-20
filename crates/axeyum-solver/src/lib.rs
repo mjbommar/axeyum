@@ -87,6 +87,7 @@ mod strategy;
 /// Bounded-length string theory by bit-vector lowering (no IR sort): `str.len`,
 /// `str.=`, `str.at`, literals over byte strings of length `0..=max_len`.
 pub mod strings;
+pub mod support_matrix;
 mod symexec;
 mod theory_combination;
 pub mod trust;

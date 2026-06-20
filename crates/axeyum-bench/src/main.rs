@@ -526,6 +526,14 @@ mod run {
         } else {
             println!("{artifact}");
         }
+        report_summary(&summary)
+    }
+
+    /// Prints the one-line corpus summary + the root-cause blocker leaderboard, then
+    /// returns the process exit code — `FAILURE` (after a printed `SOUNDNESS ALARM`)
+    /// if any soundness invariant tripped (oracle/ground-truth disagreement, a sat
+    /// model that did not replay, a rewrite that flipped a decision), else `SUCCESS`.
+    fn report_summary(summary: &Summary) -> ExitCode {
         eprintln!(
             "files={} sat={} unsat={} unknown={} unsupported={} errors={} \
              agree={} DISAGREE={} model_replay_failures={} \
@@ -547,7 +555,7 @@ mod run {
             summary.rewrite_sat_unsat_conflicts,
             summary.query_slice_changed_instances,
             summary.query_slice_dropped_terms,
-            summary.par2_seconds / decided_denominator(&summary)
+            summary.par2_seconds / decided_denominator(summary)
         );
         if !summary.blocker_buckets.is_empty() {
             eprintln!(
