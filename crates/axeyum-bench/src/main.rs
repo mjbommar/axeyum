@@ -185,6 +185,7 @@ mod run {
         cnf_variable_budget: Option<u64>,
         cnf_clause_budget: Option<u64>,
         cnf_inprocessing: bool,
+        native_cdcl: bool,
         preprocess: bool,
         compare_z3: bool,
         jobs: usize,
@@ -213,6 +214,7 @@ mod run {
             cnf_variable_budget: None,
             cnf_clause_budget: None,
             cnf_inprocessing: false,
+            native_cdcl: false,
             preprocess: false,
             compare_z3: false,
             jobs: 1,
@@ -300,6 +302,7 @@ mod run {
                 );
             }
             "--inprocess" => parsed.cnf_inprocessing = true,
+            "--native-cdcl" => parsed.native_cdcl = true,
             "--preprocess" => parsed.preprocess = true,
             "--compare-z3" => {
                 #[cfg(feature = "z3")]
@@ -804,6 +807,7 @@ mod run {
             cnf_variable_budget: args.cnf_variable_budget,
             cnf_clause_budget: args.cnf_clause_budget,
             cnf_inprocessing: args.cnf_inprocessing,
+            native_cdcl: args.native_cdcl,
             ..SolverConfig::default()
         }
     }
@@ -1983,6 +1987,7 @@ mod run {
                 "cnf_variable_budget": cnf_variable_budget,
                 "cnf_clause_budget": cnf_clause_budget,
                 "cnf_inprocessing": args.cnf_inprocessing,
+                "native_cdcl": args.native_cdcl,
                 "preprocess": args.preprocess,
                 "limit": limit,
                 "backend": backend_name,
@@ -2294,6 +2299,7 @@ mod run {
             &args.cnf_clause_budget.unwrap_or(u64::MAX).to_le_bytes(),
         );
         update_hash(&mut hash, &[u8::from(args.cnf_inprocessing)]);
+        update_hash(&mut hash, &[u8::from(args.native_cdcl)]);
         update_hash(&mut hash, &[u8::from(args.preprocess)]);
         update_hash(&mut hash, &[u8::from(args.compare_z3)]);
         update_hash(&mut hash, backend_name.as_bytes());
