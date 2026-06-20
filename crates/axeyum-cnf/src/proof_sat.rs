@@ -182,7 +182,23 @@ struct Cdcl {
     reductions: usize,
     /// Number of live (non-deleted) learned clauses. Drives the reduce trigger.
     learned_live: usize,
+    /// VSIDS order heap: a binary max-heap of variable indices keyed by
+    /// `activity` (highest activity at the root), tie-broken by lowest index.
+    /// `heap` holds the variables; `heap_pos[v]` is `v`'s position in `heap`,
+    /// or [`HEAP_ABSENT`] when `v` is not in the heap. Lazy deletion: assigned
+    /// variables are *not* removed on assignment — `pick_branch` pops the root
+    /// and skips already-assigned variables, and `backtrack_to` re-inserts a
+    /// variable only when it has been popped out (`heap_pos[v] == HEAP_ABSENT`).
+    /// All operations are O(log n); the trajectory is identical to the prior
+    /// O(n) linear scan because the ordering (`heap_before`) matches its
+    /// highest-activity / lowest-index tie-break exactly.
+    heap: Vec<usize>,
+    heap_pos: Vec<usize>,
 }
+
+/// Sentinel in [`Cdcl::heap_pos`] marking a variable that is not currently in
+/// the order heap (it has been popped by `pick_branch` and not yet re-inserted).
+const HEAP_ABSENT: usize = usize::MAX;
 
 impl Cdcl {
     fn new(formula: &CnfFormula) -> Self {
@@ -214,7 +230,7 @@ impl Cdcl {
             }
         }
         let num_clauses = clauses.len();
-        Self {
+        let mut cdcl = Self {
             clauses,
             watches,
             assign: vec![None; n],
@@ -239,7 +255,113 @@ impl Cdcl {
             cla_inc: 1.0,
             reductions: 0,
             learned_live: 0,
+            heap: Vec::with_capacity(n),
+            heap_pos: vec![HEAP_ABSENT; n],
+        };
+        // Seed the order heap with every variable. All activities are 0.0, so
+        // the heap order is purely by index; inserting in ascending index order
+        // builds a valid heap (each insert percolates up against equal-activity
+        // parents whose index is smaller, so no swaps occur — O(n) total).
+        for v in 0..n {
+            cdcl.heap_insert(v);
         }
+        cdcl
+    }
+
+    /// Order-heap comparator: returns `true` when variable `a` should sit closer
+    /// to the root than `b`, i.e. `a` is the *preferred* branching variable.
+    /// Highest activity wins; ties break to the lower index. This mirrors the
+    /// prior linear scan exactly, keeping the search trajectory identical.
+    fn heap_before(&self, a: usize, b: usize) -> bool {
+        let (aa, ab) = (self.activity[a], self.activity[b]);
+        // Exact `f64` equality is intentional and load-bearing: it must detect
+        // ties *exactly* the way the reference linear scan does (which replaces
+        // the best only on a strictly-greater activity, i.e. keeps the lower
+        // index on bitwise-equal activity). An epsilon would change the
+        // tie-break and so the search trajectory. The two activities are produced
+        // by identical arithmetic, so bitwise equality is the correct predicate.
+        #[allow(clippy::float_cmp)]
+        let tie = aa == ab;
+        aa > ab || (tie && a < b)
+    }
+
+    /// Restores the heap property by moving the element at `i` toward the root
+    /// while it precedes its parent. O(log n).
+    fn heap_percolate_up(&mut self, mut i: usize) {
+        let x = self.heap[i];
+        while i != 0 {
+            let parent = (i - 1) / 2;
+            let p = self.heap[parent];
+            if !self.heap_before(x, p) {
+                break;
+            }
+            self.heap[i] = p;
+            self.heap_pos[p] = i;
+            i = parent;
+        }
+        self.heap[i] = x;
+        self.heap_pos[x] = i;
+    }
+
+    /// Restores the heap property by moving the element at `i` toward the leaves
+    /// while a child precedes it. O(log n).
+    fn heap_percolate_down(&mut self, mut i: usize) {
+        let x = self.heap[i];
+        let len = self.heap.len();
+        loop {
+            let left = 2 * i + 1;
+            if left >= len {
+                break;
+            }
+            let right = left + 1;
+            let child = if right < len && self.heap_before(self.heap[right], self.heap[left]) {
+                right
+            } else {
+                left
+            };
+            let c = self.heap[child];
+            if !self.heap_before(c, x) {
+                break;
+            }
+            self.heap[i] = c;
+            self.heap_pos[c] = i;
+            i = child;
+        }
+        self.heap[i] = x;
+        self.heap_pos[x] = i;
+    }
+
+    /// True when `var` currently lives in the order heap.
+    fn heap_contains(&self, var: usize) -> bool {
+        self.heap_pos[var] != HEAP_ABSENT
+    }
+
+    /// Inserts `var` into the order heap (no-op if already present). O(log n).
+    fn heap_insert(&mut self, var: usize) {
+        if self.heap_contains(var) {
+            return;
+        }
+        let i = self.heap.len();
+        self.heap.push(var);
+        self.heap_pos[var] = i;
+        self.heap_percolate_up(i);
+    }
+
+    /// Removes and returns the root (preferred) variable. O(log n). The caller
+    /// must ensure the heap is non-empty.
+    fn heap_remove_min(&mut self) -> usize {
+        let root = self.heap[0];
+        let last = *self.heap.last().expect("heap not empty");
+        self.heap_pos[root] = HEAP_ABSENT;
+        if self.heap.len() == 1 {
+            self.heap.pop();
+            return root;
+        }
+        self.heap[0] = last;
+        self.heap_pos[last] = 0;
+        self.heap.pop();
+        self.heap_percolate_down(0);
+        root
     }
 
     /// Bumps `var`'s VSIDS activity, rescaling all activities if it overflows the
@@ -247,10 +369,51 @@ impl Cdcl {
     fn bump_var(&mut self, var: usize) {
         self.activity[var] += self.var_inc;
         if self.activity[var] > VSIDS_RESCALE_LIMIT {
+            // Rescale every activity (and `var_inc`) by the same positive factor.
+            // This preserves the *strict* order of distinct activities, BUT it can
+            // collapse two distinct tiny activities to an equal value (rounding /
+            // underflow to 0.0). Our comparator's secondary key is the variable
+            // index, so a newly-formed tie introduces an ordering constraint the
+            // existing heap layout never enforced — silently violating the heap
+            // property. Re-heapify from scratch so the heap matches the post-
+            // rescale total order exactly. Rescale is rare (activity must exceed
+            // 1e100), so this O(n) rebuild does not affect amortized per-decision
+            // cost; every other heap operation stays O(log n).
             for a in &mut self.activity {
                 *a *= VSIDS_RESCALE;
             }
             self.var_inc *= VSIDS_RESCALE;
+            self.heap_rebuild();
+            return;
+        }
+        // The variable's activity only ever *increases* here, so it can only move
+        // toward the root: a single sift-up restores the heap. O(log n). Variables
+        // not currently in the heap (assigned-and-popped) need no update — they
+        // are re-inserted at their (now higher) activity when they unassign.
+        if self.heap_contains(var) {
+            let i = self.heap_pos[var];
+            self.heap_percolate_up(i);
+        }
+    }
+
+    /// Rebuilds the order heap in place over its current membership, restoring
+    /// the heap property under the current `activity` values (and the index
+    /// tie-break). Floyd's bottom-up heapify: O(n) over the heap's size. Used
+    /// after a VSIDS rescale, which can collapse distinct activities into ties
+    /// and thereby invalidate the prior layout.
+    fn heap_rebuild(&mut self) {
+        let len = self.heap.len();
+        if len <= 1 {
+            return;
+        }
+        // Percolate down every internal node, highest index first (Floyd build).
+        let mut i = len / 2;
+        loop {
+            i -= 1;
+            self.heap_percolate_down(i);
+            if i == 0 {
+                break;
+            }
         }
     }
 
@@ -748,28 +911,36 @@ impl Cdcl {
                 let var = self.trail.pop().expect("trail not empty above bound");
                 self.assign[var] = None;
                 self.reason[var] = None;
+                // The variable becomes a branchable candidate again. Re-insert it
+                // into the order heap *only* if it was popped out by `pick_branch`
+                // (lazy deletion): variables still in the heap stay put, avoiding
+                // re-insertion churn. O(log n) per actually-removed variable.
+                if !self.heap_contains(var) {
+                    self.heap_insert(var);
+                }
             }
             self.trail_lim.truncate(level);
         }
         self.qhead = self.trail.len();
     }
 
-    fn pick_branch(&self) -> Option<usize> {
-        // The unassigned variable of highest VSIDS activity; ties break to the
-        // lowest index (only a strictly greater activity replaces the best), so
-        // the choice is deterministic.
-        let mut best: Option<usize> = None;
-        for v in 0..self.assign.len() {
-            if self.assign[v].is_some() {
-                continue;
-            }
-            match best {
-                None => best = Some(v),
-                Some(b) if self.activity[v] > self.activity[b] => best = Some(v),
-                _ => {}
+    fn pick_branch(&mut self) -> Option<usize> {
+        // Pop roots (highest activity, lowest index on ties) until an unassigned
+        // variable surfaces — the canonical MiniSat lazy-deletion order heap.
+        // Each `heap_remove_min` is O(log n); assigned roots are discarded (their
+        // re-insertion is deferred to `backtrack_to`). When the heap empties with
+        // every variable assigned, the formula is satisfied → `None`.
+        //
+        // This yields exactly the variable the prior O(n) linear scan would have
+        // chosen (same highest-activity / lowest-index tie-break), so the search
+        // trajectory is unchanged.
+        while !self.heap.is_empty() {
+            let var = self.heap_remove_min();
+            if self.assign[var].is_none() {
+                return Some(var);
             }
         }
-        best
+        None
     }
 }
 
@@ -1120,6 +1291,130 @@ mod tests {
         }
         let refs: Vec<&[i64]> = clauses.iter().map(Vec::as_slice).collect();
         formula(nvars, &refs)
+    }
+
+    impl Cdcl {
+        /// Reference branching rule: the exact O(n) linear scan the order heap
+        /// replaces — the unassigned variable of highest activity, ties to the
+        /// lowest index. Used only by trajectory-identity tests to confirm the
+        /// heap returns the same variable as the scan.
+        fn pick_branch_linear(&self) -> Option<usize> {
+            let mut best: Option<usize> = None;
+            for v in 0..self.assign.len() {
+                if self.assign[v].is_some() {
+                    continue;
+                }
+                match best {
+                    None => best = Some(v),
+                    Some(b) if self.activity[v] > self.activity[b] => best = Some(v),
+                    _ => {}
+                }
+            }
+            best
+        }
+
+        /// Asserts the order-heap invariants hold: every unassigned variable is in
+        /// the heap, `heap_pos` is a consistent inverse of `heap`, and the heap
+        /// property (`heap_before(parent, child)`) holds at every node.
+        fn assert_heap_invariants(&self) {
+            for (i, &v) in self.heap.iter().enumerate() {
+                assert_eq!(self.heap_pos[v], i, "heap_pos must invert heap");
+                if i > 0 {
+                    let parent = self.heap[(i - 1) / 2];
+                    assert!(
+                        !self.heap_before(v, parent),
+                        "heap property violated at {i}: {v} before parent {parent}"
+                    );
+                }
+            }
+            for v in 0..self.assign.len() {
+                if self.assign[v].is_none() {
+                    assert!(
+                        self.heap_contains(v),
+                        "every unassigned variable must be in the heap: {v}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// The order heap returns exactly the variable the O(n) linear scan would,
+    /// under randomized bump / pop / backtrack stress, and its structural
+    /// invariants hold throughout. This is the trajectory-identity guarantee at
+    /// the branching-decision level: if the heap ever picked a different variable
+    /// than the scan, the search trajectory would diverge.
+    #[test]
+    fn order_heap_matches_linear_scan_under_stress() {
+        let mut state = 0x51ce_d00d_face_0042u64;
+        let mut next = || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state
+        };
+        // A dummy unit formula gives us a fully-initialized Cdcl with n vars all
+        // in the heap; we then drive bump/pick/backtrack by hand.
+        let n = 64usize;
+        let n_signed = i64::try_from(n).unwrap();
+        let n_bound = u64::try_from(n).unwrap();
+        let mut clauses: Vec<Vec<i64>> = vec![vec![1]];
+        clauses.extend((1..=n_signed).map(|v| vec![v, -v])); // tautologies, harmless
+        let refs: Vec<&[i64]> = clauses.iter().map(Vec::as_slice).collect();
+        let mut cdcl = Cdcl::new(&formula(n, &refs));
+        cdcl.assert_heap_invariants();
+
+        for _ in 0..20_000 {
+            match next() % 3 {
+                // Bump a random variable (raises its activity → sift-up).
+                0 => {
+                    let v = usize::try_from(next() % n_bound).unwrap();
+                    cdcl.bump_var(v);
+                    cdcl.decay();
+                    cdcl.assert_heap_invariants();
+                }
+                // Pick the best variable and "decide" it (assign + push a level),
+                // first checking the heap agrees with the linear scan.
+                1 => {
+                    let expected = cdcl.pick_branch_linear();
+                    let got = cdcl.pick_branch();
+                    assert_eq!(got, expected, "heap pick must match linear scan");
+                    if let Some(v) = got {
+                        cdcl.trail_lim.push(cdcl.trail.len());
+                        let pos = CnfLit::positive(CnfVar::new(v).unwrap());
+                        cdcl.enqueue(pos, None);
+                    }
+                    cdcl.assert_heap_invariants();
+                }
+                // Backtrack to a random earlier level (unassign → re-insert).
+                _ => {
+                    if !cdcl.trail_lim.is_empty() {
+                        let lvl =
+                            usize::try_from(next() % (cdcl.trail_lim.len() as u64 + 1)).unwrap();
+                        cdcl.backtrack_to(lvl);
+                    }
+                    cdcl.assert_heap_invariants();
+                }
+            }
+        }
+    }
+
+    /// Determinism of the heap-driven core: the same formula yields a
+    /// byte-identical proof across independent runs (the heap is fully
+    /// deterministic — fixed insertion order at init, total `heap_before`
+    /// ordering, no hashmap iteration). Uses a reducing pigeonhole instance so
+    /// the run exercises bump, pop, backtrack, restart, and `reduce_db`.
+    #[test]
+    fn heap_driven_solve_is_byte_identical_across_runs() {
+        let f = pigeonhole(8);
+        let a = solve_with_drat_proof(&f);
+        let b = solve_with_drat_proof(&f);
+        assert_eq!(a, b, "heap-driven run must be byte-identical across runs");
+        match &a {
+            ProofSolveOutcome::Unsat(proof) => {
+                assert_eq!(check_drat(&f, proof), Ok(true), "proof must DRAT-check");
+            }
+            other => panic!("expected unsat, got {other:?}"),
+        }
     }
 
     /// Counts the clause-deletion (`d`) steps in a proof.
