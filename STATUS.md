@@ -569,6 +569,25 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-20** — **PERF (Track 1, #1) slice 1: CNF inprocessing un-gated — public p4dfa 3→4/113,
+  DISAGREE=0.** A read-only perf investigation found the highest-value sound lever already exists,
+  is plumbed, and is soundness-tested — but was OFF/mis-gated: `axeyum-cnf`'s `simplify`
+  (subsumption + self-subsuming resolution, model-preserving) + `bve` (bounded variable
+  elimination, equisat + `Reconstruction::extend` model lift) ran behind a 200k-var/1M-clause
+  admission cap that excluded the entire EncodingBudget band (2M+ vars / 5–8M clauses), so no
+  measured run ever used it on the cases it can convert. Raised `INPROCESS_MAX_VARIABLES`/`_CLAUSES`
+  to 4M/16M (safe: `maybe_inprocess` time-bounds the passes to half the solve budget; the
+  deadline-truncated partial result stays sound — the budget, not the cap, is the hang-preventer).
+  **Measured A/B at fair-3s (`--preprocess` vs `--preprocess --inprocess`): 3→4 decided,
+  DISAGREE=0, 0 model-replay failures, par2 5.864→5.832** — a sound, positive, zero-correctness-cost
+  gain (the `compose.p2` instance flips batsat-Timeout→SAT via BVE). At 3s the BVE pass runs
+  truncated, so the var-bound EncodingBudget cases still await **slice 2** (variable compaction —
+  `variable_count()` isn't compacted after BVE, so they stay budget-refused despite eliminating
+  1M+ vars) + the 20s tier. Added reproducible `bench-public-qfbv-preprocess-inprocess-fair-3s/-20s`
+  recipes. Default `cnf_inprocessing` stays `false` pending a broad-suite measurement before any
+  global flip. Full suite (incl. `cnf_inprocessing_agrees_with_baseline_and_replays`) + clippy +
+  doc + fmt green. Investigation sub-agent + independent A/B re-measurement.
+
 - **2026-06-20** — **P2.5: single-variable integer polynomial EQUATIONS `p(x)=0` (any degree)
   decided via the rational root theorem.** Generalizes the quadratic path (deg≤2 incl.
   inequalities unchanged) to arbitrary-degree `p(x)=0`/`≠0` in `nia_square.rs`: `Poly` collects a

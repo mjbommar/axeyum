@@ -106,6 +106,23 @@ bench-public-qfbv-preprocess-fair-20s:
     mkdir -p bench-results/baselines
     cargo run --release -p axeyum-bench --features z3 -- corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen --backend sat-bv --preprocess --compare-z3 --timeout-ms 20000 --jobs 2 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --out bench-results/baselines/qf-bv-p4dfa-fair-sat-bv-preprocess-vs-z3-20s-n300k-cnf8M.json --corpus-source 'SMT-LIB 2024 non-incremental QF_BV, Zenodo 11061097' --logic QF_BV
 
+# Fair sat-bv --preprocess --inprocess vs Z3, 3 s tier. CNF inprocessing
+# (subsumption + bounded variable elimination, equisat + model reconstruction)
+# is enabled and admitted up to the raised cap (4M vars / 16M clauses) so the
+# public EncodingBudget band is actually reached. Measured 4/113 vs --preprocess's
+# 3/113 (DISAGREE=0, 0 replay failures, par2 5.864→5.832) — the BVE pass runs
+# truncated at 3 s, so var-bound cases await compaction + the 20 s tier.
+bench-public-qfbv-preprocess-inprocess-fair-3s:
+    mkdir -p bench-results/baselines
+    cargo run --release -p axeyum-bench --features z3 -- corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen --backend sat-bv --preprocess --inprocess --compare-z3 --timeout-ms 3000 --jobs 2 --node-budget 200000 --cnf-var-budget 2000000 --cnf-clause-budget 5000000 --out bench-results/baselines/qf-bv-p4dfa-fair-sat-bv-preprocess-inprocess-vs-z3-3s-n200k-cnf5M.json --corpus-source 'SMT-LIB 2024 non-incremental QF_BV, Zenodo 11061097' --logic QF_BV
+
+# Fair sat-bv --preprocess --inprocess vs Z3, 20 s tier — the budget where the
+# (deadline-bounded) BVE pass can run closer to its full ~28% clause reduction on
+# the EncodingBudget instances.
+bench-public-qfbv-preprocess-inprocess-fair-20s:
+    mkdir -p bench-results/baselines
+    cargo run --release -p axeyum-bench --features z3 -- corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen --backend sat-bv --preprocess --inprocess --compare-z3 --timeout-ms 20000 --jobs 2 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --out bench-results/baselines/qf-bv-p4dfa-fair-sat-bv-preprocess-inprocess-vs-z3-20s-n300k-cnf8M.json --corpus-source 'SMT-LIB 2024 non-incremental QF_BV, Zenodo 11061097' --logic QF_BV
+
 # Reproduce the Phase 5 guarded admission run with explicit CNF budgets.
 bench-public-qfbv-sat-bv-guarded:
     mkdir -p bench-results/baselines

@@ -274,11 +274,19 @@ struct Inprocessed {
 /// touched queue), so they no longer blow a solve budget on the wide bit-blasted
 /// CNFs that the old `O(clauses²)`/`O(variables·clauses)` versions hung on (the
 /// earlier 5k-var/20k-clause cap saw 13–22 s passes; the indexed versions run in
-/// milliseconds). This is now a generous admission ceiling covering the whole
-/// curated slice, not a hang-preventer; the passes' own budgets are the real
-/// safety net.
-const INPROCESS_MAX_VARIABLES: usize = 200_000;
-const INPROCESS_MAX_CLAUSES: usize = 1_000_000;
+/// milliseconds on the curated slice).
+///
+/// The ceiling is deliberately set above the public-corpus `EncodingBudget` band
+/// (`QF_BV` p4dfa instances reach ~2.1 M variables / ~8 M clauses) so inprocessing
+/// is actually attempted on the cases it can convert: BVE measured a consistent
+/// ~28 % clause reduction there, which clears their CNF-budget overshoot. This is
+/// safe because [`maybe_inprocess`] time-bounds the passes to half the remaining
+/// solve budget (`eliminate_variables_within`/`simplify_within` truncate between
+/// variables/clauses and the partial result stays sound) — the *budget*, not this
+/// cap, is the hang-preventer. The cap only excludes pathological encodings whose
+/// occurrence lists would not fit a single pass even to start.
+const INPROCESS_MAX_VARIABLES: usize = 4_000_000;
+const INPROCESS_MAX_CLAUSES: usize = 16_000_000;
 
 /// XOR-propagation admission bound. Unlike subsumption/BVE, `xor_propagate` runs
 /// Gaussian elimination over the recovered XOR system, which is `O(gates²·vars)`
