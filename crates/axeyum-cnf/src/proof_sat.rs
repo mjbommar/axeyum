@@ -134,12 +134,43 @@ fn lit_code(lit: CnfLit) -> usize {
 /// propagations or conflicts are derived.
 #[derive(Clone, Copy)]
 struct Watch {
-    clause: usize,
+    clause: CRef,
     blocker: CnfLit,
 }
 
+/// A clause reference: a stable index into [`Cdcl::headers`] (and the parallel
+/// per-clause metadata vectors). It is the identity used by watches, reasons,
+/// and the proof — replacing the old `usize` clause id of the
+/// `Vec<Vec<CnfLit>>` layout. [`CRef`]s never move: `headers` only grows
+/// (learned clauses are appended) and deletion is by tombstone, so a [`CRef`]
+/// stays valid
+/// for the whole solve. The clause's literals live in the flat
+/// [`Cdcl::arena`] at `[offset .. offset + len]`; that slice never relocates
+/// either, since the arena only ever appends.
+type CRef = usize;
+
+/// Per-clause index into the packed literal [`Cdcl::arena`]. Mirrors `BatSat`'s
+/// `ClauseAllocator`/`ClauseHeader`: all clause literals are stored contiguously
+/// in one cache-local arena, and each clause is described by its `(offset, len)`
+/// here rather than by a separately-heap-allocated `Vec`. The two watched
+/// literals are kept in arena slots `offset+0` and `offset+1` (the slot-0/1
+/// convention), exactly as in the prior `Vec<CnfLit>` layout.
+#[derive(Clone, Copy)]
+struct ClauseHeader {
+    offset: usize,
+    len: usize,
+}
+
 struct Cdcl {
-    clauses: Vec<Vec<CnfLit>>,
+    /// Flat, cache-local arena of all clause literals (problem clauses first,
+    /// learned clauses appended). A clause occupies the contiguous slice
+    /// `arena[h.offset .. h.offset + h.len]` for its [`ClauseHeader`] `h`. The
+    /// arena only grows; existing clause slices never move, so [`CRef`]s and the
+    /// `(offset, len)` of already-registered clauses stay valid.
+    arena: Vec<CnfLit>,
+    /// Per-clause `(offset, len)` headers into [`Cdcl::arena`], indexed by
+    /// [`CRef`]. `headers.len()` is the clause count.
+    headers: Vec<ClauseHeader>,
     /// Per-literal watch lists, indexed by [`lit_code`]. Each entry carries a
     /// blocking literal (see [`Watch`]).
     watches: Vec<Vec<Watch>>,
@@ -203,35 +234,46 @@ const HEAP_ABSENT: usize = usize::MAX;
 impl Cdcl {
     fn new(formula: &CnfFormula) -> Self {
         let n = formula.variable_count();
-        let clauses: Vec<Vec<CnfLit>> = formula
-            .clauses()
-            .iter()
-            .map(|clause| clause.lits().to_vec())
-            .collect();
+        // Pack every clause's literals contiguously into one arena, recording a
+        // `(offset, len)` header per clause. This mirrors the prior
+        // `Vec<Vec<CnfLit>>` content exactly (same clauses, same order, same
+        // intra-clause literal order) — only the storage layout differs.
+        let mut arena: Vec<CnfLit> = Vec::new();
+        let mut headers: Vec<ClauseHeader> = Vec::with_capacity(formula.clauses().len());
+        for clause in formula.clauses() {
+            let offset = arena.len();
+            arena.extend_from_slice(clause.lits());
+            headers.push(ClauseHeader {
+                offset,
+                len: clause.lits().len(),
+            });
+        }
         let mut watches = vec![Vec::new(); 2 * n];
         let mut initial_units = Vec::new();
         let mut has_empty_clause = false;
-        for (cid, clause) in clauses.iter().enumerate() {
-            match clause.len() {
+        for (cid, &h) in headers.iter().enumerate() {
+            match h.len {
                 0 => has_empty_clause = true,
-                1 => initial_units.push(clause[0]),
+                1 => initial_units.push(arena[h.offset]),
                 _ => {
                     // Watch the first two literals; each watch's blocker is the
                     // OTHER watched literal of the same clause.
-                    watches[lit_code(clause[0])].push(Watch {
+                    let (l0, l1) = (arena[h.offset], arena[h.offset + 1]);
+                    watches[lit_code(l0)].push(Watch {
                         clause: cid,
-                        blocker: clause[1],
+                        blocker: l1,
                     });
-                    watches[lit_code(clause[1])].push(Watch {
+                    watches[lit_code(l1)].push(Watch {
                         clause: cid,
-                        blocker: clause[0],
+                        blocker: l0,
                     });
                 }
             }
         }
-        let num_clauses = clauses.len();
+        let num_clauses = headers.len();
         let mut cdcl = Self {
-            clauses,
+            arena,
+            headers,
             watches,
             assign: vec![None; n],
             level: vec![0; n],
@@ -266,6 +308,40 @@ impl Cdcl {
             cdcl.heap_insert(v);
         }
         cdcl
+    }
+
+    /// The literals of clause `cid`, as a cache-local slice into the arena.
+    #[inline]
+    fn lits(&self, cid: CRef) -> &[CnfLit] {
+        let h = self.headers[cid];
+        &self.arena[h.offset..h.offset + h.len]
+    }
+
+    /// The number of literals in clause `cid`.
+    #[inline]
+    fn clause_len(&self, cid: CRef) -> usize {
+        self.headers[cid].len
+    }
+
+    /// The `i`-th literal of clause `cid` (0-based within the clause).
+    #[inline]
+    fn lit_at(&self, cid: CRef, i: usize) -> CnfLit {
+        let h = self.headers[cid];
+        self.arena[h.offset + i]
+    }
+
+    /// Appends a clause's literals to the arena and pushes its header, returning
+    /// the new clause's stable [`CRef`]. The arena only grows here, so no
+    /// existing clause slice moves.
+    fn alloc_clause(&mut self, lits: &[CnfLit]) -> CRef {
+        let offset = self.arena.len();
+        self.arena.extend_from_slice(lits);
+        let cid = self.headers.len();
+        self.headers.push(ClauseHeader {
+            offset,
+            len: lits.len(),
+        });
+        cid
     }
 
     /// Order-heap comparator: returns `true` when variable `a` should sit closer
@@ -494,8 +570,8 @@ impl Cdcl {
                 if learned.is_empty() {
                     return ProofSolveOutcome::Unsat(self.proof);
                 }
-                let clause_id = self.clauses.len();
                 let asserting = learned[0];
+                let clause_id = self.alloc_clause(&learned);
                 if learned.len() >= 2 {
                     self.watches[lit_code(learned[0])].push(Watch {
                         clause: clause_id,
@@ -506,7 +582,6 @@ impl Cdcl {
                         blocker: learned[0],
                     });
                 }
-                self.clauses.push(learned);
                 // Register the new learned clause's deletion metadata.
                 self.lbd.push(lbd);
                 self.cla_activity.push(0.0);
@@ -602,15 +677,16 @@ impl Cdcl {
                 }
 
                 let cid = watchers[i].clause;
-                // Keep the falsified literal at index 1.
-                if self.clauses[cid][0] == false_lit {
-                    self.clauses[cid].swap(0, 1);
+                // Keep the falsified literal at slot 1 (arena slot offset+1).
+                let off = self.headers[cid].offset;
+                if self.arena[off] == false_lit {
+                    self.arena.swap(off, off + 1);
                 }
                 i += 1;
 
                 // (2) If the other watched literal is true, the clause is
                 // satisfied; keep this watch with its blocker refreshed to it.
-                let first = self.clauses[cid][0];
+                let first = self.arena[off];
                 if first != blocker && self.value(first) == Some(true) {
                     watchers[j] = Watch {
                         clause: cid,
@@ -621,13 +697,14 @@ impl Cdcl {
                 }
 
                 // Look for a non-false literal to watch instead of `false_lit`.
-                for k in 2..self.clauses[cid].len() {
-                    if self.value(self.clauses[cid][k]) != Some(false) {
-                        self.clauses[cid].swap(1, k);
+                let len = self.headers[cid].len;
+                for k in 2..len {
+                    if self.value(self.arena[off + k]) != Some(false) {
+                        self.arena.swap(off + 1, off + k);
                         // Move the watch to the new literal's list; its blocker
-                        // is the surviving (index-0) watched literal. This watch
+                        // is the surviving (slot-0) watched literal. This watch
                         // is dropped from the current list (not copied to `j`).
-                        let new_code = lit_code(self.clauses[cid][1]);
+                        let new_code = lit_code(self.arena[off + 1]);
                         self.watches[new_code].push(Watch {
                             clause: cid,
                             blocker: first,
@@ -684,9 +761,9 @@ impl Cdcl {
             // conflict, so frequently-useful learned clauses survive reduceDB.
             self.bump_clause(clause_id);
             // Clone the reason clause's literals so we can bump activities while
-            // walking it (the borrow checker forbids reading `self.clauses` and
+            // walking it (the borrow checker forbids reading the arena and
             // mutating `self.activity` at once; reason clauses are short).
-            let lits = self.clauses[clause_id].clone();
+            let lits = self.lits(clause_id).to_vec();
             for q in lits {
                 let v = q.var().index();
                 if Some(v) == pivot_var || seen[v] || self.level[v] == 0 {
@@ -771,7 +848,7 @@ impl Cdcl {
             }
             match self.reason[v] {
                 None => true, // a decision literal is never redundant
-                Some(rid) => !self.clauses[rid].iter().all(|&q| {
+                Some(rid) => !self.lits(rid).iter().all(|&q| {
                     let qv = q.var().index();
                     qv == v || in_learned[qv] || self.level[qv] == 0
                 }),
@@ -822,12 +899,11 @@ impl Cdcl {
     /// Is learned clause `cid` currently the reason (antecedent) for an assigned
     /// literal? Such a clause is LOCKED: deleting it would corrupt the
     /// implication graph, so it must be protected.
-    fn is_locked(&self, cid: usize) -> bool {
-        let clause = &self.clauses[cid];
-        if clause.is_empty() {
+    fn is_locked(&self, cid: CRef) -> bool {
+        if self.clause_len(cid) == 0 {
             return false;
         }
-        let v = clause[0].var().index();
+        let v = self.lit_at(cid, 0).var().index();
         self.assign[v].is_some() && self.reason[v] == Some(cid)
     }
 
@@ -843,10 +919,10 @@ impl Cdcl {
     /// clause, so completeness is preserved.
     fn reduce_db(&mut self) {
         // Candidates for deletion: live, learned, non-glue, non-locked clauses.
-        let mut candidates: Vec<usize> = (self.num_original..self.clauses.len())
+        let mut candidates: Vec<CRef> = (self.num_original..self.headers.len())
             .filter(|&cid| {
                 !self.deleted[cid]
-                    && self.clauses[cid].len() > 2
+                    && self.clause_len(cid) > 2
                     && self.lbd[cid] > GLUE_LBD
                     && !self.is_locked(cid)
             })
@@ -870,7 +946,7 @@ impl Cdcl {
             // Emit a DRAT deletion so the proof replays consistently. The
             // checker matches clauses as sets, and this clause was added
             // verbatim, so the stored literals delete it.
-            self.proof.push(DratStep::Delete(self.clauses[cid].clone()));
+            self.proof.push(DratStep::Delete(self.lits(cid).to_vec()));
         }
         if to_delete > 0 {
             self.rebuild_watches();
@@ -884,13 +960,12 @@ impl Cdcl {
         for w in &mut self.watches {
             w.clear();
         }
-        for cid in 0..self.clauses.len() {
+        for cid in 0..self.headers.len() {
             if self.deleted[cid] {
                 continue;
             }
-            let clause = &self.clauses[cid];
-            if clause.len() >= 2 {
-                let (l0, l1) = (clause[0], clause[1]);
+            if self.clause_len(cid) >= 2 {
+                let (l0, l1) = (self.lit_at(cid, 0), self.lit_at(cid, 1));
                 // Each watch's blocker is the other watched literal.
                 self.watches[lit_code(l0)].push(Watch {
                     clause: cid,
@@ -1488,7 +1563,7 @@ mod tests {
         cdcl.enqueue(dlit(3), None); // c@3
         // Add a learned clause that implies d, watched on its first two lits.
         let learned = vec![lit(4), lit(-1), lit(-2), lit(-3)]; // d ∨ ¬a ∨ ¬b ∨ ¬c
-        let cid = cdcl.clauses.len();
+        let cid = cdcl.alloc_clause(&learned);
         cdcl.watches[lit_code(learned[0])].push(Watch {
             clause: cid,
             blocker: learned[1],
@@ -1497,7 +1572,6 @@ mod tests {
             clause: cid,
             blocker: learned[0],
         });
-        cdcl.clauses.push(learned);
         cdcl.lbd.push(4); // distinct levels among ¬a,¬b,¬c,d (d will be @3)
         cdcl.cla_activity.push(0.0);
         cdcl.deleted.push(false);
