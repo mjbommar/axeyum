@@ -63,3 +63,50 @@ fn open_disjunctive_universal_is_valid_and_fast() {
         other => panic!("expected Sat for the valid universal, got {other:?}"),
     }
 }
+
+#[test]
+fn gcd_coefficient_strict_inequalities_decide_unsat() {
+    use axeyum_ir::Sort;
+    // 2x < 2y ∧ 2y < 2x+2  ⟺  x<y ∧ y≤x  → UNSAT. Needs gcd-aware tightening
+    // (2x-2y < 0 ⟺ 2x-2y ≤ -2, not the loose ≤ -1) to be LP-infeasible immediately.
+    let mut a = TermArena::new();
+    let x = a.declare("x", Sort::Int).unwrap();
+    let y = a.declare("y", Sort::Int).unwrap();
+    let (xv, yv) = (a.var(x), a.var(y));
+    let two = a.int_const(2);
+    let x2 = a.int_mul(two, xv).unwrap();
+    let y2 = a.int_mul(two, yv).unwrap();
+    let c1 = a.int_lt(x2, y2).unwrap(); // 2x < 2y
+    let x2p2 = a.int_add(x2, two).unwrap();
+    let c2 = a.int_lt(y2, x2p2).unwrap(); // 2y < 2x+2
+    assert!(
+        matches!(
+            check_with_lia_simplex(&a, &[c1, c2]),
+            Ok(CheckResult::Unsat)
+        ),
+        "2x<2y ∧ 2y<2x+2 must be UNSAT (gcd-2 tightening)"
+    );
+}
+
+#[test]
+fn gcd_three_strict_inequalities_decide_unsat() {
+    use axeyum_ir::Sort;
+    // 3x > 3y ∧ 3x < 3y+3  ⟺  x≥y+1 ∧ x≤y  → UNSAT (gcd-3 tightening).
+    let mut a = TermArena::new();
+    let x = a.declare("x", Sort::Int).unwrap();
+    let y = a.declare("y", Sort::Int).unwrap();
+    let (xv, yv) = (a.var(x), a.var(y));
+    let three = a.int_const(3);
+    let x3 = a.int_mul(three, xv).unwrap();
+    let y3 = a.int_mul(three, yv).unwrap();
+    let c1 = a.int_gt(x3, y3).unwrap(); // 3x > 3y
+    let y3p3 = a.int_add(y3, three).unwrap();
+    let c2 = a.int_lt(x3, y3p3).unwrap(); // 3x < 3y+3
+    assert!(
+        matches!(
+            check_with_lia_simplex(&a, &[c1, c2]),
+            Ok(CheckResult::Unsat)
+        ),
+        "3x>3y ∧ 3x<3y+3 must be UNSAT (gcd-3 tightening)"
+    );
+}

@@ -530,6 +530,19 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-19** — **P2.x COMPLETENESS: gcd-aware integer tightening + a hang/wrong-answer hunt
+  (clean bill).** Refined the strict-inequality tightening to be gcd-exact: `L + c0 < 0` (L a
+  multiple of `g = gcd(aᵢ)`) ⟺ `L ≤ g·⌊(-c0-1)/g⌋`, so `2x < 2y` ⟹ `2x-2y ≤ -2` (not the loose
+  `≤ -1`). Now `2x<2y ∧ 2y<2x+2`, `3x>3y ∧ 3x<3y+3`, `1000x<1000y ∧ 1000y<1000x+1000` all decide
+  UNSAT immediately (`g=1` reduces to the prior `c0+1`; magnitude-guarded by `TIGHTEN_COEFF_LIMIT`
+  to avoid i128 overflow — out-of-range coefficients left strict, sound). A read-only **hunt over
+  ~30 arithmetic + quantifier queries found NO hangs and NO wrong answers** (independently
+  confirming the LIA fix + the coefficient cases); all remaining gaps are graceful `Unknown` on
+  harder fragments (NIA `x*x=2`, NRA √2, ∀∃-witness synthesis). New gcd-coefficient tests; full
+  suite green. **Queued actionable item:** `∀x:Int.(x≤y ∨ x≥y+2)` → should be UNSAT (the k≥2
+  sibling of the now-Sat k=1 valid case — `∃x` in the open width-k interval `(y,y+k)` exists for
+  all y when k≥2; the instantiation fallback misses the uniform witness `x=y+1`).
+
 - **2026-06-19** — **P2.x COMPLETENESS: integer strict-inequality tightening — `c>y ∧ c<y+1`
   decides UNSAT instantly (and the open-`∀` decides Sat).** The follow-up to the LIA-hang
   deadline below: rather than merely *not hang*, the LIA solver now *decides* these. A strict

@@ -41,6 +41,23 @@ fn past_deadline(deadline: Option<Instant>) -> bool {
     deadline.is_some_and(|d| Instant::now() >= d)
 }
 
+/// Non-negative gcd of two `i128`s (`gcd(0, x) = |x|`), for integer-tightening.
+/// Callers guard `|a|, |b| < TIGHTEN_COEFF_LIMIT`, so `abs()` cannot overflow.
+fn gcd_i128(a: i128, b: i128) -> i128 {
+    let (mut a, mut b) = (a.abs(), b.abs());
+    while b != 0 {
+        let t = b;
+        b = a % b;
+        a = t;
+    }
+    a
+}
+
+/// Coefficient/constant magnitude bound for applying integer tightening. Real LIA
+/// coefficients are tiny; above this the constraint is left strict (sound, no
+/// tightening) so the gcd/`⌊⌋` arithmetic below cannot overflow `i128`.
+const TIGHTEN_COEFF_LIMIT: i128 = 1 << 62;
+
 /// Checks a conjunctive `QF_LRA` query by exact-rational Fourier–Motzkin
 /// elimination. The returned [`Model`] assigns each real variable a
 /// [`Value::Real`] and replays against the original assertions.
@@ -895,21 +912,48 @@ fn lia_simplex_within(
     }
     let nvars = ctx.vars.len();
     let mut constraints = ctx.constraints;
-    // Integer tightening: a *strict* constraint `expr < 0` over an integer-valued
-    // `expr` (all coefficients integral; the variables are integers) is equivalent to
-    // `expr ≤ -1`, i.e. `expr + 1 ≤ 0`. Tightening to a non-strict bound makes the LP
-    // relaxation EXACT for it — so `c > y ∧ c < y+1` (⇒ `c−y ≥ 1 ∧ c−y ≤ 0`) is
-    // immediately LP-infeasible (`unsat`) instead of branch-and-bound grinding forever
-    // on the real-feasible `0 < c−y < 1`. Only applied when `expr` is provably
-    // integer-valued (else left strict — sound, the simplex still handles it).
+    // Integer tightening (gcd-aware): a *strict* constraint `L + c0 < 0` whose variable
+    // part `L = Σ aᵢ·xᵢ` has integral coefficients and integral constant is, over the
+    // integers, equivalent to a NON-strict bound — and tightening it makes the LP
+    // relaxation EXACT, so the integer-infeasible cases decide immediately instead of
+    // branch-and-bound grinding. `L` is a multiple of `g = gcd(aᵢ)`, so `L + c0 < 0`
+    // ⟺ `L ≤ -c0-1` ⟺ `L ≤ g·⌊(-c0-1)/g⌋`. The new constant is `-g·⌊(-c0-1)/g⌋`
+    // (which reduces to `c0+1` when `g = 1`). E.g. `2x < 2y` (g=2) ⟹ `2x-2y ≤ -2` (not
+    // the loose `≤ -1`), so `2x<2y ∧ 2y<2x+2` is LP-infeasible (`unsat`). Only applied
+    // when `L`/`c0` are provably integral (else left strict — sound; simplex handles it).
     for constraint in &mut constraints {
-        if constraint.strict
-            && constraint.expr.constant.is_integer()
-            && constraint.expr.coeffs.values().all(|r| r.is_integer())
+        if !constraint.strict
+            || !constraint.expr.constant.is_integer()
+            || !constraint.expr.coeffs.values().all(|r| r.is_integer())
         {
-            constraint.expr.constant = constraint.expr.constant + Rational::integer(1);
-            constraint.strict = false;
+            continue;
         }
+        let c0 = constraint.expr.constant.numerator();
+        // Guard magnitudes so the arithmetic below cannot overflow; an out-of-range
+        // coefficient just leaves this constraint strict (sound — simplex handles it).
+        if c0.abs() >= TIGHTEN_COEFF_LIMIT
+            || constraint
+                .expr
+                .coeffs
+                .values()
+                .any(|r| r.numerator().abs() >= TIGHTEN_COEFF_LIMIT)
+        {
+            continue;
+        }
+        let g = constraint
+            .expr
+            .coeffs
+            .values()
+            .fold(0i128, |g, r| gcd_i128(g, r.numerator()));
+        // `L + c0 < 0` (L a multiple of g) ⟺ `L ≤ g·⌊(-c0-1)/g⌋`; new constant is its
+        // negation. `g = 0` (no variables) ⟹ `c0 + 1`, the same as the `g = 1` formula.
+        let new_const = if g == 0 {
+            c0 + 1
+        } else {
+            -g * (-c0 - 1).div_euclid(g)
+        };
+        constraint.expr.constant = Rational::integer(new_const);
+        constraint.strict = false;
     }
     let mut budget = MAX_LIA_BNB_NODES;
     match lia_branch_and_bound(&mut constraints, nvars, &mut budget, deadline) {
