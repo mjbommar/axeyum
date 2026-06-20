@@ -6,10 +6,23 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
-- **Session 2026-06-19 — robustness + proof certs + capability/hang sweep (resume here).**
-  **65 validated commits**; whole `axeyum-solver` crate green on test/clippy/doc/fmt (1122+
-  tests) + Carcara (54). **Two deep hunts (arithmetic+quantifier, then non-arithmetic) now give
-  a CLEAN BILL — no hangs, no wrong answers across every theory.** Highlights of the latter
+- **Session 2026-06-19/20 — robustness + proof certs + capability/hang sweep (resume here).**
+  **68 validated commits**; whole `axeyum-solver` crate green on test/clippy/doc/fmt (1150+
+  tests) + Carcara (54) + workspace build + links. **Two deep hunts (arithmetic+quantifier, then
+  non-arithmetic) give a CLEAN BILL — no hangs, no wrong answers across every theory** — and the
+  tractable solving + robustness + certifiable-proof work is comprehensively closed (verified by
+  the hunts + a proof-completeness check: LIA-class new-decider unsats certify). Latest additions
+  beyond the 65-commit note: guarded-finite-`∀`-over-inner-`∃`, single-variable integer
+  **quadratics** `a·x²+b·x+c ⋈ 0` (generalizes `x*x⋈c`), and the BV-OMT timeout fix.
+  **NEXT = the hard keystones only** (each needs dedicated, careful, likely-multi-session work,
+  NOT a quick slice — but do advance them, don't stall): (1) **NRA/CAD** irrational witnesses
+  (`x*x=2` Real → Sat √2) — BLOCKED on an algebraic-number `Value` in `axeyum-ir` (the rational
+  model can't replay √2); coordinate or extend the IR. (2) **SAT-core / perf** — the ~9
+  search-bound + ~6 EncodingBudget public cases need stronger reduction *algorithms*
+  (`axeyum-rewrite`, the `ite`/structural lever) or SAT inprocessing / a competitive CDCL; the
+  solver-side preprocess is measured-maxed. (3) **General MBQI / quantifier-proof** beyond the
+  bounded slices done here. (4) **Specialized certs** for the NIA/quantifier new-decider unsats
+  (partial-trust). The 65-commit checkpoint detail follows. Highlights of the latter
   stretch (after a course-correction to stop punting / keep shipping — see
   [[no-giving-up-ship-relentlessly]] and CLAUDE.md "Working Stance"):
   - **A hidden QF-LIA hang found + fixed at the root** (`c>y ∧ c<y+1` branch-and-bound grinding,
