@@ -35,10 +35,20 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     504k), props 914M→511M, wall 94s→48s — **native is now ~1.2× of batsat** (search-quality gap
     essentially closed; residual ~20% is per-propagation BCP overhead). **A genuinely competitive
     pure-Rust proof-emitting core.** 6 slices committed, 2 reverted — the revert discipline held.
-    **NEXT: the assurance payoff is now viable — wire `native_cdcl` as the primary engine when
-    `prove_unsat` is set, so an unsat carries its DRAT proof BY CONSTRUCTION (no separate
-    budget-bounded re-derivation that can fail-closed to Unknown).** Then optionally slice 9 = the
-    residual ~20% BCP/per-prop lever (vivification), lower priority.
+    **ASSURANCE PAYOFF LANDED (the keystone's purpose):** `native_cdcl` is now auto-enabled as
+    the primary engine when `prove_unsat` is set, and its OWN inline DRAT proof is checked in
+    place (`SatProofStatus::Checked`) — so an unsat carries a checked proof BY CONSTRUCTION via
+    ONE solve (was: batsat + a separate budget-bounded re-derivation that could fail-closed). The
+    guarantee "with prove_unsat you only get Unsat when a checked proof backs it" now holds with
+    strictly fewer fail-closed cases. **The SAT-core keystone has reached its meaningful goal: a
+    competitive (~1.2× batsat) pure-Rust proof-emitting core that delivers the assurance value.**
+    Note the honest perf ceiling: native is still 1.2× SLOWER than batsat, so it will NOT decide
+    MORE of the corpus than batsat (which already gets 8/113) — the native core's value is
+    ASSURANCE (proofs), now achieved, NOT beating batsat's decided-count. Remaining SAT-core
+    levers (slice 9 = vivification / BCP per-prop ~20%) are diminishing and won't change that.
+    **The next big z3-parity work is the OTHER keystones, not more SAT-core perf:** NRA/CAD
+    (algebraic-number `Value` in `axeyum-ir`), general MBQI / quantifier proofs, the Lean
+    reconstruction frontier (P3.7), and broader theory completeness.
   - **Codex-review correctness items — ALL CLOSED (each with soundness tests):** `prove_unsat`
     fail-closed (no unverified-unsat-as-checked); **eval graceful arithmetic overflow** (bv2nat
     ≥128-bit no longer wraps negative; Int/Real overflow → `Err`→`Unknown`, never crash/wrong —
