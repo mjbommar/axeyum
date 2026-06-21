@@ -17,8 +17,19 @@
 use axeyum_ir::{TermArena, TermId, Value, eval};
 use axeyum_rewrite::{eliminate_arrays, eliminate_functions};
 
-use crate::backend::{CheckResult, SolverBackend, SolverConfig, SolverError};
+use crate::backend::{
+    CheckResult, SolverBackend, SolverConfig, SolverError, UnknownKind, UnknownReason,
+};
 use crate::model::Model;
+
+/// A sound `Unknown` with an `Incomplete` reason — the decline target for a
+/// projection that cannot be reconstructed or a `sat` model that fails replay.
+fn unknown(detail: String) -> CheckResult {
+    CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail,
+    })
+}
 
 /// Checks a (possibly array- and function-using) `QF_AUFBV` conjunction with
 /// `backend`.
@@ -33,7 +44,8 @@ use crate::model::Model;
 ///
 /// Returns [`SolverError::Unsupported`] for constructs outside the supported
 /// fragment (e.g. array equality), or [`SolverError`] from the backend. A `sat`
-/// model that fails to replay is a [`SolverError::Backend`].
+/// model whose projection fails to reconstruct or fails to replay declines to a
+/// sound [`CheckResult::Unknown`] — never an error (`unknown` is first-class).
 pub fn check_with_arrays_and_functions<B: SolverBackend>(
     backend: &mut B,
     arena: &mut TermArena,
@@ -60,59 +72,48 @@ pub fn check_with_arrays_and_functions<B: SolverBackend>(
         return Ok(result);
     };
 
-    // Defense-in-depth: an arithmetic-sorted (Int/Real) uninterpreted function has
-    // no scalar-keyed sat-model projection, so degrade to a sound `Unknown` rather
-    // than risk a `scalar_code` panic in `project_model`. (Reaching here with such a
-    // function is unlikely — the bit-vector `backend` would not return `sat` on its
-    // Int constraints — but the guard keeps the "never crash" invariant total.)
-    if func_elim.had_functions() {
-        let is_arith =
-            |s: &axeyum_ir::Sort| matches!(s, axeyum_ir::Sort::Int | axeyum_ir::Sort::Real);
-        if arena
-            .functions()
-            .any(|(_f, _n, params, result)| params.iter().any(is_arith) || is_arith(&result))
-        {
-            return Ok(CheckResult::Unknown(crate::backend::UnknownReason {
-                kind: crate::backend::UnknownKind::Incomplete,
-                detail: "sat model for an arithmetic-sorted uninterpreted function is \
-                         unsupported (aufbv path)"
-                    .to_owned(),
-            }));
-        }
-    }
-
     // Project functions first: their eliminated argument terms are
     // post-array-elimination (no `select` remains), so they evaluate under the
     // base `QF_BV` model directly. Then project arrays: a `select` index may
     // mention a function application, so array projection needs the function
     // interpretations in scope.
-    let with_functions = func_elim
-        .project_model(arena, &model.to_assignment())
-        .map_err(|error| {
-            SolverError::Backend(format!("function model projection failed: {error}"))
-        })?;
-    let projected = array_elim
-        .project_model(arena, &with_functions)
-        .map_err(|error| SolverError::Backend(format!("array model projection failed: {error}")))?;
+    //
+    // An **arithmetic-sorted** (`Int`/`Real`) uninterpreted function now projects to
+    // a full-`Value`-keyed interpretation (`project_model`, crash-safe), so the early
+    // arith-UF bail is gone: we ATTEMPT the projection and let the replay check below
+    // be the soundness anchor. A projection that cannot be reconstructed (e.g. a
+    // nested arith-sorted application whose fresh symbol is unassigned in the base
+    // model) returns `Err` → a sound `Unknown`, NOT a backend error ("`unknown` is
+    // first-class, never an error"). A wrong projection can only make the replay fail
+    // (→ decline), never accept a wrong `sat`.
+    let with_functions = match func_elim.project_model(arena, &model.to_assignment()) {
+        Ok(projected) => projected,
+        Err(error) => {
+            return Ok(unknown(format!(
+                "function model projection failed (aufbv path): {error}"
+            )));
+        }
+    };
+    let projected = match array_elim.project_model(arena, &with_functions) {
+        Ok(projected) => projected,
+        Err(error) => {
+            return Ok(unknown(format!(
+                "array model projection failed (aufbv path): {error}"
+            )));
+        }
+    };
 
+    // REPLAY CHECK (the soundness anchor): every original assertion must evaluate to
+    // `Bool(true)` under the projected model through the ground evaluator (which
+    // consults the projected UF interpretation for `Op::Apply`). Array and function
+    // elimination are exact, so any non-`true`/indeterminate replay is a sound decline
+    // to `Unknown` — never an emitted (possibly wrong) `Sat`, matching euf's strictness.
     for &assertion in assertions {
         match eval(arena, assertion, &projected) {
             Ok(Value::Bool(true)) => {}
-            Ok(Value::Bool(false)) => {
-                return Err(SolverError::Backend(format!(
-                    "aufbv sat model replay failed: assertion #{} evaluated to false",
-                    assertion.index()
-                )));
-            }
-            Ok(value) => {
-                return Err(SolverError::Backend(format!(
-                    "aufbv sat model replay failed: assertion #{} evaluated to non-Boolean {value}",
-                    assertion.index()
-                )));
-            }
-            Err(error) => {
-                return Err(SolverError::Backend(format!(
-                    "aufbv sat model replay failed: assertion #{} failed evaluation: {error}",
+            Ok(_) | Err(_) => {
+                return Ok(unknown(format!(
+                    "aufbv sat model replay did not confirm assertion #{}",
                     assertion.index()
                 )));
             }

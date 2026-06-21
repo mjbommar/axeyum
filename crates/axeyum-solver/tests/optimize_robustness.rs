@@ -7,8 +7,10 @@
 //! - **B (completeness):** `div`/`mod`-by-constant objectives/constraints now
 //!   decide (the dispatcher preprocesses them), instead of erroring.
 //! - **D (hard rule "unknown is never an error"):** an out-of-fragment objective
-//!   (a UF application, a nonlinear product, a `bv2nat`) yields a graceful
-//!   `OptOutcome::Unknown`, never an `Err`.
+//!   (a nonlinear product, a `bv2nat`) yields a graceful `OptOutcome::Unknown`,
+//!   never an `Err`. (An arith-sorted UF-application objective is now decidable
+//!   via the replay-checked combined path, so it may instead return a correct
+//!   `Optimal` — still graceful, never `Err`.)
 //! - **A (resource-limit promise):** a caller-set `config.timeout` is honored —
 //!   a large Pareto front returns within the budget rather than running for
 //!   minutes.
@@ -72,9 +74,14 @@ fn b_maximize_with_div_constraint() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn d_maximize_uf_application_is_unknown_not_err() {
-    // maximize f(x) s.t. f(x) < 10, where f is uninterpreted -> Unknown (the LIA
-    // optimizer cannot decide a UF objective), NOT an error.
+fn d_maximize_uf_application_is_graceful_never_err() {
+    // maximize f(x) s.t. f(x) < 10, where f is uninterpreted. The arith-sorted UF
+    // sat-model projection is now replay-checked through the combined path, so the
+    // optimizer can decide this objective: the integer supremum of f(x) subject to
+    // f(x) < 10 is 9 (f uninterpreted, so f(x) may take any integer below 10). The
+    // hard-rule guarantee stands — it is graceful (never `Err`); previously it
+    // declined to `Unknown`, now it decides `Optimal(9)`. Either is acceptable as
+    // long as the result is never `Err` and any optimum is correct.
     let mut arena = TermArena::new();
     let f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
     let x = int_var(&mut arena, "x");
@@ -84,8 +91,8 @@ fn d_maximize_uf_application_is_unknown_not_err() {
 
     let outcome = maximize_lia(&mut arena, &[bound], fx).expect("must not return Err");
     assert!(
-        matches!(outcome, OptOutcome::Unknown(_)),
-        "expected Unknown, got {outcome:?}"
+        matches!(outcome, OptOutcome::Unknown(_) | OptOutcome::Optimal(9)),
+        "expected a graceful Unknown or the correct Optimal(9), got {outcome:?}"
     );
 }
 

@@ -20,8 +20,10 @@
 //! contains integers, the result is reported conservatively: a bit-vector
 //! `unsat` becomes `unknown` (a model may exist outside the width), and a
 //! `sat` whose integer read-back fails to replay (width-`B` wraparound) becomes
-//! `unknown`. Without integers, `unsat` is exact and a replay failure is a
-//! soundness alarm.
+//! `unknown`. Without integers, `unsat` is exact; a `sat` whose projected model
+//! does not replay against the original assertions is declined to a sound
+//! `unknown` (the replay check is the soundness anchor — a wrong projection can
+//! only fail replay, never be emitted as a wrong `sat`).
 
 use axeyum_ir::{TermArena, TermId, Value, eval};
 use axeyum_rewrite::{
@@ -46,7 +48,9 @@ use crate::model::Model;
 ///
 /// Returns [`SolverError::Unsupported`] for constructs outside the supported
 /// fragment (e.g. array equality), or [`SolverError`] from the backend. Bounded
-/// incompleteness and out-of-range constants are [`CheckResult::Unknown`].
+/// incompleteness, out-of-range constants, a `sat` projection that cannot be
+/// reconstructed, and a `sat` model that fails to replay are all the sound,
+/// first-class [`CheckResult::Unknown`] (never an error).
 pub fn check_with_all_theories<B: SolverBackend>(
     backend: &mut B,
     arena: &mut TermArena,
@@ -96,32 +100,43 @@ pub fn check_with_all_theories<B: SolverBackend>(
         CheckResult::Unknown(reason) => return Ok(CheckResult::Unknown(reason)),
     };
 
-    // A `sat` model for an **arithmetic-sorted** uninterpreted function cannot yet be
-    // projected: `project_model` keys function tables by scalar codes, which do not
-    // exist for `Int`/`Real`. Degrade to a sound `Unknown` rather than panic (UNSAT
-    // through this path is unaffected — it returns before model projection).
-    if func_elim.had_functions() && has_arithmetic_function(arena) {
-        return Ok(unknown(
-            "sat model for an arithmetic-sorted uninterpreted function is unsupported \
-             (combined path)"
-                .to_owned(),
-        ));
-    }
-
     // Project the model back in reverse reduction order: integers (read-back),
     // then functions (their args are post-array, pre-integer scalars), then
     // arrays (a `select` index may mention a function application).
+    //
+    // An **arithmetic-sorted** (`Int`/`Real`) uninterpreted function now projects to
+    // a full-`Value`-keyed interpretation (`project_model`, crash-safe), so the early
+    // arith-UF bail is gone: we ATTEMPT the projection and let the replay check below
+    // be the soundness anchor. A projection that cannot be reconstructed (e.g. a
+    // nested arith-sorted application whose fresh symbol is unassigned in the base
+    // model) returns `Err` → a sound `Unknown`, NOT a backend error ("`unknown` is
+    // first-class, never an error"). A wrong projection can only make the replay fail
+    // (→ decline), never accept a wrong `sat`.
     let with_integers = int_blast.integer_model(&model.to_assignment());
-    let with_functions = func_elim
-        .project_model(arena, &with_integers)
-        .map_err(|error| {
-            SolverError::Backend(format!("function model projection failed: {error}"))
-        })?;
-    let projected = array_elim
-        .project_model(arena, &with_functions)
-        .map_err(|error| SolverError::Backend(format!("array model projection failed: {error}")))?;
+    let with_functions = match func_elim.project_model(arena, &with_integers) {
+        Ok(projected) => projected,
+        Err(error) => {
+            return Ok(unknown(format!(
+                "function model projection failed (combined path): {error}"
+            )));
+        }
+    };
+    let projected = match array_elim.project_model(arena, &with_functions) {
+        Ok(projected) => projected,
+        Err(error) => {
+            return Ok(unknown(format!(
+                "array model projection failed (combined path): {error}"
+            )));
+        }
+    };
 
-    // Replay the projected model against the original assertions.
+    // REPLAY CHECK (the soundness anchor): every original assertion must evaluate to
+    // `Bool(true)` under the projected model through the ground evaluator (which
+    // consults the projected UF interpretation for `Op::Apply`). Without integers,
+    // array and function elimination are exact, so a non-`true` replay is a soundness
+    // alarm; with bounded integers a `false`/indeterminate replay is bounded
+    // wraparound. Either way the *sound* outcome is a decline to `Unknown` — never an
+    // emitted (possibly wrong) `Sat`, and matching euf's strictness.
     for &assertion in assertions {
         match eval(arena, assertion, &projected) {
             Ok(Value::Bool(true)) => {}
@@ -134,21 +149,14 @@ pub fn check_with_all_theories<B: SolverBackend>(
                         assertion.index()
                     )));
                 }
-                return Err(SolverError::Backend(format!(
-                    "combined sat model replay failed: assertion #{} evaluated to false",
+                return Ok(unknown(format!(
+                    "combined sat model replay did not confirm assertion #{} (evaluated false)",
                     assertion.index()
                 )));
             }
-            Ok(value) => {
-                return Err(SolverError::Backend(format!(
-                    "combined sat model replay failed: assertion #{} evaluated to non-Boolean \
-                     {value}",
-                    assertion.index()
-                )));
-            }
-            Err(error) => {
-                return Err(SolverError::Backend(format!(
-                    "combined sat model replay failed: assertion #{} failed evaluation: {error}",
+            Ok(_) | Err(_) => {
+                return Ok(unknown(format!(
+                    "combined sat model replay did not confirm assertion #{}",
                     assertion.index()
                 )));
             }
@@ -175,16 +183,6 @@ pub fn check_with_all_theories<B: SolverBackend>(
         }
     }
     Ok(CheckResult::Sat(out))
-}
-
-/// Whether any declared uninterpreted function has an `Int`/`Real` parameter or
-/// result — for such a function the `sat`-model projection (scalar-keyed function
-/// tables) is not yet representable.
-fn has_arithmetic_function(arena: &TermArena) -> bool {
-    let is_arith = |s: &axeyum_ir::Sort| matches!(s, axeyum_ir::Sort::Int | axeyum_ir::Sort::Real);
-    arena
-        .functions()
-        .any(|(_f, _n, params, result)| params.iter().any(is_arith) || is_arith(&result))
 }
 
 fn unknown(detail: String) -> CheckResult {

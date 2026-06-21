@@ -10,7 +10,9 @@
 //! native oracle.
 
 use axeyum_ir::{Sort, TermArena, Value, eval};
-use axeyum_solver::{CheckResult, SatBvBackend, SolverConfig, check_with_arrays_and_functions};
+use axeyum_solver::{
+    CheckResult, SatBvBackend, SolverConfig, SolverError, check_with_arrays_and_functions,
+};
 
 fn solve_qf_aufbv(arena: &mut TermArena, assertions: &[axeyum_ir::TermId]) -> CheckResult {
     let mut backend = SatBvBackend::new();
@@ -98,4 +100,57 @@ fn distinct_function_outputs_over_distinct_addresses_is_satisfiable() {
     let CheckResult::Sat(_) = solve_qf_aufbv(&mut arena, &[g1, g2]) else {
         panic!("expected satisfiable distinct function outputs");
     };
+}
+
+#[test]
+fn arith_sorted_uf_over_aufbv_path_is_graceful_never_wrong() {
+    // The early arith-UF `Unknown` bail was relaxed to attempt-and-replay, but the
+    // `QF_AUFBV` entry point targets the bit-vector fragment: an `Int`-sorted UF is
+    // outside it, and the pure-Rust BV backend rejects the `Int` term at
+    // `backend.check` (before any model projection) with a clean
+    // `SolverError::Unsupported` — never a crash and never a wrong sat/unsat
+    // verdict. (The auto-dispatcher routes `Int`-sorted UF to the euf/combined
+    // paths, not here; this test pins the aufbv path's graceful rejection.)
+    let mut arena = TermArena::new();
+    let mem = arena.array_var("mem", 4, 8).unwrap();
+    let idx = arena.bv_var("i", 4).unwrap();
+    let val = arena.bv_var("v", 8).unwrap();
+    let stored = arena.store(mem, idx, val).unwrap();
+    let loaded = arena.select(stored, idx).unwrap();
+    let arr_eq = arena.eq(loaded, val).unwrap();
+
+    let fun = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let x_sym = arena.declare("x", Sort::Int).unwrap();
+    let xv = arena.var(x_sym);
+    let fx = arena.apply(fun, &[xv]).unwrap();
+    let one = arena.int_const(1);
+    let one2 = arena.int_const(1);
+    let fn_eq = arena.eq(fx, one).unwrap();
+    let x_eq = arena.eq(xv, one2).unwrap();
+
+    let mut backend = SatBvBackend::new();
+    let result = check_with_arrays_and_functions(
+        &mut backend,
+        &mut arena,
+        &[arr_eq, fn_eq, x_eq],
+        &SolverConfig::default(),
+    );
+    // Graceful: either a clean `Unsupported` (the Int term is outside the BV
+    // fragment, rejected at the backend) or a sound `Unknown`/replay-checked `Sat`.
+    // It must NEVER be a wrong `Unsat`, and a `Sat`, if any, must replay.
+    match result {
+        Ok(CheckResult::Unsat) => panic!("f(x) = 1 ∧ x = 1 is satisfiable — never a wrong Unsat"),
+        Ok(CheckResult::Sat(model)) => {
+            let assignment = model.to_assignment();
+            for &a in &[arr_eq, fn_eq, x_eq] {
+                assert_eq!(
+                    eval(&arena, a, &assignment).unwrap(),
+                    Value::Bool(true),
+                    "any emitted aufbv arith-UF Sat must replay"
+                );
+            }
+        }
+        Ok(CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_)) => {}
+        Err(other) => panic!("unexpected error from the aufbv arith-UF path: {other:?}"),
+    }
 }

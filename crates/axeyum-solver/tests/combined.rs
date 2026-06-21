@@ -141,3 +141,137 @@ fn pure_bitvector_passes_through_all_reductions() {
         Some(Value::Bv { width: 8, value: 4 })
     );
 }
+
+// ---------------------------------------------------------------------------
+// Arithmetic-sorted (Int) uninterpreted functions routed through the combined
+// (UF + array + Int) path now decide `Sat` with a replay-verified model — the
+// early arith-UF `Unknown` bail was relaxed to attempt-and-replay. SOUNDNESS:
+// every returned `Sat` is replayed through the ground evaluator against the
+// original assertions; a projection that cannot be reconstructed (a nested
+// arith-sorted application) still declines to a sound `Unknown`.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn arith_sorted_uf_with_array_is_sat_and_replays() {
+    // An `Int -> Int` uninterpreted function mixed with an array fact so the
+    // query routes through `check_with_all_theories` (UF + array + Int):
+    //   select(store(mem, i, v), i) == v   (valid read-after-write)
+    //   f(x) == 7  AND  x == 3             (arith-sorted UF, pinned at x = 3)
+    // Satisfiable; the projected Int-keyed UF interpretation must replay.
+    let mut arena = TermArena::new();
+
+    let mem = arena.array_var("mem", 4, 8).unwrap();
+    let idx = arena.bv_var("i", 4).unwrap();
+    let val = arena.bv_var("v", 8).unwrap();
+    let stored = arena.store(mem, idx, val).unwrap();
+    let loaded = arena.select(stored, idx).unwrap();
+    let arr_eq = arena.eq(loaded, val).unwrap();
+
+    let fun = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let x_sym = arena.declare("x", Sort::Int).unwrap();
+    let xv = arena.var(x_sym);
+    let fx = arena.apply(fun, &[xv]).unwrap();
+    let seven = arena.int_const(7);
+    let three = arena.int_const(3);
+    let fn_eq = arena.eq(fx, seven).unwrap();
+    let x_eq = arena.eq(xv, three).unwrap();
+
+    let assertions = [arr_eq, fn_eq, x_eq];
+    let CheckResult::Sat(model) = solve(&mut arena, &assertions) else {
+        panic!("expected SAT for the arith-sorted UF + array query");
+    };
+    assert!(
+        model.function(fun).is_some(),
+        "the projected model must carry the arith-sorted UF interpretation"
+    );
+    assert_eq!(model.get(x_sym), Some(Value::Int(3)));
+    let assignment = model.to_assignment();
+    for &a in &assertions {
+        assert_eq!(
+            eval(&arena, a, &assignment).unwrap(),
+            Value::Bool(true),
+            "the projected arith-UF model must replay against every original assertion"
+        );
+    }
+}
+
+#[test]
+fn arith_sorted_uf_congruence_with_array_is_never_wrong_sat() {
+    // A genuine `Int -> Int` congruence contradiction mixed with an array:
+    //   select(store(mem, i, v), i) == v   (valid)
+    //   x == y  AND  f(x) != f(y)          (unsatisfiable by congruence)
+    // The combined path bit-blasts the Int sorts at a bounded width, so it
+    // conservatively reports the bit-vector `unsat` as `Unknown` (a model might
+    // exist outside the width) rather than `Unsat` — the existing soundness
+    // contract. The relaxed guard does not change this (UNSAT/Unknown both return
+    // before model projection): the only forbidden outcome is a (wrong) `Sat`.
+    let mut arena = TermArena::new();
+    let mem = arena.array_var("mem", 4, 8).unwrap();
+    let idx = arena.bv_var("i", 4).unwrap();
+    let val = arena.bv_var("v", 8).unwrap();
+    let stored = arena.store(mem, idx, val).unwrap();
+    let loaded = arena.select(stored, idx).unwrap();
+    let arr_eq = arena.eq(loaded, val).unwrap();
+
+    let fun = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let x_sym = arena.declare("x", Sort::Int).unwrap();
+    let y_sym = arena.declare("y", Sort::Int).unwrap();
+    let xv = arena.var(x_sym);
+    let yv = arena.var(y_sym);
+    let fx = arena.apply(fun, &[xv]).unwrap();
+    let fy = arena.apply(fun, &[yv]).unwrap();
+    let same_in = arena.eq(xv, yv).unwrap();
+    let diff_out = {
+        let neq = arena.eq(fx, fy).unwrap();
+        arena.not(neq).unwrap()
+    };
+    let result = solve(&mut arena, &[arr_eq, same_in, diff_out]);
+    assert!(
+        !matches!(result, CheckResult::Sat(_)),
+        "x = y ∧ f(x) ≠ f(y) is unsatisfiable — never a (wrong) Sat; got {result:?}"
+    );
+}
+
+#[test]
+fn nested_arith_sorted_uf_declines_to_unknown_never_sat() {
+    // A NESTED arith-sorted application — g(f(x), 0) — whose inner fresh result
+    // symbol is unassigned in the base model cannot be projected. Mixed with an
+    // array so it routes through the combined path. The instance is satisfiable,
+    // so the only sound outcomes are `Sat` (if projectable) or `Unknown`; it
+    // must NEVER be a wrong `Unsat` and must NEVER crash.
+    let mut arena = TermArena::new();
+    let mem = arena.array_var("mem", 4, 8).unwrap();
+    let idx = arena.bv_var("i", 4).unwrap();
+    let val = arena.bv_var("v", 8).unwrap();
+    let stored = arena.store(mem, idx, val).unwrap();
+    let loaded = arena.select(stored, idx).unwrap();
+    let arr_eq = arena.eq(loaded, val).unwrap();
+
+    let fun = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let gun = arena
+        .declare_fun("g", &[Sort::Int, Sort::Int], Sort::Int)
+        .unwrap();
+    let x_sym = arena.declare("x", Sort::Int).unwrap();
+    let xv = arena.var(x_sym);
+    let fx = arena.apply(fun, &[xv]).unwrap();
+    let zero = arena.int_const(0);
+    let gfx = arena.apply(gun, &[fx, zero]).unwrap();
+    let zero2 = arena.int_const(0);
+    let atom = arena.int_ge(gfx, zero2).unwrap(); // g(f(x), 0) >= 0  (satisfiable)
+
+    let result = solve(&mut arena, &[arr_eq, atom]);
+    assert!(
+        !matches!(result, CheckResult::Unsat),
+        "g(f(x), 0) >= 0 is satisfiable — never a wrong Unsat; got {result:?}"
+    );
+    // If it decides `Sat`, the model MUST replay (the soundness anchor); a
+    // projectable nested case is fine, an un-projectable one is a sound Unknown.
+    if let CheckResult::Sat(model) = &result {
+        let assignment = model.to_assignment();
+        assert_eq!(
+            eval(&arena, atom, &assignment).unwrap(),
+            Value::Bool(true),
+            "any emitted Sat must replay the nested arith-UF assertion"
+        );
+    }
+}
