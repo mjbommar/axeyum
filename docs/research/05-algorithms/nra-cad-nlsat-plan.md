@@ -138,15 +138,16 @@ SOS reconstruction covers the degree-2 cells.
      plus the open cells, decide each substituted univariate system completely;
      **decline** when a critical keep-value is algebraic. Fuzz-gated (DISAGREE=0 over
      2000 mixed instances).
-   - **slice b2 IN PROGRESS** — **algebraic** critical-point lifting (the CAD
-     completion). At an algebraic critical keep-value α (min-poly m), the elim-cell
-     boundaries β satisfy `p(α,β)=0`, i.e. β is a root of `Res_x(m, p)` (a *rational*
-     univariate in y) — isolate those, and sign-test `p(α,β)` exactly via the
-     **algebraic field arithmetic** (`RealAlgebraic` add/mul, built in slice 1). So
-     the deferred number-field case is reachable with existing infrastructure, not a
-     new engine. Fuzz-gated.
-   - **later slice:** (d) per-cell Positivstellensatz evidence (step 4) for Lean
-     reconstruction.
+   - **slice b2 DONE** (commit `1e2b8d6`) — **algebraic** critical-point lifting:
+     the **2-variable CAD is now COMPLETE** for any-coordinate mixed/non-strict
+     systems. At an algebraic critical keep-value α (min-poly m), the elim-boundaries
+     β are roots of `Res_keep(m, p)` (rational univariate), sign-tested exactly via
+     the `RealAlgebraic` field arithmetic from slice 1 — the deferred number-field
+     case reached with existing infrastructure. Fuzz-gated (DISAGREE=0, 2000
+     instances, 976 Sat replays verified).
+   - **remaining:** (c2) extend algebraic critical-point lifting to **N-var** (≥3,
+     recursive — currently N-var declines algebraic criticals); (d) per-cell
+     Positivstellensatz evidence (step 4) for Lean reconstruction (the long arc).
 4. Cell-certificate format + the degree-2 reconstruction hook; general
    Positivstellensatz reconstruction is the long arc.
 
