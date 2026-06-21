@@ -1991,6 +1991,20 @@ fn decide_two_var_component(
     let v0 = *vit.next().unwrap();
     let v1 = *vit.next().unwrap();
 
+    // ALL-STRICT-inequality component (every atom `<`, `>`, or `≠`): the solution
+    // set is OPEN in ℝ², so a complete cylindrical decomposition with one RATIONAL
+    // interior sample per open x-cell decides it exactly (Sat with a rational
+    // witness, or an exhaustive Unsat). See [`decide_strict_cad_two_var`]. A
+    // definitive verdict wins; a decline falls through to the equality path below
+    // (which itself declines for an inequality-only component).
+    if comp
+        .iter()
+        .all(|a| matches!(a.cmp, Cmp::Lt | Cmp::Gt | Cmp::Ne))
+        && let Some(verdict) = decide_strict_cad_two_var(comp, v0, v1)
+    {
+        return Some(verdict);
+    }
+
     // Gather the equality atoms of this component.
     let equalities: Vec<&MultiPoly> = comp
         .iter()
@@ -2116,6 +2130,341 @@ fn decide_two_var_component(
     // holds `Unknown`), or no orientation even had an eliminable equality pair
     // (`soft` is `None` ⇒ decline back to the outer engine).
     soft
+}
+
+// ============================================================================
+// Complete CAD for an ALL-STRICT-inequality 2-variable component
+// (the CAD/nlsat ladder, step 3 — strict-only slice).
+// ============================================================================
+//
+// Scope: a connected 2-variable component {x, y} in which EVERY atom is a STRICT
+// inequality (`<`, `>`, or `≠`). (A component with any `=`/`≤`/`≥` is OUT of
+// scope here — equalities go to the grid lift, and a mixed/non-strict component
+// is left to the outer layer; this routine is only entered when all atoms are
+// strict, and otherwise declines.)
+//
+// Why one RATIONAL interior sample per open x-cell is EXHAUSTIVE (soundness +
+// completeness of both Sat and Unsat):
+//
+//   The solution set `S ⊆ ℝ²` of a conjunction of STRICT inequalities is OPEN:
+//   each `pᵢ(x,y) < 0` / `> 0` / `≠ 0` defines an open set, and a finite
+//   intersection of open sets is open. So if `S ≠ ∅` it contains an open ball,
+//   hence an open box `(a,b) × (c,d) ⊆ S`. Its projection to the x-axis is the
+//   open interval `(a,b)`.
+//
+//   PROJECTION (sign-invariance): let `Proj` be the univariate-in-x polynomials
+//   — for each `p ∈ P`: its leading coefficient in y `lc_y(p)`, its discriminant
+//   in y `disc_y(p) = Res_y(p, ∂p/∂y)`, and for every pair `p ≠ q` the resultant
+//   `Res_y(p, q)`. Off the real zeros `α₁ < … < α_k` of `Proj` (the "critical"
+//   x-values), the number and the y-order of the real y-roots of every `p ∈ P`
+//   are CONSTANT (McCallum/Collins sign-invariance over a sign-invariant section:
+//   lc_y ≠ 0 keeps deg_y(p) fixed, disc_y ≠ 0 keeps p's y-roots simple and
+//   distinct, and Res_y(p,q) ≠ 0 keeps p and q from sharing a y-root). Hence on
+//   each open x-cell `(αᵢ, αᵢ₊₁)` (and the two unbounded tails) the truth of the
+//   whole strict system, as a function of y, is the SAME at every x in the cell.
+//   Therefore the system is satisfiable over an open x-cell `C` iff it is
+//   satisfiable at ANY single `x* ∈ C` — and because `S` is open and (if
+//   nonempty) projects onto an open interval, that open interval is a union of
+//   whole open x-cells, so some open x-cell carries a solution iff `S ≠ ∅`.
+//
+//   RATIONAL SAMPLES: a rational strictly between two consecutive critical
+//   x-values (resp. below the least / above the greatest, and `0` when there are
+//   none) is an interior point of an open x-cell. Choosing it RATIONAL is exact
+//   (`cell_samples`, refined midpoints of disjoint isolating intervals), so the
+//   substitution `x := x*` yields a conjunction of single-variable STRICT
+//   constraints in y with RATIONAL coefficients — decided COMPLETELY by
+//   [`decide_system_value`] (the sign-cell decider) with NO algebraic-coordinate
+//   substitution.
+//
+//   VERDICTS:
+//     • SAT — some x-sample's y-system is `Sat(y*)` ⇒ the component is Sat with
+//       the binding `(x→x*, y→y*)` (the caller replay-checks the full model
+//       against the ORIGINAL assertions). The sample is interior to an open
+//       x-cell, so no solution hides only on a measure-zero critical x.
+//     • UNSAT — EVERY open x-cell's y-system returns a definite Unsat (none
+//       Unknown) ⇒ the component is Unsat, COMPLETE by the open-cell argument: a
+//       strict solution would lie in an open box whose x-projection meets some
+//       sampled open cell, contradicting that cell's Unsat.
+//
+// We DECLINE (`None`) on ANY completeness doubt: an empty/degenerate projection
+// (a `p` constant in y, so its critical x-set is not captured), an incomplete
+// root isolation, an unresolved sample separation, a per-cell `decide_system_value`
+// that returns `None` (Unknown), or the cell cap. A sound `Unknown` always beats
+// a wrong verdict; we never claim Unsat with a gap, nor Sat without a replayable
+// witness.
+
+/// Hard ceiling on the number of critical x-values (and hence open x-cells +1)
+/// the strict-CAD enumerates; beyond it we decline (bounded — no OOM / hang).
+const MAX_CAD_CELLS: usize = 256;
+
+/// Decide an ALL-STRICT-inequality 2-variable component `comp` (variables
+/// `v0`=x, `v1`=y; every atom `<`, `>`, or `≠`) by a complete cylindrical
+/// decomposition: project onto x (sign-invariant set), isolate the critical
+/// x-values, sample ONE rational interior point per open x-cell, and decide each
+/// cell's rational-coefficient univariate-in-y strict system.
+///
+/// Returns `Some(Sat(bindings))` / `Some(Unsat)` when the decomposition is
+/// provably complete, or `None` to DECLINE (any projection/isolation/sample/cell
+/// indeterminacy, or the cell cap) — never a wrong verdict. Sat bindings are
+/// replay-checked against the original query by the caller.
+fn decide_strict_cad_two_var(
+    comp: &[&MultiAtom],
+    v0: SymbolId,
+    v1: SymbolId,
+) -> Option<TwoVarVerdict> {
+    // The component must genuinely have both variables (a degenerate single-var
+    // component is decided elsewhere); guard so the projection is meaningful.
+    debug_assert!(
+        comp.iter()
+            .all(|a| matches!(a.cmp, Cmp::Lt | Cmp::Gt | Cmp::Ne))
+    );
+
+    // 1. The distinct constraint polynomials `P` (deduplicated by structure).
+    let mut polys: Vec<&MultiPoly> = Vec::new();
+    for atom in comp {
+        if !polys.iter().any(|p| p.terms == atom.poly.terms) {
+            polys.push(&atom.poly);
+        }
+    }
+    if polys.is_empty() {
+        return None;
+    }
+
+    // 2. Try eliminating y (project onto x) AND eliminating x (project onto y),
+    //    deciding along whichever axis yields a complete, in-bounds decomposition.
+    //    Both orientations are sound and complete by the same open-cell argument
+    //    (x and y are symmetric); trying both rescues a shape where one axis hits
+    //    a `p` constant in the eliminated variable (degenerate projection ⇒ that
+    //    orientation declines) while the other is clean.
+    for &(elim, keep) in &[(v1, v0), (v0, v1)] {
+        if let Some(v) = strict_cad_along(comp, &polys, elim, keep) {
+            return Some(v);
+        }
+    }
+    None
+}
+
+/// One orientation of [`decide_strict_cad_two_var`]: eliminate `elim`, sample the
+/// open `keep`-cells, decide each cell's univariate-in-`elim` strict system.
+/// `None` declines this orientation (the caller tries the other / falls through).
+fn strict_cad_along(
+    comp: &[&MultiAtom],
+    polys: &[&MultiPoly],
+    elim: SymbolId,
+    keep: SymbolId,
+) -> Option<TwoVarVerdict> {
+    // 2a. PROJECTION onto `keep`: the sign-invariant set of univariate-in-`keep`
+    //     polynomials. For each `p`: leading coeff in `elim`, discriminant in
+    //     `elim`; for each pair: their resultant in `elim`. Every `p` MUST have
+    //     positive degree in `elim` (else its sign as a function of `elim` is not
+    //     captured by an `elim`-resultant ⇒ the projection would miss its critical
+    //     `keep`-values; decline this orientation).
+    let mut proj: Vec<Vec<i128>> = Vec::new();
+    for p in polys {
+        if degree_in(p, elim) == 0 {
+            // `p` is constant in `elim`: its sign depends only on `keep`. Its real
+            // zeros in `keep` ARE critical `keep`-values (the strict atom can flip
+            // there), and they are not produced by any `elim`-resultant. We could
+            // add them directly (p is already univariate in `keep`), so do so —
+            // this keeps the projection complete rather than declining.
+            let ipoly = p.to_single_var_integer_poly(keep)?;
+            if ipoly.len() > 1 {
+                proj.push(ipoly);
+            }
+            // A constant-in-both `p` contributes no critical value (it never flips).
+            continue;
+        }
+        // Leading coefficient of `p` in `elim`, as a univariate integer poly in
+        // `keep`: its zeros are where deg_{elim}(p) drops (a delineability boundary).
+        let pc = poly_in_elim_over_keep(p, elim, keep)?;
+        let lead = pc.last()?; // Vec<Rational> in `keep`
+        if let Some(ip) = rat_coeffs_to_integer(lead) {
+            if ip.len() > 1 {
+                proj.push(ip);
+            }
+        } else {
+            return None; // overflow ⇒ decline (cannot guarantee sign-invariance)
+        }
+        // Discriminant of `p` in `elim` = Res_{elim}(p, ∂p/∂elim).
+        let dp = derivative_in(p, elim)?;
+        if degree_in(&dp, elim) == 0 {
+            // ∂p/∂elim constant in `elim` ⇒ p is linear in `elim`; no discriminant
+            // boundary (its single `elim`-root never collides). Nothing to add.
+        } else {
+            let disc = resultant_univariate(p, &dp, elim, keep)?;
+            if disc.len() > 1 {
+                proj.push(disc);
+            } else if disc.first().copied().unwrap_or(0) == 0 {
+                // A vanishing discriminant means p has a repeated `elim`-root for
+                // ALL `keep` (a non-isolated boundary) ⇒ this orientation cannot
+                // guarantee sign-invariance via finitely many critical points.
+                return None;
+            }
+            // A nonzero-constant discriminant ⇒ no critical `keep`-value from it.
+        }
+    }
+    // Pairwise resultants Res_{elim}(p, q).
+    for i in 0..polys.len() {
+        for j in (i + 1)..polys.len() {
+            if degree_in(polys[i], elim) == 0 || degree_in(polys[j], elim) == 0 {
+                continue; // a constant-in-elim factor shares no elim-root to track
+            }
+            let res = resultant_univariate(polys[i], polys[j], elim, keep)?;
+            if res.len() > 1 {
+                proj.push(res);
+            } else if res.first().copied().unwrap_or(0) == 0 {
+                // Identically-zero resultant: p and q share a common `elim`-factor
+                // for all `keep` ⇒ a non-isolated coincidence ⇒ cannot delineate.
+                return None;
+            }
+        }
+    }
+
+    // 2b. ISOLATE all real roots of every projection polynomial; merge + sort the
+    //     distinct critical `keep`-values. `isolate_roots` is complete-or-None.
+    let mut roots: Vec<Root> = Vec::new();
+    for pp in &proj {
+        roots.extend(isolate_roots(pp)?);
+    }
+    let ordered = sort_roots(&roots)?;
+    // Deduplicate equal critical values (a shared root from two projection polys)
+    // so the cell samples land in genuinely distinct open cells.
+    let mut crit: Vec<Root> = Vec::new();
+    for r in ordered {
+        match crit.last() {
+            Some(prev) if compare_roots(prev, &r)? == Ordering::Equal => {}
+            _ => crit.push(r),
+        }
+    }
+    if crit.len() > MAX_CAD_CELLS {
+        return None; // bounded — never OOM / hang
+    }
+
+    // 2c. RATIONAL sample, one interior point per open `keep`-cell (below the
+    //     least critical value, between each consecutive pair, above the greatest;
+    //     `0` when there are none). `cell_samples` picks exact rationals strictly
+    //     inside the open cells.
+    let samples = cell_samples(&crit)?;
+
+    // 2d. Decide each cell's univariate-in-`elim` STRICT system. Substituting a
+    //     RATIONAL `keep := s` gives rational-coefficient single-variable atoms in
+    //     `elim` with the SAME strict comparators. `decide_system_value` decides
+    //     them completely (or returns `None` ⇒ we decline; never claim Unsat with
+    //     a gap).
+    for &s in &samples {
+        match decide_strict_cell(comp, keep, elim, s)? {
+            CellOutcome::Sat(elim_val) => {
+                // Interior sample of an open cell ⇒ a genuine solution. The caller
+                // replay-checks the full (keep, elim) model against the original
+                // assertions.
+                return Some(TwoVarVerdict::Sat(vec![
+                    (keep, Value::Real(s)),
+                    (elim, elim_val),
+                ]));
+            }
+            CellOutcome::Unsat => {}
+        }
+    }
+
+    // Every open `keep`-cell's strict system was definitely Unsat (an Unknown cell
+    // would have declined via `?` above). By the open-cell completeness argument
+    // (the solution set is open; if nonempty its x-projection contains a whole
+    // open cell we sampled), the component is Unsat — EXHAUSTIVELY.
+    Some(TwoVarVerdict::Unsat)
+}
+
+/// The outcome of deciding one open `keep`-cell's univariate-in-`elim` strict
+/// system at the rational sample `keep := s`.
+enum CellOutcome {
+    /// The cell's strict system is satisfiable; bind `elim` to this witness value.
+    Sat(Value),
+    /// The cell's strict system is (definitely) unsatisfiable.
+    Unsat,
+}
+
+/// Substitute the RATIONAL `keep := s` into every atom of the strict component,
+/// producing a conjunction of single-variable strict constraints in `elim`, and
+/// decide it with the sign-cell decider [`decide_system_value`]. `None` declines
+/// (overflow during substitution, a degenerate residual that loses `elim`, or an
+/// indeterminate sub-decision ⇒ we never claim Unsat with a gap).
+fn decide_strict_cell(
+    comp: &[&MultiAtom],
+    keep: SymbolId,
+    elim: SymbolId,
+    s: Rational,
+) -> Option<CellOutcome> {
+    let mut subst: BTreeMap<SymbolId, Rational> = BTreeMap::new();
+    subst.insert(keep, s);
+    let mut single_atoms: Vec<Atom> = Vec::with_capacity(comp.len());
+    for atom in comp {
+        let residual = substitute_rationals(&atom.poly, &subst)?;
+        // After fixing `keep`, the atom is univariate in `elim` (or constant).
+        if residual.vars().is_empty() {
+            // A constant strict comparison `c ⋈ 0`: false ⇒ the whole cell is
+            // Unsat; true ⇒ the atom is vacuous and dropped.
+            let c = residual
+                .terms
+                .get(&Vec::new())
+                .copied()
+                .unwrap_or_else(Rational::zero);
+            if !sign_satisfies(atom.cmp, Sign::of_rational(c)) {
+                return Some(CellOutcome::Unsat);
+            }
+            continue;
+        }
+        let poly = residual.to_single_var_integer_poly(elim)?;
+        if poly.len() <= 1 {
+            // Should not happen (residual has `elim`), but stay safe.
+            return None;
+        }
+        single_atoms.push(Atom {
+            cmp: atom.cmp,
+            poly,
+        });
+    }
+    if single_atoms.is_empty() {
+        // Every atom collapsed to a satisfied constant ⇒ the cell is satisfiable;
+        // any rational `elim` value (0) is a witness for the surviving (empty)
+        // constraint set.
+        return Some(CellOutcome::Sat(Value::Real(Rational::zero())));
+    }
+    match decide_system_value(&single_atoms)? {
+        SystemVerdict::Unsat => Some(CellOutcome::Unsat),
+        SystemVerdict::Sat(v) => Some(CellOutcome::Sat(v)),
+    }
+}
+
+/// The partial derivative `∂p/∂v` of a [`MultiPoly`]: each monomial `c·v^e·rest`
+/// maps to `(c·e)·v^(e−1)·rest` (terms with `e = 0` in `v` vanish). `None` on
+/// overflow (coefficient multiply by the exponent).
+fn derivative_in(p: &MultiPoly, v: SymbolId) -> Option<MultiPoly> {
+    let mut out = MultiPoly::zero();
+    for (k, &c) in &p.terms {
+        // Find the exponent of `v` in this monomial.
+        let mut exp = 0u32;
+        for &(s, e) in k {
+            if s == v {
+                exp = e;
+            }
+        }
+        if exp == 0 {
+            continue; // ∂/∂v of a v-free term is 0
+        }
+        // New coefficient c·exp; new monomial has `v^(exp−1)`.
+        let coeff = c.checked_mul(Rational::integer(i128::from(exp)))?;
+        let mut nk: MonoKey = Vec::with_capacity(k.len());
+        for &(s, e) in k {
+            if s == v {
+                if e > 1 {
+                    nk.push((s, e - 1));
+                }
+            } else {
+                nk.push((s, e));
+            }
+        }
+        out.add_term(nk, coeff)?;
+    }
+    Some(out)
 }
 
 /// Substitute `keep := α` (rational) into `p` and `q`, then find a common root of

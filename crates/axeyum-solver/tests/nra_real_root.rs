@@ -1279,3 +1279,230 @@ fn negated_single_var_ge_refutation_is_unsat() {
         "¬(x² ≥ 0) = x² < 0 is unsatisfiable; got {r:?}"
     );
 }
+
+// --- ALL-STRICT-inequality 2-variable CAD slice (CAD/nlsat step 3) ------------
+
+/// Strict-inequality SAT inside the open disk: `x²+y² < 4 ∧ x > 0 ∧ y > 0`. The
+/// solution set is the open quarter-disk; the CAD samples one rational interior
+/// point per open x-cell and finds a satisfying y-system. The witness must be
+/// rational (open cells ⇒ rational interior samples) and REPLAY against ALL three
+/// original assertions through the independent ground evaluator.
+#[test]
+fn strict_cad_open_quarter_disk_sat() {
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let (ys, yv) = real(&mut arena, "y");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let yy = arena.real_mul(yv, yv).unwrap();
+    let sum_sq = arena.real_add(xx, yy).unwrap();
+    let four = arena.real_const(Rational::integer(4));
+    let a1 = arena.real_lt(sum_sq, four).unwrap();
+    let zero = arena.real_const(Rational::zero());
+    let a2 = arena.real_gt(xv, zero).unwrap();
+    let zero2 = arena.real_const(Rational::zero());
+    let a3 = arena.real_gt(yv, zero2).unwrap();
+    let r = solve(&mut arena, &[a1, a2, a3], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x²+y²<4 ∧ x>0 ∧ y>0 must be Sat (open quarter-disk); got {r:?}");
+    };
+    // Witness is rational (interior of an open cell).
+    assert!(
+        matches!(model.get(xs), Some(Value::Real(_))),
+        "x witness must be rational"
+    );
+    assert!(
+        matches!(model.get(ys), Some(Value::Real(_))),
+        "y witness must be rational"
+    );
+    // Independent replay: ALL three original assertions hold.
+    let asg = model.to_assignment();
+    for (a, name) in [(a1, "x²+y²<4"), (a2, "x>0"), (a3, "y>0")] {
+        assert!(
+            matches!(eval(&arena, a, &asg), Ok(Value::Bool(true))),
+            "{name} must replay true at the strict-CAD witness"
+        );
+    }
+}
+
+/// A NONCONVEX strict-inequality SAT region: `x*y > 1 ∧ y < x` (the part of the
+/// hyperbola branch above 1 that lies below the diagonal — a genuinely curved,
+/// non-half-plane open region; e.g. (3, 1) since 3>1 and 1<3). The CAD must find
+/// a rational witness, and it replays against both assertions.
+#[test]
+fn strict_cad_nonconvex_hyperbola_region_sat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let xy = arena.real_mul(xv, yv).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a1 = arena.real_gt(xy, one).unwrap();
+    let a2 = arena.real_lt(yv, xv).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x*y>1 ∧ y<x must be Sat (e.g. (3,1)); got {r:?}");
+    };
+    let asg = model.to_assignment();
+    assert!(
+        matches!(eval(&arena, a1, &asg), Ok(Value::Bool(true))),
+        "x*y>1 must replay true"
+    );
+    assert!(
+        matches!(eval(&arena, a2, &asg), Ok(Value::Bool(true))),
+        "y<x must replay true"
+    );
+}
+
+/// Strict-inequality UNSAT (the completeness payoff): a disjoint system the outer
+/// McCormick/SOS layer leaves Unknown — `x²+y² < 1 ∧ x > 2`. The open disk lives
+/// in `|x| < 1`, disjoint from `x > 2`, so there is NO solution. The CAD certifies
+/// **Unsat** (every open x-cell's y-system is empty), NOT Unknown.
+#[test]
+fn strict_cad_disjoint_disk_halfplane_unsat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let yy = arena.real_mul(yv, yv).unwrap();
+    let sum_sq = arena.real_add(xx, yy).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a1 = arena.real_lt(sum_sq, one).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let a2 = arena.real_gt(xv, two).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x²+y²<1 ∧ x>2 is unsat (disk inside |x|<1, disjoint from x>2); \
+         the strict CAD must CERTIFY Unsat, not Unknown; got {r:?}"
+    );
+}
+
+/// A coupled, genuinely nonconvex strict UNSAT: `x*y > 1 ∧ x*y < 0`. No point can
+/// have its product both above 1 and below 0; the CAD certifies **Unsat** (each
+/// open x-cell's y-system — `x*y>1 ∧ x*y<0` after fixing x — is empty). This is a
+/// coupled (product) shape, not a single sign-definite quadratic form.
+#[test]
+fn strict_cad_contradictory_product_unsat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let xy = arena.real_mul(xv, yv).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a1 = arena.real_gt(xy, one).unwrap();
+    let zero = arena.real_const(Rational::zero());
+    let a2 = arena.real_lt(xy, zero).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x*y>1 ∧ x*y<0 is unsat (a product cannot be both >1 and <0); got {r:?}"
+    );
+}
+
+/// Out-of-scope: a 2-variable component containing an EQUALITY (`x*y = 1 ∧ y < x`)
+/// is NOT routed to the strict CAD. It must still decide soundly via the existing
+/// equality/resultant path — and crucially must NOT be wrongly Unsat (it is sat,
+/// e.g. (2, 1/2): 2·½=1 and ½<2). Confirms no behavior change for non-strict
+/// components.
+#[test]
+fn strict_cad_equality_component_out_of_scope_not_unsat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let xy = arena.real_mul(xv, yv).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a1 = arena.eq(xy, one).unwrap();
+    let a2 = arena.real_lt(yv, xv).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "x*y=1 ∧ y<x is sat (e.g. (2,½)); a component with an equality is out of \
+         strict-CAD scope and must NOT be wrongly Unsat; got {r:?}"
+    );
+}
+
+/// Soundness-negative (SAT must never become Unsat): a strict system whose
+/// solution set is a thin curved sliver — `x²+y² < 4 ∧ x²+y² > 3` (the open
+/// annulus between radii √3 and 2). It is satisfiable (e.g. (1.9, 0) since
+/// 3.61∈(3,4)). The CAD must return Sat (or at worst Unknown), NEVER Unsat.
+#[test]
+fn strict_cad_thin_annulus_sat_never_unsat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let yy = arena.real_mul(yv, yv).unwrap();
+    let sum_sq = arena.real_add(xx, yy).unwrap();
+    let four = arena.real_const(Rational::integer(4));
+    let a1 = arena.real_lt(sum_sq, four).unwrap();
+    let three = arena.real_const(Rational::integer(3));
+    let a2 = arena.real_gt(sum_sq, three).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "the open annulus 3<x²+y²<4 is sat (e.g. (1.9,0)); must NEVER be Unsat; got {r:?}"
+    );
+    // If decided, the witness must genuinely replay (no wrong Sat either).
+    if let CheckResult::Sat(model) = &r {
+        let asg = model.to_assignment();
+        assert!(
+            matches!(eval(&arena, a1, &asg), Ok(Value::Bool(true)))
+                && matches!(eval(&arena, a2, &asg), Ok(Value::Bool(true))),
+            "any Sat witness must replay both annulus bounds true"
+        );
+    }
+}
+
+/// Soundness-negative (UNSAT must never become Sat): `x²+y² < 1 ∧ x²+y² > 4` is
+/// unsatisfiable (a point cannot be inside radius 1 and outside radius 2). The CAD
+/// must return Unsat (or Unknown), NEVER Sat. Combined with the disjoint-disk test
+/// this pins both directions.
+#[test]
+fn strict_cad_contradictory_radii_never_sat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let yy = arena.real_mul(yv, yv).unwrap();
+    let sum_sq = arena.real_add(xx, yy).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a1 = arena.real_lt(sum_sq, one).unwrap();
+    let four = arena.real_const(Rational::integer(4));
+    let a2 = arena.real_gt(sum_sq, four).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Sat(_)),
+        "x²+y²<1 ∧ x²+y²>4 is unsat; must NEVER be Sat; got {r:?}"
+    );
+}
+
+/// A `≠` strict atom participates in the CAD: `x²+y² < 4 ∧ x ≠ 0 ∧ y ≠ 0` is sat
+/// (the punctured open disk minus the axes; e.g. (1,1)). Confirms `Ne` is handled
+/// as a strict (open) atom and the witness replays.
+#[test]
+fn strict_cad_with_ne_atoms_sat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let yy = arena.real_mul(yv, yv).unwrap();
+    let sum_sq = arena.real_add(xx, yy).unwrap();
+    let four = arena.real_const(Rational::integer(4));
+    let a1 = arena.real_lt(sum_sq, four).unwrap();
+    let zx = arena.real_const(Rational::zero());
+    let a2 = ne(&mut arena, xv, zx);
+    let zy = arena.real_const(Rational::zero());
+    let a3 = ne(&mut arena, yv, zy);
+    let r = solve(&mut arena, &[a1, a2, a3], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "x²+y²<4 ∧ x≠0 ∧ y≠0 is sat (e.g. (1,1)); got {r:?}"
+    );
+    if let CheckResult::Sat(model) = &r {
+        let asg = model.to_assignment();
+        for (a, name) in [(a1, "x²+y²<4"), (a2, "x≠0"), (a3, "y≠0")] {
+            assert!(
+                matches!(eval(&arena, a, &asg), Ok(Value::Bool(true))),
+                "{name} must replay true"
+            );
+        }
+    }
+}
