@@ -76,6 +76,74 @@ fn feasible_system_is_declined() {
     );
 }
 
+/// A cancelling system whose Diophantine refutation has the **degenerate `g = 0`
+/// row**: `x + y = 0 ∧ y + z = 0 ∧ x − z = 1`. The integer combination
+/// `−E₁ + E₂ + E₃` cancels every variable, leaving `0 = 1` (`combined = []`,
+/// `constant = 1`). This reconstructs to a kernel-checked `False` through the
+/// Diophantine fragment via the sign-based `Not (Eq Z zero 1)` close — no
+/// discreteness needed.
+#[test]
+fn cancelling_system_zero_eq_const_reconstructs_to_false() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let y = arena.int_var("y").unwrap();
+    let z = arena.int_var("z").unwrap();
+    let xpy = arena.int_add(x, y).unwrap();
+    let zero = arena.int_const(0);
+    let e1 = arena.eq(xpy, zero).unwrap();
+    let ypz = arena.int_add(y, z).unwrap();
+    let e2 = arena.eq(ypz, zero).unwrap();
+    let xmz = arena.int_sub(x, z).unwrap();
+    let one = arena.int_const(1);
+    let e3 = arena.eq(xmz, one).unwrap();
+
+    // Low-level reconstruction yields a kernel-checked `False` proof term.
+    let proof = reconstruct_diophantine_proof(&arena, &[e1, e2, e3]);
+    assert!(
+        proof.is_ok(),
+        "cancelling 0 = 1 system should reconstruct to False, got {:?}",
+        proof.err()
+    );
+
+    // The unified entry routes it through the Diophantine fragment and renders a
+    // self-contained Lean module naming the exported refutation.
+    let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &[e1, e2, e3])
+        .expect("cancelling system should prove unsat to a Lean module");
+    assert_eq!(fragment, ProofFragment::Diophantine);
+    assert!(
+        source.contains("axeyum_refutation"),
+        "rendered module should name the axeyum_refutation theorem"
+    );
+    assert_eq!(
+        scan_proof_fragment(&arena, &[e1, e2, e3]),
+        ProofFragment::Diophantine
+    );
+}
+
+/// A 2-equality cancelling system `x = 1 ∧ x = 2` whose combination `−E₁ + E₂`
+/// cancels `x`, leaving the degenerate `0 = 1` row (`combined = []`, `constant = 1`).
+/// Like the 3-equality case, it reconstructs to a kernel-checked `False`.
+#[test]
+fn x_eq_one_and_x_eq_two_zero_eq_const_reconstructs_to_false() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let one = arena.int_const(1);
+    let two = arena.int_const(2);
+    let e1 = arena.eq(x, one).unwrap();
+    let e2 = arena.eq(x, two).unwrap();
+
+    let proof = reconstruct_diophantine_proof(&arena, &[e1, e2]);
+    assert!(
+        proof.is_ok(),
+        "x=1 ∧ x=2 (0 = 1 row) should reconstruct to False, got {:?}",
+        proof.err()
+    );
+    let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &[e1, e2])
+        .expect("x=1 ∧ x=2 should prove unsat to a Lean module");
+    assert_eq!(fragment, ProofFragment::Diophantine);
+    assert!(source.contains("axeyum_refutation"));
+}
+
 /// Locate a `lean` binary (env override or `PATH`/elan); `None` ⇒ skip.
 fn lean_bin() -> Option<PathBuf> {
     if let Ok(p) = std::env::var("AXEYUM_LEAN_BIN") {

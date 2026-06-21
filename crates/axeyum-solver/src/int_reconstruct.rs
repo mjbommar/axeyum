@@ -27,11 +27,12 @@
 //! ## Scope
 //!
 //! Handles the main case `g > 0` (gcd divides every combined coefficient, as the
-//! certificate guarantees). The degenerate `g = 0` row (`0 = constant ≠ 0`, an
-//! empty `combined`) is **declined** here (no order machinery is needed for it, but
-//! it is a distinct shape; it falls through to the linear/Farkas path). The
-//! reconstruction also declines on any `i128` overflow or a normalizer mismatch —
-//! never fabricating an identity.
+//! certificate guarantees) via discreteness, AND the degenerate `g = 0` row
+//! (`0 = constant ≠ 0`, an empty `combined`, all variables cancelled): the latter is
+//! a contradiction in any ordered ring — `0 = c` with `c ≠ 0` is false — closed by
+//! `ne_c h_comb` where `ne_c : Not (Eq Z zero (intlit constant))` is built from the
+//! SIGN of `constant` (no discreteness needed). The reconstruction declines on any
+//! `i128`/bound overflow or a normalizer mismatch — never fabricating an identity.
 #![allow(clippy::similar_names, clippy::many_single_char_names)]
 
 use std::collections::BTreeMap;
@@ -1414,16 +1415,16 @@ const DIO_UNIT_MAX: i128 = 4096;
 /// `def_eq False`-gated through the kernel).
 ///
 /// Handles the main case `g = gcd(|combined_j|) > 0` (the certificate guarantees `g
-/// ∤ constant`). The degenerate empty-`combined` row (`g = 0`, `0 = constant ≠ 0`)
-/// is declined here.
+/// ∤ constant`) via discreteness, and the degenerate empty-`combined` row (`g = 0`,
+/// `0 = constant ≠ 0`) via the sign-based `Not (Eq Z zero (intlit constant))` close.
 ///
 /// # Errors
 ///
-/// [`ReconstructError::UnsupportedTerm`] when there is no Diophantine refutation,
-/// the degenerate `g = 0` case, a coefficient/bound overflow, or a normalizer
-/// mismatch (the certificate's claimed combined row does not canonicalize as
-/// expected — never fabricated); [`ReconstructError::KernelRejected`] when the
-/// assembled term does not kernel-check to `False`.
+/// [`ReconstructError::UnsupportedTerm`] when there is no Diophantine refutation, a
+/// coefficient/bound overflow, or a normalizer mismatch (the certificate's claimed
+/// combined row does not canonicalize as expected — never fabricated);
+/// [`ReconstructError::KernelRejected`] when the assembled term does not
+/// kernel-check to `False`.
 pub fn reconstruct_diophantine_proof(
     arena: &TermArena,
     assertions: &[TermId],
@@ -1892,10 +1893,14 @@ impl IntReconstructCtx {
         // and both lhs_acc and combined_faithful canonicalize to the SAME `lhs_gens`.
         let lhs_canon = self.gens_to_expr(&lhs_gens);
         let rhs_canon = self.gens_to_expr(&rhs_gens);
-        // Faithful combined form and its own normalization to `lhs_canon`.
+        // Faithful combined form and its own normalization to `lhs_canon`. When the
+        // combined row is empty (the degenerate `g = 0` case: all variables cancel),
+        // the faithful form is `zero`, which `normalize_kernel` reads as `ZExpr::Zero`
+        // and canonicalizes to the empty gen list (= `expected_lhs`). This yields
+        // `h_comb : Eq Z zero (intlit constant)` for the `0 = constant` contradiction.
         let combined_faithful = match lin_to_zexpr(combined_dense, 0) {
             Some(z) => self.emit_zexpr(&z),
-            None => return Err(decline("combined row empty")),
+            None => self.mk_zero(),
         };
         let (cf_gens, cf_kexpr, cf_norm) = self
             .normalize_kernel(combined_faithful)
@@ -2228,70 +2233,76 @@ impl IntReconstructCtx {
         id
     }
 
-    /// Assemble the `False` proof term for the Diophantine certificate. Returns a
-    /// [`ReconstructError`] (decline) on the degenerate `g = 0` case, a bound
-    /// overflow, or a normalizer/identity mismatch; the caller gates the result
-    /// through `infer`/`def_eq False`.
-    #[allow(clippy::too_many_lines)]
-    fn build_diophantine_false(
+    /// `lt (intlit c) zero` for `c < 0`. Derived from `lt zero (intlit |c|)` by
+    /// adding `intlit c` to both sides (`add_lt_add_of_le_of_lt` with `le_refl`),
+    /// then renormalizing `intlit c + 0 → intlit c` and `intlit c + intlit |c| → 0`.
+    fn lt_neg_intlit_zero(&mut self, c: i128) -> Result<ExprId, ReconstructError> {
+        debug_assert!(c < 0);
+        let abs = c.unsigned_abs();
+        let abs_i = i128::try_from(abs).map_err(|_| ReconstructError::UnsupportedTerm {
+            term: "|constant| overflow".to_owned(),
+        })?;
+        // h0 : lt zero (intlit |c|).
+        let h0 = self.lt_zero_intlit(abs_i)?;
+        let zero = self.mk_zero();
+        let c_lit = self.mk_intlit(c);
+        let abs_lit = self.mk_intlit(abs_i);
+        // h_le : le (intlit c)(intlit c)  (le_refl).
+        let h_le = self.le_refl_app(c_lit);
+        // add_lt_add_of_le_of_lt c c zero |c| h_le h0 : lt (add c zero)(add c |c|).
+        let combined = self.add_lt_add_of_le_of_lt_app(c_lit, c_lit, zero, abs_lit, h_le, h0);
+        // cast lhs (add c zero) → c via add_zero.
+        let c_zero = self.mk_add(c_lit, zero);
+        let c_abs = self.mk_add(c_lit, abs_lit);
+        let addz = self.add_zero_eq(c_lit); // add c zero = c
+        let lt_c_cabs = self.lt_cast_left(c_zero, c_lit, c_abs, combined, addz);
+        // cast rhs (add c |c|) → zero : Eq Z (add (intlit c)(intlit |c|)) (intlit 0).
+        let sum_eq_zero = self.intlit_add_eq(c, abs_i, 0)?; // Eq Z (add c |c|) (intlit 0) = zero
+        Ok(self.lt_cast_right(c_lit, c_abs, zero, lt_c_cabs, sum_eq_zero))
+    }
+
+    /// Build `ne_c : Not (Eq Z zero (intlit constant))` for `constant ≠ 0`. The
+    /// returned term is the lambda `fun (h : Eq Z zero c) => …` whose body transports
+    /// the sign fact (`lt zero c` for `c > 0`, or `lt c zero` for `c < 0`) along `h`
+    /// to `lt zero zero` and closes with `lt_irrefl zero`. `Not (Eq Z zero c)`
+    /// def-unfolds to `Eq Z zero c → False`, so the lambda's type is the `Not`.
+    fn ne_zero_intlit(&mut self, constant: i128) -> Result<ExprId, ReconstructError> {
+        debug_assert!(constant != 0);
+        let zero = self.mk_zero();
+        let c_lit = self.mk_intlit(constant);
+        // The sign fact, oriented so a cast along `h : Eq Z zero c` lands on `lt zero zero`.
+        // c > 0: lt zero c ; cast RIGHT (c → zero) along (symm h).
+        // c < 0: lt c zero ; cast LEFT  (c → zero) along (symm h).
+        let fid = self.fresh_fvar();
+        let h = self.kernel.fvar(fid); // Eq Z zero c
+        let h_sym = self.eq_symm(zero, c_lit, h); // Eq Z c zero
+        let lt_zero_zero = if constant > 0 {
+            let lt_zero_c = self.lt_zero_intlit(constant)?; // lt zero c
+            self.lt_cast_right(zero, c_lit, zero, lt_zero_c, h_sym)
+        } else {
+            let lt_c_zero = self.lt_neg_intlit_zero(constant)?; // lt c zero
+            self.lt_cast_left(c_lit, zero, zero, lt_c_zero, h_sym)
+        };
+        let irr = self.lt_irrefl_app(zero); // Not (lt zero zero)
+        let false_proof = self.kernel.app(irr, lt_zero_zero); // False
+        let body = self.kernel.abstract_fvars(false_proof, &[fid]);
+        let anon = self.kernel.anon();
+        let eq_zero_c = self.mk_eq(zero, c_lit);
+        Ok(self.kernel.lam(anon, eq_zero_c, body, BinderInfo::Default))
+    }
+
+    /// Declare each input equality `E_i` as a hypothesis axiom `h_i : Eq Z L_i
+    /// (intlit b_i)`, returning the `(l_expr, l_gens, r_expr, b_i, h_i)` tuples the
+    /// combiner consumes. Declines on any coefficient/rhs magnitude over the bound.
+    #[allow(clippy::type_complexity)]
+    fn build_hyps(
         &mut self,
         equalities: &[Equality],
-        cert: &DiophantineCertificate,
-    ) -> Result<ExprId, ReconstructError> {
+        index_of: &BTreeMap<SymbolId, usize>,
+    ) -> Result<Vec<(ExprId, Vec<IGen>, ExprId, i128, ExprId)>, ReconstructError> {
         let decline = |detail: &str| ReconstructError::UnsupportedTerm {
             term: format!("Diophantine reconstruction declined: {detail}"),
         };
-
-        // --- gcd g and Euclidean (q, r): constant = g·q + r, 0 < r < g ---------
-        let mut g: i128 = 0;
-        for &(_, c) in &cert.combined {
-            g = gcd_i128(g, c);
-        }
-        if g == 0 {
-            return Err(decline("degenerate 0 = constant row (g = 0); not handled"));
-        }
-        let mut r = cert.constant % g;
-        let mut q = cert.constant / g;
-        if r < 0 {
-            r += g;
-            q -= 1;
-        }
-        if !(r > 0 && r < g) {
-            return Err(decline("certificate not gcd-infeasible (0 < r < g failed)"));
-        }
-        if g > DIO_UNIT_MAX || r > DIO_UNIT_MAX || q.unsigned_abs() > DIO_UNIT_MAX as u128 {
-            return Err(decline("g / r / q exceed the unit-expansion bound"));
-        }
-        let gq = g.checked_mul(q).ok_or_else(|| decline("g·q overflow"))?;
-        if gq.unsigned_abs() > DIO_UNIT_MAX as u128 {
-            return Err(decline("g·q exceeds the unit-expansion bound"));
-        }
-
-        // --- dense variable indices -------------------------------------------
-        let index_of = dense_index_map(equalities, cert);
-        let mut combined_dense: Vec<(usize, i128)> = cert
-            .combined
-            .iter()
-            .map(|&(s, c)| (index_of[&s], c))
-            .collect();
-        combined_dense.sort_by_key(|&(i, _)| i);
-        // m = combined / g.
-        let mut m_coeffs: Vec<(usize, i128)> = Vec::with_capacity(combined_dense.len());
-        for &(i, c) in &combined_dense {
-            if c % g != 0 {
-                return Err(decline("combined coefficient not divisible by gcd"));
-            }
-            let cq = c / g;
-            if cq.unsigned_abs() > DIO_UNIT_MAX as u128 {
-                return Err(decline("m coefficient exceeds the unit-expansion bound"));
-            }
-            m_coeffs.push((i, cq));
-        }
-        if m_coeffs.is_empty() {
-            return Err(decline("m is empty (no variables); not handled"));
-        }
-
-        // === 1. Hypotheses h_i : Eq Z L_i (intlit b_i). =======================
         let mut hyps: Vec<(ExprId, Vec<IGen>, ExprId, i128, ExprId)> =
             Vec::with_capacity(equalities.len());
         for eq in equalities {
@@ -2316,6 +2327,114 @@ impl IntReconstructCtx {
             let h = self.hyp_axiom(prop)?;
             hyps.push((l_expr, l_gens, r_expr, eq.rhs, h));
         }
+        Ok(hyps)
+    }
+
+    /// Close the degenerate `g = 0` row: the combined row is `Eq Z zero (intlit
+    /// constant)` with `constant ≠ 0`, a contradiction in any ordered ring (no
+    /// discreteness needed). `False := ne_c h_comb`, where `ne_c : Not (Eq Z zero
+    /// (intlit constant))` is built from the SIGN of `constant`. Declines if
+    /// `|constant|` exceeds the unit-expansion bound (keeps the repeated-`one` build
+    /// small).
+    fn build_diophantine_false_g0(
+        &mut self,
+        equalities: &[Equality],
+        cert: &DiophantineCertificate,
+        index_of: &BTreeMap<SymbolId, usize>,
+    ) -> Result<ExprId, ReconstructError> {
+        let decline = |detail: &str| ReconstructError::UnsupportedTerm {
+            term: format!("Diophantine reconstruction declined: {detail}"),
+        };
+        debug_assert!(cert.combined.is_empty());
+        if cert.constant == 0 {
+            // gcd(∅) = 0 ∤ d requires d ≠ 0; a `0 = 0` row is not a refutation.
+            return Err(decline("g = 0 with constant = 0 (no contradiction)"));
+        }
+        if cert.constant.unsigned_abs() > DIO_UNIT_MAX as u128 {
+            return Err(decline("|constant| exceeds the unit-expansion bound"));
+        }
+        let combined_dense: Vec<(usize, i128)> = Vec::new();
+        let hyps = self.build_hyps(equalities, index_of)?;
+        // h_comb : Eq Z zero (intlit constant)  (combined LHS normalizes to `zero`).
+        let h_comb =
+            self.combine_equalities(&hyps, &cert.multipliers, &combined_dense, cert.constant)?;
+        // ne_c : Not (Eq Z zero (intlit constant)) ; False := ne_c h_comb.
+        let ne_c = self.ne_zero_intlit(cert.constant)?;
+        Ok(self.kernel.app(ne_c, h_comb))
+    }
+
+    /// Assemble the `False` proof term for the Diophantine certificate. Handles both
+    /// the main `g > 0` discreteness path and the degenerate `g = 0` row
+    /// (`0 = constant ≠ 0`, all variables cancelled): the latter is a contradiction
+    /// in any ordered ring (no discreteness needed), closed by `ne_c h_comb` where
+    /// `ne_c : Not (Eq Z zero (intlit constant))`. Returns a [`ReconstructError`]
+    /// (decline) on a bound overflow or a normalizer/identity mismatch; the caller
+    /// gates the result through `infer`/`def_eq False`.
+    #[allow(clippy::too_many_lines)]
+    fn build_diophantine_false(
+        &mut self,
+        equalities: &[Equality],
+        cert: &DiophantineCertificate,
+    ) -> Result<ExprId, ReconstructError> {
+        let decline = |detail: &str| ReconstructError::UnsupportedTerm {
+            term: format!("Diophantine reconstruction declined: {detail}"),
+        };
+
+        // --- dense variable indices (stable, shared by both paths) -------------
+        let index_of = dense_index_map(equalities, cert);
+
+        // --- gcd g and Euclidean (q, r): constant = g·q + r, 0 < r < g ---------
+        let mut g: i128 = 0;
+        for &(_, c) in &cert.combined {
+            g = gcd_i128(g, c);
+        }
+        if g == 0 {
+            // Degenerate `0 = constant ≠ 0` row (all variables cancelled). No
+            // discreteness is needed — `0 = c` with `c ≠ 0` is false in any ordered
+            // ring; route to the dedicated sign-based close.
+            return self.build_diophantine_false_g0(equalities, cert, &index_of);
+        }
+        let mut r = cert.constant % g;
+        let mut q = cert.constant / g;
+        if r < 0 {
+            r += g;
+            q -= 1;
+        }
+        if !(r > 0 && r < g) {
+            return Err(decline("certificate not gcd-infeasible (0 < r < g failed)"));
+        }
+        if g > DIO_UNIT_MAX || r > DIO_UNIT_MAX || q.unsigned_abs() > DIO_UNIT_MAX as u128 {
+            return Err(decline("g / r / q exceed the unit-expansion bound"));
+        }
+        let gq = g.checked_mul(q).ok_or_else(|| decline("g·q overflow"))?;
+        if gq.unsigned_abs() > DIO_UNIT_MAX as u128 {
+            return Err(decline("g·q exceeds the unit-expansion bound"));
+        }
+
+        let mut combined_dense: Vec<(usize, i128)> = cert
+            .combined
+            .iter()
+            .map(|&(s, c)| (index_of[&s], c))
+            .collect();
+        combined_dense.sort_by_key(|&(i, _)| i);
+        // m = combined / g.
+        let mut m_coeffs: Vec<(usize, i128)> = Vec::with_capacity(combined_dense.len());
+        for &(i, c) in &combined_dense {
+            if c % g != 0 {
+                return Err(decline("combined coefficient not divisible by gcd"));
+            }
+            let cq = c / g;
+            if cq.unsigned_abs() > DIO_UNIT_MAX as u128 {
+                return Err(decline("m coefficient exceeds the unit-expansion bound"));
+            }
+            m_coeffs.push((i, cq));
+        }
+        if m_coeffs.is_empty() {
+            return Err(decline("m is empty (no variables); not handled"));
+        }
+
+        // === 1. Hypotheses h_i : Eq Z L_i (intlit b_i). =======================
+        let hyps = self.build_hyps(equalities, &index_of)?;
 
         // === 2. Combined: h_comb : Eq Z combined_expr (intlit constant). ======
         let h_comb =
