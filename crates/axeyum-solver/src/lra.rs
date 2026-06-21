@@ -1163,8 +1163,28 @@ fn lia_simplex_within(
         constraint.expr.constant = Rational::integer(new_const);
         constraint.strict = false;
     }
-    let mut budget = MAX_LIA_BNB_NODES;
-    match lia_branch_and_bound(&mut constraints, nvars, &mut budget, deadline) {
+    // ADDITIVE coverage (P2.4). Branch-and-bound below decides bounded systems
+    // but STALLS (`Unknown`, grinding to the node budget) on LP-feasible-but-
+    // integer-infeasible systems over UNBOUNDED variables (e.g. `3x = 3y + 1`-
+    // shaped polytopes). A bounded round of sound Gomory fractional cuts closes
+    // many such cases to `unsat` (or finds an integer point), and is fast and
+    // deterministic (bounded rounds/rows/cols/magnitude). It is run FIRST as a
+    // cheap, fully-sound oracle: every verdict it returns is checked the same way
+    // B&B's is (`unsat` by a standard-form infeasibility certificate built only
+    // from integer-valid cuts; `sat` by replay against the original assertions).
+    // When it DECLINES (`None`) we fall through to the unchanged B&B, so no case
+    // B&B already decides loses coverage and — both engines being sound — no
+    // verdict can change to a wrong one.
+    // A Gomory `Sat` is still replayed below (the shared trust anchor): a
+    // reconstruction slip can only ever cause a (rejected, alarmed) replay
+    // failure, never an unsound `sat`.
+    let outcome = if let Some(decided) = lia_gomory_cuts(&constraints, nvars, deadline) {
+        decided
+    } else {
+        let mut budget = MAX_LIA_BNB_NODES;
+        lia_branch_and_bound(&mut constraints, nvars, &mut budget, deadline)
+    };
+    match outcome {
         LiaBnb::Unsat => Ok(CheckResult::Unsat),
         LiaBnb::Unknown => Ok(CheckResult::Unknown(UnknownReason {
             kind: UnknownKind::Incomplete,
@@ -1282,6 +1302,434 @@ fn bound_constraint(index: usize, coeff: Rational, constant: Rational) -> Constr
         mult: Vec::new(),
         origin: 0,
     }
+}
+
+// ---------------------------------------------------------------------------
+// Gomory fractional cuts over a self-contained integer standard-form tableau
+// (P2.4). Used only as an ADDITIVE fallback when branch-and-bound stalls on an
+// LP-feasible-but-integer-infeasible system over UNBOUNDED variables.
+//
+// SOUNDNESS DESIGN — why a self-contained standard form, not the LRA simplex's
+// own tableau. The `QF_LRA` general simplex above (`simplex_feasible`) is a
+// Dutertre–de Moura "simplex with bounds": its original variables are FREE (no
+// `x >= 0`) and its slacks sit at upper bounds. The textbook Gomory fractional
+// cut `Σ_j frac(a_j)·x_Nj >= frac(β)` is valid ONLY under the standard
+// assumption that every nonbasic variable is integer and `>= 0`. That
+// assumption does NOT hold in the bounds form, so extracting a cut from that
+// tableau would be unsound without a transformation we would then have to
+// re-prove. Instead this engine builds its OWN classical integer standard form
+// in which EVERY structural variable is integer-constrained and `>= 0`, so the
+// derivation is verbatim valid and self-evidently sound:
+//
+//   * each (free, possibly-negative) integer variable `x_i` is split into
+//     `x_i = p_i - n_i` with `p_i, n_i >= 0` integers;
+//   * each constraint `Σ a_i·x_i + c (<= | =) 0` becomes an EQUALITY
+//     `Σ a_i·(p_i - n_i) + c + s = 0` with a slack `s >= 0`.
+//
+// We REQUIRE all `a_i` and `c` to be integers and the constraint to be
+// non-strict; then every slack `s = -c - Σ a_i·x_i` is an integer at any
+// integer point, so all of `p_i, n_i, s` are nonneg INTEGER variables. Any
+// constraint that is strict or has a non-integer coefficient/constant ⇒ we
+// DECLINE (`unknown`): we never emit a cut whose integer-validity we cannot
+// guarantee. The Gomory cut on a fractional basic variable of THIS tableau is
+// therefore valid for every integer-feasible point and cuts off the current
+// fractional vertex.
+//
+// Everything is exact `Rational`/`i128` with `checked_*`; any overflow, the
+// round bound, the row/column-count guard, or the deadline ⇒ graceful
+// `unknown` (`None`), never OOM, never a loop, never a wrong verdict.
+// ---------------------------------------------------------------------------
+
+/// Maximum number of cut-and-re-solve rounds before declining to `unknown`.
+const MAX_GOMORY_ROUNDS: usize = 16;
+
+/// Maximum number of rows (constraints) the Gomory tableau will admit; above
+/// this we decline (`unknown`) rather than risk a large dense pivot blow-up.
+const MAX_GOMORY_ROWS: usize = 256;
+
+/// Maximum number of structural columns (`2*nvars + nrows` plus accumulated
+/// cuts) the Gomory tableau will admit; above this we decline (`unknown`).
+const MAX_GOMORY_COLS: usize = 1024;
+
+/// Maximum absolute integer magnitude allowed in any tableau coefficient's
+/// numerator/denominator; beyond it we decline, keeping all arithmetic well
+/// inside `i128` even after repeated pivots/cuts.
+const GOMORY_MAGNITUDE_LIMIT: i128 = 1 << 40;
+
+/// A dense exact-rational standard-form simplex tableau in which EVERY column is
+/// a nonneg integer-constrained variable. Row `i` reads
+/// `x_{basis[i]} = rhs[i] + Σ_j body[i][j]·x_{nonbasic[j]}` (nonbasic vars at 0).
+struct GomoryTableau {
+    /// `body[i][j]` is the coefficient of the `j`-th nonbasic in row `i`.
+    body: Vec<Vec<Rational>>,
+    /// `rhs[i]` is the value of basic variable `basis[i]` at the current vertex.
+    rhs: Vec<Rational>,
+    /// Global index of the basic variable owning row `i`.
+    basis: Vec<usize>,
+    /// Global indices of the nonbasic (column) variables, in column order.
+    nonbasic: Vec<usize>,
+    /// Number of leading global indices (`0..integral_upto`) that are
+    /// integer-constrained. In our build EVERY structural variable is integer,
+    /// so this equals the total variable count; kept explicit for clarity.
+    integral_upto: usize,
+}
+
+/// Builds the integer standard-form tableau from the collected constraints, or
+/// `None` if any constraint is unfit for a sound Gomory cut (strict, or a
+/// non-integer coefficient/constant) or any guard (size/magnitude/overflow)
+/// trips. `nvars` is the original-variable count.
+///
+/// Layout of global variable indices:
+///   `0 .. nvars`            → `p_i` (positive part of original `x_i`)
+///   `nvars .. 2*nvars`      → `n_i` (negative part of original `x_i`)
+///   `2*nvars .. 2*nvars+m`  → `s_j` (slack of constraint `j`)
+/// All are nonneg integers. `x_i = p_i - n_i`.
+fn build_gomory_tableau(constraints: &[Constraint], nvars: usize) -> Option<GomoryTableau> {
+    let m = constraints.len();
+    if m == 0 || m > MAX_GOMORY_ROWS {
+        return None;
+    }
+    let total = 2usize.checked_mul(nvars)?.checked_add(m)?;
+    if total > MAX_GOMORY_COLS {
+        return None;
+    }
+    // Nonbasic columns: the `2*nvars` split variables (p_i, n_i). Basic: the m
+    // slacks (one per constraint), initially equal to `-constant`.
+    let nonbasic: Vec<usize> = (0..2 * nvars).collect();
+    let col_of: BTreeMap<usize, usize> =
+        nonbasic.iter().enumerate().map(|(j, &g)| (g, j)).collect();
+
+    let mut body: Vec<Vec<Rational>> = Vec::with_capacity(m);
+    let mut rhs: Vec<Rational> = Vec::with_capacity(m);
+    let mut basis: Vec<usize> = Vec::with_capacity(m);
+
+    for (j, c) in constraints.iter().enumerate() {
+        // A sound Gomory cut in this form needs an INTEGER, NON-STRICT row.
+        if c.strict || !c.expr.constant.is_integer() {
+            return None;
+        }
+        // Slack form: s_j = -c - Σ a_i·(p_i - n_i).
+        // As a tableau row over the nonbasic (p,n) columns:
+        //   s_j = (-c) + Σ_i (-a_i)·p_i + Σ_i (a_i)·n_i.
+        let mut row = vec![Rational::zero(); nonbasic.len()];
+        for (&i, &a) in &c.expr.coeffs {
+            if !a.is_integer() {
+                return None;
+            }
+            if a.numerator().abs() >= GOMORY_MAGNITUDE_LIMIT {
+                return None;
+            }
+            // p_i column gets -a; n_i column gets +a.
+            let neg_a = a.checked_neg()?;
+            let pj = *col_of.get(&i)?;
+            let nj = *col_of.get(&(nvars + i))?;
+            row[pj] = row[pj].checked_add(neg_a)?;
+            row[nj] = row[nj].checked_add(a)?;
+        }
+        if c.expr.constant.numerator().abs() >= GOMORY_MAGNITUDE_LIMIT {
+            return None;
+        }
+        let r = c.expr.constant.checked_neg()?;
+        body.push(row);
+        rhs.push(r);
+        basis.push(2 * nvars + j); // slack s_j
+    }
+
+    Some(GomoryTableau {
+        body,
+        rhs,
+        basis,
+        nonbasic,
+        integral_upto: total,
+    })
+}
+
+/// Result of [`gomory_solve_lp`]: the LP relaxation of the current tableau is
+/// feasible (and the tableau is left at an optimal/feasible vertex), infeasible,
+/// or the search declined (overflow / iteration backstop → `unknown`).
+enum GomoryLp {
+    Feasible,
+    Infeasible,
+    Decline,
+}
+
+/// Drives the dense standard-form tableau to a feasible vertex (all `rhs >= 0`)
+/// by a dual-simplex-style / Bland primal repair: while some basic variable is
+/// negative, pivot to restore feasibility. Returns `Infeasible` when a negative
+/// basic row has no entering column (a Farkas-style certificate of infeasibility
+/// in standard form), `Decline` on overflow or the iteration backstop.
+///
+/// All structural variables are `>= 0`; a feasible vertex has every `rhs[i] >= 0`.
+fn gomory_solve_lp(t: &mut GomoryTableau) -> GomoryLp {
+    let nrows = t.body.len();
+    let ncols = t.nonbasic.len();
+    // Generous deterministic backstop; Bland's rule (smallest-index choice)
+    // guarantees termination, this only bounds pathological inputs.
+    let max_iters = 2000usize.saturating_add(40usize.saturating_mul(nrows.saturating_mul(ncols)));
+    for _ in 0..max_iters {
+        // Find the smallest-index basic variable whose value is negative.
+        let mut leave: Option<usize> = None;
+        let mut leave_basic = usize::MAX;
+        for i in 0..nrows {
+            if t.rhs[i].numerator() < 0 && t.basis[i] < leave_basic {
+                leave_basic = t.basis[i];
+                leave = Some(i);
+            }
+        }
+        let Some(li) = leave else {
+            return GomoryLp::Feasible;
+        };
+        // Row `li`: x_basic = rhs(<0) + Σ_j body·x_nonbasic. To raise it, we need
+        // a nonbasic column whose increase raises x_basic, i.e. a POSITIVE body
+        // coefficient (all nonbasics are currently 0 and bounded below by 0, so
+        // they can only increase). Bland: smallest global index.
+        let mut enter: Option<usize> = None;
+        let mut enter_global = usize::MAX;
+        for j in 0..ncols {
+            if t.body[li][j].numerator() > 0 && t.nonbasic[j] < enter_global {
+                enter_global = t.nonbasic[j];
+                enter = Some(j);
+            }
+        }
+        let Some(ej) = enter else {
+            // Row `li`: x_basic = rhs(<0) + Σ body_j·x_nonbasic, every body_j <= 0
+            // and every x_nonbasic >= 0, so x_basic <= rhs < 0, contradicting
+            // x_basic >= 0. The standard-form system is infeasible.
+            return GomoryLp::Infeasible;
+        };
+        if gomory_pivot(t, li, ej).is_none() {
+            return GomoryLp::Decline;
+        }
+        // Magnitude guard after each pivot: bail before coefficients can blow up.
+        if !gomory_within_magnitude(t) {
+            return GomoryLp::Decline;
+        }
+    }
+    GomoryLp::Decline
+}
+
+/// Whether every coefficient in the tableau is within [`GOMORY_MAGNITUDE_LIMIT`]
+/// (numerator and denominator), so subsequent exact arithmetic stays in `i128`.
+fn gomory_within_magnitude(t: &GomoryTableau) -> bool {
+    let ok = |r: &Rational| {
+        r.numerator().abs() < GOMORY_MAGNITUDE_LIMIT
+            && r.denominator().abs() < GOMORY_MAGNITUDE_LIMIT
+    };
+    t.rhs.iter().all(ok) && t.body.iter().all(|row| row.iter().all(ok))
+}
+
+/// Pivots nonbasic column `ej` into the basis in place of the basic owning row
+/// `li`. Standard dense Gauss–Jordan pivot over exact rationals; `None` on any
+/// `i128` overflow (caller declines to `unknown`).
+fn gomory_pivot(t: &mut GomoryTableau, li: usize, ej: usize) -> Option<()> {
+    let nrows = t.body.len();
+    let ncols = t.nonbasic.len();
+    // Row `li`: x_basic = rhs + Σ_j body[li][j]·x_nonbasic. Solve for x_{enter}:
+    //   x_enter = (-rhs/p) - (1/p)·x_basic + Σ_{j≠ej} (-body[li][j]/p)·x_nonbasic
+    // where p = body[li][ej] (the pivot, nonzero). After the pivot, row `li` is
+    // owned by `enter` and column `ej` is owned by the leaving basic.
+    let p = t.body[li][ej];
+    if p.is_zero() {
+        return None;
+    }
+    let leaving = t.basis[li];
+    // New row for the entering variable.
+    // Solve row `li` (`l = rhs + Σ_k body·N_k`, `N_ej = e`, `p = body[ej]`) for
+    // the entering var `e`:
+    //   e = (1/p)·l − (rhs/p) − Σ_{k≠ej} (body[k]/p)·N_k.
+    // So in the new row owned by `e`, the column `ej` (now hosting the leaving
+    // var `l`) has coefficient `+1/p`, and every other column `k` has
+    // `−body[k]/p`.
+    let mut new_row = vec![Rational::zero(); ncols];
+    for (j, slot) in new_row.iter_mut().enumerate() {
+        if j == ej {
+            // This column position now hosts the (former) leaving basic, coeff +1/p.
+            *slot = Rational::integer(1).checked_div(p)?;
+        } else {
+            *slot = t.body[li][j].checked_neg()?.checked_div(p)?;
+        }
+    }
+    let new_rhs = t.rhs[li].checked_neg()?.checked_div(p)?;
+    // Substitute into every OTHER row that mentions column `ej`.
+    for i in 0..nrows {
+        if i == li {
+            continue;
+        }
+        let a = t.body[i][ej];
+        if a.is_zero() {
+            continue;
+        }
+        // Row i has a term `a·x_enter`. We substitute
+        //   x_enter = new_rhs + Σ_k new_row[k]·x_k,
+        // where column `ej` now hosts the LEAVING variable. The old value at
+        // column `ej` (`= a`, the entering-var coefficient) is the term being
+        // substituted away, so it MUST be cleared before folding in
+        // `a·new_row[ej]` — otherwise the stale `a` is double-counted (an unsound
+        // tableau, caught here as a `sat` replay failure rather than escaping).
+        t.body[i][ej] = Rational::zero();
+        let row_i = &mut t.body[i];
+        for (slot, &nr) in row_i.iter_mut().zip(new_row.iter()) {
+            *slot = slot.checked_add(a.checked_mul(nr)?)?;
+        }
+        t.rhs[i] = t.rhs[i].checked_add(a.checked_mul(new_rhs)?)?;
+    }
+    // The entering variable's global index (`t.nonbasic[ej]`) now owns row `li`;
+    // column `ej` now hosts the leaving variable.
+    let entering_global = t.nonbasic[ej];
+    t.body[li] = new_row;
+    t.rhs[li] = new_rhs;
+    t.basis[li] = entering_global;
+    t.nonbasic[ej] = leaving;
+    Some(())
+}
+
+/// `frac(t) = t - floor(t)` ∈ [0,1), exact; `None` on `i128` overflow.
+fn rational_frac(r: Rational) -> Option<Rational> {
+    let num = r.numerator();
+    let den = r.denominator();
+    // `den > 0` always; floor = div_euclid gives the largest integer <= r.
+    let floor = num.div_euclid(den);
+    r.checked_sub(Rational::integer(floor))
+}
+
+/// Adds a Gomory fractional cut derived from row `li` (whose basic variable is
+/// integer-constrained and currently fractional) as a NEW row with a fresh
+/// slack column `g`. Our row convention is `x_B = β + Σ_j a_j·x_Nj`; in it the
+/// valid cut is `Σ_j frac(-a_j)·x_Nj >= frac(β)` (see the SIGN CONVENTION note in
+/// the body for why `frac(-a_j)`, NOT `frac(a_j)`), encoded as the equality
+///   `g = -frac(β) + Σ_j frac(-a_j)·x_Nj`   (so `g >= 0` ⇔ the cut holds).
+///
+/// Returns `None` on overflow / a size or magnitude guard (caller declines).
+///
+/// SOUNDNESS (short form; full re-derivation in the body): every nonbasic `x_Nj`
+/// is a nonneg INTEGER variable and the basic variable of row `li` is
+/// integer-constrained, so at any integer-feasible point
+/// `S := Σ frac(-a_j)·x_Nj` is `>= 0` and `≡ frac(β) ∈ (0,1) (mod 1)`, hence
+/// `S >= frac(β)`: the cut NEVER removes an integer point. It is violated at the
+/// current vertex (`x_Nj = 0` ⇒ `0 >= frac(β) > 0`, false), so re-solving makes
+/// progress. We never *assert* `g`'s integrality — we only rely on the cut's
+/// validity, the soundness direction.
+fn add_gomory_cut(t: &mut GomoryTableau, li: usize) -> Option<()> {
+    let ncols = t.nonbasic.len();
+    if t.body.len() >= MAX_GOMORY_ROWS || ncols >= MAX_GOMORY_COLS {
+        return None;
+    }
+    let frac_beta = rational_frac(t.rhs[li])?;
+    if frac_beta.is_zero() {
+        return None; // not actually fractional; nothing to cut.
+    }
+    // SIGN CONVENTION. Our tableau row is `x_B = β + Σ_j a_j·x_Nj`, i.e.
+    // `x_B + Σ_j (-a_j)·x_Nj = β`. Matching the textbook standard form
+    // `x_B + Σ_j ā_j·x_Nj = β̄` gives `ā_j = -a_j` and `β̄ = β`. The textbook
+    // Gomory fractional cut `Σ_j frac(ā_j)·x_Nj >= frac(β̄)` is therefore
+    // `Σ_j frac(-a_j)·x_Nj >= frac(β)` IN OUR CONVENTION — the cut coefficient is
+    // `frac(-a_j)`, NOT `frac(a_j)`.
+    //
+    // Validity (re-derived in this convention): at any integer-feasible point,
+    // x_B and every x_Nj are integers, so from `x_B = β + Σ a_j x_Nj`,
+    // `S := Σ frac(-a_j) x_Nj ≡ Σ(-a_j)x_Nj ≡ β - x_B ≡ β (mod 1)`; since `S >= 0`
+    // and `S ≡ frac(β) ∈ (0,1) (mod 1)`, `S >= frac(β)`. So the cut never removes
+    // an integer point (the soundness direction). It cuts off the current vertex
+    // (all x_Nj = 0 ⇒ `0 >= frac(β) > 0`, false).
+    //
+    // The cut introduces exactly ONE new basic variable `g` (its slack) and NO
+    // new nonbasic column — its body is `Σ_j frac(-a_j)·x_Nj` over the EXISTING
+    // nonbasic columns, with `g = -frac(β) + Σ_j frac(-a_j)·x_Nj` (so `g >= 0`
+    // ⇔ the cut holds).
+    let mut new_row = Vec::with_capacity(ncols);
+    for coeff in &t.body[li] {
+        new_row.push(rational_frac(coeff.checked_neg()?)?);
+    }
+    let basic_global = next_fresh_global(t);
+    t.body.push(new_row);
+    t.rhs.push(frac_beta.checked_neg()?);
+    t.basis.push(basic_global);
+    if !gomory_within_magnitude(t) {
+        return None;
+    }
+    Some(())
+}
+
+/// The smallest global index not currently used by any basic or nonbasic var.
+fn next_fresh_global(t: &GomoryTableau) -> usize {
+    let mut max = t.integral_upto;
+    for &b in &t.basis {
+        max = max.max(b + 1);
+    }
+    for &n in &t.nonbasic {
+        max = max.max(n + 1);
+    }
+    max
+}
+
+/// Runs a bounded round of Gomory fractional cuts on the integer standard form.
+/// Returns `Some(LiaBnb::Unsat)` if the system is integer-infeasible,
+/// `Some(LiaBnb::Sat(values))` if an integer point is found (values over the
+/// `nvars` ORIGINAL variables, for the caller's replay), or `None` to DECLINE
+/// (`unknown`) — round bound, size/magnitude guard, overflow, or deadline.
+///
+/// `None` is always sound: declining never converts a decided case to a wrong
+/// verdict, and the only definite verdicts we return are integer-valid.
+fn lia_gomory_cuts(
+    constraints: &[Constraint],
+    nvars: usize,
+    deadline: Option<Instant>,
+) -> Option<LiaBnb> {
+    if past_deadline(deadline) {
+        return None;
+    }
+    let mut t = build_gomory_tableau(constraints, nvars)?;
+
+    for _round in 0..MAX_GOMORY_ROUNDS {
+        if past_deadline(deadline) {
+            return None;
+        }
+        match gomory_solve_lp(&mut t) {
+            GomoryLp::Infeasible => return Some(LiaBnb::Unsat),
+            GomoryLp::Decline => return None,
+            GomoryLp::Feasible => {}
+        }
+        // Find a basic, integer-constrained variable whose value is fractional.
+        let mut cut_row: Option<usize> = None;
+        for i in 0..t.body.len() {
+            // Only original-form integer variables (p_i, n_i, s_j) are
+            // integer-constrained; the fresh cut slacks (global >= integral_upto)
+            // we do NOT require to be integral, so we never cut on them.
+            if t.basis[i] < t.integral_upto && !t.rhs[i].is_integer() {
+                cut_row = Some(i);
+                break;
+            }
+        }
+        let Some(li) = cut_row else {
+            // No fractional integer-constrained basic ⇒ the structural variables
+            // are all integers; reconstruct the original `x_i = p_i - n_i` and
+            // return it for replay. (Cut slacks may be fractional; irrelevant.)
+            return gomory_reconstruct(&t, nvars).map(LiaBnb::Sat);
+        };
+        add_gomory_cut(&mut t, li)?;
+    }
+    None // round bound hit ⇒ decline (never loop, never a wrong verdict).
+}
+
+/// Reads the integer values of the original variables `x_i = p_i - n_i` out of a
+/// feasible all-integer tableau. `None` on overflow. The caller replays this
+/// against the original assertions, so a reconstruction slip can only ever cause
+/// a (rejected, alarmed) replay failure, never an unsound `sat`.
+fn gomory_reconstruct(t: &GomoryTableau, nvars: usize) -> Option<Vec<Rational>> {
+    // Value of every global variable: basics from `rhs`, nonbasics are 0.
+    let mut val: BTreeMap<usize, Rational> = BTreeMap::new();
+    for (i, &b) in t.basis.iter().enumerate() {
+        val.insert(b, t.rhs[i]);
+    }
+    let get = |g: usize| val.get(&g).copied().unwrap_or_else(Rational::zero);
+    let mut out = Vec::with_capacity(nvars);
+    for i in 0..nvars {
+        let p = get(i);
+        let n = get(nvars + i);
+        let x = p.checked_sub(n)?;
+        out.push(x);
+    }
+    Some(out)
 }
 
 fn negate_int_op(op: Op) -> Op {
@@ -1879,4 +2327,79 @@ fn extract_model(
     (0..nvars)
         .map(|i| value[i].c.checked_add(value[i].k.checked_mul(delta_star)?))
         .collect()
+}
+
+#[cfg(test)]
+mod gomory_internal_tests {
+    use super::*;
+
+    /// Builds the constraint set for `2x + 2y <= 1 ∧ 2x + 2y >= 1`
+    /// (i.e. `x + y = 1/2`), which is LP-feasible but has NO integer point.
+    /// Variables: index 0 = x, index 1 = y.
+    fn x_plus_y_half() -> Vec<Constraint> {
+        // 2x + 2y <= 1  →  2x + 2y - 1 <= 0
+        let mut c0 = BTreeMap::new();
+        c0.insert(0, Rational::integer(2));
+        c0.insert(1, Rational::integer(2));
+        // 2x + 2y >= 1  →  1 - 2x - 2y <= 0
+        let mut c1 = BTreeMap::new();
+        c1.insert(0, Rational::integer(-2));
+        c1.insert(1, Rational::integer(-2));
+        vec![
+            Constraint {
+                expr: LinExpr {
+                    coeffs: c0,
+                    constant: Rational::integer(-1),
+                },
+                strict: false,
+                mult: Vec::new(),
+                origin: 0,
+            },
+            Constraint {
+                expr: LinExpr {
+                    coeffs: c1,
+                    constant: Rational::integer(1),
+                },
+                strict: false,
+                mult: Vec::new(),
+                origin: 1,
+            },
+        ]
+    }
+
+    #[test]
+    fn bnb_alone_leaves_x_plus_y_half_unknown() {
+        // Branch-and-bound with a generous-but-finite budget keeps finding shifted
+        // fractional vertices and exhausts the budget → `Unknown`. This documents
+        // that the Gomory round adds STRICTLY NEW coverage.
+        let mut constraints = x_plus_y_half();
+        // A small finite node budget; B&B keeps finding shifted fractional
+        // vertices and never closes the tree, so it exhausts the budget →
+        // `Unknown`. (The production path uses MAX_LIA_BNB_NODES = 50_000 and is
+        // likewise inconclusive here; a small budget keeps this test fast while
+        // making the same point.)
+        let mut budget = 300u64;
+        let outcome = lia_branch_and_bound(&mut constraints, 2, &mut budget, None);
+        assert!(
+            matches!(outcome, LiaBnb::Unknown),
+            "B&B alone must stall to Unknown on x+y=1/2, got a decision"
+        );
+        assert_eq!(budget, 0, "B&B should have consumed its whole node budget");
+    }
+
+    #[test]
+    fn gomory_decides_x_plus_y_half_unsat() {
+        // The same system is decided `unsat` by the bounded Gomory cut round.
+        let constraints = x_plus_y_half();
+        let outcome = lia_gomory_cuts(&constraints, 2, None);
+        assert!(
+            matches!(outcome, Some(LiaBnb::Unsat)),
+            "Gomory cuts must decide x+y=1/2 unsat, got {:?}",
+            outcome.map(|o| match o {
+                LiaBnb::Sat(_) => "Sat",
+                LiaBnb::Unsat => "Unsat",
+                LiaBnb::Unknown => "Unknown",
+            })
+        );
+    }
 }
