@@ -9,6 +9,21 @@ This is the school-facing layer of the curriculum. The
 level, decidability-organized); this layer projects that backbone — plus logic,
 proof, and computing — down onto grade bands and a single integrated pedagogy.
 
+**This layer's pages:**
+
+- this page — the **vision** (why) and what's already here to build on;
+- **[teaching plan](teaching-plan.md)** — the detailed *top-down* plan: north
+  star → enduring ideas → per-band scope-and-sequence of units;
+- **[the four strands](strands.md)** — per-band skills, each tagged with its
+  self-checking engine;
+- **[the interface ladder](interfaces.md)** — how the SMT-LIB notation stays out
+  of the way (blocks / friendly text / "show the code"), and how it's taught;
+- **modules** — the lesson template in action
+  ([binary & wraparound](modules/binary-and-wraparound.md),
+  [truth & counterexamples](modules/truth-and-counterexamples.md));
+- the [exercise widget](../../playground/exercises.html) — self-checking, in the
+  browser.
+
 ## The idea in one paragraph
 
 We teach kids arithmetic in one class, "if-then" sentences in another (if at
