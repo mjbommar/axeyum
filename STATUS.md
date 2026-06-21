@@ -642,6 +642,32 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-20** — **NRA geometry-parity gap CLOSED (binomial_square) + complete real-poly
+  decider routed into the NRA engine + honest portfolio verdicts.** The reviewer flagged
+  `binomial_square` `(x+y)²=x²+2xy+y²` as an unproved geometry goal that *also* overran the
+  10 s config deadline (a never-hang hard-rule violation) — and demanded the outcome be
+  disambiguated as a sound Unknown, never a Sat. Resolved end to end:
+  1. **Constant-atom / identity recognition** (`nra_real_root.rs`): a polynomial identity's
+     negation collapses to the ZERO polynomial, i.e. `0 ≠ 0`. `decompose_multivariate` now
+     recognizes variable-free atoms via `MultiPoly::as_constant()` and decides them exactly —
+     a FALSE constant (`0≠0`, `0<0`) ⇒ **Unsat** (this is what *proves* the identity), a TRUE
+     one is dropped, all-dropped declines (never fabricates). binomial_square: **Unknown @ 20 s
+     → Unsat, proved, ~0.7 ms** — z3 parity (z3 0.44 ms).
+  2. **Decider hooked at the top of `check_with_nra`** so DIRECT callers (examples, consumers)
+     get the same completeness, not just the `solve` auto-path. Strict gains, e.g. unbounded
+     `(x-1)²+1<0` ⇒ Unsat (was unknown). `bnb_unbounded_square_is_unknown_not_wrong_unsat`
+     upgraded to `unbounded_single_var_square_is_decided_unsat` (asserts the stronger Unsat).
+  3. **Soundness confirmed:** probed `check_with_nra` directly — it returned
+     `Unknown(ResourceLimit)`, **never Sat** (cardinal sin not committed); the geometry
+     example's "no" was a *display* bug collapsing Unknown into a disproof. Fixed with a
+     four-state `Verdict` (Proved/Countermodel/Unknown/NotApplicable).
+  4. **Deadline bound** (committed prior, 904d4ed): `check_with_lra` Fourier–Motzkin now checks
+     `past_deadline` + `MAX_FM_CONSTRAINTS=20_000`, so the 5.4 s uninterruptible elimination
+     can no longer overrun the budget.
+  - `geometry_portfolio` example now proves **6/6** goals (NRA, low-ms) at z3-parity, with an
+    in-process libz3 `--features z3` column for the apples-to-apples solver-speed comparison.
+    Gates green: fmt, clippy `--workspace` + the z3 example, full `axeyum-ir`+`axeyum-solver`
+    suite (40 binaries, 0 failures). Commits d36914d, 92a6b4e, e88f025.
 - **2026-06-20** — **REVIEW: Codex comprehensive design/implementation/benchmark review.**
   Added `docs/reviews/codex-20260620/diary.md` and
   `docs/reviews/codex-20260620/report.md`. Scope covered session state,
