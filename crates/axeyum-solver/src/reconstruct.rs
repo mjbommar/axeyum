@@ -1366,6 +1366,19 @@ fn is_am_gm_two_var(
     Some((sx, sy))
 }
 
+/// Does `assertions` have an SOS certificate that is a **single perfect square of a
+/// ±1-coefficient linear form** (`d = 1`, zero affine row)? This is the general SOS
+/// shape [`reconstruct_sos_single_unit_square`] handles via the degree-2 ring
+/// normalizer; the classifier uses it to route such queries to [`ProofFragment::Sos`]
+/// instead of the linear Farkas path. Cheap-enough: it reuses the same self-checked
+/// certificate the reconstructor consumes.
+fn is_sos_single_unit_square(arena: &TermArena, assertions: &[TermId]) -> bool {
+    match crate::nra_real_root::sos_refute_with_certificate(arena, assertions) {
+        Some(cert) => cert.strict_lt() && cert.single_unit_square().is_some(),
+        None => false,
+    }
+}
+
 /// Classify `assertions` into the [`ProofFragment`] whose emitter+reconstructor
 /// pair handles it, by scanning the operators and sorts that appear. Precedence:
 /// a top-level quantifier wraps any ground theory (`∃` skolemized before `∀`),
@@ -1417,13 +1430,15 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
     } else if has_func {
         ProofFragment::QfUf
     } else if has_arith {
-        // The single-square SOS shape (`ℓ*ℓ < 0`, no ring normalizer) and the
-        // degree-2 two-variable AM-GM sum form (`x²+y²−2xy < 0`, which the SOS
-        // reconstructor proves equal to `(x−y)·(x−y)` with the ring normalizer)
-        // are both owned by the dedicated SOS reconstructor; any other arithmetic
-        // query falls through to the linear Farkas (LRA) path.
+        // The single-square SOS shape (`ℓ*ℓ < 0`, no ring normalizer), the
+        // two-variable AM-GM sum form (`x²+y²−2xy < 0`), and any query whose SOS
+        // certificate is a single perfect square of a ±1-coefficient linear form
+        // (e.g. `(x+y)² < 0`, all driven by the degree-2 ring normalizer) are owned
+        // by the dedicated SOS reconstructor; any other arithmetic query falls
+        // through to the linear Farkas (LRA) path.
         if is_single_square_lt_zero(arena, assertions).is_some()
             || is_am_gm_two_var(arena, assertions).is_some()
+            || is_sos_single_unit_square(arena, assertions)
         {
             ProofFragment::Sos
         } else {
@@ -7485,6 +7500,102 @@ impl Gen {
     }
 }
 
+/// A **monomial** of total degree ≤ 2 over canonical variable indices, the atom of
+/// the degree-2 ring normalizer's canonical form (ADR-0040 generalization). Its
+/// kernel encoding is a fixed, deterministic `R`-expression:
+/// - [`Mono::Const`] → `one`,
+/// - [`Mono::Lin`] → `xᵢ`,
+/// - [`Mono::Quad`] (`i ≤ j`) → `mul xᵢ xⱼ`.
+///
+/// `Quad` is normalized so `i ≤ j`, giving each unordered variable pair a single
+/// canonical kernel representative (`x·y` and `y·x` map to the same `Quad`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Mono {
+    /// The constant monomial `1`.
+    Const,
+    /// The linear monomial `xᵢ`.
+    Lin(usize),
+    /// The quadratic monomial `xᵢ·xⱼ` with `i ≤ j` (the kernel term is `mul xᵢ xⱼ`).
+    Quad(usize, usize),
+}
+
+impl Mono {
+    /// Build the canonical quadratic monomial for an unordered variable pair,
+    /// ordering the two indices so the kernel representative is unique.
+    fn quad(i: usize, j: usize) -> Self {
+        if i <= j {
+            Mono::Quad(i, j)
+        } else {
+            Mono::Quad(j, i)
+        }
+    }
+
+    /// A total sort key: linear monomials (ascending index) first, then quadratic
+    /// monomials (lexicographic on the ordered pair), then the constant last —
+    /// mirroring [`Gen::sort_key`]'s "variables before constant" convention. Only
+    /// totality and determinism matter (it fixes the canonical order).
+    fn sort_key(self) -> (u8, usize, usize) {
+        match self {
+            Mono::Lin(i) => (0, i, 0),
+            Mono::Quad(i, j) => (1, i, j),
+            Mono::Const => (2, usize::MAX, usize::MAX),
+        }
+    }
+}
+
+/// A signed monomial **generator** in the degree-2 canonical additive normal form:
+/// a [`Mono`] with a sign. The canonical form of a degree-≤2 expression is a
+/// right-nested `add` over a flat list of these (terminated by `zero`), monomials
+/// in [`Mono::sort_key`] order, repeated to model integer coefficients. This is the
+/// degree-2 analogue of [`Gen`]; the normalizer reuses the same bubble-sort +
+/// cancellation algorithm, extended with a multiplicative distribution step.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct MonoGen {
+    mono: Mono,
+    /// `true` ⇒ the generator is `neg (mono_expr)`, `false` ⇒ `mono_expr`.
+    neg: bool,
+}
+
+impl MonoGen {
+    fn pos(mono: Mono) -> Self {
+        MonoGen { mono, neg: false }
+    }
+
+    /// The negation of this generator (flips the sign bit).
+    fn negate(self) -> Self {
+        MonoGen {
+            mono: self.mono,
+            neg: !self.neg,
+        }
+    }
+
+    /// A total sort key keeping a generator adjacent to its negation after bubbling
+    /// (same monomial ⇒ same primary key; sign breaks the tie) so the merge can
+    /// cancel — exactly as [`Gen::sort_key`] does for the linear engine.
+    fn sort_key(self) -> (u8, usize, usize, u8) {
+        let (a, b, c) = self.mono.sort_key();
+        (a, b, c, u8::from(self.neg))
+    }
+}
+
+/// A small owned degree-≤2 expression AST over canonical variable indices, the
+/// **input** to the degree-2 ring normalizer ([`LraReconstructCtx::normalize_deg2`]).
+/// Built from `var`/`neg`/`add`/`mul`; the normalizer both emits its faithful kernel
+/// `R`-encoding and proves it equals the canonical signed-monomial sum.
+#[derive(Debug, Clone)]
+enum RExpr {
+    /// The variable `xᵢ`.
+    Var(usize),
+    /// `neg e`.
+    Neg(Box<RExpr>),
+    /// `add a b`.
+    Add(Box<RExpr>, Box<RExpr>),
+    /// `mul a b`.
+    Mul(Box<RExpr>, Box<RExpr>),
+    /// The constant `one`.
+    One,
+}
+
 /// The carrier of the general-Farkas additive ring engine, on top of
 /// [`LraReconstructCtx`]. Builds generator expressions, the canonical right-nested
 /// normal form, and the per-rewrite `Eq R` proofs that drive normalization.
@@ -7746,6 +7857,665 @@ impl LraReconstructCtx {
         let step2 = self.congr_add_right(g, inner_from, rest_b_expr, rec);
         let rhs = self.mk_add(g, rest_b_expr);
         self.eq_trans_r(lhs, mid, rhs, assoc, step2)
+    }
+
+    // -----------------------------------------------------------------------
+    // Degree-2 ring normalizer (ADR-0040 generalization): canonicalize any
+    // degree-≤2 `R`-expression built from `var`/`neg`/`add`/`mul`/`one` into a
+    // fixed-order sum of signed monomials, carrying an `Eq R` proof. Reuses the
+    // additive bubble-sort+cancel engine above, lifted from linear [`Gen`]s to
+    // degree-2 [`MonoGen`]s, plus a multiplicative distribution step. No new kernel
+    // axiom: every rewrite is one of `left_distrib`/`mul_comm`/`mul_zero`/`mul_one`
+    // /the derived neg-bridge lemmas/`add_*` + congruence.
+    // -----------------------------------------------------------------------
+
+    /// The kernel `R`-expression for a single bare [`Mono`] (no sign).
+    fn mono_expr(&mut self, m: Mono) -> ExprId {
+        match m {
+            Mono::Const => self.mk_one(),
+            Mono::Lin(i) => {
+                let name = self.var_const(i);
+                self.kernel.const_(name, vec![])
+            }
+            Mono::Quad(i, j) => {
+                let ni = self.var_const(i);
+                let xi = self.kernel.const_(ni, vec![]);
+                let nj = self.var_const(j);
+                let xj = self.kernel.const_(nj, vec![]);
+                self.mk_mul(xi, xj)
+            }
+        }
+    }
+
+    /// The kernel `R`-expression for a single signed [`MonoGen`].
+    fn mono_gen_expr(&mut self, g: MonoGen) -> ExprId {
+        let m = self.mono_expr(g.mono);
+        if g.neg { self.mk_neg(m) } else { m }
+    }
+
+    /// The canonical right-nested additive expression
+    /// `g0 + (g1 + … + (g_{k-1} + zero))` over `gens`; empty ⇒ `zero`.
+    fn mono_gens_to_expr(&mut self, gens: &[MonoGen]) -> ExprId {
+        let mut acc = self.mk_zero();
+        for &g in gens.iter().rev() {
+            let ge = self.mono_gen_expr(g);
+            acc = self.mk_add(ge, acc);
+        }
+        acc
+    }
+
+    /// Lift a tail rewrite `proof : Eq R tail tail'` up through the `prefix` leading
+    /// generators (re-attaching each with [`Self::congr_add_right`]). Degree-2
+    /// analogue of [`Self::lift_tail_rewrite`].
+    fn mono_lift_tail_rewrite(
+        &mut self,
+        prefix: &[MonoGen],
+        tail: &[MonoGen],
+        tail2: &[MonoGen],
+        mut proof: ExprId,
+    ) -> ExprId {
+        for k in (0..prefix.len()).rev() {
+            let g = self.mono_gen_expr(prefix[k]);
+            let mut sub_tail: Vec<MonoGen> = prefix[k + 1..].to_vec();
+            sub_tail.extend_from_slice(tail);
+            let mut sub_tail2: Vec<MonoGen> = prefix[k + 1..].to_vec();
+            sub_tail2.extend_from_slice(tail2);
+            let t = self.mono_gens_to_expr(&sub_tail);
+            let t2 = self.mono_gens_to_expr(&sub_tail2);
+            proof = self.congr_add_right(g, t, t2, proof);
+        }
+        proof
+    }
+
+    /// Prove `Eq R (g0 + (g1 + tail)) (g1 + (g0 + tail))` — an adjacent head swap.
+    /// Degree-2 analogue of [`Self::swap_head_eq`] (identical additive proof shape).
+    fn mono_swap_head_eq(&mut self, g0: MonoGen, g1: MonoGen, tail: &[MonoGen]) -> ExprId {
+        let e0 = self.mono_gen_expr(g0);
+        let e1 = self.mono_gen_expr(g1);
+        let t = self.mono_gens_to_expr(tail);
+        let assoc1 = self.add_assoc_eq(e0, e1, t);
+        let lhs = {
+            let inner = self.mk_add(e1, t);
+            self.mk_add(e0, inner)
+        };
+        let mid1 = {
+            let inner = self.mk_add(e0, e1);
+            self.mk_add(inner, t)
+        };
+        let step1 = self.eq_symm_r(mid1, lhs, assoc1);
+        let comm = self.add_comm_eq(e0, e1);
+        let e0e1 = self.mk_add(e0, e1);
+        let e1e0 = self.mk_add(e1, e0);
+        let step2 = self.congr_add_left(e0e1, e1e0, t, comm);
+        let step3 = self.add_assoc_eq(e1, e0, t);
+        let mid2 = self.mk_add(e1e0, t);
+        let rhs = {
+            let inner = self.mk_add(e0, t);
+            self.mk_add(e1, inner)
+        };
+        let t01 = self.eq_trans_r(lhs, mid1, mid2, step1, step2);
+        self.eq_trans_r(lhs, mid2, rhs, t01, step3)
+    }
+
+    /// Prove `Eq R (g + (g.negate() + tail)) tail` — cancel an adjacent
+    /// generator/anti-generator pair at the head. Degree-2 analogue of
+    /// [`Self::cancel_head_eq`].
+    fn mono_cancel_head_eq(&mut self, g: MonoGen, tail: &[MonoGen]) -> ExprId {
+        let gn = g.negate();
+        let e = self.mono_gen_expr(g);
+        let en = self.mono_gen_expr(gn);
+        let t = self.mono_gens_to_expr(tail);
+        let assoc = self.add_assoc_eq(e, en, t);
+        let lhs = {
+            let inner = self.mk_add(en, t);
+            self.mk_add(e, inner)
+        };
+        let mid1 = {
+            let inner = self.mk_add(e, en);
+            self.mk_add(inner, t)
+        };
+        let step1 = self.eq_symm_r(mid1, lhs, assoc);
+        // Prove `add e en = zero`. For a positive generator (e = p, en = neg p) this
+        // is `add_neg p` directly; for a negative one (e = neg p, en = p) commute.
+        let e_en = self.mk_add(e, en);
+        let e_e_en_zero = if g.neg {
+            // e = neg p, en = p ⇒ add (neg p) p = zero via comm + add_neg.
+            let p = en;
+            let np = e;
+            let comm = self.add_comm_eq(np, p);
+            let an = self.add_neg_eq(p);
+            let lhs_c = self.mk_add(np, p);
+            let mid_c = self.mk_add(p, np);
+            let zero = self.mk_zero();
+            self.eq_trans_r(lhs_c, mid_c, zero, comm, an)
+        } else {
+            // e = p, en = neg p ⇒ add_neg p.
+            self.add_neg_eq(e)
+        };
+        let zero = self.mk_zero();
+        let step2 = self.congr_add_left(e_en, zero, t, e_e_en_zero);
+        let comm0 = self.add_comm_eq(zero, t);
+        let addz = self.add_zero_eq(t);
+        let zt = self.mk_add(zero, t);
+        let tz = self.mk_add(t, zero);
+        let step3 = self.eq_trans_r(zt, tz, t, comm0, addz);
+        let t01 = self.eq_trans_r(lhs, mid1, zt, step1, step2);
+        self.eq_trans_r(lhs, zt, t, t01, step3)
+    }
+
+    /// Normalize a [`MonoGen`] list to the canonical sorted-and-cancelled list,
+    /// returning the canonical generators and a proof
+    /// `Eq R (mono_gens_to_expr gens) (mono_gens_to_expr canonical)`. Degree-2
+    /// analogue of [`Self::normalize_gens`] (same terminating bubble pass: each
+    /// swap strictly decreases the inversion count, each cancel the length).
+    fn mono_normalize_gens(&mut self, gens: &[MonoGen]) -> (Vec<MonoGen>, ExprId) {
+        let mut cur: Vec<MonoGen> = gens.to_vec();
+        let start = self.mono_gens_to_expr(&cur);
+        let mut proof = self.eq_refl_r(start);
+        loop {
+            let mut action: Option<(usize, bool)> = None;
+            for i in 0..cur.len().saturating_sub(1) {
+                if cur[i].negate() == cur[i + 1] {
+                    action = Some((i, true));
+                    break;
+                }
+                if cur[i].sort_key() > cur[i + 1].sort_key() {
+                    action = Some((i, false));
+                    break;
+                }
+            }
+            let Some((i, is_cancel)) = action else {
+                break;
+            };
+            let prefix = cur[..i].to_vec();
+            let before = self.mono_gens_to_expr(&cur);
+            if is_cancel {
+                let g = cur[i];
+                let tail = cur[i + 2..].to_vec();
+                let head_proof = self.mono_cancel_head_eq(g, &tail);
+                let mut from_tail = vec![g, g.negate()];
+                from_tail.extend_from_slice(&tail);
+                let lifted = self.mono_lift_tail_rewrite(&prefix, &from_tail, &tail, head_proof);
+                let mut next = prefix.clone();
+                next.extend_from_slice(&tail);
+                let after = self.mono_gens_to_expr(&next);
+                proof = self.eq_trans_r(start, before, after, proof, lifted);
+                cur = next;
+            } else {
+                let g0 = cur[i];
+                let g1 = cur[i + 1];
+                let tail = cur[i + 2..].to_vec();
+                let head_proof = self.mono_swap_head_eq(g0, g1, &tail);
+                let mut from_tail = vec![g0, g1];
+                from_tail.extend_from_slice(&tail);
+                let mut to_tail = vec![g1, g0];
+                to_tail.extend_from_slice(&tail);
+                let lifted = self.mono_lift_tail_rewrite(&prefix, &from_tail, &to_tail, head_proof);
+                let mut next = prefix.clone();
+                next.push(g1);
+                next.push(g0);
+                next.extend_from_slice(&tail);
+                let after = self.mono_gens_to_expr(&next);
+                proof = self.eq_trans_r(start, before, after, proof, lifted);
+                cur = next;
+            }
+        }
+        (cur, proof)
+    }
+
+    /// Prove `Eq R (add canonA canonB) (mono_gens_to_expr(gensA ++ gensB))` — splice
+    /// `canonB` into `canonA`'s trailing `zero`. Degree-2 analogue of
+    /// [`Self::append_eq`].
+    fn mono_append_eq(&mut self, gens_a: &[MonoGen], gens_b: &[MonoGen]) -> ExprId {
+        let canon_b = self.mono_gens_to_expr(gens_b);
+        if gens_a.is_empty() {
+            let zero = self.mk_zero();
+            let comm = self.add_comm_eq(zero, canon_b);
+            let addz = self.add_zero_eq(canon_b);
+            let zt = self.mk_add(zero, canon_b);
+            let tz = self.mk_add(canon_b, zero);
+            return self.eq_trans_r(zt, tz, canon_b, comm, addz);
+        }
+        let g = self.mono_gen_expr(gens_a[0]);
+        let rest = gens_a[1..].to_vec();
+        let canon_rest = self.mono_gens_to_expr(&rest);
+        let assoc = self.add_assoc_eq(g, canon_rest, canon_b);
+        let lhs = {
+            let ca = self.mk_add(g, canon_rest);
+            self.mk_add(ca, canon_b)
+        };
+        let mid = {
+            let inner = self.mk_add(canon_rest, canon_b);
+            self.mk_add(g, inner)
+        };
+        let rec = self.mono_append_eq(&rest, gens_b);
+        let mut rest_b: Vec<MonoGen> = rest.clone();
+        rest_b.extend_from_slice(gens_b);
+        let rest_b_expr = self.mono_gens_to_expr(&rest_b);
+        let inner_from = self.mk_add(canon_rest, canon_b);
+        let step2 = self.congr_add_right(g, inner_from, rest_b_expr, rec);
+        let rhs = self.mk_add(g, rest_b_expr);
+        self.eq_trans_r(lhs, mid, rhs, assoc, step2)
+    }
+
+    /// Prove `Eq R (neg (mono_gens_to_expr gens)) (mono_gens_to_expr neg_gens)` where
+    /// `neg_gens` is `gens` with every generator's sign flipped — `neg` distributes
+    /// over the right-nested sum (via `neg_add` + `neg_neg`). Used by the `Neg` case
+    /// of [`Self::normalize_deg2`].
+    fn mono_neg_gens_eq(&mut self, gens: &[MonoGen]) -> ExprId {
+        let inner = self.mono_gens_to_expr(gens);
+        let neg_inner = self.mk_neg(inner);
+        let Some((&head, tail)) = gens.split_first() else {
+            // neg zero = zero (= mono_gens_to_expr []). Derive: zero is its own
+            // additive inverse, so neg zero = zero by inverse-uniqueness; but more
+            // directly, neg zero = neg (add zero zero)? Use add_zero on neg side:
+            // neg zero =[symm add_zero (neg zero)] add (neg zero) zero ... simpler:
+            // add zero (neg zero) = zero (add_neg zero) and add zero (neg zero)
+            // =[add_comm] add (neg zero) zero =[add_zero] neg zero ⇒ neg zero = zero.
+            let zero = self.mk_zero();
+            let nz = self.mk_neg(zero);
+            let an = self.add_neg_eq(zero); // add zero (neg zero) = zero
+            let z_nz = self.mk_add(zero, nz);
+            let comm = self.add_comm_eq(zero, nz); // add zero (neg zero) = add (neg zero) zero
+            let nz_z = self.mk_add(nz, zero);
+            let addz = self.add_zero_eq(nz); // add (neg zero) zero = neg zero
+            // neg zero = add (neg zero) zero = add zero (neg zero) = zero.
+            let s0 = self.eq_symm_r(nz_z, nz, addz); // neg zero = add (neg zero) zero
+            let comm_sym = self.eq_symm_r(z_nz, nz_z, comm); // add (neg zero) zero = add zero (neg zero)
+            let t01 = self.eq_trans_r(nz, nz_z, z_nz, s0, comm_sym);
+            return self.eq_trans_r(nz, z_nz, zero, t01, an);
+        };
+        // gens = head :: tail. inner = add (mono_gen_expr head) canon_tail.
+        let head_e = self.mono_gen_expr(head);
+        let canon_tail = self.mono_gens_to_expr(tail);
+        // neg (add head canon_tail) =[neg_add] add (neg head)(neg canon_tail).
+        let na = self.neg_add_eq(head_e, canon_tail);
+        let neg_head = self.mk_neg(head_e);
+        let neg_tail = self.mk_neg(canon_tail);
+        let na_nt = self.mk_add(neg_head, neg_tail);
+        // (neg head) ⟶ mono_gen_expr(head.negate()):
+        //   • head positive (e = p): neg p IS mono_gen_expr(neg) — refl.
+        //   • head negative (e = neg p): neg (neg p) =[neg_neg] p = mono_gen_expr(neg).
+        let head_neg_gen = head.negate();
+        let head_neg_e = self.mono_gen_expr(head_neg_gen);
+        let neg_head_eq = if head.neg {
+            // head_e = neg p, head_neg_e = p ; neg head_e = neg (neg p) = p.
+            self.neg_neg_eq(head_neg_e) // neg (neg p) = p
+        } else {
+            // neg head_e is literally mono_gen_expr(head.negate()).
+            self.eq_refl_r(neg_head)
+        };
+        // (neg canon_tail) ⟶ mono_gens_to_expr(neg tail) by recursion.
+        let rec = self.mono_neg_gens_eq(tail);
+        let neg_tail_gens: Vec<MonoGen> = tail.iter().map(|g| g.negate()).collect();
+        let neg_tail_canon = self.mono_gens_to_expr(&neg_tail_gens);
+        // congr both sides of `add (neg head)(neg canon_tail)`.
+        let cong_l = self.congr_add_left(neg_head, head_neg_e, neg_tail, neg_head_eq);
+        let mid = self.mk_add(head_neg_e, neg_tail);
+        let cong_r = self.congr_add_right(head_neg_e, neg_tail, neg_tail_canon, rec);
+        let target = self.mk_add(head_neg_e, neg_tail_canon);
+        let cong = self.eq_trans_r(na_nt, mid, target, cong_l, cong_r);
+        // neg inner = add(neg head)(neg canon_tail) = target = mono_gens_to_expr(neg gens).
+        self.eq_trans_r(neg_inner, na_nt, target, na, cong)
+    }
+
+    /// Multiply a single signed generator `g` (LHS, degree-≤1) into a generator list
+    /// `bs` (degree-≤1): prove
+    /// `Eq R (mul (mono_gen_expr g) (mono_gens_to_expr bs)) (mono_gens_to_expr out)`
+    /// where `out[k] = product_gen(g, bs[k])`. Distributes with `left_distrib`,
+    /// reducing each `mul (mono_gen_expr g)(mono_gen_expr bs[k])` to a single signed
+    /// monomial via [`Self::mul_mono_gen_eq`]. Returns `None` if any product exceeds
+    /// degree 2 (out of scope — decline).
+    fn mul_gen_into_list_eq(
+        &mut self,
+        g: MonoGen,
+        bs: &[MonoGen],
+    ) -> Option<(Vec<MonoGen>, ExprId)> {
+        let ge = self.mono_gen_expr(g);
+        let bs_canon = self.mono_gens_to_expr(bs);
+        let lhs = self.mk_mul(ge, bs_canon);
+        let Some((&b0, rest)) = bs.split_first() else {
+            // mul ge zero = zero (= mono_gens_to_expr []).
+            let mz = self.mul_zero_eq(ge); // mul ge zero = zero
+            return Some((Vec::new(), mz));
+        };
+        // mul ge (add b0e rest_canon) =[left_distrib] add (mul ge b0e)(mul ge rest_canon).
+        let b0e = self.mono_gen_expr(b0);
+        let rest_canon = self.mono_gens_to_expr(rest);
+        let ld = self.left_distrib_eq(ge, b0e, rest_canon);
+        let ge_b0 = self.mk_mul(ge, b0e);
+        let ge_rest = self.mk_mul(ge, rest_canon);
+        let sum = self.mk_add(ge_b0, ge_rest);
+        // head: mul ge b0e ⟶ single signed monomial `prod0`.
+        let (prod0, head_eq) = self.mul_mono_gen_eq(g, b0)?;
+        let prod0_e = self.mono_gen_expr(prod0);
+        // tail: recurse on `rest`.
+        let (out_rest, rest_eq) = self.mul_gen_into_list_eq(g, rest)?;
+        let out_rest_canon = self.mono_gens_to_expr(&out_rest);
+        // congr both sides of `add (mul ge b0e)(mul ge rest_canon)`.
+        let cong_l = self.congr_add_left(ge_b0, prod0_e, ge_rest, head_eq);
+        let mid = self.mk_add(prod0_e, ge_rest);
+        let cong_r = self.congr_add_right(prod0_e, ge_rest, out_rest_canon, rest_eq);
+        let target = self.mk_add(prod0_e, out_rest_canon);
+        let cong = self.eq_trans_r(sum, mid, target, cong_l, cong_r);
+        let full = self.eq_trans_r(lhs, sum, target, ld, cong);
+        // out = prod0 :: out_rest, and target IS mono_gens_to_expr(out).
+        let mut out = vec![prod0];
+        out.extend_from_slice(&out_rest);
+        Some((out, full))
+    }
+
+    /// Distribute a full product `(mono_gens_to_expr as) * (mono_gens_to_expr bs)`
+    /// of two degree-≤1 generator lists into a sum of signed monomials: prove
+    /// `Eq R (mul as_canon bs_canon) (mono_gens_to_expr out)` where `out` is the
+    /// Cartesian product of single-generator products. `None` if any product exceeds
+    /// degree 2. Recurses on `as` with `right`-distribution (via `mul_comm` +
+    /// [`Self::mul_gen_into_list_eq`]).
+    fn mul_lists_eq(
+        &mut self,
+        a_gens: &[MonoGen],
+        b_gens: &[MonoGen],
+    ) -> Option<(Vec<MonoGen>, ExprId)> {
+        let a_canon = self.mono_gens_to_expr(a_gens);
+        let b_canon = self.mono_gens_to_expr(b_gens);
+        let lhs = self.mk_mul(a_canon, b_canon);
+        let Some((&a0, rest)) = a_gens.split_first() else {
+            // mul zero b_canon: zero_mul not in prelude ⇒ commute then mul_zero.
+            // mul zero b =[mul_comm] mul b zero =[mul_zero] zero.
+            let comm = self.mul_comm_eq(a_canon, b_canon); // mul zero b = mul b zero
+            let b_zero = self.mk_mul(b_canon, a_canon); // mul b zero
+            let mz = self.mul_zero_eq(b_canon); // mul b zero = zero
+            let zero = self.mk_zero();
+            let eq = self.eq_trans_r(lhs, b_zero, zero, comm, mz);
+            return Some((Vec::new(), eq));
+        };
+        // mul (add a0e rest_canon) b_canon — distribute on the LEFT operand.
+        // No right_distrib axiom: commute to `mul b_canon (add a0e rest_canon)`,
+        // left_distrib, then commute each product back.
+        let a0e = self.mono_gen_expr(a0);
+        let rest_canon = self.mono_gens_to_expr(rest);
+        let add_a = self.mk_add(a0e, rest_canon); // = a_canon
+        // mul add_a b_canon =[mul_comm] mul b_canon add_a.
+        let comm0 = self.mul_comm_eq(add_a, b_canon);
+        let b_adda = self.mk_mul(b_canon, add_a);
+        // mul b_canon (add a0e rest_canon) =[left_distrib] add (mul b_canon a0e)(mul b_canon rest_canon).
+        let ld = self.left_distrib_eq(b_canon, a0e, rest_canon);
+        let b_a0 = self.mk_mul(b_canon, a0e);
+        let b_rest = self.mk_mul(b_canon, rest_canon);
+        let sum_b = self.mk_add(b_a0, b_rest);
+        // head: mul b_canon a0e =[mul_comm] mul a0e b_canon, then distribute a0 into bs.
+        let comm_h = self.mul_comm_eq(b_canon, a0e); // mul b_canon a0e = mul a0e b_canon
+        let a0_b = self.mk_mul(a0e, b_canon);
+        let (head_out, head_dist) = self.mul_gen_into_list_eq(a0, b_gens)?;
+        let head_out_canon = self.mono_gens_to_expr(&head_out);
+        let head_eq = self.eq_trans_r(b_a0, a0_b, head_out_canon, comm_h, head_dist);
+        // tail: recurse on `rest`. The recursion proves about `mul rest_canon b_canon`
+        // (the canonical operand order), but `left_distrib` produced `b_rest =
+        // mul b_canon rest_canon`; commute first, then apply the recursive proof.
+        let (tail_out, tail_inner_eq) = self.mul_lists_eq(rest, b_gens)?;
+        let tail_out_canon = self.mono_gens_to_expr(&tail_out);
+        let comm_t = self.mul_comm_eq(b_canon, rest_canon); // b_rest = mul rest_canon b_canon
+        let rest_b = self.mk_mul(rest_canon, b_canon);
+        let tail_eq = self.eq_trans_r(b_rest, rest_b, tail_out_canon, comm_t, tail_inner_eq);
+        // congr both sides of `add (mul b_canon a0e)(mul b_canon rest_canon)`.
+        let cong_l = self.congr_add_left(b_a0, head_out_canon, b_rest, head_eq);
+        let mid = self.mk_add(head_out_canon, b_rest);
+        let cong_r = self.congr_add_right(head_out_canon, b_rest, tail_out_canon, tail_eq);
+        // append head_out ++ tail_out to a single right-nested canonical sum.
+        let appended = self.mono_append_eq(&head_out, &tail_out);
+        let mut out: Vec<MonoGen> = head_out.clone();
+        out.extend_from_slice(&tail_out);
+        let out_canon = self.mono_gens_to_expr(&out);
+        let pre_target = self.mk_add(head_out_canon, tail_out_canon);
+        let cong = self.eq_trans_r(sum_b, mid, pre_target, cong_l, cong_r);
+        // Chain: lhs =[comm0] b_adda =[ld] sum_b =[cong] pre_target =[appended] out_canon.
+        let t01 = self.eq_trans_r(lhs, b_adda, sum_b, comm0, ld);
+        let t02 = self.eq_trans_r(lhs, sum_b, pre_target, t01, cong);
+        let full = self.eq_trans_r(lhs, pre_target, out_canon, t02, appended);
+        Some((out, full))
+    }
+
+    /// Reduce a product of two single signed generators (each degree ≤ 1) to a
+    /// single signed monomial: prove
+    /// `Eq R (mul (mono_gen_expr a)(mono_gen_expr b)) (mono_gen_expr out)`.
+    /// Handles the four sign combinations via the derived neg-bridge lemmas
+    /// (`mul_neg_right`/`mul_neg_left`/`neg_mul_neg`) and `mul_one`/`mul_comm` for
+    /// the constant factor. Returns `None` if either factor is quadratic (the product
+    /// would exceed degree 2 — out of scope).
+    fn mul_mono_gen_eq(&mut self, a: MonoGen, b: MonoGen) -> Option<(MonoGen, ExprId)> {
+        // The unsigned monomial product (both must be degree ≤ 1).
+        let (out_mono, base_eq) = self.mul_base_mono_eq(a.mono, b.mono)?;
+        let ae = self.mono_expr(a.mono);
+        let be = self.mono_expr(b.mono);
+        let out_e = self.mono_expr(out_mono);
+        // Resulting sign is the XOR of the input signs.
+        let out_neg = a.neg ^ b.neg;
+        let out_gen = MonoGen {
+            mono: out_mono,
+            neg: out_neg,
+        };
+        // The LHS as built by `mono_gen_expr`: `mul (sign ae)(sign be)`.
+        let lhs_a = if a.neg { self.mk_neg(ae) } else { ae };
+        let lhs_b = if b.neg { self.mk_neg(be) } else { be };
+        let lhs = self.mk_mul(lhs_a, lhs_b);
+        // Strip the signs down to `mul ae be`, tracking the accumulated outer neg.
+        // Case on the sign pattern; `base_eq : Eq R (mul ae be) out_e`.
+        let ab = self.mk_mul(ae, be);
+        let proof = match (a.neg, b.neg) {
+            (false, false) => {
+                // lhs = mul ae be IS `ab` (no signs); base_eq : Eq R ab out_e.
+                base_eq
+            }
+            (true, false) => {
+                // lhs = mul (neg ae) be =[mul_neg_left] neg (mul ae be) =[congr_neg base] neg out_e.
+                let mnl = self.mul_neg_left_eq(ae, be); // mul (neg ae) be = neg (ab)
+                let neg_ab = self.mk_neg(ab);
+                let neg_out = self.mk_neg(out_e);
+                let cong = self.congr_neg(ab, out_e, base_eq); // neg ab = neg out_e
+                self.eq_trans_r(lhs, neg_ab, neg_out, mnl, cong)
+            }
+            (false, true) => {
+                // lhs = mul ae (neg be) =[mul_neg_right] neg (mul ae be) =[congr_neg base] neg out_e.
+                let mnr = self.mul_neg_right_eq(ae, be); // mul ae (neg be) = neg ab
+                let neg_ab = self.mk_neg(ab);
+                let neg_out = self.mk_neg(out_e);
+                let cong = self.congr_neg(ab, out_e, base_eq);
+                self.eq_trans_r(lhs, neg_ab, neg_out, mnr, cong)
+            }
+            (true, true) => {
+                // lhs = mul (neg ae)(neg be) =[neg_mul_neg] mul ae be =[base] out_e.
+                let nmn = self.neg_mul_neg_eq(ae, be); // mul (neg ae)(neg be) = ab
+                self.eq_trans_r(lhs, ab, out_e, nmn, base_eq)
+            }
+        };
+        Some((out_gen, proof))
+    }
+
+    /// Reduce an UNSIGNED product `mul (mono_expr a)(mono_expr b)` of two degree-≤1
+    /// base monomials to a single base monomial, proving
+    /// `Eq R (mul (mono_expr a)(mono_expr b)) (mono_expr out)`. `None` if either is
+    /// [`Mono::Quad`] (product degree ≥ 3 — out of scope).
+    fn mul_base_mono_eq(&mut self, a: Mono, b: Mono) -> Option<(Mono, ExprId)> {
+        match (a, b) {
+            (Mono::Quad(..), _) | (_, Mono::Quad(..)) => None,
+            (Mono::Const, Mono::Const) => {
+                // mul one one =[mul_one one] one.
+                let one = self.mk_one();
+                let mo = self.mul_one_eq(one); // mul one one = one
+                Some((Mono::Const, mo))
+            }
+            (Mono::Const, other) | (other, Mono::Const) => {
+                // mul one v =[mul_comm] mul v one =[mul_one] v  (or mul v one directly).
+                let one = self.mk_one();
+                let ve = self.mono_expr(other);
+                // Determine actual operand order in `mul (mono_expr a)(mono_expr b)`.
+                let (le, re, is_one_left) = if matches!(a, Mono::Const) {
+                    (one, ve, true)
+                } else {
+                    (ve, one, false)
+                };
+                let lhs = self.mk_mul(le, re);
+                let eq = if is_one_left {
+                    // mul one v =[mul_comm] mul v one =[mul_one] v.
+                    let comm = self.mul_comm_eq(one, ve);
+                    let v_one = self.mk_mul(ve, one);
+                    let mo = self.mul_one_eq(ve);
+                    self.eq_trans_r(lhs, v_one, ve, comm, mo)
+                } else {
+                    // mul v one =[mul_one] v.
+                    self.mul_one_eq(ve)
+                };
+                Some((other, eq))
+            }
+            (Mono::Lin(i), Mono::Lin(j)) => {
+                // mul xi xj is already a base monomial `Quad(min,max)`.
+                let xi = self.mono_expr(Mono::Lin(i));
+                let xj = self.mono_expr(Mono::Lin(j));
+                let lhs = self.mk_mul(xi, xj);
+                let out = Mono::quad(i, j);
+                if i <= j {
+                    // out = Quad(i,j) ⇒ mono_expr(out) = mul xi xj = lhs ⇒ refl.
+                    Some((out, self.eq_refl_r(lhs)))
+                } else {
+                    // out = Quad(j,i) ⇒ mono_expr(out) = mul xj xi; lhs = mul xi xj.
+                    // mul xi xj =[mul_comm] mul xj xi.
+                    let comm = self.mul_comm_eq(xi, xj);
+                    Some((out, comm))
+                }
+            }
+        }
+    }
+
+    /// `mul_one a : Eq R (mul a one) a`.
+    fn mul_one_eq(&mut self, a: ExprId) -> ExprId {
+        let ax = self.kernel.const_(self.arith.mul_one, vec![]);
+        self.kernel.app(ax, a)
+    }
+
+    /// Emit just the faithful kernel `R`-encoding of an [`RExpr`] (no proof). The
+    /// kernel hash-conses structurally, so this yields the SAME [`ExprId`] the
+    /// normalizer's `kernel_expr` carries for the same `RExpr`.
+    fn emit_rexpr(&mut self, expr: &RExpr) -> ExprId {
+        match expr {
+            RExpr::Var(i) => {
+                let name = self.var_const(*i);
+                self.kernel.const_(name, vec![])
+            }
+            RExpr::One => self.mk_one(),
+            RExpr::Neg(a) => {
+                let ae = self.emit_rexpr(a);
+                self.mk_neg(ae)
+            }
+            RExpr::Add(a, b) => {
+                let ae = self.emit_rexpr(a);
+                let be = self.emit_rexpr(b);
+                self.mk_add(ae, be)
+            }
+            RExpr::Mul(a, b) => {
+                let ae = self.emit_rexpr(a);
+                let be = self.emit_rexpr(b);
+                self.mk_mul(ae, be)
+            }
+        }
+    }
+
+    /// **Degree-2 ring normalizer** (ADR-0040 generalization). Recursively rewrite an
+    /// [`RExpr`] of total degree ≤ 2 into a canonical signed-monomial sum, returning
+    /// `(gens, kernel_expr, proof)` with `proof : Eq R kernel_expr (mono_gens_to_expr
+    /// gens)` and `gens` the SORTED-AND-CANCELLED canonical generators. `kernel_expr`
+    /// is the faithful encoding of the input. Returns `None` (decline) if any
+    /// subproduct would exceed degree 2.
+    ///
+    /// Two `RExpr`s with the SAME canonical `gens` are provably equal over `R`:
+    /// `Eq R e1 e2 = trans (proof1) (symm proof2)`. The asserted-polynomial identity
+    /// `Eq R pK sqK` is assembled exactly this way (after confirming the two `gens`
+    /// agree — which the SOS certificate guarantees, but the reconstructor checks).
+    fn normalize_deg2(&mut self, expr: &RExpr) -> Option<(Vec<MonoGen>, ExprId, ExprId)> {
+        // First produce the raw (unsorted) gens + a proof `Eq R expr raw_canon`,
+        // then run the additive normalizer to sort & cancel.
+        let (raw_gens, kernel_expr, raw_proof) = self.normalize_deg2_raw(expr)?;
+        let (canon_gens, sort_proof) = self.mono_normalize_gens(&raw_gens);
+        let raw_canon = self.mono_gens_to_expr(&raw_gens);
+        let canon = self.mono_gens_to_expr(&canon_gens);
+        // proof : Eq R expr canon = trans raw_proof sort_proof.
+        let proof = self.eq_trans_r(kernel_expr, raw_canon, canon, raw_proof, sort_proof);
+        Some((canon_gens, kernel_expr, proof))
+    }
+
+    /// The recursive core of [`Self::normalize_deg2`]: returns `(raw_gens,
+    /// kernel_expr, proof)` with `proof : Eq R kernel_expr (mono_gens_to_expr
+    /// raw_gens)`, where `raw_gens` is NOT yet sorted/cancelled. `None` on a
+    /// degree-≥3 subproduct.
+    fn normalize_deg2_raw(&mut self, expr: &RExpr) -> Option<(Vec<MonoGen>, ExprId, ExprId)> {
+        match expr {
+            RExpr::Var(i) => {
+                let name = self.var_const(*i);
+                let xe = self.kernel.const_(name, vec![]);
+                // xi = add xi zero  (symm add_zero).
+                let zero = self.mk_zero();
+                let xz = self.mk_add(xe, zero);
+                let az = self.add_zero_eq(xe); // add xi zero = xi
+                let proof = self.eq_symm_r(xz, xe, az); // xi = add xi zero
+                Some((vec![MonoGen::pos(Mono::Lin(*i))], xe, proof))
+            }
+            RExpr::One => {
+                let one_e = self.mk_one();
+                let zero = self.mk_zero();
+                let oz = self.mk_add(one_e, zero);
+                let az = self.add_zero_eq(one_e);
+                let proof = self.eq_symm_r(oz, one_e, az);
+                Some((vec![MonoGen::pos(Mono::Const)], one_e, proof))
+            }
+            RExpr::Neg(a) => {
+                let (a_gens, a_e, a_proof) = self.normalize_deg2_raw(a)?;
+                let neg_e = self.mk_neg(a_e);
+                let a_canon = self.mono_gens_to_expr(&a_gens);
+                // neg a_e =[congr_neg a_proof] neg a_canon =[neg_gens] canon(neg gens).
+                let cong = self.congr_neg(a_e, a_canon, a_proof); // neg a_e = neg a_canon
+                let neg_a_canon = self.mk_neg(a_canon);
+                let neg_gens: Vec<MonoGen> = a_gens.iter().map(|g| g.negate()).collect();
+                let neg_gens_eq = self.mono_neg_gens_eq(&a_gens); // neg a_canon = canon(neg gens)
+                let out_canon = self.mono_gens_to_expr(&neg_gens);
+                let proof = self.eq_trans_r(neg_e, neg_a_canon, out_canon, cong, neg_gens_eq);
+                Some((neg_gens, neg_e, proof))
+            }
+            RExpr::Add(a, b) => {
+                let (a_gens, a_e, a_proof) = self.normalize_deg2_raw(a)?;
+                let (b_gens, b_e, b_proof) = self.normalize_deg2_raw(b)?;
+                let add_e = self.mk_add(a_e, b_e);
+                let a_canon = self.mono_gens_to_expr(&a_gens);
+                let b_canon = self.mono_gens_to_expr(&b_gens);
+                // add a_e b_e =[congr both] add a_canon b_canon =[append] canon(a++b).
+                let cong_l = self.congr_add_left(a_e, a_canon, b_e, a_proof);
+                let mid = self.mk_add(a_canon, b_e);
+                let cong_r = self.congr_add_right(a_canon, b_e, b_canon, b_proof);
+                let ab_canon = self.mk_add(a_canon, b_canon);
+                let cong = self.eq_trans_r(add_e, mid, ab_canon, cong_l, cong_r);
+                let appended = self.mono_append_eq(&a_gens, &b_gens);
+                let mut out: Vec<MonoGen> = a_gens.clone();
+                out.extend_from_slice(&b_gens);
+                let out_canon = self.mono_gens_to_expr(&out);
+                let proof = self.eq_trans_r(add_e, ab_canon, out_canon, cong, appended);
+                Some((out, add_e, proof))
+            }
+            RExpr::Mul(a, b) => {
+                let (a_gens, a_e, a_proof) = self.normalize_deg2_raw(a)?;
+                let (b_gens, b_e, b_proof) = self.normalize_deg2_raw(b)?;
+                let mul_e = self.mk_mul(a_e, b_e);
+                let a_canon = self.mono_gens_to_expr(&a_gens);
+                let b_canon = self.mono_gens_to_expr(&b_gens);
+                // mul a_e b_e =[congr both] mul a_canon b_canon =[distribute] canon(out).
+                let cong_l = self.congr_mul_left(a_e, a_canon, b_e, a_proof);
+                let mid = self.mk_mul(a_canon, b_e);
+                let cong_r = self.congr_mul_right(a_canon, b_e, b_canon, b_proof);
+                let ab_canon = self.mk_mul(a_canon, b_canon);
+                let cong = self.eq_trans_r(mul_e, mid, ab_canon, cong_l, cong_r);
+                let (out, dist) = self.mul_lists_eq(&a_gens, &b_gens)?;
+                let out_canon = self.mono_gens_to_expr(&out);
+                let proof = self.eq_trans_r(mul_e, ab_canon, out_canon, cong, dist);
+                Some((out, mul_e, proof))
+            }
+        }
     }
 
     /// Cast the right operand of a `le`: given `h_le : le l r` and
@@ -8226,14 +8996,23 @@ pub fn reconstruct_sos_proof(
     // Anything else (a coefficient outside ±1, other monomial sets, ≥ 3 variables)
     // is declined here so we never claim success without a kernel-checked term.
     let Some(factor) = is_single_square_lt_zero(arena, assertions) else {
+        // Fast path: the hard-coded two-variable AM-GM shape (kept working).
         if let Some((sx, sy)) = is_am_gm_two_var(arena, assertions) {
             return reconstruct_am_gm_two_var(ctx, sx, sy);
         }
+        // General path: any query whose SOS certificate is a single perfect square
+        // of a ±1-coefficient linear form (e.g. `(x+y)² < 0`, `(x−z)² < 0`). Driven
+        // by the SOS certificate (not a per-shape IR matcher) and the degree-2 ring
+        // normalizer. Declines (falls through to the error) for multi-square / `d≠1`
+        // / scaled-coefficient certificates.
+        if let Some(proof) = reconstruct_sos_single_unit_square(ctx, arena, assertions)? {
+            return Ok(proof);
+        }
         return Err(ReconstructError::UnsupportedTerm {
-            term: "SOS reconstruction (this slice) handles a single square `ℓ*ℓ < 0` of a \
-                   ±1-coefficient linear form ℓ, and the degree-2 two-variable AM-GM sum form \
-                   `x²+y²−2xy < 0`; any other sum-of-monomials SOS needs the general ring \
-                   normalizer (a later slice)"
+            term: "SOS reconstruction handles a single square `ℓ*ℓ < 0` of a ±1-coefficient \
+                   linear form ℓ, the two-variable AM-GM sum form `x²+y²−2xy < 0`, and any \
+                   query whose SOS certificate is a single perfect square of a ±1-coefficient \
+                   linear form; multi-square / scaled-coefficient SOS is a later slice"
                 .to_owned(),
         });
     };
@@ -8515,6 +9294,217 @@ fn reconstruct_am_gm_two_var(
         Err(ReconstructError::KernelRejected {
             rule: "sos_am_gm_two_var".to_owned(),
             detail: "AM-GM SOS refutation did not infer to False".to_owned(),
+        })
+    }
+}
+
+/// Maximum integer coefficient magnitude the SOS-certificate reconstructor expands
+/// into repeated monomial generators. `ℓ²` of a ±1-linear form has coefficients in
+/// `{−2, −1, 0, 1, 2}` (the cross term `2xᵢxⱼ`), so a small bound suffices; a larger
+/// one would only inflate proof size. Outside this bound we decline.
+const SOS_MAX_COEFF: i128 = 16;
+
+/// Build the [`RExpr`] for the certificate polynomial term `(factors, coeff)`'s
+/// monomial (ignoring the sign/magnitude of `coeff`): a [`RExpr::One`] for the
+/// constant, a [`RExpr::Var`] for a linear term, a [`RExpr::Mul`] of two vars for a
+/// quadratic term, and a `Var·Var` for a square (`xᵢ²`). Returns `None` (decline)
+/// for any factor of total degree ≥ 3 or an out-of-range/malformed shape.
+fn cert_mono_to_rexpr(factors: &[(usize, u32)], n_vars: usize) -> Option<RExpr> {
+    match factors {
+        [] => Some(RExpr::One),
+        [(i, 1)] if *i < n_vars => Some(RExpr::Var(*i)),
+        [(i, 2)] if *i < n_vars => Some(RExpr::Mul(
+            Box::new(RExpr::Var(*i)),
+            Box::new(RExpr::Var(*i)),
+        )),
+        [(i, 1), (j, 1)] if *i < n_vars && *j < n_vars => Some(RExpr::Mul(
+            Box::new(RExpr::Var(*i)),
+            Box::new(RExpr::Var(*j)),
+        )),
+        _ => None,
+    }
+}
+
+/// Build the [`RExpr`] for the **asserted polynomial** `p` from the certificate's
+/// indexed monomials: a left-nested `add` over `coeff`-many copies of each monomial
+/// (sign-adjusted), in the certificate's deterministic `BTreeMap` order. The result
+/// is a faithful kernel encoding of `p` over canonical indices `var_const(i)` (the
+/// SAME indices `ellK` uses). `None` (decline) on a non-integer coefficient, a
+/// coefficient exceeding [`SOS_MAX_COEFF`] in magnitude, a degree-≥3 monomial, or an
+/// empty polynomial.
+fn cert_poly_to_rexpr(terms: &[(Vec<(usize, u32)>, Rational)], n_vars: usize) -> Option<RExpr> {
+    let mut atoms: Vec<RExpr> = Vec::new();
+    for (factors, coeff) in terms {
+        if coeff.denominator() != 1 {
+            return None; // non-integer coefficient — outside this slice
+        }
+        let c = coeff.numerator();
+        if c == 0 {
+            continue;
+        }
+        if c.abs() > SOS_MAX_COEFF {
+            return None; // coefficient too large to expand into unit monomials
+        }
+        let base = cert_mono_to_rexpr(factors, n_vars)?;
+        let count = c.unsigned_abs();
+        for _ in 0..count {
+            let term = if c < 0 {
+                RExpr::Neg(Box::new(base.clone()))
+            } else {
+                base.clone()
+            };
+            atoms.push(term);
+        }
+    }
+    let mut iter = atoms.into_iter();
+    let first = iter.next()?; // empty ⇒ decline (no atom to refute)
+    let mut acc = first;
+    for t in iter {
+        acc = RExpr::Add(Box::new(acc), Box::new(t));
+    }
+    Some(acc)
+}
+
+/// Build the [`RExpr`] for the single square `ℓ = Σⱼ cⱼ·xⱼ` from its signed unit
+/// coefficients (each `±1`): a left-nested `add` over `xⱼ` / `neg xⱼ`. `cⱼ` are
+/// over the same canonical indices as [`cert_poly_to_rexpr`].
+fn cert_square_to_rexpr(coeffs: &[(usize, i128)]) -> Option<RExpr> {
+    let mut iter = coeffs.iter().map(|&(idx, c)| {
+        if c < 0 {
+            RExpr::Neg(Box::new(RExpr::Var(idx)))
+        } else {
+            RExpr::Var(idx)
+        }
+    });
+    let first = iter.next()?;
+    let mut acc = first;
+    for t in iter {
+        acc = RExpr::Add(Box::new(acc), Box::new(t));
+    }
+    Some(acc)
+}
+
+/// Reconstruct, **from the SOS certificate**, any strict query `p < 0` whose
+/// certificate is a SINGLE perfect square of a ±1-coefficient linear form
+/// `ℓ = Σⱼ ±xⱼ` (with `d = 1` and a zero affine row). Generalizes
+/// [`reconstruct_am_gm_two_var`] off the hard-coded `(x−y)²` shape via the degree-2
+/// ring normalizer ([`LraReconstructCtx::normalize_deg2`]).
+///
+/// Returns:
+/// - `Ok(Some(proof))` — a kernel-checked `False` (gated by `infer` + `def_eq`).
+/// - `Ok(None)` — the certificate is not a single ±1-unit square (decline; the
+///   caller falls through), or building `pK`/`ellK` hit this slice's bounds.
+/// - `Err(_)` — only a genuine kernel rejection (a buggy normalizer would surface
+///   here, never an unsound `False`).
+///
+/// The crux is the ring identity `idK : Eq R pK sqK`, assembled as
+/// `trans (normalize pK) (symm (normalize sqK))` **after** confirming the two
+/// normal forms are identical — which the certificate guarantees (`p = ℓ²` over ℚ)
+/// but this function re-checks, declining if they disagree rather than fabricating.
+fn reconstruct_sos_single_unit_square(
+    ctx: &mut LraReconstructCtx,
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<Option<ExprId>, ReconstructError> {
+    // Obtain the self-checked SOS certificate of the (conjunction of) assertion(s).
+    let Some(cert) = crate::nra_real_root::sos_refute_with_certificate(arena, assertions) else {
+        return Ok(None);
+    };
+    // This slice handles only the `p < 0` (M PSD) atom shape, as a single ±1 square.
+    if !cert.strict_lt() {
+        return Ok(None);
+    }
+    let Some(square_coeffs) = cert.single_unit_square() else {
+        return Ok(None);
+    };
+    let n_vars = cert.n_vars();
+
+    // Build pK (faithful encoding of the asserted polynomial p) and ellK (the square
+    // root ℓ), both over the SAME canonical indices. `sqK = mul ellK ellK`.
+    let Some(p_rexpr) = cert_poly_to_rexpr(cert.poly_terms(), n_vars) else {
+        return Ok(None);
+    };
+    let Some(ell_rexpr) = cert_square_to_rexpr(&square_coeffs) else {
+        return Ok(None);
+    };
+    let sq_rexpr = RExpr::Mul(Box::new(ell_rexpr.clone()), Box::new(ell_rexpr.clone()));
+
+    // Normalize both to canonical signed-monomial sums, each with its Eq-proof.
+    let Some((p_gens, pk, p_to_canon)) = ctx.normalize_deg2(&p_rexpr) else {
+        return Ok(None);
+    };
+    let Some((sq_gens, sqk, sq_to_canon)) = ctx.normalize_deg2(&sq_rexpr) else {
+        return Ok(None);
+    };
+
+    // Re-check the certificate's promise `p = ℓ²` at the canonical-form level: the
+    // two normal forms MUST be identical (the normalizer sorts deterministically, so
+    // equal multisets of monomials ⇒ identical gen vectors). If they disagree, the
+    // certificate/normalizer is not what we think — decline, never fabricate `idK`.
+    if p_gens != sq_gens {
+        return Ok(None);
+    }
+
+    // idK : Eq R pK sqK := trans (pK → canon) (symm (sqK → canon)).
+    let canon = ctx.mono_gens_to_expr(&p_gens);
+    let canon_to_sq = ctx.eq_symm_r(sqk, canon, sq_to_canon); // Eq R canon sqK
+    let idk = ctx.eq_trans_r(pk, canon, sqk, p_to_canon, canon_to_sq); // Eq R pK sqK
+
+    // Nonnegativity + order chain (mirrors `reconstruct_am_gm_two_var`).
+    // ellK is the `mul` LHS/RHS of sqK; emit it directly (same hash-consed ExprId).
+    let ell = ctx.emit_rexpr(&ell_rexpr);
+    let zero = ctx.mk_zero();
+    // sq : le zero sqK := sq_nonneg ell. (sqK = mul ell ell faithfully.)
+    let sq = {
+        let sq_nonneg_name = ctx.arith().sq_nonneg;
+        let sq_nonneg = ctx.kernel_mut().const_(sq_nonneg_name, vec![]);
+        ctx.kernel_mut().app(sq_nonneg, ell)
+    };
+    // lep : le zero pK — transport `sq` backward along symm idK (rewrite sqK ⟶ pK).
+    let id_sym = ctx.eq_symm_r(pk, sqk, idk); // Eq R sqK pK
+    let lep = ctx.le_cast_right(zero, sqk, pk, sq, id_sym);
+    // hlt : lt pK zero — the asserted atom `p < 0`.
+    let hlt = {
+        let prop = ctx.mk_lt(pk, zero);
+        ctx.hyp_axiom(prop)?
+    };
+    // chain : lt zero zero := lt_of_le_of_lt zero pK zero lep hlt.
+    let chain = {
+        let ax_name = ctx.arith().lt_of_le_of_lt;
+        let ax = ctx.kernel_mut().const_(ax_name, vec![]);
+        let e = ctx.kernel_mut().app(ax, zero);
+        let e = ctx.kernel_mut().app(e, pk);
+        let e = ctx.kernel_mut().app(e, zero);
+        let e = ctx.kernel_mut().app(e, lep);
+        ctx.kernel_mut().app(e, hlt)
+    };
+    // bad : False := lt_irrefl zero chain.
+    let proof = {
+        let irrefl_name = ctx.arith().lt_irrefl;
+        let irrefl = ctx.kernel_mut().const_(irrefl_name, vec![]);
+        let e = ctx.kernel_mut().app(irrefl, zero);
+        ctx.kernel_mut().app(e, chain)
+    };
+
+    // Soundness gate: the assembled term must kernel-infer to `False`. A buggy
+    // normalizer makes this fail (KernelRejected), never an accepted unsound proof.
+    let inferred = ctx
+        .kernel_mut()
+        .infer(proof)
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "sos_single_unit_square".to_owned(),
+            detail: format!("SOS certificate infer failed: {e:?}"),
+        })?;
+    let false_ = {
+        let f = ctx.arith().logic.false_;
+        ctx.kernel_mut().const_(f, vec![])
+    };
+    if ctx.kernel_mut().def_eq(inferred, false_) {
+        Ok(Some(proof))
+    } else {
+        Err(ReconstructError::KernelRejected {
+            rule: "sos_single_unit_square".to_owned(),
+            detail: "SOS certificate refutation did not infer to False".to_owned(),
         })
     }
 }

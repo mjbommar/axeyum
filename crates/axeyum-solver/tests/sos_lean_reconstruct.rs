@@ -127,6 +127,64 @@ fn am_gm_two_var_sum_form_reconstructs_to_false() {
     );
 }
 
+/// General SOS-certificate path: `x*x + y*y + (x*y + x*y) < 0` (i.e. `(x+y)² < 0`).
+/// The certificate is a single perfect square of the ±1-linear form `x + y`, so the
+/// generalized reconstructor (driven by the SOS certificate + degree-2 ring
+/// normalizer, NOT the hard-coded `(x−y)²` matcher) must prove
+/// `Eq R (x²+y²+2xy) ((x+y)·(x+y))` and refute. The `+2xy` distinguishes it from the
+/// AM-GM `−2xy` shape.
+#[test]
+fn x_plus_y_squared_sum_form_reconstructs_to_false() {
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let y = arena.real_var("y").unwrap();
+    let xx = arena.real_mul(x, x).unwrap();
+    let yy = arena.real_mul(y, y).unwrap();
+    let xy = arena.real_mul(x, y).unwrap();
+    let sum_sq = arena.real_add(xx, yy).unwrap(); // x² + y²
+    let two_xy = arena.real_add(xy, xy).unwrap(); // x·y + x·y
+    let lhs = arena.real_add(sum_sq, two_xy).unwrap(); // x² + y² + 2xy
+    let zero = arena.real_const(Rational::integer(0));
+    let assertion = arena.real_lt(lhs, zero).unwrap();
+
+    let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &[assertion]).expect(
+        "(x+y)² < 0 sum form reconstructs to a kernel-checked False via the general SOS \
+         certificate path",
+    );
+    assert_eq!(
+        fragment,
+        ProofFragment::Sos,
+        "the (x+y)² sum form must route to the SOS fragment"
+    );
+    assert!(
+        source.contains("axeyum_refutation"),
+        "the Lean module must contain the refutation theorem"
+    );
+}
+
+/// General SOS-certificate path on a DIFFERENT variable pair than the old hard-code:
+/// `x*x + z*z − (x*z + x*z) < 0` (i.e. `(x−z)² < 0`). Exercises that the generalized
+/// path is genuinely certificate-driven, not specialized to the `(x,y)` symbols.
+#[test]
+fn x_minus_z_squared_sum_form_reconstructs_to_false() {
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let z = arena.real_var("z").unwrap();
+    let xx = arena.real_mul(x, x).unwrap();
+    let zz = arena.real_mul(z, z).unwrap();
+    let xz = arena.real_mul(x, z).unwrap();
+    let sum_sq = arena.real_add(xx, zz).unwrap(); // x² + z²
+    let two_xz = arena.real_add(xz, xz).unwrap(); // x·z + x·z
+    let lhs = arena.real_sub(sum_sq, two_xz).unwrap(); // x² + z² − 2xz
+    let zero = arena.real_const(Rational::integer(0));
+    let assertion = arena.real_lt(lhs, zero).unwrap();
+
+    let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &[assertion])
+        .expect("(x−z)² < 0 sum form reconstructs to a kernel-checked False");
+    assert_eq!(fragment, ProofFragment::Sos);
+    assert!(source.contains("axeyum_refutation"));
+}
+
 /// Out of scope for this slice: `x*x + y*y < 0` (i.e. `x² + y² < 0`). It is UNSAT,
 /// but it is **not** a single perfect square — it is a *sum* of two independent
 /// squares (`x²` and `y²`), which this AM-GM slice does not cover. The

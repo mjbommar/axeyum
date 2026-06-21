@@ -2652,6 +2652,89 @@ impl SosCertificate {
         //    every D[k] ≥ 0 (the sum-of-squares nonnegativity condition).
         matches!(ldlt_reconstructs(&target, &self.l, &self.d), Some(true))
     }
+
+    /// Number of real variables `n` (the matrix is `(n+1)×(n+1)`).
+    #[must_use]
+    pub(crate) fn n_vars(&self) -> usize {
+        self.n_vars
+    }
+
+    /// The atom is `p < 0` (`true`) or `p > 0` (`false`).
+    #[must_use]
+    pub(crate) fn strict_lt(&self) -> bool {
+        self.strict_lt
+    }
+
+    /// The certified polynomial `p`'s monomials over canonical variable indices
+    /// `0..n_vars`, as `(factors, coeff)` with each `factors` a sorted list of
+    /// `(var_index, exponent)` of total degree ≤ 2 (`[]` is the constant term).
+    /// This is exactly the polynomial whose SOS the certificate refutes; the
+    /// reconstructor reads it to build the faithful kernel encoding of `p`.
+    #[must_use]
+    pub(crate) fn poly_terms(&self) -> &[(Vec<(usize, u32)>, Rational)] {
+        &self.terms
+    }
+
+    /// If this certificate is a **single perfect square of a ±1-coefficient linear
+    /// form** — exactly ONE nonzero `D[k]` equal to `1`, all other `D` zero, and
+    /// the square `ℓₖ(x) = Σⱼ L[j][k]·xⱼ + L[n][k]` having every variable
+    /// coefficient `L[j][k] ∈ {−1, 0, +1}` and a **zero** affine entry `L[n][k]` —
+    /// return that square's signed variable coefficients `[(var_index, ±1); …]`
+    /// (ascending by index, zeros dropped). Otherwise `None` (decline): multiple
+    /// nonzero `D`, `D[k] ≠ 1`, a coefficient needing scaling, or a nonzero affine
+    /// row.
+    ///
+    /// The returned coefficients are over the SAME canonical indices as
+    /// [`SosCertificate::poly_terms`], so `(Σ cⱼ·xⱼ)² = p` holds over ℚ (the
+    /// reconstructor re-asserts this before trusting it).
+    #[must_use]
+    pub(crate) fn single_unit_square(&self) -> Option<Vec<(usize, i128)>> {
+        let dim = self.n_vars + 1;
+        if self.d.len() != dim || self.l.len() != dim {
+            return None;
+        }
+        if self.l.iter().any(|row| row.len() != dim) {
+            return None;
+        }
+        // Exactly one nonzero D[k], and it must equal 1.
+        let one = Rational::integer(1);
+        let mut sq_col: Option<usize> = None;
+        for (k, &dk) in self.d.iter().enumerate() {
+            if dk.is_zero() {
+                continue;
+            }
+            if dk != one || sq_col.is_some() {
+                return None; // ≠1, or a second nonzero square
+            }
+            sq_col = Some(k);
+        }
+        let k = sq_col?;
+        // ℓₖ = column k of L, read over rows 0..dim. The affine entry (row n) must
+        // be zero; each variable entry must be ∈ {−1, 0, +1}.
+        let neg_one = Rational::integer(-1);
+        let n = self.n_vars;
+        if !self.l[n][k].is_zero() {
+            return None; // nonzero affine row — outside this slice
+        }
+        let mut coeffs: Vec<(usize, i128)> = Vec::new();
+        for j in 0..n {
+            let c = self.l[j][k];
+            if c.is_zero() {
+                continue;
+            }
+            if c == one {
+                coeffs.push((j, 1));
+            } else if c == neg_one {
+                coeffs.push((j, -1));
+            } else {
+                return None; // coefficient needs scaling — outside this slice
+            }
+        }
+        if coeffs.is_empty() {
+            return None; // the zero form squares to 0, never refutes p < 0
+        }
+        Some(coeffs)
+    }
 }
 
 /// Rebuild the symmetric `(n_vars+1)×(n_vars+1)` rational Gram matrix `M` from
