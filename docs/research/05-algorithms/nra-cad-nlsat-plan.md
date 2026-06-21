@@ -113,13 +113,20 @@ SOS reconstruction covers the degree-2 cells.
      unconditional): removes the i128-storage ceiling, collapses the i128/retry
      split, so the nested-radical coupled case `x²+y²=4 ∧ x·y=1` now decides
      **Sat** with replay. Soundness wall held (no verdict flip across 1558 tests).
-   - **next slices:** (a) **in progress** — 2-variable **strict-inequality**
-     lifting: complete CAD via rational open-cell sampling (a strict system's
-     solution set is open ⇒ one rational interior sample per open x-cell is
-     exhaustive, no algebraic substitution needed; Unsat is complete-or-decline).
-     (b) mixed / non-strict inequality cells (needs algebraic-coordinate point-cell
-     handling — harder). (c) ≥3-variable projection (now feasible — the determinant
-     is polynomial-time). (d) per-cell Positivstellensatz evidence (step 4).
+   - **slice a DONE** (commit `60833cc`) — complete CAD for 2-variable
+     **strict-inequality** systems via rational open-cell sampling (the open
+     solution set ⇒ one rational interior sample per open cell is exhaustive, no
+     algebraic substitution; Unsat complete-or-decline, every degeneracy declines).
+   - **slice c DONE** (commit `e050b3e`) — recursive **N-variable** strict-inequality
+     CAD (`visit_open_cells`): the same open-cell argument at every recursion level,
+     so ≥3-var strict systems decide (Sat + Unsat); decline propagates via `?` so a
+     gap is never mistaken for Unsat; nullification at a base point declines.
+   - **next slices:** (b) mixed / non-strict inequality cells — the remaining hard
+     core: sampling the critical *point* cells needs algebraic-coordinate
+     substitution (y-polynomial with `RealAlgebraic` coefficients → root isolation
+     over a number field). (d) per-cell Positivstellensatz evidence (step 4) for
+     Lean reconstruction. Cross-cutting: an adversarial differential fuzz vs Z3
+     guards the whole CAD/grid vertical (DISAGREE=0).
 4. Cell-certificate format + the degree-2 reconstruction hook; general
    Positivstellensatz reconstruction is the long arc.
 
