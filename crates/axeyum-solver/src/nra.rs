@@ -35,7 +35,7 @@ use axeyum_ir::{IrError, Op, Sort, TermArena, TermId, TermNode, Value, eval};
 use axeyum_rewrite::replace_subterms;
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
-use crate::dpll_t::check_with_lra_dpll;
+use crate::dpll_t::check_with_lra_dpll_within;
 use crate::model::Model;
 
 // Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
@@ -107,10 +107,17 @@ pub fn check_with_nra(
     // constant). Exact encoding, so soundness is preserved.
     let assertions = &eliminate_real_div(arena, assertions)?;
 
+    // Wall-clock deadline (only when a timeout is configured): an *absolute*
+    // instant shared by every sub-solve below, so the branch-and-bound, the
+    // refinement loop, *and* each lazy-SMT solve bail to a timely `unknown`
+    // rather than overrunning the budget inside a single solve (#15). Derived
+    // once here so the clock is not reset per call.
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+
     let products = nonlinear_products(arena, assertions);
     if products.is_empty() {
         // Already linear — straight to LRA.
-        return check_with_lra_dpll(arena, assertions, config);
+        return check_with_lra_dpll_within(arena, assertions, config, deadline);
     }
 
     // Abstract each distinct nonlinear product with a fresh real variable,
@@ -149,7 +156,7 @@ pub fn check_with_nra(
     // for *any* number of products, so the cross-product admission bound below does
     // not cost us those easy refutations. A `sat`/`unknown` here is just a candidate
     // (the abstraction is too weak), so only `unsat` is acted on.
-    if let CheckResult::Unsat = check_with_lra_dpll(arena, &base, config)? {
+    if let CheckResult::Unsat = check_with_lra_dpll_within(arena, &base, config, deadline)? {
         return Ok(CheckResult::Unsat);
     }
 
@@ -204,10 +211,9 @@ pub fn check_with_nra(
         }
     }
 
-    // Wall-clock deadline (only when a timeout is configured): bounds the spatial
-    // branch-and-bound, which can otherwise explore ~2^depth boxes × refinement
-    // rounds and run far past the configured budget (#15).
-    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    // `deadline` (derived at entry) bounds the spatial branch-and-bound, which can
+    // otherwise explore ~2^depth boxes × refinement rounds, *and* is threaded into
+    // each lazy-SMT solve so no single solve overruns the budget (#15).
     branch_and_bound(
         arena, &base, &triples, &products, assertions, config, &bounds, 0, deadline,
     )
@@ -336,7 +342,7 @@ fn solve_relaxation(
         if past_deadline(deadline) {
             return Ok(timed_out());
         }
-        let result = check_with_lra_dpll(arena, &reduced, config)?;
+        let result = check_with_lra_dpll_within(arena, &reduced, config, deadline)?;
         let CheckResult::Sat(model) = result else {
             return Ok(result); // unsat/unknown transfer (the box is a relaxation)
         };

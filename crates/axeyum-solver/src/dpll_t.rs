@@ -33,6 +33,12 @@ use std::collections::HashMap;
 
 use axeyum_ir::{Assignment, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 
+// Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
+
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::combined::check_with_all_theories;
 use crate::lia::DEFAULT_INT_WIDTH;
@@ -60,6 +66,36 @@ pub fn check_with_lra_dpll(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    // Derive the absolute deadline from the configured budget, then delegate.
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    check_with_lra_dpll_within(arena, assertions, config, deadline)
+}
+
+/// Whether `deadline` (if set) has passed.
+fn past_deadline(deadline: Option<Instant>) -> bool {
+    deadline.is_some_and(|d| Instant::now() >= d)
+}
+
+/// Lazy-SMT entry that respects an **absolute** wall-clock `deadline` (rather
+/// than re-deriving one from `config.timeout`, which would reset the clock on
+/// every call). The deadline is checked once per refinement round, so a caller
+/// that already started the clock — e.g. the NRA branch-and-bound / refinement
+/// loop, which can issue many of these solves on a growing system — bails to a
+/// timely `unknown` instead of overrunning its budget inside one solve.
+///
+/// `deadline == None` means "no wall-clock bound" (the loop is still bounded by
+/// `MAX_ROUNDS`). Bailing to `unknown` is sound: `unknown` is first-class and
+/// the deadline never converts a `sat`/`unsat` into a wrong verdict.
+///
+/// # Errors
+///
+/// Same as [`check_with_lra_dpll`].
+pub fn check_with_lra_dpll_within(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+) -> Result<CheckResult, SolverError> {
     // 1. Boolean abstraction: skeleton terms + the atom map.
     let mut ctx = Abstractor::default();
     let mut skeleton = Vec::with_capacity(assertions.len());
@@ -71,6 +107,15 @@ pub fn check_with_lra_dpll(
     let mut blocking: Vec<TermId> = Vec::new();
 
     for _ in 0..MAX_ROUNDS {
+        // Wall-clock bound: the per-round SAT+theory work grows as blocking
+        // clauses accumulate, so a long-running solve must bail here rather than
+        // overrun the caller's deterministic budget (#15).
+        if past_deadline(deadline) {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail: "lazy SMT: wall-clock timeout reached".to_owned(),
+            }));
+        }
         // 2. Decide the skeleton (real atoms abstracted to props; every other
         //    theory — bit-vectors, arrays, functions, bounded integers — left
         //    intact) plus learned blocking clauses, with the full bit-blasting
