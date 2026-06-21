@@ -1,7 +1,7 @@
 //! Exact-rational univariate polynomial + Sturm primitives (arena-free).
 //!
 //! These are the pure number-theoretic building blocks the real-algebraic
-//! *value* layer ([`crate::real_algebraic`]) and the solver's NRA root-isolation
+//! *value* layer (`crate::real_algebraic`) and the solver's NRA root-isolation
 //! pass both need: exact-`Rational` polynomial arithmetic (LSB-first vectors),
 //! the squarefree-part reduction, the Sturm chain and its exact distinct-root
 //! count, and the Sylvester-resultant primitive used for algebraic field

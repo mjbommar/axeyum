@@ -3240,7 +3240,7 @@ fn build_and_gate_int_interval(
 
 /// Detect the single-variable integer-interval refutation shape (used by the fragment
 /// classifier to route to the integer-inequality reconstructor). Returns `true` iff
-/// [`detect_int_interval`] matches.
+/// the private `detect_int_interval` matcher matches.
 #[must_use]
 pub fn is_int_inequality_refutation(arena: &TermArena, assertions: &[TermId]) -> bool {
     detect_int_interval(arena, assertions).is_some()

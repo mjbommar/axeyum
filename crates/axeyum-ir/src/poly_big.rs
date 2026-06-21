@@ -2,10 +2,10 @@
 //! (nra-cad-nlsat-plan.md, step 2), behind the optional `bignum` feature.
 //!
 //! This is a **focused duplicate** of the exact-rational resultant + squarefree +
-//! Sturm-isolation primitives in [`crate::poly`], computed over
+//! Sturm-isolation primitives in the `crate::poly` module, computed over
 //! [`num_rational::BigRational`] instead of the `i128`-backed [`Rational`]. It is
 //! used **only as a retry** when the `i128` fast path in
-//! [`crate::real_algebraic`] declines on intermediate overflow: the algorithm is
+//! the `crate::real_algebraic` module declines on intermediate overflow: the algorithm is
 //! identical, so a heavy intermediate (e.g. the Sylvester determinant of `√2+√3`)
 //! no longer caps out at `i128`, while the *final* defining polynomial and
 //! isolating interval — if they fit `i128` — are converted back so the stored
@@ -14,8 +14,8 @@
 //! (`None`): a bignum-backed `RealAlgebraic` is an explicitly-deferred later slice.
 //!
 //! **Soundness:** the duplication is guarded by a differential test
-//! (`real_algebraic_field_bignum.rs`) pinning this module and [`crate::poly`] to
-//! the SAME isolating result on small inputs — isolation is soundness-critical.
+//! (`real_algebraic_field_bignum.rs`) pinning this module and the `crate::poly`
+//! module to the SAME isolating result on small inputs — isolation is soundness-critical.
 //! Everything here is exact (no floating point) and bounded (degree/round caps →
 //! graceful decline, never OOM/hang).
 
