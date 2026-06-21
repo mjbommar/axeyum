@@ -364,6 +364,30 @@ fn eval_quantifier(
 // artificial split; length is inherent to the operator count.
 #[allow(clippy::too_many_lines)]
 fn apply(op: Op, vals: &[Value]) -> Result<Value, IrError> {
+    // `bv2nat` of a WIDE (> 128-bit) operand crosses BV → Int, so it does NOT
+    // belong on the "infallible, pure mod-2^width" wide path below (which has no
+    // `Bv2Nat` arm and would panic). A wide value is non-negative; it has a
+    // non-negative `i128` representation iff no bit at index ≥ 127 is set (i.e. it
+    // is < 2^127 = i128::MAX + 1). Otherwise report overflow — never crash, never
+    // wrap to a wrong (negative) integer.
+    if matches!(op, Op::Bv2Nat) {
+        if let Some(Value::WideBv(w)) = vals.first() {
+            if (127..w.width()).any(|i| w.bit(i)) {
+                return Err(IrError::ArithmeticOverflow { op: "bv2nat" });
+            }
+            // No bit at index ≥ 127 is set, so the value is < 2^127 ≤ i128::MAX:
+            // reconstruct it from its low bits (`to_u128` is unavailable for
+            // width > 128). Each set bit contributes `2^i` with `i < 127`.
+            let mut value: u128 = 0;
+            for i in 0..127 {
+                if w.bit(i) {
+                    value |= 1u128 << i;
+                }
+            }
+            #[allow(clippy::cast_possible_wrap)] // guarded: value < 2^127 ≤ i128::MAX.
+            return Ok(Value::Int(value as i128));
+        }
+    }
     // Bit-vectors wider than 128 bits take a separate path; the `u128` fast path
     // below is unchanged for the common case. This triggers when an operand is
     // already wide, or when a width-*growing* op produces a `> 128`-bit result
@@ -1071,6 +1095,27 @@ mod overflow_tests {
         let v = arena.bv_const(8, 200).unwrap();
         let t = arena.bv2nat(v).unwrap();
         assert_eq!(eval(&arena, t, &Assignment::new()), Ok(Value::Int(200)));
+    }
+
+    #[test]
+    fn bv2nat_wide_high_bit_set_is_graceful_overflow() {
+        // A 256-bit all-ones value (≫ i128::MAX): bv2nat of a WIDE operand crosses
+        // BV → Int. It must report overflow gracefully, NEVER panic on the wide
+        // path (regression for the missing `apply_wide` Bv2Nat arm).
+        let mut arena = TermArena::new();
+        let v = arena.wide_bv_const(crate::wide::WideUint::ones(256));
+        let t = arena.bv2nat(v).unwrap();
+        assert_eq!(eval(&arena, t, &Assignment::new()), Err(overflow("bv2nat")));
+    }
+
+    #[test]
+    fn bv2nat_wide_small_value_is_exact() {
+        // A 256-bit value whose only set bits are low (42): it fits a non-negative
+        // i128, so bv2nat must succeed exactly — not over-conservatively overflow.
+        let mut arena = TermArena::new();
+        let v = arena.wide_bv_const(crate::wide::WideUint::from_u128(42, 256));
+        let t = arena.bv2nat(v).unwrap();
+        assert_eq!(eval(&arena, t, &Assignment::new()), Ok(Value::Int(42)));
     }
 
     #[test]
