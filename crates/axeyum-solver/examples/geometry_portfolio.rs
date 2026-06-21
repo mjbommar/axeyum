@@ -38,43 +38,59 @@ fn query(arena: &mut TermArena, hyps: &[TermId], goal: TermId) -> Vec<TermId> {
     q
 }
 
-/// `(proved, wall_time)` for the LRA engine on a freshly-built goal.
-fn run_lra(g: &Goal) -> (Option<bool>, Duration) {
-    let mut arena = TermArena::new();
-    let (hyps, goal) = (g.build)(&mut arena);
-    let q = query(&mut arena, &hyps, goal);
-    let t = Instant::now();
-    let proved = match check_with_lra(&arena, &q) {
-        Ok(CheckResult::Unsat) => Some(true),
-        Ok(_) => Some(false),
-        Err(_) => None, // LRA cannot handle this (nonlinear) — abstains
-    };
-    (proved, t.elapsed())
+/// The honest outcome of running one engine on one refutation query. We keep the
+/// three solver answers DISTINCT — collapsing `Unknown` into "no" would read as a
+/// disproof when it is merely an incomplete search (and would hide the cardinal
+/// Sat-vs-Unknown line). A `Countermodel` (the engine found `hyps ∧ ¬goal` SAT)
+/// would mean the *goal is false*, not that the engine gave up.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Verdict {
+    Proved,        // Unsat: hyps ∧ ¬goal has no model ⇒ the goal is proved
+    Countermodel,  // Sat: a concrete counterexample to the goal exists
+    Unknown,       // sound-but-incomplete: budget exhausted, no verdict
+    NotApplicable, // the engine abstains (e.g. LRA on a nonlinear query)
 }
 
-/// `(proved, wall_time)` for the NRA engine on a freshly-built goal.
-fn run_nra(g: &Goal) -> (Option<bool>, Duration) {
+/// Map a solver result to the honest verdict. `Sat`/`Unknown` never collapse.
+fn verdict(r: &Result<CheckResult, axeyum_solver::SolverError>) -> Verdict {
+    match r {
+        Ok(CheckResult::Unsat) => Verdict::Proved,
+        Ok(CheckResult::Sat(_)) => Verdict::Countermodel,
+        Ok(CheckResult::Unknown(_)) => Verdict::Unknown,
+        Err(_) => Verdict::NotApplicable,
+    }
+}
+
+/// `(verdict, wall_time)` for the LRA engine on a freshly-built goal.
+fn run_lra(g: &Goal) -> (Verdict, Duration) {
     let mut arena = TermArena::new();
     let (hyps, goal) = (g.build)(&mut arena);
     let q = query(&mut arena, &hyps, goal);
     let t = Instant::now();
-    let proved = match check_with_nra(&mut arena, &q, &cfg()) {
-        Ok(CheckResult::Unsat) => Some(true),
-        Ok(_) => Some(false),
-        Err(_) => None,
-    };
-    (proved, t.elapsed())
+    let v = verdict(&check_with_lra(&arena, &q));
+    (v, t.elapsed())
+}
+
+/// `(verdict, wall_time)` for the NRA engine on a freshly-built goal.
+fn run_nra(g: &Goal) -> (Verdict, Duration) {
+    let mut arena = TermArena::new();
+    let (hyps, goal) = (g.build)(&mut arena);
+    let q = query(&mut arena, &hyps, goal);
+    let t = Instant::now();
+    let v = verdict(&check_with_nra(&mut arena, &q, &cfg()));
+    (v, t.elapsed())
 }
 
 fn ms(d: Duration) -> f64 {
     d.as_secs_f64() * 1000.0
 }
 
-fn mark(p: Option<bool>) -> &'static str {
-    match p {
-        Some(true) => "PROVED",
-        Some(false) => "no",
-        None => "n/a",
+fn mark(v: Verdict) -> &'static str {
+    match v {
+        Verdict::Proved => "PROVED",
+        Verdict::Countermodel => "FALSE", // a real countermodel ⇒ the goal is false
+        Verdict::Unknown => "unknown",
+        Verdict::NotApplicable => "n/a",
     }
 }
 
@@ -209,10 +225,10 @@ fn main() {
         //   proved iff either proved; latency = min over engines that proved
         //   (each on its own core, measured in isolation = no contention).
         let mut winners: Vec<(&str, f64)> = Vec::new();
-        if lp == Some(true) {
+        if lp == Verdict::Proved {
             winners.push(("LRA", ms(lt)));
         }
-        if np == Some(true) {
+        if np == Verdict::Proved {
             winners.push(("NRA", ms(nt)));
         }
         let (port_label, port_ms, by) = if let Some((who, m)) = winners
@@ -238,11 +254,11 @@ fn main() {
             by,
         );
 
-        if lp == Some(true) {
+        if lp == Verdict::Proved {
             lra_proved += 1;
             lra_t += ms(lt);
         }
-        if np == Some(true) {
+        if np == Verdict::Proved {
             nra_proved += 1;
             nra_t += ms(nt);
         }
@@ -265,4 +281,113 @@ fn main() {
         "Portfolio decides the UNION of {n} goals that no single engine covers alone, \
          at the min per-goal latency (each engine on its own core)."
     );
+
+    #[cfg(feature = "z3")]
+    run_z3_inproc();
+    #[cfg(not(feature = "z3"))]
+    println!("\n(Z3 in-process column: rebuild with `--features z3` for the fair libz3 row.)");
+}
+
+/// In-process Z3 (libz3 via the `z3` crate) on the *same* goals — one context
+/// reused across goals, so the measured `check()` is pure solve time, with **no**
+/// subprocess spawn / binary load / SMT-LIB parse tax. This is the apples-to-apples
+/// solver-speed row (vs the per-query subprocess measurement, which adds ~106 ms).
+#[cfg(feature = "z3")]
+#[allow(clippy::too_many_lines)]
+fn run_z3_inproc() {
+    use z3::ast::{Bool, Real};
+    use z3::{Config, SatResult, Solver, with_z3_config};
+
+    println!();
+    println!("Z3 in-process (libz3, one reused context — no subprocess/parse tax):");
+    println!("{:<22} {:<11} {:>10} {:>10}", "goal", "kind", "z3", "ms");
+    println!("{}", "-".repeat(56));
+
+    with_z3_config(&Config::new(), || {
+        let two = Real::from_rational(2, 1);
+        let zero = Real::from_rational(0, 1);
+
+        // Each row: (name, kind, hyps ∧ ¬goal). UNSAT ⟺ goal proved.
+        let mut rows: Vec<(&str, &str, Vec<Bool>)> = Vec::new();
+
+        // 1 midpoint_equidistant: 2m=a+b ⊢ m-a = b-m.
+        {
+            let (a, b, m) = (
+                Real::new_const("a"),
+                Real::new_const("b"),
+                Real::new_const("m"),
+            );
+            let hyp = (&m + &m).eq(&(&a + &b));
+            let neg = (&m - &a).eq(&(&b - &m)).not();
+            rows.push(("midpoint_equidistant", "linear", vec![hyp, neg]));
+        }
+        // 2 midpoint_between: 2m=a+b, a≤b ⊢ a≤m ∧ m≤b.
+        {
+            let (a, b, m) = (
+                Real::new_const("a"),
+                Real::new_const("b"),
+                Real::new_const("m"),
+            );
+            let hyp = (&m + &m).eq(&(&a + &b));
+            let a_le_b = a.le(&b);
+            let conj = a.le(&m) & m.le(&b);
+            rows.push(("midpoint_between", "linear", vec![hyp, a_le_b, conj.not()]));
+        }
+        // 3 segment_addition: ⊢ (c-a) = (b-a)+(c-b).
+        {
+            let (a, b, c) = (
+                Real::new_const("a"),
+                Real::new_const("b"),
+                Real::new_const("c"),
+            );
+            let ac = &c - &a;
+            let sum = &(&b - &a) + &(&c - &b);
+            rows.push(("segment_addition", "linear", vec![ac.eq(&sum).not()]));
+        }
+        // 4 am_gm_two: ⊢ x²+y² ≥ 2xy.
+        {
+            let (x, y) = (Real::new_const("x"), Real::new_const("y"));
+            let lhs = &two * &(&x * &y);
+            let rhs = &(&x * &x) + &(&y * &y);
+            rows.push(("am_gm_two", "polynomial", vec![lhs.le(&rhs).not()]));
+        }
+        // 5 square_nonneg: ⊢ x² ≥ 0.
+        {
+            let x = Real::new_const("x");
+            let xx = &x * &x;
+            rows.push(("square_nonneg", "polynomial", vec![zero.le(&xx).not()]));
+        }
+        // 6 binomial_square: ⊢ (x+y)² = x²+2xy+y².
+        {
+            let (x, y) = (Real::new_const("x"), Real::new_const("y"));
+            let xpy = &x + &y;
+            let lhs = &xpy * &xpy;
+            let rhs = &(&(&x * &x) + &(&two * &(&x * &y))) + &(&y * &y);
+            rows.push(("binomial_square", "polynomial", vec![lhs.eq(&rhs).not()]));
+        }
+
+        let n = rows.len();
+        let (mut proved, mut total) = (0, 0.0);
+        for (name, kind, q) in &rows {
+            let solver = Solver::new();
+            for c in q {
+                solver.assert(c);
+            }
+            let t = std::time::Instant::now();
+            let r = solver.check();
+            let ms = t.elapsed().as_secs_f64() * 1000.0;
+            let label = match r {
+                SatResult::Unsat => "PROVED",
+                SatResult::Sat => "no",
+                SatResult::Unknown => "unknown",
+            };
+            if r == SatResult::Unsat {
+                proved += 1;
+                total += ms;
+            }
+            println!("{name:<22} {kind:<11} {label:>10} {ms:>9.3}");
+        }
+        println!("{}", "-".repeat(56));
+        println!("Z3 in-process: proved {proved}/{n}  (total check() {total:.3} ms — pure solve)");
+    });
 }
