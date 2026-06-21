@@ -1784,6 +1784,43 @@ fn strict_cad_high_degree_many_var_bounded_no_hang() {
     }
 }
 
+/// Third fuzz-found WRONG-UNSAT — from the new INTEGER differential fuzz (seed
+/// 1352), but the bug is in the SHARED real `decompose_multivariate`/`lift_candidate`
+/// path (so it affected real NRA too). `x*y + x = 0 ∧ x*y = 0` is Sat (x=0, any y),
+/// yet was reported Unsat. Cause: the resultant root x=0 makes BOTH equalities
+/// collapse to `0 = 0` (the solution variety is the positive-dimensional line x=0),
+/// but `lift_candidate` treated the vacuous constant residuals as "no witness" and
+/// returned None, so the caller concluded an exhaustive Unsat. Fix: when both
+/// equalities collapse to ZERO constants at keep=α, decide the full single-variable
+/// elim-system at keep=α — here both atoms drop as `0=0`, leaving elim free ⇒ Sat.
+#[test]
+fn coupled_equalities_collapse_to_line_is_sat_not_unsat() {
+    let mut a = TermArena::new();
+    let xs = a.declare("x", Sort::Int).unwrap();
+    let ys = a.declare("y", Sort::Int).unwrap();
+    let x = a.var(xs);
+    let y = a.var(ys);
+    let xy = a.int_mul(x, y).unwrap();
+    let xy_plus_x = a.int_add(xy, x).unwrap();
+    let zero = a.int_const(0);
+    let atom0 = a.eq(xy_plus_x, zero).unwrap(); // x*y + x = 0
+    let xy2 = a.int_mul(x, y).unwrap();
+    let zero2 = a.int_const(0);
+    let atom1 = a.eq(xy2, zero2).unwrap(); // x*y = 0
+
+    let r = solve(&mut a, &[atom0, atom1], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x*y+x=0 ∧ x*y=0 is SAT (x=0, any y); got {r:?}");
+    };
+    let asg = model.to_assignment();
+    for (t, n) in [(atom0, "x*y+x=0"), (atom1, "x*y=0")] {
+        assert!(
+            matches!(eval(&a, t, &asg), Ok(Value::Bool(true))),
+            "{n} must replay true at the witness"
+        );
+    }
+}
+
 /// Second fuzz-found WRONG-UNSAT (seed 1924): a single-variable strict system
 /// `2 + 3z² > 0 ∧ 3 − 3z² + z < 0` (clearly Sat — atom0 is always true, atom1
 /// holds for z ≤ −1) was reported `Unsat`. Root cause: `cell_samples` derived its

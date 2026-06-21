@@ -3917,11 +3917,29 @@ fn lift_candidate(
     let Some(q_poly) = q_alpha.to_single_var_integer_poly(elim) else {
         return LiftOutcome::Overflow;
     };
-    // A degenerate (constant) residual after substitution means the resultant root
-    // did not actually pin a y via this polynomial; require genuine univariate
-    // polys so the common-root search is well-defined.
+    // Both equalities collapsed to CONSTANTS in `elim` after fixing `keep = α`.
+    // A NONZERO constant means that equality is false at α ⇒ no solution there.
+    // But if BOTH are ZERO, the equalities are vacuously satisfied and the variety
+    // is POSITIVE-DIMENSIONAL through α (e.g. `x*y + x = 0 ∧ x*y = 0` both become
+    // `0 = 0` at `x = 0`, leaving `elim` free) — so a witness with ANY `elim` may
+    // exist. Returning `None` here would let the caller wrongly conclude `Unsat`
+    // (a real wrong-unsat: the system is Sat at `(0, anything)`). Decide the FULL
+    // single-variable `elim`-system at `keep = α` (every atom of the component,
+    // with its original comparator) completely instead.
     if p_poly.len() <= 1 && q_poly.len() <= 1 {
-        return LiftOutcome::None;
+        return match (p_alpha.as_constant(), q_alpha.as_constant()) {
+            (Some(a), Some(b)) if a.is_zero() && b.is_zero() => {
+                match decide_nonstrict_cell(comp, keep, elim, alpha) {
+                    Some(CellOutcome::Sat(beta)) => {
+                        LiftOutcome::Found(vec![(keep, Value::Real(alpha)), (elim, beta)])
+                    }
+                    Some(CellOutcome::Unsat) => LiftOutcome::None, // no solution at α
+                    None => LiftOutcome::Overflow,                 // indeterminate ⇒ decline
+                }
+            }
+            // A nonzero-constant equality is false at α ⇒ no solution there.
+            _ => LiftOutcome::None,
+        };
     }
 
     // Candidate β values: the real roots of p(α,·) (or q(α,·) if p degenerated).
