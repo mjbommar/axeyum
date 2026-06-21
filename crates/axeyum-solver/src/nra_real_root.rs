@@ -470,9 +470,29 @@ fn isolate_one(poly: &[i128], lo: Rational, hi: Rational) -> Option<Root> {
     // The sign of `poly` at the lower endpoint stays invariant under the updates
     // below (when we move `lo` to `mid`, `mid` had the same sign as `lo`).
     let slo = Sign::of_rational(eval_rat(poly, lo)?);
+    // Bisect to tighten the bracket. Crucially, every iteration preserves the
+    // invariant that `poly` takes strictly opposite, nonzero signs at `lo`/`hi`
+    // (we only move an endpoint onto a midpoint whose sign we *successfully*
+    // computed). So if a midpoint evaluation overflows `i128` (denominators grow
+    // like `2^depth`, and Horner raises that to the polynomial degree), we cannot
+    // decide which half to keep — but the *current* bracket is still a valid
+    // single-root isolating interval. We therefore **stop refining** and fall
+    // through to the algebraic-number construction below, rather than declining
+    // the whole root. This is sound: a coarser-but-valid bracket still isolates
+    // exactly one root, and the replay check (`sign_at(poly, α) = 0`) does not
+    // depend on bracket width. (Before this guard, the `?` on an overflowed
+    // midpoint eval lost every degree-≥3 root to a spurious decline.)
     for _ in 0..ISOLATE_REFINE_DEPTH {
-        let mid = lo.checked_add(hi)?.checked_div(Rational::integer(2))?;
-        let smid = Sign::of_rational(eval_rat(poly, mid)?);
+        let Some(mid) = lo
+            .checked_add(hi)
+            .and_then(|s| s.checked_div(Rational::integer(2)))
+        else {
+            break;
+        };
+        let Some(mid_val) = eval_rat(poly, mid) else {
+            break;
+        };
+        let smid = Sign::of_rational(mid_val);
         if smid == Sign::Zero {
             return Some(Root::Rational(mid));
         }
@@ -504,15 +524,26 @@ const RATIONAL_ROOT_BOUND: i128 = 1 << 24;
 /// enumerate cheaply); in every `None` case the caller soundly falls back to an
 /// algebraic representation, so conflating "not found" with "declined" is safe.
 fn rational_root_in(poly: &[i128], lo: Rational, hi: Rational) -> Option<Rational> {
-    let const_term = poly[0];
     let leading = *poly.last()?;
-    // Constant term zero ⇒ 0 is a root; report it if it lies in the bracket.
-    if const_term == 0 {
+    // A zero constant term means `x = 0` is a root and the polynomial is divisible
+    // by `x`. Report `0` directly if it lies in the bracket, then **deflate** the
+    // factor(s) of `x`: the rational-root theorem keys off the *nonzero* lowest
+    // coefficient, so applying it to the original `a₀ = 0` would enumerate nothing
+    // and lose every rational root of the form `±p/q` (e.g. ±1 of `x³ − x`). The
+    // deflated poly `poly[m..]` (after stripping `m` leading zeros = factors of x)
+    // has a nonzero constant term and the *same* nonzero rational roots.
+    let mut m = 0usize;
+    while m < poly.len() && poly[m] == 0 {
+        m += 1;
+    }
+    if m > 0 {
         let zero = Rational::zero();
         if zero > lo && zero < hi {
             return Some(zero);
         }
     }
+    let deflated = &poly[m..];
+    let const_term = *deflated.first()?; // nonzero by construction (or empty ⇒ p ≡ 0)
     let const_abs = const_term.checked_abs()?;
     let lead_abs = leading.checked_abs()?;
     if const_abs == 0 || const_abs > RATIONAL_ROOT_BOUND || lead_abs > RATIONAL_ROOT_BOUND {
@@ -766,6 +797,73 @@ mod tests {
         match decide(&ipoly(&[0, 0, 1]), Cmp::Le).unwrap() {
             Verdict::SatRational(q) => assert!(q.is_zero()),
             _ => panic!("expected rational sat at 0"),
+        }
+    }
+
+    // --- degree ≥ 3 regression: isolation must not decline on bisection overflow.
+
+    #[test]
+    fn isolate_cubic_one_real_root() {
+        // x³ − 2: a single irrational real root (∛2). Before the fix, the
+        // bisection `?`-declined on midpoint overflow and this returned `None`.
+        let roots = isolate_roots(&ipoly(&[-2, 0, 0, 1])).unwrap();
+        assert_eq!(roots.len(), 1, "x³ − 2 has exactly one real root");
+        match &roots[0] {
+            Root::Algebraic(a) => {
+                assert_eq!(a.sign_at(&[-2, 0, 0, 1]), Some(Sign::Zero), "∛2 is a root");
+            }
+            Root::Rational(q) => panic!("∛2 is irrational, got rational {q}"),
+        }
+    }
+
+    #[test]
+    fn isolate_quartic_four_real_roots() {
+        // x⁴ − 5x² + 6: roots ±√2, ±√3 (all irrational).
+        let p = ipoly(&[6, 0, -5, 0, 1]);
+        let roots = isolate_roots(&p).unwrap();
+        assert_eq!(roots.len(), 4, "biquadratic has four real roots");
+        for r in &roots {
+            match r {
+                Root::Algebraic(a) => assert_eq!(a.sign_at(&p), Some(Sign::Zero)),
+                Root::Rational(q) => panic!("expected irrational roots, got {q}"),
+            }
+        }
+    }
+
+    /// Property: every isolated *algebraic* root α of a higher-degree polynomial
+    /// `p` satisfies `sign_at(p, α) = Zero` exactly (the soundness contract that
+    /// gates every algebraic `Sat`). Covers several degree-≥3 shapes.
+    #[test]
+    fn property_isolated_algebraic_roots_are_exact_zeros() {
+        let polys: &[&[i128]] = &[
+            &[-2, 0, 0, 1],       // x³ − 2
+            &[-3, 0, 0, 1],       // x³ − 3
+            &[6, 0, -5, 0, 1],    // x⁴ − 5x² + 6
+            &[-5, 0, 1, 0, 1],    // x⁴ + x² − 5
+            &[-7, 0, 0, 0, 1],    // x⁴ − 7
+            &[-2, 0, 0, 0, 0, 1], // x⁵ − 2
+        ];
+        for p in polys {
+            let roots = isolate_roots(p).unwrap_or_default();
+            assert!(!roots.is_empty(), "p {p:?} should have a real root");
+            for r in &roots {
+                if let Root::Algebraic(a) = r {
+                    assert_eq!(
+                        a.sign_at(p),
+                        Some(Sign::Zero),
+                        "isolated algebraic root of {p:?} must be an exact zero"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn cube_no_real_root_is_impossible_but_even_powers_are() {
+        // x⁴ + 1: x⁴ ≥ 0 ⇒ no real root ⇒ Unsat for `= 0`.
+        match decide_eq(&ipoly(&[1, 0, 0, 0, 1])).unwrap() {
+            Verdict::Unsat => {}
+            _ => panic!("x⁴ + 1 = 0 has no real root"),
         }
     }
 }

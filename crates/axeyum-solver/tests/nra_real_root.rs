@@ -220,6 +220,174 @@ fn second_assertion_declines_not_unsat() {
     );
 }
 
+// --- higher-degree equations: degree ≥ 3 must decide (regression) -------------
+//
+// These guard the slice-1 coverage gap: `isolate_one`'s bisection previously
+// `?`-declined the *whole* root the moment a midpoint Horner evaluation
+// overflowed `i128` (denominators grow like `2^depth`, raised to the polynomial
+// degree). Every single-variable real equation of degree ≥ 3 therefore degraded
+// to `Unknown`. The fix stops refining on overflow and keeps the last valid
+// isolating bracket. Each `Sat` below is replay-checked: an algebraic witness via
+// `sign_at(p, α) = 0`, a rational witness via the ground evaluator.
+
+/// `x*x*x` (cubed) over a fresh real `x`.
+fn cube(arena: &mut TermArena, xv: TermId) -> TermId {
+    let xx = arena.real_mul(xv, xv).unwrap();
+    arena.real_mul(xx, xv).unwrap()
+}
+
+#[test]
+fn cube_eq_2_is_sat_with_cbrt2_witness() {
+    // x*x*x = 2 ⇒ x = ∛2, irrational ⇒ Sat with an algebraic witness.
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let xxx = cube(&mut arena, xv);
+    let two = arena.real_const(Rational::integer(2));
+    let a = arena.eq(xxx, two).unwrap();
+    let r = solve(&mut arena, &[a], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x*x*x = 2 must be Sat, got {r:?}");
+    };
+    let x = model.get(xs).unwrap();
+    let alpha = x
+        .as_real_algebraic()
+        .expect("∛2 is irrational ⇒ algebraic witness");
+    // Replay-check: α is an exact root of x³ − 2 (LSB-first [-2, 0, 0, 1]).
+    assert_eq!(
+        alpha.sign_at(&[-2, 0, 0, 1]),
+        Some(Sign::Zero),
+        "the algebraic witness must satisfy x³ − 2 = 0 exactly"
+    );
+}
+
+#[test]
+fn quartic_biquadratic_eq_0_is_sat() {
+    // x⁴ − 5x² + 6 = 0 ⇒ roots ±√2, ±√3. LSB-first [6, 0, -5, 0, 1].
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let x4 = arena.real_mul(xx, xx).unwrap();
+    let five = arena.real_const(Rational::integer(5));
+    let five_xx = arena.real_mul(five, xx).unwrap();
+    let lhs = arena.real_sub(x4, five_xx).unwrap();
+    let six = arena.real_const(Rational::integer(6));
+    let lhs = arena.real_add(lhs, six).unwrap();
+    let zero = arena.real_const(Rational::zero());
+    let a = arena.eq(lhs, zero).unwrap();
+    let r = solve(&mut arena, &[a], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x⁴ − 5x² + 6 = 0 must be Sat, got {r:?}");
+    };
+    // Witness is one of ±√2, ±√3, all irrational ⇒ algebraic, replay-checked.
+    let x = model.get(xs).unwrap();
+    let alpha = x
+        .as_real_algebraic()
+        .expect("root is irrational ⇒ algebraic witness");
+    assert_eq!(
+        alpha.sign_at(&[6, 0, -5, 0, 1]),
+        Some(Sign::Zero),
+        "the witness must satisfy x⁴ − 5x² + 6 = 0 exactly"
+    );
+}
+
+#[test]
+fn cube_minus_x_eq_0_is_sat_rational() {
+    // x*x*x − x = 0 ⇒ x(x−1)(x+1) = 0, roots {0, ±1}, all rational.
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let xxx = cube(&mut arena, xv);
+    let lhs = arena.real_sub(xxx, xv).unwrap();
+    let zero = arena.real_const(Rational::zero());
+    let a = arena.eq(lhs, zero).unwrap();
+    let r = solve(&mut arena, &[a], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x³ − x = 0 must be Sat, got {r:?}");
+    };
+    let q = model
+        .get(xs)
+        .unwrap()
+        .as_real()
+        .expect("a root of x³ − x is rational (0 or ±1)");
+    assert!(
+        q == Rational::zero() || q == Rational::integer(1) || q == Rational::integer(-1),
+        "x = {q}"
+    );
+    // A rational witness replays through the ground evaluator on the original.
+    let asg = model.to_assignment();
+    assert!(matches!(eval(&arena, a, &asg), Ok(Value::Bool(true))));
+}
+
+#[test]
+fn cube_eq_neg8_is_sat_rational_neg2() {
+    // x*x*x = −8 ⇒ x = −2 (the unique real root, rational).
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let xxx = cube(&mut arena, xv);
+    let k = arena.real_const(Rational::integer(-8));
+    let a = arena.eq(xxx, k).unwrap();
+    let r = solve(&mut arena, &[a], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x³ = −8 must be Sat, got {r:?}");
+    };
+    assert_eq!(model.get(xs), Some(Value::Real(Rational::integer(-2))));
+    let asg = model.to_assignment();
+    assert!(matches!(eval(&arena, a, &asg), Ok(Value::Bool(true))));
+}
+
+// --- higher-degree equations with NO real root: exact Unsat -------------------
+
+#[test]
+fn quartic_x2_plus_1_eq_0_is_unsat() {
+    // x² + 1 = 0 has no real root ⇒ exact Unsat (sanity for the degree-2 path).
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let lhs = arena.real_add(xx, one).unwrap();
+    let zero = arena.real_const(Rational::zero());
+    let a = arena.eq(lhs, zero).unwrap();
+    let r = solve(&mut arena, &[a], &SolverConfig::default()).expect("no error");
+    assert!(matches!(r, CheckResult::Unsat), "x² + 1 = 0; got {r:?}");
+}
+
+#[test]
+fn quartic_x4_plus_1_eq_0_is_unsat() {
+    // x⁴ + 1 = 0 has no real root (x⁴ ≥ 0 ⇒ x⁴ + 1 ≥ 1) ⇒ exact Unsat.
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let x4 = arena.real_mul(xx, xx).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let lhs = arena.real_add(x4, one).unwrap();
+    let zero = arena.real_const(Rational::zero());
+    let a = arena.eq(lhs, zero).unwrap();
+    let r = solve(&mut arena, &[a], &SolverConfig::default()).expect("no error");
+    assert!(matches!(r, CheckResult::Unsat), "x⁴ + 1 = 0; got {r:?}");
+}
+
+// --- higher-degree inequality: rational witness via sign-interval sampling ----
+
+#[test]
+fn cube_gt_5_is_sat_rational() {
+    // x*x*x > 5: e.g. x = 2 (2³ = 8 > 5). The inequality arm samples a rational in
+    // a +-sign interval; the witness must stay rational and replay.
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let xxx = cube(&mut arena, xv);
+    let five = arena.real_const(Rational::integer(5));
+    let a = arena.real_gt(xxx, five).unwrap();
+    let r = solve(&mut arena, &[a], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x³ > 5 must be Sat, got {r:?}");
+    };
+    assert!(
+        model.get(xs).unwrap().as_real().is_some(),
+        "inequality witness stays rational"
+    );
+    let asg = model.to_assignment();
+    assert!(matches!(eval(&arena, a, &asg), Ok(Value::Bool(true))));
+}
+
 /// An integer (non-Real) square is the NIA case, not ours: the real decider must
 /// not fire. `int x*x = 2` is Unsat (handled by `nia_square`), and the answer must
 /// still be correct — confirming we did not break the integer path.
