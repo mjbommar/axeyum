@@ -1,0 +1,103 @@
+# NRA durability plan: algebraic field arithmetic → CAD/nlsat, with evidence hooks
+
+Status: research plan (sequences the durable NRA keystone; gates the implementation ADRs)
+Date: 2026-06-21
+Relates to: ADR-0024 (linear-abstraction NRA), ADR-0038 (real-algebraic numbers,
+single-variable), ADR-0039/0040 (degree-2 SOS + its Lean reconstruction), and the
+Sturm root-isolation primitive (`nra_real_root.rs`, commit 235e967).
+
+## Why this exists
+
+The NRA work so far is a set of *sound, exact, composable* pieces — but they stop
+short of a general engine, and the reviewer's correct guidance is to build the
+**durable, composable** ladder (field arithmetic → CAD/nlsat) rather than more
+isolated decided shapes. This note sequences that ladder and fixes the
+architecture decisions it needs, so each implementation slice lands against a plan
+instead of ad hoc.
+
+## Current state (the composable pieces in hand)
+
+- **Single-variable real-algebraic values** (ADR-0038): `Value::RealAlgebraic{poly,
+  lo,hi}` with an exact `sign_at` (zero only by exact polynomial divisibility;
+  no float). Decides single-variable polynomial constraints with irrational
+  witnesses.
+- **Robust root isolation** (Sturm, 235e967): exact distinct-root counting
+  (`V(a)−V(b)`), squarefree-part reduction, the completeness invariant
+  (complete-or-`None`). This is the prerequisite for everything below: combining
+  algebraic numbers produces a polynomial whose *correct* root must be identified,
+  which needs no-missed-roots isolation.
+- **Coupled 2-variable via Sylvester resultant** (`nra_real_root.rs`) and **degree-2
+  SOS/PSD** (ADR-0039) with a kernel-checked Lean proof (ADR-0040). These are the
+  two-variable / quadratic-form decided slices.
+
+## The durable ladder
+
+### Step 1 — Algebraic field arithmetic (the multivariate unlock)
+
+`α + β`, `α · β`, `−α`, `α⁻¹` of two real-algebraic numbers. `α+β` is a root of
+`Res_y(p_α(y), p_β(x−y))`; `α·β` of `Res_y(p_α(y), y^{deg} p_β(x/y))`. The resultant
+may be reducible / carry extra roots, so the **correct** root is identified by
+isolating within `[α.lo+β.lo, α.hi+β.hi]` (resp. the product interval) using the
+Sturm isolation — exactly why Sturm landed first. Output: a new `RealAlgebraic`
+with the resultant (or its squarefree part) as defining polynomial and the
+isolating interval narrowed until it contains exactly one root.
+
+**Architecture decision (to ADR):** field arithmetic belongs in
+`crates/axeyum-ir/src/real_algebraic.rs` (it is an operation on the IR *value*
+type, and the evaluator must compute it — today `eval` returns a graceful `Err`
+for Real field ops on an algebraic operand). The Sturm isolation currently lives in
+`axeyum-solver/nra_real_root.rs`; to avoid duplication, **move the exact-rational
+polynomial + Sturm primitives down to `axeyum-ir`** (a `poly`/`sturm` module the IR
+owns) and have the solver re-use them. This keeps one isolation implementation,
+exact, overflow-graceful (decline on `i128` overflow — the bignum extension below
+removes that ceiling later). Each operation stays exact or declines; `eval`
+upgrades from `Err` to a computed `RealAlgebraic`, so models mixing algebraic values
+replay-check.
+
+### Step 2 — Bignum/Sturm robustness (remove the i128 ceiling)
+
+The resultants and Sturm chains overflow `i128` for higher degree / large
+coefficients (today: decline to `unknown`). Introduce an arbitrary-precision integer
+(pure-Rust, no C/C++ — e.g. `dashu`/`num-bigint`, an ADR-gated leaf dependency that
+must NOT enter the default *no-dep* surface for non-NRA fragments) behind a
+`BigRational` used only on the algebraic path, so the decline becomes a decision.
+Keep the `i128` fast path; fall to bignum on overflow.
+
+### Step 3 — Cylindrical algebraic decomposition (CAD) / nlsat
+
+With field arithmetic + robust isolation, build the real engine:
+- **Projection** (McCallum/Hong) of the polynomial set onto fewer variables;
+- **Lifting**: build sample points per cell (rational where possible, else
+  algebraic via Step 1), evaluate the sign condition of every polynomial at each
+  cell's sample;
+- a query is `unsat` iff no cell satisfies all atoms. **nlsat** is the
+  search-driven variant (model-guided, conflict-driven cell exclusion) — preferred
+  for performance; CAD is the complete fallback. Bound the cell count → graceful
+  `unknown`.
+
+### Step 4 — Evidence hooks (Lean reconstruction for NRA)
+
+This is where the proof track meets CAD. A CAD/nlsat `unsat` is "no cell satisfies
+the atoms"; per cell the refutation is a **sign-condition contradiction** — a
+product/sum of the atoms' polynomials that is sign-definite on the cell, i.e. a
+*local* Positivstellensatz / SOS certificate. The degree-2 SOS→Lean pipeline
+(ADR-0040, the ring normalizer + `sq_nonneg`) is the model; the general hook emits,
+per cell, the polynomial-identity + nonnegativity certificate the kernel checks.
+**Design the cell certificate format now** so the engine produces it as it decides,
+rather than bolting proofs on later (the reviewer's "evidence hooks" point). Full
+higher-degree Positivstellensatz reconstruction is a long arc; the near-term hook
+is: CAD emits the per-cell sign-defining polynomial combination, and the existing
+SOS reconstruction covers the degree-2 cells.
+
+## Sequencing + deferral
+
+1. (next) Algebraic field arithmetic in `axeyum-ir` + move Sturm/poly primitives
+   down — ADR for the value-layer placement and the eval upgrade.
+2. Bignum on the algebraic path — ADR for the gated leaf dependency.
+3. nlsat (search-driven) before full CAD; CAD as the complete fallback.
+4. Cell-certificate format + the degree-2 reconstruction hook; general
+   Positivstellensatz reconstruction is the long arc.
+
+Each step is sound-by-construction (exact arithmetic, decline-not-guess) and
+composable (each reuses the prior). This replaces "more clever decided cases" with
+the engine the cases were approximating.
