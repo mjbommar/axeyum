@@ -42,7 +42,9 @@ fn uflia_squeeze_forces_congruence_unsat() {
 fn nested_arith_uf_application_does_not_crash() {
     let mut a = TermArena::new();
     let f = a.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
-    let g = a.declare_fun("g", &[Sort::Int, Sort::Int], Sort::Int).unwrap();
+    let g = a
+        .declare_fun("g", &[Sort::Int, Sort::Int], Sort::Int)
+        .unwrap();
     let m3 = a.int_const(-3);
     let fm3 = a.apply(f, &[m3]).unwrap();
     let zero = a.int_const(0);
