@@ -553,30 +553,63 @@ fn assert_cross_product_bound_fires(arena: &mut TermArena, assertions: &[axeyum_
     }
 }
 
-/// Controlled small repro for the multi-variable OOM (the standing "graceful
-/// `unknown`, never OOM/crash" rule). `a²+b²+c² < ab+bc+ca` over **unbounded** reals
-/// has three cross-products (`ab`, `bc`, `ca`) whose coupled disjunctive lemma set
-/// used to drive the DPLL(T)/LRA relaxation to OOM. The deterministic admission
-/// bound (`MAX_CROSS_PRODUCTS`) must now refuse it with a `ResourceLimit` `Unknown`
-/// — promptly, never exhausting memory. (Before the bound, this OOM-killed the host;
-/// it is safe only because the guard fires before any lemma is built.)
+/// 3-variable AM–GM: `a²+b²+c² < ab+bc+ca` over **unbounded** reals is globally
+/// unsatisfiable (`a²+b²+c²−ab−bc−ca = ½[(a−b)²+(b−c)²+(c−a)²] ≥ 0`). The strict
+/// `< 0` refutation is now decided **Unsat** by the degree-2 SOS/PSD certificate
+/// (ADR-0039), which runs in `decide_real_poly_constraint` *before* the abstraction
+/// search. This is a strict improvement: the query historically OOM-killed the host
+/// and was then merely *declined* by the `MAX_CROSS_PRODUCTS` admission bound; the
+/// SOS certificate now proves it exactly and instantly. Sound Unsat, never a wrong
+/// sat. (The admission bound's OOM-guard regression coverage is preserved by
+/// `indefinite_three_cross_products_still_degrade_to_unknown_not_oom` below, whose
+/// indefinite form the SOS certificate correctly declines.)
 #[test]
-fn unbounded_three_variable_cross_products_degrade_to_unknown_not_oom() {
+fn unbounded_three_variable_am_gm_is_proved_unsat_by_sos() {
     let (mut a, assertions) = three_var_cross_query(false);
-    assert_cross_product_bound_fires(&mut a, &assertions);
+    let r = check_with_nra(&mut a, &assertions, &SolverConfig::default()).unwrap();
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "3-var AM–GM a²+b²+c²<ab+bc+ca is globally unsat (SOS); got {r:?}"
+    );
 }
 
-/// The same three-cross-product query with **every variable bounded** to `[-1,1]`.
-/// Measured reality: bounds do *not* tame this — the `McCormick` path adds yet more
-/// lemmas and the relaxation still blows up *inside a single solve call* (the
-/// per-round / per-node wall-clock checks never get a turn). Before the bound, this
-/// exact case hit a memory-allocation abort under the 64 GiB cap; the cross-product
-/// admission bound must catch it **regardless of bounds**, deterministically. This
-/// is the test that pins the guard's bound-independence.
+/// The same AM–GM query with **every variable bounded** to `[-1,1]`. The strict
+/// quadratic atom is globally PSD-refuted regardless of the (linear) bounds, so the
+/// SOS certificate still proves **Unsat**. Pins that the SOS decision is
+/// bound-independent.
 #[test]
-fn bounded_three_variable_cross_products_also_degrade_not_oom() {
+fn bounded_three_variable_am_gm_is_proved_unsat_by_sos() {
     let (mut a, assertions) = three_var_cross_query(true);
-    assert_cross_product_bound_fires(&mut a, &assertions);
+    let r = check_with_nra(&mut a, &assertions, &SolverConfig::default()).unwrap();
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "bounded 3-var AM–GM is globally unsat (SOS, bound-independent); got {r:?}"
+    );
+}
+
+/// OOM-guard regression coverage that the SOS certificate does **not** subsume: an
+/// *indefinite* three-cross-product strict query `ab+bc+ca < −1`. The form `ab+bc+ca`
+/// is indefinite (eigenvalues `1, −½, −½`), so it is neither PSD nor NSD and the
+/// degree-2 SOS certificate correctly **declines** — the query then reaches the
+/// abstraction path, where the deterministic `MAX_CROSS_PRODUCTS` admission bound
+/// (three distinct cross-products `ab`, `bc`, `ca`) must refuse it with a
+/// `ResourceLimit` `Unknown`, promptly, never exhausting memory. This keeps the
+/// "graceful `unknown`, never OOM/crash" guard under regression test now that SOS
+/// intercepts the globally-definite forms.
+#[test]
+fn indefinite_three_cross_products_still_degrade_to_unknown_not_oom() {
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let y = real(&mut a, "y");
+    let z = real(&mut a, "z");
+    let xy = a.real_mul(x, y).unwrap();
+    let yz = a.real_mul(y, z).unwrap();
+    let zx = a.real_mul(z, x).unwrap();
+    let s1 = a.real_add(xy, yz).unwrap();
+    let form = a.real_add(s1, zx).unwrap(); // ab + bc + ca (indefinite)
+    let neg_one = a.real_const(Rational::integer(-1));
+    let lt = a.real_lt(form, neg_one).unwrap(); // ab+bc+ca < −1
+    assert_cross_product_bound_fires(&mut a, &[lt]);
 }
 
 /// Selectivity: the guard counts **cross-products**, not squares. A square-only

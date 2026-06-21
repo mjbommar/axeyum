@@ -1418,6 +1418,36 @@ struct MultiAtom {
 /// components) to a decision whose full model replays against every original
 /// assertion; `None` declines on any coupling / nonlinear-multivariate /
 /// non-polynomial / overflow shape.
+/// Decide and strip the CONSTANT atoms of a multivariate conjunction. An atom
+/// whose polynomial has no variables (e.g. a polynomial identity like
+/// `(x+y)² − (x²+2xy+y²)` collapses to `0`) is a constant comparison `c ⋈ 0`: a
+/// FALSE one (`0 ≠ 0`, `0 < 0`, …) makes the whole conjunction UNSAT — this is
+/// what *proves* a polynomial identity (its negation reduces to `0 ≠ 0`); a TRUE
+/// one (`0 = 0`, `0 ≤ 0`, …) is dropped as satisfied. Exact (the constant is
+/// exact) and bypasses the abstraction search entirely.
+///
+/// Returns `Ok(nonconstant_atoms)` for the surviving variable-bearing atoms, or
+/// `Err(verdict)` to short-circuit: `Err(Some(Unsat))` for a false constant, and
+/// `Err(None)` (decline) when every atom was a satisfied constant (leave the
+/// variable-free sat to the existing arithmetic path).
+fn fold_constant_atoms(atoms: Vec<MultiAtom>) -> Result<Vec<MultiAtom>, Option<CheckResult>> {
+    let mut nonconstant: Vec<MultiAtom> = Vec::with_capacity(atoms.len());
+    for atom in atoms {
+        if let Some(c) = atom.poly.as_constant() {
+            if !sign_satisfies(atom.cmp, Sign::of_rational(c)) {
+                return Err(Some(CheckResult::Unsat));
+            }
+            // true constant ⇒ satisfied, drop it.
+        } else {
+            nonconstant.push(atom);
+        }
+    }
+    if nonconstant.is_empty() {
+        return Err(None);
+    }
+    Ok(nonconstant)
+}
+
 fn decompose_multivariate(arena: &TermArena, assertions: &[TermId]) -> Option<CheckResult> {
     // 1. Re-collect every assertion as a multivariate comparison.
     let mut atoms: Vec<MultiAtom> = Vec::new();
@@ -1427,31 +1457,18 @@ fn decompose_multivariate(arena: &TermArena, assertions: &[TermId]) -> Option<Ch
     if atoms.is_empty() {
         return None;
     }
-    // Decide CONSTANT atoms directly. An atom whose polynomial has no variables
-    // (e.g. a polynomial identity like `(x+y)² − (x²+2xy+y²)` collapses to `0`) is
-    // a constant comparison `c ⋈ 0`: a FALSE one (`0 ≠ 0`, `0 < 0`, …) makes the
-    // whole conjunction UNSAT — this is what *proves* a polynomial identity (its
-    // negation reduces to `0 ≠ 0`); a TRUE one (`0 = 0`, `0 ≤ 0`, …) is dropped as
-    // satisfied. This is exact (the constant is exact) and bypasses the abstraction
-    // search entirely.
-    let mut nonconstant: Vec<MultiAtom> = Vec::with_capacity(atoms.len());
-    for atom in atoms {
-        if let Some(c) = atom.poly.as_constant() {
-            if !sign_satisfies(atom.cmp, Sign::of_rational(c)) {
-                return Some(CheckResult::Unsat);
-            }
-            // true constant ⇒ satisfied, drop it.
-        } else {
-            nonconstant.push(atom);
-        }
+    // Degree-2 SOS/PSD refutation (sound, possibly incomplete): a single STRICT
+    // inequality atom whose quadratic form is globally one-signed refutes the
+    // conjunction everywhere ⇒ `Unsat`. See `sos_refute_multivariate`.
+    if let Some(verdict) = sos_refute_multivariate(&atoms) {
+        return Some(verdict);
     }
-    atoms = nonconstant;
-    if atoms.is_empty() {
-        // Every atom was a satisfied constant ⇒ trivially satisfiable; leave the
-        // (variable-free) sat to the existing arithmetic path rather than fabricate
-        // a model here.
-        return None;
-    }
+    // Decide CONSTANT atoms directly (see `fold_constant_atoms`): a false constant
+    // comparison ⇒ Unsat; a true one is dropped; an all-constant query declines.
+    atoms = match fold_constant_atoms(atoms) {
+        Ok(rest) => rest,
+        Err(verdict) => return verdict,
+    };
     // Require at least two distinct variables overall — otherwise the single-var
     // path already owns this (and we must not double-handle / diverge).
     let all_vars: BTreeSet<SymbolId> = atoms.iter().flat_map(|a| a.poly.vars()).collect();
@@ -2513,6 +2530,205 @@ fn collect_multi(arena: &TermArena, t: TermId) -> Option<MultiPoly> {
     }
 }
 
+// ============================================================================
+// Degree-2 sum-of-squares / positive-semidefinite (PSD) refutation
+// (sound, possibly incomplete).
+// ============================================================================
+//
+// A real polynomial `p` of total degree ≤ 2 in variables x₁..xₙ is a quadratic
+// form and can be written `p(x) = [x;1]ᵀ M [x;1]` with the symmetric rational
+// (n+1)×(n+1) Gram matrix `M`:
+//
+//   M[i][i] = coeff(xᵢ²)
+//   M[i][j] = M[j][i] = ½·coeff(xᵢxⱼ)         (i ≠ j, both real vars)
+//   M[i][n] = M[n][i] = ½·coeff(xᵢ)           (linear term)
+//   M[n][n] = constant term
+//
+// `[x;1]ᵀ M [x;1] = p(x)` identically (expanding the symmetric quadratic form
+// reproduces every coefficient). Hence:
+//   • `M` PSD  ⇒ `p(x) ≥ 0 ∀x` ⇒ a STRICT `p < 0` is UNSAT,
+//   • `−M` PSD ⇒ `p(x) ≤ 0 ∀x` ⇒ a STRICT `p > 0` is UNSAT.
+// These are SUFFICIENT (sound) conditions; failing them ⇒ decline (no verdict).
+// We deliberately do NOT decide non-strict `≤`/`≥` atoms here: PSD yields `≥ 0`,
+// not `> 0`, so `p ≤ 0` can be satisfied at a zero of `p`. We never emit Sat.
+//
+// Soundness rests on the exact rational LDLᵀ PSD test below; any `i128` overflow
+// or unresolved sign during the factorization DECLINES (returns `false`), never
+// a wrong Unsat. No floating point.
+
+/// Attempt a degree-2 PSD refutation across all atoms of the conjunction. Any
+/// single STRICT inequality atom that is globally one-signed (and so refuted
+/// everywhere) makes the whole conjunction `Unsat`. Returns `None` to decline
+/// (no atom certifies) — never `Sat`.
+fn sos_refute_multivariate(atoms: &[MultiAtom]) -> Option<CheckResult> {
+    for atom in atoms {
+        if sos_refutes_strict_atom(atom.cmp, &atom.poly) {
+            return Some(CheckResult::Unsat);
+        }
+    }
+    None
+}
+
+/// Whether the STRICT inequality atom `p ⋈ 0` (`⋈ ∈ {<, >}`) is refuted globally
+/// by a degree-2 PSD certificate: `p < 0` with `p ≥ 0 ∀x` (Gram matrix PSD), or
+/// `p > 0` with `p ≤ 0 ∀x` (Gram matrix NSD). Returns `false` (decline) for any
+/// non-strict comparison, any polynomial of total degree ≥ 3, or any overflow.
+fn sos_refutes_strict_atom(cmp: Cmp, poly: &MultiPoly) -> bool {
+    // Only strict `<` / `>` admit a PSD refutation (see module note).
+    let need_psd = match cmp {
+        Cmp::Lt => true,  // p < 0 refuted by p ≥ 0 everywhere (M PSD)
+        Cmp::Gt => false, // p > 0 refuted by p ≤ 0 everywhere (−M PSD)
+        Cmp::Eq | Cmp::Ne | Cmp::Le | Cmp::Ge => return false,
+    };
+    let Some(matrix) = quadratic_gram_matrix(poly) else {
+        return false; // degree ≥ 3, or overflow building the matrix ⇒ decline
+    };
+    if need_psd {
+        is_psd_exact(&matrix).unwrap_or(false)
+    } else {
+        // `p > 0` is refuted iff `p ≤ 0` everywhere iff `−p ≥ 0` everywhere iff
+        // `−M` is PSD. Negate every entry (overflow ⇒ decline).
+        match negate_matrix(&matrix) {
+            Some(neg) => is_psd_exact(&neg).unwrap_or(false),
+            None => false,
+        }
+    }
+}
+
+/// Build the symmetric (n+1)×(n+1) rational Gram matrix `M` of a total-degree-≤2
+/// polynomial `p`, so that `p(x) = [x;1]ᵀ M [x;1]`. Returns `None` (decline) if
+/// any monomial has total degree ≥ 3, or on any `i128`/`Rational` overflow while
+/// halving an odd cross / linear coefficient.
+///
+/// The variables are ordered by their (deterministic) `SymbolId` sort order; the
+/// last index `n` is the affine ("1") coordinate. Every entry is exact.
+fn quadratic_gram_matrix(poly: &MultiPoly) -> Option<Vec<Vec<Rational>>> {
+    // Stable, deterministic variable ordering.
+    let vars: Vec<SymbolId> = poly.vars().into_iter().collect();
+    let n = vars.len();
+    // Index of each variable in the matrix; the affine row/column is index `n`.
+    let mut index: BTreeMap<SymbolId, usize> = BTreeMap::new();
+    for (i, &v) in vars.iter().enumerate() {
+        index.insert(v, i);
+    }
+    let dim = n + 1;
+    let mut gram = vec![vec![Rational::zero(); dim]; dim];
+    let half = Rational::checked_new(1, 2)?;
+
+    for (key, &coeff) in &poly.terms {
+        // Classify the monomial by its (variable, exponent) structure. Anything of
+        // total degree ≥ 3 declines.
+        match key.as_slice() {
+            // Constant term → M[n][n].
+            [] => {
+                gram[n][n] = gram[n][n].checked_add(coeff)?;
+            }
+            // Linear term `c·xᵢ` → split ½c onto M[i][n] and M[n][i].
+            [(var, 1)] => {
+                let idx = *index.get(var)?;
+                let half_c = coeff.checked_mul(half)?;
+                gram[idx][n] = gram[idx][n].checked_add(half_c)?;
+                gram[n][idx] = gram[n][idx].checked_add(half_c)?;
+            }
+            // Square term `c·xᵢ²` → M[i][i].
+            [(var, 2)] => {
+                let idx = *index.get(var)?;
+                gram[idx][idx] = gram[idx][idx].checked_add(coeff)?;
+            }
+            // Cross term `c·xᵢxⱼ` (i ≠ j) → split ½c onto M[i][j] and M[j][i].
+            [(left, 1), (right, 1)] => {
+                let row = *index.get(left)?;
+                let col = *index.get(right)?;
+                let half_c = coeff.checked_mul(half)?;
+                gram[row][col] = gram[row][col].checked_add(half_c)?;
+                gram[col][row] = gram[col][row].checked_add(half_c)?;
+            }
+            // Any monomial of total degree ≥ 3 (or an unexpected shape) ⇒ decline:
+            // this is a degree-2-only certificate.
+            _ => return None,
+        }
+    }
+    Some(gram)
+}
+
+/// Negate every entry of a rational matrix, declining (`None`) on overflow.
+fn negate_matrix(matrix: &[Vec<Rational>]) -> Option<Vec<Vec<Rational>>> {
+    let mut out = Vec::with_capacity(matrix.len());
+    for row in matrix {
+        let mut neg_row = Vec::with_capacity(row.len());
+        for &entry in row {
+            neg_row.push(entry.checked_neg()?);
+        }
+        out.push(neg_row);
+    }
+    Some(out)
+}
+
+/// Exact PSD test for a SYMMETRIC rational matrix via symmetric `LDLᵀ`
+/// (Gaussian-elimination) factorization. Returns:
+///   • `Some(true)`  — the matrix is positive semidefinite,
+///   • `Some(false)` — it is provably NOT PSD,
+///   • `None`        — the test could not be completed exactly (an `i128`
+///                     overflow during elimination) ⇒ the caller declines.
+///
+/// Algorithm (standard symmetric elimination, exact over ℚ): process pivots
+/// `k = 0..dim`. With the current (already-reduced) symmetric matrix `a`:
+///   • if `a[k][k] > 0`: a valid positive pivot; eliminate it from every later
+///     row/column by the symmetric rank-1 update
+///     `a[i][j] -= a[i][k]·a[k][j]/a[k][k]`.
+///   • if `a[k][k] == 0`: PSD requires the *entire* remaining k-th row/column to
+///     be zero (a zero pivot with any nonzero off-diagonal entry ⇒ the form takes
+///     negative values ⇒ NOT PSD). When the row is all zero, the pivot
+///     contributes nothing and we move on (no elimination needed).
+///   • if `a[k][k] < 0`: an immediate negative direction ⇒ NOT PSD.
+///
+/// A symmetric matrix is PSD iff this elimination completes with every pivot
+/// `≥ 0` and every zero pivot having a zero remaining row/column. This is the
+/// exact rational analogue of `LDLᵀ` with `D ≥ 0`; it is SOUND for global
+/// nonnegativity of the associated quadratic form.
+#[allow(
+    clippy::needless_range_loop,
+    reason = "the symmetric rank-1 update reads a[i][j], a[i][k], a[k][j] by index together"
+)]
+fn is_psd_exact(matrix: &[Vec<Rational>]) -> Option<bool> {
+    let dim = matrix.len();
+    // Defensive: a non-square matrix is not something we certify.
+    if matrix.iter().any(|r| r.len() != dim) {
+        return Some(false);
+    }
+    let mut a: Vec<Vec<Rational>> = matrix.to_vec();
+
+    for k in 0..dim {
+        let pivot = a[k][k];
+        match Sign::of_rational(pivot) {
+            Sign::Neg => return Some(false), // negative pivot ⇒ not PSD
+            Sign::Zero => {
+                // Zero pivot: PSD demands the whole remaining row/column be zero.
+                for j in (k + 1)..dim {
+                    if !a[k][j].is_zero() || !a[j][k].is_zero() {
+                        return Some(false);
+                    }
+                }
+                // Row/column already zero: nothing to eliminate, continue.
+            }
+            Sign::Pos => {
+                // Symmetric rank-1 elimination of pivot `k` from later rows/cols.
+                for i in (k + 1)..dim {
+                    let factor = a[i][k].checked_div(pivot)?; // a[i][k]/a[k][k]
+                    if factor.is_zero() {
+                        continue;
+                    }
+                    for j in (k + 1)..dim {
+                        let term = factor.checked_mul(a[k][j])?;
+                        a[i][j] = a[i][j].checked_sub(term)?;
+                    }
+                }
+            }
+        }
+    }
+    Some(true)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2641,6 +2857,70 @@ mod tests {
                 }
             }
         }
+    }
+
+    // --- exact PSD / LDLᵀ unit tests ----------------------------------------
+
+    fn rmat(rows: &[&[(i128, i128)]]) -> Vec<Vec<Rational>> {
+        rows.iter()
+            .map(|r| {
+                r.iter()
+                    .map(|&(n, d)| Rational::checked_new(n, d).unwrap())
+                    .collect()
+            })
+            .collect()
+    }
+
+    #[test]
+    fn psd_identity_is_psd() {
+        let m = rmat(&[&[(1, 1), (0, 1)], &[(0, 1), (1, 1)]]);
+        assert_eq!(is_psd_exact(&m), Some(true));
+    }
+
+    #[test]
+    fn psd_rank_one_square_is_psd() {
+        // (x − y)² ⇒ M = [[1,−1],[−1,1]], PSD (eigenvalues 0 and 2).
+        let m = rmat(&[&[(1, 1), (-1, 1)], &[(-1, 1), (1, 1)]]);
+        assert_eq!(is_psd_exact(&m), Some(true));
+    }
+
+    #[test]
+    fn psd_negative_diagonal_is_not_psd() {
+        let m = rmat(&[&[(-1, 1), (0, 1)], &[(0, 1), (1, 1)]]);
+        assert_eq!(is_psd_exact(&m), Some(false));
+    }
+
+    #[test]
+    fn psd_indefinite_is_not_psd() {
+        // diag(1, −1): indefinite.
+        let m = rmat(&[&[(1, 1), (0, 1)], &[(0, 1), (-1, 1)]]);
+        assert_eq!(is_psd_exact(&m), Some(false));
+    }
+
+    #[test]
+    fn psd_zero_pivot_with_offdiagonal_is_not_psd() {
+        // [[0,1],[1,0]] = the form 2xy, indefinite ⇒ NOT PSD.
+        let m = rmat(&[&[(0, 1), (1, 1)], &[(1, 1), (0, 1)]]);
+        assert_eq!(is_psd_exact(&m), Some(false));
+    }
+
+    #[test]
+    fn psd_zero_pivot_clean_is_psd() {
+        // [[0,0],[0,1]] = the form y², PSD.
+        let m = rmat(&[&[(0, 1), (0, 1)], &[(0, 1), (1, 1)]]);
+        assert_eq!(is_psd_exact(&m), Some(true));
+    }
+
+    #[test]
+    fn psd_three_var_am_gm_form_is_psd() {
+        // a²+b²+c²−ab−bc−ca = ½[(a−b)²+(b−c)²+(c−a)²] ⇒ PSD Gram matrix
+        // M = [[1,−½,−½],[−½,1,−½],[−½,−½,1]] (eigenvalues 0, 3/2, 3/2).
+        let m = rmat(&[
+            &[(1, 1), (-1, 2), (-1, 2)],
+            &[(-1, 2), (1, 1), (-1, 2)],
+            &[(-1, 2), (-1, 2), (1, 1)],
+        ]);
+        assert_eq!(is_psd_exact(&m), Some(true));
     }
 
     #[test]
