@@ -346,7 +346,7 @@ fn past_deadline(deadline: Option<Instant>) -> bool {
 ///    against the *original* assertions with the ground evaluator (accepted only if
 ///    it genuinely satisfies them).
 ///
-/// Bounded by [`MAX_ROW_ROUNDS`], [`MAX_ROW_SITES`] and the optional
+/// Bounded by `MAX_ROW_ROUNDS`, `MAX_ROW_SITES` and the optional
 /// `config.timeout` deadline; any blow-up degrades to `unknown`.
 ///
 /// # Errors

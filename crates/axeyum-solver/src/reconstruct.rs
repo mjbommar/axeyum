@@ -9063,7 +9063,7 @@ pub fn reconstruct_lra_proof(
 ///    square-nonnegativity axiom applied to the variable term `x`).
 /// 2. `hlt : lt (mul x x) zero` — the asserted atom `x*x < 0`, introduced as a
 ///    hypothesis axiom (mirroring how the LRA baby-Farkas path discharges its
-///    asserted constraints via [`LraReconstructCtx::hyp_axiom`]).
+///    asserted constraints via `LraReconstructCtx::hyp_axiom`).
 /// 3. `chain : lt zero zero` := `lt_of_le_of_lt zero (mul x x) zero sq hlt`.
 /// 4. `bad : False` := `lt_irrefl zero chain` (since
 ///    `lt_irrefl zero : Not (lt zero zero) = lt zero zero → False`).

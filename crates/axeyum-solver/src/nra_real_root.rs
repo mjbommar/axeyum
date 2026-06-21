@@ -2621,7 +2621,7 @@ pub struct SosCertificate {
 impl SosCertificate {
     /// Independently re-validate this sum-of-squares refutation. **Fully
     /// independent of the producer**: it rebuilds the Gram matrix from
-    /// [`SosCertificate::terms`], never trusting any matrix the producer carried,
+    /// `SosCertificate::terms`, never trusting any matrix the producer carried,
     /// then confirms the carried `LDLᵀ` factors reconstruct the certified target
     /// (`M` for `p < 0`, `−M` for `p > 0`) with `D ≥ 0`.
     ///

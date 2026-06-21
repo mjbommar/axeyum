@@ -24,6 +24,7 @@ fn eval_eq(a: &mut TermArena, term: TermId) -> TermId {
         | Value::Array(_)
         | Value::Int(_)
         | Value::Real(_)
+        | Value::RealAlgebraic(_)
         | Value::Datatype { .. } => {
             unreachable!("differential terms are bit-vector/Bool")
         }
