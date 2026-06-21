@@ -255,10 +255,19 @@ pub enum Evidence {
     /// [`LraDpllRefutation::verify`] is the evidence.
     UnsatLraDpll(LraDpllRefutation),
     /// Unsatisfiable (`NRA`): a self-checking degree-2 sum-of-squares / PSD
-    /// refutation of a STRICT quadratic inequality atom, whose
+    /// refutation of a STRICT quadratic inequality atom. The `certificate`'s
     /// [`SosCertificate::verify`] (an exact-rational `LDLᵀ` reconstruction, fully
-    /// independent of the producer) is the evidence (ADR-0039).
-    UnsatSos(SosCertificate),
+    /// independent of the producer) is the primary evidence (ADR-0039); when
+    /// `lean_module` is present, the refutation is ALSO backed by a kernel-checked
+    /// Lean proof, re-derived and re-checked on `Evidence::check` (ADR-0041).
+    UnsatSos {
+        /// The exact-rational SOS/PSD certificate (self-checked by `verify`).
+        certificate: SosCertificate,
+        /// The rendered Lean module, when SOS→Lean reconstruction succeeded for the
+        /// query. `check` re-runs the reconstruction (the kernel re-verifies it); the
+        /// stored string is for output, not trusted on its own.
+        lean_module: Option<String>,
+    },
     /// Undecided, with the classified reason.
     Unknown(UnknownReason),
 }
@@ -357,8 +366,27 @@ impl Evidence {
             Evidence::UnsatLraDpll(refutation) => refutation.verify(arena),
             // Degree-2 SOS/PSD refutation: re-validate the self-contained
             // certificate (rebuilds the Gram matrix from its own terms and confirms
-            // the carried LDLᵀ factors reconstruct it with D ≥ 0) — no arena needed.
-            Evidence::UnsatSos(certificate) => Ok(certificate.verify()),
+            // the carried LDLᵀ factors reconstruct it with D ≥ 0). When a Lean module
+            // is carried, ALSO re-derive it (ADR-0041) — the kernel re-checks the
+            // reconstructed proof to `False`; the stored string is never trusted on
+            // its own. Both checks must pass.
+            Evidence::UnsatSos {
+                certificate,
+                lean_module,
+            } => {
+                if !certificate.verify() {
+                    return Ok(false);
+                }
+                if lean_module.is_some() {
+                    // Re-run the immutable SOS→Lean reconstruction; success means the
+                    // trusted kernel re-accepted a freshly-built proof of `False`.
+                    return Ok(crate::reconstruct::reconstruct_sos_to_lean_module(
+                        arena, assertions,
+                    )
+                    .is_ok());
+                }
+                Ok(true)
+            }
             // No DRAT certificate (adapter-only `unsat`) or `unknown`: nothing to
             // independently re-check.
             Evidence::Unsat(None) | Evidence::Unknown(_) => Ok(true),
@@ -379,7 +407,7 @@ impl Evidence {
                 | Evidence::UnsatTermLevel { .. }
                 | Evidence::UnsatFarkas(_)
                 | Evidence::UnsatLraDpll(_)
-                | Evidence::UnsatSos(_)
+                | Evidence::UnsatSos { .. }
         )
     }
 }
@@ -699,6 +727,11 @@ pub fn produce_nra_sos_evidence(
     let Some(cert) = nra_real_root::sos_refute_with_certificate(arena, assertions) else {
         return Ok(None);
     };
+    // Best-effort Lean-backed evidence (ADR-0041): when the SOS→Lean reconstruction
+    // covers this query's shape, carry the kernel-checked module. `None` keeps the
+    // (still self-checked) certificate evidence for shapes the reconstruction slice
+    // does not yet cover — never an error.
+    let lean_module = crate::reconstruct::reconstruct_sos_to_lean_module(arena, assertions).ok();
     let provenance = Provenance {
         semantics_version: SEMANTICS_VERSION,
         layers: LayerVersions::CURRENT,
@@ -712,7 +745,10 @@ pub fn produce_nra_sos_evidence(
         prove_unsat: true,
     };
     Ok(Some(EvidenceReport {
-        evidence: Evidence::UnsatSos(cert),
+        evidence: Evidence::UnsatSos {
+            certificate: cert,
+            lean_module,
+        },
         provenance,
         // Exact, self-checked SOS/PSD certificate — certified this run.
         trusted_steps: trust_steps(&[(TrustId::Sos, true)]),
@@ -1218,7 +1254,7 @@ pub fn prove(
         | Evidence::UnsatTermLevel { .. }
         | Evidence::UnsatFarkas(_)
         | Evidence::UnsatLraDpll(_)
-        | Evidence::UnsatSos(_) => {
+        | Evidence::UnsatSos { .. } => {
             if !report.evidence.check(arena, &query)? {
                 return Err(SolverError::Backend(
                     "prove: refutation of the negated goal failed its own check".to_owned(),

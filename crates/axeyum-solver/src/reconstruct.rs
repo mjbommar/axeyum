@@ -1698,6 +1698,32 @@ pub fn prove_unsat_to_lean_module(
     Ok((fragment, source))
 }
 
+/// Reconstruct the SOS Lean module for a query the SOS decision proves `unsat`,
+/// taking the arena by **shared** reference (the SOS reconstruction reads the query
+/// and builds *kernel* terms; it never mutates the IR arena). This is the immutable
+/// entry the evidence pipeline ([`crate::produce_nra_sos_evidence`] and
+/// `Evidence::check`) calls, since `prove_unsat_to_lean_module`'s `&mut TermArena`
+/// is needed only by other fragments.
+///
+/// # Errors
+///
+/// Returns a [`ReconstructError`] when the query is not classified as the `Sos`
+/// fragment, or the SOS reconstruction does not kernel-check to `False`.
+pub fn reconstruct_sos_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    if scan_proof_fragment(arena, assertions) != ProofFragment::Sos {
+        return Err(ReconstructError::MalformedStep {
+            rule: "reconstruct_sos_to_lean".to_owned(),
+            detail: "query is not an SOS-reconstructable unsat".to_owned(),
+        });
+    }
+    let mut ctx = LraReconstructCtx::new();
+    let t = reconstruct_sos_proof(&mut ctx, arena, assertions)?;
+    gate_and_render_lra_module(&mut ctx, t, "SOS")
+}
+
 /// Reconstruct a **complete** EUF `unsat` Alethe proof into a Lean proof term of
 /// type `False` that the trusted [`Kernel`] type-checks.
 ///
