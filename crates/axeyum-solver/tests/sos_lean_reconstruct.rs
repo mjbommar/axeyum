@@ -49,12 +49,12 @@ fn x_squared_lt_zero_reconstructs_to_false() {
     );
 }
 
-/// General SOS (a multi-variable square like `(x − y)² < 0`) is **out of scope**
-/// for this slice — it needs the degree-2 ring normalizer (a later slice). The
-/// dedicated SOS reconstructor must *decline* (error) rather than fabricate a
-/// proof: it never claims success without a kernel-checked term.
+/// A single square of a ±1-coefficient LINEAR form — `(x − y)² < 0` — reconstructs
+/// to a kernel-checked `False` (slice 2a): the repeated factor `x − y` maps to a
+/// kernel term via the LRA encoding and `sq_nonneg (x−y)` discharges `0 ≤ (x−y)²`.
+/// Still no ring normalizer (the lhs is literally `ℓ·ℓ`).
 #[test]
-fn general_sos_two_variable_square_is_declined() {
+fn x_minus_y_squared_lt_zero_reconstructs_to_false() {
     let mut arena = TermArena::new();
     let x = arena.real_var("x").unwrap();
     let y = arena.real_var("y").unwrap();
@@ -63,12 +63,31 @@ fn general_sos_two_variable_square_is_declined() {
     let zero = arena.real_const(Rational::integer(0));
     let assertion = arena.real_lt(sq, zero).unwrap();
 
-    // The slice-1 SOS reconstructor must decline this shape outright.
+    let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &[assertion])
+        .expect("(x−y)² < 0 reconstructs to a kernel-checked False");
+    assert_eq!(fragment, ProofFragment::Sos);
+    assert!(source.contains("axeyum_refutation"));
+}
+
+/// Out of scope for this slice: a square whose linear form has a coefficient
+/// outside ±1 — `(x + x)² < 0` (`x + x` collects to `2·x`). `lin_to_r`'s slice does
+/// not model the coefficient `2`, so the reconstructor must *decline* (error)
+/// rather than fabricate a proof. (A sum-of-monomials SOS likewise needs the ring
+/// normalizer — a later slice.)
+#[test]
+fn square_with_coefficient_outside_pm_one_is_declined() {
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let two_x = arena.real_add(x, x).unwrap(); // x + x = 2x (coefficient 2)
+    let sq = arena.real_mul(two_x, two_x).unwrap();
+    let zero = arena.real_const(Rational::integer(0));
+    let assertion = arena.real_lt(sq, zero).unwrap();
+
     let mut ctx = LraReconstructCtx::new();
     let result = reconstruct_sos_proof(&mut ctx, &arena, &[assertion]);
     assert!(
         result.is_err(),
-        "general SOS `(x - y)^2 < 0` (two variables, non-square-of-a-variable lhs) \
-         must be declined by the slice-1 reconstructor, not proven"
+        "(x+x)² < 0 (a square with coefficient 2) is outside lin_to_r's ±1 slice \
+         and must be declined, not proven"
     );
 }

@@ -1233,13 +1233,25 @@ fn is_single_square_lt_zero(arena: &TermArena, assertions: &[TermId]) -> Option<
         return None;
     };
     let (a, b) = (*a, *b);
-    if a != b {
+    // Both factors must be the SAME real subterm `ℓ` (interned ⇒ identical `TermId`),
+    // and `ℓ` must collect to a LINEAR form expressible in `lin_to_r`'s slice (±1
+    // coefficients, a 0/1 constant). Then `ℓ·ℓ` is a single square and the
+    // reconstruction succeeds via `sq_nonneg ℓ` with no ring normalizer. A bare real
+    // variable `x` is the special case `ℓ = x`. Anything else (coefficient outside
+    // ±1, a nonlinear factor, a sum form) declines here and falls through to `Lra`.
+    if a != b || arena.sort_of(a) != IrSort::Real {
         return None;
     }
-    match arena.node(a) {
-        IrTermNode::Symbol(_) if arena.sort_of(a) == IrSort::Real => Some(a),
-        _ => None,
+    let lin = real_to_lin(arena, a)?;
+    let one = Rational::integer(1);
+    let neg_one = Rational::integer(-1);
+    if lin.coeffs.iter().any(|&(_, c)| c != one && c != neg_one) {
+        return None;
     }
+    if !lin.constant.is_zero() && lin.constant != one {
+        return None;
+    }
+    Some(a)
 }
 
 /// Classify `assertions` into the [`ProofFragment`] whose emitter+reconstructor
@@ -7770,39 +7782,45 @@ pub fn reconstruct_sos_proof(
     arena: &TermArena,
     assertions: &[TermId],
 ) -> Result<ExprId, ReconstructError> {
-    // Accept ONLY the trivial single-square shape `x*x < 0` over one real variable.
-    // Anything else (multi-variable squares, `(x−y)² < 0`, non-square atoms) needs
-    // the degree-2 ring normalizer — a later slice — and is declined here so we
-    // never claim success without a kernel-checked term.
-    if is_single_square_lt_zero(arena, assertions).is_none() {
+    // Accept the single-square shape `ℓ*ℓ < 0` where `ℓ` is a linear form in
+    // `lin_to_r`'s slice (a bare variable `x`, or `(x−y)`, etc.). Anything else
+    // (a coefficient outside ±1, a sum form like `x²+y²−2xy < 0`, a non-square
+    // atom) needs the degree-2 ring normalizer — a later slice — and is declined
+    // here so we never claim success without a kernel-checked term.
+    let Some(factor) = is_single_square_lt_zero(arena, assertions) else {
         return Err(ReconstructError::UnsupportedTerm {
-            term: "SOS reconstruction (slice 1) only handles the trivial single-square \
-                   query `x*x < 0` over one real variable; general SOS is a later slice"
+            term: "SOS reconstruction (this slice) handles only a single square `ℓ*ℓ < 0` \
+                   of a ±1-coefficient linear form ℓ; a sum-of-monomials SOS needs the \
+                   degree-2 ring normalizer (a later slice)"
                 .to_owned(),
         });
-    }
+    };
 
-    // The single real variable `x` as an opaque `R`-typed kernel constant. There is
-    // exactly one variable, so the dense index is 0.
-    let x_name = ctx.var_const(0);
-    let x = ctx.kernel_mut().const_(x_name, vec![]);
+    // Map the repeated linear factor `ℓ` to its `R`-typed kernel term (the same
+    // faithful encoding the LRA reconstruction trusts; the bare-variable case
+    // `ℓ = x` collapses to a single `var_const`). `sq_nonneg` is ∀-valid, so it
+    // discharges `0 ≤ ℓ·ℓ` for this `ℓ` regardless of its sign.
+    let lin = real_to_lin(arena, factor).ok_or_else(|| ReconstructError::UnsupportedTerm {
+        term: "SOS single-square factor is not a linear form".to_owned(),
+    })?;
+    let ell = ctx.lin_to_r(&lin)?;
     let zero = ctx.mk_zero();
-    let xx = ctx.mk_mul(x, x);
+    let xx = ctx.mk_mul(ell, ell);
 
-    // 1. sq : le zero (mul x x)  :=  sq_nonneg x.
+    // 1. sq : le zero (mul ℓ ℓ)  :=  sq_nonneg ℓ.
     let sq = {
         let sq_nonneg_name = ctx.arith().sq_nonneg;
         let sq_nonneg = ctx.kernel_mut().const_(sq_nonneg_name, vec![]);
-        ctx.kernel_mut().app(sq_nonneg, x)
+        ctx.kernel_mut().app(sq_nonneg, ell)
     };
 
-    // 2. hlt : lt (mul x x) zero — the asserted atom `x*x < 0` as a hypothesis.
+    // 2. hlt : lt (mul ℓ ℓ) zero — the asserted atom `ℓ*ℓ < 0` as a hypothesis.
     let hlt = {
         let prop = ctx.mk_lt(xx, zero);
         ctx.hyp_axiom(prop)?
     };
 
-    // 3. chain : lt zero zero  :=  lt_of_le_of_lt zero (mul x x) zero sq hlt.
+    // 3. chain : lt zero zero  :=  lt_of_le_of_lt zero (mul ℓ ℓ) zero sq hlt.
     let chain = {
         let ax_name = ctx.arith().lt_of_le_of_lt;
         let ax = ctx.kernel_mut().const_(ax_name, vec![]);
