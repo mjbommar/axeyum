@@ -134,9 +134,12 @@ pub struct ArithPrelude {
     /// ∀ (a b c : R), Eq R (mul a (add b c)) (add (mul a b) (mul a c))`.
     pub left_distrib: NameId,
     /// `mul_nonneg : ∀ (a b : R), le zero a → le zero b → le zero (mul a b)`.
-    /// The product of nonnegatives is nonnegative; with `a = b` it gives the
-    /// square-nonnegativity `0 ≤ a·a` the SOS proof rests on.
+    /// The product of nonnegatives is nonnegative.
     pub mul_nonneg: NameId,
+    /// `sq_nonneg : ∀ (a : R), le zero (mul a a)`. Unconditional
+    /// square-nonnegativity (every real square is `≥ 0`, sign-independent) — the
+    /// nonnegativity primitive each SOS square `ℓₖ²` rests on.
+    pub sq_nonneg: NameId,
 }
 
 /// Declare the axiomatized **linear ordered field** into `kernel`'s environment,
@@ -559,6 +562,20 @@ pub fn build_arith_prelude(kernel: &mut Kernel) -> ArithPrelude {
         declare_axiom(kernel, anon, "mul_nonneg", ty)
     };
 
+    // --- sq_nonneg : ∀ (a : R), le zero (mul a a) ----------------------------
+    // UNCONDITIONAL square-nonnegativity (true for every real, including negative
+    // a — `mul_nonneg` only covers `0 ≤ a`). This is the actual nonnegativity
+    // primitive each SOS square `ℓₖ²` needs. Under a: a=0.
+    let sq_nonneg = {
+        let zero_c = kernel.const_(zero, vec![]);
+        let a0 = kernel.bvar(0);
+        let a0b = kernel.bvar(0);
+        let mul_aa = app2(kernel, mul, a0, a0b);
+        let body = app2(kernel, le, zero_c, mul_aa);
+        let ty = kernel.pi(anon, r_ty, body, BinderInfo::Default);
+        declare_axiom(kernel, anon, "sq_nonneg", ty)
+    };
+
     ArithPrelude {
         logic,
         r,
@@ -590,6 +607,7 @@ pub fn build_arith_prelude(kernel: &mut Kernel) -> ArithPrelude {
         mul_zero,
         left_distrib,
         mul_nonneg,
+        sq_nonneg,
     }
 }
 

@@ -115,6 +115,7 @@ fn arith_prelude_admits_all_declarations() {
         p.mul_zero,
         p.left_distrib,
         p.mul_nonneg,
+        p.sq_nonneg,
     ] {
         assert!(
             k.environment().contains(name),
@@ -165,6 +166,7 @@ fn every_axiom_type_infers_to_a_sort() {
         p.mul_zero,
         p.left_distrib,
         p.mul_nonneg,
+        p.sq_nonneg,
     ] {
         let ty = k.environment().get(name).unwrap().ty();
         let inferred = k.infer(ty).unwrap();
@@ -371,13 +373,12 @@ fn baby_farkas_refutation_checks() {
     );
 }
 
-/// **square-nonnegativity** — the key SOS primitive (ADR-0040): from a single
-/// hypothesis `h : le zero a`, the term `mul_nonneg a a h h` infers to
-/// `le zero (mul a a)`, i.e. `0 ≤ a·a`. The kernel type-checks the whole proof,
-/// so this is the kernel's own verification that the new `mul_nonneg` axiom yields
-/// square-nonnegativity (the nonnegativity half of every SOS refutation).
+/// **conditional product-nonnegativity**: from `h : le zero a`,
+/// `mul_nonneg a a h h : le zero (mul a a)` checks. (This is `mul_nonneg`'s genuine
+/// content — it needs the `0 ≤ a` hypothesis; it is NOT unconditional square
+/// nonnegativity, which `sq_nonneg` below provides.)
 #[test]
-fn mul_nonneg_yields_square_nonneg() {
+fn mul_nonneg_under_hypothesis_checks() {
     let mut f = fixture();
     let a = f.a_const();
     let zero = f.zero();
@@ -396,7 +397,6 @@ fn mul_nonneg_yields_square_nonneg() {
     };
     let inferred = f.k.infer(proof).unwrap();
 
-    // Expected: le zero (mul a a).
     let a4 = f.a_const();
     let a5 = f.a_const();
     let mul_aa = {
@@ -409,6 +409,38 @@ fn mul_nonneg_yields_square_nonneg() {
     assert!(
         f.k.def_eq(inferred, expected),
         "mul_nonneg a a h h : le zero (mul a a)"
+    );
+}
+
+/// **unconditional square-nonnegativity** — the key SOS primitive (ADR-0040):
+/// `sq_nonneg a : le zero (mul a a)` checks with **no hypothesis** on `a`, i.e.
+/// `0 ≤ a·a` for every real (sign-independent). The kernel type-checks the term,
+/// so this is the kernel's own verification that each SOS square `ℓₖ²` is `≥ 0`.
+#[test]
+fn sq_nonneg_is_unconditional() {
+    let mut f = fixture();
+
+    // proof := sq_nonneg a  (no hypothesis).
+    let proof = {
+        let sq = f.k.const_(f.p.sq_nonneg, vec![]);
+        let a = f.a_const();
+        f.k.app(sq, a)
+    };
+    let inferred = f.k.infer(proof).unwrap();
+
+    // Expected: le zero (mul a a).
+    let a4 = f.a_const();
+    let a5 = f.a_const();
+    let mul_aa = {
+        let mc = f.k.const_(f.p.mul, vec![]);
+        let e = f.k.app(mc, a4);
+        f.k.app(e, a5)
+    };
+    let zero2 = f.zero();
+    let expected = f.le(zero2, mul_aa);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "sq_nonneg a : le zero (mul a a), unconditionally"
     );
 }
 
