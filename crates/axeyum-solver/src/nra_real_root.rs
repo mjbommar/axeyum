@@ -2594,6 +2594,11 @@ fn sos_refute_multivariate(atoms: &[MultiAtom]) -> Option<CheckResult> {
     None
 }
 
+/// Upper bound on an integer square weight `d` that [`SosCertificate::unit_squares`]
+/// expands into `d` repeated squares (the reconstructed proof is linear in `d`, so a
+/// large weight is declined as a later — denominator/scaling — slice).
+const SOS_MAX_SQUARE_WEIGHT: i128 = 16;
+
 /// A self-contained, independently re-checkable sum-of-squares refutation of a
 /// STRICT quadratic inequality atom. [`SosCertificate::verify`] needs no arena or
 /// solver state.
@@ -2767,9 +2772,22 @@ impl SosCertificate {
             if dk.is_zero() {
                 continue;
             }
-            if dk != one {
-                return None; // weight ≠ 1 — outside this slice
-            }
+            // Accept a positive INTEGER weight `d` by emitting the square `d` times:
+            // `d·ℓ²` is reconstructed as `ℓ² + … + ℓ²` (d copies), which the
+            // nonnegativity fold and the ring normalizer already handle with no new
+            // machinery. `d = 1` is the common case. A rational (non-integer) weight
+            // needs denominator-clearing — a later slice — so it declines. The weight
+            // is bounded to keep the (linear-in-d) proof size small.
+            let weight = if dk == one {
+                1
+            } else if dk.denominator() == 1
+                && dk.numerator() >= 1
+                && dk.numerator() <= SOS_MAX_SQUARE_WEIGHT
+            {
+                dk.numerator()
+            } else {
+                return None; // rational or too-large weight — outside this slice
+            };
             // Affine entry of column k must be zero.
             if !self.l[n][k].is_zero() {
                 return None;
@@ -2791,7 +2809,9 @@ impl SosCertificate {
             if coeffs.is_empty() {
                 return None; // a zero form — would not refute p < 0 by itself
             }
-            squares.push(coeffs);
+            for _ in 0..weight {
+                squares.push(coeffs.clone());
+            }
         }
         if squares.is_empty() {
             return None; // no nonzero square ⇒ nothing to refute

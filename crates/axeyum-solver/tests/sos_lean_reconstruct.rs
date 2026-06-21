@@ -70,16 +70,22 @@ fn x_minus_y_squared_lt_zero_reconstructs_to_false() {
 }
 
 /// Out of scope for this slice: a square whose linear form has a coefficient
-/// outside ±1 — `(x + x)² < 0` (`x + x` collects to `2·x`). `lin_to_r`'s slice does
-/// not model the coefficient `2`, so the reconstructor must *decline* (error)
-/// rather than fabricate a proof. (A sum-of-monomials SOS likewise needs the ring
-/// normalizer — a later slice.)
+/// outside ±1 — `(x + 2y)² < 0` (= `x² + 4xy + 4y²`). The SOS certificate is the
+/// single square `x + 2y` with `d = 1`, but its `y`-coefficient is `2`, outside the
+/// ±1-form slice; expressing it as a (repeated) unit-square sum needs the
+/// rational/scaling normalizer (a later slice). The reconstructor must *decline*.
+///
+/// (Note `(x+x)² = 4x²` is NOT such a case: its certificate is the unit square `x`
+/// with integer weight `4`, which the integer-weight path reconstructs as `x²×4`.)
 #[test]
-fn square_with_coefficient_outside_pm_one_is_declined() {
+fn square_with_non_unit_form_coefficient_is_declined() {
     let mut arena = TermArena::new();
     let x = arena.real_var("x").unwrap();
-    let two_x = arena.real_add(x, x).unwrap(); // x + x = 2x (coefficient 2)
-    let sq = arena.real_mul(two_x, two_x).unwrap();
+    let y = arena.real_var("y").unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let two_y = arena.real_mul(two, y).unwrap();
+    let x_plus_2y = arena.real_add(x, two_y).unwrap(); // x + 2y (form coefficient 2)
+    let sq = arena.real_mul(x_plus_2y, x_plus_2y).unwrap();
     let zero = arena.real_const(Rational::integer(0));
     let assertion = arena.real_lt(sq, zero).unwrap();
 
@@ -87,8 +93,7 @@ fn square_with_coefficient_outside_pm_one_is_declined() {
     let result = reconstruct_sos_proof(&mut ctx, &arena, &[assertion]);
     assert!(
         result.is_err(),
-        "(x+x)² < 0 (a square with coefficient 2) is outside lin_to_r's ±1 slice \
-         and must be declined, not proven"
+        "(x+2y)² < 0 has a non-±1 linear-form coefficient and must be declined, not proven"
     );
 }
 
@@ -237,13 +242,11 @@ fn sum_of_three_squares_reconstructs_to_false() {
     assert!(source.contains("axeyum_refutation"));
 }
 
-/// Out of scope for this `d = 1` slice: a SCALED sum of squares
-/// `2*x*x + 2*y*y < 0` (i.e. `2x² + 2y²`, certificate weights `D = [2, 2]`). It is
-/// UNSAT, but the unit-square classifier requires every `D[k] = 1`; a weight `2`
-/// needs scaling, which this slice does not model. The reconstructor must *decline*
-/// (error) rather than fabricate a proof.
+/// Integer-weighted sum of squares `2*x*x + 2*y*y < 0` (certificate weights
+/// `D = [2, 2]`): each square is expanded into two copies (`x²+x²+y²+y²`), so the
+/// nonnegativity fold + ring normalizer discharge it. Kernel-checked `False`.
 #[test]
-fn scaled_sum_of_squares_is_declined() {
+fn integer_weighted_sum_reconstructs_to_false() {
     let mut arena = TermArena::new();
     let x = arena.real_var("x").unwrap();
     let y = arena.real_var("y").unwrap();
@@ -256,11 +259,30 @@ fn scaled_sum_of_squares_is_declined() {
     let zero = arena.real_const(Rational::integer(0));
     let assertion = arena.real_lt(lhs, zero).unwrap();
 
+    let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &[assertion])
+        .expect("2x²+2y² < 0 reconstructs (integer weights 2 → two copies of each square)");
+    assert_eq!(fragment, ProofFragment::Sos);
+    assert!(source.contains("axeyum_refutation"));
+}
+
+/// Out of scope: an OVERSIZED integer weight `17*x*x < 0` (`D = [17]` > the
+/// `SOS_MAX_SQUARE_WEIGHT = 16` repetition bound). Expanding it would make the proof
+/// 17 squares long; the classifier declines (a denominator/scaling slice handles
+/// large and rational weights later). The reconstructor must *decline*, not prove.
+#[test]
+fn oversized_weight_square_is_declined() {
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let xx = arena.real_mul(x, x).unwrap();
+    let seventeen = arena.real_const(Rational::integer(17));
+    let lhs = arena.real_mul(seventeen, xx).unwrap(); // 17·x²
+    let zero = arena.real_const(Rational::integer(0));
+    let assertion = arena.real_lt(lhs, zero).unwrap();
+
     let mut ctx = LraReconstructCtx::new();
     let result = reconstruct_sos_proof(&mut ctx, &arena, &[assertion]);
     assert!(
         result.is_err(),
-        "2x² + 2y² < 0 is a SCALED sum of squares (weights 2); this d=1 slice models \
-         only unit weights and must decline, not prove"
+        "17x² < 0 has weight 17 > SOS_MAX_SQUARE_WEIGHT; it must decline, not prove"
     );
 }
