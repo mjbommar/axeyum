@@ -116,6 +116,27 @@ pub struct ArithPrelude {
     /// pure-strict variant `lt a b → lt c d → lt (add a c)(add b d)` is *derived*
     /// from it via [`Self::le_of_lt`], so no further axiom is added.
     pub add_lt_add_of_le_of_lt: NameId,
+
+    // --- multiplicative ring axioms (SOS reconstruction, ADR-0040) -----------
+    // Each is a standard theorem of a commutative ordered field (true in ℝ), and
+    // completes the multiplicative fragment the degree-2 SOS ring normalizer and
+    // square-nonnegativity proof need. Each axiom's type is type-checked at
+    // admission.
+    /// `mul_comm : ∀ (a b : R), Eq R (mul a b) (mul b a)`.
+    pub mul_comm: NameId,
+    /// `mul_assoc : ∀ (a b c : R), Eq R (mul (mul a b) c) (mul a (mul b c))`.
+    pub mul_assoc: NameId,
+    /// `mul_one : ∀ (a : R), Eq R (mul a one) a`.
+    pub mul_one: NameId,
+    /// `mul_zero : ∀ (a : R), Eq R (mul a zero) zero`.
+    pub mul_zero: NameId,
+    /// `left_distrib :
+    /// ∀ (a b c : R), Eq R (mul a (add b c)) (add (mul a b) (mul a c))`.
+    pub left_distrib: NameId,
+    /// `mul_nonneg : ∀ (a b : R), le zero a → le zero b → le zero (mul a b)`.
+    /// The product of nonnegatives is nonnegative; with `a = b` it gives the
+    /// square-nonnegativity `0 ≤ a·a` the SOS proof rests on.
+    pub mul_nonneg: NameId,
 }
 
 /// Declare the axiomatized **linear ordered field** into `kernel`'s environment,
@@ -438,6 +459,106 @@ pub fn build_arith_prelude(kernel: &mut Kernel) -> ArithPrelude {
         declare_axiom(kernel, anon, "add_lt_add_of_le_of_lt", ty)
     };
 
+    // --- mul_comm : ∀ (a b : R), Eq R (mul a b) (mul b a) --------------------
+    // (Same shape as `add_comm`, with `mul` for `add`.) Under a,b: a=1,b=0.
+    let mul_comm = {
+        let a1 = kernel.bvar(1);
+        let b0 = kernel.bvar(0);
+        let mul_ab = app2(kernel, mul, a1, b0);
+        let a1b = kernel.bvar(1);
+        let b0b = kernel.bvar(0);
+        let mul_ba = app2(kernel, mul, b0b, a1b);
+        let body = eq_r(kernel, mul_ab, mul_ba);
+        let ty = telescope_r(kernel, anon, r_ty, 2, body);
+        declare_axiom(kernel, anon, "mul_comm", ty)
+    };
+
+    // --- mul_assoc : ∀ (a b c : R), Eq R (mul (mul a b) c)(mul a (mul b c)) --
+    // (Same shape as `add_assoc`.) Under a,b,c: a=2,b=1,c=0.
+    let mul_assoc = {
+        let a2 = kernel.bvar(2);
+        let b1 = kernel.bvar(1);
+        let c0 = kernel.bvar(0);
+        let mul_ab = app2(kernel, mul, a2, b1);
+        let lhs = app2(kernel, mul, mul_ab, c0);
+        let a2b = kernel.bvar(2);
+        let b1b = kernel.bvar(1);
+        let c0b = kernel.bvar(0);
+        let mul_bc = app2(kernel, mul, b1b, c0b);
+        let rhs = app2(kernel, mul, a2b, mul_bc);
+        let body = eq_r(kernel, lhs, rhs);
+        let ty = telescope_r(kernel, anon, r_ty, 3, body);
+        declare_axiom(kernel, anon, "mul_assoc", ty)
+    };
+
+    // --- mul_one : ∀ (a : R), Eq R (mul a one) a -----------------------------
+    // (Same shape as `add_zero`, with `mul`/`one` for `add`/`zero`.)
+    let mul_one = {
+        let a0 = kernel.bvar(0);
+        let one_c = kernel.const_(one, vec![]);
+        let mul_ao = app2(kernel, mul, a0, one_c);
+        let a0b = kernel.bvar(0);
+        let body = eq_r(kernel, mul_ao, a0b);
+        let ty = kernel.pi(anon, r_ty, body, BinderInfo::Default);
+        declare_axiom(kernel, anon, "mul_one", ty)
+    };
+
+    // --- mul_zero : ∀ (a : R), Eq R (mul a zero) zero ------------------------
+    let mul_zero = {
+        let a0 = kernel.bvar(0);
+        let zero_c = kernel.const_(zero, vec![]);
+        let mul_az = app2(kernel, mul, a0, zero_c);
+        let zero_cb = kernel.const_(zero, vec![]);
+        let body = eq_r(kernel, mul_az, zero_cb);
+        let ty = kernel.pi(anon, r_ty, body, BinderInfo::Default);
+        declare_axiom(kernel, anon, "mul_zero", ty)
+    };
+
+    // --- left_distrib :
+    //       ∀ (a b c : R), Eq R (mul a (add b c)) (add (mul a b)(mul a c)) ----
+    // Under a,b,c: a=2,b=1,c=0.
+    let left_distrib = {
+        let a2 = kernel.bvar(2);
+        let b1 = kernel.bvar(1);
+        let c0 = kernel.bvar(0);
+        let add_bc = app2(kernel, add, b1, c0);
+        let lhs = app2(kernel, mul, a2, add_bc);
+        let a2b = kernel.bvar(2);
+        let b1b = kernel.bvar(1);
+        let mul_ab = app2(kernel, mul, a2b, b1b);
+        let a2c = kernel.bvar(2);
+        let c0b = kernel.bvar(0);
+        let mul_ac = app2(kernel, mul, a2c, c0b);
+        let rhs = app2(kernel, add, mul_ab, mul_ac);
+        let body = eq_r(kernel, lhs, rhs);
+        let ty = telescope_r(kernel, anon, r_ty, 3, body);
+        declare_axiom(kernel, anon, "left_distrib", ty)
+    };
+
+    // --- mul_nonneg : ∀ (a b : R), le zero a → le zero b → le zero (mul a b) -
+    // (Hyp shape mirrors `mul_le_mul_of_nonneg_left`'s `le zero c`.) Telescope
+    // a,b then h1,h2. Result under a,b,h1,h2: a=3,b=2; h2 under a,b,h1: b=1; h1
+    // under a,b: a=1.
+    let mul_nonneg = {
+        let zero_res = kernel.const_(zero, vec![]);
+        let a3 = kernel.bvar(3);
+        let b2 = kernel.bvar(2);
+        let mul_ab = app2(kernel, mul, a3, b2);
+        let result = app2(kernel, le, zero_res, mul_ab);
+        // h2 : le zero b — under a,b,h1 → b=1.
+        let zero_h2 = kernel.const_(zero, vec![]);
+        let b1 = kernel.bvar(1);
+        let h2_dom = app2(kernel, le, zero_h2, b1);
+        let after_h2 = kernel.pi(anon, h2_dom, result, BinderInfo::Default);
+        // h1 : le zero a — under a,b → a=1.
+        let zero_h1 = kernel.const_(zero, vec![]);
+        let a1 = kernel.bvar(1);
+        let h1_dom = app2(kernel, le, zero_h1, a1);
+        let after_h1 = kernel.pi(anon, h1_dom, after_h2, BinderInfo::Default);
+        let ty = telescope_r(kernel, anon, r_ty, 2, after_h1);
+        declare_axiom(kernel, anon, "mul_nonneg", ty)
+    };
+
     ArithPrelude {
         logic,
         r,
@@ -463,6 +584,12 @@ pub fn build_arith_prelude(kernel: &mut Kernel) -> ArithPrelude {
         mul_le_mul_of_nonneg_left,
         zero_lt_one,
         add_lt_add_of_le_of_lt,
+        mul_comm,
+        mul_assoc,
+        mul_one,
+        mul_zero,
+        left_distrib,
+        mul_nonneg,
     }
 }
 

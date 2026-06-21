@@ -109,6 +109,12 @@ fn arith_prelude_admits_all_declarations() {
         p.add_neg,
         p.mul_le_mul_of_nonneg_left,
         p.zero_lt_one,
+        p.mul_comm,
+        p.mul_assoc,
+        p.mul_one,
+        p.mul_zero,
+        p.left_distrib,
+        p.mul_nonneg,
     ] {
         assert!(
             k.environment().contains(name),
@@ -153,6 +159,12 @@ fn every_axiom_type_infers_to_a_sort() {
         p.add_neg,
         p.mul_le_mul_of_nonneg_left,
         p.zero_lt_one,
+        p.mul_comm,
+        p.mul_assoc,
+        p.mul_one,
+        p.mul_zero,
+        p.left_distrib,
+        p.mul_nonneg,
     ] {
         let ty = k.environment().get(name).unwrap().ty();
         let inferred = k.infer(ty).unwrap();
@@ -356,6 +368,47 @@ fn baby_farkas_refutation_checks() {
     assert!(
         f.k.def_eq(inferred, false_),
         "baby-Farkas refutation : False"
+    );
+}
+
+/// **square-nonnegativity** — the key SOS primitive (ADR-0040): from a single
+/// hypothesis `h : le zero a`, the term `mul_nonneg a a h h` infers to
+/// `le zero (mul a a)`, i.e. `0 ≤ a·a`. The kernel type-checks the whole proof,
+/// so this is the kernel's own verification that the new `mul_nonneg` axiom yields
+/// square-nonnegativity (the nonnegativity half of every SOS refutation).
+#[test]
+fn mul_nonneg_yields_square_nonneg() {
+    let mut f = fixture();
+    let a = f.a_const();
+    let zero = f.zero();
+    let le_0a = f.le(zero, a); // le zero a
+    let (_, h) = f.hyp("h", le_0a);
+
+    // proof := mul_nonneg a a h h.
+    let proof = {
+        let mn = f.k.const_(f.p.mul_nonneg, vec![]);
+        let a2 = f.a_const();
+        let a3 = f.a_const();
+        let e = f.k.app(mn, a2); // mul_nonneg a
+        let e = f.k.app(e, a3); // mul_nonneg a a
+        let e = f.k.app(e, h); // ... (h : le zero a)
+        f.k.app(e, h) // ... (h : le zero a) ⇒ le zero (mul a a)
+    };
+    let inferred = f.k.infer(proof).unwrap();
+
+    // Expected: le zero (mul a a).
+    let a4 = f.a_const();
+    let a5 = f.a_const();
+    let mul_aa = {
+        let mc = f.k.const_(f.p.mul, vec![]);
+        let e = f.k.app(mc, a4);
+        f.k.app(e, a5)
+    };
+    let zero2 = f.zero();
+    let expected = f.le(zero2, mul_aa);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "mul_nonneg a a h h : le zero (mul a a)"
     );
 }
 
