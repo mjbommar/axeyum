@@ -2471,17 +2471,32 @@ fn match_multi_constraint(arena: &TermArena, assertion: TermId) -> Option<(Cmp, 
     if matches!(op, Op::BoolNot) {
         let inner = args[0];
         let TermNode::App {
-            op: Op::Eq,
-            args: eq_args,
+            op: inner_op,
+            args: inner_args,
         } = arena.node(inner)
         else {
             return None;
         };
-        if arena.sort_of(eq_args[0]) != Sort::Real {
-            return None;
-        }
-        let poly = collect_multi_diff(arena, eq_args[0], eq_args[1])?;
-        return Some((Cmp::Ne, poly));
+        // Dualize a negated real (in)equality to its complementary relation, so
+        // refutation queries — which arrive as `¬goal` and are usually stated as
+        // `≤`/`≥`/`=` — reach the decider (including the SOS/PSD certificate) rather
+        // than falling through to the abstraction search. `lhs − rhs` is the same
+        // polynomial as the un-negated comparison; only the relation flips.
+        let cmp = match inner_op {
+            Op::Eq => {
+                if arena.sort_of(inner_args[0]) != Sort::Real {
+                    return None;
+                }
+                Cmp::Ne // ¬(a = b)  ⇔  a ≠ b
+            }
+            Op::RealLt => Cmp::Ge, // ¬(a < b)  ⇔  a ≥ b
+            Op::RealLe => Cmp::Gt, // ¬(a ≤ b)  ⇔  a > b
+            Op::RealGt => Cmp::Le, // ¬(a > b)  ⇔  a ≤ b
+            Op::RealGe => Cmp::Lt, // ¬(a ≥ b)  ⇔  a < b
+            _ => return None,
+        };
+        let poly = collect_multi_diff(arena, inner_args[0], inner_args[1])?;
+        return Some((cmp, poly));
     }
     let cmp = match op {
         Op::Eq => Cmp::Eq,

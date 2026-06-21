@@ -216,3 +216,34 @@ fn degree_three_declines() {
         "x³ < 0 is satisfiable; must NOT be Unsat, got {result:?}"
     );
 }
+
+#[test]
+fn negated_le_goal_engages_sos_fast() {
+    // A refutation query as it actually ARRIVES: the goal `2xy ≤ x²+y²` is refuted
+    // by asserting `¬(2xy ≤ x²+y²)`. The collector dualizes `¬(a ≤ b)` to `a > b`,
+    // so the strict atom `2xy − (x²+y²) > 0` = `−(x−y)² > 0` reaches the SOS/PSD
+    // certificate (NSD branch) and decides Unsat — quickly, not via the abstraction
+    // search. Guards that SOS engages on negated-comparison goal shapes.
+    let mut arena = TermArena::new();
+    let x = real(&mut arena, "x");
+    let y = real(&mut arena, "y");
+    let xx = arena.real_mul(x, x).unwrap();
+    let yy = arena.real_mul(y, y).unwrap();
+    let sum = arena.real_add(xx, yy).unwrap();
+    let xy = arena.real_mul(x, y).unwrap();
+    let two = konst(&mut arena, 2);
+    let two_xy = arena.real_mul(two, xy).unwrap();
+    let le = arena.real_le(two_xy, sum).unwrap();
+    let goal_refutation = arena.not(le).unwrap();
+
+    let start = std::time::Instant::now();
+    let result = run(&mut arena, goal_refutation);
+    assert!(
+        is_unsat(&result),
+        "¬(2xy ≤ x²+y²) is globally unsat (SOS); got {result:?}"
+    );
+    assert!(
+        start.elapsed() < std::time::Duration::from_millis(5),
+        "the SOS certificate must decide this without the abstraction search"
+    );
+}
