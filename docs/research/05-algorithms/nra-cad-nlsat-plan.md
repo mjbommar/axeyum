@@ -104,15 +104,22 @@ SOS reconstruction covers the degree-2 cells.
      (enumerate roots(`Res_y`) × roots(`Res_x`), test each algebraic `(α,β)` pair
      by exact field arithmetic; Sat replay-checked, Unsat exhaustive only over the
      all-equality grid with every pair definitely signed).
-   - **next slices:** (a) raise the feasible degree — replace the `O(dim!)`
-     Leibniz Sylvester determinant with a fraction-free / evaluation-interpolation
-     route (`O(dim³)`), lifting `BIG_MAX_SYLVESTER_DIM` so nested-radical degree-4
-     coordinates (e.g. `x²+y²=4 ∧ x·y=1`, currently a sound `Unknown`) decide; the
-     resultant polynomial must be preserved *exactly* (a determinant bug would
-     mis-decide every 2-var verdict — anchor on the existing tests). (b) 2-variable
-     **inequality** lifting via sign-invariant cell sample points (the CAD core;
-     Unsat needs provable cell completeness — soundness-delicate, slice carefully).
-     (c) ≥3-variable projection. (d) the deferred bignum-`Value::RealAlgebraic`.
+   - **slice 2 DONE** (commit `3333c2a`) — exact evaluation-interpolation
+     Sylvester determinant (`O(dim!)→O(dim³)`, caps 10/6→24), anchored by a
+     differential test (3240 matrices ≡ Leibniz). Raises the resultant-degree
+     reach for the bignum combinations and the future ≥3-var projection.
+   - **slice 3 DONE** (commit `366eb45`, ADR-0046) — bignum
+     `Value::RealAlgebraic` (`Vec<BigInt>`/`BigRational`, `num-bigint`
+     unconditional): removes the i128-storage ceiling, collapses the i128/retry
+     split, so the nested-radical coupled case `x²+y²=4 ∧ x·y=1` now decides
+     **Sat** with replay. Soundness wall held (no verdict flip across 1558 tests).
+   - **next slices:** (a) **in progress** — 2-variable **strict-inequality**
+     lifting: complete CAD via rational open-cell sampling (a strict system's
+     solution set is open ⇒ one rational interior sample per open x-cell is
+     exhaustive, no algebraic substitution needed; Unsat is complete-or-decline).
+     (b) mixed / non-strict inequality cells (needs algebraic-coordinate point-cell
+     handling — harder). (c) ≥3-variable projection (now feasible — the determinant
+     is polynomial-time). (d) per-cell Positivstellensatz evidence (step 4).
 4. Cell-certificate format + the degree-2 reconstruction hook; general
    Positivstellensatz reconstruction is the long arc.
 
