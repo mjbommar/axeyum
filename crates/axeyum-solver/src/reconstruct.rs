@@ -1179,12 +1179,67 @@ pub enum ProofFragment {
     Datatype,
     /// Linear real/integer arithmetic (Farkas).
     Lra,
+    /// A trivial single-square sum-of-squares refutation: the one-variable real
+    /// query `x*x < 0` (UNSAT: a square is never negative). The simplest SOS
+    /// reconstruction, needing no ring normalizer (ADR-0040, SOS slice 1).
+    Sos,
     /// A top-level universal quantifier.
     Forall,
     /// A top-level existential quantifier (skolemized).
     Exists,
     /// Empty / no reconstructable content.
     Unsupported,
+}
+
+/// Detect the **trivial single-square** SOS shape: `assertions` is exactly one
+/// assertion of the form `(x * x) < 0` where `x` is a real-sorted free variable
+/// and the right-hand side is the real constant `0`. On a match, returns the
+/// [`TermId`] of the real variable `x`; otherwise `None`.
+///
+/// This is the only shape the slice-1 SOS reconstructor accepts. General SOS
+/// (`(x − y)² < 0`, multi-variable squares, etc.) needs the degree-2 ring
+/// normalizer and is a later slice — it is deliberately *not* matched here.
+#[must_use]
+fn is_single_square_lt_zero(arena: &TermArena, assertions: &[TermId]) -> Option<TermId> {
+    let [only] = assertions else {
+        return None;
+    };
+    // The assertion must be a real strict-less-than `lhs < rhs`.
+    let IrTermNode::App {
+        op: IrOp::RealLt,
+        args,
+    } = arena.node(*only)
+    else {
+        return None;
+    };
+    let [lhs, rhs] = &**args else {
+        return None;
+    };
+    let (lhs, rhs) = (*lhs, *rhs);
+    // RHS must be the real constant 0.
+    match arena.node(rhs) {
+        IrTermNode::RealConst(c) if c.is_zero() => {}
+        _ => return None,
+    }
+    // LHS must be `mul x x` with both factors the *same* real variable symbol.
+    let IrTermNode::App {
+        op: IrOp::RealMul,
+        args,
+    } = arena.node(lhs)
+    else {
+        return None;
+    };
+    let [a, b] = &**args else {
+        return None;
+    };
+    let (a, b) = (*a, *b);
+    if a != b {
+        return None;
+    }
+    match arena.node(a) {
+        IrTermNode::Symbol(_) if arena.sort_of(a) == IrSort::Real => Some(a),
+        _ => None,
+    }
 }
 
 /// Classify `assertions` into the [`ProofFragment`] whose emitter+reconstructor
@@ -1238,7 +1293,14 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
     } else if has_func {
         ProofFragment::QfUf
     } else if has_arith {
-        ProofFragment::Lra
+        // The trivial single-square SOS shape (`x*x < 0`, one real variable) is
+        // owned by the dedicated SOS reconstructor (no ring normalizer needed); any
+        // other arithmetic query falls through to the linear Farkas (LRA) path.
+        if is_single_square_lt_zero(arena, assertions).is_some() {
+            ProofFragment::Sos
+        } else {
+            ProofFragment::Lra
+        }
     } else if assertions.is_empty() {
         ProofFragment::Unsupported
     } else {
@@ -1303,6 +1365,37 @@ fn render_ctx_module(ctx: &mut ReconstructCtx, proof: ExprId) -> String {
     };
     ctx.kernel()
         .render_lean_module(LEAN_MODULE_THEOREM, false_, proof)
+}
+
+/// Gate a [`LraReconstructCtx`]-built `proof : False` through the kernel
+/// (`infer` + `def_eq False`) and render the self-contained Lean module — the
+/// shared closing step of the arithmetic branches (`Lra`, `Sos`). `kind` names the
+/// fragment in any rejection diagnostic.
+fn gate_and_render_lra_module(
+    ctx: &mut LraReconstructCtx,
+    proof: ExprId,
+    kind: &str,
+) -> Result<String, ReconstructError> {
+    let inferred = ctx
+        .kernel_mut()
+        .infer(proof)
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "prove_unsat_to_lean".to_owned(),
+            detail: format!("infer failed: {e:?}"),
+        })?;
+    let false_ = {
+        let f = ctx.arith().logic.false_;
+        ctx.kernel_mut().const_(f, vec![])
+    };
+    if !ctx.kernel_mut().def_eq(inferred, false_) {
+        return Err(ReconstructError::KernelRejected {
+            rule: "prove_unsat_to_lean".to_owned(),
+            detail: format!("reconstructed {kind} term did not infer to False"),
+        });
+    }
+    Ok(ctx
+        .kernel()
+        .render_lean_module(LEAN_MODULE_THEOREM, false_, proof))
 }
 
 /// **Like [`prove_unsat_to_lean`], but also returns a self-contained Lean 4
@@ -1387,25 +1480,12 @@ pub fn prove_unsat_to_lean_module(
         ProofFragment::Lra => {
             let mut ctx = LraReconstructCtx::new();
             let t = reconstruct_lra_proof(&mut ctx, arena, assertions)?;
-            let inferred =
-                ctx.kernel_mut()
-                    .infer(t)
-                    .map_err(|e| ReconstructError::KernelRejected {
-                        rule: "prove_unsat_to_lean".to_owned(),
-                        detail: format!("infer failed: {e:?}"),
-                    })?;
-            let false_ = {
-                let f = ctx.arith().logic.false_;
-                ctx.kernel_mut().const_(f, vec![])
-            };
-            if !ctx.kernel_mut().def_eq(inferred, false_) {
-                return Err(ReconstructError::KernelRejected {
-                    rule: "prove_unsat_to_lean".to_owned(),
-                    detail: "reconstructed LRA term did not infer to False".to_owned(),
-                });
-            }
-            ctx.kernel()
-                .render_lean_module(LEAN_MODULE_THEOREM, false_, t)
+            gate_and_render_lra_module(&mut ctx, t, "LRA")?
+        }
+        ProofFragment::Sos => {
+            let mut ctx = LraReconstructCtx::new();
+            let t = reconstruct_sos_proof(&mut ctx, arena, assertions)?;
+            gate_and_render_lra_module(&mut ctx, t, "SOS")?
         }
         ProofFragment::Unsupported => {
             return Err(ReconstructError::UnsupportedRule {
@@ -6636,6 +6716,13 @@ impl LraReconstructCtx {
         self.kernel.app(e, y)
     }
 
+    /// `mul x y : R`.
+    fn mk_mul(&mut self, x: ExprId, y: ExprId) -> ExprId {
+        let mul = self.kernel.const_(self.arith.mul, vec![]);
+        let e = self.kernel.app(mul, x);
+        self.kernel.app(e, y)
+    }
+
     /// `neg x : R`.
     fn mk_neg(&mut self, x: ExprId) -> ExprId {
         let neg = self.kernel.const_(self.arith.neg, vec![]);
@@ -7648,6 +7735,112 @@ pub fn reconstruct_lra_proof(
         return Ok(proof);
     }
     reconstruct_transitivity_refutation(ctx, arena, assertions, &certificate)
+}
+
+/// Reconstruct the **trivial single-square sum-of-squares** refutation
+/// (ADR-0040, SOS slice 1): the one-variable real query `x*x < 0`, which is UNSAT
+/// because a real square is never negative.
+///
+/// This is the simplest SOS reconstruction and needs **no ring normalizer** — the
+/// SOS identity `x² = 1·x²` is trivial — so the proof is just unconditional
+/// square-nonnegativity composed with one order step:
+///
+/// 1. `sq  : le zero (mul x x)` := `sq_nonneg x` (the prelude's unconditional
+///    square-nonnegativity axiom applied to the variable term `x`).
+/// 2. `hlt : lt (mul x x) zero` — the asserted atom `x*x < 0`, introduced as a
+///    hypothesis axiom (mirroring how the LRA baby-Farkas path discharges its
+///    asserted constraints via [`LraReconstructCtx::hyp_axiom`]).
+/// 3. `chain : lt zero zero` := `lt_of_le_of_lt zero (mul x x) zero sq hlt`.
+/// 4. `bad : False` := `lt_irrefl zero chain` (since
+///    `lt_irrefl zero : Not (lt zero zero) = lt zero zero → False`).
+///
+/// The returned [`ExprId`] infers to `False` and is gated (`infer` + `def_eq
+/// False`) here; a wrong reconstruction is [`ReconstructError::KernelRejected`],
+/// never an accepted unsound proof.
+///
+/// # Errors
+///
+/// Returns [`ReconstructError::UnsupportedTerm`] for **anything but** the trivial
+/// single-square shape `mul x x < 0` over one real variable (general SOS such as
+/// `(x − y)² < 0` is a later slice and is declined here), or
+/// [`ReconstructError::KernelRejected`] if the assembled term fails to kernel-check
+/// to `False`.
+pub fn reconstruct_sos_proof(
+    ctx: &mut LraReconstructCtx,
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<ExprId, ReconstructError> {
+    // Accept ONLY the trivial single-square shape `x*x < 0` over one real variable.
+    // Anything else (multi-variable squares, `(x−y)² < 0`, non-square atoms) needs
+    // the degree-2 ring normalizer — a later slice — and is declined here so we
+    // never claim success without a kernel-checked term.
+    if is_single_square_lt_zero(arena, assertions).is_none() {
+        return Err(ReconstructError::UnsupportedTerm {
+            term: "SOS reconstruction (slice 1) only handles the trivial single-square \
+                   query `x*x < 0` over one real variable; general SOS is a later slice"
+                .to_owned(),
+        });
+    }
+
+    // The single real variable `x` as an opaque `R`-typed kernel constant. There is
+    // exactly one variable, so the dense index is 0.
+    let x_name = ctx.var_const(0);
+    let x = ctx.kernel_mut().const_(x_name, vec![]);
+    let zero = ctx.mk_zero();
+    let xx = ctx.mk_mul(x, x);
+
+    // 1. sq : le zero (mul x x)  :=  sq_nonneg x.
+    let sq = {
+        let sq_nonneg_name = ctx.arith().sq_nonneg;
+        let sq_nonneg = ctx.kernel_mut().const_(sq_nonneg_name, vec![]);
+        ctx.kernel_mut().app(sq_nonneg, x)
+    };
+
+    // 2. hlt : lt (mul x x) zero — the asserted atom `x*x < 0` as a hypothesis.
+    let hlt = {
+        let prop = ctx.mk_lt(xx, zero);
+        ctx.hyp_axiom(prop)?
+    };
+
+    // 3. chain : lt zero zero  :=  lt_of_le_of_lt zero (mul x x) zero sq hlt.
+    let chain = {
+        let ax_name = ctx.arith().lt_of_le_of_lt;
+        let ax = ctx.kernel_mut().const_(ax_name, vec![]);
+        let e = ctx.kernel_mut().app(ax, zero);
+        let e = ctx.kernel_mut().app(e, xx);
+        let e = ctx.kernel_mut().app(e, zero);
+        let e = ctx.kernel_mut().app(e, sq);
+        ctx.kernel_mut().app(e, hlt)
+    };
+
+    // 4. bad : False  :=  lt_irrefl zero chain.
+    let proof = {
+        let irrefl_name = ctx.arith().lt_irrefl;
+        let irrefl = ctx.kernel_mut().const_(irrefl_name, vec![]);
+        let e = ctx.kernel_mut().app(irrefl, zero);
+        ctx.kernel_mut().app(e, chain)
+    };
+
+    // Soundness gate: the assembled term must kernel-infer to `False`.
+    let inferred = ctx
+        .kernel_mut()
+        .infer(proof)
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "sos_single_square".to_owned(),
+            detail: format!("SOS infer failed: {e:?}"),
+        })?;
+    let false_ = {
+        let f = ctx.arith().logic.false_;
+        ctx.kernel_mut().const_(f, vec![])
+    };
+    if ctx.kernel_mut().def_eq(inferred, false_) {
+        Ok(proof)
+    } else {
+        Err(ReconstructError::KernelRejected {
+            rule: "sos_single_square".to_owned(),
+            detail: "SOS single-square refutation did not infer to False".to_owned(),
+        })
+    }
 }
 
 /// Reconstruct the **general** non-strict Farkas refutation. Given the certificate's
