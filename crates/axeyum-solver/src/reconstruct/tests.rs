@@ -3210,6 +3210,176 @@ fn lra_general_engine_handles_unit_baby_shape() {
     assert_lra_infers_false(&mut ctx, proof);
 }
 
+/// **Genuinely rational multipliers** (denominator-clearing path): a directly-built
+/// `FarkasCertificate` over atoms `3x − 1 ≤ 0` and `−2x + 1 ≤ 0` with multipliers
+/// `λ = (2/3, 1)`. The combination `(2/3)·(3x − 1) + 1·(−2x + 1)` cancels `x`
+/// (`2 − 2 = 0`) and leaves the **positive** constant `1/3 > 0`, a real refutation.
+///
+/// The natural `lra.rs` Fourier–Motzkin output already normalizes multipliers to
+/// integers, so this is the only test that exercises [`try_general_farkas`]'s
+/// `lcm`-denominator-clearing (`λ = (2/3, 1)` scaled by `lcm(3,1) = 3` to integer
+/// `μ = (2, 3)`, then `K = 2·(−1) + 3·(1) = 1`). We first `verify()` the cert is a
+/// genuine Farkas refutation (so we are not feeding the engine a bogus combination),
+/// then reconstruct it to a kernel-checked `False`.
+#[test]
+fn lra_general_rational_multipliers_reconstructs() {
+    use axeyum_ir::Rational;
+
+    use super::{LraReconstructCtx, try_general_farkas};
+
+    // atom0: 3x − 1 ≤ 0 ; atom1: −2x + 1 ≤ 0.
+    let cert = crate::FarkasCertificate {
+        atoms: vec![
+            crate::FarkasAtom {
+                coeffs: vec![(0, Rational::integer(3))],
+                constant: Rational::integer(-1),
+                strict: false,
+            },
+            crate::FarkasAtom {
+                coeffs: vec![(0, Rational::integer(-2))],
+                constant: Rational::integer(1),
+                strict: false,
+            },
+        ],
+        multipliers: vec![Rational::new(2, 3), Rational::integer(1)],
+        origins: vec![0, 1],
+    };
+    assert!(
+        cert.verify(),
+        "the directly-built rational-multiplier cert must be a genuine Farkas refutation"
+    );
+    // Multipliers genuinely carry a denominator > 1 (exercise the clearing path).
+    assert_eq!(cert.multipliers[0].denominator(), 3);
+
+    let mut ctx = LraReconstructCtx::new();
+    let proof = try_general_farkas(&mut ctx, &cert)
+        .expect("no error")
+        .expect("rational-multiplier general Farkas reconstructs");
+    assert_lra_infers_false(&mut ctx, proof);
+}
+
+/// **Strict, rational multipliers, mixed engine** (denominator-clearing on a strict
+/// atom): a directly-built cert over the **strict** atom `3x − 1 < 0` and the
+/// non-strict `−2x + 1 ≤ 0`, multipliers `λ = (2/3, 1)`. The combination cancels
+/// `x` and yields the strict `Σ < 0` with `Σ = K = 1/3 > 0` (after clearing,
+/// integer `μ = (2, 3)`, `K = 1`), refuted via `0 < K` and `lt_trans` → `0 < 0` →
+/// `lt_irrefl`. Exercises [`try_mixed_farkas`]'s `lcm`-clearing on a strict atom and
+/// the strict-scaling `add_lt_add` fold.
+#[test]
+fn lra_mixed_rational_multipliers_reconstructs() {
+    use axeyum_ir::Rational;
+
+    use super::{LraReconstructCtx, try_mixed_farkas};
+
+    let cert = crate::FarkasCertificate {
+        atoms: vec![
+            crate::FarkasAtom {
+                coeffs: vec![(0, Rational::integer(3))],
+                constant: Rational::integer(-1),
+                strict: true, // 3x − 1 < 0
+            },
+            crate::FarkasAtom {
+                coeffs: vec![(0, Rational::integer(-2))],
+                constant: Rational::integer(1),
+                strict: false, // −2x + 1 ≤ 0
+            },
+        ],
+        multipliers: vec![Rational::new(2, 3), Rational::integer(1)],
+        origins: vec![0, 1],
+    };
+    assert!(
+        cert.verify(),
+        "the strict rational-multiplier cert must be a genuine Farkas refutation"
+    );
+    assert_eq!(cert.multipliers[0].denominator(), 3);
+
+    let mut ctx = LraReconstructCtx::new();
+    let proof = try_mixed_farkas(&mut ctx, &cert)
+        .expect("no error")
+        .expect("strict rational-multiplier mixed Farkas reconstructs");
+    assert_lra_infers_false(&mut ctx, proof);
+}
+
+/// **NEGATIVE — the kernel is the soundness backstop.** A *wrong* Farkas combination
+/// must never yield a `False`. Two layers are checked:
+///
+/// 1. **Untrusted pre-checks** reject a non-refutation early: a cert over `x ≤ 0`
+///    and `−x ≤ 0` (i.e. `x ≥ 0`) with multipliers `(1, 1)` cancels `x` but leaves
+///    `K = 0` — the combination is `0 ≤ 0`, *true*, not a refutation. The
+///    non-strict engine requires `K > 0`, so it returns `Ok(None)` (falls through)
+///    rather than fabricating a `False`. `cert.verify()` agrees it is not a
+///    refutation.
+/// 2. **Trusted kernel gate** is the final backstop: even a hand-assembled *wrong*
+///    arithmetic term (here `lt_irrefl zero` applied to `zero_lt_one`, a deliberate
+///    type error — `lt_irrefl zero : ¬ lt zero zero` cannot consume `lt zero one`)
+///    is rejected by `infer`; the kernel never admits it as a proof of `False`.
+///
+/// Together: a bogus combination is rejected — by the pre-check when possible, by the
+/// kernel `infer`/`def_eq` gate unconditionally — and never produces a wrong `False`.
+#[test]
+fn lra_bogus_farkas_combination_is_rejected() {
+    use axeyum_ir::Rational;
+
+    use super::{LraReconstructCtx, try_general_farkas};
+
+    // Layer 1: a non-refutation cert (K = 0) falls through to `Ok(None)`.
+    let non_refutation = crate::FarkasCertificate {
+        atoms: vec![
+            crate::FarkasAtom {
+                coeffs: vec![(0, Rational::integer(1))],
+                constant: Rational::zero(),
+                strict: false, // x ≤ 0
+            },
+            crate::FarkasAtom {
+                coeffs: vec![(0, Rational::integer(-1))],
+                constant: Rational::zero(),
+                strict: false, // −x ≤ 0
+            },
+        ],
+        multipliers: vec![Rational::integer(1), Rational::integer(1)],
+        origins: vec![0, 1],
+    };
+    assert!(
+        !non_refutation.verify(),
+        "x ≤ 0 ∧ −x ≤ 0 is satisfiable (x = 0); not a Farkas refutation"
+    );
+    let mut ctx = LraReconstructCtx::new();
+    let outcome = try_general_farkas(&mut ctx, &non_refutation)
+        .expect("a non-refutation must not error-out the engine, only fall through");
+    assert!(
+        outcome.is_none(),
+        "a non-refutation (K = 0) must NOT reconstruct to a `False`; got {outcome:?}"
+    );
+
+    // Layer 2: the trusted kernel gate rejects a hand-built WRONG combination. We
+    // mis-apply `lt_irrefl zero : ¬ lt zero zero` to `zero_lt_one : lt zero one` —
+    // an ill-typed term. `infer` must FAIL (never silently yield a `False`).
+    let irrefl_zero_at_zlo = {
+        let arith = *ctx.arith();
+        let zero = {
+            let z = arith.zero;
+            ctx.kernel_mut().const_(z, vec![])
+        };
+        let irrefl = {
+            let i = arith.lt_irrefl;
+            ctx.kernel_mut().const_(i, vec![])
+        };
+        // lt_irrefl zero : Not (lt zero zero) = (lt zero zero → False).
+        let not_lt_zz = ctx.kernel_mut().app(irrefl, zero);
+        // zero_lt_one : lt zero one — the WRONG argument (expected lt zero zero).
+        let zlo = {
+            let z = arith.zero_lt_one;
+            ctx.kernel_mut().const_(z, vec![])
+        };
+        ctx.kernel_mut().app(not_lt_zz, zlo)
+    };
+    assert!(
+        ctx.kernel_mut().infer(irrefl_zero_at_zlo).is_err(),
+        "the kernel must REJECT (fail to infer) an ill-typed Farkas combination — \
+         a wrong term can never be admitted as a proof of `False`"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Quantifier instantiation: a REAL `prove_quant_unsat_alethe` proof for a
 // universally-quantified `unsat` reconstructed to a kernel-checked `False` via
