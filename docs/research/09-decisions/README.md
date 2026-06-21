@@ -93,3 +93,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0037](adr-0037-destination-2-reduction-over-custom-core.md) | Destination-2 priority is word-level reduction, not a custom default SAT core | accepted |
 | [0038](adr-0038-real-algebraic-numbers.md) | Real algebraic numbers (defining poly + isolating interval); single-variable NRA decider with irrational witnesses (slice 1) | accepted |
 | [0039](adr-0039-degree-2-sos-psd-certificate.md) | Degree-2 sum-of-squares / PSD nonnegativity certificate for NRA (multivariate AM–GM and globally-(non)negative quadratic forms decide Unsat exactly) | accepted |
+| [0040](adr-0040-sos-lean-reconstruction.md) | SOS certificate → Lean reconstruction via minimal commutative-ordered-ring axioms + a degree-2 ring normalizer (kernel-checked proof for the SOS unsat route) | accepted |
