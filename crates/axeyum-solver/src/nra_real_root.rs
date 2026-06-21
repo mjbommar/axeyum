@@ -2689,69 +2689,136 @@ fn negate_matrix(matrix: &[Vec<Rational>]) -> Option<Vec<Vec<Rational>>> {
     Some(out)
 }
 
-/// Exact PSD test for a SYMMETRIC rational matrix via symmetric `LDLᵀ`
-/// (Gaussian-elimination) factorization. Returns:
-///   • `Some(true)`  — the matrix is positive semidefinite,
-///   • `Some(false)` — it is provably NOT PSD,
-///   • `None`        — the test could not be completed exactly (an `i128`
-///                     overflow during elimination) ⇒ the caller declines.
-///
-/// Algorithm (standard symmetric elimination, exact over ℚ): process pivots
-/// `k = 0..dim`. With the current (already-reduced) symmetric matrix `a`:
-///   • if `a[k][k] > 0`: a valid positive pivot; eliminate it from every later
-///     row/column by the symmetric rank-1 update
-///     `a[i][j] -= a[i][k]·a[k][j]/a[k][k]`.
-///   • if `a[k][k] == 0`: PSD requires the *entire* remaining k-th row/column to
-///     be zero (a zero pivot with any nonzero off-diagonal entry ⇒ the form takes
-///     negative values ⇒ NOT PSD). When the row is all zero, the pivot
-///     contributes nothing and we move on (no elimination needed).
-///   • if `a[k][k] < 0`: an immediate negative direction ⇒ NOT PSD.
-///
-/// A symmetric matrix is PSD iff this elimination completes with every pivot
-/// `≥ 0` and every zero pivot having a zero remaining row/column. This is the
-/// exact rational analogue of `LDLᵀ` with `D ≥ 0`; it is SOUND for global
-/// nonnegativity of the associated quadratic form.
+/// The outcome of attempting an exact symmetric `LDLᵀ` factorization of a
+/// rational matrix: a positive-semidefinite witness, a definite refutation, or a
+/// graceful overflow decline.
+enum Ldlt {
+    /// `M = L·D·Lᵀ` with `L` unit lower-triangular and `D ≥ 0` (componentwise):
+    /// an explicit certificate that the associated quadratic form is a sum of
+    /// squares `p(x) = Σₖ D[k]·ℓₖ(x)²` (`ℓₖ` = the k-th coordinate of `Lᵀ[x;1]`),
+    /// hence globally nonnegative.
+    Psd {
+        l: Vec<Vec<Rational>>,
+        d: Vec<Rational>,
+    },
+    /// The matrix is provably NOT positive semidefinite.
+    NotPsd,
+    /// An `i128` overflow prevented an exact factorization ⇒ the caller declines.
+    Overflow,
+}
+
+/// Exact symmetric `LDLᵀ` factorization of a SYMMETRIC rational matrix, recording
+/// the `L`/`D` factors so the PSD claim carries an explicit, checkable
+/// sum-of-squares certificate. Standard symmetric (Gaussian) elimination, exact
+/// over ℚ; process pivots `k = 0..dim` on the running reduced matrix `a`:
+///   • `a[k][k] > 0`: a positive pivot `D[k]`; record the multipliers
+///     `L[i][k] = a[i][k]/a[k][k]` and apply the symmetric rank-1 update
+///     `a[i][j] -= L[i][k]·a[k][j]`.
+///   • `a[k][k] == 0`: PSD demands the entire remaining k-th row/column be zero (a
+///     zero pivot with a nonzero off-diagonal ⇒ the form takes negative values ⇒
+///     NOT PSD); when zero, `D[k] = 0`, `L[i][k] = 0`, nothing to eliminate.
+///   • `a[k][k] < 0`: an immediate negative direction ⇒ NOT PSD.
 #[allow(
     clippy::needless_range_loop,
     reason = "the symmetric rank-1 update reads a[i][j], a[i][k], a[k][j] by index together"
 )]
-fn is_psd_exact(matrix: &[Vec<Rational>]) -> Option<bool> {
+fn try_ldlt(matrix: &[Vec<Rational>]) -> Ldlt {
     let dim = matrix.len();
-    // Defensive: a non-square matrix is not something we certify.
     if matrix.iter().any(|r| r.len() != dim) {
-        return Some(false);
+        return Ldlt::NotPsd; // a non-square matrix is not something we certify
     }
     let mut a: Vec<Vec<Rational>> = matrix.to_vec();
+    let mut l = vec![vec![Rational::zero(); dim]; dim];
+    let mut d = vec![Rational::zero(); dim];
+    for k in 0..dim {
+        l[k][k] = Rational::integer(1); // unit lower triangular
+    }
 
     for k in 0..dim {
         let pivot = a[k][k];
+        d[k] = pivot;
         match Sign::of_rational(pivot) {
-            Sign::Neg => return Some(false), // negative pivot ⇒ not PSD
+            Sign::Neg => return Ldlt::NotPsd,
             Sign::Zero => {
-                // Zero pivot: PSD demands the whole remaining row/column be zero.
                 for j in (k + 1)..dim {
                     if !a[k][j].is_zero() || !a[j][k].is_zero() {
-                        return Some(false);
+                        return Ldlt::NotPsd;
                     }
                 }
-                // Row/column already zero: nothing to eliminate, continue.
+                // L[i][k] stays 0 (no elimination for a zero pivot).
             }
             Sign::Pos => {
-                // Symmetric rank-1 elimination of pivot `k` from later rows/cols.
                 for i in (k + 1)..dim {
-                    let factor = a[i][k].checked_div(pivot)?; // a[i][k]/a[k][k]
+                    let Some(factor) = a[i][k].checked_div(pivot) else {
+                        return Ldlt::Overflow;
+                    };
+                    l[i][k] = factor;
                     if factor.is_zero() {
                         continue;
                     }
                     for j in (k + 1)..dim {
-                        let term = factor.checked_mul(a[k][j])?;
-                        a[i][j] = a[i][j].checked_sub(term)?;
+                        let Some(term) = factor.checked_mul(a[k][j]) else {
+                            return Ldlt::Overflow;
+                        };
+                        let Some(updated) = a[i][j].checked_sub(term) else {
+                            return Ldlt::Overflow;
+                        };
+                        a[i][j] = updated;
                     }
                 }
             }
         }
     }
+    Ldlt::Psd { l, d }
+}
+
+/// Independently re-validate an `LDLᵀ` certificate: reconstruct `L·D·Lᵀ` and
+/// confirm it equals `matrix` exactly, with every `D[k] ≥ 0`. This is the
+/// self-checking step — the elimination is sound by construction, but an explicit
+/// reconstruction catches any factorization bug before a `p ≥ 0` claim (hence an
+/// `unsat`) is trusted. `None` on overflow during the reconstruction (⇒ decline).
+#[allow(
+    clippy::needless_range_loop,
+    reason = "the triple sum L[i][k]·D[k]·L[j][k] indexes three arrays in lockstep"
+)]
+fn ldlt_reconstructs(
+    matrix: &[Vec<Rational>],
+    l: &[Vec<Rational>],
+    d: &[Rational],
+) -> Option<bool> {
+    let dim = matrix.len();
+    // D ≥ 0 is the sum-of-squares nonnegativity condition.
+    if d.iter().any(|&dk| Sign::of_rational(dk) == Sign::Neg) {
+        return Some(false);
+    }
+    for i in 0..dim {
+        for j in 0..dim {
+            let mut acc = Rational::zero();
+            for k in 0..dim {
+                let lik_dk = l[i][k].checked_mul(d[k])?;
+                let term = lik_dk.checked_mul(l[j][k])?;
+                acc = acc.checked_add(term)?;
+            }
+            if acc != matrix[i][j] {
+                return Some(false); // factorization does not reconstruct ⇒ reject
+            }
+        }
+    }
     Some(true)
+}
+
+/// Self-checked exact PSD test for a SYMMETRIC rational matrix. Returns
+/// `Some(true)` only when an explicit `LDLᵀ` sum-of-squares certificate exists AND
+/// independently reconstructs the matrix; `Some(false)` when provably not PSD (or
+/// a certificate fails its own reconstruction — a conservative reject); `None` on
+/// an `i128` overflow (⇒ the caller declines). Sound for global nonnegativity of
+/// the associated quadratic form.
+fn is_psd_exact(matrix: &[Vec<Rational>]) -> Option<bool> {
+    match try_ldlt(matrix) {
+        Ldlt::Overflow => None,
+        Ldlt::NotPsd => Some(false),
+        Ldlt::Psd { l, d } => ldlt_reconstructs(matrix, &l, &d),
+    }
 }
 
 #[cfg(test)]
@@ -2946,6 +3013,44 @@ mod tests {
             &[(-1, 2), (-1, 2), (1, 1)],
         ]);
         assert_eq!(is_psd_exact(&m), Some(true));
+    }
+
+    #[test]
+    fn ldlt_certificate_reconstructs_the_am_gm_form() {
+        // The 3-var AM–GM Gram matrix factors as L·D·Lᵀ, and that explicit
+        // certificate must independently reconstruct M (the self-check that backs
+        // every SOS `unsat`). D ≥ 0 throughout (the sum-of-squares condition).
+        let m = rmat(&[
+            &[(1, 1), (-1, 2), (-1, 2)],
+            &[(-1, 2), (1, 1), (-1, 2)],
+            &[(-1, 2), (-1, 2), (1, 1)],
+        ]);
+        let Ldlt::Psd { l, d } = try_ldlt(&m) else {
+            panic!("AM–GM Gram matrix must factor as LDLᵀ");
+        };
+        assert!(
+            d.iter().all(|&dk| Sign::of_rational(dk) != Sign::Neg),
+            "every D[k] must be ≥ 0 (sum-of-squares)"
+        );
+        assert_eq!(
+            ldlt_reconstructs(&m, &l, &d),
+            Some(true),
+            "L·D·Lᵀ must reconstruct M exactly"
+        );
+    }
+
+    #[test]
+    fn ldlt_rejects_a_tampered_certificate() {
+        // A self-check must REJECT factors that do not reconstruct the matrix:
+        // identity M, but a D scaled wrong ⇒ L·D·Lᵀ ≠ M ⇒ Some(false).
+        let m = rmat(&[&[(1, 1), (0, 1)], &[(0, 1), (1, 1)]]);
+        let ident = rmat(&[&[(1, 1), (0, 1)], &[(0, 1), (1, 1)]]);
+        let bad_d = vec![Rational::integer(1), Rational::integer(2)]; // wrong
+        assert_eq!(
+            ldlt_reconstructs(&m, &ident, &bad_d),
+            Some(false),
+            "a certificate that does not reconstruct M must be rejected"
+        );
     }
 
     #[test]
