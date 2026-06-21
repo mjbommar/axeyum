@@ -35,6 +35,7 @@ mod bits;
 mod error;
 mod eval;
 mod fmt;
+pub mod poly;
 mod rational;
 mod real_algebraic;
 mod sort;

@@ -684,36 +684,50 @@ fn apply(op: Op, vals: &[Value]) -> Result<Value, IrError> {
         // ADR-0038 slice 1: decline exactly (graceful error → caller's `unknown`)
         // rather than return a wrong value. The rational fast path is unchanged.
         Op::RealNeg => {
-            reject_algebraic(vals, "real_neg")?;
-            Value::Real(
-                real(&vals[0])
-                    .checked_neg()
-                    .ok_or(IrError::ArithmeticOverflow { op: "real_neg" })?,
-            )
+            if matches!(&vals[0], Value::RealAlgebraic(_)) {
+                algebraic_neg(&vals[0])?
+            } else {
+                Value::Real(
+                    real(&vals[0])
+                        .checked_neg()
+                        .ok_or(IrError::ArithmeticOverflow { op: "real_neg" })?,
+                )
+            }
         }
         Op::RealAdd => {
-            reject_algebraic(vals, "real_add")?;
-            Value::Real(
-                real(&vals[0])
-                    .checked_add(real(&vals[1]))
-                    .ok_or(IrError::ArithmeticOverflow { op: "real_add" })?,
-            )
+            if has_algebraic(vals) {
+                algebraic_add(&vals[0], &vals[1], "real_add")?
+            } else {
+                Value::Real(
+                    real(&vals[0])
+                        .checked_add(real(&vals[1]))
+                        .ok_or(IrError::ArithmeticOverflow { op: "real_add" })?,
+                )
+            }
         }
         Op::RealSub => {
-            reject_algebraic(vals, "real_sub")?;
-            Value::Real(
-                real(&vals[0])
-                    .checked_sub(real(&vals[1]))
-                    .ok_or(IrError::ArithmeticOverflow { op: "real_sub" })?,
-            )
+            if has_algebraic(vals) {
+                // a − b = a + (−b).
+                let neg_b = algebraic_neg(&vals[1])?;
+                algebraic_add(&vals[0], &neg_b, "real_sub")?
+            } else {
+                Value::Real(
+                    real(&vals[0])
+                        .checked_sub(real(&vals[1]))
+                        .ok_or(IrError::ArithmeticOverflow { op: "real_sub" })?,
+                )
+            }
         }
         Op::RealMul => {
-            reject_algebraic(vals, "real_mul")?;
-            Value::Real(
-                real(&vals[0])
-                    .checked_mul(real(&vals[1]))
-                    .ok_or(IrError::ArithmeticOverflow { op: "real_mul" })?,
-            )
+            if has_algebraic(vals) {
+                algebraic_mul(&vals[0], &vals[1], "real_mul")?
+            } else {
+                Value::Real(
+                    real(&vals[0])
+                        .checked_mul(real(&vals[1]))
+                        .ok_or(IrError::ArithmeticOverflow { op: "real_mul" })?,
+                )
+            }
         }
         Op::RealDiv => {
             reject_algebraic(vals, "real_div")?;
@@ -749,12 +763,87 @@ fn is_real_value(v: &Value) -> bool {
 }
 
 /// If any operand is a [`Value::RealAlgebraic`], decline real *field arithmetic*
-/// exactly (ADR-0038 slice 1 defers algebraic add/mul/inv).
+/// exactly. Used for the operations not yet covered by algebraic field
+/// arithmetic (e.g. `RealDiv`).
 fn reject_algebraic(vals: &[Value], op: &'static str) -> Result<(), IrError> {
     if vals.iter().any(|v| matches!(v, Value::RealAlgebraic(_))) {
         return Err(IrError::AlgebraicArithmeticUnsupported { op });
     }
     Ok(())
+}
+
+/// Whether any operand is a [`Value::RealAlgebraic`] (so the op needs algebraic
+/// field arithmetic rather than the rational fast path).
+fn has_algebraic(vals: &[Value]) -> bool {
+    vals.iter().any(|v| matches!(v, Value::RealAlgebraic(_)))
+}
+
+/// Coerce a real-sorted operand into a [`RealAlgebraic`] (lifting a rational `c`
+/// to the degree-1 algebraic number with defining poly `q·x − p`). `None` on
+/// overflow.
+fn as_algebraic(v: &Value) -> Option<crate::real_algebraic::RealAlgebraic> {
+    match v {
+        Value::RealAlgebraic(a) => Some(a.clone()),
+        Value::Real(c) => crate::real_algebraic::RealAlgebraic::from_rational(*c),
+        _ => None,
+    }
+}
+
+/// Map an algebraic result back to a [`Value`]: if its defining polynomial is
+/// degree 1 (`q·x − p`), the value is the exact rational `p/q` — return
+/// [`Value::Real`] so the model stays rational; otherwise [`Value::RealAlgebraic`].
+fn algebraic_to_value(a: crate::real_algebraic::RealAlgebraic) -> Value {
+    let poly = a.defining_poly();
+    // Trimmed degree.
+    let mut deg = poly.len();
+    while deg > 0 && poly[deg - 1] == 0 {
+        deg -= 1;
+    }
+    if deg == 2 {
+        // q·x + r with q ≠ 0 ⇒ rational root −r/q.
+        let r = poly[0];
+        let q = poly[1];
+        if let Some(c) = crate::rational::Rational::checked_new(-r, q) {
+            return Value::Real(c);
+        }
+    }
+    Value::RealAlgebraic(a)
+}
+
+/// `−α` for an algebraic (or lifted-rational) operand, as a [`Value`]. Declines
+/// to the graceful algebraic error on overflow / non-isolation.
+fn algebraic_neg(v: &Value) -> Result<Value, IrError> {
+    let a = as_algebraic(v).ok_or(IrError::AlgebraicArithmeticUnsupported { op: "real_neg" })?;
+    let r = a
+        .neg()
+        .ok_or(IrError::AlgebraicArithmeticUnsupported { op: "real_neg" })?;
+    Ok(algebraic_to_value(r))
+}
+
+/// `α + β` for real operands at least one of which is algebraic, as a [`Value`].
+fn algebraic_add(lhs: &Value, rhs: &Value, op: &'static str) -> Result<Value, IrError> {
+    let alpha = as_algebraic(lhs).ok_or(IrError::AlgebraicArithmeticUnsupported { op })?;
+    let beta = as_algebraic(rhs).ok_or(IrError::AlgebraicArithmeticUnsupported { op })?;
+    let sum = alpha
+        .add(&beta)
+        .ok_or(IrError::AlgebraicArithmeticUnsupported { op })?;
+    Ok(algebraic_to_value(sum))
+}
+
+/// `α · β` for real operands at least one of which is algebraic, as a [`Value`].
+/// A rational-`0` operand short-circuits to the exact rational `0` (a
+/// [`RealAlgebraic`] is never `0`, so only a lifted rational can be zero).
+fn algebraic_mul(lhs: &Value, rhs: &Value, op: &'static str) -> Result<Value, IrError> {
+    if matches!(lhs, Value::Real(c) if c.is_zero()) || matches!(rhs, Value::Real(c) if c.is_zero())
+    {
+        return Ok(Value::Real(crate::rational::Rational::zero()));
+    }
+    let alpha = as_algebraic(lhs).ok_or(IrError::AlgebraicArithmeticUnsupported { op })?;
+    let beta = as_algebraic(rhs).ok_or(IrError::AlgebraicArithmeticUnsupported { op })?;
+    let prod = alpha
+        .mul(&beta)
+        .ok_or(IrError::AlgebraicArithmeticUnsupported { op })?;
+    Ok(algebraic_to_value(prod))
 }
 
 /// Compares two real-sorted operands exactly, supporting *algebraic* operands

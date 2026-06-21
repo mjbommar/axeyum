@@ -113,6 +113,26 @@ impl RealAlgebraic {
         }
     }
 
+    /// Represent a **rational** `c` as a degree-1 algebraic number: the unique
+    /// root of `q·x − p` (where `c = p/q`, `q > 0`) in the open interval
+    /// `(c − 1, c + 1)`. Used to lift a rational operand of algebraic field
+    /// arithmetic into the common [`RealAlgebraic`] form. `None` on overflow.
+    ///
+    /// (The value is rational, so the result's `compare_rational(&c)` is `Equal`;
+    /// it is a structurally-valid single-root bracket — the field-arithmetic
+    /// resultant treats it uniformly.)
+    #[must_use]
+    pub fn from_rational(c: Rational) -> Option<RealAlgebraic> {
+        // `c = p / q` with q > 0 (Rational keeps the denominator positive).
+        let p = c.numerator();
+        let q = c.denominator();
+        // poly = q·x − p (LSB-first [−p, q]); root is exactly c.
+        let poly = vec![p.checked_neg()?, q];
+        let lo = c.checked_sub(Rational::integer(1))?;
+        let hi = c.checked_add(Rational::integer(1))?;
+        RealAlgebraic::new(poly, lo, hi)
+    }
+
     /// The defining polynomial (LSB-first integer coefficients).
     #[must_use]
     pub fn defining_poly(&self) -> &[i128] {
@@ -266,6 +286,316 @@ impl RealAlgebraic {
         self.lo
             .checked_add(self.hi)?
             .checked_div(Rational::integer(2))
+    }
+
+    // ========================================================================
+    // Algebraic field arithmetic (ADR-0038, slice 3): −α, α+β, α·β.
+    //
+    // Each returns `Option<RealAlgebraic>`, declining (`None`) on any `i128`
+    // overflow, degree/coefficient-guard trip, or an inability to isolate the
+    // unique result root (Sturm count != 1) within the refinement bound. NEVER a
+    // wrong value: the single-root invariant of the returned `RealAlgebraic` is
+    // re-established by an EXACT Sturm count == 1 with strict opposite-sign
+    // endpoints, exactly as `RealAlgebraic::new` requires.
+    //
+    // No floating point. The defining polynomial of `α + β` (resp. `α · β`) is a
+    // factor of the resultant `Res_y(p_α(y), p_β(x − y))` (resp. the homogenized
+    // `Res_y(p_α(y), y^{deg β} p_β(x/y))`); the correct root is the one inside the
+    // sum (resp. product) of the operand intervals, identified by narrowing the
+    // operand intervals and Sturm-counting the candidate result polynomial until
+    // the interval brackets exactly one root.
+    // ========================================================================
+
+    /// The exact additive inverse `−α`.
+    ///
+    /// If `α` is the unique root of `p(x)` in `(lo, hi)`, then `−α` is the unique
+    /// root of `p(−x)` in `(−hi, −lo)`. `p(−x)` is obtained by flipping the sign
+    /// of every odd-degree coefficient. Exact; `None` only on coefficient
+    /// negation overflow (`i128::MIN`).
+    #[must_use]
+    pub fn neg(&self) -> Option<RealAlgebraic> {
+        let mut poly = Vec::with_capacity(self.poly.len());
+        for (i, &c) in self.poly.iter().enumerate() {
+            if i % 2 == 1 {
+                poly.push(c.checked_neg()?);
+            } else {
+                poly.push(c);
+            }
+        }
+        let lo = self.hi.checked_neg()?;
+        let hi = self.lo.checked_neg()?;
+        RealAlgebraic::new(poly, lo, hi)
+    }
+
+    /// The exact sum `α + β`.
+    ///
+    /// `α + β` is a root of `R(x) = Res_y(p_α(y), p_β(x − y))`, a univariate
+    /// integer polynomial. Take its squarefree part `q`; the *correct* root is the
+    /// unique root of `q` in `I = [α.lo + β.lo, α.hi + β.hi]`. We narrow `α` and
+    /// `β`'s isolating intervals (each bisection keeps the half still bracketing
+    /// that operand's root) so `I` shrinks, and use the exact Sturm count to drive
+    /// it until `I` contains EXACTLY ONE root of `q` with strict opposite signs at
+    /// the endpoints, then build the `RealAlgebraic`. Bounded → `None`.
+    #[must_use]
+    pub fn add(&self, other: &RealAlgebraic) -> Option<RealAlgebraic> {
+        // p_α(y): coefficients (by y-exponent) are constants in x.
+        let pa = ratvec_const_coeffs(&self.poly);
+        // p_β(x − y): coefficients (by y-exponent) are polynomials in x.
+        let pb = beta_of_x_minus_y(&other.poly)?;
+        let q = resultant_then_squarefree(&pa, &pb)?;
+        combine_via_interval(self, other, &q, IntervalCombine::Sum)
+    }
+
+    /// The exact product `α · β`.
+    ///
+    /// If either operand is the rational `0` the product is `0` — but a
+    /// [`RealAlgebraic`] is by construction irrational, so neither operand is `0`
+    /// here; the product is therefore a root of the homogenized resultant
+    /// `R(x) = Res_y(p_α(y), y^{deg β}·p_β(x / y))`. Take the squarefree part and
+    /// identify the unique root inside the product interval `[min, max]` of the
+    /// four endpoint products, exactly as [`RealAlgebraic::add`]. Bounded →
+    /// `None`.
+    #[must_use]
+    pub fn mul(&self, other: &RealAlgebraic) -> Option<RealAlgebraic> {
+        // p_α(y): constants in x.
+        let pa = ratvec_const_coeffs(&self.poly);
+        // y^{deg β}·p_β(x / y): coefficient of y^{n−j} is b_j·x^j.
+        let pb = beta_homogenized(&other.poly)?;
+        let q = resultant_then_squarefree(&pa, &pb)?;
+        combine_via_interval(self, other, &q, IntervalCombine::Product)
+    }
+}
+
+/// How the result interval is derived from the two operand intervals.
+#[derive(Clone, Copy)]
+enum IntervalCombine {
+    /// `[α.lo + β.lo, α.hi + β.hi]`.
+    Sum,
+    /// The min/max of the four endpoint products.
+    Product,
+}
+
+/// Maximum number of operand-interval-narrowing rounds [`combine_via_interval`]
+/// performs while driving the candidate result interval to bracket exactly one
+/// root of `q`. Each round bisects both operand intervals (halving the result
+/// interval's width), so the bound is generous; hitting it ⇒ decline.
+const COMBINE_REFINE_ROUNDS: u32 = 200;
+
+/// The degree / coefficient guards used by the field-arithmetic Sturm work. These
+/// mirror the solver's NRA guards so the `i128` exact path stays bounded; beyond
+/// them we decline (the bignum lift is a later ADR-gated step).
+const FIELD_MAX_DEGREE: usize = 64;
+const FIELD_MAX_ABS_COEFF: i128 = 1i128 << 40;
+
+/// Lift an LSB-first integer polynomial to "coefficients (by y-exponent) that are
+/// constant polynomials in x" — each a length-1 `RatVec`. Used for `p_α(y)`,
+/// whose coefficients do not depend on the surviving variable `x`.
+fn ratvec_const_coeffs(poly: &[i128]) -> Vec<crate::poly::RatVec> {
+    let trimmed = crate::poly::rat_from_int(poly);
+    trimmed.into_iter().map(|c| vec![c]).collect()
+}
+
+/// Binomial coefficient `C(n, k)` as an `i128`, `None` on overflow.
+fn binom(n: usize, k: usize) -> Option<i128> {
+    if k > n {
+        return Some(0);
+    }
+    let k = k.min(n - k);
+    let mut num = 1i128;
+    for i in 0..k {
+        num = num.checked_mul(i128::try_from(n - i).ok()?)?;
+        // Divide as we go to keep magnitudes small (exact: the running product of
+        // i+1 consecutive integers is divisible by (i+1)!).
+        num = num.checked_div(i128::try_from(i + 1).ok()?)?;
+    }
+    Some(num)
+}
+
+/// `p_β(x − y)` as a polynomial in `y` whose coefficients are LSB-first rational
+/// polynomials in `x` (indexed by the `y`-exponent). The `y`-degree equals
+/// `deg p_β`.
+///
+/// `p_β(x − y) = Σ_j b_j (x − y)^j`, and `(x − y)^j = Σ_i C(j,i) x^{j−i} (−y)^i`,
+/// so the coefficient of `y^i` is `Σ_{j ≥ i} b_j · C(j,i) · (−1)^i · x^{j−i}`.
+fn beta_of_x_minus_y(poly: &[i128]) -> Option<Vec<crate::poly::RatVec>> {
+    let trimmed = crate::poly::rat_from_int(poly);
+    let n = crate::poly::rat_degree(&trimmed)?; // β nonconstant ⇒ n ≥ 1
+    if n == 0 || n > FIELD_MAX_DEGREE {
+        return None;
+    }
+    // coeff[i] (i = y-exponent) is an LSB-first RatVec in x of degree (n − i).
+    let mut out: Vec<crate::poly::RatVec> = vec![Vec::new(); n + 1];
+    for (i, slot) in out.iter_mut().enumerate() {
+        // x-degrees 0..=(n − i).
+        let mut xcoeffs = vec![Rational::zero(); n - i + 1];
+        let sign = if i % 2 == 0 { 1i128 } else { -1i128 };
+        for j in i..=n {
+            let bj = trimmed[j];
+            if bj.is_zero() {
+                continue;
+            }
+            let c = binom(j, i)?;
+            let term = bj
+                .checked_mul(Rational::integer(c))?
+                .checked_mul(Rational::integer(sign))?;
+            // x^{j − i}.
+            xcoeffs[j - i] = xcoeffs[j - i].checked_add(term)?;
+        }
+        *slot = xcoeffs;
+    }
+    Some(out)
+}
+
+/// `y^{deg β}·p_β(x / y)` as a polynomial in `y` whose coefficients are LSB-first
+/// rational polynomials in `x` (indexed by the `y`-exponent). The `y`-degree
+/// equals `deg p_β`.
+///
+/// `y^n·p_β(x / y) = Σ_j b_j x^j y^{n − j}`, so the coefficient of `y^{n − j}` is
+/// the single monomial `b_j · x^j`.
+fn beta_homogenized(poly: &[i128]) -> Option<Vec<crate::poly::RatVec>> {
+    let trimmed = crate::poly::rat_from_int(poly);
+    let n = crate::poly::rat_degree(&trimmed)?;
+    if n == 0 || n > FIELD_MAX_DEGREE {
+        return None;
+    }
+    // out[k] (k = y-exponent) is the x-polynomial; here out[n − j] = b_j·x^j.
+    let mut out: Vec<crate::poly::RatVec> = vec![vec![Rational::zero()]; n + 1];
+    for (j, &bj) in trimmed.iter().enumerate() {
+        if bj.is_zero() {
+            continue;
+        }
+        let k = n - j; // y-exponent
+        let mut xcoeffs = vec![Rational::zero(); j + 1];
+        xcoeffs[j] = bj;
+        out[k] = xcoeffs;
+    }
+    Some(out)
+}
+
+/// Build `Res_y(p_α, p_β')` (both given as y-indexed coefficient vectors that are
+/// LSB-first rational polynomials in `x`), clear to an integer polynomial, then
+/// return its **squarefree part** as an integer polynomial. `None` on overflow,
+/// a degenerate (constant) resultant, or any guard trip.
+fn resultant_then_squarefree(
+    pa: &[crate::poly::RatVec],
+    pb: &[crate::poly::RatVec],
+) -> Option<Vec<i128>> {
+    let m = pa.len().checked_sub(1)?;
+    let n = pb.len().checked_sub(1)?;
+    if m == 0 || n == 0 {
+        return None;
+    }
+    if m + n > FIELD_MAX_DEGREE {
+        return None;
+    }
+    let mat = crate::poly::sylvester_matrix(pa, pb)?;
+    let det = crate::poly::sylvester_determinant(&mat)?;
+    if det.iter().all(|c| c.is_zero()) {
+        return None; // identically-zero resultant: cannot isolate
+    }
+    let res_int = crate::poly::rat_to_int_poly(&det, FIELD_MAX_ABS_COEFF)?;
+    if res_int.len() <= 1 {
+        return None; // constant resultant: no root to identify
+    }
+    // Squarefree part (same root set, simple roots) → integer poly.
+    let rat = crate::poly::rat_from_int(&res_int);
+    let sqfree = crate::poly::squarefree_part(&rat, FIELD_MAX_DEGREE)?;
+    let q = crate::poly::rat_to_int_poly(&sqfree, FIELD_MAX_ABS_COEFF)?;
+    if q.len() <= 1 || *q.last()? == 0 {
+        return None;
+    }
+    Some(q)
+}
+
+/// Identify the unique root of the candidate squarefree polynomial `q` that equals
+/// `α ∘ β` (∘ = + or ·), and return it as a `RealAlgebraic`.
+///
+/// Method (exact, no float): maintain a candidate interval `I` derived from the
+/// current operand intervals (`Sum`: `[α.lo+β.lo, α.hi+β.hi]`; `Product`: the
+/// min/max of the four endpoint products). Narrow `α` and `β`'s intervals so `I`
+/// shrinks, and Sturm-count the roots of `q` in `I` until the count is exactly 1
+/// with strict opposite-sign endpoints — the [`RealAlgebraic::new`] invariant.
+/// Bounded by [`COMBINE_REFINE_ROUNDS`] → `None` (sound decline).
+fn combine_via_interval(
+    a: &RealAlgebraic,
+    b: &RealAlgebraic,
+    q: &[i128],
+    how: IntervalCombine,
+) -> Option<RealAlgebraic> {
+    // Sturm chain of `q` (squarefree) for the exact in-interval root count.
+    let qrat = crate::poly::rat_from_int(q);
+    let chain = crate::poly::sturm_chain(&qrat, FIELD_MAX_DEGREE)?;
+
+    let mut pa = a.clone();
+    let mut pb = b.clone();
+
+    for _ in 0..COMBINE_REFINE_ROUNDS {
+        let (lo, hi) = combined_interval(&pa, &pb, how)?;
+        // Degenerate interval ⇒ keep narrowing (or bail if it cannot improve).
+        if lo.checked_cmp(&hi)? != Ordering::Less {
+            // Operand intervals collapsed onto exact rationals but the operands are
+            // irrational by construction, so this should not happen; decline.
+            return None;
+        }
+        // Endpoints must be non-roots of `q` for the half-open Sturm count to be a
+        // clean open-interval count, AND strict opposite signs are required by
+        // `new`. If an endpoint is exactly a root of `q`, nudge by narrowing.
+        let slo = Sign::of_rational(eval_int_poly_at(q, lo)?);
+        let shi = Sign::of_rational(eval_int_poly_at(q, hi)?);
+        if slo != Sign::Zero && shi != Sign::Zero {
+            // count of roots of q in the half-open (lo, hi].
+            let count = crate::poly::count_roots_in(&chain, lo, hi)?;
+            if count == 1 && slo != shi {
+                // Exactly one root, strict opposite signs ⇒ the isolating bracket.
+                return RealAlgebraic::new(q.to_vec(), lo, hi);
+            }
+        }
+        // Narrow both operand intervals by one bisection each (keep the half still
+        // bracketing each operand's own root). A collapse onto an exact rational
+        // (operand was actually rational) ⇒ decline (cannot happen for a genuine
+        // RealAlgebraic, but stay safe).
+        if pa.refine_once()? == Sign::Zero {
+            return None;
+        }
+        if pb.refine_once()? == Sign::Zero {
+            return None;
+        }
+    }
+    None
+}
+
+/// The candidate result interval `[lo, hi]` for `α ∘ β` from the current operand
+/// intervals. `None` on overflow.
+fn combined_interval(
+    a: &RealAlgebraic,
+    b: &RealAlgebraic,
+    how: IntervalCombine,
+) -> Option<(Rational, Rational)> {
+    let (alo, ahi) = a.interval();
+    let (blo, bhi) = b.interval();
+    match how {
+        IntervalCombine::Sum => {
+            let lo = alo.checked_add(blo)?;
+            let hi = ahi.checked_add(bhi)?;
+            Some((lo, hi))
+        }
+        IntervalCombine::Product => {
+            let p1 = alo.checked_mul(blo)?;
+            let p2 = alo.checked_mul(bhi)?;
+            let p3 = ahi.checked_mul(blo)?;
+            let p4 = ahi.checked_mul(bhi)?;
+            let mut lo = p1;
+            let mut hi = p1;
+            for p in [p2, p3, p4] {
+                if p.checked_cmp(&lo)? == Ordering::Less {
+                    lo = p;
+                }
+                if p.checked_cmp(&hi)? == Ordering::Greater {
+                    hi = p;
+                }
+            }
+            Some((lo, hi))
+        }
     }
 }
 
