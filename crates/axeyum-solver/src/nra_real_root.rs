@@ -1,30 +1,48 @@
-//! Sound, bounded NRA capability: decide a single-variable nonlinear-real
-//! **polynomial constraint** over one `Real` variable `x` *exactly*, with
-//! **irrational witnesses** (ADR-0038, slice 1).
+//! Sound, bounded NRA capability: decide a **conjunction** of single-variable
+//! nonlinear-real **polynomial constraints** over one shared `Real` variable `x`
+//! *exactly*, with **irrational witnesses** (ADR-0038, slice 1).
 //!
 //! This pass sits *in front of* the linear-abstraction NRA path
 //! ([`crate::nra`]). Where that path abstracts a product `x·x` to a fresh
 //! variable — losing the algebraic fact and reporting `Unknown` for `x·x = 2` —
-//! this decider isolates the *real roots* of the collected polynomial exactly and
-//! returns a witness, which may be an exact rational ([`Value::Real`]) or a real
-//! **algebraic number** ([`Value::RealAlgebraic`], e.g. `√2`).
+//! this decider isolates the *real roots* of the collected polynomial(s) exactly
+//! and returns a witness, which may be an exact rational ([`Value::Real`]) or a
+//! real **algebraic number** ([`Value::RealAlgebraic`], e.g. `√2`).
 //!
 //! # Scope (deliberately narrow — correctness over reach)
 //!
-//! Fires *only* when the **whole** query is exactly **one** assertion that
-//! normalizes to a comparison `p(x) ⋈ 0` between a single-variable *real*
-//! polynomial `p` and `0`, where `p` collects over `{+, −, ·, neg, RealConst,
-//! symbol}` with `x` the only variable. Rational coefficients are cleared to
-//! integers (multiplying through by the common denominator preserves every
-//! `⋈`-relation since the multiplier is positive). Everything else declines
-//! (`None`), leaving the query to [`crate::nra`]:
+//! Fires *only* when the **whole** query is a conjunction `C₁ ∧ … ∧ Cₘ` (a list
+//! of assertions and/or top-level `and` terms, flattened) where **every** `Cᵢ`
+//! normalizes to a comparison `pᵢ(x) ⋈ᵢ 0` between a single-variable *real*
+//! polynomial `pᵢ` and `0`, where each `pᵢ` collects over `{+, −, ·, neg,
+//! RealConst, symbol}` with the **same** `x` the only variable across all
+//! constraints. Rational coefficients are cleared to integers (multiplying
+//! through by the common denominator preserves every `⋈`-relation since the
+//! multiplier is positive). Everything else declines (`None`), leaving the query
+//! to [`crate::nra`]:
 //!
-//! - more than one variable, a non-`Real` sort, a non-polynomial operator
-//!   (`div`, `RealToInt`, …),
-//! - a second assertion (it could constrain `x`),
+//! - more than one *distinct* variable (across all constraints), a non-`Real`
+//!   sort, a non-polynomial operator (`div`, `RealToInt`, …),
+//! - any non-conjunctive top-level structure (an `or`, an `=>`, …),
 //! - a coefficient/degree past the [`MAX_ABS_COEFF`]/[`MAX_DEGREE`] guards, or
-//!   any `i128`/`Rational` overflow during collection, denominator clearing, or
-//!   root isolation.
+//!   any `i128`/`Rational` overflow during collection, denominator clearing,
+//!   root isolation, or algebraic-vs-algebraic ordering.
+//!
+//! # The conjunction (sign-cell decomposition)
+//!
+//! The real roots of all `pᵢ` partition ℝ into finitely many cells on which
+//! every `sign(pᵢ)` is constant. A conjunction holds on a whole cell or nowhere
+//! on it, so it suffices to test a finite **candidate set**: every isolated root
+//! of every `pᵢ` (the cell boundaries — where some `pᵢ = 0`) *and* one rational
+//! sample strictly inside each open cell (below the least root, between adjacent
+//! roots, above the greatest). A candidate α satisfies the conjunction iff for
+//! **every** `i`, `sign(pᵢ(α)) ⋈ᵢ 0`. The first satisfying candidate (in
+//! deterministic sorted order, preferring a rational sample so the witness stays
+//! rational) → **Sat**, replay-checked against every original assertion. No
+//! candidate → **Unsat** (exhaustive: roots + one-sample-per-cell cover every
+//! sign pattern of the single variable). Any inability to *order* the candidates
+//! exactly (an algebraic-vs-algebraic comparison that does not resolve within the
+//! refinement bound, or an overflow) → **decline**, never a guessed `Unsat`.
 //!
 //! # Decisions
 //!
@@ -41,6 +59,8 @@
 //!
 //! A wrong `sat`/`unsat` is catastrophic; declining is always sound. **No
 //! floating point**: every sign test is exact over `i128`/[`Rational`].
+
+use core::cmp::Ordering;
 
 use axeyum_ir::{
     Assignment, Op, Rational, RealAlgebraic, Sign, Sort, SymbolId, TermArena, TermId, TermNode,
@@ -204,11 +224,18 @@ impl RatPoly {
     }
 }
 
-/// Decide a single-assertion single-variable real polynomial constraint exactly,
-/// returning an irrational witness when the satisfying value is algebraic.
+/// Decide a conjunction of single-variable real polynomial constraints (over one
+/// shared variable) exactly, returning an irrational witness when the satisfying
+/// value is algebraic.
+///
+/// The whole query is a conjunction: each assertion is one comparison
+/// `pᵢ(x) ⋈ᵢ 0` or a top-level `and` of such comparisons (flattened). A single
+/// constraint takes the original fast path; two or more share one variable and
+/// are decided by sign-cell decomposition.
 ///
 /// Returns `Some(Sat(model))` / `Some(Unsat)` for the exact pattern (every `Sat`
-/// model replay-checked), and `None` to decline (left to [`crate::nra`]).
+/// model replay-checked against **all** assertions), and `None` to decline (left
+/// to [`crate::nra`]).
 ///
 /// # Errors
 ///
@@ -223,58 +250,296 @@ pub fn decide_real_poly_constraint(
     arena: &TermArena,
     assertions: &[TermId],
 ) -> Result<Option<CheckResult>, SolverError> {
-    // Fire only on a single-assertion query (a second assertion could constrain x).
-    let [assertion] = assertions else {
-        return Ok(None);
-    };
-    let Some((var, cmp, rat)) = match_real_poly_constraint(arena, *assertion) else {
-        return Ok(None);
-    };
-    // Degree ≥ 1 required (a constant is exact LRA territory).
-    if rat.degree() == 0 || rat.degree() > MAX_DEGREE {
+    if assertions.is_empty() {
         return Ok(None);
     }
-    let Some(poly) = rat.to_integer_poly() else {
+    // Flatten the query into the set of atomic comparisons, declining on any
+    // non-conjunctive structure or non-(single-var real poly) atom. Every atom
+    // must collect over the SAME variable.
+    let mut atoms: Vec<Atom> = Vec::new();
+    let mut var: Option<SymbolId> = None;
+    for &a in assertions {
+        if collect_conjuncts(arena, a, &mut var, &mut atoms).is_none() {
+            return Ok(None);
+        }
+    }
+    if atoms.is_empty() {
+        return Ok(None);
+    }
+    let Some(var) = var else {
+        // Every atom collected to a constant polynomial (no variable) — that is
+        // exact LRA territory, not ours.
         return Ok(None);
     };
-    // After clearing, re-trim degree (denominator clearing keeps degree).
-    if poly.len() <= 1 {
-        return Ok(None);
+
+    // Single-constraint fast path: preserves the original (well-tested) behavior,
+    // including the dedicated `≠` and `≤/≥`-root witnesses.
+    if let [atom] = atoms.as_slice() {
+        return Ok(decide_single(arena, assertions, var, atom));
     }
 
-    let Some(verdict) = decide(&poly, cmp) else {
-        return Ok(None);
-    };
+    // Conjunction: sign-cell decomposition over the shared variable.
+    Ok(decide_system(arena, assertions, var, &atoms))
+}
+
+/// One atomic comparison `poly(x) ⋈ 0`, with the integer-cleared polynomial.
+struct Atom {
+    cmp: Cmp,
+    poly: Vec<i128>,
+}
+
+/// Whether the sign `s` of `pᵢ(α)` satisfies the comparison `pᵢ ⋈ 0`.
+fn sign_satisfies(cmp: Cmp, s: Sign) -> bool {
+    match cmp {
+        Cmp::Eq => s == Sign::Zero,
+        Cmp::Ne => s != Sign::Zero,
+        Cmp::Lt => s == Sign::Neg,
+        Cmp::Le => s == Sign::Neg || s == Sign::Zero,
+        Cmp::Gt => s == Sign::Pos,
+        Cmp::Ge => s == Sign::Pos || s == Sign::Zero,
+    }
+}
+
+/// Decide a single constraint `poly ⋈ 0` (the original fast path). `None`
+/// declines.
+fn decide_single(
+    arena: &TermArena,
+    assertions: &[TermId],
+    var: SymbolId,
+    atom: &Atom,
+) -> Option<CheckResult> {
+    let poly = &atom.poly;
+    let verdict = decide(poly, atom.cmp)?;
 
     match verdict {
-        Verdict::Unsat => Ok(Some(CheckResult::Unsat)),
+        Verdict::Unsat => Some(CheckResult::Unsat),
         Verdict::SatRational(q) => {
-            // Replay the rational witness through the ground evaluator on the
-            // ORIGINAL assertion; accept only if it holds.
-            let mut asg = Assignment::new();
-            asg.set(var, Value::Real(q));
-            if !matches!(eval(arena, *assertion, &asg), Ok(Value::Bool(true))) {
-                return Ok(None);
+            // Replay the rational witness through the ground evaluator on ALL
+            // original assertions; accept only if every one holds.
+            if !replay_rational(arena, assertions, var, q) {
+                return None;
             }
             let mut model = Model::new();
             model.set(var, Value::Real(q));
-            Ok(Some(CheckResult::Sat(model)))
+            Some(CheckResult::Sat(model))
         }
         Verdict::SatAlgebraic(alpha) => {
             // Replay-check the algebraic witness: it must be a genuine root of the
             // collected polynomial, i.e. sign_at(p, α) = 0. (We do NOT ask the
             // evaluator to multiply algebraic numbers; the decider holds `poly`.)
-            if alpha.sign_at(&poly) != Some(Sign::Zero) {
-                return Ok(None);
+            if alpha.sign_at(poly) != Some(Sign::Zero) {
+                return None;
             }
             // For an equality `p = 0` the root replays by construction. For an
             // inequality we never return an algebraic witness (samples are
             // rational), so this branch is equality-only.
             let mut model = Model::new();
             model.set(var, Value::RealAlgebraic(alpha));
-            Ok(Some(CheckResult::Sat(model)))
+            Some(CheckResult::Sat(model))
         }
     }
+}
+
+/// Decide a conjunction `⋀ᵢ pᵢ(x) ⋈ᵢ 0` by sign-cell decomposition.
+///
+/// Candidate critical points = every isolated real root of every `pᵢ` (cell
+/// boundaries) ∪ one rational sample strictly inside each open cell. A candidate
+/// satisfies the conjunction iff every `pᵢ`'s sign at it satisfies `⋈ᵢ`. The
+/// first satisfying candidate (deterministic order, rationals preferred) →
+/// **Sat** (replay-checked against all assertions); none → **Unsat**; any
+/// ordering ambiguity / overflow → decline.
+fn decide_system(
+    arena: &TermArena,
+    assertions: &[TermId],
+    var: SymbolId,
+    atoms: &[Atom],
+) -> Option<CheckResult> {
+    // 1. Collect every real root of every constraint polynomial.
+    let mut roots: Vec<Root> = Vec::new();
+    for atom in atoms {
+        let rs = isolate_roots(&atom.poly)?; // overflow during isolation ⇒ decline
+        roots.extend(rs);
+    }
+
+    // 2. Sort the roots into a deterministic ascending order. Any pair we cannot
+    //    order exactly (algebraic-vs-algebraic that does not resolve) ⇒ decline.
+    let ordered = sort_roots(&roots)?;
+
+    // 3. Build the candidate sample points strictly between/around the roots.
+    //    Each is a RATIONAL preferred witness for an open cell.
+    let samples = cell_samples(&ordered)?;
+
+    // 4. Test rational samples FIRST (so the model stays rational when a cell
+    //    works), then the roots themselves (an equality may pin x to an
+    //    irrational root). A `None` from any sign test means the candidate
+    //    enumeration is *incomplete* for this query, so we must not claim Unsat
+    //    — propagate the decline.
+    for q in &samples {
+        if rational_satisfies_all(atoms, *q)? && replay_rational(arena, assertions, var, *q) {
+            let mut model = Model::new();
+            model.set(var, Value::Real(*q));
+            return Some(CheckResult::Sat(model));
+        }
+    }
+    for root in &ordered {
+        match root {
+            Root::Rational(q) => {
+                if rational_satisfies_all(atoms, *q)? && replay_rational(arena, assertions, var, *q)
+                {
+                    let mut model = Model::new();
+                    model.set(var, Value::Real(*q));
+                    return Some(CheckResult::Sat(model));
+                }
+            }
+            Root::Algebraic(a) => {
+                // `None` (a sign decision did not resolve) ⇒ decline, never Unsat.
+                if algebraic_satisfies_all(atoms, a)? {
+                    // Replay-check: the witness must genuinely satisfy every
+                    // constraint via exact `sign_at`. (algebraic_satisfies_all
+                    // already used sign_at; this is the same gate, kept as the
+                    // explicit soundness contract.)
+                    if algebraic_replay_all(atoms, a) {
+                        let mut model = Model::new();
+                        model.set(var, Value::RealAlgebraic(a.clone()));
+                        return Some(CheckResult::Sat(model));
+                    }
+                }
+            }
+        }
+    }
+
+    // No candidate (root or per-cell sample) satisfies the whole conjunction. The
+    // candidate set covers every sign pattern of the single variable, so this is
+    // exact Unsat — every sign test above resolved (an indeterminate one would
+    // have returned `None`/declined via `?`). Reaching here means the enumeration
+    // was complete.
+    Some(CheckResult::Unsat)
+}
+
+/// Whether the rational `q` satisfies every constraint, by exact rational sign
+/// evaluation. `None` on overflow (caller declines).
+fn rational_satisfies_all(atoms: &[Atom], q: Rational) -> Option<bool> {
+    for atom in atoms {
+        let s = Sign::of_rational(eval_rat(&atom.poly, q)?);
+        if !sign_satisfies(atom.cmp, s) {
+            return Some(false);
+        }
+    }
+    Some(true)
+}
+
+/// Whether the algebraic `α` satisfies every constraint, by exact `sign_at`.
+/// `None` if any sign test does not resolve (caller declines).
+fn algebraic_satisfies_all(atoms: &[Atom], a: &RealAlgebraic) -> Option<bool> {
+    for atom in atoms {
+        let s = a.sign_at(&atom.poly)?;
+        if !sign_satisfies(atom.cmp, s) {
+            return Some(false);
+        }
+    }
+    Some(true)
+}
+
+/// Explicit replay gate for an algebraic witness: re-evaluate `sign_at` against
+/// every constraint and require each to satisfy its comparison. Returns `false`
+/// on any indeterminate sign (treated as replay failure ⇒ decline upstream).
+fn algebraic_replay_all(atoms: &[Atom], a: &RealAlgebraic) -> bool {
+    atoms
+        .iter()
+        .all(|atom| matches!(a.sign_at(&atom.poly), Some(s) if sign_satisfies(atom.cmp, s)))
+}
+
+/// Replay a rational witness through the ground evaluator on **every** original
+/// assertion; accept only if all evaluate to `Bool(true)`.
+fn replay_rational(arena: &TermArena, assertions: &[TermId], var: SymbolId, q: Rational) -> bool {
+    let mut asg = Assignment::new();
+    asg.set(var, Value::Real(q));
+    assertions
+        .iter()
+        .all(|&a| matches!(eval(arena, a, &asg), Ok(Value::Bool(true))))
+}
+
+/// Sort isolated roots into ascending order, returning `None` if any pair cannot
+/// be ordered exactly (an algebraic-vs-algebraic comparison that does not resolve
+/// within the refinement bound) so the caller declines rather than guessing.
+fn sort_roots(roots: &[Root]) -> Option<Vec<Root>> {
+    let mut out: Vec<Root> = roots.to_vec();
+    // Insertion sort with a total, exact comparator; on any indeterminate
+    // comparison return None.
+    for i in 1..out.len() {
+        let mut j = i;
+        while j > 0 {
+            match compare_roots(&out[j - 1], &out[j])? {
+                Ordering::Greater => {
+                    out.swap(j - 1, j);
+                    j -= 1;
+                }
+                _ => break,
+            }
+        }
+    }
+    Some(out)
+}
+
+/// Exact comparison of two isolated roots. Rational-vs-rational and
+/// rational-vs-algebraic resolve exactly; algebraic-vs-algebraic uses a rational
+/// separating point derived from the disjoint isolating intervals, declining
+/// (`None`) only if the intervals still overlap (which the fine isolation grid
+/// makes impossible for admitted polynomials, but we never guess).
+fn compare_roots(a: &Root, b: &Root) -> Option<Ordering> {
+    match (a, b) {
+        (Root::Rational(x), Root::Rational(y)) => x.checked_cmp(y),
+        (Root::Rational(x), Root::Algebraic(y)) => Some(y.compare_rational(x)?.reverse()),
+        (Root::Algebraic(x), Root::Rational(y)) => x.compare_rational(y),
+        (Root::Algebraic(x), Root::Algebraic(y)) => {
+            // Equal value? (same poly, overlapping intervals).
+            if x == y {
+                return Some(Ordering::Equal);
+            }
+            // Distinct algebraic numbers: their isolating intervals are disjoint
+            // (or can be separated). If x's interval lies wholly below y's, x < y.
+            let (xlo, xhi) = x.interval();
+            let (ylo, yhi) = y.interval();
+            if xhi.checked_cmp(&ylo)? != Ordering::Greater {
+                return Some(Ordering::Less); // x ≤ xhi ≤ ylo ≤ y, and x ≠ y
+            }
+            if yhi.checked_cmp(&xlo)? != Ordering::Greater {
+                return Some(Ordering::Greater);
+            }
+            // Intervals overlap and the values are distinct: we cannot order them
+            // exactly without algebraic-vs-algebraic refinement (deferred). Decline.
+            None
+        }
+    }
+}
+
+/// Build one rational sample strictly inside each open cell delimited by the
+/// (ascending, deduplicated) roots: below the least root, between each adjacent
+/// pair, and above the greatest. With no roots, a single sample (0) covers ℝ.
+/// `None` on overflow.
+fn cell_samples(ordered: &[Root]) -> Option<Vec<Rational>> {
+    if ordered.is_empty() {
+        return Some(vec![Rational::zero()]);
+    }
+    let locs: Vec<Rational> = ordered.iter().map(Root::locate).collect();
+    let mut pts = Vec::with_capacity(locs.len() + 1);
+    // Below the least root.
+    pts.push(locs[0].checked_sub(Rational::integer(1))?);
+    // Strictly between adjacent root *locations*. Because the isolating intervals
+    // are disjoint and ordered, the midpoint of two distinct locations lies in the
+    // open cell between the two roots. (Equal locations — a shared rational root
+    // counted twice — yield a degenerate midpoint we simply skip; the adjacent
+    // open cells are still sampled by their other separators.)
+    for w in locs.windows(2) {
+        if w[0].checked_cmp(&w[1])? == Ordering::Equal {
+            continue;
+        }
+        let mid = w[0].checked_add(w[1])?.checked_div(Rational::integer(2))?;
+        pts.push(mid);
+    }
+    // Above the greatest root.
+    pts.push(locs[locs.len() - 1].checked_add(Rational::integer(1))?);
+    Some(pts)
 }
 
 /// A decision plus its witness.
@@ -650,6 +915,54 @@ impl SignOfRational for Sign {
             core::cmp::Ordering::Greater => Sign::Pos,
         }
     }
+}
+
+/// Flatten a Boolean assertion into atomic single-variable real-polynomial
+/// comparisons, accumulating into `atoms` and unifying the shared variable into
+/// `var`. A top-level `and` recurses into its conjuncts; a single comparison
+/// becomes one [`Atom`]. Returns `None` to decline on any non-conjunctive
+/// structure (`or`, `=>`, `xor`, …), any atom that is not a single-variable real
+/// polynomial comparison, a *distinct* second variable, a degree outside
+/// `[1, MAX_DEGREE]`, or an `i128`/`Rational` overflow during integer clearing.
+///
+/// Returning `Some(())` means every conjunct of this assertion was admitted.
+fn collect_conjuncts(
+    arena: &TermArena,
+    assertion: TermId,
+    var: &mut Option<SymbolId>,
+    atoms: &mut Vec<Atom>,
+) -> Option<()> {
+    // Top-level `and`: flatten its conjuncts. (`BoolNot` is handled below as the
+    // `≠` shape, NOT as a general negation, so we don't push De Morgan into it.)
+    if let TermNode::App {
+        op: Op::BoolAnd,
+        args,
+    } = arena.node(assertion)
+    {
+        for &c in args {
+            collect_conjuncts(arena, c, var, atoms)?;
+        }
+        return Some(());
+    }
+
+    // Otherwise it must be one atomic comparison.
+    let (atom_var, cmp, rat) = match_real_poly_constraint(arena, assertion)?;
+    // Unify the shared variable; a second distinct variable forces a decline.
+    match *var {
+        None => *var = Some(atom_var),
+        Some(v) if v == atom_var => {}
+        Some(_) => return None,
+    }
+    // Degree ≥ 1 required (a constant is exact LRA territory) and bounded.
+    if rat.degree() == 0 || rat.degree() > MAX_DEGREE {
+        return None;
+    }
+    let poly = rat.to_integer_poly()?;
+    if poly.len() <= 1 {
+        return None;
+    }
+    atoms.push(Atom { cmp, poly });
+    Some(())
 }
 
 /// Match a single real comparison/equality `lhs ⋈ rhs` (or `¬(lhs = rhs)` for

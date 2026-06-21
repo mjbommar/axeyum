@@ -388,6 +388,221 @@ fn cube_gt_5_is_sat_rational() {
     assert!(matches!(eval(&arena, a, &asg), Ok(Value::Bool(true))));
 }
 
+// --- CONJUNCTIONS over one shared variable: sign-cell decomposition -----------
+//
+// The whole query is `C₁ ∧ … ∧ Cₘ`, each `pᵢ(x) ⋈ᵢ 0` over the SAME real `x`.
+// Decided exactly by testing the roots of all `pᵢ` plus one rational sample per
+// open cell; every `Sat` is replay-checked against ALL assertions.
+
+/// `x*x = 2 ∧ x < 0` ⇒ Sat with the **negative** algebraic root −√2.
+#[test]
+fn conj_square_eq_2_and_negative_is_sat_neg_sqrt2() {
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let a1 = arena.eq(xx, two).unwrap();
+    let zero = arena.real_const(Rational::zero());
+    let a2 = arena.real_lt(xv, zero).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x*x=2 ∧ x<0 must be Sat, got {r:?}");
+    };
+    let x = model.get(xs).unwrap();
+    let alpha = x.as_real_algebraic().expect("−√2 is irrational");
+    // It is a root of x²−2 …
+    assert_eq!(alpha.sign_at(&poly_x2_minus(2)), Some(Sign::Zero));
+    // … and it is the NEGATIVE one (< 0).
+    assert_eq!(
+        alpha.compare_rational(&Rational::zero()),
+        Some(core::cmp::Ordering::Less),
+        "the witness must be the negative root −√2"
+    );
+}
+
+/// `x*x = 2 ∧ x > 0` ⇒ Sat with the **positive** algebraic root +√2.
+#[test]
+fn conj_square_eq_2_and_positive_is_sat_pos_sqrt2() {
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let a1 = arena.eq(xx, two).unwrap();
+    let zero = arena.real_const(Rational::zero());
+    let a2 = arena.real_gt(xv, zero).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x*x=2 ∧ x>0 must be Sat, got {r:?}");
+    };
+    let alpha = model.get(xs).unwrap();
+    let alpha = alpha.as_real_algebraic().expect("+√2 is irrational");
+    assert_eq!(alpha.sign_at(&poly_x2_minus(2)), Some(Sign::Zero));
+    assert_eq!(
+        alpha.compare_rational(&Rational::zero()),
+        Some(core::cmp::Ordering::Greater),
+        "the witness must be the positive root +√2"
+    );
+}
+
+/// `x*x = 2 ∧ x > 0 ∧ x < 2` ⇒ Sat (+√2 ≈ 1.41 ∈ (0, 2)).
+#[test]
+fn conj_square_eq_2_positive_bounded_is_sat() {
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let a1 = arena.eq(xx, two).unwrap();
+    let zero = arena.real_const(Rational::zero());
+    let a2 = arena.real_gt(xv, zero).unwrap();
+    let twoc = arena.real_const(Rational::integer(2));
+    let a3 = arena.real_lt(xv, twoc).unwrap();
+    let r = solve(&mut arena, &[a1, a2, a3], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x*x=2 ∧ x>0 ∧ x<2 must be Sat, got {r:?}");
+    };
+    let alpha = model.get(xs).unwrap();
+    let alpha = alpha.as_real_algebraic().expect("+√2 is irrational");
+    assert_eq!(alpha.sign_at(&poly_x2_minus(2)), Some(Sign::Zero));
+}
+
+/// `x*x = 2 ∧ x < −2` ⇒ Unsat: the only roots are ±√2 ≈ ±1.41, and −√2 ≮ −2.
+#[test]
+fn conj_square_eq_2_and_lt_neg2_is_unsat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let a1 = arena.eq(xx, two).unwrap();
+    let neg2 = arena.real_const(Rational::integer(-2));
+    let a2 = arena.real_lt(xv, neg2).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x*x=2 ∧ x<−2 has no real solution; got {r:?}"
+    );
+}
+
+/// `x³ > 1 ∧ x < 2` ⇒ Sat with a **rational** witness in the open cell (e.g. 1.5).
+#[test]
+fn conj_cube_gt_1_and_lt_2_is_sat_rational() {
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let xxx = cube(&mut arena, xv);
+    let one = arena.real_const(Rational::integer(1));
+    let a1 = arena.real_gt(xxx, one).unwrap();
+    let twoc = arena.real_const(Rational::integer(2));
+    let a2 = arena.real_lt(xv, twoc).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x³>1 ∧ x<2 must be Sat, got {r:?}");
+    };
+    assert!(
+        model.get(xs).unwrap().as_real().is_some(),
+        "inequality-only conjunction has a rational witness"
+    );
+    let asg = model.to_assignment();
+    assert!(matches!(eval(&arena, a1, &asg), Ok(Value::Bool(true))));
+    assert!(matches!(eval(&arena, a2, &asg), Ok(Value::Bool(true))));
+}
+
+/// `1 < x ∧ x < 2 ∧ x*x ≠ 2` ⇒ Sat with a rational witness (any rational in
+/// (1, 2) other than the irrational √2, e.g. 3/2, works).
+#[test]
+fn conj_bounded_and_ne_sqrt2_is_sat_rational() {
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let one = arena.real_const(Rational::integer(1));
+    let a1 = arena.real_lt(one, xv).unwrap();
+    let twoc = arena.real_const(Rational::integer(2));
+    let a2 = arena.real_lt(xv, twoc).unwrap();
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let eqp = arena.eq(xx, two).unwrap();
+    let a3 = arena.not(eqp).unwrap();
+    let r = solve(&mut arena, &[a1, a2, a3], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("1<x ∧ x<2 ∧ x*x≠2 must be Sat, got {r:?}");
+    };
+    let q = model
+        .get(xs)
+        .unwrap()
+        .as_real()
+        .expect("witness stays rational");
+    // Replay against all three assertions.
+    let asg = model.to_assignment();
+    for a in [a1, a2, a3] {
+        assert!(matches!(eval(&arena, a, &asg), Ok(Value::Bool(true))));
+    }
+    assert_ne!(q, Rational::integer(2)); // sanity
+}
+
+/// A top-level `and` of two single-variable real constraints (as ONE assertion)
+/// is flattened the same way as a two-assertion list.
+#[test]
+fn conj_as_single_and_term_is_sat() {
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let a1 = arena.eq(xx, two).unwrap();
+    let zero = arena.real_const(Rational::zero());
+    let a2 = arena.real_gt(xv, zero).unwrap();
+    let conj = arena.and(a1, a2).unwrap();
+    let r = solve(&mut arena, &[conj], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("(x*x=2 ∧ x>0) as one `and` must be Sat, got {r:?}");
+    };
+    let alpha = model.get(xs).unwrap();
+    let alpha = alpha.as_real_algebraic().expect("+√2 is irrational");
+    assert_eq!(alpha.sign_at(&poly_x2_minus(2)), Some(Sign::Zero));
+    assert_eq!(
+        alpha.compare_rational(&Rational::zero()),
+        Some(core::cmp::Ordering::Greater)
+    );
+}
+
+// --- conjunction soundness-negative DECLINE cases -----------------------------
+
+/// `x*y = 2 ∧ x > 0` mixes two variables; the decider declines (left to NRA).
+/// It is satisfiable (x = y = √2), so the verdict must NOT be Unsat.
+#[test]
+fn conj_two_variables_declines_not_unsat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let p = arena.real_mul(xv, yv).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let a1 = arena.eq(p, two).unwrap();
+    let zero = arena.real_const(Rational::zero());
+    let a2 = arena.real_gt(xv, zero).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "x*y=2 ∧ x>0 is sat; got {r:?}"
+    );
+}
+
+/// A conjunction containing a non-polynomial atom (real division) declines: the
+/// whole query is left to NRA, never mis-decided. It is satisfiable (x = 2), so
+/// the verdict must NOT be Unsat.
+#[test]
+fn conj_with_nonpoly_atom_declines_not_unsat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let four = arena.real_const(Rational::integer(4));
+    let a1 = arena.eq(xx, four).unwrap();
+    // A non-polynomial real-division atom: x / x = 1 (collector declines on div).
+    let div = arena.real_div(xv, xv).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a2 = arena.eq(div, one).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "x*x=4 ∧ x/x=1 is sat (x=2); got {r:?}"
+    );
+}
+
 /// An integer (non-Real) square is the NIA case, not ours: the real decider must
 /// not fire. `int x*x = 2` is Unsat (handled by `nia_square`), and the answer must
 /// still be correct — confirming we did not break the integer path.

@@ -893,18 +893,22 @@ fn check_auto_dispatch(
         }
     }
     if features.has_real {
-        // Single-variable nonlinear-real polynomial constraint (`p(x) ⋈ 0`): an
-        // exact, bounded NRA decision with **irrational witnesses** (ADR-0038).
-        // The linear-abstraction NRA path below abstracts a product like `x·x` to
-        // a fresh variable and so only ever reports `Unknown` for `x·x = 2`; this
-        // pass isolates the real roots of the collected polynomial exactly and
-        // returns the witness `√2` as a `Value::RealAlgebraic`. It fires only when
-        // the whole query is exactly one such single-variable real polynomial
-        // constraint — every other shape (≥ 2 variables, a non-Real sort, a
-        // non-polynomial operator, an extra assertion) declines (`None`) and is
-        // left to the NRA layer. Every `Sat` is replay-checked (an algebraic
-        // witness via `sign_at(p, α) = 0`, a rational witness via the ground
-        // evaluator) and every `Unsat` is exact by root isolation, so it can never
+        // Conjunction of single-variable nonlinear-real polynomial constraints
+        // over one shared variable (`⋀ᵢ pᵢ(x) ⋈ᵢ 0`): an exact, bounded NRA
+        // decision with **irrational witnesses** (ADR-0038). The linear-
+        // abstraction NRA path below abstracts a product like `x·x` to a fresh
+        // variable and so only ever reports `Unknown` for `x·x = 2`; this pass
+        // isolates the real roots of the collected polynomial(s) exactly and, for
+        // a conjunction, sign-cell-decomposes ℝ (roots ∪ one rational sample per
+        // open cell) to return a witness — e.g. `√2` (a `Value::RealAlgebraic`)
+        // for `x·x = 2 ∧ x > 0`, or a rational for `x³ > 1 ∧ x < 2`. The whole
+        // assertion list (and any top-level `and`) is flattened to the conjunction
+        // of atoms; every other shape (≥ 2 distinct variables, a non-Real sort, a
+        // non-polynomial operator, a non-conjunctive top-level `or`/`=>`) declines
+        // (`None`) and is left to the NRA layer. Every `Sat` is replay-checked
+        // against ALL assertions (an algebraic witness via `sign_at(pᵢ, α) ⋈ᵢ 0`,
+        // a rational witness via the ground evaluator) and every `Unsat` is exact
+        // by exhaustive sign-cell coverage of the single variable, so it can never
         // produce a wrong verdict; strictly additive (`Unknown` → decision).
         if let Some(result) = crate::nra_real_root::decide_real_poly_constraint(arena, assertions)?
         {
