@@ -154,9 +154,16 @@ impl FunctionElimination {
             for &arg in &apply.args {
                 key.push(eval(arena, arg, model)?);
             }
-            let result = model
-                .get(apply.fresh)
-                .expect("fresh application symbol is assigned");
+            // A fresh application symbol may be unassigned in the model — notably a
+            // NESTED arithmetic-sorted application (e.g. `g(f(c), …)` where the inner
+            // result feeds an outer one), whose value is not pinned in the base
+            // model. Decline gracefully (the caller maps a projection `Err` to a
+            // sound `Unknown`) rather than panic — `unknown` is first-class, and the
+            // "never crash" invariant is total.
+            let result = model.get(apply.fresh).ok_or(IrError::Unsupported(
+                "uninterpreted-function model projection: a fresh application symbol \
+                 (e.g. a nested arithmetic-sorted application) is unassigned",
+            ))?;
             if !tables.contains_key(&apply.func) {
                 func_order.push(apply.func);
             }

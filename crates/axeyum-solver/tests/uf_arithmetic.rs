@@ -31,6 +31,33 @@ fn uflia_squeeze_forces_congruence_unsat() {
     ));
 }
 
+/// Regression for the nested-UF projection CRASH found by the `QF_UFLIA` differential
+/// fuzz: `g(f(-3), 0) ≥ 0` (a nested arithmetic-sorted application as an argument to
+/// another) panicked in `project_model` (`functions.rs:159` — the inner fresh symbol
+/// is unassigned in the base model). The "never crash, graceful Unknown" hard rule:
+/// the projection now declines (`Err`) instead of `.expect`-panicking, and the caller
+/// maps that to a sound `Unknown`. The instance is satisfiable, so the only
+/// requirement is it does NOT panic and is NOT wrongly `Unsat`.
+#[test]
+fn nested_arith_uf_application_does_not_crash() {
+    let mut a = TermArena::new();
+    let f = a.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let g = a.declare_fun("g", &[Sort::Int, Sort::Int], Sort::Int).unwrap();
+    let m3 = a.int_const(-3);
+    let fm3 = a.apply(f, &[m3]).unwrap();
+    let zero = a.int_const(0);
+    let gfm3 = a.apply(g, &[fm3, zero]).unwrap();
+    let zero2 = a.int_const(0);
+    let atom = a.int_ge(gfm3, zero2).unwrap(); // g(f(-3), 0) >= 0  (satisfiable)
+
+    // Must not panic; must not be a wrong Unsat (the system is Sat).
+    let r = check_with_uf_arithmetic(&mut a, &[atom], &SolverConfig::default()).unwrap();
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "g(f(-3),0)>=0 is satisfiable — never Unsat; got {r:?}"
+    );
+}
+
 /// `f(a) ≠ f(b) ∧ a ≤ b` is satisfiable, so it is **never refuted**. (The witnessing
 /// model for an arithmetic-sorted UF is not yet built — `project_model` keys function
 /// tables by scalar codes — so this returns a sound `Unknown` rather than `Sat`; the
