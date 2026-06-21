@@ -351,6 +351,9 @@ struct AxeyumOutcome {
     replay: Replay,
     /// A model dump for a `Sat` (used only when reporting a disagreement).
     model_dump: Option<String>,
+    /// For an `Unknown` verdict, the classified reason kind + detail string
+    /// (captured only for the opt-in `NRA_DUMP_UNKNOWN` capability-gap dump).
+    unknown_reason: Option<(String, String)>,
 }
 
 /// Decide an instance with axeyum on a worker thread, joining under
@@ -372,6 +375,10 @@ fn solve_axeyum_bounded(inst: Instance) -> Option<AxeyumOutcome> {
             Err(_) => None, // solve must not error; surface as a worker failure
             Ok(ax) => {
                 let verdict = label(&ax);
+                let unknown_reason = match &ax {
+                    CheckResult::Unknown(r) => Some((format!("{:?}", r.kind), r.detail.clone())),
+                    _ => None,
+                };
                 let (replay, model_dump) = match &ax {
                     CheckResult::Sat(model) => {
                         let asg = model.to_assignment();
@@ -405,6 +412,7 @@ fn solve_axeyum_bounded(inst: Instance) -> Option<AxeyumOutcome> {
                     verdict,
                     replay,
                     model_dump,
+                    unknown_reason,
                 })
             }
         };
@@ -508,6 +516,22 @@ fn nra_differential_fuzz_disagree_zero() {
         // Both sides committed to Sat/Unsat (axeyum may still be Unknown).
         if ax_label == Verdict::Unknown {
             // axeyum incomplete here; not a joint decision, nothing to adjudicate.
+            // Opt-in capability-gap dump: Z3 decided but axeyum declined. Emits a
+            // single machine-greppable line per gap when `NRA_DUMP_UNKNOWN` is set;
+            // zero behavior change (no output) when the env var is unset.
+            if std::env::var_os("NRA_DUMP_UNKNOWN").is_some() {
+                let (kind, detail) = outcome
+                    .unknown_reason
+                    .clone()
+                    .unwrap_or_else(|| ("?".to_string(), "(no reason)".to_string()));
+                let dump = inst.dump().replace('\n', " | ");
+                eprintln!(
+                    "UNKNOWN_GAP seed={seed} z3={z3_label:?} kind={kind} detail={detail:?} \
+                     vars={} atoms={} inst=[{dump}]",
+                    inst.num_vars,
+                    inst.atoms.len()
+                );
+            }
             continue;
         }
 
