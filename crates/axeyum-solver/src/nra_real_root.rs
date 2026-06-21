@@ -2587,37 +2587,209 @@ fn collect_multi(arena: &TermArena, t: TermId) -> Option<MultiPoly> {
 /// (no atom certifies) — never `Sat`.
 fn sos_refute_multivariate(atoms: &[MultiAtom]) -> Option<CheckResult> {
     for atom in atoms {
-        if sos_refutes_strict_atom(atom.cmp, &atom.poly) {
+        if sos_certificate_for_strict_atom(atom.cmp, &atom.poly).is_some() {
             return Some(CheckResult::Unsat);
         }
     }
     None
 }
 
-/// Whether the STRICT inequality atom `p ⋈ 0` (`⋈ ∈ {<, >}`) is refuted globally
-/// by a degree-2 PSD certificate: `p < 0` with `p ≥ 0 ∀x` (Gram matrix PSD), or
-/// `p > 0` with `p ≤ 0 ∀x` (Gram matrix NSD). Returns `false` (decline) for any
-/// non-strict comparison, any polynomial of total degree ≥ 3, or any overflow.
-fn sos_refutes_strict_atom(cmp: Cmp, poly: &MultiPoly) -> bool {
-    // Only strict `<` / `>` admit a PSD refutation (see module note).
-    let need_psd = match cmp {
-        Cmp::Lt => true,  // p < 0 refuted by p ≥ 0 everywhere (M PSD)
-        Cmp::Gt => false, // p > 0 refuted by p ≤ 0 everywhere (−M PSD)
-        Cmp::Eq | Cmp::Ne | Cmp::Le | Cmp::Ge => return false,
-    };
-    let Some(matrix) = quadratic_gram_matrix(poly) else {
-        return false; // degree ≥ 3, or overflow building the matrix ⇒ decline
-    };
-    if need_psd {
-        is_psd_exact(&matrix).unwrap_or(false)
-    } else {
-        // `p > 0` is refuted iff `p ≤ 0` everywhere iff `−p ≥ 0` everywhere iff
-        // `−M` is PSD. Negate every entry (overflow ⇒ decline).
-        match negate_matrix(&matrix) {
-            Some(neg) => is_psd_exact(&neg).unwrap_or(false),
-            None => false,
+/// A self-contained, independently re-checkable sum-of-squares refutation of a
+/// STRICT quadratic inequality atom. [`SosCertificate::verify`] needs no arena or
+/// solver state.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SosCertificate {
+    /// Monomials of `p` over canonical variable indices `0..n_vars` (the atom is
+    /// `p < 0` when `strict_lt`, else `p > 0`). Each `(factors, coeff)` has total
+    /// degree ≤ 2.
+    terms: Vec<(Vec<(usize, u32)>, Rational)>,
+    n_vars: usize,
+    /// `true`: atom `p < 0`, certified by `M ⪰ 0` (⇒ `p ≥ 0`). `false`: atom
+    /// `p > 0`, certified by `−M ⪰ 0` (⇒ `p ≤ 0`). Either contradicts the strict
+    /// atom.
+    strict_lt: bool,
+    /// `LDLᵀ` factors of the certified matrix (`M` if `strict_lt`, else `−M`).
+    l: Vec<Vec<Rational>>,
+    d: Vec<Rational>,
+}
+
+impl SosCertificate {
+    /// Independently re-validate this sum-of-squares refutation. **Fully
+    /// independent of the producer**: it rebuilds the Gram matrix from
+    /// [`SosCertificate::terms`], never trusting any matrix the producer carried,
+    /// then confirms the carried `LDLᵀ` factors reconstruct the certified target
+    /// (`M` for `p < 0`, `−M` for `p > 0`) with `D ≥ 0`.
+    ///
+    /// `Some(true)`/`true` ⇒ `target ⪰ 0` ⇒ the certified quadratic form `p` is
+    /// genuinely globally `≥ 0` (or `≤ 0`), so the STRICT atom is UNSAT. Returns
+    /// `false` (never panics) on any malformed dimension, degree ≥ 3 monomial, or
+    /// `i128`/`Rational` overflow — when in doubt, reject.
+    #[must_use]
+    pub fn verify(&self) -> bool {
+        // 1. Rebuild the symmetric Gram matrix from the carried indexed terms,
+        //    independent of any producer state. `None` ⇒ degree ≥ 3 / overflow.
+        let Some(gram) = gram_from_indexed_terms(&self.terms, self.n_vars) else {
+            return false;
+        };
+        let dim = self.n_vars + 1;
+        // 2. The target the LDLᵀ factors must reconstruct.
+        let target = if self.strict_lt {
+            gram
+        } else {
+            match negate_matrix(&gram) {
+                Some(neg) => neg,
+                None => return false,
+            }
+        };
+        // 3. Dimension sanity: `l` is dim×dim, `d` is dim.
+        if target.len() != dim || self.d.len() != dim || self.l.len() != dim {
+            return false;
+        }
+        if self.l.iter().any(|row| row.len() != dim) {
+            return false;
+        }
+        // 4. Independently reconstruct L·D·Lᵀ and confirm it equals `target` with
+        //    every D[k] ≥ 0 (the sum-of-squares nonnegativity condition).
+        matches!(ldlt_reconstructs(&target, &self.l, &self.d), Some(true))
+    }
+}
+
+/// Rebuild the symmetric `(n_vars+1)×(n_vars+1)` rational Gram matrix `M` from
+/// monomials over canonical variable indices `0..n_vars`, so that
+/// `p(x) = [x;1]ᵀ M [x;1]`. Mirrors [`quadratic_gram_matrix`]'s classification
+/// over integer indices instead of [`SymbolId`]s. Returns `None` (reject) on any
+/// monomial of total degree ≥ 3, an out-of-range index, or any `Rational`
+/// overflow while halving an odd cross/linear coefficient.
+fn gram_from_indexed_terms(
+    terms: &[(Vec<(usize, u32)>, Rational)],
+    n_vars: usize,
+) -> Option<Vec<Vec<Rational>>> {
+    let n = n_vars;
+    let dim = n + 1;
+    let mut gram = vec![vec![Rational::zero(); dim]; dim];
+    let half = Rational::checked_new(1, 2)?;
+
+    for (key, coeff) in terms {
+        match key.as_slice() {
+            // Constant term → M[n][n].
+            [] => {
+                gram[n][n] = gram[n][n].checked_add(*coeff)?;
+            }
+            // Linear term `c·xᵢ` → split ½c onto M[i][n] and M[n][i].
+            [(idx, 1)] => {
+                let idx = *idx;
+                if idx >= n {
+                    return None;
+                }
+                let half_c = coeff.checked_mul(half)?;
+                gram[idx][n] = gram[idx][n].checked_add(half_c)?;
+                gram[n][idx] = gram[n][idx].checked_add(half_c)?;
+            }
+            // Square term `c·xᵢ²` → M[i][i].
+            [(idx, 2)] => {
+                let idx = *idx;
+                if idx >= n {
+                    return None;
+                }
+                gram[idx][idx] = gram[idx][idx].checked_add(*coeff)?;
+            }
+            // Cross term `c·xᵢxⱼ` (i ≠ j) → split ½c onto M[i][j] and M[j][i].
+            [(row, 1), (col, 1)] => {
+                let (row, col) = (*row, *col);
+                if row >= n || col >= n {
+                    return None;
+                }
+                let half_c = coeff.checked_mul(half)?;
+                gram[row][col] = gram[row][col].checked_add(half_c)?;
+                gram[col][row] = gram[col][row].checked_add(half_c)?;
+            }
+            // Any monomial of total degree ≥ 3 (or an unexpected shape) ⇒ reject.
+            _ => return None,
         }
     }
+    Some(gram)
+}
+
+/// If the STRICT inequality atom `p ⋈ 0` (`⋈ ∈ {<, >}`) is refuted globally by a
+/// degree-2 PSD certificate, return a self-contained [`SosCertificate`]; else
+/// `None` (decline). `p < 0` is certified by `M ⪰ 0` (⇒ `p ≥ 0 ∀x`); `p > 0` by
+/// `−M ⪰ 0` (⇒ `p ≤ 0 ∀x`). Declines for any non-strict comparison, any
+/// polynomial of total degree ≥ 3, or any overflow.
+///
+/// The verdict is unchanged from the old boolean predicate: a certificate is
+/// returned **iff** the matrix (or its negation) is exact-PSD and that PSD claim
+/// independently reconstructs — so `.is_some()` is the decision the decider uses.
+fn sos_certificate_for_strict_atom(cmp: Cmp, poly: &MultiPoly) -> Option<SosCertificate> {
+    // Only strict `<` / `>` admit a PSD refutation (see module note).
+    let strict_lt = match cmp {
+        Cmp::Lt => true,  // p < 0 refuted by p ≥ 0 everywhere (M PSD)
+        Cmp::Gt => false, // p > 0 refuted by p ≤ 0 everywhere (−M PSD)
+        Cmp::Eq | Cmp::Ne | Cmp::Le | Cmp::Ge => return None,
+    };
+    // Build M (degree ≥ 3 / overflow ⇒ decline).
+    let matrix = quadratic_gram_matrix(poly)?;
+    // The matrix the LDLᵀ certificate is over: M for `< 0`, −M for `> 0`.
+    let target = if strict_lt {
+        matrix
+    } else {
+        negate_matrix(&matrix)?
+    };
+    // Run the exact LDLᵀ; only a PSD factorization that independently reconstructs
+    // the target certifies the atom.
+    let Ldlt::Psd { l, d } = try_ldlt(&target) else {
+        return None;
+    };
+    if ldlt_reconstructs(&target, &l, &d) != Some(true) {
+        return None;
+    }
+    // Remap `poly`'s monomials from `SymbolId`s to the canonical `0..n` variable
+    // indices used by `quadratic_gram_matrix` (the deterministic `vars()` order),
+    // so the certificate is self-contained (no `SymbolId`s leak into it).
+    let vars: Vec<SymbolId> = poly.vars().into_iter().collect();
+    let n_vars = vars.len();
+    let mut index: BTreeMap<SymbolId, usize> = BTreeMap::new();
+    for (i, &v) in vars.iter().enumerate() {
+        index.insert(v, i);
+    }
+    let mut terms: Vec<(Vec<(usize, u32)>, Rational)> = Vec::with_capacity(poly.terms.len());
+    for (key, &coeff) in &poly.terms {
+        let mut factors: Vec<(usize, u32)> = Vec::with_capacity(key.len());
+        for &(sym, exp) in key {
+            factors.push((*index.get(&sym)?, exp));
+        }
+        terms.push((factors, coeff));
+    }
+    Some(SosCertificate {
+        terms,
+        n_vars,
+        strict_lt,
+        l,
+        d,
+    })
+}
+
+/// Collect a conjunction's atoms (mirroring the multivariate decomposition path)
+/// and return the [`SosCertificate`] of the **first** STRICT inequality atom a
+/// degree-2 PSD certificate refutes, or `None` to decline. The verdict matches
+/// [`sos_refute_multivariate`]: a returned certificate proves the conjunction
+/// `Unsat`. Self-contained (no `SymbolId`s leak into the certificate).
+pub(crate) fn sos_refute_with_certificate(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<SosCertificate> {
+    let mut atoms: Vec<MultiAtom> = Vec::new();
+    for &a in assertions {
+        collect_multi_conjuncts(arena, a, &mut atoms)?;
+    }
+    if atoms.is_empty() {
+        return None;
+    }
+    for atom in &atoms {
+        if let Some(cert) = sos_certificate_for_strict_atom(atom.cmp, &atom.poly) {
+            return Some(cert);
+        }
+    }
+    None
 }
 
 /// Build the symmetric (n+1)×(n+1) rational Gram matrix `M` of a total-degree-≤2
@@ -2813,6 +2985,11 @@ fn ldlt_reconstructs(
 /// a certificate fails its own reconstruction — a conservative reject); `None` on
 /// an `i128` overflow (⇒ the caller declines). Sound for global nonnegativity of
 /// the associated quadratic form.
+///
+/// The certificate producer ([`sos_certificate_for_strict_atom`]) inlines the same
+/// `try_ldlt` + `ldlt_reconstructs` so it can *retain* the `L`/`D` factors; this
+/// boolean wrapper is exercised by the PSD unit tests.
+#[cfg(test)]
 fn is_psd_exact(matrix: &[Vec<Rational>]) -> Option<bool> {
     match try_ldlt(matrix) {
         Ldlt::Overflow => None,
@@ -3050,6 +3227,42 @@ mod tests {
             ldlt_reconstructs(&m, &ident, &bad_d),
             Some(false),
             "a certificate that does not reconstruct M must be rejected"
+        );
+    }
+
+    #[test]
+    fn sos_certificate_verify_rejects_tampered_factors() {
+        // x² − 2xy + y² = (x − y)² < 0 is UNSAT (M ⪰ 0). Build a genuine,
+        // self-contained certificate over canonical indices {0,1}, then tamper its
+        // `d` so the carried factors no longer reconstruct the Gram matrix ⇒
+        // `verify()` must return `false` (the self-check rejects bad factors), and
+        // the untouched one must accept.
+        let terms: Vec<(Vec<(usize, u32)>, Rational)> = vec![
+            (vec![(0, 2)], Rational::integer(1)),          // x²
+            (vec![(1, 2)], Rational::integer(1)),          // y²
+            (vec![(0, 1), (1, 1)], Rational::integer(-2)), // −2xy
+        ];
+        let gram = gram_from_indexed_terms(&terms, 2).expect("Gram matrix builds");
+        let Ldlt::Psd { l, d } = try_ldlt(&gram) else {
+            panic!("(x − y)² Gram matrix must be PSD");
+        };
+        let cert = SosCertificate {
+            terms,
+            n_vars: 2,
+            strict_lt: true,
+            l,
+            d,
+        };
+        assert!(cert.verify(), "an untampered certificate must verify");
+
+        // Scale every D[k] by 2: L·D'·Lᵀ ≠ M ⇒ reconstruction fails ⇒ reject.
+        let mut tampered = cert.clone();
+        for dk in &mut tampered.d {
+            *dk = dk.checked_mul(Rational::integer(2)).unwrap();
+        }
+        assert!(
+            !tampered.verify(),
+            "a tampered certificate (wrong D) must be rejected by verify()"
         );
     }
 

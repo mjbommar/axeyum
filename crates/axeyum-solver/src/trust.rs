@@ -48,6 +48,8 @@ pub enum TrustId {
     LraDpll,
     /// CDCL(XOR) search-only UNSAT via in-search Gaussian reasoning (ADR-0035).
     XorGaussian,
+    /// Degree-2 sum-of-squares / PSD certificate for NRA (ADR-0039).
+    Sos,
 }
 
 /// Every [`TrustId`] in canonical (stable) order — the iteration source of truth.
@@ -64,6 +66,7 @@ pub const ALL_TRUST_IDS: &[TrustId] = &[
     TrustId::Farkas,
     TrustId::LraDpll,
     TrustId::XorGaussian,
+    TrustId::Sos,
 ];
 
 impl TrustId {
@@ -83,6 +86,7 @@ impl TrustId {
             TrustId::Farkas => "farkas",
             TrustId::LraDpll => "lra-dpll",
             TrustId::XorGaussian => "xor-gaussian",
+            TrustId::Sos => "sos",
         }
     }
 
@@ -106,6 +110,7 @@ impl TrustId {
             TrustId::XorGaussian => {
                 "CDCL(XOR) search-only UNSAT (in-search Gaussian reasoning, no DRAT)"
             }
+            TrustId::Sos => "degree-2 sum-of-squares / PSD nonnegativity certificate (NRA)",
         }
     }
 
@@ -113,7 +118,7 @@ impl TrustId {
     #[must_use]
     pub const fn pedantic_level(self) -> u8 {
         match self {
-            TrustId::TermLevelEnum | TrustId::Farkas => 10,
+            TrustId::TermLevelEnum | TrustId::Farkas | TrustId::Sos => 10,
             TrustId::Tseitin | TrustId::SatRefutation | TrustId::LraDpll => 9,
             TrustId::BitBlast => 8,
             TrustId::Fpa2Bv => 5,
@@ -136,7 +141,8 @@ impl TrustId {
             | TrustId::SatRefutation
             | TrustId::TermLevelEnum
             | TrustId::Farkas
-            | TrustId::LraDpll => true,
+            | TrustId::LraDpll
+            | TrustId::Sos => true,
             TrustId::ArrayElim
             | TrustId::Ackermann
             | TrustId::IntBlast
@@ -161,6 +167,7 @@ impl TrustId {
             TrustId::Farkas => "ADR-0015",
             TrustId::LraDpll => "ADR-0021",
             TrustId::XorGaussian => "ADR-0035",
+            TrustId::Sos => "ADR-0039",
         }
     }
 }

@@ -140,7 +140,7 @@ pub use euf_egraph::{
 pub use evidence::{
     Evidence, EvidenceReport, LayerVersions, ProofOutcome, Provenance, SEMANTICS_VERSION,
     produce_evidence, produce_lra_dpll_evidence, produce_lra_evidence, produce_nra_evidence,
-    produce_qf_bv_evidence, prove,
+    produce_nra_sos_evidence, produce_qf_bv_evidence, prove,
 };
 pub use faithfulness::{FaithfulnessOutcome, check_qf_bv_faithfulness};
 pub use fp::FloatFormat;
@@ -166,6 +166,7 @@ pub use maxsat::{
 };
 pub use model::Model;
 pub use nra::check_with_nra;
+pub use nra_real_root::SosCertificate;
 pub use optimize::{
     BvLexObjective, LexObjective, LexOutcome, OptOutcome, ParetoOutcome, maximize_bv,
     maximize_bv_signed, maximize_bv_signed_with_config, maximize_bv_with_config, maximize_lia,

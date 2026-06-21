@@ -44,6 +44,7 @@ use crate::certify::{CertifyOutcome, certify_qf_bv_by_enumeration};
 use crate::dpll_t::{LraDpllOutcome, LraDpllRefutation, certify_lra_dpll_unsat};
 use crate::lra::{FarkasCertificate, lra_farkas_certificate};
 use crate::model::Model;
+use crate::nra_real_root::{self, SosCertificate};
 use crate::proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};
 use crate::quant_finite_cert::{
     GuardedUniversalForm, check_alethe_lra_guarded_inst_against, guarded_universal_form,
@@ -253,6 +254,11 @@ pub enum Evidence {
     /// refutation (skeleton + Farkas-certified theory lemmas) whose
     /// [`LraDpllRefutation::verify`] is the evidence.
     UnsatLraDpll(LraDpllRefutation),
+    /// Unsatisfiable (`NRA`): a self-checking degree-2 sum-of-squares / PSD
+    /// refutation of a STRICT quadratic inequality atom, whose
+    /// [`SosCertificate::verify`] (an exact-rational `LDLᵀ` reconstruction, fully
+    /// independent of the producer) is the evidence (ADR-0039).
+    UnsatSos(SosCertificate),
     /// Undecided, with the classified reason.
     Unknown(UnknownReason),
 }
@@ -349,6 +355,10 @@ impl Evidence {
             }
             Evidence::UnsatFarkas(certificate) => Ok(certificate.verify()),
             Evidence::UnsatLraDpll(refutation) => refutation.verify(arena),
+            // Degree-2 SOS/PSD refutation: re-validate the self-contained
+            // certificate (rebuilds the Gram matrix from its own terms and confirms
+            // the carried LDLᵀ factors reconstruct it with D ≥ 0) — no arena needed.
+            Evidence::UnsatSos(certificate) => Ok(certificate.verify()),
             // No DRAT certificate (adapter-only `unsat`) or `unknown`: nothing to
             // independently re-check.
             Evidence::Unsat(None) | Evidence::Unknown(_) => Ok(true),
@@ -369,6 +379,7 @@ impl Evidence {
                 | Evidence::UnsatTermLevel { .. }
                 | Evidence::UnsatFarkas(_)
                 | Evidence::UnsatLraDpll(_)
+                | Evidence::UnsatSos(_)
         )
     }
 }
@@ -659,6 +670,53 @@ pub fn produce_nra_evidence(
         provenance,
         trusted_steps: Vec::new(),
     })
+}
+
+/// Produces a self-checking degree-2 **sum-of-squares / PSD** `unsat` certificate
+/// (ADR-0039) for a conjunction whose first STRICT quadratic inequality atom is
+/// globally one-signed: `p < 0` refuted by `M ⪰ 0` (⇒ `p ≥ 0 ∀x`), or `p > 0` by
+/// `−M ⪰ 0` (⇒ `p ≤ 0 ∀x`). The carried [`SosCertificate`] is fully
+/// self-contained — [`Evidence::check`] re-validates it via
+/// [`SosCertificate::verify`] (an exact-rational `LDLᵀ` reconstruction), independent
+/// of the arena.
+///
+/// Returns `Ok(Some(report))` when such a certificate exists, else `Ok(None)`
+/// (decline — no wrong verdict is ever produced). This is an *additive*,
+/// exact-arithmetic NRA `unsat` certificate; it never produces `sat`.
+///
+/// # Errors
+///
+/// Returns [`SolverError`] only to match the producer signatures; this path does
+/// not currently fail (the result is always `Ok`).
+#[allow(
+    clippy::unnecessary_wraps,
+    reason = "signature matches the other evidence producers' Result contract"
+)]
+pub fn produce_nra_sos_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<Option<EvidenceReport>, SolverError> {
+    let Some(cert) = nra_real_root::sos_refute_with_certificate(arena, assertions) else {
+        return Ok(None);
+    };
+    let provenance = Provenance {
+        semantics_version: SEMANTICS_VERSION,
+        layers: LayerVersions::CURRENT,
+        backend: "nra-sos-psd-certificate".to_owned(),
+        assertion_count: assertions.len(),
+        timeout: None,
+        resource_limit: None,
+        node_budget: None,
+        cnf_variable_budget: None,
+        cnf_clause_budget: None,
+        prove_unsat: true,
+    };
+    Ok(Some(EvidenceReport {
+        evidence: Evidence::UnsatSos(cert),
+        provenance,
+        // Exact, self-checked SOS/PSD certificate — certified this run.
+        trusted_steps: trust_steps(&[(TrustId::Sos, true)]),
+    }))
 }
 
 /// The unified evidence front door: decides any supported query with [`solve`]'s
@@ -1159,7 +1217,8 @@ pub fn prove(
         | Evidence::UnsatGuardedQuantAletheProof { .. }
         | Evidence::UnsatTermLevel { .. }
         | Evidence::UnsatFarkas(_)
-        | Evidence::UnsatLraDpll(_) => {
+        | Evidence::UnsatLraDpll(_)
+        | Evidence::UnsatSos(_) => {
             if !report.evidence.check(arena, &query)? {
                 return Err(SolverError::Backend(
                     "prove: refutation of the negated goal failed its own check".to_owned(),
