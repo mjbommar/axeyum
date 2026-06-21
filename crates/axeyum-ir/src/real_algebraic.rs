@@ -338,12 +338,19 @@ impl RealAlgebraic {
     /// the endpoints, then build the `RealAlgebraic`. Bounded → `None`.
     #[must_use]
     pub fn add(&self, other: &RealAlgebraic) -> Option<RealAlgebraic> {
-        // p_α(y): coefficients (by y-exponent) are constants in x.
-        let pa = ratvec_const_coeffs(&self.poly);
-        // p_β(x − y): coefficients (by y-exponent) are polynomials in x.
-        let pb = beta_of_x_minus_y(&other.poly)?;
-        let q = resultant_then_squarefree(&pa, &pb)?;
-        combine_via_interval(self, other, &q, IntervalCombine::Sum)
+        // i128 fast path: p_α(y) constant in x; p_β(x − y) polynomial in x.
+        let i128_path = (|| {
+            let pa = ratvec_const_coeffs(&self.poly);
+            let pb = beta_of_x_minus_y(&other.poly)?;
+            let q = resultant_then_squarefree(&pa, &pb)?;
+            combine_via_interval(self, other, &q, IntervalCombine::Sum)
+        })();
+        if i128_path.is_some() {
+            return i128_path;
+        }
+        // Overflow/decline on the i128 path: retry the SAME algorithm in bignum
+        // (feature `bignum`), converting the final result back to i128 if it fits.
+        self.combine_bignum(other, BignumCombine::Sum)
     }
 
     /// The exact product `α · β`.
@@ -357,13 +364,84 @@ impl RealAlgebraic {
     /// `None`.
     #[must_use]
     pub fn mul(&self, other: &RealAlgebraic) -> Option<RealAlgebraic> {
-        // p_α(y): constants in x.
-        let pa = ratvec_const_coeffs(&self.poly);
-        // y^{deg β}·p_β(x / y): coefficient of y^{n−j} is b_j·x^j.
-        let pb = beta_homogenized(&other.poly)?;
-        let q = resultant_then_squarefree(&pa, &pb)?;
-        combine_via_interval(self, other, &q, IntervalCombine::Product)
+        // i128 fast path: p_α(y) constant in x; y^{deg β}·p_β(x / y).
+        let i128_path = (|| {
+            let pa = ratvec_const_coeffs(&self.poly);
+            let pb = beta_homogenized(&other.poly)?;
+            let q = resultant_then_squarefree(&pa, &pb)?;
+            combine_via_interval(self, other, &q, IntervalCombine::Product)
+        })();
+        if i128_path.is_some() {
+            return i128_path;
+        }
+        // i128 decline ⇒ bignum retry (feature-gated).
+        self.combine_bignum(other, BignumCombine::Product)
     }
+
+    /// The bignum retry shared by [`RealAlgebraic::add`] and
+    /// [`RealAlgebraic::mul`]: re-run the resultant → squarefree → Sturm-isolation
+    /// over arbitrary-precision rationals, then convert the FINAL defining
+    /// polynomial + isolating interval back to the `i128`-backed representation.
+    /// Returns `Some(RealAlgebraic)` only if the final result fits `i128` AND
+    /// re-establishes the [`RealAlgebraic::new`] single-root invariant; otherwise
+    /// `None` (a sound decline — a bignum-backed `RealAlgebraic` is a later slice).
+    ///
+    /// When the `bignum` feature is OFF this is a no-op returning `None`, so the
+    /// overall behavior is exactly the i128-decline of before.
+    fn combine_bignum(&self, other: &RealAlgebraic, how: BignumCombine) -> Option<RealAlgebraic> {
+        combine_bignum_retry(self, other, how)
+    }
+}
+
+/// Which field operation the bignum retry should perform (a feature-independent
+/// mirror of [`IntervalCombine`], so the method signature does not depend on the
+/// `bignum` feature being enabled).
+#[derive(Clone, Copy)]
+enum BignumCombine {
+    Sum,
+    Product,
+}
+
+/// The bignum retry (free function so the `not(feature)` no-op does not trip
+/// `clippy::unused_self`): re-run the resultant → squarefree → Sturm-isolation in
+/// arbitrary precision, then convert the FINAL poly + interval back to `i128`.
+/// Feature OFF ⇒ always `None` (exactly the prior i128-decline behavior).
+#[cfg(feature = "bignum")]
+fn combine_bignum_retry(
+    a: &RealAlgebraic,
+    b: &RealAlgebraic,
+    how: BignumCombine,
+) -> Option<RealAlgebraic> {
+    use crate::poly_big::{Combine, combine_retry};
+    let how = match how {
+        BignumCombine::Sum => Combine::Sum,
+        BignumCombine::Product => Combine::Product,
+    };
+    let big = combine_retry(&a.poly, a.lo, a.hi, &b.poly, b.lo, b.hi, how)?;
+    let (poly, lo, hi) = big.to_i128()?;
+    // Guard the interval comparison with `checked_cmp` BEFORE calling `new`:
+    // `new`'s `lo >= hi` uses the panicking `Rational` ordering, and the
+    // bignum→i128 conversion can yield endpoints whose individual numerator/
+    // denominator fit `i128` yet overflow the cross-multiplication in `cmp`. We
+    // must NEVER panic — decline (`None`) if the comparison would overflow, and
+    // require `lo < hi` before handing the (now-safe) interval to `new`.
+    if lo.checked_cmp(&hi)? != Ordering::Less {
+        return None;
+    }
+    // Re-establish the single-root invariant in i128 (defense-in-depth: the bignum
+    // path already confirmed exactly one root with opposite endpoint signs; `new`
+    // re-checks the converted endpoints — and `lo < hi` is now guaranteed safe).
+    RealAlgebraic::new(poly, lo, hi)
+}
+
+/// Feature-OFF stub: no bignum retry, decline exactly as before.
+#[cfg(not(feature = "bignum"))]
+fn combine_bignum_retry(
+    _a: &RealAlgebraic,
+    _b: &RealAlgebraic,
+    _how: BignumCombine,
+) -> Option<RealAlgebraic> {
+    None
 }
 
 /// How the result interval is derived from the two operand intervals.

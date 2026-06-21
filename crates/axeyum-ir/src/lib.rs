@@ -36,6 +36,8 @@ mod error;
 mod eval;
 mod fmt;
 pub mod poly;
+#[cfg(feature = "bignum")]
+pub mod poly_big;
 mod rational;
 mod real_algebraic;
 mod sort;
