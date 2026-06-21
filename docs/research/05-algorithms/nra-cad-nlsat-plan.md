@@ -133,14 +133,20 @@ SOS reconstruction covers the degree-2 cells.
      (unconditional half-open split; simple eval-clean in-cell samples;
      replay declines on overflow). Now DISAGREE=0 over 2000 mixed instances. Run
      the fuzz before any NRA-decider change — it is the standing soundness gate.
-   - **slice b IN PROGRESS** — mixed / non-strict inequality cells. First sub-slice:
-     non-strict/mixed systems whose projection critical points are **rational** —
-     sample the rational 0-cells (boundaries the strict path skips) plus the open
-     cells, decide each substituted univariate system completely; **decline** when a
-     critical keep-value is algebraic (the number-field lifting — `RealAlgebraic`
-     elim-coefficients, the deferred hard core). Fuzz-gated.
-   - **later slices:** algebraic critical-point lifting (number fields), then
-     (d) per-cell Positivstellensatz evidence (step 4) for Lean reconstruction.
+   - **slice b DONE** (commit `84ce0af`) — mixed / non-strict cells with **rational**
+     critical points: sample the rational 0-cells (boundaries the strict path skips)
+     plus the open cells, decide each substituted univariate system completely;
+     **decline** when a critical keep-value is algebraic. Fuzz-gated (DISAGREE=0 over
+     2000 mixed instances).
+   - **slice b2 IN PROGRESS** — **algebraic** critical-point lifting (the CAD
+     completion). At an algebraic critical keep-value α (min-poly m), the elim-cell
+     boundaries β satisfy `p(α,β)=0`, i.e. β is a root of `Res_x(m, p)` (a *rational*
+     univariate in y) — isolate those, and sign-test `p(α,β)` exactly via the
+     **algebraic field arithmetic** (`RealAlgebraic` add/mul, built in slice 1). So
+     the deferred number-field case is reachable with existing infrastructure, not a
+     new engine. Fuzz-gated.
+   - **later slice:** (d) per-cell Positivstellensatz evidence (step 4) for Lean
+     reconstruction.
 4. Cell-certificate format + the degree-2 reconstruction hook; general
    Positivstellensatz reconstruction is the long arc.
 
