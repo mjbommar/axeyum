@@ -6491,32 +6491,34 @@ impl LinR {
         }
     }
 
-    fn neg(&self) -> Self {
-        Self {
-            coeffs: self
-                .coeffs
-                .iter()
-                .map(|&(i, c)| (i, Rational::zero() - c))
-                .collect(),
-            constant: Rational::zero() - self.constant,
+    /// Negate, declining (`None`) on any `i128` overflow during normalization.
+    fn neg(&self) -> Option<Self> {
+        let mut coeffs = Vec::with_capacity(self.coeffs.len());
+        for &(i, c) in &self.coeffs {
+            coeffs.push((i, c.checked_neg()?));
         }
+        Some(Self {
+            coeffs,
+            constant: self.constant.checked_neg()?,
+        })
     }
 
-    fn add(&self, other: &Self) -> Self {
+    /// Add, declining (`None`) on any `i128` overflow.
+    fn add(&self, other: &Self) -> Option<Self> {
         let mut map: BTreeMap<usize, Rational> = BTreeMap::new();
         for &(i, c) in self.coeffs.iter().chain(&other.coeffs) {
             let e = map.entry(i).or_insert_with(Rational::zero);
-            *e = *e + c;
+            *e = e.checked_add(c)?;
         }
         let coeffs = map.into_iter().filter(|(_, c)| !c.is_zero()).collect();
-        Self {
+        Some(Self {
             coeffs,
-            constant: self.constant + other.constant,
-        }
+            constant: self.constant.checked_add(other.constant)?,
+        })
     }
 
-    fn sub(&self, other: &Self) -> Self {
-        self.add(&other.neg())
+    fn sub(&self, other: &Self) -> Option<Self> {
+        self.add(&other.neg()?)
     }
 
     /// Whether this is the linear expression of a single bare variable `xⱼ`
@@ -7697,15 +7699,21 @@ fn try_general_farkas(
         return Ok(None);
     }
 
-    // Clear multiplier denominators: μ = λ · L where L = lcm of denominators.
+    // Clear multiplier denominators: μ = λ · L where L = lcm of denominators. Any
+    // `i128` overflow in the denominator-clearing / scaling ⇒ fall through (`None`).
     let mut lcm: i128 = 1;
     for (_, m) in &used {
-        lcm = lcm_i128(lcm, m.denominator());
+        let Some(next) = lcm_i128(lcm, m.denominator()) else {
+            return Ok(None);
+        };
+        lcm = next;
     }
     let factor = Rational::integer(lcm);
     let mut scaled: Vec<(LinR, i128)> = Vec::with_capacity(used.len());
     for (lin, m) in &used {
-        let mu = *m * factor;
+        let Some(mu) = m.checked_mul(factor) else {
+            return Ok(None);
+        };
         // mu is a nonnegative integer by construction.
         if mu.denominator() != 1 || mu.numerator() <= 0 {
             return Ok(None);
@@ -7718,9 +7726,20 @@ fn try_general_farkas(
     let mut k_total = Rational::zero();
     let mut combined = LinR::default();
     for (lin, mu) in &scaled {
-        let s = scale_lin(lin, Rational::integer(*mu));
-        combined = combined.add(&s);
-        k_total = k_total + lin.constant * Rational::integer(*mu);
+        let (Some(s), Some(prod)) = (
+            scale_lin(lin, Rational::integer(*mu)),
+            lin.constant.checked_mul(Rational::integer(*mu)),
+        ) else {
+            return Ok(None);
+        };
+        let Some(next) = combined.add(&s) else {
+            return Ok(None);
+        };
+        combined = next;
+        let Some(kt) = k_total.checked_add(prod) else {
+            return Ok(None);
+        };
+        k_total = kt;
     }
     if !combined.coeffs.is_empty() {
         // Variables did not cancel — not a genuine Farkas refutation shape.
@@ -7883,9 +7902,13 @@ fn try_mixed_farkas(
     }
 
     // Clear all multiplier denominators: μ = λ · L where L = lcm of denominators.
+    // Any `i128` overflow in denominator-clearing / scaling ⇒ fall through (`None`).
     let mut lcm: i128 = 1;
     for (_, m, _) in &used {
-        lcm = lcm_i128(lcm, m.denominator());
+        let Some(next) = lcm_i128(lcm, m.denominator()) else {
+            return Ok(None);
+        };
+        lcm = next;
     }
     let factor = Rational::integer(lcm);
     let mut strict_atoms: Vec<(LinR, i128)> = Vec::new();
@@ -7893,14 +7916,27 @@ fn try_mixed_farkas(
     let mut k_total = Rational::zero();
     let mut combined_coeffs = LinR::default();
     for (lin, m, strict) in &used {
-        let mu = *m * factor;
+        let Some(mu) = m.checked_mul(factor) else {
+            return Ok(None);
+        };
         if mu.denominator() != 1 || mu.numerator() <= 0 {
             return Ok(None);
         }
         let mu = mu.numerator();
-        let s = scale_lin(lin, Rational::integer(mu));
-        combined_coeffs = combined_coeffs.add(&s);
-        k_total = k_total + lin.constant * Rational::integer(mu);
+        let (Some(s), Some(prod)) = (
+            scale_lin(lin, Rational::integer(mu)),
+            lin.constant.checked_mul(Rational::integer(mu)),
+        ) else {
+            return Ok(None);
+        };
+        let Some(next) = combined_coeffs.add(&s) else {
+            return Ok(None);
+        };
+        combined_coeffs = next;
+        let Some(kt) = k_total.checked_add(prod) else {
+            return Ok(None);
+        };
+        k_total = kt;
         if *strict {
             strict_atoms.push((lin.clone(), mu));
         } else {
@@ -7999,12 +8035,14 @@ fn try_mixed_farkas(
 }
 
 /// `lcm(a, b)` over `i128` (positive inputs; denominators are positive).
-fn lcm_i128(a: i128, b: i128) -> i128 {
+/// Declines (`None`) on any `i128` overflow.
+fn lcm_i128(a: i128, b: i128) -> Option<i128> {
     if a == 0 || b == 0 {
-        return 0;
+        return Some(0);
     }
-    let g = gcd_i128(a.abs(), b.abs());
-    (a.abs() / g) * b.abs()
+    let g = gcd_i128(a.checked_abs()?, b.checked_abs()?);
+    // a / g * b, with g | a exactly.
+    (a.checked_abs()? / g).checked_mul(b.checked_abs()?)
 }
 
 /// `gcd(a, b)` over nonnegative `i128`.
@@ -8317,14 +8355,14 @@ fn real_to_lin_inner(
         IrTermNode::App {
             op: IrOp::RealNeg,
             args,
-        } => Some(real_to_lin_inner(arena, args[0], vars)?.neg()),
+        } => real_to_lin_inner(arena, args[0], vars)?.neg(),
         IrTermNode::App {
             op: IrOp::RealAdd,
             args,
         } => {
             let a = real_to_lin_inner(arena, args[0], vars)?;
             let b = real_to_lin_inner(arena, args[1], vars)?;
-            Some(a.add(&b))
+            a.add(&b)
         }
         IrTermNode::App {
             op: IrOp::RealSub,
@@ -8332,7 +8370,7 @@ fn real_to_lin_inner(
         } => {
             let a = real_to_lin_inner(arena, args[0], vars)?;
             let b = real_to_lin_inner(arena, args[1], vars)?;
-            Some(a.sub(&b))
+            a.sub(&b)
         }
         IrTermNode::App {
             op: IrOp::RealMul,
@@ -8342,9 +8380,9 @@ fn real_to_lin_inner(
             let b = real_to_lin_inner(arena, args[1], vars)?;
             // Linear: one factor must be a bare constant.
             if a.coeffs.is_empty() {
-                Some(scale_lin(&b, a.constant))
+                scale_lin(&b, a.constant)
             } else if b.coeffs.is_empty() {
-                Some(scale_lin(&a, b.constant))
+                scale_lin(&a, b.constant)
             } else {
                 None
             }
@@ -8353,16 +8391,21 @@ fn real_to_lin_inner(
     }
 }
 
-/// Scale a [`LinR`] by a constant factor.
+/// Scale a [`LinR`] by a constant factor, declining (`None`) on any `i128`
+/// overflow (the caller then falls back to a non-reconstruction path / decline).
 #[allow(dead_code)]
-fn scale_lin(lin: &LinR, factor: Rational) -> LinR {
+fn scale_lin(lin: &LinR, factor: Rational) -> Option<LinR> {
     if factor.is_zero() {
-        return LinR::constant(Rational::zero());
+        return Some(LinR::constant(Rational::zero()));
     }
-    LinR {
-        coeffs: lin.coeffs.iter().map(|&(i, c)| (i, c * factor)).collect(),
-        constant: lin.constant * factor,
+    let mut coeffs = Vec::with_capacity(lin.coeffs.len());
+    for &(i, c) in &lin.coeffs {
+        coeffs.push((i, c.checked_mul(factor)?));
     }
+    Some(LinR {
+        coeffs,
+        constant: lin.constant.checked_mul(factor)?,
+    })
 }
 
 /// Match two `≤`-constraints `(l0 ≤ r0)`, `(l1 ≤ r1)` as the transitivity shape

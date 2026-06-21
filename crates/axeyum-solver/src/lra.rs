@@ -235,6 +235,13 @@ fn decide_within(
         ctx.current_origin = index;
         ctx.collect(arena, assertion, false)?;
     }
+    // An `i128` overflow while linearizing poisons the collection: the
+    // placeholder constraints are garbage and must not be interpreted. Degrade to
+    // a graceful `unknown` BEFORE any constraint is solved (overflow never becomes
+    // a wrong sat/unsat).
+    if ctx.overflow {
+        return Ok(Decision::TimedOut);
+    }
     if ctx.trivially_unsat {
         return Ok(Decision::UnsatTrivial(ctx.trivial_origin.unwrap_or(0)));
     }
@@ -361,18 +368,35 @@ impl FarkasCertificate {
     /// the multipliers genuinely refute the atom system.
     #[must_use]
     pub fn verify(&self) -> bool {
+        use core::cmp::Ordering;
         if self.atoms.is_empty() || self.atoms.len() != self.multipliers.len() {
             return false;
         }
-        if self.multipliers.iter().any(|m| *m < Rational::zero()) {
+        let zero = Rational::zero();
+        // Overflow-safe sign checks: a multiplier that is not provably `>= 0`
+        // (negative, or uncomparable because of an `i128` overflow) refutes the
+        // certificate — a failed self-check never licenses a wrong `unsat`.
+        if self
+            .multipliers
+            .iter()
+            .any(|m| matches!(m.checked_cmp(&zero), Some(Ordering::Less) | None))
+        {
             return false;
         }
-        if !self.multipliers.iter().any(|m| *m > Rational::zero()) {
+        // At least one multiplier must be strictly positive.
+        if !self
+            .multipliers
+            .iter()
+            .any(|m| m.checked_cmp(&zero) == Some(Ordering::Greater))
+        {
             return false;
         }
 
         // Combined = Σ λ_i · atom_i. Strictness turns on if any *used* atom is
         // strict (multipliers are nonnegative, so a used atom has λ_i > 0).
+        // Any overflow here means the refutation cannot be reconstructed exactly,
+        // so we conservatively report it does not verify (overflow never proves an
+        // `unsat`).
         let mut coeffs: BTreeMap<usize, Rational> = BTreeMap::new();
         let mut constant = Rational::zero();
         let mut strict = false;
@@ -382,9 +406,21 @@ impl FarkasCertificate {
             }
             for &(index, coeff) in &atom.coeffs {
                 let entry = coeffs.entry(index).or_insert_with(Rational::zero);
-                *entry = *entry + coeff * m;
+                let Some(term) = coeff.checked_mul(m) else {
+                    return false;
+                };
+                let Some(sum) = (*entry).checked_add(term) else {
+                    return false;
+                };
+                *entry = sum;
             }
-            constant = constant + atom.constant * m;
+            let Some(term) = atom.constant.checked_mul(m) else {
+                return false;
+            };
+            let Some(sum) = constant.checked_add(term) else {
+                return false;
+            };
+            constant = sum;
             if atom.strict {
                 strict = true;
             }
@@ -398,10 +434,11 @@ impl FarkasCertificate {
 
         // The derived (true) relation is `constant {<,<=} 0`; it refutes the
         // system iff that relation is in fact false for the constant.
-        if strict {
-            constant >= Rational::zero()
-        } else {
-            constant > Rational::zero()
+        match constant.checked_cmp(&zero) {
+            Some(Ordering::Greater) => true,
+            // `0` refutes only a strict `< 0` relation (`0 < 0` is false).
+            Some(Ordering::Equal) => strict,
+            Some(Ordering::Less) | None => false,
         }
     }
 }
@@ -413,14 +450,14 @@ fn unit_vec(n: usize, i: usize) -> Vec<Rational> {
     v
 }
 
-/// `factor · v`, elementwise.
-fn scale_vec(v: &[Rational], factor: Rational) -> Vec<Rational> {
-    v.iter().map(|&x| x * factor).collect()
+/// `factor · v`, elementwise; `None` on `i128` overflow (→ `unknown` upstream).
+fn scale_vec(v: &[Rational], factor: Rational) -> Option<Vec<Rational>> {
+    v.iter().map(|&x| x.checked_mul(factor)).collect()
 }
 
-/// `a + b`, elementwise (equal lengths).
-fn add_vec(a: &[Rational], b: &[Rational]) -> Vec<Rational> {
-    a.iter().zip(b).map(|(&x, &y)| x + y).collect()
+/// `a + b`, elementwise (equal lengths); `None` on overflow (→ `unknown`).
+fn add_vec(a: &[Rational], b: &[Rational]) -> Option<Vec<Rational>> {
+    a.iter().zip(b).map(|(&x, &y)| x.checked_add(y)).collect()
 }
 
 /// A linear expression `sum coeff_i * x_i + constant` over real variables
@@ -459,35 +496,43 @@ impl LinExpr {
         self.coeffs.values().all(|c| c.is_zero())
     }
 
-    fn neg(&self) -> Self {
+    /// Exact negation, `None` on `i128` overflow (degrades to `unknown` upstream).
+    fn neg(&self) -> Option<Self> {
         self.scale(Rational::integer(-1))
     }
 
-    fn scale(&self, factor: Rational) -> Self {
+    /// Exact scaling, `None` on `i128` overflow (degrades to `unknown` upstream).
+    fn scale(&self, factor: Rational) -> Option<Self> {
         if factor.is_zero() {
-            return Self::constant(Rational::zero());
+            return Some(Self::constant(Rational::zero()));
         }
-        Self {
-            coeffs: self.coeffs.iter().map(|(&i, &c)| (i, c * factor)).collect(),
-            constant: self.constant * factor,
+        let mut coeffs = BTreeMap::new();
+        for (&i, &c) in &self.coeffs {
+            coeffs.insert(i, c.checked_mul(factor)?);
         }
+        Some(Self {
+            coeffs,
+            constant: self.constant.checked_mul(factor)?,
+        })
     }
 
-    fn add(&self, other: &Self) -> Self {
+    /// Exact addition, `None` on `i128` overflow (degrades to `unknown` upstream).
+    fn add(&self, other: &Self) -> Option<Self> {
         let mut coeffs = self.coeffs.clone();
         for (&i, &c) in &other.coeffs {
             let entry = coeffs.entry(i).or_insert_with(Rational::zero);
-            *entry = *entry + c;
+            *entry = (*entry).checked_add(c)?;
         }
         coeffs.retain(|_, c| !c.is_zero());
-        Self {
+        Some(Self {
             coeffs,
-            constant: self.constant + other.constant,
-        }
+            constant: self.constant.checked_add(other.constant)?,
+        })
     }
 
-    fn sub(&self, other: &Self) -> Self {
-        self.add(&other.neg())
+    /// Exact subtraction, `None` on `i128` overflow (degrades to `unknown`).
+    fn sub(&self, other: &Self) -> Option<Self> {
+        self.add(&other.neg()?)
     }
 }
 
@@ -512,6 +557,12 @@ struct Collector {
     vars: Vec<SymbolId>,
     constraints: Vec<Constraint>,
     trivially_unsat: bool,
+    /// Set when an `i128` overflow was hit while building a linear expression.
+    /// Mirrors `trivially_unsat`: a poisoned collection must NOT be interpreted —
+    /// `decide_within` bails to a graceful `unknown` before any constraint is
+    /// solved, so the harmless placeholder we substitute for an overflowed
+    /// expression can never change a verdict (overflow → `unknown`, full stop).
+    overflow: bool,
     /// Index (into the caller's `assertions`) of the assertion currently being
     /// collected; stamped onto every constraint it produces.
     current_origin: usize,
@@ -520,6 +571,19 @@ struct Collector {
 }
 
 impl Collector {
+    /// Unwraps an overflow-checked `LinExpr`; on overflow (`None`) sets the
+    /// `overflow` poison flag and returns a harmless zero placeholder so the
+    /// collector stays total. The placeholder is never acted on: `decide_within`
+    /// checks `overflow` after collection and bails to `unknown` first.
+    fn guard(&mut self, expr: Option<LinExpr>) -> LinExpr {
+        if let Some(e) = expr {
+            e
+        } else {
+            self.overflow = true;
+            LinExpr::constant(Rational::zero())
+        }
+    }
+
     fn index_of(&mut self, symbol: SymbolId) -> usize {
         if let Some(&index) = self.var_index.get(&symbol) {
             return index;
@@ -581,16 +645,17 @@ impl Collector {
                 }
                 let left = self.linearize(arena, args[0])?;
                 let right = self.linearize(arena, args[1])?;
-                let diff = left.sub(&right);
+                let diff = self.guard(left.sub(&right));
+                let diff_neg = self.guard(diff.neg());
                 // a == b  <=>  a - b <= 0  AND  b - a <= 0
                 self.constraints.push(Constraint {
-                    expr: diff.clone(),
+                    expr: diff,
                     strict: false,
                     mult: Vec::new(),
                     origin: self.current_origin,
                 });
                 self.constraints.push(Constraint {
-                    expr: diff.neg(),
+                    expr: diff_neg,
                     strict: false,
                     mult: Vec::new(),
                     origin: self.current_origin,
@@ -620,6 +685,7 @@ impl Collector {
             Op::RealGe => (right.sub(left), false),
             _ => unreachable!("push_comparison only handles real order relations"),
         };
+        let expr = self.guard(expr);
         self.constraints.push(Constraint {
             expr,
             strict,
@@ -638,14 +704,17 @@ impl Collector {
             TermNode::App {
                 op: Op::RealNeg,
                 args,
-            } => Ok(self.linearize(arena, args[0])?.neg()),
+            } => {
+                let a = self.linearize(arena, args[0])?;
+                Ok(self.guard(a.neg()))
+            }
             TermNode::App {
                 op: Op::RealAdd,
                 args,
             } => {
                 let a = self.linearize(arena, args[0])?;
                 let b = self.linearize(arena, args[1])?;
-                Ok(a.add(&b))
+                Ok(self.guard(a.add(&b)))
             }
             TermNode::App {
                 op: Op::RealSub,
@@ -653,7 +722,7 @@ impl Collector {
             } => {
                 let a = self.linearize(arena, args[0])?;
                 let b = self.linearize(arena, args[1])?;
-                Ok(a.sub(&b))
+                Ok(self.guard(a.sub(&b)))
             }
             TermNode::App {
                 op: Op::RealMul,
@@ -663,9 +732,9 @@ impl Collector {
                 let b = self.linearize(arena, args[1])?;
                 // Linear: at least one factor must be a constant.
                 if a.is_constant() {
-                    Ok(b.scale(a.constant))
+                    Ok(self.guard(b.scale(a.constant)))
                 } else if b.is_constant() {
-                    Ok(a.scale(b.constant))
+                    Ok(self.guard(a.scale(b.constant)))
                 } else {
                     Err(unsupported("nonlinear real multiplication"))
                 }
@@ -734,8 +803,11 @@ fn solve(constraints: &[Constraint], nvars: usize, deadline: Option<Instant>) ->
     // Assign v = 0, 1, ..., n-1 (reverse of elimination order).
     for (v, system) in saved.iter().rev() {
         match pick_value(system, &model, *v) {
-            Some(value) => model[*v] = value,
-            None => {
+            PickValue::Value(value) => model[*v] = value,
+            // Overflow during back-substitution: degrade to a graceful `unknown`
+            // (never a wrong verdict, never a spurious `Bug` soundness alarm).
+            PickValue::Overflow => return Feasibility::TimedOut,
+            PickValue::NoValue => {
                 return Feasibility::Bug(format!(
                     "lra: feasible projection but no value for variable {v} (Fourier–Motzkin bug)"
                 ));
@@ -760,14 +832,19 @@ fn eliminate(
     let mut out = Vec::new();
     let mut pos = Vec::new();
     let mut neg = Vec::new();
+    let zero = Rational::zero();
     for c in system {
         let a = c.expr.coeff(v);
         if a.is_zero() {
             out.push(c.clone());
-        } else if a > Rational::zero() {
-            pos.push(c);
         } else {
-            neg.push(c);
+            // Overflow here (uncomparable sign) degrades to `unknown`, never a
+            // wrong verdict.
+            match a.checked_cmp(&zero)? {
+                core::cmp::Ordering::Greater => pos.push(c),
+                core::cmp::Ordering::Less => neg.push(c),
+                core::cmp::Ordering::Equal => out.push(c.clone()),
+            }
         }
     }
     // Deterministic size guard: refuse a cross product that would blow past the
@@ -790,8 +867,11 @@ fn eliminate(
             let b = n.expr.coeff(v); // < 0
             // Positive combination (-b)*p + a*n cancels v; both scalars are
             // positive, so the multiplier combination stays nonnegative.
-            let combined = p.expr.scale(-b).add(&n.expr.scale(a));
-            let mult = add_vec(&scale_vec(&p.mult, -b), &scale_vec(&n.mult, a));
+            // Coefficient blowup mid-elimination overflows `i128`; degrade to a
+            // graceful `unknown` (`None`) rather than panic or wrong-answer.
+            let neg_b = b.checked_neg()?;
+            let combined = p.expr.scale(neg_b)?.add(&n.expr.scale(a)?)?;
+            let mult = add_vec(&scale_vec(&p.mult, neg_b)?, &scale_vec(&n.mult, a)?)?;
             out.push(Constraint {
                 expr: combined,
                 strict: p.strict || n.strict,
@@ -816,10 +896,21 @@ fn constant_feasible(c: &Constraint) -> bool {
     }
 }
 
+/// Outcome of [`pick_value`]: a feasible value, a genuine no-value (a
+/// Fourier–Motzkin bug — reported, never silently turned into `unsat`), or an
+/// `i128` overflow during back-substitution (degrades to a graceful `unknown`).
+enum PickValue {
+    Value(Rational),
+    NoValue,
+    Overflow,
+}
+
 /// Picks a feasible value for variable `v`, given that variables before it in
 /// `model` are already assigned, using `system` (which contains only variables
-/// `0..=v`).
-fn pick_value(system: &[Constraint], model: &[Rational], v: usize) -> Option<Rational> {
+/// `0..=v`). Any `i128` overflow yields [`PickValue::Overflow`] (→ `unknown`).
+fn pick_value(system: &[Constraint], model: &[Rational], v: usize) -> PickValue {
+    use core::cmp::Ordering;
+    let zero = Rational::zero();
     // (bound value, strict) for lower and upper bounds on x_v.
     let mut lower: Option<(Rational, bool)> = None;
     let mut upper: Option<(Rational, bool)> = None;
@@ -830,88 +921,109 @@ fn pick_value(system: &[Constraint], model: &[Rational], v: usize) -> Option<Rat
         let mut rest = c.expr.constant;
         for (&i, &coeff) in &c.expr.coeffs {
             if i != v {
-                rest = rest + coeff * model[i];
+                let Some(term) = coeff.checked_mul(model[i]) else {
+                    return PickValue::Overflow;
+                };
+                let Some(sum) = rest.checked_add(term) else {
+                    return PickValue::Overflow;
+                };
+                rest = sum;
             }
         }
         if a.is_zero() {
-            // Constant (in x_v) constraint: rest <op> 0 must hold.
-            let ok = if c.strict {
-                rest < Rational::zero()
-            } else {
-                rest <= Rational::zero()
-            };
+            // Constant (in x_v) constraint: rest <op> 0 must hold (compared to
+            // zero, so the cross-multiplication never overflows).
+            let ok = if c.strict { rest < zero } else { rest <= zero };
             if !ok {
-                return None;
+                return PickValue::NoValue;
             }
             continue;
         }
         // a*x_v + rest <op> 0  =>  x_v <op'> -rest/a.
-        let bound = -rest / a;
-        if a > Rational::zero() {
-            // upper bound
-            update_bound(&mut upper, bound, c.strict, false);
-        } else {
-            // lower bound
-            update_bound(&mut lower, bound, c.strict, true);
+        let Some(bound) = rest.checked_neg().and_then(|nr| nr.checked_div(a)) else {
+            return PickValue::Overflow;
+        };
+        // Sign of `a` decides upper vs lower; compared to zero, never overflows.
+        match a.cmp(&zero) {
+            Ordering::Greater => {
+                if update_bound(&mut upper, bound, c.strict, false).is_none() {
+                    return PickValue::Overflow;
+                }
+            }
+            Ordering::Less => {
+                if update_bound(&mut lower, bound, c.strict, true).is_none() {
+                    return PickValue::Overflow;
+                }
+            }
+            Ordering::Equal => unreachable!("a is non-zero here"),
         }
     }
 
-    Some(choose(lower, upper))
+    match choose(lower, upper) {
+        Some(value) => PickValue::Value(value),
+        None => PickValue::Overflow,
+    }
 }
 
-/// Tightens a lower (`is_lower`) or upper bound with a new candidate.
+/// Tightens a lower (`is_lower`) or upper bound with a new candidate. Returns
+/// `None` on an `i128` overflow during the bound comparison (→ `unknown`).
 fn update_bound(
     slot: &mut Option<(Rational, bool)>,
     value: Rational,
     strict: bool,
     is_lower: bool,
-) {
+) -> Option<()> {
+    use core::cmp::Ordering;
     match slot {
         None => *slot = Some((value, strict)),
         Some((current, current_strict)) => {
+            let order = value.checked_cmp(current)?;
             let tighter = if is_lower {
-                value > *current
+                order == Ordering::Greater
             } else {
-                value < *current
+                order == Ordering::Less
             };
             if tighter {
                 *slot = Some((value, strict));
-            } else if value == *current {
+            } else if order == Ordering::Equal {
                 *current_strict = *current_strict || strict;
             }
         }
     }
+    Some(())
 }
 
 /// Chooses a value satisfying the lower/upper bounds. The caller (a feasible
 /// system) guarantees a value exists; the returned value is replayed anyway.
-fn choose(lower: Option<(Rational, bool)>, upper: Option<(Rational, bool)>) -> Rational {
+/// `None` on an `i128` overflow building the midpoint (→ `unknown`).
+fn choose(lower: Option<(Rational, bool)>, upper: Option<(Rational, bool)>) -> Option<Rational> {
+    use core::cmp::Ordering;
     let half = Rational::new(1, 2);
-    match (lower, upper) {
+    let value = match (lower, upper) {
         (Some((lo, _)), Some((hi, _))) => {
-            if lo < hi {
-                (lo + hi) * half
-            } else {
-                // lo == hi (equality pin); strict conflicts are caught by replay.
-                lo
+            match lo.checked_cmp(&hi)? {
+                Ordering::Less => lo.checked_add(hi)?.checked_mul(half)?,
+                // lo >= hi (equality pin); strict conflicts are caught by replay.
+                _ => lo,
             }
         }
         (Some((lo, strict)), None) => {
             if strict {
-                lo + Rational::integer(1)
+                lo.checked_add(Rational::integer(1))?
             } else {
                 lo
             }
         }
         (None, Some((hi, strict))) => {
             if strict {
-                hi - Rational::integer(1)
+                hi.checked_sub(Rational::integer(1))?
             } else {
                 hi
             }
         }
         (None, None) => Rational::zero(),
-    }
+    };
+    Some(value)
 }
 
 fn negate_op(op: Op) -> Op {
@@ -992,6 +1104,16 @@ fn lia_simplex_within(
     let mut ctx = IntCollector::default();
     for &assertion in assertions {
         ctx.collect(arena, assertion, false)?;
+    }
+    // An `i128` overflow while linearizing poisons the collection; degrade to a
+    // graceful `unknown` before any constraint is interpreted (never a wrong
+    // verdict).
+    if ctx.overflow {
+        return Ok(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::ResourceLimit,
+            detail: "lia simplex: i128 overflow while linearizing the integer constraints"
+                .to_owned(),
+        }));
     }
     if ctx.trivially_unsat {
         return Ok(CheckResult::Unsat);
@@ -1120,11 +1242,18 @@ fn lia_branch_and_bound(
         .numerator()
         .div_euclid(values[branch_var].denominator());
 
+    // `-floor` and `floor + 1` are the branch constants; an out-of-range floor
+    // (a colossal fractional coordinate) makes them overflow `i128`. Degrade to a
+    // graceful `unknown` rather than panic (never a wrong verdict).
+    let (Some(neg_floor), Some(next)) = (floor.checked_neg(), floor.checked_add(1)) else {
+        return LiaBnb::Unknown;
+    };
+
     // Left branch: x_i <= floor, i.e. `1*x_i + (-floor) <= 0`.
     constraints.push(bound_constraint(
         branch_var,
         Rational::integer(1),
-        Rational::integer(-floor),
+        Rational::integer(neg_floor),
     ));
     let left = lia_branch_and_bound(constraints, nvars, budget, deadline);
     constraints.pop();
@@ -1133,7 +1262,6 @@ fn lia_branch_and_bound(
     }
 
     // Right branch: x_i >= floor+1, i.e. `-1*x_i + (floor+1) <= 0`.
-    let next = floor.checked_add(1).expect("floor + 1 fits in i128");
     constraints.push(bound_constraint(
         branch_var,
         Rational::integer(-1),
@@ -1184,9 +1312,23 @@ struct IntCollector {
     vars: Vec<SymbolId>,
     constraints: Vec<Constraint>,
     trivially_unsat: bool,
+    /// Set on an `i128` overflow while linearizing; poisons the collection so the
+    /// caller degrades to `unknown` (mirrors the LRA [`Collector`]).
+    overflow: bool,
 }
 
 impl IntCollector {
+    /// Unwraps an overflow-checked `LinExpr`; on overflow sets the poison flag and
+    /// returns a harmless placeholder (never acted on — the caller bails first).
+    fn guard(&mut self, expr: Option<LinExpr>) -> LinExpr {
+        if let Some(e) = expr {
+            e
+        } else {
+            self.overflow = true;
+            LinExpr::constant(Rational::zero())
+        }
+    }
+
     fn index_of(&mut self, symbol: SymbolId) -> usize {
         if let Some(&index) = self.var_index.get(&symbol) {
             return index;
@@ -1242,15 +1384,16 @@ impl IntCollector {
                 }
                 let left = self.linearize(arena, args[0])?;
                 let right = self.linearize(arena, args[1])?;
-                let diff = left.sub(&right);
+                let diff = self.guard(left.sub(&right));
+                let diff_neg = self.guard(diff.neg());
                 self.constraints.push(Constraint {
-                    expr: diff.clone(),
+                    expr: diff,
                     strict: false,
                     mult: Vec::new(),
                     origin: 0,
                 });
                 self.constraints.push(Constraint {
-                    expr: diff.neg(),
+                    expr: diff_neg,
                     strict: false,
                     mult: Vec::new(),
                     origin: 0,
@@ -1272,6 +1415,7 @@ impl IntCollector {
             Op::IntGe => (right.sub(left), false),
             _ => unreachable!("push_comparison only handles integer order relations"),
         };
+        let expr = self.guard(expr);
         self.constraints.push(Constraint {
             expr,
             strict,
@@ -1289,14 +1433,17 @@ impl IntCollector {
             TermNode::App {
                 op: Op::IntNeg,
                 args,
-            } => Ok(self.linearize(arena, args[0])?.neg()),
+            } => {
+                let a = self.linearize(arena, args[0])?;
+                Ok(self.guard(a.neg()))
+            }
             TermNode::App {
                 op: Op::IntAdd,
                 args,
             } => {
                 let a = self.linearize(arena, args[0])?;
                 let b = self.linearize(arena, args[1])?;
-                Ok(a.add(&b))
+                Ok(self.guard(a.add(&b)))
             }
             TermNode::App {
                 op: Op::IntSub,
@@ -1304,7 +1451,7 @@ impl IntCollector {
             } => {
                 let a = self.linearize(arena, args[0])?;
                 let b = self.linearize(arena, args[1])?;
-                Ok(a.sub(&b))
+                Ok(self.guard(a.sub(&b)))
             }
             TermNode::App {
                 op: Op::IntMul,
@@ -1313,9 +1460,9 @@ impl IntCollector {
                 let a = self.linearize(arena, args[0])?;
                 let b = self.linearize(arena, args[1])?;
                 if a.is_constant() {
-                    Ok(b.scale(a.constant))
+                    Ok(self.guard(b.scale(a.constant)))
                 } else if b.is_constant() {
-                    Ok(a.scale(b.constant))
+                    Ok(self.guard(a.scale(b.constant)))
                 } else {
                     Err(unsupported_lia("nonlinear integer multiplication"))
                 }
@@ -1359,35 +1506,35 @@ impl Delta {
     fn zero() -> Self {
         Delta::rational(Rational::zero())
     }
-    fn add(self, other: Self) -> Self {
-        Delta {
-            c: self.c + other.c,
-            k: self.k + other.k,
-        }
+    /// Exact addition; `None` on `i128` overflow (degrades to `unknown`).
+    fn add(self, other: Self) -> Option<Self> {
+        Some(Delta {
+            c: self.c.checked_add(other.c)?,
+            k: self.k.checked_add(other.k)?,
+        })
     }
-    fn sub(self, other: Self) -> Self {
-        Delta {
-            c: self.c - other.c,
-            k: self.k - other.k,
-        }
+    /// Exact subtraction; `None` on `i128` overflow (degrades to `unknown`).
+    fn sub(self, other: Self) -> Option<Self> {
+        Some(Delta {
+            c: self.c.checked_sub(other.c)?,
+            k: self.k.checked_sub(other.k)?,
+        })
     }
-    fn scale(self, factor: Rational) -> Self {
-        Delta {
-            c: self.c * factor,
-            k: self.k * factor,
-        }
+    /// Exact scaling; `None` on `i128` overflow (degrades to `unknown`).
+    fn scale(self, factor: Rational) -> Option<Self> {
+        Some(Delta {
+            c: self.c.checked_mul(factor)?,
+            k: self.k.checked_mul(factor)?,
+        })
     }
-}
-
-impl PartialOrd for Delta {
-    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Delta {
-    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        self.c.cmp(&other.c).then(self.k.cmp(&other.k))
+    /// Lexicographic `(c, k)` comparison; `None` on `i128` overflow during the
+    /// cross-multiplication (the caller defers to `unknown`, never a wrong answer).
+    fn checked_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(
+            self.c
+                .checked_cmp(&other.c)?
+                .then(self.k.checked_cmp(&other.k)?),
+        )
     }
 }
 
@@ -1479,6 +1626,8 @@ enum SimplexOutcome {
 /// multipliers refuting the system ([`SimplexOutcome::Unsat`]); `None` only if
 /// the iteration backstop is reached without deciding.
 fn simplex_feasible(constraints: &[Constraint], nvars: usize) -> Option<SimplexOutcome> {
+    use core::cmp::Ordering;
+    let zero = Rational::zero();
     let m = constraints.len();
     let total = nvars + m;
     // Variable layout: 0..nvars original (free), nvars..total slacks (one per
@@ -1495,7 +1644,8 @@ fn simplex_feasible(constraints: &[Constraint], nvars: usize) -> Option<SimplexO
 
     for (j, constraint) in constraints.iter().enumerate() {
         let slack = nvars + j;
-        let bound_c = -constraint.expr.constant;
+        // `-constant` can overflow (`i128::MIN`); on overflow defer to `unknown`.
+        let bound_c = constraint.expr.constant.checked_neg()?;
         let bound_k = if constraint.strict {
             Rational::integer(-1)
         } else {
@@ -1518,18 +1668,19 @@ fn simplex_feasible(constraints: &[Constraint], nvars: usize) -> Option<SimplexO
 
     // Bland's rule guarantees termination; the bound is a generous backstop.
     for _ in 0..(100_000 + 50 * total * total) {
-        // Find the smallest-index basic variable violating its (upper) bound.
-        let violating = basic
-            .iter()
-            .copied()
-            .find(|&b| matches!(upper[b], Some(u) if value[b] > u));
-        let Some(b) = violating else {
+        // Smallest-index basic variable violating its (upper) bound (`Overflow`
+        // = an `i128` overflow during a comparison, deferred to `unknown`).
+        let b = match first_violating(&basic, &value, &upper) {
+            Violating::Some(b) => b,
+            Violating::Overflow => return None,
             // Feasible: instantiate δ to a concrete positive rational.
-            return Some(SimplexOutcome::Sat(extract_model(
-                constraints,
-                nvars,
-                &value,
-            )));
+            Violating::None => {
+                return Some(SimplexOutcome::Sat(extract_model(
+                    constraints,
+                    nvars,
+                    &value,
+                )?));
+            }
         };
         let target = upper[b].expect("violating basic has an upper bound");
 
@@ -1538,17 +1689,18 @@ fn simplex_feasible(constraints: &[Constraint], nvars: usize) -> Option<SimplexO
         // that decreases b.
         let mut entering: Option<usize> = None;
         for &n in &nonbasic {
-            let a = row[&b].get(&n).copied().unwrap_or_else(Rational::zero);
+            let a = row[&b].get(&n).copied().unwrap_or(zero);
             if a.is_zero() {
                 continue;
             }
-            let suitable = if a > Rational::zero() {
+            // Sign of `a` (compared to zero) never overflows.
+            let suitable = if a.cmp(&zero) == Ordering::Greater {
                 // decrease n (no lower bounds anywhere → always possible)
                 true
             } else {
                 // increase n (possible unless n is at its upper bound)
                 match upper[n] {
-                    Some(u) => value[n] < u,
+                    Some(u) => value[n].checked_cmp(&u)? == Ordering::Less,
                     None => true,
                 }
             };
@@ -1563,11 +1715,13 @@ fn simplex_feasible(constraints: &[Constraint], nvars: usize) -> Option<SimplexO
             // with a negative coefficient. The Farkas refutation is
             // 1·(constraint of b) + Σ (−c_n)·(constraint of slack n); free
             // original nonbasics have coefficient 0 here and are skipped.
+            // Coefficient overflow here defers to `unknown` (never a wrong unsat;
+            // the certificate is independently re-verified upstream anyway).
             let mut multipliers = vec![Rational::zero(); m];
-            multipliers[b - nvars] = multipliers[b - nvars] + Rational::integer(1);
+            multipliers[b - nvars] = multipliers[b - nvars].checked_add(Rational::integer(1))?;
             for (&var, &coeff) in &row[&b] {
                 if var >= nvars {
-                    multipliers[var - nvars] = multipliers[var - nvars] - coeff;
+                    multipliers[var - nvars] = multipliers[var - nvars].checked_sub(coeff)?;
                 }
             }
             return Some(SimplexOutcome::Unsat(multipliers));
@@ -1581,27 +1735,55 @@ fn simplex_feasible(constraints: &[Constraint], nvars: usize) -> Option<SimplexO
             b,
             n,
             target,
-        );
+        )?;
     }
     // Backstop reached without a verdict: report feasible only if no bound is
     // violated, otherwise defer (`None`) — the caller falls back to the
     // Fourier–Motzkin engine rather than risk a wrong answer.
-    if basic
-        .iter()
-        .all(|&b| !matches!(upper[b], Some(u) if value[b] > u))
-    {
-        Some(SimplexOutcome::Sat(extract_model(
+    match first_violating(&basic, &value, &upper) {
+        Violating::Some(_) | Violating::Overflow => None,
+        Violating::None => Some(SimplexOutcome::Sat(extract_model(
             constraints,
             nvars,
             &value,
-        )))
-    } else {
-        None
+        )?)),
     }
+}
+
+/// Outcome of [`first_violating`]: a violating basic variable, none violating, or
+/// an `i128` overflow during a bound comparison (deferred to a graceful
+/// `unknown` upstream — never a wrong verdict).
+enum Violating {
+    Some(usize),
+    None,
+    Overflow,
+}
+
+/// The smallest-index basic variable above its upper bound.
+fn first_violating(
+    basic: &std::collections::BTreeSet<usize>,
+    value: &[Delta],
+    upper: &[Option<Delta>],
+) -> Violating {
+    use core::cmp::Ordering;
+    for &b in basic {
+        if let Some(u) = upper[b] {
+            match value[b].checked_cmp(&u) {
+                Some(Ordering::Greater) => return Violating::Some(b),
+                Some(_) => {}
+                None => return Violating::Overflow,
+            }
+        }
+    }
+    Violating::None
 }
 
 /// Pivots basic `b` out and nonbasic `n` in, setting `value[b]` to `target` and
 /// updating every value and tableau row (Dutertre–de Moura `pivotAndUpdate`).
+///
+/// Returns `None` on any `i128` overflow (the caller defers to a graceful
+/// `unknown`, never a wrong verdict). On `None` the tableau may be left partially
+/// updated, but the caller discards it.
 fn pivot_and_update(
     row: &mut std::collections::HashMap<usize, std::collections::HashMap<usize, Rational>>,
     basic: &mut std::collections::BTreeSet<usize>,
@@ -1610,10 +1792,12 @@ fn pivot_and_update(
     b: usize,
     n: usize,
     target: Delta,
-) {
+) -> Option<()> {
     let a_bn = row[&b][&n];
-    let theta = target.sub(value[b]).scale(a_bn.recip());
-    value[n] = value[n].add(theta);
+    // `1 / a_bn` is `a_bn.recip()`, made overflow-safe via `checked_div`.
+    let inv = Rational::integer(1).checked_div(a_bn)?;
+    let theta = target.sub(value[b])?.scale(inv)?;
+    value[n] = value[n].add(theta)?;
     value[b] = target;
     for &i in basic.iter() {
         if i == b {
@@ -1621,19 +1805,18 @@ fn pivot_and_update(
         }
         if let Some(&a_in) = row[&i].get(&n) {
             if !a_in.is_zero() {
-                value[i] = value[i].add(theta.scale(a_in));
+                value[i] = value[i].add(theta.scale(a_in)?)?;
             }
         }
     }
 
     // Rewrite the tableau: express n in terms of b and the other nonbasics.
     let row_b = row.remove(&b).expect("b is basic");
-    let inv = a_bn.recip();
     let mut row_n: std::collections::HashMap<usize, Rational> = std::collections::HashMap::new();
     row_n.insert(b, inv);
     for (&k, &coeff) in &row_b {
         if k != n {
-            row_n.insert(k, -(coeff * inv));
+            row_n.insert(k, coeff.checked_mul(inv)?.checked_neg()?);
         }
     }
     // Substitute the new n-row into every other basic row mentioning n.
@@ -1641,12 +1824,14 @@ fn pivot_and_update(
     for i in others {
         if let Some(a_in) = row.get_mut(&i).and_then(|r| r.remove(&n)) {
             if !a_in.is_zero() {
-                let additions: Vec<(usize, Rational)> =
-                    row_n.iter().map(|(&k, &c)| (k, a_in * c)).collect();
+                let additions: Vec<(usize, Rational)> = row_n
+                    .iter()
+                    .map(|(&k, &c)| a_in.checked_mul(c).map(|p| (k, p)))
+                    .collect::<Option<_>>()?;
                 let r = row.get_mut(&i).expect("basic row exists");
                 for (k, delta) in additions {
                     let entry = r.entry(k).or_insert_with(Rational::zero);
-                    *entry = *entry + delta;
+                    *entry = (*entry).checked_add(delta)?;
                 }
                 r.retain(|_, c| !c.is_zero());
             }
@@ -1658,11 +1843,19 @@ fn pivot_and_update(
     basic.insert(n);
     nonbasic.remove(&n);
     nonbasic.insert(b);
+    Some(())
 }
 
 /// Turns the δ-rational assignment into a concrete rational model by choosing a
-/// positive δ small enough that every original constraint still holds.
-fn extract_model(constraints: &[Constraint], nvars: usize, value: &[Delta]) -> Vec<Rational> {
+/// positive δ small enough that every original constraint still holds. `None` on
+/// any `i128` overflow (the caller defers to a graceful `unknown`).
+fn extract_model(
+    constraints: &[Constraint],
+    nvars: usize,
+    value: &[Delta],
+) -> Option<Vec<Rational>> {
+    use core::cmp::Ordering;
+    let zero = Rational::zero();
     // Each original variable is `c_i + k_i·δ`. For a constraint with combined
     // δ-coefficient K > 0 the bound on δ is -C/K (C < 0 in any δ-feasible
     // solution); δ* is half the tightest such bound (or 1/2 if unbounded).
@@ -1671,19 +1864,19 @@ fn extract_model(constraints: &[Constraint], nvars: usize, value: &[Delta]) -> V
         let mut big_c = constraint.expr.constant;
         let mut big_k = Rational::zero();
         for (&i, &a) in &constraint.expr.coeffs {
-            big_c = big_c + a * value[i].c;
-            big_k = big_k + a * value[i].k;
+            big_c = big_c.checked_add(a.checked_mul(value[i].c)?)?;
+            big_k = big_k.checked_add(a.checked_mul(value[i].k)?)?;
         }
-        if big_k > Rational::zero() {
-            let bound = -big_c / big_k;
-            if bound < delta_star {
+        if big_k.checked_cmp(&zero)? == Ordering::Greater {
+            let bound = big_c.checked_neg()?.checked_div(big_k)?;
+            if bound.checked_cmp(&delta_star)? == Ordering::Less {
                 delta_star = bound;
             }
         }
     }
-    delta_star = delta_star * Rational::new(1, 2);
+    delta_star = delta_star.checked_mul(Rational::new(1, 2))?;
 
     (0..nvars)
-        .map(|i| value[i].c + value[i].k * delta_star)
+        .map(|i| value[i].c.checked_add(value[i].k.checked_mul(delta_star)?))
         .collect()
 }

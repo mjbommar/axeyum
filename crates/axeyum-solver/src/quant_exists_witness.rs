@@ -275,7 +275,10 @@ fn bound_from_atom(
     let Some(right) = affine(arena, rhs, z) else {
         return false;
     };
-    let diff = left.sub(&right);
+    // An `i128` overflow forming `lhs − rhs` ⇒ not cleanly isolable (decline).
+    let Some(diff) = left.sub(&right) else {
+        return false;
+    };
     let cz = diff.coeff(z);
     // `z` must appear with net coefficient exactly `±1`.
     let one = Rational::integer(1);
@@ -301,7 +304,11 @@ fn bound_from_atom(
     let mut remainder = diff.clone();
     remainder.coeffs.remove(&z);
     let (rel, r) = if positive {
-        (rel, remainder.neg())
+        // Negating the remainder can overflow ⇒ decline.
+        let Some(neg) = remainder.neg() else {
+            return false;
+        };
+        (rel, neg)
     } else {
         (rel.flip(), remainder)
     };
@@ -519,50 +526,61 @@ impl Affine {
             .unwrap_or_else(Rational::zero)
     }
 
-    fn neg(&self) -> Self {
-        Self {
-            coeffs: self
-                .coeffs
-                .iter()
-                .map(|(&s, &c)| (s, Rational::zero() - c))
-                .collect(),
-            opaque: self
-                .opaque
-                .iter()
-                .map(|(&t, &c)| (t, Rational::zero() - c))
-                .collect(),
-            constant: Rational::zero() - self.constant,
+    /// Negate, declining (`None`) on any `i128` overflow during normalization.
+    fn neg(&self) -> Option<Self> {
+        let mut coeffs = BTreeMap::new();
+        for (&s, &c) in &self.coeffs {
+            coeffs.insert(s, c.checked_neg()?);
         }
+        let mut opaque = BTreeMap::new();
+        for (&t, &c) in &self.opaque {
+            opaque.insert(t, c.checked_neg()?);
+        }
+        Some(Self {
+            coeffs,
+            opaque,
+            constant: self.constant.checked_neg()?,
+        })
     }
 
-    fn add(&self, other: &Self) -> Self {
+    /// Add, declining (`None`) on any `i128` overflow.
+    fn add(&self, other: &Self) -> Option<Self> {
         let mut coeffs = self.coeffs.clone();
         for (&s, &c) in &other.coeffs {
             let entry = coeffs.entry(s).or_insert_with(Rational::zero);
-            *entry = *entry + c;
+            *entry = entry.checked_add(c)?;
         }
         let mut opaque = self.opaque.clone();
         for (&t, &c) in &other.opaque {
             let entry = opaque.entry(t).or_insert_with(Rational::zero);
-            *entry = *entry + c;
+            *entry = entry.checked_add(c)?;
         }
-        Self {
+        Some(Self {
             coeffs,
             opaque,
-            constant: self.constant + other.constant,
-        }
+            constant: self.constant.checked_add(other.constant)?,
+        })
     }
 
-    fn sub(&self, other: &Self) -> Self {
-        self.add(&other.neg())
+    fn sub(&self, other: &Self) -> Option<Self> {
+        self.add(&other.neg()?)
     }
 
-    fn scale(&self, factor: Rational) -> Self {
-        Self {
-            coeffs: self.coeffs.iter().map(|(&s, &c)| (s, c * factor)).collect(),
-            opaque: self.opaque.iter().map(|(&t, &c)| (t, c * factor)).collect(),
-            constant: self.constant * factor,
+    /// Scale by `factor`, declining (`None`) on any `i128` overflow.
+    fn scale(&self, factor: Rational) -> Option<Self> {
+        let mut coeffs = BTreeMap::new();
+        for (&s, &c) in &self.coeffs {
+            coeffs.insert(s, c.checked_mul(factor)?);
         }
+        let mut opaque = BTreeMap::new();
+        for (&t, &c) in &self.opaque {
+            opaque.insert(t, c.checked_mul(factor)?);
+        }
+        Some(Self {
+            coeffs,
+            opaque,
+            constant: self.constant.checked_mul(factor)?,
+        })
     }
 }
 
@@ -584,24 +602,24 @@ fn affine(arena: &TermArena, term: TermId, z: SymbolId) -> Option<Affine> {
             Op::IntAdd | Op::RealAdd => {
                 let a = affine(arena, args[0], z)?;
                 let b = affine(arena, args[1], z)?;
-                Some(a.add(&b))
+                a.add(&b)
             }
             Op::IntSub | Op::RealSub => {
                 let a = affine(arena, args[0], z)?;
                 let b = affine(arena, args[1], z)?;
-                Some(a.sub(&b))
+                a.sub(&b)
             }
             Op::IntNeg | Op::RealNeg => {
                 let a = affine(arena, args[0], z)?;
-                Some(a.neg())
+                a.neg()
             }
             Op::IntMul | Op::RealMul => {
                 let a = affine(arena, args[0], z)?;
                 let b = affine(arena, args[1], z)?;
                 if a.coeffs.is_empty() {
-                    Some(b.scale(a.constant))
+                    b.scale(a.constant)
                 } else if b.coeffs.is_empty() {
-                    Some(a.scale(b.constant))
+                    a.scale(b.constant)
                 } else {
                     None
                 }

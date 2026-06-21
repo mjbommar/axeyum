@@ -438,10 +438,16 @@ fn widest_split(bounds: &Bounds) -> Option<(TermId, axeyum_ir::Rational, axeyum_
     let mut best_w: Option<axeyum_ir::Rational> = None;
     for (&var, &(lo, hi)) in bounds {
         let Some(w) = rat_width(lo, hi) else { continue };
+        // Compared to zero, the cross-multiplication never overflows.
         if w <= axeyum_ir::Rational::integer(0) {
             continue; // already a point
         }
-        if best_w.is_none_or(|bw| w > bw) {
+        // Overflow during the width comparison just skips this candidate as the
+        // new widest (sound — splitting is heuristic; `Ord` would panic).
+        let wider = best_w.is_none_or(|bw: axeyum_ir::Rational| {
+            w.checked_cmp(&bw) == Some(core::cmp::Ordering::Greater)
+        });
+        if wider {
             best_w = Some(w);
             best = Some((var, lo, hi));
         }
@@ -725,8 +731,25 @@ fn extract_bounds(
 ) -> (Option<axeyum_ir::Rational>, Option<axeyum_ir::Rational>) {
     let mut lo: Option<axeyum_ir::Rational> = None;
     let mut hi: Option<axeyum_ir::Rational> = None;
-    let mut see_lo = |c: axeyum_ir::Rational| lo = Some(lo.map_or(c, |x| x.max(c)));
-    let mut see_hi = |c: axeyum_ir::Rational| hi = Some(hi.map_or(c, |x| x.min(c)));
+    // Overflow-safe tightening: if comparing two constants cross-multiplies out of
+    // `i128` range, keep the existing bound (only loses tightness — still sound,
+    // never a wrong verdict, and `Ord` would otherwise panic).
+    let mut see_lo = |c: axeyum_ir::Rational| {
+        lo = Some(
+            lo.map_or(c, |x: axeyum_ir::Rational| match x.checked_cmp(&c) {
+                Some(core::cmp::Ordering::Less) => c,
+                _ => x,
+            }),
+        );
+    };
+    let mut see_hi = |c: axeyum_ir::Rational| {
+        hi = Some(
+            hi.map_or(c, |x: axeyum_ir::Rational| match x.checked_cmp(&c) {
+                Some(core::cmp::Ordering::Greater) => c,
+                _ => x,
+            }),
+        );
+    };
     for &asrt in assertions {
         let TermNode::App { op, args } = arena.node(asrt) else {
             continue;

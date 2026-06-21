@@ -911,8 +911,12 @@ fn root_separators(roots: &[Root]) -> Vec<Rational> {
     }
     let locs: Vec<Rational> = roots.iter().map(Root::locate).collect();
     let mut pts = Vec::with_capacity(locs.len() + 1);
-    // Below the lowest.
-    pts.push(locs[0] - Rational::integer(1));
+    // Below the lowest. On overflow skip this separator (a sound omission: a
+    // missed sample can only degrade a `Sat` to a decline upstream, never a
+    // wrong verdict — every `Sat` is replay-checked).
+    if let Some(below) = locs[0].checked_sub(Rational::integer(1)) {
+        pts.push(below);
+    }
     // Between adjacent roots: the midpoint (the isolating intervals are disjoint,
     // so the midpoint of two distinct root locations lies strictly between them).
     for w in locs.windows(2) {
@@ -923,8 +927,10 @@ fn root_separators(roots: &[Root]) -> Vec<Rational> {
             pts.push(mid);
         }
     }
-    // Above the highest.
-    pts.push(locs[locs.len() - 1] + Rational::integer(1));
+    // Above the highest. On overflow skip (sound omission, as above).
+    if let Some(above) = locs[locs.len() - 1].checked_add(Rational::integer(1)) {
+        pts.push(above);
+    }
     pts
 }
 

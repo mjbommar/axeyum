@@ -323,11 +323,14 @@ fn parse_rational(text: &str) -> Option<Rational> {
             Rational::new(scaled, denominator)
         }
     };
-    Some(if negative {
-        Rational::zero() - rational
+    if negative {
+        // Negating a freshly-parsed numeral can overflow only at `i128::MIN`;
+        // a literal we cannot represent exactly ⇒ `None` (treated as a variable
+        // or a nonlinear factor by the caller — never a wrong proof).
+        rational.checked_neg()
     } else {
-        rational
-    })
+        Some(rational)
+    }
 }
 
 /// Integer counterpart of [`negated_literal_term`]: builds the IR Boolean term for
@@ -610,7 +613,11 @@ fn farkas_args(arena: &TermArena, assertions: &[TermId]) -> Vec<AletheTerm> {
         match group.as_slice() {
             // Inequality: the single atom's multiplier is the coefficient (always
             // nonnegative here — identical to the prior inequality-only output).
-            [(_, m)] => args.push(rational_to_alethe(m)),
+            [(_, m)] => match rational_to_alethe(m) {
+                Some(term) => args.push(term),
+                // Overflow rendering the coefficient ⇒ emit no args at all.
+                None => return Vec::new(),
+            },
             // Equality `a = b`: atoms are `+(a − b)` (mult `m0`) then `−(a − b)`
             // (mult `m1`) in push order. Confirm they are exact negatives (the
             // split invariant) before trusting order, then emit the signed
@@ -629,7 +636,16 @@ fn farkas_args(arena: &TermArena, assertions: &[TermId]) -> Vec<AletheTerm> {
                 if !is_negation_of(atom0, atom1) {
                     return Vec::new();
                 }
-                args.push(rational_to_alethe(&(**m1 - **m0)));
+                // An `i128` overflow forming the signed coefficient `m1 − m0` ⇒
+                // emit no args at all (Carcara then reports `invalid`; our own
+                // checker still re-derives the contradiction). Never a wrong proof.
+                let Some(coeff) = (**m1).checked_sub(**m0) else {
+                    return Vec::new();
+                };
+                match rational_to_alethe(&coeff) {
+                    Some(term) => args.push(term),
+                    None => return Vec::new(),
+                }
             }
             // No atoms (assertion did not reach the certificate) or more than two
             // (a shape we cannot reduce to one coefficient): emit no args at all.
@@ -648,7 +664,12 @@ fn is_negation_of(a: &crate::lra::FarkasAtom, b: &crate::lra::FarkasAtom) -> boo
     if a.strict != b.strict {
         return false;
     }
-    if a.constant != Rational::zero() - b.constant {
+    // An `i128` overflow negating `b.constant` ⇒ cannot confirm the negation
+    // invariant ⇒ treat as "not a negation" (the caller then emits no args).
+    let Some(neg_b_const) = b.constant.checked_neg() else {
+        return false;
+    };
+    if a.constant != neg_b_const {
         return false;
     }
     if a.coeffs.len() != b.coeffs.len() {
@@ -657,7 +678,7 @@ fn is_negation_of(a: &crate::lra::FarkasAtom, b: &crate::lra::FarkasAtom) -> boo
     a.coeffs
         .iter()
         .zip(&b.coeffs)
-        .all(|(&(ia, ca), &(ib, cb))| ia == ib && ca == Rational::zero() - cb)
+        .all(|(&(ia, ca), &(ib, cb))| ia == ib && cb.checked_neg() == Some(ca))
 }
 
 /// Renders a (possibly signed) Farkas coefficient as an Alethe `:args` term in the
@@ -672,10 +693,15 @@ fn is_negation_of(a: &crate::lra::FarkasAtom, b: &crate::lra::FarkasAtom) -> boo
 /// Inequality multipliers are nonnegative, so for those this is identical to the
 /// prior renderer; equality coefficients (`m0 − m1`) may be negative or zero, hence
 /// the sign handling. All four forms were confirmed accepted by the Carcara binary.
-fn rational_to_alethe(value: &Rational) -> AletheTerm {
+///
+/// Returns `None` only when taking the magnitude of a negative coefficient
+/// overflows `i128` (i.e. `i128::MIN`); the caller then emits no `:args` (a sound
+/// degradation — the proof's own checker still re-derives the contradiction).
+fn rational_to_alethe(value: &Rational) -> Option<AletheTerm> {
+    // `value < 0` compared to zero — never overflows.
     let negative = *value < Rational::zero();
     let magnitude = if negative {
-        Rational::zero() - *value
+        value.checked_neg()?
     } else {
         *value
     };
@@ -692,11 +718,11 @@ fn rational_to_alethe(value: &Rational) -> AletheTerm {
             ],
         )
     };
-    if negative {
+    Some(if negative {
         AletheTerm::App("-".to_owned(), vec![positive_term])
     } else {
         positive_term
-    }
+    })
 }
 
 /// Converts an IR linear-real **comparison atom** to its Alethe term, or `None` if

@@ -494,11 +494,17 @@ fn clause_gap_content(var: SymbolId, clause: &Clause) -> GapContent {
             continue;
         }
 
-        // `x` appears: bound `x = -r/a`, keeping `r`'s symbolic part.
+        // `x` appears: bound `x = -r/a`, keeping `r`'s symbolic part. An `i128`
+        // overflow forming `-1/a` or scaling ⇒ indeterminate (sound: declines
+        // unless an always-contains clause overrides).
         let r = without_var(&lit.expr, var);
-        let neg_inv_a = Rational::zero() - Rational::integer(1) / a;
-        let bound = r.scale(neg_inv_a);
-        let a_pos = a > Rational::zero();
+        let Some(neg_inv_a) = Rational::integer(-1).checked_div(a) else {
+            return GapContent::Indeterminate;
+        };
+        let Some(bound) = r.scale(neg_inv_a) else {
+            return GapContent::Indeterminate;
+        };
+        let a_pos = a > Rational::zero(); // compared to zero — never overflows
 
         match lit.rel {
             Rel::Lt => {
@@ -541,7 +547,10 @@ fn clause_gap_content(var: SymbolId, clause: &Clause) -> GapContent {
     }
 
     // The width `w = U − L` must be a constant (all symbolic coefficients cancel).
-    let width = up.sub(lo);
+    // An `i128` overflow forming `U − L` ⇒ indeterminate.
+    let Some(width) = up.sub(lo) else {
+        return GapContent::Indeterminate;
+    };
     if !width.coeffs.values().all(|c| c.is_zero()) {
         return GapContent::Indeterminate;
     }
@@ -638,9 +647,11 @@ fn clause_has_integer(var: SymbolId, clause: &Clause) -> Option<bool> {
             // A symbolic residual on the bound ⇒ open universal ⇒ decline.
             return None;
         }
-        let neg_inv_a = Rational::zero() - Rational::integer(1) / a;
-        let bound = r.constant * neg_inv_a; // -r/a, a concrete rational
-        let a_pos = a > Rational::zero();
+        // An `i128` overflow forming `-1/a` or the bound `-r/a` ⇒ decline (an
+        // unresolvable bound is treated like an open universal: `None`).
+        let neg_inv_a = Rational::integer(-1).checked_div(a)?;
+        let bound = r.constant.checked_mul(neg_inv_a)?; // -r/a, a concrete rational
+        let a_pos = a > Rational::zero(); // compared to zero — never overflows
 
         match lit.rel {
             Rel::Lt => {
@@ -862,10 +873,10 @@ fn eliminate_clause(arena: &mut TermArena, var: SymbolId, clause: &Clause) -> Op
         // `x` genuinely appears. Isolate `x`: from `a·x + r ⋈ 0`, the bound is
         // `x = -r/a` (so `bound = expr_without_x scaled by -1/a`).
         let r = without_var(&lit.expr, var); // the `x`-free part `r`
-        // bound = -r / a
-        let neg_inv_a = Rational::zero() - Rational::integer(1) / a;
-        let bound = r.scale(neg_inv_a);
-        let a_pos = a > Rational::zero();
+        // bound = -r / a. Any `i128` overflow forming `-1/a` or scaling ⇒ decline.
+        let neg_inv_a = Rational::integer(-1).checked_div(a)?;
+        let bound = r.scale(neg_inv_a)?;
+        let a_pos = a > Rational::zero(); // compared to zero — never overflows
 
         match lit.rel {
             Rel::Lt => {
@@ -971,7 +982,7 @@ fn build_pair_atom(
     up: &Affine,
     strict: bool,
 ) -> Option<AtomValue> {
-    let diff = lo.sub(up); // lo - up ⋈ 0
+    let diff = lo.sub(up)?; // lo - up ⋈ 0 (overflow ⇒ decline)
     build_xfree_atom(arena, &diff, if strict { Rel::Lt } else { Rel::Le })
 }
 
@@ -1172,12 +1183,13 @@ fn atom_literal(arena: &TermArena, atom: TermId, negate: bool, relax_int: bool) 
     // Build `expr` and base relation so the atom is `expr ⋈ 0` (pre-negation).
     // The Int and Real order/equality ops share the same affine normalization
     // (the relaxation treats Int atoms over the reals).
+    // An `i128` overflow forming the affine difference ⇒ decline this atom.
     let (expr, rel) = match op {
-        Op::RealLt | Op::IntLt => (left.sub(&right), Rel::Lt), // a - b < 0
-        Op::RealLe | Op::IntLe => (left.sub(&right), Rel::Le), // a - b ≤ 0
-        Op::RealGt | Op::IntGt => (right.sub(&left), Rel::Lt), // b - a < 0
-        Op::RealGe | Op::IntGe => (right.sub(&left), Rel::Le), // b - a ≤ 0
-        Op::Eq => (left.sub(&right), Rel::Eq),                 // a - b = 0
+        Op::RealLt | Op::IntLt => (left.sub(&right)?, Rel::Lt), // a - b < 0
+        Op::RealLe | Op::IntLe => (left.sub(&right)?, Rel::Le), // a - b ≤ 0
+        Op::RealGt | Op::IntGt => (right.sub(&left)?, Rel::Lt), // b - a < 0
+        Op::RealGe | Op::IntGe => (right.sub(&left)?, Rel::Le), // b - a ≤ 0
+        Op::Eq => (left.sub(&right)?, Rel::Eq),                 // a - b = 0
         _ => return None,
     };
     if !negate {
@@ -1189,8 +1201,8 @@ fn atom_literal(arena: &TermArena, atom: TermId, negate: bool, relax_int: bool) 
     //   ¬(e ≤ 0)  =  e > 0   =  (-e) < 0
     //   ¬(e = 0)  =  e ≠ 0
     let (expr, rel) = match rel {
-        Rel::Lt => (expr.neg(), Rel::Le),
-        Rel::Le => (expr.neg(), Rel::Lt),
+        Rel::Lt => (expr.neg()?, Rel::Le),
+        Rel::Le => (expr.neg()?, Rel::Lt),
         Rel::Eq => (expr, Rel::Ne),
         Rel::Ne => (expr, Rel::Eq), // unreachable for a freshly-built atom
     };
@@ -1232,38 +1244,45 @@ impl Affine {
             .unwrap_or_else(Rational::zero)
     }
 
-    fn neg(&self) -> Self {
-        Self {
-            coeffs: self
-                .coeffs
-                .iter()
-                .map(|(&s, &c)| (s, Rational::zero() - c))
-                .collect(),
-            constant: Rational::zero() - self.constant,
+    /// Negate, declining (`None`) on any `i128` overflow during normalization.
+    fn neg(&self) -> Option<Self> {
+        let mut coeffs = BTreeMap::new();
+        for (&s, &c) in &self.coeffs {
+            coeffs.insert(s, c.checked_neg()?);
         }
+        Some(Self {
+            coeffs,
+            constant: self.constant.checked_neg()?,
+        })
     }
 
-    fn add(&self, other: &Self) -> Self {
+    /// Add, declining (`None`) on any `i128` overflow.
+    fn add(&self, other: &Self) -> Option<Self> {
         let mut coeffs = self.coeffs.clone();
         for (&s, &c) in &other.coeffs {
             let entry = coeffs.entry(s).or_insert_with(Rational::zero);
-            *entry = *entry + c;
+            *entry = entry.checked_add(c)?;
         }
-        Self {
+        Some(Self {
             coeffs,
-            constant: self.constant + other.constant,
-        }
+            constant: self.constant.checked_add(other.constant)?,
+        })
     }
 
-    fn sub(&self, other: &Self) -> Self {
-        self.add(&other.neg())
+    fn sub(&self, other: &Self) -> Option<Self> {
+        self.add(&other.neg()?)
     }
 
-    fn scale(&self, factor: Rational) -> Self {
-        Self {
-            coeffs: self.coeffs.iter().map(|(&s, &c)| (s, c * factor)).collect(),
-            constant: self.constant * factor,
+    /// Scale by `factor`, declining (`None`) on any `i128` overflow.
+    fn scale(&self, factor: Rational) -> Option<Self> {
+        let mut coeffs = BTreeMap::new();
+        for (&s, &c) in &self.coeffs {
+            coeffs.insert(s, c.checked_mul(factor)?);
         }
+        Some(Self {
+            coeffs,
+            constant: self.constant.checked_mul(factor)?,
+        })
     }
 }
 
@@ -1333,25 +1352,25 @@ fn affine(arena: &TermArena, term: TermId) -> Option<Affine> {
             Op::IntAdd | Op::RealAdd => {
                 let a = affine(arena, args[0])?;
                 let b = affine(arena, args[1])?;
-                Some(a.add(&b))
+                a.add(&b)
             }
             Op::IntSub | Op::RealSub => {
                 let a = affine(arena, args[0])?;
                 let b = affine(arena, args[1])?;
-                Some(a.sub(&b))
+                a.sub(&b)
             }
             Op::IntNeg | Op::RealNeg => {
                 let a = affine(arena, args[0])?;
-                Some(a.neg())
+                a.neg()
             }
             Op::IntMul | Op::RealMul => {
                 let a = affine(arena, args[0])?;
                 let b = affine(arena, args[1])?;
                 // Linear only when one factor is a (var-free) constant.
                 if a.coeffs.is_empty() {
-                    Some(b.scale(a.constant))
+                    b.scale(a.constant)
                 } else if b.coeffs.is_empty() {
-                    Some(a.scale(b.constant))
+                    a.scale(b.constant)
                 } else {
                     None
                 }

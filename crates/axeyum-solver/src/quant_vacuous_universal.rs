@@ -237,8 +237,12 @@ fn arith_atom_x_free(arena: &TermArena, args: &[TermId], var: SymbolId) -> bool 
     let Some(right) = affine(arena, rhs, var) else {
         return false;
     };
-    // Net `var` coefficient of `lhs - rhs`.
-    let net = left.coeff(var) - right.coeff(var);
+    // Net `var` coefficient of `lhs - rhs`. Subtracting two coefficients cannot
+    // overflow for a coefficient `1` (the only coefficients `affine` produces here
+    // are `±1`), but stay checked; an overflow ⇒ not provably vacuous (decline).
+    let Some(net) = left.coeff(var).checked_sub(right.coeff(var)) else {
+        return false;
+    };
     net.is_zero()
 }
 
@@ -278,38 +282,45 @@ impl Affine {
             .unwrap_or_else(Rational::zero)
     }
 
-    fn neg(&self) -> Self {
-        Self {
-            coeffs: self
-                .coeffs
-                .iter()
-                .map(|(&s, &c)| (s, Rational::zero() - c))
-                .collect(),
-            constant: Rational::zero() - self.constant,
+    /// Negate, declining (`None`) on any `i128` overflow during normalization.
+    fn neg(&self) -> Option<Self> {
+        let mut coeffs = BTreeMap::new();
+        for (&s, &c) in &self.coeffs {
+            coeffs.insert(s, c.checked_neg()?);
         }
+        Some(Self {
+            coeffs,
+            constant: self.constant.checked_neg()?,
+        })
     }
 
-    fn add(&self, other: &Self) -> Self {
+    /// Add, declining (`None`) on any `i128` overflow.
+    fn add(&self, other: &Self) -> Option<Self> {
         let mut coeffs = self.coeffs.clone();
         for (&s, &c) in &other.coeffs {
             let entry = coeffs.entry(s).or_insert_with(Rational::zero);
-            *entry = *entry + c;
+            *entry = entry.checked_add(c)?;
         }
-        Self {
+        Some(Self {
             coeffs,
-            constant: self.constant + other.constant,
-        }
+            constant: self.constant.checked_add(other.constant)?,
+        })
     }
 
-    fn sub(&self, other: &Self) -> Self {
-        self.add(&other.neg())
+    fn sub(&self, other: &Self) -> Option<Self> {
+        self.add(&other.neg()?)
     }
 
-    fn scale(&self, factor: Rational) -> Self {
-        Self {
-            coeffs: self.coeffs.iter().map(|(&s, &c)| (s, c * factor)).collect(),
-            constant: self.constant * factor,
+    /// Scale by `factor`, declining (`None`) on any `i128` overflow.
+    fn scale(&self, factor: Rational) -> Option<Self> {
+        let mut coeffs = BTreeMap::new();
+        for (&s, &c) in &self.coeffs {
+            coeffs.insert(s, c.checked_mul(factor)?);
         }
+        Some(Self {
+            coeffs,
+            constant: self.constant.checked_mul(factor)?,
+        })
     }
 }
 
@@ -335,16 +346,16 @@ fn affine(arena: &TermArena, term: TermId, var: SymbolId) -> Option<Affine> {
             Op::IntAdd | Op::RealAdd => {
                 let a = affine(arena, args[0], var)?;
                 let b = affine(arena, args[1], var)?;
-                Some(a.add(&b))
+                a.add(&b)
             }
             Op::IntSub | Op::RealSub => {
                 let a = affine(arena, args[0], var)?;
                 let b = affine(arena, args[1], var)?;
-                Some(a.sub(&b))
+                a.sub(&b)
             }
             Op::IntNeg | Op::RealNeg => {
                 let a = affine(arena, args[0], var)?;
-                Some(a.neg())
+                a.neg()
             }
             Op::IntMul | Op::RealMul => {
                 let a = affine(arena, args[0], var)?;
@@ -353,9 +364,9 @@ fn affine(arena: &TermArena, term: TermId, var: SymbolId) -> Option<Affine> {
                 // the product is non-linear and `var` might appear in a way the
                 // affine form cannot represent.
                 if a.coeffs.is_empty() {
-                    Some(b.scale(a.constant))
+                    b.scale(a.constant)
                 } else if b.coeffs.is_empty() {
-                    Some(a.scale(b.constant))
+                    a.scale(b.constant)
                 } else {
                     None
                 }
