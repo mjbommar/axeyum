@@ -1239,6 +1239,24 @@ impl MultiPoly {
         s
     }
 
+    /// `Some(c)` when this polynomial has NO variables (it is the constant `c`,
+    /// `0` for the zero polynomial); `None` when a variable appears. A no-variable
+    /// polynomial has at most one term (the empty monomial), so the value is that
+    /// term's coefficient. This is exact (the term was built by checked arithmetic).
+    fn as_constant(&self) -> Option<Rational> {
+        if self.vars().is_empty() {
+            Some(
+                self.terms
+                    .values()
+                    .next()
+                    .copied()
+                    .unwrap_or_else(Rational::zero),
+            )
+        } else {
+            None
+        }
+    }
+
     fn is_zero(&self) -> bool {
         self.terms.is_empty()
     }
@@ -1401,6 +1419,31 @@ fn decompose_multivariate(arena: &TermArena, assertions: &[TermId]) -> Option<Ch
         collect_multi_conjuncts(arena, a, &mut atoms)?;
     }
     if atoms.is_empty() {
+        return None;
+    }
+    // Decide CONSTANT atoms directly. An atom whose polynomial has no variables
+    // (e.g. a polynomial identity like `(x+y)² − (x²+2xy+y²)` collapses to `0`) is
+    // a constant comparison `c ⋈ 0`: a FALSE one (`0 ≠ 0`, `0 < 0`, …) makes the
+    // whole conjunction UNSAT — this is what *proves* a polynomial identity (its
+    // negation reduces to `0 ≠ 0`); a TRUE one (`0 = 0`, `0 ≤ 0`, …) is dropped as
+    // satisfied. This is exact (the constant is exact) and bypasses the abstraction
+    // search entirely.
+    let mut nonconstant: Vec<MultiAtom> = Vec::with_capacity(atoms.len());
+    for atom in atoms {
+        if let Some(c) = atom.poly.as_constant() {
+            if !sign_satisfies(atom.cmp, Sign::of_rational(c)) {
+                return Some(CheckResult::Unsat);
+            }
+            // true constant ⇒ satisfied, drop it.
+        } else {
+            nonconstant.push(atom);
+        }
+    }
+    atoms = nonconstant;
+    if atoms.is_empty() {
+        // Every atom was a satisfied constant ⇒ trivially satisfiable; leave the
+        // (variable-free) sat to the existing arithmetic path rather than fabricate
+        // a model here.
         return None;
     }
     // Require at least two distinct variables overall — otherwise the single-var

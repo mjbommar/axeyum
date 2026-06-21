@@ -1035,3 +1035,34 @@ fn integer_square_still_unsat_via_nia() {
         "int x*x = 2 must stay Unsat; got {r:?}"
     );
 }
+
+#[test]
+fn binomial_square_identity_proves_unsat_fast() {
+    // (x+y)² = x²+2xy+y² is a TRUE polynomial identity; its negation reduces to the
+    // ZERO polynomial ≠ 0, i.e. 0 ≠ 0 — recognized as UNSAT (the identity is proved),
+    // instantly, not via the abstraction search. Mirrors z3's complete-NRA 0.4ms.
+    let mut arena = TermArena::new();
+    let (_xs, x) = real(&mut arena, "x");
+    let (_ys, y) = real(&mut arena, "y");
+    let xpy = arena.real_add(x, y).unwrap();
+    let lhs = arena.real_mul(xpy, xpy).unwrap();
+    let xx = arena.real_mul(x, x).unwrap();
+    let yy = arena.real_mul(y, y).unwrap();
+    let xy = arena.real_mul(x, y).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let twoxy = arena.real_mul(two, xy).unwrap();
+    let s1 = arena.real_add(xx, twoxy).unwrap();
+    let rhs = arena.real_add(s1, yy).unwrap();
+    let neg = ne(&mut arena, lhs, rhs);
+    let start = std::time::Instant::now();
+    let result = solve(&mut arena, &[neg], &SolverConfig::default()).expect("solve must not error");
+    assert!(
+        start.elapsed() < std::time::Duration::from_secs(2),
+        "must be instant, not the old 20s"
+    );
+    assert_eq!(
+        result,
+        CheckResult::Unsat,
+        "the polynomial identity must be proved (Unsat), not Unknown/Sat"
+    );
+}
