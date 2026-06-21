@@ -250,12 +250,14 @@ pub const SUPPORT_MATRIX: &[SupportRow] = &[
         fragment: "QF_UFLIA / QF_UFLRA (UF + arithmetic)",
         parser: ParserStatus::Accepted,
         ir: IrStatus::Modeled,
-        solver: SolverStatus::UnsatSatUnknown,
+        solver: SolverStatus::Decides,
         proof: ProofStatus::PartialTrust,
         note: "eager Ackermann congruence → arithmetic; complete for the conjunctive \
-               fragment's UNSAT, but a sat model for an arithmetic-sorted function is \
-               not built (scalar-keyed tables) → sound unknown. Alethe proof covers \
-               the conjunctive sub-cases modulo trusted Ackermann. ADR-0013/0015",
+               fragment's UNSAT, and a satisfiable query now yields a REPLAY-CHECKED \
+               sat model — the arithmetic model is projected back to a full-Value-keyed \
+               function interpretation and replayed against the original assertions \
+               (decline to sound unknown on any replay doubt). Alethe proof covers the \
+               conjunctive UNSAT sub-cases modulo trusted Ackermann. ADR-0013/0015",
     },
     SupportRow {
         fragment: "QF_FP (floating-point)",
@@ -370,8 +372,8 @@ pub fn support_matrix_markdown() -> String {
         "**solver-decides** (definite `sat`/`unsat` for the core queries?):\n\
          - **decides** — returns both `sat` and `unsat` for the core fragment.\n\
          - **unsat decided; sat→unknown** — `unsat` is decided but a satisfying model is not \
-           built, so `sat` degrades to a sound `unknown` (arithmetic-sorted UF; the `str.len` \
-           BV+LIA gap). First-class — never a wrong answer.\n\
+           built, so `sat` degrades to a sound `unknown` (the `str.len` BV+LIA gap). \
+           First-class — never a wrong answer.\n\
          - **sound, incomplete (unknown-safe)** — may return `unknown` in general (nonlinear \
            arithmetic, quantifiers outside finite/guarded domains, optimization).\n\
          - **unsupported** — not decided.\n\n",

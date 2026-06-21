@@ -503,6 +503,16 @@ fn dispatch_reduced(
             out.set(symbol, value);
         }
     }
+    // Carry uninterpreted-function interpretations through too: an inner
+    // QF_UFLIA/QF_UFLRA `sat` reconstructs an `Op::Apply` interpretation, and
+    // dropping it would leave the returned model unable to replay a UF query
+    // (the original assertions reference `f` — `eval` would raise
+    // `UnboundFunction`).
+    for (func, _name, _params, _result) in arena.functions() {
+        if let Some(interp) = reconstructed.function(func) {
+            out.set_function(func, interp.clone());
+        }
+    }
     Ok(CheckResult::Sat(out))
 }
 

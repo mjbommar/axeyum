@@ -10,7 +10,7 @@
 use axeyum_solver::support_matrix::{
     ProofStatus, SUPPORT_MATRIX, SolverStatus, support_matrix_markdown,
 };
-use axeyum_solver::{CheckResult, SolverConfig, UnknownKind, solve_smtlib};
+use axeyum_solver::{CheckResult, SolverConfig, solve_smtlib};
 
 const DOC: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -66,9 +66,6 @@ fn is_sat(r: &CheckResult) -> bool {
 }
 fn is_unsat(r: &CheckResult) -> bool {
     matches!(r, CheckResult::Unsat)
-}
-fn is_unknown(r: &CheckResult) -> bool {
-    matches!(r, CheckResult::Unknown(_))
 }
 
 // ---------------------------------------------------------------------------
@@ -132,9 +129,7 @@ fn probe_qf_nia_single_var_polynomial_decides() {
 }
 
 #[test]
-fn probe_uflia_unsat_decided_sat_degrades_to_unknown() {
-    // This is the first-class `unsat decided; sat→unknown` status, exercised:
-    //
+fn probe_uflia_decides_unsat_and_replay_checked_sat() {
     // UNSAT side is decided: f:Int->Int, f(a)=1 ∧ f(b)=2 ∧ a=b is unsat by
     // congruence + LIA.
     let unsat = decide(
@@ -147,38 +142,45 @@ fn probe_uflia_unsat_decided_sat_degrades_to_unknown() {
         "UFLIA arithmetic-sorted UF unsat probe: {unsat:?}"
     );
 
-    // SAT side degrades to a *sound* unknown (a model for an arithmetic-sorted
-    // function is not built). It must never be reported as a wrong sat/unsat.
+    // SAT side is now DECIDED with a replay-checked model: the eager-Ackermann
+    // arithmetic model is projected back to a full-Value-keyed function
+    // interpretation and replayed against the original assertions (drop the
+    // `a=b` so the two `f` points are genuinely satisfiable).
     let sat_query = decide(
         "(declare-fun f (Int) Int)\
          (declare-const a Int)(declare-const b Int)\
          (assert (= (f a) 1))(assert (= (f b) 2))(check-sat)",
     );
     assert!(
-        is_unknown(&sat_query),
-        "UFLIA arithmetic-sorted UF satisfiable query must degrade to a sound \
-         unknown (not sat/unsat): {sat_query:?}"
+        is_sat(&sat_query),
+        "UFLIA satisfiable query must now be a replay-checked sat (never a wrong \
+         sat/unsat): {sat_query:?}"
     );
-    if let CheckResult::Unknown(reason) = &sat_query {
-        // Sanity: an unknown here is an honest "incomplete", never "unsat".
-        assert!(
-            matches!(
-                reason.kind,
-                UnknownKind::Incomplete | UnknownKind::ResourceLimit | UnknownKind::Other
-            ),
-            "unexpected unknown kind for the UFLIA sat degradation: {reason:?}"
-        );
-    }
 
-    // And the matrix row must record exactly this status.
+    // And the matrix row must record that UFLIA now decides.
     let row = SUPPORT_MATRIX
         .iter()
         .find(|r| r.fragment.starts_with("QF_UFLIA"))
         .expect("QF_UFLIA row present");
     assert_eq!(
         row.solver,
-        SolverStatus::UnsatSatUnknown,
-        "the UFLIA row must carry the first-class `unsat decided; sat→unknown` status"
+        SolverStatus::Decides,
+        "the UFLIA row must record that satisfiable queries now decide (replay-checked sat)"
+    );
+}
+
+/// A satisfiable `QF_UFLRA` query through the SMT-LIB front door is likewise a
+/// replay-checked `sat` (the real-keyed function interpretation projects).
+#[test]
+fn probe_uflra_satisfiable_is_replay_checked_sat() {
+    let sat_query = decide(
+        "(declare-fun g (Real) Real)\
+         (declare-const p Real)\
+         (assert (= (g p) 1.0))(assert (= p 2.0))(check-sat)",
+    );
+    assert!(
+        is_sat(&sat_query),
+        "UFLRA satisfiable query must be a replay-checked sat: {sat_query:?}"
     );
 }
 

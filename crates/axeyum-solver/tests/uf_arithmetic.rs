@@ -242,3 +242,141 @@ fn sat_int_domain_quantifier_is_graceful() {
         "satisfiable: must not claim unsat"
     );
 }
+
+// ---------------------------------------------------------------------------
+// QF_UFLIA / QF_UFLRA satisfiable cases: a replay-checked witnessing model is
+// now built by projecting the eager-Ackermann arithmetic model back to a
+// full-`Value`-keyed UF interpretation. SOUNDNESS: every returned `Sat` model
+// is replayed through the ground evaluator against the *original* assertions;
+// a wrong projection can only fail replay (→ decline), never a wrong `sat`.
+// ---------------------------------------------------------------------------
+
+/// Replays every original `assertion` under `model` through the ground
+/// evaluator (which consults the projected UF interpretation for `Op::Apply`);
+/// asserts each evaluates to `Bool(true)` — the level-1 evidence check.
+fn assert_model_replays(
+    arena: &axeyum_ir::TermArena,
+    assertions: &[axeyum_ir::TermId],
+    model: &axeyum_solver::Model,
+) {
+    use axeyum_ir::{Value, eval};
+    let assignment = model.to_assignment();
+    for &t in assertions {
+        assert_eq!(
+            eval(arena, t, &assignment).unwrap(),
+            Value::Bool(true),
+            "original assertion must replay to true under the projected model"
+        );
+    }
+}
+
+/// `f(x) = 1 ∧ x = 2` over `Int` is SAT (`x = 2`, `f(2) = 1`); the projected
+/// UF interpretation replays against the original query.
+#[test]
+fn uflia_simple_sat_model_replays() {
+    let mut a = TermArena::new();
+    let x = decl_int(&mut a, "x");
+    let f = a.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let fx = a.apply(f, &[x]).unwrap();
+    let one = a.int_const(1);
+    let two = a.int_const(2);
+    let e1 = a.eq(fx, one).unwrap();
+    let e2 = a.eq(x, two).unwrap();
+    let originals = [e1, e2];
+    let result = check_with_uf_arithmetic(&mut a, &originals, &SolverConfig::default()).unwrap();
+    let CheckResult::Sat(model) = result else {
+        panic!("expected SAT for f(x)=1 ∧ x=2, got {result:?}");
+    };
+    assert_model_replays(&a, &originals, &model);
+}
+
+/// `f(a) = f(b) ∧ a = b + 1` over `Int` is SAT (e.g. `b = 0`, `a = 1`, `f`
+/// constant); the projected interpretation replays.
+#[test]
+fn uflia_congruent_results_sat_model_replays() {
+    let mut a = TermArena::new();
+    let av = decl_int(&mut a, "a");
+    let bv = decl_int(&mut a, "b");
+    let f = a.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let fa = a.apply(f, &[av]).unwrap();
+    let fb = a.apply(f, &[bv]).unwrap();
+    let one = a.int_const(1);
+    let bp1 = a.int_add(bv, one).unwrap();
+    let e1 = a.eq(fa, fb).unwrap(); // f(a) = f(b)
+    let e2 = a.eq(av, bp1).unwrap(); // a = b + 1
+    let originals = [e1, e2];
+    let result = check_with_uf_arithmetic(&mut a, &originals, &SolverConfig::default()).unwrap();
+    let CheckResult::Sat(model) = result else {
+        panic!("expected SAT for f(a)=f(b) ∧ a=b+1, got {result:?}");
+    };
+    assert_model_replays(&a, &originals, &model);
+}
+
+/// `solve` (the public dispatcher) returns a replay-checked `Sat` for a
+/// satisfiable `QF_UFLIA` query — the capability is reachable end-to-end.
+#[test]
+fn solve_returns_replay_checked_uflia_sat() {
+    use axeyum_solver::solve;
+    let mut a = TermArena::new();
+    let x = decl_int(&mut a, "x");
+    let f = a.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let fx = a.apply(f, &[x]).unwrap();
+    let seven = a.int_const(7);
+    let three = a.int_const(3);
+    let e1 = a.eq(fx, seven).unwrap();
+    let e2 = a.eq(x, three).unwrap();
+    let originals = [e1, e2];
+    let result = solve(&mut a, &originals, &SolverConfig::default()).unwrap();
+    let CheckResult::Sat(model) = result else {
+        panic!("expected SAT via solve, got {result:?}");
+    };
+    assert_model_replays(&a, &originals, &model);
+}
+
+/// `QF_UFLRA` satisfiable: `g(p) = 1 ∧ p = q ∧ g(q) = 1` over `Real`. Congruence
+/// is consistent (`p = q ⇒ g(p) = g(q)`, both `1`); the projected real-keyed
+/// interpretation replays.
+#[test]
+fn uflra_simple_sat_model_replays() {
+    let mut a = TermArena::new();
+    let p = a.real_var("p").unwrap();
+    let q = a.real_var("q").unwrap();
+    let g = a.declare_fun("g", &[Sort::Real], Sort::Real).unwrap();
+    let gp = a.apply(g, &[p]).unwrap();
+    let gq = a.apply(g, &[q]).unwrap();
+    let one = a.real_const(axeyum_ir::Rational::new(1, 1));
+    let e1 = a.eq(gp, one).unwrap();
+    let e2 = a.eq(p, q).unwrap();
+    let e3 = a.eq(gq, one).unwrap();
+    let originals = [e1, e2, e3];
+    let result = check_with_uf_arithmetic(&mut a, &originals, &SolverConfig::default()).unwrap();
+    let CheckResult::Sat(model) = result else {
+        panic!("expected SAT for the QF_UFLRA case, got {result:?}");
+    };
+    assert_model_replays(&a, &originals, &model);
+}
+
+/// Two distinct constrained points: `f(a) = 1 ∧ f(b) = 2 ∧ a = b + 1` is SAT
+/// (the args differ, so no congruence conflict); the projected interpretation
+/// must carry *both* entries `f(arg_a)=1` and `f(arg_b)=2` and replay.
+#[test]
+fn uflia_two_point_interp_sat_model_replays() {
+    let mut a = TermArena::new();
+    let av = decl_int(&mut a, "a");
+    let bv = decl_int(&mut a, "b");
+    let f = a.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let fa = a.apply(f, &[av]).unwrap();
+    let fb = a.apply(f, &[bv]).unwrap();
+    let one = a.int_const(1);
+    let two = a.int_const(2);
+    let bp1 = a.int_add(bv, one).unwrap();
+    let e1 = a.eq(fa, one).unwrap();
+    let e2 = a.eq(fb, two).unwrap();
+    let e3 = a.eq(av, bp1).unwrap();
+    let originals = [e1, e2, e3];
+    let result = check_with_uf_arithmetic(&mut a, &originals, &SolverConfig::default()).unwrap();
+    let CheckResult::Sat(model) = result else {
+        panic!("expected SAT for the two-point case, got {result:?}");
+    };
+    assert_model_replays(&a, &originals, &model);
+}

@@ -43,7 +43,12 @@ pub fn check_with_function_elimination<B: SolverBackend>(
     };
 
     let assignment = model.to_assignment();
-    project_replay_build(arena, &elimination, assertions, &assignment)
+    Ok(project_replay_build(
+        arena,
+        &elimination,
+        assertions,
+        &assignment,
+    ))
 }
 
 /// Projects a candidate model back to function interpretations, replays it
@@ -51,59 +56,51 @@ pub fn check_with_function_elimination<B: SolverBackend>(
 /// original query — the shared `sat` tail of both the eager and lazy entry
 /// points.
 ///
-/// # Errors
-///
-/// Returns [`SolverError::Backend`] if model projection fails or if any original
-/// assertion fails to replay to `true` under the projected model.
+/// SOUNDNESS: the returned [`CheckResult::Sat`] is reached *only* after every
+/// original assertion replays to `Bool(true)` through the ground evaluator
+/// (which consults the projected UF interpretation for `Op::Apply`). A failed
+/// projection, a non-`true` replay, or any indeterminate evaluation declines to a
+/// sound [`CheckResult::Unknown`] — never an emitted (possibly wrong) `Sat`, and
+/// never an error (`unknown` is a first-class result, not a failure).
 fn project_replay_build(
     arena: &TermArena,
     elimination: &axeyum_rewrite::FunctionElimination,
     assertions: &[TermId],
     assignment: &Assignment,
-) -> Result<CheckResult, SolverError> {
-    // The SAT-model projection encodes function-table entries via scalar codes,
-    // which exist only for finite-scalar sorts. For an arithmetic-sorted (Int/Real)
-    // uninterpreted function we cannot yet build a witnessing model, so the SAT case
-    // degrades to a sound `Unknown` (UNSAT — the combination refutation — is decided
-    // without any model and is unaffected).
-    for (_func, _name, params, result) in arena.functions() {
-        let is_arith =
-            |s: &axeyum_ir::Sort| matches!(s, axeyum_ir::Sort::Int | axeyum_ir::Sort::Real);
-        if params.iter().any(is_arith) || is_arith(&result) {
-            return Ok(CheckResult::Unknown(crate::backend::UnknownReason {
+) -> CheckResult {
+    // Project the candidate model back to function interpretations. Arithmetic
+    // (`Int`/`Real`) functions now project to a full-`Value`-keyed interpretation
+    // (`project_model`); scalar functions to the original `u128`-coded tables.
+    // SOUNDNESS rests entirely on the replay check below — a wrong projection can
+    // only make replay fail (→ decline), never accept a wrong sat. Any projection
+    // error (e.g. a value that cannot be reconstructed) is a sound decline to
+    // `Unknown`, not a wrong answer.
+    let projected = match elimination.project_model(arena, assignment) {
+        Ok(projected) => projected,
+        Err(error) => {
+            return CheckResult::Unknown(crate::backend::UnknownReason {
                 kind: crate::backend::UnknownKind::Incomplete,
-                detail: "sat model for an arithmetic-sorted uninterpreted function is \
-                         unsupported (UNSAT is decided)"
-                    .to_owned(),
-            }));
+                detail: format!("function model projection failed: {error}"),
+            });
         }
-    }
-    let projected = elimination
-        .project_model(arena, assignment)
-        .map_err(|error| {
-            SolverError::Backend(format!("function model projection failed: {error}"))
-        })?;
+    };
 
+    // REPLAY CHECK (the soundness anchor): every original assertion must evaluate
+    // to `Bool(true)` under the projected model through the ground evaluator
+    // (which consults the projected UF interpretation for `Op::Apply`). Any
+    // failure, non-Boolean, or indeterminate evaluation is a sound decline to
+    // `Unknown` — never an emitted `Sat`.
     for &assertion in assertions {
         match eval(arena, assertion, &projected) {
             Ok(Value::Bool(true)) => {}
-            Ok(Value::Bool(false)) => {
-                return Err(SolverError::Backend(format!(
-                    "function sat model replay failed: assertion #{} evaluated to false",
-                    assertion.index()
-                )));
-            }
-            Ok(value) => {
-                return Err(SolverError::Backend(format!(
-                    "function sat model replay failed: assertion #{} evaluated to non-Boolean {value}",
-                    assertion.index()
-                )));
-            }
-            Err(error) => {
-                return Err(SolverError::Backend(format!(
-                    "function sat model replay failed: assertion #{} failed evaluation: {error}",
-                    assertion.index()
-                )));
+            Ok(_) | Err(_) => {
+                return CheckResult::Unknown(crate::backend::UnknownReason {
+                    kind: crate::backend::UnknownKind::Incomplete,
+                    detail: format!(
+                        "function sat model replay did not confirm assertion #{}",
+                        assertion.index()
+                    ),
+                });
             }
         }
     }
@@ -125,7 +122,7 @@ fn project_replay_build(
             out.set_function(func, interp.clone());
         }
     }
-    Ok(CheckResult::Sat(out))
+    CheckResult::Sat(out)
 }
 
 /// Lazy/on-demand Ackermann for `QF_UFBV` (P1.6): abstracts each uninterpreted
@@ -199,7 +196,12 @@ pub fn check_with_uf_arithmetic(
         return Ok(result);
     };
     let assignment = model.to_assignment();
-    project_replay_build(arena, &elimination, assertions, &assignment)
+    Ok(project_replay_build(
+        arena,
+        &elimination,
+        assertions,
+        &assignment,
+    ))
 }
 
 /// The shared functional-consistency CEGAR loop: abstract each uninterpreted
@@ -283,7 +285,7 @@ where
 
         if new_lemmas.is_empty() {
             // Model is functionally consistent: project, replay, and return.
-            return project_replay_build(arena, &elim, assertions, &assignment);
+            return Ok(project_replay_build(arena, &elim, assertions, &assignment));
         }
 
         for (i, j) in new_lemmas {

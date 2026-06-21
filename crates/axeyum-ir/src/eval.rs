@@ -229,9 +229,13 @@ pub fn eval_with_memo(
                                 let interp = assignment
                                     .function(*func)
                                     .ok_or(IrError::UnboundFunction(*func))?;
-                                let key: Vec<u128> = vals.iter().map(Value::scalar_code).collect();
-                                let code = interp.apply(&key);
-                                Value::from_scalar_code(arena.sort_of(t), code)
+                                // `apply_value` handles both storage modes: scalar
+                                // (`Bool`/`BitVec`/`Float`) functions code their
+                                // keys to `u128` internally, while arithmetic
+                                // (`Int`/`Real`) functions compare full `Value`
+                                // keys — so `QF_UFLIA`/`QF_UFLRA` interpretations
+                                // replay through the same path.
+                                interp.apply_value(&vals)
                             }
                             Op::DtConstruct {
                                 constructor,

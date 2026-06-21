@@ -22,10 +22,23 @@
 use std::collections::HashMap;
 
 use axeyum_ir::{
-    Assignment, FuncId, FuncValue, IrError, Op, Sort, SymbolId, TermArena, TermId, TermNode, eval,
+    Assignment, FuncId, FuncValue, IrError, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value,
+    eval,
 };
 
 use crate::canonical::build_app;
+
+/// A canonical default value for an arithmetic result sort (`Int 0` / `Real 0`),
+/// used as the unconstrained default of a projected arithmetic-sorted function
+/// interpretation. Panics for a non-arithmetic sort (the arithmetic projection
+/// path only calls it for `Int`/`Real`).
+fn default_value_of(sort: Sort) -> Value {
+    match sort {
+        Sort::Int => Value::Int(0),
+        Sort::Real => Value::Real(axeyum_ir::Rational::zero()),
+        other => panic!("default_value_of called on non-arithmetic sort {other:?}"),
+    }
+}
 
 /// Error from uninterpreted-function elimination.
 #[derive(Debug, Clone)]
@@ -130,24 +143,45 @@ impl FunctionElimination {
         model: &Assignment,
     ) -> Result<Assignment, IrError> {
         let mut projected = model.clone();
-        // Per function, the (argument-code tuple, result-code) entries.
-        let mut tables: HashMap<FuncId, Vec<(Vec<u128>, u128)>> = HashMap::new();
+        // Per function, the (argument-value tuple, result-value) entries, kept in
+        // the application discovery order so the projection is deterministic.
+        let mut tables: HashMap<FuncId, Vec<(Vec<Value>, Value)>> = HashMap::new();
+        // The discovery order of distinct `FuncId`s, so we build interpretations
+        // (and thus the arithmetic entry order) deterministically.
+        let mut func_order: Vec<FuncId> = Vec::new();
         for apply in &self.applies {
             let mut key = Vec::with_capacity(apply.args.len());
             for &arg in &apply.args {
-                key.push(eval(arena, arg, model)?.scalar_code());
+                key.push(eval(arena, arg, model)?);
             }
             let result = model
                 .get(apply.fresh)
-                .expect("fresh application symbol is assigned")
-                .scalar_code();
+                .expect("fresh application symbol is assigned");
+            if !tables.contains_key(&apply.func) {
+                func_order.push(apply.func);
+            }
             tables.entry(apply.func).or_default().push((key, result));
         }
-        for (func, entries) in tables {
+        for func in func_order {
+            let entries = tables.remove(&func).expect("func recorded in order");
             let (_, params, result) = arena.function(func);
-            let mut value = FuncValue::constant(params.to_vec(), result, 0);
+            let arith = matches!(result, Sort::Int | Sort::Real)
+                || params.iter().any(|s| matches!(s, Sort::Int | Sort::Real));
+            let mut value = if arith {
+                // Default result is any value of the result sort; the original
+                // query only constrains the explicitly recorded applications.
+                let default = default_value_of(result);
+                FuncValue::constant_value(params.to_vec(), result, default)
+            } else {
+                FuncValue::constant(params.to_vec(), result, 0)
+            };
             for (args, element) in entries {
-                value = value.define(&args, element);
+                value = if arith {
+                    value.define_value(&args, element)
+                } else {
+                    let key: Vec<u128> = args.iter().map(Value::scalar_code).collect();
+                    value.define(&key, element.scalar_code())
+                };
             }
             projected.set_function(func, value);
         }

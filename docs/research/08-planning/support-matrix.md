@@ -22,7 +22,7 @@ Four **independent** axes per SMT-LIB fragment, so "the parser accepts it" is ne
 
 **solver-decides** (definite `sat`/`unsat` for the core queries?):
 - **decides** — returns both `sat` and `unsat` for the core fragment.
-- **unsat decided; sat→unknown** — `unsat` is decided but a satisfying model is not built, so `sat` degrades to a sound `unknown` (arithmetic-sorted UF; the `str.len` BV+LIA gap). First-class — never a wrong answer.
+- **unsat decided; sat→unknown** — `unsat` is decided but a satisfying model is not built, so `sat` degrades to a sound `unknown` (the `str.len` BV+LIA gap). First-class — never a wrong answer.
 - **sound, incomplete (unknown-safe)** — may return `unknown` in general (nonlinear arithmetic, quantifiers outside finite/guarded domains, optimization).
 - **unsupported** — not decided.
 
@@ -42,7 +42,7 @@ Four **independent** axes per SMT-LIB fragment, so "the parser accepts it" is ne
 | QF_LRA (linear real) | accepted | modeled | decides | checked |
 | QF_NIA (nonlinear integer) | accepted | modeled | sound, incomplete (unknown-safe) | none |
 | QF_NRA (nonlinear real) | accepted | modeled | sound, incomplete (unknown-safe) | none |
-| QF_UFLIA / QF_UFLRA (UF + arithmetic) | accepted | modeled | unsat decided; sat→unknown | partial-trust |
+| QF_UFLIA / QF_UFLRA (UF + arithmetic) | accepted | modeled | decides | partial-trust |
 | QF_FP (floating-point) | accepted | lowered (no IR sort) | decides | partial-trust |
 | quantifiers (∃/∀, finite-domain + instantiation) | accepted | modeled | sound, incomplete (unknown-safe) | partial-trust |
 | datatypes (algebraic) | accepted (bounded) | modeled | decides | partial-trust |
@@ -59,7 +59,7 @@ Four **independent** axes per SMT-LIB fragment, so "the parser accepts it" is ne
 - **QF_LRA (linear real)** — exact-rational simplex is complete for QF_LRA; unsat carries a Farkas certificate with a from-scratch independent verifier (Alethe la_generic + Lean too). ADR-0015
 - **QF_NIA (nonlinear integer)** — general NIA is sound-incomplete (linear abstraction + sign lemmas, unknown otherwise); the single-variable integer polynomial decider (nia_square) is exact for that shape (e.g. x*x=2 → unsat). No proof artifact. ADR-0024
 - **QF_NRA (nonlinear real)** — linear abstraction + replay + McCormick spatial branch-and-bound; relaxation-unsat is sound, sat is replay-checked, unknown otherwise. No proof artifact. ADR-0024
-- **QF_UFLIA / QF_UFLRA (UF + arithmetic)** — eager Ackermann congruence → arithmetic; complete for the conjunctive fragment's UNSAT, but a sat model for an arithmetic-sorted function is not built (scalar-keyed tables) → sound unknown. Alethe proof covers the conjunctive sub-cases modulo trusted Ackermann. ADR-0013/0015
+- **QF_UFLIA / QF_UFLRA (UF + arithmetic)** — eager Ackermann congruence → arithmetic; complete for the conjunctive fragment's UNSAT, and a satisfiable query now yields a REPLAY-CHECKED sat model — the arithmetic model is projected back to a full-Value-keyed function interpretation and replayed against the original assertions (decline to sound unknown on any replay doubt). Alethe proof covers the conjunctive UNSAT sub-cases modulo trusted Ackermann. ADR-0013/0015
 - **QF_FP (floating-point)** — FP sorts/ops parsed (some conversions constant-only); FP values are BitVec (no IR sort), lowered to circuits differentially validated vs native/apfloat; unsat DRAT is modulo the trusted FP circuit. ADR-0023/0026/0028
 - **quantifiers (∃/∀, finite-domain + instantiation)** — complete over finite (Bool/BV) domains, guarded-finite Int expansion, and single-variable real Fourier-Motzkin; otherwise sound refutation by e-matching/MBQI instantiation (ground unsat transfers; sat/no-progress is unknown). Checkable Alethe/Lean for the refutation slices. ADR-0016/0032
 - **datatypes (algebraic)** — non-parametric declare-datatype(s) parsed (parametric rejected); structural acyclicity/injectivity + elimination/native expansion decide; unsat DRAT modulo trusted datatype folding (Alethe/Lean too). ADR-0022

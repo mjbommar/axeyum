@@ -123,36 +123,114 @@ impl ArrayValue {
 /// map from argument tuples to a result, stored as a default result plus the
 /// overriding entries.
 ///
-/// Arguments and results are scalar (`Bool` or `BitVec`); both are encoded to
-/// `u128` (a `Bool` as `0`/`1`, a `BitVec` masked to its width). Like
-/// [`ArrayValue`], the map is normalized — entries equal to `default` are
+/// Two storage modes coexist:
+///
+/// * **Scalar** (`Bool`/`BitVec`/`Float` parameters *and* result): both keys and
+///   results are encoded to `u128` (a `Bool` as `0`/`1`, a `BitVec`/`Float`
+///   masked to its width). This is the original ADR-0013 path; entries are kept
+///   in a normalized [`BTreeMap`] — entries equal to `default` are removed.
+/// * **Arithmetic** (`Int`/`Real` appearing in a parameter or the result): keys
+///   and results are full [`Value`]s, since integers and reals have no `u128`
+///   scalar code (the `QF_UFLIA`/`QF_UFLRA` witnessing-model path, kept finite —
+///   only the argument tuples the query actually constrains are recorded, plus a
+///   default for every other point). `Value` is `Eq` but not `Ord`, so these
+///   entries are an insertion-deduplicated [`Vec`]; iteration order is the order
+///   the entries were defined (deterministic for a deterministic projection).
+///
+/// In both modes the map is normalized — entries equal to the default are
 /// removed — so equality is extensional and the representation deterministic.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FuncValue {
     params: Vec<Sort>,
     result: Sort,
-    default: u128,
-    entries: BTreeMap<Vec<u128>, u128>,
+    storage: FuncStorage,
+}
+
+/// The backing store of a [`FuncValue`]: scalar (`u128`-coded) or arithmetic
+/// (full-[`Value`]-keyed) — see [`FuncValue`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum FuncStorage {
+    /// `u128`-coded keys and results (`Bool`/`BitVec`/`Float`).
+    Scalar {
+        default: u128,
+        entries: BTreeMap<Vec<u128>, u128>,
+    },
+    /// Full-[`Value`]-keyed keys and results (`Int`/`Real` present); entries are
+    /// an insertion-deduplicated [`Vec`] because [`Value`] is not `Ord`.
+    Arith {
+        default: Value,
+        entries: Vec<(Vec<Value>, Value)>,
+    },
+}
+
+/// Whether `sort` is an arithmetic sort (`Int`/`Real`) that has no `u128`
+/// scalar code and therefore requires the [`FuncStorage::Arith`] path.
+fn is_arith_sort(sort: Sort) -> bool {
+    matches!(sort, Sort::Int | Sort::Real)
 }
 
 impl FuncValue {
-    /// Creates a constant function mapping every argument tuple to `default`.
+    /// Whether any parameter or the result sort is arithmetic (`Int`/`Real`), so
+    /// this interpretation uses the full-[`Value`]-keyed [`FuncStorage::Arith`]
+    /// path rather than the `u128` scalar path.
+    fn sorts_are_arith(params: &[Sort], result: Sort) -> bool {
+        params.iter().copied().any(is_arith_sort) || is_arith_sort(result)
+    }
+
+    /// Creates a constant scalar function mapping every argument tuple to
+    /// `default`.
     ///
     /// # Panics
     ///
-    /// Panics if any parameter or the result sort is an array (functions are
-    /// scalar in the supported fragment).
+    /// Panics if any parameter or the result sort is an array, or is arithmetic
+    /// (`Int`/`Real`) — arithmetic interpretations must use
+    /// [`FuncValue::constant_value`].
     pub fn constant(params: Vec<Sort>, result: Sort, default: u128) -> Self {
         assert!(
             params.iter().all(|s| !matches!(s, Sort::Array { .. }))
                 && !matches!(result, Sort::Array { .. }),
             "function arguments and result must be scalar"
         );
+        assert!(
+            !Self::sorts_are_arith(&params, result),
+            "arithmetic-sorted functions must use FuncValue::constant_value"
+        );
         Self {
-            default: encode_to(result, default),
+            storage: FuncStorage::Scalar {
+                default: encode_to(result, default),
+                entries: BTreeMap::new(),
+            },
             params,
             result,
-            entries: BTreeMap::new(),
+        }
+    }
+
+    /// Creates a constant arithmetic (`Int`/`Real`) function mapping every
+    /// argument tuple to `default`. The default is any value of the result sort;
+    /// the original query only constrains the explicitly defined points.
+    ///
+    /// # Panics
+    ///
+    /// Panics if neither a parameter nor the result is arithmetic (use
+    /// [`FuncValue::constant`] for purely scalar functions), or if `default`'s
+    /// sort does not match `result`.
+    pub fn constant_value(params: Vec<Sort>, result: Sort, default: Value) -> Self {
+        assert!(
+            Self::sorts_are_arith(&params, result),
+            "FuncValue::constant_value is for arithmetic-sorted functions"
+        );
+        assert_eq!(
+            default.sort(),
+            result,
+            "default value sort must match the function result sort"
+        );
+        Self {
+            storage: FuncStorage::Arith {
+                default,
+                entries: Vec::new(),
+            },
+            params,
+            result,
         }
     }
 
@@ -166,27 +244,73 @@ impl FuncValue {
         self.result
     }
 
+    /// Whether this interpretation uses the full-[`Value`]-keyed arithmetic
+    /// storage path.
+    pub fn is_arith(&self) -> bool {
+        matches!(self.storage, FuncStorage::Arith { .. })
+    }
+
     /// The encoded result for `args` (each argument encoded to `u128`).
     ///
     /// # Panics
     ///
-    /// Panics if `args` does not match the declared arity.
+    /// Panics if `args` does not match the declared arity, or if this is an
+    /// arithmetic-storage interpretation (use [`FuncValue::apply_value`]).
     pub fn apply(&self, args: &[u128]) -> u128 {
-        let key = self.normalize_key(args);
-        self.entries.get(&key).copied().unwrap_or(self.default)
+        match &self.storage {
+            FuncStorage::Scalar { default, entries } => {
+                let key = self.normalize_key(args);
+                entries.get(&key).copied().unwrap_or(*default)
+            }
+            FuncStorage::Arith { .. } => {
+                panic!("FuncValue::apply on an arithmetic-storage function (use apply_value)")
+            }
+        }
     }
 
-    /// Returns a copy of this function with `args` mapped to `result`.
+    /// The result [`Value`] for `args` (full-value keys). Works for both storage
+    /// modes: for scalar storage the arguments and result are `u128`-coded
+    /// internally.
     ///
     /// # Panics
     ///
-    /// Panics if `args` does not match the declared arity.
+    /// Panics if `args` does not match the declared arity, or (scalar mode) if an
+    /// argument value is not scalar-codable.
+    pub fn apply_value(&self, args: &[Value]) -> Value {
+        assert_eq!(args.len(), self.params.len(), "function arity mismatch");
+        match &self.storage {
+            FuncStorage::Scalar { default, entries } => {
+                let key: Vec<u128> = self
+                    .params
+                    .iter()
+                    .zip(args)
+                    .map(|(&sort, arg)| encode_to(sort, arg.scalar_code()))
+                    .collect();
+                let code = entries.get(&key).copied().unwrap_or(*default);
+                Value::from_scalar_code(self.result, code)
+            }
+            FuncStorage::Arith { default, entries } => entries
+                .iter()
+                .find(|(k, _)| k.as_slice() == args)
+                .map_or_else(|| default.clone(), |(_, v)| v.clone()),
+        }
+    }
+
+    /// Returns a copy of this scalar function with `args` mapped to `result`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `args` does not match the declared arity, or if this is an
+    /// arithmetic-storage interpretation (use [`FuncValue::define_value`]).
     #[must_use]
     pub fn define(&self, args: &[u128], result: u128) -> Self {
+        let FuncStorage::Scalar { default, entries } = &self.storage else {
+            panic!("FuncValue::define on an arithmetic-storage function (use define_value)");
+        };
         let key = self.normalize_key(args);
         let result = encode_to(self.result, result);
-        let mut entries = self.entries.clone();
-        if result == self.default {
+        let mut entries = entries.clone();
+        if result == *default {
             entries.remove(&key);
         } else {
             entries.insert(key, result);
@@ -194,19 +318,107 @@ impl FuncValue {
         Self {
             params: self.params.clone(),
             result: self.result,
-            default: self.default,
-            entries,
+            storage: FuncStorage::Scalar {
+                default: *default,
+                entries,
+            },
         }
     }
 
-    /// The default (encoded) result value.
-    pub fn default_result(&self) -> u128 {
-        self.default
+    /// Returns a copy of this arithmetic function with the `args` tuple mapped to
+    /// `result` (full [`Value`] keys/results). An entry equal to the default is
+    /// dropped (normalization); redefining an existing tuple replaces it
+    /// in place (preserving order).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `args` does not match the declared arity, if this is a
+    /// scalar-storage interpretation (use [`FuncValue::define`]), or if a key or
+    /// the result has the wrong sort.
+    #[must_use]
+    pub fn define_value(&self, args: &[Value], result: Value) -> Self {
+        let FuncStorage::Arith { default, entries } = &self.storage else {
+            panic!("FuncValue::define_value on a scalar-storage function (use define)");
+        };
+        assert_eq!(args.len(), self.params.len(), "function arity mismatch");
+        for (&sort, arg) in self.params.iter().zip(args) {
+            assert_eq!(
+                arg.sort(),
+                sort,
+                "argument sort must match the parameter sort"
+            );
+        }
+        assert_eq!(
+            result.sort(),
+            self.result,
+            "result sort must match the function result sort"
+        );
+        let key: Vec<Value> = args.to_vec();
+        let mut entries = entries.clone();
+        if let Some(pos) = entries.iter().position(|(k, _)| *k == key) {
+            if result == *default {
+                entries.remove(pos);
+            } else {
+                entries[pos].1 = result;
+            }
+        } else if result != *default {
+            entries.push((key, result));
+        }
+        Self {
+            params: self.params.clone(),
+            result: self.result,
+            storage: FuncStorage::Arith {
+                default: default.clone(),
+                entries,
+            },
+        }
     }
 
-    /// The overriding `(args, result)` entries in argument-tuple order.
+    /// The default (encoded) result value (scalar storage).
+    ///
+    /// # Panics
+    ///
+    /// Panics for an arithmetic-storage interpretation (use
+    /// [`FuncValue::default_value`]).
+    pub fn default_result(&self) -> u128 {
+        match &self.storage {
+            FuncStorage::Scalar { default, .. } => *default,
+            FuncStorage::Arith { .. } => {
+                panic!("FuncValue::default_result on an arithmetic-storage function")
+            }
+        }
+    }
+
+    /// The default result [`Value`] (works for both storage modes).
+    pub fn default_value(&self) -> Value {
+        match &self.storage {
+            FuncStorage::Scalar { default, .. } => Value::from_scalar_code(self.result, *default),
+            FuncStorage::Arith { default, .. } => default.clone(),
+        }
+    }
+
+    /// The overriding `(args, result)` entries in argument-tuple order (scalar
+    /// storage only).
+    ///
+    /// # Panics
+    ///
+    /// Panics for an arithmetic-storage interpretation (use
+    /// [`FuncValue::value_entries`]).
     pub fn entries(&self) -> impl Iterator<Item = (&[u128], u128)> + '_ {
-        self.entries.iter().map(|(k, &v)| (k.as_slice(), v))
+        let FuncStorage::Scalar { entries, .. } = &self.storage else {
+            panic!("FuncValue::entries on an arithmetic-storage function (use value_entries)");
+        };
+        entries.iter().map(|(k, &v)| (k.as_slice(), v))
+    }
+
+    /// The overriding `(args, result)` entries as full [`Value`]s, in definition
+    /// order (arithmetic storage only).
+    pub fn value_entries(&self) -> impl Iterator<Item = (&[Value], &Value)> + '_ {
+        let entries: &[(Vec<Value>, Value)] = match &self.storage {
+            FuncStorage::Arith { entries, .. } => entries,
+            FuncStorage::Scalar { .. } => &[],
+        };
+        entries.iter().map(|(k, v)| (k.as_slice(), v))
     }
 
     fn normalize_key(&self, args: &[u128]) -> Vec<u128> {

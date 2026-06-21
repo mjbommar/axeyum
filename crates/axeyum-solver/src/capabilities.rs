@@ -154,8 +154,10 @@ pub const CAPABILITIES: &[Capability] = &[
         assurance: Assurance::SoundIncomplete,
         evidence: "complete for the conjunctive fragment's UNSAT — eager congruence \
                    constraints + LIA/LRA decide f(a)≠f(b)∧a≤b∧b≤a, f(x+0)≠f(x), and nested \
-                   f(g(a))≠f(g(b))∧a=b; SAT model for an arithmetic-sorted function not yet \
-                   built (scalar-keyed func tables) → sound Unknown; never a wrong sat/unsat",
+                   f(g(a))≠f(g(b))∧a=b; SAT yields a REPLAY-CHECKED model — the arithmetic \
+                   model is projected back to a full-Value-keyed function interpretation and \
+                   replayed against the original assertions (decline to sound Unknown on any \
+                   replay/projection doubt); never a wrong sat/unsat",
         reference: "ADR-0013/0015 (P1.6)",
     },
     Capability {
