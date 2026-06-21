@@ -91,10 +91,28 @@ SOS reconstruction covers the degree-2 cells.
 
 ## Sequencing + deferral
 
-1. (next) Algebraic field arithmetic in `axeyum-ir` + move Sturm/poly primitives
-   down — ADR for the value-layer placement and the eval upgrade.
-2. Bignum on the algebraic path — ADR for the gated leaf dependency.
-3. nlsat (search-driven) before full CAD; CAD as the complete fallback.
+1. **DONE** (commit `2a54d51`, ADR-0044) — Algebraic field arithmetic in
+   `axeyum-ir` + Sturm/poly primitives moved down to `axeyum-ir/src/poly.rs`;
+   `eval` upgraded from `Err` to computed `RealAlgebraic`.
+2. **DONE** (commit `d3144bb`, ADR-0045) — Bignum on the algebraic path
+   (`num-bigint`/`num-rational`, feature-gated `bignum`); intermediate resultant
+   overflow becomes a decision. `RealAlgebraic` storage stays `i128` (final-result
+   overflow still declines — the bignum-`Value` representation is a deferred slice).
+3. **In progress** — the multivariate engine, sliced:
+   - **slice 1 DONE** (commit `d3f8cfe`) — algebraic-grid lift: all-equality
+     2-variable coupled systems with *irrational* coordinates now decide
+     (enumerate roots(`Res_y`) × roots(`Res_x`), test each algebraic `(α,β)` pair
+     by exact field arithmetic; Sat replay-checked, Unsat exhaustive only over the
+     all-equality grid with every pair definitely signed).
+   - **next slices:** (a) raise the feasible degree — replace the `O(dim!)`
+     Leibniz Sylvester determinant with a fraction-free / evaluation-interpolation
+     route (`O(dim³)`), lifting `BIG_MAX_SYLVESTER_DIM` so nested-radical degree-4
+     coordinates (e.g. `x²+y²=4 ∧ x·y=1`, currently a sound `Unknown`) decide; the
+     resultant polynomial must be preserved *exactly* (a determinant bug would
+     mis-decide every 2-var verdict — anchor on the existing tests). (b) 2-variable
+     **inequality** lifting via sign-invariant cell sample points (the CAD core;
+     Unsat needs provable cell completeness — soundness-delicate, slice carefully).
+     (c) ≥3-variable projection. (d) the deferred bignum-`Value::RealAlgebraic`.
 4. Cell-certificate format + the degree-2 reconstruction hook; general
    Positivstellensatz reconstruction is the long arc.
 
