@@ -2600,6 +2600,37 @@ fn end_to_end_add_reconstructs() {
         .expect("a binary-add QF_BV proof must reconstruct to kernel-checked False");
 }
 
+/// **THE CLOSEDNESS BAR for the ripple-carry adder**: the `(= (bvadd a b) a) ∧ ¬…`
+/// refutation — whose bit-blast runs the carry-chain `bitblast_add` — reconstructs
+/// to a `False` term **closed over only the two input `assume` hypotheses and
+/// `em`**. There is NO load-bearing bridge/bitblast/carry axiom: the per-bit carry
+/// recurrence is proved as an `em`-tautology iff and fused through the equiv1/equiv2
+/// bridge, leaving no `cong`/`trans`/`bitblast_add` axiom in `declared_axiom_roles`.
+#[test]
+fn end_to_end_add_is_closed_over_assumptions() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let add = arena.bv_add(a, b).unwrap();
+    let eq = arena.eq(add, a).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_bv_proof(&mut ctx, &proof)
+        .expect("a binary-add QF_BV proof must reconstruct to kernel-checked False");
+    assert_infers_false(&mut ctx, term);
+    // The crux: a bvadd-containing fused `False` is still closed over only the input
+    // assumptions + `em` — no carry/bridge axiom is left load-bearing.
+    assert_closed_over_assumptions(&ctx, 2);
+}
+
 /// **End-to-end**: a `(= (bvneg a) a) ∧ ¬…` `QF_BV` unsat proof — bit-blasted via
 /// the two's-complement ripple-carry `bitblast_neg` — reconstructs to a
 /// kernel-checked `False`.
