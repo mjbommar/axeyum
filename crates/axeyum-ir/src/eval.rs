@@ -793,18 +793,23 @@ fn as_algebraic(v: &Value) -> Option<crate::real_algebraic::RealAlgebraic> {
 /// degree 1 (`q·x − p`), the value is the exact rational `p/q` — return
 /// [`Value::Real`] so the model stays rational; otherwise [`Value::RealAlgebraic`].
 fn algebraic_to_value(a: crate::real_algebraic::RealAlgebraic) -> Value {
-    let poly = a.defining_poly();
-    // Trimmed degree.
-    let mut deg = poly.len();
-    while deg > 0 && poly[deg - 1] == 0 {
-        deg -= 1;
-    }
-    if deg == 2 {
-        // q·x + r with q ≠ 0 ⇒ rational root −r/q.
-        let r = poly[0];
-        let q = poly[1];
-        if let Some(c) = crate::rational::Rational::checked_new(-r, q) {
-            return Value::Real(c);
+    // A degree-1 (constant-term) defining poly `q·x + r` denotes the exact rational
+    // `−r/q`. Only attempt the rational collapse when the poly fits `i128` (it does
+    // for any genuinely degree-1 case); a non-`i128`-fitting poly is necessarily
+    // higher-degree and stays algebraic.
+    if let Some(poly) = a.defining_poly_i128() {
+        // Trimmed degree.
+        let mut deg = poly.len();
+        while deg > 0 && poly[deg - 1] == 0 {
+            deg -= 1;
+        }
+        if deg == 2 {
+            // q·x + r with q ≠ 0 ⇒ rational root −r/q.
+            let r = poly[0];
+            let q = poly[1];
+            if let Some(c) = crate::rational::Rational::checked_new(-r, q) {
+                return Value::Real(c);
+            }
         }
     }
     Value::RealAlgebraic(a)
@@ -887,15 +892,15 @@ fn algebraic_cmp(
     // locate it. `x` is one fixed root; `y`'s interval brackets a *different*
     // value, so comparing `x` to `y`'s rational endpoints decides the order once
     // `x` falls cleanly on one side. We refine `y`'s bracket via its endpoints.
-    let (ylo, yhi) = y.interval();
+    let (ylo, yhi) = y.interval_big();
     // If x ≤ ylo then x < y (x is below y's whole bracket); if x ≥ yhi then x > y.
-    match x.compare_rational(&ylo)? {
+    match x.compare_big(&ylo)? {
         core::cmp::Ordering::Less | core::cmp::Ordering::Equal => {
             return Some(core::cmp::Ordering::Less);
         }
         core::cmp::Ordering::Greater => {}
     }
-    match x.compare_rational(&yhi)? {
+    match x.compare_big(&yhi)? {
         core::cmp::Ordering::Greater | core::cmp::Ordering::Equal => {
             return Some(core::cmp::Ordering::Greater);
         }

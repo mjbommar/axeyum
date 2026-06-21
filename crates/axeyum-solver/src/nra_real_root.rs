@@ -555,12 +555,12 @@ fn compare_roots(a: &Root, b: &Root) -> Option<Ordering> {
             }
             // Distinct algebraic numbers: their isolating intervals are disjoint
             // (or can be separated). If x's interval lies wholly below y's, x < y.
-            let (xlo, xhi) = x.interval();
-            let (ylo, yhi) = y.interval();
-            if xhi.checked_cmp(&ylo)? != Ordering::Greater {
+            let (xlo, xhi) = x.interval_big();
+            let (ylo, yhi) = y.interval_big();
+            if xhi <= ylo {
                 return Some(Ordering::Less); // x ≤ xhi ≤ ylo ≤ y, and x ≠ y
             }
-            if yhi.checked_cmp(&xlo)? != Ordering::Greater {
+            if yhi <= xlo {
                 return Some(Ordering::Greater);
             }
             // Intervals overlap and the values are distinct: we cannot order them
@@ -2489,12 +2489,15 @@ fn ceil_to_den(q: Rational, den: i128) -> Option<Rational> {
 /// (and lie strictly inside `(lo,hi)`) wins. If none up to the cap works, return
 /// `None` (decline) — never a wrong value.
 fn coarsen_algebraic(a: &RealAlgebraic) -> Option<RealAlgebraic> {
-    let (lo, hi) = a.interval();
+    // This coarsening runs in `i128`: if the algebraic value's defining poly or
+    // isolating interval do not fit `i128`, decline (the value is kept as-is by the
+    // caller — still sound). The widening below preserves the exact real value.
+    let (lo, hi) = a.interval()?;
     // Squarefree integer poly (same root SET, every root SIMPLE ⇒ sign-changing) and
     // its Sturm chain, so we can EXACTLY count distinct roots in a candidate widened
     // interval. The value is the same real number; replay still checks the ORIGINAL
     // atoms via `sign_at`.
-    let rat = rat_from_int(a.defining_poly());
+    let rat = rat_from_int(&a.defining_poly_i128()?);
     let sqfree = squarefree_part(&rat)?;
     let sqf = rat_to_int_poly(&sqfree)?;
     if sqf.last().copied()? == 0 {
@@ -2636,7 +2639,10 @@ fn positive_divisors(n: i128) -> Option<Vec<i128>> {
 /// `None` if `a` is irrational or the candidate enumeration overflows / exceeds the
 /// cap — never a wrong rationalization (the equality check is exact).
 fn try_rationalize(a: &RealAlgebraic) -> Option<Rational> {
-    let poly = a.defining_poly();
+    // Rational-root enumeration runs in `i128`: a poly or interval that does not
+    // fit `i128` declines (the value stays algebraic — still sound).
+    let poly = a.defining_poly_i128()?;
+    let poly = poly.as_slice();
     // Trimmed degree and the (nonzero) constant + leading coefficients.
     let mut deg_plus_one = poly.len();
     while deg_plus_one > 0 && poly[deg_plus_one - 1] == 0 {
@@ -2652,7 +2658,7 @@ fn try_rationalize(a: &RealAlgebraic) -> Option<Rational> {
         // does not arise. Stay safe and decline.
         return None;
     }
-    let (lo, hi) = a.interval();
+    let (lo, hi) = a.interval()?;
     let p_divs = positive_divisors(a0)?;
     let q_divs = positive_divisors(lead)?;
     for &p in &p_divs {
@@ -2683,6 +2689,23 @@ fn value_add(a: &Value, b: &Value) -> Option<Value> {
     if let (Value::Real(x), Value::Real(y)) = (a, b) {
         return Some(Value::Real(x.checked_add(*y)?));
     }
+    // A rational operand `c` added to an algebraic `α` is the exact affine image
+    // `α + c` (`affine_algebraic(α, 1, c)`) — an exact, resultant-free derived
+    // algebraic number. This is more precise than lifting `c` to a degree-1
+    // algebraic and running the sum resultant (whose wide rational bracket can
+    // capture multiple roots of the result poly and decline). Only when BOTH are
+    // genuinely algebraic do we use the resultant-based `RealAlgebraic::add`.
+    match (a, b) {
+        (Value::Real(c), Value::RealAlgebraic(alg))
+        | (Value::RealAlgebraic(alg), Value::Real(c)) => {
+            return Some(algebraic_result_to_value(affine_algebraic(
+                alg,
+                Rational::integer(1),
+                *c,
+            )?));
+        }
+        _ => {}
+    }
     let alpha = value_as_algebraic(a)?;
     let beta = value_as_algebraic(b)?;
     Some(algebraic_result_to_value(alpha.add(&beta)?))
@@ -2698,6 +2721,22 @@ fn value_mul(a: &Value, b: &Value) -> Option<Value> {
     }
     if let (Value::Real(x), Value::Real(y)) = (a, b) {
         return Some(Value::Real(x.checked_mul(*y)?));
+    }
+    // A (nonzero) rational operand `c` times an algebraic `α` is the exact affine
+    // image `c·α` (`affine_algebraic(α, c, 0)`) — exact, resultant-free, and avoids
+    // the wide-bracket decline of lifting `c` to a degree-1 algebraic and running
+    // the product resultant. Only genuinely algebraic × algebraic uses the
+    // resultant-based `RealAlgebraic::mul`.
+    match (a, b) {
+        (Value::Real(c), Value::RealAlgebraic(alg))
+        | (Value::RealAlgebraic(alg), Value::Real(c)) => {
+            return Some(algebraic_result_to_value(affine_algebraic(
+                alg,
+                *c,
+                Rational::zero(),
+            )?));
+        }
+        _ => {}
     }
     let alpha = value_as_algebraic(a)?;
     let beta = value_as_algebraic(b)?;
@@ -2965,7 +3004,10 @@ fn affine_algebraic(alpha: &RealAlgebraic, a: Rational, b: Rational) -> Option<R
     // q(t) = p((t − b)/a): substitute the linear argument `(t − b)/a` into p.
     // Represent p as a single-variable MultiPoly over a placeholder, then compose
     // with the linear map, then integer-clear.
-    let p = alpha.defining_poly();
+    // The affine map runs in `i128`: an algebraic input whose defining poly or
+    // interval does not fit `i128` declines (a sound `Unknown`).
+    let p = alpha.defining_poly_i128()?;
+    let p = p.as_slice();
     // arg(t) = (1/a)·t + (−b/a).
     let inv_a = Rational::integer(1).checked_div(a)?;
     let neg_b_over_a = b.checked_neg()?.checked_div(a)?;
@@ -2979,7 +3021,7 @@ fn affine_algebraic(alpha: &RealAlgebraic, a: Rational, b: Rational) -> Option<R
     }
     let qpoly = rat_coeffs_to_integer(&acc)?;
     // Map the isolating interval.
-    let (lo, hi) = alpha.interval();
+    let (lo, hi) = alpha.interval()?;
     let mlo = a.checked_mul(lo)?.checked_add(b)?;
     let mhi = a.checked_mul(hi)?.checked_add(b)?;
     let (nlo, nhi) = if mlo.checked_cmp(&mhi)? == Ordering::Less {

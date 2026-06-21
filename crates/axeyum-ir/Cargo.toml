@@ -12,20 +12,16 @@ categories.workspace = true
 publish = false
 
 [dependencies]
-# Arbitrary-precision integers/rationals used ONLY on the algebraic-number field-
-# arithmetic retry path (intermediate resultant + squarefree + Sturm isolation),
-# behind the optional `bignum` feature (OFF by default — keeps this crate a
-# zero-C/C++, minimal-dependency leaf for non-NRA embedders). Pure Rust,
-# MIT/Apache-2.0. See docs nra-cad-nlsat-plan.md step 2.
-num-bigint = { version = "0.4", optional = true }
-num-rational = { version = "0.4", optional = true, default-features = false, features = ["num-bigint"] }
-num-integer = { version = "0.1", optional = true }
-num-traits = { version = "0.2", optional = true }
-
-[features]
-default = []
-# Enable arbitrary-precision retry on the algebraic field-arithmetic path.
-bignum = ["dep:num-bigint", "dep:num-rational", "dep:num-integer", "dep:num-traits"]
+# Arbitrary-precision integers/rationals backing `Value::RealAlgebraic`'s storage
+# (defining polynomial + isolating interval) and the algebraic-number field-
+# arithmetic primitives (resultant + squarefree + Sturm isolation), per ADR-0045.
+# Unconditional deps: pure Rust, MIT/Apache-2.0, allowed by the no-C/C++ hard rule
+# (`cargo deny` passes them). Algebraic values appear only in NRA witnesses (rare),
+# so the always-bignum storage is fine; the core `Rational` type stays `i128`.
+num-bigint = { version = "0.4" }
+num-rational = { version = "0.4", default-features = false, features = ["num-bigint"] }
+num-integer = { version = "0.1" }
+num-traits = { version = "0.2" }
 
 [lints]
 workspace = true

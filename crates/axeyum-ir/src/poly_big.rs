@@ -1,23 +1,25 @@
-//! Arbitrary-precision (bignum) retry path for algebraic-number field arithmetic
-//! (nra-cad-nlsat-plan.md, step 2), behind the optional `bignum` feature.
+//! Arbitrary-precision (bignum) algebraic-number primitives: the exact-rational
+//! resultant + squarefree + Sturm-isolation routines computed over
+//! [`num_rational::BigRational`] / [`num_bigint::BigInt`] (ADR-0045 storage
+//! widening).
 //!
-//! This is a **focused duplicate** of the exact-rational resultant + squarefree +
-//! Sturm-isolation primitives in the `crate::poly` module, computed over
-//! [`num_rational::BigRational`] instead of the `i128`-backed [`Rational`]. It is
-//! used **only as a retry** when the `i128` fast path in
-//! the `crate::real_algebraic` module declines on intermediate overflow: the algorithm is
-//! identical, so a heavy intermediate (e.g. the Sylvester determinant of `√2+√3`)
-//! no longer caps out at `i128`, while the *final* defining polynomial and
-//! isolating interval — if they fit `i128` — are converted back so the stored
-//! [`crate::RealAlgebraic`] representation is unchanged (still `Vec<i128>` + i128
-//! [`Rational`]). If the final result does not fit `i128`, the retry declines
-//! (`None`): a bignum-backed `RealAlgebraic` is an explicitly-deferred later slice.
+//! Since [`crate::RealAlgebraic`] now stores its defining polynomial and isolating
+//! interval in arbitrary precision, **these are THE algebraic field-arithmetic
+//! primitives** (no longer an i128 "retry"). Field arithmetic always computes in
+//! bignum, so a heavy intermediate (e.g. the Sylvester determinant of `√2+√3`, or
+//! a high-degree coupled NRA witness) no longer caps out at `i128`. The
+//! single-variable root-isolation primitives over the `i128`-backed
+//! [`Rational`](crate::Rational) continue to live in the `crate::poly` module
+//! (used by the solver's NRA root
+//! isolation, which works in `i128` until it hands a witness to this layer).
 //!
-//! **Soundness:** the duplication is guarded by a differential test
-//! (`real_algebraic_field_bignum.rs`) pinning this module and the `crate::poly`
-//! module to the SAME isolating result on small inputs — isolation is soundness-critical.
-//! Everything here is exact (no floating point) and bounded (degree/round caps →
-//! graceful decline, never OOM/hang).
+//! **Soundness:** these routines are guarded by a differential test
+//! (`sylvester_determinant_diff_bignum.rs`) pinning the fast
+//! evaluation–interpolation determinant against the reference Leibniz expansion,
+//! and (`real_algebraic_field.rs`) pinning the field arithmetic to the known
+//! min-polynomials — isolation is soundness-critical. Everything here is exact (no
+//! floating point) and bounded (degree/round/dimension caps → graceful decline,
+//! never OOM/hang).
 
 use core::cmp::Ordering;
 
@@ -26,7 +28,6 @@ use num_integer::Integer;
 use num_rational::BigRational;
 use num_traits::{One, Zero};
 
-use crate::rational::Rational;
 use crate::real_algebraic::Sign;
 
 /// A bignum-rational univariate polynomial, LSB-first.
@@ -64,9 +65,9 @@ pub enum Combine {
     Product,
 }
 
-/// The outcome of a successful bignum retry: a final defining polynomial and an
-/// isolating interval, all in bignum form. The caller converts to `i128` (or
-/// declines if it does not fit).
+/// The outcome of a successful field-arithmetic combination: a final defining
+/// polynomial and an isolating interval, all in bignum form. This is exactly the
+/// representation [`crate::RealAlgebraic`] now stores.
 pub struct BigAlgebraic {
     /// LSB-first integer (bignum) defining polynomial.
     pub poly: Vec<BigInt>,
@@ -76,47 +77,10 @@ pub struct BigAlgebraic {
     pub hi: BigRational,
 }
 
-impl BigAlgebraic {
-    /// Convert to the `i128`-backed representation, or `None` if any coefficient or
-    /// interval endpoint does not fit `i128`. Never panics.
-    #[must_use]
-    pub fn to_i128(&self) -> Option<(Vec<i128>, Rational, Rational)> {
-        let mut poly = Vec::with_capacity(self.poly.len());
-        for c in &self.poly {
-            poly.push(bigint_to_i128(c)?);
-        }
-        let lo = bigrational_to_rational(&self.lo)?;
-        let hi = bigrational_to_rational(&self.hi)?;
-        Some((poly, lo, hi))
-    }
-}
-
-/// Lift an `i128` [`Rational`] to a [`BigRational`].
-fn rational_to_big(r: Rational) -> BigRational {
-    BigRational::new(BigInt::from(r.numerator()), BigInt::from(r.denominator()))
-}
-
-/// Lift an LSB-first `i128`-integer polynomial to a bignum-rational polynomial,
+/// Lift an LSB-first bignum-integer polynomial to a bignum-rational polynomial,
 /// trailing zeros trimmed.
-fn big_from_int(poly: &[i128]) -> BigVec {
-    big_trim(
-        poly.iter()
-            .map(|&c| BigRational::from(BigInt::from(c)))
-            .collect(),
-    )
-}
-
-/// `BigInt` → `i128`, `None` if out of range.
-fn bigint_to_i128(b: &BigInt) -> Option<i128> {
-    i128::try_from(b.clone()).ok()
-}
-
-/// `BigRational` → `i128` [`Rational`], `None` if numerator or denominator is out
-/// of `i128` range. The bignum rational is already in lowest terms.
-fn bigrational_to_rational(r: &BigRational) -> Option<Rational> {
-    let num = bigint_to_i128(r.numer())?;
-    let den = bigint_to_i128(r.denom())?;
-    Rational::checked_new(num, den)
+fn big_from_bigint(poly: &[BigInt]) -> BigVec {
+    big_trim(poly.iter().map(|c| BigRational::from(c.clone())).collect())
 }
 
 /// Drop trailing zero coefficients.
@@ -137,7 +101,7 @@ fn big_degree(p: &[BigRational]) -> Option<usize> {
 }
 
 /// The sign of a bignum rational.
-fn big_sign(r: &BigRational) -> Sign {
+pub(crate) fn big_sign(r: &BigRational) -> Sign {
     match r.numer().sign() {
         num_bigint::Sign::Minus => Sign::Neg,
         num_bigint::Sign::NoSign => Sign::Zero,
@@ -284,7 +248,7 @@ fn bigint_poly_to_rat(p: &[BigInt]) -> BigVec {
 }
 
 /// Exact Horner evaluation of a bignum-rational polynomial at a bignum-rational.
-fn big_eval(p: &[BigRational], x: &BigRational) -> BigRational {
+pub(crate) fn big_eval(p: &[BigRational], x: &BigRational) -> BigRational {
     let mut acc = BigRational::zero();
     for c in p.iter().rev() {
         acc = &acc * x + c;
@@ -392,13 +356,13 @@ fn big_binom(n: usize, k: usize) -> BigInt {
 }
 
 /// `p_α(y)`: coefficients constant in x (each a length-1 vector).
-fn big_const_coeffs(poly: &[i128]) -> Vec<BigVec> {
-    big_from_int(poly).into_iter().map(|c| vec![c]).collect()
+fn big_const_coeffs(poly: &[BigInt]) -> Vec<BigVec> {
+    big_from_bigint(poly).into_iter().map(|c| vec![c]).collect()
 }
 
 /// `p_β(x − y)` as a poly in y whose coefficients are LSB-first polys in x.
-fn big_beta_of_x_minus_y(poly: &[i128]) -> Option<Vec<BigVec>> {
-    let trimmed = big_from_int(poly);
+fn big_beta_of_x_minus_y(poly: &[BigInt]) -> Option<Vec<BigVec>> {
+    let trimmed = big_from_bigint(poly);
     let n = big_degree(&trimmed)?;
     if n == 0 || n > BIG_MAX_DEGREE {
         return None;
@@ -422,8 +386,8 @@ fn big_beta_of_x_minus_y(poly: &[i128]) -> Option<Vec<BigVec>> {
 }
 
 /// `y^{deg β}·p_β(x / y)` as a poly in y whose coefficients are polys in x.
-fn big_beta_homogenized(poly: &[i128]) -> Option<Vec<BigVec>> {
-    let trimmed = big_from_int(poly);
+fn big_beta_homogenized(poly: &[BigInt]) -> Option<Vec<BigVec>> {
+    let trimmed = big_from_bigint(poly);
     let n = big_degree(&trimmed)?;
     if n == 0 || n > BIG_MAX_DEGREE {
         return None;
@@ -684,11 +648,11 @@ struct Operand {
 }
 
 impl Operand {
-    fn new(poly: &[i128], lo: Rational, hi: Rational) -> Operand {
+    fn new(poly: &[BigInt], lo: BigRational, hi: BigRational) -> Operand {
         Operand {
-            poly: big_from_int(poly),
-            lo: rational_to_big(lo),
-            hi: rational_to_big(hi),
+            poly: big_from_bigint(poly),
+            lo,
+            hi,
         }
     }
 
@@ -778,17 +742,19 @@ fn combine(a: &Operand, b: &Operand, q: &[BigInt], how: Combine) -> Option<BigAl
     None
 }
 
-/// The bignum retry for `α + β` (resp. `α · β`): same algorithm as the `i128`
-/// path, in arbitrary precision. Returns the final defining poly + isolating
-/// interval in bignum (the caller converts to `i128` or declines).
+/// Compute `α + β` (resp. `α · β`) for two algebraic numbers in arbitrary
+/// precision: build the resultant, take its squarefree part, and Sturm-isolate the
+/// unique result root. Returns the final defining poly + isolating interval in
+/// bignum form (exactly [`crate::RealAlgebraic`]'s storage), or `None` on a
+/// degree/dimension/round-cap trip (graceful decline, never OOM/hang).
 #[must_use]
 pub fn combine_retry(
-    a_poly: &[i128],
-    a_lo: Rational,
-    a_hi: Rational,
-    b_poly: &[i128],
-    b_lo: Rational,
-    b_hi: Rational,
+    a_poly: &[BigInt],
+    a_lo: &BigRational,
+    a_hi: &BigRational,
+    b_poly: &[BigInt],
+    b_lo: &BigRational,
+    b_hi: &BigRational,
     how: Combine,
 ) -> Option<BigAlgebraic> {
     let pa = big_const_coeffs(a_poly);
@@ -797,7 +763,48 @@ pub fn combine_retry(
         Combine::Product => big_beta_homogenized(b_poly)?,
     };
     let q = big_resultant_then_squarefree(&pa, &pb)?;
-    let a = Operand::new(a_poly, a_lo, a_hi);
-    let b = Operand::new(b_poly, b_lo, b_hi);
+    let a = Operand::new(a_poly, a_lo.clone(), a_hi.clone());
+    let b = Operand::new(b_poly, b_lo.clone(), b_hi.clone());
     combine(&a, &b, &q, how)
+}
+
+// ============================================================================
+// Bignum primitives used directly by the `crate::real_algebraic` value layer
+// (sign tests, refinement, divisibility). All exact, no floating point.
+// ============================================================================
+
+/// Exact Horner evaluation of an LSB-first **bignum-integer** polynomial at a
+/// [`BigRational`]. Always exact (bignum never overflows).
+pub(crate) fn big_eval_int_at(poly: &[BigInt], x: &BigRational) -> BigRational {
+    let mut acc = BigRational::zero();
+    for c in poly.iter().rev() {
+        acc = &acc * x + BigRational::from(c.clone());
+    }
+    acc
+}
+
+/// Lift an LSB-first `i128`-integer polynomial to a bignum-integer polynomial.
+pub(crate) fn bigint_poly_from_i128(poly: &[i128]) -> Vec<BigInt> {
+    poly.iter().map(|&c| BigInt::from(c)).collect()
+}
+
+/// Lift an `i128` numerator/denominator pair (a [`crate::Rational`] decomposed)
+/// to a [`BigRational`].
+pub(crate) fn bigrational_from_i128(num: i128, den: i128) -> BigRational {
+    BigRational::new(BigInt::from(num), BigInt::from(den))
+}
+
+/// Exact test of whether the LSB-first bignum-integer polynomial `divisor` divides
+/// `dividend` over the rationals with zero remainder. `divisor` must be non-zero.
+/// Always decides (bignum never overflows).
+pub(crate) fn big_poly_divides(divisor: &[BigInt], dividend: &[BigInt]) -> bool {
+    let d = big_from_bigint(divisor);
+    let n = big_from_bigint(dividend);
+    if big_degree(&d).is_none() {
+        return false; // zero divisor: treat as "does not divide"
+    }
+    match big_rem(&n, &d) {
+        Some(r) => big_degree(&r).is_none(),
+        None => false,
+    }
 }

@@ -1157,18 +1157,20 @@ fn grid_inequality_component_not_wrongly_unsat() {
 
 /// A genuinely coupled equality system with deeply-nested-radical witnesses:
 /// `x² + y² = 4 ∧ x*y = 1`. `Res_y = x⁴ − 4x² + 1` whose roots are `±√(2±√3)`
-/// (degree-4 algebraic, all irrational). The resultant builds and isolates fine,
-/// but every x-candidate is irrational and the 2-variable decider only lifts
-/// RATIONAL x-candidates (the algebraic-coordinate lift is a deferred slice), so
-/// it yields a sound `Unknown` — the decider must not crash and must not answer
-/// Unsat (it IS satisfiable). The eval-interpolation resultant raised the feasible
-/// resultant DIMENSION; this case is gated by the separate algebraic-x lift, not
-/// by the resultant degree.
+/// (degree-4 algebraic, all irrational). Real solutions are
+/// `(x, y) = (±√(2+√3), ±√(2−√3))` and their swaps (same sign).
+///
+/// With arbitrary-precision `RealAlgebraic` storage (ADR-0045) the algebraic
+/// (α, β) grid lift now DECIDES this **Sat**: the grid's algebraic x/y candidates
+/// are tested by exact bignum field arithmetic — `x² + y² = (2+√3)+(2−√3) = 4` and
+/// `x·y = √(2+√3)·√(2−√3) = √(4−3) = 1` — with no i128-storage overflow. The
+/// returned model is independently replay-checked here: evaluating BOTH original
+/// assertions through the IR ground evaluator at the witness yields `true`.
 #[test]
-fn multi_coupled_algebraic_x_declines_not_unsat() {
+fn multi_coupled_algebraic_x_decides_sat_with_replay() {
     let mut arena = TermArena::new();
-    let (_xs, xv) = real(&mut arena, "x");
-    let (_ys, yv) = real(&mut arena, "y");
+    let (xs, xv) = real(&mut arena, "x");
+    let (ys, yv) = real(&mut arena, "y");
     let xx = arena.real_mul(xv, xv).unwrap();
     let yy = arena.real_mul(yv, yv).unwrap();
     let sum_sq = arena.real_add(xx, yy).unwrap();
@@ -1178,9 +1180,34 @@ fn multi_coupled_algebraic_x_declines_not_unsat() {
     let one = arena.real_const(Rational::integer(1));
     let a2 = arena.eq(xy, one).unwrap();
     let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x²+y²=4 ∧ x*y=1 is sat with nested-radical coords; got {r:?}");
+    };
+    // The witnesses are genuinely algebraic (irrational), the roots of x⁴−4x²+1.
+    let x = model.get(xs).expect("model must bind x");
+    let y = model.get(ys).expect("model must bind y");
+    let ax = x.as_real_algebraic().expect("x witness is irrational");
+    let ay = y.as_real_algebraic().expect("y witness is irrational");
+    assert_eq!(
+        ax.sign_at(&[1, 0, -4, 0, 1]),
+        Some(Sign::Zero),
+        "x ∈ roots(x⁴−4x²+1)"
+    );
+    assert_eq!(
+        ay.sign_at(&[1, 0, -4, 0, 1]),
+        Some(Sign::Zero),
+        "y ∈ roots(x⁴−4x²+1)"
+    );
+    // INDEPENDENT replay: evaluate BOTH original assertions at the model through the
+    // IR ground evaluator (exact algebraic field arithmetic), expecting `true`.
+    let asg = model.to_assignment();
     assert!(
-        !matches!(r, CheckResult::Unsat),
-        "x²+y²=4 ∧ x*y=1 is sat (irrational coords); algebraic-x lift declines, not Unsat; got {r:?}"
+        matches!(eval(&arena, a1, &asg), Ok(Value::Bool(true))),
+        "x²+y²=4 must replay true at the witness"
+    );
+    assert!(
+        matches!(eval(&arena, a2, &asg), Ok(Value::Bool(true))),
+        "x·y=1 must replay true at the witness"
     );
 }
 

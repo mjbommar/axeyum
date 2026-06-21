@@ -1,12 +1,10 @@
 //! Differential test for the BIGNUM Sylvester determinant: the fast
 //! evaluation–interpolation route (`big_determinant`) vs the reference Leibniz
 //! expansion (`big_determinant_leibniz`), on many small random polynomial
-//! matrices over `BigRational`. Runs only with the `bignum` feature.
+//! matrices over `BigRational`.
 //!
 //! Same soundness rationale as the `i128`/`Rational` differential test: the
 //! determinant IS the resultant polynomial; the two routes must agree exactly.
-
-#![cfg(feature = "bignum")]
 
 use axeyum_ir::poly_big::{big_determinant, big_determinant_leibniz};
 use num_bigint::BigInt;
