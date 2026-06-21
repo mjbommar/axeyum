@@ -157,7 +157,10 @@ formats, and WASM surface friendly to a learner, not just a researcher.
    tagged with the self-checking family/engine that grades it.
 2. Author ~3 modules per band on the [module template](modules/binary-and-wraparound.md),
    reusing `axeyum-scenarios` families as the graders.
-3. Wire the [WASM playground](../../playground/README.md) into an
-   "exercise widget" (pose → student answers → solver checks → show proof /
-   counterexample) — the single highest-leverage build.
+3. ✅ **Prototyped:** the [self-checking exercise widget](../../playground/exercises.html)
+   (pose → student answers → the real solver grades by *replay* or
+   *assert-the-negation*, in the browser). Verified end-to-end in a headless
+   browser: student answers are graded correctly by the actual solver, no answer
+   key. Next: richer item types + showing the solver's *own* counterexample
+   value (a small model-export addition to the WASM binding).
 4. Map modules to common standards (CCSS-M, CSTA) so a teacher can adopt them.

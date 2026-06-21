@@ -9,6 +9,14 @@ inspiration). Instead of a notebook kernel, the reader runs the **actual solver*
 — so a playground example can't silently drift from the code, because it *is* the
 code. See the rationale in [internals/documentation.md](../internals/documentation.md).
 
+## Two pages
+
+- **[`index.html`](index.html)** — the free-form solver: paste any SMT-LIB query.
+- **[`exercises.html`](exercises.html)** — the **self-checking exercise widget**
+  for the [K-12 curriculum](../curriculum/k12/README.md): pose → student answers →
+  the real solver grades by *replay* ("find x") or *assert-the-negation*
+  ("is it always true?"), with proof/counterexample feedback. No answer key.
+
 ## Try it
 
 Open [`index.html`](index.html) from a built docs site (or any static server).

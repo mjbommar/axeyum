@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Axeyum — Self-Checking Exercises</title>
+<style>
+  :root { --bg:#0f1117; --panel:#171a23; --ink:#e6e9ef; --muted:#9aa3b2;
+          --accent:#6ea8fe; --ok:#4caf50; --no:#ef5350; --unk:#e0a23b; --line:#2a2f3a; }
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.55 ui-sans-serif,system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+  header,main,footer{max-width:820px;margin:0 auto;padding:0 20px}
+  header{padding-top:26px}
+  h1{margin:0 0 4px;font-size:23px}
+  .tag{color:var(--muted);font-size:13px}
+  .banner{display:none;background:#2a2410;border:1px solid #6b5a1e;color:#f0d68a;padding:10px 14px;border-radius:8px;font-size:13px;margin:12px 0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:16px 0}
+  .strands{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  .prompt{font-size:16px;font-weight:600;margin-bottom:12px}
+  code,.q{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .q{background:#0d1018;border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:inline-block;font-size:13px;color:#cdd6f4}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+  input[type=number]{width:120px;background:#0d1018;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px}
+  button{background:var(--accent);color:#06122b;border:0;border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer}
+  button.choice{background:#222838;color:var(--ink);border:1px solid var(--line)}
+  button.choice:hover{border-color:var(--accent)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .fb{margin-top:12px;padding:12px;border-radius:8px;display:none}
+  .fb.ok{background:#13251a;border:1px solid var(--ok);display:block}
+  .fb.no{background:#2a1718;border:1px solid var(--no);display:block}
+  .fb.unk{background:#2a2410;border:1px solid var(--unk);display:block}
+  .fb b{font-size:16px}
+  .reveal{margin-top:8px;color:var(--muted);font-size:13px}
+  a{color:var(--accent)}
+  footer{color:var(--muted);font-size:12px;padding:24px 20px 48px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Self-checking exercises <span class="tag">· graded by the real solver, in your browser</span></h1>
+  <div class="tag">No answer key. You make a claim; axeyum checks it against the actual math and shows a proof or a counterexample. From the
+    <a href="../curriculum/k12/README.md">K-12 curriculum</a>.</div>
+  <div id="banner" class="banner"></div>
+</header>
+<main id="exercises"></main>
+<footer>
+  Powered by axeyum compiled to WebAssembly. Each "Check" runs the same solver used natively — your answer is
+  <i>replayed against the real problem</i>, exactly as in the trust-boundary model.
+</footer>
+
+<script type="module">
+const EXERCISES = [
+  {
+    type: "find-x", strands: "computer science · math",
+    prompt: "Find an 8-bit number x where  x + 1 = 0.",
+    hint: "8-bit numbers wrap around at 256, like a clock. What's the biggest one?",
+    // student's value v is replayed: is (v + 1 == 0) in 8 bits actually true?
+    query: v => `(set-logic QF_BV)(assert (= (bvadd (_ bv${v} 8) (_ bv1 8)) (_ bv0 8)))(check-sat)`,
+    win: v => `✅ Yes! ${v} + 1 wraps around to 0 in 8 bits.`,
+    lose: v => `❌ ${v} + 1 = ${(Number(v)+1)%256} in 8 bits, not 0. ${(()=>'')()}Try the biggest 8-bit value.`,
+    max: 255,
+  },
+  {
+    type: "find-x", strands: "math · computer science · surprise",
+    prompt: "Find an 8-bit number x where  x · 3 = 1.",
+    hint: "It exists! Because 3 is odd, it has a 'multiplicative inverse' mod 256.",
+    query: v => `(set-logic QF_BV)(assert (= (bvmul (_ bv${v} 8) (_ bv3 8)) (_ bv1 8)))(check-sat)`,
+    win: v => `✅ Whoa — ${v} · 3 = ${(Number(v)*3)%256} = 1 (mod 256). Odd numbers are invertible!`,
+    lose: v => `❌ ${v} · 3 = ${(Number(v)*3)%256} in 8 bits, not 1. Keep hunting (it's between 1 and 255).`,
+    max: 255,
+  },
+  {
+    type: "valid", strands: "logic · reasoning",
+    prompt: "Is this ALWAYS true:  (p or q)  →  p ?",
+    claim: "(=> (or p q) p)",
+    truth: "invalid",  // it's NOT always true
+    revealOnInvalid: "Counterexample: p = false, q = true. Then (p or q) is true but p is false — so the if-then is broken.",
+  },
+  {
+    type: "valid", strands: "logic · reasoning",
+    prompt: "Is this ALWAYS true (modus ponens):  ((p → q) and p)  →  q ?",
+    claim: "(=> (and (=> p q) p) q)",
+    truth: "valid",
+    revealOnValid: "No counterexample exists — axeyum found NO way to make it false, and can emit a re-checkable proof. This is the bedrock rule of logic.",
+  },
+  {
+    type: "predict", strands: "logic · reasoning",
+    prompt: "Predict the verdict:  an 8-bit x with  x = 0  AND  x = 1.",
+    query: `(set-logic QF_BV)(declare-const x (_ BitVec 8))(assert (= x #x00))(assert (= x #x01))(check-sat)`,
+    truth: "unsat",
+    why: "No number is both 0 and 1 — and 'no solution' is provable, not a shrug.",
+  },
+];
+
+let solveFn = null;
+const $ = s => document.querySelector(s);
+const solve = (q) => JSON.parse(solveFn(q, 5000));
+
+function feedback(card, cls, html) {
+  const fb = card.querySelector(".fb");
+  fb.className = "fb " + cls;
+  fb.innerHTML = html;
+}
+
+function render() {
+  const root = $("#exercises");
+  EXERCISES.forEach((ex, i) => {
+    const card = document.createElement("div");
+    card.className = "card";
+    let controls = "";
+    if (ex.type === "find-x") {
+      controls = `<div class="row"><input type="number" min="0" max="${ex.max}" placeholder="0–${ex.max}">
+        <button data-act="check">Check my answer</button>
+        <button class="choice" data-act="hint">Hint</button></div>`;
+    } else if (ex.type === "valid") {
+      controls = `<div class="row">
+        <button class="choice" data-act="always">Always true</button>
+        <button class="choice" data-act="canbefalse">Can be false</button></div>`;
+    } else if (ex.type === "predict") {
+      controls = `<div class="q">${ex.query.replace('(set-logic QF_BV)','').replace(/\(check-sat\)/,'')}</div>
+        <div class="row"><button class="choice" data-act="sat">sat (a solution exists)</button>
+        <button class="choice" data-act="unsat">unsat (impossible)</button></div>`;
+    }
+    card.innerHTML = `<div class="strands">${ex.strands}</div>
+      <div class="prompt">${ex.prompt}</div>${controls}<div class="fb"></div>`;
+    root.appendChild(card);
+
+    card.addEventListener("click", (e) => {
+      const act = e.target.getAttribute("data-act");
+      if (!act || !solveFn) return;
+      if (act === "hint") { feedback(card, "unk", `💡 ${ex.hint}`); return; }
+
+      if (ex.type === "find-x") {
+        const v = card.querySelector("input").value.trim();
+        if (v === "" || Number(v) < 0 || Number(v) > ex.max) { feedback(card,"unk",`Enter a number 0–${ex.max}.`); return; }
+        const r = solve(ex.query(v));
+        if (r.status === "sat") feedback(card, "ok", `<b>Correct!</b><br>${ex.win(v)}`);
+        else feedback(card, "no", `<b>Not yet.</b><br>${ex.lose(v)}`);
+      }
+
+      else if (ex.type === "valid") {
+        // assert the NEGATION: unsat ⇒ valid (always true); sat ⇒ a counterexample exists
+        const r = solve(`(set-logic QF_BV)(declare-const p Bool)(declare-const q Bool)(assert (not ${ex.claim}))(check-sat)`);
+        const actuallyValid = (r.status === "unsat");
+        const studentSaysValid = (act === "always");
+        const right = (actuallyValid === studentSaysValid);
+        if (actuallyValid) {
+          feedback(card, right?"ok":"no",
+            `<b>${right?"Right!":"Actually…"}</b> It's <b>always true (valid)</b>. <div class="reveal">${ex.revealOnValid||""}</div>`);
+        } else {
+          feedback(card, right?"ok":"no",
+            `<b>${right?"Right!":"Actually…"}</b> It <b>can be false</b> — the solver found a counterexample. <div class="reveal">${ex.revealOnInvalid||""}</div>`);
+        }
+      }
+
+      else if (ex.type === "predict") {
+        const r = solve(ex.query);
+        const right = (r.status === ex.truth);
+        feedback(card, right?"ok":"no",
+          `<b>${right?"Correct!":"Not quite —"}</b> the solver says <b>${r.status}</b>. <div class="reveal">${ex.why}</div>`);
+      }
+    });
+  });
+}
+
+(async () => {
+  render();
+  try {
+    const m = await import("./pkg/axeyum_wasm.js");
+    await m.default();
+    solveFn = m.solve_smtlib_json;
+  } catch (e) {
+    $("#banner").style.display = "block";
+    $("#banner").innerHTML = "The WASM engine isn't built yet — exercises won't grade. See <a href='README.md'>README</a> to build the bundle.";
+  }
+})();
+</script>
+</body>
+</html>
