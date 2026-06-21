@@ -1254,6 +1254,118 @@ fn is_single_square_lt_zero(arena: &TermArena, assertions: &[TermId]) -> Option<
     Some(a)
 }
 
+/// Match `term` as `mul s t` of two **real variable symbols**, returning their
+/// `SymbolId`s `(s, t)` in left-to-right order.
+fn match_two_var_mul(
+    arena: &TermArena,
+    term: TermId,
+) -> Option<(axeyum_ir::SymbolId, axeyum_ir::SymbolId)> {
+    let IrTermNode::App {
+        op: IrOp::RealMul,
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let [a, b] = &**args else {
+        return None;
+    };
+    let (sa, sb) = match (arena.node(*a), arena.node(*b)) {
+        (IrTermNode::Symbol(sa), IrTermNode::Symbol(sb)) => (*sa, *sb),
+        _ => return None,
+    };
+    if arena.sort_of(*a) != IrSort::Real || arena.sort_of(*b) != IrSort::Real {
+        return None;
+    }
+    Some((sa, sb))
+}
+
+/// Detect the **degree-2 two-variable AM-GM sum form** `x² + y² − 2xy < 0`, the
+/// first SOS shape whose asserted lhs is a *sum of monomials* (not a literal
+/// `ℓ·ℓ`) — so it needs the degree-2 ring normalizer to prove
+/// `Eq R (x²+y²−2xy) ((x−y)·(x−y))` before square-nonnegativity applies.
+///
+/// The matched IR shape is exactly
+/// `RealLt(RealSub(RealAdd(mul x x, mul y y), RealAdd(mul x y, mul x y)), 0)`
+/// with `x`, `y` two **distinct** real variable symbols (the cross-term factors
+/// may appear in either order, `x·y` or `y·x`). Returns the variable symbols
+/// `(x, y)`. Anything else (other monomial sets, three variables, non-unit
+/// coefficients, a missing/extra term) returns `None` and falls through — this
+/// slice covers only this single shape.
+fn is_am_gm_two_var(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<(axeyum_ir::SymbolId, axeyum_ir::SymbolId)> {
+    let [only] = assertions else {
+        return None;
+    };
+    // `lhs < 0`.
+    let IrTermNode::App {
+        op: IrOp::RealLt,
+        args,
+    } = arena.node(*only)
+    else {
+        return None;
+    };
+    let [lhs, rhs] = &**args else {
+        return None;
+    };
+    match arena.node(*rhs) {
+        IrTermNode::RealConst(c) if c.is_zero() => {}
+        _ => return None,
+    }
+    // lhs = RealSub(A, B).
+    let IrTermNode::App {
+        op: IrOp::RealSub,
+        args,
+    } = arena.node(*lhs)
+    else {
+        return None;
+    };
+    let [a_part, b_part] = &**args else {
+        return None;
+    };
+    // A = RealAdd(mul x x, mul y y).
+    let IrTermNode::App {
+        op: IrOp::RealAdd,
+        args: a_args,
+    } = arena.node(*a_part)
+    else {
+        return None;
+    };
+    let [a0, a1] = &**a_args else {
+        return None;
+    };
+    let (sx0, sx1) = match_two_var_mul(arena, *a0)?;
+    let (sy0, sy1) = match_two_var_mul(arena, *a1)?;
+    // First square is `x·x`, second is `y·y`, with `x ≠ y`.
+    if sx0 != sx1 || sy0 != sy1 || sx0 == sy0 {
+        return None;
+    }
+    let (sx, sy) = (sx0, sy0);
+    // B = RealAdd(xy, xy), each `xy` a product of `x` and `y` (either factor order).
+    let IrTermNode::App {
+        op: IrOp::RealAdd,
+        args: b_args,
+    } = arena.node(*b_part)
+    else {
+        return None;
+    };
+    let [b0, b1] = &**b_args else {
+        return None;
+    };
+    let is_xy = |t: TermId| -> bool {
+        match match_two_var_mul(arena, t) {
+            Some((p, q)) => (p == sx && q == sy) || (p == sy && q == sx),
+            None => false,
+        }
+    };
+    if !is_xy(*b0) || !is_xy(*b1) {
+        return None;
+    }
+    Some((sx, sy))
+}
+
 /// Classify `assertions` into the [`ProofFragment`] whose emitter+reconstructor
 /// pair handles it, by scanning the operators and sorts that appear. Precedence:
 /// a top-level quantifier wraps any ground theory (`∃` skolemized before `∀`),
@@ -1305,10 +1417,14 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
     } else if has_func {
         ProofFragment::QfUf
     } else if has_arith {
-        // The trivial single-square SOS shape (`x*x < 0`, one real variable) is
-        // owned by the dedicated SOS reconstructor (no ring normalizer needed); any
-        // other arithmetic query falls through to the linear Farkas (LRA) path.
-        if is_single_square_lt_zero(arena, assertions).is_some() {
+        // The single-square SOS shape (`ℓ*ℓ < 0`, no ring normalizer) and the
+        // degree-2 two-variable AM-GM sum form (`x²+y²−2xy < 0`, which the SOS
+        // reconstructor proves equal to `(x−y)·(x−y)` with the ring normalizer)
+        // are both owned by the dedicated SOS reconstructor; any other arithmetic
+        // query falls through to the linear Farkas (LRA) path.
+        if is_single_square_lt_zero(arena, assertions).is_some()
+            || is_am_gm_two_var(arena, assertions).is_some()
+        {
             ProofFragment::Sos
         } else {
             ProofFragment::Lra
@@ -7009,6 +7125,322 @@ impl LraReconstructCtx {
         let ax = self.kernel.const_(self.arith.add_neg, vec![]);
         self.kernel.app(ax, a)
     }
+
+    // -----------------------------------------------------------------------
+    // Multiplicative ring layer (degree-2 SOS ring normalizer, ADR-0040).
+    //
+    // The single-square SOS path needs no ring normalizer (the asserted lhs is
+    // literally `ℓ·ℓ`). A *sum-of-monomials* SOS — e.g. AM-GM's
+    // `x² + y² − 2xy < 0`, whose lhs is `(x−y)·(x−y)` only after a ring identity —
+    // does: we must PROVE `Eq R p ((x−y)·(x−y))` in the kernel and rewrite the
+    // square-nonnegativity across it. The helpers below extend the additive
+    // `Eq R` engine with the multiplicative axiom wrappers, `mul` congruence, and
+    // the three derived `neg`/`mul` bridge lemmas (each grounded in
+    // inverse-uniqueness, which is itself derived from the additive axioms — no
+    // new kernel axiom is introduced).
+    // -----------------------------------------------------------------------
+
+    /// `mul_comm a b : Eq R (mul a b) (mul b a)`.
+    fn mul_comm_eq(&mut self, a: ExprId, b: ExprId) -> ExprId {
+        let ax = self.kernel.const_(self.arith.mul_comm, vec![]);
+        let e = self.kernel.app(ax, a);
+        self.kernel.app(e, b)
+    }
+
+    /// `mul_zero a : Eq R (mul a zero) zero`.
+    fn mul_zero_eq(&mut self, a: ExprId) -> ExprId {
+        let ax = self.kernel.const_(self.arith.mul_zero, vec![]);
+        self.kernel.app(ax, a)
+    }
+
+    /// `left_distrib a b c : Eq R (mul a (add b c)) (add (mul a b) (mul a c))`.
+    fn left_distrib_eq(&mut self, a: ExprId, b: ExprId, c: ExprId) -> ExprId {
+        let ax = self.kernel.const_(self.arith.left_distrib, vec![]);
+        let e = self.kernel.app(ax, a);
+        let e = self.kernel.app(e, b);
+        self.kernel.app(e, c)
+    }
+
+    /// Congruence on the *left* argument of `mul`: given `h : Eq R a a'`, build
+    /// `Eq R (mul a b) (mul a' b)`.
+    fn congr_mul_left(&mut self, a: ExprId, ap: ExprId, b: ExprId, h: ExprId) -> ExprId {
+        // motive := fun (x : R) (_ : Eq R a x) => Eq R (mul a b) (mul x b).
+        let motive = {
+            let a_b = self.mk_mul(a, b);
+            let x1 = self.kernel.bvar(1);
+            let x_b = self.mk_mul(x1, b);
+            let eq_body = self.mk_eq_r(a_b, x_b);
+            let x0 = self.kernel.bvar(0);
+            let eq_a_x = self.mk_eq_r(a, x0);
+            let anon = self.kernel.anon();
+            let inner = self.kernel.lam(anon, eq_a_x, eq_body, BinderInfo::Default);
+            let r_ty = self.kernel.const_(self.arith.r, vec![]);
+            self.kernel.lam(anon, r_ty, inner, BinderInfo::Default)
+        };
+        let refl_case = {
+            let a_b = self.mk_mul(a, b);
+            self.eq_refl_r(a_b)
+        };
+        self.eq_rec_transport_r(a, motive, refl_case, ap, h)
+    }
+
+    /// Congruence on the *right* argument of `mul`: given `h : Eq R b b'`, build
+    /// `Eq R (mul a b) (mul a b')`.
+    fn congr_mul_right(&mut self, a: ExprId, b: ExprId, bp: ExprId, h: ExprId) -> ExprId {
+        // motive := fun (x : R) (_ : Eq R b x) => Eq R (mul a b) (mul a x).
+        let motive = {
+            let a_b = self.mk_mul(a, b);
+            let x1 = self.kernel.bvar(1);
+            let a_x = self.mk_mul(a, x1);
+            let eq_body = self.mk_eq_r(a_b, a_x);
+            let x0 = self.kernel.bvar(0);
+            let eq_b_x = self.mk_eq_r(b, x0);
+            let anon = self.kernel.anon();
+            let inner = self.kernel.lam(anon, eq_b_x, eq_body, BinderInfo::Default);
+            let r_ty = self.kernel.const_(self.arith.r, vec![]);
+            self.kernel.lam(anon, r_ty, inner, BinderInfo::Default)
+        };
+        let refl_case = {
+            let a_b = self.mk_mul(a, b);
+            self.eq_refl_r(a_b)
+        };
+        self.eq_rec_transport_r(b, motive, refl_case, bp, h)
+    }
+
+    /// Inverse-uniqueness over the additive group: from `h1 : Eq R (add c u) zero`
+    /// and `h2 : Eq R (add c v) zero`, derive `Eq R u v`. Pure additive-axiom chain
+    /// (`add_zero`, `add_assoc`, `add_comm` + congruence), so it needs **no** new
+    /// kernel axiom — it is the bridge every `neg`/`mul` lemma below rests on.
+    ///
+    /// `u = u+0 = u+(c+v) = (u+c)+v = (c+u)+v = 0+v = v+0 = v`.
+    fn add_left_cancel_eq(
+        &mut self,
+        c: ExprId,
+        u: ExprId,
+        v: ExprId,
+        h1: ExprId,
+        h2: ExprId,
+    ) -> ExprId {
+        let zero = self.mk_zero();
+        let cv = self.mk_add(c, v);
+        let cu = self.mk_add(c, u);
+        // s0 : u = add u zero  (symm add_zero).
+        let u_zero = self.mk_add(u, zero);
+        let s0 = {
+            let az = self.add_zero_eq(u); // add u zero = u
+            self.eq_symm_r(u_zero, u, az) // u = add u zero
+        };
+        // s1 : add u zero = add u (add c v)  (congr_right with symm h2).
+        let h2_sym = self.eq_symm_r(cv, zero, h2); // zero = add c v
+        let s1 = self.congr_add_right(u, zero, cv, h2_sym);
+        // s2 : add u (add c v) = add (add u c) v  (symm add_assoc).
+        let u_cv = self.mk_add(u, cv);
+        let uc = self.mk_add(u, c);
+        let uc_v = self.mk_add(uc, v);
+        let s2 = {
+            let assoc = self.add_assoc_eq(u, c, v); // (u+c)+v = u+(c+v)
+            self.eq_symm_r(uc_v, u_cv, assoc) // u+(c+v) = (u+c)+v
+        };
+        // s3 : add (add u c) v = add (add c u) v  (congr_left add_comm u c).
+        let comm_uc = self.add_comm_eq(u, c); // add u c = add c u
+        let s3 = self.congr_add_left(uc, cu, v, comm_uc);
+        // s4 : add (add c u) v = add zero v  (congr_left h1).
+        let cu_v = self.mk_add(cu, v);
+        let s4 = self.congr_add_left(cu, zero, v, h1);
+        // s5 : add zero v = add v zero  (add_comm zero v).
+        let zero_v = self.mk_add(zero, v);
+        let v_zero = self.mk_add(v, zero);
+        let s5 = self.add_comm_eq(zero, v);
+        // s6 : add v zero = v  (add_zero v).
+        let s6 = self.add_zero_eq(v);
+        // Chain u = … = v.
+        let t01 = self.eq_trans_r(u, u_zero, u_cv, s0, s1);
+        let t02 = self.eq_trans_r(u, u_cv, uc_v, t01, s2);
+        let t03 = self.eq_trans_r(u, uc_v, cu_v, t02, s3);
+        let t04 = self.eq_trans_r(u, cu_v, zero_v, t03, s4);
+        let t05 = self.eq_trans_r(u, zero_v, v_zero, t04, s5);
+        self.eq_trans_r(u, v_zero, v, t05, s6)
+    }
+
+    /// `neg_neg z : Eq R (neg (neg z)) z`. Derived: `z` and `neg (neg z)` are both
+    /// additive inverses of `neg z`, so inverse-uniqueness identifies them.
+    fn neg_neg_eq(&mut self, z: ExprId) -> ExprId {
+        let nz = self.mk_neg(z);
+        let nnz = self.mk_neg(nz);
+        let zero = self.mk_zero();
+        // h1 : add (neg z) z = zero  — from add_neg (neg z)? No: add_neg gives
+        // `add a (neg a) = zero`. With `a = z`: add z (neg z) = zero; commute.
+        let add_z_nz = self.mk_add(z, nz);
+        let add_nz_z = self.mk_add(nz, z);
+        let h1 = {
+            let comm = self.add_comm_eq(nz, z); // add (neg z) z = add z (neg z)
+            let an = self.add_neg_eq(z); // add z (neg z) = zero
+            self.eq_trans_r(add_nz_z, add_z_nz, zero, comm, an)
+        };
+        // h2 : add (neg z) (neg (neg z)) = zero  — add_neg (neg z).
+        let h2 = self.add_neg_eq(nz);
+        // inverse-uniqueness with c = neg z, u = z, v = neg (neg z) ⇒ z = neg(neg z).
+        let z_eq_nnz = self.add_left_cancel_eq(nz, z, nnz, h1, h2);
+        self.eq_symm_r(z, nnz, z_eq_nnz) // neg (neg z) = z
+    }
+
+    /// `mul_neg_right a b : Eq R (mul a (neg b)) (neg (mul a b))`. Derived:
+    /// `mul a (neg b)` is an additive inverse of `mul a b` (via `left_distrib` +
+    /// `add_neg` + `mul_zero`), and `neg (mul a b)` is too; inverse-uniqueness
+    /// identifies them.
+    fn mul_neg_right_eq(&mut self, a: ExprId, b: ExprId) -> ExprId {
+        let nb = self.mk_neg(b);
+        let ab = self.mk_mul(a, b);
+        let a_nb = self.mk_mul(a, nb);
+        let zero = self.mk_zero();
+        // inv1 : add (mul a b) (mul a (neg b)) = zero.
+        //   left_distrib a b (neg b) : mul a (add b (neg b)) = add (mul a b)(mul a (neg b))
+        //   add_neg b               : add b (neg b) = zero
+        //   ⇒ mul a (add b (neg b)) = mul a zero = zero.
+        let b_nb = self.mk_add(b, nb);
+        let a_bnb = self.mk_mul(a, b_nb);
+        let sum = self.mk_add(ab, a_nb);
+        let inv1 = {
+            let ld = self.left_distrib_eq(a, b, nb); // a*(b+(-b)) = a*b + a*(-b)
+            let an = self.add_neg_eq(b); // b+(-b) = zero
+            let cong = self.congr_mul_right(a, b_nb, zero, an); // a*(b+(-b)) = a*0
+            let mz = self.mul_zero_eq(a); // a*0 = zero
+            let a_zero = self.mk_mul(a, zero);
+            // a*(b+(-b)) = zero
+            let lhs_zero = self.eq_trans_r(a_bnb, a_zero, zero, cong, mz);
+            // sum = a*(b+(-b)) (symm ld), then = zero.
+            let sum_to_lhs = self.eq_symm_r(a_bnb, sum, ld); // a*b+a*(-b) = a*(b+(-b))
+            self.eq_trans_r(sum, a_bnb, zero, sum_to_lhs, lhs_zero)
+        };
+        // inv2 : add (mul a b) (neg (mul a b)) = zero  — add_neg (mul a b).
+        let inv2 = self.add_neg_eq(ab);
+        // inverse-uniqueness: c = mul a b, u = mul a (neg b), v = neg (mul a b).
+        let neg_ab = self.mk_neg(ab);
+        self.add_left_cancel_eq(ab, a_nb, neg_ab, inv1, inv2)
+    }
+
+    /// `mul_neg_left a b : Eq R (mul (neg a) b) (neg (mul a b))`. Derived from
+    /// `mul_neg_right` by commuting the product on both sides of the `neg`.
+    fn mul_neg_left_eq(&mut self, a: ExprId, b: ExprId) -> ExprId {
+        let na = self.mk_neg(a);
+        let na_b = self.mk_mul(na, b);
+        let b_na = self.mk_mul(b, na);
+        let ba = self.mk_mul(b, a);
+        let ab = self.mk_mul(a, b);
+        // mul (neg a) b =[mul_comm] mul b (neg a) =[mul_neg_right] neg (mul b a)
+        //   =[congr neg mul_comm] neg (mul a b).
+        let comm1 = self.mul_comm_eq(na, b); // (neg a)*b = b*(neg a)
+        let mnr = self.mul_neg_right_eq(b, a); // b*(neg a) = neg (b*a)
+        let neg_ba = self.mk_neg(ba);
+        let comm2 = self.mul_comm_eq(b, a); // b*a = a*b
+        let neg_ab = self.mk_neg(ab);
+        let neg_cong = self.congr_neg(ba, ab, comm2); // neg (b*a) = neg (a*b)
+        let t01 = self.eq_trans_r(na_b, b_na, neg_ba, comm1, mnr);
+        self.eq_trans_r(na_b, neg_ba, neg_ab, t01, neg_cong)
+    }
+
+    /// Congruence under `neg`: given `h : Eq R a a'`, build `Eq R (neg a) (neg a')`.
+    fn congr_neg(&mut self, a: ExprId, ap: ExprId, h: ExprId) -> ExprId {
+        // motive := fun (x : R) (_ : Eq R a x) => Eq R (neg a) (neg x).
+        let motive = {
+            let neg_a = self.mk_neg(a);
+            let x1 = self.kernel.bvar(1);
+            let neg_x = self.mk_neg(x1);
+            let eq_body = self.mk_eq_r(neg_a, neg_x);
+            let x0 = self.kernel.bvar(0);
+            let eq_a_x = self.mk_eq_r(a, x0);
+            let anon = self.kernel.anon();
+            let inner = self.kernel.lam(anon, eq_a_x, eq_body, BinderInfo::Default);
+            let r_ty = self.kernel.const_(self.arith.r, vec![]);
+            self.kernel.lam(anon, r_ty, inner, BinderInfo::Default)
+        };
+        let refl_case = {
+            let neg_a = self.mk_neg(a);
+            self.eq_refl_r(neg_a)
+        };
+        self.eq_rec_transport_r(a, motive, refl_case, ap, h)
+    }
+
+    /// `neg_add a b : Eq R (neg (add a b)) (add (neg a) (neg b))`. Derived:
+    /// `add (neg a)(neg b)` is an additive inverse of `add a b` (shown by
+    /// reassociating `(a+b)+((-a)+(-b))` to `zero`), and `neg (add a b)` is too;
+    /// inverse-uniqueness identifies them.
+    fn neg_add_eq(&mut self, a: ExprId, b: ExprId) -> ExprId {
+        let na = self.mk_neg(a);
+        let nb = self.mk_neg(b);
+        let ab = self.mk_add(a, b);
+        let na_nb = self.mk_add(na, nb); // (-a)+(-b)
+        let zero = self.mk_zero();
+        // inv1 : add (add a b) (add (neg a)(neg b)) = zero.
+        let inv1 = {
+            // (a+b)+T =[add_assoc a b T] a+(b+T),  T = (-a)+(-b).
+            let assoc0 = self.add_assoc_eq(a, b, na_nb);
+            let ab_t = self.mk_add(ab, na_nb); // (a+b)+T
+            let b_t = self.mk_add(b, na_nb); // b+T
+            let a_bt = self.mk_add(a, b_t); // a+(b+T)
+            // inner: b+T = b+((-a)+(-b)) ⟶ -a.
+            // b+((-a)+(-b)) =[symm add_assoc b (-a)(-b)] (b+(-a))+(-b)
+            let assoc1 = self.add_assoc_eq(b, na, nb); // (b+(-a))+(-b) = b+((-a)+(-b))
+            let b_na = self.mk_add(b, na); // b+(-a)
+            let bna_nb = self.mk_add(b_na, nb); // (b+(-a))+(-b)
+            let s1 = self.eq_symm_r(bna_nb, b_t, assoc1); // b+T = (b+(-a))+(-b)
+            // (b+(-a)) =[add_comm] ((-a)+b) ⟶ congr_left.
+            let na_b = self.mk_add(na, b); // (-a)+b
+            let comm1 = self.add_comm_eq(b, na); // b+(-a) = (-a)+b
+            let s2 = self.congr_add_left(b_na, na_b, nb, comm1); // (b+(-a))+(-b) = ((-a)+b)+(-b)
+            let nab_nb = self.mk_add(na_b, nb); // ((-a)+b)+(-b)
+            // ((-a)+b)+(-b) =[add_assoc (-a) b (-b)] (-a)+(b+(-b)).
+            let assoc2 = self.add_assoc_eq(na, b, nb);
+            let b_nb = self.mk_add(b, nb); // b+(-b)
+            let na_bnb = self.mk_add(na, b_nb); // (-a)+(b+(-b))
+            // (b+(-b)) =[add_neg b] zero ⟶ congr_right.
+            let an_b = self.add_neg_eq(b); // b+(-b) = zero
+            let na_zero = self.mk_add(na, zero); // (-a)+zero
+            let s3 = self.congr_add_right(na, b_nb, zero, an_b); // (-a)+(b+(-b)) = (-a)+zero
+            // (-a)+zero =[add_zero] -a.
+            let s4 = self.add_zero_eq(na); // (-a)+zero = -a
+            // chain inner: b+T = (b+(-a))+(-b) = ((-a)+b)+(-b) = (-a)+(b+(-b)) = (-a)+zero = -a.
+            let i01 = self.eq_trans_r(b_t, bna_nb, nab_nb, s1, s2);
+            let i02 = self.eq_trans_r(b_t, nab_nb, na_bnb, i01, assoc2);
+            let i03 = self.eq_trans_r(b_t, na_bnb, na_zero, i02, s3);
+            let inner = self.eq_trans_r(b_t, na_zero, na, i03, s4); // b+T = -a
+            // a+(b+T) =[congr_right inner] a+(-a) =[add_neg a] zero.
+            let a_na = self.mk_add(a, na); // a+(-a)
+            let lift = self.congr_add_right(a, b_t, na, inner); // a+(b+T) = a+(-a)
+            let an_a = self.add_neg_eq(a); // a+(-a) = zero
+            // (a+b)+T = a+(b+T) = a+(-a) = zero.
+            let c01 = self.eq_trans_r(ab_t, a_bt, a_na, assoc0, lift);
+            self.eq_trans_r(ab_t, a_na, zero, c01, an_a)
+        };
+        // inv2 : add (add a b) (neg (add a b)) = zero  — add_neg (add a b).
+        let inv2 = self.add_neg_eq(ab);
+        // inverse-uniqueness: c = add a b, u = add(neg a)(neg b), v = neg(add a b).
+        let neg_ab = self.mk_neg(ab);
+        let u_eq_v = self.add_left_cancel_eq(ab, na_nb, neg_ab, inv1, inv2); // (-a)+(-b) = neg(a+b)
+        self.eq_symm_r(na_nb, neg_ab, u_eq_v) // neg(a+b) = (-a)+(-b)
+    }
+
+    /// `neg_mul_neg a b : Eq R (mul (neg a) (neg b)) (mul a b)`. Derived:
+    /// `(neg a)·(neg b) = neg ((neg a)·b) = neg (neg (a·b)) = a·b`.
+    fn neg_mul_neg_eq(&mut self, a: ExprId, b: ExprId) -> ExprId {
+        let na = self.mk_neg(a);
+        let nb = self.mk_neg(b);
+        let na_nb = self.mk_mul(na, nb);
+        let na_b = self.mk_mul(na, b);
+        let ab = self.mk_mul(a, b);
+        // (neg a)*(neg b) =[mul_neg_right (neg a) b] neg ((neg a)*b)
+        let mnr = self.mul_neg_right_eq(na, b); // (neg a)*(neg b) = neg ((neg a)*b)
+        let neg_na_b = self.mk_neg(na_b);
+        // neg ((neg a)*b) =[congr_neg mul_neg_left a b] neg (neg (a*b))
+        let mnl = self.mul_neg_left_eq(a, b); // (neg a)*b = neg (a*b)
+        let neg_ab = self.mk_neg(ab);
+        let neg_neg_ab = self.mk_neg(neg_ab);
+        let cong = self.congr_neg(na_b, neg_ab, mnl); // neg ((neg a)*b) = neg (neg (a*b))
+        // neg (neg (a*b)) =[neg_neg] a*b
+        let nn = self.neg_neg_eq(ab); // neg (neg (a*b)) = a*b
+        let t01 = self.eq_trans_r(na_nb, neg_na_b, neg_neg_ab, mnr, cong);
+        self.eq_trans_r(na_nb, neg_neg_ab, ab, t01, nn)
+    }
 }
 
 /// A signed unit **generator** in the canonical additive normal form: either a
@@ -7783,15 +8215,25 @@ pub fn reconstruct_sos_proof(
     assertions: &[TermId],
 ) -> Result<ExprId, ReconstructError> {
     // Accept the single-square shape `ℓ*ℓ < 0` where `ℓ` is a linear form in
-    // `lin_to_r`'s slice (a bare variable `x`, or `(x−y)`, etc.). Anything else
-    // (a coefficient outside ±1, a sum form like `x²+y²−2xy < 0`, a non-square
-    // atom) needs the degree-2 ring normalizer — a later slice — and is declined
-    // here so we never claim success without a kernel-checked term.
+    // `lin_to_r`'s slice (a bare variable `x`, or `(x−y)`, etc.). The asserted lhs
+    // is literally `ℓ·ℓ`, so no ring normalizer is needed.
+    //
+    // Otherwise try the degree-2 two-variable AM-GM sum form `x²+y²−2xy < 0` —
+    // the first shape needing the ring normalizer (the lhs is a *sum* of
+    // monomials, proven equal to `(x−y)·(x−y)` in the kernel before
+    // square-nonnegativity applies).
+    //
+    // Anything else (a coefficient outside ±1, other monomial sets, ≥ 3 variables)
+    // is declined here so we never claim success without a kernel-checked term.
     let Some(factor) = is_single_square_lt_zero(arena, assertions) else {
+        if let Some((sx, sy)) = is_am_gm_two_var(arena, assertions) {
+            return reconstruct_am_gm_two_var(ctx, sx, sy);
+        }
         return Err(ReconstructError::UnsupportedTerm {
-            term: "SOS reconstruction (this slice) handles only a single square `ℓ*ℓ < 0` \
-                   of a ±1-coefficient linear form ℓ; a sum-of-monomials SOS needs the \
-                   degree-2 ring normalizer (a later slice)"
+            term: "SOS reconstruction (this slice) handles a single square `ℓ*ℓ < 0` of a \
+                   ±1-coefficient linear form ℓ, and the degree-2 two-variable AM-GM sum form \
+                   `x²+y²−2xy < 0`; any other sum-of-monomials SOS needs the general ring \
+                   normalizer (a later slice)"
                 .to_owned(),
         });
     };
@@ -7857,6 +8299,222 @@ pub fn reconstruct_sos_proof(
         Err(ReconstructError::KernelRejected {
             rule: "sos_single_square".to_owned(),
             detail: "SOS single-square refutation did not infer to False".to_owned(),
+        })
+    }
+}
+
+/// Reconstruct the degree-2 two-variable **AM-GM sum form** `x²+y²−2xy < 0` to a
+/// kernel-checked `False` (ADR-0040, the first SOS shape needing the ring
+/// normalizer). The asserted lhs is a *sum of monomials*, not a literal `ℓ·ℓ`,
+/// so the crux is a kernel-proven ring identity `Eq R p ((x−y)·(x−y))` over which
+/// square-nonnegativity is transported.
+///
+/// Variable symbols are mapped deterministically: `sx → index 0`, `sy → index 1`.
+/// The faithful kernel encoding of the asserted lhs `RealSub(A, B)` is
+/// `pK = add A (neg B)` with `A = add (mul x x)(mul y y)` and
+/// `B = add (mul x y)(mul x y)` — denotationally `x² + y² − 2xy`.
+///
+/// The reconstruction:
+/// 1. builds `pK`, `ellK = add x (neg y)`, `sqK = mul ellK ellK`;
+/// 2. proves the ring identity `idK : Eq R pK sqK` (the crux, via
+///    [`LraReconstructCtx`]'s additive+multiplicative `Eq R` engine);
+/// 3. `sq : le zero sqK := sq_nonneg ellK`;
+/// 4. transports nonnegativity back along `idK` to `lep : le zero pK`;
+/// 5. closes `lt_of_le_of_lt 0 pK 0 lep hlt : lt 0 0` (with `hlt : lt pK 0` the
+///    asserted atom) and refutes it with `lt_irrefl 0`.
+///
+/// Kernel-gated: the assembled term must `infer` to `False`.
+#[allow(clippy::too_many_lines)]
+fn reconstruct_am_gm_two_var(
+    ctx: &mut LraReconstructCtx,
+    _sx: axeyum_ir::SymbolId,
+    _sy: axeyum_ir::SymbolId,
+) -> Result<ExprId, ReconstructError> {
+    // --- kernel atoms --------------------------------------------------------
+    let xk = {
+        let n = ctx.var_const(0);
+        ctx.kernel_mut().const_(n, vec![])
+    };
+    let yk = {
+        let n = ctx.var_const(1);
+        ctx.kernel_mut().const_(n, vec![])
+    };
+    let nyk = ctx.mk_neg(yk);
+    let ell = ctx.mk_add(xk, nyk); // x + (-y) = x − y
+    let sqk = ctx.mk_mul(ell, ell); // (x−y)·(x−y)
+
+    // Monomial atoms.
+    let xx = ctx.mk_mul(xk, xk); // x·x
+    let yy = ctx.mk_mul(yk, yk); // y·y
+    let xy = ctx.mk_mul(xk, yk); // x·y
+    let nxy = ctx.mk_neg(xy); // −(x·y)
+
+    // pK = add (add xx yy) (neg (add xy xy)) — faithful `x²+y²−(xy+xy)`.
+    let xx_yy = ctx.mk_add(xx, yy);
+    let xy_xy = ctx.mk_add(xy, xy);
+    let neg_xy_xy = ctx.mk_neg(xy_xy);
+    let pk = ctx.mk_add(xx_yy, neg_xy_xy);
+
+    // Canonical join target S = add xx (add yy (add nxy nxy)).
+    let nxy_nxy = ctx.mk_add(nxy, nxy);
+    let yy_tail = ctx.mk_add(yy, nxy_nxy);
+    let s = ctx.mk_add(xx, yy_tail);
+
+    // --- pK → S (purely additive) -------------------------------------------
+    // step1: neg(add xy xy) ⟶ add nxy nxy  (lift neg over the inner add).
+    let neg_add = ctx.neg_add_eq(xy, xy); // neg(xy+xy) = (-xy)+(-xy)
+    let p_step1 = ctx.congr_add_right(xx_yy, neg_xy_xy, nxy_nxy, neg_add);
+    // p1 = add (add xx yy) (add nxy nxy).
+    let p1 = ctx.mk_add(xx_yy, nxy_nxy);
+    // step2: reassociate (xx+yy)+(nxy+nxy) ⟶ xx+(yy+(nxy+nxy)) = S.
+    let p_step2 = ctx.add_assoc_eq(xx, yy, nxy_nxy); // (xx+yy)+T = xx+(yy+T)
+    let pk_to_s = ctx.eq_trans_r(pk, p1, s, p_step1, p_step2);
+
+    // --- sqK → S (the ring expansion) ---------------------------------------
+    // d1: mul ell ell = add (mul ell x)(mul ell (neg y))  (left_distrib on the
+    // right operand ell = add x (neg y); `mul ell ell` IS `mul ell (add x (neg y))`).
+    let a_term = ctx.mk_mul(ell, xk); // mul ell x
+    let b_term = ctx.mk_mul(ell, nyk); // mul ell (neg y)
+    let e1 = ctx.mk_add(a_term, b_term);
+    let d1 = ctx.left_distrib_eq(ell, xk, nyk); // sqK = add A B
+
+    // A = mul ell x ⟶ add xx nxy.
+    let a_eq = {
+        // mul (x+(-y)) x =[mul_comm] mul x (x+(-y))
+        let comm = ctx.mul_comm_eq(ell, xk); // mul ell x = mul x ell
+        let x_ell = ctx.mk_mul(xk, ell); // mul x (x+(-y))
+        // mul x (x+(-y)) =[left_distrib] add (mul x x)(mul x (neg y)) = add xx (mul x (neg y))
+        let ld = ctx.left_distrib_eq(xk, xk, nyk);
+        let x_ny = ctx.mk_mul(xk, nyk); // mul x (neg y)
+        let xx_xny = ctx.mk_add(xx, x_ny); // add xx (mul x (neg y))
+        let comm_ld = ctx.eq_trans_r(a_term, x_ell, xx_xny, comm, ld);
+        // mul x (neg y) =[mul_neg_right] neg (mul x y) = nxy.
+        let mnr = ctx.mul_neg_right_eq(xk, yk); // mul x (neg y) = neg (x·y)
+        let xx_nxy = ctx.mk_add(xx, nxy);
+        let cong = ctx.congr_add_right(xx, x_ny, nxy, mnr); // add xx (x·(-y)) = add xx nxy
+        ctx.eq_trans_r(a_term, xx_xny, xx_nxy, comm_ld, cong)
+    };
+    let xx_nxy = ctx.mk_add(xx, nxy);
+
+    // B = mul ell (neg y) ⟶ add nxy yy.
+    let b_eq = {
+        // mul (x+(-y)) (neg y) =[mul_comm] mul (neg y) (x+(-y))
+        let comm = ctx.mul_comm_eq(ell, nyk); // mul ell (neg y) = mul (neg y) ell
+        let ny_ell = ctx.mk_mul(nyk, ell);
+        // mul (neg y) (x+(-y)) =[left_distrib] add (mul (neg y) x)(mul (neg y)(neg y))
+        let ld = ctx.left_distrib_eq(nyk, xk, nyk);
+        let ny_x = ctx.mk_mul(nyk, xk); // mul (neg y) x
+        let ny_ny = ctx.mk_mul(nyk, nyk); // mul (neg y)(neg y)
+        let ny_x_plus = ctx.mk_add(ny_x, ny_ny);
+        let comm_ld = ctx.eq_trans_r(b_term, ny_ell, ny_x_plus, comm, ld);
+        // mul (neg y) x =[mul_neg_left] neg (mul y x) =[congr_neg mul_comm] neg (mul x y) = nxy.
+        let mnl = ctx.mul_neg_left_eq(yk, xk); // mul (neg y) x = neg (y·x)
+        let yx = ctx.mk_mul(yk, xk);
+        let neg_yx = ctx.mk_neg(yx);
+        let comm_yx = ctx.mul_comm_eq(yk, xk); // y·x = x·y
+        let cong_neg = ctx.congr_neg(yx, xy, comm_yx); // neg(y·x) = neg(x·y) = nxy
+        let ny_x_to_nxy = ctx.eq_trans_r(ny_x, neg_yx, nxy, mnl, cong_neg);
+        // mul (neg y)(neg y) =[neg_mul_neg] mul y y = yy.
+        let nmn = ctx.neg_mul_neg_eq(yk, yk); // (neg y)(neg y) = y·y = yy
+        // congr both sides of `add (mul (neg y) x)(mul (neg y)(neg y))`.
+        let nxy_plus = ctx.mk_add(nxy, ny_ny);
+        let cong_l = ctx.congr_add_left(ny_x, nxy, ny_ny, ny_x_to_nxy);
+        let nxy_yy = ctx.mk_add(nxy, yy);
+        let cong_r = ctx.congr_add_right(nxy, ny_ny, yy, nmn);
+        let cong_both = ctx.eq_trans_r(ny_x_plus, nxy_plus, nxy_yy, cong_l, cong_r);
+        ctx.eq_trans_r(b_term, ny_x_plus, nxy_yy, comm_ld, cong_both)
+    };
+    let nxy_yy = ctx.mk_add(nxy, yy);
+
+    // E1 = add A B ⟶ E2 = add (add xx nxy)(add nxy yy) (congr both sides).
+    let e2 = ctx.mk_add(xx_nxy, nxy_yy);
+    let e1_to_e2 = {
+        let cong_l = ctx.congr_add_left(a_term, xx_nxy, b_term, a_eq);
+        let mid = ctx.mk_add(xx_nxy, b_term);
+        let cong_r = ctx.congr_add_right(xx_nxy, b_term, nxy_yy, b_eq);
+        ctx.eq_trans_r(e1, mid, e2, cong_l, cong_r)
+    };
+
+    // E2 = (xx+nxy)+(nxy+yy) ⟶ S = xx+(yy+(nxy+nxy)).
+    let e2_to_s = {
+        // assoc: (xx+nxy)+(nxy+yy) = xx + (nxy + (nxy+yy)).
+        let assoc = ctx.add_assoc_eq(xx, nxy, nxy_yy);
+        let nxy_nxyyy = ctx.mk_add(nxy, nxy_yy); // nxy + (nxy + yy)
+        let m1 = ctx.mk_add(xx, nxy_nxyyy); // xx + (nxy+(nxy+yy))
+        // tail reorder: nxy+(nxy+yy) ⟶ (nxy+nxy)+yy ⟶ yy+(nxy+nxy).
+        let assoc_tail = ctx.add_assoc_eq(nxy, nxy, yy); // (nxy+nxy)+yy = nxy+(nxy+yy)
+        let nxynxy_yy = ctx.mk_add(nxy_nxy, yy); // (nxy+nxy)+yy
+        let tail1 = ctx.eq_symm_r(nxynxy_yy, nxy_nxyyy, assoc_tail); // nxy+(nxy+yy) = (nxy+nxy)+yy
+        let comm_tail = ctx.add_comm_eq(nxy_nxy, yy); // (nxy+nxy)+yy = yy+(nxy+nxy)
+        let tail_eq = ctx.eq_trans_r(nxy_nxyyy, nxynxy_yy, yy_tail, tail1, comm_tail);
+        // lift into xx + _ : m1 ⟶ S.
+        let lift = ctx.congr_add_right(xx, nxy_nxyyy, yy_tail, tail_eq);
+        ctx.eq_trans_r(e2, m1, s, assoc, lift)
+    };
+
+    // sqK ⟶ E1 ⟶ E2 ⟶ S.
+    let sq_to_e2 = ctx.eq_trans_r(sqk, e1, e2, d1, e1_to_e2);
+    let sqk_to_s = ctx.eq_trans_r(sqk, e2, s, sq_to_e2, e2_to_s);
+
+    // --- idK : Eq R pK sqK  ⟵  trans (pK→S) (symm sqK→S) --------------------
+    let s_to_sqk = ctx.eq_symm_r(sqk, s, sqk_to_s); // S = sqK
+    let idk = ctx.eq_trans_r(pk, s, sqk, pk_to_s, s_to_sqk);
+
+    // --- nonnegativity + order chain ----------------------------------------
+    let zero = ctx.mk_zero();
+    // sq : le zero sqK := sq_nonneg ell.
+    let sq = {
+        let sq_nonneg_name = ctx.arith().sq_nonneg;
+        let sq_nonneg = ctx.kernel_mut().const_(sq_nonneg_name, vec![]);
+        ctx.kernel_mut().app(sq_nonneg, ell)
+    };
+    // lep : le zero pK — transport `sq` backwards along idK (rewrite sqK ⟶ pK,
+    // i.e. cast the right operand of `le zero _` along symm idK : Eq R sqK pK).
+    let id_sym = ctx.eq_symm_r(pk, sqk, idk); // Eq R sqK pK
+    let lep = ctx.le_cast_right(zero, sqk, pk, sq, id_sym);
+
+    // hlt : lt pK zero — the asserted atom `p < 0`.
+    let hlt = {
+        let prop = ctx.mk_lt(pk, zero);
+        ctx.hyp_axiom(prop)?
+    };
+
+    // chain : lt zero zero := lt_of_le_of_lt zero pK zero lep hlt.
+    let chain = {
+        let ax_name = ctx.arith().lt_of_le_of_lt;
+        let ax = ctx.kernel_mut().const_(ax_name, vec![]);
+        let e = ctx.kernel_mut().app(ax, zero);
+        let e = ctx.kernel_mut().app(e, pk);
+        let e = ctx.kernel_mut().app(e, zero);
+        let e = ctx.kernel_mut().app(e, lep);
+        ctx.kernel_mut().app(e, hlt)
+    };
+    // bad : False := lt_irrefl zero chain.
+    let proof = {
+        let irrefl_name = ctx.arith().lt_irrefl;
+        let irrefl = ctx.kernel_mut().const_(irrefl_name, vec![]);
+        let e = ctx.kernel_mut().app(irrefl, zero);
+        ctx.kernel_mut().app(e, chain)
+    };
+
+    // Soundness gate: the assembled term must kernel-infer to `False`.
+    let inferred = ctx
+        .kernel_mut()
+        .infer(proof)
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "sos_am_gm_two_var".to_owned(),
+            detail: format!("AM-GM SOS infer failed: {e:?}"),
+        })?;
+    let false_ = {
+        let f = ctx.arith().logic.false_;
+        ctx.kernel_mut().const_(f, vec![])
+    };
+    if ctx.kernel_mut().def_eq(inferred, false_) {
+        Ok(proof)
+    } else {
+        Err(ReconstructError::KernelRejected {
+            rule: "sos_am_gm_two_var".to_owned(),
+            detail: "AM-GM SOS refutation did not infer to False".to_owned(),
         })
     }
 }

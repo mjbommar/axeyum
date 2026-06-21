@@ -91,3 +91,62 @@ fn square_with_coefficient_outside_pm_one_is_declined() {
          and must be declined, not proven"
     );
 }
+
+/// Slice 2b — the degree-2 two-variable AM-GM sum form
+/// `x*x + y*y − (x*y + x*y) < 0` (i.e. `x² + y² − 2xy < 0`). Unlike the earlier
+/// slices, the asserted lhs is a **sum of monomials**, not a literal `ℓ·ℓ`, so the
+/// reconstruction must PROVE the ring identity `Eq R p ((x−y)·(x−y))` in the kernel
+/// and rewrite square-nonnegativity across it. Success means the trusted kernel
+/// accepted that ring-identity proof and the closing order chain.
+#[test]
+fn am_gm_two_var_sum_form_reconstructs_to_false() {
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let y = arena.real_var("y").unwrap();
+    let xx = arena.real_mul(x, x).unwrap();
+    let yy = arena.real_mul(y, y).unwrap();
+    let xy = arena.real_mul(x, y).unwrap();
+    let sum_sq = arena.real_add(xx, yy).unwrap(); // x² + y²
+    let two_xy = arena.real_add(xy, xy).unwrap(); // x·y + x·y
+    let lhs = arena.real_sub(sum_sq, two_xy).unwrap(); // x² + y² − 2xy
+    let zero = arena.real_const(Rational::integer(0));
+    let assertion = arena.real_lt(lhs, zero).unwrap();
+
+    let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &[assertion]).expect(
+        "AM-GM sum form `x²+y²−2xy < 0` reconstructs to a kernel-checked False via the ring \
+         identity p = (x−y)·(x−y)",
+    );
+    assert_eq!(
+        fragment,
+        ProofFragment::Sos,
+        "the AM-GM sum form must route to the SOS fragment"
+    );
+    assert!(
+        source.contains("axeyum_refutation"),
+        "the Lean module must contain the refutation theorem"
+    );
+}
+
+/// Out of scope for this slice: `x*x + y*y < 0` (i.e. `x² + y² < 0`). It is UNSAT,
+/// but it is **not** a single perfect square — it is a *sum* of two independent
+/// squares (`x²` and `y²`), which this AM-GM slice does not cover. The
+/// reconstructor must *decline* (error) rather than fabricate a proof.
+#[test]
+fn sum_of_two_squares_is_declined() {
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let y = arena.real_var("y").unwrap();
+    let xx = arena.real_mul(x, x).unwrap();
+    let yy = arena.real_mul(y, y).unwrap();
+    let lhs = arena.real_add(xx, yy).unwrap(); // x² + y²
+    let zero = arena.real_const(Rational::integer(0));
+    let assertion = arena.real_lt(lhs, zero).unwrap();
+
+    let mut ctx = LraReconstructCtx::new();
+    let result = reconstruct_sos_proof(&mut ctx, &arena, &[assertion]);
+    assert!(
+        result.is_err(),
+        "x² + y² < 0 is a sum of two independent squares, not a single perfect square; \
+         it is outside this AM-GM slice and must be declined, not proven"
+    );
+}
