@@ -7,6 +7,13 @@ serve axeyum's double-duty thesis
 ([ADR-0033](../research/09-decisions/adr-0033-double-duty-educational-artifacts.md)):
 the same artifacts that teach a concept also test an axeyum theory.
 
+- **🎓 K-12 layer (the school-facing front door):** [`k12/`](k12/README.md) —
+  the same backbone projected onto grade bands and a single integrated pedagogy
+  (**logic + reasoning + math + computer science as one subject**, with axeyum as
+  the self-checking auto-grader). Start with the
+  [K-12 vision](k12/README.md), the [four strands](k12/strands.md), and the worked
+  modules ([binary & wraparound](k12/modules/binary-and-wraparound.md),
+  [truth & counterexamples](k12/modules/truth-and-counterexamples.md)).
 - **The graph:** [`curriculum.toml`](curriculum.toml) is the authoritative
   node/edge list (prerequisites = edges) plus per-node decidability/testability
   metadata. The `axeyum-scenarios::mathtour` module mirrors it and a test fails
