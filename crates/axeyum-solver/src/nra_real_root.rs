@@ -1916,9 +1916,28 @@ fn decide_component(comp: &[&MultiAtom]) -> Option<ComponentOutcome> {
             TwoVarVerdict::Unknown => ComponentOutcome::Unknown,
         });
     }
+    if comp_vars.len() >= 3 {
+        // ≥ 3 distinct variables that share a constraint ⇒ genuinely coupled. The
+        // ALL-STRICT case is decided by the recursive N-variable cylindrical
+        // decomposition (the solution set is open ⇒ rational interior samples of
+        // open cells suffice at every recursion level). A definitive verdict wins;
+        // any completeness doubt declines (`None`), as does any non-strict atom.
+        if comp
+            .iter()
+            .all(|a| matches!(a.cmp, Cmp::Lt | Cmp::Gt | Cmp::Ne))
+            && let Some(verdict) = decide_strict_cad_nvar(comp, &comp_vars)
+        {
+            return Some(match verdict {
+                TwoVarVerdict::Unsat => ComponentOutcome::Unsat,
+                TwoVarVerdict::Sat(b) => ComponentOutcome::Sat(b),
+                TwoVarVerdict::Unknown => ComponentOutcome::Unknown,
+            });
+        }
+        // A non-strict (equality / ≤ / ≥) ≥3-var component, or any decline, is left
+        // to the outer engine.
+        return None;
+    }
     if comp_vars.len() != 1 {
-        // ≥ 3 distinct variables that share a constraint ⇒ genuinely coupled
-        // (the deferred CAD slice). Decline.
         return None;
     }
     let var = *comp_vars.iter().next().unwrap();
@@ -2432,6 +2451,573 @@ fn decide_strict_cell(
         SystemVerdict::Unsat => Some(CellOutcome::Unsat),
         SystemVerdict::Sat(v) => Some(CellOutcome::Sat(v)),
     }
+}
+
+// ============================================================================
+// Recursive N-variable strict CAD (all-strict components, any N ≥ 2)
+// (the CAD/nlsat ladder, step 4 — recursive cylindrical decomposition).
+// ============================================================================
+//
+// Scope: a connected component of N ≥ 2 variables in which EVERY atom is a STRICT
+// inequality (`<`, `>`, or `≠`). The N = 2 case is owned by the (well-tested)
+// `decide_strict_cad_two_var` above; this engine is routed only for N ≥ 3
+// (`decide_strict_cad_nvar`), and reuses the SAME open-cell recursion internally,
+// so the cell decomposition is one implementation, not divergent code.
+//
+// THE SOUNDNESS FACT (carries over to every dimension):
+//
+//   The solution set `S ⊆ ℝ^N` of a conjunction of STRICT inequalities is OPEN:
+//   each atom `pᵢ ⋈ 0` (⋈ ∈ {<, >, ≠}) defines an open subset of ℝ^N, and a
+//   finite intersection of open sets is open. So if `S ≠ ∅` it contains an open
+//   box, hence a point with RATIONAL coordinates. More strongly, on each open
+//   cell of the cylindrical arrangement the truth of the whole strict system is
+//   constant, so ONE rational interior sample per open cell decides that cell
+//   exactly — AT EVERY RECURSION LEVEL. The whole decomposition therefore stays
+//   rational, with NO algebraic-coordinate substitution.
+//
+// `open_cell_samples(polys, vars)` returns a rational sample point (one per open
+// cell of the arrangement of the zero sets of `polys`, covering ℝ^|vars| off the
+// projection zeros), or `None` to DECLINE on any completeness doubt:
+//
+//   • N == 1: isolate the real roots of all (univariate-in the sole var) polys;
+//     return one rational interior point per open interval (below least / between
+//     consecutive / above greatest / `0` if none) — exactly the `cell_samples`
+//     logic the 2-var path uses.
+//
+//   • N > 1: pick an elimination variable `e`; PROJECT it out — for each `p` with
+//     positive degree in `e`: its leading coefficient in `e` (a delineability
+//     boundary, where deg_e(p) drops), its discriminant in `e`
+//     (`Res_e(p, ∂p/∂e)`, where p gains a repeated e-root), and for every pair
+//     `p ≠ q` (both of positive e-degree) the resultant `Res_e(p, q)` (where p and
+//     q share an e-root) — all multivariate polynomials in `vars \ {e}`. A `p`
+//     CONSTANT in `e` contributes ITSELF to the projection (its e-independent zero
+//     set is still a critical locus and keeps the cover complete). Recurse:
+//     `base = open_cell_samples(projected, vars\{e})`. For EACH base rational
+//     sample `P`: substitute `P` into the ORIGINAL `polys` → univariate in `e`;
+//     isolate its real e-roots; take rational interior samples of the open
+//     e-intervals; extend `P` with each e-sample. Collect all.
+//
+// PROJECTION gives per-cell sign-invariance (McCallum/Collins): over a cell where
+// none of the projection polynomials vanish, lc_e ≠ 0 fixes deg_e(p), disc_e ≠ 0
+// keeps p's e-roots simple, and Res_e(p,q) ≠ 0 keeps p and q from sharing an
+// e-root — so the number and e-order of every p's real e-roots are CONSTANT across
+// the cell, and the strict system's truth as a function of e is the same at every
+// `P` in the cell. Hence sampling ONE rational interior P per projected cell, then
+// recursing into e, loses no cell of ℝ^N.
+//
+// DECLINE (`None`) — never proceed past a gap — on:
+//   • an identically-zero discriminant or pairwise resultant (NULLIFICATION /
+//     non-isolated coincidence ⇒ sign-invariance not guaranteed),
+//   • a poly NULLIFIED at a base point (all its e-coefficients vanish there ⇒ its
+//     e-degree collapses ⇒ delineability fails ⇒ decline; we never sample its e),
+//   • overflow in coefficient clearing / projection / substitution,
+//   • any incomplete root isolation (`isolate_roots`/`sort_roots` return `None`),
+//   • a global cell-count cap [`MAX_CAD_CELLS`] counted across the WHOLE recursion.
+//
+// VERDICTS (`decide_strict_cad_nvar`): build the poly set, run
+// `open_cell_samples(polys, all_vars)`; for each full RATIONAL sample point
+// evaluate EVERY atom's sign exactly (substitute all vars → constant → sign via
+// the exact rational/algebraic evaluator). If all atoms hold at some point → Sat
+// with that rational binding (the caller replay-checks against the original
+// assertions). If every sample point fails → Unsat (COMPLETE by the open-set
+// argument: a strict solution lies in an open box that meets some sampled open
+// cell, contradicting that cell's failure). Any `None` from the decomposition ⇒
+// decline (Unknown).
+//
+// This handles ALL-STRICT components ONLY; equalities / non-strict atoms still
+// route elsewhere (the grid / resultant paths) or decline. No floating point;
+// every sign test is exact over `Rational` / `RealAlgebraic`. Bounded — the
+// cell-count cap guards against combinatorial blow-up in N (no OOM / hang).
+
+/// A budget for the recursive cell enumeration: a single shared counter,
+/// decremented as cells are produced anywhere in the recursion. Hitting zero ⇒
+/// the whole decomposition declines (bounded — no OOM / hang in higher N). Held in
+/// a [`Cell`] so the recursive call and its nested visitor closure can BOTH charge
+/// it through a shared reference (no `&mut` aliasing, no `unsafe`).
+struct CellBudget {
+    remaining: core::cell::Cell<usize>,
+}
+
+impl CellBudget {
+    fn new() -> Self {
+        CellBudget {
+            remaining: core::cell::Cell::new(MAX_CAD_CELLS),
+        }
+    }
+
+    /// Charge one produced cell; `None` (decline) once the budget is exhausted.
+    fn charge(&self) -> Option<()> {
+        let next = self.remaining.get().checked_sub(1)?;
+        self.remaining.set(next);
+        Some(())
+    }
+}
+
+/// One rational sample point: a binding of each (already-eliminated / sampled)
+/// variable to an exact rational, interior to an open cell of the arrangement.
+type SamplePoint = BTreeMap<SymbolId, Rational>;
+
+/// The outcome of visiting one full sample point in the recursive decomposition.
+enum Visit {
+    /// Keep enumerating cells.
+    Continue,
+    /// Stop the whole enumeration early (a satisfying witness was found).
+    Stop,
+}
+
+/// Recursive cylindrical decomposition for an ALL-STRICT system: invoke `visit`
+/// once per open cell of the arrangement of the zero sets of `polys` over `vars`,
+/// passing a RATIONAL interior sample point (covering ℝ^|vars| off the projection
+/// zeros). Returns `Some(true)` if a visit asked to stop (witness found),
+/// `Some(false)` if every cell was visited without stopping, or `None` to DECLINE
+/// on any completeness doubt (see the module block above).
+///
+/// The visitor pattern lets the decision SHORT-CIRCUIT on the first satisfying
+/// point (Sat) without materializing every cell, while still visiting EVERY cell
+/// when none satisfies (the exhaustive Unsat). `vars` is the ordered set of
+/// variables still to decompose (deterministic `BTreeSet` order ⇒ a fixed
+/// elimination order); `partial` is the rational binding accumulated by outer
+/// levels (the cells visited extend it); `budget` bounds the TOTAL cell count
+/// across the whole recursion.
+fn visit_open_cells(
+    polys: &[MultiPoly],
+    vars: &BTreeSet<SymbolId>,
+    partial: &SamplePoint,
+    budget: &CellBudget,
+    visit: &mut dyn FnMut(&SamplePoint) -> Option<Visit>,
+) -> Option<bool> {
+    if vars.is_empty() {
+        // No variables left: `partial` is a full cell point. Visit it.
+        budget.charge()?;
+        return Some(matches!(visit(partial)?, Visit::Stop));
+    }
+    if vars.len() == 1 {
+        let var = *vars.iter().next().unwrap();
+        // Each poly is univariate in `var` (or constant); isolate all real roots.
+        let mut roots: Vec<Root> = Vec::new();
+        for p in polys {
+            if degree_in(p, var) == 0 {
+                // Constant in `var`: contributes no critical value here (its sign
+                // does not depend on `var`). A poly mentioning a FOREIGN variable
+                // would have been rejected by `project_strict`'s subset check, so at
+                // this leaf there are no foreign vars.
+                continue;
+            }
+            let ipoly = p.to_single_var_integer_poly(var)?;
+            if ipoly.len() <= 1 {
+                continue;
+            }
+            roots.extend(isolate_roots(&ipoly)?);
+        }
+        let crit = dedup_sorted_roots(&roots)?;
+        let samples = cell_samples(&crit)?;
+        for s in samples {
+            budget.charge()?;
+            let mut pt = partial.clone();
+            pt.insert(var, s);
+            if matches!(visit(&pt)?, Visit::Stop) {
+                return Some(true);
+            }
+        }
+        return Some(false);
+    }
+
+    // N > 1: pick the (deterministic) first variable as the elimination var.
+    let elim = *vars.iter().next().unwrap();
+    let mut rest: BTreeSet<SymbolId> = vars.clone();
+    rest.remove(&elim);
+
+    // PROJECTION: build the projection polynomials in `rest`.
+    let projected = project_strict(polys, elim, &rest)?;
+
+    // Recurse to visit the open cells of the projection over `rest`. For each base
+    // point, substitute it into the ORIGINAL polys (univariate in `elim`), isolate
+    // the e-roots, sample the open e-intervals, and visit each extended point.
+    visit_open_cells(&projected, &rest, partial, budget, &mut |base_pt| {
+        let mut roots: Vec<Root> = Vec::new();
+        for p in polys {
+            // A poly constant in `elim` does not constrain the e-fiber; its critical
+            // loci were captured in the projection as `p` itself.
+            if degree_in(p, elim) == 0 {
+                continue;
+            }
+            // Substitute the base rational point into `p` ⇒ univariate in `elim`.
+            // NULLIFICATION guard: if every e-coefficient vanishes at `base_pt` (the
+            // residual loses `elim` entirely) the e-degree of `p` collapsed here ⇒
+            // delineability fails ⇒ decline (propagate `None`).
+            let residual = substitute_rationals(p, base_pt)?;
+            if degree_in(&residual, elim) == 0 {
+                return None;
+            }
+            let ipoly = residual.to_single_var_integer_poly(elim)?;
+            if ipoly.len() <= 1 {
+                return None; // residual mentions `elim` yet collapsed ⇒ decline
+            }
+            roots.extend(isolate_roots(&ipoly)?);
+        }
+        let crit = dedup_sorted_roots(&roots)?;
+        let samples = cell_samples(&crit)?;
+        for s in samples {
+            budget.charge()?;
+            let mut pt = base_pt.clone();
+            pt.insert(elim, s);
+            if matches!(visit(&pt)?, Visit::Stop) {
+                return Some(Visit::Stop);
+            }
+        }
+        Some(Visit::Continue)
+    })
+}
+
+/// Sort isolated `roots` ascending and deduplicate EQUAL critical values (a shared
+/// root of two polys) so cell samples land in genuinely distinct open cells. `None`
+/// if any pair cannot be ordered exactly (caller declines).
+fn dedup_sorted_roots(roots: &[Root]) -> Option<Vec<Root>> {
+    let ordered = sort_roots(roots)?;
+    let mut crit: Vec<Root> = Vec::new();
+    for r in ordered {
+        match crit.last() {
+            Some(prev) if compare_roots(prev, &r)? == Ordering::Equal => {}
+            _ => crit.push(r),
+        }
+    }
+    Some(crit)
+}
+
+/// Project the elimination variable `elim` out of `polys`, returning the
+/// projection polynomials over the remaining variables `rest`: each `p`'s leading
+/// coefficient in `elim`, discriminant in `elim` (`Res_elim(p, ∂p/∂elim)`), and
+/// every pairwise resultant `Res_elim(p, q)` — plus any `p` CONSTANT in `elim`
+/// contributed as itself (its e-independent critical locus). `None` declines on a
+/// nullified discriminant / resultant (non-isolated coincidence) or any overflow.
+fn project_strict(
+    polys: &[MultiPoly],
+    elim: SymbolId,
+    rest: &BTreeSet<SymbolId>,
+) -> Option<Vec<MultiPoly>> {
+    let mut proj: Vec<MultiPoly> = Vec::new();
+    for p in polys {
+        if degree_in(p, elim) == 0 {
+            // Constant in `elim`: its zero set is e-independent and IS a critical
+            // locus in `rest` (the strict atom can flip across it). Keep it whole so
+            // the projected cover is complete. Skip a constant-in-EVERYTHING poly.
+            if !p.vars().is_empty() {
+                push_proj(&mut proj, p.clone());
+            }
+            continue;
+        }
+        // Leading coefficient of `p` in `elim` (a MultiPoly in `rest`): its zeros
+        // are where deg_elim(p) drops (a delineability boundary).
+        let lead = leading_coeff_in(p, elim);
+        if !lead.is_zero() && !lead.vars().is_empty() {
+            push_proj(&mut proj, lead);
+        }
+        // Discriminant of `p` in `elim` = Res_elim(p, ∂p/∂elim).
+        let dp = derivative_in(p, elim)?;
+        if degree_in(&dp, elim) == 0 {
+            // p linear in `elim`: its single e-root never collides ⇒ no discriminant
+            // boundary. Nothing to add.
+        } else {
+            match multi_resultant(p, &dp, elim)? {
+                ResultantOutcome::Poly(disc) => push_proj(&mut proj, disc),
+                ResultantOutcome::Zero => return None, // repeated e-root for all rest
+                ResultantOutcome::NonzeroConstant => {}
+            }
+        }
+    }
+    // Pairwise resultants Res_elim(p, q).
+    for i in 0..polys.len() {
+        for j in (i + 1)..polys.len() {
+            if degree_in(&polys[i], elim) == 0 || degree_in(&polys[j], elim) == 0 {
+                continue; // a constant-in-elim factor shares no e-root to track
+            }
+            match multi_resultant(&polys[i], &polys[j], elim)? {
+                ResultantOutcome::Poly(res) => push_proj(&mut proj, res),
+                ResultantOutcome::Zero => return None, // shared e-factor for all rest
+                ResultantOutcome::NonzeroConstant => {}
+            }
+        }
+    }
+    // Every projection polynomial must live in `rest` (no `elim`, no foreign var):
+    // verify so the recursion stays well-formed (defense-in-depth — the resultant
+    // already eliminates `elim`, and the inputs are restricted to `vars`).
+    for q in &proj {
+        let qv = q.vars();
+        if !qv.is_subset(rest) {
+            return None;
+        }
+    }
+    Some(proj)
+}
+
+/// Add `p` to the projection set, deduplicating by structure (avoid re-isolating
+/// the same critical locus). A constant `p` (no variables) is dropped — it never
+/// flips sign, so it contributes no critical value.
+fn push_proj(proj: &mut Vec<MultiPoly>, p: MultiPoly) {
+    if p.vars().is_empty() {
+        return;
+    }
+    if !proj.iter().any(|q| q.terms == p.terms) {
+        proj.push(p);
+    }
+}
+
+/// The leading coefficient of `p` viewed as a univariate polynomial in `elim`: the
+/// coefficient (a [`MultiPoly`] in the other variables) of `elim^d`, `d =
+/// deg_elim(p)`. The zero poly maps to the zero poly.
+fn leading_coeff_in(p: &MultiPoly, elim: SymbolId) -> MultiPoly {
+    let d = degree_in(p, elim);
+    let mut out = MultiPoly::zero();
+    for (k, &c) in &p.terms {
+        // Exponent of `elim` in this monomial.
+        let mut e = 0u32;
+        for &(v, ex) in k {
+            if v == elim {
+                e = ex;
+            }
+        }
+        if e != d {
+            continue;
+        }
+        // Strip the `elim^d` factor; keep the rest of the monomial. Each surviving
+        // `rest` key is distinct (monomials are canonical), so a plain insert is
+        // exact (no merge / overflow possible — we only copy an existing coeff).
+        let rest: MonoKey = k.iter().copied().filter(|&(v, _)| v != elim).collect();
+        out.terms.insert(rest, c);
+    }
+    out
+}
+
+/// The outcome of a multivariate resultant `Res_elim(p, q)` over the remaining
+/// variables.
+enum ResultantOutcome {
+    /// A genuine variable-bearing resultant polynomial in the remaining variables.
+    Poly(MultiPoly),
+    /// The resultant is identically zero (a shared e-factor for ALL remaining-var
+    /// values) — a non-isolated coincidence ⇒ the caller must decline.
+    Zero,
+    /// The resultant is a nonzero constant — no critical locus in the remaining
+    /// variables (p and q never share an e-root). The caller adds nothing.
+    NonzeroConstant,
+}
+
+/// Hard ceiling on the Sylvester dimension (= `deg_elim(p) + deg_elim(q)`) for the
+/// MULTIVARIATE resultant. The determinant is taken by exact Leibniz expansion over
+/// the [`MultiPoly`] ring (no division — `MultiPoly` is not a field), which is
+/// `O(dim! · dim)` ring multiplications, so the dimension must stay small. Beyond
+/// it we decline (bounded — no OOM / hang). For the degree-2 conic systems this
+/// slice targets, `deg_elim ≤ 2` ⇒ `dim ≤ 4` (`4! = 24` permutations).
+const MAX_MULTI_SYLVESTER_DIM: usize = 6;
+
+/// `Res_elim(p, q)` as a [`MultiPoly`] in the remaining variables, by the Sylvester
+/// determinant over the [`MultiPoly`] polynomial ring (each Sylvester entry is a
+/// `MultiPoly` coefficient in the remaining variables, computed exactly with no
+/// division). Returns the classified [`ResultantOutcome`], or `None` on overflow /
+/// the dimension cap. Both `p` and `q` must have positive degree in `elim`.
+fn multi_resultant(p: &MultiPoly, q: &MultiPoly, elim: SymbolId) -> Option<ResultantOutcome> {
+    let pc = multipoly_in_elim(p, elim)?; // Vec<MultiPoly>, LSB-first in elim
+    let qc = multipoly_in_elim(q, elim)?;
+    let m = pc.len().checked_sub(1)?; // deg_elim(p)
+    let n = qc.len().checked_sub(1)?; // deg_elim(q)
+    if m == 0 || n == 0 {
+        return None; // not genuinely of positive e-degree
+    }
+    let dim = m.checked_add(n)?;
+    if dim > MAX_MULTI_SYLVESTER_DIM {
+        return None;
+    }
+    // Build the (m+n) × (m+n) Sylvester matrix of `pc` (MSB-first rows) over `qc`.
+    // Mirror the univariate layout: `n` shifted rows of `p`'s coefficients, then
+    // `m` shifted rows of `q`'s coefficients (coefficients written MSB-first).
+    let mut mat: Vec<Vec<MultiPoly>> = vec![vec![MultiPoly::zero(); dim]; dim];
+    // p occupies the first `n` rows; q the next `m` rows.
+    for (row, slot) in (0..n).zip(0..n) {
+        for (i, c) in pc.iter().rev().enumerate() {
+            mat[row][slot + i] = c.clone();
+        }
+    }
+    for (row, slot) in (0..m).zip(0..m) {
+        for (i, c) in qc.iter().rev().enumerate() {
+            mat[n + row][slot + i] = c.clone();
+        }
+    }
+    let det = multipoly_determinant(&mat)?;
+    if det.is_zero() {
+        return Some(ResultantOutcome::Zero);
+    }
+    if det.vars().is_empty() {
+        return Some(ResultantOutcome::NonzeroConstant);
+    }
+    Some(ResultantOutcome::Poly(det))
+}
+
+/// View `p` as a univariate polynomial in `elim` with [`MultiPoly`] coefficients
+/// (in the other variables), LSB-first by the exponent of `elim`. `None` on a
+/// degree overflow.
+fn multipoly_in_elim(p: &MultiPoly, elim: SymbolId) -> Option<Vec<MultiPoly>> {
+    let de = usize::try_from(degree_in(p, elim)).ok()?;
+    let mut out: Vec<MultiPoly> = vec![MultiPoly::zero(); de + 1];
+    for (k, &c) in &p.terms {
+        let mut e = 0u32;
+        let mut rest: MonoKey = Vec::with_capacity(k.len());
+        for &(v, ex) in k {
+            if v == elim {
+                e = ex;
+            } else {
+                rest.push((v, ex));
+            }
+        }
+        let ie = usize::try_from(e).ok()?;
+        out[ie].add_term(rest, c)?;
+    }
+    Some(out)
+}
+
+/// Exact determinant of a square matrix over the [`MultiPoly`] ring by Leibniz
+/// permutation expansion (no division — `MultiPoly` is not a field). Bounded by the
+/// caller's dimension cap. `None` on overflow during the ring arithmetic.
+fn multipoly_determinant(mat: &[Vec<MultiPoly>]) -> Option<MultiPoly> {
+    let n = mat.len();
+    if n == 0 {
+        return Some(MultiPoly::constant(Rational::integer(1)));
+    }
+    // Heap's-style recursive permutation enumeration with sign tracking, summing
+    // `sign · ∏ mat[i][perm[i]]`. Bounded by the dimension cap (≤ 6 ⇒ ≤ 720 perms).
+    let mut col_used = vec![false; n];
+    let mut perm = vec![0usize; n];
+    let mut acc = MultiPoly::zero();
+    multipoly_det_rec(mat, &mut col_used, &mut perm, 0, false, &mut acc)?;
+    Some(acc)
+}
+
+/// Recursive Leibniz term accumulation for [`multipoly_determinant`]. `parity` is
+/// the running permutation sign (false = even, true = odd); at depth `n` we add the
+/// signed product of the chosen entries to `acc`. `None` on overflow.
+fn multipoly_det_rec(
+    mat: &[Vec<MultiPoly>],
+    col_used: &mut [bool],
+    perm: &mut [usize],
+    row: usize,
+    parity: bool,
+    acc: &mut MultiPoly,
+) -> Option<()> {
+    let n = mat.len();
+    if row == n {
+        // Product of the chosen entries along the permutation.
+        let mut prod = MultiPoly::constant(Rational::integer(1));
+        for (r, &c) in perm.iter().enumerate() {
+            // An early-zero product short-circuits (the zero MultiPoly absorbs).
+            if prod.is_zero() {
+                break;
+            }
+            prod = prod.mul(&mat[r][c])?;
+        }
+        if !prod.is_zero() {
+            let signed = if parity { prod.neg()? } else { prod };
+            *acc = acc.add(&signed)?;
+        }
+        return Some(());
+    }
+    // Count the inversions added by choosing column `col` at this row: the parity
+    // flips once per already-used column with a LARGER index (standard transposition
+    // parity for building a permutation left-to-right).
+    for col in 0..n {
+        if col_used[col] {
+            continue;
+        }
+        // A zero entry contributes a zero product ⇒ skip (sound: it adds nothing).
+        if mat[row][col].is_zero() {
+            continue;
+        }
+        // Inversions added by appending `col`: already-chosen columns with a LARGER
+        // index each contribute one transposition (standard left-to-right parity).
+        let mut flips = 0usize;
+        for (c, &used) in col_used.iter().enumerate() {
+            if used && c > col {
+                flips += 1;
+            }
+        }
+        col_used[col] = true;
+        perm[row] = col;
+        let next_parity = parity ^ (flips % 2 == 1);
+        multipoly_det_rec(mat, col_used, perm, row + 1, next_parity, acc)?;
+        col_used[col] = false;
+    }
+    Some(())
+}
+
+/// Decide an ALL-STRICT-inequality N ≥ 3-variable component `comp` by the recursive
+/// cylindrical decomposition [`open_cell_samples`]. Every atom is `<`, `>`, or `≠`.
+///
+/// Returns `Some(Sat(bindings))` / `Some(Unsat)` when the decomposition is provably
+/// complete (Sat carries a fully-RATIONAL witness, replay-checked by the caller;
+/// Unsat is exhaustive by the open-set argument), or `None` to DECLINE on ANY
+/// completeness doubt (projection / isolation / sample / nullification / overflow /
+/// the cell cap) — never a wrong verdict.
+fn decide_strict_cad_nvar(comp: &[&MultiAtom], vars: &BTreeSet<SymbolId>) -> Option<TwoVarVerdict> {
+    debug_assert!(vars.len() >= 3);
+    debug_assert!(
+        comp.iter()
+            .all(|a| matches!(a.cmp, Cmp::Lt | Cmp::Gt | Cmp::Ne))
+    );
+
+    // The distinct constraint polynomials (deduplicated by structure).
+    let mut polys: Vec<MultiPoly> = Vec::new();
+    for atom in comp {
+        if !polys.iter().any(|p| p.terms == atom.poly.terms) {
+            polys.push(atom.poly.clone());
+        }
+    }
+    if polys.is_empty() {
+        return None;
+    }
+
+    let budget = CellBudget::new();
+    let mut witness: Option<Vec<(SymbolId, Value)>> = None;
+
+    // Visit each open cell's rational interior sample, SHORT-CIRCUITING on the first
+    // point that satisfies the whole strict system. A `None` from the visitor (an
+    // indeterminate sign at a complete rational point — which should not occur, but
+    // we never guess) propagates as a decline. The visitor binds `witness` and
+    // returns `Stop` on the first satisfying point.
+    let stopped = visit_open_cells(&polys, vars, &SamplePoint::new(), &budget, &mut |pt| {
+        // Defensive completeness: the sample must bind EVERY component variable.
+        if vars.iter().any(|v| !pt.contains_key(v)) {
+            return None;
+        }
+        let mut value_pt: BTreeMap<SymbolId, Value> = BTreeMap::new();
+        for (&v, &q) in pt {
+            value_pt.insert(v, Value::Real(q));
+        }
+        let mut all_hold = true;
+        for atom in comp {
+            // Every variable of the atom is in `vars`, so the point is complete; an
+            // indeterminate sign ⇒ decline (never a gap).
+            let s = multipoly_sign_at(&atom.poly, &value_pt)?;
+            if !sign_satisfies(atom.cmp, s) {
+                all_hold = false;
+                break;
+            }
+        }
+        if all_hold {
+            witness = Some(pt.iter().map(|(&v, &q)| (v, Value::Real(q))).collect());
+            Some(Visit::Stop)
+        } else {
+            Some(Visit::Continue)
+        }
+    })?;
+
+    if stopped {
+        // The first satisfying interior sample of an open cell ⇒ a genuine solution.
+        return Some(TwoVarVerdict::Sat(witness?));
+    }
+
+    // Every open cell's sample failed the strict system. By the open-set argument
+    // (the solution set is open; if nonempty it contains an open box meeting some
+    // sampled open cell), the component is Unsat — EXHAUSTIVELY. Reaching here means
+    // every sign test resolved (an indeterminate one would have declined via `?`)
+    // and the decomposition was complete (no decline anywhere).
+    Some(TwoVarVerdict::Unsat)
 }
 
 /// The partial derivative `∂p/∂v` of a [`MultiPoly`]: each monomial `c·v^e·rest`

@@ -2,7 +2,7 @@
 #![allow(clippy::many_single_char_names)]
 
 use axeyum_ir::{Rational, Sort, TermArena};
-use axeyum_solver::{CheckResult, SolverConfig, UnknownKind, check_with_nra};
+use axeyum_solver::{CheckResult, SolverConfig, check_with_nra};
 
 fn real(arena: &mut TermArena, name: &str) -> axeyum_ir::TermId {
     let s = arena.declare(name, Sort::Real).unwrap();
@@ -532,27 +532,6 @@ fn three_var_cross_query(bounded: bool) -> (TermArena, Vec<axeyum_ir::TermId>) {
     (a, assertions)
 }
 
-/// Assert a three-cross-product NRA query degrades to a `ResourceLimit` `Unknown`
-/// via the cross-product admission bound — promptly, never exhausting memory.
-fn assert_cross_product_bound_fires(arena: &mut TermArena, assertions: &[axeyum_ir::TermId]) {
-    let r = check_with_nra(arena, assertions, &SolverConfig::default()).unwrap();
-    match r {
-        CheckResult::Unknown(reason) => {
-            assert!(
-                matches!(reason.kind, UnknownKind::ResourceLimit),
-                "expected a ResourceLimit Unknown, got kind {:?}",
-                reason.kind
-            );
-            assert!(
-                reason.detail.contains("cross-products exceed"),
-                "expected the cross-product admission bound to fire, got: {}",
-                reason.detail
-            );
-        }
-        other => panic!("expected a graceful Unknown (never an OOM), got {other:?}"),
-    }
-}
-
 /// 3-variable AM–GM: `a²+b²+c² < ab+bc+ca` over **unbounded** reals is globally
 /// unsatisfiable (`a²+b²+c²−ab−bc−ca = ½[(a−b)²+(b−c)²+(c−a)²] ≥ 0`). The strict
 /// `< 0` refutation is now decided **Unsat** by the degree-2 SOS/PSD certificate
@@ -560,9 +539,9 @@ fn assert_cross_product_bound_fires(arena: &mut TermArena, assertions: &[axeyum_
 /// search. This is a strict improvement: the query historically OOM-killed the host
 /// and was then merely *declined* by the `MAX_CROSS_PRODUCTS` admission bound; the
 /// SOS certificate now proves it exactly and instantly. Sound Unsat, never a wrong
-/// sat. (The admission bound's OOM-guard regression coverage is preserved by
-/// `indefinite_three_cross_products_still_degrade_to_unknown_not_oom` below, whose
-/// indefinite form the SOS certificate correctly declines.)
+/// sat. (The indefinite companion form `ab+bc+ca < −1`, which the SOS certificate
+/// correctly declines, is now decided **Sat** by the recursive strict CAD — see
+/// `indefinite_three_cross_products_decided_sat_by_strict_cad` below.)
 #[test]
 fn unbounded_three_variable_am_gm_is_proved_unsat_by_sos() {
     let (mut a, assertions) = three_var_cross_query(false);
@@ -587,17 +566,17 @@ fn bounded_three_variable_am_gm_is_proved_unsat_by_sos() {
     );
 }
 
-/// OOM-guard regression coverage that the SOS certificate does **not** subsume: an
-/// *indefinite* three-cross-product strict query `ab+bc+ca < −1`. The form `ab+bc+ca`
-/// is indefinite (eigenvalues `1, −½, −½`), so it is neither PSD nor NSD and the
-/// degree-2 SOS certificate correctly **declines** — the query then reaches the
-/// abstraction path, where the deterministic `MAX_CROSS_PRODUCTS` admission bound
-/// (three distinct cross-products `ab`, `bc`, `ca`) must refuse it with a
-/// `ResourceLimit` `Unknown`, promptly, never exhausting memory. This keeps the
-/// "graceful `unknown`, never OOM/crash" guard under regression test now that SOS
-/// intercepts the globally-definite forms.
+/// An *indefinite* three-cross-product STRICT query `ab+bc+ca < −1`. The form
+/// `ab+bc+ca` is indefinite (eigenvalues `1, −½, −½`), so it is neither PSD nor NSD
+/// and the degree-2 SOS certificate correctly **declines**. It is genuinely
+/// SATISFIABLE (e.g. `a=2, b=−1, c=0` ⇒ `−2+0+0 = −2 < −1`), and the recursive
+/// N-variable strict CAD (all atoms strict ⇒ the solution set is open ⇒ rational
+/// interior cell samples decide it exactly) now finds a rational witness, replacing
+/// the former `ResourceLimit` `Unknown` degrade. Must be a SOUND Sat (replays
+/// through the independent ground evaluator) — never an OOM/crash, and never a wrong
+/// Unsat (the form is unbounded below).
 #[test]
-fn indefinite_three_cross_products_still_degrade_to_unknown_not_oom() {
+fn indefinite_three_cross_products_decided_sat_by_strict_cad() {
     let mut a = TermArena::new();
     let x = real(&mut a, "x");
     let y = real(&mut a, "y");
@@ -609,7 +588,23 @@ fn indefinite_three_cross_products_still_degrade_to_unknown_not_oom() {
     let form = a.real_add(s1, zx).unwrap(); // ab + bc + ca (indefinite)
     let neg_one = a.real_const(Rational::integer(-1));
     let lt = a.real_lt(form, neg_one).unwrap(); // ab+bc+ca < −1
-    assert_cross_product_bound_fires(&mut a, &[lt]);
+    let r = check_with_nra(&mut a, &[lt], &SolverConfig::default()).unwrap();
+    // Never a wrong Unsat (the form is unbounded below ⇒ the region is nonempty).
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "ab+bc+ca < −1 is sat (e.g. (2,−1,0)); must NEVER be Unsat, got {r:?}"
+    );
+    // A Sat witness must replay through the independent ground evaluator.
+    if let CheckResult::Sat(model) = &r {
+        let asg = model.to_assignment();
+        assert!(
+            matches!(
+                axeyum_ir::eval(&a, lt, &asg),
+                Ok(axeyum_ir::Value::Bool(true))
+            ),
+            "the strict-CAD witness must replay ab+bc+ca < −1 true; got {r:?}"
+        );
+    }
 }
 
 /// Selectivity: the guard counts **cross-products**, not squares. A square-only

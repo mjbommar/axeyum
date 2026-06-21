@@ -1506,3 +1506,280 @@ fn strict_cad_with_ne_atoms_sat() {
         }
     }
 }
+
+// --- Recursive N-variable (N ≥ 3) ALL-STRICT CAD slice (CAD/nlsat step 4) ------
+
+/// Build the squared term `v*v`.
+fn sq(arena: &mut TermArena, v: TermId) -> TermId {
+    arena.real_mul(v, v).unwrap()
+}
+
+/// 3-variable strict SAT: `x²+y²+z² < 9 ∧ x > 0 ∧ y > 0 ∧ z > 0` — the open
+/// positive octant of the open ball of radius 3. Satisfiable (e.g. (1,1,1) since
+/// 3 < 9). The recursive CAD samples one rational interior point per open cell at
+/// every recursion level (z eliminated, then y, then x), yields a fully RATIONAL
+/// witness, and that witness REPLAYS against ALL FOUR original assertions through
+/// the independent ground evaluator.
+#[test]
+fn strict_cad3_open_octant_ball_sat() {
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let (ys, yv) = real(&mut arena, "y");
+    let (zs, zv) = real(&mut arena, "z");
+    let xx = sq(&mut arena, xv);
+    let yy = sq(&mut arena, yv);
+    let zz = sq(&mut arena, zv);
+    let s1 = arena.real_add(xx, yy).unwrap();
+    let sum_sq = arena.real_add(s1, zz).unwrap();
+    let nine = arena.real_const(Rational::integer(9));
+    let a1 = arena.real_lt(sum_sq, nine).unwrap();
+    let z0 = arena.real_const(Rational::zero());
+    let a2 = arena.real_gt(xv, z0).unwrap();
+    let z1 = arena.real_const(Rational::zero());
+    let a3 = arena.real_gt(yv, z1).unwrap();
+    let z2 = arena.real_const(Rational::zero());
+    let a4 = arena.real_gt(zv, z2).unwrap();
+    let r = solve(&mut arena, &[a1, a2, a3, a4], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x²+y²+z²<9 ∧ x,y,z>0 must be Sat (open octant ball); got {r:?}");
+    };
+    // Witness must be fully rational (open cells ⇒ rational interior samples).
+    for (sym, name) in [(xs, "x"), (ys, "y"), (zs, "z")] {
+        assert!(
+            matches!(model.get(sym), Some(Value::Real(_))),
+            "{name} witness must be rational"
+        );
+    }
+    // Independent replay: ALL FOUR original assertions hold at the witness.
+    let asg = model.to_assignment();
+    for (a, name) in [(a1, "x²+y²+z²<9"), (a2, "x>0"), (a3, "y>0"), (a4, "z>0")] {
+        assert!(
+            matches!(eval(&arena, a, &asg), Ok(Value::Bool(true))),
+            "{name} must replay true at the 3-var strict-CAD witness"
+        );
+    }
+}
+
+/// 3-variable strict UNSAT (the completeness payoff): `x²+y²+z² < 1 ∧ x > 2`. The
+/// open ball lives in `|x| < 1`, disjoint from `x > 2` ⇒ NO solution. The recursive
+/// CAD certifies **Unsat** (every open cell's fiber system is empty), not Unknown.
+#[test]
+fn strict_cad3_disjoint_ball_halfspace_unsat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let (_zs, zv) = real(&mut arena, "z");
+    let xx = sq(&mut arena, xv);
+    let yy = sq(&mut arena, yv);
+    let zz = sq(&mut arena, zv);
+    let s1 = arena.real_add(xx, yy).unwrap();
+    let sum_sq = arena.real_add(s1, zz).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a1 = arena.real_lt(sum_sq, one).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let a2 = arena.real_gt(xv, two).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x²+y²+z²<1 ∧ x>2 is unsat (ball inside |x|<1, disjoint from x>2); the \
+         recursive strict CAD must CERTIFY Unsat, not Unknown; got {r:?}"
+    );
+}
+
+/// Soundness-negative (SAT must NEVER become Unsat): a 3-var CURVED open region —
+/// a spherical cap `x²+y²+z² < 4 ∧ x > 1` (inside radius 2, beyond the plane x=1).
+/// Satisfiable (e.g. (1.5,0,0): 2.25 < 4 and 1.5 > 1). The boundary is a genuine
+/// sphere (not a half-space), so the CAD must sample a curved fiber. Must be Sat or
+/// Unknown — NEVER Unsat — and any Sat witness must genuinely replay both atoms.
+#[test]
+fn strict_cad3_spherical_cap_sat_never_unsat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let (_zs, zv) = real(&mut arena, "z");
+    let xx = sq(&mut arena, xv);
+    let yy = sq(&mut arena, yv);
+    let zz = sq(&mut arena, zv);
+    let s1 = arena.real_add(xx, yy).unwrap();
+    let sum_sq = arena.real_add(s1, zz).unwrap();
+    let four = arena.real_const(Rational::integer(4));
+    let a1 = arena.real_lt(sum_sq, four).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a2 = arena.real_gt(xv, one).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "the open cap x²+y²+z²<4 ∧ x>1 is sat (e.g. (1.5,0,0)); must NEVER be Unsat; got {r:?}"
+    );
+    if let CheckResult::Sat(model) = &r {
+        let asg = model.to_assignment();
+        assert!(
+            matches!(eval(&arena, a1, &asg), Ok(Value::Bool(true)))
+                && matches!(eval(&arena, a2, &asg), Ok(Value::Bool(true))),
+            "any Sat witness must replay both cap bounds true"
+        );
+    }
+}
+
+/// Soundness-negative (UNSAT must NEVER become Sat): `x²+y²+z² < 1 ∧ x²+y²+z² > 4`
+/// is unsatisfiable (a point cannot be inside radius 1 and outside radius 2). Must
+/// be Unsat or Unknown — NEVER Sat.
+#[test]
+fn strict_cad3_contradictory_radii_never_sat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let (_zs, zv) = real(&mut arena, "z");
+    let xx = sq(&mut arena, xv);
+    let yy = sq(&mut arena, yv);
+    let zz = sq(&mut arena, zv);
+    let s1 = arena.real_add(xx, yy).unwrap();
+    let sum_sq = arena.real_add(s1, zz).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a1 = arena.real_lt(sum_sq, one).unwrap();
+    let four = arena.real_const(Rational::integer(4));
+    let a2 = arena.real_gt(sum_sq, four).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Sat(_)),
+        "x²+y²+z²<1 ∧ x²+y²+z²>4 is unsat; must NEVER be Sat; got {r:?}"
+    );
+}
+
+/// A coupled 3-var strict UNSAT via a product sign contradiction: `x*y*z > 1 ∧
+/// x*y*z < 0`. No point's triple product is both above 1 and below 0. The recursive
+/// CAD must certify Unsat, NEVER Sat (and never hang).
+#[test]
+fn strict_cad3_contradictory_triple_product_never_sat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let (_zs, zv) = real(&mut arena, "z");
+    let xy = arena.real_mul(xv, yv).unwrap();
+    let xyz = arena.real_mul(xy, zv).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a1 = arena.real_gt(xyz, one).unwrap();
+    let zero = arena.real_const(Rational::zero());
+    let a2 = arena.real_lt(xyz, zero).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Sat(_)),
+        "x*y*z>1 ∧ x*y*z<0 is unsat (a product cannot be both >1 and <0); \
+         must NEVER be Sat; got {r:?}"
+    );
+}
+
+/// Out-of-scope: a ≥3-var component containing an EQUALITY (`x*y*z = 1 ∧ x > 0 ∧
+/// y > 0`) is NOT routed to the recursive strict CAD. It must NOT be wrongly Unsat
+/// (it is sat, e.g. (1,1,1)); a sound decline (Unknown) is acceptable.
+#[test]
+fn strict_cad3_equality_component_out_of_scope_not_unsat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let (_zs, zv) = real(&mut arena, "z");
+    let xy = arena.real_mul(xv, yv).unwrap();
+    let xyz = arena.real_mul(xy, zv).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a1 = arena.eq(xyz, one).unwrap();
+    let z0 = arena.real_const(Rational::zero());
+    let a2 = arena.real_gt(xv, z0).unwrap();
+    let z1 = arena.real_const(Rational::zero());
+    let a3 = arena.real_gt(yv, z1).unwrap();
+    let r = solve(&mut arena, &[a1, a2, a3], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "x*y*z=1 ∧ x>0 ∧ y>0 is sat (e.g. (1,1,1)); a ≥3-var component with an \
+         equality is out of strict-CAD scope and must NOT be wrongly Unsat; got {r:?}"
+    );
+}
+
+/// `≠` atoms participate in the recursive CAD: `x²+y²+z² < 9 ∧ x ≠ 0 ∧ y ≠ 0 ∧
+/// z ≠ 0` (the punctured open ball minus the coordinate planes; e.g. (1,1,1)). Must
+/// not be Unsat; any Sat witness replays.
+#[test]
+fn strict_cad3_with_ne_atoms_sat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let (_zs, zv) = real(&mut arena, "z");
+    let xx = sq(&mut arena, xv);
+    let yy = sq(&mut arena, yv);
+    let zz = sq(&mut arena, zv);
+    let s1 = arena.real_add(xx, yy).unwrap();
+    let sum_sq = arena.real_add(s1, zz).unwrap();
+    let nine = arena.real_const(Rational::integer(9));
+    let a1 = arena.real_lt(sum_sq, nine).unwrap();
+    let zx = arena.real_const(Rational::zero());
+    let a2 = ne(&mut arena, xv, zx);
+    let zy = arena.real_const(Rational::zero());
+    let a3 = ne(&mut arena, yv, zy);
+    let zz0 = arena.real_const(Rational::zero());
+    let a4 = ne(&mut arena, zv, zz0);
+    let r = solve(&mut arena, &[a1, a2, a3, a4], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "x²+y²+z²<9 ∧ x≠0 ∧ y≠0 ∧ z≠0 is sat (e.g. (1,1,1)); got {r:?}"
+    );
+    if let CheckResult::Sat(model) = &r {
+        let asg = model.to_assignment();
+        for (a, name) in [(a1, "x²+y²+z²<9"), (a2, "x≠0"), (a3, "y≠0"), (a4, "z≠0")] {
+            assert!(
+                matches!(eval(&arena, a, &asg), Ok(Value::Bool(true))),
+                "{name} must replay true"
+            );
+        }
+    }
+}
+
+/// Bounded: a high-degree, many-variable strict input must DECLINE (or decide)
+/// WITHOUT hanging / OOM / panicking — the cell-count / Sylvester caps guard the
+/// combinatorial blow-up. `x⁴+y⁴+z⁴+w⁴ < 1 ∧ x>0 ∧ y>0 ∧ z>0 ∧ w>0` (4 vars,
+/// degree 4). Whatever the verdict, it must be sound: if Sat, it replays; it must
+/// never be a wrong Unsat (the region is nonempty, e.g. near the origin).
+#[test]
+fn strict_cad_high_degree_many_var_bounded_no_hang() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let (_zs, zv) = real(&mut arena, "z");
+    let (_ws, wv) = real(&mut arena, "w");
+    let quart = |arena: &mut TermArena, v: TermId| {
+        let v2 = arena.real_mul(v, v).unwrap();
+        arena.real_mul(v2, v2).unwrap()
+    };
+    let x4 = quart(&mut arena, xv);
+    let y4 = quart(&mut arena, yv);
+    let z4 = quart(&mut arena, zv);
+    let w4 = quart(&mut arena, wv);
+    let s1 = arena.real_add(x4, y4).unwrap();
+    let s2 = arena.real_add(s1, z4).unwrap();
+    let sum = arena.real_add(s2, w4).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a1 = arena.real_lt(sum, one).unwrap();
+    let z0 = arena.real_const(Rational::zero());
+    let a2 = arena.real_gt(xv, z0).unwrap();
+    let z1 = arena.real_const(Rational::zero());
+    let a3 = arena.real_gt(yv, z1).unwrap();
+    let z2 = arena.real_const(Rational::zero());
+    let a4 = arena.real_gt(zv, z2).unwrap();
+    let z3 = arena.real_const(Rational::zero());
+    let a5 = arena.real_gt(wv, z3).unwrap();
+    let r =
+        solve(&mut arena, &[a1, a2, a3, a4, a5], &SolverConfig::default()).expect("no error/hang");
+    // Soundness: the region is nonempty (e.g. (0.5,0.5,0.5,0.5): 4·0.0625=0.25<1),
+    // so it must NEVER be Unsat. Sat (replayed) or Unknown are both acceptable.
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "the open region x⁴+y⁴+z⁴+w⁴<1 ∧ x,y,z,w>0 is nonempty; must NEVER be Unsat; got {r:?}"
+    );
+    if let CheckResult::Sat(model) = &r {
+        let asg = model.to_assignment();
+        for a in [a1, a2, a3, a4, a5] {
+            assert!(
+                matches!(eval(&arena, a, &asg), Ok(Value::Bool(true))),
+                "any Sat witness must replay every atom true"
+            );
+        }
+    }
+}
