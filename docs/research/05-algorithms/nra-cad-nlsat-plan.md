@@ -145,9 +145,23 @@ SOS reconstruction covers the degree-2 cells.
      the `RealAlgebraic` field arithmetic from slice 1 — the deferred number-field
      case reached with existing infrastructure. Fuzz-gated (DISAGREE=0, 2000
      instances, 976 Sat replays verified).
-   - **remaining:** (c2) extend algebraic critical-point lifting to **N-var** (≥3,
-     recursive — currently N-var declines algebraic criticals); (d) per-cell
-     Positivstellensatz evidence (step 4) for Lean reconstruction (the long arc).
+   - **slice c2 DONE** — recursive **N-variable algebraic** critical-point lifting:
+     the **CAD is now COMPLETE on the decision side** for any dimension and any
+     (rational or algebraic) coordinate. `decide_nonstrict_cad_nvar_algebraic` /
+     `visit_all_cells_value` carry a mixed rational/algebraic point; `fiber_boundary_poly`
+     derives each fiber's rational univariate boundary by eliminating every
+     algebraic-bound coordinate against its min-poly (`multi_resultant(mᵢ, p, xᵢ)` —
+     the 2-var technique iterated), and signs are exact field arithmetic. Routed via
+     `or_else` after the rational path (so it only upgrades Unknown→decide, never
+     flips). Fuzz-gated: BOTH the NRA and NIA differential fuzzes DISAGREE=0.
+   - **SOUNDNESS GATES (4):** the adversarial sweep added differential fuzzes for
+     NRA, **NIA** (integer — found the `lift_candidate` positive-dimensional collapse
+     wrong-unsat, `6ea89a8`), **UFLIA** (UF+arith — found a nested-UF projection
+     crash, `9c2b2f9`), and **ABV** (arrays — clean). All four at DISAGREE=0; run the
+     relevant gate(s) before any decider change.
+   - **remaining:** (d) per-cell Positivstellensatz evidence (step 4) for Lean
+     reconstruction (the long arc — the proof/Lean-parity side; NRA decisions carry
+     no proof artifact yet beyond the degree-2 SOS cells).
 4. Cell-certificate format + the degree-2 reconstruction hook; general
    Positivstellensatz reconstruction is the long arc.
 
