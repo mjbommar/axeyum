@@ -62,6 +62,8 @@
 
 use core::cmp::Ordering;
 
+use std::collections::{BTreeMap, BTreeSet};
+
 use axeyum_ir::{
     Assignment, Op, Rational, RealAlgebraic, Sign, Sort, SymbolId, TermArena, TermId, TermNode,
     Value, eval,
@@ -258,28 +260,41 @@ pub fn decide_real_poly_constraint(
     // must collect over the SAME variable.
     let mut atoms: Vec<Atom> = Vec::new();
     let mut var: Option<SymbolId> = None;
+    let mut single_var_ok = true;
     for &a in assertions {
         if collect_conjuncts(arena, a, &mut var, &mut atoms).is_none() {
-            return Ok(None);
+            single_var_ok = false;
+            break;
         }
     }
-    if atoms.is_empty() {
-        return Ok(None);
-    }
-    let Some(var) = var else {
-        // Every atom collected to a constant polynomial (no variable) — that is
-        // exact LRA territory, not ours.
-        return Ok(None);
-    };
 
-    // Single-constraint fast path: preserves the original (well-tested) behavior,
-    // including the dedicated `≠` and `≤/≥`-root witnesses.
-    if let [atom] = atoms.as_slice() {
-        return Ok(decide_single(arena, assertions, var, atom));
+    if single_var_ok {
+        if atoms.is_empty() {
+            return Ok(None);
+        }
+        let Some(var) = var else {
+            // Every atom collected to a constant polynomial (no variable) — that is
+            // exact LRA territory, not ours.
+            return Ok(None);
+        };
+
+        // Single-constraint fast path: preserves the original (well-tested) behavior,
+        // including the dedicated `≠` and `≤/≥`-root witnesses.
+        if let [atom] = atoms.as_slice() {
+            return Ok(decide_single(arena, assertions, var, atom));
+        }
+
+        // Conjunction: sign-cell decomposition over the shared variable.
+        return Ok(decide_system(arena, assertions, var, &atoms));
     }
 
-    // Conjunction: sign-cell decomposition over the shared variable.
-    Ok(decide_system(arena, assertions, var, &atoms))
+    // The single-variable collector declined (most often because a *second*
+    // distinct variable appears). Try the sound, bounded **multivariate
+    // decomposition** path (linear-substitution fixpoint + connected components
+    // of single-variable sub-systems). It declines (`None`) on any genuinely
+    // coupled / nonlinear-multivariate / non-polynomial / overflow shape, leaving
+    // the query to the NRA layer.
+    Ok(decompose_multivariate(arena, assertions))
 }
 
 /// One atomic comparison `poly(x) ⋈ 0`, with the integer-cleared polynomial.
@@ -414,6 +429,48 @@ fn decide_system(
     // have returned `None`/declined via `?`). Reaching here means the enumeration
     // was complete.
     Some(CheckResult::Unsat)
+}
+
+/// The outcome of deciding a single-variable system **without** the
+/// per-assertion replay (used by the multivariate decomposition, which replays
+/// the assembled full model against all original assertions once at the end).
+enum SystemVerdict {
+    Unsat,
+    Sat(Value),
+}
+
+/// Decide a single-variable system `⋀ᵢ pᵢ(x) ⋈ᵢ 0` and return just the witness
+/// **value** (a rational [`Value::Real`] or irrational [`Value::RealAlgebraic`])
+/// or `Unsat`, with **no** assertion-level replay. Same sign-cell decomposition
+/// as [`decide_system`]; `None` declines (ordering ambiguity / overflow).
+fn decide_system_value(atoms: &[Atom]) -> Option<SystemVerdict> {
+    let mut roots: Vec<Root> = Vec::new();
+    for atom in atoms {
+        roots.extend(isolate_roots(&atom.poly)?);
+    }
+    let ordered = sort_roots(&roots)?;
+    let samples = cell_samples(&ordered)?;
+
+    for q in &samples {
+        if rational_satisfies_all(atoms, *q)? {
+            return Some(SystemVerdict::Sat(Value::Real(*q)));
+        }
+    }
+    for root in &ordered {
+        match root {
+            Root::Rational(q) => {
+                if rational_satisfies_all(atoms, *q)? {
+                    return Some(SystemVerdict::Sat(Value::Real(*q)));
+                }
+            }
+            Root::Algebraic(a) => {
+                if algebraic_satisfies_all(atoms, a)? && algebraic_replay_all(atoms, a) {
+                    return Some(SystemVerdict::Sat(Value::RealAlgebraic(a.clone())));
+                }
+            }
+        }
+    }
+    Some(SystemVerdict::Unsat)
 }
 
 /// Whether the rational `q` satisfies every constraint, by exact rational sign
@@ -1034,6 +1091,842 @@ fn collect(arena: &TermArena, t: TermId) -> Option<RatPoly> {
             }
             Op::RealMul if args.len() == 2 => {
                 collect(arena, args[0])?.mul(&collect(arena, args[1])?)
+            }
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+// ============================================================================
+// Multivariate decomposition (sound, bounded): linear-substitution fixpoint +
+// connected-components of single-variable sub-systems.
+// ============================================================================
+//
+// `decide_real_poly_constraint` routes here when the single-variable collector
+// declines (typically: ≥ 2 distinct variables). We re-collect the whole query
+// as **multivariate** polynomial comparisons, then reduce to single-variable
+// sub-problems by two sound transformations:
+//
+//   1. **Linear-defined-variable substitution.** An equality atom that
+//      isolates one variable `y` as `y = L(other vars)` (L linear, y-free) is
+//      removed and `y := L` substituted (exact Rational arithmetic) into every
+//      other atom. Iterated to a fixpoint, bounded by the variable count.
+//
+//   2. **Connected components.** After substitution the remaining atoms are
+//      partitioned by variable-sharing. If *every* component mentions exactly
+//      one variable, each is a single-variable system decided by the existing
+//      machinery; the witnesses combine because the components are disjoint.
+//
+// Anything else — a component with ≥ 2 distinct variables (genuinely coupled),
+// a non-polynomial atom, a degree/coefficient/overflow guard trip — DECLINES.
+// Every `Sat` is replay-checked: the assembled full model is evaluated against
+// **every** original assertion (rational vars through the ground evaluator;
+// for an atom containing the single algebraic var, the rational vars are
+// substituted into the atom polynomial and the residual single-variable
+// polynomial's sign at the algebraic value is checked exactly via `sign_at`).
+
+/// The substitution fixpoint is bounded by the number of distinct variables;
+/// this is a hard ceiling guarding against any non-termination.
+const MAX_SUBST_ITERS: usize = 256;
+
+/// A monomial: a sorted product of `var^exp` factors (empty ⇒ the constant
+/// monomial `1`). Stored as a `BTreeMap` for a canonical key.
+type Monomial = BTreeMap<SymbolId, u32>;
+
+/// A multivariate polynomial with **rational** coefficients: a canonical map
+/// from monomial to nonzero coefficient. The empty map is the zero polynomial.
+#[derive(Clone, Default)]
+struct MultiPoly {
+    terms: BTreeMap<MonoKey, Rational>,
+}
+
+/// An orderable key for a monomial (the `BTreeMap` of a monomial is not itself
+/// `Ord` in a way we can nest; we serialize it to a sorted `Vec`).
+type MonoKey = Vec<(SymbolId, u32)>;
+
+fn mono_key(m: &Monomial) -> MonoKey {
+    m.iter().map(|(&s, &e)| (s, e)).collect()
+}
+
+impl MultiPoly {
+    fn zero() -> Self {
+        MultiPoly {
+            terms: BTreeMap::new(),
+        }
+    }
+
+    fn constant(r: Rational) -> Self {
+        let mut p = MultiPoly::zero();
+        if !r.is_zero() {
+            p.terms.insert(Vec::new(), r);
+        }
+        p
+    }
+
+    fn var(s: SymbolId) -> Self {
+        let mut p = MultiPoly::zero();
+        p.terms.insert(vec![(s, 1)], Rational::integer(1));
+        p
+    }
+
+    /// Insert `coeff * monomial`, merging into any existing term and dropping a
+    /// resulting zero coefficient. `None` on overflow.
+    fn add_term(&mut self, key: MonoKey, coeff: Rational) -> Option<()> {
+        if coeff.is_zero() {
+            return Some(());
+        }
+        match self.terms.get(&key).copied() {
+            None => {
+                self.terms.insert(key, coeff);
+            }
+            Some(existing) => {
+                let sum = existing.checked_add(coeff)?;
+                if sum.is_zero() {
+                    self.terms.remove(&key);
+                } else {
+                    self.terms.insert(key, sum);
+                }
+            }
+        }
+        Some(())
+    }
+
+    fn add(&self, other: &Self) -> Option<Self> {
+        let mut out = self.clone();
+        for (k, &c) in &other.terms {
+            out.add_term(k.clone(), c)?;
+        }
+        Some(out)
+    }
+
+    fn neg(&self) -> Option<Self> {
+        let mut out = MultiPoly::zero();
+        for (k, &c) in &self.terms {
+            out.terms.insert(k.clone(), c.checked_neg()?);
+        }
+        Some(out)
+    }
+
+    fn sub(&self, other: &Self) -> Option<Self> {
+        self.add(&other.neg()?)
+    }
+
+    fn mul(&self, other: &Self) -> Option<Self> {
+        let mut out = MultiPoly::zero();
+        for (ka, &ca) in &self.terms {
+            for (kb, &cb) in &other.terms {
+                let coeff = ca.checked_mul(cb)?;
+                let key = mul_mono(ka, kb)?;
+                // Total-degree guard.
+                if mono_total_degree(&key) > MAX_DEGREE {
+                    return None;
+                }
+                out.add_term(key, coeff)?;
+            }
+        }
+        Some(out)
+    }
+
+    /// The set of variables actually appearing (with nonzero exponent).
+    fn vars(&self) -> BTreeSet<SymbolId> {
+        let mut s = BTreeSet::new();
+        for k in self.terms.keys() {
+            for &(v, _) in k {
+                s.insert(v);
+            }
+        }
+        s
+    }
+
+    fn is_zero(&self) -> bool {
+        self.terms.is_empty()
+    }
+
+    /// Substitute `var := repl` (a polynomial) into this polynomial. Each
+    /// occurrence `var^e` is replaced by `repl^e`. `None` on overflow.
+    fn substitute(&self, var: SymbolId, repl: &MultiPoly) -> Option<Self> {
+        let mut out = MultiPoly::zero();
+        for (key, &coeff) in &self.terms {
+            // Split the monomial into the `var^e` factor and the rest.
+            let mut exp = 0u32;
+            let mut rest: MonoKey = Vec::new();
+            for &(v, e) in key {
+                if v == var {
+                    exp = e;
+                } else {
+                    rest.push((v, e));
+                }
+            }
+            // term = coeff * rest * repl^exp.
+            let mut factor = MultiPoly::constant(coeff);
+            if !rest.is_empty() {
+                let mut rp = MultiPoly::zero();
+                rp.terms.insert(rest, Rational::integer(1));
+                factor = factor.mul(&rp)?;
+            }
+            for _ in 0..exp {
+                factor = factor.mul(repl)?;
+            }
+            out = out.add(&factor)?;
+        }
+        Some(out)
+    }
+
+    /// If this polynomial is **linear** and isolates one variable with
+    /// coefficient `±1` so that an equality `poly = 0` rearranges to
+    /// `y = L(other vars)` with `L` linear and y-free, return `(y, L)`.
+    ///
+    /// The polynomial is `c0 + Σ cᵢ·vᵢ`. We require it linear (every monomial
+    /// degree ≤ 1) and pick a variable `y` whose coefficient is exactly `±1`.
+    /// Then `poly = 0` ⇒ `y = −(rest)/cᵧ`, and since `cᵧ = ±1`, `L` has exact
+    /// rational coefficients with no division blow-up.
+    fn as_linear_definition(&self) -> Option<(SymbolId, MultiPoly)> {
+        // Reject any nonlinear monomial.
+        for k in self.terms.keys() {
+            if mono_total_degree(k) > 1 {
+                return None;
+            }
+        }
+        // Find a variable with coefficient ±1.
+        let mut chosen: Option<(SymbolId, Rational)> = None;
+        for (k, &c) in &self.terms {
+            if let [(v, 1)] = k.as_slice()
+                && (c == Rational::integer(1) || c == Rational::integer(-1))
+            {
+                chosen = Some((*v, c));
+                break;
+            }
+        }
+        let (y, cy) = chosen?;
+        // L = −(poly − cy·y) / cy. Build `poly` with the y-term removed, then
+        // scale by `−1/cy`. Since cy = ±1, −1/cy = ∓1.
+        let scale = cy.checked_neg()?; // −cy = ∓1 (because cy=±1 ⇒ −1/cy = −cy)
+        let mut l = MultiPoly::zero();
+        for (k, &c) in &self.terms {
+            if k.as_slice() == [(y, 1)] {
+                continue;
+            }
+            let nc = c.checked_mul(scale)?;
+            l.add_term(k.clone(), nc)?;
+        }
+        // `L` must be y-free (it is, by construction) and linear (it is).
+        Some((y, l))
+    }
+
+    /// Reduce a single-variable multivariate polynomial to the LSB-first integer
+    /// polynomial layout the single-variable decider consumes. Requires exactly
+    /// one variable. `None` on overflow / coefficient guard.
+    fn to_single_var_integer_poly(&self, var: SymbolId) -> Option<Vec<i128>> {
+        // Gather rational coefficients by exponent.
+        let mut by_exp: BTreeMap<u32, Rational> = BTreeMap::new();
+        let mut max_exp = 0u32;
+        for (k, &c) in &self.terms {
+            let exp = match k.as_slice() {
+                [] => 0,
+                [(v, e)] if *v == var => *e,
+                _ => return None, // not single-variable in `var`
+            };
+            max_exp = max_exp.max(exp);
+            let slot = by_exp.entry(exp).or_insert_with(Rational::zero);
+            *slot = slot.checked_add(c)?;
+        }
+        if usize::try_from(max_exp).ok()? > MAX_DEGREE {
+            return None;
+        }
+        let rat: Vec<Rational> = (0..=max_exp)
+            .map(|e| by_exp.get(&e).copied().unwrap_or_else(Rational::zero))
+            .collect();
+        rat_coeffs_to_integer(&rat)
+    }
+}
+
+/// Multiply two monomial keys, summing exponents. `None` on `u32` overflow.
+fn mul_mono(a: &MonoKey, b: &MonoKey) -> Option<MonoKey> {
+    let mut m: Monomial = BTreeMap::new();
+    for &(v, e) in a.iter().chain(b.iter()) {
+        let slot = m.entry(v).or_insert(0);
+        *slot = slot.checked_add(e)?;
+    }
+    m.retain(|_, &mut e| e != 0);
+    Some(mono_key(&m))
+}
+
+/// Total degree of a monomial key (sum of exponents).
+fn mono_total_degree(k: &MonoKey) -> usize {
+    k.iter().map(|&(_, e)| e as usize).sum()
+}
+
+/// Clear denominators of a LSB-first rational coefficient vector to an integer
+/// polynomial (multiply by the positive LCM of denominators), mirroring
+/// `RatPoly::to_integer_poly`. `None` on overflow / coefficient guard.
+fn rat_coeffs_to_integer(coeffs: &[Rational]) -> Option<Vec<i128>> {
+    let mut lcm = 1i128;
+    for c in coeffs {
+        lcm = lcm_i128(lcm, c.denominator())?;
+    }
+    let mut out = Vec::with_capacity(coeffs.len());
+    for c in coeffs {
+        let scaled = c.numerator().checked_mul(lcm)?;
+        if scaled % c.denominator() != 0 {
+            return None;
+        }
+        let v = scaled / c.denominator();
+        if v.checked_abs()? >= MAX_ABS_COEFF {
+            return None;
+        }
+        out.push(v);
+    }
+    while out.len() > 1 && *out.last().unwrap() == 0 {
+        out.pop();
+    }
+    Some(out)
+}
+
+/// A multivariate atomic comparison `poly(vars) ⋈ 0`.
+struct MultiAtom {
+    cmp: Cmp,
+    poly: MultiPoly,
+}
+
+/// Drive the sound multivariate decomposition. Returns `Some(Sat/Unsat)` only
+/// when the query reduces (via linear substitution + single-variable
+/// components) to a decision whose full model replays against every original
+/// assertion; `None` declines on any coupling / nonlinear-multivariate /
+/// non-polynomial / overflow shape.
+fn decompose_multivariate(arena: &TermArena, assertions: &[TermId]) -> Option<CheckResult> {
+    // 1. Re-collect every assertion as a multivariate comparison.
+    let mut atoms: Vec<MultiAtom> = Vec::new();
+    for &a in assertions {
+        collect_multi_conjuncts(arena, a, &mut atoms)?;
+    }
+    if atoms.is_empty() {
+        return None;
+    }
+    // Require at least two distinct variables overall — otherwise the single-var
+    // path already owns this (and we must not double-handle / diverge).
+    let all_vars: BTreeSet<SymbolId> = atoms.iter().flat_map(|a| a.poly.vars()).collect();
+    if all_vars.len() < 2 {
+        return None;
+    }
+
+    // 2. Substitution fixpoint. `subst[y] = L` records each eliminated variable's
+    //    definition (in terms of the *remaining* variables at elimination time;
+    //    back-substitution at the end resolves these to concrete values).
+    let mut subst: Vec<(SymbolId, MultiPoly)> = Vec::new();
+    for _ in 0..MAX_SUBST_ITERS {
+        // Find an equality atom that defines a variable linearly.
+        let mut found: Option<(usize, SymbolId, MultiPoly)> = None;
+        for (i, atom) in atoms.iter().enumerate() {
+            if matches!(atom.cmp, Cmp::Eq)
+                && let Some((y, l)) = atom.poly.as_linear_definition()
+            {
+                found = Some((i, y, l));
+                break;
+            }
+        }
+        let Some((idx, y, l)) = found else { break };
+        // Substitute `y := L` into every *other* atom; drop the defining atom.
+        let mut next: Vec<MultiAtom> = Vec::with_capacity(atoms.len() - 1);
+        for (i, atom) in atoms.iter().enumerate() {
+            if i == idx {
+                continue;
+            }
+            let poly = atom.poly.substitute(y, &l)?;
+            next.push(MultiAtom {
+                cmp: atom.cmp,
+                poly,
+            });
+        }
+        atoms = next;
+        // Also rewrite earlier definitions that referenced `y` (so back-subst is
+        // independent of evaluation order).
+        for (_, def) in &mut subst {
+            *def = def.substitute(y, &l)?;
+        }
+        subst.push((y, l));
+        if atoms.is_empty() {
+            break;
+        }
+    }
+
+    // 3. Connected components over the remaining (post-substitution) atoms. A
+    //    constant atom (no vars) is checked directly: false ⇒ Unsat, true ⇒ drop.
+    let mut live: Vec<&MultiAtom> = Vec::new();
+    for atom in &atoms {
+        if atom.poly.vars().is_empty() {
+            // Constant comparison: evaluate its sign exactly.
+            let c = atom.poly.terms.get(&Vec::new()).copied();
+            let val = c.unwrap_or_else(Rational::zero);
+            let s = Sign::of_rational(val);
+            if !sign_satisfies(atom.cmp, s) {
+                return Some(CheckResult::Unsat);
+            }
+            // Tautology — contributes nothing.
+        } else {
+            live.push(atom);
+        }
+    }
+
+    // Partition `live` atoms into connected components by shared variables.
+    let components = connected_components(&live);
+
+    // Decide each component; every component must be single-variable.
+    let mut model = Model::new();
+    for comp in &components {
+        // Union of variables across this component.
+        let comp_vars: BTreeSet<SymbolId> = comp.iter().flat_map(|a| a.poly.vars()).collect();
+        if comp_vars.len() != 1 {
+            // ≥ 2 distinct variables that share a constraint ⇒ genuinely coupled
+            // (the deferred CAD slice). Decline.
+            return None;
+        }
+        let var = *comp_vars.iter().next().unwrap();
+        // Convert this component's atoms to single-variable integer polynomials.
+        let mut single_atoms: Vec<Atom> = Vec::with_capacity(comp.len());
+        for atom in comp {
+            let poly = atom.poly.to_single_var_integer_poly(var)?;
+            if poly.len() <= 1 {
+                // Degenerate (became constant after substitution): re-check it as
+                // a constant — but a single-variable component should retain its
+                // variable; treat as decline to stay safe.
+                return None;
+            }
+            single_atoms.push(Atom {
+                cmp: atom.cmp,
+                poly,
+            });
+        }
+        match decide_system_value(&single_atoms)? {
+            SystemVerdict::Unsat => return Some(CheckResult::Unsat),
+            SystemVerdict::Sat(v) => {
+                model.set(var, v);
+            }
+        }
+    }
+
+    // 4. Back-substitute eliminated variables (reverse order). Each `y = L` with
+    //    L in already-resolved variables; evaluate L under the current model.
+    for (y, l) in subst.iter().rev() {
+        let v = eval_multipoly_under_model(l, &model)?;
+        model.set(*y, v);
+    }
+
+    // 5. Replay-check the full model against EVERY original assertion. The
+    //    eliminated-variable definitions (`subst`) are applied back into each atom
+    //    first, so a linear *defining* equation (which couples two algebraic vars,
+    //    e.g. `y = −x` with both ±√2) collapses to an identity in the surviving
+    //    component variable rather than needing algebraic field arithmetic.
+    if !replay_multivariate(arena, assertions, &model, &subst) {
+        return None;
+    }
+    Some(CheckResult::Sat(model))
+}
+
+/// Union-find root with path-halving.
+fn uf_find(parent: &mut [usize], mut x: usize) -> usize {
+    while parent[x] != x {
+        parent[x] = parent[parent[x]];
+        x = parent[x];
+    }
+    x
+}
+
+/// Connected components of `atoms` under the "share a variable" relation,
+/// returned as groups of atom references (deterministic order).
+fn connected_components<'a>(atoms: &[&'a MultiAtom]) -> Vec<Vec<&'a MultiAtom>> {
+    let n = atoms.len();
+    let mut parent: Vec<usize> = (0..n).collect();
+    // Union atoms that share any variable.
+    let var_sets: Vec<BTreeSet<SymbolId>> = atoms.iter().map(|a| a.poly.vars()).collect();
+    for i in 0..n {
+        for j in (i + 1)..n {
+            if !var_sets[i].is_disjoint(&var_sets[j]) {
+                let ri = uf_find(&mut parent, i);
+                let rj = uf_find(&mut parent, j);
+                if ri != rj {
+                    parent[ri] = rj;
+                }
+            }
+        }
+    }
+    // Group by root, preserving first-appearance order for determinism.
+    let mut order: Vec<usize> = Vec::new();
+    let mut groups: BTreeMap<usize, Vec<&MultiAtom>> = BTreeMap::new();
+    for (i, atom) in atoms.iter().enumerate() {
+        let r = uf_find(&mut parent, i);
+        if !groups.contains_key(&r) {
+            order.push(r);
+        }
+        groups.entry(r).or_default().push(atom);
+    }
+    order
+        .into_iter()
+        .map(|r| groups.remove(&r).unwrap())
+        .collect()
+}
+
+/// Evaluate a multivariate polynomial under a model that binds every variable
+/// it mentions to a concrete [`Value`] (rational or algebraic). Returns the
+/// resulting value. `None` on overflow, an unbound variable, or a case that
+/// would require multiplying two *distinct* algebraic values (the deferred
+/// field-arithmetic case).
+fn eval_multipoly_under_model(p: &MultiPoly, model: &Model) -> Option<Value> {
+    // Partition variables into rational-valued and algebraic-valued.
+    let vars = p.vars();
+    let mut rationals: BTreeMap<SymbolId, Rational> = BTreeMap::new();
+    let mut algebraic: Option<SymbolId> = None;
+    for v in &vars {
+        match model.get(*v)? {
+            Value::Real(q) => {
+                rationals.insert(*v, q);
+            }
+            Value::RealAlgebraic(_) => {
+                if algebraic.is_some() && algebraic != Some(*v) {
+                    // Two distinct algebraic variables in one polynomial: the
+                    // deferred algebraic-product case. Decline.
+                    return None;
+                }
+                algebraic = Some(*v);
+            }
+            _ => return None,
+        }
+    }
+
+    match algebraic {
+        None => {
+            // Fully rational: evaluate exactly.
+            let q = eval_multipoly_rational(p, &rationals)?;
+            Some(Value::Real(q))
+        }
+        Some(av) => {
+            // Substitute the rational variables, leaving a single-variable
+            // polynomial in `av`. If the residual is constant, the value is that
+            // rational; if it is *affine* in `av` (`a·av + b`, a ≠ 0) we build the
+            // exact derived algebraic value by an affine transform of `av`'s
+            // defining polynomial and isolating interval (sound: it is one
+            // algebraic number mapped through an affine map, not a product of two
+            // distinct algebraic numbers). Anything higher-degree in `av` would
+            // need genuine algebraic field arithmetic — decline.
+            let alg = model.get(av)?.as_real_algebraic()?.clone();
+            let residual = substitute_rationals(p, &rationals)?; // single-var in `av`
+            classify_residual(&residual, av, &alg)
+        }
+    }
+}
+
+/// Evaluate a fully-rational multivariate polynomial. `None` on overflow.
+fn eval_multipoly_rational(p: &MultiPoly, vals: &BTreeMap<SymbolId, Rational>) -> Option<Rational> {
+    let mut acc = Rational::zero();
+    for (k, &c) in &p.terms {
+        let mut term = c;
+        for &(v, e) in k {
+            let base = *vals.get(&v)?;
+            for _ in 0..e {
+                term = term.checked_mul(base)?;
+            }
+        }
+        acc = acc.checked_add(term)?;
+    }
+    Some(acc)
+}
+
+/// Substitute the rational-valued variables into `p`, returning a polynomial in
+/// the remaining (algebraic) variable(s). `None` on overflow.
+fn substitute_rationals(p: &MultiPoly, vals: &BTreeMap<SymbolId, Rational>) -> Option<MultiPoly> {
+    let mut out = p.clone();
+    for (&v, &q) in vals {
+        out = out.substitute(v, &MultiPoly::constant(q))?;
+    }
+    Some(out)
+}
+
+/// Classify a residual single-variable polynomial (in `av`, whose value is the
+/// algebraic number `alg`) into the value it denotes, for the shapes slice 1 can
+/// represent exactly without algebraic *field* arithmetic:
+///
+/// - a constant → that rational;
+/// - an **affine** form `a·av + b` (a ≠ 0) → the exact derived algebraic value
+///   obtained by affine-transforming `alg` (sound: an affine image of a single
+///   algebraic number, not a product/sum of two distinct algebraic numbers).
+///   A degenerate affine image that lands on a rational (only possible if `alg`
+///   were rational, which it is not) does not arise.
+///
+/// Anything of degree ≥ 2 in `av` declines (it would need field arithmetic).
+fn classify_residual(residual: &MultiPoly, av: SymbolId, alg: &RealAlgebraic) -> Option<Value> {
+    if residual.is_zero() {
+        return Some(Value::Real(Rational::zero()));
+    }
+    // Constant?
+    if residual.vars().is_empty() {
+        let q = residual.terms.get(&Vec::new()).copied()?;
+        return Some(Value::Real(q));
+    }
+    // Extract the affine coefficients: residual = a·av + b, rejecting any term of
+    // degree ≥ 2 or in any other variable.
+    let mut a = Rational::zero();
+    let mut b = Rational::zero();
+    for (k, &c) in &residual.terms {
+        match k.as_slice() {
+            [] => b = c,
+            [(v, 1)] if *v == av => a = c,
+            _ => return None, // nonlinear or foreign variable
+        }
+    }
+    if a.is_zero() {
+        return None;
+    }
+    // Build the affine image y = a·α + b as an exact algebraic number.
+    affine_algebraic(alg, a, b).map(Value::RealAlgebraic)
+}
+
+/// The exact algebraic number `y = a·α + b` (`a ≠ 0`) given `α` as a
+/// [`RealAlgebraic`]. If `α` is the unique root of `p(t)` in `(lo, hi)`, then `y`
+/// is the unique root of `p((t − b)/a)` (denominators cleared to integers) in the
+/// affine-mapped interval `(a·lo + b, a·hi + b)` (endpoints swapped when `a < 0`).
+/// `None` on any overflow / coefficient-guard trip.
+fn affine_algebraic(alpha: &RealAlgebraic, a: Rational, b: Rational) -> Option<RealAlgebraic> {
+    // q(t) = p((t − b)/a): substitute the linear argument `(t − b)/a` into p.
+    // Represent p as a single-variable MultiPoly over a placeholder, then compose
+    // with the linear map, then integer-clear.
+    let p = alpha.defining_poly();
+    // arg(t) = (1/a)·t + (−b/a).
+    let inv_a = Rational::integer(1).checked_div(a)?;
+    let neg_b_over_a = b.checked_neg()?.checked_div(a)?;
+    // Horner-compose: q = (((pₙ·arg + pₙ₋₁)·arg + …)·arg + p₀), as rational coeffs
+    // in `t` (LSB-first), where `arg = inv_a·t + neg_b_over_a`.
+    let mut acc: Vec<Rational> = vec![Rational::zero()];
+    for &c in p.iter().rev() {
+        // acc := acc * arg + c.
+        acc = poly_mul_linear(&acc, inv_a, neg_b_over_a)?;
+        acc[0] = acc[0].checked_add(Rational::integer(c))?;
+    }
+    let qpoly = rat_coeffs_to_integer(&acc)?;
+    // Map the isolating interval.
+    let (lo, hi) = alpha.interval();
+    let mlo = a.checked_mul(lo)?.checked_add(b)?;
+    let mhi = a.checked_mul(hi)?.checked_add(b)?;
+    let (nlo, nhi) = if mlo.checked_cmp(&mhi)? == Ordering::Less {
+        (mlo, mhi)
+    } else {
+        (mhi, mlo)
+    };
+    RealAlgebraic::new(qpoly, nlo, nhi)
+}
+
+/// Multiply an LSB-first rational polynomial `acc` by the linear `(m·t + k)`,
+/// returning the product coefficients. `None` on overflow.
+fn poly_mul_linear(acc: &[Rational], m: Rational, k: Rational) -> Option<Vec<Rational>> {
+    let mut out = vec![Rational::zero(); acc.len() + 1];
+    for (i, &c) in acc.iter().enumerate() {
+        // c·t^i · (m·t + k) = (c·m)·t^{i+1} + (c·k)·t^i.
+        let cm = c.checked_mul(m)?;
+        let ck = c.checked_mul(k)?;
+        out[i + 1] = out[i + 1].checked_add(cm)?;
+        out[i] = out[i].checked_add(ck)?;
+    }
+    Some(out)
+}
+
+/// Replay the assembled full model against every original assertion. Rational
+/// vars evaluate through the ground evaluator; an assertion that mentions the
+/// (at most one, after applying the eliminated-variable definitions `subst`)
+/// algebraic var is checked by exact polynomial sign evaluation.
+///
+/// Each eliminated variable's definition `y = L` is substituted back into every
+/// atom before checking. This is exactly the same algebra used to build the
+/// model, so it cannot introduce error, and it guarantees no atom retains more
+/// than the single component algebraic variable — sidestepping algebraic field
+/// arithmetic. Returns `false` on any failure, indeterminate sign, or
+/// unsupported shape (the caller then declines — never a wrong `Sat`).
+fn replay_multivariate(
+    arena: &TermArena,
+    assertions: &[TermId],
+    model: &Model,
+    subst: &[(SymbolId, MultiPoly)],
+) -> bool {
+    // Does the model bind any variable to an algebraic value?
+    let has_algebraic = model_has_algebraic(model);
+    if !has_algebraic {
+        // Pure-rational model: the ground evaluator decides every assertion.
+        let asg = model.to_assignment();
+        return assertions
+            .iter()
+            .all(|&a| matches!(eval(arena, a, &asg), Ok(Value::Bool(true))));
+    }
+    // The model has algebraic variables. Re-collect the (multivariate) atoms,
+    // apply the back-substitutions (so a defining equation coupling two algebraic
+    // vars collapses to its surviving component variable), and check each exactly.
+    let mut atoms: Vec<MultiAtom> = Vec::new();
+    for &a in assertions {
+        if collect_multi_conjuncts(arena, a, &mut atoms).is_none() {
+            return false;
+        }
+    }
+    for atom in &atoms {
+        // Apply every elimination definition, in elimination order, into the atom.
+        let mut poly = atom.poly.clone();
+        for (y, l) in subst {
+            let Some(next) = poly.substitute(*y, l) else {
+                return false;
+            };
+            poly = next;
+        }
+        let reduced = MultiAtom {
+            cmp: atom.cmp,
+            poly,
+        };
+        if !replay_multi_atom(&reduced, model) {
+            return false;
+        }
+    }
+    true
+}
+
+/// Whether the model binds at least one variable to an algebraic value.
+fn model_has_algebraic(model: &Model) -> bool {
+    model
+        .iter()
+        .any(|(_, v)| matches!(v, Value::RealAlgebraic(_)))
+}
+
+/// Exact replay of one multivariate atom `poly ⋈ 0` under a model. Rational
+/// vars are substituted; the residual must be constant (→ rational sign) or
+/// single-variable in one algebraic var (→ `sign_at`). Two distinct algebraic
+/// vars in one atom ⇒ `false` (decline). Returns `true` iff the comparison holds.
+fn replay_multi_atom(atom: &MultiAtom, model: &Model) -> bool {
+    // Collect the rational bindings for this atom's variables; detect a sole
+    // algebraic variable.
+    let vars = atom.poly.vars();
+    let mut rationals: BTreeMap<SymbolId, Rational> = BTreeMap::new();
+    let mut algebraic: Option<SymbolId> = None;
+    for v in &vars {
+        match model.get(*v) {
+            Some(Value::Real(q)) => {
+                rationals.insert(*v, q);
+            }
+            Some(Value::RealAlgebraic(_)) => {
+                if algebraic.is_some() {
+                    return false; // two algebraic vars in one atom: decline
+                }
+                algebraic = Some(*v);
+            }
+            _ => return false,
+        }
+    }
+    let Some(residual) = substitute_rationals(&atom.poly, &rationals) else {
+        return false;
+    };
+    match algebraic {
+        None => {
+            // Constant residual: check the comparison directly.
+            let q = residual
+                .terms
+                .get(&Vec::new())
+                .copied()
+                .unwrap_or_else(Rational::zero);
+            sign_satisfies(atom.cmp, Sign::of_rational(q))
+        }
+        Some(av) => {
+            // Single-variable residual in `av`: integer-clear and use `sign_at`.
+            let Some(alg) = model.get(av).and_then(|v| v.as_real_algebraic().cloned()) else {
+                return false;
+            };
+            let Some(ipoly) = residual.to_single_var_integer_poly(av) else {
+                return false;
+            };
+            match alg.sign_at(&ipoly) {
+                Some(s) => sign_satisfies(atom.cmp, s),
+                None => false,
+            }
+        }
+    }
+}
+
+/// Multivariate analogue of [`collect_conjuncts`]: flatten a Boolean assertion
+/// into multivariate polynomial comparisons, **allowing multiple variables**.
+/// Declines (`None`) on any non-conjunctive structure or non-polynomial atom.
+fn collect_multi_conjuncts(
+    arena: &TermArena,
+    assertion: TermId,
+    atoms: &mut Vec<MultiAtom>,
+) -> Option<()> {
+    if let TermNode::App {
+        op: Op::BoolAnd,
+        args,
+    } = arena.node(assertion)
+    {
+        for &c in args {
+            collect_multi_conjuncts(arena, c, atoms)?;
+        }
+        return Some(());
+    }
+    let (cmp, poly) = match_multi_constraint(arena, assertion)?;
+    atoms.push(MultiAtom { cmp, poly });
+    Some(())
+}
+
+/// Multivariate analogue of [`match_real_poly_constraint`]: a real comparison
+/// whose `lhs − rhs` collects to a multivariate polynomial.
+fn match_multi_constraint(arena: &TermArena, assertion: TermId) -> Option<(Cmp, MultiPoly)> {
+    let TermNode::App { op, args } = arena.node(assertion) else {
+        return None;
+    };
+    if matches!(op, Op::BoolNot) {
+        let inner = args[0];
+        let TermNode::App {
+            op: Op::Eq,
+            args: eq_args,
+        } = arena.node(inner)
+        else {
+            return None;
+        };
+        if arena.sort_of(eq_args[0]) != Sort::Real {
+            return None;
+        }
+        let poly = collect_multi_diff(arena, eq_args[0], eq_args[1])?;
+        return Some((Cmp::Ne, poly));
+    }
+    let cmp = match op {
+        Op::Eq => Cmp::Eq,
+        Op::RealLt => Cmp::Lt,
+        Op::RealLe => Cmp::Le,
+        Op::RealGt => Cmp::Gt,
+        Op::RealGe => Cmp::Ge,
+        _ => return None,
+    };
+    if matches!(op, Op::Eq) && arena.sort_of(args[0]) != Sort::Real {
+        return None;
+    }
+    let poly = collect_multi_diff(arena, args[0], args[1])?;
+    Some((cmp, poly))
+}
+
+fn collect_multi_diff(arena: &TermArena, lhs: TermId, rhs: TermId) -> Option<MultiPoly> {
+    let l = collect_multi(arena, lhs)?;
+    let r = collect_multi(arena, rhs)?;
+    l.sub(&r)
+}
+
+/// Recursively collect a `Real`-sorted term into a multivariate rational
+/// polynomial over `{+, −, ·, neg, RealConst, symbol}`. Anything else declines.
+fn collect_multi(arena: &TermArena, t: TermId) -> Option<MultiPoly> {
+    if arena.sort_of(t) != Sort::Real {
+        return None;
+    }
+    match arena.node(t) {
+        TermNode::RealConst(r) => Some(MultiPoly::constant(*r)),
+        TermNode::Symbol(s) => Some(MultiPoly::var(*s)),
+        TermNode::App { op, args } => match op {
+            Op::RealNeg if args.len() == 1 => collect_multi(arena, args[0])?.neg(),
+            Op::RealAdd if args.len() == 2 => {
+                collect_multi(arena, args[0])?.add(&collect_multi(arena, args[1])?)
+            }
+            Op::RealSub if args.len() == 2 => {
+                collect_multi(arena, args[0])?.sub(&collect_multi(arena, args[1])?)
+            }
+            Op::RealMul if args.len() == 2 => {
+                collect_multi(arena, args[0])?.mul(&collect_multi(arena, args[1])?)
             }
             _ => None,
         },

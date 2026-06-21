@@ -603,6 +603,301 @@ fn conj_with_nonpoly_atom_declines_not_unsat() {
     );
 }
 
+// --- MULTIVARIATE decomposition: linear substitution + independent components -
+//
+// The query has ≥ 2 distinct variables; the single-variable decider declines and
+// the sound, bounded multivariate decomposition fires: a variable defined by a
+// linear equality `y = L(others)` is substituted out (fixpoint), and the
+// remaining atoms that share no variable are decided independently. Every `Sat`
+// is replay-checked against the FULL multivariate model on ALL assertions.
+
+/// `x*x = 2 ∧ y = −x` ⇒ substitute `y := −x` → single-variable `x*x = 2`, decide
+/// `x = ±√2`, then `y = −x`. Sat with `y = ∓√2` consistent. Replay-checked.
+#[test]
+fn multi_subst_y_eq_neg_x_is_sat() {
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let (ys, yv) = real(&mut arena, "y");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let a1 = arena.eq(xx, two).unwrap();
+    // y = −x.
+    let negx = arena.real_neg(xv).unwrap();
+    let a2 = arena.eq(yv, negx).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x*x=2 ∧ y=−x must be Sat, got {r:?}");
+    };
+    // Both x and y are bound to the (irrational) algebraic ±√2 / ∓√2.
+    let x = model.get(xs).unwrap();
+    let y = model.get(ys).unwrap();
+    let ax = x.as_real_algebraic().expect("x is √2 / −√2");
+    let ay = y.as_real_algebraic().expect("y is −√2 / √2");
+    assert_eq!(ax.sign_at(&poly_x2_minus(2)), Some(Sign::Zero));
+    assert_eq!(ay.sign_at(&poly_x2_minus(2)), Some(Sign::Zero));
+    // y = −x: they are on opposite sides of zero.
+    let xc = ax.compare_rational(&Rational::zero()).unwrap();
+    let yc = ay.compare_rational(&Rational::zero()).unwrap();
+    assert_ne!(xc, yc, "y = −x must have the opposite sign of x");
+    assert_ne!(xc, core::cmp::Ordering::Equal);
+}
+
+/// `x*x = 2 ∧ z*z = 3` ⇒ x and z are independent ⇒ Sat with x = ±√2, z = ±√3.
+#[test]
+fn multi_independent_components_is_sat() {
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let (zs, zv) = real(&mut arena, "z");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let a1 = arena.eq(xx, two).unwrap();
+    let zz = arena.real_mul(zv, zv).unwrap();
+    let three = arena.real_const(Rational::integer(3));
+    let a2 = arena.eq(zz, three).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x*x=2 ∧ z*z=3 must be Sat, got {r:?}");
+    };
+    let ax = model.get(xs).unwrap();
+    let az = model.get(zs).unwrap();
+    assert_eq!(
+        ax.as_real_algebraic().unwrap().sign_at(&poly_x2_minus(2)),
+        Some(Sign::Zero)
+    );
+    assert_eq!(
+        az.as_real_algebraic().unwrap().sign_at(&poly_x2_minus(3)),
+        Some(Sign::Zero)
+    );
+}
+
+/// `x*x = 2 ∧ y = x ∧ y < 0` ⇒ substitute `y := x` → `x*x = 2 ∧ x < 0` →
+/// x = −√2, y = −√2. Sat. Replay-checked (y is the negative algebraic root).
+#[test]
+fn multi_subst_y_eq_x_with_bound_is_sat() {
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let (ys, yv) = real(&mut arena, "y");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let a1 = arena.eq(xx, two).unwrap();
+    let a2 = arena.eq(yv, xv).unwrap();
+    let zero = arena.real_const(Rational::zero());
+    let a3 = arena.real_lt(yv, zero).unwrap();
+    let r = solve(&mut arena, &[a1, a2, a3], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x*x=2 ∧ y=x ∧ y<0 must be Sat, got {r:?}");
+    };
+    let ax = model.get(xs).unwrap();
+    let ay = model.get(ys).unwrap();
+    let ax = ax.as_real_algebraic().expect("x = −√2");
+    let ay = ay.as_real_algebraic().expect("y = −√2");
+    assert_eq!(ax.sign_at(&poly_x2_minus(2)), Some(Sign::Zero));
+    assert_eq!(ay.sign_at(&poly_x2_minus(2)), Some(Sign::Zero));
+    // Both are the NEGATIVE root.
+    assert_eq!(
+        ax.compare_rational(&Rational::zero()),
+        Some(core::cmp::Ordering::Less)
+    );
+    assert_eq!(
+        ay.compare_rational(&Rational::zero()),
+        Some(core::cmp::Ordering::Less)
+    );
+}
+
+/// `x*x = 2 ∧ y = x + 1 ∧ y > 2` ⇒ substitute `y := x + 1`. `y > 2 ⇔ x > 1`, so
+/// x = +√2 (≈ 1.41 > 1), y = √2 + 1 (≈ 2.41 > 2). Sat, replay-checked.
+#[test]
+fn multi_subst_affine_definition_is_sat() {
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let (ys, yv) = real(&mut arena, "y");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let a1 = arena.eq(xx, two).unwrap();
+    // y = x + 1.
+    let one = arena.real_const(Rational::integer(1));
+    let xp1 = arena.real_add(xv, one).unwrap();
+    let a2 = arena.eq(yv, xp1).unwrap();
+    // y > 2.
+    let twoc = arena.real_const(Rational::integer(2));
+    let a3 = arena.real_gt(yv, twoc).unwrap();
+    let r = solve(&mut arena, &[a1, a2, a3], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x*x=2 ∧ y=x+1 ∧ y>2 must be Sat, got {r:?}");
+    };
+    let ax = model.get(xs).unwrap();
+    let ax = ax.as_real_algebraic().expect("x = +√2");
+    assert_eq!(ax.sign_at(&poly_x2_minus(2)), Some(Sign::Zero));
+    // x must be the POSITIVE root (x > 1).
+    assert_eq!(
+        ax.compare_rational(&Rational::integer(1)),
+        Some(core::cmp::Ordering::Greater)
+    );
+    // y is bound to the derived algebraic value √2 + 1, which is > 2.
+    let ay = model.get(ys).unwrap();
+    let ay = ay.as_real_algebraic().expect("y = √2 + 1 is irrational");
+    assert_eq!(
+        ay.compare_rational(&Rational::integer(2)),
+        Some(core::cmp::Ordering::Greater),
+        "y = √2 + 1 ≈ 2.41 > 2"
+    );
+}
+
+/// `x*x = 2 ∧ y = x ∧ y*y < 1` ⇒ substitute `y := x`: `x*x = 2 ∧ x*x < 1`,
+/// which is Unsat (x² cannot be both 2 and < 1). A multivariate UNSAT via a
+/// decomposed single-variable sub-system. Exact.
+#[test]
+fn multi_subst_to_unsat_subsystem() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let a1 = arena.eq(xx, two).unwrap();
+    let a2 = arena.eq(yv, xv).unwrap();
+    let yy = arena.real_mul(yv, yv).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a3 = arena.real_lt(yy, one).unwrap();
+    let r = solve(&mut arena, &[a1, a2, a3], &SolverConfig::default()).expect("no error");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x*x=2 ∧ y=x ∧ y*y<1 is Unsat; got {r:?}"
+    );
+}
+
+/// `x*x = 2 ∧ y = x ∧ x = 3` ⇒ substitute `y := x`, leaving `x*x = 2 ∧ x = 3`;
+/// substitute `x := 3` (it is a linear definition too) — but x is the live var of
+/// `x*x=2`. Easier: `x*x=2 ∧ x=3` is a single-variable system → Unsat (3² ≠ 2).
+/// Confirms substitution + single-var Unsat compose.
+#[test]
+fn multi_subst_chain_to_single_var_unsat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let a1 = arena.eq(xx, two).unwrap();
+    let a2 = arena.eq(yv, xv).unwrap();
+    let three = arena.real_const(Rational::integer(3));
+    let a3 = arena.eq(xv, three).unwrap();
+    let r = solve(&mut arena, &[a1, a2, a3], &SolverConfig::default()).expect("no error");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x*x=2 ∧ y=x ∧ x=3 is Unsat; got {r:?}"
+    );
+}
+
+/// Independent rational components: `x = 1 ∧ z*z = 4` ⇒ x = 1, z = ±2, both
+/// rational, decided independently. Sat, replay-checked.
+#[test]
+fn multi_independent_rational_is_sat() {
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let (zs, zv) = real(&mut arena, "z");
+    // x*x = 1 keeps x as a genuine variable in a degree-2 component.
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a1 = arena.eq(xx, one).unwrap();
+    let zz = arena.real_mul(zv, zv).unwrap();
+    let four = arena.real_const(Rational::integer(4));
+    let a2 = arena.eq(zz, four).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x*x=1 ∧ z*z=4 must be Sat, got {r:?}");
+    };
+    let qx = model.get(xs).unwrap().as_real().expect("x rational");
+    let qz = model.get(zs).unwrap().as_real().expect("z rational");
+    assert!(qx == Rational::integer(1) || qx == Rational::integer(-1));
+    assert!(qz == Rational::integer(2) || qz == Rational::integer(-2));
+    // Replay both assertions through the ground evaluator.
+    let asg = model.to_assignment();
+    assert!(matches!(eval(&arena, a1, &asg), Ok(Value::Bool(true))));
+    assert!(matches!(eval(&arena, a2, &asg), Ok(Value::Bool(true))));
+}
+
+// --- multivariate DECLINE cases (coupled / CAD — never mis-decided) -----------
+
+/// `x*y = 2 ∧ x > 0` is genuinely coupled (a product of two distinct variables
+/// with no linear definition to substitute). The decider DECLINES; the result
+/// must not be a wrong verdict. It is satisfiable (x = y = √2) ⇒ not Unsat.
+#[test]
+fn multi_coupled_product_declines_not_unsat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let xy = arena.real_mul(xv, yv).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let a1 = arena.eq(xy, two).unwrap();
+    let zero = arena.real_const(Rational::zero());
+    let a2 = arena.real_gt(xv, zero).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "x*y=2 ∧ x>0 is sat (deferred CAD); got {r:?}"
+    );
+}
+
+/// The circle/line system `x² + y² = 1 ∧ x + y = 1` is satisfiable
+/// (e.g. (1, 0) or (0, 1)). After substituting `y := 1 − x` it becomes the
+/// single-variable `x² + (1−x)² = 1 ⇔ 2x² − 2x = 0 ⇔ x(x−1)=0`, which IS in scope
+/// (a single-variable component). So this one is actually DECIDED Sat — verify it
+/// is not Unsat (soundness), and the model replays.
+#[test]
+fn multi_circle_line_substitutes_to_single_var_sat() {
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let (ys, yv) = real(&mut arena, "y");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let yy = arena.real_mul(yv, yv).unwrap();
+    let sum_sq = arena.real_add(xx, yy).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a1 = arena.eq(sum_sq, one).unwrap();
+    // x + y = 1.
+    let xpy = arena.real_add(xv, yv).unwrap();
+    let onec = arena.real_const(Rational::integer(1));
+    let a2 = arena.eq(xpy, onec).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    // It is satisfiable, so it must NOT be Unsat. (The substitution lands it in
+    // scope, so we expect Sat; at minimum, never a wrong Unsat.)
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "x²+y²=1 ∧ x+y=1 is sat (e.g. (1,0)); got {r:?}"
+    );
+    if let CheckResult::Sat(model) = &r {
+        // Replay: both vars rational here (roots 0/1), ground evaluator decides.
+        let asg = model.to_assignment();
+        assert!(matches!(eval(&arena, a1, &asg), Ok(Value::Bool(true))));
+        assert!(matches!(eval(&arena, a2, &asg), Ok(Value::Bool(true))));
+        let _ = (xs, ys);
+    }
+}
+
+/// A genuinely coupled nonlinear system with NO substitutable linear definition:
+/// `x² + y² = 1 ∧ x*y = 1`. No linear equality ⇒ no substitution; the single
+/// component couples x and y nonlinearly ⇒ DECLINE. It is UNSAT in truth
+/// (x²+y² ≥ 2|xy| = 2 > 1), but the decider must not assert that — it declines.
+/// We only require it does not wrongly answer Sat/Unsat *unsoundly*: since it is
+/// truly unsat, a sound engine returns Unsat or Unknown; we assert NOT Sat.
+#[test]
+fn multi_coupled_nonlinear_declines() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let yy = arena.real_mul(yv, yv).unwrap();
+    let sum_sq = arena.real_add(xx, yy).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a1 = arena.eq(sum_sq, one).unwrap();
+    let xy = arena.real_mul(xv, yv).unwrap();
+    let onec = arena.real_const(Rational::integer(1));
+    let a2 = arena.eq(xy, onec).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Sat(_)),
+        "x²+y²=1 ∧ x*y=1 is unsat; the decider must not answer Sat; got {r:?}"
+    );
+}
+
 /// An integer (non-Real) square is the NIA case, not ours: the real decider must
 /// not fire. `int x*x = 2` is Unsat (handled by `nia_square`), and the answer must
 /// still be correct — confirming we did not break the integer path.
