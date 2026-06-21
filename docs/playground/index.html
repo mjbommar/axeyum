@@ -76,11 +76,11 @@ const EXAMPLES = {
 (assert (= x #x01))
 (check-sat)`,
   unknown: `(set-logic QF_BV)
-(declare-const p (_ BitVec 2048))
-(declare-const q (_ BitVec 2048))
-(declare-const r (_ BitVec 2048))
-(assert (= r (bvmul p q)))
-(assert (= x #x01))   ; oversized multiply → graceful unknown
+(declare-const p (_ BitVec 8192))
+(declare-const q (_ BitVec 8192))
+; a constrained 8192-bit multiply is too large to encode →
+; Axeyum refuses it deterministically as a graceful "unknown"
+(assert (= (bvmul p q) (_ bv1 8192)))
 (check-sat)`,
 };
 
