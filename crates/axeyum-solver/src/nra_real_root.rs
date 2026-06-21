@@ -2031,8 +2031,24 @@ fn decide_component(comp: &[&MultiAtom]) -> Option<ComponentOutcome> {
                 TwoVarVerdict::Unknown => ComponentOutcome::Unknown,
             });
         }
-        // A non-strict (equality / ≤ / ≥) ≥3-var component, or any decline, is left
-        // to the outer engine.
+        // A MIXED / NON-STRICT (at least one `=`/`≤`/`≥`) ≥3-var component is decided
+        // by the recursive non-strict cylindrical decomposition, which samples both
+        // the open cells AND the RATIONAL critical 0-cells at every level (a non-strict
+        // solution can live exactly on a boundary section). A definitive verdict wins;
+        // any completeness doubt — esp. an ALGEBRAIC critical value — declines (`None`)
+        // to the outer engine, never a wrong verdict. See [`decide_nonstrict_cad_nvar`].
+        if comp
+            .iter()
+            .any(|a| matches!(a.cmp, Cmp::Eq | Cmp::Le | Cmp::Ge))
+            && let Some(verdict) = decide_nonstrict_cad_nvar(comp, &comp_vars)
+        {
+            return Some(match verdict {
+                TwoVarVerdict::Unsat => ComponentOutcome::Unsat,
+                TwoVarVerdict::Sat(b) => ComponentOutcome::Sat(b),
+                TwoVarVerdict::Unknown => ComponentOutcome::Unknown,
+            });
+        }
+        // Any decline is left to the outer engine.
         return None;
     }
     if comp_vars.len() != 1 {
@@ -2118,6 +2134,26 @@ fn decide_two_var_component(
         .iter()
         .all(|a| matches!(a.cmp, Cmp::Lt | Cmp::Gt | Cmp::Ne))
         && let Some(verdict) = decide_strict_cad_two_var(comp, v0, v1)
+    {
+        return Some(verdict);
+    }
+
+    // MIXED / NON-STRICT component (at least one `=`/`≤`/`≥` atom, NOT all-equality):
+    // a complete cylindrical decomposition that samples BOTH the open `keep`-cell
+    // interiors AND each RATIONAL critical `keep`-value (the 0-cells where a
+    // non-strict atom may hold on a boundary) decides it exactly — provided every
+    // critical `keep`-value is rational (else it declines this orientation, trying
+    // the other axis, then the outer layer). See [`decide_nonstrict_cad_two_var`]. A
+    // definitive verdict wins; a decline falls through to the equality/resultant path
+    // below. An ALL-EQUALITY component is left to the grid lift (its regression
+    // anchor) — it is excluded here.
+    let has_nonstrict = comp
+        .iter()
+        .any(|a| matches!(a.cmp, Cmp::Eq | Cmp::Le | Cmp::Ge));
+    let all_eq = comp.iter().all(|a| matches!(a.cmp, Cmp::Eq));
+    if has_nonstrict
+        && !all_eq
+        && let Some(verdict) = decide_nonstrict_cad_two_var(comp, v0, v1)
     {
         return Some(verdict);
     }
@@ -2543,6 +2579,287 @@ fn decide_strict_cell(
         // Every atom collapsed to a satisfied constant ⇒ the cell is satisfiable;
         // any rational `elim` value (0) is a witness for the surviving (empty)
         // constraint set.
+        return Some(CellOutcome::Sat(Value::Real(Rational::zero())));
+    }
+    match decide_system_value(&single_atoms)? {
+        SystemVerdict::Unsat => Some(CellOutcome::Unsat),
+        SystemVerdict::Sat(v) => Some(CellOutcome::Sat(v)),
+    }
+}
+
+// ============================================================================
+// Complete CAD for a MIXED / NON-STRICT 2-variable component
+// (the CAD/nlsat ladder, step 5 — non-strict slice, RATIONAL critical points).
+// ============================================================================
+//
+// Scope: a connected 2-variable component {x, y} in which AT LEAST ONE atom is
+// NON-STRICT (`=`, `≤`, or `≥`) — strict atoms (`<`, `>`, `≠`) may appear
+// alongside. (An ALL-STRICT component is owned by `decide_strict_cad_two_var`
+// above; an ALL-EQUALITY component is owned by the grid lift; this routine is the
+// remaining mixed/non-strict case, and otherwise declines.)
+//
+// Why a non-strict component needs MORE than open cells:
+//
+//   The solution set `S ⊆ ℝ²` of a conjunction that contains a non-strict atom is
+//   generally NOT open: a `≤`/`≥`/`=` atom is satisfied ON the boundary where its
+//   polynomial vanishes — a CRITICAL point of the projection (a 0-cell), not only
+//   in an open cell's interior. So a solution can live EXACTLY on a critical
+//   `keep`-value (the section over `x = α`), which the strict path (open cells
+//   only) would miss ⇒ a wrong `Unsat`. We therefore additionally sample EACH
+//   critical `keep`-value itself.
+//
+// THE COMPLETENESS ARGUMENT (soundness of BOTH Sat and Unsat):
+//
+//   PROJECTION (identical to the strict path): let `Proj` be the univariate-in-
+//   `keep` polynomials — for each `p`: its leading coeff in `elim` `lc_elim(p)`,
+//   its discriminant in `elim` `disc_elim(p) = Res_elim(p, ∂p/∂elim)`, every
+//   pairwise resultant `Res_elim(p, q)`, and any `p` constant in `elim` contributed
+//   as itself (its `elim`-independent zero set is still a critical `keep`-locus).
+//   Off the real zeros `α₁ < … < α_k` of `Proj` (the critical `keep`-values), the
+//   number and `elim`-order of the real `elim`-roots of every `p` are CONSTANT
+//   (McCallum/Collins sign-invariance), so on each open `keep`-cell `(αᵢ, αᵢ₊₁)`
+//   (and the two tails) the truth of the WHOLE system as a function of `elim` is
+//   the same at every `keep` in the cell.
+//
+//   The solution set `S` is a finite union of CELLS of this decomposition: the
+//   open `keep`-cells (where it is sign-invariant) AND the critical `keep`-sections
+//   `keep = αᵢ` (the 0-cells where a non-strict atom may hold on a boundary).
+//   Therefore `S ≠ ∅` iff SOME open `keep`-cell OR SOME critical `keep`-value
+//   carries a satisfying `elim`. We sample BOTH:
+//     (a) one RATIONAL interior point per open `keep`-cell (via `cell_samples`,
+//         representative by sign-invariance), AND
+//     (b) each RATIONAL critical `keep`-value itself (the 0-cells).
+//   At each sampled rational `keep := s` the system becomes a conjunction of
+//   single-variable constraints in `elim` with RATIONAL coefficients, decided
+//   COMPLETELY by `decide_system_value` (which handles ALGEBRAIC `elim`-roots, so
+//   the `elim` axis needs no restriction).
+//
+//   VERDICTS:
+//     • SAT — the first sampled `keep := s` whose `elim`-system is `Sat(elim*)` ⇒
+//       the component is Sat with `(keep→s, elim→elim*)`; the caller replay-checks
+//       the full model against the ORIGINAL assertions. (`s` is rational; `elim*`
+//       may be rational or algebraic.)
+//     • UNSAT — EVERY sampled `keep := s` (open-cell points AND every rational
+//       critical value) yields a definite Unsat `elim`-system, AND the
+//       decomposition was complete (all critical `keep`-values RATIONAL, isolation
+//       complete, within the cell cap) ⇒ the component is Unsat, EXHAUSTIVELY.
+//
+//   THE ONE RESTRICTION (what keeps the slice sound + tractable): if ANY critical
+//   `keep`-value is ALGEBRAIC, we DECLINE this orientation (`None`) — substituting
+//   an algebraic `keep` into the polys would give `elim`-coefficients in a number
+//   field, whose root isolation is the deferred hard slice. We try the OTHER
+//   orientation; if both have an algebraic critical `keep`-value, we decline to the
+//   outer layer. A sound `Unknown` always beats a wrong `Unsat`.
+//
+// We DECLINE (`None`) on ANY completeness doubt: a degenerate projection, an
+// incomplete root isolation, an unresolved separation, an ALGEBRAIC critical
+// `keep`-value, a per-cell `decide_system_value` that returns `None` (Unknown),
+// overflow, or the cell cap. We NEVER claim Unsat with a gap, nor Sat without a
+// replayable witness.
+
+/// Decide a MIXED / NON-STRICT 2-variable component `comp` (variables `v0`, `v1`;
+/// at least one atom `=`/`≤`/`≥`) by a complete cylindrical decomposition with
+/// RATIONAL critical points: project onto a `keep` axis, isolate the critical
+/// `keep`-values (require ALL rational), then sample one rational interior point
+/// per open `keep`-cell AND each rational critical `keep`-value, deciding each
+/// substituted univariate-in-`elim` rational-coefficient system completely.
+///
+/// Returns `Some(Sat(bindings))` / `Some(Unsat)` when the decomposition is provably
+/// complete, or `None` to DECLINE (any projection/isolation/sample/cell
+/// indeterminacy, an algebraic critical `keep`-value in BOTH orientations, or the
+/// cell cap) — never a wrong verdict. Sat bindings are replay-checked by the caller.
+fn decide_nonstrict_cad_two_var(
+    comp: &[&MultiAtom],
+    v0: SymbolId,
+    v1: SymbolId,
+) -> Option<TwoVarVerdict> {
+    // Only entered for a mixed/non-strict component; an all-strict one is owned by
+    // `decide_strict_cad_two_var`, so guard against double-handling.
+    debug_assert!(
+        comp.iter()
+            .any(|a| matches!(a.cmp, Cmp::Eq | Cmp::Le | Cmp::Ge))
+    );
+
+    // The distinct constraint polynomials (deduplicated by structure).
+    let mut polys: Vec<&MultiPoly> = Vec::new();
+    for atom in comp {
+        if !polys.iter().any(|p| p.terms == atom.poly.terms) {
+            polys.push(&atom.poly);
+        }
+    }
+    if polys.is_empty() {
+        return None;
+    }
+
+    // Try projecting onto v0 (eliminate v1) AND onto v1 (eliminate v0). Either
+    // orientation is sound and complete by the same cell argument; trying both
+    // rescues a shape whose critical values are rational along one axis but
+    // algebraic (⇒ decline) along the other.
+    for &(elim, keep) in &[(v1, v0), (v0, v1)] {
+        if let Some(v) = nonstrict_cad_along(comp, &polys, elim, keep) {
+            return Some(v);
+        }
+    }
+    None
+}
+
+/// One orientation of [`decide_nonstrict_cad_two_var`]: eliminate `elim`, isolate
+/// the critical `keep`-values (require ALL rational — else decline), sample the
+/// open `keep`-cells AND each rational critical value, decide each substituted
+/// univariate-in-`elim` system. `None` declines this orientation.
+fn nonstrict_cad_along(
+    comp: &[&MultiAtom],
+    polys: &[&MultiPoly],
+    elim: SymbolId,
+    keep: SymbolId,
+) -> Option<TwoVarVerdict> {
+    // PROJECTION onto `keep` — IDENTICAL to the strict path (`strict_cad_along`):
+    // leading coeff in `elim`, discriminant in `elim`, pairwise resultants, and any
+    // `p` constant in `elim` contributed as itself. A degenerate/non-isolable
+    // boundary (vanishing discriminant / resultant) ⇒ decline.
+    let mut proj: Vec<Vec<i128>> = Vec::new();
+    for p in polys {
+        if degree_in(p, elim) == 0 {
+            // `p` constant in `elim`: its real zeros in `keep` ARE critical
+            // `keep`-values (a non-strict atom can hold exactly there). It is
+            // already univariate in `keep`; add it directly.
+            let ipoly = p.to_single_var_integer_poly(keep)?;
+            if ipoly.len() > 1 {
+                proj.push(ipoly);
+            }
+            // constant-in-both ⇒ no critical value.
+            continue;
+        }
+        let pc = poly_in_elim_over_keep(p, elim, keep)?;
+        let lead = pc.last()?;
+        if let Some(ip) = rat_coeffs_to_integer(lead) {
+            if ip.len() > 1 {
+                proj.push(ip);
+            }
+        } else {
+            return None; // overflow ⇒ decline (cannot guarantee sign-invariance)
+        }
+        let dp = derivative_in(p, elim)?;
+        if degree_in(&dp, elim) == 0 {
+            // p linear in `elim`: no discriminant boundary.
+        } else {
+            let disc = resultant_univariate(p, &dp, elim, keep)?;
+            if disc.len() > 1 {
+                proj.push(disc);
+            } else if disc.first().copied().unwrap_or(0) == 0 {
+                return None; // repeated `elim`-root for all `keep` ⇒ cannot delineate
+            }
+        }
+    }
+    for i in 0..polys.len() {
+        for j in (i + 1)..polys.len() {
+            if degree_in(polys[i], elim) == 0 || degree_in(polys[j], elim) == 0 {
+                continue;
+            }
+            let res = resultant_univariate(polys[i], polys[j], elim, keep)?;
+            if res.len() > 1 {
+                proj.push(res);
+            } else if res.first().copied().unwrap_or(0) == 0 {
+                return None; // shared `elim`-factor for all `keep` ⇒ cannot delineate
+            }
+        }
+    }
+
+    // ISOLATE all real roots of every projection polynomial; merge, sort, dedup the
+    // distinct critical `keep`-values. `isolate_roots` is complete-or-None.
+    let mut roots: Vec<Root> = Vec::new();
+    for pp in &proj {
+        roots.extend(isolate_roots(pp)?);
+    }
+    let crit = dedup_sorted_roots(&roots)?;
+    if crit.len() > MAX_CAD_CELLS {
+        return None; // bounded — never OOM / hang
+    }
+
+    // THE RESTRICTION: require EVERY critical `keep`-value to be RATIONAL. An
+    // algebraic critical value would force substituting an algebraic `keep` into the
+    // polys (number-field `elim`-coefficients ⇒ deferred). Decline this orientation
+    // so the caller tries the other axis / falls through to the outer layer.
+    let mut crit_rationals: Vec<Rational> = Vec::with_capacity(crit.len());
+    for r in &crit {
+        match r {
+            Root::Rational(q) => crit_rationals.push(*q),
+            Root::Algebraic(_) => return None,
+        }
+    }
+
+    // SAMPLE: one rational interior point per open `keep`-cell (the open cells) AND
+    // each rational critical `keep`-value (the 0-cells). Both sets together cover
+    // EVERY `keep`-cell of the decomposition.
+    let open_samples = cell_samples(&crit)?;
+
+    // Decide each sampled `keep := s` (open-cell interiors first so a SAT witness
+    // stays as simple as possible, then the critical 0-cells).
+    for &s in open_samples.iter().chain(crit_rationals.iter()) {
+        match decide_nonstrict_cell(comp, keep, elim, s)? {
+            CellOutcome::Sat(elim_val) => {
+                // A genuine solution at `keep = s` (an open-cell interior or a
+                // critical 0-cell). The caller replay-checks the full model against
+                // the ORIGINAL assertions.
+                return Some(TwoVarVerdict::Sat(vec![
+                    (keep, Value::Real(s)),
+                    (elim, elim_val),
+                ]));
+            }
+            CellOutcome::Unsat => {}
+        }
+    }
+
+    // Every open `keep`-cell sample AND every rational critical `keep`-value gave a
+    // definite Unsat `elim`-system (an Unknown one would have declined via `?`). The
+    // critical values are ALL rational (else we declined above), the isolation was
+    // complete, and we stayed within the cap, so the decomposition is COMPLETE — by
+    // the cell argument (open cells + 0-cells partition the solution set), the
+    // component is Unsat, EXHAUSTIVELY.
+    Some(TwoVarVerdict::Unsat)
+}
+
+/// Substitute the RATIONAL `keep := s` into every atom of the (possibly non-strict)
+/// component, producing a conjunction of single-variable constraints in `elim`
+/// (with their ORIGINAL comparators, strict or non-strict), and decide it COMPLETELY
+/// with [`decide_system_value`]. `None` declines (overflow, a degenerate residual
+/// that loses `elim`, or an indeterminate sub-decision ⇒ never Unsat with a gap).
+fn decide_nonstrict_cell(
+    comp: &[&MultiAtom],
+    keep: SymbolId,
+    elim: SymbolId,
+    s: Rational,
+) -> Option<CellOutcome> {
+    let mut subst: BTreeMap<SymbolId, Rational> = BTreeMap::new();
+    subst.insert(keep, s);
+    let mut single_atoms: Vec<Atom> = Vec::with_capacity(comp.len());
+    for atom in comp {
+        let residual = substitute_rationals(&atom.poly, &subst)?;
+        if residual.vars().is_empty() {
+            // A constant comparison `c ⋈ 0`: false ⇒ the whole cell is Unsat;
+            // true ⇒ the atom is vacuous and dropped.
+            let c = residual
+                .terms
+                .get(&Vec::new())
+                .copied()
+                .unwrap_or_else(Rational::zero);
+            if !sign_satisfies(atom.cmp, Sign::of_rational(c)) {
+                return Some(CellOutcome::Unsat);
+            }
+            continue;
+        }
+        let poly = residual.to_single_var_integer_poly(elim)?;
+        if poly.len() <= 1 {
+            return None; // residual mentions `elim` yet collapsed ⇒ decline
+        }
+        single_atoms.push(Atom {
+            cmp: atom.cmp,
+            poly,
+        });
+    }
+    if single_atoms.is_empty() {
+        // Every atom collapsed to a satisfied constant ⇒ the cell is satisfiable;
+        // any rational `elim` value (0) witnesses the (empty) residual system.
         return Some(CellOutcome::Sat(Value::Real(Rational::zero())));
     }
     match decide_system_value(&single_atoms)? {
@@ -3114,6 +3431,214 @@ fn decide_strict_cad_nvar(comp: &[&MultiAtom], vars: &BTreeSet<SymbolId>) -> Opt
     // (the solution set is open; if nonempty it contains an open box meeting some
     // sampled open cell), the component is Unsat — EXHAUSTIVELY. Reaching here means
     // every sign test resolved (an indeterminate one would have declined via `?`)
+    // and the decomposition was complete (no decline anywhere).
+    Some(TwoVarVerdict::Unsat)
+}
+
+// ============================================================================
+// Recursive N-variable MIXED / NON-STRICT CAD (any N ≥ 3)
+// (the CAD/nlsat ladder, step 5 — non-strict slice, RATIONAL critical points).
+// ============================================================================
+//
+// Scope: a connected component of N ≥ 3 variables with AT LEAST ONE non-strict
+// atom (`=`/`≤`/`≥`). (The N = 2 mixed case is owned by
+// `decide_nonstrict_cad_two_var`; all-strict ≥3-var is owned by
+// `decide_strict_cad_nvar`.)
+//
+// Mirrors the strict N-var recursion (`visit_open_cells` / `project_strict`)
+// EXACTLY for the projection, but the cell sampler additionally emits each RATIONAL
+// critical value (the 0-cells where a non-strict atom may hold on a boundary), at
+// EVERY recursion level — because a non-strict system's solution set is a finite
+// union of cells (open cells + the critical sections), not an open set. So a
+// solution can live exactly on a critical section, which the strict (open-only)
+// sampler would miss ⇒ a wrong `Unsat`.
+//
+// THE RESTRICTION (soundness + tractability, mirroring the 2-var mixed decider): if
+// ANY critical value at ANY level is ALGEBRAIC, the WHOLE decomposition DECLINES
+// (`None`) — sampling an algebraic critical coordinate, then substituting it into
+// the polys, yields number-field coefficients (the deferred hard slice). Every
+// sample coordinate is therefore RATIONAL, so each leaf point is a fully-rational
+// binding whose atom signs are decided exactly by the rational evaluator. We never
+// claim Unsat with a gap: any decline (algebraic critical value, nullification,
+// overflow, incomplete isolation, the cell cap) propagates as `None` (Unknown).
+
+/// Rational interior samples of the open intervals PLUS each rational critical
+/// value of `crit`, for the MIXED/non-strict recursion. Returns the combined
+/// rational sample set, or `None` to DECLINE — specifically if ANY critical value is
+/// ALGEBRAIC (the non-strict slice's restriction) or `cell_samples` overflows.
+fn nonstrict_axis_samples(crit: &[Root]) -> Option<Vec<Rational>> {
+    let open = cell_samples(crit)?;
+    let mut out = open;
+    for r in crit {
+        match r {
+            Root::Rational(q) => out.push(*q),
+            // An algebraic critical value ⇒ decline the whole non-strict
+            // decomposition (we never sample an algebraic critical coordinate).
+            Root::Algebraic(_) => return None,
+        }
+    }
+    Some(out)
+}
+
+/// Recursive cylindrical decomposition for a MIXED / NON-STRICT system: invoke
+/// `visit` once per cell (open interior AND rational critical 0-cell) of the
+/// arrangement of the zero sets of `polys` over `vars`, passing a fully-RATIONAL
+/// sample point. Mirrors [`visit_open_cells`] but the per-axis sampler adds the
+/// rational critical values and DECLINES on any algebraic critical value.
+///
+/// Returns `Some(true)` if a visit asked to stop (a witness was found),
+/// `Some(false)` if every cell was visited without stopping, or `None` to DECLINE
+/// (an algebraic critical value, nullification, overflow, incomplete isolation, or
+/// the cell-budget cap).
+fn visit_all_cells(
+    polys: &[MultiPoly],
+    vars: &BTreeSet<SymbolId>,
+    partial: &SamplePoint,
+    budget: &CellBudget,
+    visit: &mut dyn FnMut(&SamplePoint) -> Option<Visit>,
+) -> Option<bool> {
+    if vars.is_empty() {
+        budget.charge()?;
+        return Some(matches!(visit(partial)?, Visit::Stop));
+    }
+    if vars.len() == 1 {
+        let var = *vars.iter().next().unwrap();
+        let mut roots: Vec<Root> = Vec::new();
+        for p in polys {
+            if degree_in(p, var) == 0 {
+                continue;
+            }
+            let ipoly = p.to_single_var_integer_poly(var)?;
+            if ipoly.len() <= 1 {
+                continue;
+            }
+            roots.extend(isolate_roots(&ipoly)?);
+        }
+        let crit = dedup_sorted_roots(&roots)?;
+        // Open-interval interiors AND rational critical values (decline on algebraic).
+        let samples = nonstrict_axis_samples(&crit)?;
+        for s in samples {
+            budget.charge()?;
+            let mut pt = partial.clone();
+            pt.insert(var, s);
+            if matches!(visit(&pt)?, Visit::Stop) {
+                return Some(true);
+            }
+        }
+        return Some(false);
+    }
+
+    // N > 1: eliminate the deterministic first variable.
+    let elim = *vars.iter().next().unwrap();
+    let mut rest: BTreeSet<SymbolId> = vars.clone();
+    rest.remove(&elim);
+
+    // PROJECTION onto `rest` — IDENTICAL to the strict path.
+    let projected = project_strict(polys, elim, &rest)?;
+
+    // Recurse over ALL cells of the projection (open + rational critical), then for
+    // each base point sample the e-fiber's open intervals AND rational critical
+    // values, declining on any algebraic e-critical value.
+    visit_all_cells(&projected, &rest, partial, budget, &mut |base_pt| {
+        let mut roots: Vec<Root> = Vec::new();
+        for p in polys {
+            if degree_in(p, elim) == 0 {
+                continue;
+            }
+            // NULLIFICATION guard: a base point that collapses `p`'s e-degree breaks
+            // delineability ⇒ decline (sound: never proceed past a gap).
+            let residual = substitute_rationals(p, base_pt)?;
+            if degree_in(&residual, elim) == 0 {
+                return None;
+            }
+            let ipoly = residual.to_single_var_integer_poly(elim)?;
+            if ipoly.len() <= 1 {
+                return None;
+            }
+            roots.extend(isolate_roots(&ipoly)?);
+        }
+        let crit = dedup_sorted_roots(&roots)?;
+        let samples = nonstrict_axis_samples(&crit)?;
+        for s in samples {
+            budget.charge()?;
+            let mut pt = base_pt.clone();
+            pt.insert(elim, s);
+            if matches!(visit(&pt)?, Visit::Stop) {
+                return Some(Visit::Stop);
+            }
+        }
+        Some(Visit::Continue)
+    })
+}
+
+/// Decide a MIXED / NON-STRICT N ≥ 3-variable component `comp` (at least one
+/// `=`/`≤`/`≥` atom) by the recursive cylindrical decomposition [`visit_all_cells`],
+/// which samples both open-cell interiors and RATIONAL critical 0-cells at every
+/// level.
+///
+/// Returns `Some(Sat(bindings))` (a fully-RATIONAL witness, replay-checked by the
+/// caller) / `Some(Unsat)` (exhaustive by the cell argument: a solution lies in some
+/// cell we sampled) when the decomposition is provably complete, or `None` to
+/// DECLINE on ANY completeness doubt (an algebraic critical value, projection /
+/// isolation / nullification / overflow / the cell cap) — never a wrong verdict.
+fn decide_nonstrict_cad_nvar(
+    comp: &[&MultiAtom],
+    vars: &BTreeSet<SymbolId>,
+) -> Option<TwoVarVerdict> {
+    debug_assert!(vars.len() >= 3);
+    debug_assert!(
+        comp.iter()
+            .any(|a| matches!(a.cmp, Cmp::Eq | Cmp::Le | Cmp::Ge))
+    );
+
+    let mut polys: Vec<MultiPoly> = Vec::new();
+    for atom in comp {
+        if !polys.iter().any(|p| p.terms == atom.poly.terms) {
+            polys.push(atom.poly.clone());
+        }
+    }
+    if polys.is_empty() {
+        return None;
+    }
+
+    let budget = CellBudget::new();
+    let mut witness: Option<Vec<(SymbolId, Value)>> = None;
+
+    let stopped = visit_all_cells(&polys, vars, &SamplePoint::new(), &budget, &mut |pt| {
+        // Defensive completeness: the sample must bind EVERY component variable.
+        if vars.iter().any(|v| !pt.contains_key(v)) {
+            return None;
+        }
+        // Every sample coordinate is rational (the sampler declines on algebraic
+        // critical values), so each atom's sign is decided exactly by the rational
+        // evaluator. An indeterminate sign ⇒ decline (never a gap).
+        let mut value_pt: BTreeMap<SymbolId, Value> = BTreeMap::new();
+        for (&v, &q) in pt {
+            value_pt.insert(v, Value::Real(q));
+        }
+        let mut all_hold = true;
+        for atom in comp {
+            let s = multipoly_sign_at(&atom.poly, &value_pt)?;
+            if !sign_satisfies(atom.cmp, s) {
+                all_hold = false;
+                break;
+            }
+        }
+        if all_hold {
+            witness = Some(pt.iter().map(|(&v, &q)| (v, Value::Real(q))).collect());
+            Some(Visit::Stop)
+        } else {
+            Some(Visit::Continue)
+        }
+    })?;
+
+    if stopped {
+        return Some(TwoVarVerdict::Sat(witness?));
+    }
+
+    // Every cell's sample (open interior AND rational critical 0-cell) failed. By the
+    // cell argument (the solution set is a finite union of these cells), the
+    // component is Unsat — EXHAUSTIVELY. Reaching here means every sign test resolved
     // and the decomposition was complete (no decline anywhere).
     Some(TwoVarVerdict::Unsat)
 }

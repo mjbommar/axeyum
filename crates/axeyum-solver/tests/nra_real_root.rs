@@ -1882,3 +1882,210 @@ fn strict_cad_wrong_unsat_regression_seed_1117_is_sat() {
         );
     }
 }
+
+// === MIXED / NON-STRICT 2-variable CAD (ADR-0038, step 5) =====================
+//
+// A non-strict atom (`=`/`≤`/`≥`) can be satisfied ON a projection boundary (a
+// critical point / 0-cell), not only in an open cell's interior. The non-strict
+// decider samples BOTH the open keep-cells AND each RATIONAL critical keep-value,
+// then decides each substituted univariate-in-elim system completely. With all
+// critical keep-values rational this is exact (Sat with witness, or exhaustive
+// Unsat); an algebraic critical keep-value DECLINES (never a wrong Unsat).
+
+fn ge(a: &mut TermArena, l: TermId, r: TermId) -> TermId {
+    a.real_ge(l, r).unwrap()
+}
+
+/// Build `x² + y²` over given var terms.
+fn sum_of_squares(a: &mut TermArena, xv: TermId, yv: TermId) -> TermId {
+    let xx = a.real_mul(xv, xv).unwrap();
+    let yy = a.real_mul(yv, yv).unwrap();
+    a.real_add(xx, yy).unwrap()
+}
+
+/// Non-strict SAT with a witness ON the boundary: `x² + y² ≤ 1 ∧ x = 1`. The only
+/// solution is (1, 0) — exactly on the unit circle, a critical 0-cell. The critical
+/// keep-values are rational, so the non-strict CAD decides it Sat and the model
+/// replays.
+#[test]
+fn nonstrict_disk_boundary_witness_is_sat() {
+    let mut a = TermArena::new();
+    let (xs, xv) = real(&mut a, "x");
+    let (ys, yv) = real(&mut a, "y");
+    let ss = sum_of_squares(&mut a, xv, yv);
+    let one = a.real_const(Rational::integer(1));
+    let a1 = le(&mut a, ss, one); // x² + y² ≤ 1
+    let onec = a.real_const(Rational::integer(1));
+    let a2 = eq(&mut a, xv, onec); // x = 1
+
+    let r = solve(&mut a, &[a1, a2], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x²+y²≤1 ∧ x=1 is SAT (witness (1,0) on the boundary); got {r:?}");
+    };
+    // Replay: both original atoms hold at the returned model.
+    let asg = model.to_assignment();
+    assert!(
+        matches!(eval(&a, a1, &asg), Ok(Value::Bool(true))),
+        "x²+y²≤1 must replay true at the witness"
+    );
+    assert!(
+        matches!(eval(&a, a2, &asg), Ok(Value::Bool(true))),
+        "x=1 must replay true at the witness"
+    );
+    let _ = (xs, ys);
+}
+
+/// Non-strict UNSAT (rational critical points, exhaustive): `x² + y² ≤ 1 ∧ x ≥ 2`.
+/// The disk lives in `x ∈ [−1, 1]`, disjoint from `x ≥ 2` ⇒ no solution. All
+/// critical keep-values are rational, so the enumeration is complete ⇒ Unsat.
+#[test]
+fn nonstrict_disk_and_far_halfplane_is_unsat() {
+    let mut a = TermArena::new();
+    let (_xs, xv) = real(&mut a, "x");
+    let (_ys, yv) = real(&mut a, "y");
+    let ss = sum_of_squares(&mut a, xv, yv);
+    let one = a.real_const(Rational::integer(1));
+    let a1 = le(&mut a, ss, one); // x² + y² ≤ 1
+    let two = a.real_const(Rational::integer(2));
+    let a2 = ge(&mut a, xv, two); // x ≥ 2
+
+    let r = solve(&mut a, &[a1, a2], &SolverConfig::default()).expect("no error");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x²+y²≤1 ∧ x≥2 is UNSAT (disjoint); got {r:?}"
+    );
+}
+
+/// Mixed strict + non-strict, satisfiable: `x² + y² ≤ 4 ∧ x > 0 ∧ x = 1`. Witness
+/// e.g. (1, 0) — on the boundary of `x = 1`, interior of the disk. Never Unsat.
+#[test]
+fn nonstrict_mixed_satisfiable_is_sat_or_sound() {
+    let mut a = TermArena::new();
+    let (_xs, xv) = real(&mut a, "x");
+    let (_ys, yv) = real(&mut a, "y");
+    let ss = sum_of_squares(&mut a, xv, yv);
+    let four = a.real_const(Rational::integer(4));
+    let a1 = le(&mut a, ss, four); // x² + y² ≤ 4
+    let zero = a.real_const(Rational::zero());
+    let a2 = gt(&mut a, xv, zero); // x > 0
+    let onec = a.real_const(Rational::integer(1));
+    let a3 = eq(&mut a, xv, onec); // x = 1
+
+    let r = solve(&mut a, &[a1, a2, a3], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "x²+y²≤4 ∧ x>0 ∧ x=1 is SAT (e.g. (1,0)); must not be Unsat; got {r:?}"
+    );
+    if let CheckResult::Sat(model) = &r {
+        let asg = model.to_assignment();
+        for (t, n) in [(a1, "x²+y²≤4"), (a2, "x>0"), (a3, "x=1")] {
+            assert!(
+                matches!(eval(&a, t, &asg), Ok(Value::Bool(true))),
+                "{n} must replay true at the witness"
+            );
+        }
+    }
+}
+
+/// Mixed strict + non-strict, contradictory: `x² + y² ≤ 1 ∧ x > 5`. Must be Unsat
+/// or a sound Unknown — NEVER Sat. (Rational critical points ⇒ expect Unsat.)
+#[test]
+fn nonstrict_mixed_contradictory_never_sat() {
+    let mut a = TermArena::new();
+    let (_xs, xv) = real(&mut a, "x");
+    let (_ys, yv) = real(&mut a, "y");
+    let ss = sum_of_squares(&mut a, xv, yv);
+    let one = a.real_const(Rational::integer(1));
+    let a1 = le(&mut a, ss, one); // x² + y² ≤ 1
+    let five = a.real_const(Rational::integer(5));
+    let a2 = gt(&mut a, xv, five); // x > 5
+
+    let r = solve(&mut a, &[a1, a2], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Sat(_)),
+        "x²+y²≤1 ∧ x>5 is UNSAT; must never be Sat; got {r:?}"
+    );
+}
+
+/// Algebraic-critical-value DECLINE: a non-strict system whose keep-projection has
+/// an IRRATIONAL critical value. `x² + y² ≤ 4 ∧ x² = 2 ∧ y = 0`: the `x² = 2`
+/// boundary critical x-values are ±√2 (irrational). Whichever orientation is tried,
+/// a critical keep-value is algebraic ⇒ the non-strict CAD DECLINES (Unknown). The
+/// system is actually SAT (x = √2, y = 0: 2 ≤ 4 ✓), so it must NOT be wrongly Unsat.
+#[test]
+fn nonstrict_algebraic_critical_value_declines_not_unsat() {
+    let mut a = TermArena::new();
+    let (_xs, xv) = real(&mut a, "x");
+    let (_ys, yv) = real(&mut a, "y");
+    let ss = sum_of_squares(&mut a, xv, yv);
+    let four = a.real_const(Rational::integer(4));
+    let a1 = le(&mut a, ss, four); // x² + y² ≤ 4
+    let xx = a.real_mul(xv, xv).unwrap();
+    let two = a.real_const(Rational::integer(2));
+    let a2 = eq(&mut a, xx, two); // x² = 2
+    let zero = a.real_const(Rational::zero());
+    let a3 = eq(&mut a, yv, zero); // y = 0
+
+    let r = solve(&mut a, &[a1, a2, a3], &SolverConfig::default()).expect("no error");
+    // The decider may DECLINE (Unknown) on the algebraic critical value; it may also
+    // be decided Sat by another path. The ONLY forbidden answer is Unsat (the system
+    // is satisfiable at (√2, 0)).
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "x²+y²≤4 ∧ x²=2 ∧ y=0 is SAT ((√2,0)); algebraic critical x must DECLINE, \
+         never Unsat; got {r:?}"
+    );
+}
+
+/// Soundness-negative (SAT never Unsat): a satisfiable non-strict region
+/// `x² + y² ≤ 9 ∧ x ≥ 1 ∧ y ≥ 1` (e.g. (1, 1): 2 ≤ 9 ✓) must NEVER be Unsat.
+#[test]
+fn nonstrict_satisfiable_region_never_unsat() {
+    let mut a = TermArena::new();
+    let (_xs, xv) = real(&mut a, "x");
+    let (_ys, yv) = real(&mut a, "y");
+    let ss = sum_of_squares(&mut a, xv, yv);
+    let nine = a.real_const(Rational::integer(9));
+    let a1 = le(&mut a, ss, nine); // x² + y² ≤ 9
+    let one = a.real_const(Rational::integer(1));
+    let a2 = ge(&mut a, xv, one); // x ≥ 1
+    let onec = a.real_const(Rational::integer(1));
+    let a3 = ge(&mut a, yv, onec); // y ≥ 1
+
+    let r = solve(&mut a, &[a1, a2, a3], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "x²+y²≤9 ∧ x≥1 ∧ y≥1 is SAT (e.g. (1,1)); must never be Unsat; got {r:?}"
+    );
+    if let CheckResult::Sat(model) = &r {
+        let asg = model.to_assignment();
+        for (t, n) in [(a1, "x²+y²≤9"), (a2, "x≥1"), (a3, "y≥1")] {
+            assert!(
+                matches!(eval(&a, t, &asg), Ok(Value::Bool(true))),
+                "{n} must replay true at the witness"
+            );
+        }
+    }
+}
+
+/// Soundness-negative (UNSAT never Sat): an unsatisfiable non-strict system
+/// `y ≥ x² + 1 ∧ y ≤ 0` (the parabola interior sits at y ≥ 1, disjoint from y ≤ 0)
+/// must NEVER be Sat.
+#[test]
+fn nonstrict_unsatisfiable_never_sat() {
+    let mut a = TermArena::new();
+    let (_xs, xv) = real(&mut a, "x");
+    let (_ys, yv) = real(&mut a, "y");
+    let xx = a.real_mul(xv, xv).unwrap();
+    let one = a.real_const(Rational::integer(1));
+    let xx1 = a.real_add(xx, one).unwrap();
+    let a1 = ge(&mut a, yv, xx1); // y ≥ x² + 1
+    let zero = a.real_const(Rational::zero());
+    let a2 = le(&mut a, yv, zero); // y ≤ 0
+
+    let r = solve(&mut a, &[a1, a2], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Sat(_)),
+        "y≥x²+1 ∧ y≤0 is UNSAT; must never be Sat; got {r:?}"
+    );
+}
