@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Axeyum — WASM Solver Playground</title>
+<style>
+  :root { --bg:#0f1117; --panel:#171a23; --ink:#e6e9ef; --muted:#9aa3b2;
+          --accent:#6ea8fe; --sat:#4caf50; --unsat:#ef5350; --unk:#e0a23b; --err:#ef5350; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.5 ui-sans-serif,system-ui,sans-serif; background:var(--bg); color:var(--ink); }
+  header { padding:24px 20px 8px; max-width:920px; margin:0 auto; }
+  h1 { margin:0 0 4px; font-size:22px; }
+  .tag { color:var(--muted); font-size:13px; }
+  main { max-width:920px; margin:0 auto; padding:12px 20px 48px; }
+  .banner { background:#2a2410; border:1px solid #6b5a1e; color:#f0d68a; padding:10px 14px;
+            border-radius:8px; font-size:13px; margin:10px 0; display:none; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:12px 0; }
+  textarea { width:100%; min-height:200px; background:var(--panel); color:var(--ink); border:1px solid #2a2f3a;
+             border-radius:10px; padding:14px; font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; resize:vertical; }
+  button { background:var(--accent); color:#06122b; border:0; border-radius:8px; padding:9px 16px; font-weight:600; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .chip { background:var(--panel); color:var(--ink); border:1px solid #2a2f3a; border-radius:999px;
+          padding:5px 12px; font-size:12px; cursor:pointer; }
+  .chip:hover { border-color:var(--accent); }
+  label { color:var(--muted); font-size:13px; }
+  input[type=number] { width:90px; background:var(--panel); color:var(--ink); border:1px solid #2a2f3a; border-radius:8px; padding:7px; }
+  #result { margin-top:16px; padding:16px; border-radius:10px; background:var(--panel); border:1px solid #2a2f3a; min-height:54px; }
+  .verdict { font-size:26px; font-weight:800; letter-spacing:.5px; }
+  .v-sat { color:var(--sat); } .v-unsat { color:var(--unsat); } .v-unknown { color:var(--unk); } .v-error { color:var(--err); }
+  .meta { color:var(--muted); font-size:13px; margin-top:6px; }
+  footer { color:var(--muted); font-size:12px; max-width:920px; margin:0 auto; padding:0 20px 40px; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Axeyum — Solver Playground <span class="tag">· runs in your browser (WebAssembly)</span></h1>
+  <div class="tag">Untrusted fast search, trusted small checking. A <code>sat</code> here is replay-verified against your query, just like native.</div>
+</header>
+<main>
+  <div id="banner" class="banner"></div>
+
+  <div class="row">
+    <span class="tag">Examples:</span>
+    <button class="chip" data-ex="sat">sat (x + 1 = 0)</button>
+    <button class="chip" data-ex="unsat">unsat (x = 0 ∧ x = 1)</button>
+    <button class="chip" data-ex="unknown">unknown (wide multiply)</button>
+  </div>
+
+  <textarea id="query" spellcheck="false"></textarea>
+
+  <div class="row">
+    <button id="solve">Solve</button>
+    <label>timeout <input id="timeout" type="number" value="5000" min="100" step="100" /> ms</label>
+    <span id="status" class="tag"></span>
+  </div>
+
+  <div id="result"><span class="meta">Press <b>Solve</b> to run the query.</span></div>
+</main>
+<footer>
+  Built from <code>crates/axeyum-wasm</code> via wasm-pack. Not live yet? See the
+  <a href="README.md">playground README</a> to build the bundle. The same
+  <code>solve_smtlib</code> runs here as in Rust.
+</footer>
+
+<script type="module">
+const EXAMPLES = {
+  sat: `(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (= (bvadd x #x01) #x00))
+(check-sat)`,
+  unsat: `(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (= x #x00))
+(assert (= x #x01))
+(check-sat)`,
+  unknown: `(set-logic QF_BV)
+(declare-const p (_ BitVec 2048))
+(declare-const q (_ BitVec 2048))
+(declare-const r (_ BitVec 2048))
+(assert (= r (bvmul p q)))
+(assert (= x #x01))   ; oversized multiply → graceful unknown
+(check-sat)`,
+};
+
+const $ = (id) => document.getElementById(id);
+$("query").value = EXAMPLES.sat;
+for (const c of document.querySelectorAll(".chip"))
+  c.onclick = () => { $("query").value = EXAMPLES[c.dataset.ex]; };
+
+let solveFn = null;
+
+function showResult(status, detail, logic, ms) {
+  const cls = { sat: "v-sat", unsat: "v-unsat", unknown: "v-unknown", error: "v-error" }[status] || "v-unknown";
+  const meta = [
+    logic ? `logic: ${logic}` : null,
+    ms != null ? `${ms.toFixed(1)} ms` : null,
+    detail ? detail : null,
+  ].filter(Boolean).join("  ·  ");
+  $("result").innerHTML =
+    `<span class="verdict ${cls}">${status}</span>` + (meta ? `<div class="meta">${meta}</div>` : "");
+}
+
+async function boot() {
+  try {
+    const mod = await import("./pkg/axeyum_wasm.js");
+    await mod.default();              // init the wasm
+    solveFn = mod.solve_smtlib_json;
+    $("status").textContent = "engine ready · axeyum-wasm " + (mod.version ? mod.version() : "");
+  } catch (e) {
+    const b = $("banner");
+    b.style.display = "block";
+    b.innerHTML = "Live solving is not enabled yet — the WASM bundle isn't built. " +
+      "See <a href='README.md'>README</a> (<code>wasm-pack build</code>). " +
+      "You can still read and edit the example queries.";
+    $("solve").disabled = true;
+    $("status").textContent = "demo mode (no engine)";
+  }
+}
+
+$("solve").onclick = () => {
+  if (!solveFn) return;
+  $("status").textContent = "solving…";
+  // defer so the UI repaints before the (synchronous) solve runs
+  setTimeout(() => {
+    const t0 = performance.now();
+    let out;
+    try { out = JSON.parse(solveFn($("query").value, parseInt($("timeout").value, 10) || 5000)); }
+    catch (e) { out = { status: "error", detail: String(e) }; }
+    const ms = performance.now() - t0;
+    showResult(out.status, out.detail, out.logic, ms);
+    $("status").textContent = "done";
+  }, 10);
+};
+
+boot();
+</script>
+</body>
+</html>

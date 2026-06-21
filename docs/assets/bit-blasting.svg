@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <style>
+    .title { font-size: 16px; font-weight: 700; fill: #1a2b50; }
+    .sub   { font-size: 12px; fill: #5a6478; }
+    .fa    { fill: #eef3ff; stroke: #3355aa; stroke-width: 1.5; rx: 8; }
+    .falbl { font-weight: 600; fill: #1a2b50; text-anchor: middle; }
+    .wire  { stroke: #3355aa; stroke-width: 1.5; fill: none; }
+    .carry { stroke: #c62828; stroke-width: 1.8; fill: none; }
+    .pin   { fill: #5a6478; text-anchor: middle; }
+    .out   { fill: #2e7d32; font-weight: 600; text-anchor: middle; }
+    .note  { fill: #b8860b; font-style: italic; }
+  </style>
+
+  <text x="20" y="28" class="title">Bit-blasting:  bvadd(x, 1) over 8-bit words  →  a Boolean circuit</text>
+  <text x="20" y="48" class="sub">Each bit becomes a Boolean wire; bvadd becomes a ripple-carry chain of full adders (FA). Shown: low 4 bits.</text>
+
+  <!-- carry-in label -->
+  <text x="690" y="150" class="pin">c0 = 0</text>
+  <line x1="640" y1="145" x2="690" y2="145" class="carry"/>
+
+  <!-- Full adders, bit 0 (right) .. bit 3 (left); carry flows right -> left -->
+  <!-- FA0 -->
+  <rect class="fa" x="560" y="120" width="80" height="50"/>
+  <text x="600" y="150" class="falbl">FA₀</text>
+  <text x="600" y="108" class="pin">x₀ , 1</text>
+  <text x="600" y="195" class="out">s₀</text>
+  <line x1="600" y1="170" x2="600" y2="185" class="wire"/>
+  <line x1="600" y1="112" x2="600" y2="120" class="wire"/>
+
+  <!-- carry FA0 -> FA1 -->
+  <line x1="560" y1="145" x2="500" y2="145" class="carry"/>
+  <text x="530" y="138" class="pin" fill="#c62828">c1</text>
+
+  <!-- FA1 -->
+  <rect class="fa" x="420" y="120" width="80" height="50"/>
+  <text x="460" y="150" class="falbl">FA₁</text>
+  <text x="460" y="108" class="pin">x₁ , 0</text>
+  <text x="460" y="195" class="out">s₁</text>
+  <line x1="460" y1="170" x2="460" y2="185" class="wire"/>
+  <line x1="460" y1="112" x2="460" y2="120" class="wire"/>
+
+  <line x1="420" y1="145" x2="360" y2="145" class="carry"/>
+  <text x="390" y="138" class="pin" fill="#c62828">c2</text>
+
+  <!-- FA2 -->
+  <rect class="fa" x="280" y="120" width="80" height="50"/>
+  <text x="320" y="150" class="falbl">FA₂</text>
+  <text x="320" y="108" class="pin">x₂ , 0</text>
+  <text x="320" y="195" class="out">s₂</text>
+  <line x1="320" y1="170" x2="320" y2="185" class="wire"/>
+  <line x1="320" y1="112" x2="320" y2="120" class="wire"/>
+
+  <line x1="280" y1="145" x2="220" y2="145" class="carry"/>
+  <text x="250" y="138" class="pin" fill="#c62828">c3</text>
+
+  <!-- FA3 -->
+  <rect class="fa" x="140" y="120" width="80" height="50"/>
+  <text x="180" y="150" class="falbl">FA₃</text>
+  <text x="180" y="108" class="pin">x₃ , 0</text>
+  <text x="180" y="195" class="out">s₃</text>
+  <line x1="180" y1="170" x2="180" y2="185" class="wire"/>
+  <line x1="180" y1="112" x2="180" y2="120" class="wire"/>
+
+  <line x1="140" y1="145" x2="95" y2="145" class="carry"/>
+  <text x="118" y="138" class="pin" fill="#c62828">c4 …</text>
+
+  <!-- constraint + outcome -->
+  <text x="20" y="240" class="sub">Constraint  s = #x00  forces every output bit to 0; the SAT core finds  x = 11111111 (255),</text>
+  <text x="20" y="258" class="note">and the trusted ground evaluator confirms  255 + 1 ≡ 0 (mod 2⁸)  before "sat" is returned.</text>
+
+  <!-- legend -->
+  <line x1="560" y1="245" x2="585" y2="245" class="wire"/>
+  <text x="592" y="249" class="sub">bit wire</text>
+  <line x1="660" y1="245" x2="685" y2="245" class="carry"/>
+  <text x="692" y="249" class="sub">carry</text>
+</svg>

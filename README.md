@@ -108,6 +108,23 @@ the Lean proof-export ladder — is the followable roadmap in [PLAN.md](PLAN.md)
   recorded benchmark baselines (public QF_BV `sat-bv` vs Z3 slices, rewrite
   measurement, replay-refinement diagnostics).
 
+## Documentation
+
+New, reader-friendly front door (Markdown that also builds into a searchable
+[mdBook](https://rust-lang.github.io/mdBook/) site with Mermaid diagrams):
+**[docs/README.md](docs/README.md)**.
+
+| You are… | Start here |
+|---|---|
+| **New to SAT/SMT/proofs** | [docs/learn/](docs/learn/README.md) — concepts via tiny examples + diagrams |
+| **A user** | [docs/user-guide/](docs/user-guide/README.md) — run a query, read a model, [limitations](docs/user-guide/limitations.md), [benchmarks](docs/user-guide/benchmarks.md) |
+| **Curious about internals** | [docs/internals/](docs/internals/README.md) — [architecture](docs/internals/architecture.md), trust boundary |
+| **Want to try it now** | [docs/playground/](docs/playground/README.md) — solve a query **in your browser** (WASM) |
+
+The single best page to understand the system:
+[How Axeyum solves a query](docs/learn/07-how-axeyum-solves-a-query.md) — the
+pipeline and the untrusted-search / trusted-checking boundary, with diagrams.
+
 ## Workspace
 
 | Crate | Purpose |

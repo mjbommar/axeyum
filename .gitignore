@@ -15,3 +15,12 @@
 
 # Public corpus tier (fetched, not committed)
 /corpus/public/
+
+# mdBook generated site + mermaid runtime assets
+# (regenerate: `cargo install mdbook mdbook-mermaid && mdbook-mermaid install . && mdbook build`)
+/book/
+/mermaid.min.js
+/mermaid-init.js
+
+# WASM playground bundle (regenerate: `wasm-pack build crates/axeyum-wasm --target web --out-dir docs/playground/pkg`)
+/docs/playground/pkg/

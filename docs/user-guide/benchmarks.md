@@ -1,0 +1,77 @@
+# Benchmarks
+
+Axeyum's benchmark posture is the same as its solving posture: **measure, don't
+assert.** Every number here comes from a committed artifact under
+[`bench-results/`](../../bench-results/), with `DISAGREE=0` and zero replay
+failures (a wrong answer would fail the harness, not just score badly).
+
+## The measured Z3 head-to-head (public QF_BV)
+
+On the public `QF_BV` slice `20221214-p4dfa-XiaoqiChen` (113 files, SMT-LIB 2024,
+Zenodo 11061097), pure-Rust Axeyum vs Z3 4.13.3, single-threaded:
+
+| budget | **Axeyum** (sat-bv, preprocess+inprocess) | **Z3 4.13.3** |
+|---|---:|---:|
+| 3 s | 4 / 113 | 5 / 113 |
+| 20 s | 8 / 113 | 9 / 113 |
+| 60 s | 11 / 113 | 11 / 113 |
+
+```mermaid
+xychart-beta
+    title "Decided / 113 vs budget (both time out on ~90%)"
+    x-axis "budget (s)" [3, 20, 60]
+    y-axis "decided" 0 --> 15
+    line "axeyum" [4, 8, 11]
+    line "z3" [5, 9, 11]
+```
+
+**What this says, honestly:**
+
+- They are at **parity** at second-scale, and parity is *budget-robust* (it holds
+  at 3 s, 20 s, and 60 s).
+- **Both** time out on ~**90%** (≈102/113) of this corpus even at 60 s — it is
+  adversarially hard *for both solvers*, not just for Axeyum.
+- The earlier "Z3 sweeps essentially all 113" was an **unmeasured premise**; when
+  measured, Z3 decides 11/113 at 60 s. Axeyum even decides instances Z3 times out
+  on (e.g. `string1x8.3`).
+
+This is *not* a claim of general Z3 performance parity — it is parity *on this
+corpus*. Z3's breadth (strings, FP, NRA, incremental, tactics) and its complete
+nonlinear engine remain ahead. See [Limitations](limitations.md).
+
+## Where Axeyum's design shows: embeddability + certification
+
+On small, frequent proof obligations (e.g. Euclidean-geometry facts), the story
+is different and favorable:
+
+- **No process tax.** As an embedded Rust library, Axeyum answers in
+  microseconds–milliseconds. If your integration *shells out* to the `z3` binary,
+  you also pay ~100 ms of process startup *per query* — embedding wins by orders
+  of magnitude there. (Against *in-process* libz3 the gap is a process-model
+  effect, not solver speed — be fair about which you're comparing.)
+- **Certified answers** where Z3's default `unsat` is unchecked.
+
+See the runnable [`geometry_portfolio` example](../../crates/axeyum-solver/examples/geometry_portfolio.rs).
+
+## Reproducing
+
+```sh
+just check                                       # fmt + clippy + test + doc gate
+just bench-micro                                 # committed SMT-LIB micro corpus
+just bench-public-qfbv-sat-bv-compare            # public sat-bv vs Z3 slice
+just bench-public-qfbv-sat-bv-guarded            # node/CNF guarded run
+just bench-public-qfbv-sat-bv-replay-refine      # replay-checked query refinement
+```
+
+**Resource rules** (this matters — the harness can OOM a small host otherwise):
+
+- Build with capped jobs: `CARGO_BUILD_JOBS=4` / `-j4`.
+- Do **not** sweep the full ~41 GB public corpus to "make progress." Measure once
+  on a committed slice, then stop.
+
+## Reading an artifact
+
+Each JSON records the corpus + config hash, per-instance outcome, budgets,
+backend stats, PAR-2, **disagreements**, and **model-replay failures**. The two
+numbers that gate correctness are always `disagree = 0` and
+`model_replay_failures = 0`; the decided count is the *performance* signal.

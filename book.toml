@@ -1,0 +1,33 @@
+# mdBook configuration — builds the curated documentation front door under docs/
+# into a searchable static site. The same Markdown also renders directly on
+# GitHub, so this is additive, not a lock-in. See docs/internals/documentation.md.
+#
+#   cargo install mdbook mdbook-mermaid
+#   mdbook-mermaid install .     # writes mermaid assets + wires this file
+#   mdbook serve --open         # live preview   |   mdbook build -> book/
+
+[book]
+title = "Axeyum"
+authors = ["Axeyum contributors"]
+description = "A Rust-first automated reasoning stack: untrusted fast search, trusted small checking."
+src = "docs"
+language = "en"
+
+[output.html]
+default-theme = "rust"
+preferred-dark-theme = "ayu"
+git-repository-url = "https://github.com/mjbommar/axeyum"
+edit-url-template = "https://github.com/mjbommar/axeyum/edit/main/{path}"
+additional-js = ["mermaid.min.js", "mermaid-init.js"]
+
+[output.html.search]
+enable = true
+
+[output.html.fold]
+enable = true
+level = 1
+
+# Renders ```mermaid fenced blocks. Installed by `mdbook-mermaid install .`,
+# which also drops mermaid.min.js / mermaid-init.js next to this file.
+[preprocessor.mermaid]
+command = "mdbook-mermaid"

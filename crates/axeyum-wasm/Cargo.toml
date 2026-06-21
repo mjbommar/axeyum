@@ -1,0 +1,25 @@
+# WebAssembly binding for the playground — run the Axeyum solver in the browser.
+#
+# Intentionally NOT yet listed in the root workspace `members`: it stays inert
+# until activated, so it never entangles the main build. To activate:
+#   1. add "crates/axeyum-wasm" to [workspace].members in the root Cargo.toml
+#   2. rustup target add wasm32-unknown-unknown
+#   3. cargo install wasm-pack
+#   4. wasm-pack build crates/axeyum-wasm --target web --out-dir ../../docs/playground/pkg
+#
+# The default solver build is pure Rust and wasm-compatible (ADR-0017), so this
+# adds no C/C++ dependency.
+
+[package]
+name = "axeyum-wasm"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "WebAssembly binding exposing the Axeyum SMT-LIB solver to the browser playground."
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+axeyum-solver = { path = "../axeyum-solver" }
+wasm-bindgen = "0.2"
