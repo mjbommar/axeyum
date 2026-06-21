@@ -993,11 +993,173 @@ fn multi_region_only_declines_not_unsat() {
     );
 }
 
-/// A genuinely coupled equality system with an algebraic-valued witness, decided
-/// Sat and replay-checked: `x² + y² = 4 ∧ x*y = 1`. Common solutions have
-/// irrational coordinates; `Res_y = x⁴ − 4x² + 1`, whose roots are irrational.
-/// Because the x-candidates are algebraic (not rational), the lift DECLINES — the
-/// decider must not crash and must not answer Unsat (it IS satisfiable).
+// --- ALGEBRAIC (α, β) grid-lift slice (CAD/nlsat step 3) ----------------------
+
+/// Algebraic-coupled SAT via the (α, β) grid lift (was `Unknown`): the diagonal of
+/// a circle, `x² + y² = 4 ∧ x = y`, whose only real solutions are `x = y = ±√2`
+/// (irrational). The witness's `(√2, √2)` coordinates are algebraic; the engine
+/// decides **Sat** and the model satisfies BOTH original assertions under the
+/// independent ground evaluator (a genuine replay of `x²+y²=4` and `x=y`).
+#[test]
+fn grid_circle_diagonal_sat_sqrt2() {
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let (ys, yv) = real(&mut arena, "y");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let yy = arena.real_mul(yv, yv).unwrap();
+    let sum_sq = arena.real_add(xx, yy).unwrap();
+    let four = arena.real_const(Rational::integer(4));
+    let a1 = arena.eq(sum_sq, four).unwrap();
+    let a2 = arena.eq(xv, yv).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x²+y²=4 ∧ x=y must be Sat with x=y=±√2; got {r:?}");
+    };
+    // Independent replay: BOTH original assertions hold at the witness.
+    let asg = model.to_assignment();
+    assert!(
+        matches!(eval(&arena, a1, &asg), Ok(Value::Bool(true))),
+        "x²+y²=4 must hold at the algebraic witness"
+    );
+    assert!(
+        matches!(eval(&arena, a2, &asg), Ok(Value::Bool(true))),
+        "x=y must hold at the algebraic witness"
+    );
+    // The witness is genuinely algebraic (irrational ±√2), not a rational.
+    assert!(
+        model.get(xs).unwrap().as_real_algebraic().is_some(),
+        "x must be an algebraic (irrational) value"
+    );
+    assert!(
+        model.get(ys).unwrap().as_real_algebraic().is_some(),
+        "y must be an algebraic (irrational) value"
+    );
+    // The square of the witness is exactly 2: x·x − 2 vanishes by exact sign.
+    let x = model.get(xs).unwrap();
+    let a = x.as_real_algebraic().unwrap();
+    assert_eq!(
+        a.sign_at(&[-2, 0, 1]),
+        Some(Sign::Zero),
+        "x must satisfy x² = 2 exactly"
+    );
+}
+
+/// Algebraic-coupled SAT via the grid, mixing a univariate and a bivariate
+/// equality: `x² = 2 ∧ x*y = 1`. The unique-up-to-sign solutions are
+/// `x = ±√2, y = ±1/√2` (both irrational). x-candidates come from the univariate
+/// `x²−2`; y-candidates from `Res_x(x²−2, xy−1)`. The grid pair test (exact field
+/// arithmetic, e.g. `√2 · 1/√2 = 1`) certifies **Sat**; the model replays.
+#[test]
+fn grid_univar_bivar_sat_recip_sqrt2() {
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let (ys, yv) = real(&mut arena, "y");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let a1 = arena.eq(xx, two).unwrap();
+    let xy = arena.real_mul(xv, yv).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a2 = arena.eq(xy, one).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x²=2 ∧ x*y=1 must be Sat with x=±√2, y=±1/√2; got {r:?}");
+    };
+    let asg = model.to_assignment();
+    assert!(
+        matches!(eval(&arena, a1, &asg), Ok(Value::Bool(true))),
+        "x²=2 must hold at the witness"
+    );
+    assert!(
+        matches!(eval(&arena, a2, &asg), Ok(Value::Bool(true))),
+        "x*y=1 must hold at the algebraic witness (√2 · 1/√2 = 1)"
+    );
+    // Both coordinates are genuinely algebraic.
+    assert!(model.get(xs).unwrap().as_real_algebraic().is_some());
+    assert!(model.get(ys).unwrap().as_real_algebraic().is_some());
+}
+
+/// Algebraic-coupled UNSAT via the grid, certified EXHAUSTIVELY (all equalities,
+/// algebraic candidates): `x² = 2 ∧ y² = 2 ∧ x*y = −3`. The candidate coordinates
+/// are `x, y = ±√2`, so `x*y ∈ {2, −2}` — never `−3`. Every atom is an equality
+/// and the grid is the complete common-solution candidate set, so the engine
+/// certifies **Unsat** (not Unknown) even though the coordinates are algebraic.
+#[test]
+fn grid_algebraic_exhaustive_unsat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let a1 = arena.eq(xx, two).unwrap();
+    let yy = arena.real_mul(yv, yv).unwrap();
+    let two2 = arena.real_const(Rational::integer(2));
+    let a2 = arena.eq(yy, two2).unwrap();
+    let xy = arena.real_mul(xv, yv).unwrap();
+    let neg3 = arena.real_const(Rational::integer(-3));
+    let a3 = arena.eq(xy, neg3).unwrap();
+    let r = solve(&mut arena, &[a1, a2, a3], &SolverConfig::default()).expect("no error");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x²=2 ∧ y²=2 ∧ x*y=−3 is unsat (±√2·±√2 ∈ {{2,−2}} ≠ −3), certified by the \
+         algebraic grid; got {r:?}"
+    );
+}
+
+/// Algebraic-coupled UNSAT for the classic circle/line-too-far system, all
+/// equalities: `x² + y² = 1 ∧ x = y + 2`. Substituting the line gives
+/// `2y² + 4y + 3 = 0` whose discriminant `16 − 24 < 0` ⇒ NO real solution. The
+/// engine certifies **Unsat** (the resultant has no real root) rather than
+/// Unknown.
+#[test]
+fn grid_circle_line_too_far_unsat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let yy = arena.real_mul(yv, yv).unwrap();
+    let sum_sq = arena.real_add(xx, yy).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a1 = arena.eq(sum_sq, one).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let yp2 = arena.real_add(yv, two).unwrap();
+    let a2 = arena.eq(xv, yp2).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x²+y²=1 ∧ x=y+2 is unsat (line too far from the unit circle); got {r:?}"
+    );
+}
+
+/// A 2-variable component WITH an inequality must NEVER be wrongly Unsat from the
+/// grid (a region is not captured by point candidates). `x² = 2 ∧ x*y = 1 ∧ y > 0`
+/// IS satisfiable (`x=√2, y=1/√2 > 0`). The grid decline path leaves the
+/// inequality component to the outer engine ⇒ the verdict is Sat or Unknown, but
+/// crucially NOT a (wrong) Unsat.
+#[test]
+fn grid_inequality_component_not_wrongly_unsat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let a1 = arena.eq(xx, two).unwrap();
+    let xy = arena.real_mul(xv, yv).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a2 = arena.eq(xy, one).unwrap();
+    let zero = arena.real_const(Rational::zero());
+    let a3 = arena.real_gt(yv, zero).unwrap();
+    let r = solve(&mut arena, &[a1, a2, a3], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "x²=2 ∧ x*y=1 ∧ y>0 is sat (x=√2, y=1/√2>0); must NOT be wrongly Unsat; got {r:?}"
+    );
+}
+
+/// A genuinely coupled equality system with deeply-nested-radical witnesses:
+/// `x² + y² = 4 ∧ x*y = 1`. `Res_y = x⁴ − 4x² + 1` whose roots are `±√(2±√3)`
+/// (degree-4 algebraic). The grid forms but the field arithmetic on degree-4
+/// algebraic coordinates declines (overflow) ⇒ a sound `Unknown` — the decider
+/// must not crash and must not answer Unsat (it IS satisfiable).
 #[test]
 fn multi_coupled_algebraic_x_declines_not_unsat() {
     let mut arena = TermArena::new();

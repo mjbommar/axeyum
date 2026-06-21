@@ -1836,6 +1836,11 @@ fn decompose_multivariate(arena: &TermArena, assertions: &[TermId]) -> Option<Ch
         model.set(*y, v);
     }
 
+    // 4b. Coarsen every algebraic model value to a small-denominator isolating
+    //     interval (value-preserving — same root), so the witness replays under the
+    //     independent ground evaluator. See [`coarsen_model_algebraics`].
+    coarsen_model_algebraics(&mut model);
+
     // 5. Replay-check the full model against EVERY original assertion. The
     //    eliminated-variable definitions (`subst`) are applied back into each atom
     //    first, so a linear *defining* equation (which couples two algebraic vars,
@@ -1998,6 +2003,19 @@ fn decide_two_var_component(
     // Whether *every* atom in the component is an equality (no inequality region
     // can escape the common-root enumeration ⇒ a complete `Unsat` is possible).
     let all_equalities = comp.iter().all(|a| matches!(a.cmp, Cmp::Eq));
+
+    // ALGEBRAIC (α, β) grid lift (the CAD/nlsat ladder, step 3). For an
+    // all-equality component, decide via the grid `x-candidates × y-candidates`
+    // (each axis's complete real-root candidate set, from a univariate equality or
+    // a resultant) tested by exact field arithmetic — this resolves ALGEBRAIC
+    // coordinates that the rational-only per-orientation lift below declines on. A
+    // definitive verdict wins immediately; a decline falls through to the existing
+    // path (which also handles the non-grid shapes). See `decide_grid_two_var`.
+    if all_equalities
+        && let Some(verdict) = decide_grid_two_var(comp, v0, v1, &equalities, all_equalities)
+    {
+        return Some(verdict);
+    }
 
     // Try eliminating each variable. A definitive verdict (Sat / Unsat) from
     // either orientation wins immediately; otherwise we keep the weakest sound
@@ -2189,6 +2207,512 @@ fn two_var_model_satisfies(comp: &[&MultiAtom], model: &Model) -> bool {
         };
         replay_multi_atom(&ma, model)
     })
+}
+
+// ============================================================================
+// Algebraic (α, β) grid lift (the CAD/nlsat ladder, step 3 — coupled all-equality
+// 2-variable component with ALGEBRAIC coordinates, decided by exact field
+// arithmetic over `RealAlgebraic`).
+// ============================================================================
+//
+// For two equalities `p(x,y)=0 ∧ q(x,y)=0` the common real solutions `(α,β)`
+// satisfy, by the resultant elimination property:
+//   • α is a real root of `Res_y(p,q)`  (eliminate y, univariate in x), AND
+//   • β is a real root of `Res_x(p,q)`  (eliminate x, univariate in y).
+// So the GRID `roots(Res_y) × roots(Res_x)` is an **exhaustive** finite candidate
+// set: every common root's coordinates appear among the grid's first/second
+// components (the grid is a *superset* of the solution set — it may contain
+// spurious pairs whose coordinates each solve a resultant but which together do
+// not solve the system). For each grid pair we test `p(α,β)=0 ∧ q(α,β)=0` EXACTLY
+// via field arithmetic on `RealAlgebraic` (no float), so an algebraic α/β no longer
+// forces a decline.
+//
+// Each axis's candidate set ([`axis_candidates`]) is a COMPLETE superset of that
+// coordinate over the whole solution set — derived either from the roots of a
+// univariate equality in that variable, or, when none exists, from the resultant
+// eliminating the other variable. Both are complete by the same elimination
+// property (a full solution also solves the chosen equality/-ies).
+//
+// Soundness invariant (the algebraic `Unsat`):
+//   The grid PROVABLY contains every common solution of the equalities (each
+//   coordinate appears in its axis's complete candidate set). When EVERY atom of
+//   the component is an equality (region-free: no inequality can hide a solution
+//   outside the discrete common-root set), if NO grid pair satisfies all the
+//   equalities, the component is empty ⇒ `Unsat`, EXHAUSTIVELY — and this now holds
+//   even when the roots are algebraic. The completeness rests on:
+//     (a) each axis-candidate source being computed exactly (overflow/cap ⇒ decline),
+//     (b) every root isolation being COMPLETE (`isolate_roots` is complete-or-None;
+//         a None on either side ⇒ decline — the grid might miss a coordinate),
+//     (c) the bounded grid size (cap ⇒ decline rather than risk OOM/hang),
+//     (d) every per-pair test resolving to a definite zero/nonzero (a `None` field
+//         evaluation on ANY pair ⇒ decline — that pair could be a real solution we
+//         cannot rule out).
+//   If any of (a)–(d) fails for a pair or a side, we DECLINE (`Unknown`) — a sound
+//   Unknown beats a wrong Unsat. We never claim `Unsat` for a component that
+//   contains an inequality from the grid (a region is not captured by point
+//   candidates); the only inequality-tolerant Unsat is the existing exact
+//   "no real resultant root ⇒ Unsat" rule, handled in `decide_two_var_component`.
+//
+// Every `Sat` returns a candidate model that the caller still replay-checks against
+// every ORIGINAL assertion, so a spurious grid pair can never yield a wrong `Sat`.
+
+/// Hard ceiling on the candidate grid size `|roots(Res_y)| × |roots(Res_x)|`.
+/// Each pair test is bounded field arithmetic; the cap keeps the total work
+/// bounded (no OOM / hang). Beyond it we decline.
+const MAX_GRID: usize = 64;
+
+/// The exhaustive candidate set for one coordinate `target` of the common
+/// solutions of an all-equality system, with the OTHER variable `other`.
+///
+/// Soundness — each branch yields a COMPLETE superset of `target`'s coordinate
+/// over the whole solution set:
+///   • If some equality `g` is **univariate** in `target` (mentions only it),
+///     every solution has `target` a real root of `g` ⇒ `roots(g)` is complete.
+///   • Else if two equalities both have positive degree in `other`, every common
+///     solution has `target` a real root of `Res_other(p,q)` (resultant
+///     elimination completeness) ⇒ `roots(Res_other)` is complete.
+/// Either source is a *superset* of the full system's `target`-coordinates (a
+/// full solution also solves the chosen equality/-ies), so using it loses no
+/// solution. Returns the complete root set, `Some(constant_nonzero=true)` packed
+/// as an empty-vec + the flag — actually a dedicated enum keeps it explicit.
+enum AxisRoots {
+    /// The complete, finite real-root candidate set for this coordinate.
+    Roots(Vec<Root>),
+    /// A nonzero constant resultant: no common root anywhere ⇒ the system is Unsat.
+    NoCommonRoot,
+}
+
+/// Compute [`AxisRoots`] for `target` from the equality set. `None` declines (no
+/// usable source, overflow, incomplete isolation, a vanishing resultant).
+fn axis_candidates(
+    equalities: &[&MultiPoly],
+    target: SymbolId,
+    other: SymbolId,
+) -> Option<AxisRoots> {
+    // Prefer a univariate equality in `target` (its roots constrain `target`
+    // completely with the fewest candidates). Pick the smallest-degree such one.
+    let mut best_uni: Option<&MultiPoly> = None;
+    for eq in equalities {
+        if degree_in(eq, target) > 0 && degree_in(eq, other) == 0 {
+            match best_uni {
+                Some(b) if degree_in(b, target) <= degree_in(eq, target) => {}
+                _ => best_uni = Some(eq),
+            }
+        }
+    }
+    if let Some(g) = best_uni {
+        let ipoly = g.to_single_var_integer_poly(target)?;
+        if ipoly.len() <= 1 {
+            // Degenerate after view (a nonzero constant ⇒ no root; else decline).
+            if ipoly.first().copied().unwrap_or(0) != 0 {
+                return Some(AxisRoots::NoCommonRoot);
+            }
+            return None;
+        }
+        let roots = isolate_roots(&ipoly)?;
+        return Some(AxisRoots::Roots(roots));
+    }
+
+    // Else eliminate `other` from a bivariate-in-`other` equality pair via the
+    // resultant, giving a univariate polynomial in `target`.
+    let mut pair: Option<(&MultiPoly, &MultiPoly)> = None;
+    'outer: for i in 0..equalities.len() {
+        if degree_in(equalities[i], other) == 0 {
+            continue;
+        }
+        for &q in equalities.iter().skip(i + 1) {
+            if degree_in(q, other) == 0 {
+                continue;
+            }
+            pair = Some((equalities[i], q));
+            break 'outer;
+        }
+    }
+    let (p, q) = pair?;
+    let res = resultant_univariate(p, q, other, target)?;
+    if res.len() <= 1 {
+        if res.first().copied().unwrap_or(0) != 0 {
+            return Some(AxisRoots::NoCommonRoot);
+        }
+        // Vanishing resultant: a shared curve — not finitely enumerable ⇒ decline.
+        return None;
+    }
+    let roots = isolate_roots(&res)?;
+    Some(AxisRoots::Roots(roots))
+}
+
+/// Decide a 2-variable coupled all-equality component by the algebraic (α, β)
+/// grid lift. Returns `Some(verdict)` when the grid is provably exhaustive (Sat
+/// with a replay-pending witness, or an exhaustive Unsat); `None` to decline (a
+/// candidate source unavailable, an incomplete isolation, the grid cap, or any
+/// per-pair indeterminacy) — never a wrong verdict.
+///
+/// `equalities` are all the component's equality polynomials; `v0`, `v1` are the
+/// two component variables. The full component `comp` is checked at any Sat
+/// candidate.
+fn decide_grid_two_var(
+    comp: &[&MultiAtom],
+    v0: SymbolId,
+    v1: SymbolId,
+    equalities: &[&MultiPoly],
+    all_equalities: bool,
+) -> Option<TwoVarVerdict> {
+    // The grid Unsat is only exhaustive for a region-free (all-equality) component.
+    // For a component with an inequality we may still find a Sat pair, but we must
+    // NOT certify Unsat from the discrete grid. We therefore only run the grid when
+    // the component is all-equalities (the in-scope shape); an inequality component
+    // is left to the existing decline path.
+    if !all_equalities {
+        return None;
+    }
+
+    // The complete x-candidate and y-candidate sets (each a superset of the
+    // respective coordinate over the whole solution set).
+    let x_roots = match axis_candidates(equalities, v0, v1)? {
+        AxisRoots::NoCommonRoot => return Some(TwoVarVerdict::Unsat),
+        AxisRoots::Roots(r) => r,
+    };
+    let y_roots = match axis_candidates(equalities, v1, v0)? {
+        AxisRoots::NoCommonRoot => return Some(TwoVarVerdict::Unsat),
+        AxisRoots::Roots(r) => r,
+    };
+
+    // No real root on either side ⇒ the equality system has no common real
+    // solution ⇒ Unsat (an empty equality variety stays empty).
+    if x_roots.is_empty() || y_roots.is_empty() {
+        return Some(TwoVarVerdict::Unsat);
+    }
+
+    // Bound the grid (no OOM / hang). Each pair test is bounded field arithmetic.
+    let grid_size = x_roots.len().checked_mul(y_roots.len())?;
+    if grid_size > MAX_GRID {
+        return None;
+    }
+
+    // Test every (α, β) pair EXACTLY against EVERY atom of the component (all
+    // equalities here). The first pair satisfying them all is a Sat witness
+    // (replay-checked by the caller). A `None` on ANY pair (overflow / indeterminate
+    // sign) means we cannot rule it in OR out ⇒ the grid is no longer provably
+    // exhaustive ⇒ decline (never a wrong Unsat).
+    for xr in &x_roots {
+        let alpha = root_to_value(xr)?;
+        for yr in &y_roots {
+            let beta = root_to_value(yr)?;
+            let mut point: BTreeMap<SymbolId, Value> = BTreeMap::new();
+            point.insert(v0, alpha.clone());
+            point.insert(v1, beta.clone());
+            if grid_point_satisfies(comp, &point)? {
+                return Some(TwoVarVerdict::Sat(vec![(v0, alpha), (v1, beta)]));
+            }
+        }
+    }
+
+    // No grid pair satisfies all the equalities. Because (a) each axis-candidate
+    // source was exact and COMPLETE (a superset of that coordinate over the whole
+    // solution set), (b) both isolations were complete, (c) the grid was within the
+    // cap, and (d) every pair resolved to a definite sign, the grid is the COMPLETE
+    // common-solution candidate set and it is empty of solutions ⇒ the all-equality
+    // component is unsatisfiable, EXHAUSTIVELY.
+    Some(TwoVarVerdict::Unsat)
+}
+
+/// Convert an isolated [`Root`] to a [`Value`] (rational or algebraic) usable in
+/// exact field arithmetic. Algebraic roots are **coarsened** ([`coarsen_algebraic`])
+/// to a small-denominator isolating interval first: root isolation over-refines the
+/// bracket (huge power-of-two denominators), and the `RealAlgebraic` field-arithmetic
+/// combine multiplies interval endpoints — large denominators there overflow even
+/// bignum and spuriously decline. Coarsening keeps the SAME root with simpler
+/// endpoints. `None` if coarsening cannot find a small isolating interval (decline).
+fn root_to_value(r: &Root) -> Option<Value> {
+    Some(match r {
+        Root::Rational(q) => Value::Real(*q),
+        Root::Algebraic(a) => Value::RealAlgebraic(coarsen_algebraic(a)?),
+    })
+}
+
+/// Coarsen every algebraic value in `model` to a small-denominator isolating
+/// interval (value-preserving). Root isolation over-refines the bracket (huge
+/// dyadic denominators); the emitted model and any independent re-evaluation of the
+/// original terms (the IR ground evaluator multiplies interval endpoints during
+/// algebraic field arithmetic) overflow on those endpoints. Coarsening keeps the
+/// verdict sound while making the witness replay-friendly. Best-effort: a value
+/// whose coarsening declines is left unchanged (still a valid in-engine witness).
+fn coarsen_model_algebraics(model: &mut Model) {
+    let coarse: Vec<(SymbolId, Value)> = model
+        .iter()
+        .filter_map(|(v, val)| match &val {
+            Value::RealAlgebraic(a) => coarsen_algebraic(a).map(|c| (v, Value::RealAlgebraic(c))),
+            _ => None,
+        })
+        .collect();
+    for (v, val) in coarse {
+        model.set(v, val);
+    }
+}
+
+/// The cap on the dyadic denominator `2^k` used to round an algebraic number's
+/// isolating interval to small-denominator endpoints. Beyond it we keep the
+/// original (and let field arithmetic decline if it must) — bounded, never a hang.
+const COARSEN_MAX_EXP: u32 = 40;
+
+/// Round `q` DOWN to the nearest multiple of `1/den` (`den > 0`).
+fn floor_to_den(q: Rational, den: i128) -> Option<Rational> {
+    let n = q.numerator().checked_mul(den)?; // q·den = (num·den)/qden
+    let qden = q.denominator();
+    // floor(n / qden) with Euclidean rounding toward −∞.
+    let f = n.checked_div_euclid(qden)?;
+    Rational::checked_new(f, den)
+}
+
+/// Round `q` UP to the nearest multiple of `1/den` (`den > 0`).
+fn ceil_to_den(q: Rational, den: i128) -> Option<Rational> {
+    let n = q.numerator().checked_mul(den)?;
+    let qden = q.denominator();
+    // ceil(n / qden) = −floor(−n / qden).
+    let neg = n.checked_neg()?;
+    let c = neg.checked_div_euclid(qden)?.checked_neg()?;
+    Rational::checked_new(c, den)
+}
+
+/// Re-bracket the algebraic number `a` with a small-denominator isolating interval
+/// `(nlo, nhi) ⊆ (lo, hi)` that still contains its (unique-in-`(lo,hi)`) root.
+///
+/// Soundness: any sub-interval of an isolating interval that still brackets the
+/// root (strict sign change at its endpoints, both nonzero) isolates the SAME
+/// single root — `(lo,hi)` holds exactly one root, so a sub-interval with a sign
+/// change holds an odd count ≤ 1, i.e. exactly that root. We try increasing dyadic
+/// denominators `2^k`; the smallest one whose rounded endpoints bracket the root
+/// (and lie strictly inside `(lo,hi)`) wins. If none up to the cap works, return
+/// `None` (decline) — never a wrong value.
+fn coarsen_algebraic(a: &RealAlgebraic) -> Option<RealAlgebraic> {
+    let (lo, hi) = a.interval();
+    // Squarefree integer poly (same root SET, every root SIMPLE ⇒ sign-changing) and
+    // its Sturm chain, so we can EXACTLY count distinct roots in a candidate widened
+    // interval. The value is the same real number; replay still checks the ORIGINAL
+    // atoms via `sign_at`.
+    let rat = rat_from_int(a.defining_poly());
+    let sqfree = squarefree_part(&rat)?;
+    let sqf = rat_to_int_poly(&sqfree)?;
+    if sqf.last().copied()? == 0 {
+        return None;
+    }
+    let chain = sturm_chain(&sqfree)?;
+
+    // Widen `(lo, hi)` OUTWARD to small-denominator dyadic endpoints, then verify by
+    // an EXACT Sturm count that the widened interval still holds exactly ONE root,
+    // and that it is `a` (root strictly between the endpoints). Widening can only be
+    // accepted once the count is exactly 1 — so no other root is ever captured.
+    let mut den: i128 = 1;
+    for _ in 0..=COARSEN_MAX_EXP {
+        let nlo = floor_to_den(lo, den)?;
+        let nhi = ceil_to_den(hi, den)?;
+        if nlo.checked_cmp(&nhi)? == core::cmp::Ordering::Less
+            && !eval_rat(&sqf, nlo)?.is_zero()
+            && !eval_rat(&sqf, nhi)?.is_zero()
+            && count_roots_in(&chain, nlo, nhi)? == 1
+        {
+            // Exactly one distinct root in (nlo, nhi); confirm it is `a` (root
+            // strictly between the endpoints) via `a`'s own exact comparison.
+            let above = a.compare_rational(&nlo)?; // root vs nlo
+            let below = a.compare_rational(&nhi)?; // root vs nhi
+            if above == core::cmp::Ordering::Greater && below == core::cmp::Ordering::Less {
+                return RealAlgebraic::new(sqf, nlo, nhi);
+            }
+        }
+        den = den.checked_mul(2)?;
+    }
+    None
+}
+
+/// Whether the component is satisfied at the grid `point` (every atom). For the
+/// all-equality grid this confirms each equality vanishes; an indeterminate atom
+/// (`None`) declines. Returns `Some(true/false)` or `None` to decline.
+fn grid_point_satisfies(comp: &[&MultiAtom], point: &BTreeMap<SymbolId, Value>) -> Option<bool> {
+    for atom in comp {
+        let s = multipoly_sign_at(&atom.poly, point)?;
+        if !sign_satisfies(atom.cmp, s) {
+            return Some(false);
+        }
+    }
+    Some(true)
+}
+
+/// The exact sign of `p(point)` where `point` binds every variable of `p` to a
+/// rational or algebraic [`Value`]. Computed by exact field arithmetic over
+/// `RealAlgebraic` (no float). `None` on overflow, an unbound variable, or any
+/// field-arithmetic decline.
+fn multipoly_sign_at(p: &MultiPoly, point: &BTreeMap<SymbolId, Value>) -> Option<Sign> {
+    let v = eval_multipoly_value(p, point)?;
+    value_sign(&v)
+}
+
+/// Evaluate a [`MultiPoly`] at `point` (each variable bound to a rational or
+/// algebraic [`Value`]) by exact field arithmetic. Returns the resulting
+/// [`Value`]. `None` on overflow, an unbound variable, or a field-arithmetic
+/// decline (e.g. a product of two distinct high-degree algebraic numbers whose
+/// resultant overflows even bignum).
+fn eval_multipoly_value(p: &MultiPoly, point: &BTreeMap<SymbolId, Value>) -> Option<Value> {
+    let mut acc = Value::Real(Rational::zero());
+    for (k, &c) in &p.terms {
+        // term = c · ∏ vᵢ^eᵢ.
+        let mut term = Value::Real(c);
+        for &(v, e) in k {
+            let base = point.get(&v)?;
+            for _ in 0..e {
+                term = value_mul(&term, base)?;
+            }
+        }
+        acc = value_add(&acc, &term)?;
+    }
+    Some(acc)
+}
+
+/// Lift a real-sorted [`Value`] (rational or algebraic) to a [`RealAlgebraic`].
+/// `None` on overflow or a non-real value.
+fn value_as_algebraic(v: &Value) -> Option<RealAlgebraic> {
+    match v {
+        Value::RealAlgebraic(a) => Some(a.clone()),
+        Value::Real(c) => RealAlgebraic::from_rational(*c),
+        _ => None,
+    }
+}
+
+/// Cap on the number of divisor candidates enumerated by [`try_rationalize`]'s
+/// rational-root-theorem search (per endpoint). A composite constant/leading
+/// coefficient with more divisors declines the rationality check (keeping the
+/// value as an algebraic — still sound, just not collapsed). Bounded ⇒ no hang.
+const RATIONALIZE_MAX_DIVISORS: usize = 256;
+
+/// Map a [`RealAlgebraic`] result back to a [`Value`]. A degree-1 defining poly
+/// `q·t + r` denotes the exact rational `−r/q`. A HIGHER-degree poly may still
+/// denote a rational (e.g. `√2 · 1/√2 = 1` arrives as a root of `4t² − 4`): the
+/// rational-root-theorem search [`try_rationalize`] recovers it. Collapsing to a
+/// [`Value::Real`] keeps arithmetic exact and prevents an avoidable field-arithmetic
+/// overflow downstream; failing the check just leaves an algebraic value (still
+/// sound). Detection is exact (`compare_rational == Equal`), never a wrong collapse.
+fn algebraic_result_to_value(a: RealAlgebraic) -> Value {
+    if let Some(c) = try_rationalize(&a) {
+        return Value::Real(c);
+    }
+    Value::RealAlgebraic(a)
+}
+
+/// The positive divisors of `|n|` (for `n ≠ 0`), bounded by
+/// [`RATIONALIZE_MAX_DIVISORS`]. `None` if `n == 0` or the divisor set exceeds the
+/// cap (decline — keep the value algebraic).
+fn positive_divisors(n: i128) -> Option<Vec<i128>> {
+    let m = n.checked_abs()?;
+    if m == 0 {
+        return None;
+    }
+    let mut out: Vec<i128> = Vec::new();
+    let mut d: i128 = 1;
+    while d.checked_mul(d)? <= m {
+        if m % d == 0 {
+            out.push(d);
+            let other = m / d;
+            if other != d {
+                out.push(other);
+            }
+            if out.len() > RATIONALIZE_MAX_DIVISORS {
+                return None;
+            }
+        }
+        d = d.checked_add(1)?;
+    }
+    Some(out)
+}
+
+/// If the algebraic number `a` is in fact rational, return that exact rational.
+///
+/// By the rational-root theorem, a rational root `p/q` (lowest terms) of `a`'s
+/// integer defining polynomial has `p | a₀` (constant) and `q | aₙ` (leading). We
+/// enumerate those bounded candidates lying within `a`'s isolating interval and
+/// confirm exactly via `a.compare_rational(&cand) == Equal` (which refines safely).
+/// `None` if `a` is irrational or the candidate enumeration overflows / exceeds the
+/// cap — never a wrong rationalization (the equality check is exact).
+fn try_rationalize(a: &RealAlgebraic) -> Option<Rational> {
+    let poly = a.defining_poly();
+    // Trimmed degree and the (nonzero) constant + leading coefficients.
+    let mut deg_plus_one = poly.len();
+    while deg_plus_one > 0 && poly[deg_plus_one - 1] == 0 {
+        deg_plus_one -= 1;
+    }
+    if deg_plus_one < 2 {
+        return None; // constant or empty ⇒ not a usable root poly
+    }
+    let lead = poly[deg_plus_one - 1];
+    let a0 = poly[0];
+    if a0 == 0 {
+        // 0 is a root; but a `RealAlgebraic` is irrational by construction, so this
+        // does not arise. Stay safe and decline.
+        return None;
+    }
+    let (lo, hi) = a.interval();
+    let p_divs = positive_divisors(a0)?;
+    let q_divs = positive_divisors(lead)?;
+    for &p in &p_divs {
+        for &q in &q_divs {
+            for signed in [p, p.checked_neg()?] {
+                let Some(cand) = Rational::checked_new(signed, q) else {
+                    continue;
+                };
+                // Must lie within the isolating interval (cheap reject).
+                if cand.checked_cmp(&lo)? != Ordering::Greater
+                    || cand.checked_cmp(&hi)? != Ordering::Less
+                {
+                    continue;
+                }
+                if a.compare_rational(&cand)? == Ordering::Equal {
+                    return Some(cand);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Exact `a + b` of two real-sorted [`Value`]s (rational or algebraic). A pure
+/// rational sum stays rational (exact); any algebraic operand uses
+/// [`RealAlgebraic::add`]. `None` on overflow / decline.
+fn value_add(a: &Value, b: &Value) -> Option<Value> {
+    if let (Value::Real(x), Value::Real(y)) = (a, b) {
+        return Some(Value::Real(x.checked_add(*y)?));
+    }
+    let alpha = value_as_algebraic(a)?;
+    let beta = value_as_algebraic(b)?;
+    Some(algebraic_result_to_value(alpha.add(&beta)?))
+}
+
+/// Exact `a · b` of two real-sorted [`Value`]s. A rational-`0` operand yields the
+/// exact rational `0` (a [`RealAlgebraic`] is never `0`). A pure rational product
+/// stays rational; any algebraic operand uses [`RealAlgebraic::mul`]. `None` on
+/// overflow / decline.
+fn value_mul(a: &Value, b: &Value) -> Option<Value> {
+    if matches!(a, Value::Real(c) if c.is_zero()) || matches!(b, Value::Real(c) if c.is_zero()) {
+        return Some(Value::Real(Rational::zero()));
+    }
+    if let (Value::Real(x), Value::Real(y)) = (a, b) {
+        return Some(Value::Real(x.checked_mul(*y)?));
+    }
+    let alpha = value_as_algebraic(a)?;
+    let beta = value_as_algebraic(b)?;
+    Some(algebraic_result_to_value(alpha.mul(&beta)?))
+}
+
+/// The exact sign of a real-sorted [`Value`]. A rational uses its numerator's
+/// sign; an algebraic number (irrational by construction, so never zero) is
+/// compared exactly against `0` via its isolating interval. `None` on overflow.
+fn value_sign(v: &Value) -> Option<Sign> {
+    match v {
+        Value::Real(q) => Some(Sign::of_rational(*q)),
+        Value::RealAlgebraic(a) => match a.compare_rational(&Rational::zero())? {
+            Ordering::Less => Some(Sign::Neg),
+            Ordering::Equal => Some(Sign::Zero),
+            Ordering::Greater => Some(Sign::Pos),
+        },
+        _ => None,
+    }
 }
 
 /// The degree of a [`MultiPoly`] in one variable `v` (highest exponent of `v`
@@ -2539,33 +3063,55 @@ fn model_has_algebraic(model: &Model) -> bool {
 }
 
 /// Exact replay of one multivariate atom `poly ⋈ 0` under a model. Rational
-/// vars are substituted; the residual must be constant (→ rational sign) or
-/// single-variable in one algebraic var (→ `sign_at`). Two distinct algebraic
-/// vars in one atom ⇒ `false` (decline). Returns `true` iff the comparison holds.
+/// vars are substituted; the residual is constant (→ rational sign), single-
+/// variable in one algebraic var (→ `sign_at`), or — for a genuinely coupled
+/// component whose model binds TWO algebraic coordinates — evaluated exactly by
+/// `RealAlgebraic` field arithmetic at the algebraic point ([`multipoly_sign_at`],
+/// the grid-lift evaluator). Returns `true` iff the comparison holds; `false` on
+/// any overflow / unbound var / indeterminacy (the caller then declines — never a
+/// wrong `Sat`).
 fn replay_multi_atom(atom: &MultiAtom, model: &Model) -> bool {
-    // Collect the rational bindings for this atom's variables; detect a sole
-    // algebraic variable.
+    // Collect the rational bindings for this atom's variables; detect algebraic ones.
     let vars = atom.poly.vars();
     let mut rationals: BTreeMap<SymbolId, Rational> = BTreeMap::new();
-    let mut algebraic: Option<SymbolId> = None;
+    let mut algebraic_count = 0usize;
+    let mut sole_algebraic: Option<SymbolId> = None;
     for v in &vars {
         match model.get(*v) {
             Some(Value::Real(q)) => {
                 rationals.insert(*v, q);
             }
             Some(Value::RealAlgebraic(_)) => {
-                if algebraic.is_some() {
-                    return false; // two algebraic vars in one atom: decline
-                }
-                algebraic = Some(*v);
+                algebraic_count += 1;
+                sole_algebraic = Some(*v);
             }
             _ => return false,
         }
     }
+    if algebraic_count >= 2 {
+        // Two (or more) algebraic coordinates in one atom: evaluate the FULL
+        // polynomial exactly at the algebraic point by field arithmetic. Every
+        // variable of the atom is bound in the model (checked above), so the point
+        // is complete. A `None` (overflow / decline) ⇒ `false` (the caller
+        // declines — never a wrong Sat).
+        let mut point: BTreeMap<SymbolId, Value> = BTreeMap::new();
+        for v in &vars {
+            match model.get(*v) {
+                Some(val) => {
+                    point.insert(*v, val);
+                }
+                None => return false,
+            }
+        }
+        return match multipoly_sign_at(&atom.poly, &point) {
+            Some(s) => sign_satisfies(atom.cmp, s),
+            None => false,
+        };
+    }
     let Some(residual) = substitute_rationals(&atom.poly, &rationals) else {
         return false;
     };
-    match algebraic {
+    match sole_algebraic {
         None => {
             // Constant residual: check the comparison directly.
             let q = residual
