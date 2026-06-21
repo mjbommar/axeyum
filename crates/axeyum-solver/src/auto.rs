@@ -1051,15 +1051,8 @@ fn check_auto_dispatch(
     }
 
     if features.has_array {
-        // Array extensionality as congruence: `a = b ⇒ select(a, i) = select(b, i)`.
-        // `prove_unsat_by_congruence` treats `select`/`store` as uninterpreted, so it
-        // soundly refutes extensionality conflicts (e.g. `a = b ∧ select(a,i) ≠
-        // select(b,i)`) — including **wide-index array equality** the eager array
-        // elimination rejects outright. Congruence is valid for arrays, so this only
-        // ever fast-paths a correct `unsat`; otherwise it falls through to the eager
-        // read-over-write + Ackermann path below.
-        if crate::euf_egraph::prove_unsat_by_congruence(arena, assertions).is_some() {
-            return Ok(CheckResult::Unsat);
+        if let Some(result) = dispatch_array_fast_paths(arena, assertions, config, &features)? {
+            return Ok(result);
         }
     }
 
@@ -1115,6 +1108,55 @@ fn check_auto_dispatch(
 
     let mut backend = SatBvBackend::new();
     check_with_all_theories(&mut backend, arena, assertions, DEFAULT_INT_WIDTH, config)
+}
+
+/// Array fast paths, tried before the eager read-over-write + Ackermann
+/// composition. Returns `Some(verdict)` when one decides the query, else `None`.
+fn dispatch_array_fast_paths(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    features: &Features,
+) -> Result<Option<CheckResult>, SolverError> {
+    // Array extensionality as congruence: `a = b ⇒ select(a, i) = select(b, i)`.
+    // `prove_unsat_by_congruence` treats `select`/`store` as uninterpreted, so it
+    // soundly refutes extensionality conflicts (e.g. `a = b ∧ select(a,i) ≠
+    // select(b,i)`) — including **wide-index array equality** the eager array
+    // elimination rejects outright. Congruence is valid for arrays, so this only
+    // ever fast-paths a correct `unsat`; otherwise it falls through.
+    if crate::euf_egraph::prove_unsat_by_congruence(arena, assertions).is_some() {
+        return Ok(Some(CheckResult::Unsat));
+    }
+    // Pure `QF_ABV` (no int/real/UF): the lazy read-over-write (ROW) path, which
+    // delegates to the eager elimination for the cases it accepts and decides the
+    // wide-index store shapes it refuses (`dispatch_pure_qf_abv`).
+    if !features.has_int && !features.has_real && !features.has_function {
+        return dispatch_pure_qf_abv(arena, assertions, config);
+    }
+    Ok(None)
+}
+
+/// Pure `QF_ABV` dispatch via the lazy read-over-write (ROW) path (P2.2). It
+/// delegates to the eager elimination + lazy select-congruence whenever that path
+/// accepts the query (so every case the eager path already decides is unchanged),
+/// and otherwise — the canonical refused case being a *wide-index array equality
+/// involving a store*, `b = store(a, i, v)`, which bounded extensionality declines
+/// above its index cap — adds the ROW axiom on demand (CEGAR) to decide it without
+/// enumerating index equalities. Its `sat` is replay-checked against the originals
+/// and its `unsat` transfers from the relaxation, so it never returns a wrong
+/// verdict; an unmodelled shape degrades to `unknown` (returned as `None`) and the
+/// caller falls through to the eager composition.
+fn dispatch_pure_qf_abv(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<Option<CheckResult>, SolverError> {
+    let mut backend = SatBvBackend::new();
+    match crate::abv::check_qf_abv_lazy_row(&mut backend, arena, assertions, config)? {
+        CheckResult::Sat(model) => Ok(Some(CheckResult::Sat(model))),
+        CheckResult::Unsat => Ok(Some(CheckResult::Unsat)),
+        CheckResult::Unknown(_) => Ok(None),
+    }
 }
 
 /// Whether `deadline` (if set) has passed.

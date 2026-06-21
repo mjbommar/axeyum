@@ -96,7 +96,7 @@ pub mod trust;
 #[cfg(feature = "z3")]
 mod z3_backend;
 
-pub use abv::{check_qf_abv_lazy, check_with_array_elimination};
+pub use abv::{check_qf_abv_lazy, check_qf_abv_lazy_row, check_with_array_elimination};
 pub use alethe_lra::{check_alethe_lra, prove_lia_unsat_alethe, prove_lra_unsat_alethe};
 pub use aufbv::check_with_arrays_and_functions;
 pub use auto::{
