@@ -1066,3 +1066,23 @@ fn binomial_square_identity_proves_unsat_fast() {
         "the polynomial identity must be proved (Unsat), not Unknown/Sat"
     );
 }
+
+/// A single-variable goal refutation that arrives NEGATED: the valid goal
+/// `x*x ≥ 0` refuted as `¬(x*x ≥ 0)` = `x*x < 0`. The collector dualizes
+/// `¬(a ≥ b)` to `a < b`, so the strict atom reaches the exact single-variable
+/// decider (no real root of `x²` makes it negative) and decides Unsat — mirroring
+/// the multivariate negation-dualization.
+#[test]
+fn negated_single_var_ge_refutation_is_unsat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let zero = arena.real_const(Rational::zero());
+    let ge = arena.real_ge(xx, zero).unwrap();
+    let neg = arena.not(ge).unwrap();
+    let r = solve(&mut arena, &[neg], &SolverConfig::default()).expect("no error");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "¬(x² ≥ 0) = x² < 0 is unsatisfiable; got {r:?}"
+    );
+}

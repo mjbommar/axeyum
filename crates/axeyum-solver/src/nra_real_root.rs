@@ -1039,19 +1039,29 @@ fn match_real_poly_constraint(
         return None;
     };
 
-    // `≠` is `not(=)`.
+    // A negated real (in)equality dualizes to its complementary relation, so a
+    // single-variable goal refutation `¬(a ⋈ b)` reaches the exact decider rather
+    // than the abstraction (mirrors `match_multi_constraint`). `≠` is `¬(=)`.
     if matches!(op, Op::BoolNot) {
         let inner = args[0];
         let TermNode::App {
-            op: Op::Eq,
-            args: eq_args,
+            op: inner_op,
+            args: inner_args,
         } = arena.node(inner)
         else {
             return None;
         };
-        let poly = collect_diff(arena, eq_args[0], eq_args[1])?;
+        let cmp = match inner_op {
+            Op::Eq => Cmp::Ne,     // ¬(a = b) ⇔ a ≠ b
+            Op::RealLt => Cmp::Ge, // ¬(a < b) ⇔ a ≥ b
+            Op::RealLe => Cmp::Gt, // ¬(a ≤ b) ⇔ a > b
+            Op::RealGt => Cmp::Le, // ¬(a > b) ⇔ a ≤ b
+            Op::RealGe => Cmp::Lt, // ¬(a ≥ b) ⇔ a < b
+            _ => return None,
+        };
+        let poly = collect_diff(arena, inner_args[0], inner_args[1])?;
         let var = poly.var?;
-        return Some((var, Cmp::Ne, poly));
+        return Some((var, cmp, poly));
     }
 
     let cmp = match op {
