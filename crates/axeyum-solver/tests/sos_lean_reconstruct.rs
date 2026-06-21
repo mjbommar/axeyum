@@ -69,16 +69,15 @@ fn x_minus_y_squared_lt_zero_reconstructs_to_false() {
     assert!(source.contains("axeyum_refutation"));
 }
 
-/// Out of scope for this slice: a square whose linear form has a coefficient
-/// outside ±1 — `(x + 2y)² < 0` (= `x² + 4xy + 4y²`). The SOS certificate is the
-/// single square `x + 2y` with `d = 1`, but its `y`-coefficient is `2`, outside the
-/// ±1-form slice; expressing it as a (repeated) unit-square sum needs the
-/// rational/scaling normalizer (a later slice). The reconstructor must *decline*.
-///
-/// (Note `(x+x)² = 4x²` is NOT such a case: its certificate is the unit square `x`
-/// with integer weight `4`, which the integer-weight path reconstructs as `x²×4`.)
+/// A square whose linear form has a coefficient outside ±1 — `(x + 2y)² < 0`
+/// (= `x² + 4xy + 4y²`). The SOS certificate is the single square `x + 2y` with
+/// `d = 1`; its `y`-coefficient is `2`, outside the ±1-form slice, but the
+/// integer-coefficient form encoder (`2y = y + y`) now handles it via the
+/// denominator-clearing rational-weight path (here `M = 1`, the integer form is
+/// `x + 2y`). Genuinely UNSAT, so it now reconstructs to a kernel-checked `False`
+/// rather than declining — the kernel gate guarantees the proof is sound.
 #[test]
-fn square_with_non_unit_form_coefficient_is_declined() {
+fn square_with_non_unit_form_coefficient_reconstructs_to_false() {
     let mut arena = TermArena::new();
     let x = arena.real_var("x").unwrap();
     let y = arena.real_var("y").unwrap();
@@ -90,11 +89,13 @@ fn square_with_non_unit_form_coefficient_is_declined() {
     let assertion = arena.real_lt(sq, zero).unwrap();
 
     let mut ctx = LraReconstructCtx::new();
-    let result = reconstruct_sos_proof(&mut ctx, &arena, &[assertion]);
-    assert!(
-        result.is_err(),
-        "(x+2y)² < 0 has a non-±1 linear-form coefficient and must be declined, not proven"
+    let proof = reconstruct_sos_proof(&mut ctx, &arena, &[assertion]).expect(
+        "(x+2y)² < 0 is UNSAT; the integer-coefficient form encoder (2y = y+y) reconstructs it \
+         to a kernel-checked False",
     );
+    // The kernel `infer`+`def_eq False` gate inside `reconstruct_sos_proof` already
+    // accepted `proof`; a non-error result is the machine-checked refutation.
+    let _ = proof;
 }
 
 /// Slice 2b — the degree-2 two-variable AM-GM sum form
@@ -265,6 +266,52 @@ fn integer_weighted_sum_reconstructs_to_false() {
     assert!(source.contains("axeyum_refutation"));
 }
 
+/// HEADLINE — 3-variable AM-GM: `a*a + b*b + c*c − (a*b + b*c + c*a) < 0` is UNSAT
+/// (`= ½[(a−b)²+(b−c)²+(c−a)²]`). Its `LDLᵀ` SOS certificate carries a RATIONAL weight
+/// (`¾`) and a `±½` linear form, so it is the first query needing denominator
+/// clearing. The reconstructor clears denominators (`4·p = (2a−b−c)² + 3·(b−c)²`) and
+/// folds entirely in the existing integer machinery — no scaling lemma, no new kernel
+/// axiom. Success means the trusted kernel accepted the cleared identity, the
+/// nonnegativity fold, and the M-fold negativity chain as a proof of `False`.
+#[test]
+fn three_var_am_gm_reconstructs_to_false() {
+    let mut arena = TermArena::new();
+    let a = arena.real_var("a").unwrap();
+    let b = arena.real_var("b").unwrap();
+    let c = arena.real_var("c").unwrap();
+    let aa = arena.real_mul(a, a).unwrap();
+    let bb = arena.real_mul(b, b).unwrap();
+    let cc = arena.real_mul(c, c).unwrap();
+    let ab = arena.real_mul(a, b).unwrap();
+    let bc = arena.real_mul(b, c).unwrap();
+    let ca = arena.real_mul(c, a).unwrap();
+    let sum_sq = {
+        let t = arena.real_add(aa, bb).unwrap();
+        arena.real_add(t, cc).unwrap() // a² + b² + c²
+    };
+    let sum_cross = {
+        let t = arena.real_add(ab, bc).unwrap();
+        arena.real_add(t, ca).unwrap() // ab + bc + ca
+    };
+    let lhs = arena.real_sub(sum_sq, sum_cross).unwrap(); // a²+b²+c² − (ab+bc+ca)
+    let zero = arena.real_const(Rational::integer(0));
+    let assertion = arena.real_lt(lhs, zero).unwrap();
+
+    let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &[assertion]).expect(
+        "3-var AM-GM `a²+b²+c² − (ab+bc+ca) < 0` reconstructs to a kernel-checked False via the \
+         denominator-cleared rational-weight SOS path",
+    );
+    assert_eq!(
+        fragment,
+        ProofFragment::Sos,
+        "the 3-var AM-GM shape must route to the SOS fragment"
+    );
+    assert!(
+        source.contains("axeyum_refutation"),
+        "the Lean module must contain the refutation theorem"
+    );
+}
+
 /// Out of scope: an OVERSIZED integer weight `17*x*x < 0` (`D = [17]` > the
 /// `SOS_MAX_SQUARE_WEIGHT = 16` repetition bound). Expanding it would make the proof
 /// 17 squares long; the classifier declines (a denominator/scaling slice handles
@@ -284,5 +331,39 @@ fn oversized_weight_square_is_declined() {
     assert!(
         result.is_err(),
         "17x² < 0 has weight 17 > SOS_MAX_SQUARE_WEIGHT; it must decline, not prove"
+    );
+}
+
+/// Out of scope: a rational-weight SOS certificate whose cleared denominator exceeds
+/// the slice bound (`SOS_RATIONAL_MAX = 64`). `65x² + 64xy + 16y² < 0` is UNSAT
+/// (PSD Gram `[[65,32],[32,16]]`), and its `LDLᵀ` certificate's first square is the
+/// form `x + (32/65)y` — clearing its denominator needs `C = 65 > 64`. The
+/// denominator-clearing reconstructor declines (`Ok(None)`) rather than building a
+/// 65-wide kernel term; `reconstruct_sos_proof` then surfaces the decline as an
+/// error. A correct decline — never a fabricated proof.
+#[test]
+fn oversized_cleared_denominator_is_declined() {
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let y = arena.real_var("y").unwrap();
+    let xx = arena.real_mul(x, x).unwrap();
+    let yy = arena.real_mul(y, y).unwrap();
+    let xy = arena.real_mul(x, y).unwrap();
+    let c65 = arena.real_const(Rational::integer(65));
+    let c64 = arena.real_const(Rational::integer(64));
+    let c16 = arena.real_const(Rational::integer(16));
+    let t65 = arena.real_mul(c65, xx).unwrap(); // 65x²
+    let t64 = arena.real_mul(c64, xy).unwrap(); // 64xy
+    let t16 = arena.real_mul(c16, yy).unwrap(); // 16y²
+    let s = arena.real_add(t65, t64).unwrap();
+    let lhs = arena.real_add(s, t16).unwrap(); // 65x² + 64xy + 16y²
+    let zero = arena.real_const(Rational::integer(0));
+    let assertion = arena.real_lt(lhs, zero).unwrap();
+
+    let mut ctx = LraReconstructCtx::new();
+    let result = reconstruct_sos_proof(&mut ctx, &arena, &[assertion]);
+    assert!(
+        result.is_err(),
+        "65x²+64xy+16y² < 0 needs a cleared denominator 65 > SOS_RATIONAL_MAX; it must decline"
     );
 }

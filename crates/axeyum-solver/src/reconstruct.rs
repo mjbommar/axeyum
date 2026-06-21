@@ -1393,6 +1393,27 @@ fn is_sos_multi_unit_square(arena: &TermArena, assertions: &[TermId]) -> bool {
     }
 }
 
+/// Does `assertions` have an SOS certificate that is a **RATIONAL-weight sum of
+/// squares** `p = Σ dₖ·ℓₖ²` (rational weights, rational/integer linear forms, zero
+/// affine row) whose denominators clear within this slice's bounds? This is the
+/// shape [`reconstruct_sos_rational_weight`] handles (e.g. 3-variable AM-GM); the
+/// classifier uses it to route such queries to [`ProofFragment::Sos`]. Strictly
+/// generalizes the ±1/integer-weight classifiers (which also route to `Sos`), so the
+/// overlap is fine.
+fn is_sos_rational_weight(arena: &TermArena, assertions: &[TermId]) -> bool {
+    match crate::nra_real_root::sos_refute_with_certificate(arena, assertions) {
+        Some(cert) => {
+            cert.strict_lt()
+                && cert
+                    .rational_squares()
+                    .as_deref()
+                    .and_then(clear_rational_sos_denominators)
+                    .is_some()
+        }
+        None => false,
+    }
+}
+
 /// Classify `assertions` into the [`ProofFragment`] whose emitter+reconstructor
 /// pair handles it, by scanning the operators and sorts that appear. Precedence:
 /// a top-level quantifier wraps any ground theory (`∃` skolemized before `∀`),
@@ -1454,6 +1475,7 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
             || is_am_gm_two_var(arena, assertions).is_some()
             || is_sos_single_unit_square(arena, assertions)
             || is_sos_multi_unit_square(arena, assertions)
+            || is_sos_rational_weight(arena, assertions)
         {
             ProofFragment::Sos
         } else {
@@ -9029,11 +9051,19 @@ pub fn reconstruct_sos_proof(
         if let Some(proof) = reconstruct_sos_multi_unit_square(ctx, arena, assertions)? {
             return Ok(proof);
         }
+        // General path: any query whose SOS certificate is a RATIONAL-weight sum of
+        // squares `p = Σ dₖ·ℓₖ²` (rational weights, rational/integer linear forms,
+        // zero affine) — unlocks 3-variable AM-GM. Clears denominators so the proof
+        // reduces to the integer fold (`M·p = Σ(M·wₖ)(ℓₖ⁺)²`); no scaling lemma.
+        if let Some(proof) = reconstruct_sos_rational_weight(ctx, arena, assertions)? {
+            return Ok(proof);
+        }
         return Err(ReconstructError::UnsupportedTerm {
             term: "SOS reconstruction handles a single square `ℓ*ℓ < 0` of a ±1-coefficient \
                    linear form ℓ, the two-variable AM-GM sum form `x²+y²−2xy < 0`, any query \
-                   whose SOS certificate is a single perfect square, and a SUM of ±1-unit \
-                   squares (every d=1, zero affine); scaled-coefficient SOS is a later slice"
+                   whose SOS certificate is a single perfect square, a SUM of ±1-unit \
+                   squares (every d=1, zero affine), and a RATIONAL-weight sum of squares \
+                   (denominator-cleared); higher-degree / nonzero-affine SOS is a later slice"
                 .to_owned(),
         });
     };
@@ -9712,6 +9742,360 @@ fn reconstruct_sos_multi_unit_square(
         Err(ReconstructError::KernelRejected {
             rule: "sos_multi_unit_square".to_owned(),
             detail: "SOS multi-square refutation did not infer to False".to_owned(),
+        })
+    }
+}
+
+/// Upper bound on the cleared denominator `M` and on any integer linear-form
+/// coefficient the rational-weight SOS reconstructor will expand into repeated unit
+/// monomials / repeated squares (the proof is linear in these magnitudes, so a large
+/// value is declined — `Ok(None)` — rather than building a giant kernel term).
+const SOS_RATIONAL_MAX: i128 = 64;
+
+/// The least common multiple of `a` and `b` (both already nonnegative), returning
+/// `None` on `i128` overflow. `lcm(0, _) = lcm(_, 0) = 0` is never needed here (all
+/// denominators are ≥ 1), but `a = 0` is handled as the identity for folding.
+fn checked_lcm(a: i128, b: i128) -> Option<i128> {
+    if a == 0 {
+        return Some(b);
+    }
+    if b == 0 {
+        return Some(a);
+    }
+    let g = gcd_i128(a, b);
+    // a / g is exact; multiply by b.
+    (a / g).checked_mul(b)
+}
+
+/// Build the [`RExpr`] for an INTEGER-coefficient linear form `ℓ⁺ = Σⱼ cⱼ·xⱼ` from
+/// signed coefficients `cⱼ` (any nonzero integer, not just ±1): a left-nested `add`
+/// over `|cⱼ|` repeated copies of `xⱼ` (or `neg xⱼ` when `cⱼ < 0`). E.g.
+/// `2x₀ − x₁` ⇒ `add (add x₀ x₀) (neg x₁)`. `None` (decline) on an empty list or any
+/// `|cⱼ| > SOS_RATIONAL_MAX`.
+fn int_lin_to_rexpr(coeffs: &[(usize, i128)]) -> Option<RExpr> {
+    let mut atoms: Vec<RExpr> = Vec::new();
+    for &(idx, c) in coeffs {
+        if c == 0 {
+            continue;
+        }
+        if c.unsigned_abs() > SOS_RATIONAL_MAX as u128 {
+            return None; // coefficient too large to expand into unit copies
+        }
+        let count = c.unsigned_abs();
+        for _ in 0..count {
+            let atom = if c < 0 {
+                RExpr::Neg(Box::new(RExpr::Var(idx)))
+            } else {
+                RExpr::Var(idx)
+            };
+            atoms.push(atom);
+        }
+    }
+    let mut iter = atoms.into_iter();
+    let first = iter.next()?;
+    let mut acc = first;
+    for t in iter {
+        acc = RExpr::Add(Box::new(acc), Box::new(t));
+    }
+    Some(acc)
+}
+
+/// From the certificate's rational SOS decomposition `p = Σₖ dₖ·ℓₖ²` (each
+/// `(dₖ, [(j, cₖⱼ)])` with `dₖ > 0` rational and `cₖⱼ` rational), clear all
+/// denominators to land entirely in the integer machinery:
+///
+/// 1. For each square, let `Cₖ = LCM(denominators of cₖⱼ)`; the INTEGER form is
+///    `ℓₖ⁺ = Cₖ·ℓₖ` with coefficients `cₖⱼ⁺ = Cₖ·cₖⱼ`. Then
+///    `dₖ·ℓₖ² = wₖ·(ℓₖ⁺)²` with `wₖ = dₖ/Cₖ²` (rational, > 0).
+/// 2. Let `M = LCM(denominators of all wₖ)`. Then `M·wₖ` is a **nonnegative
+///    integer** and `M·p = Σₖ (M·wₖ)·(ℓₖ⁺)²`.
+///
+/// Returns `Some((M, [(M·wₖ, [(j, cₖⱼ⁺)])]))` — the cleared multiplier `M` and, per
+/// square, its integer repetition weight `M·wₖ` and integer-coefficient form — or
+/// `None` (decline) on any `i128`/`Rational` overflow, or if `M`, a weight `M·wₖ`, or
+/// a form coefficient `|cₖⱼ⁺|` exceeds [`SOS_RATIONAL_MAX`] (keeps the proof bounded).
+#[allow(clippy::type_complexity)]
+fn clear_rational_sos_denominators(
+    squares: &[(Rational, Vec<(usize, Rational)>)],
+) -> Option<(i128, Vec<(i128, Vec<(usize, i128)>)>)> {
+    // Phase 1: per-square integer form `ℓₖ⁺` and rational weight `wₖ = dₖ/Cₖ²`.
+    let mut int_squares: Vec<(Rational, Vec<(usize, i128)>)> = Vec::with_capacity(squares.len());
+    for (dk, coeffs) in squares {
+        // Cₖ = LCM of the variable-coefficient denominators.
+        let mut ck: i128 = 1;
+        for &(_, c) in coeffs {
+            ck = checked_lcm(ck, c.denominator())?;
+            if ck > SOS_RATIONAL_MAX {
+                return None;
+            }
+        }
+        // Integer form coefficients cₖⱼ⁺ = Cₖ·cₖⱼ (exact integers by construction).
+        let ck_rat = Rational::integer(ck);
+        let mut int_coeffs: Vec<(usize, i128)> = Vec::with_capacity(coeffs.len());
+        for &(j, c) in coeffs {
+            let scaled = c.checked_mul(ck_rat)?;
+            if scaled.denominator() != 1 {
+                return None; // should be integral after clearing; defensive
+            }
+            let num = scaled.numerator();
+            if num == 0 {
+                continue;
+            }
+            if num.unsigned_abs() > SOS_RATIONAL_MAX as u128 {
+                return None;
+            }
+            int_coeffs.push((j, num));
+        }
+        if int_coeffs.is_empty() {
+            return None; // a zero form refutes nothing
+        }
+        // wₖ = dₖ / Cₖ² (rational, > 0).
+        let ck_sq = ck_rat.checked_mul(ck_rat)?;
+        let wk = dk.checked_div(ck_sq)?;
+        if wk.is_zero() || wk.numerator() < 0 {
+            return None;
+        }
+        int_squares.push((wk, int_coeffs));
+    }
+    if int_squares.is_empty() {
+        return None;
+    }
+    // Phase 2: M = LCM of all wₖ denominators.
+    let mut m: i128 = 1;
+    for (wk, _) in &int_squares {
+        m = checked_lcm(m, wk.denominator())?;
+        if m > SOS_RATIONAL_MAX {
+            return None;
+        }
+    }
+    let m_rat = Rational::integer(m);
+    // Per square: integer repetition weight M·wₖ.
+    let mut out: Vec<(i128, Vec<(usize, i128)>)> = Vec::with_capacity(int_squares.len());
+    for (wk, int_coeffs) in int_squares {
+        let mwk = wk.checked_mul(m_rat)?;
+        if mwk.denominator() != 1 {
+            return None; // M·wₖ must be integral by construction; defensive
+        }
+        let weight = mwk.numerator();
+        if weight <= 0 || weight > SOS_RATIONAL_MAX {
+            return None;
+        }
+        out.push((weight, int_coeffs));
+    }
+    Some((m, out))
+}
+
+/// Reconstruct, **from the SOS certificate**, any strict query `p < 0` whose
+/// certificate is a RATIONAL-weight sum of squares `p = Σₖ dₖ·ℓₖ²` (with `dₖ > 0`
+/// rational and `ℓₖ` a rational/integer-coefficient linear form, zero affine row) —
+/// the slice that unlocks 3-variable AM-GM. Generalizes
+/// [`reconstruct_sos_multi_unit_square`] (the integer-weight / ±1-form special case)
+/// by **clearing denominators** so everything reduces to the existing integer fold:
+/// no scaling lemma is needed.
+///
+/// Let `M·p = Σₖ (M·wₖ)·(ℓₖ⁺)²` be the cleared identity from
+/// [`clear_rational_sos_denominators`] (every `M·wₖ` a nonnegative integer, every
+/// `ℓₖ⁺` an integer-coefficient form). Then:
+/// - `sosK` = the right-nested `add` of the squares `(ℓₖ⁺·ℓₖ⁺)`, each repeated `M·wₖ`
+///   times, last copy as the innermost leaf.
+/// - `mpK` = `M` right-nested copies of the asserted `p` (`p + p + … + p`).
+/// - `idK : Eq R mpK sosK` via the degree-2 ring normalizer (both sides normalized;
+///   canonical gens must agree, else decline — the certificate guarantees it, we
+///   re-check it over the kernel, NEVER fabricate the identity).
+/// - `nn : le zero sosK` — the existing integer-weight nonnegativity fold over the
+///   repeated squares.
+/// - `mneg : lt mpK zero` — fold the asserted `hlt : lt p zero` `M` times via
+///   `add_lt_add`, casting `add zero zero → zero` on the right at each step so the
+///   nesting matches `mpK`.
+/// - transport `nn` along `idK` to `lep : le zero mpK`, then `lt_of_le_of_lt zero mpK
+///   zero lep mneg : lt zero zero`, refuted by `lt_irrefl zero`.
+///
+/// Returns `Ok(Some(proof))` (kernel-gated `infer` + `def_eq False`), `Ok(None)` to
+/// decline (not this shape, or a bound/overflow/identity-mismatch), or `Err(_)` only
+/// on a genuine kernel rejection.
+#[allow(clippy::too_many_lines)]
+fn reconstruct_sos_rational_weight(
+    ctx: &mut LraReconstructCtx,
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<Option<ExprId>, ReconstructError> {
+    let Some(cert) = crate::nra_real_root::sos_refute_with_certificate(arena, assertions) else {
+        return Ok(None);
+    };
+    if !cert.strict_lt() {
+        return Ok(None);
+    }
+    let Some(rat_squares) = cert.rational_squares() else {
+        return Ok(None);
+    };
+    let n_vars = cert.n_vars();
+
+    // Clear all denominators: M·p = Σ (M·wₖ)·(ℓₖ⁺)².
+    let Some((m, cleared)) = clear_rational_sos_denominators(&rat_squares) else {
+        return Ok(None);
+    };
+    debug_assert!(m >= 1);
+
+    // Faithful encoding of the asserted polynomial p (integer-coefficient).
+    let Some(p_rexpr) = cert_poly_to_rexpr(cert.poly_terms(), n_vars) else {
+        return Ok(None);
+    };
+
+    // Per-square: the integer form ℓₖ⁺ as an RExpr and the square (ℓₖ⁺·ℓₖ⁺), each
+    // repeated M·wₖ times (flattened, so the integer-weight fold sees one square per
+    // copy — exactly the existing machinery).
+    let mut ell_rexprs: Vec<RExpr> = Vec::new();
+    let mut sq_rexprs: Vec<RExpr> = Vec::new();
+    for (weight, int_coeffs) in &cleared {
+        let Some(ell) = int_lin_to_rexpr(int_coeffs) else {
+            return Ok(None);
+        };
+        for _ in 0..*weight {
+            sq_rexprs.push(RExpr::Mul(Box::new(ell.clone()), Box::new(ell.clone())));
+            ell_rexprs.push(ell.clone());
+        }
+    }
+
+    // sosK as an RExpr: RIGHT-nested add over all (repeated) squares, last as the
+    // innermost leaf (no trailing zero), matching `normalize_deg2`'s faithful form.
+    let Some((last, init)) = sq_rexprs.split_last() else {
+        return Ok(None);
+    };
+    let mut sos_rexpr = last.clone();
+    for r in init.iter().rev() {
+        sos_rexpr = RExpr::Add(Box::new(r.clone()), Box::new(sos_rexpr));
+    }
+
+    // mpK as an RExpr: M RIGHT-nested copies of p (p + (p + (… + p))), last as leaf.
+    let mut mp_rexpr = p_rexpr.clone();
+    for _ in 1..m {
+        mp_rexpr = RExpr::Add(Box::new(p_rexpr.clone()), Box::new(mp_rexpr));
+    }
+
+    // Normalize M·p and the SOS sum; the canonical gens MUST agree (else decline —
+    // re-proving M·p = Σ(M·wₖ)(ℓₖ⁺)² over the kernel, never fabricated).
+    let Some((mp_gens, mpk, mp_to_canon)) = ctx.normalize_deg2(&mp_rexpr) else {
+        return Ok(None);
+    };
+    let Some((sos_gens, sosk, sos_to_canon)) = ctx.normalize_deg2(&sos_rexpr) else {
+        return Ok(None);
+    };
+    if mp_gens != sos_gens {
+        return Ok(None);
+    }
+
+    // idK : Eq R mpK sosK := trans (mpK → canon)(symm (sosK → canon)).
+    let canon = ctx.mono_gens_to_expr(&mp_gens);
+    let canon_to_sos = ctx.eq_symm_r(sosk, canon, sos_to_canon); // Eq R canon sosK
+    let idk = ctx.eq_trans_r(mpk, canon, sosk, mp_to_canon, canon_to_sos); // Eq R mpK sosK
+
+    // Kernel-level per-square ℓₖ⁺ and (ℓₖ⁺·ℓₖ⁺), emitted from the SAME RExprs so the
+    // `mul`/`add` ExprIds are hash-consed identical to those inside `sosK`.
+    let zero = ctx.mk_zero();
+    let mut ells: Vec<ExprId> = Vec::with_capacity(ell_rexprs.len());
+    let mut sqs: Vec<ExprId> = Vec::with_capacity(sq_rexprs.len());
+    for ell_rexpr in &ell_rexprs {
+        let ell = ctx.emit_rexpr(ell_rexpr);
+        ells.push(ell);
+        sqs.push(ctx.mk_mul(ell, ell));
+    }
+
+    // -------------------------------------------------------------------------
+    // Nonnegativity fold (existing integer-weight machinery): nn : le zero sosK.
+    // sosK = add sq_0 (add sq_1 (… sq_{N-1})). Base = sq_nonneg of the LAST square;
+    // fold earlier squares from last-1 down to first, casting `add zero zero → zero`.
+    // -------------------------------------------------------------------------
+    let nsq = sqs.len();
+    let sq_nonneg_of = |ctx: &mut LraReconstructCtx, ell: ExprId| -> ExprId {
+        let name = ctx.arith().sq_nonneg;
+        let f = ctx.kernel_mut().const_(name, vec![]);
+        ctx.kernel_mut().app(f, ell) // le zero (mul ell ell)
+    };
+    let mut nn = sq_nonneg_of(ctx, ells[nsq - 1]);
+    let mut tail = sqs[nsq - 1];
+    for idx in (0..nsq - 1).rev() {
+        let sq = sqs[idx];
+        let sq_k = sq_nonneg_of(ctx, ells[idx]);
+        let combined = ctx.add_le_add_app(zero, sq, zero, tail, sq_k, nn);
+        let new_tail = ctx.mk_add(sq, tail);
+        let lhs = ctx.mk_add(zero, zero);
+        let add_zero_zero = ctx.add_zero_eq(zero);
+        nn = ctx.le_cast_left(lhs, zero, new_tail, combined, add_zero_zero);
+        tail = new_tail;
+    }
+    debug_assert_eq!(tail, sosk);
+
+    // Transport nn backward along idK (rewrite sosK → mpK) ⇒ lep : le zero mpK.
+    let id_sym = ctx.eq_symm_r(mpk, sosk, idk); // Eq R sosK mpK
+    let lep = ctx.le_cast_right(zero, sosk, mpk, nn, id_sym);
+
+    // -------------------------------------------------------------------------
+    // Negativity M-fold: mneg : lt mpK zero, where
+    //   mpK = add p (add p (… p)).  (M right-nested copies, last = leaf)
+    // The asserted atom is `hlt : lt p zero`. Seed from the INNERMOST p (the leaf),
+    // then fold the earlier copies from M-2 down to 0: combine `hlt : lt p zero` with
+    // the running `lt tail zero` via `add_lt_add p zero tail zero hlt acc :
+    // lt (add p tail)(add zero zero)`, then cast the RIGHT side
+    // `add zero zero → zero` so the type stays `lt (add p tail) zero` — matching
+    // `mpK`'s exact right-nesting.
+    // -------------------------------------------------------------------------
+    // The leaf `p` ExprId used inside mpK (each copy, incl. the innermost, is exactly
+    // the faithful encoding of `p_rexpr` — hash-consed identical).
+    let p_leaf = ctx.emit_rexpr(&p_rexpr);
+    // hlt : lt p zero — the asserted atom `p < 0` over the faithful encoding of p.
+    let hlt = {
+        let p_prop = ctx.mk_lt(p_leaf, zero);
+        ctx.hyp_axiom(p_prop)?
+    };
+    let mut mneg = hlt; // lt p zero (p_leaf)
+    let mut mtail = p_leaf; // running right-nested tail (matches mpK structurally)
+    for _ in 1..m {
+        // add_lt_add p zero tail zero hlt mneg : lt (add p tail)(add zero zero).
+        let combined = ctx.add_lt_add_app(p_leaf, zero, mtail, zero, hlt, mneg);
+        let new_tail = ctx.mk_add(p_leaf, mtail); // add p tail (next mpK prefix)
+        let add_zz = ctx.mk_add(zero, zero);
+        let azz = ctx.add_zero_eq(zero); // Eq R (add zero zero) zero
+        mneg = ctx.lt_cast_right(new_tail, add_zz, zero, combined, azz);
+        mtail = new_tail;
+    }
+    debug_assert_eq!(mtail, mpk);
+
+    // chain : lt zero zero := lt_of_le_of_lt zero mpK zero lep mneg.
+    let chain = {
+        let ax_name = ctx.arith().lt_of_le_of_lt;
+        let ax = ctx.kernel_mut().const_(ax_name, vec![]);
+        let e = ctx.kernel_mut().app(ax, zero);
+        let e = ctx.kernel_mut().app(e, mpk);
+        let e = ctx.kernel_mut().app(e, zero);
+        let e = ctx.kernel_mut().app(e, lep);
+        ctx.kernel_mut().app(e, mneg)
+    };
+    // bad : False := lt_irrefl zero chain.
+    let proof = {
+        let irrefl_name = ctx.arith().lt_irrefl;
+        let irrefl = ctx.kernel_mut().const_(irrefl_name, vec![]);
+        let e = ctx.kernel_mut().app(irrefl, zero);
+        ctx.kernel_mut().app(e, chain)
+    };
+
+    // Soundness gate.
+    let inferred = ctx
+        .kernel_mut()
+        .infer(proof)
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "sos_rational_weight".to_owned(),
+            detail: format!("SOS rational-weight certificate infer failed: {e:?}"),
+        })?;
+    let false_ = {
+        let f = ctx.arith().logic.false_;
+        ctx.kernel_mut().const_(f, vec![])
+    };
+    if ctx.kernel_mut().def_eq(inferred, false_) {
+        Ok(Some(proof))
+    } else {
+        Err(ReconstructError::KernelRejected {
+            rule: "sos_rational_weight".to_owned(),
+            detail: "SOS rational-weight refutation did not infer to False".to_owned(),
         })
     }
 }

@@ -2818,6 +2818,64 @@ impl SosCertificate {
         }
         Some(squares)
     }
+
+    /// The **rational** sum-of-squares decomposition `p = Σₖ dₖ·ℓₖ²` carried by the
+    /// `LDLᵀ` factors, with NO ±1 / integer-weight restriction: each returned entry
+    /// is `(dₖ, [(var_index, cₖⱼ); …])` where `dₖ > 0` is the rational diagonal
+    /// weight and `cₖⱼ = L[j][k]` are the rational variable coefficients of the
+    /// `k`-th square's linear form `ℓₖ = Σⱼ cₖⱼ·xⱼ` (zeros dropped, ascending by
+    /// index). Columns with `D[k] = 0` are dropped (they contribute nothing).
+    ///
+    /// The coefficients are over the SAME canonical indices as
+    /// [`SosCertificate::poly_terms`], so `Σₖ dₖ·(Σⱼ cₖⱼ·xⱼ)² = p` holds over ℚ
+    /// (the reconstructor re-asserts this over the kernel before trusting it).
+    ///
+    /// Returns `None` (decline) on a malformed dimension, a **nonzero affine row**
+    /// `L[n][k] ≠ 0` (outside the homogeneous slice the denominator-clearing
+    /// reconstructor handles), a negative `D[k]` (never produced by a PSD factor,
+    /// but rejected defensively), or a square whose form is identically zero.
+    #[must_use]
+    #[allow(clippy::type_complexity)]
+    pub(crate) fn rational_squares(&self) -> Option<Vec<(Rational, Vec<(usize, Rational)>)>> {
+        let dim = self.n_vars + 1;
+        if self.d.len() != dim || self.l.len() != dim {
+            return None;
+        }
+        if self.l.iter().any(|row| row.len() != dim) {
+            return None;
+        }
+        let n = self.n_vars;
+        let zero = Rational::zero();
+        let mut squares: Vec<(Rational, Vec<(usize, Rational)>)> = Vec::new();
+        for (k, &dk) in self.d.iter().enumerate() {
+            if dk.is_zero() {
+                continue; // a zero-weight column contributes nothing
+            }
+            if dk.numerator() < 0 {
+                return None; // negative weight — never PSD, reject defensively
+            }
+            // The affine entry of column k must be zero (homogeneous slice).
+            if !self.l[n][k].is_zero() {
+                return None;
+            }
+            let mut coeffs: Vec<(usize, Rational)> = Vec::new();
+            for j in 0..n {
+                let c = self.l[j][k];
+                if c == zero {
+                    continue;
+                }
+                coeffs.push((j, c));
+            }
+            if coeffs.is_empty() {
+                return None; // a zero form would not refute p < 0 by itself
+            }
+            squares.push((dk, coeffs));
+        }
+        if squares.is_empty() {
+            return None; // no nonzero square ⇒ nothing to refute
+        }
+        Some(squares)
+    }
 }
 
 /// Rebuild the symmetric `(n_vars+1)×(n_vars+1)` rational Gram matrix `M` from
