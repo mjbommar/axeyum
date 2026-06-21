@@ -1379,6 +1379,20 @@ fn is_sos_single_unit_square(arena: &TermArena, assertions: &[TermId]) -> bool {
     }
 }
 
+/// Does `assertions` have an SOS certificate that is a **sum of several perfect
+/// squares of ±1-coefficient linear forms** (every `D[k] = 1`, zero affine row)?
+/// This is the multi-square shape [`reconstruct_sos_multi_unit_square`] handles; the
+/// classifier uses it to route such queries (e.g. `x²+y² < 0`) to
+/// [`ProofFragment::Sos`]. The single-square case is its `m = 1` specialization, so
+/// `unit_squares` also accepts it — the two classifiers therefore overlap, which is
+/// fine (both route to `Sos`).
+fn is_sos_multi_unit_square(arena: &TermArena, assertions: &[TermId]) -> bool {
+    match crate::nra_real_root::sos_refute_with_certificate(arena, assertions) {
+        Some(cert) => cert.strict_lt() && cert.unit_squares().is_some(),
+        None => false,
+    }
+}
+
 /// Classify `assertions` into the [`ProofFragment`] whose emitter+reconstructor
 /// pair handles it, by scanning the operators and sorts that appear. Precedence:
 /// a top-level quantifier wraps any ground theory (`∃` skolemized before `∀`),
@@ -1439,6 +1453,7 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         if is_single_square_lt_zero(arena, assertions).is_some()
             || is_am_gm_two_var(arena, assertions).is_some()
             || is_sos_single_unit_square(arena, assertions)
+            || is_sos_multi_unit_square(arena, assertions)
         {
             ProofFragment::Sos
         } else {
@@ -9008,11 +9023,17 @@ pub fn reconstruct_sos_proof(
         if let Some(proof) = reconstruct_sos_single_unit_square(ctx, arena, assertions)? {
             return Ok(proof);
         }
+        // General path: any query whose SOS certificate is a SUM of several perfect
+        // squares of ±1-coefficient linear forms (e.g. `x²+y² < 0`, `x²+y²+z² < 0`),
+        // every `d = 1`, zero affine. Folds square-nonnegativity over the squares.
+        if let Some(proof) = reconstruct_sos_multi_unit_square(ctx, arena, assertions)? {
+            return Ok(proof);
+        }
         return Err(ReconstructError::UnsupportedTerm {
             term: "SOS reconstruction handles a single square `ℓ*ℓ < 0` of a ±1-coefficient \
-                   linear form ℓ, the two-variable AM-GM sum form `x²+y²−2xy < 0`, and any \
-                   query whose SOS certificate is a single perfect square of a ±1-coefficient \
-                   linear form; multi-square / scaled-coefficient SOS is a later slice"
+                   linear form ℓ, the two-variable AM-GM sum form `x²+y²−2xy < 0`, any query \
+                   whose SOS certificate is a single perfect square, and a SUM of ±1-unit \
+                   squares (every d=1, zero affine); scaled-coefficient SOS is a later slice"
                 .to_owned(),
         });
     };
@@ -9505,6 +9526,192 @@ fn reconstruct_sos_single_unit_square(
         Err(ReconstructError::KernelRejected {
             rule: "sos_single_unit_square".to_owned(),
             detail: "SOS certificate refutation did not infer to False".to_owned(),
+        })
+    }
+}
+
+/// Reconstruct, **from the SOS certificate**, any strict query `p < 0` whose
+/// certificate is a **SUM of perfect squares** of ±1-coefficient linear forms
+/// `ℓ₁..ℓₘ` (every `D[k] = 1`, zero affine row). Generalizes
+/// [`reconstruct_sos_single_unit_square`] (the `m = 1` case) by folding
+/// square-nonnegativity over several squares.
+///
+/// Returns:
+/// - `Ok(Some(proof))` — a kernel-checked `False` (gated by `infer` + `def_eq`).
+/// - `Ok(None)` — the certificate is not a sum of ±1-unit squares (decline; the
+///   caller falls through), or building the kernel terms hit this slice's bounds,
+///   or the two normal forms disagree (never fabricate the ring identity).
+/// - `Err(_)` — only a genuine kernel rejection.
+///
+/// Construction:
+/// - `sosK = add (ℓ₁·ℓ₁) (add (ℓ₂·ℓ₂) (… (ℓₘ·ℓₘ)))` — a RIGHT-nested `add` of the
+///   squares with the last square as the innermost leaf (NO trailing zero, so the
+///   kernel `sosK` is exactly the faithful encoding the normalizer returns).
+/// - `idK : Eq R pK sosK := trans (normalize pK) (symm (normalize sosK))`, only
+///   after confirming the canonical gens are identical (else decline).
+/// - `nn : le zero sosK` folds from the innermost (last) square outward. Base case
+///   (the `m`-th square): `sq_nonneg ℓₘ : le zero (ℓₘ·ℓₘ)`. Then for each earlier
+///   square `ℓₖ` (k = m-1 … 1) combine `sq_nonneg ℓₖ : le zero (ℓₖ·ℓₖ)` with the
+///   running `le zero tail` via
+///   `add_le_add zero (ℓₖ·ℓₖ) zero tail … : le (add zero zero)(add (ℓₖ·ℓₖ) tail)`,
+///   then cast the lhs `add zero zero → zero` (`add_zero zero`) so the type stays
+///   `le zero (add (ℓₖ·ℓₖ) tail)` — matching `sosK`'s exact right-nesting.
+/// - transport `nn` along `idK` to `lep : le zero pK`, then `lt_of_le_of_lt` with
+///   the asserted `hlt : lt pK zero` ⇒ `lt zero zero`, refuted by `lt_irrefl zero`.
+#[allow(clippy::too_many_lines)]
+fn reconstruct_sos_multi_unit_square(
+    ctx: &mut LraReconstructCtx,
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<Option<ExprId>, ReconstructError> {
+    let Some(cert) = crate::nra_real_root::sos_refute_with_certificate(arena, assertions) else {
+        return Ok(None);
+    };
+    if !cert.strict_lt() {
+        return Ok(None);
+    }
+    let Some(squares) = cert.unit_squares() else {
+        return Ok(None);
+    };
+    let n_vars = cert.n_vars();
+
+    // Faithful encoding of the asserted polynomial p.
+    let Some(p_rexpr) = cert_poly_to_rexpr(cert.poly_terms(), n_vars) else {
+        return Ok(None);
+    };
+
+    // Per-square: the linear form ℓₖ as an RExpr (for emit) and the square sub-RExpr
+    // (ℓₖ·ℓₖ).
+    let mut ell_rexprs: Vec<RExpr> = Vec::with_capacity(squares.len());
+    let mut sq_rexprs: Vec<RExpr> = Vec::with_capacity(squares.len());
+    for sq_coeffs in &squares {
+        let Some(ell) = cert_square_to_rexpr(sq_coeffs) else {
+            return Ok(None);
+        };
+        sq_rexprs.push(RExpr::Mul(Box::new(ell.clone()), Box::new(ell.clone())));
+        ell_rexprs.push(ell);
+    }
+
+    // sosK as an RExpr: RIGHT-nested add over the squares, last square as the
+    // innermost LEAF (no trailing zero). E.g. for m=3:
+    //   add sq_0 (add sq_1 sq_2).
+    // The kernel `sosK` is then EXACTLY the faithful encoding `normalize_deg2`
+    // returns for this RExpr, so no bridge between the fold's `sosK` and the
+    // normalized form is needed.
+    let Some((last, init)) = sq_rexprs.split_last() else {
+        return Ok(None);
+    };
+    let mut sos_rexpr = last.clone();
+    for r in init.iter().rev() {
+        sos_rexpr = RExpr::Add(Box::new(r.clone()), Box::new(sos_rexpr));
+    }
+
+    // Normalize p and the SOS sum; the canonical gens MUST agree (else decline).
+    let Some((p_gens, pk, p_to_canon)) = ctx.normalize_deg2(&p_rexpr) else {
+        return Ok(None);
+    };
+    let Some((sos_gens, sosk, sos_to_canon)) = ctx.normalize_deg2(&sos_rexpr) else {
+        return Ok(None);
+    };
+    if p_gens != sos_gens {
+        return Ok(None);
+    }
+
+    // idK : Eq R pK sosK := trans (pK → canon)(symm (sosK → canon)).
+    let canon = ctx.mono_gens_to_expr(&p_gens);
+    let canon_to_sos = ctx.eq_symm_r(sosk, canon, sos_to_canon); // Eq R canon sosK
+    let idk = ctx.eq_trans_r(pk, canon, sosk, p_to_canon, canon_to_sos); // Eq R pK sosK
+
+    // Kernel-level per-square ℓₖ and (ℓₖ·ℓₖ), emitted from the SAME RExprs so the
+    // `mul`/`add` ExprIds are hash-consed identical to those inside `sosK`.
+    let zero = ctx.mk_zero();
+    let mut ells: Vec<ExprId> = Vec::with_capacity(squares.len());
+    let mut sqs: Vec<ExprId> = Vec::with_capacity(squares.len());
+    for ell_rexpr in &ell_rexprs {
+        let ell = ctx.emit_rexpr(ell_rexpr);
+        ells.push(ell);
+        sqs.push(ctx.mk_mul(ell, ell));
+    }
+
+    // -------------------------------------------------------------------------
+    // Nonnegativity fold: nn : le zero sosK, where
+    //   sosK = add sq_0 (add sq_1 (… sq_{m-1})).  (right-nested, last = leaf)
+    // Base: the LAST square's sq_nonneg gives `le zero sq_{m-1}`. Then fold the
+    // earlier squares FROM LAST-1 DOWN TO FIRST, each step prepending one square to
+    // the running `le zero tail`, casting `add zero zero → zero` on the lhs.
+    // -------------------------------------------------------------------------
+    let m = sqs.len();
+    let sq_nonneg_of = |ctx: &mut LraReconstructCtx, ell: ExprId| -> ExprId {
+        let name = ctx.arith().sq_nonneg;
+        let f = ctx.kernel_mut().const_(name, vec![]);
+        ctx.kernel_mut().app(f, ell) // le zero (mul ell ell)
+    };
+    // Base: nn : le zero sq_{m-1}.
+    let mut nn = sq_nonneg_of(ctx, ells[m - 1]);
+    let mut tail = sqs[m - 1]; // running right-nested tail (matches sosK structurally)
+    for idx in (0..m - 1).rev() {
+        let sq = sqs[idx];
+        // sq_k : le zero (mul ℓ ℓ).
+        let sq_k = sq_nonneg_of(ctx, ells[idx]);
+        // add_le_add zero (mul ℓ ℓ) zero tail sq_k nn
+        //   : le (add zero zero)(add (mul ℓ ℓ) tail).
+        let combined = ctx.add_le_add_app(zero, sq, zero, tail, sq_k, nn);
+        // Cast lhs (add zero zero) → zero via add_zero zero : Eq R (add zero zero) zero.
+        let new_tail = ctx.mk_add(sq, tail); // add (mul ℓ ℓ) tail (= next sosK prefix)
+        let lhs = ctx.mk_add(zero, zero);
+        let add_zero_zero = ctx.add_zero_eq(zero); // Eq R (add zero zero) zero
+        nn = ctx.le_cast_left(lhs, zero, new_tail, combined, add_zero_zero);
+        // now nn : le zero (add (mul ℓ ℓ) tail) = le zero new_tail.
+        tail = new_tail;
+    }
+    // nn : le zero sosK (= le zero tail, tail == sosk structurally).
+    debug_assert_eq!(tail, sosk);
+
+    // Transport nn backward along idK (rewrite sosK → pK) ⇒ lep : le zero pK.
+    let id_sym = ctx.eq_symm_r(pk, sosk, idk); // Eq R sosK pK
+    let lep = ctx.le_cast_right(zero, sosk, pk, nn, id_sym);
+
+    // hlt : lt pK zero — the asserted atom `p < 0`.
+    let hlt = {
+        let prop = ctx.mk_lt(pk, zero);
+        ctx.hyp_axiom(prop)?
+    };
+    // chain : lt zero zero := lt_of_le_of_lt zero pK zero lep hlt.
+    let chain = {
+        let ax_name = ctx.arith().lt_of_le_of_lt;
+        let ax = ctx.kernel_mut().const_(ax_name, vec![]);
+        let e = ctx.kernel_mut().app(ax, zero);
+        let e = ctx.kernel_mut().app(e, pk);
+        let e = ctx.kernel_mut().app(e, zero);
+        let e = ctx.kernel_mut().app(e, lep);
+        ctx.kernel_mut().app(e, hlt)
+    };
+    // bad : False := lt_irrefl zero chain.
+    let proof = {
+        let irrefl_name = ctx.arith().lt_irrefl;
+        let irrefl = ctx.kernel_mut().const_(irrefl_name, vec![]);
+        let e = ctx.kernel_mut().app(irrefl, zero);
+        ctx.kernel_mut().app(e, chain)
+    };
+
+    // Soundness gate.
+    let inferred = ctx
+        .kernel_mut()
+        .infer(proof)
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "sos_multi_unit_square".to_owned(),
+            detail: format!("SOS multi-square certificate infer failed: {e:?}"),
+        })?;
+    let false_ = {
+        let f = ctx.arith().logic.false_;
+        ctx.kernel_mut().const_(f, vec![])
+    };
+    if ctx.kernel_mut().def_eq(inferred, false_) {
+        Ok(Some(proof))
+    } else {
+        Err(ReconstructError::KernelRejected {
+            rule: "sos_multi_unit_square".to_owned(),
+            detail: "SOS multi-square refutation did not infer to False".to_owned(),
         })
     }
 }

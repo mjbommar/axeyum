@@ -2735,6 +2735,69 @@ impl SosCertificate {
         }
         Some(coeffs)
     }
+
+    /// If this certificate is a **sum of perfect squares of ±1-coefficient linear
+    /// forms** — EVERY nonzero `D[k]` equals `1`, and each such square's column `k`
+    /// of `L` has every variable coefficient `L[j][k] ∈ {−1, 0, +1}` and a **zero**
+    /// affine entry `L[n][k]` — return the list of squares' signed unit coefficient
+    /// vectors `[[(var_index, ±1); …]; …]`, one inner vector per nonzero `D[k]`
+    /// (in ascending column order; within each square, ascending by index, zeros
+    /// dropped). Otherwise `None` (decline): some nonzero `D[k] ≠ 1`, a coefficient
+    /// needing scaling, a nonzero affine row, or a square whose form is identically
+    /// zero.
+    ///
+    /// This is the multi-square generalization of [`SosCertificate::single_unit_square`]
+    /// (which is the `m = 1` special case). The returned coefficients are over the
+    /// SAME canonical indices as [`SosCertificate::poly_terms`], so
+    /// `Σₖ (Σⱼ cₖⱼ·xⱼ)² = p` holds over ℚ (the reconstructor re-asserts this).
+    #[must_use]
+    pub(crate) fn unit_squares(&self) -> Option<Vec<Vec<(usize, i128)>>> {
+        let dim = self.n_vars + 1;
+        if self.d.len() != dim || self.l.len() != dim {
+            return None;
+        }
+        if self.l.iter().any(|row| row.len() != dim) {
+            return None;
+        }
+        let one = Rational::integer(1);
+        let neg_one = Rational::integer(-1);
+        let n = self.n_vars;
+        let mut squares: Vec<Vec<(usize, i128)>> = Vec::new();
+        for (k, &dk) in self.d.iter().enumerate() {
+            if dk.is_zero() {
+                continue;
+            }
+            if dk != one {
+                return None; // weight ≠ 1 — outside this slice
+            }
+            // Affine entry of column k must be zero.
+            if !self.l[n][k].is_zero() {
+                return None;
+            }
+            let mut coeffs: Vec<(usize, i128)> = Vec::new();
+            for j in 0..n {
+                let c = self.l[j][k];
+                if c.is_zero() {
+                    continue;
+                }
+                if c == one {
+                    coeffs.push((j, 1));
+                } else if c == neg_one {
+                    coeffs.push((j, -1));
+                } else {
+                    return None; // coefficient needs scaling — outside this slice
+                }
+            }
+            if coeffs.is_empty() {
+                return None; // a zero form — would not refute p < 0 by itself
+            }
+            squares.push(coeffs);
+        }
+        if squares.is_empty() {
+            return None; // no nonzero square ⇒ nothing to refute
+        }
+        Some(squares)
+    }
 }
 
 /// Rebuild the symmetric `(n_vars+1)×(n_vars+1)` rational Gram matrix `M` from

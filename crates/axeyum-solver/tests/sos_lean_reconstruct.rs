@@ -185,12 +185,12 @@ fn x_minus_z_squared_sum_form_reconstructs_to_false() {
     assert!(source.contains("axeyum_refutation"));
 }
 
-/// Out of scope for this slice: `x*x + y*y < 0` (i.e. `x² + y² < 0`). It is UNSAT,
-/// but it is **not** a single perfect square — it is a *sum* of two independent
-/// squares (`x²` and `y²`), which this AM-GM slice does not cover. The
-/// reconstructor must *decline* (error) rather than fabricate a proof.
+/// Multi-square slice: `x*x + y*y < 0` (i.e. `x² + y² < 0`) is UNSAT — a *sum* of
+/// two independent ±1-unit squares (`x²` and `y²`, certificate `D = [1, 1]`). The
+/// reconstructor folds `sq_nonneg x` and `sq_nonneg y` to `0 ≤ x² + y²` and closes
+/// the order chain to a kernel-checked `False`. (Previously declined; now handled.)
 #[test]
-fn sum_of_two_squares_is_declined() {
+fn sum_of_two_squares_reconstructs_to_false() {
     let mut arena = TermArena::new();
     let x = arena.real_var("x").unwrap();
     let y = arena.real_var("y").unwrap();
@@ -200,11 +200,67 @@ fn sum_of_two_squares_is_declined() {
     let zero = arena.real_const(Rational::integer(0));
     let assertion = arena.real_lt(lhs, zero).unwrap();
 
+    let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &[assertion])
+        .expect("x² + y² < 0 reconstructs to a kernel-checked False");
+    assert_eq!(
+        fragment,
+        ProofFragment::Sos,
+        "the sum-of-squares shape must route to the SOS fragment"
+    );
+    assert!(
+        source.contains("axeyum_refutation"),
+        "the Lean module must contain the refutation theorem"
+    );
+}
+
+/// Multi-square slice with three squares: `x*x + y*y + z*z < 0` (`D = [1, 1, 1]`).
+/// Exercises the fold over more than two squares — the right-nested `sosK` and the
+/// matching `add_le_add` / `add_zero` rewrites must compose to a kernel-checked
+/// `False`.
+#[test]
+fn sum_of_three_squares_reconstructs_to_false() {
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let y = arena.real_var("y").unwrap();
+    let z = arena.real_var("z").unwrap();
+    let xx = arena.real_mul(x, x).unwrap();
+    let yy = arena.real_mul(y, y).unwrap();
+    let zz = arena.real_mul(z, z).unwrap();
+    let xy = arena.real_add(xx, yy).unwrap();
+    let lhs = arena.real_add(xy, zz).unwrap(); // x² + y² + z²
+    let zero = arena.real_const(Rational::integer(0));
+    let assertion = arena.real_lt(lhs, zero).unwrap();
+
+    let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &[assertion])
+        .expect("x² + y² + z² < 0 reconstructs to a kernel-checked False");
+    assert_eq!(fragment, ProofFragment::Sos);
+    assert!(source.contains("axeyum_refutation"));
+}
+
+/// Out of scope for this `d = 1` slice: a SCALED sum of squares
+/// `2*x*x + 2*y*y < 0` (i.e. `2x² + 2y²`, certificate weights `D = [2, 2]`). It is
+/// UNSAT, but the unit-square classifier requires every `D[k] = 1`; a weight `2`
+/// needs scaling, which this slice does not model. The reconstructor must *decline*
+/// (error) rather than fabricate a proof.
+#[test]
+fn scaled_sum_of_squares_is_declined() {
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let y = arena.real_var("y").unwrap();
+    let xx = arena.real_mul(x, x).unwrap();
+    let yy = arena.real_mul(y, y).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let two_xx = arena.real_mul(two, xx).unwrap();
+    let two_yy = arena.real_mul(two, yy).unwrap();
+    let lhs = arena.real_add(two_xx, two_yy).unwrap(); // 2x² + 2y²
+    let zero = arena.real_const(Rational::integer(0));
+    let assertion = arena.real_lt(lhs, zero).unwrap();
+
     let mut ctx = LraReconstructCtx::new();
     let result = reconstruct_sos_proof(&mut ctx, &arena, &[assertion]);
     assert!(
         result.is_err(),
-        "x² + y² < 0 is a sum of two independent squares, not a single perfect square; \
-         it is outside this AM-GM slice and must be declined, not proven"
+        "2x² + 2y² < 0 is a SCALED sum of squares (weights 2); this d=1 slice models \
+         only unit weights and must decline, not prove"
     );
 }
