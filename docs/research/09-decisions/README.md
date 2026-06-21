@@ -96,3 +96,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0040](adr-0040-sos-lean-reconstruction.md) | SOS certificate → Lean reconstruction via minimal commutative-ordered-ring axioms + a degree-2 ring normalizer (kernel-checked proof for the SOS unsat route) | accepted |
 | [0041](adr-0041-lean-backed-sos-evidence.md) | Lean-backed SOS evidence — the SOS unsat's `Evidence::UnsatSos` carries its kernel-checked Lean module, re-derived+re-checked on `Evidence::check` | accepted |
 | [0042](adr-0042-integer-prelude.md) | Integer prelude (discretely-ordered commutative ring + `no_int_between`) — the trusted-kernel foundation for integer-arithmetic / Diophantine Lean reconstruction | accepted |
+| [0043](adr-0043-lean-backed-diophantine-evidence.md) | Lean-backed Diophantine evidence — integer-infeasibility `Evidence::UnsatDiophantine` carries a self-check + kernel-checked Lean module; `TrustId::Diophantine` | accepted |
