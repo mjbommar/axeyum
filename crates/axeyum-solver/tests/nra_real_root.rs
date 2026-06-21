@@ -873,13 +873,13 @@ fn multi_circle_line_substitutes_to_single_var_sat() {
 }
 
 /// A genuinely coupled nonlinear system with NO substitutable linear definition:
-/// `x² + y² = 1 ∧ x*y = 1`. No linear equality ⇒ no substitution; the single
-/// component couples x and y nonlinearly ⇒ DECLINE. It is UNSAT in truth
-/// (x²+y² ≥ 2|xy| = 2 > 1), but the decider must not assert that — it declines.
-/// We only require it does not wrongly answer Sat/Unsat *unsoundly*: since it is
-/// truly unsat, a sound engine returns Unsat or Unknown; we assert NOT Sat.
+/// `x² + y² = 1 ∧ x*y = 1`. No linear equality ⇒ no substitution; the component
+/// couples x and y nonlinearly with TWO equalities ⇒ the resultant-elimination
+/// slice fires. `Res_y(x²+y²−1, xy−1) = x⁴ − x² + 1` has NO real root, so the two
+/// equalities have no common real solution ⇒ **Unsat** (exact). Soundness: an
+/// empty equality variety stays empty.
 #[test]
-fn multi_coupled_nonlinear_declines() {
+fn multi_coupled_nonlinear_unsat_via_resultant() {
     let mut arena = TermArena::new();
     let (_xs, xv) = real(&mut arena, "x");
     let (_ys, yv) = real(&mut arena, "y");
@@ -893,8 +893,128 @@ fn multi_coupled_nonlinear_declines() {
     let a2 = arena.eq(xy, onec).unwrap();
     let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
     assert!(
-        !matches!(r, CheckResult::Sat(_)),
-        "x²+y²=1 ∧ x*y=1 is unsat; the decider must not answer Sat; got {r:?}"
+        matches!(r, CheckResult::Unsat),
+        "x²+y²=1 ∧ x*y=1 is unsat (x⁴−x²+1 has no real root); got {r:?}"
+    );
+}
+
+/// A coupled 2-variable system WITH a real solution, decided Sat by the resultant
+/// slice and replay-checked: `x² + y² = 2 ∧ x*y = 1`. Common real solutions are
+/// (1,1) and (−1,−1) (both rational). `Res_y = x⁴ − 2x² + 1 = (x²−1)²`, roots
+/// x = ±1; lifting x=1 gives y=1. The model replays against both equalities.
+#[test]
+fn multi_coupled_nonlinear_sat_via_resultant() {
+    let mut arena = TermArena::new();
+    let (xs, xv) = real(&mut arena, "x");
+    let (ys, yv) = real(&mut arena, "y");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let yy = arena.real_mul(yv, yv).unwrap();
+    let sum_sq = arena.real_add(xx, yy).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let a1 = arena.eq(sum_sq, two).unwrap();
+    let xy = arena.real_mul(xv, yv).unwrap();
+    let onec = arena.real_const(Rational::integer(1));
+    let a2 = arena.eq(xy, onec).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x²+y²=2 ∧ x*y=1 must be Sat (e.g. (1,1)); got {r:?}");
+    };
+    // Replay: the witness satisfies BOTH original equalities exactly.
+    let asg = model.to_assignment();
+    assert!(
+        matches!(eval(&arena, a1, &asg), Ok(Value::Bool(true))),
+        "x²+y²=2 must hold at the witness"
+    );
+    assert!(
+        matches!(eval(&arena, a2, &asg), Ok(Value::Bool(true))),
+        "x*y=1 must hold at the witness"
+    );
+    // Both coordinates are rational here (±1).
+    let x = model.get(xs).unwrap().as_real().expect("x rational");
+    let y = model.get(ys).unwrap().as_real().expect("y rational");
+    assert_eq!(
+        x.checked_mul(y),
+        Some(Rational::integer(1)),
+        "x*y must equal 1, got x={x}, y={y}"
+    );
+}
+
+/// A coupled, all-nonlinear, all-equality system whose resultant has **rational**
+/// real roots but where a third equality rules every common root out ⇒ **Unsat**
+/// by exhaustive enumeration. `x² + y² = 2 ∧ x*y = 1 ∧ x² + y² = 5`: the first two
+/// have common roots (±1, ±1); none satisfies x² + y² = 5 (each gives 2). All
+/// atoms are equalities and every x-candidate is rational, so the enumeration is
+/// provably exhaustive ⇒ Unsat. (All atoms are degree-2, so the substitution path
+/// never breaks the coupling — this routes through the resultant slice.)
+#[test]
+fn multi_coupled_exhaustive_unsat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let yy = arena.real_mul(yv, yv).unwrap();
+    let sum_sq = arena.real_add(xx, yy).unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let a1 = arena.eq(sum_sq, two).unwrap();
+    let xy = arena.real_mul(xv, yv).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a2 = arena.eq(xy, one).unwrap();
+    // A second circle of a different radius: x² + y² = 5 (rebuilt to a fresh term).
+    let xx2 = arena.real_mul(xv, xv).unwrap();
+    let yy2 = arena.real_mul(yv, yv).unwrap();
+    let sum_sq2 = arena.real_add(xx2, yy2).unwrap();
+    let five = arena.real_const(Rational::integer(5));
+    let a3 = arena.eq(sum_sq2, five).unwrap();
+    let r = solve(&mut arena, &[a1, a2, a3], &SolverConfig::default()).expect("no error");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x²+y²=2 ∧ x*y=1 ∧ x²+y²=5 is unsat (common roots (±1,±1) give x²+y²=2≠5); got {r:?}"
+    );
+}
+
+/// Region-only coupled system: `x*y > 1 ∧ x > 0`. There is only ONE (in fact
+/// zero) equality, so the resultant slice has no eliminable pair ⇒ DECLINE. The
+/// satisfying set is a 2-D region; the decider must NOT answer Unsat (it is sat,
+/// e.g. x=2, y=1).
+#[test]
+fn multi_region_only_declines_not_unsat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let xy = arena.real_mul(xv, yv).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a1 = arena.real_gt(xy, one).unwrap();
+    let zero = arena.real_const(Rational::zero());
+    let a2 = arena.real_gt(xv, zero).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "x*y>1 ∧ x>0 is sat (region; e.g. (2,1)); got {r:?}"
+    );
+}
+
+/// A genuinely coupled equality system with an algebraic-valued witness, decided
+/// Sat and replay-checked: `x² + y² = 4 ∧ x*y = 1`. Common solutions have
+/// irrational coordinates; `Res_y = x⁴ − 4x² + 1`, whose roots are irrational.
+/// Because the x-candidates are algebraic (not rational), the lift DECLINES — the
+/// decider must not crash and must not answer Unsat (it IS satisfiable).
+#[test]
+fn multi_coupled_algebraic_x_declines_not_unsat() {
+    let mut arena = TermArena::new();
+    let (_xs, xv) = real(&mut arena, "x");
+    let (_ys, yv) = real(&mut arena, "y");
+    let xx = arena.real_mul(xv, xv).unwrap();
+    let yy = arena.real_mul(yv, yv).unwrap();
+    let sum_sq = arena.real_add(xx, yy).unwrap();
+    let four = arena.real_const(Rational::integer(4));
+    let a1 = arena.eq(sum_sq, four).unwrap();
+    let xy = arena.real_mul(xv, yv).unwrap();
+    let one = arena.real_const(Rational::integer(1));
+    let a2 = arena.eq(xy, one).unwrap();
+    let r = solve(&mut arena, &[a1, a2], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "x²+y²=4 ∧ x*y=1 is sat (irrational coords); algebraic-x lift declines, not Unsat; got {r:?}"
     );
 }
 

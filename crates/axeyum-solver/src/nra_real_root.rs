@@ -69,7 +69,7 @@ use axeyum_ir::{
     Value, eval,
 };
 
-use crate::backend::{CheckResult, SolverError};
+use crate::backend::{CheckResult, SolverError, UnknownKind, UnknownReason};
 use crate::model::Model;
 
 /// Coefficient magnitude guard (mirrors `nia_square::MAX_ABS_COEFF`): above this
@@ -1471,36 +1471,28 @@ fn decompose_multivariate(arena: &TermArena, assertions: &[TermId]) -> Option<Ch
     // Partition `live` atoms into connected components by shared variables.
     let components = connected_components(&live);
 
-    // Decide each component; every component must be single-variable.
+    // Decide each component (single-variable by the sign-cell decider, or a
+    // two-variable coupled component by resultant elimination), assembling the
+    // model. Any in-component `Unsat`/`Unknown` short-circuits the whole query.
     let mut model = Model::new();
     for comp in &components {
-        // Union of variables across this component.
-        let comp_vars: BTreeSet<SymbolId> = comp.iter().flat_map(|a| a.poly.vars()).collect();
-        if comp_vars.len() != 1 {
-            // ≥ 2 distinct variables that share a constraint ⇒ genuinely coupled
-            // (the deferred CAD slice). Decline.
-            return None;
-        }
-        let var = *comp_vars.iter().next().unwrap();
-        // Convert this component's atoms to single-variable integer polynomials.
-        let mut single_atoms: Vec<Atom> = Vec::with_capacity(comp.len());
-        for atom in comp {
-            let poly = atom.poly.to_single_var_integer_poly(var)?;
-            if poly.len() <= 1 {
-                // Degenerate (became constant after substitution): re-check it as
-                // a constant — but a single-variable component should retain its
-                // variable; treat as decline to stay safe.
-                return None;
+        match decide_component(comp)? {
+            ComponentOutcome::Unsat => return Some(CheckResult::Unsat),
+            ComponentOutcome::Unknown => {
+                // Sound short-circuit (resultant slice committed but could not
+                // certify): return `Unknown` rather than decline into a possibly
+                // non-terminating NRA re-derivation of the same coupled system.
+                return Some(CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::Incomplete,
+                    detail: "nra: 2-variable resultant elimination could not certify \
+                             (algebraic-x lift or inequality region)"
+                        .to_string(),
+                }));
             }
-            single_atoms.push(Atom {
-                cmp: atom.cmp,
-                poly,
-            });
-        }
-        match decide_system_value(&single_atoms)? {
-            SystemVerdict::Unsat => return Some(CheckResult::Unsat),
-            SystemVerdict::Sat(v) => {
-                model.set(var, v);
+            ComponentOutcome::Sat(bindings) => {
+                for (v, val) in bindings {
+                    model.set(v, val);
+                }
             }
         }
     }
@@ -1521,6 +1513,544 @@ fn decompose_multivariate(arena: &TermArena, assertions: &[TermId]) -> Option<Ch
         return None;
     }
     Some(CheckResult::Sat(model))
+}
+
+// ============================================================================
+// Two-variable resultant elimination (sound, bounded coupled-system slice).
+// ============================================================================
+//
+// A connected component with **exactly two** variables {x, y} that is genuinely
+// coupled (the substitution fixpoint already failed to break it). If at least
+// two of its atoms are **equalities** `p(x,y)=0`, `q(x,y)=0` that both genuinely
+// mention the eliminated variable, we eliminate one variable by the **Sylvester
+// resultant** `Res_y(p, q)` — a univariate integer polynomial in x whose real
+// roots are *exactly* the x-coordinates at which p and q share a y-root. Thus the
+// isolated real roots of the resultant are an **exhaustive** set of x-candidates
+// for the common solutions of the two equalities.
+//
+// Pipeline: **eliminate** (Sylvester determinant over `Rational`, overflow →
+// decline) → **isolate** the resultant's real x-roots (reusing `isolate_roots`)
+// → **lift** each *rational* x-candidate α by substituting x:=α into p and q
+// (exact rational coefficients in y) and finding a common y-root (rational or a
+// single algebraic number) → **replay-check** the full (x,y) model against EVERY
+// original assertion.
+//
+// Soundness:
+// - The resultant is exact (Sylvester determinant over `Rational`; any overflow
+//   declines). `Res_y(p,q)(α) = 0 ⟺ p(α,·)` and `q(α,·)` share a y-root, so the
+//   x-candidates miss no common solution of the two equalities.
+// - Every `Sat` is replay-checked against all original assertions, so a spurious
+//   candidate fails replay → never a wrong `Sat`.
+// - `Unsat` is claimed **only** when the candidate enumeration is provably
+//   exhaustive for the constraint shape: every atom in the component is an
+//   equality (no inequality region could escape the common-root set) AND every
+//   resultant root is rational (so the lift is complete). A real x-root that is
+//   algebraic, or any inequality in the component, makes the enumeration possibly
+//   incomplete ⇒ we **decline** rather than risk a wrong `Unsat`.
+//   - The one exact exception: if the resultant has **no** real root at all, the
+//     two equalities have no common real solution ⇒ the whole system is `Unsat`,
+//     regardless of any inequalities (an empty equality variety stays empty).
+// - No floating point; the Sylvester matrix is a fixed determinant and isolation
+//   is bounded.
+
+/// The outcome of deciding one connected component of the multivariate query.
+enum ComponentOutcome {
+    /// The component is unsatisfiable ⇒ the whole query is `Unsat`.
+    Unsat,
+    /// The component is satisfiable; these bindings extend the shared model.
+    Sat(Vec<(SymbolId, Value)>),
+    /// Sound short-circuit to `Unknown` (a committed-but-uncertifiable 2-var
+    /// resultant component).
+    Unknown,
+}
+
+/// Decide one connected component: a single-variable component via the sign-cell
+/// decider, a two-variable coupled component via resultant elimination, anything
+/// larger (≥ 3 vars) declines (`None`). The bindings it returns must still be
+/// replay-checked against the full original query by the caller.
+fn decide_component(comp: &[&MultiAtom]) -> Option<ComponentOutcome> {
+    let comp_vars: BTreeSet<SymbolId> = comp.iter().flat_map(|a| a.poly.vars()).collect();
+    if comp_vars.len() == 2 {
+        // Two coupled variables: the resultant-elimination slice (≥ 2 equalities ⇒
+        // eliminate one variable, isolate x-candidates, lift to y, replay-check).
+        return Some(match decide_two_var_component(comp, &comp_vars)? {
+            TwoVarVerdict::Unsat => ComponentOutcome::Unsat,
+            TwoVarVerdict::Sat(b) => ComponentOutcome::Sat(b),
+            TwoVarVerdict::Unknown => ComponentOutcome::Unknown,
+        });
+    }
+    if comp_vars.len() != 1 {
+        // ≥ 3 distinct variables that share a constraint ⇒ genuinely coupled
+        // (the deferred CAD slice). Decline.
+        return None;
+    }
+    let var = *comp_vars.iter().next().unwrap();
+    // Convert this component's atoms to single-variable integer polynomials.
+    let mut single_atoms: Vec<Atom> = Vec::with_capacity(comp.len());
+    for atom in comp {
+        let poly = atom.poly.to_single_var_integer_poly(var)?;
+        if poly.len() <= 1 {
+            // Degenerate (became constant after substitution): a single-variable
+            // component should retain its variable; decline to stay safe.
+            return None;
+        }
+        single_atoms.push(Atom {
+            cmp: atom.cmp,
+            poly,
+        });
+    }
+    Some(match decide_system_value(&single_atoms)? {
+        SystemVerdict::Unsat => ComponentOutcome::Unsat,
+        SystemVerdict::Sat(v) => ComponentOutcome::Sat(vec![(var, v)]),
+    })
+}
+
+/// The verdict of the two-variable resultant slice for one connected component.
+enum TwoVarVerdict {
+    /// The component is unsatisfiable (exhaustively, for its shape).
+    Unsat,
+    /// The component is satisfiable; bind these variables in the shared model.
+    /// (Replay against the full original query happens once at the end.)
+    Sat(Vec<(SymbolId, Value)>),
+    /// Could not certify Sat or Unsat (an algebraic-x lift, or a real common root
+    /// the inequalities could not be replay-confirmed against). A **sound**
+    /// `Unknown` short-circuit: we have *committed* to the resultant slice
+    /// (a ≥ 2-equality coupled component) and resolved the elimination, so handing
+    /// the same nonlinear system to the outer NRA layer would only risk a
+    /// (potentially non-terminating) re-derivation of the same indeterminacy.
+    Unknown,
+}
+
+/// The outcome of lifting one x-candidate to a (keep, elim) witness.
+enum LiftOutcome {
+    /// A full-component-satisfying binding (replay-checked against every atom).
+    Found(Vec<(SymbolId, Value)>),
+    /// This x-candidate has no satisfying common y (sound — search continues).
+    None,
+    /// The lift could not be completed exactly (overflow): the candidate can be
+    /// neither ruled in nor ruled out, so no `Unsat` may be claimed from it.
+    Overflow,
+}
+
+/// Hard ceiling on the Sylvester matrix dimension (= `deg_y(p) + deg_y(q)`). The
+/// determinant is computed by Leibniz permutation expansion (`dim!` terms over a
+/// polynomial ring), so the cap keeps it bounded; beyond it we decline.
+const MAX_SYLVESTER_DIM: usize = 6;
+
+/// Decide a 2-variable coupled component by resultant elimination. Returns
+/// `Some(verdict)` only for the in-scope shape (≥ 2 equalities, rational-x lifts,
+/// replay-confirmed); `None` declines (region-only, algebraic-x lift, overflow,
+/// no eliminable equality pair, any doubt).
+fn decide_two_var_component(
+    comp: &[&MultiAtom],
+    comp_vars: &BTreeSet<SymbolId>,
+) -> Option<TwoVarVerdict> {
+    debug_assert_eq!(comp_vars.len(), 2);
+    let mut vit = comp_vars.iter();
+    let v0 = *vit.next().unwrap();
+    let v1 = *vit.next().unwrap();
+
+    // Gather the equality atoms of this component.
+    let equalities: Vec<&MultiPoly> = comp
+        .iter()
+        .filter(|a| matches!(a.cmp, Cmp::Eq))
+        .map(|a| &a.poly)
+        .collect();
+    if equalities.len() < 2 {
+        // No eliminable equality pair (e.g. a region-only inequality system like
+        // `x*y > 1 ∧ x > 0`): the satisfying set can be a 2-D region a resultant
+        // cannot certify. Decline — the outer engine may still decide it.
+        return None;
+    }
+
+    // Whether *every* atom in the component is an equality (no inequality region
+    // can escape the common-root enumeration ⇒ a complete `Unsat` is possible).
+    let all_equalities = comp.iter().all(|a| matches!(a.cmp, Cmp::Eq));
+
+    // Try eliminating each variable. A definitive verdict (Sat / Unsat) from
+    // either orientation wins immediately; otherwise we keep the weakest sound
+    // outcome (`Unknown` if a resultant was computed but could not be certified;
+    // `None`/decline if no orientation even had an eliminable pair).
+    let mut soft: Option<TwoVarVerdict> = None;
+    for &(elim, keep) in &[(v1, v0), (v0, v1)] {
+        // Pick two equalities that both have positive degree in `elim` (so the
+        // Sylvester matrix is well-formed and the elimination is meaningful).
+        let mut pair: Option<(&MultiPoly, &MultiPoly)> = None;
+        'outer: for i in 0..equalities.len() {
+            if degree_in(equalities[i], elim) == 0 {
+                continue;
+            }
+            for &q in equalities.iter().skip(i + 1) {
+                if degree_in(q, elim) == 0 {
+                    continue;
+                }
+                pair = Some((equalities[i], q));
+                break 'outer;
+            }
+        }
+        let Some((p, q)) = pair else { continue };
+
+        // Eliminate `elim` → a univariate integer polynomial in `keep`.
+        let Some(res_int) = resultant_univariate(p, q, elim, keep) else {
+            // Overflow, dimension cap, or a degenerate (identically-zero)
+            // resultant: this orientation cannot certify ⇒ remember `Unknown`,
+            // try the other orientation.
+            soft = Some(TwoVarVerdict::Unknown);
+            continue;
+        };
+        if res_int.len() <= 1 {
+            // The resultant collapsed to a constant. A *nonzero* constant means the
+            // two equalities share no common root anywhere ⇒ Unsat. A zero constant
+            // (every coefficient vanished) means a non-trivial common factor /
+            // shared curve — we cannot enumerate that finitely ⇒ `Unknown`.
+            if res_int.first().copied().unwrap_or(0) != 0 {
+                return Some(TwoVarVerdict::Unsat);
+            }
+            soft = Some(TwoVarVerdict::Unknown);
+            continue;
+        }
+
+        // Isolate the real x-roots of the resultant. These keep-variable values are
+        // EXHAUSTIVE for the common (keep, elim) solutions of the two equalities.
+        let Some(roots) = isolate_roots(&res_int) else {
+            soft = Some(TwoVarVerdict::Unknown);
+            continue;
+        };
+
+        if roots.is_empty() {
+            // No real common x ⇒ the two equalities have no common real solution ⇒
+            // the whole system is Unsat (exact: an empty equality variety stays
+            // empty under any additional constraint).
+            return Some(TwoVarVerdict::Unsat);
+        }
+
+        // Lift each candidate. We require RATIONAL x-candidates: an algebraic α
+        // would make the substituted y-coefficients algebraic (field arithmetic,
+        // deferred ⇒ skip that candidate). Track whether every candidate was a
+        // clean rational lift, which is required to claim a complete `Unsat`.
+        let mut all_rational_x = true;
+        let mut lift_overflow = false;
+        for root in &roots {
+            let Root::Rational(alpha) = root else {
+                all_rational_x = false;
+                continue;
+            };
+            // Substitute keep := α into p and q ⇒ univariate polys in `elim`.
+            match lift_candidate(comp, *alpha, keep, elim, p, q) {
+                LiftOutcome::Found(bindings) => return Some(TwoVarVerdict::Sat(bindings)),
+                LiftOutcome::None => {}
+                LiftOutcome::Overflow => {
+                    // Cannot rule the candidate in or out.
+                    lift_overflow = true;
+                }
+            }
+        }
+
+        // No candidate produced a full-component-satisfying (keep, elim). This is a
+        // complete enumeration ⇒ Unsat **only** when (a) the component is all
+        // equalities (no inequality region can hide a solution outside the common
+        // roots), (b) every x-candidate was a clean rational lift (no algebraic α
+        // was skipped), and (c) no lift overflowed. Otherwise the enumeration is
+        // not provably exhaustive ⇒ a sound `Unknown` short-circuit.
+        if all_equalities && all_rational_x && !lift_overflow {
+            return Some(TwoVarVerdict::Unsat);
+        }
+        soft = Some(TwoVarVerdict::Unknown);
+    }
+
+    // Either an orientation computed a resultant but could not certify (`soft`
+    // holds `Unknown`), or no orientation even had an eliminable equality pair
+    // (`soft` is `None` ⇒ decline back to the outer engine).
+    soft
+}
+
+/// Substitute `keep := α` (rational) into `p` and `q`, then find a common root of
+/// the two resulting univariate polynomials in `elim`. For each candidate root β
+/// (rational or a single algebraic number), assemble the model `{keep→α, elim→β}`
+/// and check it against **every** atom of the component. Returns `Some(Some(..))`
+/// on the first satisfying binding, `Some(None)` if none of this α's β candidates
+/// satisfy the component, `None` to decline (overflow / unsupported shape).
+fn lift_candidate(
+    comp: &[&MultiAtom],
+    alpha: Rational,
+    keep: SymbolId,
+    elim: SymbolId,
+    p: &MultiPoly,
+    q: &MultiPoly,
+) -> LiftOutcome {
+    let mut subst: BTreeMap<SymbolId, Rational> = BTreeMap::new();
+    subst.insert(keep, alpha);
+    // p(α, elim) and q(α, elim) as single-variable integer polynomials in `elim`.
+    let Some(p_alpha) = substitute_rationals(p, &subst) else {
+        return LiftOutcome::Overflow;
+    };
+    let Some(q_alpha) = substitute_rationals(q, &subst) else {
+        return LiftOutcome::Overflow;
+    };
+    let Some(p_poly) = p_alpha.to_single_var_integer_poly(elim) else {
+        return LiftOutcome::Overflow;
+    };
+    let Some(q_poly) = q_alpha.to_single_var_integer_poly(elim) else {
+        return LiftOutcome::Overflow;
+    };
+    // A degenerate (constant) residual after substitution means the resultant root
+    // did not actually pin a y via this polynomial; require genuine univariate
+    // polys so the common-root search is well-defined.
+    if p_poly.len() <= 1 && q_poly.len() <= 1 {
+        return LiftOutcome::None;
+    }
+
+    // Candidate β values: the real roots of p(α,·) (or q(α,·) if p degenerated).
+    let base_poly = if p_poly.len() > 1 { &p_poly } else { &q_poly };
+    let other_poly = if p_poly.len() > 1 { &q_poly } else { &p_poly };
+    let Some(beta_roots) = isolate_roots(base_poly) else {
+        return LiftOutcome::Overflow;
+    };
+
+    for broot in &beta_roots {
+        // β must also be a root of the *other* equality (the common solution).
+        let beta_val = match broot {
+            Root::Rational(b) => {
+                // Check the other equality vanishes at β (if it is non-constant).
+                if other_poly.len() > 1 {
+                    match eval_rat(other_poly, *b) {
+                        Some(v) if !v.is_zero() => continue,
+                        Some(_) => {}
+                        None => return LiftOutcome::Overflow,
+                    }
+                }
+                Value::Real(*b)
+            }
+            Root::Algebraic(a) => {
+                // The other equality must vanish at this algebraic β.
+                if other_poly.len() > 1 {
+                    match a.sign_at(other_poly) {
+                        Some(Sign::Zero) => {}
+                        Some(_) => continue,
+                        None => return LiftOutcome::Overflow,
+                    }
+                }
+                Value::RealAlgebraic(a.clone())
+            }
+        };
+
+        // Build the candidate component model and check it against EVERY atom of
+        // the component (equalities and any inequalities), exactly.
+        let mut model = Model::new();
+        model.set(keep, Value::Real(alpha));
+        model.set(elim, beta_val.clone());
+        if two_var_model_satisfies(comp, &model) {
+            return LiftOutcome::Found(vec![(keep, Value::Real(alpha)), (elim, beta_val)]);
+        }
+    }
+    LiftOutcome::None
+}
+
+/// Exact check that the (at most two-variable) `model` satisfies every atom of the
+/// component, reusing the algebraic-aware single-atom replay. Returns `false` on
+/// any failure or unsupported shape (the caller then keeps searching / declines).
+fn two_var_model_satisfies(comp: &[&MultiAtom], model: &Model) -> bool {
+    comp.iter().all(|atom| {
+        let ma = MultiAtom {
+            cmp: atom.cmp,
+            poly: atom.poly.clone(),
+        };
+        replay_multi_atom(&ma, model)
+    })
+}
+
+/// The degree of a [`MultiPoly`] in one variable `v` (highest exponent of `v`
+/// across its monomials; 0 if `v` does not appear).
+fn degree_in(p: &MultiPoly, v: SymbolId) -> u32 {
+    let mut d = 0u32;
+    for k in p.terms.keys() {
+        for &(s, e) in k {
+            if s == v {
+                d = d.max(e);
+            }
+        }
+    }
+    d
+}
+
+/// View the bivariate `p` as a univariate polynomial in `elim` whose coefficients
+/// are univariate **rational** polynomials in `keep` (LSB-first). The outer `Vec`
+/// is indexed by the exponent of `elim`; each inner `Vec<Rational>` is LSB-first
+/// in `keep`. Returns `None` if `p` mentions any variable other than {elim, keep}
+/// or on a degree overflow.
+fn poly_in_elim_over_keep(
+    p: &MultiPoly,
+    elim: SymbolId,
+    keep: SymbolId,
+) -> Option<Vec<Vec<Rational>>> {
+    let dy = usize::try_from(degree_in(p, elim)).ok()?;
+    let dx = usize::try_from(degree_in(p, keep)).ok()?;
+    let mut out: Vec<Vec<Rational>> = vec![vec![Rational::zero(); dx + 1]; dy + 1];
+    for (k, &c) in &p.terms {
+        let mut ey = 0u32;
+        let mut ex = 0u32;
+        for &(s, e) in k {
+            if s == elim {
+                ey = e;
+            } else if s == keep {
+                ex = e;
+            } else {
+                return None; // foreign variable
+            }
+        }
+        let iy = usize::try_from(ey).ok()?;
+        let ix = usize::try_from(ex).ok()?;
+        out[iy][ix] = out[iy][ix].checked_add(c)?;
+    }
+    Some(out)
+}
+
+/// Multiply two LSB-first rational univariate polynomials. `None` on overflow.
+fn ratpoly_mul(a: &[Rational], b: &[Rational]) -> Option<Vec<Rational>> {
+    if a.is_empty() || b.is_empty() {
+        return Some(vec![Rational::zero()]);
+    }
+    let mut out = vec![Rational::zero(); a.len() + b.len() - 1];
+    for (i, &ca) in a.iter().enumerate() {
+        if ca.is_zero() {
+            continue;
+        }
+        for (j, &cb) in b.iter().enumerate() {
+            let term = ca.checked_mul(cb)?;
+            out[i + j] = out[i + j].checked_add(term)?;
+        }
+    }
+    Some(out)
+}
+
+/// Add two LSB-first rational univariate polynomials. `None` on overflow.
+fn ratpoly_add(a: &[Rational], b: &[Rational]) -> Option<Vec<Rational>> {
+    let n = a.len().max(b.len());
+    let mut out = vec![Rational::zero(); n];
+    for (i, slot) in out.iter_mut().enumerate() {
+        let ca = a.get(i).copied().unwrap_or_else(Rational::zero);
+        let cb = b.get(i).copied().unwrap_or_else(Rational::zero);
+        *slot = ca.checked_add(cb)?;
+    }
+    Some(out)
+}
+
+/// Negate an LSB-first rational univariate polynomial. `None` on overflow.
+fn ratpoly_neg(a: &[Rational]) -> Option<Vec<Rational>> {
+    let mut out = Vec::with_capacity(a.len());
+    for &c in a {
+        out.push(c.checked_neg()?);
+    }
+    Some(out)
+}
+
+/// `Res_elim(p, q)` as a univariate **integer** polynomial in `keep`, by the
+/// Sylvester determinant. Entries are univariate rational polynomials in `keep`;
+/// the determinant is computed by Leibniz permutation expansion over that
+/// polynomial ring (exact, bounded by `MAX_SYLVESTER_DIM`). Denominators are then
+/// cleared to integers (LSB-first). Returns `None` on a foreign variable, a
+/// dimension over the cap, an identically-zero resultant, or any overflow.
+fn resultant_univariate(
+    p: &MultiPoly,
+    q: &MultiPoly,
+    elim: SymbolId,
+    keep: SymbolId,
+) -> Option<Vec<i128>> {
+    let pc = poly_in_elim_over_keep(p, elim, keep)?;
+    let qc = poly_in_elim_over_keep(q, elim, keep)?;
+    let m = pc.len() - 1; // deg_elim(p)
+    let n = qc.len() - 1; // deg_elim(q)
+    if m == 0 || n == 0 {
+        return None; // not genuinely bivariate in `elim`; cannot eliminate
+    }
+    let dim = m + n;
+    if dim > MAX_SYLVESTER_DIM {
+        return None;
+    }
+    // Build the (m+n)×(m+n) Sylvester matrix. Rows 0..n are shifted copies of p's
+    // coefficient row (highest elim-degree first); rows n..n+m are shifted copies
+    // of q's. Each cell is an LSB-first rational polynomial in `keep`.
+    let zero_cell = || vec![Rational::zero()];
+    let mut mat: Vec<Vec<Vec<Rational>>> = vec![vec![zero_cell(); dim]; dim];
+    // p's coefficients, MSB(elim)-first: index 0 ↔ elim^m.
+    for (row, slot) in mat.iter_mut().take(n).enumerate() {
+        for (j, coeff) in pc.iter().rev().enumerate() {
+            slot[row + j].clone_from(coeff);
+        }
+    }
+    for (i, slot) in mat.iter_mut().skip(n).take(m).enumerate() {
+        for (j, coeff) in qc.iter().rev().enumerate() {
+            slot[i + j].clone_from(coeff);
+        }
+    }
+
+    // Determinant by Leibniz expansion over permutations (dim ≤ MAX_SYLVESTER_DIM).
+    let det = sylvester_determinant(&mat)?;
+    // Clear denominators → integer poly. A genuinely-zero determinant declines.
+    if det.iter().all(|c| c.is_zero()) {
+        return None;
+    }
+    rat_coeffs_to_integer(&det)
+}
+
+/// Determinant of a square matrix whose entries are LSB-first rational univariate
+/// polynomials, by Leibniz permutation expansion (exact; bounded dimension).
+/// Returns the determinant polynomial (LSB-first). `None` on overflow.
+fn sylvester_determinant(mat: &[Vec<Vec<Rational>>]) -> Option<Vec<Rational>> {
+    let n = mat.len();
+    let mut perm: Vec<usize> = (0..n).collect();
+    let mut acc = vec![Rational::zero()];
+    let mut used = vec![false; n];
+    leibniz_recurse(mat, &mut perm, 0, &mut used, &mut acc)?;
+    Some(acc)
+}
+
+/// One step of the Leibniz determinant expansion: choose the row for column `col`,
+/// recurse, and at a complete permutation accumulate the signed entry product (the
+/// sign from inversion parity). `None` on any polynomial-arithmetic overflow.
+fn leibniz_recurse(
+    mat: &[Vec<Vec<Rational>>],
+    perm: &mut [usize],
+    col: usize,
+    used: &mut [bool],
+    acc: &mut Vec<Rational>,
+) -> Option<()> {
+    let n = mat.len();
+    if col == n {
+        let mut prod = vec![Rational::integer(1)];
+        for (i, &c) in perm.iter().enumerate() {
+            prod = ratpoly_mul(&prod, &mat[i][c])?;
+        }
+        if permutation_sign(perm) < 0 {
+            prod = ratpoly_neg(&prod)?;
+        }
+        *acc = ratpoly_add(acc, &prod)?;
+        return Some(());
+    }
+    for r in 0..n {
+        if used[r] {
+            continue;
+        }
+        used[r] = true;
+        perm[col] = r;
+        leibniz_recurse(mat, perm, col + 1, used, acc)?;
+        used[r] = false;
+    }
+    Some(())
+}
+
+/// The sign (+1 / −1) of a permutation given as a slice mapping position → value,
+/// by counting inversions.
+fn permutation_sign(perm: &[usize]) -> i32 {
+    let mut inv = 0usize;
+    for i in 0..perm.len() {
+        for j in (i + 1)..perm.len() {
+            if perm[i] > perm[j] {
+                inv += 1;
+            }
+        }
+    }
+    if inv % 2 == 0 { 1 } else { -1 }
 }
 
 /// Union-find root with path-halving.
