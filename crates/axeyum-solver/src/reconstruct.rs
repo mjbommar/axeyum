@@ -1414,6 +1414,27 @@ fn is_sos_rational_weight(arena: &TermArena, assertions: &[TermId]) -> bool {
     }
 }
 
+/// Does `assertions` have an SOS certificate refuting a STRICT `p > 0` atom
+/// (`strict_lt == false`) whose squares decompose `−p` and whose denominators clear
+/// within this slice's bounds? This is the `p > 0` dual shape
+/// [`reconstruct_sos_rational_weight_gt`] handles (e.g. `−x² > 0`, `−x²−y² > 0`);
+/// the classifier uses it to route such queries to [`ProofFragment::Sos`] (the
+/// strict-inequality classifiers above all require `strict_lt`, so they never match
+/// a `p > 0` certificate).
+fn is_sos_rational_weight_gt(arena: &TermArena, assertions: &[TermId]) -> bool {
+    match crate::nra_real_root::sos_refute_with_certificate(arena, assertions) {
+        Some(cert) => {
+            !cert.strict_lt()
+                && cert
+                    .rational_squares()
+                    .as_deref()
+                    .and_then(clear_rational_sos_denominators)
+                    .is_some()
+        }
+        None => false,
+    }
+}
+
 /// Classify `assertions` into the [`ProofFragment`] whose emitter+reconstructor
 /// pair handles it, by scanning the operators and sorts that appear. Precedence:
 /// a top-level quantifier wraps any ground theory (`∃` skolemized before `∀`),
@@ -1476,6 +1497,7 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
             || is_sos_single_unit_square(arena, assertions)
             || is_sos_multi_unit_square(arena, assertions)
             || is_sos_rational_weight(arena, assertions)
+            || is_sos_rational_weight_gt(arena, assertions)
         {
             ProofFragment::Sos
         } else {
@@ -9058,6 +9080,13 @@ pub fn reconstruct_sos_proof(
         if let Some(proof) = reconstruct_sos_rational_weight(ctx, arena, assertions)? {
             return Ok(proof);
         }
+        // Strict-inequality DUAL: any query whose SOS certificate refutes `p > 0`
+        // (`strict_lt == false`) — the certificate's squares decompose `−p`. Mirrors
+        // the `p < 0` rational-weight fold, closing via the exact `sosK + mpK = 0`
+        // cancellation (sosK = `−(M·p)`, mpK = `M·p`).
+        if let Some(proof) = reconstruct_sos_rational_weight_gt(ctx, arena, assertions)? {
+            return Ok(proof);
+        }
         return Err(ReconstructError::UnsupportedTerm {
             term: "SOS reconstruction handles a single square `ℓ*ℓ < 0` of a ±1-coefficient \
                    linear form ℓ, the two-variable AM-GM sum form `x²+y²−2xy < 0`, any query \
@@ -10096,6 +10125,236 @@ fn reconstruct_sos_rational_weight(
         Err(ReconstructError::KernelRejected {
             rule: "sos_rational_weight".to_owned(),
             detail: "SOS rational-weight refutation did not infer to False".to_owned(),
+        })
+    }
+}
+
+/// Reconstruct, **from the SOS certificate**, any STRICT query `p > 0` whose
+/// certificate is a rational-weight sum of squares of `−p`. This is the `p > 0`
+/// (`strict_lt == false`) dual of [`reconstruct_sos_rational_weight`]: the
+/// self-checked certificate certifies `−M ⪰ 0`, so its squares decompose **`−p`**
+/// (`−p = Σ dₖ ℓₖ²`, i.e. `p ≤ 0` everywhere), contradicting the asserted `p > 0`.
+///
+/// Clearing denominators (the SAME [`clear_rational_sos_denominators`] machinery)
+/// gives the integer identity `sosK := Σ (M·wₖ)(ℓₖ⁺)² = M·(−p) = −(M·p)`. With
+/// `mpK := p + p + … + p` (`M` right-nested copies of `p`):
+/// - `nn : le zero sosK` — the SAME integer-weight nonnegativity fold over
+///   `sq_nonneg`, `add_le_add`, and the `add zero zero → zero` cast. Only needs
+///   `0 ≤ sosK`, which holds regardless of what `sosK` denotes.
+/// - `mppos : lt zero mpK` — fold the asserted `hlt : lt zero p` (`0 < p`) `M`
+///   times via `add_lt_add` (both premises `lt`, so `0+0 < p+tail`), casting the
+///   LEFT `add zero zero → zero` each step so the nesting matches `mpK`.
+/// - `combined : lt zero (add sosK mpK)` via `add_lt_add_of_le_of_lt zero sosK zero
+///   mpK nn mppos` (summing `0 ≤ sosK` with `0 < mpK`), casting the LEFT `add zero
+///   zero → zero`.
+/// - `cancel : Eq R (add sosK mpK) zero` — `normalize_deg2(add sosK mpK)` MUST
+///   yield EMPTY canonical gens (since `sosK = −(M·p)` and `mpK = M·p` cancel
+///   exactly), whose canonical form is the kernel `zero`. If the gens are NOT empty,
+///   the certificate/clearing disagree — decline (`Ok(None)`), never fabricate.
+/// - `lt_cast_right combined cancel : lt zero zero`, refuted by `lt_irrefl zero`.
+///
+/// Returns `Ok(Some(proof))` (kernel-gated `infer` + `def_eq False`), `Ok(None)` to
+/// decline (not this shape — including `p < 0`, handled by the strict sibling — or a
+/// bound/overflow/cancellation mismatch), or `Err(_)` only on a genuine kernel
+/// rejection.
+#[allow(clippy::too_many_lines)]
+fn reconstruct_sos_rational_weight_gt(
+    ctx: &mut LraReconstructCtx,
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<Option<ExprId>, ReconstructError> {
+    let Some(cert) = crate::nra_real_root::sos_refute_with_certificate(arena, assertions) else {
+        return Ok(None);
+    };
+    // This path owns the `p > 0` (`−M` PSD) dual; the `p < 0` case is the strict
+    // sibling's.
+    if cert.strict_lt() {
+        return Ok(None);
+    }
+    let Some(rat_squares) = cert.rational_squares() else {
+        return Ok(None);
+    };
+    let n_vars = cert.n_vars();
+
+    // Clear all denominators: `sosK = Σ (M·wₖ)·(ℓₖ⁺)²`. Since the certificate's
+    // squares decompose `−p`, this `sosK` equals `M·(−p) = −(M·p)`.
+    let Some((m, cleared)) = clear_rational_sos_denominators(&rat_squares) else {
+        return Ok(None);
+    };
+    debug_assert!(m >= 1);
+
+    // Faithful encoding of the asserted polynomial `p` (integer-coefficient).
+    let Some(p_rexpr) = cert_poly_to_rexpr(cert.poly_terms(), n_vars) else {
+        return Ok(None);
+    };
+
+    // Per-square: the integer form `ℓₖ⁺` and the square `(ℓₖ⁺·ℓₖ⁺)`, each repeated
+    // `M·wₖ` times (flattened, so the integer-weight fold sees one square per copy).
+    let mut ell_rexprs: Vec<RExpr> = Vec::new();
+    let mut sq_rexprs: Vec<RExpr> = Vec::new();
+    for (weight, int_coeffs) in &cleared {
+        let Some(ell) = int_lin_to_rexpr(int_coeffs) else {
+            return Ok(None);
+        };
+        for _ in 0..*weight {
+            sq_rexprs.push(RExpr::Mul(Box::new(ell.clone()), Box::new(ell.clone())));
+            ell_rexprs.push(ell.clone());
+        }
+    }
+
+    // `sosK` as an RExpr: RIGHT-nested add over all (repeated) squares, last as the
+    // innermost leaf (no trailing zero), matching `normalize_deg2`'s faithful form.
+    let Some((last, init)) = sq_rexprs.split_last() else {
+        return Ok(None);
+    };
+    let mut sos_rexpr = last.clone();
+    for r in init.iter().rev() {
+        sos_rexpr = RExpr::Add(Box::new(r.clone()), Box::new(sos_rexpr));
+    }
+
+    // `mpK` as an RExpr: M RIGHT-nested copies of p (p + (p + (… + p))), last = leaf.
+    let mut mp_rexpr = p_rexpr.clone();
+    for _ in 1..m {
+        mp_rexpr = RExpr::Add(Box::new(p_rexpr.clone()), Box::new(mp_rexpr));
+    }
+
+    // Kernel-level per-square `ℓₖ⁺` and `(ℓₖ⁺·ℓₖ⁺)`, emitted from the SAME RExprs so
+    // the `mul`/`add` ExprIds are hash-consed identical to those inside `sosK`.
+    let zero = ctx.mk_zero();
+    let mut ells: Vec<ExprId> = Vec::with_capacity(ell_rexprs.len());
+    let mut sqs: Vec<ExprId> = Vec::with_capacity(sq_rexprs.len());
+    for ell_rexpr in &ell_rexprs {
+        let ell = ctx.emit_rexpr(ell_rexpr);
+        ells.push(ell);
+        sqs.push(ctx.mk_mul(ell, ell));
+    }
+
+    // `sosK` as a kernel ExprId: emit from the faithful RExpr (hash-consed identical
+    // to the right-nested `add` of `sqs`).
+    let sosk = ctx.emit_rexpr(&sos_rexpr);
+    // `mpK` as a kernel ExprId: M right-nested copies of `p` (the leaf `p` is the
+    // faithful encoding of `p_rexpr`).
+    let p_leaf = ctx.emit_rexpr(&p_rexpr);
+    let mut mpk = p_leaf;
+    for _ in 1..m {
+        mpk = ctx.mk_add(p_leaf, mpk);
+    }
+
+    // -------------------------------------------------------------------------
+    // Nonnegativity fold (existing integer-weight machinery): nn : le zero sosK.
+    // sosK = add sq_0 (add sq_1 (… sq_{N-1})). Base = sq_nonneg of the LAST square;
+    // fold earlier squares from last-1 down to first, casting `add zero zero → zero`.
+    // -------------------------------------------------------------------------
+    let nsq = sqs.len();
+    let sq_nonneg_of = |ctx: &mut LraReconstructCtx, ell: ExprId| -> ExprId {
+        let name = ctx.arith().sq_nonneg;
+        let f = ctx.kernel_mut().const_(name, vec![]);
+        ctx.kernel_mut().app(f, ell) // le zero (mul ell ell)
+    };
+    let mut nn = sq_nonneg_of(ctx, ells[nsq - 1]);
+    let mut tail = sqs[nsq - 1];
+    for idx in (0..nsq - 1).rev() {
+        let sq = sqs[idx];
+        let sq_k = sq_nonneg_of(ctx, ells[idx]);
+        let combined = ctx.add_le_add_app(zero, sq, zero, tail, sq_k, nn);
+        let new_tail = ctx.mk_add(sq, tail);
+        let lhs = ctx.mk_add(zero, zero);
+        let add_zero_zero = ctx.add_zero_eq(zero);
+        nn = ctx.le_cast_left(lhs, zero, new_tail, combined, add_zero_zero);
+        tail = new_tail;
+    }
+    debug_assert_eq!(tail, sosk);
+
+    // -------------------------------------------------------------------------
+    // Positivity M-fold: mppos : lt zero mpK, where mpK = add p (add p (… p)).
+    // The asserted atom is `hlt : lt zero p` (`0 < p`). Seed from the INNERMOST p
+    // (the leaf), then fold the earlier copies from M-2 down to 0: combine
+    // `hlt : lt zero p` with the running `lt zero tail` via
+    // `add_lt_add zero p zero tail hlt acc : lt (add zero zero)(add p tail)`, then
+    // cast the LEFT side `add zero zero → zero` so the type stays `lt zero (add p
+    // tail)` — matching mpK's exact right-nesting.
+    // -------------------------------------------------------------------------
+    // hlt : lt zero p — the asserted atom `0 < p` over the faithful encoding of p.
+    let hlt = {
+        let p_prop = ctx.mk_lt(zero, p_leaf);
+        ctx.hyp_axiom(p_prop)?
+    };
+    let mut mppos = hlt; // lt zero p (p_leaf)
+    let mut mtail = p_leaf; // running right-nested tail (matches mpK structurally)
+    for _ in 1..m {
+        // add_lt_add zero p zero tail hlt mppos : lt (add zero zero)(add p tail).
+        let combined = ctx.add_lt_add_app(zero, p_leaf, zero, mtail, hlt, mppos);
+        let new_tail = ctx.mk_add(p_leaf, mtail); // add p tail (next mpK prefix)
+        let add_zz = ctx.mk_add(zero, zero);
+        let azz = ctx.add_zero_eq(zero); // Eq R (add zero zero) zero
+        mppos = ctx.lt_cast_left(add_zz, zero, new_tail, combined, azz);
+        mtail = new_tail;
+    }
+    debug_assert_eq!(mtail, mpk);
+
+    // -------------------------------------------------------------------------
+    // Combine: add_lt_add_of_le_of_lt zero sosK zero mpK nn mppos
+    //   : lt (add zero zero)(add sosK mpK). Cast the LEFT `add zero zero → zero`.
+    // -------------------------------------------------------------------------
+    let combined_lt = ctx.add_lt_add_of_le_of_lt_app(zero, sosk, zero, mpk, nn, mppos);
+    let add_zz = ctx.mk_add(zero, zero);
+    let azz = ctx.add_zero_eq(zero); // Eq R (add zero zero) zero
+    let sos_plus_mp = ctx.mk_add(sosk, mpk);
+    let combined = ctx.lt_cast_left(add_zz, zero, sos_plus_mp, combined_lt, azz);
+    // combined : lt zero (add sosK mpK).
+
+    // -------------------------------------------------------------------------
+    // Cancellation identity: cancel : Eq R (add sosK mpK) zero. Since sosK = −(M·p)
+    // and mpK = M·p, the degree-2 normal form of `add sosK mpK` has EMPTY canonical
+    // gens, whose canonical form is the kernel `zero`. The normalizer returns
+    // `proof : Eq R (add sosK mpK) (mono_gens_to_expr canon_gens)`; if `canon_gens`
+    // is empty, that target IS `zero` (mono_gens_to_expr([]) = mk_zero). If the gens
+    // are NOT empty (cancellation failed ⇒ certificate/clearing mismatch), decline —
+    // never fabricate the identity.
+    // -------------------------------------------------------------------------
+    let cancel_rexpr = RExpr::Add(Box::new(sos_rexpr.clone()), Box::new(mp_rexpr.clone()));
+    let Some((cancel_gens, cancel_kexpr, cancel_proof)) = ctx.normalize_deg2(&cancel_rexpr) else {
+        return Ok(None);
+    };
+    if !cancel_gens.is_empty() {
+        return Ok(None);
+    }
+    // `cancel_kexpr` is the faithful `add sosK mpK`; assert it matches the combined
+    // term so the cast is well-typed (hash-consing makes this an equality of ExprIds).
+    if cancel_kexpr != sos_plus_mp {
+        return Ok(None);
+    }
+    // cancel_proof : Eq R (add sosK mpK) zero (canon of empty gens = zero).
+    let cancel = cancel_proof;
+
+    // lt_cast_right combined cancel : lt zero zero.
+    let lt_zero_zero = ctx.lt_cast_right(zero, sos_plus_mp, zero, combined, cancel);
+    // bad : False := lt_irrefl zero (lt zero zero).
+    let proof = {
+        let irrefl_name = ctx.arith().lt_irrefl;
+        let irrefl = ctx.kernel_mut().const_(irrefl_name, vec![]);
+        let e = ctx.kernel_mut().app(irrefl, zero);
+        ctx.kernel_mut().app(e, lt_zero_zero)
+    };
+
+    // Soundness gate.
+    let inferred = ctx
+        .kernel_mut()
+        .infer(proof)
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "sos_rational_weight_gt".to_owned(),
+            detail: format!("SOS rational-weight (p>0) certificate infer failed: {e:?}"),
+        })?;
+    let false_ = {
+        let f = ctx.arith().logic.false_;
+        ctx.kernel_mut().const_(f, vec![])
+    };
+    if ctx.kernel_mut().def_eq(inferred, false_) {
+        Ok(Some(proof))
+    } else {
+        Err(ReconstructError::KernelRejected {
+            rule: "sos_rational_weight_gt".to_owned(),
+            detail: "SOS rational-weight (p>0) refutation did not infer to False".to_owned(),
         })
     }
 }

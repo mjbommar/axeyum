@@ -367,3 +367,55 @@ fn oversized_cleared_denominator_is_declined() {
         "65x²+64xy+16y² < 0 needs a cleared denominator 65 > SOS_RATIONAL_MAX; it must decline"
     );
 }
+
+/// The `p > 0` strict-inequality DUAL: `−x² > 0` is UNSAT (a real square's
+/// negation is never positive). The self-checked SOS certificate refutes the
+/// `strict_lt == false` atom by certifying `−M ⪰ 0`, so its single square `x`
+/// decomposes `−p = x²`. Reconstruction folds `0 ≤ x²` and `0 < −x²` into
+/// `0 < x² + (−x²)`, then cancels exactly to `0 < 0`, refuted by `lt_irrefl`.
+/// Routes to [`ProofFragment::Sos`] and emits `axeyum_refutation`.
+#[test]
+fn neg_square_gt_zero_reconstructs_to_false() {
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let xx = arena.real_mul(x, x).unwrap();
+    let neg = arena.real_neg(xx).unwrap(); // −x²
+    let zero = arena.real_const(Rational::integer(0));
+    let assertion = arena.real_gt(neg, zero).unwrap(); // −x² > 0
+
+    let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &[assertion])
+        .expect("the strict-dual SOS query `−x² > 0` reconstructs to a kernel-checked False");
+
+    assert_eq!(
+        fragment,
+        ProofFragment::Sos,
+        "a `p > 0` SOS certificate must route to the SOS fragment"
+    );
+    assert!(
+        source.contains("axeyum_refutation"),
+        "the Lean module must contain the refutation theorem"
+    );
+}
+
+/// The multi-square `p > 0` dual: `−x² − y² > 0` is UNSAT. The certificate's two
+/// squares `x`, `y` decompose `−p = x² + y²`; the reconstructor folds both
+/// `sq_nonneg`s into `0 ≤ x² + y²` and combines with `0 < −x²−y²`, cancelling to
+/// `0 < 0`.
+#[test]
+fn neg_sum_of_squares_gt_zero_reconstructs_to_false() {
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let y = arena.real_var("y").unwrap();
+    let xx = arena.real_mul(x, x).unwrap();
+    let yy = arena.real_mul(y, y).unwrap();
+    let sum = arena.real_add(xx, yy).unwrap();
+    let neg = arena.real_neg(sum).unwrap(); // −(x² + y²)
+    let zero = arena.real_const(Rational::integer(0));
+    let assertion = arena.real_gt(neg, zero).unwrap(); // −x² − y² > 0
+
+    let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &[assertion])
+        .expect("the strict-dual SOS query `−x² − y² > 0` reconstructs to a kernel-checked False");
+
+    assert_eq!(fragment, ProofFragment::Sos);
+    assert!(source.contains("axeyum_refutation"));
+}
