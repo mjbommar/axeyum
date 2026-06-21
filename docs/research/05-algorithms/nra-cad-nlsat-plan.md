@@ -121,12 +121,26 @@ SOS reconstruction covers the degree-2 cells.
      CAD (`visit_open_cells`): the same open-cell argument at every recursion level,
      so ≥3-var strict systems decide (Sat + Unsat); decline propagates via `?` so a
      gap is never mistaken for Unsat; nullification at a base point declines.
-   - **next slices:** (b) mixed / non-strict inequality cells — the remaining hard
-     core: sampling the critical *point* cells needs algebraic-coordinate
-     substitution (y-polynomial with `RealAlgebraic` coefficients → root isolation
-     over a number field). (d) per-cell Positivstellensatz evidence (step 4) for
-     Lean reconstruction. Cross-cutting: an adversarial differential fuzz vs Z3
-     guards the whole CAD/grid vertical (DISAGREE=0).
+   - **SOUNDNESS AUDIT DONE** (commits `e39d161`, `af03e7b`, `2def73c`) — an
+     adversarial **Z3 differential fuzz** (`tests/nra_differential_fuzz.rs`, 2000
+     random coupled instances, gate DISAGREE=0) was added over the whole CAD/grid
+     vertical. It found **two foundational wrong-`Unsat` bugs the 1370+ unit tests
+     missed**, both in code every decider shares: (1) `sturm_isolate_rec`
+     double-counted a root sitting at a bisection midpoint
+     (`isolate_roots(−3x²−3x) → {0,0}`); (2) `cell_samples` used deep-dyadic
+     `Root::locate` samples whose exact-rational term-eval overflowed `i128`, and
+     the replay gate read the `Err` as "witness invalid" ⇒ wrong `Unsat`. Fixed
+     (unconditional half-open split; simple eval-clean in-cell samples;
+     replay declines on overflow). Now DISAGREE=0 over 2000 mixed instances. Run
+     the fuzz before any NRA-decider change — it is the standing soundness gate.
+   - **slice b IN PROGRESS** — mixed / non-strict inequality cells. First sub-slice:
+     non-strict/mixed systems whose projection critical points are **rational** —
+     sample the rational 0-cells (boundaries the strict path skips) plus the open
+     cells, decide each substituted univariate system completely; **decline** when a
+     critical keep-value is algebraic (the number-field lifting — `RealAlgebraic`
+     elim-coefficients, the deferred hard core). Fuzz-gated.
+   - **later slices:** algebraic critical-point lifting (number fields), then
+     (d) per-cell Positivstellensatz evidence (step 4) for Lean reconstruction.
 4. Cell-certificate format + the degree-2 reconstruction hook; general
    Positivstellensatz reconstruction is the long arc.
 
