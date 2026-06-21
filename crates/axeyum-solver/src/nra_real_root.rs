@@ -2040,13 +2040,23 @@ fn decide_component(comp: &[&MultiAtom]) -> Option<ComponentOutcome> {
         if comp
             .iter()
             .any(|a| matches!(a.cmp, Cmp::Eq | Cmp::Le | Cmp::Ge))
-            && let Some(verdict) = decide_nonstrict_cad_nvar(comp, &comp_vars)
         {
-            return Some(match verdict {
-                TwoVarVerdict::Unsat => ComponentOutcome::Unsat,
-                TwoVarVerdict::Sat(b) => ComponentOutcome::Sat(b),
-                TwoVarVerdict::Unknown => ComponentOutcome::Unknown,
-            });
+            // First the (faster) rational-critical decomposition; if it declines
+            // (Unknown) — typically because some critical value is ALGEBRAIC — fall
+            // back to the algebraic-capable decomposition, which DECIDES algebraic
+            // critical coordinates via the `Res(min-poly, p)` elimination + exact
+            // field arithmetic. The fallback can only upgrade Unknown→{Sat,Unsat}; it
+            // is never consulted once the rational path returns a definite verdict, so
+            // it can never flip an existing sat/unsat.
+            if let Some(verdict) = decide_nonstrict_cad_nvar(comp, &comp_vars)
+                .or_else(|| decide_nonstrict_cad_nvar_algebraic(comp, &comp_vars))
+            {
+                return Some(match verdict {
+                    TwoVarVerdict::Unsat => ComponentOutcome::Unsat,
+                    TwoVarVerdict::Sat(b) => ComponentOutcome::Sat(b),
+                    TwoVarVerdict::Unknown => ComponentOutcome::Unknown,
+                });
+            }
         }
         // Any decline is left to the outer engine.
         return None;
@@ -3853,6 +3863,303 @@ fn decide_nonstrict_cad_nvar(
     // component is Unsat — EXHAUSTIVELY. Reaching here means every sign test resolved
     // and the decomposition was complete (no decline anywhere).
     Some(TwoVarVerdict::Unsat)
+}
+
+/// The recursive non-strict decomposition that DECIDES ALGEBRAIC critical values
+/// (the slice's extension): it mirrors [`decide_nonstrict_cad_nvar`] but carries a
+/// VALUE base point (each variable bound to a rational OR algebraic [`Value`]) and
+/// derives every fiber's boundaries via the `Res(min-poly, p)` elimination
+/// ([`fiber_boundary_poly`]) instead of declining on the first algebraic critical
+/// value. It is tried ONLY as a fallback after the (faster) rational path
+/// [`decide_nonstrict_cad_nvar`] declines — so it can only upgrade an Unknown to a
+/// definite verdict, never flip an existing one.
+///
+/// SOUNDNESS — identical discipline to the 2-var algebraic decider and the strict
+/// N-var recursion. At each level the fiber boundaries are the real roots of a
+/// RATIONAL univariate in the fiber variable, obtained by eliminating every
+/// algebraic-bound earlier coordinate against its integer min-poly (a SUPERSET of
+/// the true boundaries — conjugate min-poly roots only REFINE the cells, never miss
+/// one), plus the rational-bound coordinates substituted directly. Every open-cell
+/// interior is sampled rationally and every critical 0-cell (rational or algebraic)
+/// is sampled exactly; the base case evaluates every atom's sign at the
+/// fully-bound (mixed rational/algebraic) point via exact field arithmetic
+/// (`multipoly_sign_at`). Any decline — overflow, a nullified residual, an
+/// identically-zero / over-large resultant, incomplete isolation, a field-arithmetic
+/// indeterminacy, or the cell cap — propagates as `None` (Unknown). We never claim
+/// Unsat with a gap, and every Sat carries a (rational/algebraic) witness the caller
+/// replay-checks via the same field arithmetic.
+fn decide_nonstrict_cad_nvar_algebraic(
+    comp: &[&MultiAtom],
+    vars: &BTreeSet<SymbolId>,
+) -> Option<TwoVarVerdict> {
+    debug_assert!(vars.len() >= 3);
+    debug_assert!(
+        comp.iter()
+            .any(|a| matches!(a.cmp, Cmp::Eq | Cmp::Le | Cmp::Ge))
+    );
+
+    let mut polys: Vec<MultiPoly> = Vec::new();
+    for atom in comp {
+        if !polys.iter().any(|p| p.terms == atom.poly.terms) {
+            polys.push(atom.poly.clone());
+        }
+    }
+    if polys.is_empty() {
+        return None;
+    }
+
+    let budget = CellBudget::new();
+    let mut witness: Option<Vec<(SymbolId, Value)>> = None;
+
+    let empty: BTreeMap<SymbolId, Value> = BTreeMap::new();
+    let stopped = visit_all_cells_value(&polys, vars, &empty, &budget, &mut |pt| {
+        // Defensive completeness: the sample must bind EVERY component variable.
+        if vars.iter().any(|v| !pt.contains_key(v)) {
+            return None;
+        }
+        // Each atom's sign at the (mixed rational/algebraic) point, decided exactly by
+        // the field-arithmetic evaluator. An indeterminate sign ⇒ decline (never a gap).
+        let mut all_hold = true;
+        for atom in comp {
+            let s = multipoly_sign_at(&atom.poly, pt)?;
+            if !sign_satisfies(atom.cmp, s) {
+                all_hold = false;
+                break;
+            }
+        }
+        if all_hold {
+            witness = Some(pt.iter().map(|(&v, val)| (v, val.clone())).collect());
+            Some(Visit::Stop)
+        } else {
+            Some(Visit::Continue)
+        }
+    })?;
+
+    if stopped {
+        return Some(TwoVarVerdict::Sat(witness?));
+    }
+
+    // Every cell's sample (open interior AND critical 0-cell, rational or algebraic)
+    // failed, with NO decline anywhere — so the decomposition is COMPLETE and the
+    // component is Unsat, EXHAUSTIVELY (the solution set is a finite union of these
+    // cells; each fiber's boundary superset only refines, never drops, a cell).
+    Some(TwoVarVerdict::Unsat)
+}
+
+/// One VALUE sample point: each (already-eliminated / sampled) variable bound to an
+/// exact rational or algebraic [`Value`].
+type ValuePoint = BTreeMap<SymbolId, Value>;
+
+/// The result of deriving an atom's fiber-boundary polynomial in `elim` at a value
+/// base point ([`fiber_boundary_poly`]).
+enum FiberBoundary {
+    /// A genuine univariate (LSB-first integer) boundary poly in `elim`, `len > 1`;
+    /// its real roots are a superset of `{β : p(base, β) = 0}`.
+    Poly(Vec<i128>),
+    /// This atom imposes NO `elim`-boundary at the base point (a nonzero-constant
+    /// resultant or a residual constant in `elim`).
+    None,
+}
+
+/// Compute a RATIONAL univariate (LSB-first integer poly) in `elim` whose real roots
+/// are a SUPERSET of `{β : p(base, β) = 0}`, where `base` binds the earlier variables
+/// (other than `elim`) to rational or algebraic [`Value`]s.
+///
+/// METHOD: substitute the rational-bound variables directly, then eliminate each
+/// algebraic-bound variable `xᵢ` (value `αᵢ`, integer min-poly `mᵢ`) by the
+/// multivariate resultant `Res_{xᵢ}(mᵢ(xᵢ), cur)` (over the remaining variables) —
+/// the same `Res(min-poly, p)` elimination the 2-var algebraic cell decider uses,
+/// iterated. A common point with `mᵢ(αᵢ)=0` and `p(...)=0` forces the resultant to
+/// vanish, so the final univariate vanishes at every true boundary β; conjugate
+/// min-poly roots may add EXTRA β (a sound superset — it only refines the elim-cells,
+/// never misses a boundary).
+///
+/// Returns `Some(FiberBoundary::Poly(ipoly))` (a genuine univariate boundary poly,
+/// `len > 1`), `Some(FiberBoundary::None)` (no `elim`-boundary from this atom at
+/// `base` — a nonzero constant resultant or a residual constant in `elim`), or `None`
+/// to DECLINE (overflow, an identically-zero resultant, an algebraic coordinate whose
+/// min-poly does not fit `i128`, or the Sylvester-dimension cap).
+fn fiber_boundary_poly(p: &MultiPoly, base: &ValuePoint, elim: SymbolId) -> Option<FiberBoundary> {
+    // Partition the bound earlier variables (those `p` mentions, other than `elim`)
+    // into rational and algebraic. A variable `p` does not mention needs no binding.
+    let pvars = p.vars();
+    let mut rationals: BTreeMap<SymbolId, Rational> = BTreeMap::new();
+    let mut algebraics: Vec<(SymbolId, RealAlgebraic)> = Vec::new();
+    for v in &pvars {
+        if *v == elim {
+            continue;
+        }
+        match base.get(v)? {
+            Value::Real(q) => {
+                rationals.insert(*v, *q);
+            }
+            Value::RealAlgebraic(a) => algebraics.push((*v, a.clone())),
+            _ => return None,
+        }
+    }
+
+    // Substitute the rational coordinates first (exact, cheap). The result still
+    // mentions `elim` and any algebraic-bound variables.
+    let mut cur = substitute_rationals(p, &rationals)?;
+
+    // Eliminate each algebraic-bound variable against its integer min-poly. After all
+    // are eliminated, `cur` is univariate in `elim` with rational coefficients.
+    for (v, a) in &algebraics {
+        if degree_in(&cur, *v) == 0 {
+            // `cur` no longer mentions `v` (an earlier elimination cleared it, or `p`
+            // only ever had it through a now-substituted factor) ⇒ nothing to do.
+            continue;
+        }
+        let m_i128 = a.defining_poly_i128()?; // i128-bound ⇒ decline (sound Unknown)
+        let m_poly = univariate_multipoly(&m_i128, *v)?;
+        if degree_in(&m_poly, *v) == 0 {
+            return None; // algebraic value with a degree-0 min-poly view ⇒ defensive decline
+        }
+        match multi_resultant(&m_poly, &cur, *v)? {
+            ResultantOutcome::Poly(res) => cur = res,
+            // No common `v`-root with the min-poly for any remaining value ⇒ this atom
+            // contributes NO `elim`-boundary at `base`.
+            ResultantOutcome::NonzeroConstant => return Some(FiberBoundary::None),
+            // A shared `v`-factor for all remaining values ⇒ a degeneracy we decline on.
+            ResultantOutcome::Zero => return None,
+        }
+    }
+
+    // `cur` must now be univariate in `elim` (every other variable was substituted or
+    // eliminated). A residual that lost `elim` ⇒ no boundary from this atom.
+    if degree_in(&cur, elim) == 0 {
+        return Some(FiberBoundary::None);
+    }
+    // Any surviving foreign variable would make this not a valid univariate boundary
+    // ⇒ decline (defensive: should not occur, the elimination cleared them all).
+    if cur.vars().iter().any(|v| *v != elim) {
+        return None;
+    }
+    let ipoly = cur.to_single_var_integer_poly(elim)?;
+    if ipoly.len() <= 1 {
+        return Some(FiberBoundary::None);
+    }
+    Some(FiberBoundary::Poly(ipoly))
+}
+
+/// Map an isolated [`Root`] to a [`Value`] for binding into a [`ValuePoint`],
+/// coarsening an algebraic root to a small-denominator bracket so downstream field
+/// arithmetic does not overflow on over-refined endpoints (mirrors
+/// [`decide_nonstrict_cell_algebraic`]). `None` ⇒ decline.
+fn root_to_point_value(r: &Root) -> Option<Value> {
+    match r {
+        Root::Rational(q) => Some(Value::Real(*q)),
+        Root::Algebraic(a) => Some(Value::RealAlgebraic(coarsen_algebraic(a)?)),
+    }
+}
+
+/// The VALUE analogue of [`visit_all_cells`]: invoke `visit` once per cell (open
+/// interior AND critical 0-cell, rational OR algebraic) of the arrangement of the
+/// zero sets of `polys` over `vars`, passing a mixed rational/algebraic
+/// [`ValuePoint`]. Each fiber's boundaries are derived by [`fiber_boundary_poly`]
+/// (the `Res(min-poly, p)` elimination), so an algebraic earlier coordinate is
+/// DECIDED, not declined.
+///
+/// Returns `Some(true)` if a visit asked to stop (witness found), `Some(false)` if
+/// every cell was visited without stopping, or `None` to DECLINE (overflow, a
+/// nullified residual, an identically-zero / over-large resultant, incomplete
+/// isolation, or the cell cap).
+fn visit_all_cells_value(
+    polys: &[MultiPoly],
+    vars: &BTreeSet<SymbolId>,
+    partial: &ValuePoint,
+    budget: &CellBudget,
+    visit: &mut dyn FnMut(&ValuePoint) -> Option<Visit>,
+) -> Option<bool> {
+    if vars.is_empty() {
+        budget.charge()?;
+        return Some(matches!(visit(partial)?, Visit::Stop));
+    }
+    if vars.len() == 1 {
+        let var = *vars.iter().next().unwrap();
+        // The deepest level: every poly is univariate in `var` (or constant). Its real
+        // roots — rational OR algebraic — are the critical values; sample the open-cell
+        // interiors (rational) and each critical value (as a Value).
+        let mut roots: Vec<Root> = Vec::new();
+        for p in polys {
+            if degree_in(p, var) == 0 {
+                continue;
+            }
+            let ipoly = p.to_single_var_integer_poly(var)?;
+            if ipoly.len() <= 1 {
+                continue;
+            }
+            roots.extend(isolate_roots(&ipoly)?);
+        }
+        let crit = dedup_sorted_roots(&roots)?;
+        if crit.len() > MAX_CAD_CELLS {
+            return None;
+        }
+        return visit_axis_values(&crit, var, partial, budget, visit);
+    }
+
+    // N > 1: eliminate the deterministic first variable. The projection is RATIONAL
+    // (identical to the strict / rational paths); only the fiber sampling changes.
+    let elim = *vars.iter().next().unwrap();
+    let mut rest: BTreeSet<SymbolId> = vars.clone();
+    rest.remove(&elim);
+    let projected = project_strict(polys, elim, &rest)?;
+
+    visit_all_cells_value(&projected, &rest, partial, budget, &mut |base_pt| {
+        // Derive the `elim`-fiber boundaries at this (possibly algebraic) base point
+        // via the `Res(min-poly, p)` elimination — a SUPERSET of the true boundaries.
+        let mut roots: Vec<Root> = Vec::new();
+        for p in polys {
+            if degree_in(p, elim) == 0 {
+                continue;
+            }
+            if let FiberBoundary::Poly(ipoly) = fiber_boundary_poly(p, base_pt, elim)? {
+                roots.extend(isolate_roots(&ipoly)?);
+            }
+        }
+        let crit = dedup_sorted_roots(&roots)?;
+        if crit.len() > MAX_CAD_CELLS {
+            return None;
+        }
+        if visit_axis_values(&crit, elim, base_pt, budget, &mut |pt| visit(pt))? {
+            Some(Visit::Stop)
+        } else {
+            Some(Visit::Continue)
+        }
+    })
+}
+
+/// Sample one fiber axis given its (sorted, deduped) critical roots `crit` and the
+/// base [`ValuePoint`]: visit each open-cell interior (a rational sample) and each
+/// critical 0-cell (rational or algebraic, as a [`Value`]). Returns `Some(true)` if a
+/// visit asked to stop, `Some(false)` if all were visited, or `None` to decline.
+fn visit_axis_values(
+    crit: &[Root],
+    var: SymbolId,
+    base: &ValuePoint,
+    budget: &CellBudget,
+    visit: &mut dyn FnMut(&ValuePoint) -> Option<Visit>,
+) -> Option<bool> {
+    // Open-cell interiors first (rational ⇒ a simpler witness), then the 0-cells.
+    let open = cell_samples(crit)?;
+    for q in open {
+        budget.charge()?;
+        let mut pt = base.clone();
+        pt.insert(var, Value::Real(q));
+        if matches!(visit(&pt)?, Visit::Stop) {
+            return Some(true);
+        }
+    }
+    for r in crit {
+        budget.charge()?;
+        let val = root_to_point_value(r)?;
+        let mut pt = base.clone();
+        pt.insert(var, val);
+        if matches!(visit(&pt)?, Visit::Stop) {
+            return Some(true);
+        }
+    }
+    Some(false)
 }
 
 /// The partial derivative `∂p/∂v` of a [`MultiPoly`]: each monomial `c·v^e·rest`

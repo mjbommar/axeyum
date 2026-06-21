@@ -2215,3 +2215,140 @@ fn nonstrict_unsatisfiable_never_sat() {
         "y≥x²+1 ∧ y≤0 is UNSAT; must never be Sat; got {r:?}"
     );
 }
+
+// ============================================================================
+// Recursive N-var (≥3) NON-STRICT CAD with ALGEBRAIC critical coordinates.
+//
+// The rational-critical N-var path declines the moment any critical value at any
+// recursion level is irrational; the algebraic fallback DECIDES those slices by the
+// `Res(min-poly, p)` elimination + exact field arithmetic. These tests pin the
+// upgrades (Unknown→Sat / Unknown→Unsat) and the soundness-negative guards.
+// ============================================================================
+
+/// 3-var non-strict SAT with an IRRATIONAL critical coordinate that now DECIDES.
+/// `x² = 2 ∧ x ≥ 0 ∧ y = x ∧ z = y` forces the unique solution `x = y = z = √2`,
+/// an algebraic coordinate threading all three variables. The old rational-critical
+/// N-var path declines (√2 is algebraic); the algebraic fallback must return Sat
+/// with a replay-checking witness.
+#[test]
+fn three_var_nonstrict_algebraic_critical_is_sat() {
+    let mut a = TermArena::new();
+    let (xs, xv) = real(&mut a, "x");
+    let (ys, yv) = real(&mut a, "y");
+    let (zs, zv) = real(&mut a, "z");
+    let xx = a.real_mul(xv, xv).unwrap();
+    let two = a.real_const(Rational::integer(2));
+    let a1 = eq(&mut a, xx, two); // x² = 2
+    let zero = a.real_const(Rational::zero());
+    let a2 = ge(&mut a, xv, zero); // x ≥ 0  (pin the positive branch)
+    let a3 = eq(&mut a, yv, xv); // y = x
+    let a4 = eq(&mut a, zv, yv); // z = y
+
+    let r = solve(&mut a, &[a1, a2, a3, a4], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x²=2 ∧ x≥0 ∧ y=x ∧ z=y is SAT (x=y=z=√2); got {r:?}");
+    };
+    // The shared coordinate is the irrational √2 (root of x² − 2), bound to all three.
+    for s in [xs, ys, zs] {
+        let v = model.get(s).expect("model must bind every variable");
+        let alpha = v
+            .as_real_algebraic()
+            .expect("√2 witness must be real-algebraic, not rational");
+        assert_eq!(
+            alpha.sign_at(&poly_x2_minus(2)),
+            Some(Sign::Zero),
+            "each coordinate must satisfy x² − 2 = 0 exactly"
+        );
+        // Positive branch.
+        assert_eq!(
+            alpha.compare_rational(&Rational::zero()),
+            Some(core::cmp::Ordering::Greater)
+        );
+    }
+    // Replay the full original conjunction through the ground evaluator (algebraic).
+    let asg = model.to_assignment();
+    for t in [a1, a2, a3, a4] {
+        assert!(
+            matches!(eval(&a, t, &asg), Ok(Value::Bool(true))),
+            "witness must replay-satisfy every original assertion"
+        );
+    }
+}
+
+/// 3-var non-strict UNSAT through an IRRATIONAL critical coordinate that now DECIDES
+/// EXHAUSTIVELY. `x² = 2 ∧ x ≥ 0 ∧ y = x ∧ z = y ∧ z ≤ 1` forces `z = √2 ≈ 1.414`,
+/// which violates `z ≤ 1` — and the negative branch is excluded by `x ≥ 0`. The
+/// algebraic fallback must return Unsat (never Sat), exhaustively.
+#[test]
+fn three_var_nonstrict_algebraic_critical_is_unsat() {
+    let mut a = TermArena::new();
+    let (_xs, xv) = real(&mut a, "x");
+    let (_ys, yv) = real(&mut a, "y");
+    let (_zs, zv) = real(&mut a, "z");
+    let xx = a.real_mul(xv, xv).unwrap();
+    let two = a.real_const(Rational::integer(2));
+    let a1 = eq(&mut a, xx, two); // x² = 2
+    let zero = a.real_const(Rational::zero());
+    let a2 = ge(&mut a, xv, zero); // x ≥ 0
+    let a3 = eq(&mut a, yv, xv); // y = x
+    let a4 = eq(&mut a, zv, yv); // z = y
+    let one = a.real_const(Rational::integer(1));
+    let a5 = le(&mut a, zv, one); // z ≤ 1  (false at z = √2)
+
+    let r = solve(&mut a, &[a1, a2, a3, a4, a5], &SolverConfig::default()).expect("no error");
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "z = √2 > 1 ⇒ UNSAT; got {r:?}"
+    );
+}
+
+/// Soundness-negative (SAT never Unsat): the same algebraic-critical 3-var coupling
+/// but with `z ≤ 2` — satisfied at `z = √2 ≈ 1.414 < 2` — must NEVER be Unsat.
+#[test]
+fn three_var_nonstrict_algebraic_satisfiable_never_unsat() {
+    let mut a = TermArena::new();
+    let (_xs, xv) = real(&mut a, "x");
+    let (_ys, yv) = real(&mut a, "y");
+    let (_zs, zv) = real(&mut a, "z");
+    let xx = a.real_mul(xv, xv).unwrap();
+    let two = a.real_const(Rational::integer(2));
+    let a1 = eq(&mut a, xx, two);
+    let zero = a.real_const(Rational::zero());
+    let a2 = ge(&mut a, xv, zero);
+    let a3 = eq(&mut a, yv, xv);
+    let a4 = eq(&mut a, zv, yv);
+    let bound = a.real_const(Rational::integer(2));
+    let a5 = le(&mut a, zv, bound); // z ≤ 2, true at z = √2
+
+    let r = solve(&mut a, &[a1, a2, a3, a4, a5], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "z = √2 < 2 ⇒ SATISFIABLE; must never be Unsat; got {r:?}"
+    );
+}
+
+/// Soundness-negative (UNSAT never Sat) at a 3-var algebraic coupling with a strict
+/// inequality on the boundary: `x² = 2 ∧ x ≥ 0 ∧ y = x ∧ z = y ∧ z < √-region`. Use
+/// `z < 1` (z = √2 ≈ 1.414 fails) ⇒ UNSAT; must never be Sat.
+#[test]
+fn three_var_nonstrict_algebraic_strict_boundary_never_sat() {
+    let mut a = TermArena::new();
+    let (_xs, xv) = real(&mut a, "x");
+    let (_ys, yv) = real(&mut a, "y");
+    let (_zs, zv) = real(&mut a, "z");
+    let xx = a.real_mul(xv, xv).unwrap();
+    let two = a.real_const(Rational::integer(2));
+    let a1 = eq(&mut a, xx, two);
+    let zero = a.real_const(Rational::zero());
+    let a2 = ge(&mut a, xv, zero);
+    let a3 = eq(&mut a, yv, xv);
+    let a4 = eq(&mut a, zv, yv);
+    let one = a.real_const(Rational::integer(1));
+    let a5 = lt(&mut a, zv, one); // z < 1, false at z = √2
+
+    let r = solve(&mut a, &[a1, a2, a3, a4, a5], &SolverConfig::default()).expect("no error");
+    assert!(
+        !matches!(r, CheckResult::Sat(_)),
+        "z = √2 ≥ 1 ⇒ UNSAT; must never be Sat; got {r:?}"
+    );
+}
