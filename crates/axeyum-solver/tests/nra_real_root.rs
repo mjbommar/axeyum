@@ -1783,3 +1783,54 @@ fn strict_cad_high_degree_many_var_bounded_no_hang() {
         }
     }
 }
+
+/// Regression for the fuzz-found WRONG-UNSAT (the adversarial Z3 differential
+/// harness, seed 1117, minimized): `3xy + 3 + 3x < 0 ∧ xy > 0` is satisfiable
+/// (witness x = −2, y = −1/4: A = −3/2 < 0, B = 1/2 > 0), yet the strict-CAD path
+/// reported `Unsat`. Root cause was in `sturm_isolate_rec`: splitting the Cauchy
+/// interval at a midpoint that is ITSELF a root (here x = 0, the midpoint of the
+/// symmetric `[−B, B]`, a root of the pairwise resultant `−3x²−3x`) recorded the
+/// midpoint and then recursed on the left half with a count that excluded it,
+/// causing the `count == 1` leaf to grab the midpoint AGAIN (`eval(hi) == 0`) and
+/// MISS the genuine left root `x = −1`. So `isolate_roots(−3x²−3x)` returned
+/// `{0, 0}` instead of `{−1, 0}`, the CAD missed the open cell `(−∞, −1)` holding
+/// the witness, and every sampled cell was (correctly, but incompletely) Unsat.
+/// The fix makes the half-open split `(lo, mid] + (mid, hi]` unconditional (it
+/// always partitions exactly, root-at-mid or not), so the root at `mid` is found
+/// once by the left half. This is a foundational root-isolation fix — it affects
+/// every NRA decider, not just the CAD.
+#[test]
+fn strict_cad_wrong_unsat_regression_seed_1117_is_sat() {
+    let mut a = TermArena::new();
+    let (xs, x) = real(&mut a, "x");
+    let (ys, y) = real(&mut a, "y");
+    let xy = a.real_mul(x, y).unwrap();
+    let three = a.real_const(Rational::integer(3));
+    let three_xy = a.real_mul(three, xy).unwrap();
+    let three_c = a.real_const(Rational::integer(3));
+    let three_x = a.real_mul(three_c, x).unwrap();
+    let c3 = a.real_const(Rational::integer(3));
+    let s1 = a.real_add(three_xy, c3).unwrap();
+    let a_poly = a.real_add(s1, three_x).unwrap();
+    let zero = a.real_const(Rational::zero());
+    let atom_a = a.real_lt(a_poly, zero).unwrap(); // 3xy + 3 + 3x < 0
+    let xy2 = a.real_mul(x, y).unwrap();
+    let zero2 = a.real_const(Rational::zero());
+    let atom_b = a.real_gt(xy2, zero2).unwrap(); // xy > 0
+
+    let r = solve(&mut a, &[atom_a, atom_b], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("3xy+3+3x<0 ∧ xy>0 is SAT (x=-2, y=-1/4); got {r:?}");
+    };
+    // The witnesses are rational (interior of an open cell).
+    assert!(matches!(model.get(xs), Some(Value::Real(_))));
+    assert!(matches!(model.get(ys), Some(Value::Real(_))));
+    // Independent replay: both original atoms hold at the returned model.
+    let asg = model.to_assignment();
+    for (t, n) in [(atom_a, "3xy+3+3x<0"), (atom_b, "xy>0")] {
+        assert!(
+            matches!(eval(&a, t, &asg), Ok(Value::Bool(true))),
+            "{n} must replay true at the witness"
+        );
+    }
+}

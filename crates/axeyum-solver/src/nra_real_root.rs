@@ -792,9 +792,16 @@ fn sturm_isolate_rec(
         out.push(sturm_isolate_single(int_poly, chain, lo, hi, depth)?);
         return Some(());
     }
-    // count ≥ 2: split at the midpoint and recurse on each half. The midpoint
-    // must NOT be a root for the half-open counts to compose cleanly; if it is,
-    // nudge by recording it and counting the open halves around it.
+    // count ≥ 2: split at the midpoint and recurse on each HALF-OPEN half. The two
+    // half-open intervals `(lo, mid]` and `(mid, hi]` ALWAYS partition `(lo, hi]`
+    // exactly — whether or not `mid` is a root — so `count_roots_in(lo, mid) +
+    // count_roots_in(mid, hi) == count` holds unconditionally, and each child's
+    // count matches its interval's exact half-open count (the recursion's
+    // contract). A root exactly at `mid` belongs to the LEFT half `(lo, mid]` and
+    // is recorded there by the `count == 1` leaf (`eval(hi=mid) == 0`); it must NOT
+    // be recorded here, else it is double-counted while the genuine left root is
+    // missed (the historical wrong-`Unsat` bug: e.g. `−3x²−3x` split at the root
+    // `mid = 0` returned `{0, 0}` instead of `{−1, 0}`).
     if depth >= STURM_SUBDIVIDE_DEPTH {
         return None; // bound hit ⇒ decline (never an incomplete set)
     }
@@ -803,24 +810,10 @@ fn sturm_isolate_rec(
     if mid.checked_cmp(&lo)? != Ordering::Greater || mid.checked_cmp(&hi)? != Ordering::Less {
         return None;
     }
-    let mid_is_root = eval_rat(int_poly, mid)?.is_zero();
-    if mid_is_root {
-        // Record the exact rational root at `mid`, then count the two OPEN halves
-        // `(lo, mid)` and `(mid, hi]`. `count_roots_in` is half-open `(a, b]`, so:
-        //   roots in (lo, mid]  =  roots in (lo, mid) + 1   (the root at mid)
-        // hence roots in (lo, mid) = count_roots_in(lo, mid) − 1.
-        out.push(Root::Rational(mid));
-        let lo_half = count_roots_in(chain, lo, mid)?; // counts mid
-        let lo_open = lo_half.checked_sub(1)?;
-        sturm_isolate_rec(int_poly, chain, lo, mid, lo_open, depth + 1, out)?;
-        let hi_half = count_roots_in(chain, mid, hi)?; // (mid, hi]
-        sturm_isolate_rec(int_poly, chain, mid, hi, hi_half, depth + 1, out)?;
-        return Some(());
-    }
-    let lo_count = count_roots_in(chain, lo, mid)?;
-    let hi_count = count_roots_in(chain, mid, hi)?;
-    // Sanity: the halves must account for exactly the parent count (mid not a
-    // root). A mismatch signals overflow/inconsistency ⇒ decline.
+    let lo_count = count_roots_in(chain, lo, mid)?; // (lo, mid] — includes a root AT mid
+    let hi_count = count_roots_in(chain, mid, hi)?; // (mid, hi]
+    // The half-open halves partition (lo, hi]; their counts must sum to `count`.
+    // A mismatch signals overflow/inconsistency ⇒ decline.
     if lo_count.checked_add(hi_count)? != count {
         return None;
     }
