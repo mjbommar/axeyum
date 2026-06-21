@@ -11,7 +11,41 @@
 //! (never a wrong `unsat`). All arithmetic is exact — no floating point.
 
 use axeyum_ir::{Rational, Sort, TermArena, TermId};
-use axeyum_solver::{Evidence, produce_nra_sos_evidence};
+use axeyum_solver::{Evidence, SolverConfig, produce_evidence, produce_nra_sos_evidence};
+
+/// The DEFAULT evidence path (`produce_evidence`) routes an SOS-decided real `unsat`
+/// to the Lean-backed SOS certificate — not just the standalone producer.
+#[test]
+fn default_produce_evidence_routes_sos_unsat_to_sos_certificate() {
+    let mut arena = TermArena::new();
+    let x = real(&mut arena, "x");
+    let y = real(&mut arena, "y");
+    let xx = arena.real_mul(x, x).unwrap();
+    let yy = arena.real_mul(y, y).unwrap();
+    let xy = arena.real_mul(x, y).unwrap();
+    let two = konst(&mut arena, 2);
+    let two_xy = arena.real_mul(two, xy).unwrap();
+    let sum = arena.real_add(xx, yy).unwrap();
+    let p = arena.real_sub(sum, two_xy).unwrap();
+    let zero = konst(&mut arena, 0);
+    let atom = arena.real_lt(p, zero).unwrap(); // x²+y²−2xy < 0
+    let assertions = [atom];
+
+    let report = produce_evidence(&mut arena, &assertions, &SolverConfig::default())
+        .expect("produce_evidence must not error");
+    assert!(
+        matches!(report.evidence, Evidence::UnsatSos { .. }),
+        "the default path must route AM-GM to UnsatSos, got {:?}",
+        report.evidence
+    );
+    assert!(
+        report
+            .evidence
+            .check(&arena, &assertions)
+            .expect("check must not error"),
+        "the routed SOS evidence must independently re-check"
+    );
+}
 
 fn real(arena: &mut TermArena, name: &str) -> TermId {
     let s = arena.declare(name, Sort::Real).unwrap();

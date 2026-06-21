@@ -900,6 +900,14 @@ pub fn produce_evidence(
         // front door now dispatches nonlinear real goals to NRA instead of
         // hard-erroring `Unsupported`).
         EvidenceRoute::PureReal => {
+            // Prefer the self-checked, Lean-backed degree-2 SOS certificate when the
+            // query is an SOS-decided `unsat` (ADR-0039/0041): it is re-checkable two
+            // independent ways (exact-rational LDLᵀ + kernel-checked Lean), stronger
+            // than the NRA abstraction's bare `unsat`. Declines (`None`) on anything
+            // it does not decide, falling through to the linear / NRA route.
+            if let Some(report) = produce_nra_sos_evidence(arena, assertions)? {
+                return Ok(report);
+            }
             return match produce_lra_dpll_evidence(arena, assertions, config) {
                 Err(SolverError::Unsupported(msg)) if msg.contains("nonlinear") => {
                     produce_nra_evidence(arena, assertions, config)
@@ -927,6 +935,14 @@ pub fn produce_evidence(
         cnf_clause_budget: config.cnf_clause_budget,
         prove_unsat: false,
     };
+    // Prefer the self-checking, Lean-backed integer-Farkas (Diophantine) certificate
+    // for an integer-systems `unsat` (ADR-0042/0043): unlike the `lia_generic` Alethe
+    // route (a Carcara hole for integer systems), it is independently checkable in-tree
+    // AND reconstructs to a real-`lean`-checked proof. Declines (`None`) for
+    // non-integer-equality-systems, falling through to the unified engine below.
+    if let Some(report) = produce_diophantine_evidence(arena, assertions)? {
+        return Ok(report);
+    }
     let (evidence, trusted_steps) = match solve(arena, assertions, config)? {
         CheckResult::Sat(model) => (Evidence::Sat(model), Vec::new()),
         CheckResult::Unsat => {

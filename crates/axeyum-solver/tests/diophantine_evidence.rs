@@ -14,7 +14,38 @@
 //! All arithmetic is exact — no floating point.
 
 use axeyum_ir::TermArena;
-use axeyum_solver::{Evidence, produce_diophantine_evidence};
+use axeyum_solver::{Evidence, SolverConfig, produce_diophantine_evidence, produce_evidence};
+
+/// The DEFAULT evidence path (`produce_evidence`) routes an integer-infeasible system
+/// to the Lean-backed Diophantine certificate — not just the standalone producer.
+#[test]
+fn default_produce_evidence_routes_integer_infeasibility_to_diophantine() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let y = arena.int_var("y").unwrap();
+    let xpy = arena.int_add(x, y).unwrap();
+    let zero = arena.int_const(0);
+    let e1 = arena.eq(xpy, zero).unwrap();
+    let xmy = arena.int_sub(x, y).unwrap();
+    let one = arena.int_const(1);
+    let e2 = arena.eq(xmy, one).unwrap();
+    let assertions = [e1, e2];
+
+    let report = produce_evidence(&mut arena, &assertions, &SolverConfig::default())
+        .expect("produce_evidence must not error");
+    assert!(
+        matches!(report.evidence, Evidence::UnsatDiophantine { .. }),
+        "the default path must route 2x=1 to UnsatDiophantine, got {:?}",
+        report.evidence
+    );
+    assert!(
+        report
+            .evidence
+            .check(&arena, &assertions)
+            .expect("check must not error"),
+        "the routed Diophantine evidence must independently re-check"
+    );
+}
 
 /// `x + y = 0 ∧ x − y = 1` over `Int`: rational-feasible (`x = ½`) yet
 /// integer-infeasible (`2x = 1`). The producer must emit `Evidence::UnsatDiophantine`
