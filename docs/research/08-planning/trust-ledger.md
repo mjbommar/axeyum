@@ -24,3 +24,4 @@ Trusted base: **6** reduction(s) remain trust holes.
 | lra-dpll | lazy-SMT skeleton + Farkas-certified theory lemmas | 9 | certified | ADR-0021 |
 | xor-gaussian | CDCL(XOR) search-only UNSAT (in-search Gaussian reasoning, no DRAT) | 3 | trust hole | ADR-0035 |
 | sos | degree-2 sum-of-squares / PSD nonnegativity certificate (NRA) | 10 | certified | ADR-0039 |
+| diophantine | integer-systems infeasibility (integer Farkas / Diophantine) | 10 | certified | ADR-0042 |

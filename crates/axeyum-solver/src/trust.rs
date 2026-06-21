@@ -50,6 +50,8 @@ pub enum TrustId {
     XorGaussian,
     /// Degree-2 sum-of-squares / PSD certificate for NRA (ADR-0039).
     Sos,
+    /// Integer-systems infeasibility (integer Farkas / Diophantine) (ADR-0042).
+    Diophantine,
 }
 
 /// Every [`TrustId`] in canonical (stable) order — the iteration source of truth.
@@ -67,6 +69,7 @@ pub const ALL_TRUST_IDS: &[TrustId] = &[
     TrustId::LraDpll,
     TrustId::XorGaussian,
     TrustId::Sos,
+    TrustId::Diophantine,
 ];
 
 impl TrustId {
@@ -87,6 +90,7 @@ impl TrustId {
             TrustId::LraDpll => "lra-dpll",
             TrustId::XorGaussian => "xor-gaussian",
             TrustId::Sos => "sos",
+            TrustId::Diophantine => "diophantine",
         }
     }
 
@@ -111,6 +115,7 @@ impl TrustId {
                 "CDCL(XOR) search-only UNSAT (in-search Gaussian reasoning, no DRAT)"
             }
             TrustId::Sos => "degree-2 sum-of-squares / PSD nonnegativity certificate (NRA)",
+            TrustId::Diophantine => "integer-systems infeasibility (integer Farkas / Diophantine)",
         }
     }
 
@@ -118,7 +123,7 @@ impl TrustId {
     #[must_use]
     pub const fn pedantic_level(self) -> u8 {
         match self {
-            TrustId::TermLevelEnum | TrustId::Farkas | TrustId::Sos => 10,
+            TrustId::TermLevelEnum | TrustId::Farkas | TrustId::Sos | TrustId::Diophantine => 10,
             TrustId::Tseitin | TrustId::SatRefutation | TrustId::LraDpll => 9,
             TrustId::BitBlast => 8,
             TrustId::Fpa2Bv => 5,
@@ -142,7 +147,8 @@ impl TrustId {
             | TrustId::TermLevelEnum
             | TrustId::Farkas
             | TrustId::LraDpll
-            | TrustId::Sos => true,
+            | TrustId::Sos
+            | TrustId::Diophantine => true,
             TrustId::ArrayElim
             | TrustId::Ackermann
             | TrustId::IntBlast
@@ -168,6 +174,7 @@ impl TrustId {
             TrustId::LraDpll => "ADR-0021",
             TrustId::XorGaussian => "ADR-0035",
             TrustId::Sos => "ADR-0039",
+            TrustId::Diophantine => "ADR-0042",
         }
     }
 }

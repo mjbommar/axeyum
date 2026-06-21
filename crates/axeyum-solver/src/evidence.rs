@@ -42,6 +42,10 @@ use crate::auto::solve;
 use crate::backend::{CheckResult, SolverBackend, SolverConfig, SolverError, UnknownReason};
 use crate::certify::{CertifyOutcome, certify_qf_bv_by_enumeration};
 use crate::dpll_t::{LraDpllOutcome, LraDpllRefutation, certify_lra_dpll_unsat};
+use crate::lia_gcd::{
+    DiophantineCertificate, Equality, check_diophantine_certificate,
+    prove_lia_unsat_by_diophantine_certified,
+};
 use crate::lra::{FarkasCertificate, lra_farkas_certificate};
 use crate::model::Model;
 use crate::nra_real_root::{self, SosCertificate};
@@ -268,6 +272,24 @@ pub enum Evidence {
         /// stored string is for output, not trusted on its own.
         lean_module: Option<String>,
     },
+    /// Unsatisfiable (integer-equality systems): a self-checking "integer Farkas" /
+    /// Diophantine refutation of an integer-infeasible system of equalities. The
+    /// `certificate`'s independent re-checker [`check_diophantine_certificate`]
+    /// (re-derives `Σ λᵢ·Eᵢ` and confirms `gcd ∤ constant`, fully independent of the
+    /// producer) is the primary evidence (ADR-0042); when `lean_module` is present,
+    /// the refutation is ALSO backed by a kernel-checked Lean proof, re-derived and
+    /// re-checked on `Evidence::check` (ADR-0043).
+    UnsatDiophantine {
+        /// The original normalized integer equalities the certificate refers to.
+        equalities: Vec<Equality>,
+        /// The integer-Farkas certificate (self-checked by
+        /// [`check_diophantine_certificate`]).
+        certificate: DiophantineCertificate,
+        /// The rendered Lean module, when Diophantine→Lean reconstruction succeeded
+        /// for the query. `check` re-runs the reconstruction (the kernel re-verifies
+        /// it); the stored string is for output, not trusted on its own.
+        lean_module: Option<String>,
+    },
     /// Undecided, with the classified reason.
     Unknown(UnknownReason),
 }
@@ -387,6 +409,32 @@ impl Evidence {
                 }
                 Ok(true)
             }
+            // Diophantine (integer-systems) refutation: re-validate the self-contained
+            // integer-Farkas certificate (re-derives `Σ λᵢ·Eᵢ` from the originals and
+            // confirms `gcd ∤ constant`). When a Lean module is carried, ALSO re-derive
+            // it (ADR-0043) — the kernel re-checks the reconstructed proof to `False`;
+            // the stored string is never trusted on its own. Both checks must pass.
+            Evidence::UnsatDiophantine {
+                equalities,
+                certificate,
+                lean_module,
+            } => {
+                if !check_diophantine_certificate(equalities, certificate) {
+                    return Ok(false);
+                }
+                if lean_module.is_some() {
+                    // Re-run the immutable Diophantine→Lean reconstruction; success
+                    // means the trusted kernel re-accepted a freshly-built proof of
+                    // `False`.
+                    return Ok(
+                        crate::int_reconstruct::reconstruct_diophantine_to_lean_module(
+                            arena, assertions,
+                        )
+                        .is_ok(),
+                    );
+                }
+                Ok(true)
+            }
             // No DRAT certificate (adapter-only `unsat`) or `unknown`: nothing to
             // independently re-check.
             Evidence::Unsat(None) | Evidence::Unknown(_) => Ok(true),
@@ -408,6 +456,7 @@ impl Evidence {
                 | Evidence::UnsatFarkas(_)
                 | Evidence::UnsatLraDpll(_)
                 | Evidence::UnsatSos { .. }
+                | Evidence::UnsatDiophantine { .. }
         )
     }
 }
@@ -752,6 +801,64 @@ pub fn produce_nra_sos_evidence(
         provenance,
         // Exact, self-checked SOS/PSD certificate — certified this run.
         trusted_steps: trust_steps(&[(TrustId::Sos, true)]),
+    }))
+}
+
+/// Attaches a self-checking, Lean-backed integer-infeasibility certificate to a
+/// system of integer equalities that the Diophantine decision proves `unsat`
+/// (ADR-0043). The carried [`DiophantineCertificate`] is fully self-contained:
+/// [`Evidence::check`] re-validates it via [`check_diophantine_certificate`] (an
+/// integer-Farkas recombination re-derived from the originals, independent of the
+/// producer), and — when [`crate::int_reconstruct::reconstruct_diophantine_to_lean_module`]
+/// covers the query shape — ALSO re-derives the kernel-checked Lean module.
+///
+/// Returns `Ok(None)` when the system is not a Diophantine-refutable integer
+/// infeasibility (never a wrong `unsat`).
+///
+/// # Errors
+///
+/// Returns [`SolverError`] only to match the other evidence producers' `Result`
+/// contract; this path does not currently fail (the result is always `Ok`).
+#[allow(
+    clippy::unnecessary_wraps,
+    reason = "signature matches the other evidence producers' Result contract"
+)]
+pub fn produce_diophantine_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<Option<EvidenceReport>, SolverError> {
+    let Some((equalities, certificate)) =
+        prove_lia_unsat_by_diophantine_certified(arena, assertions)
+    else {
+        return Ok(None);
+    };
+    // Best-effort Lean-backed evidence (ADR-0043): when the Diophantine→Lean
+    // reconstruction covers this query's shape, carry the kernel-checked module.
+    // `None` keeps the (still self-checked) certificate evidence for shapes the
+    // reconstruction slice does not yet cover — never an error.
+    let lean_module =
+        crate::int_reconstruct::reconstruct_diophantine_to_lean_module(arena, assertions).ok();
+    let provenance = Provenance {
+        semantics_version: SEMANTICS_VERSION,
+        layers: LayerVersions::CURRENT,
+        backend: "lia-diophantine-certificate".to_owned(),
+        assertion_count: assertions.len(),
+        timeout: None,
+        resource_limit: None,
+        node_budget: None,
+        cnf_variable_budget: None,
+        cnf_clause_budget: None,
+        prove_unsat: true,
+    };
+    Ok(Some(EvidenceReport {
+        evidence: Evidence::UnsatDiophantine {
+            equalities,
+            certificate,
+            lean_module,
+        },
+        provenance,
+        // Exact, self-checked integer-Farkas certificate — certified this run.
+        trusted_steps: trust_steps(&[(TrustId::Diophantine, true)]),
     }))
 }
 
@@ -1254,7 +1361,8 @@ pub fn prove(
         | Evidence::UnsatTermLevel { .. }
         | Evidence::UnsatFarkas(_)
         | Evidence::UnsatLraDpll(_)
-        | Evidence::UnsatSos { .. } => {
+        | Evidence::UnsatSos { .. }
+        | Evidence::UnsatDiophantine { .. } => {
             if !report.evidence.check(arena, &query)? {
                 return Err(SolverError::Backend(
                     "prove: refutation of the negated goal failed its own check".to_owned(),
