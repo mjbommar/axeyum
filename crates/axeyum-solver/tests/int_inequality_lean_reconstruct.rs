@@ -1,0 +1,208 @@
+//! Integration tests for integer-INEQUALITY (interval) infeasibility Lean
+//! reconstruction (ADR-0042, the integer-cut payoff): the canonical
+//! `3*x ≥ 1 ∧ 3*x ≤ 2` (Int) system — infeasible because no multiple of 3 lies in
+//! `[1, 2]`, equivalently `0 < x < 1`, refuted by `no_int_between` — reconstructs to
+//! a kernel-checked Lean `False`, while an integer-FEASIBLE inequality system is
+//! declined (never fabricated).
+
+use std::path::PathBuf;
+use std::process::Command;
+
+use axeyum_ir::TermArena;
+use axeyum_solver::{
+    ProofFragment, prove_unsat_to_lean_module, reconstruct_int_inequality_proof,
+    scan_proof_fragment,
+};
+
+/// `3*x ≥ 1 ∧ 3*x ≤ 2` over `Int`: LP-feasible (`x ∈ [⅓, ⅔]`) yet integer-infeasible
+/// (no multiple of 3 in `[1, 2]`). It reconstructs to a kernel-checked Lean `False`
+/// through the `IntInequality` fragment, with the exported module naming the
+/// `axeyum_refutation` theorem.
+#[test]
+fn three_x_in_one_two_reconstructs_to_false() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let three = arena.int_const(3);
+    let three_x = arena.int_mul(three, x).unwrap();
+    let one = arena.int_const(1);
+    let two = arena.int_const(2);
+    let e1 = arena.int_ge(three_x, one).unwrap(); // 3x ≥ 1
+    let e2 = arena.int_le(three_x, two).unwrap(); // 3x ≤ 2
+
+    // The low-level reconstruction yields a kernel-checked `False` proof term.
+    let proof = reconstruct_int_inequality_proof(&arena, &[e1, e2]);
+    assert!(
+        proof.is_ok(),
+        "3x≥1 ∧ 3x≤2 should reconstruct to False, got {:?}",
+        proof.err()
+    );
+
+    // The unified entry routes it through the IntInequality fragment and renders a
+    // self-contained Lean module that names the exported refutation.
+    let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &[e1, e2])
+        .expect("integer-interval system should prove unsat to a Lean module");
+    assert_eq!(fragment, ProofFragment::IntInequality);
+    assert!(
+        source.contains("axeyum_refutation"),
+        "rendered module should name the axeyum_refutation theorem"
+    );
+    assert_eq!(
+        scan_proof_fragment(&arena, &[e1, e2]),
+        ProofFragment::IntInequality
+    );
+}
+
+/// The same instance with a strict bound and the variable on the right
+/// (`1 ≤ 3*x ∧ 3*x < 3`): strict `< 3` rewrites to `≤ 2`, so it matches the same
+/// `1 ≤ 3x ≤ 2` interval. Confirms the comparison-normalization (strict↔non-strict,
+/// orientation) of the shape detector.
+#[test]
+fn strict_and_oriented_bounds_reconstruct() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let three = arena.int_const(3);
+    let three_x = arena.int_mul(three, x).unwrap();
+    let one = arena.int_const(1);
+    let three_c = arena.int_const(3);
+    let e1 = arena.int_le(one, three_x).unwrap(); // 1 ≤ 3x  (lower, var on right)
+    let e2 = arena.int_lt(three_x, three_c).unwrap(); // 3x < 3 ⇒ 3x ≤ 2
+
+    let proof = reconstruct_int_inequality_proof(&arena, &[e1, e2]);
+    assert!(
+        proof.is_ok(),
+        "1≤3x ∧ 3x<3 should reconstruct to False, got {:?}",
+        proof.err()
+    );
+    let (fragment, _src) = prove_unsat_to_lean_module(&mut arena, &[e1, e2])
+        .expect("strict/oriented interval should prove unsat");
+    assert_eq!(fragment, ProofFragment::IntInequality);
+}
+
+/// A shifted interval `3*x ≥ 4 ∧ 3*x ≤ 5` (no multiple of 3 in `[4, 5]`, infeasible;
+/// the reduction offset is `m = 1`, so `1 < x < 2`). Exercises the general `m ≠ 0`
+/// additive-shift path.
+#[test]
+fn shifted_interval_reconstructs_to_false() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let three = arena.int_const(3);
+    let three_x = arena.int_mul(three, x).unwrap();
+    let four = arena.int_const(4);
+    let five = arena.int_const(5);
+    let e1 = arena.int_ge(three_x, four).unwrap(); // 3x ≥ 4
+    let e2 = arena.int_le(three_x, five).unwrap(); // 3x ≤ 5
+
+    let proof = reconstruct_int_inequality_proof(&arena, &[e1, e2]);
+    assert!(
+        proof.is_ok(),
+        "3x≥4 ∧ 3x≤5 (m=1) should reconstruct to False, got {:?}",
+        proof.err()
+    );
+    let (fragment, _src) = prove_unsat_to_lean_module(&mut arena, &[e1, e2])
+        .expect("shifted interval should prove unsat");
+    assert_eq!(fragment, ProofFragment::IntInequality);
+}
+
+/// An integer-FEASIBLE inequality system `2*x ≥ 1 ∧ 2*x ≤ 3` (sat at `x = 1`, since
+/// `2·1 = 2 ∈ [1, 3]`) has no integer-cut refutation and must be declined — never
+/// fabricated, and not classified as the `IntInequality` fragment.
+#[test]
+fn feasible_interval_is_declined() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let two = arena.int_const(2);
+    let two_x = arena.int_mul(two, x).unwrap();
+    let one = arena.int_const(1);
+    let three = arena.int_const(3);
+    let e1 = arena.int_ge(two_x, one).unwrap(); // 2x ≥ 1
+    let e2 = arena.int_le(two_x, three).unwrap(); // 2x ≤ 3  (x=1 ⇒ 2 ∈ [1,3])
+
+    assert!(
+        reconstruct_int_inequality_proof(&arena, &[e1, e2]).is_err(),
+        "a feasible integer interval must not produce a refutation"
+    );
+    assert_ne!(
+        scan_proof_fragment(&arena, &[e1, e2]),
+        ProofFragment::IntInequality,
+        "feasible interval should not route to the IntInequality fragment"
+    );
+}
+
+/// Locate a `lean` binary (env override or `PATH`/elan); `None` ⇒ skip.
+fn lean_bin() -> Option<PathBuf> {
+    if let Ok(p) = std::env::var("AXEYUM_LEAN_BIN") {
+        let pb = PathBuf::from(p);
+        if pb.exists() {
+            return Some(pb);
+        }
+    }
+    let elan = dirs_home().join(".elan/bin/lean");
+    if elan.exists() {
+        return Some(elan);
+    }
+    which_lean()
+}
+
+fn dirs_home() -> PathBuf {
+    std::env::var("HOME").map(PathBuf::from).unwrap_or_default()
+}
+
+fn which_lean() -> Option<PathBuf> {
+    let out = Command::new("which").arg("lean").output().ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let path = String::from_utf8_lossy(&out.stdout).trim().to_owned();
+    if path.is_empty() {
+        None
+    } else {
+        Some(PathBuf::from(path))
+    }
+}
+
+/// **Real-Lean crosscheck**: the rendered integer-interval module must be accepted by
+/// a genuine `lean` binary (skips gracefully if none is installed), and
+/// `#print axioms axeyum_refutation` must not depend on `sorryAx`. This is the
+/// end-to-end kernel-checked integer-inequality payoff of ADR-0042.
+#[test]
+fn int_inequality_module_checks_in_real_lean() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let three = arena.int_const(3);
+    let three_x = arena.int_mul(three, x).unwrap();
+    let one = arena.int_const(1);
+    let two = arena.int_const(2);
+    let e1 = arena.int_ge(three_x, one).unwrap();
+    let e2 = arena.int_le(three_x, two).unwrap();
+    let (frag, source) = prove_unsat_to_lean_module(&mut arena, &[e1, e2])
+        .expect("integer-interval system reconstructs to a Lean module");
+    assert_eq!(frag, ProofFragment::IntInequality);
+
+    let Some(bin) = lean_bin() else {
+        eprintln!("[skip] int_inequality: lean binary not found; set AXEYUM_LEAN_BIN to enable");
+        return;
+    };
+    let dir = std::env::temp_dir().join("axeyum_lean_int_inequality");
+    std::fs::create_dir_all(&dir).expect("create temp dir");
+    let file = dir.join("int_inequality.lean");
+    std::fs::write(&file, &source).expect("write lean module");
+    let out = Command::new(&bin).arg(&file).output().expect("run lean");
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        out.status.success(),
+        "lean REJECTED the int_inequality module\n=== stdout ===\n{stdout}\n=== stderr ===\n{stderr}\n=== source ===\n{source}"
+    );
+    assert!(
+        !stdout.contains("sorryAx"),
+        "int_inequality proof depends on sorryAx:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("axeyum_refutation"),
+        "missing #print axioms output:\n{stdout}"
+    );
+    eprintln!(
+        "[lean ok] int_inequality: {}",
+        stdout.trim().replace('\n', " | ")
+    );
+}

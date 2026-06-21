@@ -1184,6 +1184,11 @@ pub enum ProofFragment {
     /// the [`DiophantineCertificate`](crate::DiophantineCertificate) and
     /// reconstructed over the integer prelude (ADR-0042).
     Diophantine,
+    /// Integer-**inequality** infeasibility (integer cut) `QF_LIA`: a single-variable
+    /// interval `c ≤ k·x ≤ d` (k > 0) whose LP relaxation is feasible yet contains no
+    /// integer (no multiple of `k` in `[c, d]`), refuted via discreteness
+    /// (`no_int_between`) over the integer prelude (ADR-0042).
+    IntInequality,
     /// A trivial single-square sum-of-squares refutation: the one-variable real
     /// query `x*x < 0` (UNSAT: a square is never negative). The simplest SOS
     /// reconstruction, needing no ring normalizer (ADR-0040, SOS slice 1).
@@ -1510,6 +1515,12 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
             // Owned by the integer-prelude Diophantine reconstructor (ADR-0042);
             // anything else falls through to the linear Farkas (LRA) path.
             ProofFragment::Diophantine
+        } else if crate::is_int_inequality_refutation(arena, assertions) {
+            // A single-variable integer-INEQUALITY interval `c ≤ k·x ≤ d` (k > 0) with
+            // no multiple of `k` in `[c, d]`: integer-infeasible while LP-feasible.
+            // Owned by the integer-prelude inequality reconstructor (ADR-0042);
+            // anything else falls through to the linear Farkas (LRA) path.
+            ProofFragment::IntInequality
         } else {
             ProofFragment::Lra
         }
@@ -1703,6 +1714,12 @@ pub fn prove_unsat_to_lean_module(
             // The integer Diophantine reconstructor builds its own integer-prelude
             // kernel, gates the `False` proof, and renders the module (ADR-0042).
             crate::int_reconstruct::reconstruct_diophantine_to_lean_module(arena, assertions)?
+        }
+        ProofFragment::IntInequality => {
+            // The integer-inequality (interval) reconstructor builds its own
+            // integer-prelude kernel, gates the `False` proof via discreteness, and
+            // renders the module (ADR-0042).
+            crate::int_reconstruct::reconstruct_int_inequality_to_lean_module(arena, assertions)?
         }
         ProofFragment::Unsupported => {
             return Err(ReconstructError::UnsupportedRule {

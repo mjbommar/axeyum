@@ -37,7 +37,7 @@
 
 use std::collections::BTreeMap;
 
-use axeyum_ir::{SymbolId, TermArena, TermId};
+use axeyum_ir::{Op, SymbolId, TermArena, TermId, TermNode};
 use axeyum_lean_kernel::{
     BinderInfo, Declaration, ExprId, IntPrelude, Kernel, NameId, build_int_prelude,
 };
@@ -2538,4 +2538,710 @@ fn gcd_i128(a: i128, b: i128) -> i128 {
         b = t;
     }
     i128::try_from(a).unwrap_or(i128::MAX)
+}
+
+// =============================================================================
+// Integer-INEQUALITY infeasibility reconstruction (ADR-0042, the integer-cut
+// payoff for the single-variable `c ≤ k·x ≤ d` shape).
+// =============================================================================
+
+/// The detected single-variable integer-interval shape `c ≤ k·x ≤ d` with `k > 0`,
+/// over one integer variable `x`, where **no multiple of `k` lies in `[c, d]`** (so
+/// the system is integer-infeasible while its LP relaxation is feasible).
+///
+/// The discreteness reduction picks the integer `m` with `k·m < c` and `d < k·(m+1)`
+/// (forced and unique when one exists): then `m < x < m+1`, i.e. `0 < x − m < 1`,
+/// refuted by `no_int_between (x − m)`.
+#[derive(Debug, Clone, Copy)]
+struct IntInterval {
+    /// The single integer variable.
+    var: SymbolId,
+    /// The positive multiplier `k`.
+    k: i128,
+    /// The lower bound `c` (so `c ≤ k·x`).
+    c: i128,
+    /// The upper bound `d` (so `k·x ≤ d`).
+    d: i128,
+    /// The reduction offset `m` with `k·m < c` and `d < k·(m+1)`.
+    m: i128,
+}
+
+/// A bound atom recovered from one assertion: `lower` ⇒ `k·x ≥ c` (i.e. `c ≤ k·x`),
+/// `!lower` ⇒ `k·x ≤ d`. Both sides are normalized so the variable side is exactly
+/// `k·x` (`k > 0`) and the bound is the integer constant on the other side.
+#[derive(Debug, Clone, Copy)]
+struct BoundAtom {
+    var: SymbolId,
+    k: i128,
+    bound: i128,
+    lower: bool,
+}
+
+/// Parse a linear integer term into `(coeff·var, constant)` for a **single** variable
+/// (or a pure constant). Returns `None` for multi-variable / nonlinear / multi-term
+/// forms — this slice handles only the single-variable interval shape.
+fn single_var_linear(arena: &TermArena, t: TermId) -> Option<(Option<(SymbolId, i128)>, i128)> {
+    match arena.node(t) {
+        TermNode::IntConst(n) => Some((None, *n)),
+        TermNode::Symbol(s) => Some((Some((*s, 1)), 0)),
+        TermNode::App { op, args } => match (op, &args[..]) {
+            (Op::IntNeg, [x]) => {
+                let (v, k) = single_var_linear(arena, *x)?;
+                let v = match v {
+                    Some((s, c)) => Some((s, c.checked_neg()?)),
+                    None => None,
+                };
+                Some((v, k.checked_neg()?))
+            }
+            (Op::IntAdd | Op::IntSub, [x, y]) => {
+                let sub = matches!(op, Op::IntSub);
+                let (vx, kx) = single_var_linear(arena, *x)?;
+                let (vy, ky) = single_var_linear(arena, *y)?;
+                let ky = if sub { ky.checked_neg()? } else { ky };
+                let var = match (vx, vy) {
+                    (None, None) => None,
+                    (Some(p), None) => Some(p),
+                    (None, Some((s, c))) => Some((s, if sub { c.checked_neg()? } else { c })),
+                    (Some((sx, cx)), Some((sy, cy))) => {
+                        if sx != sy {
+                            return None; // two distinct variables — out of scope
+                        }
+                        let cy = if sub { cy.checked_neg()? } else { cy };
+                        Some((sx, cx.checked_add(cy)?))
+                    }
+                };
+                Some((var, kx.checked_add(ky)?))
+            }
+            (Op::IntMul, [x, y]) => {
+                let (vx, kx) = single_var_linear(arena, *x)?;
+                let (vy, ky) = single_var_linear(arena, *y)?;
+                match (vx, vy) {
+                    (None, Some((s, c))) => {
+                        Some((Some((s, c.checked_mul(kx)?)), ky.checked_mul(kx)?))
+                    }
+                    (Some((s, c)), None) => {
+                        Some((Some((s, c.checked_mul(ky)?)), kx.checked_mul(ky)?))
+                    }
+                    (None, None) => Some((None, kx.checked_mul(ky)?)),
+                    (Some(_), Some(_)) => None, // nonlinear (var·var)
+                }
+            }
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+/// Parse one assertion into a [`BoundAtom`] of the form `c ≤ k·x` or `k·x ≤ d`
+/// (`k > 0`, single variable `x`). Recognizes `IntLe`/`IntGe`/`IntLt`/`IntGt` and
+/// rewrites strict integer bounds to non-strict ones (`k·x > c ⟺ k·x ≥ c+1`,
+/// `k·x < d ⟺ k·x ≤ d−1`). Returns `None` on any other shape.
+fn parse_bound_atom(arena: &TermArena, t: TermId) -> Option<BoundAtom> {
+    let TermNode::App { op, args } = arena.node(t) else {
+        return None;
+    };
+    let [a, b] = &args[..] else {
+        return None;
+    };
+    let (a, b) = (*a, *b);
+    // Normalize each comparison `lhs ⋈ rhs` to `var_side ⋈' bound`, with `var_side`
+    // the side carrying the variable. We collect `lhs − rhs = k·x + const ⋈ 0` and
+    // read off the bound on `x` directly.
+    let (la, ka) = single_var_linear(arena, a)?;
+    let (lb, kb) = single_var_linear(arena, b)?;
+    // Move everything to the left: `(lhs − rhs) ⋈ 0`, i.e. `kx·x + (ka − kb) ⋈ 0`.
+    let (var, coeff) = match (la, lb) {
+        (Some((s, c)), None) => (s, c),
+        (None, Some((s, c))) => (s, c.checked_neg()?),
+        (Some((sx, cx)), Some((sy, cy))) if sx == sy => (sx, cx.checked_sub(cy)?),
+        _ => return None,
+    };
+    if coeff == 0 {
+        return None;
+    }
+    let konst = ka.checked_sub(kb)?; // `coeff·x + konst ⋈ 0`
+
+    // Direction of the relation as `coeff·x + konst R 0` with R ∈ {≤,<,≥,>}.
+    // We rewrite to an oriented `k·x ⋈ bound` with `k > 0`.
+    // op compares `a R b`, i.e. `(a − b) R 0`.
+    let (mut k, mut konst, mut rel) = (coeff, konst, *op);
+    // If coeff < 0, multiply the inequality by −1, flipping the relation.
+    if k < 0 {
+        k = k.checked_neg()?;
+        konst = konst.checked_neg()?;
+        rel = flip_rel(rel)?;
+    }
+    // Now `k·x + konst R 0`, k > 0. Rearrange to `k·x R (−konst)`.
+    let rhs = konst.checked_neg()?;
+    // Map to a lower/upper non-strict bound on `k·x`.
+    // k·x ≤ rhs (Le), k·x < rhs (Lt ⇒ ≤ rhs−1), k·x ≥ rhs (Ge), k·x > rhs (Gt ⇒ ≥ rhs+1).
+    let (bound, lower) = match rel {
+        Op::IntLe => (rhs, false),
+        Op::IntLt => (rhs.checked_sub(1)?, false),
+        Op::IntGe => (rhs, true),
+        Op::IntGt => (rhs.checked_add(1)?, true),
+        _ => return None,
+    };
+    Some(BoundAtom {
+        var,
+        k,
+        bound,
+        lower,
+    })
+}
+
+/// Flip a comparison `Op` under negation of both sides (`a R b` ⟺ `−a R' −b`).
+fn flip_rel(op: Op) -> Option<Op> {
+    Some(match op {
+        Op::IntLe => Op::IntGe,
+        Op::IntLt => Op::IntGt,
+        Op::IntGe => Op::IntLe,
+        Op::IntGt => Op::IntLt,
+        _ => return None,
+    })
+}
+
+/// Detect the canonical single-variable integer-interval shape `c ≤ k·x ≤ d` (k > 0,
+/// one variable, LP-feasible `c ≤ d`, integer-infeasible: no multiple of `k` in
+/// `[c, d]`). On a match returns the [`IntInterval`] with the forced reduction offset
+/// `m` (`k·m < c` and `d < k·(m+1)`). `None` otherwise (declines — never fabricates).
+fn detect_int_interval(arena: &TermArena, assertions: &[TermId]) -> Option<IntInterval> {
+    let [a1, a2] = assertions else {
+        return None;
+    };
+    let b1 = parse_bound_atom(arena, *a1)?;
+    let b2 = parse_bound_atom(arena, *a2)?;
+    if b1.var != b2.var || b1.lower == b2.lower {
+        return None; // need exactly one lower and one upper bound on the same var
+    }
+    let (lo, hi) = if b1.lower { (b1, b2) } else { (b2, b1) };
+    // Require the SAME positive multiplier on both sides for the clean `c ≤ k·x ≤ d`
+    // reduction (a later slice may rescale to a common multiple).
+    if lo.k != hi.k || lo.k <= 0 {
+        return None;
+    }
+    let k = lo.k;
+    let c = lo.bound; // c ≤ k·x
+    let d = hi.bound; // k·x ≤ d
+    if c > d {
+        return None; // LP-infeasible — an LRA (not integer-cut) refutation; decline
+    }
+    // The infeasible-interval reduction: find integer m with k·m < c and d < k·(m+1).
+    // m is forced: m = ⌊(c−1)/k⌋ (Euclidean, k > 0). Verify both strict bounds; if
+    // they hold there is no multiple of k in [c, d] and we have a discreteness proof.
+    let m = (c.checked_sub(1)?).div_euclid(k);
+    let km = k.checked_mul(m)?;
+    let km1 = k.checked_mul(m.checked_add(1)?)?;
+    if !(km < c && d < km1) {
+        return None; // some multiple of k lies in [c, d] — integer-feasible; decline
+    }
+    Some(IntInterval {
+        var: b1.var,
+        k,
+        c,
+        d,
+        m,
+    })
+}
+
+impl IntReconstructCtx {
+    /// Build the kernel `False` proof for a detected [`IntInterval`] `c ≤ k·x ≤ d`.
+    ///
+    /// Mirrors the asserted atoms as hypothesis axioms `h_lo : le c (k·x)` and
+    /// `h_hi : le (k·x) d`, derives the strict literal facts `lt (k·m) (k·x)` and
+    /// `lt (k·x) (k·(m+1))`, cancels the positive `k` (via `le_total` + the forward
+    /// scaling axiom, exactly as the Diophantine discreteness closers) to obtain
+    /// `lt m x` and `lt x (m+1)`, shifts by `−m` to `lt 0 (x−m)` / `lt (x−m) 1`, and
+    /// closes with `no_int_between (x−m)`. For `m = 0` the shift is the identity and
+    /// the close is `no_int_between x` directly.
+    fn build_int_interval_false(&mut self, iv: &IntInterval) -> Result<ExprId, ReconstructError> {
+        let decline = |d: &str| ReconstructError::UnsupportedTerm {
+            term: format!("integer-interval reconstruction declined: {d}"),
+        };
+        let bound = DIO_UNIT_MAX.unsigned_abs();
+        if iv.k > DIO_UNIT_MAX
+            || iv.c.unsigned_abs() > bound
+            || iv.d.unsigned_abs() > bound
+            || iv.m.unsigned_abs() > bound
+        {
+            return Err(decline("k / c / d / m exceed the unit-expansion bound"));
+        }
+        // Dense index 0 for the single variable; `x` as a kernel constant.
+        let x_name = self.var_const_for(iv.var);
+        let xe = self.kernel.const_(x_name, vec![]);
+        let k_lit = self.mk_intlit(iv.k);
+        let gx = self.mk_mul(k_lit, xe); // k·x
+        let c_lit = self.mk_intlit(iv.c);
+        let d_lit = self.mk_intlit(iv.d);
+
+        // --- mirror the asserted atoms as hypotheses over Z -------------------
+        // h_lo : le c (k·x) ; h_hi : le (k·x) d.
+        let lo_prop = self.mk_le(c_lit, gx);
+        let h_lo = self.hyp_axiom(lo_prop)?;
+        let hi_prop = self.mk_le(gx, d_lit);
+        let h_hi = self.hyp_axiom(hi_prop)?;
+
+        // --- 0 ≤ k (k > 0) ----------------------------------------------------
+        let zero = self.mk_zero();
+        let lt_zero_k = self.lt_zero_intlit(iv.k)?; // lt zero k
+        let le_zero_k = self.le_of_lt_app(zero, k_lit, lt_zero_k); // le zero k
+
+        // --- strict literal facts about k·x ----------------------------------
+        // lt (k·m) (k·x):  lt (k·m) c  (literal, since k·m < c) ∘ le c (k·x).
+        let km = iv.k * iv.m;
+        let km1 = iv.k * (iv.m + 1);
+        let km_lit = self.mk_intlit(km);
+        let km1_lit = self.mk_intlit(km1);
+        // lt (k·m) c : need 0 ≤ k·m < c. By construction k·m < c; and m is the floor so
+        // k·m ≤ c−1. We need k·m ≥ 0 for `lt_intlit_intlit`. Establish via the helper
+        // when k·m ≥ 0, else derive through zero. To keep the slice robust, REQUIRE
+        // k·m ≥ 0 and d ≥ 0 (true whenever m ≥ 0, i.e. c ≥ 1); decline otherwise.
+        if km < 0 || iv.d < 0 || km1 < 0 {
+            return Err(decline(
+                "reduction offset yields a negative bound (later slice)",
+            ));
+        }
+        let m_lit = self.mk_intlit(iv.m);
+        let m1_lit = self.mk_intlit(iv.m + 1);
+        // lt (k·m) c (literal) ∘ le c (k·x) : lt (intlit (k·m)) (k·x). Then recast the
+        // left `intlit (k·m) → mul k m` so the cancellation sees `lt (mul k m)(mul k x)`.
+        let lt_km_c = self.lt_lit_lit(km, iv.c)?; // lt (intlit (k·m)) c
+        let lt_kmlit_gx = self.lt_of_lt_of_le_app(km_lit, c_lit, gx, lt_km_c, h_lo);
+        let mul_km = self.mk_mul(k_lit, m_lit); // mul k m
+        let eq_mul_km = self.eq_mul_lit_lit(iv.k, iv.m); // Eq Z (mul k m)(intlit (k·m))
+        let eq_kmlit_mul = self.eq_symm(mul_km, km_lit, eq_mul_km); // Eq Z (intlit (k·m))(mul k m)
+        let lt_km_gx = self.lt_cast_left(km_lit, mul_km, gx, lt_kmlit_gx, eq_kmlit_mul); // lt (mul k m)(k·x)
+
+        // lt (k·x) (k·(m+1)) :  le (k·x) d ∘ lt d (intlit (k·(m+1))) ; recast right.
+        let lt_d_km1 = self.lt_lit_lit(iv.d, km1)?; // lt d (intlit (k·(m+1)))
+        let lt_gx_km1lit = self.lt_of_le_of_lt_app(gx, d_lit, km1_lit, h_hi, lt_d_km1);
+        let mul_km1 = self.mk_mul(k_lit, m1_lit); // mul k (m+1)
+        let eq_mul_km1 = self.eq_mul_lit_lit(iv.k, iv.m + 1); // Eq Z (mul k (m+1))(intlit (k·(m+1)))
+        let eq_km1lit_mul = self.eq_symm(mul_km1, km1_lit, eq_mul_km1); // Eq Z (intlit …)(mul k (m+1))
+        let lt_gx_km1 = self.lt_cast_right(gx, km1_lit, mul_km1, lt_gx_km1lit, eq_km1lit_mul); // lt (k·x)(mul k (m+1))
+
+        // --- cancel the positive k : lt m x and lt x (m+1) -------------------
+        let lt_m_x = self.cancel_pos_mul_lt_lower(k_lit, m_lit, xe, le_zero_k, lt_km_gx);
+        let lt_x_m1 = self.cancel_pos_mul_lt_upper(k_lit, xe, m1_lit, le_zero_k, lt_gx_km1);
+
+        // --- shift by −m, then close with no_int_between ----------------------
+        if iv.m == 0 {
+            // m_lit = mk_intlit(0) = zero ; m1_lit = mk_intlit(1) = one (count==1 ⇒ the
+            // unit `one`, no `add`). So lt_m_x : lt zero x and lt_x_m1 : lt x one
+            // already — close with `no_int_between x (And.intro (lt 0 x)(lt x 1))`.
+            let one = self.mk_one();
+            let p_prop = self.mk_lt(zero, xe);
+            let q_prop = self.mk_lt(xe, one);
+            let and_proof = self.and_intro(p_prop, q_prop, lt_m_x, lt_x_m1);
+            return Ok(self.no_int_between_app(xe, and_proof));
+        }
+        // General m ≠ 0: w = x + (−m) = x − m. Prove lt 0 w from lt m x, and lt w 1
+        // from lt x (m+1), by adding (−m) to both sides (additive shift), then close.
+        let neg_m_lit = self.mk_intlit(-iv.m);
+        let w = self.mk_add(xe, neg_m_lit); // x + (−m)
+
+        // lt 0 w :  from lt m x add (−m): lt (m + (−m)) (x + (−m)); normalize lhs → 0.
+        let lt_zero_w = self.shift_lt_lower(m_lit, xe, neg_m_lit, iv.m, lt_m_x)?;
+        // lt w 1 :  from lt x (m+1) add (−m): lt (x + (−m)) ((m+1) + (−m)); rhs → 1.
+        let lt_w_one = self.shift_lt_upper(xe, m1_lit, neg_m_lit, iv.m, lt_x_m1)?;
+
+        let one = self.mk_one();
+        let p_prop = self.mk_lt(zero, w);
+        let q_prop = self.mk_lt(w, one);
+        let and_proof = self.and_intro(p_prop, q_prop, lt_zero_w, lt_w_one);
+        Ok(self.no_int_between_app(w, and_proof))
+    }
+
+    /// Get (declaring lazily) the opaque `Z`-typed constant for an IR [`SymbolId`],
+    /// using a fixed dense index `0` (the interval shape has a single variable).
+    fn var_const_for(&mut self, _sym: SymbolId) -> NameId {
+        self.var_const(0)
+    }
+
+    /// `Eq Z (mul (intlit a)(intlit b)) (intlit (a·b))` via the ring normalizer (the
+    /// kernel term `mul (mk_intlit a)(mk_intlit b)` hash-conses with the normalizer's
+    /// `kexpr`). Handles `a = 0` or `b = 0` (product `zero`) through the normalizer's
+    /// `Zero`/`mul_zero` path; both nonzero go through the literal-product distribution.
+    fn eq_mul_lit_lit(&mut self, a: i128, b: i128) -> ExprId {
+        let za = intlit_zexpr(a);
+        let zb = intlit_zexpr(b);
+        let prod = ZExpr::Mul(Box::new(za), Box::new(zb));
+        let (gens, kexpr, proof) = self
+            .normalize(&prod)
+            .expect("literal·literal normalizer never declines (degree ≤ 1)");
+        let prod_val = a.checked_mul(b).expect("k·m within i128");
+        debug_assert_eq!(gens, lin_to_canon_gens(&[], prod_val));
+        let canon = self.gens_to_expr(&gens);
+        let lit = self.mk_intlit(prod_val);
+        let bridge = self.intlit_eq_canon(prod_val); // Eq Z lit canon
+        let bridge_sym = self.eq_symm(lit, canon, bridge); // canon = lit
+        // proof : Eq Z kexpr canon ; kexpr == mul (mk_intlit a)(mk_intlit b).
+        self.eq_trans(kexpr, canon, lit, proof, bridge_sym)
+    }
+
+    /// `lt (intlit a)(intlit b)` for `0 ≤ a < b`, dispatching the `a = 0` case to
+    /// [`Self::lt_zero_intlit`] (since [`Self::lt_intlit_intlit`] requires `a ≥ 1`).
+    fn lt_lit_lit(&mut self, a: i128, b: i128) -> Result<ExprId, ReconstructError> {
+        debug_assert!(a >= 0 && b > a);
+        if a == 0 {
+            self.lt_zero_intlit(b)
+        } else {
+            self.lt_intlit_intlit(a, b)
+        }
+    }
+
+    /// From `h_lt : lt (k·m) (k·x)` and `h_k : le 0 k` derive `lt m x` — cancel the
+    /// positive multiplier `k`. Pure forward scaling + total order + irreflexivity (no
+    /// strict-cancel axiom), mirroring `prove_m_prime_lt_one`.
+    fn cancel_pos_mul_lt_lower(
+        &mut self,
+        k_lit: ExprId,
+        m_lit: ExprId,
+        xe: ExprId,
+        h_k: ExprId,
+        h_lt: ExprId, // lt (mul k m) (mul k x)
+    ) -> ExprId {
+        // le_total m x : Or (le m x)(le x m).
+        let a_prop = self.mk_le(m_lit, xe);
+        let b_prop = self.mk_le(xe, m_lit);
+        let or_proof = {
+            let ax = self.kernel.const_(self.int.le_total, vec![]);
+            let e = self.kernel.app(ax, m_lit);
+            self.kernel.app(e, xe)
+        };
+        let target = self.mk_le(m_lit, xe);
+        let minor_inl = {
+            let fid = self.fresh_fvar();
+            let h = self.kernel.fvar(fid);
+            let body = self.kernel.abstract_fvars(h, &[fid]);
+            let anon = self.kernel.anon();
+            self.kernel.lam(anon, a_prop, body, BinderInfo::Default)
+        };
+        let minor_inr = {
+            let fid = self.fresh_fvar();
+            let h_le_x_m = self.kernel.fvar(fid); // le x m
+            // mul_le_mul_of_nonneg_left k x m h_k h_le_x_m : le (k·x)(k·m).
+            let le_kx_km = self.mul_le_mul_left_app(k_lit, xe, m_lit, h_k, h_le_x_m);
+            // lt (k·m)(k·x) ∘ le (k·x)(k·m) : lt (k·m)(k·m).
+            let km = self.mk_mul(k_lit, m_lit);
+            let kx = self.mk_mul(k_lit, xe);
+            let lt_km_km = self.lt_of_lt_of_le_app(km, kx, km, h_lt, le_kx_km);
+            let irr = self.lt_irrefl_app(km);
+            let false_proof = self.kernel.app(irr, lt_km_km);
+            let exf = self.ex_falso(target, false_proof);
+            let body = self.kernel.abstract_fvars(exf, &[fid]);
+            let anon = self.kernel.anon();
+            self.kernel.lam(anon, b_prop, body, BinderInfo::Default)
+        };
+        let le_m_x = self.or_rec_le(a_prop, b_prop, target, minor_inl, minor_inr, or_proof);
+        // m ≠ x : else k·m = k·x contradicts lt (k·m)(k·x).
+        let not_eq = {
+            let fid = self.fresh_fvar();
+            let h_eq = self.kernel.fvar(fid); // Eq Z m x
+            let cong = self.congr_mul_right(k_lit, m_lit, xe, h_eq); // mul k m = mul k x
+            let km = self.mk_mul(k_lit, m_lit);
+            let kx = self.mk_mul(k_lit, xe);
+            // cast lt (k·m)(k·x) on the LEFT km → kx ⇒ lt (k·x)(k·x).
+            let lt_kx_kx = self.lt_cast_left(km, kx, kx, h_lt, cong);
+            let irr = self.lt_irrefl_app(kx);
+            let false_proof = self.kernel.app(irr, lt_kx_kx);
+            let body = self.kernel.abstract_fvars(false_proof, &[fid]);
+            let anon = self.kernel.anon();
+            let eq_m_x = self.mk_eq(m_lit, xe);
+            self.kernel.lam(anon, eq_m_x, body, BinderInfo::Default)
+        };
+        self.lt_of_le_of_ne_app(m_lit, xe, le_m_x, not_eq)
+    }
+
+    /// From `h_lt : lt (k·x) (k·(m+1))` and `h_k : le 0 k` derive `lt x (m+1)` — cancel
+    /// the positive multiplier on the upper bound. Symmetric to
+    /// [`Self::cancel_pos_mul_lt_lower`].
+    fn cancel_pos_mul_lt_upper(
+        &mut self,
+        k_lit: ExprId,
+        xe: ExprId,
+        m1_lit: ExprId,
+        h_k: ExprId,
+        h_lt: ExprId, // lt (mul k x) (mul k (m+1))
+    ) -> ExprId {
+        let a_prop = self.mk_le(xe, m1_lit); // le x (m+1)
+        let b_prop = self.mk_le(m1_lit, xe); // le (m+1) x
+        let or_proof = {
+            let ax = self.kernel.const_(self.int.le_total, vec![]);
+            let e = self.kernel.app(ax, xe);
+            self.kernel.app(e, m1_lit)
+        };
+        let target = self.mk_le(xe, m1_lit);
+        let minor_inl = {
+            let fid = self.fresh_fvar();
+            let h = self.kernel.fvar(fid);
+            let body = self.kernel.abstract_fvars(h, &[fid]);
+            let anon = self.kernel.anon();
+            self.kernel.lam(anon, a_prop, body, BinderInfo::Default)
+        };
+        let minor_inr = {
+            let fid = self.fresh_fvar();
+            let h_le_m1_x = self.kernel.fvar(fid); // le (m+1) x
+            // mul_le_mul_of_nonneg_left k (m+1) x h_k h_le_m1_x : le (k·(m+1))(k·x).
+            let le_km1_kx = self.mul_le_mul_left_app(k_lit, m1_lit, xe, h_k, h_le_m1_x);
+            let kx = self.mk_mul(k_lit, xe);
+            let km1 = self.mk_mul(k_lit, m1_lit);
+            // lt (k·x)(k·(m+1)) ∘ le (k·(m+1))(k·x) : lt (k·x)(k·x).
+            let lt_kx_kx = self.lt_of_lt_of_le_app(kx, km1, kx, h_lt, le_km1_kx);
+            let irr = self.lt_irrefl_app(kx);
+            let false_proof = self.kernel.app(irr, lt_kx_kx);
+            let exf = self.ex_falso(target, false_proof);
+            let body = self.kernel.abstract_fvars(exf, &[fid]);
+            let anon = self.kernel.anon();
+            self.kernel.lam(anon, b_prop, body, BinderInfo::Default)
+        };
+        let le_x_m1 = self.or_rec_le(a_prop, b_prop, target, minor_inl, minor_inr, or_proof);
+        // x ≠ (m+1) : else k·x = k·(m+1) contradicts lt (k·x)(k·(m+1)).
+        let not_eq = {
+            let fid = self.fresh_fvar();
+            let h_eq = self.kernel.fvar(fid); // Eq Z x (m+1)
+            let cong = self.congr_mul_right(k_lit, xe, m1_lit, h_eq); // mul k x = mul k (m+1)
+            let kx = self.mk_mul(k_lit, xe);
+            let km1 = self.mk_mul(k_lit, m1_lit);
+            // cast lt (k·x)(k·(m+1)) on the RIGHT km1 → kx ⇒ lt (k·x)(k·x).
+            let cong_sym = self.eq_symm(kx, km1, cong); // mul k (m+1) = mul k x
+            let lt_kx_kx = self.lt_cast_right(kx, km1, kx, h_lt, cong_sym);
+            let irr = self.lt_irrefl_app(kx);
+            let false_proof = self.kernel.app(irr, lt_kx_kx);
+            let body = self.kernel.abstract_fvars(false_proof, &[fid]);
+            let anon = self.kernel.anon();
+            let eq_x_m1 = self.mk_eq(xe, m1_lit);
+            self.kernel.lam(anon, eq_x_m1, body, BinderInfo::Default)
+        };
+        self.lt_of_le_of_ne_app(xe, m1_lit, le_x_m1, not_eq)
+    }
+
+    /// `Or.rec.{0}` over `le`-valued props: from `minor_inl : a → target`,
+    /// `minor_inr : b → target`, and `or_proof : Or a b`, build `target`.
+    fn or_rec_le(
+        &mut self,
+        a_prop: ExprId,
+        b_prop: ExprId,
+        target: ExprId,
+        minor_inl: ExprId,
+        minor_inr: ExprId,
+        or_proof: ExprId,
+    ) -> ExprId {
+        let anon = self.kernel.anon();
+        let or_ab = {
+            let or_c = self.kernel.const_(self.int.logic.or, vec![]);
+            let e = self.kernel.app(or_c, a_prop);
+            self.kernel.app(e, b_prop)
+        };
+        let motive = self.kernel.lam(anon, or_ab, target, BinderInfo::Default);
+        let zlvl = self.kernel.level_zero();
+        let rec = self.kernel.const_(self.int.logic.or_rec, vec![zlvl]);
+        let e = self.kernel.app(rec, a_prop);
+        let e = self.kernel.app(e, b_prop);
+        let e = self.kernel.app(e, motive);
+        let e = self.kernel.app(e, minor_inl);
+        let e = self.kernel.app(e, minor_inr);
+        self.kernel.app(e, or_proof)
+    }
+
+    /// From `h : lt (intlit m) x` derive `lt zero (add x (neg (intlit m)))` by adding
+    /// `neg (intlit m)` to both sides and normalizing the lhs `m + (−m) → 0`.
+    fn shift_lt_lower(
+        &mut self,
+        m_lit: ExprId,
+        xe: ExprId,
+        neg_m_lit: ExprId,
+        m: i128,
+        h: ExprId, // lt m x
+    ) -> Result<ExprId, ReconstructError> {
+        // h_le : le (neg m)(neg m)  (le_refl).
+        let h_le = self.le_refl_app(neg_m_lit);
+        // add_lt_add_of_le_of_lt (neg m)(neg m) m x h_le h : lt (add (neg m) m)(add (neg m) x).
+        let combined = self.add_lt_add_of_le_of_lt_app(neg_m_lit, neg_m_lit, m_lit, xe, h_le, h);
+        // lhs (add (neg m) m) → zero ; rhs (add (neg m) x) → (add x (neg m)) (= w).
+        let lhs = self.mk_add(neg_m_lit, m_lit); // (−m) + m
+        let rhs = self.mk_add(neg_m_lit, xe); // (−m) + x
+        let zero = self.mk_zero();
+        // Eq Z ((−m) + m) zero via the ring normalizer (neg_m_lit is the *literal*
+        // `intlit (−m)`, not `neg (intlit m)`, so we normalize the literal sum).
+        let lhs_eq_zero = self.intlit_pair_sum_eq_zero(neg_m_lit, m_lit, -m, m)?;
+        let lt_zero_rhs = self.lt_cast_left(lhs, zero, rhs, combined, lhs_eq_zero); // lt zero ((−m)+x)
+        // rhs ((−m)+x) → w = (x + (−m)) by commutativity.
+        let w = self.mk_add(xe, neg_m_lit);
+        let comm2 = self.add_comm_eq(neg_m_lit, xe); // (−m)+x = x+(−m)
+        Ok(self.lt_cast_right(zero, rhs, w, lt_zero_rhs, comm2))
+    }
+
+    /// From `h : lt x (intlit (m+1))` derive `lt (add x (neg (intlit m))) one` by adding
+    /// `neg (intlit m)` to both sides and normalizing the rhs `(m+1) + (−m) → 1`.
+    fn shift_lt_upper(
+        &mut self,
+        xe: ExprId,
+        m1_lit: ExprId,
+        neg_m_lit: ExprId,
+        m: i128,
+        h: ExprId, // lt x (m+1)
+    ) -> Result<ExprId, ReconstructError> {
+        let h_le = self.le_refl_app(neg_m_lit);
+        // add_lt_add_of_le_of_lt (neg m)(neg m) x (m+1) h_le h :
+        //   lt (add (neg m) x)(add (neg m)(m+1)).
+        let combined = self.add_lt_add_of_le_of_lt_app(neg_m_lit, neg_m_lit, xe, m1_lit, h_le, h);
+        let lhs = self.mk_add(neg_m_lit, xe); // (−m)+x
+        let rhs = self.mk_add(neg_m_lit, m1_lit); // (−m)+(m+1)
+        let one = self.mk_one();
+        // rhs ((−m)+(m+1)) → one (sum is 1).
+        let rhs_eq_one = self.intlit_pair_sum_eq_one(neg_m_lit, m1_lit, -m, m + 1)?;
+        let lt_lhs_one = self.lt_cast_right(lhs, rhs, one, combined, rhs_eq_one); // lt ((−m)+x) one
+        // lhs ((−m)+x) → w = (x+(−m)) by commutativity.
+        let w = self.mk_add(xe, neg_m_lit);
+        let comm = self.add_comm_eq(neg_m_lit, xe); // (−m)+x = x+(−m)
+        Ok(self.lt_cast_left(lhs, w, one, lt_lhs_one, comm))
+    }
+
+    /// `Eq Z (add (intlit a)(intlit b)) zero` when `a + b = 0` (both nonzero), via the
+    /// ring normalizer (canonical form is the empty gen list = `zero`).
+    fn intlit_pair_sum_eq_zero(
+        &mut self,
+        _a_lit: ExprId,
+        _b_lit: ExprId,
+        a: i128,
+        b: i128,
+    ) -> Result<ExprId, ReconstructError> {
+        debug_assert_eq!(a + b, 0);
+        self.intlit_pair_sum_eq(a, b, 0)
+    }
+
+    /// `Eq Z (add (intlit a)(intlit b)) one` when `a + b = 1` (both nonzero), via the
+    /// ring normalizer.
+    fn intlit_pair_sum_eq_one(
+        &mut self,
+        _a_lit: ExprId,
+        _b_lit: ExprId,
+        a: i128,
+        b: i128,
+    ) -> Result<ExprId, ReconstructError> {
+        debug_assert_eq!(a + b, 1);
+        self.intlit_pair_sum_eq(a, b, 1)
+    }
+
+    /// `Eq Z (add (intlit a)(intlit b)) (intlit s)` when `a + b = s` (`a`, `b` nonzero),
+    /// via the ring normalizer (a generalization of [`Self::intlit_add_eq`] permitting
+    /// `s = 0` or any `s`). Builds the faithful sum, normalizes, checks the canonical
+    /// form matches `s`, and bridges to the `mk_intlit s` term.
+    fn intlit_pair_sum_eq(
+        &mut self,
+        a: i128,
+        b: i128,
+        s: i128,
+    ) -> Result<ExprId, ReconstructError> {
+        debug_assert_eq!(a + b, s);
+        let (Some(za), Some(zb)) = (lin_to_zexpr(&[], a), lin_to_zexpr(&[], b)) else {
+            return Err(ReconstructError::UnsupportedTerm {
+                term: "intlit_pair_sum requires both operands nonzero".to_owned(),
+            });
+        };
+        let sum_zexpr = ZExpr::Add(Box::new(za), Box::new(zb));
+        let (gens, kexpr, proof) =
+            self.normalize(&sum_zexpr)
+                .ok_or_else(|| ReconstructError::UnsupportedTerm {
+                    term: "intlit_pair_sum normalizer declined".to_owned(),
+                })?;
+        let expected = lin_to_canon_gens(&[], s);
+        if gens != expected {
+            return Err(ReconstructError::UnsupportedTerm {
+                term: "intlit_pair_sum did not canonicalize to the expected sum".to_owned(),
+            });
+        }
+        let canon = self.gens_to_expr(&gens);
+        let s_lit = self.mk_intlit(s);
+        let bridge = self.intlit_eq_canon(s); // Eq Z (intlit s) canon
+        let bridge_sym = self.eq_symm(s_lit, canon, bridge); // canon = intlit s
+        Ok(self.eq_trans(kexpr, canon, s_lit, proof, bridge_sym))
+    }
+}
+
+/// **Reconstruct an integer-inequality (interval) infeasibility to a kernel-checked
+/// Lean `False`** (ADR-0042, the integer-cut payoff). Detects the single-variable
+/// shape `c ≤ k·x ≤ d` (k > 0) with no multiple of `k` in `[c, d]`, reconstructs the
+/// discreteness argument over [`IntPrelude`], and returns the assembled `False` proof
+/// term (already `infer` + `def_eq False`-gated through the kernel).
+///
+/// # Errors
+///
+/// [`ReconstructError::UnsupportedTerm`] when the assertions do not match the detected
+/// shape (multiple variables, non-unit multipliers, an integer-feasible interval, or a
+/// coefficient/bound overflow) — never fabricated; [`ReconstructError::KernelRejected`]
+/// when the assembled term does not kernel-check to `False`.
+pub fn reconstruct_int_inequality_proof(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<ExprId, ReconstructError> {
+    let (_, proof) = build_and_gate_int_interval(arena, assertions)?;
+    Ok(proof)
+}
+
+/// The theorem name used for the exported integer-interval refutation Lean module.
+const INT_INEQ_LEAN_THEOREM: &str = "axeyum_refutation";
+
+/// **Like [`reconstruct_int_inequality_proof`], but also renders a self-contained Lean
+/// module** re-proving the refutation. A successful return means the proof was emitted,
+/// kernel-checked to `False`, and rendered to externally-checkable Lean source.
+///
+/// # Errors
+///
+/// Same as [`reconstruct_int_inequality_proof`].
+pub fn reconstruct_int_inequality_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let (mut ctx, proof) = build_and_gate_int_interval(arena, assertions)?;
+    let false_ = {
+        let f = ctx.int().logic.false_;
+        ctx.kernel_mut().const_(f, vec![])
+    };
+    Ok(ctx
+        .kernel()
+        .render_lean_module(INT_INEQ_LEAN_THEOREM, false_, proof))
+}
+
+/// Shared core: detect the interval shape, build the `False` proof over a fresh
+/// [`IntReconstructCtx`], and gate it through the kernel (`infer` + `def_eq False`).
+fn build_and_gate_int_interval(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<(IntReconstructCtx, ExprId), ReconstructError> {
+    let Some(iv) = detect_int_interval(arena, assertions) else {
+        return Err(ReconstructError::UnsupportedTerm {
+            term: "no single-variable integer-interval (c ≤ k·x ≤ d) refutation".to_owned(),
+        });
+    };
+    let mut ctx = IntReconstructCtx::new();
+    let proof = ctx.build_int_interval_false(&iv)?;
+    let inferred = ctx
+        .kernel_mut()
+        .infer(proof)
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "int_inequality".to_owned(),
+            detail: format!("infer failed: {e:?}"),
+        })?;
+    let false_ = {
+        let f = ctx.int().logic.false_;
+        ctx.kernel_mut().const_(f, vec![])
+    };
+    if ctx.kernel_mut().def_eq(inferred, false_) {
+        Ok((ctx, proof))
+    } else {
+        Err(ReconstructError::KernelRejected {
+            rule: "int_inequality".to_owned(),
+            detail: "integer-interval refutation did not infer to False".to_owned(),
+        })
+    }
+}
+
+/// Detect the single-variable integer-interval refutation shape (used by the fragment
+/// classifier to route to the integer-inequality reconstructor). Returns `true` iff
+/// [`detect_int_interval`] matches.
+#[must_use]
+pub fn is_int_inequality_refutation(arena: &TermArena, assertions: &[TermId]) -> bool {
+    detect_int_interval(arena, assertions).is_some()
 }

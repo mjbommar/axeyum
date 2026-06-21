@@ -148,7 +148,9 @@ pub use faithfulness::{FaithfulnessOutcome, check_qf_bv_faithfulness};
 pub use fp::FloatFormat;
 pub use incremental::{AssumptionOutcome, IncrementalBvSolver};
 pub use int_reconstruct::{
-    IntReconstructCtx, reconstruct_diophantine_proof, reconstruct_diophantine_to_lean_module,
+    IntReconstructCtx, is_int_inequality_refutation, reconstruct_diophantine_proof,
+    reconstruct_diophantine_to_lean_module, reconstruct_int_inequality_proof,
+    reconstruct_int_inequality_to_lean_module,
 };
 pub use layers::BvLayerStats;
 pub use lazy_bv::{
