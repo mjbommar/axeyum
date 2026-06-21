@@ -773,9 +773,18 @@ fn estimate_blast_clauses(arena: &TermArena, assertions: &[TermId]) -> u64 {
         if let TermNode::App { op, args } = arena.node(t) {
             let w = width(t);
             let cost = match op {
-                Op::BvMul => w.saturating_mul(w),
+                // A shift-and-add multiplier is `w²` partial-product AND gates PLUS a
+                // carry-save adder tree (~`w` ripple-carry adds of `w`-bit numbers,
+                // ~7 AIG nodes per full adder) ≈ 8·w² gates total. Charging only `w²`
+                // under-estimated by ~8×, so e.g. a 4096-bit `bvmul` slipped *just*
+                // under the clause ceiling and then OOM-trapped during lowering
+                // instead of degrading to `unknown`. Use the conservative ~8·w² so
+                // genuinely-too-large multipliers are refused before allocation.
+                Op::BvMul => w.saturating_mul(w).saturating_mul(8),
+                // Restoring division/remainder is a per-bit subtract+compare circuit,
+                // heavier than multiplication; conservatively ~10·w².
                 Op::BvUdiv | Op::BvUrem | Op::BvSdiv | Op::BvSrem | Op::BvSmod => {
-                    w.saturating_mul(w).saturating_mul(4)
+                    w.saturating_mul(w).saturating_mul(10)
                 }
                 Op::BvShl | Op::BvLshr | Op::BvAshr => {
                     let log_w = 64u64 - u64::from(w.leading_zeros());

@@ -795,6 +795,36 @@ fn oversized_multiply_is_refused_gracefully_not_oom() {
     );
 }
 
+#[test]
+fn just_under_ceiling_4096bit_multiply_is_refused_not_trapped() {
+    // Regression (documentation-agent / wasm-playground find): a 4096-bit `a·b`
+    // estimated to only `4096²·3 ≈ 50M` clauses under the OLD `w²`-gate model — *just*
+    // under the 64M ceiling — so it was NOT refused and OOM-trapped (wasm
+    // `unreachable`) during lowering instead of returning `unknown`. The estimate now
+    // charges the multiplier's adder tree (~8·w²), so this is refused before
+    // allocation: a graceful `EncodingBudget` unknown, never a crash.
+    let mut arena = TermArena::new();
+    let w = 4096;
+    let a = arena
+        .declare("a", Sort::BitVec(w))
+        .map(|s| arena.var(s))
+        .unwrap();
+    let b = arena
+        .declare("b", Sort::BitVec(w))
+        .map(|s| arena.var(s))
+        .unwrap();
+    let prod = arena.bv_mul(a, b).unwrap();
+    let one = arena.bv_const(w, 1).unwrap();
+    let goal = arena.eq(prod, one).unwrap(); // a·b = 1, a constrained multiply
+    let result = SatBvBackend::new()
+        .check(&arena, &[goal], &SolverConfig::default())
+        .unwrap();
+    assert!(
+        matches!(&result, CheckResult::Unknown(r) if matches!(r.kind, UnknownKind::EncodingBudget)),
+        "4096-bit constrained multiply must refuse gracefully (EncodingBudget), got {result:?}"
+    );
+}
+
 /// End-to-end checks of the flag-gated native CDCL primary search (slice 1):
 /// the native core decides BV queries, its `sat` models still replay against the
 /// original terms, and its verdicts agree with the default `BatSat` path.
