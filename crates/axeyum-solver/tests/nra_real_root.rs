@@ -1784,6 +1784,54 @@ fn strict_cad_high_degree_many_var_bounded_no_hang() {
     }
 }
 
+/// Second fuzz-found WRONG-UNSAT (seed 1924): a single-variable strict system
+/// `2 + 3z² > 0 ∧ 3 − 3z² + z < 0` (clearly Sat — atom0 is always true, atom1
+/// holds for z ≤ −1) was reported `Unsat`. Root cause: `cell_samples` derived its
+/// per-cell witnesses from `Root::locate` (a depth-48 isolating-interval dyadic),
+/// so for atom1's IRRATIONAL roots `(1 ± √37)/6` the samples had ~2⁴⁹
+/// denominators; evaluating the original term there OVERFLOWED `i128`, the replay
+/// gate read the `Err` as "witness invalid", and with every valid witness rejected
+/// `decide_system` concluded `Unsat`. Fix: `cell_samples` now picks SIMPLE
+/// in-cell rationals (integers / coarse dyadics from the safe gap between roots),
+/// and the replay distinguishes overflow (`None` ⇒ decline) from a genuine `false`
+/// — so a witness is never silently dropped into a wrong `Unsat`. The witness here
+/// is now the clean integer `z = −2`.
+#[test]
+fn strict_single_var_wrong_unsat_regression_seed_1924_is_sat() {
+    let mut a = TermArena::new();
+    let (zs, z) = real(&mut a, "z");
+    let zz = a.real_mul(z, z).unwrap();
+    let three = a.real_const(Rational::integer(3));
+    let t3zz = a.real_mul(three, zz).unwrap();
+    let two = a.real_const(Rational::integer(2));
+    let p0 = a.real_add(two, t3zz).unwrap();
+    let zero = a.real_const(Rational::zero());
+    let atom0 = a.real_gt(p0, zero).unwrap(); // 2 + 3z² > 0
+    let m3 = a.real_const(Rational::integer(-3));
+    let m3zz = a.real_mul(m3, zz).unwrap();
+    let three2 = a.real_const(Rational::integer(3));
+    let sum = a.real_add(three2, m3zz).unwrap();
+    let p1 = a.real_add(sum, z).unwrap();
+    let zero2 = a.real_const(Rational::zero());
+    let atom1 = a.real_lt(p1, zero2).unwrap(); // 3 − 3z² + z < 0
+
+    let r = solve(&mut a, &[atom0, atom1], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("2+3z²>0 ∧ 3-3z²+z<0 is SAT (e.g. z=-2); got {r:?}");
+    };
+    assert!(
+        matches!(model.get(zs), Some(Value::Real(_))),
+        "witness must be a (clean) rational"
+    );
+    let asg = model.to_assignment();
+    for (t, n) in [(atom0, "2+3z²>0"), (atom1, "3-3z²+z<0")] {
+        assert!(
+            matches!(eval(&a, t, &asg), Ok(Value::Bool(true))),
+            "{n} must replay true at the witness (no eval overflow)"
+        );
+    }
+}
+
 /// Regression for the fuzz-found WRONG-UNSAT (the adversarial Z3 differential
 /// harness, seed 1117, minimized): `3xy + 3 + 3x < 0 ∧ xy > 0` is satisfiable
 /// (witness x = −2, y = −1/4: A = −3/2 < 0, B = 1/2 > 0), yet the strict-CAD path

@@ -330,8 +330,9 @@ fn decide_single(
         Verdict::Unsat => Some(CheckResult::Unsat),
         Verdict::SatRational(q) => {
             // Replay the rational witness through the ground evaluator on ALL
-            // original assertions; accept only if every one holds.
-            if !replay_rational(arena, assertions, var, q) {
+            // original assertions; accept only if every one definitely holds (a
+            // `None`/overflow or a definite `false` ⇒ decline, never a wrong Sat).
+            if replay_rational(arena, assertions, var, q) != Some(true) {
                 return None;
             }
             let mut model = Model::new();
@@ -390,20 +391,33 @@ fn decide_system(
     //    enumeration is *incomplete* for this query, so we must not claim Unsat
     //    — propagate the decline.
     for q in &samples {
-        if rational_satisfies_all(atoms, *q)? && replay_rational(arena, assertions, var, *q) {
-            let mut model = Model::new();
-            model.set(var, Value::Real(*q));
-            return Some(CheckResult::Sat(model));
+        if rational_satisfies_all(atoms, *q)? {
+            // The exact integer-polynomial check already proves `q` satisfies every
+            // constraint. Confirm via the original terms; a `None` (overflow ⇒ could
+            // not re-eval) or a definite `false` (an inconsistency) means we cannot
+            // soundly certify — DECLINE rather than continue toward a wrong `Unsat`.
+            match replay_rational(arena, assertions, var, *q) {
+                Some(true) => {
+                    let mut model = Model::new();
+                    model.set(var, Value::Real(*q));
+                    return Some(CheckResult::Sat(model));
+                }
+                _ => return None,
+            }
         }
     }
     for root in &ordered {
         match root {
             Root::Rational(q) => {
-                if rational_satisfies_all(atoms, *q)? && replay_rational(arena, assertions, var, *q)
-                {
-                    let mut model = Model::new();
-                    model.set(var, Value::Real(*q));
-                    return Some(CheckResult::Sat(model));
+                if rational_satisfies_all(atoms, *q)? {
+                    match replay_rational(arena, assertions, var, *q) {
+                        Some(true) => {
+                            let mut model = Model::new();
+                            model.set(var, Value::Real(*q));
+                            return Some(CheckResult::Sat(model));
+                        }
+                        _ => return None,
+                    }
                 }
             }
             Root::Algebraic(a) => {
@@ -508,12 +522,30 @@ fn algebraic_replay_all(atoms: &[Atom], a: &RealAlgebraic) -> bool {
 
 /// Replay a rational witness through the ground evaluator on **every** original
 /// assertion; accept only if all evaluate to `Bool(true)`.
-fn replay_rational(arena: &TermArena, assertions: &[TermId], var: SymbolId, q: Rational) -> bool {
+/// Replay the original assertions at `var := q`: `Some(true)` = all hold,
+/// `Some(false)` = some assertion is definitely false, `None` = a replay did not
+/// resolve (e.g. the exact-rational evaluation OVERFLOWED `i128` at a
+/// high-denominator witness). A `None` must make the caller DECLINE — treating an
+/// unresolved replay as "witness invalid" and continuing to `Unsat` was a
+/// wrong-`Unsat` soundness bug (the witness genuinely satisfied the constraints by
+/// the exact integer-polynomial check; only the term-level re-eval overflowed).
+fn replay_rational(
+    arena: &TermArena,
+    assertions: &[TermId],
+    var: SymbolId,
+    q: Rational,
+) -> Option<bool> {
     let mut asg = Assignment::new();
     asg.set(var, Value::Real(q));
-    assertions
-        .iter()
-        .all(|&a| matches!(eval(arena, a, &asg), Ok(Value::Bool(true))))
+    let mut all_true = true;
+    for &a in assertions {
+        match eval(arena, a, &asg) {
+            Ok(Value::Bool(true)) => {}
+            Ok(Value::Bool(false)) => return Some(false),
+            _ => all_true = false, // overflow / non-Bool ⇒ inconclusive
+        }
+    }
+    if all_true { Some(true) } else { None }
 }
 
 /// Sort isolated roots into ascending order, returning `None` if any pair cannot
@@ -570,32 +602,105 @@ fn compare_roots(a: &Root, b: &Root) -> Option<Ordering> {
     }
 }
 
+/// The isolating lower/upper rational bounds of a root: the true value lies in
+/// `[lo, hi]` (`lo == hi` for a rational root). `None` if an algebraic root cannot
+/// expose its interval.
+fn root_bounds(r: &Root) -> Option<(Rational, Rational)> {
+    match r {
+        Root::Rational(q) => Some((*q, *q)),
+        Root::Algebraic(a) => a.interval(),
+    }
+}
+
+/// `floor(r)` as an `i128` (`den > 0` is a `Rational` invariant, so `div_euclid`
+/// is the floor).
+fn floor_i128(r: Rational) -> i128 {
+    r.numerator().div_euclid(r.denominator())
+}
+
+/// `ceil(r)` as an `i128`. `None` on the `i128::MIN` negation edge.
+fn ceil_i128(r: Rational) -> Option<i128> {
+    Some(-(r.numerator().checked_neg()?.div_euclid(r.denominator())))
+}
+
+/// Depth bound for [`coarsest_rational_in`]'s denominator doublings (`2^52` finely
+/// separates the roots of any admissible polynomial; beyond it the caller falls
+/// back to the exact midpoint).
+const COARSEN_SAMPLE_DEPTH: u32 = 52;
+
+/// The smallest-denominator dyadic strictly inside the open interval `(a, b)`
+/// (`a < b`). Tries denominators `1, 2, 4, …`, taking `m = floor(a·den)+1` (the
+/// least numerator with `m/den > a`) and returning the first `m/den < b`. A
+/// SIMPLE in-cell sample keeps the witness's denominator small so it evaluates
+/// without `i128` overflow (a deep-bisection dyadic from `Root::locate` would
+/// overflow the exact-rational replay — the wrong-`Unsat` bug). `None` on overflow
+/// or if no dyadic is found within the bound.
+fn coarsest_rational_in(a: Rational, b: Rational) -> Option<Rational> {
+    let mut den: i128 = 1;
+    for _ in 0..=COARSEN_SAMPLE_DEPTH {
+        let scaled = a.checked_mul(Rational::integer(den))?;
+        let m = floor_i128(scaled).checked_add(1)?;
+        let cand = Rational::checked_new(m, den)?;
+        if cand.checked_cmp(&b)? == Ordering::Less {
+            return Some(cand);
+        }
+        den = den.checked_mul(2)?;
+    }
+    None
+}
+
 /// Build one rational sample strictly inside each open cell delimited by the
 /// (ascending, deduplicated) roots: below the least root, between each adjacent
 /// pair, and above the greatest. With no roots, a single sample (0) covers ℝ.
 /// `None` on overflow.
+///
+/// Samples are chosen SIMPLE (small denominator): an integer below/above the
+/// extreme roots, and the coarsest dyadic in the SAFE gap `(hi_i, lo_{i+1})`
+/// between consecutive roots' isolating intervals — which is guaranteed strictly
+/// between the two roots (`hi_i ≥ root_i`, `lo_{i+1} ≤ root_{i+1}`). This keeps
+/// witnesses eval-checkable: a `Root::locate` midpoint is a depth-48 dyadic whose
+/// exact-rational evaluation overflows `i128`, which previously made the replay
+/// reject a valid witness and the system wrongly report `Unsat`.
 fn cell_samples(ordered: &[Root]) -> Option<Vec<Rational>> {
     if ordered.is_empty() {
         return Some(vec![Rational::zero()]);
     }
-    let locs: Vec<Rational> = ordered.iter().map(Root::locate).collect();
-    let mut pts = Vec::with_capacity(locs.len() + 1);
-    // Below the least root.
-    pts.push(locs[0].checked_sub(Rational::integer(1))?);
-    // Strictly between adjacent root *locations*. Because the isolating intervals
-    // are disjoint and ordered, the midpoint of two distinct locations lies in the
-    // open cell between the two roots. (Equal locations — a shared rational root
-    // counted twice — yield a degenerate midpoint we simply skip; the adjacent
-    // open cells are still sampled by their other separators.)
-    for w in locs.windows(2) {
-        if w[0].checked_cmp(&w[1])? == Ordering::Equal {
-            continue;
+    let bounds: Vec<(Rational, Rational)> =
+        ordered.iter().map(root_bounds).collect::<Option<_>>()?;
+    let mut pts = Vec::with_capacity(bounds.len() + 1);
+    // Below the least root: the integer floor(lo) − 1 < root (small, eval-clean).
+    pts.push(Rational::integer(floor_i128(bounds[0].0).checked_sub(1)?));
+    // Between adjacent roots: the simplest rational in the safe gap (hi_i, lo_{i+1}).
+    for i in 0..bounds.len() - 1 {
+        let hi_i = bounds[i].1;
+        let lo_j = bounds[i + 1].0;
+        match hi_i.checked_cmp(&lo_j)? {
+            Ordering::Less => {
+                // Disjoint brackets ⇒ a guaranteed-between, simple sample exists.
+                let s = match coarsest_rational_in(hi_i, lo_j) {
+                    Some(s) => s,
+                    None => hi_i.checked_add(lo_j)?.checked_div(Rational::integer(2))?,
+                };
+                pts.push(s);
+            }
+            Ordering::Equal => {
+                // Touching brackets: the locate midpoint of the two (distinct) roots
+                // still lies strictly between them.
+                let (li, lj) = (ordered[i].locate(), ordered[i + 1].locate());
+                if li.checked_cmp(&lj)? != Ordering::Equal {
+                    pts.push(li.checked_add(lj)?.checked_div(Rational::integer(2))?);
+                }
+            }
+            Ordering::Greater => {
+                // Overlapping brackets (e.g. a shared root counted twice): skip; the
+                // adjacent open cells are still sampled by their other separators.
+            }
         }
-        let mid = w[0].checked_add(w[1])?.checked_div(Rational::integer(2))?;
-        pts.push(mid);
     }
-    // Above the greatest root.
-    pts.push(locs[locs.len() - 1].checked_add(Rational::integer(1))?);
+    // Above the greatest root: the integer ceil(hi) + 1 > root (small, eval-clean).
+    pts.push(Rational::integer(
+        ceil_i128(bounds[bounds.len() - 1].1)?.checked_add(1)?,
+    ));
     Some(pts)
 }
 
