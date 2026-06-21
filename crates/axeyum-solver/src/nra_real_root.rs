@@ -2644,30 +2644,34 @@ fn decide_strict_cell(
 //       decomposition was complete (all critical `keep`-values RATIONAL, isolation
 //       complete, within the cell cap) ⇒ the component is Unsat, EXHAUSTIVELY.
 //
-//   THE ONE RESTRICTION (what keeps the slice sound + tractable): if ANY critical
-//   `keep`-value is ALGEBRAIC, we DECLINE this orientation (`None`) — substituting
-//   an algebraic `keep` into the polys would give `elim`-coefficients in a number
-//   field, whose root isolation is the deferred hard slice. We try the OTHER
-//   orientation; if both have an algebraic critical `keep`-value, we decline to the
-//   outer layer. A sound `Unknown` always beats a wrong `Unsat`.
+//   ALGEBRAIC critical `keep`-values are now DECIDED (not declined): at an algebraic
+//   `α` the slice `keep = α` is decomposed along `elim` by the roots of
+//   `Res_keep(m, p)` (m = α's integer min-poly), a SUPERSET of the true elim-cell
+//   boundaries ⇒ sign-invariant cells; every atom's sign at `(α, β*)` is then
+//   evaluated EXACTLY by algebraic field arithmetic (no substitution into a number
+//   field — `α` and `β*` are bound as exact `Value`s and the poly is evaluated
+//   through the field operations). See [`decide_nonstrict_cell_algebraic`].
 //
 // We DECLINE (`None`) on ANY completeness doubt: a degenerate projection, an
-// incomplete root isolation, an unresolved separation, an ALGEBRAIC critical
-// `keep`-value, a per-cell `decide_system_value` that returns `None` (Unknown),
-// overflow, or the cell cap. We NEVER claim Unsat with a gap, nor Sat without a
-// replayable witness.
+// incomplete root isolation, an unresolved separation, an algebraic min-poly /
+// interval that does not fit the `i128` bound, an indeterminate field-arithmetic
+// sign, a per-cell `decide_system_value` that returns `None` (Unknown), overflow,
+// or the cell cap. We NEVER claim Unsat with a gap, nor Sat without a replayable
+// witness.
 
 /// Decide a MIXED / NON-STRICT 2-variable component `comp` (variables `v0`, `v1`;
-/// at least one atom `=`/`≤`/`≥`) by a complete cylindrical decomposition with
-/// RATIONAL critical points: project onto a `keep` axis, isolate the critical
-/// `keep`-values (require ALL rational), then sample one rational interior point
-/// per open `keep`-cell AND each rational critical `keep`-value, deciding each
-/// substituted univariate-in-`elim` rational-coefficient system completely.
+/// at least one atom `=`/`≤`/`≥`) by a complete cylindrical decomposition: project
+/// onto a `keep` axis, isolate the critical `keep`-values, then sample one rational
+/// interior point per open `keep`-cell AND each critical `keep`-value 0-cell. A
+/// RATIONAL critical value is decided by substitution; an ALGEBRAIC critical value
+/// `α` is decided by the `Res_keep(m, p)` elim-decomposition + exact field
+/// arithmetic (no number-field substitution).
 ///
 /// Returns `Some(Sat(bindings))` / `Some(Unsat)` when the decomposition is provably
 /// complete, or `None` to DECLINE (any projection/isolation/sample/cell
-/// indeterminacy, an algebraic critical `keep`-value in BOTH orientations, or the
-/// cell cap) — never a wrong verdict. Sat bindings are replay-checked by the caller.
+/// indeterminacy, an algebraic min-poly past the `i128` bound, an indeterminate
+/// field-arithmetic sign, or the cell cap) — never a wrong verdict. Sat bindings are
+/// replay-checked by the caller.
 fn decide_nonstrict_cad_two_var(
     comp: &[&MultiAtom],
     v0: SymbolId,
@@ -2693,8 +2697,8 @@ fn decide_nonstrict_cad_two_var(
 
     // Try projecting onto v0 (eliminate v1) AND onto v1 (eliminate v0). Either
     // orientation is sound and complete by the same cell argument; trying both
-    // rescues a shape whose critical values are rational along one axis but
-    // algebraic (⇒ decline) along the other.
+    // rescues a shape one orientation declines on (e.g. a degenerate projection or
+    // an `i128`-overflowing algebraic critical value along one axis but not the other).
     for &(elim, keep) in &[(v1, v0), (v0, v1)] {
         if let Some(v) = nonstrict_cad_along(comp, &polys, elim, keep) {
             return Some(v);
@@ -2704,9 +2708,11 @@ fn decide_nonstrict_cad_two_var(
 }
 
 /// One orientation of [`decide_nonstrict_cad_two_var`]: eliminate `elim`, isolate
-/// the critical `keep`-values (require ALL rational — else decline), sample the
-/// open `keep`-cells AND each rational critical value, decide each substituted
-/// univariate-in-`elim` system. `None` declines this orientation.
+/// the critical `keep`-values (RATIONAL and ALGEBRAIC), sample the open `keep`-cells
+/// AND each critical 0-cell, decide each slice — rational 0-cells by substitution
+/// ([`decide_nonstrict_cell`]), algebraic 0-cells by the `Res_keep(m, p)`
+/// elim-decomposition + field arithmetic ([`decide_nonstrict_cell_algebraic`]).
+/// `None` declines this orientation.
 fn nonstrict_cad_along(
     comp: &[&MultiAtom],
     polys: &[&MultiPoly],
@@ -2776,31 +2782,35 @@ fn nonstrict_cad_along(
         return None; // bounded — never OOM / hang
     }
 
-    // THE RESTRICTION: require EVERY critical `keep`-value to be RATIONAL. An
-    // algebraic critical value would force substituting an algebraic `keep` into the
-    // polys (number-field `elim`-coefficients ⇒ deferred). Decline this orientation
-    // so the caller tries the other axis / falls through to the outer layer.
-    let mut crit_rationals: Vec<Rational> = Vec::with_capacity(crit.len());
+    // The critical `keep`-values come in two flavors. The RATIONAL 0-cells are
+    // decided by substituting `keep := q` and running the existing rational cell
+    // decider. The ALGEBRAIC 0-cells are decided by the `Res_keep(m, p)`
+    // elim-decomposition + exact field arithmetic (see `decide_nonstrict_cell_algebraic`).
+    // Both flavors, plus the open `keep`-cell interiors (always rational, from
+    // `cell_samples`), together partition the WHOLE `keep`-axis — so Unsat reached
+    // below is EXHAUSTIVE only if every one of them is decided definitively.
+    let mut crit_rationals: Vec<Rational> = Vec::new();
+    let mut crit_algebraics: Vec<&RealAlgebraic> = Vec::new();
     for r in &crit {
         match r {
             Root::Rational(q) => crit_rationals.push(*q),
-            Root::Algebraic(_) => return None,
+            Root::Algebraic(a) => crit_algebraics.push(a),
         }
     }
 
-    // SAMPLE: one rational interior point per open `keep`-cell (the open cells) AND
-    // each rational critical `keep`-value (the 0-cells). Both sets together cover
-    // EVERY `keep`-cell of the decomposition.
+    // SAMPLE: one rational interior point per open `keep`-cell (the open cells). The
+    // open cells plus ALL critical 0-cells (rational and algebraic) cover EVERY
+    // `keep`-cell of the decomposition.
     let open_samples = cell_samples(&crit)?;
 
-    // Decide each sampled `keep := s` (open-cell interiors first so a SAT witness
-    // stays as simple as possible, then the critical 0-cells).
+    // Decide each open-cell interior and each RATIONAL critical 0-cell (open-cell
+    // interiors first so a SAT witness stays as simple as possible).
     for &s in open_samples.iter().chain(crit_rationals.iter()) {
         match decide_nonstrict_cell(comp, keep, elim, s)? {
             CellOutcome::Sat(elim_val) => {
-                // A genuine solution at `keep = s` (an open-cell interior or a
-                // critical 0-cell). The caller replay-checks the full model against
-                // the ORIGINAL assertions.
+                // A genuine solution at the rational `keep = s` (an open-cell interior
+                // or a rational critical 0-cell). The caller replay-checks the full
+                // model against the ORIGINAL assertions.
                 return Some(TwoVarVerdict::Sat(vec![
                     (keep, Value::Real(s)),
                     (elim, elim_val),
@@ -2810,12 +2820,33 @@ fn nonstrict_cad_along(
         }
     }
 
-    // Every open `keep`-cell sample AND every rational critical `keep`-value gave a
-    // definite Unsat `elim`-system (an Unknown one would have declined via `?`). The
-    // critical values are ALL rational (else we declined above), the isolation was
-    // complete, and we stayed within the cap, so the decomposition is COMPLETE — by
-    // the cell argument (open cells + 0-cells partition the solution set), the
-    // component is Unsat, EXHAUSTIVELY.
+    // Decide each ALGEBRAIC critical 0-cell `keep := α` by the `Res_keep(m, p)`
+    // elim-decomposition + exact field-arithmetic sign tests. A `None` here
+    // (incomplete isolation / field-arithmetic indeterminacy / a bound) ⇒ DECLINE
+    // the whole orientation — never claim Unsat with an undecided algebraic cell.
+    for a in &crit_algebraics {
+        match decide_nonstrict_cell_algebraic(comp, keep, elim, a)? {
+            CellOutcome::Sat(elim_val) => {
+                // A genuine solution at the algebraic `keep = α`. The witness binds
+                // `keep` to the algebraic value and `elim` to the (rational or
+                // algebraic) elim-sample; the caller replay-checks via the exact
+                // field-arithmetic evaluator on the ORIGINAL assertions.
+                return Some(TwoVarVerdict::Sat(vec![
+                    (keep, Value::RealAlgebraic((*a).clone())),
+                    (elim, elim_val),
+                ]));
+            }
+            CellOutcome::Unsat => {}
+        }
+    }
+
+    // Every open `keep`-cell sample, every rational critical 0-cell, AND every
+    // algebraic critical 0-cell gave a definite Unsat `elim`-system (an Unknown one
+    // would have declined via `?`). The keep-axis is FULLY decomposed (open cells +
+    // ALL critical 0-cells, rational and algebraic), the isolation was complete, and
+    // we stayed within the cap, so the decomposition is COMPLETE — by the cell
+    // argument (open cells + 0-cells partition the solution set), the component is
+    // Unsat, EXHAUSTIVELY.
     Some(TwoVarVerdict::Unsat)
 }
 
@@ -2866,6 +2897,187 @@ fn decide_nonstrict_cell(
         SystemVerdict::Unsat => Some(CellOutcome::Unsat),
         SystemVerdict::Sat(v) => Some(CellOutcome::Sat(v)),
     }
+}
+
+// ============================================================================
+// Algebraic critical `keep`-value: decide the slice `keep = α` (α irrational).
+//
+// At an algebraic critical `keep`-value `α` with integer min-poly
+// `m(x) = α.defining_poly()`, the elim-cell boundaries of the slice are the `β`
+// with some atom `p(α, β) = 0`. Every such `β` is a root of the RATIONAL
+// univariate
+//
+//     R_p(y) = Res_x(m(x), p(x, y))          (eliminate x = `keep`, keep y = `elim`)
+//
+// because a common point `(α, β)` with `m(α)=0` and `p(α,β)=0` forces
+// `Res_x(m, p)(β) = 0`. `Res_x(m, p)` may carry EXTRA `β`-roots coming from `m`'s
+// other (conjugate) roots — that is SOUND: a SUPERSET of the true boundaries only
+// REFINES the elim-cells (each remains sign-invariant for every atom at this fixed
+// `α`), it never MISSES a boundary. For a `p` CONSTANT in `keep` (it does not
+// mention `α`) we take its `elim`-roots directly (`p(β) = 0`), which is the same
+// boundary set without a resultant.
+//
+// PROCEDURE:
+//   1. For each atom poly `p`, collect its `β`-boundary candidates: the real roots
+//      of `R_p` (or of `p` itself if `p` is constant in `keep`).
+//   2. Merge/sort/dedup all atoms' `β`-candidates ⇒ the elim-critical points at `α`.
+//      Build elim-cells: one RATIONAL interior sample per open elim-cell (via the
+//      existing `cell_samples` logic over these β) PLUS each β itself (the 0-cells).
+//   3. For each elim-sample `β*` (rational or algebraic) evaluate the SIGN of every
+//      atom poly `p` at `(keep = α, elim = β*)` EXACTLY via the algebraic field
+//      arithmetic (`multipoly_sign_at`). A point satisfies the slice iff every
+//      atom's sign satisfies its comparator.
+//
+// VERDICT: the slice is **Sat** if some elim-sample satisfies all atoms (witness
+// `(α, β*)`, replay-checked by the caller), **Unsat** if none does, and DECLINES
+// (`None`) if any field-arithmetic sign is indeterminate / overflows, any isolation
+// is incomplete, or a bound is hit — never Unsat with a gap.
+// ============================================================================
+
+/// Decide the slice `keep = α` (α an ALGEBRAIC critical `keep`-value) of a
+/// mixed/non-strict 2-variable component, via the `Res_keep(m, p)` elim-decomposition
+/// plus exact field-arithmetic sign tests. `None` declines (see the module block
+/// above) — never Unsat with an undecided cell, never Sat without a checkable witness.
+fn decide_nonstrict_cell_algebraic(
+    comp: &[&MultiAtom],
+    keep: SymbolId,
+    elim: SymbolId,
+    alpha: &RealAlgebraic,
+) -> Option<CellOutcome> {
+    // α's integer min-poly, lifted into a univariate `MultiPoly` in the `keep`
+    // variable so the existing `resultant_univariate(m, p, keep, elim)` (which
+    // eliminates `keep` and keeps `elim`) applies directly.
+    let m_i128 = alpha.defining_poly_i128()?; // i128-bound ⇒ decline (sound Unknown)
+    let m_poly = univariate_multipoly(&m_i128, keep)?;
+    if degree_in(&m_poly, keep) == 0 {
+        return None; // α irrational ⇒ min-poly has positive keep-degree; defensive
+    }
+
+    // 1. Collect every `β`-boundary candidate (the elim-critical points at `α`).
+    let mut beta_polys: Vec<Vec<i128>> = Vec::new();
+    for p in distinct_polys(comp) {
+        if degree_in(p, elim) == 0 {
+            // `p` constant in `elim`: it imposes no `elim`-boundary (its zero set, if
+            // any, is a `keep`-only condition already captured by the `keep`-axis
+            // decomposition that produced `α`). Nothing to add to the elim-axis.
+            continue;
+        }
+        if degree_in(p, keep) == 0 {
+            // `p` constant in `keep` (it does not mention `α`): its `elim`-boundaries
+            // are exactly the roots of `p(β)` — take them directly, no resultant.
+            let ipoly = p.to_single_var_integer_poly(elim)?;
+            if ipoly.len() > 1 {
+                beta_polys.push(ipoly);
+            }
+            continue;
+        }
+        // Genuinely bivariate: R_p(y) = Res_x(m(x), p(x, y)), eliminating `keep`.
+        // `resultant_univariate` declines (`None`) on an identically-zero resultant
+        // (m and p share a `keep`-factor for all `elim` — an over-constrained
+        // degeneracy we decline on rather than guess).
+        let res = resultant_univariate(&m_poly, p, keep, elim)?;
+        if res.len() > 1 {
+            beta_polys.push(res);
+        }
+        // A constant nonzero resultant ⇒ no `elim`-boundary from this atom at α.
+    }
+
+    // 2. Merge the `β`-candidates → the elim-critical points; build the elim-cells:
+    //    one rational interior per open cell PLUS each β as a 0-cell.
+    let mut beta_roots: Vec<Root> = Vec::new();
+    for bp in &beta_polys {
+        beta_roots.extend(isolate_roots(bp)?); // complete-or-None
+    }
+    let beta_crit = dedup_sorted_roots(&beta_roots)?;
+    if beta_crit.len() > MAX_CAD_CELLS {
+        return None; // bounded — never OOM / hang
+    }
+    let beta_open = cell_samples(&beta_crit)?;
+
+    // The α binding is fixed for the whole slice; build it once.
+    let alpha_val = Value::RealAlgebraic(alpha.clone());
+
+    // 3. Test each elim-sample (open-cell interiors first — a rational `β*` keeps the
+    //    witness simpler; then the 0-cells, which a non-strict atom may need exactly).
+    for q in &beta_open {
+        let mut point: BTreeMap<SymbolId, Value> = BTreeMap::new();
+        point.insert(keep, alpha_val.clone());
+        point.insert(elim, Value::Real(*q));
+        if cell_point_satisfies_all(comp, &point)? {
+            return Some(CellOutcome::Sat(Value::Real(*q)));
+        }
+    }
+    for r in &beta_crit {
+        let beta_val = match r {
+            Root::Rational(q) => Value::Real(*q),
+            // Coarsen the algebraic `β` to a small-denominator bracket so the field
+            // arithmetic does not overflow on over-refined endpoints (mirrors the
+            // grid lift's `root_to_value`). `None` ⇒ decline.
+            Root::Algebraic(b) => Value::RealAlgebraic(coarsen_algebraic(b)?),
+        };
+        let mut point: BTreeMap<SymbolId, Value> = BTreeMap::new();
+        point.insert(keep, alpha_val.clone());
+        point.insert(elim, beta_val.clone());
+        if cell_point_satisfies_all(comp, &point)? {
+            return Some(CellOutcome::Sat(beta_val));
+        }
+    }
+
+    // Every elim-cell (open interiors + all β 0-cells) at this fixed `α` is
+    // definitively Unsat (an indeterminate sign would have declined via `?`). The
+    // elim-axis is fully decomposed by `Res_keep(m, p)`'s roots (a SUPERSET of the
+    // true boundaries ⇒ sign-invariant cells), and every sign was exact, so the
+    // slice is Unsat — EXHAUSTIVELY for `keep = α`.
+    Some(CellOutcome::Unsat)
+}
+
+/// Whether the component holds at the (mixed rational/algebraic) `point`, by exact
+/// field-arithmetic sign of every atom poly. `Some(true)` = all atoms satisfied,
+/// `Some(false)` = some atom definitely violated, `None` = an indeterminate /
+/// overflowing sign ⇒ the caller DECLINES (never a wrong Unsat).
+fn cell_point_satisfies_all(
+    comp: &[&MultiAtom],
+    point: &BTreeMap<SymbolId, Value>,
+) -> Option<bool> {
+    for atom in comp {
+        let s = multipoly_sign_at(&atom.poly, point)?;
+        if !sign_satisfies(atom.cmp, s) {
+            return Some(false);
+        }
+    }
+    Some(true)
+}
+
+/// The distinct constraint polynomials of a component (deduplicated by structure).
+fn distinct_polys<'a>(comp: &[&'a MultiAtom]) -> Vec<&'a MultiPoly> {
+    let mut polys: Vec<&MultiPoly> = Vec::new();
+    for atom in comp {
+        if !polys.iter().any(|p| p.terms == atom.poly.terms) {
+            polys.push(&atom.poly);
+        }
+    }
+    polys
+}
+
+/// Lift an LSB-first integer polynomial to a univariate [`MultiPoly`] in `var`.
+/// `None` on a degree past [`MAX_DEGREE`] or a coefficient/exponent overflow.
+fn univariate_multipoly(poly: &[i128], var: SymbolId) -> Option<MultiPoly> {
+    if poly.len().checked_sub(1)? > MAX_DEGREE {
+        return None;
+    }
+    let mut out = MultiPoly::zero();
+    for (e, &c) in poly.iter().enumerate() {
+        if c == 0 {
+            continue;
+        }
+        let key: MonoKey = if e == 0 {
+            Vec::new()
+        } else {
+            vec![(var, u32::try_from(e).ok()?)]
+        };
+        out.add_term(key, Rational::integer(c))?;
+    }
+    Some(out)
 }
 
 // ============================================================================

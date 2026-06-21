@@ -2007,15 +2007,17 @@ fn nonstrict_mixed_contradictory_never_sat() {
     );
 }
 
-/// Algebraic-critical-value DECLINE: a non-strict system whose keep-projection has
-/// an IRRATIONAL critical value. `x² + y² ≤ 4 ∧ x² = 2 ∧ y = 0`: the `x² = 2`
-/// boundary critical x-values are ±√2 (irrational). Whichever orientation is tried,
-/// a critical keep-value is algebraic ⇒ the non-strict CAD DECLINES (Unknown). The
-/// system is actually SAT (x = √2, y = 0: 2 ≤ 4 ✓), so it must NOT be wrongly Unsat.
+/// Algebraic-critical-value SAT (formerly the DECLINE anchor): a non-strict system
+/// whose keep-projection has an IRRATIONAL critical value. `x² + y² ≤ 4 ∧ x² = 2 ∧
+/// y = 0`: the `x² = 2` boundary critical x-values are ±√2 (irrational). The
+/// algebraic-critical lifting now DECIDES this slice (it no longer declines): the
+/// system is SAT at (±√2, 0) (2 ≤ 4 ✓), decided via the `Res_keep(m, p)`
+/// elim-decomposition + exact field arithmetic, and the witness replays. (It must,
+/// of course, NEVER be Unsat — the soundness floor.)
 #[test]
 fn nonstrict_algebraic_critical_value_declines_not_unsat() {
     let mut a = TermArena::new();
-    let (_xs, xv) = real(&mut a, "x");
+    let (xs, xv) = real(&mut a, "x");
     let (_ys, yv) = real(&mut a, "y");
     let ss = sum_of_squares(&mut a, xv, yv);
     let four = a.real_const(Rational::integer(4));
@@ -2027,13 +2029,100 @@ fn nonstrict_algebraic_critical_value_declines_not_unsat() {
     let a3 = eq(&mut a, yv, zero); // y = 0
 
     let r = solve(&mut a, &[a1, a2, a3], &SolverConfig::default()).expect("no error");
-    // The decider may DECLINE (Unknown) on the algebraic critical value; it may also
-    // be decided Sat by another path. The ONLY forbidden answer is Unsat (the system
-    // is satisfiable at (√2, 0)).
+    // The soundness floor: NEVER Unsat (the system is satisfiable at (±√2, 0)).
     assert!(
         !matches!(r, CheckResult::Unsat),
-        "x²+y²≤4 ∧ x²=2 ∧ y=0 is SAT ((√2,0)); algebraic critical x must DECLINE, \
-         never Unsat; got {r:?}"
+        "x²+y²≤4 ∧ x²=2 ∧ y=0 is SAT ((±√2,0)); must never be Unsat; got {r:?}"
+    );
+    // The algebraic-critical lifting now decides it Sat; the witness must replay
+    // against every original assertion via the exact field-arithmetic evaluator.
+    let CheckResult::Sat(model) = &r else {
+        panic!("x²+y²≤4 ∧ x²=2 ∧ y=0 must now be decided Sat, got {r:?}");
+    };
+    let x = model.get(xs).expect("model must bind x");
+    assert!(
+        x.as_real_algebraic().is_some(),
+        "the critical x-witness must be algebraic (±√2), got {x:?}"
+    );
+    let asg = model.to_assignment();
+    for (t, n) in [(a1, "x²+y²≤4"), (a2, "x²=2"), (a3, "y=0")] {
+        assert!(
+            matches!(eval(&a, t, &asg), Ok(Value::Bool(true))),
+            "{n} must replay true at the algebraic witness; got {:?}",
+            eval(&a, t, &asg)
+        );
+    }
+}
+
+/// Algebraic-critical SAT: a non-strict 2-var system whose keep-critical point is
+/// irrational and a solution sits at the algebraic boundary — `x² = 2 ∧ y² ≤ x`.
+/// The keep-critical x-value is √2 (irrational); the slice `x = √2` is decided by
+/// the `Res_keep(m, p)` elim-decomposition + field arithmetic. SAT at x = √2 with a
+/// small y (y² ≤ √2 holds e.g. at y = −1, since 1 ≤ √2 ✓); the witness replays
+/// through both atoms exactly.
+#[test]
+fn nonstrict_algebraic_critical_sat_with_replay() {
+    let mut a = TermArena::new();
+    let (xs, xv) = real(&mut a, "x");
+    let (_ys, yv) = real(&mut a, "y");
+    let xx = a.real_mul(xv, xv).unwrap();
+    let two = a.real_const(Rational::integer(2));
+    let a1 = eq(&mut a, xx, two); // x² = 2  ⇒ x = ±√2
+    let yy = a.real_mul(yv, yv).unwrap();
+    let a2 = le(&mut a, yy, xv); // y² ≤ x  (needs x ≥ 0, so x = +√2)
+
+    let r = solve(&mut a, &[a1, a2], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("x²=2 ∧ y²≤x must be Sat (x=√2, y small), got {r:?}");
+    };
+    let x = model.get(xs).expect("model must bind x");
+    let alpha = x
+        .as_real_algebraic()
+        .expect("x-witness must be algebraic (√2)");
+    assert_eq!(
+        alpha.sign_at(&poly_x2_minus(2)),
+        Some(Sign::Zero),
+        "the x-witness must satisfy x² − 2 = 0 exactly"
+    );
+    let asg = model.to_assignment();
+    for (t, n) in [(a1, "x²=2"), (a2, "y²≤x")] {
+        assert!(
+            matches!(eval(&a, t, &asg), Ok(Value::Bool(true))),
+            "{n} must replay true at the algebraic witness; got {:?}",
+            eval(&a, t, &asg)
+        );
+    }
+}
+
+/// Algebraic-critical UNSAT: a non-strict system with algebraic critical keep-values
+/// and NO solution — `x² = 2 ∧ y² ≤ x − 2`. The keep-critical x is ±√2; at both,
+/// `x − 2 < 0` (√2 ≈ 1.414, −√2 ≈ −1.414, both below 2), so `y² ≤ x − 2` demands a
+/// negative upper bound on a square ⇒ impossible. The algebraic-critical lifting
+/// decides every slice (each algebraic 0-cell's elim-axis is exhausted) ⇒ Unsat —
+/// and must never be Sat.
+#[test]
+fn nonstrict_algebraic_critical_unsat_exhaustive() {
+    let mut a = TermArena::new();
+    let (_xs, xv) = real(&mut a, "x");
+    let (_ys, yv) = real(&mut a, "y");
+    let xx = a.real_mul(xv, xv).unwrap();
+    let two = a.real_const(Rational::integer(2));
+    let a1 = eq(&mut a, xx, two); // x² = 2  ⇒ x = ±√2
+    let yy = a.real_mul(yv, yv).unwrap();
+    let twob = a.real_const(Rational::integer(2));
+    let xm2 = a.real_sub(xv, twob).unwrap();
+    let a2 = le(&mut a, yy, xm2); // y² ≤ x − 2  (< 0 at x = ±√2) ⇒ impossible
+
+    let r = solve(&mut a, &[a1, a2], &SolverConfig::default()).expect("no error");
+    // Soundness floor: NEVER Sat (no real (x, y) satisfies it).
+    assert!(
+        !matches!(r, CheckResult::Sat(_)),
+        "x²=2 ∧ y²≤x−2 is UNSAT (x−2 < 0 at ±√2); must never be Sat; got {r:?}"
+    );
+    // The algebraic-critical lifting decides it Unsat exhaustively.
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x²=2 ∧ y²≤x−2 must be decided Unsat by the algebraic-critical lifting, got {r:?}"
     );
 }
 
