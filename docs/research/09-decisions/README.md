@@ -95,3 +95,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0039](adr-0039-degree-2-sos-psd-certificate.md) | Degree-2 sum-of-squares / PSD nonnegativity certificate for NRA (multivariate AM–GM and globally-(non)negative quadratic forms decide Unsat exactly) | accepted |
 | [0040](adr-0040-sos-lean-reconstruction.md) | SOS certificate → Lean reconstruction via minimal commutative-ordered-ring axioms + a degree-2 ring normalizer (kernel-checked proof for the SOS unsat route) | accepted |
 | [0041](adr-0041-lean-backed-sos-evidence.md) | Lean-backed SOS evidence — the SOS unsat's `Evidence::UnsatSos` carries its kernel-checked Lean module, re-derived+re-checked on `Evidence::check` | accepted |
+| [0042](adr-0042-integer-prelude.md) | Integer prelude (discretely-ordered commutative ring + `no_int_between`) — the trusted-kernel foundation for integer-arithmetic / Diophantine Lean reconstruction | accepted |
