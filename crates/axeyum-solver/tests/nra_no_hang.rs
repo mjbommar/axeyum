@@ -15,7 +15,7 @@
 use std::time::{Duration, Instant};
 
 use axeyum_ir::{Rational, Sort, TermArena};
-use axeyum_solver::{CheckResult, SolverConfig, check_with_nra};
+use axeyum_solver::{CheckResult, SolverConfig, check_with_nra, solve};
 
 fn real(arena: &mut TermArena, name: &str) -> axeyum_ir::TermId {
     let s = arena.declare(name, Sort::Real).unwrap();
@@ -80,5 +80,55 @@ fn fast_query_still_decides_quickly_under_a_timeout() {
     assert!(
         elapsed < Duration::from_secs(1),
         "fast unsat took too long: {elapsed:?}"
+    );
+}
+
+#[test]
+fn binomial_square_respects_timeout_and_is_not_sat() {
+    // The negated binomial-square identity `(x+y)² ≠ x²+2xy+y²` is UNSAT (the
+    // identity always holds), but the multivariate single-var NRA decider
+    // declines (a `≠` with two vars) and the linear-abstraction NRA path's exact
+    // Fourier–Motzkin LRA sub-solve blows up combinatorially on the abstracted
+    // system — a single *uninterruptible* call that used to run ~10s past the
+    // budget (a never-hang-rule violation). The deadline + size guard threaded
+    // into the elimination now degrades it to a *timely* `unknown`.
+    //
+    // Soundness: the verdict must NEVER be `Sat` (the identity is a tautology, so
+    // its negation is unsatisfiable). `unknown` or `unsat` are both acceptable;
+    // only a wrong `sat` would be a soundness bug. The cardinal check here is
+    // `!Sat`, with the budget honored.
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let y = real(&mut a, "y");
+    // (x + y)²
+    let xy_sum = a.real_add(x, y).unwrap();
+    let lhs = a.real_mul(xy_sum, xy_sum).unwrap();
+    // x² + 2xy + y²
+    let xx = a.real_mul(x, x).unwrap();
+    let yy = a.real_mul(y, y).unwrap();
+    let two = a.real_const(Rational::integer(2));
+    let two_x = a.real_mul(two, x).unwrap();
+    let two_xy = a.real_mul(two_x, y).unwrap();
+    let sum1 = a.real_add(xx, two_xy).unwrap();
+    let rhs = a.real_add(sum1, yy).unwrap();
+    let eq = a.eq(lhs, rhs).unwrap();
+    let ne = a.not(eq).unwrap();
+
+    let cfg = SolverConfig::default().with_timeout(Duration::from_secs(10));
+    let start = Instant::now();
+    let r = solve(&mut a, &[ne], &cfg);
+    let elapsed = start.elapsed();
+
+    // The 10s budget is respected (well under the old ~20s overrun). Generous
+    // ceiling so the assert is robust on a loaded CI box while still proving the
+    // bound fires.
+    assert!(
+        elapsed < Duration::from_secs(13),
+        "binomial-square negation overran its 10s budget: elapsed {elapsed:?} (result {r:?})"
+    );
+    // The cardinal soundness check: NEVER `Sat` (the negated identity is unsat).
+    assert!(
+        !matches!(r, Ok(CheckResult::Sat(_))),
+        "(x+y)² ≠ x²+2xy+y² must never be Sat (the identity is a tautology), got {r:?}"
     );
 }

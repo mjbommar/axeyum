@@ -42,7 +42,7 @@ use web_time::Instant;
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::combined::check_with_all_theories;
 use crate::lia::DEFAULT_INT_WIDTH;
-use crate::lra::{check_with_lra, lra_farkas_certificate};
+use crate::lra::{check_with_lra, check_with_lra_within, lra_farkas_certificate};
 use crate::model::Model;
 use crate::sat_bv_backend::SatBvBackend;
 
@@ -151,7 +151,7 @@ pub fn check_with_lra_dpll_within(
             });
         }
 
-        match check_with_lra(arena, &theory_lits)? {
+        match check_with_lra_within(arena, &theory_lits, deadline)? {
             CheckResult::Sat(theory_model) => {
                 return finish_sat(arena, assertions, &ctx, &propositional, &theory_model);
             }

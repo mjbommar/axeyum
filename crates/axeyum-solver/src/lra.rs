@@ -72,9 +72,39 @@ pub fn check_with_lra(
     arena: &TermArena,
     assertions: &[TermId],
 ) -> Result<CheckResult, SolverError> {
-    match decide(arena, assertions)? {
+    check_with_lra_within(arena, assertions, None)
+}
+
+/// Like [`check_with_lra`], but bailing to a timely `unknown` once `deadline`
+/// (an absolute [`Instant`]) has passed during the Fourier–Motzkin elimination.
+///
+/// Fourier–Motzkin can blow up combinatorially — each variable elimination
+/// replaces `m` lower + `n` upper bounds with `m·n` derived constraints, which
+/// compounds across eliminations — so a single `decide` call can run for many
+/// seconds with no interruption point, overrunning the caller's deterministic
+/// budget. This variant threads the deadline into the elimination loop (checked
+/// before each variable is eliminated) and a deterministic constraint-count
+/// admission guard, so the call degrades to `unknown` rather than overrunning.
+///
+/// Bailing to `unknown` is sound — the deadline never converts a `sat`/`unsat`
+/// into a wrong verdict — and `deadline == None` is exactly [`check_with_lra`].
+///
+/// # Errors
+///
+/// Same as [`check_with_lra`].
+pub fn check_with_lra_within(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<CheckResult, SolverError> {
+    match decide_within(arena, assertions, deadline)? {
         Decision::Sat(model) => Ok(CheckResult::Sat(model)),
         Decision::UnsatFarkas { .. } | Decision::UnsatTrivial(_) => Ok(CheckResult::Unsat),
+        Decision::TimedOut => Ok(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::ResourceLimit,
+            detail: "lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget"
+                .to_owned(),
+        })),
     }
 }
 
@@ -99,7 +129,7 @@ pub fn lra_farkas_certificate(
 ) -> Result<Option<FarkasCertificate>, SolverError> {
     match decide(arena, assertions)? {
         Decision::UnsatFarkas { certificate, .. } => Ok(Some(certificate)),
-        Decision::Sat(_) | Decision::UnsatTrivial(_) => Ok(None),
+        Decision::Sat(_) | Decision::UnsatTrivial(_) | Decision::TimedOut => Ok(None),
     }
 }
 
@@ -167,7 +197,7 @@ pub fn lra_unsat_core(
         }
         // A literally-`false` assertion is its own (singleton) core.
         Decision::UnsatTrivial(origin) => Ok(Some(vec![origin])),
-        Decision::Sat(_) => Ok(None),
+        Decision::Sat(_) | Decision::TimedOut => Ok(None),
     }
 }
 
@@ -186,9 +216,20 @@ enum Decision {
     /// Unsatisfiable because a literally-`false` assertion was present (no
     /// linear refutation is meaningful); carries that assertion's index.
     UnsatTrivial(usize),
+    /// The Fourier–Motzkin elimination did not finish within the wall-clock /
+    /// size budget; the query is left undecided (a timely, sound `unknown`).
+    TimedOut,
 }
 
 fn decide(arena: &TermArena, assertions: &[TermId]) -> Result<Decision, SolverError> {
+    decide_within(arena, assertions, None)
+}
+
+fn decide_within(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<Decision, SolverError> {
     let mut ctx = Collector::default();
     for (index, &assertion) in assertions.iter().enumerate() {
         ctx.current_origin = index;
@@ -211,7 +252,8 @@ fn decide(arena: &TermArena, assertions: &[TermId]) -> Result<Decision, SolverEr
     let origins: Vec<usize> = ctx.constraints.iter().map(|c| c.origin).collect();
 
     let nvars = ctx.vars.len();
-    match solve(&ctx.constraints, nvars) {
+    match solve(&ctx.constraints, nvars, deadline) {
+        Feasibility::TimedOut => Ok(Decision::TimedOut),
         Feasibility::Unsat(multipliers) => {
             let certificate = FarkasCertificate {
                 atoms,
@@ -644,20 +686,41 @@ enum Feasibility {
     Sat(Vec<Rational>),
     Unsat(Vec<Rational>),
     Bug(String),
+    /// Elimination ran past the wall-clock deadline or the size guard before a
+    /// verdict; left undecided (a sound `unknown` upstream).
+    TimedOut,
 }
+
+/// Hard ceiling on the number of constraints any single Fourier–Motzkin
+/// elimination step may produce. Each step replaces the `pos`/`neg` bound sets
+/// with their `|pos|·|neg|` cross product, so a deeply coupled system can blow
+/// up double-exponentially in *one* `decide` call — uninterruptibly, since the
+/// elimination is a tight loop with no theory callbacks. Above this bound the
+/// step declines to `unknown` deterministically (independent of the clock), so
+/// the result is reproducible regardless of machine speed.
+const MAX_FM_CONSTRAINTS: usize = 20_000;
 
 /// Fourier–Motzkin over `nvars` variables. Each input constraint must already
 /// carry a multiplier vector (a unit vector for originals); elimination
 /// accumulates these so an infeasible residual constant constraint reports the
 /// Farkas multipliers that produced it.
-fn solve(constraints: &[Constraint], nvars: usize) -> Feasibility {
+fn solve(constraints: &[Constraint], nvars: usize, deadline: Option<Instant>) -> Feasibility {
     // Eliminate variables n-1, n-2, ..., 0, saving the system before each
     // elimination so the model can be reconstructed by forward substitution.
     let mut saved: Vec<(usize, Vec<Constraint>)> = Vec::with_capacity(nvars);
     let mut current = constraints.to_vec();
     for v in (0..nvars).rev() {
+        // Wall-clock bound: this loop is uninterruptible (a tight exact-rational
+        // cross product per step), so a long elimination would overrun the
+        // caller's deterministic budget. Bail to a timely `unknown` instead.
+        if past_deadline(deadline) {
+            return Feasibility::TimedOut;
+        }
         saved.push((v, current.clone()));
-        current = eliminate(&current, v);
+        match eliminate(&current, v, deadline) {
+            Some(next) => current = next,
+            None => return Feasibility::TimedOut,
+        }
     }
     // After eliminating every variable, only constant constraints remain. The
     // first infeasible one carries the Farkas multipliers of its derivation.
@@ -684,7 +747,16 @@ fn solve(constraints: &[Constraint], nvars: usize) -> Feasibility {
 
 /// Fourier–Motzkin elimination of variable `v` from a constraint system,
 /// carrying each derived constraint's nonnegative multiplier combination.
-fn eliminate(system: &[Constraint], v: usize) -> Vec<Constraint> {
+///
+/// Returns `None` to bail (a sound `unknown` upstream) when the wall-clock
+/// `deadline` passes mid-elimination, or when the derived system would exceed
+/// [`MAX_FM_CONSTRAINTS`] (a deterministic, clock-independent size guard against
+/// the `|pos|·|neg|` cross-product blowup).
+fn eliminate(
+    system: &[Constraint],
+    v: usize,
+    deadline: Option<Instant>,
+) -> Option<Vec<Constraint>> {
     let mut out = Vec::new();
     let mut pos = Vec::new();
     let mut neg = Vec::new();
@@ -698,7 +770,21 @@ fn eliminate(system: &[Constraint], v: usize) -> Vec<Constraint> {
             neg.push(c);
         }
     }
-    for p in &pos {
+    // Deterministic size guard: refuse a cross product that would blow past the
+    // admission bound before doing the (potentially huge, uninterruptible) work.
+    if out
+        .len()
+        .saturating_add(pos.len().saturating_mul(neg.len()))
+        > MAX_FM_CONSTRAINTS
+    {
+        return None;
+    }
+    for (i, p) in pos.iter().enumerate() {
+        // Re-check the wall clock periodically inside the cross product (rows can
+        // still be many thousands even under the size guard).
+        if i % 64 == 0 && past_deadline(deadline) {
+            return None;
+        }
         for n in &neg {
             let a = p.expr.coeff(v); // > 0
             let b = n.expr.coeff(v); // < 0
@@ -717,7 +803,7 @@ fn eliminate(system: &[Constraint], v: usize) -> Vec<Constraint> {
             });
         }
     }
-    out
+    Some(out)
 }
 
 /// Whether a constant constraint `c <op> 0` holds.
