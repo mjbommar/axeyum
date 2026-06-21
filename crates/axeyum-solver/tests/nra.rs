@@ -313,11 +313,12 @@ fn bnb_feasible_square_stays_sat() {
 }
 
 #[test]
-fn bnb_unbounded_square_is_unknown_not_wrong_unsat() {
-    // x*x < -1 with x unbounded: truly unsat, but the sign rule already proves
-    // it (x^2 >= 0). Use a case the sign rule can't: x*x < 2x - 2 with NO bounds
-    // on x. Unsat in truth, but B&B cannot branch an unbounded var -> unknown
-    // (never a wrong unsat, and never a wrong sat).
+fn unbounded_single_var_square_is_decided_unsat() {
+    // x*x < 2x - 2 with NO bounds on x, i.e. (x-1)² + 1 < 0 — truly UNSAT (the
+    // expression is ≥ 1 everywhere). The bounded B&B relaxation alone cannot branch
+    // an unbounded variable and would only manage `unknown`; the exact single-
+    // variable real-root decider (no real root ⇒ the strict `<0` is empty) now
+    // proves it UNSAT completely. A strict improvement, and never a wrong `sat`.
     let mut a = TermArena::new();
     let x = real(&mut a, "x");
     let two = a.real_const(Rational::integer(2));
@@ -327,8 +328,8 @@ fn bnb_unbounded_square_is_unknown_not_wrong_unsat() {
     let lt = a.real_lt(sq, rhs).unwrap();
     let r = check_with_nra(&mut a, &[lt], &SolverConfig::default()).unwrap();
     assert!(
-        matches!(r, CheckResult::Unknown(_)),
-        "unbounded x^2<2x-2 -> unknown, got {r:?}"
+        matches!(r, CheckResult::Unsat),
+        "unbounded (x-1)²+1<0 is empty ⇒ unsat, got {r:?}"
     );
 }
 

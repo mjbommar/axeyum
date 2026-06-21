@@ -101,6 +101,18 @@ pub fn check_with_nra(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    // Complete, exact decision for pure real-polynomial constraints (single- and
+    // multi-variable), including polynomial *identities* whose negation collapses to
+    // a constant comparison `0 ⋈ 0`. This is the same sound decider the `solve`
+    // auto-path runs *before* falling here; hooking it at the top of the NRA engine
+    // means DIRECT `check_with_nra` callers (examples, downstream consumers) get the
+    // same completeness instead of grinding the abstraction search to a timeout. It
+    // returns `None` (declines) on anything it cannot decide exactly, so it never
+    // weakens the search below or risks an unsound verdict.
+    if let Some(result) = crate::nra_real_root::decide_real_poly_constraint(arena, assertions)? {
+        return Ok(result);
+    }
+
     // Eliminate real division first: `x/y → r` with `(y = 0) ∨ (x = r·y)`,
     // matching SMT-LIB's unspecified division by zero. The `r·y` product is then
     // handled by the nonlinear abstraction below (or is linear when `y` is
