@@ -205,15 +205,28 @@ pub const SUPPORT_MATRIX: &[SupportRow] = &[
                union-find checker (Alethe + Lean too). ADR-0013/0032",
     },
     SupportRow {
-        fragment: "QF_LIA (linear integer)",
+        fragment: "QF_LIA (general linear integer)",
         parser: ParserStatus::Accepted,
         ir: IrStatus::Modeled,
         solver: SolverStatus::Decides,
         proof: ProofStatus::PartialTrust,
         note: "Int sort + div/mod/abs eliminated exactly; Diophantine refutation + \
-               branch-and-bound simplex decide (degrade to unknown on node budget); \
-               unsat DRAT is bounded (refutes at the chosen bit-blast width). \
+               branch-and-bound simplex + Gomory cuts decide (degrade to unknown on \
+               node budget); general-case unsat DRAT is bounded (refutes at the chosen \
+               bit-blast width). Checked-proof sub-fragments are listed separately. \
                ADR-0014/0020/0021",
+    },
+    SupportRow {
+        fragment: "QF_LIA · integer infeasibility (Diophantine + interval)",
+        parser: ParserStatus::Accepted,
+        ir: IrStatus::Modeled,
+        solver: SolverStatus::Decides,
+        proof: ProofStatus::Checked,
+        note: "integer-systems infeasibility (equality systems, e.g. 2x=1; and the \
+               single-variable interval c≤k·x≤d) carries an independent integer-Farkas \
+               self-check (Evidence::UnsatDiophantine) AND a kernel-checked Lean proof \
+               accepted by the real `lean` binary (discreteness via the ℤ prelude). \
+               ADR-0042/0043. General integer-cut (Gomory) proof reconstruction is future.",
     },
     SupportRow {
         fragment: "QF_LRA (linear real)",
@@ -237,14 +250,37 @@ pub const SUPPORT_MATRIX: &[SupportRow] = &[
                artifact. ADR-0024",
     },
     SupportRow {
-        fragment: "QF_NRA (nonlinear real)",
+        fragment: "QF_NRA (general nonlinear real)",
         parser: ParserStatus::Accepted,
         ir: IrStatus::Modeled,
         solver: SolverStatus::SoundIncomplete,
         proof: ProofStatus::NoProof,
         note: "linear abstraction + replay + McCormick spatial branch-and-bound; \
                relaxation-unsat is sound, sat is replay-checked, unknown otherwise. \
-               No proof artifact. ADR-0024",
+               No proof artifact for the GENERAL case. ADR-0024. (Sub-fragments with \
+               proofs are listed separately below.)",
+    },
+    SupportRow {
+        fragment: "QF_NRA · degree-2 SOS / globally-(non)negative quadratic forms",
+        parser: ParserStatus::Accepted,
+        ir: IrStatus::Modeled,
+        solver: SolverStatus::Decides,
+        proof: ProofStatus::Checked,
+        note: "exact decision via a PSD/sum-of-squares certificate (multivariate AM-GM, \
+               (x±y)²<0, …). Self-checking LDLᵀ certificate (Evidence::UnsatSos), AND a \
+               kernel-checked Lean proof for both strict directions up to 3-variable \
+               AM-GM, accepted by the real `lean` binary. ADR-0039/0040/0041",
+    },
+    SupportRow {
+        fragment: "QF_NRA · single-variable real-algebraic",
+        parser: ParserStatus::Accepted,
+        ir: IrStatus::Modeled,
+        solver: SolverStatus::Decides,
+        proof: ProofStatus::NoProof,
+        note: "exact single-variable polynomial decision with irrational (real-algebraic) \
+               witnesses (x*x=2 → sat √2, replay-checked by exact sign test); coupled \
+               2-var via resultant. No proof artifact yet (sat witnesses are not \
+               Lean-reconstructed). ADR-0038",
     },
     SupportRow {
         fragment: "QF_UFLIA / QF_UFLRA (UF + arithmetic)",

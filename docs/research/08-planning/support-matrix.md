@@ -38,10 +38,13 @@ Four **independent** axes per SMT-LIB fragment, so "the parser accepts it" is ne
 | QF_BV (scalar bit-vectors) | accepted | modeled | decides | checked |
 | QF_ABV (arrays) | accepted (bounded) | modeled | decides | partial-trust |
 | QF_UF (EUF / congruence) | accepted | modeled | decides | checked |
-| QF_LIA (linear integer) | accepted | modeled | decides | partial-trust |
+| QF_LIA (general linear integer) | accepted | modeled | decides | partial-trust |
+| QF_LIA · integer infeasibility (Diophantine + interval) | accepted | modeled | decides | checked |
 | QF_LRA (linear real) | accepted | modeled | decides | checked |
 | QF_NIA (nonlinear integer) | accepted | modeled | sound, incomplete (unknown-safe) | none |
-| QF_NRA (nonlinear real) | accepted | modeled | sound, incomplete (unknown-safe) | none |
+| QF_NRA (general nonlinear real) | accepted | modeled | sound, incomplete (unknown-safe) | none |
+| QF_NRA · degree-2 SOS / globally-(non)negative quadratic forms | accepted | modeled | decides | checked |
+| QF_NRA · single-variable real-algebraic | accepted | modeled | decides | none |
 | QF_UFLIA / QF_UFLRA (UF + arithmetic) | accepted | modeled | decides | partial-trust |
 | QF_FP (floating-point) | accepted | lowered (no IR sort) | decides | partial-trust |
 | quantifiers (∃/∀, finite-domain + instantiation) | accepted | modeled | sound, incomplete (unknown-safe) | partial-trust |
@@ -55,10 +58,13 @@ Four **independent** axes per SMT-LIB fragment, so "the parser accepts it" is ne
 - **QF_BV (scalar bit-vectors)** — full scalar op set parsed and modeled; bit-blast to SAT decides both directions; unsat carries a DRAT proof + an end-to-end faithfulness miter (Alethe/Lean too). ADR-0006/0011/0012
 - **QF_ABV (arrays)** — Array sort restricted to bit-vector index/element; eager read-over-write + Ackermann elimination decides; unsat DRAT is modulo the trusted (replay-validatable) elimination. ADR-0010
 - **QF_UF (EUF / congruence)** — declare-fun + congruence closure on a backtrackable e-graph decides; unsat carries a congruence explanation re-derived by an independent union-find checker (Alethe + Lean too). ADR-0013/0032
-- **QF_LIA (linear integer)** — Int sort + div/mod/abs eliminated exactly; Diophantine refutation + branch-and-bound simplex decide (degrade to unknown on node budget); unsat DRAT is bounded (refutes at the chosen bit-blast width). ADR-0014/0020/0021
+- **QF_LIA (general linear integer)** — Int sort + div/mod/abs eliminated exactly; Diophantine refutation + branch-and-bound simplex + Gomory cuts decide (degrade to unknown on node budget); general-case unsat DRAT is bounded (refutes at the chosen bit-blast width). Checked-proof sub-fragments are listed separately. ADR-0014/0020/0021
+- **QF_LIA · integer infeasibility (Diophantine + interval)** — integer-systems infeasibility (equality systems, e.g. 2x=1; and the single-variable interval c≤k·x≤d) carries an independent integer-Farkas self-check (Evidence::UnsatDiophantine) AND a kernel-checked Lean proof accepted by the real `lean` binary (discreteness via the ℤ prelude). ADR-0042/0043. General integer-cut (Gomory) proof reconstruction is future.
 - **QF_LRA (linear real)** — exact-rational simplex is complete for QF_LRA; unsat carries a Farkas certificate with a from-scratch independent verifier (Alethe la_generic + Lean too). ADR-0015
 - **QF_NIA (nonlinear integer)** — general NIA is sound-incomplete (linear abstraction + sign lemmas, unknown otherwise); the single-variable integer polynomial decider (nia_square) is exact for that shape (e.g. x*x=2 → unsat). No proof artifact. ADR-0024
-- **QF_NRA (nonlinear real)** — linear abstraction + replay + McCormick spatial branch-and-bound; relaxation-unsat is sound, sat is replay-checked, unknown otherwise. No proof artifact. ADR-0024
+- **QF_NRA (general nonlinear real)** — linear abstraction + replay + McCormick spatial branch-and-bound; relaxation-unsat is sound, sat is replay-checked, unknown otherwise. No proof artifact for the GENERAL case. ADR-0024. (Sub-fragments with proofs are listed separately below.)
+- **QF_NRA · degree-2 SOS / globally-(non)negative quadratic forms** — exact decision via a PSD/sum-of-squares certificate (multivariate AM-GM, (x±y)²<0, …). Self-checking LDLᵀ certificate (Evidence::UnsatSos), AND a kernel-checked Lean proof for both strict directions up to 3-variable AM-GM, accepted by the real `lean` binary. ADR-0039/0040/0041
+- **QF_NRA · single-variable real-algebraic** — exact single-variable polynomial decision with irrational (real-algebraic) witnesses (x*x=2 → sat √2, replay-checked by exact sign test); coupled 2-var via resultant. No proof artifact yet (sat witnesses are not Lean-reconstructed). ADR-0038
 - **QF_UFLIA / QF_UFLRA (UF + arithmetic)** — eager Ackermann congruence → arithmetic; complete for the conjunctive fragment's UNSAT, and a satisfiable query now yields a REPLAY-CHECKED sat model — the arithmetic model is projected back to a full-Value-keyed function interpretation and replayed against the original assertions (decline to sound unknown on any replay doubt). Alethe proof covers the conjunctive UNSAT sub-cases modulo trusted Ackermann. ADR-0013/0015
 - **QF_FP (floating-point)** — FP sorts/ops parsed (some conversions constant-only); FP values are BitVec (no IR sort), lowered to circuits differentially validated vs native/apfloat; unsat DRAT is modulo the trusted FP circuit. ADR-0023/0026/0028
 - **quantifiers (∃/∀, finite-domain + instantiation)** — complete over finite (Bool/BV) domains, guarded-finite Int expansion, and single-variable real Fourier-Motzkin; otherwise sound refutation by e-matching/MBQI instantiation (ground unsat transfers; sat/no-progress is unknown). Checkable Alethe/Lean for the refutation slices. ADR-0016/0032
