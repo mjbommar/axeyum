@@ -56,10 +56,17 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     operands exactly; Real field ops on an algebraic operand → graceful Err (field arithmetic
     DEFERRED). Decides `x*x=2/3`→Sat(algebraic), `x*x=4`→Sat(2 rational), `x*x<0/=-1`→Unsat,
     `x*x>2`→Sat(rational), declines multivariate/2nd-assertion to the unchanged NRA abstraction.
-    **NEXT NRA slices (per ADR-0038, deferred-then-advance): (2)** Sturm sequences for robust
-    multi-root isolation + bigint when i128 overflows; **(3)** algebraic FIELD arithmetic
-    (resultant/min-poly — needed once two algebraic numbers combine); **(4)** multivariate CAD /
-    nlsat (the full decidable-NRA engine, T2.5.4, XL/research-scale).
+    Extended since: **higher-degree** single-var (`x³=2`→Sat(∛2), `x⁴−5x²+6=0`→Sat,
+    `x²+1=0`→Unsat — fixed an isolation i128-overflow that lost all degree≥3) and **conjunctions**
+    of single-var constraints (`x*x=2 ∧ x<0`→Sat(−√2)) via exact sign-cell decomposition (roots ∪
+    one rational sample per open cell, replay-checked against ALL assertions, exhaustive-or-decline
+    Unsat). **The single-variable NRA case is now near-complete** (any-degree polynomial systems
+    over one real var, irrational witnesses, sound). **NEXT NRA slices (per ADR-0038, all
+    deferred-LARGE / multi-session): (2)** Sturm sequences + bigint when i128 overflows;
+    **(3)** algebraic FIELD arithmetic (resultant/min-poly — needed once TWO algebraic numbers
+    combine, i.e. the first multivariate/nested step); **(4)** multivariate CAD / nlsat (the full
+    decidable-NRA engine, T2.5.4, XL/research-scale). These are the genuine multi-session frontier
+    — start fresh with full context, not as a session-tail slice.
   - Also open: general MBQI / quantifier proofs, the Lean reconstruction frontier (P3.7), and
     broader theory completeness.
   - **Codex-review correctness items — ALL CLOSED (each with soundness tests):** `prove_unsat`
