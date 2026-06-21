@@ -1970,9 +1970,13 @@ enum LiftOutcome {
 }
 
 /// Hard ceiling on the Sylvester matrix dimension (= `deg_y(p) + deg_y(q)`). The
-/// determinant is computed by Leibniz permutation expansion (`dim!` terms over a
-/// polynomial ring), so the cap keeps it bounded; beyond it we decline.
-const MAX_SYLVESTER_DIM: usize = 6;
+/// determinant is now computed by exact evaluation–interpolation (`O(D · dim³)`
+/// over the polynomial ring, in [`axeyum_ir::poly`]), NOT factorial Leibniz
+/// expansion, so the dimension is no longer factorially constrained. The cap
+/// stays a bounded-cost guard (and the underlying `i128` arithmetic still declines
+/// gracefully on overflow); raised from 6 to 24 so higher-degree coupled systems
+/// decide instead of declining, while a genuinely huge input still declines fast.
+const MAX_SYLVESTER_DIM: usize = 24;
 
 /// Decide a 2-variable coupled component by resultant elimination. Returns
 /// `Some(verdict)` only for the in-scope shape (≥ 2 equalities, rational-x lifts,

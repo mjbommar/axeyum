@@ -37,15 +37,17 @@ type BigVec = Vec<BigRational>;
 /// polynomial degree, and the refinement-round count are capped → graceful
 /// decline (never OOM/hang).
 ///
-/// The Sylvester determinant is computed by Leibniz expansion, which is `O(dim!)`
-/// in the matrix dimension `dim = deg(p_α) + deg(p_β)`. `BIG_MAX_SYLVESTER_DIM`
-/// is therefore a HARD cost cap: beyond it the retry declines *before* building
-/// the matrix, so a high-degree combination (e.g. a degree-12 × degree-4 product,
-/// `dim = 16`, `16! ≈ 2·10¹³`) declines instantly instead of hanging. A `dim`
-/// of 10 (`10! ≈ 3.6·10⁶`) comfortably covers the cases the i128 path can also
-/// reach while staying fast. (The i128 path is bounded in practice by its `i128`
-/// overflow on those same large dimensions; this is the bignum analogue.)
-const BIG_MAX_SYLVESTER_DIM: usize = 10;
+/// The Sylvester determinant is now computed by exact evaluation–interpolation
+/// (`O(D · dim³)`, `D ≤ Σ row-max degrees`), NOT Leibniz expansion, so the
+/// dimension is no longer factorially constrained. `BIG_MAX_SYLVESTER_DIM` remains
+/// a HARD bounded-cost cap so a genuinely huge coupled system declines *before*
+/// building the matrix (the eval-interpolation cost and the bignum coefficient
+/// growth are both polynomial but still grow with `dim`). Raised to 24 (from 10)
+/// to reach the higher-degree coupled systems the polynomial-time route now
+/// affords — e.g. the dim-16 resultant behind the degree-4 nested-radical
+/// coordinates of `x²+y²=4 ∧ x·y=1`. Beyond 24 the retry declines fast instead of
+/// risking an OOM/hang on a pathological input.
+const BIG_MAX_SYLVESTER_DIM: usize = 24;
 const BIG_MAX_DEGREE: usize = BIG_MAX_SYLVESTER_DIM;
 const BIG_COMBINE_REFINE_ROUNDS: u32 = 200;
 /// Belt-and-suspenders cap on the Euclidean / Sturm-chain iteration count (the
@@ -475,14 +477,20 @@ fn permutation_sign(perm: &[usize]) -> i32 {
     if inv % 2 == 0 { 1 } else { -1 }
 }
 
-/// Determinant of a polynomial-entry matrix by Leibniz expansion.
-fn big_determinant(mat: &[Vec<BigVec>]) -> BigVec {
+/// Determinant of a polynomial-entry matrix by Leibniz expansion (`O(dim!)`).
+///
+/// Kept as the **reference oracle** for the differential test pinning the fast
+/// [`big_determinant`] (evaluation–interpolation) to the same exact coefficient
+/// vector. Not on the solver path. Exposed (`pub`) only so that test can call it.
+#[doc(hidden)]
+#[must_use]
+pub fn big_determinant_leibniz(mat: &[Vec<BigVec>]) -> BigVec {
     let n = mat.len();
     let mut perm: Vec<usize> = (0..n).collect();
     let mut used = vec![false; n];
     let mut acc = vec![BigRational::zero()];
     leibniz(mat, &mut perm, 0, &mut used, &mut acc);
-    acc
+    big_trim(acc)
 }
 
 fn leibniz(
@@ -513,6 +521,125 @@ fn leibniz(
         leibniz(mat, perm, col + 1, used, acc);
         used[r] = false;
     }
+}
+
+/// Determinant of a square matrix of LSB-first bignum-rational polynomials in one
+/// variable `x`, returned as the determinant polynomial `R(x)` (LSB-first), by
+/// exact evaluation–interpolation (`O(D · dim³)`, `D` bounds `deg R`). Mirrors the
+/// `i128`-path [`crate::poly::sylvester_determinant`]. Coefficients are unbounded
+/// (the bignum point) so this never overflows; the matrix DIMENSION is the cost
+/// driver and is capped by the caller. Exposed (`pub`) for the differential test.
+#[doc(hidden)]
+#[must_use]
+pub fn big_determinant(mat: &[Vec<BigVec>]) -> BigVec {
+    let n = mat.len();
+    if n == 0 {
+        return vec![BigRational::one()];
+    }
+    // Degree bound D = Σ_i max_j deg(M[i][j]); an all-zero row ⇒ R ≡ 0.
+    let mut deg_bound: usize = 0;
+    for row in mat {
+        let mut row_max: Option<usize> = None;
+        for entry in row {
+            if let Some(d) = big_degree(entry) {
+                row_max = Some(row_max.map_or(d, |m: usize| m.max(d)));
+            }
+        }
+        match row_max {
+            None => return vec![BigRational::zero()],
+            Some(d) => deg_bound += d,
+        }
+    }
+    let num_points = deg_bound + 1;
+    let mut xs: Vec<BigRational> = Vec::with_capacity(num_points);
+    let mut ys: Vec<BigRational> = Vec::with_capacity(num_points);
+    for k in 0..num_points {
+        let x = BigRational::from(BigInt::from(k));
+        let scalar = big_eval_poly_matrix(mat, &x);
+        let det = big_bareiss_determinant(&scalar);
+        xs.push(x);
+        ys.push(det);
+    }
+    big_trim(big_newton_interpolate(&xs, &ys))
+}
+
+/// Evaluate every entry of a polynomial-entry matrix at `x` → scalar matrix.
+fn big_eval_poly_matrix(mat: &[Vec<BigVec>], x: &BigRational) -> Vec<Vec<BigRational>> {
+    mat.iter()
+        .map(|row| row.iter().map(|entry| big_eval(entry, x)).collect())
+        .collect()
+}
+
+/// Exact determinant of a scalar bignum-rational matrix by fraction-free Bareiss
+/// elimination with partial pivoting (`O(n³)`, exact). Singular ⇒ zero.
+fn big_bareiss_determinant(mat: &[Vec<BigRational>]) -> BigRational {
+    let n = mat.len();
+    if n == 0 {
+        return BigRational::one();
+    }
+    let mut a: Vec<Vec<BigRational>> = mat.to_vec();
+    let mut sign = 1i32;
+    let mut prev = BigRational::one();
+    for k in 0..n {
+        if a[k][k].is_zero() {
+            let mut swap_row = None;
+            for (i, _) in a.iter().enumerate().skip(k + 1) {
+                if !a[i][k].is_zero() {
+                    swap_row = Some(i);
+                    break;
+                }
+            }
+            match swap_row {
+                Some(i) => {
+                    a.swap(k, i);
+                    sign = -sign;
+                }
+                None => return BigRational::zero(),
+            }
+        }
+        let pivot = a[k][k].clone();
+        for i in (k + 1)..n {
+            for j in (k + 1)..n {
+                let num = &a[i][j] * &pivot - &a[i][k] * &a[k][j];
+                a[i][j] = num / &prev;
+            }
+            a[i][k] = BigRational::zero();
+        }
+        prev = pivot;
+    }
+    let det = a[n - 1][n - 1].clone();
+    if sign < 0 { -det } else { det }
+}
+
+/// Exact Newton-divided-difference interpolation over bignum rationals: the unique
+/// polynomial of degree `< xs.len()` through `(xs[i], ys[i])` (distinct `xs`),
+/// LSB-first.
+fn big_newton_interpolate(xs: &[BigRational], ys: &[BigRational]) -> BigVec {
+    let n = xs.len();
+    if n == 0 {
+        return vec![BigRational::zero()];
+    }
+    let mut coeff = ys.to_vec();
+    for level in 1..n {
+        for i in (level..n).rev() {
+            let num = &coeff[i] - &coeff[i - 1];
+            let den = &xs[i] - &xs[i - level];
+            coeff[i] = num / den;
+        }
+    }
+    let mut result: BigVec = vec![coeff[n - 1].clone()];
+    for k in (0..n - 1).rev() {
+        let mut next = vec![BigRational::zero(); result.len() + 1];
+        for (i, c) in result.iter().enumerate() {
+            next[i + 1] += c;
+        }
+        for (i, c) in result.iter().enumerate() {
+            next[i] -= c * &xs[k];
+        }
+        next[0] += &coeff[k];
+        result = next;
+    }
+    result
 }
 
 /// `Res_y(p_α, p_β')` → squarefree integer (bignum) polynomial. `None` on a

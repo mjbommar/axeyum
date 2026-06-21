@@ -1157,9 +1157,13 @@ fn grid_inequality_component_not_wrongly_unsat() {
 
 /// A genuinely coupled equality system with deeply-nested-radical witnesses:
 /// `x² + y² = 4 ∧ x*y = 1`. `Res_y = x⁴ − 4x² + 1` whose roots are `±√(2±√3)`
-/// (degree-4 algebraic). The grid forms but the field arithmetic on degree-4
-/// algebraic coordinates declines (overflow) ⇒ a sound `Unknown` — the decider
-/// must not crash and must not answer Unsat (it IS satisfiable).
+/// (degree-4 algebraic, all irrational). The resultant builds and isolates fine,
+/// but every x-candidate is irrational and the 2-variable decider only lifts
+/// RATIONAL x-candidates (the algebraic-coordinate lift is a deferred slice), so
+/// it yields a sound `Unknown` — the decider must not crash and must not answer
+/// Unsat (it IS satisfiable). The eval-interpolation resultant raised the feasible
+/// resultant DIMENSION; this case is gated by the separate algebraic-x lift, not
+/// by the resultant degree.
 #[test]
 fn multi_coupled_algebraic_x_declines_not_unsat() {
     let mut arena = TermArena::new();

@@ -367,16 +367,186 @@ pub fn ratpoly_neg(a: &[Rational]) -> Option<Vec<Rational>> {
 }
 
 /// Determinant of a square matrix whose entries are LSB-first rational univariate
-/// polynomials, by Leibniz permutation expansion (exact; bounded dimension).
-/// Returns the determinant polynomial (LSB-first). `None` on overflow.
+/// polynomials, by Leibniz permutation expansion (exact; `O(dim!)`). Returns the
+/// determinant polynomial (LSB-first). `None` on overflow.
+///
+/// This is the **reference oracle** kept for the differential test that pins the
+/// fast [`sylvester_determinant`] (evaluation–interpolation) to the same exact
+/// coefficient vector. It is NOT on the solver hot path (its factorial cost is the
+/// reason for the replacement) — do not call it for production resultants.
 #[must_use]
-pub fn sylvester_determinant(mat: &[Vec<Vec<Rational>>]) -> Option<Vec<Rational>> {
+pub fn sylvester_determinant_leibniz(mat: &[Vec<Vec<Rational>>]) -> Option<Vec<Rational>> {
     let n = mat.len();
     let mut perm: Vec<usize> = (0..n).collect();
     let mut acc = vec![Rational::zero()];
     let mut used = vec![false; n];
     leibniz_recurse(mat, &mut perm, 0, &mut used, &mut acc)?;
-    Some(acc)
+    Some(rat_trim(acc))
+}
+
+/// Determinant of a square matrix whose entries are LSB-first rational univariate
+/// polynomials in one variable `x`, returned as the determinant polynomial `R(x)`
+/// (LSB-first). Exact, no floating point, `O(D · dim³)` where `D` bounds `deg R`.
+///
+/// Method (exact evaluation–interpolation):
+/// 1. **Degree bound** `D = Σ_i max_j deg(M[i][j])` — a safe upper bound on
+///    `deg R` (every Leibniz term is a product of one entry per row, so its degree
+///    is `≤ Σ_i max_j deg(M[i][j])`). Over-estimates are harmless (extra,
+///    redundant interpolation points). An all-zero / empty row makes `R ≡ 0`.
+/// 2. **Evaluate** the polynomial matrix at the `D+1` distinct integer points
+///    `x = 0,1,…,D`, giving `D+1` scalar `Rational` matrices.
+/// 3. **Scalar determinant** of each via fraction-free Bareiss elimination
+///    (exact over ℚ; `O(dim³)`).
+/// 4. **Interpolate** `R(x)` from the `D+1` pairs `(k, det_k)` by exact Newton
+///    divided differences over ℚ.
+///
+/// `None` on any `i128`/[`Rational`] overflow (the caller declines) — never a
+/// wrong coefficient. The result equals [`sylvester_determinant_leibniz`] exactly
+/// (pinned by a differential test).
+#[must_use]
+pub fn sylvester_determinant(mat: &[Vec<Vec<Rational>>]) -> Option<Vec<Rational>> {
+    let n = mat.len();
+    if n == 0 {
+        // Determinant of the empty matrix is 1 (matches Leibniz: the single empty
+        // permutation contributes the empty product).
+        return Some(vec![Rational::integer(1)]);
+    }
+    // Degree bound D = Σ_i max_j deg(M[i][j]). A row of all-zero entries forces a
+    // zero determinant (every Leibniz term passes through that row).
+    let mut deg_bound: usize = 0;
+    for row in mat {
+        debug_assert_eq!(row.len(), n);
+        let mut row_max: Option<usize> = None;
+        for entry in row {
+            if let Some(d) = rat_degree(entry) {
+                row_max = Some(row_max.map_or(d, |m: usize| m.max(d)));
+            }
+        }
+        match row_max {
+            // Whole row is zero ⇒ determinant is identically zero.
+            None => return Some(vec![Rational::zero()]),
+            Some(d) => deg_bound = deg_bound.checked_add(d)?,
+        }
+    }
+    let num_points = deg_bound.checked_add(1)?;
+    let mut xs: Vec<Rational> = Vec::with_capacity(num_points);
+    let mut ys: Vec<Rational> = Vec::with_capacity(num_points);
+    for k in 0..num_points {
+        let x = Rational::integer(i128::try_from(k).ok()?);
+        let scalar = eval_poly_matrix(mat, x)?;
+        let det = bareiss_determinant(&scalar)?;
+        xs.push(x);
+        ys.push(det);
+    }
+    let coeffs = newton_interpolate(&xs, &ys)?;
+    Some(rat_trim(coeffs))
+}
+
+/// Evaluate every entry of a polynomial-entry matrix at `x`, producing a scalar
+/// `Rational` matrix. `None` on overflow.
+fn eval_poly_matrix(mat: &[Vec<Vec<Rational>>], x: Rational) -> Option<Vec<Vec<Rational>>> {
+    let n = mat.len();
+    let mut out = Vec::with_capacity(n);
+    for row in mat {
+        let mut orow = Vec::with_capacity(n);
+        for entry in row {
+            orow.push(eval_rat_poly(entry, x)?);
+        }
+        out.push(orow);
+    }
+    Some(out)
+}
+
+/// Exact determinant of a square scalar `Rational` matrix by fraction-free Bareiss
+/// elimination with partial pivoting. `O(n³)`, exact over ℚ (the Bareiss division
+/// is exact: each pivot quotient is an integer combination that divides evenly).
+/// `None` on overflow. Returns `Rational::zero()` for a singular matrix.
+fn bareiss_determinant(mat: &[Vec<Rational>]) -> Option<Rational> {
+    let n = mat.len();
+    if n == 0 {
+        return Some(Rational::integer(1));
+    }
+    let mut a: Vec<Vec<Rational>> = mat.to_vec();
+    let mut sign = 1i32;
+    let mut prev = Rational::integer(1); // previous pivot (M[k-1][k-1] after step)
+    for k in 0..n {
+        // Pivot: if the diagonal is zero, swap in a nonzero row below.
+        if a[k][k].is_zero() {
+            let mut swap_row = None;
+            for (i, _) in a.iter().enumerate().skip(k + 1) {
+                if !a[i][k].is_zero() {
+                    swap_row = Some(i);
+                    break;
+                }
+            }
+            match swap_row {
+                Some(i) => {
+                    a.swap(k, i);
+                    sign = -sign;
+                }
+                None => return Some(Rational::zero()), // singular
+            }
+        }
+        let pivot = a[k][k];
+        for i in (k + 1)..n {
+            for j in (k + 1)..n {
+                // a[i][j] = (a[i][j]·pivot − a[i][k]·a[k][j]) / prev  (exact).
+                let term1 = a[i][j].checked_mul(pivot)?;
+                let term2 = a[i][k].checked_mul(a[k][j])?;
+                let num = term1.checked_sub(term2)?;
+                a[i][j] = num.checked_div(prev)?;
+            }
+            a[i][k] = Rational::zero();
+        }
+        prev = pivot;
+    }
+    let det = a[n - 1][n - 1];
+    if sign < 0 {
+        det.checked_neg()
+    } else {
+        Some(det)
+    }
+}
+
+/// Exact Newton-divided-difference interpolation of the unique polynomial of
+/// degree `< xs.len()` through the points `(xs[i], ys[i])` (distinct `xs`),
+/// returned as an LSB-first `Rational` coefficient vector. `None` on overflow.
+fn newton_interpolate(xs: &[Rational], ys: &[Rational]) -> Option<Vec<Rational>> {
+    let n = xs.len();
+    if n == 0 {
+        return Some(vec![Rational::zero()]);
+    }
+    // Divided differences: coeff[k] = f[x0,…,xk] computed in place.
+    let mut coeff = ys.to_vec();
+    for level in 1..n {
+        for i in (level..n).rev() {
+            // (coeff[i] − coeff[i-1]) / (xs[i] − xs[i-level])
+            let num = coeff[i].checked_sub(coeff[i - 1])?;
+            let den = xs[i].checked_sub(xs[i - level])?;
+            coeff[i] = num.checked_div(den)?;
+        }
+    }
+    // Horner-from-the-top expansion to standard coefficients:
+    //   R(x) = ((coeff[n-1])(x−x_{n-2}) + coeff[n-2])(x−x_{n-3}) + …
+    // Maintain `result` as an LSB-first coefficient vector.
+    let mut result: Vec<Rational> = vec![coeff[n - 1]];
+    for k in (0..n - 1).rev() {
+        // result = result·(x − xs[k]) + coeff[k]
+        // Multiply by x: shift up by one degree.
+        let mut next = vec![Rational::zero(); result.len() + 1];
+        for (i, &c) in result.iter().enumerate() {
+            next[i + 1] = next[i + 1].checked_add(c)?;
+        }
+        // Subtract xs[k]·result.
+        for (i, &c) in result.iter().enumerate() {
+            let sub = c.checked_mul(xs[k])?;
+            next[i] = next[i].checked_sub(sub)?;
+        }
+        // Add coeff[k] (constant term).
+        next[0] = next[0].checked_add(coeff[k])?;
+        result = next;
+    }
+    Some(result)
 }
 
 /// One step of the Leibniz determinant expansion: choose the row for column `col`,
