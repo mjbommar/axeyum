@@ -121,6 +121,8 @@ fn int_prelude_admits_all_declarations() {
         p.left_distrib,
         p.mul_nonneg,
         p.no_int_between,
+        p.le_total,
+        p.lt_of_le_of_ne,
     ] {
         assert!(
             k.environment().contains(name),
@@ -174,6 +176,8 @@ fn every_axiom_type_infers_to_a_sort() {
         p.left_distrib,
         p.mul_nonneg,
         p.no_int_between,
+        p.le_total,
+        p.lt_of_le_of_ne,
     ] {
         let ty = k.environment().get(name).unwrap().ty();
         let inferred = k.infer(ty).unwrap();

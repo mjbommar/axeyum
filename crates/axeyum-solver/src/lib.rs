@@ -48,6 +48,7 @@ mod evidence;
 mod faithfulness;
 mod incremental;
 mod int_real_relax;
+mod int_reconstruct;
 mod layers;
 mod lazy_bv;
 mod lia;
@@ -145,6 +146,9 @@ pub use evidence::{
 pub use faithfulness::{FaithfulnessOutcome, check_qf_bv_faithfulness};
 pub use fp::FloatFormat;
 pub use incremental::{AssumptionOutcome, IncrementalBvSolver};
+pub use int_reconstruct::{
+    IntReconstructCtx, reconstruct_diophantine_proof, reconstruct_diophantine_to_lean_module,
+};
 pub use layers::BvLayerStats;
 pub use lazy_bv::{
     LazyBvBackend, LazyBvOutcome, check_lazy_bv_abstraction, check_lazy_bv_abstraction_ro,

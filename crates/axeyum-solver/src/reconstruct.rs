@@ -1179,6 +1179,11 @@ pub enum ProofFragment {
     Datatype,
     /// Linear real/integer arithmetic (Farkas).
     Lra,
+    /// Integer-infeasibility (**Diophantine**) `QF_LIA`: an integer-equality system
+    /// that is rational-feasible yet integer-infeasible (`gcd ∤ const`), refuted by
+    /// the [`DiophantineCertificate`](crate::DiophantineCertificate) and
+    /// reconstructed over the integer prelude (ADR-0042).
+    Diophantine,
     /// A trivial single-square sum-of-squares refutation: the one-variable real
     /// query `x*x < 0` (UNSAT: a square is never negative). The simplest SOS
     /// reconstruction, needing no ring normalizer (ADR-0040, SOS slice 1).
@@ -1500,6 +1505,11 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
             || is_sos_rational_weight_gt(arena, assertions)
         {
             ProofFragment::Sos
+        } else if crate::prove_lia_unsat_by_diophantine(arena, assertions) {
+            // An integer-equality system that is integer-infeasible (`gcd ∤ const`).
+            // Owned by the integer-prelude Diophantine reconstructor (ADR-0042);
+            // anything else falls through to the linear Farkas (LRA) path.
+            ProofFragment::Diophantine
         } else {
             ProofFragment::Lra
         }
@@ -1688,6 +1698,11 @@ pub fn prove_unsat_to_lean_module(
             let mut ctx = LraReconstructCtx::new();
             let t = reconstruct_sos_proof(&mut ctx, arena, assertions)?;
             gate_and_render_lra_module(&mut ctx, t, "SOS")?
+        }
+        ProofFragment::Diophantine => {
+            // The integer Diophantine reconstructor builds its own integer-prelude
+            // kernel, gates the `False` proof, and renders the module (ADR-0042).
+            crate::int_reconstruct::reconstruct_diophantine_to_lean_module(arena, assertions)?
         }
         ProofFragment::Unsupported => {
             return Err(ReconstructError::UnsupportedRule {

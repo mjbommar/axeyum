@@ -33,6 +33,9 @@
 //! - **Constant axiom**: `zero_lt_one : lt zero one`.
 //! - **Discreteness axiom** (the integer-specific fact the field `R` lacks):
 //!   `no_int_between : ∀ (x : Z), Not (And (lt zero x) (lt x one))`.
+//! - **Linear-order / antisymmetry axioms** (genuine ℤ theorems):
+//!   `le_total : ∀ (a b : Z), Or (le a b) (le b a)` and
+//!   `lt_of_le_of_ne : ∀ (a b : Z), le a b → Not (Eq Z a b) → lt a b`.
 //!
 //! Each axiom's exact type is documented on the corresponding [`IntPrelude`]
 //! field. The propositional connectives (`Not`, `And`, `Eq`, `False`) come from
@@ -142,6 +145,17 @@ pub struct IntPrelude {
     /// no integer strictly between `0` and `1`. This is the single axiom the
     /// field `R` lacks, and the crux of every integer-infeasibility proof.
     pub no_int_between: NameId,
+
+    // --- linear-order / antisymmetry axioms (genuine ℤ theorems) -------------
+    /// `le_total : ∀ (a b : Z), Or (le a b) (le b a)` — `ℤ` is a **total**
+    /// (linear) order: any two integers are comparable. A standard theorem of
+    /// `ℤ`; used to case-split `m' ≤ 1` vs `1 ≤ m'` in the discreteness close.
+    pub le_total: NameId,
+    /// `lt_of_le_of_ne : ∀ (a b : Z), le a b → Not (Eq Z a b) → lt a b` — a
+    /// non-strict inequality that is **not** an equality is strict. A standard
+    /// theorem of any partial order (`le` antisymmetric); used to strengthen
+    /// `m' ≤ 1` to `m' < 1` (and `0 ≤ m'` to `0 < m'`) once equality is excluded.
+    pub lt_of_le_of_ne: NameId,
 }
 
 /// Declare the axiomatized **discretely-ordered commutative ring** into
@@ -582,6 +596,49 @@ pub fn build_int_prelude(kernel: &mut Kernel) -> IntPrelude {
         declare_axiom(kernel, anon, "no_int_between", ty)
     };
 
+    // --- le_total : ∀ (a b : Z), Or (le a b) (le b a) ------------------------
+    // `ℤ` is a total order. Under binders a,b (de Bruijn a=1, b=0):
+    //   Or (le a b) (le b a) = (Or (le a b)) (le b a)  (the logic prelude's `Or`,
+    //   two explicit Props).
+    let le_total = {
+        let a1 = kernel.bvar(1);
+        let b0 = kernel.bvar(0);
+        let le_ab = app2(kernel, le, a1, b0);
+        let a1b = kernel.bvar(1);
+        let b0b = kernel.bvar(0);
+        let le_ba = app2(kernel, le, b0b, a1b);
+        let or_c = kernel.const_(logic.or, vec![]);
+        let or_p = kernel.app(or_c, le_ab);
+        let or_pq = kernel.app(or_p, le_ba);
+        let ty = telescope_z(kernel, anon, z_ty, 2, or_pq);
+        declare_axiom(kernel, anon, "le_total", ty)
+    };
+
+    // --- lt_of_le_of_ne : ∀ (a b : Z), le a b → Not (Eq Z a b) → lt a b ------
+    // A non-strict inequality that is not an equality is strict.
+    // Binder order a,b then h1 : le a b, h2 : Not (Eq Z a b). Result under
+    // a,b,h1,h2: a=3,b=2; h2 (Not(Eq a b)) under a,b,h1: a=2,b=1; h1 (le a b)
+    // under a,b: a=1,b=0.
+    let lt_of_le_of_ne = {
+        let a3 = kernel.bvar(3);
+        let b2 = kernel.bvar(2);
+        let result = app2(kernel, lt, a3, b2);
+        // h2 : Not (Eq Z a b) — under a,b,h1 → a=2,b=1.
+        let a2 = kernel.bvar(2);
+        let b1 = kernel.bvar(1);
+        let eq_ab = eq_z(kernel, a2, b1);
+        let not_c = kernel.const_(logic.not, vec![]);
+        let not_eq = kernel.app(not_c, eq_ab);
+        let after_h2 = kernel.pi(anon, not_eq, result, BinderInfo::Default);
+        // h1 : le a b — under a,b → a=1,b=0.
+        let a1 = kernel.bvar(1);
+        let b0 = kernel.bvar(0);
+        let h1_dom = app2(kernel, le, a1, b0);
+        let after_h1 = kernel.pi(anon, h1_dom, after_h2, BinderInfo::Default);
+        let ty = telescope_z(kernel, anon, z_ty, 2, after_h1);
+        declare_axiom(kernel, anon, "lt_of_le_of_ne", ty)
+    };
+
     IntPrelude {
         logic,
         z,
@@ -614,6 +671,8 @@ pub fn build_int_prelude(kernel: &mut Kernel) -> IntPrelude {
         left_distrib,
         mul_nonneg,
         no_int_between,
+        le_total,
+        lt_of_le_of_ne,
     }
 }
 
