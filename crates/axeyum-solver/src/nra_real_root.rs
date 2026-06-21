@@ -703,6 +703,507 @@ impl Root {
     }
 }
 
+// ============================================================================
+// Sturm sequences: an EXACT count of distinct real roots in an interval.
+//
+// Sturm's theorem: for a squarefree polynomial `p`, the number of *distinct*
+// real roots in the half-open interval `(a, b]` equals `V(a) − V(b)`, where
+// `V(t)` is the number of sign changes (ignoring zeros) in the Sturm chain
+//
+//     S₀ = p,  S₁ = p',  S_{k+1} = −rem(S_{k−1}, S_k),
+//
+// continued until the remainder is zero. The count is *exact*, so we use it to
+// drive root isolation: subdivide the Cauchy interval until every subinterval
+// holds exactly one root, then bisect it. This NEVER misses a root — unlike a
+// fixed grid, which silently drops a root when two fall in one cell (their
+// endpoint signs match, so the cell looks root-free).
+//
+// All arithmetic is exact `Rational`; every step is `checked_*`. ANY overflow
+// returns `None`, and the caller falls back to the (sound) grid path. For a
+// non-squarefree `p` we first divide out `gcd(p, p')` to obtain the squarefree
+// part, whose roots are the SAME SET — so the distinct-root count is unchanged.
+// ============================================================================
+
+/// A polynomial with exact `Rational` coefficients (LSB-first). The Sturm chain
+/// remainders have rational coefficients even when `p` is integer, so the chain
+/// is computed in this representation throughout.
+type RatVec = Vec<Rational>;
+
+/// Drop trailing (high-degree) zero coefficients so the leading coefficient is
+/// genuinely nonzero. The zero polynomial becomes the empty vector.
+fn rat_trim(mut p: RatVec) -> RatVec {
+    while p.last().is_some_and(|c| c.is_zero()) {
+        p.pop();
+    }
+    p
+}
+
+/// The (true, post-trim) degree, or `None` for the zero polynomial.
+fn rat_degree(p: &[Rational]) -> Option<usize> {
+    let mut n = p.len();
+    while n > 0 && p[n - 1].is_zero() {
+        n -= 1;
+    }
+    if n == 0 { None } else { Some(n - 1) }
+}
+
+/// Lift an LSB-first integer polynomial to a trimmed rational polynomial.
+fn rat_from_int(poly: &[i128]) -> RatVec {
+    rat_trim(poly.iter().map(|&c| Rational::integer(c)).collect())
+}
+
+/// The formal derivative `p'` (LSB-first), exact. `None` on overflow.
+fn rat_derivative(p: &[Rational]) -> Option<RatVec> {
+    if p.len() <= 1 {
+        return Some(Vec::new()); // constant ⇒ derivative 0
+    }
+    let mut out = Vec::with_capacity(p.len() - 1);
+    for (i, &c) in p.iter().enumerate().skip(1) {
+        out.push(c.checked_mul(Rational::integer(i128::try_from(i).ok()?))?);
+    }
+    Some(rat_trim(out))
+}
+
+/// Exact polynomial remainder `a mod b` (LSB-first), `b ≠ 0`. Long division over
+/// `Rational`; `None` on overflow. The result has degree `< deg(b)`.
+fn rat_rem(a: &[Rational], b: &[Rational]) -> Option<RatVec> {
+    let db = rat_degree(b)?; // b ≠ 0 by contract
+    let lead_b = b[db];
+    let mut r = rat_trim(a.to_vec());
+    // Reduce while deg(r) ≥ deg(b).
+    while let Some(dr) = rat_degree(&r) {
+        if dr < db {
+            break;
+        }
+        // factor = (lead_r / lead_b) · x^(dr − db)
+        let coeff = r[dr].checked_div(lead_b)?;
+        let shift = dr - db;
+        for (j, &bj) in b[..=db].iter().enumerate() {
+            let sub = coeff.checked_mul(bj)?;
+            let idx = j + shift;
+            r[idx] = r[idx].checked_sub(sub)?;
+        }
+        // The leading term must cancel exactly; trim it (and any new trailing
+        // zeros) so the loop makes progress.
+        r = rat_trim(r);
+        if rat_degree(&r).is_some_and(|d| d == dr) {
+            // Leading term failed to cancel (should be impossible with exact
+            // arithmetic); decline rather than loop forever.
+            return None;
+        }
+    }
+    Some(r)
+}
+
+/// Exact polynomial GCD (monic-normalized result), via the Euclidean algorithm
+/// over `Rational`. Returns the zero polynomial only if both inputs are zero;
+/// `None` on overflow. Used to extract the squarefree part `p / gcd(p, p')`.
+fn rat_gcd(a: &[Rational], b: &[Rational]) -> Option<RatVec> {
+    let mut a = rat_trim(a.to_vec());
+    let mut b = rat_trim(b.to_vec());
+    // Bound the Euclidean iterations by the starting degree (+ slack) so a
+    // pathological input can never spin.
+    for _ in 0..(MAX_DEGREE + 4) {
+        if rat_degree(&b).is_none() {
+            // b == 0 ⇒ gcd is a; normalize to monic.
+            return rat_make_monic(&a);
+        }
+        let r = rat_rem(&a, &b)?;
+        a = b;
+        b = r;
+    }
+    None
+}
+
+/// Normalize a nonzero polynomial to monic (divide by its leading coefficient);
+/// the zero polynomial maps to zero. `None` on overflow.
+fn rat_make_monic(p: &[Rational]) -> Option<RatVec> {
+    let Some(d) = rat_degree(p) else {
+        return Some(Vec::new());
+    };
+    let lead = p[d];
+    let mut out = Vec::with_capacity(d + 1);
+    for &c in &p[..=d] {
+        out.push(c.checked_div(lead)?);
+    }
+    Some(out)
+}
+
+/// Exact polynomial division `a / b` assuming `b` divides `a` EXACTLY (the
+/// squarefree-part extraction calls this with `b = gcd(p, p')`). Returns the
+/// quotient (LSB-first), or `None` on overflow or a nonzero remainder (a
+/// defensive guard — `b | a` should make the remainder vanish).
+fn rat_exact_div(a: &[Rational], b: &[Rational]) -> Option<RatVec> {
+    let db = rat_degree(b)?;
+    let lead_b = b[db];
+    let mut r = rat_trim(a.to_vec());
+    let Some(da) = rat_degree(&r) else {
+        return Some(Vec::new()); // 0 / b = 0
+    };
+    if da < db {
+        return None; // not an exact multiple (nonzero a of lower degree)
+    }
+    let mut quot = vec![Rational::zero(); da - db + 1];
+    while let Some(dr) = rat_degree(&r) {
+        if dr < db {
+            break;
+        }
+        let coeff = r[dr].checked_div(lead_b)?;
+        let shift = dr - db;
+        quot[shift] = coeff;
+        for (j, &bj) in b[..=db].iter().enumerate() {
+            let sub = coeff.checked_mul(bj)?;
+            let idx = j + shift;
+            r[idx] = r[idx].checked_sub(sub)?;
+        }
+        r = rat_trim(r);
+        if rat_degree(&r).is_some_and(|d| d == dr) {
+            return None;
+        }
+    }
+    // Exact division ⇒ remainder must be zero.
+    if rat_degree(&r).is_some() {
+        return None;
+    }
+    Some(rat_trim(quot))
+}
+
+/// The squarefree part `p / gcd(p, p')` of `p` (same root SET, every root now
+/// simple), as a trimmed rational polynomial. `None` on overflow or a degenerate
+/// shape (constant `p`). When `gcd(p, p')` is a nonzero constant, `p` is already
+/// squarefree and is returned (trimmed) unchanged.
+fn squarefree_part(p: &[Rational]) -> Option<RatVec> {
+    let dp = rat_degree(p)?; // None ⇒ zero poly: caller handles separately
+    if dp == 0 {
+        return None; // constant: no roots, not our job here
+    }
+    let dpoly = rat_derivative(p)?;
+    let g = rat_gcd(p, &dpoly)?;
+    match rat_degree(&g) {
+        // gcd is a nonzero constant ⇒ already squarefree.
+        Some(0) | None => Some(rat_trim(p.to_vec())),
+        Some(_) => rat_exact_div(p, &g),
+    }
+}
+
+/// Clear denominators of a rational polynomial to an integer polynomial
+/// (LSB-first), multiplying through by the LCM of all denominators. The multiplier
+/// is positive, so the polynomial's real roots are UNCHANGED. Declines (`None`) on
+/// overflow or if any cleared coefficient exceeds [`MAX_ABS_COEFF`].
+fn rat_to_int_poly(p: &[Rational]) -> Option<Vec<i128>> {
+    if p.is_empty() {
+        return None;
+    }
+    let mut lcm = 1i128;
+    for c in p {
+        lcm = lcm_i128(lcm, c.denominator())?;
+    }
+    let mut out = Vec::with_capacity(p.len());
+    for c in p {
+        let scaled = c.numerator().checked_mul(lcm)?;
+        if scaled % c.denominator() != 0 {
+            return None;
+        }
+        let v = scaled / c.denominator();
+        if v.checked_abs()? >= MAX_ABS_COEFF {
+            return None;
+        }
+        out.push(v);
+    }
+    while out.len() > 1 && *out.last().unwrap() == 0 {
+        out.pop();
+    }
+    Some(out)
+}
+
+/// Exact Horner evaluation of a rational polynomial (LSB-first) at `x`. `None` on
+/// overflow.
+fn eval_rat_poly(p: &[Rational], x: Rational) -> Option<Rational> {
+    let mut acc = Rational::zero();
+    for &c in p.iter().rev() {
+        acc = acc.checked_mul(x)?.checked_add(c)?;
+    }
+    Some(acc)
+}
+
+/// The Sturm chain `S₀ = p, S₁ = p', S_{k+1} = −rem(S_{k−1}, S_k)` of a
+/// SQUAREFREE polynomial `p`. The chain is returned LSB-first per element; its
+/// length is bounded by `deg(p) + 2`. `None` on overflow (⇒ decline). Each step
+/// strictly drops the degree, so the chain always terminates; the bound is a
+/// belt-and-suspenders guard against any unexpected non-termination.
+fn sturm_chain(p: &[Rational]) -> Option<Vec<RatVec>> {
+    let dp = rat_degree(p)?;
+    let mut chain: Vec<RatVec> = Vec::with_capacity(dp + 2);
+    chain.push(rat_trim(p.to_vec()));
+    let deriv = rat_derivative(p)?;
+    // p' == 0 ⇒ p is constant; no Sturm chain (handled by the caller).
+    rat_degree(&deriv)?;
+    chain.push(deriv);
+    // After the first two, each S_{k+1} = −rem(S_{k−1}, S_k). Bounded by degree.
+    for _ in 0..(MAX_DEGREE + 2) {
+        let n = chain.len();
+        let prev2 = &chain[n - 2];
+        let prev1 = &chain[n - 1];
+        if rat_degree(prev1).is_none() {
+            break; // last pushed element was zero (cannot happen: we break before)
+        }
+        let r = rat_rem(prev2, prev1)?;
+        if rat_degree(&r).is_none() {
+            break; // remainder zero ⇒ chain complete
+        }
+        let neg = rat_negate(&r)?;
+        chain.push(neg);
+    }
+    Some(chain)
+}
+
+/// Exact coefficient-wise negation of a rational polynomial. `None` on overflow.
+fn rat_negate(p: &[Rational]) -> Option<RatVec> {
+    let mut out = Vec::with_capacity(p.len());
+    for &c in p {
+        out.push(c.checked_neg()?);
+    }
+    Some(out)
+}
+
+/// `V(t)`: the number of sign alternations in the Sturm chain evaluated at `t`,
+/// dropping zeros. `None` on overflow.
+fn sturm_sign_changes(chain: &[RatVec], t: Rational) -> Option<usize> {
+    let mut changes = 0usize;
+    let mut last: Option<Sign> = None;
+    for s in chain {
+        let v = eval_rat_poly(s, t)?;
+        let sign = Sign::of_rational(v);
+        if sign == Sign::Zero {
+            continue; // zeros are ignored
+        }
+        if let Some(prev) = last
+            && prev != sign
+        {
+            changes += 1;
+        }
+        last = Some(sign);
+    }
+    Some(changes)
+}
+
+/// `count_roots_in(chain, lo, hi) = V(lo) − V(hi)`: the EXACT number of distinct
+/// real roots of the squarefree `p` in the half-open interval `(lo, hi]`.
+///
+/// `lo` and `hi` must not themselves be roots of `p` (the Cauchy bound endpoints
+/// `±B` are safe — `B` strictly exceeds every root magnitude). `None` on
+/// overflow, or if `V(lo) < V(hi)` (impossible for a valid Sturm chain — a
+/// defensive guard so a bug can never yield a bogus large count).
+fn count_roots_in(chain: &[RatVec], lo: Rational, hi: Rational) -> Option<usize> {
+    let vlo = sturm_sign_changes(chain, lo)?;
+    let vhi = sturm_sign_changes(chain, hi)?;
+    vlo.checked_sub(vhi)
+}
+
+/// Maximum recursion *depth* for the Sturm-driven interval subdivision. Each
+/// level halves the interval; `2^SUBDIVIDE_DEPTH` cells comfortably separate the
+/// roots of any admissible polynomial. Hitting the bound ⇒ decline (fall back to
+/// the grid), never an incomplete result.
+const STURM_SUBDIVIDE_DEPTH: u32 = 60;
+
+/// Recursively subdivide `(lo, hi]` using the EXACT Sturm count to drive the
+/// split, pushing each isolated single root into `out`. `count` is the precomputed
+/// `count_roots_in(chain, lo, hi)` (passed so the parent's count is reused).
+///
+/// Invariant on return `Some(())`: EVERY distinct root in `(lo, hi]` is
+/// represented in `out` (completeness). `None` ⇒ overflow or the depth bound was
+/// hit ⇒ the whole isolation declines (the caller falls back to the grid, which
+/// stays sound). This never silently drops a root.
+#[allow(clippy::too_many_arguments)]
+fn sturm_isolate_rec(
+    int_poly: &[i128],
+    chain: &[RatVec],
+    lo: Rational,
+    hi: Rational,
+    count: usize,
+    depth: u32,
+    out: &mut Vec<Root>,
+) -> Option<()> {
+    if count == 0 {
+        return Some(());
+    }
+    if count == 1 {
+        // Exactly one root in (lo, hi]. The endpoint `hi` itself may be that root
+        // (the interval is half-open). Test it exactly first.
+        let vhi = eval_rat(int_poly, hi)?;
+        if vhi.is_zero() {
+            out.push(Root::Rational(hi));
+            return Some(());
+        }
+        // Otherwise the single root lies in the OPEN (lo, hi). But `lo` may ITSELF
+        // be a root (e.g. it is the `mid` carried in from a parent split where mid
+        // was a root and we recursed on `(mid, hi]`). `isolate_one` needs a
+        // STRICT, opposite-sign bracket with both endpoints non-roots, so we first
+        // narrow to a clean bracket via Sturm before handing off.
+        out.push(sturm_isolate_single(int_poly, chain, lo, hi, depth)?);
+        return Some(());
+    }
+    // count ≥ 2: split at the midpoint and recurse on each half. The midpoint
+    // must NOT be a root for the half-open counts to compose cleanly; if it is,
+    // nudge by recording it and counting the open halves around it.
+    if depth >= STURM_SUBDIVIDE_DEPTH {
+        return None; // bound hit ⇒ decline (never an incomplete set)
+    }
+    let mid = lo.checked_add(hi)?.checked_div(Rational::integer(2))?;
+    // Guard against a degenerate (collapsed) interval.
+    if mid.checked_cmp(&lo)? != Ordering::Greater || mid.checked_cmp(&hi)? != Ordering::Less {
+        return None;
+    }
+    let mid_is_root = eval_rat(int_poly, mid)?.is_zero();
+    if mid_is_root {
+        // Record the exact rational root at `mid`, then count the two OPEN halves
+        // `(lo, mid)` and `(mid, hi]`. `count_roots_in` is half-open `(a, b]`, so:
+        //   roots in (lo, mid]  =  roots in (lo, mid) + 1   (the root at mid)
+        // hence roots in (lo, mid) = count_roots_in(lo, mid) − 1.
+        out.push(Root::Rational(mid));
+        let lo_half = count_roots_in(chain, lo, mid)?; // counts mid
+        let lo_open = lo_half.checked_sub(1)?;
+        sturm_isolate_rec(int_poly, chain, lo, mid, lo_open, depth + 1, out)?;
+        let hi_half = count_roots_in(chain, mid, hi)?; // (mid, hi]
+        sturm_isolate_rec(int_poly, chain, mid, hi, hi_half, depth + 1, out)?;
+        return Some(());
+    }
+    let lo_count = count_roots_in(chain, lo, mid)?;
+    let hi_count = count_roots_in(chain, mid, hi)?;
+    // Sanity: the halves must account for exactly the parent count (mid not a
+    // root). A mismatch signals overflow/inconsistency ⇒ decline.
+    if lo_count.checked_add(hi_count)? != count {
+        return None;
+    }
+    sturm_isolate_rec(int_poly, chain, lo, mid, lo_count, depth + 1, out)?;
+    sturm_isolate_rec(int_poly, chain, mid, hi, hi_count, depth + 1, out)?;
+    Some(())
+}
+
+/// Isolate the SINGLE root known (by the exact Sturm count) to lie in the
+/// half-open `(lo, hi]`, where `lo` MAY itself be a root (so the interval is not
+/// yet a clean opposite-sign bracket). Narrow with the Sturm count until both
+/// endpoints are non-roots straddling the root with opposite signs, then hand off
+/// to [`isolate_one`]; an exact rational midpoint root short-circuits. `None` on
+/// overflow or the depth bound (⇒ decline). The squarefree `int_poly` has only
+/// SIMPLE roots, so a non-root bracket ALWAYS exhibits a strict sign change.
+fn sturm_isolate_single(
+    int_poly: &[i128],
+    chain: &[RatVec],
+    lo: Rational,
+    hi: Rational,
+    depth: u32,
+) -> Option<Root> {
+    let mut lo = lo;
+    let mut hi = hi;
+    let mut depth = depth;
+    // We maintain the invariant: exactly one root lies in (lo, hi], and `hi` is
+    // NOT a root (checked by the caller / re-established below). We bisect until
+    // `lo` is also a non-root and the bracket has a strict sign change.
+    loop {
+        // If `lo` is non-root and `hi` is non-root with opposite signs, the open
+        // (lo, hi) is a clean isolating bracket ⇒ hand off.
+        let slo = Sign::of_rational(eval_rat(int_poly, lo)?);
+        let shi = Sign::of_rational(eval_rat(int_poly, hi)?);
+        if slo != Sign::Zero && shi != Sign::Zero && slo != shi {
+            return isolate_one(int_poly, lo, hi);
+        }
+        if depth >= STURM_SUBDIVIDE_DEPTH {
+            return None; // bound hit ⇒ decline
+        }
+        let mid = lo.checked_add(hi)?.checked_div(Rational::integer(2))?;
+        if mid.checked_cmp(&lo)? != Ordering::Greater || mid.checked_cmp(&hi)? != Ordering::Less {
+            return None; // collapsed interval ⇒ decline
+        }
+        if eval_rat(int_poly, mid)?.is_zero() {
+            return Some(Root::Rational(mid)); // exact rational root
+        }
+        // The single root is in (lo, hi]; use the half-open Sturm count to keep
+        // the half that contains it, discarding the (root-free) other half. This
+        // also walks `lo` rightward off a root endpoint.
+        let lo_count = count_roots_in(chain, lo, mid)?; // roots in (lo, mid]
+        if lo_count >= 1 {
+            hi = mid;
+        } else {
+            lo = mid;
+        }
+        depth += 1;
+    }
+}
+
+/// Isolate **all** distinct real roots of the integer polynomial `poly` using
+/// Sturm's theorem — the COMPLETE, never-miss path. Returns `Some(roots)` with
+/// every distinct real root represented exactly once (ascending order not
+/// guaranteed; the caller re-sorts), or `None` to DECLINE (overflow, a
+/// constant/degenerate shape, or the recursion bound) so the caller falls back to
+/// the sound grid scan.
+///
+/// Method: lift `poly` to rational, take its squarefree part `q = poly/gcd(poly,
+/// poly')` (same root set, all roots simple), build the Sturm chain of `q`, count
+/// the distinct roots over the Cauchy interval `(−B, B]`, and recursively
+/// subdivide by exact count until each subinterval holds exactly one root, then
+/// bisect it (via `isolate_one` on the ORIGINAL integer `poly`, so the returned
+/// `Root::Algebraic` carries the original defining polynomial). Because the
+/// count is exact, NO root is ever missed; on any overflow/bound the whole path
+/// declines and the grid takes over.
+fn isolate_roots_sturm(poly: &[i128]) -> Option<Vec<Root>> {
+    if poly.last().copied()? == 0 {
+        return None;
+    }
+    // Squarefree part over the rationals (SAME root SET, every root now SIMPLE),
+    // cleared back to an integer polynomial `sqf`. Working with `sqf` everywhere
+    // below is what makes the never-miss guarantee hold even for non-squarefree
+    // input: each distinct root of `poly` is a SIGN-CHANGING root of `sqf`, so
+    // `isolate_one`'s bracket-and-bisect always applies (a double root of `poly`
+    // would have NO sign change and defeat bracketing). The returned algebraic
+    // numbers carry `sqf` as their defining polynomial — a genuine defining poly
+    // for the same real value — and the caller's replay still checks the ORIGINAL
+    // `poly` via `sign_at`, which vanishes at the (multiple) root too.
+    let rat = rat_from_int(poly);
+    let sqfree = squarefree_part(&rat)?;
+    let sqf = rat_to_int_poly(&sqfree)?;
+    let lead = *sqf.last()?;
+    if lead == 0 {
+        return None;
+    }
+    // Cauchy bound B = 1 + max|aᵢ|/|aₙ| of `sqf`, rounded UP to an integer ⇒ a
+    // strict bound: every real root satisfies |root| < B, so ±B are NOT roots.
+    let max_other = sqf[..sqf.len() - 1]
+        .iter()
+        .map(|c| c.unsigned_abs())
+        .max()
+        .unwrap_or(0);
+    let bound = Rational::integer(1).checked_add(Rational::checked_new(
+        i128::try_from(max_other).ok()?,
+        lead.checked_abs()?,
+    )?)?;
+    let b_int = bound
+        .numerator()
+        .checked_div(bound.denominator())?
+        .checked_add(1)?;
+    let lo = Rational::integer(b_int.checked_neg()?);
+    let hi = Rational::integer(b_int);
+
+    // The endpoints must not be roots (strict Cauchy bound guarantees this, but
+    // verify exactly — if an endpoint were a root the half-open count would be off).
+    if eval_rat(&sqf, lo)?.is_zero() || eval_rat(&sqf, hi)?.is_zero() {
+        return None;
+    }
+    let chain = sturm_chain(&sqfree)?;
+    let total = count_roots_in(&chain, lo, hi)?;
+    let mut out: Vec<Root> = Vec::new();
+    sturm_isolate_rec(&sqf, &chain, lo, hi, total, 0, &mut out)?;
+    // Completeness invariant: `out` now holds exactly `total` distinct roots — the
+    // exact Sturm count over the full Cauchy interval. (Each leaf pushes exactly
+    // one Root for a count-1 cell or the recorded rational root at a split point;
+    // count-0 cells push none.) If this does not hold, something is inconsistent
+    // ⇒ decline rather than return a possibly-incomplete set.
+    if out.len() != total {
+        return None;
+    }
+    Some(out)
+}
+
 /// The number of equal cells the root-isolation grid subdivides `[-B, B]` into
 /// (a uniform first pass to separate roots into distinct cells). Bounded so the
 /// scan is cheap; each cell is then bisected to isolate its single root. `1 <<
@@ -733,7 +1234,34 @@ const ISOLATE_REFINE_DEPTH: u32 = 48;
 /// wrong verdict, because every returned `Sat` is replay-checked and `Unsat` for
 /// `=` is reported only when no sign change is found anywhere on `[-B, B]`, which
 /// — `B` being a true root bound — is exact for these polynomials).
+///
+/// COMPLETENESS: this dispatcher tries the exact **Sturm-sequence** path first
+/// ([`isolate_roots_sturm`]), which provably finds EVERY distinct real root (the
+/// Sturm count is exact, so two roots in one would-be grid cell are still both
+/// found). Only if Sturm declines (overflow, a constant/degenerate shape, or the
+/// recursion bound) do we fall back to the uniform grid scan
+/// ([`isolate_roots_grid`]). The grid stays sound — a missed root only degrades a
+/// `Sat` to a decline upstream — but the Sturm path removes that gap entirely for
+/// every polynomial it admits. The returned set is therefore COMPLETE (every real
+/// root represented) whenever Sturm succeeds, and the grid's sound behavior is
+/// preserved otherwise. A whole-isolation `None` makes the caller decline.
 fn isolate_roots(poly: &[i128]) -> Option<Vec<Root>> {
+    if let Some(mut roots) = isolate_roots_sturm(poly) {
+        // Sturm yields distinct roots but not necessarily in ascending order;
+        // sort to match the documented contract (callers rely on ascending order
+        // for `decide_eq`'s first-root and the inequality separators). If the
+        // sort cannot order a pair exactly, fall through to the grid.
+        if let Some(sorted) = sort_roots(&roots) {
+            roots = sorted;
+            return Some(roots);
+        }
+    }
+    isolate_roots_grid(poly)
+}
+
+/// The original uniform-grid root isolation (now the fallback when the exact
+/// Sturm path declines). See [`isolate_roots`] for the completeness contract.
+fn isolate_roots_grid(poly: &[i128]) -> Option<Vec<Root>> {
     let lead = *poly.last()?;
     if lead == 0 {
         return None;
@@ -3228,6 +3756,64 @@ mod tests {
 
     fn ipoly(coeffs: &[i128]) -> Vec<i128> {
         coeffs.to_vec()
+    }
+
+    #[test]
+    fn grid_misses_two_close_roots_sturm_finds_them() {
+        // p(x) = (10000x − 1)(10000x − 2) = 1e8 x² − 30000 x + 2. Its two roots
+        // 1/10000 and 2/10000 fall inside ONE 2^14 grid cell — the grid scan sees
+        // equal endpoint signs and reports it root-free, UNDER-counting (0 roots).
+        // Sturm's exact count finds BOTH. This is the soundness-relevant gap: a
+        // missed root could turn a real `sat` into a spurious `unsat` downstream.
+        let poly = ipoly(&[2, -30000, 100_000_000]);
+        let grid = isolate_roots_grid(&poly).unwrap();
+        let sturm = isolate_roots_sturm(&poly).unwrap();
+        assert_eq!(grid.len(), 0, "the coarse grid MISSES both close roots");
+        assert_eq!(sturm.len(), 2, "Sturm's exact count finds both roots");
+        // The dispatcher uses Sturm first ⇒ the complete set.
+        assert_eq!(isolate_roots(&poly).unwrap().len(), 2);
+    }
+
+    #[test]
+    fn sturm_distinct_count_nonsquarefree() {
+        // (x² − 2)² has a double root at ±√2 ⇒ 2 DISTINCT roots. The squarefree
+        // part (x² − 2) recovers them; the grid alone would see no sign change at
+        // an even-multiplicity root and find NONE.
+        let p = poly_mul_i(&[-2, 0, 1], &[-2, 0, 1]);
+        let sturm = isolate_roots_sturm(&p).unwrap();
+        assert_eq!(sturm.len(), 2, "(x²−2)² has 2 distinct real roots");
+        for r in &sturm {
+            // Each is a genuine root of the ORIGINAL (multiple-root) poly.
+            match r {
+                Root::Algebraic(a) => assert_eq!(a.sign_at(&p), Some(Sign::Zero)),
+                Root::Rational(q) => assert!(eval_rat(&p, *q).unwrap().is_zero()),
+            }
+        }
+    }
+
+    fn poly_mul_i(a: &[i128], b: &[i128]) -> Vec<i128> {
+        let mut out = vec![0i128; a.len() + b.len() - 1];
+        for (i, &x) in a.iter().enumerate() {
+            for (j, &y) in b.iter().enumerate() {
+                out[i + j] += x * y;
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn sturm_count_known_shapes() {
+        // (chain count over the full Cauchy interval) must equal the known number
+        // of distinct real roots.
+        let known: &[(&[i128], usize)] = &[
+            (&[-2, 0, 1], 2),    // x² − 2  → ±√2
+            (&[1, 0, 1], 0),     // x² + 1  → none
+            (&[0, -1, 0, 1], 3), // x³ − x  → −1, 0, 1
+        ];
+        for (poly, want) in known {
+            let got = isolate_roots_sturm(poly).unwrap().len();
+            assert_eq!(got, *want, "distinct-root count for {poly:?}");
+        }
     }
 
     #[test]
