@@ -94,15 +94,18 @@ BV (the lazy path is built but inert), thin preprocessing. Already the whole of
 Track 1 (SAT inprocessing [P1.1], preprocessing [P1.2], core modernization
 [P1.3]); this is tuning depth, not a missing feature.
 
-**3. ~3 categorically-absent engines** (the genuinely new work this audit adds):
+**3. ~3 categorically-absent engines** — **ALL THREE now addressed (2026-06-22),
+each verify-guarded (untrusted search, trusted small checking); depth/fuller
+versions remain:**
 - **CHC / Horn (PDR/Spacer)** — *unbounded* invariant discovery, the step beyond
   today's bounded BMC + inductive k-induction. The single biggest categorical hole
   vs Z3. [P4.6](docs/plan/track-4-usecases-frontend/P4.6-chc-horn.md). **OPENED
-  (2026-06-22, ADR-0048):** verify-guarded single-predicate **IC3/PDR over QF_BV**
+  (ADR-0048):** verify-guarded single-predicate **IC3/PDR over QF_BV**
   (`prove_safety_pdr`) discovers invariants where k-induction is inconclusive —
-  `Safe` only when the discovered invariant passes the 3 implication checks. **Next
-  prerequisite (long pole): MBP for LIA/LRA** (P2.6-T2.6.6, absent) → then LRA-theory
-  CHC + the multi-predicate Horn core.
+  `Safe` only when the discovered invariant passes the 3 implication checks; **MBP
+  for LRA** (P2.6-T2.6.6) **landed** as the Spacer predecessor primitive; an **IMC**
+  (interpolation-based model checking) consumer of the interpolation API is the next
+  slice. Depth: LRA-theory PDR, online LRA solver, multi-predicate Horn core.
 - **Craig interpolation** — a feature column *and* CHC's lemma engine; read off
   the already-checked proof. [P3.8](docs/plan/track-3-proof-lean/P3.8-interpolation.md)
   **ENGINE DONE (2026-06-22, ADR-0047):** interpolants land for conjunctive
@@ -113,7 +116,11 @@ Track 1 (SAT inprocessing [P1.1], preprocessing [P1.2], core modernization
   rather than emitting anything unverified). Only the SMT-LIB `(get-interpolant)`
   parse surface remains (coordinate `axeyum-smtlib`).
 - **Synthesis / abduction (SyGuS, `get-abduct`)** — turns the checker into a
-  generator; lower priority, mostly integration. New: [P4.7](docs/plan/track-4-usecases-frontend/P4.7-synthesis.md).
+  generator. [P4.7](docs/plan/track-4-usecases-frontend/P4.7-synthesis.md).
+  **OPENED (ADR-0049):** `abduct(axioms, conjecture)` — bounded enumeration of
+  shared-vocab atoms, each candidate returned only when `check_auto` confirms
+  consistency + sufficiency + vocabulary. Depth: SyGuS grammar synthesizing *new*
+  atoms, CEGIS, minimality, `(get-abduct)` surface.
 - Plus the enumerated **breadth tail** (sequences, sets/bags, separation logic,
   finite fields, co-datatypes, rec-fun) kept *counted*, not forgotten:
   [P2.10](docs/plan/track-2-theories/P2.10-breadth-backlog.md).
