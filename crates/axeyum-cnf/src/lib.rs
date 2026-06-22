@@ -21,6 +21,7 @@ mod bve;
 mod compact;
 mod drat;
 mod gf2;
+mod interpolant;
 mod lrat;
 mod proof_sat;
 mod simplify;
@@ -42,6 +43,7 @@ pub use bve::{
 pub use compact::{CompactMap, compact};
 pub use drat::{DratError, DratStep, check_drat, parse_drat, write_drat};
 pub use gf2::{Gf2Outcome, Gf2Solution, Gf2System};
+pub use interpolant::{BoolExpr, propositional_interpolant};
 pub use lrat::{LratError, LratStep, check_lrat, elaborate_drat_to_lrat, parse_lrat, write_lrat};
 pub use proof_sat::{ProofSolveOutcome, solve_with_drat_proof, solve_with_drat_proof_within};
 pub use simplify::{SubsumeStats, simplify, simplify_within};
