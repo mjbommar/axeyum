@@ -72,6 +72,7 @@ mod optimize;
 mod pb;
 mod pbls;
 mod pdr;
+mod pdr_lra;
 mod preprocess;
 mod proof;
 mod qfabv_alethe;
@@ -211,6 +212,7 @@ pub use pdr::{
     CertifiedPdrOutcome, ChcSafetyCertificate, PdrOutcome, prove_safety_pdr,
     prove_safety_pdr_certified,
 };
+pub use pdr_lra::{PdrLraOutcome, prove_safety_pdr_lra};
 pub use preprocess::check_with_preprocessing;
 pub use proof::{
     UnsatProof, UnsatProofOutcome, export_datatype_unsat_proof, export_qf_abv_unsat_proof,
