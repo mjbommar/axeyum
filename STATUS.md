@@ -6,6 +6,20 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-22 (cont.) — ABDUCTION (`get-abduct`) landed — ALL THREE categorically-missing
+  Z3 engines now addressed.** `axeyum_solver::abduct(axioms, conjecture, config)` (ADR-0049): the
+  checker turned generator. Bounded enumeration of shared-vocabulary atoms (≤2-literal conjunctions),
+  each candidate returned only when re-checked — **consistency** (`axioms ∧ H` `check_auto`-`Sat`),
+  **sufficiency** (`axioms ∧ H ∧ ¬conjecture` `check_auto`-`Unsat`), **shared vocabulary**; `⊤` for the
+  already-entailed edge case; `Unknown` rejects, over-eager `None` on budget/out-of-grammar (never a
+  wrong abduct). 6 tests (LRA/EUF + already-entailed-⊤ + inconsistent/no-vocab declines + LCG fuzz).
+  Ledger row (synthesis, `Validated`). **The three missing engines: interpolation DONE (7 fragments),
+  CHC OPENED (PDR invariant discovery), abduction OPENED (this slice).** Fuller abduction (SyGuS
+  grammar synthesizing *new* atoms, CEGIS, minimality, the SMT-LIB `(get-abduct)` surface) is future.
+  - **Env note:** the disk hit 100% (worktree `target/` dirs accumulated); reclaimed ~15G by removing
+    this session's 8 *integrated* agent worktrees (work all on `main`) — left the concurrent agent's
+    10 worktrees untouched. `df` now ~15G free.
+
 - **Session 2026-06-22 (cont.) — LIA (integer) interpolant landed (interpolation engine now 6 fragments).**
   Filled the reviewer-noted gap ("no `lia_interpolant`"; needed for integer CHC) and deepened the engine
   (the #1 depth/completeness gap), staying in-lane while CHC remains coordination-gated.

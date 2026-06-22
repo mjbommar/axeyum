@@ -401,6 +401,18 @@ pub const CAPABILITIES: &[Capability] = &[
                    3 DRAT-recheckable proofs; all caps → Unknown",
         reference: "ADR-0048",
     },
+    Capability {
+        area: "synthesis",
+        feature: "abduction (abduct / get-abduct): find H over the shared vocabulary with axioms ∧ H \
+                  sat and axioms ∧ H ⊨ conjecture — the checker turned generator",
+        assurance: Assurance::Validated,
+        evidence: "the candidate enumeration (shared-vocab atoms, ≤2-literal conjunctions) is \
+                   untrusted — every returned H is re-checked: consistency (check_auto Sat), \
+                   sufficiency (axioms ∧ H ∧ ¬conjecture check_auto Unsat), and shared vocabulary; \
+                   Unknown rejects, over-eager None on budget exhaustion / out-of-grammar (never \
+                   a wrong abduct)",
+        reference: "ADR-0049",
+    },
 ];
 
 /// Renders [`CAPABILITIES`] as the canonical capability-matrix markdown table.
