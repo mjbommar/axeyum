@@ -39,6 +39,7 @@ mod enums;
 mod euf;
 mod euf_alethe;
 mod euf_egraph;
+mod euf_interpolant;
 /// Floating-point (IEEE 754) formula builders — predicates, classification, sign
 /// ops, equality, ordering — re-exported from the `axeyum-fp` crate (extracted so
 /// the SMT-LIB front-end can share them without depending on the solver). FP
@@ -139,6 +140,7 @@ pub use euf_egraph::{
     EufConflict, EufTheory, TheoryLit, TheoryProp, TheorySolver, check_qf_uf,
     prove_unsat_by_congruence, prove_unsat_lazy, prove_unsat_qf_uf_online, solve_qf_uf_online,
 };
+pub use euf_interpolant::qf_uf_interpolant;
 pub use evidence::{
     Evidence, EvidenceReport, LayerVersions, ProofOutcome, Provenance, SEMANTICS_VERSION,
     produce_diophantine_evidence, produce_evidence, produce_lra_dpll_evidence,

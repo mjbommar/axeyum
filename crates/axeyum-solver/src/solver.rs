@@ -218,7 +218,13 @@ impl<B: SolverBackend> Solver<B> {
             .filter(|i| !a_set.contains(i))
             .map(|i| self.assertions[i])
             .collect();
-        crate::lra_interpolant(arena, &a, &b)
+        // Try the QF_LRA Farkas interpolant; fall through to ground EUF when the
+        // partition is not linear-real-arithmetic (Unsupported) or LRA declines.
+        match crate::lra_interpolant(arena, &a, &b) {
+            Ok(Some(interpolant)) => Ok(Some(interpolant)),
+            Ok(None) | Err(SolverError::Unsupported(_)) => crate::qf_uf_interpolant(arena, &a, &b),
+            Err(other) => Err(other),
+        }
     }
 
     /// Maximizes the integer-linear `objective` subject to the active assertions
