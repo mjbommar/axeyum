@@ -115,6 +115,20 @@ fn real_int(arena: &mut TermArena, value: i128) -> TermId {
     arena.real_const(Rational::integer(value))
 }
 
+/// Collects every distinct subterm id of `term` (including `term`) — used to
+/// assert that a synthesized abduct is genuinely NOT present in the formulas.
+fn collect_subterms(arena: &TermArena, term: TermId, out: &mut BTreeSet<TermId>) {
+    if !out.insert(term) {
+        return;
+    }
+    if let TermNode::App { args, .. } = arena.node(term) {
+        let children = args.to_vec();
+        for child in children {
+            collect_subterms(arena, child, out);
+        }
+    }
+}
+
 #[test]
 fn lra_non_entailed_finds_verified_abduct() {
     // Reals x, y shared by axioms and conjecture.
@@ -231,6 +245,178 @@ fn euf_non_entailed_finds_equality_abduct() {
     assert!(
         abduct_conditions_hold(&mut arena, &axioms, conjecture, h, &config),
         "independently re-verified all three abduction conditions"
+    );
+}
+
+#[test]
+fn lra_synthesized_comparison_abduct() {
+    // SYNTHESIZED-ATOM coverage. Axioms: { x <= y, z <= y }. Conjecture:
+    // (x <= 5) ∧ (z <= 5) ∧ (y <= y) (the inert `y <= y` makes y shared). No
+    // single syntactic atom abduces (x <= 5 alone leaves z unbounded, and vice
+    // versa), but the synthesized comparison `y <= 5` of the shared term y to the
+    // constant 5 (drawn from the conjecture) closes BOTH gaps at once:
+    // x <= y <= 5 and z <= y <= 5. A single literal is always tried before any
+    // conjunction, so the synthesized `y <= 5` wins — and it is NOT literally
+    // present in either formula.
+    let mut arena = TermArena::new();
+    let var_x = arena.real_var("x").unwrap();
+    let var_y = arena.real_var("y").unwrap();
+    let var_z = arena.real_var("z").unwrap();
+    let five = real_int(&mut arena, 5);
+
+    let x_le_y = arena.real_le(var_x, var_y).unwrap();
+    let z_le_y = arena.real_le(var_z, var_y).unwrap();
+    let axioms = vec![x_le_y, z_le_y];
+
+    let x_le_5 = arena.real_le(var_x, five).unwrap();
+    let z_le_5 = arena.real_le(var_z, five).unwrap();
+    let y_le_y = arena.real_le(var_y, var_y).unwrap();
+    let inner = arena.and(x_le_5, z_le_5).unwrap();
+    let conjecture = arena.and(inner, y_le_y).unwrap();
+
+    let config = SolverConfig::default();
+
+    // Setup sanity: not already entailed (x could be 0, y = 100).
+    let not_c = arena.not(conjecture).unwrap();
+    let mut entail = axioms.clone();
+    entail.push(not_c);
+    assert!(
+        !matches!(
+            check_auto(&mut arena, &entail, &config).unwrap(),
+            CheckResult::Unsat
+        ),
+        "test setup: conjecture must NOT already be entailed"
+    );
+
+    let abduct_h = abduct(&mut arena, &axioms, conjecture, &config)
+        .unwrap()
+        .expect("a synthesized comparison abduct exists for this LRA case");
+
+    // Independently re-verify all three conditions test-side.
+    assert!(
+        abduct_conditions_hold(&mut arena, &axioms, conjecture, abduct_h, &config),
+        "independently re-verified all three abduction conditions"
+    );
+
+    // And confirm the abduct is genuinely a SYNTHESIZED atom: neither it nor its
+    // negation occurs syntactically in the axioms or conjecture.
+    let present: BTreeSet<TermId> = {
+        let mut subterms = BTreeSet::new();
+        for &root in axioms.iter().chain(std::iter::once(&conjecture)) {
+            collect_subterms(&arena, root, &mut subterms);
+        }
+        subterms
+    };
+    let neg_h = arena.not(abduct_h).unwrap();
+    assert!(
+        !present.contains(&abduct_h) && !present.contains(&neg_h),
+        "the abduct must be synthesized, not literally present in the formulas"
+    );
+}
+
+#[test]
+fn euf_synthesized_equality_abduct() {
+    // SYNTHESIZED-ATOM coverage (equality). The abduct `a = b` — an equality
+    // between two shared constants that does NOT appear in axioms or conjecture —
+    // closes the gap by congruence: a = b ⟹ f(a) = f(b) and g(a) = g(b).
+    //
+    // Axioms: { f(a) = c, g(a) = d, (a = c) ∨ (b = c) }. The disjunction puts b
+    // in the axiom vocabulary (so a, b, c, d are shared) and constrains the model
+    // for a clean projection. Conjecture: { f(b) = c ∧ g(b) = d ∧ (a = a) } (the
+    // inert `a = a` makes a shared so the equality `a = b` is admissible). No
+    // single present atom abduces the WHOLE conjecture (`f(b)=c` leaves g(b)=d
+    // open and vice versa), and a single literal is always tried before any
+    // conjunction — so the SYNTHESIZED equality `a = b`, which closes both at
+    // once, is returned.
+    let mut arena = TermArena::new();
+    let fun_f = arena.declare_fun("f", &[Sort::Real], Sort::Real).unwrap();
+    let fun_g = arena.declare_fun("g", &[Sort::Real], Sort::Real).unwrap();
+    let var_a = arena.real_var("a").unwrap();
+    let var_b = arena.real_var("b").unwrap();
+    let var_c = arena.real_var("c").unwrap();
+    let var_d = arena.real_var("d").unwrap();
+
+    let f_of_a = arena.apply(fun_f, &[var_a]).unwrap();
+    let f_of_b = arena.apply(fun_f, &[var_b]).unwrap();
+    let g_of_a = arena.apply(fun_g, &[var_a]).unwrap();
+    let g_of_b = arena.apply(fun_g, &[var_b]).unwrap();
+    let axiom_fa_is_c = arena.eq(f_of_a, var_c).unwrap();
+    let axiom_ga_is_d = arena.eq(g_of_a, var_d).unwrap();
+    let a_eq_c = arena.eq(var_a, var_c).unwrap();
+    let b_eq_c = arena.eq(var_b, var_c).unwrap();
+    let disjunction = arena.or(a_eq_c, b_eq_c).unwrap();
+    let axioms = vec![axiom_fa_is_c, axiom_ga_is_d, disjunction];
+
+    let goal_fb_is_c = arena.eq(f_of_b, var_c).unwrap();
+    let goal_gb_is_d = arena.eq(g_of_b, var_d).unwrap();
+    let a_eq_a = arena.eq(var_a, var_a).unwrap();
+    let goals = arena.and(goal_fb_is_c, goal_gb_is_d).unwrap();
+    let conjecture = arena.and(goals, a_eq_a).unwrap();
+
+    let config = SolverConfig::default();
+
+    let not_c = arena.not(conjecture).unwrap();
+    let mut entail = axioms.clone();
+    entail.push(not_c);
+    assert!(
+        !matches!(
+            check_auto(&mut arena, &entail, &config).unwrap(),
+            CheckResult::Unsat
+        ),
+        "test setup: conjecture must NOT already be entailed"
+    );
+
+    let abduct_h = abduct(&mut arena, &axioms, conjecture, &config)
+        .unwrap()
+        .expect("a synthesized equality abduct exists for this EUF case");
+
+    assert!(
+        abduct_conditions_hold(&mut arena, &axioms, conjecture, abduct_h, &config),
+        "independently re-verified all three abduction conditions"
+    );
+
+    // The abduct is the synthesized equality `a = b`, which is not present
+    // syntactically (only `a = c`, `b = c`, `f(a)=c`, `g(a)=d`, `f(b)=c`,
+    // `g(b)=d` are).
+    let a_eq_b = arena.eq(var_a, var_b).unwrap();
+    assert_eq!(abduct_h, a_eq_b, "expected the synthesized equality a = b");
+
+    let present: BTreeSet<TermId> = {
+        let mut subterms = BTreeSet::new();
+        for &root in axioms.iter().chain(std::iter::once(&conjecture)) {
+            collect_subterms(&arena, root, &mut subterms);
+        }
+        subterms
+    };
+    let neg_h = arena.not(abduct_h).unwrap();
+    assert!(
+        !present.contains(&abduct_h) && !present.contains(&neg_h),
+        "the equality abduct must be synthesized, not literally present"
+    );
+}
+
+#[test]
+fn no_abduct_in_grammar_within_budget_declines() {
+    // The conjecture is NOT entailed and NO atom in the (now larger) grammar —
+    // shared literals plus synthesized equalities/comparisons over the shared
+    // vocabulary — can close the gap, so the sound answer is a decline. Here the
+    // shared vocabulary is empty (axioms over x, conjecture over y), so no
+    // synthesized atom is admissible and `None` is correct. (A decline is always
+    // acceptable; a wrong abduct never is.)
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let y = arena.real_var("y").unwrap();
+    let zero = real_int(&mut arena, 0);
+    let three = real_int(&mut arena, 3);
+    let x_ge_0 = arena.real_ge(x, zero).unwrap();
+    let axioms = vec![x_ge_0];
+    let conjecture = arena.real_le(y, three).unwrap();
+
+    let config = SolverConfig::default();
+    let result = abduct(&mut arena, &axioms, conjecture, &config).unwrap();
+    assert!(
+        result.is_none(),
+        "no admissible abduct in the larger grammar ⇒ decline, never wrong"
     );
 }
 
