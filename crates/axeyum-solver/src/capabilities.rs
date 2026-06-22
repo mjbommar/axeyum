@@ -230,6 +230,20 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0047",
     },
     Capability {
+        area: "QF_UFLRA",
+        feature: "ONLINE Nelson–Oppen combination (check_qf_uflra_online): the online EufTheory + the \
+                  online LraTheory combined by model-based equality sharing (interface-equality \
+                  exchange + DFS interface split) — the warm alternative to eager Ackermann, first \
+                  slice of the theory-combination keystone",
+        assurance: Assurance::Validated,
+        evidence: "soundness by DIFFERENTIAL validation vs the trusted offline check_with_uf_arithmetic \
+                   — random UFLRA conjunctions, 0 disagreements, every sat model REPLAYED against the \
+                   originals (the fuzz caught + fixed 2 real soundness bugs); slightly MORE complete \
+                   than eager Ackermann on real-UF cases. Conjunctive MBTC (Boolean structure / \
+                   propagation deferred); non-UFLRA → Unknown",
+        reference: "ADR-0013/0015",
+    },
+    Capability {
         area: "QF_UFLIA/UFLRA",
         feature: "uninterpreted functions over Int/Real, by EUF + linear-arithmetic \
                   combination (eager Ackermann elimination → the arithmetic dispatcher)",
