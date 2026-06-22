@@ -159,6 +159,16 @@ pub fn blast_integers(
         rewritten.push(ctx.rewrite(arena, assertion)?);
     }
 
+    // No-overflow side-constraints for every integer product bit-blasted at width
+    // `B`. Each is a *restriction* that forces the SAT search onto a NON-WRAPPING
+    // (faithful) model of `a * b`, so the bounded blast finds the genuine small
+    // witness instead of a spurious mod-2^B wrapping one (which replay rejects).
+    // Conjoining them with the rewritten assertions keeps the result a pure
+    // conjunction; see `mul_no_overflow_constraint` for the encoding and the
+    // soundness note (replay remains the anchor; UNSAT-with-constraint only widens
+    // via the ladder, never an `unsat`).
+    rewritten.extend(ctx.mul_constraints);
+
     Ok(IntBlasting {
         assertions: rewritten,
         width,
@@ -174,6 +184,9 @@ struct Blaster {
     symbol_memo: HashMap<SymbolId, SymbolId>,
     vars: Vec<(SymbolId, SymbolId)>,
     fresh_counter: usize,
+    /// No-overflow side-constraints accumulated for each integer product (one
+    /// `bool` term per `int_mul`); conjoined with the rewritten assertions.
+    mul_constraints: Vec<TermId>,
 }
 
 impl Blaster {
@@ -233,6 +246,22 @@ impl Blaster {
                     core::cmp::Ordering::Greater => arena.sign_ext(width - self.width, x)?,
                 }
             }
+            TermNode::App {
+                op: Op::IntMul,
+                args,
+            } => {
+                // Lower both factors, then form the width-`B` product *and* a
+                // no-overflow side-constraint that ties it to the true (non-wrapping)
+                // integer product. The constraint is recorded for conjunction; the
+                // node value remains the plain width-`B` `bvmul` so the rest of the
+                // rewrite (and the existing replay) is unchanged.
+                let a = self.rewrite(arena, args[0])?;
+                let b = self.rewrite(arena, args[1])?;
+                let product = arena.bv_mul(a, b)?;
+                let constraint = self.mul_no_overflow_constraint(arena, a, b, product)?;
+                self.mul_constraints.push(constraint);
+                product
+            }
             TermNode::App { op, args } => {
                 let mut lowered = Vec::with_capacity(args.len());
                 for &arg in &args {
@@ -254,6 +283,45 @@ impl Blaster {
             }));
         };
         Ok(arena.bv_const(w, 0)?)
+    }
+
+    /// Builds the **faithful-product (no-overflow) side-constraint** for an
+    /// integer product `a * b` whose width-`B` two's-complement value is
+    /// `product` (`= bvmul(a, b)`, both width `B`).
+    ///
+    /// The true signed product of two `B`-bit values fits in `2B` bits, so we
+    /// recompute it exactly there — sign-extend each factor to `2B` and multiply
+    /// — and demand that it equal the sign-extension of the width-`B` `product`.
+    /// That holds iff the integer product `a * b` fits in signed `B` bits, i.e.
+    /// the width-`B` `bvmul` did NOT wrap. Adding this as a conjunct forces the
+    /// SAT search onto a non-wrapping (faithful) model — exactly the genuine
+    /// small witness for tiny-witness `QF_NIA` queries.
+    ///
+    /// Soundness: this is a *restriction* at width `B`. A model that satisfies it
+    /// has `a * b` equal over the integers to its width-`B` encoding, so the
+    /// existing exact-integer replay (the soundness anchor in `lia.rs` /
+    /// `combined.rs`) still independently re-checks every original assertion — a
+    /// mis-encoded constraint could only make the search MISS a model (→ a
+    /// wider width via the ladder, or a sound `Unknown`), never accept a wrong
+    /// `Sat`. When the width-`B` solve is UNSAT *with* this constraint, the width
+    /// ladder simply widens (a genuine large-product witness is found at a larger
+    /// `B`); an exhausted ladder stays `Unknown`, never `Unsat`.
+    fn mul_no_overflow_constraint(
+        &self,
+        arena: &mut TermArena,
+        a: TermId,
+        b: TermId,
+        product: TermId,
+    ) -> Result<TermId, IntBlastError> {
+        let width = self.width;
+        // True signed product in `2*width` bits (cannot itself overflow there).
+        let a_wide = arena.sign_ext(width, a)?;
+        let b_wide = arena.sign_ext(width, b)?;
+        let true_product = arena.bv_mul(a_wide, b_wide)?;
+        // Sign-extend the width-`B` result to `2*width`; equality with the true
+        // product is exactly "the product fits in signed `B` bits".
+        let product_wide = arena.sign_ext(width, product)?;
+        Ok(arena.eq(product_wide, true_product)?)
     }
 
     fn build_int_app(
