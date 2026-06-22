@@ -402,6 +402,18 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0048",
     },
     Capability {
+        area: "reachability",
+        feature: "interpolation-based model checking (prove_safety_imc): McMillan IMC over QF_BV — \
+                  proves unbounded safety by growing an interpolant-derived reachable over-approximation \
+                  to a fixpoint (the first real consumer of the interpolation engine)",
+        assurance: Assurance::Validated,
+        evidence: "the interpolation fixpoint is UNTRUSTED — Safe only when the discovered invariant \
+                   passes 3 check_auto-unsat checks (initiation, consecution, safety); Reachable only \
+                   when BMC-confirmed; qf_bv_interpolant None / too-coarse over-approximation deepen k; \
+                   all caps → Unknown",
+        reference: "ADR-0048",
+    },
+    Capability {
         area: "synthesis",
         feature: "abduction (abduct / get-abduct): find H over the shared vocabulary with axioms ∧ H \
                   sat and axioms ∧ H ⊨ conjecture — the checker turned generator",
