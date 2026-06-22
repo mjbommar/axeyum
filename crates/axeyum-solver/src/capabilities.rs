@@ -165,20 +165,23 @@ pub const CAPABILITIES: &[Capability] = &[
         area: "QF_LRA",
         feature: "Craig interpolation (lra_interpolant): interpolant read off the Farkas \
                   certificate of an unsat A ∧ B",
-        assurance: Assurance::Checked,
-        evidence: "interpolant = the A-side Farkas combination; re-verified before return by three \
-                   independent checks (A ∧ ¬I unsat, I ∧ B unsat, shared vocabulary); declines on \
-                   any failure (never an unverified interpolant)",
+        assurance: Assurance::Validated,
+        evidence: "interpolant = the A-side Farkas combination; VERIFY-BEFORE-RETURN — re-decided by \
+                   three independent checks (A ∧ ¬I unsat, I ∧ B unsat, shared vocabulary), declining \
+                   on any non-Unsat/doubt; no per-query certificate is emitted (so Validated, not \
+                   Checked), but the interpolant is independently re-checkable by re-running the checks",
         reference: "ADR-0047",
     },
     Capability {
         area: "SAT (propositional)",
         feature: "Craig interpolation (axeyum_cnf::propositional_interpolant): McMillan fold over \
                   the elaborated LRAT resolution proof of an unsat A ∧ B",
-        assurance: Assurance::Checked,
-        evidence: "interpolant re-verified before return — A ∧ ¬I and I ∧ B each Tseitin-encoded \
-                   and discharged unsat by the proof-producing core + check_drat, plus shared-\
-                   vocabulary containment; declines (None) on any failure",
+        assurance: Assurance::Validated,
+        evidence: "VERIFY-BEFORE-RETURN — A ∧ ¬I and I ∧ B each Tseitin-encoded and discharged unsat \
+                   by the proof-producing core + the independent check_drat checker, plus shared-\
+                   vocabulary containment; declines (None) on any failure. No per-query certificate \
+                   is returned (Validated); the DRAT-checked verify is the strongest interpolation \
+                   basis and is re-runnable by the consumer",
         reference: "ADR-0047",
     },
     Capability {
@@ -281,11 +284,11 @@ pub const CAPABILITIES: &[Capability] = &[
         feature: "model-based projection for LRA (mbp_lra): model-guided existential elimination of \
                   one real variable (Loos–Weispfenning) — the QE primitive Spacer/PDR uses for \
                   predecessor generalization",
-        assurance: Assurance::Checked,
-        evidence: "the LW selection is untrusted — every returned projection F' is re-verified before \
-                   return: M ⊨ F', the variable is absent, and F' ⇒ ∃x.F (entailment of the exact \
-                   Fourier–Motzkin projection, per-literal check_with_lra UNSAT); declines (None) on \
-                   any doubt (disjunctive-disequality case, overflow, non-LRA)",
+        assurance: Assurance::Validated,
+        evidence: "the LW selection is untrusted — VERIFY-BEFORE-RETURN: every projection F' is \
+                   re-checked (M ⊨ F', variable absent, and F' ⇒ ∃x.F by per-literal check_with_lra \
+                   UNSAT against the exact Fourier–Motzkin projection); declines (None) on any doubt \
+                   (disjunctive-disequality case, overflow, non-LRA). No per-query certificate emitted",
         reference: "ADR-0048 (P2.6)",
     },
     Capability {

@@ -94,6 +94,21 @@ Concretely:
   LRA+EUF ([T3.8.4]) are tracked follow-ups. The `(get-interpolant)` SMT-LIB
   command awaits coordination on the `axeyum-smtlib` parser.
 - The interpolation rows enter the capability ledger
-  (`crates/axeyum-solver/src/capabilities.rs`) at `Assurance::Checked` (LRA, off a
-  checked Farkas certificate) and `Assurance::Validated` (EUF, verify-before-return
-  but no per-query emitted certificate yet).
+  (`crates/axeyum-solver/src/capabilities.rs`).
+
+## Update (2026-06-22, same session)
+
+All five fragments named above as follow-ups **landed**, each under the same
+verify-before-return contract: **QF_LRA** (`lra_interpolant`), **QF_UF**
+(`qf_uf_interpolant`), **propositional/SAT** (`axeyum_cnf::propositional_interpolant`,
+McMillan over the LRAT proof), **QF_BV** (`qf_bv_interpolant`, joint bit-blast +
+lifted propositional interpolant), and **conjunctive QF_UFLRA** (`uflra_interpolant`,
+Ackermannize → LRA interpolant → translate). `Solver::interpolant` dispatches
+LRA → EUF → UFLRA → BV. **The only remaining P3.8 work is the SMT-LIB
+`(get-interpolant)` command surface** (coordinate `axeyum-smtlib`).
+
+**Ledger-label correction:** every interpolation row (and `mbp_lra`) is
+`Assurance::Validated`, **not** `Checked` — each *re-decides* the three conditions
+internally to verify, but emits **no per-query certificate** to the consumer
+(`Validated` is exactly "verify-before-return via solver checks, no self-contained
+certificate"). The interpolants are not yet Lean-kernel-reconstructed.
