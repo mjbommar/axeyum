@@ -218,11 +218,18 @@ impl<B: SolverBackend> Solver<B> {
             .filter(|i| !a_set.contains(i))
             .map(|i| self.assertions[i])
             .collect();
-        // Try the QF_LRA Farkas interpolant; fall through to ground EUF when the
-        // partition is not linear-real-arithmetic (Unsupported) or LRA declines.
+        // Try the QF_LRA Farkas interpolant, then ground EUF, then the QF_BV
+        // bit-blast interpolant — the natural fallback for QF_BV partitions —
+        // when the earlier theories decline (Unsupported or `Ok(None)`).
         match crate::lra_interpolant(arena, &a, &b) {
             Ok(Some(interpolant)) => Ok(Some(interpolant)),
-            Ok(None) | Err(SolverError::Unsupported(_)) => crate::qf_uf_interpolant(arena, &a, &b),
+            Ok(None) | Err(SolverError::Unsupported(_)) => {
+                match crate::qf_uf_interpolant(arena, &a, &b) {
+                    Ok(Some(interpolant)) => Ok(Some(interpolant)),
+                    Ok(None) => Ok(crate::qf_bv_interpolant(arena, &a, &b)),
+                    Err(other) => Err(other),
+                }
+            }
             Err(other) => Err(other),
         }
     }

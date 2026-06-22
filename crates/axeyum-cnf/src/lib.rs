@@ -1924,7 +1924,17 @@ struct SparsePlanContext<'a> {
     not_and_gates: &'a [Option<NotAndGate>],
 }
 
-fn reachable_node_mask(aig: &Aig, roots: &[AigLit]) -> Vec<bool> {
+/// Computes the set of AIG nodes reachable from `roots`, as a mask indexed by
+/// [`AigNodeId::index`].
+///
+/// A node is reachable when it is a root node or a transitive AND-child of one.
+/// This drives the sparse Tseitin encoding (only reachable gates are encoded) and
+/// is also the partition primitive for Craig interpolation: a joint CNF clause is
+/// attributed to the `A`-side or `B`-side of a partition by which roots its gates
+/// are reachable from. The returned vector has one entry per AIG node, indexed by
+/// [`AigNodeId::index`].
+#[must_use]
+pub fn reachable_node_mask(aig: &Aig, roots: &[AigLit]) -> Vec<bool> {
     let mut reachable = vec![false; aig.node_count()];
     let mut stack = roots.iter().map(|root| root.node()).collect::<Vec<_>>();
     while let Some(node_id) = stack.pop() {
