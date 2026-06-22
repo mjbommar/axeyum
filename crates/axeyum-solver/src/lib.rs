@@ -50,6 +50,7 @@ pub use axeyum_fp as fp;
 mod evidence;
 mod faithfulness;
 mod imc;
+mod imc_lra;
 mod incremental;
 mod int_real_relax;
 mod int_reconstruct;
@@ -160,6 +161,7 @@ pub use evidence::{
 pub use faithfulness::{FaithfulnessOutcome, check_qf_bv_faithfulness};
 pub use fp::FloatFormat;
 pub use imc::{ImcOutcome, prove_safety_imc};
+pub use imc_lra::{ImcLraOutcome, prove_safety_imc_lra};
 pub use incremental::{AssumptionOutcome, IncrementalBvSolver};
 pub use int_reconstruct::{
     IntReconstructCtx, is_int_inequality_refutation, reconstruct_diophantine_proof,
