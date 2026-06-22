@@ -19,8 +19,15 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     non-conjunctive-QF_LIA. `Solver::interpolant` dispatch now **LRA → LIA → EUF → UFLRA → BV**. 7 tests
     (incl. denominator-clearing `2x≤1∧2x≥3`, cuts-needed-declines, A-local exclusion, fuzz). Ledger row
     (QF_LIA, `Validated`). Whole crate green (366 lib + all interpolation suites).
-  - **Interpolation engine now spans LRA, LIA, EUF, propositional/SAT, QF_BV, UFLRA** — all
-    verify-before-return, all `Validated`, all fuzzed/panic-proofed.
+  - **UFLIA interpolant — DONE (`1e1872d`).** `axeyum_solver::uflia_interpolant` — the integer analogue
+    of UFLRA (one shared `eliminate_functions`, `lia_interpolant` on the function-free integer
+    abstraction, fresh vars translated back to UF terms). Verify-guarded by `check_with_uf_arithmetic`;
+    declines on congruence-needed OR cuts-needed refutations. 9 tests. Ledger row.
+  - **Interpolation engine now spans LRA, LIA, EUF, propositional/SAT, QF_BV, UFLRA, UFLIA** (7
+    fragments — the complete arithmetic+UF matrix: {L,U·L}×{RA,IA} + EUF + SAT + BV) — all
+    verify-before-return, all `Validated`, all fuzzed/panic-proofed. Dispatch:
+    LRA → LIA → EUF → UFLRA → UFLIA → BV. Only the SMT-LIB `(get-interpolant)` parse surface remains
+    (coordination-gated on `axeyum-smtlib`).
 
 - **Session 2026-06-22 (cont.) — REVIEW-DRIVEN HARDENING of the interpolation engine (reviewer top-10).**
   A reviewing agent's rank-ordered list reprioritized: **harden + honesty-check interpolation before any

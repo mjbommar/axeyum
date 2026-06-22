@@ -228,6 +228,17 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0047",
     },
     Capability {
+        area: "QF_UFLIA/UFLRA",
+        feature: "Craig interpolation (uflia_interpolant): the integer analogue — Ackermannize A∪B, \
+                  lia_interpolant on the function-free integer relaxation, fresh vars translated back \
+                  to shared UF terms",
+        assurance: Assurance::Validated,
+        evidence: "re-verified before return — A ∧ ¬I and I ∧ B each Unsat via check_with_uf_arithmetic \
+                   + shared symbol/function vocabulary; declines on a congruence-needed or cuts-needed \
+                   (rational-relaxation-sat) refutation, or any re-check failure",
+        reference: "ADR-0047",
+    },
+    Capability {
         area: "QF_NRA",
         feature: "nonlinear real: a complete cylindrical-decomposition decision side \
                   (single-variable real-algebraic + degree-2 SOS/PSD + coupled-equality \
