@@ -428,6 +428,19 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "reachability",
+        feature: "CHC / Horn front-end (solve_horn): the standard SMT-LIB constrained-Horn input \
+                  (HornClause/HornSystem, predicates = Bool-result functions) — first slice reduces \
+                  single-predicate-linear systems to the model-checking engines",
+        assurance: Assurance::Validated,
+        evidence: "the Horn→transition-system reduction is UNTRUSTED — a Sat (SAFE) is returned only \
+                   when the candidate predicate interpretation makes EVERY clause valid (per-clause \
+                   check_auto-Unsat of body∧constraint∧¬head); Unsat carries the engine's replay-checked \
+                   counterexample. (A reduction soundness bug — variable leakage into the invariant — \
+                   was caught by this gate + soundness tests and fixed.) Multi-predicate/nonlinear → Unknown",
+        reference: "ADR-0048",
+    },
+    Capability {
+        area: "reachability",
         feature: "Spacer-style IC3/PDR over LRA (prove_safety_pdr_lra): inductive-invariant discovery \
                   for infinite-state real-valued transition systems — mbp_lra predecessor cubes, \
                   relative-inductive blocking, literal-drop generalization, fixpoint",
