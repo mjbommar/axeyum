@@ -65,6 +65,7 @@ mod nra_real_root;
 mod optimize;
 mod pb;
 mod pbls;
+mod pdr;
 mod preprocess;
 mod proof;
 mod qfabv_alethe;
@@ -193,6 +194,10 @@ pub use optimize::{
 };
 pub use pb::{pb_eq, pb_ge, pb_gt, pb_le, pb_lt};
 pub use pbls::{LocalSearchOutcome, PblsBackend, solve_local_search};
+pub use pdr::{
+    CertifiedPdrOutcome, ChcSafetyCertificate, PdrOutcome, prove_safety_pdr,
+    prove_safety_pdr_certified,
+};
 pub use preprocess::check_with_preprocessing;
 pub use proof::{
     UnsatProof, UnsatProofOutcome, export_datatype_unsat_proof, export_qf_abv_unsat_proof,
