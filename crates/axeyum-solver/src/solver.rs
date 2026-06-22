@@ -299,7 +299,11 @@ impl<B: SolverBackend> Solver<B> {
                     Ok(Some(interpolant)) => Ok(Some(interpolant)),
                     Ok(None) => match crate::uflra_interpolant(arena, a, b) {
                         Ok(Some(interpolant)) => Ok(Some(interpolant)),
-                        Ok(None) => Ok(crate::qf_bv_interpolant(arena, a, b)),
+                        Ok(None) => match crate::uflia_interpolant(arena, a, b) {
+                            Ok(Some(interpolant)) => Ok(Some(interpolant)),
+                            Ok(None) => Ok(crate::qf_bv_interpolant(arena, a, b)),
+                            Err(other) => Err(other),
+                        },
                         Err(other) => Err(other),
                     },
                     Err(other) => Err(other),
