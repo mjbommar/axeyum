@@ -173,6 +173,19 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0047",
     },
     Capability {
+        area: "QF_LRA",
+        feature: "DISJUNCTIVE Craig interpolation (lra_interpolant_cnf): interpolating-SMT over the \
+                  DPLL(T) refutation — propositional-resolution interpolation with Farkas theory-lemma \
+                  leaves, mixed lemmas purified by a shared synthetic atom",
+        assurance: Assurance::Validated,
+        evidence: "lifts interpolation beyond the conjunctive case to CNF/Boolean-structured QF_LRA \
+                   (the shape IMC/PDR fixpoints generate); VERIFY-BEFORE-RETURN — A ∧ ¬I and I ∧ B each \
+                   check_auto-Unsat + shared vocabulary (the vocab check rejects any non-shared \
+                   synthetic atom); the abstraction/purification/lifting are untrusted; declines on \
+                   sat/non-pure-real/unverified",
+        reference: "ADR-0047",
+    },
+    Capability {
         area: "SAT (propositional)",
         feature: "Craig interpolation (axeyum_cnf::propositional_interpolant): McMillan fold over \
                   the elaborated LRAT resolution proof of an unsat A ∧ B",
