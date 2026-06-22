@@ -58,6 +58,7 @@ mod lia;
 mod lia_gcd;
 mod lra;
 mod maxsat;
+mod mbp;
 mod model;
 mod nia_square;
 mod nra;
@@ -179,6 +180,7 @@ pub use maxsat::{
     MaxSatOutcome, max_satisfiable, max_satisfiable_model, max_satisfiable_weighted,
     max_satisfiable_weighted_model,
 };
+pub use mbp::mbp_lra;
 pub use model::Model;
 pub use nra::check_with_nra;
 pub use nra_real_root::SosCertificate;
