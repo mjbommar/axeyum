@@ -76,6 +76,19 @@ pub fn qf_bv_interpolant(
         return None;
     }
 
+    // Decline cleanly on any non-`QF_BV` input. `lower_terms` *panics* (an
+    // `unreachable!` in `axeyum-bv`) on real/int-sorted terms rather than
+    // returning `Err`, so a sort pre-check is required to keep this total
+    // ("graceful unknown, never crash" — the dispatch may hand us a real/int
+    // partition that earlier theories declined).
+    if a_assertions
+        .iter()
+        .chain(b_assertions)
+        .any(|&t| !is_bv_lowerable(arena, t, &mut BTreeSet::new()))
+    {
+        return None;
+    }
+
     // 1. Joint lowering of A ++ B. Structural hashing + memoization collapse a
     //    shared term/symbol bit to one AigLit across both sides.
     let mut combined = Vec::with_capacity(a_assertions.len() + b_assertions.len());
@@ -463,4 +476,21 @@ fn collect_subterms(arena: &TermArena, term: TermId, out: &mut BTreeSet<TermId>)
             collect_subterms(arena, arg, out);
         }
     }
+}
+
+/// Whether `term` and all its subterms are bit-lowerable — every sort is `Bool`
+/// or `BitVec`. `lower_terms` panics (an `unreachable!` in `axeyum-bv`) on
+/// real/int (and other non-`QF_BV`) terms rather than returning `Err`, so the
+/// `QF_BV` interpolant pre-filters with this to stay total (decline, never crash).
+fn is_bv_lowerable(arena: &TermArena, term: TermId, seen: &mut BTreeSet<TermId>) -> bool {
+    if !seen.insert(term) {
+        return true;
+    }
+    if !matches!(arena.sort_of(term), Sort::Bool | Sort::BitVec(_)) {
+        return false;
+    }
+    if let TermNode::App { args, .. } = arena.node(term) {
+        return args.iter().all(|&arg| is_bv_lowerable(arena, arg, seen));
+    }
+    true
 }

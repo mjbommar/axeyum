@@ -8,7 +8,9 @@
 use std::collections::BTreeSet;
 
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId, TermNode};
-use axeyum_solver::{CheckResult, SatBvBackend, Solver, check_with_lra, lra_interpolant};
+use axeyum_solver::{
+    CheckResult, InterpolantOutcome, SatBvBackend, Solver, check_with_lra, lra_interpolant,
+};
 
 /// `x` as a real symbol + its variable term.
 fn real_var(arena: &mut TermArena, name: &str) -> TermId {
@@ -223,6 +225,39 @@ fn solver_facade_interpolant_partitions_assertions() {
         .expect("decides")
         .expect("interpolant exists");
     assert_is_interpolant(&mut arena, &[a0], &[b0], interpolant);
+}
+
+#[test]
+fn explained_outcome_distinguishes_interpolant_notinterpolable_declined() {
+    let mut arena = TermArena::new();
+    let x = real_var(&mut arena, "x");
+    let zero = arena.real_ratio(0, 1);
+    let one = arena.real_ratio(1, 1);
+    let two = arena.real_ratio(2, 1);
+    let nonpos = arena.real_le(x, zero).unwrap();
+    let atleast_one = arena.real_ge(x, one).unwrap();
+    let atmost_two = arena.real_le(x, two).unwrap();
+
+    // Unsat partition (x ≤ 0 vs x ≥ 1) ⇒ a real interpolant.
+    let mut unsat_solver = Solver::new(SatBvBackend::new());
+    unsat_solver.assert(nonpos);
+    unsat_solver.assert(atleast_one);
+    assert!(matches!(
+        unsat_solver
+            .interpolant_explained(&mut arena, &[0])
+            .unwrap(),
+        InterpolantOutcome::Interpolant(_)
+    ));
+
+    // Satisfiable partition (x ≤ 0 ∧ x ≤ 2) ⇒ no interpolant exists.
+    let mut sat_solver = Solver::new(SatBvBackend::new());
+    sat_solver.assert(nonpos);
+    sat_solver.assert(atmost_two);
+    assert_eq!(
+        sat_solver.interpolant_explained(&mut arena, &[0]).unwrap(),
+        InterpolantOutcome::NotInterpolable,
+        "a satisfiable A ∧ B has no interpolant"
+    );
 }
 
 #[test]

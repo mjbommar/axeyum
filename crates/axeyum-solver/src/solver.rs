@@ -60,6 +60,23 @@ pub struct Solver<B> {
     scopes: Vec<usize>,
 }
 
+/// The classified result of [`Solver::interpolant_explained`] — the
+/// "interpolant vs no-interpolant-exists vs declined" distinction a CHC/PDR
+/// consumer needs to react correctly (generalize-with-`I` / cube-is-reachable /
+/// fall-back-generalization).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InterpolantOutcome {
+    /// A fully re-verified Craig interpolant for the partition.
+    Interpolant(TermId),
+    /// `A ∧ B` is **satisfiable** — no Craig interpolant exists for this
+    /// partition (e.g. a blocked-cube query whose cube is actually reachable).
+    NotInterpolable,
+    /// `A ∧ B` is unsatisfiable or undecided, but every supported theory
+    /// **declined** to produce a verified interpolant — the consumer should fall
+    /// back to another generalization rather than treat this as "no interpolant".
+    Declined,
+}
+
 impl<B: SolverBackend> Solver<B> {
     /// Creates a solver over `backend` with the default configuration.
     pub fn new(backend: B) -> Self {
@@ -210,6 +227,47 @@ impl<B: SolverBackend> Solver<B> {
         arena: &mut TermArena,
         a_indices: &[usize],
     ) -> Result<Option<TermId>, SolverError> {
+        let (a, b) = self.partition(a_indices);
+        Self::dispatch_interpolant(arena, &a, &b)
+    }
+
+    /// Like [`Solver::interpolant`], but distinguishes *why* no interpolant was
+    /// returned — the distinction a CHC/PDR consumer needs to tell "no interpolant
+    /// exists" from "we declined". Returns:
+    /// - [`InterpolantOutcome::Interpolant`] with a verified interpolant;
+    /// - [`InterpolantOutcome::NotInterpolable`] when `A ∧ B` is *satisfiable*
+    ///   (there is no Craig interpolant — e.g. a blocked-cube query whose cube is
+    ///   actually reachable);
+    /// - [`InterpolantOutcome::Declined`] when `A ∧ B` is unsat-or-undecided but
+    ///   every supported theory declined to produce a verified interpolant (the
+    ///   consumer should fall back to another generalization).
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`SolverError`] from the underlying interpolation / decision.
+    pub fn interpolant_explained(
+        &self,
+        arena: &mut TermArena,
+        a_indices: &[usize],
+    ) -> Result<InterpolantOutcome, SolverError> {
+        let (a, b) = self.partition(a_indices);
+        if let Some(interpolant) = Self::dispatch_interpolant(arena, &a, &b)? {
+            return Ok(InterpolantOutcome::Interpolant(interpolant));
+        }
+        // No interpolant produced: classify by re-deciding A ∧ B. A *satisfiable*
+        // conjunction has no interpolant at all (NotInterpolable); otherwise the
+        // theories declined on an unsat/undecided query (Declined).
+        let mut combined = a;
+        combined.extend_from_slice(&b);
+        match crate::check_auto(arena, &combined, &self.config) {
+            Ok(CheckResult::Sat(_)) => Ok(InterpolantOutcome::NotInterpolable),
+            _ => Ok(InterpolantOutcome::Declined),
+        }
+    }
+
+    /// Splits the active assertions into the `A`-side (the in-range `a_indices`)
+    /// and the `B`-side (the rest). Out-of-range indices are ignored.
+    fn partition(&self, a_indices: &[usize]) -> (Vec<TermId>, Vec<TermId>) {
         let n = self.assertions.len();
         let a_set: std::collections::BTreeSet<usize> =
             a_indices.iter().copied().filter(|&i| i < n).collect();
@@ -218,18 +276,25 @@ impl<B: SolverBackend> Solver<B> {
             .filter(|i| !a_set.contains(i))
             .map(|i| self.assertions[i])
             .collect();
-        // Try the QF_LRA Farkas interpolant, then ground EUF, then combined
-        // QF_UFLRA (Ackermannize + LRA interpolant), then the QF_BV bit-blast
-        // interpolant — each a fallback for the earlier theories' declines
-        // (Unsupported or `Ok(None)`).
-        match crate::lra_interpolant(arena, &a, &b) {
+        (a, b)
+    }
+
+    /// Tries each theory interpolator in turn: `QF_LRA` Farkas, ground EUF,
+    /// combined `QF_UFLRA`, then the `QF_BV` bit-blast interpolant — each a
+    /// fallback for the earlier theories' declines (`Unsupported` or `Ok(None)`).
+    fn dispatch_interpolant(
+        arena: &mut TermArena,
+        a: &[TermId],
+        b: &[TermId],
+    ) -> Result<Option<TermId>, SolverError> {
+        match crate::lra_interpolant(arena, a, b) {
             Ok(Some(interpolant)) => Ok(Some(interpolant)),
             Ok(None) | Err(SolverError::Unsupported(_)) => {
-                match crate::qf_uf_interpolant(arena, &a, &b) {
+                match crate::qf_uf_interpolant(arena, a, b) {
                     Ok(Some(interpolant)) => Ok(Some(interpolant)),
-                    Ok(None) => match crate::uflra_interpolant(arena, &a, &b) {
+                    Ok(None) => match crate::uflra_interpolant(arena, a, b) {
                         Ok(Some(interpolant)) => Ok(Some(interpolant)),
-                        Ok(None) => Ok(crate::qf_bv_interpolant(arena, &a, &b)),
+                        Ok(None) => Ok(crate::qf_bv_interpolant(arena, a, b)),
                         Err(other) => Err(other),
                     },
                     Err(other) => Err(other),
