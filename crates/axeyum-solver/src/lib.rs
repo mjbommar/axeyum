@@ -49,6 +49,7 @@ mod euf_interpolant;
 pub use axeyum_fp as fp;
 mod evidence;
 mod faithfulness;
+mod horn;
 mod imc;
 mod imc_lra;
 mod incremental;
@@ -162,6 +163,7 @@ pub use evidence::{
 };
 pub use faithfulness::{FaithfulnessOutcome, check_qf_bv_faithfulness};
 pub use fp::FloatFormat;
+pub use horn::{HornClause, HornModel, HornOutcome, HornSystem, solve_horn};
 pub use imc::{ImcOutcome, prove_safety_imc};
 pub use imc_lra::{ImcLraOutcome, prove_safety_imc_lra};
 pub use incremental::{AssumptionOutcome, IncrementalBvSolver};
