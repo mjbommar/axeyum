@@ -454,7 +454,9 @@ pub const CAPABILITIES: &[Capability] = &[
     Capability {
         area: "synthesis",
         feature: "abduction (abduct / get-abduct): find H over the shared vocabulary with axioms ∧ H \
-                  sat and axioms ∧ H ⊨ conjecture — the checker turned generator",
+                  sat and axioms ∧ H ⊨ conjecture — the checker turned generator. Grammar reuses \
+                  syntactic atoms AND synthesizes new shared-term equalities + arithmetic comparisons \
+                  (to shared terms / problem constants), a SyGuS-lite step",
         assurance: Assurance::Validated,
         evidence: "the candidate enumeration (shared-vocab atoms, ≤2-literal conjunctions) is \
                    untrusted — every returned H is re-checked: consistency (check_auto Sat), \
