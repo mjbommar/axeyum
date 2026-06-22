@@ -213,6 +213,10 @@ pub struct LraTheory {
     /// `(live, assigned_log)` lengths to restore on the matching
     /// [`pop`](TheorySolver::pop).
     trail: Vec<(usize, usize)>,
+    /// The real symbols in dense-variable-index order — `builder_vars[i]` is the
+    /// symbol of variable `i`. Lets [`LraTheory::real_model`] read a witness back
+    /// over the original symbols (used by the online theory-combination path).
+    vars: Vec<SymbolId>,
 }
 
 impl LraTheory {
@@ -239,7 +243,21 @@ impl LraTheory {
             assigned: vec![None; count],
             assigned_log: Vec::new(),
             trail: Vec::new(),
+            vars: builder.vars,
         }
+    }
+
+    /// A real witness for the currently-asserted constraints, over the original
+    /// symbols, or `None` if the live system is infeasible / arithmetic overflowed.
+    /// The crate-internal reader the online theory-combination path
+    /// ([`crate::uflra_online`]) uses to build the `LRA` half of a combined model at
+    /// a consistent leaf — the same reconstruction [`LraTheory::model`] performs, but
+    /// keyed by the symbols the theory was built over (so the caller needs no separate
+    /// variable list). Soundness rests on the caller replaying the assembled model
+    /// against the original assertions.
+    #[must_use]
+    pub(crate) fn real_model(&self) -> Option<Model> {
+        self.model(&self.vars)
     }
 
     /// Whether atom `index` is an LRA order/equality atom this theory tracks.
@@ -1181,6 +1199,7 @@ pub fn check_qf_lra_online(
         assigned: vec![None; atom_count],
         assigned_log: Vec::new(),
         trail: Vec::new(),
+        vars: builder.vars,
     };
 
     let mut solver = Dpll::new(enc.var_count, atom_count, clauses);

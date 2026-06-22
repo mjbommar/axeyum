@@ -108,6 +108,7 @@ mod theory_combination;
 pub mod trust;
 mod uflia_interpolant;
 mod uflra_interpolant;
+mod uflra_online;
 #[cfg(feature = "z3")]
 mod z3_backend;
 
@@ -265,5 +266,6 @@ pub use theory_combination::{
 pub use trust::{ALL_TRUST_IDS, TrustId, TrustStep, trust_ledger_markdown};
 pub use uflia_interpolant::uflia_interpolant;
 pub use uflra_interpolant::uflra_interpolant;
+pub use uflra_online::check_qf_uflra_online;
 #[cfg(feature = "z3")]
 pub use z3_backend::Z3Backend;
