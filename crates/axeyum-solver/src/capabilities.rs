@@ -133,11 +133,33 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0013/0032",
     },
     Capability {
+        area: "QF_UF",
+        feature: "Craig interpolation (qf_uf_interpolant): ground interpolant summarized from the \
+                  congruence-closure explanation, lowering non-shared congruence boundaries to \
+                  argument equalities",
+        assurance: Assurance::Validated,
+        evidence: "re-verified before return by three independent checks (A ∧ ¬I unsat, I ∧ B \
+                   unsat via check_qf_uf, shared vocabulary); partial generator (single \
+                   disequality conflict, monochrome congruence) — declines outside scope, never \
+                   an unverified interpolant",
+        reference: "ADR-0047",
+    },
+    Capability {
         area: "QF_LRA",
         feature: "linear real arithmetic (exact-rational simplex)",
         assurance: Assurance::Checked,
         evidence: "Farkas certificate for UNSAT; exact rational model",
         reference: "ADR-0015",
+    },
+    Capability {
+        area: "QF_LRA",
+        feature: "Craig interpolation (lra_interpolant): interpolant read off the Farkas \
+                  certificate of an unsat A ∧ B",
+        assurance: Assurance::Checked,
+        evidence: "interpolant = the A-side Farkas combination; re-verified before return by three \
+                   independent checks (A ∧ ¬I unsat, I ∧ B unsat, shared vocabulary); declines on \
+                   any failure (never an unverified interpolant)",
+        reference: "ADR-0047",
     },
     Capability {
         area: "QF_LIA",
