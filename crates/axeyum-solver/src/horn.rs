@@ -22,11 +22,36 @@
 //! # The fragment this slice solves (and what it declines)
 //!
 //! Every clause is **linear** — its body holds **at most one** predicate
-//! application. The supported systems are the **acyclic multi-predicate linear**
-//! ones: any number of predicates `P₁…Pₘ`, every clause linear, and the
-//! predicate **dependency graph acyclic** (no cycle among *distinct* predicates;
-//! a predicate may be self-recursive). The single-predicate case is the `m = 1`
-//! special case.
+//! application. The supported systems are the **multi-predicate linear** ones:
+//! any number of predicates `P₁…Pₘ`, every clause linear. The predicate
+//! dependency graph is **condensed into strongly-connected components (`SCC`s)**
+//! and the `SCC`s are processed in topological order. A **trivial** `SCC` (a
+//! single predicate that is either non-recursive or self-recursive) is solved by
+//! the existing direct / self-recursive reduction. A **non-trivial** `SCC` (`≥ 2`
+//! mutually-recursive predicates — *mutual recursion*) is handled by the
+//! **merge-to-tagged-predicate** reduction described below. The acyclic
+//! single-`SCC`-per-predicate case is the special case where every `SCC` is
+//! trivial.
+//!
+//! ## Mutual recursion — the merge-to-tagged-predicate reduction
+//!
+//! A non-trivial `SCC` `{P₁…Pₖ}` is merged into **one self-recursive predicate
+//! `P*`** over a *control-tagged* state `(tag, x₁…xₙ)`: a fresh `tag` selector
+//! (a real or bit-vector constant column, chosen to match the engine family)
+//! records which original member is active, and `(x₁…xₙ)` carries the members'
+//! shared argument tuple. This slice handles the **sort-compatible** case — every
+//! `SCC` member must declare the **same argument sort vector** `(τ₁…τₙ)`, so the
+//! union state is just that shared vector plus the tag. Each intra-`SCC` clause
+//! `Pⱼ(body) ∧ constraint ⇒ Pᵢ(head)` is rewritten over `P*` by pinning the
+//! body's tag to `j` and the head's tag to `i`; inter-`SCC` clauses from an
+//! already-solved predecessor fold in exactly as the self-recursive path already
+//! does. `P*` is solved by the **existing self-recursive solver**
+//! ([`solve_self_recursive`]); its invariant `I*(tag, x…)` is then **projected**
+//! back to each member by restricting the tag to that member's constant,
+//! `Iᵢ(x…) := I*(i, x…)`, populating the [`HornModel`] for every member. If the
+//! members are **not** sort-compatible, the `SCC` exceeds the size/width caps, or
+//! the underlying solver returns unknown/refuted, the whole query declines to
+//! [`HornOutcome::Unknown`] — never a guess.
 //!
 //! For one predicate `P` the clauses are:
 //!
@@ -41,11 +66,11 @@
 //! substituting its interpretation `I_Q` for each `Q`-atom.
 //!
 //! Anything outside this fragment — a body with two or more atoms (nonlinear
-//! recursion), a cycle among distinct predicates (mutual recursion), or an
-//! unsupported argument shape — is **out of fragment** and declines cleanly to
-//! [`HornOutcome::Unknown`]. Mutual recursion and nonlinear (`k ≥ 2`-atom body)
-//! `CHC` are the natural next slices; both would ride the same
-//! verify-before-return discipline.
+//! recursion), a non-sort-compatible mutually-recursive `SCC`, or an unsupported
+//! argument shape — is **out of fragment** and declines cleanly to
+//! [`HornOutcome::Unknown`]. The full tagged-disjoint-union merge (members of
+//! *different* arities/sorts) and nonlinear (`k ≥ 2`-atom body) `CHC` are the
+//! natural next slices; both would ride the same verify-before-return discipline.
 //!
 //! # Reduction to a transition system (untrusted)
 //!
@@ -187,16 +212,20 @@ pub enum HornOutcome {
 /// predicates that satisfies every clause (`Sat`), or is the query head `false`
 /// derivable (`Unsat`)?
 ///
-/// This slice handles the **acyclic multi-predicate linear** fragment (see the
-/// module docs): any number of predicates, each clause body holding at most one
-/// application, and an acyclic dependency graph among distinct predicates. With
-/// one predicate it reduces to a [`TransitionSystem`](crate::TransitionSystem)
-/// and dispatches to the model-checking engines by the predicate's argument
-/// sorts — `Real` to the `LRA` engines, `BitVec`/`Bool` to the bit-level engines.
-/// With several predicates it solves them in topological order, folding each
-/// solved predecessor's interpretation into the later clauses. Anything outside
-/// the fragment (mutual recursion, a nonlinear body, an unsupported shape)
-/// declines to [`HornOutcome::Unknown`].
+/// This slice handles the **multi-predicate linear** fragment (see the module
+/// docs): any number of predicates, each clause body holding at most one
+/// application. With one predicate it reduces to a
+/// [`TransitionSystem`](crate::TransitionSystem) and dispatches to the
+/// model-checking engines by the predicate's argument sorts — `Real` to the
+/// `LRA` engines, `BitVec`/`Bool` to the bit-level engines. With several
+/// predicates it condenses the dependency graph into strongly-connected
+/// components and processes them in topological order: a trivial component (one
+/// non-recursive or self-recursive predicate) folds each solved predecessor's
+/// interpretation in; a non-trivial (mutually-recursive) **sort-compatible**
+/// component is merged into one control-tagged self-recursive predicate, solved,
+/// and projected back per member. Anything outside the fragment (a non-sort-
+/// compatible `SCC`, a nonlinear body, an unsupported shape) declines to
+/// [`HornOutcome::Unknown`].
 ///
 /// Soundness is total and rests on the verify-before-return discipline: a `Sat`
 /// is returned only after the candidate **whole-system** model re-validates
@@ -895,11 +924,13 @@ struct ClauseShape {
     head: Option<(FuncId, Vec<TermId>)>,
 }
 
-/// Solves an **acyclic multi-predicate linear** [`HornSystem`]: builds the
-/// predicate dependency graph, declines on mutual recursion (a cycle among
-/// distinct predicates) or a nonlinear (`≥ 2`-atom) body, topologically orders
-/// the predicates, solves each in turn folding solved predecessors in, then
-/// re-validates the whole model against every clause before returning `Sat`.
+/// Solves a **multi-predicate linear** [`HornSystem`]: builds the predicate
+/// dependency graph, condenses it into strongly-connected components, processes
+/// the `SCC`s in topological order (a trivial `SCC` via the direct/self-recursive
+/// path; a non-trivial mutually-recursive sort-compatible `SCC` via the
+/// merge-to-tagged-predicate reduction), then re-validates the whole model
+/// against every clause before returning `Sat`. Declines a nonlinear (`≥ 2`-atom)
+/// body or a non-sort-compatible `SCC`.
 fn solve_horn_multi(
     arena: &mut TermArena,
     system: &HornSystem,
@@ -927,19 +958,36 @@ fn solve_horn_multi(
         Err(reason) => return Ok(unknown(&reason)),
     };
 
-    // Topological order over the dependency graph; declines on a cycle among
-    // distinct predicates (mutual recursion). Self-loops are allowed.
-    let order = match topological_order(&system.predicates, &shapes) {
-        Ok(order) => order,
-        Err(reason) => return Ok(unknown(&reason)),
-    };
+    // Condense the dependency graph into strongly-connected components, listed in
+    // topological order (dependencies first). Mutual recursion ⇒ a non-trivial
+    // SCC handled by the merge reduction rather than declined.
+    let sccs = scc_condensation(&system.predicates, &shapes);
 
-    // Solve each predicate in topological order, accumulating a partial model.
+    // Solve each SCC in topological order, accumulating a partial model.
     let mut model = BTreeMap::new();
-    for &pred in &order {
-        match solve_one_predicate(arena, system, &shapes, pred, &model, config)? {
+    for scc in &sccs {
+        // A trivial SCC (a single predicate, recursive or not) takes the existing
+        // direct / self-loop path; a non-trivial SCC (≥ 2 mutually-recursive
+        // predicates) takes the merge-to-tagged-predicate reduction.
+        let solved = if scc.len() == 1 {
+            // solve_one_predicate dispatches the direct vs self-recursive path.
+            solve_one_predicate(arena, system, &shapes, scc[0], &model, config)?
+        } else {
+            // Returns one interpretation per member, or declines.
+            match solve_mutual_scc(arena, system, &shapes, scc, &model, config)? {
+                SolveScc::Interps(interps) => {
+                    for (pred, interp) in interps {
+                        model.insert(pred, interp);
+                    }
+                    continue;
+                }
+                SolveScc::Unsat { steps } => return Ok(HornOutcome::Unsat { steps }),
+                SolveScc::Decline(reason) => return Ok(unknown(&reason)),
+            }
+        };
+        match solved {
             SolveOne::Interp(interp) => {
-                model.insert(pred, interp);
+                model.insert(scc[0], interp);
             }
             SolveOne::Unsat { steps } => {
                 // A self-recursive predicate's own reachability already derives
@@ -1030,55 +1078,110 @@ fn predicate_app(
     }
 }
 
-/// Topologically orders the predicates so each is listed after its non-self
-/// dependencies. Edge `P → Q` (P depends on Q) for every clause with body
-/// predicate `Q` and head predicate `P` (`P ≠ Q`). A self-loop `P → P` is allowed
-/// and ignored for ordering. A cycle among distinct predicates ⇒ decline.
+/// Condenses the predicate dependency graph into its strongly-connected
+/// components, returned in **topological order** (dependencies first), so each
+/// `SCC` is processed only after every `SCC` it depends on. Each component is a
+/// list of its member predicates in stable (declaration) order. A single
+/// predicate (whether or not self-recursive) is a one-element component; a cycle
+/// among distinct predicates (mutual recursion) is a multi-element component.
 ///
-/// Determinism: predicates are processed in declaration order, dependency sets are
-/// [`std::collections::BTreeSet`]s, so the order is stable.
-fn topological_order(predicates: &[FuncId], shapes: &[ClauseShape]) -> Result<Vec<FuncId>, String> {
-    // deps[P] = the set of distinct predicates P depends on (excludes self).
-    let mut deps: BTreeMap<FuncId, std::collections::BTreeSet<FuncId>> = predicates
+/// The dependency edge `P → Q` (P depends on Q) is added for every clause whose
+/// body predicate is `Q` and head predicate is `P`. Self-loops are recorded
+/// implicitly (a single predicate is always its own component) and do not affect
+/// the component structure.
+///
+/// Determinism: this is Tarjan's algorithm driven over `predicates` in
+/// declaration order, with each adjacency list collected via a
+/// [`std::collections::BTreeSet`] and iterated in that stable order, so the
+/// component list and the order within each component are reproducible.
+fn scc_condensation(predicates: &[FuncId], shapes: &[ClauseShape]) -> Vec<Vec<FuncId>> {
+    // Adjacency over the dependency edge P → Q (P depends on Q). BTreeSet keeps a
+    // stable, de-duplicated successor order.
+    let mut adj: BTreeMap<FuncId, std::collections::BTreeSet<FuncId>> = predicates
         .iter()
         .map(|&p| (p, std::collections::BTreeSet::new()))
         .collect();
     for shape in shapes {
         if let (Some((body_pred, _)), Some((head_pred, _))) = (&shape.body, &shape.head) {
             if body_pred != head_pred {
-                deps.entry(*head_pred).or_default().insert(*body_pred);
+                adj.entry(*head_pred).or_default().insert(*body_pred);
             }
         }
     }
 
-    // Kahn's algorithm over the *reverse* edges, emitting dependencies first.
-    // A predicate is ready once all of its dependencies are already emitted.
-    let mut emitted: std::collections::BTreeSet<FuncId> = std::collections::BTreeSet::new();
-    let mut order = Vec::with_capacity(predicates.len());
-    while order.len() < predicates.len() {
-        // Pick the first (declaration-order) not-yet-emitted predicate all of
-        // whose dependencies are already emitted.
-        let next = predicates.iter().copied().find(|p| {
-            !emitted.contains(p)
-                && deps
-                    .get(p)
-                    .is_some_and(|d| d.iter().all(|q| emitted.contains(q)))
-        });
-        match next {
-            Some(p) => {
-                emitted.insert(p);
-                order.push(p);
+    // A stable index per predicate, in declaration order.
+    let index_of: BTreeMap<FuncId, usize> = predicates
+        .iter()
+        .copied()
+        .enumerate()
+        .map(|(i, p)| (p, i))
+        .collect();
+
+    let n = predicates.len();
+    let mut indices: Vec<Option<usize>> = vec![None; n];
+    let mut lowlink: Vec<usize> = vec![0; n];
+    let mut on_stack: Vec<bool> = vec![false; n];
+    let mut stack: Vec<usize> = Vec::new();
+    let mut next_index: usize = 0;
+    // Components in Tarjan's emission order. With the dependency edge P → Q (P
+    // depends on Q), a component is finalized only after every component it can
+    // reach (its dependencies) is finalized — so this emission order is already
+    // topological (dependencies first), no reversal needed.
+    let mut components: Vec<Vec<FuncId>> = Vec::new();
+
+    // Iterative Tarjan to avoid recursion depth concerns. Each frame tracks the
+    // node and the position of its next successor to visit.
+    for start in 0..n {
+        if indices[start].is_some() {
+            continue;
+        }
+        let mut call_stack: Vec<(usize, usize)> = vec![(start, 0)];
+        while let Some(&(v, succ_pos)) = call_stack.last() {
+            if succ_pos == 0 {
+                indices[v] = Some(next_index);
+                lowlink[v] = next_index;
+                next_index += 1;
+                stack.push(v);
+                on_stack[v] = true;
             }
-            None => {
-                return Err(
-                    "out of fragment: the predicate dependency graph has a cycle among distinct \
-                     predicates (mutual recursion is a later slice)"
-                        .to_owned(),
-                );
+            let successors: Vec<usize> = adj
+                .get(&predicates[v])
+                .map(|s| s.iter().map(|q| index_of[q]).collect())
+                .unwrap_or_default();
+            if succ_pos < successors.len() {
+                let w = successors[succ_pos];
+                // Advance this frame's cursor before descending.
+                call_stack.last_mut().expect("frame present").1 += 1;
+                if indices[w].is_none() {
+                    call_stack.push((w, 0));
+                } else if on_stack[w] {
+                    lowlink[v] = lowlink[v].min(indices[w].expect("visited node has an index"));
+                }
+            } else {
+                // All successors processed: settle v.
+                if lowlink[v] == indices[v].expect("v has an index") {
+                    let mut component: Vec<FuncId> = Vec::new();
+                    loop {
+                        let w = stack.pop().expect("non-empty SCC stack");
+                        on_stack[w] = false;
+                        component.push(predicates[w]);
+                        if w == v {
+                            break;
+                        }
+                    }
+                    // Stable within-component order: by declaration index.
+                    component.sort_by_key(|p| index_of[p]);
+                    components.push(component);
+                }
+                call_stack.pop();
+                if let Some(&(parent, _)) = call_stack.last() {
+                    lowlink[parent] = lowlink[parent].min(lowlink[v]);
+                }
             }
         }
     }
-    Ok(order)
+
+    components
 }
 
 /// The result of solving one predicate in topological order.
@@ -1547,6 +1650,487 @@ impl TransitionSystem for PinnedSelf<'_> {
     fn bad(&self, arena: &mut TermArena, s: &[SymbolId]) -> Result<TermId, SolverError> {
         self.inner.bad(arena, s)
     }
+}
+
+// ===========================================================================
+// Mutual recursion: the merge-to-tagged-predicate reduction (sort-compatible SCC)
+// ===========================================================================
+
+/// The maximum number of members in a mutually-recursive `SCC` this slice merges.
+/// Beyond this, the tagged-union state and clause count grow past a safe bound and
+/// the `SCC` declines to `Unknown`.
+const MAX_SCC_MEMBERS: usize = 16;
+
+/// The maximum argument width (number of state columns, excluding the tag) of an
+/// `SCC` member. A wider tuple declines rather than risk an engine blow-up.
+const MAX_SCC_STATE_WIDTH: usize = 32;
+
+/// The result of solving a non-trivial (mutually-recursive) `SCC`.
+enum SolveScc {
+    /// One interpretation per `SCC` member, projected from the merged predicate.
+    Interps(Vec<(FuncId, PredInterpretation)>),
+    /// The merged predicate's own reachability derives `false` ⇒ the whole system
+    /// is `Unsat` with this counterexample depth.
+    Unsat {
+        /// The counterexample depth.
+        steps: usize,
+    },
+    /// Decline (not sort-compatible, a cap, an unsupported sort, or an engine that
+    /// could not decide).
+    Decline(String),
+}
+
+/// Solves a non-trivial (`≥ 2`-member) mutually-recursive `SCC` by the
+/// **merge-to-tagged-predicate** reduction (the sort-compatible slice).
+///
+/// All members must share the same argument sort vector `(τ₁…τₙ)`. The members
+/// are merged into one self-recursive predicate `P*` over a control-tagged state
+/// `(tag, x₁…xₙ)`, where `tag` is a fresh real/bit-vector column whose constant
+/// value selects the active member. Each defining clause is rewritten over `P*`:
+///
+/// * a **fact / inter-`SCC`** clause into member `Pᵢ` becomes an init disjunct
+///   pinning the post tag to `i` (an inter-`SCC` body folds in its already-solved
+///   predecessor exactly as [`solve_self_recursive`] does);
+/// * an **intra-`SCC`** clause `Pⱼ(body) ∧ constraint ⇒ Pᵢ(head)` becomes an
+///   inductive transition pinning the pre tag to `j` and the post tag to `i`;
+/// * a **query** off member `Pⱼ` becomes a bad disjunct pinning the tag to `j`.
+///
+/// The merged system is solved by the existing [`SelfReduced`] dispatch, and the
+/// invariant `I*(tag, x…)` is projected back per member as `Iᵢ(x…) := I*(i, x…)`.
+/// Any non-sort-compatible member, an unbindable argument, a cap, or an engine
+/// `Unknown` declines the whole `SCC`.
+fn solve_mutual_scc(
+    arena: &mut TermArena,
+    system: &HornSystem,
+    shapes: &[ClauseShape],
+    scc: &[FuncId],
+    model: &BTreeMap<FuncId, PredInterpretation>,
+    config: &SolverConfig,
+) -> Result<SolveScc, SolverError> {
+    if scc.len() > MAX_SCC_MEMBERS {
+        return Ok(SolveScc::Decline(format!(
+            "out of cap: a mutually-recursive SCC has {} members (cap {MAX_SCC_MEMBERS}); declining",
+            scc.len()
+        )));
+    }
+
+    // Sort-compatibility: every member must declare the SAME argument sort vector.
+    let (_, first_sorts, _) = arena.function(scc[0]);
+    let member_sorts: Vec<Sort> = first_sorts.to_vec();
+    if member_sorts.len() > MAX_SCC_STATE_WIDTH {
+        return Ok(SolveScc::Decline(format!(
+            "out of cap: an SCC member has arity {} (cap {MAX_SCC_STATE_WIDTH}); declining",
+            member_sorts.len()
+        )));
+    }
+    for &pred in scc {
+        let (_, sorts, _) = arena.function(pred);
+        if sorts != member_sorts.as_slice() {
+            return Ok(SolveScc::Decline(
+                "out of fragment: a mutually-recursive SCC has members of differing argument sort \
+                 vectors (the full tagged-disjoint-union merge is a later slice; this slice handles \
+                 only sort-compatible SCCs)"
+                    .to_owned(),
+            ));
+        }
+    }
+
+    // The tag column's sort matches the engine family the member sorts dispatch to
+    // (Real members ⇒ a Real tag; BitVec/Bool members ⇒ a BitVec tag), so the
+    // merged state stays in one engine family rather than mixing sorts.
+    let Some(tag_sort) = tag_sort_for(&member_sorts, scc.len()) else {
+        return Ok(SolveScc::Decline(
+            "out of fragment: a mutually-recursive SCC's argument sorts are outside this slice's \
+             reach (only all-Real or all-BitVec/Bool members are merged); declining"
+                .to_owned(),
+        ));
+    };
+
+    // The merged state sort vector: [tag, τ₁…τₙ].
+    let mut merged_sorts: Vec<Sort> = Vec::with_capacity(member_sorts.len() + 1);
+    merged_sorts.push(tag_sort);
+    merged_sorts.extend_from_slice(&member_sorts);
+
+    // A stable tag constant per member, by the SCC's (declaration-order) position.
+    let tag_of: BTreeMap<FuncId, usize> = scc
+        .iter()
+        .copied()
+        .enumerate()
+        .map(|(i, p)| (p, i))
+        .collect();
+
+    // Build the merged self-recursive system's init/inductive/query lists.
+    let merged = match build_merged_clauses(
+        arena,
+        system,
+        shapes,
+        scc,
+        &tag_of,
+        &member_sorts,
+        tag_sort,
+        model,
+    )? {
+        Ok(merged) => merged,
+        Err(reason) => return Ok(SolveScc::Decline(reason)),
+    };
+
+    // Solve the merged self-recursive predicate with the existing machinery.
+    let reduced = SelfReduced {
+        arg_sorts: merged_sorts,
+        inits: merged.inits,
+        inductives: merged.inductives,
+        queries: merged.queries,
+    };
+    let (dispatched, state_params) = dispatch_self(arena, &reduced, config)?;
+    let invariant = match dispatched {
+        Dispatch::Safe { invariant } => invariant,
+        Dispatch::Unsat { steps } => return Ok(SolveScc::Unsat { steps }),
+        Dispatch::Unknown(reason) => return Ok(SolveScc::Decline(reason)),
+    };
+
+    // Project I*(tag, x…) back to each member: Iᵢ(x…) := I*(i, x…). state_params
+    // is [tag, x₁…xₙ]; the tag is position 0, the member params are positions 1..n.
+    let (&tag_param, member_params) = state_params
+        .split_first()
+        .expect("merged state has at least the tag column");
+    let member_params = member_params.to_vec();
+
+    let mut interps: Vec<(FuncId, PredInterpretation)> = Vec::with_capacity(scc.len());
+    for &pred in scc {
+        let tag_const = tag_constant(arena, tag_sort, tag_of[&pred]);
+        let mapping = vec![(tag_param, tag_const)];
+        let projected = substitute(arena, invariant, &mapping);
+        interps.push((
+            pred,
+            PredInterpretation {
+                params: member_params.clone(),
+                body: projected,
+            },
+        ));
+    }
+    Ok(SolveScc::Interps(interps))
+}
+
+/// The merged self-recursive transition-system clause lists built from an `SCC`'s
+/// clauses (each carrying a leading control-tag column).
+struct MergedClauses {
+    inits: Vec<SelfInit>,
+    inductives: Vec<InductiveClause>,
+    queries: Vec<QueryClause>,
+}
+
+/// The merged clause a clause whose head is an `SCC` member rewrites to: an init
+/// disjunct (a fact / inter-`SCC` body) or an inductive transition (an intra-`SCC`
+/// body).
+enum MergedHead {
+    Init(SelfInit),
+    Inductive(InductiveClause),
+}
+
+/// Rewrites a single clause whose head is an `SCC` member into its merged init /
+/// inductive form, pinning the relevant control-tag column(s). The outer `Result`
+/// carries a genuine arena error; the inner `Result`'s `Err(reason)` is a sound
+/// decline of the whole `SCC`.
+#[allow(clippy::too_many_arguments)]
+fn merge_head_clause(
+    arena: &mut TermArena,
+    clause: &HornClause,
+    shape: &ClauseShape,
+    scc_set: &std::collections::BTreeSet<FuncId>,
+    tag_of: &BTreeMap<FuncId, usize>,
+    member_sorts: &[Sort],
+    tag_sort: Sort,
+    model: &BTreeMap<FuncId, PredInterpretation>,
+    ci: usize,
+    fresh: &mut usize,
+) -> Result<Result<MergedHead, String>, SolverError> {
+    let Some((head_pred, head_args)) = &shape.head else {
+        return Ok(Err(
+            "internal: merge_head_clause on a head-free clause".to_owned()
+        ));
+    };
+    let Some(head_vars) = distinct_arg_vars(arena, head_args, member_sorts) else {
+        return Ok(Err(
+            "out of fragment: an SCC clause's head has a non-distinct-variable argument; declining"
+                .to_owned(),
+        ));
+    };
+    let head_tag = tag_of[head_pred];
+
+    match &shape.body {
+        // Fact: empty body ⇒ an init pinning the post tag.
+        None => {
+            let Some((constraint, tag_var)) =
+                pin_tag_head(arena, clause.constraint, tag_sort, head_tag, ci, fresh)
+            else {
+                return Ok(Err(
+                    "internal: failed to build a tagged init constraint".to_owned()
+                ));
+            };
+            Ok(Ok(MergedHead::Init(SelfInit {
+                constraint,
+                head_vars: prepend(tag_var, head_vars),
+            })))
+        }
+        // Intra-SCC body ⇒ an inductive transition pinning pre and post tags.
+        Some((body_pred, body_args)) if scc_set.contains(body_pred) => {
+            let Some(body_vars) = distinct_arg_vars(arena, body_args, member_sorts) else {
+                return Ok(Err(
+                    "out of fragment: an intra-SCC body has a non-distinct-variable argument; \
+                     declining"
+                        .to_owned(),
+                ));
+            };
+            if body_vars.iter().any(|v| head_vars.contains(v)) {
+                return Ok(Err(
+                    "out of fragment: an intra-SCC clause shares a variable between its body and \
+                     head predicate arguments (ambiguous pre/post binding); declining"
+                        .to_owned(),
+                ));
+            }
+            let body_tag = tag_of[body_pred];
+            let Some((constraint, body_tag_var, head_tag_var)) = pin_tag_trans(
+                arena,
+                clause.constraint,
+                tag_sort,
+                body_tag,
+                head_tag,
+                ci,
+                fresh,
+            ) else {
+                return Ok(Err(
+                    "internal: failed to build a tagged transition constraint".to_owned(),
+                ));
+            };
+            Ok(Ok(MergedHead::Inductive(InductiveClause {
+                constraint,
+                body_vars: prepend(body_tag_var, body_vars),
+                head_vars: prepend(head_tag_var, head_vars),
+            })))
+        }
+        // Inter-SCC body from an already-solved predecessor ⇒ an init with the
+        // predecessor folded in, pinning the post tag.
+        Some((body_pred, body_args)) => {
+            let Some(interp) = model.get(body_pred) else {
+                return Ok(Err(
+                    "internal: an inter-SCC body predecessor was unsolved".to_owned()
+                ));
+            };
+            let Some(body_inst) = instantiate(arena, interp, body_args) else {
+                return Ok(Err(
+                    "out of fragment: an inter-SCC body application has an arity mismatch; declining"
+                        .to_owned(),
+                ));
+            };
+            let folded = arena.and(body_inst, clause.constraint)?;
+            let Some((constraint, tag_var)) =
+                pin_tag_head(arena, folded, tag_sort, head_tag, ci, fresh)
+            else {
+                return Ok(Err(
+                    "internal: failed to build a tagged inter-SCC init constraint".to_owned(),
+                ));
+            };
+            Ok(Ok(MergedHead::Init(SelfInit {
+                constraint,
+                head_vars: prepend(tag_var, head_vars),
+            })))
+        }
+    }
+}
+
+/// Rewrites every clause relevant to the `SCC` (head an `SCC` member, or a query
+/// off an `SCC` member) into the merged self-recursive system's init/inductive/
+/// query lists, threading a fresh per-clause control-tag variable as the leading
+/// argument so the existing [`SelfReduced::bind`] binds it to the leading state
+/// column. The outer `Result` carries a genuine arena error; the inner `Result`'s
+/// `Err(reason)` is a sound decline of the whole `SCC`.
+#[allow(clippy::too_many_arguments)]
+fn build_merged_clauses(
+    arena: &mut TermArena,
+    system: &HornSystem,
+    shapes: &[ClauseShape],
+    scc: &[FuncId],
+    tag_of: &BTreeMap<FuncId, usize>,
+    member_sorts: &[Sort],
+    tag_sort: Sort,
+    model: &BTreeMap<FuncId, PredInterpretation>,
+) -> Result<Result<MergedClauses, String>, SolverError> {
+    let mut inits: Vec<SelfInit> = Vec::new();
+    let mut inductives: Vec<InductiveClause> = Vec::new();
+    let mut queries: Vec<QueryClause> = Vec::new();
+    let mut fresh: usize = 0;
+    let scc_set: std::collections::BTreeSet<FuncId> = scc.iter().copied().collect();
+
+    for (ci, (clause, shape)) in system.clauses.iter().zip(shapes).enumerate() {
+        // A clause is relevant to this SCC iff its head is an SCC member, or it is
+        // a query whose body is an SCC member.
+        let head_in_scc = matches!(&shape.head, Some((h, _)) if scc_set.contains(h));
+        let query_in_scc =
+            shape.head.is_none() && matches!(&shape.body, Some((b, _)) if scc_set.contains(b));
+        if !head_in_scc && !query_in_scc {
+            continue;
+        }
+
+        if head_in_scc {
+            match merge_head_clause(
+                arena,
+                clause,
+                shape,
+                &scc_set,
+                tag_of,
+                member_sorts,
+                tag_sort,
+                model,
+                ci,
+                &mut fresh,
+            )? {
+                Ok(MergedHead::Init(init)) => inits.push(init),
+                Ok(MergedHead::Inductive(ind)) => inductives.push(ind),
+                Err(reason) => return Ok(Err(reason)),
+            }
+        } else {
+            // A query whose body is an SCC member ⇒ a bad disjunct pinning the tag.
+            let Some((body_pred, body_args)) = &shape.body else {
+                continue;
+            };
+            let Some(body_vars) = distinct_arg_vars(arena, body_args, member_sorts) else {
+                return Ok(Err("out of fragment: a query over an SCC member has a \
+                               non-distinct-variable argument; declining"
+                    .to_owned()));
+            };
+            let body_tag = tag_of[body_pred];
+            let Some((constraint, tag_var)) =
+                pin_tag_head(arena, clause.constraint, tag_sort, body_tag, ci, &mut fresh)
+            else {
+                return Ok(Err(
+                    "internal: failed to build a tagged query constraint".to_owned()
+                ));
+            };
+            queries.push(QueryClause {
+                constraint,
+                body_vars: prepend(tag_var, body_vars),
+            });
+        }
+    }
+
+    Ok(Ok(MergedClauses {
+        inits,
+        inductives,
+        queries,
+    }))
+}
+
+/// Prepends a single symbol to a vector, returning the new vector.
+fn prepend(first: SymbolId, rest: Vec<SymbolId>) -> Vec<SymbolId> {
+    let mut out = Vec::with_capacity(rest.len() + 1);
+    out.push(first);
+    out.extend(rest);
+    out
+}
+
+/// The tag column's sort for an `SCC` whose members share `member_sorts`: a `Real`
+/// tag for all-`Real` members, a `BitVec` tag wide enough to hold `member_count`
+/// distinct values for all-`BitVec`/`Bool` members, else `None` (unsupported).
+fn tag_sort_for(member_sorts: &[Sort], member_count: usize) -> Option<Sort> {
+    match state_class(member_sorts) {
+        StateClass::Real => Some(Sort::Real),
+        StateClass::Finite => {
+            // A width holding values 0..member_count (≥ 1 bit).
+            let mut width: u32 = 1;
+            while (1u128 << width) < u128::try_from(member_count).ok()? {
+                width += 1;
+            }
+            Some(Sort::BitVec(width))
+        }
+        StateClass::Unsupported => None,
+    }
+}
+
+/// The tag constant term for member index `tag` of sort `tag_sort`: a real literal
+/// for a `Real` tag, a bit-vector constant for a `BitVec` tag.
+fn tag_constant(arena: &mut TermArena, tag_sort: Sort, tag: usize) -> TermId {
+    match tag_sort {
+        Sort::Real => {
+            let n = i128::try_from(tag).expect("tag fits i128");
+            arena.real_ratio(n, 1)
+        }
+        Sort::BitVec(w) => {
+            let v = u128::try_from(tag).expect("tag fits u128");
+            arena
+                .bv_const(w, v)
+                .expect("tag value fits the tag width by construction")
+        }
+        // tag_sort_for only ever returns Real/BitVec; a Bool/other tag is unreachable.
+        _ => arena.bool_const(false),
+    }
+}
+
+/// Builds a fresh tag variable bound (by an added `tag_var = const(tag)` equality)
+/// for a clause that pins **one** tag (an init / inter-`SCC` init / query head or
+/// body). Returns the augmented constraint and the fresh tag variable symbol.
+fn pin_tag_head(
+    arena: &mut TermArena,
+    constraint: TermId,
+    tag_sort: Sort,
+    tag: usize,
+    clause_index: usize,
+    fresh: &mut usize,
+) -> Option<(TermId, SymbolId)> {
+    let tag_var = arena
+        .declare(
+            &format!("scc_tag@{clause_index}_{}", next_fresh(fresh)),
+            tag_sort,
+        )
+        .ok()?;
+    let tag_term = arena.var(tag_var);
+    let tag_const = tag_constant(arena, tag_sort, tag);
+    let tag_eq = arena.eq(tag_term, tag_const).ok()?;
+    let augmented = arena.and(tag_eq, constraint).ok()?;
+    Some((augmented, tag_var))
+}
+
+/// Builds two fresh tag variables (pre and post) bound to `body_tag` and
+/// `head_tag` for an intra-`SCC` inductive clause. Returns the augmented
+/// constraint and the two fresh tag variable symbols.
+#[allow(clippy::too_many_arguments)]
+fn pin_tag_trans(
+    arena: &mut TermArena,
+    constraint: TermId,
+    tag_sort: Sort,
+    body_tag: usize,
+    head_tag: usize,
+    clause_index: usize,
+    fresh: &mut usize,
+) -> Option<(TermId, SymbolId, SymbolId)> {
+    let body_var = arena
+        .declare(
+            &format!("scc_tagb@{clause_index}_{}", next_fresh(fresh)),
+            tag_sort,
+        )
+        .ok()?;
+    let head_var = arena
+        .declare(
+            &format!("scc_tagh@{clause_index}_{}", next_fresh(fresh)),
+            tag_sort,
+        )
+        .ok()?;
+    let body_term = arena.var(body_var);
+    let head_term = arena.var(head_var);
+    let body_const = tag_constant(arena, tag_sort, body_tag);
+    let head_const = tag_constant(arena, tag_sort, head_tag);
+    let body_eq = arena.eq(body_term, body_const).ok()?;
+    let head_eq = arena.eq(head_term, head_const).ok()?;
+    let tags = arena.and(body_eq, head_eq).ok()?;
+    let augmented = arena.and(tags, constraint).ok()?;
+    Some((augmented, body_var, head_var))
+}
+
+/// Returns the current fresh counter and advances it (a unique-suffix source for
+/// the per-clause tag variable names).
+fn next_fresh(fresh: &mut usize) -> usize {
+    let v = *fresh;
+    *fresh += 1;
+    v
 }
 
 /// The query check under a solved model.

@@ -507,10 +507,12 @@ fn two_predicate_acyclic_unsafe_is_unsat() {
     }
 }
 
-/// Mutual recursion (`P :- Q`, `Q :- P`) ⇒ `Ok(Unknown)` (decline): a cycle among
-/// distinct predicates is out of the acyclic fragment.
+/// Mutual recursion with no facts and no query (`P :- Q`, `Q :- P`) ⇒ `Sat`: the
+/// merged tagged predicate has an empty init and no bad states, so nothing is
+/// unsafe. The all-`false` interpretation (`P := false`, `Q := false`) satisfies
+/// every clause and re-checks. (Formerly declined; the merge reduction covers it.)
 #[test]
-fn mutual_recursion_declines() {
+fn mutual_recursion_no_fact_is_sat() {
     let mut arena = TermArena::new();
     let p = arena.declare_fun("P", &[Sort::Real], Sort::Bool).unwrap();
     let q = arena.declare_fun("Q", &[Sort::Real], Sort::Bool).unwrap();
@@ -542,11 +544,314 @@ fn mutual_recursion_declines() {
     };
 
     let outcome = solve_horn(&mut arena, &system, &SolverConfig::default()).unwrap();
-    assert!(
-        matches!(outcome, HornOutcome::Unknown { .. }),
-        "mutual recursion is a cycle among distinct predicates (out of fragment); expected \
-         Unknown, got {outcome:?}"
-    );
+    match outcome {
+        HornOutcome::Sat(model) => recheck_model(&mut arena, &system, &model),
+        HornOutcome::Unknown { .. } => {} // a sound decline is acceptable
+        HornOutcome::Unsat { .. } => {
+            panic!("no fact and no query ⇒ nothing unsafe; an Unsat would be a soundness bug")
+        }
+    }
+}
+
+/// Genuine 2-predicate mutual recursion that is SAFE: `Even`/`Odd` over the reals
+/// with a fact `Even(0)`, the cross steps `Even(x) ∧ y=x+1 ⇒ Odd(y)` and
+/// `Odd(x) ∧ y=x+1 ⇒ Even(y)`, and the safety query `Even(x) ∧ x < 0 ⇒ false`.
+/// The reachable `Even`/`Odd` values are all `≥ 0`, so the property holds ⇒ `Sat`,
+/// projected back per member and independently re-checked. (Or a sound `Unknown`.)
+#[test]
+fn even_odd_mutual_recursion_is_sat_or_unknown() {
+    let mut arena = TermArena::new();
+    let even = arena
+        .declare_fun("Even", &[Sort::Real], Sort::Bool)
+        .unwrap();
+    let odd = arena.declare_fun("Odd", &[Sort::Real], Sort::Bool).unwrap();
+
+    let x = arena.declare("x", Sort::Real).unwrap();
+    let y = arena.declare("y", Sort::Real).unwrap();
+    let xv = arena.var(x);
+    let yv = arena.var(y);
+    let zero = arena.real_ratio(0, 1);
+    let one = arena.real_ratio(1, 1);
+
+    // fact: x = 0 ⇒ Even(x).
+    let x_eq_0 = arena.eq(xv, zero).unwrap();
+    let even_x = arena.apply(even, &[xv]).unwrap();
+    let fact = HornClause {
+        body: vec![],
+        constraint: x_eq_0,
+        head: Some(even_x),
+    };
+
+    // Even(x) ∧ y = x + 1 ⇒ Odd(y).
+    let x_plus_1 = arena.real_add(xv, one).unwrap();
+    let y_eq = arena.eq(yv, x_plus_1).unwrap();
+    let even_x_b = arena.apply(even, &[xv]).unwrap();
+    let odd_y = arena.apply(odd, &[yv]).unwrap();
+    let even_to_odd = HornClause {
+        body: vec![even_x_b],
+        constraint: y_eq,
+        head: Some(odd_y),
+    };
+
+    // Odd(x) ∧ y = x + 1 ⇒ Even(y).
+    let x_plus_1b = arena.real_add(xv, one).unwrap();
+    let y_eq_b = arena.eq(yv, x_plus_1b).unwrap();
+    let odd_x_b = arena.apply(odd, &[xv]).unwrap();
+    let even_y = arena.apply(even, &[yv]).unwrap();
+    let odd_to_even = HornClause {
+        body: vec![odd_x_b],
+        constraint: y_eq_b,
+        head: Some(even_y),
+    };
+
+    // query: Even(x) ∧ x < 0 ⇒ false (holds: reachable Even values are ≥ 0).
+    let x_lt_0 = arena.real_lt(xv, zero).unwrap();
+    let even_x_q = arena.apply(even, &[xv]).unwrap();
+    let query = HornClause {
+        body: vec![even_x_q],
+        constraint: x_lt_0,
+        head: None,
+    };
+
+    let system = HornSystem {
+        predicates: vec![even, odd],
+        clauses: vec![fact, even_to_odd, odd_to_even, query],
+    };
+
+    let outcome = solve_horn(&mut arena, &system, &SolverConfig::default()).unwrap();
+    match outcome {
+        HornOutcome::Sat(model) => recheck_model(&mut arena, &system, &model),
+        HornOutcome::Unknown { .. } => {} // a sound decline is acceptable
+        HornOutcome::Unsat { .. } => {
+            panic!(
+                "the Even/Odd reachable set is x ≥ 0; the x<0 query is unreachable — Unsat is a \
+                    soundness bug"
+            )
+        }
+    }
+}
+
+/// 2-predicate mutual recursion that is UNSAFE: same `Even`/`Odd` cross steps from
+/// `Even(0)`, but the query `Even(x) ∧ x = 2 ⇒ false` IS reachable (0 → 1 (Odd) →
+/// 2 (Even)). ⇒ `Unsat` (or a sound `Unknown`), never `Sat`.
+#[test]
+fn even_odd_mutual_recursion_unsafe_is_unsat_or_unknown() {
+    let mut arena = TermArena::new();
+    let even = arena
+        .declare_fun("Even", &[Sort::Real], Sort::Bool)
+        .unwrap();
+    let odd = arena.declare_fun("Odd", &[Sort::Real], Sort::Bool).unwrap();
+
+    let x = arena.declare("x", Sort::Real).unwrap();
+    let y = arena.declare("y", Sort::Real).unwrap();
+    let xv = arena.var(x);
+    let yv = arena.var(y);
+    let zero = arena.real_ratio(0, 1);
+    let one = arena.real_ratio(1, 1);
+    let two = arena.real_ratio(2, 1);
+
+    let x_eq_0 = arena.eq(xv, zero).unwrap();
+    let even_x = arena.apply(even, &[xv]).unwrap();
+    let fact = HornClause {
+        body: vec![],
+        constraint: x_eq_0,
+        head: Some(even_x),
+    };
+
+    let x_plus_1 = arena.real_add(xv, one).unwrap();
+    let y_eq = arena.eq(yv, x_plus_1).unwrap();
+    let even_x_b = arena.apply(even, &[xv]).unwrap();
+    let odd_y = arena.apply(odd, &[yv]).unwrap();
+    let even_to_odd = HornClause {
+        body: vec![even_x_b],
+        constraint: y_eq,
+        head: Some(odd_y),
+    };
+
+    let x_plus_1b = arena.real_add(xv, one).unwrap();
+    let y_eq_b = arena.eq(yv, x_plus_1b).unwrap();
+    let odd_x_b = arena.apply(odd, &[xv]).unwrap();
+    let even_y = arena.apply(even, &[yv]).unwrap();
+    let odd_to_even = HornClause {
+        body: vec![odd_x_b],
+        constraint: y_eq_b,
+        head: Some(even_y),
+    };
+
+    // query: Even(x) ∧ x = 2 ⇒ false (reachable: 0 →Odd 1 →Even 2).
+    let x_eq_2 = arena.eq(xv, two).unwrap();
+    let even_x_q = arena.apply(even, &[xv]).unwrap();
+    let query = HornClause {
+        body: vec![even_x_q],
+        constraint: x_eq_2,
+        head: None,
+    };
+
+    let system = HornSystem {
+        predicates: vec![even, odd],
+        clauses: vec![fact, even_to_odd, odd_to_even, query],
+    };
+
+    let outcome = solve_horn(&mut arena, &system, &SolverConfig::default()).unwrap();
+    match outcome {
+        HornOutcome::Unsat { .. } | HornOutcome::Unknown { .. } => {}
+        HornOutcome::Sat(_) => {
+            panic!("Even(2) is reachable; the query is derivable — a Sat would be a soundness bug")
+        }
+    }
+}
+
+/// Builds one cross step `from(pre) ∧ succ = pre + 1 ⇒ to(succ)` of a real
+/// counter, used to wire the 3-predicate `SCC` cycle.
+fn counter_step(
+    arena: &mut TermArena,
+    pre: axeyum_ir::SymbolId,
+    succ: axeyum_ir::SymbolId,
+    from: axeyum_ir::FuncId,
+    to: axeyum_ir::FuncId,
+) -> HornClause {
+    let pre_v = arena.var(pre);
+    let succ_v = arena.var(succ);
+    let one = arena.real_ratio(1, 1);
+    let pre_plus_1 = arena.real_add(pre_v, one).unwrap();
+    let succ_eq = arena.eq(succ_v, pre_plus_1).unwrap();
+    let from_pre = arena.apply(from, &[pre_v]).unwrap();
+    let to_succ = arena.apply(to, &[succ_v]).unwrap();
+    HornClause {
+        body: vec![from_pre],
+        constraint: succ_eq,
+        head: Some(to_succ),
+    }
+}
+
+/// A 3-predicate SCC cycle `P → Q → R → P` over the reals: fact `P(0)`, steps
+/// `P(x) ∧ y=x+1 ⇒ Q(y)`, `Q(x) ∧ y=x+1 ⇒ R(y)`, `R(x) ∧ y=x+1 ⇒ P(y)`, and the
+/// safety query `P(x) ∧ x < 0 ⇒ false`. Reachable values are `≥ 0` ⇒ `Sat`
+/// (re-checked per member), or a sound `Unknown` — never `Unsat`.
+#[test]
+fn three_predicate_scc_is_sat_or_unknown() {
+    let mut arena = TermArena::new();
+    let p = arena.declare_fun("P", &[Sort::Real], Sort::Bool).unwrap();
+    let q = arena.declare_fun("Q", &[Sort::Real], Sort::Bool).unwrap();
+    let r = arena.declare_fun("R", &[Sort::Real], Sort::Bool).unwrap();
+
+    let x0 = arena.declare("x", Sort::Real).unwrap();
+    let x1 = arena.declare("y", Sort::Real).unwrap();
+    let xv = arena.var(x0);
+    let zero = arena.real_ratio(0, 1);
+
+    let x_eq_0 = arena.eq(xv, zero).unwrap();
+    let p_x = arena.apply(p, &[xv]).unwrap();
+    let fact = HornClause {
+        body: vec![],
+        constraint: x_eq_0,
+        head: Some(p_x),
+    };
+
+    let p_to_q = counter_step(&mut arena, x0, x1, p, q);
+    let q_to_r = counter_step(&mut arena, x0, x1, q, r);
+    let r_to_p = counter_step(&mut arena, x0, x1, r, p);
+
+    let x_lt_0 = arena.real_lt(xv, zero).unwrap();
+    let p_x_q = arena.apply(p, &[xv]).unwrap();
+    let query = HornClause {
+        body: vec![p_x_q],
+        constraint: x_lt_0,
+        head: None,
+    };
+
+    let system = HornSystem {
+        predicates: vec![p, q, r],
+        clauses: vec![fact, p_to_q, q_to_r, r_to_p, query],
+    };
+
+    let outcome = solve_horn(&mut arena, &system, &SolverConfig::default()).unwrap();
+    match outcome {
+        HornOutcome::Sat(model) => recheck_model(&mut arena, &system, &model),
+        HornOutcome::Unknown { .. } => {}
+        HornOutcome::Unsat { .. } => {
+            panic!(
+                "the 3-cycle reachable set is x ≥ 0; the x<0 query is unreachable — Unsat is a \
+                    soundness bug"
+            )
+        }
+    }
+}
+
+/// Soundness-negative mutual recursion: the ONLY plausible-looking candidate model
+/// is wrong. `Even(0)`, the usual cross steps, and the query `Odd(x) ∧ x = 2 ⇒
+/// false` — but `Odd(2)` is NOT reachable (Odd holds only at odd values), so the
+/// query is genuinely unreachable and the system is SAFE. A buggy projection that
+/// conflated the two members' reachable sets would wrongly report `Unsat`; the
+/// verify-before-return gate must keep this `Sat` (per member) or `Unknown`,
+/// never a wrong `Unsat`, and never a `Sat` whose model fails the re-check.
+#[test]
+fn mutual_recursion_soundness_negative() {
+    let mut arena = TermArena::new();
+    let even = arena
+        .declare_fun("Even", &[Sort::Real], Sort::Bool)
+        .unwrap();
+    let odd = arena.declare_fun("Odd", &[Sort::Real], Sort::Bool).unwrap();
+
+    let x = arena.declare("x", Sort::Real).unwrap();
+    let y = arena.declare("y", Sort::Real).unwrap();
+    let xv = arena.var(x);
+    let yv = arena.var(y);
+    let zero = arena.real_ratio(0, 1);
+    let one = arena.real_ratio(1, 1);
+    let two = arena.real_ratio(2, 1);
+
+    let x_eq_0 = arena.eq(xv, zero).unwrap();
+    let even_x = arena.apply(even, &[xv]).unwrap();
+    let fact = HornClause {
+        body: vec![],
+        constraint: x_eq_0,
+        head: Some(even_x),
+    };
+    let x_plus_1 = arena.real_add(xv, one).unwrap();
+    let y_eq = arena.eq(yv, x_plus_1).unwrap();
+    let even_x_b = arena.apply(even, &[xv]).unwrap();
+    let odd_y = arena.apply(odd, &[yv]).unwrap();
+    let even_to_odd = HornClause {
+        body: vec![even_x_b],
+        constraint: y_eq,
+        head: Some(odd_y),
+    };
+    let x_plus_1b = arena.real_add(xv, one).unwrap();
+    let y_eq_b = arena.eq(yv, x_plus_1b).unwrap();
+    let odd_x_b = arena.apply(odd, &[xv]).unwrap();
+    let even_y = arena.apply(even, &[yv]).unwrap();
+    let odd_to_even = HornClause {
+        body: vec![odd_x_b],
+        constraint: y_eq_b,
+        head: Some(even_y),
+    };
+    // query: Odd(x) ∧ x = 2 ⇒ false (UNREACHABLE — Odd holds only at odd values).
+    let x_eq_2 = arena.eq(xv, two).unwrap();
+    let odd_x_q = arena.apply(odd, &[xv]).unwrap();
+    let query = HornClause {
+        body: vec![odd_x_q],
+        constraint: x_eq_2,
+        head: None,
+    };
+
+    let system = HornSystem {
+        predicates: vec![even, odd],
+        clauses: vec![fact, even_to_odd, odd_to_even, query],
+    };
+
+    let outcome = solve_horn(&mut arena, &system, &SolverConfig::default()).unwrap();
+    match outcome {
+        // SAFE: a sound Sat must survive the independent re-check.
+        HornOutcome::Sat(model) => recheck_model(&mut arena, &system, &model),
+        HornOutcome::Unknown { .. } => {}
+        HornOutcome::Unsat { .. } => {
+            panic!(
+                "Odd(2) is unreachable (Odd holds only at odd values); an Unsat here would be a \
+                    projection-conflation soundness bug"
+            )
+        }
+    }
 }
 
 /// A non-recursive predicate chain `A ⇒ B ⇒ C` (with a fact seeding `A` and a
