@@ -19,23 +19,33 @@
 //!   (⋀ body_i) ∧ constraint  ⇒  head        (head = Some(P(t…)) | None = false)
 //! ```
 //!
-//! # The fragment this first slice solves (and what it declines)
+//! # The fragment this slice solves (and what it declines)
 //!
-//! A system is in the **single-predicate-linear** fragment when there is exactly
-//! one predicate `P` and every clause's body holds **at most one** predicate
-//! application (necessarily of `P`):
+//! Every clause is **linear** — its body holds **at most one** predicate
+//! application. The supported systems are the **acyclic multi-predicate linear**
+//! ones: any number of predicates `P₁…Pₘ`, every clause linear, and the
+//! predicate **dependency graph acyclic** (no cycle among *distinct* predicates;
+//! a predicate may be self-recursive). The single-predicate case is the `m = 1`
+//! special case.
+//!
+//! For one predicate `P` the clauses are:
 //!
 //! * **Fact / init** — `constraint ⇒ P(t…)` (empty body).
 //! * **Inductive** — `P(s…) ∧ constraint ⇒ P(s'…)` (one body atom).
 //! * **Query** — `P(s…) ∧ constraint ⇒ false` (head `None`).
 //!
-//! Anything else — two or more predicates, a body with two or more atoms
-//! (nonlinear recursion), or a head over a different predicate than the single
-//! `P` — is **out of fragment** and declines cleanly to
-//! [`HornOutcome::Unknown`]. Multi-predicate and nonlinear `CHC` are the natural
-//! next slices (each predicate becomes its own transition-system component, and a
-//! body with `k` atoms becomes a `k`-fold product; both ride the same
-//! verify-before-return discipline).
+//! With several predicates a clause `Q(t…) ∧ constraint ⇒ P(u…)` records the
+//! dependency edge `P → Q` (`P` depends on `Q`). The predicates are solved in
+//! **topological order** so every predicate is solved after its non-self
+//! dependencies; a solved predecessor `Q` is folded into the later clauses by
+//! substituting its interpretation `I_Q` for each `Q`-atom.
+//!
+//! Anything outside this fragment — a body with two or more atoms (nonlinear
+//! recursion), a cycle among distinct predicates (mutual recursion), or an
+//! unsupported argument shape — is **out of fragment** and declines cleanly to
+//! [`HornOutcome::Unknown`]. Mutual recursion and nonlinear (`k ≥ 2`-atom body)
+//! `CHC` are the natural next slices; both would ride the same
+//! verify-before-return discipline.
 //!
 //! # Reduction to a transition system (untrusted)
 //!
@@ -177,18 +187,24 @@ pub enum HornOutcome {
 /// predicates that satisfies every clause (`Sat`), or is the query head `false`
 /// derivable (`Unsat`)?
 ///
-/// This first slice handles the **single-predicate-linear** fragment (see the
-/// module docs): one predicate, each clause body holding at most one application.
-/// It reduces that fragment to a [`TransitionSystem`](crate::TransitionSystem)
+/// This slice handles the **acyclic multi-predicate linear** fragment (see the
+/// module docs): any number of predicates, each clause body holding at most one
+/// application, and an acyclic dependency graph among distinct predicates. With
+/// one predicate it reduces to a [`TransitionSystem`](crate::TransitionSystem)
 /// and dispatches to the model-checking engines by the predicate's argument
 /// sorts — `Real` to the `LRA` engines, `BitVec`/`Bool` to the bit-level engines.
-/// Anything outside the fragment declines to [`HornOutcome::Unknown`].
+/// With several predicates it solves them in topological order, folding each
+/// solved predecessor's interpretation into the later clauses. Anything outside
+/// the fragment (mutual recursion, a nonlinear body, an unsupported shape)
+/// declines to [`HornOutcome::Unknown`].
 ///
 /// Soundness is total and rests on the verify-before-return discipline: a `Sat`
-/// is returned only after the candidate interpretation re-validates against every
-/// original clause under [`check_auto`](crate::check_auto), and an `Unsat` carries
-/// the engine's replay-checked counterexample. A classification or reduction bug
-/// can only ever cause an over-eager `Unknown`.
+/// is returned only after the candidate **whole-system** model re-validates
+/// against every original clause under [`check_auto`](crate::check_auto), and an
+/// `Unsat` carries the engine's replay-checked counterexample or a query-SAT
+/// witness. The dependency analysis, topological order, substitution, and
+/// per-predicate solving are all untrusted; a bug there can only ever cause an
+/// over-eager `Unknown`.
 ///
 /// # Errors
 ///
@@ -200,6 +216,12 @@ pub fn solve_horn(
     system: &HornSystem,
     config: &SolverConfig,
 ) -> Result<HornOutcome, SolverError> {
+    // Multi-predicate systems take the acyclic topological-order path; a single
+    // predicate is the m = 1 special case handled by the original reduction.
+    if system.predicates.len() != 1 {
+        return solve_horn_multi(arena, system, config);
+    }
+
     // 1. Classify. Outside the single-predicate-linear fragment ⇒ decline.
     let classified = match classify(arena, system) {
         Ok(classified) => classified,
@@ -856,5 +878,838 @@ fn substitute_symbols(
 fn unknown(reason: &str) -> HornOutcome {
     HornOutcome::Unknown {
         reason: reason.to_owned(),
+    }
+}
+
+// ===========================================================================
+// Acyclic multi-predicate linear CHC
+// ===========================================================================
+
+/// A clause's predicate shape: the (optional) body predicate (linear ⇒ at most
+/// one) and the (optional) head predicate (`None` ⇒ a query head `false`).
+struct ClauseShape {
+    /// The single body predicate application, if any: `(predicate, args)`.
+    body: Option<(FuncId, Vec<TermId>)>,
+    /// The head predicate application, if any: `(predicate, args)`; `None` is a
+    /// query head.
+    head: Option<(FuncId, Vec<TermId>)>,
+}
+
+/// Solves an **acyclic multi-predicate linear** [`HornSystem`]: builds the
+/// predicate dependency graph, declines on mutual recursion (a cycle among
+/// distinct predicates) or a nonlinear (`≥ 2`-atom) body, topologically orders
+/// the predicates, solves each in turn folding solved predecessors in, then
+/// re-validates the whole model against every clause before returning `Sat`.
+fn solve_horn_multi(
+    arena: &mut TermArena,
+    system: &HornSystem,
+    config: &SolverConfig,
+) -> Result<HornOutcome, SolverError> {
+    if system.predicates.is_empty() {
+        return Ok(unknown(
+            "out of fragment: a Horn system needs at least one predicate",
+        ));
+    }
+
+    // Every predicate must be a Bool-result function.
+    for &pred in &system.predicates {
+        let (_, _, result) = arena.function(pred);
+        if result != Sort::Bool {
+            return Ok(unknown(
+                "out of fragment: every Horn predicate must have a Bool result sort",
+            ));
+        }
+    }
+
+    // Per-clause body/head predicate shapes; declines a nonlinear body.
+    let shapes = match clause_shapes(arena, system) {
+        Ok(shapes) => shapes,
+        Err(reason) => return Ok(unknown(&reason)),
+    };
+
+    // Topological order over the dependency graph; declines on a cycle among
+    // distinct predicates (mutual recursion). Self-loops are allowed.
+    let order = match topological_order(&system.predicates, &shapes) {
+        Ok(order) => order,
+        Err(reason) => return Ok(unknown(&reason)),
+    };
+
+    // Solve each predicate in topological order, accumulating a partial model.
+    let mut model = BTreeMap::new();
+    for &pred in &order {
+        match solve_one_predicate(arena, system, &shapes, pred, &model, config)? {
+            SolveOne::Interp(interp) => {
+                model.insert(pred, interp);
+            }
+            SolveOne::Unsat { steps } => {
+                // A self-recursive predicate's own reachability already derives
+                // false (it has a reachable query). The whole system is Unsat.
+                return Ok(HornOutcome::Unsat { steps });
+            }
+            SolveOne::Decline(reason) => return Ok(unknown(&reason)),
+        }
+    }
+
+    // Query clauses: under the solved model, every query body must be
+    // unsatisfiable. A satisfiable query body is a reachable derivation of false.
+    match check_queries(arena, system, &shapes, &model, config)? {
+        QueryCheck::Reachable { steps } => return Ok(HornOutcome::Unsat { steps }),
+        QueryCheck::Unreachable => {}
+        QueryCheck::Decline => {
+            return Ok(unknown(
+                "a Horn query body could not be discharged under the candidate model; declining",
+            ));
+        }
+    }
+
+    // VERIFY-BEFORE-RETURN: the full multi-predicate model must make EVERY clause
+    // valid. This is the only trusted gate; all of the above is untrusted.
+    if verify_horn_model(arena, system, &model, config)? {
+        Ok(HornOutcome::Sat(HornModel {
+            interpretations: model,
+        }))
+    } else {
+        Ok(unknown(
+            "Horn candidate model failed the whole-system per-clause re-check; declining",
+        ))
+    }
+}
+
+/// Determines the body/head predicate shape of every clause, declining a
+/// nonlinear (`≥ 2` predicate atoms in the body) clause or a malformed atom.
+fn clause_shapes(arena: &TermArena, system: &HornSystem) -> Result<Vec<ClauseShape>, String> {
+    let known: std::collections::BTreeSet<FuncId> = system.predicates.iter().copied().collect();
+    let mut shapes = Vec::with_capacity(system.clauses.len());
+    for clause in &system.clauses {
+        if clause.body.len() > 1 {
+            return Err(format!(
+                "out of fragment: a clause body has {} predicate atoms; this slice handles linear \
+                 Horn (at most one body atom)",
+                clause.body.len()
+            ));
+        }
+        let body = match clause.body.first() {
+            None => None,
+            Some(&atom) => Some(predicate_app(arena, atom, &known)?),
+        };
+        let head = match clause.head {
+            None => None,
+            Some(head) => Some(predicate_app(arena, head, &known)?),
+        };
+        if body.is_none() && head.is_none() {
+            return Err(
+                "out of fragment: a clause has neither a body atom nor a head predicate (a \
+                 predicate-free theory obligation)"
+                    .to_owned(),
+            );
+        }
+        shapes.push(ClauseShape { body, head });
+    }
+    Ok(shapes)
+}
+
+/// Extracts `(predicate, args)` from a predicate application `P(args)`, requiring
+/// `P` to be one of the system's declared predicates. Arguments may be arbitrary
+/// terms here (the distinct-variable restriction is imposed only where the
+/// transition-system reduction needs it).
+fn predicate_app(
+    arena: &TermArena,
+    term: TermId,
+    known: &std::collections::BTreeSet<FuncId>,
+) -> Result<(FuncId, Vec<TermId>), String> {
+    match arena.node(term) {
+        TermNode::App {
+            op: Op::Apply(func),
+            args,
+        } if known.contains(func) => Ok((*func, args.to_vec())),
+        _ => Err(
+            "malformed: a body/head entry is not an application of a declared predicate (Op::Apply \
+             over a Bool-result predicate function)"
+                .to_owned(),
+        ),
+    }
+}
+
+/// Topologically orders the predicates so each is listed after its non-self
+/// dependencies. Edge `P → Q` (P depends on Q) for every clause with body
+/// predicate `Q` and head predicate `P` (`P ≠ Q`). A self-loop `P → P` is allowed
+/// and ignored for ordering. A cycle among distinct predicates ⇒ decline.
+///
+/// Determinism: predicates are processed in declaration order, dependency sets are
+/// [`std::collections::BTreeSet`]s, so the order is stable.
+fn topological_order(predicates: &[FuncId], shapes: &[ClauseShape]) -> Result<Vec<FuncId>, String> {
+    // deps[P] = the set of distinct predicates P depends on (excludes self).
+    let mut deps: BTreeMap<FuncId, std::collections::BTreeSet<FuncId>> = predicates
+        .iter()
+        .map(|&p| (p, std::collections::BTreeSet::new()))
+        .collect();
+    for shape in shapes {
+        if let (Some((body_pred, _)), Some((head_pred, _))) = (&shape.body, &shape.head) {
+            if body_pred != head_pred {
+                deps.entry(*head_pred).or_default().insert(*body_pred);
+            }
+        }
+    }
+
+    // Kahn's algorithm over the *reverse* edges, emitting dependencies first.
+    // A predicate is ready once all of its dependencies are already emitted.
+    let mut emitted: std::collections::BTreeSet<FuncId> = std::collections::BTreeSet::new();
+    let mut order = Vec::with_capacity(predicates.len());
+    while order.len() < predicates.len() {
+        // Pick the first (declaration-order) not-yet-emitted predicate all of
+        // whose dependencies are already emitted.
+        let next = predicates.iter().copied().find(|p| {
+            !emitted.contains(p)
+                && deps
+                    .get(p)
+                    .is_some_and(|d| d.iter().all(|q| emitted.contains(q)))
+        });
+        match next {
+            Some(p) => {
+                emitted.insert(p);
+                order.push(p);
+            }
+            None => {
+                return Err(
+                    "out of fragment: the predicate dependency graph has a cycle among distinct \
+                     predicates (mutual recursion is a later slice)"
+                        .to_owned(),
+                );
+            }
+        }
+    }
+    Ok(order)
+}
+
+/// The result of solving one predicate in topological order.
+enum SolveOne {
+    /// The predicate's interpretation `I_P(params)`.
+    Interp(PredInterpretation),
+    /// The predicate's own reachability already derives `false` ⇒ the whole
+    /// system is `Unsat` with this counterexample depth.
+    Unsat {
+        /// The counterexample depth.
+        steps: usize,
+    },
+    /// Decline (out of fragment / a cap / an engine that could not decide).
+    Decline(String),
+}
+
+/// Solves a single predicate `P` given the already-solved `model` of its
+/// dependencies. Non-self-recursive predicates get a direct formula; self-
+/// recursive ones build a [`TransitionSystem`] with solved predecessors folded
+/// into `init`/`trans`/`bad` and dispatch to a model-checking engine.
+fn solve_one_predicate(
+    arena: &mut TermArena,
+    system: &HornSystem,
+    shapes: &[ClauseShape],
+    pred: FuncId,
+    model: &BTreeMap<FuncId, PredInterpretation>,
+    config: &SolverConfig,
+) -> Result<SolveOne, SolverError> {
+    let (_, params_sorts, _) = arena.function(pred);
+    let arg_sorts: Vec<Sort> = params_sorts.to_vec();
+
+    // Is P self-recursive? (some clause has P in both body and head.)
+    let self_recursive = system.clauses.iter().zip(shapes).any(|(_, shape)| {
+        matches!((&shape.body, &shape.head),
+            (Some((b, _)), Some((h, _))) if *b == pred && *h == pred)
+    });
+
+    // Defining clauses: those whose head is P.
+    let defining: Vec<usize> = shapes
+        .iter()
+        .enumerate()
+        .filter(|(_, s)| matches!(&s.head, Some((h, _)) if *h == pred))
+        .map(|(i, _)| i)
+        .collect();
+
+    if self_recursive {
+        solve_self_recursive(
+            arena, system, shapes, pred, &arg_sorts, &defining, model, config,
+        )
+    } else {
+        solve_direct(arena, system, shapes, pred, &arg_sorts, &defining, model)
+    }
+}
+
+/// Builds a **direct** interpretation for a non-self-recursive predicate `P`:
+/// `I_P(p) := ⋁ over P's defining clauses of (I_{body} ∧ constraint)[head args ↦ p]`.
+///
+/// Each defining clause's optional solved body predicate is substituted by its
+/// interpretation; the head arguments (required to be distinct variable symbols)
+/// are bound to fresh parameter symbols. If any disjunct retains a free variable
+/// outside the parameters, the interpretation would be unsound to re-check under
+/// the existential semantics of [`check_auto`], so the construction declines.
+#[allow(clippy::too_many_arguments)]
+fn solve_direct(
+    arena: &mut TermArena,
+    system: &HornSystem,
+    shapes: &[ClauseShape],
+    pred: FuncId,
+    arg_sorts: &[Sort],
+    defining: &[usize],
+    model: &BTreeMap<FuncId, PredInterpretation>,
+) -> Result<SolveOne, SolverError> {
+    // Fresh parameter symbols, one per predicate argument.
+    let mut params = Vec::with_capacity(arg_sorts.len());
+    for (i, &sort) in arg_sorts.iter().enumerate() {
+        params.push(arena.declare(&format!("q@{}_{i}", pred.index()), sort)?);
+    }
+    let param_set: std::collections::BTreeSet<SymbolId> = params.iter().copied().collect();
+
+    let mut disjuncts: Vec<TermId> = Vec::new();
+    for &ci in defining {
+        let clause = &system.clauses[ci];
+        let shape = &shapes[ci];
+
+        // Bind the head arguments (distinct variable symbols) to the parameters.
+        let Some((_, head_args)) = &shape.head else {
+            continue;
+        };
+        let Some(head_vars) = distinct_arg_vars(arena, head_args, arg_sorts) else {
+            return Ok(SolveOne::Decline(
+                "out of fragment: a defining clause's head predicate has a non-distinct-variable \
+                 argument (re-model P(t…) as P(p…) ∧ p = t…); declining"
+                    .to_owned(),
+            ));
+        };
+
+        // Substitute the solved body predicate (if any) by its interpretation.
+        let mut term = clause.constraint;
+        if let Some((body_pred, body_args)) = &shape.body {
+            let Some(interp) = model.get(body_pred) else {
+                // A non-self body predicate that is not yet solved cannot happen
+                // under a correct topological order; decline conservatively.
+                return Ok(SolveOne::Decline(
+                    "internal: a body predicate was unsolved when building a direct interpretation"
+                        .to_owned(),
+                ));
+            };
+            let Some(body_inst) = instantiate(arena, interp, body_args) else {
+                return Ok(SolveOne::Decline(
+                    "out of fragment: a body predicate application has an arity mismatch; declining"
+                        .to_owned(),
+                ));
+            };
+            term = arena.and(body_inst, term)?;
+        }
+
+        // Bind head argument variables → parameter symbols.
+        let mapping: Vec<(SymbolId, SymbolId)> = head_vars
+            .iter()
+            .copied()
+            .zip(params.iter().copied())
+            .collect();
+        let mut sorted = mapping;
+        sorted.sort_by_key(|&(src, _)| src);
+        let bound = substitute_symbols(arena, term, &sorted);
+
+        // The disjunct must be closed over the parameters: a stray free variable
+        // would be existential under check_auto where the head re-check needs it
+        // universal — unsound. Decline.
+        let mut frees = std::collections::BTreeSet::new();
+        collect_free_symbols(arena, bound, &mut frees);
+        if !frees.is_subset(&param_set) {
+            return Ok(SolveOne::Decline(
+                "out of fragment: a non-recursive predicate's defining clause leaves a free \
+                 variable outside the predicate arguments (an existential body); declining"
+                    .to_owned(),
+            ));
+        }
+        disjuncts.push(bound);
+    }
+
+    // I_P(p) = ⋁ disjuncts; no defining clause ⇒ false (P is empty).
+    let body = match disjuncts.split_first() {
+        None => arena.bool_const(false),
+        Some((&first, rest)) => {
+            let mut acc = first;
+            for &d in rest {
+                acc = arena.or(acc, d)?;
+            }
+            acc
+        }
+    };
+
+    Ok(SolveOne::Interp(PredInterpretation { params, body }))
+}
+
+/// Builds a self-recursive predicate's interpretation by reducing it to a
+/// single-predicate [`TransitionSystem`] with the solved predecessors folded in,
+/// then dispatching to a model-checking engine.
+///
+/// * `init` — facts (`constraint ⇒ P(head)`) and clauses whose body is a solved
+///   predecessor `Q` (`I_Q(args) ∧ constraint ⇒ P(head)`), head args bound to `s0`.
+/// * `trans` — the inductive clauses (`P(s) ∧ constraint ⇒ P(s')`).
+/// * `bad` — the query clauses whose body is `P`.
+#[allow(clippy::too_many_arguments)]
+fn solve_self_recursive(
+    arena: &mut TermArena,
+    system: &HornSystem,
+    shapes: &[ClauseShape],
+    pred: FuncId,
+    arg_sorts: &[Sort],
+    defining: &[usize],
+    model: &BTreeMap<FuncId, PredInterpretation>,
+    config: &SolverConfig,
+) -> Result<SolveOne, SolverError> {
+    // Split P's defining clauses into init-disjuncts and inductive (trans) ones.
+    // An init-disjunct is `(solved-body-invariant ∧ constraint, head_vars)`; an
+    // inductive is `(constraint, body_vars, head_vars)`.
+    let mut inits: Vec<SelfInit> = Vec::new();
+    let mut inductives: Vec<InductiveClause> = Vec::new();
+    for &ci in defining {
+        let clause = &system.clauses[ci];
+        let shape = &shapes[ci];
+        let Some((_, head_args)) = &shape.head else {
+            continue;
+        };
+        let Some(head_vars) = distinct_arg_vars(arena, head_args, arg_sorts) else {
+            return Ok(SolveOne::Decline(
+                "out of fragment: a self-recursive predicate's head has a non-distinct-variable \
+                 argument; declining"
+                    .to_owned(),
+            ));
+        };
+        match &shape.body {
+            // Fact: empty body.
+            None => inits.push(SelfInit {
+                constraint: clause.constraint,
+                head_vars,
+            }),
+            // Self body: an inductive transition. Body args must be distinct vars
+            // disjoint from the head vars (pre/post binding).
+            Some((b, body_args)) if *b == pred => {
+                let Some(body_vars) = distinct_arg_vars(arena, body_args, arg_sorts) else {
+                    return Ok(SolveOne::Decline(
+                        "out of fragment: a self-recursive body has a non-distinct-variable \
+                         argument; declining"
+                            .to_owned(),
+                    ));
+                };
+                if body_vars.iter().any(|v| head_vars.contains(v)) {
+                    return Ok(SolveOne::Decline(
+                        "out of fragment: an inductive clause shares a variable between its body \
+                         and head predicate arguments (ambiguous pre/post binding); declining"
+                            .to_owned(),
+                    ));
+                }
+                inductives.push(InductiveClause {
+                    constraint: clause.constraint,
+                    body_vars,
+                    head_vars,
+                });
+            }
+            // Solved-predecessor body: an init clause with the predecessor folded
+            // in as `I_Q(args) ∧ constraint`.
+            Some((b, body_args)) => {
+                let Some(interp) = model.get(b) else {
+                    return Ok(SolveOne::Decline(
+                        "internal: a body predecessor was unsolved for a self-recursive predicate"
+                            .to_owned(),
+                    ));
+                };
+                let Some(body_inst) = instantiate(arena, interp, body_args) else {
+                    return Ok(SolveOne::Decline(
+                        "out of fragment: a body predecessor application has an arity mismatch; \
+                         declining"
+                            .to_owned(),
+                    ));
+                };
+                let folded = arena.and(body_inst, clause.constraint)?;
+                inits.push(SelfInit {
+                    constraint: folded,
+                    head_vars,
+                });
+            }
+        }
+    }
+
+    // The query clauses whose body is P become `bad`.
+    let mut queries: Vec<QueryClause> = Vec::new();
+    for (clause, shape) in system.clauses.iter().zip(shapes) {
+        if shape.head.is_none() {
+            if let Some((b, body_args)) = &shape.body {
+                if *b == pred {
+                    let Some(body_vars) = distinct_arg_vars(arena, body_args, arg_sorts) else {
+                        return Ok(SolveOne::Decline(
+                            "out of fragment: a query over a self-recursive predicate has a \
+                             non-distinct-variable argument; declining"
+                                .to_owned(),
+                        ));
+                    };
+                    queries.push(QueryClause {
+                        constraint: clause.constraint,
+                        body_vars,
+                    });
+                }
+            }
+        }
+    }
+
+    let reduced = SelfReduced {
+        arg_sorts: arg_sorts.to_vec(),
+        inits,
+        inductives,
+        queries,
+    };
+
+    let (dispatched, state_params) = dispatch_self(arena, &reduced, config)?;
+    match dispatched {
+        Dispatch::Safe { invariant } => Ok(SolveOne::Interp(PredInterpretation {
+            params: state_params,
+            body: invariant,
+        })),
+        Dispatch::Unsat { steps } => Ok(SolveOne::Unsat { steps }),
+        Dispatch::Unknown(reason) => Ok(SolveOne::Decline(reason)),
+    }
+}
+
+/// A self-recursive predicate's init disjunct: a constraint (with any solved
+/// predecessor already folded in) and the head argument variables.
+struct SelfInit {
+    constraint: TermId,
+    head_vars: Vec<SymbolId>,
+}
+
+/// The reduced single-predicate transition system for a self-recursive predicate,
+/// with solved predecessors already folded into `inits`.
+struct SelfReduced {
+    arg_sorts: Vec<Sort>,
+    inits: Vec<SelfInit>,
+    inductives: Vec<InductiveClause>,
+    queries: Vec<QueryClause>,
+}
+
+impl SelfReduced {
+    fn declare_state(
+        &self,
+        arena: &mut TermArena,
+        step: usize,
+    ) -> Result<Vec<SymbolId>, SolverError> {
+        let mut vars = Vec::with_capacity(self.arg_sorts.len());
+        for (i, &sort) in self.arg_sorts.iter().enumerate() {
+            vars.push(arena.declare(&format!("p@{step}_{i}"), sort)?);
+        }
+        Ok(vars)
+    }
+}
+
+impl TransitionSystem for SelfReduced {
+    fn state_vars(&self, arena: &mut TermArena, step: usize) -> Result<Vec<SymbolId>, SolverError> {
+        self.declare_state(arena, step)
+    }
+
+    fn init(&self, arena: &mut TermArena, s0: &[SymbolId]) -> Result<TermId, SolverError> {
+        let mut acc: Option<TermId> = None;
+        for fact in &self.inits {
+            let Some(bound) =
+                ReducedSystem::bind(arena, fact.constraint, &[], &[], &fact.head_vars, s0)
+            else {
+                return Err(SolverError::Unsupported(
+                    "Horn fact/init clause has an unbindable argument shape".to_owned(),
+                ));
+            };
+            acc = Some(match acc {
+                None => bound,
+                Some(prev) => arena.or(prev, bound)?,
+            });
+        }
+        Ok(match acc {
+            Some(term) => term,
+            None => arena.bool_const(false),
+        })
+    }
+
+    fn trans(
+        &self,
+        arena: &mut TermArena,
+        pre: &[SymbolId],
+        post: &[SymbolId],
+    ) -> Result<TermId, SolverError> {
+        let mut acc: Option<TermId> = None;
+        for ind in &self.inductives {
+            let Some(bound) = ReducedSystem::bind(
+                arena,
+                ind.constraint,
+                &ind.body_vars,
+                pre,
+                &ind.head_vars,
+                post,
+            ) else {
+                return Err(SolverError::Unsupported(
+                    "Horn inductive clause shares a variable between its body and head arguments"
+                        .to_owned(),
+                ));
+            };
+            acc = Some(match acc {
+                None => bound,
+                Some(prev) => arena.or(prev, bound)?,
+            });
+        }
+        Ok(match acc {
+            Some(term) => term,
+            None => arena.bool_const(false),
+        })
+    }
+
+    fn bad(&self, arena: &mut TermArena, s: &[SymbolId]) -> Result<TermId, SolverError> {
+        let mut acc: Option<TermId> = None;
+        for query in &self.queries {
+            let Some(bound) =
+                ReducedSystem::bind(arena, query.constraint, &query.body_vars, s, &[], &[])
+            else {
+                return Err(SolverError::Unsupported(
+                    "Horn query clause has an unbindable argument shape".to_owned(),
+                ));
+            };
+            acc = Some(match acc {
+                None => bound,
+                Some(prev) => arena.or(prev, bound)?,
+            });
+        }
+        Ok(match acc {
+            Some(term) => term,
+            None => arena.bool_const(false),
+        })
+    }
+}
+
+/// Dispatches a [`SelfReduced`] system to the model-checking engine for its state
+/// sort, returning the engine result with the pinned step-0 parameters.
+fn dispatch_self(
+    arena: &mut TermArena,
+    reduced: &SelfReduced,
+    config: &SolverConfig,
+) -> Result<(Dispatch, Vec<SymbolId>), SolverError> {
+    let state_params = reduced.declare_state(arena, 0)?;
+    let pinned = PinnedSelf {
+        inner: reduced,
+        state_params: state_params.clone(),
+    };
+    let dispatch = match state_class(&reduced.arg_sorts) {
+        StateClass::Real => match prove_safety_pdr_lra(arena, &pinned, config)? {
+            PdrLraOutcome::Safe { invariant } => Dispatch::Safe { invariant },
+            PdrLraOutcome::Reachable { steps, .. } => Dispatch::Unsat { steps },
+            PdrLraOutcome::Unknown { .. } => match prove_safety_imc_lra(arena, &pinned, config)? {
+                ImcLraOutcome::Safe { invariant } => Dispatch::Safe { invariant },
+                ImcLraOutcome::Reachable { steps, .. } => Dispatch::Unsat { steps },
+                ImcLraOutcome::Unknown { reason } => Dispatch::Unknown(reason),
+            },
+        },
+        StateClass::Finite => match prove_safety_pdr(arena, &pinned, config)? {
+            PdrOutcome::Safe { invariant } => Dispatch::Safe { invariant },
+            PdrOutcome::Reachable { steps, .. } => Dispatch::Unsat { steps },
+            PdrOutcome::Unknown { .. } => match prove_safety_imc(arena, &pinned, config)? {
+                ImcOutcome::Safe { invariant } => Dispatch::Safe { invariant },
+                ImcOutcome::Reachable { steps, .. } => Dispatch::Unsat { steps },
+                ImcOutcome::Unknown { reason } => Dispatch::Unknown(reason),
+            },
+        },
+        StateClass::Unsupported => Dispatch::Unknown(
+            "Horn predicate argument sorts are outside this slice's reach (only Real, BitVec, and \
+             Bool are dispatched)"
+                .to_owned(),
+        ),
+    };
+    Ok((dispatch, state_params))
+}
+
+/// A [`SelfReduced`] wrapper pinning the step-0 state symbols (mirrors
+/// [`PinnedReduced`] for the single-predicate path).
+struct PinnedSelf<'a> {
+    inner: &'a SelfReduced,
+    state_params: Vec<SymbolId>,
+}
+
+impl TransitionSystem for PinnedSelf<'_> {
+    fn state_vars(&self, arena: &mut TermArena, step: usize) -> Result<Vec<SymbolId>, SolverError> {
+        if step == 0 {
+            return Ok(self.state_params.clone());
+        }
+        self.inner.declare_state(arena, step)
+    }
+
+    fn init(&self, arena: &mut TermArena, s0: &[SymbolId]) -> Result<TermId, SolverError> {
+        self.inner.init(arena, s0)
+    }
+
+    fn trans(
+        &self,
+        arena: &mut TermArena,
+        pre: &[SymbolId],
+        post: &[SymbolId],
+    ) -> Result<TermId, SolverError> {
+        self.inner.trans(arena, pre, post)
+    }
+
+    fn bad(&self, arena: &mut TermArena, s: &[SymbolId]) -> Result<TermId, SolverError> {
+        self.inner.bad(arena, s)
+    }
+}
+
+/// The query check under a solved model.
+enum QueryCheck {
+    /// Some query body is satisfiable under the model ⇒ `false` is derivable.
+    Reachable {
+        /// A surfaced depth (0 when no model-checking depth is available).
+        steps: usize,
+    },
+    /// Every query body is unsatisfiable under the model.
+    Unreachable,
+    /// A query could not be discharged (an engine `Unknown`/unsupported).
+    Decline,
+}
+
+/// Checks every query clause `P(args) ∧ constraint ⇒ false` under the solved
+/// model: `I_P(args) ∧ constraint` must be UNSAT. A `Sat` is a reachable
+/// derivation of `false` (the whole system is `Unsat`).
+fn check_queries(
+    arena: &mut TermArena,
+    system: &HornSystem,
+    shapes: &[ClauseShape],
+    model: &BTreeMap<FuncId, PredInterpretation>,
+    config: &SolverConfig,
+) -> Result<QueryCheck, SolverError> {
+    for (clause, shape) in system.clauses.iter().zip(shapes) {
+        if shape.head.is_some() {
+            continue;
+        }
+        let mut assertions: Vec<TermId> = Vec::new();
+        if let Some((body_pred, body_args)) = &shape.body {
+            let Some(interp) = model.get(body_pred) else {
+                return Ok(QueryCheck::Decline);
+            };
+            let Some(inst) = instantiate(arena, interp, body_args) else {
+                return Ok(QueryCheck::Decline);
+            };
+            assertions.push(inst);
+        }
+        assertions.push(clause.constraint);
+        match check_auto(arena, &assertions, config) {
+            Ok(CheckResult::Unsat) => {}
+            Ok(CheckResult::Sat(_)) => return Ok(QueryCheck::Reachable { steps: 0 }),
+            Ok(_) | Err(SolverError::Unsupported(_)) => return Ok(QueryCheck::Decline),
+            Err(other) => return Err(other),
+        }
+    }
+    Ok(QueryCheck::Unreachable)
+}
+
+/// **The whole-system verify-before-return clause-validity check.** Re-validates
+/// the full multi-predicate `model` against **every** original Horn clause. For
+/// each clause `(⋀ body P_j → I_{P_j}) ∧ constraint ∧ ¬(head P → I_P)` (head
+/// `None` ⇒ no head term) the obligation must be `unsat` under the trusted
+/// [`check_auto`](crate::check_auto). Returns `true` only when **all** clauses
+/// pass; any non-`unsat`, unknown, unsupported, or error ⇒ `false` (a sound
+/// decline). This is the only trusted gate of the multi-predicate solver.
+fn verify_horn_model(
+    arena: &mut TermArena,
+    system: &HornSystem,
+    model: &BTreeMap<FuncId, PredInterpretation>,
+    config: &SolverConfig,
+) -> Result<bool, SolverError> {
+    for clause in &system.clauses {
+        let mut assertions: Vec<TermId> = Vec::new();
+
+        // Body atoms: P_j(args) ↦ I_{P_j}(args).
+        for &atom in &clause.body {
+            let Some((func, args)) = app_args_with_func(arena, atom, model) else {
+                return Ok(false);
+            };
+            let interp = &model[&func];
+            let Some(inst) = instantiate(arena, interp, &args) else {
+                return Ok(false);
+            };
+            assertions.push(inst);
+        }
+
+        // The theory constraint.
+        assertions.push(clause.constraint);
+
+        // ¬(head with P ↦ I); head None ⇒ ¬false = true (a no-op, omitted).
+        if let Some(head) = clause.head {
+            let Some((func, args)) = app_args_with_func(arena, head, model) else {
+                return Ok(false);
+            };
+            let interp = &model[&func];
+            let Some(inst) = instantiate(arena, interp, &args) else {
+                return Ok(false);
+            };
+            let neg = arena.not(inst)?;
+            assertions.push(neg);
+        }
+
+        match check_auto(arena, &assertions, config) {
+            Ok(CheckResult::Unsat) => {}
+            Ok(_) | Err(SolverError::Unsupported(_)) => return Ok(false),
+            Err(other) => return Err(other),
+        }
+    }
+    Ok(true)
+}
+
+/// The `(predicate, args)` of `term` if it is an application of a predicate the
+/// `model` interprets, else `None`.
+fn app_args_with_func(
+    arena: &TermArena,
+    term: TermId,
+    model: &BTreeMap<FuncId, PredInterpretation>,
+) -> Option<(FuncId, Vec<TermId>)> {
+    match arena.node(term) {
+        TermNode::App {
+            op: Op::Apply(func),
+            args,
+        } if model.contains_key(func) => Some((*func, args.to_vec())),
+        _ => None,
+    }
+}
+
+/// Extracts the argument **variable symbols** of a list of predicate-application
+/// argument terms, requiring each to be a **distinct** variable symbol of the
+/// matching declared sort. Returns `None` on any non-variable, repeated, or
+/// sort-mismatched argument (the reduction's distinct-variable boundary).
+fn distinct_arg_vars(
+    arena: &TermArena,
+    args: &[TermId],
+    arg_sorts: &[Sort],
+) -> Option<Vec<SymbolId>> {
+    if args.len() != arg_sorts.len() {
+        return None;
+    }
+    let mut vars = Vec::with_capacity(args.len());
+    for (i, &arg) in args.iter().enumerate() {
+        match arena.node(arg) {
+            TermNode::Symbol(sym) => {
+                if arena.sort_of(arg) != arg_sorts[i] || vars.contains(sym) {
+                    return None;
+                }
+                vars.push(*sym);
+            }
+            _ => return None,
+        }
+    }
+    Some(vars)
+}
+
+/// Collects the free variable symbols of `term` into `out` (every [`TermNode::Symbol`]
+/// leaf). Used to confirm a direct interpretation is closed over its parameters.
+fn collect_free_symbols(
+    arena: &TermArena,
+    term: TermId,
+    out: &mut std::collections::BTreeSet<SymbolId>,
+) {
+    match arena.node(term) {
+        TermNode::Symbol(sym) => {
+            out.insert(*sym);
+        }
+        TermNode::App { args, .. } => {
+            let args = args.clone();
+            for arg in args {
+                collect_free_symbols(arena, arg, out);
+            }
+        }
+        _ => {}
     }
 }
