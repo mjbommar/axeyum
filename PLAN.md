@@ -97,7 +97,12 @@ Track 1 (SAT inprocessing [P1.1], preprocessing [P1.2], core modernization
 **3. ~3 categorically-absent engines** (the genuinely new work this audit adds):
 - **CHC / Horn (PDR/Spacer)** — *unbounded* invariant discovery, the step beyond
   today's bounded BMC + inductive k-induction. The single biggest categorical hole
-  vs Z3. New: [P4.6](docs/plan/track-4-usecases-frontend/P4.6-chc-horn.md).
+  vs Z3. [P4.6](docs/plan/track-4-usecases-frontend/P4.6-chc-horn.md). **OPENED
+  (2026-06-22, ADR-0048):** verify-guarded single-predicate **IC3/PDR over QF_BV**
+  (`prove_safety_pdr`) discovers invariants where k-induction is inconclusive —
+  `Safe` only when the discovered invariant passes the 3 implication checks. **Next
+  prerequisite (long pole): MBP for LIA/LRA** (P2.6-T2.6.6, absent) → then LRA-theory
+  CHC + the multi-predicate Horn core.
 - **Craig interpolation** — a feature column *and* CHC's lemma engine; read off
   the already-checked proof. [P3.8](docs/plan/track-3-proof-lean/P3.8-interpolation.md)
   **ENGINE DONE (2026-06-22, ADR-0047):** interpolants land for conjunctive

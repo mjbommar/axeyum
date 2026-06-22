@@ -352,6 +352,18 @@ pub const CAPABILITIES: &[Capability] = &[
                    DIMACS+DRAT pair (clausal layer, modulo trusted term→CNF reduction)",
         reference: "ADR-0011/0012",
     },
+    Capability {
+        area: "reachability",
+        feature: "CHC/PDR inductive-invariant DISCOVERY (prove_safety_pdr): single-predicate IC3/PDR \
+                  over the transition system — proves safe properties that are not k-inductive by \
+                  discovering the invariant",
+        assurance: Assurance::Checked,
+        evidence: "the IC3 search is UNTRUSTED — a Safe verdict is returned only when the discovered \
+                   invariant passes 3 independent check_auto-unsat checks (initiation, consecution, \
+                   safety); Reachable only when BMC-confirmed; prove_safety_pdr_certified bundles the \
+                   3 DRAT-recheckable proofs; all caps → Unknown",
+        reference: "ADR-0048",
+    },
 ];
 
 /// Renders [`CAPABILITIES`] as the canonical capability-matrix markdown table.

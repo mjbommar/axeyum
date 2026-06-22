@@ -16,16 +16,22 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   all 5 interpolants, the `TransitionSystem`/BMC/k-induction machinery (`bmc.rs`), the warm BV
   incremental solver with unsat-core cube extraction (`check_assuming_core`) + `block_model`, the
   e-graph keystone, and the `certify_safety_k_induction` certificate precedent.
-  - **First slice (in progress, worktree sub-agent): single-predicate IC3/PDR over the existing
-    `TransitionSystem` (QF_BV/Bool)** — `prove_safety_pdr` discovers an inductive invariant on
-    properties where `prove_safety_k_induction` returns `Inconclusive`. **Soundness anchor (untrusted
-    search):** a `Safe` verdict is returned ONLY when the discovered invariant passes 3 independent
-    `check_auto`-unsat checks (initiation `init∧¬Inv`, consecution `Inv∧trans∧¬Inv'`, safety
-    `Inv∧bad`); `Reachable` only when confirmed by `bounded_model_check`'s replay-checked trace; all
-    caps → `Unknown`. Certified variant bundles the 3 proofs (clone of `SafetyCertificate::recheck`).
-    No MBP / no interpolation dependency (classic unsat-core inductive generalization) — robust to
-    worktree base. **NEXT after this lands: MBP for LIA/LRA (P2.6-T2.6.6)** — the prerequisite that
-    unblocks LRA-theory CHC and the full Spacer generalization.
+  - **First slice — DONE (`38cd647`, ADR-0048): single-predicate IC3/PDR over `TransitionSystem`
+    (QF_BV/Bool).** `prove_safety_pdr` discovers an inductive invariant on properties where
+    `prove_safety_k_induction` returns `Inconclusive` (the headline test proves exactly this gap is
+    closed: a stuck counter with `bad: x==12` — k-induction Inconclusive, PDR `Safe`, invariant
+    independently re-checked). Full IC3: frame lemma sets, proof-obligation work-stack (no recursion),
+    relative-inductiveness blocking + predecessor extraction, greedy literal-drop generalization,
+    forward propagation + `F[i]==F[i+1]` fixpoint. **Soundness anchor (untrusted search):** `Safe`
+    only when the discovered invariant passes 3 `check_auto`-unsat checks (initiation/consecution/
+    safety; consecution via a faithful `s↦s'` structural substitution — reviewed); `Reachable` only
+    when `bounded_model_check`-confirmed; 4 resource caps → `Unknown`. `prove_safety_pdr_certified`
+    bundles the 3 DRAT-recheckable proofs. 5 tests; bmc lib (13) green. (Opus worktree sub-agent off
+    a stale base — pdr.rs uses only pre-existing APIs so it cherry-picked clean; anchor reviewed.)
+    Ledger row (reachability, `Checked`).
+  - **NEXT: MBP for LIA/LRA (P2.6-T2.6.6)** — the long-pole prerequisite that unblocks LRA-theory CHC
+    and Spacer-style predecessor generalization; then the online LRA theory solver, the multi-predicate
+    Horn IR, and interpolation-based generalization. The BV-PDR slice de-risked the engine shape.
 
 - **Session 2026-06-22 (cont.) — P3.8 Craig interpolation COMPLETE (LRA+EUF+SAT+QF_BV+UFLRA, ledgered).**
   Engine now interpolates the two core conjunctive theories, each verify-before-return:
