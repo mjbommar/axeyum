@@ -79,6 +79,14 @@ pub struct IntBlasting {
     /// `(original integer symbol, fresh bit-vector symbol)` pairs.
     vars: Vec<(SymbolId, SymbolId)>,
     had_integers: bool,
+    /// Number of no-overflow (faithful-product) side-constraints conjoined onto
+    /// the assertions — one per integer product bit-blasted at this width. These
+    /// are *restricting* guards: they prune wrapping models so the bounded search
+    /// finds the genuine witness for `sat`, but they also strengthen the formula,
+    /// so a refutation of the guarded query does NOT refute the original. Any
+    /// proof-/`unsat`-emitting consumer must treat a non-zero count as a reason to
+    /// stay inconclusive (see `restricting_constraints`).
+    restricting_constraints: usize,
 }
 
 impl IntBlasting {
@@ -95,6 +103,17 @@ impl IntBlasting {
     /// The bit-width used for the bounded encoding.
     pub fn width(&self) -> u32 {
         self.width
+    }
+
+    /// Number of no-overflow side-constraints conjoined onto the blasted
+    /// assertions (one per integer product). A non-zero count means the blasted
+    /// query is a **strict restriction** of the original: it is sound to read a
+    /// model back for `sat` (replay re-checks the originals), but a bit-vector
+    /// `unsat` of the guarded query does NOT establish `unsat` of the original —
+    /// so any proof export / `unsat`-emitting path must decline (stay
+    /// `Inconclusive`/`Unknown`) when this is non-zero.
+    pub fn restricting_constraints(&self) -> usize {
+        self.restricting_constraints
     }
 
     /// Reads a bit-vector model back into an integer assignment over the
@@ -147,6 +166,7 @@ pub fn blast_integers(
             width,
             vars: Vec::new(),
             had_integers: false,
+            restricting_constraints: 0,
         });
     }
 
@@ -167,6 +187,7 @@ pub fn blast_integers(
     // conjunction; see `mul_no_overflow_constraint` for the encoding and the
     // soundness note (replay remains the anchor; UNSAT-with-constraint only widens
     // via the ladder, never an `unsat`).
+    let restricting_constraints = ctx.mul_constraints.len();
     rewritten.extend(ctx.mul_constraints);
 
     Ok(IntBlasting {
@@ -174,6 +195,7 @@ pub fn blast_integers(
         width,
         vars: ctx.vars,
         had_integers: true,
+        restricting_constraints,
     })
 }
 

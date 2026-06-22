@@ -212,6 +212,37 @@ fn bounded_qf_lia_unsat_exports_a_recheckable_certificate() {
 }
 
 #[test]
+fn bounded_qf_nia_with_overflow_guard_does_not_export_a_false_proof() {
+    // SOUNDNESS REGRESSION (locks the fail-closed guard): x*x == 16 ∧ 0 ≤ x ≤ 100
+    // is satisfiable over the integers (x = 4). Bit-blasted at width 4 (signed
+    // range [-8, 7]), the genuine witness x = 4 has x*x = 16, which OVERFLOWS the
+    // 4-bit product — so the no-overflow side-constraint prunes it and the guarded
+    // QF_BV query can be UNSAT at this width. A DRAT refutation of that *restricted*
+    // query must NEVER be exported as a proof that the ORIGINAL is unsat (it is
+    // not). `export_qf_lia_unsat_proof` must decline to `Inconclusive`.
+    use axeyum_ir::Sort;
+    use axeyum_solver::export_qf_lia_unsat_proof;
+
+    let mut arena = TermArena::new();
+    let xs = arena.declare("x", Sort::Int).unwrap();
+    let x = arena.var(xs);
+    let xx = arena.int_mul(x, x).unwrap();
+    let sixteen = arena.int_const(16);
+    let xx_eq_16 = arena.eq(xx, sixteen).unwrap();
+    let zero = arena.int_const(0);
+    let hundred = arena.int_const(100);
+    let lo = arena.int_le(zero, x).unwrap();
+    let hi = arena.int_le(x, hundred).unwrap();
+
+    let outcome = export_qf_lia_unsat_proof(&mut arena, &[xx_eq_16, lo, hi], 4).unwrap();
+    assert!(
+        matches!(outcome, UnsatProofOutcome::Inconclusive),
+        "a guarded (overflow-restricted) blast must NOT export an unsat proof of \
+         the original satisfiable formula; expected Inconclusive, got {outcome:?}"
+    );
+}
+
+#[test]
 fn datatype_unsat_exports_a_recheckable_certificate() {
     // A ground constructor mismatch folds to false: is_green(red) is unsat.
     // simplify_datatypes reduces it to a Boolean contradiction, exported and

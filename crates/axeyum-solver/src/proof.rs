@@ -309,6 +309,16 @@ pub fn export_qf_lia_unsat_proof(
         }
         Err(IntBlastError::Ir(inner)) => return Err(SolverError::Backend(inner.to_string())),
     };
+    // Fail-closed against restricting guards: when the blast added any
+    // no-overflow (faithful-product) side-constraints, the resulting `QF_BV`
+    // query is a *strict restriction* of the original (it prunes wrapping
+    // products to steer the `sat` search). A DRAT refutation of that restricted
+    // query therefore does NOT establish `unsat` of the original integer
+    // formula — exporting it would be a wrong `unsat` proof. So we decline to a
+    // sound `Inconclusive` rather than certify a refutation we cannot transfer.
+    if blasting.restricting_constraints() > 0 {
+        return Ok(UnsatProofOutcome::Inconclusive);
+    }
     let eliminated = blasting.assertions().to_vec();
     export_qf_bv_unsat_proof(arena, &eliminated)
 }
