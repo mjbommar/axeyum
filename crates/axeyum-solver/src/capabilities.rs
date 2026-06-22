@@ -428,8 +428,20 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "reachability",
+        feature: "Spacer-style IC3/PDR over LRA (prove_safety_pdr_lra): inductive-invariant discovery \
+                  for infinite-state real-valued transition systems — mbp_lra predecessor cubes, \
+                  relative-inductive blocking, literal-drop generalization, fixpoint",
+        assurance: Assurance::Validated,
+        evidence: "the IC3 search + mbp_lra projection are UNTRUSTED — Safe only when the discovered \
+                   invariant passes 3 check_auto-unsat checks (init/consecution/safety); Reachable only \
+                   when an inline LRA k-unrolling is check_auto-Sat; closes Safe incl. MULTI-VARIABLE \
+                   systems (twin counters x=y); all caps → Unknown",
+        reference: "ADR-0048",
+    },
+    Capability {
+        area: "reachability",
         feature: "interpolation-based model checking over LRA (prove_safety_imc_lra): IMC for \
-                  infinite-state real-valued transition systems via the conjunctive lra_interpolant + \
+                  infinite-state real-valued transition systems via the disjunctive lra_interpolant_cnf + \
                   an inline LRA k-unrolling",
         assurance: Assurance::Validated,
         evidence: "same untrusted-fixpoint / 3-check Safe gate + check_auto-Sat Reachable as QF_BV IMC. \
