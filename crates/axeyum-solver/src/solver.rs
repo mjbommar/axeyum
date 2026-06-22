@@ -291,6 +291,12 @@ impl<B: SolverBackend> Solver<B> {
         match crate::lra_interpolant(arena, a, b) {
             Ok(Some(interpolant)) => Ok(Some(interpolant)),
             Ok(None) | Err(SolverError::Unsupported(_)) => {
+                // Disjunctive (CNF) QF_LRA: the conjunctive Farkas interpolant
+                // declines when the assertions carry Boolean structure over real
+                // atoms; the interpolating-SMT construction handles those.
+                if let Some(interpolant) = crate::lra_interpolant_cnf(arena, a, b)? {
+                    return Ok(Some(interpolant));
+                }
                 // QF_LIA via the rational relaxation (verified over the integers).
                 if let Some(interpolant) = crate::lia_interpolant(arena, a, b)? {
                     return Ok(Some(interpolant));

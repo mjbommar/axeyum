@@ -61,6 +61,7 @@ mod lia;
 mod lia_gcd;
 mod lia_interpolant;
 mod lra;
+mod lra_interpolant_cnf;
 mod maxsat;
 mod mbp;
 mod model;
@@ -185,6 +186,7 @@ pub use lra::{
     FarkasAtom, FarkasCertificate, check_with_lia_simplex, check_with_lra, check_with_lra_simplex,
     lra_farkas_certificate, lra_unsat_core,
 };
+pub use lra_interpolant_cnf::lra_interpolant_cnf;
 pub use maxsat::{
     MaxSatOutcome, max_satisfiable, max_satisfiable_model, max_satisfiable_weighted,
     max_satisfiable_weighted_model,
