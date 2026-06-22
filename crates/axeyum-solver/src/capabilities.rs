@@ -256,6 +256,19 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0013/0015",
     },
     Capability {
+        area: "QF_UFLIA",
+        feature: "ONLINE Nelson–Oppen combination (check_qf_uflia_online): online EufTheory + online \
+                  LiaTheory by model-based equality sharing — the integer analogue, handling LIA \
+                  non-convexity via model-based DFS interface splitting (interface candidates include \
+                  UF-argument constants, so integer tightening fires)",
+        assurance: Assurance::Validated,
+        evidence: "differential vs the trusted offline check_with_uf_arithmetic — random UFLIA \
+                   conjunctions, 0 disagreements, every sat model REPLAYED with integer values; the \
+                   combined model covers EUF-only symbols and an uncertifiable leaf yields Unknown (both \
+                   guards from the EUF+LRA bug-fixes carried over). Conjunctive MBTC; non-UFLIA → Unknown",
+        reference: "ADR-0013/0014",
+    },
+    Capability {
         area: "QF_UFLIA/UFLRA",
         feature: "uninterpreted functions over Int/Real, by EUF + linear-arithmetic \
                   combination (eager Ackermann elimination → the arithmetic dispatcher)",
