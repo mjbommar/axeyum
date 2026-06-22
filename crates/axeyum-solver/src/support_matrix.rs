@@ -244,10 +244,14 @@ pub const SUPPORT_MATRIX: &[SupportRow] = &[
         ir: IrStatus::Modeled,
         solver: SolverStatus::SoundIncomplete,
         proof: ProofStatus::NoProof,
-        note: "general NIA is sound-incomplete (linear abstraction + sign lemmas, \
-               unknown otherwise); the single-variable integer polynomial decider \
-               (nia_square) is exact for that shape (e.g. x*x=2 → unsat). No proof \
-               artifact. ADR-0024",
+        note: "general NIA is sound-incomplete (linear abstraction + bounded bit-blast \
+               with no-overflow MULTIPLIER GUARDS so small-witness nonlinear sat decides \
+               — replay-checked over exact integer semantics; genuine nonlinear-integer \
+               unsat is undecidable for bounded blasting ⇒ sound unknown); the \
+               single-variable integer polynomial decider (nia_square) is exact (e.g. \
+               x*x=2 → unsat). Differentially validated DISAGREE=0 vs Z3. No proof \
+               artifact, and proof export is fail-closed (Inconclusive) when overflow \
+               guards restrict the blast. ADR-0024",
     },
     SupportRow {
         fragment: "QF_NRA (general nonlinear real)",
@@ -255,10 +259,28 @@ pub const SUPPORT_MATRIX: &[SupportRow] = &[
         ir: IrStatus::Modeled,
         solver: SolverStatus::SoundIncomplete,
         proof: ProofStatus::NoProof,
-        note: "linear abstraction + replay + McCormick spatial branch-and-bound; \
-               relaxation-unsat is sound, sat is replay-checked, unknown otherwise. \
-               No proof artifact for the GENERAL case. ADR-0024. (Sub-fragments with \
-               proofs are listed separately below.)",
+        note: "the FALLBACK for the hard coupled/high-degree tail the CAD declines \
+               (linear abstraction + replay + McCormick spatial branch-and-bound; \
+               relaxation-unsat sound, sat replay-checked, unknown otherwise). No proof \
+               artifact for this general fallback. ADR-0024. (The complete CAD decision \
+               side and the proof-carrying sub-fragments are listed separately below.)",
+    },
+    SupportRow {
+        fragment: "QF_NRA · cylindrical decomposition (coupled, mixed/non-strict, any dimension)",
+        parser: ParserStatus::Accepted,
+        ir: IrStatus::Modeled,
+        solver: SolverStatus::Decides,
+        proof: ProofStatus::NoProof,
+        note: "complete CAD decision side: coupled-equality resultant grid (irrational \
+               coordinates) + strict and non-strict cylindrical decomposition over open \
+               cells AND critical 0-cells, ANY dimension, with RATIONAL or ALGEBRAIC \
+               coordinates (algebraic criticals lifted via Res(min-poly, p) + exact \
+               RealAlgebraic field arithmetic). Every sat replay-checked; every unsat \
+               exhaustive-or-decline (decline propagates, never a gap). Differentially \
+               VALIDATED DISAGREE=0 vs Z3 (the NRA + NIA fuzzes found+fixed three real \
+               wrong-unsats in shared isolation/sampling/lift code). No proof artifact \
+               yet (per-cell Positivstellensatz reconstruction is the open arc). \
+               ADR-0044/0045/0046",
     },
     SupportRow {
         fragment: "QF_NRA · degree-2 SOS / globally-(non)negative quadratic forms",

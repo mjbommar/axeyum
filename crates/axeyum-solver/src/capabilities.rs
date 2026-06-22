@@ -161,11 +161,34 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0013/0015 (P1.6)",
     },
     Capability {
-        area: "QF_NRA/NIA",
-        feature: "nonlinear via linear abstraction + sign/zero lemmas + McCormick B&B",
+        area: "QF_NRA",
+        feature: "nonlinear real: a complete cylindrical-decomposition decision side \
+                  (single-variable real-algebraic + degree-2 SOS/PSD + coupled-equality \
+                  resultant grid + strict and non-strict CAD, ANY dimension, rational OR \
+                  algebraic coordinates) over a linear-abstraction/McCormick fallback; \
+                  sound-incomplete only on the hard coupled/high-degree tail",
         assurance: Assurance::SoundIncomplete,
-        evidence: "model replay (SAT); relaxation-unsat (UNSAT); unknown otherwise",
-        reference: "ADR-0024",
+        evidence: "irrational witnesses as Value::RealAlgebraic (x*x=2 → Sat √2); every \
+                   SAT replay-checked (sign_at / exact field-arithmetic eval), every CAD \
+                   UNSAT exhaustive-or-decline; differentially VALIDATED DISAGREE=0 vs Z3 \
+                   over the NRA fuzz (which found+fixed real wrong-unsats); degree-2 SOS \
+                   UNSAT carries a kernel-checked Lean proof, general CAD UNSAT no proof yet",
+        reference: "ADR-0024/0038/0039/0040/0044/0045/0046",
+    },
+    Capability {
+        area: "QF_NIA",
+        feature: "nonlinear integer: linear abstraction + bounded bit-blast with \
+                  no-overflow multiplier guards + the single-variable integer-polynomial \
+                  decider (nia_square)",
+        assurance: Assurance::SoundIncomplete,
+        evidence: "small-witness SAT decides (the no-overflow guard finds faithful, \
+                   non-wrapping products; every SAT replay-checked over exact integer \
+                   semantics); x*x=2 → unsat; genuine nonlinear-integer UNSAT is \
+                   undecidable for bounded blasting ⇒ sound Unknown (never wrong unsat); \
+                   differentially VALIDATED DISAGREE=0 vs Z3 over the NIA fuzz; proof \
+                   export is fail-closed (Inconclusive) when overflow guards restrict the \
+                   blast",
+        reference: "ADR-0024 + the no-overflow multiplier guard / fail-closed proof export",
     },
     Capability {
         area: "QF_FP",
