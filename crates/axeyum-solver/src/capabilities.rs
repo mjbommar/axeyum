@@ -265,12 +265,18 @@ pub const CAPABILITIES: &[Capability] = &[
         feature: "ONLINE Nelson–Oppen combination (check_qf_uflia_online): online EufTheory + online \
                   LiaTheory by model-based equality sharing — the integer analogue, handling LIA \
                   non-convexity via model-based DFS interface splitting (interface candidates include \
-                  UF-argument constants, so integer tightening fires)",
+                  UF-argument constants, so integer tightening fires). Now decides FULL \
+                  Boolean-structured QF_UFLIA via the same enumerative DPLL(T) as QF_UFLRA (Tseitin \
+                  skeleton over the theory atoms, propositional-model enumeration with theory-conflict \
+                  blocking clauses, the conjunctive MBTC reused as the per-model theory oracle)",
         assurance: Assurance::Validated,
         evidence: "differential vs the trusted offline check_with_uf_arithmetic — random UFLIA \
-                   conjunctions, 0 disagreements, every sat model REPLAYED with integer values; the \
-                   combined model covers EUF-only symbols and an uncertifiable leaf yields Unknown (both \
-                   guards from the EUF+LRA bug-fixes carried over). Conjunctive MBTC; non-UFLIA → Unknown",
+                   conjunctions AND random and/or/not/ite Boolean trees over UFLIA atoms (600-instance \
+                   fuzz, non-zero sat + unsat coverage), 0 disagreements, every sat model REPLAYED with \
+                   integer values; the combined model covers EUF-only symbols and an uncertifiable / \
+                   per-model leaf yields Unknown (no wrong unsat). Caps (models/atoms/clauses/split-depth/\
+                   timeout) → graceful Unknown; non-UFLIA → Unknown. 1-UIP learning / theory propagation \
+                   deferred",
         reference: "ADR-0013/0014",
     },
     Capability {
