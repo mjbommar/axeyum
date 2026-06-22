@@ -1,7 +1,18 @@
 # Roadmap
 
-Status: draft
-Last updated: 2026-06-12
+Status: **foundation phases (0–7) landed**; active execution has moved to the
+multi-track Z3 + Lean parity plan.
+Last updated: 2026-06-22
+
+> **Where the live plan is now.** This file is the *research/foundation* roadmap
+> (Phases 0–7 — the decidable finite-domain + arithmetic foundation, now built).
+> The end-to-end push to **Z3 + Lean parity** is decomposed into tracks → phases →
+> tasks in **[PLAN.md](../../../PLAN.md)** and [`docs/plan/`](../../../docs/plan/README.md)
+> (Track 1 engine/perf · Track 2 theories · Track 3 proofs/Lean · Track 4
+> use-cases), with the current honest gap analysis in PLAN.md's
+> "the gap to Z3/cvc5, itemized" section. Live per-session state is in
+> **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
+> "how the foundation was sequenced."
 
 ## Purpose
 
@@ -334,17 +345,32 @@ math/verification examples and a memory-using infosec example remain.
 ## Beyond Phase 7: The Proving Horizon
 
 The phases above build the decidable finite-domain foundation. The north
-star ([north-star note](../00-orientation/north-star.md)) continues past it;
-these are direction markers, not commitments, sequenced only loosely:
+star ([north-star note](../00-orientation/north-star.md)) continues past it.
+**Most of these markers are now landed or in active flight** (2026-06-22) — they
+are tracked concretely in the [parity plan](../../../PLAN.md) (tracks/phases) and
+[STATUS.md](../../../STATUS.md), not loosely here:
 
-- Arithmetic theories (QF_LIA/QF_LRA): simplex core, branch and bound.
-- Theory combination (Nelson-Oppen style) once two real theories exist.
-- Quantified fragments: E-matching over the term index, then MBQI-style
-  model checking; enumerative instantiation as the simple baseline.
-- Proof production grows with each rung: every new engine ships with its
-  evidence story, extending the layered-certificate pattern.
-- Proof-assistant interop (export obligations to / import lemmas from
-  Lean-class systems) as the bridge to full proving.
+- Arithmetic theories (QF_LIA/QF_LRA): **landed** — exact-rational simplex +
+  Farkas (QF_LRA), bit-blast + branch-and-bound + Gomory cuts (QF_LIA). Next:
+  native LIA cut portfolio + an unbounded-completeness backstop
+  ([P2.4](../../../docs/plan/track-2-theories/P2.4-lia-cuts.md)).
+- Nonlinear arithmetic (QF_NRA/NIA): **CAD decision side complete** (single-var
+  real-algebraic + coupled grid + strict/non-strict CAD, rational *or* algebraic
+  coordinates); sound-incomplete tail tracked at
+  [P2.5](../../../docs/plan/track-2-theories/P2.5-nra-cad.md).
+- Theory combination (Nelson-Oppen): conjunctive EUF+LIA/LRA **landed**; the
+  online e-graph + CDCL(T) keystone is [P1.4/P1.5](../../../docs/plan/track-1-engine/README.md).
+- Quantified fragments: finite expansion + e-matching + MBQI **landed**;
+  maturity at [P2.6](../../../docs/plan/track-2-theories/P2.6-quantifiers.md).
+- Proof production: DRAT (clausal) + Alethe + an in-tree **Lean-grade kernel**
+  with reconstruction **landed**; the trust ledger drives "modulo trusted
+  reduction" toward zero ([Track 3](../../../docs/plan/track-3-proof-lean/README.md)).
+- Proof-assistant interop: Alethe→Lean reconstruction is the
+  [Track 3 capstone](../../../docs/plan/track-3-proof-lean/P3.7-lean-reconstruction.md).
+- **Newly scoped categorical engines** (the honest remaining gap vs Z3): CHC/Horn
+  PDR ([P4.6](../../../docs/plan/track-4-usecases-frontend/P4.6-chc-horn.md)),
+  Craig interpolation ([P3.8](../../../docs/plan/track-3-proof-lean/P3.8-interpolation.md)),
+  synthesis/abduction ([P4.7](../../../docs/plan/track-4-usecases-frontend/P4.7-synthesis.md)).
 
 Entering any horizon item gets its own ADR with prerequisites and exit
 criteria; none may begin while it would starve a foundation phase.

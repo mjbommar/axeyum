@@ -22,13 +22,17 @@ Reference reading: [`../references/z3-theories.md`](../references/z3-theories.md
 | [P2.7](P2.7-strings.md) | Strings (unbounded, full `str.*`, regex) | L | P1.6 (BV+LIA), P2.6 | needs combination + quantifier-ish reasoning |
 | [P2.8](P2.8-fp-polish.md) | FP polish (unspecified values, min/max ±0, lazy conversion) | S–M | — | already near parity |
 | [P2.9](P2.9-datatypes-lazy.md) | Datatypes lazy (e-graph splitting + occurs-check) | M | P1.4, P1.5 | lower priority |
+| [P2.10](P2.10-breadth-backlog.md) | Breadth backlog (sequences, sets/bags, sep logic, finite fields, co-datatypes, rec-fun, NIA gap) | per-item M–XL | P1.4, P1.5 | enumerated; the remaining theory *columns* Z3/cvc5 have and we don't |
 
 ## Order
 After the Track 1 keystones land: **P2.3 (EUF)** first (it is the first
 `TheorySolver` and validates the loop), then **P2.2 (lazy arrays)** and **P2.1
 (lazy BV)**, then **P2.9 (datatypes)**. **P2.4 (LIA cuts)** and **P2.8 (FP)** any
 time. **P2.6 (quantifiers)** after the e-graph. **P2.5 (NRA/CAD)** and **P2.7
-(full strings)** are the multi-month frontiers.
+(full strings)** are the multi-month frontiers. **P2.10 (breadth backlog)** is
+the enumerated tail — items there start only behind the keystones and behind the
+fragments above, but the file keeps them *counted* so "feature coverage" is a
+list, not a guess.
 
 Every new `unsat` route gets either an independent checker or a
 [trust-ledger](../track-3-proof-lean/P3.0-trust-ledger.md) entry, and ideally an

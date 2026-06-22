@@ -56,9 +56,9 @@ untrusted search and validated by small independent checkers.
 | Track | Folder | Theme |
 |---|---|---|
 | 1 — Engine & Performance | [`track-1-engine/`](docs/plan/track-1-engine/README.md) | SAT inprocessing, preprocessing, SAT-core modernization, e-graph, CDCL(T), theory combination, PBLS, strategy |
-| 2 — Theories & Breadth | [`track-2-theories/`](docs/plan/track-2-theories/README.md) | lazy BV, lazy arrays, EUF, LIA cuts, NRA/CAD, quantifiers, strings, FP polish, datatypes |
-| 3 — Proofs & Lean | [`track-3-proof-lean/`](docs/plan/track-3-proof-lean/README.md) | trust ledger, LRAT, Alethe IR+emitter, Carcara-checked QF_BV, embedded checker, reduction proofs, Lean kernel + reconstruction |
-| 4 — Use Cases & Frontend | [`track-4-usecases-frontend/`](docs/plan/track-4-usecases-frontend/README.md) | warm lazy memory, symexec/CFG frontend, OMT/MILP, SMT-LIB command surface, benchmarking & the perf gate |
+| 2 — Theories & Breadth | [`track-2-theories/`](docs/plan/track-2-theories/README.md) | lazy BV, lazy arrays, EUF, LIA cuts (+ unbounded backstop), NRA/CAD, quantifiers, strings, FP polish, datatypes, **breadth backlog** (sequences/sets/sep-logic/finite-fields/co-datatypes/rec-fun) |
+| 3 — Proofs & Lean | [`track-3-proof-lean/`](docs/plan/track-3-proof-lean/README.md) | trust ledger, LRAT, Alethe IR+emitter, Carcara-checked QF_BV, embedded checker, reduction proofs, Lean kernel + reconstruction, **Craig interpolation** |
+| 4 — Use Cases & Frontend | [`track-4-usecases-frontend/`](docs/plan/track-4-usecases-frontend/README.md) | warm lazy memory, symexec/CFG frontend, OMT/MILP, SMT-LIB command surface, benchmarking & the perf gate, **CHC/Horn (PDR/Spacer)**, **synthesis/abduction** |
 
 Cross-cutting: [`00-north-star.md`](docs/plan/00-north-star.md) (definition of
 done), [`01-dependency-dag.md`](docs/plan/01-dependency-dag.md) (the end-to-end
@@ -66,6 +66,50 @@ DAG, keystones, critical paths), and
 [`references/`](docs/plan/references/README.md) (the distilled top-down review of
 Z3, cvc5, bitwuzla, CaDiCaL/Kissat, Carcara, lean4/nanoda, lean-smt that this
 plan is built on).
+
+## The gap to Z3/cvc5, itemized (2026-06-21)
+
+A grounded audit against `crates/axeyum-solver/src/capabilities.rs` (the golden
+capability ledger) corrected the framing: **the gap is not breadth — it is depth,
+maturity, and ~3 missing engines.** axeyum already has *columns* for QF_BV,
+QF_ABV, QF_UF, QF_LRA, QF_LIA, UFLIA/UFLRA, QF_NRA/NIA, QF_FP, datatypes,
+quantifiers (finite + e-matching + MBQI), strings, optimization, incremental,
+symbolic execution, BMC, and k-induction. The honest gap is three things, in size
+order:
+
+**1. Depth / completeness on a mostly-complete grid** — most fragments are
+`validated`/`sound-incomplete`/`experimental` where Z3 is complete-and-tuned. The
+depth ladders are already planned; this audit only sharpens their exit criteria:
+- NRA: linear abstraction + McCormick → **nlsat/CAD** — [P2.5](docs/plan/track-2-theories/P2.5-nra-cad.md)
+  (active; as of 2026-06-22 the **CAD decision side is complete** — N-var algebraic
+  critical-point lifting — and the fuzz-measured QF_NRA Unknown rate fell 109→64,
+  QF_NIA 498→146, QF_UFLIA 311→18; remaining = proof/Lean evidence for the new
+  unsats. Five standing Z3 differential gates clean).
+- LIA: **bounded** bit-blast/B&B → **unbounded-complete** (Omega/Cooper backstop) — [P2.4 T2.4.8](docs/plan/track-2-theories/P2.4-lia-cuts.md) (added).
+- Strings: bounded BV-lowered → **unbounded** decision procedure — [P2.7](docs/plan/track-2-theories/P2.7-strings.md).
+- Quantifiers: maturity of e-matching/MBQI — [P2.6](docs/plan/track-2-theories/P2.6-quantifiers.md).
+
+**2. Performance / maturity** — young SAT core (no inprocessing yet), eager-only
+BV (the lazy path is built but inert), thin preprocessing. Already the whole of
+Track 1 (SAT inprocessing [P1.1], preprocessing [P1.2], core modernization
+[P1.3]); this is tuning depth, not a missing feature.
+
+**3. ~3 categorically-absent engines** (the genuinely new work this audit adds):
+- **CHC / Horn (PDR/Spacer)** — *unbounded* invariant discovery, the step beyond
+  today's bounded BMC + inductive k-induction. The single biggest categorical hole
+  vs Z3. New: [P4.6](docs/plan/track-4-usecases-frontend/P4.6-chc-horn.md).
+- **Craig interpolation** — a feature column *and* CHC's lemma engine; read off
+  the already-checked proof. New: [P3.8](docs/plan/track-3-proof-lean/P3.8-interpolation.md).
+- **Synthesis / abduction (SyGuS, `get-abduct`)** — turns the checker into a
+  generator; lower priority, mostly integration. New: [P4.7](docs/plan/track-4-usecases-frontend/P4.7-synthesis.md).
+- Plus the enumerated **breadth tail** (sequences, sets/bags, separation logic,
+  finite fields, co-datatypes, rec-fun) kept *counted*, not forgotten:
+  [P2.10](docs/plan/track-2-theories/P2.10-breadth-backlog.md).
+
+**Where axeyum is already ahead:** self-checking evidence (DRAT + Alethe + an
+in-tree Lean-grade kernel + universal model replay) — ahead of Z3, competitive
+with cvc5. That is the moat and it exists today; the plan's job is to keep
+*widening* it (Track 3) while closing depth (Track 2) and adding the three engines.
 
 ## How to use this plan each session
 
@@ -115,7 +159,12 @@ The plan was synthesized from a top-down review of the cloned reference solvers
 in `references/` (Z3 ~688k LoC, cvc5 ~512k, bitwuzla, CaDiCaL, Kissat, Carcara,
 lean4, nanoda_lib, lean-smt, drat-trim) by five parallel Opus sub-agents on
 2026-06-15; their full reports are in
-[`docs/plan/references/`](docs/plan/references/README.md). axeyum today is
-~63k LoC of Rust with a broad, evidence-backed decidable+arithmetic foundation
-(destination 1); this plan is the route to destinations 2 (Z3-class performance)
-and 3 (Lean-checkable proofs).
+[`docs/plan/references/`](docs/plan/references/README.md). axeyum today (2026-06-22)
+is **~143k LoC of Rust across 14 crates** with a broad, evidence-backed
+decidable+arithmetic foundation (destination 1) — including a complete CAD
+decision side for NRA, a competitive pure-Rust proof-emitting SAT core, and
+self-checking evidence (DRAT + Alethe + an in-tree Lean-grade kernel + universal
+model replay) that already leads Z3. This plan is the route to destinations 2
+(Z3-class performance) and 3 (Lean-checkable proofs). Live per-session state is in
+[STATUS.md](STATUS.md); the foundation phase history is in the research
+[roadmap](docs/research/08-planning/roadmap.md).

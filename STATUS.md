@@ -6,6 +6,40 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-22 — GPT/codex review follow-through VERIFIED + roadmap expansion (RESUME HERE).**
+  Two soundness/accuracy commits landed and are **independently re-verified** (code read + passing
+  tests, not just commit messages):
+  - **Proof-export soundness gap CLOSED (`5b80253`).** The QF_NIA no-overflow multiplier guards
+    (`5dca1ad`) *restrict* the bit-blasted formula, so `export_qf_lia_unsat_proof` handing the
+    guarded query straight to the DRAT exporter could certify a **wrong `unsat`** (a refutation of
+    the guard-restricted query does not transfer to the original integer formula, which may be Sat
+    with a large product). Fix is **fail-closed**: `IntBlasting` now carries
+    `restricting_constraints()`; export returns `Inconclusive` *before* exporting whenever guards
+    > 0. Linear QF_LIA (zero guards) exports a re-checkable certificate exactly as before. The
+    *verdict* path was already sound (BV-UNSAT→Unknown when integers are present); this closed the
+    **certificate** path. Negative regression
+    `bounded_qf_nia_with_overflow_guard_does_not_export_a_false_proof` (`x*x=16 ∧ 0≤x≤100` @ width 4)
+    passes.
+  - **Truth-source ledgers synced (`ab899f3`).** The coarse `QF_NRA/NIA` capability row is split
+    into an accurate **QF_NRA** (complete CAD decision side; irrational RealAlgebraic witnesses;
+    DISAGREE=0 vs Z3) and **QF_NIA** (small-witness nonlinear SAT decides via the guard; genuine
+    nonlinear-int unsat stays sound `Unknown`); new support-matrix probe; `support_matrix_doc_is_in_sync`
+    green.
+  - **Reviewer validation set all green:** `nia_tiny_witness` (4), `proof_export` (9),
+    `capabilities` (2), `support_matrix` (12).
+  - **Roadmap expansion (docs).** PLAN.md gained an itemized **"gap to Z3/cvc5"** (the honest
+    finding: depth/maturity on a mostly-complete grid + ~3 *categorically missing* engines, not a
+    breadth hole) plus four new track phase docs — **CHC/Horn PDR/Spacer (P4.6)**, **Craig
+    interpolation (P3.8)**, **synthesis/abduction (P4.7)**, **breadth backlog (P2.10)** — and an
+    unbounded-LIA completeness backstop (P2.4 T2.4.8), all wired into the track READMEs + the
+    dependency DAG. **CHC implementation NOT started** (correctly held behind interpolation + the
+    e-graph/CDCL(T) keystone).
+  - **Open follow-through (non-urgent):** (a) promote the fuzz-measured Unknown deltas (QF_NIA
+    498→146, QF_NRA 109→64, QF_UFLIA 311→18) to a committed reproducible bench artifact;
+    (b) classify the remaining ~146 QF_NIA unknowns into proof-gap / true nonlinear-int
+    incompleteness / resource-refusal. The live NRA/CAD-front detail continues in the session
+    blocks below.
+
 - **Session 2026-06-20 — SAT-core keystone (in progress) + codex-review correctness sweep
   (RESUME HERE).** **85 validated commits**; whole workspace green (fmt + clippy `--workspace`
   + doc + tests). **The destination-2 record is CORRECTED: measured axeyum 8/113 = PARITY with
@@ -641,6 +675,24 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed slice + baseline (32/43 decided, agree=32, DISAGREE=0) |
 
 ## Changelog
+
+- **2026-06-22** — **GPT/codex review follow-through verified + roadmap expansion.**
+  (1) **Soundness:** `export_qf_lia_unsat_proof` is now fail-closed under the QF_NIA
+  no-overflow multiplier guards (`5b80253`) — `IntBlasting::restricting_constraints()` gates a
+  decline to `Inconclusive` before any DRAT export, closing a wrong-`unsat`-*proof* gap; negative
+  regression added. (2) **Accuracy:** capability ledger + support matrix split/synced to the
+  complete-CAD / improved-NIA-UFLIA state (`ab899f3`); doc-in-sync test green. (3) **Roadmap:**
+  PLAN.md itemized gap-to-Z3/cvc5 (depth-not-breadth + ~3 missing engines), four new track phase
+  docs (CHC/Horn P4.6, interpolation P3.8, synthesis P4.7, breadth backlog P2.10), LIA
+  unbounded-completeness backstop (P2.4 T2.4.8), wired into the track READMEs + dependency DAG;
+  bench-results README refreshed (authoritative QF_BV parity record + recent Unknown-reduction
+  front). Reviewer validation set all green (nia_tiny_witness, proof_export, capabilities,
+  support_matrix). Open: durable NIA-sweep artifact; classify the ~146 residual QF_NIA unknowns.
+
+- **2026-06-20** — **DOCS: public documentation plan captured.**
+  Added `docs/documentation-plan.md`, a concrete plan for reshaping the README
+  into a short project lobby and scaffolding beginner, user-guide, contributor,
+  reference, and internals docs. Link check passed.
 
 - **2026-06-20** — **NRA geometry-parity gap CLOSED (binomial_square) + complete real-poly
   decider routed into the NRA engine + honest portfolio verdicts.** The reviewer flagged

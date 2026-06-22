@@ -25,6 +25,7 @@ not independent — the arrows below are the real constraints.
             │ P2.5 NRA/CAD (independent, XL)  │
             │ P2.6 quantifiers ◄── needs e-graph + MAM
             │ P2.7 strings   P2.8 FP polish (independent)
+            │ P2.10 breadth backlog ◄── needs keystones (enumerated tail)
             └─────────────────────────────────┘
 
   ┌──────────────────────────── TRACK 3: PROOFS & LEAN (mostly parallel to Track 1) ───────────────────────────┐
@@ -32,11 +33,16 @@ not independent — the arrows below are the real constraints.
   │                                           │                                  │                              │
   │                                           └────► P3.5 reduction proofs ──────┘──► P3.6 Lean kernel ─► P3.7   │
   │                                                  (needs Track 2 reductions)        (capstone)    reconstruct │
+  │  P3.8 Craig interpolation ◄── reads off P3.2/P3.5 proofs (+ LRA Farkas) ──► feeds CHC/synthesis (Track 4)    │
   └────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 
   TRACK 4: USE CASES & FRONTEND
   P4.1 warm lazy memory ◄ needs P1.4/P1.5 (or interim eager) ─► P4.2 CFG frontend (angr/unicorn-class)
   P4.3 OMT/MILP (independent)   P4.4 SMT-LIB surface (independent)   P4.5 benchmarking (do FIRST, gates Track 1)
+  ┌─ VERIFICATION FRONTIER (new categorical engines) ───────────────────────────────────────────────┐
+  │ {P3.8 interpolation + P2.6 MBP + P1.5 CDCL(T)} ─► P4.6 CHC/Horn (PDR/Spacer, unbounded invariants) │
+  │                                                   P4.7 synthesis/abduction ◄ needs P2.6 + P3.8     │
+  └───────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## The two keystones
@@ -61,7 +67,13 @@ not independent — the arrows below are the real constraints.
   P3.5 depends on Track 2 reductions existing in lazy/checkable form.
 - **To theory breadth/perf:** `P1.4 (e-graph) → P1.5 (CDCL(T)) → {P2.2, P2.3,
   P2.6, P2.9} → P1.6 (combination)`. P2.4 (LIA cuts), P2.5 (NRA/CAD), P2.8 (FP)
-  are independent and can proceed any time.
+  are independent and can proceed any time. P2.10 (breadth backlog) rides the
+  keystones.
+- **To unbounded verification (the biggest categorical gap):** `P3.2 (Alethe IR)
+  → P3.8 (interpolation) + P2.6 (MBP) + P1.5 (CDCL(T)) → P4.6 (CHC/Horn, PDR)`.
+  The cheapest first slice of P3.8 (Farkas/LRA interpolants) reuses certificates
+  already in tree, so this path can start partially before the e-graph lands.
+  P4.7 (synthesis/abduction) reuses P2.6 + P3.8 and trails P4.6.
 
 ## Recommended execution order (waterfall with parallelism)
 
@@ -93,9 +105,13 @@ keeps the trust story honest.
 - Track 4: P4.1 (warm lazy memory) once P1.4/P1.5 land; P4.3/P4.4 anytime.
 
 **Stage 4 — the hard frontiers (multi-month each).**
-- Track 2: P2.5 (NRA/CAD), P2.7 (full strings), P2.6 (MBQI/QE maturity).
-- Track 3: P3.6 (Lean kernel) → P3.7 (Alethe→Lean reconstruction) — the capstone.
-- Track 4: P4.2 (angr/unicorn-class CFG frontend).
+- Track 2: P2.5 (NRA/CAD), P2.7 (full strings), P2.6 (MBQI/QE maturity); P2.10
+  (breadth backlog) items as demand warrants.
+- Track 3: P3.6 (Lean kernel) → P3.7 (Alethe→Lean reconstruction) — the capstone;
+  P3.8 (interpolation) lands earlier (its LRA slice rides existing Farkas certs).
+- Track 4: P4.2 (angr/unicorn-class CFG frontend); **P4.6 (CHC/Horn)** — the
+  unbounded-verification engine and the largest categorical gain — once P3.8 +
+  P2.6(MBP) + P1.5 are in place; P4.7 (synthesis/abduction) trailing.
 
 ## Sequencing principles
 

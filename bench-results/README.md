@@ -3,6 +3,53 @@
 Committed benchmark artifacts that serve as project evidence. Scratch runs stay
 under `bench-results/local/`, which is gitignored.
 
+## Current authoritative record (2026-06-20)
+
+- [`baselines/qf-bv-p4dfa-axeyum-vs-z3-20s-authoritative.json`](baselines/qf-bv-p4dfa-axeyum-vs-z3-20s-authoritative.json):
+  **the headline QF_BV head-to-head.** Pure-Rust `sat-bv` (rustsat-batsat,
+  CNF inprocessing on, node/CNF budgets 3M var / 8M clause) vs **z3 4.13.3** on
+  the full public `QF_BV/20221214-p4dfa-XiaoqiChen` slice (113 files), 20 s each.
+  Result: **axeyum 8 sat / 105 unknown / 0 unsat, DISAGREE = 0, replay failures = 0**;
+  the Z3 oracle agrees on all 7 it was compared against. PAR-2 mean 37.6 s. This
+  is **parity, both hard-capped** — axeyum uniquely decides `string1x8.3` (z3
+  times out @20.5 s), z3 uniquely gets `compose.p3`/`s2_nr4`, and the other 105
+  defeat both. Layer attribution confirms the gap is **search-bound, not encoding**:
+  SAT solve is 97.4 % of pipeline time; bit-blast + CNF-encode + model-lift
+  together are < 2.6 %. The companion [`qf-bv-p4dfa-z3-standalone-20s.json`](baselines/qf-bv-p4dfa-z3-standalone-20s.json)
+  is the Z3-only run at the same budget.
+- **Fair multi-config comparison family** (2026-06-18 → 06-20): the
+  `qf-bv-p4dfa-fair-*` baselines isolate single levers at matched budgets vs Z3 —
+  plain `sat-bv`, `+preprocess`, `+preprocess-inprocess`, and `lazy-bv` (CEGAR) —
+  at 3 s and 20 s. Finding: solver-side preprocessing is **measured-maxed** (decides
+  the same set as single-pass on this slice), and `lazy-bv` is **inert here** (the
+  slice is arithmetic-free, 0 heavy ops) — confirming the lever is stronger
+  *reduction algorithms* (`axeyum-rewrite`) or the SAT core, not more iteration.
+  The [`qfbv-curated-sat-bv-*-vs-z3-2s.json`](baselines/) trio is the smaller
+  curated cross-check (same conclusion at 2 s).
+
+## Recent capability movement (Unknown-reduction front, 2026-06-21 → 06-22)
+
+The QF_BV perf artifacts above are **unchanged** — there have been no QF_BV-perf
+commits since 06-20. The recent week's measured movement is on the **completeness /
+decide-rate** front (the "depth gap" in [PLAN.md](../PLAN.md#the-gap-to-z3cvc5-itemized)),
+measured by the env-gated Unknown-gap dump in the **adversarial Z3 differential
+fuzzers** (not by committed JSON artifacts — these are fuzz-measured decide rates):
+
+- **QF_NRA** Unknown `109 → 64` (polynomial normalization + any-coefficient
+  linear-definition substitution); the **CAD decision side is complete** (N-variable
+  algebraic critical-point lifting landed).
+- **QF_NIA** Unknown `498 → 146` (no-overflow guard on the integer-multiplier
+  bit-blast).
+- **QF_UFLIA** Unknown `311 → 18` (replay-checked sat models for arithmetic-sorted UF).
+- **Soundness:** **five standing adversarial Z3 differential gates** (bv, nia,
+  uflia, abv, nra) now all sweep clean (DISAGREE = 0). The NRA/CAD development
+  surfaced and fixed **three wrong-unsat bugs** the unit tests missed — exactly the
+  "test it harder" discipline, not avoidance.
+
+> Note: the canonical live tracker for this front is [STATUS.md](../STATUS.md)
+> (owned by the arithmetic/CAD work in flight); this section is the benchmark-side
+> snapshot only.
+
 ## Baselines
 
 - [`baselines/qf-bv-20221214-p4dfa-z3-1s.json`](baselines/qf-bv-20221214-p4dfa-z3-1s.json):
