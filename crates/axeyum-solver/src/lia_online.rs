@@ -152,6 +152,20 @@ impl LiaTheory {
             .is_some_and(|k| !matches!(k, AtomKind::Unsupported))
     }
 
+    /// An integer witness for the currently-asserted constraints, over the original
+    /// symbols, or `None` if the live system is infeasible / inconclusive (resource
+    /// limit / overflow / outside the offline fragment). The crate-internal reader the
+    /// online theory-combination path ([`crate::uflia_online`]) uses to build the `LIA`
+    /// half of a combined model at a consistent leaf — the same reconstruction
+    /// [`theory_model`] performs (re-running the trusted offline
+    /// [`check_with_lia_simplex`] over the live conjunction and lifting its `sat`
+    /// model). Soundness rests on the caller replaying the assembled model against the
+    /// original assertions.
+    #[must_use]
+    pub(crate) fn integer_model(&self) -> Option<Model> {
+        theory_model(self)
+    }
+
     /// The currently-asserted atom literals that contribute a live constraint
     /// (order atoms in either polarity, equality atoms asserted true). Equality
     /// atoms asserted false and unsupported atoms contribute nothing.

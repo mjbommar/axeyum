@@ -108,6 +108,7 @@ mod symexec;
 mod theory_combination;
 pub mod trust;
 mod uflia_interpolant;
+mod uflia_online;
 mod uflra_interpolant;
 mod uflra_online;
 #[cfg(feature = "z3")]
@@ -267,6 +268,7 @@ pub use theory_combination::{
 };
 pub use trust::{ALL_TRUST_IDS, TrustId, TrustStep, trust_ledger_markdown};
 pub use uflia_interpolant::uflia_interpolant;
+pub use uflia_online::check_qf_uflia_online;
 pub use uflra_interpolant::uflra_interpolant;
 pub use uflra_online::check_qf_uflra_online;
 #[cfg(feature = "z3")]
