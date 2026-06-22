@@ -99,7 +99,10 @@ Track 1 (SAT inprocessing [P1.1], preprocessing [P1.2], core modernization
   today's bounded BMC + inductive k-induction. The single biggest categorical hole
   vs Z3. New: [P4.6](docs/plan/track-4-usecases-frontend/P4.6-chc-horn.md).
 - **Craig interpolation** — a feature column *and* CHC's lemma engine; read off
-  the already-checked proof. New: [P3.8](docs/plan/track-3-proof-lean/P3.8-interpolation.md).
+  the already-checked proof. [P3.8](docs/plan/track-3-proof-lean/P3.8-interpolation.md)
+  **STARTED (2026-06-22, ADR-0047):** conjunctive **QF_LRA** (Farkas) + **QF_UF**
+  (congruence-explanation) interpolants land, each verify-before-return; remaining
+  = combined UFLRA, propositional/BV off the DRAT proof, and the SMT-LIB surface.
 - **Synthesis / abduction (SyGuS, `get-abduct`)** — turns the checker into a
   generator; lower priority, mostly integration. New: [P4.7](docs/plan/track-4-usecases-frontend/P4.7-synthesis.md).
 - Plus the enumerated **breadth tail** (sequences, sets/bags, separation logic,

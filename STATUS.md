@@ -6,7 +6,23 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
-- **Session 2026-06-22 (cont.) — P3.8 Craig interpolation OPENED (LRA slice landed; EUF in progress).**
+- **Session 2026-06-22 (cont.) — P3.8 Craig interpolation OPENED (LRA + EUF landed, ledgered).**
+  Engine now interpolates the two core conjunctive theories, each verify-before-return:
+  - **T3.8.1 LRA Farkas interpolant — DONE (`d3a7a2a`).** (detail below.)
+  - **T3.8.3 EUF ground interpolant — DONE (`8791e4b`).** `qf_uf_interpolant(arena, A, B)`
+    summarizes the congruence-closure explanation of the violated disequality `s ≠ t`: thread the
+    `s→t` path, color each edge by partition (Input by asserting side, Congruence by its argument
+    sub-proofs' common color), summarize the maximal segments opposite the disequality into
+    shared-term equalities, **lowering** a non-shared congruence boundary to its argument equalities
+    (so `A={a=b}`, `B={f(a)≠f(b)}` ⇒ `I=(a=b)` though `f` is B-only). `I=⋀summary` (diseq in B) /
+    `¬⋀summary` (diseq in A); empty summary ⇒ degenerate ⊤/⊥. Fail-closed via `check_qf_uf`
+    re-checks + vocabulary; partial generator stays sound by the verify-guard. 10 tests.
+  - **`Solver::interpolant` dispatches LRA → EUF** (`8791e4b`); ledger rows (LRA `Checked`, EUF
+    `Validated`) + **ADR-0047** + regenerated capability matrix (`4fd6262`).
+  - **NEXT: T3.8.4 combined LRA+EUF (UFLRA conjunctive)** then **T3.8.2 propositional/BV off the
+    DRAT proof** (McMillan/Pudlák), then the SMT-LIB `(get-interpolant)` parse surface
+    (coordinate `axeyum-smtlib`). All under the same verify-before-return contract.
+  - Original LRA detail:
   Starting the **interpolation engine** (one of the 3 categorically-missing engines vs Z3 and the
   lemma engine that unblocks CHC/P4.6). Read off the *already-verified* Farkas certificate, not a
   fresh untrusted procedure, so it inherits the assurance:
