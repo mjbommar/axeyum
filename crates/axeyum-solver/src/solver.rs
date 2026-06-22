@@ -279,9 +279,10 @@ impl<B: SolverBackend> Solver<B> {
         (a, b)
     }
 
-    /// Tries each theory interpolator in turn: `QF_LRA` Farkas, ground EUF,
-    /// combined `QF_UFLRA`, then the `QF_BV` bit-blast interpolant — each a
-    /// fallback for the earlier theories' declines (`Unsupported` or `Ok(None)`).
+    /// Tries each theory interpolator in turn: `QF_LRA` Farkas, the `QF_LIA`
+    /// rational-relaxation interpolant, ground EUF, combined `QF_UFLRA`, then the
+    /// `QF_BV` bit-blast interpolant — each a fallback for the earlier theories'
+    /// declines (`Unsupported` or `Ok(None)`).
     fn dispatch_interpolant(
         arena: &mut TermArena,
         a: &[TermId],
@@ -290,6 +291,10 @@ impl<B: SolverBackend> Solver<B> {
         match crate::lra_interpolant(arena, a, b) {
             Ok(Some(interpolant)) => Ok(Some(interpolant)),
             Ok(None) | Err(SolverError::Unsupported(_)) => {
+                // QF_LIA via the rational relaxation (verified over the integers).
+                if let Some(interpolant) = crate::lia_interpolant(arena, a, b)? {
+                    return Ok(Some(interpolant));
+                }
                 match crate::qf_uf_interpolant(arena, a, b) {
                     Ok(Some(interpolant)) => Ok(Some(interpolant)),
                     Ok(None) => match crate::uflra_interpolant(arena, a, b) {
