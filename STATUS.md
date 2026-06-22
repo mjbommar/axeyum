@@ -6,7 +6,28 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
-- **Session 2026-06-22 (cont.) — P3.8 Craig interpolation OPENED (LRA + EUF landed, ledgered).**
+- **Session 2026-06-22 (cont.) — P4.6 CHC/Horn ENGINE OPENED (first slice in progress).**
+  With P3.8 interpolation complete, started the **biggest categorically-missing Z3 engine** (CHC /
+  unbounded invariant discovery). **Readiness audit (sub-agent):** the full Spacer core needs two
+  things axeyum lacks — (1) **MBP / model-based projection for LIA/LRA is entirely absent** (no
+  `mbp`/`model_based`/QE-by-projection anywhere; P2.6-T2.6.6 unimplemented) — this is the long pole
+  for the XL core; (2) **no online incremental LRA theory solver across frames** (warm
+  `IncrementalBvSolver` is BV/Bool only; LRA rides the offline `check_with_lra_dpll`). What IS ready:
+  all 5 interpolants, the `TransitionSystem`/BMC/k-induction machinery (`bmc.rs`), the warm BV
+  incremental solver with unsat-core cube extraction (`check_assuming_core`) + `block_model`, the
+  e-graph keystone, and the `certify_safety_k_induction` certificate precedent.
+  - **First slice (in progress, worktree sub-agent): single-predicate IC3/PDR over the existing
+    `TransitionSystem` (QF_BV/Bool)** — `prove_safety_pdr` discovers an inductive invariant on
+    properties where `prove_safety_k_induction` returns `Inconclusive`. **Soundness anchor (untrusted
+    search):** a `Safe` verdict is returned ONLY when the discovered invariant passes 3 independent
+    `check_auto`-unsat checks (initiation `init∧¬Inv`, consecution `Inv∧trans∧¬Inv'`, safety
+    `Inv∧bad`); `Reachable` only when confirmed by `bounded_model_check`'s replay-checked trace; all
+    caps → `Unknown`. Certified variant bundles the 3 proofs (clone of `SafetyCertificate::recheck`).
+    No MBP / no interpolation dependency (classic unsat-core inductive generalization) — robust to
+    worktree base. **NEXT after this lands: MBP for LIA/LRA (P2.6-T2.6.6)** — the prerequisite that
+    unblocks LRA-theory CHC and the full Spacer generalization.
+
+- **Session 2026-06-22 (cont.) — P3.8 Craig interpolation COMPLETE (LRA+EUF+SAT+QF_BV+UFLRA, ledgered).**
   Engine now interpolates the two core conjunctive theories, each verify-before-return:
   - **T3.8.1 LRA Farkas interpolant — DONE (`d3a7a2a`).** (detail below.)
   - **T3.8.3 EUF ground interpolant — DONE (`8791e4b`).** `qf_uf_interpolant(arena, A, B)`
