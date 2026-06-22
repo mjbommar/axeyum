@@ -6,6 +6,29 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-22 (cont.) — P3.8 Craig interpolation OPENED (LRA slice landed; EUF in progress).**
+  Starting the **interpolation engine** (one of the 3 categorically-missing engines vs Z3 and the
+  lemma engine that unblocks CHC/P4.6). Read off the *already-verified* Farkas certificate, not a
+  fresh untrusted procedure, so it inherits the assurance:
+  - **T3.8.1 LRA Farkas interpolant — DONE (`d3a7a2a`).** `axeyum_solver::lra_interpolant(arena, A, B)`
+    for an unsat conjunctive QF_LRA `A ∧ B` returns the Craig interpolant `I := (Σ over A-side atoms
+    λᵢ·atomᵢ) ⋈ 0` (⋈ strict iff a used A-atom is strict). The three Craig conditions hold by
+    construction — `A ⇒ I` (each A-atom ≤/<0, λ≥0); `I ∧ B ⇒ ⊥` (adding the B-side reproduces the
+    full false-constant refutation); **shared vocabulary automatically** (A-only vars have zero
+    B-part coeff ⇒ by full-cancellation zero A-part coeff ⇒ drop out of `I`). `FarkasCertificate`
+    gained a `vars: Vec<SymbolId>` field (dense index → symbol) populated at both the FM and simplex
+    cert-build sites. **Fail-closed:** every returned interpolant is independently re-checked (A∧¬I
+    unsat, I∧B unsat, vocabulary) and overflow-guarded; declines to `Ok(None)` otherwise — never an
+    unverified interpolant. 8 integration tests, each independently re-checking all three conditions.
+  - **T3.8.5 façade slice — DONE (`3aba7a1`).** `Solver::interpolant(arena, a_indices)` partitions the
+    active assertions (A = selected indices, B = the rest) and delegates. (SMT-LIB `(get-interpolant)`
+    *parse* surface deferred — `axeyum-smtlib` is the coordinated agent's crate; the solver-side
+    driver can land without touching their parser.)
+  - **NEXT: T3.8.3 EUF interpolant** (ground interpolation off the congruence-closure explanation,
+    verified by `check_qf_uf` on A∧¬I / I∧B), then T3.8.2 (propositional/BV off the DRAT proof) and
+    T3.8.4 (combined LRA+EUF). Capability-ledger row for interpolation to be added once EUF lands
+    (avoid churning the golden matrix twice).
+
 - **Session 2026-06-22 — GPT/codex review follow-through VERIFIED + roadmap expansion (RESUME HERE).**
   Two soundness/accuracy commits landed and are **independently re-verified** (code read + passing
   tests, not just commit messages):
