@@ -414,6 +414,19 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0048",
     },
     Capability {
+        area: "reachability",
+        feature: "interpolation-based model checking over LRA (prove_safety_imc_lra): IMC for \
+                  infinite-state real-valued transition systems via the conjunctive lra_interpolant + \
+                  an inline LRA k-unrolling",
+        assurance: Assurance::Validated,
+        evidence: "same untrusted-fixpoint / 3-check Safe gate + check_auto-Sat Reachable as QF_BV IMC. \
+                   PARTIAL coverage: closes a fixpoint only when the first (conjunctive) interpolation \
+                   step suffices (init already an inductive over-approximation); a disjunctive frontier \
+                   deepens then declines to Unknown (conjunctive Farkas only — disjunctive interpolation \
+                   is future work). Never a wrong Safe/Reachable",
+        reference: "ADR-0048",
+    },
+    Capability {
         area: "synthesis",
         feature: "abduction (abduct / get-abduct): find H over the shared vocabulary with axioms ∧ H \
                   sat and axioms ∧ H ⊨ conjecture — the checker turned generator",
