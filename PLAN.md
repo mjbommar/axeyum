@@ -100,12 +100,13 @@ Track 1 (SAT inprocessing [P1.1], preprocessing [P1.2], core modernization
   vs Z3. New: [P4.6](docs/plan/track-4-usecases-frontend/P4.6-chc-horn.md).
 - **Craig interpolation** — a feature column *and* CHC's lemma engine; read off
   the already-checked proof. [P3.8](docs/plan/track-3-proof-lean/P3.8-interpolation.md)
-  **SUBSTANTIALLY DONE (2026-06-22, ADR-0047):** interpolants land for conjunctive
+  **ENGINE DONE (2026-06-22, ADR-0047):** interpolants land for conjunctive
   **QF_LRA** (Farkas), **QF_UF** (congruence-explanation), **propositional/SAT**
-  (McMillan over the LRAT resolution proof), and **QF_BV** (joint bit-blast + lifted
-  propositional interpolant) — each **verify-before-return** (declines rather than
-  emitting anything unverified). Remaining: combined UFLRA (Nelson–Oppen) and the
-  SMT-LIB `(get-interpolant)` surface (coordinate `axeyum-smtlib`).
+  (McMillan over the LRAT resolution proof), **QF_BV** (joint bit-blast + lifted
+  propositional interpolant), and **QF_UFLRA** (Ackermannize → LRA interpolant →
+  translate) — every phase-exit fragment, each **verify-before-return** (declines
+  rather than emitting anything unverified). Only the SMT-LIB `(get-interpolant)`
+  parse surface remains (coordinate `axeyum-smtlib`).
 - **Synthesis / abduction (SyGuS, `get-abduct`)** — turns the checker into a
   generator; lower priority, mostly integration. New: [P4.7](docs/plan/track-4-usecases-frontend/P4.7-synthesis.md).
 - Plus the enumerated **breadth tail** (sequences, sets/bags, separation logic,

@@ -44,9 +44,19 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     / non-shared-term vars. 7 tests (shared-var contradiction, A-local exclusion, x=y vs x≠y, sat→None,
     fuzz). Ledger row (QF_BV, `Validated`). Implemented by an Opus worktree sub-agent; soundness anchor
     `verify_interpolant` reviewed, fast-forwarded + re-gated on main (cnf lib 251, all interp suites green).
-  - **P3.8 interpolation now spans LRA + EUF + propositional/SAT + QF_BV**, all verify-before-return.
-    Remaining: combined UFLRA (Nelson–Oppen, intricate) + SMT-LIB `(get-interpolant)` parse surface
-    (coordinate `axeyum-smtlib`).
+  - **T3.8.4 combined QF_UFLRA interpolant — DONE (`ee34411`).** `axeyum_solver::uflra_interpolant`:
+    one shared `eliminate_functions` over A∪B (memo aligns shared apps to one fresh symbol),
+    `lra_interpolant` on the function-free `abstraction()` (no congruence lemmas — a *relaxation*, so
+    unsat there ⟹ original unsat), then translate the shared fresh symbols back to UF application
+    terms (recursive for nested apps). Verify-guarded by `check_with_uf_arithmetic` (A∧¬I, I∧B) +
+    shared symbol/function vocabulary; declines on a congruence-needed (disjunctive) refutation that
+    conjunctive Farkas can't express, or any re-check failure. `Solver::interpolant` chain now
+    **LRA → EUF → UFLRA → BV**. 8 tests. (Worktree sub-agent off a stale base rebuilt a redundant
+    `lra_interpolant` — discarded, re-pointed at the existing one; fixed an Unsupported-propagation
+    so it declines instead of erroring.) Ledger row (QF_UFLIA/UFLRA, `Validated`).
+  - **P3.8 interpolation now spans LRA + EUF + propositional/SAT + QF_BV + UFLRA** — every
+    phase-exit-criteria fragment, all verify-before-return. **Only remaining:** the SMT-LIB
+    `(get-interpolant)` parse surface (coordinate `axeyum-smtlib`); the solver-side engine is done.
   - **Randomized soundness gate landed** (`tests/interpolant_fuzz.rs`): 400 LRA + 800 EUF random
     unsat conjunctions; every returned interpolant independently re-checks all three Craig
     conditions; deterministic LCG; both assert non-zero coverage. Whole solver lib green (366).
