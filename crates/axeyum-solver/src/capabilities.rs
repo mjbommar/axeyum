@@ -105,6 +105,16 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "QF_BV",
+        feature: "Craig interpolation (qf_bv_interpolant): joint bit-blast, propositional \
+                  interpolant over the resolution proof, lifted to extract-predicates on shared terms",
+        assurance: Assurance::Validated,
+        evidence: "re-verified before return — A ∧ ¬I and I ∧ B each decided Unsat by the \
+                   independent QF_BV decider (check_auto) + shared-symbol vocabulary; lift declines \
+                   to None on any non-shared-term / interior-gate var (partial, never unverified)",
+        reference: "ADR-0047",
+    },
+    Capability {
+        area: "QF_BV",
         feature: "arbitrary width up to 2^16 (wide bit-vectors); bv2nat exact \
                   in the i128 reference range, wider → graceful unknown",
         assurance: Assurance::Validated,

@@ -33,6 +33,20 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     anchor `verify_interpolant`/`unsat_with_expr` reviewed + cherry-picked + re-gated on main.)
     Ledger row added (SAT propositional, `Checked`). **BV-term lifting** (map shared CNF vars → shared
     BV-term bits via `variable_bindings`) is the remaining follow-up to reach SMT-level QF_BV interp.
+  - **T3.8.2b QF_BV interpolant — DONE (`153e730`).** `axeyum_solver::qf_bv_interpolant(arena, A, B)`:
+    **joint** bit-blast (`lower_terms(A++B)` — structural hashing collapses shared bits to one
+    CnfVar), a node-indexed joint Tseitin encode partitioned into A/B CNFs (AND-gate clauses by
+    per-root reachability — `reachable_node_mask` now `pub` in axeyum-cnf — with **root assertions
+    attributed by provenance**, the fix for the direct-root-optimization collapse a naive
+    clause-partition hits), `propositional_interpolant` over the shared space, then **lift** each
+    global `CnfVar` → `(TermId,bit)` → `((_ extract i i) t)=#b1` predicate. Verify-guarded by the
+    QF_BV decider (`check_auto` on A∧¬I and I∧B) + shared-symbol vocabulary; declines on interior-gate
+    / non-shared-term vars. 7 tests (shared-var contradiction, A-local exclusion, x=y vs x≠y, sat→None,
+    fuzz). Ledger row (QF_BV, `Validated`). Implemented by an Opus worktree sub-agent; soundness anchor
+    `verify_interpolant` reviewed, fast-forwarded + re-gated on main (cnf lib 251, all interp suites green).
+  - **P3.8 interpolation now spans LRA + EUF + propositional/SAT + QF_BV**, all verify-before-return.
+    Remaining: combined UFLRA (Nelson–Oppen, intricate) + SMT-LIB `(get-interpolant)` parse surface
+    (coordinate `axeyum-smtlib`).
   - **Randomized soundness gate landed** (`tests/interpolant_fuzz.rs`): 400 LRA + 800 EUF random
     unsat conjunctions; every returned interpolant independently re-checks all three Craig
     conditions; deterministic LCG; both assert non-zero coverage. Whole solver lib green (366).
