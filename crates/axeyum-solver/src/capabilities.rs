@@ -220,6 +220,18 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "QF_LIA",
+        feature: "ONLINE incremental LIA theory solver (LiaTheory + check_qf_lia_online): backtrackable \
+                  assert/push/pop + deletion-minimized conflict cores, integer-complete (strict \
+                  tightening, branch-and-bound, cuts) — the warm integer theory engine",
+        assurance: Assurance::Validated,
+        evidence: "re-decided-incremental over the trusted offline check_with_lia_simplex; DIFFERENTIAL \
+                   validation — 400 random conjunctions (sat+unsat) + 3.7k push/pop steps, 0 disagreements, \
+                   every sat model replayed with INTEGER values; strict-tightening (0<x<1 ⇒ UNSAT) handled. \
+                   Propagation deferred; non-LIA atoms decline gracefully",
+        reference: "ADR-0014/0015",
+    },
+    Capability {
+        area: "QF_LIA",
         feature: "Craig interpolation (lia_interpolant): interpolate the rational relaxation \
                   (Int→Real, Farkas), clear denominators to integer coefficients",
         assurance: Assurance::Validated,
