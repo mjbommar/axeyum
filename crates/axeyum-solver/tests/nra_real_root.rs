@@ -2352,3 +2352,190 @@ fn three_var_nonstrict_algebraic_strict_boundary_never_sat() {
         "z = √2 ≥ 1 ⇒ UNSAT; must never be Sat; got {r:?}"
     );
 }
+
+// --- polynomial normalization: any-coefficient linear definitions + count -----
+
+/// Replay every original assertion under a Sat model; assert all hold concretely.
+fn assert_model_replays(arena: &TermArena, assertions: &[TermId], model: &axeyum_solver::Model) {
+    let asg = model.to_assignment();
+    for &a in assertions {
+        assert_eq!(
+            eval(arena, a, &asg).ok(),
+            Some(Value::Bool(true)),
+            "model must satisfy every original assertion on replay"
+        );
+    }
+}
+
+/// `c·x` with an integer constant on the left.
+fn cmul(a: &mut TermArena, c: i128, x: TermId) -> TermId {
+    let k = a.real_const(Rational::integer(c));
+    a.real_mul(k, x).unwrap()
+}
+
+/// Seed 955: a SINGLE atom `−2xy + 2xy + x = 0` over two raw variables whose two
+/// `xy` products cancel, normalizing to `x = 0` with `y` free ⇒ **Sat**.
+/// Previously this fell to a Fourier–Motzkin timeout (`Unknown`).
+#[test]
+fn single_atom_cancelling_to_one_var_is_sat() {
+    let mut a = TermArena::new();
+    let (xs, xv) = real(&mut a, "x");
+    let (_ys, yv) = real(&mut a, "y");
+    let zero = a.real_const(Rational::zero());
+    // Mirror the fuzz term association exactly: each monomial is `((c)*x)*y`.
+    let m2 = cmul(&mut a, -2, xv);
+    let m2xy = a.real_mul(m2, yv).unwrap();
+    let p2 = cmul(&mut a, 2, xv);
+    let p2xy = a.real_mul(p2, yv).unwrap();
+    let s1 = a.real_add(m2xy, p2xy).unwrap();
+    let s2 = a.real_add(s1, xv).unwrap();
+    let assertion = eq(&mut a, s2, zero);
+    let r = solve(&mut a, &[assertion], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("−2xy+2xy+x=0 must be Sat (x=0, any y); got {r:?}");
+    };
+    assert_eq!(
+        model.get(xs),
+        Some(Value::Real(Rational::zero())),
+        "x must be 0"
+    );
+    assert_model_replays(&a, &[assertion], model);
+}
+
+/// THE seed-1224 routing bug: `−3x = 0 ∧ −3yx − x = 0`. From `−3x = 0` ⇒ `x = 0`
+/// (a linear definition with coefficient ≠ ±1); substituting collapses the second
+/// atom to `0 = 0`, leaving `y` free ⇒ **Sat** (x = 0, any y). Previously the
+/// complete multivariate path declined this decidable system to `Unknown`.
+#[test]
+fn any_coeff_linear_def_collapses_system_to_sat() {
+    let mut a = TermArena::new();
+    let (xs, xv) = real(&mut a, "x");
+    let (_ys, yv) = real(&mut a, "y");
+    let zero = a.real_const(Rational::zero());
+    // −3x = 0
+    let neg_three_x = cmul(&mut a, -3, xv);
+    let a1 = eq(&mut a, neg_three_x, zero);
+    // −3yx − x = 0
+    let prod_yx = a.real_mul(yv, xv).unwrap();
+    let coupled = cmul(&mut a, -3, prod_yx);
+    let coupled_minus_x = a.real_sub(coupled, xv).unwrap();
+    let a2 = eq(&mut a, coupled_minus_x, zero);
+
+    let r = solve(&mut a, &[a1, a2], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("−3x=0 ∧ −3yx−x=0 must be Sat (x=0, any y); got {r:?}");
+    };
+    assert_eq!(
+        model.get(xs),
+        Some(Value::Real(Rational::zero())),
+        "x must be 0"
+    );
+    assert_model_replays(&a, &[a1, a2], model);
+}
+
+/// A linear definition with a non-±1 coefficient AND a nonzero constant:
+/// `2x − 6 = 0 ∧ x·y = 9`. `2x − 6 = 0` ⇒ `x = 3` (exact rational division by 2),
+/// substituted ⇒ `3y = 9` ⇒ `y = 3` ⇒ **Sat**.
+#[test]
+fn any_coeff_linear_def_with_constant_substitutes() {
+    let mut a = TermArena::new();
+    let (xs, xv) = real(&mut a, "x");
+    let (ys, yv) = real(&mut a, "y");
+    // 2x − 6 = 0
+    let two_x = cmul(&mut a, 2, xv);
+    let six = a.real_const(Rational::integer(6));
+    let lhs = a.real_sub(two_x, six).unwrap();
+    let zero = a.real_const(Rational::zero());
+    let a1 = eq(&mut a, lhs, zero);
+    // x·y = 9
+    let xy = a.real_mul(xv, yv).unwrap();
+    let nine = a.real_const(Rational::integer(9));
+    let a2 = eq(&mut a, xy, nine);
+
+    let r = solve(&mut a, &[a1, a2], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("2x−6=0 ∧ xy=9 must be Sat (x=3, y=3); got {r:?}");
+    };
+    assert_eq!(
+        model.get(xs),
+        Some(Value::Real(Rational::integer(3))),
+        "x must be 3"
+    );
+    assert_eq!(
+        model.get(ys),
+        Some(Value::Real(Rational::integer(3))),
+        "y must be 3"
+    );
+    assert_model_replays(&a, &[a1, a2], model);
+}
+
+/// An atom carrying a `0`-coefficient monomial that algebraically cancels:
+/// `−2xy + 2xy + x = 0` normalizes to `x = 0`. Conjoined with `y·y − 4 = 0`
+/// (y = ±2) the normalized system has ZERO genuine cross-products and decides
+/// directly ⇒ **Sat** (x = 0, y = ±2). Previously the raw term-tree count of two
+/// `xy` products plus the abstraction inflated the cross-product gate.
+#[test]
+fn cancelling_products_normalize_and_decide() {
+    let mut a = TermArena::new();
+    let (xs, xv) = real(&mut a, "x");
+    let (_ys, yv) = real(&mut a, "y");
+    let zero = a.real_const(Rational::zero());
+    // −2xy + 2xy + x = 0
+    let xy = a.real_mul(xv, yv).unwrap();
+    let m2xy = cmul(&mut a, -2, xy);
+    let p2xy = cmul(&mut a, 2, xy);
+    let sum1 = a.real_add(m2xy, p2xy).unwrap();
+    let sum2 = a.real_add(sum1, xv).unwrap();
+    let a1 = eq(&mut a, sum2, zero);
+    // y·y − 4 = 0
+    let yy = a.real_mul(yv, yv).unwrap();
+    let four = a.real_const(Rational::integer(4));
+    let yy4 = a.real_sub(yy, four).unwrap();
+    let a2 = eq(&mut a, yy4, zero);
+
+    let r = solve(&mut a, &[a1, a2], &SolverConfig::default()).expect("no error");
+    let CheckResult::Sat(model) = &r else {
+        panic!("(−2xy+2xy+x=0) ∧ (y²−4=0) must be Sat (x=0, y=±2); got {r:?}");
+    };
+    assert_eq!(
+        model.get(xs),
+        Some(Value::Real(Rational::zero())),
+        "x must be 0"
+    );
+    assert_model_replays(&a, &[a1, a2], model);
+}
+
+/// The deterministic OOM admission bound is PRESERVED for a genuinely-nonlinear
+/// system with > 2 DISTINCT real cross-products: `a²+b²+c² < ab+bc+ca` has three
+/// distinct cross-product monomials `ab`, `bc`, `ca` (none cancel, none are
+/// `0`-coefficient) ⇒ the gate must still fire (never wrongly decided). It is a
+/// valid PSD inequality (UNSAT in fact), but our normalized-count gate guards the
+/// abstraction; assert we do NOT return a (possibly wrong) Sat from the relaxation.
+#[test]
+fn genuine_three_cross_products_not_wrongly_decided() {
+    let mut a = TermArena::new();
+    let (_as, av) = real(&mut a, "a");
+    let (_bs, bv) = real(&mut a, "b");
+    let (_cs, cv) = real(&mut a, "c");
+    let aa = a.real_mul(av, av).unwrap();
+    let bb = a.real_mul(bv, bv).unwrap();
+    let cc = a.real_mul(cv, cv).unwrap();
+    let s1 = a.real_add(aa, bb).unwrap();
+    let lhs = a.real_add(s1, cc).unwrap();
+    let ab = a.real_mul(av, bv).unwrap();
+    let bc = a.real_mul(bv, cv).unwrap();
+    let ca = a.real_mul(cv, av).unwrap();
+    let r1 = a.real_add(ab, bc).unwrap();
+    let rhs = a.real_add(r1, ca).unwrap();
+    // a²+b²+c² < ab+bc+ca  (note: STRICT — this is actually UNSAT by PSD).
+    let assertion = lt(&mut a, lhs, rhs);
+
+    let r = solve(&mut a, &[assertion], &SolverConfig::default()).expect("no error");
+    // It must NOT be Sat (the relaxation, if admitted, could fabricate a spurious
+    // model). Unsat (a PSD certificate may catch it) or Unknown (the gate fires)
+    // are both sound; a Sat would be a soundness violation.
+    assert!(
+        !matches!(r, CheckResult::Sat(_)),
+        "genuinely-nonlinear 3-cross-product strict PSD inequality must never be Sat; got {r:?}"
+    );
+}

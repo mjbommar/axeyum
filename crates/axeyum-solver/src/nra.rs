@@ -179,7 +179,17 @@ pub fn check_with_nra(
     // relaxation to OOM inside a single solve call — bounded or not (see
     // `MAX_CROSS_PRODUCTS`). Squares are cheap and excluded, so square-only
     // multi-variable instances stay decidable.
-    let cross_products = triples.iter().filter(|&&(pa, pb, _)| pa != pb).count();
+    // Count cross-products from the NORMALIZED polynomials of the assertions when
+    // they are representable as multivariate polynomial comparisons (like monomials
+    // collected, zero-coefficient and cancelling monomials dropped). This corrects
+    // the raw term-tree over-count — e.g. `2 + 0·y·y + 0·y·z − 1 > 0` (the
+    // `0·`-coefficient monomials vanish) and `−2·x·y + 2·x·y + x = 0` (the products
+    // cancel to `x`). A genuinely-nonlinear instance with > 2 *distinct* normalized
+    // cross-product monomials still trips the bound, so the OOM guard is intact; only
+    // the inflated counts are corrected. Falls back to the raw distinct-operand count
+    // for shapes the normalizer cannot represent (so the gate never weakens there).
+    let cross_products = crate::nra_real_root::normalized_cross_product_count(arena, assertions)
+        .unwrap_or_else(|| triples.iter().filter(|&&(pa, pb, _)| pa != pb).count());
     if cross_products > MAX_CROSS_PRODUCTS {
         return Ok(CheckResult::Unknown(UnknownReason {
             kind: UnknownKind::ResourceLimit,

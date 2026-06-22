@@ -1661,14 +1661,20 @@ impl MultiPoly {
         Some(out)
     }
 
-    /// If this polynomial is **linear** and isolates one variable with
-    /// coefficient `±1` so that an equality `poly = 0` rearranges to
+    /// If this polynomial is **linear** and isolates one variable with **any**
+    /// nonzero coefficient so that an equality `poly = 0` rearranges to
     /// `y = L(other vars)` with `L` linear and y-free, return `(y, L)`.
     ///
     /// The polynomial is `c0 + Σ cᵢ·vᵢ`. We require it linear (every monomial
-    /// degree ≤ 1) and pick a variable `y` whose coefficient is exactly `±1`.
-    /// Then `poly = 0` ⇒ `y = −(rest)/cᵧ`, and since `cᵧ = ±1`, `L` has exact
-    /// rational coefficients with no division blow-up.
+    /// degree ≤ 1) and pick a variable `y` whose coefficient `cᵧ` is nonzero.
+    /// Then `poly = 0` ⇒ `y = −(poly − cᵧ·y)/cᵧ`, so each remaining term is
+    /// scaled by `−1/cᵧ` via **exact rational division** — e.g. `−3·x = 0`
+    /// ⇒ `x = 0`, `2·x − 6 = 0` ⇒ `x = 3`, `a·x + L(rest) = 0` ⇒ `x = −L/a`.
+    ///
+    /// A `±1` coefficient is *preferred* when one exists (it keeps `L` integer,
+    /// minimizing denominator growth in the substitution fixpoint), but is no
+    /// longer required: any nonzero coefficient yields an exact definition,
+    /// which closes the cases that algebraically collapse to linear/constant.
     fn as_linear_definition(&self) -> Option<(SymbolId, MultiPoly)> {
         // Reject any nonlinear monomial.
         for k in self.terms.keys() {
@@ -1676,7 +1682,10 @@ impl MultiPoly {
                 return None;
             }
         }
-        // Find a variable with coefficient ±1.
+        // Prefer a variable with coefficient ±1 (keeps `L` integer); otherwise
+        // fall back to the first variable with ANY nonzero coefficient. Both
+        // passes iterate the canonical `BTreeMap` order, so the choice is
+        // deterministic.
         let mut chosen: Option<(SymbolId, Rational)> = None;
         for (k, &c) in &self.terms {
             if let [(v, 1)] = k.as_slice()
@@ -1686,10 +1695,20 @@ impl MultiPoly {
                 break;
             }
         }
+        if chosen.is_none() {
+            for (k, &c) in &self.terms {
+                if let [(v, 1)] = k.as_slice()
+                    && !c.is_zero()
+                {
+                    chosen = Some((*v, c));
+                    break;
+                }
+            }
+        }
         let (y, cy) = chosen?;
         // L = −(poly − cy·y) / cy. Build `poly` with the y-term removed, then
-        // scale by `−1/cy`. Since cy = ±1, −1/cy = ∓1.
-        let scale = cy.checked_neg()?; // −cy = ∓1 (because cy=±1 ⇒ −1/cy = −cy)
+        // scale each surviving term by `−1/cy` (exact rational division).
+        let scale = Rational::integer(-1).checked_div(cy)?; // −1/cy (cy ≠ 0)
         let mut l = MultiPoly::zero();
         for (k, &c) in &self.terms {
             if k.as_slice() == [(y, 1)] {
@@ -1821,6 +1840,14 @@ fn decompose_multivariate(arena: &TermArena, assertions: &[TermId]) -> Option<Ch
     if atoms.is_empty() {
         return None;
     }
+    // Every Real symbol appearing in the ORIGINAL assertion *terms* (not the
+    // normalized polynomials). A variable can vanish from the normalized form yet
+    // still occur in the raw term the replay evaluator reads — e.g.
+    // `−2xy + 2xy + x = 0` normalizes to `x`, but `y` remains a symbol of the
+    // original equality, and the ground evaluator needs every symbol bound. Such a
+    // variable is genuinely unconstrained (its coefficient cancelled), so binding it
+    // to `0` before replay (step 4a') yields a concrete, evaluator-checkable witness.
+    let all_original_vars = real_symbols_of(arena, assertions);
     // Degree-2 SOS/PSD refutation (sound, possibly incomplete): a single STRICT
     // inequality atom whose quadratic form is globally one-signed refutes the
     // conjunction everywhere ⇒ `Unsat`. See `sos_refute_multivariate`.
@@ -1833,10 +1860,19 @@ fn decompose_multivariate(arena: &TermArena, assertions: &[TermId]) -> Option<Ch
         Ok(rest) => rest,
         Err(verdict) => return verdict,
     };
-    // Require at least two distinct variables overall — otherwise the single-var
-    // path already owns this (and we must not double-handle / diverge).
+    // Require at least one variable in the NORMALIZED atoms. We reach
+    // `decompose_multivariate` only after the single-variable collector declined
+    // (`decide_real_poly_constraint`'s else branch) — typically because a *raw*
+    // term mentions a second variable. After normalization that variable may
+    // CANCEL, leaving a genuinely single-variable system (e.g. the single atom
+    // `−2xy + 2xy + x = 0` collapses to `x = 0`, with `y` free). Such a system is
+    // ours to decide — the single-var collector never saw the normalized form — so
+    // we no longer decline at one variable; the component decision handles the live
+    // variable and the free-variable binding (step 4a') handles any cancelled one.
+    // (Zero variables means every atom folded to a constant, already handled by
+    // `fold_constant_atoms` above, so this guard only rejects the empty residue.)
     let all_vars: BTreeSet<SymbolId> = atoms.iter().flat_map(|a| a.poly.vars()).collect();
-    if all_vars.len() < 2 {
+    if all_vars.is_empty() {
         return None;
     }
 
@@ -1932,6 +1968,17 @@ fn decompose_multivariate(arena: &TermArena, assertions: &[TermId]) -> Option<Ch
     for (y, l) in subst.iter().rev() {
         let v = eval_multipoly_under_model(l, &model)?;
         model.set(*y, v);
+    }
+
+    // 4a'. Bind any ORIGINAL variable left free (never entered a component nor a
+    //      back-substitution — e.g. `y` once `x = 0` collapses `−3xy − x = 0` to
+    //      `0 = 0`) to `0`. It is genuinely unconstrained, so any value works; `0`
+    //      gives a concrete witness for the evaluator-backed replay below. Sound:
+    //      the choice is replay-checked against every original assertion.
+    for v in &all_original_vars {
+        if model.get(*v).is_none() {
+            model.set(*v, Value::Real(Rational::zero()));
+        }
     }
 
     // 4b. Coarsen every algebraic model value to a small-denominator isolating
@@ -5278,6 +5325,37 @@ fn replay_multi_atom(atom: &MultiAtom, model: &Model) -> bool {
     }
 }
 
+/// Collect every **Real-sorted** symbol that occurs in the term `t` (transitive),
+/// into `out`. Used to bind any cancelled-but-still-present free variable before
+/// the ground-evaluator replay (a symbol can vanish from a normalized polynomial
+/// yet remain in the raw term the evaluator reads). Only Real symbols are gathered
+/// so a non-Real symbol is never mis-bound to a Real value.
+fn collect_term_symbols(arena: &TermArena, t: TermId, out: &mut BTreeSet<SymbolId>) {
+    let mut stack = vec![t];
+    let mut seen: BTreeSet<TermId> = BTreeSet::new();
+    while let Some(cur) = stack.pop() {
+        if !seen.insert(cur) {
+            continue;
+        }
+        match arena.node(cur) {
+            TermNode::Symbol(s) if arena.sort_of(cur) == Sort::Real => {
+                out.insert(*s);
+            }
+            TermNode::App { args, .. } => stack.extend(args.iter().copied()),
+            _ => {}
+        }
+    }
+}
+
+/// The set of all Real-sorted symbols occurring across `assertions`.
+fn real_symbols_of(arena: &TermArena, assertions: &[TermId]) -> BTreeSet<SymbolId> {
+    let mut out = BTreeSet::new();
+    for &a in assertions {
+        collect_term_symbols(arena, a, &mut out);
+    }
+    out
+}
+
 /// Multivariate analogue of [`collect_conjuncts`]: flatten a Boolean assertion
 /// into multivariate polynomial comparisons, **allowing multiple variables**.
 /// Declines (`None`) on any non-conjunctive structure or non-polynomial atom.
@@ -5299,6 +5377,46 @@ fn collect_multi_conjuncts(
     let (cmp, poly) = match_multi_constraint(arena, assertion)?;
     atoms.push(MultiAtom { cmp, poly });
     Some(())
+}
+
+/// Count the **distinct cross-product monomials** of the NORMALIZED polynomials
+/// of `assertions`, for the deterministic OOM admission gate in
+/// [`crate::nra::check_with_nra`].
+///
+/// A *cross-product monomial* is a nonzero-coefficient monomial mentioning **two
+/// or more distinct variables** (e.g. `x·y`, `x·y·z`, `x²·y`). Pure powers of a
+/// single variable (`x²`, `x³`) are squares/powers — cheap, never counted —
+/// matching the raw gate's exclusion of `a == b`.
+///
+/// This counts over the canonical [`MultiPoly`] (like monomials collected,
+/// zero-coefficient terms dropped, cancelling pairs removed), so it is **not
+/// inflated** by `0·y·z` monomials or algebraically-cancelling products that the
+/// raw term-tree walk over-counts. It is purely a *count* used by the gate; it
+/// changes no verdict and only relaxes a conservative OOM refusal.
+///
+/// Returns `None` if any assertion is not a conjunction of multivariate
+/// polynomial comparisons (so the caller falls back to the raw term-tree count,
+/// preserving the original gate for shapes this normalizer cannot represent).
+pub(crate) fn normalized_cross_product_count(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<usize> {
+    let mut atoms: Vec<MultiAtom> = Vec::new();
+    for &a in assertions {
+        collect_multi_conjuncts(arena, a, &mut atoms)?;
+    }
+    let mut cross: BTreeSet<MonoKey> = BTreeSet::new();
+    for atom in &atoms {
+        for key in atom.poly.terms.keys() {
+            // `terms` already excludes zero-coefficient monomials. A monomial with
+            // ≥ 2 distinct variables is a cross-product (the `key` is a sorted list
+            // of `(var, exp)` pairs, one entry per distinct variable).
+            if key.len() >= 2 {
+                cross.insert(key.clone());
+            }
+        }
+    }
+    Some(cross.len())
 }
 
 /// Multivariate analogue of [`match_real_poly_constraint`]: a real comparison
