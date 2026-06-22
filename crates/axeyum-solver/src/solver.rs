@@ -193,6 +193,34 @@ impl<B: SolverBackend> Solver<B> {
         crate::unsat_core(arena, &self.assertions, &self.config)
     }
 
+    /// Computes a verified Craig interpolant for the partition of the active
+    /// assertions in which `a_indices` selects the `A`-side and the remaining
+    /// assertions form the `B`-side. Returns `Ok(Some(I))` with a fully
+    /// re-checked interpolant, or `Ok(None)` when no Farkas interpolant is
+    /// available (the conjunction is satisfiable, outside conjunctive `QF_LRA`,
+    /// or the candidate fails its re-checks). Out-of-range indices are ignored.
+    /// See [`crate::lra_interpolant`].
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`SolverError`] from the underlying Farkas decision / the
+    /// interpolant re-verification.
+    pub fn interpolant(
+        &self,
+        arena: &mut TermArena,
+        a_indices: &[usize],
+    ) -> Result<Option<TermId>, SolverError> {
+        let n = self.assertions.len();
+        let a_set: std::collections::BTreeSet<usize> =
+            a_indices.iter().copied().filter(|&i| i < n).collect();
+        let a: Vec<TermId> = a_set.iter().map(|&i| self.assertions[i]).collect();
+        let b: Vec<TermId> = (0..n)
+            .filter(|i| !a_set.contains(i))
+            .map(|i| self.assertions[i])
+            .collect();
+        crate::lra_interpolant(arena, &a, &b)
+    }
+
     /// Maximizes the integer-linear `objective` subject to the active assertions
     /// (see [`crate::maximize_lia`]).
     ///

@@ -8,7 +8,7 @@
 use std::collections::BTreeSet;
 
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId, TermNode};
-use axeyum_solver::{CheckResult, check_with_lra, lra_interpolant};
+use axeyum_solver::{CheckResult, SatBvBackend, Solver, check_with_lra, lra_interpolant};
 
 /// `x` as a real symbol + its variable term.
 fn real_var(arena: &mut TermArena, name: &str) -> TermId {
@@ -202,6 +202,27 @@ fn satisfiable_conjunction_has_no_interpolant() {
             .is_none(),
         "a satisfiable conjunction must yield no interpolant"
     );
+}
+
+#[test]
+fn solver_facade_interpolant_partitions_assertions() {
+    // Active assertions [x ≤ 0, x ≥ 1]; A = {index 0}, B = {index 1}.
+    let mut arena = TermArena::new();
+    let x = real_var(&mut arena, "x");
+    let zero = arena.real_ratio(0, 1);
+    let one = arena.real_ratio(1, 1);
+    let a0 = arena.real_le(x, zero).unwrap();
+    let b0 = arena.real_ge(x, one).unwrap();
+
+    let mut solver = Solver::new(SatBvBackend::new());
+    solver.assert(a0);
+    solver.assert(b0);
+
+    let interpolant = solver
+        .interpolant(&mut arena, &[0])
+        .expect("decides")
+        .expect("interpolant exists");
+    assert_is_interpolant(&mut arena, &[a0], &[b0], interpolant);
 }
 
 #[test]
