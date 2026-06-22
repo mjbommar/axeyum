@@ -245,14 +245,19 @@ pub const CAPABILITIES: &[Capability] = &[
         area: "QF_UFLRA",
         feature: "ONLINE Nelson–Oppen combination (check_qf_uflra_online): the online EufTheory + the \
                   online LraTheory combined by model-based equality sharing (interface-equality \
-                  exchange + DFS interface split) — the warm alternative to eager Ackermann, first \
-                  slice of the theory-combination keystone",
+                  exchange + DFS interface split) — the warm alternative to eager Ackermann. Now \
+                  decides FULL Boolean-structured QF_UFLRA via an enumerative DPLL(T): Tseitin \
+                  skeleton over the theory atoms, propositional-model enumeration with theory-conflict \
+                  blocking clauses, the conjunctive MBTC reused verbatim as the per-model theory oracle",
         assurance: Assurance::Validated,
         evidence: "soundness by DIFFERENTIAL validation vs the trusted offline check_with_uf_arithmetic \
-                   — random UFLRA conjunctions, 0 disagreements, every sat model REPLAYED against the \
-                   originals (the fuzz caught + fixed 2 real soundness bugs); slightly MORE complete \
-                   than eager Ackermann on real-UF cases. Conjunctive MBTC (Boolean structure / \
-                   propagation deferred); non-UFLRA → Unknown",
+                   — random UFLRA conjunctions AND random and/or/not/ite Boolean trees over UFLRA atoms, \
+                   0 disagreements, every sat model REPLAYED against the originals (the conjunctive fuzz \
+                   caught + fixed 2 real soundness bugs; the Boolean fuzz jointly decided 123 = 41 sat / \
+                   82 unsat). A per-model Unknown forces a whole-query Unknown (no wrong unsat). Caps \
+                   (models/atoms/clauses/split-depth/timeout) → graceful Unknown; non-UFLRA → Unknown. \
+                   Enumerative DPLL(T) with blocking-clause pruning (1-UIP learning / theory propagation \
+                   deferred)",
         reference: "ADR-0013/0015",
     },
     Capability {
