@@ -492,16 +492,22 @@ pub const CAPABILITIES: &[Capability] = &[
     Capability {
         area: "reachability",
         feature: "CHC / Horn front-end (solve_horn): the standard SMT-LIB constrained-Horn input \
-                  (HornClause/HornSystem, predicates = Bool-result functions) — solves single-predicate \
-                  AND ACYCLIC multi-predicate linear systems (topological solving, predecessor \
-                  invariants substituted; self-recursion via the model-checking engines)",
+                  (HornClause/HornSystem, predicates = Bool-result functions) — solves single-predicate, \
+                  ACYCLIC multi-predicate, AND MUTUALLY-RECURSIVE (cyclic) linear systems. SCC \
+                  condensation (deterministic Tarjan over declaration order); a non-trivial SCC of \
+                  sort-compatible members is merged into one self-recursive predicate over a \
+                  control-tagged disjoint-union state, solved by the model-checking engines, then \
+                  projected back per member; self-recursion + predecessor-invariant substitution as before",
         assurance: Assurance::Validated,
-        evidence: "the dependency analysis / topo order / reduction are UNTRUSTED — a Sat (SAFE) is \
+        evidence: "the dependency analysis / SCC / tag-merge / projection are UNTRUSTED — a Sat (SAFE) is \
                    returned only when the full multi-predicate interpretation makes EVERY clause valid \
-                   (per-clause check_auto-Unsat of body∧constraint∧¬head); Unsat via the engine's \
-                   replay-checked counterexample / a reachable query. (A reduction soundness bug — \
-                   variable leakage into the invariant — was caught by this gate + soundness tests and \
-                   fixed.) Mutual recursion / nonlinear (≥2-atom body) → Unknown",
+                   (per-clause check_auto-Unsat of body∧constraint∧¬head over the ORIGINAL clauses); \
+                   Unsat via the engine's replay-checked counterexample / a reachable query. (A reduction \
+                   soundness bug — variable leakage into the invariant — was caught by this gate + \
+                   soundness-negative tests and fixed; mutual recursion adds a soundness-negative test \
+                   that a member-conflating projection can never yield a wrong Unsat.) SCCs over caps \
+                   (16 members / 32 state width), sort-incompatible members, or nonlinear (≥2-atom body) \
+                   → Unknown",
         reference: "ADR-0048",
     },
     Capability {
