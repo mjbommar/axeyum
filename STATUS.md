@@ -6,6 +6,32 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-22 (cont.) — REVIEW-DRIVEN HARDENING of the interpolation engine (reviewer top-10).**
+  A reviewing agent's rank-ordered list reprioritized: **harden + honesty-check interpolation before any
+  CHC push.** Addressed the in-lane items:
+  - **#1 soundness — DONE.** Audited all five verifiers: each matches *only* `CheckResult::Unsat`
+    (`Ok(true)` for SAT), so every one declines on `Unknown`/`Sat`/`Err` — never returns on doubt.
+    **Extended the adversarial fuzz to QF_BV + UFLRA** (`interpolant_fuzz.rs`; SAT already had a
+    4000-iter fuzz in `axeyum-cnf`), each independently re-checking the 3 Craig conditions.
+  - **#2 honesty — DONE.** Every interpolation row (+ `mbp_lra`) → `Assurance::Validated` (was `Checked`
+    for LRA/SAT/MBP): they verify-before-return by *re-deciding*, emitting **no per-query certificate**.
+    Confirmed no doc claims interpolants are Lean-reconstructed.
+  - **#3 prose — DONE.** ADR-0047 + the P3.8 implementation notes synced to "all five fragments land
+    verify-before-return; only the SMT-LIB surface remains" (matching PLAN.md).
+  - **#5 decline telemetry — DONE.** `Solver::interpolant_explained` → `InterpolantOutcome::{Interpolant,
+    NotInterpolable, Declined}` so a CHC/PDR consumer can tell "no interpolant exists (A∧B sat)" from
+    "we declined (fall back)". **Found + fixed a real robustness bug:** `qf_bv_interpolant` *panicked*
+    (`axeyum-bv unreachable!`) on real/int-sorted input from the dispatch fall-through — added an
+    `is_bv_lowerable` sort pre-check (graceful `None`). Added a **cross-theory robustness gate**
+    (`interpolant_robustness.rs`, 5 tests) confirming no interpolator panics on a foreign partition.
+  - **#6 CHC sequencing — HONORED.** The LRA-theory PDR push (task gated) stays paused. Gate is now:
+    decline telemetry **(done)** + the `(get-interpolant)` API stable **(remaining, #4)**.
+  - **Remaining review items (gated / cross-lane):** **#4** `(get-interpolant)` SMT-LIB surface needs the
+    `axeyum-smtlib` *parser* (coordinated agent's crate) — solver-side driver can follow once the command
+    parses. **#7–#9** NRA/NIA certify+explain evidence frontier touches the concurrent agent's NRA lane
+    (`real_algebraic.rs`) — coordinate before editing. **#10** ~19 commits unpushed on local `main`;
+    pushing is outward-facing — left for an explicit decision (not pushed unilaterally).
+
 - **Session 2026-06-22 (cont.) — P4.6 CHC/Horn ENGINE OPENED (first slice in progress).**
   With P3.8 interpolation complete, started the **biggest categorically-missing Z3 engine** (CHC /
   unbounded invariant discovery). **Readiness audit (sub-agent):** the full Spacer core needs two
