@@ -6,6 +6,22 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-22 (cont.) — LIA (integer) interpolant landed (interpolation engine now 6 fragments).**
+  Filled the reviewer-noted gap ("no `lia_interpolant`"; needed for integer CHC) and deepened the engine
+  (the #1 depth/completeness gap), staying in-lane while CHC remains coordination-gated.
+  - **`axeyum_solver::lia_interpolant` — DONE (`11232b6`).** Interpolate the **rational relaxation**
+    (map Int→Real with a shared symbol bijection, reuse `lra_interpolant`/Farkas), then translate the
+    real interpolant back to an integer atom **clearing denominators to integer coefficients** (LCM,
+    overflow-checked). Sound because a rational-relaxation interpolant is a valid *integer* interpolant
+    when the relaxation is itself unsat (A⇒I, I∧B⇒⊥ over ℝ ⟹ over ℤ). **Verify-before-return over the
+    integers:** `check_with_lia_simplex` on A∧¬I and I∧B + shared vocabulary; the mapping/Farkas/clearing
+    are untrusted. **Declines** the cuts-needed case (rational relaxation sat, e.g. `2x=1`), overflow, and
+    non-conjunctive-QF_LIA. `Solver::interpolant` dispatch now **LRA → LIA → EUF → UFLRA → BV**. 7 tests
+    (incl. denominator-clearing `2x≤1∧2x≥3`, cuts-needed-declines, A-local exclusion, fuzz). Ledger row
+    (QF_LIA, `Validated`). Whole crate green (366 lib + all interpolation suites).
+  - **Interpolation engine now spans LRA, LIA, EUF, propositional/SAT, QF_BV, UFLRA** — all
+    verify-before-return, all `Validated`, all fuzzed/panic-proofed.
+
 - **Session 2026-06-22 (cont.) — REVIEW-DRIVEN HARDENING of the interpolation engine (reviewer top-10).**
   A reviewing agent's rank-ordered list reprioritized: **harden + honesty-check interpolation before any
   CHC push.** Addressed the in-lane items:

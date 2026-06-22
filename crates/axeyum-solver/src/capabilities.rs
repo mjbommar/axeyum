@@ -193,6 +193,17 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0014/0020/0021",
     },
     Capability {
+        area: "QF_LIA",
+        feature: "Craig interpolation (lia_interpolant): interpolate the rational relaxation \
+                  (Int→Real, Farkas), clear denominators to integer coefficients",
+        assurance: Assurance::Validated,
+        evidence: "VERIFY-BEFORE-RETURN over the integers — A ∧ ¬I and I ∧ B each Unsat via \
+                   check_with_lia_simplex + shared vocabulary; the relaxation/Farkas/denominator-\
+                   clearing are untrusted. Declines on a cuts-needed unsat (rational relaxation sat), \
+                   overflow, or non-conjunctive-QF_LIA. No per-query certificate emitted",
+        reference: "ADR-0047",
+    },
+    Capability {
         area: "QF_UFLIA/UFLRA",
         feature: "uninterpreted functions over Int/Real, by EUF + linear-arithmetic \
                   combination (eager Ackermann elimination → the arithmetic dispatcher)",
