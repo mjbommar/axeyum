@@ -163,6 +163,19 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "QF_LRA",
+        feature: "ONLINE incremental LRA theory solver (LraTheory: assert/push/pop + Farkas conflict \
+                  cores) + a DPLL(T) driver (check_qf_lra_online) — the warm theory engine for online \
+                  combination, first slice of the architecture-maturity keystone",
+        assurance: Assurance::Validated,
+        evidence: "incremental Fourier–Motzkin with backtrackable trail; soundness by DIFFERENTIAL \
+                   validation vs the trusted offline check_with_lra — 4000 random conjunctions \
+                   (sat+unsat) + 27.7k push/pop checkpoints, 0 disagreements, every sat model replayed, \
+                   conflict cores re-verified unsat (same discipline as the online EUF path). \
+                   Propagation under-approximated (deferred); non-LRA atoms decline gracefully",
+        reference: "ADR-0015",
+    },
+    Capability {
+        area: "QF_LRA",
         feature: "Craig interpolation (lra_interpolant): interpolant read off the Farkas \
                   certificate of an unsat A ∧ B",
         assurance: Assurance::Validated,
