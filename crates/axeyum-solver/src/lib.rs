@@ -49,6 +49,7 @@ mod faithfulness;
 mod incremental;
 mod int_real_relax;
 mod int_reconstruct;
+mod interpolant;
 mod layers;
 mod lazy_bv;
 mod lia;
@@ -152,6 +153,7 @@ pub use int_reconstruct::{
     reconstruct_diophantine_to_lean_module, reconstruct_int_inequality_proof,
     reconstruct_int_inequality_to_lean_module,
 };
+pub use interpolant::lra_interpolant;
 pub use layers::BvLayerStats;
 pub use lazy_bv::{
     LazyBvBackend, LazyBvOutcome, check_lazy_bv_abstraction, check_lazy_bv_abstraction_ro,

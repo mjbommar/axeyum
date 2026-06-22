@@ -3274,6 +3274,7 @@ fn lra_general_rational_multipliers_reconstructs() {
         ],
         multipliers: vec![Rational::new(2, 3), Rational::integer(1)],
         origins: vec![0, 1],
+        vars: Vec::new(),
     };
     assert!(
         cert.verify(),
@@ -3317,6 +3318,7 @@ fn lra_mixed_rational_multipliers_reconstructs() {
         ],
         multipliers: vec![Rational::new(2, 3), Rational::integer(1)],
         origins: vec![0, 1],
+        vars: Vec::new(),
     };
     assert!(
         cert.verify(),
@@ -3369,6 +3371,7 @@ fn lra_bogus_farkas_combination_is_rejected() {
         ],
         multipliers: vec![Rational::integer(1), Rational::integer(1)],
         origins: vec![0, 1],
+        vars: Vec::new(),
     };
     assert!(
         !non_refutation.verify(),

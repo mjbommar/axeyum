@@ -266,6 +266,7 @@ fn decide_within(
                 atoms,
                 multipliers,
                 origins: origins.clone(),
+                vars: ctx.vars.clone(),
             };
             if !certificate.verify() {
                 return Err(SolverError::Backend(
@@ -359,6 +360,11 @@ pub struct FarkasCertificate {
     /// deterministic collection order), so this stays a public determinism
     /// promise.
     pub origins: Vec<usize>,
+    /// Maps the dense variable index used in [`FarkasAtom::coeffs`] back to its
+    /// [`SymbolId`]: a coefficient pair `(idx, c)` refers to symbol `vars[idx]`.
+    /// In dense-index (first-seen) order; lets a consumer (e.g. the Craig
+    /// interpolant extractor) turn a Farkas combination back into a typed term.
+    pub vars: Vec<SymbolId>,
 }
 
 impl FarkasCertificate {
@@ -2045,6 +2051,7 @@ pub fn check_with_lra_simplex(
                 atoms,
                 multipliers,
                 origins,
+                vars: ctx.vars.clone(),
             };
             if certificate.verify() {
                 Ok(CheckResult::Unsat)
