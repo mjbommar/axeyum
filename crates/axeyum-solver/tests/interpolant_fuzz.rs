@@ -10,7 +10,10 @@
 use std::collections::BTreeSet;
 
 use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode};
-use axeyum_solver::{CheckResult, check_qf_uf, check_with_lra, lra_interpolant, qf_uf_interpolant};
+use axeyum_solver::{
+    CheckResult, SolverConfig, check_auto, check_qf_uf, check_with_lra, check_with_uf_arithmetic,
+    lra_interpolant, qf_bv_interpolant, qf_uf_interpolant, uflra_interpolant,
+};
 
 /// A small deterministic linear-congruential generator.
 struct Lcg(u64);
@@ -239,5 +242,131 @@ fn euf_interpolant_soundness_fuzz() {
     assert!(
         produced > 0,
         "fuzzer never produced an interpolant — coverage bug"
+    );
+}
+
+#[test]
+fn qf_bv_interpolant_soundness_fuzz() {
+    let cfg = SolverConfig::default();
+    let bv_unsat = |arena: &mut TermArena, ts: &[TermId]| {
+        matches!(check_auto(arena, ts, &cfg), Ok(CheckResult::Unsat))
+    };
+
+    let mut rng = Lcg(0xdead_beef_0bad_f00d);
+    let mut produced = 0u32;
+
+    for _ in 0..300 {
+        let mut arena = TermArena::new();
+        let width = 4u32;
+        let vars: Vec<TermId> = (0..3)
+            .map(|k| {
+                let s = arena
+                    .declare(&format!("b{k}"), Sort::BitVec(width))
+                    .unwrap();
+                arena.var(s)
+            })
+            .collect();
+
+        let make = |arena: &mut TermArena, rng: &mut Lcg| -> TermId {
+            let lhs = vars[rng.pick(vars.len())];
+            let rhs = if rng.pick(2) == 0 {
+                vars[rng.pick(vars.len())]
+            } else {
+                let v = u128::try_from(rng.pick(16)).expect("fits u128");
+                arena.bv_const(width, v).unwrap()
+            };
+            let atom = match rng.pick(3) {
+                0 => arena.eq(lhs, rhs).unwrap(),
+                1 => arena.bv_ult(lhs, rhs).unwrap(),
+                _ => arena.bv_ule(lhs, rhs).unwrap(),
+            };
+            if rng.pick(2) == 0 {
+                atom
+            } else {
+                arena.not(atom).unwrap()
+            }
+        };
+
+        let na = rng.pick(3) + 1;
+        let nb = rng.pick(3) + 1;
+        let a: Vec<TermId> = (0..na).map(|_| make(&mut arena, &mut rng)).collect();
+        let b: Vec<TermId> = (0..nb).map(|_| make(&mut arena, &mut rng)).collect();
+
+        let mut all = a.clone();
+        all.extend_from_slice(&b);
+        if !bv_unsat(&mut arena, &all) {
+            continue;
+        }
+        if let Some(i) = qf_bv_interpolant(&mut arena, &a, &b) {
+            produced += 1;
+            check_interpolant(&mut arena, &a, &b, i, bv_unsat);
+        }
+    }
+
+    assert!(
+        produced > 0,
+        "QF_BV fuzzer never produced an interpolant — coverage bug"
+    );
+}
+
+#[test]
+fn uflra_interpolant_soundness_fuzz() {
+    let cfg = SolverConfig::default();
+    let uflra_unsat = |arena: &mut TermArena, ts: &[TermId]| {
+        matches!(
+            check_with_uf_arithmetic(arena, ts, &cfg),
+            Ok(CheckResult::Unsat)
+        )
+    };
+
+    let mut rng = Lcg(0xfeed_face_cafe_b0ba);
+    let mut produced = 0u32;
+
+    for _ in 0..800 {
+        let mut arena = TermArena::new();
+        let r0_sym = arena.declare("r0", Sort::Real).unwrap();
+        let r0 = arena.var(r0_sym);
+        let f = arena.declare_fun("f", &[Sort::Real], Sort::Real).unwrap();
+        // A small pool — the real var and one shared UF app — so opposing bounds
+        // on the SAME term frequently contradict without needing congruence (the
+        // fragment uflra_interpolant produces on).
+        let terms = [r0, arena.apply(f, &[r0]).unwrap()];
+
+        let make = |arena: &mut TermArena, rng: &mut Lcg| -> TermId {
+            let lhs = terms[rng.pick(terms.len())];
+            let k = arena.real_ratio(rng.coeff(-2, 2), 1);
+            // Bias toward bounds so contradictory intervals arise often.
+            match rng.pick(3) {
+                0 => arena.real_le(lhs, k).unwrap(),
+                1 => arena.real_ge(lhs, k).unwrap(),
+                _ => arena.real_lt(lhs, k).unwrap(),
+            }
+        };
+
+        let na = rng.pick(3) + 1;
+        let nb = rng.pick(3) + 1;
+        let a: Vec<TermId> = (0..na).map(|_| make(&mut arena, &mut rng)).collect();
+        let b: Vec<TermId> = (0..nb).map(|_| make(&mut arena, &mut rng)).collect();
+
+        let mut all = a.clone();
+        all.extend_from_slice(&b);
+        if !uflra_unsat(&mut arena, &all) {
+            continue;
+        }
+        // An Err is a verifying-decider error (not a false interpolant); skip it.
+        if let Ok(Some(i)) = uflra_interpolant(&mut arena, &a, &b) {
+            produced += 1;
+            // A ground (empty-vocab) interpolant was already inline-verified; the
+            // external recheck below covers every non-degenerate case.
+            if vocab_of(&arena, std::slice::from_ref(&i)).is_empty() {
+                continue;
+            }
+            check_interpolant(&mut arena, &a, &b, i, uflra_unsat);
+        }
+    }
+
+    assert!(
+        produced > 0,
+        "QF_UFLRA fuzzer never produced an interpolant — coverage bug"
     );
 }
