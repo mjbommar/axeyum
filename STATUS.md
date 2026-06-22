@@ -19,6 +19,20 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     re-checks + vocabulary; partial generator stays sound by the verify-guard. 10 tests.
   - **`Solver::interpolant` dispatches LRA → EUF** (`8791e4b`); ledger rows (LRA `Checked`, EUF
     `Validated`) + **ADR-0047** + regenerated capability matrix (`4fd6262`).
+  - **T3.8.2 propositional/CNF interpolant — DONE (`6c77d4c`, McMillan 2003).**
+    `axeyum_cnf::propositional_interpolant(a, b) -> Option<BoolExpr>` for two CNF formulas over a
+    shared variable space whose conjunction is unsat: refute with `solve_with_drat_proof`, elaborate
+    to LRAT, fold McMillan partial interpolants over the LRAT hint chains (input A-clause → OR of its
+    global literals, B-clause → ⊤; learned clause → replay RUP to recover pivots, fold backward with
+    ∨ at an A-local pivot, ∧ otherwise). **Untrusted fold, trusted check:** every candidate
+    re-verified before return — `A∧¬I` and `I∧B` Tseitin-encoded + discharged unsat by the core +
+    `check_drat`, plus shared-vocabulary containment; declines on any doubt. New `BoolExpr` carrier
+    (smart constructors + Tseitin encoder). 9 tests (incl. A-local/B-local exclusion, multi-step
+    resolution, sat-declines, 4000-round fuzz independently re-checking every produced interpolant);
+    cnf lib 251 green. (Implemented by an Opus sub-agent in an isolated worktree; the soundness
+    anchor `verify_interpolant`/`unsat_with_expr` reviewed + cherry-picked + re-gated on main.)
+    Ledger row added (SAT propositional, `Checked`). **BV-term lifting** (map shared CNF vars → shared
+    BV-term bits via `variable_bindings`) is the remaining follow-up to reach SMT-level QF_BV interp.
   - **Randomized soundness gate landed** (`tests/interpolant_fuzz.rs`): 400 LRA + 800 EUF random
     unsat conjunctions; every returned interpolant independently re-checks all three Craig
     conditions; deterministic LCG; both assert non-zero coverage. Whole solver lib green (366).

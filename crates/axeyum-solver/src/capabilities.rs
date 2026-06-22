@@ -162,6 +162,16 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0047",
     },
     Capability {
+        area: "SAT (propositional)",
+        feature: "Craig interpolation (axeyum_cnf::propositional_interpolant): McMillan fold over \
+                  the elaborated LRAT resolution proof of an unsat A ∧ B",
+        assurance: Assurance::Checked,
+        evidence: "interpolant re-verified before return — A ∧ ¬I and I ∧ B each Tseitin-encoded \
+                   and discharged unsat by the proof-producing core + check_drat, plus shared-\
+                   vocabulary containment; declines (None) on any failure",
+        reference: "ADR-0047",
+    },
+    Capability {
         area: "QF_LIA",
         feature: "linear integer arithmetic (bit-blast + branch-and-bound simplex)",
         assurance: Assurance::Validated,
