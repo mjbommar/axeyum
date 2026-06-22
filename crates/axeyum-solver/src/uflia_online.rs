@@ -32,12 +32,31 @@
 //! theories or all branches infeasible. Every undetermined pair the `EUF` congruence
 //! already pins (entailed / refuted) prunes a branch — the equality-sharing exchange.
 //!
-//! **What this slice implements.** The sound *conjunctive* MBTC: flatten the
-//! assertions to a conjunction of literals (declining a non-conjunctive Boolean
-//! skeleton to a graceful [`CheckResult::Unknown`]), assert each theory's atoms, and
-//! DFS-split on the shared pairs. A leaf consistent in both theories yields a combined
-//! model that is **replayed against the original assertions**; all branches infeasible
-//! ⇒ `UNSAT`.
+//! **What this slice implements.**
+//!
+//! - The sound *conjunctive* MBTC (`decide_conjunction`): flatten the assertions to a
+//!   conjunction of literals, assert each theory's atoms, and DFS-split on the shared
+//!   pairs. A leaf consistent in both theories yields a combined model that is
+//!   **replayed against the original assertions**; all branches infeasible ⇒ `UNSAT`.
+//!   This is the conjunctive fast-path and its behaviour is unchanged.
+//!
+//! - Full (Boolean-structured) `QF_UFLIA` (`check_qf_uflia_boolean`): when the
+//!   assertions are *not* a conjunction, a **`DPLL(T)`** layer (the online `CDCL(T)`
+//!   payoff) wraps the combination. The Boolean structure (`and` / `or` / `not` /
+//!   `xor` / `=>` / `ite` over the distinct `EUF` / `LIA` atoms) is Tseitin-encoded
+//!   into a propositional skeleton with one variable per distinct theory atom. An
+//!   enumerative `DPLL` search assigns those propositions; on each total propositional
+//!   model the corresponding conjunction of theory literals is decided by the **same**
+//!   `decide_conjunction` combination above. A model whose combination is `sat`
+//!   (replay-checked) ⇒ `SAT`; a model whose combination is `unsat` is blocked by a
+//!   theory-conflict clause (the negation of the model's theory-literal assignment) and
+//!   the search continues; when every propositional model is blocked ⇒ `UNSAT`. A
+//!   combination that returns `Unknown` on some model, or any of the enumeration caps,
+//!   degrades the whole query to a conservative [`CheckResult::Unknown`] — never a wrong
+//!   `sat` / `unsat`. This is the sound **enumerative `DPLL(T)`** slice: it handles
+//!   arbitrary Boolean structure by reusing the conjunctive combination as the theory
+//!   oracle behind a propositional search, with theory-conflict blocking clauses for
+//!   pruning.
 //!
 //! **Trust.** This is a decision procedure; its soundness is established by the
 //! differential gate against the trusted offline
@@ -52,7 +71,8 @@
 //! shared pairs) and the recursion depth capped, so a resource cap degrades to
 //! [`CheckResult::Unknown`].
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::time::Instant;
 
 use axeyum_ir::{Assignment, FuncValue, Op, Sort, TermArena, TermId, TermNode, Value, eval};
 
@@ -67,6 +87,20 @@ use crate::theory_combination::{InterfaceStatus, classify_interface_equalities};
 /// wrong verdict.
 const MAX_SPLIT_DEPTH: usize = 64;
 
+/// Hard ceiling on the number of propositional models the Boolean `DPLL(T)` layer
+/// enumerates before declining to a graceful [`CheckResult::Unknown`]. Bounds the
+/// enumerative search so a pathological skeleton degrades, never a wrong verdict.
+const MAX_BOOLEAN_MODELS: usize = 100_000;
+
+/// Hard ceiling on the number of distinct theory atoms in the Boolean skeleton.
+/// Above it the layer declines (the propositional search space is too large to
+/// enumerate soundly within budget).
+const MAX_BOOLEAN_ATOMS: usize = 48;
+
+/// Hard ceiling on Tseitin clauses produced for the Boolean skeleton; above it the
+/// layer declines rather than build an unbounded encoding.
+const MAX_BOOLEAN_CLAUSES: usize = 200_000;
+
 /// A classified literal of the conjunction: the atom term and its asserted polarity.
 #[derive(Clone, Copy)]
 struct Literal {
@@ -74,26 +108,31 @@ struct Literal {
     value: bool,
 }
 
-/// Decides a conjunctive `QF_UFLIA` query (`EUF` + linear integer arithmetic) by the
-/// **online** model-based `Nelson–Oppen` combination, returning a **replay-checked**
-/// integer model on `sat`. The warm, equality-sharing alternative to the
-/// eager-Ackermann [`crate::euf::check_with_uf_arithmetic`].
+/// Decides an **arbitrary Boolean combination** of `QF_UFLIA` literals (`EUF` + linear
+/// integer arithmetic) by the **online** model-based `Nelson–Oppen` combination,
+/// returning a **replay-checked** integer model on `sat`. The warm, equality-sharing
+/// alternative to the eager-Ackermann [`crate::euf::check_with_uf_arithmetic`].
 ///
-/// The assertions are flattened to a conjunction of literals and partitioned between
-/// [`crate::euf_egraph::EufTheory`] and [`crate::lia_online::LiaTheory`]; the two
+/// A conjunctive query takes the fast-path: the literals are partitioned between
+/// [`crate::euf_egraph::EufTheory`] and [`crate::lia_online::LiaTheory`] and the two
 /// arrangements over the shared (interface) integer terms are reconciled by exchanging
 /// `EUF`-entailed equalities and **model-based** case-splitting the remaining pairs
 /// (`LIA` is not convex, so the split — not a single forced equality — is what keeps the
-/// combination complete). A consistent arrangement yields a combined model **replayed
-/// against the original assertions** before being returned — the soundness gate, so a
-/// model the combination cannot justify yields [`CheckResult::Unknown`], never a wrong
-/// `sat`. `unsat` is reported only when every branch is infeasible.
+/// combination complete; `decide_conjunction`). A non-conjunctive (Boolean-structured)
+/// query is driven by an enumerative `DPLL(T)` layer (`check_qf_uflia_boolean`) that
+/// Tseitin-encodes the Boolean structure over the distinct theory atoms and decides each
+/// propositional model's conjunction by that same combination. Either way a consistent
+/// arrangement yields a combined model **replayed against the original assertions** before
+/// being returned — the soundness gate, so a model the combination cannot justify yields
+/// [`CheckResult::Unknown`], never a wrong `sat`. `unsat` is reported only when every
+/// branch / propositional model is infeasible.
 ///
-/// Returns [`CheckResult::Unknown`] (a sound decline, never a guess) when the query is
-/// not conjunctive `QF_UFLIA` (a non-conjunctive Boolean skeleton, or an atom outside
-/// `EUF` / `LIA` — `BV` / `Real` / arrays / quantifiers), when the interface split
-/// exceeds the internal depth cap, or when arithmetic overflow / a resource limit made
-/// a feasibility check inconclusive.
+/// Returns [`CheckResult::Unknown`] (a sound decline, never a guess) when an atom is
+/// outside `EUF` / `LIA` (`BV` / `Real` / arrays / quantifiers), when the Boolean
+/// skeleton uses a connective the encoder does not cover, when the interface split or the
+/// propositional enumeration exceeds an internal cap (depth, model count, atom count,
+/// clauses, or `config.timeout`), or when arithmetic overflow / a resource limit made a
+/// feasibility check inconclusive.
 ///
 /// # Errors
 ///
@@ -103,26 +142,47 @@ struct Literal {
 pub fn check_qf_uflia_online(
     arena: &mut TermArena,
     assertions: &[TermId],
-    _config: &SolverConfig,
+    config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
-    // 1. Flatten to a conjunction of literals; decline a non-conjunctive skeleton.
+    // 1. The conjunctive fast-path: if every assertion flattens to a conjunction of
+    //    literals, decide it directly by the model-based combination — the behaviour
+    //    this module shipped with, kept verbatim.
     let mut literals: Vec<Literal> = Vec::new();
+    let mut conjunctive = true;
     for &assertion in assertions {
         if !flatten_conjunction(arena, assertion, true, &mut literals) {
-            return Ok(decline(
-                "non-conjunctive boolean skeleton for the online UFLIA path",
-            ));
+            conjunctive = false;
+            break;
         }
     }
-    if literals.is_empty() {
-        return Ok(decline("no UFLIA literals for the online combination path"));
+    // `flatten_conjunction` returns a leaf literal for any non-`And`/`Not` shape,
+    // including a positive `or` / `ite` / Boolean leaf — those are not atoms. The
+    // fast-path applies only when every flattened literal is a genuine theory atom (an
+    // equality or an order atom); otherwise the Boolean layer handles it.
+    if conjunctive && !literals.iter().all(|l| is_theory_atom(arena, l.atom)) {
+        conjunctive = false;
+    }
+    if conjunctive {
+        if literals.is_empty() {
+            return Ok(decline("no UFLIA literals for the online combination path"));
+        }
+        return Ok(decide_conjunction(arena, &literals));
     }
 
+    // 2. Boolean-structured QF_UFLIA: drive the combination from a DPLL(T) layer over
+    //    the Tseitin skeleton (one proposition per distinct UFLIA atom).
+    Ok(check_qf_uflia_boolean(arena, assertions, config))
+}
+
+/// Decides a **conjunction** of `QF_UFLIA` literals by the model-based combination (the
+/// original conjunctive core, factored out so both the fast-path and the Boolean
+/// `DPLL(T)` layer call it). Returns a replay-checked model on `sat`, `Unsat` when every
+/// interface branch is infeasible, and a conservative [`CheckResult::Unknown`] otherwise
+/// (an unsupported atom, the depth cap, or a leaf model that did not replay).
+fn decide_conjunction(arena: &mut TermArena, literals: &[Literal]) -> CheckResult {
     // 2. Partition the literals; decline an unsupported atom.
-    let Some(part) = partition(arena, &literals) else {
-        return Ok(decline(
-            "atom outside QF_UFLIA for the online combination path",
-        ));
+    let Some(part) = partition(arena, literals) else {
+        return decline("atom outside QF_UFLIA for the online combination path");
     };
 
     // 3. The interface pairs. Each `EUF`-interface integer term (a UF argument /
@@ -136,16 +196,14 @@ pub fn check_qf_uflia_online(
     let interface = interface_terms(arena, &part);
     let pairs = interface_pairs(&interface);
     if pairs.len() > MAX_SPLIT_DEPTH {
-        return Ok(decline(
-            "too many interface pairs for the online combination split",
-        ));
+        return decline("too many interface pairs for the online combination split");
     }
 
     // 4. The initial EUF assertions (original equalities / disequalities). A
     //    single-theory EUF conflict is UNSAT.
     let euf_assertions = build_euf_assertions(arena, &part.euf);
     if euf_unsat(arena, &euf_assertions) {
-        return Ok(CheckResult::Unsat);
+        return CheckResult::Unsat;
     }
 
     // 5. Register the `LiaTheory` over the original LIA atoms PLUS, per shared pair,
@@ -156,13 +214,13 @@ pub fn check_qf_uflia_online(
     let mut pair_atoms: Vec<PairAtoms> = Vec::with_capacity(pairs.len());
     for &(s, t) in &pairs {
         let Ok(eq) = arena.eq(s, t) else {
-            return Ok(decline("interface equality term build failed"));
+            return decline("interface equality term build failed");
         };
         let Ok(lt) = arena.int_lt(s, t) else {
-            return Ok(decline("interface order term build failed"));
+            return decline("interface order term build failed");
         };
         let Ok(gt) = arena.int_gt(s, t) else {
-            return Ok(decline("interface order term build failed"));
+            return decline("interface order term build failed");
         };
         let base = lia_atom_terms.len();
         lia_atom_terms.push(eq);
@@ -178,23 +236,23 @@ pub fn check_qf_uflia_online(
     let mut lia = LiaTheory::new(arena, &lia_atom_terms);
     for (index, lit) in part.lia.iter().enumerate() {
         if lia.assert(index, lit.value).is_err() {
-            return Ok(CheckResult::Unsat);
+            return CheckResult::Unsat;
         }
     }
 
     // 6. The interface case-split (DFS).
     let mut search = Search {
         arena,
-        literals: &literals,
+        literals,
         euf_atoms: &part.euf,
         euf_assertions,
         pairs: &pairs,
         pair_atoms: &pair_atoms,
     };
     match search.run(&mut lia, &mut Vec::new(), 0) {
-        Outcome::Sat(model) => Ok(CheckResult::Sat(model)),
-        Outcome::Unsat => Ok(CheckResult::Unsat),
-        Outcome::Unknown(detail) => Ok(decline(detail)),
+        Outcome::Sat(model) => CheckResult::Sat(model),
+        Outcome::Unsat => CheckResult::Unsat,
+        Outcome::Unknown(detail) => decline(detail),
     }
 }
 
@@ -575,6 +633,20 @@ fn partition(arena: &TermArena, literals: &[Literal]) -> Option<Partition> {
     }
 
     Some(Partition { lia, euf })
+}
+
+/// Whether `term` is a genuine `QF_UFLIA` theory atom — an equality (`(= s t)`) or an
+/// integer order atom (`<`, `<=`, `>`, `>=`). Used to tell a conjunction of integer
+/// atoms (the fast-path) from a flattened literal that is itself Boolean structure (a
+/// positive `or` / `ite` / Boolean leaf), which the Boolean layer must handle.
+fn is_theory_atom(arena: &TermArena, term: TermId) -> bool {
+    matches!(
+        arena.node(term),
+        TermNode::App {
+            op: Op::Eq | Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe,
+            ..
+        }
+    )
 }
 
 /// The `EUF` assertion terms for the `EUF` literals: a `true` equality literal is its
@@ -1014,6 +1086,426 @@ impl IntTable {
             fv = fv.define_value(&args, result);
         }
         fv
+    }
+}
+
+// --- The Boolean (DPLL(T)) layer over the conjunctive combination. ----------
+//
+// Full QF_UFLIA with arbitrary Boolean structure: Tseitin-encode the skeleton over one
+// proposition per distinct theory atom, enumerate propositional models with a
+// self-contained DPLL search, and decide each total model's conjunction with the
+// conjunctive combination [`decide_conjunction`] above (the theory oracle). The search
+// prunes with theory-conflict blocking clauses (the negation of an UNSAT model's
+// theory-literal assignment). It is the sound enumerative DPLL(T): SAT if some model's
+// combination is consistent (replay-checked), UNSAT if every model is blocked, and a
+// conservative Unknown on any cap or an Unknown combination.
+
+/// A propositional literal in the Boolean skeleton: a variable index and polarity.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct BoolLit {
+    var: usize,
+    positive: bool,
+}
+
+impl BoolLit {
+    fn negate(self) -> Self {
+        Self {
+            var: self.var,
+            positive: !self.positive,
+        }
+    }
+}
+
+/// Decides a Boolean-structured `QF_UFLIA` query by the enumerative `DPLL(T)` layer.
+///
+/// The distinct theory atoms (`EUF` equalities, `LIA` order atoms) become the first
+/// propositional variables; the Boolean structure is Tseitin-encoded over them. A
+/// self-contained `DPLL` search enumerates total propositional models; each model's
+/// conjunction of theory literals is decided by [`decide_conjunction`]. A `sat`
+/// (replay-checked) combination wins immediately; an `unsat` combination blocks the
+/// model and the search continues; an `unknown` combination degrades the whole query to
+/// a conservative [`CheckResult::Unknown`]. `UNSAT` is reported only when every
+/// propositional model is blocked.
+fn check_qf_uflia_boolean(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> CheckResult {
+    // The distinct theory atoms over the whole assertion set become the proposition
+    // variables 0..atom_count (deterministic left-to-right scan).
+    let mut atom_terms: Vec<TermId> = Vec::new();
+    let mut seen: BTreeSet<TermId> = BTreeSet::new();
+    for &a in assertions {
+        collect_uflia_atoms(arena, a, &mut atom_terms, &mut seen);
+    }
+    if atom_terms.is_empty() {
+        return decline("no UFLIA atoms for the online combination boolean layer");
+    }
+    if atom_terms.len() > MAX_BOOLEAN_ATOMS {
+        return decline("too many theory atoms for the online combination boolean layer");
+    }
+
+    // Tseitin-encode each assertion; assert each top variable.
+    let mut enc = BoolEncoder::new(&atom_terms);
+    let mut clauses: Vec<Vec<BoolLit>> = Vec::new();
+    for &assertion in assertions {
+        let Some(top) = enc.encode(arena, assertion, &mut clauses) else {
+            return decline("boolean skeleton outside the online combination encoder");
+        };
+        if clauses.len() > MAX_BOOLEAN_CLAUSES {
+            return decline("too many clauses for the online combination boolean layer");
+        }
+        clauses.push(vec![BoolLit {
+            var: top,
+            positive: true,
+        }]);
+    }
+
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    let mut search = BoolSearch {
+        var_count: enc.var_count,
+        atom_count: atom_terms.len(),
+        atom_terms: &atom_terms,
+        clauses,
+        value: vec![None; enc.var_count],
+        trail: Vec::new(),
+        models_tried: 0,
+        deadline,
+    };
+    search.solve(arena)
+}
+
+/// The propositional enumeration search of the Boolean `DPLL(T)` layer. Chronological
+/// backtracking over the Tseitin skeleton; on each total propositional model the theory
+/// atoms' conjunction is decided by [`decide_conjunction`], and an `unsat` model is
+/// blocked by a theory-conflict clause.
+struct BoolSearch<'a> {
+    var_count: usize,
+    /// The first `atom_count` variables are the theory atoms (the rest are Tseitin
+    /// auxiliaries / Boolean leaves).
+    atom_count: usize,
+    /// The atom term per atom variable index (`0..atom_count`).
+    atom_terms: &'a [TermId],
+    clauses: Vec<Vec<BoolLit>>,
+    value: Vec<Option<bool>>,
+    /// `(var, is_decision)` in assignment order — the backtrack trail.
+    trail: Vec<(usize, bool)>,
+    /// How many total propositional models have been decided (the enumeration cap).
+    models_tried: usize,
+    deadline: Option<Instant>,
+}
+
+impl BoolSearch<'_> {
+    fn lit_sat(&self, lit: BoolLit) -> Option<bool> {
+        self.value[lit.var].map(|v| v == lit.positive)
+    }
+
+    /// Boolean unit propagation to fixpoint. `Err` carries the (Boolean) conflict clause
+    /// `¬clause` on an all-false clause; `Ok(())` at a consistent fixpoint.
+    fn unit_propagate(&mut self) -> Result<(), Vec<BoolLit>> {
+        let mut changed = true;
+        while changed {
+            changed = false;
+            for ci in 0..self.clauses.len() {
+                let mut unassigned: Option<BoolLit> = None;
+                let mut satisfied = false;
+                let mut count = 0;
+                for &lit in &self.clauses[ci] {
+                    match self.lit_sat(lit) {
+                        Some(true) => {
+                            satisfied = true;
+                            break;
+                        }
+                        Some(false) => {}
+                        None => {
+                            unassigned = Some(lit);
+                            count += 1;
+                        }
+                    }
+                }
+                if satisfied {
+                    continue;
+                }
+                if count == 0 {
+                    return Err(self.clauses[ci].iter().map(|l| l.negate()).collect());
+                }
+                if count == 1 {
+                    let lit = unassigned.expect("count == 1 has the unit literal");
+                    self.value[lit.var] = Some(lit.positive);
+                    self.trail.push((lit.var, false));
+                    changed = true;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Undoes the trail back to (and excluding) the most recent decision, returning that
+    /// decision's `(var, value)`; `None` when no decision remains.
+    fn backtrack_to_decision(&mut self) -> Option<(usize, bool)> {
+        loop {
+            let (var, is_decision) = self.trail.pop()?;
+            let value = self.value[var].expect("trail var is assigned");
+            self.value[var] = None;
+            if is_decision {
+                return Some((var, value));
+            }
+        }
+    }
+
+    /// The lowest-index unassigned variable, or `None` when the assignment is total.
+    fn pick_unassigned(&self) -> Option<usize> {
+        (0..self.var_count).find(|&v| self.value[v].is_none())
+    }
+
+    /// Records `clause` (the learned/blocking clause), backtracks past the most recent
+    /// decision, and flips it as an implied assignment. `false` when no decision remains
+    /// (the propositional search is exhausted).
+    fn learn_and_backtrack(&mut self, clause: Vec<BoolLit>) -> bool {
+        if !clause.is_empty() {
+            self.clauses.push(clause);
+        }
+        let Some((var, value)) = self.backtrack_to_decision() else {
+            return false;
+        };
+        self.value[var] = Some(!value);
+        self.trail.push((var, false));
+        true
+    }
+
+    /// The theory-literal conjunction of the current total propositional model: each atom
+    /// variable's term at its assigned polarity.
+    fn model_literals(&self) -> Vec<Literal> {
+        let mut lits = Vec::with_capacity(self.atom_count);
+        for (var, &atom) in self.atom_terms.iter().enumerate() {
+            if let Some(value) = self.value[var] {
+                lits.push(Literal { atom, value });
+            }
+        }
+        lits
+    }
+
+    /// The theory-conflict blocking clause for an `unsat` model: the negation of the
+    /// model's theory-literal assignment (`¬⋀ atom-literals`), so the propositional
+    /// search never revisits a model agreeing on every theory atom.
+    fn blocking_clause(&self) -> Vec<BoolLit> {
+        (0..self.atom_count)
+            .filter_map(|var| {
+                self.value[var].map(|value| BoolLit {
+                    var,
+                    positive: !value,
+                })
+            })
+            .collect()
+    }
+
+    /// Runs the enumerative search. Returns `SAT` (replay-checked) for the first total
+    /// propositional model whose theory-combination is consistent, `UNSAT` when every
+    /// model is blocked, and a conservative `Unknown` on a cap or an `Unknown`
+    /// combination.
+    fn solve(&mut self, arena: &mut TermArena) -> CheckResult {
+        loop {
+            // Resolve any pending Boolean conflict by backtracking.
+            loop {
+                match self.unit_propagate() {
+                    Ok(()) => break,
+                    Err(clause) => {
+                        if !self.learn_and_backtrack(clause) {
+                            return CheckResult::Unsat;
+                        }
+                    }
+                }
+            }
+            match self.pick_unassigned() {
+                None => {
+                    // A total propositional model: decide its theory conjunction.
+                    if self.models_tried >= MAX_BOOLEAN_MODELS {
+                        return decline(
+                            "propositional model budget exhausted in the boolean layer",
+                        );
+                    }
+                    self.models_tried += 1;
+                    if self.deadline.is_some_and(|d| Instant::now() >= d) {
+                        return decline("timeout in the online combination boolean layer");
+                    }
+                    let literals = self.model_literals();
+                    match decide_conjunction(arena, &literals) {
+                        CheckResult::Sat(model) => return CheckResult::Sat(model),
+                        CheckResult::Unsat => {
+                            // Block this model and keep enumerating.
+                            let clause = self.blocking_clause();
+                            if !self.learn_and_backtrack(clause) {
+                                return CheckResult::Unsat;
+                            }
+                        }
+                        // The combination could not certify this model either way: a sound
+                        // decline (the offline decider may still settle it). We cannot
+                        // soundly call the whole query UNSAT, so degrade.
+                        CheckResult::Unknown(_) => {
+                            return decline(
+                                "theory combination inconclusive on a boolean-layer model",
+                            );
+                        }
+                    }
+                }
+                Some(var) => {
+                    self.value[var] = Some(true);
+                    self.trail.push((var, true));
+                }
+            }
+        }
+    }
+}
+
+/// Collects the distinct `QF_UFLIA` theory atoms in `term` — `EUF` equalities
+/// (`(= s t)`) and `LIA` order atoms (`<`, `<=`, `>`, `>=`) — in a stable left-to-right
+/// scan (so the proposition indexing is deterministic). An atom is not descended into
+/// (its sides are theory terms, not Boolean structure).
+fn collect_uflia_atoms(
+    arena: &TermArena,
+    term: TermId,
+    out: &mut Vec<TermId>,
+    seen: &mut BTreeSet<TermId>,
+) {
+    match arena.node(term) {
+        TermNode::App {
+            op: Op::Eq | Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe,
+            ..
+        } if seen.insert(term) => {
+            out.push(term);
+        }
+        // An already-seen atom (the guard above failed) is skipped; only descend into
+        // genuine Boolean structure.
+        TermNode::App {
+            op: Op::Eq | Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe,
+            ..
+        } => {}
+        TermNode::App { args, .. } => {
+            let args = args.clone();
+            for a in args {
+                collect_uflia_atoms(arena, a, out, seen);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Tseitin encoder from the typed Boolean IR into the propositional skeleton, with the
+/// first `atom_terms.len()` variables reserved for the theory atoms (numbered to match
+/// the [`BoolSearch`] atom variables). Mirrors the encoder in [`crate::uflra_online`],
+/// retargeted to the integer combination's atom set.
+struct BoolEncoder {
+    term_var: HashMap<TermId, usize>,
+    var_count: usize,
+}
+
+impl BoolEncoder {
+    fn new(atom_terms: &[TermId]) -> Self {
+        let mut term_var = HashMap::new();
+        for (i, &t) in atom_terms.iter().enumerate() {
+            term_var.insert(t, i);
+        }
+        Self {
+            term_var,
+            var_count: atom_terms.len(),
+        }
+    }
+
+    fn fresh(&mut self) -> usize {
+        let v = self.var_count;
+        self.var_count += 1;
+        v
+    }
+
+    /// Encodes Boolean term `t`, returning the variable whose truth equals `t`, or `None`
+    /// for structure outside the supported connectives (a sound give-up).
+    fn encode(
+        &mut self,
+        arena: &TermArena,
+        t: TermId,
+        clauses: &mut Vec<Vec<BoolLit>>,
+    ) -> Option<usize> {
+        if let Some(&v) = self.term_var.get(&t) {
+            return Some(v);
+        }
+        let v = match arena.node(t) {
+            TermNode::Symbol(_) if arena.sort_of(t) == Sort::Bool => self.fresh(),
+            TermNode::BoolConst(b) => {
+                let value = *b;
+                let g = self.fresh();
+                clauses.push(vec![BoolLit {
+                    var: g,
+                    positive: value,
+                }]);
+                g
+            }
+            TermNode::App { op, args } => {
+                let op = *op;
+                let args = args.clone();
+                self.encode_app(arena, op, &args, clauses)?
+            }
+            _ => return None,
+        };
+        self.term_var.insert(t, v);
+        Some(v)
+    }
+
+    fn encode_app(
+        &mut self,
+        arena: &TermArena,
+        op: Op,
+        args: &[TermId],
+        clauses: &mut Vec<Vec<BoolLit>>,
+    ) -> Option<usize> {
+        let lits: Vec<BoolLit> = args
+            .iter()
+            .map(|&a| {
+                self.encode(arena, a, clauses).map(|var| BoolLit {
+                    var,
+                    positive: true,
+                })
+            })
+            .collect::<Option<Vec<_>>>()?;
+        let g = self.fresh();
+        let gl = BoolLit {
+            var: g,
+            positive: true,
+        };
+        match (op, lits.as_slice()) {
+            (Op::BoolNot, [a]) => {
+                clauses.push(vec![gl.negate(), a.negate()]);
+                clauses.push(vec![gl, *a]);
+            }
+            (Op::BoolAnd, [a, b]) => {
+                clauses.push(vec![gl.negate(), *a]);
+                clauses.push(vec![gl.negate(), *b]);
+                clauses.push(vec![a.negate(), b.negate(), gl]);
+            }
+            (Op::BoolOr, [a, b]) => {
+                clauses.push(vec![gl, a.negate()]);
+                clauses.push(vec![gl, b.negate()]);
+                clauses.push(vec![gl.negate(), *a, *b]);
+            }
+            (Op::BoolImplies, [a, b]) => {
+                clauses.push(vec![gl, *a]);
+                clauses.push(vec![gl, b.negate()]);
+                clauses.push(vec![gl.negate(), a.negate(), *b]);
+            }
+            (Op::BoolXor, [a, b]) => {
+                clauses.push(vec![gl.negate(), *a, *b]);
+                clauses.push(vec![gl.negate(), a.negate(), b.negate()]);
+                clauses.push(vec![gl, a.negate(), *b]);
+                clauses.push(vec![gl, *a, b.negate()]);
+            }
+            (Op::Ite, [c, x, y]) => {
+                clauses.push(vec![c.negate(), x.negate(), gl]);
+                clauses.push(vec![c.negate(), *x, gl.negate()]);
+                clauses.push(vec![*c, y.negate(), gl]);
+                clauses.push(vec![*c, *y, gl.negate()]);
+            }
+            _ => return None,
+        }
+        Some(g)
     }
 }
 

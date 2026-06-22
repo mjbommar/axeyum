@@ -290,6 +290,136 @@ fn non_uflia_atom_declines_gracefully() {
     );
 }
 
+#[test]
+#[allow(clippy::similar_names)]
+fn disjunctive_sat_replays() {
+    // (x <= 0 OR f(x) = f(1)) AND x >= 1 AND x <= 1.
+    // x >= 1 AND x <= 1 ⇒ x = 1, refuting x <= 0, so the disjunction is satisfied by
+    // f(x) = f(1), which holds by congruence (x = 1) ⇒ SAT.
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::Int], Sort::Int)
+        .expect("declare f");
+    let x = ivar(&mut arena, "x");
+    let one = iconst(&mut arena, 1);
+    let zero = iconst(&mut arena, 0);
+    let fx = arena.apply(f, &[x]).unwrap();
+    let f1 = arena.apply(f, &[one]).unwrap();
+
+    let x_le_0 = arena.int_le(x, zero).unwrap();
+    let fx_eq_f1 = arena.eq(fx, f1).unwrap();
+    let disjunction = arena.or(x_le_0, fx_eq_f1).unwrap();
+    let x_ge_1 = arena.int_ge(x, one).unwrap();
+    let x_le_1 = arena.int_le(x, one).unwrap();
+    let assertions = [disjunction, x_ge_1, x_le_1];
+
+    let config = SolverConfig::default();
+    let online = check_qf_uflia_online(&mut arena, &assertions, &config).unwrap();
+    assert_eq!(verdict(&online), Some(true), "expected SAT, got {online:?}");
+    model_replays(&arena, &assertions, &online);
+
+    // Re-check the verdict test-side against the trusted offline decider.
+    let offline = check_with_uf_arithmetic(&mut arena, &assertions, &config).unwrap();
+    assert_eq!(verdict(&offline), Some(true));
+}
+
+#[test]
+#[allow(clippy::similar_names)]
+fn disjunctive_unsat() {
+    // (x <= 0 OR f(x) = f(1)) AND x >= 1 AND x <= 1 AND f(x) != f(1).
+    // x = 1 refutes x <= 0, forcing f(x) = f(1), contradicting f(x) != f(1) ⇒ UNSAT.
+    // The old conjunctive path declined this (a disjunction in the skeleton).
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::Int], Sort::Int)
+        .expect("declare f");
+    let x = ivar(&mut arena, "x");
+    let one = iconst(&mut arena, 1);
+    let zero = iconst(&mut arena, 0);
+    let fx = arena.apply(f, &[x]).unwrap();
+    let f1 = arena.apply(f, &[one]).unwrap();
+
+    let x_le_0 = arena.int_le(x, zero).unwrap();
+    let fx_eq_f1 = arena.eq(fx, f1).unwrap();
+    let disjunction = arena.or(x_le_0, fx_eq_f1).unwrap();
+    let x_ge_1 = arena.int_ge(x, one).unwrap();
+    let x_le_1 = arena.int_le(x, one).unwrap();
+    let fx_ne_f1 = arena.not(fx_eq_f1).unwrap();
+    let assertions = [disjunction, x_ge_1, x_le_1, fx_ne_f1];
+
+    let config = SolverConfig::default();
+    let online = check_qf_uflia_online(&mut arena, &assertions, &config).unwrap();
+    assert_eq!(online, CheckResult::Unsat, "combination must refute");
+
+    let offline = check_with_uf_arithmetic(&mut arena, &assertions, &config).unwrap();
+    assert_eq!(verdict(&offline), Some(false));
+}
+
+#[test]
+#[allow(clippy::similar_names)]
+fn ite_over_uflia_sat_replays() {
+    // ite(x >= 1, f(x) = f(1), x <= 0) AND x >= 1 AND x <= 1 AND nothing forbidding
+    // f(x) = f(1). The guard x >= 1 holds (x = 1), selecting the then-branch
+    // f(x) = f(1), which is consistent (x = 1 ⇒ f(x) = f(1) by congruence) ⇒ SAT.
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::Int], Sort::Int)
+        .expect("declare f");
+    let x = ivar(&mut arena, "x");
+    let one = iconst(&mut arena, 1);
+    let zero = iconst(&mut arena, 0);
+    let fx = arena.apply(f, &[x]).unwrap();
+    let f1 = arena.apply(f, &[one]).unwrap();
+
+    let guard = arena.int_ge(x, one).unwrap();
+    let then_b = arena.eq(fx, f1).unwrap();
+    let else_b = arena.int_le(x, zero).unwrap();
+    let ite = arena.ite(guard, then_b, else_b).unwrap();
+    let x_ge_1 = arena.int_ge(x, one).unwrap();
+    let x_le_1 = arena.int_le(x, one).unwrap();
+    let assertions = [ite, x_ge_1, x_le_1];
+
+    let config = SolverConfig::default();
+    let online = check_qf_uflia_online(&mut arena, &assertions, &config).unwrap();
+    assert_eq!(verdict(&online), Some(true), "expected SAT, got {online:?}");
+    model_replays(&arena, &assertions, &online);
+
+    let offline = check_with_uf_arithmetic(&mut arena, &assertions, &config).unwrap();
+    assert_eq!(verdict(&offline), Some(true));
+}
+
+#[test]
+#[allow(clippy::similar_names)]
+fn ite_over_uflia_unsat() {
+    // ite(x >= 1, f(x) = f(1), x <= 0) AND x >= 1 AND x <= 1 AND f(x) != f(1).
+    // The guard holds, selecting f(x) = f(1); with f(x) != f(1) asserted ⇒ UNSAT.
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::Int], Sort::Int)
+        .expect("declare f");
+    let x = ivar(&mut arena, "x");
+    let one = iconst(&mut arena, 1);
+    let zero = iconst(&mut arena, 0);
+    let fx = arena.apply(f, &[x]).unwrap();
+    let f1 = arena.apply(f, &[one]).unwrap();
+
+    let guard = arena.int_ge(x, one).unwrap();
+    let then_b = arena.eq(fx, f1).unwrap();
+    let else_b = arena.int_le(x, zero).unwrap();
+    let ite = arena.ite(guard, then_b, else_b).unwrap();
+    let x_ge_1 = arena.int_ge(x, one).unwrap();
+    let x_le_1 = arena.int_le(x, one).unwrap();
+    let fx_ne_f1 = arena.not(then_b).unwrap();
+    let assertions = [ite, x_ge_1, x_le_1, fx_ne_f1];
+
+    let config = SolverConfig::default();
+    let online = check_qf_uflia_online(&mut arena, &assertions, &config).unwrap();
+    assert_eq!(online, CheckResult::Unsat);
+
+    let offline = check_with_uf_arithmetic(&mut arena, &assertions, &config).unwrap();
+    assert_eq!(verdict(&offline), Some(false));
+}
+
 /// Advances a 64-bit LCG and returns a 32-bit draw (no `rand` crate, no clock).
 fn next_rand(state: &mut u64) -> u32 {
     *state = state
@@ -397,5 +527,131 @@ fn differential_fuzz_agrees_with_offline_ackermann() {
     assert!(
         unsat_count > 0,
         "expected non-zero UNSAT coverage, got none"
+    );
+}
+
+/// Builds a small deterministic-random pool of `QF_UFLIA` atoms over a few integer vars
+/// and a unary integer `f`: order atoms and `f`-application equalities.
+#[allow(clippy::many_single_char_names)]
+fn build_atom_pool(arena: &mut TermArena, state: &mut u64) -> Vec<TermId> {
+    let f = arena
+        .declare_fun("f", &[Sort::Int], Sort::Int)
+        .expect("declare f");
+    let x = ivar(arena, "x");
+    let y = ivar(arena, "y");
+    let z = ivar(arena, "z");
+
+    let mut terms: Vec<TermId> = vec![x, y, z];
+    for _ in 0..2 {
+        let n = i128::from(next_rand(state) % 4);
+        terms.push(iconst(arena, n));
+    }
+    for _ in 0..3 {
+        let pick = terms[(next_rand(state) as usize) % terms.len()];
+        terms.push(arena.apply(f, &[pick]).unwrap());
+    }
+
+    let mut atoms: Vec<TermId> = Vec::new();
+    for _ in 0..6 {
+        let lhs = terms[(next_rand(state) as usize) % terms.len()];
+        let rhs = terms[(next_rand(state) as usize) % terms.len()];
+        let atom = match next_rand(state) % 4 {
+            0 => arena.int_lt(lhs, rhs).unwrap(),
+            1 => arena.int_le(lhs, rhs).unwrap(),
+            2 => arena.int_ge(lhs, rhs).unwrap(),
+            _ => arena.eq(lhs, rhs).unwrap(),
+        };
+        atoms.push(atom);
+    }
+    atoms
+}
+
+/// Builds a random `and`/`or`/`not` tree (depth-bounded) over the atom pool.
+fn build_bool_tree(arena: &mut TermArena, pool: &[TermId], state: &mut u64, depth: u32) -> TermId {
+    if depth == 0 || next_rand(state) % 3 == 0 {
+        return pool[(next_rand(state) as usize) % pool.len()];
+    }
+    match next_rand(state) % 3 {
+        0 => {
+            let inner = build_bool_tree(arena, pool, state, depth - 1);
+            arena.not(inner).unwrap()
+        }
+        1 => {
+            let a = build_bool_tree(arena, pool, state, depth - 1);
+            let b = build_bool_tree(arena, pool, state, depth - 1);
+            arena.and(a, b).unwrap()
+        }
+        _ => {
+            let a = build_bool_tree(arena, pool, state, depth - 1);
+            let b = build_bool_tree(arena, pool, state, depth - 1);
+            arena.or(a, b).unwrap()
+        }
+    }
+}
+
+#[test]
+fn boolean_structured_differential_fuzz_agrees_with_offline_ackermann() {
+    // The load-bearing gate for the Boolean (DPLL(T)) layer: random and/or/not trees
+    // over a pool of UFLIA atoms must AGREE with the trusted offline decider on every
+    // jointly-decided instance, every sat model replayed, zero disagreements.
+    let config = SolverConfig::default();
+    let mut jointly_decided = 0usize;
+    let mut sat_count = 0usize;
+    let mut unsat_count = 0usize;
+    let mut online_decided = 0usize;
+
+    let mut state: u64 = 0x0bad_f00d_dead_beef;
+
+    for _case in 0..600usize {
+        let mut arena = TermArena::new();
+        let pool = build_atom_pool(&mut arena, &mut state);
+        // 2..3 top-level Boolean assertions over the pool.
+        let assertion_count = 2 + (next_rand(&mut state) % 2) as usize;
+        let assertions: Vec<TermId> = (0..assertion_count)
+            .map(|_| build_bool_tree(&mut arena, &pool, &mut state, 3))
+            .collect();
+
+        let online = check_qf_uflia_online(&mut arena, &assertions, &config).expect("online check");
+        let offline =
+            check_with_uf_arithmetic(&mut arena, &assertions, &config).expect("offline check");
+
+        // Every online `sat` must replay against the originals with integer values —
+        // the trust anchor.
+        model_replays(&arena, &assertions, &online);
+
+        if verdict(&online).is_some() {
+            online_decided += 1;
+        }
+
+        if let (Some(on), Some(off)) = (verdict(&online), verdict(&offline)) {
+            assert_eq!(
+                on, off,
+                "online/offline DISAGREE on a jointly-decided boolean-structured case \
+                 (online={online:?}, offline={offline:?}); assertions: {assertions:?}"
+            );
+            jointly_decided += 1;
+            if on {
+                sat_count += 1;
+            } else {
+                unsat_count += 1;
+            }
+        }
+    }
+
+    assert!(
+        jointly_decided > 0,
+        "expected some jointly-decided boolean-structured cases, got none"
+    );
+    assert!(
+        online_decided > 0,
+        "online decider should decide some boolean-structured cases (not all Unknown)"
+    );
+    assert!(
+        sat_count > 0,
+        "expected non-zero SAT coverage on boolean-structured cases, got none"
+    );
+    assert!(
+        unsat_count > 0,
+        "expected non-zero UNSAT coverage on boolean-structured cases, got none"
     );
 }
