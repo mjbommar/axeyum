@@ -29,9 +29,20 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     bundles the 3 DRAT-recheckable proofs. 5 tests; bmc lib (13) green. (Opus worktree sub-agent off
     a stale base — pdr.rs uses only pre-existing APIs so it cherry-picked clean; anchor reviewed.)
     Ledger row (reachability, `Checked`).
-  - **NEXT: MBP for LIA/LRA (P2.6-T2.6.6)** — the long-pole prerequisite that unblocks LRA-theory CHC
-    and Spacer-style predecessor generalization; then the online LRA theory solver, the multi-predicate
-    Horn IR, and interpolation-based generalization. The BV-PDR slice de-risked the engine shape.
+  - **MBP for LRA — DONE (`9953400`, P2.6-T2.6.6).** `axeyum_solver::mbp_lra(arena, formula, model, var)`:
+    model-guided existential elimination of one real var (Loos–Weispfenning — equality substitution,
+    M-selected tightest lower+upper interval resolvent + same-direction domination literals, one-sided
+    & unbounded cases). **Untrusted selection, trusted check:** every returned `F'` re-verified —
+    `M ⊨ F'`, var-absent, and `F' ⇒ ∃x.F` (entailment of the *exact* Fourier–Motzkin projection,
+    per-literal `check_with_lra` UNSAT); declines on the disjunctive var-disequality case, overflow,
+    or non-LRA. 8 tests (independent test-side FM oracle) + fuzz (261 verified projections, **0
+    unsound**). Ledger row (quantifiers, `Checked`). This is the Spacer predecessor-generalization
+    primitive — the CHC long pole.
+  - **NEXT on the CHC critical path:** (1) an **online incremental LRA `TheorySolver`** (warm across
+    PDR frames; today LRA rides the offline `check_with_lra_dpll`); (2) wire MBP + interpolation into
+    an **LRA-theory PDR** loop (lift the QF_BV-only `prove_safety_pdr` to LRA transition systems);
+    (3) the **multi-predicate Horn IR** (T4.6.1) generalizing the single-predicate transition system.
+    A LIA MBP variant (Cooper, model-guided) parallels the LRA one for integer CHC.
 
 - **Session 2026-06-22 (cont.) — P3.8 Craig interpolation COMPLETE (LRA+EUF+SAT+QF_BV+UFLRA, ledgered).**
   Engine now interpolates the two core conjunctive theories, each verify-before-return:

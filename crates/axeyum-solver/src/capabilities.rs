@@ -277,6 +277,18 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0016/0032",
     },
     Capability {
+        area: "quantifiers",
+        feature: "model-based projection for LRA (mbp_lra): model-guided existential elimination of \
+                  one real variable (Loos–Weispfenning) — the QE primitive Spacer/PDR uses for \
+                  predecessor generalization",
+        assurance: Assurance::Checked,
+        evidence: "the LW selection is untrusted — every returned projection F' is re-verified before \
+                   return: M ⊨ F', the variable is absent, and F' ⇒ ∃x.F (entailment of the exact \
+                   Fourier–Motzkin projection, per-literal check_with_lra UNSAT); declines (None) on \
+                   any doubt (disjunctive-disequality case, overflow, non-LRA)",
+        reference: "ADR-0048 (P2.6)",
+    },
+    Capability {
         area: "QF_S (strings)",
         feature: "bounded strings + regex (BV-lowered); SMT-LIB front end wired for \
                   declare/literal/=/distinct + str.prefixof/suffixof/contains + str.at (const idx) \
