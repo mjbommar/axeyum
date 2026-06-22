@@ -276,6 +276,25 @@ fn real_accumulator_is_never_a_wrong_verdict() {
 }
 
 #[test]
+fn real_accumulator_is_proven_safe_via_disjunctive_interpolation() {
+    // With the disjunctive `lra_interpolant_cnf` fallback, the IMC fixpoint closes
+    // the accumulator (whose growing `R = (x=0) ∨ (x≥0)` becomes disjunctive after
+    // the first step) to a genuine inductive invariant — a case the conjunctive-only
+    // route declined to `Unknown`. The discovered invariant is independently
+    // re-checked.
+    let mut arena = TermArena::new();
+    let outcome =
+        prove_safety_imc_lra(&mut arena, &RealAccumulator, &SolverConfig::default()).unwrap();
+    let ImcLraOutcome::Safe { invariant } = outcome else {
+        panic!("disjunctive interpolation should prove the accumulator Safe, got {outcome:?}");
+    };
+    assert!(
+        recheck_invariant(&mut arena, &RealAccumulator, invariant),
+        "the discovered invariant must pass the independent 3-condition re-check"
+    );
+}
+
+#[test]
 fn reaches_three_is_reachable_with_a_revalidated_trace() {
     let mut arena = TermArena::new();
     let outcome =

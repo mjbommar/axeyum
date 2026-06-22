@@ -331,16 +331,26 @@ impl<'sys, S: TransitionSystem> ImcLraEngine<'sys, S> {
             // vocabulary); s2..sk are fresh per-step copies.
             let Partition { a, b } = self.build_partition(arena, r, k)?;
 
-            // The interpolant I is over the shared vars s1 (== self.sp). None ⇒
-            // the conjunctive-QF_LRA Farkas route found no interpolant (a
-            // disjunctive A/B, a sat partition, an overflow) ⇒ deepen rather than
-            // fail. This is the documented partial-coverage boundary.
-            let interpolant = match lra_interpolant(arena, &a, &b) {
-                Ok(Some(interpolant)) => interpolant,
-                Ok(None) | Err(SolverError::Unsupported(_)) => {
-                    return Ok(FixpointResult::Deepen);
-                }
+            // The interpolant I is over the shared vars s1 (== self.sp). Try the
+            // cheap conjunctive Farkas route first; on its decline, fall back to
+            // the DISJUNCTIVE interpolating-SMT route (`lra_interpolant_cnf`),
+            // which closes the disjunctive A/B partitions the fixpoint generates
+            // (a growing `R = init ∨ I' ∨ …` and the multi-step bad-disjunction).
+            // Both `None` ⇒ deepen rather than fail.
+            let conjunctive = match lra_interpolant(arena, &a, &b) {
+                Ok(some) => some,
+                Err(SolverError::Unsupported(_)) => None,
                 Err(other) => return Err(other),
+            };
+            let interpolant = match conjunctive {
+                Some(interpolant) => interpolant,
+                None => match crate::lra_interpolant_cnf(arena, &a, &b) {
+                    Ok(Some(interpolant)) => interpolant,
+                    Ok(None) | Err(SolverError::Unsupported(_)) => {
+                        return Ok(FixpointResult::Deepen);
+                    }
+                    Err(other) => return Err(other),
+                },
             };
 
             // Rename I from s1 to s0 to express it over R's vocabulary.
