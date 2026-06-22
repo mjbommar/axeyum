@@ -19,9 +19,17 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
     re-checks + vocabulary; partial generator stays sound by the verify-guard. 10 tests.
   - **`Solver::interpolant` dispatches LRA → EUF** (`8791e4b`); ledger rows (LRA `Checked`, EUF
     `Validated`) + **ADR-0047** + regenerated capability matrix (`4fd6262`).
-  - **NEXT: T3.8.4 combined LRA+EUF (UFLRA conjunctive)** then **T3.8.2 propositional/BV off the
-    DRAT proof** (McMillan/Pudlák), then the SMT-LIB `(get-interpolant)` parse surface
-    (coordinate `axeyum-smtlib`). All under the same verify-before-return contract.
+  - **Randomized soundness gate landed** (`tests/interpolant_fuzz.rs`): 400 LRA + 800 EUF random
+    unsat conjunctions; every returned interpolant independently re-checks all three Craig
+    conditions; deterministic LCG; both assert non-zero coverage. Whole solver lib green (366).
+  - **NEXT (precise resume): T3.8.4 combined LRA+EUF (UFLRA conjunctive)** then **T3.8.2
+    propositional/BV off the DRAT proof** (McMillan/Pudlák), then the SMT-LIB `(get-interpolant)`
+    parse surface (coordinate `axeyum-smtlib`). Both remaining theory slices are L-sized/intricate
+    (combined = Nelson–Oppen equality-sharing interpolation; BV = color-tracking through the
+    resolution refutation) — start each with fresh context. All under the same verify-before-return
+    contract, so a partial generator stays sound. The engine API shape is settled:
+    `lra_interpolant` / `qf_uf_interpolant` free fns + `Solver::interpolant` dispatch; add the next
+    theory as a sibling free fn + extend the dispatch chain.
   - Original LRA detail:
   Starting the **interpolation engine** (one of the 3 categorically-missing engines vs Z3 and the
   lemma engine that unblocks CHC/P4.6). Read off the *already-verified* Farkas certificate, not a
