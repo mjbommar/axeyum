@@ -96,6 +96,7 @@ pub mod support_matrix;
 mod symexec;
 mod theory_combination;
 pub mod trust;
+mod uflra_interpolant;
 #[cfg(feature = "z3")]
 mod z3_backend;
 
@@ -238,5 +239,6 @@ pub use theory_combination::{
     propose_interface_equalities, shared_terms,
 };
 pub use trust::{ALL_TRUST_IDS, TrustId, TrustStep, trust_ledger_markdown};
+pub use uflra_interpolant::uflra_interpolant;
 #[cfg(feature = "z3")]
 pub use z3_backend::Z3Backend;
