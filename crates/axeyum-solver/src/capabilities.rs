@@ -385,6 +385,25 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "QF_LIA",
+        feature: "CERTIFIED conjunctive Craig interpolation (lia_interpolant_certified): the same \
+                  verified interpolant I, plus two KERNEL-CHECKED integer certificates",
+        assurance: Assurance::Checked,
+        evidence: "I is a single integer linear inequality, so A ∧ ¬I and I ∧ B are each integer \
+                   CONJUNCTIONS (¬I built as the bare DUAL comparison so the integer fragment \
+                   classifier reads it); reconstructs EACH to a kernel-checked Lean module via \
+                   prove_unsat_to_lean_module (infer + def_eq False, no sorryAx) — Carcara has NO \
+                   lia_generic rule (warns + holey), so the Lean kernel is the external checker. \
+                   Returns the certificate ONLY when BOTH conjunctions reconstruct through a COVERED \
+                   integer-prelude fragment (Diophantine gcd-infeasible / single-variable interval cut), \
+                   else declines to the Validated lia_interpolant path. BOUNDARY: covered-shapes-only — \
+                   an interpolant whose A ∧ ¬I or I ∧ B needs an UNCOVERED integer refutation (a general \
+                   cut, or a multivariate rational-relaxation refutation the integer reconstructor \
+                   declines) stays Validated; equality interpolants (no single-comparison dual) and \
+                   disjunctive/Boolean-I (lia_interpolant_cnf) stay Validated too",
+        reference: "ADR-0047",
+    },
+    Capability {
+        area: "QF_LIA",
         feature: "DISJUNCTIVE Craig interpolation (lia_interpolant_cnf): the integer mirror of \
                   lra_interpolant_cnf — lifts integer interpolation to assertions with arbitrary Boolean \
                   structure (∧/∨/¬/ite/= over linear-int atoms). Relax Int→Real (shared surrogates), reuse \

@@ -734,3 +734,113 @@ fn tampered_certified_euf_interpolant_module_is_rejected_by_real_lean() {
     }
     // (If it does NOT type-check, that is already a rejection — nothing to assert.)
 }
+
+// --- Certified conjunctive QF_LIA Craig interpolant (lia_interpolant_certified) ---
+//
+// The LIA interpolant `I` carries two KERNEL-CHECKED integer certificates witnessing
+// its two Craig soundness conditions: `A ∧ ¬I ⊢ ⊥` and `I ∧ B ⊢ ⊥`. Each conjunction
+// is an integer-infeasible system the integer-prelude reconstructor covers
+// (Diophantine / interval cut), so each certificate is a Lean module
+// `prove_unsat_to_lean_module` already kernel-checked in-tree. Feeding both to the
+// REAL `lean` binary — accepted, no `sorryAx` — is the external check that upgrades
+// the LIA interpolant from Validated to Checked. Carcara has NO `lia_generic` rule
+// (warns + `holey`), so for integers the Lean kernel is the external checker.
+
+#[test]
+fn certified_lia_interpolant_both_integer_certs_checked_by_real_lean() {
+    use axeyum_solver::{ProofFragment, lia_interpolant_certified};
+    // A: 2x ≥ 1 ; B: 2x ≤ 0 over Int.  Unsat; shared variable x.  I = (2x ≥ 1), and
+    // both A ∧ ¬I and I ∧ B are the empty integer interval 1 ≤ 2x ≤ 0 (IntInequality).
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let two = arena.int_const(2);
+    let two_x = arena.int_mul(two, x).unwrap();
+    let zero = arena.int_const(0);
+    let one = arena.int_const(1);
+    let a0 = arena.int_ge(two_x, one).unwrap();
+    let b0 = arena.int_le(two_x, zero).unwrap();
+
+    let cert = lia_interpolant_certified(&mut arena, &[a0], &[b0])
+        .expect("decides")
+        .expect("a certified LIA interpolant exists");
+
+    // Both certificates reconstructed through a COVERED integer fragment.
+    assert!(matches!(
+        cert.a_fragment,
+        ProofFragment::Diophantine | ProofFragment::IntInequality
+    ));
+    assert!(matches!(
+        cert.b_fragment,
+        ProofFragment::Diophantine | ProofFragment::IntInequality
+    ));
+
+    // Craig condition 1: A ∧ ¬I is the kernel-checked integer module on the cert.
+    assert!(
+        !cert.a_certificate.contains("sorryAx"),
+        "A ∧ ¬I module depends on sorryAx:\n{}",
+        cert.a_certificate
+    );
+    lean_accepts("lia_interp_a_not_i", &cert.a_certificate);
+
+    // Craig condition 2: I ∧ B likewise.
+    assert!(
+        !cert.b_certificate.contains("sorryAx"),
+        "I ∧ B module depends on sorryAx:\n{}",
+        cert.b_certificate
+    );
+    lean_accepts("lia_interp_i_b", &cert.b_certificate);
+}
+
+/// TAMPER (the no-`sorryAx` / kernel check has teeth): take a genuine certified LIA
+/// integer module and replace its proof term with `sorry`. The real Lean kernel then
+/// EITHER fails to type-check OR `#print axioms` reports `sorryAx` — both are
+/// rejections. A fabricated LIA certificate cannot pass the gate the positive test
+/// uses.
+#[test]
+fn tampered_certified_lia_interpolant_module_is_rejected_by_real_lean() {
+    use axeyum_solver::lia_interpolant_certified;
+    if lean_bin().is_none() {
+        eprintln!("[skip] tamper: lean binary not found; install via elan or set AXEYUM_LEAN_BIN");
+        return;
+    }
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let two = arena.int_const(2);
+    let two_x = arena.int_mul(two, x).unwrap();
+    let zero = arena.int_const(0);
+    let one = arena.int_const(1);
+    let a0 = arena.int_ge(two_x, one).unwrap();
+    let b0 = arena.int_le(two_x, zero).unwrap();
+    let cert = lia_interpolant_certified(&mut arena, &[a0], &[b0])
+        .expect("decides")
+        .expect("a certified LIA interpolant exists");
+    let source = &cert.a_certificate;
+
+    // Replace the proof body `:= <proof>` of the refutation theorem with `sorry`.
+    let marker = "theorem axeyum_refutation : False :=";
+    let idx = source
+        .find(marker)
+        .expect("module declares axeyum_refutation");
+    let head = &source[..idx + marker.len()];
+    let tail_start = source[idx..]
+        .find("#print axioms")
+        .map(|p| idx + p)
+        .expect("module has a #print axioms audit");
+    let tampered = format!("{head} sorry\n\n{}", &source[tail_start..]);
+
+    let typechecks = lean_typechecks("lia_interp_tampered", &tampered).expect("lean available");
+    if typechecks {
+        // If `sorry` type-checks (a warning, not an error), `#print axioms` MUST
+        // expose `sorryAx` — the audit the positive test relies on.
+        let bin = lean_bin().expect("lean available");
+        let dir = std::env::temp_dir().join("axeyum_lean_lia_interp_tampered");
+        let file = dir.join("lia_interp_tampered.lean");
+        let out = Command::new(&bin).arg(&file).output().expect("run lean");
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        assert!(
+            stdout.contains("sorryAx"),
+            "a `sorry`-tampered LIA refutation must expose sorryAx in the axiom audit:\n{stdout}"
+        );
+    }
+    // (If it does NOT type-check, that is already a rejection — nothing to assert.)
+}

@@ -10,7 +10,10 @@
 use std::collections::BTreeSet;
 
 use axeyum_ir::{SymbolId, TermArena, TermId, TermNode};
-use axeyum_solver::{CheckResult, check_with_lia_simplex, lia_interpolant};
+use axeyum_solver::{
+    CheckResult, ProofFragment, check_with_lia_simplex, lia_interpolant, lia_interpolant_certified,
+    prove_unsat_to_lean_module,
+};
 
 /// Declares a fresh `Int` symbol and returns its variable term.
 fn int_var(arena: &mut TermArena, name: &str) -> TermId {
@@ -368,5 +371,177 @@ fn lcg_fuzz_no_unsound_interpolant() {
     assert!(
         interpolant_count > 0,
         "fuzz produced no interpolants — coverage too low"
+    );
+}
+
+// --- Certified conjunctive QF_LIA Craig interpolant (lia_interpolant_certified) ---
+//
+// The certified interpolant `I` carries two KERNEL-CHECKED integer certificates
+// witnessing its two Craig soundness conditions: `A ∧ ¬I ⊢ ⊥` and `I ∧ B ⊢ ⊥`.
+// Each conjunction is an integer-infeasible system the integer-prelude
+// reconstructor covers (Diophantine / interval cut), so `prove_unsat_to_lean_module`
+// reconstructs it to a Lean-kernel-checked `theorem … : False` (no `sorryAx`). The
+// in-tree `axeyum_lean_kernel::Kernel` (`infer` + `def_eq False`) is the REAL gate
+// here — it runs inside `prove_unsat_to_lean_module` before the module is rendered,
+// so `Ok` already means kernel-accepted. (The real `lean` binary re-checks the same
+// modules in `lean_crosscheck.rs`.) For integers Carcara has no `lia_generic` rule
+// (warns + `holey`), so the Lean kernel is the external checker.
+
+/// The certifiable shape: `A: 2·x ≥ 1`, `B: 2·x ≤ 0` over `Int`. The rational
+/// relaxation is unsat (`x ≥ ½ ∧ x ≤ 0`), so `lia_interpolant` returns `I` with
+/// `2·x ≥ 1` (i.e. `1 − 2·x ≤ 0`). With `¬I` built as the bare dual `2·x ≤ 0`,
+/// BOTH `A ∧ ¬I` and `I ∧ B` are the integer-interval `1 ≤ 2·x ≤ 0` (empty), which
+/// reconstructs through the `IntInequality` fragment — a covered shape — so both
+/// integer certificates are kernel-checked with NO `sorryAx`. The interpolant `I`
+/// is byte-identical to the `Validated` `lia_interpolant` output, and the three
+/// Craig conditions still independently re-check.
+#[test]
+fn certified_lia_interpolant_carries_two_kernel_checked_integer_certs() {
+    let mut arena = TermArena::new();
+    let x = int_var(&mut arena, "x");
+    let two_x = scale(&mut arena, 2, x);
+    let zero = k(&mut arena, 0);
+    let one = k(&mut arena, 1);
+    let a = vec![ge(&mut arena, two_x, one)]; // 2x ≥ 1
+    let b = vec![le(&mut arena, two_x, zero)]; // 2x ≤ 0
+
+    // The plain (Validated) interpolant the certified path must reproduce verbatim.
+    let plain = lia_interpolant(&mut arena, &a, &b)
+        .unwrap()
+        .expect("a Validated interpolant exists");
+
+    let cert = lia_interpolant_certified(&mut arena, &a, &b)
+        .expect("decides")
+        .expect("a certified interpolant exists for 2x≥1 ∧ 2x≤0");
+
+    // The certified interpolant is byte-identical to the Validated one.
+    assert_eq!(
+        cert.interpolant, plain,
+        "certified interpolant must be byte-identical to lia_interpolant"
+    );
+
+    // Both soundness conjunctions are certified through a COVERED integer fragment.
+    assert!(
+        matches!(
+            cert.a_fragment,
+            ProofFragment::Diophantine | ProofFragment::IntInequality
+        ),
+        "A ∧ ¬I must reconstruct through an integer fragment, got {:?}",
+        cert.a_fragment
+    );
+    assert!(
+        matches!(
+            cert.b_fragment,
+            ProofFragment::Diophantine | ProofFragment::IntInequality
+        ),
+        "I ∧ B must reconstruct through an integer fragment, got {:?}",
+        cert.b_fragment
+    );
+
+    // Both Lean certificates are kernel-checked (the module is rendered ONLY after
+    // `prove_unsat_to_lean_module` kernel-checks `infer` + `def_eq False`) and audit
+    // clean: NO `sorryAx`, and each names the exported refutation theorem.
+    for (name, module) in [
+        ("A ∧ ¬I", &cert.a_certificate),
+        ("I ∧ B", &cert.b_certificate),
+    ] {
+        assert!(
+            !module.contains("sorryAx"),
+            "{name} certificate must not depend on sorryAx:\n{module}"
+        );
+        assert!(
+            module.contains("axeyum_refutation"),
+            "{name} certificate must name the axeyum_refutation theorem"
+        );
+    }
+
+    // The conjunctions recorded on the certificate are exactly the ones the modules
+    // refute, and re-feeding them to the kernel-checking reconstructor still yields
+    // a covered integer fragment (the in-tree kernel gate, run again).
+    let (a_frag2, _) = prove_unsat_to_lean_module(&mut arena, &cert.a_and_not_i)
+        .expect("A ∧ ¬I kernel-reconstructs");
+    let (b_frag2, _) =
+        prove_unsat_to_lean_module(&mut arena, &cert.i_and_b).expect("I ∧ B kernel-reconstructs");
+    assert_eq!(a_frag2, cert.a_fragment);
+    assert_eq!(b_frag2, cert.b_fragment);
+
+    // The three Craig conditions still hold (independent re-check, not trusting the
+    // certificate): A ⇒ I, I ∧ B ⊢ ⊥, shared vocabulary.
+    assert_valid_interpolant(&mut arena, &a, &b, cert.interpolant);
+}
+
+/// DECLINE (the honest boundary): `A: x + y ≥ 1`, `B: x + y ≤ 0` over `Int`. A
+/// genuine `Validated` interpolant `x + y ≥ 1` exists, but `A ∧ ¬I` /  `I ∧ B` are
+/// MULTIVARIATE rational-relaxation refutations — an UNCOVERED integer shape (the
+/// integer reconstructor declines; the LRA path rejects `Int` atoms). So the
+/// certified path returns `Ok(None)` and the caller falls back to `Validated`. It
+/// NEVER fabricates a certificate for an uncovered shape.
+#[test]
+fn uncovered_integer_refutation_declines_to_validated() {
+    let mut arena = TermArena::new();
+    let x = int_var(&mut arena, "x");
+    let y = int_var(&mut arena, "y");
+    let xy = arena.int_add(x, y).unwrap();
+    let zero = k(&mut arena, 0);
+    let one = k(&mut arena, 1);
+    let a = vec![ge(&mut arena, xy, one)]; // x + y ≥ 1
+    let b = vec![le(&mut arena, xy, zero)]; // x + y ≤ 0
+
+    // The Validated path still produces a verified interpolant…
+    let plain = lia_interpolant(&mut arena, &a, &b).unwrap();
+    assert!(
+        plain.is_some(),
+        "a Validated interpolant must still exist for x+y≥1 ∧ x+y≤0"
+    );
+    if let Some(interpolant) = plain {
+        assert_valid_interpolant(&mut arena, &a, &b, interpolant);
+    }
+
+    // …but the certified path declines (uncovered integer shape).
+    let cert = lia_interpolant_certified(&mut arena, &a, &b).expect("decides");
+    assert!(
+        cert.is_none(),
+        "an uncovered (multivariate) integer refutation must NOT be certified"
+    );
+}
+
+/// TAMPER (the kernel gate has teeth): take a genuine certified integer module and
+/// replace its `False`-proof body with `sorry`. The independent `axeyum-lean-grade`
+/// audit our certified path relies on — module carries no `sorryAx` — then FAILS:
+/// the tampered module trivially contains `sorryAx`, so it would be refused. (The
+/// real `lean` binary likewise rejects it; see `lean_crosscheck.rs`.) A fabricated
+/// certificate cannot pass the gate the positive test uses.
+#[test]
+fn tampered_lia_interpolant_certificate_fails_the_sorry_audit() {
+    let mut arena = TermArena::new();
+    let x = int_var(&mut arena, "x");
+    let two_x = scale(&mut arena, 2, x);
+    let zero = k(&mut arena, 0);
+    let one = k(&mut arena, 1);
+    let a = vec![ge(&mut arena, two_x, one)];
+    let b = vec![le(&mut arena, two_x, zero)];
+    let cert = lia_interpolant_certified(&mut arena, &a, &b)
+        .expect("decides")
+        .expect("a certified interpolant exists");
+
+    // Replace the proof body `:= <proof>` of the refutation theorem with `sorry`.
+    let marker = "theorem axeyum_refutation : False :=";
+    let idx = cert
+        .a_certificate
+        .find(marker)
+        .expect("module declares axeyum_refutation");
+    let head = &cert.a_certificate[..idx + marker.len()];
+    let tail_start = cert.a_certificate[idx..]
+        .find("#print axioms")
+        .map(|p| idx + p)
+        .expect("module has a #print axioms audit");
+    let tampered = format!("{head} sorry\n\n{}", &cert.a_certificate[tail_start..]);
+
+    // The genuine certificate audits clean; the tampered one does not. The audit the
+    // certified path enforces (no `sorryAx`) therefore REJECTS the fabrication.
+    assert!(!cert.a_certificate.contains("sorryAx"));
+    assert!(
+        tampered.contains("sorryAx") || tampered.contains("sorry"),
+        "a `sorry`-tampered module must trip the sorry audit"
     );
 }

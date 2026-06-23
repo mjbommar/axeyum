@@ -46,7 +46,10 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_ir::{Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode};
 
-use crate::{CheckResult, SolverError, check_with_lia_simplex, lra_interpolant};
+use crate::{
+    CheckResult, ProofFragment, SolverError, check_with_lia_simplex, lra_interpolant,
+    prove_unsat_to_lean_module,
+};
 
 /// Produces a verified Craig interpolant for the unsatisfiable integer
 /// conjunction `A ∧ B`, where `a_assertions` is `A` and `b_assertions` is `B`
@@ -73,6 +76,28 @@ pub fn lia_interpolant(
     a_assertions: &[TermId],
     b_assertions: &[TermId],
 ) -> Result<Option<TermId>, SolverError> {
+    build_verified_lia_interpolant(arena, a_assertions, b_assertions)
+        .map(|opt| opt.map(|built| built.interpolant))
+}
+
+/// The output of [`build_verified_lia_interpolant`]: the verified interpolant `I`
+/// plus the parsed comparison [`Relation`] of its atom (needed by the certified
+/// path to form `¬I` as a bare dual comparison).
+struct BuiltLiaInterpolant {
+    interpolant: TermId,
+    relation: Relation,
+}
+
+/// Builds the verified conjunctive `QF_LIA` interpolant `I` for `A ∧ B`,
+/// returning it **with** the comparison relation of its atom. This is the single
+/// source of truth for the interpolant `I`; [`lia_interpolant`] forwards to it and
+/// keeps only `I`, and [`lia_interpolant_certified`] reuses it, so the returned `I`
+/// is byte-identical across both entry points.
+fn build_verified_lia_interpolant(
+    arena: &mut TermArena,
+    a_assertions: &[TermId],
+    b_assertions: &[TermId],
+) -> Result<Option<BuiltLiaInterpolant>, SolverError> {
     // 1. Build the rational relaxation: a fresh Real symbol per Int symbol (the
     //    SAME int symbol → the SAME real symbol across A and B), every integer
     //    relation/op reinterpreted over the reals. A construct with no clean real
@@ -117,9 +142,205 @@ pub fn lia_interpolant(
     // 4. VERIFY-BEFORE-RETURN over the ORIGINAL integer partitions with the
     //    integer-complete decider. Decline on any doubt.
     if verify_interpolant(arena, a_assertions, b_assertions, interpolant, &int_coeffs)? {
-        Ok(Some(interpolant))
+        Ok(Some(BuiltLiaInterpolant {
+            interpolant,
+            relation,
+        }))
     } else {
         Ok(None)
+    }
+}
+
+/// A **certified** conjunctive `QF_LIA` Craig interpolant: the interpolant `I`
+/// for an unsatisfiable integer `A ∧ B`, paired with two externally-checkable,
+/// **kernel-checked** integer refutations witnessing its two soundness conditions.
+///
+/// - [`a_certificate`](Self::a_certificate) is a self-contained Lean 4 module
+///   (`prelude`-mode source) re-proving `A ∧ ¬I ⊢ ⊥` over the integer prelude
+///   (Craig condition 1, `A ⇒ I`);
+/// - [`b_certificate`](Self::b_certificate) is the same for `I ∧ B ⊢ ⊥` (Craig
+///   condition 2).
+///
+/// Both modules are produced by [`crate::prove_unsat_to_lean_module`], which
+/// **kernel-checks** the refutation in-tree (`infer` + `def_eq False`, no
+/// `sorryAx`) before rendering; an independent `lean` binary re-checks the same
+/// module. Carcara has **no** `lia_generic` rule (it warns and marks the proof
+/// `holey`), so for integers the external checker is the **Lean kernel**, not
+/// Carcara.
+///
+/// # Boundary — covered shapes only
+///
+/// The certifiable interpolant `I` is a single integer linear inequality, so `¬I`
+/// is one (dual) inequality and both `A ∧ ¬I` and `I ∧ B` are integer
+/// **conjunctions**. They are certified here **only** when each reconstructs
+/// through one of the integer-prelude shapes the
+/// `int_reconstruct` module covers — [`ProofFragment::Diophantine`]
+/// (a `gcd`-infeasible integer-equality system) or [`ProofFragment::IntInequality`]
+/// (a single-variable integer-interval cut). A LIA interpolant whose `A ∧ ¬I` or
+/// `I ∧ B` needs an **uncovered** integer refutation (a general cut, or a
+/// multivariate rational-relaxation refutation the integer reconstructor declines)
+/// is **not** certified here and stays `Validated`: this function returns `Ok(None)`
+/// and the caller falls back to [`lia_interpolant`]. This is an honest boundary —
+/// not all LIA interpolants are certified, only those whose two soundness
+/// conjunctions land in the covered integer shapes.
+#[derive(Debug, Clone)]
+pub struct LiaInterpolantCertificate {
+    /// The verified interpolant term `I` (byte-identical to what
+    /// [`lia_interpolant`] returns for the same `(A, B)`).
+    pub interpolant: TermId,
+    /// `A ∧ ¬I`, the conjunction the [`a_certificate`](Self::a_certificate)
+    /// refutes (so a consumer can re-derive the Lean-kernel certificate from it).
+    pub a_and_not_i: Vec<TermId>,
+    /// `I ∧ B`, the conjunction the [`b_certificate`](Self::b_certificate) refutes.
+    pub i_and_b: Vec<TermId>,
+    /// Kernel-checked Lean module re-proving `A ∧ ¬I ⊢ ⊥` (Craig condition 1).
+    pub a_certificate: String,
+    /// Kernel-checked Lean module re-proving `I ∧ B ⊢ ⊥` (Craig condition 2).
+    pub b_certificate: String,
+    /// The integer-prelude fragment of [`a_certificate`](Self::a_certificate)
+    /// (one of [`ProofFragment::Diophantine`] / [`ProofFragment::IntInequality`]).
+    pub a_fragment: ProofFragment,
+    /// The integer-prelude fragment of [`b_certificate`](Self::b_certificate).
+    pub b_fragment: ProofFragment,
+}
+
+/// Produces a **certified** Craig interpolant for the unsatisfiable conjunctive
+/// `QF_LIA` partition `A = a_assertions`, `B = b_assertions`: the same verified
+/// interpolant [`lia_interpolant`] returns, **plus** two kernel-checked integer
+/// certificates — Lean modules re-proving `A ∧ ¬I` and `I ∧ B` over the integer
+/// prelude — that an independent `lean` binary can accept on its own.
+///
+/// This is the `Checked`-assurance upgrade of the `Validated` [`lia_interpolant`]:
+/// the interpolant was already verify-before-return over the integers; here we
+/// additionally emit a kernel-checked integer certificate for each of its two
+/// soundness conditions, and return it **only** when both conjunctions reconstruct
+/// through an integer-prelude fragment ([`ProofFragment::Diophantine`] or
+/// [`ProofFragment::IntInequality`]). `¬I` is built as the explicit **dual**
+/// comparison (`¬(e ≤ 0) = e > 0`, etc.) rather than a `not`-wrapper, so the
+/// integer fragment classifier — which reads bare comparisons, not `not` — covers
+/// it.
+///
+/// # Boundary
+///
+/// Only the covered integer shapes are certified (see
+/// [`LiaInterpolantCertificate`]). This function declines (`Ok(None)`) whenever
+/// [`lia_interpolant`] declines (satisfiable, the unsat needs cuts the rational
+/// relaxation cannot witness, outside conjunctive `QF_LIA`, an `i128` overflow, or
+/// a failed post-check), whenever `¬I` cannot be built as a bare dual comparison,
+/// or whenever either conjunction does **not** reconstruct through a covered
+/// integer fragment (e.g. a multivariate rational-relaxation refutation, which the
+/// integer reconstructor declines and the LRA path rejects on `Int` atoms). A
+/// caller that gets `Ok(None)` should fall back to the `Validated`
+/// [`lia_interpolant`] path — this function NEVER returns an uncertified
+/// interpolant dressed as certified.
+///
+/// # Errors
+///
+/// Propagates [`SolverError`] from the shared interpolant builder (the underlying
+/// [`lia_interpolant`] decision / the integer re-verification — e.g. a self-check
+/// soundness alarm), or a term-builder failure ([`SolverError::Backend`]).
+pub fn lia_interpolant_certified(
+    arena: &mut TermArena,
+    a_assertions: &[TermId],
+    b_assertions: &[TermId],
+) -> Result<Option<LiaInterpolantCertificate>, SolverError> {
+    // 1. The verified interpolant `I` (identical to `lia_interpolant`'s output),
+    //    plus the parsed relation so we can form `¬I` as a bare dual comparison.
+    let Some(BuiltLiaInterpolant {
+        interpolant,
+        relation,
+    }) = build_verified_lia_interpolant(arena, a_assertions, b_assertions)?
+    else {
+        return Ok(None);
+    };
+
+    // 2. Form the two conjunctions whose integer-UNSAT is the two Craig soundness
+    //    conditions. `¬I` is the explicit DUAL comparison (`¬(e ≤ 0) = e > 0`,
+    //    `¬(e < 0) = e ≥ 0`, `¬(e = 0)` has no single-comparison dual ⇒ decline),
+    //    a BARE integer comparison the integer fragment classifier can read (it
+    //    lowers comparisons, not a `not`-wrapper).
+    let Some(not_interpolant) = dual_int_comparison(arena, interpolant, relation) else {
+        return Ok(None);
+    };
+    let mut a_and_not_i: Vec<TermId> = a_assertions.to_vec();
+    a_and_not_i.push(not_interpolant);
+    let mut i_and_b: Vec<TermId> = Vec::with_capacity(b_assertions.len() + 1);
+    i_and_b.push(interpolant);
+    i_and_b.extend_from_slice(b_assertions);
+
+    // 3. Reconstruct EACH conjunction to a kernel-checked integer Lean module.
+    //    `prove_unsat_to_lean_module` kernel-checks (`infer` + `def_eq False`, no
+    //    `sorryAx`) before returning; we require the fragment to be one of the
+    //    COVERED integer shapes (Diophantine / interval cut), declining otherwise
+    //    so an uncovered (e.g. multivariate / LRA-routed) refutation falls back to
+    //    the `Validated` path rather than being dressed as Checked.
+    let Some((a_fragment, a_certificate)) = integer_certificate(arena, &a_and_not_i) else {
+        return Ok(None);
+    };
+    let Some((b_fragment, b_certificate)) = integer_certificate(arena, &i_and_b) else {
+        return Ok(None);
+    };
+
+    Ok(Some(LiaInterpolantCertificate {
+        interpolant,
+        a_and_not_i,
+        i_and_b,
+        a_certificate,
+        b_certificate,
+        a_fragment,
+        b_fragment,
+    }))
+}
+
+/// Reconstructs the integer conjunction `assertions` to a kernel-checked Lean
+/// module, returning `Some((fragment, module))` **only** when it reconstructs
+/// through a COVERED integer-prelude fragment ([`ProofFragment::Diophantine`] or
+/// [`ProofFragment::IntInequality`]) and the rendered module carries no `sorryAx`.
+///
+/// Any other outcome — a reconstruction error, or a refutation that routes through
+/// a non-integer fragment (e.g. the LRA path, which the integer reconstructor does
+/// not own) — returns `None` so the certified path declines to `Validated`.
+fn integer_certificate(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Option<(ProofFragment, String)> {
+    let (fragment, module) = prove_unsat_to_lean_module(arena, assertions).ok()?;
+    if !matches!(
+        fragment,
+        ProofFragment::Diophantine | ProofFragment::IntInequality
+    ) {
+        return None;
+    }
+    // Defensive: a covered integer module is kernel-checked and never leans on the
+    // `sorryAx` escape hatch; refuse to certify if it somehow does.
+    if module.contains("sorryAx") {
+        return None;
+    }
+    Some((fragment, module))
+}
+
+/// Builds the explicit dual (logical negation) of the interpolant comparison `I`
+/// as a single **bare** integer comparison term, so the integer fragment
+/// classifier — which reads bare comparisons, not a `not`-wrapper — can route it.
+///
+/// `I` is produced by [`build_verified_lia_interpolant`] as `int_le(e, 0)`,
+/// `int_lt(e, 0)`, or `eq(e, 0)`. The duals of the inequalities are `int_gt(e, 0)`
+/// and `int_ge(e, 0)`. An equality interpolant `e = 0` has no single-comparison
+/// dual (`¬(e = 0)` is a disjunction `e < 0 ∨ e > 0`), so it returns `None` ⇒
+/// decline (such an interpolant stays `Validated`).
+fn dual_int_comparison(
+    arena: &mut TermArena,
+    interpolant: TermId,
+    relation: Relation,
+) -> Option<TermId> {
+    let (lhs, rhs) = match arena.node(interpolant) {
+        TermNode::App { args, .. } if args.len() == 2 => (args[0], args[1]),
+        _ => return None,
+    };
+    match relation {
+        Relation::Le => arena.int_gt(lhs, rhs).ok(),
+        Relation::Lt => arena.int_ge(lhs, rhs).ok(),
+        Relation::Eq => None,
     }
 }
 

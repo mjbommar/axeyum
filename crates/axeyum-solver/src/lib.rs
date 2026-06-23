@@ -195,7 +195,7 @@ pub use lia_gcd::{
     prove_lia_unsat_by_diophantine, prove_lia_unsat_by_diophantine_certified,
     prove_lia_unsat_by_gcd,
 };
-pub use lia_interpolant::lia_interpolant;
+pub use lia_interpolant::{LiaInterpolantCertificate, lia_interpolant, lia_interpolant_certified};
 pub use lia_interpolant_cnf::lia_interpolant_cnf;
 pub use lia_online::{LiaTheory, check_qf_lia_online};
 pub use lra::{
