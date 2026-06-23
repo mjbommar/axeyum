@@ -274,6 +274,71 @@ fn tester_fold_checks_in_real_lean() {
     lean_accepts("tester_false", &build(false, false));
 }
 
+/// Datatype constructor **DISTINCTNESS** (slice 2, the Lean mirror of the Carcara
+/// distinctness route). An asserted equality between two **distinct** constructors
+/// `Red a = Green b` is UNSAT — discharged BY ι + congruence + the existing
+/// `Bool.true ≠ Bool.false` discriminator (NO `noConfusion`, NO assumed fold axiom):
+///
+///   - `is_Green (Red a)` ι-reduces to `Bool.false`, `is_Green (Green b)` to
+///     `Bool.true`;
+///   - `congrArg is_Green h` (an `Eq.rec`) transports the hypothesis to
+///     `Eq Bool (is_Green (Red a)) (is_Green (Green b))`, `def_eq` to `false = true`;
+///   - the `Bool.true ≠ Bool.false` discriminator (`Bool.rec` ι) closes it to `False`.
+///
+/// The exported module must type-check in real Lean and `#print axioms` must report
+/// no `sorryAx` and no datatype-distinctness axiom — distinctness is kernel-computed.
+#[test]
+fn distinct_constructors_check_in_real_lean() {
+    let mut arena = TermArena::new();
+    let color = arena.declare_datatype("Color");
+    let red = arena.add_constructor(color, "Red", &[("v".into(), Sort::BitVec(2))]);
+    let green = arena.add_constructor(color, "Green", &[("w".into(), Sort::BitVec(2))]);
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    // Red(a) = Green(b) — distinct constructors, UNSAT.
+    let lhs = arena.construct(red, &[a]).unwrap();
+    let rhs = arena.construct(green, &[b]).unwrap();
+    let eq = arena.eq(lhs, rhs).unwrap();
+    let (_frag, source) = prove_unsat_to_lean_module(&mut arena, &[eq])
+        .expect("distinct-constructor unsat reconstructs");
+    lean_accepts("distinct_constructors", &source);
+}
+
+/// Soundness-negative: a **SAME-constructor** equality `Red a = Red b` must NOT be
+/// claimed UNSAT by the distinctness route — it is *satisfiable* (take `a = b`), and
+/// proving it would need injectivity (a separate slice), not distinctness. The
+/// distinctness reconstructor declines, so no wrong `False` is emitted: the whole
+/// datatype route reports no refutation for this lone same-constructor equality.
+#[test]
+fn same_constructor_equality_is_not_a_distinctness_refutation() {
+    let mut arena = TermArena::new();
+    let color = arena.declare_datatype("Color");
+    let red = arena.add_constructor(color, "Red", &[("v".into(), Sort::BitVec(2))]);
+    let _green = arena.add_constructor(color, "Green", &[("w".into(), Sort::BitVec(2))]);
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    // Red(a) = Red(b) — SAME constructor; satisfiable, not a distinctness refutation.
+    let lhs = arena.construct(red, &[a]).unwrap();
+    let rhs = arena.construct(red, &[b]).unwrap();
+    let eq = arena.eq(lhs, rhs).unwrap();
+    assert!(
+        prove_unsat_to_lean_module(&mut arena, &[eq]).is_err(),
+        "a SAME-constructor equality must not reconstruct to a distinctness `False`"
+    );
+}
+
 /// `QF_BV` (the foundational bit-blasting path): `bvule a b ∧ bvult b a`
 /// (`a ≤ b ∧ b < a`, `BitVec(2)`) is unsat. It lowers to core ops and the
 /// bit-level resolution refutation must type-check in real Lean.

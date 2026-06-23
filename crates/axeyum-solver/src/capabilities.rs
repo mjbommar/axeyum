@@ -680,10 +680,32 @@ pub const CAPABILITIES: &[Capability] = &[
                    `#print axioms` reports NO sorryAx and NO datatype-fold axiom (only the input \
                    tester assertion + carrier atoms), the family and Bool rendered as real Lean \
                    `inductive`s so Lean regenerates the recursor with ι (lean_crosscheck \
-                   tester_fold_checks_in_real_lean). Honest boundary: is-tester fold ONLY this \
-                   slice; constructor distinctness and injectivity Lean routes are deferred \
-                   (injectivity needs noConfusion beyond ι); the Carcara premise-based route is \
-                   unchanged",
+                   tester_fold_checks_in_real_lean). Honest boundary: is-tester fold this slice; \
+                   constructor DISTINCTNESS is the axiom-free Lean row below; injectivity Lean \
+                   route is deferred (needs noConfusion beyond ι); the Carcara premise-based route \
+                   is unchanged",
+        reference: "ADR-0022",
+    },
+    Capability {
+        area: "datatypes",
+        feature: "axiom-free Lean-kernel constructor DISTINCTNESS reconstruction \
+                  (reconstruct_qf_dt_distinct_to_lean_module): an asserted equality C(x)=D(y) \
+                  between DISTINCT constructors C!=D of the same datatype is reconstructed to a \
+                  kernel-checked False by COMPOSING the is-tester ι-fold with a congruence \
+                  transport — is_D(C x) ι-reduces to false, is_D(D y) to true; congrArg is_D h \
+                  (an Eq.rec) lands at Eq Bool (is_D(C x)) (is_D(D y)) = (false=true); the \
+                  existing Bool.true!=Bool.false discriminator (Bool.rec ι) closes it to False. \
+                  NO noConfusion, NO assumed distinctness axiom",
+        assurance: Assurance::Checked,
+        evidence: "the in-tree axeyum-lean-kernel infers the term to False (require_infers_false), \
+                   and — when a real lean binary is present — the rendered module type-checks and \
+                   `#print axioms` reports NO sorryAx and NO datatype-distinctness axiom (only the \
+                   input equality + carrier atoms), the family and Bool rendered as real Lean \
+                   `inductive`s so Lean regenerates the recursor with ι (lean_crosscheck \
+                   distinct_constructors_check_in_real_lean). A SAME-constructor equality \
+                   C(x)=C(y) is DECLINED (no wrong False — that is injectivity's job). Honest \
+                   boundary: distinctness this slice; injectivity Lean route is deferred (needs \
+                   noConfusion beyond ι); the Carcara premise-based distinctness route is unchanged",
         reference: "ADR-0022",
     },
     Capability {

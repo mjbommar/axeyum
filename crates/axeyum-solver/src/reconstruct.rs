@@ -1761,6 +1761,13 @@ pub fn prove_unsat_to_lean_module(
             // where the read-over-construct projection is itself ι-discharged.
             if let Some(module) = reconstruct_qf_dt_tester_to_lean_module(arena, assertions) {
                 module?
+            } else if let Some(module) =
+                reconstruct_qf_dt_distinct_to_lean_module(arena, assertions)
+            {
+                // Constructor DISTINCTNESS `C x = D y` (C ≠ D): discharged by ι +
+                // congruence + the true≠false discriminator — axiom-free, no
+                // `noConfusion`. The Lean mirror of the Carcara distinctness route.
+                module?
             } else {
                 let p = crate::prove_qf_dt_unsat_alethe_via_simplification(arena, assertions)
                     .ok_or_else(declined)?;
@@ -2383,6 +2390,321 @@ fn reconstruct_qf_dt_tester_to_lean_module(
 ) -> Option<Result<String, ReconstructError>> {
     let c = find_tester_contradiction(arena, assertions)?;
     Some(build_tester_refutation_module(arena, &c))
+}
+
+// ===========================================================================
+// QF_DT **constructor DISTINCTNESS** — axiom-free Lean-kernel reconstruction
+// (slice 2, the Lean mirror of the Carcara `prove_qf_dt_distinct_alethe_carcara`).
+//
+// An asserted constructor equality `C x… = D y…` between two **distinct**
+// constructors `C ≠ D` of the *same* datatype family is UNSAT — distinct
+// constructors of an inductive are never equal. We discharge it by COMPOSING
+// the slice-1 is-tester primitives, with **no `noConfusion`** and **no new
+// axiom** beyond the honest encoding of the input equality:
+//
+//   1. register the family `D` carrying every constructor
+//      ([`Kernel::add_datatype_family`], reused from the tester path);
+//   2. apply the is-tester for the RIGHT constructor `D`
+//      ([`Kernel::datatype_tester`]): `is_D (C x…)` ι-reduces to `Bool.false`,
+//      `is_D (D y…)` ι-reduces to `Bool.true`;
+//   3. from the input hypothesis `h : Eq Dty (C x…) (D y…)`, transport by
+//      congruence (`Eq.rec` with motive `fun z _ => Eq Bool (is_D (C x…)) (is_D z)`,
+//      refl case `Eq.refl Bool (is_D (C x…))`) to `Eq Bool (is_D (C x…)) (is_D (D y…))`,
+//      which is `def_eq` to `Eq Bool Bool.false Bool.true` after ι on both sides;
+//   4. feed that to the EXISTING `Bool.true ≠ Bool.false` discriminator
+//      ([`build_bool_true_ne_false`]): its `lhs = is_D (C x…)` ι-reduces to
+//      `Bool.false`, the proof witnesses `lhs = Bool.true`, and the `Bool.rec`
+//      motive `D false = True, D true = False` transported along it yields `False`.
+//
+// Every step is ι-reduction + `Eq.rec` — axiom-free, exactly like slice 1's
+// false-fold. The final term `infer`s to `False` (gated by [`require_infers_false`]);
+// a non-distinct or ill-typed equality makes ι fail and the kernel rejects —
+// never a wrong `False`.
+// ===========================================================================
+
+/// A pure constructor-distinctness contradiction located in `assertions`: an
+/// asserted equality `C x… = D y…` whose two constructors `C ≠ D` are **distinct**
+/// constructors of the same datatype family.
+struct DistinctContradiction {
+    /// The shared datatype of `C` and `D`.
+    datatype: DatatypeId,
+    /// The left-hand-side (builder) constructor `C`.
+    lhs_ctor: ConstructorId,
+    /// The left-hand-side field argument terms (modeled as opaque carrier atoms).
+    lhs_fields: Vec<TermId>,
+    /// The right-hand-side (builder) constructor `D` — used as the tested
+    /// constructor `is_D`, so the congruence yields `false = true`.
+    rhs_ctor: ConstructorId,
+    /// The right-hand-side field argument terms (modeled as opaque carrier atoms).
+    rhs_fields: Vec<TermId>,
+}
+
+/// Find the first asserted equality `C x… = D y…` between **distinct**
+/// constructors `C ≠ D` of the same datatype. Returns [`None`] when no such
+/// equality is present (e.g. a same-constructor equality `C x = C y`, which is an
+/// injectivity obligation handled by a separate slice, or a non-constructor
+/// equality).
+fn find_distinct_constructor_contradiction(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<DistinctContradiction> {
+    for &assertion in assertions {
+        let IrTermNode::App { op: IrOp::Eq, args } = arena.node(assertion) else {
+            continue;
+        };
+        let &[lhs, rhs] = &args[..] else {
+            continue;
+        };
+        let IrTermNode::App {
+            op:
+                IrOp::DtConstruct {
+                    constructor: lhs_ctor,
+                    ..
+                },
+            args: lhs_fields,
+        } = arena.node(lhs)
+        else {
+            continue;
+        };
+        let IrTermNode::App {
+            op:
+                IrOp::DtConstruct {
+                    constructor: rhs_ctor,
+                    ..
+                },
+            args: rhs_fields,
+        } = arena.node(rhs)
+        else {
+            continue;
+        };
+        let (lhs_ctor, rhs_ctor) = (*lhs_ctor, *rhs_ctor);
+        // SAME constructor ⇒ this is an injectivity obligation, NOT distinctness;
+        // decline so the distinctness reconstructor never emits a wrong `False`.
+        if lhs_ctor == rhs_ctor {
+            continue;
+        }
+        // Distinct constructors must share the same datatype (the SMT equality is
+        // sort-homogeneous; guard defensively anyway).
+        let datatype = arena.constructor_datatype(lhs_ctor);
+        if arena.constructor_datatype(rhs_ctor) != datatype {
+            continue;
+        }
+        return Some(DistinctContradiction {
+            datatype,
+            lhs_ctor,
+            lhs_fields: lhs_fields.to_vec(),
+            rhs_ctor,
+            rhs_fields: rhs_fields.to_vec(),
+        });
+    }
+    None
+}
+
+/// **Reconstruct a pure `QF_DT` constructor-distinctness contradiction to a Lean
+/// module** whose `axeyum_refutation : False` is kernel-checked and **axiom-free
+/// over the fold** — distinctness is discharged by composing the is-tester ι-fold
+/// with a congruence transport and the `Bool.true ≠ Bool.false` discriminator, not
+/// assumed (no `noConfusion`). The only added axiom is the input equality itself.
+///
+/// Returns [`None`] when `assertions` carry no distinct-constructor equality (the
+/// caller then falls back to the general datatype reconstructor).
+///
+/// # Errors
+///
+/// [`ReconstructError::KernelRejected`] if the datatype family fails to admit or
+/// the assembled `False` term does not `infer`/`def_eq` to `False` (a defensive
+/// gate; a sound distinctness refutation always discharges).
+fn reconstruct_qf_dt_distinct_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<Result<String, ReconstructError>> {
+    let c = find_distinct_constructor_contradiction(arena, assertions)?;
+    Some(build_distinct_refutation_module(arena, &c))
+}
+
+/// Assemble the kernel `False` term for a [`DistinctContradiction`] and render the
+/// Lean module. Mirrors [`build_tester_refutation_module`]: same family registry,
+/// same `datatype_tester`, same `build_bool_true_ne_false` discriminator — the only
+/// new piece is the `Eq.rec` congruence transport built by [`build_congr_is_d`].
+fn build_distinct_refutation_module(
+    arena: &TermArena,
+    c: &DistinctContradiction,
+) -> Result<String, ReconstructError> {
+    let mut ctx = ReconstructCtx::new();
+
+    // 1. Declare the kernel family `D` carrying EVERY constructor of the datatype
+    //    (declaration order), reusing the tester path's family registry.
+    let dt_name = arena.datatype_name(c.datatype).to_owned();
+    let ctor_ids = arena.datatype_constructors(c.datatype).to_vec();
+    let ctor_decls: Vec<(String, usize)> = ctor_ids
+        .iter()
+        .enumerate()
+        .map(|(j, &cid)| (format!("c{j}"), arena.constructor_fields(cid).len()))
+        .collect();
+    let family = ctx.datatype_family(&dt_name, &ctor_decls)?;
+
+    let lhs_pos = constructor_position(&ctor_ids, c.lhs_ctor)?;
+    let rhs_pos = constructor_position(&ctor_ids, c.rhs_ctor)?;
+
+    // 2. Build the two constructor applications `C(x…)` and `D(y…)`. Each field is a
+    //    fresh opaque carrier atom (distinctness is field-independent — only the
+    //    constructor head drives the is-tester ι).
+    let lhs_con = build_opaque_construct(&mut ctx, family.ctors[lhs_pos], c.lhs_fields.len())?;
+    let rhs_con = build_opaque_construct(&mut ctx, family.ctors[rhs_pos], c.rhs_fields.len())?;
+
+    // 3. The is-tester for the RIGHT constructor `D`: `is_D (C x…)` ι-reduces to
+    //    `Bool.false`, `is_D (D y…)` ι-reduces to `Bool.true`.
+    let alpha = ctx.alpha;
+    let is_d = ctx.kernel.datatype_tester(
+        &family,
+        ctx.prelude.bool_,
+        ctx.prelude.bool_true,
+        ctx.prelude.bool_false,
+        alpha,
+        rhs_pos,
+    );
+    // `is_d (C x…)` ι→ Bool.false (the discriminator `lhs`); `is_d (D y…)` ι→
+    // Bool.true (the congruence's right side — built inside `build_congr_is_d`).
+    let is_d_lhs = ctx.kernel.app(is_d, lhs_con);
+
+    // 4. Input hypothesis `h : Eq Dty (C x…) (D y…)` (the ONLY added axiom). The
+    //    datatype carrier in the kernel is the family inductive `Dty := D`.
+    let dty = ctx.kernel.const_(family.ind, vec![]);
+    let one = ctx.one;
+    let eq_prop = mk_eq_at(&mut ctx, dty, one, lhs_con, rhs_con);
+    let h = fresh_axiom(&mut ctx, eq_prop, "assume")?;
+
+    // 5. Congruence transport `congrArg is_D h : Eq Bool (is_D (C x…)) (is_D (D y…))`,
+    //    which is `def_eq` to `Eq Bool Bool.false Bool.true`.
+    let congr = build_congr_is_d(&mut ctx, dty, is_d, lhs_con, rhs_con, h);
+
+    // 6. The existing `Bool.true ≠ Bool.false` discriminator: `lhs = is_D (C x…)`
+    //    ι-reduces to `Bool.false`, `congr : Eq Bool lhs Bool.true` ⇒ `False`.
+    let false_term = build_bool_true_ne_false(&mut ctx, is_d_lhs, congr);
+
+    require_infers_false(&mut ctx, false_term)?;
+    // Render the datatype family AND the computational `Bool` as real Lean
+    // `inductive`s so an external Lean regenerates their recursors *with* ι — the
+    // congruence `Eq.rec` only collapses to `false = true` if Lean can compute
+    // `is_D (cⱼ x…)` by ι.
+    let bool_ind = ctx.prelude.bool_;
+    let false_const = {
+        let n = ctx.prelude().false_;
+        ctx.kernel_mut().const_(n, vec![])
+    };
+    Ok(ctx.kernel().render_lean_module_with_inductives(
+        LEAN_MODULE_THEOREM,
+        false_const,
+        false_term,
+        &[family.ind, bool_ind],
+    ))
+}
+
+/// Position of constructor `cid` in `ctor_ids` (declaration order), or a
+/// [`ReconstructError::KernelRejected`] if it is not a constructor of the datatype.
+fn constructor_position(
+    ctor_ids: &[ConstructorId],
+    cid: ConstructorId,
+) -> Result<usize, ReconstructError> {
+    ctor_ids
+        .iter()
+        .position(|&c| c == cid)
+        .ok_or_else(|| ReconstructError::KernelRejected {
+            rule: "datatype_distinct".to_owned(),
+            detail: "constructor not in datatype".to_owned(),
+        })
+}
+
+/// Build a constructor application `ctor a₀ … a_{arity-1}` whose `arity` field
+/// arguments are fresh opaque carrier atoms of sort `α` (distinctness is
+/// field-independent, so the exact field values are irrelevant — only the
+/// constructor head drives the is-tester ι).
+fn build_opaque_construct(
+    ctx: &mut ReconstructCtx,
+    ctor: NameId,
+    arity: usize,
+) -> Result<ExprId, ReconstructError> {
+    let mut con = ctx.kernel.const_(ctor, vec![]);
+    for i in 0..arity {
+        let atom_name = ctx.fresh_name(&format!("fld_{i}"));
+        let alpha = ctx.alpha;
+        ctx.kernel
+            .add_declaration(Declaration::Axiom {
+                name: atom_name,
+                uparams: vec![],
+                ty: alpha,
+            })
+            .map_err(|e| ReconstructError::KernelRejected {
+                rule: "datatype_distinct".to_owned(),
+                detail: format!("field carrier atom did not admit: {e:?}"),
+            })?;
+        let a = ctx.kernel.const_(atom_name, vec![]);
+        con = ctx.kernel.app(con, a);
+    }
+    Ok(con)
+}
+
+/// Build `Eq.{u} ty l r` for an arbitrary carrier type `ty : Sort u`.
+fn mk_eq_at(ctx: &mut ReconstructCtx, ty: ExprId, u: LevelId, l: ExprId, r: ExprId) -> ExprId {
+    let eq = ctx.kernel.const_(ctx.prelude.eq, vec![u]);
+    let e = ctx.kernel.app(eq, ty);
+    let e = ctx.kernel.app(e, l);
+    ctx.kernel.app(e, r)
+}
+
+/// Build the congruence transport `congrArg is_D h` as an `Eq.rec`:
+/// given `h : Eq dty lhs_con rhs_con` (both `dty`-typed constructor applications)
+/// and the is-tester `is_d : dty → Bool`, produce a proof of
+/// `Eq Bool (is_d lhs_con) (is_d rhs_con)`.
+///
+/// Transport motive `fun (z : dty) (_ : Eq dty lhs_con z) => Eq Bool (is_d lhs_con) (is_d z)`,
+/// refl case `Eq.refl Bool (is_d lhs_con)` (the `z := lhs_con` instance is
+/// `Eq Bool (is_d lhs_con) (is_d lhs_con)`), then `Eq.rec … rhs_con h` lands at
+/// `Eq Bool (is_d lhs_con) (is_d rhs_con)`. Pure `Eq.rec` — axiom-free, the exact
+/// `congrArg` derivation.
+fn build_congr_is_d(
+    ctx: &mut ReconstructCtx,
+    dty: ExprId,
+    is_d: ExprId,
+    lhs_con: ExprId,
+    rhs_con: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let anon = ctx.kernel.anon();
+    let one = ctx.one;
+    let bool_const = ctx.kernel.const_(ctx.prelude.bool_, vec![]);
+    let is_d_lhs = ctx.kernel.app(is_d, lhs_con);
+
+    // motive := fun (z : dty) (_ : Eq dty lhs_con z) => Eq Bool (is_d lhs_con) (is_d z).
+    let transport_motive = {
+        // Under binders (z : dty) (_ : Eq dty lhs_con z): `z` is bvar 1.
+        let z_var = ctx.kernel.bvar(1);
+        let is_d_z = ctx.kernel.app(is_d, z_var);
+        let body = mk_eq_at(ctx, bool_const, one, is_d_lhs, is_d_z);
+        // inner Pi binder type: Eq dty lhs_con z, with `z` as bvar 0 at this depth.
+        let z0 = ctx.kernel.bvar(0);
+        let eq_lhs_z = mk_eq_at(ctx, dty, one, lhs_con, z0);
+        let inner = ctx.kernel.lam(anon, eq_lhs_z, body, BinderInfo::Default);
+        ctx.kernel.lam(anon, dty, inner, BinderInfo::Default)
+    };
+    // refl_case : Eq Bool (is_d lhs_con) (is_d lhs_con) — `Eq.refl Bool (is_d lhs_con)`.
+    let refl = ctx.kernel.const_(ctx.prelude.eq_refl, vec![ctx.one]);
+    let refl_case = {
+        let e = ctx.kernel.app(refl, bool_const);
+        ctx.kernel.app(e, is_d_lhs)
+    };
+    // Eq.rec.{v,u} dty lhs_con transport_motive refl_case rhs_con h
+    //   : Eq Bool (is_d lhs_con) (is_d rhs_con).
+    // motive `fun z _ => Eq Bool …` eliminates into `Prop` ⇒ v = 0; the equands of
+    // `h` are `dty : Sort 1` ⇒ u = 1 (= `ctx.one`).
+    let v = ctx.kernel.level_zero();
+    let rec_eq = ctx.kernel.const_(ctx.prelude.eq_rec, vec![v, one]);
+    let e = ctx.kernel.app(rec_eq, dty);
+    let e = ctx.kernel.app(e, lhs_con);
+    let e = ctx.kernel.app(e, transport_motive);
+    let e = ctx.kernel.app(e, refl_case);
+    let e = ctx.kernel.app(e, rhs_con);
+    ctx.kernel.app(e, h)
 }
 
 /// Assemble the kernel `False` term for a [`TesterContradiction`] and render the
