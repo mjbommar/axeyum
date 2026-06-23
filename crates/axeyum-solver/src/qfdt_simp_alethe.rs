@@ -1082,3 +1082,268 @@ fn dt_step(id: &str, clause: Vec<AletheLit>, rule: &str, premises: &[&str]) -> A
         args: Vec::new(),
     }
 }
+
+// =====================================================================
+// Constructor INJECTIVITY (gap-analysis Gap 14): `C(x…) = C(y…) ⇒ x_i = y_i`
+// (same constructor C) is certified by COMPOSING the certified
+// select-over-construct fold with congruence — no field-unification axiom, no
+// new datatype rule. A downstream field disequality `x_i != y_i` then closes
+// to ⊥.
+// =====================================================================
+
+/// Emits a complete, **Carcara-checkable** Alethe refutation of an asserted
+/// same-constructor equality `(= (C x…) (C y…))` together with a conflicting
+/// field disequality `(not (= x_i y_i))` for some field `i`, or [`None`] when no
+/// such pair is present or the assembled proof fails self-validation.
+///
+/// # The composed proof (`cong` on `sel_i` + the two select folds + `trans`)
+///
+/// The refutation reuses the certified `select`-over-`construct` fold and adds
+/// one congruence lift; for the `i`-th selector `sel_i`:
+///
+/// 1. `h` (the **trusted premise**): the asserted equality `(= (C x…) (C y…))`;
+/// 2. `cong` lifts `h` under the selector head `sel_i`:
+///    `(= (sel_i (C x…)) (sel_i (C y…)))`;
+/// 3. the two **`select`-over-`construct` folds** (the trusted projection
+///    equations the `select` certificate certifies the *use* of):
+///    `(= (sel_i (C x…)) x_i)` and `(= (sel_i (C y…)) y_i)`;
+/// 4. a single `eq_transitive` chains `x_i = sel_i(C x…) = sel_i(C y…) = y_i` to
+///    `(= x_i y_i)`, discharged against the three equalities by `resolution`;
+/// 5. `resolution` against the trusted field disequality `(not (= x_i y_i))`
+///    closes to the empty clause `(cl)`.
+///
+/// Every rule (`cong`, `eq_transitive`, `resolution`) is exactly the set the
+/// `select` and distinctness certificates already use, all **Carcara-checkable**.
+/// The two reserved structural heads `!dtsel_n_i_C` / `!dtcon_n_C` are
+/// uninterpreted functions to Carcara (no datatype rule).
+///
+/// # Trust boundary (honest residual)
+///
+/// The constructor equality `(= (C x…) (C y…))` stays a **trusted premise**
+/// (`h`), the field disequality `(not (= x_i y_i))` stays a trusted premise, and
+/// the two `select` folds stay trusted premises (as in the certified `select`
+/// collapse). What is **Carcara-certified** is the *injectivity reasoning*: that
+/// a same-constructor equality forces each field pair `(= x_i y_i)`, so a
+/// conflicting `x_i != y_i` is ⊥. Constructor **acyclicity** (which needs
+/// induction) and the **distinct-constructor** case remain **trusted/deferred**
+/// and are out of scope. The Lean/kernel reconstruction route for the
+/// injectivity collapse is deferred (it composes the deferred `select`-fold
+/// reconstruction tail through `cong`), so this certificate is
+/// **Carcara-checked only**.
+///
+/// # Returns
+///
+/// [`None`] when no `(= (C x…) (C y…))` (same constructor) with a matching
+/// conflicting `(not (= x_i y_i))` on a renderable (BV/Bool) field occurs in
+/// `assertions`, or when the assembled proof fails its own narrow
+/// [`axeyum_cnf::check_alethe`] self-validation.
+///
+/// # Fragment boundary
+///
+/// Constructor fields are rendered as residual (`BitVec`/`Bool`) leaves; a
+/// datatype-typed (nested) field is skipped. The constructor heads are rendered
+/// as **structural applications** `(!dtcon_n_C args…)`, so a **nullary**
+/// constructor would render as the empty application `(!dtcon_0_C)`, which the
+/// SMT-LIB front-end does not accept — only constructors with at least one
+/// argument are in scope. **Distinct-constructor** equalities `(= (C x…) (D y…))`
+/// are declined (they need distinctness, not injectivity).
+///
+/// # Panics
+///
+/// Does not panic for any input; arena access is total over well-formed terms.
+#[must_use]
+pub fn prove_qf_dt_injective_alethe_carcara(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<Vec<AletheCommand>> {
+    // Find the first asserted `(= (C x…) (C y…))` (same constructor) with a
+    // conflicting `(not (= x_i y_i))` on some renderable field index `i`.
+    let inj = assertions
+        .iter()
+        .find_map(|&assertion| match_same_constructor_eq(arena, assertion))
+        .and_then(|(ctor, xs, ys)| {
+            find_conflicting_field(arena, assertions, ctor, &xs, &ys)
+                .map(|index| (ctor, xs, ys, index))
+        });
+    let (ctor, xs, ys, index) = inj?;
+
+    let proof = build_injectivity_proof(arena, ctor, &xs, &ys, index)?;
+
+    // Self-validate with the narrow injectivity hook (Carcara is the trust anchor).
+    matches!(
+        check_alethe_with(&proof, &injective_simplify_hook),
+        Ok(true)
+    )
+    .then_some(proof)
+}
+
+/// Assembles the `cong(sel_i)` + two select folds + `eq_transitive` + closing
+/// `resolution` block for field `index` of `(= (C x…) (C y…))` with the trusted
+/// disequality `(not (= x_i y_i))`.
+fn build_injectivity_proof(
+    arena: &TermArena,
+    ctor: ConstructorId,
+    xs: &[TermId],
+    ys: &[TermId],
+    index: u32,
+) -> Option<Vec<AletheCommand>> {
+    // Render both constructor applications structurally (`!dtcon_n_C …`).
+    let lhs_con = construct_alethe(arena, ctor, xs)?;
+    let rhs_con = construct_alethe(arena, ctor, ys)?;
+
+    // Selector `sel_i` applied to each side: `(!dtsel_n_i_C <con>)`.
+    let sel_lhs = selector_alethe(arena, ctor, index, lhs_con.clone());
+    let sel_rhs = selector_alethe(arena, ctor, index, rhs_con.clone());
+
+    let x_i = term_to_alethe(arena, xs[index as usize])?;
+    let y_i = term_to_alethe(arena, ys[index as usize])?;
+    let field_eq = eq_term(x_i.clone(), y_i.clone());
+
+    let proof = vec![
+        // h: the TRUSTED same-constructor equality `(= (C x…) (C y…))`.
+        AletheCommand::Assume {
+            id: "h".to_owned(),
+            clause: vec![pos(eq_term(lhs_con, rhs_con))],
+        },
+        // cong: lift `h` under the selector head: `(= (sel_i (C x…)) (sel_i (C y…)))`.
+        dt_step(
+            "cong",
+            vec![pos(eq_term(sel_lhs.clone(), sel_rhs.clone()))],
+            "cong",
+            &["h"],
+        ),
+        // fold_x: the TRUSTED select fold `(= x_i (sel_i (C x…)))`.
+        AletheCommand::Assume {
+            id: "fold_x".to_owned(),
+            clause: vec![pos(eq_term(x_i.clone(), sel_lhs.clone()))],
+        },
+        // fold_y: the TRUSTED select fold `(= (sel_i (C y…)) y_i)`.
+        AletheCommand::Assume {
+            id: "fold_y".to_owned(),
+            clause: vec![pos(eq_term(sel_rhs.clone(), y_i.clone()))],
+        },
+        // diseq: the TRUSTED conflicting field disequality `(not (= x_i y_i))`.
+        AletheCommand::Assume {
+            id: "diseq".to_owned(),
+            clause: vec![neg(field_eq.clone())],
+        },
+        // chain: `eq_transitive` over `x_i = sel_i(C x…) = sel_i(C y…) = y_i`.
+        dt_step(
+            "chain",
+            vec![
+                neg(eq_term(x_i, sel_lhs.clone())),
+                neg(eq_term(sel_lhs, sel_rhs.clone())),
+                neg(eq_term(sel_rhs, y_i)),
+                pos(field_eq.clone()),
+            ],
+            "eq_transitive",
+            &[],
+        ),
+        // contra: resolve the chain against the three equalities ⇒ `(= x_i y_i)`.
+        dt_step(
+            "contra",
+            vec![pos(field_eq)],
+            "resolution",
+            &["chain", "fold_x", "cong", "fold_y"],
+        ),
+        // empty: resolve `(= x_i y_i)` against the trusted `(not (= x_i y_i))` ⇒ `(cl)`.
+        dt_step("empty", Vec::new(), "resolution", &["contra", "diseq"]),
+    ];
+    Some(proof)
+}
+
+/// If `assertion` is `(= (C x…) (C y…))` with both sides constructor applications
+/// of the **same** constructor `C`, returns `(C, x…, y…)`; else [`None`].
+fn match_same_constructor_eq(
+    arena: &TermArena,
+    assertion: TermId,
+) -> Option<(ConstructorId, Vec<TermId>, Vec<TermId>)> {
+    let TermNode::App { op: Op::Eq, args } = arena.node(assertion) else {
+        return None;
+    };
+    let &[x, y] = &args[..] else {
+        return None;
+    };
+    let (lhs_ctor, lhs_fields) = as_construct(arena, x)?;
+    let (rhs_ctor, rhs_fields) = as_construct(arena, y)?;
+    (lhs_ctor == rhs_ctor).then_some((lhs_ctor, lhs_fields, rhs_fields))
+}
+
+/// Finds the first field index `i` with a renderable (BV/Bool) field pair such
+/// that `assertions` contains a disequality `(not (= x_i y_i))` (in either field
+/// order). Returns the index, or [`None`] if no field conflict is asserted.
+fn find_conflicting_field(
+    arena: &TermArena,
+    assertions: &[TermId],
+    ctor: ConstructorId,
+    xs: &[TermId],
+    ys: &[TermId],
+) -> Option<u32> {
+    let field_count = arena.constructor_fields(ctor).len();
+    for i in 0..field_count {
+        let x_i = xs[i];
+        let y_i = ys[i];
+        // Only residual (BV/Bool) field sorts are renderable as Alethe leaves.
+        if !matches!(arena.sort_of(x_i), Sort::BitVec(_) | Sort::Bool) {
+            continue;
+        }
+        if assertions
+            .iter()
+            .any(|&a| is_field_disequality(arena, a, x_i, y_i))
+        {
+            return u32::try_from(i).ok();
+        }
+    }
+    None
+}
+
+/// True when `assertion` is `(not (= x_i y_i))` (either field order).
+fn is_field_disequality(arena: &TermArena, assertion: TermId, x_i: TermId, y_i: TermId) -> bool {
+    let TermNode::App {
+        op: Op::BoolNot,
+        args: not_args,
+    } = arena.node(assertion)
+    else {
+        return false;
+    };
+    let &[inner] = &not_args[..] else {
+        return false;
+    };
+    let TermNode::App {
+        op: Op::Eq,
+        args: eq_args,
+    } = arena.node(inner)
+    else {
+        return false;
+    };
+    let &[p, q] = &eq_args[..] else {
+        return false;
+    };
+    (p == x_i && q == y_i) || (p == y_i && q == x_i)
+}
+
+/// The structural selector application `(!dtsel_n_i_C <con>)` applying the
+/// `index`-th selector of constructor `ctor` (arity `n`) to the already-rendered
+/// constructor term `con`.
+fn selector_alethe(
+    arena: &TermArena,
+    ctor: ConstructorId,
+    index: u32,
+    con: AletheTerm,
+) -> AletheTerm {
+    let name = arena.constructor_name(ctor);
+    let n = arena.constructor_fields(ctor).len();
+    AletheTerm::App(format!("!dtsel_{n}_{index}_{name}"), vec![con])
+}
+
+/// The narrow self-validation hook for [`prove_qf_dt_injective_alethe_carcara`].
+///
+/// The injectivity refutation uses only `cong`, `eq_transitive`, and
+/// `resolution` — all natively handled by [`axeyum_cnf::check_alethe`]. No
+/// `evaluate`/`false` simplification is emitted (unlike distinctness), so this
+/// hook defers **every** rule (`None`) to the native checker; it exists so the
+/// self-validation matches the distinctness pattern and rejects any future shape
+/// the native checker would not handle. Carcara is the external trust anchor.
+fn injective_simplify_hook(_rule: &str, _clause: &[AletheLit]) -> Option<bool> {
+    None
+}

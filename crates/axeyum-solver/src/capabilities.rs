@@ -669,6 +669,28 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0022",
     },
     Capability {
+        area: "datatypes",
+        feature: "Carcara-checked constructor INJECTIVITY certificate \
+                  (prove_qf_dt_injective_alethe_carcara): an asserted (= (C x..) (C y..)) with the \
+                  SAME C plus a conflicting field disequality (not (= x_i y_i)) is refuted by \
+                  COMPOSING the certified select-over-construct fold with congruence — cong lifts \
+                  the equality under sel_i, the two select folds give sel_i(C x..)=x_i and \
+                  sel_i(C y..)=y_i, and eq_transitive forces (= x_i y_i) (resolution against the \
+                  disequality closes to the empty clause)",
+        assurance: Assurance::Checked,
+        evidence: "every STRUCTURAL step (cong/eq_transitive/resolution) is accepted (valid && \
+                   !holey) by the external Carcara checker (datatype_injective_cert) — reserved \
+                   !dtsel/!dtcon heads are uninterpreted, the constructor equality, the field \
+                   disequality and the two select folds are asserted premises; a tampered eq_transitive \
+                   chain / wrong-field projection is REJECTED. Honest boundary: the constructor \
+                   equality, the field disequality and the select folds stay TRUSTED premises (only \
+                   the injectivity reasoning that same-C equality forces (= x_i y_i) is certified); \
+                   distinct-constructor equalities are declined (distinctness's job); acyclicity stays \
+                   trusted/deferred (needs induction); nullary constructors are out of scope; the \
+                   Lean/kernel reconstruction route is deferred (Carcara-only)",
+        reference: "ADR-0022",
+    },
+    Capability {
         area: "quantifiers",
         feature: "finite-domain expansion + congruence-aware e-matching on the e-graph keystone \
                   (single/multi-variable, multi-pattern set-cover triggers, nested triggers) \

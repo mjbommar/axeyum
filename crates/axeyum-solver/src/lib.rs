@@ -263,7 +263,8 @@ pub use qfbv_alethe::{
     prove_qf_bv_unsat_alethe_lowered, prove_qf_bv_unsat_alethe_route2,
 };
 pub use qfdt_simp_alethe::{
-    prove_qf_dt_distinct_alethe_carcara, prove_qf_dt_unsat_alethe_via_simplification,
+    prove_qf_dt_distinct_alethe_carcara, prove_qf_dt_injective_alethe_carcara,
+    prove_qf_dt_unsat_alethe_via_simplification,
 };
 pub use qfufbv_alethe::prove_qf_ufbv_unsat_alethe;
 pub use qfuflia_alethe::prove_qf_uflia_unsat_alethe;
