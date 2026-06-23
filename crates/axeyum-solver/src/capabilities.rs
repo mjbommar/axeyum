@@ -449,9 +449,12 @@ pub const CAPABILITIES: &[Capability] = &[
         feature: "ONLINE Nelson–Oppen combination (check_qf_uflra_online): the online EufTheory + the \
                   online LraTheory combined by model-based equality sharing (interface-equality \
                   exchange + DFS interface split) — the warm alternative to eager Ackermann. Now \
-                  decides FULL Boolean-structured QF_UFLRA via an enumerative DPLL(T): Tseitin \
-                  skeleton over the theory atoms, propositional-model enumeration with theory-conflict \
-                  blocking clauses, the conjunctive MBTC reused verbatim as the per-model theory oracle. \
+                  decides FULL Boolean-structured QF_UFLRA via a real CDCL(T) over the combination: \
+                  Dpll<CombinedIncremental> drives one warm EUF+LRA theory with backtrackable \
+                  assert/push/pop, joint unit+theory propagation, and 1-UIP conflict learning + \
+                  non-chronological backjump over Boolean + theory + INTERFACE-EQUALITY literals (the \
+                  Nelson–Oppen undetermined interface split is now ordinary SAT branching on registered \
+                  eq/lt/gt vars, not a private DFS — the enumerative BoolSearch is retired to a fallback). \
                   Now the DEFAULT check_auto route for mixed UF+real-arith queries (tried before eager \
                   Ackermann, which stays the byte-unchanged fallback on online Unknown)",
         assurance: Assurance::Validated,
@@ -461,14 +464,14 @@ pub const CAPABILITIES: &[Capability] = &[
                    caught + fixed 2 real soundness bugs; the Boolean fuzz jointly decided 123 = 41 sat / \
                    82 unsat). A per-model Unknown forces a whole-query Unknown (no wrong unsat). Caps \
                    (models/atoms/clauses/split-depth/timeout) → graceful Unknown; non-UFLRA → Unknown. \
-                   Enumerative DPLL(T) with blocking-clause pruning + EARLY theory-conflict detection \
-                   (partial-assignment theory check prunes whole subtrees) + a WARM incremental \
-                   CombinedTheory oracle (cache-by-layout, replaces the from-scratch Nelson–Oppen per \
-                   model — parallel-run verdict-IDENTICAL to the cold core) + COMBINED THEORY PROPAGATION \
-                   (EUF + LRA congruence/order entailments + interface-equality entailments assign \
-                   implied literals before deciding; 79 fired propagations all offline-confirmed entailed, \
-                   0 unsound) — slices 1-2 toward a full CDCL(T) over the combination; slice 3 (Dpll over \
-                   CombinedTheory, retiring enumeration) + 1-UIP-over-combination deferred. The \
+                   The shared-CDCL(T)-spine keystone (gap-analysis centerpiece) is COMPLETE for UFLRA — \
+                   built slice by slice each verdict-invariant under the differential: warm CombinedTheory \
+                   oracle (cache-by-layout, parallel-run verdict-IDENTICAL to the cold Nelson–Oppen core), \
+                   combined theory propagation (EUF + LRA + interface entailments, all fired propagations \
+                   offline-confirmed entailed, 0 unsound), a generic Dpll<T: TheorySolver> (no-behavior- \
+                   change refactor, 1-UIP counters byte-identical), the CombinedIncremental TheorySolver \
+                   surface (interface vars registered as SAT decision atoms), and the Dpll-over- \
+                   CombinedIncremental wiring (learned theory lemmas re-validated entailed). The \
                    check_auto dispatch wiring is itself guarded by an in-tree differential \
                    vs the eager route (300-query mixed UF+arith LCG corpus: 240 co-decided, 0 \
                    disagreements, 0 LOGICAL decision-regressions, sat replay, +16 value-add decisions \
