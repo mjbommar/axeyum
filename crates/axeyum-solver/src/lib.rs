@@ -75,6 +75,7 @@ mod optimize;
 mod pb;
 mod pbls;
 mod pdr;
+mod pdr_lia;
 mod pdr_lra;
 mod preprocess;
 mod proof;
@@ -221,6 +222,7 @@ pub use pdr::{
     CertifiedPdrOutcome, ChcSafetyCertificate, PdrOutcome, prove_safety_pdr,
     prove_safety_pdr_certified,
 };
+pub use pdr_lia::{PdrLiaOutcome, prove_safety_pdr_lia};
 pub use pdr_lra::{PdrLraOutcome, prove_safety_pdr_lra};
 pub use preprocess::check_with_preprocessing;
 pub use proof::{
