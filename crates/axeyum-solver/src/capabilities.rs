@@ -497,7 +497,10 @@ pub const CAPABILITIES: &[Capability] = &[
                   condensation (deterministic Tarjan over declaration order); a non-trivial SCC of \
                   sort-compatible members is merged into one self-recursive predicate over a \
                   control-tagged disjoint-union state, solved by the model-checking engines, then \
-                  projected back per member; self-recursion + predecessor-invariant substitution as before",
+                  projected back per member; self-recursion + predecessor-invariant substitution as before. \
+                  Also STRATIFIED-NONLINEAR bodies (≥2 atoms): every already-solved lower-stratum body \
+                  atom is folded (its invariant conjoined into the constraint), reducing to the linear \
+                  shape when ≤1 same-SCC recursive atom remains",
         assurance: Assurance::Validated,
         evidence: "the dependency analysis / SCC / tag-merge / projection are UNTRUSTED — a Sat (SAFE) is \
                    returned only when the full multi-predicate interpretation makes EVERY clause valid \
@@ -505,9 +508,10 @@ pub const CAPABILITIES: &[Capability] = &[
                    Unsat via the engine's replay-checked counterexample / a reachable query. (A reduction \
                    soundness bug — variable leakage into the invariant — was caught by this gate + \
                    soundness-negative tests and fixed; mutual recursion adds a soundness-negative test \
-                   that a member-conflating projection can never yield a wrong Unsat.) SCCs over caps \
-                   (16 members / 32 state width), sort-incompatible members, or nonlinear (≥2-atom body) \
-                   → Unknown",
+                   that a member-conflating projection can never yield a wrong Unsat; verify_horn_model \
+                   conjoins EVERY body atom, audited for the nonlinear extension.) SCCs over caps \
+                   (16 members / 32 state width), sort-incompatible members, GENUINE nonlinear recursion \
+                   (≥2 same-SCC atoms after folding), or >8-atom bodies → Unknown",
         reference: "ADR-0048",
     },
     Capability {
