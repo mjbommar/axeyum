@@ -566,7 +566,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    construction; guarded by a 400-query LCG differential (check_auto_explained.0 == \
                    check_auto EXACTLY, 0 mismatches) + a determinism check (byte-identical trace across \
                    runs). No decider verdict logic touched",
-        reference: "gap-analysis-z3-cvc5-2026-06-22 #6",
+        reference: "ADR-0050",
     },
 ];
 
