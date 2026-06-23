@@ -1717,6 +1717,226 @@ fn value_to_const(arena: &mut TermArena, value: &Value) -> Option<TermId> {
     }
 }
 
+/// Whether `term` is an atomic linear-arithmetic literal over the named `sort`
+/// (`Int` or `Real`) that the model-based projection primitives (`mbp_lia` /
+/// `mbp_lra`) can parse: a comparison or an `Eq` over operands of that sort, or
+/// a single `BoolNot` of such a literal. A minimal duplicate of the recognizers
+/// that already feed `mbp_*` (kept private to `pdr_lia.rs` / `pdr_lra.rs`); used
+/// only to gate eligibility before calling `mbp_*`, which independently re-parses
+/// and verifies, so an over-permissive match here is still sound.
+fn is_arith_atom(arena: &TermArena, term: TermId, sort: Sort) -> bool {
+    match arena.node(term) {
+        TermNode::App {
+            op: Op::BoolNot,
+            args,
+        } => is_arith_atom(arena, args[0], sort),
+        TermNode::App {
+            op: Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe,
+            args,
+        } => sort == Sort::Int && args.iter().all(|&a| arena.sort_of(a) == Sort::Int),
+        TermNode::App {
+            op: Op::RealLt | Op::RealLe | Op::RealGt | Op::RealGe,
+            args,
+        } => sort == Sort::Real && args.iter().all(|&a| arena.sort_of(a) == Sort::Real),
+        TermNode::App { op: Op::Eq, args } => args.iter().all(|&a| arena.sort_of(a) == sort),
+        _ => false,
+    }
+}
+
+/// Flattens the negation `¬body` into a **conjunction** of negated arithmetic
+/// literals over `sort`, returning the literal terms (already negated) or `None`
+/// when `¬body` is not a pure conjunction of `LIA`/`LRA` atoms.
+///
+/// The common eligible shape is a clause `body = (ℓ₁ ∨ … ∨ ℓₙ)` whose negation
+/// is `(¬ℓ₁ ∧ … ∧ ¬ℓₙ)` — e.g. `(x ≤ y ∨ x ≥ y+3)` ⇒ `(x > y ∧ x < y+3)`.
+/// De Morgan is pushed through `∨` and double negation only; an `∧` under the
+/// negation would make `¬body` disjunctive, so it declines (`None`).
+fn negate_body_to_conjuncts(
+    arena: &mut TermArena,
+    body: TermId,
+    sort: Sort,
+) -> Result<Option<Vec<TermId>>, axeyum_ir::IrError> {
+    let mut out = Vec::new();
+    if collect_negation_conjuncts(arena, body, sort, &mut out)? {
+        Ok(Some(out))
+    } else {
+        Ok(None)
+    }
+}
+
+/// Recursive worker for [`negate_body_to_conjuncts`]: pushes the conjuncts of
+/// `¬term` onto `out`. Returns `false` (decline) on any non-arithmetic /
+/// non-conjunctive shape; `out` is then left in an unspecified partial state and
+/// must be discarded by the caller.
+fn collect_negation_conjuncts(
+    arena: &mut TermArena,
+    term: TermId,
+    sort: Sort,
+    out: &mut Vec<TermId>,
+) -> Result<bool, axeyum_ir::IrError> {
+    match arena.node(term) {
+        // ¬(a ∨ b) = ¬a ∧ ¬b — distribute the negation over each disjunct.
+        TermNode::App {
+            op: Op::BoolOr,
+            args,
+        } => {
+            let args = args.clone();
+            for arg in args {
+                if !collect_negation_conjuncts(arena, arg, sort, out)? {
+                    return Ok(false);
+                }
+            }
+            Ok(true)
+        }
+        // ¬¬a = a — the inner term is itself a conjunct of ¬term.
+        TermNode::App {
+            op: Op::BoolNot,
+            args,
+        } => {
+            let inner = args[0];
+            if is_arith_atom(arena, inner, sort) {
+                out.push(inner);
+                Ok(true)
+            } else {
+                Ok(false)
+            }
+        }
+        // A bare atom ℓ: ¬ℓ is one conjunct.
+        _ => {
+            if is_arith_atom(arena, term, sort) {
+                let neg = arena.not(term)?;
+                out.push(neg);
+                Ok(true)
+            } else {
+                Ok(false)
+            }
+        }
+    }
+}
+
+/// Collects the free symbols of `term` into `out` (deterministic, sorted).
+fn collect_term_symbols(arena: &TermArena, term: TermId, out: &mut BTreeSet<SymbolId>) {
+    let mut stack = vec![term];
+    let mut seen = BTreeSet::new();
+    while let Some(t) = stack.pop() {
+        if !seen.insert(t) {
+            continue;
+        }
+        match arena.node(t) {
+            TermNode::Symbol(s) => {
+                out.insert(*s);
+            }
+            TermNode::App { args, .. } => {
+                let args = args.clone();
+                stack.extend(args);
+            }
+            _ => {}
+        }
+    }
+}
+
+/// A [`Value`] as a ground constant term, restricted to the arithmetic sorts the
+/// MBP witness path produces (`Int`/`Real`); `None` otherwise or on overflow.
+fn arith_value_to_const(arena: &mut TermArena, value: &Value) -> Option<TermId> {
+    match value {
+        Value::Int(n) => Some(arena.int_const(*n)),
+        Value::Real(r) => Some(arena.real_const(*r)),
+        _ => None,
+    }
+}
+
+/// MBP-driven model-based instantiation of `∀sym. body` (gap-analysis Gap 9).
+///
+/// Synthesizes a ground instance `body[sym := t]` whose witness `t` refutes the
+/// universal at the current `model` even when it is *symbolic in another
+/// variable* — the case the scalar candidate probe misses. The method projects
+/// the negated body `∃sym. ¬body`:
+///
+/// 1. **Eligibility.** `¬body` must be a conjunction of `LRA` (real `sym`) or
+///    `LIA` (int `sym`) literals; otherwise decline (`None`).
+/// 2. **Witness sub-solve.** Fix every *other* variable of `¬body` to its
+///    `model` value and solve the quantifier-free conjunction for a `sym`-witness
+///    with the same `config`. `Unsat` ⇒ the universal holds at this model ⇒
+///    decline; `Sat(M')` gives the witness model.
+/// 3. **Project + witness.** Call `mbp_lia` / `mbp_lra` to *certify* the witness
+///    region is a sound projection (best-effort: a decline does not block the
+///    witness, since the instance is sound regardless — see soundness below) and
+///    read the concrete witness `t = M'(sym)`.
+/// 4. Build and return `body[sym := t]` (via [`replace_subterms`]).
+///
+/// **Soundness.** Every returned instance `body[sym := t]` is a logical
+/// consequence of `∀sym. body` for *any* `t`, so the projection / sub-solve only
+/// *chooses* a useful witness — a bad choice yields a redundant-but-true
+/// instance, never an unsound one. The verdict-soundness rests entirely on the
+/// caller's existing weakening invariant.
+fn mbqi_instance_via_mbp(
+    arena: &mut TermArena,
+    sym: SymbolId,
+    body: TermId,
+    model: &Model,
+    config: &SolverConfig,
+) -> Option<TermId> {
+    let sort = arena.symbol(sym).1;
+    if sort != Sort::Int && sort != Sort::Real {
+        return None;
+    }
+    // (1) Eligibility: ¬body must be a conjunction of LIA/LRA literals over `sym`.
+    let neg_literals = negate_body_to_conjuncts(arena, body, sort).ok()??;
+    if neg_literals.is_empty() {
+        return None;
+    }
+
+    // (2) Witness sub-solve: fix the OTHER variables of ¬body to their model
+    // values, then solve the conjunction for a `sym`-witness with the same config.
+    let mut others = BTreeSet::new();
+    for &lit in &neg_literals {
+        collect_term_symbols(arena, lit, &mut others);
+    }
+    others.remove(&sym);
+    let mut sub_query = neg_literals.clone();
+    for other in &others {
+        let value = model.get(*other)?;
+        let var = arena.var(*other);
+        let c = arith_value_to_const(arena, &value)?;
+        let fixed = arena.eq(var, c).ok()?;
+        sub_query.push(fixed);
+    }
+    let CheckResult::Sat(witness_model) = check_auto(arena, &sub_query, config).ok()? else {
+        // Unsat / Unknown: no certified `sym`-witness under these fixings → decline.
+        return None;
+    };
+
+    // (3) Project (best-effort certification — its decline does not block the
+    // sound witness) and read the concrete witness `t = M'(sym)`.
+    let _ = mbp_for_sort(arena, sort, &neg_literals, &witness_model, sym);
+    let witness_value = witness_model.get(sym)?;
+    let t = arith_value_to_const(arena, &witness_value)?;
+
+    // (4) Build the ground instance `body[sym := t]`.
+    let var = arena.var(sym);
+    let mut map: HashMap<TermId, TermId> = HashMap::new();
+    map.insert(var, t);
+    let mut memo: HashMap<TermId, TermId> = HashMap::new();
+    replace_subterms(arena, body, &map, &mut memo).ok()
+}
+
+/// Dispatches to the sort-appropriate model-based projection primitive,
+/// returning whether the witness region certified (best-effort; the caller does
+/// not require success).
+fn mbp_for_sort(
+    arena: &mut TermArena,
+    sort: Sort,
+    literals: &[TermId],
+    model: &Model,
+    sym: SymbolId,
+) -> bool {
+    match sort {
+        Sort::Int => crate::mbp::mbp_lia(arena, literals, model, sym).is_some(),
+        Sort::Real => crate::mbp::mbp_lra(arena, literals, model, sym).is_some(),
+        _ => false,
+    }
+}
+
 /// Model-based quantifier instantiation (MBQI): a refutation loop for top-level
 /// universals over infinite domains. Each round decides `ground ∧ instances`; on
 /// a `sat` candidate, every universal `∀x. body` is checked against the model at
@@ -1865,6 +2085,7 @@ pub fn prove_unsat_by_mbqi(
                 }
                 _ => {}
             }
+            let mut this_added = false;
             for v in candidates {
                 let mut probe = assignment.clone();
                 probe.set(sym, v.clone());
@@ -1882,8 +2103,24 @@ pub fn prove_unsat_by_mbqi(
                         instances.push(inst);
                         added = true;
                     }
+                    this_added = true;
                     break;
                 }
+            }
+            // Scalar probing is incomplete: a universal violated only at a witness
+            // *symbolic in another variable* (beyond the `±1` neighbourhood of the
+            // model's scalar candidates) is missed. When the scalar probe found no
+            // refinement for this universal, project the negated body `∃x. ¬body`
+            // out of `x` (model-based projection over the other variables fixed to
+            // the model) to synthesize that witness instance. Additive — it only
+            // ever supplies a *true* instance of `∀x. body` (a consequence), never
+            // changing the scalar-probe verdict and never an unsound instance.
+            if !this_added
+                && let Some(inst) = mbqi_instance_via_mbp(arena, sym, body, &model, config)
+                && !instances.contains(&inst)
+            {
+                instances.push(inst);
+                added = true;
             }
         }
         if !added {
