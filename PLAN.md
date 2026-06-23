@@ -12,6 +12,47 @@ session state.
 > without ever losing the thread. **We do not stop and we do not hand-wave; we
 > advance the next task and record it.**
 
+## ⚠ Course correction (2026-06-23): MEASURE, don't seed
+
+**Diagnosis (evidence-based).** ~150 commits over 24h moved **zero** Z3/cvc5
+metrics. Verified causes:
+1. **Measurement vacuum.** Only **one** division is corpus-measured (QF_BV p4dfa).
+   All the new work — interpolation, CHC/PDR/IMC, abduction, online combination,
+   datatypes, the proof certs — is on divisions **nothing measures**. Real
+   decide-rate gains happened (fuzz-measured: QF_NRA 109→64, QF_NIA 498→146,
+   QF_UFLIA 311→18) but are **invisible** because no committed corpus vs Z3 records
+   them. *You cannot show progress you do not measure.*
+2. **Ledger-over-corpus.** The cadence became *seed engine → mark Validated/Checked
+   → register a ledger row → next engine.* That optimizes **breadth + assurance**
+   (the ledger). Parity metrics measure **depth + performance** (the corpus). A
+   ledger row is **not** progress toward parity; a measured PAR-2 is.
+3. **QF_BV bottleneck untouched.** The one measured metric is gated on
+   batsat-path search / word-level reduction. The recent SAT heuristics (VSIDS,
+   Luby, LBD, phase-saving) landed in the **generic CDCL(T) Dpll** (`lra_online.rs`,
+   the *theory* loop) — a different code path from the QF_BV solver
+   (`solve_with_rustsat_batsat`/`native_cdcl`). So they cannot move QF_BV.
+
+**The correction (binding until lifted):**
+- **Measurement is the gate, not an afterthought.** No fragment may be called
+  "parity"/"competitive" without a **committed measured corpus vs Z3/cvc5**
+  ([P4.5](docs/plan/track-4-usecases-frontend/P4.5-benchmarking.md)). Until then its
+  status is "seeded/decides," never "parity." (See the
+  [maturity ladder](#true-parity-the-maturity-ladder-and-the-measurement-debt-2026-06-23).)
+- **Fastest real progress = measure what already improved.** Stand up committed
+  per-division corpora (QF_LRA, QF_LIA, QF_UF, then QF_NRA/NIA) vs Z3 *now* — the
+  gains already exist (fuzz-measured); measuring them makes them visible **today**.
+  The new oracle-free corpus gate (`tests/corpus_regression.rs`) is the credibility
+  substrate; the missing piece is the **measured PAR-2** harness across divisions.
+- **Seed moratorium.** Do **not** add another new engine seed until ≥2 existing
+  divisions are *measured-competitive*. A 12th seeded engine is worth less than
+  QF_LRA proven on a real corpus.
+- **QF_BV work must hit its real bottleneck** — batsat-path search (kissat-class
+  techniques in the native core) or deeper word-level reduction — not the theory
+  loop. SAT heuristics in `lra_online.rs` do nothing for QF_BV.
+- Proof/certification work still has value (it widens the *Certifying* moat we
+  already lead) — but it advances assurance, **not** the parity metric; budget it
+  accordingly, behind measurement.
+
 ## What "done" means
 
 See [`docs/plan/00-north-star.md`](docs/plan/00-north-star.md) for the full
