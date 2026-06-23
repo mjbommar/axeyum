@@ -212,7 +212,11 @@ pub const CAPABILITIES: &[Capability] = &[
         evidence: "UNSAT carries a congruence explanation re-derived by an independent \
                    union-find + congruence checker (check_congruence); SAT model built from \
                    the e-graph classes and replayed against the original; both routes \
-                   differentially + randomly validated against the Ackermann path",
+                   differentially + randomly validated against the Ackermann path. The online \
+                   DPLL(T) loop is now a full CDCL(T) spine — theory propagation + 1-UIP conflict \
+                   learning with non-chronological backjump (congruence-explain reasons threaded on \
+                   the trail); verdict-invariant, 0 differential disagreements, 800 learned theory-lemma \
+                   clauses re-validated congruence-UNSAT and shorter than the full core",
         reference: "ADR-0013/0032",
     },
     Capability {
@@ -358,18 +362,20 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "QF_LIA",
-        feature: "ONLINE LIA now does THEORY PROPAGATION (real CDCL(T) spine, mirrors the LRA path): the \
-                  DPLL(T) loop interleaves unit + theory propagation; each unassigned order atom is \
-                  probed by the cheap LP-RELAXATION (real-infeasible of asserted ∧ ¬atom ⇒ atom entailed \
-                  over ℤ, since ℤ-solutions ⊆ ℝ-solutions) — strictly cheaper than a per-atom integer \
-                  solve, propagated with an asserted-only deletion-minimized reason",
+        feature: "ONLINE LIA is a real CDCL(T) spine (mirrors the LRA path): THEORY PROPAGATION (each \
+                  unassigned order atom probed by the cheap LP-RELAXATION — real-infeasible of asserted ∧ \
+                  ¬atom ⇒ atom entailed over ℤ since ℤ-solutions ⊆ ℝ-solutions — strictly cheaper than a \
+                  per-atom integer solve), AND 1-UIP CONFLICT LEARNING with non-chronological backjump \
+                  (per-var levels/reasons, analyze_conflict resolves to the first-UIP asserting clause, \
+                  theory pop once per decision crossed)",
         assurance: Assurance::Validated,
         evidence: "DECIDER change, verdict-INVARIANT: differential vs the offline integer decider over \
-                   400 decided LCG instances (199 sat / 201 unsat) + 3.7k push/pop/assert steps, 0 \
-                   disagreements, every sat model replayed with integer values; a soundness probe \
-                   integer-offline-CONFIRMED all 1650 fired propagations are genuinely entailed (asserted \
-                   ∧ ¬entailed integer-UNSAT), 0 unsound. LP-feasible probe is inconclusive ⇒ skip; \
-                   overflow/equality/out-of-fragment skip. uflia combination (reuses LiaTheory) unchanged",
+                   400 decided LCG instances + 3.7k push/pop/assert steps, 0 disagreements, every sat \
+                   model replayed with integer values; a probe integer-offline-CONFIRMED all 1650 fired \
+                   propagations entailed (0 unsound), and 84 learned 1-UIP theory-lemma clauses each \
+                   ENTAILED (¬clause ∧ level-0 facts integer-UNSAT) and shorter than the full core. \
+                   LP-feasible probe inconclusive ⇒ skip; overflow/equality/out-of-fragment skip. uflia \
+                   combination (reuses LiaTheory) unchanged",
         reference: "ADR-0014/0015",
     },
     Capability {
