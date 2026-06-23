@@ -256,10 +256,12 @@ pub const CAPABILITIES: &[Capability] = &[
     Capability {
         area: "QF_LIA",
         feature: "kernel-checked LEAN proof for integer UNSAT shapes (int_reconstruct, integer prelude): \
-                  Diophantine gcd-infeasible equality systems, and single-variable integer-interval cuts \
+                  Diophantine gcd-infeasible equality systems; single-variable integer-interval cuts \
                   c ≤ k_lo·x ∧ k_hi·x ≤ d — INCLUDING the different-multiplier case (k_lo ≠ k_hi, e.g. \
-                  3x ≥ 2 ∧ 2x ≤ 1) that is LP-feasible but integer-infeasible, so LRA/Farkas cannot refute \
-                  it — reconstructed via no_int_between over the IntPrelude",
+                  3x ≥ 2 ∧ 2x ≤ 1) that is LP-feasible but integer-infeasible, via no_int_between; and \
+                  equality-and-bound k·x = b ∧ (c ≤ x | x ≤ c) (e.g. 2x=4 ∧ x≥3) where the equality pins x \
+                  outside the bound — a real-Farkas close (scale-by-k + substitute), reconstructed over \
+                  the IntPrelude",
         assurance: Assurance::Checked,
         evidence: "reconstructed to a Lean term the in-tree Lean-grade KERNEL accepts (infer + def_eq \
                    False); axiom audit shows only IntPrelude axioms + the verbatim hypotheses, NO sorryAx; \
