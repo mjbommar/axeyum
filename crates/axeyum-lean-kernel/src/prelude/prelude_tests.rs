@@ -1239,3 +1239,80 @@ fn datatype_tester_iota_reduces_to_bool() {
         }
     }
 }
+
+/// The **family selector** route (the injectivity foundation), the family
+/// analogue of [`datatype_selector_iota_reduces_to_field`]: declare a
+/// two-constructor family `Box : Type` (`B2 : α → α → Box | B0 : Box`); then for
+/// carrier atoms `x, y : α`, the selectors built by
+/// [`Kernel::datatype_family_selector`] over constructor `B2` satisfy
+/// `sel_0 (B2 x y)` `def_eq` `x` and `sel_1 (B2 x y)` `def_eq` `y` — the
+/// read-over-construct projection is **ι-reduction**, so
+/// `Eq α (sel_i (B2 x y)) x_i` is `Eq.refl`. The other constructor's minor (a
+/// supplied `default` inhabitant) only types the recursor; it never reduces here.
+#[test]
+fn datatype_family_selector_iota_reduces_to_field() {
+    let mut k = Kernel::new();
+    let p = build_logic_prelude(&mut k);
+    let anon = k.anon();
+    let z = k.level_zero();
+    let one = k.level_succ(z);
+    let alpha = declare_carrier(&mut k, "α", one);
+
+    // Box : Type with B2 : α → α → Box | B0 : Box (arities 2 and 0).
+    let box_name = k.name_str(anon, "Box");
+    let b2_name = k.name_str(box_name, "B2");
+    let b0_name = k.name_str(box_name, "B0");
+    let family = k
+        .add_datatype_family(box_name, alpha, one, &[(b2_name, 2), (b0_name, 0)])
+        .expect("Box family should admit");
+
+    // Carrier atoms x, y : α; a `default` inhabitant d : α for the B0 minor.
+    let atom = |k: &mut Kernel, name: &str| {
+        let n = k.name_str(anon, name);
+        k.add_declaration(Declaration::Axiom {
+            name: n,
+            uparams: vec![],
+            ty: alpha,
+        })
+        .unwrap();
+        k.const_(n, vec![])
+    };
+    let x = atom(&mut k, "x");
+    let y = atom(&mut k, "y");
+    let d = atom(&mut k, "d");
+
+    // B2 x y : Box.
+    let b2_xy = {
+        let c = k.const_(b2_name, vec![]);
+        let e = k.app(c, x);
+        k.app(e, y)
+    };
+
+    // sel_0 (B2 x y) def_eq x ; sel_1 (B2 x y) def_eq y.
+    for (index, field) in [(0usize, x), (1usize, y)] {
+        let sel = k.datatype_family_selector(&family, alpha, one, 0, index, d);
+        let applied = k.app(sel, b2_xy);
+        assert!(
+            k.def_eq(applied, field),
+            "sel_{index}(B2 x y) must ι-reduce to field {index}"
+        );
+
+        // The projection equation Eq α (sel_i (B2 x y)) field is Eq.refl.
+        let eq_prop = {
+            let eq = k.const_(p.eq, vec![one]);
+            let e = k.app(eq, alpha);
+            let e = k.app(e, applied);
+            k.app(e, field)
+        };
+        let refl = {
+            let r = k.const_(p.eq_refl, vec![one]);
+            let e = k.app(r, alpha);
+            k.app(e, field)
+        };
+        let inferred = k.infer(refl).expect("Eq.refl infers");
+        assert!(
+            k.def_eq(inferred, eq_prop),
+            "Eq.refl proves the sel_{index} family projection (ι-reduction)"
+        );
+    }
+}

@@ -339,6 +339,137 @@ fn same_constructor_equality_is_not_a_distinctness_refutation() {
     );
 }
 
+/// Datatype constructor **INJECTIVITY** (slice 3, the Lean mirror of the Carcara
+/// injectivity route). A same-constructor equality `Pair(a,b) = Pair(c,d)` with a
+/// conflicting field disequality `¬(a = c)` is UNSAT — discharged through the
+/// SELECTOR route (NO `noConfusion`, NO assumed injectivity axiom):
+///
+///   - `sel_0 (Pair a b)` ι-reduces to `a`, `sel_0 (Pair c d)` to `c`;
+///   - `congrArg sel_0 h` (an `Eq.rec`) transports the hypothesis to
+///     `Eq α (sel_0 (Pair a b)) (sel_0 (Pair c d))`, `def_eq` to `Eq α a c`;
+///   - applying the input field disequality `hne : ¬(a = c)` to it yields `False`.
+///
+/// The exported module must type-check in real Lean and `#print axioms` must report
+/// no `sorryAx` and no datatype-injectivity axiom — injectivity is kernel-computed.
+#[test]
+fn injective_field_mismatch_check_in_real_lean() {
+    let mut arena = TermArena::new();
+    let pair = arena.declare_datatype("Pair");
+    let mk = arena.add_constructor(
+        pair,
+        "mk",
+        &[
+            ("fst".into(), Sort::BitVec(2)),
+            ("snd".into(), Sort::BitVec(2)),
+        ],
+    );
+    let bv = |arena: &mut TermArena, n: &str| {
+        let s = arena.declare(n, Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let a = bv(&mut arena, "a");
+    let b = bv(&mut arena, "b");
+    let c = bv(&mut arena, "c");
+    let d = bv(&mut arena, "d");
+    // mk(a,b) = mk(c,d) ∧ ¬(a = c) — SAME constructor, conflicting field 0; UNSAT.
+    let lhs = arena.construct(mk, &[a, b]).unwrap();
+    let rhs = arena.construct(mk, &[c, d]).unwrap();
+    let eq = arena.eq(lhs, rhs).unwrap();
+    let a_eq_c = arena.eq(a, c).unwrap();
+    let a_ne_c = arena.not(a_eq_c).unwrap();
+    let (_frag, source) = prove_unsat_to_lean_module(&mut arena, &[eq, a_ne_c])
+        .expect("injectivity field-mismatch unsat reconstructs");
+    // Independent of an external Lean: the rendered module must NOT smuggle a
+    // datatype-injectivity escape hatch. The kernel already `infer`d it to `False`
+    // (no `sorryAx`); the family + Bool are real `inductive`s, the only axioms are
+    // the carrier, the field atoms, the selector default, and the two inputs.
+    assert!(
+        !source.contains("sorryAx") && !source.contains("noConfusion"),
+        "injectivity module must not lean on sorryAx/noConfusion:\n{source}"
+    );
+    lean_accepts("injective_field_mismatch", &source);
+
+    // Second sub-case: a non-zero field index AND the diseq in the REVERSED order
+    // `¬(d = b)` (so `(p,q) = (y_1, x_1)`), exercising the field-1 selector and the
+    // inline `Eq.symm` re-orientation of the selector congruence.
+    let d_eq_b = arena.eq(d, b).unwrap();
+    let d_ne_b = arena.not(d_eq_b).unwrap();
+    let (_frag1, source1) = prove_unsat_to_lean_module(&mut arena, &[eq, d_ne_b])
+        .expect("injectivity field-1 reversed-order unsat reconstructs");
+    assert!(
+        !source1.contains("sorryAx") && !source1.contains("noConfusion"),
+        "injectivity (field-1, reversed) module must not lean on sorryAx/noConfusion:\n{source1}"
+    );
+    lean_accepts("injective_field1_reversed", &source1);
+}
+
+/// Soundness-negative: a same-constructor equality `mk(a,b) = mk(c,d)` **without**
+/// any conflicting field disequality is *satisfiable* (take `a=c`, `b=d`), so the
+/// injectivity route must DECLINE — no field conflict means no refutation. Combined
+/// with distinctness declining a same-constructor equality, the whole datatype route
+/// reports no refutation (no wrong `False`).
+#[test]
+fn same_constructor_without_field_conflict_is_not_an_injectivity_refutation() {
+    let mut arena = TermArena::new();
+    let pair = arena.declare_datatype("Pair");
+    let mk = arena.add_constructor(
+        pair,
+        "mk",
+        &[
+            ("fst".into(), Sort::BitVec(2)),
+            ("snd".into(), Sort::BitVec(2)),
+        ],
+    );
+    let bv = |arena: &mut TermArena, n: &str| {
+        let s = arena.declare(n, Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let a = bv(&mut arena, "a");
+    let b = bv(&mut arena, "b");
+    let c = bv(&mut arena, "c");
+    let d = bv(&mut arena, "d");
+    // mk(a,b) = mk(c,d) with NO field disequality — satisfiable, not a refutation.
+    let lhs = arena.construct(mk, &[a, b]).unwrap();
+    let rhs = arena.construct(mk, &[c, d]).unwrap();
+    let eq = arena.eq(lhs, rhs).unwrap();
+    assert!(
+        prove_unsat_to_lean_module(&mut arena, &[eq]).is_err(),
+        "a same-constructor equality with no conflicting field must not reconstruct to `False`"
+    );
+}
+
+/// Soundness/routing-negative: a DISTINCT-constructor equality `Red a = Green b`
+/// is distinctness's job, NOT injectivity's. It must still reconstruct to a
+/// kernel-checked `False` (via the slice-2 distinctness route), and the rendered
+/// module must be axiom-free over the fold — confirming injectivity does not
+/// hijack or corrupt the distinct-constructor case.
+#[test]
+fn distinct_constructor_equality_is_not_an_injectivity_refutation() {
+    let mut arena = TermArena::new();
+    let color = arena.declare_datatype("Color");
+    let red = arena.add_constructor(color, "Red", &[("v".into(), Sort::BitVec(2))]);
+    let green = arena.add_constructor(color, "Green", &[("w".into(), Sort::BitVec(2))]);
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    // Red(a) = Green(b) — distinct constructors; refuted by distinctness, not injectivity.
+    let lhs = arena.construct(red, &[a]).unwrap();
+    let rhs = arena.construct(green, &[b]).unwrap();
+    let eq = arena.eq(lhs, rhs).unwrap();
+    let (_frag, source) = prove_unsat_to_lean_module(&mut arena, &[eq])
+        .expect("distinct-constructor unsat reconstructs (via distinctness)");
+    assert!(
+        !source.contains("sorryAx") && !source.contains("noConfusion"),
+        "distinct-constructor module must stay axiom-free over the fold:\n{source}"
+    );
+    lean_accepts("distinct_not_injective", &source);
+}
+
 /// `QF_BV` (the foundational bit-blasting path): `bvule a b ∧ bvult b a`
 /// (`a ≤ b ∧ b < a`, `BitVec(2)`) is unsat. It lowers to core ops and the
 /// bit-level resolution refutation must type-check in real Lean.

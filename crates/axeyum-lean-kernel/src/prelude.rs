@@ -753,6 +753,78 @@ impl Kernel {
         let body = self.app(applied, t);
         self.lam(anon, ind_const, body, BinderInfo::Default)
     }
+
+    /// Build the **field selector** for the `tested`-th constructor of a
+    /// [`DatatypeFamily`] at field `index`, as a closed recursor application
+    /// `λ (t : D), D.rec.{u} (motive := λ _ => carrier) min₀ … min_{k-1} t`, where
+    /// `min_tested = λ (f₀ … f_{a-1} : carrier), f_index` projects the requested
+    /// field and **every other** minor `min_j = λ (f₀ … : carrier), default`
+    /// returns the supplied `default` carrier inhabitant.
+    ///
+    /// Applying it to a constructor application `D.c_tested x…` ι-reduces (kernel
+    /// `whnf`/`def_eq`) to `x_index`, so the selector fold
+    /// `Eq carrier (sel (D.c_tested x…)) x_index` is `Eq.refl carrier x_index` —
+    /// kernel-computed, axiom-free. (The other-constructor minors are only there to
+    /// type the recursor; in the same-constructor injectivity use the selector is
+    /// only ever applied to `c_tested`-headed majors, so they never reduce.)
+    ///
+    /// This is the **family analogue** of [`Kernel::datatype_selector`] (which is
+    /// specialised to a single-constructor [`DatatypeInductive`]); both make the
+    /// read-over-construct projection an ι-reduction rather than an assumed axiom.
+    ///
+    /// `carrier_sort` is the carrier's universe level `u` (the recursor's
+    /// elimination universe). `tested` must be `< family.ctors.len()`, and `index`
+    /// must be `< family.arities[tested]`. `default` must be a closed `carrier`
+    /// inhabitant (used only to type the non-`tested` minors).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `tested >= family.ctors.len()` or `index >= family.arities[tested]`
+    /// (a caller bug; the field must belong to the tested constructor).
+    #[must_use]
+    pub fn datatype_family_selector(
+        &mut self,
+        family: &DatatypeFamily,
+        carrier: ExprId,
+        carrier_sort: LevelId,
+        tested: usize,
+        index: usize,
+        default: ExprId,
+    ) -> ExprId {
+        assert!(
+            tested < family.ctors.len(),
+            "tested constructor out of family range"
+        );
+        assert!(
+            index < family.arities[tested],
+            "selector index out of the tested constructor's field range"
+        );
+        let anon = self.anon();
+        let ind_const = self.const_(family.ind, vec![]);
+        // motive := λ (_ : D), carrier   (constant motive `λ _ => carrier`).
+        let motive = self.lam(anon, ind_const, carrier, BinderInfo::Default);
+        let rec_const = self.const_(family.rec, vec![carrier_sort]);
+        let mut applied = self.app(rec_const, motive);
+        for (j, &arity) in family.arities.iter().enumerate() {
+            // The `tested` minor projects field `index` (outer-to-inner f₀…f_{a-1},
+            // so field `index` is `BVar(arity - 1 - index)`); every other minor is
+            // the constant `default` carrier inhabitant (closed, weakening-invariant
+            // under the field binders).
+            let mut minor = if j == tested {
+                self.bvar(u32::try_from(arity - 1 - index).expect("fits u32"))
+            } else {
+                default
+            };
+            for _ in 0..arity {
+                minor = self.lam(anon, carrier, minor, BinderInfo::Default);
+            }
+            applied = self.app(applied, minor);
+        }
+        // λ (t : D), D.rec.{u} motive min₀ … min_{k-1} t.
+        let t = self.bvar(0);
+        let body = self.app(applied, t);
+        self.lam(anon, ind_const, body, BinderInfo::Default)
+    }
 }
 
 #[cfg(test)]

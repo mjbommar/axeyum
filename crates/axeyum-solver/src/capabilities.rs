@@ -704,8 +704,35 @@ pub const CAPABILITIES: &[Capability] = &[
                    `inductive`s so Lean regenerates the recursor with ι (lean_crosscheck \
                    distinct_constructors_check_in_real_lean). A SAME-constructor equality \
                    C(x)=C(y) is DECLINED (no wrong False — that is injectivity's job). Honest \
-                   boundary: distinctness this slice; injectivity Lean route is deferred (needs \
-                   noConfusion beyond ι); the Carcara premise-based distinctness route is unchanged",
+                   boundary: distinctness this slice; constructor INJECTIVITY is the axiom-free \
+                   Lean row below; the Carcara premise-based distinctness route is unchanged",
+        reference: "ADR-0022",
+    },
+    Capability {
+        area: "datatypes",
+        feature: "axiom-free Lean-kernel constructor INJECTIVITY reconstruction \
+                  (reconstruct_qf_dt_injective_to_lean_module): a same-constructor equality \
+                  C(x)=C(y) plus a conflicting field disequality ¬(x_i=y_i) is reconstructed to a \
+                  kernel-checked False through the SELECTOR route (the field-projection analogue \
+                  of distinctness's is-tester discriminator) — the i-th field selector over the \
+                  family (datatype_family_selector) gives sel_i(C x) ι-reduces to x_i and \
+                  sel_i(C y) to y_i; congrArg sel_i h (an Eq.rec) lands at \
+                  Eq α (sel_i(C x)) (sel_i(C y)) = (x_i=y_i); applying the input field \
+                  disequality ¬(x_i=y_i) to it closes to False. NO noConfusion, NO assumed \
+                  injectivity axiom",
+        assurance: Assurance::Checked,
+        evidence: "the in-tree axeyum-lean-kernel infers the term to False (require_infers_false), \
+                   and — when a real lean binary is present — the rendered module type-checks and \
+                   `#print axioms` reports NO sorryAx, NO noConfusion and NO datatype-injectivity \
+                   axiom (only the input equality, the field disequality + carrier atoms), the \
+                   family and Bool rendered as real Lean `inductive`s so Lean regenerates the \
+                   recursor with ι (lean_crosscheck injective_field_mismatch_check_in_real_lean). A \
+                   DISTINCT-constructor equality C(x)=D(y) is left to distinctness, and a \
+                   same-constructor equality with NO conflicting field is DECLINED (no wrong \
+                   False). Honest boundary: injectivity COMPLETES the field-axiom Lean chain \
+                   (is-tester + distinctness + injectivity all axiom-free Lean); only acyclicity \
+                   remains deferred (needs well-founded induction); the Carcara premise-based \
+                   injectivity route is unchanged",
         reference: "ADR-0022",
     },
     Capability {

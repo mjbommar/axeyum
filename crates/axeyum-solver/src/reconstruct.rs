@@ -1768,6 +1768,14 @@ pub fn prove_unsat_to_lean_module(
                 // congruence + the true≠false discriminator — axiom-free, no
                 // `noConfusion`. The Lean mirror of the Carcara distinctness route.
                 module?
+            } else if let Some(module) =
+                reconstruct_qf_dt_injective_to_lean_module(arena, assertions)
+            {
+                // Constructor INJECTIVITY `C x = C y ∧ ¬(x_i = y_i)` (SAME ctor C):
+                // discharged by ι (selector-over-construct) + congruence + the field
+                // disequality — axiom-free, no `noConfusion`. The Lean mirror of the
+                // Carcara injectivity route.
+                module?
             } else {
                 let p = crate::prove_qf_dt_unsat_alethe_via_simplification(arena, assertions)
                     .ok_or_else(declined)?;
@@ -2704,6 +2712,411 @@ fn build_congr_is_d(
     let e = ctx.kernel.app(e, transport_motive);
     let e = ctx.kernel.app(e, refl_case);
     let e = ctx.kernel.app(e, rhs_con);
+    ctx.kernel.app(e, h)
+}
+
+// ===========================================================================
+// QF_DT **constructor INJECTIVITY** — axiom-free Lean-kernel reconstruction
+// (slice 3, the Lean mirror of the Carcara `prove_qf_dt_injective_alethe_carcara`).
+//
+// An asserted same-constructor equality `C x… = C y…` together with a conflicting
+// field disequality `¬(x_i = y_i)` is UNSAT: constructors are injective, so
+// `C x… = C y…` forces `x_i = y_i`, contradicting the disequality. We discharge
+// it through the **SELECTOR** route (the field-projection analogue of slice-2's
+// is-tester discriminator) — **no `noConfusion`** and **no new axiom** beyond the
+// honest encoding of the two input assertions:
+//
+//   1. register the family `D` carrying every constructor
+//      ([`Kernel::add_datatype_family`], reused from the tester/distinct paths);
+//   2. build the `i`-th field SELECTOR for `C` over the family
+//      ([`Kernel::datatype_family_selector`]): `sel_i (C x…)` ι-reduces to `x_i`,
+//      `sel_i (C y…)` ι-reduces to `y_i` (the same-constructor major is always
+//      `C`-headed, so the family recursor's other minors never reduce);
+//   3. from the input hypothesis `h : Eq D (C x…) (C y…)`, transport by
+//      congruence ([`build_congr_sel`], an `Eq.rec` with motive
+//      `fun z _ => Eq α (sel_i (C x…)) (sel_i z)`, refl case
+//      `Eq.refl α (sel_i (C x…))`) to `Eq α (sel_i (C x…)) (sel_i (C y…))`, which
+//      is `def_eq` to `Eq α x_i y_i` after ι on both sides;
+//   4. resolve against the input field disequality `hne : Eq α x_i y_i → False`
+//      (with an inline `Eq.symm` when the diseq is asserted in the `y_i = x_i`
+//      order) ⇒ `False`.
+//
+// Every step is ι-reduction + `Eq.rec` + a function application — axiom-free,
+// exactly the selector twin of slice-2's distinctness. The final term `infer`s to
+// `False` (gated by [`require_infers_false`]); a different-constructor equality is
+// DECLINED (distinctness's job) and a same-constructor equality without a
+// conflicting field diseq is DECLINED — never a wrong `False`.
+// ===========================================================================
+
+/// A pure constructor-injectivity contradiction located in `assertions`: an
+/// asserted same-constructor equality `C x… = C y…` with a conflicting field
+/// disequality `¬(x_i = y_i)` on field `i`.
+struct InjectiveContradiction {
+    /// The datatype of the constructor `C`.
+    datatype: DatatypeId,
+    /// The (shared) constructor `C` of both equands.
+    ctor: ConstructorId,
+    /// The left-hand-side field argument terms (modeled as opaque carrier atoms).
+    lhs_fields: Vec<TermId>,
+    /// The right-hand-side field argument terms (modeled as opaque carrier atoms).
+    rhs_fields: Vec<TermId>,
+    /// The index `i` of the conflicting field.
+    field: usize,
+    /// `true` when the disequality is asserted in the `x_i = y_i` order
+    /// (`¬(x_i = y_i)`), `false` when reversed (`¬(y_i = x_i)`). Drives whether the
+    /// congruence proof is fed to `hne` directly or via an inline `Eq.symm`.
+    forward: bool,
+}
+
+/// Find the first asserted same-constructor equality `C x… = C y…` with a
+/// conflicting field disequality `¬(x_i = y_i)` (in either field order) on some
+/// field `i`. Returns [`None`] when no such pair is present — a
+/// DISTINCT-constructor equality `C x = D y` is declined (distinctness's job), and
+/// a same-constructor equality without a conflicting field diseq is declined (no
+/// wrong `False`).
+fn find_injectivity_contradiction(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<InjectiveContradiction> {
+    for &assertion in assertions {
+        let IrTermNode::App { op: IrOp::Eq, args } = arena.node(assertion) else {
+            continue;
+        };
+        let &[lhs, rhs] = &args[..] else {
+            continue;
+        };
+        let IrTermNode::App {
+            op:
+                IrOp::DtConstruct {
+                    constructor: lhs_ctor,
+                    ..
+                },
+            args: lhs_fields,
+        } = arena.node(lhs)
+        else {
+            continue;
+        };
+        let IrTermNode::App {
+            op:
+                IrOp::DtConstruct {
+                    constructor: rhs_ctor,
+                    ..
+                },
+            args: rhs_fields,
+        } = arena.node(rhs)
+        else {
+            continue;
+        };
+        let (lhs_ctor, rhs_ctor) = (*lhs_ctor, *rhs_ctor);
+        // DIFFERENT constructor ⇒ this is a DISTINCTNESS obligation, NOT injectivity;
+        // decline so the injectivity reconstructor never overlaps the distinct path.
+        if lhs_ctor != rhs_ctor {
+            continue;
+        }
+        let lhs_fields = lhs_fields.to_vec();
+        let rhs_fields = rhs_fields.to_vec();
+        // Locate a field index with an asserted conflicting `¬(x_i = y_i)`.
+        if let Some((field, forward)) =
+            find_conflicting_field_diseq(arena, assertions, &lhs_fields, &rhs_fields)
+        {
+            return Some(InjectiveContradiction {
+                datatype: arena.constructor_datatype(lhs_ctor),
+                ctor: lhs_ctor,
+                lhs_fields,
+                rhs_fields,
+                field,
+                forward,
+            });
+        }
+    }
+    None
+}
+
+/// Find the first field index `i` for which `assertions` contains a disequality
+/// `¬(x_i = y_i)` (returns `forward = true`) or `¬(y_i = x_i)` (`forward = false`),
+/// where `x_i = lhs_fields[i]` and `y_i = rhs_fields[i]`. Returns [`None`] if no
+/// field disequality is asserted.
+fn find_conflicting_field_diseq(
+    arena: &TermArena,
+    assertions: &[TermId],
+    lhs_fields: &[TermId],
+    rhs_fields: &[TermId],
+) -> Option<(usize, bool)> {
+    for (i, (&x_i, &y_i)) in lhs_fields.iter().zip(rhs_fields).enumerate() {
+        for &assertion in assertions {
+            let IrTermNode::App {
+                op: IrOp::BoolNot,
+                args: not_args,
+            } = arena.node(assertion)
+            else {
+                continue;
+            };
+            let &[inner] = &not_args[..] else {
+                continue;
+            };
+            let IrTermNode::App {
+                op: IrOp::Eq,
+                args: eq_args,
+            } = arena.node(inner)
+            else {
+                continue;
+            };
+            let &[p, q] = &eq_args[..] else {
+                continue;
+            };
+            if p == x_i && q == y_i {
+                return Some((i, true));
+            }
+            if p == y_i && q == x_i {
+                return Some((i, false));
+            }
+        }
+    }
+    None
+}
+
+/// **Reconstruct a pure `QF_DT` constructor-injectivity contradiction to a Lean
+/// module** whose `axeyum_refutation : False` is kernel-checked and **axiom-free
+/// over the projection** — injectivity is discharged by composing the
+/// selector-over-construct ι-fold with a congruence transport and the input field
+/// disequality, not assumed (no `noConfusion`). The only added axioms are the two
+/// input assertions themselves (the same-constructor equality and the field
+/// disequality).
+///
+/// Returns [`None`] when `assertions` carry no same-constructor equality with a
+/// conflicting field disequality (the caller then falls back to the general
+/// datatype reconstructor).
+///
+/// # Errors
+///
+/// [`ReconstructError::KernelRejected`] if the datatype family fails to admit or
+/// the assembled `False` term does not `infer`/`def_eq` to `False` (a defensive
+/// gate; a sound injectivity refutation always discharges).
+fn reconstruct_qf_dt_injective_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<Result<String, ReconstructError>> {
+    let c = find_injectivity_contradiction(arena, assertions)?;
+    Some(build_injective_refutation_module(arena, &c))
+}
+
+/// Assemble the kernel `False` term for an [`InjectiveContradiction`] and render the
+/// Lean module. Mirrors [`build_distinct_refutation_module`]: same family registry,
+/// but uses the field SELECTOR ([`Kernel::datatype_family_selector`]) and the
+/// selector congruence ([`build_congr_sel`]), resolving against the input field
+/// disequality rather than the `Bool` discriminator.
+fn build_injective_refutation_module(
+    arena: &TermArena,
+    c: &InjectiveContradiction,
+) -> Result<String, ReconstructError> {
+    let mut ctx = ReconstructCtx::new();
+
+    // 1. Declare the kernel family `D` carrying EVERY constructor of the datatype
+    //    (declaration order), reusing the tester/distinct path's family registry.
+    let dt_name = arena.datatype_name(c.datatype).to_owned();
+    let ctor_ids = arena.datatype_constructors(c.datatype).to_vec();
+    let ctor_decls: Vec<(String, usize)> = ctor_ids
+        .iter()
+        .enumerate()
+        .map(|(j, &cid)| (format!("c{j}"), arena.constructor_fields(cid).len()))
+        .collect();
+    let family = ctx.datatype_family(&dt_name, &ctor_decls)?;
+
+    let ctor_pos = constructor_position(&ctor_ids, c.ctor)?;
+
+    // 2. Build `C(x…)` and `C(y…)`, keeping the per-field carrier atoms so the i-th
+    //    field atoms `x_i`, `y_i` can be referenced by the input field disequality.
+    let (lhs_con, lhs_atoms) =
+        build_opaque_construct_with_fields(&mut ctx, family.ctors[ctor_pos], c.lhs_fields.len())?;
+    let (rhs_con, rhs_atoms) =
+        build_opaque_construct_with_fields(&mut ctx, family.ctors[ctor_pos], c.rhs_fields.len())?;
+    let x_i = lhs_atoms[c.field];
+    let y_i = rhs_atoms[c.field];
+
+    // 3. The i-th field selector for `C`: `sel_i (C x…)` ι→ `x_i`, `sel_i (C y…)`
+    //    ι→ `y_i`. The other-constructor minors take a fresh `α` default inhabitant
+    //    (they only type the recursor; they never reduce on a `C`-headed major).
+    let alpha = ctx.alpha;
+    let one = ctx.one;
+    let default = {
+        let n = ctx.fresh_name("dflt");
+        ctx.kernel
+            .add_declaration(Declaration::Axiom {
+                name: n,
+                uparams: vec![],
+                ty: alpha,
+            })
+            .map_err(|e| ReconstructError::KernelRejected {
+                rule: "datatype_injective".to_owned(),
+                detail: format!("selector default inhabitant did not admit: {e:?}"),
+            })?;
+        ctx.kernel.const_(n, vec![])
+    };
+    let sel_i = ctx
+        .kernel
+        .datatype_family_selector(&family, alpha, one, ctor_pos, c.field, default);
+
+    // 4. Input hypothesis `h : Eq D (C x…) (C y…)` (an honest input axiom).
+    let dty = ctx.kernel.const_(family.ind, vec![]);
+    let eq_prop = mk_eq_at(&mut ctx, dty, one, lhs_con, rhs_con);
+    let h = fresh_axiom(&mut ctx, eq_prop, "assume")?;
+
+    // 5. Selector congruence `congrArg sel_i h : Eq α (sel_i (C x…)) (sel_i (C y…))`,
+    //    which is `def_eq` to `Eq α x_i y_i` after ι on both sides.
+    let congr = build_congr_sel(&mut ctx, dty, sel_i, lhs_con, rhs_con, h);
+
+    // 6. Input field disequality `hne : Not (Eq α P Q) = (Eq α P Q → False)` (the
+    //    second honest input axiom), with `(P, Q)` in the ASSERTED order. Feed it
+    //    the congruence proof (re-oriented by `Eq.symm` when the diseq is reversed).
+    let (p_atom, q_atom) = if c.forward { (x_i, y_i) } else { (y_i, x_i) };
+    let diseq_eq = mk_eq_at(&mut ctx, alpha, one, p_atom, q_atom);
+    let diseq_not = ctx.mk_not(diseq_eq);
+    let hne = fresh_axiom(&mut ctx, diseq_not, "assume")?;
+    let eq_proof = if c.forward {
+        congr
+    } else {
+        // `congr : Eq α x_i y_i`; the diseq is over `(y_i, x_i)`, so symmetrize.
+        build_eq_symm(&mut ctx, alpha, one, x_i, y_i, congr)
+    };
+    let false_term = ctx.kernel.app(hne, eq_proof);
+
+    require_infers_false(&mut ctx, false_term)?;
+    // Render the datatype family AND the computational `Bool` as real Lean
+    // `inductive`s so an external Lean regenerates their recursors *with* ι — the
+    // selector congruence `Eq.rec` only collapses to `x_i = y_i` if Lean can
+    // compute `sel_i (C z…)` by ι. (`Bool` is listed for parity with the other
+    // datatype routes; injectivity itself never folds into `Bool`.)
+    let bool_ind = ctx.prelude.bool_;
+    let false_const = {
+        let n = ctx.prelude().false_;
+        ctx.kernel_mut().const_(n, vec![])
+    };
+    Ok(ctx.kernel().render_lean_module_with_inductives(
+        LEAN_MODULE_THEOREM,
+        false_const,
+        false_term,
+        &[family.ind, bool_ind],
+    ))
+}
+
+/// Build a constructor application `ctor a₀ … a_{arity-1}` whose `arity` field
+/// arguments are fresh opaque carrier atoms of sort `α`, **returning the atoms**
+/// alongside the application so a caller (injectivity) can reference the i-th
+/// field. The selector analogue of [`build_opaque_construct`], which discards them.
+fn build_opaque_construct_with_fields(
+    ctx: &mut ReconstructCtx,
+    ctor: NameId,
+    arity: usize,
+) -> Result<(ExprId, Vec<ExprId>), ReconstructError> {
+    let mut con = ctx.kernel.const_(ctor, vec![]);
+    let mut atoms = Vec::with_capacity(arity);
+    for i in 0..arity {
+        let atom_name = ctx.fresh_name(&format!("fld_{i}"));
+        let alpha = ctx.alpha;
+        ctx.kernel
+            .add_declaration(Declaration::Axiom {
+                name: atom_name,
+                uparams: vec![],
+                ty: alpha,
+            })
+            .map_err(|e| ReconstructError::KernelRejected {
+                rule: "datatype_injective".to_owned(),
+                detail: format!("field carrier atom did not admit: {e:?}"),
+            })?;
+        let a = ctx.kernel.const_(atom_name, vec![]);
+        atoms.push(a);
+        con = ctx.kernel.app(con, a);
+    }
+    Ok((con, atoms))
+}
+
+/// Build the selector congruence transport `congrArg sel_i h` as an `Eq.rec`:
+/// given `h : Eq dty lhs_con rhs_con` (both `dty`-typed constructor applications)
+/// and the field selector `sel_i : dty → α`, produce a proof of
+/// `Eq α (sel_i lhs_con) (sel_i rhs_con)`.
+///
+/// Transport motive `fun (z : dty) (_ : Eq dty lhs_con z) => Eq α (sel_i lhs_con) (sel_i z)`,
+/// refl case `Eq.refl α (sel_i lhs_con)`, then `Eq.rec … rhs_con h` lands at
+/// `Eq α (sel_i lhs_con) (sel_i rhs_con)`. The selector twin of [`build_congr_is_d`]
+/// (the `Bool` codomain is replaced by the carrier `α`). Pure `Eq.rec` — axiom-free.
+fn build_congr_sel(
+    ctx: &mut ReconstructCtx,
+    dty: ExprId,
+    sel_i: ExprId,
+    lhs_con: ExprId,
+    rhs_con: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let anon = ctx.kernel.anon();
+    let one = ctx.one;
+    let alpha = ctx.alpha;
+    let sel_lhs = ctx.kernel.app(sel_i, lhs_con);
+
+    // motive := fun (z : dty) (_ : Eq dty lhs_con z) => Eq α (sel_i lhs_con) (sel_i z).
+    let transport_motive = {
+        let z_var = ctx.kernel.bvar(1);
+        let sel_z = ctx.kernel.app(sel_i, z_var);
+        let body = mk_eq_at(ctx, alpha, one, sel_lhs, sel_z);
+        let z0 = ctx.kernel.bvar(0);
+        let eq_lhs_z = mk_eq_at(ctx, dty, one, lhs_con, z0);
+        let inner = ctx.kernel.lam(anon, eq_lhs_z, body, BinderInfo::Default);
+        ctx.kernel.lam(anon, dty, inner, BinderInfo::Default)
+    };
+    // refl_case : Eq α (sel_i lhs_con) (sel_i lhs_con) — `Eq.refl α (sel_i lhs_con)`.
+    let refl = ctx.kernel.const_(ctx.prelude.eq_refl, vec![one]);
+    let refl_case = {
+        let e = ctx.kernel.app(refl, alpha);
+        ctx.kernel.app(e, sel_lhs)
+    };
+    // Eq.rec.{v,u} dty lhs_con transport_motive refl_case rhs_con h
+    //   : Eq α (sel_i lhs_con) (sel_i rhs_con).
+    // motive `fun z _ => Eq α …` eliminates into `Prop` ⇒ v = 0; the equands of `h`
+    // are `dty : Sort 1` ⇒ u = 1 (= `ctx.one`).
+    let v = ctx.kernel.level_zero();
+    let rec_eq = ctx.kernel.const_(ctx.prelude.eq_rec, vec![v, one]);
+    let e = ctx.kernel.app(rec_eq, dty);
+    let e = ctx.kernel.app(e, lhs_con);
+    let e = ctx.kernel.app(e, transport_motive);
+    let e = ctx.kernel.app(e, refl_case);
+    let e = ctx.kernel.app(e, rhs_con);
+    ctx.kernel.app(e, h)
+}
+
+/// Build `Eq.symm` of `h : Eq α a b` as an `Eq.rec`, producing `Eq α b a`:
+/// motive `fun (x : α) (_ : Eq α a x) => Eq α x a`, refl case `Eq.refl α a`, then
+/// `Eq.rec … b h : Eq α b a`. Pure `Eq.rec` — axiom-free. Used to re-orient the
+/// selector congruence when the input field disequality is asserted as `¬(y_i = x_i)`.
+fn build_eq_symm(
+    ctx: &mut ReconstructCtx,
+    ty: ExprId,
+    u: LevelId,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let anon = ctx.kernel.anon();
+    // motive := fun (x : α) (_ : Eq α a x) => Eq α x a.
+    let transport_motive = {
+        let x_var = ctx.kernel.bvar(1);
+        let body = mk_eq_at(ctx, ty, u, x_var, a);
+        let x0 = ctx.kernel.bvar(0);
+        let eq_a_x = mk_eq_at(ctx, ty, u, a, x0);
+        let inner = ctx.kernel.lam(anon, eq_a_x, body, BinderInfo::Default);
+        ctx.kernel.lam(anon, ty, inner, BinderInfo::Default)
+    };
+    // refl_case : Eq α a a — `Eq.refl α a`.
+    let refl = ctx.kernel.const_(ctx.prelude.eq_refl, vec![u]);
+    let refl_case = {
+        let e = ctx.kernel.app(refl, ty);
+        ctx.kernel.app(e, a)
+    };
+    let v = ctx.kernel.level_zero();
+    let rec_eq = ctx.kernel.const_(ctx.prelude.eq_rec, vec![v, u]);
+    let e = ctx.kernel.app(rec_eq, ty);
+    let e = ctx.kernel.app(e, a);
+    let e = ctx.kernel.app(e, transport_motive);
+    let e = ctx.kernel.app(e, refl_case);
+    let e = ctx.kernel.app(e, b);
     ctx.kernel.app(e, h)
 }
 
