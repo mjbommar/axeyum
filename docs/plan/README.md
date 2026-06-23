@@ -12,6 +12,8 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   and Lean parity; the sizing and status legends used everywhere.
 - [`01-dependency-dag.md`](01-dependency-dag.md) — the cross-track dependency DAG,
   the two keystones, the critical paths, and the recommended execution order.
+- [`gap-analysis-z3-cvc5-2026-06-22.md`](gap-analysis-z3-cvc5-2026-06-22.md) —
+  current practical gap analysis against Z3/cvc5, with concrete next increments.
 - [`track-1-engine/`](track-1-engine/README.md) — Engine & Performance.
 - [`track-2-theories/`](track-2-theories/README.md) — Theories & Breadth.
 - [`track-3-proof-lean/`](track-3-proof-lean/README.md) — Proofs & Lean.

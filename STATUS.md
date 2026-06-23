@@ -6,6 +6,83 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-23 — Z3/cvc5 gap analysis amended after online-combination push.**
+  Updated [`docs/plan/gap-analysis-z3-cvc5-2026-06-22.md`](docs/plan/gap-analysis-z3-cvc5-2026-06-22.md)
+  and sharpened `PLAN.md` to reflect the latest ledger: online LRA/LIA and
+  default online UFLRA/UFLIA are no longer future work; vivification and
+  route-trace telemetry have landed; LIA MBP/PDR/IMC and richer Horn handling
+  have landed. The honest remaining gap is now **quality and migration**:
+  real CDCL(T) propagation/1-UIP/relevance over the online spine, lazy arrays/BV
+  on that spine, measured QF_BV performance with route traces, disjunctive LIA
+  interpolation, NRA/NIA proof evidence, unbounded strings/sequences, and
+  SMT-LIB surfaces for interpolation/abduction/proofs/diagnostics.
+
+- **Session 2026-06-22 (cont.) — INFINITE-STATE + ONLINE-COMBINATION push: 12 verified increments (Track 1/2/4), all on `main`.**
+  Advanced PLAN leverage items #1 (online multi-theory combination), #3 (SAT vivification), and #4
+  (deepen CHC/PDR) — every increment isolated-worktree-delegated, hard-verify-gated before FF-merge,
+  ledgered (`capabilities.rs` + matrix), and pushed (`b405e8e` → `4a95135`). Each is verify-guarded
+  (DRAT / in-tree differential / model replay / verify-before-return); **0 wrong sat/unsat** throughout.
+  - **Online EUF+LRA & EUF+LIA now decide FULL Boolean-structured QF_UFLRA/QF_UFLIA** via an enumerative
+    DPLL(T) (Tseitin skeleton + propositional-model enumeration + theory-conflict blocking, the
+    conjunctive MBTC reused as the per-model oracle) — differential vs offline `check_with_uf_arithmetic`,
+    0 disagreements (`b405e8e`, `6850da9`).
+  - **KEYSTONE (PLAN #1): the online combination is now the DEFAULT `check_auto` route for mixed
+    UF+arith** (eager Ackermann is the byte-unchanged fallback on online Unknown) — gated by an in-tree
+    differential vs the trusted eager route: 300-query corpus, 0 disagreements, 0 *logical* regressions,
+    sat replay, +16 value-add decisions; an adversarial audit caught a budget-regression and it was
+    *fixed* (online probe on an arena clone + bounded sub-budget) not excused (`ee11ab9`).
+  - **CHC depth:** mutual-recursion Horn (SCC-condensation + tagged-predicate merge, `c434762`) and
+    stratified-nonlinear Horn bodies (fold solved lower-stratum predecessors, `verify_horn_model`
+    audited, `1624036`).
+  - **SAT inprocessing (PLAN #3): vivification with full DRAT accounting** (`969f8d3`) —
+    `axeyum_cnf::vivify`, RUP-only strengthening (prefix-conflict + ALA), model-preserving,
+    `check_drat`-self-verified over 1100 random formulas + equisat differential + brute-force
+    model-preservation.
+  - **Route-trace / decline telemetry** (`check_auto_explained` → `(CheckResult, RouteTrace)`, ADR-0050,
+    `9f05f0a`) — additive recorder threaded through the single dispatch path, 400-query verdict-invariance
+    differential (0 mismatches). The gap-analysis #6 "minimal strategy/probe" + reviewer decline-telemetry.
+  - **Infinite-state LRA/LIA symmetry COMPLETED:** integer MBP `mbp_lia` (Cooper/Omega, soundness fuzz
+    0 unsound, `ea6e260`), integer PDR `prove_safety_pdr_lia` (3-check gate over ℤ, `2ee309e`), and
+    integer IMC `prove_safety_imc_lia` (McMillan via `lia_interpolant`, `4218b47`). Every infinite-state
+    engine now mirrored real↔integer: online solvers, online combinations, MBP, PDR, IMC.
+  - Full-workspace consolidation gate passed (exit 0). Two ops-lessons recorded to memory (test-result
+    grep masking exit codes; resume a resting agent via SendMessage not a `to:`-prefixed fork).
+  - **Next (still open, PLAN leverage order):** theory propagation in the online spine (toward real
+    CDCL(T) w/ 1-UIP); lazy arrays/BV (P2.1/2.2, the keystone's downstream unlock); a disjunctive integer
+    interpolant (closes `imc_lia`'s documented partial coverage); NRA/NIA certify-gap (cross-lane);
+    `(get-interpolant)`/`(get-abduct)` SMT-LIB surface (coordination-gated on `axeyum-smtlib`).
+  - *(This block is recorded but intentionally left UNCOMMITTED to avoid sweeping the concurrent agent's
+    uncommitted STATUS.md/PLAN.md writeups into a commit; the durable record is the committed capability
+    ledger + the 12 commits `b405e8e`→`4a95135`.)*
+
+- **Session 2026-06-22 (cont.) — QF_BV authoritative slice RE-MEASURED on HEAD (regression/soundness checkpoint).**
+  Re-ran the exact authoritative 20s config (`sat-bv` + inprocess/preprocess, node 300k /
+  CNF 3M·8M, query-plan full, refine 16, compare-z3) on `HEAD` after 100+ commits since the
+  06-20 baseline. **Soundness: zero regression — DISAGREE=0, 0 replay failures, 0 errors, 0
+  wrong-unsat.** Decided count 8→**7**: the single delta is `string1x8.6._bit8_na6_nr3_paired`
+  (baseline `sat` @15.6 s, only ~4.4 s of headroom under the 20 s wall → `unknown` @HEAD), a
+  **20 s-boundary instance under concurrent-build contention**, not a logic/capability
+  regression (the other 7 sat are identical). **Committed baseline left unchanged** (it was
+  taken under controlled conditions; this contended 7/113 would understate parity); the
+  re-measure artifact is in gitignored `bench-results/local/`. A clean idle-machine re-run
+  would confirm `string1x8.6` is load-sensitive vs a small HEAD overhead — a perf-watch item,
+  not a blocker. PLAN.md gap section sharpened: **online multi-theory combination** is named the
+  top architecture lever, the stale "no SAT inprocessing" note corrected (**BVE has landed**;
+  vivification next), and a leverage-ordered next-step list added.
+
+- **Session 2026-06-22 (cont.) — top-down Z3/cvc5 gap analysis refreshed.**
+  Added [`docs/plan/gap-analysis-z3-cvc5-2026-06-22.md`](docs/plan/gap-analysis-z3-cvc5-2026-06-22.md)
+  and wired it into `PLAN.md` + `docs/plan/README.md`. Main conclusion: the
+  "big three" categorical engines are now opened by first slices, so the honest
+  gap has shifted to production depth — measured QF_BV performance, word-level
+  reduction, proof-accounted SAT inprocessing, strategy/tactic routing, the
+  shared e-graph/CDCL(T) spine, lazy arrays/memory, LIA/NRA/NIA depth, full
+  strings/sequences, proof-carrying reductions, and SMT-LIB surfaces.
+  Practical next increments in order: refresh the stale current-state audit,
+  commit a current Z3 head-to-head dashboard, measure the landed `solve_eqs` /
+  `elim_unconstrained` preprocessing, measure the landed subsumption/SSR/BVE
+  pipeline, then add vivification/glue-tiering and stabilize the typed Alethe IR.
+
 - **Session 2026-06-22 (cont.) — ABDUCTION (`get-abduct`) landed — ALL THREE categorically-missing
   Z3 engines now addressed.** `axeyum_solver::abduct(axioms, conjecture, config)` (ADR-0049): the
   checker turned generator. Bounded enumeration of shared-vocabulary atoms (≤2-literal conjunctions),
@@ -861,6 +938,23 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed slice + baseline (32/43 decided, agree=32, DISAGREE=0) |
 
 ## Changelog
+
+- **2026-06-23** — **Regression & testing-coverage expansion (goal-driven).** Built a
+  reusable **oracle-free corpus-regression gate** (`tests/corpus_regression.rs`): parses
+  status-annotated `.smt2`, runs `check_auto`, fails only on a wrong verdict (no Z3 → runs in
+  default `cargo test`); tolerant (parse-gap/`unknown` skip), per-file wall-clock cap, scoping
+  guard. Curated a **10-logic corpus** (`corpus/regression/`, 139 files): hand-verified seeds
+  (QF_LRA/LIA/UF/UFLIA/BV/ABV/NIA/NRA/DT) + reused cvc5 `test/regress` (QF_LIA/LRA/ABV/FP/UF/BV/S,
+  BSD, provenance documented) — **94 decided, 0 disagreements**, <3.5 s. Added **four new
+  adversarial Z3 differential fuzz gates** (1500 seeded instances each, DISAGREE=0): **pure
+  QF_LRA** (online LRA DPLL(T)), **pure EUF** (congruence keystone), **QF_UFLRA** (online EUF+LRA
+  Nelson-Oppen combination — the new default route; 1389 agree / 111 sound-unknown), **enum
+  QF_DT**. With the existing bv/abv/nia/nra/uflia fuzzes, the entire online-combination spine +
+  datatypes are now directly fuzzed. FP is left to its existing **circuit-level differential**
+  coverage (vs native f32/f64 + rustc_apfloat — a stronger oracle than a Z3 cross-check).
+  Front-end-blocked (`declare-sort` pure-UF, unbounded strings) flagged as smtlib-lane gaps; the
+  per-division **measured PAR-2 vs Z3** debt remains the larger follow-on. 8 commits, all gated
+  (fmt + clippy `-D warnings`) + pushed. Reclaimed 35 GiB of `target/` mid-way (disk hit 100%).
 
 - **2026-06-22** — **GPT/codex review follow-through verified + roadmap expansion.**
   (1) **Soundness:** `export_qf_lia_unsat_proof` is now fail-closed under the QF_NIA

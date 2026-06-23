@@ -63,19 +63,33 @@ untrusted search and validated by small independent checkers.
 Cross-cutting: [`00-north-star.md`](docs/plan/00-north-star.md) (definition of
 done), [`01-dependency-dag.md`](docs/plan/01-dependency-dag.md) (the end-to-end
 DAG, keystones, critical paths), and
+[`gap-analysis-z3-cvc5-2026-06-22.md`](docs/plan/gap-analysis-z3-cvc5-2026-06-22.md)
+(the latest practical gap analysis against Z3/cvc5), plus
 [`references/`](docs/plan/references/README.md) (the distilled top-down review of
 Z3, cvc5, bitwuzla, CaDiCaL/Kissat, Carcara, lean4/nanoda, lean-smt that this
 plan is built on).
 
-## The gap to Z3/cvc5, itemized (2026-06-21)
+## The gap to Z3/cvc5, itemized (2026-06-22; amended 2026-06-23)
 
 A grounded audit against `crates/axeyum-solver/src/capabilities.rs` (the golden
 capability ledger) corrected the framing: **the gap is not breadth — it is depth,
-maturity, and ~3 missing engines.** axeyum already has *columns* for QF_BV,
+maturity, and (formerly) ~3 missing engines.** axeyum already has *columns* for QF_BV,
 QF_ABV, QF_UF, QF_LRA, QF_LIA, UFLIA/UFLRA, QF_NRA/NIA, QF_FP, datatypes,
 quantifiers (finite + e-matching + MBQI), strings, optimization, incremental,
-symbolic execution, BMC, and k-induction. The honest gap is three things, in size
-order:
+symbolic execution, BMC, and k-induction.
+
+> **Reframe (2026-06-22; amended 2026-06-23).** With interpolation done and CHC/abduction opened (item 3
+> below) and the NRA CAD decision side complete, the three categorically-missing
+> engines are now *addressed*. So the dominant gap is no longer "what can't we
+> decide." It is **(A) architecture maturity** — chiefly *online* multi-theory
+> combination, still eager Ackermann today (the e-graph keystone and the EUF lazy
+> DPLL(T) loop already exist; cross-theory propagation does not) — and **(B) the
+> certify-gap**: fragments that now *decide* but cannot yet *prove* their `unsat`
+> (NRA CAD, NIA). The honest one-liner: **the gap is now "can we certify and explain
+> at the same assurance," not "can we decide."** Leverage order is at the end of this
+> section.
+
+The honest gap is three things, in size order:
 
 **1. Depth / completeness on a mostly-complete grid** — most fragments are
 `validated`/`sound-incomplete`/`experimental` where Z3 is complete-and-tuned. The
@@ -89,10 +103,19 @@ depth ladders are already planned; this audit only sharpens their exit criteria:
 - Strings: bounded BV-lowered → **unbounded** decision procedure — [P2.7](docs/plan/track-2-theories/P2.7-strings.md).
 - Quantifiers: maturity of e-matching/MBQI — [P2.6](docs/plan/track-2-theories/P2.6-quantifiers.md).
 
-**2. Performance / maturity** — young SAT core (no inprocessing yet), eager-only
-BV (the lazy path is built but inert), thin preprocessing. Already the whole of
-Track 1 (SAT inprocessing [P1.1], preprocessing [P1.2], core modernization
-[P1.3]); this is tuning depth, not a missing feature.
+**2. Architecture / performance maturity** — the *highest-leverage* axis now:
+- **Online multi-theory combination has moved from gap to first production route**
+  ([P1.6](docs/plan/track-1-engine/README.md)). Online LRA/LIA theory solvers and
+  online UFLRA/UFLIA Nelson-Oppen-style combination are now the default
+  `check_auto` route for mixed UF+arithmetic, with eager Ackermann as fallback.
+  The remaining Z3-class gap is **quality of the spine**: theory propagation,
+  lazy antecedents, 1-UIP theory-clause learning, relevance filtering, then moving
+  lazy arrays/BV/datatypes/quantifiers onto it.
+- **SAT core: BVE + vivification have landed** (bounded variable elimination /
+  subsumption / compaction in the SAT-BV path; `axeyum-cnf::vivify` with DRAT
+  accounting). Remaining levers: wire/measure vivification in the SAT-BV pipeline,
+  glue/LBD retention, SCC/equiv-lit substitution, probing, and word-level BV
+  abstraction. The hard-QF_BV tail (~9 instances) remains mostly search-bound.
 
 **3. ~3 categorically-absent engines** — **ALL THREE now addressed (2026-06-22),
 each verify-guarded (untrusted search, trusted small checking); depth/fuller
@@ -129,6 +152,78 @@ versions remain:**
 in-tree Lean-grade kernel + universal model replay) — ahead of Z3, competitive
 with cvc5. That is the moat and it exists today; the plan's job is to keep
 *widening* it (Track 3) while closing depth (Track 2) and adding the three engines.
+
+**Next, in leverage order (amended 2026-06-23)** — full rationale in the
+[gap analysis](docs/plan/gap-analysis-z3-cvc5-2026-06-22.md):
+1. **Make online combination a real CDCL(T) spine** ([P1.6](docs/plan/track-1-engine/README.md)):
+   theory propagation, lazy antecedents, 1-UIP theory learning, relevance, then
+   lazy arrays/BV ([P2.2](docs/plan/track-2-theories/P2.2-arrays-lazy.md)/[P2.1](docs/plan/track-2-theories/P2.1-bv-lazy.md)).
+   **LANDING (2026-06-23):** theory propagation (LRA/LIA), **1-UIP theory-conflict
+   learning + non-chronological backjump** (LRA/LIA/EUF), and a warm combined-theory
+   oracle with combined propagation (UFLRA/UFLIA) are in. Remaining spine quality:
+   relevance filtering, then moving lazy arrays/BV/datatypes/quantifiers onto it.
+2. **Certify what already decides** — Lean/Alethe evidence for NRA CAD and NIA
+   `unsat` ([P2.5](docs/plan/track-2-theories/P2.5-nra-cad.md)/[Track 3](docs/plan/track-3-proof-lean/README.md)).
+   Attacks the certify-gap head-on and widens the unique moat. **LANDING:**
+   interpolants promoted **Validated→Checked** (LRA/EUF/LIA/UFLRA/UFLIA/QF_BV), and
+   Lean reconstruction extended (more QF_LIA shapes, disjunctive QF_LRA, QF_ABV ROW
+   Carcara-checked). Remaining: NRA CAD / general NIA `unsat` certificates.
+3. **Measure** the levers as they land — this is the [measurement-debt](#true-parity-the-maturity-ladder-and-the-measurement-debt-2026-06-23)
+   payoff. **SAT vivification is now wired into the SAT-BV pipeline** (gated by
+   `cnf_vivify`, default off) **and exposed to the harness** (`axeyum-bench --vivify`),
+   so its QF_BV effect is now measurable; word-level BV abstraction is next.
+   **Quantifier maturity** ([P2.6](docs/plan/track-2-theories/P2.6-quantifiers.md);
+   MBQI is now MBP-driven).
+4. **Deepen the seeded engines** behind a stable API — CHC/PDR ([P4.6](docs/plan/track-4-usecases-frontend/P4.6-chc-horn.md))
+   and the `(get-interpolant)`/`(get-abduct)` SMT-LIB surfaces — then the breadth tail.
+
+## True parity: the maturity ladder and the measurement debt (2026-06-23)
+
+A sober big-picture check, because the ledger now reads as "we have almost
+everything Z3/cvc5 have." That is true **at the seed level** and misleading as a
+parity claim: **a sound, verify-guarded first slice of an engine is not parity
+with a 15-to-20-year production engine.** Every capability climbs a ladder, and
+naming the rung honestly is the difference between a real roadmap and a feature
+checklist:
+
+| Rung | Meaning | Where axeyum mostly is |
+|---|---|---|
+| **Seeded** | sound, verify-guarded first slice (often conjunctive / bounded / single-predicate) | **most newer engines** — CHC/PDR, abduction, interpolation, online combination |
+| **Decides** | complete on the decidable fragment; honest `unknown` outside | QF_BV, QF_UF, QF_LRA; NRA CAD decision side |
+| **Measured-competitive** | solved-count + PAR-2 within target of Z3/cvc5 on a *committed* corpus, same hardware/timeout | **QF_BV only** (p4dfa 113, parity, both hard-capped) |
+| **Certifying** | every `unsat` carries a Lean-checkable certificate | QF_BV (DRAT), QF_LRA (Farkas), QF_UF, degree-2 SOS — **ahead of Z3** |
+| **Production** | tuned, scalable, robust across the division's *full* benchmark suite | **none yet** — Z3/cvc5 are here across all divisions |
+
+**The honest position:** axeyum has **breadth of seeds + a leading *certifying*
+story + one measured division.** It is *not* at Z3/cvc5 parity, and the distance
+is dominated by two things the ledger does not show — **production depth** (the
+bulk of Z3's ~688k LoC) and **measurement debt** (only QF_BV is measured; every
+other "parity" is a feature-ledger assertion, not a number).
+
+**The phase pivot.** Breadth acquisition is essentially done — the ledger has a
+seed for nearly everything. **The standing rule now inverts: stop adding new engine
+seeds; deepen, *measure*, and certify the ones that exist.** A new seed without a
+measured corpus behind it adds claim-surface, not parity.
+
+**What true parity actually requires — and the realistic bet:**
+1. **Measured per-division corpora vs Z3/cvc5 — the #1 credibility item.** Today
+   [P4.5](docs/plan/track-4-usecases-frontend/P4.5-benchmarking.md) measures QF_BV
+   alone. Parity is a *number per division* (QF_LRA, QF_LIA, QF_UF, QF_UFLIA,
+   QF_ABV, QF_NIA, QF_NRA, QF_S), not a ledger row. **Gate every "parity" claim on a
+   committed measured slice; until a division has one, its status is
+   "seeded/decides," never "parity."**
+2. **Do not race Z3 to production depth on every division** — that is a 15-year
+   loss. **Pick the divisions where axeyum can be both measured-competitive *and*
+   fully-certifying** — QF_BV, QF_LRA, QF_UF, QF_LIA, QF_ABV — and drive those to the
+   top of the ladder. "Fast-enough **and** every `unsat` carries a Lean-checkable
+   proof" is a position **neither Z3 nor cvc5 occupies**; that is the winnable parity.
+3. **Accept sound-incompleteness on the hard frontiers** (NRA, strings, full
+   quantifiers, large-scale CHC) as the honest steady state — match Z3's *practical*
+   heuristics where cheap, return first-class `unknown` otherwise, and let
+   **certification, not raw decide-rate, be the differentiator.**
+
+In one line: **true parity is measured-and-certified on a chosen set of divisions —
+not a feature checklist — and the next phase is depth + evidence, not more seeds.**
 
 ## How to use this plan each session
 
