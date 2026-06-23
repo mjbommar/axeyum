@@ -307,6 +307,48 @@ impl LraTheory {
         core
     }
 
+    /// Maps Farkas-participating row indices (into a *probe* constraint list that
+    /// equals the live system plus appended negation constraint(s)) back to the
+    /// **asserted-only** literals behind the refutation — explicitly excluding the
+    /// probed atom, whose negation was added speculatively and is *not* asserted.
+    ///
+    /// This is the soundness anchor of [`LraTheory::propagate`]: the explanation a
+    /// propagated literal carries must be exactly the currently-asserted literals
+    /// (mirroring [`crate::euf_egraph::EufTheory`]'s `explain_*`), so the learned
+    /// lemma `¬(reason ∧ ¬entailed)` is entailed by the asserted state alone.
+    /// Returns `None` if the refutation rests on no asserted atom (then the probe
+    /// is not a sound propagation under the *asserted* state — skip it).
+    fn probe_core(
+        &self,
+        probe: &[Constraint],
+        rows: &[usize],
+        probe_atom: usize,
+    ) -> Option<Vec<TheoryLit>> {
+        let mut seen: BTreeSet<usize> = BTreeSet::new();
+        let mut core = Vec::new();
+        for &row in rows {
+            let Some(c) = probe.get(row) else { continue };
+            if c.atom == probe_atom {
+                // The speculative negation row — never part of the asserted reason.
+                continue;
+            }
+            // Only genuinely-asserted atoms may appear in the reason.
+            let Some(value) = self.assigned.get(c.atom).copied().flatten() else {
+                continue;
+            };
+            if seen.insert(c.atom) {
+                core.push(TheoryLit {
+                    atom: c.atom,
+                    value,
+                });
+            }
+        }
+        if core.is_empty() {
+            return None;
+        }
+        Some(core)
+    }
+
     /// Builds a candidate model from a feasible live system: each real variable
     /// gets a satisfying rational, returned as a [`Model`] over the original
     /// symbols. Returns `None` if the system is (now) infeasible or arithmetic
@@ -321,15 +363,64 @@ impl LraTheory {
         Some(model)
     }
 
-    /// Theory propagation. The first slice returns no propagations — a sound
-    /// under-approximation: the `DPLL(T)` driver still decides correctly, it
-    /// simply branches on atoms theory propagation could have forced. Documented
-    /// as deferred; a later slice can derive entailed bounds from the simplex
-    /// tableau.
+    /// Sound `LRA` theory propagation by the **negation probe**: for each
+    /// unassigned tracked order atom, snapshot the live Fourier–Motzkin system,
+    /// add the constraint for the atom's *opposite* polarity, and re-decide. If
+    /// that augmented system is infeasible, the atom is **entailed** at the tested
+    /// polarity under the currently-asserted constraints — emit it as a
+    /// [`TheoryProp`] whose `reason` is the **asserted-only** Farkas core (the
+    /// probed negation excluded). A `DPLL(T)` loop can then assign the entailed
+    /// literal without a decision.
+    ///
+    /// Only genuinely-entailed literals are emitted: an inconclusive probe
+    /// (overflow / size guard, or no asserted atom in the core) yields nothing — a
+    /// sound under-approximation that **never** fabricates a propagation. Equality
+    /// atoms are skipped (their negation is a disjunction the conjunctive probe
+    /// cannot represent — the same restriction [`TheorySolver::assert`] makes).
     #[must_use]
-    #[allow(clippy::unused_self)]
     pub fn propagate(&self) -> Vec<TheoryProp> {
-        Vec::new()
+        let mut out = Vec::new();
+        for atom in 0..self.atoms.len() {
+            if self.assigned.get(atom).copied().flatten().is_some() {
+                continue; // already decided by the search
+            }
+            let AtomKind::Order {
+                when_true,
+                when_false,
+            } = &self.atoms[atom]
+            else {
+                continue; // equality-false is a disjunction; unsupported is a no-op
+            };
+            // Probe ¬atom (the `when_false` constraint): infeasible ⇒ atom entailed true.
+            if let Some(reason) = self.probe_entails(when_false, atom) {
+                out.push(TheoryProp {
+                    lit: TheoryLit { atom, value: true },
+                    reason,
+                });
+                continue;
+            }
+            // Probe atom (the `when_true` constraint): infeasible ⇒ ¬atom entailed.
+            if let Some(reason) = self.probe_entails(when_true, atom) {
+                out.push(TheoryProp {
+                    lit: TheoryLit { atom, value: false },
+                    reason,
+                });
+            }
+        }
+        out
+    }
+
+    /// Tests whether adding `probe_constraint` (the opposite polarity of atom
+    /// `atom`) to the live system is infeasible. On infeasibility returns the
+    /// asserted-only Farkas core (the entailment's explanation); otherwise `None`
+    /// (feasible, inconclusive, or no asserted support — never a fabrication).
+    fn probe_entails(&self, probe_constraint: &Constraint, atom: usize) -> Option<Vec<TheoryLit>> {
+        let mut probe = self.live.clone();
+        probe.push(tag(probe_constraint, atom));
+        match solve(&probe, self.nvars) {
+            Feasibility::Unsat(rows) => self.probe_core(&probe, &rows, atom),
+            Feasibility::Sat | Feasibility::Unknown => None,
+        }
     }
 }
 
@@ -909,6 +1000,54 @@ impl Dpll {
         Ok(())
     }
 
+    /// Applies sound theory propagations to the trail until fixpoint. Returns the
+    /// learned clause on a theory conflict, else `Ok(())`. A mirror of
+    /// `crate::euf_egraph::Dpll::theory_propagate` retargeted to [`LraTheory`].
+    fn theory_propagate(&mut self, theory: &mut LraTheory) -> Result<(), Vec<Lit>> {
+        loop {
+            let props = theory.propagate();
+            let mut progress = false;
+            for prop in props {
+                let var = prop.lit.atom;
+                match self.value[var] {
+                    Some(v) if v == prop.lit.value => {}
+                    Some(_) => {
+                        // Theory entails the opposite of the current value: a
+                        // conflict. Learn ¬(reason ∧ current literal).
+                        let mut core = prop.reason.clone();
+                        core.push(TheoryLit {
+                            atom: var,
+                            value: !prop.lit.value,
+                        });
+                        return Err(Self::theory_conflict_clause(&core));
+                    }
+                    None => {
+                        if let Err(c) = self.assign(theory, var, prop.lit.value, Cause::Implied) {
+                            return Err(Self::theory_conflict_clause(&c));
+                        }
+                        progress = true;
+                    }
+                }
+            }
+            if !progress {
+                return Ok(());
+            }
+        }
+    }
+
+    /// Unit propagation interleaved with theory propagation to a joint fixpoint. A
+    /// mirror of `crate::euf_egraph::Dpll::propagate` retargeted to [`LraTheory`].
+    fn propagate(&mut self, theory: &mut LraTheory) -> Result<(), Vec<Lit>> {
+        loop {
+            self.unit_propagate(theory)?;
+            let before = self.trail.len();
+            self.theory_propagate(theory)?;
+            if self.trail.len() == before {
+                return Ok(());
+            }
+        }
+    }
+
     /// Maps a theory conflict core to a learned CNF clause `¬⋀core`.
     fn theory_conflict_clause(core: &[TheoryLit]) -> Vec<Lit> {
         core.iter()
@@ -929,7 +1068,7 @@ impl Dpll {
     fn solve(&mut self, theory: &mut LraTheory) -> bool {
         loop {
             loop {
-                match self.unit_propagate(theory) {
+                match self.propagate(theory) {
                     Ok(()) => break,
                     Err(clause) => {
                         if !self.learn_and_backtrack(theory, clause) {

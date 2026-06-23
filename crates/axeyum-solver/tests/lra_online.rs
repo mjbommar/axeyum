@@ -392,3 +392,145 @@ fn differential_fuzz_push_pop_sequences_track_offline() {
     assert!(sat_seen, "push/pop fuzz saw no sat states");
     assert!(unsat_seen, "push/pop fuzz saw no conflict states");
 }
+
+/// Builds the typed Boolean term for the *negation* of an order atom `lhs REL 0`
+/// (the atom shapes `random_atom` produces), used to independently verify a
+/// propagation: `asserted ∧ ¬entailed` must be offline-unsat. Returns `None` for
+/// shapes other than the order relations (e.g. equality).
+fn negate_order_atom(arena: &mut TermArena, atom: TermId) -> Option<TermId> {
+    use axeyum_ir::{Op, TermNode};
+    let TermNode::App { op, args } = arena.node(atom) else {
+        return None;
+    };
+    let (op, l, r) = (*op, args[0], args[1]);
+    match op {
+        Op::RealLt => Some(arena.real_ge(l, r).expect("ge")),
+        Op::RealLe => Some(arena.real_gt(l, r).expect("gt")),
+        Op::RealGt => Some(arena.real_le(l, r).expect("le")),
+        Op::RealGe => Some(arena.real_lt(l, r).expect("lt")),
+        _ => None,
+    }
+}
+
+/// SOUNDNESS gate for **theory propagation** (Slice 1): over a deterministic LCG
+/// corpus, assert a random subset of order atoms true into the incremental
+/// [`LraTheory`], call `propagate()`, and for EVERY emitted propagation
+/// independently verify with the trusted offline decider that
+///
+///   1. the entailed literal is *genuinely* entailed — `asserted ∧ ¬entailed` is
+///      offline-UNSAT (a fabricated propagation would make this SAT: a hard fail);
+///   2. the carried `reason` is **asserted-only** (every reason literal is one of
+///      the currently-asserted atoms at its asserted polarity), and the lemma
+///      `reason ∧ ¬entailed` is itself offline-UNSAT (the explanation is genuine).
+///
+/// Also counts how often propagation FIRES, asserting it engages on a meaningful
+/// number of instances (so Slice 1 is exercised, not merely falling through).
+#[test]
+fn theory_propagation_is_sound_and_fires() {
+    let mut lcg = Lcg(0x9e37_79b9_7f4a_7c15);
+    let mut fired = 0_usize;
+    let mut props_checked = 0_usize;
+
+    for _ in 0..3000 {
+        let mut arena = TermArena::new();
+        let nvars = 1 + usize::try_from(lcg.below(2)).expect("small") /* 1..=2 */;
+        let vars = real_vars(&mut arena, nvars);
+        // Order atoms only (so each has a representable single-constraint negation).
+        let pool: Vec<TermId> = (0..5)
+            .map(|_| {
+                loop {
+                    let a = random_atom(&mut arena, &mut lcg, &vars);
+                    if negate_order_atom(&mut arena, a).is_some() {
+                        break a;
+                    }
+                }
+            })
+            .collect();
+
+        let mut theory = LraTheory::new(&arena, &pool);
+        if !(0..pool.len()).all(|i| theory.tracks(i)) {
+            continue;
+        }
+
+        // Assert a random subset true; stop at the first conflict (post-conflict
+        // propagation is not meaningful).
+        let mut asserted: Vec<usize> = Vec::new();
+        let mut conflicted = false;
+        for i in 0..pool.len() {
+            if lcg.below(2) == 0 {
+                continue;
+            }
+            if theory.assert(i, true).is_err() {
+                conflicted = true;
+                break;
+            }
+            asserted.push(i);
+        }
+        if conflicted || asserted.is_empty() {
+            continue;
+        }
+
+        // The currently-asserted atom terms (all asserted true here).
+        let asserted_terms: Vec<TermId> = asserted.iter().map(|&i| pool[i]).collect();
+
+        for prop in theory.propagate() {
+            fired += 1;
+            // The entailed literal's *negated* term: false-polarity means ¬atom is
+            // entailed, so the witness to refute is the atom itself.
+            let entailed_neg = if prop.lit.value {
+                negate_order_atom(&mut arena, pool[prop.lit.atom]).expect("order atom")
+            } else {
+                pool[prop.lit.atom]
+            };
+
+            // (1) Genuine entailment: asserted ∧ ¬entailed must be offline-UNSAT.
+            let mut full = asserted_terms.clone();
+            full.push(entailed_neg);
+            if let Some(offline) = offline_verdict(&mut arena, &full) {
+                assert!(
+                    !offline,
+                    "UNSOUND PROPAGATION: asserted ∧ ¬entailed is SAT (lit {:?})",
+                    prop.lit
+                );
+                props_checked += 1;
+            }
+
+            // (2) Asserted-only reason: every reason literal is an asserted atom at
+            //     its asserted polarity (here always true), and reason ∧ ¬entailed
+            //     is itself offline-UNSAT (the explanation is a genuine core).
+            let mut reason_terms: Vec<TermId> = Vec::new();
+            for r in &prop.reason {
+                assert!(
+                    r.value,
+                    "reason literal must be asserted-true here (got false), lit {r:?}"
+                );
+                assert!(
+                    asserted.contains(&r.atom),
+                    "reason names a NON-asserted atom {} — unsound explanation",
+                    r.atom
+                );
+                reason_terms.push(pool[r.atom]);
+            }
+            reason_terms.push(entailed_neg);
+            if let Some(offline) = offline_verdict(&mut arena, &reason_terms) {
+                assert!(
+                    !offline,
+                    "UNSOUND REASON: reason ∧ ¬entailed is SAT (lit {:?}, reason {:?})",
+                    prop.lit, prop.reason
+                );
+            }
+        }
+    }
+
+    eprintln!(
+        "theory-propagation gate: fired={fired} propagations, {props_checked} entailments offline-confirmed, 0 unsound"
+    );
+    assert!(
+        fired > 50,
+        "theory propagation never meaningfully fired ({fired}) — Slice 1 not exercised"
+    );
+    assert!(
+        props_checked > 20,
+        "too few propagations offline-confirmed ({props_checked})"
+    );
+}
