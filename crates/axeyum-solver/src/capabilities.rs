@@ -553,6 +553,21 @@ pub const CAPABILITIES: &[Capability] = &[
                    a wrong abduct)",
         reference: "ADR-0049",
     },
+    Capability {
+        area: "diagnostics",
+        feature: "route-trace / decline telemetry (Solver::check_auto_explained → (CheckResult, \
+                  RouteTrace)): a fragment probe + an ordered trail of every dispatch route tried, each \
+                  Decided or Declined with a reason (Unsupported / NotApplicable / Budget / Incomplete / \
+                  VerifierRejected, reusing UnknownKind) — the gap-analysis 'minimal strategy/probe' \
+                  layer and the named prerequisite for the lazy-CDCL(T) dispatch push",
+        assurance: Assurance::Validated,
+        evidence: "PURELY ADDITIVE — one dispatch path, a recorder threaded through check_auto_with_recorder \
+                   that never participates in a branch condition, so the verdict is invariant by \
+                   construction; guarded by a 400-query LCG differential (check_auto_explained.0 == \
+                   check_auto EXACTLY, 0 mismatches) + a determinism check (byte-identical trace across \
+                   runs). No decider verdict logic touched",
+        reference: "gap-analysis-z3-cvc5-2026-06-22 #6",
+    },
 ];
 
 /// Renders [`CAPABILITIES`] as the canonical capability-matrix markdown table.
