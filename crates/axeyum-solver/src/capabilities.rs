@@ -385,8 +385,11 @@ pub const CAPABILITIES: &[Capability] = &[
                    caught + fixed 2 real soundness bugs; the Boolean fuzz jointly decided 123 = 41 sat / \
                    82 unsat). A per-model Unknown forces a whole-query Unknown (no wrong unsat). Caps \
                    (models/atoms/clauses/split-depth/timeout) → graceful Unknown; non-UFLRA → Unknown. \
-                   Enumerative DPLL(T) with blocking-clause pruning (1-UIP learning / theory propagation \
-                   deferred). The check_auto dispatch wiring is itself guarded by an in-tree differential \
+                   Enumerative DPLL(T) with blocking-clause pruning + EARLY theory-conflict detection \
+                   (at each post-BCP fixpoint the partial assignment is theory-checked; an Unsat prunes \
+                   the whole subtree — verdict-invariant, e.g. 6561→0 enumerated models on a crafted \
+                   early-conflict family; 1-UIP learning / cross-call incremental theory deferred). The \
+                   check_auto dispatch wiring is itself guarded by an in-tree differential \
                    vs the eager route (300-query mixed UF+arith LCG corpus: 240 co-decided, 0 \
                    disagreements, 0 LOGICAL decision-regressions, sat replay, +16 value-add decisions \
                    where eager returns Unknown; the online probe runs on an arena CLONE with a bounded \
@@ -401,7 +404,8 @@ pub const CAPABILITIES: &[Capability] = &[
                   UF-argument constants, so integer tightening fires). Now decides FULL \
                   Boolean-structured QF_UFLIA via the same enumerative DPLL(T) as QF_UFLRA (Tseitin \
                   skeleton over the theory atoms, propositional-model enumeration with theory-conflict \
-                  blocking clauses, the conjunctive MBTC reused as the per-model theory oracle). Now the \
+                  blocking clauses + EARLY theory-conflict detection on partial assignments, the \
+                  conjunctive MBTC reused as the per-model theory oracle). Now the \
                   DEFAULT check_auto route for mixed UF+int-arith queries (online-first, eager Ackermann \
                   the byte-unchanged fallback on online Unknown)",
         assurance: Assurance::Validated,
