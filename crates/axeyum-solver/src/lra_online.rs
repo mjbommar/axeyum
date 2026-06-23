@@ -885,6 +885,18 @@ fn choose(lower: Option<(Rational, bool)>, upper: Option<(Rational, bool)>) -> O
 // --- The online DPLL(T) driver (a mirror of euf_egraph::Dpll retargeted to
 // --- LraTheory, since that one is hardwired to EufTheory). ------------------
 
+/// Learned clauses tolerated before the first [`Dpll::reduce_db`]. Mirrors
+/// `axeyum_cnf::proof_sat`'s additive schedule, scaled for the smaller working
+/// instances of the online theory loop so reduction actually triggers.
+const REDUCE_FIRST: usize = 2_000;
+/// Additive growth of the learned-clause budget after each reduction: the budget
+/// is `REDUCE_FIRST + REDUCE_INC * reductions`, so reductions become less frequent
+/// over time (the standard Glucose/`MiniSat` schedule shape).
+const REDUCE_INC: usize = 300;
+/// Learned clauses whose literal-block distance (`LBD`) is at or below this are
+/// "glue" clauses and are never deleted (the canonical Glucose protection rule).
+const GLUE_LBD: usize = 2;
+
 /// A CNF literal in the online `DPLL(T)` skeleton: a variable index and polarity.
 ///
 /// `pub(crate)` so the `QF_UFLRA` Boolean layer ([`crate::uflra_online`]) can build the
@@ -951,9 +963,45 @@ pub(crate) struct Dpll {
     /// gate uses this to pick clauses it can independently re-validate with the
     /// trusted conjunctive offline decider.
     reason_theory: Vec<bool>,
+    /// Per variable: the clause index in [`Self::clauses`] of the learned clause
+    /// that is currently this variable's reason, or `None` if its reason is not a
+    /// stored learned clause (a decision, a Boolean input clause, or a synthesized
+    /// theory clause). Lets [`Self::reduce_db`] protect a *locked* learned clause
+    /// (one currently a reason on the trail) in O(1). Valid only while the variable
+    /// is assigned.
+    reason_clause: Vec<Option<usize>>,
     /// The current decision level (incremented on every decision, restored on
     /// backjump).
     decision_level: usize,
+    /// Number of original (input + Tseitin skeleton) clauses. Clause indices
+    /// `< num_original` are permanent (never deletion-eligible); learned 1-UIP
+    /// asserting clauses are appended at indices `>= num_original`.
+    num_original: usize,
+    /// Per clause (indexed like [`Self::clauses`]): the literal-block distance
+    /// (`LBD`) — the number of distinct decision levels among the clause's literals
+    /// at learning time. Meaningful for learned clauses only (`0` for originals).
+    lbd: Vec<usize>,
+    /// Per clause: a monotone learning-time activity stamp (the deletion
+    /// tie-break, fresher = higher = more valuable). `0.0` for originals.
+    cla_activity: Vec<f64>,
+    /// Per clause: tombstone flag. A deleted learned clause keeps its slot (so the
+    /// `clauses[num_original..]` stream stays aligned with the diagnostics and no
+    /// index shifts) but is skipped everywhere in propagation. Originals are never
+    /// tombstoned.
+    deleted: Vec<bool>,
+    /// Current clause-activity stamp, advanced on each learned clause so the stamp
+    /// is a strictly increasing recency key (deterministic, no clock).
+    cla_inc: f64,
+    /// Number of [`Self::reduce_db`] reductions performed so far (drives the
+    /// growing budget).
+    reductions: usize,
+    /// Number of live (non-deleted) learned clauses. Drives the reduce trigger.
+    learned_live: usize,
+    /// Test-only override of [`REDUCE_FIRST`] so a small fixture can cross the
+    /// budget and exercise [`Self::reduce_db`] without millions of conflicts.
+    /// `None` in production (the standard schedule).
+    #[cfg(test)]
+    reduce_first_override: Option<usize>,
     /// Test-only diagnostics for the 1-UIP path (fires counter and learned-vs-full
     /// conflict-clause lengths). Compiled out of the production library.
     #[cfg(test)]
@@ -993,6 +1041,7 @@ impl Dpll {
             initial_clauses: clauses.len(),
             ..Diagnostics::default()
         };
+        let num_original = clauses.len();
         Self {
             var_count,
             atom_count,
@@ -1002,7 +1051,17 @@ impl Dpll {
             level: vec![0; var_count],
             reason: vec![None; var_count],
             reason_theory: vec![false; var_count],
+            reason_clause: vec![None; var_count],
             decision_level: 0,
+            num_original,
+            lbd: vec![0; num_original],
+            cla_activity: vec![0.0; num_original],
+            deleted: vec![false; num_original],
+            cla_inc: 1.0,
+            reductions: 0,
+            learned_live: 0,
+            #[cfg(test)]
+            reduce_first_override: None,
             #[cfg(test)]
             diag,
         }
@@ -1051,6 +1110,11 @@ impl Dpll {
         while changed {
             changed = false;
             for ci in 0..self.clauses.len() {
+                // Skip tombstoned (reduce_db-deleted) learned clauses: they are
+                // redundant resolvents, so omitting them only forgoes pruning.
+                if self.deleted[ci] {
+                    continue;
+                }
                 let mut unassigned: Option<Lit> = None;
                 let mut satisfied = false;
                 let mut count = 0;
@@ -1302,6 +1366,7 @@ impl Dpll {
             self.value[var] = None;
             self.reason[var] = None;
             self.reason_theory[var] = false;
+            self.reason_clause[var] = None;
             if cause == Cause::Decision {
                 theory.pop();
             }
@@ -1328,6 +1393,41 @@ impl Dpll {
     #[cfg(test)]
     pub(crate) fn analyze_fires(&self) -> usize {
         self.diag.analyze_fires
+    }
+
+    /// Test-only: lowers the first-reduction budget so a small conflict-heavy
+    /// fixture exercises [`Self::reduce_db`]. Must be set before [`Self::solve`].
+    #[cfg(test)]
+    pub(crate) fn set_reduce_first_for_test(&mut self, first: usize) {
+        self.reduce_first_override = Some(first);
+    }
+
+    /// Test-only: the number of [`Self::reduce_db`] reductions performed.
+    #[cfg(test)]
+    pub(crate) fn reductions(&self) -> usize {
+        self.reductions
+    }
+
+    /// Test-only: the number of learned clauses tombstoned by reductions so far
+    /// (total stored learned clauses minus the live count).
+    #[cfg(test)]
+    pub(crate) fn deleted_learned_count(&self) -> usize {
+        (self.clauses.len() - self.num_original) - self.learned_live
+    }
+
+    /// Test-only soundness check: no tombstoned clause is currently a *locked*
+    /// reason on the trail (an active reason clause must never be deleted). Returns
+    /// `true` when every assigned variable whose reason is a stored learned clause
+    /// points at a live (non-deleted) clause.
+    #[cfg(test)]
+    pub(crate) fn no_deleted_active_reason(&self) -> bool {
+        self.reason_clause
+            .iter()
+            .enumerate()
+            .all(|(var, slot)| match slot {
+                Some(cid) => self.value[var].is_none() || !self.deleted[*cid],
+                None => true,
+            })
     }
 
     /// Test-only: the summed length of every learned 1-UIP asserting clause.
@@ -1437,20 +1537,44 @@ impl Dpll {
         } else {
             Some(learned.clone())
         };
+        // The clause's LBD is the number of distinct decision levels among its
+        // literals, measured *now* (post-backjump): the UIP is at `backjump` and
+        // every other literal is at or below it, the standard learning-time LBD.
+        let lbd = self.compute_lbd(&learned);
+        let clause_id = self.clauses.len();
+        // The just-pushed clause is the UIP's reason exactly when it has the other
+        // literals to force it (`reason.is_some()`); a unit learned clause asserts
+        // the UIP at level 0 with no reason clause, so it is never locked.
+        let uip_locked_by_clause = reason.is_some();
         self.clauses.push(learned);
+        self.register_learned(lbd);
         // Enqueue the UIP literal. At the backjump level its theory assertion is
         // consistent (the asserting clause is an entailed resolvent), but a
         // *theory* conflict can still surface here — re-analyze that conflict. The
         // learned clause is the UIP's reason, a theory clause iff it is a theory
-        // lemma.
-        match self.assign(
+        // lemma. Record the clause index as the UIP's reason clause so `reduce_db`
+        // protects it while it is locked.
+        let assigned = self.assign(
             theory,
             uip.var,
             uip.positive,
             Cause::Implied,
             reason,
             is_theory_lemma,
-        ) {
+        );
+        if uip_locked_by_clause {
+            self.reason_clause[uip.var] = Some(clause_id);
+        }
+        // Database reduction (Glucose/MiniSat schedule): once the live learned
+        // count exceeds the growing budget, tombstone the worst half. Sound: every
+        // learned clause is a redundant resolvent, so deleting one never changes
+        // sat/unsat — see `reduce_db`. Run here (after the backjump + enqueue,
+        // before the next propagation) so the trail and reasons are consistent.
+        if self.learned_live > self.reduce_budget() {
+            self.reduce_db();
+            self.reductions += 1;
+        }
+        match assigned {
             Ok(()) => true,
             Err(core) => self.learn_and_backjump(
                 theory,
@@ -1459,6 +1583,91 @@ impl Dpll {
                     is_theory: true,
                 },
             ),
+        }
+    }
+
+    /// Literal-block distance of a learned clause: the number of distinct decision
+    /// levels among its literals' current assignments. Computed at learning time,
+    /// when every literal of the clause is assigned. `LBD <= GLUE_LBD` "glue"
+    /// clauses are the most valuable and are kept permanently by [`Self::reduce_db`].
+    fn compute_lbd(&self, clause: &[Lit]) -> usize {
+        let mut levels: Vec<usize> = clause.iter().map(|lit| self.level[lit.var]).collect();
+        levels.sort_unstable();
+        levels.dedup();
+        levels.len()
+    }
+
+    /// Registers a freshly learned clause's deletion metadata: its `LBD`, a fresh
+    /// monotone activity stamp, a live (non-deleted) tombstone, and bumps the live
+    /// learned count. Keeps the per-clause metadata vectors aligned with
+    /// [`Self::clauses`] by index.
+    fn register_learned(&mut self, lbd: usize) {
+        self.lbd.push(lbd);
+        self.cla_activity.push(self.cla_inc);
+        self.deleted.push(false);
+        self.learned_live += 1;
+        // Advance the stamp so the next learned clause is strictly fresher. A tiny
+        // additive step keeps the sequence deterministic and overflow-free over any
+        // realistic conflict count.
+        self.cla_inc += 1.0;
+    }
+
+    /// The learned-clause budget for the current reduction round (additive
+    /// schedule: grows by [`REDUCE_INC`] after each reduction).
+    fn reduce_budget(&self) -> usize {
+        #[cfg(test)]
+        let first = self.reduce_first_override.unwrap_or(REDUCE_FIRST);
+        #[cfg(not(test))]
+        let first = REDUCE_FIRST;
+        first + REDUCE_INC * self.reductions
+    }
+
+    /// Is learned clause `cid` currently *locked* — the reason for an assigned
+    /// literal on the trail? A locked learned clause must not be deleted: it is
+    /// needed for conflict analysis / backjump over that literal. (Reasons are
+    /// stored as cloned literal vectors, so a deletion could not actually dangle a
+    /// trail index, but protecting locked clauses keeps the search's implication
+    /// graph re-derivable and mirrors the Glucose protocol exactly.)
+    fn is_locked(&self, cid: usize) -> bool {
+        self.clauses[cid].first().is_some_and(|lit| {
+            self.value[lit.var].is_some() && self.reason_clause[lit.var] == Some(cid)
+        })
+    }
+
+    /// Glucose/MiniSat `reduceDB`: tombstone the worst half of the deletion-eligible
+    /// learned clauses, protecting originals, glue (`LBD <= GLUE_LBD`) clauses, and
+    /// locked clauses (a current reason on the trail). Worst-first order is by
+    /// descending `LBD` (higher = less valuable), then ascending activity (staler
+    /// first), then descending clause index — a total, deterministic order (no
+    /// hash-map iteration). Deletion is by tombstone (the slot is kept, not
+    /// reused), so every clause index — and thus the `clauses[num_original..]`
+    /// learned stream the diagnostics align with — stays stable.
+    ///
+    /// Soundness: every learned clause is a 1-UIP resolvent entailed by the input
+    /// clauses plus the theory, so it is redundant; removing a redundant clause
+    /// cannot change the formula's models, hence never flips sat/unsat. Only
+    /// learned, non-locked clauses are ever removed.
+    fn reduce_db(&mut self) {
+        let mut candidates: Vec<usize> = (self.num_original..self.clauses.len())
+            .filter(|&cid| !self.deleted[cid] && self.lbd[cid] > GLUE_LBD && !self.is_locked(cid))
+            .collect();
+        if candidates.is_empty() {
+            return;
+        }
+        candidates.sort_by(|&x, &y| {
+            self.lbd[y]
+                .cmp(&self.lbd[x])
+                .then_with(|| {
+                    self.cla_activity[x]
+                        .partial_cmp(&self.cla_activity[y])
+                        .unwrap_or(core::cmp::Ordering::Equal)
+                })
+                .then_with(|| y.cmp(&x))
+        });
+        let to_delete = candidates.len() / 2;
+        for &cid in candidates.iter().take(to_delete) {
+            self.deleted[cid] = true;
+            self.learned_live -= 1;
         }
     }
 }
@@ -2101,6 +2310,155 @@ mod tests {
         assert!(
             learned_len_total < conflict_len_total,
             "learned clauses not shorter on average ({learned_len_total} vs {conflict_len_total})"
+        );
+    }
+
+    /// Builds a `Dpll` + `LraTheory` over a conjunction of `assertions` exactly as
+    /// [`check_qf_lra_online`] does, for the in-source reduce-database tests.
+    /// Returns the wired solver and theory (un-run), plus the registered atom
+    /// terms, so a test can lower the reduce budget before `solve`.
+    fn build_solver(arena: &TermArena, assertions: &[TermId]) -> (Dpll, LraTheory) {
+        let mut atom_terms: Vec<TermId> = Vec::new();
+        let mut seen = HashSet::new();
+        for &a in assertions {
+            collect_lra_atoms(arena, a, &mut atom_terms, &mut seen);
+        }
+        let mut enc = Encoder::new(&atom_terms);
+        let mut clauses: Vec<Vec<Lit>> = Vec::new();
+        for &assertion in assertions {
+            let top = enc
+                .encode(arena, assertion, &mut clauses)
+                .expect("encodable");
+            clauses.push(vec![Lit {
+                var: top,
+                positive: true,
+            }]);
+        }
+        let atom_count = atom_terms.len();
+        let mut builder = AtomBuilder::default();
+        let atoms: Vec<AtomKind> = atom_terms
+            .iter()
+            .map(|&t| builder.build(arena, t))
+            .collect();
+        let nvars = builder.vars.len();
+        let theory = LraTheory {
+            atoms,
+            nvars,
+            live: Vec::new(),
+            assigned: vec![None; atom_count],
+            assigned_log: Vec::new(),
+            trail: Vec::new(),
+            vars: builder.vars,
+        };
+        let solver = Dpll::new(enc.var_count, atom_count, clauses);
+        (solver, theory)
+    }
+
+    /// A Boolean-**pigeonhole** `QF_LRA` formula whose `pigeons × holes` atoms are
+    /// *independent* real order atoms (`x_{p,h} < 0`, each over its own real
+    /// variable — so every Boolean assignment is trivially theory-feasible and the
+    /// feasibility check stays cheap). The Boolean skeleton — "each pigeon in some
+    /// hole" ∧ "no two pigeons share a hole" — is purely-Boolean **UNSAT** whenever
+    /// `pigeons > holes`, forcing the `Dpll` to learn many 1-UIP asserting clauses
+    /// quickly. This is the cheap-theory / hard-Boolean shape that exercises
+    /// [`Dpll::reduce_db`] without slow Fourier–Motzkin work. Returns the arena and
+    /// the assertion list.
+    fn pigeonhole_real_formula(pigeons: usize, holes: usize) -> (TermArena, Vec<TermId>) {
+        let mut arena = TermArena::new();
+        let zero = arena.real_const(Rational::zero());
+        // atom[p][h] is `x_{p,h} < 0` over a fresh real variable.
+        let mut atom = vec![vec![arena.bool_const(false); holes]; pigeons];
+        for (p, row) in atom.iter_mut().enumerate() {
+            for (h, slot) in row.iter_mut().enumerate() {
+                let s = arena
+                    .declare(&format!("x_{p}_{h}"), Sort::Real)
+                    .expect("declare");
+                let v = arena.var(s);
+                *slot = arena.real_lt(v, zero).expect("x<0");
+            }
+        }
+        let mut assertions: Vec<TermId> = Vec::new();
+        // Each pigeon occupies at least one hole: OR over its holes.
+        for row in &atom {
+            let mut clause = row[0];
+            for &a in &row[1..] {
+                clause = arena.or(clause, a).expect("or");
+            }
+            assertions.push(clause);
+        }
+        // No two pigeons share a hole: for each pigeon pair, forbid them sharing
+        // any single hole — ¬(atom[p1][h] ∧ atom[p2][h]) over the zipped columns.
+        for p1 in 0..pigeons {
+            for p2 in (p1 + 1)..pigeons {
+                for (&a1, &a2) in atom[p1].iter().zip(&atom[p2]) {
+                    let both = arena.and(a1, a2).expect("and");
+                    assertions.push(arena.not(both).expect("not"));
+                }
+            }
+        }
+        (arena, assertions)
+    }
+
+    /// Cross-checks the online verdict against running the *same* `Dpll` driver
+    /// with reduction disabled (the never-delete baseline) — the cleanest
+    /// verdict-invariance oracle, since the formulas here are disjunctive (outside
+    /// the conjunctive offline decider's scope). Deletion only forgoes pruning, so
+    /// both runs must reach the same sat/unsat. Returns `(unsat, deleted_count,
+    /// reductions, no_stale_reason)` for the reduced run.
+    fn reduced_vs_baseline(
+        arena: &TermArena,
+        assertions: &[TermId],
+        reduce_first: usize,
+    ) -> (bool, usize, usize, bool) {
+        // Baseline: no reduction (budget stays astronomically high).
+        let (mut base_solver, mut base_theory) = build_solver(arena, assertions);
+        base_solver.set_reduce_first_for_test(usize::MAX);
+        let base_unsat = base_solver.solve(&mut base_theory);
+        // Reduced: a low budget so reduce_db fires.
+        let (mut solver, mut theory) = build_solver(arena, assertions);
+        solver.set_reduce_first_for_test(reduce_first);
+        let unsat = solver.solve(&mut theory);
+        assert_eq!(
+            unsat, base_unsat,
+            "reduce_db FLIPPED the verdict vs the never-delete baseline \
+             (reduced={unsat}, baseline={base_unsat})"
+        );
+        (
+            unsat,
+            solver.deleted_learned_count(),
+            solver.reductions(),
+            solver.no_deleted_active_reason(),
+        )
+    }
+
+    /// `reduce_db` must FIRE on conflict-heavy instances once the learned count
+    /// crosses a (lowered) budget — deletions actually happen — AND the verdict is
+    /// unchanged vs the never-delete baseline (verdict invariance), AND no
+    /// tombstoned clause is ever an active reason on the trail (the stale-reason
+    /// guard), AND every `sat` model still replays against the original assertions.
+    #[test]
+    fn reduce_db_fires_and_keeps_the_verdict() {
+        let mut total_deleted = 0_usize;
+        let mut total_reductions = 0_usize;
+        // A handful of pigeonhole sizes; each is purely-Boolean UNSAT and forces
+        // many learned clauses, crossing the lowered budget repeatedly.
+        for &(pigeons, holes) in &[(5_usize, 4_usize), (6, 5), (7, 6)] {
+            let (arena, assertions) = pigeonhole_real_formula(pigeons, holes);
+            let (unsat, deleted, reductions, no_stale) =
+                reduced_vs_baseline(&arena, &assertions, 3);
+            assert!(unsat, "pigeonhole {pigeons}->{holes} must be UNSAT");
+            assert!(
+                no_stale,
+                "a deleted learned clause is still an active reason (stale reason!)"
+            );
+            total_deleted += deleted;
+            total_reductions += reductions;
+        }
+        eprintln!("reduce_db gate: reductions={total_reductions}, deleted_total={total_deleted}");
+        assert!(
+            total_reductions > 0 && total_deleted > 0,
+            "reduce_db never fired / deleted nothing (reductions={total_reductions}, \
+             deleted={total_deleted})"
         );
     }
 }
