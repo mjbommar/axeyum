@@ -32,6 +32,7 @@ mod cardinality;
 mod certify;
 mod combined;
 mod combined_theory;
+mod combined_theory_lia;
 mod datatype_acyclicity;
 mod datatype_elim;
 mod datatype_native;
@@ -151,6 +152,8 @@ pub use certify::{CertifyOutcome, certify_qf_bv_by_enumeration};
 pub use combined::check_with_all_theories;
 #[doc(hidden)]
 pub use combined_theory::combined_vs_cold_conjunction;
+#[doc(hidden)]
+pub use combined_theory_lia::combined_lia_vs_cold_conjunction;
 pub use datatype_acyclicity::prove_datatype_unsat_structurally;
 pub use datatype_elim::check_with_datatype_elimination;
 pub use datatype_native::check_with_datatype_native;

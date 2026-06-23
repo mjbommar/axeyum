@@ -102,10 +102,14 @@ const MAX_BOOLEAN_ATOMS: usize = 48;
 const MAX_BOOLEAN_CLAUSES: usize = 200_000;
 
 /// A classified literal of the conjunction: the atom term and its asserted polarity.
+///
+/// `pub(crate)` so the warm [`crate::combined_theory_lia::CombinedTheoryLia`] (the
+/// equality-sharing theory oracle the Boolean `DPLL(T)` layer calls) can hand the same
+/// literal shape to the shared conjunctive core.
 #[derive(Clone, Copy)]
-struct Literal {
-    atom: TermId,
-    value: bool,
+pub(crate) struct Literal {
+    pub(crate) atom: TermId,
+    pub(crate) value: bool,
 }
 
 /// Decides an **arbitrary Boolean combination** of `QF_UFLIA` literals (`EUF` + linear
@@ -207,7 +211,7 @@ pub fn check_qf_uflia_boolean_with_metrics(
 /// `DPLL(T)` layer call it). Returns a replay-checked model on `sat`, `Unsat` when every
 /// interface branch is infeasible, and a conservative [`CheckResult::Unknown`] otherwise
 /// (an unsupported atom, the depth cap, or a leaf model that did not replay).
-fn decide_conjunction(arena: &mut TermArena, literals: &[Literal]) -> CheckResult {
+pub(crate) fn decide_conjunction(arena: &mut TermArena, literals: &[Literal]) -> CheckResult {
     // 2. Partition the literals; decline an unsupported atom.
     let Some(part) = partition(arena, literals) else {
         return decline("atom outside QF_UFLIA for the online combination path");
@@ -269,15 +273,43 @@ fn decide_conjunction(arena: &mut TermArena, literals: &[Literal]) -> CheckResul
     }
 
     // 6. The interface case-split (DFS).
+    run_interface_search(
+        arena,
+        literals,
+        &part.euf,
+        euf_assertions,
+        &pairs,
+        &pair_atoms,
+        &mut lia,
+    )
+}
+
+/// Runs the interface case-split DFS (step 6 of the conjunctive combination) over a
+/// **prepared** `LiaTheory` whose atom indices are already the original `LIA` literals
+/// (positions `0..part.lia.len()`) plus the per-pair interface atoms named by
+/// `pair_atoms`. Factored out of [`decide_conjunction`] so the warm
+/// [`crate::combined_theory_lia::CombinedTheoryLia`] runs the *exact same* DFS over its
+/// persistent `LiaTheory`, guaranteeing the warm oracle returns the identical verdict to
+/// the from-scratch core (the parallel-run equivalence gate).
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn run_interface_search(
+    arena: &mut TermArena,
+    literals: &[Literal],
+    euf_atoms: &[Literal],
+    euf_assertions: Vec<TermId>,
+    pairs: &[(TermId, TermId)],
+    pair_atoms: &[PairAtoms],
+    lia: &mut LiaTheory,
+) -> CheckResult {
     let mut search = Search {
         arena,
         literals,
-        euf_atoms: &part.euf,
+        euf_atoms,
         euf_assertions,
-        pairs: &pairs,
-        pair_atoms: &pair_atoms,
+        pairs,
+        pair_atoms,
     };
-    match search.run(&mut lia, &mut Vec::new(), 0) {
+    match search.run(lia, &mut Vec::new(), 0) {
         Outcome::Sat(model) => CheckResult::Sat(model),
         Outcome::Unsat => CheckResult::Unsat,
         Outcome::Unknown(detail) => decline(detail),
@@ -286,10 +318,10 @@ fn decide_conjunction(arena: &mut TermArena, literals: &[Literal]) -> CheckResul
 
 /// The `LiaTheory` atom indices of a shared pair's three interface terms.
 #[derive(Clone, Copy)]
-struct PairAtoms {
-    eq: usize,
-    lt: usize,
-    gt: usize,
+pub(crate) struct PairAtoms {
+    pub(crate) eq: usize,
+    pub(crate) lt: usize,
+    pub(crate) gt: usize,
 }
 
 /// The carried state for the interface DFS.
@@ -566,7 +598,7 @@ impl Search<'_> {
 /// through `And` (positive), `not` (flipping polarity), and `¬(or ..) ≡ ⋀ ¬disjunct`.
 /// Returns `false` for any other Boolean structure (a positive disjunction,
 /// `ite`/`xor`/`implies`) — a non-conjunctive skeleton this slice declines.
-fn flatten_conjunction(
+pub(crate) fn flatten_conjunction(
     arena: &TermArena,
     term: TermId,
     polarity: bool,
@@ -612,14 +644,14 @@ fn flatten_conjunction(
 }
 
 /// The classification of the flattened literals into the two theories.
-struct Partition {
-    lia: Vec<Literal>,
-    euf: Vec<Literal>,
+pub(crate) struct Partition {
+    pub(crate) lia: Vec<Literal>,
+    pub(crate) euf: Vec<Literal>,
 }
 
 /// Partitions the flattened literals, or `None` if any literal is outside `QF_UFLIA`
 /// (a non-`LIA`, non-`EUF` atom — `BV` / `Real` / array / quantifier / bare predicate).
-fn partition(arena: &TermArena, literals: &[Literal]) -> Option<Partition> {
+pub(crate) fn partition(arena: &TermArena, literals: &[Literal]) -> Option<Partition> {
     let mut lia = Vec::new();
     let mut euf = Vec::new();
 
@@ -667,7 +699,7 @@ fn partition(arena: &TermArena, literals: &[Literal]) -> Option<Partition> {
 /// integer order atom (`<`, `<=`, `>`, `>=`). Used to tell a conjunction of integer
 /// atoms (the fast-path) from a flattened literal that is itself Boolean structure (a
 /// positive `or` / `ite` / Boolean leaf), which the Boolean layer must handle.
-fn is_theory_atom(arena: &TermArena, term: TermId) -> bool {
+pub(crate) fn is_theory_atom(arena: &TermArena, term: TermId) -> bool {
     matches!(
         arena.node(term),
         TermNode::App {
@@ -680,7 +712,7 @@ fn is_theory_atom(arena: &TermArena, term: TermId) -> bool {
 /// The `EUF` assertion terms for the `EUF` literals: a `true` equality literal is its
 /// atom, a `false` one its negation `(not (= ..))`. Consumed by
 /// [`classify_interface_equalities`] (which reads exactly those two shapes).
-fn build_euf_assertions(arena: &mut TermArena, euf: &[Literal]) -> Vec<TermId> {
+pub(crate) fn build_euf_assertions(arena: &mut TermArena, euf: &[Literal]) -> Vec<TermId> {
     let mut out = Vec::with_capacity(euf.len());
     for lit in euf {
         if lit.value {
@@ -756,15 +788,15 @@ fn mentions_uf(arena: &TermArena, term: TermId) -> bool {
 /// and reconciled by congruence, not by an explicit interface split, and a linear `LIA`
 /// term is determined by its symbol values — so splitting them adds no fact while
 /// exploding the search.
-struct Interface {
+pub(crate) struct Interface {
     /// Atomic integer terms occurring as a UF argument (a symbol / constant).
-    euf: BTreeSet<TermId>,
+    pub(crate) euf: BTreeSet<TermId>,
     /// Atomic integer subterms of the `LIA` atoms (symbols / constants).
-    lia: BTreeSet<TermId>,
+    pub(crate) lia: BTreeSet<TermId>,
 }
 
 /// Collects the [`Interface`] integer terms of the two partitions.
-fn interface_terms(arena: &TermArena, part: &Partition) -> Interface {
+pub(crate) fn interface_terms(arena: &TermArena, part: &Partition) -> Interface {
     let mut euf: BTreeSet<TermId> = BTreeSet::new();
     let mut lia: BTreeSet<TermId> = BTreeSet::new();
 
@@ -805,7 +837,7 @@ fn is_atomic_int(arena: &TermArena, term: TermId) -> bool {
 /// `LIA` constant matters because integer tightening such as `0 < x ∧ x < 2` forces
 /// `x = 1`, where `1` may be a UF argument only — `f(1)` — and never in a `LIA` atom.)
 /// Deterministic: the candidate set is the sorted union, pairs in [`TermId`] order.
-fn interface_pairs(interface: &Interface) -> Vec<(TermId, TermId)> {
+pub(crate) fn interface_pairs(interface: &Interface) -> Vec<(TermId, TermId)> {
     let candidates: BTreeSet<TermId> = interface.euf.union(&interface.lia).copied().collect();
     let candidates: Vec<TermId> = candidates.into_iter().collect();
     let mut pairs = Vec::new();
@@ -865,7 +897,7 @@ fn collect_int_subterms(arena: &TermArena, term: TermId, out: &mut BTreeSet<Term
 /// disequality whose sides are congruent (detected by classifying each disequality's
 /// `(a, b)` against the full assertion set: an `Entailed` verdict on a pair that is
 /// also asserted distinct is the conflict).
-fn euf_unsat(arena: &TermArena, euf_assertions: &[TermId]) -> bool {
+pub(crate) fn euf_unsat(arena: &TermArena, euf_assertions: &[TermId]) -> bool {
     let mut diseq_pairs: Vec<(TermId, TermId)> = Vec::new();
     for &assertion in euf_assertions {
         if let TermNode::App {
@@ -1192,6 +1224,10 @@ fn check_qf_uflia_boolean(
     }
 
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    // Build the warm equality-sharing oracle once over the atom set (the indices align
+    // with the BoolSearch variables). The enumeration is unchanged — only this theory
+    // oracle is warm across the per-model checks.
+    let combined = crate::combined_theory_lia::CombinedTheoryLia::new(arena, &atom_terms);
     let mut search = BoolSearch {
         var_count: enc.var_count,
         atom_count: atom_terms.len(),
@@ -1204,6 +1240,7 @@ fn check_qf_uflia_boolean(
         prunes_fired: 0,
         enable_early_prune,
         deadline,
+        combined,
     };
     let result = search.solve(arena);
     if let Some(out) = metrics {
@@ -1251,6 +1288,12 @@ struct BoolSearch<'a> {
     /// establish the no-pruning baseline).
     enable_early_prune: bool,
     deadline: Option<Instant>,
+    /// The **warm** equality-sharing theory oracle (slice 1): it decides each model's
+    /// conjunction with the *same* combination as the cold [`decide_conjunction`] —
+    /// identical verdict and model — but caches the constructed-and-base-asserted
+    /// `LiaTheory` and reuses it when the `LIA` atom layout repeats across the
+    /// enumeration. The enumeration above is unchanged — only the theory oracle is warmed.
+    combined: crate::combined_theory_lia::CombinedTheoryLia,
 }
 
 impl BoolSearch<'_> {
@@ -1382,10 +1425,8 @@ impl BoolSearch<'_> {
             return EarlyPrune::Continue;
         }
         self.last_early_atoms = assigned;
-        if matches!(
-            decide_conjunction(arena, &self.model_literals()),
-            CheckResult::Unsat
-        ) {
+        let literals = self.model_literals();
+        if matches!(self.combined.check(arena, &literals), CheckResult::Unsat) {
             self.prunes_fired += 1;
             let clause = self.blocking_clause();
             if !self.learn_and_backtrack(clause) {
@@ -1432,7 +1473,7 @@ impl BoolSearch<'_> {
                         return decline("timeout in the online combination boolean layer");
                     }
                     let literals = self.model_literals();
-                    match decide_conjunction(arena, &literals) {
+                    match self.combined.check(arena, &literals) {
                         CheckResult::Sat(model) => return CheckResult::Sat(model),
                         CheckResult::Unsat => {
                             // Block this model and keep enumerating.
@@ -1464,7 +1505,7 @@ impl BoolSearch<'_> {
 /// (`(= s t)`) and `LIA` order atoms (`<`, `<=`, `>`, `>=`) — in a stable left-to-right
 /// scan (so the proposition indexing is deterministic). An atom is not descended into
 /// (its sides are theory terms, not Boolean structure).
-fn collect_uflia_atoms(
+pub(crate) fn collect_uflia_atoms(
     arena: &TermArena,
     term: TermId,
     out: &mut Vec<TermId>,
@@ -1613,7 +1654,7 @@ impl BoolEncoder {
 }
 
 /// A classified `unknown` reason for the online `UFLIA` path.
-fn decline(detail: impl Into<String>) -> CheckResult {
+pub(crate) fn decline(detail: impl Into<String>) -> CheckResult {
     CheckResult::Unknown(UnknownReason {
         kind: UnknownKind::Incomplete,
         detail: detail.into(),
