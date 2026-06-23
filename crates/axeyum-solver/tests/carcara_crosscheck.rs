@@ -19,10 +19,11 @@ use axeyum_cnf::{AletheClause, AletheCommand, AletheLit, AletheTerm, write_aleth
 use axeyum_ir::{Rational, Sort, TermArena, TermId};
 use axeyum_smtlib::write_script;
 use axeyum_solver::{
-    bitblast_step, prove_lra_unsat_alethe, prove_qf_abv_unsat_alethe_via_elimination,
-    prove_qf_bv_unsat_alethe, prove_qf_bv_unsat_alethe_ext_compare,
-    prove_qf_bv_unsat_alethe_route2, prove_qf_dt_unsat_alethe_via_simplification,
-    prove_qf_uf_unsat_alethe, prove_qf_ufbv_unsat_alethe,
+    bitblast_step, prove_lra_unsat_alethe, prove_qf_abv_row_same_alethe_carcara,
+    prove_qf_abv_unsat_alethe_via_elimination, prove_qf_bv_unsat_alethe,
+    prove_qf_bv_unsat_alethe_ext_compare, prove_qf_bv_unsat_alethe_route2,
+    prove_qf_dt_unsat_alethe_via_simplification, prove_qf_uf_unsat_alethe,
+    prove_qf_ufbv_unsat_alethe,
 };
 
 /// Resolves the Carcara binary: `AXEYUM_CARCARA_BIN` if set, otherwise the
@@ -2067,4 +2068,102 @@ fn driver_bvsge_slt_conflict_is_accepted_by_carcara() {
     let ge = arena.bv_sge(a, b).unwrap();
     let lt = arena.bv_slt(a, b).unwrap();
     assert_ext_compare_accepted("driver_bvsge", &[ge, lt], &mut arena);
+}
+
+// --- QF_ABV read-over-write-same certificate: -------------------------------
+// `prove_qf_abv_row_same_alethe_carcara`
+//
+// The in-tree `prove_qf_abv_unsat_alethe` discharges a same-index read with the
+// axeyum-internal premise-free `read_over_write_same` rule, which only the
+// in-tree `check_alethe` accepts (Carcara has NO array theory rule). This
+// certificate instead asserts the more primitive read-over-write *rewrite
+// instance* `(= (select (store a i v) i) (ite (= i i) v (select a i)))` as a
+// `QF_AUFBV` premise and derives the same-index collapse with rules Carcara
+// checks in full — `eq_simplify` (`(= i i) → true`), `cong`, `ite_simplify`
+// (`ite true v _ → v`), and `trans`. Carcara therefore checks the *collapse
+// reasoning* externally; the rewrite instance itself remains an array fact in
+// the problem. The matching `.smt2` declares the array `a`, index `i`, value
+// `v`, and asserts the `rw` instance plus the refuted disequality.
+
+/// Builds a read-over-write-same disequality `(not (= (select (store a i v) i) v))`
+/// over `a : (Array (BitVec 4) (BitVec 8))`, returning the assertion id.
+fn row_same_diseq(arena: &mut TermArena) -> TermId {
+    let a = arena.array_var("a", 4, 8).unwrap();
+    let i = bvw(arena, "i", 4);
+    let v = bvw(arena, "v", 8);
+    let stored = arena.store(a, i, v).unwrap();
+    let sel = arena.select(stored, i).unwrap();
+    let eq = arena.eq(sel, v).unwrap();
+    arena.not(eq).unwrap()
+}
+
+#[test]
+fn abv_row_same_collapse_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let neq = row_same_diseq(&mut arena);
+    let (proof, _rw) = prove_qf_abv_row_same_alethe_carcara(&arena, &[neq])
+        .expect("emit QF_ABV read-over-write-same Carcara certificate");
+    // The `rw` assume renders verbatim as the read-over-write rewrite instance,
+    // asserted alongside the refuted disequality in the QF_AUFBV problem.
+    let smt2 = "\
+(set-logic QF_AUFBV)
+(declare-const a (Array (_ BitVec 4) (_ BitVec 8)))
+(declare-const i (_ BitVec 4))
+(declare-const v (_ BitVec 8))
+(assert (= (select (store a i v) i) (ite (= i i) v (select a i))))
+(assert (not (= (select (store a i v) i) v)))
+(check-sat)
+";
+    let report = carcara_accepts_smt2(&bin, "abv_row_same_collapse", smt2, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+#[test]
+fn abv_row_same_tampered_collapse_is_rejected_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let neq = row_same_diseq(&mut arena);
+    let (mut proof, _rw) = prove_qf_abv_row_same_alethe_carcara(&arena, &[neq])
+        .expect("emit QF_ABV read-over-write-same Carcara certificate");
+    // Tamper the `ite_simplify` step (s3) to claim `ite true v (select a i) → (select a i)`
+    // instead of `→ v`. The conclusion is no longer the genuine simplification, so a
+    // sound checker MUST reject — no fabricated certificate slips through.
+    let AletheCommand::Step { clause, .. } = &mut proof[4] else {
+        panic!("expected step at index 4 (s3 ite_simplify)");
+    };
+    let AletheLit { atom, .. } = &mut clause[0];
+    let AletheTerm::App(_, eq_args) = atom else {
+        panic!("expected (= … …) atom in s3");
+    };
+    // RHS of s3 is `v`; swap it for the else-branch `(select a i)` (a wrong fold).
+    let AletheTerm::App(_, ite_args) = &eq_args[0] else {
+        panic!("expected (ite …) on the LHS of s3");
+    };
+    let bogus_rhs = ite_args[2].clone();
+    eq_args[1] = bogus_rhs;
+    let smt2 = "\
+(set-logic QF_AUFBV)
+(declare-const a (Array (_ BitVec 4) (_ BitVec 8)))
+(declare-const i (_ BitVec 4))
+(declare-const v (_ BitVec 8))
+(assert (= (select (store a i v) i) (ite (= i i) v (select a i))))
+(assert (not (= (select (store a i v) i) v)))
+(check-sat)
+";
+    let report = carcara_output(&bin, "abv_row_same_tampered", smt2, &proof);
+    assert!(
+        report.contains("invalid") || report.contains("ERROR"),
+        "carcara must reject the tampered ite_simplify step, got:\n{report}"
+    );
+    assert!(
+        !report.lines().any(|l| l.trim() == "valid"),
+        "tampered proof must not be reported valid, got:\n{report}"
+    );
 }

@@ -234,7 +234,7 @@ pub use proof::{
     export_qf_aufbv_unsat_proof, export_qf_bv_unsat_proof, export_qf_lia_unsat_proof,
     export_qf_uf_unsat_proof,
 };
-pub use qfabv_alethe::prove_qf_abv_unsat_alethe;
+pub use qfabv_alethe::{prove_qf_abv_row_same_alethe_carcara, prove_qf_abv_unsat_alethe};
 pub use qfabv_elim_alethe::prove_qf_abv_unsat_alethe_via_elimination;
 pub use qfbv_alethe::{
     prove_qf_bv_unsat_alethe, prove_qf_bv_unsat_alethe_ext_compare,
