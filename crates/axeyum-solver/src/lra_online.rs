@@ -897,6 +897,16 @@ const REDUCE_INC: usize = 300;
 /// "glue" clauses and are never deleted (the canonical Glucose protection rule).
 const GLUE_LBD: usize = 2;
 
+/// `VSIDS` activity decay: after each conflict the bump increment `var_inc` is
+/// divided by this, so older activity bumps decay geometrically relative to
+/// fresh ones (the `MiniSat` scheme; mirrors `axeyum_cnf::proof_sat`).
+const VSIDS_DECAY: f64 = 0.95;
+/// Rescale all activities (and `var_inc`) by this when any exceeds the cap, to
+/// avoid `f64` overflow without changing their relative order.
+const VSIDS_RESCALE: f64 = 1e-100;
+/// Activity ceiling that triggers a rescale.
+const VSIDS_RESCALE_LIMIT: f64 = 1e100;
+
 /// A CNF literal in the online `DPLL(T)` skeleton: a variable index and polarity.
 ///
 /// `pub(crate)` so the `QF_UFLRA` Boolean layer ([`crate::uflra_online`]) can build the
@@ -973,6 +983,15 @@ pub(crate) struct Dpll {
     /// The current decision level (incremented on every decision, restored on
     /// backjump).
     decision_level: usize,
+    /// `VSIDS` activity per variable (higher ⇒ decided sooner). Bumped for every
+    /// variable that participates in a conflict's 1-UIP resolution
+    /// ([`Self::analyze_conflict`]); decided most-active-first by
+    /// [`Self::pick_unassigned`]. Pure search heuristic — never affects sat/unsat.
+    activity: Vec<f64>,
+    /// Current `VSIDS` bump increment, grown by `1/VSIDS_DECAY` after each conflict
+    /// so older bumps decay geometrically relative to fresh ones (the `MiniSat`
+    /// trick; mirrors `axeyum_cnf::proof_sat`'s `var_inc`).
+    var_inc: f64,
     /// Number of original (input + Tseitin skeleton) clauses. Clause indices
     /// `< num_original` are permanent (never deletion-eligible); learned 1-UIP
     /// asserting clauses are appended at indices `>= num_original`.
@@ -1053,6 +1072,8 @@ impl Dpll {
             reason_theory: vec![false; var_count],
             reason_clause: vec![None; var_count],
             decision_level: 0,
+            activity: vec![0.0; var_count],
+            var_inc: 1.0,
             num_original,
             lbd: vec![0; num_original],
             cla_activity: vec![0.0; num_original],
@@ -1273,7 +1294,11 @@ impl Dpll {
     /// entailed by the theory alone. A mirror of `axeyum_cnf::proof_sat`'s
     /// `analyze`, without the VSIDS/LBD/minimization machinery (kept deliberately
     /// minimal for the online theory loop).
-    fn analyze_conflict(&self, conflict: &[Lit], seed_is_theory: bool) -> (Vec<Lit>, usize, bool) {
+    fn analyze_conflict(
+        &mut self,
+        conflict: &[Lit],
+        seed_is_theory: bool,
+    ) -> (Vec<Lit>, usize, bool) {
         let mut seen = vec![false; self.var_count];
         let mut lower: Vec<Lit> = Vec::new();
         let mut path_count = 0_usize;
@@ -1292,6 +1317,10 @@ impl Dpll {
                     continue;
                 }
                 seen[v] = true;
+                // VSIDS: bump every variable on the conflict side as it is first
+                // resolved through, exactly as `axeyum_cnf::proof_sat`'s `analyze`.
+                // Heuristic only — does not affect which clauses are learned.
+                self.bump_var(v);
                 if self.level[v] >= current {
                     path_count += 1;
                 } else {
@@ -1374,9 +1403,52 @@ impl Dpll {
         self.decision_level = target_level;
     }
 
-    /// The lowest-index unassigned variable, or `None` when total.
+    /// The unassigned variable of highest `VSIDS` activity, ties broken by lowest
+    /// index, or `None` when every variable is assigned (a total model). A
+    /// deterministic `O(n)` max-scan: the best is replaced only on a *strictly*
+    /// greater activity, so among equal activities the lowest index wins — the same
+    /// total order `axeyum_cnf::proof_sat`'s activity heap uses. No hash-map
+    /// iteration, so the same query always picks the same variable.
+    ///
+    /// This is a pure search heuristic: it changes only the *order* decisions are
+    /// taken, never which assignments are consistent, so it cannot change the
+    /// sat/unsat verdict (the theory still gates every assignment; every learned
+    /// clause is still an entailed resolvent).
     fn pick_unassigned(&self) -> Option<usize> {
-        (0..self.var_count).find(|&v| self.value[v].is_none())
+        let mut best: Option<usize> = None;
+        for v in 0..self.var_count {
+            if self.value[v].is_some() {
+                continue;
+            }
+            match best {
+                None => best = Some(v),
+                Some(b) if self.activity[v] > self.activity[b] => best = Some(v),
+                Some(_) => {}
+            }
+        }
+        best
+    }
+
+    /// Bumps `var`'s `VSIDS` activity by the current increment, rescaling **all**
+    /// activities (and `var_inc`) by [`VSIDS_RESCALE`] when any exceeds
+    /// [`VSIDS_RESCALE_LIMIT`], to avoid `f64` overflow. Rescaling multiplies every
+    /// activity by the same positive factor, preserving their relative order — and
+    /// hence every `pick_unassigned` decision — exactly (mirrors `proof_sat`).
+    fn bump_var(&mut self, var: usize) {
+        self.activity[var] += self.var_inc;
+        if self.activity[var] > VSIDS_RESCALE_LIMIT {
+            for a in &mut self.activity {
+                *a *= VSIDS_RESCALE;
+            }
+            self.var_inc *= VSIDS_RESCALE;
+        }
+    }
+
+    /// Decays activity by growing the bump increment (the `MiniSat` trick): future
+    /// bumps weigh more, so older bumps fade geometrically. Called once per
+    /// conflict.
+    fn decay(&mut self) {
+        self.var_inc /= VSIDS_DECAY;
     }
 
     /// The current Boolean value of `var` (its trail polarity), or `None` if it is
@@ -1503,6 +1575,9 @@ impl Dpll {
     fn learn_and_backjump<T: TheorySolver>(&mut self, theory: &mut T, conflict: &Conflict) -> bool {
         let (learned, backjump, is_theory_lemma) =
             self.analyze_conflict(&conflict.clause, conflict.is_theory);
+        // VSIDS decay: one step per conflict, so the activity recency window mirrors
+        // `axeyum_cnf::proof_sat`. Heuristic only — does not affect the verdict.
+        self.decay();
         #[cfg(test)]
         {
             self.diag.analyze_fires += 1;
@@ -2128,6 +2203,140 @@ mod tests {
         match verdict {
             CheckResult::Sat(model) => assert!(replays(&arena, &[or], &model)),
             other => panic!("expected sat, got {other:?}"),
+        }
+    }
+
+    /// `VSIDS` mechanism gate: a hand-built conflict trail must (1) bump *exactly*
+    /// the variables resolved through 1-UIP analysis, leaving the rest at zero
+    /// activity (so the activity vector is non-uniform after a conflict), (2) make
+    /// [`Dpll::pick_unassigned`] prefer a bumped variable over a lower-index
+    /// un-bumped one (`VSIDS` genuinely changes the decision order from the old
+    /// static lowest-index pick), and (3) be fully deterministic — the same trail
+    /// analyzed twice yields byte-identical activities and the same learned clause.
+    /// A no-op (`NoTheory`) theory keeps this focused on the Boolean `VSIDS` core.
+    #[test]
+    fn vsids_bumps_conflict_vars_and_reorders_decisions() {
+        // Build the conflict scenario once on a fresh `Dpll` and return its post-
+        // analysis activity vector + learned clause, so we can run it twice and
+        // compare for determinism.
+        fn run() -> (Vec<f64>, Vec<Lit>) {
+            // Four Boolean vars; no clauses needed (we drive `analyze_conflict`
+            // directly with a hand-built trail).
+            let mut dpll = Dpll::new(4, 0, Vec::new());
+            // Decision: v0 := true at level 1.
+            dpll.decision_level = 1;
+            dpll.value[0] = Some(true);
+            dpll.level[0] = 1;
+            dpll.trail.push((0, true, Cause::Decision));
+            // Implied: v1 := true at level 1, forced by (¬v0 ∨ v1).
+            dpll.value[1] = Some(true);
+            dpll.level[1] = 1;
+            dpll.reason[1] = Some(vec![
+                Lit {
+                    var: 0,
+                    positive: false,
+                },
+                Lit {
+                    var: 1,
+                    positive: true,
+                },
+            ]);
+            dpll.trail.push((1, true, Cause::Implied));
+            // Conflict clause (¬v0 ∨ ¬v1): both literals false under the trail.
+            let conflict = vec![
+                Lit {
+                    var: 0,
+                    positive: false,
+                },
+                Lit {
+                    var: 1,
+                    positive: false,
+                },
+            ];
+            let (learned, _backjump, _theory) = dpll.analyze_conflict(&conflict, false);
+            (dpll.activity, learned)
+        }
+
+        let (activity, learned) = run();
+        // (1) Exactly v0 and v1 (resolved through) are bumped; v2, v3 stay zero.
+        // Activity only ever increases from 0.0, so "not positive" ⇔ "never bumped".
+        assert!(activity[0] > 0.0, "v0 (UIP) must be bumped");
+        assert!(activity[1] > 0.0, "v1 (resolved) must be bumped");
+        assert!(activity[2] <= 0.0, "untouched v2 stays at zero activity");
+        assert!(activity[3] <= 0.0, "untouched v3 stays at zero activity");
+        // The learned 1-UIP asserting clause is the unit (¬v0).
+        assert_eq!(learned.len(), 1, "1-UIP learns a unit here");
+        assert_eq!(learned[0].var, 0);
+        assert!(!learned[0].positive, "asserts ¬v0");
+
+        // (2) `pick_unassigned` now prefers a bumped var over a lower-index zero one.
+        // Construct a fresh `Dpll`, bump only v2 (a higher index), and confirm the
+        // pick is v2 — NOT v0, which the old static lowest-index rule would return.
+        let mut picker = Dpll::new(4, 0, Vec::new());
+        picker.bump_var(2);
+        assert_eq!(
+            picker.pick_unassigned(),
+            Some(2),
+            "VSIDS must pick the most-active var (2), not the lowest index (0)"
+        );
+        // Ties (all zero) break to the lowest index — the deterministic fallback.
+        let plain = Dpll::new(4, 0, Vec::new());
+        assert_eq!(
+            plain.pick_unassigned(),
+            Some(0),
+            "all-equal activities tie-break to the lowest index"
+        );
+
+        // (3) Determinism: the identical trail analyzed again is byte-identical.
+        let (activity2, learned2) = run();
+        assert_eq!(
+            activity, activity2,
+            "VSIDS activities must be deterministic"
+        );
+        assert_eq!(learned, learned2, "learned clause must be deterministic");
+    }
+
+    /// End-to-end determinism through the public driver: the same `QF_LRA` query
+    /// decided twice must yield the same verdict and the same `sat` model (the
+    /// `VSIDS` decision order is a deterministic function of the encoding, so the
+    /// whole search trajectory — and thus the witness — is reproducible).
+    #[test]
+    fn driver_is_deterministic_across_repeated_runs() {
+        // A mixed sat instance with disjunction (forces branching, hence VSIDS).
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let zero = rconst(&mut arena, 0);
+        let lt = arena.real_lt(x, y).expect("x<y");
+        let ge = arena.real_ge(y, zero).expect("y>=0");
+        let or = arena.or(lt, ge).expect("or");
+        let cfg = SolverConfig::default();
+
+        let first = check_qf_lra_online(&arena, &[or, ge], &cfg).expect("decidable");
+        let second = check_qf_lra_online(&arena, &[or, ge], &cfg).expect("decidable");
+        match (first, second) {
+            (CheckResult::Sat(m1), CheckResult::Sat(m2)) => {
+                assert!(replays(&arena, &[or, ge], &m1));
+                assert_eq!(
+                    m1.get(symbol_of(&arena, x)),
+                    m2.get(symbol_of(&arena, x)),
+                    "repeated runs must yield the same model for x"
+                );
+                assert_eq!(
+                    m1.get(symbol_of(&arena, y)),
+                    m2.get(symbol_of(&arena, y)),
+                    "repeated runs must yield the same model for y"
+                );
+            }
+            (a, b) => assert_eq!(a, b, "repeated runs must yield the same verdict"),
+        }
+    }
+
+    /// The [`SymbolId`] backing a declared variable term (for model lookups).
+    fn symbol_of(arena: &TermArena, var: TermId) -> SymbolId {
+        match arena.node(var) {
+            TermNode::Symbol(s) => *s,
+            _ => panic!("expected a symbol term"),
         }
     }
 
