@@ -309,6 +309,22 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0014/0015",
     },
     Capability {
+        area: "QF_LRA",
+        feature: "ONLINE LRA now does THEORY PROPAGATION (real CDCL(T) spine, mirrors EUF): the DPLL(T) \
+                  loop interleaves unit + theory propagation to a joint fixpoint — for each unassigned \
+                  order atom a Fourier–Motzkin negation-probe (assert ¬atom; infeasible ⇒ atom entailed) \
+                  propagates it as a forced literal with an ASSERTED-only Farkas-core reason, pruning the \
+                  search instead of pure model enumeration",
+        assurance: Assurance::Validated,
+        evidence: "DECIDER change, verdict-INVARIANT (propagation only prunes/orders): differential vs \
+                   offline check_with_lra over 4000 decided LCG instances (1985 sat / 2015 unsat), 0 \
+                   disagreements, every sat model replayed; a soundness probe offline-CONFIRMED all 2367 \
+                   fired propagations are genuinely entailed (asserted ∧ ¬entailed UNSAT, reasons \
+                   asserted-only), 0 unsound. Unknown/overflow/equality-atoms skip (no fabricated \
+                   propagation). uflra/uflia combination (reuses LraTheory) unchanged",
+        reference: "ADR-0014/0015",
+    },
+    Capability {
         area: "QF_LIA",
         feature: "Craig interpolation (lia_interpolant): interpolate the rational relaxation \
                   (Int→Real, Farkas), clear denominators to integer coefficients",
