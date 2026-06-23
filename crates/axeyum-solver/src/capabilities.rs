@@ -462,9 +462,13 @@ pub const CAPABILITIES: &[Capability] = &[
                    82 unsat). A per-model Unknown forces a whole-query Unknown (no wrong unsat). Caps \
                    (models/atoms/clauses/split-depth/timeout) → graceful Unknown; non-UFLRA → Unknown. \
                    Enumerative DPLL(T) with blocking-clause pruning + EARLY theory-conflict detection \
-                   (at each post-BCP fixpoint the partial assignment is theory-checked; an Unsat prunes \
-                   the whole subtree — verdict-invariant, e.g. 6561→0 enumerated models on a crafted \
-                   early-conflict family; 1-UIP learning / cross-call incremental theory deferred). The \
+                   (partial-assignment theory check prunes whole subtrees) + a WARM incremental \
+                   CombinedTheory oracle (cache-by-layout, replaces the from-scratch Nelson–Oppen per \
+                   model — parallel-run verdict-IDENTICAL to the cold core) + COMBINED THEORY PROPAGATION \
+                   (EUF + LRA congruence/order entailments + interface-equality entailments assign \
+                   implied literals before deciding; 79 fired propagations all offline-confirmed entailed, \
+                   0 unsound) — slices 1-2 toward a full CDCL(T) over the combination; slice 3 (Dpll over \
+                   CombinedTheory, retiring enumeration) + 1-UIP-over-combination deferred. The \
                    check_auto dispatch wiring is itself guarded by an in-tree differential \
                    vs the eager route (300-query mixed UF+arith LCG corpus: 240 co-decided, 0 \
                    disagreements, 0 LOGICAL decision-regressions, sat replay, +16 value-add decisions \
