@@ -51,6 +51,7 @@ mod evidence;
 mod faithfulness;
 mod horn;
 mod imc;
+mod imc_lia;
 mod imc_lra;
 mod incremental;
 mod int_real_relax;
@@ -171,6 +172,7 @@ pub use faithfulness::{FaithfulnessOutcome, check_qf_bv_faithfulness};
 pub use fp::FloatFormat;
 pub use horn::{HornClause, HornModel, HornOutcome, HornSystem, solve_horn};
 pub use imc::{ImcOutcome, prove_safety_imc};
+pub use imc_lia::{ImcLiaOutcome, prove_safety_imc_lia};
 pub use imc_lra::{ImcLraOutcome, prove_safety_imc_lra};
 pub use incremental::{AssumptionOutcome, IncrementalBvSolver};
 pub use int_reconstruct::{
