@@ -185,6 +185,7 @@ mod run {
         cnf_variable_budget: Option<u64>,
         cnf_clause_budget: Option<u64>,
         cnf_inprocessing: bool,
+        cnf_vivify: bool,
         native_cdcl: bool,
         preprocess: bool,
         compare_z3: bool,
@@ -214,6 +215,7 @@ mod run {
             cnf_variable_budget: None,
             cnf_clause_budget: None,
             cnf_inprocessing: false,
+            cnf_vivify: false,
             native_cdcl: false,
             preprocess: false,
             compare_z3: false,
@@ -302,6 +304,7 @@ mod run {
                 );
             }
             "--inprocess" => parsed.cnf_inprocessing = true,
+            "--vivify" => parsed.cnf_vivify = true,
             "--native-cdcl" => parsed.native_cdcl = true,
             "--preprocess" => parsed.preprocess = true,
             "--compare-z3" => {
@@ -829,6 +832,7 @@ mod run {
             cnf_variable_budget: args.cnf_variable_budget,
             cnf_clause_budget: args.cnf_clause_budget,
             cnf_inprocessing: args.cnf_inprocessing,
+            cnf_vivify: args.cnf_vivify,
             native_cdcl: args.native_cdcl,
             ..SolverConfig::default()
         }
@@ -2042,6 +2046,7 @@ mod run {
                 "cnf_variable_budget": cnf_variable_budget,
                 "cnf_clause_budget": cnf_clause_budget,
                 "cnf_inprocessing": args.cnf_inprocessing,
+                "cnf_vivify": args.cnf_vivify,
                 "native_cdcl": args.native_cdcl,
                 "preprocess": args.preprocess,
                 "limit": limit,

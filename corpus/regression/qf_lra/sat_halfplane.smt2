@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(set-info :status sat)
+(declare-fun x () Real)
+(assert (> x 0))
+(check-sat)
