@@ -105,6 +105,22 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "QF_BV",
+        feature: "UNSAT with an ALETHE proof, Carcara-checked (prove_qf_bv_unsat_alethe + \
+                  prove_qf_bv_unsat_alethe_ext_compare): per-operator bitblast steps using Carcara's \
+                  native bitblast rule set (bvnot/and/or/xor/xnor, add/neg/mul, ult/slt, comp, =, \
+                  extract/concat/sign_extend), bvsub via the poly-simp bridge, and the extended \
+                  comparisons bvule/ugt/uge/sle/sgt/sge normalized in-emitter to bvult/bvslt before \
+                  emission — the on-ramp to Lean evidence",
+        assurance: Assurance::Checked,
+        evidence: "every emitted proof is self-validated by the in-tree check_alethe AND independently \
+                   accepted (valid && !holey) by the external Rust Carcara checker in carcara_crosscheck \
+                   (60 cases incl. the 6 new extended-comparison drivers, proven NOT skipped) — an emitter \
+                   bug surfaces as a Carcara rejection, never an unsound accept. Declines (no proof) on \
+                   shifts / div-rem (no Carcara bitblast rule) → the in-house miter cert covers those",
+        reference: "ADR-0011/0012",
+    },
+    Capability {
+        area: "QF_BV",
         feature: "Craig interpolation (qf_bv_interpolant): joint bit-blast, propositional \
                   interpolant over the resolution proof, lifted to extract-predicates on shared terms",
         assurance: Assurance::Validated,
