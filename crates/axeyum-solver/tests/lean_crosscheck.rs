@@ -11,6 +11,7 @@
 //! when it is absent. Install it with `elan` (a `leanprover/lean4` toolchain on
 //! `PATH`), or point `AXEYUM_LEAN_BIN` at a `lean` executable.
 #![allow(clippy::many_single_char_names)]
+#![allow(clippy::similar_names)]
 
 use std::path::PathBuf;
 use std::process::Command;
@@ -247,4 +248,84 @@ fn qf_bv_comparison_refutation_checks_in_real_lean() {
     let (_frag, source) = prove_unsat_to_lean_module(&mut arena, &[le, gt])
         .expect("QF_BV comparison unsat reconstructs");
     lean_accepts("qf_bv", &source);
+}
+
+/// **Disjunctive `QF_LRA`** (the Boolean-structured case split): the conjunctive
+/// system `x ≤ 0 ∧ y ≤ 0` plus the clause `(x ≥ 1 ∨ y ≥ 1)` is UNSAT — each leaf
+/// is a two-atom Farkas contradiction (`x ≤ 0 ∧ 1 ≤ x` ⇒ `1 ≤ 0`, and likewise
+/// for `y`). The conjunctive Farkas path declines a top-level positive `Or`, so
+/// this carries a Lean proof only through the new `Or.rec` case-split
+/// reconstruction. The exported module must check in real Lean with no `sorryAx`.
+#[test]
+fn disjunctive_lra_case_split_checks_in_real_lean() {
+    use axeyum_solver::ProofFragment;
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let y = arena.real_var("y").unwrap();
+    let zero = arena.real_const(Rational::integer(0));
+    let one = arena.real_const(Rational::integer(1));
+    let x_le_0 = arena.real_le(x, zero).unwrap();
+    let y_le_0 = arena.real_le(y, zero).unwrap();
+    let x_ge_1 = arena.real_ge(x, one).unwrap();
+    let y_ge_1 = arena.real_ge(y, one).unwrap();
+    let clause = arena.or(x_ge_1, y_ge_1).unwrap();
+    let (frag, source) = prove_unsat_to_lean_module(&mut arena, &[x_le_0, y_le_0, clause])
+        .expect("disjunctive-LRA unsat reconstructs to a kernel-checked False");
+    assert_eq!(
+        frag,
+        ProofFragment::DisjunctiveLra,
+        "routed to the disjunctive-LRA case-split reconstructor"
+    );
+    // The in-tree kernel already accepted (infer + def_eq False inside the call);
+    // the rendered module must not lean on the sorryAx escape hatch.
+    assert!(
+        !source.contains("sorryAx"),
+        "disjunctive-LRA module depends on sorryAx:\n{source}"
+    );
+    lean_accepts("disjunctive_lra", &source);
+}
+
+/// **Decline (feasible) disjunctive `QF_LRA`**: `x ≤ 0 ∧ (x ≥ 1 ∨ y ≥ 1) ∧ y ≤ 5`
+/// is SATISFIABLE (take `y = 1`), so the disjunctive detector must NOT match and
+/// no proof may be fabricated — `prove_unsat_to_lean_module` returns an error
+/// (the conjunctive Farkas path also declines the positive `Or`).
+#[test]
+fn disjunctive_lra_feasible_set_is_declined() {
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let y = arena.real_var("y").unwrap();
+    let zero = arena.real_const(Rational::integer(0));
+    let one = arena.real_const(Rational::integer(1));
+    let five = arena.real_const(Rational::integer(5));
+    let x_le_0 = arena.real_le(x, zero).unwrap();
+    let y_le_5 = arena.real_le(y, five).unwrap();
+    let x_ge_1 = arena.real_ge(x, one).unwrap();
+    let y_ge_1 = arena.real_ge(y, one).unwrap();
+    let clause = arena.or(x_ge_1, y_ge_1).unwrap();
+    let result = prove_unsat_to_lean_module(&mut arena, &[x_le_0, y_le_5, clause]);
+    assert!(
+        result.is_err(),
+        "a satisfiable disjunctive set must not produce a fabricated refutation; got {result:?}"
+    );
+}
+
+/// **Regression**: the existing CONJUNCTIVE LRA refutation `x < 0 ∧ 0 ≤ x` still
+/// routes to [`ProofFragment::Lra`] and reconstructs byte-identically (the new
+/// disjunctive path only fires on a top-level `Or`).
+#[test]
+fn conjunctive_lra_still_reconstructs_unchanged() {
+    use axeyum_solver::ProofFragment;
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let zero = arena.real_const(Rational::integer(0));
+    let a1 = arena.real_lt(x, zero).unwrap();
+    let a2 = arena.real_le(zero, x).unwrap();
+    let (frag, source) = prove_unsat_to_lean_module(&mut arena, &[a1, a2])
+        .expect("conjunctive LRA unsat still reconstructs");
+    assert_eq!(
+        frag,
+        ProofFragment::Lra,
+        "conjunctive LRA stays on the Lra path"
+    );
+    assert!(!source.contains("sorryAx"));
 }

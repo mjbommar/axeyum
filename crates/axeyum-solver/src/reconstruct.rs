@@ -1179,6 +1179,13 @@ pub enum ProofFragment {
     Datatype,
     /// Linear real/integer arithmetic (Farkas).
     Lra,
+    /// **Boolean-structured (disjunctive) `QF_LRA`**: a conjunctive linear-real
+    /// system plus exactly one clause `(L₁ ∨ L₂)` of non-strict linear-real
+    /// literals, where each leaf `conj ∧ Lᵢ` is conjunctive-`Farkas`-refutable.
+    /// Reconstructed by a kernel case-split (`Or.rec`/`Or.elim`) on the clause:
+    /// each branch reuses the conjunctive general-`Farkas` fold to derive `False`,
+    /// and the eliminator combines the two `False` branches into `False`.
+    DisjunctiveLra,
     /// Integer-infeasibility (**Diophantine**) `QF_LIA`: an integer-equality system
     /// that is rational-feasible yet integer-infeasible (`gcd ∤ const`), refuted by
     /// the [`DiophantineCertificate`](crate::DiophantineCertificate) and
@@ -1521,6 +1528,14 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
             // Owned by the integer-prelude inequality reconstructor (ADR-0042);
             // anything else falls through to the linear Farkas (LRA) path.
             ProofFragment::IntInequality
+        } else if is_disjunctive_lra_refutation(arena, assertions) {
+            // A conjunctive linear-real system plus exactly one clause `(L₁ ∨ L₂)`
+            // of non-strict literals, with each leaf `conj ∧ Lᵢ` Farkas-refutable.
+            // Reconstructed by a kernel case-split (`Or.rec`) reusing the per-leaf
+            // conjunctive Farkas fold; the purely-conjunctive `Lra` path can never
+            // match (it declines a top-level positive `Or`), so this is uncovered
+            // by `reconstruct_lra_proof` today.
+            ProofFragment::DisjunctiveLra
         } else {
             ProofFragment::Lra
         }
@@ -1704,6 +1719,11 @@ pub fn prove_unsat_to_lean_module(
             let mut ctx = LraReconstructCtx::new();
             let t = reconstruct_lra_proof(&mut ctx, arena, assertions)?;
             gate_and_render_lra_module(&mut ctx, t, "LRA")?
+        }
+        ProofFragment::DisjunctiveLra => {
+            let mut ctx = LraReconstructCtx::new();
+            let t = reconstruct_disjunctive_lra_proof(&mut ctx, arena, assertions)?;
+            gate_and_render_lra_module(&mut ctx, t, "disjunctive-LRA")?
         }
         ProofFragment::Sos => {
             let mut ctx = LraReconstructCtx::new();
@@ -6950,6 +6970,16 @@ impl LraReconstructCtx {
         self.kernel.name_num(with_base, id)
     }
 
+    /// Mint a fresh free-variable id for building open `Or.rec` minor-premise
+    /// bodies (the disjunctive-LRA case split). Reuses the deterministic `next_id`
+    /// counter; fvar ids live in a separate namespace from `NameId` declarations,
+    /// so sharing the counter cannot collide.
+    fn fresh_fvar_id(&mut self) -> u64 {
+        let id = self.next_id;
+        self.next_id += 1;
+        id
+    }
+
     /// Get (declaring lazily) the opaque `R`-typed constant for variable `index`.
     /// Idempotent: the same index always maps to the same constant.
     fn var_const(&mut self, index: usize) -> NameId {
@@ -11057,6 +11087,493 @@ fn reconstruct_transitivity_refutation(
             detail: "inferred proposition is not def-eq to `False`".to_owned(),
         })
     }
+}
+
+/// Reconstruct a **Boolean-structured (disjunctive) `QF_LRA`** refutation: a
+/// conjunctive linear-real system plus exactly one clause `(L₁ ∨ L₂)` of
+/// non-strict literals, each leaf `conj ∧ Lᵢ` conjunctive-Farkas-refutable. The
+/// refutation is a kernel case-split (`Or.rec`) on `hor : Enc(L₁ ∨ L₂)`; each
+/// branch reuses the conjunctive general-Farkas fold (with the branch literal as
+/// the bound hypothesis) to derive `False`, and the eliminator combines them.
+///
+/// # Errors
+///
+/// [`ReconstructError::UnsupportedTerm`] when `assertions` is not the disjunctive
+/// shape (no single binary clause, a strict / out-of-slice branch literal, or a
+/// leaf that is not non-strict-general-Farkas-refutable), or
+/// [`ReconstructError::KernelRejected`] if the assembled term fails to kernel-check
+/// to `False`. Decision logic is untouched — this only certifies an already-decided
+/// `unsat`.
+fn reconstruct_disjunctive_lra_proof(
+    ctx: &mut LraReconstructCtx,
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<ExprId, ReconstructError> {
+    let Some((conj, l1, l2, syms)) = split_disjunctive_lra(arena, assertions) else {
+        return Err(ReconstructError::UnsupportedTerm {
+            term: "disjunctive-LRA reconstruction needs exactly one binary clause \
+                   `(L₁ ∨ L₂)` of non-strict linear-real literals plus conjunctive \
+                   real-linear assertions"
+                .to_owned(),
+        });
+    };
+
+    // Encode each branch literal `Enc(Lᵢ) = le Eᵢ zero` (Eᵢ canonical over the
+    // shared symbol map), and the clause `Or (Enc L₁) (Enc L₂)` as `hor`.
+    let zero = ctx.mk_zero();
+    let e1 = ctx.gens_to_expr(&l1.gens);
+    let e2 = ctx.gens_to_expr(&l2.gens);
+    let enc1 = ctx.mk_le(e1, zero);
+    let enc2 = ctx.mk_le(e2, zero);
+    let or_prop = {
+        let or = ctx.kernel.const_(ctx.arith.logic.or, vec![]);
+        let e = ctx.kernel.app(or, enc1);
+        ctx.kernel.app(e, enc2)
+    };
+    let hor = ctx.hyp_axiom(or_prop)?;
+
+    // Build each branch's `False` proof as a function of the bound literal `hᵢ`.
+    let minor1 = disjunctive_branch_minor(ctx, arena, &conj, &l1, enc1, &syms)?;
+    let minor2 = disjunctive_branch_minor(ctx, arena, &conj, &l2, enc2, &syms)?;
+
+    // motive := fun (_ : Or enc1 enc2) => False.
+    let false_ = ctx.kernel.const_(ctx.arith.logic.false_, vec![]);
+    let motive = {
+        let anon = ctx.kernel.anon();
+        ctx.kernel.lam(anon, or_prop, false_, BinderInfo::Default)
+    };
+    // Or.rec.{0} enc1 enc2 motive minor1 minor2 hor : False.
+    let proof = {
+        let z = ctx.kernel.level_zero();
+        let rec = ctx.kernel.const_(ctx.arith.logic.or_rec, vec![z]);
+        let e = ctx.kernel.app(rec, enc1);
+        let e = ctx.kernel.app(e, enc2);
+        let e = ctx.kernel.app(e, motive);
+        let e = ctx.kernel.app(e, minor1);
+        let e = ctx.kernel.app(e, minor2);
+        ctx.kernel.app(e, hor)
+    };
+
+    // Soundness gate: the assembled case-split must kernel-infer to `False`.
+    let inferred = ctx
+        .kernel
+        .infer(proof)
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "disjunctive_la_generic".to_owned(),
+            detail: format!("Or.rec case-split infer failed: {e:?}"),
+        })?;
+    let false_ = ctx.kernel.const_(ctx.arith.logic.false_, vec![]);
+    if ctx.kernel.def_eq(inferred, false_) {
+        Ok(proof)
+    } else {
+        Err(ReconstructError::KernelRejected {
+            rule: "disjunctive_la_generic".to_owned(),
+            detail: "disjunctive-LRA case-split did not infer to False".to_owned(),
+        })
+    }
+}
+
+/// Build the `Or.rec` minor premise `fun (hᵢ : enc_lit) => branchᵢ` for one branch
+/// of the disjunctive-LRA case split: bind the branch literal `Lᵢ` as a fresh free
+/// variable, reconstruct `branchᵢ : False` over `conj ∧ Lᵢ` (general Farkas, the
+/// branch literal supplied as that bound `hᵢ`), then abstract `hᵢ` into the lambda.
+fn disjunctive_branch_minor(
+    ctx: &mut LraReconstructCtx,
+    arena: &TermArena,
+    conj: &[TermId],
+    lit: &BranchLiteral,
+    enc_lit: ExprId,
+    syms: &BTreeMap<axeyum_ir::SymbolId, usize>,
+) -> Result<ExprId, ReconstructError> {
+    let fvar_id = ctx.fresh_fvar_id();
+    let h_branch = ctx.kernel.fvar(fvar_id);
+    let body = disjunctive_branch_false(ctx, arena, conj, lit, h_branch, syms)?;
+    let body = ctx.kernel.abstract_fvars(body, &[fvar_id]);
+    let anon = ctx.kernel.anon();
+    Ok(ctx.kernel.lam(anon, enc_lit, body, BinderInfo::Default))
+}
+
+/// Reconstruct `branchᵢ : False` for the leaf `conj ∧ Lᵢ` via the conjunctive
+/// general-Farkas fold, with the branch literal `Lᵢ`'s `le Eᵢ zero` hypothesis
+/// supplied as the external proof `h_branch` (the bound `Or.rec` hypothesis) and
+/// every conjunctive atom discharged via a fresh `hyp_axiom`. Declines (with an
+/// error) when the leaf's certificate is outside the non-strict integer general
+/// Farkas slice (a strict used atom, a non-integer coefficient, an overflow, or a
+/// non-`±1`-generator branch literal).
+fn disjunctive_branch_false(
+    ctx: &mut LraReconstructCtx,
+    arena: &TermArena,
+    conj: &[TermId],
+    lit: &BranchLiteral,
+    h_branch: ExprId,
+    syms: &BTreeMap<axeyum_ir::SymbolId, usize>,
+) -> Result<ExprId, ReconstructError> {
+    // Re-decide the leaf to obtain self-checked Farkas multipliers (decision logic
+    // is unchanged; we only read its certificate). The leaf is `conj ++ [Lᵢ]`.
+    let mut leaf: Vec<TermId> = conj.to_vec();
+    leaf.push(lit.term);
+    let branch_origin = conj.len(); // index of `Lᵢ` in the leaf assertion slice
+    let Ok(Some(cert)) = crate::lra_farkas_certificate(arena, &leaf) else {
+        return Err(ReconstructError::MalformedStep {
+            rule: "disjunctive_la_generic".to_owned(),
+            detail: "a disjunctive leaf is not conjunctive-Farkas-refutable".to_owned(),
+        });
+    };
+
+    // Collect the used (positive-multiplier) atoms, mapping each to global symbol
+    // indices and clearing the multiplier denominators to integers `μ ≥ 1`. The
+    // branch-literal atom (origin == branch_origin) carries the external `h_branch`
+    // proof; every other atom gets a fresh `hyp_axiom`. Strict / non-integer /
+    // overflow ⇒ decline (this slice is non-strict integer general Farkas).
+    let atoms = collect_branch_farkas_atoms(ctx, &cert, branch_origin, h_branch, &lit.gens, syms)?;
+    let Some(atoms) = atoms else {
+        return Err(ReconstructError::MalformedStep {
+            rule: "disjunctive_la_generic".to_owned(),
+            detail: "a disjunctive leaf is outside the non-strict integer general-Farkas slice"
+                .to_owned(),
+        });
+    };
+    branch_general_farkas_close(ctx, &atoms)
+}
+
+/// One scaled atom of a branch's general-Farkas fold: its canonical base
+/// generators `Eⱼ` (the literal denotes `Eⱼ ≤ 0`), the integer multiplier `μⱼ ≥ 1`,
+/// and a proof `hⱼ : le (gens_to_expr Eⱼ) zero` (either a fresh `hyp_axiom` for a
+/// conjunctive atom, or the bound `Or.rec` hypothesis for the branch literal).
+struct BranchAtom {
+    gens: Vec<Gen>,
+    mu: i128,
+    proof: ExprId,
+}
+
+/// Translate a leaf's [`FarkasCertificate`] into the [`BranchAtom`] list for the
+/// general-Farkas fold, over the **global** symbol indices (so the branch
+/// literal's encoding matches the `Or.rec` binding `enc_lit`). Returns `Ok(None)`
+/// when the certificate is outside the non-strict integer general-Farkas slice.
+fn collect_branch_farkas_atoms(
+    ctx: &mut LraReconstructCtx,
+    cert: &crate::FarkasCertificate,
+    branch_origin: usize,
+    h_branch: ExprId,
+    branch_gens: &[Gen],
+    syms: &BTreeMap<axeyum_ir::SymbolId, usize>,
+) -> Result<Option<Vec<BranchAtom>>, ReconstructError> {
+    let zero = ctx.mk_zero();
+    let mut out: Vec<BranchAtom> = Vec::new();
+    for ((atom, m), origin) in cert.atoms.iter().zip(&cert.multipliers).zip(&cert.origins) {
+        if m.is_zero() {
+            continue;
+        }
+        if atom.strict {
+            return Ok(None); // strict atoms are a later slice
+        }
+        // Clear the multiplier denominator: μ must be a positive integer.
+        if m.denominator() != 1 || m.numerator() <= 0 {
+            return Ok(None);
+        }
+        let mu = m.numerator();
+        // Canonical generators of this atom's `E ≤ 0`, over global symbol indices.
+        let gens = if *origin == branch_origin {
+            branch_gens.to_vec()
+        } else {
+            let Some(g) = farkas_atom_to_global_gens(atom, &cert.vars, syms) else {
+                return Ok(None);
+            };
+            g
+        };
+        // The atom's hypothesis proof: the bound `h_branch` for the branch literal,
+        // a fresh `hyp_axiom : le base_expr zero` otherwise.
+        let proof = if *origin == branch_origin {
+            h_branch
+        } else {
+            let base_expr = ctx.gens_to_expr(&gens);
+            let prop = ctx.mk_le(base_expr, zero);
+            ctx.hyp_axiom(prop)?
+        };
+        out.push(BranchAtom { gens, mu, proof });
+    }
+    if out.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(out))
+}
+
+/// Canonical generators of a [`FarkasAtom`]'s `E ≤ 0` over the **shared** symbol
+/// index map `syms`: each coefficient pair `(local_idx, c)` is re-keyed through the
+/// certificate's `vars[local_idx]` symbol to the shared index the kernel constants
+/// (and the branch literal's encoding) use. Returns `None` on a non-integer
+/// coefficient/constant or a symbol missing from the shared map (outside scope).
+fn farkas_atom_to_global_gens(
+    atom: &crate::FarkasAtom,
+    vars: &[axeyum_ir::SymbolId],
+    syms: &BTreeMap<axeyum_ir::SymbolId, usize>,
+) -> Option<Vec<Gen>> {
+    let mut coeffs: Vec<(usize, Rational)> = Vec::with_capacity(atom.coeffs.len());
+    for &(local_idx, c) in &atom.coeffs {
+        let symbol = *vars.get(local_idx)?;
+        let global_idx = *syms.get(&symbol)?;
+        coeffs.push((global_idx, c));
+    }
+    let lin = LinR {
+        coeffs,
+        constant: atom.constant,
+    };
+    LraReconstructCtx::lin_to_gens(&lin)
+}
+
+/// The fold: combine the [`BranchAtom`]s into `False`. Mirrors the conjunctive
+/// `try_general_farkas` engine (scale each atom by `μ` via `add_le_add`, sum to
+/// `le Lsum zero`, normalize the generators so variables cancel to a positive
+/// constant `K`, and close `K ≤ 0` against `0 < K`), but takes externally-built
+/// per-atom proofs (so the branch literal flows in as the bound hypothesis). The
+/// conjunctive path is left byte-identical.
+fn branch_general_farkas_close(
+    ctx: &mut LraReconstructCtx,
+    atoms: &[BranchAtom],
+) -> Result<ExprId, ReconstructError> {
+    let zero = ctx.mk_zero();
+    let mut acc: Option<(ExprId, Vec<Gen>)> = None; // (le-proof, gens)
+    for atom in atoms {
+        let base_gens = &atom.gens;
+        let base_expr = ctx.gens_to_expr(base_gens);
+        // Scale by μ: combine the atom's proof with itself μ times (RHS stays zero,
+        // LHS kept in canonical generator form).
+        let mut s_proof = atom.proof;
+        let mut s_gens = base_gens.clone();
+        let mut s_expr = base_expr;
+        for _ in 1..atom.mu {
+            let combined = ctx.add_le_add_app(s_expr, zero, base_expr, zero, s_proof, atom.proof);
+            let lhs = ctx.mk_add(s_expr, base_expr);
+            let azz = ctx.add_zero_eq(zero);
+            let add_zz = ctx.mk_add(zero, zero);
+            let combined = ctx.le_cast_right(lhs, add_zz, zero, combined, azz);
+            let mut next_gens = s_gens.clone();
+            next_gens.extend_from_slice(base_gens);
+            let append_proof = ctx.append_eq(&s_gens, base_gens);
+            let next_canon = ctx.gens_to_expr(&next_gens);
+            s_proof = ctx.le_cast_left(lhs, next_canon, zero, combined, append_proof);
+            s_gens = next_gens;
+            s_expr = next_canon;
+        }
+        acc = Some(match acc {
+            None => (s_proof, s_gens),
+            Some((acc_proof, acc_gens)) => {
+                let acc_expr = ctx.gens_to_expr(&acc_gens);
+                let combined = ctx.add_le_add_app(acc_expr, zero, s_expr, zero, acc_proof, s_proof);
+                let azz = ctx.add_zero_eq(zero);
+                let add_zz = ctx.mk_add(zero, zero);
+                let lhs = ctx.mk_add(acc_expr, s_expr);
+                let combined = ctx.le_cast_right(lhs, add_zz, zero, combined, azz);
+                let mut next_gens = acc_gens.clone();
+                next_gens.extend_from_slice(&s_gens);
+                let append_proof = ctx.append_eq(&acc_gens, &s_gens);
+                let next_canon = ctx.gens_to_expr(&next_gens);
+                let new_proof = ctx.le_cast_left(lhs, next_canon, zero, combined, append_proof);
+                (new_proof, next_gens)
+            }
+        });
+    }
+    let (le_lsum_zero, all_gens) = acc.expect("at least one branch atom");
+    // Normalize: variables cancel, leaving exactly `K` `One`s with `K > 0`.
+    let lsum_canon = ctx.gens_to_expr(&all_gens);
+    let (norm_gens, norm_proof) = ctx.normalize_gens(&all_gens);
+    let k_int = i128::try_from(norm_gens.len()).map_err(|_| ReconstructError::MalformedStep {
+        rule: "disjunctive_la_generic".to_owned(),
+        detail: "normalized constant overflows i128".to_owned(),
+    })?;
+    if k_int <= 0 || norm_gens.iter().any(|g| *g != Gen::One) {
+        return Err(ReconstructError::MalformedStep {
+            rule: "disjunctive_la_generic".to_owned(),
+            detail: "branch Farkas combination did not reduce to a positive constant".to_owned(),
+        });
+    }
+    let k_expr = ctx.gens_to_expr(&norm_gens);
+    let le_k_zero = ctx.le_cast_left(lsum_canon, k_expr, zero, le_lsum_zero, norm_proof);
+    let lt_zero_k = ctx.lt_zero_ones(k_int);
+    let lt_zero_zero = ctx.lt_of_lt_of_le_app(zero, k_expr, zero, lt_zero_k, le_k_zero);
+    let irrefl = ctx.kernel.const_(ctx.arith.lt_irrefl, vec![]);
+    let e = ctx.kernel.app(irrefl, zero);
+    Ok(ctx.kernel.app(e, lt_zero_zero))
+}
+
+// ===========================================================================
+// Boolean-structured (disjunctive) QF_LRA reconstruction.
+//
+// The conjunctive Farkas path (`reconstruct_lra_proof`) handles only assertion
+// sets that the conjunctive decision procedure can collect — a top-level
+// positive `Or` is reported `Unsupported` by `lra_farkas_certificate`, so a
+// disjunctive UNSAT carries NO Lean proof there. This block closes the smallest
+// uncovered disjunctive shape: a conjunctive linear-real system plus exactly one
+// clause `(L₁ ∨ L₂)` of NON-STRICT linear-real literals, where each leaf
+// `conj ∧ Lᵢ` is conjunctive-Farkas-refutable.
+//
+// The reconstruction is a kernel case-split (`Or.rec`, the eliminator behind
+// `Or.elim`) on a hypothesis `hor : Enc(L₁ ∨ L₂)`. Each minor premise binds the
+// branch literal `hᵢ : Enc(Lᵢ)` as a free variable, reuses the conjunctive
+// general-Farkas fold to derive `branchᵢ : False` (the conjunctive atoms remain
+// the verbatim `hyp_axiom` hypotheses; only the branch literal flows in as the
+// bound `hᵢ`), then abstracts `hᵢ` into a `fun (hᵢ : Enc Lᵢ) => branchᵢ` lambda.
+// The kernel `infer`s the assembled `Or.rec … hor : False`; a wrong fold ⇒
+// `KernelRejected`, never a wrong `False`. The only added axioms are the
+// conjunctive constraint hypotheses and `hor` (the verbatim disjunction).
+// ===========================================================================
+
+/// A non-strict real linear literal `Lᵢ` already normalized to `E ≤ 0` form, as
+/// the canonical generators of `E` (over a *shared* symbol→index map) plus the
+/// originating IR [`TermId`]. Built by [`disjunctive_branch_literal`].
+#[derive(Debug, Clone)]
+struct BranchLiteral {
+    /// Canonical generators of `E` where the literal denotes `E ≤ 0`.
+    gens: Vec<Gen>,
+    /// The original IR atom (a real `≤`/`≥`), used to drive the per-leaf
+    /// conjunctive decision procedure.
+    term: TermId,
+}
+
+/// Normalize a non-strict real literal `term` (`l ≤ r` / `l ≥ r`) to `E ≤ 0` and
+/// return its canonical generators over the **shared** symbol→index map `syms`
+/// (so two literals / the conjunctive atoms agree on every variable's kernel
+/// constant). `E = l − r` for `≤`, `E = r − l` for `≥`. Returns `None` for a
+/// strict / non-real / out-of-slice literal (any coefficient outside the
+/// generator alphabet ±1·var, ±1).
+fn disjunctive_branch_literal(
+    arena: &TermArena,
+    term: TermId,
+    syms: &mut BTreeMap<axeyum_ir::SymbolId, usize>,
+) -> Option<BranchLiteral> {
+    let IrTermNode::App { op, args } = arena.node(term) else {
+        return None;
+    };
+    if args.len() != 2 {
+        return None;
+    }
+    let l = real_to_lin_inner(arena, args[0], syms)?;
+    let r = real_to_lin_inner(arena, args[1], syms)?;
+    // `l ≤ r` ⇒ `l − r ≤ 0`; `l ≥ r` ⇒ `r − l ≤ 0`. Strict / non-comparison: decline.
+    let e = match op {
+        IrOp::RealLe => l.sub(&r)?,
+        IrOp::RealGe => r.sub(&l)?,
+        _ => return None,
+    };
+    let gens = LraReconstructCtx::lin_to_gens(&e)?;
+    Some(BranchLiteral { gens, term })
+}
+
+/// The structural decomposition of a disjunctive-LRA query (the output of
+/// [`split_disjunctive_lra`]): the conjunctive assertion [`TermId`]s, the two
+/// parsed branch literals of the single clause, and the shared symbol→index map
+/// over which every literal's and conjunctive atom's variables are encoded.
+type DisjunctiveSplit = (
+    Vec<TermId>,
+    BranchLiteral,
+    BranchLiteral,
+    BTreeMap<axeyum_ir::SymbolId, usize>,
+);
+
+/// Split `assertions` into `(conj, l1, l2, syms)` for the disjunctive-LRA shape:
+/// **exactly one** assertion is a binary `Or` of two non-strict real-linear
+/// literals, and every other assertion is a conjunctive real-linear constraint
+/// (`≤`/`<`/`=`/`≥`/`>`). Returns the conjunctive [`TermId`]s and the two parsed
+/// branch literals (over a shared symbol→index map). `None` if the shape does not
+/// hold (no clause, more than one clause, a strict / out-of-slice branch literal,
+/// or a non-linear conjunctive assertion).
+fn split_disjunctive_lra(arena: &TermArena, assertions: &[TermId]) -> Option<DisjunctiveSplit> {
+    let mut syms: BTreeMap<axeyum_ir::SymbolId, usize> = BTreeMap::new();
+    let mut conj: Vec<TermId> = Vec::new();
+    let mut clause: Option<(BranchLiteral, BranchLiteral)> = None;
+    for &a in assertions {
+        if let IrTermNode::App {
+            op: IrOp::BoolOr,
+            args,
+        } = arena.node(a)
+        {
+            if args.len() != 2 || clause.is_some() {
+                return None; // not binary, or a second clause — out of this slice
+            }
+            let l1 = disjunctive_branch_literal(arena, args[0], &mut syms)?;
+            let l2 = disjunctive_branch_literal(arena, args[1], &mut syms)?;
+            clause = Some((l1, l2));
+        } else {
+            // A conjunctive assertion: it must be a real-linear constraint so the
+            // shared symbol map covers its variables (and the leaf decides cleanly).
+            if as_le_constraint(arena, a).is_none()
+                && as_lt_constraint(arena, a).is_none()
+                && !is_real_eq_constraint(arena, a, &mut syms)
+            {
+                return None;
+            }
+            // Thread the conjunctive variables through the shared map too.
+            register_real_vars(arena, a, &mut syms);
+            conj.push(a);
+        }
+    }
+    let (l1, l2) = clause?;
+    Some((conj, l1, l2, syms))
+}
+
+/// Whether `term` is a real equality `a = b` over the linear subset, threading its
+/// variables into the shared `syms` map.
+fn is_real_eq_constraint(
+    arena: &TermArena,
+    term: TermId,
+    syms: &mut BTreeMap<axeyum_ir::SymbolId, usize>,
+) -> bool {
+    let IrTermNode::App { op: IrOp::Eq, args } = arena.node(term) else {
+        return false;
+    };
+    if args.len() != 2 || arena.sort_of(args[0]) != IrSort::Real {
+        return false;
+    }
+    real_to_lin_inner(arena, args[0], syms).is_some()
+        && real_to_lin_inner(arena, args[1], syms).is_some()
+}
+
+/// Register every real variable reachable in `term` into the shared symbol→index
+/// map (in first-seen order), so the kernel constant for a symbol is the same
+/// whether it appears in a conjunctive atom or a branch literal.
+fn register_real_vars(
+    arena: &TermArena,
+    term: TermId,
+    syms: &mut BTreeMap<axeyum_ir::SymbolId, usize>,
+) {
+    let mut stack = vec![term];
+    let mut seen = BTreeSet::new();
+    while let Some(t) = stack.pop() {
+        if !seen.insert(t) {
+            continue;
+        }
+        if let IrTermNode::Symbol(s) = arena.node(t) {
+            if arena.sort_of(t) == IrSort::Real {
+                let next = syms.len();
+                syms.entry(*s).or_insert(next);
+            }
+        }
+        if let IrTermNode::App { args, .. } = arena.node(t) {
+            stack.extend(args.iter().copied());
+        }
+    }
+}
+
+/// Detect the **disjunctive-LRA refutation** shape: the [`split_disjunctive_lra`]
+/// structure holds **and** each leaf `conj ∧ Lᵢ` is conjunctive-Farkas-refutable
+/// (`unsat`). A satisfiable disjunctive set (some leaf is `sat`) returns `false`
+/// so no fabricated proof is routed. The whole set being UNSAT follows from both
+/// leaves being UNSAT (`(L₁ ∨ L₂) ∧ conj` is unsat iff `conj ∧ L₁` and
+/// `conj ∧ L₂` are both unsat).
+#[must_use]
+fn is_disjunctive_lra_refutation(arena: &TermArena, assertions: &[TermId]) -> bool {
+    let Some((conj, l1, l2, _syms)) = split_disjunctive_lra(arena, assertions) else {
+        return false;
+    };
+    leaf_is_farkas_unsat(arena, &conj, l1.term) && leaf_is_farkas_unsat(arena, &conj, l2.term)
+}
+
+/// Whether the leaf `conj ∧ literal` has a (self-checked) conjunctive Farkas
+/// refutation. Any decision error / `sat` / `unknown` ⇒ `false` (decline).
+fn leaf_is_farkas_unsat(arena: &TermArena, conj: &[TermId], literal: TermId) -> bool {
+    let mut leaf: Vec<TermId> = conj.to_vec();
+    leaf.push(literal);
+    matches!(crate::lra_farkas_certificate(arena, &leaf), Ok(Some(_)))
 }
 
 /// A non-strict `(<= left right)` constraint as `(left_lin, right_lin)` linear
