@@ -568,6 +568,23 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "reachability",
+        feature: "interpolation-based model checking over LIA (prove_safety_imc_lia): the integer mirror \
+                  of prove_safety_imc_lra — McMillan IMC for infinite-state integer-valued transition \
+                  systems, the reachability over-approximation grown by lia_interpolant of the UNSAT \
+                  k-unrolling; reuses pdr_lia's integer TransitionSystem. PARTIAL coverage (conjunctive \
+                  interpolation only — no disjunctive integer interpolant fallback yet, so it honestly \
+                  deepens/declines where the LRA CNF route would close a disjunctive fixpoint)",
+        assurance: Assurance::Validated,
+        evidence: "untrusted interpolation/fixpoint search — Safe only when the over-approximation R passes \
+                   3 check_auto-unsat checks over ℤ (initiation/consecution/safety), independently \
+                   re-checked test-side; Reachable only when the concrete integer k-unrolling is \
+                   check_auto-Sat (trace replayed); lia_interpolant is verify-before-return and its \
+                   declines (cuts-needed / non-conjunctive / overflow) become a sound Unknown, never an \
+                   error; soundness-negative test that an actually-unsafe system never returns Safe",
+        reference: "ADR-0047/0048",
+    },
+    Capability {
+        area: "reachability",
         feature: "interpolation-based model checking over LRA (prove_safety_imc_lra): IMC for \
                   infinite-state real-valued transition systems via the disjunctive lra_interpolant_cnf + \
                   an inline LRA k-unrolling",
