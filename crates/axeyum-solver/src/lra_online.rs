@@ -904,25 +904,94 @@ enum Cause {
     Implied,
 }
 
+/// A conflict surfaced by propagation: the falsified clause to analyze, tagged
+/// with whether it is a **theory** clause (a theory conflict `¬⋀core`, entailed by
+/// the theory alone) or a Boolean input clause. The tag seeds the theory-lemma
+/// provenance tracked through 1-UIP resolution.
+struct Conflict {
+    clause: Vec<Lit>,
+    is_theory: bool,
+}
+
 /// A self-contained `DPLL(T)` search over the CNF skeleton driving an
-/// [`LraTheory`] online: chronological backtracking with theory-conflict clause
-/// learning, the theory pushed on each decision and popped on each backtrack.
+/// [`LraTheory`] online: **1-UIP** theory-conflict learning with
+/// non-chronological backjumping, the theory pushed on each decision and popped
+/// once per decision crossed when backjumping.
 struct Dpll {
     var_count: usize,
     atom_count: usize,
     clauses: Vec<Vec<Lit>>,
     value: Vec<Option<bool>>,
+    /// The assignment trail: `(var, value, cause)` in assignment order.
     trail: Vec<(usize, bool, Cause)>,
+    /// Per variable: the decision level it was assigned at (valid only while the
+    /// variable is assigned).
+    level: Vec<usize>,
+    /// Per variable: the reason clause that forced it (a clause that, once all
+    /// its other literals are false, propagates this variable). `None` for a
+    /// decision. Valid only while the variable is assigned.
+    reason: Vec<Option<Vec<Lit>>>,
+    /// Per variable: whether its reason clause is a *theory* clause (a theory
+    /// conflict `¬⋀core` or a theory propagation `¬reason ∨ lit`, both entailed by
+    /// the theory alone) rather than a Boolean input clause. A 1-UIP clause
+    /// resolved only through theory clauses is itself a theory lemma — the test
+    /// gate uses this to pick clauses it can independently re-validate with the
+    /// trusted conjunctive offline decider.
+    reason_theory: Vec<bool>,
+    /// The current decision level (incremented on every decision, restored on
+    /// backjump).
+    decision_level: usize,
+    /// Test-only diagnostics for the 1-UIP path (fires counter and learned-vs-full
+    /// conflict-clause lengths). Compiled out of the production library.
+    #[cfg(test)]
+    diag: Diagnostics,
+}
+
+/// Test-only counters proving the 1-UIP analysis fires and that its asserting
+/// clauses are shorter than the full `¬⋀core` clause the old chronological scheme
+/// would have learned.
+#[cfg(test)]
+#[derive(Default)]
+struct Diagnostics {
+    /// The number of 1-UIP analyses run.
+    analyze_fires: usize,
+    /// Summed length of every learned asserting clause.
+    learned_len_total: u64,
+    /// Summed length of the corresponding full conflict clause (`¬⋀core`).
+    conflict_len_total: u64,
+    /// The number of clauses present before any learning (the encoded skeleton);
+    /// every clause at or after this index is a learned 1-UIP asserting clause.
+    initial_clauses: usize,
+    /// Per stored learned clause (aligned with `clauses[initial_clauses..]`):
+    /// whether it is a pure theory lemma (entailed by the theory plus the
+    /// level-0 facts), so the test gate can re-validate it with the conjunctive
+    /// offline decider.
+    lemma_flags: Vec<bool>,
+    /// Per stored learned clause: the level-0 atom assignments `(atom, value)` in
+    /// force when it was learned — the unconditional facts the lemma rests on, so
+    /// the entailment oracle conjoins them with `¬clause`.
+    lemma_level0: Vec<Vec<(usize, bool)>>,
 }
 
 impl Dpll {
     fn new(var_count: usize, atom_count: usize, clauses: Vec<Vec<Lit>>) -> Self {
+        #[cfg(test)]
+        let diag = Diagnostics {
+            initial_clauses: clauses.len(),
+            ..Diagnostics::default()
+        };
         Self {
             var_count,
             atom_count,
             clauses,
             value: vec![None; var_count],
             trail: Vec::new(),
+            level: vec![0; var_count],
+            reason: vec![None; var_count],
+            reason_theory: vec![false; var_count],
+            decision_level: 0,
+            #[cfg(test)]
+            diag,
         }
     }
 
@@ -930,15 +999,30 @@ impl Dpll {
         self.value[lit.var].map(|v| v == lit.positive)
     }
 
-    /// Assigns `var := value`, mirroring a theory atom into [`LraTheory`].
+    /// The literal currently true for `var` (its trail polarity).
+    fn true_literal(&self, var: usize) -> Lit {
+        Lit {
+            var,
+            positive: self.value[var].expect("assigned variable has a value"),
+        }
+    }
+
+    /// Assigns `var := value` at the current decision level, recording its level
+    /// and reason and mirroring a theory atom into [`LraTheory`]. `reason` is the
+    /// forcing clause for a propagation, `None` for a decision.
     fn assign(
         &mut self,
         theory: &mut LraTheory,
         var: usize,
         value: bool,
         cause: Cause,
+        reason: Option<Vec<Lit>>,
+        reason_is_theory: bool,
     ) -> Result<(), Vec<TheoryLit>> {
         self.value[var] = Some(value);
+        self.level[var] = self.decision_level;
+        self.reason[var] = reason;
+        self.reason_theory[var] = reason_is_theory;
         self.trail.push((var, value, cause));
         if var < self.atom_count {
             theory.assert(var, value)?;
@@ -946,22 +1030,10 @@ impl Dpll {
         Ok(())
     }
 
-    /// Undoes the trail back to (and excluding) the most recent decision, popping
-    /// the theory once. `None` if the search is exhausted.
-    fn backtrack_to_decision(&mut self, theory: &mut LraTheory) -> Option<(usize, bool)> {
-        loop {
-            let (var, value, cause) = self.trail.pop()?;
-            self.value[var] = None;
-            if cause == Cause::Decision {
-                theory.pop();
-                return Some((var, value));
-            }
-        }
-    }
-
-    /// Boolean unit propagation to fixpoint. `Err` carries a learned clause on a
-    /// Boolean conflict or a forced theory conflict.
-    fn unit_propagate(&mut self, theory: &mut LraTheory) -> Result<(), Vec<Lit>> {
+    /// Boolean unit propagation to fixpoint. `Err` carries a falsified conflict
+    /// clause (literals all currently false) on a Boolean conflict, or a learned
+    /// theory-conflict clause on a forced theory inconsistency — tagged with which.
+    fn unit_propagate(&mut self, theory: &mut LraTheory) -> Result<(), Conflict> {
         let mut changed = true;
         while changed {
             changed = false;
@@ -986,12 +1058,29 @@ impl Dpll {
                     continue;
                 }
                 if count == 0 {
-                    return Err(self.clauses[ci].iter().map(|l| l.negate()).collect());
+                    // The whole clause is falsified: a Boolean conflict clause.
+                    return Err(Conflict {
+                        clause: self.clauses[ci].clone(),
+                        is_theory: false,
+                    });
                 }
                 if count == 1 {
                     let lit = unassigned.expect("count == 1 has the unit literal");
-                    if let Err(core) = self.assign(theory, lit.var, lit.positive, Cause::Implied) {
-                        return Err(Self::theory_conflict_clause(&core));
+                    // The reason for `lit` is this clause itself: once its other
+                    // literals are false, it forces `lit`.
+                    let reason = self.clauses[ci].clone();
+                    if let Err(core) = self.assign(
+                        theory,
+                        lit.var,
+                        lit.positive,
+                        Cause::Implied,
+                        Some(reason),
+                        false,
+                    ) {
+                        return Err(Conflict {
+                            clause: Self::theory_conflict_clause(&core),
+                            is_theory: true,
+                        });
                     }
                     changed = true;
                 }
@@ -1001,9 +1090,10 @@ impl Dpll {
     }
 
     /// Applies sound theory propagations to the trail until fixpoint. Returns the
-    /// learned clause on a theory conflict, else `Ok(())`. A mirror of
-    /// `crate::euf_egraph::Dpll::theory_propagate` retargeted to [`LraTheory`].
-    fn theory_propagate(&mut self, theory: &mut LraTheory) -> Result<(), Vec<Lit>> {
+    /// learned theory-conflict clause on a theory conflict, else `Ok(())`. A
+    /// mirror of `crate::euf_egraph::Dpll::theory_propagate` retargeted to
+    /// [`LraTheory`].
+    fn theory_propagate(&mut self, theory: &mut LraTheory) -> Result<(), Conflict> {
         loop {
             let props = theory.propagate();
             let mut progress = false;
@@ -1019,11 +1109,28 @@ impl Dpll {
                             atom: var,
                             value: !prop.lit.value,
                         });
-                        return Err(Self::theory_conflict_clause(&core));
+                        return Err(Conflict {
+                            clause: Self::theory_conflict_clause(&core),
+                            is_theory: true,
+                        });
                     }
                     None => {
-                        if let Err(c) = self.assign(theory, var, prop.lit.value, Cause::Implied) {
-                            return Err(Self::theory_conflict_clause(&c));
+                        // The reason clause for the propagated literal is
+                        // `¬(reason) ∨ lit`: once every reason literal is asserted
+                        // (so its negation is false), this clause forces `lit`.
+                        let reason_clause = Self::theory_reason_clause(&prop.reason, prop.lit);
+                        if let Err(c) = self.assign(
+                            theory,
+                            var,
+                            prop.lit.value,
+                            Cause::Implied,
+                            Some(reason_clause),
+                            true,
+                        ) {
+                            return Err(Conflict {
+                                clause: Self::theory_conflict_clause(&c),
+                                is_theory: true,
+                            });
                         }
                         progress = true;
                     }
@@ -1037,7 +1144,7 @@ impl Dpll {
 
     /// Unit propagation interleaved with theory propagation to a joint fixpoint. A
     /// mirror of `crate::euf_egraph::Dpll::propagate` retargeted to [`LraTheory`].
-    fn propagate(&mut self, theory: &mut LraTheory) -> Result<(), Vec<Lit>> {
+    fn propagate(&mut self, theory: &mut LraTheory) -> Result<(), Conflict> {
         loop {
             self.unit_propagate(theory)?;
             let before = self.trail.len();
@@ -1048,7 +1155,8 @@ impl Dpll {
         }
     }
 
-    /// Maps a theory conflict core to a learned CNF clause `¬⋀core`.
+    /// Maps a theory conflict core to a learned CNF conflict clause `¬⋀core`
+    /// (every literal currently false, so it is the falsified clause to analyze).
     fn theory_conflict_clause(core: &[TheoryLit]) -> Vec<Lit> {
         core.iter()
             .map(|l| Lit {
@@ -1056,6 +1164,136 @@ impl Dpll {
                 positive: !l.value,
             })
             .collect()
+    }
+
+    /// The reason clause for a theory propagation `reason ⊨ lit`, namely
+    /// `¬(reason) ∨ lit`: each reason literal contributes its negation, plus the
+    /// propagated literal. Once every reason literal is asserted, this clause is
+    /// unit and forces `lit` — the invariant [`Self::analyze_conflict`] relies on.
+    fn theory_reason_clause(reason: &[TheoryLit], lit: TheoryLit) -> Vec<Lit> {
+        let mut clause: Vec<Lit> = reason
+            .iter()
+            .map(|l| Lit {
+                var: l.atom,
+                positive: !l.value,
+            })
+            .collect();
+        clause.push(Lit {
+            var: lit.atom,
+            positive: lit.value,
+        });
+        clause
+    }
+
+    /// 1-UIP conflict analysis: resolves the falsified `conflict` clause against
+    /// the reason clauses of current-decision-level literals (newest-first on the
+    /// trail) until a single current-level literal — the first UIP — remains.
+    /// Returns the asserting clause (the UIP literal at index 0, the lower-level
+    /// literals after it), the backjump level (the second-highest decision level
+    /// among the clause's literals, `0` if it has none), and whether the clause is
+    /// a pure **theory lemma** — derived by resolving only theory clauses (the
+    /// seed conflict and every resolved reason were theory clauses), so it is
+    /// entailed by the theory alone. A mirror of `axeyum_cnf::proof_sat`'s
+    /// `analyze`, without the VSIDS/LBD/minimization machinery (kept deliberately
+    /// minimal for the online theory loop).
+    fn analyze_conflict(&self, conflict: &[Lit], seed_is_theory: bool) -> (Vec<Lit>, usize, bool) {
+        let mut seen = vec![false; self.var_count];
+        let mut lower: Vec<Lit> = Vec::new();
+        let mut path_count = 0_usize;
+        let mut pivot: Option<usize> = None;
+        let mut index = self.trail.len();
+        let current = self.decision_level;
+        let mut all_theory = seed_is_theory;
+        // Seed the worklist with the falsified conflict clause; afterwards each
+        // iteration resolves against the popped literal's reason clause.
+        let mut clause: Vec<Lit> = conflict.to_vec();
+
+        loop {
+            for lit in &clause {
+                let v = lit.var;
+                if Some(v) == pivot || seen[v] || self.level[v] == 0 {
+                    continue;
+                }
+                seen[v] = true;
+                if self.level[v] >= current {
+                    path_count += 1;
+                } else {
+                    lower.push(*lit);
+                }
+            }
+
+            // Walk the trail newest-first for the next seen variable.
+            let mut found = false;
+            while index > 0 {
+                index -= 1;
+                if seen[self.trail[index].0] {
+                    found = true;
+                    break;
+                }
+            }
+            if !found {
+                // The conflict is implied at level 0: the empty asserting clause.
+                return (Vec::new(), 0, all_theory);
+            }
+
+            let var = self.trail[index].0;
+            seen[var] = false;
+            path_count -= 1;
+            pivot = Some(var);
+
+            if path_count == 0 {
+                // `var` is the 1-UIP. The asserting literal is the negation of its
+                // trail polarity (the clause forces it the opposite way after the
+                // backjump).
+                let mut learned = Vec::with_capacity(lower.len() + 1);
+                learned.push(self.true_literal(var).negate());
+                learned.extend(lower);
+                let backjump = Self::backjump_level(&self.level, &learned);
+                return (learned, backjump, all_theory);
+            }
+
+            // Resolve against the reason clause of the next current-level literal;
+            // the result is a theory lemma only if that reason is also a theory
+            // clause.
+            all_theory = all_theory && self.reason_theory[var];
+            clause.clone_from(
+                self.reason[var]
+                    .as_ref()
+                    .expect("a current-level implied literal has a reason clause"),
+            );
+        }
+    }
+
+    /// The backjump level of an asserting clause: the second-highest decision
+    /// level among its literals (the asserting literal at index 0 sits at the
+    /// highest level), or `0` for a unit asserting clause.
+    fn backjump_level(level: &[usize], learned: &[Lit]) -> usize {
+        learned
+            .iter()
+            .skip(1)
+            .map(|lit| level[lit.var])
+            .max()
+            .unwrap_or(0)
+    }
+
+    /// Backjumps to `target_level`: pops every trail entry strictly above it,
+    /// unassigning each variable and popping the theory **once per decision
+    /// crossed** (the theory was pushed once per decision, so this keeps the
+    /// push/pop stack in lockstep).
+    fn backjump_to(&mut self, theory: &mut LraTheory, target_level: usize) {
+        while let Some(&(var, _, _)) = self.trail.last() {
+            if self.level[var] <= target_level {
+                break;
+            }
+            let (var, _, cause) = self.trail.pop().expect("non-empty trail");
+            self.value[var] = None;
+            self.reason[var] = None;
+            self.reason_theory[var] = false;
+            if cause == Cause::Decision {
+                theory.pop();
+            }
+        }
+        self.decision_level = target_level;
     }
 
     /// The lowest-index unassigned variable, or `None` when total.
@@ -1067,23 +1305,27 @@ impl Dpll {
     /// `false` on a Boolean- and theory-consistent total assignment.
     fn solve(&mut self, theory: &mut LraTheory) -> bool {
         loop {
-            loop {
-                match self.propagate(theory) {
-                    Ok(()) => break,
-                    Err(clause) => {
-                        if !self.learn_and_backtrack(theory, clause) {
-                            return true;
-                        }
+            match self.propagate(theory) {
+                Ok(()) => {}
+                Err(conflict) => {
+                    if !self.learn_and_backjump(theory, &conflict) {
+                        return true;
                     }
+                    continue;
                 }
             }
             match self.pick_unassigned() {
                 None => return false,
                 Some(var) => {
+                    self.decision_level += 1;
                     theory.push();
-                    if let Err(core) = self.assign(theory, var, true, Cause::Decision) {
-                        let clause = Self::theory_conflict_clause(&core);
-                        if !self.learn_and_backtrack(theory, clause) {
+                    if let Err(core) = self.assign(theory, var, true, Cause::Decision, None, false)
+                    {
+                        let conflict = Conflict {
+                            clause: Self::theory_conflict_clause(&core),
+                            is_theory: true,
+                        };
+                        if !self.learn_and_backjump(theory, &conflict) {
                             return true;
                         }
                     }
@@ -1092,26 +1334,69 @@ impl Dpll {
         }
     }
 
-    /// Records the learned clause, backtracks past the most recent decision, and
-    /// flips it as an implied assignment. `false` when no decision remains (UNSAT).
-    fn learn_and_backtrack(&mut self, theory: &mut LraTheory, clause: Vec<Lit>) -> bool {
-        if !clause.is_empty() {
-            self.clauses.push(clause);
+    /// Handles a conflict by 1-UIP analysis: learns the asserting clause, jumps
+    /// non-chronologically to the backjump level, and enqueues the UIP literal as
+    /// an implied assignment with the learned clause as its reason. `false` when
+    /// the conflict is implied at level 0 (UNSAT) — there is nothing to assert.
+    fn learn_and_backjump(&mut self, theory: &mut LraTheory, conflict: &Conflict) -> bool {
+        let (learned, backjump, is_theory_lemma) =
+            self.analyze_conflict(&conflict.clause, conflict.is_theory);
+        #[cfg(test)]
+        {
+            self.diag.analyze_fires += 1;
+            self.diag.conflict_len_total +=
+                u64::try_from(conflict.clause.len()).expect("clause length fits u64");
         }
-        loop {
-            let Some((var, value)) = self.backtrack_to_decision(theory) else {
-                return false;
-            };
-            let flipped = !value;
-            match self.assign(theory, var, flipped, Cause::Implied) {
-                Ok(()) => return true,
-                Err(core) => {
-                    let learned = Self::theory_conflict_clause(&core);
-                    if !learned.is_empty() {
-                        self.clauses.push(learned);
-                    }
-                }
-            }
+        if learned.is_empty() {
+            return false;
+        }
+        #[cfg(test)]
+        {
+            // Only non-empty learned clauses are stored in `clauses`; keep the
+            // length-total and lemma-flag streams aligned with that storage.
+            self.diag.learned_len_total +=
+                u64::try_from(learned.len()).expect("clause length fits u64");
+            self.diag.lemma_flags.push(is_theory_lemma);
+            // The level-0 atom facts the lemma rests on (analyze drops them as
+            // unconditional). The conflict was analyzed against the current trail,
+            // so capture the level-0 atom prefix now, before backjumping.
+            let level0: Vec<(usize, bool)> = self
+                .trail
+                .iter()
+                .filter(|&&(v, _, _)| self.level[v] == 0 && v < self.atom_count)
+                .map(|&(v, val, _)| (v, val))
+                .collect();
+            self.diag.lemma_level0.push(level0);
+        }
+        self.backjump_to(theory, backjump);
+        let uip = learned[0];
+        let reason = if learned.len() == 1 {
+            None
+        } else {
+            Some(learned.clone())
+        };
+        self.clauses.push(learned);
+        // Enqueue the UIP literal. At the backjump level its theory assertion is
+        // consistent (the asserting clause is an entailed resolvent), but a
+        // *theory* conflict can still surface here — re-analyze that conflict. The
+        // learned clause is the UIP's reason, a theory clause iff it is a theory
+        // lemma.
+        match self.assign(
+            theory,
+            uip.var,
+            uip.positive,
+            Cause::Implied,
+            reason,
+            is_theory_lemma,
+        ) {
+            Ok(()) => true,
+            Err(core) => self.learn_and_backjump(
+                theory,
+                &Conflict {
+                    clause: Self::theory_conflict_clause(&core),
+                    is_theory: true,
+                },
+            ),
         }
     }
 }
@@ -1367,6 +1652,81 @@ fn replays(arena: &TermArena, assertions: &[TermId], model: &Model) -> bool {
         .all(|&a| matches!(eval(arena, a, &assignment), Ok(Value::Bool(true))))
 }
 
+/// Test-only diagnostic run of the online LRA driver over a conjunction of
+/// `assertions`: returns the verdict (`true` = UNSAT), the registered atom terms,
+/// the atom count, the learned 1-UIP asserting clauses, and the fires/length
+/// diagnostics. Mirrors the setup of [`check_qf_lra_online`]. Used by the
+/// in-source soundness tests to confirm each learned clause is entailed and that
+/// 1-UIP fired and shrank the learned clauses below the full conflict cores.
+#[cfg(test)]
+struct OnlineDiag {
+    atom_terms: Vec<TermId>,
+    atom_count: usize,
+    learned: Vec<Vec<Lit>>,
+    /// Aligned with `learned`: whether each stored clause is a pure theory lemma.
+    lemma_flags: Vec<bool>,
+    /// Aligned with `learned`: the level-0 atom facts each lemma rests on.
+    lemma_level0: Vec<Vec<(usize, bool)>>,
+    analyze_fires: usize,
+    learned_len_total: u64,
+    conflict_len_total: u64,
+}
+
+#[cfg(test)]
+fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDiag> {
+    let mut atom_terms: Vec<TermId> = Vec::new();
+    let mut seen = HashSet::new();
+    for &a in assertions {
+        collect_lra_atoms(arena, a, &mut atom_terms, &mut seen);
+    }
+    if atom_terms.is_empty() {
+        return None;
+    }
+    let mut enc = Encoder::new(&atom_terms);
+    let mut clauses: Vec<Vec<Lit>> = Vec::new();
+    for &assertion in assertions {
+        let top = enc.encode(arena, assertion, &mut clauses)?;
+        clauses.push(vec![Lit {
+            var: top,
+            positive: true,
+        }]);
+    }
+    let atom_count = atom_terms.len();
+    let mut builder = AtomBuilder::default();
+    let atoms: Vec<AtomKind> = atom_terms
+        .iter()
+        .map(|&t| builder.build(arena, t))
+        .collect();
+    let nvars = builder.vars.len();
+    let mut theory = LraTheory {
+        atoms,
+        nvars,
+        live: Vec::new(),
+        assigned: vec![None; atom_count],
+        assigned_log: Vec::new(),
+        trail: Vec::new(),
+        vars: builder.vars,
+    };
+    let mut solver = Dpll::new(enc.var_count, atom_count, clauses);
+    let _ = solver.solve(&mut theory);
+    let learned = solver.clauses[solver.diag.initial_clauses..].to_vec();
+    debug_assert_eq!(
+        learned.len(),
+        solver.diag.lemma_flags.len(),
+        "one lemma flag per stored learned clause"
+    );
+    Some(OnlineDiag {
+        atom_terms,
+        atom_count,
+        learned,
+        lemma_flags: solver.diag.lemma_flags,
+        lemma_level0: solver.diag.lemma_level0,
+        analyze_fires: solver.diag.analyze_fires,
+        learned_len_total: solver.diag.learned_len_total,
+        conflict_len_total: solver.diag.conflict_len_total,
+    })
+}
+
 /// A classified `unknown` reason for the online LRA path.
 fn unknown(detail: &str) -> UnknownReason {
     UnknownReason {
@@ -1498,5 +1858,187 @@ mod tests {
             CheckResult::Sat(model) => assert!(replays(&arena, &[or], &model)),
             other => panic!("expected sat, got {other:?}"),
         }
+    }
+
+    /// A tiny deterministic LCG (numerical-recipes constants) for the in-source
+    /// 1-UIP soundness fuzz — no `rand`, no clock, reproducible from the seed.
+    struct Lcg(u64);
+
+    impl Lcg {
+        fn next_u64(&mut self) -> u64 {
+            self.0 = self
+                .0
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            self.0
+        }
+
+        fn below(&mut self, n: u64) -> u64 {
+            self.next_u64() % n
+        }
+    }
+
+    /// Builds a random linear order/equality atom `Σ c_i·x_i + k REL 0` over the
+    /// given real variables.
+    fn random_lra_atom(arena: &mut TermArena, lcg: &mut Lcg, vars: &[TermId]) -> TermId {
+        let mut expr: Option<TermId> = None;
+        for &v in vars {
+            let c = i128::from(lcg.below(7)) - 3;
+            if c == 0 {
+                continue;
+            }
+            let coeff = arena.real_const(Rational::integer(c));
+            let term = arena.real_mul(coeff, v).expect("c*x");
+            expr = Some(match expr {
+                None => term,
+                Some(acc) => arena.real_add(acc, term).expect("acc+term"),
+            });
+        }
+        let k = i128::from(lcg.below(11)) - 5;
+        let kconst = arena.real_const(Rational::integer(k));
+        let lhs = match expr {
+            None => kconst,
+            Some(acc) => arena.real_add(acc, kconst).expect("acc+k"),
+        };
+        let zero = arena.real_const(Rational::zero());
+        match lcg.below(5) {
+            0 => arena.real_lt(lhs, zero).expect("lt"),
+            1 => arena.real_le(lhs, zero).expect("le"),
+            2 => arena.real_gt(lhs, zero).expect("gt"),
+            3 => arena.real_ge(lhs, zero).expect("ge"),
+            _ => arena.eq(lhs, zero).expect("eq"),
+        }
+    }
+
+    /// SOUNDNESS gate for **1-UIP theory-conflict learning** (this slice): over a
+    /// deterministic LCG corpus of random `QF_LRA` formulas with **disjunctive**
+    /// assertions (so the driver must branch and learns non-trivial asserting
+    /// clauses), drive the online driver and, for EVERY learned asserting clause
+    /// whose literals are all theory atoms, independently verify with the trusted
+    /// offline decider that the clause is *entailed* — i.e. `¬clause` (the
+    /// assignment falsifying it) is `check_with_lra`-UNSAT. A learned clause that
+    /// isn't implied is a hard failure (an unsound lemma would corrupt the
+    /// search). Also proves the 1-UIP path FIRES and that learned clauses are
+    /// strictly SHORTER on average than the full `¬⋀core` conflict clauses the old
+    /// chronological scheme learned.
+    #[test]
+    fn learned_clauses_are_entailed_and_shorter() {
+        let mut lcg = Lcg(0x1c1c_2b2b_3c3c_4d4d);
+        let mut fires_total = 0_usize;
+        let mut learned_len_total = 0_u64;
+        let mut conflict_len_total = 0_u64;
+        let mut clauses_checked = 0_usize;
+
+        for _ in 0..4000 {
+            let mut arena = TermArena::new();
+            let nvars = 2 + usize::try_from(lcg.below(2)).expect("small");
+            let vars: Vec<TermId> = (0..nvars)
+                .map(|i| {
+                    let s = arena
+                        .declare(&format!("v{i}"), Sort::Real)
+                        .expect("declare");
+                    arena.var(s)
+                })
+                .collect();
+            // A pool of order/eq atoms; each assertion is a random *disjunction*
+            // of two or three of them (so the driver must decide between them,
+            // exercising real 1-UIP backjump learning rather than level-0 unit
+            // propagation). A wider pool and wider clauses drive deeper search.
+            let pool_n = 6;
+            let pool: Vec<TermId> = (0..pool_n)
+                .map(|_| random_lra_atom(&mut arena, &mut lcg, &vars))
+                .collect();
+            let pick = |lcg: &mut Lcg| pool[usize::try_from(lcg.below(pool_n)).expect("small")];
+            let nclauses = 3 + usize::try_from(lcg.below(4)).expect("small");
+            let atoms: Vec<TermId> = (0..nclauses)
+                .map(|_| {
+                    let width = 2 + usize::try_from(lcg.below(2)).expect("small"); /* 2..=3 */
+                    let mut term = pick(&mut lcg);
+                    for _ in 1..width {
+                        let b = pick(&mut lcg);
+                        term = arena.or(term, b).expect("or");
+                    }
+                    term
+                })
+                .collect();
+
+            let Some(diag) = run_online_diag(&arena, &atoms) else {
+                continue;
+            };
+            fires_total += diag.analyze_fires;
+            learned_len_total += diag.learned_len_total;
+            conflict_len_total += diag.conflict_len_total;
+
+            for ((clause, &is_lemma), level0) in diag
+                .learned
+                .iter()
+                .zip(&diag.lemma_flags)
+                .zip(&diag.lemma_level0)
+            {
+                // Only PURE THEORY LEMMAS are entailed by the theory plus the
+                // level-0 facts — a 1-UIP clause that resolved through Boolean
+                // input clauses is entailed by formula+theory, not the theory, so
+                // the conjunctive offline decider is not its oracle. Restrict the
+                // check to lemmas.
+                if !is_lemma {
+                    continue;
+                }
+                // Restrict to atom-only clauses (Tseitin aux vars have no atom term
+                // to negate); theory lemmas over the order/eq fragment are these.
+                if clause.iter().any(|l| l.var >= diag.atom_count) {
+                    continue;
+                }
+                // ¬clause ∧ level0-facts: every clause literal falsified (atom
+                // `var` asserted at `!positive`) together with the unconditional
+                // level-0 atom assignments the lemma rests on — must be theory
+                // UNSAT.
+                let mut neg_terms: Vec<TermId> = Vec::with_capacity(clause.len() + level0.len());
+                for lit in clause {
+                    let atom = diag.atom_terms[lit.var];
+                    let term = if lit.positive {
+                        arena.not(atom).expect("not")
+                    } else {
+                        atom
+                    };
+                    neg_terms.push(term);
+                }
+                for &(atom_idx, value) in level0 {
+                    let atom = diag.atom_terms[atom_idx];
+                    let term = if value {
+                        atom
+                    } else {
+                        arena.not(atom).expect("not")
+                    };
+                    neg_terms.push(term);
+                }
+                // The offline decider may decline a negated equality (real
+                // disequality is out of its conjunctive scope) — that is a sound
+                // skip, not a learned-clause defect.
+                match crate::lra::check_with_lra(&arena, &neg_terms) {
+                    Ok(CheckResult::Unsat) => clauses_checked += 1,
+                    Ok(CheckResult::Sat(m)) => panic!(
+                        "UNSOUND LEARNED CLAUSE: ¬clause is SAT\nclause={clause:?}\n\
+                         assertions={atoms:?}\nmodel={m:?}"
+                    ),
+                    Ok(CheckResult::Unknown(_)) | Err(_) => {}
+                }
+            }
+        }
+
+        eprintln!(
+            "1-UIP gate: fires={fires_total}, clauses_checked={clauses_checked}, \
+             learned_len_total={learned_len_total}, conflict_len_total={conflict_len_total}"
+        );
+        assert!(fires_total > 50, "1-UIP analysis never meaningfully fired");
+        assert!(
+            clauses_checked > 20,
+            "too few learned clauses entailment-checked ({clauses_checked})"
+        );
+        // The improvement metric: 1-UIP asserting clauses are strictly shorter
+        // than the full conflict cores on average.
+        assert!(
+            learned_len_total < conflict_len_total,
+            "learned clauses not shorter on average ({learned_len_total} vs {conflict_len_total})"
+        );
     }
 }
