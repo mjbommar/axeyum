@@ -297,10 +297,11 @@ impl<B: SolverBackend> Solver<B> {
         (a, b)
     }
 
-    /// Tries each theory interpolator in turn: `QF_LRA` Farkas, the `QF_LIA`
-    /// rational-relaxation interpolant, ground EUF, combined `QF_UFLRA`, then the
-    /// `QF_BV` bit-blast interpolant — each a fallback for the earlier theories'
-    /// declines (`Unsupported` or `Ok(None)`).
+    /// Tries each theory interpolator in turn: `QF_LRA` Farkas, disjunctive
+    /// (CNF) `QF_LRA`, the conjunctive `QF_LIA` rational-relaxation interpolant,
+    /// disjunctive (CNF) `QF_LIA`, ground EUF, combined `QF_UFLRA`, `QF_UFLIA`,
+    /// then the `QF_BV` bit-blast interpolant — each a fallback for the earlier
+    /// theories' declines (`Unsupported` or `Ok(None)`).
     fn dispatch_interpolant(
         arena: &mut TermArena,
         a: &[TermId],
@@ -317,6 +318,12 @@ impl<B: SolverBackend> Solver<B> {
                 }
                 // QF_LIA via the rational relaxation (verified over the integers).
                 if let Some(interpolant) = crate::lia_interpolant(arena, a, b)? {
+                    return Ok(Some(interpolant));
+                }
+                // Disjunctive (CNF) QF_LIA: the conjunctive integer interpolant
+                // declines on Boolean structure over integer atoms; the
+                // relaxation-driven interpolating-SMT construction handles those.
+                if let Some(interpolant) = crate::lia_interpolant_cnf(arena, a, b)? {
                     return Ok(Some(interpolant));
                 }
                 match crate::qf_uf_interpolant(arena, a, b) {

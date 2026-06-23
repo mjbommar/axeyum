@@ -62,6 +62,7 @@ mod lazy_bv;
 mod lia;
 mod lia_gcd;
 mod lia_interpolant;
+mod lia_interpolant_cnf;
 mod lia_online;
 mod lra;
 mod lra_interpolant_cnf;
@@ -193,6 +194,7 @@ pub use lia_gcd::{
     prove_lia_unsat_by_gcd,
 };
 pub use lia_interpolant::lia_interpolant;
+pub use lia_interpolant_cnf::lia_interpolant_cnf;
 pub use lia_online::{LiaTheory, check_qf_lia_online};
 pub use lra::{
     FarkasAtom, FarkasCertificate, check_with_lia_simplex, check_with_lra, check_with_lra_simplex,
