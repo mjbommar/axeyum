@@ -552,6 +552,22 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "reachability",
+        feature: "Spacer-style IC3/PDR over LIA (prove_safety_pdr_lia): the integer mirror of \
+                  prove_safety_pdr_lra — inductive-invariant discovery for infinite-state integer-valued \
+                  transition systems, mbp_lia predecessor cubes, relative-inductive blocking, literal-drop \
+                  generalization, fixpoint; an unprojectable (divisibility-boundary) predecessor routes to \
+                  the trusted k-unrolling instead of fabricating a cube",
+        assurance: Assurance::Validated,
+        evidence: "the IC3 search + mbp_lia projection are UNTRUSTED — Safe only when the discovered \
+                   invariant passes 3 check_auto-unsat checks over ℤ (init/consecution/safety); Reachable \
+                   only when an integer k-unrolling is check_auto-Sat (trace replayed = init + each trans + \
+                   bad); integer-specific safety (e.g. odd target unreachable by +2 steps) decided by the \
+                   integer decider in the loop; soundness-negative test that an actually-reachable system \
+                   can never return a wrong Safe; all caps / mbp_lia decline → Unknown",
+        reference: "ADR-0048",
+    },
+    Capability {
+        area: "reachability",
         feature: "interpolation-based model checking over LRA (prove_safety_imc_lra): IMC for \
                   infinite-state real-valued transition systems via the disjunctive lra_interpolant_cnf + \
                   an inline LRA k-unrolling",
