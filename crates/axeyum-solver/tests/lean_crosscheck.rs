@@ -231,6 +231,49 @@ fn datatype_read_over_construct_checks_in_real_lean() {
     lean_accepts("datatype", &source);
 }
 
+/// Datatype **is-tester** fold (route-A, the is-tester twin of read-over-construct).
+/// Two pure is-tester contradictions, both discharged BY ι (no assumed fold axiom):
+///
+///   - TRUE fold:  `¬is_Green(Green a)` is UNSAT — `is_Green(Green a)` ι-reduces to
+///     `Bool.true`, so `Eq.refl Bool true` closes the negated hypothesis.
+///   - FALSE fold: `is_Red(Green a)` is UNSAT — `is_Red(Green a)` ι-reduces to
+///     `Bool.false`, contradicting the asserted `… = true` via the
+///     `Bool.true ≠ Bool.false` discriminator (`Bool.rec` ι, axiom-free).
+///
+/// The exported module must type-check in real Lean and `#print axioms` must
+/// report no `sorryAx` — the fold is kernel-computed, not assumed.
+#[test]
+fn tester_fold_checks_in_real_lean() {
+    // A two-constructor datatype `Color = Red(v) | Green(w)`.
+    let build = |tested_is_green: bool, negate: bool| {
+        let mut arena = TermArena::new();
+        let color = arena.declare_datatype("Color");
+        let red = arena.add_constructor(color, "Red", &[("v".into(), Sort::BitVec(2))]);
+        let green = arena.add_constructor(color, "Green", &[("w".into(), Sort::BitVec(2))]);
+        let a = {
+            let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+            arena.var(s)
+        };
+        // Argument is always `Green(a)`; vary which constructor we test for.
+        let g = arena.construct(green, &[a]).unwrap();
+        let tested = if tested_is_green { green } else { red };
+        let is_c = arena.dt_test(tested, g).unwrap();
+        let assertion = if negate {
+            arena.not(is_c).unwrap()
+        } else {
+            is_c
+        };
+        let (_frag, source) = prove_unsat_to_lean_module(&mut arena, &[assertion])
+            .expect("is-tester fold unsat reconstructs");
+        source
+    };
+
+    // TRUE fold: ¬is_Green(Green a) — tested == builder, negated.
+    lean_accepts("tester_true", &build(true, true));
+    // FALSE fold: is_Red(Green a) — tested != builder, positive.
+    lean_accepts("tester_false", &build(false, false));
+}
+
 /// `QF_BV` (the foundational bit-blasting path): `bvule a b ∧ bvult b a`
 /// (`a ≤ b ∧ b < a`, `BitVec(2)`) is unsat. It lowers to core ops and the
 /// bit-level resolution refutation must type-check in real Lean.

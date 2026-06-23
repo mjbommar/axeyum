@@ -50,8 +50,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm};
 use axeyum_lean_kernel::{
-    BinderInfo, DatatypeInductive, Declaration, ExprId, ExprNode, Kernel, LevelId, LogicPrelude,
-    NameId, build_logic_prelude,
+    BinderInfo, DatatypeFamily, DatatypeInductive, Declaration, ExprId, ExprNode, Kernel, LevelId,
+    LogicPrelude, NameId, build_logic_prelude,
 };
 
 /// An error from Alethe → Lean reconstruction. Every out-of-scope shape, unknown
@@ -219,6 +219,14 @@ pub struct ReconstructCtx {
     /// an **ι-reduction** (`Eq.refl`), so the datatype-elim certificate carries
     /// **no assumed projection axiom** (zero-trust datatypes).
     datatypes: BTreeMap<String, DatatypeInductive>,
+    /// **Route-A datatype FAMILY registry** for the is-tester fold. Maps a
+    /// datatype's name (the SMT `DatatypeId`'s name) to the kernel
+    /// **multi-constructor** inductive `D : α` carrying *every* constructor of
+    /// that datatype (`D.c₀ … D.c_{k-1}`), declared lazily the first time a
+    /// tester over the datatype is seen. The family lets the is-tester recursor
+    /// distinguish constructors, so `is_C (cⱼ x…)` ι-reduces to a concrete
+    /// `Bool` value — the is-tester fold is `Eq.refl Bool`, no assumed axiom.
+    datatype_families: BTreeMap<String, DatatypeFamily>,
 }
 
 impl core::fmt::Debug for ReconstructCtx {
@@ -281,6 +289,7 @@ impl ReconstructCtx {
             bv_widths: BTreeMap::new(),
             gate_memo: BTreeMap::new(),
             datatypes: BTreeMap::new(),
+            datatype_families: BTreeMap::new(),
         }
     }
 
@@ -411,6 +420,57 @@ impl ReconstructCtx {
             })?;
         self.datatypes.insert(key, dt);
         Ok(dt)
+    }
+
+    /// Get (declaring lazily) the **route-A datatype FAMILY** for the SMT
+    /// datatype named `dt_name`, whose constructors are `(leaf_name, arity)` in
+    /// declaration order. The kernel constructors are named **under** the family
+    /// inductive (`<family>.<leaf>`), so that when the family is rendered as a real
+    /// Lean `inductive` the auto-generated constructor/recursor names match Lean's.
+    /// Idempotent per `dt_name`.
+    fn datatype_family(
+        &mut self,
+        dt_name: &str,
+        ctors: &[(String, usize)],
+    ) -> Result<DatatypeFamily, ReconstructError> {
+        if let Some(fam) = self.datatype_families.get(dt_name) {
+            return Ok(fam.clone());
+        }
+        let decl_name = self.fresh_name("dtfam");
+        let ctor_decls: Vec<(NameId, usize)> = ctors
+            .iter()
+            .map(|(leaf, arity)| (self.kernel.name_str(decl_name, leaf.as_str()), *arity))
+            .collect();
+        let alpha = self.alpha;
+        let one = self.one;
+        let fam = self
+            .kernel
+            .add_datatype_family(decl_name, alpha, one, &ctor_decls)
+            .map_err(|e| ReconstructError::KernelRejected {
+                rule: "datatype_tester".to_owned(),
+                detail: format!("datatype family did not admit: {e:?}"),
+            })?;
+        self.datatype_families
+            .insert(dt_name.to_owned(), fam.clone());
+        Ok(fam)
+    }
+
+    /// Build the Lean proposition `Eq.{1} Bool l r` over the computational `Bool`.
+    fn mk_eq_bool(&mut self, l: ExprId, r: ExprId) -> ExprId {
+        let bool_const = self.kernel.const_(self.prelude.bool_, vec![]);
+        let eq = self.kernel.const_(self.prelude.eq, vec![self.one]);
+        let e = self.kernel.app(eq, bool_const);
+        let e = self.kernel.app(e, l);
+        self.kernel.app(e, r)
+    }
+
+    /// Build `Eq.refl.{1} Bool a` (the is-tester fold proof, when `a` is the
+    /// ι-reduced `Bool` value `is_C (cⱼ x…)` `def_eq`).
+    fn mk_eq_refl_bool(&mut self, a: ExprId) -> ExprId {
+        let bool_const = self.kernel.const_(self.prelude.bool_, vec![]);
+        let refl = self.kernel.const_(self.prelude.eq_refl, vec![self.one]);
+        let e = self.kernel.app(refl, bool_const);
+        self.kernel.app(e, a)
     }
 
     /// `f` applied to `args` (left-nested application `f a0 a1 … a_{n-1}`).
@@ -1694,12 +1754,21 @@ pub fn prove_unsat_to_lean_module(
             render_ctx_module(&mut ctx, t)
         }
         ProofFragment::Datatype => {
-            let p = crate::prove_qf_dt_unsat_alethe_via_simplification(arena, assertions)
-                .ok_or_else(declined)?;
-            let mut ctx = ReconstructCtx::new();
-            let t = reconstruct_qf_ufbv_proof(&mut ctx, &p)?;
-            require_infers_false(&mut ctx, t)?;
-            render_ctx_module(&mut ctx, t)
+            // Route-A is-tester fold: a pure `is_C(cⱼ x…)` contradiction is
+            // discharged **by ι** (axiom-free over the fold) through the dedicated
+            // tester reconstructor. Any other datatype proof (select-over-construct,
+            // mixed BV residual) falls back to the general QF_UFBV reconstructor,
+            // where the read-over-construct projection is itself ι-discharged.
+            if let Some(module) = reconstruct_qf_dt_tester_to_lean_module(arena, assertions) {
+                module?
+            } else {
+                let p = crate::prove_qf_dt_unsat_alethe_via_simplification(arena, assertions)
+                    .ok_or_else(declined)?;
+                let mut ctx = ReconstructCtx::new();
+                let t = reconstruct_qf_ufbv_proof(&mut ctx, &p)?;
+                require_infers_false(&mut ctx, t)?;
+                render_ctx_module(&mut ctx, t)
+            }
         }
         ProofFragment::Forall => {
             let p = crate::prove_quant_unsat_alethe(arena, assertions).ok_or_else(declined)?;
@@ -2188,6 +2257,304 @@ fn datatype_key(head: &str) -> Option<String> {
         return Some(format!("{arity}_{ctor}"));
     }
     None
+}
+
+// ===========================================================================
+// QF_DT **is-tester** fold — axiom-free Lean-kernel reconstruction (route A).
+//
+// The is-tester fold is `is_C (C x) = true` and `is_C (K x) = false` for K ≠ C
+// (the SMT-LIB datatype-tester semantics). The selector route already models an
+// SMT datatype constructor as a kernel inductive constructor, so the
+// read-over-construct projection is ι-reduction (`Eq.refl`); this is its
+// **is-tester twin**.
+//
+// A pure is-tester contradiction is a single redex `is_C (cⱼ x…)` asserted with
+// a polarity that disagrees with the fold:
+//
+//   - `¬is_C (C x)` — a TRUE-fold contradiction (`is_C (C x)` ι-reduces to
+//     `Bool.true`, but the assertion says it is not true); or
+//   - `is_C (K x)` with `K ≠ C` — a FALSE-fold contradiction (`is_C (K x)`
+//     ι-reduces to `Bool.false`, but the assertion says it is true).
+//
+// We model the whole datatype as ONE kernel inductive carrying every
+// constructor ([`Kernel::add_datatype_family`]); the is-tester is the recursor
+// application [`Kernel::datatype_tester`] eliminating into the **computational
+// `Bool`**, so `is_C (cⱼ x…)` ι-reduces (kernel `whnf`/`def_eq`) to a concrete
+// `Bool.true`/`Bool.false`. The is-tester predicate "`is_C(arg)` holds" is the
+// Bool equality `Eq Bool (is_C arg) Bool.true`, and:
+//
+//   - the input assertion `is_C(arg)` / `¬is_C(arg)` is the ONLY assumed axiom
+//     (the honest encoding of the input); and
+//   - the fold itself is discharged BY ι — `Eq.refl Bool true` (true fold) closes
+//     the negated hypothesis directly, while the false fold uses the
+//     `Bool.true ≠ Bool.false` discriminator (a `Bool.rec` motive `D` with
+//     `D false = True`, `D true = False`, transported along the hypothesis),
+//     which is itself axiom-free (no `noConfusion` axiom, just `Bool.rec` ι).
+//
+// The final term `infer`s to `False` (gated by [`require_infers_false`]); a wrong
+// fold makes ι fail to reduce and the kernel rejects — never a wrong `False`.
+// ===========================================================================
+
+/// A pure is-tester contradiction located in `assertions`: a tester redex
+/// `is_C(cⱼ x…)` whose asserted polarity disagrees with the constructor fold.
+struct TesterContradiction {
+    /// The datatype of the tester's constructors.
+    datatype: DatatypeId,
+    /// The **tested** constructor `C` of `is_C`.
+    tested: ConstructorId,
+    /// The **builder** constructor `cⱼ` of the argument `cⱼ(x…)`.
+    builder: ConstructorId,
+    /// The builder's field argument terms (modeled as opaque carrier atoms).
+    fields: Vec<TermId>,
+    /// `true` when the assertion is the positive tester atom `is_C(cⱼ x…)`
+    /// (a FALSE-fold contradiction needs `tested != builder`); `false` when it is
+    /// the negated atom `¬is_C(cⱼ x…)` (a TRUE-fold contradiction needs
+    /// `tested == builder`).
+    asserted_positive: bool,
+}
+
+/// Find the first pure is-tester contradiction in `assertions`: an assertion that
+/// is `is_C(cⱼ x…)` or `¬is_C(cⱼ x…)` (a tester directly over a constructor
+/// application) whose polarity disagrees with the `tested == builder` fold.
+/// Returns [`None`] when no such redex is present (e.g. a select-over-construct
+/// proof, or a tester over a non-constructor argument).
+fn find_tester_contradiction(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<TesterContradiction> {
+    for &assertion in assertions {
+        let (atom, positive) = match arena.node(assertion) {
+            IrTermNode::App {
+                op: IrOp::BoolNot,
+                args,
+            } => (args[0], false),
+            _ => (assertion, true),
+        };
+        let IrTermNode::App {
+            op: IrOp::DtTest(tested),
+            args,
+        } = arena.node(atom)
+        else {
+            continue;
+        };
+        let tested = *tested;
+        let arg = args[0];
+        let IrTermNode::App {
+            op: IrOp::DtConstruct { constructor, .. },
+            args: fields,
+        } = arena.node(arg)
+        else {
+            continue;
+        };
+        let builder = *constructor;
+        let folds_true = builder == tested;
+        // A contradiction iff the asserted polarity disagrees with the fold:
+        // positive assertion ⇒ needs the fold to be FALSE; negative ⇒ TRUE.
+        if positive != folds_true {
+            return Some(TesterContradiction {
+                datatype: arena.constructor_datatype(tested),
+                tested,
+                builder,
+                fields: fields.to_vec(),
+                asserted_positive: positive,
+            });
+        }
+    }
+    None
+}
+
+/// **Reconstruct a pure `QF_DT` is-tester contradiction to a Lean module** whose
+/// `axeyum_refutation : False` is kernel-checked and **axiom-free over the fold**
+/// — the is-tester fold `is_C (C x) = true` / `is_C (K x) = false` is discharged
+/// by ι-reduction (`Eq.refl`), not assumed. The only added axiom is the input
+/// tester assertion itself (the honest encoding of the input constraint).
+///
+/// Returns [`None`] when `assertions` carry no pure is-tester contradiction
+/// (the caller then falls back to the general datatype reconstructor).
+///
+/// # Errors
+///
+/// [`ReconstructError::KernelRejected`] if the datatype family fails to admit or
+/// the assembled `False` term does not `infer`/`def_eq` to `False` (a defensive
+/// gate; a sound fold always discharges).
+fn reconstruct_qf_dt_tester_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<Result<String, ReconstructError>> {
+    let c = find_tester_contradiction(arena, assertions)?;
+    Some(build_tester_refutation_module(arena, &c))
+}
+
+/// Assemble the kernel `False` term for a [`TesterContradiction`] and render the
+/// Lean module. Split out so the entry point stays a thin Option wrapper.
+fn build_tester_refutation_module(
+    arena: &TermArena,
+    c: &TesterContradiction,
+) -> Result<String, ReconstructError> {
+    let mut ctx = ReconstructCtx::new();
+
+    // 1. Declare the kernel family `D` carrying EVERY constructor of the datatype
+    //    (in declaration order), so the recursor can distinguish them.
+    let dt_name = arena.datatype_name(c.datatype).to_owned();
+    let ctor_ids = arena.datatype_constructors(c.datatype).to_vec();
+    // Constructor LEAF names `c0, c1, …` (kept positional + Lean-identifier-safe;
+    // `datatype_family` namespaces them under the family inductive so Lean's
+    // regenerated constructor/recursor names match).
+    let ctor_decls: Vec<(String, usize)> = ctor_ids
+        .iter()
+        .enumerate()
+        .map(|(j, &cid)| (format!("c{j}"), arena.constructor_fields(cid).len()))
+        .collect();
+    let family = ctx.datatype_family(&dt_name, &ctor_decls)?;
+
+    // 2. Build the constructor application `cⱼ(x…)`: model each field as a fresh
+    //    opaque carrier atom `α` (the fold is field-independent, so the exact
+    //    field value is irrelevant — only the constructor head drives ι).
+    let builder_pos = ctor_ids
+        .iter()
+        .position(|&cid| cid == c.builder)
+        .ok_or_else(|| ReconstructError::KernelRejected {
+            rule: "datatype_tester".to_owned(),
+            detail: "builder constructor not in datatype".to_owned(),
+        })?;
+    let tested_pos = ctor_ids
+        .iter()
+        .position(|&cid| cid == c.tested)
+        .ok_or_else(|| ReconstructError::KernelRejected {
+            rule: "datatype_tester".to_owned(),
+            detail: "tested constructor not in datatype".to_owned(),
+        })?;
+    let mut con = ctx.kernel.const_(family.ctors[builder_pos], vec![]);
+    for (i, _field) in c.fields.iter().enumerate() {
+        let atom_name = ctx.fresh_name(&format!("fld_{i}"));
+        let alpha = ctx.alpha;
+        ctx.kernel
+            .add_declaration(Declaration::Axiom {
+                name: atom_name,
+                uparams: vec![],
+                ty: alpha,
+            })
+            .map_err(|e| ReconstructError::KernelRejected {
+                rule: "datatype_tester".to_owned(),
+                detail: format!("field carrier atom did not admit: {e:?}"),
+            })?;
+        let a = ctx.kernel.const_(atom_name, vec![]);
+        con = ctx.kernel.app(con, a);
+    }
+
+    // 3. The is-tester `is_C : D → Bool` and the fold `is_C(cⱼ x…)`.
+    let alpha = ctx.alpha;
+    let tester = ctx.kernel.datatype_tester(
+        &family,
+        ctx.prelude.bool_,
+        ctx.prelude.bool_true,
+        ctx.prelude.bool_false,
+        alpha,
+        tested_pos,
+    );
+    let folded = ctx.kernel.app(tester, con);
+    let bool_true = ctx.kernel.const_(ctx.prelude.bool_true, vec![]);
+
+    // The is-tester predicate atom "is_C(arg) holds" := Eq Bool (is_C arg) true.
+    let pred = ctx.mk_eq_bool(folded, bool_true);
+
+    let false_term = if c.asserted_positive {
+        // FALSE fold: assertion `is_C(K x)` ⇒ axiom `h : Eq Bool (is_C(K x)) true`.
+        // But `is_C(K x)` ι-reduces to `Bool.false`, so `h` proves `false = true`
+        // (def_eq). The `Bool.true ≠ Bool.false` discriminator yields `False`.
+        let h = fresh_axiom(&mut ctx, pred, "assume")?;
+        build_bool_true_ne_false(&mut ctx, folded, h)
+    } else {
+        // TRUE fold: assertion `¬is_C(C x)` ⇒ axiom `h : ¬(Eq Bool (is_C(C x)) true)`.
+        // `is_C(C x)` ι-reduces to `Bool.true`, so `Eq.refl Bool true` proves the
+        // predicate; applying `h` to it gives `False`.
+        let not_pred = ctx.mk_not(pred);
+        let h = fresh_axiom(&mut ctx, not_pred, "assume")?;
+        let refl = ctx.mk_eq_refl_bool(bool_true);
+        ctx.kernel.app(h, refl)
+    };
+
+    require_infers_false(&mut ctx, false_term)?;
+    // Render the datatype family AND the computational `Bool` as **real Lean
+    // `inductive`s** so an external Lean regenerates their recursors *with* ι — the
+    // is-tester fold `Eq.refl Bool (true/false)` only type-checks if Lean can
+    // compute `is_C (cⱼ x…)` by ι. Everything else (the logical prelude, the input
+    // hypothesis axiom) renders as before.
+    let bool_ind = ctx.prelude.bool_;
+    let false_const = {
+        let n = ctx.prelude().false_;
+        ctx.kernel_mut().const_(n, vec![])
+    };
+    Ok(ctx.kernel().render_lean_module_with_inductives(
+        LEAN_MODULE_THEOREM,
+        false_const,
+        false_term,
+        &[family.ind, bool_ind],
+    ))
+}
+
+/// Given `lhs` (a `Bool` term that ι-reduces to `Bool.false`) and a proof
+/// `h : Eq Bool lhs Bool.true`, build a proof of `False` using the
+/// `Bool.true ≠ Bool.false` discriminator — **axiom-free**, by `Bool.rec` ι.
+///
+/// The discriminator motive is `D := λ (b : Bool), Bool.rec (λ _ => Prop) False
+/// True b`, so `D Bool.false` ι-reduces to `True` and `D Bool.true` to `False`.
+/// Transporting `True.intro : D lhs` (`lhs` `def_eq` `Bool.false`, so `D lhs`
+/// `def_eq` `True`) along `h` to `D Bool.true` (`def_eq` `False`) is the refutation.
+fn build_bool_true_ne_false(ctx: &mut ReconstructCtx, lhs: ExprId, h: ExprId) -> ExprId {
+    let anon = ctx.kernel.anon();
+    let bool_const = ctx.kernel.const_(ctx.prelude.bool_, vec![]);
+    let prop = ctx.kernel.sort_zero();
+    let true_const = ctx.kernel.const_(ctx.prelude.true_, vec![]);
+    let false_const = ctx.kernel.const_(ctx.prelude.false_, vec![]);
+
+    // discr := λ (b : Bool), Bool.rec.{1} (motive := λ _ => Prop) False True b.
+    //   minor for Bool.true  = False ;  minor for Bool.false = True.
+    // The motive `λ _ => Prop` maps `Bool → Sort 1` (since `Prop : Sort 1`), so the
+    // (large) elimination universe is `1`.
+    let z = ctx.kernel.level_zero();
+    let one = ctx.kernel.level_succ(z);
+    let rec = ctx.kernel.const_(ctx.prelude.bool_rec, vec![one]);
+    let motive = ctx.kernel.lam(anon, bool_const, prop, BinderInfo::Default);
+    let discr = {
+        let e = ctx.kernel.app(rec, motive);
+        let e = ctx.kernel.app(e, false_const); // minor for Bool.true
+        let e = ctx.kernel.app(e, true_const); // minor for Bool.false
+        let b = ctx.kernel.bvar(0);
+        let body = ctx.kernel.app(e, b);
+        ctx.kernel.lam(anon, bool_const, body, BinderInfo::Default)
+    };
+
+    // The Eq.rec transport motive `fun (x : Bool) (_ : Eq Bool lhs x) => discr x`.
+    // `discr lhs` def_eq `True`, so the refl case is `True.intro : discr lhs`.
+    let bool_true = ctx.kernel.const_(ctx.prelude.bool_true, vec![]);
+    let transport_motive = {
+        // Under binders (x : Bool) (_ : Eq Bool lhs x): apply `discr` to `x`(=bvar 1).
+        let x = ctx.kernel.bvar(1);
+        let discr_x = ctx.kernel.app(discr, x);
+        // inner Pi binder type: Eq Bool lhs x. `lhs` is closed (no bound vars here),
+        // `x` is bvar 0 at this binder depth.
+        let eq = ctx.kernel.const_(ctx.prelude.eq, vec![ctx.one]);
+        let x0 = ctx.kernel.bvar(0);
+        let eq_lhs_x = {
+            let e = ctx.kernel.app(eq, bool_const);
+            let e = ctx.kernel.app(e, lhs);
+            ctx.kernel.app(e, x0)
+        };
+        let inner = ctx.kernel.lam(anon, eq_lhs_x, discr_x, BinderInfo::Default);
+        ctx.kernel.lam(anon, bool_const, inner, BinderInfo::Default)
+    };
+    // refl_case : discr lhs  (def_eq True) — `True.intro`.
+    let refl_case = ctx.kernel.const_(ctx.prelude.true_intro, vec![]);
+    // Eq.rec.{0,1} Bool lhs transport_motive refl_case Bool.true h : discr Bool.true
+    //   = False (def_eq).
+    let rec_eq = ctx.kernel.const_(ctx.prelude.eq_rec, vec![z, ctx.one]);
+    let e = ctx.kernel.app(rec_eq, bool_const);
+    let e = ctx.kernel.app(e, lhs);
+    let e = ctx.kernel.app(e, transport_motive);
+    let e = ctx.kernel.app(e, refl_case);
+    let e = ctx.kernel.app(e, bool_true);
+    ctx.kernel.app(e, h)
 }
 
 /// Declare a fresh axiom of proposition `prop` and return a `Const` proof of it.
@@ -7020,7 +7387,10 @@ impl ReconstructCtx {
 // base; the only added axioms are the input-constraint hypotheses.
 // ===========================================================================
 
-use axeyum_ir::{Op as IrOp, Rational, Sort as IrSort, TermArena, TermId, TermNode as IrTermNode};
+use axeyum_ir::{
+    ConstructorId, DatatypeId, Op as IrOp, Rational, Sort as IrSort, TermArena, TermId,
+    TermNode as IrTermNode,
+};
 use axeyum_lean_kernel::{ArithPrelude, build_arith_prelude};
 
 // The LRA reconstruction items below are the public API surface a `lib.rs`

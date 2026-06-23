@@ -1127,3 +1127,115 @@ fn datatype_selector_iota_reduces_to_field() {
         );
     }
 }
+
+/// A carrier-axiom helper: declare an `α : Type` axiom and return `(name, α)`.
+#[cfg(test)]
+fn declare_carrier(k: &mut Kernel, name: &str, sort: crate::LevelId) -> crate::ExprId {
+    let anon = k.anon();
+    let type_ = k.sort(sort);
+    let n = k.name_str(anon, name);
+    k.add_declaration(Declaration::Axiom {
+        name: n,
+        uparams: vec![],
+        ty: type_,
+    })
+    .unwrap();
+    k.const_(n, vec![])
+}
+
+/// The **computational `Bool`** declared by `build_logic_prelude` is a genuine
+/// two-element enum: `Bool.true`/`Bool.false` both infer to `Bool`, and they are
+/// **distinct** (not `def_eq`). This is the carrier the is-tester eliminates into.
+#[test]
+fn computational_bool_has_two_distinct_values() {
+    let mut k = Kernel::new();
+    let p = build_logic_prelude(&mut k);
+    let bool_const = k.const_(p.bool_, vec![]);
+    let t = k.const_(p.bool_true, vec![]);
+    let f = k.const_(p.bool_false, vec![]);
+    let t_ty = k.infer(t).expect("Bool.true infers");
+    let f_ty = k.infer(f).expect("Bool.false infers");
+    assert!(k.def_eq(t_ty, bool_const), "Bool.true : Bool");
+    assert!(k.def_eq(f_ty, bool_const), "Bool.false : Bool");
+    assert!(
+        !k.def_eq(t, f),
+        "Bool.true and Bool.false must be distinct values"
+    );
+}
+
+/// The **is-tester** route, mirroring the selector route: declare a
+/// two-constructor family `Color : Type` (`Red : α → Color | Green : α → Color`);
+/// then for a carrier atom `a : α`, the is-testers built by
+/// [`Kernel::datatype_tester`] satisfy `is_Green (Green a)` `def_eq` `Bool.true`,
+/// `is_Green (Red a)` `def_eq` `Bool.false`, etc. — the is-tester fold is
+/// **ι-reduction**, so `Eq Bool (is_C (cⱼ a)) (true/false)` is `Eq.refl`.
+#[test]
+fn datatype_tester_iota_reduces_to_bool() {
+    let mut k = Kernel::new();
+    let p = build_logic_prelude(&mut k);
+    let anon = k.anon();
+    let z = k.level_zero();
+    let one = k.level_succ(z);
+    let alpha = declare_carrier(&mut k, "α", one);
+
+    // Color : Type with Red : α → Color | Green : α → Color  (each arity 1).
+    let color_name = k.name_str(anon, "Color");
+    let red_name = k.name_str(color_name, "Red");
+    let green_name = k.name_str(color_name, "Green");
+    let family = k
+        .add_datatype_family(color_name, alpha, one, &[(red_name, 1), (green_name, 1)])
+        .expect("Color family should admit");
+
+    // Carrier atom a : α.
+    let a = {
+        let n = k.name_str(anon, "a");
+        k.add_declaration(Declaration::Axiom {
+            name: n,
+            uparams: vec![],
+            ty: alpha,
+        })
+        .unwrap();
+        k.const_(n, vec![])
+    };
+
+    let bool_const = k.const_(p.bool_, vec![]);
+    let tt = k.const_(p.bool_true, vec![]);
+    let ff = k.const_(p.bool_false, vec![]);
+
+    // For each (tested ctor, applied ctor) pair, `is_tested (applied a)` must
+    // ι-reduce to `Bool.true` iff tested == applied, else `Bool.false`; and the
+    // fold equation `Eq Bool (is_tested (applied a)) value` is `Eq.refl Bool value`.
+    for tested in 0..2usize {
+        let tester = k.datatype_tester(&family, p.bool_, p.bool_true, p.bool_false, alpha, tested);
+        for (applied, ctor) in family.ctors.clone().iter().enumerate() {
+            let con = {
+                let c = k.const_(*ctor, vec![]);
+                k.app(c, a)
+            };
+            let folded = k.app(tester, con);
+            let expected = if tested == applied { tt } else { ff };
+            assert!(
+                k.def_eq(folded, expected),
+                "is_{tested}({applied} a) must ι-reduce to the right Bool value"
+            );
+
+            // Eq.refl Bool value : Eq Bool (is_tested (applied a)) value.
+            let eq_prop = {
+                let eq = k.const_(p.eq, vec![one]);
+                let e = k.app(eq, bool_const);
+                let e = k.app(e, folded);
+                k.app(e, expected)
+            };
+            let refl = {
+                let r = k.const_(p.eq_refl, vec![one]);
+                let e = k.app(r, bool_const);
+                k.app(e, expected)
+            };
+            let inferred = k.infer(refl).expect("Eq.refl infers");
+            assert!(
+                k.def_eq(inferred, eq_prop),
+                "Eq.refl proves the is_{tested}({applied}) fold (ι-reduction)"
+            );
+        }
+    }
+}

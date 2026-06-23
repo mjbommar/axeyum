@@ -111,6 +111,19 @@ pub struct LogicPrelude {
 
     /// `Not : Prop → Prop` (the definition `fun a => a → False`).
     pub not: NameId,
+
+    /// `Bool : Type` (`Sort 1`) — the **computational** two-element type, a
+    /// nullary enum `Bool.true | Bool.false`. This is *not* the `Prop`-valued
+    /// `True`/`False`; it is the carrier the datatype **is-tester** recursor
+    /// eliminates into (`is_C : D → Bool`), so `is_C (C x)` ι-reduces to a
+    /// genuine `Bool` value computable by `def_eq`.
+    pub bool_: NameId,
+    /// `Bool.true : Bool`.
+    pub bool_true: NameId,
+    /// `Bool.false : Bool`.
+    pub bool_false: NameId,
+    /// `Bool.rec` — the `Bool` eliminator (used to build is-testers).
+    pub bool_rec: NameId,
 }
 
 impl Kernel {
@@ -397,6 +410,32 @@ pub fn build_logic_prelude(kernel: &mut Kernel) -> LogicPrelude {
     let exists_rec = kernel.name_str(exists_, "rec");
 
     // --- Not (a : Prop) : Prop := fun a => a → False ---------------------
+    // --- Bool : Type, Bool.true | Bool.false -----------------------------
+    // The computational two-element enum at `Sort 1` (= Type). Its two nullary
+    // constructors carry the truth values the is-tester recursor returns; the
+    // generated `Bool.rec` is the eliminator that ι-computes `is_C (C x)`.
+    let bool_ = kernel.name_str(anon, "Bool");
+    let bool_true = kernel.name_str(bool_, "true");
+    let bool_false = kernel.name_str(bool_, "false");
+    {
+        // Bool : Sort 1.
+        let z = kernel.level_zero();
+        let one = kernel.level_succ(z);
+        let bool_ty = kernel.sort(one);
+        // Each nullary constructor has type `Bool` (the bare inductive).
+        let bool_const = kernel.const_(bool_, vec![]);
+        kernel
+            .add_inductive(
+                bool_,
+                &[],
+                0,
+                bool_ty,
+                &[(bool_true, bool_const), (bool_false, bool_const)],
+            )
+            .expect("Bool should admit");
+    }
+    let bool_rec = kernel.name_str(bool_, "rec");
+
     // A Definition (not an inductive). Type: Prop → Prop. Value: λ a, a → False.
     let not = kernel.name_str(anon, "Not");
     {
@@ -446,6 +485,10 @@ pub fn build_logic_prelude(kernel: &mut Kernel) -> LogicPrelude {
         exists_rec,
         exists_uparam,
         not,
+        bool_,
+        bool_true,
+        bool_false,
+        bool_rec,
     }
 }
 
@@ -570,6 +613,145 @@ impl Kernel {
             self.app(e, t)
         };
         self.lam(anon, ind_const, applied, BinderInfo::Default)
+    }
+}
+
+/// The interned names of a **multi-constructor datatype family** declared by
+/// [`Kernel::add_datatype_family`]: a non-recursive, non-indexed inductive
+/// `D : Sort u` carrying *every* constructor of an SMT datatype, each
+/// `D.cⱼ : carrier → … → D` taking its own field count of the fixed carrier
+/// type, plus the generated recursor `D.rec`.
+///
+/// This is the foundation for the **is-tester** fold (`is_C (C x) = true`,
+/// `is_C (K x) = false` for `K ≠ C`): because the family carries *all*
+/// constructors, the recursor can distinguish them, so the is-tester recursor
+/// application [`Kernel::datatype_tester`] ι-reduces to a concrete `Bool` value
+/// — `is_C (cⱼ x…)` is `Eq.refl Bool` against `Bool.true`/`Bool.false`, with no
+/// assumed datatype axiom (route-A, the is-tester twin of the selector route).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DatatypeFamily {
+    /// `D : Sort u` (the carrier-modeling inductive sort).
+    pub ind: NameId,
+    /// The constructors `D.c₀ … D.c_{k-1}`, in declaration order.
+    pub ctors: Vec<NameId>,
+    /// The field count (carrier-arrow count) of each constructor, by the same
+    /// index as `ctors`.
+    pub arities: Vec<usize>,
+    /// `D.rec` — the eliminator, used to define the is-testers.
+    pub rec: NameId,
+}
+
+impl Kernel {
+    /// Declare a **multi-constructor datatype family** `D : Sort u` whose
+    /// constructors are `(name, arity)` pairs — each `D.cⱼ` takes `arityⱼ`
+    /// fields, all of the fixed `carrier` type — and return the interned
+    /// [`DatatypeFamily`].
+    ///
+    /// `name` is the (fresh) inductive name; each constructor name and `D.rec`
+    /// are derived/registered through the trusted [`Kernel::add_inductive`]
+    /// gate. The constructor result `D` is closed (no field reference), so the
+    /// fields are non-recursive and the slice-7 inductive gate admits it.
+    ///
+    /// With this declared, the **is-tester** for the constructor at `tested` is
+    /// the recursor application
+    /// `λ (t : D), D.rec.{1} (motive := λ _ => Bool) min₀ … min_{k-1} t`
+    /// where `min_tested = λ fields => Bool.true` and every other minor yields
+    /// `Bool.false` (see [`Kernel::datatype_tester`]); `is_C (cⱼ x…)` ι-reduces
+    /// to the corresponding `Bool` value, so the fold equation is `Eq.refl`.
+    ///
+    /// # Errors
+    ///
+    /// Returns the [`KernelError`](crate::tc::KernelError) from
+    /// [`Kernel::add_inductive`] if the declaration fails to admit (a name
+    /// clash or a malformed carrier).
+    pub fn add_datatype_family(
+        &mut self,
+        name: NameId,
+        carrier: ExprId,
+        carrier_sort: LevelId,
+        ctors: &[(NameId, usize)],
+    ) -> Result<DatatypeFamily, crate::tc::KernelError> {
+        let anon = self.anon();
+        // ty := Sort u (closed — no params, no indices).
+        let ind_ty = self.sort(carrier_sort);
+        let ind_const = self.const_(name, vec![]);
+        // Each constructor type := Π (_ : carrier)^arity, D   (result `D` closed).
+        let ctor_decls: Vec<(NameId, ExprId)> = ctors
+            .iter()
+            .map(|&(cn, arity)| {
+                let mut ctor_ty = ind_const;
+                for _ in 0..arity {
+                    ctor_ty = self.pi(anon, carrier, ctor_ty, BinderInfo::Default);
+                }
+                (cn, ctor_ty)
+            })
+            .collect();
+        self.add_inductive(name, &[], 0, ind_ty, &ctor_decls)?;
+        let rec = self.name_str(name, "rec");
+        Ok(DatatypeFamily {
+            ind: name,
+            ctors: ctors.iter().map(|&(cn, _)| cn).collect(),
+            arities: ctors.iter().map(|&(_, a)| a).collect(),
+            rec,
+        })
+    }
+
+    /// Build the **is-tester** for the `tested`-th constructor of a
+    /// [`DatatypeFamily`] as a closed recursor application
+    /// `λ (t : D), D.rec.{1} (motive := λ _ => Bool) min₀ … min_{k-1} t`, where
+    /// `min_tested = λ (f₀ … : carrier), Bool.true` and every other minor is
+    /// `λ (f₀ … : carrier), Bool.false`.
+    ///
+    /// Applying it to a constructor application `D.cⱼ x…` ι-reduces (kernel
+    /// `whnf`/`def_eq`) to `Bool.true` when `j == tested` and `Bool.false`
+    /// otherwise, so the is-tester fold `Eq Bool (is_C (cⱼ x…)) (true/false)`
+    /// is `Eq.refl Bool (true/false)` — kernel-computed, axiom-free.
+    ///
+    /// `bool_`, `bool_true`, `bool_false` are the computational `Bool` names
+    /// (from [`LogicPrelude`]); `tested` must be `< family.ctors.len()`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `tested >= family.ctors.len()` (a caller bug; the tested
+    /// constructor must belong to the family).
+    #[must_use]
+    pub fn datatype_tester(
+        &mut self,
+        family: &DatatypeFamily,
+        bool_: NameId,
+        bool_true: NameId,
+        bool_false: NameId,
+        carrier: ExprId,
+        tested: usize,
+    ) -> ExprId {
+        assert!(
+            tested < family.ctors.len(),
+            "tested constructor out of family range"
+        );
+        let anon = self.anon();
+        let ind_const = self.const_(family.ind, vec![]);
+        let bool_const = self.const_(bool_, vec![]);
+        // motive := λ (_ : D), Bool   (constant motive `λ _ => Bool`).
+        let motive = self.lam(anon, ind_const, bool_const, BinderInfo::Default);
+        // The recursor's elimination universe for a `Bool : Sort 1` motive is `1`.
+        let z = self.level_zero();
+        let one = self.level_succ(z);
+        let rec_const = self.const_(family.rec, vec![one]);
+        let mut applied = self.app(rec_const, motive);
+        // One minor per constructor: `λ (f₀ … f_{a-1} : carrier), value` — the
+        // fields are bound and ignored, so the minor is a constant function.
+        for (j, &arity) in family.arities.iter().enumerate() {
+            let value = if j == tested { bool_true } else { bool_false };
+            let mut minor = self.const_(value, vec![]);
+            for _ in 0..arity {
+                minor = self.lam(anon, carrier, minor, BinderInfo::Default);
+            }
+            applied = self.app(applied, minor);
+        }
+        // λ (t : D), D.rec.{1} motive min₀ … min_{k-1} t.
+        let t = self.bvar(0);
+        let body = self.app(applied, t);
+        self.lam(anon, ind_const, body, BinderInfo::Default)
     }
 }
 

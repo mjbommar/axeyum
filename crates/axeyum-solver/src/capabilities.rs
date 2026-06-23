@@ -661,7 +661,29 @@ pub const CAPABILITIES: &[Capability] = &[
                    premise; a tampered eq_transitive is REJECTED. Honest boundary: the \
                    is-tester FOLD stays a trusted premise (only its USE is certified); the \
                    field-unification axioms (distinctness/injectivity/acyclicity) stay \
-                   trusted; the Lean/kernel reconstruction route is deferred (Carcara-only)",
+                   trusted; the axiom-free Lean/kernel route is the row below (Carcara stays \
+                   premise-based)",
+        reference: "ADR-0022",
+    },
+    Capability {
+        area: "datatypes",
+        feature: "axiom-free Lean-kernel is-tester FOLD reconstruction \
+                  (reconstruct_qf_dt_tester_to_lean_module, route A): a pure is_C(K(x)) \
+                  contradiction (¬is_C(C x) TRUE fold, or is_C(K x) FALSE fold for K!=C) is \
+                  reconstructed to a kernel-checked False where the datatype is modeled as a \
+                  multi-constructor kernel inductive and is_C is its recursor eliminating into a \
+                  computational Bool, so is_C(C x)=true / is_C(K x)=false is ι-reduction \
+                  (Eq.refl Bool / a Bool.true!=Bool.false discriminator), NOT an assumed fold",
+        assurance: Assurance::Checked,
+        evidence: "the in-tree axeyum-lean-kernel infers the term to False (require_infers_false), \
+                   and — when a real lean binary is present — the rendered module type-checks and \
+                   `#print axioms` reports NO sorryAx and NO datatype-fold axiom (only the input \
+                   tester assertion + carrier atoms), the family and Bool rendered as real Lean \
+                   `inductive`s so Lean regenerates the recursor with ι (lean_crosscheck \
+                   tester_fold_checks_in_real_lean). Honest boundary: is-tester fold ONLY this \
+                   slice; constructor distinctness and injectivity Lean routes are deferred \
+                   (injectivity needs noConfusion beyond ι); the Carcara premise-based route is \
+                   unchanged",
         reference: "ADR-0022",
     },
     Capability {
