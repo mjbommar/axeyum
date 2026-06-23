@@ -492,3 +492,124 @@ fn const_shift_lowering_in_tree_kernel_accepts() {
         "the correct bvshl lowering must be kernel-accepted, got {ok:?}"
     );
 }
+
+// --- Certified conjunctive QF_LRA Craig interpolant (lra_interpolant_certified) ---
+//
+// The interpolant `I` carries two Farkas certificates witnessing its two Craig
+// soundness conditions: `A ∧ ¬I ⊢ ⊥` and `I ∧ B ⊢ ⊥`. Each conjunction is itself
+// a conjunctive LRA refutation, so `prove_unsat_to_lean_module` reconstructs it to
+// a Lean-kernel-checked `theorem … : False`. Feeding both to the REAL `lean`
+// binary — accepted, no `sorryAx` — is the external check that upgrades the
+// interpolant from Validated to Checked via the Lean route.
+
+/// Write `source` to a temp `.lean` file and run `lean`; return `true` iff the
+/// module type-checks (exit 0). Skips (returns early `true`-equivalent via the
+/// caller's guard) when no `lean` binary is available. Used by the TAMPER test to
+/// confirm the kernel REJECTS a corrupted module.
+fn lean_typechecks(tag: &str, source: &str) -> Option<bool> {
+    let bin = lean_bin()?;
+    let dir = std::env::temp_dir().join(format!("axeyum_lean_{tag}"));
+    std::fs::create_dir_all(&dir).expect("create temp dir");
+    let file = dir.join(format!("{tag}.lean"));
+    std::fs::write(&file, source).expect("write lean module");
+    let out = Command::new(&bin)
+        .arg(&file)
+        .output()
+        .expect("run lean binary");
+    Some(out.status.success())
+}
+
+#[test]
+fn certified_lra_interpolant_both_farkas_certs_checked_by_real_lean() {
+    use axeyum_solver::lra_interpolant_certified;
+    // A: x ≤ 0 ; B: x ≥ 1.  Unsat; shared variable x.
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let zero = arena.real_const(Rational::integer(0));
+    let one = arena.real_const(Rational::integer(1));
+    let a0 = arena.real_le(x, zero).unwrap();
+    let b0 = arena.real_ge(x, one).unwrap();
+
+    let cert = lra_interpolant_certified(&mut arena, &[a0], &[b0])
+        .expect("decides")
+        .expect("a certified interpolant exists");
+
+    // Craig condition 1: A ∧ ¬I reconstructs to a kernel-checked `: False`.
+    let (_frag_a, source_a) = prove_unsat_to_lean_module(&mut arena, &cert.a_and_not_i)
+        .expect("A ∧ ¬I reconstructs to a Lean module");
+    assert!(
+        !source_a.contains("sorryAx"),
+        "A ∧ ¬I module depends on sorryAx:\n{source_a}"
+    );
+    lean_accepts("interp_a_not_i", &source_a);
+
+    // Craig condition 2: I ∧ B reconstructs to a kernel-checked `: False`.
+    let (_frag_b, source_b) = prove_unsat_to_lean_module(&mut arena, &cert.i_and_b)
+        .expect("I ∧ B reconstructs to a Lean module");
+    assert!(
+        !source_b.contains("sorryAx"),
+        "I ∧ B module depends on sorryAx:\n{source_b}"
+    );
+    lean_accepts("interp_i_b", &source_b);
+}
+
+// (A rational-coefficient certified interpolant — `3x ≤ 1 ∧ 2x ≥ 3` — is exercised
+// against the Lean *in-tree* kernel inside `lra_interpolant_certified` and against
+// Carcara in `carcara_crosscheck`; it is intentionally NOT fed to the real `lean`
+// binary here because the verbose nested-`add` reconstruction overruns Lean's
+// default `maxRecDepth` during elaboration — a pretty-printing depth limit, not a
+// soundness rejection. The unit-coefficient case above already proves real-Lean
+// acceptance of both Farkas certs end to end.)
+
+/// TAMPER (the no-`sorryAx` / kernel check has teeth): take a genuine certified
+/// refutation module and replace its proof term with `sorry`. The real Lean kernel
+/// then EITHER fails to type-check OR `#print axioms` reports `sorryAx` — both are
+/// rejections. A fabricated certificate cannot pass the gate the positive tests use.
+#[test]
+fn tampered_certified_lra_interpolant_module_is_rejected_by_real_lean() {
+    use axeyum_solver::lra_interpolant_certified;
+    if lean_bin().is_none() {
+        eprintln!("[skip] tamper: lean binary not found; install via elan or set AXEYUM_LEAN_BIN");
+        return;
+    }
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let zero = arena.real_const(Rational::integer(0));
+    let one = arena.real_const(Rational::integer(1));
+    let a0 = arena.real_le(x, zero).unwrap();
+    let b0 = arena.real_ge(x, one).unwrap();
+    let cert = lra_interpolant_certified(&mut arena, &[a0], &[b0])
+        .expect("decides")
+        .expect("a certified interpolant exists");
+    let (_frag, source) =
+        prove_unsat_to_lean_module(&mut arena, &cert.a_and_not_i).expect("A ∧ ¬I reconstructs");
+
+    // Replace the proof body `:= <proof>` of the refutation theorem with `sorry`.
+    let marker = "theorem axeyum_refutation : False :=";
+    let idx = source
+        .find(marker)
+        .expect("module declares axeyum_refutation");
+    let head = &source[..idx + marker.len()];
+    // Keep the trailing `#print axioms` line so the axiom audit still runs.
+    let tail_start = source[idx..]
+        .find("#print axioms")
+        .map(|p| idx + p)
+        .expect("module has a #print axioms audit");
+    let tampered = format!("{head} sorry\n\n{}", &source[tail_start..]);
+
+    let typechecks = lean_typechecks("interp_tampered", &tampered).expect("lean available");
+    if typechecks {
+        // If `sorry` type-checks (a warning, not an error), `#print axioms` MUST
+        // expose `sorryAx` — the audit the positive tests rely on.
+        let bin = lean_bin().expect("lean available");
+        let dir = std::env::temp_dir().join("axeyum_lean_interp_tampered");
+        let file = dir.join("interp_tampered.lean");
+        let out = Command::new(&bin).arg(&file).output().expect("run lean");
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        assert!(
+            stdout.contains("sorryAx"),
+            "a `sorry`-tampered refutation must expose sorryAx in the axiom audit:\n{stdout}"
+        );
+    }
+    // (If it does NOT type-check, that is already a rejection — nothing to assert.)
+}

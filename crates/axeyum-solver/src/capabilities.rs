@@ -248,6 +248,21 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "QF_LRA",
+        feature: "CERTIFIED conjunctive Craig interpolation (lra_interpolant_certified): the same \
+                  verified interpolant I, plus two externally-checkable Farkas certificates",
+        assurance: Assurance::Checked,
+        evidence: "I is a single linear inequality, so A ∧ ¬I and I ∧ B are each CONJUNCTIONS of \
+                   linear-real atoms (¬I is one inequality) ⇒ Farkas-refutable; emits a self-validated \
+                   Alethe la_generic refutation for each (Craig conditions 1 and 2), each independently \
+                   accepted by Carcara (valid && !holey) AND by the Lean kernel via \
+                   prove_unsat_to_lean_module (infer + def_eq False, no sorryAx); returns the certificate \
+                   ONLY when both refutations emit and self-check, else declines to the Validated \
+                   lra_interpolant path. BOUNDARY: conjunctive-only — disjunctive/Boolean-I \
+                   (lra_interpolant_cnf) and non-LRA stay Validated",
+        reference: "ADR-0047",
+    },
+    Capability {
+        area: "QF_LRA",
         feature: "DISJUNCTIVE Craig interpolation (lra_interpolant_cnf): interpolating-SMT over the \
                   DPLL(T) refutation — propositional-resolution interpolation with Farkas theory-lemma \
                   leaves, mixed lemmas purified by a shared synthetic atom",

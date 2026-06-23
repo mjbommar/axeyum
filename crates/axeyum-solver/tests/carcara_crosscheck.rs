@@ -19,11 +19,11 @@ use axeyum_cnf::{AletheClause, AletheCommand, AletheLit, AletheTerm, write_aleth
 use axeyum_ir::{Rational, Sort, TermArena, TermId};
 use axeyum_smtlib::write_script;
 use axeyum_solver::{
-    bitblast_step, prove_lra_unsat_alethe, prove_qf_abv_row_same_alethe_carcara,
-    prove_qf_abv_unsat_alethe_via_elimination, prove_qf_bv_unsat_alethe,
-    prove_qf_bv_unsat_alethe_ext_compare, prove_qf_bv_unsat_alethe_route2,
-    prove_qf_dt_unsat_alethe_via_simplification, prove_qf_uf_unsat_alethe,
-    prove_qf_ufbv_unsat_alethe,
+    bitblast_step, lra_interpolant_certified, prove_lra_unsat_alethe,
+    prove_qf_abv_row_same_alethe_carcara, prove_qf_abv_unsat_alethe_via_elimination,
+    prove_qf_bv_unsat_alethe, prove_qf_bv_unsat_alethe_ext_compare,
+    prove_qf_bv_unsat_alethe_route2, prove_qf_dt_unsat_alethe_via_simplification,
+    prove_qf_uf_unsat_alethe, prove_qf_ufbv_unsat_alethe,
 };
 
 /// Resolves the Carcara binary: `AXEYUM_CARCARA_BIN` if set, otherwise the
@@ -2165,5 +2165,150 @@ fn abv_row_same_tampered_collapse_is_rejected_by_carcara() {
     assert!(
         !report.lines().any(|l| l.trim() == "valid"),
         "tampered proof must not be reported valid, got:\n{report}"
+    );
+}
+
+// --- Certified conjunctive QF_LRA Craig interpolant (lra_interpolant_certified) ---
+//
+// The interpolant `I` carries two Farkas certificates — `la_generic` refutations
+// of `A ∧ ¬I` (Craig condition 1) and `I ∧ B` (condition 2). Each is handed to
+// the REAL Carcara binary on the matching `.smt2` conjunction; Carcara accepting
+// both (valid && !holey) is the external check that upgrades the interpolant from
+// Validated to Checked.
+
+#[test]
+fn certified_lra_interpolant_both_farkas_certs_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // A: x ≤ 0 ; B: x ≥ 1.  Unsat; shared variable x. The interpolant is a single
+    // inequality, so both `A ∧ ¬I` and `I ∧ B` are conjunctive (Farkas-refutable).
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let zero = real_int(&mut arena, 0);
+    let one = real_int(&mut arena, 1);
+    let a0 = arena.real_le(x, zero).unwrap();
+    let b0 = arena.real_ge(x, one).unwrap();
+
+    let cert = lra_interpolant_certified(&mut arena, &[a0], &[b0])
+        .expect("decides")
+        .expect("a certified interpolant exists");
+
+    // Condition 1: Carcara accepts the A ∧ ¬I refutation.
+    let report_a = carcara_accepts(
+        &bin,
+        "interp_a_not_i",
+        &arena,
+        &cert.a_and_not_i,
+        &cert.a_refutation,
+    );
+    assert!(
+        report_a.contains("valid"),
+        "expected Carcara 'valid' on A ∧ ¬I, got:\n{report_a}"
+    );
+    // Condition 2: Carcara accepts the I ∧ B refutation.
+    let report_b = carcara_accepts(
+        &bin,
+        "interp_i_b",
+        &arena,
+        &cert.i_and_b,
+        &cert.b_refutation,
+    );
+    assert!(
+        report_b.contains("valid"),
+        "expected Carcara 'valid' on I ∧ B, got:\n{report_b}"
+    );
+}
+
+#[test]
+fn certified_lra_interpolant_rational_certs_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // A: 3x ≤ 1 ; B: 2x ≥ 3 — rational Farkas combination in the interpolant.
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let one = real_int(&mut arena, 1);
+    let three = real_int(&mut arena, 3);
+    let two = real_int(&mut arena, 2);
+    let three_x = arena.real_mul(three, x).unwrap();
+    let two_x = arena.real_mul(two, x).unwrap();
+    let a0 = arena.real_le(three_x, one).unwrap();
+    let b0 = arena.real_ge(two_x, three).unwrap();
+
+    let cert = lra_interpolant_certified(&mut arena, &[a0], &[b0])
+        .expect("decides")
+        .expect("a certified interpolant exists");
+    let report_a = carcara_accepts(
+        &bin,
+        "interp_rat_a",
+        &arena,
+        &cert.a_and_not_i,
+        &cert.a_refutation,
+    );
+    assert!(report_a.contains("valid"), "A-side: {report_a}");
+    let report_b = carcara_accepts(
+        &bin,
+        "interp_rat_b",
+        &arena,
+        &cert.i_and_b,
+        &cert.b_refutation,
+    );
+    assert!(report_b.contains("valid"), "B-side: {report_b}");
+}
+
+/// TAMPER: corrupt the Farkas `:args` coefficient inside a certified interpolant's
+/// refutation and confirm Carcara REJECTS it. This proves the external check has
+/// teeth — a wrong certificate cannot pass (a bug surfaces as a rejection, never an
+/// unsound accept).
+#[test]
+fn tampered_certified_lra_interpolant_cert_is_rejected_by_carcara() {
+    use axeyum_cnf::{AletheCommand, AletheTerm};
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let zero = real_int(&mut arena, 0);
+    let one = real_int(&mut arena, 1);
+    let a0 = arena.real_le(x, zero).unwrap();
+    let b0 = arena.real_ge(x, one).unwrap();
+    let cert = lra_interpolant_certified(&mut arena, &[a0], &[b0])
+        .expect("decides")
+        .expect("a certified interpolant exists");
+
+    // Tamper the A ∧ ¬I refutation: replace the la_generic Farkas `:args` with
+    // bogus zero coefficients (which do NOT refute the conjunction), so Carcara's
+    // own re-derivation from the coefficients fails.
+    let mut tampered = cert.a_refutation.clone();
+    let mut patched = false;
+    for cmd in &mut tampered {
+        if let AletheCommand::Step { rule, args, .. } = cmd {
+            if rule == "la_generic" {
+                for a in args.iter_mut() {
+                    *a = AletheTerm::Const("0".to_owned());
+                }
+                patched = true;
+            }
+        }
+    }
+    assert!(patched, "expected a la_generic step to tamper");
+
+    let report = carcara_output(
+        &bin,
+        "interp_tampered",
+        &write_script(&arena, &cert.a_and_not_i),
+        &tampered,
+    );
+    assert!(
+        !report.lines().any(|l| l.trim() == "valid"),
+        "a tampered Farkas certificate must NOT be reported valid, got:\n{report}"
+    );
+    assert!(
+        report.contains("invalid") || report.contains("ERROR") || report.contains("holey"),
+        "Carcara must reject the tampered certificate, got:\n{report}"
     );
 }

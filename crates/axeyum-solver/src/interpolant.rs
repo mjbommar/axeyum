@@ -35,9 +35,12 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use axeyum_cnf::AletheCommand;
 use axeyum_ir::{Rational, SymbolId, TermArena, TermId, TermNode};
 
-use crate::{CheckResult, SolverError, check_with_lra, lra_farkas_certificate};
+use crate::{
+    CheckResult, SolverError, check_with_lra, lra_farkas_certificate, prove_lra_unsat_alethe,
+};
 
 /// Produces a verified Craig interpolant for the unsatisfiable conjunction
 /// `A ∧ B`, where `a_assertions` is `A` and `b_assertions` is `B` (each a
@@ -57,6 +60,20 @@ use crate::{CheckResult, SolverError, check_with_lra, lra_farkas_certificate};
 /// soundness alarm). A term-builder failure is also surfaced as
 /// [`SolverError::Backend`].
 pub fn lra_interpolant(
+    arena: &mut TermArena,
+    a_assertions: &[TermId],
+    b_assertions: &[TermId],
+) -> Result<Option<TermId>, SolverError> {
+    build_verified_interpolant(arena, a_assertions, b_assertions)
+}
+
+/// Builds the `A`-side Farkas interpolant `I` for the unsatisfiable conjunction
+/// `A ∧ B`, re-verifies the three Craig conditions independently, and returns it
+/// (or `None`). This is the single source of truth for the interpolant `I`;
+/// [`lra_interpolant`] forwards to it directly and
+/// [`lra_interpolant_certified`] reuses it, so the returned `I` is byte-identical
+/// across both entry points.
+fn build_verified_interpolant(
     arena: &mut TermArena,
     a_assertions: &[TermId],
     b_assertions: &[TermId],
@@ -132,6 +149,137 @@ pub fn lra_interpolant(
         Ok(Some(interpolant))
     } else {
         Ok(None)
+    }
+}
+
+/// A **certified** conjunctive `QF_LRA` Craig interpolant: the interpolant `I`
+/// for an unsatisfiable `A ∧ B`, paired with two externally-checkable `Farkas`
+/// refutations witnessing its two soundness conditions.
+///
+/// - [`a_refutation`](Self::a_refutation) is an Alethe `la_generic` proof of
+///   `A ∧ ¬I ⊢ ⊥` (Craig condition 1, `A ⇒ I`);
+/// - [`b_refutation`](Self::b_refutation) is an Alethe `la_generic` proof of
+///   `I ∧ B ⊢ ⊥` (Craig condition 2).
+///
+/// Both proofs are self-validated through [`crate::check_alethe_lra`] before this
+/// struct is constructed, and each is **independently** checkable by an external
+/// checker — Carcara (`la_generic`, accepted when `valid && !holey`) or, via
+/// [`crate::prove_unsat_to_lean_module`] on the same conjunction, the Lean kernel
+/// (`infer` + `def_eq False`, no `sorryAx`). Because the interpolant `I` here is a
+/// single linear inequality, both `A ∧ ¬I` and `I ∧ B` are **conjunctions** of
+/// linear-real atoms (`¬I` is one inequality), so each is `Farkas`-refutable —
+/// this is exactly the conjunctively-certifiable slice (see
+/// [`lra_interpolant_certified`]).
+#[derive(Debug, Clone)]
+pub struct LraInterpolantCertificate {
+    /// The verified interpolant term `I` (byte-identical to what
+    /// [`lra_interpolant`] returns for the same `(A, B)`).
+    pub interpolant: TermId,
+    /// `A ∧ ¬I`, the conjunction the [`a_refutation`](Self::a_refutation) refutes
+    /// (so a consumer can re-derive a Lean-kernel certificate from it).
+    pub a_and_not_i: Vec<TermId>,
+    /// `I ∧ B`, the conjunction the [`b_refutation`](Self::b_refutation) refutes.
+    pub i_and_b: Vec<TermId>,
+    /// Alethe `la_generic` refutation of `A ∧ ¬I` (Craig condition 1).
+    pub a_refutation: Vec<AletheCommand>,
+    /// Alethe `la_generic` refutation of `I ∧ B` (Craig condition 2).
+    pub b_refutation: Vec<AletheCommand>,
+}
+
+/// Produces a **certified** Craig interpolant for the unsatisfiable conjunctive
+/// `QF_LRA` partition `A = a_assertions`, `B = b_assertions`: the same verified
+/// interpolant [`lra_interpolant`] returns, **plus** two `Farkas` certificates —
+/// Alethe `la_generic` refutations of `A ∧ ¬I` and `I ∧ B` — that an independent
+/// checker (Carcara, or the Lean kernel via
+/// [`crate::prove_unsat_to_lean_module`]) can accept on its own.
+///
+/// This is the `Checked`-assurance upgrade of the `Validated` [`lra_interpolant`]:
+/// the interpolant was already verify-before-return; here we additionally emit an
+/// externally-checkable certificate for each of its two soundness conditions, and
+/// return it **only** when both certificates are produced and self-check (through
+/// [`crate::check_alethe_lra`]). Both refutations are conjunctive because the
+/// interpolant `I` is a single linear inequality, so `¬I` is a single inequality
+/// and each conjunction is `Farkas`-refutable.
+///
+/// # Boundary
+///
+/// Only the CONJUNCTIVE `QF_LRA` slice is certified here. A disjunctive or
+/// Boolean-structured interpolant (the `lra_interpolant_cnf` shape) is **not**
+/// emitted by this path and stays at `Validated`; this function declines
+/// (`Ok(None)`) whenever [`lra_interpolant`] declines (satisfiable, trivially
+/// false, outside conjunctive `QF_LRA`, an exact `i128` overflow, or a failed
+/// post-check) or whenever either `Farkas` refutation cannot be emitted/validated
+/// for the produced conjunction. A caller that gets `Ok(None)` should fall back to
+/// the `Validated` [`lra_interpolant`] path — this function NEVER returns an
+/// uncertified interpolant dressed as certified.
+///
+/// # Errors
+///
+/// Propagates [`SolverError`] from the underlying Farkas decision / verification
+/// `check_with_lra` calls (a `sat`-replay or self-check soundness alarm), or a
+/// term-builder failure ([`SolverError::Backend`]).
+pub fn lra_interpolant_certified(
+    arena: &mut TermArena,
+    a_assertions: &[TermId],
+    b_assertions: &[TermId],
+) -> Result<Option<LraInterpolantCertificate>, SolverError> {
+    // 1. The verified interpolant `I` (identical to `lra_interpolant`'s output).
+    let Some(interpolant) = build_verified_interpolant(arena, a_assertions, b_assertions)? else {
+        return Ok(None);
+    };
+
+    // 2. Form the two conjunctions whose UNSAT is the two Craig soundness
+    //    conditions. `¬I` is one inequality (I is one inequality), so each
+    //    conjunction is a conjunctive linear-real system — Farkas-refutable.
+    //    We build `¬I` as the explicit DUAL comparison (`¬(e ≤ 0) = e > 0`,
+    //    `¬(e < 0) = e ≥ 0`) rather than a `not`-wrapper, so the Alethe atom
+    //    emitter (which lowers bare comparisons, not `not`) covers it.
+    let Some(not_interpolant) = dual_comparison(arena, interpolant) else {
+        return Ok(None);
+    };
+    let mut a_and_not_i: Vec<TermId> = a_assertions.to_vec();
+    a_and_not_i.push(not_interpolant);
+    let mut i_and_b: Vec<TermId> = Vec::with_capacity(b_assertions.len() + 1);
+    i_and_b.push(interpolant);
+    i_and_b.extend_from_slice(b_assertions);
+
+    // 3. Emit a self-validated Alethe `la_generic` refutation for each. The
+    //    emitter re-checks the proof through `check_alethe_lra` and yields `None`
+    //    on any doubt; we then decline to the `Validated` path rather than return
+    //    an uncertified interpolant. (The external Carcara/Lean acceptance of these
+    //    two refutations is exercised by the cross-check tests.)
+    let Some(a_refutation) = prove_lra_unsat_alethe(arena, &a_and_not_i) else {
+        return Ok(None);
+    };
+    let Some(b_refutation) = prove_lra_unsat_alethe(arena, &i_and_b) else {
+        return Ok(None);
+    };
+
+    Ok(Some(LraInterpolantCertificate {
+        interpolant,
+        a_and_not_i,
+        i_and_b,
+        a_refutation,
+        b_refutation,
+    }))
+}
+
+/// Builds the explicit dual (logical negation) of the interpolant comparison `I`
+/// as a single bare comparison term, so the `la_generic` Alethe emitter — which
+/// lowers bare comparisons but not a `not`-wrapper — can render it.
+///
+/// `I` is produced by [`build_verified_interpolant`] as exactly `real_le(e, 0)`
+/// or `real_lt(e, 0)`, whose duals are `real_gt(e, 0)` and `real_ge(e, 0)`. Any
+/// other shape (which this path never builds) returns `None` ⇒ decline.
+fn dual_comparison(arena: &mut TermArena, interpolant: TermId) -> Option<TermId> {
+    let (op, lhs, rhs) = match arena.node(interpolant) {
+        TermNode::App { op, args } if args.len() == 2 => (*op, args[0], args[1]),
+        _ => return None,
+    };
+    match op {
+        axeyum_ir::Op::RealLe => arena.real_gt(lhs, rhs).ok(),
+        axeyum_ir::Op::RealLt => arena.real_ge(lhs, rhs).ok(),
+        _ => None,
     }
 }
 
