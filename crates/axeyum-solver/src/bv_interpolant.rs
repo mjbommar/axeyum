@@ -51,11 +51,12 @@ use std::collections::{BTreeMap, BTreeSet};
 use axeyum_aig::{AigLit, AigNode};
 use axeyum_bv::{BitLowering, lower_terms};
 use axeyum_cnf::{
-    BoolExpr, CnfClause, CnfFormula, CnfLit, CnfVar, propositional_interpolant, reachable_node_mask,
+    AletheCommand, BoolExpr, CnfClause, CnfFormula, CnfLit, CnfVar, propositional_interpolant,
+    reachable_node_mask,
 };
-use axeyum_ir::{Sort, SymbolId, TermArena, TermId, TermNode};
+use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode};
 
-use crate::{CheckResult, SolverConfig, check_auto};
+use crate::{CheckResult, SolverConfig, SolverError, check_auto, prove_qf_bv_unsat_alethe};
 
 /// Produces a verified `QF_BV` Craig interpolant for the unsatisfiable
 /// conjunction `A ∧ B`, where `a_assertions` is `A` and `b_assertions` is `B`
@@ -68,6 +69,18 @@ use crate::{CheckResult, SolverConfig, check_auto};
 /// an unverified interpolant.
 #[must_use]
 pub fn qf_bv_interpolant(
+    arena: &mut TermArena,
+    a_assertions: &[TermId],
+    b_assertions: &[TermId],
+) -> Option<TermId> {
+    build_verified_bv_interpolant(arena, a_assertions, b_assertions)
+}
+
+/// Shared builder behind [`qf_bv_interpolant`] and [`qf_bv_interpolant_certified`]:
+/// builds the candidate `QF_BV` Craig interpolant and returns it only after the
+/// three Craig conditions independently re-check. The returned `I` is byte-identical
+/// to [`qf_bv_interpolant`]'s output for the same `(A, B)`.
+fn build_verified_bv_interpolant(
     arena: &mut TermArena,
     a_assertions: &[TermId],
     b_assertions: &[TermId],
@@ -169,6 +182,165 @@ pub fn qf_bv_interpolant(
     } else {
         None
     }
+}
+
+/// A **certified** `QF_BV` Craig interpolant: the interpolant `I` for an
+/// unsatisfiable `A ∧ B`, paired with two externally-checkable bit-blast
+/// refutations witnessing its two soundness conditions.
+///
+/// - [`a_refutation`](Self::a_refutation) is a `Carcara`-checkable `Alethe`
+///   bit-blast proof of `A ∧ ¬I ⊢ ⊥` (Craig condition 1, `A ⇒ I`);
+/// - [`b_refutation`](Self::b_refutation) is an `Alethe` bit-blast proof of
+///   `I ∧ B ⊢ ⊥` (Craig condition 2).
+///
+/// Both proofs are self-validated through the SAT-`BV` refutation path before this
+/// struct is constructed (the emitter [`prove_qf_bv_unsat_alethe`] returns `None`
+/// on any doubt), and each is **independently** checkable by the external `Carcara`
+/// `Alethe` checker (`bitblast_*` + `resolution`, accepted when `valid && !holey`).
+///
+/// # Boundary
+///
+/// Only the **single-predicate** `QF_BV` interpolant slice is certified. The lifted
+/// interpolant `I` is generally a Boolean combination (an `and`/`or`/`not` tree) of
+/// `extract`-predicates over shared bit-vector terms; the `Carcara`-checked
+/// [`prove_qf_bv_unsat_alethe`] emitter only accepts an assertion that is a single
+/// top-level predicate (`=`/`bvult`/`bvslt`) over bit-blastable operands, optionally
+/// under one `not`. So this certificate is produced **only** when `I` is itself such
+/// a single predicate — then both `A ∧ ¬I` and `I ∧ B` stay in that emittable
+/// fragment (`¬I` peels a `not` to avoid a double negation). Any compound (tree)
+/// interpolant declines to `Ok(None)` and stays `Validated`; this function NEVER
+/// returns an uncertified interpolant dressed as certified.
+#[derive(Debug, Clone)]
+pub struct QfBvInterpolantCertificate {
+    /// The verified interpolant term `I` (byte-identical to what
+    /// [`qf_bv_interpolant`] returns for the same `(A, B)`).
+    pub interpolant: TermId,
+    /// `A ∧ ¬I`, the conjunction the [`a_refutation`](Self::a_refutation) refutes.
+    pub a_and_not_i: Vec<TermId>,
+    /// `I ∧ B`, the conjunction the [`b_refutation`](Self::b_refutation) refutes.
+    pub i_and_b: Vec<TermId>,
+    /// `Alethe` bit-blast refutation of `A ∧ ¬I` (Craig condition 1).
+    pub a_refutation: Vec<AletheCommand>,
+    /// `Alethe` bit-blast refutation of `I ∧ B` (Craig condition 2).
+    pub b_refutation: Vec<AletheCommand>,
+}
+
+/// Produces a **certified** Craig interpolant for the unsatisfiable `QF_BV` partition
+/// `A = a_assertions`, `B = b_assertions`: the same verified interpolant
+/// [`qf_bv_interpolant`] returns, **plus** two bit-blast certificates — `Carcara`-
+/// checkable `Alethe` refutations of `A ∧ ¬I` and `I ∧ B`.
+///
+/// This is the `Checked`-assurance upgrade of the `Validated` [`qf_bv_interpolant`]:
+/// the interpolant was already verify-before-return; here we additionally emit an
+/// externally-checkable certificate for each of its two soundness conditions, and
+/// return it **only** when both certificates are produced and self-check (inside the
+/// emitter, through the SAT-`BV` refutation path). External `Carcara` acceptance of
+/// the two refutations is exercised by the cross-check tests.
+///
+/// # Boundary
+///
+/// Only the **single-predicate** `QF_BV` interpolant slice is certified here (see
+/// [`QfBvInterpolantCertificate`]). When the lifted interpolant `I` is a compound
+/// Boolean tree of `extract`-predicates — the common shape — it is outside the
+/// `Carcara`-checked [`prove_qf_bv_unsat_alethe`] emitter's flat-predicate fragment,
+/// so this function declines (`Ok(None)`) and the caller falls back to the
+/// `Validated` [`qf_bv_interpolant`] path. It also declines whenever
+/// [`qf_bv_interpolant`] declines (satisfiable, non-`QF_BV` input, a failed
+/// post-check) or whenever either refutation cannot be emitted/validated.
+///
+/// # Errors
+///
+/// Currently infallible at the `Result` layer (every decline returns `Ok(None)`);
+/// the [`SolverError`] signature mirrors [`crate::lra_interpolant_certified`] and
+/// [`crate::qf_uf_interpolant_certified`] so the certified-interpolant API is uniform.
+pub fn qf_bv_interpolant_certified(
+    arena: &mut TermArena,
+    a_assertions: &[TermId],
+    b_assertions: &[TermId],
+) -> Result<Option<QfBvInterpolantCertificate>, SolverError> {
+    // 1. The verified interpolant `I` (identical to `qf_bv_interpolant`'s output).
+    let Some(interpolant) = build_verified_bv_interpolant(arena, a_assertions, b_assertions) else {
+        return Ok(None);
+    };
+
+    // 2. Only a single top-level predicate is in the Carcara-checked emitter's
+    //    fragment. A compound (and/or/not-tree) interpolant — the common lifted
+    //    shape — is not emittable, so decline cleanly to the Validated path.
+    if !is_single_bv_predicate(arena, interpolant) {
+        return Ok(None);
+    }
+
+    // 3. Form the two Craig conjunctions. `¬I` peels a `not` (when `I = (not p)`)
+    //    so the emitter's single-`not`-peel `classify` reads it as a bare predicate.
+    let Some(not_interpolant) = negate_bv_interpolant(arena, interpolant) else {
+        return Ok(None);
+    };
+    let mut a_and_not_i: Vec<TermId> = a_assertions.to_vec();
+    a_and_not_i.push(not_interpolant);
+    let mut i_and_b: Vec<TermId> = Vec::with_capacity(b_assertions.len() + 1);
+    i_and_b.push(interpolant);
+    i_and_b.extend_from_slice(b_assertions);
+
+    // 4. Emit a self-validated Alethe bit-blast refutation for each. The emitter
+    //    re-checks the proof and yields `None` on any doubt (or when the conjunction
+    //    is outside its fragment); we then decline rather than return an uncertified
+    //    interpolant. External Carcara acceptance is exercised by the cross-check tests.
+    let Some(a_refutation) = prove_qf_bv_unsat_alethe(arena, &a_and_not_i) else {
+        return Ok(None);
+    };
+    let Some(b_refutation) = prove_qf_bv_unsat_alethe(arena, &i_and_b) else {
+        return Ok(None);
+    };
+
+    Ok(Some(QfBvInterpolantCertificate {
+        interpolant,
+        a_and_not_i,
+        i_and_b,
+        a_refutation,
+        b_refutation,
+    }))
+}
+
+/// Whether `term` is a single top-level `QF_BV` predicate the `Carcara`-checked
+/// emitter accepts — `(= s t)`, `(bvult s t)`, `(bvslt s t)`, or a single `not` of
+/// one. A compound Boolean tree (`and`/`or`, or a doubly-negated predicate) is **not**
+/// such a predicate and is rejected so the certificate path declines on it.
+fn is_single_bv_predicate(arena: &TermArena, term: TermId) -> bool {
+    match arena.node(term) {
+        TermNode::App {
+            op: Op::BoolNot,
+            args,
+        } if args.len() == 1 => is_bare_bv_predicate(arena, args[0]),
+        _ => is_bare_bv_predicate(arena, term),
+    }
+}
+
+/// Whether `term` is a bare (un-negated) supported `QF_BV` predicate head.
+fn is_bare_bv_predicate(arena: &TermArena, term: TermId) -> bool {
+    matches!(
+        arena.node(term),
+        TermNode::App {
+            op: Op::Eq | Op::BvUlt | Op::BvSlt,
+            ..
+        }
+    )
+}
+
+/// Builds the logical negation `¬I` of the interpolant as a *bare* assertion the
+/// bit-blast emitter can classify, peeling a double negation: when `I` is
+/// `(not inner)` the negation is `inner` itself (the emitter peels at most one
+/// `not`), otherwise it is `(not I)`. Returns `None` if the negation cannot be built.
+fn negate_bv_interpolant(arena: &mut TermArena, interpolant: TermId) -> Option<TermId> {
+    if let TermNode::App {
+        op: Op::BoolNot,
+        args,
+    } = arena.node(interpolant)
+    {
+        if args.len() == 1 {
+            return Some(args[0]);
+        }
+    }
+    arena.not(interpolant).ok()
 }
 
 /// The CNF variable for a non-constant AIG node index (`node - 1`).

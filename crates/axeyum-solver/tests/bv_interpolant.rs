@@ -276,3 +276,94 @@ fn randomized_soundness_fuzz() {
         "fuzz must produce at least one verified interpolant"
     );
 }
+
+// --- Certified single-predicate QF_BV Craig interpolant (qf_bv_interpolant_certified) ---
+//
+// The certificate carries the *same* verified interpolant plus two bit-blast
+// refutations (of `A ∧ ¬I` and `I ∧ B`) for an external Carcara cross-check. These
+// unit tests cover the parts that do not need the Carcara binary: the cert's
+// interpolant is byte-identical to the plain path's, the three Craig conditions still
+// hold, and a compound (tree) interpolant declines to the `Validated` path.
+
+/// A single-predicate interpolant (`A: x=y`, `B: x≠y` ⟹ `I = (x=y)`) certifies: the
+/// certificate exists, its interpolant equals the plain `qf_bv_interpolant` output,
+/// and the carried `A ∧ ¬I` / `I ∧ B` conjunctions are independently unsat.
+#[test]
+fn certified_single_predicate_interpolant_matches_and_refutes() {
+    use axeyum_solver::qf_bv_interpolant_certified;
+    let mut arena = TermArena::new();
+    let x = bv8(&mut arena, "x");
+    let y = bv8(&mut arena, "y");
+    let a = vec![eq(&mut arena, x, y)];
+    let b = vec![neq(&mut arena, x, y)];
+
+    let plain = qf_bv_interpolant(&mut arena, &a, &b).expect("plain interpolant exists");
+    let cert = qf_bv_interpolant_certified(&mut arena, &a, &b)
+        .expect("decides")
+        .expect("a certified interpolant exists");
+
+    // Byte-identical interpolant term: the cert reuses the shared builder.
+    assert_eq!(
+        cert.interpolant, plain,
+        "certified interpolant must equal the plain qf_bv_interpolant output"
+    );
+    // The carried interpolant is still a genuine Craig interpolant (all 3 conditions).
+    assert_is_interpolant(&mut arena, &a, &b, cert.interpolant);
+    // The carried conjunctions the refutations witness are independently unsat.
+    assert!(
+        is_unsat(&mut arena, &cert.a_and_not_i),
+        "A ∧ ¬I must be unsat"
+    );
+    assert!(is_unsat(&mut arena, &cert.i_and_b), "I ∧ B must be unsat");
+    assert!(
+        !cert.a_refutation.is_empty() && !cert.b_refutation.is_empty(),
+        "both refutations must carry steps"
+    );
+}
+
+/// A compound (Boolean-tree) interpolant — here `A: x=0`, `B: x=1`, whose lifted
+/// interpolant is an `and` of `extract`-predicates — is outside the Carcara-checked
+/// emitter's flat-predicate fragment, so the certified path declines (`Ok(None)`)
+/// while the plain `Validated` path still returns an interpolant.
+#[test]
+fn compound_interpolant_declines_certification() {
+    use axeyum_solver::qf_bv_interpolant_certified;
+    let mut arena = TermArena::new();
+    let x = bv8(&mut arena, "x");
+    let zero = const8(&mut arena, 0);
+    let one = const8(&mut arena, 1);
+    let a = vec![eq(&mut arena, x, zero)];
+    let b = vec![eq(&mut arena, x, one)];
+
+    // The Validated path still produces a (compound) interpolant.
+    let plain = qf_bv_interpolant(&mut arena, &a, &b).expect("plain interpolant exists");
+    assert!(
+        matches!(arena.node(plain), TermNode::App { .. }),
+        "this instance's interpolant is a compound Boolean term"
+    );
+    // The certified path declines it (out of the emittable single-predicate slice).
+    assert!(
+        qf_bv_interpolant_certified(&mut arena, &a, &b)
+            .expect("decides")
+            .is_none(),
+        "a compound (tree) interpolant must decline certification"
+    );
+}
+
+/// A satisfiable conjunction has no interpolant, so the certified path declines too.
+#[test]
+fn satisfiable_pair_declines_certification() {
+    use axeyum_solver::qf_bv_interpolant_certified;
+    let mut arena = TermArena::new();
+    let x = bv8(&mut arena, "x");
+    let zero = const8(&mut arena, 0);
+    let a = vec![eq(&mut arena, x, zero)];
+    let b = vec![eq(&mut arena, x, zero)];
+    assert!(!is_unsat(&mut arena, &[a[0], b[0]]), "A ∧ B is sat");
+    assert!(
+        qf_bv_interpolant_certified(&mut arena, &a, &b)
+            .expect("decides")
+            .is_none(),
+        "a satisfiable conjunction certifies no interpolant"
+    );
+}

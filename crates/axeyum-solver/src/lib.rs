@@ -140,7 +140,9 @@ pub use bmc::{
     bounded_model_check, bounded_model_check_with_memory, certify_safety_k_induction,
     prove_safety_k_induction,
 };
-pub use bv_interpolant::qf_bv_interpolant;
+pub use bv_interpolant::{
+    QfBvInterpolantCertificate, qf_bv_interpolant, qf_bv_interpolant_certified,
+};
 pub use cardinality::{at_least, at_most, at_most_one, between, exactly, exactly_one};
 pub use certify::{CertifyOutcome, certify_qf_bv_by_enumeration};
 pub use combined::check_with_all_theories;

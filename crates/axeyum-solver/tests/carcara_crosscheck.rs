@@ -23,7 +23,8 @@ use axeyum_solver::{
     prove_qf_abv_row_same_alethe_carcara, prove_qf_abv_unsat_alethe_via_elimination,
     prove_qf_bv_unsat_alethe, prove_qf_bv_unsat_alethe_ext_compare,
     prove_qf_bv_unsat_alethe_route2, prove_qf_dt_unsat_alethe_via_simplification,
-    prove_qf_uf_unsat_alethe, prove_qf_ufbv_unsat_alethe, qf_uf_interpolant_certified,
+    prove_qf_uf_unsat_alethe, prove_qf_ufbv_unsat_alethe, qf_bv_interpolant_certified,
+    qf_uf_interpolant_certified,
 };
 
 /// Resolves the Carcara binary: `AXEYUM_CARCARA_BIN` if set, otherwise the
@@ -2470,5 +2471,146 @@ fn tampered_certified_euf_interpolant_cert_is_rejected_by_carcara() {
     assert!(
         report.contains("invalid") || report.contains("ERROR") || report.contains("holey"),
         "Carcara must reject the tampered EUF certificate, got:\n{report}"
+    );
+}
+
+// --- Certified single-predicate QF_BV Craig interpolant (qf_bv_interpolant_certified) ---
+//
+// The interpolant `I` carries two bit-blast refutations — Alethe `bitblast_*` +
+// `resolution` proofs of `A ∧ ¬I` (Craig condition 1) and `I ∧ B` (condition 2).
+// Each is handed to the REAL Carcara binary on the matching `.smt2` conjunction;
+// Carcara accepting both (valid && !holey) is the external check that upgrades the
+// single-predicate QF_BV interpolant from Validated to Checked. A compound (tree)
+// interpolant is out of the emitter's flat-predicate fragment and stays Validated.
+
+/// Declares an 8-bit bit-vector symbol and returns its variable term.
+fn bv8(arena: &mut TermArena, name: &str) -> TermId {
+    let s = arena.declare(name, Sort::BitVec(8)).expect("declare");
+    arena.var(s)
+}
+
+#[test]
+fn certified_qf_bv_interpolant_both_bitblast_certs_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // A: x = y ; B: x ≠ y.  Unsat; shared terms x, y. The interpolant is the single
+    // predicate I = (x = y), so both `A ∧ ¬I` (= x=y, x≠y) and `I ∧ B` (= x=y, x≠y)
+    // are in the Carcara-checked flat-predicate bit-blast fragment.
+    let mut arena = TermArena::new();
+    let x = bv8(&mut arena, "x");
+    let y = bv8(&mut arena, "y");
+    let a0 = arena.eq(x, y).unwrap();
+    let e = arena.eq(x, y).unwrap();
+    let b0 = arena.not(e).unwrap();
+
+    let cert = qf_bv_interpolant_certified(&mut arena, &[a0], &[b0])
+        .expect("decides")
+        .expect("a certified QF_BV interpolant exists");
+
+    // Condition 1: Carcara accepts the A ∧ ¬I bit-blast refutation.
+    let report_a = carcara_accepts(
+        &bin,
+        "bv_interp_a_not_i",
+        &arena,
+        &cert.a_and_not_i,
+        &cert.a_refutation,
+    );
+    assert!(
+        report_a.contains("valid"),
+        "expected Carcara 'valid' on A ∧ ¬I, got:\n{report_a}"
+    );
+    // Condition 2: Carcara accepts the I ∧ B bit-blast refutation.
+    let report_b = carcara_accepts(
+        &bin,
+        "bv_interp_i_b",
+        &arena,
+        &cert.i_and_b,
+        &cert.b_refutation,
+    );
+    assert!(
+        report_b.contains("valid"),
+        "expected Carcara 'valid' on I ∧ B, got:\n{report_b}"
+    );
+}
+
+/// A compound (Boolean-tree) interpolant — `A: x=0`, `B: x=1`, lifted to an `and` of
+/// `extract`-predicates — is outside the Carcara-checked emitter's flat-predicate
+/// fragment, so the certified path declines (`Ok(None)`) and stays `Validated`. (No
+/// Carcara invocation: this is the honest emittable-only boundary.)
+#[test]
+fn compound_qf_bv_interpolant_declines_certification() {
+    let mut arena = TermArena::new();
+    let x = bv8(&mut arena, "x");
+    let zero = arena.bv_const(8, 0).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let a0 = arena.eq(x, zero).unwrap();
+    let b0 = arena.eq(x, one).unwrap();
+    assert!(
+        qf_bv_interpolant_certified(&mut arena, &[a0], &[b0])
+            .expect("decides")
+            .is_none(),
+        "a compound (tree) QF_BV interpolant must decline certification"
+    );
+}
+
+/// TAMPER: corrupt a derived (non-`assume`) step's clause inside a certified `QF_BV`
+/// interpolant's refutation and confirm Carcara REJECTS it. This proves the external
+/// check has teeth — a wrong certificate cannot pass (a bug surfaces as a rejection,
+/// never an unsound accept).
+#[test]
+fn tampered_certified_qf_bv_interpolant_cert_is_rejected_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let x = bv8(&mut arena, "x");
+    let y = bv8(&mut arena, "y");
+    let a0 = arena.eq(x, y).unwrap();
+    let e = arena.eq(x, y).unwrap();
+    let b0 = arena.not(e).unwrap();
+    let cert = qf_bv_interpolant_certified(&mut arena, &[a0], &[b0])
+        .expect("decides")
+        .expect("a certified QF_BV interpolant exists");
+
+    // Tamper the A ∧ ¬I refutation: rewrite the LAST derived (non-`assume`) step's
+    // clause to a bogus non-empty conclusion `(= x x)` its premises do not entail, so
+    // Carcara's resolution chain to the empty clause breaks.
+    let mut tampered = cert.a_refutation.clone();
+    let mut patched = false;
+    for cmd in tampered.iter_mut().rev() {
+        if let AletheCommand::Step { clause, .. } = cmd {
+            let bogus = AletheTerm::App(
+                "=".to_owned(),
+                vec![
+                    AletheTerm::Const("x".to_owned()),
+                    AletheTerm::Const("x".to_owned()),
+                ],
+            );
+            *clause = vec![AletheLit {
+                atom: bogus,
+                negated: false,
+            }];
+            patched = true;
+            break;
+        }
+    }
+    assert!(patched, "expected a derivable step to tamper");
+
+    let report = carcara_output(
+        &bin,
+        "bv_interp_tampered",
+        &write_script(&arena, &cert.a_and_not_i),
+        &tampered,
+    );
+    assert!(
+        !report.lines().any(|l| l.trim() == "valid"),
+        "a tampered QF_BV bit-blast certificate must NOT be reported valid, got:\n{report}"
+    );
+    assert!(
+        report.contains("invalid") || report.contains("ERROR") || report.contains("holey"),
+        "Carcara must reject the tampered QF_BV certificate, got:\n{report}"
     );
 }

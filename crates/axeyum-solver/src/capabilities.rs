@@ -147,6 +147,22 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "QF_BV",
+        feature: "CERTIFIED single-predicate Craig interpolation (qf_bv_interpolant_certified): the \
+                  same verified QF_BV interpolant I, plus two externally-checkable bit-blast certificates",
+        assurance: Assurance::Checked,
+        evidence: "when the lifted interpolant I is a single top-level predicate (=/bvult/bvslt over \
+                   bit-blastable operands; the ¬I slot peels one not), A ∧ ¬I and I ∧ B stay in the \
+                   Carcara-checked flat-predicate fragment ⇒ emits a self-validated Alethe \
+                   bitblast_*/resolution refutation for each (Craig conditions 1 and 2) via \
+                   prove_qf_bv_unsat_alethe, each independently accepted by Carcara (valid && !holey); \
+                   returns the certificate ONLY when both refutations emit and self-check, else \
+                   declines to the Validated qf_bv_interpolant path. BOUNDARY: single-predicate only — \
+                   the common compound (and/or/not-tree of extract-predicates) interpolant is outside \
+                   the emitter's fragment and stays Validated",
+        reference: "ADR-0047",
+    },
+    Capability {
+        area: "QF_BV",
         feature: "arbitrary width up to 2^16 (wide bit-vectors); bv2nat exact \
                   in the i128 reference range, wider → graceful unknown",
         assurance: Assurance::Validated,
