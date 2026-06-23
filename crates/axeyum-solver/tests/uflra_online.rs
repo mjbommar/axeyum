@@ -645,3 +645,59 @@ fn early_theory_prune_fires_and_reduces_enumeration() {
          (prunes_fired={prunes_fired}) vs baseline={models_without}"
     );
 }
+
+/// **Slice-1 parallel-run equivalence gate (load-bearing).** The warm equality-sharing
+/// `CombinedTheory` oracle must return the **identical** verdict (Sat / Unsat / Unknown)
+/// to the trusted cold from-scratch `decide_conjunction` on every conjunctive instance —
+/// zero disagreements. A divergence is exactly the bug slice 1 must not introduce: the
+/// warm path only changes the theory solver's lifetime, never the decision. Driven over
+/// both fuzz corpora's conjunctions (the `build_case` conjunctions and any `build_bool_tree`
+/// assertion that happens to flatten to a conjunction of theory atoms).
+#[test]
+fn combined_theory_matches_cold_decide_conjunction() {
+    let mut compared = 0usize;
+
+    // Corpus A: the `build_case` conjunctions (the conjunctive fast-path's own corpus).
+    let mut state: u64 = 0x1234_5678_9abc_def0;
+    for _case in 0..600usize {
+        let mut arena = TermArena::new();
+        let assertions = build_case(&mut arena, &mut state);
+        if let Some((cold, warm)) =
+            axeyum_solver::combined_vs_cold_conjunction(&mut arena, &assertions)
+        {
+            assert_eq!(
+                cold, warm,
+                "warm CombinedTheory DIVERGES from cold decide_conjunction \
+                 (cold={cold}, warm={warm}); assertions: {assertions:?}"
+            );
+            compared += 1;
+        }
+    }
+
+    // Corpus B: the Boolean-tree corpus — many of its assertions flatten to a conjunction
+    // of theory atoms, exercising the warm oracle on a different atom distribution.
+    let mut state: u64 = 0x0bad_f00d_dead_beef;
+    for _case in 0..600usize {
+        let mut arena = TermArena::new();
+        let pool = build_atom_pool(&mut arena, &mut state);
+        let assertion_count = 2 + (next_rand(&mut state) % 2) as usize;
+        let assertions: Vec<TermId> = (0..assertion_count)
+            .map(|_| build_bool_tree(&mut arena, &pool, &mut state, 3))
+            .collect();
+        if let Some((cold, warm)) =
+            axeyum_solver::combined_vs_cold_conjunction(&mut arena, &assertions)
+        {
+            assert_eq!(
+                cold, warm,
+                "warm CombinedTheory DIVERGES from cold decide_conjunction on a \
+                 boolean-corpus conjunction (cold={cold}, warm={warm}); assertions: {assertions:?}"
+            );
+            compared += 1;
+        }
+    }
+
+    assert!(
+        compared > 0,
+        "the parallel-run equivalence gate compared no conjunctive instances"
+    );
+}
