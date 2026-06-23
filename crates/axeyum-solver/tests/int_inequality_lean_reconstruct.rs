@@ -128,6 +128,172 @@ fn feasible_interval_is_declined() {
     );
 }
 
+/// `3*x ≥ 2 ∧ 2*x ≤ 1` over `Int`: **different** multipliers (lower `k=3`, upper
+/// `k=2`). The lower integer cut forces `x ≥ 1` (`3x ≥ 2 ⇒ x > 0`, `m_lo = 0`) and the
+/// upper forces `x ≤ 0` (`2x ≤ 1 ⇒ x < 1`, `m_hi = 0`), leaving the empty window
+/// `(0, 1)`. The equal-multiplier detector does not cover distinct `k`, so this routes
+/// to the new different-multiplier reconstructor through the `IntInequality` fragment.
+#[test]
+fn diff_mult_interval_reconstructs_to_false() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let three = arena.int_const(3);
+    let two = arena.int_const(2);
+    let three_x = arena.int_mul(three, x).unwrap();
+    let two_x = arena.int_mul(two, x).unwrap();
+    let lo = arena.int_const(2);
+    let hi = arena.int_const(1);
+    let e1 = arena.int_ge(three_x, lo).unwrap(); // 3x ≥ 2  ⇒ x ≥ 1
+    let e2 = arena.int_le(two_x, hi).unwrap(); // 2x ≤ 1  ⇒ x ≤ 0
+
+    let proof = reconstruct_int_inequality_proof(&arena, &[e1, e2]);
+    assert!(
+        proof.is_ok(),
+        "3x≥2 ∧ 2x≤1 (different multipliers) should reconstruct to False, got {:?}",
+        proof.err()
+    );
+    let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &[e1, e2])
+        .expect("different-multiplier interval should prove unsat to a Lean module");
+    assert_eq!(fragment, ProofFragment::IntInequality);
+    assert!(source.contains("axeyum_refutation"));
+    assert_eq!(
+        scan_proof_fragment(&arena, &[e1, e2]),
+        ProofFragment::IntInequality
+    );
+}
+
+/// A different-multiplier interval with a **non-zero shared offset** `m_lo = m_hi = 1`:
+/// `5 ≤ 3*x ∧ 2*x ≤ 3` gives `m_lo = ⌊4/3⌋ = 1` (so `3x ≥ 5 ⇒ x > 1`) and
+/// `m_hi = ⌊3/2⌋ = 1` (so `2x ≤ 3 ⇒ x < 2`), the empty open window `(1, 2)`. Exercises
+/// the `m ≠ 0` additive shift on the different-multiplier path with both offsets equal.
+#[test]
+fn diff_mult_shifted_interval_reconstructs() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let three = arena.int_const(3);
+    let two = arena.int_const(2);
+    let three_x = arena.int_mul(three, x).unwrap();
+    let two_x = arena.int_mul(two, x).unwrap();
+    let lo = arena.int_const(5);
+    let hi = arena.int_const(3);
+    let e1 = arena.int_ge(three_x, lo).unwrap(); // 3x ≥ 5 ⇒ x > 1
+    let e2 = arena.int_le(two_x, hi).unwrap(); // 2x ≤ 3 ⇒ x < 2
+
+    let proof = reconstruct_int_inequality_proof(&arena, &[e1, e2]);
+    assert!(
+        proof.is_ok(),
+        "5≤3x ∧ 2x≤3 should reconstruct to False, got {:?}",
+        proof.err()
+    );
+    let (fragment, _src) = prove_unsat_to_lean_module(&mut arena, &[e1, e2])
+        .expect("shifted different-multiplier interval should prove unsat");
+    assert_eq!(fragment, ProofFragment::IntInequality);
+}
+
+/// A different-multiplier interval where the offsets **differ** (`m_hi < m_lo`):
+/// `7 ≤ 4*x ∧ 3*x ≤ 5` ⇒ `x ≥ 2` (from `4x ≥ 7`, `m_lo = ⌊6/4⌋ = 1`, `x > 1`) and
+/// `x ≤ 1` (from `3x ≤ 5`, `m_hi = ⌊5/3⌋ = 1`)… here both are 1. Use `9 ≤ 4*x ∧ 3*x ≤ 5`:
+/// `m_lo = ⌊8/4⌋ = 2` (`x > 2`), `m_hi = ⌊5/3⌋ = 1` (`x < 2`), so `m_hi (1) < m_lo (2)`
+/// — exercising the upper-bound weakening branch (`lt x 2 ⇒ lt x 3`).
+#[test]
+fn diff_mult_unequal_offsets_reconstructs() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let four = arena.int_const(4);
+    let three = arena.int_const(3);
+    let four_x = arena.int_mul(four, x).unwrap();
+    let three_x = arena.int_mul(three, x).unwrap();
+    let lo = arena.int_const(9);
+    let hi = arena.int_const(5);
+    let e1 = arena.int_ge(four_x, lo).unwrap(); // 4x ≥ 9 ⇒ x > 2 (m_lo = 2)
+    let e2 = arena.int_le(three_x, hi).unwrap(); // 3x ≤ 5 ⇒ x < 2 (m_hi = 1)
+
+    let proof = reconstruct_int_inequality_proof(&arena, &[e1, e2]);
+    assert!(
+        proof.is_ok(),
+        "9≤4x ∧ 3x≤5 (unequal offsets) should reconstruct to False, got {:?}",
+        proof.err()
+    );
+    let (fragment, _src) = prove_unsat_to_lean_module(&mut arena, &[e1, e2])
+        .expect("unequal-offset different-multiplier interval should prove unsat");
+    assert_eq!(fragment, ProofFragment::IntInequality);
+}
+
+/// An integer-FEASIBLE different-multiplier interval `3*x ≥ 2 ∧ 2*x ≤ 5` ⇒ `x ≥ 1`
+/// and `x ≤ 2`, satisfiable at `x = 1` or `x = 2`. It has no integer-cut refutation and
+/// must be declined — never fabricated, and not routed to `IntInequality`.
+#[test]
+fn diff_mult_feasible_interval_is_declined() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let three = arena.int_const(3);
+    let two = arena.int_const(2);
+    let three_x = arena.int_mul(three, x).unwrap();
+    let two_x = arena.int_mul(two, x).unwrap();
+    let lo = arena.int_const(2);
+    let hi = arena.int_const(5);
+    let e1 = arena.int_ge(three_x, lo).unwrap(); // 3x ≥ 2 ⇒ x ≥ 1
+    let e2 = arena.int_le(two_x, hi).unwrap(); // 2x ≤ 5 ⇒ x ≤ 2 (x=1,2 feasible)
+
+    assert!(
+        reconstruct_int_inequality_proof(&arena, &[e1, e2]).is_err(),
+        "a feasible different-multiplier interval must not produce a refutation"
+    );
+    assert_ne!(
+        scan_proof_fragment(&arena, &[e1, e2]),
+        ProofFragment::IntInequality,
+        "feasible different-multiplier interval should not route to IntInequality"
+    );
+}
+
+/// **Real-Lean crosscheck** of the different-multiplier reconstruction: the rendered
+/// `9 ≤ 4*x ∧ 3*x ≤ 5` module (unequal offsets, exercises the weakening branch) must be
+/// accepted by a genuine `lean` binary with no `sorryAx` dependency (skips if no Lean).
+#[test]
+fn diff_mult_module_checks_in_real_lean() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let four = arena.int_const(4);
+    let three = arena.int_const(3);
+    let four_x = arena.int_mul(four, x).unwrap();
+    let three_x = arena.int_mul(three, x).unwrap();
+    let lo = arena.int_const(9);
+    let hi = arena.int_const(5);
+    let e1 = arena.int_ge(four_x, lo).unwrap();
+    let e2 = arena.int_le(three_x, hi).unwrap();
+    let (frag, source) = prove_unsat_to_lean_module(&mut arena, &[e1, e2])
+        .expect("different-multiplier interval reconstructs to a Lean module");
+    assert_eq!(frag, ProofFragment::IntInequality);
+
+    let Some(bin) = lean_bin() else {
+        eprintln!("[skip] diff_mult: lean binary not found; set AXEYUM_LEAN_BIN to enable");
+        return;
+    };
+    let dir = std::env::temp_dir().join("axeyum_lean_diff_mult");
+    std::fs::create_dir_all(&dir).expect("create temp dir");
+    let file = dir.join("diff_mult.lean");
+    std::fs::write(&file, &source).expect("write lean module");
+    let out = Command::new(&bin).arg(&file).output().expect("run lean");
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        out.status.success(),
+        "lean REJECTED the diff_mult module\n=== stdout ===\n{stdout}\n=== stderr ===\n{stderr}\n=== source ===\n{source}"
+    );
+    assert!(
+        !stdout.contains("sorryAx"),
+        "diff_mult proof depends on sorryAx:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("axeyum_refutation"),
+        "missing #print axioms output:\n{stdout}"
+    );
+    eprintln!(
+        "[lean ok] diff_mult: {}",
+        stdout.trim().replace('\n', " | ")
+    );
+}
+
 /// Locate a `lean` binary (env override or `PATH`/elan); `None` ⇒ skip.
 fn lean_bin() -> Option<PathBuf> {
     if let Ok(p) = std::env::var("AXEYUM_LEAN_BIN") {

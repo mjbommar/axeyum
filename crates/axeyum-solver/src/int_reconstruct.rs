@@ -2566,6 +2566,25 @@ struct IntInterval {
     m: i128,
 }
 
+/// A single-variable integer interval with **distinct** lower/upper multipliers:
+/// `c ≤ k_lo·x` and `k_hi·x ≤ d` (`k_lo, k_hi > 0`, `k_lo ≠ k_hi`). Integer-infeasible
+/// because the implied integer window `(m_lo, m_lo+1)` on `x` contains no integer,
+/// while it is LP-feasible (genuinely needs an integer cut, not a Farkas/LRA close).
+#[derive(Debug, Clone, Copy)]
+struct IntIntervalDiff {
+    var: SymbolId,
+    /// Lower multiplier `k_lo > 0` (so `c ≤ k_lo·x`).
+    k_lo: i128,
+    c: i128,
+    /// Upper multiplier `k_hi > 0` (so `k_hi·x ≤ d`).
+    k_hi: i128,
+    d: i128,
+    /// Lower reduction offset: `m_lo = ⌊(c−1)/k_lo⌋`, the forced `lt m_lo x`.
+    m_lo: i128,
+    /// Upper reduction offset: `m_hi = ⌊d/k_hi⌋`, the forced `lt x (m_hi+1)`.
+    m_hi: i128,
+}
+
 /// A bound atom recovered from one assertion: `lower` ⇒ `k·x ≥ c` (i.e. `c ≤ k·x`),
 /// `!lower` ⇒ `k·x ≤ d`. Both sides are normalized so the variable side is exactly
 /// `k·x` (`k > 0`) and the bound is the integer constant on the other side.
@@ -2744,6 +2763,56 @@ fn detect_int_interval(arena: &TermArena, assertions: &[TermId]) -> Option<IntIn
     })
 }
 
+/// Detect the **different-multiplier** single-variable integer interval `c ≤ k_lo·x`
+/// and `k_hi·x ≤ d` (`k_lo, k_hi > 0`, `k_lo ≠ k_hi`) that is LP-feasible yet
+/// integer-infeasible: the lower bound forces `x ≥ m_lo+1` and the upper `x ≤ m_hi`
+/// with `m_hi ≤ m_lo`, leaving the empty open window `(m_lo, m_lo+1)`. Returns the
+/// [`IntIntervalDiff`] on a match, `None` otherwise (declines — never fabricates).
+/// (The equal-multiplier case is owned by [`detect_int_interval`].)
+fn detect_int_interval_diff_mult(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<IntIntervalDiff> {
+    let [a1, a2] = assertions else {
+        return None;
+    };
+    let b1 = parse_bound_atom(arena, *a1)?;
+    let b2 = parse_bound_atom(arena, *a2)?;
+    if b1.var != b2.var || b1.lower == b2.lower {
+        return None; // need exactly one lower and one upper bound on the same var
+    }
+    let (lo, hi) = if b1.lower { (b1, b2) } else { (b2, b1) };
+    if lo.k <= 0 || hi.k <= 0 || lo.k == hi.k {
+        return None; // equal multiplier → detect_int_interval; non-positive → reject
+    }
+    let (k_lo, c) = (lo.k, lo.bound); // c ≤ k_lo·x
+    let (k_hi, d) = (hi.k, hi.bound); // k_hi·x ≤ d
+    // Lower forces x > m_lo with m_lo = ⌊(c−1)/k_lo⌋ (k_lo·m_lo < c ≤ k_lo·(m_lo+1)).
+    let m_lo = (c.checked_sub(1)?).div_euclid(k_lo);
+    if k_lo.checked_mul(m_lo)? >= c {
+        return None;
+    }
+    // Upper forces x < m_hi+1 with m_hi = ⌊d/k_hi⌋ (k_hi·m_hi ≤ d < k_hi·(m_hi+1)).
+    let m_hi = d.div_euclid(k_hi);
+    if d >= k_hi.checked_mul(m_hi.checked_add(1)?)? {
+        return None;
+    }
+    // Integer-infeasible iff the forced lower `x ≥ m_lo+1` exceeds the upper `x ≤ m_hi`,
+    // i.e. m_hi ≤ m_lo (the open window `(m_lo, m_lo+1)` then holds no integer).
+    if m_hi > m_lo {
+        return None; // some integer lies in [m_lo+1, m_hi] — integer-feasible; decline
+    }
+    Some(IntIntervalDiff {
+        var: lo.var,
+        k_lo,
+        c,
+        k_hi,
+        d,
+        m_lo,
+        m_hi,
+    })
+}
+
 impl IntReconstructCtx {
     /// Build the kernel `False` proof for a detected [`IntInterval`] `c ≤ k·x ≤ d`.
     ///
@@ -2787,48 +2856,100 @@ impl IntReconstructCtx {
         let le_zero_k = self.le_of_lt_app(zero, k_lit, lt_zero_k); // le zero k
 
         // --- strict literal facts about k·x ----------------------------------
-        // lt (k·m) (k·x):  lt (k·m) c  (literal, since k·m < c) ∘ le c (k·x).
         let km = iv.k * iv.m;
         let km1 = iv.k * (iv.m + 1);
-        let km_lit = self.mk_intlit(km);
-        let km1_lit = self.mk_intlit(km1);
-        // lt (k·m) c : need 0 ≤ k·m < c. By construction k·m < c; and m is the floor so
-        // k·m ≤ c−1. We need k·m ≥ 0 for `lt_intlit_intlit`. Establish via the helper
-        // when k·m ≥ 0, else derive through zero. To keep the slice robust, REQUIRE
-        // k·m ≥ 0 and d ≥ 0 (true whenever m ≥ 0, i.e. c ≥ 1); decline otherwise.
+        // Require non-negative bounds for the `lt_intlit_intlit` literal facts (true
+        // whenever m ≥ 0, i.e. c ≥ 1); decline otherwise.
         if km < 0 || iv.d < 0 || km1 < 0 {
             return Err(decline(
                 "reduction offset yields a negative bound (later slice)",
             ));
         }
-        let m_lit = self.mk_intlit(iv.m);
-        let m1_lit = self.mk_intlit(iv.m + 1);
-        // lt (k·m) c (literal) ∘ le c (k·x) : lt (intlit (k·m)) (k·x). Then recast the
-        // left `intlit (k·m) → mul k m` so the cancellation sees `lt (mul k m)(mul k x)`.
-        let lt_km_c = self.lt_lit_lit(km, iv.c)?; // lt (intlit (k·m)) c
-        let lt_kmlit_gx = self.lt_of_lt_of_le_app(km_lit, c_lit, gx, lt_km_c, h_lo);
-        let mul_km = self.mk_mul(k_lit, m_lit); // mul k m
-        let eq_mul_km = self.eq_mul_lit_lit(iv.k, iv.m); // Eq Z (mul k m)(intlit (k·m))
-        let eq_kmlit_mul = self.eq_symm(mul_km, km_lit, eq_mul_km); // Eq Z (intlit (k·m))(mul k m)
-        let lt_km_gx = self.lt_cast_left(km_lit, mul_km, gx, lt_kmlit_gx, eq_kmlit_mul); // lt (mul k m)(k·x)
-
-        // lt (k·x) (k·(m+1)) :  le (k·x) d ∘ lt d (intlit (k·(m+1))) ; recast right.
-        let lt_d_km1 = self.lt_lit_lit(iv.d, km1)?; // lt d (intlit (k·(m+1)))
-        let lt_gx_km1lit = self.lt_of_le_of_lt_app(gx, d_lit, km1_lit, h_hi, lt_d_km1);
-        let mul_km1 = self.mk_mul(k_lit, m1_lit); // mul k (m+1)
-        let eq_mul_km1 = self.eq_mul_lit_lit(iv.k, iv.m + 1); // Eq Z (mul k (m+1))(intlit (k·(m+1)))
-        let eq_km1lit_mul = self.eq_symm(mul_km1, km1_lit, eq_mul_km1); // Eq Z (intlit …)(mul k (m+1))
-        let lt_gx_km1 = self.lt_cast_right(gx, km1_lit, mul_km1, lt_gx_km1lit, eq_km1lit_mul); // lt (k·x)(mul k (m+1))
-
         // --- cancel the positive k : lt m x and lt x (m+1) -------------------
-        let lt_m_x = self.cancel_pos_mul_lt_lower(k_lit, m_lit, xe, le_zero_k, lt_km_gx);
-        let lt_x_m1 = self.cancel_pos_mul_lt_upper(k_lit, xe, m1_lit, le_zero_k, lt_gx_km1);
+        let lt_m_x = self.derive_lt_m_x(iv.k, iv.c, iv.m, c_lit, gx, xe, k_lit, h_lo, le_zero_k)?;
+        let lt_x_m1 =
+            self.derive_lt_x_m1(iv.k, iv.d, iv.m, d_lit, gx, xe, k_lit, h_hi, le_zero_k)?;
 
         // --- shift by −m, then close with no_int_between ----------------------
-        if iv.m == 0 {
-            // m_lit = mk_intlit(0) = zero ; m1_lit = mk_intlit(1) = one (count==1 ⇒ the
-            // unit `one`, no `add`). So lt_m_x : lt zero x and lt_x_m1 : lt x one
-            // already — close with `no_int_between x (And.intro (lt 0 x)(lt x 1))`.
+        self.close_no_int_between(xe, zero, iv.m, lt_m_x, lt_x_m1)
+    }
+
+    /// From `h_lo : le c (k·x)` and `le_zero_k : le 0 k` (with `k·m < c`, `0 ≤ k·m`),
+    /// derive `lt (intlit m) x` by chaining `lt (k·m) c ∘ le c (k·x)`, recasting the
+    /// literal `k·m` to `mul k m`, and cancelling the positive `k`. The lower half of
+    /// the interval reduction, parametric in the multiplier `k` so the
+    /// different-multiplier path can reuse it with its own lower multiplier.
+    #[allow(clippy::too_many_arguments)]
+    fn derive_lt_m_x(
+        &mut self,
+        k: i128,
+        c: i128,
+        m: i128,
+        c_lit: ExprId,
+        gx: ExprId, // mul k x
+        xe: ExprId,
+        k_lit: ExprId,
+        h_lo: ExprId,      // le c (k·x)
+        le_zero_k: ExprId, // le 0 k
+    ) -> Result<ExprId, ReconstructError> {
+        let km = k * m;
+        let km_lit = self.mk_intlit(km);
+        let m_lit = self.mk_intlit(m);
+        // lt (k·m) c (literal) ∘ le c (k·x) : lt (intlit (k·m)) (k·x); recast left.
+        let lt_km_c = self.lt_lit_lit(km, c)?;
+        let lt_kmlit_gx = self.lt_of_lt_of_le_app(km_lit, c_lit, gx, lt_km_c, h_lo);
+        let mul_km = self.mk_mul(k_lit, m_lit); // mul k m
+        let eq_mul_km = self.eq_mul_lit_lit(k, m); // Eq Z (mul k m)(intlit (k·m))
+        let eq_kmlit_mul = self.eq_symm(mul_km, km_lit, eq_mul_km);
+        let lt_km_gx = self.lt_cast_left(km_lit, mul_km, gx, lt_kmlit_gx, eq_kmlit_mul);
+        Ok(self.cancel_pos_mul_lt_lower(k_lit, m_lit, xe, le_zero_k, lt_km_gx))
+    }
+
+    /// From `h_hi : le (k·x) d` and `le_zero_k : le 0 k` (with `d < k·(m+1)`,
+    /// `0 ≤ k·(m+1)`), derive `lt x (intlit (m+1))` symmetrically to
+    /// [`Self::derive_lt_m_x`]: the upper half of the interval reduction.
+    #[allow(clippy::too_many_arguments)]
+    fn derive_lt_x_m1(
+        &mut self,
+        k: i128,
+        d: i128,
+        m: i128,
+        d_lit: ExprId,
+        gx: ExprId, // mul k x
+        xe: ExprId,
+        k_lit: ExprId,
+        h_hi: ExprId,      // le (k·x) d
+        le_zero_k: ExprId, // le 0 k
+    ) -> Result<ExprId, ReconstructError> {
+        let km1 = k * (m + 1);
+        let km1_lit = self.mk_intlit(km1);
+        let m1_lit = self.mk_intlit(m + 1);
+        // le (k·x) d ∘ lt d (intlit (k·(m+1))) : lt (k·x)(intlit …); recast right.
+        let lt_d_km1 = self.lt_lit_lit(d, km1)?;
+        let lt_gx_km1lit = self.lt_of_le_of_lt_app(gx, d_lit, km1_lit, h_hi, lt_d_km1);
+        let mul_km1 = self.mk_mul(k_lit, m1_lit); // mul k (m+1)
+        let eq_mul_km1 = self.eq_mul_lit_lit(k, m + 1);
+        let eq_km1lit_mul = self.eq_symm(mul_km1, km1_lit, eq_mul_km1);
+        let lt_gx_km1 = self.lt_cast_right(gx, km1_lit, mul_km1, lt_gx_km1lit, eq_km1lit_mul);
+        Ok(self.cancel_pos_mul_lt_upper(k_lit, xe, m1_lit, le_zero_k, lt_gx_km1))
+    }
+
+    /// Close a single-variable discreteness contradiction: from `lt_m_x : lt m x`
+    /// and `lt_x_m1 : lt x (m+1)` (both literals `m`, `m+1` ≥ 0), derive `False` by
+    /// `no_int_between`. For `m = 0` the bounds are already `lt 0 x`/`lt x 1`; for
+    /// `m ≠ 0` it shifts both by `−m` to the unit window `0 < x−m < 1`. Shared by the
+    /// common-multiplier and different-multiplier interval reconstructors.
+    fn close_no_int_between(
+        &mut self,
+        xe: ExprId,
+        zero: ExprId,
+        m: i128,
+        lt_m_x: ExprId,  // lt (intlit m) x
+        lt_x_m1: ExprId, // lt x (intlit (m+1))
+    ) -> Result<ExprId, ReconstructError> {
+        if m == 0 {
+            // lt_m_x : lt zero x and lt_x_m1 : lt x one already (mk_intlit 0/1 fold to
+            // zero/one) — close with `no_int_between x (And.intro (lt 0 x)(lt x 1))`.
             let one = self.mk_one();
             let p_prop = self.mk_lt(zero, xe);
             let q_prop = self.mk_lt(xe, one);
@@ -2837,19 +2958,115 @@ impl IntReconstructCtx {
         }
         // General m ≠ 0: w = x + (−m) = x − m. Prove lt 0 w from lt m x, and lt w 1
         // from lt x (m+1), by adding (−m) to both sides (additive shift), then close.
-        let neg_m_lit = self.mk_intlit(-iv.m);
+        let m_lit = self.mk_intlit(m);
+        let m1_lit = self.mk_intlit(m + 1);
+        let neg_m_lit = self.mk_intlit(-m);
         let w = self.mk_add(xe, neg_m_lit); // x + (−m)
 
         // lt 0 w :  from lt m x add (−m): lt (m + (−m)) (x + (−m)); normalize lhs → 0.
-        let lt_zero_w = self.shift_lt_lower(m_lit, xe, neg_m_lit, iv.m, lt_m_x)?;
+        let lt_zero_w = self.shift_lt_lower(m_lit, xe, neg_m_lit, m, lt_m_x)?;
         // lt w 1 :  from lt x (m+1) add (−m): lt (x + (−m)) ((m+1) + (−m)); rhs → 1.
-        let lt_w_one = self.shift_lt_upper(xe, m1_lit, neg_m_lit, iv.m, lt_x_m1)?;
+        let lt_w_one = self.shift_lt_upper(xe, m1_lit, neg_m_lit, m, lt_x_m1)?;
 
         let one = self.mk_one();
         let p_prop = self.mk_lt(zero, w);
         let q_prop = self.mk_lt(w, one);
         let and_proof = self.and_intro(p_prop, q_prop, lt_zero_w, lt_w_one);
         Ok(self.no_int_between_app(w, and_proof))
+    }
+
+    /// Build the kernel `False` proof for a [`IntIntervalDiff`] `c ≤ k_lo·x`,
+    /// `k_hi·x ≤ d` (distinct positive multipliers).
+    ///
+    /// Mirrors the asserted atoms verbatim as hypotheses `h_lo : le c (k_lo·x)` and
+    /// `h_hi : le (k_hi·x) d`, derives `lt m_lo x` from the lower (cancelling `k_lo`)
+    /// and `lt x (m_hi+1)` from the upper (cancelling `k_hi`) — each via the SAME
+    /// half-reduction the equal-multiplier path uses, but with its own multiplier.
+    /// When `m_hi < m_lo` it weakens the upper to `lt x (m_lo+1)` by transitivity
+    /// through the literal fact `lt (m_hi+1) (m_lo+1)`, so both bounds share the
+    /// offset `m_lo`, then closes with [`Self::close_no_int_between`].
+    fn build_int_interval_diff_mult_false(
+        &mut self,
+        iv: &IntIntervalDiff,
+    ) -> Result<ExprId, ReconstructError> {
+        let decline = |d: &str| ReconstructError::UnsupportedTerm {
+            term: format!("different-multiplier interval reconstruction declined: {d}"),
+        };
+        let bound = DIO_UNIT_MAX;
+        if iv.k_lo > bound
+            || iv.k_hi > bound
+            || iv.c.unsigned_abs() > bound.unsigned_abs()
+            || iv.d.unsigned_abs() > bound.unsigned_abs()
+            || iv.m_lo.unsigned_abs() > bound.unsigned_abs()
+            || iv.m_hi.unsigned_abs() > bound.unsigned_abs()
+        {
+            return Err(decline(
+                "k_lo / k_hi / c / d / m exceed the unit-expansion bound",
+            ));
+        }
+        // Require non-negative bounds for the literal `lt` facts (true when c ≥ 1, d ≥ 0).
+        if iv.k_lo * iv.m_lo < 0 || iv.d < 0 || iv.k_hi * (iv.m_hi + 1) < 0 {
+            return Err(decline("a reduction bound is negative (later slice)"));
+        }
+
+        let x_name = self.var_const_for(iv.var);
+        let xe = self.kernel.const_(x_name, vec![]);
+        let zero = self.mk_zero();
+
+        // --- lower half: h_lo : le c (k_lo·x) ⟹ lt m_lo x -------------------
+        let klo_lit = self.mk_intlit(iv.k_lo);
+        let glo = self.mk_mul(klo_lit, xe); // k_lo·x
+        let c_lit = self.mk_intlit(iv.c);
+        let lo_prop = self.mk_le(c_lit, glo);
+        let h_lo = self.hyp_axiom(lo_prop)?;
+        let lt_zero_klo = self.lt_zero_intlit(iv.k_lo)?;
+        let le_zero_klo = self.le_of_lt_app(zero, klo_lit, lt_zero_klo);
+        let lt_m_x = self.derive_lt_m_x(
+            iv.k_lo,
+            iv.c,
+            iv.m_lo,
+            c_lit,
+            glo,
+            xe,
+            klo_lit,
+            h_lo,
+            le_zero_klo,
+        )?;
+
+        // --- upper half: h_hi : le (k_hi·x) d ⟹ lt x (m_hi+1) ---------------
+        let khi_lit = self.mk_intlit(iv.k_hi);
+        let ghi = self.mk_mul(khi_lit, xe); // k_hi·x
+        let d_lit = self.mk_intlit(iv.d);
+        let hi_prop = self.mk_le(ghi, d_lit);
+        let h_hi = self.hyp_axiom(hi_prop)?;
+        let lt_zero_khi = self.lt_zero_intlit(iv.k_hi)?;
+        let le_zero_khi = self.le_of_lt_app(zero, khi_lit, lt_zero_khi);
+        let lt_x_mhi1 = self.derive_lt_x_m1(
+            iv.k_hi,
+            iv.d,
+            iv.m_hi,
+            d_lit,
+            ghi,
+            xe,
+            khi_lit,
+            h_hi,
+            le_zero_khi,
+        )?;
+
+        // --- align the offsets at m_lo, then close --------------------------
+        // m_hi ≤ m_lo (detector invariant). If equal, the upper is already
+        // `lt x (m_lo+1)`. Otherwise weaken via `lt (m_hi+1)(m_lo+1)` (literals).
+        let lt_x_mlo1 = if iv.m_hi == iv.m_lo {
+            lt_x_mhi1
+        } else {
+            let mhi1_lit = self.mk_intlit(iv.m_hi + 1);
+            let mlo1_lit = self.mk_intlit(iv.m_lo + 1);
+            // 0 ≤ m_hi+1 < m_lo+1, so the literal `lt` and its `le` weakening hold.
+            let lt_mhi1_mlo1 = self.lt_lit_lit(iv.m_hi + 1, iv.m_lo + 1)?;
+            let le_mhi1_mlo1 = self.le_of_lt_app(mhi1_lit, mlo1_lit, lt_mhi1_mlo1);
+            self.lt_of_lt_of_le_app(xe, mhi1_lit, mlo1_lit, lt_x_mhi1, le_mhi1_mlo1)
+        };
+        self.close_no_int_between(xe, zero, iv.m_lo, lt_m_x, lt_x_mlo1)
     }
 
     /// Get (declaring lazily) the opaque `Z`-typed constant for an IR [`SymbolId`],
@@ -3210,13 +3427,19 @@ fn build_and_gate_int_interval(
     arena: &TermArena,
     assertions: &[TermId],
 ) -> Result<(IntReconstructCtx, ExprId), ReconstructError> {
-    let Some(iv) = detect_int_interval(arena, assertions) else {
+    // Build the (ungated) `False` proof: the equal-multiplier interval first, then
+    // the different-multiplier interval. Either way the kernel gate below is the sole
+    // soundness authority — a builder bug surfaces as `KernelRejected`, never accept.
+    let mut ctx = IntReconstructCtx::new();
+    let proof = if let Some(iv) = detect_int_interval(arena, assertions) {
+        ctx.build_int_interval_false(&iv)?
+    } else if let Some(iv) = detect_int_interval_diff_mult(arena, assertions) {
+        ctx.build_int_interval_diff_mult_false(&iv)?
+    } else {
         return Err(ReconstructError::UnsupportedTerm {
             term: "no single-variable integer-interval (c ≤ k·x ≤ d) refutation".to_owned(),
         });
     };
-    let mut ctx = IntReconstructCtx::new();
-    let proof = ctx.build_int_interval_false(&iv)?;
     let inferred = ctx
         .kernel_mut()
         .infer(proof)
@@ -3240,8 +3463,10 @@ fn build_and_gate_int_interval(
 
 /// Detect the single-variable integer-interval refutation shape (used by the fragment
 /// classifier to route to the integer-inequality reconstructor). Returns `true` iff
-/// the private `detect_int_interval` matcher matches.
+/// either the equal-multiplier or the different-multiplier (private) interval matcher
+/// matches.
 #[must_use]
 pub fn is_int_inequality_refutation(arena: &TermArena, assertions: &[TermId]) -> bool {
     detect_int_interval(arena, assertions).is_some()
+        || detect_int_interval_diff_mult(arena, assertions).is_some()
 }
