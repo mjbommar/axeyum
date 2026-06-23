@@ -193,7 +193,11 @@ pub const CAPABILITIES: &[Capability] = &[
         area: "QF_LRA",
         feature: "linear real arithmetic (exact-rational simplex)",
         assurance: Assurance::Checked,
-        evidence: "Farkas certificate for UNSAT; exact rational model",
+        evidence: "Farkas certificate for UNSAT; exact rational model. UNSAT also reconstructs to a \
+                   kernel-checked Lean proof (reconstruct_lra_proof) — conjunctive Farkas AND now \
+                   2-leaf BOOLEAN-STRUCTURED (disjunctive) refutations: a clause (L₁ ∨ L₂) whose leaves \
+                   are each Farkas-unsat, closed by a kernel Or.rec case-split over the per-leaf Farkas \
+                   (no new prelude axiom; audit shows no sorryAx). Strict/multi-clause disjunctions decline",
         reference: "ADR-0015",
     },
     Capability {
