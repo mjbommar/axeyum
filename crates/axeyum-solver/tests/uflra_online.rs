@@ -10,9 +10,9 @@
 
 use axeyum_ir::{Assignment, Rational, Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::{
-    CheckResult, SolverConfig, check_qf_uflra_boolean_prop_metrics,
+    CheckResult, IncrementalDecision, SolverConfig, check_qf_uflra_boolean_prop_metrics,
     check_qf_uflra_boolean_with_metrics, check_qf_uflra_online, check_with_uf_arithmetic,
-    combined_theory_propagations,
+    combined_incremental_structure, combined_incremental_vs_check, combined_theory_propagations,
 };
 
 fn rconst(arena: &mut TermArena, n: i128) -> TermId {
@@ -847,5 +847,173 @@ fn combined_theory_propagation_fires_in_boolean_search() {
         total_props > 0,
         "combined theory propagation never fired through BoolSearch ({total_props}) — \
          the slice-2 wiring is not engaging"
+    );
+}
+
+/// **Slice-3b incremental-surface-vs-`check` differential (load-bearing).** The new
+/// backtrackable `impl TheorySolver` surface on `CombinedIncremental` — driven exactly as
+/// the slice-3c `Dpll` will (`push`, `assert` each literal to a propagation fixpoint) —
+/// must AGREE with the trusted reference [`check`] on every case it decides on its own,
+/// with **zero disagreements**, and never refute a genuinely-SAT conjunction:
+///
+/// - `Inconsistent` ⇒ `check` must NOT be SAT (`check` may decline to `Unknown` on a
+///   hard case the incremental surface still refutes — that is *more* capable, not a
+///   disagreement), AND the trusted **offline Ackermann** decider — a *complete*
+///   reference — must NOT call it SAT (the load-bearing soundness anchor: the incremental
+///   surface must never refute a satisfiable conjunction).
+/// - `Consistent` (no `Undetermined` interface pair) ⇒ `check` must NOT be UNSAT — the
+///   incremental surface agrees with the slice's own reference. (It is *not* asserted
+///   that offline cannot be UNSAT: like `check`, the incremental surface is intentionally
+///   incomplete on disequalities outside an interface pair — it does not *claim* SAT, only
+///   "no conflict found", exactly as `check` returns `Unknown` on the same shape, so the
+///   slice-3c `Dpll` returns `Unknown` there too, never a wrong SAT.)
+/// - `Deferred` (an `Undetermined` pair only the slice-3c case-split resolves) imposes
+///   no constraint — the honest handles/defers split.
+///
+/// A single wrong-direction verdict — incremental Inconsistent on an offline-SAT case, or
+/// Consistent on a `check`-UNSAT case — is a hard failure. Driven over both fuzz corpora's
+/// conjunctions, mirroring `combined_theory_matches_cold_decide_conjunction`.
+#[test]
+fn combined_incremental_surface_matches_check() {
+    // verdict codes: 0 = Unsat, 1 = Sat, 2 = Unknown.
+    let mut handled = 0usize;
+    let mut deferred = 0usize;
+    let mut consistent = 0usize;
+    let mut inconsistent = 0usize;
+    let config = SolverConfig::default();
+
+    let mut run = |assertions: &[TermId], arena: &mut TermArena| {
+        let Some((decision, check)) = combined_incremental_vs_check(arena, assertions) else {
+            return;
+        };
+        // The trusted soundness anchor: the offline Ackermann verdict.
+        let offline =
+            verdict(&check_with_uf_arithmetic(arena, assertions, &config).expect("offline"));
+        match decision {
+            IncrementalDecision::Inconsistent => {
+                assert_ne!(
+                    offline,
+                    Some(true),
+                    "UNSOUND: incremental Inconsistent on an offline-SAT case; \
+                     assertions: {assertions:?}"
+                );
+                assert_ne!(
+                    check, 1,
+                    "incremental Inconsistent but check is SAT (check={check}); \
+                     assertions: {assertions:?}"
+                );
+                handled += 1;
+                inconsistent += 1;
+            }
+            IncrementalDecision::Consistent => {
+                assert_ne!(
+                    check, 0,
+                    "incremental Consistent (no undetermined pair) but check is UNSAT; \
+                     assertions: {assertions:?}"
+                );
+                handled += 1;
+                consistent += 1;
+            }
+            IncrementalDecision::Deferred => deferred += 1,
+        }
+    };
+
+    // Corpus A: the `build_case` conjunctions.
+    let mut state: u64 = 0x1234_5678_9abc_def0;
+    for _case in 0..600usize {
+        let mut arena = TermArena::new();
+        let assertions = build_case(&mut arena, &mut state);
+        run(&assertions, &mut arena);
+    }
+
+    // Corpus B: the Boolean-tree corpus's conjunctive assertions.
+    let mut state: u64 = 0x0bad_f00d_dead_beef;
+    for _case in 0..600usize {
+        let mut arena = TermArena::new();
+        let pool = build_atom_pool(&mut arena, &mut state);
+        let assertion_count = 2 + (next_rand(&mut state) % 2) as usize;
+        let assertions: Vec<TermId> = (0..assertion_count)
+            .map(|_| build_bool_tree(&mut arena, &pool, &mut state, 3))
+            .collect();
+        run(&assertions, &mut arena);
+    }
+
+    eprintln!(
+        "slice-3b incremental-vs-check: handled={handled} (consistent={consistent}, \
+         inconsistent={inconsistent}), deferred={deferred}, 0 unsound disagreements"
+    );
+    assert!(
+        handled > 0,
+        "the incremental surface decided no case on its own — gate not exercised"
+    );
+    assert!(
+        inconsistent > 0,
+        "the incremental surface never detected a conflict — the Inconsistent path is untested"
+    );
+    assert!(
+        consistent > 0,
+        "the incremental surface never confirmed a consistent case — Consistent path untested"
+    );
+}
+
+/// **Slice-3b interface-variable registration structure (slice-3c hand-off check).** The
+/// `CombinedIncremental` must register its interface variables FRESH — beyond the
+/// original atom count — three per shared pair (`eq` / `lt` / `gt`), all distinct, and
+/// its structural clauses (`eq ∨ lt ∨ gt`, the three pairwise exclusions) must reference
+/// only those registered variables. This is the surface slice 3c adds to the SAT clause
+/// DB; the slice does not yet wire it in.
+#[test]
+fn combined_incremental_registers_fresh_interface_vars() {
+    let mut state: u64 = 0xfeed_face_0000_1111;
+    let mut saw_pairs = 0usize;
+
+    for _ in 0..400usize {
+        let mut arena = TermArena::new();
+        let pool = build_atom_pool(&mut arena, &mut state);
+        let assertion_count = 2 + (next_rand(&mut state) % 2) as usize;
+        let assertions: Vec<TermId> = (0..assertion_count)
+            .map(|_| build_bool_tree(&mut arena, &pool, &mut state, 3))
+            .collect();
+
+        let Some((original_count, pairs, clauses)) =
+            combined_incremental_structure(&mut arena, &assertions)
+        else {
+            continue;
+        };
+
+        let mut all_vars = std::collections::BTreeSet::new();
+        for (i, &(eq, lt, gt)) in pairs.iter().enumerate() {
+            // Fresh: every interface variable is beyond the original atom numbering.
+            for v in [eq, lt, gt] {
+                assert!(
+                    v >= original_count,
+                    "interface var {v} not fresh (original_count={original_count})"
+                );
+                assert!(all_vars.insert(v), "interface var {v} registered twice");
+            }
+            // Three vars per pair, contiguous in registration order.
+            assert_eq!(eq, original_count + i * 3);
+            assert_eq!(lt, original_count + i * 3 + 1);
+            assert_eq!(gt, original_count + i * 3 + 2);
+        }
+
+        // Exactly four structural clauses per pair, over registered variables only.
+        assert_eq!(clauses.len(), pairs.len() * 4);
+        for clause in &clauses {
+            for &(v, _) in clause {
+                assert!(
+                    all_vars.contains(&v),
+                    "structural clause references unregistered var {v}"
+                );
+            }
+        }
+        if !pairs.is_empty() {
+            saw_pairs += 1;
+        }
+    }
+
+    assert!(
+        saw_pairs > 0,
+        "no instance registered an interface pair — the registration path is untested"
     );
 }

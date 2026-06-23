@@ -152,7 +152,8 @@ pub use certify::{CertifyOutcome, certify_qf_bv_by_enumeration};
 pub use combined::check_with_all_theories;
 #[doc(hidden)]
 pub use combined_theory::{
-    PropagationReport, combined_theory_propagations, combined_vs_cold_conjunction,
+    IncrementalDecision, PropagationReport, combined_incremental_structure,
+    combined_incremental_vs_check, combined_theory_propagations, combined_vs_cold_conjunction,
 };
 #[doc(hidden)]
 pub use combined_theory_lia::{combined_lia_vs_cold_conjunction, combined_theory_lia_propagations};
