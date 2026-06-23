@@ -121,6 +121,22 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "QF_BV",
+        feature: "kernel-certified CONSTANT-shift lowering identity (reconstruct_const_shift_lowering): \
+                  the previously-trusted lowering (bvshl/bvlshr/bvashr a k) = concat/extract/sign_extend \
+                  for a constant k now carries a Lean-kernel-checked proof — Carcara has NO rule for it \
+                  (shift→concat is non-polynomial; no bitblast_shl), so the Lean kernel is the external \
+                  checker. Constant-shift QF_BV thus reconstructs end-to-end with the lowering step \
+                  certified, not trusted",
+        assurance: Assurance::Checked,
+        evidence: "per-bit reflexive proof ⋀_i (bv_bit(shift,i) ↔ bv_bit(rhs,i)) — both sides route \
+                   through the SAME bv_bit model so each conjunct is Iff.refl IFF the lowering is correct; \
+                   kernel infer + def_eq gate, axiom audit shows NO sorryAx; a WRONG slice is KernelRejected \
+                   (tamper test has teeth). Constant-only: variable shifts (no literal k) out of fragment; \
+                   division stays trusted/out-of-scope (term blowup past width ~2, not a missing rule)",
+        reference: "ADR-0011/0012",
+    },
+    Capability {
+        area: "QF_BV",
         feature: "Craig interpolation (qf_bv_interpolant): joint bit-blast, propositional \
                   interpolant over the resolution proof, lifted to extract-predicates on shared terms",
         assurance: Assurance::Validated,
