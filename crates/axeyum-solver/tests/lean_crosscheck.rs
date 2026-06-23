@@ -870,3 +870,122 @@ fn uflra_opaque_application_refutation_is_declined_by_lean_path() {
          this cert's external check is Carcara"
     );
 }
+
+// --- Certified conjunctive QF_UFLIA Craig interpolant (uflia_interpolant_certified) ---
+//
+// The QF_UFLIA interpolant `I` carries two KERNEL-CHECKED integer certificates witnessing
+// its two Craig soundness conditions: `A ∧ ¬I ⊢ ⊥` and `I ∧ B ⊢ ⊥`. Because the
+// conjunctive construction declines whenever congruence is needed (the function-free
+// relaxation is then sat), the certifiable interpolant is always congruence-free — its UF
+// applications `(f c)` are OPAQUE shared integers. Each conjunction is therefore an
+// integer-infeasible system over opaque applications that the integer-prelude
+// reconstructor covers (Diophantine / interval cut, with each `(f c)` treated as a fresh
+// opaque integer), so each certificate is a Lean module `prove_unsat_to_lean_module`
+// already kernel-checked in-tree. Feeding both to the REAL `lean` binary — accepted, no
+// `sorryAx` — is the external check that upgrades the QF_UFLIA interpolant from Validated
+// to Checked. Carcara has NO `lia_generic` rule (warns + `holey`), so for integers the
+// Lean kernel is the external checker (unlike QF_UFLRA, whose opaque-application
+// `la_generic` refutations Carcara checks).
+
+#[test]
+fn certified_uflia_interpolant_both_integer_certs_checked_by_real_lean() {
+    use axeyum_solver::{ProofFragment, uflia_interpolant_certified};
+    // A: 2·f(c) ≥ 1 ; B: 2·f(c) ≤ 0 over Int, with f(c) a SHARED opaque integer
+    // application. Unsat (2·f(c) is even, cannot be ≥ 1 and ≤ 0). I = (2·f(c) ≥ 1), and
+    // both A ∧ ¬I and I ∧ B are diff-multiplier integer intervals over the opaque f(c).
+    let mut arena = TermArena::new();
+    let f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let c = arena.int_var("c").unwrap();
+    let fc = arena.apply(f, &[c]).unwrap();
+    let two = arena.int_const(2);
+    let two_fc = arena.int_mul(two, fc).unwrap();
+    let zero = arena.int_const(0);
+    let one = arena.int_const(1);
+    let a0 = arena.int_ge(two_fc, one).unwrap();
+    let b0 = arena.int_le(two_fc, zero).unwrap();
+
+    let cert = uflia_interpolant_certified(&mut arena, &[a0], &[b0])
+        .expect("decides")
+        .expect("a certified QF_UFLIA interpolant exists");
+
+    // Both certificates reconstructed through a COVERED integer fragment.
+    assert!(matches!(
+        cert.a_fragment,
+        ProofFragment::Diophantine | ProofFragment::IntInequality
+    ));
+    assert!(matches!(
+        cert.b_fragment,
+        ProofFragment::Diophantine | ProofFragment::IntInequality
+    ));
+
+    // Craig condition 1: A ∧ ¬I is the kernel-checked integer module on the cert.
+    assert!(
+        !cert.a_certificate.contains("sorryAx"),
+        "A ∧ ¬I module depends on sorryAx:\n{}",
+        cert.a_certificate
+    );
+    lean_accepts("uflia_interp_a_not_i", &cert.a_certificate);
+
+    // Craig condition 2: I ∧ B likewise.
+    assert!(
+        !cert.b_certificate.contains("sorryAx"),
+        "I ∧ B module depends on sorryAx:\n{}",
+        cert.b_certificate
+    );
+    lean_accepts("uflia_interp_i_b", &cert.b_certificate);
+}
+
+/// TAMPER (the no-`sorryAx` / kernel check has teeth): take a genuine certified `QF_UFLIA`
+/// integer module and replace its proof term with `sorry`. The real Lean kernel then
+/// EITHER fails to type-check OR `#print axioms` reports `sorryAx` — both are rejections.
+/// A fabricated `QF_UFLIA` certificate cannot pass the gate the positive test uses.
+#[test]
+fn tampered_certified_uflia_interpolant_module_is_rejected_by_real_lean() {
+    use axeyum_solver::uflia_interpolant_certified;
+    if lean_bin().is_none() {
+        eprintln!("[skip] tamper: lean binary not found; install via elan or set AXEYUM_LEAN_BIN");
+        return;
+    }
+    let mut arena = TermArena::new();
+    let f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let c = arena.int_var("c").unwrap();
+    let fc = arena.apply(f, &[c]).unwrap();
+    let two = arena.int_const(2);
+    let two_fc = arena.int_mul(two, fc).unwrap();
+    let zero = arena.int_const(0);
+    let one = arena.int_const(1);
+    let a0 = arena.int_ge(two_fc, one).unwrap();
+    let b0 = arena.int_le(two_fc, zero).unwrap();
+    let cert = uflia_interpolant_certified(&mut arena, &[a0], &[b0])
+        .expect("decides")
+        .expect("a certified QF_UFLIA interpolant exists");
+    let source = &cert.a_certificate;
+
+    // Replace the proof body `:= <proof>` of the refutation theorem with `sorry`.
+    let marker = "theorem axeyum_refutation : False :=";
+    let idx = source
+        .find(marker)
+        .expect("module declares axeyum_refutation");
+    let head = &source[..idx + marker.len()];
+    let tail_start = source[idx..]
+        .find("#print axioms")
+        .map(|p| idx + p)
+        .expect("module has a #print axioms audit");
+    let tampered = format!("{head} sorry\n\n{}", &source[tail_start..]);
+
+    let typechecks = lean_typechecks("uflia_interp_tampered", &tampered).expect("lean available");
+    if typechecks {
+        // If `sorry` type-checks (a warning, not an error), `#print axioms` MUST expose
+        // `sorryAx` — the audit the positive test relies on.
+        let bin = lean_bin().expect("lean available");
+        let dir = std::env::temp_dir().join("axeyum_lean_uflia_interp_tampered");
+        let file = dir.join("uflia_interp_tampered.lean");
+        let out = Command::new(&bin).arg(&file).output().expect("run lean");
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        assert!(
+            stdout.contains("sorryAx"),
+            "a `sorry`-tampered QF_UFLIA refutation must expose sorryAx in the audit:\n{stdout}"
+        );
+    }
+    // (If it does NOT type-check, that is already a rejection — nothing to assert.)
+}

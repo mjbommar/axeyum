@@ -539,6 +539,25 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0047",
     },
     Capability {
+        area: "QF_UFLIA",
+        feature: "CERTIFIED conjunctive Craig interpolation (uflia_interpolant_certified): the same \
+                  verified interpolant I, plus two kernel-checked integer Lean certificates treating \
+                  every uninterpreted-function application as an opaque integer",
+        assurance: Assurance::Checked,
+        evidence: "the certifiable I is always congruence-free (the conjunctive construction declines \
+                   whenever the refutation needs functional consistency), so A ∧ ¬I and I ∧ B are each \
+                   integer conjunctions over OPAQUE applications; each maximal non-arithmetic subterm \
+                   (f c) is treated as a fresh opaque integer (AtomVar::Opaque — sound: an (f c) is some \
+                   integer, so the free-variable system only generalizes), reconstructed directly through \
+                   the integer-prelude reconstructors (reconstruct_diophantine/int_inequality_to_lean_module) \
+                   which gate infer + def_eq False before rendering; ¬I as the bare dual comparison; returns \
+                   the certificate ONLY when both conjunctions reconstruct through a covered integer fragment \
+                   (Diophantine / IntInequality) with no sorryAx, else declines to the Validated \
+                   uflia_interpolant path. BOUNDARY: conjunctive, congruence-free, covered integer shapes \
+                   only; Carcara has no integer lia_generic rule, so the external checker is the Lean kernel",
+        reference: "ADR-0047",
+    },
+    Capability {
         area: "QF_NRA",
         feature: "nonlinear real: a complete cylindrical-decomposition decision side \
                   (single-variable real-algebraic + degree-2 SOS/PSD + coupled-equality \

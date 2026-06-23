@@ -2545,6 +2545,32 @@ fn gcd_i128(a: i128, b: i128) -> i128 {
 // payoff for the single-variable `c ≤ k·x ≤ d` shape).
 // =============================================================================
 
+/// The identity of the single integer "variable" an interval/equality atom is over.
+///
+/// Either a genuine integer [`SymbolId`] (`Σ … x …`) or an **opaque integer
+/// application** `(f args)` keyed by its structurally-hashed [`TermId`] — the latter
+/// lets the integer reconstructor treat a maximal non-arithmetic `Int`-sorted subterm
+/// `(f c)` (an uninterpreted-function application) as a fresh opaque integer, exactly
+/// as the conjunctive `QF_UFLIA` interpolant's congruence-free refutations require.
+///
+/// **Soundness of the opaque case.** An `(f args)` application is `Int`-sorted, so it
+/// denotes *some* integer. Treating it as a fresh integer variable `y` GENERALIZES the
+/// atom: the original (with `y := f(args)`) is a special case of the free-`y` system.
+/// If the free-`y` system is integer-infeasible (which the discreteness reconstruction
+/// proves over an opaque `Z` axiom — [`IntReconstructCtx::var_const_for`] already maps
+/// every variable to one opaque `Z` constant), then a fortiori the original is. So an
+/// opaque atom can only make UNSAT *harder* to witness, never spuriously UNSAT — and
+/// the kernel gate (`infer` + `def_eq False`) remains the sole authority. The two
+/// equal `TermId`s of a shared `(f c)` (structural hashing) compare equal here, so the
+/// "same variable" detector checks hold for a shared opaque application.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AtomVar {
+    /// A genuine integer symbol.
+    Sym(SymbolId),
+    /// An opaque integer application `(f args)`, keyed by its `TermId`.
+    Opaque(TermId),
+}
+
 /// The detected single-variable integer-interval shape `c ≤ k·x ≤ d` with `k > 0`,
 /// over one integer variable `x`, where **no multiple of `k` lies in `[c, d]`** (so
 /// the system is integer-infeasible while its LP relaxation is feasible).
@@ -2554,8 +2580,8 @@ fn gcd_i128(a: i128, b: i128) -> i128 {
 /// refuted by `no_int_between (x − m)`.
 #[derive(Debug, Clone, Copy)]
 struct IntInterval {
-    /// The single integer variable.
-    var: SymbolId,
+    /// The single integer variable (a symbol or an opaque application).
+    var: AtomVar,
     /// The positive multiplier `k`.
     k: i128,
     /// The lower bound `c` (so `c ≤ k·x`).
@@ -2572,7 +2598,7 @@ struct IntInterval {
 /// while it is LP-feasible (genuinely needs an integer cut, not a Farkas/LRA close).
 #[derive(Debug, Clone, Copy)]
 struct IntIntervalDiff {
-    var: SymbolId,
+    var: AtomVar,
     /// Lower multiplier `k_lo > 0` (so `c ≤ k_lo·x`).
     k_lo: i128,
     c: i128,
@@ -2598,7 +2624,7 @@ struct IntIntervalDiff {
 /// Upper-bound infeasibility: `x ≤ c ⟹ b = k·x ≤ k·c`, contradicting `k·c < b`.
 #[derive(Debug, Clone, Copy)]
 struct IntEqBound {
-    var: SymbolId,
+    var: AtomVar,
     /// The positive equality multiplier `k > 0` (oriented), so `k·x = b`.
     k: i128,
     /// The equality right-hand value `b`.
@@ -2614,19 +2640,27 @@ struct IntEqBound {
 /// `k·x` (`k > 0`) and the bound is the integer constant on the other side.
 #[derive(Debug, Clone, Copy)]
 struct BoundAtom {
-    var: SymbolId,
+    var: AtomVar,
     k: i128,
     bound: i128,
     lower: bool,
 }
 
 /// Parse a linear integer term into `(coeff·var, constant)` for a **single** variable
-/// (or a pure constant). Returns `None` for multi-variable / nonlinear / multi-term
-/// forms — this slice handles only the single-variable interval shape.
-fn single_var_linear(arena: &TermArena, t: TermId) -> Option<(Option<(SymbolId, i128)>, i128)> {
+/// (or a pure constant). The "variable" is either a genuine integer symbol or an
+/// **opaque integer application** `(f args)` treated as a fresh opaque integer (see
+/// [`AtomVar`] for the soundness of the opaque case). Returns `None` for
+/// multi-variable / nonlinear / multi-term forms — this slice handles only the
+/// single-variable interval shape.
+fn single_var_linear(arena: &TermArena, t: TermId) -> Option<(Option<(AtomVar, i128)>, i128)> {
     match arena.node(t) {
         TermNode::IntConst(n) => Some((None, *n)),
-        TermNode::Symbol(s) => Some((Some((*s, 1)), 0)),
+        TermNode::Symbol(s) => Some((Some((AtomVar::Sym(*s), 1)), 0)),
+        // A maximal non-arithmetic `Int`-sorted subterm `(f args)` is an opaque integer
+        // variable, keyed by its (structurally-hashed) `TermId`.
+        TermNode::App {
+            op: Op::Apply(_), ..
+        } => Some((Some((AtomVar::Opaque(t), 1)), 0)),
         TermNode::App { op, args } => match (op, &args[..]) {
             (Op::IntNeg, [x]) => {
                 let (v, k) = single_var_linear(arena, *x)?;
@@ -2842,7 +2876,7 @@ fn detect_int_interval_diff_mult(
 /// a value on the other (in either orientation), normalizes so the variable coefficient
 /// is positive, and returns `(var, k, b)`. Returns `None` on any other shape (multiple
 /// variables, a zero coefficient, a non-equality, or an overflow) — never fabricates.
-fn parse_int_equality(arena: &TermArena, t: TermId) -> Option<(SymbolId, i128, i128)> {
+fn parse_int_equality(arena: &TermArena, t: TermId) -> Option<(AtomVar, i128, i128)> {
     let TermNode::App { op, args } = arena.node(t) else {
         return None;
     };
@@ -3296,9 +3330,12 @@ impl IntReconstructCtx {
         self.close_no_int_between(xe, zero, iv.m_lo, lt_m_x, lt_x_mlo1)
     }
 
-    /// Get (declaring lazily) the opaque `Z`-typed constant for an IR [`SymbolId`],
-    /// using a fixed dense index `0` (the interval shape has a single variable).
-    fn var_const_for(&mut self, _sym: SymbolId) -> NameId {
+    /// Get (declaring lazily) the opaque `Z`-typed constant for the single interval
+    /// variable, using a fixed dense index `0`. The variable identity ([`AtomVar`] —
+    /// a symbol or an opaque application) is irrelevant to the proof: the
+    /// single-variable shape always maps to the one opaque `Z` constant, which is
+    /// exactly why an opaque application reconstructs identically to a symbol.
+    fn var_const_for(&mut self, _var: AtomVar) -> NameId {
         self.var_const(0)
     }
 

@@ -50,7 +50,10 @@ use axeyum_rewrite::eliminate_functions;
 
 use crate::backend::{CheckResult, SolverConfig, SolverError};
 use crate::euf::check_with_uf_arithmetic;
-use crate::lia_interpolant;
+use crate::int_reconstruct::{
+    reconstruct_diophantine_to_lean_module, reconstruct_int_inequality_to_lean_module,
+};
+use crate::{ProofFragment, lia_interpolant, prove_lia_unsat_by_diophantine};
 
 /// Computes a conjunctive `QF_UFLIA` Craig interpolant for the partition
 /// `(a_assertions, b_assertions)`.
@@ -69,6 +72,18 @@ use crate::lia_interpolant;
 /// errors (a procedure-bug soundness alarm); ordinary unsupported input declines
 /// with `Ok(None)`.
 pub fn uflia_interpolant(
+    arena: &mut TermArena,
+    a_assertions: &[TermId],
+    b_assertions: &[TermId],
+) -> Result<Option<TermId>, SolverError> {
+    build_verified_uflia_interpolant(arena, a_assertions, b_assertions)
+}
+
+/// Builds the verified conjunctive `QF_UFLIA` interpolant `I` for `A ∧ B` (or
+/// `None`). This is the single source of truth for `I`; [`uflia_interpolant`]
+/// forwards to it directly and [`uflia_interpolant_certified`] reuses it, so the
+/// returned `I` is byte-identical across both entry points.
+fn build_verified_uflia_interpolant(
     arena: &mut TermArena,
     a_assertions: &[TermId],
     b_assertions: &[TermId],
@@ -206,6 +221,207 @@ pub fn verify_uflia_interpolant(
     }
 
     Ok(true)
+}
+
+/// A **certified** conjunctive `QF_UFLIA` Craig interpolant: the interpolant `I` for an
+/// unsatisfiable integer `A ∧ B`, paired with two externally-checkable, **kernel-checked**
+/// integer refutations witnessing its two soundness conditions.
+///
+/// - [`a_certificate`](Self::a_certificate) is a self-contained Lean 4 module
+///   (`prelude`-mode source) re-proving `A ∧ ¬I ⊢ ⊥` over the integer prelude (Craig
+///   condition 1, `A ⇒ I`);
+/// - [`b_certificate`](Self::b_certificate) is the same for `I ∧ B ⊢ ⊥` (Craig
+///   condition 2).
+///
+/// `I` is a single linear-integer comparison whose only uninterpreted-function
+/// applications are **opaque** shared integers (the conjunctive `QF_UFLIA` construction
+/// declines whenever a refutation would need functional consistency / congruence — the
+/// function-free relaxation is then `sat` — so the certifiable interpolant is always
+/// congruence-free). Each of `A ∧ ¬I` and `I ∧ B` is therefore an integer **conjunction**
+/// over opaque applications, reconstructed through one of the integer-prelude shapes the
+/// `int_reconstruct` module covers ([`ProofFragment::Diophantine`] or
+/// [`ProofFragment::IntInequality`]) — where each maximal non-arithmetic subterm `(f c)`
+/// is treated as a fresh opaque integer (`AtomVar::Opaque`, sound because an `(f c)` is
+/// some integer, so the free-variable system is a generalization).
+///
+/// Both modules are produced by [`crate::prove_unsat_to_lean_module`], which
+/// **kernel-checks** the refutation in-tree (`infer` + `def_eq False`, no `sorryAx`)
+/// before rendering; an independent `lean` binary re-checks the same module. Carcara has
+/// **no** integer `lia_generic` rule (it warns and marks the proof `holey`), so for
+/// integers the external checker is the **Lean kernel**, not Carcara.
+///
+/// # Boundary — covered shapes only
+///
+/// The certifiable interpolant `I` is a single integer linear comparison, so `¬I` is one
+/// (dual) comparison and both `A ∧ ¬I` and `I ∧ B` are integer conjunctions over opaque
+/// applications. They are certified here **only** when each reconstructs through a covered
+/// integer-prelude fragment. A `QF_UFLIA` interpolant whose `A ∧ ¬I` or `I ∧ B` needs an
+/// **uncovered** integer refutation (a general cut, or a multivariate rational-relaxation
+/// refutation the integer reconstructor declines) is **not** certified here and stays
+/// `Validated`. This is an honest boundary — not all `QF_UFLIA` interpolants are
+/// certified, only those whose two soundness conjunctions land in the covered integer
+/// shapes.
+#[derive(Debug, Clone)]
+pub struct UfliaInterpolantCertificate {
+    /// The verified interpolant term `I` (byte-identical to what [`uflia_interpolant`]
+    /// returns for the same `(A, B)`).
+    pub interpolant: TermId,
+    /// `A ∧ ¬I`, the conjunction the [`a_certificate`](Self::a_certificate) refutes.
+    pub a_and_not_i: Vec<TermId>,
+    /// `I ∧ B`, the conjunction the [`b_certificate`](Self::b_certificate) refutes.
+    pub i_and_b: Vec<TermId>,
+    /// Kernel-checked Lean module re-proving `A ∧ ¬I ⊢ ⊥` (Craig condition 1).
+    pub a_certificate: String,
+    /// Kernel-checked Lean module re-proving `I ∧ B ⊢ ⊥` (Craig condition 2).
+    pub b_certificate: String,
+    /// The integer-prelude fragment of [`a_certificate`](Self::a_certificate)
+    /// (one of [`ProofFragment::Diophantine`] / [`ProofFragment::IntInequality`]).
+    pub a_fragment: ProofFragment,
+    /// The integer-prelude fragment of [`b_certificate`](Self::b_certificate).
+    pub b_fragment: ProofFragment,
+}
+
+/// Produces a **certified** Craig interpolant for the unsatisfiable conjunctive
+/// `QF_UFLIA` partition `A = a_assertions`, `B = b_assertions`: the same verified
+/// interpolant [`uflia_interpolant`] returns, **plus** two kernel-checked integer
+/// certificates — Lean modules re-proving `A ∧ ¬I` and `I ∧ B` over the integer prelude
+/// (treating every uninterpreted-function application as an opaque integer) — that an
+/// independent `lean` binary can accept on its own.
+///
+/// This is the `Checked`-assurance upgrade of the `Validated` [`uflia_interpolant`]: the
+/// interpolant was already verify-before-return over the original `QF_UFLIA` partitions;
+/// here we additionally emit a kernel-checked integer certificate for each of its two
+/// soundness conditions, and return it **only** when both conjunctions reconstruct through
+/// a covered integer-prelude fragment ([`ProofFragment::Diophantine`] or
+/// [`ProofFragment::IntInequality`]). `¬I` is built as the explicit **dual** comparison
+/// (`¬(e ≤ 0) = e > 0`, `¬(e < 0) = e ≥ 0`) rather than a `not`-wrapper, so the integer
+/// fragment classifier — which reads bare comparisons, not `not` — covers it.
+///
+/// # Boundary
+///
+/// Only the covered integer shapes are certified (see [`UfliaInterpolantCertificate`]).
+/// This function declines (`Ok(None)`) whenever [`uflia_interpolant`] declines, whenever
+/// `¬I` cannot be built as a bare dual comparison (e.g. an equality interpolant, whose
+/// negation is a disjunction), or whenever either conjunction does **not** reconstruct
+/// through a covered integer fragment. A caller that gets `Ok(None)` should fall back to
+/// the `Validated` [`uflia_interpolant`] path — this function NEVER returns an uncertified
+/// interpolant dressed as certified.
+///
+/// # Errors
+///
+/// Propagates [`SolverError`] from the shared verifying `QF_UFLIA` decider (a procedure-bug
+/// soundness alarm); ordinary unsupported input declines with `Ok(None)`.
+pub fn uflia_interpolant_certified(
+    arena: &mut TermArena,
+    a_assertions: &[TermId],
+    b_assertions: &[TermId],
+) -> Result<Option<UfliaInterpolantCertificate>, SolverError> {
+    // 1. The verified interpolant `I` (identical to `uflia_interpolant`'s output).
+    let Some(interpolant) = build_verified_uflia_interpolant(arena, a_assertions, b_assertions)?
+    else {
+        return Ok(None);
+    };
+
+    // 2. Form the two Craig-condition conjunctions. `¬I` is the explicit dual comparison
+    //    (a bare integer comparison the integer fragment classifier reads), not a
+    //    `not`-wrapper.
+    let Some(not_interpolant) = dual_int_comparison(arena, interpolant) else {
+        return Ok(None);
+    };
+    let mut a_and_not_i: Vec<TermId> = a_assertions.to_vec();
+    a_and_not_i.push(not_interpolant);
+    let mut i_and_b: Vec<TermId> = Vec::with_capacity(b_assertions.len() + 1);
+    i_and_b.push(interpolant);
+    i_and_b.extend_from_slice(b_assertions);
+
+    // 3. Reconstruct EACH conjunction to a kernel-checked integer Lean module, requiring a
+    //    COVERED integer fragment; either failing ⇒ decline to the `Validated` path (never
+    //    an uncertified interpolant dressed as certified).
+    let Some((a_fragment, a_certificate)) = integer_certificate(arena, &a_and_not_i) else {
+        return Ok(None);
+    };
+    let Some((b_fragment, b_certificate)) = integer_certificate(arena, &i_and_b) else {
+        return Ok(None);
+    };
+
+    Ok(Some(UfliaInterpolantCertificate {
+        interpolant,
+        a_and_not_i,
+        i_and_b,
+        a_certificate,
+        b_certificate,
+        a_fragment,
+        b_fragment,
+    }))
+}
+
+/// Reconstructs the integer conjunction `assertions` (over opaque applications) to a
+/// kernel-checked Lean module, returning `Some((fragment, module))` **only** when it
+/// reconstructs through a COVERED integer-prelude fragment ([`ProofFragment::Diophantine`]
+/// or [`ProofFragment::IntInequality`]) and the rendered module carries no `sorryAx`.
+///
+/// Unlike the `QF_LIA` certified path, this **bypasses** the general
+/// [`crate::scan_proof_fragment`] router: that router classifies any term carrying an
+/// uninterpreted-function application as `QF_UF` (`has_func` takes precedence over
+/// arithmetic), which would route these integer conjunctions to the EUF reconstructor (it
+/// declines — they are not pure-EUF). Since the conjunctive `QF_UFLIA` construction
+/// guarantees both conjunctions are integer refutations over **opaque** applications (the
+/// interpolant is congruence-free), we invoke the integer-prelude reconstructors directly —
+/// the Diophantine equality reconstructor first (it owns `gcd`-infeasible equality systems),
+/// then the integer-inequality interval reconstructor. Each treats every maximal
+/// non-arithmetic subterm `(f c)` as a fresh opaque integer (sound: an `(f c)` is some
+/// integer, so the free-variable system is a generalization). Both reconstructors gate the
+/// `False` proof through their own integer-prelude kernel (`infer` + `def_eq False`) before
+/// rendering, so a returned module is already kernel-accepted.
+///
+/// Any reconstruction failure, or a module that somehow carries `sorryAx`, returns `None`
+/// so the certified path declines to `Validated` — never an uncertified interpolant dressed
+/// as certified.
+fn integer_certificate(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<(ProofFragment, String)> {
+    // Diophantine equality system first (matches the `scan_proof_fragment` priority), then
+    // the single-variable integer-interval cut. Both build their own integer-prelude kernel
+    // and gate `infer` + `def_eq False` before rendering.
+    let (fragment, module) = if prove_lia_unsat_by_diophantine(arena, assertions) {
+        (
+            ProofFragment::Diophantine,
+            reconstruct_diophantine_to_lean_module(arena, assertions).ok()?,
+        )
+    } else {
+        (
+            ProofFragment::IntInequality,
+            reconstruct_int_inequality_to_lean_module(arena, assertions).ok()?,
+        )
+    };
+    // Defensive: a covered integer module is kernel-checked and never leans on the `sorryAx`
+    // escape hatch; refuse to certify if it somehow does.
+    if module.contains("sorryAx") {
+        return None;
+    }
+    Some((fragment, module))
+}
+
+/// Builds the explicit dual (logical negation) of the interpolant comparison `I` as a
+/// single **bare** integer comparison term, so the integer fragment classifier — which
+/// reads bare comparisons, not a `not`-wrapper — can route it.
+///
+/// `I` is produced by [`build_verified_uflia_interpolant`] (via the underlying
+/// `lia_interpolant`) as `int_le(e, 0)`, `int_lt(e, 0)`, or `eq(e, 0)`. The duals of the
+/// inequalities are `int_gt(e, 0)` and `int_ge(e, 0)`. An equality interpolant `e = 0`
+/// has no single-comparison dual (`¬(e = 0)` is a disjunction `e < 0 ∨ e > 0`), so it
+/// returns `None` ⇒ decline (such an interpolant stays `Validated`).
+fn dual_int_comparison(arena: &mut TermArena, interpolant: TermId) -> Option<TermId> {
+    let (op, lhs, rhs) = match arena.node(interpolant) {
+        TermNode::App { op, args } if args.len() == 2 => (*op, args[0], args[1]),
+        _ => return None,
+    };
+    match op {
+        Op::IntLe => arena.int_gt(lhs, rhs).ok(),
+        Op::IntLt => arena.int_ge(lhs, rhs).ok(),
+        _ => None,
+    }
 }
 
 /// Rebuilds an LIA interpolant term, substituting each fresh Ackermann symbol

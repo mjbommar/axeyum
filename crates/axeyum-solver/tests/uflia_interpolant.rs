@@ -406,3 +406,208 @@ fn mentions_function(arena: &TermArena, term: TermId, name: &str) -> bool {
     }
     false
 }
+
+// === Certified conjunctive QF_UFLIA Craig interpolant (uflia_interpolant_certified) ===
+//
+// The certified interpolant `I` carries two KERNEL-CHECKED integer certificates witnessing
+// its two Craig soundness conditions: `A ∧ ¬I ⊢ ⊥` and `I ∧ B ⊢ ⊥`. Because the
+// conjunctive construction declines whenever congruence is needed, the certifiable
+// interpolant is congruence-free — its UF applications `(f c)` are OPAQUE shared integers,
+// and each conjunction is an integer-infeasible system over opaque applications that the
+// integer-prelude reconstructor covers (Diophantine / interval cut). `prove_unsat_to_lean_module`
+// kernel-checks (`infer` + `def_eq False`, no `sorryAx`) before rendering, so `Ok` already
+// means kernel-accepted. (The real `lean` binary re-checks the same modules in
+// `lean_crosscheck.rs`.) For integers Carcara has no `lia_generic` rule, so the Lean kernel
+// is the external checker.
+
+/// The certifiable shape: `A: 2·f(c) ≥ 1`, `B: 2·f(c) ≤ 0` over `Int` with `f(c)` a SHARED
+/// opaque integer application. Unsat (`2·f(c)` is even). `lia_interpolant` (under the
+/// Ackermann abstraction) returns `I` with `2·f(c) ≥ 1`; with `¬I` the bare dual, BOTH
+/// `A ∧ ¬I` and `I ∧ B` are diff-multiplier integer intervals over the opaque `f(c)`, which
+/// reconstruct through the `IntInequality` fragment — so both integer certificates are
+/// kernel-checked with NO `sorryAx`. The interpolant `I` is byte-identical to the
+/// `Validated` `uflia_interpolant` output, and the Craig conditions still independently
+/// re-check.
+#[test]
+fn certified_uflia_interpolant_carries_two_kernel_checked_integer_certs() {
+    use axeyum_solver::{
+        ProofFragment, is_int_inequality_refutation, reconstruct_int_inequality_to_lean_module,
+        uflia_interpolant_certified,
+    };
+
+    let mut arena = TermArena::new();
+    let func_f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let var_c = arena.declare("c", Sort::Int).unwrap();
+    let var_c = arena.var(var_c);
+    let app_fc = arena.apply(func_f, &[var_c]).unwrap();
+    let two = int_k(&mut arena, 2);
+    let two_fc = arena.int_mul(two, app_fc).unwrap();
+    let zero = int_k(&mut arena, 0);
+    let one = int_k(&mut arena, 1);
+    let part_a = vec![arena.int_ge(two_fc, one).unwrap()]; // 2·f(c) ≥ 1
+    let part_b = vec![arena.int_le(two_fc, zero).unwrap()]; // 2·f(c) ≤ 0
+
+    // The plain (Validated) interpolant the certified path must reproduce verbatim.
+    let plain = uflia_interpolant(&mut arena, &part_a, &part_b)
+        .unwrap()
+        .expect("a Validated interpolant exists");
+
+    let cert = uflia_interpolant_certified(&mut arena, &part_a, &part_b)
+        .expect("decides")
+        .expect("a certified interpolant exists for 2·f(c)≥1 ∧ 2·f(c)≤0");
+
+    // The certified interpolant is byte-identical to the Validated one.
+    assert_eq!(
+        cert.interpolant, plain,
+        "certified interpolant must be byte-identical to uflia_interpolant"
+    );
+
+    // Both soundness conjunctions are certified through a COVERED integer fragment.
+    assert!(
+        matches!(
+            cert.a_fragment,
+            ProofFragment::Diophantine | ProofFragment::IntInequality
+        ),
+        "A ∧ ¬I must reconstruct through an integer fragment, got {:?}",
+        cert.a_fragment
+    );
+    assert!(
+        matches!(
+            cert.b_fragment,
+            ProofFragment::Diophantine | ProofFragment::IntInequality
+        ),
+        "I ∧ B must reconstruct through an integer fragment, got {:?}",
+        cert.b_fragment
+    );
+
+    // Both Lean certificates are kernel-checked (rendered ONLY after
+    // `prove_unsat_to_lean_module` kernel-checks `infer` + `def_eq False`) and audit clean:
+    // NO `sorryAx`, and each names the exported refutation theorem.
+    for (name, module) in [
+        ("A ∧ ¬I", &cert.a_certificate),
+        ("I ∧ B", &cert.b_certificate),
+    ] {
+        assert!(
+            !module.contains("sorryAx"),
+            "{name} certificate must not depend on sorryAx:\n{module}"
+        );
+        assert!(
+            module.contains("axeyum_refutation"),
+            "{name} certificate must name the axeyum_refutation theorem"
+        );
+    }
+
+    // The interpolant mentions the SHARED opaque application f(c).
+    let f_name = arena.function(func_f).0.to_owned();
+    assert!(
+        mentions_function(&arena, cert.interpolant, &f_name),
+        "certified interpolant must be over the shared opaque f(c)"
+    );
+
+    // Re-feeding the recorded conjunctions to the integer reconstructor still recognizes the
+    // integer-interval shape over the opaque application and kernel-reconstructs (the in-tree
+    // kernel gate, run again). (The general `prove_unsat_to_lean_module` router classifies a
+    // UF application as `QF_UF` and would not route here — the cert calls the integer
+    // reconstructor directly, exactly as re-checked below.)
+    assert!(
+        is_int_inequality_refutation(&arena, &cert.a_and_not_i),
+        "A ∧ ¬I is an integer-interval refutation over the opaque app"
+    );
+    assert!(
+        is_int_inequality_refutation(&arena, &cert.i_and_b),
+        "I ∧ B is an integer-interval refutation over the opaque app"
+    );
+    let a_mod = reconstruct_int_inequality_to_lean_module(&arena, &cert.a_and_not_i)
+        .expect("A ∧ ¬I kernel-reconstructs");
+    let b_mod = reconstruct_int_inequality_to_lean_module(&arena, &cert.i_and_b)
+        .expect("I ∧ B kernel-reconstructs");
+    assert!(!a_mod.contains("sorryAx") && !b_mod.contains("sorryAx"));
+    assert_eq!(cert.a_fragment, ProofFragment::IntInequality);
+    assert_eq!(cert.b_fragment, ProofFragment::IntInequality);
+
+    // The Craig conditions still hold (independent re-check, not trusting the certificate).
+    assert!(
+        craig_conditions_hold(&mut arena, &part_a, &part_b, cert.interpolant),
+        "independently re-verified Craig conditions"
+    );
+}
+
+/// DECLINE (the honest boundary): the canonical `A: f(c) ≥ 5`, `B: f(c) ≤ 3` pair. A genuine
+/// `Validated` interpolant `f(c) ≥ 5` exists, but `A ∧ ¬I` / `I ∧ B` are the EMPTY
+/// same-multiplier integer interval `5 ≤ f(c) ≤ 4` (LP-infeasible) — an LRA, not an
+/// integer-cut, refutation, which the integer reconstructor declines (and the LRA path
+/// rejects `Int` atoms). So the certified path returns `Ok(None)` and the caller falls back
+/// to `Validated`. It NEVER fabricates a certificate for an uncovered shape.
+#[test]
+fn uncovered_uflia_refutation_declines_to_validated() {
+    use axeyum_solver::uflia_interpolant_certified;
+
+    let mut arena = TermArena::new();
+    let func_f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let var_c = arena.declare("c", Sort::Int).unwrap();
+    let var_c = arena.var(var_c);
+    let app_fc = arena.apply(func_f, &[var_c]).unwrap();
+    let five = int_k(&mut arena, 5);
+    let three = int_k(&mut arena, 3);
+    let part_a = vec![arena.int_ge(app_fc, five).unwrap()];
+    let part_b = vec![arena.int_le(app_fc, three).unwrap()];
+
+    // The Validated path still produces a verified interpolant…
+    let plain = uflia_interpolant(&mut arena, &part_a, &part_b).unwrap();
+    assert!(plain.is_some(), "a Validated interpolant must still exist");
+    if let Some(interp) = plain {
+        assert!(craig_conditions_hold(&mut arena, &part_a, &part_b, interp));
+    }
+
+    // …but the certified path declines (uncovered integer shape — LP-infeasible interval).
+    let cert = uflia_interpolant_certified(&mut arena, &part_a, &part_b).expect("decides");
+    assert!(
+        cert.is_none(),
+        "an uncovered (LP-infeasible) integer refutation must NOT be certified"
+    );
+}
+
+/// TAMPER (the kernel gate has teeth): take a genuine certified integer module and replace
+/// its `False`-proof body with `sorry`. The no-`sorryAx` audit our certified path relies on
+/// then FAILS: the tampered module trivially contains `sorry`/`sorryAx`, so it would be
+/// refused. (The real `lean` binary likewise rejects it; see `lean_crosscheck.rs`.) A
+/// fabricated certificate cannot pass the gate the positive test uses.
+#[test]
+fn tampered_uflia_interpolant_certificate_fails_the_sorry_audit() {
+    use axeyum_solver::uflia_interpolant_certified;
+
+    let mut arena = TermArena::new();
+    let func_f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let var_c = arena.declare("c", Sort::Int).unwrap();
+    let var_c = arena.var(var_c);
+    let app_fc = arena.apply(func_f, &[var_c]).unwrap();
+    let two = int_k(&mut arena, 2);
+    let two_fc = arena.int_mul(two, app_fc).unwrap();
+    let zero = int_k(&mut arena, 0);
+    let one = int_k(&mut arena, 1);
+    let part_a = vec![arena.int_ge(two_fc, one).unwrap()];
+    let part_b = vec![arena.int_le(two_fc, zero).unwrap()];
+    let cert = uflia_interpolant_certified(&mut arena, &part_a, &part_b)
+        .expect("decides")
+        .expect("a certified interpolant exists");
+
+    // Replace the proof body `:= <proof>` of the refutation theorem with `sorry`.
+    let marker = "theorem axeyum_refutation : False :=";
+    let idx = cert
+        .a_certificate
+        .find(marker)
+        .expect("module declares axeyum_refutation");
+    let head = &cert.a_certificate[..idx + marker.len()];
+    let tail_start = cert.a_certificate[idx..]
+        .find("#print axioms")
+        .map(|p| idx + p)
+        .expect("module has a #print axioms audit");
+    let tampered = format!("{head} sorry\n\n{}", &cert.a_certificate[tail_start..]);
+
+    // The genuine certificate audits clean; the tampered one does not.
+    assert!(!cert.a_certificate.contains("sorryAx"));
+    assert!(
+        tampered.contains("sorryAx") || tampered.contains("sorry"),
+        "a `sorry`-tampered module must trip the sorry audit"
+    );
+}

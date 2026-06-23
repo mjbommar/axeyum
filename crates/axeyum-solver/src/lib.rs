@@ -283,7 +283,9 @@ pub use theory_combination::{
     propose_interface_equalities, shared_terms,
 };
 pub use trust::{ALL_TRUST_IDS, TrustId, TrustStep, trust_ledger_markdown};
-pub use uflia_interpolant::uflia_interpolant;
+pub use uflia_interpolant::{
+    UfliaInterpolantCertificate, uflia_interpolant, uflia_interpolant_certified,
+};
 #[doc(hidden)]
 pub use uflia_online::check_qf_uflia_boolean_with_metrics;
 pub use uflia_online::check_qf_uflia_online;
