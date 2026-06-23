@@ -237,7 +237,8 @@ pub use proof::{
 pub use qfabv_alethe::prove_qf_abv_unsat_alethe;
 pub use qfabv_elim_alethe::prove_qf_abv_unsat_alethe_via_elimination;
 pub use qfbv_alethe::{
-    prove_qf_bv_unsat_alethe, prove_qf_bv_unsat_alethe_lowered, prove_qf_bv_unsat_alethe_route2,
+    prove_qf_bv_unsat_alethe, prove_qf_bv_unsat_alethe_ext_compare,
+    prove_qf_bv_unsat_alethe_lowered, prove_qf_bv_unsat_alethe_route2,
 };
 pub use qfdt_simp_alethe::prove_qf_dt_unsat_alethe_via_simplification;
 pub use qfufbv_alethe::prove_qf_ufbv_unsat_alethe;

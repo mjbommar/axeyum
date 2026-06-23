@@ -154,6 +154,114 @@ pub fn prove_qf_bv_unsat_alethe_route2(
     prove_with_rewrites(arena, assertions, &sub_rewrites)
 }
 
+/// **Extended-comparison route**: emit a Carcara-checkable Alethe refutation for an
+/// `unsat` `QF_BV` conjunction whose assertions may use the six **non-core comparison
+/// predicates** `bvule`/`bvugt`/`bvuge`/`bvsle`/`bvsgt`/`bvsge` at the top level (each
+/// optionally under a single `not`), in addition to the core `=`/`bvult`/`bvslt`
+/// fragment of [`prove_qf_bv_unsat_alethe`].
+///
+/// Carcara has bit-blast rules for `bvult`/`bvslt` only — **none** for the six extended
+/// comparisons, and no stock rule rewrites one to the other inside a proof (the
+/// `rare_rewrite` route needs an external RARE file the cross-check does not supply;
+/// `comp_simplify`/`bv_poly_simp`/`refl`/`connective_def` all reject the equivalence).
+/// So this route **normalizes each top-level extended comparison to its denotation-equal
+/// `bvult`/`bvslt` form** before emission, using the SMT-LIB-verbatim equivalences:
+///
+/// - `(bvugt a b)` ≡ `(bvult b a)`            `(bvule a b)` ≡ `(not (bvult b a))`
+/// - `(bvuge a b)` ≡ `(not (bvult a b))`      `(bvsgt a b)` ≡ `(bvslt b a)`
+/// - `(bvsle a b)` ≡ `(not (bvslt b a))`      `(bvsge a b)` ≡ `(not (bvslt a b))`
+///
+/// The normalization is **denotation- and sort-preserving** (each side has the same
+/// truth value for all inputs — see the totality semantics note), so the emitted
+/// refutation certifies the conjunction's unsatisfiability up to that local rewrite. The
+/// returned proof's `assume`s — and therefore the matching `.smt2` premises — are over
+/// the **normalized** assertions, which this function returns alongside the proof so the
+/// caller (and the Carcara cross-check) can render the exact problem the proof closes.
+///
+/// Needs `&mut TermArena` to intern each normalized `(bvult …)`/`(bvslt …)` (and the
+/// wrapping `not`). Returns `(proof, normalized_assertions)`, or [`None`] for a
+/// non-`unsat` or otherwise out-of-fragment query (e.g. a shift/division subterm, still a
+/// Carcara hole), or if a rewrite interning fails. Operands are otherwise the full
+/// bit-blastable compound fragment of [`prove_qf_bv_unsat_alethe`] — only the **top-level
+/// predicate head** is normalized here.
+#[must_use]
+pub fn prove_qf_bv_unsat_alethe_ext_compare(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Option<(Vec<AletheCommand>, Vec<TermId>)> {
+    // Normalize each assertion's top-level extended comparison (under at most one `not`)
+    // to its core `bvult`/`bvslt` form. Interning needs `&mut`, so rewrite up front, then
+    // hand the normalized assertions to the shared (`&`-only) core emitter.
+    let normalized = assertions
+        .iter()
+        .map(|&t| normalize_ext_compare_assertion(arena, t))
+        .collect::<Option<Vec<_>>>()?;
+    let proof = prove_with_rewrites(arena, &normalized, &BTreeMap::new())?;
+    Some((proof, normalized))
+}
+
+/// Rewrites `term`'s **top-level** predicate, when it is one of the six extended
+/// comparisons (optionally under a single `not`), to the denotation-equal core
+/// `bvult`/`bvslt` form; any other assertion is returned unchanged. Returns [`None`] only
+/// if interning the rewrite fails (a malformed bit-vector term — never for well-formed
+/// input). The rewrite is applied to the **negation's inner predicate** when the
+/// assertion is `(not p)`, preserving the outer `not`, so polarity is kept exactly.
+fn normalize_ext_compare_assertion(arena: &mut TermArena, term: TermId) -> Option<TermId> {
+    if let TermNode::App {
+        op: Op::BoolNot,
+        args,
+    } = arena.node(term)
+    {
+        let inner = *args.first()?;
+        let inner_norm = normalize_ext_compare_pred(arena, inner)?;
+        if inner_norm == inner {
+            return Some(term);
+        }
+        return arena.not(inner_norm).ok();
+    }
+    normalize_ext_compare_pred(arena, term)
+}
+
+/// Rewrites an extended-comparison **predicate** `(pred a b)` to its core
+/// `bvult`/`bvslt` (possibly `not`-wrapped) form, per the SMT-LIB equivalences; returns
+/// any non-extended-comparison `term` unchanged. [`None`] only on an interning failure.
+fn normalize_ext_compare_pred(arena: &mut TermArena, term: TermId) -> Option<TermId> {
+    let TermNode::App { op, args } = arena.node(term) else {
+        return Some(term);
+    };
+    let op = *op;
+    let [a, b] = args[..] else {
+        return Some(term);
+    };
+    Some(match op {
+        // a >ᵤ b ⟺ b <ᵤ a
+        Op::BvUgt => arena.bv_ult(b, a).ok()?,
+        // a ≤ᵤ b ⟺ ¬(b <ᵤ a)
+        Op::BvUle => {
+            let lt = arena.bv_ult(b, a).ok()?;
+            arena.not(lt).ok()?
+        }
+        // a ≥ᵤ b ⟺ ¬(a <ᵤ b)
+        Op::BvUge => {
+            let lt = arena.bv_ult(a, b).ok()?;
+            arena.not(lt).ok()?
+        }
+        // a >ₛ b ⟺ b <ₛ a
+        Op::BvSgt => arena.bv_slt(b, a).ok()?,
+        // a ≤ₛ b ⟺ ¬(b <ₛ a)
+        Op::BvSle => {
+            let lt = arena.bv_slt(b, a).ok()?;
+            arena.not(lt).ok()?
+        }
+        // a ≥ₛ b ⟺ ¬(a <ₛ b)
+        Op::BvSge => {
+            let lt = arena.bv_slt(a, b).ok()?;
+            arena.not(lt).ok()?
+        }
+        _ => term,
+    })
+}
+
 /// Interns `(bvadd a (bvneg b))` for every `(bvsub a b)` subterm reachable from
 /// `term`, recording each in `sub_rewrites`. Returns [`None`] if a rewrite cannot be
 /// interned (a malformed bit-vector term — never for well-formed input).
@@ -1587,5 +1695,67 @@ mod tests {
         let eq = arena.eq(sub, c).unwrap();
         // (bvsub a b) = c alone is satisfiable.
         assert!(prove_qf_bv_unsat_alethe_route2(&mut arena, &[eq]).is_none());
+    }
+
+    // --- Extended comparisons (bvule/bvugt/bvuge/bvsle/bvsgt/bvsge) ----------
+
+    #[test]
+    fn ext_compare_bvugt_emits_a_closing_proof() {
+        use super::prove_qf_bv_unsat_alethe_ext_compare;
+        // (bvugt a b) ∧ (= a b) over width 2 — unsat: a > b yet a = b. The top-level
+        // `bvugt` normalizes to `(bvult b a)`.
+        let mut arena = TermArena::new();
+        let a = bv(&mut arena, "a", 2);
+        let b = bv(&mut arena, "b", 2);
+        let gt = arena.bv_ugt(a, b).unwrap();
+        let eq = arena.eq(a, b).unwrap();
+        let (proof, normalized) =
+            prove_qf_bv_unsat_alethe_ext_compare(&mut arena, &[gt, eq]).expect("unsat proof");
+        assert!(closes_to_empty(&proof));
+        // The normalized assertion is `(bvult b a)`, no longer `bvugt`.
+        assert_ne!(normalized[0], gt);
+    }
+
+    #[test]
+    fn ext_compare_bvule_emits_a_closing_proof() {
+        use super::prove_qf_bv_unsat_alethe_ext_compare;
+        // (bvule a b) ∧ (bvult b a) — unsat: a ≤ b contradicts b < a. `bvule` normalizes
+        // to `(not (bvult b a))`, a negated predicate.
+        let mut arena = TermArena::new();
+        let a = bv(&mut arena, "a", 2);
+        let b = bv(&mut arena, "b", 2);
+        let le = arena.bv_ule(a, b).unwrap();
+        let lt = arena.bv_ult(b, a).unwrap();
+        let (proof, _norm) =
+            prove_qf_bv_unsat_alethe_ext_compare(&mut arena, &[le, lt]).expect("unsat proof");
+        assert!(closes_to_empty(&proof));
+    }
+
+    #[test]
+    fn ext_compare_passthrough_matches_core() {
+        use super::{prove_qf_bv_unsat_alethe, prove_qf_bv_unsat_alethe_ext_compare};
+        // With no extended comparison, normalization is a no-op and the proof equals the
+        // core driver's (the normalized assertions are the inputs unchanged).
+        let mut arena = TermArena::new();
+        let a = bv(&mut arena, "a", 2);
+        let b = bv(&mut arena, "b", 2);
+        let eq = arena.eq(a, b).unwrap();
+        let neq = arena.not(eq).unwrap();
+        let core = prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("core");
+        let (ext, norm) =
+            prove_qf_bv_unsat_alethe_ext_compare(&mut arena, &[eq, neq]).expect("ext");
+        assert_eq!(core, ext);
+        assert_eq!(norm, vec![eq, neq]);
+    }
+
+    #[test]
+    fn ext_compare_sat_instance_is_none() {
+        use super::prove_qf_bv_unsat_alethe_ext_compare;
+        let mut arena = TermArena::new();
+        let a = bv(&mut arena, "a", 2);
+        let b = bv(&mut arena, "b", 2);
+        let ge = arena.bv_uge(a, b).unwrap();
+        // (bvuge a b) alone is satisfiable.
+        assert!(prove_qf_bv_unsat_alethe_ext_compare(&mut arena, &[ge]).is_none());
     }
 }

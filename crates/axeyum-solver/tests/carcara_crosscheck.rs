@@ -20,9 +20,9 @@ use axeyum_ir::{Rational, Sort, TermArena, TermId};
 use axeyum_smtlib::write_script;
 use axeyum_solver::{
     bitblast_step, prove_lra_unsat_alethe, prove_qf_abv_unsat_alethe_via_elimination,
-    prove_qf_bv_unsat_alethe, prove_qf_bv_unsat_alethe_route2,
-    prove_qf_dt_unsat_alethe_via_simplification, prove_qf_uf_unsat_alethe,
-    prove_qf_ufbv_unsat_alethe,
+    prove_qf_bv_unsat_alethe, prove_qf_bv_unsat_alethe_ext_compare,
+    prove_qf_bv_unsat_alethe_route2, prove_qf_dt_unsat_alethe_via_simplification,
+    prove_qf_uf_unsat_alethe, prove_qf_ufbv_unsat_alethe,
 };
 
 /// Resolves the Carcara binary: `AXEYUM_CARCARA_BIN` if set, otherwise the
@@ -1966,4 +1966,105 @@ fn route2_bvsub_rewrite_proof_is_accepted_by_carcara() {
     );
     let report = carcara_accepts(&bin, "route2_bvsub", &arena, &assertions, &proof);
     assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+// --- Extended comparisons: bvule/bvugt/bvuge/bvsle/bvsgt/bvsge ----------------
+//
+// Carcara bit-blasts only `bvult`/`bvslt`; it has no rule for the six extended
+// comparisons, and (verified empirically) no stock rule — `comp_simplify`,
+// `equiv_simplify`, `bv_poly_simp`, `refl`, `connective_def`, `rare_rewrite` without an
+// external RARE file — rewrites one comparison to the other inside a proof. So
+// `prove_qf_bv_unsat_alethe_ext_compare` normalizes each top-level extended comparison to
+// its denotation-equal `bvult`/`bvslt` (possibly `not`-wrapped) form BEFORE emission, and
+// returns the normalized assertions. The `.smt2` is rendered over those normalized
+// assertions — the exact premises the proof's `assume`s match — and Carcara validates the
+// whole core refutation. Each test builds a genuinely-unsat instance over a different
+// extended comparison.
+
+/// Emits a `prove_qf_bv_unsat_alethe_ext_compare` proof for `assertions`, renders the
+/// `.smt2` over the *normalized* assertions it returns, and asserts Carcara reports
+/// `valid` (and not `holey`).
+fn assert_ext_compare_accepted(tag: &str, assertions: &[TermId], arena: &mut TermArena) {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let (proof, normalized) =
+        prove_qf_bv_unsat_alethe_ext_compare(arena, assertions).expect("emit ext-compare proof");
+    let report = carcara_accepts(&bin, tag, arena, &normalized, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+    assert!(
+        !report.contains("holey"),
+        "proof must not be holey:\n{report}"
+    );
+}
+
+#[test]
+fn driver_bvugt_eq_conflict_is_accepted_by_carcara() {
+    // (bvugt a b) ∧ (= a b) over width-2 — unsat: a > b yet a = b. `bvugt`→`(bvult b a)`.
+    let mut arena = TermArena::new();
+    let a = bvw(&mut arena, "a", 2);
+    let b = bvw(&mut arena, "b", 2);
+    let gt = arena.bv_ugt(a, b).unwrap();
+    let eq = arena.eq(a, b).unwrap();
+    assert_ext_compare_accepted("driver_bvugt", &[gt, eq], &mut arena);
+}
+
+#[test]
+fn driver_bvule_ult_conflict_is_accepted_by_carcara() {
+    // (bvule a b) ∧ (bvult b a) over width-2 — unsat: a ≤ b contradicts b < a.
+    // `bvule`→`(not (bvult b a))`.
+    let mut arena = TermArena::new();
+    let a = bvw(&mut arena, "a", 2);
+    let b = bvw(&mut arena, "b", 2);
+    let le = arena.bv_ule(a, b).unwrap();
+    let lt = arena.bv_ult(b, a).unwrap();
+    assert_ext_compare_accepted("driver_bvule", &[le, lt], &mut arena);
+}
+
+#[test]
+fn driver_bvuge_ult_conflict_is_accepted_by_carcara() {
+    // (bvuge a b) ∧ (bvult a b) over width-2 — unsat: a ≥ b contradicts a < b.
+    // `bvuge`→`(not (bvult a b))`.
+    let mut arena = TermArena::new();
+    let a = bvw(&mut arena, "a", 2);
+    let b = bvw(&mut arena, "b", 2);
+    let ge = arena.bv_uge(a, b).unwrap();
+    let lt = arena.bv_ult(a, b).unwrap();
+    assert_ext_compare_accepted("driver_bvuge", &[ge, lt], &mut arena);
+}
+
+#[test]
+fn driver_bvsgt_eq_conflict_is_accepted_by_carcara() {
+    // (bvsgt a b) ∧ (= a b) over width-3 — unsat: a >ₛ b yet a = b. `bvsgt`→`(bvslt b a)`.
+    let mut arena = TermArena::new();
+    let a = bvw(&mut arena, "a", 3);
+    let b = bvw(&mut arena, "b", 3);
+    let gt = arena.bv_sgt(a, b).unwrap();
+    let eq = arena.eq(a, b).unwrap();
+    assert_ext_compare_accepted("driver_bvsgt", &[gt, eq], &mut arena);
+}
+
+#[test]
+fn driver_bvsle_slt_conflict_is_accepted_by_carcara() {
+    // (bvsle a b) ∧ (bvslt b a) over width-3 — unsat: a ≤ₛ b contradicts b <ₛ a.
+    // `bvsle`→`(not (bvslt b a))`.
+    let mut arena = TermArena::new();
+    let a = bvw(&mut arena, "a", 3);
+    let b = bvw(&mut arena, "b", 3);
+    let le = arena.bv_sle(a, b).unwrap();
+    let lt = arena.bv_slt(b, a).unwrap();
+    assert_ext_compare_accepted("driver_bvsle", &[le, lt], &mut arena);
+}
+
+#[test]
+fn driver_bvsge_slt_conflict_is_accepted_by_carcara() {
+    // (bvsge a b) ∧ (bvslt a b) over width-3 — unsat: a ≥ₛ b contradicts a <ₛ b.
+    // `bvsge`→`(not (bvslt a b))`.
+    let mut arena = TermArena::new();
+    let a = bvw(&mut arena, "a", 3);
+    let b = bvw(&mut arena, "b", 3);
+    let ge = arena.bv_sge(a, b).unwrap();
+    let lt = arena.bv_slt(a, b).unwrap();
+    assert_ext_compare_accepted("driver_bvsge", &[ge, lt], &mut arena);
 }
