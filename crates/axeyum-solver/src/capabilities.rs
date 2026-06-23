@@ -374,18 +374,21 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "QF_LRA",
-        feature: "ONLINE LRA now does THEORY PROPAGATION (real CDCL(T) spine, mirrors EUF): the DPLL(T) \
-                  loop interleaves unit + theory propagation to a joint fixpoint — for each unassigned \
-                  order atom a Fourier–Motzkin negation-probe (assert ¬atom; infeasible ⇒ atom entailed) \
-                  propagates it as a forced literal with an ASSERTED-only Farkas-core reason, pruning the \
-                  search instead of pure model enumeration",
+        feature: "ONLINE LRA is a real CDCL(T) spine: THEORY PROPAGATION (the DPLL(T) loop interleaves \
+                  unit + theory propagation to a joint fixpoint — each unassigned order atom probed by a \
+                  Fourier–Motzkin negation-probe, propagated with an ASSERTED-only Farkas-core reason), \
+                  AND 1-UIP CONFLICT LEARNING with non-chronological backjump (per-var levels/reasons, \
+                  the discarded TheoryProp.reason now threaded onto the trail; analyze_conflict resolves \
+                  to the first-UIP asserting clause — shorter than the full core — and backjumps, popping \
+                  the theory once per decision crossed to keep the push/pop lockstep)",
         assurance: Assurance::Validated,
-        evidence: "DECIDER change, verdict-INVARIANT (propagation only prunes/orders): differential vs \
-                   offline check_with_lra over 4000 decided LCG instances (1985 sat / 2015 unsat), 0 \
-                   disagreements, every sat model replayed; a soundness probe offline-CONFIRMED all 2367 \
-                   fired propagations are genuinely entailed (asserted ∧ ¬entailed UNSAT, reasons \
-                   asserted-only), 0 unsound. Unknown/overflow/equality-atoms skip (no fabricated \
-                   propagation). uflra/uflia combination (reuses LraTheory) unchanged",
+        evidence: "DECIDER change, verdict-INVARIANT (propagation prunes, 1-UIP learning only shortens \
+                   clauses + reorders search): differential vs offline check_with_lra over 4000 decided \
+                   LCG instances + 27.7k push/pop checks, 0 disagreements, every sat model replayed; a \
+                   probe offline-CONFIRMED all 2367 fired propagations entailed (0 unsound), and 585 \
+                   learned 1-UIP theory-lemma clauses are each ENTAILED (¬clause ∧ level-0 facts \
+                   check_with_lra-UNSAT) and shorter than the full core. Unknown/overflow/equality skip. \
+                   lia_online/euf 1-UIP mirrors are follow-up; uflra/uflia BoolSearch unchanged",
         reference: "ADR-0014/0015",
     },
     Capability {
