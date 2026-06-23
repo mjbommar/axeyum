@@ -36,6 +36,7 @@ use crate::lra::{check_with_lia_simplex_within, check_with_lra};
 use crate::model::Model;
 use crate::qinst_egraph::prove_quantified_unsat_via_egraph;
 use crate::quant_guarded_int::{expand_guarded_int_universals, skolemize_positive_existentials};
+use crate::route_trace::{DeclineReason, Recorder, RouteTrace, Verdict, with_recorder};
 use crate::sat_bv_backend::SatBvBackend;
 
 // Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
@@ -368,6 +369,47 @@ pub fn check_auto(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    // Thin wrapper: the *same* dispatch as `check_auto_explained`, with no trace
+    // recorder. The recorder is a pure side effect at the existing decide/decline
+    // sites — it never participates in a branch condition — so this returns
+    // byte-for-byte the verdict `check_auto_explained` does (verdict invariance,
+    // pinned by `tests/route_trace.rs`).
+    check_auto_with_recorder(arena, assertions, config, &mut None)
+}
+
+/// Like [`check_auto`], but additionally returns a [`RouteTrace`]: the ordered
+/// record of which dispatch routes were tried and why each declined, with the
+/// decisive route last. This is purely additive telemetry — the returned
+/// [`CheckResult`] is **identical** to the one [`check_auto`] returns for the
+/// same query (the trace is captured at the same branch points that already
+/// exist; nothing is re-decided).
+///
+/// # Errors
+///
+/// Returns the same [`SolverError`] as [`check_auto`].
+pub fn check_auto_explained(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<(CheckResult, RouteTrace), SolverError> {
+    let mut trace = RouteTrace::new();
+    let result = check_auto_with_recorder(arena, assertions, config, &mut Some(&mut trace))?;
+    Ok((result, trace))
+}
+
+/// The shared dispatch for [`check_auto`] / [`check_auto_explained`]. `rec` is an
+/// optional [`RouteTrace`] recorder, threaded down the single dispatch path;
+/// recording is a side effect only, so the verdict is independent of `rec`.
+fn check_auto_with_recorder(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    rec: &mut Recorder<'_>,
+) -> Result<CheckResult, SolverError> {
+    // Probe: classify the quantifier-free fragment and record the planned route
+    // ordering as the trace's first entry, so the trail explains the dispatch.
+    record_probe(arena, assertions, rec);
+
     // Word-level preprocessing (P1.2) is owned here, at the default-path entry, when
     // `config.preprocess` is set; otherwise dispatch directly. The full model-sound
     // pipeline (not just canonicalization) is what moves the public QF_BV number —
@@ -385,16 +427,71 @@ pub fn check_auto(
         // ORIGINAL unreduced query. Preprocessing is only ever an optimization, never
         // a correctness dependency, so a failure must degrade, not propagate.
         let preprocessed = match preprocess_reduce(arena, assertions) {
-            Ok((reduced, trail)) => dispatch_reduced(arena, assertions, &reduced, &trail, config),
+            Ok((reduced, trail)) => {
+                dispatch_reduced(arena, assertions, &reduced, &trail, config, rec)
+            }
             Err(error) => Err(error),
         };
-        match preprocessed {
-            Ok(result) => Ok(result),
-            Err(_) => check_auto_inner(arena, assertions, config),
+        if let Ok(result) = preprocessed {
+            Ok(result)
+        } else {
+            with_recorder(rec, |t| {
+                t.record_declined("preprocess", DeclineReason::Incomplete(reduced_fallback()));
+            });
+            check_auto_inner(arena, assertions, config, rec)
         }
     } else {
-        check_auto_inner(arena, assertions, config)
+        check_auto_inner(arena, assertions, config, rec)
     }
+}
+
+/// The [`UnknownReason`] recorded when the preprocessed path errors and dispatch
+/// degrades to the original unreduced query (a route note, not a verdict).
+fn reduced_fallback() -> UnknownReason {
+    UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail: "preprocessed path errored; degraded to the original query".to_owned(),
+    }
+}
+
+/// Records the probe preamble — the detected quantifier-free fragment and the
+/// planned route ordering — as the trace's first entry. Cheap and deterministic;
+/// reuses the existing [`Features`] scan and quantifier detection, adding no new
+/// fragment-detection engine.
+fn record_probe(arena: &TermArena, assertions: &[TermId], rec: &mut Recorder<'_>) {
+    with_recorder(rec, |trace| {
+        let features = Features::scan(arena, assertions);
+        let mut tags: Vec<&str> = Vec::new();
+        if contains_quantifier(arena, assertions) {
+            tags.push("quant");
+        }
+        if features.has_datatype {
+            tags.push("datatype");
+        }
+        if features.has_real {
+            tags.push("real");
+        }
+        if features.has_int {
+            tags.push("int");
+        }
+        if features.has_function {
+            tags.push("uf");
+        }
+        if features.has_array {
+            tags.push("array");
+        }
+        if features.has_bitblast
+            && !features.has_int
+            && !features.has_array
+            && !features.has_function
+        {
+            tags.push("bv");
+        }
+        if tags.is_empty() {
+            tags.push("bool");
+        }
+        trace.record_probe(format!("fragment {{{}}}", tags.join(",")));
+    });
 }
 
 /// Whether any declared uninterpreted function has an `Int`/`Real` parameter or
@@ -467,13 +564,14 @@ fn dispatch_reduced(
     reduced: &[TermId],
     trail: &ModelReconstructionTrail,
     config: &SolverConfig,
+    rec: &mut Recorder<'_>,
 ) -> Result<CheckResult, SolverError> {
     let inner_config = {
         let mut c = config.clone();
         c.preprocess = false;
         c
     };
-    let result = check_auto_inner(arena, reduced, &inner_config)?;
+    let result = check_auto_inner(arena, reduced, &inner_config, rec)?;
     let CheckResult::Sat(model) = result else {
         return Ok(result);
     };
@@ -523,6 +621,7 @@ fn check_auto_inner(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
+    rec: &mut Recorder<'_>,
 ) -> Result<CheckResult, SolverError> {
     // `to_real` is a ring homomorphism, so fold `to_real(a) ± to_real(b)` into
     // `to_real(a ± b)` (bottom-up): a linear combination of coerced integers
@@ -548,7 +647,7 @@ fn check_auto_inner(
     // coupling fails on replay is `unknown`.
     let (relaxed, had_coercion) = relax_coercions(arena, assertions)?;
     if !had_coercion {
-        return check_auto_dispatch(arena, assertions, config);
+        return check_auto_dispatch(arena, assertions, config, rec);
     }
     // A `to_real` coercion couples the integer and real theories. Before the
     // (sound but incomplete) relaxation above, try exact mixed-integer linear
@@ -559,19 +658,43 @@ fn check_auto_inner(
     // of that fragment (or on the node budget) it returns `unknown`, and we fall
     // through to the relaxation.
     match check_with_milp(arena, assertions) {
-        Ok(CheckResult::Sat(model)) => return Ok(CheckResult::Sat(model)),
-        Ok(CheckResult::Unsat) => return Ok(CheckResult::Unsat),
-        Ok(CheckResult::Unknown(_)) | Err(_) => {}
+        Ok(CheckResult::Sat(model)) => {
+            with_recorder(rec, |t| t.record_decided("milp", Verdict::Sat));
+            return Ok(CheckResult::Sat(model));
+        }
+        Ok(CheckResult::Unsat) => {
+            with_recorder(rec, |t| t.record_decided("milp", Verdict::Unsat));
+            return Ok(CheckResult::Unsat);
+        }
+        Ok(CheckResult::Unknown(reason)) => {
+            with_recorder(rec, |t| {
+                t.record_declined("milp", DeclineReason::from_unknown(&reason));
+            });
+        }
+        Err(_) => {
+            with_recorder(rec, |t| {
+                t.record_declined("milp", DeclineReason::Unsupported);
+            });
+        }
     }
-    match check_auto_dispatch(arena, &relaxed, config)? {
+    match check_auto_dispatch(arena, &relaxed, config, rec)? {
         CheckResult::Sat(model) => {
             let assignment = model.to_assignment();
             if assertions
                 .iter()
                 .all(|&a| matches!(eval(arena, a, &assignment), Ok(Value::Bool(true))))
             {
+                with_recorder(rec, |t| t.record_decided("coercion-relax", Verdict::Sat));
                 Ok(CheckResult::Sat(model))
             } else {
+                with_recorder(rec, |t| {
+                    t.record_declined(
+                        "coercion-relax",
+                        DeclineReason::VerifierRejected(
+                            "candidate fails the original int↔real coupling".to_owned(),
+                        ),
+                    );
+                });
                 Ok(CheckResult::Unknown(UnknownReason {
                     kind: UnknownKind::Incomplete,
                     detail: "int↔real coercion relaxation: candidate fails the original coupling"
@@ -579,7 +702,7 @@ fn check_auto_inner(
                 }))
             }
         }
-        other => Ok(other), // Unsat (sound) or Unknown
+        other => Ok(other), // Unsat (sound) or Unknown — already recorded by dispatch
     }
 }
 
@@ -854,11 +977,161 @@ fn refute_bv2nat_out_of_range(
     )
 }
 
+/// The exact integer linear-refuter chain (bv2nat-range → Diophantine →
+/// LIA-simplex → LIA-DPLL), split from [`check_auto_dispatch`] for length. Each
+/// is a sound refuter / complete decider over the linear integer fragment;
+/// anything outside it declines (`Unsupported`) and `Ok(None)` is returned so the
+/// dispatcher falls through to the nonlinear/bit-blasting tail. Verdict logic is
+/// verbatim the inlined original; `rec` only annotates the existing sites.
+fn dispatch_int_linear_refuters(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    rec: &mut Recorder<'_>,
+) -> Result<Option<CheckResult>, SolverError> {
+    // `bv2nat(b)` finite-range refutation (G2): abstract each distinct `bv2nat(b)`
+    // to a fresh range-bounded `Int` var and try the exact refuters; an `unsat` of
+    // the relaxation transfers soundly. Only ever turns `unknown` into `unsat`.
+    if refute_bv2nat_out_of_range(arena, assertions, config)? {
+        with_recorder(rec, |t| t.record_decided("bv2nat-range", Verdict::Unsat));
+        return Ok(Some(CheckResult::Unsat));
+    }
+    // `div`/`mod`-by-constant and `abs` are first eliminated into exact linear
+    // constraints (equisatisfiable), so the *complete* simplex/DPLL path decides
+    // them for both `sat` and `unsat` — not just the sat-only bit-blaster.
+    let lin = axeyum_rewrite::eliminate_int_divmod(arena, assertions)
+        .map_err(|e| SolverError::Backend(e.to_string()))?;
+    // Diophantine system refutation: integer (fraction-free) row reduction of the
+    // *system* of top-level integer equalities — a sound refutation that decides
+    // even *unbounded* systems the simplex/B&B cannot terminate on.
+    if crate::lia_gcd::prove_lia_unsat_by_diophantine(arena, &lin) {
+        with_recorder(rec, |t| t.record_decided("lia-diophantine", Verdict::Unsat));
+        return Ok(Some(CheckResult::Unsat));
+    }
+    // Deadline-aware: branch-and-bound on an unbounded integer difference
+    // constraint (`c > y ∧ c < y+1`) grinds toward the node budget, so honor
+    // `config.timeout` here rather than spinning past it.
+    match check_with_lia_simplex_within(
+        arena,
+        &lin,
+        config.timeout.and_then(|t| Instant::now().checked_add(t)),
+    ) {
+        Ok(result) => {
+            with_recorder(rec, |t| t.record_result("lia-simplex", &result));
+            return Ok(Some(result));
+        }
+        Err(SolverError::Unsupported(_)) => {
+            with_recorder(rec, |t| {
+                t.record_declined("lia-simplex", DeclineReason::Unsupported);
+            });
+        }
+        Err(other) => return Err(other),
+    }
+    match check_with_lia_dpll(arena, &lin, config) {
+        Ok(result) => {
+            with_recorder(rec, |t| t.record_result("lia-dpll", &result));
+            Ok(Some(result))
+        }
+        Err(SolverError::Unsupported(_)) => {
+            with_recorder(rec, |t| {
+                t.record_declined("lia-dpll", DeclineReason::Unsupported);
+            });
+            Ok(None)
+        }
+        Err(other) => Err(other),
+    }
+}
+
+/// The uninterpreted-function fast paths (online DPLL(T) EUF → offline EUF
+/// enumeration → EUF + linear-arithmetic combination), split from
+/// [`check_auto_dispatch`] for length. Returns `Some(verdict)` when one decides
+/// the query (or the real-sorted-UF `Unknown` that must short-circuit), else
+/// `Ok(None)` so the dispatcher falls through to the array / bit-blast tail.
+/// Verdict logic is verbatim the inlined original; `rec` only annotates the
+/// existing sites.
+fn dispatch_uf_fast_paths(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    features: &Features,
+    rec: &mut Recorder<'_>,
+) -> Result<Option<CheckResult>, SolverError> {
+    // Try the **online** DPLL(T) decider on the backtrackable e-graph first: it
+    // keeps one incremental congruence graph across the Boolean search. Both its
+    // `sat` (replay-checked) and `unsat` (root-level congruence conflict) are
+    // sound. On `unknown` fall through to the offline enumeration, then bit-blast.
+    match crate::euf_egraph::solve_qf_uf_online(arena, assertions) {
+        CheckResult::Sat(model) => {
+            with_recorder(rec, |t| t.record_decided("euf-online", Verdict::Sat));
+            return Ok(Some(CheckResult::Sat(model)));
+        }
+        CheckResult::Unsat => {
+            with_recorder(rec, |t| t.record_decided("euf-online", Verdict::Unsat));
+            return Ok(Some(CheckResult::Unsat));
+        }
+        CheckResult::Unknown(reason) => {
+            with_recorder(rec, |t| {
+                t.record_declined("euf-online", DeclineReason::from_unknown(&reason));
+            });
+        }
+    }
+    match crate::euf_egraph::check_qf_uf(arena, assertions) {
+        CheckResult::Sat(model) => {
+            with_recorder(rec, |t| t.record_decided("euf-offline", Verdict::Sat));
+            return Ok(Some(CheckResult::Sat(model)));
+        }
+        CheckResult::Unsat => {
+            with_recorder(rec, |t| t.record_decided("euf-offline", Verdict::Unsat));
+            return Ok(Some(CheckResult::Unsat));
+        }
+        CheckResult::Unknown(reason) => {
+            with_recorder(rec, |t| {
+                t.record_declined("euf-offline", DeclineReason::from_unknown(&reason));
+            });
+        }
+    }
+    // Arithmetic-sorted uninterpreted functions (QF_UFLIA / QF_UFLRA): decide them
+    // by EUF + linear-arithmetic combination. Sound either way — its `unsat` is a
+    // relaxation refutation, its `sat`/`unknown` fall through.
+    if has_arithmetic_function(arena) {
+        match crate::check_with_uf_arithmetic(arena, assertions, config)? {
+            CheckResult::Sat(model) => {
+                with_recorder(rec, |t| t.record_decided("uf-arithmetic", Verdict::Sat));
+                return Ok(Some(CheckResult::Sat(model)));
+            }
+            CheckResult::Unsat => {
+                with_recorder(rec, |t| t.record_decided("uf-arithmetic", Verdict::Unsat));
+                return Ok(Some(CheckResult::Unsat));
+            }
+            // A *real*-sorted arithmetic UF cannot be bit-blasted by the eager
+            // fallback below (it errors on `Real`), so the combination's `Unknown`
+            // is the best available result — return it rather than fall through to a
+            // Real-incompatible path. An *integer*-only arithmetic UF can still fall
+            // through to the int-blast + Ackermann fallback.
+            CheckResult::Unknown(reason) if features.has_real => {
+                with_recorder(rec, |t| {
+                    t.record_declined("uf-arithmetic", DeclineReason::from_unknown(&reason));
+                });
+                return Ok(Some(CheckResult::Unknown(reason)));
+            }
+            CheckResult::Unknown(reason) => {
+                with_recorder(rec, |t| {
+                    t.record_declined("uf-arithmetic", DeclineReason::from_unknown(&reason));
+                });
+            }
+        }
+    }
+    Ok(None)
+}
+
 /// The theory dispatcher (coercions already relaxed away by [`check_auto`]).
+/// `rec` records each route attempt + outcome at the existing decide/decline
+/// sites; it is a side effect only, never a branch condition (verdict invariance).
 fn check_auto_dispatch(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
+    rec: &mut Recorder<'_>,
 ) -> Result<CheckResult, SolverError> {
     // Lift Int/Real `ite` to the Boolean level (`ite(c,a,b)` → fresh `t` with
     // `c→t=a ∧ ¬c→t=b`) so the arithmetic linearizers, which only accept linear
@@ -875,6 +1148,9 @@ fn check_auto_dispatch(
         // (`cons(h,x) = cons(h,y) ∧ x ≠ y`) is `unsat` — sound refutations the eager
         // tag/field expansion misses. Cheap; only ever fast-paths a correct `unsat`.
         if crate::datatype_acyclicity::prove_datatype_unsat_structurally(arena, assertions) {
+            with_recorder(rec, |t| {
+                t.record_decided("datatype-acyclicity", Verdict::Unsat);
+            });
             return Ok(CheckResult::Unsat);
         }
         // Datatypes: first fold read-over-construct and decide the residual
@@ -882,11 +1158,18 @@ fn check_auto_dispatch(
         // `select`), that path reports `Unsupported`; decide those natively by
         // eager tag/field expansion (ADR-0022 step B).
         match crate::datatype_elim::check_with_datatype_elimination(arena, assertions, config) {
-            Ok(result) => return Ok(result),
+            Ok(result) => {
+                with_recorder(rec, |t| t.record_result("datatype-elim", &result));
+                return Ok(result);
+            }
             Err(SolverError::Unsupported(_)) => {
-                return crate::datatype_native::check_with_datatype_native(
-                    arena, assertions, config,
-                );
+                with_recorder(rec, |t| {
+                    t.record_declined("datatype-elim", DeclineReason::Unsupported);
+                });
+                let result =
+                    crate::datatype_native::check_with_datatype_native(arena, assertions, config)?;
+                with_recorder(rec, |t| t.record_result("datatype-native", &result));
+                return Ok(result);
             }
             Err(other) => return Err(other),
         }
@@ -897,8 +1180,15 @@ fn check_auto_dispatch(
         // share no sort). Falls back to the real loop on non-arithmetic atoms
         // (mixed BV/array), which bit-blasts them.
         match check_with_arith_dpll(arena, assertions, config) {
-            Ok(result) => return Ok(result),
-            Err(SolverError::Unsupported(_)) => {}
+            Ok(result) => {
+                with_recorder(rec, |t| t.record_result("lira-dpll", &result));
+                return Ok(result);
+            }
+            Err(SolverError::Unsupported(_)) => {
+                with_recorder(rec, |t| {
+                    t.record_declined("lira-dpll", DeclineReason::Unsupported);
+                });
+            }
             Err(other) => return Err(other),
         }
     }
@@ -922,8 +1212,12 @@ fn check_auto_dispatch(
         // produce a wrong verdict; strictly additive (`Unknown` → decision).
         if let Some(result) = crate::nra_real_root::decide_real_poly_constraint(arena, assertions)?
         {
+            with_recorder(rec, |t| t.record_result("nra-real-root", &result));
             return Ok(result);
         }
+        with_recorder(rec, |t| {
+            t.record_declined("nra-real-root", DeclineReason::NotApplicable);
+        });
         // Reals plus (optionally) the bit-blasted theories: the lazy-SMT loop
         // abstracts the real atoms and lets the bit-blasting backend decide the
         // rest. Reals share no sort with those theories, so the only coupling is
@@ -938,8 +1232,15 @@ fn check_auto_dispatch(
         // decides QF_UFLRA the same way it does QF_UFLIA) instead of propagating the
         // error — upholding "`unknown` is never an error" and unlocking EUF+LRA.
         match crate::nra::check_with_nra(arena, assertions, config) {
-            Ok(result) => return Ok(result),
-            Err(SolverError::Unsupported(_)) if features.has_function => {}
+            Ok(result) => {
+                with_recorder(rec, |t| t.record_result("nra", &result));
+                return Ok(result);
+            }
+            Err(SolverError::Unsupported(_)) if features.has_function => {
+                with_recorder(rec, |t| {
+                    t.record_declined("nra", DeclineReason::Unsupported);
+                });
+            }
             Err(e) => return Err(e),
         }
     }
@@ -956,49 +1257,8 @@ fn check_auto_dispatch(
         // non-`unsat` outcome is discarded — the original query (with `bv2nat`
         // intact, which the bit-blaster handles natively) decides sat below. This
         // is strictly additive: it only ever turns a prior `unknown` into `unsat`.
-        if refute_bv2nat_out_of_range(arena, assertions, config)? {
-            return Ok(CheckResult::Unsat);
-        }
-        // Conjunctive pure-integer queries are decided soundly for *both* sat and
-        // unsat by branch-and-bound over the simplex (ADR-0020); the bounded
-        // bit-blasting fallback is sat-only. Boolean-structured pure-integer
-        // queries (disjunctions/implications of integer atoms) are decided by the
-        // lazy-SMT loop over that simplex. Anything outside the integer-arithmetic
-        // fragment (mixed BV/array/UF terms) surfaces as `Unsupported` and falls
-        // through to bit-blasting, which handles it.
-        //
-        // `div`/`mod`-by-constant and `abs` are first eliminated into exact linear
-        // constraints (equisatisfiable), so the *complete* simplex/DPLL path
-        // decides them for both `sat` and `unsat` — not just the sat-only
-        // bit-blaster (whose in-range `unsat` is only `unknown`).
-        let lin = axeyum_rewrite::eliminate_int_divmod(arena, assertions)
-            .map_err(|e| SolverError::Backend(e.to_string()))?;
-        // Diophantine system refutation: integer (fraction-free) row reduction of
-        // the *system* of top-level integer equalities. A derived contradiction row
-        // `0 = c` (c ≠ 0) or a surviving row `Σ gᵢ·xᵢ = c` with `gcd(gᵢ) ∤ c` makes
-        // the system `unsat` — a sound refutation that decides even *unbounded*
-        // systems the simplex/B&B cannot terminate on (e.g. `x+y=1 ∧ x+y=2`, or the
-        // single-equation `2x + 4y = 3`). Strictly generalizes the per-equation GCD
-        // test (a one-row system); cheap; only ever fast-paths a correct `unsat`.
-        if crate::lia_gcd::prove_lia_unsat_by_diophantine(arena, &lin) {
-            return Ok(CheckResult::Unsat);
-        }
-        // Deadline-aware: branch-and-bound on an unbounded integer difference
-        // constraint (`c > y ∧ c < y+1`) grinds toward the node budget, so honor
-        // `config.timeout` here rather than spinning past it.
-        match check_with_lia_simplex_within(
-            arena,
-            &lin,
-            config.timeout.and_then(|t| Instant::now().checked_add(t)),
-        ) {
-            Ok(result) => return Ok(result),
-            Err(SolverError::Unsupported(_)) => {}
-            Err(other) => return Err(other),
-        }
-        match check_with_lia_dpll(arena, &lin, config) {
-            Ok(result) => return Ok(result),
-            Err(SolverError::Unsupported(_)) => {}
-            Err(other) => return Err(other),
+        if let Some(result) = dispatch_int_linear_refuters(arena, assertions, config, rec)? {
+            return Ok(result);
         }
     }
     // Uninterpreted functions: try the lazy EUF path on the e-graph first. It
@@ -1009,51 +1269,19 @@ fn check_auto_dispatch(
     // its `sat` (replay-checked) and `unsat` (congruence, independently re-checked)
     // are sound for QF_UFBV, so this only ever fast-paths a correct answer.
     if features.has_function {
-        // Try the **online** DPLL(T) decider on the backtrackable e-graph first: it
-        // keeps one incremental congruence graph across the Boolean search (vs the
-        // offline per-model rebuild) and is differentially validated against both
-        // `check_qf_uf` and the Ackermann path. Both its `sat` (replay-checked) and
-        // `unsat` (root-level congruence conflict) are sound. On `unknown` (no
-        // equality atoms or Boolean structure outside its Tseitin encoder) fall
-        // through to the offline enumeration, then to bit-blasting.
-        match crate::euf_egraph::solve_qf_uf_online(arena, assertions) {
-            CheckResult::Sat(model) => return Ok(CheckResult::Sat(model)),
-            CheckResult::Unsat => return Ok(CheckResult::Unsat),
-            CheckResult::Unknown(_) => {}
-        }
-        match crate::euf_egraph::check_qf_uf(arena, assertions) {
-            CheckResult::Sat(model) => return Ok(CheckResult::Sat(model)),
-            CheckResult::Unsat => return Ok(CheckResult::Unsat),
-            CheckResult::Unknown(_) => {}
-        }
-        // Arithmetic-sorted uninterpreted functions (QF_UFLIA / QF_UFLRA) cannot be
-        // bit-blasted by the eager path below; decide them by EUF + linear-arithmetic
-        // combination (functional-consistency CEGAR over the dispatcher). Sound
-        // either way — its `unsat` is a relaxation refutation, its `sat`/`unknown`
-        // fall through.
-        if has_arithmetic_function(arena) {
-            match crate::check_with_uf_arithmetic(arena, assertions, config)? {
-                CheckResult::Sat(model) => return Ok(CheckResult::Sat(model)),
-                CheckResult::Unsat => return Ok(CheckResult::Unsat),
-                // A *real*-sorted arithmetic UF cannot be bit-blasted by the eager
-                // fallback below (it errors on `Real`), so the combination's
-                // `Unknown` (e.g. a QF_UFLRA sat model that cannot yet be projected)
-                // is the best available result — return it rather than fall through
-                // to a Real-incompatible path that would surface a hard error
-                // ("`unknown` is never an error"). An *integer*-only arithmetic UF
-                // can still fall through to the int-blast + Ackermann fallback.
-                CheckResult::Unknown(reason) if features.has_real => {
-                    return Ok(CheckResult::Unknown(reason));
-                }
-                CheckResult::Unknown(_) => {}
-            }
+        if let Some(result) = dispatch_uf_fast_paths(arena, assertions, config, &features, rec)? {
+            return Ok(result);
         }
     }
 
     if features.has_array {
         if let Some(result) = dispatch_array_fast_paths(arena, assertions, config, &features)? {
+            with_recorder(rec, |t| t.record_result("array-fast-path", &result));
             return Ok(result);
         }
+        with_recorder(rec, |t| {
+            t.record_declined("array-fast-path", DeclineReason::NotApplicable);
+        });
     }
 
     if features.has_int {
@@ -1069,6 +1297,7 @@ fn check_auto_dispatch(
         // by the perfect-square / sign analysis, so it can never produce a wrong
         // verdict; strictly additive (`Unknown` → decision).
         if let Some(result) = crate::nia_square::decide_int_square_constraint(arena, assertions)? {
+            with_recorder(rec, |t| t.record_result("nia-square", &result));
             return Ok(result);
         }
         // Bounded integer bit-blasting at a single width is fragile for *nonlinear*
@@ -1101,13 +1330,19 @@ fn check_auto_dispatch(
         // real-refutable cases. The relaxation runs on a clone of the arena and
         // never leaks a symbol or term back.
         if crate::int_real_relax::refute_int_via_real_relaxation(arena, assertions, config)? {
+            with_recorder(rec, |t| t.record_decided("int-real-relax", Verdict::Unsat));
             return Ok(CheckResult::Unsat);
         }
-        return dispatch_int_blast_width_ladder(arena, assertions, config);
+        let result = dispatch_int_blast_width_ladder(arena, assertions, config)?;
+        with_recorder(rec, |t| t.record_result("int-blast-ladder", &result));
+        return Ok(result);
     }
 
     let mut backend = SatBvBackend::new();
-    check_with_all_theories(&mut backend, arena, assertions, DEFAULT_INT_WIDTH, config)
+    let result =
+        check_with_all_theories(&mut backend, arena, assertions, DEFAULT_INT_WIDTH, config)?;
+    with_recorder(rec, |t| t.record_result("qf-bv", &result));
+    Ok(result)
 }
 
 /// Array fast paths, tried before the eager read-over-write + Ackermann

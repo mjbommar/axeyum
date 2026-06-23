@@ -95,6 +95,7 @@ mod quant_vacuous_universal;
 mod quant_valid_universal;
 mod reconstruct;
 mod records;
+pub mod route_trace;
 mod sat_bv_backend;
 mod skolem_alethe;
 mod smtlib;
@@ -119,8 +120,8 @@ pub use abv::{check_qf_abv_lazy, check_qf_abv_lazy_row, check_with_array_elimina
 pub use alethe_lra::{check_alethe_lra, prove_lia_unsat_alethe, prove_lra_unsat_alethe};
 pub use aufbv::check_with_arrays_and_functions;
 pub use auto::{
-    check_auto, check_with_quantifiers, prove_unsat_by_ematching, prove_unsat_by_instantiation,
-    prove_unsat_by_mbqi, solve, unsat_core,
+    check_auto, check_auto_explained, check_with_quantifiers, prove_unsat_by_ematching,
+    prove_unsat_by_instantiation, prove_unsat_by_mbqi, solve, unsat_core,
 };
 pub use backend::{
     Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind,
@@ -252,6 +253,7 @@ pub use reconstruct::{
     reconstruct_skolem_unsat_proof, reconstruct_sos_proof, scan_proof_fragment,
 };
 pub use records::{RecordError, RecordSort};
+pub use route_trace::{DeclineReason, RouteAttempt, RouteOutcome, RouteTrace, Verdict};
 pub use sat_bv_backend::SatBvBackend;
 pub use skolem_alethe::{SkolemCert, SkolemRecord, prove_skolem_unsat_alethe};
 pub use smtlib::{

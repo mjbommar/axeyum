@@ -199,6 +199,24 @@ impl<B: SolverBackend> Solver<B> {
         crate::prove_unsat_to_lean_module(arena, &self.assertions)
     }
 
+    /// Decides the active assertions through the auto-dispatcher and additionally
+    /// returns a [`crate::RouteTrace`]: the ordered record of which dispatch
+    /// routes were tried and why each declined (see [`crate::check_auto_explained`]).
+    ///
+    /// This is purely additive telemetry — the returned [`CheckResult`] is
+    /// **identical** to the one a plain auto-solve of the same assertions
+    /// produces; the trace never changes the verdict.
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`SolverError`] from the underlying dispatch.
+    pub fn check_auto_explained(
+        &self,
+        arena: &mut TermArena,
+    ) -> Result<(CheckResult, crate::RouteTrace), SolverError> {
+        crate::check_auto_explained(arena, &self.assertions, &self.config)
+    }
+
     /// Computes a (deletion-minimized) unsat core of the active assertions as
     /// indices into them, or `None` if they are not `unsat` (see
     /// [`crate::unsat_core`]).
