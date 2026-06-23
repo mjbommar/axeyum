@@ -255,6 +255,21 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "QF_LIA",
+        feature: "kernel-checked LEAN proof for integer UNSAT shapes (int_reconstruct, integer prelude): \
+                  Diophantine gcd-infeasible equality systems, and single-variable integer-interval cuts \
+                  c ≤ k_lo·x ∧ k_hi·x ≤ d — INCLUDING the different-multiplier case (k_lo ≠ k_hi, e.g. \
+                  3x ≥ 2 ∧ 2x ≤ 1) that is LP-feasible but integer-infeasible, so LRA/Farkas cannot refute \
+                  it — reconstructed via no_int_between over the IntPrelude",
+        assurance: Assurance::Checked,
+        evidence: "reconstructed to a Lean term the in-tree Lean-grade KERNEL accepts (infer + def_eq \
+                   False); axiom audit shows only IntPrelude axioms + the verbatim hypotheses, NO sorryAx; \
+                   a reconstructor bug surfaces as KernelRejected, never an unsound accept. Carcara does \
+                   NOT implement integer lia_generic (warns + holey), so the Lean kernel is the external \
+                   checker here. Feasible-decline tests confirm no fabrication",
+        reference: "ADR-0042/0043",
+    },
+    Capability {
+        area: "QF_LIA",
         feature: "ONLINE incremental LIA theory solver (LiaTheory + check_qf_lia_online): backtrackable \
                   assert/push/pop + deletion-minimized conflict cores, integer-complete (strict \
                   tightening, branch-and-bound, cuts) — the warm integer theory engine",
