@@ -248,7 +248,9 @@ pub const CAPABILITIES: &[Capability] = &[
                   exchange + DFS interface split) — the warm alternative to eager Ackermann. Now \
                   decides FULL Boolean-structured QF_UFLRA via an enumerative DPLL(T): Tseitin \
                   skeleton over the theory atoms, propositional-model enumeration with theory-conflict \
-                  blocking clauses, the conjunctive MBTC reused verbatim as the per-model theory oracle",
+                  blocking clauses, the conjunctive MBTC reused verbatim as the per-model theory oracle. \
+                  Now the DEFAULT check_auto route for mixed UF+real-arith queries (tried before eager \
+                  Ackermann, which stays the byte-unchanged fallback on online Unknown)",
         assurance: Assurance::Validated,
         evidence: "soundness by DIFFERENTIAL validation vs the trusted offline check_with_uf_arithmetic \
                    — random UFLRA conjunctions AND random and/or/not/ite Boolean trees over UFLRA atoms, \
@@ -257,7 +259,11 @@ pub const CAPABILITIES: &[Capability] = &[
                    82 unsat). A per-model Unknown forces a whole-query Unknown (no wrong unsat). Caps \
                    (models/atoms/clauses/split-depth/timeout) → graceful Unknown; non-UFLRA → Unknown. \
                    Enumerative DPLL(T) with blocking-clause pruning (1-UIP learning / theory propagation \
-                   deferred)",
+                   deferred). The check_auto dispatch wiring is itself guarded by an in-tree differential \
+                   vs the eager route (300-query mixed UF+arith LCG corpus: 240 co-decided, 0 \
+                   disagreements, 0 LOGICAL decision-regressions, sat replay, +16 value-add decisions \
+                   where eager returns Unknown; the online probe runs on an arena CLONE with a bounded \
+                   sub-budget so the eager fallback is never starved)",
         reference: "ADR-0013/0015",
     },
     Capability {
@@ -268,7 +274,9 @@ pub const CAPABILITIES: &[Capability] = &[
                   UF-argument constants, so integer tightening fires). Now decides FULL \
                   Boolean-structured QF_UFLIA via the same enumerative DPLL(T) as QF_UFLRA (Tseitin \
                   skeleton over the theory atoms, propositional-model enumeration with theory-conflict \
-                  blocking clauses, the conjunctive MBTC reused as the per-model theory oracle)",
+                  blocking clauses, the conjunctive MBTC reused as the per-model theory oracle). Now the \
+                  DEFAULT check_auto route for mixed UF+int-arith queries (online-first, eager Ackermann \
+                  the byte-unchanged fallback on online Unknown)",
         assurance: Assurance::Validated,
         evidence: "differential vs the trusted offline check_with_uf_arithmetic — random UFLIA \
                    conjunctions AND random and/or/not/ite Boolean trees over UFLIA atoms (600-instance \
