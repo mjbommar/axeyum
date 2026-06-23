@@ -76,6 +76,34 @@ fn random_atom(arena: &mut TermArena, vars: &[TermId], rng: &mut Lcg) -> TermId 
     }
 }
 
+/// Builds a random linear-integer **order** atom (`<,<=,>,>=`, never equality) —
+/// every such atom has a representable single-constraint negation, the precondition
+/// the theory-propagation gate needs. Same `Σ cᵢ·xᵢ <rel> k` shape as
+/// [`random_atom`] but with the relation drawn only from the four order relations.
+fn random_order_atom(arena: &mut TermArena, vars: &[TermId], rng: &mut Lcg) -> TermId {
+    let mut lhs: Option<TermId> = None;
+    for &v in vars {
+        let coeff = rng.small(3);
+        if coeff == 0 {
+            continue;
+        }
+        let c = arena.int_const(coeff);
+        let term = arena.int_mul(c, v).expect("int mul");
+        lhs = Some(match lhs {
+            None => term,
+            Some(acc) => arena.int_add(acc, term).expect("int add"),
+        });
+    }
+    let lhs = lhs.unwrap_or_else(|| arena.int_const(0));
+    let k = arena.int_const(rng.small(4));
+    match rng.below(4) {
+        0 => arena.int_lt(lhs, k).expect("int lt"),
+        1 => arena.int_le(lhs, k).expect("int le"),
+        2 => arena.int_gt(lhs, k).expect("int gt"),
+        _ => arena.int_ge(lhs, k).expect("int ge"),
+    }
+}
+
 /// Replays a `sat` model against `assertions` requiring **integer** values; panics
 /// on any non-integer value or any assertion not satisfied.
 fn assert_integer_model(arena: &TermArena, assertions: &[TermId], model: &Model) {
@@ -338,6 +366,172 @@ fn differential_fuzz_push_pop_assert_sequences_agree() {
     assert!(
         clean_steps > 0,
         "push/pop/assert fuzz must reach at least one feasible state"
+    );
+}
+
+/// Builds the polarity-applied term for an order atom: the atom itself for
+/// `true`, its `BoolNot` for `false` (in a working arena clone).
+fn polarity_term(arena: &mut TermArena, atom: TermId, value: bool) -> TermId {
+    if value {
+        atom
+    } else {
+        arena.not(atom).expect("not")
+    }
+}
+
+/// Offline integer verdict for a conjunction: `Some(true)` = `sat`, `Some(false)`
+/// = `unsat`, `None` = the offline decider declined (`Unknown`). Built in a clone
+/// so polarity `not` terms resolve without mutating the caller's arena.
+fn offline_int_verdict(arena: &TermArena, terms: &[TermId]) -> Option<bool> {
+    match check_with_lia_simplex(arena, terms) {
+        Ok(CheckResult::Sat(_)) => Some(true),
+        Ok(CheckResult::Unsat) => Some(false),
+        Ok(CheckResult::Unknown(_)) | Err(_) => None,
+    }
+}
+
+/// The soundness-and-fires gate for `LIA` theory propagation (Slice 1), the
+/// integer analogue of `lra_online`'s `theory_propagation_is_sound_and_fires`.
+///
+/// Over a large LCG corpus of order-atom conjunctions, asserts a random subset
+/// true and, for every literal [`LiaTheory::propagate`] emits, checks BOTH:
+///   1. **Genuine entailment**: `asserted ∧ ¬entailed` is offline integer-UNSAT
+///      (the propagation never fabricates an entailment — the soundness anchor).
+///   2. **Asserted-only reason**: every reason literal is an asserted atom at its
+///      asserted polarity, and `reason ∧ ¬entailed` is itself integer-UNSAT (the
+///      explanation is a genuine core, not just the full state).
+///
+/// Also counts how often propagation FIRES, asserting Slice 1 meaningfully engages
+/// (so the pruning is exercised, not merely falling through).
+#[test]
+fn theory_propagation_is_sound_and_fires() {
+    let mut rng = Lcg::new(0x9e37_79b9_7f4a_7c15);
+    let mut fired = 0_u32;
+    let mut props_checked = 0_u32;
+
+    for _ in 0..2000 {
+        let mut arena = TermArena::new();
+        let nvars = 1 + usize::try_from(rng.below(2)).expect("fits"); // 1..=2 vars
+        let vars: Vec<TermId> = (0..nvars)
+            .map(|i| {
+                let s = arena
+                    .declare(&format!("z{i}"), Sort::Int)
+                    .expect("declare int");
+                arena.var(s)
+            })
+            .collect();
+
+        // Order atoms only (each has a representable single-constraint negation).
+        let pool: Vec<TermId> = (0..5)
+            .map(|_| random_order_atom(&mut arena, &vars, &mut rng))
+            .collect();
+
+        let mut theory = LiaTheory::new(&arena, &pool);
+        if !(0..pool.len()).all(|i| theory.tracks(i)) {
+            continue;
+        }
+
+        // Assert a random subset true; stop at the first conflict.
+        let mut asserted: Vec<usize> = Vec::new();
+        let mut conflicted = false;
+        for i in 0..pool.len() {
+            if rng.below(2) == 0 {
+                continue;
+            }
+            if theory.assert(i, true).is_err() {
+                conflicted = true;
+                break;
+            }
+            asserted.push(i);
+        }
+        if conflicted || asserted.is_empty() {
+            continue;
+        }
+        let asserted_terms: Vec<TermId> = asserted.iter().map(|&i| pool[i]).collect();
+
+        for prop in theory.propagate() {
+            fired += 1;
+            // ¬entailed: the witness that must be refuted by the asserted state.
+            let entailed_neg = polarity_term(&mut arena, pool[prop.lit.atom], !prop.lit.value);
+
+            // (1) Genuine entailment: asserted ∧ ¬entailed must be integer-UNSAT.
+            let mut full = asserted_terms.clone();
+            full.push(entailed_neg);
+            if let Some(sat) = offline_int_verdict(&arena, &full) {
+                assert!(
+                    !sat,
+                    "UNSOUND PROPAGATION: asserted ∧ ¬entailed is integer-SAT (lit {:?})",
+                    prop.lit
+                );
+                props_checked += 1;
+            }
+
+            // (2) Asserted-only reason, itself a genuine integer-UNSAT core.
+            let mut reason_terms: Vec<TermId> = Vec::new();
+            for r in &prop.reason {
+                assert!(
+                    r.value,
+                    "reason literal must be asserted-true here (got false), lit {r:?}"
+                );
+                assert!(
+                    asserted.contains(&r.atom),
+                    "reason names a NON-asserted atom {} — unsound explanation",
+                    r.atom
+                );
+                reason_terms.push(pool[r.atom]);
+            }
+            reason_terms.push(entailed_neg);
+            if let Some(sat) = offline_int_verdict(&arena, &reason_terms) {
+                assert!(
+                    !sat,
+                    "UNSOUND REASON: reason ∧ ¬entailed is integer-SAT (lit {:?}, reason {:?})",
+                    prop.lit, prop.reason
+                );
+            }
+        }
+    }
+
+    eprintln!(
+        "LIA theory-propagation gate: fired={fired} propagations, \
+         {props_checked} entailments integer-offline-confirmed, 0 unsound"
+    );
+    assert!(
+        fired > 50,
+        "LIA theory propagation never meaningfully fired ({fired}) — Slice 1 not exercised"
+    );
+    assert!(
+        props_checked > 20,
+        "too few LIA propagations integer-offline-confirmed ({props_checked})"
+    );
+}
+
+/// A directed sanity case that propagation FIRES and is sound: `x >= 5` is
+/// asserted; over ℤ this entails `¬(x <= 4)` (i.e. the atom `x <= 4` is forced
+/// false). The LP relaxation already refutes `x >= 5 ∧ x <= 4`, so propagation must
+/// emit it with an asserted-only reason naming `x >= 5`.
+#[test]
+fn propagation_fires_on_a_forced_order_atom() {
+    let mut arena = TermArena::new();
+    let s = arena.declare("x", Sort::Int).expect("declare");
+    let x = arena.var(s);
+    let five = arena.int_const(5);
+    let four = arena.int_const(4);
+    let ge5 = arena.int_ge(x, five).expect("x>=5");
+    let le4 = arena.int_le(x, four).expect("x<=4");
+
+    let mut theory = LiaTheory::new(&arena, &[ge5, le4]);
+    assert!(theory.assert(0, true).is_ok(), "x>=5 feasible");
+
+    let props = theory.propagate();
+    let forced = props
+        .iter()
+        .find(|p| p.lit.atom == 1)
+        .expect("x<=4 must be forced false by x>=5 over ℤ");
+    assert!(!forced.lit.value, "x<=4 must be entailed FALSE");
+    assert!(
+        forced.reason.iter().all(|r| r.atom == 0 && r.value),
+        "reason must name only the asserted x>=5 (atom 0, true), got {:?}",
+        forced.reason
     );
 }
 

@@ -32,9 +32,18 @@
 //! - [`LiaTheory::push`] / [`LiaTheory::pop`] snapshot and restore the trail
 //!   length, so a backtrack drops exactly the literals added since the matching
 //!   `push`.
-//! - `propagate` is an honest empty under-approximation in this first slice (a
-//!   sound choice: the driver still terminates, just with less theory-level
-//!   pruning). It is documented as deferred.
+//! - [`LiaTheory::propagate`] mirrors [`crate::lra_online::LraTheory::propagate`]:
+//!   the **negation probe**, but tested with the *cheap, sound* **LP relaxation**
+//!   rather than a full integer solve. For each unassigned tracked order atom it
+//!   appends the atom's opposite-polarity constraint to the live conjunction and
+//!   asks [`crate::lra::lp_relaxation_feasibility`]; an `Infeasible` relaxation
+//!   *over the reals* implies the integer system is infeasible too (integer
+//!   solutions are a subset of real ones), so the atom is **entailed over ℤ** —
+//!   emitted as a [`TheoryProp`] whose `reason` is the **asserted-only** core. An
+//!   LP-`Feasible` probe is inconclusive about ℤ → skip (no fabricated
+//!   propagation). The relaxation skips integer tightening / Gomory cuts /
+//!   branch-and-bound, so it stays far cheaper than the per-`assert` integer
+//!   feasibility decision.
 //!
 //! [`check_qf_lia_online`] wires [`LiaTheory`] into a self-contained `DPLL(T)`
 //! search over the Boolean skeleton (the same shape as
@@ -60,7 +69,7 @@ use axeyum_ir::{Assignment, Op, Sort, TermArena, TermId, TermNode, Value, eval};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
-use crate::lra::check_with_lia_simplex;
+use crate::lra::{LpRelaxation, check_with_lia_simplex, lp_relaxation_feasibility};
 use crate::model::Model;
 
 /// The kind of a registered atom, used to reconstruct the live conjunctive
@@ -226,14 +235,126 @@ impl LiaTheory {
         }
     }
 
-    /// Theory propagation. The first slice returns no propagations — a sound
-    /// under-approximation: the `DPLL(T)` driver still decides correctly, it
-    /// simply branches on atoms theory propagation could have forced. Documented
-    /// as deferred.
+    /// Sound `LIA` theory propagation by the **LP-relaxation negation probe** — the
+    /// integer analogue of [`crate::lra_online::LraTheory::propagate`], made cheap by
+    /// testing entailment with the real relaxation rather than a full integer solve.
+    ///
+    /// For each unassigned tracked order atom: build the live asserted conjunction,
+    /// append the atom's *opposite* polarity, and ask the LP relaxation. If the
+    /// relaxation is infeasible *over the reals*, the integer system is infeasible
+    /// too (integer points ⊆ real points), so the atom is **entailed over ℤ** at the
+    /// tested polarity — emit a [`TheoryProp`] whose `reason` is the **asserted-only**
+    /// (and deletion-minimized) core. An LP-`Feasible` probe is inconclusive about ℤ,
+    /// and an `Unknown` (overflow / outside the fragment / backstop) probe declines:
+    /// either way nothing is emitted — a sound under-approximation that **never**
+    /// fabricates a propagation. Equality atoms are skipped (their negation is a
+    /// disjunction the conjunctive relaxation cannot represent — the same restriction
+    /// [`TheorySolver::assert`] makes).
     #[must_use]
-    #[allow(clippy::unused_self)]
     pub fn propagate(&self) -> Vec<TheoryProp> {
-        Vec::new()
+        let asserted = self.live_lits();
+        let mut out = Vec::new();
+        for atom in 0..self.kinds.len() {
+            if self.assigned.get(atom).copied().flatten().is_some() {
+                continue; // already decided by the search
+            }
+            if !matches!(self.kinds[atom], AtomKind::Order) {
+                continue; // equality-false is a disjunction; unsupported is a no-op
+            }
+            // Probe ¬atom (atom false): LP-infeasible ⇒ atom entailed true.
+            if let Some(reason) = self.probe_entails(&asserted, atom, false) {
+                out.push(TheoryProp {
+                    lit: TheoryLit { atom, value: true },
+                    reason,
+                });
+                continue;
+            }
+            // Probe atom (atom true): LP-infeasible ⇒ ¬atom entailed.
+            if let Some(reason) = self.probe_entails(&asserted, atom, true) {
+                out.push(TheoryProp {
+                    lit: TheoryLit { atom, value: false },
+                    reason,
+                });
+            }
+        }
+        out
+    }
+
+    /// Tests whether the live asserted set plus `atom` at `probe_value` is
+    /// LP-relaxation-infeasible (so `atom` is entailed at the *opposite* polarity
+    /// over ℤ). On infeasibility returns the **asserted-only**, deletion-minimized
+    /// reason (the probed atom excluded); otherwise `None` (feasible or
+    /// inconclusive — never a fabrication).
+    fn probe_entails(
+        &self,
+        asserted: &[TheoryLit],
+        atom: usize,
+        probe_value: bool,
+    ) -> Option<Vec<TheoryLit>> {
+        let probe = TheoryLit {
+            atom,
+            value: probe_value,
+        };
+        if !self.probe_lp_infeasible(asserted, Some(probe)) {
+            return None;
+        }
+        Some(self.minimize_probe_reason(asserted, probe))
+    }
+
+    /// Whether the asserted literals `asserted` together with the optional extra
+    /// literal `probe` are LP-relaxation-infeasible (and so integer-infeasible).
+    /// `false` on LP-feasible *or* inconclusive (overflow / outside the fragment) —
+    /// the conservative direction, so a `true` here is always a sound entailment.
+    fn probe_lp_infeasible(&self, asserted: &[TheoryLit], probe: Option<TheoryLit>) -> bool {
+        let mut lits: Vec<TheoryLit> = asserted.to_vec();
+        if let Some(p) = probe {
+            lits.push(p);
+        }
+        let Some((arena, terms)) = self.live_terms(&lits) else {
+            return false;
+        };
+        matches!(
+            lp_relaxation_feasibility(&arena, &terms),
+            LpRelaxation::Infeasible
+        )
+    }
+
+    /// Deletion-minimizes the asserted-only reason behind an entailment: greedily
+    /// drops asserted literals while `kept ∧ probe` stays LP-infeasible. The result
+    /// is a sound (minimal-by-deletion) core — every retained subset is re-checked
+    /// LP-infeasible, so the learned lemma `¬(reason ∧ ¬entailed)` is entailed by the
+    /// asserted state alone. The `probe` literal is the speculative negation, never
+    /// part of the reason.
+    fn minimize_probe_reason(&self, asserted: &[TheoryLit], probe: TheoryLit) -> Vec<TheoryLit> {
+        let mut keep: Vec<bool> = vec![true; asserted.len()];
+        for drop_idx in 0..asserted.len() {
+            keep[drop_idx] = false;
+            let subset: Vec<TheoryLit> = asserted
+                .iter()
+                .zip(&keep)
+                .filter_map(|(&lit, &k)| k.then_some(lit))
+                .collect();
+            if self.probe_lp_infeasible(&subset, Some(probe)) {
+                // Still entailed without this literal — drop it.
+            } else {
+                keep[drop_idx] = true; // needed for the refutation; keep it.
+            }
+        }
+        let core: Vec<TheoryLit> = asserted
+            .iter()
+            .zip(&keep)
+            .filter_map(|(&lit, &k)| k.then_some(lit))
+            .collect();
+        // Fall back to the full asserted set if minimization somehow emptied the
+        // core (a refutation resting on no asserted atom would not be a sound
+        // propagation, but the caller already confirmed LP-infeasibility *with* the
+        // probe; an empty reason here means the probe alone refutes, which the
+        // unassigned-atom guard rules out — keep the full set, sound and coarse).
+        if core.is_empty() {
+            asserted.to_vec()
+        } else {
+            core
+        }
     }
 }
 
@@ -454,6 +575,54 @@ impl Dpll {
         Ok(())
     }
 
+    /// Applies sound theory propagations to the trail until fixpoint. Returns the
+    /// learned clause on a theory conflict, else `Ok(())`. A mirror of
+    /// `crate::lra_online::Dpll::theory_propagate` retargeted to [`LiaTheory`].
+    fn theory_propagate(&mut self, theory: &mut LiaTheory) -> Result<(), Vec<Lit>> {
+        loop {
+            let props = theory.propagate();
+            let mut progress = false;
+            for prop in props {
+                let var = prop.lit.atom;
+                match self.value[var] {
+                    Some(v) if v == prop.lit.value => {}
+                    Some(_) => {
+                        // Theory entails the opposite of the current value: a
+                        // conflict. Learn ¬(reason ∧ current literal).
+                        let mut core = prop.reason.clone();
+                        core.push(TheoryLit {
+                            atom: var,
+                            value: !prop.lit.value,
+                        });
+                        return Err(Self::theory_conflict_clause(&core));
+                    }
+                    None => {
+                        if let Err(c) = self.assign(theory, var, prop.lit.value, Cause::Implied) {
+                            return Err(Self::theory_conflict_clause(&c));
+                        }
+                        progress = true;
+                    }
+                }
+            }
+            if !progress {
+                return Ok(());
+            }
+        }
+    }
+
+    /// Unit propagation interleaved with theory propagation to a joint fixpoint. A
+    /// mirror of `crate::lra_online::Dpll::propagate` retargeted to [`LiaTheory`].
+    fn propagate(&mut self, theory: &mut LiaTheory) -> Result<(), Vec<Lit>> {
+        loop {
+            self.unit_propagate(theory)?;
+            let before = self.trail.len();
+            self.theory_propagate(theory)?;
+            if self.trail.len() == before {
+                return Ok(());
+            }
+        }
+    }
+
     /// Maps a theory conflict core to a learned CNF clause `¬⋀core`.
     fn theory_conflict_clause(core: &[TheoryLit]) -> Vec<Lit> {
         core.iter()
@@ -474,7 +643,7 @@ impl Dpll {
     fn solve(&mut self, theory: &mut LiaTheory) -> bool {
         loop {
             loop {
-                match self.unit_propagate(theory) {
+                match self.propagate(theory) {
                     Ok(()) => break,
                     Err(clause) => {
                         if !self.learn_and_backtrack(theory, clause) {

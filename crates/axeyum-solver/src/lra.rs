@@ -1230,6 +1230,58 @@ fn lia_simplex_within(
     }
 }
 
+/// Three-valued outcome of the **LP relaxation** of an integer constraint set —
+/// the cheap entailment probe the online [`crate::lia_online`] theory propagation
+/// uses. Soundness anchor: the LP relaxation drops the integrality requirement, so
+/// `Infeasible` over the reals implies the integer system is infeasible too (the
+/// integer points are a subset of the real points). `Feasible` is therefore
+/// *inconclusive* about integer feasibility — the probe declines to propagate on it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum LpRelaxation {
+    /// The real relaxation has a satisfying point. Inconclusive about ℤ (may still
+    /// be integer-infeasible) — the caller must NOT treat this as entailment.
+    Feasible,
+    /// The real relaxation is infeasible ⇒ the integer system is infeasible too.
+    Infeasible,
+    /// Overflow / outside the conjunctive-linear-integer fragment / iteration
+    /// backstop: inconclusive (never asserted as `Infeasible`).
+    Unknown,
+}
+
+/// Tests the **LP relaxation** of the conjunctive integer atom set `assertions`
+/// (each a linear integer order atom or its `BoolNot`, or a true integer equality)
+/// by a single exact-rational simplex feasibility solve — **no** integer
+/// tightening, Gomory cuts, or branch-and-bound (those are what make a full
+/// integer decision heavy). The cheap, sound entailment probe driving online `LIA`
+/// theory propagation in [`crate::lia_online`].
+///
+/// Returns [`LpRelaxation::Infeasible`] only when the real relaxation has no
+/// satisfying point — which soundly implies the integer system is infeasible
+/// (integer solutions are a subset of real ones). [`LpRelaxation::Feasible`] is
+/// inconclusive about ℤ. Any overflow, an unsupported (e.g. disjunctive /
+/// disequality) atom, or the simplex backstop yields [`LpRelaxation::Unknown`] —
+/// never a wrong `Infeasible`.
+pub(crate) fn lp_relaxation_feasibility(arena: &TermArena, assertions: &[TermId]) -> LpRelaxation {
+    let mut ctx = IntCollector::default();
+    for &assertion in assertions {
+        if ctx.collect(arena, assertion, false).is_err() {
+            return LpRelaxation::Unknown;
+        }
+    }
+    if ctx.overflow {
+        return LpRelaxation::Unknown;
+    }
+    if ctx.trivially_unsat {
+        return LpRelaxation::Infeasible;
+    }
+    match simplex_feasible(&ctx.constraints, ctx.vars.len()) {
+        Some(SimplexOutcome::Sat(_)) => LpRelaxation::Feasible,
+        Some(SimplexOutcome::Unsat(_)) => LpRelaxation::Infeasible,
+        // Iteration backstop without a verdict: stay conservative.
+        None => LpRelaxation::Unknown,
+    }
+}
+
 /// Result of one branch-and-bound subtree.
 enum LiaBnb {
     Sat(Vec<Rational>),
