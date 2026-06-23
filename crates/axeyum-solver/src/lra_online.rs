@@ -1019,6 +1019,17 @@ pub(crate) struct Dpll {
     /// so older bumps decay geometrically relative to fresh ones (the `MiniSat`
     /// trick; mirrors `axeyum_cnf::proof_sat`'s `var_inc`).
     var_inc: f64,
+    /// Per variable: the last polarity it was assigned (phase saving). Updated in
+    /// [`Self::assign`] on every assignment — both decisions and propagations — so a
+    /// variable re-decided after a backjump or restart reuses the polarity it last
+    /// settled on (the `MiniSat`/`BatSat` "progress saving" heuristic; mirrors
+    /// `axeyum_cnf::proof_sat`'s `phase`). Initialized to `true` so the *first*
+    /// decision of each variable matches the prior fixed `true`-first default,
+    /// keeping the determinism baseline unchanged. Pure search heuristic: the
+    /// polarity of a decision is a free branch choice, so this never affects
+    /// sat/unsat, only the search trajectory. Read at the decision in
+    /// [`Self::solve`].
+    saved_phase: Vec<bool>,
     /// Number of original (input + Tseitin skeleton) clauses. Clause indices
     /// `< num_original` are permanent (never deletion-eligible); learned 1-UIP
     /// asserting clauses are appended at indices `>= num_original`.
@@ -1115,6 +1126,7 @@ impl Dpll {
             decision_level: 0,
             activity: vec![0.0; var_count],
             var_inc: 1.0,
+            saved_phase: vec![true; var_count],
             num_original,
             lbd: vec![0; num_original],
             cla_activity: vec![0.0; num_original],
@@ -1158,6 +1170,11 @@ impl Dpll {
         reason_is_theory: bool,
     ) -> Result<(), Vec<TheoryLit>> {
         self.value[var] = Some(value);
+        // Phase saving: remember this polarity so a later re-decision of `var`
+        // (after a backjump or restart unassigns it) reuses it. Captured on every
+        // assignment — decisions and propagations alike, matching the SAT core's
+        // `enqueue`. Heuristic only; never affects the verdict.
+        self.saved_phase[var] = value;
         self.level[var] = self.decision_level;
         self.reason[var] = reason;
         self.reason_theory[var] = reason_is_theory;
@@ -1637,7 +1654,15 @@ impl Dpll {
                 Some(var) => {
                     self.decision_level += 1;
                     theory.push();
-                    if let Err(core) = self.assign(theory, var, true, Cause::Decision, None, false)
+                    // Phase saving: branch on the variable's last-settled polarity
+                    // (its `saved_phase`, initialized to `true` so a never-yet-seen
+                    // variable keeps the prior fixed `true`-first default). The
+                    // variable choice came from VSIDS in `pick_unassigned`; only the
+                    // polarity is the saved phase. Either polarity is a valid branch,
+                    // so this is verdict-invariant.
+                    let polarity = self.saved_phase[var];
+                    if let Err(core) =
+                        self.assign(theory, var, polarity, Cause::Decision, None, false)
                     {
                         let conflict = Conflict {
                             clause: Self::theory_conflict_clause(&core),
@@ -2397,6 +2422,77 @@ mod tests {
             "VSIDS activities must be deterministic"
         );
         assert_eq!(learned, learned2, "learned clause must be deterministic");
+    }
+
+    /// Phase-saving mechanism gate (verdict-invariant heuristic). Three claims:
+    /// (1) `saved_phase` initializes to `true` so a never-seen variable's first
+    /// decision matches the prior fixed `true`-first default (the determinism
+    /// baseline); (2) [`Dpll::assign`] updates `saved_phase[var]` to the assigned
+    /// value on *every* assignment (decision or propagation); (3) after that
+    /// polarity is recorded, a re-decision genuinely reuses the saved phase rather
+    /// than the fixed default — here `false`, the opposite of the old default.
+    /// With `atom_count == 0`, [`Dpll::assign`]'s `var < atom_count` guard never
+    /// touches the theory, so a no-op theory keeps this on the Boolean core.
+    #[test]
+    fn phase_saving_updates_on_assign_and_steers_redecision() {
+        /// No-op theory: every variable is a pure Boolean (no atom is mirrored,
+        /// since `atom_count == 0`), so these are never called — they exist only to
+        /// satisfy the [`TheorySolver`] bound.
+        struct NoTheory;
+        impl TheorySolver for NoTheory {
+            fn assert(&mut self, _atom: usize, _value: bool) -> Result<(), Vec<TheoryLit>> {
+                Ok(())
+            }
+            fn push(&mut self) {}
+            fn pop(&mut self) {}
+            fn propagate(&self) -> Vec<TheoryProp> {
+                Vec::new()
+            }
+        }
+
+        let mut theory = NoTheory;
+        let mut dpll = Dpll::new(3, 0, Vec::new());
+        // (1) Fresh init: every saved phase is the `true`-first default.
+        assert_eq!(
+            dpll.saved_phase,
+            vec![true, true, true],
+            "saved_phase initializes to the true-first default"
+        );
+
+        // (2) Assign v0 := false (as if a decision had branched false). `assign`
+        // must record that polarity into saved_phase.
+        dpll.decision_level = 1;
+        dpll.assign(&mut theory, 0, false, Cause::Decision, None, false)
+            .expect("no-theory assign cannot fail");
+        assert!(
+            !dpll.saved_phase[0],
+            "assign must save the assigned polarity (false here)"
+        );
+        // A propagation polarity is saved too: v1 := false, implied.
+        dpll.assign(&mut theory, 1, false, Cause::Implied, None, false)
+            .expect("no-theory assign cannot fail");
+        assert!(
+            !dpll.saved_phase[1],
+            "assign saves the polarity of propagations as well as decisions"
+        );
+
+        // (3) Unassign v0 (as a backjump would) — saved_phase must survive — then a
+        // re-decision reuses the saved `false`, not the fixed `true` default.
+        dpll.value[0] = None;
+        assert!(
+            !dpll.saved_phase[0],
+            "saved_phase outlives the variable being unassigned"
+        );
+        let redecision_polarity = dpll.saved_phase[0];
+        assert!(
+            !redecision_polarity,
+            "re-decision uses the saved phase (false), not the old true-first default"
+        );
+        // v2 was never assigned, so it would still decide at the default `true`.
+        assert!(
+            dpll.saved_phase[2],
+            "an untouched variable still decides at the true-first default"
+        );
     }
 
     /// End-to-end determinism through the public driver: the same `QF_LRA` query
