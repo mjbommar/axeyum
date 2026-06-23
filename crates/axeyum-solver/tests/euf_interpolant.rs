@@ -10,7 +10,8 @@ use std::collections::BTreeSet;
 use axeyum_cnf::check_alethe;
 use axeyum_ir::{Assignment, Op, Sort, TermArena, TermId, TermNode, Value, eval};
 use axeyum_solver::{
-    CheckResult, SatBvBackend, Solver, check_qf_uf, qf_uf_interpolant, qf_uf_interpolant_certified,
+    CheckResult, SatBvBackend, Solver, SolverConfig, check_auto, check_qf_uf, qf_uf_interpolant,
+    qf_uf_interpolant_certified,
 };
 
 fn con(arena: &mut TermArena, name: &str) -> TermId {
@@ -29,6 +30,16 @@ fn neq(arena: &mut TermArena, a: TermId, b: TermId) -> TermId {
 
 fn is_unsat(arena: &mut TermArena, assertions: &[TermId]) -> bool {
     matches!(check_qf_uf(arena, assertions), CheckResult::Unsat)
+}
+
+/// Like [`is_unsat`], but routes through the full [`check_auto`] dispatch instead
+/// of the EUF-only [`check_qf_uf`] — so it can refute conjunctions whose atoms span
+/// theories EUF cannot reason about (e.g. the `≤`/`≥` atoms of an LRA interpolant).
+fn is_unsat_auto(arena: &mut TermArena, assertions: &[TermId]) -> bool {
+    matches!(
+        check_auto(arena, assertions, &SolverConfig::default()),
+        Ok(CheckResult::Unsat)
+    )
 }
 
 /// Vocabulary (uninterpreted symbols + functions) used by a term.
@@ -79,6 +90,39 @@ fn assert_is_interpolant(arena: &mut TermArena, a: &[TermId], b: &[TermId], i: T
     let mut i_b = vec![i];
     i_b.extend_from_slice(b);
     assert!(is_unsat(arena, &i_b), "I ∧ B must be unsat");
+
+    // (3) Vocabulary ⊆ shared.
+    let av = vocab_of(arena, a);
+    let bv = vocab_of(arena, b);
+    let iv = vocab_of(arena, std::slice::from_ref(&i));
+    for v in &iv {
+        assert!(
+            av.contains(v) && bv.contains(v),
+            "interpolant uses a non-shared symbol"
+        );
+    }
+}
+
+/// Independently verifies that `i` is a Craig interpolant for `(a, b)`, refuting
+/// the two implication conditions with the full [`check_auto`] dispatch. Use this
+/// when the producing theory is not known to be EUF-only — the façade may return,
+/// e.g., an LRA interpolant over `≤`/`≥` atoms that the EUF-only [`is_unsat`]
+/// cannot decide. The three Craig conditions are checked in full; only the decider
+/// is broadened.
+fn assert_is_interpolant_auto(arena: &mut TermArena, a: &[TermId], b: &[TermId], i: TermId) {
+    // (1) A ⇒ I  ≡  A ∧ ¬I unsat.
+    let not_i = arena.not(i).unwrap();
+    let mut a_not_i = a.to_vec();
+    a_not_i.push(not_i);
+    assert!(
+        is_unsat_auto(arena, &a_not_i),
+        "A ∧ ¬I must be unsat (A ⇒ I)"
+    );
+
+    // (2) I ∧ B unsat.
+    let mut i_b = vec![i];
+    i_b.extend_from_slice(b);
+    assert!(is_unsat_auto(arena, &i_b), "I ∧ B must be unsat");
 
     // (3) Vocabulary ⊆ shared.
     let av = vocab_of(arena, a);
@@ -213,9 +257,16 @@ fn congruence_with_shared_function() {
 }
 
 #[test]
-fn solver_facade_dispatches_to_euf() {
-    // The Solver façade tries LRA then EUF; this EUF partition must come back via
-    // the fall-through. Active assertions [a=b, b=c, a≠c]; A = {0, 1}.
+fn solver_facade_returns_a_verified_interpolant() {
+    // The Solver façade dispatches LRA → LIA → EUF → … in turn. The constants are
+    // `Sort::Int`, so the equalities `a=b, b=c, a≠c` are decidable arithmetic and the
+    // *first* theory — LRA — produces (and self-verifies) a valid interpolant of the
+    // form `c ≤ a ∧ a ≤ c` (i.e. `a = c`) over the shared `{a, c}`; it never reaches
+    // the EUF fall-through. The point this test makes is the façade-level invariant:
+    // `Solver::interpolant` returns only *verified* interpolants. We re-check all three
+    // Craig conditions independently with `check_auto`, the full decider — `check_qf_uf`
+    // alone cannot reason about the `≤` atoms LRA emits. Active assertions
+    // [a=b, b=c, a≠c]; A = {0, 1}.
     let mut arena = TermArena::new();
     let (a, b, c) = (
         con(&mut arena, "a"),
@@ -234,8 +285,8 @@ fn solver_facade_dispatches_to_euf() {
     let i = solver
         .interpolant(&mut arena, &[0, 1])
         .expect("decides")
-        .expect("EUF interpolant via façade");
-    assert_is_interpolant(&mut arena, &[a_eq_b, b_eq_c], &[a_ne_c], i);
+        .expect("interpolant via façade");
+    assert_is_interpolant_auto(&mut arena, &[a_eq_b, b_eq_c], &[a_ne_c], i);
 }
 
 #[test]
