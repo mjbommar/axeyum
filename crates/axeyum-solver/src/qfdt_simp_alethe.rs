@@ -87,7 +87,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm, check_alethe};
+use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm, check_alethe, check_alethe_with};
 use axeyum_ir::{ConstructorId, Op, Sort, SymbolId, TermArena, TermId, TermNode};
 
 /// One `select`-over-`construct` projection fold whose result `a_i` the residual
@@ -818,4 +818,267 @@ fn bv_const_literal(width: u32, value: u128) -> String {
         out.push(if bit == 1 { '1' } else { '0' });
     }
     out
+}
+
+// =====================================================================
+// Constructor DISTINCTNESS (gap-analysis Gap 14): `C(x…) = D(y…)` with
+// distinct constructors `C != D` is refuted by COMPOSING the certified
+// is-tester collapse with congruence — no new datatype axiom, no field
+// unification.
+// =====================================================================
+
+/// Emits a complete, **Carcara-checkable** Alethe refutation of a single asserted
+/// constructor equality `(= (C x…) (D y…))` whose two constructors are **distinct**
+/// (`C != D`), or [`None`] when no such assertion is present or the assembled proof
+/// fails self-validation.
+///
+/// # The composed proof (cong + is-tester folds + `#b1 != #b0`)
+///
+/// The refutation reuses the just-certified is-tester collapse and adds one
+/// congruence lift; for the tested constructor `is_C`:
+///
+/// 1. `h` (the **trusted premise**): the asserted equality `(= (C x…) (D y…))`;
+/// 2. `cong` lifts `h` under the tester head `is_C`:
+///    `(= (is_C (C x…)) (is_C (D y…)))`;
+/// 3. the two **is-tester folds** (the trusted folds the is-tester certificate
+///    certifies the *use* of): `(= (is_C (C x…)) #b1)` (the true fold, `C == C`) and
+///    `(= (is_C (D y…)) #b0)` (the false fold, `C != D`);
+/// 4. a single `eq_transitive` chains `#b1 = is_C(C x…) = is_C(D y…) = #b0` to the
+///    contradiction `(= #b1 #b0)`, discharged against the three equalities by
+///    `resolution`;
+/// 5. `evaluate` folds `(= (= #b1 #b0) false)` (distinct constants), `equiv1` +
+///    the `false` tautology + `resolution` then close to the empty clause `(cl)`.
+///
+/// Every rule (`cong`, `eq_transitive`, `resolution`, `evaluate`, `equiv1`,
+/// `false`) is exactly the set the is-tester certificate already uses, all
+/// **Carcara-checkable**. The two reserved structural heads `!dttest_n_C` /
+/// `!dtcon_m_K` are uninterpreted functions to Carcara (no datatype rule).
+///
+/// # Trust boundary (honest residual)
+///
+/// The constructor equality `(= (C x…) (D y…))` stays a **trusted premise** (`h`),
+/// and the two is-tester folds stay trusted premises (as in the certified
+/// is-tester collapse). What is **Carcara-certified** is the *distinctness
+/// reasoning*: that a constructor equality between distinct `C != D` forces
+/// `#b1 = #b0`, i.e. ⊥. Constructor **injectivity** (`C(x) = C(y) ⇒ x_i = y_i`)
+/// and **acyclicity** remain **trusted/deferred** and are out of scope. The
+/// Lean/kernel reconstruction route for the distinctness collapse is deferred too
+/// (it composes the deferred is-tester reconstruction), so this certificate is
+/// **Carcara-checked only**.
+///
+/// # Returns
+///
+/// [`None`] when no `(= (C x…) (D y…))` with distinct `C != D` and renderable
+/// (BV/Bool) field leaves occurs in `assertions`, or when the assembled proof
+/// fails its own narrow [`axeyum_cnf::check_alethe_with`] self-validation.
+///
+/// # Fragment boundary
+///
+/// Constructor fields are rendered as residual (`BitVec`/`Bool`) leaves; a
+/// datatype-typed (nested) field returns [`None`]. The
+/// constructor heads are rendered as **structural applications**
+/// `(!dtcon_n_C args…)`, so a **nullary** constructor would render as the empty
+/// application `(!dtcon_0_C)`, which the SMT-LIB front-end does not accept — only
+/// constructors with at least one argument are in scope for this slice. Distinct
+/// **same-constructor** equalities `(= (C x…) (C y…))` are declined (they need
+/// injectivity, not distinctness).
+///
+/// # Panics
+///
+/// Does not panic for any input; arena access is total over well-formed terms.
+#[must_use]
+pub fn prove_qf_dt_distinct_alethe_carcara(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<Vec<AletheCommand>> {
+    // Find the first asserted `(= (C x…) (D y…))` with distinct constructors.
+    let (lhs_ctor, lhs_fields, rhs_ctor, rhs_fields) = assertions
+        .iter()
+        .find_map(|&assertion| match_distinct_constructor_eq(arena, assertion))?;
+
+    // Render both constructor applications structurally (`!dtcon_n_C …`).
+    let lhs_con = construct_alethe(arena, lhs_ctor, &lhs_fields)?;
+    let rhs_con = construct_alethe(arena, rhs_ctor, &rhs_fields)?;
+
+    // Tester `is_C` applied to each side: `(!dttest_n_C <con>)`.
+    let test_lhs = tester_alethe(arena, lhs_ctor, lhs_con.clone());
+    let test_rhs = tester_alethe(arena, lhs_ctor, rhs_con.clone());
+
+    let one = bit_alethe(true);
+    let zero = bit_alethe(false);
+    let false_t = AletheTerm::Const("false".to_owned());
+
+    // The contradictory bit equality `(= #b1 #b0)` and its `evaluate` fact.
+    let bit_eq = eq_term(one.clone(), zero.clone());
+
+    let proof = vec![
+        // h: the TRUSTED constructor equality `(= (C x…) (D y…))`.
+        AletheCommand::Assume {
+            id: "h".to_owned(),
+            clause: vec![pos(eq_term(lhs_con, rhs_con))],
+        },
+        // cong: lift `h` under the tester head: `(= (is_C (C x…)) (is_C (D y…)))`.
+        dt_step(
+            "cong",
+            vec![pos(eq_term(test_lhs.clone(), test_rhs.clone()))],
+            "cong",
+            &["h"],
+        ),
+        // fold_true: the TRUSTED true is-tester fold `(= #b1 (is_C (C x…)))`.
+        AletheCommand::Assume {
+            id: "fold_true".to_owned(),
+            clause: vec![pos(eq_term(one.clone(), test_lhs.clone()))],
+        },
+        // fold_false: the TRUSTED false is-tester fold `(= (is_C (D y…)) #b0)`.
+        AletheCommand::Assume {
+            id: "fold_false".to_owned(),
+            clause: vec![pos(eq_term(test_rhs.clone(), zero.clone()))],
+        },
+        // chain: `eq_transitive` over `#b1 = is_C(C x…) = is_C(D y…) = #b0`.
+        dt_step(
+            "chain",
+            vec![
+                neg(eq_term(one.clone(), test_lhs.clone())),
+                neg(eq_term(test_lhs, test_rhs.clone())),
+                neg(eq_term(test_rhs, zero)),
+                pos(bit_eq.clone()),
+            ],
+            "eq_transitive",
+            &[],
+        ),
+        // contra: resolve the chain against the three equalities ⇒ `(= #b1 #b0)`.
+        dt_step(
+            "contra",
+            vec![pos(bit_eq.clone())],
+            "resolution",
+            &["chain", "fold_true", "cong", "fold_false"],
+        ),
+        // ev: `evaluate` folds the distinct-constant equality to `false`.
+        dt_step(
+            "ev",
+            vec![pos(eq_term(bit_eq.clone(), false_t.clone()))],
+            "evaluate",
+            &[],
+        ),
+        // e1: `equiv1` over `ev` ⇒ `(cl (not (= #b1 #b0)) false)`.
+        dt_step(
+            "e1",
+            vec![neg(bit_eq.clone()), pos(false_t.clone())],
+            "equiv1",
+            &["ev"],
+        ),
+        // ff: the `false` tautology ⇒ `(cl (not false))`.
+        dt_step("ff", vec![neg(false_t)], "false", &[]),
+        // empty: resolve `(= #b1 #b0)`, `(cl (not (= #b1 #b0)) false)`, `(cl (not
+        // false))` to the empty clause.
+        dt_step("empty", Vec::new(), "resolution", &["contra", "e1", "ff"]),
+    ];
+
+    // Self-validate with the narrow distinctness hook (Carcara is the trust anchor).
+    matches!(check_alethe_with(&proof, &distinct_simplify_hook), Ok(true)).then_some(proof)
+}
+
+/// If `assertion` is `(= (C x…) (D y…))` with both sides constructor applications
+/// and **distinct** constructors `C != D`, returns `(C, x…, D, y…)`; else [`None`].
+///
+/// The two constructors must also share the same datatype sort (the SMT-LIB
+/// equality is sort-homogeneous), which is guaranteed by the arena's well-typed
+/// `eq` builder.
+fn match_distinct_constructor_eq(
+    arena: &TermArena,
+    assertion: TermId,
+) -> Option<(ConstructorId, Vec<TermId>, ConstructorId, Vec<TermId>)> {
+    let TermNode::App { op: Op::Eq, args } = arena.node(assertion) else {
+        return None;
+    };
+    let &[x, y] = &args[..] else {
+        return None;
+    };
+    let (lhs_ctor, lhs_fields) = as_construct(arena, x)?;
+    let (rhs_ctor, rhs_fields) = as_construct(arena, y)?;
+    (lhs_ctor != rhs_ctor).then_some((lhs_ctor, lhs_fields, rhs_ctor, rhs_fields))
+}
+
+/// The structural constructor application `(!dtcon_n_C a0 … a_{n-1})` for
+/// `C(a0…a_{n-1})`, as an [`AletheTerm`]. Returns [`None`] if a field is not a
+/// renderable residual leaf (BV/Bool symbol or constant).
+fn construct_alethe(
+    arena: &TermArena,
+    ctor: ConstructorId,
+    fields: &[TermId],
+) -> Option<AletheTerm> {
+    let name = arena.constructor_name(ctor);
+    let n = fields.len();
+    let mut con_args = Vec::with_capacity(n);
+    for &f in fields {
+        con_args.push(term_to_alethe(arena, f)?);
+    }
+    Some(AletheTerm::App(format!("!dtcon_{n}_{name}"), con_args))
+}
+
+/// The structural tester application `(!dttest_n_C <con>)` applying the tester for
+/// constructor `tested` (field count `n`) to the already-rendered constructor
+/// term `con`.
+fn tester_alethe(arena: &TermArena, tested: ConstructorId, con: AletheTerm) -> AletheTerm {
+    let name = arena.constructor_name(tested);
+    let arity = arena.constructor_fields(tested).len();
+    AletheTerm::App(format!("!dttest_{arity}_{name}"), vec![con])
+}
+
+/// The narrow self-validation hook for [`prove_qf_dt_distinct_alethe_carcara`]:
+/// accepts `evaluate` only for the exact unit `(= (= #b1 #b0) false)` (the bit
+/// equality folding to `false`) and `false` only for the unit `(cl (not false))`.
+/// Every other rule defers (`None`) to the native checker (`cong`, `eq_transitive`,
+/// `equiv1`, `resolution` are all natively handled). These are precisely the two
+/// shapes the emitter produces that the native checker does not handle, and exactly
+/// the simplifications Carcara independently checks.
+fn distinct_simplify_hook(rule: &str, clause: &[AletheLit]) -> Option<bool> {
+    match rule {
+        // `(= (= #b1 #b0) false)` — the distinct-constant bit equality folds to
+        // `false`.
+        "evaluate" => {
+            let [lit] = clause else {
+                return Some(false);
+            };
+            if lit.negated {
+                return Some(false);
+            }
+            let AletheTerm::App(head, args) = &lit.atom else {
+                return Some(false);
+            };
+            if head != "=" || args.len() != 2 {
+                return Some(false);
+            }
+            let inner_is_const_diseq = matches!(
+                &args[0],
+                AletheTerm::App(h, a)
+                    if h == "="
+                        && a.len() == 2
+                        && matches!(&a[0], AletheTerm::Const(_))
+                        && matches!(&a[1], AletheTerm::Const(_))
+                        && a[0] != a[1]
+            );
+            let rhs_is_false = matches!(&args[1], AletheTerm::Const(c) if c == "false");
+            Some(inner_is_const_diseq && rhs_is_false)
+        }
+        // `(cl (not false))` — the `false` tautology.
+        "false" => {
+            let [lit] = clause else {
+                return Some(false);
+            };
+            Some(lit.negated && matches!(&lit.atom, AletheTerm::Const(c) if c == "false"))
+        }
+        _ => None,
+    }
+}
+
+/// A `step` command with the given id, clause, rule, and premise ids (no args).
+fn dt_step(id: &str, clause: Vec<AletheLit>, rule: &str, premises: &[&str]) -> AletheCommand {
+    AletheCommand::Step {
+        id: id.to_owned(),
+        clause,
+        rule: rule.to_owned(),
+        premises: premises.iter().map(|p| (*p).to_owned()).collect(),
+        args: Vec::new(),
+    }
 }

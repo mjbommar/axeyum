@@ -649,6 +649,26 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0022",
     },
     Capability {
+        area: "datatypes",
+        feature: "Carcara-checked constructor DISTINCTNESS certificate \
+                  (prove_qf_dt_distinct_alethe_carcara): an asserted (= (C x..) (D y..)) with \
+                  distinct C!=D is refuted by COMPOSING the certified is-tester collapse with \
+                  congruence — cong lifts the equality under is_C, the two is-tester folds give \
+                  is_C(C x..)=#b1 and is_C(D y..)=#b0, and eq_transitive forces #b1=#b0 (evaluate \
+                  + equiv1 + false + resolution close to the empty clause)",
+        assurance: Assurance::Checked,
+        evidence: "every STRUCTURAL step (cong/eq_transitive/resolution/evaluate/equiv1/false) is \
+                   accepted (valid && !holey) by the external Carcara checker \
+                   (datatype_distinct_cert) — reserved !dttest/!dtcon heads are uninterpreted, the \
+                   constructor equality and the two is-tester folds are asserted premises; a \
+                   tampered eq_transitive chain is REJECTED. Honest boundary: the constructor \
+                   equality and the is-tester folds stay TRUSTED premises (only the distinctness \
+                   reasoning that distinct C!=D forces #b1=#b0 is certified); injectivity and \
+                   acyclicity stay trusted/deferred; nullary constructors are out of scope; the \
+                   Lean/kernel reconstruction route is deferred (Carcara-only)",
+        reference: "ADR-0022",
+    },
+    Capability {
         area: "quantifiers",
         feature: "finite-domain expansion + congruence-aware e-matching on the e-graph keystone \
                   (single/multi-variable, multi-pattern set-cover triggers, nested triggers) \
