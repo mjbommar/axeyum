@@ -7,8 +7,11 @@
 
 use std::collections::BTreeSet;
 
+use axeyum_cnf::check_alethe;
 use axeyum_ir::{Assignment, Op, Sort, TermArena, TermId, TermNode, Value, eval};
-use axeyum_solver::{CheckResult, SatBvBackend, Solver, check_qf_uf, qf_uf_interpolant};
+use axeyum_solver::{
+    CheckResult, SatBvBackend, Solver, check_qf_uf, qf_uf_interpolant, qf_uf_interpolant_certified,
+};
 
 fn con(arena: &mut TermArena, name: &str) -> TermId {
     let s = arena.declare(name, Sort::Int).unwrap();
@@ -293,4 +296,219 @@ fn a_alone_unsat_yields_false() {
         "A-alone-unsat interpolant must be ⊥"
     );
     assert!(is_unsat(&mut arena, &[a_eq_b, a_ne_b]), "A unsat ⇒ A ⇒ ⊥");
+}
+
+// --- Certified conjunctive EUF interpolation (`qf_uf_interpolant_certified`) ---
+
+/// The certified path returns the SAME verified interpolant as `qf_uf_interpolant`,
+/// re-passes the three Craig conditions, and carries two congruence refutations that
+/// BOTH self-check through the in-tree `check_alethe` (the counterpart to the
+/// external Carcara/Lean acceptance the cross-check suites exercise).
+#[test]
+fn certified_euf_interpolant_carries_two_self_checked_congruence_refutations() {
+    // A: a=b, b=c ; B: a≠c.  I = (a=c), a positive equality conjunction (diseq in B).
+    let mut arena = TermArena::new();
+    let (a, b, c) = (
+        con(&mut arena, "a"),
+        con(&mut arena, "b"),
+        con(&mut arena, "c"),
+    );
+    let a_eq_b = eq(&mut arena, a, b);
+    let b_eq_c = eq(&mut arena, b, c);
+    let a_ne_c = neq(&mut arena, a, c);
+
+    // Byte-identical interpolant to the Validated path.
+    let validated = qf_uf_interpolant(&mut arena, &[a_eq_b, b_eq_c], &[a_ne_c])
+        .expect("decides")
+        .expect("interpolant exists");
+    let cert = qf_uf_interpolant_certified(&mut arena, &[a_eq_b, b_eq_c], &[a_ne_c])
+        .expect("decides")
+        .expect("a certified interpolant exists for an unsat EUF conjunction");
+    assert_eq!(
+        cert.interpolant, validated,
+        "the certified interpolant must equal the Validated qf_uf_interpolant output"
+    );
+
+    // The three Craig conditions still hold for the returned interpolant.
+    assert_is_interpolant(&mut arena, &[a_eq_b, b_eq_c], &[a_ne_c], cert.interpolant);
+
+    // The two carried refutations are genuine congruence proofs deriving the empty
+    // clause — accepted by the in-tree checker (external Carcara/Lean acceptance is
+    // asserted in `carcara_crosscheck`/`lean_crosscheck`).
+    assert_eq!(
+        check_alethe(&cert.a_refutation),
+        Ok(true),
+        "the A ∧ ¬I refutation (Craig condition 1) must self-check"
+    );
+    assert_eq!(
+        check_alethe(&cert.b_refutation),
+        Ok(true),
+        "the I ∧ B refutation (Craig condition 2) must self-check"
+    );
+
+    // The carried conjunctions are exactly A ∧ ¬I and I ∧ B (each genuinely unsat).
+    assert!(
+        is_unsat(&mut arena, &cert.a_and_not_i),
+        "A ∧ ¬I must be unsat"
+    );
+    assert!(is_unsat(&mut arena, &cert.i_and_b), "I ∧ B must be unsat");
+}
+
+/// The disequality-in-`A` case: `I = ¬(a=c)`. `¬I` is *peeled* back to the bare
+/// equality `(a=c)` so `A ∧ ¬I` stays a single-disequality congruence conflict the
+/// emitter handles — both refutations self-check.
+#[test]
+fn certified_euf_interpolant_negated_interpolant_diseq_in_a() {
+    // A: a≠c ; B: a=b, b=c.  I = ¬(a=c).
+    let mut arena = TermArena::new();
+    let (a, b, c) = (
+        con(&mut arena, "a"),
+        con(&mut arena, "b"),
+        con(&mut arena, "c"),
+    );
+    let a_ne_c = neq(&mut arena, a, c);
+    let a_eq_b = eq(&mut arena, a, b);
+    let b_eq_c = eq(&mut arena, b, c);
+
+    let cert = qf_uf_interpolant_certified(&mut arena, &[a_ne_c], &[a_eq_b, b_eq_c])
+        .expect("decides")
+        .expect("certified interpolant exists");
+    assert_is_interpolant(&mut arena, &[a_ne_c], &[a_eq_b, b_eq_c], cert.interpolant);
+    assert_eq!(check_alethe(&cert.a_refutation), Ok(true));
+    assert_eq!(check_alethe(&cert.b_refutation), Ok(true));
+}
+
+/// A congruence interpolant (shared `f(a)`/`f(b)`): `A: a=b`, `B: f(a)≠f(b)`. The
+/// interpolant `f(a)=f(b)` is a positive equality over shared terms; both Craig
+/// refutations are congruence conflicts and self-check.
+#[test]
+fn certified_euf_interpolant_congruence() {
+    let mut arena = TermArena::new();
+    let (a, b) = (con(&mut arena, "a"), con(&mut arena, "b"));
+    let f = arena
+        .declare_fun("f", &[Sort::Int], Sort::Int)
+        .expect("declare_fun");
+    let fa = arena.apply(f, &[a]).unwrap();
+    let fb = arena.apply(f, &[b]).unwrap();
+    let a_eq_b = eq(&mut arena, a, b);
+    let fa_ne_fb = neq(&mut arena, fa, fb);
+
+    let cert = qf_uf_interpolant_certified(&mut arena, &[a_eq_b], &[fa_ne_fb])
+        .expect("decides")
+        .expect("certified interpolant exists");
+    assert_is_interpolant(&mut arena, &[a_eq_b], &[fa_ne_fb], cert.interpolant);
+    assert_eq!(check_alethe(&cert.a_refutation), Ok(true));
+    assert_eq!(check_alethe(&cert.b_refutation), Ok(true));
+}
+
+/// A satisfiable conjunction has no interpolant, so the certified path declines
+/// (`Ok(None)`) — the caller falls back to `qf_uf_interpolant`, which also declines.
+/// Nothing is dressed up as certified.
+#[test]
+fn certified_euf_interpolant_declines_on_satisfiable() {
+    // A: a=b ; B: c=d — satisfiable, so neither path yields an interpolant.
+    let mut arena = TermArena::new();
+    let (a, b, c, d) = (
+        con(&mut arena, "a"),
+        con(&mut arena, "b"),
+        con(&mut arena, "c"),
+        con(&mut arena, "d"),
+    );
+    let a_eq_b = eq(&mut arena, a, b);
+    let c_eq_d = eq(&mut arena, c, d);
+
+    assert!(
+        qf_uf_interpolant_certified(&mut arena, &[a_eq_b], &[c_eq_d])
+            .expect("decides")
+            .is_none(),
+        "a satisfiable A ∧ B must yield no certified interpolant"
+    );
+    assert!(
+        qf_uf_interpolant(&mut arena, &[a_eq_b], &[c_eq_d])
+            .expect("decides")
+            .is_none(),
+        "the Validated fallback must also decline"
+    );
+}
+
+/// The degenerate `⊤` interpolant (B alone unsat) is a bare Bool constant with no
+/// congruence atoms to refute, so the certified path declines (`Ok(None)`) and the
+/// caller falls back to the `Validated` `qf_uf_interpolant`, which still returns the
+/// `⊤` interpolant. This documents the conjunctive-only boundary.
+#[test]
+fn certified_euf_interpolant_declines_on_degenerate_top() {
+    // A: (empty) ; B: a=b ∧ a≠b — B alone unsat, interpolant ⊤.
+    let mut arena = TermArena::new();
+    let (a, b) = (con(&mut arena, "a"), con(&mut arena, "b"));
+    let a_eq_b = eq(&mut arena, a, b);
+    let a_ne_b = neq(&mut arena, a, b);
+
+    assert!(
+        qf_uf_interpolant_certified(&mut arena, &[], &[a_eq_b, a_ne_b])
+            .expect("decides")
+            .is_none(),
+        "the degenerate ⊤ interpolant is out of the certified slice"
+    );
+    // The Validated path still yields the ⊤ interpolant.
+    assert!(
+        qf_uf_interpolant(&mut arena, &[], &[a_eq_b, a_ne_b])
+            .expect("decides")
+            .is_some(),
+        "the Validated fallback still produces the ⊤ interpolant"
+    );
+}
+
+/// TAMPER (the self-check has teeth): corrupting a carried congruence refutation's
+/// derived equality makes the in-tree `check_alethe` REJECT it. A wrong certificate
+/// cannot masquerade as valid — a bug surfaces as a rejection, never an unsound
+/// accept. (The external-Carcara analogue of this tamper is in `carcara_crosscheck`.)
+#[test]
+fn tampered_certified_euf_refutation_is_rejected() {
+    use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm};
+    let mut arena = TermArena::new();
+    let (a, b, c) = (
+        con(&mut arena, "a"),
+        con(&mut arena, "b"),
+        con(&mut arena, "c"),
+    );
+    let a_eq_b = eq(&mut arena, a, b);
+    let b_eq_c = eq(&mut arena, b, c);
+    let a_ne_c = neq(&mut arena, a, c);
+    let cert = qf_uf_interpolant_certified(&mut arena, &[a_eq_b, b_eq_c], &[a_ne_c])
+        .expect("decides")
+        .expect("certified interpolant exists");
+
+    // The genuine refutation passes.
+    assert_eq!(check_alethe(&cert.a_refutation), Ok(true));
+
+    // Tamper: rewrite a non-`assume` derived step's clause to a bogus reflexive
+    // equality `(= a a)` that its premises do not entail and that no longer chains
+    // to the empty clause, so `check_alethe` rejects the proof.
+    let mut tampered = cert.a_refutation.clone();
+    let mut patched = false;
+    for cmd in &mut tampered {
+        if let AletheCommand::Step { clause, .. } = cmd {
+            if !clause.is_empty() {
+                let bogus = AletheTerm::App(
+                    "=".to_owned(),
+                    vec![
+                        AletheTerm::Const("a".to_owned()),
+                        AletheTerm::Const("a".to_owned()),
+                    ],
+                );
+                *clause = vec![AletheLit {
+                    atom: bogus,
+                    negated: false,
+                }];
+                patched = true;
+                break;
+            }
+        }
+    }
+    assert!(patched, "expected a derivable step to tamper");
+    assert_ne!(
+        check_alethe(&tampered),
+        Ok(true),
+        "a tampered congruence refutation must NOT self-check"
+    );
 }

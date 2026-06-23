@@ -212,6 +212,23 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0047",
     },
     Capability {
+        area: "QF_UF",
+        feature: "CERTIFIED conjunctive Craig interpolation (qf_uf_interpolant_certified): the same \
+                  verified EUF interpolant I, plus two externally-checkable congruence certificates",
+        assurance: Assurance::Checked,
+        evidence: "I is a conjunction of equalities over shared terms (the diseq-in-B case; the \
+                   diseq-in-A negated-I case peels ¬I back to a bare equality), so A ∧ ¬I and I ∧ B \
+                   are each single-disequality congruence conflicts ⇒ EUF-refutable; emits a \
+                   self-validated Alethe eq_congruent/eq_transitive/resolution refutation for each \
+                   (Craig conditions 1 and 2) via prove_qf_uf_unsat_alethe, each independently \
+                   accepted by Carcara (valid && !holey) AND by the Lean kernel via \
+                   prove_unsat_to_lean_module (infer + def_eq False, no sorryAx); returns the \
+                   certificate ONLY when both refutations emit and self-check, else declines to the \
+                   Validated qf_uf_interpolant path. BOUNDARY: conjunctive-only — the degenerate \
+                   ⊤/⊥ interpolant and non-congruence shapes stay Validated",
+        reference: "ADR-0047",
+    },
+    Capability {
         area: "QF_LRA",
         feature: "linear real arithmetic (exact-rational simplex)",
         assurance: Assurance::Checked,

@@ -23,7 +23,7 @@ use axeyum_solver::{
     prove_qf_abv_row_same_alethe_carcara, prove_qf_abv_unsat_alethe_via_elimination,
     prove_qf_bv_unsat_alethe, prove_qf_bv_unsat_alethe_ext_compare,
     prove_qf_bv_unsat_alethe_route2, prove_qf_dt_unsat_alethe_via_simplification,
-    prove_qf_uf_unsat_alethe, prove_qf_ufbv_unsat_alethe,
+    prove_qf_uf_unsat_alethe, prove_qf_ufbv_unsat_alethe, qf_uf_interpolant_certified,
 };
 
 /// Resolves the Carcara binary: `AXEYUM_CARCARA_BIN` if set, otherwise the
@@ -2310,5 +2310,165 @@ fn tampered_certified_lra_interpolant_cert_is_rejected_by_carcara() {
     assert!(
         report.contains("invalid") || report.contains("ERROR") || report.contains("holey"),
         "Carcara must reject the tampered certificate, got:\n{report}"
+    );
+}
+
+// --- Certified conjunctive QF_UF (EUF) Craig interpolant (qf_uf_interpolant_certified) ---
+//
+// The EUF interpolant `I` carries two congruence certificates — `eq_congruent` /
+// `eq_transitive` / `resolution` refutations of `A ∧ ¬I` (Craig condition 1) and
+// `I ∧ B` (condition 2). Each is handed to the REAL Carcara binary on the matching
+// `.smt2` conjunction; Carcara accepting both (valid && !holey) is the external
+// check that upgrades the EUF interpolant from Validated to Checked.
+
+#[test]
+fn certified_euf_interpolant_both_congruence_certs_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // A: a=b, b=c ; B: a≠c.  Unsat; shared terms a, c. I = (a=c), a positive
+    // equality conjunction, so A ∧ ¬I and I ∧ B are each single-disequality
+    // congruence conflicts (EUF-refutable).
+    let mut arena = TermArena::new();
+    let a = var(&mut arena, "a");
+    let b = var(&mut arena, "b");
+    let c = var(&mut arena, "c");
+    let ab = arena.eq(a, b).unwrap();
+    let bc = arena.eq(b, c).unwrap();
+    let ac = arena.eq(a, c).unwrap();
+    let nac = arena.not(ac).unwrap();
+
+    let cert = qf_uf_interpolant_certified(&mut arena, &[ab, bc], &[nac])
+        .expect("decides")
+        .expect("a certified EUF interpolant exists");
+
+    // Condition 1: Carcara accepts the A ∧ ¬I congruence refutation.
+    let report_a = carcara_accepts(
+        &bin,
+        "euf_interp_a_not_i",
+        &arena,
+        &cert.a_and_not_i,
+        &cert.a_refutation,
+    );
+    assert!(
+        report_a.contains("valid"),
+        "expected Carcara 'valid' on A ∧ ¬I, got:\n{report_a}"
+    );
+    // Condition 2: Carcara accepts the I ∧ B congruence refutation.
+    let report_b = carcara_accepts(
+        &bin,
+        "euf_interp_i_b",
+        &arena,
+        &cert.i_and_b,
+        &cert.b_refutation,
+    );
+    assert!(
+        report_b.contains("valid"),
+        "expected Carcara 'valid' on I ∧ B, got:\n{report_b}"
+    );
+}
+
+#[test]
+fn certified_euf_interpolant_congruence_certs_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // A: a=b ; B: f(a)≠f(b).  I = (f(a)=f(b)) over shared f(a), f(b). Both Craig
+    // conjunctions are congruence conflicts.
+    let mut arena = TermArena::new();
+    let a = var(&mut arena, "a");
+    let b = var(&mut arena, "b");
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(8)], Sort::BitVec(8))
+        .expect("declare_fun");
+    let fa = arena.apply(f, &[a]).unwrap();
+    let fb = arena.apply(f, &[b]).unwrap();
+    let ab = arena.eq(a, b).unwrap();
+    let fafb = arena.eq(fa, fb).unwrap();
+    let nfafb = arena.not(fafb).unwrap();
+
+    let cert = qf_uf_interpolant_certified(&mut arena, &[ab], &[nfafb])
+        .expect("decides")
+        .expect("a certified EUF interpolant exists");
+    let report_a = carcara_accepts(
+        &bin,
+        "euf_interp_cong_a",
+        &arena,
+        &cert.a_and_not_i,
+        &cert.a_refutation,
+    );
+    assert!(report_a.contains("valid"), "A-side: {report_a}");
+    let report_b = carcara_accepts(
+        &bin,
+        "euf_interp_cong_b",
+        &arena,
+        &cert.i_and_b,
+        &cert.b_refutation,
+    );
+    assert!(report_b.contains("valid"), "B-side: {report_b}");
+}
+
+/// TAMPER: corrupt a congruence step inside a certified EUF interpolant's refutation
+/// and confirm Carcara REJECTS it. This proves the external check has teeth — a wrong
+/// certificate cannot pass (a bug surfaces as a rejection, never an unsound accept).
+#[test]
+fn tampered_certified_euf_interpolant_cert_is_rejected_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let a = var(&mut arena, "a");
+    let b = var(&mut arena, "b");
+    let c = var(&mut arena, "c");
+    let ab = arena.eq(a, b).unwrap();
+    let bc = arena.eq(b, c).unwrap();
+    let ac = arena.eq(a, c).unwrap();
+    let nac = arena.not(ac).unwrap();
+    let cert = qf_uf_interpolant_certified(&mut arena, &[ab, bc], &[nac])
+        .expect("decides")
+        .expect("a certified EUF interpolant exists");
+
+    // Tamper the A ∧ ¬I refutation: rewrite a derived (non-`assume`) step's clause
+    // to a bogus reflexive equality `(= a a)` its premises do not entail, so Carcara
+    // rejects the congruence chain.
+    let mut tampered = cert.a_refutation.clone();
+    let mut patched = false;
+    for cmd in &mut tampered {
+        if let AletheCommand::Step { clause, .. } = cmd {
+            if !clause.is_empty() {
+                let bogus = AletheTerm::App(
+                    "=".to_owned(),
+                    vec![
+                        AletheTerm::Const("a".to_owned()),
+                        AletheTerm::Const("a".to_owned()),
+                    ],
+                );
+                *clause = vec![AletheLit {
+                    atom: bogus,
+                    negated: false,
+                }];
+                patched = true;
+                break;
+            }
+        }
+    }
+    assert!(patched, "expected a derivable step to tamper");
+
+    let report = carcara_output(
+        &bin,
+        "euf_interp_tampered",
+        &write_script(&arena, &cert.a_and_not_i),
+        &tampered,
+    );
+    assert!(
+        !report.lines().any(|l| l.trim() == "valid"),
+        "a tampered EUF congruence certificate must NOT be reported valid, got:\n{report}"
+    );
+    assert!(
+        report.contains("invalid") || report.contains("ERROR") || report.contains("holey"),
+        "Carcara must reject the tampered EUF certificate, got:\n{report}"
     );
 }

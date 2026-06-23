@@ -37,10 +37,11 @@
 
 use std::collections::{BTreeSet, HashMap};
 
+use axeyum_cnf::AletheCommand;
 use axeyum_egraph::{EGraph, ENodeId, ProofStep};
 use axeyum_ir::{Op, TermArena, TermId, TermNode};
 
-use crate::{CheckResult, SolverError, check_qf_uf};
+use crate::{CheckResult, SolverError, check_qf_uf, prove_qf_uf_unsat_alethe};
 
 /// Which side of the partition an atom or proof edge belongs to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -65,6 +66,26 @@ enum Side {
 /// `Ok(None)`); the signature mirrors [`crate::lra_interpolant`] so the two
 /// theories share a dispatch shape.
 pub fn qf_uf_interpolant(
+    arena: &mut TermArena,
+    a_assertions: &[TermId],
+    b_assertions: &[TermId],
+) -> Result<Option<TermId>, SolverError> {
+    build_verified_qf_uf_interpolant(arena, a_assertions, b_assertions)
+}
+
+/// Builds the congruence-summary EUF interpolant `I` for the unsatisfiable
+/// conjunction `A ∧ B`, re-verifies the three Craig conditions independently, and
+/// returns it (or `None`). This is the single source of truth for the interpolant
+/// `I`; [`qf_uf_interpolant`] forwards to it directly and
+/// [`qf_uf_interpolant_certified`] reuses it, so the returned `I` is byte-identical
+/// across both entry points.
+///
+/// The `Result` is currently infallible (every decline path returns `Ok(None)`)
+/// but is kept to mirror [`qf_uf_interpolant`]'s public signature and the LRA
+/// [`crate::lra_interpolant`] dispatch shape, and to leave room for a future
+/// `SolverError` decision path.
+#[allow(clippy::unnecessary_wraps)]
+fn build_verified_qf_uf_interpolant(
     arena: &mut TermArena,
     a_assertions: &[TermId],
     b_assertions: &[TermId],
@@ -164,6 +185,144 @@ pub fn qf_uf_interpolant(
     } else {
         Ok(None)
     }
+}
+
+/// A **certified** conjunctive `QF_UF` (EUF) Craig interpolant: the interpolant
+/// `I` for an unsatisfiable `A ∧ B`, paired with two externally-checkable
+/// congruence refutations witnessing its two soundness conditions.
+///
+/// - [`a_refutation`](Self::a_refutation) is an Alethe `eq_congruent` /
+///   `eq_transitive` / `resolution` proof of `A ∧ ¬I ⊢ ⊥` (Craig condition 1,
+///   `A ⇒ I`);
+/// - [`b_refutation`](Self::b_refutation) is an Alethe congruence proof of
+///   `I ∧ B ⊢ ⊥` (Craig condition 2).
+///
+/// Both proofs are self-validated through [`axeyum_cnf::check_alethe`] before this
+/// struct is constructed (the emitter [`crate::prove_qf_uf_unsat_alethe`] returns
+/// `None` on any doubt), and each is **independently** checkable by an external
+/// checker — Carcara (`eq_congruent` / `eq_transitive` / `resolution`, accepted
+/// when `valid && !holey`) or, via [`crate::prove_unsat_to_lean_module`] on the
+/// same conjunction, the Lean kernel (`infer` + `def_eq False`, no `sorryAx`).
+///
+/// # Boundary
+///
+/// Only the CONJUNCTIVE EUF slice is certified: the interpolant `I` is a
+/// conjunction of equalities over shared terms (the disequality-in-`B` case), so
+/// `A ∧ ¬I` is `{A equalities} ∪ {one disequality ¬I}` and `I ∧ B` is
+/// `{I equalities} ∪ {B disequality}` — each a single-disequality congruence
+/// conflict [`crate::prove_qf_uf_unsat_alethe`] handles. When `I` is itself a
+/// negated equality (the disequality-in-`A` case), `¬I` is **peeled** back to the
+/// bare equality so the conjunction stays single-disequality. Anything the EUF
+/// congruence emitter cannot refute (a multi-disequality or non-congruence
+/// conjunction) declines to `Ok(None)` and stays `Validated`.
+#[derive(Debug, Clone)]
+pub struct QfUfInterpolantCertificate {
+    /// The verified interpolant term `I` (byte-identical to what
+    /// [`qf_uf_interpolant`] returns for the same `(A, B)`).
+    pub interpolant: TermId,
+    /// `A ∧ ¬I`, the conjunction the [`a_refutation`](Self::a_refutation) refutes
+    /// (so a consumer can re-derive a Lean-kernel certificate from it).
+    pub a_and_not_i: Vec<TermId>,
+    /// `I ∧ B`, the conjunction the [`b_refutation`](Self::b_refutation) refutes.
+    pub i_and_b: Vec<TermId>,
+    /// Alethe congruence refutation of `A ∧ ¬I` (Craig condition 1).
+    pub a_refutation: Vec<AletheCommand>,
+    /// Alethe congruence refutation of `I ∧ B` (Craig condition 2).
+    pub b_refutation: Vec<AletheCommand>,
+}
+
+/// Produces a **certified** Craig interpolant for the unsatisfiable conjunctive
+/// `QF_UF` (EUF) partition `A = a_assertions`, `B = b_assertions`: the same
+/// verified interpolant [`qf_uf_interpolant`] returns, **plus** two congruence
+/// certificates — Alethe `eq_congruent` / `eq_transitive` / `resolution`
+/// refutations of `A ∧ ¬I` and `I ∧ B` — that an independent checker (Carcara, or
+/// the Lean kernel via [`crate::prove_unsat_to_lean_module`]) can accept on its own.
+///
+/// This is the `Checked`-assurance upgrade of the `Validated` [`qf_uf_interpolant`]:
+/// the interpolant was already verify-before-return; here we additionally emit an
+/// externally-checkable certificate for each of its two soundness conditions, and
+/// return it **only** when both certificates are produced and self-check (through
+/// [`axeyum_cnf::check_alethe`] inside the emitter).
+///
+/// # Boundary
+///
+/// Only the CONJUNCTIVE EUF slice is certified here (see
+/// [`QfUfInterpolantCertificate`]). The certifiable interpolant is a conjunction
+/// of equalities over shared terms; both `A ∧ ¬I` and `I ∧ B` are then
+/// single-disequality congruence conflicts. This function declines (`Ok(None)`)
+/// whenever [`qf_uf_interpolant`] declines, whenever the produced interpolant is
+/// the degenerate `⊤`/`⊥` constant (no congruence atoms to refute through the
+/// emitter), or whenever either congruence refutation cannot be emitted/validated.
+/// A caller that gets `Ok(None)` should fall back to the `Validated`
+/// [`qf_uf_interpolant`] path — this function NEVER returns an uncertified
+/// interpolant dressed as certified.
+///
+/// # Errors
+///
+/// Propagates [`SolverError`] from the shared interpolant builder (which is
+/// currently infallible at the `Result` layer; the signature mirrors the LRA path).
+pub fn qf_uf_interpolant_certified(
+    arena: &mut TermArena,
+    a_assertions: &[TermId],
+    b_assertions: &[TermId],
+) -> Result<Option<QfUfInterpolantCertificate>, SolverError> {
+    // 1. The verified interpolant `I` (identical to `qf_uf_interpolant`'s output).
+    let Some(interpolant) = build_verified_qf_uf_interpolant(arena, a_assertions, b_assertions)?
+    else {
+        return Ok(None);
+    };
+
+    // 2. Form the two conjunctions whose UNSAT is the two Craig soundness
+    //    conditions. `¬I` is peeled so it is a *bare* disequality (or equality
+    //    list), keeping each conjunction a single-disequality congruence conflict
+    //    the EUF emitter handles: when `I = ¬(x=y)` we use `(x=y)`, else `¬I`.
+    let Some(not_interpolant) = negate_interpolant(arena, interpolant) else {
+        return Ok(None);
+    };
+    let mut a_and_not_i: Vec<TermId> = a_assertions.to_vec();
+    a_and_not_i.push(not_interpolant);
+    let mut i_and_b: Vec<TermId> = Vec::with_capacity(b_assertions.len() + 1);
+    i_and_b.push(interpolant);
+    i_and_b.extend_from_slice(b_assertions);
+
+    // 3. Emit a self-validated Alethe congruence refutation for each. The emitter
+    //    re-checks the proof through `check_alethe` and yields `None` on any doubt
+    //    (or when the conjunction is outside its single-disequality slice); we then
+    //    decline to the `Validated` path rather than return an uncertified
+    //    interpolant. (External Carcara/Lean acceptance is exercised by the
+    //    cross-check tests.)
+    let Some(a_refutation) = prove_qf_uf_unsat_alethe(arena, &a_and_not_i) else {
+        return Ok(None);
+    };
+    let Some(b_refutation) = prove_qf_uf_unsat_alethe(arena, &i_and_b) else {
+        return Ok(None);
+    };
+
+    Ok(Some(QfUfInterpolantCertificate {
+        interpolant,
+        a_and_not_i,
+        i_and_b,
+        a_refutation,
+        b_refutation,
+    }))
+}
+
+/// Builds the logical negation `¬I` of an EUF interpolant as a *bare* literal the
+/// congruence emitter can classify, peeling a double negation: when `I` is
+/// `not(inner)` the negation is `inner` itself (avoiding `not(not(inner))`, which
+/// [`crate::prove_qf_uf_unsat_alethe`]'s `classify` cannot read), otherwise it is
+/// `not(I)`. Returns `None` if the negation term cannot be built.
+fn negate_interpolant(arena: &mut TermArena, interpolant: TermId) -> Option<TermId> {
+    if let TermNode::App {
+        op: Op::BoolNot,
+        args,
+    } = arena.node(interpolant)
+    {
+        if args.len() == 1 {
+            return Some(args[0]);
+        }
+    }
+    arena.not(interpolant).ok()
 }
 
 /// Recursively gathers the equality / disequality literals of a conjunctive

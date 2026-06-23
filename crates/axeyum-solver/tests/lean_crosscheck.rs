@@ -613,3 +613,124 @@ fn tampered_certified_lra_interpolant_module_is_rejected_by_real_lean() {
     }
     // (If it does NOT type-check, that is already a rejection — nothing to assert.)
 }
+
+// --- Certified conjunctive QF_UF (EUF) Craig interpolant (qf_uf_interpolant_certified) ---
+//
+// The EUF interpolant `I` carries two congruence certificates witnessing its two
+// Craig soundness conditions: `A ∧ ¬I ⊢ ⊥` and `I ∧ B ⊢ ⊥`. Each conjunction is a
+// single-disequality congruence conflict, so `prove_unsat_to_lean_module`
+// reconstructs it (through the `QfUf` fragment) to a Lean-kernel-checked
+// `theorem … : False`. Feeding both to the REAL `lean` binary — accepted, no
+// `sorryAx` — is the external check that upgrades the EUF interpolant from Validated
+// to Checked via the Lean route.
+
+#[test]
+fn certified_euf_interpolant_both_congruence_certs_checked_by_real_lean() {
+    use axeyum_solver::qf_uf_interpolant_certified;
+    // A: a=b, b=c ; B: a≠c.  I = (a=c), a positive equality conjunction.
+    let mut arena = TermArena::new();
+    let alpha = Sort::BitVec(8);
+    let a = {
+        let s = arena.declare("a", alpha).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", alpha).unwrap();
+        arena.var(s)
+    };
+    let c = {
+        let s = arena.declare("c", alpha).unwrap();
+        arena.var(s)
+    };
+    let ab = arena.eq(a, b).unwrap();
+    let bc = arena.eq(b, c).unwrap();
+    let ac = arena.eq(a, c).unwrap();
+    let nac = arena.not(ac).unwrap();
+
+    let cert = qf_uf_interpolant_certified(&mut arena, &[ab, bc], &[nac])
+        .expect("decides")
+        .expect("a certified EUF interpolant exists");
+
+    // Craig condition 1: A ∧ ¬I reconstructs to a kernel-checked `: False`.
+    let (_frag_a, source_a) = prove_unsat_to_lean_module(&mut arena, &cert.a_and_not_i)
+        .expect("A ∧ ¬I reconstructs to a Lean module");
+    assert!(
+        !source_a.contains("sorryAx"),
+        "A ∧ ¬I module depends on sorryAx:\n{source_a}"
+    );
+    lean_accepts("euf_interp_a_not_i", &source_a);
+
+    // Craig condition 2: I ∧ B reconstructs to a kernel-checked `: False`.
+    let (_frag_b, source_b) = prove_unsat_to_lean_module(&mut arena, &cert.i_and_b)
+        .expect("I ∧ B reconstructs to a Lean module");
+    assert!(
+        !source_b.contains("sorryAx"),
+        "I ∧ B module depends on sorryAx:\n{source_b}"
+    );
+    lean_accepts("euf_interp_i_b", &source_b);
+}
+
+/// TAMPER (the no-`sorryAx` / kernel check has teeth): take a genuine certified EUF
+/// refutation module and replace its proof term with `sorry`. The real Lean kernel
+/// then EITHER fails to type-check OR `#print axioms` reports `sorryAx` — both are
+/// rejections. A fabricated EUF certificate cannot pass the gate the positive test
+/// uses.
+#[test]
+fn tampered_certified_euf_interpolant_module_is_rejected_by_real_lean() {
+    use axeyum_solver::qf_uf_interpolant_certified;
+    if lean_bin().is_none() {
+        eprintln!("[skip] tamper: lean binary not found; install via elan or set AXEYUM_LEAN_BIN");
+        return;
+    }
+    let mut arena = TermArena::new();
+    let alpha = Sort::BitVec(8);
+    let a = {
+        let s = arena.declare("a", alpha).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", alpha).unwrap();
+        arena.var(s)
+    };
+    let c = {
+        let s = arena.declare("c", alpha).unwrap();
+        arena.var(s)
+    };
+    let ab = arena.eq(a, b).unwrap();
+    let bc = arena.eq(b, c).unwrap();
+    let ac = arena.eq(a, c).unwrap();
+    let nac = arena.not(ac).unwrap();
+    let cert = qf_uf_interpolant_certified(&mut arena, &[ab, bc], &[nac])
+        .expect("decides")
+        .expect("a certified EUF interpolant exists");
+    let (_frag, source) =
+        prove_unsat_to_lean_module(&mut arena, &cert.a_and_not_i).expect("A ∧ ¬I reconstructs");
+
+    // Replace the proof body `:= <proof>` of the refutation theorem with `sorry`.
+    let marker = "theorem axeyum_refutation : False :=";
+    let idx = source
+        .find(marker)
+        .expect("module declares axeyum_refutation");
+    let head = &source[..idx + marker.len()];
+    let tail_start = source[idx..]
+        .find("#print axioms")
+        .map(|p| idx + p)
+        .expect("module has a #print axioms audit");
+    let tampered = format!("{head} sorry\n\n{}", &source[tail_start..]);
+
+    let typechecks = lean_typechecks("euf_interp_tampered", &tampered).expect("lean available");
+    if typechecks {
+        // If `sorry` type-checks (a warning, not an error), `#print axioms` MUST
+        // expose `sorryAx` — the audit the positive test relies on.
+        let bin = lean_bin().expect("lean available");
+        let dir = std::env::temp_dir().join("axeyum_lean_euf_interp_tampered");
+        let file = dir.join("euf_interp_tampered.lean");
+        let out = Command::new(&bin).arg(&file).output().expect("run lean");
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        assert!(
+            stdout.contains("sorryAx"),
+            "a `sorry`-tampered EUF refutation must expose sorryAx in the axiom audit:\n{stdout}"
+        );
+    }
+    // (If it does NOT type-check, that is already a rejection — nothing to assert.)
+}
