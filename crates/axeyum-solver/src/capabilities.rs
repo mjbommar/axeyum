@@ -485,10 +485,12 @@ pub const CAPABILITIES: &[Capability] = &[
                   LiaTheory by model-based equality sharing — the integer analogue, handling LIA \
                   non-convexity via model-based DFS interface splitting (interface candidates include \
                   UF-argument constants, so integer tightening fires). Now decides FULL \
-                  Boolean-structured QF_UFLIA via the same enumerative DPLL(T) as QF_UFLRA (Tseitin \
-                  skeleton over the theory atoms, propositional-model enumeration with theory-conflict \
-                  blocking clauses + EARLY theory-conflict detection on partial assignments, the \
-                  conjunctive MBTC reused as the per-model theory oracle). Now the \
+                  Boolean-structured QF_UFLIA via a real CDCL(T) over the combination (the integer mirror \
+                  of QF_UFLRA): Dpll<CombinedIncrementalLia> drives one warm EUF+LiaTheory with \
+                  backtrackable assert/push/pop, joint unit+theory propagation, and 1-UIP learning + \
+                  non-chronological backjump over Boolean + theory + INTERFACE-EQUALITY literals (the \
+                  ≥1-EUF-endpoint interface split is now SAT branching on registered int eq/lt/gt vars, \
+                  not a private DFS — the enumerative BoolSearch is retired to a fallback). Now the \
                   DEFAULT check_auto route for mixed UF+int-arith queries (online-first, eager Ackermann \
                   the byte-unchanged fallback on online Unknown)",
         assurance: Assurance::Validated,
