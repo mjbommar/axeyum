@@ -370,13 +370,11 @@ pub fn check_qf_abv_lazy_row<B: SolverBackend>(
     }
 
     // Step 1: inline array-variable definitions `v = E`, removing array equalities.
-    // A surviving (non-substitutable) array equality declines soundly.
+    // A surviving (non-substitutable) array equality is a *true extensionality*
+    // case: hand it to the lazy-extensionality CEGAR path (diff-skolem witnesses +
+    // on-demand select-congruence) instead of declining.
     let Some((substituted, defs)) = substitute_array_definitions(arena, assertions)? else {
-        return Ok(row_unknown(
-            "lazy-ROW declines: array equality is not an inlinable array-variable definition \
-             (extensionality over a wide index is not decided by on-demand ROW)"
-                .to_owned(),
-        ));
+        return check_qf_abv_lazy_ext(backend, arena, assertions, config);
     };
 
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
@@ -554,6 +552,25 @@ enum RowKind {
     Const { value: TermId },
 }
 
+/// One abstracted array (dis)equality atom `a = b` between two array-sorted
+/// terms (neither necessarily an inlinable variable definition). The atom is
+/// replaced in the abstraction by `flag` (a fresh `Bool` variable); the
+/// extensionality CEGAR then constrains `flag` against the array operands on
+/// demand (select-congruence when `flag` is true, a diff-skolem witness when
+/// `flag` is false).
+#[derive(Clone)]
+struct ArrayEqAtom {
+    /// The fresh `Bool` variable abstracting this `a = b` atom.
+    flag: SymbolId,
+    /// The (already index-abstracted-free) left array operand term.
+    lhs: TermId,
+    /// The right array operand term.
+    rhs: TermId,
+    /// Whether the diff-skolem witness for the `a != b` case has been
+    /// materialised yet (at most one per atom).
+    diff_materialised: bool,
+}
+
 /// The lazy-ROW CEGAR state: the materialised sites and the abstraction builder's
 /// memo (so an identical `select(base, index)` maps to a single site/fresh var).
 #[derive(Default)]
@@ -562,6 +579,11 @@ struct RowCtx {
     /// `(base term, index term) -> site index`.
     memo: HashMap<(TermId, TermId), usize>,
     fresh_counter: usize,
+    /// Abstracted array (dis)equality atoms, for the lazy-extensionality path.
+    eq_atoms: Vec<ArrayEqAtom>,
+    /// `(lhs term, rhs term) -> eq_atoms index` (order-insensitive: stored with
+    /// the smaller `TermId` first) so an identical array equality maps to one flag.
+    eq_memo: HashMap<(TermId, TermId), usize>,
 }
 
 impl RowCtx {
@@ -681,6 +703,88 @@ impl RowCtx {
         arena
             .declare(&name, Sort::BitVec(width))
             .map_err(|e| SolverError::Backend(format!("lazy-ROW fresh symbol failed: {e}")))
+    }
+
+    /// Abstracts `term` like [`Self::abstract_term`], but additionally replaces
+    /// each **array (dis)equality atom** `a = b` (an `Op::Eq` whose operands are
+    /// array-sorted) by a fresh `Bool` flag variable, recording the operands for
+    /// the lazy-extensionality CEGAR. This is strictly a superset of
+    /// [`Self::abstract_term`]: a query with no array-eq atom abstracts identically.
+    fn abstract_with_array_eq(
+        &mut self,
+        arena: &mut TermArena,
+        term: TermId,
+    ) -> Result<Option<TermId>, SolverError> {
+        if let TermNode::App { op: Op::Eq, args } = arena.node(term).clone() {
+            if matches!(arena.sort_of(args[0]), Sort::Array { .. }) {
+                let flag = self.array_eq_flag(arena, args[0], args[1])?;
+                return Ok(Some(arena.var(flag)));
+            }
+        }
+        let node = arena.node(term).clone();
+        match node {
+            // Reuse the ROW abstraction for selects/stores/scalars; only the
+            // top-level/structural Boolean wrapping needs the array-eq rewrite, so
+            // recurse with this method through Boolean/structural apps.
+            TermNode::App { op: Op::Select, .. } | TermNode::App { op: Op::Store, .. } => {
+                self.abstract_term(arena, term)
+            }
+            TermNode::App { op, args } => {
+                let mut new_args = Vec::with_capacity(args.len());
+                for arg in args {
+                    let Some(t) = self.abstract_with_array_eq(arena, arg)? else {
+                        return Ok(None);
+                    };
+                    new_args.push(t);
+                }
+                Ok(Some(rebuild_app(arena, op, &new_args)?))
+            }
+            _ => Ok(Some(term)),
+        }
+    }
+
+    /// Returns the index of (materialising if needed) the array-eq atom for
+    /// `lhs = rhs`, registering a fresh `Bool` flag. The key is order-insensitive
+    /// (`a = b` and `b = a` share a flag).
+    fn array_eq_atom(
+        &mut self,
+        arena: &mut TermArena,
+        lhs: TermId,
+        rhs: TermId,
+    ) -> Result<usize, SolverError> {
+        let key = if lhs.index() <= rhs.index() {
+            (lhs, rhs)
+        } else {
+            (rhs, lhs)
+        };
+        if let Some(&idx) = self.eq_memo.get(&key) {
+            return Ok(idx);
+        }
+        let name = format!("!ext_eq_{}", self.fresh_counter);
+        self.fresh_counter += 1;
+        let flag = arena
+            .declare(&name, Sort::Bool)
+            .map_err(|e| SolverError::Backend(format!("lazy-ext flag declare failed: {e}")))?;
+        let idx = self.eq_atoms.len();
+        self.eq_atoms.push(ArrayEqAtom {
+            flag,
+            lhs: key.0,
+            rhs: key.1,
+            diff_materialised: false,
+        });
+        self.eq_memo.insert(key, idx);
+        Ok(idx)
+    }
+
+    /// The fresh `Bool` flag symbol abstracting the array equality `lhs = rhs`.
+    fn array_eq_flag(
+        &mut self,
+        arena: &mut TermArena,
+        lhs: TermId,
+        rhs: TermId,
+    ) -> Result<SymbolId, SolverError> {
+        let idx = self.array_eq_atom(arena, lhs, rhs)?;
+        Ok(self.eq_atoms[idx].flag)
     }
 }
 
@@ -979,6 +1083,454 @@ fn project_replay_row(
     let mut out = Model::new();
     for (symbol, name, _sort) in arena.symbols() {
         if name.starts_with("!row_sel_") {
+            continue;
+        }
+        if let Some(value) = projected.get(symbol) {
+            out.set(symbol, value);
+        }
+    }
+    Ok(CheckResult::Sat(out))
+}
+
+/// Deterministic bound on the number of diff-skolem witnesses the
+/// lazy-extensionality path will introduce before declining to `unknown`. Each
+/// asserted array disequality needs at most one, so this caps the total number of
+/// distinct array (dis)equality atoms whose witness is materialised.
+const MAX_DIFF_SKOLEMS: usize = 256;
+
+/// Builds the `unknown` result with the lazy-extensionality classification.
+fn ext_unknown(detail: String) -> CheckResult {
+    CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail,
+    })
+}
+
+/// Decides a `QF_ABV` query carrying a **true array (dis)equality** — an array
+/// equality `a = b` (or its negation) between two array terms *neither* of which
+/// is an inlinable variable definition — via **lazy extensionality** (CEGAR):
+///
+/// * Each array `Op::Eq` atom `a = b` is abstracted to a fresh `Bool` flag.
+///   Every `select(…)` is abstracted to a fresh `BitVec` site exactly as in the
+///   lazy-ROW path, so ROW / read-over-read congruence are still enforced.
+/// * On a candidate model, for each atom: when the flag is **true**, the
+///   select-congruence lemma `flag => select(a,i) = select(b,i)` is added for any
+///   already-materialised read index `i` that the model leaves inconsistent; when
+///   the flag is **false** (`a != b`), a fresh **diff-skolem** index `k` is
+///   introduced once and the witness lemma `!flag => select(a,k) != select(b,k)`
+///   is added (a concrete index where the arrays differ).
+/// * The relaxation's `unsat` transfers (strictly fewer constraints); a
+///   refinement-consistent candidate is **projected and replayed** against the
+///   *original* assertions — including the array (dis)equalities, re-derived
+///   extensionally from the reconstructed array values — and accepted only if it
+///   genuinely satisfies them, else `unknown`.
+///
+/// Strictly additive: any query the eager / lazy-ROW paths already decide reaches
+/// this function only after they refuse, so it never changes a decided verdict.
+/// Bounded by `MAX_ROW_ROUNDS`, `MAX_ROW_SITES`, `MAX_DIFF_SKOLEMS`, and the
+/// optional deadline; a blow-up degrades to `unknown`.
+///
+/// # Errors
+///
+/// Returns [`SolverError`] from the backend. A `sat` candidate that fails to
+/// replay against the originals declines to `unknown`, never a wrong `sat`.
+fn check_qf_abv_lazy_ext<B: SolverBackend>(
+    backend: &mut B,
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    let mut ctx = RowCtx::default();
+
+    // Abstract: array-eq atoms -> fresh Bool flags, selects -> fresh BV sites.
+    let mut working: Vec<TermId> = Vec::with_capacity(assertions.len());
+    for &assertion in assertions {
+        match ctx.abstract_with_array_eq(arena, assertion)? {
+            Some(t) => working.push(t),
+            None => {
+                return Ok(ext_unknown(
+                    "lazy-extensionality declines: an array read/term is outside the modelled \
+                     store/variable/const-array fragment"
+                        .to_owned(),
+                ));
+            }
+        }
+    }
+
+    // No array-eq atom survived abstraction: this is a pure-ROW query the ROW
+    // path's own abstraction handles — delegate (it re-abstracts from the
+    // originals) rather than duplicate it.
+    if ctx.eq_atoms.is_empty() {
+        let defs = ArrayDefs::new();
+        let replay = ReplayTargets {
+            originals: assertions,
+            defs: &defs,
+        };
+        return check_row_cegar(backend, arena, assertions, &replay, config, deadline);
+    }
+
+    add_const_lemmas(arena, &ctx, &mut working)?;
+    ext_cegar_loop(
+        backend, arena, &mut ctx, working, assertions, config, deadline,
+    )
+}
+
+/// Asserts the unconditional `select((as const _) v, j) = v` facts for every
+/// const-array site (shared with the lazy-ROW path).
+fn add_const_lemmas(
+    arena: &mut TermArena,
+    ctx: &RowCtx,
+    working: &mut Vec<TermId>,
+) -> Result<(), SolverError> {
+    let const_lemmas: Vec<(SymbolId, TermId)> = ctx
+        .sites
+        .iter()
+        .filter_map(|site| match &site.kind {
+            RowKind::Const { value } => Some((site.fresh, *value)),
+            _ => None,
+        })
+        .collect();
+    for (fresh, value) in const_lemmas {
+        let var = arena.var(fresh);
+        let eqc = arena
+            .eq(var, value)
+            .map_err(|e| SolverError::Backend(format!("lazy-ext const lemma failed: {e}")))?;
+        working.push(eqc);
+    }
+    Ok(())
+}
+
+/// The CEGAR loop for the lazy-extensionality path: solve the abstraction, add any
+/// violated ROW / congruence / extensionality lemma, repeat to convergence or the
+/// bound.
+#[allow(clippy::too_many_arguments)]
+fn ext_cegar_loop<B: SolverBackend>(
+    backend: &mut B,
+    arena: &mut TermArena,
+    ctx: &mut RowCtx,
+    mut working: Vec<TermId>,
+    originals: &[TermId],
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+) -> Result<CheckResult, SolverError> {
+    let mut added_row: HashSet<usize> = HashSet::new();
+    let mut added_cong: HashSet<(usize, usize)> = HashSet::new();
+    let mut diff_skolems = 0usize;
+
+    for _round in 0..MAX_ROW_ROUNDS {
+        if past_deadline(deadline) {
+            return Ok(ext_unknown(
+                "lazy-extensionality deadline exceeded before refinement converged".to_owned(),
+            ));
+        }
+        let assignment = match backend.check(arena, &working, config)? {
+            CheckResult::Unsat => return Ok(CheckResult::Unsat),
+            CheckResult::Unknown(reason) => return Ok(CheckResult::Unknown(reason)),
+            CheckResult::Sat(model) => model.to_assignment(),
+        };
+
+        let mut progressed = false;
+
+        // 1. ROW + read-over-read congruence on the materialised sites.
+        progressed |= refine_row_and_congruence(
+            arena,
+            ctx,
+            &assignment,
+            &mut working,
+            &mut added_row,
+            &mut added_cong,
+        )?;
+
+        // 2. Extensionality on the array-eq atoms (congruence when the flag is
+        //    true, a fresh diff-skolem witness when it is false).
+        progressed |=
+            refine_extensionality(arena, ctx, &assignment, &mut working, &mut diff_skolems)?;
+
+        if !progressed {
+            return project_replay_ext(arena, ctx, originals, &assignment);
+        }
+    }
+
+    Ok(ext_unknown(format!(
+        "lazy-extensionality refinement did not converge within {MAX_ROW_ROUNDS} rounds"
+    )))
+}
+
+/// Adds every ROW / read-over-read-congruence lemma the candidate violates,
+/// returning whether any lemma was added. Shared shape with the lazy-ROW loop.
+fn refine_row_and_congruence(
+    arena: &mut TermArena,
+    ctx: &RowCtx,
+    assignment: &Assignment,
+    working: &mut Vec<TermId>,
+    added_row: &mut HashSet<usize>,
+    added_cong: &mut HashSet<(usize, usize)>,
+) -> Result<bool, SolverError> {
+    let mut new_row: Vec<usize> = Vec::new();
+    for (idx, site) in ctx.sites.iter().enumerate() {
+        if added_row.contains(&idx) {
+            continue;
+        }
+        if let RowKind::Store { .. } = site.kind {
+            if row_violated(arena, ctx, idx, assignment)? {
+                new_row.push(idx);
+            }
+        }
+    }
+    let mut new_cong: Vec<(usize, usize)> = Vec::new();
+    for a in 0..ctx.sites.len() {
+        for b in (a + 1)..ctx.sites.len() {
+            if added_cong.contains(&(a, b)) {
+                continue;
+            }
+            if let (RowKind::Var { array: va }, RowKind::Var { array: vb }) =
+                (&ctx.sites[a].kind, &ctx.sites[b].kind)
+            {
+                if va == vb
+                    && indices_equal(arena, ctx.sites[a].index, ctx.sites[b].index, assignment)?
+                    && results_differ(assignment, ctx.sites[a].fresh, ctx.sites[b].fresh)
+                {
+                    new_cong.push((a, b));
+                }
+            }
+        }
+    }
+
+    let progressed = !new_row.is_empty() || !new_cong.is_empty();
+    for idx in new_row {
+        let lemma = row_axiom_lemma(arena, ctx, idx)?;
+        working.push(lemma);
+        added_row.insert(idx);
+    }
+    for (a, b) in new_cong {
+        let lemma = select_congruence_lemma(
+            arena,
+            ctx.sites[a].index,
+            ctx.sites[b].index,
+            ctx.sites[a].fresh,
+            ctx.sites[b].fresh,
+        )?;
+        working.push(lemma);
+        added_cong.insert((a, b));
+    }
+    Ok(progressed)
+}
+
+/// Refines the array (dis)equality atoms against extensionality, returning whether
+/// any lemma was added.
+///
+/// For each atom `a = b` with flag `f` under `assignment`:
+/// * `f` **true** but some already-materialised read index `i` has
+///   `select(a,i) != select(b,i)` in the model: add `f => select(a,i)=select(b,i)`.
+/// * `f` **false** and no diff-witness yet: introduce a fresh diff-skolem `k` and
+///   add `!f => select(a,k) != select(b,k)`.
+fn refine_extensionality(
+    arena: &mut TermArena,
+    ctx: &mut RowCtx,
+    assignment: &Assignment,
+    working: &mut Vec<TermId>,
+    diff_skolems: &mut usize,
+) -> Result<bool, SolverError> {
+    let mut progressed = false;
+    for atom_idx in 0..ctx.eq_atoms.len() {
+        let flag = ctx.eq_atoms[atom_idx].flag;
+        let flag_true = matches!(assignment.get(flag), Some(Value::Bool(true)));
+        if flag_true {
+            progressed |= refine_eq_congruence(arena, ctx, atom_idx, assignment, working)?;
+        } else if !ctx.eq_atoms[atom_idx].diff_materialised {
+            if *diff_skolems >= MAX_DIFF_SKOLEMS {
+                continue;
+            }
+            refine_diff_skolem(arena, ctx, atom_idx, working)?;
+            *diff_skolems += 1;
+            progressed = true;
+        }
+    }
+    Ok(progressed)
+}
+
+/// For a *true*-flagged atom `a = b`, adds `flag => select(a,i)=select(b,i)` for
+/// every read index `i` (already materialised on either operand) the model leaves
+/// inconsistent. Returns whether any lemma was added.
+fn refine_eq_congruence(
+    arena: &mut TermArena,
+    ctx: &mut RowCtx,
+    atom_idx: usize,
+    assignment: &Assignment,
+    working: &mut Vec<TermId>,
+) -> Result<bool, SolverError> {
+    // Gather the distinct index terms already read on either operand.
+    let (lhs, rhs, flag) = {
+        let atom = &ctx.eq_atoms[atom_idx];
+        (atom.lhs, atom.rhs, atom.flag)
+    };
+    let indices = read_indices_for(ctx, lhs, rhs);
+    let mut progressed = false;
+    for index in indices {
+        let Some(site_a) = ctx.resolve_select(arena, lhs, index)? else {
+            continue;
+        };
+        let Some(site_b) = ctx.resolve_select(arena, rhs, index)? else {
+            continue;
+        };
+        let fa = ctx.sites[site_a].fresh;
+        let fb = ctx.sites[site_b].fresh;
+        if results_differ(assignment, fa, fb) {
+            let var_flag = arena.var(flag);
+            let va = arena.var(fa);
+            let vb = arena.var(fb);
+            let eqr = arena
+                .eq(va, vb)
+                .map_err(|e| SolverError::Backend(format!("lazy-ext cong build failed: {e}")))?;
+            let lemma = arena
+                .implies(var_flag, eqr)
+                .map_err(|e| SolverError::Backend(format!("lazy-ext cong build failed: {e}")))?;
+            working.push(lemma);
+            progressed = true;
+        }
+    }
+    Ok(progressed)
+}
+
+/// The set of index terms already read (as `select` sites) on `lhs` or `rhs`.
+fn read_indices_for(ctx: &RowCtx, lhs: TermId, rhs: TermId) -> Vec<TermId> {
+    let mut indices: Vec<TermId> = Vec::new();
+    for &(base, index) in ctx.memo.keys() {
+        if (base == lhs || base == rhs) && !indices.contains(&index) {
+            indices.push(index);
+        }
+    }
+    // Deterministic order independent of hash-map iteration.
+    indices.sort_by_key(|t| t.index());
+    indices
+}
+
+/// For a *false*-flagged atom `a != b`, introduces a fresh diff-skolem index `k`
+/// and adds the witness lemma `!flag => select(a,k) != select(b,k)`, materialising
+/// the two read sites at `k`.
+fn refine_diff_skolem(
+    arena: &mut TermArena,
+    ctx: &mut RowCtx,
+    atom_idx: usize,
+    working: &mut Vec<TermId>,
+) -> Result<(), SolverError> {
+    let (lhs, rhs, flag) = {
+        let atom = &ctx.eq_atoms[atom_idx];
+        (atom.lhs, atom.rhs, atom.flag)
+    };
+    let Some((index_width, _)) = arena.sort_of(lhs).array_widths() else {
+        return Ok(());
+    };
+    let name = format!("!ext_diff_{}", ctx.fresh_counter);
+    ctx.fresh_counter += 1;
+    let k_sym = arena
+        .declare(&name, Sort::BitVec(index_width))
+        .map_err(|e| SolverError::Backend(format!("lazy-ext diff-skolem declare failed: {e}")))?;
+    let k = arena.var(k_sym);
+
+    let Some(site_a) = ctx.resolve_select(arena, lhs, k)? else {
+        return Ok(());
+    };
+    let Some(site_b) = ctx.resolve_select(arena, rhs, k)? else {
+        return Ok(());
+    };
+    let fa = ctx.sites[site_a].fresh;
+    let fb = ctx.sites[site_b].fresh;
+    let var_flag = arena.var(flag);
+    let not_flag = arena
+        .not(var_flag)
+        .map_err(|e| SolverError::Backend(format!("lazy-ext diff build failed: {e}")))?;
+    let va = arena.var(fa);
+    let vb = arena.var(fb);
+    let eqr = arena
+        .eq(va, vb)
+        .map_err(|e| SolverError::Backend(format!("lazy-ext diff build failed: {e}")))?;
+    let ner = arena
+        .not(eqr)
+        .map_err(|e| SolverError::Backend(format!("lazy-ext diff build failed: {e}")))?;
+    let lemma = arena
+        .implies(not_flag, ner)
+        .map_err(|e| SolverError::Backend(format!("lazy-ext diff build failed: {e}")))?;
+    working.push(lemma);
+    ctx.eq_atoms[atom_idx].diff_materialised = true;
+    Ok(())
+}
+
+/// Projects a refinement-consistent lazy-extensionality candidate to a model over
+/// the original query (reconstructing each array variable from its base-variable
+/// read sites), replays it against the `originals` with the ground evaluator —
+/// re-deriving the array (dis)equalities extensionally — and returns it only if it
+/// genuinely satisfies every original assertion, else `unknown`.
+fn project_replay_ext(
+    arena: &TermArena,
+    ctx: &RowCtx,
+    originals: &[TermId],
+    assignment: &Assignment,
+) -> Result<CheckResult, SolverError> {
+    let ir =
+        |e: axeyum_ir::IrError| SolverError::Backend(format!("lazy-ext projection failed: {e}"));
+    // Reconstruct array variables from the base-variable read sites only.
+    let mut arrays: HashMap<SymbolId, Vec<(u128, u128)>> = HashMap::new();
+    for site in &ctx.sites {
+        if let RowKind::Var { array } = site.kind {
+            let index = eval(arena, site.index, assignment)
+                .map_err(ir)?
+                .scalar_code();
+            let value = match assignment.get(site.fresh) {
+                Some(v) => v.scalar_code(),
+                None => continue,
+            };
+            arrays.entry(array).or_default().push((index, value));
+        }
+    }
+
+    let mut projected = assignment.clone();
+    for (&array, entries) in &arrays {
+        let Some((index_width, element_width)) = arena.symbol(array).1.array_widths() else {
+            continue;
+        };
+        let mut value = ArrayValue::constant(index_width, element_width, 0);
+        for &(index, element) in entries {
+            value = value.store(index, element);
+        }
+        projected.set(array, Value::Array(value));
+    }
+
+    // Replay against the ORIGINAL assertions, re-deriving every array (dis)equality
+    // extensionally from the reconstructed arrays. Accept only a genuine model;
+    // a replay miss (reconstruction underdetermined this shape) declines.
+    for &assertion in originals {
+        match eval(arena, assertion, &projected) {
+            Ok(Value::Bool(true)) => {}
+            Ok(Value::Bool(false)) => {
+                return Ok(ext_unknown(format!(
+                    "lazy-extensionality candidate failed replay: assertion #{} evaluated to \
+                     false (incomplete on this shape)",
+                    assertion.index()
+                )));
+            }
+            Ok(value) => {
+                return Err(SolverError::Backend(format!(
+                    "lazy-ext replay: assertion #{} evaluated to non-Boolean {value}",
+                    assertion.index()
+                )));
+            }
+            Err(error) => {
+                return Err(SolverError::Backend(format!(
+                    "lazy-ext replay: assertion #{} failed evaluation: {error}",
+                    assertion.index()
+                )));
+            }
+        }
+    }
+
+    let mut out = Model::new();
+    for (symbol, name, _sort) in arena.symbols() {
+        if name.starts_with("!row_sel_")
+            || name.starts_with("!ext_eq_")
+            || name.starts_with("!ext_diff_")
+        {
             continue;
         }
         if let Some(value) = projected.get(symbol) {
