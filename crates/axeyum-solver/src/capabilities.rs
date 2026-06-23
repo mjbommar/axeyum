@@ -242,6 +242,23 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0047",
     },
     Capability {
+        area: "QF_LIA",
+        feature: "DISJUNCTIVE Craig interpolation (lia_interpolant_cnf): the integer mirror of \
+                  lra_interpolant_cnf — lifts integer interpolation to assertions with arbitrary Boolean \
+                  structure (∧/∨/¬/ite/= over linear-int atoms). Relax Int→Real (shared surrogates), reuse \
+                  the full lra_interpolant_cnf McMillan interpolating-SMT machinery, translate the real \
+                  interpolant back to integer atoms (per-atom denominator clearing). Closes the \
+                  imc_lia disjunctive-interpolant gap; wired into Solver::interpolant after lia_interpolant",
+        assurance: Assurance::Validated,
+        evidence: "VERIFY-BEFORE-RETURN over ℤ — A ∧ ¬I and I ∧ B each Unsat via the DISJUNCTIVE integer \
+                   decider check_with_lia_dpll + shared vocabulary; relaxation/McMillan/translation are \
+                   untrusted. Declines (Ok(None)) on a cuts-needed leaf (relaxation sat ⇒ lra_interpolant_cnf \
+                   declines), real-analogue-less constructs (div/mod/abs/coercions/BV), overflow, or any \
+                   re-check failure — never an unverified interpolant. Soundness fuzz: 27 Some / 373 None, \
+                   0 unsound",
+        reference: "ADR-0047",
+    },
+    Capability {
         area: "QF_UFLRA",
         feature: "ONLINE Nelson–Oppen combination (check_qf_uflra_online): the online EufTheory + the \
                   online LraTheory combined by model-based equality sharing (interface-equality \
