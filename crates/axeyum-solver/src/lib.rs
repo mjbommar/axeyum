@@ -201,7 +201,7 @@ pub use maxsat::{
     MaxSatOutcome, max_satisfiable, max_satisfiable_model, max_satisfiable_weighted,
     max_satisfiable_weighted_model,
 };
-pub use mbp::mbp_lra;
+pub use mbp::{mbp_lia, mbp_lra};
 pub use model::Model;
 pub use nra::check_with_nra;
 pub use nra_real_root::SosCertificate;
