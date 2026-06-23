@@ -278,8 +278,12 @@ pub use theory_combination::{
 };
 pub use trust::{ALL_TRUST_IDS, TrustId, TrustStep, trust_ledger_markdown};
 pub use uflia_interpolant::uflia_interpolant;
+#[doc(hidden)]
+pub use uflia_online::check_qf_uflia_boolean_with_metrics;
 pub use uflia_online::check_qf_uflia_online;
 pub use uflra_interpolant::uflra_interpolant;
+#[doc(hidden)]
+pub use uflra_online::check_qf_uflra_boolean_with_metrics;
 pub use uflra_online::check_qf_uflra_online;
 #[cfg(feature = "z3")]
 pub use z3_backend::Z3Backend;

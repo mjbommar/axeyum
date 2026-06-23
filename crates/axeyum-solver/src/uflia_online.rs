@@ -170,8 +170,36 @@ pub fn check_qf_uflia_online(
     }
 
     // 2. Boolean-structured QF_UFLIA: drive the combination from a DPLL(T) layer over
-    //    the Tseitin skeleton (one proposition per distinct UFLIA atom).
-    Ok(check_qf_uflia_boolean(arena, assertions, config))
+    //    the Tseitin skeleton (one proposition per distinct UFLIA atom). Early
+    //    theory-conflict detection (partial-assignment pruning) is on by default.
+    Ok(check_qf_uflia_boolean(
+        arena, assertions, config, true, None,
+    ))
+}
+
+/// Test-only entry that runs the Boolean-structured `DPLL(T)` layer with early
+/// pruning toggleable and returns the enumeration metrics `(prunes_fired,
+/// models_tried)` alongside the verdict. Lets the pruning-metric test prove that
+/// early theory-conflict detection both fires and strictly reduces the number of
+/// total propositional models enumerated, without disturbing the verdict. Not part
+/// of the production surface.
+#[doc(hidden)]
+#[must_use]
+pub fn check_qf_uflia_boolean_with_metrics(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    enable_early_prune: bool,
+) -> (CheckResult, usize, usize) {
+    let mut metrics = (0usize, 0usize);
+    let result = check_qf_uflia_boolean(
+        arena,
+        assertions,
+        config,
+        enable_early_prune,
+        Some(&mut metrics),
+    );
+    (result, metrics.0, metrics.1)
 }
 
 /// Decides a **conjunction** of `QF_UFLIA` literals by the model-based combination (the
@@ -1130,6 +1158,8 @@ fn check_qf_uflia_boolean(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
+    enable_early_prune: bool,
+    metrics: Option<&mut (usize, usize)>,
 ) -> CheckResult {
     // The distinct theory atoms over the whole assertion set become the proposition
     // variables 0..atom_count (deterministic left-to-right scan).
@@ -1170,9 +1200,27 @@ fn check_qf_uflia_boolean(
         value: vec![None; enc.var_count],
         trail: Vec::new(),
         models_tried: 0,
+        last_early_atoms: 0,
+        prunes_fired: 0,
+        enable_early_prune,
         deadline,
     };
-    search.solve(arena)
+    let result = search.solve(arena);
+    if let Some(out) = metrics {
+        *out = (search.prunes_fired, search.models_tried);
+    }
+    result
+}
+
+/// The control-flow outcome of an early (partial-assignment) theory-conflict check
+/// in [`BoolSearch::early_theory_prune`].
+enum EarlyPrune {
+    /// A partial theory conflict was blocked and backtracked: re-run `BCP`.
+    Pruned,
+    /// The conflict left no decision to flip: the whole query is `UNSAT`.
+    Exhausted,
+    /// No pruning (no new atoms, a total assignment, or a non-`Unsat` check): keep going.
+    Continue,
 }
 
 /// The propositional enumeration search of the Boolean `DPLL(T)` layer. Chronological
@@ -1192,6 +1240,16 @@ struct BoolSearch<'a> {
     trail: Vec<(usize, bool)>,
     /// How many total propositional models have been decided (the enumeration cap).
     models_tried: usize,
+    /// The number of assigned atom variables at the most recent early theory check —
+    /// the load-bearing guard that skips internal `BCP` fixpoints which added no new
+    /// theory atom (each early check pays a full from-scratch `Nelson–Oppen` run).
+    last_early_atoms: usize,
+    /// How many partial-assignment early theory conflicts pruned the search.
+    prunes_fired: usize,
+    /// Whether early theory-conflict detection on partial assignments is enabled
+    /// (always `true` in production; toggled off only by the pruning-metric test to
+    /// establish the no-pruning baseline).
+    enable_early_prune: bool,
     deadline: Option<Instant>,
 }
 
@@ -1299,6 +1357,45 @@ impl BoolSearch<'_> {
             .collect()
     }
 
+    /// Early theory-conflict detection on the *partial* propositional assignment at a
+    /// `BCP` fixpoint, before deciding (`pick_unassigned`). When new theory atoms have
+    /// been assigned since the last check (the `assigned > last_early_atoms` guard,
+    /// which skips internal nodes that added no theory atom — each check pays a full
+    /// from-scratch `Nelson–Oppen` run, with no cross-call incrementality) and the
+    /// assignment is not yet total, the conjunction of the assigned atom-literals is
+    /// decided:
+    ///
+    /// - `Unsat` ⇒ the *only* verdict-affecting transition, and it is sound: a partial
+    ///   theory `Unsat` means every total extension agreeing on those atoms is unsat,
+    ///   so the blocking clause prunes them all. Returns `Pruned` (re-run `BCP`) or
+    ///   `Exhausted` when no decision remains (the whole query is `UNSAT`).
+    /// - `Sat` / `Unknown` ⇒ never prune; fall through to keep deciding (`Continue`).
+    ///   A partial-consistent or inconclusive check must not change the verdict.
+    fn early_theory_prune(&mut self, arena: &mut TermArena) -> EarlyPrune {
+        if !self.enable_early_prune {
+            return EarlyPrune::Continue;
+        }
+        let assigned = (0..self.atom_count)
+            .filter(|&v| self.value[v].is_some())
+            .count();
+        if assigned <= self.last_early_atoms || assigned >= self.atom_count {
+            return EarlyPrune::Continue;
+        }
+        self.last_early_atoms = assigned;
+        if matches!(
+            decide_conjunction(arena, &self.model_literals()),
+            CheckResult::Unsat
+        ) {
+            self.prunes_fired += 1;
+            let clause = self.blocking_clause();
+            if !self.learn_and_backtrack(clause) {
+                return EarlyPrune::Exhausted;
+            }
+            return EarlyPrune::Pruned;
+        }
+        EarlyPrune::Continue
+    }
+
     /// Runs the enumerative search. Returns `SAT` (replay-checked) for the first total
     /// propositional model whose theory-combination is consistent, `UNSAT` when every
     /// model is blocked, and a conservative `Unknown` on a cap or an `Unknown`
@@ -1315,6 +1412,12 @@ impl BoolSearch<'_> {
                         }
                     }
                 }
+            }
+            // Early theory-conflict detection on the partial assignment.
+            match self.early_theory_prune(arena) {
+                EarlyPrune::Pruned => continue,
+                EarlyPrune::Exhausted => return CheckResult::Unsat,
+                EarlyPrune::Continue => {}
             }
             match self.pick_unassigned() {
                 None => {

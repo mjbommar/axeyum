@@ -9,7 +9,10 @@
 //! `Unknown` on a hard case is fine; a wrong sat / unsat is unacceptable.
 
 use axeyum_ir::{Assignment, Rational, Sort, TermArena, TermId, Value, eval};
-use axeyum_solver::{CheckResult, SolverConfig, check_qf_uflra_online, check_with_uf_arithmetic};
+use axeyum_solver::{
+    CheckResult, SolverConfig, check_qf_uflra_boolean_with_metrics, check_qf_uflra_online,
+    check_with_uf_arithmetic,
+};
 
 fn rconst(arena: &mut TermArena, n: i128) -> TermId {
     arena.real_const(Rational::integer(n))
@@ -567,5 +570,78 @@ fn boolean_structured_differential_fuzz_agrees_with_offline_ackermann() {
     assert!(
         unsat_count > 0,
         "expected non-zero UNSAT coverage on boolean-structured cases, got none"
+    );
+}
+
+/// Builds a Boolean-structured UNSAT `QF_UFLRA` query whose *early* (low-index) theory
+/// atoms already conflict, while many independent downstream atoms remain free —
+/// exactly the shape early partial-assignment pruning is meant to short-circuit.
+///
+/// Atoms 0 and 1 are `x < y` and `y < x` (jointly LRA-UNSAT), each unit-asserted so
+/// `BCP` fixes them before any decision. Then `n_free` independent disjunctions
+/// `(or (u_k < v_k) (v_k < u_k))` over fresh variables force a branching factor that,
+/// WITHOUT pruning, explodes the number of total propositional models enumerated
+/// before the conflict on atoms {0,1} is finally seen at a leaf. WITH pruning the
+/// conflict is caught on the 2-atom partial assignment and the query is `UNSAT` at once.
+fn build_early_conflict_query(arena: &mut TermArena, n_free: usize) -> Vec<TermId> {
+    let x = rvar(arena, "x");
+    let y = rvar(arena, "y");
+    let x_lt_y = arena.real_lt(x, y).unwrap();
+    let y_lt_x = arena.real_lt(y, x).unwrap();
+    let mut assertions = vec![x_lt_y, y_lt_x];
+    for k in 0..n_free {
+        let u = rvar(arena, &format!("u{k}"));
+        let v = rvar(arena, &format!("v{k}"));
+        let u_lt_v = arena.real_lt(u, v).unwrap();
+        let v_lt_u = arena.real_lt(v, u).unwrap();
+        assertions.push(arena.or(u_lt_v, v_lt_u).unwrap());
+    }
+    assertions
+}
+
+#[test]
+fn early_theory_prune_fires_and_reduces_enumeration() {
+    // Prove early theory-conflict detection (i) engages and (ii) strictly reduces the
+    // number of total propositional models enumerated — without changing the verdict.
+    let config = SolverConfig::default();
+    let mut arena = TermArena::new();
+    let assertions = build_early_conflict_query(&mut arena, 8);
+
+    // Public path (pruning on by default) must agree with the offline decider: UNSAT.
+    let online = check_qf_uflra_online(&mut arena, &assertions, &config).expect("online check");
+    let offline =
+        check_with_uf_arithmetic(&mut arena, &assertions, &config).expect("offline check");
+    assert_eq!(
+        verdict(&online),
+        Some(false),
+        "early-conflict query is UNSAT"
+    );
+    assert_eq!(
+        verdict(&online),
+        verdict(&offline),
+        "online/offline must agree on the early-conflict query"
+    );
+
+    // Verdict invariant across the pruning toggle, plus the metric contrast.
+    let (with_prune, prunes_fired, models_with) =
+        check_qf_uflra_boolean_with_metrics(&mut arena, &assertions, &config, true);
+    let (without_prune, prunes_off, models_without) =
+        check_qf_uflra_boolean_with_metrics(&mut arena, &assertions, &config, false);
+
+    assert_eq!(verdict(&with_prune), Some(false), "pruned run is UNSAT");
+    assert_eq!(
+        verdict(&without_prune),
+        Some(false),
+        "baseline run is UNSAT"
+    );
+    assert_eq!(prunes_off, 0, "pruning disabled must fire zero prunes");
+    assert!(
+        prunes_fired > 0,
+        "early pruning must engage (prunes_fired > 0), got {prunes_fired}"
+    );
+    assert!(
+        models_with < models_without,
+        "pruning must reduce enumerated total models: with={models_with} \
+         (prunes_fired={prunes_fired}) vs baseline={models_without}"
     );
 }
