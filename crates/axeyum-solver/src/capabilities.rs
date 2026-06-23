@@ -131,6 +131,25 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0010",
     },
     Capability {
+        area: "QF_ABV",
+        feature: "LAZY arrays (check_qf_abv_lazy / lazy-ROW / lazy extensionality): on-demand CEGAR — \
+                  select-congruence + read-over-write axioms added only when a candidate model violates \
+                  them, AND array (dis)equality by EXTENSIONALITY (diff-skolem witness a≠b ⇒ \
+                  select(a,k)≠select(b,k) + on-demand select-congruence for a=b), woven into one CEGAR \
+                  loop. Strictly additive over the eager path: reached only after eager + lazy-ROW refuse \
+                  (e.g. true extensionality over a wide index that bounded Ackermann declines)",
+        assurance: Assurance::Validated,
+        evidence: "the abstraction is a relaxation (its UNSAT transfers) and every added lemma (ROW, \
+                   select-congruence, extensionality congruence, diff-witness) is a sound consequence of \
+                   read-over-write / array extensionality; every SAT projects a full array model (finite \
+                   map + diff-skolem witnesses + else values) and REPLAYS against the original assertions \
+                   incl. the (dis)equalities — a failed replay → Unknown, never a wrong SAT. Differential \
+                   vs the eager check_with_array_elimination (300 LCG cases, 0 disagreements, every lazy \
+                   sat replayed); caps (rounds/sites/256 diff-skolems/deadline) → Unknown. The eager path \
+                   stays the always-correct fallback",
+        reference: "ADR-0010",
+    },
+    Capability {
         area: "QF_UF",
         feature: "uninterpreted functions: lazy congruence closure on a backtrackable \
                   e-graph (check_qf_uf, the check_auto fast path) with an eager Ackermann \
