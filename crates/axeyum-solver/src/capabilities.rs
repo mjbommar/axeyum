@@ -390,6 +390,22 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0048 (P2.6)",
     },
     Capability {
+        area: "quantifiers",
+        feature: "model-based projection for LIA (mbp_lia): the integer mirror of mbp_lra — model-guided \
+                  existential elimination of one integer variable (Cooper/Omega), the QE primitive \
+                  integer PDR / quantifier instantiation needs. Unit-coefficient slice exact (x-free \
+                  passthrough, ±1 equality substitution, interval resolvents with exact strict→non-strict \
+                  integer tightening + cross-feasibility); non-unit Cooper-divisibility cases declined",
+        assurance: Assurance::Validated,
+        evidence: "the selection is untrusted — VERIFY-BEFORE-RETURN: every projection F' is re-checked \
+                   (M ⊨ F', variable absent, and F' ⇒ ∃x∈ℤ.F by per-literal check_with_lia_dpll UNSAT \
+                   against an independent exact integer Omega projection); declines (None) on the \
+                   divisibility boundary (|c|>1, no IR modulo the deciders interpret), disjunctive \
+                   disequality, overflow, or non-LIA — a soundness fuzz over 400 LCG cases projected 29 / \
+                   declined 285 with ZERO unsound. No per-query certificate emitted",
+        reference: "ADR-0048 (P2.6)",
+    },
+    Capability {
         area: "QF_S (strings)",
         feature: "bounded strings + regex (BV-lowered); SMT-LIB front end wired for \
                   declare/literal/=/distinct + str.prefixof/suffixof/contains + str.at (const idx) \
