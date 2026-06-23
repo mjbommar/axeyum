@@ -151,9 +151,11 @@ pub use cardinality::{at_least, at_most, at_most_one, between, exactly, exactly_
 pub use certify::{CertifyOutcome, certify_qf_bv_by_enumeration};
 pub use combined::check_with_all_theories;
 #[doc(hidden)]
-pub use combined_theory::combined_vs_cold_conjunction;
+pub use combined_theory::{
+    PropagationReport, combined_theory_propagations, combined_vs_cold_conjunction,
+};
 #[doc(hidden)]
-pub use combined_theory_lia::combined_lia_vs_cold_conjunction;
+pub use combined_theory_lia::{combined_lia_vs_cold_conjunction, combined_theory_lia_propagations};
 pub use datatype_acyclicity::prove_datatype_unsat_structurally;
 pub use datatype_elim::check_with_datatype_elimination;
 pub use datatype_native::check_with_datatype_native;
@@ -293,12 +295,14 @@ pub use uflia_interpolant::{
     UfliaInterpolantCertificate, uflia_interpolant, uflia_interpolant_certified,
 };
 #[doc(hidden)]
+pub use uflia_online::check_qf_uflia_boolean_prop_metrics;
 pub use uflia_online::check_qf_uflia_boolean_with_metrics;
 pub use uflia_online::check_qf_uflia_online;
 pub use uflra_interpolant::{
     UflraInterpolantCertificate, uflra_interpolant, uflra_interpolant_certified,
 };
 #[doc(hidden)]
+pub use uflra_online::check_qf_uflra_boolean_prop_metrics;
 pub use uflra_online::check_qf_uflra_boolean_with_metrics;
 pub use uflra_online::check_qf_uflra_online;
 #[cfg(feature = "z3")]

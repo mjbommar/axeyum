@@ -31,15 +31,18 @@
 //! e-graph per call, exactly as the cold core does), so only the `LiaTheory` construction
 //! is warmed in slice 1.
 
+use std::collections::BTreeMap;
+
 use axeyum_ir::{TermArena, TermId};
 
 use crate::backend::CheckResult;
-use crate::euf_egraph::TheorySolver;
+use crate::euf_egraph::{EufTheory, TheoryLit, TheoryProp, TheorySolver};
 use crate::lia_online::LiaTheory;
+use crate::theory_combination::{InterfaceStatus, classify_interface_equalities};
 use crate::uflia_online::{
-    Literal, PairAtoms, build_euf_assertions, collect_uflia_atoms, decide_conjunction, decline,
-    euf_unsat, flatten_conjunction, interface_pairs, interface_terms, is_theory_atom, partition,
-    run_interface_search,
+    Literal, PairAtoms, Partition, build_euf_assertions, collect_uflia_atoms, decide_conjunction,
+    decline, euf_unsat, flatten_conjunction, interface_pairs, interface_terms, is_theory_atom,
+    partition, run_interface_search,
 };
 
 /// Hard ceiling on interface case-split pairs, mirroring the cold core's `MAX_SPLIT_DEPTH`
@@ -58,6 +61,17 @@ pub(crate) struct CombinedTheoryLia {
     /// `(lia_atom_terms layout, pairs, pair_atoms, theory)`. `None` until the first
     /// cacheable conjunction. A new call whose `lia_atom_terms` differs rebuilds.
     cache: Option<Cached>,
+    /// The full theory-atom set in `BoolSearch` variable order (index `v` is the atom
+    /// term of propositional variable `v`). [`CombinedTheoryLia::propagate`] builds its
+    /// warm `EUF` / `LIA` sub-theories over this whole set — asserting only the
+    /// conjunction — so the sub-theories can entail the *unassigned* atoms, with the
+    /// sub-theory atom index equal to the `BoolSearch` variable directly.
+    atom_terms: Vec<TermId>,
+    /// The inverse of `atom_terms`: each theory-atom [`TermId`]'s `BoolSearch`
+    /// propositional variable. Used to assert a literal and to name an interface
+    /// equality atom; an atom absent from it has no variable (its interface equality is
+    /// then dropped — a sound omission, propagation only ever *adds* assignments).
+    atom_var: BTreeMap<TermId, usize>,
 }
 
 /// One warm-reusable `LiaTheory` together with the layout it was built for.
@@ -79,8 +93,16 @@ impl CombinedTheoryLia {
     /// cache fills lazily from the first conjunction); it is kept so the wiring mirrors
     /// the cold core's atom-set discovery and leaves room for a future eager pre-warm.
     #[must_use]
-    pub(crate) fn new(_arena: &mut TermArena, _atom_terms: &[TermId]) -> Self {
-        Self { cache: None }
+    pub(crate) fn new(_arena: &mut TermArena, atom_terms: &[TermId]) -> Self {
+        let mut atom_var = BTreeMap::new();
+        for (var, &atom) in atom_terms.iter().enumerate() {
+            atom_var.entry(atom).or_insert(var);
+        }
+        Self {
+            cache: None,
+            atom_terms: atom_terms.to_vec(),
+            atom_var,
+        }
     }
 
     /// Decides the conjunction of `literals` with the warm equality-sharing combination,
@@ -158,6 +180,139 @@ impl CombinedTheoryLia {
             &mut cached.theory,
         )
     }
+
+    /// **Combined theory propagation** (slice 2): the literals the warm `EUF` + `LIA`
+    /// combination *genuinely entails* under the conjunction `literals`, each expressed
+    /// as a [`TheoryProp`] over the **`BoolSearch` propositional variable** numbering.
+    /// A `DPLL(T)` loop assigns each without a decision, pruning the search — never
+    /// changing the `Sat` / `Unsat` verdict. The integer mirror of
+    /// [`crate::combined_theory::CombinedTheory::propagate`].
+    ///
+    /// Three sound, never-fabricating sources are unioned: `EUF` congruence entailments
+    /// ([`EufTheory::propagate`]), `LIA` order entailments ([`LiaTheory::propagate`] —
+    /// the LP-relaxation negation probe, sound over ℤ since integer points ⊆ real
+    /// points), and interface-equality entailments ([`classify_interface_equalities`]
+    /// over the asserted `EUF` state: `Entailed` ⇒ the pair's `(= s t)` atom true,
+    /// `Refuted` ⇒ false). Every emitted literal is genuinely entailed and every reason
+    /// literal is asserted-only.
+    pub(crate) fn propagate(&self, arena: &mut TermArena, literals: &[Literal]) -> Vec<TheoryProp> {
+        let Some(part) = partition(arena, literals) else {
+            return Vec::new();
+        };
+        let asserted: Vec<Literal> = literals
+            .iter()
+            .copied()
+            .filter(|l| self.atom_var.contains_key(&l.atom))
+            .collect();
+        let mut out: Vec<TheoryProp> = Vec::new();
+        self.euf_propagations(arena, &asserted, &mut out);
+        self.lia_propagations(arena, &asserted, &mut out);
+        self.interface_propagations(arena, &part, &mut out);
+        out
+    }
+
+    /// Source (a): `EUF` congruence entailments, over the whole atom set (atom index =
+    /// `BoolSearch` variable), asserting only the conjunction.
+    fn euf_propagations(
+        &self,
+        arena: &mut TermArena,
+        asserted: &[Literal],
+        out: &mut Vec<TheoryProp>,
+    ) {
+        let mut euf = EufTheory::new(arena, &self.atom_terms);
+        for lit in asserted {
+            let var = self.atom_var[&lit.atom];
+            if euf.assert(var, lit.value).is_err() {
+                return; // an inconsistent EUF state — `check` reports it; emit nothing
+            }
+        }
+        self.collect_props(&euf.propagate(), out);
+    }
+
+    /// Source (b): `LIA` order entailments, over the whole atom set, asserting only the
+    /// conjunction so [`LiaTheory::propagate`] entails the *unassigned* order atoms.
+    fn lia_propagations(
+        &self,
+        arena: &mut TermArena,
+        asserted: &[Literal],
+        out: &mut Vec<TheoryProp>,
+    ) {
+        let mut lia = LiaTheory::new(arena, &self.atom_terms);
+        for lit in asserted {
+            let var = self.atom_var[&lit.atom];
+            if lia.assert(var, lit.value).is_err() {
+                return; // a base LIA conflict — `check` reports it; nothing to propagate
+            }
+        }
+        self.collect_props(&lia.propagate(), out);
+    }
+
+    /// Source (c): interface-equality entailments — the shared pairs the asserted `EUF`
+    /// congruence pins `Entailed` / `Refuted`, mapped to the pair's `(= s t)` query
+    /// variable, with the asserted `EUF` literals as the (asserted-only) reason.
+    fn interface_propagations(
+        &self,
+        arena: &mut TermArena,
+        part: &Partition,
+        out: &mut Vec<TheoryProp>,
+    ) {
+        let interface = interface_terms(arena, part);
+        let pairs = interface_pairs(&interface);
+        if pairs.is_empty() {
+            return;
+        }
+        let euf_assertions = build_euf_assertions(arena, &part.euf);
+        let reason = asserted_euf_reason(&self.atom_var, part);
+        for &(s, t) in &pairs {
+            let Ok(eq) = arena.eq(s, t) else { continue };
+            let Some(&var) = self.atom_var.get(&eq) else {
+                continue; // the interface equality is not a propositional query variable
+            };
+            let status = classify_interface_equalities(arena, &euf_assertions, &[(s, t)])
+                .first()
+                .map_or(InterfaceStatus::Undetermined, |c| c.1);
+            let value = match status {
+                InterfaceStatus::Entailed => true,
+                InterfaceStatus::Refuted => false,
+                InterfaceStatus::Undetermined => continue,
+            };
+            out.push(TheoryProp {
+                lit: TheoryLit { atom: var, value },
+                reason: reason.clone(),
+            });
+        }
+    }
+
+    /// Appends the sub-theory propagations (atom indices already `BoolSearch` variables,
+    /// since built over the whole atom set) onto `out`, with a bound check that keeps the
+    /// translation total and panic-free.
+    fn collect_props(&self, props: &[TheoryProp], out: &mut Vec<TheoryProp>) {
+        for prop in props {
+            if prop.lit.atom >= self.atom_terms.len() {
+                continue;
+            }
+            if prop.reason.iter().any(|r| r.atom >= self.atom_terms.len()) {
+                continue;
+            }
+            out.push(prop.clone());
+        }
+    }
+}
+
+/// The asserted `EUF` literals as a reason core over `BoolSearch` variables: every
+/// `EUF` literal currently asserted, at its asserted polarity — asserted-only by
+/// construction, a sound explanation for any congruence entailment the asserted `EUF`
+/// state forces. Literals without a query variable are skipped (they cannot be named).
+fn asserted_euf_reason(atom_var: &BTreeMap<TermId, usize>, part: &Partition) -> Vec<TheoryLit> {
+    part.euf
+        .iter()
+        .filter_map(|lit| {
+            atom_var.get(&lit.atom).map(|&var| TheoryLit {
+                atom: var,
+                value: lit.value,
+            })
+        })
+        .collect()
 }
 
 /// A verdict code for the parallel-run equivalence gate: `0` = `Unsat`, `1` = `Sat`,
@@ -218,4 +373,45 @@ pub fn combined_lia_vs_cold_conjunction(
     );
 
     Some((cold, warm_first))
+}
+
+/// **Combined-theory-propagation harness** (slice-2 soundness gate, test-only): build
+/// the warm [`CombinedTheoryLia`] over the atom set `atom_terms` (the `BoolSearch`
+/// numbering), assert the conjunction `asserted` (each `(atom term, polarity)`), and
+/// return every literal [`CombinedTheoryLia::propagate`] genuinely entails as a
+/// [`crate::combined_theory::PropagationReport`], so the slice-2 test can confirm each
+/// is genuinely entailed (`asserted ∧ ¬entailed` `UNSAT` offline) and the reason
+/// asserted-only. Returns `None` when `asserted` is not a conjunction of `QF_UFLIA`
+/// theory atoms. Not part of the production surface.
+#[doc(hidden)]
+#[must_use]
+pub fn combined_theory_lia_propagations(
+    arena: &mut TermArena,
+    atom_terms: &[TermId],
+    asserted: &[(TermId, bool)],
+) -> Option<Vec<crate::combined_theory::PropagationReport>> {
+    if !asserted
+        .iter()
+        .all(|&(atom, _)| is_theory_atom(arena, atom))
+    {
+        return None;
+    }
+    let literals: Vec<Literal> = asserted
+        .iter()
+        .map(|&(atom, value)| Literal { atom, value })
+        .collect();
+    let combined = CombinedTheoryLia::new(arena, atom_terms);
+    let props = combined.propagate(arena, &literals);
+    let term_of = |var: usize| atom_terms.get(var).copied();
+    let mut out = Vec::with_capacity(props.len());
+    for prop in props {
+        let atom = term_of(prop.lit.atom)?;
+        let reason: Option<Vec<(TermId, bool)>> = prop
+            .reason
+            .iter()
+            .map(|r| term_of(r.atom).map(|t| (t, r.value)))
+            .collect();
+        out.push((atom, prop.lit.value, reason?));
+    }
+    Some(out)
 }

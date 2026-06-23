@@ -189,7 +189,7 @@ pub fn check_qf_uflra_boolean_with_metrics(
     config: &SolverConfig,
     enable_early_prune: bool,
 ) -> (CheckResult, usize, usize) {
-    let mut metrics = (0usize, 0usize);
+    let mut metrics = Metrics::default();
     let result = check_qf_uflra_boolean(
         arena,
         assertions,
@@ -197,7 +197,25 @@ pub fn check_qf_uflra_boolean_with_metrics(
         enable_early_prune,
         Some(&mut metrics),
     );
-    (result, metrics.0, metrics.1)
+    (result, metrics.prunes_fired, metrics.models_tried)
+}
+
+/// Test-only entry returning the Boolean-`DPLL(T)` verdict together with the
+/// **combined-theory-propagation** fire count (slice 2): how many genuinely-entailed
+/// literals the joint (Boolean + theory) propagation fixpoint assigned (or conflicts it
+/// learned) across the search. Lets the slice-2 "propagation fires through the
+/// integrated path" assertion observe that theory propagation actually engages. Not
+/// part of the production surface.
+#[doc(hidden)]
+#[must_use]
+pub fn check_qf_uflra_boolean_prop_metrics(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> (CheckResult, usize) {
+    let mut metrics = Metrics::default();
+    let result = check_qf_uflra_boolean(arena, assertions, config, true, Some(&mut metrics));
+    (result, metrics.props_fired)
 }
 
 /// Decides a **conjunction** of `QF_UFLRA` literals by the model-based combination
@@ -1141,7 +1159,7 @@ fn check_qf_uflra_boolean(
     assertions: &[TermId],
     config: &SolverConfig,
     enable_early_prune: bool,
-    metrics: Option<&mut (usize, usize)>,
+    metrics: Option<&mut Metrics>,
 ) -> CheckResult {
     // The distinct theory atoms over the whole assertion set become the proposition
     // variables 0..atom_count (deterministic left-to-right scan).
@@ -1187,14 +1205,18 @@ fn check_qf_uflra_boolean(
         trail: Vec::new(),
         models_tried: 0,
         last_early_atoms: 0,
+        last_prop_atoms: 0,
         prunes_fired: 0,
+        props_fired: 0,
         enable_early_prune,
         deadline,
         combined,
     };
     let result = search.solve(arena);
     if let Some(out) = metrics {
-        *out = (search.prunes_fired, search.models_tried);
+        out.prunes_fired = search.prunes_fired;
+        out.models_tried = search.models_tried;
+        out.props_fired = search.props_fired;
     }
     result
 }
@@ -1208,6 +1230,38 @@ enum EarlyPrune {
     Exhausted,
     /// No pruning (no new atoms, a total assignment, or a non-`Unsat` check): keep going.
     Continue,
+}
+
+/// The enumeration metrics the Boolean `DPLL(T)` layer reports back (test-only): the
+/// early-prune fire count, the total propositional models decided, and the
+/// combined-theory-propagation fire count (slice 2).
+#[derive(Default)]
+struct Metrics {
+    prunes_fired: usize,
+    models_tried: usize,
+    props_fired: usize,
+}
+
+/// The reason clause `¬(reason) ∨ lit` for a combined-theory propagation
+/// `reason ⊨ lit`: each reason literal contributes its negation, plus the propagated
+/// literal at its proven polarity. Under the current assignment (every reason literal
+/// asserted, `lit` asserted at the *opposite* polarity) this clause is falsified — the
+/// theory-conflict clause the search learns and backtracks on (and once the conflict is
+/// resolved it remains a valid implication, forcing `lit` whenever its reason holds).
+fn reason_clause(prop: &crate::euf_egraph::TheoryProp) -> Vec<BoolLit> {
+    let mut clause: Vec<BoolLit> = prop
+        .reason
+        .iter()
+        .map(|r| BoolLit {
+            var: r.atom,
+            positive: !r.value,
+        })
+        .collect();
+    clause.push(BoolLit {
+        var: prop.lit.atom,
+        positive: prop.lit.value,
+    });
+    clause
 }
 
 /// The propositional enumeration search of the Boolean `DPLL(T)` layer. Chronological
@@ -1231,8 +1285,15 @@ struct BoolSearch<'a> {
     /// the load-bearing guard that skips internal `BCP` fixpoints which added no new
     /// theory atom (each early check pays a full from-scratch `Nelson–Oppen` run).
     last_early_atoms: usize,
+    /// The number of assigned atom variables at the most recent theory-propagation pass
+    /// — the analogous guard that skips the (from-scratch) combined propagation rebuild
+    /// on internal nodes that added no theory atom.
+    last_prop_atoms: usize,
     /// How many partial-assignment early theory conflicts pruned the search.
     prunes_fired: usize,
+    /// How many combined-theory propagations fired (an implied literal assigned or a
+    /// propagated-literal conflict learned) — the slice-2 "propagation engages" metric.
+    props_fired: usize,
     /// Whether early theory-conflict detection on partial assignments is enabled
     /// (always `true` in production; toggled off only by the pruning-metric test to
     /// establish the no-pruning baseline).
@@ -1387,6 +1448,65 @@ impl BoolSearch<'_> {
         EarlyPrune::Continue
     }
 
+    /// **Combined theory propagation** on the current `BCP`-fixpoint partial
+    /// assignment (slice 2): pull every literal the warm `EUF` + `LRA` combination
+    /// genuinely entails ([`crate::combined_theory::CombinedTheory::propagate`]) and
+    /// assign each as an *implied* literal, so the joint (Boolean + theory) propagation
+    /// reaches a fixpoint before the next decision. This is **additive** pruning — it
+    /// only assigns more genuinely-entailed literals, never changing the `Sat` / `Unsat`
+    /// verdict.
+    ///
+    /// A propagated literal that *agrees* with an already-assigned value is a no-op; one
+    /// that is currently *unassigned* is assigned implied (recorded on the trail so
+    /// backtrack undoes it); one that *conflicts* with the current value is a theory
+    /// conflict whose reason clause `¬(reason) ∨ lit` is falsified — learned and
+    /// backtracked exactly like a Boolean conflict.
+    ///
+    /// Returns [`EarlyPrune::Pruned`] when a propagation either assigned a new literal
+    /// or resolved a conflict (re-run `BCP`), [`EarlyPrune::Exhausted`] when a conflict
+    /// left no decision to flip (the whole query is `UNSAT`), and
+    /// [`EarlyPrune::Continue`] when nothing was propagated (proceed to a decision). The
+    /// `assigned > last_prop_atoms` guard skips the (from-scratch) propagation rebuild on
+    /// internal nodes that added no theory atom, mirroring `early_theory_prune`.
+    fn theory_propagate(&mut self, arena: &mut TermArena) -> EarlyPrune {
+        let assigned = (0..self.atom_count)
+            .filter(|&v| self.value[v].is_some())
+            .count();
+        if assigned <= self.last_prop_atoms || assigned >= self.atom_count {
+            return EarlyPrune::Continue;
+        }
+        self.last_prop_atoms = assigned;
+        let literals = self.model_literals();
+        let props = self.combined.propagate(arena, &literals);
+        let mut progressed = false;
+        for prop in props {
+            match self.value[prop.lit.atom] {
+                Some(v) if v == prop.lit.value => {} // already entailed this way: no-op
+                Some(_) => {
+                    // The theory entails the opposite of the current value: the reason
+                    // clause `¬(reason) ∨ lit` is falsified. Learn it and backtrack.
+                    self.props_fired += 1;
+                    let clause = reason_clause(&prop);
+                    if !self.learn_and_backtrack(clause) {
+                        return EarlyPrune::Exhausted;
+                    }
+                    return EarlyPrune::Pruned;
+                }
+                None => {
+                    self.props_fired += 1;
+                    self.value[prop.lit.atom] = Some(prop.lit.value);
+                    self.trail.push((prop.lit.atom, false));
+                    progressed = true;
+                }
+            }
+        }
+        if progressed {
+            EarlyPrune::Pruned
+        } else {
+            EarlyPrune::Continue
+        }
+    }
+
     /// Runs the enumerative search. Returns `SAT` (replay-checked) for the first total
     /// propositional model whose theory-combination is consistent, `UNSAT` when every
     /// model is blocked, and a conservative `Unknown` on a cap or an `Unknown`
@@ -1406,6 +1526,13 @@ impl BoolSearch<'_> {
             }
             // Early theory-conflict detection on the partial assignment.
             match self.early_theory_prune(arena) {
+                EarlyPrune::Pruned => continue,
+                EarlyPrune::Exhausted => return CheckResult::Unsat,
+                EarlyPrune::Continue => {}
+            }
+            // Combined theory propagation to a joint (Boolean + theory) fixpoint: assign
+            // every genuinely-entailed literal as implied before deciding. Pruning only.
+            match self.theory_propagate(arena) {
                 EarlyPrune::Pruned => continue,
                 EarlyPrune::Exhausted => return CheckResult::Unsat,
                 EarlyPrune::Continue => {}

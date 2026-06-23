@@ -11,8 +11,9 @@
 
 use axeyum_ir::{Assignment, Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::{
-    CheckResult, SolverConfig, check_qf_uflia_boolean_with_metrics, check_qf_uflia_online,
-    check_with_uf_arithmetic,
+    CheckResult, SolverConfig, check_qf_uflia_boolean_prop_metrics,
+    check_qf_uflia_boolean_with_metrics, check_qf_uflia_online, check_with_uf_arithmetic,
+    combined_theory_lia_propagations,
 };
 
 fn iconst(arena: &mut TermArena, n: i128) -> TermId {
@@ -786,5 +787,144 @@ fn combined_theory_lia_matches_cold_decide_conjunction() {
     assert!(
         compared > 0,
         "the parallel-run equivalence gate compared no conjunctive instances"
+    );
+}
+
+/// `Some(true)`/`Some(false)` for the offline decider's sat/unsat verdict on a
+/// conjunction, `None` on Unknown — the trusted reference for the slice-2 entailment
+/// check.
+fn offline_verdict(arena: &mut TermArena, assertions: &[TermId]) -> Option<bool> {
+    let config = SolverConfig::default();
+    verdict(&check_with_uf_arithmetic(arena, assertions, &config).expect("offline check"))
+}
+
+/// The witness term refuting a propagated literal `(atom, value)`: `not(atom)` when the
+/// literal is entailed true (so `asserted ∧ ¬atom` must be UNSAT), `atom` itself when
+/// entailed false.
+fn refuting_witness(arena: &mut TermArena, atom: TermId, value: bool) -> TermId {
+    if value {
+        arena.not(atom).expect("negate atom")
+    } else {
+        atom
+    }
+}
+
+/// **Slice-2 propagation soundness + fires gate (load-bearing).** Each literal the warm
+/// `CombinedTheoryLia::propagate` reports must be GENUINELY entailed by the asserted
+/// state — `asserted ∧ ¬entailed` is offline-UNSAT — and its reason asserted-only. A
+/// counter proves propagation FIRES. The integer mirror of `uflra_online`'s
+/// `combined_theory_propagation_is_sound_and_fires`.
+#[test]
+fn combined_theory_propagation_is_sound_and_fires() {
+    let mut state: u64 = 0x51a2_b3c4_d5e6_f700;
+    let mut fired = 0usize;
+    let mut confirmed = 0usize;
+
+    for _ in 0..1500usize {
+        let mut arena = TermArena::new();
+        let pool = build_atom_pool(&mut arena, &mut state);
+
+        let mut asserted: Vec<(TermId, bool)> = Vec::new();
+        for &atom in &pool {
+            if next_rand(&mut state) % 2 == 0 {
+                asserted.push((atom, true));
+            }
+        }
+        if asserted.is_empty() {
+            continue;
+        }
+
+        let asserted_terms: Vec<TermId> = asserted.iter().map(|&(t, _)| t).collect();
+        if offline_verdict(&mut arena, &asserted_terms) == Some(false) {
+            continue; // skip an already-UNSAT conjunction (vacuous entailment)
+        }
+
+        let Some(props) = combined_theory_lia_propagations(&mut arena, &pool, &asserted) else {
+            continue;
+        };
+
+        for (atom, value, reason) in props {
+            fired += 1;
+
+            // (1) Genuine entailment: asserted ∧ ¬entailed must be offline-UNSAT.
+            let witness = refuting_witness(&mut arena, atom, value);
+            let mut full = asserted_terms.clone();
+            full.push(witness);
+            if let Some(sat) = offline_verdict(&mut arena, &full) {
+                assert!(
+                    !sat,
+                    "UNSOUND COMBINED PROPAGATION: asserted ∧ ¬entailed is SAT \
+                     (atom={atom:?}, value={value}); asserted: {asserted_terms:?}"
+                );
+                confirmed += 1;
+            }
+
+            // (2) Asserted-only reason.
+            for (r_atom, r_value) in &reason {
+                assert!(
+                    *r_value,
+                    "reason literal must be asserted-true here (got false), atom {r_atom:?}"
+                );
+                assert!(
+                    asserted.contains(&(*r_atom, true)),
+                    "reason names a NON-asserted atom {r_atom:?} — unsound explanation"
+                );
+            }
+        }
+    }
+
+    eprintln!(
+        "combined-theory-lia-propagation gate: fired={fired} propagations, \
+         {confirmed} entailments offline-confirmed, 0 unsound"
+    );
+    assert!(
+        fired > 20,
+        "combined theory propagation never meaningfully fired ({fired}) — slice 2 not exercised"
+    );
+    assert!(
+        confirmed > 10,
+        "too few combined propagations offline-confirmed ({confirmed})"
+    );
+}
+
+/// **Slice-2 propagation fires through the integrated `BoolSearch` path.** Combined
+/// theory propagation must engage in the joint fixpoint (`props_fired > 0`), and the
+/// verdict must still agree with the offline decider (verdict-invariant).
+#[test]
+fn combined_theory_propagation_fires_in_boolean_search() {
+    let config = SolverConfig::default();
+    let mut state: u64 = 0x2468_ace0_1357_9bdf;
+    let mut total_props = 0usize;
+    let mut decided = 0usize;
+
+    for _ in 0..400usize {
+        let mut arena = TermArena::new();
+        let pool = build_atom_pool(&mut arena, &mut state);
+        let assertion_count = 2 + (next_rand(&mut state) % 2) as usize;
+        let assertions: Vec<TermId> = (0..assertion_count)
+            .map(|_| build_bool_tree(&mut arena, &pool, &mut state, 3))
+            .collect();
+
+        let (result, props_fired) =
+            check_qf_uflia_boolean_prop_metrics(&mut arena, &assertions, &config);
+        total_props += props_fired;
+
+        model_replays(&arena, &assertions, &result);
+        let offline = check_with_uf_arithmetic(&mut arena, &assertions, &config).expect("offline");
+        if let (Some(on), Some(off)) = (verdict(&result), verdict(&offline)) {
+            assert_eq!(
+                on, off,
+                "theory propagation changed the verdict (online={result:?}, offline={offline:?}); \
+                 assertions: {assertions:?}"
+            );
+            decided += 1;
+        }
+    }
+
+    assert!(decided > 0, "expected some jointly-decided cases, got none");
+    assert!(
+        total_props > 0,
+        "combined theory propagation never fired through BoolSearch ({total_props}) — \
+         the slice-2 wiring is not engaging"
     );
 }
