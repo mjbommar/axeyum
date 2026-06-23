@@ -13,13 +13,20 @@ flat assertion view is faithful.
 
 ## Layout
 
-| Dir | Logic | Source |
-|---|---|---|
-| `qf_lra/` | QF_LRA | hand-authored (canonical linear-real sat/unsat) |
-| `qf_lia/` | QF_LIA | hand-authored (integer gap / parity / solve) |
-| `qf_uf/`  | QF_UF  | hand-authored (congruence, transitivity, distinct) |
-| `qf_uflia/` | QF_UFLIA | hand-authored (uninterpreted `f` over `Int`) |
-| `cvc5/qf_lia/`, `cvc5/qf_lra/` | QF_LIA / QF_LRA | **reused from cvc5** `test/regress` (see below) |
+- **Hand-authored seeds** (statuses certain by construction), one subdir per logic:
+  `qf_lra/`, `qf_lia/`, `qf_uf/`, `qf_uflia/`, `qf_bv/`, `qf_abv/` (read-over-write),
+  `qf_nia/` (square sat/unsat), `qf_nra/` (√2 sat, `x²=-1` unsat), `qf_dt/` (enum
+  constructors).
+- **Reused from cvc5** under `cvc5/<logic>/`: flat, status-annotated, parser-friendly
+  instances for QF_LIA, QF_LRA, QF_ABV, QF_FP, QF_UF, QF_BV, QF_S (strings). See
+  provenance below.
+
+> Note on coverage: pure **QF_UF with `declare-sort` (uninterpreted sorts)** is
+> currently *parse-skipped* — the front end does not yet model first-class
+> uninterpreted sorts (a known gap). EUF congruence is still exercised through
+> QF_UFLIA (uninterpreted functions over `Int`). Most **QF_S (strings)** files
+> parse-skip too — axeyum's string support is experimental/bounded. These skips
+> are coverage gaps the gate surfaces honestly, not soundness failures.
 
 ## Provenance of the `cvc5/` slice
 
