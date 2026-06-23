@@ -414,11 +414,17 @@ pub const CAPABILITIES: &[Capability] = &[
         area: "quantifiers",
         feature: "finite-domain expansion + congruence-aware e-matching on the e-graph keystone \
                   (single/multi-variable, multi-pattern set-cover triggers, nested triggers) \
-                  + the instantiation fixpoint loop + model-based instantiation (MBQI)",
+                  + the instantiation fixpoint loop + model-based instantiation (MBQI), now with \
+                  MBP-DRIVEN instantiation: when scalar point-probing finds no falsifying value, the \
+                  universal's negation (¬φ as an LRA/LIA conjunction) is projected via mbp_lra/mbp_lia \
+                  from a witness sub-solve to synthesize a SYMBOLIC instantiation point (e.g. a witness \
+                  symbolic in another variable, or a non-unit-coefficient witness the ±1 probe misses)",
         assurance: Assurance::SoundIncomplete,
         evidence: "complete over finite domains; otherwise sound refutation by instantiation \
-                   (every instance is entailed, so a ground UNSAT transfers; SAT/no-progress is \
-                   unknown-safe). E-matching is modulo the ground congruence (keystone EGraph::ematch)",
+                   (every instance body[x:=t] is entailed by ∀x.body for ANY ground t, so a ground UNSAT \
+                   transfers; MBP/the sub-solve only CHOOSE a useful t — a bad choice adds a redundant-but-\
+                   true instance, never an unsound one; SAT/no-progress is unknown-safe). E-matching is \
+                   modulo the ground congruence (keystone EGraph::ematch)",
         reference: "ADR-0016/0032",
     },
     Capability {
