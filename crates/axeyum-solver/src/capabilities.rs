@@ -179,7 +179,10 @@ pub const CAPABILITIES: &[Capability] = &[
                    read-CONSISTENCY stratum is Carcara-checked (select as a plain UF); and the \
                    read-over-write-SAME collapse select(store(a,i,v),i)=v now has a Carcara-checked \
                    derivation (prove_qf_abv_row_same_alethe_carcara: eq_simplify/cong/ite_simplify/trans/\
-                   resolution, with a tamper-rejection test) — shrinking the trusted surface to just the \
+                   resolution, with a tamper-rejection test), and the read-over-write-DIFF collapse \
+                   select(store(a,i,e),j)=select(a,j) for distinct CONSTANT indices is likewise Carcara-checked \
+                   (prove_qf_abv_row_diff_alethe_carcara: evaluate/cong/ite_simplify/trans/resolution, with a \
+                   tamper-rejection test) — both shrinking the trusted surface to just the \
                    read-over-write rewrite INSTANCE (asserted as a premise; the array axiom is not yet \
                    certified)",
         reference: "ADR-0010",

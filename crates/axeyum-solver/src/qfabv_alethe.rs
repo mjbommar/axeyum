@@ -468,6 +468,296 @@ fn row_same_simplify_hook(rule: &str, clause: &[AletheLit]) -> Option<bool> {
     }
 }
 
+/// Emits a **Carcara-checkable** refutation of a `QF_ABV` read-over-write-*diff*
+/// disequality, deriving `select(store(a, i, e), j) = select(a, j)` from the
+/// *general* read-over-write rewrite instance through Carcara's own `evaluate`,
+/// `cong`, `ite_simplify`, and `trans` rules — the diff-index (`i ≠ j`)
+/// counterpart of [`prove_qf_abv_row_same_alethe_carcara`].
+///
+/// ## The diff-case collapse
+///
+/// The general select-of-store rewrite is
+/// `select(store(a, i, e), j) → ite(i = j, e, select(a, j))`. The same-index
+/// branch (`i = j ⇒ ite → e`) is certified by
+/// [`prove_qf_abv_row_same_alethe_carcara`]. This emitter certifies the **other**
+/// branch — `i ≠ j ⇒ ite → select(a, j)` — by asserting the read-over-write
+/// rewrite *instance*
+///
+/// ```text
+/// (= (select (store a i e) j) (ite (= i j) e (select a j)))
+/// ```
+///
+/// as a `QF_AUFBV` premise, then folding `(ite (= i j) …)` to `(select a j)` with
+/// rules Carcara checks in full:
+///
+/// ```text
+/// (assume rw (= (select (store a i e) j) (ite (= i j) e (select a j))))
+/// (assume h  (not (= (select (store a i e) j) (select a j))))
+/// (step s1 (cl (= (= i j) false)) :rule evaluate)
+/// (step s2 (cl (= (ite (= i j) e (select a j)) (ite false e (select a j)))) :rule cong :premises (s1))
+/// (step s3 (cl (= (ite false e (select a j)) (select a j))) :rule ite_simplify)
+/// (step s4 (cl (= (ite (= i j) e (select a j)) (select a j))) :rule trans :premises (s2 s3))
+/// (step s5 (cl (= (select (store a i e) j) (select a j))) :rule trans :premises (rw s4))
+/// (step s6 (cl) :rule resolution :premises (s5 h))
+/// ```
+///
+/// ## Why the indices must be distinct **constants**
+///
+/// The diff fold needs `(= i j) → false`. Unlike the same-index `(= i i) → true`
+/// (a `eq_simplify` tautology valid for symbols), `(= i j) → false` is **not**
+/// derivable in Carcara from a symbolic disequality premise `(not (= i j))` — no
+/// `*_simplify` rule folds a symbolic equality to `false`, and feeding `(not (= i
+/// j))` as a premise leaves the `ite` condition opaque. It *is* discharged
+/// soundly by the `evaluate` rule when `i` and `j` are **distinct concrete
+/// bit-vector constants**: Carcara evaluates `(= #b… #b…)` to `false` and checks
+/// the step in full. This emitter therefore matches only the constant-index diff
+/// shape; a symbolic-index instance renders outside it and yields [`None`].
+///
+/// **Honest boundary.** Exactly as the same-index certificate: the
+/// read-over-write rewrite *instance* (`rw`) is the trusted residual — an array
+/// fact asserted as a problem premise. This certifies the **diff-case collapse
+/// reasoning** externally (the `(= i j) → false` evaluation and the `ite false`
+/// fold are Carcara-checked, not baked into a trusted rule); it does **not**
+/// certify the array axiom itself, and does not replace [`prove_qf_abv_unsat_alethe`]
+/// in the solving path.
+///
+/// Returns the `assume rw` premise term alongside the proof so the caller can
+/// emit the matching `QF_AUFBV` problem. Returns [`None`] when no assertion is a
+/// constant-index read-over-write-diff disequality, when the matched terms render
+/// outside the array fragment, or — defensively — when self-validation fails.
+///
+/// Self-validation uses [`axeyum_cnf::check_alethe_with`] with a narrow hook that
+/// accepts `evaluate` only for `(= (= c d) false)` with *distinct constant*
+/// operands and `ite_simplify` only for `(= (ite false x _) _)` — the exact two
+/// shapes emitted; Carcara is the trust anchor for them.
+///
+/// # Panics
+///
+/// Does not panic for any input; arena access is total over well-formed terms.
+#[must_use]
+pub fn prove_qf_abv_row_diff_alethe_carcara(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<(Vec<AletheCommand>, AletheTerm)> {
+    // Find the first read-over-write-diff disequality and recover (a, i, e, j).
+    let (a, i, e, j) = assertions
+        .iter()
+        .find_map(|&assertion| match_row_diff_diseq(arena, assertion))?;
+
+    // Render the array-fragment subterms.
+    let a_t = array_term_to_alethe(arena, a)?;
+    let i_t = array_term_to_alethe(arena, i)?;
+    let e_t = array_term_to_alethe(arena, e)?;
+    let j_t = array_term_to_alethe(arena, j)?;
+
+    // `(select (store a i e) j)`, `(select a j)`, `(= i j)`, the two `ite`s.
+    let store_t = AletheTerm::App(
+        "store".to_owned(),
+        vec![a_t.clone(), i_t.clone(), e_t.clone()],
+    );
+    let sel_store = AletheTerm::App("select".to_owned(), vec![store_t, j_t.clone()]);
+    let sel_a = AletheTerm::App("select".to_owned(), vec![a_t, j_t.clone()]);
+    let eq_ij = AletheTerm::App("=".to_owned(), vec![i_t, j_t]);
+    let false_t = AletheTerm::Const("false".to_owned());
+    let ite_cond = AletheTerm::App(
+        "ite".to_owned(),
+        vec![eq_ij.clone(), e_t.clone(), sel_a.clone()],
+    );
+    let ite_false = AletheTerm::App("ite".to_owned(), vec![false_t.clone(), e_t, sel_a.clone()]);
+
+    // The read-over-write rewrite instance, the `rw` premise (returned for the problem).
+    let rw_atom = eq(sel_store.clone(), ite_cond.clone());
+    // The refuted disequality `(not (= (select (store a i e) j) (select a j)))`.
+    let goal_eq = eq(sel_store, sel_a.clone());
+
+    let proof = vec![
+        AletheCommand::Assume {
+            id: "rw".to_owned(),
+            clause: vec![pos(rw_atom.clone())],
+        },
+        AletheCommand::Assume {
+            id: "h".to_owned(),
+            clause: vec![neg(goal_eq.clone())],
+        },
+        // s1: (= (= i j) false) by evaluate (distinct constant indices).
+        step("s1", vec![pos(eq(eq_ij, false_t))], "evaluate", &[]),
+        // s2: cong lifting `(= i j) = false` under the `ite` head.
+        step(
+            "s2",
+            vec![pos(eq(ite_cond.clone(), ite_false.clone()))],
+            "cong",
+            &["s1"],
+        ),
+        // s3: (= (ite false e (select a j)) (select a j)) by ite_simplify.
+        step(
+            "s3",
+            vec![pos(eq(ite_false, sel_a.clone()))],
+            "ite_simplify",
+            &[],
+        ),
+        // s4: (= (ite (= i j) e (select a j)) (select a j)) by trans s2,s3.
+        step("s4", vec![pos(eq(ite_cond, sel_a))], "trans", &["s2", "s3"]),
+        // s5: (= (select (store a i e) j) (select a j)) by trans rw,s4.
+        step("s5", vec![pos(goal_eq)], "trans", &["rw", "s4"]),
+        // s6: empty clause by resolving s5 against the assumed disequality.
+        step("s6", Vec::new(), "resolution", &["s5", "h"]),
+    ];
+
+    // Self-validate with the narrow simplify hook; Carcara is the trust anchor.
+    let accepted = matches!(check_alethe_with(&proof, &row_diff_simplify_hook), Ok(true));
+    accepted.then_some((proof, rw_atom))
+}
+
+/// If `assertion` is `(not (= sel (select a j)))` or the symmetric form, where
+/// `sel == (select (store a i e) j)` with the read index `j` **distinct** from the
+/// write index `i` and both are bit-vector constants, returns `(a, i, e, j)`;
+/// otherwise [`None`].
+///
+/// The constant-index requirement mirrors the emitter's Carcara `evaluate` step
+/// (`(= i j) → false`): only distinct *concrete* indices fold there.
+fn match_row_diff_diseq(
+    arena: &TermArena,
+    assertion: TermId,
+) -> Option<(TermId, TermId, TermId, TermId)> {
+    // Peel a single `not`.
+    let TermNode::App {
+        op: Op::BoolNot,
+        args,
+    } = arena.node(assertion)
+    else {
+        return None;
+    };
+    let &[inner] = &args[..] else {
+        return None;
+    };
+    // The inner term must be a binary equality `(= x y)`.
+    let TermNode::App {
+        op: Op::Eq,
+        args: eq_args,
+    } = arena.node(inner)
+    else {
+        return None;
+    };
+    let &[x, y] = &eq_args[..] else {
+        return None;
+    };
+    // Either operand may be the ROW-diff select `(select (store a i e) j)`; the
+    // other must then be `(select a j)`.
+    if let Some(parts) = match_row_diff_pair(arena, x, y) {
+        return Some(parts);
+    }
+    match_row_diff_pair(arena, y, x)
+}
+
+/// If `sel == (select (store a i e) j)` (with `i`, `j` distinct bit-vector
+/// constants) and `other == (select a j)`, returns `(a, i, e, j)`; else [`None`].
+fn match_row_diff_pair(
+    arena: &TermArena,
+    sel: TermId,
+    other: TermId,
+) -> Option<(TermId, TermId, TermId, TermId)> {
+    // sel == (select (store a i e) j)
+    let TermNode::App {
+        op: Op::Select,
+        args: sel_args,
+    } = arena.node(sel)
+    else {
+        return None;
+    };
+    let &[stored, read_idx] = &sel_args[..] else {
+        return None;
+    };
+    let TermNode::App {
+        op: Op::Store,
+        args: store_args,
+    } = arena.node(stored)
+    else {
+        return None;
+    };
+    let &[array, write_idx, value] = &store_args[..] else {
+        return None;
+    };
+    // Diff case: read index distinct from write index, and both constants so the
+    // emitter's `evaluate` step folds `(= i j)` to `false`.
+    if read_idx == write_idx || !is_bv_const(arena, read_idx) || !is_bv_const(arena, write_idx) {
+        return None;
+    }
+    // other == (select a j) — same array, same read index.
+    let TermNode::App {
+        op: Op::Select,
+        args: other_args,
+    } = arena.node(other)
+    else {
+        return None;
+    };
+    let &[other_array, other_idx] = &other_args[..] else {
+        return None;
+    };
+    if other_array != array || other_idx != read_idx {
+        return None;
+    }
+    Some((array, write_idx, value, read_idx))
+}
+
+/// Whether `term` is a bit-vector constant node.
+fn is_bv_const(arena: &TermArena, term: TermId) -> bool {
+    matches!(arena.node(term), TermNode::BvConst { .. })
+}
+
+/// The narrow self-validation hook for [`prove_qf_abv_row_diff_alethe_carcara`]:
+/// accepts `evaluate` only when the clause is the unit `(= (= c d) false)` with
+/// `c`, `d` *distinct constants*, and `ite_simplify` only when it is the unit
+/// `(= (ite false _ y) y)`. Every other rule defers (`None`). These are the two
+/// exact shapes the emitter produces and are precisely the simplifications
+/// Carcara independently checks.
+fn row_diff_simplify_hook(rule: &str, clause: &[AletheLit]) -> Option<bool> {
+    let [lit] = clause else {
+        return Some(false);
+    };
+    if lit.negated {
+        return Some(false);
+    }
+    match rule {
+        // (= (= c d) false) with c, d distinct constants.
+        "evaluate" => {
+            let AletheTerm::App(head, args) = &lit.atom else {
+                return Some(false);
+            };
+            if head != "=" || args.len() != 2 {
+                return Some(false);
+            }
+            let inner_is_const_diseq = matches!(
+                &args[0],
+                AletheTerm::App(h, a)
+                    if h == "="
+                        && a.len() == 2
+                        && matches!(&a[0], AletheTerm::Const(_))
+                        && matches!(&a[1], AletheTerm::Const(_))
+                        && a[0] != a[1]
+            );
+            let rhs_is_false = matches!(&args[1], AletheTerm::Const(c) if c == "false");
+            Some(inner_is_const_diseq && rhs_is_false)
+        }
+        // (= (ite false _ y) y)
+        "ite_simplify" => {
+            let AletheTerm::App(head, args) = &lit.atom else {
+                return Some(false);
+            };
+            if head != "=" || args.len() != 2 {
+                return Some(false);
+            }
+            let AletheTerm::App(ite_head, ite_args) = &args[0] else {
+                return Some(false);
+            };
+            let well_formed = ite_head == "ite"
+                && ite_args.len() == 3
+                && matches!(&ite_args[0], AletheTerm::Const(c) if c == "false");
+            Some(well_formed && ite_args[2] == args[1])
+        }
+        _ => None,
+    }
+}
+
 /// `(= a b)`.
 fn eq(a: AletheTerm, b: AletheTerm) -> AletheTerm {
     AletheTerm::App("=".to_owned(), vec![a, b])

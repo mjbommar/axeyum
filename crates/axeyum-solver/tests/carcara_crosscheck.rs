@@ -20,11 +20,12 @@ use axeyum_ir::{Rational, Sort, TermArena, TermId};
 use axeyum_smtlib::write_script;
 use axeyum_solver::{
     bitblast_step, lra_interpolant_certified, prove_lra_unsat_alethe,
-    prove_qf_abv_row_same_alethe_carcara, prove_qf_abv_unsat_alethe_via_elimination,
-    prove_qf_bv_unsat_alethe, prove_qf_bv_unsat_alethe_ext_compare,
-    prove_qf_bv_unsat_alethe_route2, prove_qf_dt_unsat_alethe_via_simplification,
-    prove_qf_uf_unsat_alethe, prove_qf_ufbv_unsat_alethe, qf_bv_interpolant_certified,
-    qf_uf_interpolant_certified, uflra_interpolant_certified,
+    prove_qf_abv_row_diff_alethe_carcara, prove_qf_abv_row_same_alethe_carcara,
+    prove_qf_abv_unsat_alethe_via_elimination, prove_qf_bv_unsat_alethe,
+    prove_qf_bv_unsat_alethe_ext_compare, prove_qf_bv_unsat_alethe_route2,
+    prove_qf_dt_unsat_alethe_via_simplification, prove_qf_uf_unsat_alethe,
+    prove_qf_ufbv_unsat_alethe, qf_bv_interpolant_certified, qf_uf_interpolant_certified,
+    uflra_interpolant_certified,
 };
 
 /// Resolves the Carcara binary: `AXEYUM_CARCARA_BIN` if set, otherwise the
@@ -2222,6 +2223,97 @@ fn abv_row_same_tampered_collapse_is_rejected_by_carcara() {
 (check-sat)
 ";
     let report = carcara_output(&bin, "abv_row_same_tampered", smt2, &proof);
+    assert!(
+        report.contains("invalid") || report.contains("ERROR"),
+        "carcara must reject the tampered ite_simplify step, got:\n{report}"
+    );
+    assert!(
+        !report.lines().any(|l| l.trim() == "valid"),
+        "tampered proof must not be reported valid, got:\n{report}"
+    );
+}
+
+// `prove_qf_abv_row_diff_alethe_carcara`
+//
+// The diff-index (`i ≠ j`) counterpart of the same-index certificate above. The
+// general select-of-store rewrite `select(store(a, i, e), j) → ite(i = j, e,
+// select(a, j))` has two branches; the same-index test certifies `i = j ⇒ ite →
+// e`, this one certifies `i ≠ j ⇒ ite → select(a, j)`. The `.smt2` asserts the
+// read-over-write rewrite *instance* (the trusted residual) plus the refuted
+// disequality `select(store(a, i, e), j) ≠ select(a, j)`; the proof folds the
+// `ite` with `evaluate` (`(= i j) → false` for distinct constant indices), `cong`,
+// `ite_simplify` (`ite false e _ → _`), and `trans` — all Carcara-checked. The
+// indices are distinct *constants* (`#b0001`, `#b0010`) because `(= i j) → false`
+// is only Carcara-derivable for concrete indices (no `*_simplify` folds a symbolic
+// equality to `false`).
+
+/// Builds a read-over-write-*diff* disequality
+/// `(not (= (select (store a #b0001 e) #b0010) (select a #b0010)))` over
+/// `a : (Array (BitVec 4) (BitVec 8))`, returning the assertion id.
+fn row_diff_diseq(arena: &mut TermArena) -> TermId {
+    let a = arena.array_var("a", 4, 8).unwrap();
+    let i = arena.bv_const(4, 1).unwrap();
+    let j = arena.bv_const(4, 2).unwrap();
+    let e = bvw(arena, "e", 8);
+    let stored = arena.store(a, i, e).unwrap();
+    let sel_store = arena.select(stored, j).unwrap();
+    let sel_a = arena.select(a, j).unwrap();
+    let eq = arena.eq(sel_store, sel_a).unwrap();
+    arena.not(eq).unwrap()
+}
+
+/// The `.smt2` problem matching [`row_diff_diseq`]: declares `a`, `e`, and asserts
+/// the read-over-write rewrite instance plus the refuted diff disequality.
+const ROW_DIFF_SMT2: &str = "\
+(set-logic QF_AUFBV)
+(declare-const a (Array (_ BitVec 4) (_ BitVec 8)))
+(declare-const e (_ BitVec 8))
+(assert (= (select (store a #b0001 e) #b0010) (ite (= #b0001 #b0010) e (select a #b0010))))
+(assert (not (= (select (store a #b0001 e) #b0010) (select a #b0010))))
+(check-sat)
+";
+
+#[test]
+fn abv_row_diff_collapse_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let neq = row_diff_diseq(&mut arena);
+    let (proof, _rw) = prove_qf_abv_row_diff_alethe_carcara(&arena, &[neq])
+        .expect("emit QF_ABV read-over-write-diff Carcara certificate");
+    let report = carcara_accepts_smt2(&bin, "abv_row_diff_collapse", ROW_DIFF_SMT2, &proof);
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+#[test]
+fn abv_row_diff_tampered_collapse_is_rejected_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let neq = row_diff_diseq(&mut arena);
+    let (mut proof, _rw) = prove_qf_abv_row_diff_alethe_carcara(&arena, &[neq])
+        .expect("emit QF_ABV read-over-write-diff Carcara certificate");
+    // Tamper the `ite_simplify` step (s3) to claim `ite false e (select a j) → e`
+    // (the then-branch) instead of `→ (select a j)` (the else-branch). The fold is
+    // wrong, so a sound checker MUST reject — no fabricated certificate slips through.
+    let AletheCommand::Step { clause, .. } = &mut proof[4] else {
+        panic!("expected step at index 4 (s3 ite_simplify)");
+    };
+    let AletheLit { atom, .. } = &mut clause[0];
+    let AletheTerm::App(_, eq_args) = atom else {
+        panic!("expected (= … …) atom in s3");
+    };
+    // RHS of s3 is `(select a j)` (the else-branch); swap it for the then-branch `e`.
+    let AletheTerm::App(_, ite_args) = &eq_args[0] else {
+        panic!("expected (ite …) on the LHS of s3");
+    };
+    let bogus_rhs = ite_args[1].clone();
+    eq_args[1] = bogus_rhs;
+    let report = carcara_output(&bin, "abv_row_diff_tampered", ROW_DIFF_SMT2, &proof);
     assert!(
         report.contains("invalid") || report.contains("ERROR"),
         "carcara must reject the tampered ite_simplify step, got:\n{report}"
