@@ -31,7 +31,7 @@
 //! e-graph per call, exactly as the cold core does), so only the `LiaTheory` construction
 //! is warmed in slice 1.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_ir::{TermArena, TermId};
 
@@ -414,4 +414,512 @@ pub fn combined_theory_lia_propagations(
         out.push((atom, prop.lit.value, reason?));
     }
     Some(out)
+}
+
+// --- Slice 3b-lia: the incremental, backtrackable combined-theory state. -----
+
+/// How a combined-theory atom routes to the live sub-theories (slice 3b-lia). The
+/// incremental [`CombinedIncrementalLia::assert`] consults this per propositional
+/// variable to fan an assertion out to the owning sub-theory (or both, for a shared
+/// atom). The integer mirror of [`crate::combined_theory`]'s `AtomRoute`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AtomRoute {
+    /// A pure `LIA` order atom — asserted on the live `LiaTheory` only.
+    Lia,
+    /// A pure `EUF` (UF-touching, non-linear-integer) equality — asserted on the live
+    /// `EufTheory` only.
+    Euf,
+    /// A linear-integer equality that also mentions a `UF` application — asserted on
+    /// **both** sub-theories (the original atom is genuinely shared).
+    Both,
+    /// An interface `(= s t)` atom for shared pair index `pair` — asserting it merges
+    /// / separates the pair on **both** the `EufTheory` (via the eq atom) and the
+    /// `LiaTheory` (via its eq interface atom).
+    InterfaceEq { pair: usize },
+    /// An interface order atom (`s < t` / `s > t`) for a shared pair — asserted on the
+    /// `LiaTheory` only (the `EufTheory` has no order relation).
+    InterfaceOrder,
+}
+
+/// One registered shared-interface pair (slice 3b-lia): its `(s, t)` integer terms and
+/// the freshly-allocated propositional variables of its three structural atoms
+/// (`eq` / `lt` / `gt`), beyond the original Tseitin `atom_count`. Slice 3c-lia adds the
+/// structural clauses (`eq ∨ lt ∨ gt`, mutual exclusion) over these variables to the
+/// `SAT` clause DB and lets the generic [`Dpll`](crate::lra_online::Dpll) branch them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct InterfacePair {
+    /// The shared integer terms `(s, t)`, in [`TermId`] order.
+    pub(crate) terms: (TermId, TermId),
+    /// The fresh propositional variable for `(= s t)`.
+    pub(crate) eq_var: usize,
+    /// The fresh propositional variable for `(int_lt s t)`.
+    pub(crate) lt_var: usize,
+    /// The fresh propositional variable for `(int_gt s t)`.
+    pub(crate) gt_var: usize,
+}
+
+/// A structural clause over the registered interface variables (slice 3b-lia output): a
+/// disjunction of `(variable, polarity)` literals.
+pub(crate) type StructuralClause = Vec<(usize, bool)>;
+
+/// **Incremental, backtrackable combined-theory state** (slice 3b-lia): live `EUF` +
+/// `LIA` sub-theories over the **full** atom set `[original atoms ++ interface eq/lt/gt
+/// per shared pair]`, with the up-front interface variables registered beyond the
+/// original `atom_count`. It [`impl TheorySolver`](TheorySolver) so the generic
+/// [`crate::lra_online::Dpll`] (slice 3c-lia) can drive it: each `SAT` trail assignment
+/// of a theory atom is forwarded to the owning sub-theory
+/// ([`CombinedIncrementalLia::assert`]), decisions backtrack in lockstep
+/// ([`push`](CombinedIncrementalLia::push) / [`pop`](CombinedIncrementalLia::pop)), and
+/// the combination's entailments are returned by
+/// [`propagate`](CombinedIncrementalLia::propagate) reading the **live** sub-theories.
+/// The integer mirror of [`crate::combined_theory`]'s `CombinedIncremental`.
+///
+/// **Atom routing.** Each propositional variable carries an [`AtomRoute`]: a pure order
+/// atom goes to `LIA`, a `UF`-touching equality to `EUF`, a shared linear-integer-`UF`
+/// equality to both, an interface `(= s t)` variable to both (merge/separate on `EUF`,
+/// the `LIA` eq atom), an interface order variable to `LIA`. The fan-out keeps the two
+/// sub-theories' shared-equality views in sync — the core of `Nelson–Oppen` combination.
+///
+/// **Interface-pair rule.** The shared pairs are computed by the `QF_UFLIA`
+/// **≥1-`EUF`-endpoint** rule ([`interface_terms`] / [`interface_pairs`]) — *not* the
+/// `LRA` pure-intersection rule — because `LIA` is not convex and an integer-tight bound
+/// can force an interface equality with a `UF`-argument constant (e.g. `f(1)`) that never
+/// appears in a `LIA` atom.
+///
+/// **Conflict cores.** Both sub-theories return **asserted-only** conflict cores over
+/// their own atom indices (which are the combined variables directly, since each
+/// sub-theory is built over the full combined layout). A core therefore names only
+/// currently-asserted literals at their asserted polarity — exactly the shape `1-UIP`
+/// conflict analysis in [`crate::lra_online::Dpll`] consumes.
+///
+/// **Validation (no [`Dpll`](crate::lra_online::Dpll) yet for 3b).** Slice 3b-lia keeps
+/// the trusted per-call [`CombinedTheoryLia::check`] and validates this surface against
+/// it (`combined_incremental_lia_vs_check`): driving the incremental surface to a
+/// fixpoint and reading its verdict must AGREE with `check` on every case the incremental
+/// surface *decides on its own*. Where an interface pair stays `Undetermined` (a genuine
+/// case-split that only the slice-3c branching resolves), the incremental surface
+/// honestly *defers* to `check` rather than guessing.
+pub(crate) struct CombinedIncrementalLia {
+    /// Live `EUF` sub-theory over the full combined atom layout (index = combined var).
+    euf: EufTheory,
+    /// Live `LIA` sub-theory over the same full combined atom layout.
+    lia: LiaTheory,
+    /// Per combined variable, how an assertion of it fans out to the sub-theories.
+    routes: Vec<AtomRoute>,
+    /// The registered shared-interface pairs (their structural variables + terms).
+    pairs: Vec<InterfacePair>,
+    /// Per combined variable, the value it is currently asserted at (`None` if free).
+    assigned: Vec<Option<bool>>,
+    /// The assignment log (combined variables assigned since the start, in order) —
+    /// truncated back to a marker on [`pop`](CombinedIncrementalLia::pop).
+    assigned_log: Vec<usize>,
+    /// Backtrack trail: the `assigned_log` length saved at each
+    /// [`push`](CombinedIncrementalLia::push).
+    trail: Vec<usize>,
+}
+
+impl CombinedIncrementalLia {
+    /// Builds the incremental combined state over `atom_terms` (the `BoolSearch` /
+    /// Tseitin atom numbering). The shared-interface pairs are computed **once** up front
+    /// from the full atom set by the `QF_UFLIA` ≥1-`EUF`-endpoint rule, and three fresh
+    /// propositional variables — `eq` / `lt` / `gt` — are registered per pair *beyond* the
+    /// original `atom_terms.len()`. The live `EufTheory` and `LiaTheory` are built over the
+    /// resulting combined layout so a sub-theory atom index equals the combined variable
+    /// directly.
+    ///
+    /// Returns `None` when the interface terms cannot be built (an arena failure) — the
+    /// caller then falls back to the per-call [`CombinedTheoryLia::check`].
+    #[must_use]
+    pub(crate) fn new(arena: &mut TermArena, atom_terms: &[TermId]) -> Option<Self> {
+        let original_atoms: Vec<TermId> = atom_terms.to_vec();
+
+        // Shared pairs over the full atom set, once. Build a Partition from "all atoms
+        // asserted true" purely to discover the EUF/LIA integer-term split; the polarity
+        // does not affect which terms are shared.
+        let all_true: Vec<Literal> = original_atoms
+            .iter()
+            .map(|&atom| Literal { atom, value: true })
+            .collect();
+        let part = partition(arena, &all_true)?;
+        let interface = interface_terms(arena, &part);
+        let raw_pairs = interface_pairs(&interface);
+        if raw_pairs.len() > MAX_SPLIT_PAIRS {
+            return None;
+        }
+
+        let mut combined: Vec<TermId> = original_atoms.clone();
+        let mut pairs: Vec<InterfacePair> = Vec::with_capacity(raw_pairs.len());
+        for &(s, t) in &raw_pairs {
+            let (Ok(eq), Ok(lt), Ok(gt)) = (arena.eq(s, t), arena.int_lt(s, t), arena.int_gt(s, t))
+            else {
+                return None;
+            };
+            let eq_var = combined.len();
+            combined.push(eq);
+            let lt_var = combined.len();
+            combined.push(lt);
+            let gt_var = combined.len();
+            combined.push(gt);
+            pairs.push(InterfacePair {
+                terms: (s, t),
+                eq_var,
+                lt_var,
+                gt_var,
+            });
+        }
+
+        let routes = build_routes(&part, &original_atoms, &combined, &pairs);
+        let euf = EufTheory::new(arena, &combined);
+        let lia = LiaTheory::new(arena, &combined);
+        let n = combined.len();
+        Some(Self {
+            euf,
+            lia,
+            routes,
+            pairs,
+            assigned: vec![None; n],
+            assigned_log: Vec::new(),
+            trail: Vec::new(),
+        })
+    }
+
+    /// The registered shared-interface pairs (their fresh `eq` / `lt` / `gt` variables and
+    /// `(s, t)` terms). Slice 3c-lia reads these to wire the structural clauses + the
+    /// case-split branching into the generic [`Dpll`](crate::lra_online::Dpll).
+    #[must_use]
+    pub(crate) fn interface_pairs(&self) -> &[InterfacePair] {
+        &self.pairs
+    }
+
+    /// The structural clauses over the registered interface variables (slice 3b-lia
+    /// output, for slice 3c-lia's `SAT` clause DB). Per shared pair `(s, t)` with
+    /// variables `eq` / `lt` / `gt`:
+    ///
+    /// - **totality** `eq ∨ lt ∨ gt` — exactly one order relation holds over the integers;
+    /// - **mutual exclusion** `¬eq ∨ ¬lt`, `¬eq ∨ ¬gt`, `¬lt ∨ ¬gt` — at most one holds.
+    ///
+    /// Together they pin each shared pair to exactly one of `{=, <, >}` — the trichotomy
+    /// the interface case-split branches. (The `EUF` ↔ `LIA` *tie* — that the `eq`
+    /// variable's truth equals the pair's `EUF` congruence — is enforced dynamically by
+    /// [`CombinedIncrementalLia::assert`] fanning the eq onto both sub-theories and by
+    /// [`CombinedIncrementalLia::propagate`]'s interface entailments, not by a static
+    /// clause.)
+    #[must_use]
+    pub(crate) fn structural_clauses(&self) -> Vec<StructuralClause> {
+        let mut clauses = Vec::with_capacity(self.pairs.len() * 4);
+        for p in &self.pairs {
+            clauses.push(vec![(p.eq_var, true), (p.lt_var, true), (p.gt_var, true)]);
+            clauses.push(vec![(p.eq_var, false), (p.lt_var, false)]);
+            clauses.push(vec![(p.eq_var, false), (p.gt_var, false)]);
+            clauses.push(vec![(p.lt_var, false), (p.gt_var, false)]);
+        }
+        clauses
+    }
+
+    /// Records `var := value` in the assignment log, classifying the assertion against any
+    /// existing assignment of `var`: `Fresh` (newly recorded — fan it out), `Repeat`
+    /// (idempotent at the same value — a no-op), or `Conflict` (asserting the *opposite*
+    /// of an already-asserted value — a theory conflict).
+    fn record(&mut self, var: usize, value: bool) -> RecordOutcome {
+        match self.assigned.get(var).copied().flatten() {
+            Some(existing) if existing == value => RecordOutcome::Repeat,
+            Some(_) => RecordOutcome::Conflict,
+            None => {
+                self.assigned[var] = Some(value);
+                self.assigned_log.push(var);
+                RecordOutcome::Fresh
+            }
+        }
+    }
+
+    /// The currently-asserted literals over combined variables — a sound (if non-minimal)
+    /// **asserted-only** conflict core for a direct contradiction (an opposite re-assert).
+    fn asserted_core(&self) -> Vec<TheoryLit> {
+        self.assigned_log
+            .iter()
+            .filter_map(|&v| self.assigned[v].map(|value| TheoryLit { atom: v, value }))
+            .collect()
+    }
+}
+
+/// The outcome of recording an assertion against the current assignment.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RecordOutcome {
+    /// A new assignment — the caller fans it out to the sub-theories.
+    Fresh,
+    /// The same value already asserted — a no-op.
+    Repeat,
+    /// The opposite value already asserted — a direct theory conflict.
+    Conflict,
+}
+
+impl TheorySolver for CombinedIncrementalLia {
+    /// Asserts combined variable `var` at `value`, routing it to the owning sub-theory
+    /// (or both, for a shared / interface-eq atom). Returns the conflicting **asserted**
+    /// literal core (over combined variables) on inconsistency — suitable verbatim for
+    /// `1-UIP` conflict analysis in [`crate::lra_online::Dpll`].
+    fn assert(&mut self, var: usize, value: bool) -> Result<(), Vec<TheoryLit>> {
+        match self.record(var, value) {
+            RecordOutcome::Repeat => return Ok(()), // idempotent re-assert at the same value
+            RecordOutcome::Conflict => {
+                // Asserting the opposite of an asserted literal: a direct conflict over the
+                // asserted trail (var is not re-recorded, so the trail stays consistent).
+                return Err(self.asserted_core());
+            }
+            RecordOutcome::Fresh => {}
+        }
+        let route = self.routes.get(var).copied().unwrap_or(AtomRoute::Euf);
+        match route {
+            AtomRoute::Lia | AtomRoute::InterfaceOrder => self.lia.assert(var, value),
+            AtomRoute::Euf => self.euf.assert(var, value),
+            AtomRoute::Both | AtomRoute::InterfaceEq { .. } => {
+                self.euf.assert(var, value)?;
+                self.lia.assert(var, value)
+            }
+        }
+    }
+
+    /// Saves a backtrack point on **both** sub-theories and the interface trail, in
+    /// lockstep — so a later [`pop`](CombinedIncrementalLia::pop) restores all three to
+    /// this point together.
+    fn push(&mut self) {
+        self.euf.push();
+        self.lia.push();
+        self.trail.push(self.assigned_log.len());
+    }
+
+    /// Undoes every assertion back to the most recent
+    /// [`push`](CombinedIncrementalLia::push), on both sub-theories and the interface
+    /// trail, in lockstep.
+    fn pop(&mut self) {
+        self.euf.pop();
+        self.lia.pop();
+        if let Some(marker) = self.trail.pop() {
+            while self.assigned_log.len() > marker {
+                if let Some(var) = self.assigned_log.pop() {
+                    self.assigned[var] = None;
+                }
+            }
+        }
+    }
+
+    /// Combined-theory propagation over the **live** sub-theories: the `EUF` congruence
+    /// entailments + the `LIA` order entailments, read incrementally. Indices are combined
+    /// variables directly (each sub-theory is over the full combined layout), so the
+    /// [`Dpll`](crate::lra_online::Dpll) consumes them without translation, and each reason
+    /// is asserted-only.
+    ///
+    /// The interface `eq` atoms are themselves registered in the live `EufTheory`, so an
+    /// `Entailed` interface equality is emitted *by* [`EufTheory::propagate`] (its two
+    /// sides congruent) with no extra interface pass. The `Refuted` direction (an interface
+    /// eq forced *false*) is not emitted: `EufTheory` defers disequality-entailment, and
+    /// **omitting** a propagation is always sound — it only forgoes pruning, never a
+    /// verdict. (Slice 3c-lia's structural clauses still let the
+    /// [`Dpll`](crate::lra_online::Dpll) branch the refuted pair, so completeness is
+    /// unaffected.)
+    fn propagate(&self) -> Vec<TheoryProp> {
+        let mut out: Vec<TheoryProp> = self.euf.propagate();
+        out.extend(self.lia.propagate());
+        out
+    }
+}
+
+/// Builds the per-variable [`AtomRoute`] table for the combined layout. The original
+/// atoms are routed by their **`partition` membership** — the *same* classification the
+/// per-call [`CombinedTheoryLia::check`] uses — so the incremental routing cannot diverge
+/// from the trusted path: an atom in `part.lia` only ⇒ `Lia`, in `part.euf` only ⇒ `Euf`,
+/// in both (a shared linear-integer-`UF` equality) ⇒ `Both`. The trailing variables are
+/// the registered interface atoms (eq → `InterfaceEq`, lt/gt → `InterfaceOrder`), looked
+/// up from `pairs`.
+fn build_routes(
+    part: &Partition,
+    original_atoms: &[TermId],
+    combined: &[TermId],
+    pairs: &[InterfacePair],
+) -> Vec<AtomRoute> {
+    let in_lia: BTreeSet<TermId> = part.lia.iter().map(|l| l.atom).collect();
+    let in_euf: BTreeSet<TermId> = part.euf.iter().map(|l| l.atom).collect();
+    let mut routes = vec![AtomRoute::Euf; combined.len()];
+    for (var, &atom) in original_atoms.iter().enumerate() {
+        routes[var] = match (in_lia.contains(&atom), in_euf.contains(&atom)) {
+            (true, true) => AtomRoute::Both,
+            (true, false) => AtomRoute::Lia,
+            // EUF-only, or (defensively) neither — assert on EUF, a no-op for a
+            // non-equality atom, never on LIA where a spurious constraint could mislead.
+            (false, _) => AtomRoute::Euf,
+        };
+    }
+    for (index, p) in pairs.iter().enumerate() {
+        routes[p.eq_var] = AtomRoute::InterfaceEq { pair: index };
+        routes[p.lt_var] = AtomRoute::InterfaceOrder;
+        routes[p.gt_var] = AtomRoute::InterfaceOrder;
+    }
+    routes
+}
+
+/// The incremental surface's self-decided verdict on a conjunction (slice-3b-lia
+/// harness): `Inconsistent` when an `assert` (after the propagation fixpoint) hits a
+/// sub-theory conflict; `Consistent` when every literal asserts cleanly **and** no shared
+/// interface pair stays `Undetermined` (so no case-split — a definite verdict the
+/// incremental surface owns without a `Dpll`); `Deferred` when an interface pair is
+/// `Undetermined` (a genuine case-split slice 3c-lia's branching must resolve).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IncrementalDecision {
+    /// A sub-theory conflict — the conjunction is `Unsat`.
+    Inconsistent,
+    /// No conflict and every shared pair determined — `check` must agree (not `Unsat`).
+    Consistent,
+    /// An `Undetermined` interface pair remains — deferred to the slice-3c-lia case-split.
+    Deferred,
+}
+
+/// **Slice-3b-lia incremental-vs-`check` validation harness** (soundness gate,
+/// test-only): drive the [`CombinedIncrementalLia`] surface over a conjunction of theory
+/// literals and return *both* its self-decided verdict ([`IncrementalDecision`]) and the
+/// trusted per-call [`CombinedTheoryLia::check`] verdict code, so the test can assert they
+/// agree on every case the incremental surface decides on its own. The integer mirror of
+/// [`crate::combined_theory`]'s `combined_incremental_vs_check`.
+///
+/// Returns `None` for a non-conjunctive / non-atom shape, or when the incremental state
+/// cannot be built (the same shapes [`CombinedTheoryLia::check`] declines).
+///
+/// Not part of the production surface.
+#[doc(hidden)]
+#[must_use]
+pub fn combined_incremental_lia_vs_check(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Option<(IncrementalDecision, u8)> {
+    let mut literals: Vec<Literal> = Vec::new();
+    for &assertion in assertions {
+        if !flatten_conjunction(arena, assertion, true, &mut literals) {
+            return None;
+        }
+    }
+    if literals.is_empty() || !literals.iter().all(|l| is_theory_atom(arena, l.atom)) {
+        return None;
+    }
+
+    // The atom set the incremental surface (and `check`) numbers over.
+    let mut atom_terms: Vec<TermId> = Vec::new();
+    let mut seen: BTreeSet<TermId> = BTreeSet::new();
+    for &assertion in assertions {
+        collect_uflia_atoms(arena, assertion, &mut atom_terms, &mut seen);
+    }
+
+    let decision = drive_incremental(arena, &atom_terms, &literals)?;
+
+    // The trusted per-call verdict over the same atom set.
+    let mut combined = CombinedTheoryLia::new(arena, &atom_terms);
+    let check = verdict_code(&combined.check(arena, &literals));
+    Some((decision, check))
+}
+
+/// The registered interface structure of a [`CombinedIncrementalLia`] (slice-3b-lia
+/// harness, test-only): the number of original atoms, the registered interface pairs as
+/// `(eq_var, lt_var, gt_var)` triples, and the structural clauses over those variables.
+/// Lets the slice-3b-lia test confirm the slice-3c-lia hand-off surface is well-formed:
+/// every interface variable is fresh (≥ the original atom count) and distinct, and the
+/// structural clauses reference only registered variables.
+///
+/// Returns `None` for shapes the incremental state declines.
+///
+/// Not part of the production surface.
+#[doc(hidden)]
+#[must_use]
+#[allow(clippy::type_complexity)]
+pub fn combined_incremental_lia_structure(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Option<(usize, Vec<(usize, usize, usize)>, Vec<Vec<(usize, bool)>>)> {
+    let mut atom_terms: Vec<TermId> = Vec::new();
+    let mut seen: BTreeSet<TermId> = BTreeSet::new();
+    for &assertion in assertions {
+        collect_uflia_atoms(arena, assertion, &mut atom_terms, &mut seen);
+    }
+    let original_count = atom_terms.len();
+    let state = CombinedIncrementalLia::new(arena, &atom_terms)?;
+    let pairs: Vec<(usize, usize, usize)> = state
+        .interface_pairs()
+        .iter()
+        .map(|p| (p.eq_var, p.lt_var, p.gt_var))
+        .collect();
+    Some((original_count, pairs, state.structural_clauses()))
+}
+
+/// Drives the [`CombinedIncrementalLia`] surface over `literals` and returns its
+/// self-decided [`IncrementalDecision`] (the slice-3b-lia harness core). `None` when the
+/// incremental state cannot be built over `atom_terms`.
+fn drive_incremental(
+    arena: &mut TermArena,
+    atom_terms: &[TermId],
+    literals: &[Literal],
+) -> Option<IncrementalDecision> {
+    let var_of: BTreeMap<TermId, usize> = atom_terms
+        .iter()
+        .enumerate()
+        .map(|(v, &t)| (t, v))
+        .collect();
+    let mut state = CombinedIncrementalLia::new(arena, atom_terms)?;
+    state.push();
+    for lit in literals {
+        let Some(&var) = var_of.get(&lit.atom) else {
+            continue; // an atom outside the numbering — cannot assert it (defer is sound)
+        };
+        if assert_to_fixpoint(&mut state, var, lit.value).is_err() {
+            return Some(IncrementalDecision::Inconsistent);
+        }
+    }
+    // No conflict: a definite verdict only when no interface pair stays Undetermined.
+    let euf_assertions = live_euf_assertions(arena, literals);
+    let pair_terms: Vec<(TermId, TermId)> =
+        state.interface_pairs().iter().map(|p| p.terms).collect();
+    let any_undetermined = classify_interface_equalities(arena, &euf_assertions, &pair_terms)
+        .iter()
+        .any(|c| c.1 == InterfaceStatus::Undetermined);
+    Some(if any_undetermined {
+        IncrementalDecision::Deferred
+    } else {
+        IncrementalDecision::Consistent
+    })
+}
+
+/// Asserts `var := value` then drains the propagation fixpoint, asserting every entailed
+/// literal in turn (so a conflict reachable only *through* a propagation is detected, as
+/// the slice-3c-lia [`Dpll`](crate::lra_online::Dpll) would). Returns `Err` on the first
+/// sub-theory conflict.
+fn assert_to_fixpoint(
+    state: &mut CombinedIncrementalLia,
+    var: usize,
+    value: bool,
+) -> Result<(), Vec<TheoryLit>> {
+    state.assert(var, value)?;
+    loop {
+        let props = state.propagate();
+        let mut progressed = false;
+        for prop in props {
+            // `assert` is idempotent at the same value and a no-op once assigned; it only
+            // does work for a genuinely new entailment, which is the fixpoint progress.
+            let before = state.assigned[prop.lit.atom];
+            state.assert(prop.lit.atom, prop.lit.value)?;
+            if before.is_none() {
+                progressed = true;
+            }
+        }
+        if !progressed {
+            return Ok(());
+        }
+    }
+}
+
+/// The asserted `EUF` assertion terms for `literals` (a `true` eq atom is its term, a
+/// `false` one its negation) — the input [`classify_interface_equalities`] reads to decide
+/// each shared pair. This is the **same** `EUF` view `check`'s preamble classifies against
+/// (the partition's EUF split over the original literals), so the Undetermined test the
+/// harness uses to gate `Consistent` vs `Deferred` matches `check`'s case-split.
+fn live_euf_assertions(arena: &mut TermArena, literals: &[Literal]) -> Vec<TermId> {
+    let Some(part) = partition(arena, literals) else {
+        return Vec::new();
+    };
+    build_euf_assertions(arena, &part.euf)
 }

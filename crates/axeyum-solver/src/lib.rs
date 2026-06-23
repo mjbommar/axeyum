@@ -156,7 +156,11 @@ pub use combined_theory::{
     combined_incremental_vs_check, combined_theory_propagations, combined_vs_cold_conjunction,
 };
 #[doc(hidden)]
-pub use combined_theory_lia::{combined_lia_vs_cold_conjunction, combined_theory_lia_propagations};
+pub use combined_theory_lia::{
+    IncrementalDecision as IncrementalDecisionLia, combined_incremental_lia_structure,
+    combined_incremental_lia_vs_check, combined_lia_vs_cold_conjunction,
+    combined_theory_lia_propagations,
+};
 pub use datatype_acyclicity::prove_datatype_unsat_structurally;
 pub use datatype_elim::check_with_datatype_elimination;
 pub use datatype_native::check_with_datatype_native;
