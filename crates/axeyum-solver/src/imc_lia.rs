@@ -27,7 +27,9 @@
 //! 2. **Interpolation fixpoint.** Start from `R := init`. The unrolling is
 //!    partitioned `A = R(s0) ∧ trans(s0, s1)`, `B = trans(s1, s2) ∧ … ∧
 //!    trans(s_{k-1}, s_k) ∧ (bad(s1) ∨ … ∨ bad(s_k))`, with `A ∧ B` unsatisfiable.
-//!    The Craig interpolant `I(s1)` over ℤ ([`lia_interpolant`](crate::lia_interpolant))
+//!    The Craig interpolant `I(s1)` over ℤ (the disjunctive
+//!    [`lia_interpolant_cnf`](crate::lia_interpolant_cnf), falling back to the
+//!    conjunctive [`lia_interpolant`](crate::lia_interpolant))
 //!    over-approximates the one-step image of `R` while excluding states that reach
 //!    `bad`. Renaming `I` from `s1` to `s0` gives `I'(s0)`, and `R_next := R ∨ I'`.
 //!    If `R_next ⇒ R`, `R` is a fixpoint ⇒ a candidate inductive invariant. If
@@ -53,14 +55,18 @@
 //!   whose `init` already over-approximates the reachable set (e.g. a monotone
 //!   integer accumulator with `init : x ≥ 0`, `bad : x < 0`, fixpoint `x ≥ 0`).
 //! * Once `R` has grown into a **disjunction** `init ∨ I' ∨ …`, or once the
-//!   bad-suffix is a genuine multi-step disjunction (`k ≥ 2`), or the integer unsat
-//!   needs a cut, `lia_interpolant` returns `Ok(None)` — which the engine treats as
-//!   a signal to **deepen** (or, if exhausted, decline to `Unknown`). This is sound
-//!   but partial coverage: closing a disjunctive integer fixpoint needs a
-//!   disjunctive / cut-aware integer interpolation engine (future work). Unlike
-//!   [`imc_lra`](crate::imc_lra), there is no disjunctive integer fallback yet, so
-//!   `imc_lia` deepens/declines wherever `imc_lra`'s `lra_interpolant_cnf` route
-//!   would have closed a disjunctive real fixpoint — honest partiality.
+//!   bad-suffix is a genuine multi-step disjunction (`k ≥ 2`), the partition is
+//!   Boolean-structured and the conjunctive `lia_interpolant` returns `Ok(None)`.
+//!   The engine now first tries the **disjunctive** integer interpolant
+//!   [`lia_interpolant_cnf`](crate::lia_interpolant_cnf) (Boolean-structured A/B,
+//!   verify-before-return over ℤ), exactly as [`imc_lra`](crate::imc_lra) uses
+//!   [`lra_interpolant_cnf`](crate::lra_interpolant_cnf): a disjunctive integer
+//!   interpolant closes the disjunctive fixpoint that the conjunctive route could
+//!   not. Only when **both** the disjunctive and the conjunctive engines decline
+//!   (`Ok(None)` — the integer unsat still needs a cut neither rational relaxation
+//!   witnesses, or the input is out of fragment) does the engine **deepen** (or, if
+//!   exhausted, decline to `Unknown`). This remains sound but is now strictly
+//!   broader coverage than the conjunctive-only path.
 //!
 //! Partial coverage is acceptable; a wrong verdict is not. Every `Safe` is gated
 //! by the three independent inductive-invariant checks below, so an interpolation
@@ -95,6 +101,7 @@ use crate::auto::check_auto;
 use crate::backend::{CheckResult, SolverConfig, SolverError};
 use crate::bmc::TransitionSystem;
 use crate::lia_interpolant::lia_interpolant;
+use crate::lia_interpolant_cnf::lia_interpolant_cnf;
 use crate::model::Model;
 
 /// Resource caps for the `LIA` `IMC` search. All degrade to
@@ -140,10 +147,11 @@ pub enum ImcLiaOutcome {
         model: Model,
     },
     /// Undecided: a resource cap, an unsupported construct, an interpolant that
-    /// could not be produced or renamed, a disjunctive / cut-needing partition
-    /// outside the conjunctive-`QF_LIA` interpolation fragment, or a candidate
-    /// over-approximation that failed its inductive verification. First-class and
-    /// honest — never a (possibly wrong) `Safe`.
+    /// could not be produced or renamed, a cut-needing partition outside the
+    /// `QF_LIA` interpolation fragment that neither the disjunctive nor the
+    /// conjunctive engine could witness, or a candidate over-approximation that
+    /// failed its inductive verification. First-class and honest — never a
+    /// (possibly wrong) `Safe`.
     Unknown {
         /// A human-readable reason for declining.
         reason: String,
@@ -155,20 +163,24 @@ pub enum ImcLiaOutcome {
 /// integer mirror of [`prove_safety_imc_lra`](crate::prove_safety_imc_lra).
 ///
 /// The untrusted interpolation fixpoint grows an over-approximation `R(s)` of the
-/// reachable states from `QF_LIA` Craig interpolants
-/// ([`lia_interpolant`](crate::lia_interpolant)) of unsatisfiable k-unrollings,
-/// until `R` is closed under the transition image. **No `Safe` is returned until
+/// reachable states from `QF_LIA` Craig interpolants (the disjunctive
+/// [`lia_interpolant_cnf`](crate::lia_interpolant_cnf), falling back to the
+/// conjunctive [`lia_interpolant`](crate::lia_interpolant)) of unsatisfiable
+/// k-unrollings, until `R` is closed under the transition image. **No `Safe` is
+/// returned until
 /// that candidate `R` passes all three independent implication checks**
 /// (initiation, consecution, safety) over ℤ under the trusted
 /// [`check_auto`](crate::check_auto) decider; otherwise the engine declines to
 /// [`ImcLiaOutcome::Unknown`]. A [`ImcLiaOutcome::Reachable`] is confirmed by a
 /// `check_auto`-`Sat` of the concrete unrolling (the model is replay-checked).
 ///
-/// Coverage is partial by design: the conjunctive `QF_LIA` interpolation engine
-/// closes a fixpoint only when the `A`/`B` partition is conjunctive and the
-/// rational relaxation witnesses the unsat (see the module docs); disjunctive /
-/// cut-needing shapes deepen or decline. Soundness is total: a search bug can only
-/// cause an over-eager `Unknown`.
+/// Coverage is partial by design: the engine tries the disjunctive
+/// [`lia_interpolant_cnf`](crate::lia_interpolant_cnf) first and falls back to the
+/// conjunctive [`lia_interpolant`](crate::lia_interpolant), so it closes both
+/// conjunctive and Boolean-structured fixpoints whenever the rational relaxation
+/// witnesses the integer unsat (see the module docs); only genuinely cut-needing
+/// shapes deepen or decline. Soundness is total: a search bug can only cause an
+/// over-eager `Unknown`.
 ///
 /// # Errors
 ///
@@ -352,17 +364,29 @@ impl<'sys, S: TransitionSystem> ImcLiaEngine<'sys, S> {
             // vocabulary); s2..sk are fresh per-step copies.
             let Partition { a, b } = self.build_partition(arena, r, k)?;
 
-            // The interpolant I is over the shared vars s1 (== self.sp). The
-            // conjunctive QF_LIA engine interpolates the rational relaxation and
-            // re-verifies over ℤ. A `None` (sat-relaxation / cut-needed /
-            // non-conjunctive / overflow) ⇒ deepen rather than fail. Unlike
-            // `imc_lra` there is no disjunctive integer fallback (future work).
-            let interpolant = match lia_interpolant(arena, &a, &b) {
-                Ok(Some(interpolant)) => interpolant,
-                Ok(None) | Err(SolverError::Unsupported(_)) => {
-                    return Ok(FixpointResult::Deepen);
-                }
+            // The interpolant I is over the shared vars s1 (== self.sp). Try the
+            // DISJUNCTIVE integer route first (`lia_interpolant_cnf`): it handles the
+            // Boolean-structured A/B partitions the fixpoint generates (a growing
+            // `R = init ∨ I' ∨ …` and the multi-step bad-disjunction) and subsumes
+            // the conjunctive case. On its decline, fall back to the conjunctive
+            // Farkas route (`lia_interpolant`), preserving every previously-decided
+            // case. Both re-verify over ℤ before returning. Both declining
+            // (`Ok(None)` — the integer unsat still needs a cut, or out of fragment)
+            // ⇒ deepen rather than fail, mirroring `imc_lra`.
+            let disjunctive = match lia_interpolant_cnf(arena, &a, &b) {
+                Ok(some) => some,
+                Err(SolverError::Unsupported(_)) => None,
                 Err(other) => return Err(other),
+            };
+            let interpolant = match disjunctive {
+                Some(interpolant) => interpolant,
+                None => match lia_interpolant(arena, &a, &b) {
+                    Ok(Some(interpolant)) => interpolant,
+                    Ok(None) | Err(SolverError::Unsupported(_)) => {
+                        return Ok(FixpointResult::Deepen);
+                    }
+                    Err(other) => return Err(other),
+                },
             };
 
             // Rename I from s1 to s0 to express it over R's vocabulary.

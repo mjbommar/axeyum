@@ -103,6 +103,54 @@ impl TransitionSystem for IntAccumulator {
     }
 }
 
+/// A genuinely safe integer system whose **inductive invariant is DISJUNCTIVE**
+/// (not conjunctively interpolatable): `init : x = 0 ∨ x = 10`,
+/// `trans : x' = x` (stutter), `bad : 1 ≤ x ≤ 9`. The reachable set is `{0, 10}`,
+/// and the natural inductive invariant is `x ≤ 0 ∨ x ≥ 10` — it contains `{0, 10}`,
+/// is closed under the stutter transition, and excludes the bad band `1..=9`. No
+/// single conjunction of linear-integer atoms separates `{0, 10}` from `1..=9`, so
+/// the conjunctive-only `lia_interpolant` declines (the A side `init` is itself a
+/// disjunction). The disjunctive `lia_interpolant_cnf` route, now wired into the
+/// fixpoint, closes it — and the engine reports `Safe`, re-checked test-side.
+struct DisjunctiveTwoRegion;
+
+impl TransitionSystem for DisjunctiveTwoRegion {
+    fn state_vars(&self, arena: &mut TermArena, step: usize) -> Result<Vec<SymbolId>, SolverError> {
+        Ok(vec![int_var(arena, step)])
+    }
+
+    fn init(&self, arena: &mut TermArena, s0: &[SymbolId]) -> Result<TermId, SolverError> {
+        let x = arena.var(s0[0]);
+        let zero = arena.int_const(0);
+        let ten = arena.int_const(10);
+        let at_zero = arena.eq(x, zero)?;
+        let at_ten = arena.eq(x, ten)?;
+        Ok(arena.or(at_zero, at_ten)?)
+    }
+
+    fn trans(
+        &self,
+        arena: &mut TermArena,
+        pre: &[SymbolId],
+        post: &[SymbolId],
+    ) -> Result<TermId, SolverError> {
+        // Stutter: x' = x. The reachable set is exactly the (disjunctive) init set.
+        let x = arena.var(pre[0]);
+        let x_next = arena.var(post[0]);
+        Ok(arena.eq(x_next, x)?)
+    }
+
+    fn bad(&self, arena: &mut TermArena, s: &[SymbolId]) -> Result<TermId, SolverError> {
+        // The band 1 ≤ x ≤ 9 — separated from {0, 10} only by a disjunction.
+        let x = arena.var(s[0]);
+        let one = arena.int_const(1);
+        let nine = arena.int_const(9);
+        let lower = arena.int_ge(x, one)?;
+        let upper = arena.int_le(x, nine)?;
+        Ok(arena.and(lower, upper)?)
+    }
+}
+
 /// An **unsafe** integer system: `init : x = 0`, `trans : x' = x + 1`,
 /// `bad : x = 3`. A bad state is reachable in exactly three transitions.
 struct ReachesThree;
@@ -253,6 +301,33 @@ fn monotone_lower_bound_is_proven_safe_and_revalidates() {
         }
         ImcLiaOutcome::Reachable { .. } => {
             panic!("the monotone system is safe (x ≥ 0); a Reachable verdict is unsound")
+        }
+    }
+}
+
+#[test]
+fn disjunctive_two_region_is_proven_safe_via_disjunctive_interpolant() {
+    // A safe system whose ONLY inductive invariant is disjunctive (x ≤ 0 ∨ x ≥ 10):
+    // the reachable set {0, 10} cannot be separated from the bad band 1..=9 by any
+    // single conjunction of linear-integer atoms. The conjunctive `lia_interpolant`
+    // alone could not close this fixpoint (it declines on the disjunctive A side);
+    // the newly-wired disjunctive `lia_interpolant_cnf` route does. We require Safe
+    // and independently re-check the three inductive-invariant conditions over ℤ.
+    let mut arena = TermArena::new();
+    let outcome =
+        prove_safety_imc_lia(&mut arena, &DisjunctiveTwoRegion, &SolverConfig::default()).unwrap();
+    match outcome {
+        ImcLiaOutcome::Safe { invariant } => {
+            assert!(
+                recheck_invariant(&mut arena, &DisjunctiveTwoRegion, invariant),
+                "the disjunctive invariant must pass an independent 3-condition re-check over ℤ"
+            );
+        }
+        ImcLiaOutcome::Unknown { reason } => panic!(
+            "the disjunctive interpolant should close this fixpoint to Safe, got Unknown: {reason}"
+        ),
+        ImcLiaOutcome::Reachable { .. } => {
+            panic!("the two-region system is safe (reachable set {{0, 10}}); Reachable is unsound")
         }
     }
 }
