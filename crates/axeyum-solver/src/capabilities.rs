@@ -510,6 +510,24 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0047",
     },
     Capability {
+        area: "QF_UFLRA",
+        feature: "CERTIFIED conjunctive Craig interpolation (uflra_interpolant_certified): the same \
+                  verified interpolant I, plus two externally-checkable la_generic refutations treating \
+                  every uninterpreted-function application as an opaque real",
+        assurance: Assurance::Checked,
+        evidence: "the certifiable I is always congruence-free (the conjunctive construction declines \
+                   whenever the refutation needs functional consistency), so A ∧ ¬I and I ∧ B are each \
+                   conjunctions of linear-real comparisons over OPAQUE applications — single-la_generic \
+                   refutable; emits a self-validated Alethe la_generic refutation for each (¬I as the dual \
+                   comparison) via prove_uflra_unsat_alethe (abstract apps → fresh reals, refute pure-LRA, \
+                   substitute apps back), each independently accepted by Carcara (valid && !holey) on the \
+                   inlined .smt2; returns the certificate ONLY when both refutations emit and self-check, \
+                   else declines to the Validated uflra_interpolant path. BOUNDARY: conjunctive, \
+                   congruence-free only; the Lean reconstruction path does not yet cover opaque-application \
+                   LRA, so the external check is Carcara",
+        reference: "ADR-0047",
+    },
+    Capability {
         area: "QF_UFLIA/UFLRA",
         feature: "Craig interpolation (uflia_interpolant): the integer analogue — Ackermannize A∪B, \
                   lia_interpolant on the function-free integer relaxation, fresh vars translated back \

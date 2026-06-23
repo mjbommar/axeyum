@@ -120,7 +120,9 @@ mod z3_backend;
 
 pub use abduct::{MAX_CANDIDATES, abduct};
 pub use abv::{check_qf_abv_lazy, check_qf_abv_lazy_row, check_with_array_elimination};
-pub use alethe_lra::{check_alethe_lra, prove_lia_unsat_alethe, prove_lra_unsat_alethe};
+pub use alethe_lra::{
+    check_alethe_lra, prove_lia_unsat_alethe, prove_lra_unsat_alethe, prove_uflra_unsat_alethe,
+};
 pub use aufbv::check_with_arrays_and_functions;
 pub use auto::{
     check_auto, check_auto_explained, check_with_quantifiers, prove_unsat_by_ematching,
@@ -285,7 +287,9 @@ pub use uflia_interpolant::uflia_interpolant;
 #[doc(hidden)]
 pub use uflia_online::check_qf_uflia_boolean_with_metrics;
 pub use uflia_online::check_qf_uflia_online;
-pub use uflra_interpolant::uflra_interpolant;
+pub use uflra_interpolant::{
+    UflraInterpolantCertificate, uflra_interpolant, uflra_interpolant_certified,
+};
 #[doc(hidden)]
 pub use uflra_online::check_qf_uflra_boolean_with_metrics;
 pub use uflra_online::check_qf_uflra_online;

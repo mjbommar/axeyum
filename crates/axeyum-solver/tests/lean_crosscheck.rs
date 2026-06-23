@@ -844,3 +844,29 @@ fn tampered_certified_lia_interpolant_module_is_rejected_by_real_lean() {
     }
     // (If it does NOT type-check, that is already a rejection — nothing to assert.)
 }
+
+/// BOUNDARY (`QF_UFLRA` interpolant cert): the certified conjunctive `QF_UFLRA` Craig
+/// interpolant (`uflra_interpolant_certified`) carries its two soundness conditions
+/// as `la_generic` refutations over OPAQUE uninterpreted-function applications, and
+/// those are externally re-checked by **Carcara** (see `carcara_crosscheck.rs`). The
+/// Lean-kernel reconstruction path (`prove_unsat_to_lean_module`) does NOT yet cover
+/// the opaque-application `LRA` fragment, so it declines these conjunctions — the
+/// external check for this cert is Carcara, not Lean. This test pins that boundary so
+/// a future Lean-fragment extension is a deliberate, noticed change.
+#[test]
+fn uflra_opaque_application_refutation_is_declined_by_lean_path() {
+    use axeyum_ir::Sort;
+    let mut arena = TermArena::new();
+    let f = arena.declare_fun("f", &[Sort::Real], Sort::Real).unwrap();
+    let c = arena.real_var("c").unwrap();
+    let fc = arena.apply(f, &[c]).unwrap();
+    let five = arena.real_const(Rational::integer(5));
+    // f(c) >= 5 ∧ f(c) < 5 — UNSAT with f(c) opaque; Carcara checks it via la_generic.
+    let a = arena.real_ge(fc, five).unwrap();
+    let b = arena.real_lt(fc, five).unwrap();
+    assert!(
+        prove_unsat_to_lean_module(&mut arena, &[a, b]).is_err(),
+        "the Lean reconstruction path does not (yet) cover opaque-application LRA; \
+         this cert's external check is Carcara"
+    );
+}

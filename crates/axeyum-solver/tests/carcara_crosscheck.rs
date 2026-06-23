@@ -24,7 +24,7 @@ use axeyum_solver::{
     prove_qf_bv_unsat_alethe, prove_qf_bv_unsat_alethe_ext_compare,
     prove_qf_bv_unsat_alethe_route2, prove_qf_dt_unsat_alethe_via_simplification,
     prove_qf_uf_unsat_alethe, prove_qf_ufbv_unsat_alethe, qf_bv_interpolant_certified,
-    qf_uf_interpolant_certified,
+    qf_uf_interpolant_certified, uflra_interpolant_certified,
 };
 
 /// Resolves the Carcara binary: `AXEYUM_CARCARA_BIN` if set, otherwise the
@@ -174,6 +174,69 @@ fn carcara_accepts_inlined(
 fn var(arena: &mut TermArena, name: &str) -> TermId {
     let s = arena.declare(name, Sort::BitVec(8)).expect("declare");
     arena.var(s)
+}
+
+/// Renders an SMT-LIB sort for the inlined `QF_UFLRA` script writer.
+fn render_smt_sort(sort: &axeyum_ir::Sort) -> String {
+    match sort {
+        axeyum_ir::Sort::Real => "Real".to_owned(),
+        axeyum_ir::Sort::Int => "Int".to_owned(),
+        axeyum_ir::Sort::Bool => "Bool".to_owned(),
+        axeyum_ir::Sort::BitVec(w) => format!("(_ BitVec {w})"),
+        other => panic!("inlined_uflra_smt2: unsupported sort {other:?}"),
+    }
+}
+
+/// Renders a `QF_UFLRA` `.smt2` whose assertions are **fully inlined** (no
+/// `define-fun` hoisting), declaring every real symbol and every uninterpreted
+/// function reached from the assertions. The `(f args)` applications then render
+/// verbatim, so an `assume` of an opaque application atom matches the problem
+/// premise structurally (the production [`write_script`] hoists `(f c)` into a
+/// `define-fun` alias Carcara keeps opaque, which would not match).
+fn inlined_uflra_smt2(arena: &TermArena, assertions: &[TermId]) -> String {
+    use std::collections::BTreeMap;
+    use std::fmt::Write as _;
+    let mut consts: BTreeMap<String, axeyum_ir::Sort> = BTreeMap::new();
+    let mut funcs: BTreeMap<String, (Vec<axeyum_ir::Sort>, axeyum_ir::Sort)> = BTreeMap::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    let mut seen: std::collections::HashSet<TermId> = std::collections::HashSet::new();
+    while let Some(t) = stack.pop() {
+        if !seen.insert(t) {
+            continue;
+        }
+        match arena.node(t) {
+            axeyum_ir::TermNode::Symbol(s) => {
+                let (name, sort) = arena.symbol(*s);
+                consts.insert(name.to_owned(), sort);
+            }
+            axeyum_ir::TermNode::App { op, args } => {
+                if let axeyum_ir::Op::Apply(func) = op {
+                    let (name, params, result) = arena.function(*func);
+                    funcs.insert(name.to_owned(), (params.to_vec(), result));
+                }
+                stack.extend(args.iter().copied());
+            }
+            _ => {}
+        }
+    }
+    let mut out = String::from("(set-logic QF_UFLRA)\n");
+    for (name, sort) in &consts {
+        let _ = writeln!(out, "(declare-const {name} {})", render_smt_sort(sort));
+    }
+    for (name, (params, result)) in &funcs {
+        let params: Vec<String> = params.iter().map(render_smt_sort).collect();
+        let _ = writeln!(
+            out,
+            "(declare-fun {name} ({}) {})",
+            params.join(" "),
+            render_smt_sort(result)
+        );
+    }
+    for &a in assertions {
+        let _ = writeln!(out, "(assert {})", axeyum_ir::render(arena, a));
+    }
+    out.push_str("(check-sat)\n");
+    out
 }
 
 #[test]
@@ -2612,5 +2675,155 @@ fn tampered_certified_qf_bv_interpolant_cert_is_rejected_by_carcara() {
     assert!(
         report.contains("invalid") || report.contains("ERROR") || report.contains("holey"),
         "Carcara must reject the tampered QF_BV certificate, got:\n{report}"
+    );
+}
+
+// --- Certified conjunctive QF_UFLRA Craig interpolant (uflra_interpolant_certified) ---
+//
+// The QF_UFLRA interpolant `I` carries two `la_generic` refutations — of `A ∧ ¬I`
+// (Craig condition 1) and `I ∧ B` (condition 2) — each treating every
+// uninterpreted-function application as an OPAQUE real (the certifiable interpolant
+// is always congruence-free). Each is handed to the REAL Carcara binary on the
+// matching INLINED `.smt2` conjunction (no `define-fun` hoisting, so `(f c)` renders
+// verbatim); Carcara accepting both (valid && !holey) is the external check that
+// upgrades the QF_UFLRA interpolant from Validated to Checked.
+
+fn real_int_t(arena: &mut TermArena, v: i128) -> TermId {
+    arena.real_const(Rational::integer(v))
+}
+
+#[test]
+fn certified_uflra_interpolant_both_opaque_certs_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // A: f(c) >= 5 ; B: f(c) <= 3. Shared opaque f(c); no congruence needed.
+    let mut arena = TermArena::new();
+    let f = arena.declare_fun("f", &[Sort::Real], Sort::Real).unwrap();
+    let c = arena.real_var("c").unwrap();
+    let fc = arena.apply(f, &[c]).unwrap();
+    let five = real_int_t(&mut arena, 5);
+    let three = real_int_t(&mut arena, 3);
+    let a0 = arena.real_ge(fc, five).unwrap();
+    let b0 = arena.real_le(fc, three).unwrap();
+
+    let cert = uflra_interpolant_certified(&mut arena, &[a0], &[b0])
+        .expect("decides")
+        .expect("a certified QF_UFLRA interpolant exists");
+
+    // Condition 1: Carcara accepts the A ∧ ¬I refutation.
+    let report_a = carcara_accepts_smt2(
+        &bin,
+        "uflra_interp_a_not_i",
+        &inlined_uflra_smt2(&arena, &cert.a_and_not_i),
+        &cert.a_refutation,
+    );
+    assert!(
+        report_a.contains("valid"),
+        "expected Carcara 'valid' on A ∧ ¬I, got:\n{report_a}"
+    );
+    // Condition 2: Carcara accepts the I ∧ B refutation.
+    let report_b = carcara_accepts_smt2(
+        &bin,
+        "uflra_interp_i_b",
+        &inlined_uflra_smt2(&arena, &cert.i_and_b),
+        &cert.b_refutation,
+    );
+    assert!(
+        report_b.contains("valid"),
+        "expected Carcara 'valid' on I ∧ B, got:\n{report_b}"
+    );
+}
+
+#[test]
+fn certified_uflra_interpolant_app_plus_arithmetic_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    // A: f(c) >= x ∧ x >= 5 ; B: f(c) <= 3. The interpolant is over the shared
+    // opaque f(c); x is A-local.
+    let mut arena = TermArena::new();
+    let f = arena.declare_fun("f", &[Sort::Real], Sort::Real).unwrap();
+    let c = arena.real_var("c").unwrap();
+    let fc = arena.apply(f, &[c]).unwrap();
+    let x = arena.real_var("x").unwrap();
+    let five = real_int_t(&mut arena, 5);
+    let three = real_int_t(&mut arena, 3);
+    let a0 = arena.real_ge(fc, x).unwrap();
+    let a1 = arena.real_ge(x, five).unwrap();
+    let b0 = arena.real_le(fc, three).unwrap();
+
+    let cert = uflra_interpolant_certified(&mut arena, &[a0, a1], &[b0])
+        .expect("decides")
+        .expect("a certified QF_UFLRA interpolant exists");
+    let report_a = carcara_accepts_smt2(
+        &bin,
+        "uflra_interp_arith_a",
+        &inlined_uflra_smt2(&arena, &cert.a_and_not_i),
+        &cert.a_refutation,
+    );
+    assert!(report_a.contains("valid"), "A-side: {report_a}");
+    let report_b = carcara_accepts_smt2(
+        &bin,
+        "uflra_interp_arith_b",
+        &inlined_uflra_smt2(&arena, &cert.i_and_b),
+        &cert.b_refutation,
+    );
+    assert!(report_b.contains("valid"), "B-side: {report_b}");
+}
+
+/// TAMPER: corrupt the `la_generic` Farkas `:args` inside a certified `QF_UFLRA`
+/// interpolant's refutation and confirm Carcara REJECTS it. This proves the external
+/// check has teeth — a wrong certificate cannot pass (a bug surfaces as a rejection,
+/// never an unsound accept).
+#[test]
+fn tampered_certified_uflra_interpolant_cert_is_rejected_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let f = arena.declare_fun("f", &[Sort::Real], Sort::Real).unwrap();
+    let c = arena.real_var("c").unwrap();
+    let fc = arena.apply(f, &[c]).unwrap();
+    let five = real_int_t(&mut arena, 5);
+    let three = real_int_t(&mut arena, 3);
+    let a0 = arena.real_ge(fc, five).unwrap();
+    let b0 = arena.real_le(fc, three).unwrap();
+    let cert = uflra_interpolant_certified(&mut arena, &[a0], &[b0])
+        .expect("decides")
+        .expect("a certified QF_UFLRA interpolant exists");
+
+    // Tamper the A ∧ ¬I refutation: replace the la_generic Farkas `:args` with bogus
+    // zero coefficients (which do NOT refute the conjunction).
+    let mut tampered = cert.a_refutation.clone();
+    let mut patched = false;
+    for cmd in &mut tampered {
+        if let AletheCommand::Step { rule, args, .. } = cmd {
+            if rule == "la_generic" {
+                for a in args.iter_mut() {
+                    *a = AletheTerm::Const("0".to_owned());
+                }
+                patched = true;
+            }
+        }
+    }
+    assert!(patched, "expected a la_generic step to tamper");
+
+    let report = carcara_output(
+        &bin,
+        "uflra_interp_tampered",
+        &inlined_uflra_smt2(&arena, &cert.a_and_not_i),
+        &tampered,
+    );
+    assert!(
+        !report.lines().any(|l| l.trim() == "valid"),
+        "a tampered Farkas certificate must NOT be reported valid, got:\n{report}"
+    );
+    assert!(
+        report.contains("invalid") || report.contains("ERROR") || report.contains("holey"),
+        "Carcara must reject the tampered certificate, got:\n{report}"
     );
 }

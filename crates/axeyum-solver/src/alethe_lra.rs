@@ -193,11 +193,22 @@ fn real_term(
                 n if n >= 2 => fold_real(arena, vars, args, TermArena::real_sub),
                 _ => None,
             },
-            _ => None,
+            // Any other application head — e.g. an uninterpreted-function
+            // application `(f c)` — has no linear-arithmetic structure, so for the
+            // purposes of `la_generic` validity it is an OPAQUE atom: a single fresh
+            // real variable keyed by the term's canonical s-expression, so the same
+            // application is the same variable. Treating a maximal non-arithmetic
+            // subterm as a fresh variable is exactly congruence-free `EUF`+`LRA`
+            // validity; it can only make the `la_generic` check MORE conservative
+            // (it never accepts a clause that is not a tautology under this
+            // abstraction), so it is sound. This is what lets the `QF_UFLRA`
+            // interpolant's opaque-application refutations re-check here.
+            _ => Some(real_var(arena, vars, &term.key())),
         },
         // An indexed-operator application (e.g. a bit-blast `(_ @bit_of i)`) has no
-        // LRA real meaning.
-        AletheTerm::Indexed { .. } => None,
+        // LRA real meaning; like an uninterpreted application it is an opaque atom,
+        // a fresh real variable keyed by its canonical s-expression.
+        AletheTerm::Indexed { .. } => Some(real_var(arena, vars, &term.key())),
     }
 }
 
@@ -558,6 +569,142 @@ pub fn prove_lra_unsat_alethe(
         Some(commands)
     } else {
         None
+    }
+}
+
+/// Emits a checkable Alethe `la_generic` refutation of an `unsat` **congruence-free**
+/// `QF_UFLRA` conjunction — a conjunction of linear-real comparisons whose only
+/// uninterpreted-function applications act as **opaque** shared reals (no functional
+/// consistency / congruence is needed for the contradiction) — or `None` otherwise.
+///
+/// Each uninterpreted-function application `f(args)` is treated as an opaque real:
+/// the conjunction is abstracted (every distinct application → one fresh real
+/// variable, via [`axeyum_rewrite::eliminate_functions`]'s congruence-free
+/// abstraction), [`prove_lra_unsat_alethe`] refutes the **pure-`LRA`** abstraction
+/// (so the exact-rational `Farkas` decision and `:args` machinery apply unchanged),
+/// and each fresh-variable `Const` is then substituted **back** to its original
+/// application term in the emitted proof's atoms. The result refutes the *original*
+/// conjunction with each application rendered verbatim as `(f args)`.
+///
+/// The proof is **self-validated** through [`check_alethe_lra`] (whose `la_generic`
+/// check now treats a maximal non-arithmetic subterm — including `(f args)` — as an
+/// opaque fresh real, congruence-free `EUF`+`LRA` validity) and returned only if it
+/// checks, so a construction bug yields `None`, never a wrong proof. An independent
+/// checker (Carcara) accepts the same proof against the **inlined** `.smt2` problem
+/// (no `define-fun` hoisting), `la_generic` over the opaque `(f args)` atoms.
+///
+/// Returns `None` when:
+///
+/// - the abstraction step fails or the abstracted conjunction is not `LRA`-`unsat`
+///   (e.g. the refutation genuinely needs congruence — outside the congruence-free
+///   slice this emitter targets) so [`prove_lra_unsat_alethe`] declines; or
+/// - any fresh symbol cannot be translated back to its application term; or
+/// - the assembled proof fails its own [`check_alethe_lra`] re-check.
+#[must_use]
+pub fn prove_uflra_unsat_alethe(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Option<Vec<AletheCommand>> {
+    use axeyum_ir::{FuncId, SymbolId};
+
+    // Congruence-free abstraction: each distinct `f(args)` → one fresh real var.
+    let elim = axeyum_rewrite::eliminate_functions(arena, assertions).ok()?;
+    let abstraction = elim.abstraction().to_vec();
+    if abstraction.len() != assertions.len() {
+        return None;
+    }
+    // `(fresh symbol, func, rewritten args)` for the back-substitution.
+    let applications: Vec<(SymbolId, FuncId, Vec<TermId>)> = elim
+        .applications()
+        .into_iter()
+        .map(|(func, args, fresh)| (fresh, func, args.to_vec()))
+        .collect();
+
+    // Refute the pure-LRA abstraction (fresh vars are ordinary reals here).
+    let reduced_proof = prove_lra_unsat_alethe(arena, &abstraction)?;
+
+    // Map each fresh symbol NAME → its opaque application `AletheTerm` (recursively,
+    // since a nested `f(g(c))` abstracts `g(c)` to a fresh var inside `f`'s args).
+    let fresh_to_app: BTreeMap<SymbolId, (FuncId, Vec<TermId>)> = applications
+        .iter()
+        .map(|(fresh, func, args)| (*fresh, (*func, args.clone())))
+        .collect();
+    let mut name_to_app: BTreeMap<String, AletheTerm> = BTreeMap::new();
+    for &(fresh, _, _) in &applications {
+        let (name, _sort) = arena.symbol(fresh);
+        let name = name.to_owned();
+        let app = fresh_symbol_to_alethe(arena, fresh, &fresh_to_app)?;
+        name_to_app.insert(name, app);
+    }
+
+    // Substitute fresh-var `Const`s back to `(f args)` in every proof atom.
+    let mut commands = reduced_proof;
+    for command in &mut commands {
+        match command {
+            AletheCommand::Assume { clause, .. } | AletheCommand::Step { clause, .. } => {
+                for lit in clause.iter_mut() {
+                    substitute_apps(&mut lit.atom, &name_to_app);
+                }
+            }
+        }
+    }
+
+    // Self-validate with the opaque-aware `la_generic` checker, then return.
+    if matches!(check_alethe_lra(&commands), Ok(true)) {
+        Some(commands)
+    } else {
+        None
+    }
+}
+
+/// Renders a fresh Ackermann symbol as its opaque application `AletheTerm`
+/// `(funcname arg0 …)`, recursively expanding any argument that is itself a fresh
+/// application symbol. `None` if a fresh symbol has no application entry.
+fn fresh_symbol_to_alethe(
+    arena: &TermArena,
+    fresh: axeyum_ir::SymbolId,
+    fresh_to_app: &BTreeMap<axeyum_ir::SymbolId, (axeyum_ir::FuncId, Vec<TermId>)>,
+) -> Option<AletheTerm> {
+    let (func, args) = fresh_to_app.get(&fresh)?;
+    let (name, _params, _result) = arena.function(*func);
+    let name = name.to_owned();
+    let mut converted = Vec::with_capacity(args.len());
+    for &arg in args {
+        converted.push(app_arg_to_alethe(arena, arg, fresh_to_app)?);
+    }
+    Some(AletheTerm::App(name, converted))
+}
+
+/// Renders an application **argument** (a rewritten/abstracted term) as an
+/// `AletheTerm`: a fresh application symbol expands to its `(f …)` form, any other
+/// linear-real term goes through [`real_subterm_to_alethe`]. `None` outside that.
+fn app_arg_to_alethe(
+    arena: &TermArena,
+    arg: TermId,
+    fresh_to_app: &BTreeMap<axeyum_ir::SymbolId, (axeyum_ir::FuncId, Vec<TermId>)>,
+) -> Option<AletheTerm> {
+    if let TermNode::Symbol(symbol) = arena.node(arg) {
+        if fresh_to_app.contains_key(symbol) {
+            return fresh_symbol_to_alethe(arena, *symbol, fresh_to_app);
+        }
+    }
+    real_subterm_to_alethe(arena, arg)
+}
+
+/// Substitutes each fresh-variable `Const(name)` whose `name` is a known abstraction
+/// symbol with its opaque application `AletheTerm`, in place and recursively.
+fn substitute_apps(term: &mut AletheTerm, name_to_app: &BTreeMap<String, AletheTerm>) {
+    match term {
+        AletheTerm::Const(name) => {
+            if let Some(app) = name_to_app.get(name) {
+                *term = app.clone();
+            }
+        }
+        AletheTerm::App(_, args) | AletheTerm::Indexed { args, .. } => {
+            for arg in args.iter_mut() {
+                substitute_apps(arg, name_to_app);
+            }
+        }
     }
 }
 

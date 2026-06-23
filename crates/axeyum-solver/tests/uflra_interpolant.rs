@@ -303,6 +303,114 @@ fn deterministic_fuzz_never_wrong() {
     );
 }
 
+// --- certified interpolant (uflra_interpolant_certified) -------------------
+
+/// The certified interpolant `I` is byte-identical to the `Validated`
+/// [`uflra_interpolant`] output, and both refutations self-validate through
+/// [`check_alethe_lra`] (proven NOT skipped: the proofs are non-empty and accepted).
+/// The three Craig conditions are independently re-checked on the original
+/// partitions.
+#[test]
+fn certified_uflra_interpolant_emits_and_self_checks() {
+    use axeyum_solver::{check_alethe_lra, uflra_interpolant_certified};
+    // A: f(c) >= 5 ; B: f(c) <= 3. Shared opaque f(c); no congruence needed.
+    let mut arena = TermArena::new();
+    let func_f = arena.declare_fun("f", &[Sort::Real], Sort::Real).unwrap();
+    let var_c = arena.real_var("c").unwrap();
+    let app_fc = arena.apply(func_f, &[var_c]).unwrap();
+    let five = real_int(&mut arena, 5);
+    let three = real_int(&mut arena, 3);
+    let part_a = vec![arena.real_ge(app_fc, five).unwrap()];
+    let part_b = vec![arena.real_le(app_fc, three).unwrap()];
+
+    // Byte-identical interpolant.
+    let plain = uflra_interpolant(&mut arena, &part_a, &part_b)
+        .unwrap()
+        .expect("validated interpolant exists");
+    let cert = uflra_interpolant_certified(&mut arena, &part_a, &part_b)
+        .unwrap()
+        .expect("certified interpolant exists");
+    assert_eq!(
+        cert.interpolant, plain,
+        "certified interpolant must be byte-identical to the validated one"
+    );
+
+    // Both refutations are non-empty and self-check (NOT skipped).
+    assert!(
+        !cert.a_refutation.is_empty() && !cert.b_refutation.is_empty(),
+        "both refutations must be present"
+    );
+    assert_eq!(check_alethe_lra(&cert.a_refutation), Ok(true));
+    assert_eq!(check_alethe_lra(&cert.b_refutation), Ok(true));
+
+    // The three Craig conditions, independently re-checked.
+    assert!(craig_conditions_hold(
+        &mut arena,
+        &part_a,
+        &part_b,
+        cert.interpolant
+    ));
+    let f_name = arena.function(func_f).0.to_owned();
+    // The interpolant mentions the SHARED f(c); its vocabulary is shared.
+    assert!(
+        mentions_function(&arena, cert.interpolant, &f_name),
+        "the interpolant must mention the shared function f"
+    );
+}
+
+/// A shared-opaque-app-plus-arithmetic instance also certifies, and the certified
+/// `a_and_not_i` / `i_and_b` conjunctions are genuinely the Craig conditions.
+#[test]
+fn certified_uflra_interpolant_app_plus_arithmetic() {
+    use axeyum_solver::{check_alethe_lra, uflra_interpolant_certified};
+    // A: f(c) >= x ∧ x >= 5 ; B: f(c) <= 3.
+    let mut arena = TermArena::new();
+    let func_f = arena.declare_fun("f", &[Sort::Real], Sort::Real).unwrap();
+    let var_c = arena.real_var("c").unwrap();
+    let app_fc = arena.apply(func_f, &[var_c]).unwrap();
+    let var_x = arena.real_var("x").unwrap();
+    let five = real_int(&mut arena, 5);
+    let three = real_int(&mut arena, 3);
+    let part_a = vec![
+        arena.real_ge(app_fc, var_x).unwrap(),
+        arena.real_ge(var_x, five).unwrap(),
+    ];
+    let part_b = vec![arena.real_le(app_fc, three).unwrap()];
+
+    let cert = uflra_interpolant_certified(&mut arena, &part_a, &part_b)
+        .unwrap()
+        .expect("certified interpolant exists");
+    assert_eq!(check_alethe_lra(&cert.a_refutation), Ok(true));
+    assert_eq!(check_alethe_lra(&cert.b_refutation), Ok(true));
+    assert!(craig_conditions_hold(
+        &mut arena,
+        &part_a,
+        &part_b,
+        cert.interpolant
+    ));
+}
+
+/// DECLINE: a satisfiable pair has no interpolant, so no certificate either.
+#[test]
+fn certified_uflra_interpolant_declines_on_sat() {
+    use axeyum_solver::uflra_interpolant_certified;
+    let mut arena = TermArena::new();
+    let func_f = arena.declare_fun("f", &[Sort::Real], Sort::Real).unwrap();
+    let var_c = arena.real_var("c").unwrap();
+    let app_fc = arena.apply(func_f, &[var_c]).unwrap();
+    let one = real_int(&mut arena, 1);
+    let five = real_int(&mut arena, 5);
+    let part_a = vec![arena.real_ge(app_fc, one).unwrap()];
+    let part_b = vec![arena.real_le(app_fc, five).unwrap()];
+
+    assert!(
+        uflra_interpolant_certified(&mut arena, &part_a, &part_b)
+            .unwrap()
+            .is_none(),
+        "a satisfiable pair yields no certificate"
+    );
+}
+
 // --- helpers ---------------------------------------------------------------
 
 fn arena_symbol_name(arena: &TermArena, term: TermId) -> String {

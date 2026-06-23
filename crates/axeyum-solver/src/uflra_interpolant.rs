@@ -42,12 +42,13 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use axeyum_cnf::AletheCommand;
 use axeyum_ir::{FuncId, Op, SymbolId, TermArena, TermId, TermNode};
 use axeyum_rewrite::eliminate_functions;
 
 use crate::backend::{CheckResult, SolverConfig, SolverError};
 use crate::euf::check_with_uf_arithmetic;
-use crate::lra_interpolant;
+use crate::{lra_interpolant, prove_uflra_unsat_alethe};
 
 /// Computes a conjunctive `QF_UFLRA` Craig interpolant for the partition
 /// `(a_assertions, b_assertions)`.
@@ -65,6 +66,18 @@ use crate::lra_interpolant;
 /// errors (a procedure-bug soundness alarm); ordinary unsupported input declines
 /// with `Ok(None)`.
 pub fn uflra_interpolant(
+    arena: &mut TermArena,
+    a_assertions: &[TermId],
+    b_assertions: &[TermId],
+) -> Result<Option<TermId>, SolverError> {
+    build_verified_uflra_interpolant(arena, a_assertions, b_assertions)
+}
+
+/// Builds the verified conjunctive `QF_UFLRA` interpolant `I` for `A ∧ B` (or
+/// `None`). This is the single source of truth for `I`; [`uflra_interpolant`]
+/// forwards to it directly and [`uflra_interpolant_certified`] reuses it, so the
+/// returned `I` is byte-identical across both entry points.
+fn build_verified_uflra_interpolant(
     arena: &mut TermArena,
     a_assertions: &[TermId],
     b_assertions: &[TermId],
@@ -202,6 +215,137 @@ pub fn verify_uflra_interpolant(
     }
 
     Ok(true)
+}
+
+/// A **certified** conjunctive `QF_UFLRA` Craig interpolant: the interpolant `I`
+/// for an unsatisfiable `A ∧ B`, paired with two externally-checkable refutations
+/// witnessing its two soundness conditions.
+///
+/// - [`a_refutation`](Self::a_refutation) is an Alethe `la_generic` proof of
+///   `A ∧ ¬I ⊢ ⊥` (Craig condition 1, `A ⇒ I`);
+/// - [`b_refutation`](Self::b_refutation) is an Alethe `la_generic` proof of
+///   `I ∧ B ⊢ ⊥` (Craig condition 2).
+///
+/// `I` is a single linear-real comparison whose only uninterpreted-function
+/// applications are **opaque** shared reals (the conjunctive `QF_UFLRA`
+/// construction declines whenever a refutation would need functional
+/// consistency / congruence, so the certifiable interpolant is always
+/// congruence-free). Each of `A ∧ ¬I` and `I ∧ B` is therefore a conjunction of
+/// linear-real comparisons over opaque applications — refutable by a single
+/// `la_generic` step treating every `(f args)` as an opaque real (see
+/// [`crate::prove_uflra_unsat_alethe`]).
+///
+/// Both proofs are self-validated through [`crate::check_alethe_lra`] before this
+/// struct is constructed, and each is **independently** checkable by an external
+/// checker — Carcara (`la_generic`, accepted when `valid && !holey`, over the
+/// **inlined** `.smt2` problem so the `(f args)` atoms render verbatim) or the Lean
+/// kernel.
+#[derive(Debug, Clone)]
+pub struct UflraInterpolantCertificate {
+    /// The verified interpolant term `I` (byte-identical to what
+    /// [`uflra_interpolant`] returns for the same `(A, B)`).
+    pub interpolant: TermId,
+    /// `A ∧ ¬I`, the conjunction the [`a_refutation`](Self::a_refutation) refutes.
+    pub a_and_not_i: Vec<TermId>,
+    /// `I ∧ B`, the conjunction the [`b_refutation`](Self::b_refutation) refutes.
+    pub i_and_b: Vec<TermId>,
+    /// Alethe `la_generic` (opaque-application) refutation of `A ∧ ¬I`.
+    pub a_refutation: Vec<AletheCommand>,
+    /// Alethe `la_generic` (opaque-application) refutation of `I ∧ B`.
+    pub b_refutation: Vec<AletheCommand>,
+}
+
+/// Produces a **certified** Craig interpolant for the unsatisfiable conjunctive
+/// `QF_UFLRA` partition `A = a_assertions`, `B = b_assertions`: the same verified
+/// interpolant [`uflra_interpolant`] returns, **plus** two `la_generic` refutations
+/// — of `A ∧ ¬I` and `I ∧ B`, treating every uninterpreted-function application as
+/// an opaque real — that an independent checker (Carcara) can accept on its own.
+///
+/// This is the `Checked`-assurance upgrade of the `Validated` [`uflra_interpolant`]:
+/// the interpolant was already verify-before-return; here we additionally emit an
+/// externally-checkable certificate for each of its two soundness conditions, and
+/// return it **only** when both refutations are produced and self-check (through
+/// [`crate::check_alethe_lra`], whose `la_generic` validation treats `(f args)` as
+/// an opaque real). `¬I` is built as the explicit DUAL comparison (`¬(e ≤ 0) = e >
+/// 0`, `¬(e < 0) = e ≥ 0`) rather than a `not`-wrapper, so the bare-comparison
+/// refutation emitter covers it.
+///
+/// # Boundary
+///
+/// Only the CONJUNCTIVE, **congruence-free** `QF_UFLRA` slice is certified here. The
+/// conjunctive interpolant construction already declines whenever the refutation
+/// needs functional consistency / congruence (the function-free relaxation is then
+/// `sat`), so the certifiable interpolant is always over opaque applications and
+/// both `A ∧ ¬I` and `I ∧ B` are single-`la_generic` refutable. This function
+/// declines (`Ok(None)`) whenever [`uflra_interpolant`] declines, or whenever either
+/// refutation cannot be emitted/validated for the produced conjunction (e.g. a shape
+/// the opaque emitter cannot reduce). A caller that gets `Ok(None)` should fall back
+/// to the `Validated` [`uflra_interpolant`] path — this function NEVER returns an
+/// uncertified interpolant dressed as certified.
+///
+/// # Errors
+///
+/// Propagates [`SolverError`] from the underlying verifying `QF_UFLRA` decider (a
+/// procedure-bug soundness alarm); ordinary unsupported input declines with
+/// `Ok(None)`.
+pub fn uflra_interpolant_certified(
+    arena: &mut TermArena,
+    a_assertions: &[TermId],
+    b_assertions: &[TermId],
+) -> Result<Option<UflraInterpolantCertificate>, SolverError> {
+    // 1. The verified interpolant `I` (identical to `uflra_interpolant`'s output).
+    let Some(interpolant) = build_verified_uflra_interpolant(arena, a_assertions, b_assertions)?
+    else {
+        return Ok(None);
+    };
+
+    // 2. Form the two Craig-condition conjunctions. `¬I` is the explicit dual
+    //    comparison (a bare comparison the opaque emitter lowers), not a
+    //    `not`-wrapper.
+    let Some(not_interpolant) = dual_comparison(arena, interpolant) else {
+        return Ok(None);
+    };
+    let mut a_and_not_i: Vec<TermId> = a_assertions.to_vec();
+    a_and_not_i.push(not_interpolant);
+    let mut i_and_b: Vec<TermId> = Vec::with_capacity(b_assertions.len() + 1);
+    i_and_b.push(interpolant);
+    i_and_b.extend_from_slice(b_assertions);
+
+    // 3. Emit a self-validated opaque-application `la_generic` refutation for each.
+    //    Either failing ⇒ decline to the `Validated` path (never an uncertified
+    //    interpolant).
+    let Some(a_refutation) = prove_uflra_unsat_alethe(arena, &a_and_not_i) else {
+        return Ok(None);
+    };
+    let Some(b_refutation) = prove_uflra_unsat_alethe(arena, &i_and_b) else {
+        return Ok(None);
+    };
+
+    Ok(Some(UflraInterpolantCertificate {
+        interpolant,
+        a_and_not_i,
+        i_and_b,
+        a_refutation,
+        b_refutation,
+    }))
+}
+
+/// Builds the explicit dual (logical negation) of the interpolant comparison `I`
+/// as a single bare comparison term, so the bare-comparison refutation emitter can
+/// lower it. `I` is produced by [`build_verified_uflra_interpolant`] as exactly
+/// `real_le(e, 0)` or `real_lt(e, 0)` (via the underlying `lra_interpolant`), whose
+/// duals are `real_gt(e, 0)` and `real_ge(e, 0)`. Any other shape returns `None` ⇒
+/// decline.
+fn dual_comparison(arena: &mut TermArena, interpolant: TermId) -> Option<TermId> {
+    let (op, lhs, rhs) = match arena.node(interpolant) {
+        TermNode::App { op, args } if args.len() == 2 => (*op, args[0], args[1]),
+        _ => return None,
+    };
+    match op {
+        Op::RealLe => arena.real_gt(lhs, rhs).ok(),
+        Op::RealLt => arena.real_ge(lhs, rhs).ok(),
+        _ => None,
+    }
 }
 
 /// Rebuilds an LRA interpolant term, substituting each fresh Ackermann symbol
