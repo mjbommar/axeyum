@@ -1,0 +1,6 @@
+(set-logic QF_DT)
+(set-info :status sat)
+(declare-datatypes ((Color 0)) (((red) (green) (blue))))
+(declare-const c Color)
+(assert ((_ is red) c))
+(check-sat)

@@ -1,0 +1,7 @@
+(set-logic QF_ABV)
+(set-info :status unsat)
+(declare-const a (Array (_ BitVec 8) (_ BitVec 8)))
+(declare-const i (_ BitVec 8))
+(declare-const v (_ BitVec 8))
+(assert (not (= (select (store a i v) i) v)))
+(check-sat)

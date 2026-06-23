@@ -1,0 +1,7 @@
+(set-logic QF_DT)
+(set-info :status unsat)
+(declare-datatypes ((Color 0)) (((red) (green) (blue))))
+(declare-const c Color)
+(assert (= c red))
+(assert (= c green))
+(check-sat)

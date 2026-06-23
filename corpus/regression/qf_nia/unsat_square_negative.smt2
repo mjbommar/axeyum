@@ -1,0 +1,5 @@
+(set-logic QF_NIA)
+(set-info :status unsat)
+(declare-const x Int)
+(assert (= (* x x) (- 1)))
+(check-sat)

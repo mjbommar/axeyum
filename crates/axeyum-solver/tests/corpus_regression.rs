@@ -24,7 +24,7 @@ use axeyum_solver::{CheckResult, SolverConfig, check_auto};
 
 /// Per-file wall-clock cap. The committed corpora are tiny; the cap only guards
 /// against a future heavy instance hanging the suite.
-const SOLVE_CAP: Duration = Duration::from_secs(5);
+const SOLVE_CAP: Duration = Duration::from_secs(2);
 
 #[derive(Debug, Default)]
 struct Summary {
