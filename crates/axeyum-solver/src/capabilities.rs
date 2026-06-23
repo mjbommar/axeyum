@@ -309,6 +309,22 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0014/0015",
     },
     Capability {
+        area: "QF_LIA",
+        feature: "ONLINE LIA now does THEORY PROPAGATION (real CDCL(T) spine, mirrors the LRA path): the \
+                  DPLL(T) loop interleaves unit + theory propagation; each unassigned order atom is \
+                  probed by the cheap LP-RELAXATION (real-infeasible of asserted ∧ ¬atom ⇒ atom entailed \
+                  over ℤ, since ℤ-solutions ⊆ ℝ-solutions) — strictly cheaper than a per-atom integer \
+                  solve, propagated with an asserted-only deletion-minimized reason",
+        assurance: Assurance::Validated,
+        evidence: "DECIDER change, verdict-INVARIANT: differential vs the offline integer decider over \
+                   400 decided LCG instances (199 sat / 201 unsat) + 3.7k push/pop/assert steps, 0 \
+                   disagreements, every sat model replayed with integer values; a soundness probe \
+                   integer-offline-CONFIRMED all 1650 fired propagations are genuinely entailed (asserted \
+                   ∧ ¬entailed integer-UNSAT), 0 unsound. LP-feasible probe is inconclusive ⇒ skip; \
+                   overflow/equality/out-of-fragment skip. uflia combination (reuses LiaTheory) unchanged",
+        reference: "ADR-0014/0015",
+    },
+    Capability {
         area: "QF_LRA",
         feature: "ONLINE LRA now does THEORY PROPAGATION (real CDCL(T) spine, mirrors EUF): the DPLL(T) \
                   loop interleaves unit + theory propagation to a joint fixpoint — for each unassigned \
