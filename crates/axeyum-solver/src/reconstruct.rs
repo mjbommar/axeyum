@@ -5443,6 +5443,15 @@ fn bv_bit(
                 let bit_term = comp_bit_term(x, y, width);
                 Ok(ctx.gate_term_to_prop(&bit_term))
             }
+            // **Constant** left/right shifts (`bvshl`/`bvlshr`/`bvashr` by a
+            // bit-vector **literal** amount). These route bit `i` to *exactly* the
+            // bit the `lower_const_shift` rewrite (`axeyum_rewrite`) collapses them
+            // to — `bvshl k` → `(concat (extract a (w-1-k) 0) (bv0 k))` etc. — so
+            // proving `(= shift concat)` per-bit is reflexive by construction and the
+            // previously-TRUSTED lowering identity becomes kernel-checked (the gate
+            // rejects any divergent routing). A *variable* shift amount stays out of
+            // fragment (no literal `k`): falls through to the catch-all below.
+            ("bvshl" | "bvlshr" | "bvashr", [a, amt]) => const_shift_bit(ctx, head, a, amt, i),
             _ => Err(ReconstructError::UnsupportedTerm {
                 term: format!("non-bitwise bit-blast operand `{}`", term.key()),
             }),
@@ -5799,6 +5808,84 @@ fn parse_bv_literal(symbol: &str) -> Option<Vec<bool>> {
     Some(rest.bytes().rev().map(|c| c == b'1').collect())
 }
 
+/// The numeric value of a `#b…` bit-vector literal as a `u128`, or [`None`] if
+/// `symbol` is not a literal or its width exceeds 128 bits. Used to read a
+/// **constant shift amount** `k` (the only shift case reconstructed).
+fn bv_literal_value(symbol: &str) -> Option<u128> {
+    let bits = parse_bv_literal(symbol)?; // LSB-first
+    if bits.len() > 128 {
+        return None;
+    }
+    let mut value: u128 = 0;
+    for (i, &b) in bits.iter().enumerate() {
+        if b {
+            value |= 1u128 << i;
+        }
+    }
+    Some(value)
+}
+
+/// Bit `i` of a **constant** shift `(<op> a #b…)` (`op` ∈ `bvshl`/`bvlshr`/`bvashr`),
+/// routed to exactly the source bit the `lower_const_shift` rewrite produces. With
+/// operand width `w` and amount `k`:
+///
+/// - `bvshl`  (`a << k`): bit `i` is `False` for `i < k`, else `a_{i-k}`.
+/// - `bvlshr` (`a >>ᵤ k`): bit `i` is `a_{i+k}` for `i+k < w`, else `False`.
+/// - `bvashr` (`a >>ₛ k`): bit `i` is `a_{i+k}` for `i+k < w`, else the sign `a_{w-1}`.
+///
+/// The `k = 0` (identity) and `k ≥ w` (all-zero / all-sign) edges fall out of these
+/// formulas directly. A non-literal amount yields [`ReconstructError::UnsupportedTerm`]
+/// (a *variable* shift is out of fragment — not a missing rule, the term-model gap).
+fn const_shift_bit(
+    ctx: &mut ReconstructCtx,
+    op: &str,
+    a: &AletheTerm,
+    amt: &AletheTerm,
+    i: usize,
+) -> Result<ExprId, ReconstructError> {
+    let AletheTerm::Const(amt_sym) = amt else {
+        return Err(ReconstructError::UnsupportedTerm {
+            term: format!("non-constant {op} amount"),
+        });
+    };
+    let k = bv_literal_value(amt_sym).ok_or_else(|| ReconstructError::UnsupportedTerm {
+        term: format!("non-literal {op} amount `{amt_sym}`"),
+    })?;
+    let width = alethe_bv_width(ctx, a).ok_or_else(|| ReconstructError::UnsupportedTerm {
+        term: format!("{op} operand width unknown"),
+    })?;
+    let width_u128 = u128::try_from(width).map_err(|_| ReconstructError::UnsupportedTerm {
+        term: format!("{op} operand width too large"),
+    })?;
+    let i_u128 = u128::try_from(i).map_err(|_| ReconstructError::UnsupportedTerm {
+        term: format!("{op} bit index too large"),
+    })?;
+    match op {
+        "bvshl" => {
+            if i_u128 < k {
+                Ok(ctx.kernel.const_(ctx.prelude.false_, vec![]))
+            } else {
+                // `i - k < width` because `i < width` and `k ≥ 0`; the index fits `usize`.
+                let src = i - usize::try_from(k).expect("k < i < width fits usize");
+                bv_bit(ctx, a, src)
+            }
+        }
+        "bvlshr" | "bvashr" => {
+            if i_u128 + k < width_u128 {
+                let src = i + usize::try_from(k).expect("i + k < width fits usize");
+                bv_bit(ctx, a, src)
+            } else if op == "bvashr" {
+                bv_bit(ctx, a, width - 1) // sign bit
+            } else {
+                Ok(ctx.kernel.const_(ctx.prelude.false_, vec![]))
+            }
+        }
+        other => Err(ReconstructError::UnsupportedTerm {
+            term: format!("unexpected shift op `{other}`"),
+        }),
+    }
+}
+
 /// Reconstruct one **bitwise** `bitblast_*` step into a kernel-checked proof term
 /// of its bit-iff conjunction.
 ///
@@ -5906,6 +5993,126 @@ pub fn reconstruct_bitblast_step(
     };
 
     check_against(ctx, rule, proof, target)
+}
+
+/// Certify the **constant-shift → concat lowering identity** as a Lean-kernel-checked
+/// theorem, turning the previously-TRUSTED `lower_const_shift` rewrite into an
+/// externally-checked one.
+///
+/// Given a constant shift `shift = (<op> a #b…)` (`op` ∈ `bvshl`/`bvlshr`/`bvashr`,
+/// the amount a bit-vector **literal**) and the `rhs` term `lower_const_shift`
+/// collapses it to — `(concat (extract a (w-1-k) 0) (bv0 k))` for `bvshl`, the
+/// `lshr`/`ashr` analogues, or the `k = 0` / `k ≥ w` edge forms — this proves the
+/// **per-bit equality conjunction**
+///
+/// > `⋀_{i<width} ( bv_bit(shift, i) ↔ bv_bit(rhs, i) )`
+///
+/// i.e. *each bit of the shift is definitionally the corresponding bit of the
+/// lowered concat*. Both sides route through the faithful `bv_bit` model; when the
+/// lowering is correct they are the **same** `Prop`, so each conjunct is `Iff.refl`
+/// and the `infer`/`def_eq` gate accepts. A **wrong** `rhs` (e.g. the wrong `k`, or
+/// a swapped operand) makes some bit's two sides differ — the reflexive proof then
+/// fails to `infer` to the stated conjunction and the kernel **rejects**. So the
+/// check has teeth: it can never accept an unsound lowering.
+///
+/// `operand_width` is `a`'s bit width `w` (a bare-symbol operand carries no width in
+/// the Alethe term); it is recorded in the context so the symbol's projection bits
+/// route on both sides. This certifies **constant** shifts only — variable shifts and
+/// division remain out of scope (a term-representation gap, not a missing rule).
+///
+/// # Errors
+///
+/// [`ReconstructError::UnsupportedTerm`] if `shift` is not a constant shift of a
+/// bare-symbol operand, [`ReconstructError::MalformedStep`] for a zero width, and
+/// [`ReconstructError::KernelRejected`] at the `infer`/`def_eq` gate (the soundness
+/// boundary — a wrong lowering surfaces here as a rejection, never an accept).
+pub fn reconstruct_const_shift_lowering(
+    ctx: &mut ReconstructCtx,
+    shift: &AletheTerm,
+    rhs: &AletheTerm,
+    operand_width: usize,
+) -> Result<ExprId, ReconstructError> {
+    if operand_width == 0 {
+        return Err(ReconstructError::MalformedStep {
+            rule: "const_shift_lowering".to_owned(),
+            detail: "zero operand width".to_owned(),
+        });
+    }
+    // Register the bare-symbol operand's width so `bv_bit`/`alethe_bv_width` can
+    // route its projection bits on both sides.
+    let AletheTerm::App(op, args) = shift else {
+        return Err(ReconstructError::UnsupportedTerm {
+            term: format!("not a shift application `{}`", shift.key()),
+        });
+    };
+    let ("bvshl" | "bvlshr" | "bvashr", [a, _amt]) = (op.as_str(), args.as_slice()) else {
+        return Err(ReconstructError::UnsupportedTerm {
+            term: format!("not a constant `bvshl`/`bvlshr`/`bvashr` `{}`", shift.key()),
+        });
+    };
+    if let AletheTerm::Const(name) = a {
+        if parse_bv_literal(name).is_none() {
+            ctx.bv_widths.insert(name.clone(), operand_width);
+        }
+    }
+
+    // Build `⋀_i ( bv_bit(shift, i) ↔ bv_bit(rhs, i) )` and its reflexive proof,
+    // folding right with `And.intro`. Each conjunct's two sides are the SAME `Prop`
+    // exactly when the lowering is correct, so `mk_iff_refl` type-checks — the gate
+    // rejects otherwise.
+    let bit_iff = |ctx: &mut ReconstructCtx, i: usize| -> Result<ExprId, ReconstructError> {
+        let l = bv_bit(ctx, shift, i)?;
+        let r = bv_bit(ctx, rhs, i)?;
+        Ok(ctx.mk_iff(l, r))
+    };
+    let last = operand_width - 1;
+    let mut target = bit_iff(ctx, last)?;
+    let mut proof = {
+        let l = bv_bit(ctx, shift, last)?;
+        ctx.mk_iff_refl(l)
+    };
+    for i in (0..last).rev() {
+        let head_prop = bit_iff(ctx, i)?;
+        let head_proof = {
+            let l = bv_bit(ctx, shift, i)?;
+            ctx.mk_iff_refl(l)
+        };
+        proof = and_intro(ctx, head_prop, target, head_proof, proof);
+        target = ctx.mk_and(head_prop, target);
+    }
+    check_against(ctx, "const_shift_lowering", proof, target)
+}
+
+/// Certify the constant-shift lowering identity (see [`reconstruct_const_shift_lowering`])
+/// **and render it as a self-contained Lean 4 module** an independent `lean` binary
+/// can re-check.
+///
+/// Returns the `prelude`-mode source of `theorem <LEAN_MODULE_THEOREM> : <goal> :=
+/// <proof>` (the per-bit equality conjunction) plus its `#print axioms` audit; a
+/// faithful proof must report **no** `sorryAx`. A successful return means the
+/// lowering identity was kernel-checked **and** rendered to externally-checkable
+/// Lean — never a wrong identity.
+///
+/// # Errors
+///
+/// Same as [`reconstruct_const_shift_lowering`].
+pub fn prove_const_shift_lowering_to_lean_module(
+    shift: &AletheTerm,
+    rhs: &AletheTerm,
+    operand_width: usize,
+) -> Result<String, ReconstructError> {
+    let mut ctx = ReconstructCtx::new();
+    let proof = reconstruct_const_shift_lowering(&mut ctx, shift, rhs, operand_width)?;
+    let goal = ctx
+        .kernel
+        .infer(proof)
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "const_shift_lowering".to_owned(),
+            detail: format!("infer failed: {e:?}"),
+        })?;
+    Ok(ctx
+        .kernel
+        .render_lean_module(LEAN_MODULE_THEOREM, goal, proof))
 }
 
 /// Translate a `@bbterm` **gadget bit** into its `Prop`, agreeing with [`bv_bit`]

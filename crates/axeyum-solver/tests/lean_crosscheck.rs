@@ -329,3 +329,166 @@ fn conjunctive_lra_still_reconstructs_unchanged() {
     );
     assert!(!source.contains("sorryAx"));
 }
+
+// --- Constant-shift → concat lowering identity, kernel-certified (ROUTE B) ------
+//
+// The `lower_const_shift` rewrite (axeyum-rewrite) collapses a *constant* shift to
+// `extract`/`concat`/`sign_extend`. That lowering step used to be TRUSTED. These
+// tests certify the identity itself as a Lean-kernel-checked theorem: the per-bit
+// equality `⋀_i ( bit_i(shift) ↔ bit_i(concat) )` is proved reflexively and gated by
+// the kernel — a WRONG lowering is rejected, never accepted. Carcara has no rule for
+// the `(= (bvshl a k) (concat …))` bridge (STEP-0 probe: `bv_poly_simp`/`bitblast_*`/
+// `*_simplify` all reject it), so this standalone kernel lemma is the certificate.
+
+use axeyum_cnf::AletheTerm;
+use axeyum_solver::{
+    ReconstructCtx, prove_const_shift_lowering_to_lean_module, reconstruct_const_shift_lowering,
+};
+
+/// `(bvshl a #b0001)` over width 4 — the LHS the test certifies.
+fn shl1_w4() -> AletheTerm {
+    AletheTerm::App(
+        "bvshl".to_owned(),
+        vec![
+            AletheTerm::Const("a".to_owned()),
+            AletheTerm::Const("#b0001".to_owned()),
+        ],
+    )
+}
+
+/// `(concat ((_ extract 2 0) a) #b0)` — the width-4 lowering of `bvshl a 1`
+/// (drop the top bit, append one zero at the low end).
+fn shl1_w4_concat() -> AletheTerm {
+    AletheTerm::App(
+        "concat".to_owned(),
+        vec![
+            AletheTerm::Indexed {
+                op: "extract".to_owned(),
+                indices: vec![2, 0],
+                args: vec![AletheTerm::Const("a".to_owned())],
+            },
+            AletheTerm::Const("#b0".to_owned()),
+        ],
+    )
+}
+
+/// **ROUTE-B positive (`bvshl`)**: the constant-left-shift lowering identity
+/// `(bvshl a #b0001) = (concat ((_ extract 2 0) a) #b0)` reconstructs to a real-Lean
+/// kernel-checked theorem with **no `sorryAx`**.
+#[test]
+fn const_shl_lowering_checks_in_real_lean() {
+    let source = prove_const_shift_lowering_to_lean_module(&shl1_w4(), &shl1_w4_concat(), 4)
+        .expect("constant bvshl lowering reconstructs to a kernel-checked theorem");
+    // In-tree kernel already accepted (infer + def_eq inside the call); the rendered
+    // module must check in real Lean with no sorryAx.
+    assert!(
+        !source.contains("sorryAx"),
+        "const-shl lowering module depends on sorryAx:\n{source}"
+    );
+    lean_accepts("const_shl_lowering", &source);
+}
+
+/// **ROUTE-B positive (`bvlshr`)**: the constant-logical-right-shift identity
+/// `(bvlshr a #b0001) = (concat #b0 ((_ extract 3 1) a))` over width 4 — prepend a
+/// zero at the high end, drop the low bit.
+#[test]
+fn const_lshr_lowering_checks_in_real_lean() {
+    let shift = AletheTerm::App(
+        "bvlshr".to_owned(),
+        vec![
+            AletheTerm::Const("a".to_owned()),
+            AletheTerm::Const("#b0001".to_owned()),
+        ],
+    );
+    let concat = AletheTerm::App(
+        "concat".to_owned(),
+        vec![
+            AletheTerm::Const("#b0".to_owned()),
+            AletheTerm::Indexed {
+                op: "extract".to_owned(),
+                indices: vec![3, 1],
+                args: vec![AletheTerm::Const("a".to_owned())],
+            },
+        ],
+    );
+    let source = prove_const_shift_lowering_to_lean_module(&shift, &concat, 4)
+        .expect("constant bvlshr lowering reconstructs to a kernel-checked theorem");
+    assert!(
+        !source.contains("sorryAx"),
+        "const-lshr lowering module depends on sorryAx:\n{source}"
+    );
+    lean_accepts("const_lshr_lowering", &source);
+}
+
+/// **ROUTE-B positive (`bvashr`)**: the constant-arithmetic-right-shift identity
+/// `(bvashr a #b0001) = ((_ sign_extend 1) ((_ extract 3 1) a))` over width 4 — drop
+/// the low bit, fill the high end with the sign (`sign_extend` of the surviving high
+/// slice, whose MSB is `a`'s sign bit).
+#[test]
+fn const_ashr_lowering_checks_in_real_lean() {
+    let shift = AletheTerm::App(
+        "bvashr".to_owned(),
+        vec![
+            AletheTerm::Const("a".to_owned()),
+            AletheTerm::Const("#b0001".to_owned()),
+        ],
+    );
+    let rhs = AletheTerm::Indexed {
+        op: "sign_extend".to_owned(),
+        indices: vec![1],
+        args: vec![AletheTerm::Indexed {
+            op: "extract".to_owned(),
+            indices: vec![3, 1],
+            args: vec![AletheTerm::Const("a".to_owned())],
+        }],
+    };
+    let source = prove_const_shift_lowering_to_lean_module(&shift, &rhs, 4)
+        .expect("constant bvashr lowering reconstructs to a kernel-checked theorem");
+    assert!(
+        !source.contains("sorryAx"),
+        "const-ashr lowering module depends on sorryAx:\n{source}"
+    );
+    lean_accepts("const_ashr_lowering", &source);
+}
+
+/// **ROUTE-B negative (the check has teeth)**: a WRONG lowering of `bvshl a 1` —
+/// claiming `(concat ((_ extract 3 1) a) #b0)` (the wrong `extract` slice, the
+/// `lshr` pattern) — must be **REJECTED** by the kernel, never certified. This proves
+/// the per-bit reflexive proof only type-checks for a genuinely-equal lowering.
+#[test]
+fn wrong_const_shift_lowering_is_rejected_by_kernel() {
+    let mut ctx = ReconstructCtx::new();
+    let wrong_concat = AletheTerm::App(
+        "concat".to_owned(),
+        vec![
+            // WRONG: `bvshl a 1` keeps bits 2..0 of `a` in the high part, not 3..1.
+            AletheTerm::Indexed {
+                op: "extract".to_owned(),
+                indices: vec![3, 1],
+                args: vec![AletheTerm::Const("a".to_owned())],
+            },
+            AletheTerm::Const("#b0".to_owned()),
+        ],
+    );
+    let result = reconstruct_const_shift_lowering(&mut ctx, &shl1_w4(), &wrong_concat, 4);
+    assert!(
+        matches!(
+            result,
+            Err(axeyum_solver::ReconstructError::KernelRejected { .. })
+        ),
+        "a wrong shift→concat lowering must be kernel-REJECTED, got {result:?}"
+    );
+}
+
+/// **Regression / boundary**: the CORRECT lowering reconstructs through the in-tree
+/// kernel (`reconstruct_const_shift_lowering` returns `Ok`) — the positive companion
+/// to the rejection test, without needing a `lean` binary.
+#[test]
+fn const_shift_lowering_in_tree_kernel_accepts() {
+    let mut ctx = ReconstructCtx::new();
+    let ok = reconstruct_const_shift_lowering(&mut ctx, &shl1_w4(), &shl1_w4_concat(), 4);
+    assert!(
+        ok.is_ok(),
+        "the correct bvshl lowering must be kernel-accepted, got {ok:?}"
+    );
+}
