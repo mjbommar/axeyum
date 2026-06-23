@@ -631,6 +631,24 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0022",
     },
     Capability {
+        area: "datatypes",
+        feature: "Carcara-checked is-tester COLLAPSE certificate \
+                  (prove_qf_dt_unsat_alethe_via_simplification, is-tester arm): each \
+                  is_C(K(args)) redex is abstracted to a truth-bit w; the test-fold \
+                  (= (is_C (K args)) true/false), K==C iff true, is taken as a TRUSTED \
+                  premise; the collapse to the bit-blast residual is closed by \
+                  eq_transitive / cong+equiv1 + resolution",
+        assurance: Assurance::Checked,
+        evidence: "every STRUCTURAL step of the collapse is accepted (valid && !holey) by \
+                   the external Carcara checker (datatype_tester_cert) — reserved \
+                   !dttest/!dtcon heads are uninterpreted, the test-fold is an asserted \
+                   premise; a tampered eq_transitive is REJECTED. Honest boundary: the \
+                   is-tester FOLD stays a trusted premise (only its USE is certified); the \
+                   field-unification axioms (distinctness/injectivity/acyclicity) stay \
+                   trusted; the Lean/kernel reconstruction route is deferred (Carcara-only)",
+        reference: "ADR-0022",
+    },
+    Capability {
         area: "quantifiers",
         feature: "finite-domain expansion + congruence-aware e-matching on the e-graph keystone \
                   (single/multi-variable, multi-pattern set-cover triggers, nested triggers) \

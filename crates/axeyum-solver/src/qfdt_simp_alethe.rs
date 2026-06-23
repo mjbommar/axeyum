@@ -18,7 +18,27 @@
 //! ## The composed proof and the trust boundary
 //!
 //! This emitter certifies the **`select`-over-`construct`** fold (the
-//! read-over-construct fragment). For each redex `r = select_i(C(a…))`:
+//! read-over-construct fragment) **and** the **is-tester** fold
+//! (`is_C(K(args)) = true/false`, `K == C` iff `true`). The is-tester
+//! certification is the read-over-construct twin: each `is_C(K(args))` redex is
+//! abstracted to a fresh Boolean `w`, the **test-fold equation**
+//! `(= (is_C (K args)) true/false)` is added as a (trusted) premise, and the
+//! collapse `w = is_C(K args) = true/false` is closed by `eq_transitive` +
+//! `resolution` — exactly the structural reasoning **Carcara checks** (it treats
+//! the reserved tester/constructor heads as uninterpreted functions and the
+//! test-fold as an asserted premise). The test fold itself stays a trusted
+//! premise (like the projection equation); what is **certified** is its *use* in
+//! the refutation. The field-unification datatype axioms (constructor
+//! distinctness, injectivity, acyclicity) remain **trusted** and are out of scope
+//! for this slice.
+//!
+//! Unlike the `select`-over-`construct` fold (whose route-A Lean reconstructor
+//! ι-reduces the projection), the **Lean/kernel reconstruction route for the
+//! is-tester collapse is deferred**: the fragment dispatch does not yet route a
+//! datatype is-tester proof to a datatype reconstructor. The is-tester
+//! certificate is therefore **Carcara-checked only** for now.
+//!
+//! For each redex `r = select_i(C(a…))`:
 //!
 //! 1. a fresh abstraction symbol `w` of `a_i`'s sort replaces `r` everywhere in
 //!    the assertions, and the **projection equation** `(= w a_i)` is added to the
@@ -88,6 +108,23 @@ struct ProjectionCert {
     ctor_fields: Vec<TermId>,
 }
 
+/// One `is_c(construct_k(..))` is-tester fold whose Boolean result the residual
+/// refutation references through a fresh `BitVec(1)` **truth-bit** abstraction
+/// `w` (the redex is substituted by the predicate `(= w #b1)`), with the data to
+/// splice the test-fold derivation of the truth-bit equation `(= w #b1/#b0)`.
+struct TesterCert {
+    /// The fresh `BitVec(1)` truth-bit abstraction symbol (renders `w`).
+    fresh: SymbolId,
+    /// The folded Boolean value (`tested == builder`): `#b1` when `true`.
+    value: bool,
+    /// The **tested** constructor `c` of `is_c(..)`.
+    tested: ConstructorId,
+    /// The **builder** constructor `k` of the argument `construct_k(..)`.
+    builder: ConstructorId,
+    /// The builder's full field argument terms (rendered for route-A structure).
+    ctor_fields: Vec<TermId>,
+}
+
 /// Emits a complete, checkable Alethe refutation for an `unsat` datatype
 /// conjunction decided by read-over-construct simplification — with every
 /// `select`-over-`construct` fold made explicit as an abstraction plus a
@@ -123,10 +160,12 @@ pub fn prove_qf_dt_unsat_alethe_via_simplification(
     arena: &mut TermArena,
     assertions: &[TermId],
 ) -> Option<Vec<AletheCommand>> {
-    // 1. Collect every `select_i(construct_c(..))` redex (matching constructor) in
-    //    the assertions, in a deterministic order. Each gets a fresh abstraction.
+    // 1. Collect every `select_i(construct_c(..))` redex (matching constructor) and
+    //    every `is_c(construct_k(..))` is-tester redex in the assertions, in a
+    //    deterministic order. Each gets a fresh abstraction.
     let redexes = collect_projection_redexes(arena, assertions);
-    if redexes.is_empty() {
+    let tester_redexes = collect_tester_redexes(arena, assertions);
+    if redexes.is_empty() && tester_redexes.is_empty() {
         return None;
     }
 
@@ -153,9 +192,31 @@ pub fn prove_qf_dt_unsat_alethe_via_simplification(
         });
     }
 
+    // Allocate, per distinct is-tester redex, a fresh **`BitVec(1)`** truth-bit
+    // abstraction `w` and substitute the Bool redex `is_C(K a…)` with the Bool
+    // **predicate** `(= w #b1)` — so the residual stays in the bit-blastable BV
+    // fragment (a bare Bool atom is not a supported predicate). The truth bit is
+    // `#b1` when `K == C`, `#b0` otherwise (the SMT-LIB tester semantics).
+    let mut tester_certs: Vec<TesterCert> = Vec::new();
+    for (n, redex) in tester_redexes.iter().enumerate() {
+        let name = format!("!dt_t_{n}");
+        let sym = arena.declare(&name, Sort::BitVec(1)).ok()?;
+        let w = arena.var(sym);
+        let one = arena.bv_const(1, 1).ok()?;
+        let pred = arena.eq(w, one).ok()?;
+        subst.insert(redex.term, pred);
+        tester_certs.push(TesterCert {
+            fresh: sym,
+            value: redex.value,
+            tested: redex.tested,
+            builder: redex.builder,
+            ctor_fields: redex.ctor_fields.clone(),
+        });
+    }
+
     // 2. Rewrite the assertions, replacing each redex with its abstraction `w`.
     let mut memo: HashMap<TermId, TermId> = HashMap::new();
-    let mut residual = Vec::with_capacity(assertions.len() + certs.len());
+    let mut residual = Vec::with_capacity(assertions.len() + certs.len() + tester_certs.len());
     for &assertion in assertions {
         residual.push(replace_subterms(arena, assertion, &subst, &mut memo).ok()?);
     }
@@ -167,11 +228,29 @@ pub fn prove_qf_dt_unsat_alethe_via_simplification(
         residual.push(eq);
     }
 
-    // 4. Bit-blast refutation of the residual. It `assume`s each `(= w a_i)`.
+    // 3b. Add each is-tester truth-fact to the residual as a unit over the SAME
+    //     predicate atom `(= w #b1)` the occurrences use: `(= w #b1)` when the
+    //     fold is `true`, `(not (= w #b1))` when `false`. This keeps the residual a
+    //     bit-blast unit conflict (the BV emitter resolves opposite-polarity units
+    //     of one atom), regardless of the tester's polarity in the assertion.
+    for cert in &tester_certs {
+        let w = arena.var(cert.fresh);
+        let one = arena.bv_const(1, 1).ok()?;
+        let pred = arena.eq(w, one).ok()?;
+        let fact = if cert.value {
+            pred
+        } else {
+            arena.not(pred).ok()?
+        };
+        residual.push(fact);
+    }
+
+    // 4. Bit-blast refutation of the residual. It `assume`s each `(= w a_i)` and
+    //    each `(= w true/false)`.
     let bv_proof = crate::prove_qf_bv_unsat_alethe_lowered(arena, &residual)?;
 
-    // 5. Splice: replace each projection `Assume` with its derivation block.
-    let spliced = splice_projection_derivations(arena, &bv_proof, &certs)?;
+    // 5. Splice: replace each projection / is-tester `Assume` with its block.
+    let spliced = splice_projection_derivations(arena, &bv_proof, &certs, &tester_certs)?;
 
     // 6. Self-validate before returning.
     if matches!(check_alethe(&spliced), Ok(true)) {
@@ -232,6 +311,55 @@ fn collect_projection_redexes(arena: &TermArena, roots: &[TermId]) -> Vec<Projec
     out
 }
 
+/// One `is_c(construct_k(..))` is-tester redex (any constructor pair), with its
+/// folded Boolean value `c == k` and the builder's field arguments.
+struct TesterRedex {
+    /// The redex term `is_c(K(args…))`.
+    term: TermId,
+    /// The folded Boolean value (`tested == builder`).
+    value: bool,
+    /// The **tested** constructor `c`.
+    tested: ConstructorId,
+    /// The **builder** constructor `k`.
+    builder: ConstructorId,
+    /// The builder's full field argument terms `a0 … a_{n-1}`.
+    ctor_fields: Vec<TermId>,
+}
+
+/// Collects every distinct `is_c(construct_k(..))` is-tester redex (any
+/// constructor pair `c`, `k`) in deterministic first-seen order. The fold value
+/// is `c == k`: `true` when the tested constructor is the builder, `false`
+/// otherwise (the SMT-LIB tester semantics).
+fn collect_tester_redexes(arena: &TermArena, roots: &[TermId]) -> Vec<TesterRedex> {
+    let mut seen: HashSet<TermId> = HashSet::new();
+    let mut out: Vec<TesterRedex> = Vec::new();
+    let mut stack: Vec<TermId> = roots.to_vec();
+    stack.reverse();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(term) {
+            if let Op::DtTest(tested) = op {
+                let tested = *tested;
+                if let Some((builder, fields)) = as_construct(arena, args[0]) {
+                    out.push(TesterRedex {
+                        term,
+                        value: builder == tested,
+                        tested,
+                        builder,
+                        ctor_fields: fields,
+                    });
+                }
+            }
+            for &arg in args.iter().rev() {
+                stack.push(arg);
+            }
+        }
+    }
+    out
+}
+
 /// If `term` is `construct_c(args…)`, returns `(c, args)`.
 fn as_construct(arena: &TermArena, term: TermId) -> Option<(ConstructorId, Vec<TermId>)> {
     match arena.node(term) {
@@ -280,13 +408,15 @@ fn replace_subterms(
     Ok(result)
 }
 
-/// Replaces each projection `Assume { (= w a_i) }` in `bv_proof` with a `!cong_*`
-/// derivation block deriving `(cl (= w a_i))` under the same id, so the fold is
-/// made explicit (abstraction definition + projection axiom + `eq_transitive`).
+/// Replaces each projection `Assume { (= w a_i) }` and each is-tester
+/// `Assume { (= w true/false) }` in `bv_proof` with a `!cong_*` derivation block
+/// deriving the same consequent under the same id, so the fold is made explicit
+/// (abstraction definition + fold axiom + `eq_transitive`).
 fn splice_projection_derivations(
     arena: &TermArena,
     bv_proof: &[AletheCommand],
     certs: &[ProjectionCert],
+    tester_certs: &[TesterCert],
 ) -> Option<Vec<AletheCommand>> {
     // Map each projection consequent's `(= w a_i)` clause key to its cert.
     let mut by_consequent: HashMap<String, &ProjectionCert> = HashMap::new();
@@ -294,14 +424,23 @@ fn splice_projection_derivations(
         let key = consequent_clause_key(arena, cert)?;
         by_consequent.insert(key, cert);
     }
+    // Map each is-tester consequent's `(= w true/false)` clause key to its cert.
+    let mut by_tester: HashMap<String, &TesterCert> = HashMap::new();
+    for cert in tester_certs {
+        let key = tester_consequent_clause_key(arena, cert);
+        by_tester.insert(key, cert);
+    }
 
-    let mut out: Vec<AletheCommand> = Vec::with_capacity(bv_proof.len() + certs.len() * 4);
+    let estimate = bv_proof.len() + (certs.len() + tester_certs.len()) * 4;
+    let mut out: Vec<AletheCommand> = Vec::with_capacity(estimate);
     let mut fresh = 0usize;
     for cmd in bv_proof {
         match cmd {
             AletheCommand::Assume { id, clause } => {
                 if let Some(cert) = projection_consequent_cert(clause, &by_consequent) {
                     emit_projection_derivation(arena, &mut out, &mut fresh, id, cert)?;
+                } else if let Some(cert) = tester_consequent_cert(clause, &by_tester) {
+                    emit_tester_derivation(arena, &mut out, &mut fresh, id, cert)?;
                 } else {
                     out.push(cmd.clone());
                 }
@@ -310,6 +449,28 @@ fn splice_projection_derivations(
         }
     }
     Some(out)
+}
+
+/// If `clause` is a single literal over the truth predicate `(= w #b1)` whose
+/// polarity matches a registered is-tester consequent (positive for a `true`
+/// fold, negated for `false`), returns its cert.
+fn tester_consequent_cert<'a>(
+    clause: &[AletheLit],
+    by_tester: &HashMap<String, &'a TesterCert>,
+) -> Option<&'a TesterCert> {
+    let [lit] = clause else {
+        return None;
+    };
+    let cert = by_tester.get(&lit.atom.key()).copied()?;
+    // Positive literal ⇔ `true` fold; negated literal ⇔ `false` fold.
+    (lit.negated != cert.value).then_some(cert)
+}
+
+/// The truth predicate atom `(= w #b1)` clause key for an is-tester consequent
+/// (the polarity is carried by [`TesterCert::value`], not the key).
+fn tester_consequent_clause_key(arena: &TermArena, cert: &TesterCert) -> String {
+    let w = sym_alethe(arena, cert.fresh);
+    eq_term(w, bit_alethe(true)).key()
 }
 
 /// If `clause` is a single positive literal `(= w a_i)` matching a registered
@@ -430,6 +591,167 @@ fn selector_application_alethe(arena: &TermArena, cert: &ProjectionCert) -> Opti
         format!("!dtsel_{n}_{}_{name}", cert.index),
         vec![con],
     ))
+}
+
+/// Emits, under `assume_id`, the steps deriving the is-tester **truth fact** over
+/// the predicate `(= w #b1)` — `(cl (= w #b1))` when the fold is `true`, or
+/// `(cl (not (= w #b1)))` when `false` — from the abstraction definition
+/// `(= w (is_c (K a…)))` and the (trusted) test-fold premise.
+///
+/// `is_c(K a…)` is rendered **structurally** as a reserved-named tester
+/// application over a reserved-named constructor application
+/// (`(!dttest_n_c (!dtcon_m_K a0 … a_{m-1}))`): the tester head names the tested
+/// constructor `c` and its field count `n`; the constructor head names the
+/// builder `K` and its arity `m`. For Carcara (no datatype rule) both heads are
+/// plain uninterpreted functions and the test-fold premise is an **asserted
+/// premise** (the trusted is-tester fold); every *other* step (the
+/// abstraction-definition resolution, the `eq_transitive` / `cong`+`equiv1`, the
+/// bit-blast tail) is Carcara-checked structurally — the collapse reasoning is
+/// what is certified. The Lean/kernel reconstruction route for the is-tester
+/// collapse is deferred (the fragment dispatch does not yet route datatype
+/// is-tester proofs to a datatype reconstructor), so this certificate is
+/// Carcara-checked only.
+fn emit_tester_derivation(
+    arena: &TermArena,
+    out: &mut Vec<AletheCommand>,
+    fresh: &mut usize,
+    assume_id: &str,
+    cert: &TesterCert,
+) -> Option<()> {
+    let w = sym_alethe(arena, cert.fresh);
+    let one = bit_alethe(true);
+    // `is_c(K a…)` rendered structurally as the truth-bit tester application.
+    let test = tester_application_alethe(arena, cert)?;
+
+    // Abstraction definition `(= w (is_c (K a…)))` — fresh-variable introduction.
+    let def_id = next_id(fresh, "defi");
+    out.push(AletheCommand::Assume {
+        id: def_id.clone(),
+        clause: vec![pos(eq_term(w.clone(), test.clone()))],
+    });
+
+    if cert.value {
+        emit_tester_true(out, fresh, assume_id, &def_id, &w, &test, &one);
+    } else {
+        emit_tester_false(out, fresh, assume_id, &def_id, &w, &test, &one);
+    }
+    Some(())
+}
+
+/// The `true` fold: derive `(= w #b1)` by `eq_transitive` over the abstraction
+/// definition `(= w (is_c (K a…)))` and the trusted test-fold `(= (is_c (K a…)) #b1)`.
+fn emit_tester_true(
+    out: &mut Vec<AletheCommand>,
+    fresh: &mut usize,
+    assume_id: &str,
+    def_id: &str,
+    w: &AletheTerm,
+    test: &AletheTerm,
+    one: &AletheTerm,
+) {
+    // Test-fold premise `(= (is_c (K a…)) #b1)` — the TRUSTED is-tester fold.
+    let fold_id = next_id(fresh, "test");
+    out.push(AletheCommand::Assume {
+        id: fold_id.clone(),
+        clause: vec![pos(eq_term(test.clone(), one.clone()))],
+    });
+    // Chain w = is_c(K a…) = #b1 by a single `eq_transitive`.
+    let trans = next_id(fresh, "trans");
+    out.push(AletheCommand::Step {
+        id: trans.clone(),
+        clause: vec![
+            neg(eq_term(w.clone(), test.clone())),
+            neg(eq_term(test.clone(), one.clone())),
+            pos(eq_term(w.clone(), one.clone())),
+        ],
+        rule: "eq_transitive".to_owned(),
+        premises: Vec::new(),
+        args: Vec::new(),
+    });
+    out.push(AletheCommand::Step {
+        id: assume_id.to_owned(),
+        clause: vec![pos(eq_term(w.clone(), one.clone()))],
+        rule: "resolution".to_owned(),
+        premises: vec![trans, def_id.to_owned(), fold_id],
+        args: Vec::new(),
+    });
+}
+
+/// The `false` fold: derive `(not (= w #b1))` from the abstraction definition
+/// `(= w (is_c (K a…)))` and the trusted test-fold `(not (= (is_c (K a…)) #b1))`,
+/// by `cong` (lifting `(= w T)` under the `=` head to
+/// `(= (= w #b1) (= T #b1))`), `equiv1`, and `resolution`.
+fn emit_tester_false(
+    out: &mut Vec<AletheCommand>,
+    fresh: &mut usize,
+    assume_id: &str,
+    def_id: &str,
+    w: &AletheTerm,
+    test: &AletheTerm,
+    one: &AletheTerm,
+) {
+    let w_eq = eq_term(w.clone(), one.clone());
+    let t_eq = eq_term(test.clone(), one.clone());
+    // Test-fold premise `(not (= (is_c (K a…)) #b1))` — the TRUSTED is-tester fold.
+    let fold_id = next_id(fresh, "test");
+    out.push(AletheCommand::Assume {
+        id: fold_id.clone(),
+        clause: vec![neg(t_eq.clone())],
+    });
+    // cong: `(= (= w #b1) (= T #b1))` from `(= w T)` (the `#b1` arg is unchanged).
+    let cong = next_id(fresh, "cong");
+    out.push(AletheCommand::Step {
+        id: cong.clone(),
+        clause: vec![pos(eq_term(w_eq.clone(), t_eq.clone()))],
+        rule: "cong".to_owned(),
+        premises: vec![def_id.to_owned()],
+        args: Vec::new(),
+    });
+    // equiv1: `(= A B)` ⇒ `(cl (not A) B)`, i.e. `(cl (not (= w #b1)) (= T #b1))`.
+    let equiv = next_id(fresh, "equiv");
+    out.push(AletheCommand::Step {
+        id: equiv.clone(),
+        clause: vec![neg(w_eq.clone()), pos(t_eq)],
+        rule: "equiv1".to_owned(),
+        premises: vec![cong],
+        args: Vec::new(),
+    });
+    // resolution with the trusted `(not (= T #b1))` ⇒ `(not (= w #b1))`.
+    out.push(AletheCommand::Step {
+        id: assume_id.to_owned(),
+        clause: vec![neg(w_eq)],
+        rule: "resolution".to_owned(),
+        premises: vec![equiv, fold_id],
+        args: Vec::new(),
+    });
+}
+
+/// The structural tester application `(!dttest_n_c (!dtcon_m_K a0 … a_{m-1}))`
+/// for the redex `is_c(K(a0…a_{m-1}))`, as an [`AletheTerm`]. The tester head
+/// names the tested constructor `c` and its field count `n`; the constructor
+/// head names the builder `K` and its arity `m`. Returns [`None`] if a field is
+/// not a renderable residual leaf (BV/Bool).
+fn tester_application_alethe(arena: &TermArena, cert: &TesterCert) -> Option<AletheTerm> {
+    let tested_name = arena.constructor_name(cert.tested);
+    let tested_arity = arena.constructor_fields(cert.tested).len();
+    let builder_name = arena.constructor_name(cert.builder);
+    let m = cert.ctor_fields.len();
+    // (!dtcon_m_K a0 … a_{m-1}).
+    let mut con_args = Vec::with_capacity(m);
+    for &f in &cert.ctor_fields {
+        con_args.push(term_to_alethe(arena, f)?);
+    }
+    let con = AletheTerm::App(format!("!dtcon_{m}_{builder_name}"), con_args);
+    // (!dttest_n_c <con>).
+    Some(AletheTerm::App(
+        format!("!dttest_{tested_arity}_{tested_name}"),
+        vec![con],
+    ))
+}
+
+/// The `BitVec(1)` truth-bit constant `#b1`/`#b0` as an [`AletheTerm`].
+fn bit_alethe(value: bool) -> AletheTerm {
+    AletheTerm::Const(if value { "#b1" } else { "#b0" }.into())
 }
 
 /// A fresh, namespaced derivation-step id (`!cong_<base>_<n>`), matching the
