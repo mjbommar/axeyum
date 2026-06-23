@@ -143,7 +143,13 @@ pub const CAPABILITIES: &[Capability] = &[
         feature: "arrays via eager read-over-write + Ackermann elimination",
         assurance: Assurance::Validated,
         evidence: "reduction to QF_BV; model replay; UNSAT exportable as a re-checkable \
-                   DRAT certificate (clausal layer, modulo trusted elimination)",
+                   DRAT certificate (clausal layer, modulo trusted elimination). The Ackermann-over-select \
+                   read-CONSISTENCY stratum is Carcara-checked (select as a plain UF); and the \
+                   read-over-write-SAME collapse select(store(a,i,v),i)=v now has a Carcara-checked \
+                   derivation (prove_qf_abv_row_same_alethe_carcara: eq_simplify/cong/ite_simplify/trans/\
+                   resolution, with a tamper-rejection test) — shrinking the trusted surface to just the \
+                   read-over-write rewrite INSTANCE (asserted as a premise; the array axiom is not yet \
+                   certified)",
         reference: "ADR-0010",
     },
     Capability {
