@@ -480,6 +480,10 @@ impl TheorySolver for LraTheory {
         }
         self.live.truncate(live_len);
     }
+
+    fn propagate(&self) -> Vec<TheoryProp> {
+        LraTheory::propagate(self)
+    }
 }
 
 /// Attaches an empty `mult` (seeded by [`solve`] once the live row count is known)
@@ -913,10 +917,12 @@ struct Conflict {
     is_theory: bool,
 }
 
-/// A self-contained `DPLL(T)` search over the CNF skeleton driving an
-/// [`LraTheory`] online: **1-UIP** theory-conflict learning with
-/// non-chronological backjumping, the theory pushed on each decision and popped
-/// once per decision crossed when backjumping.
+/// A self-contained `DPLL(T)` search over the CNF skeleton driving any online
+/// [`TheorySolver`]: **1-UIP** theory-conflict learning with non-chronological
+/// backjumping, the theory pushed on each decision and popped once per decision
+/// crossed when backjumping. The loop is generic over the theory (its methods
+/// take `&mut T` where `T: TheorySolver`); [`check_qf_lra_online`] instantiates
+/// it with [`LraTheory`].
 struct Dpll {
     var_count: usize,
     atom_count: usize,
@@ -1010,9 +1016,9 @@ impl Dpll {
     /// Assigns `var := value` at the current decision level, recording its level
     /// and reason and mirroring a theory atom into [`LraTheory`]. `reason` is the
     /// forcing clause for a propagation, `None` for a decision.
-    fn assign(
+    fn assign<T: TheorySolver>(
         &mut self,
-        theory: &mut LraTheory,
+        theory: &mut T,
         var: usize,
         value: bool,
         cause: Cause,
@@ -1033,7 +1039,7 @@ impl Dpll {
     /// Boolean unit propagation to fixpoint. `Err` carries a falsified conflict
     /// clause (literals all currently false) on a Boolean conflict, or a learned
     /// theory-conflict clause on a forced theory inconsistency — tagged with which.
-    fn unit_propagate(&mut self, theory: &mut LraTheory) -> Result<(), Conflict> {
+    fn unit_propagate<T: TheorySolver>(&mut self, theory: &mut T) -> Result<(), Conflict> {
         let mut changed = true;
         while changed {
             changed = false;
@@ -1093,7 +1099,7 @@ impl Dpll {
     /// learned theory-conflict clause on a theory conflict, else `Ok(())`. A
     /// mirror of `crate::euf_egraph::Dpll::theory_propagate` retargeted to
     /// [`LraTheory`].
-    fn theory_propagate(&mut self, theory: &mut LraTheory) -> Result<(), Conflict> {
+    fn theory_propagate<T: TheorySolver>(&mut self, theory: &mut T) -> Result<(), Conflict> {
         loop {
             let props = theory.propagate();
             let mut progress = false;
@@ -1144,7 +1150,7 @@ impl Dpll {
 
     /// Unit propagation interleaved with theory propagation to a joint fixpoint. A
     /// mirror of `crate::euf_egraph::Dpll::propagate` retargeted to [`LraTheory`].
-    fn propagate(&mut self, theory: &mut LraTheory) -> Result<(), Conflict> {
+    fn propagate<T: TheorySolver>(&mut self, theory: &mut T) -> Result<(), Conflict> {
         loop {
             self.unit_propagate(theory)?;
             let before = self.trail.len();
@@ -1280,7 +1286,7 @@ impl Dpll {
     /// unassigning each variable and popping the theory **once per decision
     /// crossed** (the theory was pushed once per decision, so this keeps the
     /// push/pop stack in lockstep).
-    fn backjump_to(&mut self, theory: &mut LraTheory, target_level: usize) {
+    fn backjump_to<T: TheorySolver>(&mut self, theory: &mut T, target_level: usize) {
         while let Some(&(var, _, _)) = self.trail.last() {
             if self.level[var] <= target_level {
                 break;
@@ -1303,7 +1309,7 @@ impl Dpll {
 
     /// Runs the search. Returns `true` iff the skeleton is UNSAT under the theory,
     /// `false` on a Boolean- and theory-consistent total assignment.
-    fn solve(&mut self, theory: &mut LraTheory) -> bool {
+    fn solve<T: TheorySolver>(&mut self, theory: &mut T) -> bool {
         loop {
             match self.propagate(theory) {
                 Ok(()) => {}
@@ -1338,7 +1344,7 @@ impl Dpll {
     /// non-chronologically to the backjump level, and enqueues the UIP literal as
     /// an implied assignment with the learned clause as its reason. `false` when
     /// the conflict is implied at level 0 (UNSAT) — there is nothing to assert.
-    fn learn_and_backjump(&mut self, theory: &mut LraTheory, conflict: &Conflict) -> bool {
+    fn learn_and_backjump<T: TheorySolver>(&mut self, theory: &mut T, conflict: &Conflict) -> bool {
         let (learned, backjump, is_theory_lemma) =
             self.analyze_conflict(&conflict.clause, conflict.is_theory);
         #[cfg(test)]

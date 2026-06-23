@@ -74,6 +74,11 @@ pub trait TheorySolver {
     fn push(&mut self);
     /// Undoes every assertion back to the most recent [`Self::push`].
     fn pop(&mut self);
+    /// Sound theory propagation: the literals the theory entails under the current
+    /// assertions, each with the asserted literals that force it (its explanation).
+    /// A CDCL(T) loop can assign these without a decision. Only genuinely-entailed
+    /// literals are emitted — an under-approximation that never fabricates one.
+    fn propagate(&self) -> Vec<TheoryProp>;
 }
 
 /// Online EUF theory solver over the backtrackable congruence-closure e-graph
@@ -255,6 +260,10 @@ impl TheorySolver for EufTheory {
                 }
             }
         }
+    }
+
+    fn propagate(&self) -> Vec<TheoryProp> {
+        EufTheory::propagate(self)
     }
 }
 

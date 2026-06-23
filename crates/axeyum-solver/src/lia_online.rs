@@ -398,6 +398,10 @@ impl TheorySolver for LiaTheory {
             self.assigned[atom] = None;
         }
     }
+
+    fn propagate(&self) -> Vec<TheoryProp> {
+        LiaTheory::propagate(self)
+    }
 }
 
 /// Classifies one atom term into its [`AtomKind`] for the integer theory.
