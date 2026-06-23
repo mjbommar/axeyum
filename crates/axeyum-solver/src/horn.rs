@@ -21,17 +21,41 @@
 //!
 //! # The fragment this slice solves (and what it declines)
 //!
-//! Every clause is **linear** — its body holds **at most one** predicate
-//! application. The supported systems are the **multi-predicate linear** ones:
-//! any number of predicates `P₁…Pₘ`, every clause linear. The predicate
-//! dependency graph is **condensed into strongly-connected components (`SCC`s)**
-//! and the `SCC`s are processed in topological order. A **trivial** `SCC` (a
-//! single predicate that is either non-recursive or self-recursive) is solved by
-//! the existing direct / self-recursive reduction. A **non-trivial** `SCC` (`≥ 2`
-//! mutually-recursive predicates — *mutual recursion*) is handled by the
-//! **merge-to-tagged-predicate** reduction described below. The acyclic
+//! The supported systems are the **multi-predicate stratified** ones: any number
+//! of predicates `P₁…Pₘ`. A clause is **linear** when its body holds at most one
+//! predicate application and **nonlinear** (`k ≥ 2` atoms) otherwise. The
+//! predicate dependency graph is **condensed into strongly-connected components
+//! (`SCC`s)** and the `SCC`s are processed in topological order. A **trivial**
+//! `SCC` (a single predicate that is either non-recursive or self-recursive) is
+//! solved by the existing direct / self-recursive reduction. A **non-trivial**
+//! `SCC` (`≥ 2` mutually-recursive predicates — *mutual recursion*) is handled by
+//! the **merge-to-tagged-predicate** reduction described below. The acyclic
 //! single-`SCC`-per-predicate case is the special case where every `SCC` is
 //! trivial.
+//!
+//! ## Stratified nonlinear bodies — solved-predecessor folding
+//!
+//! A nonlinear clause `B₁(…) ∧ … ∧ B_k(…) ∧ φ ⇒ R(head)` (`k ≥ 2`) is handled
+//! **when, within the contribution to solving `R`'s `SCC`, every body atom whose
+//! predicate is NOT in `R`'s own `SCC` is already solved** (a strictly-lower
+//! stratum). Each such solved atom `Bᵢ` is *folded into the constraint*: it is
+//! replaced by its interpretation formula `I_{Bᵢ}(argsᵢ)`, giving an enriched
+//! constraint `φ' = φ ∧ ⋀ I_{Bᵢ}(argsᵢ)`. After folding, the clause is classified
+//! by how many body atoms remain in `R`'s own (recursive) `SCC`:
+//!
+//! * **0 remaining** — a pure fact / init / nonlinear query, a direct obligation;
+//! * **1 remaining** — the existing **linear** shape (one recursive body atom plus
+//!   the enriched constraint), routed to `solve_direct` / `solve_self_recursive` /
+//!   the mutual-`SCC` merge unchanged;
+//! * **`≥ 2` remaining** — genuine **nonlinear recursion** (a product / k-fold
+//!   transition system); this slice **declines the whole system to
+//!   [`HornOutcome::Unknown`]** rather than guess.
+//!
+//! A clause whose body exceeds [`MAX_BODY_ATOMS`] atoms, references an unsolved /
+//! circular non-self predecessor, or whose folding hits an arity mismatch declines
+//! cleanly. Folding several solved atoms reuses the same arg-binding substitution
+//! the single-predecessor linear case already used. Genuine nonlinear recursion
+//! and a non-sort-compatible mutually-recursive `SCC` remain out of fragment.
 //!
 //! ## Mutual recursion — the merge-to-tagged-predicate reduction
 //!
@@ -65,12 +89,13 @@
 //! dependencies; a solved predecessor `Q` is folded into the later clauses by
 //! substituting its interpretation `I_Q` for each `Q`-atom.
 //!
-//! Anything outside this fragment — a body with two or more atoms (nonlinear
-//! recursion), a non-sort-compatible mutually-recursive `SCC`, or an unsupported
-//! argument shape — is **out of fragment** and declines cleanly to
-//! [`HornOutcome::Unknown`]. The full tagged-disjoint-union merge (members of
-//! *different* arities/sorts) and nonlinear (`k ≥ 2`-atom body) `CHC` are the
-//! natural next slices; both would ride the same verify-before-return discipline.
+//! Anything outside this fragment — genuine nonlinear recursion (`≥ 2` body atoms
+//! remaining in the recursive `SCC` after folding), a non-sort-compatible
+//! mutually-recursive `SCC`, or an unsupported argument shape — is **out of
+//! fragment** and declines cleanly to [`HornOutcome::Unknown`]. The full
+//! tagged-disjoint-union merge (members of *different* arities/sorts) and genuine
+//! nonlinear recursion are the natural next slices; both would ride the same
+//! verify-before-return discipline.
 //!
 //! # Reduction to a transition system (untrusted)
 //!
@@ -212,20 +237,23 @@ pub enum HornOutcome {
 /// predicates that satisfies every clause (`Sat`), or is the query head `false`
 /// derivable (`Unsat`)?
 ///
-/// This slice handles the **multi-predicate linear** fragment (see the module
-/// docs): any number of predicates, each clause body holding at most one
-/// application. With one predicate it reduces to a
-/// [`TransitionSystem`](crate::TransitionSystem) and dispatches to the
-/// model-checking engines by the predicate's argument sorts — `Real` to the
+/// This slice handles the **multi-predicate stratified** fragment (see the module
+/// docs): any number of predicates, and bodies with several predicate atoms
+/// (**nonlinear** clauses) as long as all but at most one body atom belong to
+/// already-solved (strictly-lower-stratum) predicates. With one predicate it
+/// reduces to a [`TransitionSystem`](crate::TransitionSystem) and dispatches to
+/// the model-checking engines by the predicate's argument sorts — `Real` to the
 /// `LRA` engines, `BitVec`/`Bool` to the bit-level engines. With several
 /// predicates it condenses the dependency graph into strongly-connected
-/// components and processes them in topological order: a trivial component (one
-/// non-recursive or self-recursive predicate) folds each solved predecessor's
-/// interpretation in; a non-trivial (mutually-recursive) **sort-compatible**
-/// component is merged into one control-tagged self-recursive predicate, solved,
-/// and projected back per member. Anything outside the fragment (a non-sort-
-/// compatible `SCC`, a nonlinear body, an unsupported shape) declines to
-/// [`HornOutcome::Unknown`].
+/// components and processes them in topological order: when solving a component,
+/// every solved lower-stratum body atom is **folded into the clause constraint**
+/// (its interpretation replaces the atom); a trivial component (one non-recursive
+/// or self-recursive predicate) then solves the folded clauses, and a non-trivial
+/// (mutually-recursive) **sort-compatible** component is merged into one
+/// control-tagged self-recursive predicate, solved, and projected back per
+/// member. **Genuine nonlinear recursion** (`≥ 2` body atoms remaining in the
+/// component's own `SCC` after folding), a non-sort-compatible `SCC`, an
+/// over-cap body, or an unsupported shape declines to [`HornOutcome::Unknown`].
 ///
 /// Soundness is total and rests on the verify-before-return discipline: a `Sat`
 /// is returned only after the candidate **whole-system** model re-validates
@@ -914,11 +942,14 @@ fn unknown(reason: &str) -> HornOutcome {
 // Acyclic multi-predicate linear CHC
 // ===========================================================================
 
-/// A clause's predicate shape: the (optional) body predicate (linear ⇒ at most
-/// one) and the (optional) head predicate (`None` ⇒ a query head `false`).
+/// A clause's predicate shape: every body predicate application (a clause is
+/// **linear** with `≤ 1` and **nonlinear** with `≥ 2`) and the (optional) head
+/// predicate (`None` ⇒ a query head `false`).
 struct ClauseShape {
-    /// The single body predicate application, if any: `(predicate, args)`.
-    body: Option<(FuncId, Vec<TermId>)>,
+    /// Every body predicate application `(predicate, args)`, in clause order. An
+    /// empty vector is a fact / init clause; one entry is linear; two or more is
+    /// a nonlinear clause (handled by solved-predecessor folding).
+    bodies: Vec<(FuncId, Vec<TermId>)>,
     /// The head predicate application, if any: `(predicate, args)`; `None` is a
     /// query head.
     head: Option<(FuncId, Vec<TermId>)>,
@@ -1023,38 +1054,42 @@ fn solve_horn_multi(
     }
 }
 
-/// Determines the body/head predicate shape of every clause, declining a
-/// nonlinear (`≥ 2` predicate atoms in the body) clause or a malformed atom.
+/// Determines the body/head predicate shape of every clause. A nonlinear (`≥ 2`
+/// predicate atoms in the body) clause is **retained** for solved-predecessor
+/// folding; only a malformed atom or an over-[`MAX_BODY_ATOMS`] body declines.
 fn clause_shapes(arena: &TermArena, system: &HornSystem) -> Result<Vec<ClauseShape>, String> {
     let known: std::collections::BTreeSet<FuncId> = system.predicates.iter().copied().collect();
     let mut shapes = Vec::with_capacity(system.clauses.len());
     for clause in &system.clauses {
-        if clause.body.len() > 1 {
+        if clause.body.len() > MAX_BODY_ATOMS {
             return Err(format!(
-                "out of fragment: a clause body has {} predicate atoms; this slice handles linear \
-                 Horn (at most one body atom)",
+                "out of cap: a clause body has {} predicate atoms (cap {MAX_BODY_ATOMS}); declining",
                 clause.body.len()
             ));
         }
-        let body = match clause.body.first() {
-            None => None,
-            Some(&atom) => Some(predicate_app(arena, atom, &known)?),
-        };
+        let mut bodies = Vec::with_capacity(clause.body.len());
+        for &atom in &clause.body {
+            bodies.push(predicate_app(arena, atom, &known)?);
+        }
         let head = match clause.head {
             None => None,
             Some(head) => Some(predicate_app(arena, head, &known)?),
         };
-        if body.is_none() && head.is_none() {
+        if bodies.is_empty() && head.is_none() {
             return Err(
                 "out of fragment: a clause has neither a body atom nor a head predicate (a \
                  predicate-free theory obligation)"
                     .to_owned(),
             );
         }
-        shapes.push(ClauseShape { body, head });
+        shapes.push(ClauseShape { bodies, head });
     }
     Ok(shapes)
 }
+
+/// The maximum number of predicate atoms in a clause body this slice will fold.
+/// A wider body declines to [`HornOutcome::Unknown`] rather than risk a blow-up.
+const MAX_BODY_ATOMS: usize = 8;
 
 /// Extracts `(predicate, args)` from a predicate application `P(args)`, requiring
 /// `P` to be one of the system's declared predicates. Arguments may be arbitrary
@@ -1076,6 +1111,70 @@ fn predicate_app(
                 .to_owned(),
         ),
     }
+}
+
+/// The result of folding a clause's body atoms while solving an `SCC`: the body
+/// atoms that remain in the recursive `SCC` (`≤ 1` for a routable clause) and the
+/// constraint with every solved lower-stratum atom folded in.
+struct FoldedBody {
+    /// The body predicate atoms still in the `SCC` being solved (recursive). A
+    /// linear-shaped clause has at most one; `≥ 2` is genuine nonlinear recursion
+    /// and the caller declines.
+    recursive: Vec<(FuncId, Vec<TermId>)>,
+    /// The clause constraint conjoined with each solved lower-stratum atom's
+    /// interpretation `I_{Bᵢ}(argsᵢ)`.
+    constraint: TermId,
+}
+
+/// Folds a clause's body atoms relative to the `SCC` currently being solved.
+/// Partitions the body into atoms whose predicate is in `scc_set` (recursive —
+/// kept) and atoms whose predicate is already in `model` (solved lower stratum —
+/// replaced by their interpretation and conjoined into the constraint).
+///
+/// Returns `Ok(folded)` with the recursive remainder and enriched constraint, or
+/// `Err(reason)` (a sound decline) if a non-recursive body atom is **not** solved
+/// (an unsolved/circular non-self predecessor — impossible under a correct
+/// topological order, but checked conservatively) or its interpretation has an
+/// arity mismatch. The outer `Result` carries a genuine arena error.
+///
+/// The caller decides what `recursive.len()` means: `0` is a fact/init/query
+/// obligation, `1` routes to the existing linear machinery, and `≥ 2` is genuine
+/// nonlinear recursion that declines.
+fn fold_solved_bodies(
+    arena: &mut TermArena,
+    bodies: &[(FuncId, Vec<TermId>)],
+    constraint: TermId,
+    scc_set: &std::collections::BTreeSet<FuncId>,
+    model: &BTreeMap<FuncId, PredInterpretation>,
+) -> Result<Result<FoldedBody, String>, SolverError> {
+    let mut recursive: Vec<(FuncId, Vec<TermId>)> = Vec::new();
+    let mut acc = constraint;
+    for (pred, args) in bodies {
+        if scc_set.contains(pred) {
+            recursive.push((*pred, args.clone()));
+            continue;
+        }
+        let Some(interp) = model.get(pred) else {
+            return Ok(Err(
+                "out of fragment: a nonlinear clause references a body predicate that is neither \
+                 in the SCC being solved nor already solved (an unsolved/circular dependency); \
+                 declining"
+                    .to_owned(),
+            ));
+        };
+        let Some(inst) = instantiate(arena, interp, args) else {
+            return Ok(Err(
+                "out of fragment: a folded body predicate application has an arity mismatch; \
+                 declining"
+                    .to_owned(),
+            ));
+        };
+        acc = arena.and(inst, acc)?;
+    }
+    Ok(Ok(FoldedBody {
+        recursive,
+        constraint: acc,
+    }))
 }
 
 /// Condenses the predicate dependency graph into its strongly-connected
@@ -1102,9 +1201,13 @@ fn scc_condensation(predicates: &[FuncId], shapes: &[ClauseShape]) -> Vec<Vec<Fu
         .map(|&p| (p, std::collections::BTreeSet::new()))
         .collect();
     for shape in shapes {
-        if let (Some((body_pred, _)), Some((head_pred, _))) = (&shape.body, &shape.head) {
-            if body_pred != head_pred {
-                adj.entry(*head_pred).or_default().insert(*body_pred);
+        if let Some((head_pred, _)) = &shape.head {
+            // A head P depends on every body predicate Q (P → Q) in a nonlinear
+            // clause; a self-loop (Q == P) does not affect the component structure.
+            for (body_pred, _) in &shape.bodies {
+                if body_pred != head_pred {
+                    adj.entry(*head_pred).or_default().insert(*body_pred);
+                }
             }
         }
     }
@@ -1213,10 +1316,15 @@ fn solve_one_predicate(
     let (_, params_sorts, _) = arena.function(pred);
     let arg_sorts: Vec<Sort> = params_sorts.to_vec();
 
-    // Is P self-recursive? (some clause has P in both body and head.)
-    let self_recursive = system.clauses.iter().zip(shapes).any(|(_, shape)| {
-        matches!((&shape.body, &shape.head),
-            (Some((b, _)), Some((h, _))) if *b == pred && *h == pred)
+    // A trivial SCC is the single predicate P; its own recursive atoms are exactly
+    // the P-atoms. Every other body atom belongs to a strictly-lower stratum and is
+    // folded into the constraint.
+    let scc_set: std::collections::BTreeSet<FuncId> = std::iter::once(pred).collect();
+
+    // Is P self-recursive? (some clause has P among its body atoms and as head.)
+    let self_recursive = shapes.iter().any(|shape| {
+        matches!(&shape.head, Some((h, _)) if *h == pred)
+            && shape.bodies.iter().any(|(b, _)| *b == pred)
     });
 
     // Defining clauses: those whose head is P.
@@ -1229,21 +1337,25 @@ fn solve_one_predicate(
 
     if self_recursive {
         solve_self_recursive(
-            arena, system, shapes, pred, &arg_sorts, &defining, model, config,
+            arena, system, shapes, pred, &arg_sorts, &scc_set, &defining, model, config,
         )
     } else {
-        solve_direct(arena, system, shapes, pred, &arg_sorts, &defining, model)
+        solve_direct(
+            arena, system, shapes, pred, &arg_sorts, &scc_set, &defining, model,
+        )
     }
 }
 
 /// Builds a **direct** interpretation for a non-self-recursive predicate `P`:
-/// `I_P(p) := ⋁ over P's defining clauses of (I_{body} ∧ constraint)[head args ↦ p]`.
+/// `I_P(p) := ⋁ over P's defining clauses of (⋀ I_{bodyᵢ} ∧ constraint)[head args ↦ p]`.
 ///
-/// Each defining clause's optional solved body predicate is substituted by its
-/// interpretation; the head arguments (required to be distinct variable symbols)
-/// are bound to fresh parameter symbols. If any disjunct retains a free variable
-/// outside the parameters, the interpretation would be unsound to re-check under
-/// the existential semantics of [`check_auto`], so the construction declines.
+/// Each defining clause's solved body predicates are folded into the constraint by
+/// [`fold_solved_bodies`] (`scc_set = {P}`, so a non-self-recursive `P` has no
+/// recursive remainder); the head arguments (required to be distinct variable
+/// symbols) are bound to fresh parameter symbols. If any disjunct retains a free
+/// variable outside the parameters, the interpretation would be unsound to
+/// re-check under the existential semantics of [`check_auto`], so the construction
+/// declines.
 #[allow(clippy::too_many_arguments)]
 fn solve_direct(
     arena: &mut TermArena,
@@ -1251,6 +1363,7 @@ fn solve_direct(
     shapes: &[ClauseShape],
     pred: FuncId,
     arg_sorts: &[Sort],
+    scc_set: &std::collections::BTreeSet<FuncId>,
     defining: &[usize],
     model: &BTreeMap<FuncId, PredInterpretation>,
 ) -> Result<SolveOne, SolverError> {
@@ -1278,25 +1391,22 @@ fn solve_direct(
             ));
         };
 
-        // Substitute the solved body predicate (if any) by its interpretation.
-        let mut term = clause.constraint;
-        if let Some((body_pred, body_args)) = &shape.body {
-            let Some(interp) = model.get(body_pred) else {
-                // A non-self body predicate that is not yet solved cannot happen
-                // under a correct topological order; decline conservatively.
-                return Ok(SolveOne::Decline(
-                    "internal: a body predicate was unsolved when building a direct interpretation"
-                        .to_owned(),
-                ));
+        // Fold every solved lower-stratum body atom into the constraint. A
+        // non-self-recursive P has no recursive remainder; a stray recursive atom
+        // would mean P was mis-classified, so decline.
+        let folded =
+            match fold_solved_bodies(arena, &shape.bodies, clause.constraint, scc_set, model)? {
+                Ok(folded) => folded,
+                Err(reason) => return Ok(SolveOne::Decline(reason)),
             };
-            let Some(body_inst) = instantiate(arena, interp, body_args) else {
-                return Ok(SolveOne::Decline(
-                    "out of fragment: a body predicate application has an arity mismatch; declining"
-                        .to_owned(),
-                ));
-            };
-            term = arena.and(body_inst, term)?;
+        if !folded.recursive.is_empty() {
+            return Ok(SolveOne::Decline(
+                "internal: a non-self-recursive predicate's defining clause retained a recursive \
+                 body atom; declining"
+                    .to_owned(),
+            ));
         }
+        let term = folded.constraint;
 
         // Bind head argument variables → parameter symbols.
         let mapping: Vec<(SymbolId, SymbolId)> = head_vars
@@ -1342,10 +1452,17 @@ fn solve_direct(
 /// single-predicate [`TransitionSystem`] with the solved predecessors folded in,
 /// then dispatching to a model-checking engine.
 ///
-/// * `init` — facts (`constraint ⇒ P(head)`) and clauses whose body is a solved
-///   predecessor `Q` (`I_Q(args) ∧ constraint ⇒ P(head)`), head args bound to `s0`.
-/// * `trans` — the inductive clauses (`P(s) ∧ constraint ⇒ P(s')`).
-/// * `bad` — the query clauses whose body is `P`.
+/// Each defining/query clause's solved lower-stratum body atoms are folded into
+/// the constraint by [`fold_solved_bodies`] (`scc_set = {P}`); what remains is the
+/// linear recursive shape:
+///
+/// * `init` — facts (`constraint ⇒ P(head)`) and clauses whose only remaining body
+///   atom is a solved predecessor `Q`, folded as `I_Q(args) ∧ constraint`.
+/// * `trans` — the inductive clauses (one remaining recursive `P(s)` body atom).
+/// * `bad` — the query clauses whose remaining body atom is `P`.
+///
+/// A clause that retains **two or more** recursive `P`-atoms after folding is
+/// genuine nonlinear recursion and declines.
 #[allow(clippy::too_many_arguments)]
 fn solve_self_recursive(
     arena: &mut TermArena,
@@ -1353,6 +1470,7 @@ fn solve_self_recursive(
     shapes: &[ClauseShape],
     pred: FuncId,
     arg_sorts: &[Sort],
+    scc_set: &std::collections::BTreeSet<FuncId>,
     defining: &[usize],
     model: &BTreeMap<FuncId, PredInterpretation>,
     config: &SolverConfig,
@@ -1375,15 +1493,22 @@ fn solve_self_recursive(
                     .to_owned(),
             ));
         };
-        match &shape.body {
-            // Fact: empty body.
-            None => inits.push(SelfInit {
-                constraint: clause.constraint,
+
+        // Fold solved lower-stratum body atoms; what remains is the recursive part.
+        let folded =
+            match fold_solved_bodies(arena, &shape.bodies, clause.constraint, scc_set, model)? {
+                Ok(folded) => folded,
+                Err(reason) => return Ok(SolveOne::Decline(reason)),
+            };
+        match folded.recursive.as_slice() {
+            // No recursive atom left: an init (a fact, or solved predecessors only).
+            [] => inits.push(SelfInit {
+                constraint: folded.constraint,
                 head_vars,
             }),
-            // Self body: an inductive transition. Body args must be distinct vars
-            // disjoint from the head vars (pre/post binding).
-            Some((b, body_args)) if *b == pred => {
+            // Exactly one recursive `P`-atom: an inductive transition. Body args
+            // must be distinct vars disjoint from the head vars (pre/post binding).
+            [(_, body_args)] => {
                 let Some(body_vars) = distinct_arg_vars(arena, body_args, arg_sorts) else {
                     return Ok(SolveOne::Decline(
                         "out of fragment: a self-recursive body has a non-distinct-variable \
@@ -1399,57 +1524,29 @@ fn solve_self_recursive(
                     ));
                 }
                 inductives.push(InductiveClause {
-                    constraint: clause.constraint,
+                    constraint: folded.constraint,
                     body_vars,
                     head_vars,
                 });
             }
-            // Solved-predecessor body: an init clause with the predecessor folded
-            // in as `I_Q(args) ∧ constraint`.
-            Some((b, body_args)) => {
-                let Some(interp) = model.get(b) else {
-                    return Ok(SolveOne::Decline(
-                        "internal: a body predecessor was unsolved for a self-recursive predicate"
-                            .to_owned(),
-                    ));
-                };
-                let Some(body_inst) = instantiate(arena, interp, body_args) else {
-                    return Ok(SolveOne::Decline(
-                        "out of fragment: a body predecessor application has an arity mismatch; \
-                         declining"
-                            .to_owned(),
-                    ));
-                };
-                let folded = arena.and(body_inst, clause.constraint)?;
-                inits.push(SelfInit {
-                    constraint: folded,
-                    head_vars,
-                });
+            // Two or more recursive atoms: genuine nonlinear recursion. Decline.
+            _ => {
+                return Ok(SolveOne::Decline(
+                    "out of fragment: a clause retains two or more recursive body atoms after \
+                     folding (genuine nonlinear recursion — a product/k-fold transition system); \
+                     declining"
+                        .to_owned(),
+                ));
             }
         }
     }
 
-    // The query clauses whose body is P become `bad`.
-    let mut queries: Vec<QueryClause> = Vec::new();
-    for (clause, shape) in system.clauses.iter().zip(shapes) {
-        if shape.head.is_none() {
-            if let Some((b, body_args)) = &shape.body {
-                if *b == pred {
-                    let Some(body_vars) = distinct_arg_vars(arena, body_args, arg_sorts) else {
-                        return Ok(SolveOne::Decline(
-                            "out of fragment: a query over a self-recursive predicate has a \
-                             non-distinct-variable argument; declining"
-                                .to_owned(),
-                        ));
-                    };
-                    queries.push(QueryClause {
-                        constraint: clause.constraint,
-                        body_vars,
-                    });
-                }
-            }
-        }
-    }
+    // The query clauses whose remaining body atom is P become `bad`.
+    let queries =
+        match collect_self_queries(arena, system, shapes, pred, arg_sorts, scc_set, model)? {
+            Ok(queries) => queries,
+            Err(reason) => return Ok(SolveOne::Decline(reason)),
+        };
 
     let reduced = SelfReduced {
         arg_sorts: arg_sorts.to_vec(),
@@ -1467,6 +1564,57 @@ fn solve_self_recursive(
         Dispatch::Unsat { steps } => Ok(SolveOne::Unsat { steps }),
         Dispatch::Unknown(reason) => Ok(SolveOne::Decline(reason)),
     }
+}
+
+/// Collects the `bad`-state query clauses of a self-recursive predicate `P`: every
+/// head-free clause that mentions `P`. Its solved lower-stratum body atoms are
+/// folded into the constraint; exactly one recursive `P`-atom must remain (a query
+/// retaining `≥ 2` recursive atoms is genuine nonlinear recursion and declines).
+/// The inner `Err(reason)` is a sound decline; the outer `Result` an arena error.
+#[allow(clippy::too_many_arguments)]
+fn collect_self_queries(
+    arena: &mut TermArena,
+    system: &HornSystem,
+    shapes: &[ClauseShape],
+    pred: FuncId,
+    arg_sorts: &[Sort],
+    scc_set: &std::collections::BTreeSet<FuncId>,
+    model: &BTreeMap<FuncId, PredInterpretation>,
+) -> Result<Result<Vec<QueryClause>, String>, SolverError> {
+    let mut queries: Vec<QueryClause> = Vec::new();
+    for (clause, shape) in system.clauses.iter().zip(shapes) {
+        if shape.head.is_some() {
+            continue;
+        }
+        // Only a query that mentions P at all is relevant to P's bad states.
+        if !shape.bodies.iter().any(|(b, _)| *b == pred) {
+            continue;
+        }
+        let folded =
+            match fold_solved_bodies(arena, &shape.bodies, clause.constraint, scc_set, model)? {
+                Ok(folded) => folded,
+                Err(reason) => return Ok(Err(reason)),
+            };
+        let [(_, body_args)] = folded.recursive.as_slice() else {
+            return Ok(Err(
+                "out of fragment: a query retains zero or more than one recursive body atom after \
+                 folding (genuine nonlinear recursion); declining"
+                    .to_owned(),
+            ));
+        };
+        let Some(body_vars) = distinct_arg_vars(arena, body_args, arg_sorts) else {
+            return Ok(Err(
+                "out of fragment: a query over a self-recursive predicate has a \
+                 non-distinct-variable argument; declining"
+                    .to_owned(),
+            ));
+        };
+        queries.push(QueryClause {
+            constraint: folded.constraint,
+            body_vars,
+        });
+    }
+    Ok(Ok(queries))
 }
 
 /// A self-recursive predicate's init disjunct: a constraint (with any solved
@@ -1857,11 +2005,21 @@ fn merge_head_clause(
     };
     let head_tag = tag_of[head_pred];
 
-    match &shape.body {
-        // Fact: empty body ⇒ an init pinning the post tag.
-        None => {
+    // Fold every solved inter-SCC body atom into the constraint; what remains is
+    // the intra-SCC recursive part (0 ⇒ an init, 1 ⇒ an inductive transition,
+    // ≥ 2 ⇒ genuine nonlinear recursion within the SCC, declined).
+    let folded = match fold_solved_bodies(arena, &shape.bodies, clause.constraint, scc_set, model)?
+    {
+        Ok(folded) => folded,
+        Err(reason) => return Ok(Err(reason)),
+    };
+
+    match folded.recursive.as_slice() {
+        // No intra-SCC body left ⇒ an init pinning the post tag (a fact, or an
+        // inter-SCC clause whose solved predecessors were all folded in).
+        [] => {
             let Some((constraint, tag_var)) =
-                pin_tag_head(arena, clause.constraint, tag_sort, head_tag, ci, fresh)
+                pin_tag_head(arena, folded.constraint, tag_sort, head_tag, ci, fresh)
             else {
                 return Ok(Err(
                     "internal: failed to build a tagged init constraint".to_owned()
@@ -1872,8 +2030,8 @@ fn merge_head_clause(
                 head_vars: prepend(tag_var, head_vars),
             })))
         }
-        // Intra-SCC body ⇒ an inductive transition pinning pre and post tags.
-        Some((body_pred, body_args)) if scc_set.contains(body_pred) => {
+        // One intra-SCC body ⇒ an inductive transition pinning pre and post tags.
+        [(body_pred, body_args)] => {
             let Some(body_vars) = distinct_arg_vars(arena, body_args, member_sorts) else {
                 return Ok(Err(
                     "out of fragment: an intra-SCC body has a non-distinct-variable argument; \
@@ -1891,7 +2049,7 @@ fn merge_head_clause(
             let body_tag = tag_of[body_pred];
             let Some((constraint, body_tag_var, head_tag_var)) = pin_tag_trans(
                 arena,
-                clause.constraint,
+                folded.constraint,
                 tag_sort,
                 body_tag,
                 head_tag,
@@ -1908,33 +2066,12 @@ fn merge_head_clause(
                 head_vars: prepend(head_tag_var, head_vars),
             })))
         }
-        // Inter-SCC body from an already-solved predecessor ⇒ an init with the
-        // predecessor folded in, pinning the post tag.
-        Some((body_pred, body_args)) => {
-            let Some(interp) = model.get(body_pred) else {
-                return Ok(Err(
-                    "internal: an inter-SCC body predecessor was unsolved".to_owned()
-                ));
-            };
-            let Some(body_inst) = instantiate(arena, interp, body_args) else {
-                return Ok(Err(
-                    "out of fragment: an inter-SCC body application has an arity mismatch; declining"
-                        .to_owned(),
-                ));
-            };
-            let folded = arena.and(body_inst, clause.constraint)?;
-            let Some((constraint, tag_var)) =
-                pin_tag_head(arena, folded, tag_sort, head_tag, ci, fresh)
-            else {
-                return Ok(Err(
-                    "internal: failed to build a tagged inter-SCC init constraint".to_owned(),
-                ));
-            };
-            Ok(Ok(MergedHead::Init(SelfInit {
-                constraint,
-                head_vars: prepend(tag_var, head_vars),
-            })))
-        }
+        // Two or more intra-SCC body atoms ⇒ genuine nonlinear recursion. Decline.
+        _ => Ok(Err(
+            "out of fragment: an SCC clause retains two or more intra-SCC body atoms after folding \
+             (genuine nonlinear recursion within the SCC); declining"
+                .to_owned(),
+        )),
     }
 }
 
@@ -1963,10 +2100,10 @@ fn build_merged_clauses(
 
     for (ci, (clause, shape)) in system.clauses.iter().zip(shapes).enumerate() {
         // A clause is relevant to this SCC iff its head is an SCC member, or it is
-        // a query whose body is an SCC member.
+        // a query with at least one SCC-member body atom.
         let head_in_scc = matches!(&shape.head, Some((h, _)) if scc_set.contains(h));
         let query_in_scc =
-            shape.head.is_none() && matches!(&shape.body, Some((b, _)) if scc_set.contains(b));
+            shape.head.is_none() && shape.bodies.iter().any(|(b, _)| scc_set.contains(b));
         if !head_in_scc && !query_in_scc {
             continue;
         }
@@ -1989,9 +2126,20 @@ fn build_merged_clauses(
                 Err(reason) => return Ok(Err(reason)),
             }
         } else {
-            // A query whose body is an SCC member ⇒ a bad disjunct pinning the tag.
-            let Some((body_pred, body_args)) = &shape.body else {
-                continue;
+            // A query off an SCC member ⇒ a bad disjunct pinning the tag. Fold the
+            // solved lower-stratum atoms; exactly one intra-SCC body must remain.
+            let folded =
+                match fold_solved_bodies(arena, &shape.bodies, clause.constraint, &scc_set, model)?
+                {
+                    Ok(folded) => folded,
+                    Err(reason) => return Ok(Err(reason)),
+                };
+            let [(body_pred, body_args)] = folded.recursive.as_slice() else {
+                return Ok(Err(
+                    "out of fragment: a query off an SCC member retains zero or more than one \
+                     intra-SCC body atom after folding (genuine nonlinear recursion); declining"
+                        .to_owned(),
+                ));
             };
             let Some(body_vars) = distinct_arg_vars(arena, body_args, member_sorts) else {
                 return Ok(Err("out of fragment: a query over an SCC member has a \
@@ -2000,7 +2148,7 @@ fn build_merged_clauses(
             };
             let body_tag = tag_of[body_pred];
             let Some((constraint, tag_var)) =
-                pin_tag_head(arena, clause.constraint, tag_sort, body_tag, ci, &mut fresh)
+                pin_tag_head(arena, folded.constraint, tag_sort, body_tag, ci, &mut fresh)
             else {
                 return Ok(Err(
                     "internal: failed to build a tagged query constraint".to_owned()
@@ -2146,9 +2294,11 @@ enum QueryCheck {
     Decline,
 }
 
-/// Checks every query clause `P(args) ∧ constraint ⇒ false` under the solved
-/// model: `I_P(args) ∧ constraint` must be UNSAT. A `Sat` is a reachable
-/// derivation of `false` (the whole system is `Unsat`).
+/// Checks every query clause `(⋀ Pⱼ(argsⱼ)) ∧ constraint ⇒ false` under the
+/// solved model: the conjunction `(⋀ I_{Pⱼ}(argsⱼ)) ∧ constraint` must be UNSAT.
+/// A `Sat` is a reachable derivation of `false` (the whole system is `Unsat`).
+/// Every body atom of a (possibly nonlinear) query is instantiated; at the top
+/// level every predicate is solved, so each atom has an interpretation.
 fn check_queries(
     arena: &mut TermArena,
     system: &HornSystem,
@@ -2161,7 +2311,7 @@ fn check_queries(
             continue;
         }
         let mut assertions: Vec<TermId> = Vec::new();
-        if let Some((body_pred, body_args)) = &shape.body {
+        for (body_pred, body_args) in &shape.bodies {
             let Some(interp) = model.get(body_pred) else {
                 return Ok(QueryCheck::Decline);
             };

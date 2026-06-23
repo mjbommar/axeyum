@@ -961,6 +961,332 @@ fn non_recursive_chain_reachable_is_unsat() {
     }
 }
 
+/// Stratified **nonlinear** SAT: two lower predicates `P`, `Q` are solved directly
+/// (`x ≥ 0 ⇒ P(x)`, `x ≤ 10 ⇒ Q(x)`), then `R(x) ⇐ P(x) ∧ Q(x) ∧ true` is a
+/// nonlinear (`k = 2`) clause whose body atoms are both lower-stratum. The query
+/// `R(x) ∧ x < 0 ⇒ false` holds (every reachable `R` value has `0 ≤ x ≤ 10`).
+/// Both body atoms fold into the constraint, leaving no recursive remainder ⇒
+/// `R := P ∧ Q = (0 ≤ x ≤ 10)` ⇒ `Sat`, independently re-checked.
+#[test]
+fn stratified_nonlinear_two_lower_bodies_is_sat() {
+    let mut arena = TermArena::new();
+    let p = arena.declare_fun("P", &[Sort::Real], Sort::Bool).unwrap();
+    let q = arena.declare_fun("Q", &[Sort::Real], Sort::Bool).unwrap();
+    let r = arena.declare_fun("R", &[Sort::Real], Sort::Bool).unwrap();
+
+    let x = arena.declare("x", Sort::Real).unwrap();
+    let xv = arena.var(x);
+    let zero = arena.real_ratio(0, 1);
+    let ten = arena.real_ratio(10, 1);
+    let tru = arena.bool_const(true);
+
+    // x ≥ 0 ⇒ P(x).
+    let x_ge_0 = arena.real_ge(xv, zero).unwrap();
+    let p_x = arena.apply(p, &[xv]).unwrap();
+    let p_fact = HornClause {
+        body: vec![],
+        constraint: x_ge_0,
+        head: Some(p_x),
+    };
+    // x ≤ 10 ⇒ Q(x).
+    let x_le_10 = arena.real_le(xv, ten).unwrap();
+    let q_x = arena.apply(q, &[xv]).unwrap();
+    let q_fact = HornClause {
+        body: vec![],
+        constraint: x_le_10,
+        head: Some(q_x),
+    };
+    // P(x) ∧ Q(x) ∧ true ⇒ R(x): a nonlinear (2-atom) body, both lower-stratum.
+    let p_x_b = arena.apply(p, &[xv]).unwrap();
+    let q_x_b = arena.apply(q, &[xv]).unwrap();
+    let r_x = arena.apply(r, &[xv]).unwrap();
+    let r_clause = HornClause {
+        body: vec![p_x_b, q_x_b],
+        constraint: tru,
+        head: Some(r_x),
+    };
+    // query: R(x) ∧ x < 0 ⇒ false (unreachable: R ⇒ x ≥ 0).
+    let x_lt_0 = arena.real_lt(xv, zero).unwrap();
+    let r_x_q = arena.apply(r, &[xv]).unwrap();
+    let query = HornClause {
+        body: vec![r_x_q],
+        constraint: x_lt_0,
+        head: None,
+    };
+
+    let system = HornSystem {
+        predicates: vec![p, q, r],
+        clauses: vec![p_fact, q_fact, r_clause, query],
+    };
+
+    let outcome = solve_horn(&mut arena, &system, &SolverConfig::default()).unwrap();
+    let HornOutcome::Sat(model) = outcome else {
+        panic!("expected Sat for the stratified nonlinear P ∧ Q ⇒ R system, got {outcome:?}");
+    };
+    recheck_model(&mut arena, &system, &model);
+}
+
+/// Nonlinear **fact UNSAT**: `false` is reachable through a 2-atom body. `P(x)`
+/// holds for `x = 5` and `Q(x)` for `x = 5`, then `P(x) ∧ Q(x) ⇒ false` is a
+/// nonlinear query whose body is satisfiable (at `x = 5`) ⇒ `Unsat`.
+#[test]
+fn nonlinear_fact_query_is_unsat() {
+    let mut arena = TermArena::new();
+    let p = arena.declare_fun("P", &[Sort::Real], Sort::Bool).unwrap();
+    let q = arena.declare_fun("Q", &[Sort::Real], Sort::Bool).unwrap();
+
+    let x = arena.declare("x", Sort::Real).unwrap();
+    let xv = arena.var(x);
+    let five = arena.real_ratio(5, 1);
+    let tru = arena.bool_const(true);
+
+    let x_eq_5 = arena.eq(xv, five).unwrap();
+    let p_x = arena.apply(p, &[xv]).unwrap();
+    let p_fact = HornClause {
+        body: vec![],
+        constraint: x_eq_5,
+        head: Some(p_x),
+    };
+    let x_eq_5b = arena.eq(xv, five).unwrap();
+    let q_x = arena.apply(q, &[xv]).unwrap();
+    let q_fact = HornClause {
+        body: vec![],
+        constraint: x_eq_5b,
+        head: Some(q_x),
+    };
+    // P(x) ∧ Q(x) ⇒ false: a nonlinear query, satisfiable at x = 5.
+    let p_x_b = arena.apply(p, &[xv]).unwrap();
+    let q_x_b = arena.apply(q, &[xv]).unwrap();
+    let query = HornClause {
+        body: vec![p_x_b, q_x_b],
+        constraint: tru,
+        head: None,
+    };
+
+    let system = HornSystem {
+        predicates: vec![p, q],
+        clauses: vec![p_fact, q_fact, query],
+    };
+
+    let outcome = solve_horn(&mut arena, &system, &SolverConfig::default()).unwrap();
+    match outcome {
+        HornOutcome::Unsat { .. } => {}
+        HornOutcome::Sat(_) => {
+            panic!("P(5) ∧ Q(5) derives false; a Sat would be a soundness bug")
+        }
+        HornOutcome::Unknown { .. } => {
+            panic!("the nonlinear query is satisfiable at x = 5; expected Unsat, not a decline")
+        }
+    }
+}
+
+/// **Linear recursion plus a solved side atom**: `Inv` is the usual self-recursive
+/// counter (`x = 0`, `x' = x + 1`), `Bound(x) :- x ≤ 1000000` is a solved lower
+/// predicate, and the inductive step *also* consults it:
+/// `Inv(x) ∧ Bound(x') ∧ x' = x + 1 ⇒ Inv(x')` (a 2-atom body: one recursive
+/// `Inv`, one solved `Bound`). After folding `Bound`, the clause is the linear
+/// inductive shape. The query `Inv(x) ∧ x < 0 ⇒ false` holds ⇒ `Sat`
+/// (re-checked), or a sound `Unknown` — never `Unsat`.
+#[test]
+fn linear_recursion_with_solved_side_atom_is_sat_or_unknown() {
+    let mut arena = TermArena::new();
+    let inv = arena.declare_fun("Inv", &[Sort::Real], Sort::Bool).unwrap();
+    let bound = arena
+        .declare_fun("Bound", &[Sort::Real], Sort::Bool)
+        .unwrap();
+
+    let x = arena.declare("x", Sort::Real).unwrap();
+    let xp = arena.declare("xp", Sort::Real).unwrap();
+    let xv = arena.var(x);
+    let xpv = arena.var(xp);
+    let zero = arena.real_ratio(0, 1);
+    let one = arena.real_ratio(1, 1);
+    let big = arena.real_ratio(1_000_000, 1);
+
+    // Bound(x) :- x ≤ 1000000.
+    let x_le_big = arena.real_le(xv, big).unwrap();
+    let bound_x = arena.apply(bound, &[xv]).unwrap();
+    let bound_fact = HornClause {
+        body: vec![],
+        constraint: x_le_big,
+        head: Some(bound_x),
+    };
+    // init: x = 0 ⇒ Inv(x).
+    let x_eq_0 = arena.eq(xv, zero).unwrap();
+    let inv_x = arena.apply(inv, &[xv]).unwrap();
+    let fact = HornClause {
+        body: vec![],
+        constraint: x_eq_0,
+        head: Some(inv_x),
+    };
+    // inductive: Inv(x) ∧ Bound(x') ∧ x' = x + 1 ⇒ Inv(x').
+    let x_plus_1 = arena.real_add(xv, one).unwrap();
+    let xp_eq = arena.eq(xpv, x_plus_1).unwrap();
+    let inv_x_b = arena.apply(inv, &[xv]).unwrap();
+    let bound_xp = arena.apply(bound, &[xpv]).unwrap();
+    let inv_xp = arena.apply(inv, &[xpv]).unwrap();
+    let inductive = HornClause {
+        body: vec![inv_x_b, bound_xp],
+        constraint: xp_eq,
+        head: Some(inv_xp),
+    };
+    // query: Inv(x) ∧ x < 0 ⇒ false.
+    let x_lt_0 = arena.real_lt(xv, zero).unwrap();
+    let inv_x_q = arena.apply(inv, &[xv]).unwrap();
+    let query = HornClause {
+        body: vec![inv_x_q],
+        constraint: x_lt_0,
+        head: None,
+    };
+
+    let system = HornSystem {
+        predicates: vec![bound, inv],
+        clauses: vec![bound_fact, fact, inductive, query],
+    };
+
+    let outcome = solve_horn(&mut arena, &system, &SolverConfig::default()).unwrap();
+    match outcome {
+        HornOutcome::Sat(model) => recheck_model(&mut arena, &system, &model),
+        HornOutcome::Unknown { .. } => {}
+        HornOutcome::Unsat { .. } => {
+            panic!(
+                "the reachable Inv set is 0 ≤ x ≤ 1000000; the x<0 query is unreachable — Unsat \
+                    would be a soundness bug"
+            )
+        }
+    }
+}
+
+/// **Genuine nonlinear recursion** declines: `R(z) ⇐ R(x) ∧ R(y) ∧ z = x + y` keeps
+/// *two* recursive `R`-atoms in the body even after folding (nothing to fold — both
+/// are in `R`'s own SCC). With a fact `R(1)` and a query, the system must decline
+/// to `Unknown` (sound), never guess a Sat/Unsat.
+#[test]
+fn genuine_nonlinear_recursion_declines() {
+    let mut arena = TermArena::new();
+    let r = arena.declare_fun("R", &[Sort::Real], Sort::Bool).unwrap();
+
+    let x = arena.declare("x", Sort::Real).unwrap();
+    let y = arena.declare("y", Sort::Real).unwrap();
+    let z = arena.declare("z", Sort::Real).unwrap();
+    let xv = arena.var(x);
+    let yv = arena.var(y);
+    let zv = arena.var(z);
+    let one = arena.real_ratio(1, 1);
+
+    // fact: x = 1 ⇒ R(x).
+    let x_eq_1 = arena.eq(xv, one).unwrap();
+    let r_x = arena.apply(r, &[xv]).unwrap();
+    let fact = HornClause {
+        body: vec![],
+        constraint: x_eq_1,
+        head: Some(r_x),
+    };
+    // R(x) ∧ R(y) ∧ z = x + y ⇒ R(z): two recursive R-atoms (genuine nonlinear).
+    let x_plus_y = arena.real_add(xv, yv).unwrap();
+    let z_eq = arena.eq(zv, x_plus_y).unwrap();
+    let rec_first = arena.apply(r, &[xv]).unwrap();
+    let rec_second = arena.apply(r, &[yv]).unwrap();
+    let r_z = arena.apply(r, &[zv]).unwrap();
+    let nonlinear = HornClause {
+        body: vec![rec_first, rec_second],
+        constraint: z_eq,
+        head: Some(r_z),
+    };
+    // query: R(x) ∧ x < 0 ⇒ false.
+    let zero = arena.real_ratio(0, 1);
+    let x_lt_0 = arena.real_lt(xv, zero).unwrap();
+    let r_x_q = arena.apply(r, &[xv]).unwrap();
+    let query = HornClause {
+        body: vec![r_x_q],
+        constraint: x_lt_0,
+        head: None,
+    };
+
+    let system = HornSystem {
+        predicates: vec![r],
+        clauses: vec![fact, nonlinear, query],
+    };
+
+    let outcome = solve_horn(&mut arena, &system, &SolverConfig::default()).unwrap();
+    assert!(
+        matches!(outcome, HornOutcome::Unknown { .. }),
+        "genuine nonlinear recursion (two recursive body atoms) must decline soundly; got {outcome:?}"
+    );
+}
+
+/// **Soundness-negative nonlinear**: a 2-atom-body system whose only plausible
+/// candidate model is wrong must never return `Sat`. `P(x) :- x = 0`,
+/// `Q(x) :- x = 1`, then `R(x) ⇐ P(x) ∧ Q(x)` — but `P ∧ Q` is empty (no `x` is
+/// both 0 and 1), so `R` is empty. The query `R(x) ∧ x = 0 ⇒ false` is genuinely
+/// SAFE (R is empty). A buggy fold that dropped one atom (treating the body as just
+/// `P`) would make `R = {0}` and wrongly report `Unsat`. The verify-before-return
+/// gate must keep this `Sat` (re-checked) or `Unknown`, never a wrong `Unsat`.
+#[test]
+fn nonlinear_soundness_negative_empty_conjunction() {
+    let mut arena = TermArena::new();
+    let p = arena.declare_fun("P", &[Sort::Real], Sort::Bool).unwrap();
+    let q = arena.declare_fun("Q", &[Sort::Real], Sort::Bool).unwrap();
+    let r = arena.declare_fun("R", &[Sort::Real], Sort::Bool).unwrap();
+
+    let x = arena.declare("x", Sort::Real).unwrap();
+    let xv = arena.var(x);
+    let zero = arena.real_ratio(0, 1);
+    let one = arena.real_ratio(1, 1);
+    let tru = arena.bool_const(true);
+
+    // P(x) :- x = 0.
+    let x_eq_0 = arena.eq(xv, zero).unwrap();
+    let p_x = arena.apply(p, &[xv]).unwrap();
+    let p_fact = HornClause {
+        body: vec![],
+        constraint: x_eq_0,
+        head: Some(p_x),
+    };
+    // Q(x) :- x = 1.
+    let x_eq_1 = arena.eq(xv, one).unwrap();
+    let q_x = arena.apply(q, &[xv]).unwrap();
+    let q_fact = HornClause {
+        body: vec![],
+        constraint: x_eq_1,
+        head: Some(q_x),
+    };
+    // R(x) ⇐ P(x) ∧ Q(x): the conjunction is empty (no x is both 0 and 1).
+    let p_x_b = arena.apply(p, &[xv]).unwrap();
+    let q_x_b = arena.apply(q, &[xv]).unwrap();
+    let r_x = arena.apply(r, &[xv]).unwrap();
+    let r_clause = HornClause {
+        body: vec![p_x_b, q_x_b],
+        constraint: tru,
+        head: Some(r_x),
+    };
+    // query: R(x) ∧ x = 0 ⇒ false (UNREACHABLE — R is empty).
+    let x_eq_0_q = arena.eq(xv, zero).unwrap();
+    let r_x_q = arena.apply(r, &[xv]).unwrap();
+    let query = HornClause {
+        body: vec![r_x_q],
+        constraint: x_eq_0_q,
+        head: None,
+    };
+
+    let system = HornSystem {
+        predicates: vec![p, q, r],
+        clauses: vec![p_fact, q_fact, r_clause, query],
+    };
+
+    let outcome = solve_horn(&mut arena, &system, &SolverConfig::default()).unwrap();
+    match outcome {
+        HornOutcome::Sat(model) => recheck_model(&mut arena, &system, &model),
+        HornOutcome::Unknown { .. } => {}
+        HornOutcome::Unsat { .. } => {
+            panic!(
+                "P ∧ Q is empty so R is empty and the query is unreachable; an Unsat here would \
+                    be a dropped-atom soundness bug"
+            )
+        }
+    }
+}
+
 /// A malformed/empty system (no predicates) ⇒ a graceful `Unknown`, never a panic.
 #[test]
 fn empty_system_is_graceful_unknown() {
