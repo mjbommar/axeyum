@@ -495,26 +495,32 @@ fn cnf_inprocessing_agrees_with_baseline_and_replays() {
         let baseline = SatBvBackend::new()
             .check(&arena, &assertions, &SolverConfig::default())
             .unwrap();
-        let inprocessed = SatBvBackend::new()
-            .check(
-                &arena,
-                &assertions,
-                &SolverConfig::default().with_cnf_inprocessing(true),
-            )
-            .unwrap();
-        assert_eq!(
-            outcome_tag(&baseline),
-            outcome_tag(&inprocessed),
-            "inprocessing changed the decision"
-        );
-        if let CheckResult::Sat(model) = &inprocessed {
-            let assignment = model.to_assignment();
-            for &term in &assertions {
-                assert_eq!(
-                    eval(&arena, term, &assignment).unwrap(),
-                    Value::Bool(true),
-                    "reconstructed model must satisfy every original assertion"
-                );
+        // Two inprocessing arms: subsumption+BVE only, and the same plus vivify.
+        // Both are model-preserving / equisatisfiable, so both must match the
+        // baseline verdict, and any `sat` model must replay against the originals.
+        let inprocess_only = SolverConfig::default().with_cnf_inprocessing(true);
+        let inprocess_plus_vivify = SolverConfig::default()
+            .with_cnf_inprocessing(true)
+            .with_cnf_vivify(true);
+        for config in [inprocess_only, inprocess_plus_vivify] {
+            let inprocessed = SatBvBackend::new()
+                .check(&arena, &assertions, &config)
+                .unwrap();
+            assert_eq!(
+                outcome_tag(&baseline),
+                outcome_tag(&inprocessed),
+                "inprocessing (vivify={}) changed the decision",
+                config.cnf_vivify
+            );
+            if let CheckResult::Sat(model) = &inprocessed {
+                let assignment = model.to_assignment();
+                for &term in &assertions {
+                    assert_eq!(
+                        eval(&arena, term, &assignment).unwrap(),
+                        Value::Bool(true),
+                        "reconstructed model must satisfy every original assertion"
+                    );
+                }
             }
         }
     }
@@ -592,6 +598,112 @@ fn cnf_inprocessing_unsat_is_drat_proof_checked() {
         "reduced-formula unsat should be DRAT-proof-checked inline (single solve), \
          got stats: {:?}",
         stats.backend
+    );
+}
+
+#[test]
+fn cnf_vivify_records_stats_when_enabled() {
+    // With vivify enabled the `vivify_*` stat keys must appear in the backend
+    // audit trail (alongside the existing subsume_*/bve_* keys). A formula dense
+    // with Tseitin gates gives the pass clauses to strengthen.
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 8).unwrap();
+    let y = arena.bv_var("y", 8).unwrap();
+    let sum = arena.bv_add(x, y).unwrap();
+    let prod = arena.bv_mul(sum, x).unwrap();
+    let nine = arena.bv_const(8, 9).unwrap();
+    let formula = arena.eq(prod, nine).unwrap();
+
+    let mut backend = SatBvBackend::new();
+    let result = backend
+        .check(
+            &arena,
+            &[formula],
+            &SolverConfig::default()
+                .with_cnf_inprocessing(true)
+                .with_cnf_vivify(true),
+        )
+        .unwrap();
+    assert!(matches!(
+        result,
+        CheckResult::Sat(_) | CheckResult::Unsat | CheckResult::Unknown(_)
+    ));
+    let stats = backend.last_stats().expect("stats recorded");
+    let has = |key: &str| stats.backend.iter().any(|(name, _)| name == key);
+    assert!(
+        has("vivify_clauses_strengthened"),
+        "vivify_clauses_strengthened must be recorded when vivify is on"
+    );
+    assert!(
+        has("vivify_literals_removed"),
+        "vivify_literals_removed must be recorded when vivify is on"
+    );
+    assert!(
+        has("vivify_clauses_removed"),
+        "vivify_clauses_removed must be recorded when vivify is on"
+    );
+}
+
+#[test]
+fn cnf_vivify_off_records_no_vivify_stats() {
+    // Sanity: with vivify off (inprocessing on) the vivify_* keys are absent, so
+    // the stats above are genuinely gated by the flag.
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 8).unwrap();
+    let y = arena.bv_var("y", 8).unwrap();
+    let sum = arena.bv_add(x, y).unwrap();
+    let prod = arena.bv_mul(sum, x).unwrap();
+    let nine = arena.bv_const(8, 9).unwrap();
+    let formula = arena.eq(prod, nine).unwrap();
+
+    let mut backend = SatBvBackend::new();
+    backend
+        .check(
+            &arena,
+            &[formula],
+            &SolverConfig::default().with_cnf_inprocessing(true),
+        )
+        .unwrap();
+    let stats = backend.last_stats().expect("stats recorded");
+    assert!(
+        !stats
+            .backend
+            .iter()
+            .any(|(name, _)| name.starts_with("vivify_")),
+        "no vivify_* stats should appear when cnf_vivify is off"
+    );
+}
+
+#[test]
+fn cnf_vivify_prove_unsat_stays_green() {
+    // Vivify is model-preserving, so enabling it with prove_unsat on a small UNSAT
+    // instance must still return Unsat (the proof path stays green) and the
+    // standalone vivify-DRAT step-guard must hold (recorded as 1.0 when fired).
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 6).unwrap();
+    let zero = arena.bv_const(6, 0).unwrap();
+    let below_zero = arena.bv_ult(x, zero).unwrap();
+    let config = SolverConfig::default()
+        .with_cnf_inprocessing(true)
+        .with_cnf_vivify(true)
+        .with_prove_unsat(true);
+
+    let mut backend = SatBvBackend::new();
+    assert_eq!(
+        backend.check(&arena, &[below_zero], &config).unwrap(),
+        CheckResult::Unsat
+    );
+    let stats = backend.last_stats().expect("stats recorded");
+    // The step-guard either did not run (vivify produced no proof to check on this
+    // tiny formula) or ran and passed; it must never have been recorded as failed.
+    let step_checked = stats
+        .backend
+        .iter()
+        .find(|(name, _)| name == "vivify_drat_step_checked")
+        .map(|(_, value)| *value);
+    assert!(
+        step_checked.is_none_or(|v| (v - 1.0).abs() < f64::EPSILON),
+        "vivify DRAT step-guard must hold when it fires, got {step_checked:?}"
     );
 }
 

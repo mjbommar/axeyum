@@ -21,9 +21,10 @@ use axeyum_bv::{
 use axeyum_cnf::{
     BveOptions, CnfAssignment, CnfEncoding, CnfError, CnfFormula, CompactMap, ProofSolveOutcome,
     Reconstruction, SatError, SatProofStatus, SatResult, SatUnknownReason, SatUnsatEvidence,
-    XorCdclResult, XorPropagation, check_drat, compact, eliminate_variables_within, extract_xors,
-    simplify_within, solve_with_drat_proof, solve_with_drat_proof_within,
-    solve_with_rustsat_batsat_timeout, solve_with_xor_cdcl, tseitin_encode, xor_propagate,
+    VivifyOptions, XorCdclResult, XorPropagation, check_drat, compact, eliminate_variables_within,
+    extract_xors, simplify_within, solve_with_drat_proof, solve_with_drat_proof_within,
+    solve_with_rustsat_batsat_timeout, solve_with_xor_cdcl, tseitin_encode, vivify_within,
+    xor_propagate,
 };
 use axeyum_ir::{
     Assignment, IrError, Sort, TermArena, TermId, TermStats, Value, eval, well_founded_default,
@@ -358,18 +359,80 @@ fn maybe_inprocess(
     // solve deadline.
     let start = Instant::now();
     let inprocess_deadline = deadline.map(|dl| start + dl.saturating_duration_since(start) / 2);
-    let out = inprocess(formula, inprocess_deadline, stats);
+    let out = inprocess(config, formula, inprocess_deadline, stats);
     let elapsed = start.elapsed();
     stats.translate += elapsed;
     push_duration_ms(stats, "inprocess_ms", elapsed);
     Some(out)
 }
 
-/// Runs subsumption then bounded variable elimination on `formula`, recording
-/// what each pass removed in `stats`. Subsumption is model-preserving; BVE is
-/// equisatisfiable and pairs the reduced formula with a reconstruction stack. Both
-/// passes stop scheduling new work once `deadline` passes.
+/// Runs clause vivification on `simplified` when `config.cnf_vivify` is set,
+/// returning the strengthened (model-preserving) formula; otherwise returns
+/// `simplified` unchanged.
+///
+/// Vivification has the same satisfying assignments and `variable_count` as its
+/// input (no reconstruction trail), so the caller feeds the result straight into
+/// `BVE` and the model-lift stack is untouched. The `vivify_*` stat keys mirror the
+/// `subsume_*`/`bve_*` accounting.
+///
+/// In `prove_unsat` mode the pass's `DRAT` is *step-checked* as a standalone guard:
+/// every step of `outcome.proof` must verify (RUP/RAT) against the pre-vivify
+/// formula — i.e. [`check_drat`] returns `Ok(_)`, not `Err` (vivify's own contract:
+/// each added clause is RUP by construction). This is not yet composed into the
+/// end-to-end solve proof — the same accounting tier as subsumption/`BVE`. A failed
+/// step-check is a soundness alarm, so the un-vivified formula is returned (the
+/// verdict is unaffected either way, since vivify is model-preserving).
+fn maybe_vivify(
+    config: &SolverConfig,
+    simplified: &CnfFormula,
+    deadline: Option<Instant>,
+    stats: &mut SolveStats,
+) -> CnfFormula {
+    if !config.cnf_vivify {
+        return simplified.clone();
+    }
+    let outcome = vivify_within(simplified, VivifyOptions::default(), deadline);
+    if config.prove_unsat {
+        // Step-guard: every step of vivify's DRAT must verify (RUP/RAT) against the
+        // formula it acted on. `check_drat` returns `Ok(true)` only when the proof
+        // also derives the empty clause (a strengthening collapsing to `()`), and
+        // `Ok(false)` for an ordinary strengthening that verifies but does not
+        // refute — both are *step-sound*; only `Err` (an unjustified add) is a
+        // soundness alarm. So the guard is `is_ok()`, matching vivify's own tests.
+        let step_ok = check_drat(simplified, &outcome.proof).is_ok();
+        stats.backend.push((
+            "vivify_drat_step_checked".to_owned(),
+            if step_ok { 1.0 } else { 0.0 },
+        ));
+        if !step_ok {
+            // Conservative: discard the (unverifiable) strengthening and proceed on
+            // the pre-vivify formula. Model-preserving either way, so no verdict change.
+            return simplified.clone();
+        }
+    }
+    stats.backend.push((
+        "vivify_clauses_strengthened".to_owned(),
+        usize_to_f64(outcome.stats.clauses_strengthened),
+    ));
+    stats.backend.push((
+        "vivify_literals_removed".to_owned(),
+        usize_to_f64(outcome.stats.literals_removed),
+    ));
+    stats.backend.push((
+        "vivify_clauses_removed".to_owned(),
+        usize_to_f64(outcome.stats.clauses_removed),
+    ));
+    outcome.formula
+}
+
+/// Runs subsumption, optional clause vivification, then bounded variable
+/// elimination on `formula`, recording what each pass removed in `stats`.
+/// Subsumption and vivification are model-preserving; `BVE` is equisatisfiable and
+/// pairs the reduced formula with a reconstruction stack. All passes stop
+/// scheduling new work once `deadline` passes. Vivification runs only when
+/// `config.cnf_vivify` is set.
 fn inprocess(
+    config: &SolverConfig,
     formula: &CnfFormula,
     deadline: Option<Instant>,
     stats: &mut SolveStats,
@@ -417,7 +480,12 @@ fn inprocess(
     let base: &CnfFormula = xor_base.as_ref().unwrap_or(formula);
 
     let (simplified, subsume) = simplify_within(base, deadline);
-    let bve = eliminate_variables_within(&simplified, BveOptions::default(), deadline);
+    // Optional clause vivification between subsumption and BVE. Vivify is
+    // model-preserving (same satisfying assignments, same `variable_count`, no
+    // reconstruction trail), so its output feeds BVE in place of `simplified` and
+    // the model-lift stack is unchanged. See `maybe_vivify`.
+    let vivified = maybe_vivify(config, &simplified, deadline, stats);
+    let bve = eliminate_variables_within(&vivified, BveOptions::default(), deadline);
 
     stats.backend.push(("cnf_inprocessing".to_owned(), 1.0));
     stats.backend.push((

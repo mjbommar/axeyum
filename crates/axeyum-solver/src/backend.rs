@@ -144,6 +144,26 @@ pub struct SolverConfig {
     /// sound, off-by-default performance lever (Track 1, P1.1). Defaults to
     /// `false` so the recorded baselines reflect the un-inprocessed encoding.
     pub cnf_inprocessing: bool,
+    /// When set (and `cnf_inprocessing` is also on), the bit-blasting BV backend
+    /// runs a clause-vivification pass ([`axeyum_cnf::vivify_within`]) between the
+    /// subsumption and `BVE` inprocessing passes.
+    ///
+    /// Vivification is **model-preserving** (same satisfying assignments, same
+    /// `variable_count` — no reconstruction trail), so the model-lift stack is
+    /// unchanged and every `sat` result is still replay-checked against the
+    /// original terms; it only strengthens (shrinks) clauses, never changing the
+    /// verdict. A no-op unless `cnf_inprocessing` is set. Off by default so
+    /// recorded baselines reflect the un-vivified inprocessing path.
+    ///
+    /// Proof accounting: in `prove_unsat` mode the vivify pass's `DRAT` is
+    /// *step-checked* (RUP-verified by [`axeyum_cnf::check_drat`] against the
+    /// formula it acted on, matching `vivify`'s own contract) but is **not yet
+    /// composed** into the final end-to-end solve proof — the same accounting tier
+    /// as the subsumption and `BVE` passes, whose inprocessing `DRAT` is likewise
+    /// not threaded into the solve proof (the backend relies on an
+    /// equisatisfiability meta-argument). Full `DRAT` composition is a separate,
+    /// larger task.
+    pub cnf_vivify: bool,
     /// When set, [`crate::check_auto`]/[`crate::solve`] run the
     /// denotation-preserving canonicalizer over the assertions before dispatch
     /// (Track 1, P1.2 word-level preprocessing). It is symbol-preserving — no
@@ -217,6 +237,7 @@ impl Default for SolverConfig {
             cnf_clause_budget: None,
             prove_unsat: false,
             cnf_inprocessing: false,
+            cnf_vivify: false,
             preprocess: true,
             xor_cdcl_fallback: false,
             lazy_bv: false,
@@ -286,6 +307,15 @@ impl SolverConfig {
     #[must_use]
     pub fn with_cnf_inprocessing(mut self, cnf_inprocessing: bool) -> Self {
         self.cnf_inprocessing = cnf_inprocessing;
+        self
+    }
+
+    /// Enables clause vivification within CNF inprocessing (between subsumption
+    /// and `BVE`). A no-op unless [`Self::with_cnf_inprocessing`] is also on.
+    /// See [`SolverConfig::cnf_vivify`].
+    #[must_use]
+    pub fn with_cnf_vivify(mut self, cnf_vivify: bool) -> Self {
+        self.cnf_vivify = cnf_vivify;
         self
     }
 
