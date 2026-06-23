@@ -886,14 +886,18 @@ fn choose(lower: Option<(Rational, bool)>, upper: Option<(Rational, bool)>) -> O
 // --- LraTheory, since that one is hardwired to EufTheory). ------------------
 
 /// A CNF literal in the online `DPLL(T)` skeleton: a variable index and polarity.
+///
+/// `pub(crate)` so the `QF_UFLRA` Boolean layer ([`crate::uflra_online`]) can build the
+/// extended skeleton (theory atoms ++ interface vars ++ Tseitin auxiliaries) it hands to
+/// the generic [`Dpll`] driving a [`crate::combined_theory::CombinedIncremental`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Lit {
-    var: usize,
-    positive: bool,
+pub(crate) struct Lit {
+    pub(crate) var: usize,
+    pub(crate) positive: bool,
 }
 
 impl Lit {
-    fn negate(self) -> Self {
+    pub(crate) fn negate(self) -> Self {
         Self {
             var: self.var,
             positive: !self.positive,
@@ -922,8 +926,11 @@ struct Conflict {
 /// backjumping, the theory pushed on each decision and popped once per decision
 /// crossed when backjumping. The loop is generic over the theory (its methods
 /// take `&mut T` where `T: TheorySolver`); [`check_qf_lra_online`] instantiates
-/// it with [`LraTheory`].
-struct Dpll {
+/// it with [`LraTheory`] and the `QF_UFLRA` Boolean layer
+/// ([`crate::uflra_online`]) instantiates it with a
+/// [`crate::combined_theory::CombinedIncremental`] (the shared-`CDCL(T)`-combination
+/// keystone, slice 3c) — hence `pub(crate)`.
+pub(crate) struct Dpll {
     var_count: usize,
     atom_count: usize,
     clauses: Vec<Vec<Lit>>,
@@ -980,7 +987,7 @@ struct Diagnostics {
 }
 
 impl Dpll {
-    fn new(var_count: usize, atom_count: usize, clauses: Vec<Vec<Lit>>) -> Self {
+    pub(crate) fn new(var_count: usize, atom_count: usize, clauses: Vec<Vec<Lit>>) -> Self {
         #[cfg(test)]
         let diag = Diagnostics {
             initial_clauses: clauses.len(),
@@ -1307,9 +1314,41 @@ impl Dpll {
         (0..self.var_count).find(|&v| self.value[v].is_none())
     }
 
+    /// The current Boolean value of `var` (its trail polarity), or `None` if it is
+    /// unassigned. `pub(crate)` so the `QF_UFLRA` Boolean layer can read the
+    /// theory-atom + interface assignment off a SAT leaf to rebuild and replay-check the
+    /// combined model.
+    pub(crate) fn value_of(&self, var: usize) -> Option<bool> {
+        self.value.get(var).copied().flatten()
+    }
+
+    /// Test-only: the number of 1-UIP conflict analyses run (the "the loop fires"
+    /// diagnostic for the `QF_UFLRA` real-`CDCL(T)` layer, mirroring the `LRA` driver's
+    /// own `analyze_fires` gate).
+    #[cfg(test)]
+    pub(crate) fn analyze_fires(&self) -> usize {
+        self.diag.analyze_fires
+    }
+
+    /// Test-only: the learned 1-UIP asserting clauses (those stored after the initial
+    /// skeleton), each paired with `(is_theory_lemma, level0_atom_facts)`. The `QF_UFLRA`
+    /// layer's 1-UIP-over-combination soundness gate re-validates every theory lemma with
+    /// the trusted conjunctive decider, exactly as the `LRA` driver's gate does.
+    #[cfg(test)]
+    #[allow(clippy::type_complexity)]
+    pub(crate) fn learned_lemmas(&self) -> Vec<(Vec<Lit>, bool, Vec<(usize, bool)>)> {
+        let learned = &self.clauses[self.diag.initial_clauses..];
+        learned
+            .iter()
+            .zip(self.diag.lemma_flags.iter())
+            .zip(self.diag.lemma_level0.iter())
+            .map(|((clause, &lemma), level0)| (clause.clone(), lemma, level0.clone()))
+            .collect()
+    }
+
     /// Runs the search. Returns `true` iff the skeleton is UNSAT under the theory,
     /// `false` on a Boolean- and theory-consistent total assignment.
-    fn solve<T: TheorySolver>(&mut self, theory: &mut T) -> bool {
+    pub(crate) fn solve<T: TheorySolver>(&mut self, theory: &mut T) -> bool {
         loop {
             match self.propagate(theory) {
                 Ok(()) => {}
