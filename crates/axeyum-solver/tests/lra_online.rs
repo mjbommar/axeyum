@@ -534,3 +534,47 @@ fn theory_propagation_is_sound_and_fires() {
         "too few propagations offline-confirmed ({props_checked})"
     );
 }
+
+/// Determinism across the public driver: solving the same `QF_LRA` query twice
+/// yields the identical verdict (and identical sat model when sat). The Luby
+/// restart schedule is a pure function of the restart index, so the restart
+/// points — and hence the whole search trajectory — are reproducible. Run over a
+/// fuzz batch so the restart-bearing instances are covered too.
+#[test]
+fn online_driver_is_deterministic() {
+    let mut lcg = Lcg(0x0bad_c0de_dead_0007);
+    let mut checked = 0_usize;
+
+    for _ in 0..2000 {
+        let mut arena = TermArena::new();
+        let nvars = 2 + usize::try_from(lcg.below(2)).expect("small");
+        let vars = real_vars(&mut arena, nvars);
+        let natoms = 3 + usize::try_from(lcg.below(5)).expect("small");
+        let atoms: Vec<TermId> = (0..natoms)
+            .map(|_| random_atom(&mut arena, &mut lcg, &vars))
+            .collect();
+
+        let first = check_qf_lra_online(&arena, &atoms, &SolverConfig::default())
+            .expect("online never errors");
+        let second = check_qf_lra_online(&arena, &atoms, &SolverConfig::default())
+            .expect("online never errors");
+
+        match (&first, &second) {
+            (CheckResult::Sat(m1), CheckResult::Sat(m2)) => {
+                let p1 = model_pairs(&arena, m1, &vars);
+                let p2 = model_pairs(&arena, m2, &vars);
+                assert_eq!(p1, p2, "non-deterministic sat model on atoms {atoms:?}");
+            }
+            (CheckResult::Unsat, CheckResult::Unsat)
+            | (CheckResult::Unknown(_), CheckResult::Unknown(_)) => {}
+            _ => panic!("non-deterministic verdict {first:?} != {second:?} on atoms {atoms:?}"),
+        }
+        checked += 1;
+    }
+
+    eprintln!("determinism gate: {checked} queries, identical verdict on every repeat");
+    assert!(
+        checked > 100,
+        "determinism gate ran too few queries ({checked})"
+    );
+}

@@ -907,6 +907,33 @@ const VSIDS_RESCALE: f64 = 1e-100;
 /// Activity ceiling that triggers a rescale.
 const VSIDS_RESCALE_LIMIT: f64 = 1e100;
 
+/// Conflict-interval unit multiplied by the Luby value to set each restart's
+/// length: the `restart_count`-th restart fires after `luby(restart_count) *
+/// LUBY_UNIT` conflicts. Mirrors `axeyum_cnf::proof_sat`'s `LUBY_UNIT`.
+const LUBY_UNIT: usize = 100;
+
+/// The `i`-th term (1-indexed) of the Luby sequence `1,1,2,1,1,2,4,1,1,2,1,1,2,
+/// 4,8,…`, used to space restarts (Knuth's reluctant-doubling formulation,
+/// iterative). The schedule is a pure function of the restart index, so it is
+/// deterministic: the same query crosses the same restart points and follows
+/// the same trajectory. Mirrors `axeyum_cnf::proof_sat`'s `luby`.
+fn luby(mut i: u64) -> u64 {
+    let mut k = 1_u64;
+    loop {
+        let pow = 1_u64 << k; // 2^k
+        if i == pow - 1 {
+            return 1_u64 << (k - 1); // 2^(k-1)
+        }
+        let half = 1_u64 << (k - 1); // 2^(k-1)
+        if half <= i && i < pow - 1 {
+            i = i - half + 1;
+            k = 1;
+        } else {
+            k += 1;
+        }
+    }
+}
+
 /// A CNF literal in the online `DPLL(T)` skeleton: a variable index and polarity.
 ///
 /// `pub(crate)` so the `QF_UFLRA` Boolean layer ([`crate::uflra_online`]) can build the
@@ -1016,11 +1043,25 @@ pub(crate) struct Dpll {
     reductions: usize,
     /// Number of live (non-deleted) learned clauses. Drives the reduce trigger.
     learned_live: usize,
+    /// Conflicts seen since the last [`Luby`](luby) restart (reset to `0` on each
+    /// restart). Bumped once per conflict in [`Self::learn_and_backjump`] and
+    /// compared against [`Self::restart_limit`] in [`Self::solve`].
+    conflicts_since_restart: usize,
+    /// The Luby-sequence index (1-based; advances by one on each restart), so the
+    /// next restart fires after `luby(restart_count) * LUBY_UNIT` conflicts.
+    /// Restarting is verdict-invariant: it abandons only the current partial
+    /// assignment, keeping every learned clause and every `VSIDS` activity.
+    restart_count: u64,
     /// Test-only override of [`REDUCE_FIRST`] so a small fixture can cross the
     /// budget and exercise [`Self::reduce_db`] without millions of conflicts.
     /// `None` in production (the standard schedule).
     #[cfg(test)]
     reduce_first_override: Option<usize>,
+    /// Test-only override of [`LUBY_UNIT`] so a small conflict-heavy fixture crosses
+    /// the Luby restart trigger after a handful of conflicts (rather than hundreds).
+    /// `None` in production (the standard `LUBY_UNIT` schedule).
+    #[cfg(test)]
+    restart_unit_override: Option<usize>,
     /// Test-only diagnostics for the 1-UIP path (fires counter and learned-vs-full
     /// conflict-clause lengths). Compiled out of the production library.
     #[cfg(test)]
@@ -1081,8 +1122,12 @@ impl Dpll {
             cla_inc: 1.0,
             reductions: 0,
             learned_live: 0,
+            conflicts_since_restart: 0,
+            restart_count: 1,
             #[cfg(test)]
             reduce_first_override: None,
+            #[cfg(test)]
+            restart_unit_override: None,
             #[cfg(test)]
             diag,
         }
@@ -1480,6 +1525,29 @@ impl Dpll {
         self.reductions
     }
 
+    /// Test-only: the number of [`Luby`](luby) restarts performed so far. The index
+    /// starts at `1`, so the restart count is `restart_count - 1`.
+    #[cfg(test)]
+    pub(crate) fn restarts(&self) -> u64 {
+        self.restart_count - 1
+    }
+
+    /// Test-only: lowers the restart unit so a small conflict-heavy fixture crosses
+    /// the Luby trigger and exercises a real restart. Must be set before
+    /// [`Self::solve`].
+    #[cfg(test)]
+    pub(crate) fn force_early_restart_for_test(&mut self) {
+        self.restart_unit_override = Some(1);
+    }
+
+    /// Test-only: raises the restart unit so the Luby trigger is never crossed — the
+    /// never-restart baseline for the verdict-invariance comparison. Must be set
+    /// before [`Self::solve`].
+    #[cfg(test)]
+    pub(crate) fn disable_restarts_for_test(&mut self) {
+        self.restart_unit_override = Some(usize::MAX);
+    }
+
     /// Test-only: the number of learned clauses tombstoned by reductions so far
     /// (total stored learned clauses minus the live count).
     #[cfg(test)]
@@ -1548,6 +1616,22 @@ impl Dpll {
                     continue;
                 }
             }
+            // Luby restart: once enough conflicts have accumulated, abandon the
+            // current partial assignment and re-decide from the root. We backjump to
+            // decision level 0 — undoing the trail, popping `theory` once per crossed
+            // decision in lockstep (the same `backjump_to` discipline), so the theory
+            // returns to exactly its level-0 (root) state. The learned-clause DB and
+            // every `VSIDS` activity are preserved untouched, which is what makes a
+            // restart help (better decisions over the accumulated clauses) and what
+            // makes it verdict-invariant (the formula + clauses + root theory state
+            // are unchanged, so sat/unsat cannot move). Only at a real decision
+            // (`decision_level() > 0`) is there a partial assignment worth abandoning.
+            if self.decision_level > 0 && self.conflicts_since_restart >= self.restart_limit() {
+                self.backjump_to(theory, 0);
+                self.conflicts_since_restart = 0;
+                self.restart_count += 1;
+                continue;
+            }
             match self.pick_unassigned() {
                 None => return false,
                 Some(var) => {
@@ -1578,6 +1662,10 @@ impl Dpll {
         // VSIDS decay: one step per conflict, so the activity recency window mirrors
         // `axeyum_cnf::proof_sat`. Heuristic only — does not affect the verdict.
         self.decay();
+        // Count this conflict toward the next Luby restart. `learn_and_backjump` is
+        // the single chokepoint every conflict (Boolean or theory) routes through,
+        // so one bump here counts each conflict exactly once. Heuristic only.
+        self.conflicts_since_restart += 1;
         #[cfg(test)]
         {
             self.diag.analyze_fires += 1;
@@ -1695,6 +1783,21 @@ impl Dpll {
         #[cfg(not(test))]
         let first = REDUCE_FIRST;
         first + REDUCE_INC * self.reductions
+    }
+
+    /// Conflicts allowed before the next [`Luby`](luby) restart, namely
+    /// `luby(restart_count)` scaled by [`LUBY_UNIT`]. A pure function of
+    /// `restart_count`, so the schedule — and hence the trajectory — is deterministic.
+    /// Saturates on the (astronomically unreachable) overflow rather than wrapping,
+    /// so a huge index never spuriously restarts.
+    fn restart_limit(&self) -> usize {
+        #[cfg(test)]
+        let unit = self.restart_unit_override.unwrap_or(LUBY_UNIT);
+        #[cfg(not(test))]
+        let unit = LUBY_UNIT;
+        usize::try_from(luby(self.restart_count))
+            .unwrap_or(usize::MAX)
+            .saturating_mul(unit)
     }
 
     /// Is learned clause `cid` currently *locked* — the reason for an assigned
@@ -2669,5 +2772,93 @@ mod tests {
             "reduce_db never fired / deleted nothing (reductions={total_reductions}, \
              deleted={total_deleted})"
         );
+    }
+
+    /// Luby restarts must FIRE on conflict-heavy instances (with the unit lowered so
+    /// a small fixture crosses the trigger) AND be verdict-invariant: a restart
+    /// abandons only the current partial assignment, keeping every learned clause and
+    /// activity, so the verdict matches the never-restart baseline. After every
+    /// restart — and after the whole solve — the theory is popped back to its root
+    /// (its push/pop stack is balanced: empty trail), the guard against a restart
+    /// that pops too few/many theory levels and corrupts the theory.
+    #[test]
+    fn restarts_fire_and_keep_the_verdict() {
+        let mut total_restarts = 0_u64;
+        for &(pigeons, holes) in &[(5_usize, 4_usize), (6, 5), (7, 6)] {
+            let (arena, assertions) = pigeonhole_real_formula(pigeons, holes);
+
+            // Baseline: restarts disabled (the trigger is never crossed), the
+            // clean never-restart verdict oracle.
+            let (mut base_solver, mut base_theory) = build_solver(&arena, &assertions);
+            base_solver.disable_restarts_for_test();
+            let base_unsat = base_solver.solve(&mut base_theory);
+            assert_eq!(
+                base_solver.restarts(),
+                0,
+                "baseline unexpectedly restarted — the comparison is no longer clean"
+            );
+            assert!(
+                base_theory.trail.is_empty(),
+                "baseline theory push/pop imbalance ({} stray level(s))",
+                base_theory.trail.len()
+            );
+
+            // Restart-enabled: lower the unit so the Luby trigger crosses repeatedly.
+            let (mut solver, mut theory) = build_solver(&arena, &assertions);
+            solver.force_early_restart_for_test();
+            let unsat = solver.solve(&mut theory);
+
+            assert_eq!(
+                unsat, base_unsat,
+                "restarts FLIPPED the verdict vs the never-restart baseline \
+                 (restarted={unsat}, baseline={base_unsat}) on pigeonhole {pigeons}->{holes}"
+            );
+            assert!(unsat, "pigeonhole {pigeons}->{holes} must be UNSAT");
+            assert!(
+                solver.restarts() > 0,
+                "restarts never fired on pigeonhole {pigeons}->{holes} (count={})",
+                solver.restarts()
+            );
+            // Theory push/pop balance: after the solve returns the theory has been
+            // popped back to its root state (no decision levels left on its stack).
+            // A restart that popped too few/many levels would leave a residue here.
+            assert!(
+                theory.trail.is_empty(),
+                "theory push/pop IMBALANCE after restarts: {} stray level(s) left on \
+                 the theory trail (pigeonhole {pigeons}->{holes})",
+                theory.trail.len()
+            );
+            total_restarts += solver.restarts();
+        }
+        eprintln!("restart gate: total_restarts={total_restarts}");
+        assert!(
+            total_restarts > 0,
+            "Luby restarts never fired across the fixtures (total={total_restarts})"
+        );
+    }
+
+    /// Determinism: the same query solved twice yields the identical verdict and the
+    /// identical restart trajectory (count). The Luby schedule is a pure function of
+    /// the restart index, so the restart points — and the whole search trajectory —
+    /// are reproducible.
+    #[test]
+    fn restarts_are_deterministic() {
+        let (arena, assertions) = pigeonhole_real_formula(6, 5);
+
+        let run = || {
+            let (mut solver, mut theory) = build_solver(&arena, &assertions);
+            solver.force_early_restart_for_test();
+            let unsat = solver.solve(&mut theory);
+            (unsat, solver.restarts())
+        };
+
+        let first = run();
+        let second = run();
+        assert_eq!(
+            first, second,
+            "non-deterministic restart trajectory: \
+             (unsat, restarts) {first:?} != {second:?}"
+        );
+        assert!(first.1 > 0, "expected restarts to fire (count={})", first.1);
     }
 }
