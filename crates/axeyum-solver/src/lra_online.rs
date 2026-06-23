@@ -1330,6 +1330,23 @@ impl Dpll {
         self.diag.analyze_fires
     }
 
+    /// Test-only: the summed length of every learned 1-UIP asserting clause.
+    /// `pub(crate)` so the `QF_LIA` driver's in-source 1-UIP gate
+    /// ([`crate::lia_online`]) can read the shorter-on-average improvement metric
+    /// off the shared generic driver, exactly as the in-`LRA` gate does.
+    #[cfg(test)]
+    pub(crate) fn learned_len_total(&self) -> u64 {
+        self.diag.learned_len_total
+    }
+
+    /// Test-only: the summed length of the corresponding full conflict clauses
+    /// (`¬⋀core`) the old chronological scheme would have learned. Paired with
+    /// [`Self::learned_len_total`] for the `QF_LIA` driver's shorter-on-average gate.
+    #[cfg(test)]
+    pub(crate) fn conflict_len_total(&self) -> u64 {
+        self.diag.conflict_len_total
+    }
+
     /// Test-only: the learned 1-UIP asserting clauses (those stored after the initial
     /// skeleton), each paired with `(is_theory_lemma, level0_atom_facts)`. The `QF_UFLRA`
     /// layer's 1-UIP-over-combination soundness gate re-validates every theory lemma with
