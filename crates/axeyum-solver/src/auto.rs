@@ -1094,6 +1094,17 @@ fn dispatch_uf_fast_paths(
     // by EUF + linear-arithmetic combination. Sound either way — its `unsat` is a
     // relaxation refutation, its `sat`/`unknown` fall through.
     if has_arithmetic_function(arena) {
+        // FIRST attempt: the **online** EUF + linear-arithmetic combination
+        // (warm, equality-sharing `Nelson–Oppen`), in place of eager Ackermann as
+        // the normal mixed-theory answer (gap-analysis keystone). Its `sat` is
+        // replay-checked inside; its `unsat` is the differentially-validated,
+        // verify-guarded online refutation; on `unknown` (any cap / unsupported
+        // shape) we FALL THROUGH to the eager `check_with_uf_arithmetic` route
+        // below, byte-unchanged. Strictly additive: it only ever turns the eager
+        // route's would-be result into the same verdict sooner, or declines.
+        if let Some(result) = dispatch_uf_arith_online(arena, assertions, config, features, rec)? {
+            return Ok(Some(result));
+        }
         match crate::check_with_uf_arithmetic(arena, assertions, config)? {
             CheckResult::Sat(model) => {
                 with_recorder(rec, |t| t.record_decided("uf-arithmetic", Verdict::Sat));
@@ -1122,6 +1133,88 @@ fn dispatch_uf_fast_paths(
         }
     }
     Ok(None)
+}
+
+/// The configuration for the online probe: a copy of `config` with any wall-clock
+/// `timeout` halved, so the probe consumes at most half the configured budget
+/// before the eager fallback (which computes its own fresh deadline at entry) runs
+/// with the full budget. `timeout == None` is left unbounded — there is no
+/// wall-clock budget to split, and both routes then decline only on their
+/// deterministic size guards, so the online combination keeps its full power.
+fn probe_budget(config: &SolverConfig) -> SolverConfig {
+    let mut probe = config.clone();
+    if let Some(t) = probe.timeout {
+        probe.timeout = Some(t / 2);
+    }
+    probe
+}
+
+/// The **online** EUF + linear-arithmetic combination, tried *before* the eager
+/// Ackermann route in [`dispatch_uf_fast_paths`]. Routes by sort — reals present
+/// ⇒ [`crate::check_qf_uflra_online`] (`QF_UFLRA`), otherwise
+/// [`crate::check_qf_uflia_online`] (`QF_UFLIA`) — and returns:
+///
+/// - `Ok(Some(Sat))` — the online combination's model, already replayed against
+///   the original assertions inside the decider;
+/// - `Ok(Some(Unsat))` — the online combination's (verify-guarded) refutation;
+/// - `Ok(None)` — the online decider declined (`unknown`: any cap / unsupported
+///   shape), so the caller FALLS THROUGH to the unchanged eager
+///   [`crate::check_with_uf_arithmetic`] route.
+///
+/// Recording: a decided run is logged at `"uf-arith-online"`; a decline is logged
+/// at the same route with the carried [`UnknownReason`] before the eager fallback
+/// records itself. Purely additive — it never produces a verdict the eager route
+/// would not also reach, only the same one sooner (the in-tree differential
+/// `uf_arith_dispatch_differential` is the load-bearing gate on this invariant).
+fn dispatch_uf_arith_online(
+    arena: &TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    features: &Features,
+    rec: &mut Recorder<'_>,
+) -> Result<Option<CheckResult>, SolverError> {
+    // Run the online attempt on a CLONE of the arena, never the caller's, so that
+    // when it declines and we fall through, the eager `check_with_uf_arithmetic`
+    // route sees a pristine arena — byte-identical to running eager alone. The
+    // online deciders append skolems / lowered terms; left in the caller's arena
+    // they enlarge the eager fallback's work and, on a few queries, push it over
+    // the shared per-query wall-clock cap (a real capability regression). The Sat
+    // model is keyed by `SymbolId` (which the clone preserves), so it is sound to
+    // return a model produced against the clone. The clone is bounded by the
+    // (small) mixed-UF query and is the cost of keeping the fallback regression-free.
+    let mut scratch = arena.clone();
+    // Bound the online PROBE's share of a wall-clock budget so it cannot starve the
+    // eager fallback. The eager route computes its own fresh deadline at entry, so a
+    // small probe cap leaves it the full configured budget — without this, the probe
+    // grinding a hard query to the shared cap left the fallback timing out where
+    // running eager alone would have decided (a capability regression). When no
+    // wall-clock budget is set (`timeout == None`) there is nothing to split — both
+    // routes decline only on their deterministic size guards, identically — so the
+    // probe runs unbounded and the online combination keeps its full power.
+    let probe_config = probe_budget(config);
+    // Int vs Real detection mirrors the surrounding dispatch: a real-sorted term
+    // anywhere routes to the `QF_UFLRA` decider, otherwise the integer one.
+    let online = if features.has_real {
+        crate::check_qf_uflra_online(&mut scratch, assertions, &probe_config)?
+    } else {
+        crate::check_qf_uflia_online(&mut scratch, assertions, &probe_config)?
+    };
+    match online {
+        CheckResult::Sat(model) => {
+            with_recorder(rec, |t| t.record_decided("uf-arith-online", Verdict::Sat));
+            Ok(Some(CheckResult::Sat(model)))
+        }
+        CheckResult::Unsat => {
+            with_recorder(rec, |t| t.record_decided("uf-arith-online", Verdict::Unsat));
+            Ok(Some(CheckResult::Unsat))
+        }
+        CheckResult::Unknown(reason) => {
+            with_recorder(rec, |t| {
+                t.record_declined("uf-arith-online", DeclineReason::from_unknown(&reason));
+            });
+            Ok(None)
+        }
+    }
 }
 
 /// The theory dispatcher (coercions already relaxed away by [`check_auto`]).
