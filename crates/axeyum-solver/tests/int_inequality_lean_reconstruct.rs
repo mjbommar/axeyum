@@ -294,6 +294,132 @@ fn diff_mult_module_checks_in_real_lean() {
     );
 }
 
+/// `2*x = 4 ∧ x ≥ 3` over `Int`: an **equality combined with a unit-multiplier bound**.
+/// The equality pins `x = 2`, which violates `x ≥ 3`, so the conjunction is already
+/// real-infeasible — yet the Diophantine path declines (the equality `2x = 4` alone is
+/// feasible, `2 | 4`) and the interval detectors require two inequalities. This routes to
+/// the new equality-and-bound reconstructor through the `IntInequality` fragment.
+#[test]
+fn eq_bound_lower_reconstructs_to_false() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let two = arena.int_const(2);
+    let two_x = arena.int_mul(two, x).unwrap();
+    let four = arena.int_const(4);
+    let three = arena.int_const(3);
+    let e1 = arena.eq(two_x, four).unwrap(); // 2x = 4 ⇒ x = 2
+    let e2 = arena.int_ge(x, three).unwrap(); // x ≥ 3
+
+    let proof = reconstruct_int_inequality_proof(&arena, &[e1, e2]);
+    assert!(
+        proof.is_ok(),
+        "2x=4 ∧ x≥3 should reconstruct to False, got {:?}",
+        proof.err()
+    );
+    let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &[e1, e2])
+        .expect("equality-and-bound system should prove unsat to a Lean module");
+    assert_eq!(fragment, ProofFragment::IntInequality);
+    assert!(source.contains("axeyum_refutation"));
+    assert_eq!(
+        scan_proof_fragment(&arena, &[e1, e2]),
+        ProofFragment::IntInequality
+    );
+}
+
+/// `x ≤ 1 ∧ 3*x = 6` over `Int` (bound first, equality second; upper-bound branch). The
+/// equality pins `x = 2`, violating `x ≤ 1`. Exercises both assertion orders and the
+/// upper-bound close. `3 | 6` keeps the equality alone feasible, so Diophantine declines.
+#[test]
+fn eq_bound_upper_reconstructs_to_false() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let three = arena.int_const(3);
+    let three_x = arena.int_mul(three, x).unwrap();
+    let six = arena.int_const(6);
+    let one = arena.int_const(1);
+    let e1 = arena.int_le(x, one).unwrap(); // x ≤ 1
+    let e2 = arena.eq(three_x, six).unwrap(); // 3x = 6 ⇒ x = 2
+
+    let proof = reconstruct_int_inequality_proof(&arena, &[e1, e2]);
+    assert!(
+        proof.is_ok(),
+        "x≤1 ∧ 3x=6 should reconstruct to False, got {:?}",
+        proof.err()
+    );
+    let (fragment, _src) = prove_unsat_to_lean_module(&mut arena, &[e1, e2])
+        .expect("upper-bound equality-and-bound system should prove unsat");
+    assert_eq!(fragment, ProofFragment::IntInequality);
+}
+
+/// A **feasible** equality-and-bound system `2*x = 4 ∧ x ≥ 1` (`x = 2` satisfies both).
+/// It has no refutation and must be declined — never fabricated, and not routed to the
+/// `IntInequality` fragment.
+#[test]
+fn eq_bound_feasible_is_declined() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let two = arena.int_const(2);
+    let two_x = arena.int_mul(two, x).unwrap();
+    let four = arena.int_const(4);
+    let one = arena.int_const(1);
+    let e1 = arena.eq(two_x, four).unwrap(); // 2x = 4 ⇒ x = 2
+    let e2 = arena.int_ge(x, one).unwrap(); // x ≥ 1 (x = 2 feasible)
+
+    assert!(
+        reconstruct_int_inequality_proof(&arena, &[e1, e2]).is_err(),
+        "a feasible equality-and-bound system must not produce a refutation"
+    );
+    assert_ne!(
+        scan_proof_fragment(&arena, &[e1, e2]),
+        ProofFragment::IntInequality,
+        "feasible equality-and-bound system should not route to IntInequality"
+    );
+}
+
+/// **Real-Lean crosscheck** of the equality-and-bound reconstruction: the rendered
+/// `2*x = 4 ∧ x ≥ 3` module must be accepted by a genuine `lean` binary with no `sorryAx`
+/// dependency (skips if no Lean), with the axiom audit naming only the prelude axioms and
+/// the two verbatim hypotheses.
+#[test]
+fn eq_bound_module_checks_in_real_lean() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let two = arena.int_const(2);
+    let two_x = arena.int_mul(two, x).unwrap();
+    let four = arena.int_const(4);
+    let three = arena.int_const(3);
+    let e1 = arena.eq(two_x, four).unwrap();
+    let e2 = arena.int_ge(x, three).unwrap();
+    let (frag, source) = prove_unsat_to_lean_module(&mut arena, &[e1, e2])
+        .expect("equality-and-bound reconstructs to a Lean module");
+    assert_eq!(frag, ProofFragment::IntInequality);
+
+    let Some(bin) = lean_bin() else {
+        eprintln!("[skip] eq_bound: lean binary not found; set AXEYUM_LEAN_BIN to enable");
+        return;
+    };
+    let dir = std::env::temp_dir().join("axeyum_lean_int_eq_bound");
+    std::fs::create_dir_all(&dir).expect("create temp dir");
+    let file = dir.join("int_eq_bound.lean");
+    std::fs::write(&file, &source).expect("write lean module");
+    let out = Command::new(&bin).arg(&file).output().expect("run lean");
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        out.status.success(),
+        "lean REJECTED the eq_bound module\n=== stdout ===\n{stdout}\n=== stderr ===\n{stderr}\n=== source ===\n{source}"
+    );
+    assert!(
+        !stdout.contains("sorryAx"),
+        "eq_bound proof depends on sorryAx:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("axeyum_refutation"),
+        "missing #print axioms output:\n{stdout}"
+    );
+    eprintln!("[lean ok] eq_bound: {}", stdout.trim().replace('\n', " | "));
+}
+
 /// Locate a `lean` binary (env override or `PATH`/elan); `None` ⇒ skip.
 fn lean_bin() -> Option<PathBuf> {
     if let Ok(p) = std::env::var("AXEYUM_LEAN_BIN") {

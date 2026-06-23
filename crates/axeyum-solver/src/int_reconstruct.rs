@@ -2585,6 +2585,30 @@ struct IntIntervalDiff {
     m_hi: i128,
 }
 
+/// A single-variable integer **equality combined with a unit-multiplier bound** that is
+/// **real-infeasible**: an equality `k·x = b` (`k > 0`) together with a bound `c ≤ x`
+/// (lower) or `x ≤ c` (upper). The equality pins `x = b/k` (a rational); the bound
+/// excludes it, so the conjunction is unsatisfiable already over ℝ — yet neither
+/// dedicated integer reconstructor covers it: the Diophantine path ignores the inequality
+/// and the equality alone (`k | b` permitted) is feasible, and the interval detectors
+/// require **two** inequalities (no equality atom). The refutation scales the bound by
+/// `k` and chains through the equality to a literal `b ⋈ k·c` contradiction.
+///
+/// Lower-bound infeasibility: `c ≤ x ⟹ k·c ≤ k·x = b`, contradicting `b < k·c`.
+/// Upper-bound infeasibility: `x ≤ c ⟹ b = k·x ≤ k·c`, contradicting `k·c < b`.
+#[derive(Debug, Clone, Copy)]
+struct IntEqBound {
+    var: SymbolId,
+    /// The positive equality multiplier `k > 0` (oriented), so `k·x = b`.
+    k: i128,
+    /// The equality right-hand value `b`.
+    b: i128,
+    /// The bound constant `c`: `c ≤ x` when `lower`, else `x ≤ c`.
+    c: i128,
+    /// Whether the bound is a lower bound (`c ≤ x`) or an upper bound (`x ≤ c`).
+    lower: bool,
+}
+
 /// A bound atom recovered from one assertion: `lower` ⇒ `k·x ≥ c` (i.e. `c ≤ k·x`),
 /// `!lower` ⇒ `k·x ≤ d`. Both sides are normalized so the variable side is exactly
 /// `k·x` (`k > 0`) and the bound is the integer constant on the other side.
@@ -2813,7 +2837,210 @@ fn detect_int_interval_diff_mult(
     })
 }
 
+/// Parse one assertion into a single-variable integer equality `k·x = b` (`k > 0`).
+/// Recognizes the generic [`Op::Eq`] over a single-variable linear term on one side and
+/// a value on the other (in either orientation), normalizes so the variable coefficient
+/// is positive, and returns `(var, k, b)`. Returns `None` on any other shape (multiple
+/// variables, a zero coefficient, a non-equality, or an overflow) — never fabricates.
+fn parse_int_equality(arena: &TermArena, t: TermId) -> Option<(SymbolId, i128, i128)> {
+    let TermNode::App { op, args } = arena.node(t) else {
+        return None;
+    };
+    if *op != Op::Eq {
+        return None;
+    }
+    let [a, b] = &args[..] else {
+        return None;
+    };
+    let (la, ka) = single_var_linear(arena, *a)?;
+    let (lb, kb) = single_var_linear(arena, *b)?;
+    // Move to `coeff·x + konst = 0`, i.e. `coeff·x = −konst`.
+    let (var, coeff) = match (la, lb) {
+        (Some((s, c)), None) => (s, c),
+        (None, Some((s, c))) => (s, c.checked_neg()?),
+        (Some((sx, cx)), Some((sy, cy))) if sx == sy => (sx, cx.checked_sub(cy)?),
+        _ => return None, // two distinct variables or a pure-constant equality
+    };
+    if coeff == 0 {
+        return None;
+    }
+    let konst = ka.checked_sub(kb)?; // `coeff·x + konst = 0`
+    // Orient so the multiplier is positive (negate both coeff and the moved constant).
+    let (k, rhs) = if coeff < 0 {
+        (coeff.checked_neg()?, konst) // (−coeff)·x = konst
+    } else {
+        (coeff, konst.checked_neg()?) // coeff·x = −konst
+    };
+    Some((var, k, rhs))
+}
+
+/// Detect the single-variable integer **equality-and-unit-bound** refutation shape: an
+/// equality `k·x = b` (`k > 0`) and a **unit-multiplier** bound (`c ≤ x` or `x ≤ c`) on
+/// the same variable, whose conjunction is **real-infeasible** (the rational point
+/// `x = b/k` violates the bound). Returns the [`IntEqBound`] on a match, `None` otherwise.
+///
+/// Real-infeasibility (`k > 0`, so multiplying the bound by `k` preserves direction):
+/// a lower bound `c ≤ x` forces `k·c ≤ b`, so it is refuted iff `b < k·c`; an upper
+/// bound `x ≤ c` forces `b ≤ k·c`, refuted iff `k·c < b`. Declines (never fabricates)
+/// on any other shape, a non-unit bound multiplier, or a feasible conjunction.
+fn detect_int_eq_bound(arena: &TermArena, assertions: &[TermId]) -> Option<IntEqBound> {
+    let [a1, a2] = assertions else {
+        return None; // exactly one equality + one bound
+    };
+    // Identify which assertion is the equality and which is the inequality (either order).
+    let (eq_term, bound_term) = match (
+        parse_int_equality(arena, *a1),
+        parse_int_equality(arena, *a2),
+    ) {
+        (Some(_), None) => (*a1, *a2),
+        (None, Some(_)) => (*a2, *a1),
+        _ => return None, // zero or two equalities — out of this shape's scope
+    };
+    let (var, k, b) = parse_int_equality(arena, eq_term)?;
+    if k <= 0 {
+        return None;
+    }
+    let bound = parse_bound_atom(arena, bound_term)?;
+    if bound.var != var || bound.k != 1 {
+        return None; // different variable, or a non-unit-multiplier bound (later slice)
+    }
+    let c = bound.bound;
+    let kc = k.checked_mul(c)?;
+    // Real-infeasible test (see the type docs); feasible ⇒ decline.
+    let infeasible = if bound.lower { b < kc } else { kc < b };
+    if !infeasible {
+        return None;
+    }
+    Some(IntEqBound {
+        var,
+        k,
+        b,
+        c,
+        lower: bound.lower,
+    })
+}
+
 impl IntReconstructCtx {
+    /// Build the kernel `False` proof for a single-variable integer
+    /// equality-and-unit-bound [`IntEqBound`] (`k·x = b` with `c ≤ x` or `x ≤ c`,
+    /// real-infeasible).
+    ///
+    /// Mirrors the equality as `h_eq : Eq Z (k·x) b` and the bound as a hypothesis over
+    /// `Z`, scales the bound by the positive `k` (`mul_le_mul_of_nonneg_left`), rewrites
+    /// the scaled literal `k·c` through the ring normalizer, and chains through the
+    /// equality (recast `k·x → b`) to a literal `b ⋈ k·c` contradiction closed by
+    /// `lt_irrefl`.
+    fn build_int_eq_bound_false(&mut self, iv: &IntEqBound) -> Result<ExprId, ReconstructError> {
+        let decline = |d: &str| ReconstructError::UnsupportedTerm {
+            term: format!("integer equality-bound reconstruction declined: {d}"),
+        };
+        let bound = DIO_UNIT_MAX.unsigned_abs();
+        let kc =
+            iv.k.checked_mul(iv.c)
+                .ok_or_else(|| decline("k·c overflow"))?;
+        if iv.k > DIO_UNIT_MAX
+            || iv.b.unsigned_abs() > bound
+            || iv.c.unsigned_abs() > bound
+            || kc.unsigned_abs() > bound
+        {
+            return Err(decline("k / b / c / k·c exceed the unit-expansion bound"));
+        }
+        // The literal `lt` facts need non-negative operands for `lt_lit_lit`.
+        if iv.b < 0 || kc < 0 {
+            return Err(decline("a literal bound is negative (later slice)"));
+        }
+
+        let x_name = self.var_const_for(iv.var);
+        let xe = self.kernel.const_(x_name, vec![]);
+        let k_lit = self.mk_intlit(iv.k);
+        let gx = self.mk_mul(k_lit, xe); // k·x
+        let b_lit = self.mk_intlit(iv.b);
+        let c_lit = self.mk_intlit(iv.c);
+
+        // h_eq : Eq Z (k·x) b (the asserted equality, mirrored verbatim).
+        let eq_prop = self.mk_eq(gx, b_lit);
+        let h_eq = self.hyp_axiom(eq_prop)?;
+
+        // 0 ≤ k (k > 0), for the positive scaling of the bound.
+        let zero = self.mk_zero();
+        let lt_zero_k = self.lt_zero_intlit(iv.k)?;
+        let le_zero_k = self.le_of_lt_app(zero, k_lit, lt_zero_k);
+
+        if iv.lower {
+            self.close_eq_bound_lower(iv, xe, gx, k_lit, b_lit, c_lit, h_eq, le_zero_k)
+        } else {
+            self.close_eq_bound_upper(iv, xe, gx, k_lit, b_lit, c_lit, h_eq, le_zero_k)
+        }
+    }
+
+    /// Lower-bound close: from `h_eq : Eq Z (k·x) b`, `c ≤ x`, and `b < k·c`, derive
+    /// `False`. Scales `c ≤ x` to `k·c ≤ k·x`, recasts the RHS to `b` through `h_eq`,
+    /// rewrites the literal `k·c`, and closes `b < k·c ≤ b ⇒ b < b`.
+    #[allow(clippy::too_many_arguments)]
+    fn close_eq_bound_lower(
+        &mut self,
+        iv: &IntEqBound,
+        xe: ExprId,
+        gx: ExprId,
+        k_lit: ExprId,
+        b_lit: ExprId,
+        c_lit: ExprId,
+        h_eq: ExprId,      // Eq Z (k·x) b
+        le_zero_k: ExprId, // le 0 k
+    ) -> Result<ExprId, ReconstructError> {
+        let kc = iv.k * iv.c;
+        let kc_lit = self.mk_intlit(kc);
+        // h_bound : le c x.
+        let bound_prop = self.mk_le(c_lit, xe);
+        let h_bound = self.hyp_axiom(bound_prop)?;
+        // le (k·c)(k·x) by scaling; recast (mul k c) → literal k·c on the left.
+        let le_kc_kx = self.mul_le_mul_left_app(k_lit, c_lit, xe, le_zero_k, h_bound);
+        let mul_kc = self.mk_mul(k_lit, c_lit);
+        let eq_mul_kc = self.eq_mul_lit_lit(iv.k, iv.c); // Eq Z (mul k c)(intlit k·c)
+        let le_kclit_kx = self.le_cast_left(mul_kc, kc_lit, gx, le_kc_kx, eq_mul_kc);
+        // recast (k·x) → b on the right via h_eq : le (intlit k·c) b.
+        let le_kclit_b = self.le_cast_right(kc_lit, gx, b_lit, le_kclit_kx, h_eq);
+        // lt b (k·c) literal (b < k·c by infeasibility) ∘ le (k·c) b ⇒ lt b b.
+        let lt_b_kc = self.lt_lit_lit(iv.b, kc)?;
+        let lt_b_b = self.lt_of_lt_of_le_app(b_lit, kc_lit, b_lit, lt_b_kc, le_kclit_b);
+        let irr = self.lt_irrefl_app(b_lit);
+        Ok(self.kernel.app(irr, lt_b_b))
+    }
+
+    /// Upper-bound close: from `h_eq : Eq Z (k·x) b`, `x ≤ c`, and `k·c < b`, derive
+    /// `False`. Scales `x ≤ c` to `k·x ≤ k·c`, recasts the LHS to `b` through `h_eq`,
+    /// rewrites the literal `k·c`, and closes `b ≤ k·c < b ⇒ b < b`.
+    #[allow(clippy::too_many_arguments)]
+    fn close_eq_bound_upper(
+        &mut self,
+        iv: &IntEqBound,
+        xe: ExprId,
+        gx: ExprId,
+        k_lit: ExprId,
+        b_lit: ExprId,
+        c_lit: ExprId,
+        h_eq: ExprId,      // Eq Z (k·x) b
+        le_zero_k: ExprId, // le 0 k
+    ) -> Result<ExprId, ReconstructError> {
+        let kc = iv.k * iv.c;
+        let kc_lit = self.mk_intlit(kc);
+        // h_bound : le x c.
+        let bound_prop = self.mk_le(xe, c_lit);
+        let h_bound = self.hyp_axiom(bound_prop)?;
+        // le (k·x)(k·c) by scaling; recast (mul k c) → literal k·c on the right.
+        let le_kx_kc = self.mul_le_mul_left_app(k_lit, xe, c_lit, le_zero_k, h_bound);
+        let mul_kc = self.mk_mul(k_lit, c_lit);
+        let eq_mul_kc = self.eq_mul_lit_lit(iv.k, iv.c); // Eq Z (mul k c)(intlit k·c)
+        let le_kx_kclit = self.le_cast_right(gx, mul_kc, kc_lit, le_kx_kc, eq_mul_kc);
+        // recast (k·x) → b on the left via h_eq : le b (intlit k·c).
+        let le_b_kclit = self.le_cast_left(gx, b_lit, kc_lit, le_kx_kclit, h_eq);
+        // le b (k·c) ∘ lt (k·c) b literal (k·c < b) ⇒ lt b b.
+        let lt_kc_b = self.lt_lit_lit(kc, iv.b)?;
+        let lt_b_b = self.lt_of_le_of_lt_app(b_lit, kc_lit, b_lit, le_b_kclit, lt_kc_b);
+        let irr = self.lt_irrefl_app(b_lit);
+        Ok(self.kernel.app(irr, lt_b_b))
+    }
+
     /// Build the kernel `False` proof for a detected [`IntInterval`] `c ≤ k·x ≤ d`.
     ///
     /// Mirrors the asserted atoms as hypothesis axioms `h_lo : le c (k·x)` and
@@ -3435,6 +3662,8 @@ fn build_and_gate_int_interval(
         ctx.build_int_interval_false(&iv)?
     } else if let Some(iv) = detect_int_interval_diff_mult(arena, assertions) {
         ctx.build_int_interval_diff_mult_false(&iv)?
+    } else if let Some(iv) = detect_int_eq_bound(arena, assertions) {
+        ctx.build_int_eq_bound_false(&iv)?
     } else {
         return Err(ReconstructError::UnsupportedTerm {
             term: "no single-variable integer-interval (c ≤ k·x ≤ d) refutation".to_owned(),
@@ -3462,11 +3691,12 @@ fn build_and_gate_int_interval(
 }
 
 /// Detect the single-variable integer-interval refutation shape (used by the fragment
-/// classifier to route to the integer-inequality reconstructor). Returns `true` iff
-/// either the equal-multiplier or the different-multiplier (private) interval matcher
-/// matches.
+/// classifier to route to the integer-inequality reconstructor). Returns `true` iff the
+/// equal-multiplier, the different-multiplier, or the equality-and-unit-bound
+/// (`k·x = b` ∧ `c ≤ x`/`x ≤ c`, real-infeasible) integer matcher matches.
 #[must_use]
 pub fn is_int_inequality_refutation(arena: &TermArena, assertions: &[TermId]) -> bool {
     detect_int_interval(arena, assertions).is_some()
         || detect_int_interval_diff_mult(arena, assertions).is_some()
+        || detect_int_eq_bound(arena, assertions).is_some()
 }
