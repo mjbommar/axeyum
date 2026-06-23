@@ -24,7 +24,7 @@ use axeyum_cnf::{
     VivifyOptions, XorCdclResult, XorPropagation, check_drat, compact, eliminate_variables_within,
     extract_xors, simplify_within, solve_with_drat_proof, solve_with_drat_proof_within,
     solve_with_rustsat_batsat_timeout, solve_with_xor_cdcl, tseitin_encode, vivify_within,
-    xor_propagate,
+    write_drat, xor_gauss_drat_refutation, xor_propagate,
 };
 use axeyum_ir::{
     Assignment, IrError, Sort, TermArena, TermId, TermStats, Value, eval, well_founded_default,
@@ -36,6 +36,7 @@ use crate::backend::{
     UnknownReason,
 };
 use crate::model::Model;
+use crate::proof::UnsatProof;
 
 /// Pure Rust `QF_BV` backend for the currently supported bit-blasting subset.
 ///
@@ -324,9 +325,19 @@ const XOR_PROPAGATE_MAX_CLAUSES: usize = 20_000;
 const XOR_CDCL_FALLBACK_MAX_CLAUSES: usize = 50_000;
 
 /// Outcome of [`maybe_xor_cdcl_fallback`]: the (possibly upgraded) SAT result and
-/// whether the `unsat` verdict came from the trusted CDCL(XOR) core (so the
-/// caller can skip the DRAT proof route, which cannot certify a non-RUP XOR
-/// refutation, and surface the `XorGaussian` trust hole instead).
+/// whether the `unsat` verdict came from the **trusted** (uncertified) CDCL(XOR)
+/// core, so the caller can skip the standard DRAT proof route, which cannot
+/// certify a non-RUP XOR refutation, and surface the `XorGaussian` trust hole.
+///
+/// `unsat_from_xor` is `true` only for an XOR-derived `unsat` that was *not*
+/// independently certified. The pure-Gaussian-level-0 sub-case (the extracted XOR
+/// system is inconsistent by Gaussian elimination alone, no branching) is checked
+/// here via a per-query DRAT certificate ([`xor_gauss_drat_refutation`] +
+/// [`check_drat`]); when that certificate validates the `unsat` is stamped
+/// [`SatProofStatus::Checked`] and `unsat_from_xor` is `false`, so it flows
+/// through the same checked-by-construction path the batsat/native `unsat` uses
+/// (no trust cost). The harder interleaved CDCL(XOR) `unsat` (branching was
+/// needed) stays `unsat_from_xor = true` — still the trusted `XorGaussian` hole.
 struct XorCdclFallback {
     result: SatResult,
     unsat_from_xor: bool,
@@ -580,8 +591,12 @@ fn reconstruct_sat_result(result: SatResult, inprocessed: Option<&Inprocessed>) 
 /// The returned `result` keeps the original `unknown` unless the core reaches a
 /// definite verdict:
 ///
-/// - `Unsat` upgrades to `SatResult::Unsat` (`unsat_from_xor = true`): the trusted
-///   `XorGaussian` hole, no DRAT proof.
+/// - `Unsat` upgrades to `SatResult::Unsat`. The pure-Gaussian-level-0 sub-case
+///   (the extracted XOR system is inconsistent by Gaussian elimination alone) is
+///   `check_drat`-certified here via [`certify_pure_gauss_xor_unsat`]; on success
+///   it is stamped `SatProofStatus::Checked` with `unsat_from_xor = false`.
+///   Otherwise it is the trusted `XorGaussian` hole (`unsat_from_xor = true`, no
+///   DRAT proof) — the interleaved CDCL(XOR) case is not certifiable here yet.
 /// - `Sat(values)` upgrades to `SatResult::Sat` over `formula`'s variable space;
 ///   it then flows through the same reconstruction + AIG/model/term replay the
 ///   batsat path uses, so a wrong model is rejected at replay (never a wrong sat).
@@ -623,12 +638,34 @@ fn maybe_xor_cdcl_fallback(
             stats
                 .backend
                 .push(("xor_cdcl_fallback_unsat".to_owned(), 1.0));
-            XorCdclFallback {
-                result: SatResult::Unsat(SatUnsatEvidence {
-                    proof: SatProofStatus::Unchecked,
-                    failed_assumptions: Vec::new(),
-                }),
-                unsat_from_xor: true,
+            // Pure-Gaussian-level-0 sub-case: if the extracted XOR system is
+            // inconsistent by Gaussian elimination *alone* (no branching), emit a
+            // per-query DRAT certificate of the conflict subset and validate it
+            // with the independent `check_drat`. A validated certificate makes
+            // this `unsat` checked-by-construction (stamped `Checked`,
+            // `unsat_from_xor = false`); it then rides the same accepted-as-checked
+            // path the batsat/native `unsat` uses. If the system is not pure-Gauss
+            // UNSAT (the conflict needed interleaved CDCL branching) or the
+            // certificate fails to validate, keep the prior trusted behavior.
+            if certify_pure_gauss_xor_unsat(formula) {
+                stats
+                    .backend
+                    .push(("xor_cdcl_fallback_unsat_drat_checked".to_owned(), 1.0));
+                XorCdclFallback {
+                    result: SatResult::Unsat(SatUnsatEvidence {
+                        proof: SatProofStatus::Checked,
+                        failed_assumptions: Vec::new(),
+                    }),
+                    unsat_from_xor: false,
+                }
+            } else {
+                XorCdclFallback {
+                    result: SatResult::Unsat(SatUnsatEvidence {
+                        proof: SatProofStatus::Unchecked,
+                        failed_assumptions: Vec::new(),
+                    }),
+                    unsat_from_xor: true,
+                }
             }
         }
         XorCdclResult::Sat(values) => {
@@ -650,6 +687,95 @@ fn maybe_xor_cdcl_fallback(
             }
         }
     }
+}
+
+/// Whether the formula's `unsat` is certified by a `check_drat`-validated DRAT
+/// refutation of the **pure-Gaussian-level-0** XOR sub-case.
+///
+/// The clean, independently-decidable sub-case: the XOR system recovered from
+/// `formula` ([`extract_xors`]) is inconsistent by Gaussian elimination *alone*
+/// (no CDCL branching). When so, [`axeyum_cnf::Gf2System::unsat_reason_subset`] surfaces the
+/// subset `S` of original XOR constraints whose GF(2)-sum is `0 = 1`, and
+/// [`xor_gauss_drat_refutation`] builds a DRAT refutation of `CNF(S)`. The proof
+/// is then re-validated end to end by the independent [`check_drat`] (a different
+/// implementation than the producer): only `Ok(true)` — the proof genuinely
+/// derives the empty clause from `CNF(S)` — returns `true`.
+///
+/// Soundness link to the original query: each recovered XOR gate is logically
+/// entailed by a clause-subset of `formula` (the same entailment the XOR
+/// inprocessing path relies on), so an inconsistent subset of those XORs makes
+/// the formula UNSAT, and `CNF(S)`'s `check_drat`-accepted refutation certifies
+/// that subset is contradictory. Soundness rides entirely on `check_drat`
+/// accepting: a wrong subset, a non-refuting proof, or a width over
+/// [`axeyum_cnf::MAX_XOR_WIDTH`] all make this return `false` (declining is sound
+/// — the caller then keeps the prior trusted XOR-UNSAT behavior, never a false
+/// certificate).
+///
+/// Returns `false` when the conflict is *not* pure-Gauss (interleaved CDCL(XOR)
+/// branching was needed — the combined-proof case, still uncertified) — that is
+/// exactly when [`axeyum_cnf::Gf2System::unsat_reason_subset`] is `None`.
+fn certify_pure_gauss_xor_unsat(formula: &CnfFormula) -> bool {
+    pure_gauss_xor_unsat_certificate(formula).is_some()
+}
+
+/// Builds the `check_drat`-validated DRAT certificate of the pure-Gaussian-level-0
+/// XOR sub-case for `formula`, or `None` when the sub-case does not apply.
+///
+/// The returned [`UnsatProof`] carries the DIMACS of `CNF(S)` (the conflict
+/// subset `S` of original XOR constraints summing to `0 = 1`) and its DRAT
+/// refutation, both as text, re-checkable from the text alone via
+/// [`UnsatProof::recheck`] / [`crate::Evidence::check`]. See
+/// [`certify_pure_gauss_xor_unsat`] for the soundness argument; the certificate
+/// is returned only after [`check_drat`] accepts it here, so a `Some` is always a
+/// genuine, independently-validated refutation of `CNF(S)`.
+pub(crate) fn pure_gauss_xor_unsat_certificate(formula: &CnfFormula) -> Option<UnsatProof> {
+    let system = extract_xors(formula).system;
+    let subset = system.unsat_reason_subset()?;
+    let constraints = system.constraints();
+    let refutation = xor_gauss_drat_refutation(&constraints, &subset, system.num_vars())?;
+    // The certificate is accepted only if the independent checker derives the
+    // empty clause from CNF(S) (`Ok(true)`). Any other outcome (`Ok(false)` — a
+    // proof that does not refute — or an `Err`) declines: no false certificate.
+    if !matches!(
+        check_drat(refutation.formula(), refutation.proof()),
+        Ok(true)
+    ) {
+        return None;
+    }
+    Some(UnsatProof {
+        dimacs: refutation.formula().to_dimacs(),
+        drat: write_drat(refutation.proof()),
+        lrat: None,
+    })
+}
+
+/// Builds the pure-Gaussian-level-0 XOR certificate for a `QF_BV` query by
+/// bit-blasting `assertions` to CNF and certifying the recovered XOR system, or
+/// `None` when the sub-case does not apply (or the query is outside the
+/// bit-blastable subset).
+///
+/// This independently re-derives the certificate from the query terms — it does
+/// not reuse any backend state — so the evidence layer can attach a freshly
+/// re-validated certificate. The CNF is the un-inprocessed Tseitin encoding; the
+/// pure-Gauss inconsistency of the recovered XOR system is a property of that
+/// formula, and the certificate is `check_drat`-validated before being returned.
+pub(crate) fn pure_gauss_xor_unsat_certificate_for_query(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<UnsatProof> {
+    if first_unsupported_op(arena, assertions).is_some()
+        || first_unsupported_sort(arena, assertions).is_some()
+    {
+        return None;
+    }
+    let lowering = lower_terms(arena, assertions).ok()?;
+    let roots = lowering
+        .roots()
+        .iter()
+        .map(|root| root.bits()[0])
+        .collect::<Vec<_>>();
+    let encoding = tseitin_encode(lowering.aig(), &roots).ok()?;
+    pure_gauss_xor_unsat_certificate(encoding.formula())
 }
 
 fn complete_model(arena: &TermArena, assignment: &Assignment) -> Model {
@@ -1170,10 +1296,13 @@ mod tests {
     }
 
     #[test]
-    fn fallback_decides_xor_unsat_with_trust_signal() {
-        // An XOR-structured UNSAT: the fallback upgrades `unknown` to `unsat`,
-        // flags it as the trusted `XorGaussian` hole, and records the stat the
-        // evidence layer reads.
+    fn fallback_decides_xor_unsat_with_certificate() {
+        // An XOR-structured UNSAT decidable by pure Gaussian elimination (the
+        // parity chain telescopes to 0 = 1, no branching): the fallback upgrades
+        // `unknown` to `unsat` AND certifies it via a check_drat-validated DRAT
+        // certificate, so it is stamped `Checked` and `unsat_from_xor` is false
+        // (it then rides the standard checked-by-construction path, not the trust
+        // hole). The verdict is `unsat` either way — only the trust signal changed.
         let f = parity_chain_unsat(6);
         assert!(
             extract_xors(&f).num_recognized > 0,
@@ -1181,10 +1310,132 @@ mod tests {
         );
         let mut stats = SolveStats::default();
         let out = maybe_xor_cdcl_fallback(&f, unknown(), &mut stats);
-        assert!(matches!(out.result, SatResult::Unsat(_)));
-        assert!(out.unsat_from_xor, "unsat must be flagged as xor-derived");
+        let SatResult::Unsat(evidence) = &out.result else {
+            panic!("expected unsat");
+        };
+        assert_eq!(
+            evidence.proof,
+            SatProofStatus::Checked,
+            "pure-Gauss XOR unsat must carry a checked certificate"
+        );
+        assert!(
+            !out.unsat_from_xor,
+            "a certified pure-Gauss unsat is not the trusted hole"
+        );
         assert_eq!(stat(&stats, "xor_cdcl_fallback_fired"), Some(1.0));
         assert_eq!(stat(&stats, "xor_cdcl_fallback_unsat"), Some(1.0));
+        assert_eq!(
+            stat(&stats, "xor_cdcl_fallback_unsat_drat_checked"),
+            Some(1.0)
+        );
+        // The certificate the gate validated must independently re-check.
+        let proof = pure_gauss_xor_unsat_certificate(&f).expect("certificate");
+        assert!(proof.recheck().expect("recheck parses"));
+    }
+
+    /// A BV "parity chain" query: `v0 ^ v1 = 0`, …, `v_{n-2} ^ v_{n-1} = 0`, and
+    /// `v0 ^ v_{n-1} = 1` over 1-bit vectors. Each `bvxor(a,b) == 0` bit-blasts to
+    /// a width-2 XOR gate `extract_xors` recognizes, and the chain telescopes to
+    /// the pure-Gaussian inconsistency `0 = 1` (no branching). UNSAT.
+    fn bv_parity_chain_query(n: usize) -> (TermArena, Vec<TermId>) {
+        let mut arena = TermArena::new();
+        let xs: Vec<TermId> = (0..n)
+            .map(|i| arena.bv_var(&format!("v{i}"), 1).unwrap())
+            .collect();
+        let zero = arena.bv_const(1, 0).unwrap();
+        let one = arena.bv_const(1, 1).unwrap();
+        let mut eqs = Vec::new();
+        for i in 0..n - 1 {
+            let xr = arena.bv_xor(xs[i], xs[i + 1]).unwrap();
+            eqs.push(arena.eq(xr, zero).unwrap());
+        }
+        let head = arena.bv_xor(xs[0], xs[n - 1]).unwrap();
+        eqs.push(arena.eq(head, one).unwrap());
+        (arena, eqs)
+    }
+
+    #[test]
+    fn query_certificate_for_bv_parity_chain_rechecks() {
+        // A real BV query whose bit-blasted CNF carries a pure-Gauss-UNSAT XOR
+        // system: the query-level builder returns a certificate that re-checks
+        // independently (the end-to-end soundness link from query terms to a
+        // check_drat-validated artifact).
+        let (arena, eqs) = bv_parity_chain_query(5);
+        let cert = pure_gauss_xor_unsat_certificate_for_query(&arena, &eqs)
+            .expect("pure-Gauss certificate for the BV parity chain");
+        assert!(cert.recheck().expect("recheck parses"));
+    }
+
+    #[test]
+    fn query_certificate_declines_for_satisfiable_query() {
+        // A satisfiable BV query never yields a pure-Gauss XOR refutation: the
+        // query-level certificate builder must return None (no false certificate).
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 2).unwrap();
+        let y = arena.bv_var("y", 2).unwrap();
+        let xor = arena.bv_xor(x, y).unwrap();
+        let three = arena.bv_const(2, 3).unwrap();
+        let eq = arena.eq(xor, three).unwrap();
+        assert!(pure_gauss_xor_unsat_certificate_for_query(&arena, &[eq]).is_none());
+    }
+
+    #[test]
+    fn certify_pure_gauss_declines_for_sat_xor_system() {
+        // A satisfiable XOR system is NOT pure-Gauss unsat: no false certificate.
+        let mut clauses: Vec<Vec<(usize, bool)>> = Vec::new();
+        clauses.extend(xor_clauses(&[0, 1], true));
+        clauses.extend(xor_clauses(&[1, 2], false));
+        let refs: Vec<&[(usize, bool)]> = clauses.iter().map(Vec::as_slice).collect();
+        let f = formula(3, &refs);
+        assert!(!certify_pure_gauss_xor_unsat(&f));
+        assert!(pure_gauss_xor_unsat_certificate(&f).is_none());
+    }
+
+    #[test]
+    fn certify_pure_gauss_declines_when_no_xor_structure() {
+        // No recognized XOR gate ⇒ the extracted system is empty ⇒ no pure-Gauss
+        // refutation (it would have to come from CNF clauses, the interleaved
+        // case, which this sub-case does not certify).
+        let f = formula(2, &[&[(0, false), (1, false)]]); // plain (x0 ∨ x1)
+        assert_eq!(extract_xors(&f).num_recognized, 0);
+        assert!(!certify_pure_gauss_xor_unsat(&f));
+    }
+
+    #[test]
+    fn interleaved_xor_unsat_stays_trusted_not_certified() {
+        // The recovered XOR system alone is SAT (`x0 ⊕ x1 = 0`), but the formula
+        // is UNSAT because two NON-XOR unit clauses (`x0`, `¬x1`) force the XOR's
+        // operands apart. The unsatisfiability therefore needs clause/XOR
+        // interleaving — it is NOT pure-Gauss — so it must stay the trusted
+        // `XorGaussian` hole: `unsat_from_xor` true, `Unchecked`, and the certified
+        // stat absent. (Soundness boundary: never a false certificate here.)
+        let mut clauses: Vec<Vec<(usize, bool)>> = Vec::new();
+        clauses.extend(xor_clauses(&[0, 1], false)); // x0 ⊕ x1 = 0 (recognized, SAT)
+        clauses.push(vec![(0, false)]); // unit x0 (not an XOR gate)
+        clauses.push(vec![(1, true)]); // unit ¬x1 (not an XOR gate)
+        let refs: Vec<&[(usize, bool)]> = clauses.iter().map(Vec::as_slice).collect();
+        let f = formula(2, &refs);
+        assert_eq!(
+            extract_xors(&f).num_recognized,
+            1,
+            "only the width-2 XOR is recognized; the units are not"
+        );
+        // The XOR subsystem alone is satisfiable ⇒ no pure-Gauss refutation.
+        assert!(extract_xors(&f).system.unsat_reason_subset().is_none());
+        assert!(!certify_pure_gauss_xor_unsat(&f));
+
+        let mut stats = SolveStats::default();
+        let out = maybe_xor_cdcl_fallback(&f, unknown(), &mut stats);
+        // Still decided UNSAT — the interleaved path is not regressed.
+        let SatResult::Unsat(evidence) = &out.result else {
+            panic!("expected unsat");
+        };
+        assert_eq!(evidence.proof, SatProofStatus::Unchecked);
+        assert!(
+            out.unsat_from_xor,
+            "interleaved XOR unsat stays the trusted hole"
+        );
+        assert!(stat(&stats, "xor_cdcl_fallback_unsat_drat_checked").is_none());
     }
 
     #[test]

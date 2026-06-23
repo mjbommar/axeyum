@@ -92,6 +92,54 @@ fn decided_unsat_evidence_unaffected_by_flag() {
 }
 
 #[test]
+fn bv_parity_chain_unsat_evidence_rechecks() {
+    // A BV "parity chain" `v0 ^ v1 = 0`, …, `v0 ^ v4 = 1` over 1-bit vectors: a
+    // pure-Gaussian-UNSAT XOR system at the CNF level (the certifiable sub-case).
+    // batsat decides this small instance directly, so it takes the standard
+    // checked route; the point is the verdict is a re-checkable `unsat` and is
+    // NOT mislabelled as an interleaved-trusted `XorGaussian` hole. (The
+    // pure-Gauss XOR certificate path itself — query→CNF→CNF(S)→check_drat — is
+    // covered deterministically by the `sat_bv_backend` inline tests.)
+    let mut arena = TermArena::new();
+    let xs: Vec<TermId> = (0..5)
+        .map(|i| arena.bv_var(&format!("v{i}"), 1).unwrap())
+        .collect();
+    let zero = arena.bv_const(1, 0).unwrap();
+    let one = arena.bv_const(1, 1).unwrap();
+    let mut eqs = Vec::new();
+    for i in 0..4 {
+        let xr = arena.bv_xor(xs[i], xs[i + 1]).unwrap();
+        eqs.push(arena.eq(xr, zero).unwrap());
+    }
+    let head = arena.bv_xor(xs[0], xs[4]).unwrap();
+    eqs.push(arena.eq(head, one).unwrap());
+
+    let report = produce_qf_bv_evidence(
+        &arena,
+        &eqs,
+        &SolverConfig::new().with_xor_cdcl_fallback(true),
+    )
+    .expect("evidence");
+    assert!(matches!(
+        report.evidence,
+        Evidence::Unsat(_) | Evidence::UnsatTermLevel { .. } | Evidence::UnsatAletheProof(_)
+    ));
+    assert!(report.evidence.check(&arena, &eqs).expect("re-check"));
+    // Any XorGaussian step that *is* present must be honestly certified (the
+    // pure-Gauss sub-case); an UNCERTIFIED XorGaussian step here would be the
+    // interleaved hole, which this pure-Gauss instance must not take.
+    for step in &report.trusted_steps {
+        if step.id == TrustId::XorGaussian {
+            assert!(
+                step.certified,
+                "a pure-Gauss XOR unsat must carry a certified XorGaussian step, never the \
+                 trusted interleaved hole"
+            );
+        }
+    }
+}
+
+#[test]
 fn sat_model_replays_with_flag_on() {
     // A satisfiable XOR query with the flag on still produces a replay-checkable
     // model (whether or not the fallback contributed it).

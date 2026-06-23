@@ -190,6 +190,104 @@ impl Gf2System {
             equalities,
         })
     }
+
+    /// Returns the subset of original constraint indices whose GF(2)-sum is the
+    /// inconsistent row `0 = 1`, if and only if the system is unsatisfiable by
+    /// pure Gaussian elimination (no branching).
+    ///
+    /// This is the **conflict-reason subset** the per-query DRAT certificate
+    /// route ([`crate::xor_gauss_drat_refutation`]) consumes: the few original
+    /// constraints the elimination actually summed to reach `0 = 1`. It returns
+    /// `Some(subset)` exactly when [`Gf2System::solve`] returns
+    /// [`Gf2Outcome::Unsat`], and `None` for a satisfiable system.
+    ///
+    /// The reduction is the same column-order Gaussian elimination
+    /// [`Gf2System::solve`] runs, additionally tracking, per working row, the set
+    /// of original-row indices summed into it (a provenance bitset). When a
+    /// reduced row becomes all-zero in the variable columns with parity `1`, its
+    /// provenance is exactly a subset summing to `0 = 1`. The returned indices
+    /// are sorted ascending and the GF(2)-sum of the indexed
+    /// [`Gf2System::constraints`] is verified to be `0 = 1` before returning, so
+    /// the result is always a genuine refutation subset (or `None`).
+    ///
+    /// Determinism: the same column order and the first inconsistent row found
+    /// give a stable subset for a given system.
+    #[must_use]
+    pub fn unsat_reason_subset(&self) -> Option<Vec<usize>> {
+        let words = self.words;
+        let mut rows = self.rows.clone();
+        let mut rhs = self.rhs.clone();
+        // Provenance: row `r` started as the XOR of original constraints in
+        // `prov[r]` (a bitset over constraint indices). Initially each row is
+        // itself.
+        let prov_words = self.rows.len().div_ceil(64).max(1);
+        let mut prov: Vec<Vec<u64>> = (0..self.rows.len())
+            .map(|r| {
+                let mut p = vec![0u64; prov_words];
+                p[r / 64] |= 1u64 << (r % 64);
+                p
+            })
+            .collect();
+
+        let mut pivot_row = 0usize;
+        for col in 0..self.num_vars {
+            let Some(sel) = (pivot_row..rows.len()).find(|&r| bit_is_set(&rows[r], col)) else {
+                continue;
+            };
+            rows.swap(pivot_row, sel);
+            rhs.swap(pivot_row, sel);
+            prov.swap(pivot_row, sel);
+            let pivot = rows[pivot_row].clone();
+            let pivot_rhs = rhs[pivot_row];
+            let pivot_prov = prov[pivot_row].clone();
+            for r in 0..rows.len() {
+                if r != pivot_row && bit_is_set(&rows[r], col) {
+                    xor_into(&mut rows[r], &pivot, words);
+                    rhs[r] ^= pivot_rhs;
+                    xor_into(&mut prov[r], &pivot_prov, prov_words);
+                }
+            }
+            pivot_row += 1;
+            if pivot_row == rows.len() {
+                break;
+            }
+        }
+
+        // First inconsistent `0 = 1` row: read its provenance subset.
+        for (r, row) in rows.iter().enumerate() {
+            if rhs[r] && row_is_zero(row) {
+                let subset = set_bits(&prov[r], self.rows.len());
+                debug_assert!(
+                    self.subset_sums_to_zero_eq_one(&subset),
+                    "unsat_reason_subset produced a subset not summing to 0 = 1"
+                );
+                if self.subset_sums_to_zero_eq_one(&subset) {
+                    return Some(subset);
+                }
+                return None;
+            }
+        }
+        None
+    }
+
+    /// Verifies the GF(2)-sum of the constraints at `subset` is the inconsistent
+    /// row `0 = 1` (empty variable support, parity `1`). The soundness check on
+    /// the reason subset before it is returned.
+    fn subset_sums_to_zero_eq_one(&self, subset: &[usize]) -> bool {
+        if subset.is_empty() {
+            return false;
+        }
+        let mut acc = vec![0u64; self.words];
+        let mut parity = false;
+        for &idx in subset {
+            let Some(row) = self.rows.get(idx) else {
+                return false;
+            };
+            xor_into(&mut acc, row, self.words);
+            parity ^= self.rhs[idx];
+        }
+        row_is_zero(&acc) && parity
+    }
 }
 
 /// Outcome of solving a [`Gf2System`].
@@ -515,5 +613,146 @@ mod tests {
         let eqs = sol.implied_equalities();
         assert!(eqs.windows(2).all(|w| (w[0].0, w[0].1) <= (w[1].0, w[1].1)));
         assert_satisfies_all(&sol, &constraints);
+    }
+
+    /// The XOR-fold of the constraints at `subset` (`(support, parity)`),
+    /// duplicates cancelling by parity — the test-side oracle for "sums to
+    /// `0 = 1`".
+    fn fold_subset(constraints: &[Constraint], subset: &[usize]) -> (Vec<usize>, bool) {
+        let mut counts: std::collections::BTreeMap<usize, usize> =
+            std::collections::BTreeMap::new();
+        let mut parity = false;
+        for &i in subset {
+            let (vars, rhs) = &constraints[i];
+            for &v in vars {
+                *counts.entry(v).or_insert(0) += 1;
+            }
+            parity ^= *rhs;
+        }
+        let support: Vec<usize> = counts
+            .into_iter()
+            .filter(|&(_, c)| c % 2 == 1)
+            .map(|(v, _)| v)
+            .collect();
+        (support, parity)
+    }
+
+    #[test]
+    fn reason_subset_none_for_sat_system() {
+        // A satisfiable system has no `0 = 1` row, so no reason subset.
+        let sys = build(3, &[(vec![0, 1], true), (vec![1, 2], false)]);
+        assert!(matches!(sys.solve(), Gf2Outcome::Sat(_)));
+        assert!(sys.unsat_reason_subset().is_none());
+    }
+
+    #[test]
+    fn reason_subset_direct_contradiction() {
+        // x0 ⊕ x1 = 0 and x0 ⊕ x1 = 1: the two rows sum to 0 = 1.
+        let constraints = vec![(vec![0, 1], false), (vec![0, 1], true)];
+        let sys = build(2, &constraints);
+        let subset = sys.unsat_reason_subset().expect("unsat reason subset");
+        assert_eq!(subset, vec![0, 1]);
+        assert_eq!(fold_subset(&constraints, &subset), (vec![], true));
+    }
+
+    #[test]
+    fn reason_subset_chained_three_rows() {
+        // x0⊕x1=1, x1⊕x2=1, x0⊕x2=1 sum to 0 = 1 (the classic odd-parity cycle).
+        let constraints = vec![(vec![0, 1], true), (vec![1, 2], true), (vec![0, 2], true)];
+        let sys = build(3, &constraints);
+        let subset = sys.unsat_reason_subset().expect("unsat reason subset");
+        // Every subset returned must genuinely sum to 0 = 1.
+        assert_eq!(fold_subset(&constraints, &subset), (vec![], true));
+        assert_eq!(sys.solve(), Gf2Outcome::Unsat);
+    }
+
+    #[test]
+    fn reason_subset_ignores_irrelevant_rows() {
+        // Two inconsistent rows plus an unrelated consistent one; the subset
+        // must not include the irrelevant row (it is not needed to reach 0 = 1).
+        let constraints = vec![
+            (vec![5, 6], false), // irrelevant
+            (vec![0, 1], false),
+            (vec![0, 1], true),
+        ];
+        let sys = build(7, &constraints);
+        let subset = sys.unsat_reason_subset().expect("unsat reason subset");
+        assert_eq!(fold_subset(&constraints, &subset), (vec![], true));
+        assert!(!subset.contains(&0), "irrelevant row must not appear");
+    }
+
+    #[test]
+    fn reason_subset_empty_constraint_unsat() {
+        // An explicit () = 1 is itself the inconsistent row.
+        let constraints = vec![(vec![], true)];
+        let sys = build(2, &constraints);
+        let subset = sys.unsat_reason_subset().expect("unsat reason subset");
+        assert_eq!(subset, vec![0]);
+        assert_eq!(fold_subset(&constraints, &subset), (vec![], true));
+    }
+
+    #[test]
+    fn reason_subset_soundness_fuzz_no_false_subset() {
+        // Deterministic LCG over many random small XOR systems. Soundness
+        // invariant: `unsat_reason_subset` is `Some` iff `solve` is `Unsat`, and
+        // every returned subset genuinely sums to 0 = 1 (so a downstream DRAT
+        // certificate over CNF(S) is always a real refutation — never a false one).
+        let mut state: u64 = 0x9E37_79B9_7F4A_7C15;
+        let mut next = || {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            state
+        };
+        let mut unsat_seen = 0u32;
+        for _ in 0..4000 {
+            let num_vars = 1 + (next() % 6) as usize;
+            let num_rows = 1 + (next() % 7) as usize;
+            let mut constraints: Vec<Constraint> = Vec::new();
+            for _ in 0..num_rows {
+                let mut vars: Vec<usize> = Vec::new();
+                for v in 0..num_vars {
+                    if next() & 1 == 1 {
+                        vars.push(v);
+                    }
+                }
+                let rhs = next() & 1 == 1;
+                constraints.push((vars, rhs));
+            }
+            let sys = build(num_vars, &constraints);
+            let is_unsat = matches!(sys.solve(), Gf2Outcome::Unsat);
+            match sys.unsat_reason_subset() {
+                Some(subset) => {
+                    assert!(is_unsat, "reason subset for a SAT system: {constraints:?}");
+                    assert_eq!(
+                        fold_subset(&constraints, &subset),
+                        (vec![], true),
+                        "subset {subset:?} does not sum to 0 = 1 for {constraints:?}"
+                    );
+                    unsat_seen += 1;
+                }
+                None => assert!(
+                    !is_unsat,
+                    "no reason subset for an UNSAT system: {constraints:?}"
+                ),
+            }
+        }
+        assert!(unsat_seen > 0, "fuzz must exercise some UNSAT systems");
+    }
+
+    #[test]
+    fn reason_subset_cross_word_boundary() {
+        // Variables above index 63 plus an inconsistency, exercising multi-word
+        // rows alongside multi-word provenance is not needed (few rows) but the
+        // variable path is multi-word.
+        let constraints = vec![
+            (vec![0, 64, 100], true),
+            (vec![64, 100], false),
+            (vec![0], false), // forces x0=false, but row 0 ⇒ x0=true ⇒ 0 = 1
+        ];
+        let sys = build(128, &constraints);
+        assert_eq!(sys.solve(), Gf2Outcome::Unsat);
+        let subset = sys.unsat_reason_subset().expect("unsat reason subset");
+        assert_eq!(fold_subset(&constraints, &subset), (vec![], true));
     }
 }

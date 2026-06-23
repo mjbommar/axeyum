@@ -96,6 +96,22 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "QF_BV",
+        feature: "CERTIFIED pure-Gaussian XOR UNSAT (CDCL(XOR) fallback, ADR-0035): when the \
+                  recovered XOR system is inconsistent by Gaussian elimination ALONE (level 0, no \
+                  branching), the conflict subset S (summing to 0 = 1) is refuted by a per-query DRAT \
+                  certificate over CNF(S). BOUNDARY: the INTERLEAVED CDCL(XOR) UNSAT (branching needed) \
+                  stays search-only TRUSTED (the XorGaussian ledger hole) — this row covers ONLY the \
+                  pure-Gauss-level-0 sub-case",
+        assurance: Assurance::Checked,
+        evidence: "xor_gauss_drat_refutation builds CNF(S) + a DRAT proof from the conflict subset \
+                   (Gf2System::unsat_reason_subset provenance); validated end-to-end by the independent \
+                   check_drat and re-attached as Evidence::Unsat(Some(_)), re-checkable from text via \
+                   Evidence::check / UnsatProof::recheck. Declines (keeps the trusted behavior, no false \
+                   cert) on the interleaved case or any non-validating proof",
+        reference: "ADR-0035",
+    },
+    Capability {
+        area: "QF_BV",
         feature: "end-to-end certified UNSAT (certify_qf_bv_unsat_end_to_end): bit-blasting \
                   certified faithful vs an independent reference + CNF-UNSAT DRAT",
         assurance: Assurance::Checked,

@@ -46,7 +46,12 @@ pub enum TrustId {
     Farkas,
     /// Lazy-SMT skeleton + Farkas-certified theory lemmas (ADR-0021).
     LraDpll,
-    /// CDCL(XOR) search-only UNSAT via in-search Gaussian reasoning (ADR-0035).
+    /// CDCL(XOR) UNSAT via Gaussian reasoning (ADR-0035). The
+    /// pure-Gaussian-level-0 sub-case (the recovered XOR system is inconsistent by
+    /// Gaussian elimination alone, no branching) now carries a `check_drat`-checked
+    /// per-query certificate; the interleaved CDCL(XOR) sub-case (branching needed)
+    /// remains search-only and trusted. `is_certified` stays `false` because not
+    /// *every* XOR UNSAT is certified — see [`TrustId::is_certified`].
     XorGaussian,
     /// Degree-2 sum-of-squares / PSD certificate for NRA (ADR-0039).
     Sos,
@@ -134,10 +139,25 @@ impl TrustId {
         }
     }
 
-    /// Whether this reduction has an independent per-query checker today (the
-    /// bit-blast miter; DRAT for Tseitin/SAT; Farkas/lazy-SMT/enumeration
-    /// verifiers). Trust holes return `false` — these are what Track 3 P3.5 drives
-    /// to zero.
+    /// Whether *every* result depending on this reduction has an independent
+    /// per-query checker today (the bit-blast miter; DRAT for Tseitin/SAT;
+    /// Farkas/lazy-SMT/enumeration verifiers). Trust holes return `false` — these
+    /// are what Track 3 P3.5 drives to zero.
+    ///
+    /// This is the **conservative** ledger status: a reduction returns `true` only
+    /// when no result that relies on it is trusted-uncertified. [`XorGaussian`]
+    /// stays `false` even though its **pure-Gaussian-level-0** sub-case now carries
+    /// a `check_drat` certificate (a freshly re-checkable `Evidence::Unsat(Some(_))`
+    /// over `CNF(S)`), because the **interleaved CDCL(XOR)** sub-case (branching
+    /// needed) is still search-only with no per-query certificate. The per-run
+    /// [`TrustStep::certified`] flag reports which sub-case a *given* `unsat`
+    /// actually took: `true` for the certified pure-Gauss refutation, `false` for
+    /// the trusted interleaved one. A reviewer must therefore read
+    /// [`TrustStep::certified`], not this ledger bit, to know whether a *particular*
+    /// XOR `unsat` was certified — and must not read `XorGaussian` as
+    /// "interleaved XOR-UNSAT is certified" (it is not).
+    ///
+    /// [`XorGaussian`]: TrustId::XorGaussian
     #[must_use]
     pub const fn is_certified(self) -> bool {
         match self {

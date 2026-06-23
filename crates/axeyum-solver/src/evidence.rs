@@ -497,13 +497,47 @@ pub fn produce_qf_bv_evidence(
             .iter()
             .any(|(name, value)| name == "xor_cdcl_fallback_unsat" && *value > 0.0)
     });
+    // Was this XOR `unsat` the certifiable pure-Gaussian-level-0 sub-case? The
+    // backend stamps `xor_cdcl_fallback_unsat_drat_checked` when its conflict
+    // subset's `CNF(S)` carried a `check_drat`-validated DRAT certificate. We then
+    // re-derive that certificate independently here (a fresh bit-blast + a fresh
+    // `check_drat`) and attach it as real `Evidence::Unsat(Some(_))` with
+    // `XorGaussian` certified for this run. If the re-derivation does not validate
+    // (it always should for the same query), we fall back to the trusted bare
+    // `unsat` below — never a `certified: true` without a validating certificate.
+    let xor_cdcl_unsat_certified = backend.last_stats().is_some_and(|s| {
+        s.backend
+            .iter()
+            .any(|(name, value)| name == "xor_cdcl_fallback_unsat_drat_checked" && *value > 0.0)
+    });
+    let xor_gauss_cert = if matches!(check, CheckResult::Unsat) && xor_cdcl_unsat_certified {
+        crate::sat_bv_backend::pure_gauss_xor_unsat_certificate_for_query(arena, assertions)
+    } else {
+        None
+    };
     let (evidence, trusted_steps) = match check {
         CheckResult::Sat(model) => (Evidence::Sat(model), Vec::new()),
         CheckResult::Unknown(reason) => (Evidence::Unknown(reason), Vec::new()),
+        CheckResult::Unsat if xor_gauss_cert.is_some() => (
+            // Pure-Gaussian-level-0 XOR refutation: the recovered XOR system is
+            // inconsistent by Gaussian elimination alone, and the conflict subset
+            // `CNF(S)` carries a `check_drat`-validated DRAT certificate (re-derived
+            // and re-checked here). bit-blast and Tseitin produced the CNF (trusted,
+            // not certified on this route); the XOR-Gaussian step IS certified this
+            // run by the attached, re-checkable certificate.
+            Evidence::Unsat(xor_gauss_cert),
+            trust_steps(&[
+                (TrustId::BitBlast, false),
+                (TrustId::Tseitin, false),
+                (TrustId::XorGaussian, true),
+            ]),
+        ),
         CheckResult::Unsat if xor_cdcl_unsat => (
             // Search-only XOR refutation: bit-blast and Tseitin produced the CNF
             // (trusted, not certified on this route), and the XOR Gaussian search
-            // refuted it without an RUP-checkable proof — the ledgered hole.
+            // refuted it without an RUP-checkable proof — the ledgered hole. This
+            // is the interleaved CDCL(XOR) case (branching was needed), which is not
+            // pure-Gauss-certifiable and stays trusted.
             Evidence::Unsat(None),
             trust_steps(&[
                 (TrustId::BitBlast, false),
