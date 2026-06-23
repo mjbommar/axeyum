@@ -1091,6 +1091,11 @@ struct Diagnostics {
     learned_len_total: u64,
     /// Summed length of the corresponding full conflict clause (`¬⋀core`).
     conflict_len_total: u64,
+    /// The number of conflicts whose 1-UIP clause lost at least one literal to
+    /// self-subsuming minimization.
+    minimize_fires: usize,
+    /// Summed count of literals dropped by minimization across all conflicts.
+    minimize_removed_total: u64,
     /// The number of clauses present before any learning (the encoded skeleton);
     /// every clause at or after this index is a learned 1-UIP asserting clause.
     initial_clauses: usize,
@@ -1416,6 +1421,34 @@ impl Dpll {
                 let mut learned = Vec::with_capacity(lower.len() + 1);
                 learned.push(self.true_literal(var).negate());
                 learned.extend(lower);
+                // Recursive (self-subsuming) minimization: drop non-asserting
+                // literals whose negation is already implied — through their reason
+                // chains — by the rest of the clause (`MiniSat` `ccmin_mode = 2`,
+                // mirroring `axeyum_cnf::proof_sat`'s `minimize`/`lit_redundant`).
+                // At this point `seen[w]` is true exactly for the non-asserting
+                // (`lower`) variables and false for the asserting literal's variable
+                // — the precondition [`Self::minimize`] relies on. The backjump
+                // level is recomputed from the *minimized* clause below, so it stays
+                // a valid asserting clause (single current-level literal at index 0).
+                #[cfg(test)]
+                let pre_min_len = learned.len();
+                // Minimization resolves the clause against the reason chains of the
+                // dropped literals. A clause is a pure *theory* lemma only if EVERY
+                // reason it was resolved through — in 1-UIP *and* in minimization —
+                // is a theory clause. `minimize` ANDs the theory-purity of the
+                // reasons it traverses into `all_theory`, so a literal removed via a
+                // Boolean reason correctly downgrades the lemma flag (the test gate's
+                // conjunctive offline oracle is only valid for pure theory lemmas).
+                self.minimize(&mut learned, &mut seen, &mut all_theory);
+                #[cfg(test)]
+                {
+                    let removed =
+                        u64::try_from(pre_min_len - learned.len()).expect("removed fits u64");
+                    if removed > 0 {
+                        self.diag.minimize_fires += 1;
+                        self.diag.minimize_removed_total += removed;
+                    }
+                }
                 let backjump = Self::backjump_level(&self.level, &learned);
                 return (learned, backjump, all_theory);
             }
@@ -1430,6 +1463,132 @@ impl Dpll {
                     .expect("a current-level implied literal has a reason clause"),
             );
         }
+    }
+
+    /// An abstraction of a variable's decision level as a single-bit mask
+    /// (`MiniSat`'s `abstractLevel`). The union of these masks over a clause's
+    /// non-asserting literals lets [`Self::lit_redundant`] short-circuit: a reason
+    /// literal whose level-bit is absent from the clause's mask comes from a
+    /// decision level unrelated to the clause and so cannot be resolved away.
+    #[inline]
+    fn abstract_level(&self, var: usize) -> u32 {
+        1_u32 << (self.level[var] & 31)
+    }
+
+    /// Recursive (self-subsuming) minimization of the 1-UIP asserting clause —
+    /// `MiniSat` `ccmin_mode = 2`, mirroring `axeyum_cnf::proof_sat`'s `minimize`.
+    ///
+    /// A non-asserting literal `l` (index `>= 1`) is dropped when its negation is
+    /// already entailed by the remaining clause literals through `l`'s reason
+    /// chain: every literal in `reason(l)` (other than `l` itself) must be already
+    /// in the clause (`seen`), fixed at level 0, or itself recursively redundant.
+    /// Resolving the clause against those reason chains keeps it entailed, so the
+    /// minimized clause is still implied — verdict-invariant. Decision literals (no
+    /// reason) are never redundant, and the asserting literal (index 0, the only
+    /// current-level literal) is always kept, so the result is still a valid
+    /// asserting clause that forces the same UIP after the recomputed backjump.
+    ///
+    /// Precondition: `seen[w]` is true exactly for the non-asserting clause
+    /// variables and false for the asserting literal's variable. `seen` is the
+    /// per-conflict local owned by [`Self::analyze_conflict`] and discarded when
+    /// that frame returns, so no state leaks across conflicts; the result depends
+    /// only on this conflict's `seen` state, the reason graph, and the input clause
+    /// order — hence deterministic (no hash-map iteration).
+    ///
+    /// `all_theory` is conjoined with the theory-purity of every reason clause the
+    /// minimization walk traverses, so a clause flagged a pure theory lemma stays
+    /// flagged only if no Boolean reason was resolved through — the test gate's
+    /// conjunctive offline oracle is sound only for pure theory lemmas, and a
+    /// minimized clause that resolved through a Boolean reason is no longer one.
+    fn minimize(&self, learned: &mut Vec<Lit>, seen: &mut [bool], all_theory: &mut bool) {
+        if learned.len() <= 1 {
+            return;
+        }
+        // Mask of the decision levels present among the non-asserting literals.
+        let mut abstract_levels = 0_u32;
+        for lit in &learned[1..] {
+            abstract_levels |= self.abstract_level(lit.var);
+        }
+        let mut stack: Vec<usize> = Vec::new();
+        let mut to_clear: Vec<usize> = Vec::new();
+        let mut write = 1_usize;
+        for read in 1..learned.len() {
+            let lit = learned[read];
+            // Keep `lit` if it is a decision (no reason) or not redundant.
+            if self.reason[lit.var].is_none()
+                || !self.lit_redundant(
+                    lit.var,
+                    abstract_levels,
+                    seen,
+                    &mut stack,
+                    &mut to_clear,
+                    all_theory,
+                )
+            {
+                learned[write] = lit;
+                write += 1;
+            }
+        }
+        learned.truncate(write);
+    }
+
+    /// Can the literal on variable `p` be removed from the learned clause?
+    /// Iterative self-subsumption check (an explicit `stack` avoids stack overflow
+    /// on deep reason chains), mirroring `axeyum_cnf::proof_sat`'s `lit_redundant`.
+    ///
+    /// `p` is redundant iff, walking its reason chain, every encountered literal
+    /// (other than the propagated literal itself) is fixed at level 0, already in
+    /// the clause (`seen`), or has a reason and a level present in
+    /// `abstract_levels` (so it can in turn be resolved away). The first literal
+    /// that has no reason, or whose level is outside `abstract_levels`, makes `p`
+    /// irredundant — and every `seen` mark this call set (recorded in `to_clear`)
+    /// is rolled back before returning `false`, so a failed probe leaves no state
+    /// behind. On success the marks set during the walk are retained.
+    fn lit_redundant(
+        &self,
+        p: usize,
+        abstract_levels: u32,
+        seen: &mut [bool],
+        stack: &mut Vec<usize>,
+        to_clear: &mut Vec<usize>,
+        all_theory: &mut bool,
+    ) -> bool {
+        stack.clear();
+        stack.push(p);
+        let top = to_clear.len();
+        while let Some(qv) = stack.pop() {
+            // Conservatively downgrade the theory-lemma flag for every reason this
+            // probe walks: resolving through a Boolean reason means the resolvent is
+            // no longer a pure theory lemma. Downgrading on a walked-but-failed probe
+            // is sound (it only makes the flag `false` more often).
+            *all_theory = *all_theory && self.reason_theory[qv];
+            let reason = self.reason[qv]
+                .as_ref()
+                .expect("lit_redundant only walks variables with a reason clause");
+            for lit in reason {
+                let lv = lit.var;
+                // Skip the propagated literal itself (it is the clause member the
+                // reason forces, the analogue of `proof_sat`'s reason slot 0).
+                if lv == qv || self.level[lv] == 0 || seen[lv] {
+                    continue;
+                }
+                if self.reason[lv].is_some() && (self.abstract_level(lv) & abstract_levels) != 0 {
+                    // `l` may itself be redundant: mark it and recurse.
+                    seen[lv] = true;
+                    stack.push(lv);
+                    to_clear.push(lv);
+                } else {
+                    // `l` has no reason or comes from an unrelated decision level:
+                    // `p` cannot be removed. Roll back this probe's marks.
+                    for &w in &to_clear[top..] {
+                        seen[w] = false;
+                    }
+                    to_clear.truncate(top);
+                    return false;
+                }
+            }
+        }
+        true
     }
 
     /// The backjump level of an asserting clause: the second-highest decision
@@ -2144,6 +2303,8 @@ struct OnlineDiag {
     analyze_fires: usize,
     learned_len_total: u64,
     conflict_len_total: u64,
+    minimize_fires: usize,
+    minimize_removed_total: u64,
 }
 
 #[cfg(test)]
@@ -2198,6 +2359,8 @@ fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDia
         analyze_fires: solver.diag.analyze_fires,
         learned_len_total: solver.diag.learned_len_total,
         conflict_len_total: solver.diag.conflict_len_total,
+        minimize_fires: solver.diag.minimize_fires,
+        minimize_removed_total: solver.diag.minimize_removed_total,
     })
 }
 
@@ -2424,6 +2587,101 @@ mod tests {
         assert_eq!(learned, learned2, "learned clause must be deterministic");
     }
 
+    /// Self-subsuming **minimization** mechanism gate on a hand-built conflict.
+    /// The 1-UIP asserting clause is `(¬v0 ∨ ¬v1 ∨ ¬v2)`, but `v2`'s reason is
+    /// `(¬v1 ∨ v2)` — so `¬v2` is implied by `¬v1` (already in the clause) and is
+    /// redundant. Minimization must drop it, yielding the strictly shorter
+    /// `(¬v0 ∨ ¬v1)`. That shorter clause is still a valid resolvent of the
+    /// pre-minimization clause against `reason(v2)` on `v2`, hence still entailed —
+    /// verdict-invariant. Determinism: the identical trail analyzed twice yields the
+    /// identical minimized clause. A no-op theory keeps this on the Boolean core.
+    #[test]
+    fn minimization_removes_a_self_subsumed_literal() {
+        // Reason clauses here all contain the propagated literal as a member (the
+        // `Dpll` convention), distinguishing it inside `lit_redundant` by variable.
+        fn run() -> (Vec<Lit>, usize) {
+            let mut dpll = Dpll::new(5, 0, Vec::new());
+            // Level 1: decision v1 := true.
+            dpll.decision_level = 1;
+            dpll.value[1] = Some(true);
+            dpll.level[1] = 1;
+            dpll.trail.push((1, true, Cause::Decision));
+            // Level 1: implied v2 := true by reason (¬v1 ∨ v2).
+            dpll.value[2] = Some(true);
+            dpll.level[2] = 1;
+            dpll.reason[2] = Some(vec![
+                Lit {
+                    var: 1,
+                    positive: false,
+                },
+                Lit {
+                    var: 2,
+                    positive: true,
+                },
+            ]);
+            dpll.trail.push((2, true, Cause::Implied));
+            // Level 2: decision v3 := true (an intervening level, unused by the
+            // conflict — present so the trail spans several levels).
+            dpll.decision_level = 2;
+            dpll.value[3] = Some(true);
+            dpll.level[3] = 2;
+            dpll.trail.push((3, true, Cause::Decision));
+            // Level 3 (current): decision v0 := true — the sole current-level
+            // literal of the conflict, hence the 1-UIP.
+            dpll.decision_level = 3;
+            dpll.value[0] = Some(true);
+            dpll.level[0] = 3;
+            dpll.trail.push((0, true, Cause::Decision));
+            // Conflict (¬v0 ∨ ¬v1 ∨ ¬v2): all three literals false under the trail.
+            let conflict = vec![
+                Lit {
+                    var: 0,
+                    positive: false,
+                },
+                Lit {
+                    var: 1,
+                    positive: false,
+                },
+                Lit {
+                    var: 2,
+                    positive: false,
+                },
+            ];
+            let (learned, backjump, _theory) = dpll.analyze_conflict(&conflict, false);
+            (learned, backjump)
+        }
+
+        let (learned, backjump) = run();
+        // Minimization dropped ¬v2 (self-subsumed by ¬v1 via reason(v2)).
+        assert_eq!(
+            learned.len(),
+            2,
+            "minimized clause must be shorter than the 3-literal 1-UIP clause: {learned:?}"
+        );
+        // The asserting (UIP) literal ¬v0 stays at index 0 — the only current-level
+        // literal, so still a valid asserting clause.
+        assert_eq!(learned[0].var, 0, "UIP literal kept at index 0");
+        assert!(!learned[0].positive, "asserts ¬v0");
+        // The surviving non-asserting literal is ¬v1 (v2 was removed).
+        assert_eq!(learned[1].var, 1, "¬v1 survives, ¬v2 removed");
+        assert!(!learned[1].positive, "asserts ¬v1");
+        assert!(
+            !learned.iter().any(|l| l.var == 2),
+            "the self-subsumed literal ¬v2 must be gone: {learned:?}"
+        );
+        // Backjump is recomputed from the MINIMIZED clause: only ¬v1 (level 1)
+        // remains besides the UIP, so the backjump level is 1.
+        assert_eq!(backjump, 1, "backjump recomputed from the minimized clause");
+
+        // Still-entailed (resolvent) check: {¬v0, ¬v1} is the resolvent of the
+        // pre-minimization {¬v0, ¬v1, ¬v2} with reason(v2) = {¬v1, v2} on v2, so it
+        // is logically implied — minimization is verdict-invariant.
+        // Determinism: the same hand-built trail minimizes identically.
+        let (learned2, backjump2) = run();
+        assert_eq!(learned, learned2, "minimized clause must be deterministic");
+        assert_eq!(backjump, backjump2, "backjump must be deterministic");
+    }
+
     /// Phase-saving mechanism gate (verdict-invariant heuristic). Three claims:
     /// (1) `saved_phase` initializes to `true` so a never-seen variable's first
     /// decision matches the prior fixed `true`-first default (the determinism
@@ -2589,17 +2847,83 @@ mod tests {
         }
     }
 
-    /// SOUNDNESS gate for **1-UIP theory-conflict learning** (this slice): over a
-    /// deterministic LCG corpus of random `QF_LRA` formulas with **disjunctive**
-    /// assertions (so the driver must branch and learns non-trivial asserting
-    /// clauses), drive the online driver and, for EVERY learned asserting clause
-    /// whose literals are all theory atoms, independently verify with the trusted
-    /// offline decider that the clause is *entailed* — i.e. `¬clause` (the
-    /// assignment falsifying it) is `check_with_lra`-UNSAT. A learned clause that
-    /// isn't implied is a hard failure (an unsound lemma would corrupt the
-    /// search). Also proves the 1-UIP path FIRES and that learned clauses are
-    /// strictly SHORTER on average than the full `¬⋀core` conflict clauses the old
-    /// chronological scheme learned.
+    /// For one solved instance: independently re-validate every **pure theory
+    /// lemma** learned clause with the trusted offline decider — `¬clause` together
+    /// with the level-0 facts it rests on must be `check_with_lra`-UNSAT (the
+    /// clause is genuinely entailed). This runs AFTER minimization, so it certifies
+    /// the *minimized* clauses are still implied. Returns how many clauses were
+    /// successfully entailment-checked; panics on an unsound (non-entailed) clause.
+    fn check_learned_clauses_entailed(
+        arena: &mut TermArena,
+        atoms: &[TermId],
+        diag: &OnlineDiag,
+    ) -> usize {
+        let mut checked = 0_usize;
+        for ((clause, &is_lemma), level0) in diag
+            .learned
+            .iter()
+            .zip(&diag.lemma_flags)
+            .zip(&diag.lemma_level0)
+        {
+            // Only PURE THEORY LEMMAS are entailed by the theory plus the level-0
+            // facts — a 1-UIP clause that resolved (in analysis OR minimization)
+            // through Boolean input clauses is entailed by formula+theory, not the
+            // theory, so the conjunctive offline decider is not its oracle.
+            if !is_lemma {
+                continue;
+            }
+            // Restrict to atom-only clauses (Tseitin aux vars have no atom term to
+            // negate); theory lemmas over the order/eq fragment are these.
+            if clause.iter().any(|l| l.var >= diag.atom_count) {
+                continue;
+            }
+            // ¬clause ∧ level0-facts: every clause literal falsified (atom `var`
+            // asserted at `!positive`) together with the unconditional level-0 atom
+            // assignments the lemma rests on — must be theory UNSAT.
+            let mut neg_terms: Vec<TermId> = Vec::with_capacity(clause.len() + level0.len());
+            for lit in clause {
+                let atom = diag.atom_terms[lit.var];
+                let term = if lit.positive {
+                    arena.not(atom).expect("not")
+                } else {
+                    atom
+                };
+                neg_terms.push(term);
+            }
+            for &(atom_idx, value) in level0 {
+                let atom = diag.atom_terms[atom_idx];
+                let term = if value {
+                    atom
+                } else {
+                    arena.not(atom).expect("not")
+                };
+                neg_terms.push(term);
+            }
+            // The offline decider may decline a negated equality (real disequality is
+            // out of its conjunctive scope) — a sound skip, not a clause defect.
+            match crate::lra::check_with_lra(arena, &neg_terms) {
+                Ok(CheckResult::Unsat) => checked += 1,
+                Ok(CheckResult::Sat(m)) => panic!(
+                    "UNSOUND LEARNED CLAUSE: ¬clause is SAT\nclause={clause:?}\n\
+                     assertions={atoms:?}\nmodel={m:?}"
+                ),
+                Ok(CheckResult::Unknown(_)) | Err(_) => {}
+            }
+        }
+        checked
+    }
+
+    /// SOUNDNESS gate for **1-UIP theory-conflict learning + self-subsuming
+    /// minimization**: over a deterministic LCG corpus of random `QF_LRA` formulas
+    /// with **disjunctive** assertions (so the driver must branch and learns
+    /// non-trivial asserting clauses), drive the online driver and, for EVERY
+    /// learned asserting clause whose literals are all theory atoms, independently
+    /// verify with the trusted offline decider that the (minimized) clause is
+    /// *entailed* — i.e. `¬clause` is `check_with_lra`-UNSAT. A learned clause that
+    /// isn't implied is a hard failure (an unsound lemma would corrupt the search).
+    /// Also proves the 1-UIP path FIRES, that minimization FIRES (removes ≥1
+    /// literal on some conflict), and that learned clauses are strictly SHORTER on
+    /// average than the full `¬⋀core` conflict clauses.
     #[test]
     fn learned_clauses_are_entailed_and_shorter() {
         let mut lcg = Lcg(0x1c1c_2b2b_3c3c_4d4d);
@@ -2607,6 +2931,8 @@ mod tests {
         let mut learned_len_total = 0_u64;
         let mut conflict_len_total = 0_u64;
         let mut clauses_checked = 0_usize;
+        let mut minimize_fires_total = 0_usize;
+        let mut minimize_removed_total = 0_u64;
 
         for _ in 0..4000 {
             let mut arena = TermArena::new();
@@ -2647,66 +2973,15 @@ mod tests {
             fires_total += diag.analyze_fires;
             learned_len_total += diag.learned_len_total;
             conflict_len_total += diag.conflict_len_total;
-
-            for ((clause, &is_lemma), level0) in diag
-                .learned
-                .iter()
-                .zip(&diag.lemma_flags)
-                .zip(&diag.lemma_level0)
-            {
-                // Only PURE THEORY LEMMAS are entailed by the theory plus the
-                // level-0 facts — a 1-UIP clause that resolved through Boolean
-                // input clauses is entailed by formula+theory, not the theory, so
-                // the conjunctive offline decider is not its oracle. Restrict the
-                // check to lemmas.
-                if !is_lemma {
-                    continue;
-                }
-                // Restrict to atom-only clauses (Tseitin aux vars have no atom term
-                // to negate); theory lemmas over the order/eq fragment are these.
-                if clause.iter().any(|l| l.var >= diag.atom_count) {
-                    continue;
-                }
-                // ¬clause ∧ level0-facts: every clause literal falsified (atom
-                // `var` asserted at `!positive`) together with the unconditional
-                // level-0 atom assignments the lemma rests on — must be theory
-                // UNSAT.
-                let mut neg_terms: Vec<TermId> = Vec::with_capacity(clause.len() + level0.len());
-                for lit in clause {
-                    let atom = diag.atom_terms[lit.var];
-                    let term = if lit.positive {
-                        arena.not(atom).expect("not")
-                    } else {
-                        atom
-                    };
-                    neg_terms.push(term);
-                }
-                for &(atom_idx, value) in level0 {
-                    let atom = diag.atom_terms[atom_idx];
-                    let term = if value {
-                        atom
-                    } else {
-                        arena.not(atom).expect("not")
-                    };
-                    neg_terms.push(term);
-                }
-                // The offline decider may decline a negated equality (real
-                // disequality is out of its conjunctive scope) — that is a sound
-                // skip, not a learned-clause defect.
-                match crate::lra::check_with_lra(&arena, &neg_terms) {
-                    Ok(CheckResult::Unsat) => clauses_checked += 1,
-                    Ok(CheckResult::Sat(m)) => panic!(
-                        "UNSOUND LEARNED CLAUSE: ¬clause is SAT\nclause={clause:?}\n\
-                         assertions={atoms:?}\nmodel={m:?}"
-                    ),
-                    Ok(CheckResult::Unknown(_)) | Err(_) => {}
-                }
-            }
+            minimize_fires_total += diag.minimize_fires;
+            minimize_removed_total += diag.minimize_removed_total;
+            clauses_checked += check_learned_clauses_entailed(&mut arena, &atoms, &diag);
         }
 
         eprintln!(
             "1-UIP gate: fires={fires_total}, clauses_checked={clauses_checked}, \
-             learned_len_total={learned_len_total}, conflict_len_total={conflict_len_total}"
+             learned_len_total={learned_len_total}, conflict_len_total={conflict_len_total}, \
+             minimize_fires={minimize_fires_total}, minimize_removed={minimize_removed_total}"
         );
         assert!(fires_total > 50, "1-UIP analysis never meaningfully fired");
         assert!(
@@ -2718,6 +2993,14 @@ mod tests {
         assert!(
             learned_len_total < conflict_len_total,
             "learned clauses not shorter on average ({learned_len_total} vs {conflict_len_total})"
+        );
+        // Minimization must FIRE: at least one conflict had a 1-UIP literal removed
+        // by self-subsuming minimization (and the entailment check above already
+        // re-validated every learned clause is STILL implied AFTER minimization).
+        assert!(
+            minimize_fires_total > 0 && minimize_removed_total > 0,
+            "self-subsuming minimization never removed a literal \
+             (fires={minimize_fires_total}, removed={minimize_removed_total})"
         );
     }
 
