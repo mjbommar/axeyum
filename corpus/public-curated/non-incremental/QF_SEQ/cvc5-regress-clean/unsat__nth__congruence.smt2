@@ -1,0 +1,8 @@
+(set-info :status unsat)
+(set-logic QF_SEQ)
+(declare-fun s () (Seq Int))
+(declare-fun t () (Seq Int))
+(declare-fun i () Int)
+(assert (= s t))
+(assert (not (= (seq.nth s i) (seq.nth t i))))
+(check-sat)

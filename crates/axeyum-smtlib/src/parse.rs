@@ -121,6 +121,28 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
             command,
         )?;
     }
+    // Eager `seq.nth` Ackermann congruence (ADR-0029 slice 2): two `seq.nth`
+    // applications with provably-equal sequence and index operands must return the
+    // same (otherwise-unconstrained) out-of-bounds value. The constraints only pin
+    // the **fresh** out-of-bounds symbols, so appending them globally is monotone
+    // and sound (never turns a genuine `sat` into `unsat`). Added to the flat
+    // `assertions` view and, for the incremental view, as an `Assert` before the
+    // first `check-sat` so every query sees the function property.
+    if let Some(cong) = seq.drain_nth_congruence(&mut script.arena)? {
+        script.assertions.push(cong);
+        script.assertion_names.push(None);
+        let at = script
+            .commands
+            .iter()
+            .position(|c| {
+                matches!(
+                    c,
+                    ScriptCommand::CheckSat | ScriptCommand::CheckSatAssuming(_)
+                )
+            })
+            .unwrap_or(script.commands.len());
+        script.commands.insert(at, ScriptCommand::Assert(cong));
+    }
     Ok(script)
 }
 
@@ -3364,14 +3386,18 @@ fn parse_indexed_constant(arena: &mut TermArena, items: &[SExpr]) -> Result<Term
 // never read a tail element's value), exactly mirroring their `str.*`
 // counterparts with the element width swapped in for `8`.
 //
-// `seq.nth` / `seq.at` are **declined**. SMT-LIB sequences leave `(seq.nth s i)`
-// **unconstrained** for `i` out of `[0, len(s))` (cvc5's rewriter only fixes
-// in-bounds positions; the out-of-bounds value is an arbitrary fixed element).
-// The canonical zero-padded layout would instead force `(seq.nth s i) = 0` for
-// `i ≥ len(s)`, which can flip a `sat` to a wrong `unsat` — so modeling `seq.nth`
-// soundly needs an unconstrained-default with per-`(s,i)` congruence, deferred to
-// a later slice. `seq.update`/`seq.rev`/`seq.replace`/`seq.replace_all`/
-// `seq.indexof` are likewise declined for now (slice 2).
+// `seq.nth` / `seq.at` are wired (slice 2). SMT-LIB sequences leave
+// `(seq.nth s i)` **unconstrained** for `i` out of `[0, len(s))` (the
+// out-of-bounds value is an arbitrary fixed element, *not* zero). A zero-padded
+// layout would force `(seq.nth s i) = 0` for `i ≥ len(s)`, flipping a `sat` to a
+// wrong `unsat`; instead the out-of-bounds case is a **fresh, free** value of the
+// element sort, keyed per syntactic `(s, i)` so identical applications share it
+// ([`seq_nth`]), with an eager Ackermann congruence pass
+// ([`SeqInfo::drain_nth_congruence`]) closing semantically-equal operands —
+// `seq.nth` stays a function even where its value is unspecified. `seq.at` is the
+// **total** unit-sub-sequence (empty out-of-bounds), mirroring `str.at`.
+// `seq.update`/`seq.rev`/`seq.replace`/`seq.replace_all`/`seq.indexof` remain
+// declined (slice 3).
 
 /// Bounded-int element width for `(Seq Int)`: an `Int` element is modeled as a
 /// two's-complement `BitVec(SEQ_INT_WIDTH)`. The slice-1 sequence operators only
@@ -3410,13 +3436,13 @@ fn seq_max_len_for(ew: u32) -> Option<u32> {
         .find(|&m| seq_total(ew, m) <= SEQ_TOTAL_BITS_CAP)
 }
 
-/// `elem_width(E)` for a fixed-width element sort, or `None` for an element sort
-/// with no sound fixed-width packing (Real, uninterpreted, String, nested Seq) or
-/// the reserved string byte width `8`.
-fn seq_elem_width(sort: &SExpr) -> Option<u32> {
+/// The [`SeqElemSort`] of a fixed-width element sort, or `None` for an element
+/// sort with no sound fixed-width packing (Real, uninterpreted, String, nested
+/// Seq) or the reserved string byte width `8`.
+fn seq_elem_sort(sort: &SExpr) -> Option<SeqElemSort> {
     match sort {
-        SExpr::Atom(a) if a == "Bool" => Some(1),
-        SExpr::Atom(a) if a == "Int" => Some(SEQ_INT_WIDTH),
+        SExpr::Atom(a) if a == "Bool" => Some(SeqElemSort::Bool),
+        SExpr::Atom(a) if a == "Int" => Some(SeqElemSort::Int),
         SExpr::List(items)
             if items.len() == 3
                 && items[0].atom() == Some("_")
@@ -3427,15 +3453,67 @@ fn seq_elem_width(sort: &SExpr) -> Option<u32> {
                 .atom()
                 .and_then(|w| w.parse::<u32>().ok())
                 .filter(|&w| w >= 1 && w != 8)
+                .map(SeqElemSort::BitVec)
         }
         _ => None,
     }
 }
 
-/// The packed width → element-width registry, built as `(Seq E)` sorts are
+/// `elem_width(E)` for a fixed-width element sort, or `None` for an element sort
+/// with no sound fixed-width packing (Real, uninterpreted, String, nested Seq) or
+/// the reserved string byte width `8`.
+fn seq_elem_width(sort: &SExpr) -> Option<u32> {
+    seq_elem_sort(sort).map(SeqElemSort::width)
+}
+
+/// The SMT-LIB element sort of a `(Seq E)`, as far as the bounded packing
+/// distinguishes it. Two sorts can share an element **width** yet differ in their
+/// SMT-LIB result sort (`Bool` and `(_ BitVec 1)` both pack to a 1-bit element;
+/// `Int` and `(_ BitVec 16)` both to 16 bits), so `seq.nth` — whose result is the
+/// element sort, not the packed bits — must track the sort, not just the width.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SeqElemSort {
+    /// `Bool` element (`ew = 1`); `seq.nth` returns a `Bool` (`elem = #b1`).
+    Bool,
+    /// `Int` element (`ew = SEQ_INT_WIDTH`, two's-complement); `seq.nth` returns
+    /// an `Int` (the signed value of the packed element).
+    Int,
+    /// `(_ BitVec w)` element; `seq.nth` returns the `BitVec(w)` element verbatim.
+    BitVec(u32),
+}
+
+impl SeqElemSort {
+    /// The packed element width of this element sort.
+    fn width(self) -> u32 {
+        match self {
+            SeqElemSort::Bool => 1,
+            SeqElemSort::Int => SEQ_INT_WIDTH,
+            SeqElemSort::BitVec(w) => w,
+        }
+    }
+}
+
+/// A registered `seq.nth` application, retained for the eager Ackermann
+/// congruence pass: two `seq.nth` applications with provably-equal sequence and
+/// index operands must return the same out-of-bounds value (`seq.nth` is a
+/// function even where SMT-LIB leaves its value unconstrained).
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct NthApp {
+    /// The sequence operand `s`.
+    seq: TermId,
+    /// The `Int` index operand `i`.
+    idx: TermId,
+    /// The fresh, unconstrained out-of-bounds value `oob(s, i)` (a `BitVec(ew)`
+    /// declared symbol). Keyed by `(s.index, i.index)` so two **syntactically**
+    /// identical applications already share it; the congruence pass closes the
+    /// **semantic** case (distinct term ids that denote equal `s`, `i`).
+    oob: TermId,
+}
+
+/// The packed width → element-sort registry, built as `(Seq E)` sorts are
 /// parsed. Lets the `seq.*` operators (dispatched after term construction, where
-/// only the operand's `BitVec` width is visible) recover the element width of a
-/// packed sequence operand. A genuine `BitVec` whose width is not registered is
+/// only the operand's `BitVec` width is visible) recover the element width/sort of
+/// a packed sequence operand. A genuine `BitVec` whose width is not registered is
 /// **not** a sequence, so a non-sequence operand to a `seq.*` op declines cleanly.
 #[derive(Debug, Default)]
 pub(crate) struct SeqInfo {
@@ -3443,6 +3521,16 @@ pub(crate) struct SeqInfo {
     /// for one element width; a would-be second, different element width at the
     /// same total width makes the *declaration* decline (see [`seq_register`]).
     width_to_ew: HashMap<u32, u32>,
+    /// `packed_width → element sort`, for the registered (declared) sequence
+    /// sorts. A `seq.nth` over a packed operand recovers its element sort here so
+    /// the result has the right SMT-LIB sort (`Bool`/`Int`/`BitVec`). A collision
+    /// (two element sorts at one packed width) makes the *declaration* decline.
+    width_to_sort: HashMap<u32, SeqElemSort>,
+    /// Registered `seq.nth` applications, for the eager congruence pass
+    /// ([`SeqInfo::drain_nth_congruence`]). Interior-mutable so the read-only
+    /// `&SeqInfo` threaded through the parse can still record applications; the
+    /// width maps stay immutable.
+    nth_apps: std::cell::RefCell<Vec<NthApp>>,
 }
 
 impl SeqInfo {
@@ -3480,6 +3568,64 @@ impl SeqInfo {
         let mut it = self.width_to_ew.values().copied();
         let first = it.next()?;
         it.all(|w| w == first).then_some(first)
+    }
+
+    /// The element **sort** of a packed sequence operand of bit width `w` — both
+    /// the **declared** sequence widths (registered directly) and a **derived**
+    /// width produced by `seq.unit`/`seq.++`/`seq.extract`. The derived case
+    /// resolves to the registered element sort whose grid `seq_total(ew, m)` hits
+    /// `w` (the element sort is recovered from the matching `ew`). `None` when `w`
+    /// is not a sequence width or the script declares no element sort of that `ew`.
+    fn elem_sort_of(&self, w: u32) -> Option<SeqElemSort> {
+        if let Some(&s) = self.width_to_sort.get(&w) {
+            return Some(s);
+        }
+        let ew = self.elem_width_of(w)?;
+        // Pick the declared element sort with this width (Bool vs BitVec(1), Int
+        // vs BitVec(16) are distinguished by which was actually declared). A
+        // script can declare only one sort per width (the scan rejects a
+        // collision), so this is unambiguous.
+        self.width_to_sort
+            .values()
+            .copied()
+            .find(|s| s.width() == ew)
+    }
+
+    /// Records a `seq.nth` application for the eager congruence pass.
+    fn register_nth(&self, seq: TermId, idx: TermId, oob: TermId) {
+        self.nth_apps.borrow_mut().push(NthApp { seq, idx, oob });
+    }
+
+    /// Drains the pending `seq.nth` Ackermann congruence constraints
+    /// (`(s = s') ∧ (i = i') ⇒ oob(s,i) = oob(s',i')` over every distinct pair of
+    /// registered applications) and clears the registry. Returns the conjunction
+    /// of those implications (or `None` if there is nothing to constrain). The
+    /// constraints only pin the **fresh** out-of-bounds symbols to agree on
+    /// equal operands, so appending them to the assertion set is monotone and
+    /// sound — it can never turn a genuine `sat` into `unsat`.
+    fn drain_nth_congruence(&self, arena: &mut TermArena) -> Result<Option<TermId>, SmtError> {
+        let apps = std::mem::take(&mut *self.nth_apps.borrow_mut());
+        let mut acc: Option<TermId> = None;
+        for (a, b) in apps
+            .iter()
+            .enumerate()
+            .flat_map(|(k, a)| apps[k + 1..].iter().map(move |b| (a, b)))
+        {
+            // Same fresh symbol already ⇒ syntactically identical ⇒ nothing to add.
+            if a.oob == b.oob {
+                continue;
+            }
+            let seq_eq = arena.eq(a.seq, b.seq)?;
+            let idx_eq = arena.eq(a.idx, b.idx)?;
+            let operands_eq = arena.and(seq_eq, idx_eq)?;
+            let val_eq = arena.eq(a.oob, b.oob)?;
+            let imp = arena.implies(operands_eq, val_eq)?;
+            acc = Some(match acc {
+                None => imp,
+                Some(conj) => arena.and(conj, imp)?,
+            });
+        }
+        Ok(acc)
     }
 }
 
@@ -3522,13 +3668,14 @@ fn build_seq_info(exprs: &[SExpr]) -> Result<SeqInfo, SmtError> {
 fn scan_seq_sorts(e: &SExpr, info: &mut SeqInfo) -> Result<(), SmtError> {
     let SExpr::List(items) = e else { return Ok(()) };
     if items.len() == 2 && items[0].atom() == Some("Seq") {
-        let ew = seq_elem_width(&items[1]).ok_or_else(|| {
+        let es = seq_elem_sort(&items[1]).ok_or_else(|| {
             SmtError::Unsupported(format!(
                 "`(Seq {:?})` has no sound fixed-width element packing (only Bool, Int, and \
                  `(_ BitVec w)` with w ≠ 8 are modeled; ADR-0029)",
                 items[1]
             ))
         })?;
+        let ew = es.width();
         // A nested element `(Seq …)` is itself a sort node, scanned below; but a
         // non-fixed-width element already declined above, so registration here is
         // for the fixed-width leaf cases only.
@@ -3542,6 +3689,19 @@ fn scan_seq_sorts(e: &SExpr, info: &mut SeqInfo) -> Result<(), SmtError> {
             Some(prev) if prev != ew => {
                 return Err(SmtError::Unsupported(format!(
                     "two sequence element widths ({prev} and {ew}) pack to the same width {w}; \
+                     the script mixes element types this bounded encoding cannot separate"
+                )));
+            }
+            _ => {}
+        }
+        // Track the element sort too (Bool vs BitVec(1), Int vs BitVec(16) share a
+        // width but differ as `seq.nth` result sorts). A second, *different* sort
+        // at the same packed width makes the declaration decline — that script
+        // mixes element types this bounded encoding cannot separate on `seq.nth`.
+        match info.width_to_sort.insert(w, es) {
+            Some(prev) if prev != es => {
+                return Err(SmtError::Unsupported(format!(
+                    "two sequence element sorts ({prev:?} and {es:?}) pack to the same width {w}; \
                      the script mixes element types this bounded encoding cannot separate"
                 )));
             }
@@ -4052,6 +4212,142 @@ fn seq_contains(
     Ok(any)
 }
 
+/// Lifts a packed element `BitVec(ew)` back to its SMT-LIB element sort `es`: a
+/// `Bool` element is `elem = #b1`, an `Int` element is its **signed** value
+/// (`bv2nat(elem) − 2^ew · msb(elem)`, exact two's-complement), and a `BitVec`
+/// element passes through. The inverse of [`seq_coerce_elem`] for the result of
+/// `seq.nth`.
+fn seq_lift_elem(arena: &mut TermArena, elem: TermId, es: SeqElemSort) -> Result<TermId, SmtError> {
+    match es {
+        SeqElemSort::Bool => {
+            let one = arena.bv_const(1, 1)?;
+            arena.eq(elem, one).map_err(SmtError::Ir)
+        }
+        SeqElemSort::Int => {
+            let ew = SEQ_INT_WIDTH;
+            let uns = arena.bv2nat(elem)?;
+            // sign bit (the top bit) lifted to an `Int` 0/1, times 2^ew.
+            let msb = arena.extract(ew - 1, ew - 1, elem)?;
+            let msb_i = arena.bv2nat(msb)?;
+            let pow = arena.int_const(1i128 << ew);
+            let corr = arena.int_mul(msb_i, pow)?;
+            arena.int_sub(uns, corr).map_err(SmtError::Ir)
+        }
+        SeqElemSort::BitVec(_) => Ok(elem),
+    }
+}
+
+/// A fresh, unconstrained `BitVec(ew)` value standing for the **out-of-bounds**
+/// result of `(seq.nth s i)`. SMT-LIB leaves the out-of-bounds value
+/// unconstrained, so this is a free symbol; it is keyed deterministically by the
+/// operand term ids `(s.index, i.index)` so two **syntactically** identical
+/// applications already share one value (`seq.nth` is a function). Semantic
+/// congruence over distinct-but-equal operands is closed by
+/// [`SeqInfo::drain_nth_congruence`].
+fn seq_nth_oob_value(
+    arena: &mut TermArena,
+    s: TermId,
+    i: TermId,
+    ew: u32,
+) -> Result<TermId, SmtError> {
+    let name = format!("!seq.nth.oob.{}.{}.{ew}", s.index(), i.index());
+    let sym = match arena.find_symbol(&name) {
+        Some(sym) => sym,
+        None => arena.declare(&name, Sort::BitVec(ew))?,
+    };
+    Ok(arena.var(sym))
+}
+
+/// `(seq.nth s i)` — the `i`-th element of `s`, the SMT-LIB **partial** function:
+/// in-bounds (`0 ≤ i < len(s)`) it is the element; out-of-bounds it is
+/// **unconstrained** (a fresh, free value, *not* a fixed default — zero-padding
+/// here would force a wrong `unsat`). The result has the sequence's element sort.
+///
+/// In-bounds value is the existing position mux (an `Int`-equality select over the
+/// `≤ m` content slots). The out-of-bounds value is a fresh per-`(s,i)` symbol
+/// ([`seq_nth_oob_value`]); the application is registered so the eager congruence
+/// pass pins equal-operand applications to agree. A **constant** index resolves
+/// in/out-of-bounds against the literal directly; a symbolic index threads the
+/// `ite(0 ≤ i < len(s), mux, oob)`.
+fn seq_nth(arena: &mut TermArena, seq: &SeqInfo, s: TermId, i: TermId) -> Result<TermId, SmtError> {
+    let (ew, m) = seq_max_len(arena, seq, s)?;
+    let es = seq
+        .elem_sort_of(match arena.sort_of(s) {
+            Sort::BitVec(w) => w,
+            _ => unreachable!("seq_max_len accepted a BitVec"),
+        })
+        .ok_or_else(|| {
+            SmtError::Unsupported(
+                "seq.nth over a sequence whose element sort is not registered (ADR-0029)"
+                    .to_owned(),
+            )
+        })?;
+    let len_field = seq_len_field(arena, s, m)?;
+    // The position mux: the `i`-th content element, with an `in_bounds` flag that
+    // is true exactly when `0 ≤ i < len(s)` — a slot `j` is hit only when the
+    // `Int` index equals `j` **and** `j` is below the length (mirrors
+    // `seq_extract`'s `select`). A constant `i` outside `[0, m)` matches no slot,
+    // so `in_bounds` folds to false (the out-of-bounds branch).
+    let mut elem = arena.bv_const(ew, 0)?;
+    let mut in_bounds = arena.bool_const(false);
+    for j in 0..m {
+        let jconst = arena.int_const(i128::from(j));
+        let is_j = arena.eq(i, jconst)?;
+        let jbv = arena.bv_const(len_width(m), u128::from(j))?;
+        let j_active = arena.bv_ult(jbv, len_field)?;
+        let hit = arena.and(is_j, j_active)?;
+        let ej = seq_elem_m(arena, s, j, m, ew)?;
+        elem = arena.ite(hit, ej, elem)?;
+        in_bounds = arena.or(in_bounds, hit)?;
+    }
+    // Fresh, unconstrained out-of-bounds value, registered for congruence.
+    let oob = seq_nth_oob_value(arena, s, i, ew)?;
+    seq.register_nth(s, i, oob);
+    // The packed element: in-bounds → mux; out-of-bounds → fresh free value.
+    let packed = arena.ite(in_bounds, elem, oob)?;
+    seq_lift_elem(arena, packed, es)
+}
+
+/// `(seq.at s i)` — the **total** unit-sub-sequence at index `i`: in-bounds
+/// (`0 ≤ i < len(s)`) the length-1 sequence holding `s[i]`, out-of-bounds the
+/// empty sequence (`seq.at` is total, unlike `seq.nth`; it mirrors `str.at`). The
+/// result is a packed `(Seq E)` in `s`'s own max-length layout.
+fn seq_at(arena: &mut TermArena, seq: &SeqInfo, s: TermId, i: TermId) -> Result<TermId, SmtError> {
+    let (ew, m) = seq_max_len(arena, seq, s)?;
+    let len_field = seq_len_field(arena, s, m)?;
+    // The selected element (0 when out-of-bounds) and the in-bounds flag.
+    let mut elem = arena.bv_const(ew, 0)?;
+    let mut in_bounds = arena.bool_const(false);
+    for j in 0..m {
+        let jconst = arena.int_const(i128::from(j));
+        let is_j = arena.eq(i, jconst)?;
+        let jbv = arena.bv_const(len_width(m), u128::from(j))?;
+        let j_active = arena.bv_ult(jbv, len_field)?;
+        let hit = arena.and(is_j, j_active)?;
+        let ej = seq_elem_m(arena, s, j, m, ew)?;
+        elem = arena.ite(hit, ej, elem)?;
+        in_bounds = arena.or(in_bounds, hit)?;
+    }
+    // Pack the result in `s`'s own layout: content element 0 = `elem` (the rest
+    // zero), length = `1` in-bounds else `0`. Out-of-bounds the element is already
+    // zero, so the empty sequence's canonical (all-zero) pattern falls out.
+    let lwm = len_width(m);
+    let one_len = arena.bv_const(lwm, 1)?;
+    let zero_len = arena.bv_const(lwm, 0)?;
+    let rlen = arena.ite(in_bounds, one_len, zero_len)?;
+    let mut content: Option<TermId> = None;
+    let zero = arena.bv_const(ew, 0)?;
+    for p in (0..m).rev() {
+        let e = if p == 0 { elem } else { zero };
+        content = Some(match content {
+            None => e,
+            Some(acc) => arena.concat(acc, e)?,
+        });
+    }
+    let content = content.expect("m ≥ 1");
+    arena.concat(content, rlen).map_err(SmtError::Ir)
+}
+
 /// Coerces a `seq.unit` element argument to a `BitVec(ew)`: an `Int` element is
 /// `int2bv`-narrowed to the bounded width (its low `ew` bits, two's-complement),
 /// a `Bool` element becomes a 1-bit value, and a `BitVec(ew)` passes through. An
@@ -4140,12 +4436,25 @@ fn apply_seq_op(
             need(2)?;
             seq_contains(arena, seq, args[0], args[1])?
         }
-        // Declined (slice 2): `seq.nth`/`seq.at` are unsound under zero-padding
-        // (out-of-bounds is unconstrained, not 0); the rest are deferred.
-        "seq.nth" | "seq.at" | "seq.update" | "seq.rev" | "seq.replace" | "seq.replace_all"
-        | "seq.indexof" | "seq.nth_total" => {
+        // `(seq.nth s i)` — the `i`-th element, the SMT-LIB **partial** function:
+        // in-bounds the element, out-of-bounds a fresh *unconstrained* value with
+        // eager congruence (slice 2). Zero-padding here would force a wrong
+        // `unsat`, so the out-of-bounds case is modeled, not faked.
+        "seq.nth" => {
+            need(2)?;
+            seq_nth(arena, seq, args[0], args[1])?
+        }
+        // `(seq.at s i)` — the **total** unit-sub-sequence at `i` (empty when
+        // out-of-bounds); mirrors `str.at` (slice 2).
+        "seq.at" => {
+            need(2)?;
+            seq_at(arena, seq, args[0], args[1])?
+        }
+        // Declined (slice 3): the in-place rewrites and search ops.
+        "seq.update" | "seq.rev" | "seq.replace" | "seq.replace_all" | "seq.indexof"
+        | "seq.nth_total" => {
             return Err(SmtError::Unsupported(format!(
-                "sequence operator `{op}` is outside the slice-1 sound subset (ADR-0029)"
+                "sequence operator `{op}` is outside the slice-2 sound subset (ADR-0029)"
             )));
         }
         _ => return Ok(None),

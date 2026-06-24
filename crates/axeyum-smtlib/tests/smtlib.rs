@@ -1955,14 +1955,193 @@ fn seq_empty_is_length_zero() {
     );
 }
 
+/// Evaluates every assertion of a `(Seq Int)` script under a concrete assignment
+/// built from `(symbol-name, Value)` pairs — used for `seq.nth`/`seq.at` tests
+/// that must assign both the sequence and a fresh out-of-bounds symbol.
+fn eval_seq_script_multi(text: &str, binds: &[(&str, Value)]) -> bool {
+    let script = parse_script(text).expect("script parses");
+    let mut asg = Assignment::new();
+    for (name, val) in binds {
+        let sym = script.arena.find_symbol(name).expect("symbol declared");
+        asg.set(sym, val.clone());
+    }
+    script
+        .assertions
+        .iter()
+        .all(|&a| eval(&script.arena, a, &asg).unwrap() == Value::Bool(true))
+}
+
+/// The name of the fresh out-of-bounds symbol minted for the (single) `seq.nth`
+/// application in a script, found by its `!seq.nth.oob.` prefix.
+fn seq_nth_oob_name(text: &str) -> String {
+    let script = parse_script(text).expect("parses");
+    script
+        .arena
+        .symbols()
+        .map(|(_, name, _)| name)
+        .find(|n| n.starts_with("!seq.nth.oob."))
+        .expect("a seq.nth application minted an oob symbol")
+        .to_owned()
+}
+
 #[test]
-fn seq_nth_is_declined() {
-    // `seq.nth` is outside the slice-1 sound subset (out-of-bounds is
-    // unconstrained, not zero), so it declines cleanly — never a wrong verdict.
-    let err =
-        parse_script("(declare-fun s () (Seq Int))\n(assert (= (seq.nth s 0) 7))\n(check-sat)\n")
-            .expect_err("seq.nth is declined in slice 1");
-    assert!(matches!(err, SmtError::Unsupported(_)), "got {err:?}");
+fn seq_nth_in_bounds_is_the_element() {
+    // (seq.nth s 0) == 7 with a witness s = [7, 3]: in-bounds nth returns the
+    // 0-th element, so the equality holds. Oracle: concrete eval over a witness.
+    let text = "(declare-fun s () (Seq Int))\n\
+                (assert (= (seq.len s) 2))\n(assert (= (seq.nth s 0) 7))\n(check-sat)\n";
+    // `eval` walks both `ite` branches, so the (unused, in-bounds) oob symbol must
+    // be bound to *some* value; the result is independent of it.
+    let oob = seq_nth_oob_name(text);
+    assert!(
+        eval_seq_script_multi(
+            text,
+            &[
+                (
+                    "s",
+                    Value::Bv {
+                        width: SEQ_INT_TOTAL,
+                        value: pack_seq_int(&[7, 3])
+                    }
+                ),
+                (
+                    &oob,
+                    Value::Bv {
+                        width: SEQ_INT_EW,
+                        value: 0
+                    }
+                ),
+            ],
+        ),
+        "s=[7,3] ⇒ (seq.nth s 0)=7 holds"
+    );
+    assert!(
+        !eval_seq_script_multi(
+            text,
+            &[
+                (
+                    "s",
+                    Value::Bv {
+                        width: SEQ_INT_TOTAL,
+                        value: pack_seq_int(&[5, 3])
+                    }
+                ),
+                (
+                    &oob,
+                    Value::Bv {
+                        width: SEQ_INT_EW,
+                        value: 0
+                    }
+                ),
+            ],
+        ),
+        "s=[5,3] ⇒ (seq.nth s 0)=7 false"
+    );
+}
+
+#[test]
+fn seq_nth_out_of_bounds_is_unconstrained_not_zero() {
+    // THE SOUNDNESS TEST. Under a zero-padded model, `(seq.nth s 0)` for an empty
+    // `s` would be forced to 0, making `(= (seq.nth s 0) 7)` a WRONG `unsat`.
+    // SMT-LIB leaves it unconstrained, so a model exists (oob value = 7): the
+    // script is SAT. We exhibit a witness (s = empty, oob symbol = 7) under which
+    // every assertion is true — proving the front end did NOT pin the oob value.
+    let text = "(declare-fun s () (Seq Int))\n\
+                (assert (= (seq.len s) 0))\n(assert (= (seq.nth s 0) 7))\n(check-sat)\n";
+    let oob = seq_nth_oob_name(text);
+    // The oob symbol is a BitVec(16); 7 packs as the literal 7.
+    let witness_true = eval_seq_script_multi(
+        text,
+        &[
+            (
+                "s",
+                Value::Bv {
+                    width: SEQ_INT_TOTAL,
+                    value: pack_seq_int(&[]),
+                },
+            ),
+            (
+                &oob,
+                Value::Bv {
+                    width: SEQ_INT_EW,
+                    value: 7,
+                },
+            ),
+        ],
+    );
+    assert!(
+        witness_true,
+        "an out-of-bounds witness with oob=7 satisfies the script — not a wrong unsat"
+    );
+}
+
+#[test]
+fn seq_nth_congruence_constraint_is_emitted() {
+    // Two distinct `seq.nth` applications over equal operands must agree even
+    // out-of-bounds (`seq.nth` is a function). The front end emits the eager
+    // Ackermann implication `(s=t ∧ i=i') ⇒ oob(s,i)=oob(t,i')` as an extra
+    // assertion; structurally, the script gains it beyond its own asserts.
+    let text = "(declare-fun s () (Seq Int))\n(declare-fun t () (Seq Int))\n\
+                (declare-fun i () Int)\n(assert (= s t))\n\
+                (assert (not (= (seq.nth s i) (seq.nth t i))))\n(check-sat)\n";
+    let script = parse_script(text).expect("parses");
+    // Two well-formedness asserts (s, t) + (= s t) + (not (= nth nth)) + the
+    // appended congruence = 5 assertions.
+    assert_eq!(
+        script.assertions.len(),
+        5,
+        "the congruence implication is appended as a 5th assertion"
+    );
+}
+
+#[test]
+fn seq_at_in_bounds_is_unit_of_element() {
+    // (seq.at s 0) is the length-1 sequence [s[0]]; with s=[7,3] that is [7], so
+    // (= (seq.at s 0) (seq.unit 7)) holds. Oracle: concrete eval over the witness.
+    let text = "(declare-fun s () (Seq Int))\n\
+                (assert (= (seq.len s) 2))\n\
+                (assert (= (seq.at s 0) (seq.unit 7)))\n(check-sat)\n";
+    assert!(
+        eval_seq_script(text, "s", SEQ_INT_TOTAL, pack_seq_int(&[7, 3])),
+        "s=[7,3] ⇒ (seq.at s 0)=[7]"
+    );
+    assert!(
+        !eval_seq_script(text, "s", SEQ_INT_TOTAL, pack_seq_int(&[8, 3])),
+        "s=[8,3] ⇒ (seq.at s 0)=[8] ≠ [7]"
+    );
+}
+
+#[test]
+fn seq_at_out_of_bounds_is_empty() {
+    // (seq.at s 5) on a length-2 sequence is out of bounds → the empty sequence;
+    // so (= (seq.at s 5) (as seq.empty (Seq Int))) holds. seq.at is total.
+    let text = "(declare-fun s () (Seq Int))\n\
+                (assert (= (seq.len s) 2))\n\
+                (assert (= (seq.at s 5) (as seq.empty (Seq Int))))\n(check-sat)\n";
+    assert!(
+        eval_seq_script(text, "s", SEQ_INT_TOTAL, pack_seq_int(&[7, 3])),
+        "out-of-bounds seq.at is the empty sequence"
+    );
+    // And in-bounds it is NOT empty (length 1), so the same shape at index 0 fails.
+    let text0 = "(declare-fun s () (Seq Int))\n\
+                 (assert (= (seq.len s) 2))\n\
+                 (assert (= (seq.at s 0) (as seq.empty (Seq Int))))\n(check-sat)\n";
+    assert!(
+        !eval_seq_script(text0, "s", SEQ_INT_TOTAL, pack_seq_int(&[7, 3])),
+        "in-bounds seq.at is length 1, not empty"
+    );
+}
+
+#[test]
+fn seq_update_family_still_declined() {
+    // The slice-3 ops stay cleanly declined (Unsupported), never a wrong verdict.
+    for op in ["seq.update", "seq.rev", "seq.replace", "seq.indexof"] {
+        let text = format!(
+            "(declare-fun s () (Seq Int))\n(assert (= (seq.len ({op} s)) 0))\n(check-sat)\n"
+        );
+        let err = parse_script(&text).expect_err("slice-3 op declines");
+        assert!(matches!(err, SmtError::Unsupported(_)), "{op}: got {err:?}");
+    }
 }
 
 #[test]

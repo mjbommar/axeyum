@@ -1,0 +1,6 @@
+(set-info :status sat)
+(set-logic QF_SEQ)
+(declare-fun s () (Seq Int))
+(assert (= (seq.len s) 0))
+(assert (= (seq.nth s 0) 7))
+(check-sat)
