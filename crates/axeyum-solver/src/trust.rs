@@ -33,6 +33,18 @@ pub enum TrustId {
     /// Arrays → BV by read-over-write + Ackermann (ADR-0010).
     ArrayElim,
     /// Uninterpreted-function applications → fresh vars + functional consistency (ADR-0013).
+    /// The **eager-elimination** UNSAT sub-case (`check_with_function_elimination`:
+    /// every distinct application replaced by a fresh var, the full pairwise
+    /// congruence set asserted up front, the resulting `QF_BV` refuted) now has an
+    /// independent per-query re-checker —
+    /// [`crate::AckermannUnsatCertificate::recheck`] re-runs the deterministic
+    /// elimination on the original assertions, structurally re-derives the
+    /// congruence set (witnessing each appended constraint is a valid UF
+    /// consequence, so the eliminated formula is a sound relaxation), re-bit-blasts
+    /// it to confirm the stored CNF, and re-runs `check_drat`. `is_certified` stays
+    /// `false` because the *general* Ackermann (lazy/CEGAR `sat`, the
+    /// array-combined `QF_AUFBV` route, and arithmetic-sorted function `sat` models)
+    /// carries no such certificate — see [`TrustId::is_certified`].
     Ackermann,
     /// Bounded integers → `BitVec` at a chosen width (ADR-0014). The
     /// **proven-box bounded** sub-case (`decide_bounded_int_blast`: every free Int
@@ -171,8 +183,16 @@ impl TrustId {
     /// (the sat-only width ladder / unbounded queries) has no per-query
     /// certificate, so this bit stays `false`.
     ///
+    /// [`Ackermann`] is likewise analogous: its **eager-elimination** UNSAT
+    /// sub-case now carries a re-checkable [`crate::AckermannUnsatCertificate`] (the
+    /// elimination + full congruence set re-derived from the originals, the CNF
+    /// re-blasted, plus `check_drat`), but the lazy/CEGAR `sat` path, the
+    /// array-combined `QF_AUFBV` route, and arithmetic-sorted function `sat` models
+    /// have no per-query certificate, so this bit stays `false`.
+    ///
     /// [`XorGaussian`]: TrustId::XorGaussian
     /// [`IntBlast`]: TrustId::IntBlast
+    /// [`Ackermann`]: TrustId::Ackermann
     #[must_use]
     pub const fn is_certified(self) -> bool {
         match self {

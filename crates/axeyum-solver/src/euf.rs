@@ -714,6 +714,310 @@ fn map_elim_error(error: FuncElimError) -> SolverError {
     }
 }
 
+// ===========================================================================
+// Eager Ackermann UF-elimination UNSAT CERTIFICATE (narrows the
+// `TrustId::Ackermann` hole for the eager-elimination UNSAT sub-case).
+// ===========================================================================
+//
+// [`check_with_function_elimination`] reaches a TRUSTED `Unsat` for a `QF_UFBV`
+// query: it eagerly Ackermann-eliminates the uninterpreted functions
+// ([`eliminate_functions`]) to a pure `QF_BV` formula and refutes that. The
+// `QF_BV` layer already carries DRAT (`export_qf_bv_unsat_proof` → `check_drat`),
+// but the Int/UF→BV *reduction* — that the eliminated formula is a SOUND
+// relaxation of the original UF formula — is the `Ackermann` trust hole.
+//
+// SOUNDNESS DIRECTION (why `QF_BV`-UNSAT ⇒ UF-UNSAT). `eliminate_functions`
+// replaces every distinct application `f(a⃗)` by a fresh variable `v_{f(a⃗)}`
+// (consistently: identical applications intern to one var) and, for every pair
+// of same-`f` applications, appends the **congruence constraint**
+// `(⋀ᵢ aᵢ = bᵢ) ⇒ (v_{f(a⃗)} = v_{f(b⃗)})`. Each such constraint is a VALID
+// consequence of the semantics of an uninterpreted function (`f` is a function:
+// equal arguments force equal results). Therefore EVERY model `M` of the
+// original UF formula extends to a model of the eliminated `QF_BV` formula
+// (interpret each `v_{f(a⃗)}` as `f^M(a⃗^M)`; the rewritten originals hold because
+// the substitution is faithful, and every congruence constraint holds because
+// `f^M` is a genuine function). So the eliminated formula is a sound
+// over-approximation (relaxation): if it is UNSAT, the original has no model
+// either. The congruence set being the FULL pairwise set is what we re-derive;
+// note that for the UNSAT direction even a *subset* would remain sound (fewer
+// constraints only enlarge the model set), so we never risk an unsound UNSAT by
+// the congruence accounting — the witness simply confirms each appended
+// constraint is a real, valid congruence (no spurious extra assertion that could
+// make a satisfiable formula look UNSAT).
+//
+// The certificate makes this reduction INDEPENDENTLY RE-CHECKABLE. `recheck`
+// re-runs the deterministic elimination on the ORIGINAL assertions, structurally
+// re-derives the congruence set from the discovered application pairs and
+// confirms the eliminated formula is exactly `rewritten-originals ++
+// pairwise-congruence` (so it IS a sound relaxation, witnessed — not asserted),
+// re-bit-blasts that eliminated formula to CNF and confirms the stored DIMACS is
+// byte-identical (the DRAT refutes precisely the CNF of the re-derived eliminated
+// formula), and re-runs `check_drat` over the stored DIMACS/DRAT. Trusting
+// nothing the emitter computed.
+
+/// A re-checkable certificate that a `QF_UFBV` query is `Unsat` via **eager
+/// Ackermann UF-elimination**: the bit-blasted-CNF DRAT refutation of the
+/// (deterministically) function-eliminated formula, plus the witnessed shape of
+/// the elimination (the per-function congruence-pair counts) so the reduction
+/// can be re-derived and confirmed. See [`AckermannUnsatCertificate::recheck`].
+#[derive(Debug, Clone)]
+pub struct AckermannUnsatCertificate {
+    /// Per-function congruence-pair counts `(func, pairs)` in discovery order:
+    /// `pairs = k·(k−1)/2` for a function with `k` distinct applications. Purely
+    /// descriptive (re-derived and confirmed by `recheck`); records the witnessed
+    /// shape of the Ackermann expansion this certificate stands for.
+    congruence_pairs_per_func: Vec<(FuncId, usize)>,
+    /// Total appended congruence constraints (`Σ pairs`): the size of the
+    /// valid-consequence set the eliminated formula adds over the rewritten
+    /// originals. Re-derived and confirmed by `recheck`.
+    congruence_constraint_count: usize,
+    /// DRAT (+ DIMACS) refutation of the bit-blasted, function-eliminated `QF_BV`
+    /// CNF, independently re-checkable by `check_drat`.
+    bv_proof: crate::proof::UnsatProof,
+}
+
+impl AckermannUnsatCertificate {
+    /// The per-function congruence-pair counts `(func, pairs)`, in discovery order.
+    #[must_use]
+    pub fn congruence_pairs_per_func(&self) -> &[(FuncId, usize)] {
+        &self.congruence_pairs_per_func
+    }
+
+    /// The total number of appended congruence constraints.
+    #[must_use]
+    pub fn congruence_constraint_count(&self) -> usize {
+        self.congruence_constraint_count
+    }
+
+    /// The bit-blasted-CNF DRAT certificate of the function-eliminated formula.
+    #[must_use]
+    pub fn bv_proof(&self) -> &crate::proof::UnsatProof {
+        &self.bv_proof
+    }
+
+    /// **Independently re-validates** the whole eager-Ackermann reduction plus the
+    /// BV refutation, from the ORIGINAL `assertions` and this certificate's stored
+    /// data, trusting nothing the emitter computed:
+    ///
+    ///  1. re-runs the deterministic [`eliminate_functions`] on `assertions`;
+    ///  2. structurally re-derives the pairwise congruence set from the discovered
+    ///     application pairs and confirms the eliminated formula is *exactly*
+    ///     `rewritten-originals ++ that-congruence-set` (so each appended assertion
+    ///     is a VALID UF congruence consequence — the eliminated formula is a sound
+    ///     relaxation, witnessed) and that the recorded pair counts match;
+    ///  3. re-bit-blasts the re-derived eliminated formula and confirms the stored
+    ///     DIMACS is byte-identical (the DRAT refutes precisely *this* CNF);
+    ///  4. re-runs `check_drat` (RUP/RAT) over the stored DIMACS/DRAT.
+    ///
+    /// Returns `Ok(true)` only when all four hold. With the reduction re-derived
+    /// (2,3) and the refutation re-checked (4), `QF_BV`-UNSAT ⇒ UF-UNSAT, so this
+    /// `Unsat` carries no residual `Ackermann` trust. A `false`/`Err` means the
+    /// certificate does not establish the `Unsat` and must not be trusted.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] if the elimination/bit-blast fails or the stored
+    /// DRAT/DIMACS is unparseable.
+    pub fn recheck(&self, arena: &TermArena, assertions: &[TermId]) -> Result<bool, SolverError> {
+        // (1) Re-run the deterministic elimination on a scratch copy of the
+        //     ORIGINAL assertions. We trust nothing the emitter stored: the
+        //     eliminated formula and its blast are recomputed here.
+        let mut scratch = arena.clone();
+        let Ok(elim) = eliminate_functions(&mut scratch, assertions) else {
+            return Ok(false);
+        };
+        if !elim.had_functions() {
+            // No applications: nothing was Ackermann-eliminated, so there is no
+            // eager-Ackermann reduction for this certificate to stand for.
+            return Ok(false);
+        }
+
+        // (2) Structurally re-derive the pairwise congruence set and confirm the
+        //     eliminated formula is exactly `abstraction ++ congruence`.
+        let Some((rederived, per_func)) = rederive_congruence(&mut scratch, &elim) else {
+            return Ok(false);
+        };
+        // The eliminated assertions must be `abstraction` followed by exactly our
+        // re-derived congruence constraints — same terms, same order, same count.
+        let abstraction = elim.abstraction();
+        let eliminated = elim.assertions();
+        if eliminated.len() != abstraction.len() + rederived.len() {
+            return Ok(false);
+        }
+        if eliminated[..abstraction.len()] != *abstraction {
+            return Ok(false);
+        }
+        if eliminated[abstraction.len()..] != rederived[..] {
+            return Ok(false);
+        }
+        // The recorded shape must match the witnessed one.
+        if per_func != self.congruence_pairs_per_func
+            || rederived.len() != self.congruence_constraint_count
+        {
+            return Ok(false);
+        }
+
+        // (3) Re-bit-blast the re-derived eliminated formula and confirm the stored
+        //     DIMACS is byte-identical: the DRAT refutes precisely the CNF of the
+        //     formula we just re-derived, not some unrelated CNF the emitter chose.
+        let eliminated = eliminated.to_vec();
+        match crate::proof::export_qf_bv_unsat_proof(&scratch, &eliminated)? {
+            crate::proof::UnsatProofOutcome::Proved(fresh) => {
+                if fresh.dimacs != self.bv_proof.dimacs {
+                    return Ok(false);
+                }
+            }
+            // The re-derived eliminated formula is SAT or undecided: the stored
+            // UNSAT certificate cannot stand.
+            crate::proof::UnsatProofOutcome::Satisfiable
+            | crate::proof::UnsatProofOutcome::Inconclusive => return Ok(false),
+        }
+
+        // (4) Independently re-check the stored BV refutation (RUP/RAT) over the
+        //     stored DIMACS/DRAT.
+        self.bv_proof.recheck()
+    }
+}
+
+/// The re-derived congruence set: the constraint terms (in eliminator-append
+/// order) paired with the per-function congruence-pair counts `(func, pairs)`.
+type RederivedCongruence = (Vec<TermId>, Vec<(FuncId, usize)>);
+
+/// Structurally re-derives the eager-Ackermann congruence constraints from an
+/// elimination's discovered applications, replicating exactly what
+/// [`eliminate_functions`] appends: per function (discovery order), for every
+/// `i < j` application pair, `(⋀ₖ argsᵢ[k] = argsⱼ[k]) ⇒ (freshᵢ = freshⱼ)`,
+/// with the guard left-folded by `and` in argument order. Returns the constraint
+/// terms (in the same order the eliminator appends them) and the per-function
+/// pair counts. `None` on an IR builder failure or arity mismatch.
+///
+/// Because these terms are rebuilt on the SAME (post-elimination) `arena` whose
+/// interning gives identity, the returned `TermId`s are directly comparable to
+/// the eliminated formula's appended constraints — so a match *witnesses* that
+/// every appended assertion is a genuine, valid congruence consequence.
+fn rederive_congruence(
+    arena: &mut TermArena,
+    elim: &axeyum_rewrite::FunctionElimination,
+) -> Option<RederivedCongruence> {
+    // Snapshot the borrowed application metadata before mutating the arena.
+    let applications: Vec<(FuncId, Vec<TermId>, axeyum_ir::SymbolId)> = elim
+        .applications()
+        .into_iter()
+        .map(|(func, args, fresh)| (func, args.to_vec(), fresh))
+        .collect();
+
+    // Group application indices by function, preserving discovery order (the
+    // same grouping order `eliminate_functions` uses).
+    let mut groups: Vec<(FuncId, Vec<usize>)> = Vec::new();
+    for (idx, (func, _args, _fresh)) in applications.iter().enumerate() {
+        if let Some((_, members)) = groups.iter_mut().find(|(g, _)| g == func) {
+            members.push(idx);
+        } else {
+            groups.push((*func, vec![idx]));
+        }
+    }
+
+    let mut constraints = Vec::new();
+    let mut per_func = Vec::new();
+    for (func, members) in &groups {
+        let mut pairs = 0usize;
+        for a in 0..members.len() {
+            for b in (a + 1)..members.len() {
+                let (_fi, args_i, fresh_i) = &applications[members[a]];
+                let (_fj, args_j, fresh_j) = &applications[members[b]];
+                if args_i.len() != args_j.len() {
+                    return None;
+                }
+                let mut same_args: Option<TermId> = None;
+                for (&ai, &bj) in args_i.iter().zip(args_j) {
+                    let eq = arena.eq(ai, bj).ok()?;
+                    same_args = Some(match same_args {
+                        Some(acc) => arena.and(acc, eq).ok()?,
+                        None => eq,
+                    });
+                }
+                let var_i = arena.var(*fresh_i);
+                let var_j = arena.var(*fresh_j);
+                let same_result = arena.eq(var_i, var_j).ok()?;
+                let constraint = match same_args {
+                    Some(guard) => arena.implies(guard, same_result).ok()?,
+                    None => same_result,
+                };
+                constraints.push(constraint);
+                pairs += 1;
+            }
+        }
+        per_func.push((*func, pairs));
+    }
+    Some((constraints, per_func))
+}
+
+/// Attempts to produce a fully re-checkable [`AckermannUnsatCertificate`] for a
+/// `QF_UFBV` `assertions`: eagerly Ackermann-eliminates the uninterpreted
+/// functions ([`eliminate_functions`]), bit-blasts the eliminated `QF_BV` formula,
+/// and — if that CNF is `Unsat` — emits the DRAT bundled with the witnessed shape
+/// of the elimination.
+///
+/// Returns `Ok(None)` when there are no functions to eliminate (not the
+/// eager-Ackermann fragment), the instance is over the deterministic admission
+/// bound (`MAX_ACKERMANN_CONGRUENCE_PAIRS` — graceful, no O(k²) blowup), the
+/// eliminated formula is `Sat`, or the proof core stays inconclusive. The verdict
+/// path is unchanged; this only adds a certificate when one cleanly exists.
+///
+/// This is the **certifying** entry point for eager-Ackermann `QF_UFBV` `Unsat`:
+/// a returned certificate, re-checked by [`AckermannUnsatCertificate::recheck`]
+/// against the same `assertions`, establishes the `Unsat` with no residual
+/// `Ackermann` trust for this eager-elimination sub-case.
+///
+/// # Errors
+///
+/// Returns [`SolverError`] on an internal elimination/encoding/blast failure.
+pub fn certify_ackermann_unsat(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<Option<AckermannUnsatCertificate>, SolverError> {
+    // Deterministic admission bound: refuse the O(k²) eager expansion above the
+    // cap rather than build it (graceful — no certificate, never a hang).
+    if refuse_oversized_ackermann(arena, assertions, "certify_ackermann_unsat").is_some() {
+        return Ok(None);
+    }
+
+    // Eliminate on a scratch arena (additive; the caller's arena is untouched).
+    let mut scratch = arena.clone();
+    let elim = eliminate_functions(&mut scratch, assertions).map_err(map_elim_error)?;
+    if !elim.had_functions() {
+        // No uninterpreted functions: there is no eager-Ackermann reduction to
+        // certify here (pure QF_BV has its own exporter).
+        return Ok(None);
+    }
+
+    // Witness the elimination's shape by structurally re-deriving the congruence
+    // set; it must equal what `eliminate_functions` appended.
+    let Some((rederived, per_func)) = rederive_congruence(&mut scratch, &elim) else {
+        return Ok(None);
+    };
+    let abstraction = elim.abstraction();
+    let eliminated = elim.assertions();
+    if eliminated.len() != abstraction.len() + rederived.len()
+        || eliminated[..abstraction.len()] != *abstraction
+        || eliminated[abstraction.len()..] != rederived[..]
+    {
+        return Ok(None);
+    }
+    let congruence_constraint_count = rederived.len();
+
+    let eliminated = eliminated.to_vec();
+    match crate::proof::export_qf_bv_unsat_proof(&scratch, &eliminated)? {
+        crate::proof::UnsatProofOutcome::Proved(bv_proof) => Ok(Some(AckermannUnsatCertificate {
+            congruence_pairs_per_func: per_func,
+            congruence_constraint_count,
+            bv_proof,
+        })),
+        crate::proof::UnsatProofOutcome::Satisfiable
+        | crate::proof::UnsatProofOutcome::Inconclusive => Ok(None),
+    }
+}
+
 #[cfg(test)]
 #[allow(clippy::many_single_char_names, clippy::similar_names)]
 mod tests {

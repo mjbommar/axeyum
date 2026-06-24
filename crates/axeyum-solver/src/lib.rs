@@ -175,8 +175,8 @@ pub use dpll_t::{
 };
 pub use enums::{EnumError, EnumSort, EnumVar};
 pub use euf::{
-    check_qf_ufbv_lazy, check_with_function_elimination, check_with_uf_arithmetic,
-    check_with_uf_arithmetic_lazy,
+    AckermannUnsatCertificate, certify_ackermann_unsat, check_qf_ufbv_lazy,
+    check_with_function_elimination, check_with_uf_arithmetic, check_with_uf_arithmetic_lazy,
 };
 pub use euf_alethe::prove_qf_uf_unsat_alethe;
 pub use euf_egraph::{
