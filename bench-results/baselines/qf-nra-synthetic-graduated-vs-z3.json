@@ -1,0 +1,22 @@
+{
+  "dir": "corpus/public-curated/synthetic/QF_NRA/graduated",
+  "timeout_ms": 30000,
+  "considered": 33,
+  "axeyum_decided": 30,
+  "axeyum_sat": 14,
+  "axeyum_unsat": 16,
+  "axeyum_unknown": 3,
+  "z3_decided": 33,
+  "agree": 30,
+  "disagree": 0,
+  "axeyum_par2_s": 5.4547,
+  "z3_par2_s": 0.0091,
+  "decide_frontier": [
+    { "family": "nra-circle-line", "frontier_decided": 6, "max_knob": 6 },
+    { "family": "nra-neg-square", "frontier_decided": 6, "max_knob": 6 },
+    { "family": "nra-sat-witness", "frontier_decided": 8, "max_knob": 8 },
+    { "family": "nra-sos-strict-unsat", "frontier_decided": 2, "max_knob": 5 },
+    { "family": "nra-sos-unsat", "frontier_decided": 8, "max_knob": 8 }
+  ],
+  "disagreements": []
+}

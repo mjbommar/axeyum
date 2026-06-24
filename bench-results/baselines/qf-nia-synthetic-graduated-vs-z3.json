@@ -1,0 +1,21 @@
+{
+  "dir": "corpus/public-curated/synthetic/QF_NIA/graduated",
+  "timeout_ms": 30000,
+  "considered": 32,
+  "axeyum_decided": 16,
+  "axeyum_sat": 16,
+  "axeyum_unsat": 0,
+  "axeyum_unknown": 16,
+  "z3_decided": 32,
+  "agree": 16,
+  "disagree": 0,
+  "axeyum_par2_s": 36.7387,
+  "z3_par2_s": 0.1225,
+  "decide_frontier": [
+    { "family": "nia-no-square-mod", "frontier_decided": 0, "max_knob": 8 },
+    { "family": "nia-product", "frontier_decided": 8, "max_knob": 8 },
+    { "family": "nia-pythagorean", "frontier_decided": 8, "max_knob": 8 },
+    { "family": "nia-sum-sq-2", "frontier_decided": 0, "max_knob": 8 }
+  ],
+  "disagreements": []
+}

@@ -1,0 +1,16 @@
+(set-logic QF_NRA)
+(set-info :smt-lib-version 2.6)
+(set-info :source |axeyum synthetic graduated corpus (scripts/gen-graduated-nra-nia.py)|)
+(set-info :status sat)
+; STATUS-PROOF: explicit rational witness ['1/2', '2/3', '3/4', '4/5'] substituted; sum(xi^2)=6829/3600 holds exactly (checked by generator).
+(declare-fun x1 () Real)
+(declare-fun x2 () Real)
+(declare-fun x3 () Real)
+(declare-fun x4 () Real)
+
+(assert (= x1 (/ 1.0 2.0)))
+(assert (= x2 (/ 2.0 3.0)))
+(assert (= x3 (/ 3.0 4.0)))
+(assert (= x4 (/ 4.0 5.0)))
+(assert (= (+ (* x1 x1) (* x2 x2) (* x3 x3) (* x4 x4)) (/ 6829.0 3600.0)))
+(check-sat)
