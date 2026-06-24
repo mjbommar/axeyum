@@ -1,0 +1,171 @@
+{
+  "config": {
+    "backend": "axeyum-solver check_auto",
+    "backend_kind": "solver",
+    "cnf_clause_budget": null,
+    "cnf_inprocessing": false,
+    "cnf_variable_budget": null,
+    "cnf_vivify": false,
+    "compare_backend": "z3 4.13.3.0",
+    "compare_z3": true,
+    "config_hash": "40a0ef86723d8c0f",
+    "corpus": "corpus/public-curated/non-incremental/QF_DT/cvc5-regress-clean",
+    "corpus_hash": "a91a2b3a0db7fe6b",
+    "corpus_source": null,
+    "hardware": {
+      "arch": "x86_64",
+      "hostname": null,
+      "os": "linux",
+      "parallelism": 16
+    },
+    "harness": "axeyum-bench 0.1.0",
+    "jobs": 4,
+    "limit": null,
+    "logic": "QF_DT",
+    "native_cdcl": false,
+    "node_budget": null,
+    "preprocess": false,
+    "query_plan": {
+      "mode": "full",
+      "refine_adaptive_batch": false,
+      "refine_batch": 1,
+      "refine_rounds": 16,
+      "refine_select": "first",
+      "sat_replay_failure_policy": "soundness-alarm"
+    },
+    "rewrite": {
+      "enabled_rule_ids": [],
+      "mode": "off",
+      "rule_set": null
+    },
+    "seed": "none",
+    "selected_families": null,
+    "timeout_ms": 10000
+  },
+  "instances": [
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 5.332675999999999
+      },
+      "dag_nodes": 520,
+      "detail": "`is`/`select` over a non-variable datatype term (constructors should fold first) (ADR-0022)",
+      "distinct_symbols": 73,
+      "expected": "unsat",
+      "file": "corpus/public-curated/non-incremental/QF_DT/cvc5-regress-clean/cli__regress1__datatypes__acyclicity-sr-ground096.smt2",
+      "max_depth": 25,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unsupported"
+      },
+      "outcome": "unsupported",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 520,
+          "digest": "997a2cf908c6c36f",
+          "tree_nodes": 1562
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 520,
+            "digest": "997a2cf908c6c36f",
+            "tree_nodes": 1562
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 520,
+        "input_tree_nodes": 1562,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 520,
+        "output_distinct_symbols": 73,
+        "output_max_depth": 25,
+        "output_tree_nodes": 1562,
+        "rewritten_outcome": "unsupported",
+        "rule_counts": {}
+      },
+      "solve_ms": 5,
+      "translate_ms": 0,
+      "tree_nodes": 1562
+    }
+  ],
+  "summary": {
+    "agree": 0,
+    "blocker_buckets": {
+      "unsupported": 1
+    },
+    "disagree": 0,
+    "errors": 0,
+    "files": 1,
+    "layer_attribution": null,
+    "model_replay_failures": 0,
+    "oracle": {
+      "agree": 0,
+      "backend": "z3 4.13.3.0",
+      "compared": 0,
+      "disagree": 0,
+      "enabled": true,
+      "skipped": 1
+    },
+    "par2_mean_s": 20.0,
+    "query_plan": {
+      "original_dag_nodes": 520,
+      "original_tree_nodes": 1562,
+      "slice_changed_instances": 0,
+      "slice_dag_nodes": 520,
+      "slice_dropped_terms": 0,
+      "slice_tree_nodes": 1562
+    },
+    "rewrite": {
+      "applications": 0,
+      "changed_instances": 0,
+      "decision_changes": 0,
+      "decision_matches": 0,
+      "input_dag_nodes": 0,
+      "input_tree_nodes": 0,
+      "mode": "off",
+      "output_dag_nodes": 0,
+      "output_tree_nodes": 0,
+      "sat_unsat_conflicts": 0
+    },
+    "sat": 0,
+    "unknown": 0,
+    "unsat": 0,
+    "unsupported": 1
+  },
+  "triage": {
+    "errors": [],
+    "rewrite_decision_changes": [],
+    "soundness": {
+      "model_replay_failures": 0,
+      "oracle_disagreements": 0,
+      "rewrite_sat_unsat_conflicts": 0,
+      "status_disagreements": 0
+    },
+    "unsupported": [
+      {
+        "detail": "`is`/`select` over a non-variable datatype term (constructors should fold first) (ADR-0022)",
+        "file": "corpus/public-curated/non-incremental/QF_DT/cvc5-regress-clean/cli__regress1__datatypes__acyclicity-sr-ground096.smt2",
+        "outcome": "unsupported"
+      }
+    ]
+  },
+  "version": 14
+}
