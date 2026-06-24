@@ -46,7 +46,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.361177
+        "check_auto_ms": 0.628056
       },
       "dag_nodes": 307,
       "distinct_symbols": 2,
@@ -67,7 +67,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 15,
+          "solve_ms": 13,
           "verdict": "sat"
         }
       },
@@ -119,7 +119,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.08769500000000001
+        "check_auto_ms": 0.068199
       },
       "dag_nodes": 3,
       "distinct_symbols": 0,
@@ -140,7 +140,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 9,
+          "solve_ms": 7,
           "verdict": "sat"
         }
       },
@@ -192,7 +192,7 @@
     {
       "assertions": 4,
       "backend_stats": {
-        "check_auto_ms": 0.306828
+        "check_auto_ms": 0.243126
       },
       "dag_nodes": 10,
       "distinct_symbols": 2,
@@ -265,7 +265,7 @@
     {
       "assertions": 4,
       "backend_stats": {
-        "check_auto_ms": 0.450461
+        "check_auto_ms": 0.289268
       },
       "dag_nodes": 63,
       "distinct_symbols": 2,
@@ -286,7 +286,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 9,
+          "solve_ms": 8,
           "verdict": "unsat"
         }
       },
@@ -338,7 +338,7 @@
     {
       "assertions": 4,
       "backend_stats": {
-        "check_auto_ms": 0.32978
+        "check_auto_ms": 0.33658499999999997
       },
       "dag_nodes": 63,
       "distinct_symbols": 2,
@@ -359,7 +359,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 13,
+          "solve_ms": 12,
           "verdict": "unsat"
         }
       },
@@ -409,14 +409,82 @@
       "tree_nodes": 344
     },
     {
-      "detail": "sort `RoundingMode`",
+      "assertions": 16,
+      "backend_stats": {
+        "check_auto_ms": 139.75880199999997
+      },
+      "dag_nodes": 5737,
+      "distinct_symbols": 3,
+      "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_misc.smt2",
-      "outcome": "unsupported"
+      "max_depth": 424,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support floating-point symbols yet (ADR-0026)",
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 15,
+          "verdict": "unsat"
+        }
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 16,
+          "assumptions": 0,
+          "dag_nodes": 5737,
+          "digest": "ddf299849e149fc1",
+          "tree_nodes": 18446744073709551615
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 16,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 16,
+            "assumptions": 0,
+            "dag_nodes": 5737,
+            "digest": "ddf299849e149fc1",
+            "tree_nodes": 18446744073709551615
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 5737,
+        "input_tree_nodes": 18446744073709551615,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 16,
+        "output_dag_nodes": 5737,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 424,
+        "output_tree_nodes": 18446744073709551615,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 139,
+      "translate_ms": 0,
+      "tree_nodes": 18446744073709551615
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.106148
+        "check_auto_ms": 0.102082
       },
       "dag_nodes": 5,
       "distinct_symbols": 0,
@@ -437,7 +505,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 8,
+          "solve_ms": 11,
           "verdict": "unsat"
         }
       },
@@ -489,7 +557,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.206484
+        "check_auto_ms": 0.17400200000000002
       },
       "dag_nodes": 21,
       "distinct_symbols": 1,
@@ -510,7 +578,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 12,
+          "solve_ms": 13,
           "verdict": "sat"
         }
       },
@@ -562,7 +630,7 @@
     {
       "assertions": 4,
       "backend_stats": {
-        "check_auto_ms": 0.215768
+        "check_auto_ms": 0.326612
       },
       "dag_nodes": 41,
       "distinct_symbols": 2,
@@ -583,7 +651,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 17,
+          "solve_ms": 13,
           "verdict": "sat"
         }
       },
@@ -635,7 +703,7 @@
     {
       "assertions": 2,
       "backend_stats": {
-        "check_auto_ms": 0.731772
+        "check_auto_ms": 0.737034
       },
       "dag_nodes": 685,
       "distinct_symbols": 2,
@@ -656,7 +724,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 15,
+          "solve_ms": 13,
           "verdict": "sat"
         }
       },
@@ -706,14 +774,81 @@
       "tree_nodes": 18446744073709551615
     },
     {
-      "detail": "sort `RoundingMode`",
+      "assertions": 6,
+      "backend_stats": {
+        "check_auto_ms": 0.068822
+      },
+      "dag_nodes": 11,
+      "distinct_symbols": 0,
+      "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_rm.smt2",
-      "outcome": "unsupported"
+      "max_depth": 2,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 131.19,
+          "memory": 82.91,
+          "num allocs": 89023.0,
+          "rlimit count": 31.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 6,
+          "assumptions": 0,
+          "dag_nodes": 11,
+          "digest": "57edcb48a073f719",
+          "tree_nodes": 18
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 6,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 6,
+            "assumptions": 0,
+            "dag_nodes": 11,
+            "digest": "57edcb48a073f719",
+            "tree_nodes": 18
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 11,
+        "input_tree_nodes": 18,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 6,
+        "output_dag_nodes": 11,
+        "output_distinct_symbols": 0,
+        "output_max_depth": 2,
+        "output_tree_nodes": 18,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 18
     },
     {
       "assertions": 5,
       "backend_stats": {
-        "check_auto_ms": 9.574795
+        "check_auto_ms": 9.544456
       },
       "dag_nodes": 1209,
       "distinct_symbols": 1,
@@ -734,7 +869,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 15,
           "verdict": "sat"
         }
       },
@@ -786,7 +921,7 @@
     {
       "assertions": 7,
       "backend_stats": {
-        "check_auto_ms": 0.262752
+        "check_auto_ms": 0.25103099999999995
       },
       "dag_nodes": 13,
       "distinct_symbols": 2,
@@ -807,7 +942,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 9,
+          "solve_ms": 8,
           "verdict": "unsat"
         }
       },
@@ -859,7 +994,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.844408
+        "check_auto_ms": 1.407402
       },
       "dag_nodes": 1079,
       "distinct_symbols": 0,
@@ -872,7 +1007,7 @@
         "backend_stats": {
           "max memory": 131.19,
           "memory": 91.29,
-          "num allocs": 132441.0,
+          "num allocs": 163452.0,
           "rlimit count": 3967.0
         },
         "decision_agrees": true,
@@ -881,7 +1016,7 @@
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
-        "translate_ms": 0
+        "translate_ms": 1
       },
       "outcome": "sat",
       "query_plan": {
@@ -924,14 +1059,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 18446744073709551615
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.166785
+        "check_auto_ms": 0.226523
       },
       "dag_nodes": 59,
       "distinct_symbols": 2,
@@ -1004,7 +1139,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.201538
+        "check_auto_ms": 0.16761900000000002
       },
       "dag_nodes": 59,
       "distinct_symbols": 2,
@@ -1025,7 +1160,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 12,
           "verdict": "sat"
         }
       },
@@ -1076,7 +1211,7 @@
     }
   ],
   "summary": {
-    "agree": 14,
+    "agree": 16,
     "blocker_buckets": {},
     "disagree": 0,
     "errors": 0,
@@ -1084,21 +1219,21 @@
     "layer_attribution": null,
     "model_replay_failures": 0,
     "oracle": {
-      "agree": 14,
+      "agree": 16,
       "backend": "z3 4.13.3.0",
-      "compared": 14,
+      "compared": 16,
       "disagree": 0,
       "enabled": true,
       "skipped": 0
     },
-    "par2_mean_s": 0.0009890279285714285,
+    "par2_mean_s": 0.009645601187500002,
     "query_plan": {
-      "original_dag_nodes": 3617,
-      "original_tree_nodes": 482014298281265,
+      "original_dag_nodes": 9365,
+      "original_tree_nodes": 482014298281282,
       "slice_changed_instances": 0,
-      "slice_dag_nodes": 3617,
+      "slice_dag_nodes": 9365,
       "slice_dropped_terms": 0,
-      "slice_tree_nodes": 482014298281265
+      "slice_tree_nodes": 482014298281282
     },
     "rewrite": {
       "applications": 0,
@@ -1114,8 +1249,8 @@
     },
     "sat": 9,
     "unknown": 0,
-    "unsat": 5,
-    "unsupported": 2
+    "unsat": 7,
+    "unsupported": 0
   },
   "triage": {
     "errors": [],
@@ -1126,18 +1261,7 @@
       "rewrite_sat_unsat_conflicts": 0,
       "status_disagreements": 0
     },
-    "unsupported": [
-      {
-        "detail": "sort `RoundingMode`",
-        "file": "corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_misc.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "sort `RoundingMode`",
-        "file": "corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_rm.smt2",
-        "outcome": "unsupported"
-      }
-    ]
+    "unsupported": []
   },
   "version": 14
 }

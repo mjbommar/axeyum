@@ -1050,6 +1050,12 @@ fn parse_declare_fun(
         declare_string_symbol(script, name)?;
         return Ok(());
     }
+    // A 0-ary `RoundingMode` constant: a `BitVec(3)` plus its `≤ 4` constraint,
+    // exactly like `declare-const … RoundingMode`.
+    if args.is_empty() && sexpr_at(items, 3)?.atom() == Some("RoundingMode") {
+        declare_rounding_mode_symbol(script, name)?;
+        return Ok(());
+    }
     // A 0-ary `(Seq E)` constant: packed sequence + well-formedness (ADR-0029),
     // exactly like `declare-const ... (Seq E)`.
     if args.is_empty()
@@ -1190,6 +1196,11 @@ fn parse_declare_const(
     if sexpr_at(items, 2)?.atom() == Some("String") {
         return declare_string_symbol(script, name);
     }
+    // A `RoundingMode` constant: a `BitVec(3)` plus its `≤ 4` well-formedness
+    // constraint, so it can only take one of the 5 SMT-LIB rounding-mode tokens.
+    if sexpr_at(items, 2)?.atom() == Some("RoundingMode") {
+        return declare_rounding_mode_symbol(script, name);
+    }
     // A `(Seq E)` constant: the packed sequence bit-vector plus its canonical
     // well-formedness constraint (ADR-0029), exactly like a `String` symbol.
     if let Some(ew) = seq_decl_elem_width(sexpr_at(items, 2)?) {
@@ -1242,6 +1253,25 @@ fn declare_string_symbol(script: &mut Script, name: &str) -> Result<(), SmtError
     let sym = script.arena.declare(name, Sort::BitVec(STRING_TOTAL))?;
     let v = script.arena.var(sym);
     let wf = string_wellformed(&mut script.arena, v)?;
+    script.assertions.push(wf);
+    script.assertion_names.push(None);
+    script.commands.push(ScriptCommand::Assert(wf));
+    Ok(())
+}
+
+/// Declares a 0-ary `RoundingMode` symbol: a `BitVec(ROUNDING_MODE_BITS)` plus a
+/// `≤ 4` well-formedness constraint (asserted in the flat and incremental views)
+/// so the modeled sort has exactly its 5 inhabitants — the symbol can only take
+/// one of the 5 SMT-LIB rounding-mode tokens, never an unused pattern. Shared by
+/// `declare-const … RoundingMode` and 0-ary `declare-fun … RoundingMode`.
+fn declare_rounding_mode_symbol(script: &mut Script, name: &str) -> Result<(), SmtError> {
+    let sym = script
+        .arena
+        .declare(name, Sort::BitVec(ROUNDING_MODE_BITS))?;
+    let v = script.arena.var(sym);
+    // `rm ≤ 4` (`#b100`): the 5 valid tokens are `0..=4`.
+    let max = script.arena.bv_const(ROUNDING_MODE_BITS, 4)?;
+    let wf = script.arena.bv_ule(v, max)?;
     script.assertions.push(wf);
     script.assertion_names.push(None);
     script.commands.push(ScriptCommand::Assert(wf));
@@ -1431,6 +1461,15 @@ fn parse_sort(
         // `=`/`distinct` decide via the BV path. `Seq` (unbounded sequences) has no
         // sound bounded lowering yet, so it stays a scoped `Unsupported`.
         SExpr::Atom(a) if a == "String" => Ok(Sort::BitVec(STRING_TOTAL)),
+        // The `RoundingMode` sort is the 5-element FP rounding-mode enumeration,
+        // modeled as a [`BitVec(ROUNDING_MODE_BITS)`] (8 patterns, the 5 SMT-LIB
+        // modes mapped by [`rounding_mode_value`]). A declared `RoundingMode`
+        // symbol additionally carries a `≤ 4` well-formedness constraint (asserted
+        // at declare time, see [`declare_rounding_mode_symbol`]) so the sort has
+        // exactly its 5 inhabitants. The 5 literal mode keywords still parse as
+        // concrete [`RoundingMode`] values (a fast single-mode path); this sort
+        // path only fires when `RoundingMode` is named as a *sort*.
+        SExpr::Atom(a) if a == "RoundingMode" => Ok(Sort::BitVec(ROUNDING_MODE_BITS)),
         SExpr::Atom(a) if a == "Seq" => Err(SmtError::Unsupported(format!(
             "the bare `{a}` sort head needs an element sort `(Seq E)` (ADR-0029)"
         ))),
@@ -1579,7 +1618,16 @@ fn parse_declare_sort(
 fn is_builtin_sort_name(name: &str) -> bool {
     matches!(
         name,
-        "Bool" | "Int" | "Real" | "Float16" | "Float32" | "Float64" | "Float128" | "String" | "Seq"
+        "Bool"
+            | "Int"
+            | "Real"
+            | "Float16"
+            | "Float32"
+            | "Float64"
+            | "Float128"
+            | "String"
+            | "RoundingMode"
+            | "Seq"
     )
 }
 
@@ -1603,18 +1651,23 @@ enum Frame<'a> {
     /// `RegLan` argument, which is **compiled**, not evaluated as a term).
     /// `all` selects `str.replace_re_all` over `str.replace_re`.
     ApplyReplaceRe { re_expr: &'a SExpr, all: bool },
-    /// Pop `argc` results and apply a rounding-mode FP op. The mode is the first
-    /// child (a `RoundingMode` value, not a term) parsed before queueing.
+    /// Pop `argc` results and apply a rounding-mode FP op. When `mode` is
+    /// `Some(m)` the mode is a literal `RoundingMode` value parsed before queueing
+    /// (the single-mode fast path) and only the operand children were queued. When
+    /// `mode` is `None` the mode is a **symbolic** `RoundingMode` term: it was
+    /// queued as the *first* operand (so the top-of-stack ordering is `[rm, ops…]`)
+    /// and the op expands to the 5-way `ite` ([`apply_fp_rounded_symbolic`]).
     ApplyFpRounded {
         items: &'a [SExpr],
-        mode: RoundingMode,
+        mode: Option<RoundingMode>,
         argc: usize,
     },
     /// Like [`Frame::ApplyFpRounded`] but for an *indexed* head, e.g.
-    /// `((_ to_fp 8 24) RM x)` or `((_ fp.to_sbv 32) RM x)`.
+    /// `((_ to_fp 8 24) RM x)` or `((_ fp.to_sbv 32) RM x)`. The same `mode`
+    /// literal-vs-symbolic convention applies.
     ApplyFpRoundedIndexed {
         items: &'a [SExpr],
-        mode: RoundingMode,
+        mode: Option<RoundingMode>,
         argc: usize,
     },
     /// Pop `argc` results and expand a parameterized `define-fun` body.
@@ -1716,11 +1769,29 @@ fn parse_term<'a>(
             }
             Frame::ApplyFpRounded { items, mode, argc } => {
                 let args = results.split_off(results.len() - argc);
-                results.push(apply_fp_rounded(arena, items, mode, &args)?);
+                let out = if let Some(m) = mode {
+                    apply_fp_rounded(arena, items, m, &args)?
+                } else {
+                    // Symbolic mode: the first queued operand is the `rm` term.
+                    let (rm, ops) = args
+                        .split_first()
+                        .ok_or_else(|| SmtError::Syntax("missing rounding mode".to_owned()))?;
+                    apply_fp_rounded_symbolic(arena, items, *rm, ops)?
+                };
+                results.push(out);
             }
             Frame::ApplyFpRoundedIndexed { items, mode, argc } => {
                 let args = results.split_off(results.len() - argc);
-                results.push(apply_fp_rounded_indexed(arena, items, mode, &args)?);
+                let out = if let Some(m) = mode {
+                    apply_fp_rounded_indexed(arena, items, m, &args)?
+                } else {
+                    // Symbolic mode: the first queued operand is the `rm` term.
+                    let (rm, ops) = args
+                        .split_first()
+                        .ok_or_else(|| SmtError::Syntax("missing rounding mode".to_owned()))?;
+                    apply_fp_rounded_indexed_symbolic(arena, items, *rm, ops)?
+                };
+                results.push(out);
             }
             Frame::ApplyMacro { name, argc } => {
                 queue_macro_expansion(
@@ -1908,21 +1979,27 @@ fn queue_list_eval<'a>(
     } else if let Some(name) = head.atom()
         && is_fp_rounded_op(name)
     {
-        // Rounding-mode FP ops `(fp.add RM x y)`: the first argument is a
-        // `RoundingMode` value (not a term), so parse it here and queue only the
-        // operand children.
+        // Rounding-mode FP ops `(fp.add RM x y)`: the first argument is the
+        // rounding mode. A *literal* mode is parsed here (single-mode fast path,
+        // byte-identical); a *symbolic* mode (e.g. a declared `RoundingMode`
+        // symbol or a `define-fun` alias) is queued as the first operand and
+        // expands to the 5-way `ite` in [`apply_fp_rounded_symbolic`].
         let mode_expr = items
             .get(1)
             .ok_or_else(|| SmtError::Syntax(format!("{name} expects a rounding mode")))?;
-        let mode = parse_rounding_mode(mode_expr)
-            .ok_or_else(|| SmtError::Syntax(format!("{name}: unrecognized rounding mode")))?;
-        let operands = &items[2..];
+        let mode = parse_rounding_mode(mode_expr);
+        // Queue the rounding-mode subterm too when it is symbolic.
+        let queued = if mode.is_some() {
+            &items[2..]
+        } else {
+            &items[1..]
+        };
         frames.push(Frame::ApplyFpRounded {
             items,
             mode,
-            argc: operands.len(),
+            argc: queued.len(),
         });
-        for child in operands.iter().rev() {
+        for child in queued.iter().rev() {
             frames.push(Frame::Eval(child));
         }
     } else if let Some(idx) = head.list()
@@ -1931,22 +2008,28 @@ fn queue_list_eval<'a>(
             .get(1)
             .and_then(SExpr::atom)
             .is_some_and(is_fp_indexed_conversion)
-        && items
-            .get(1)
-            .is_some_and(|e| parse_rounding_mode(e).is_some())
+        && items.len() == 3
     {
         // Indexed rounding-mode FP conversions `((_ to_fp eb sb) RM x)`,
-        // `((_ fp.to_sbv m) RM x)`, …: the leading `RM` is a value, not a term.
-        // (The mode-free bit-reinterpret `((_ to_fp eb sb) x)` has no RM here, so
-        // it falls through to the generic indexed-application path.)
-        let mode = parse_rounding_mode(&items[1]).expect("checked");
-        let operands = &items[2..];
+        // `((_ fp.to_sbv m) RM x)`, …: the leading `RM` precedes a single operand
+        // (`items.len() == 3` = head + RM + operand). A *literal* RM takes the
+        // single-mode fast path; a *symbolic* RM is queued as the first operand and
+        // expands to the 5-way `ite`. (The mode-free bit-reinterpret
+        // `((_ to_fp eb sb) x)` has only one argument — `items.len() == 2` — so it
+        // falls through to the generic indexed-application path; `to_fp_unsigned` /
+        // `fp.to_sbv` / `fp.to_ubv` always carry a mandatory RM, so they match here.)
+        let mode = parse_rounding_mode(&items[1]);
+        let queued = if mode.is_some() {
+            &items[2..]
+        } else {
+            &items[1..]
+        };
         frames.push(Frame::ApplyFpRoundedIndexed {
             items,
             mode,
-            argc: operands.len(),
+            argc: queued.len(),
         });
-        for child in operands.iter().rev() {
+        for child in queued.iter().rev() {
             frames.push(Frame::Eval(child));
         }
     } else if let Some(name) = head.atom()
@@ -3752,6 +3835,15 @@ fn parse_atom(
             "constructor `{a}` needs arguments"
         )));
     }
+    // A literal `RoundingMode` keyword used as a *term* (not as the leading mode
+    // of an `fp.*` op, which is consumed syntactically in `queue_list_eval` and
+    // never reaches here): resolve to its `BitVec(ROUNDING_MODE_BITS)` token. This
+    // is what lets a `(define-fun rne () RoundingMode roundNearestTiesToEven)`
+    // alias body fold to the constant, and lets a literal mode flow as an operand
+    // to a symbolic-mode `ite` selection.
+    if let Some(mode) = parse_rounding_mode(&SExpr::Atom(a.to_owned())) {
+        return Ok(arena.bv_const(ROUNDING_MODE_BITS, rounding_mode_value(mode))?);
+    }
     // Nullary string/regex constants outside the wired bounded subset
     // (`re.none`/`re.all`/`re.allchar`, …) are declined cleanly (ADR-0029) so a
     // benchmark using them returns `Unsupported`, never a wrong verdict.
@@ -3821,6 +3913,34 @@ fn is_fp_rounded_op(name: &str) -> bool {
         name,
         "fp.add" | "fp.sub" | "fp.mul" | "fp.div" | "fp.fma" | "fp.sqrt" | "fp.roundToIntegral"
     )
+}
+
+/// Bit-width modeling the `RoundingMode` sort as a `BitVec`. Three bits give 8
+/// patterns; only the low 5 (`0..=4`) name an SMT-LIB rounding mode (see
+/// [`rounding_mode_value`] / [`ALL_ROUNDING_MODES`]). A declared `RoundingMode`
+/// symbol is additionally constrained `≤ 4`, so the sort has exactly 5
+/// inhabitants.
+const ROUNDING_MODE_BITS: u32 = 3;
+
+/// The 5 SMT-LIB rounding modes paired with their canonical `BitVec(3)` token, in
+/// ascending value order. This is the single source of truth for both the literal
+/// keyword → value map ([`rounding_mode_value`]) and the symbolic 5-way `ite`
+/// ([`apply_fp_rounded_symbolic`] / [`apply_fp_rounded_indexed_symbolic`]).
+const ALL_ROUNDING_MODES: [(RoundingMode, u128); 5] = [
+    (RoundingMode::NearestEven, 0),
+    (RoundingMode::NearestAway, 1),
+    (RoundingMode::TowardPositive, 2),
+    (RoundingMode::TowardNegative, 3),
+    (RoundingMode::TowardZero, 4),
+];
+
+/// The `BitVec(ROUNDING_MODE_BITS)` token for a concrete rounding mode (the
+/// inverse of the value column of [`ALL_ROUNDING_MODES`]).
+fn rounding_mode_value(mode: RoundingMode) -> u128 {
+    ALL_ROUNDING_MODES
+        .iter()
+        .find_map(|&(m, v)| (m == mode).then_some(v))
+        .expect("every RoundingMode appears in ALL_ROUNDING_MODES")
 }
 
 /// Parses an SMT-LIB `RoundingMode` value (short or long form). Returns `None`
@@ -4039,6 +4159,72 @@ fn apply_fp_rounded(
     };
     // Every rounding-mode op here is FP-valued; stamp the float sort (ADR-0026).
     as_float(arena, fmt, term)
+}
+
+/// Applies a rounding-mode FP op whose mode is a **symbolic** `RoundingMode` term
+/// `rm` (a `BitVec(ROUNDING_MODE_BITS)`): builds the 5-way `ite` selecting among
+/// [`apply_fp_rounded`] evaluated once per concrete mode.
+///
+/// `ite(rm = 0, …RNE, ite(rm = 1, …RNA, ite(rm = 2, …RTP, ite(rm = 3, …RTN,
+/// …RTZ))))` — the innermost else is the last mode (RTZ), so any `rm` value
+/// outside `0..=4` would resolve to RTZ; the declared-symbol `≤ 4` constraint
+/// (see [`declare_rounding_mode_symbol`]) makes those patterns unreachable, so the
+/// modeled sort has exactly its 5 inhabitants and each picks its exact mode's
+/// result. Per-mode results are byte-identical to the literal-mode fast path.
+fn apply_fp_rounded_symbolic(
+    arena: &mut TermArena,
+    items: &[SExpr],
+    rm: TermId,
+    operands: &[TermId],
+) -> Result<TermId, SmtError> {
+    rounding_mode_select(arena, rm, |arena, mode| {
+        apply_fp_rounded(arena, items, mode, operands)
+    })
+}
+
+/// Like [`apply_fp_rounded_symbolic`] but for an *indexed* head
+/// (`((_ to_fp eb sb) rm x)`, `((_ fp.to_sbv m) rm x)`, …) with a symbolic mode.
+fn apply_fp_rounded_indexed_symbolic(
+    arena: &mut TermArena,
+    items: &[SExpr],
+    rm: TermId,
+    operands: &[TermId],
+) -> Result<TermId, SmtError> {
+    rounding_mode_select(arena, rm, |arena, mode| {
+        apply_fp_rounded_indexed(arena, items, mode, operands)
+    })
+}
+
+/// Builds the right-nested 5-way `ite` over [`ALL_ROUNDING_MODES`] that selects
+/// `build(mode)` for the mode named by the symbolic `BitVec(ROUNDING_MODE_BITS)`
+/// term `rm`. The last mode is the innermost (unconditional) else; the
+/// declared-symbol `≤ 4` constraint keeps the unused patterns out of any model, so
+/// the selection is exact (see [`apply_fp_rounded_symbolic`]).
+fn rounding_mode_select(
+    arena: &mut TermArena,
+    rm: TermId,
+    mut build: impl FnMut(&mut TermArena, RoundingMode) -> Result<TermId, SmtError>,
+) -> Result<TermId, SmtError> {
+    // `rm` must be the modeled `BitVec(ROUNDING_MODE_BITS)`; reject anything else
+    // (a wrong-width term can never be a sound rounding mode).
+    if arena.sort_of(rm) != Sort::BitVec(ROUNDING_MODE_BITS) {
+        return Err(SmtError::Syntax(format!(
+            "symbolic rounding mode must be a RoundingMode (BitVec({ROUNDING_MODE_BITS})) term, \
+             got {:?}",
+            arena.sort_of(rm)
+        )));
+    }
+    // Fold from the last (innermost else) mode outward.
+    let mut iter = ALL_ROUNDING_MODES.iter().rev();
+    let (last_mode, _) = *iter.next().expect("ALL_ROUNDING_MODES is non-empty");
+    let mut acc = build(arena, last_mode)?;
+    for &(mode, value) in iter {
+        let token = arena.bv_const(ROUNDING_MODE_BITS, value)?;
+        let is_mode = arena.eq(rm, token)?;
+        let then = build(arena, mode)?;
+        acc = arena.ite(is_mode, then, acc)?;
+    }
+    Ok(acc)
 }
 
 fn parse_indexed_constant(arena: &mut TermArena, items: &[SExpr]) -> Result<TermId, SmtError> {

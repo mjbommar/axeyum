@@ -955,6 +955,121 @@ fn parses_and_evaluates_rounding_mode_fp_arithmetic() {
 }
 
 #[test]
+fn rounding_mode_sort_symbol_and_alias() {
+    // The `RoundingMode` sort is modeled as a `BitVec(3)`; a declared symbol
+    // carries the `≤ 4` well-formedness constraint, and a `define-fun` alias
+    // binding a literal mode resolves to the constant token.
+    let mut script = parse_script(
+        r"
+        (set-logic QF_FP)
+        (declare-const rm RoundingMode)
+        (define-fun rne () RoundingMode roundNearestTiesToEven)
+        (declare-const x Float32)
+        (assert (fp.eq (fp.add rm x x) (fp.add rne x x)))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+    // `rm` is a BitVec(3) symbol; the declaration added the `rm <= 4` constraint.
+    let rm = script.arena.find_symbol("rm").unwrap();
+    let rm_var = script.arena.var(rm);
+    assert_eq!(script.arena.sort_of(rm_var), Sort::BitVec(3));
+    // One assertion is the user assert; the other is the `rm <= 4` well-formedness.
+    assert_eq!(script.assertions.len(), 2);
+    // Under rm = 0 (RNE) the symbolic `fp.add rm x x` agrees with the alias
+    // `fp.add rne x x` for any x: the `fp.eq` body evaluates to true.
+    let x = script.arena.find_symbol("x").unwrap();
+    let mut asg = Assignment::new();
+    asg.set(rm, Value::Bv { width: 3, value: 0 });
+    // x = 1.0f32 = 0x3F800000.
+    asg.set(
+        x,
+        Value::Bv {
+            width: 32,
+            value: 0x3F80_0000,
+        },
+    );
+    // The user assertion (index 1; the wf constraint is index 0 from declare).
+    let body = script
+        .assertions
+        .iter()
+        .copied()
+        .find(|&a| eval(&script.arena, a, &asg) == Ok(Value::Bool(true)))
+        .expect("some assertion is true");
+    assert_eq!(eval(&script.arena, body, &asg).unwrap(), Value::Bool(true));
+}
+
+#[test]
+fn rounding_mode_literal_byte_identical_and_symbolic_modes_differ() {
+    // 1) Literal-mode op is byte-identical to the pre-symbolic-rm behavior:
+    //    fp.add RNE 1.0 1.0 == 2.0 over Float32 evaluates to true (ground).
+    let lit = parse_script(
+        r"
+        (set-logic QF_FP)
+        (assert (fp.eq
+                  (fp.add RNE
+                    (fp #b0 #b01111111 #b00000000000000000000000)
+                    (fp #b0 #b01111111 #b00000000000000000000000))
+                  (fp #b0 #b10000000 #b00000000000000000000000)))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+    assert_eq!(
+        eval(&lit.arena, lit.assertions[0], &Assignment::default()).unwrap(),
+        Value::Bool(true)
+    );
+
+    // 2) Symbolic rm: 1/3 over Float32 rounds *up* under RTP and *down* under RTN,
+    //    so `(fp.div rm 1.0 3.0)` yields different values under the two modes — a
+    //    `distinct`/disequality over modes is satisfiable. The user assertion
+    //    compares the symbolic quotient against the *literal-RTP* quotient: it
+    //    holds under rm = RTP (2) but not under rm = RTN (3), proving the 5-way
+    //    select picks the right mode.
+    let sym = parse_script(
+        r"
+        (set-logic QF_FP)
+        (declare-const rm RoundingMode)
+        (assert (fp.eq
+                  (fp.div rm
+                    (fp #b0 #b01111111 #b00000000000000000000000)
+                    (fp #b0 #b10000000 #b10000000000000000000000))
+                  (fp.div roundTowardPositive
+                    (fp #b0 #b01111111 #b00000000000000000000000)
+                    (fp #b0 #b10000000 #b10000000000000000000000))))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+    let rm = sym.arena.find_symbol("rm").unwrap();
+    // The user assertion is the one mentioning `fp.div` (the other is `rm <= 4`):
+    // its truth depends on the rm token (true under RTP, false under RTN).
+    let user = sym
+        .assertions
+        .iter()
+        .copied()
+        .find(|&a| {
+            let mut asg_up = Assignment::new();
+            asg_up.set(rm, Value::Bv { width: 3, value: 2 });
+            let mut asg_down = Assignment::new();
+            asg_down.set(rm, Value::Bv { width: 3, value: 3 });
+            eval(&sym.arena, a, &asg_up) != eval(&sym.arena, a, &asg_down)
+        })
+        .expect("the fp.div assertion's truth depends on the rounding mode");
+    let mut asg_up = Assignment::new();
+    asg_up.set(rm, Value::Bv { width: 3, value: 2 });
+    let mut asg_down = Assignment::new();
+    asg_down.set(rm, Value::Bv { width: 3, value: 3 });
+    // rm = RTP token (2) selects the RTP result → equal to the literal-RTP side.
+    assert_eq!(eval(&sym.arena, user, &asg_up).unwrap(), Value::Bool(true));
+    // rm = RTN token (3) selects the RTN result → differs from RTP → not equal.
+    assert_eq!(
+        eval(&sym.arena, user, &asg_down).unwrap(),
+        Value::Bool(false)
+    );
+}
+
+#[test]
 fn parses_symbolic_round_to_integral_and_fp_conversions() {
     use axeyum_ir::Sort;
 
