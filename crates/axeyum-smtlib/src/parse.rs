@@ -1979,21 +1979,73 @@ fn combine_match(
 
 // --- bounded string front-end (ADR-0029, first slice) ------------------------
 //
-// A `String` is represented as one bit-vector packing a length in the low
-// `STRING_LEN_WIDTH` bits and up to `STRING_MAX_LEN` content bytes above it
-// (byte `i` at bits `[LEN_WIDTH + 8i, +8)`). String variables carry a
-// canonical well-formedness constraint (length ≤ max; padding bytes zero), so
-// two equal strings share exactly one bit pattern and `=` / `distinct` over
-// strings are decided as plain bit-vector equality / inequality through the
-// existing BV path — no operator-dispatch changes. This is the bounded-model
-// fragment; `str.*` operations and lengths beyond the bound are future slices.
+// A `String` of maximum length `m` bytes is represented as one bit-vector
+// packing a length in the low `len_width(m)` bits and `m` content bytes above it
+// (byte `i` at bits `[len_width(m) + 8i, +8)`). The packed width is therefore
+// `string_total(m) = len_width(m) + 8m`, and `m` is recoverable from that width
+// alone (`string_max_len_of`) — strings are **self-describing by width**, so no
+// side table is needed. String variables carry a canonical well-formedness
+// constraint (length ≤ max; padding bytes zero), so two equal strings share
+// exactly one bit pattern and `=` / `distinct` over strings are decided as plain
+// bit-vector equality / inequality through the existing BV path.
+//
+// Variable `str.++` (concat over non-constant operands, ADR-0029 slice 2)
+// produces a result in a **wider** packed sort — `max_len(x) + max_len(y)` bytes,
+// exactly like the API `BoundedString::concat` — so the join never silently
+// overflows the operand bound. The result string is again self-describing, so
+// `str.len` / `=` / `str.at` / `str.contains` / prefix / suffix all decide over
+// it. When the summed bound exceeds [`STRING_BOUND_CAP`] the concat is a clean
+// `Unsupported` (Unknown to the consumer) — never a wrong verdict.
 
-/// Maximum bounded string length in bytes.
+/// Maximum bounded string length in bytes for a **declared symbol or a literal**.
+/// Concatenation may grow a *result* up to [`STRING_BOUND_CAP`].
 const STRING_MAX_LEN: u32 = 8;
-/// Bits holding a length in `0..=STRING_MAX_LEN`.
-const STRING_LEN_WIDTH: u32 = 4;
-/// Total packed width: length bits plus `STRING_MAX_LEN` content bytes.
-const STRING_TOTAL: u32 = STRING_LEN_WIDTH + STRING_MAX_LEN * 8;
+/// Hard cap on any packed string's `max_len` (the 128-bit content ceiling), so
+/// `len_width(16) + 8·16 = 5 + 128 = 133` bits stays a representable BV width.
+const STRING_BOUND_CAP: u32 = 16;
+
+/// Bits holding a length in `0..=m` for a string of maximum length `m`.
+const fn len_width(m: u32) -> u32 {
+    // bits to hold the value `m` (and every smaller length); matches
+    // `BoundedString::len_width` so the two encodings agree on widths.
+    32 - m.leading_zeros()
+}
+
+/// Total packed width of a string of maximum length `m`: length bits plus `m`
+/// content bytes.
+const fn string_total(m: u32) -> u32 {
+    len_width(m) + m * 8
+}
+
+/// Total packed width for a declared symbol / literal (`STRING_MAX_LEN` bytes).
+const STRING_TOTAL: u32 = string_total(STRING_MAX_LEN);
+
+/// Recovers a packed string's maximum length `m` from its bit-vector width `w`
+/// (the inverse of [`string_total`]). Returns `None` if `w` is not the width of
+/// any `m ∈ 1..=STRING_BOUND_CAP` — i.e. the term is a genuine `BitVec`, not a
+/// packed string — so a real `(_ BitVec w)` is never mistaken for a string.
+fn string_max_len_of(w: u32) -> Option<u32> {
+    (1..=STRING_BOUND_CAP).find(|&m| string_total(m) == w)
+}
+
+/// The maximum length of the packed string term `v`, from its sort width.
+///
+/// # Errors
+///
+/// [`SmtError::Unsupported`] if `v` is not a packed-string-shaped bit-vector
+/// (so a non-string operand to a `str.*` op declines rather than misbehaves).
+fn string_max_len(arena: &TermArena, v: TermId) -> Result<u32, SmtError> {
+    match arena.sort_of(v) {
+        Sort::BitVec(w) => string_max_len_of(w).ok_or_else(|| {
+            SmtError::Unsupported(format!(
+                "string operator applied to a non-string `BitVec({w})` (ADR-0029)"
+            ))
+        }),
+        s => Err(SmtError::Unsupported(format!(
+            "string operator applied to a non-string operand of sort {s:?} (ADR-0029)"
+        ))),
+    }
+}
 
 /// Packs a string literal's bytes into the canonical bit-vector representation
 /// (length low, content above, padding zero). Errors if it exceeds the bound.
@@ -2008,35 +2060,84 @@ fn pack_string_literal(arena: &mut TermArena, bytes: &[u8]) -> Result<TermId, Sm
         content |= u128::from(b) << (8 * i);
     }
     let packed = u128::from(u32::try_from(bytes.len()).expect("len ≤ STRING_MAX_LEN"))
-        | (content << STRING_LEN_WIDTH);
+        | (content << len_width(STRING_MAX_LEN));
     arena.bv_const(STRING_TOTAL, packed).map_err(SmtError::Ir)
 }
 
-/// The length field (a `BitVec(STRING_LEN_WIDTH)`) of a packed string.
-fn string_len(arena: &mut TermArena, v: TermId) -> Result<TermId, SmtError> {
-    arena
-        .extract(STRING_LEN_WIDTH - 1, 0, v)
-        .map_err(SmtError::Ir)
+/// The length field (a `BitVec(len_width(m))`) of a packed string of max length
+/// `m`.
+fn string_len_field(arena: &mut TermArena, v: TermId, m: u32) -> Result<TermId, SmtError> {
+    arena.extract(len_width(m) - 1, 0, v).map_err(SmtError::Ir)
 }
 
-/// Content byte `i` (a `BitVec(8)`) of a packed string.
-fn string_byte(arena: &mut TermArena, v: TermId, i: u32) -> Result<TermId, SmtError> {
-    let lo = STRING_LEN_WIDTH + i * 8;
+/// Content byte `i` (a `BitVec(8)`) of a packed string of max length `m`.
+fn string_byte_m(arena: &mut TermArena, v: TermId, i: u32, m: u32) -> Result<TermId, SmtError> {
+    let lo = len_width(m) + i * 8;
     arena.extract(lo + 7, lo, v).map_err(SmtError::Ir)
+}
+
+/// Re-packs a packed string `v` (max length `m`) into the layout of a string of
+/// max length `to` (`to ≥ m`): the length is zero-extended to the wider
+/// `len_width(to)`, and each content byte is moved to its position in the wider
+/// layout. A plain `zero_ext` would **not** work, because the content bytes start
+/// at bit `len_width(m)`, which differs from `len_width(to)` when the length
+/// widths differ. Under well-formedness the result denotes the same string, so
+/// two strings widened to a common `to` compare byte-for-byte.
+fn string_widen(arena: &mut TermArena, v: TermId, m: u32, to: u32) -> Result<TermId, SmtError> {
+    debug_assert!(to >= m, "string_widen only widens");
+    if to == m {
+        return Ok(v);
+    }
+    let len = string_len_field(arena, v, m)?;
+    let rlen = arena.zero_ext(len_width(to) - len_width(m), len)?;
+    // Assemble content bytes high-to-low for the wider layout (byte `to-1` … 0).
+    let zero8 = arena.bv_const(8, 0)?;
+    let mut content: Option<TermId> = None;
+    for i in (0..to).rev() {
+        let byte = if i < m {
+            string_byte_m(arena, v, i, m)?
+        } else {
+            zero8
+        };
+        content = Some(match content {
+            None => byte,
+            Some(acc) => arena.concat(acc, byte)?,
+        });
+    }
+    let content = content.expect("to ≥ 1");
+    arena.concat(content, rlen).map_err(SmtError::Ir)
+}
+
+/// Widens `x` and `y` to a shared max length `max(m_x, m_y)`, returning the
+/// re-packed terms and that common length. The comparison/relation builders run
+/// over the shared layout so they decide across mixed-width operands (e.g. a
+/// variable concat result against a literal).
+fn string_align(
+    arena: &mut TermArena,
+    x: TermId,
+    y: TermId,
+) -> Result<(TermId, TermId, u32), SmtError> {
+    let mx = string_max_len(arena, x)?;
+    let my = string_max_len(arena, y)?;
+    let m = mx.max(my);
+    let xw = string_widen(arena, x, mx, m)?;
+    let yw = string_widen(arena, y, my, m)?;
+    Ok((xw, yw, m))
 }
 
 /// `str.prefixof x y` — `x` is a prefix of `y`: `len(x) ≤ len(y)` and the first
 /// `len(x)` bytes match. A pure bit-vector/Boolean formula over the packed
 /// strings, so it decides both directions (no Int / theory-combination gap).
 fn string_prefixof(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId, SmtError> {
-    let xlen = string_len(arena, x)?;
-    let ylen = string_len(arena, y)?;
+    let (x, y, m) = string_align(arena, x, y)?;
+    let xlen = string_len_field(arena, x, m)?;
+    let ylen = string_len_field(arena, y, m)?;
     let mut acc = arena.bv_ule(xlen, ylen)?;
-    for i in 0..STRING_MAX_LEN {
-        let xb = string_byte(arena, x, i)?;
-        let yb = string_byte(arena, y, i)?;
+    for i in 0..m {
+        let xb = string_byte_m(arena, x, i, m)?;
+        let yb = string_byte_m(arena, y, i, m)?;
         let beq = arena.eq(xb, yb)?;
-        let idx = arena.bv_const(STRING_LEN_WIDTH, u128::from(i))?;
+        let idx = arena.bv_const(len_width(m), u128::from(i))?;
         let active = arena.bv_ult(idx, xlen)?; // i < len(x)
         let nactive = arena.not(active)?;
         let ok = arena.or(nactive, beq)?; // i ≥ len(x) ∨ bytes equal
@@ -2050,26 +2151,27 @@ fn string_prefixof(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId
 /// "`y` fits at `d` (`d + len(y) ≤ len(x)`) and matches there". Bounded
 /// (`O(MAX_LEN²)`), decides both directions.
 fn string_contains(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId, SmtError> {
-    let xlen = string_len(arena, x)?;
-    let ylen = string_len(arena, y)?;
+    let (x, y, m) = string_align(arena, x, y)?;
+    let xlen = string_len_field(arena, x, m)?;
+    let ylen = string_len_field(arena, y, m)?;
     // Widen lengths by one bit so `d + len(y)` cannot overflow the length width.
     let xlen_w = arena.zero_ext(1, xlen)?;
     let ylen_w = arena.zero_ext(1, ylen)?;
-    let wlen = STRING_LEN_WIDTH + 1;
+    let wlen = len_width(m) + 1;
     let mut any = arena.bool_const(false);
-    for d in 0..STRING_MAX_LEN {
+    for d in 0..m {
         let dconst = arena.bv_const(wlen, u128::from(d))?;
         let sum = arena.bv_add(dconst, ylen_w)?;
         let fits = arena.bv_ule(sum, xlen_w)?; // d + len(y) ≤ len(x)
         let mut matched = fits;
-        for j in 0..STRING_MAX_LEN {
-            if d + j >= STRING_MAX_LEN {
+        for j in 0..m {
+            if d + j >= m {
                 break; // x has no byte at d+j; under `fits` this forces j ≥ len(y)
             }
-            let xb = string_byte(arena, x, d + j)?;
-            let yb = string_byte(arena, y, j)?;
+            let xb = string_byte_m(arena, x, d + j, m)?;
+            let yb = string_byte_m(arena, y, j, m)?;
             let beq = arena.eq(xb, yb)?;
-            let jconst = arena.bv_const(STRING_LEN_WIDTH, u128::from(j))?;
+            let jconst = arena.bv_const(len_width(m), u128::from(j))?;
             let jactive = arena.bv_ult(jconst, ylen)?; // j < len(y)
             let njactive = arena.not(jactive)?;
             let ok = arena.or(njactive, beq)?; // j ≥ len(y) ∨ bytes equal
@@ -2084,25 +2186,26 @@ fn string_contains(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId
 /// `o = len(y) − len(x)`, the bytes match. Disjunction over `o` (pure BV/Bool,
 /// decides both directions).
 fn string_suffixof(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId, SmtError> {
-    let xlen = string_len(arena, x)?;
-    let ylen = string_len(arena, y)?;
+    let (x, y, m) = string_align(arena, x, y)?;
+    let xlen = string_len_field(arena, x, m)?;
+    let ylen = string_len_field(arena, y, m)?;
     let xlen_w = arena.zero_ext(1, xlen)?;
     let ylen_w = arena.zero_ext(1, ylen)?;
-    let wlen = STRING_LEN_WIDTH + 1;
+    let wlen = len_width(m) + 1;
     let mut any = arena.bool_const(false);
-    for o in 0..=STRING_MAX_LEN {
+    for o in 0..=m {
         let oconst = arena.bv_const(wlen, u128::from(o))?;
         let sum = arena.bv_add(oconst, xlen_w)?;
         let aligned = arena.eq(sum, ylen_w)?; // len(y) == o + len(x)
         let mut matched = aligned;
-        for i in 0..STRING_MAX_LEN {
-            if o + i >= STRING_MAX_LEN {
+        for i in 0..m {
+            if o + i >= m {
                 break; // y has no byte at o+i; under `aligned` this forces i ≥ len(x)
             }
-            let xb = string_byte(arena, x, i)?;
-            let yb = string_byte(arena, y, o + i)?;
+            let xb = string_byte_m(arena, x, i, m)?;
+            let yb = string_byte_m(arena, y, o + i, m)?;
             let beq = arena.eq(xb, yb)?;
-            let iconst = arena.bv_const(STRING_LEN_WIDTH, u128::from(i))?;
+            let iconst = arena.bv_const(len_width(m), u128::from(i))?;
             let iactive = arena.bv_ult(iconst, xlen)?; // i < len(x)
             let niactive = arena.not(iactive)?;
             let ok = arena.or(niactive, beq)?;
@@ -2115,75 +2218,237 @@ fn string_suffixof(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId
 
 /// `str.at s k` for a **constant** index `k`: the length-1 string holding byte
 /// `s[k]` when `0 ≤ k < len(s)` (and within the bound), else the empty string.
-/// The result is another packed string (no width growth), canonical, so it
-/// composes with equality. Pure BV/Bool — decides both directions.
+/// The result is a max-length-1 packed string (the smallest sort), canonical, so
+/// it composes with equality. Pure BV/Bool — decides both directions.
 fn string_at_const(arena: &mut TermArena, s: TermId, k: i128) -> Result<TermId, SmtError> {
+    let m = string_max_len(arena, s)?;
     // Out of the representable range: always the empty string (all-zero packing).
-    if k < 0 || k >= i128::from(STRING_MAX_LEN) {
-        return arena.bv_const(STRING_TOTAL, 0).map_err(SmtError::Ir);
+    if k < 0 || k >= i128::from(m) {
+        return arena.bv_const(string_total(1), 0).map_err(SmtError::Ir);
     }
-    let kk = u32::try_from(k).expect("0 ≤ k < STRING_MAX_LEN");
-    let slen = string_len(arena, s)?;
-    let kconst = arena.bv_const(STRING_LEN_WIDTH, u128::from(kk))?;
+    let kk = u32::try_from(k).expect("0 ≤ k < m");
+    let slen = string_len_field(arena, s, m)?;
+    let kconst = arena.bv_const(len_width(m), u128::from(kk))?;
     let active = arena.bv_ult(kconst, slen)?; // k < len(s)
-    let byte_k = string_byte(arena, s, kk)?;
+    let byte_k = string_byte_m(arena, s, kk, m)?;
     let zero8 = arena.bv_const(8, 0)?;
-    let one_len = arena.bv_const(STRING_LEN_WIDTH, 1)?;
-    let zero_len = arena.bv_const(STRING_LEN_WIDTH, 0)?;
+    // Result is a max-length-1 string: length width is `len_width(1) = 1`.
+    let one_len = arena.bv_const(len_width(1), 1)?;
+    let zero_len = arena.bv_const(len_width(1), 0)?;
     let rlen = arena.ite(active, one_len, zero_len)?;
     let rbyte = arena.ite(active, byte_k, zero8)?;
-    // Pack: content = zero-padding ++ byte0(rbyte); packed = content ++ length.
-    let zeros_hi = arena.bv_const((STRING_MAX_LEN - 1) * 8, 0)?;
-    let content = arena.concat(zeros_hi, rbyte)?;
-    arena.concat(content, rlen).map_err(SmtError::Ir)
+    // Pack: packed = byte0(rbyte) ++ length.
+    arena.concat(rbyte, rlen).map_err(SmtError::Ir)
 }
 
-/// `str.++` over **constant** strings: concatenate their bytes and pack the
-/// result (a literal of the true total length, so no width-growth/equality
-/// issue). Variable concatenation grows the bound and needs the typed-result
-/// front end (ADR-0029) — a clean `Unsupported`. An over-bound result is also
-/// `Unsupported` (handled by [`pack_string_literal`]).
-fn string_concat_const(arena: &mut TermArena, args: &[TermId]) -> Result<Vec<u8>, SmtError> {
-    let mut bytes: Vec<u8> = Vec::new();
-    for &arg in args {
-        let (len, content) = match arena.node(arg) {
-            TermNode::BvConst { width, value } if *width == STRING_TOTAL => {
-                let len = usize::try_from(*value & ((1u128 << STRING_LEN_WIDTH) - 1))
-                    .expect("length fits usize");
-                (len, *value >> STRING_LEN_WIDTH)
-            }
-            _ => {
-                return Err(SmtError::Unsupported(
-                    "str.++ is supported only for constant strings; variable concatenation \
-                     needs the typed-result front end (ADR-0029)"
-                        .to_owned(),
-                ));
-            }
+/// The bytes and total length of a **constant** packed string argument, or
+/// `None` if `arg` is not a string constant (so a mixed const/variable `str.++`
+/// folds the constant runs and concatenates the variable spans symbolically).
+fn string_const_bytes(arena: &TermArena, arg: TermId) -> Option<Vec<u8>> {
+    let (width, value) = match arena.node(arg) {
+        TermNode::BvConst { width, value } => (*width, *value),
+        _ => return None,
+    };
+    let m = string_max_len_of(width)?;
+    let lwm = len_width(m);
+    let len = usize::try_from(value & ((1u128 << lwm) - 1)).ok()?;
+    if len > m as usize {
+        return None; // not well-formed as a string of this max length
+    }
+    let content = value >> lwm;
+    let mut bytes = Vec::with_capacity(len);
+    for i in 0..len {
+        bytes.push(u8::try_from((content >> (8 * i)) & 0xff).expect("byte fits u8"));
+    }
+    Some(bytes)
+}
+
+/// `str.++` of two **packed-string** operands (constant or variable). Produces a
+/// result in the wider sort `max_len(x) + max_len(y)` (capped at
+/// [`STRING_BOUND_CAP`]), exactly like the API `BoundedString::concat`: the
+/// result length is `len(x) + len(y)`, and the result content is
+/// `content(x) | (content(y) << (len(x)·8))` with `x`'s padding masked off. So
+/// the join never overflows the operand bound, and the result is a self-describing
+/// packed string that the other `str.*` ops decide over. Over-`STRING_BOUND_CAP`
+/// is a clean `Unsupported`.
+#[allow(clippy::similar_names)] // len_x_r/len_y_r/len_x_c mirror the layout
+fn string_concat_pair(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId, SmtError> {
+    let mx = string_max_len(arena, x)?;
+    let my = string_max_len(arena, y)?;
+    let rm = mx + my;
+    if rm > STRING_BOUND_CAP {
+        return Err(SmtError::Unsupported(format!(
+            "str.++ result of bounded max length {rm} exceeds the cap {STRING_BOUND_CAP} \
+             (ADR-0029); the query needs a larger string bound"
+        )));
+    }
+    let rcw = rm * 8; // result content width
+    let rlw = len_width(rm); // result length width
+
+    let xlen = string_len_field(arena, x, mx)?;
+    let ylen = string_len_field(arena, y, my)?;
+    // result length = len_x + len_y, widened to the result's length width.
+    let len_x_r = arena.zero_ext(rlw - len_width(mx), xlen)?;
+    let len_y_r = arena.zero_ext(rlw - len_width(my), ylen)?;
+    let rlen = arena.bv_add(len_x_r, len_y_r)?;
+
+    // x content, repacked into the result's byte layout (low `mx` bytes).
+    let mut xcontent: Option<TermId> = None;
+    let zero8 = arena.bv_const(8, 0)?;
+    for i in (0..rm).rev() {
+        let byte = if i < mx {
+            string_byte_m(arena, x, i, mx)?
+        } else {
+            zero8
         };
-        for i in 0..len {
-            bytes.push(u8::try_from((content >> (8 * i)) & 0xff).expect("byte fits u8"));
+        xcontent = Some(match xcontent {
+            None => byte,
+            Some(acc) => arena.concat(acc, byte)?,
+        });
+    }
+    let x_content_r = xcontent.expect("rm ≥ 1");
+
+    // y content, repacked into the result's byte layout (low `my` bytes).
+    let mut ycontent: Option<TermId> = None;
+    for i in (0..rm).rev() {
+        let byte = if i < my {
+            string_byte_m(arena, y, i, my)?
+        } else {
+            zero8
+        };
+        ycontent = Some(match ycontent {
+            None => byte,
+            Some(acc) => arena.concat(acc, byte)?,
+        });
+    }
+    let y_content_r = ycontent.expect("rm ≥ 1");
+
+    // shift (in bits) for y = len_x * 8, in the result content width.
+    let len_x_c = arena.zero_ext(rcw - len_width(mx), xlen)?;
+    let three = arena.bv_const(rcw, 3)?; // *8
+    let shift = arena.bv_shl(len_x_c, three)?;
+
+    // mask x's content to its low len_x*8 bits (drop padding bytes).
+    let one = arena.bv_const(rcw, 1)?;
+    let pow = arena.bv_shl(one, shift)?; // 2^(len_x*8)
+    let mask = arena.bv_sub(pow, one)?; // low len_x*8 ones
+    let x_masked = arena.bv_and(x_content_r, mask)?;
+
+    // place y after x.
+    let y_shifted = arena.bv_shl(y_content_r, shift)?;
+    let rcontent = arena.bv_or(x_masked, y_shifted)?;
+
+    arena.concat(rcontent, rlen).map_err(SmtError::Ir)
+}
+
+/// `str.++` over `args`: left-fold [`string_concat_pair`]. A run of leading
+/// constant operands is folded into one literal first (keeping the tight literal
+/// width), then variable operands extend it pairwise. Zero operands is the empty
+/// string; one operand is itself.
+fn string_concat(arena: &mut TermArena, args: &[TermId]) -> Result<TermId, SmtError> {
+    if args.is_empty() {
+        return pack_string_literal(arena, &[]);
+    }
+    // Fold a leading constant prefix into a single literal (so `(str.++ "a" "b" v)`
+    // does not pay for two concat layers before reaching the variable `v`).
+    let mut idx = 0;
+    let mut const_bytes: Vec<u8> = Vec::new();
+    while idx < args.len() {
+        if let Some(bytes) = string_const_bytes(arena, args[idx]) {
+            const_bytes.extend_from_slice(&bytes);
+            idx += 1;
+        } else {
+            break;
         }
     }
-    Ok(bytes)
+    let mut acc = if idx > 0 {
+        // All-constant fast path keeps the exact-length literal (no width growth).
+        if idx == args.len() {
+            return pack_string_literal(arena, &const_bytes);
+        }
+        pack_string_literal(arena, &const_bytes)?
+    } else {
+        let first = args[0];
+        // Validate it really is a packed string before folding.
+        string_max_len(arena, first)?;
+        idx = 1;
+        first
+    };
+    for &arg in &args[idx..] {
+        acc = string_concat_pair(arena, acc, arg)?;
+    }
+    Ok(acc)
 }
 
-/// The canonical well-formedness constraint for a packed string `v`: its length
-/// is `≤ STRING_MAX_LEN`, and every content byte at or above the length is zero.
-fn string_wellformed(arena: &mut TermArena, v: TermId) -> Result<TermId, SmtError> {
-    let len = arena.extract(STRING_LEN_WIDTH - 1, 0, v)?;
-    let max = arena.bv_const(STRING_LEN_WIDTH, u128::from(STRING_MAX_LEN))?;
+/// The canonical well-formedness constraint for a packed string `v` of max length
+/// `m`: its length is `≤ m`, and every content byte at or above the length is
+/// zero.
+fn string_wellformed_m(arena: &mut TermArena, v: TermId, m: u32) -> Result<TermId, SmtError> {
+    let lwm = len_width(m);
+    let len = arena.extract(lwm - 1, 0, v)?;
+    let max = arena.bv_const(lwm, u128::from(m))?;
     let mut wf = arena.bv_ule(len, max)?;
     let zero8 = arena.bv_const(8, 0)?;
-    for i in 0..STRING_MAX_LEN {
-        let lo = STRING_LEN_WIDTH + i * 8;
+    for i in 0..m {
+        let lo = lwm + i * 8;
         let byte = arena.extract(lo + 7, lo, v)?;
         let byte_zero = arena.eq(byte, zero8)?;
-        let idx = arena.bv_const(STRING_LEN_WIDTH, u128::from(i))?;
+        let idx = arena.bv_const(lwm, u128::from(i))?;
         let active = arena.bv_ult(idx, len)?;
         let ok = arena.or(active, byte_zero)?;
         wf = arena.and(wf, ok)?;
     }
     Ok(wf)
+}
+
+/// Well-formedness for a declared `String` symbol (the `STRING_MAX_LEN` layout).
+fn string_wellformed(arena: &mut TermArena, v: TermId) -> Result<TermId, SmtError> {
+    string_wellformed_m(arena, v, STRING_MAX_LEN)
+}
+
+/// Semantic string equality (equal length, equal bytes below the length, padding
+/// ignored), aligning operands of differing widths first. Used by `=`/`distinct`
+/// only when two packed-string operands have **different** widths — equal-width
+/// operands keep plain bit-vector equality (sound by the canonical
+/// well-formedness, and unchanged from slice 1).
+fn string_equal(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId, SmtError> {
+    let (x, y, m) = string_align(arena, x, y)?;
+    let xlen = string_len_field(arena, x, m)?;
+    let ylen = string_len_field(arena, y, m)?;
+    let mut acc = arena.eq(xlen, ylen)?;
+    for i in 0..m {
+        let idx = arena.bv_const(len_width(m), u128::from(i))?;
+        let active = arena.bv_ult(idx, xlen)?; // i < len(x) == len(y)
+        let bx = string_byte_m(arena, x, i, m)?;
+        let by = string_byte_m(arena, y, i, m)?;
+        let beq = arena.eq(bx, by)?;
+        let nactive = arena.not(active)?;
+        let implied = arena.or(nactive, beq)?;
+        acc = arena.and(acc, implied)?;
+    }
+    Ok(acc)
+}
+
+/// `=`/`distinct` over a pair: plain bit-vector equality when the operands share
+/// a sort, but semantic [`string_equal`] when both are packed strings of
+/// **different** widths (e.g. a variable `str.++` result vs a literal). Returns
+/// `None` (deferring to the caller's plain `arena.eq`) when the operands are not
+/// both same-shaped or both string-shaped — so non-string equality is untouched.
+fn string_aware_eq(
+    arena: &mut TermArena,
+    a: TermId,
+    b: TermId,
+) -> Result<Option<TermId>, SmtError> {
+    let (Sort::BitVec(wa), Sort::BitVec(wb)) = (arena.sort_of(a), arena.sort_of(b)) else {
+        return Ok(None);
+    };
+    if wa == wb {
+        return Ok(None); // same sort — plain eq (slice-1 behavior, unchanged)
+    }
+    if string_max_len_of(wa).is_some() && string_max_len_of(wb).is_some() {
+        return Ok(Some(string_equal(arena, a, b)?));
+    }
+    Ok(None) // genuinely differing BV widths: let `arena.eq` raise its sort error
 }
 
 fn parse_atom(
@@ -2626,7 +2891,8 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
         // (`(>= (str.len s) 3)`, `(= (str.len s) 0)`, …).
         "str.len" => {
             need(1)?;
-            let len = arena.extract(STRING_LEN_WIDTH - 1, 0, args[0])?;
+            let m = string_max_len(arena, args[0])?;
+            let len = string_len_field(arena, args[0], m)?;
             arena.bv2nat(len)?
         }
         // `str.prefixof x y` — pure BV/Bool over packed strings; decides both
@@ -2659,11 +2925,9 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
             };
             string_at_const(arena, args[0], k)?
         }
-        // `str.++` over constant strings folds to a literal (ADR-0029).
-        "str.concat" | "str.++" => {
-            let bytes = string_concat_const(arena, args)?;
-            pack_string_literal(arena, &bytes)?
-        }
+        // `str.++` — variable concatenation grows into a wider packed sort; a run
+        // of constant operands folds to a literal (ADR-0029 slice 2).
+        "str.concat" | "str.++" => string_concat(arena, args)?,
         // `(and x)` / `(or x)` with a single operand denote `x`: an n-ary
         // connective folded over one argument is that argument (the identity of
         // `∧`/`∨`). SMT-LIB's `:left-assoc` grammar nominally wants ≥2 operands,
@@ -2695,9 +2959,16 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
             } else {
                 args.to_vec()
             };
-            let mut acc = arena.eq(eq_args[0], eq_args[1])?;
+            let eq_pair =
+                |arena: &mut TermArena, p: TermId, q: TermId| -> Result<TermId, SmtError> {
+                    match string_aware_eq(arena, p, q)? {
+                        Some(e) => Ok(e),
+                        None => arena.eq(p, q).map_err(SmtError::Ir),
+                    }
+                };
+            let mut acc = eq_pair(arena, eq_args[0], eq_args[1])?;
             for pair in eq_args.windows(2).skip(1) {
-                let e = arena.eq(pair[0], pair[1])?;
+                let e = eq_pair(arena, pair[0], pair[1])?;
                 acc = arena.and(acc, e)?;
             }
             acc
@@ -2711,7 +2982,10 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
             let mut acc = None;
             for i in 0..args.len() {
                 for j in i + 1..args.len() {
-                    let e = arena.eq(args[i], args[j])?;
+                    let e = match string_aware_eq(arena, args[i], args[j])? {
+                        Some(e) => e,
+                        None => arena.eq(args[i], args[j])?,
+                    };
                     let ne = arena.not(e)?;
                     acc = Some(match acc {
                         Some(prev) => arena.and(prev, ne)?,
@@ -3078,7 +3352,7 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
                 return Err(SmtError::Unsupported(format!(
                     "string/regex operator `{other}` is outside the wired bounded subset \
                      (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, \
-                     str.at (const idx), str.++ (const args), = / distinct over String"
+                     str.at (const idx), str.++ (variable, bounded), = / distinct over String"
                 )));
             }
             if let Some(func) = arena.find_function(other) {

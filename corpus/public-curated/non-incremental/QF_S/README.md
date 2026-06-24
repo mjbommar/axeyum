@@ -40,48 +40,71 @@ declined as a clean `Unsupported`. **Soundness is by construction**: an
 incomplete or unsupported case returns `unknown`/`unsupported`, never a wrong
 verdict.
 
-## Measured head-to-head (2026-06-24)
+## Measured head-to-head
 
 `qf-s-cvc5-regress-clean-solver-vs-z3-10s.json`, `--timeout-ms 10000 --jobs 4`:
 
-- **files 123**. axeyum **decides 4** (sat 3, unsat 1), **unknown 1**
-  (incomplete — needs more than the bounded representation), **unsupported 118**
+### Slice 2 — variable `str.++` (2026-06-24)
+
+- **files 123**. axeyum **decides 13** (sat 9, unsat 4), **unknown 2**
+  (incomplete — needs more than the bounded representation), **unsupported 108**
   (declined cleanly), errors 0.
-- **compared 4, agree 4, DISAGREE 0.** Every decided verdict matches both the Z3
-  4.13.3 binary **and** the benchmark's `(set-info :status …)` annotation
-  (independent double-check).
-- PAR-2 mean 4.001 s (dominated by the unsupported/unknown timeout accounting,
-  not solve cost — the 4 decided instances finish in < 10 ms each).
+- **compared 13, agree 13, DISAGREE 0.** Every decided verdict matches both the
+  Z3 4.13.3 binary **and** the benchmark's `(set-info :status …)` annotation
+  (independent double-check), including the soundness regression
+  `r0_QF_SLIA_unsound-0908.smt2`.
+- Variable `str.++` (concat over non-constant operands) and the operators that
+  share its representation now decide: `str.len`, `=`/`distinct`, `str.at`
+  (const idx), `str.contains`, `str.prefixof`, `str.suffixof` over variable
+  strings and over concat results. Slice 1 measured decided 4 / unsupported 118;
+  slice 2 is decided 13 / unsupported 108.
 
-A low decide-rate is expected and fine: the win is **opening QF_S soundly with
+### Slice 1 — bounded packed-BV strings (2026-06-24)
+
+- decided 4 (sat 3, unsat 1), unknown 1, unsupported 118, errors 0; compared 4,
+  agree 4, DISAGREE 0.
+
+A modest decide-rate is expected and fine: the win is **growing QF_S soundly with
 DISAGREE = 0**. The bounded packed-BV fragment is the foundation; the
-decomposition below is the path to raising the decide-rate.
+decomposition below is the path to raising the decide-rate further.
 
-## Slice-2 decomposition (raise the decide-rate, stay sound)
+## How variable `str.++` decides (slice 2)
 
-The 118 unsupported instances break down by the first gating operator (the
+The parser's packed-string layout is **self-describing by width**: a string of
+maximum length `m` is one bit-vector packing a `len_width(m)`-bit length and `m`
+content bytes, so `m` is recoverable from the bit-vector width alone (no side
+table). Variable `str.++ a b` produces a **wider** packed string of maximum
+length `max_len(a) + max_len(b)` — exactly like the solver-side
+`axeyum_solver::strings::BoundedString::concat` — so the join never silently
+overflows the operand bound. The result length is `len(a) + len(b)` and the
+content is `content(a) | (content(b) << (len(a)·8))` with `a`'s padding masked
+off; the result is again a self-describing packed string, so `str.len`, `=`,
+`str.at`, `str.contains`, prefix/suffix all decide over it. Declared symbols and
+literals are `STRING_MAX_LEN = 8` bytes; a concat result is capped at
+`STRING_BOUND_CAP = 16` bytes (the 128-bit content ceiling). A concat whose
+summed bound exceeds the cap declines as `Unsupported` (Unknown to the consumer)
+— **never a wrong verdict**.
+
+## Slice-3 decomposition (raise the decide-rate, stay sound)
+
+The remaining unsupported instances break down by the first gating operator (the
 solver's `axeyum_solver::strings::BoundedString` API **already** implements all
-of these end-to-end — the remaining work is purely front-end wiring of the
-typed-result `StrTerm` (len, content) representation, which differs from the
-parser's single packed-BV layout):
+of these end-to-end — the remaining work is front-end wiring onto the same
+self-describing packed layout):
 
-| count | gap | slice-2 action |
-|---|---|---|
-| 36 | variable `str.++` | typed-result concat (grows the bound); the single biggest win |
-| ~40 | regex (`str.to_re`, `re.range`, `re.++`, `re.*`, `re.all/none/allchar`) | wire `str.in_re` + the `Regex` NFA fragment already in the solver |
-| 6 | `str.substr` | wire `BoundedString::substr`/`substr_at` |
-| 5 | `str.replace` | wire `BoundedString::replace`/`replace_same_len` |
-| 5 | `str.to_code` / 2 `str.from_code` | wire `to_code`/`from_code` |
-| 4+3 | `str.from_int` / `str.to_int` | wire `from_int`/`to_int` (QF_SLIA Int bridge) |
-| 2 | `str.indexof` | wire `index_of` (constant `from`) |
-| 2+1 | `str.<` / `str.<=` | wire `less`/`less_equal` |
-| 7 | over-bound literal (> 8 bytes) | raise `STRING_MAX_LEN` toward the 16-byte cap |
-| residual | `str.update`, `str.to_lower`, `str.replace_re_all`, `Seq` | genuinely unsupported / unbounded — remain a sound decline |
+| gap | slice-3 action |
+|---|---|
+| regex (`str.to_re`, `re.range`, `re.++`, `re.*`, `re.all/none/allchar`, `str.in_re`) | wire the `Regex` NFA fragment already in the solver |
+| `str.substr` | wire `BoundedString::substr`/`substr_at` (result in a smaller sort) |
+| `str.replace` | wire `BoundedString::replace`/`replace_same_len` |
+| `str.to_code` / `str.from_code` | wire `to_code`/`from_code` |
+| `str.from_int` / `str.to_int` | wire `from_int`/`to_int` (QF_SLIA Int bridge) |
+| `str.indexof` | wire `index_of` (constant `from`) |
+| `str.<` / `str.<=` | wire `less`/`less_equal` |
+| over-bound literal (> 8 bytes) | raise `STRING_MAX_LEN` toward the 16-byte cap |
+| `str.update`, `str.to_lower`, `str.replace_re_all`, `Seq` | genuinely unsupported / unbounded — remain a sound decline |
 
-The principled next step is to migrate the parser's string representation onto
-the solver's richer `StrTerm` (separate `len`/`content` terms with sort growth),
-which unlocks variable concat, substr/replace/indexof, and the regex NFA in one
-coherent slice — each gated by the same DISAGREE = 0 re-measure.
+Each slice is gated by the same DISAGREE = 0 re-measure.
 
 Reproduce the curation:
 

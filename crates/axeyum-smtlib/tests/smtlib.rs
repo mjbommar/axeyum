@@ -1328,6 +1328,116 @@ fn string_at_and_const_concat_eval() {
     assert!(!eval_string_script(text, pack_str(b"ho")), "s ≠ \"hi\"");
 }
 
+/// Evaluates every assertion of a parsed script under concrete assignments of the
+/// named string symbols (each to its packed bit-vector value), AND-ing the Bool
+/// results. The packed width is taken from each symbol's declared sort, so it
+/// works for the `STRING_MAX_LEN` declared layout.
+fn eval_string_script_vars(text: &str, vars: &[(&str, &[u8])]) -> bool {
+    let mut script = parse_script(text).expect("script parses");
+    let mut asg = Assignment::new();
+    for &(name, bytes) in vars {
+        let sym = script.arena.find_symbol(name).expect("symbol declared");
+        let v = script.arena.var(sym);
+        let Sort::BitVec(width) = script.arena.sort_of(v) else {
+            panic!("string symbol should be a bit-vector");
+        };
+        asg.set(
+            sym,
+            Value::Bv {
+                width,
+                value: pack_str(bytes),
+            },
+        );
+    }
+    script
+        .assertions
+        .iter()
+        .all(|&a| eval(&script.arena, a, &asg).unwrap() == Value::Bool(true))
+}
+
+#[test]
+fn variable_concat_length_and_equality_eval() {
+    // (= (str.++ a b) "xy") ∧ (= (str.len a) 1): the only witnesses pair a one-byte
+    // `a` with the matching `b` so the concat spells "xy". Oracle-checked by
+    // concrete evaluation of the packed-BV encoding (no solver dependency).
+    let text = "(declare-fun a () String)\n\
+                (declare-fun b () String)\n\
+                (assert (= (str.++ a b) \"xy\"))\n\
+                (assert (= (str.len a) 1))\n(check-sat)\n";
+    assert!(
+        eval_string_script_vars(text, &[("a", b"x"), ("b", b"y")]),
+        "a=\"x\", b=\"y\" ⇒ a++b = \"xy\", len a = 1"
+    );
+    assert!(
+        !eval_string_script_vars(text, &[("a", b"xy"), ("b", b"")]),
+        "len a = 2 violates the len-1 assertion"
+    );
+    assert!(
+        !eval_string_script_vars(text, &[("a", b"x"), ("b", b"z")]),
+        "a++b = \"xz\" ≠ \"xy\""
+    );
+}
+
+#[test]
+fn variable_concat_length_conflict_is_unsat_shaped() {
+    // (= (str.++ a b) "x") ∧ (= (str.len a) 1) ∧ (= (str.len b) 1): the concat would
+    // have length 2, but "x" has length 1 — no witness, a small UNSAT.
+    let text = "(declare-fun a () String)\n\
+                (declare-fun b () String)\n\
+                (assert (= (str.++ a b) \"x\"))\n\
+                (assert (= (str.len a) 1))\n\
+                (assert (= (str.len b) 1))\n(check-sat)\n";
+    // Every concrete assignment with len a = len b = 1 makes a++b length 2 ≠ 1.
+    for a in [&b"x"[..], b"y", b"z"] {
+        for b in [&b"x"[..], b"y", b"a"] {
+            assert!(
+                !eval_string_script_vars(text, &[("a", a), ("b", b)]),
+                "len(a)=len(b)=1 ⇒ |a++b| = 2 ≠ 1"
+            );
+        }
+    }
+}
+
+#[test]
+fn variable_concat_at_and_contains_decide() {
+    // str.at and str.contains over a variable concat result decide via the wider
+    // packed sort. (= (str.at (str.++ a b) 0) "h") picks the first byte of a++b.
+    let text = "(declare-fun a () String)\n\
+                (declare-fun b () String)\n\
+                (assert (= (str.at (str.++ a b) 0) \"h\"))\n\
+                (assert (str.contains (str.++ a b) \"i\"))\n(check-sat)\n";
+    assert!(
+        eval_string_script_vars(text, &[("a", b"hi"), ("b", b"")]),
+        "a++b = \"hi\": byte0 = 'h', contains \"i\""
+    );
+    assert!(
+        eval_string_script_vars(text, &[("a", b"h"), ("b", b"i")]),
+        "a++b = \"hi\" across the boundary"
+    );
+    assert!(
+        !eval_string_script_vars(text, &[("a", b"ab"), ("b", b"i")]),
+        "a++b = \"abi\": byte0 = 'a' ≠ 'h'"
+    );
+}
+
+#[test]
+fn variable_concat_over_bound_declines_gracefully() {
+    // Two declared strings are max_len 8 each, so a++b is max_len 16 (fits the cap).
+    // A *third* concat would be max_len 24 > the 16-byte cap, so it must decline as
+    // Unsupported (Unknown to the consumer) — never a wrong verdict.
+    let err = parse_script(
+        "(declare-fun a () String)\n\
+         (declare-fun b () String)\n\
+         (declare-fun c () String)\n\
+         (assert (= (str.++ (str.++ a b) c) \"z\"))\n(check-sat)\n",
+    )
+    .expect_err("max_len 24 exceeds the 16-byte cap");
+    let SmtError::Unsupported(msg) = err else {
+        panic!("expected Unsupported for the over-cap concat, got {err:?}");
+    };
+    assert!(msg.contains("exceeds the cap"), "actionable msg: {msg}");
+}
+
 #[test]
 fn string_prefix_and_suffix_eval() {
     let text = "(declare-fun s () String)\n\
