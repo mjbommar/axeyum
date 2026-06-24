@@ -46,6 +46,34 @@ vacuous verdict) when the flat assertion view would silently solve a different
 problem than the source — specifically when a `check-sat-assuming` carries inline
 assumptions, or zero assertions parse from constraint-bearing source text.
 
+## QF_UF: `cvc5-regress-clean-bounded` (88 files)
+
+The QF_UF slice is committed as `cvc5-regress-clean-bounded`: the 88 of 103
+otherwise-clean QF_UF files on which the `check_auto` dispatcher respects the
+`--timeout-ms` budget. **15** files were excluded for a *measurement* (not
+soundness) reason — on them `check_auto`'s EUF path does not currently honor the
+solve timeout, so the harness cannot bound the run. They are listed here so the
+exclusion is reproducible and so the gap can be re-checked once the timeout is
+threaded through that path:
+
+```
+cli__regress1__nl__nl_uf_lalt.smt2
+cli__regress1__uflia__FIREFLY_luke_1b_e2_3049_e7_1173.ec.minimized.smt2
+cli__regress1__uflia__microwave21.ec.minimized.smt2
+cli__regress1__uflia__simple_cyclic2.smt2
+cli__regress2__hash_sat_06_19.smt2
+cli__regress2__hash_sat_07_17.smt2
+cli__regress2__hash_sat_09_09.smt2
+cli__regress2__hash_sat_10_09.smt2
+cli__regress2__javafe.ast.StandardPrettyPrint.319_no_forall.smt2
+cli__regress2__javafe.ast.WhileStmt.447_no_forall.smt2
+cli__regress2__nl__ufnia-factor-open-proof.smt2
+cli__regress2__ooo.rf6.smt2
+cli__regress2__ooo.tag10.smt2
+cli__regress2__simplify.javafe.ast.ArrayInit.35_without_quantification2.smt2
+cli__regress4__xs-11-20-5-2-5-3.smt2
+```
+
 ## Note on the Z3 comparison oracle
 
 The in-repo `Z3Backend` only supports `QF_BV`; it declines UF/arithmetic. For these
