@@ -38,20 +38,40 @@
 //! self-checked ground truth) is a **hard test failure** — this is the
 //! soundness guard. We never trust an unverified decided result.
 //!
-//! # The three families and their levers
+//! # The five families and their levers
 //!
 //! | family          | knob `N` scales …                                  | roadmap lever                                                  |
 //! |-----------------|----------------------------------------------------|----------------------------------------------------------------|
 //! | `bv_reduction`  | depth of a constant-folding multiplier tower       | `QF_BV` **word-level reduction** (`preprocess`, ADR-0037)     |
 //! | `lia_cuts`      | size/coupling of an integer-linear system          | `QF_LIA` **branch-and-bound** (the bounded integer engine)    |
 //! | `string_bound`  | required string length                             | **bounded-string** `STRING_MAX_LEN` (currently 8, ADR-0029)   |
+//! | `nra_degree`    | even degree of a shifted sum-of-powers refutation  | `QF_NRA` **CAD / high-degree refutation** (the NRA decider)   |
+//! | `nia_unsat`     | bound/modulus of an integer-nonlinear refutation   | `QF_NIA` **integer-nonlinear UNSAT** (the NIA decider gap)    |
 //!
 //! Each family's fall-off is *attributable to its lever*: `bv_reduction` decides
 //! far past where the same instances fall off with `preprocess` **disabled**
 //! (proving reduction is doing the work — see `bv_reduction_falloff_is_the_lever`);
-//! `string_bound` falls off exactly at the packed-string bound. When a lever
+//! `string_bound` falls off exactly at the packed-string bound; `nra_degree`
+//! falls off at the CAD/high-degree-SOS refutation cliff; `nia_unsat` sits at the
+//! measured integer-nonlinear blind spot (frontier `0` today — a tracking row
+//! that *rises the moment the NIA decider gains UNSAT capability*). When a lever
 //! deepens, the corresponding baseline can be bumped — gradual progress, made
 //! visible and attributable.
+//!
+//! ## `nra_degree` and `nia_unsat` are ported from the measured graduated corpus
+//!
+//! The two nonlinear families port the by-construction UNSAT constructions of the
+//! neutral graduated corpus (`scripts/gen-graduated-nra-nia.py`, commit
+//! `97d903b`) into Rust generators, so the oracle-free CI dashboard tracks the
+//! exact NRA/NIA decider frontiers that the neutral measurement pinned:
+//!
+//! - `nra_degree` ports **`sos-strict-unsat-dN`**: `(x-1)^{2d} + (y-2)^{2d} + 1
+//!   < 0`, infeasible because a sum of even powers plus 1 is `>= 1 > 0`. The
+//!   measured cliff is degree `~4` (degrees `6/8/10` → `unknown` today).
+//! - `nia_unsat` ports **`no-square-mod-bN`**: `x^2 = m·t + r` with `r` a
+//!   quadratic **non-residue** mod `m` and `0 <= x < b·m` — no integer square is
+//!   `≡ r (mod m)`. The measured frontier is `0` (axeyum returns `unknown` on
+//!   all): an UNSAT blind spot, captured as a tracking row.
 
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
@@ -99,6 +119,25 @@ const BASELINE_LIA_CUTS: u32 = 20;
 /// is deterministic (a hard packing bound, not a timing edge), so the floor sits
 /// exactly at the measured frontier. Rises when the bound is raised.
 const BASELINE_STRING_BOUND: u32 = 8;
+
+/// `nra_degree`: largest even-degree exponent `2N` whose shifted sum-of-powers
+/// refutation `(x-1)^{2N} + (y-2)^{2N} + 1 < 0` axeyum refutes (UNSAT) within
+/// budget. The knob `N` is the *half-degree*, so instance `N` has degree `2N`.
+/// Measured frontier ≈ 2 (degree 4); the high-degree shifted SOS at `N=3,4,5`
+/// (degrees 6/8/10) degrades to `unknown` today — that is the only NRA gap the
+/// neutral measurement found. Rises when CAD/high-degree-SOS refutation deepens
+/// (the concurrent NRA-decider lane).
+const BASELINE_NRA_DEGREE: u32 = 2;
+
+/// `nia_unsat`: largest bound multiplier `N` whose integer-nonlinear
+/// `no-square-mod` refutation axeyum refutes (UNSAT) within budget. The measured
+/// frontier is **0** — axeyum returns `unknown` on every `N` today (the NIA
+/// decider has no integer-nonlinear UNSAT capability yet). A baseline of `0` is
+/// *correct and useful*: it is a high-signal tracking row for an unfilled
+/// capability, and `frontier >= 0` always holds, so the test PASSES and PRINTS
+/// the live frontier — which RISES above `0` the moment the NIA decider gains
+/// integer-nonlinear UNSAT power (then the floor is bumped).
+const BASELINE_NIA_UNSAT: u32 = 0;
 
 /// The largest `N` any family is ever swept to (a hard ceiling so a regression
 /// that suddenly decides "everything" can't run forever).
@@ -628,6 +667,344 @@ fn string_bound_point(n: u32, config: &SolverConfig) -> CurvePoint {
     }
 }
 
+// ===========================================================================
+// Family 4: nra_degree — lever: QF_NRA CAD / high-degree refutation.
+// ===========================================================================
+//
+// Instance `N` is the shifted sum-of-even-powers infeasibility ported from the
+// neutral graduated corpus' `sos-strict-unsat-dN` family
+// (`scripts/gen-graduated-nra-nia.py`, commit `97d903b`):
+//
+//     (assert (< (+ (x-1)^{2N} (y-2)^{2N} 1.0) 0.0))   over Real x, y
+//
+// where `(x-1)^{2N}` and `(y-2)^{2N}` are *even* powers, hence `>= 0` for every
+// real, so the asserted sum is `>= 1 > 0` and the strict `< 0` is impossible:
+// UNSAT by construction, for every half-degree `N >= 1`. As `N` grows the degree
+// `2N` rises and the CAD/high-degree refutation gets harder — the frontier is the
+// largest degree axeyum refutes, *the reach of the NRA decider's high-degree
+// refutation*. The measured cliff is `N=2` (degree 4); degrees 6/8/10 → unknown.
+//
+// Self-check (oracle-free, independent of the bit-blast/CAD search path): the
+// UNSAT is a from-first-principles nonnegativity fact — an even power of any real
+// is `>= 0`, so the sum of two even powers plus 1 is `>= 1`, never `< 0`. We
+// assert that fact directly AND bounded-verify it over a rational sample grid
+// (no grid point satisfies the strict inequality), so a corrupted generator that
+// emitted a satisfiable instance is caught before the solver is trusted.
+
+/// The fixed real shifts for the two `nra_degree` variables (matching the ported
+/// `sos-strict-unsat` construction: `(x-1)` and `(y-2)`).
+const NRA_SHIFTS: [i64; 2] = [1, 2];
+
+/// `(* base base … )` `e` times as an SMT-LIB s-expression, `e >= 1`.
+fn smt_power(base: &str, e: u32) -> String {
+    if e == 1 {
+        return base.to_string();
+    }
+    let mut s = String::from("(*");
+    for _ in 0..e {
+        s.push(' ');
+        s.push_str(base);
+    }
+    s.push(')');
+    s
+}
+
+/// The `sos-strict-unsat` SMT-LIB text for half-degree `N` (so even degree
+/// `2N`): `(x-1)^{2N} + (y-2)^{2N} + 1 < 0`, an UNSAT real-nonlinear instance.
+fn nra_degree_smtlib(n: u32) -> String {
+    let deg = 2 * n;
+    let xm = format!("(- x {}.0)", NRA_SHIFTS[0]);
+    let ym = format!("(- y {}.0)", NRA_SHIFTS[1]);
+    let t1 = smt_power(&xm, deg);
+    let t2 = smt_power(&ym, deg);
+    format!(
+        "(set-logic QF_NRA)\n\
+         (set-info :status unsat)\n\
+         (declare-fun x () Real)\n\
+         (declare-fun y () Real)\n\
+         (assert (< (+ {t1} {t2} 1.0) 0.0))\n\
+         (check-sat)\n"
+    )
+}
+
+/// Independently confirm the `nra_degree` instance is genuinely UNSAT, with NO
+/// solver involved. The strict inequality `(x-1)^{2N} + (y-2)^{2N} + 1 < 0` is
+/// impossible because each even power is `>= 0`, so the sum is `>= 1`. We
+/// re-establish that two ways:
+///
+/// 1. **First-principles nonnegativity**: `2N` is even, so `t^{2N} >= 0` for all
+///    real `t`; the construction is sound iff the exponent is even and `>= 2`.
+/// 2. **Bounded rational grid**: evaluate the left-hand side at a dense grid of
+///    rational `(x, y)` (including the shift centers, where the powers vanish and
+///    the value is the minimum `1`) and confirm NO point makes it `< 0` — a
+///    concrete refutation of the strict inequality on the sampled region.
+///
+/// Returns `true` iff both hold (the instance is UNSAT by construction).
+fn nra_degree_self_check(n: u32) -> bool {
+    nra_degree_self_check_with_degree(2 * n)
+}
+
+/// The body of [`nra_degree_self_check`] parameterized on the raw exponent, so a
+/// soundness-negative test can feed it a corrupted (odd) degree and confirm the
+/// check REJECTS it. Used with an even degree in the real path.
+fn nra_degree_self_check_with_degree(deg: u32) -> bool {
+    // (1) The exponent must be a positive even number for the positivity argument.
+    if deg < 2 || deg % 2 != 0 {
+        return false;
+    }
+    // (2) Bounded rational grid in steps of 1/4 over [-3, 5] in both x and y,
+    // which contains both shift centers (x=1, y=2 — where each power is 0 and the
+    // LHS attains its minimum of exactly 1). Exact rational arithmetic via i128
+    // numerator over a fixed denominator power, so there is no float rounding.
+    let denom: i128 = 4; // grid step 1/4
+    let lo: i128 = -3 * denom;
+    let hi: i128 = 5 * denom;
+    for xi in lo..=hi {
+        for yi in lo..=hi {
+            // value = (x-1)^deg + (y-2)^deg + 1, computed as exact rationals; we
+            // only need its SIGN, so compare numerators over the common positive
+            // denominator denom^deg.
+            let dx = xi - i128::from(NRA_SHIFTS[0]) * denom; // numerator of (x-1) over denom
+            let dy = yi - i128::from(NRA_SHIFTS[1]) * denom; // numerator of (y-2) over denom
+            let px = ipow_i128(dx, deg); // (x-1)^deg numerator over denom^deg
+            let py = ipow_i128(dy, deg);
+            let dpow = ipow_i128(denom, deg); // common denominator (positive)
+            // value * denom^deg = px + py + denom^deg  (all over denom^deg > 0).
+            let value_num = px + py + dpow;
+            // UNSAT means NO grid point satisfies value < 0; value_num shares the
+            // positive denominator's sign, so value < 0 iff value_num < 0.
+            if value_num < 0 {
+                return false; // a satisfying point => the generator is corrupt
+            }
+        }
+    }
+    true
+}
+
+/// `base^exp` in `i128`; `exp` small (degrees stay <= 10 in the sweep) and the
+/// grid keeps `base` tiny, so this never overflows in practice. Saturating to be
+/// safe — a saturated (still-positive) even power can only *over*-state the LHS,
+/// so it can never spuriously report a satisfying point.
+fn ipow_i128(base: i128, exp: u32) -> i128 {
+    let mut acc: i128 = 1;
+    for _ in 0..exp {
+        acc = acc.saturating_mul(base);
+    }
+    acc
+}
+
+/// Solve one `nra_degree` instance end-to-end via `solve_smtlib` (the SMT-LIB
+/// text front door, like `string_bound`). Ground truth is UNSAT; a decided `sat`
+/// is a hard soundness failure, `unknown` past the cliff is the benign fall-off.
+fn nra_degree_point(n: u32, config: &SolverConfig) -> CurvePoint {
+    assert!(
+        nra_degree_self_check(n),
+        "nra_degree N={n}: the constructed instance (degree {}) failed its own \
+         independent UNSAT self-check (nonnegativity + bounded grid)",
+        2 * n,
+    );
+    let text = nra_degree_smtlib(n);
+    solve_smtlib_unsat_point("nra_degree", n, &text, config)
+}
+
+// ===========================================================================
+// Family 5: nia_unsat — lever: QF_NIA integer-nonlinear UNSAT (the decider gap).
+// ===========================================================================
+//
+// Instance `N` is the bounded integer-nonlinear infeasibility ported from the
+// neutral graduated corpus' `no-square-mod-bN` family
+// (`scripts/gen-graduated-nra-nia.py`, commit `97d903b`):
+//
+//     (assert (= (* x x) (+ (* m t) r)))   ; x^2 = m·t + r, i.e. x^2 ≡ r (mod m)
+//     (assert (and (<= 0 x) (< x {b·m})))  ; 0 <= x < b·m
+//     (assert (>= t 0))
+//
+// with `r` a quadratic **non-residue** mod `m` (no integer square is ≡ r mod m),
+// so the system is infeasible for every bound multiplier `b`. The knob `N = b`
+// scales the bound `b·m`. This is the measured NIA *blind spot*: axeyum returns
+// `unknown` on every `N` today, so the frontier is `0` — and that `0` is a valid
+// tracking row that RISES the moment the NIA decider gains integer-nonlinear
+// UNSAT capability.
+//
+// Self-check (oracle-free, exhaustive bounded enumeration): the bound makes the
+// domain finite, so we enumerate EVERY integer `x` in `0 <= x < b·m` and confirm
+// none has `x^2 ≡ r (mod m)` (equivalently, `r` is not in the residue table of
+// squares mod `m`, which we also recompute). No square in range hits `r` => the
+// system is genuinely UNSAT, established without any solver.
+
+/// The `(modulus, non_residue)` pairs for the `nia_unsat` family (ported from the
+/// graduated corpus' `nonres_cases`). Each `r` is a quadratic non-residue mod
+/// `m`, re-confirmed by enumeration in the self-check.
+const NIA_NONRES_CASES: [(i64, i64); 8] = [
+    (3, 2), // squares mod 3: {0,1}; 2 non-residue
+    (4, 2), // squares mod 4: {0,1}; 2 non-residue
+    (4, 3), // 3 non-residue mod 4
+    (5, 2), // squares mod 5: {0,1,4}; 2 non-residue
+    (5, 3), // 3 non-residue mod 5
+    (7, 3), // squares mod 7: {0,1,2,4}; 3 non-residue
+    (8, 3), // squares mod 8: {0,1,4}; 3 non-residue
+    (8, 5), // 5 non-residue mod 8
+];
+
+/// The `(modulus, residue)` for `nia_unsat` instance `N` (1-based into
+/// [`NIA_NONRES_CASES`], cycling so the sweep can grow the bound past 8 cases).
+fn nia_case(n: u32) -> (i64, i64) {
+    let idx = (n as usize - 1) % NIA_NONRES_CASES.len();
+    NIA_NONRES_CASES[idx]
+}
+
+/// The `no-square-mod` SMT-LIB text for bound multiplier `N`: `x^2 = m·t + r`
+/// with `0 <= x < N·m`, `t >= 0` — UNSAT because `r` is a non-residue mod `m`.
+fn nia_unsat_smtlib(n: u32) -> String {
+    let (m, r) = nia_case(n);
+    let upper = i128::from(n) * i128::from(m);
+    format!(
+        "(set-logic QF_NIA)\n\
+         (set-info :status unsat)\n\
+         (declare-fun x () Int)\n\
+         (declare-fun t () Int)\n\
+         (assert (= (* x x) (+ (* {m} t) {r})))\n\
+         (assert (and (<= 0 x) (< x {upper})))\n\
+         (assert (>= t 0))\n\
+         (check-sat)\n"
+    )
+}
+
+/// Independently confirm the `nia_unsat` instance is genuinely UNSAT by
+/// **exhaustive bounded enumeration** — no solver involved. The bound makes the
+/// domain finite, so we:
+///
+/// 1. recompute the residue table of squares mod `m` and confirm `r` is NOT in it
+///    (so `r` is a quadratic non-residue), and
+/// 2. enumerate every integer `x` in `0 <= x < N·m` and confirm none satisfies
+///    `x^2 ≡ r (mod m)` (i.e. no `t >= 0` makes `x^2 = m·t + r`, since that forces
+///    `x^2 mod m == r` and `t = (x^2 - r)/m >= 0` for `x^2 >= r`).
+///
+/// Returns `true` iff no integer in range squares to `r` mod `m` — a genuine,
+/// oracle-free proof that the system is infeasible.
+fn nia_unsat_self_check(n: u32) -> bool {
+    let (m, r) = nia_case(n);
+    nia_unsat_self_check_with_case(n, r, m)
+}
+
+/// The body of [`nia_unsat_self_check`] parameterized on `(n, r, m)`, so a
+/// soundness-negative test can feed it a quadratic RESIDUE `r` and confirm the
+/// exhaustive enumeration REJECTS it (finds a satisfying `x`).
+fn nia_unsat_self_check_with_case(n: u32, r: i64, m: i64) -> bool {
+    if m <= 0 || r < 0 || r >= m {
+        return false;
+    }
+    // (1) Residue table: r must be a non-residue mod m.
+    let residues: std::collections::BTreeSet<i64> = (0..m).map(|i| (i * i) % m).collect();
+    if residues.contains(&r) {
+        return false;
+    }
+    // (2) Exhaustive enumeration over the finite domain 0 <= x < N·m.
+    let upper = i128::from(n) * i128::from(m);
+    let mm = i128::from(m);
+    let rr = i128::from(r);
+    let mut x: i128 = 0;
+    while x < upper {
+        // x^2 = m·t + r has a solution t >= 0 iff x^2 % m == r and x^2 >= r.
+        let sq = x * x;
+        if sq % mm == rr && sq >= rr {
+            return false; // a satisfying x => the instance is NOT unsat
+        }
+        x += 1;
+    }
+    true
+}
+
+/// Solve one `nia_unsat` instance end-to-end via `solve_smtlib`. Ground truth is
+/// UNSAT; a decided `sat` is a hard soundness failure, `unknown` (the measured
+/// status today) is the benign blind-spot fall-off.
+fn nia_unsat_point(n: u32, config: &SolverConfig) -> CurvePoint {
+    assert!(
+        nia_unsat_self_check(n),
+        "nia_unsat N={n}: the constructed instance failed its own independent \
+         UNSAT self-check (residue table + exhaustive bounded enumeration)",
+    );
+    let text = nia_unsat_smtlib(n);
+    solve_smtlib_unsat_point("nia_unsat", n, &text, config)
+}
+
+// ---------------------------------------------------------------------------
+// Shared SMT-LIB-text UNSAT solving (nra_degree, nia_unsat).
+// ---------------------------------------------------------------------------
+
+/// Solve a known-UNSAT SMT-LIB script under [`BUDGET`] on a worker thread (sound
+/// timeout on overrun) and classify the outcome into a [`CurvePoint`].
+///
+/// Ground truth is UNSAT (already established by the caller's independent
+/// self-check), so a decided `sat` is a **hard soundness failure** (panic);
+/// `unknown`/`timeout`/`error` are the benign fall-off past the decider's reach.
+fn solve_smtlib_unsat_point(family: &str, n: u32, text: &str, config: &SolverConfig) -> CurvePoint {
+    let text = text.to_string();
+    let cfg = config.clone();
+    let (tx, rx) = mpsc::channel();
+    let t0 = Instant::now();
+    thread::Builder::new()
+        .stack_size(256 * 1024 * 1024)
+        .spawn(move || {
+            let res = solve_smtlib(&text, &cfg).map(|o| o.result);
+            let _ = tx.send(res);
+        })
+        .expect("spawn smtlib solver thread");
+    let outcome = rx.recv_timeout(BUDGET + Duration::from_secs(1));
+    let solve_ms = t0.elapsed().as_secs_f64() * 1000.0;
+
+    let (decided_correct, status) = match outcome {
+        Ok(Ok(CheckResult::Unsat)) => (true, "unsat"),
+        Ok(Ok(CheckResult::Sat(_))) => {
+            panic!(
+                "SOUNDNESS FAILURE [{family} N={n}]: solver said sat but the instance is \
+                 UNSAT by an independent self-check (nonnegativity / exhaustive enumeration)",
+            );
+        }
+        Ok(Ok(CheckResult::Unknown(_))) => (false, "unknown"),
+        Ok(Err(_)) => (false, "error"),
+        Err(_) => (false, "timeout"),
+    };
+
+    CurvePoint {
+        n,
+        decided_correct,
+        status,
+        solve_ms,
+    }
+}
+
+/// Sweep a point-based SMT-LIB UNSAT family (`nra_degree`, `nia_unsat`),
+/// mirroring the generic [`sweep`] frontier rule but over the `solve_smtlib`
+/// path. The frontier is the largest `N` decided-correct with no undecided `N`
+/// below it; we overshoot [`OVERSHOOT`] points past the first miss to log the
+/// fall-off. A `start` lets a family begin its knob above 1.
+fn smtlib_unsat_sweep(
+    start: u32,
+    mut point: impl FnMut(u32) -> CurvePoint,
+) -> (u32, Vec<CurvePoint>) {
+    let mut curve = Vec::new();
+    let mut frontier = 0u32;
+    let mut consecutive_undecided = 0u32;
+
+    for n in start..=MAX_N {
+        let p = point(n);
+        if p.decided_correct {
+            if consecutive_undecided == 0 {
+                frontier = n;
+            }
+        } else {
+            consecutive_undecided += 1;
+        }
+        curve.push(p);
+        if consecutive_undecided > OVERSHOOT {
+            break;
+        }
+    }
+
+    (frontier, curve)
+}
+
 // ---------------------------------------------------------------------------
 // Shared helpers.
 // ---------------------------------------------------------------------------
@@ -687,6 +1064,20 @@ fn frontier_string_bound() {
     report_and_assert("string_bound", BASELINE_STRING_BOUND, frontier, &curve);
 }
 
+#[test]
+fn frontier_nra_degree() {
+    let config = SolverConfig::new().with_timeout(BUDGET);
+    let (frontier, curve) = smtlib_unsat_sweep(1, |n| nra_degree_point(n, &config));
+    report_and_assert("nra_degree", BASELINE_NRA_DEGREE, frontier, &curve);
+}
+
+#[test]
+fn frontier_nia_unsat() {
+    let config = SolverConfig::new().with_timeout(BUDGET);
+    let (frontier, curve) = smtlib_unsat_sweep(1, |n| nia_unsat_point(n, &config));
+    report_and_assert("nia_unsat", BASELINE_NIA_UNSAT, frontier, &curve);
+}
+
 /// Soundness: the curves are built from self-checking instances. This test
 /// re-verifies a sample of each generator independently of the solver — a
 /// corrupted generator (one that builds a witness/identity that does not hold)
@@ -713,6 +1104,46 @@ fn every_generated_instance_self_checks() {
             "string_bound N={n}: witness {w:?} failed self-check",
         );
     }
+    // nra_degree: each shifted sum-of-even-powers instance is UNSAT by
+    // nonnegativity + bounded rational grid (no solver involved).
+    for n in 1..=6 {
+        assert!(
+            nra_degree_self_check(n),
+            "nra_degree N={n} (degree {}) failed self-check",
+            2 * n,
+        );
+    }
+    // nia_unsat: each no-square-mod instance is UNSAT by residue table +
+    // exhaustive bounded enumeration over the finite integer domain.
+    for n in 1..=8 {
+        assert!(nia_unsat_self_check(n), "nia_unsat N={n} failed self-check");
+    }
+}
+
+/// Soundness (negative direction): the `nra_degree` / `nia_unsat` self-checks
+/// must REJECT a corrupted construction, not just accept the good one — otherwise
+/// they would not actually guard soundness. We feed each independent check an
+/// instance it must call NOT-unsat and confirm it returns `false`.
+#[test]
+fn nonlinear_self_checks_reject_corruption() {
+    // nra_degree: an ODD exponent breaks the even-power nonnegativity argument
+    // (e.g. degree 3 is negative for negative bases), so the self-check — which
+    // requires an even exponent and grid-confirms no satisfying point — must
+    // reject it. We re-derive the check's verdict on a doctored exponent.
+    assert!(
+        !nra_degree_self_check_with_degree(3),
+        "nra_degree self-check must reject an odd (degree-3) construction — its \
+         positivity argument does not hold",
+    );
+
+    // nia_unsat: if `r` were a quadratic RESIDUE mod m (e.g. r=1 mod 3, since
+    // 1^2 ≡ 1), the system would be satisfiable, so the exhaustive-enumeration
+    // self-check must return false (it finds x=1 with x^2 ≡ 1).
+    assert!(
+        !nia_unsat_self_check_with_case(3, 1, 2),
+        "nia_unsat self-check must reject a residue (r=1 mod 3) construction — it \
+         IS satisfiable (x=1)",
+    );
 }
 
 /// The `bv_reduction` fall-off is **the reduction lever**, not a generic limit.

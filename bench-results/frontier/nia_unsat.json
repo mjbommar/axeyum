@@ -1,0 +1,12 @@
+{
+  "family": "nia_unsat",
+  "baseline": 0,
+  "frontier": 0,
+  "budget_ms": 4000,
+  "curve": [
+    { "n": 1, "decided": false, "status": "unknown", "solve_ms": 275.5 },
+    { "n": 2, "decided": false, "status": "unknown", "solve_ms": 229.9 },
+    { "n": 3, "decided": false, "status": "unknown", "solve_ms": 228.6 },
+    { "n": 4, "decided": false, "status": "unknown", "solve_ms": 300.0 }
+  ]
+}
