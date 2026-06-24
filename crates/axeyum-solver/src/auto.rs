@@ -1820,6 +1820,99 @@ fn atom_bounds(arena: &TermArena, term: TermId, out: &mut Vec<(SymbolId, BoundKi
     }
 }
 
+/// If `term` is an equality `(= x c)` / `(= c x)` between exactly one `Int`
+/// variable and one `Int` constant, returns `(symbol, value)`; else `None`.
+fn as_var_eq_const(arena: &TermArena, term: TermId) -> Option<(SymbolId, i128)> {
+    let TermNode::App { op: Op::Eq, args } = arena.node(term) else {
+        return None;
+    };
+    if args.len() != 2 {
+        return None;
+    }
+    let (a, b) = (args[0], args[1]);
+    if let (Some(s), Some(c)) = (as_int_var(arena, a), as_int_const(arena, b)) {
+        Some((s, c))
+    } else if let (Some(c), Some(s)) = (as_int_const(arena, a), as_int_var(arena, b)) {
+        Some((s, c))
+    } else {
+        None
+    }
+}
+
+/// Flattens a (possibly left-associative-nested binary) top-level `or` tree
+/// rooted at `term` into its disjunct leaves. SMT-LIB n-ary `(or e1 … ek)` is
+/// built as nested binary `(or (or … e_{k-1}) e_k)`, so we recurse through every
+/// `BoolOr` node; a non-`or` node is a leaf disjunct.
+fn flatten_disjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
+    match arena.node(term) {
+        TermNode::App {
+            op: Op::BoolOr,
+            args,
+        } => {
+            let args = args.clone();
+            for arg in args {
+                flatten_disjuncts(arena, arg, out);
+            }
+        }
+        _ => out.push(term),
+    }
+}
+
+/// Recognizes a **disjunctive finite-value-set bound**: a top-level
+/// unconditional conjunct that is a disjunction `(or (= x c1) … (= x ck))` where
+/// every disjunct equates the SAME single `Int` variable `x` to an `Int`
+/// CONSTANT `cᵢ`. Such a conjunct holds in every model, so `x ∈ {c1,…,ck} ⊆
+/// [min cᵢ, max cᵢ]` — a sound box bound. Emits `Lower(min cᵢ)` and `Upper(max
+/// cᵢ)` for `x`. The disjunction itself stays in the formula, so the bit-vector
+/// search is restricted to the actual `{cᵢ}`, never the full `[min, max]`.
+///
+/// SOUNDNESS / CONSERVATIVE DECLINE: only a flat disjunction whose EVERY leaf is
+/// `var = const` on ONE COMMON variable counts. A disjunct that is not such an
+/// equality, or that names a DIFFERENT variable (e.g. `(or (= x 1) (= y 2))`),
+/// yields NO bound. Only `BoolAnd`-flattened top-level conjuncts reach here, so a
+/// disjunction nested under `not`/`ite`/`=>` is never offered (its truth is not
+/// guaranteed) — it bounds nothing. Over-recognizing a non-bound would be a
+/// wrong-`unsat`; recognizing fewer shapes is always sound (it just declines).
+fn disjunctive_value_set_bounds(
+    arena: &TermArena,
+    term: TermId,
+    out: &mut Vec<(SymbolId, BoundKind)>,
+) {
+    // Must be a disjunction at the top of this conjunct.
+    if !matches!(arena.node(term), TermNode::App { op: Op::BoolOr, .. }) {
+        return;
+    }
+    let mut disjuncts = Vec::new();
+    flatten_disjuncts(arena, term, &mut disjuncts);
+    if disjuncts.is_empty() {
+        return;
+    }
+    // Every disjunct must pin the SAME variable to a constant.
+    let mut common: Option<SymbolId> = None;
+    let mut min_c = i128::MAX;
+    let mut max_c = i128::MIN;
+    for &d in &disjuncts {
+        let Some((sym, c)) = as_var_eq_const(arena, d) else {
+            // A disjunct that is not `var = const` (a comparison, a different
+            // shape, a nested term) breaks the finite-value-set form: decline.
+            return;
+        };
+        match common {
+            None => common = Some(sym),
+            Some(prev) if prev == sym => {}
+            // A disjunct over a DIFFERENT variable (e.g. `(or (= x 1) (= y 2))`)
+            // bounds NEITHER variable to a finite set: decline.
+            Some(_) => return,
+        }
+        min_c = min_c.min(c);
+        max_c = max_c.max(c);
+    }
+    if let Some(sym) = common {
+        out.push((sym, BoundKind::Lower(min_c)));
+        out.push((sym, BoundKind::Upper(max_c)));
+    }
+}
+
 /// Collects the top-level **unconditional** conjuncts of `assertions` into
 /// `out`, flattening `and` and the assertion list itself. A conjunct under any
 /// other connective (`or`/`not`/`ite`/`=>`) is NOT unconditional and is skipped
@@ -1950,10 +2043,15 @@ fn prove_int_box(arena: &TermArena, assertions: &[TermId]) -> IntBoxProof {
         return IntBoxProof::Decline;
     }
 
-    // 2. Direct constant half-bounds from atomic top-level conjuncts.
+    // 2. Direct constant half-bounds from top-level conjuncts: atomic order
+    //    literals (`atom_bounds`) AND disjunctive finite-value-set bounds
+    //    (`disjunctive_value_set_bounds` — a `(or (= x c1) … (= x ck))` conjunct
+    //    confines `x` to `[min cᵢ, max cᵢ]`). Both read only UNCONDITIONAL
+    //    top-level conjuncts, so each half-bound is a fact about every model.
     let mut raw_bounds: Vec<(SymbolId, BoundKind)> = Vec::new();
     for &c in &conjuncts {
         atom_bounds(arena, c, &mut raw_bounds);
+        disjunctive_value_set_bounds(arena, c, &mut raw_bounds);
     }
     let mut lo: HashMap<SymbolId, i128> = HashMap::new();
     let mut hi: HashMap<SymbolId, i128> = HashMap::new();
@@ -4021,6 +4119,152 @@ mod tests {
         assert!(
             matches!(result, CheckResult::Unsat),
             "bounded linear x>0 ∧ x<1 must be unsat, got {result:?}"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Disjunctive finite-value-set bounds (case-split QF_NIA).
+    // -----------------------------------------------------------------------
+
+    /// Builds a left-associative `(or (= x c0) (= x c1) …)` over a single `Int`
+    /// variable, mirroring the SMT-LIB n-ary `or` lowering.
+    fn or_var_eq_consts(arena: &mut TermArena, xv: TermId, cs: &[i128]) -> TermId {
+        let mut iter = cs.iter();
+        let first = *iter.next().expect("nonempty value set");
+        let fc = arena.int_const(first);
+        let mut acc = arena.eq(xv, fc).unwrap();
+        for &c in iter {
+            let cc = arena.int_const(c);
+            let eq = arena.eq(xv, cc).unwrap();
+            acc = arena.or(acc, eq).unwrap();
+        }
+        acc
+    }
+
+    /// `(or (= x 5) (= x 7) (= x 9)) ∧ x*x = 50`: none of 25/49/81 equals 50, so
+    /// the finite value set `{5,7,9}` is bounded to `[5,9]` and the exact blast
+    /// must REFUTE it (the width ladder alone only says `Unknown` for `x*x=50`).
+    #[test]
+    fn disjunctive_value_set_square_no_root_is_unsat() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let disj = or_var_eq_consts(&mut arena, xv, &[5, 7, 9]);
+        let sq = arena.int_mul(xv, xv).unwrap();
+        let fifty = arena.int_const(50);
+        let eq = arena.eq(sq, fifty).unwrap();
+        let result = check_auto(&mut arena, &[disj, eq], &SolverConfig::default()).unwrap();
+        assert!(
+            matches!(result, CheckResult::Unsat),
+            "disjunctive value-set x∈{{5,7,9}} ∧ x*x=50 must be unsat, got {result:?}"
+        );
+    }
+
+    /// `(or (= x 2) (= x 3)) ∧ x*x = 9`: `x=3` works, so this is a genuine bounded
+    /// SAT — and the model must replay against EVERY original assertion exactly.
+    #[test]
+    fn disjunctive_value_set_with_solution_is_sat() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let disj = or_var_eq_consts(&mut arena, xv, &[2, 3]);
+        let sq = arena.int_mul(xv, xv).unwrap();
+        let nine = arena.int_const(9);
+        let eq = arena.eq(sq, nine).unwrap();
+        let asserts = [disj, eq];
+        let result = check_auto(&mut arena, &asserts, &SolverConfig::default()).unwrap();
+        let CheckResult::Sat(model) = result else {
+            panic!("disjunctive value-set x∈{{2,3}} ∧ x*x=9 must be sat, got {result:?}");
+        };
+        let assignment = model.to_assignment();
+        for &a in &asserts {
+            assert_eq!(
+                eval(&arena, a, &assignment).unwrap(),
+                Value::Bool(true),
+                "sat model must satisfy every original assertion"
+            );
+        }
+    }
+
+    /// SOUNDNESS GUARD: a MIXED disjunction `(or (= x 1) (= y 2))` bounds NEITHER
+    /// variable (the disjunction does not pin a single variable to a finite set).
+    /// With `x*y` otherwise unbounded, the box cannot be proven, the exact path
+    /// DECLINES, and the query must NOT be falsely refuted.
+    #[test]
+    fn mixed_disjunction_does_not_falsely_bound() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let y = arena.declare("y", Sort::Int).unwrap();
+        let (xv, yv) = (arena.var(x), arena.var(y));
+        let one = arena.int_const(1);
+        let two = arena.int_const(2);
+        let ex = arena.eq(xv, one).unwrap();
+        let ey = arena.eq(yv, two).unwrap();
+        let disj = arena.or(ex, ey).unwrap();
+        // x*y = 7 — with x,y otherwise unbounded, no finite box exists.
+        let prod = arena.int_mul(xv, yv).unwrap();
+        let seven = arena.int_const(7);
+        let eq = arena.eq(prod, seven).unwrap();
+        let config = SolverConfig {
+            timeout: Some(std::time::Duration::from_secs(5)),
+            ..Default::default()
+        };
+        let result = check_auto(&mut arena, &[disj, eq], &config).unwrap();
+        assert!(
+            !matches!(result, CheckResult::Unsat),
+            "mixed disjunction (= x 1)∨(= y 2) must NOT bound either var; got {result:?}"
+        );
+    }
+
+    /// SOUNDNESS GUARD: a finite-value-set disjunction nested under `not` is NOT a
+    /// top-level conjunct, so it bounds nothing. `(not (or (= x 5) (= x 7)))` says
+    /// `x ∉ {5,7}` — emphatically NOT `x ∈ [5,7]`. With `x` otherwise unbounded
+    /// the exact path declines; the query must not be falsely refuted.
+    #[test]
+    fn negated_disjunction_does_not_falsely_bound() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let disj = or_var_eq_consts(&mut arena, xv, &[5, 7]);
+        let neg = arena.not(disj).unwrap();
+        // x*x = 50 — unbounded, undecidable here; the point is NEVER a wrong unsat
+        // arising from treating the negated set as a `[5,7]` bound.
+        let sq = arena.int_mul(xv, xv).unwrap();
+        let fifty = arena.int_const(50);
+        let eq = arena.eq(sq, fifty).unwrap();
+        let config = SolverConfig {
+            timeout: Some(std::time::Duration::from_secs(5)),
+            ..Default::default()
+        };
+        let result = check_auto(&mut arena, &[neg, eq], &config).unwrap();
+        assert!(
+            !matches!(result, CheckResult::Unsat),
+            "negated value-set must NOT bound x to [5,7]; got {result:?}"
+        );
+    }
+
+    /// A finite value set composes with `derive_var_bound`: `(or (= x 2) (= x 4))`
+    /// bounds `x` to `[2,4]`, and `x + t = 10` then DERIVES `t ∈ [6,8]`, so the
+    /// whole system is bounded. `x*x = t` has no solution (4≠6/7/8, 16≠.., and the
+    /// only consistent pairs are (2,8),(4,6) with 4≠8, 16≠6) ⇒ unsat, now decided.
+    #[test]
+    fn disjunctive_value_set_composes_with_derived_bound() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let t = arena.declare("t", Sort::Int).unwrap();
+        let (xv, tv) = (arena.var(x), arena.var(t));
+        let disj = or_var_eq_consts(&mut arena, xv, &[2, 4]);
+        // x + t = 10  ⇒  t = 10 - x ∈ [6, 8].
+        let sum = arena.int_add(xv, tv).unwrap();
+        let ten = arena.int_const(10);
+        let lin = arena.eq(sum, ten).unwrap();
+        // x*x = t : (x,t) constrained to {(2,8),(4,6)}; 2*2=4≠8, 4*4=16≠6 ⇒ unsat.
+        let sq = arena.int_mul(xv, xv).unwrap();
+        let eqt = arena.eq(sq, tv).unwrap();
+        let result = check_auto(&mut arena, &[disj, lin, eqt], &SolverConfig::default()).unwrap();
+        assert!(
+            matches!(result, CheckResult::Unsat),
+            "value-set x∈{{2,4}} + derived t bound, x*x=t must be unsat, got {result:?}"
         );
     }
 }
