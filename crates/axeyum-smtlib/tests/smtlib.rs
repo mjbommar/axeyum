@@ -1260,19 +1260,131 @@ fn string_const_and_literal_parse_into_packed_bitvectors() {
     assert_eq!(script.assertions.len(), 2, "wf constraint + the equality");
 }
 
-#[test]
-fn string_sort_in_unsupported_context_is_a_clear_error() {
-    // Outside the wired const slice (e.g. a String-returning function), String is
-    // still a clean, actionable Unsupported rather than a cryptic "unknown sort".
-    let err = parse_script("(declare-fun f () String)\n(check-sat)\n")
-        .expect_err("String return sort is not yet front-end-wired");
-    let SmtError::Unsupported(msg) = err else {
-        panic!("expected Unsupported for the String sort, got {err:?}");
-    };
-    assert!(
-        msg.contains("String") && msg.contains("ADR-0025/0029"),
-        "actionable msg: {msg}"
+/// Packs a byte string into the parser's canonical bounded-string bit-vector
+/// (length in the low 4 bits, byte `i` at bits `[4 + 8i, +8)`), mirroring
+/// `pack_string_literal`. `STRING_MAX_LEN = 8`, `STRING_TOTAL = 4 + 8·8 = 68`.
+fn pack_str(bytes: &[u8]) -> u128 {
+    assert!(bytes.len() <= 8);
+    let mut content: u128 = 0;
+    for (i, &b) in bytes.iter().enumerate() {
+        content |= u128::from(b) << (8 * i);
+    }
+    u128::try_from(bytes.len()).unwrap() | (content << 4)
+}
+
+/// Evaluates every assertion of a parsed script under one concrete assignment of
+/// the (single) string symbol `s` to a packed value, AND-ing the Bool results.
+fn eval_string_script(text: &str, s_packed: u128) -> bool {
+    let script = parse_script(text).expect("script parses");
+    let sym = script.arena.find_symbol("s").expect("s declared");
+    let mut asg = Assignment::new();
+    asg.set(
+        sym,
+        Value::Bv {
+            width: 68,
+            value: s_packed,
+        },
     );
+    script
+        .assertions
+        .iter()
+        .all(|&a| eval(&script.arena, a, &asg).unwrap() == Value::Bool(true))
+}
+
+#[test]
+fn string_len_and_contains_decide_via_bv_eval() {
+    // (str.len s) == 3 ∧ (str.contains s "a") — oracle-checked by evaluating the
+    // packed-BV encoding against concrete witnesses.
+    let text = "(declare-fun s () String)\n\
+                (assert (= (str.len s) 3))\n\
+                (assert (str.contains s \"a\"))\n(check-sat)\n";
+    assert!(eval_string_script(text, pack_str(b"bah")), "len 3, has 'a'");
+    assert!(!eval_string_script(text, pack_str(b"ab")), "len 2 ⇒ false");
+    assert!(
+        !eval_string_script(text, pack_str(b"xyz")),
+        "no 'a' ⇒ false"
+    );
+}
+
+#[test]
+fn string_equality_with_wrong_length_is_unsat_shaped() {
+    // (= s "a") ∧ (= (str.len s) 2): no witness satisfies both (a small UNSAT).
+    let text = "(declare-fun s () String)\n\
+                (assert (= s \"a\"))\n\
+                (assert (= (str.len s) 2))\n(check-sat)\n";
+    // "a" forces len 1, so the len-2 assertion can never hold for the equal value.
+    assert!(!eval_string_script(text, pack_str(b"a")), "len 1 ≠ 2");
+    assert!(!eval_string_script(text, pack_str(b"ab")), "≠ \"a\"");
+}
+
+#[test]
+fn string_at_and_const_concat_eval() {
+    // (= (str.at s 0) "h") ∧ (= s (str.++ "h" "i")): str.at picks byte 0, and the
+    // constant-folded concat equals "hi".
+    let text = "(declare-fun s () String)\n\
+                (assert (= (str.at s 0) \"h\"))\n\
+                (assert (= s (str.++ \"h\" \"i\")))\n(check-sat)\n";
+    assert!(eval_string_script(text, pack_str(b"hi")), "s = \"hi\"");
+    assert!(!eval_string_script(text, pack_str(b"ho")), "s ≠ \"hi\"");
+}
+
+#[test]
+fn string_prefix_and_suffix_eval() {
+    let text = "(declare-fun s () String)\n\
+                (assert (str.prefixof \"ab\" s))\n\
+                (assert (str.suffixof \"yz\" s))\n(check-sat)\n";
+    assert!(eval_string_script(text, pack_str(b"abxyz")), "ab…yz");
+    assert!(
+        !eval_string_script(text, pack_str(b"abxxx")),
+        "no yz suffix"
+    );
+    assert!(
+        !eval_string_script(text, pack_str(b"xxxyz")),
+        "no ab prefix"
+    );
+}
+
+#[test]
+fn declare_fun_string_constant_is_wired_like_declare_const() {
+    // QF_S benchmarks overwhelmingly use `(declare-fun s () String)`, not
+    // `declare-const`. The 0-ary `declare-fun ... String` form now opens the same
+    // bounded packed-BV representation + canonical well-formedness assertion
+    // (ADR-0029) as `declare-const ... String`.
+    let script = parse_script("(declare-fun s () String)\n(assert (= s \"ab\"))\n(check-sat)\n")
+        .expect("declare-fun () String should parse like declare-const");
+    assert_eq!(
+        script.assertions.len(),
+        2,
+        "wf constraint (from the declare) + the equality"
+    );
+    // The symbol is the packed bounded-string bit-vector.
+    let mut arena = script.arena;
+    let sym = arena.find_symbol("s").expect("s declared");
+    let v = arena.var(sym);
+    assert_eq!(arena.sort_of(v), Sort::BitVec(4 + 8 * 8));
+}
+
+#[test]
+fn seq_sort_is_still_a_clear_unsupported() {
+    // `Seq` (unbounded sequences) has no sound bounded lowering yet, so it stays a
+    // scoped, actionable Unsupported rather than a cryptic "unknown sort".
+    let err = parse_script("(declare-fun f () (Seq Int))\n(check-sat)\n")
+        .expect_err("Seq sort is not front-end-wired");
+    assert!(matches!(err, SmtError::Unsupported(_)), "got {err:?}");
+}
+
+#[test]
+fn unsupported_string_op_declines_gracefully() {
+    // A `str.*` operator outside the wired bounded subset is a clean `Unsupported`
+    // (the benchmark is declined, never mis-decided).
+    let err = parse_script(
+        "(declare-fun s () String)\n(assert (= (str.replace s \"a\" \"b\") \"x\"))\n(check-sat)\n",
+    )
+    .expect_err("str.replace is outside the wired subset");
+    let SmtError::Unsupported(msg) = err else {
+        panic!("expected Unsupported for str.replace, got {err:?}");
+    };
+    assert!(msg.contains("str.replace"), "actionable msg: {msg}");
 }
 
 /// The full set of standard output/query no-op commands is accepted, so a

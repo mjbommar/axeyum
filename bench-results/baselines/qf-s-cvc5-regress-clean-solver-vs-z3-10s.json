@@ -1,0 +1,1653 @@
+{
+  "config": {
+    "backend": "axeyum-solver check_auto",
+    "backend_kind": "solver",
+    "cnf_clause_budget": null,
+    "cnf_inprocessing": false,
+    "cnf_variable_budget": null,
+    "cnf_vivify": false,
+    "compare_backend": "z3 4.13.3.0",
+    "compare_z3": true,
+    "config_hash": "a3e085775ba398fe",
+    "corpus": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean",
+    "corpus_hash": "8f9f647ea02273cd",
+    "corpus_source": "cvc5 test/regress strings (QF_S + QF_SLIA), clean filter",
+    "hardware": {
+      "arch": "x86_64",
+      "hostname": null,
+      "os": "linux",
+      "parallelism": 16
+    },
+    "harness": "axeyum-bench 0.1.0",
+    "jobs": 4,
+    "limit": null,
+    "logic": "QF_S",
+    "native_cdcl": false,
+    "node_budget": null,
+    "preprocess": false,
+    "query_plan": {
+      "mode": "full",
+      "refine_adaptive_batch": false,
+      "refine_batch": 1,
+      "refine_rounds": 16,
+      "refine_select": "first",
+      "sat_replay_failure_policy": "soundness-alarm"
+    },
+    "rewrite": {
+      "enabled_rule_ids": [],
+      "mode": "off",
+      "rule_set": null
+    },
+    "seed": "none",
+    "selected_families": null,
+    "timeout_ms": 10000
+  },
+  "instances": [
+    {
+      "detail": "string/regex operator `str.indexof` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_bug613.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_code-sat-neg-one.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_ctn-repl-to-ctn.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_indexof_re-start-index.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex constant `re.allchar` is outside the wired bounded subset (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_indexof_re.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue2958.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.indexof` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue3497.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string literal longer than the bounded length 8 (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue4376.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue5508-multiple-conflicts.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue6520.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue6643-ctn-decompose-conflict.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue6681-split-eq-strip-l.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue6834-str-eq-const-nhomog.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_leq.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_norn-31.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_norn-simp-rew.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.from_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_proj-issue409-re-loop-none.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_quad-028-2-2-unsat.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_quad-138-4-2-unsat.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex constant `re.allchar` is outside the wired bounded subset (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_re-in-rewrite.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex constant `re.none` is outside the wired bounded subset (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_re-none-rewrites.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_re.all.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_regexp_inclusion_reduction.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_replace-find-base.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.from_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_simple-nth-fail.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_str004.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string literal longer than the bounded length 8 (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_strip-endpoint-itos.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_type001.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "assertions": 3,
+      "backend_stats": {
+        "check_auto_ms": 0.724317
+      },
+      "dag_nodes": 66,
+      "distinct_symbols": 1,
+      "expected": "sat",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_unsound-0908.smt2",
+      "max_depth": 12,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support integer terms yet (ADR-0014)",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 8,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 3,
+          "assumptions": 0,
+          "dag_nodes": 66,
+          "digest": "803657e64ca0dc65",
+          "tree_nodes": 116
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 3,
+            "assumptions": 0,
+            "dag_nodes": 66,
+            "digest": "803657e64ca0dc65",
+            "tree_nodes": 116
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 66,
+        "input_tree_nodes": 116,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 3,
+        "output_dag_nodes": 66,
+        "output_distinct_symbols": 1,
+        "output_max_depth": 12,
+        "output_tree_nodes": 116,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 116
+    },
+    {
+      "assertions": 7,
+      "backend_stats": {
+        "check_auto_ms": 0.284264
+      },
+      "dag_nodes": 145,
+      "distinct_symbols": 3,
+      "expected": "sat",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_bug001.smt2",
+      "max_depth": 12,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 108.19,
+          "memory": 66.7,
+          "num allocs": 202454.0,
+          "rlimit count": 1818.0,
+          "solve-eqs-elim-vars": 3.0,
+          "solve-eqs-steps": 3.0
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 7,
+          "assumptions": 0,
+          "dag_nodes": 145,
+          "digest": "3fe8bd429c7ab7c8",
+          "tree_nodes": 264
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 7,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 7,
+            "assumptions": 0,
+            "dag_nodes": 145,
+            "digest": "3fe8bd429c7ab7c8",
+            "tree_nodes": 264
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 145,
+        "input_tree_nodes": 264,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 7,
+        "output_dag_nodes": 145,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 12,
+        "output_tree_nodes": 264,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 264
+    },
+    {
+      "assertions": 3,
+      "backend_stats": {
+        "check_auto_ms": 0.826699
+      },
+      "dag_nodes": 382,
+      "distinct_symbols": 1,
+      "expected": "unsat",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_bug612.smt2",
+      "max_depth": 22,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 108.19,
+          "memory": 66.7,
+          "num allocs": 103579.0,
+          "rlimit count": 5343.0,
+          "sat backjumps": 8.0,
+          "sat conflicts": 9.0,
+          "sat decisions": 14.0,
+          "sat del clause": 1.0,
+          "sat elim clauses": 1.0,
+          "sat elim literals": 2.0,
+          "sat minimized lits": 2.0,
+          "sat mk clause 2ary": 239.0,
+          "sat mk clause nary": 50.0,
+          "sat mk var": 116.0,
+          "sat propagations 2ary": 318.0,
+          "sat propagations nary": 25.0,
+          "sat subs resolution dyn": 1.0,
+          "sat units": 10.0,
+          "time": 0.004
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 4,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 3,
+          "assumptions": 0,
+          "dag_nodes": 382,
+          "digest": "02db920aa0d68f0e",
+          "tree_nodes": 1111
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 3,
+            "assumptions": 0,
+            "dag_nodes": 382,
+            "digest": "02db920aa0d68f0e",
+            "tree_nodes": 1111
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 382,
+        "input_tree_nodes": 1111,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 3,
+        "output_dag_nodes": 382,
+        "output_distinct_symbols": 1,
+        "output_max_depth": 22,
+        "output_tree_nodes": 1111,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 1111
+    },
+    {
+      "detail": "string literal longer than the bounded length 8 (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_escchar.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string literal longer than the bounded length 8 (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_escchar_25.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_issue3440.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_issue4674-recomp-nf.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string literal longer than the bounded length 8 (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_issue5384-double-conflict.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex constant `re.allchar` is outside the wired bounded subset (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_issue5428-re-diff-assoc.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex constant `re.all` is outside the wired bounded subset (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_issue9784.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_leadingzero001.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_loop001.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "assertions": 4,
+      "backend_stats": {
+        "check_auto_ms": 1.278122
+      },
+      "dag_nodes": 101,
+      "distinct_symbols": 2,
+      "expected": "sat",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_model001.smt2",
+      "max_depth": 12,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 9,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 4,
+          "assumptions": 0,
+          "dag_nodes": 101,
+          "digest": "b4498b260452fb02",
+          "tree_nodes": 179
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 4,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 4,
+            "assumptions": 0,
+            "dag_nodes": 101,
+            "digest": "b4498b260452fb02",
+            "tree_nodes": 179
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 101,
+        "input_tree_nodes": 179,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 4,
+        "output_dag_nodes": 101,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 12,
+        "output_tree_nodes": 179,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 1,
+      "translate_ms": 0,
+      "tree_nodes": 179
+    },
+    {
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_re-include-union.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str003.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "assertions": 8,
+      "backend_stats": {
+        "check_auto_ms": 13.107369
+      },
+      "dag_nodes": 274,
+      "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
+      "distinct_symbols": 6,
+      "expected": "unsat",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str005.smt2",
+      "max_depth": 12,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 8,
+          "assumptions": 0,
+          "dag_nodes": 274,
+          "digest": "66ad0089e4a03d01",
+          "tree_nodes": 513
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 8,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 8,
+            "assumptions": 0,
+            "dag_nodes": 274,
+            "digest": "66ad0089e4a03d01",
+            "tree_nodes": 513
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 274,
+        "input_tree_nodes": 513,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 8,
+        "output_dag_nodes": 274,
+        "output_distinct_symbols": 6,
+        "output_max_depth": 12,
+        "output_tree_nodes": 513,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 13,
+      "translate_ms": 0,
+      "tree_nodes": 513
+    },
+    {
+      "detail": "string/regex operator `str.to_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_artemis-0512-nonterm.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.at with a non-constant index is not yet supported (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_at001.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_fmf002.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex constant `re.allchar` is outside the wired bounded subset (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue10195.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue2981.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue4379.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue4701_substr_splice.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6057-replace-re-all-jiwonparc.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6057-replace-re.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6203-6-replace-re.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6337-replace-re-all.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6337-replace-re.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "sort List([Atom(\"Seq\"), Atom(\"Int\")])",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6653-3-seq.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex constant `re.all` is outside the wired bounded subset (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6973-dup-lemma-conc.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue7677-test-const-rv.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue9269-rei-nconst.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_kaluza-fl.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_loop005.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_loop007.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_loop008.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_norn-360.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_norn-re-inter-none.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_norn-simp-rew-sat.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_open-pf-merge.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_pattern1.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-agg-total1.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-inter-stack-ovf.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-mod-eq.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_reloop.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_simple-re-consume.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_slent-re-pos-eager.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-sat.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-2.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-3.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-pred-small-rw_392.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.<=` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-leq-trans-unsat.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.<` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-lt-len5.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.<` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-lt-simple.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_substr001.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_type002.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_type003.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.update` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_update-ex1.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.update` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_update-ex2.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string literal longer than the bounded length 8 (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_bug615.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_bug768.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_csp-prefix-exp-bug.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_fmf001.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_goodAI.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex constant `re.allchar` is outside the wired bounded subset (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_instance1079-re-loop-cong.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_instance3303-delta.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_instance7075-delta.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue1684-regex.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string literal longer than the bounded length 8 (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue2060.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue4608-re-derive.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue4759-comp-delta.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue5510-re-consume.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue5520-re-consume.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.replace_all` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue8981-2-strings-deq-ext-nth.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_lower` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue8981-strings-deq-ext-nth.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_loop002.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_loop003.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_loop004.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_loop006.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_loop009.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_nf-ff-contains-abs.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_norn-13.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_norn-nel-bug-052116.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_re-neg-concat-reduct.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_re-neg-unfold-rev-a.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_regexp-strat-fix.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_regexp001.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_regexp002.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_regexp003.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str001.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str002.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str006.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str007.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_username_checker_min.smt2",
+      "outcome": "unsupported"
+    }
+  ],
+  "summary": {
+    "agree": 4,
+    "blocker_buckets": {
+      "unknown:Incomplete": 1
+    },
+    "disagree": 0,
+    "errors": 0,
+    "files": 123,
+    "layer_attribution": null,
+    "model_replay_failures": 0,
+    "oracle": {
+      "agree": 4,
+      "backend": "z3 4.13.3.0",
+      "compared": 4,
+      "disagree": 0,
+      "enabled": true,
+      "skipped": 1
+    },
+    "par2_mean_s": 4.0006226804,
+    "query_plan": {
+      "original_dag_nodes": 968,
+      "original_tree_nodes": 2183,
+      "slice_changed_instances": 0,
+      "slice_dag_nodes": 968,
+      "slice_dropped_terms": 0,
+      "slice_tree_nodes": 2183
+    },
+    "rewrite": {
+      "applications": 0,
+      "changed_instances": 0,
+      "decision_changes": 0,
+      "decision_matches": 0,
+      "input_dag_nodes": 0,
+      "input_tree_nodes": 0,
+      "mode": "off",
+      "output_dag_nodes": 0,
+      "output_tree_nodes": 0,
+      "sat_unsat_conflicts": 0
+    },
+    "sat": 3,
+    "unknown": 1,
+    "unsat": 1,
+    "unsupported": 118
+  },
+  "triage": {
+    "errors": [],
+    "rewrite_decision_changes": [],
+    "soundness": {
+      "model_replay_failures": 0,
+      "oracle_disagreements": 0,
+      "rewrite_sat_unsat_conflicts": 0,
+      "status_disagreements": 0
+    },
+    "unsupported": [
+      {
+        "detail": "string/regex operator `str.indexof` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_bug613.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_code-sat-neg-one.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_ctn-repl-to-ctn.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_indexof_re-start-index.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex constant `re.allchar` is outside the wired bounded subset (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_indexof_re.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue2958.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.indexof` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue3497.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string literal longer than the bounded length 8 (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue4376.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue5508-multiple-conflicts.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue6520.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue6643-ctn-decompose-conflict.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue6681-split-eq-strip-l.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue6834-str-eq-const-nhomog.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_leq.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_norn-31.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_norn-simp-rew.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.from_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_proj-issue409-re-loop-none.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_quad-028-2-2-unsat.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_quad-138-4-2-unsat.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex constant `re.allchar` is outside the wired bounded subset (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_re-in-rewrite.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex constant `re.none` is outside the wired bounded subset (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_re-none-rewrites.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_re.all.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_regexp_inclusion_reduction.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_replace-find-base.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.from_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_simple-nth-fail.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_str004.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string literal longer than the bounded length 8 (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_strip-endpoint-itos.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_type001.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string literal longer than the bounded length 8 (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_escchar.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string literal longer than the bounded length 8 (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_escchar_25.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_issue3440.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_issue4674-recomp-nf.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string literal longer than the bounded length 8 (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_issue5384-double-conflict.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex constant `re.allchar` is outside the wired bounded subset (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_issue5428-re-diff-assoc.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex constant `re.all` is outside the wired bounded subset (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_issue9784.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_leadingzero001.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_loop001.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_re-include-union.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str003.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_artemis-0512-nonterm.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.at with a non-constant index is not yet supported (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_at001.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_fmf002.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex constant `re.allchar` is outside the wired bounded subset (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue10195.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue2981.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue4379.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue4701_substr_splice.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6057-replace-re-all-jiwonparc.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6057-replace-re.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6203-6-replace-re.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6337-replace-re-all.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6337-replace-re.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "sort List([Atom(\"Seq\"), Atom(\"Int\")])",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6653-3-seq.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex constant `re.all` is outside the wired bounded subset (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6973-dup-lemma-conc.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue7677-test-const-rv.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue9269-rei-nconst.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_kaluza-fl.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_loop005.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_loop007.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_loop008.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_norn-360.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_norn-re-inter-none.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_norn-simp-rew-sat.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_open-pf-merge.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_pattern1.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-agg-total1.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-inter-stack-ovf.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-mod-eq.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_reloop.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_simple-re-consume.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_slent-re-pos-eager.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-sat.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-2.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-3.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-pred-small-rw_392.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.<=` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-leq-trans-unsat.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.<` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-lt-len5.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.<` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-lt-simple.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_substr001.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_type002.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_type003.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.update` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_update-ex1.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.update` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_update-ex2.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string literal longer than the bounded length 8 (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_bug615.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_bug768.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_csp-prefix-exp-bug.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_fmf001.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_goodAI.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex constant `re.allchar` is outside the wired bounded subset (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_instance1079-re-loop-cong.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_instance3303-delta.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_instance7075-delta.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue1684-regex.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string literal longer than the bounded length 8 (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue2060.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue4608-re-derive.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue4759-comp-delta.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue5510-re-consume.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue5520-re-consume.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.replace_all` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue8981-2-strings-deq-ext-nth.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_lower` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue8981-strings-deq-ext-nth.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_loop002.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_loop003.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_loop004.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_loop006.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_loop009.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_nf-ff-contains-abs.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_norn-13.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_norn-nel-bug-052116.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_re-neg-concat-reduct.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_re-neg-unfold-rev-a.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_regexp-strat-fix.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_regexp001.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_regexp002.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (const args), = / distinct over String",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_regexp003.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str001.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str002.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str006.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str007.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "str.++ is supported only for constant strings; variable concatenation needs the typed-result front end (ADR-0029)",
+        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_username_checker_min.smt2",
+        "outcome": "unsupported"
+      }
+    ]
+  },
+  "version": 14
+}

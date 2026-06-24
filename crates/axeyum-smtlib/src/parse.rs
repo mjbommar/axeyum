@@ -708,6 +708,15 @@ fn parse_declare_fun(
         .get(2)
         .and_then(SExpr::list)
         .ok_or_else(|| SmtError::Syntax("declare-fun args".to_owned()))?;
+    // A 0-ary `String` constant is the packed bounded-string bit-vector plus its
+    // canonical well-formedness constraint (ADR-0029), exactly like
+    // `declare-const ... String`. Detected syntactically (not by the resolved
+    // `BitVec(STRING_TOTAL)` sort) so a genuine `(_ BitVec 68)` constant is never
+    // forced into the string well-formedness shape.
+    if args.is_empty() && sexpr_at(items, 3)?.atom() == Some("String") {
+        declare_string_symbol(script, name)?;
+        return Ok(());
+    }
     let result = parse_sort(&script.arena, sort_aliases, sexpr_at(items, 3)?)?;
     if args.is_empty() {
         // 0-ary: a plain constant symbol.
@@ -838,16 +847,25 @@ fn parse_declare_const(
     // bit-vector plus its canonical well-formedness constraint, asserted in both
     // the flat and incremental views so equality/disequality decide via the BV path.
     if sexpr_at(items, 2)?.atom() == Some("String") {
-        let sym = script.arena.declare(name, Sort::BitVec(STRING_TOTAL))?;
-        let v = script.arena.var(sym);
-        let wf = string_wellformed(&mut script.arena, v)?;
-        script.assertions.push(wf);
-        script.assertion_names.push(None);
-        script.commands.push(ScriptCommand::Assert(wf));
-        return Ok(());
+        return declare_string_symbol(script, name);
     }
     let sort = parse_sort(&script.arena, sort_aliases, sexpr_at(items, 2)?)?;
     script.arena.declare(name, sort)?;
+    Ok(())
+}
+
+/// Declares a 0-ary `String` symbol: a packed bounded-string bit-vector plus its
+/// canonical well-formedness constraint (length ≤ max, padding bytes zero),
+/// asserted in both the flat and incremental views so equality/disequality and
+/// the `str.*` operators decide via the BV path (ADR-0029). Shared by
+/// `declare-const ... String` and 0-ary `declare-fun ... String`.
+fn declare_string_symbol(script: &mut Script, name: &str) -> Result<(), SmtError> {
+    let sym = script.arena.declare(name, Sort::BitVec(STRING_TOTAL))?;
+    let v = script.arena.var(sym);
+    let wf = string_wellformed(&mut script.arena, v)?;
+    script.assertions.push(wf);
+    script.assertion_names.push(None);
+    script.commands.push(ScriptCommand::Assert(wf));
     Ok(())
 }
 
@@ -1020,11 +1038,15 @@ fn parse_sort(
         SExpr::Atom(a) if a == "Float32" => Ok(Sort::Float { exp: 8, sig: 24 }),
         SExpr::Atom(a) if a == "Float64" => Ok(Sort::Float { exp: 11, sig: 53 }),
         SExpr::Atom(a) if a == "Float128" => Ok(Sort::Float { exp: 15, sig: 113 }),
-        // The string/sequence theory exists at the API level (the BoundedString
-        // BV lowering, ADR-0025) but is not yet wired into the text front end
-        // (ADR-0029). Fail with an actionable message rather than a generic
-        // "unknown sort", so consumers know it is scoped, not unrecognized.
-        SExpr::Atom(a) if a == "String" || a == "Seq" => Err(SmtError::Unsupported(format!(
+        // The `String` sort is the bounded-model fragment (ADR-0029): a string of
+        // up to `STRING_MAX_LEN` bytes is one bit-vector packing a length (low) and
+        // the content bytes (above). The sort resolves to that `BitVec`; declared
+        // string symbols additionally carry a canonical well-formedness constraint
+        // (asserted at `declare-*` time) so equal strings share one bit pattern and
+        // `=`/`distinct` decide via the BV path. `Seq` (unbounded sequences) has no
+        // sound bounded lowering yet, so it stays a scoped `Unsupported`.
+        SExpr::Atom(a) if a == "String" => Ok(Sort::BitVec(STRING_TOTAL)),
+        SExpr::Atom(a) if a == "Seq" => Err(SmtError::Unsupported(format!(
             "the `{a}` sort is not yet wired into the SMT-LIB front end; the bounded-string \
              theory exists at the API level (ADR-0025/0029)"
         ))),
@@ -2237,6 +2259,14 @@ fn parse_atom(
             "constructor `{a}` needs arguments"
         )));
     }
+    // Nullary string/regex constants outside the wired bounded subset
+    // (`re.none`/`re.all`/`re.allchar`, …) are declined cleanly (ADR-0029) so a
+    // benchmark using them returns `Unsupported`, never a wrong verdict.
+    if a.starts_with("re.") || a.starts_with("str.") {
+        return Err(SmtError::Unsupported(format!(
+            "string/regex constant `{a}` is outside the wired bounded subset (ADR-0029)"
+        )));
+    }
     Err(SmtError::Unsupported(format!("unknown identifier `{a}`")))
 }
 
@@ -3039,6 +3069,18 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
         // A declared uninterpreted function applied to arguments (ADR-0013).
         // Builtins above take priority, matching SMT-LIB reserved names.
         other => {
+            // String/regex operators outside the wired bounded subset
+            // (`str.replace`, `str.indexof`, `str.substr`, `str.<`, `str.to_int`,
+            // `str.in_re`, the `re.*` constructors, …) are declined cleanly
+            // (ADR-0029) so a benchmark using them returns `Unknown`/`Unsupported`
+            // — never a wrong verdict, never a confusing "unknown operator".
+            if other.starts_with("str.") || other.starts_with("re.") {
+                return Err(SmtError::Unsupported(format!(
+                    "string/regex operator `{other}` is outside the wired bounded subset \
+                     (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, \
+                     str.at (const idx), str.++ (const args), = / distinct over String"
+                )));
+            }
             if let Some(func) = arena.find_function(other) {
                 arena.apply(func, args)?
             } else if let Some(ctor) = arena.find_constructor(other) {
