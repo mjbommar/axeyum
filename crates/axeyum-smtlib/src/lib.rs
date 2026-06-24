@@ -13,6 +13,7 @@
 //! the stack.
 
 mod parse;
+mod regex;
 mod sexpr;
 mod write;
 

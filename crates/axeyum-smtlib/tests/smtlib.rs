@@ -2787,3 +2787,302 @@ fn no_set_usage_is_untouched() {
     assert_eq!(s.assertions.len(), 1);
     assert_eq!(s.arena.sort_of(s.assertions[0]), Sort::Bool);
 }
+
+// --- bounded regex matching (`str.in_re`, ADR-0029 slice 5) ------------------
+
+/// `str.in_re s R` over a single declared string `s`. The encoding is over `s`'s
+/// packed bytes, so evaluating the asserted Bool under a concrete packed `s`
+/// directly reports whether that string is in the regex language — an exact
+/// oracle by construction. (`eval_string_script` ANDs the wf constraint too, so
+/// only ≤8-byte strings are valid witnesses, which is the bounded fragment.)
+#[test]
+fn regex_to_re_and_star_and_concat_match() {
+    // (str.in_re s (re.++ (str.to_re "a") (re.* (re.range "a" "z")))):
+    // "a" followed by zero-or-more lowercase letters.
+    let text = "(declare-fun s () String)\n\
+                (assert (str.in_re s (re.++ (str.to_re \"a\") (re.* (re.range \"a\" \"z\")))))\n\
+                (check-sat)\n";
+    assert!(
+        eval_string_script(text, pack_str(b"a")),
+        "\"a\" matches (star = 0)"
+    );
+    assert!(
+        eval_string_script(text, pack_str(b"abc")),
+        "\"abc\" matches"
+    );
+    assert!(eval_string_script(text, pack_str(b"az")), "\"az\" matches");
+    assert!(
+        !eval_string_script(text, pack_str(b"b")),
+        "\"b\" ≠ leading 'a'"
+    );
+    assert!(!eval_string_script(text, pack_str(b"a1")), "'1' ∉ [a-z]");
+    assert!(
+        !eval_string_script(text, pack_str(b"")),
+        "empty ≠ needs leading 'a'"
+    );
+}
+
+#[test]
+fn regex_to_re_literal_exact_match() {
+    // (str.in_re s (str.to_re "abc")) matches exactly "abc".
+    let text = "(declare-fun s () String)\n\
+                (assert (str.in_re s (str.to_re \"abc\")))\n(check-sat)\n";
+    assert!(eval_string_script(text, pack_str(b"abc")), "exact match");
+    assert!(!eval_string_script(text, pack_str(b"ab")), "prefix only");
+    assert!(!eval_string_script(text, pack_str(b"abcd")), "extra char");
+    assert!(!eval_string_script(text, pack_str(b"abd")), "wrong char");
+}
+
+#[test]
+fn regex_union_matches_either_alternative() {
+    // (str.in_re s (re.union (str.to_re "cat") (str.to_re "dog"))).
+    let text = "(declare-fun s () String)\n\
+                (assert (str.in_re s (re.union (str.to_re \"cat\") (str.to_re \"dog\"))))\n\
+                (check-sat)\n";
+    assert!(eval_string_script(text, pack_str(b"cat")), "cat ∈ union");
+    assert!(eval_string_script(text, pack_str(b"dog")), "dog ∈ union");
+    assert!(!eval_string_script(text, pack_str(b"cow")), "cow ∉ union");
+    assert!(
+        !eval_string_script(text, pack_str(b"ca")),
+        "partial ∉ union"
+    );
+}
+
+#[test]
+fn regex_opt_matches_zero_or_one() {
+    // (str.in_re s (re.++ (str.to_re "a") (re.opt (str.to_re "b")) (str.to_re "c"))):
+    // "ac" or "abc".
+    let text = "(declare-fun s () String)\n\
+                (assert (str.in_re s (re.++ (str.to_re \"a\") (re.opt (str.to_re \"b\")) (str.to_re \"c\"))))\n\
+                (check-sat)\n";
+    assert!(eval_string_script(text, pack_str(b"ac")), "opt absent");
+    assert!(eval_string_script(text, pack_str(b"abc")), "opt present");
+    assert!(!eval_string_script(text, pack_str(b"abbc")), "opt is ≤1");
+    assert!(!eval_string_script(text, pack_str(b"a")), "missing 'c'");
+}
+
+#[test]
+fn regex_plus_requires_one_or_more() {
+    // (str.in_re s (re.+ (str.to_re "ab"))): "ab", "abab", … but not "".
+    let text = "(declare-fun s () String)\n\
+                (assert (str.in_re s (re.+ (str.to_re \"ab\"))))\n(check-sat)\n";
+    assert!(eval_string_script(text, pack_str(b"ab")), "one rep");
+    assert!(eval_string_script(text, pack_str(b"abab")), "two reps");
+    assert!(!eval_string_script(text, pack_str(b"")), "+ needs ≥1");
+    assert!(
+        !eval_string_script(text, pack_str(b"aba")),
+        "incomplete rep"
+    );
+}
+
+#[test]
+fn regex_star_matches_empty() {
+    // (str.in_re s (re.* (str.to_re "x"))): "", "x", "xx", …
+    let text = "(declare-fun s () String)\n\
+                (assert (str.in_re s (re.* (str.to_re \"x\"))))\n(check-sat)\n";
+    assert!(eval_string_script(text, pack_str(b"")), "* matches empty");
+    assert!(eval_string_script(text, pack_str(b"x")), "one x");
+    assert!(eval_string_script(text, pack_str(b"xxx")), "many x");
+    assert!(!eval_string_script(text, pack_str(b"xy")), "stray y");
+}
+
+#[test]
+fn regex_allchar_all_none() {
+    // re.allchar = any single char; re.all = Σ*; re.none = ∅.
+    let any1 = "(declare-fun s () String)\n\
+                (assert (str.in_re s re.allchar))\n(check-sat)\n";
+    assert!(
+        eval_string_script(any1, pack_str(b"q")),
+        "one char ∈ allchar"
+    );
+    assert!(!eval_string_script(any1, pack_str(b"")), "empty ∉ allchar");
+    assert!(
+        !eval_string_script(any1, pack_str(b"qq")),
+        "two chars ∉ allchar"
+    );
+
+    let all = "(declare-fun s () String)\n\
+               (assert (str.in_re s re.all))\n(check-sat)\n";
+    assert!(eval_string_script(all, pack_str(b"")), "empty ∈ all");
+    assert!(
+        eval_string_script(all, pack_str(b"hello")),
+        "anything ∈ all"
+    );
+
+    let none = "(declare-fun s () String)\n\
+                (assert (str.in_re s re.none))\n(check-sat)\n";
+    assert!(!eval_string_script(none, pack_str(b"")), "empty ∉ none");
+    assert!(!eval_string_script(none, pack_str(b"a")), "nothing ∈ none");
+}
+
+#[test]
+fn regex_negated_in_re_is_complement_of_match() {
+    // (not (str.in_re s (str.to_re "hi"))): true for every string except "hi".
+    let text = "(declare-fun s () String)\n\
+                (assert (not (str.in_re s (str.to_re \"hi\"))))\n(check-sat)\n";
+    assert!(
+        !eval_string_script(text, pack_str(b"hi")),
+        "\"hi\" fails the negation"
+    );
+    assert!(
+        eval_string_script(text, pack_str(b"ho")),
+        "non-match passes"
+    );
+    assert!(eval_string_script(text, pack_str(b"")), "empty passes");
+}
+
+#[test]
+fn regex_range_endpoints_and_degenerate() {
+    // (re.range "0" "9"): a single digit.
+    let digit = "(declare-fun s () String)\n\
+                 (assert (str.in_re s (re.range \"0\" \"9\")))\n(check-sat)\n";
+    assert!(eval_string_script(digit, pack_str(b"0")), "'0' in [0-9]");
+    assert!(eval_string_script(digit, pack_str(b"9")), "'9' in [0-9]");
+    assert!(eval_string_script(digit, pack_str(b"5")), "'5' in [0-9]");
+    assert!(!eval_string_script(digit, pack_str(b"a")), "'a' ∉ [0-9]");
+    assert!(
+        !eval_string_script(digit, pack_str(b"")),
+        "empty ∉ single-char class"
+    );
+
+    // A reversed range "9".."0" denotes ∅ (matches nothing).
+    let empty = "(declare-fun s () String)\n\
+                 (assert (str.in_re s (re.range \"9\" \"0\")))\n(check-sat)\n";
+    assert!(
+        !eval_string_script(empty, pack_str(b"5")),
+        "reversed range is ∅"
+    );
+}
+
+#[test]
+fn regex_declined_constructs_are_clean_unsupported() {
+    // re.comp (complement) is declined cleanly — never a wrong verdict.
+    assert!(matches!(
+        parse_script(
+            "(declare-fun s () String)\n\
+             (assert (str.in_re s (re.comp (str.to_re \"a\"))))\n(check-sat)\n"
+        ),
+        Err(SmtError::Unsupported(_))
+    ));
+    // re.diff is declined.
+    assert!(matches!(
+        parse_script(
+            "(declare-fun s () String)\n\
+             (assert (str.in_re s (re.diff re.all (str.to_re \"a\"))))\n(check-sat)\n"
+        ),
+        Err(SmtError::Unsupported(_))
+    ));
+    // (_ re.loop 0 2) (indexed head) is declined.
+    assert!(matches!(
+        parse_script(
+            "(declare-fun s () String)\n\
+             (assert (str.in_re s ((_ re.loop 0 2) (str.to_re \"a\"))))\n(check-sat)\n"
+        ),
+        Err(SmtError::Unsupported(_))
+    ));
+    // str.to_re of a non-literal (symbolic) string is declined.
+    assert!(matches!(
+        parse_script(
+            "(declare-fun s () String)\n(declare-fun t () String)\n\
+             (assert (str.in_re s (str.to_re t)))\n(check-sat)\n"
+        ),
+        Err(SmtError::Unsupported(_))
+    ));
+}
+
+#[test]
+fn regex_inter_matches_intersection() {
+    // (re.inter (re.* (re.range "a" "z")) (str.to_re "ab")): lowercase-only ∩ {"ab"} = {"ab"}.
+    let text = "(declare-fun s () String)\n\
+                (assert (str.in_re s (re.inter (re.* (re.range \"a\" \"z\")) (str.to_re \"ab\"))))\n\
+                (check-sat)\n";
+    assert!(eval_string_script(text, pack_str(b"ab")), "ab in both");
+    assert!(
+        !eval_string_script(text, pack_str(b"a")),
+        "a not in the singleton ab"
+    );
+    assert!(
+        !eval_string_script(text, pack_str(b"AB")),
+        "uppercase not lowercase-class"
+    );
+}
+
+#[test]
+fn regex_over_bound_string_is_not_a_wrong_verdict() {
+    // A regex match constraint plus a length far over the bound: parsing succeeds
+    // (the encoding is over the bounded bytes), and no ≤8-byte witness satisfies a
+    // forced len=12, so eval is false for every representable string — i.e. the
+    // bounded model is unsat-shaped here, which the solver surfaces as `unknown`
+    // (tested end-to-end in the corpus run), never a wrong `sat`/`unsat`.
+    let text = "(declare-fun s () String)\n\
+                (assert (str.in_re s (re.* (str.to_re \"a\"))))\n\
+                (assert (= (str.len s) 12))\n(check-sat)\n";
+    let script = parse_script(text).expect("over-bound regex still parses");
+    // No representable (≤8-byte, wf) witness can have len 12.
+    for w in [b"".as_slice(), b"a", b"aaaaaaaa"] {
+        assert!(
+            !eval_string_script(text, pack_str(w)),
+            "len ≠ 12 for any ≤8-byte string"
+        );
+    }
+    assert!(
+        script.assertions.len() >= 2,
+        "wf + in_re + len constraints present"
+    );
+}
+
+#[test]
+fn regex_unicode_escape_range_is_sound() {
+    // (re.range "\u{0}" "\u{ff}") is any byte (code points 0..=255 are
+    // representable), so `str.in_re s (re.* …)` ∧ `str.in_re s …` is sat for any
+    // single character — the exact `issue1684-regex` shape. The decode must NOT
+    // collapse the escaped endpoints to the empty language (which was a latent
+    // wrong-unsat).
+    let any = "(declare-fun s () String)\n\
+               (assert (str.in_re s (re.range \"\\u{0}\" \"\\u{ff}\")))\n(check-sat)\n";
+    assert!(
+        eval_string_script(any, pack_str(b"x")),
+        "any single byte matches"
+    );
+    assert!(
+        eval_string_script(any, pack_str(&[0u8])),
+        "the NUL byte matches"
+    );
+    assert!(
+        !eval_string_script(any, pack_str(b"")),
+        "empty ∉ single-char class"
+    );
+    assert!(
+        !eval_string_script(any, pack_str(b"xy")),
+        "two chars ∉ single-char class"
+    );
+
+    // A \uXXXX escape for a digit: (re.range "0" "9") = [0-9].
+    let digit = "(declare-fun s () String)\n\
+                 (assert (str.in_re s (re.range \"\\u0030\" \"\\u0039\")))\n(check-sat)\n";
+    assert!(
+        eval_string_script(digit, pack_str(b"5")),
+        "'5' in \\u0030-\\u0039"
+    );
+    assert!(!eval_string_script(digit, pack_str(b"a")), "'a' ∉ digits");
+}
+
+#[test]
+fn regex_out_of_byte_codepoint_declines() {
+    // A code point > 255 is outside the byte model; the regex must DECLINE
+    // (Unsupported), never silently treat it as the empty language.
+    assert!(matches!(
+        parse_script(
+            "(declare-fun s () String)\n\
+             (assert (str.in_re s (str.to_re \"\\u{1f600}\")))\n(check-sat)\n"
+        ),
+        Err(SmtError::Unsupported(_))
+    ));
+    assert!(matches!(
+        parse_script(
+            "(declare-fun s () String)\n\
+             (assert (str.in_re s (re.range \"\\u{100}\" \"\\u{200}\")))\n(check-sat)\n"
+        ),
+        Err(SmtError::Unsupported(_))
+    ));
+}

@@ -1203,6 +1203,10 @@ enum Frame<'a> {
     RegisterNamed { name: &'a str },
     /// Pop `argc` results and apply the operator list.
     Apply { items: &'a [SExpr], argc: usize },
+    /// Pop the evaluated string operand of `(str.in_re s R)` and encode the
+    /// bounded regex match against the regex s-expression `re_expr` (which is
+    /// **not** a term and so is compiled, not evaluated, by [`crate::regex`]).
+    ApplyInRe { re_expr: &'a SExpr },
     /// Pop `argc` results and apply a rounding-mode FP op. The mode is the first
     /// child (a `RoundingMode` value, not a term) parsed before queueing.
     ApplyFpRounded {
@@ -1291,6 +1295,12 @@ fn parse_term<'a>(
             Frame::Apply { items, argc } => {
                 let args = results.split_off(results.len() - argc);
                 results.push(apply_op(arena, items, &args)?);
+            }
+            Frame::ApplyInRe { re_expr } => {
+                let s = results
+                    .pop()
+                    .ok_or_else(|| SmtError::Syntax("str.in_re string operand".to_owned()))?;
+                results.push(crate::regex::encode_in_re(arena, s, re_expr)?);
             }
             Frame::ApplyFpRounded { items, mode, argc } => {
                 let args = results.split_off(results.len() - argc);
@@ -1433,6 +1443,14 @@ fn queue_list_eval<'a>(
         // not be queued for term evaluation). The `((as const S) v)` constant-
         // array form is an *application* whose head is itself `(as const S)`;
         // it has a list head and is handled in [`apply_op`], not here.
+        frames.push(Frame::Eval(&items[1]));
+    } else if head.atom() == Some("str.in_re") && items.len() == 3 {
+        // `(str.in_re s R)`: the second argument `R` is a `RegLan` regex, which
+        // has no term sort — it must be **compiled** (Thompson NFA → bounded
+        // match), not evaluated as a term. Queue only the string operand for
+        // evaluation, then a [`Frame::ApplyInRe`] that pops it and encodes the
+        // bounded regex match against `R` (ADR-0029 slice 5).
+        frames.push(Frame::ApplyInRe { re_expr: &items[2] });
         frames.push(Frame::Eval(&items[1]));
     } else if let Some(name) = head.atom()
         && is_fp_rounded_op(name)
@@ -2002,10 +2020,10 @@ fn combine_match(
 const STRING_MAX_LEN: u32 = 8;
 /// Hard cap on any packed string's `max_len` (the 128-bit content ceiling), so
 /// `len_width(16) + 8·16 = 5 + 128 = 133` bits stays a representable BV width.
-const STRING_BOUND_CAP: u32 = 16;
+pub(crate) const STRING_BOUND_CAP: u32 = 16;
 
 /// Bits holding a length in `0..=m` for a string of maximum length `m`.
-const fn len_width(m: u32) -> u32 {
+pub(crate) const fn len_width(m: u32) -> u32 {
     // bits to hold the value `m` (and every smaller length); matches
     // `BoundedString::len_width` so the two encodings agree on widths.
     32 - m.leading_zeros()
@@ -2013,7 +2031,7 @@ const fn len_width(m: u32) -> u32 {
 
 /// Total packed width of a string of maximum length `m`: length bits plus `m`
 /// content bytes.
-const fn string_total(m: u32) -> u32 {
+pub(crate) const fn string_total(m: u32) -> u32 {
     len_width(m) + m * 8
 }
 

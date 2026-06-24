@@ -32,19 +32,76 @@ representation. Wired operators: `str.len`, `str.prefixof`, `str.contains`,
 `str.suffixof`, `str.at` (constant **and** variable `Int` index), `str.++`
 (variable, bounded), `str.substr`, `str.to_code`, `str.from_code` (conservative
 to ASCII), `str.to_int`, `str.from_int` (QF_SLIA Int bridge), `str.<`, `str.<=`,
-and `=`/`distinct`. String literals (including `""`-escaped quotes) pack to
-constants.
+`str.in_re` over the bounded **regex** fragment (`str.to_re` of a literal,
+`re.range`, `re.allchar`/`re.all`/`re.none`, `re.++`/`re.union`/`re.inter`,
+`re.*`/`re.+`/`re.opt`), and `=`/`distinct`. String literals (including
+`""`-escaped quotes and `\u{…}`/`\uXXXX` code points ≤ 255) pack to constants.
 
-Everything outside this subset — regex (`str.in_re`/`re.*`),
-`str.replace`/`str.indexof`, the `Seq` sort, and over-bound cases (literals > 8
-bytes, a concat past the 16-byte cap, a `str.from_int` whose decimal expansion
-exceeds 10 digits) — is declined as a clean `Unsupported`. **Soundness is by
-construction**: an incomplete or unsupported case returns
-`unknown`/`unsupported`, never a wrong verdict.
+Everything outside this subset — the regex constructs `re.comp`/`re.diff`/
+`re.loop`/`re.^`, a symbolic `str.to_re x`, a code point > 255, an NFA over the
+state cap, `str.replace`/`str.indexof`/`str.replace_re`/`str.indexof_re`, the
+`Seq` sort, and over-bound cases (literals > 8 bytes, a concat past the 16-byte
+cap, a `str.from_int` whose decimal expansion exceeds 10 digits) — is declined as
+a clean `Unsupported`. **Soundness is by construction**: an incomplete or
+unsupported case returns `unknown`/`unsupported`, never a wrong verdict.
+
+### Bounded regex matching (`str.in_re`, slice 5)
+
+`(str.in_re s R)` for a bounded string `s` of max length `m` compiles `R` to a
+Thompson NFA over **byte** character classes, then asserts acceptance with a
+bounded reachable-state encoding: Boolean `reach[pos][q]` for each position
+`pos ∈ 0..=m` and NFA state `q`, where `reach[0]` is the ε-closure of the start
+state, `reach[pos+1][t]` holds when some `reach[pos][q]` has a `q → t` character
+transition whose predicate accepts byte `s[pos]` **and** `pos < len(s)` (then
+ε-closure), and acceptance is selected at `pos = len(s)` from the packed length
+field. The encoding is **denotation-preserving for the ≤`m`-byte representation
+of `s`** — it decides matching exactly over the bounded string, with the static
+ε-closure precomputed and every disjunction built as a *balanced* tree so a large
+NFA cannot produce a stack-overflowing linear-depth term (the `re-inter-stack-ovf`
+benchmark now returns a sound `unknown`, not a crash). The same length bound as
+the rest of the front end is the only incompleteness: a match that needs a string
+longer than `m` is excluded by well-formedness and surfaces as `unknown`, never a
+wrong `sat`/`unsat`. The `re.inter` case is a determinized subset product of the
+component NFAs, capped at the same state limit. Each construct is checked against
+the SMT-LIB `UnicodeStrings`/`RegLan` semantics; `\u{…}`/`\uXXXX` escapes are
+decoded so an escaped endpoint is never silently collapsed to the empty language
+(the `issue1684-regex` corner: `(re.range "\u{0}" "\u{ff}")` is *any byte*, sat).
 
 ## Measured head-to-head
 
 `qf-s-cvc5-regress-clean-solver-vs-z3-10s.json`, `--timeout-ms 10000 --jobs 4`:
+
+### Slice 5 — bounded **regex** matching (`str.in_re`) (2026-06-24)
+
+- **files 123**. axeyum **decides 41** (sat 29, unsat 12), **unknown 11**
+  (all `Incomplete` — bounded integer width 32 / out-of-range Int constant /
+  over-length string, **not** a wrong verdict), **unsupported 71** (declined
+  cleanly), errors 0.
+- **compared 40, agree 40, DISAGREE 0** (12 skipped where Z3 itself returned
+  `unknown`/timed out). Every decided verdict matches both the Z3 4.13.3 binary
+  **and** the benchmark's `(set-info :status …)` annotation (0 status
+  mismatches), and every `sat` model replay-checks (`model_replay_failures = 0`).
+  No regression on QF_UF/QF_UFLIA (DISAGREE 0). `par2_mean` 4.38 → 4.23 s (no new
+  timeout; the deeply-nested `re-inter-stack-ovf` benchmark is a sound `unknown`).
+- New deciders (all in `axeyum-smtlib`, no `axeyum-ir`/`axeyum-solver` change):
+  `str.in_re` over the bounded regex fragment — `str.to_re` of a literal,
+  `re.range`, `re.allchar`/`re.all`/`re.none`, `re.++`/`re.union`/`re.inter`,
+  `re.*`/`re.+`/`re.opt` — encoded as a Thompson NFA → bounded reachable-state
+  Boolean/BV match over the ≤`m` packed bytes (see the fragment description
+  above). Of the 52 `str.in_re` files, **16 now decide** (10 sat, 6 unsat); the
+  rest decline a declined construct (`re.comp`/`re.diff`/`re.loop`,
+  `str.replace_re`, symbolic `str.to_re`, code point > 255) or are over-bound.
+- **Soundness corner fixed:** `\u{…}`/`\uXXXX` escapes are decoded to code points;
+  an endpoint with a representable code point (≤ 255) forms its byte range, an
+  endpoint **above** 255 (or a malformed escape) **declines** rather than collapse
+  to the empty language — so `issue1684-regex` (`(re.range "\u{0}" "\u{ff}")` =
+  any byte) is correctly `sat`, where a naive byte-literal decode produced a wrong
+  `unsat`.
+- **Bound decision:** `STRING_MAX_LEN = 8` and `STRING_BOUND_CAP = 16` unchanged
+  (slice-4's measurement that widening regresses the decide-rate still holds). The
+  remaining 71 unsupported are dominated by **over-bound** length (a concat past
+  the 16-byte cap: 25; a literal > 8 bytes: 10) — a length-bound lever, not a
+  regex gap — plus the declined non-regular constructs.
 
 ### Slice 4 — `str.to_int` / `str.from_int` (QF_SLIA Int bridge) (2026-06-24)
 
@@ -151,31 +208,34 @@ literals are `STRING_MAX_LEN = 8` bytes; a concat result is capped at
 summed bound exceeds the cap declines as `Unsupported` (Unknown to the consumer)
 — **never a wrong verdict**.
 
-## Slice-5 decomposition (raise the decide-rate, stay sound)
+## Slice-6 decomposition (raise the decide-rate, stay sound)
 
-Slices 2–4 wired the BV-expressible manipulation/conversion ops (variable
+Slices 2–5 wired the BV-expressible manipulation/conversion ops (variable
 `str.++`, variable-index `str.at`, `str.substr`, `str.to_code`/`from_code`,
-`str.<`/`str.<=`, `str.to_int`/`str.from_int`). The remaining **91** unsupported
-instances break down by the first gating operator (measured from the slice-4
+`str.<`/`str.<=`, `str.to_int`/`str.from_int`) and the bounded **regex** fragment
+(`str.in_re` over `str.to_re`/`re.range`/`re.allchar`/`re.all`/`re.none`/`re.++`/
+`re.union`/`re.inter`/`re.*`/`re.+`/`re.opt`). The remaining **71** unsupported
+instances break down by the first gating operator (measured from the slice-5
 artifact):
 
-| gap | count | slice-5 action |
+| gap | count | slice-6 action |
 |---|---|---|
-| regex (`str.to_re` 27, `re.range` 10, `re.all/none/allchar` 9, `str.in_re`, `str.indexof_re`, `str.replace_re`) | **~46 (biggest bucket)** — wire a bounded `Regex`/NFA fragment onto the packed layout (regex matching of a ≤`m`-byte string) |
-| over-bound `concat` past the 16-byte cap | 22 | a wider-cap or a length-abstraction path; mind the formula-size blowup measured in slice 4 (naively raising `STRING_MAX_LEN` regresses the decide-rate) |
-| string literal > 8 bytes | 9 | same length-bound tension; a literal-only widening (without widening every symbol) is the cheaper lever to try |
-| `str.replace` (first occurrence) / `str.replace_all` | ~8 | bounded byte-matching + rebuild over the ≤`m` positions; mind the result-length growth and the no-match corner |
-| `str.indexof s sub off` | 2 | bounded byte-matching cascade returning the first match position (or `-1`); reuses the Int↔position bridge from slice-3 `str.at`/`str.substr` |
-| `str.update`, `str.to_lower`, `str.replace_re_all`, `Seq`, a 29-digit Int constant | few | genuinely unsupported / unbounded / int-width-limited — remain a sound decline |
+| over-bound `concat` past the 16-byte cap | 25 | **biggest bucket** — a wider-cap or a length-abstraction path; mind the formula-size blowup (naively raising `STRING_MAX_LEN` regresses the decide-rate, measured in slice 4) |
+| string literal > 8 bytes | 10 | same length-bound tension; a literal-only widening (without widening every symbol) is the cheaper lever to try |
+| `str.replace` / `str.replace_all` | 7 | bounded byte-matching + rebuild over the ≤`m` positions; mind the result-length growth and the no-match corner |
+| declined regex (`re.comp`/`re.diff` 4, `re.loop`/`re.^` indexed 6, symbolic `str.to_re` 5, a regex op used outside `str.in_re` ~5) | ~20 | `re.comp`/`re.diff` need a complement-aware (DFA-product) encoding; `re.loop` is a bounded-repeat unroll; symbolic `str.to_re` needs matching against an unknown string |
+| `str.indexof` / `str.indexof_re` | 2 | bounded byte-matching cascade returning the first match position (or `-1`); reuses the Int↔position bridge from slice-3 `str.at`/`str.substr` |
+| `str.update`, `str.to_lower`, `re.inter` (nested), `Seq`, a 29-digit Int constant | few | genuinely unsupported / unbounded / int-width-limited — remain a sound decline |
 
-Note on slice-4 unknowns: the 7 `unknown:Incomplete` instances are sound
+Note on slice-5 unknowns: the 11 `unknown:Incomplete` instances are sound
 declines, not wrong verdicts — they are unsat-shaped queries the bounded BV
-int-blast cannot refute (`str004`, `str005`, `open-pf-merge`, the
-`str-code-unsat*` family, `artemis`) or carry an Int constant that overflows the
-bounded width 32 (`str-code-unsat-2`'s 29-digit literal). **None** clear by
-raising the *string* length bound (measured: 9 and 12 both regress); the lever
-they need is the **bounded integer width**, which lives in `axeyum-solver`
-(`DEFAULT_INT_WIDTH`, out of the `axeyum-smtlib` lane).
+int-blast cannot refute, carry an Int constant that overflows the bounded width
+32 (`str-code-unsat-2`'s 29-digit literal), or assert a string length over the
+bound (`username_checker_min`, `re-inter-stack-ovf`, `re-agg-total1`). **None**
+clear by raising the *string* length bound (measured in slice 4: 9 and 12 both
+regress the decide-rate); the levers they need — the **bounded integer width**
+(`DEFAULT_INT_WIDTH`) and a non-regressing length-widening — live in
+`axeyum-solver` / are the slice-6 over-bound work.
 
 Each slice is gated by the same DISAGREE = 0 re-measure.
 
