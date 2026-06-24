@@ -83,16 +83,74 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
     let mut macros: HashMap<String, MacroDef<'_>> = HashMap::new();
     let mut sort_aliases: HashMap<String, Sort> = HashMap::new();
 
+    // Width used to model every arity-0 `(declare-sort U 0)` uninterpreted sort
+    // as a `BitVec(W)` (see [`uninterpreted_sort_width`]). Computed once from a
+    // rigorous upper bound on the number of distinct `U`-typed terms the whole
+    // script can possibly contain — the soundness argument lives on that
+    // function.
+    let uninterpreted_width = uninterpreted_sort_width(&exprs);
+
     for command in &exprs {
         parse_command(
             &mut script,
             &mut aliases,
             &mut macros,
             &mut sort_aliases,
+            uninterpreted_width,
             command,
         )?;
     }
     Ok(script)
+}
+
+/// The bit-width `W` used to model **every** arity-0 uninterpreted sort
+/// `(declare-sort U 0)` as a `BitVec(W)`, turning `QF_UF`/`QF_UFLIA` over
+/// uninterpreted sorts into `QF_UFBV`/`QF_UFLIA`-over-BV (which axeyum already
+/// fully decides) without touching the IR `Sort` enum.
+///
+/// # Soundness — why no wrong `unsat` is possible
+///
+/// In a quantifier-free formula, an uninterpreted sort `U` only needs as many
+/// **distinct** values as there are **distinct `U`-typed terms** in the formula:
+/// any satisfying model can be collapsed so that every `U`-typed term takes a
+/// value drawn from a set of size at most `k`, where `k` is the number of
+/// distinct `U`-typed terms (a Herbrand-style bound — you cannot assert more
+/// pairwise-`distinct` `U`-elements than there are `U`-terms to name them).
+///
+/// Every `U`-typed term is itself an s-expression node somewhere in the script,
+/// so the **total s-expression node count** `n` of the entire script is a
+/// rigorous upper bound on `k`: `k ≤ n`. We pick
+/// `W = max(1, ceil(log2(n)) + MARGIN)` with `MARGIN = 2`, which guarantees
+/// `2^W ≥ 4·n ≥ n ≥ k`. Hence the `BitVec(W)` domain always has at least `k`
+/// distinct values available, so a satisfiable `distinct`/inequality constraint
+/// over `U` can never be forced `unsat` by running out of tokens. The `MARGIN`
+/// is pure slack (never required for soundness); it only keeps the encoding off
+/// the exact boundary. The width is intentionally uniform across all declared
+/// sorts in the script: the global node count is still a sound
+/// over-approximation of any single sort's own term count, and it keeps the
+/// single-pass parser simple.
+///
+/// `n` is computed once over the parsed s-expressions and is bounded by the
+/// input size; a parseable benchmark cannot hold `2^usize::BITS` nodes, so the
+/// `ceil(log2)` cannot saturate in practice.
+fn uninterpreted_sort_width(exprs: &[SExpr]) -> u32 {
+    const MARGIN: u32 = 2;
+    let n: usize = exprs.iter().map(count_sexpr_nodes).sum();
+    // ceil(log2(n)): the number of bits needed to index `n` distinct values.
+    // For n ≤ 1 a single bit already provides 2 ≥ n values, so 0 base bits.
+    let bits = if n <= 1 { 0 } else { (n - 1).ilog2() + 1 };
+    (bits + MARGIN).max(1)
+}
+
+/// Total number of s-expression nodes (every atom, and every list node plus its
+/// children) in `e`. An over-approximation of the number of distinct terms any
+/// declaration/assertion in the script can introduce; see
+/// [`uninterpreted_sort_width`] for how this bounds the modeling width.
+fn count_sexpr_nodes(e: &SExpr) -> usize {
+    match e {
+        SExpr::Atom(_) => 1,
+        SExpr::List(items) => 1 + items.iter().map(count_sexpr_nodes).sum::<usize>(),
+    }
 }
 
 // A flat dispatch over the SMT-LIB command keywords; one match arm per command.
@@ -102,6 +160,7 @@ fn parse_command<'a>(
     aliases: &mut HashMap<String, TermId>,
     macros: &mut HashMap<String, MacroDef<'a>>,
     sort_aliases: &mut HashMap<String, Sort>,
+    uninterpreted_width: u32,
     command: &'a SExpr,
 ) -> Result<(), SmtError> {
     let items = command
@@ -200,6 +259,10 @@ fn parse_command<'a>(
         "declare-datatypes" => parse_declare_datatypes(script, sort_aliases, items)?,
         "define-fun" => parse_define_fun(script, aliases, macros, sort_aliases, items)?,
         "define-sort" => parse_define_sort(script, sort_aliases, items)?,
+        // `(declare-sort U 0)` — an arity-0 uninterpreted sort, modeled as a
+        // `BitVec(W)` (soundness on [`uninterpreted_sort_width`]). Arity ≥ 1
+        // (parametric, e.g. `(declare-sort List 1)`) is out of scope.
+        "declare-sort" => parse_declare_sort(script, sort_aliases, uninterpreted_width, items)?,
         "assert" => {
             exact_len(items, 2, head)?;
             let body = sexpr_at(items, 1)?;
@@ -620,6 +683,58 @@ fn parse_define_sort(
     }
     let body = parse_sort(&script.arena, sort_aliases, sexpr_at(items, 3)?)?;
     sort_aliases.insert(name.to_owned(), body);
+    Ok(())
+}
+
+/// `(declare-sort U n)` — an uninterpreted sort.
+///
+/// The arity-0 case `(declare-sort U 0)` is the common `QF_UF`/`QF_UFLIA` shape:
+/// `U` is registered (in the shared `sort_aliases` map, alongside `define-sort`
+/// aliases) as `BitVec(uninterpreted_width)`. Every later use of `U` as a sort —
+/// in `declare-fun` parameter/result positions, `=`, `distinct`, `ite`, array
+/// index/element, etc. — then resolves through [`parse_sort`] to that bit-vector
+/// width, so the whole script becomes `QF_UFBV`/`QF_UFLIA`-over-BV, which axeyum
+/// already decides. The modeling is sound for any width chosen by
+/// [`uninterpreted_sort_width`]; see its soundness argument for why no wrong
+/// `unsat` is possible.
+///
+/// Parametric declared sorts (`(declare-sort List 1)` and higher) would model a
+/// *family* of sorts, which the scalar BV encoding cannot express, so they are
+/// rejected as [`SmtError::Unsupported`] (rare in practice).
+///
+/// # Errors
+///
+/// [`SmtError::Unsupported`] for a parametric (arity ≥ 1) sort; [`SmtError::Syntax`]
+/// for a malformed form, a non-numeric arity, a name that is a builtin sort, or a
+/// duplicate sort name (mirroring [`parse_define_sort`]).
+fn parse_declare_sort(
+    script: &mut Script,
+    sort_aliases: &mut HashMap<String, Sort>,
+    uninterpreted_width: u32,
+    items: &[SExpr],
+) -> Result<(), SmtError> {
+    exact_len(items, 3, "declare-sort")?;
+    let name = atom_at(items, 1)?;
+    let arity = atom_at(items, 2)?
+        .parse::<u32>()
+        .map_err(|_| SmtError::Syntax("declare-sort arity must be a numeral".to_owned()))?;
+    if arity != 0 {
+        return Err(SmtError::Unsupported(format!(
+            "parametric/arity-{arity} declared sort `{name}` (only arity-0 \
+             uninterpreted sorts are modeled, as BitVec)"
+        )));
+    }
+    if is_builtin_sort_name(name) || script.arena.find_datatype(name).is_some() {
+        return Err(SmtError::Syntax(format!(
+            "declare-sort: `{name}` is a builtin or declared sort"
+        )));
+    }
+    if sort_aliases.contains_key(name) {
+        return Err(SmtError::Syntax(format!(
+            "declare-sort: duplicate sort name `{name}`"
+        )));
+    }
+    sort_aliases.insert(name.to_owned(), Sort::BitVec(uninterpreted_width));
     Ok(())
 }
 

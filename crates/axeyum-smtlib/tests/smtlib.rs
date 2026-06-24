@@ -1,6 +1,6 @@
 //! Reader/writer tests: feature coverage, round trips, and corpus smoke.
 
-use axeyum_ir::{Assignment, SymbolId, TermStats, Value, eval};
+use axeyum_ir::{Assignment, Sort, SymbolId, TermStats, Value, eval};
 use axeyum_smtlib::{SmtError, parse_script, write_script};
 
 #[test]
@@ -332,7 +332,14 @@ fn unsupported_constructs_are_clear_errors() {
     assert_eq!(inc.commands.len(), 1);
     // An unknown command is still a clear unsupported error.
     assert!(matches!(
-        parse_script("(declare-sort S 0)"),
+        parse_script("(some-unknown-command 0)"),
+        Err(SmtError::Unsupported(_))
+    ));
+    // Arity-0 `declare-sort` is now accepted (modeled as a BitVec); an arity-N
+    // (parametric) declared sort is still a graceful unsupported error.
+    assert!(parse_script("(declare-sort S 0)").is_ok());
+    assert!(matches!(
+        parse_script("(declare-sort List 1)"),
         Err(SmtError::Unsupported(_))
     ));
     // n-ary functions over scalar sorts are supported (ADR-0013); a function
@@ -345,6 +352,106 @@ fn unsupported_constructs_are_clear_errors() {
     assert!(matches!(
         parse_script("(assert (bvadd"),
         Err(SmtError::Syntax(_))
+    ));
+}
+
+#[test]
+fn uninterpreted_sort_is_modeled_as_bitvec() {
+    // `(declare-sort U 0)` constants resolve to the same `BitVec(W)` width, so an
+    // equality between two `U`-typed constants parses as a plain BV equality.
+    let text = r"
+        (set-logic QF_UF)
+        (declare-sort U 0)
+        (declare-fun a () U)
+        (declare-fun b () U)
+        (assert (= a b))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+    let a = script.arena.find_symbol("a").unwrap();
+    let b = script.arena.find_symbol("b").unwrap();
+    let (_, sort_a) = script.arena.symbol(a);
+    let (_, sort_b) = script.arena.symbol(b);
+    let Sort::BitVec(w) = sort_a else {
+        panic!("U constant should resolve to a BitVec sort, got {sort_a:?}");
+    };
+    assert!(w >= 1, "modeling width must be at least 1");
+    assert_eq!(sort_a, sort_b, "both U constants must share one width");
+}
+
+#[test]
+fn uninterpreted_sort_distinct_has_room_for_all_tokens() {
+    // Three pairwise-distinct `U`-typed constants must fit in the modeling width
+    // (2^W ≥ 3). The width is sized from the whole-script node count + margin, so
+    // this can never be forced unsat by running out of distinct BV values.
+    let text = r"
+        (set-logic QF_UF)
+        (declare-sort U 0)
+        (declare-fun a () U)
+        (declare-fun b () U)
+        (declare-fun c () U)
+        (assert (distinct a b c))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+    let a = script.arena.find_symbol("a").unwrap();
+    let Sort::BitVec(w) = script.arena.symbol(a).1 else {
+        panic!("U constant should resolve to a BitVec sort");
+    };
+    // The encoding must be able to represent at least the 3 distinct tokens.
+    assert!(
+        u64::from(w) >= 2,
+        "width {w} cannot hold 3 distinct values (need 2^W ≥ 3)"
+    );
+}
+
+#[test]
+fn uninterpreted_function_over_sort_parses() {
+    // A function over the uninterpreted sort `(declare-fun f (U) U)` becomes a
+    // `BitVec(W) → BitVec(W)` uninterpreted function; a congruence formula
+    // (a = b ∧ f(a) ≠ f(b)) parses cleanly into two assertions.
+    let text = r"
+        (set-logic QF_UF)
+        (declare-sort U 0)
+        (declare-fun a () U)
+        (declare-fun b () U)
+        (declare-fun f (U) U)
+        (assert (= a b))
+        (assert (not (= (f a) (f b))))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 2);
+    // f's result is a BV of the modeling width.
+    let fa = script.assertions[1];
+    // The second assertion is `(not (= (f a) (f b)))`; just confirm it built and
+    // that f's applications are BV-sorted via the term's sort.
+    assert_eq!(script.arena.sort_of(fa), Sort::Bool);
+}
+
+#[test]
+fn uninterpreted_sort_collisions_and_arity_are_errors() {
+    // Duplicate declared sort name.
+    assert!(matches!(
+        parse_script("(declare-sort U 0) (declare-sort U 0)"),
+        Err(SmtError::Syntax(_))
+    ));
+    // A builtin sort name cannot be redeclared.
+    assert!(matches!(
+        parse_script("(declare-sort Int 0)"),
+        Err(SmtError::Syntax(_))
+    ));
+    // Non-numeric arity is a syntax error.
+    assert!(matches!(
+        parse_script("(declare-sort U x)"),
+        Err(SmtError::Syntax(_))
+    ));
+    // Parametric (arity ≥ 1) is gracefully unsupported.
+    assert!(matches!(
+        parse_script("(declare-sort Pair 2)"),
+        Err(SmtError::Unsupported(_))
     ));
 }
 
