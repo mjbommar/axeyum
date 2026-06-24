@@ -3263,6 +3263,26 @@ fn select_by_order(
     let by_order = arena.ite(x_le_y, lo, hi)?;
     // Opposite-sign-zero override: SMT-LIB-unspecified, so a free zero whose sign
     // is a fresh per-application bit. `both_zero ∧ sign(x) ≠ sign(y)`.
+    //
+    // The override is emitted ONLY when the opposite-sign-zero case is not
+    // statically excluded — i.e. when BOTH operands COULD be ±0. If either
+    // operand is a *constant* whose magnitude is non-zero (an infinity, NaN, or
+    // any non-zero finite), then `is_zero` of that operand is statically false,
+    // so `opposite_sign_zero` can never hold; we then return the ordered pick
+    // directly. This keeps the term free of the fresh `free_sign_zero` symbol so
+    // the *strict* ground evaluator never reaches an unbound symbol in a branch
+    // that is statically dead (`fp.min`/`fp.max` over non-zero constants is a
+    // deterministic tautology and must ground-evaluate). Soundness is unchanged:
+    // we only SKIP the override where the unspecified case is impossible, so no
+    // model is added or removed; where the case is *possible* (both operands
+    // could be a zero — symbolic, or constant ±0) the fresh-symbol override is
+    // kept and the ±0 nondeterminism (issue208) holds.
+    if provably_nonzero(arena, fmt, x) || provably_nonzero(arena, fmt, y) {
+        let nx = is_nan(arena, fmt, x)?;
+        let ny = is_nan(arena, fmt, y)?;
+        let if_x_nan = arena.ite(nx, y, by_order)?;
+        return arena.ite(ny, x, if_x_nan);
+    }
     let opp = opposite_sign_zero(arena, fmt, x, y)?;
     let free_zero = free_sign_zero(arena, fmt, x, y, want_smaller)?;
     let by_order = arena.ite(opp, free_zero, by_order)?;
@@ -3289,6 +3309,30 @@ fn opposite_sign_zero(
     let diff_sign = arena.not(diff_sign)?;
     let both_zero = arena.and(zx, zy)?;
     arena.and(both_zero, diff_sign)
+}
+
+/// `true` when `x` is a *constant* whose value is provably NOT `±0` — i.e. the
+/// magnitude (every bit except the sign bit) is non-zero. Such a value is an
+/// infinity, a NaN, or a non-zero finite, none of which is a zero, so
+/// [`opposite_sign_zero`] involving it is statically false. Returns `false` for
+/// any symbolic (non-constant) term and for the constant `±0` patterns
+/// themselves — those keep the [`select_by_order`] fresh-symbol override. Used
+/// to keep `fp.min`/`fp.max` over non-zero constants free of the fresh sign-bit
+/// symbol so the strict ground evaluator can fold the term (the override's only
+/// purpose is the genuinely-unspecified `±0` case, which is impossible here).
+fn provably_nonzero(arena: &TermArena, fmt: FloatFormat, x: TermId) -> bool {
+    let width = fmt.width();
+    match arena.node(x) {
+        TermNode::BvConst { width: w, value } if *w == width => {
+            // Clear the sign bit; any remaining set bit means non-zero magnitude.
+            (*value & !sign_mask(fmt)) != 0
+        }
+        TermNode::WideBvConst(v) if v.width() == width => {
+            // Non-zero magnitude iff any bit below the sign bit is set.
+            (0..width - 1).any(|i| v.bit(i))
+        }
+        _ => false,
+    }
 }
 
 /// A zero of the format's width whose sign is a **fresh free Boolean**, one per
@@ -6916,5 +6960,59 @@ mod fp_to_int_symbolic_tests {
             bit(&a, mn_yx, &differ),
             "opposite-sign-zero fp.min results must be free to differ",
         );
+    }
+
+    /// `fp.min`/`fp.max` over NON-zero constants (infinities and non-zero
+    /// finites) must ground-evaluate to the exact deterministic result with NO
+    /// assignment — the static-exclusion guard skips the fresh `±0` sign symbol,
+    /// so the strict evaluator never hits an unbound symbol. This is the
+    /// regression that `af6c8bf`'s unconditional override introduced (a fresh
+    /// symbol in every `fp.min`/`fp.max` term → `eval(...): UnboundSymbol` on a
+    /// constant tautology like `fp.min(−∞, +∞)`).
+    #[test]
+    fn min_max_nonzero_constants_ground_evaluate() {
+        // F64 bit patterns: ±∞ (exp all ones, sig 0) and a couple of finites.
+        const POS_INF: u128 = 0x7FF0_0000_0000_0000;
+        const NEG_INF: u128 = 0xFFF0_0000_0000_0000;
+        const ONE: u128 = 0x3FF0_0000_0000_0000; // 1.0
+        const TWO: u128 = 0x4000_0000_0000_0000; // 2.0
+
+        let bits = |a: &TermArena, t| match eval(a, t, &Assignment::new()) {
+            Ok(Value::Bv { value, .. }) => value,
+            other => panic!("expected a ground BV value, got {other:?}"),
+        };
+
+        let mut a = TermArena::new();
+        let p_inf = a.bv_const(64, POS_INF).unwrap();
+        let n_inf = a.bv_const(64, NEG_INF).unwrap();
+        let one = a.bv_const(64, ONE).unwrap();
+        let two = a.bv_const(64, TWO).unwrap();
+
+        // No fresh `signzero` symbol is created for any non-zero-constant pair.
+        for &(x, y) in &[(p_inf, n_inf), (one, two), (n_inf, one)] {
+            let mn = min(&mut a, FloatFormat::F64, x, y).unwrap();
+            let mx = max(&mut a, FloatFormat::F64, x, y).unwrap();
+            // Ground-evaluating with an EMPTY assignment must succeed (no
+            // UnboundSymbol) — this is exactly what the float128 smtlib test
+            // exercises through `fp.min`/`fp.max` over infinities.
+            let _ = bits(&a, mn);
+            let _ = bits(&a, mx);
+        }
+        // No `.signzero.` symbol was declared at all (override fully skipped).
+        assert!(
+            a.symbols().all(|(_, name, _)| !name.contains(".signzero.")),
+            "non-zero-constant fp.min/max must not allocate a fresh ±0 sign bit",
+        );
+
+        // Exact deterministic results: min(−∞,+∞)=−∞, max(−∞,+∞)=+∞,
+        // min(1,2)=1, max(1,2)=2.
+        let min_inf = min(&mut a, FloatFormat::F64, n_inf, p_inf).unwrap();
+        let max_inf = max(&mut a, FloatFormat::F64, n_inf, p_inf).unwrap();
+        assert_eq!(bits(&a, min_inf), NEG_INF, "min(−∞,+∞) = −∞");
+        assert_eq!(bits(&a, max_inf), POS_INF, "max(−∞,+∞) = +∞");
+        let min_one_two = min(&mut a, FloatFormat::F64, one, two).unwrap();
+        let max_one_two = max(&mut a, FloatFormat::F64, one, two).unwrap();
+        assert_eq!(bits(&a, min_one_two), ONE, "min(1,2) = 1");
+        assert_eq!(bits(&a, max_one_two), TWO, "max(1,2) = 2");
     }
 }
