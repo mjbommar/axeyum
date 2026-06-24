@@ -85,6 +85,12 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
     // [`SmtError::Unsupported`] for a script whose set usage falls outside the
     // provably-sound subset (see [`desugar_sets`]).
     desugar_sets(&mut exprs)?;
+    // Bounded finite-sequence theory: build the packed-width → element-width
+    // registry for every `(Seq E)` over a fixed-width element sort, once, up front
+    // (mirroring [`uninterpreted_sort_width`]). The map is then immutable for the
+    // parse; an empty table is the fast path for sequence-free scripts. A `(Seq E)`
+    // over an unsupported element sort makes this a clean [`SmtError::Unsupported`].
+    let seq = build_seq_info(&exprs)?;
     let mut script = Script::default();
     let mut aliases: HashMap<String, TermId> = HashMap::new();
     let mut macros: HashMap<String, MacroDef<'_>> = HashMap::new();
@@ -111,6 +117,7 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
             &mut sort_aliases,
             &mut named,
             uninterpreted_width,
+            &seq,
             command,
         )?;
     }
@@ -510,7 +517,7 @@ fn atom(s: &str) -> SExpr {
 }
 
 // A flat dispatch over the SMT-LIB command keywords; one match arm per command.
-#[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_lines, clippy::too_many_arguments)]
 fn parse_command<'a>(
     script: &mut Script,
     aliases: &mut HashMap<String, TermId>,
@@ -518,6 +525,7 @@ fn parse_command<'a>(
     sort_aliases: &mut HashMap<String, Sort>,
     named: &mut HashMap<String, TermId>,
     uninterpreted_width: u32,
+    seq: &SeqInfo,
     command: &'a SExpr,
 ) -> Result<(), SmtError> {
     let items = command
@@ -579,6 +587,7 @@ fn parse_command<'a>(
                 aliases,
                 macros,
                 named,
+                seq,
             )?;
             script.objectives.push((t, head == "maximize"));
         }
@@ -592,7 +601,7 @@ fn parse_command<'a>(
                 .and_then(SExpr::list)
                 .ok_or_else(|| SmtError::Syntax("get-value expects (t …)".to_owned()))?;
             for t in list {
-                let term = parse_term(&mut script.arena, t, aliases, macros, named)?;
+                let term = parse_term(&mut script.arena, t, aliases, macros, named, seq)?;
                 script.get_value_terms.push(term);
             }
         }
@@ -604,7 +613,14 @@ fn parse_command<'a>(
                 .ok_or_else(|| SmtError::Syntax("check-sat-assuming expects (l ...)".to_owned()))?;
             let mut assumptions = Vec::with_capacity(list.len());
             for lit in list {
-                assumptions.push(parse_term(&mut script.arena, lit, aliases, macros, named)?);
+                assumptions.push(parse_term(
+                    &mut script.arena,
+                    lit,
+                    aliases,
+                    macros,
+                    named,
+                    seq,
+                )?);
             }
             script.check_sats += 1;
             script
@@ -620,11 +636,13 @@ fn parse_command<'a>(
         "declare-const" => parse_declare_const(script, sort_aliases, items)?,
         "declare-datatype" => parse_declare_datatype(script, sort_aliases, items)?,
         "declare-datatypes" => parse_declare_datatypes(script, sort_aliases, items)?,
-        "define-fun" => parse_define_fun(script, aliases, macros, sort_aliases, named, items)?,
+        "define-fun" => parse_define_fun(script, aliases, macros, sort_aliases, named, seq, items)?,
         // `(define-const c S body)` is exact sugar for `(define-fun c () S body)`
         // (SMT-LIB §3.7.2 abbreviation): a nullary definition. We reuse the
         // no-args alias path verbatim, so soundness is identical to `define-fun`.
-        "define-const" => parse_define_const(script, aliases, macros, sort_aliases, named, items)?,
+        "define-const" => {
+            parse_define_const(script, aliases, macros, sort_aliases, named, seq, items)?;
+        }
         "define-sort" => parse_define_sort(script, sort_aliases, items)?,
         // `(declare-sort U 0)` — an arity-0 uninterpreted sort, modeled as a
         // `BitVec(W)` (soundness on [`uninterpreted_sort_width`]). Arity ≥ 1
@@ -634,7 +652,7 @@ fn parse_command<'a>(
             exact_len(items, 2, head)?;
             let body = sexpr_at(items, 1)?;
             let name = named_label(body);
-            let t = parse_term(&mut script.arena, body, aliases, macros, named)?;
+            let t = parse_term(&mut script.arena, body, aliases, macros, named, seq)?;
             script.assertions.push(t);
             script.assertion_names.push(name);
             script.commands.push(ScriptCommand::Assert(t));
@@ -715,6 +733,14 @@ fn parse_declare_fun(
     // forced into the string well-formedness shape.
     if args.is_empty() && sexpr_at(items, 3)?.atom() == Some("String") {
         declare_string_symbol(script, name)?;
+        return Ok(());
+    }
+    // A 0-ary `(Seq E)` constant: packed sequence + well-formedness (ADR-0029),
+    // exactly like `declare-const ... (Seq E)`.
+    if args.is_empty()
+        && let Some(ew) = seq_decl_elem_width(sexpr_at(items, 3)?)
+    {
+        declare_seq_symbol(script, name, ew)?;
         return Ok(());
     }
     let result = parse_sort(&script.arena, sort_aliases, sexpr_at(items, 3)?)?;
@@ -849,8 +875,46 @@ fn parse_declare_const(
     if sexpr_at(items, 2)?.atom() == Some("String") {
         return declare_string_symbol(script, name);
     }
+    // A `(Seq E)` constant: the packed sequence bit-vector plus its canonical
+    // well-formedness constraint (ADR-0029), exactly like a `String` symbol.
+    if let Some(ew) = seq_decl_elem_width(sexpr_at(items, 2)?) {
+        return declare_seq_symbol(script, name, ew);
+    }
     let sort = parse_sort(&script.arena, sort_aliases, sexpr_at(items, 2)?)?;
     script.arena.declare(name, sort)?;
+    Ok(())
+}
+
+/// The element width of a syntactic `(Seq E)` declaration sort, or `None` if the
+/// sort is not a soundly-packable sequence (so a non-sequence declaration falls
+/// through to the normal sort path).
+fn seq_decl_elem_width(sort: &SExpr) -> Option<u32> {
+    let items = sort.list()?;
+    if items.len() == 2 && items[0].atom() == Some("Seq") {
+        seq_elem_width(&items[1])
+    } else {
+        None
+    }
+}
+
+/// Declares a 0-ary `(Seq E)` symbol: the packed sequence bit-vector (max length
+/// [`SEQ_MAX_LEN`], element width `ew`) plus its canonical well-formedness
+/// constraint (length ≤ max; padding elements zero), asserted in both the flat and
+/// incremental views so `=`/`distinct` and the `seq.*` operators decide via the
+/// BV path (ADR-0029). Shared by `declare-const`/0-ary `declare-fun` of `(Seq E)`.
+fn declare_seq_symbol(script: &mut Script, name: &str, ew: u32) -> Result<(), SmtError> {
+    let m = seq_max_len_for(ew).ok_or_else(|| {
+        SmtError::Unsupported(format!(
+            "sequence element width {ew} exceeds the packed-sort bit ceiling (ADR-0029)"
+        ))
+    })?;
+    let total = seq_total(ew, m);
+    let sym = script.arena.declare(name, Sort::BitVec(total))?;
+    let v = script.arena.var(sym);
+    let wf = seq_wellformed(&mut script.arena, v, m, ew)?;
+    script.assertions.push(wf);
+    script.assertion_names.push(None);
+    script.commands.push(ScriptCommand::Assert(wf));
     Ok(())
 }
 
@@ -875,6 +939,7 @@ fn parse_define_fun<'a>(
     macros: &mut HashMap<String, MacroDef<'a>>,
     sort_aliases: &HashMap<String, Sort>,
     named: &mut HashMap<String, TermId>,
+    seq: &SeqInfo,
     items: &'a [SExpr],
 ) -> Result<(), SmtError> {
     exact_len(items, 5, "define-fun")?;
@@ -891,6 +956,7 @@ fn parse_define_fun<'a>(
             aliases,
             macros,
             named,
+            seq,
             name,
             declared_sort,
             body_expr,
@@ -920,6 +986,7 @@ fn parse_define_const<'a>(
     macros: &mut HashMap<String, MacroDef<'a>>,
     sort_aliases: &HashMap<String, Sort>,
     named: &mut HashMap<String, TermId>,
+    seq: &SeqInfo,
     items: &'a [SExpr],
 ) -> Result<(), SmtError> {
     exact_len(items, 4, "define-const")?;
@@ -931,22 +998,25 @@ fn parse_define_const<'a>(
         aliases,
         macros,
         named,
+        seq,
         name,
         declared_sort,
         body_expr,
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn parse_define_fun_alias(
     script: &mut Script,
     aliases: &mut HashMap<String, TermId>,
     macros: &HashMap<String, MacroDef<'_>>,
     named: &mut HashMap<String, TermId>,
+    seq: &SeqInfo,
     name: &str,
     declared_sort: Sort,
     body_expr: &SExpr,
 ) -> Result<(), SmtError> {
-    let body = parse_term(&mut script.arena, body_expr, aliases, macros, named)?;
+    let body = parse_term(&mut script.arena, body_expr, aliases, macros, named, seq)?;
     let body_sort = script.arena.sort_of(body);
     if body_sort != declared_sort {
         return Err(SmtError::Ir(axeyum_ir::IrError::SortsDiffer(
@@ -1047,10 +1117,15 @@ fn parse_sort(
         // sound bounded lowering yet, so it stays a scoped `Unsupported`.
         SExpr::Atom(a) if a == "String" => Ok(Sort::BitVec(STRING_TOTAL)),
         SExpr::Atom(a) if a == "Seq" => Err(SmtError::Unsupported(format!(
-            "the `{a}` sort is not yet wired into the SMT-LIB front end; the bounded-string \
-             theory exists at the API level (ADR-0025/0029)"
+            "the bare `{a}` sort head needs an element sort `(Seq E)` (ADR-0029)"
         ))),
         SExpr::List(items) => {
+            // `(Seq E)` over a fixed-width element sort → the packed `BitVec`
+            // (ADR-0029 generalization of the bounded-string layout). The
+            // width→element-width mapping was registered by `build_seq_info`.
+            if items.len() == 2 && items[0].atom() == Some("Seq") {
+                return seq_sort(items);
+            }
             if items.len() == 4
                 && items[0].atom() == Some("_")
                 && items[1].atom() == Some("FloatingPoint")
@@ -1266,6 +1341,7 @@ fn parse_term<'a>(
     aliases: &HashMap<String, TermId>,
     macros: &HashMap<String, MacroDef<'a>>,
     named: &mut HashMap<String, TermId>,
+    seq: &SeqInfo,
 ) -> Result<TermId, SmtError> {
     let mut frames: Vec<Frame> = vec![Frame::Eval(root)];
     let mut results: Vec<TermId> = Vec::new();
@@ -1294,7 +1370,7 @@ fn parse_term<'a>(
             }
             Frame::Apply { items, argc } => {
                 let args = results.split_off(results.len() - argc);
-                results.push(apply_op(arena, items, &args)?);
+                results.push(apply_op(arena, seq, items, &args)?);
             }
             Frame::ApplyInRe { re_expr } => {
                 let s = results
@@ -1434,6 +1510,20 @@ fn queue_list_eval<'a>(
     } else if head.atom() == Some("forall") || head.atom() == Some("exists") {
         let is_forall = head.atom() == Some("forall");
         queue_quantifier(arena, items, is_forall, frames)?;
+    } else if head.atom() == Some("as") && items.len() == 3 && items[1].atom() == Some("seq.empty")
+    {
+        // `(as seq.empty (Seq E))` — the empty sequence (length 0, zero content)
+        // in the max-length-`SEQ_MAX_LEN` packed layout for element width `ew`,
+        // taken from the `(Seq E)` ascription (ADR-0029). The element width is on
+        // the ascription, so it needs no `seq` table; a non-fixed-width element
+        // declines cleanly.
+        let ew = seq_decl_elem_width(&items[2]).ok_or_else(|| {
+            SmtError::Unsupported(format!(
+                "`(as seq.empty {:?})` has no sound fixed-width element packing (ADR-0029)",
+                items[2]
+            ))
+        })?;
+        results.push(seq_empty(arena, ew)?);
     } else if head.atom() == Some("as") && items.len() == 3 {
         // Sort ascription `(as t S)` denotes `t` — it only annotates the sort of
         // an otherwise-determined term (SMT-LIB §3.6, "qualified identifier").
@@ -3243,15 +3333,848 @@ fn parse_indexed_constant(arena: &mut TermArena, items: &[SExpr]) -> Result<Term
     Err(SmtError::Unsupported(format!("indexed term {items:?}")))
 }
 
+// --- bounded finite Sequences front-end (`(Seq E)`, ADR-0029 generalization) --
+//
+// A `(Seq E)` over a **fixed-width** element sort `E` is the same packed
+// bit-vector structure a bounded `String` uses, generalized from a byte
+// (`elem_width = 8`) to an arbitrary element width `ew`. A sequence of maximum
+// length `m` is one `BitVec(seq_total(ew, m))` packing a length in the low
+// `len_width(m)` bits and `m` content elements above it (element `i` at bits
+// `[len_width(m) + i·ew, +ew)`). Declared sequence symbols carry the same
+// canonical well-formedness constraint strings do (length ≤ `m`; padding
+// elements zero), so two equal sequences share exactly one bit pattern and
+// `=` / `distinct` decide as plain bit-vector (in)equality.
+//
+// # Element sorts and their widths (the sound, fixed-width subset)
+//
+// `elem_width(E)` is `w` for `(_ BitVec w)`, `1` for `Bool`, and
+// [`SEQ_INT_WIDTH`] for `Int` (the bounded-int element width, two's-complement).
+// Every other element sort — `Real`, an uninterpreted/parametric sort, `String`,
+// or a nested `(Seq …)` — has no sound fixed-width packing here and makes the
+// sequence sort a clean [`SmtError::Unsupported`] (Unknown to the consumer),
+// never a wrong verdict. The byte width `8` is **reserved for `String`**: a
+// `(Seq (_ BitVec 8))` is declined so a packed sequence width can never be
+// mistaken for (or collide with) a packed `String` on the shared `=` path.
+//
+// # The modeled operator subset (slice 1) and what is declined
+//
+// `seq.empty`/`seq.unit`/`seq.++`/`seq.len`/`seq.extract`, `=`/`distinct`, and
+// `seq.prefixof`/`seq.suffixof`/`seq.contains` are all denotation-preserving
+// over the packed layout (they only move, compare, or count whole elements —
+// never read a tail element's value), exactly mirroring their `str.*`
+// counterparts with the element width swapped in for `8`.
+//
+// `seq.nth` / `seq.at` are **declined**. SMT-LIB sequences leave `(seq.nth s i)`
+// **unconstrained** for `i` out of `[0, len(s))` (cvc5's rewriter only fixes
+// in-bounds positions; the out-of-bounds value is an arbitrary fixed element).
+// The canonical zero-padded layout would instead force `(seq.nth s i) = 0` for
+// `i ≥ len(s)`, which can flip a `sat` to a wrong `unsat` — so modeling `seq.nth`
+// soundly needs an unconstrained-default with per-`(s,i)` congruence, deferred to
+// a later slice. `seq.update`/`seq.rev`/`seq.replace`/`seq.replace_all`/
+// `seq.indexof` are likewise declined for now (slice 2).
+
+/// Bounded-int element width for `(Seq Int)`: an `Int` element is modeled as a
+/// two's-complement `BitVec(SEQ_INT_WIDTH)`. The slice-1 sequence operators only
+/// move/compare/count whole elements (never do element arithmetic across the
+/// width boundary), so equality/disequality over `Int` elements is exact for
+/// every value representable in this width; an `Int` element **literal** outside
+/// the signed range is declined (never wrapped into a wrong value). `16` keeps the
+/// packed `(Seq Int)` sort within the [`SEQ_TOTAL_BITS_CAP`] ceiling at a useful
+/// element bound while still covering the small integers these benchmarks name.
+pub(crate) const SEQ_INT_WIDTH: u32 = 16;
+
+/// Hard ceiling on any packed sequence's total bit width. The ground evaluator
+/// (and the `seq.unit` / `seq.empty` constant packers) represent a bit-vector
+/// value as a `u128`, so a packed sequence sort must fit in 128 bits — element
+/// widths/lengths that would exceed this decline cleanly (Unknown), never wrap.
+const SEQ_TOTAL_BITS_CAP: u32 = 128;
+
+/// Soft cap on a packed sequence's `max_len` (in elements), for tractability —
+/// the analogue of [`STRING_MAX_LEN`]. The realized bound is the smaller of this
+/// and whatever [`SEQ_TOTAL_BITS_CAP`] allows for the element width.
+const SEQ_LEN_SOFT_CAP: u32 = 8;
+
+/// Total packed width of a sequence of max length `m` over element width `ew`:
+/// the length field plus `m` content elements.
+const fn seq_total(ew: u32, m: u32) -> u32 {
+    len_width(m) + m * ew
+}
+
+/// The bounded maximum sequence length (in elements) for element width `ew`: the
+/// largest `m ≤ SEQ_LEN_SOFT_CAP` whose packed sort `seq_total(ew, m)` fits the
+/// [`SEQ_TOTAL_BITS_CAP`] ceiling. `None` if even a length-1 sequence over `ew`
+/// would exceed the ceiling (so a too-wide element declines, never wraps).
+fn seq_max_len_for(ew: u32) -> Option<u32> {
+    (1..=SEQ_LEN_SOFT_CAP)
+        .rev()
+        .find(|&m| seq_total(ew, m) <= SEQ_TOTAL_BITS_CAP)
+}
+
+/// `elem_width(E)` for a fixed-width element sort, or `None` for an element sort
+/// with no sound fixed-width packing (Real, uninterpreted, String, nested Seq) or
+/// the reserved string byte width `8`.
+fn seq_elem_width(sort: &SExpr) -> Option<u32> {
+    match sort {
+        SExpr::Atom(a) if a == "Bool" => Some(1),
+        SExpr::Atom(a) if a == "Int" => Some(SEQ_INT_WIDTH),
+        SExpr::List(items)
+            if items.len() == 3
+                && items[0].atom() == Some("_")
+                && items[1].atom() == Some("BitVec") =>
+        {
+            // `(_ BitVec w)`, with `8` reserved for `String` (see the module note).
+            items[2]
+                .atom()
+                .and_then(|w| w.parse::<u32>().ok())
+                .filter(|&w| w >= 1 && w != 8)
+        }
+        _ => None,
+    }
+}
+
+/// The packed width → element-width registry, built as `(Seq E)` sorts are
+/// parsed. Lets the `seq.*` operators (dispatched after term construction, where
+/// only the operand's `BitVec` width is visible) recover the element width of a
+/// packed sequence operand. A genuine `BitVec` whose width is not registered is
+/// **not** a sequence, so a non-sequence operand to a `seq.*` op declines cleanly.
+#[derive(Debug, Default)]
+pub(crate) struct SeqInfo {
+    /// `packed_width → elem_width`. Built injectively: a width is inserted only
+    /// for one element width; a would-be second, different element width at the
+    /// same total width makes the *declaration* decline (see [`seq_register`]).
+    width_to_ew: HashMap<u32, u32>,
+}
+
+impl SeqInfo {
+    /// The element width of a packed sequence operand of bit width `w`. Recognizes
+    /// both a **declared** sequence width (registered directly) and a **derived**
+    /// width produced by `seq.unit`/`seq.++`/`seq.extract` (a different max length
+    /// over a registered element width): `w` is a sequence of element width `ew`
+    /// iff `w = seq_total(ew, m)` for some `m ≤ SEQ_LEN_SOFT_CAP` and some
+    /// registered element width `ew`. The element-width set is small (the distinct
+    /// `(Seq E)` element types in the script), so this is a tiny linear scan.
+    fn elem_width_of(&self, w: u32) -> Option<u32> {
+        if let Some(&ew) = self.width_to_ew.get(&w) {
+            return Some(ew);
+        }
+        // Derived width: match against each registered element width's length grid.
+        let mut ews: Vec<u32> = self.width_to_ew.values().copied().collect();
+        ews.sort_unstable();
+        ews.dedup();
+        ews.into_iter()
+            .find(|&ew| (1..=SEQ_LEN_SOFT_CAP).any(|m| seq_total(ew, m) == w))
+    }
+
+    /// Whether any sequence sort has been registered (fast path: a script with no
+    /// sequences threads an empty table and never hits the `seq.*` dispatch).
+    fn is_empty(&self) -> bool {
+        self.width_to_ew.is_empty()
+    }
+
+    /// The single element width shared by every registered sequence sort, if the
+    /// script uses exactly one. `seq.unit`/`seq.empty` (whose element type is not
+    /// recoverable from the element/ascription alone in the post-parse dispatch)
+    /// use this; a script mixing two element widths makes them decline, which is
+    /// sound (never a wrong verdict).
+    fn sole_elem_width(&self) -> Option<u32> {
+        let mut it = self.width_to_ew.values().copied();
+        let first = it.next()?;
+        it.all(|w| w == first).then_some(first)
+    }
+}
+
+/// Whether `e` mentions the `Seq` sort head or any `seq.*` operator anywhere
+/// (the fast-path guard: a script with no sequences skips [`build_seq_info`] and
+/// threads an empty table).
+fn mentions_seq(e: &SExpr) -> bool {
+    match e {
+        SExpr::Atom(a) => a.starts_with("seq."),
+        SExpr::List(items) => {
+            items.first().and_then(SExpr::atom) == Some("Seq") || items.iter().any(mentions_seq)
+        }
+    }
+}
+
+/// Builds the packed-width → element-width registry for a script by scanning every
+/// `(Seq E)` sort s-expr (declaration, function signature, `(as seq.empty (Seq
+/// E))` ascription, …) once, up front — mirroring [`uninterpreted_sort_width`]'s
+/// pure pre-scan. The width→ew map is then immutable for the whole parse, so the
+/// `seq.*` operator dispatch (which only sees a packed operand's bit width) can
+/// recover its element width without threading mutable state through `parse_sort`.
+///
+/// # Errors
+///
+/// [`SmtError::Unsupported`] for a `(Seq E)` whose element sort `E` is not a
+/// soundly-packable fixed-width sort (see [`seq_elem_width`]), or on a width
+/// collision (two element widths packing to the same total width).
+fn build_seq_info(exprs: &[SExpr]) -> Result<SeqInfo, SmtError> {
+    let mut info = SeqInfo::default();
+    if !exprs.iter().any(mentions_seq) {
+        return Ok(info);
+    }
+    for e in exprs {
+        scan_seq_sorts(e, &mut info)?;
+    }
+    Ok(info)
+}
+
+/// Recursively registers every `(Seq E)` sort s-expr in `e`.
+fn scan_seq_sorts(e: &SExpr, info: &mut SeqInfo) -> Result<(), SmtError> {
+    let SExpr::List(items) = e else { return Ok(()) };
+    if items.len() == 2 && items[0].atom() == Some("Seq") {
+        let ew = seq_elem_width(&items[1]).ok_or_else(|| {
+            SmtError::Unsupported(format!(
+                "`(Seq {:?})` has no sound fixed-width element packing (only Bool, Int, and \
+                 `(_ BitVec w)` with w ≠ 8 are modeled; ADR-0029)",
+                items[1]
+            ))
+        })?;
+        // A nested element `(Seq …)` is itself a sort node, scanned below; but a
+        // non-fixed-width element already declined above, so registration here is
+        // for the fixed-width leaf cases only.
+        let m = seq_max_len_for(ew).ok_or_else(|| {
+            SmtError::Unsupported(format!(
+                "sequence element width {ew} exceeds the packed-sort bit ceiling (ADR-0029)"
+            ))
+        })?;
+        let w = seq_total(ew, m);
+        match info.width_to_ew.insert(w, ew) {
+            Some(prev) if prev != ew => {
+                return Err(SmtError::Unsupported(format!(
+                    "two sequence element widths ({prev} and {ew}) pack to the same width {w}; \
+                     the script mixes element types this bounded encoding cannot separate"
+                )));
+            }
+            _ => {}
+        }
+    }
+    for child in items {
+        scan_seq_sorts(child, info)?;
+    }
+    Ok(())
+}
+
+/// Resolves a `(Seq E)` sort s-expr to its packed `BitVec` sort (max length
+/// [`SEQ_MAX_LEN`]). Pure: the width→ew mapping was registered by the up-front
+/// [`build_seq_info`] scan, so this only computes the resolved [`Sort`].
+///
+/// # Errors
+///
+/// [`SmtError::Unsupported`] for a `(Seq E)` whose element sort `E` is not a
+/// soundly-packable fixed-width sort (see [`seq_elem_width`]).
+fn seq_sort(items: &[SExpr]) -> Result<Sort, SmtError> {
+    let ew = seq_elem_width(&items[1]).ok_or_else(|| {
+        SmtError::Unsupported(format!(
+            "`(Seq {:?})` has no sound fixed-width element packing (only Bool, Int, and \
+             `(_ BitVec w)` with w ≠ 8 are modeled; ADR-0029)",
+            items[1]
+        ))
+    })?;
+    let m = seq_max_len_for(ew).ok_or_else(|| {
+        SmtError::Unsupported(format!(
+            "sequence element width {ew} exceeds the packed-sort bit ceiling (ADR-0029)"
+        ))
+    })?;
+    Ok(Sort::BitVec(seq_total(ew, m)))
+}
+
+/// The element width of a packed sequence term `v`, from the registry.
+///
+/// # Errors
+///
+/// [`SmtError::Unsupported`] if `v` is not a registered packed-sequence operand
+/// (so a non-sequence operand to a `seq.*` op declines rather than misbehaves).
+fn seq_ew(arena: &TermArena, seq: &SeqInfo, v: TermId) -> Result<u32, SmtError> {
+    match arena.sort_of(v) {
+        Sort::BitVec(w) => seq.elem_width_of(w).ok_or_else(|| {
+            SmtError::Unsupported(format!(
+                "sequence operator applied to a non-sequence `BitVec({w})` (ADR-0029)"
+            ))
+        }),
+        s => Err(SmtError::Unsupported(format!(
+            "sequence operator applied to a non-sequence operand of sort {s:?} (ADR-0029)"
+        ))),
+    }
+}
+
+/// The max length `m` of a packed sequence term `v` of element width `ew`,
+/// recovered from its bit width `seq_total(ew, m) = len_width(m) + m·ew`.
+fn seq_max_len(arena: &TermArena, seq: &SeqInfo, v: TermId) -> Result<(u32, u32), SmtError> {
+    let ew = seq_ew(arena, seq, v)?;
+    let Sort::BitVec(w) = arena.sort_of(v) else {
+        unreachable!("seq_ew accepted a BitVec");
+    };
+    let m = (1..=SEQ_LEN_SOFT_CAP)
+        .find(|&m| seq_total(ew, m) == w)
+        .ok_or_else(|| {
+            SmtError::Unsupported(format!(
+                "packed sequence width {w} is not seq_total(ew={ew}, m) for any m ≤ \
+                 {SEQ_LEN_SOFT_CAP}"
+            ))
+        })?;
+    Ok((ew, m))
+}
+
+/// The length field (a `BitVec(len_width(m))`) of a packed sequence of max
+/// length `m`.
+fn seq_len_field(arena: &mut TermArena, v: TermId, m: u32) -> Result<TermId, SmtError> {
+    arena.extract(len_width(m) - 1, 0, v).map_err(SmtError::Ir)
+}
+
+/// Content element `i` (a `BitVec(ew)`) of a packed sequence of max length `m`.
+fn seq_elem_m(
+    arena: &mut TermArena,
+    v: TermId,
+    i: u32,
+    m: u32,
+    ew: u32,
+) -> Result<TermId, SmtError> {
+    let lo = len_width(m) + i * ew;
+    arena.extract(lo + ew - 1, lo, v).map_err(SmtError::Ir)
+}
+
+/// The canonical well-formedness constraint for a packed sequence `v` of max
+/// length `m` and element width `ew`: its length is `≤ m`, and every content
+/// element at or above the length is zero (so equal sequences share one bit
+/// pattern and `=`/`distinct` decide via plain BV (in)equality).
+fn seq_wellformed(arena: &mut TermArena, v: TermId, m: u32, ew: u32) -> Result<TermId, SmtError> {
+    let lwm = len_width(m);
+    let len = arena.extract(lwm - 1, 0, v)?;
+    let max = arena.bv_const(lwm, u128::from(m))?;
+    let mut wf = arena.bv_ule(len, max)?;
+    let zero = arena.bv_const(ew, 0)?;
+    for i in 0..m {
+        let elem = seq_elem_m(arena, v, i, m, ew)?;
+        let elem_zero = arena.eq(elem, zero)?;
+        let idx = arena.bv_const(lwm, u128::from(i))?;
+        let active = arena.bv_ult(idx, len)?;
+        let ok = arena.or(active, elem_zero)?;
+        wf = arena.and(wf, ok)?;
+    }
+    Ok(wf)
+}
+
+/// Re-packs a packed sequence `v` (max length `m`, element width `ew`) into the
+/// layout of a sequence of max length `to` (`to ≥ m`): the length is
+/// zero-extended to `len_width(to)`, and each content element is moved to its
+/// position in the wider layout. Mirrors `string_widen` with `ew` for `8`.
+fn seq_widen(
+    arena: &mut TermArena,
+    v: TermId,
+    m: u32,
+    to: u32,
+    ew: u32,
+) -> Result<TermId, SmtError> {
+    debug_assert!(to >= m, "seq_widen only widens");
+    if to == m {
+        return Ok(v);
+    }
+    let len = seq_len_field(arena, v, m)?;
+    let rlen = arena.zero_ext(len_width(to) - len_width(m), len)?;
+    let zero = arena.bv_const(ew, 0)?;
+    let mut content: Option<TermId> = None;
+    for i in (0..to).rev() {
+        let elem = if i < m {
+            seq_elem_m(arena, v, i, m, ew)?
+        } else {
+            zero
+        };
+        content = Some(match content {
+            None => elem,
+            Some(acc) => arena.concat(acc, elem)?,
+        });
+    }
+    let content = content.expect("to ≥ 1");
+    arena.concat(content, rlen).map_err(SmtError::Ir)
+}
+
+/// Widens `x` and `y` to a shared max length `max(m_x, m_y)` (they must share an
+/// element width), returning the re-packed terms, that common length, and `ew`.
+fn seq_align(
+    arena: &mut TermArena,
+    seq: &SeqInfo,
+    x: TermId,
+    y: TermId,
+) -> Result<(TermId, TermId, u32, u32), SmtError> {
+    let (ewx, mx) = seq_max_len(arena, seq, x)?;
+    let (ewy, my) = seq_max_len(arena, seq, y)?;
+    if ewx != ewy {
+        return Err(SmtError::Unsupported(format!(
+            "sequence operands have differing element widths ({ewx} vs {ewy})"
+        )));
+    }
+    let m = mx.max(my);
+    let xw = seq_widen(arena, x, mx, m, ewx)?;
+    let yw = seq_widen(arena, y, my, m, ewx)?;
+    Ok((xw, yw, m, ewx))
+}
+
+/// `(as seq.empty (Seq E))` — the empty sequence (length 0, zero content) in the
+/// max-length-[`SEQ_MAX_LEN`] layout for element width `ew`.
+fn seq_empty(arena: &mut TermArena, ew: u32) -> Result<TermId, SmtError> {
+    let m = seq_max_len_for(ew).ok_or_else(|| {
+        SmtError::Unsupported(format!(
+            "sequence element width {ew} exceeds the packed-sort bit ceiling (ADR-0029)"
+        ))
+    })?;
+    arena.bv_const(seq_total(ew, m), 0).map_err(SmtError::Ir)
+}
+
+/// `(seq.unit e)` — the length-1 sequence holding element `e` (already a
+/// `BitVec(ew)`), packed as `e ++ length(1)`.
+fn seq_unit(arena: &mut TermArena, e: TermId) -> Result<TermId, SmtError> {
+    let one_len = arena.bv_const(len_width(1), 1)?;
+    arena.concat(e, one_len).map_err(SmtError::Ir)
+}
+
+/// `(seq.len s)` as an `Int` (the length field lifted out via `bv2nat`).
+fn seq_len(arena: &mut TermArena, seq: &SeqInfo, s: TermId) -> Result<TermId, SmtError> {
+    let (_ew, m) = seq_max_len(arena, seq, s)?;
+    let len = seq_len_field(arena, s, m)?;
+    arena.bv2nat(len).map_err(SmtError::Ir)
+}
+
+/// Semantic sequence equality (equal length, equal elements below the length,
+/// padding ignored), aligning operands of differing widths first. Used by
+/// `=`/`distinct` only when two packed-sequence operands have **different**
+/// widths; equal-width operands keep plain bit-vector equality (sound by the
+/// canonical well-formedness).
+fn seq_equal(
+    arena: &mut TermArena,
+    seq: &SeqInfo,
+    x: TermId,
+    y: TermId,
+) -> Result<TermId, SmtError> {
+    let (x, y, m, ew) = seq_align(arena, seq, x, y)?;
+    let xlen = seq_len_field(arena, x, m)?;
+    let ylen = seq_len_field(arena, y, m)?;
+    let mut acc = arena.eq(xlen, ylen)?;
+    for i in 0..m {
+        let idx = arena.bv_const(len_width(m), u128::from(i))?;
+        let active = arena.bv_ult(idx, xlen)?;
+        let ex = seq_elem_m(arena, x, i, m, ew)?;
+        let ey = seq_elem_m(arena, y, i, m, ew)?;
+        let eeq = arena.eq(ex, ey)?;
+        let nactive = arena.not(active)?;
+        let implied = arena.or(nactive, eeq)?;
+        acc = arena.and(acc, implied)?;
+    }
+    Ok(acc)
+}
+
+/// `=`/`distinct` over a pair of packed-sequence operands of **different**
+/// widths → [`seq_equal`]; otherwise `None` (the caller keeps plain `arena.eq`).
+/// Equal-width sequence operands are sound under plain BV equality (canonical
+/// well-formedness), so they too return `None`.
+fn seq_aware_eq(
+    arena: &mut TermArena,
+    seq: &SeqInfo,
+    a: TermId,
+    b: TermId,
+) -> Result<Option<TermId>, SmtError> {
+    let (Sort::BitVec(wa), Sort::BitVec(wb)) = (arena.sort_of(a), arena.sort_of(b)) else {
+        return Ok(None);
+    };
+    if wa == wb {
+        return Ok(None); // same sort — plain eq is sound by well-formedness
+    }
+    if seq.elem_width_of(wa).is_some() && seq.elem_width_of(wb).is_some() {
+        return Ok(Some(seq_equal(arena, seq, a, b)?));
+    }
+    Ok(None)
+}
+
+/// `(seq.++ a b)` of two packed-sequence operands of element width `ew`. Produces
+/// a result in the wider sort `max_len(x) + max_len(y)` (capped at
+/// [`SEQ_BOUND_CAP`]): result length `len(x) + len(y)`, result content
+/// `content(x) | (content(y) << (len(x)·ew))` with `x`'s padding masked off.
+/// Mirrors `string_concat_pair` with `ew` for `8`.
+#[allow(clippy::similar_names)]
+fn seq_concat_pair(
+    arena: &mut TermArena,
+    seq: &SeqInfo,
+    x: TermId,
+    y: TermId,
+) -> Result<TermId, SmtError> {
+    let (ewx, mx) = seq_max_len(arena, seq, x)?;
+    let (ewy, my) = seq_max_len(arena, seq, y)?;
+    if ewx != ewy {
+        return Err(SmtError::Unsupported(format!(
+            "seq.++ over differing element widths ({ewx} vs {ewy})"
+        )));
+    }
+    let ew = ewx;
+    let rm = mx + my;
+    if rm > SEQ_LEN_SOFT_CAP || seq_total(ew, rm) > SEQ_TOTAL_BITS_CAP {
+        return Err(SmtError::Unsupported(format!(
+            "seq.++ result of bounded max length {rm} (over {ew}-bit elements) exceeds the \
+             packed-sequence bound (ADR-0029)"
+        )));
+    }
+    let rcw = rm * ew; // result content width
+    let rlw = len_width(rm); // result length width
+
+    let xlen = seq_len_field(arena, x, mx)?;
+    let ylen = seq_len_field(arena, y, my)?;
+    let len_x_r = arena.zero_ext(rlw - len_width(mx), xlen)?;
+    let len_y_r = arena.zero_ext(rlw - len_width(my), ylen)?;
+    let rlen = arena.bv_add(len_x_r, len_y_r)?;
+
+    let zero = arena.bv_const(ew, 0)?;
+    let mut xcontent: Option<TermId> = None;
+    for i in (0..rm).rev() {
+        let elem = if i < mx {
+            seq_elem_m(arena, x, i, mx, ew)?
+        } else {
+            zero
+        };
+        xcontent = Some(match xcontent {
+            None => elem,
+            Some(acc) => arena.concat(acc, elem)?,
+        });
+    }
+    let x_content_r = xcontent.expect("rm ≥ 1");
+
+    let mut ycontent: Option<TermId> = None;
+    for i in (0..rm).rev() {
+        let elem = if i < my {
+            seq_elem_m(arena, y, i, my, ew)?
+        } else {
+            zero
+        };
+        ycontent = Some(match ycontent {
+            None => elem,
+            Some(acc) => arena.concat(acc, elem)?,
+        });
+    }
+    let y_content_r = ycontent.expect("rm ≥ 1");
+
+    // shift (in bits) for y = len_x * ew, in the result content width.
+    let len_x_c = arena.zero_ext(rcw - len_width(mx), xlen)?;
+    let ew_log = arena.bv_const(rcw, u128::from(ew))?;
+    let shift = arena.bv_mul(len_x_c, ew_log)?;
+
+    let one = arena.bv_const(rcw, 1)?;
+    let pow = arena.bv_shl(one, shift)?; // 2^(len_x*ew)
+    let mask = arena.bv_sub(pow, one)?;
+    let x_masked = arena.bv_and(x_content_r, mask)?;
+
+    let y_shifted = arena.bv_shl(y_content_r, shift)?;
+    let rcontent = arena.bv_or(x_masked, y_shifted)?;
+
+    arena.concat(rcontent, rlen).map_err(SmtError::Ir)
+}
+
+/// `(seq.++ args…)` — left-fold [`seq_concat_pair`]. Zero operands is declined
+/// (the empty sequence has no element width without an `(as seq.empty …)`
+/// annotation, which is handled at parse time); one operand is itself.
+fn seq_concat(arena: &mut TermArena, seq: &SeqInfo, args: &[TermId]) -> Result<TermId, SmtError> {
+    if args.is_empty() {
+        return Err(SmtError::Unsupported(
+            "nullary seq.++ has no element width to model".to_owned(),
+        ));
+    }
+    let mut acc = args[0];
+    seq_max_len(arena, seq, acc)?; // validate it is a packed sequence
+    for &arg in &args[1..] {
+        acc = seq_concat_pair(arena, seq, acc, arg)?;
+    }
+    Ok(acc)
+}
+
+/// `(seq.extract s off n)` — the bounded sub-sequence of `s` starting at `Int`
+/// offset `off` for up to `n` elements, the SMT-LIB total function: the empty
+/// sequence unless `0 ≤ off < len(s)` and `n > 0`, else `s[off .. min(off+n,
+/// len(s))]`. Mirrors `string_substr` over elements (`ew` for `8`). The result is
+/// packed in the operand's own max-length layout, so it composes with `=`/len.
+fn seq_extract(
+    arena: &mut TermArena,
+    seq: &SeqInfo,
+    s: TermId,
+    off: TermId,
+    n: TermId,
+) -> Result<TermId, SmtError> {
+    let (ew, m) = seq_max_len(arena, seq, s)?;
+    let len_field = seq_len_field(arena, s, m)?;
+    let len_i = arena.bv2nat(len_field)?;
+    let zero_i = arena.int_const(0);
+    let off_nonneg = arena.int_ge(off, zero_i)?;
+    let off_in = arena.int_lt(off, len_i)?;
+    let start_ok = arena.and(off_nonneg, off_in)?;
+    let zero = arena.bv_const(ew, 0)?;
+    // Selects element at `Int` index `src` of `s`: `(elem, in_range)` with
+    // `in_range` exactly when `0 ≤ src < len(s)` (else `(0, false)`).
+    let select = |arena: &mut TermArena, src: TermId| -> Result<(TermId, TermId), SmtError> {
+        let mut elem = arena.bv_const(ew, 0)?;
+        let mut in_range = arena.bool_const(false);
+        for j in 0..m {
+            let jconst = arena.int_const(i128::from(j));
+            let is_j = arena.eq(src, jconst)?;
+            let jbv = arena.bv_const(len_width(m), u128::from(j))?;
+            let j_active = arena.bv_ult(jbv, len_field)?;
+            let hit = arena.and(is_j, j_active)?;
+            let ej = seq_elem_m(arena, s, j, m, ew)?;
+            elem = arena.ite(hit, ej, elem)?;
+            in_range = arena.or(in_range, hit)?;
+        }
+        Ok((elem, in_range))
+    };
+    let present = |arena: &mut TermArena, p: u32, src_in: TermId| -> Result<TermId, SmtError> {
+        let pconst = arena.int_const(i128::from(p));
+        let p_lt_n = arena.int_lt(pconst, n)?;
+        let present0 = arena.and(start_ok, p_lt_n)?;
+        arena.and(present0, src_in).map_err(SmtError::Ir)
+    };
+    let mut count_i = arena.int_const(0);
+    for p in 0..m {
+        let pconst = arena.int_const(i128::from(p));
+        let src = arena.int_add(off, pconst)?;
+        let (_elem, src_in) = select(arena, src)?;
+        let pres = present(arena, p, src_in)?;
+        let one_i = arena.int_const(1);
+        let inc = arena.ite(pres, one_i, zero_i)?;
+        count_i = arena.int_add(count_i, inc)?;
+    }
+    let mut content: Option<TermId> = None;
+    for p in (0..m).rev() {
+        let pconst = arena.int_const(i128::from(p));
+        let src = arena.int_add(off, pconst)?;
+        let (elem, src_in) = select(arena, src)?;
+        let pres = present(arena, p, src_in)?;
+        let out_elem = arena.ite(pres, elem, zero)?;
+        content = Some(match content {
+            None => out_elem,
+            Some(acc) => arena.concat(acc, out_elem)?,
+        });
+    }
+    let content = content.expect("m ≥ 1");
+    let rlen = arena.int2bv(len_width(m), count_i)?;
+    arena.concat(content, rlen).map_err(SmtError::Ir)
+}
+
+/// `(seq.prefixof x y)` — `x` is a prefix of `y`: `len(x) ≤ len(y)` and the first
+/// `len(x)` elements match. Mirrors `string_prefixof` over elements.
+fn seq_prefixof(
+    arena: &mut TermArena,
+    seq: &SeqInfo,
+    x: TermId,
+    y: TermId,
+) -> Result<TermId, SmtError> {
+    let (x, y, m, ew) = seq_align(arena, seq, x, y)?;
+    let xlen = seq_len_field(arena, x, m)?;
+    let ylen = seq_len_field(arena, y, m)?;
+    let mut acc = arena.bv_ule(xlen, ylen)?;
+    for i in 0..m {
+        let xe = seq_elem_m(arena, x, i, m, ew)?;
+        let ye = seq_elem_m(arena, y, i, m, ew)?;
+        let eeq = arena.eq(xe, ye)?;
+        let idx = arena.bv_const(len_width(m), u128::from(i))?;
+        let active = arena.bv_ult(idx, xlen)?;
+        let nactive = arena.not(active)?;
+        let ok = arena.or(nactive, eeq)?;
+        acc = arena.and(acc, ok)?;
+    }
+    Ok(acc)
+}
+
+/// `(seq.suffixof x y)` — `x` is a suffix of `y`. Mirrors `string_suffixof`.
+fn seq_suffixof(
+    arena: &mut TermArena,
+    seq: &SeqInfo,
+    x: TermId,
+    y: TermId,
+) -> Result<TermId, SmtError> {
+    let (x, y, m, ew) = seq_align(arena, seq, x, y)?;
+    let xlen = seq_len_field(arena, x, m)?;
+    let ylen = seq_len_field(arena, y, m)?;
+    let xlen_w = arena.zero_ext(1, xlen)?;
+    let ylen_w = arena.zero_ext(1, ylen)?;
+    let wlen = len_width(m) + 1;
+    let mut any = arena.bool_const(false);
+    for o in 0..=m {
+        let oconst = arena.bv_const(wlen, u128::from(o))?;
+        let sum = arena.bv_add(oconst, xlen_w)?;
+        let aligned = arena.eq(sum, ylen_w)?;
+        let mut matched = aligned;
+        for i in 0..m {
+            if o + i >= m {
+                break;
+            }
+            let xe = seq_elem_m(arena, x, i, m, ew)?;
+            let ye = seq_elem_m(arena, y, o + i, m, ew)?;
+            let eeq = arena.eq(xe, ye)?;
+            let iconst = arena.bv_const(len_width(m), u128::from(i))?;
+            let iactive = arena.bv_ult(iconst, xlen)?;
+            let niactive = arena.not(iactive)?;
+            let ok = arena.or(niactive, eeq)?;
+            matched = arena.and(matched, ok)?;
+        }
+        any = arena.or(any, matched)?;
+    }
+    Ok(any)
+}
+
+/// `(seq.contains x y)` — `y` occurs in `x` as a contiguous sub-sequence. Mirrors
+/// `string_contains` over elements.
+fn seq_contains(
+    arena: &mut TermArena,
+    seq: &SeqInfo,
+    x: TermId,
+    y: TermId,
+) -> Result<TermId, SmtError> {
+    let (x, y, m, ew) = seq_align(arena, seq, x, y)?;
+    let xlen = seq_len_field(arena, x, m)?;
+    let ylen = seq_len_field(arena, y, m)?;
+    let xlen_w = arena.zero_ext(1, xlen)?;
+    let ylen_w = arena.zero_ext(1, ylen)?;
+    let wlen = len_width(m) + 1;
+    let mut any = arena.bool_const(false);
+    for d in 0..m {
+        let dconst = arena.bv_const(wlen, u128::from(d))?;
+        let sum = arena.bv_add(dconst, ylen_w)?;
+        let fits = arena.bv_ule(sum, xlen_w)?;
+        let mut matched = fits;
+        for j in 0..m {
+            if d + j >= m {
+                break;
+            }
+            let xe = seq_elem_m(arena, x, d + j, m, ew)?;
+            let ye = seq_elem_m(arena, y, j, m, ew)?;
+            let eeq = arena.eq(xe, ye)?;
+            let jconst = arena.bv_const(len_width(m), u128::from(j))?;
+            let jactive = arena.bv_ult(jconst, ylen)?;
+            let njactive = arena.not(jactive)?;
+            let ok = arena.or(njactive, eeq)?;
+            matched = arena.and(matched, ok)?;
+        }
+        any = arena.or(any, matched)?;
+    }
+    Ok(any)
+}
+
+/// Coerces a `seq.unit` element argument to a `BitVec(ew)`: an `Int` element is
+/// `int2bv`-narrowed to the bounded width (its low `ew` bits, two's-complement),
+/// a `Bool` element becomes a 1-bit value, and a `BitVec(ew)` passes through. An
+/// element of any other shape (or a mismatched BV width) is declined.
+fn seq_coerce_elem(arena: &mut TermArena, e: TermId, ew: u32) -> Result<TermId, SmtError> {
+    match arena.sort_of(e) {
+        Sort::BitVec(w) if w == ew => Ok(e),
+        Sort::Int => {
+            // An `Int` **literal** outside the signed `ew`-bit range is declined
+            // (never silently wrapped into a wrong value, which could alias a
+            // distinct element and force a wrong `unsat`).
+            if let TermNode::IntConst(v) = arena.node(e) {
+                let v = *v;
+                let lo = -(1i128 << (ew - 1));
+                let hi = (1i128 << (ew - 1)) - 1;
+                if v < lo || v > hi {
+                    return Err(SmtError::Unsupported(format!(
+                        "sequence Int element literal {v} is outside the signed {ew}-bit range \
+                         (ADR-0029)"
+                    )));
+                }
+            }
+            arena.int2bv(ew, e).map_err(SmtError::Ir)
+        }
+        Sort::Bool if ew == 1 => {
+            let one = arena.bv_const(1, 1)?;
+            let zero = arena.bv_const(1, 0)?;
+            arena.ite(e, one, zero).map_err(SmtError::Ir)
+        }
+        s => Err(SmtError::Unsupported(format!(
+            "seq.unit element of sort {s:?} cannot be packed into a {ew}-bit element"
+        ))),
+    }
+}
+
+/// Dispatches a `seq.*` operator over its packed-sequence/element arguments.
+/// Returns `None` if `op` is not a sequence operator (so the caller continues its
+/// normal dispatch). A modeled-but-unsound corner declines via `Err(Unsupported)`.
+fn apply_seq_op(
+    arena: &mut TermArena,
+    seq: &SeqInfo,
+    op: &str,
+    args: &[TermId],
+) -> Result<Option<TermId>, SmtError> {
+    let need = |k: usize| -> Result<(), SmtError> {
+        if args.len() == k {
+            Ok(())
+        } else {
+            Err(SmtError::Syntax(format!("`{op}` expects {k} arguments")))
+        }
+    };
+    let term = match op {
+        "seq.len" => {
+            need(1)?;
+            seq_len(arena, seq, args[0])?
+        }
+        "seq.++" | "seq.concat" => seq_concat(arena, seq, args)?,
+        "seq.unit" => {
+            need(1)?;
+            // The element type is not recoverable from the element alone (an `Int`
+            // element is just `Int`). Use the script's sole sequence element width
+            // (the common case); a script mixing element widths declines cleanly.
+            let ew = seq.sole_elem_width().ok_or_else(|| {
+                SmtError::Unsupported(
+                    "seq.unit element width is not determined (the script declares no \
+                     single sequence element type); ADR-0029"
+                        .to_owned(),
+                )
+            })?;
+            let elem = seq_coerce_elem(arena, args[0], ew)?;
+            seq_unit(arena, elem)?
+        }
+        "seq.extract" => {
+            need(3)?;
+            seq_extract(arena, seq, args[0], args[1], args[2])?
+        }
+        "seq.prefixof" => {
+            need(2)?;
+            seq_prefixof(arena, seq, args[0], args[1])?
+        }
+        "seq.suffixof" => {
+            need(2)?;
+            seq_suffixof(arena, seq, args[0], args[1])?
+        }
+        "seq.contains" => {
+            need(2)?;
+            seq_contains(arena, seq, args[0], args[1])?
+        }
+        // Declined (slice 2): `seq.nth`/`seq.at` are unsound under zero-padding
+        // (out-of-bounds is unconstrained, not 0); the rest are deferred.
+        "seq.nth" | "seq.at" | "seq.update" | "seq.rev" | "seq.replace" | "seq.replace_all"
+        | "seq.indexof" | "seq.nth_total" => {
+            return Err(SmtError::Unsupported(format!(
+                "sequence operator `{op}` is outside the slice-1 sound subset (ADR-0029)"
+            )));
+        }
+        _ => return Ok(None),
+    };
+    Ok(Some(term))
+}
+
 /// Applies an operator list head to evaluated arguments.
 // Flat dispatch over the operator vocabulary; length is inherent.
 #[allow(clippy::too_many_lines)]
-fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<TermId, SmtError> {
+fn apply_op(
+    arena: &mut TermArena,
+    seq: &SeqInfo,
+    items: &[SExpr],
+    args: &[TermId],
+) -> Result<TermId, SmtError> {
     // Parameterized head: ((_ extract h l) x) etc.
     if let Some(head_items) = items[0].list() {
         return apply_parameterized(arena, head_items, args);
     }
     let op = items[0].atom().expect("list head checked");
+    // Bounded finite-sequence operators (`seq.*`, ADR-0029): dispatched only when
+    // the script declares a sequence sort (else `seq` is empty and this returns
+    // `None`, leaving the normal dispatch untouched).
+    if !seq.is_empty()
+        && let Some(t) = apply_seq_op(arena, seq, op, args)?
+    {
+        return Ok(t);
+    }
     let need = |n: usize| -> Result<(), SmtError> {
         if args.len() == n {
             Ok(())
@@ -3402,6 +4325,9 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
             };
             let eq_pair =
                 |arena: &mut TermArena, p: TermId, q: TermId| -> Result<TermId, SmtError> {
+                    if let Some(e) = seq_aware_eq(arena, seq, p, q)? {
+                        return Ok(e);
+                    }
                     match string_aware_eq(arena, p, q)? {
                         Some(e) => Ok(e),
                         None => arena.eq(p, q).map_err(SmtError::Ir),
@@ -3423,9 +4349,13 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
             let mut acc = None;
             for i in 0..args.len() {
                 for j in i + 1..args.len() {
-                    let e = match string_aware_eq(arena, args[i], args[j])? {
-                        Some(e) => e,
-                        None => arena.eq(args[i], args[j])?,
+                    let e = if let Some(e) = seq_aware_eq(arena, seq, args[i], args[j])? {
+                        e
+                    } else {
+                        match string_aware_eq(arena, args[i], args[j])? {
+                            Some(e) => e,
+                            None => arena.eq(args[i], args[j])?,
+                        }
                     };
                     let ne = arena.not(e)?;
                     acc = Some(match acc {

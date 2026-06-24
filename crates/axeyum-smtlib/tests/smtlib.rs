@@ -1830,11 +1830,138 @@ fn declare_fun_string_constant_is_wired_like_declare_const() {
 }
 
 #[test]
-fn seq_sort_is_still_a_clear_unsupported() {
-    // `Seq` (unbounded sequences) has no sound bounded lowering yet, so it stays a
-    // scoped, actionable Unsupported rather than a cryptic "unknown sort".
-    let err = parse_script("(declare-fun f () (Seq Int))\n(check-sat)\n")
-        .expect_err("Seq sort is not front-end-wired");
+fn seq_sort_over_unsupported_element_is_a_clear_unsupported() {
+    // A `(Seq E)` whose element sort `E` has no sound fixed-width packing
+    // (here `Real`) stays a scoped, actionable Unsupported (Unknown to the
+    // consumer) — never a wrong verdict (ADR-0029).
+    let err = parse_script("(declare-fun f () (Seq Real))\n(check-sat)\n")
+        .expect_err("(Seq Real) has no fixed-width element packing");
+    assert!(matches!(err, SmtError::Unsupported(_)), "got {err:?}");
+    // The reserved byte width `8` is for `String`, so `(Seq (_ BitVec 8))` declines.
+    let err = parse_script("(declare-fun f () (Seq (_ BitVec 8)))\n(check-sat)\n")
+        .expect_err("(Seq (_ BitVec 8)) is reserved for String");
+    assert!(matches!(err, SmtError::Unsupported(_)), "got {err:?}");
+}
+
+// Packed `(Seq Int)` layout constants for the tests: SEQ_INT_WIDTH = 16, and the
+// bounded max length is the largest m ≤ 8 with len_width(m) + 16m ≤ 128, i.e.
+// m = 7 (len_width(7) = 3): total = 3 + 7*16 = 115.
+const SEQ_INT_EW: u32 = 16;
+const SEQ_INT_M: u32 = 7;
+const SEQ_INT_LW: u32 = 3; // len_width(7)
+const SEQ_INT_TOTAL: u32 = SEQ_INT_LW + SEQ_INT_M * SEQ_INT_EW; // 115
+
+#[test]
+fn seq_int_const_is_packed_and_wellformed() {
+    // A `(Seq Int)` constant resolves to the packed sequence bit-vector (length
+    // field over `SEQ_INT_WIDTH`-bit elements) plus its well-formedness assertion.
+    let script =
+        parse_script("(declare-fun s () (Seq Int))\n(assert (= (seq.len s) 0))\n(check-sat)\n")
+            .expect("(Seq Int) constant parses");
+    let mut arena = script.arena;
+    let sym = arena.find_symbol("s").expect("s declared");
+    let v = arena.var(sym);
+    assert_eq!(arena.sort_of(v), Sort::BitVec(SEQ_INT_TOTAL));
+    assert_eq!(
+        script.assertions.len(),
+        2,
+        "well-formedness (from the declare) + the len assertion"
+    );
+}
+
+/// Evaluates every assertion of a `(Seq Int)` script against a concrete packed
+/// assignment for one sequence symbol `name` of total width `width`.
+fn eval_seq_script(text: &str, name: &str, width: u32, packed: u128) -> bool {
+    let script = parse_script(text).expect("script parses");
+    let sym = script.arena.find_symbol(name).expect("symbol declared");
+    let mut asg = Assignment::new();
+    asg.set(
+        sym,
+        Value::Bv {
+            width,
+            value: packed,
+        },
+    );
+    script
+        .assertions
+        .iter()
+        .all(|&a| eval(&script.arena, a, &asg).unwrap() == Value::Bool(true))
+}
+
+/// Packs a `(Seq Int)` value (elements as 16-bit two's-complement) into the
+/// canonical layout: length low, elements above, padding zero.
+fn pack_seq_int(elems: &[i64]) -> u128 {
+    let mut v: u128 = u128::try_from(elems.len()).unwrap();
+    for (i, &e) in elems.iter().enumerate() {
+        // Low 16 bits, two's-complement (mask the i64 to its low 16 bits).
+        #[allow(clippy::cast_sign_loss)]
+        let bits = (e & 0xffff) as u128;
+        v |= bits << (SEQ_INT_LW + SEQ_INT_EW * u32::try_from(i).unwrap());
+    }
+    v
+}
+
+#[test]
+fn seq_len_eval_via_packed_bv() {
+    // (seq.len s) == 2 — a length predicate, oracle-checked over concrete witnesses.
+    let text = "(declare-fun s () (Seq Int))\n\
+                (assert (= (seq.len s) 2))\n(check-sat)\n";
+    assert!(
+        eval_seq_script(text, "s", SEQ_INT_TOTAL, pack_seq_int(&[7, 3])),
+        "length 2 ⇒ true"
+    );
+    assert!(
+        !eval_seq_script(text, "s", SEQ_INT_TOTAL, pack_seq_int(&[7])),
+        "length 1 ⇒ false"
+    );
+}
+
+#[test]
+fn seq_unit_len_arithmetic_is_unsat_shaped() {
+    // (= (seq.len (seq.unit x)) 2): a unit sequence always has length 1, so the
+    // len-2 assertion can never hold — a small UNSAT (oracle: no witness). The
+    // `(Seq Int)` declaration fixes the element width for `seq.unit`.
+    let text = "(declare-fun s () (Seq Int))\n(declare-fun x () Int)\n\
+                (assert (= (seq.len (seq.unit x)) 2))\n(check-sat)\n";
+    let script = parse_script(text).expect("parses");
+    // (seq.unit x) is a constant-length-1 sequence: the length field is the literal
+    // 1, so (= 1 2) is structurally false for every x. Evaluate with any x.
+    let sym = script.arena.find_symbol("x").expect("x");
+    let mut asg = Assignment::new();
+    asg.set(sym, Value::Int(5.into()));
+    // Evaluate only the `(= (seq.len (seq.unit x)) 2)` assertion (the last one; the
+    // first is `s`'s well-formedness, which references the unassigned `s`).
+    let len_eq = *script.assertions.last().expect("the len assertion");
+    assert_eq!(
+        eval(&script.arena, len_eq, &asg).unwrap(),
+        Value::Bool(false),
+        "unit length is 1, never 2"
+    );
+}
+
+#[test]
+fn seq_empty_is_length_zero() {
+    // (as seq.empty (Seq Int)) is the length-0 sequence; (not (= s empty)) with a
+    // length-0 witness for s is false (s equals empty), with a nonempty witness true.
+    let text = "(declare-fun s () (Seq Int))\n\
+                (assert (not (= s (as seq.empty (Seq Int)))))\n(check-sat)\n";
+    assert!(
+        !eval_seq_script(text, "s", SEQ_INT_TOTAL, pack_seq_int(&[])),
+        "s = empty ⇒ (not (= s empty)) false"
+    );
+    assert!(
+        eval_seq_script(text, "s", SEQ_INT_TOTAL, pack_seq_int(&[9])),
+        "s nonempty ⇒ true"
+    );
+}
+
+#[test]
+fn seq_nth_is_declined() {
+    // `seq.nth` is outside the slice-1 sound subset (out-of-bounds is
+    // unconstrained, not zero), so it declines cleanly — never a wrong verdict.
+    let err =
+        parse_script("(declare-fun s () (Seq Int))\n(assert (= (seq.nth s 0) 7))\n(check-sat)\n")
+            .expect_err("seq.nth is declined in slice 1");
     assert!(matches!(err, SmtError::Unsupported(_)), "got {err:?}");
 }
 
