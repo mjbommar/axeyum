@@ -2554,8 +2554,10 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
             }
         }
         "/" => {
-            // Real division; only constant/constant is in the linear fragment.
-            let (_, a) = numeric_args(arena, args)?;
+            // `/` is always Real-typed (SMT-LIB `Reals_Ints`): every operand is
+            // coerced to `Real`, including the all-integer-constant case
+            // `(/ 177 366500000)`, which `numeric_args` would leave as `Int`.
+            let a = real_args(arena, args)?;
             real_division(arena, &a)?
         }
         "div" | "mod" => {
@@ -2691,8 +2693,16 @@ fn parse_decimal(a: &str) -> Option<Rational> {
 }
 
 /// Classifies numeric `args` as real (any operand `Real`) and, if real, coerces
-/// integer-constant operands to `Real` (SMT-LIB numeral coercion). Non-constant
-/// integers and other sorts cannot be coerced.
+/// integer operands to `Real` (SMT-LIB numeral coercion). Integer *constants*
+/// fold directly to a `RealConst`; non-constant `Int` terms are wrapped in the
+/// exact `Int → Real` embedding (`arena.int_to_real`, the `to_real` operator).
+///
+/// This is the SMT-LIB / Z3 `Reals_Ints` mixed-arithmetic rule: an `Int`
+/// subterm appearing in a `Real` context is embedded via `to_real`
+/// (`to_real n = n`), which is denotation-preserving. The coercion fires *only*
+/// when at least one operand is already `Real` (a genuine Real context);
+/// pure-`Int` calls return early below, so `div`/`mod`/`abs`/comparisons over
+/// `Int` keep their integer semantics untouched.
 fn numeric_args(arena: &mut TermArena, args: &[TermId]) -> Result<(bool, Vec<TermId>), SmtError> {
     let is_real = args.iter().any(|&a| arena.sort_of(a) == Sort::Real);
     if !is_real {
@@ -2703,12 +2713,10 @@ fn numeric_args(arena: &mut TermArena, args: &[TermId]) -> Result<(bool, Vec<Ter
         match arena.sort_of(a) {
             Sort::Real => out.push(a),
             Sort::Int => match *arena.node(a) {
+                // Integer constant: fold to the exact real constant.
                 TermNode::IntConst(value) => out.push(arena.real_const(Rational::integer(value))),
-                _ => {
-                    return Err(SmtError::Unsupported(
-                        "cannot coerce a non-constant Int to Real".to_owned(),
-                    ));
-                }
+                // Non-constant Int term: embed via the exact `to_real` operator.
+                _ => out.push(arena.int_to_real(a)?),
             },
             _ => {
                 return Err(SmtError::Syntax(
@@ -2718,6 +2726,31 @@ fn numeric_args(arena: &mut TermArena, args: &[TermId]) -> Result<(bool, Vec<Ter
         }
     }
     Ok((true, out))
+}
+
+/// Coerces *every* numeric operand to `Real`, for the always-`Real` operator
+/// `/` (SMT-LIB `Reals_Ints` real division). Unlike [`numeric_args`], this
+/// fires even when no operand is already `Real` — e.g. `(/ 177 366500000)` over
+/// two integer constants, which denotes the rational `177/366500000`. Integer
+/// constants fold to `RealConst`; non-constant `Int` terms use the exact
+/// `to_real` embedding. The coercion is denotation-preserving, matching Z3/cvc5.
+fn real_args(arena: &mut TermArena, args: &[TermId]) -> Result<Vec<TermId>, SmtError> {
+    let mut out = Vec::with_capacity(args.len());
+    for &a in args {
+        match arena.sort_of(a) {
+            Sort::Real => out.push(a),
+            Sort::Int => match *arena.node(a) {
+                TermNode::IntConst(value) => out.push(arena.real_const(Rational::integer(value))),
+                _ => out.push(arena.int_to_real(a)?),
+            },
+            _ => {
+                return Err(SmtError::Syntax(
+                    "`/` expects real or integer operands".to_owned(),
+                ));
+            }
+        }
+    }
+    Ok(out)
 }
 
 /// Folds a binary arithmetic builder over `args` (left-associative), requiring

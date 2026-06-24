@@ -763,6 +763,145 @@ fn folds_constant_int_real_coercions() {
 }
 
 #[test]
+fn coerces_non_constant_int_to_real_in_mixed_arithmetic() {
+    // An Int *variable* `n` appearing in a Real `+` / `=` context is embedded via
+    // the exact `to_real` operator. Bind n := 2, y := 5.0 and evaluate:
+    //   (= y (+ (to_real n) 3.0))  ->  5.0 == 2 + 3.0  ->  true.
+    let text = r"
+        (set-logic QF_LIRA)
+        (declare-fun n () Int)
+        (declare-fun y () Real)
+        (assert (= y (+ n 3.0)))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+
+    let n = script.arena.find_symbol("n").unwrap();
+    let y = script.arena.find_symbol("y").unwrap();
+
+    // n = 2, y = 5.0 -> assertion true (5.0 == to_real(2) + 3.0).
+    let mut asg_true = Assignment::new();
+    asg_true.set(n, Value::Int(2));
+    asg_true.set(y, Value::Real(axeyum_ir::Rational::integer(5)));
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg_true).unwrap(),
+        Value::Bool(true),
+    );
+
+    // n = 2, y = 4.0 -> assertion false (4.0 != 5.0).
+    let mut asg_false = Assignment::new();
+    asg_false.set(n, Value::Int(2));
+    asg_false.set(y, Value::Real(axeyum_ir::Rational::integer(4)));
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg_false).unwrap(),
+        Value::Bool(false),
+    );
+
+    // Round-trips through the writer (the coercion survives re-parse).
+    let rendered = write_script(&script.arena, &script.assertions);
+    let reparsed = parse_script(&rendered).unwrap();
+    assert_eq!(reparsed.assertions.len(), 1);
+}
+
+#[test]
+fn coerces_non_constant_int_in_mixed_comparison() {
+    // Int variable `n` on the Real side of `<`: (< n y) with n := 3, y := 4.5
+    // is true (to_real(3) = 3 < 4.5); with y := 2.5 it is false.
+    let text = r"
+        (set-logic QF_LIRA)
+        (declare-fun n () Int)
+        (declare-fun y () Real)
+        (assert (< n y))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+
+    let n = script.arena.find_symbol("n").unwrap();
+    let y = script.arena.find_symbol("y").unwrap();
+
+    let mut asg_true = Assignment::new();
+    asg_true.set(n, Value::Int(3));
+    asg_true.set(y, Value::Real(axeyum_ir::Rational::new(9, 2)));
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg_true).unwrap(),
+        Value::Bool(true),
+    );
+
+    let mut asg_false = Assignment::new();
+    asg_false.set(n, Value::Int(3));
+    asg_false.set(y, Value::Real(axeyum_ir::Rational::new(5, 2)));
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg_false).unwrap(),
+        Value::Bool(false),
+    );
+}
+
+#[test]
+fn real_division_over_integer_constants_folds_to_rational() {
+    // `/` is always Real-typed: `(/ 1 4)` over two integer constants denotes the
+    // rational 1/4, even though neither operand is syntactically Real. Bind
+    // y := 1/4 and check (= y (/ 1 4)) -> true; y := 1/2 -> false.
+    let text = r"
+        (set-logic QF_NRA)
+        (declare-fun y () Real)
+        (assert (= y (/ 1 4)))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+
+    let y = script.arena.find_symbol("y").unwrap();
+    let mut asg_true = Assignment::new();
+    asg_true.set(y, Value::Real(axeyum_ir::Rational::new(1, 4)));
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg_true).unwrap(),
+        Value::Bool(true),
+    );
+    let mut asg_false = Assignment::new();
+    asg_false.set(y, Value::Real(axeyum_ir::Rational::new(1, 2)));
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg_false).unwrap(),
+        Value::Bool(false),
+    );
+}
+
+#[test]
+fn pure_int_context_is_not_coerced() {
+    // No Real operand anywhere: `div`/`mod`/`<` stay integer-typed. Evaluating
+    // (= (div n 2) 3) with n := 7 gives 7 div 2 = 3 -> true, exercising integer
+    // (not real) division — the coercion must NOT fire here.
+    let text = r"
+        (set-logic QF_LIA)
+        (declare-fun n () Int)
+        (assert (= (div n 2) 3))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+
+    let n = script.arena.find_symbol("n").unwrap();
+    // The asserted equality's left operand is Int-sorted (integer div), so the
+    // result stays an integer comparison.
+    assert_eq!(script.arena.sort_of(script.assertions[0]), Sort::Bool);
+
+    let mut asg = Assignment::new();
+    asg.set(n, Value::Int(7));
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg).unwrap(),
+        Value::Bool(true),
+    );
+    // 6 div 2 = 3 too; 8 div 2 = 4 -> false. Confirms truncating int division.
+    let mut asg2 = Assignment::new();
+    asg2.set(n, Value::Int(8));
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg2).unwrap(),
+        Value::Bool(false),
+    );
+}
+
+#[test]
 fn parses_attributed_terms_with_patterns() {
     // (! body :pattern (...)) and (! ... :named n) denote the inner term; the
     // annotations are dropped. Common in quantified benchmarks.

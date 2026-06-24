@@ -46,7 +46,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 5.029013
+        "check_auto_ms": 4.995132
       },
       "dag_nodes": 12,
       "detail": "ResourceLimit: lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget",
@@ -101,14 +101,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 5,
+      "solve_ms": 4,
       "translate_ms": 0,
       "tree_nodes": 18
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "check_auto_ms": 32.617233000000006
+        "check_auto_ms": 31.66106
       },
       "dag_nodes": 9,
       "distinct_symbols": 3,
@@ -129,7 +129,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 13,
+          "solve_ms": 10,
           "verdict": "sat"
         }
       },
@@ -174,14 +174,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 32,
+      "solve_ms": 31,
       "translate_ms": 0,
       "tree_nodes": 10
     },
     {
       "assertions": 5,
       "backend_stats": {
-        "check_auto_ms": 2.716544
+        "check_auto_ms": 4.365477
       },
       "dag_nodes": 12,
       "detail": "ResourceLimit: lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget",
@@ -236,14 +236,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 2,
+      "solve_ms": 4,
       "translate_ms": 0,
       "tree_nodes": 21
     },
     {
       "assertions": 5,
       "backend_stats": {
-        "check_auto_ms": 0.117153
+        "check_auto_ms": 0.185245
       },
       "dag_nodes": 10,
       "distinct_symbols": 2,
@@ -264,7 +264,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 11,
+          "solve_ms": 13,
           "verdict": "unsat"
         }
       },
@@ -316,7 +316,7 @@
     {
       "assertions": 4,
       "backend_stats": {
-        "check_auto_ms": 0.26366999999999996
+        "check_auto_ms": 0.345401
       },
       "dag_nodes": 13,
       "distinct_symbols": 2,
@@ -337,7 +337,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 12,
+          "solve_ms": 9,
           "verdict": "sat"
         }
       },
@@ -387,14 +387,71 @@
       "tree_nodes": 20
     },
     {
-      "detail": "cannot coerce a non-constant Int to Real",
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 2636.0738260000003
+      },
+      "dag_nodes": 16,
+      "detail": "ResourceLimit: lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget",
+      "distinct_symbols": 2,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__issue3003.smt2",
-      "outcome": "unsupported"
+      "max_depth": 10,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 16,
+          "digest": "f92eb93679d59dd5",
+          "tree_nodes": 25
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 16,
+            "digest": "f92eb93679d59dd5",
+            "tree_nodes": 25
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 16,
+        "input_tree_nodes": 25,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 16,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 10,
+        "output_tree_nodes": 25,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 2636,
+      "translate_ms": 0,
+      "tree_nodes": 25
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.08599
+        "check_auto_ms": 0.07405300000000001
       },
       "dag_nodes": 6,
       "distinct_symbols": 1,
@@ -415,7 +472,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 12,
+          "solve_ms": 10,
           "verdict": "sat"
         }
       },
@@ -467,7 +524,7 @@
     {
       "assertions": 20,
       "backend_stats": {
-        "check_auto_ms": 0.934791
+        "check_auto_ms": 0.6677719999999999
       },
       "dag_nodes": 111,
       "distinct_symbols": 0,
@@ -488,7 +545,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 9,
           "verdict": "sat"
         }
       },
@@ -540,7 +597,7 @@
     {
       "assertions": 6,
       "backend_stats": {
-        "check_auto_ms": 536.1028239999999
+        "check_auto_ms": 520.2528950000001
       },
       "dag_nodes": 17,
       "detail": "ResourceLimit: lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget",
@@ -595,14 +652,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 536,
+      "solve_ms": 520,
       "translate_ms": 0,
       "tree_nodes": 30
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.576874
+        "check_auto_ms": 0.5936020000000001
       },
       "dag_nodes": 44,
       "detail": "ResourceLimit: nonlinear abstraction: 31 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
@@ -664,7 +721,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 0.083006
+        "check_auto_ms": 0.084965
       },
       "dag_nodes": 10,
       "distinct_symbols": 2,
@@ -685,7 +742,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 13,
+          "solve_ms": 9,
           "verdict": "sat"
         }
       },
@@ -735,14 +792,71 @@
       "tree_nodes": 19
     },
     {
-      "detail": "sort mismatch: expected Real, found Int",
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.733285
+      },
+      "dag_nodes": 53,
+      "detail": "ResourceLimit: nonlinear abstraction: 7 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
+      "distinct_symbols": 3,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__sin-cos-346-b-chunk-0169.smt2",
-      "outcome": "unsupported"
+      "max_depth": 15,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 53,
+          "digest": "4fa1943244de9e5b",
+          "tree_nodes": 73
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 53,
+            "digest": "4fa1943244de9e5b",
+            "tree_nodes": 73
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 53,
+        "input_tree_nodes": 73,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 53,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 15,
+        "output_tree_nodes": 73,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 73
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "check_auto_ms": 0.239531
+        "check_auto_ms": 0.20460899999999999
       },
       "dag_nodes": 19,
       "detail": "ResourceLimit: nonlinear abstraction: 6 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
@@ -802,14 +916,128 @@
       "tree_nodes": 23
     },
     {
-      "detail": "sort mismatch: expected Real, found Int",
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 115.190451
+      },
+      "dag_nodes": 32,
+      "detail": "ResourceLimit: lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget",
+      "distinct_symbols": 5,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__very-easy-sat.smt2",
-      "outcome": "unsupported"
+      "max_depth": 11,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 32,
+          "digest": "c22cf2fea6685659",
+          "tree_nodes": 44
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 32,
+            "digest": "c22cf2fea6685659",
+            "tree_nodes": 44
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 32,
+        "input_tree_nodes": 44,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 32,
+        "output_distinct_symbols": 5,
+        "output_max_depth": 11,
+        "output_tree_nodes": 44,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 115,
+      "translate_ms": 0,
+      "tree_nodes": 44
     },
     {
-      "detail": "cannot coerce a non-constant Int to Real",
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.38434199999999996
+      },
+      "dag_nodes": 6,
+      "detail": "Incomplete: int↔real coercion relaxation: candidate fails the original coupling",
+      "distinct_symbols": 1,
+      "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__very-simple-unsat.smt2",
-      "outcome": "unsupported"
+      "max_depth": 4,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 6,
+          "digest": "e05fed323fc4a6b8",
+          "tree_nodes": 7
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 6,
+            "digest": "e05fed323fc4a6b8",
+            "tree_nodes": 7
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 6,
+        "input_tree_nodes": 7,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 6,
+        "output_distinct_symbols": 1,
+        "output_max_depth": 4,
+        "output_tree_nodes": 7,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 7
     },
     {
       "detail": "operands must share a sort: Real vs Int",
@@ -819,7 +1047,7 @@
     {
       "assertions": 4,
       "backend_stats": {
-        "check_auto_ms": 9.988942000000002
+        "check_auto_ms": 10.338299000000001
       },
       "dag_nodes": 11,
       "detail": "ResourceLimit: lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget",
@@ -874,14 +1102,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 9,
+      "solve_ms": 10,
       "translate_ms": 0,
       "tree_nodes": 16
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 0.215664
+        "check_auto_ms": 0.22106900000000002
       },
       "dag_nodes": 29,
       "detail": "backend failure: lra sat model replay failed: assertion #58 evaluation error: arithmetic overflow evaluating `real_cmp` (outside i128 range)",
@@ -943,7 +1171,7 @@
     {
       "assertions": 5,
       "backend_stats": {
-        "check_auto_ms": 5190.074471
+        "check_auto_ms": 5683.176246
       },
       "dag_nodes": 27,
       "detail": "ResourceLimit: nonlinear abstraction: refinement round bound reached (raise the budget to attempt more)",
@@ -998,14 +1226,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 5190,
+      "solve_ms": 5683,
       "translate_ms": 0,
       "tree_nodes": 41
     },
     {
       "assertions": 4,
       "backend_stats": {
-        "check_auto_ms": 9088.222292999999
+        "check_auto_ms": 9575.784581
       },
       "dag_nodes": 12,
       "detail": "ResourceLimit: nonlinear abstraction: refinement round bound reached (raise the budget to attempt more)",
@@ -1060,14 +1288,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 9088,
+      "solve_ms": 9575,
       "translate_ms": 0,
       "tree_nodes": 20
     },
     {
       "assertions": 4,
       "backend_stats": {
-        "check_auto_ms": 0.230426
+        "check_auto_ms": 0.239084
       },
       "dag_nodes": 13,
       "distinct_symbols": 2,
@@ -1088,7 +1316,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 12,
+          "solve_ms": 11,
           "verdict": "unsat"
         }
       },
@@ -1140,7 +1368,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 17.818065
+        "check_auto_ms": 14.38911
       },
       "dag_nodes": 9,
       "distinct_symbols": 3,
@@ -1161,7 +1389,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 11,
+          "solve_ms": 14,
           "verdict": "unsat"
         }
       },
@@ -1206,14 +1434,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 17,
+      "solve_ms": 14,
       "translate_ms": 0,
       "tree_nodes": 15
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 1.6955900000000002
+        "check_auto_ms": 1.892793
       },
       "dag_nodes": 20,
       "detail": "ResourceLimit: nonlinear abstraction: 322 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
@@ -1273,14 +1501,71 @@
       "tree_nodes": 65
     },
     {
-      "detail": "cannot coerce a non-constant Int to Real",
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.343908
+      },
+      "dag_nodes": 67,
+      "detail": "ResourceLimit: nonlinear abstraction: 15 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
+      "distinct_symbols": 3,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__factor_agg_s.smt2",
-      "outcome": "unsupported"
+      "max_depth": 19,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 67,
+          "digest": "eb4152231810c5ef",
+          "tree_nodes": 194
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 67,
+            "digest": "eb4152231810c5ef",
+            "tree_nodes": 194
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 67,
+        "input_tree_nodes": 194,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 67,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 19,
+        "output_tree_nodes": 194,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 194
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.25340399999999996
+        "check_auto_ms": 0.127664
       },
       "dag_nodes": 13,
       "detail": "ResourceLimit: nonlinear abstraction: 3 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
@@ -1342,7 +1627,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.661333
+        "check_auto_ms": 0.427484
       },
       "dag_nodes": 8,
       "detail": "ResourceLimit: nonlinear abstraction: 3 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
@@ -1402,24 +1687,195 @@
       "tree_nodes": 11
     },
     {
-      "detail": "cannot coerce a non-constant Int to Real",
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 2636.091793
+      },
+      "dag_nodes": 33,
+      "detail": "ResourceLimit: lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget",
+      "distinct_symbols": 4,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__metitarski-1025.smt2",
-      "outcome": "unsupported"
+      "max_depth": 8,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 33,
+          "digest": "4818fb86456a89a1",
+          "tree_nodes": 42
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 33,
+            "digest": "4818fb86456a89a1",
+            "tree_nodes": 42
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 33,
+        "input_tree_nodes": 42,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 33,
+        "output_distinct_symbols": 4,
+        "output_max_depth": 8,
+        "output_tree_nodes": 42,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 2636,
+      "translate_ms": 0,
+      "tree_nodes": 42
     },
     {
-      "detail": "cannot coerce a non-constant Int to Real",
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.638151
+      },
+      "dag_nodes": 67,
+      "detail": "ResourceLimit: nonlinear abstraction: 14 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
+      "distinct_symbols": 3,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__metitarski-3-4.smt2",
-      "outcome": "unsupported"
+      "max_depth": 19,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 67,
+          "digest": "81e4da90eb17945f",
+          "tree_nodes": 166
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 67,
+            "digest": "81e4da90eb17945f",
+            "tree_nodes": 166
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 67,
+        "input_tree_nodes": 166,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 67,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 19,
+        "output_tree_nodes": 166,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 166
     },
     {
-      "detail": "sort mismatch: expected Real, found Int",
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 6.5955889999999995
+      },
+      "dag_nodes": 91,
+      "detail": "ResourceLimit: nonlinear abstraction: 9 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
+      "distinct_symbols": 3,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__metitarski_3_4_2e.smt2",
-      "outcome": "unsupported"
+      "max_depth": 16,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 91,
+          "digest": "55a02c72fcdae538",
+          "tree_nodes": 123
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 91,
+            "digest": "55a02c72fcdae538",
+            "tree_nodes": 123
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 91,
+        "input_tree_nodes": 123,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 91,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 16,
+        "output_tree_nodes": 123,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 6,
+      "translate_ms": 0,
+      "tree_nodes": 123
     },
     {
       "assertions": 6,
       "backend_stats": {
-        "check_auto_ms": 0.374831
+        "check_auto_ms": 0.36322600000000005
       },
       "dag_nodes": 20,
       "detail": "ResourceLimit: nonlinear abstraction: 3 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
@@ -1479,14 +1935,71 @@
       "tree_nodes": 36
     },
     {
-      "detail": "sort mismatch: expected Real, found Int",
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 1.561317
+      },
+      "dag_nodes": 93,
+      "detail": "ResourceLimit: nonlinear abstraction: 20 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
+      "distinct_symbols": 3,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__poly-1025.smt2",
-      "outcome": "unsupported"
+      "max_depth": 23,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 93,
+          "digest": "98d09193750a7156",
+          "tree_nodes": 195
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 93,
+            "digest": "98d09193750a7156",
+            "tree_nodes": 195
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 93,
+        "input_tree_nodes": 195,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 93,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 23,
+        "output_tree_nodes": 195,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 1,
+      "translate_ms": 0,
+      "tree_nodes": 195
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "check_auto_ms": 41.197728000000005
+        "check_auto_ms": 41.069019999999995
       },
       "dag_nodes": 15,
       "detail": "ResourceLimit: lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget",
@@ -1548,7 +2061,7 @@
     {
       "assertions": 4,
       "backend_stats": {
-        "check_auto_ms": 0.286314
+        "check_auto_ms": 1.4239249999999999
       },
       "dag_nodes": 17,
       "detail": "ResourceLimit: nonlinear abstraction: 4 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
@@ -1603,14 +2116,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 24
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 2019.9668960000001
+        "check_auto_ms": 2109.463367
       },
       "dag_nodes": 9,
       "detail": "ResourceLimit: lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget",
@@ -1665,19 +2178,76 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 2019,
+      "solve_ms": 2109,
       "translate_ms": 0,
       "tree_nodes": 13
     },
     {
-      "detail": "cannot coerce a non-constant Int to Real",
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 3083.482135
+      },
+      "dag_nodes": 31,
+      "detail": "ResourceLimit: lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget",
+      "distinct_symbols": 3,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__solve-eq-small-qf-nra.smt2",
-      "outcome": "unsupported"
+      "max_depth": 12,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 31,
+          "digest": "6525d38cf3db0483",
+          "tree_nodes": 39
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 31,
+            "digest": "6525d38cf3db0483",
+            "tree_nodes": 39
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 31,
+        "input_tree_nodes": 39,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 31,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 12,
+        "output_tree_nodes": 39,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 3083,
+      "translate_ms": 0,
+      "tree_nodes": 39
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "check_auto_ms": 1166.911084
+        "check_auto_ms": 1095.484307
       },
       "dag_nodes": 13,
       "distinct_symbols": 5,
@@ -1698,7 +2268,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 12,
+          "solve_ms": 10,
           "verdict": "unsat"
         }
       },
@@ -1743,26 +2313,141 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 1166,
+      "solve_ms": 1095,
       "translate_ms": 0,
       "tree_nodes": 21
     },
     {
-      "detail": "sort mismatch: expected Real, found Int",
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.275335
+      },
+      "dag_nodes": 30,
+      "detail": "ResourceLimit: nonlinear abstraction: 3 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
+      "distinct_symbols": 3,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress2__arith__real2int-test.smt2",
-      "outcome": "unsupported"
+      "max_depth": 10,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 30,
+          "digest": "7c84f1ca89276319",
+          "tree_nodes": 39
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 30,
+            "digest": "7c84f1ca89276319",
+            "tree_nodes": 39
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 30,
+        "input_tree_nodes": 39,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 30,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 10,
+        "output_tree_nodes": 39,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 39
     },
     {
-      "detail": "sort mismatch: expected Real, found Int",
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.251354
+      },
+      "dag_nodes": 70,
+      "detail": "ResourceLimit: nonlinear abstraction: 12 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
+      "distinct_symbols": 3,
+      "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress2__nl__nt-lemmas-bad.smt2",
-      "outcome": "unsupported"
+      "max_depth": 22,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 70,
+          "digest": "c10f5d91d792466d",
+          "tree_nodes": 103
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 70,
+            "digest": "c10f5d91d792466d",
+            "tree_nodes": 103
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 70,
+        "input_tree_nodes": 103,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 70,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 22,
+        "output_tree_nodes": 103,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 103
     }
   ],
   "summary": {
     "agree": 9,
     "blocker_buckets": {
       "solver-error": 1,
-      "unknown:ResourceLimit": 15
+      "unknown:Incomplete": 1,
+      "unknown:ResourceLimit": 26
     },
     "disagree": 0,
     "errors": 1,
@@ -1775,16 +2460,16 @@
       "compared": 9,
       "disagree": 0,
       "enabled": true,
-      "skipped": 16
+      "skipped": 28
     },
-    "par2_mean_s": 12.84876245672,
+    "par2_mean_s": 15.166030567486485,
     "query_plan": {
-      "original_dag_nodes": 479,
-      "original_tree_nodes": 1226,
+      "original_dag_nodes": 1068,
+      "original_tree_nodes": 2276,
       "slice_changed_instances": 0,
-      "slice_dag_nodes": 479,
+      "slice_dag_nodes": 1068,
       "slice_dropped_terms": 0,
-      "slice_tree_nodes": 1226
+      "slice_tree_nodes": 2276
     },
     "rewrite": {
       "applications": 0,
@@ -1799,9 +2484,9 @@
       "sat_unsat_conflicts": 0
     },
     "sat": 5,
-    "unknown": 15,
+    "unknown": 27,
     "unsat": 4,
-    "unsupported": 13
+    "unsupported": 1
   },
   "triage": {
     "errors": [
@@ -1820,68 +2505,8 @@
     },
     "unsupported": [
       {
-        "detail": "cannot coerce a non-constant Int to Real",
-        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__issue3003.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "sort mismatch: expected Real, found Int",
-        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__sin-cos-346-b-chunk-0169.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "sort mismatch: expected Real, found Int",
-        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__very-easy-sat.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "cannot coerce a non-constant Int to Real",
-        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__very-simple-unsat.smt2",
-        "outcome": "unsupported"
-      },
-      {
         "detail": "operands must share a sort: Real vs Int",
         "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__parser__real-numerals.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "cannot coerce a non-constant Int to Real",
-        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__factor_agg_s.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "cannot coerce a non-constant Int to Real",
-        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__metitarski-1025.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "cannot coerce a non-constant Int to Real",
-        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__metitarski-3-4.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "sort mismatch: expected Real, found Int",
-        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__metitarski_3_4_2e.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "sort mismatch: expected Real, found Int",
-        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__poly-1025.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "cannot coerce a non-constant Int to Real",
-        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__solve-eq-small-qf-nra.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "sort mismatch: expected Real, found Int",
-        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress2__arith__real2int-test.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "sort mismatch: expected Real, found Int",
-        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress2__nl__nt-lemmas-bad.smt2",
         "outcome": "unsupported"
       }
     ]
