@@ -1,0 +1,1890 @@
+{
+  "config": {
+    "backend": "axeyum-solver check_auto",
+    "backend_kind": "solver",
+    "cnf_clause_budget": null,
+    "cnf_inprocessing": false,
+    "cnf_variable_budget": null,
+    "cnf_vivify": false,
+    "compare_backend": "z3 4.13.3.0",
+    "compare_z3": true,
+    "config_hash": "6aae14b96d192198",
+    "corpus": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean",
+    "corpus_hash": "80c7982a4d691658",
+    "corpus_source": null,
+    "hardware": {
+      "arch": "x86_64",
+      "hostname": null,
+      "os": "linux",
+      "parallelism": 16
+    },
+    "harness": "axeyum-bench 0.1.0",
+    "jobs": 4,
+    "limit": null,
+    "logic": "QF_NRA",
+    "native_cdcl": false,
+    "node_budget": null,
+    "preprocess": false,
+    "query_plan": {
+      "mode": "full",
+      "refine_adaptive_batch": false,
+      "refine_batch": 1,
+      "refine_rounds": 16,
+      "refine_select": "first",
+      "sat_replay_failure_policy": "soundness-alarm"
+    },
+    "rewrite": {
+      "enabled_rule_ids": [],
+      "mode": "off",
+      "rule_set": null
+    },
+    "seed": "none",
+    "selected_families": null,
+    "timeout_ms": 10000
+  },
+  "instances": [
+    {
+      "assertions": 3,
+      "backend_stats": {
+        "check_auto_ms": 5.029013
+      },
+      "dag_nodes": 12,
+      "detail": "ResourceLimit: lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget",
+      "distinct_symbols": 3,
+      "expected": "unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__div.04.smt2",
+      "max_depth": 5,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 3,
+          "assumptions": 0,
+          "dag_nodes": 12,
+          "digest": "682420e3b07dfa37",
+          "tree_nodes": 18
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 3,
+            "assumptions": 0,
+            "dag_nodes": 12,
+            "digest": "682420e3b07dfa37",
+            "tree_nodes": 18
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 12,
+        "input_tree_nodes": 18,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 3,
+        "output_dag_nodes": 12,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 5,
+        "output_tree_nodes": 18,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 5,
+      "translate_ms": 0,
+      "tree_nodes": 18
+    },
+    {
+      "assertions": 2,
+      "backend_stats": {
+        "check_auto_ms": 32.617233000000006
+      },
+      "dag_nodes": 9,
+      "distinct_symbols": 3,
+      "expected": "sat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__div.05.smt2",
+      "max_depth": 3,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support real terms yet (ADR-0015)",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 13,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 2,
+          "assumptions": 0,
+          "dag_nodes": 9,
+          "digest": "4d4498605342ab65",
+          "tree_nodes": 10
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 2,
+            "assumptions": 0,
+            "dag_nodes": 9,
+            "digest": "4d4498605342ab65",
+            "tree_nodes": 10
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 9,
+        "input_tree_nodes": 10,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 2,
+        "output_dag_nodes": 9,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 3,
+        "output_tree_nodes": 10,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 32,
+      "translate_ms": 0,
+      "tree_nodes": 10
+    },
+    {
+      "assertions": 5,
+      "backend_stats": {
+        "check_auto_ms": 2.716544
+      },
+      "dag_nodes": 12,
+      "detail": "ResourceLimit: lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget",
+      "distinct_symbols": 3,
+      "expected": "unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__div.07.smt2",
+      "max_depth": 4,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 5,
+          "assumptions": 0,
+          "dag_nodes": 12,
+          "digest": "63318f75a25212f1",
+          "tree_nodes": 21
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 5,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 5,
+            "assumptions": 0,
+            "dag_nodes": 12,
+            "digest": "63318f75a25212f1",
+            "tree_nodes": 21
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 12,
+        "input_tree_nodes": 21,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 5,
+        "output_dag_nodes": 12,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 4,
+        "output_tree_nodes": 21,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 2,
+      "translate_ms": 0,
+      "tree_nodes": 21
+    },
+    {
+      "assertions": 5,
+      "backend_stats": {
+        "check_auto_ms": 0.117153
+      },
+      "dag_nodes": 10,
+      "distinct_symbols": 2,
+      "expected": "unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__mult.01.smt2",
+      "max_depth": 4,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 11,
+          "verdict": "unsat"
+        }
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 5,
+          "assumptions": 0,
+          "dag_nodes": 10,
+          "digest": "30c358ed0e96203c",
+          "tree_nodes": 18
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 5,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 5,
+            "assumptions": 0,
+            "dag_nodes": 10,
+            "digest": "30c358ed0e96203c",
+            "tree_nodes": 18
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 10,
+        "input_tree_nodes": 18,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 5,
+        "output_dag_nodes": 10,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 4,
+        "output_tree_nodes": 18,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 18
+    },
+    {
+      "assertions": 4,
+      "backend_stats": {
+        "check_auto_ms": 0.26366999999999996
+      },
+      "dag_nodes": 13,
+      "distinct_symbols": 2,
+      "expected": "sat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__coeff-sat.smt2",
+      "max_depth": 4,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 12,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 4,
+          "assumptions": 0,
+          "dag_nodes": 13,
+          "digest": "57206a1ef09db25f",
+          "tree_nodes": 20
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 4,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 4,
+            "assumptions": 0,
+            "dag_nodes": 13,
+            "digest": "57206a1ef09db25f",
+            "tree_nodes": 20
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 13,
+        "input_tree_nodes": 20,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 4,
+        "output_dag_nodes": 13,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 4,
+        "output_tree_nodes": 20,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 20
+    },
+    {
+      "detail": "cannot coerce a non-constant Int to Real",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__issue3003.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.08599
+      },
+      "dag_nodes": 6,
+      "distinct_symbols": 1,
+      "expected": "sat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__issue3719.smt2",
+      "max_depth": 4,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support real terms yet (ADR-0015)",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 12,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 6,
+          "digest": "d13336c7875ec745",
+          "tree_nodes": 7
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 6,
+            "digest": "d13336c7875ec745",
+            "tree_nodes": 7
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 6,
+        "input_tree_nodes": 7,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 6,
+        "output_distinct_symbols": 1,
+        "output_max_depth": 4,
+        "output_tree_nodes": 7,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 7
+    },
+    {
+      "assertions": 20,
+      "backend_stats": {
+        "check_auto_ms": 0.934791
+      },
+      "dag_nodes": 111,
+      "distinct_symbols": 0,
+      "expected": "sat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__magnitude-wrong-1020-m.smt2",
+      "max_depth": 16,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 10,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 20,
+          "assumptions": 0,
+          "dag_nodes": 111,
+          "digest": "34f25138ec52eabc",
+          "tree_nodes": 544
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 20,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 20,
+            "assumptions": 0,
+            "dag_nodes": 111,
+            "digest": "34f25138ec52eabc",
+            "tree_nodes": 544
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 111,
+        "input_tree_nodes": 544,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 20,
+        "output_dag_nodes": 111,
+        "output_distinct_symbols": 0,
+        "output_max_depth": 16,
+        "output_tree_nodes": 544,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 544
+    },
+    {
+      "assertions": 6,
+      "backend_stats": {
+        "check_auto_ms": 536.1028239999999
+      },
+      "dag_nodes": 17,
+      "detail": "ResourceLimit: lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget",
+      "distinct_symbols": 4,
+      "expected": "sat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__mult-po.smt2",
+      "max_depth": 4,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 6,
+          "assumptions": 0,
+          "dag_nodes": 17,
+          "digest": "4e749cbda6b6e0e8",
+          "tree_nodes": 30
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 6,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 6,
+            "assumptions": 0,
+            "dag_nodes": 17,
+            "digest": "4e749cbda6b6e0e8",
+            "tree_nodes": 30
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 17,
+        "input_tree_nodes": 30,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 6,
+        "output_dag_nodes": 17,
+        "output_distinct_symbols": 4,
+        "output_max_depth": 4,
+        "output_tree_nodes": 30,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 536,
+      "translate_ms": 0,
+      "tree_nodes": 30
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.576874
+      },
+      "dag_nodes": 44,
+      "detail": "ResourceLimit: nonlinear abstraction: 31 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
+      "distinct_symbols": 3,
+      "expected": "sat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__nlExtPurify-test.smt2",
+      "max_depth": 37,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 44,
+          "digest": "9eb03051e5511710",
+          "tree_nodes": 140
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 44,
+            "digest": "9eb03051e5511710",
+            "tree_nodes": 140
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 44,
+        "input_tree_nodes": 140,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 44,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 37,
+        "output_tree_nodes": 140,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 140
+    },
+    {
+      "assertions": 3,
+      "backend_stats": {
+        "check_auto_ms": 0.083006
+      },
+      "dag_nodes": 10,
+      "distinct_symbols": 2,
+      "expected": "sat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__real-as-int.smt2",
+      "max_depth": 4,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support real terms yet (ADR-0015)",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 13,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 3,
+          "assumptions": 0,
+          "dag_nodes": 10,
+          "digest": "51862831b0e0ca01",
+          "tree_nodes": 19
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 3,
+            "assumptions": 0,
+            "dag_nodes": 10,
+            "digest": "51862831b0e0ca01",
+            "tree_nodes": 19
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 10,
+        "input_tree_nodes": 19,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 3,
+        "output_dag_nodes": 10,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 4,
+        "output_tree_nodes": 19,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 19
+    },
+    {
+      "detail": "sort mismatch: expected Real, found Int",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__sin-cos-346-b-chunk-0169.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "assertions": 2,
+      "backend_stats": {
+        "check_auto_ms": 0.239531
+      },
+      "dag_nodes": 19,
+      "detail": "ResourceLimit: nonlinear abstraction: 6 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
+      "distinct_symbols": 7,
+      "expected": "unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__subs0-unsat-confirm.smt2",
+      "max_depth": 9,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 2,
+          "assumptions": 0,
+          "dag_nodes": 19,
+          "digest": "1cbbbca6e973717e",
+          "tree_nodes": 23
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 2,
+            "assumptions": 0,
+            "dag_nodes": 19,
+            "digest": "1cbbbca6e973717e",
+            "tree_nodes": 23
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 19,
+        "input_tree_nodes": 23,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 2,
+        "output_dag_nodes": 19,
+        "output_distinct_symbols": 7,
+        "output_max_depth": 9,
+        "output_tree_nodes": 23,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 23
+    },
+    {
+      "detail": "sort mismatch: expected Real, found Int",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__very-easy-sat.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "cannot coerce a non-constant Int to Real",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__very-simple-unsat.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "operands must share a sort: Real vs Int",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__parser__real-numerals.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "assertions": 4,
+      "backend_stats": {
+        "check_auto_ms": 9.988942000000002
+      },
+      "dag_nodes": 11,
+      "detail": "ResourceLimit: lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget",
+      "distinct_symbols": 3,
+      "expected": "sat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__arith__div.06.smt2",
+      "max_depth": 3,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 4,
+          "assumptions": 0,
+          "dag_nodes": 11,
+          "digest": "03c8d335f72e9eed",
+          "tree_nodes": 16
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 4,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 4,
+            "assumptions": 0,
+            "dag_nodes": 11,
+            "digest": "03c8d335f72e9eed",
+            "tree_nodes": 16
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 11,
+        "input_tree_nodes": 16,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 4,
+        "output_dag_nodes": 11,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 3,
+        "output_tree_nodes": 16,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 9,
+      "translate_ms": 0,
+      "tree_nodes": 16
+    },
+    {
+      "assertions": 3,
+      "backend_stats": {
+        "check_auto_ms": 0.215664
+      },
+      "dag_nodes": 29,
+      "detail": "backend failure: lra sat model replay failed: assertion #58 evaluation error: arithmetic overflow evaluating `real_cmp` (outside i128 range)",
+      "distinct_symbols": 1,
+      "expected": "unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__approx-sqrt-unsat.smt2",
+      "max_depth": 7,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-solver-error"
+      },
+      "outcome": "solver-error",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 3,
+          "assumptions": 0,
+          "dag_nodes": 29,
+          "digest": "df19ded3280ca7c2",
+          "tree_nodes": 43
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 3,
+            "assumptions": 0,
+            "dag_nodes": 29,
+            "digest": "df19ded3280ca7c2",
+            "tree_nodes": 43
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 29,
+        "input_tree_nodes": 43,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 3,
+        "output_dag_nodes": 29,
+        "output_distinct_symbols": 1,
+        "output_max_depth": 7,
+        "output_tree_nodes": 43,
+        "rewritten_outcome": "solver-error",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 43
+    },
+    {
+      "assertions": 5,
+      "backend_stats": {
+        "check_auto_ms": 5190.074471
+      },
+      "dag_nodes": 27,
+      "detail": "ResourceLimit: nonlinear abstraction: refinement round bound reached (raise the budget to attempt more)",
+      "distinct_symbols": 1,
+      "expected": "sat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__approx-sqrt.smt2",
+      "max_depth": 5,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 5,
+          "assumptions": 0,
+          "dag_nodes": 27,
+          "digest": "4bb34c5d472e1ab5",
+          "tree_nodes": 41
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 5,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 5,
+            "assumptions": 0,
+            "dag_nodes": 27,
+            "digest": "4bb34c5d472e1ab5",
+            "tree_nodes": 41
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 27,
+        "input_tree_nodes": 41,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 5,
+        "output_dag_nodes": 27,
+        "output_distinct_symbols": 1,
+        "output_max_depth": 5,
+        "output_tree_nodes": 41,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 5190,
+      "translate_ms": 0,
+      "tree_nodes": 41
+    },
+    {
+      "assertions": 4,
+      "backend_stats": {
+        "check_auto_ms": 9088.222292999999
+      },
+      "dag_nodes": 12,
+      "detail": "ResourceLimit: nonlinear abstraction: refinement round bound reached (raise the budget to attempt more)",
+      "distinct_symbols": 2,
+      "expected": "unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat-base.smt2",
+      "max_depth": 4,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 4,
+          "assumptions": 0,
+          "dag_nodes": 12,
+          "digest": "2517223646494345",
+          "tree_nodes": 20
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 4,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 4,
+            "assumptions": 0,
+            "dag_nodes": 12,
+            "digest": "2517223646494345",
+            "tree_nodes": 20
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 12,
+        "input_tree_nodes": 20,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 4,
+        "output_dag_nodes": 12,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 4,
+        "output_tree_nodes": 20,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 9088,
+      "translate_ms": 0,
+      "tree_nodes": 20
+    },
+    {
+      "assertions": 4,
+      "backend_stats": {
+        "check_auto_ms": 0.230426
+      },
+      "dag_nodes": 13,
+      "distinct_symbols": 2,
+      "expected": "unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat.smt2",
+      "max_depth": 4,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 12,
+          "verdict": "unsat"
+        }
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 4,
+          "assumptions": 0,
+          "dag_nodes": 13,
+          "digest": "711dfc3b2b1f4d90",
+          "tree_nodes": 20
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 4,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 4,
+            "assumptions": 0,
+            "dag_nodes": 13,
+            "digest": "711dfc3b2b1f4d90",
+            "tree_nodes": 20
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 13,
+        "input_tree_nodes": 20,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 4,
+        "output_dag_nodes": 13,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 4,
+        "output_tree_nodes": 20,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 20
+    },
+    {
+      "assertions": 3,
+      "backend_stats": {
+        "check_auto_ms": 17.818065
+      },
+      "dag_nodes": 9,
+      "distinct_symbols": 3,
+      "expected": "unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__combine.smt2",
+      "max_depth": 4,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 11,
+          "verdict": "unsat"
+        }
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 3,
+          "assumptions": 0,
+          "dag_nodes": 9,
+          "digest": "7b92ce0f173e881d",
+          "tree_nodes": 15
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 3,
+            "assumptions": 0,
+            "dag_nodes": 9,
+            "digest": "7b92ce0f173e881d",
+            "tree_nodes": 15
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 9,
+        "input_tree_nodes": 15,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 3,
+        "output_dag_nodes": 9,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 4,
+        "output_tree_nodes": 15,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 17,
+      "translate_ms": 0,
+      "tree_nodes": 15
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 1.6955900000000002
+      },
+      "dag_nodes": 20,
+      "detail": "ResourceLimit: nonlinear abstraction: 322 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
+      "distinct_symbols": 8,
+      "expected": "sat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__dist-big.smt2",
+      "max_depth": 12,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 20,
+          "digest": "764bcee8110971cd",
+          "tree_nodes": 65
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 20,
+            "digest": "764bcee8110971cd",
+            "tree_nodes": 65
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 20,
+        "input_tree_nodes": 65,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 20,
+        "output_distinct_symbols": 8,
+        "output_max_depth": 12,
+        "output_tree_nodes": 65,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 1,
+      "translate_ms": 0,
+      "tree_nodes": 65
+    },
+    {
+      "detail": "cannot coerce a non-constant Int to Real",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__factor_agg_s.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.25340399999999996
+      },
+      "dag_nodes": 13,
+      "detail": "ResourceLimit: nonlinear abstraction: 3 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
+      "distinct_symbols": 2,
+      "expected": "sat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__issue3656.smt2",
+      "max_depth": 8,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 13,
+          "digest": "91ce73d9a8f3c6cd",
+          "tree_nodes": 26
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 13,
+            "digest": "91ce73d9a8f3c6cd",
+            "tree_nodes": 26
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 13,
+        "input_tree_nodes": 26,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 13,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 8,
+        "output_tree_nodes": 26,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 26
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.661333
+      },
+      "dag_nodes": 8,
+      "detail": "ResourceLimit: nonlinear abstraction: 3 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
+      "distinct_symbols": 2,
+      "expected": "sat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__issue9164-2.smt2",
+      "max_depth": 4,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 8,
+          "digest": "a94748e84d9bd159",
+          "tree_nodes": 11
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 8,
+            "digest": "a94748e84d9bd159",
+            "tree_nodes": 11
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 8,
+        "input_tree_nodes": 11,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 8,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 4,
+        "output_tree_nodes": 11,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 11
+    },
+    {
+      "detail": "cannot coerce a non-constant Int to Real",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__metitarski-1025.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "cannot coerce a non-constant Int to Real",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__metitarski-3-4.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "sort mismatch: expected Real, found Int",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__metitarski_3_4_2e.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "assertions": 6,
+      "backend_stats": {
+        "check_auto_ms": 0.374831
+      },
+      "dag_nodes": 20,
+      "detail": "ResourceLimit: nonlinear abstraction: 3 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
+      "distinct_symbols": 4,
+      "expected": "unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__ones.smt2",
+      "max_depth": 5,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 6,
+          "assumptions": 0,
+          "dag_nodes": 20,
+          "digest": "9dc9b844dd22f546",
+          "tree_nodes": 36
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 6,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 6,
+            "assumptions": 0,
+            "dag_nodes": 20,
+            "digest": "9dc9b844dd22f546",
+            "tree_nodes": 36
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 20,
+        "input_tree_nodes": 36,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 6,
+        "output_dag_nodes": 20,
+        "output_distinct_symbols": 4,
+        "output_max_depth": 5,
+        "output_tree_nodes": 36,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 36
+    },
+    {
+      "detail": "sort mismatch: expected Real, found Int",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__poly-1025.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "assertions": 2,
+      "backend_stats": {
+        "check_auto_ms": 41.197728000000005
+      },
+      "dag_nodes": 15,
+      "detail": "ResourceLimit: lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget",
+      "distinct_symbols": 2,
+      "expected": "unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__red-exp.smt2",
+      "max_depth": 6,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 2,
+          "assumptions": 0,
+          "dag_nodes": 15,
+          "digest": "57f2b77ff972cd48",
+          "tree_nodes": 25
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 2,
+            "assumptions": 0,
+            "dag_nodes": 15,
+            "digest": "57f2b77ff972cd48",
+            "tree_nodes": 25
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 15,
+        "input_tree_nodes": 25,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 2,
+        "output_dag_nodes": 15,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 6,
+        "output_tree_nodes": 25,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 41,
+      "translate_ms": 0,
+      "tree_nodes": 25
+    },
+    {
+      "assertions": 4,
+      "backend_stats": {
+        "check_auto_ms": 0.286314
+      },
+      "dag_nodes": 17,
+      "detail": "ResourceLimit: nonlinear abstraction: 4 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
+      "distinct_symbols": 4,
+      "expected": "unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono-unsat.smt2",
+      "max_depth": 6,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 4,
+          "assumptions": 0,
+          "dag_nodes": 17,
+          "digest": "f0de684038948da2",
+          "tree_nodes": 24
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 4,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 4,
+            "assumptions": 0,
+            "dag_nodes": 17,
+            "digest": "f0de684038948da2",
+            "tree_nodes": 24
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 17,
+        "input_tree_nodes": 24,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 4,
+        "output_dag_nodes": 17,
+        "output_distinct_symbols": 4,
+        "output_max_depth": 6,
+        "output_tree_nodes": 24,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 24
+    },
+    {
+      "assertions": 3,
+      "backend_stats": {
+        "check_auto_ms": 2019.9668960000001
+      },
+      "dag_nodes": 9,
+      "detail": "ResourceLimit: lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget",
+      "distinct_symbols": 3,
+      "expected": "unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono.smt2",
+      "max_depth": 3,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 3,
+          "assumptions": 0,
+          "dag_nodes": 9,
+          "digest": "e7fd7b81a8807215",
+          "tree_nodes": 13
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 3,
+            "assumptions": 0,
+            "dag_nodes": 9,
+            "digest": "e7fd7b81a8807215",
+            "tree_nodes": 13
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 9,
+        "input_tree_nodes": 13,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 3,
+        "output_dag_nodes": 9,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 3,
+        "output_tree_nodes": 13,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 2019,
+      "translate_ms": 0,
+      "tree_nodes": 13
+    },
+    {
+      "detail": "cannot coerce a non-constant Int to Real",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__solve-eq-small-qf-nra.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "assertions": 2,
+      "backend_stats": {
+        "check_auto_ms": 1166.911084
+      },
+      "dag_nodes": 13,
+      "distinct_symbols": 5,
+      "expected": "unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__zero-subset.smt2",
+      "max_depth": 7,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support real terms yet (ADR-0015)",
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 12,
+          "verdict": "unsat"
+        }
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 2,
+          "assumptions": 0,
+          "dag_nodes": 13,
+          "digest": "7efd53fcfdc2d6c8",
+          "tree_nodes": 21
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 2,
+            "assumptions": 0,
+            "dag_nodes": 13,
+            "digest": "7efd53fcfdc2d6c8",
+            "tree_nodes": 21
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 13,
+        "input_tree_nodes": 21,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 2,
+        "output_dag_nodes": 13,
+        "output_distinct_symbols": 5,
+        "output_max_depth": 7,
+        "output_tree_nodes": 21,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 1166,
+      "translate_ms": 0,
+      "tree_nodes": 21
+    },
+    {
+      "detail": "sort mismatch: expected Real, found Int",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress2__arith__real2int-test.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "sort mismatch: expected Real, found Int",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress2__nl__nt-lemmas-bad.smt2",
+      "outcome": "unsupported"
+    }
+  ],
+  "summary": {
+    "agree": 9,
+    "blocker_buckets": {
+      "solver-error": 1,
+      "unknown:ResourceLimit": 15
+    },
+    "disagree": 0,
+    "errors": 1,
+    "files": 38,
+    "layer_attribution": null,
+    "model_replay_failures": 0,
+    "oracle": {
+      "agree": 9,
+      "backend": "z3 4.13.3.0",
+      "compared": 9,
+      "disagree": 0,
+      "enabled": true,
+      "skipped": 16
+    },
+    "par2_mean_s": 12.84876245672,
+    "query_plan": {
+      "original_dag_nodes": 479,
+      "original_tree_nodes": 1226,
+      "slice_changed_instances": 0,
+      "slice_dag_nodes": 479,
+      "slice_dropped_terms": 0,
+      "slice_tree_nodes": 1226
+    },
+    "rewrite": {
+      "applications": 0,
+      "changed_instances": 0,
+      "decision_changes": 0,
+      "decision_matches": 0,
+      "input_dag_nodes": 0,
+      "input_tree_nodes": 0,
+      "mode": "off",
+      "output_dag_nodes": 0,
+      "output_tree_nodes": 0,
+      "sat_unsat_conflicts": 0
+    },
+    "sat": 5,
+    "unknown": 15,
+    "unsat": 4,
+    "unsupported": 13
+  },
+  "triage": {
+    "errors": [
+      {
+        "detail": "backend failure: lra sat model replay failed: assertion #58 evaluation error: arithmetic overflow evaluating `real_cmp` (outside i128 range)",
+        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__approx-sqrt-unsat.smt2",
+        "outcome": "solver-error"
+      }
+    ],
+    "rewrite_decision_changes": [],
+    "soundness": {
+      "model_replay_failures": 0,
+      "oracle_disagreements": 0,
+      "rewrite_sat_unsat_conflicts": 0,
+      "status_disagreements": 0
+    },
+    "unsupported": [
+      {
+        "detail": "cannot coerce a non-constant Int to Real",
+        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__issue3003.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "sort mismatch: expected Real, found Int",
+        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__sin-cos-346-b-chunk-0169.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "sort mismatch: expected Real, found Int",
+        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__very-easy-sat.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "cannot coerce a non-constant Int to Real",
+        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__very-simple-unsat.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "operands must share a sort: Real vs Int",
+        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__parser__real-numerals.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "cannot coerce a non-constant Int to Real",
+        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__factor_agg_s.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "cannot coerce a non-constant Int to Real",
+        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__metitarski-1025.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "cannot coerce a non-constant Int to Real",
+        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__metitarski-3-4.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "sort mismatch: expected Real, found Int",
+        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__metitarski_3_4_2e.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "sort mismatch: expected Real, found Int",
+        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__poly-1025.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "cannot coerce a non-constant Int to Real",
+        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__solve-eq-small-qf-nra.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "sort mismatch: expected Real, found Int",
+        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress2__arith__real2int-test.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "sort mismatch: expected Real, found Int",
+        "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress2__nl__nt-lemmas-bad.smt2",
+        "outcome": "unsupported"
+      }
+    ]
+  },
+  "version": 14
+}

@@ -131,6 +131,62 @@ The `QF_LIA` slice (exact-logic match) yields 12 clean files from cvc5
 (`cli__regress3__arith_prp-13-24.smt2`), so the committed slice is the **11**
 that respect the `--timeout-ms` budget.
 
+## QF_NRA: `cvc5-regress-clean` (38 files)
+
+The `QF_NRA` slice (exact-logic match) yields **38** clean files from cvc5
+`test/regress`. **No** measurement exclusion was needed: with the eager
+UF+arithmetic (Ackermann) bound (commit `6233a7c`) and the `nra.rs` solve
+deadlines in place, every file respects the `--timeout-ms` budget — a per-file
+probe with a 10 s `--timeout-ms` and a 30 s OS hard-timeout backstop killed
+none of the 38. The committed slice is therefore the full clean set
+(`cvc5-regress-clean`, not `-bounded`).
+
+Measured head-to-head vs the Z3 4.13.3 binary
+(`qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json`,
+`--timeout-ms 10000 --jobs 4`): axeyum decides **9** (sat 5, unsat 4),
+**unknown 15** (all `ResourceLimit`), **unsupported 13**, and **1**
+`solver-error`. Oracle: **compared 9, agree 9, DISAGREE 0**, skipped 16. PAR-2
+mean ≈ 12.85 s. The `solver-error` (`cli__regress1__nl__approx-sqrt-unsat.smt2`)
+is the i128 `Rational`-overflow *guard* — model replay caught a `real_cmp`
+value outside i128 range and returned an error rather than a wrong verdict
+(a graceful guard, never an unsound sat/unsat).
+
+Dominant front-end gap (the real follow-up): **Int/Real coercion in the
+SMT-LIB front-end** — 13 unsupported files split as `cannot coerce a
+non-constant Int to Real` (6), `sort mismatch: expected Real, found Int` (6),
+and `operands must share a sort: Real vs Int` (1). These are mixed Int/Real
+arithmetic terms the front-end does not yet reconcile; closing the gap is a
+solver-source change (out of scope for corpus curation). The 15 `unknown`s are
+the genuine nonlinear-real arithmetic search frontier, which is the measured
+opportunity this baseline exists to track.
+
+## QF_NIA: `cvc5-regress-clean` (39 files)
+
+The `QF_NIA` slice (exact-logic match) yields **39** clean files from cvc5
+`test/regress`. As with QF_NRA, **no** measurement exclusion was needed — every
+file respects the `--timeout-ms` budget under the `6233a7c` bound + `nra.rs`
+deadlines (the same per-file 10 s / 30 s-backstop probe killed none of the 39).
+The committed slice is the full clean set (`cvc5-regress-clean`).
+
+Measured head-to-head vs the Z3 4.13.3 binary
+(`qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json`,
+`--timeout-ms 10000 --jobs 4`): axeyum decides **19** (sat 15, unsat 4),
+**unknown 8** (`Incomplete` 5, `ResourceLimit` 3), **unsupported 11**, and
+**1** `parse-error`. Oracle: **compared 19, agree 19, DISAGREE 0**, skipped 8.
+PAR-2 mean ≈ 5.85 s. The `parse-error`
+(`cli__regress1__nl__issue3441.smt2`) is a front-end strictness gap: the file
+wraps a single sub-term in `(and …)` (axeyum requires `and` to have ≥ 2
+arguments), so it is a parser-arity limitation, not a verdict and not a
+disagreement.
+
+Dominant front-end gap (the real follow-up): **the `int.pow2` /
+`(_ iand N)` / `@int_div_by_zero` operator family** — 11 unsupported files
+split as `int.pow2` (7), `(_ iand 4)`/`(_ iand 5)` bitwise-and-over-Int (3),
+and `@int_div_by_zero` (1). These nonlinear-integer operators are not yet in the
+front-end's operator table; adding them is a solver-source change (out of scope
+here). The 8 `unknown`s (5 `Incomplete`, 3 `ResourceLimit`) are the genuine
+nonlinear-integer decision frontier this baseline exists to track.
+
 ## Note on the Z3 comparison oracle
 
 The in-repo `Z3Backend` only supports `QF_BV`; it declines UF/arithmetic. For these

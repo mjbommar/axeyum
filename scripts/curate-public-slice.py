@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """Curate clean, parser-faithful, status-annotated SMT-LIB slices from the
-cvc5 regress suite, mirroring the committed QF_UF / QF_LRA / QF_UFLIA / QF_LIA
-filter for `corpus/public-curated/`. Reproducible record of the curation.
+cvc5 regress suite, mirroring the committed
+QF_UF / QF_LRA / QF_UFLIA / QF_LIA / QF_NRA / QF_NIA filter for
+`corpus/public-curated/`. Reproducible record of the curation.
 
 This filter is validated: `--prefix QF_UF` re-derives the 103 clean QF_UF-family
-files (the committed 88-file bounded slice plus its 15 excluded files) exactly.
+files (the committed 88-file bounded slice plus its 15 excluded files) exactly,
+and the exact-logic match re-derives QF_NRA (38 files) and QF_NIA (39 files)
+byte-for-byte.
 
 Usage: curate-public-slice.py <LOGIC_PATTERN> <out_dir|-> [--prefix]
   --prefix : match any (set-logic X) where X starts with LOGIC_PATTERN
