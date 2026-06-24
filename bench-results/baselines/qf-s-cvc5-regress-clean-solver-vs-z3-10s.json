@@ -8,7 +8,7 @@
     "cnf_vivify": false,
     "compare_backend": "z3 4.13.3.0",
     "compare_z3": true,
-    "config_hash": "cf9e2fcb3b0da586",
+    "config_hash": "aac9d5b633052789",
     "corpus": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean",
     "corpus_hash": "8f9f647ea02273cd",
     "corpus_source": null,
@@ -21,7 +21,7 @@
     "harness": "axeyum-bench 0.1.0",
     "jobs": 4,
     "limit": null,
-    "logic": "QF_S",
+    "logic": null,
     "native_cdcl": false,
     "node_budget": null,
     "preprocess": false,
@@ -44,14 +44,14 @@
   },
   "instances": [
     {
-      "detail": "string/regex operator `str.indexof` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.indexof` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.replace, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_bug613.smt2",
       "outcome": "unsupported"
     },
     {
       "assertions": 4,
       "backend_stats": {
-        "check_auto_ms": 1.642204
+        "check_auto_ms": 1.032549
       },
       "dag_nodes": 109,
       "distinct_symbols": 2,
@@ -122,12 +122,69 @@
       "tree_nodes": 193
     },
     {
-      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+      "assertions": 3,
+      "backend_stats": {
+        "check_auto_ms": 2004.9421719999998
+      },
+      "dag_nodes": 4266,
+      "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
+      "distinct_symbols": 2,
+      "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_ctn-repl-to-ctn.smt2",
-      "outcome": "unsupported"
+      "max_depth": 102,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 3,
+          "assumptions": 0,
+          "dag_nodes": 4266,
+          "digest": "6c9c678cc550d74e",
+          "tree_nodes": 1325803564
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 3,
+            "assumptions": 0,
+            "dag_nodes": 4266,
+            "digest": "6c9c678cc550d74e",
+            "tree_nodes": 1325803564
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 4266,
+        "input_tree_nodes": 1325803564,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 3,
+        "output_dag_nodes": 4266,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 102,
+        "output_tree_nodes": 1325803564,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 2004,
+      "translate_ms": 0,
+      "tree_nodes": 1325803564
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.replace, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_indexof_re-start-index.smt2",
       "outcome": "unsupported"
     },
@@ -139,7 +196,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 19.308926
+        "check_auto_ms": 17.713527
       },
       "dag_nodes": 646,
       "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
@@ -194,12 +251,12 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 19,
+      "solve_ms": 17,
       "translate_ms": 0,
       "tree_nodes": 327093
     },
     {
-      "detail": "string/regex operator `str.indexof` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.indexof` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.replace, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue3497.smt2",
       "outcome": "unsupported"
     },
@@ -219,9 +276,77 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+      "assertions": 3,
+      "backend_stats": {
+        "check_auto_ms": 16.898844
+      },
+      "dag_nodes": 4303,
+      "distinct_symbols": 2,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue6643-ctn-decompose-conflict.smt2",
-      "outcome": "unsupported"
+      "max_depth": 103,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 10,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 3,
+          "assumptions": 0,
+          "dag_nodes": 4303,
+          "digest": "1ac46de6681c42af",
+          "tree_nodes": 2512030108
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 3,
+            "assumptions": 0,
+            "dag_nodes": 4303,
+            "digest": "1ac46de6681c42af",
+            "tree_nodes": 2512030108
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 4303,
+        "input_tree_nodes": 2512030108,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 3,
+        "output_dag_nodes": 4303,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 103,
+        "output_tree_nodes": 2512030108,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 16,
+      "translate_ms": 0,
+      "tree_nodes": 2512030108
     },
     {
       "detail": "str.++ result of bounded max length 24 exceeds the cap 16 (ADR-0029); the query needs a larger string bound",
@@ -236,7 +361,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 5.712097
+        "check_auto_ms": 5.232393
       },
       "dag_nodes": 1058,
       "distinct_symbols": 2,
@@ -247,9 +372,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 133.65,
-          "memory": 108.32,
-          "num allocs": 3392904.0,
+          "max memory": 124.4,
+          "memory": 83.42,
+          "num allocs": 43064490.0,
           "rlimit count": 11709.0,
           "sat backjumps": 1.0,
           "sat conflicts": 2.0,
@@ -258,14 +383,14 @@
           "sat mk clause nary": 360.0,
           "sat mk var": 275.0,
           "sat propagations 2ary": 20.0,
-          "time": 0.005
+          "time": 0.004
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "unsat",
-        "solve_ms": 5,
+        "solve_ms": 4,
         "translate_ms": 1
       },
       "outcome": "unsat",
@@ -316,7 +441,7 @@
     {
       "assertions": 17,
       "backend_stats": {
-        "check_auto_ms": 3.583209
+        "check_auto_ms": 3.298713
       },
       "dag_nodes": 976,
       "distinct_symbols": 13,
@@ -327,9 +452,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 133.65,
-          "memory": 83.62,
-          "num allocs": 4651665.0,
+          "max memory": 124.4,
+          "memory": 83.52,
+          "num allocs": 43875478.0,
           "rlimit count": 28413.0,
           "sat backjumps": 14.0,
           "sat conflicts": 15.0,
@@ -351,7 +476,7 @@
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "unsat",
-        "solve_ms": 5,
+        "solve_ms": 6,
         "translate_ms": 0
       },
       "outcome": "unsat",
@@ -432,7 +557,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 0.963592
+        "check_auto_ms": 0.599269
       },
       "dag_nodes": 250,
       "distinct_symbols": 1,
@@ -443,9 +568,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 133.65,
-          "memory": 133.56,
-          "num allocs": 2170955.0,
+          "max memory": 124.4,
+          "memory": 83.08,
+          "num allocs": 38348191.0,
           "rlimit count": 3308.0,
           "sat backjumps": 4.0,
           "sat conflicts": 5.0,
@@ -457,14 +582,14 @@
           "sat propagations 2ary": 94.0,
           "sat propagations nary": 4.0,
           "sat units": 12.0,
-          "time": 0.006
+          "time": 0.003
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "unsat",
-        "solve_ms": 6,
+        "solve_ms": 3,
         "translate_ms": 0
       },
       "outcome": "unsat",
@@ -515,7 +640,7 @@
     {
       "assertions": 7,
       "backend_stats": {
-        "check_auto_ms": 1.501369
+        "check_auto_ms": 1.4509480000000001
       },
       "dag_nodes": 574,
       "distinct_symbols": 2,
@@ -526,9 +651,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 133.65,
-          "memory": 99.52,
-          "num allocs": 3824672.0,
+          "max memory": 124.4,
+          "memory": 83.2,
+          "num allocs": 39740556.0,
           "rlimit count": 7799.0,
           "sat decisions": 11.0,
           "sat mk clause 2ary": 460.0,
@@ -593,14 +718,14 @@
       "tree_nodes": 3464
     },
     {
-      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+      "detail": "str.++ result of bounded max length 24 exceeds the cap 16 (ADR-0029); the query needs a larger string bound",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_replace-find-base.smt2",
       "outcome": "unsupported"
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 0.449145
+        "check_auto_ms": 0.45708499999999996
       },
       "dag_nodes": 39,
       "distinct_symbols": 2,
@@ -673,7 +798,7 @@
     {
       "assertions": 8,
       "backend_stats": {
-        "check_auto_ms": 31.177309
+        "check_auto_ms": 30.754357
       },
       "dag_nodes": 439,
       "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
@@ -728,7 +853,7 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 31,
+      "solve_ms": 30,
       "translate_ms": 0,
       "tree_nodes": 3828
     },
@@ -745,7 +870,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 0.6297889999999999
+        "check_auto_ms": 0.64256
       },
       "dag_nodes": 135,
       "distinct_symbols": 1,
@@ -766,7 +891,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 9,
+          "solve_ms": 11,
           "verdict": "sat"
         }
       },
@@ -818,7 +943,7 @@
     {
       "assertions": 7,
       "backend_stats": {
-        "check_auto_ms": 0.398653
+        "check_auto_ms": 0.292676
       },
       "dag_nodes": 145,
       "distinct_symbols": 3,
@@ -829,9 +954,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 133.65,
-          "memory": 100.2,
-          "num allocs": 10407292.0,
+          "max memory": 124.4,
+          "memory": 83.06,
+          "num allocs": 42204465.0,
           "rlimit count": 1818.0,
           "solve-eqs-elim-vars": 3.0,
           "solve-eqs-steps": 3.0
@@ -892,7 +1017,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 0.7869539999999999
+        "check_auto_ms": 0.7990970000000001
       },
       "dag_nodes": 382,
       "distinct_symbols": 1,
@@ -903,9 +1028,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 124.23,
-          "memory": 91.25,
-          "num allocs": 104573.0,
+          "max memory": 124.4,
+          "memory": 91.41,
+          "num allocs": 132366.0,
           "rlimit count": 5343.0,
           "sat backjumps": 8.0,
           "sat conflicts": 9.0,
@@ -928,8 +1053,8 @@
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "unsat",
-        "solve_ms": 5,
-        "translate_ms": 0
+        "solve_ms": 6,
+        "translate_ms": 1
       },
       "outcome": "unsat",
       "query_plan": {
@@ -987,9 +1112,77 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+      "assertions": 5,
+      "backend_stats": {
+        "check_auto_ms": 30.827262
+      },
+      "dag_nodes": 3692,
+      "distinct_symbols": 4,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_issue3440.smt2",
-      "outcome": "unsupported"
+      "max_depth": 66,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 11,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 5,
+          "assumptions": 0,
+          "dag_nodes": 3692,
+          "digest": "634c4d247c572353",
+          "tree_nodes": 8722737
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 5,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 5,
+            "assumptions": 0,
+            "dag_nodes": 3692,
+            "digest": "634c4d247c572353",
+            "tree_nodes": 8722737
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 3692,
+        "input_tree_nodes": 8722737,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 5,
+        "output_dag_nodes": 3692,
+        "output_distinct_symbols": 4,
+        "output_max_depth": 66,
+        "output_tree_nodes": 8722737,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 30,
+      "translate_ms": 0,
+      "tree_nodes": 8722737
     },
     {
       "detail": "str.to_re of a non-literal string is declined (ADR-0029)",
@@ -1014,7 +1207,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 0.339683
+        "check_auto_ms": 0.309195
       },
       "dag_nodes": 155,
       "distinct_symbols": 1,
@@ -1087,7 +1280,7 @@
     {
       "assertions": 7,
       "backend_stats": {
-        "check_auto_ms": 2.18892
+        "check_auto_ms": 1.769778
       },
       "dag_nodes": 343,
       "distinct_symbols": 6,
@@ -1098,9 +1291,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 124.23,
-          "memory": 83.34,
-          "num allocs": 586154.0,
+          "max memory": 124.4,
+          "memory": 83.33,
+          "num allocs": 5482583.0,
           "rlimit count": 17431.0,
           "solve-eqs-elim-vars": 45.0,
           "solve-eqs-steps": 284.0,
@@ -1112,7 +1305,7 @@
         "model_lift_ms": 0,
         "outcome": "unsat",
         "solve_ms": 2,
-        "translate_ms": 1
+        "translate_ms": 0
       },
       "outcome": "unsat",
       "query_plan": {
@@ -1155,14 +1348,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 2,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 711
     },
     {
       "assertions": 4,
       "backend_stats": {
-        "check_auto_ms": 0.709791
+        "check_auto_ms": 1.533706
       },
       "dag_nodes": 101,
       "distinct_symbols": 2,
@@ -1183,7 +1376,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 12,
           "verdict": "sat"
         }
       },
@@ -1228,14 +1421,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 179
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 0.8706389999999999
+        "check_auto_ms": 1.214825
       },
       "dag_nodes": 223,
       "distinct_symbols": 1,
@@ -1246,9 +1439,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 124.23,
-          "memory": 108.47,
-          "num allocs": 1529567.0,
+          "max memory": 124.4,
+          "memory": 83.22,
+          "num allocs": 9566663.0,
           "rlimit count": 6203.0,
           "sat backjumps": 11.0,
           "sat conflicts": 12.0,
@@ -1264,14 +1457,14 @@
           "sat propagations nary": 96.0,
           "sat subs resolution dyn": 6.0,
           "sat units": 106.0,
-          "time": 0.004
+          "time": 0.003
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "unsat",
-        "solve_ms": 4,
+        "solve_ms": 3,
         "translate_ms": 0
       },
       "outcome": "unsat",
@@ -1315,14 +1508,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 15757
     },
     {
       "assertions": 9,
       "backend_stats": {
-        "check_auto_ms": 1.591607
+        "check_auto_ms": 1.521213
       },
       "dag_nodes": 469,
       "distinct_symbols": 6,
@@ -1333,9 +1526,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 133.65,
-          "memory": 125.28,
-          "num allocs": 2359556.0,
+          "max memory": 124.4,
+          "memory": 100.5,
+          "num allocs": 13000642.0,
           "rlimit count": 11167.0,
           "solve-eqs-elim-vars": 68.0,
           "solve-eqs-steps": 68.0,
@@ -1397,7 +1590,7 @@
     {
       "assertions": 8,
       "backend_stats": {
-        "check_auto_ms": 12.887016
+        "check_auto_ms": 12.72776
       },
       "dag_nodes": 274,
       "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
@@ -1459,7 +1652,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 34.710824
+        "check_auto_ms": 35.986824
       },
       "dag_nodes": 190,
       "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
@@ -1514,14 +1707,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 34,
+      "solve_ms": 35,
       "translate_ms": 0,
       "tree_nodes": 3843
     },
     {
       "assertions": 5,
       "backend_stats": {
-        "check_auto_ms": 1.677401
+        "check_auto_ms": 0.9498059999999999
       },
       "dag_nodes": 185,
       "distinct_symbols": 2,
@@ -1542,7 +1735,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 15,
+          "solve_ms": 10,
           "verdict": "sat"
         }
       },
@@ -1587,7 +1780,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 1,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 8959
     },
@@ -1604,7 +1797,7 @@
     {
       "assertions": 15,
       "backend_stats": {
-        "check_auto_ms": 3.809213
+        "check_auto_ms": 3.54016
       },
       "dag_nodes": 379,
       "distinct_symbols": 4,
@@ -1625,7 +1818,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 15,
+          "solve_ms": 12,
           "verdict": "sat"
         }
       },
@@ -1680,9 +1873,77 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+      "assertions": 8,
+      "backend_stats": {
+        "check_auto_ms": 40.768085
+      },
+      "dag_nodes": 4213,
+      "distinct_symbols": 4,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue4701_substr_splice.smt2",
-      "outcome": "unsupported"
+      "max_depth": 66,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 12,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 8,
+          "assumptions": 0,
+          "dag_nodes": 4213,
+          "digest": "bb7793f4374d865e",
+          "tree_nodes": 9127878
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 8,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 8,
+            "assumptions": 0,
+            "dag_nodes": 4213,
+            "digest": "bb7793f4374d865e",
+            "tree_nodes": 9127878
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 4213,
+        "input_tree_nodes": 9127878,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 8,
+        "output_dag_nodes": 4213,
+        "output_distinct_symbols": 4,
+        "output_max_depth": 66,
+        "output_tree_nodes": 9127878,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 40,
+      "translate_ms": 0,
+      "tree_nodes": 9127878
     },
     {
       "detail": "str.to_re of a non-literal string is declined (ADR-0029)",
@@ -1695,7 +1956,7 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.replace, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6203-6-replace-re.smt2",
       "outcome": "unsupported"
     },
@@ -1705,14 +1966,82 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.replace, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6337-replace-re.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "sort List([Atom(\"Seq\"), Atom(\"Int\")])",
+      "assertions": 4,
+      "backend_stats": {
+        "check_auto_ms": 1.405678
+      },
+      "dag_nodes": 136,
+      "distinct_symbols": 4,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6653-3-seq.smt2",
-      "outcome": "unsupported"
+      "max_depth": 18,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": null,
+        "decision_compared": false,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "unsupported",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "(error \"line 4 column 29: unknown parameter 'strings_lazy_pp'",
+          "solve_ms": 8,
+          "verdict": null
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 4,
+          "assumptions": 0,
+          "dag_nodes": 136,
+          "digest": "ed487519942a85fd",
+          "tree_nodes": 679
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 4,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 4,
+            "assumptions": 0,
+            "dag_nodes": 136,
+            "digest": "ed487519942a85fd",
+            "tree_nodes": 679
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 136,
+        "input_tree_nodes": 679,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 4,
+        "output_dag_nodes": 136,
+        "output_distinct_symbols": 4,
+        "output_max_depth": 18,
+        "output_tree_nodes": 679,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 1,
+      "translate_ms": 0,
+      "tree_nodes": 679
     },
     {
       "detail": "regex operator `re.diff` is outside the wired bounded subset (ADR-0029)",
@@ -1737,7 +2066,7 @@
     {
       "assertions": 8,
       "backend_stats": {
-        "check_auto_ms": 10.174213
+        "check_auto_ms": 6.474556000000001
       },
       "dag_nodes": 256,
       "distinct_symbols": 4,
@@ -1758,7 +2087,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 8,
+          "solve_ms": 9,
           "verdict": "sat"
         }
       },
@@ -1803,7 +2132,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 10,
+      "solve_ms": 6,
       "translate_ms": 0,
       "tree_nodes": 759
     },
@@ -1815,7 +2144,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 1.033879
+        "check_auto_ms": 1.056801
       },
       "dag_nodes": 131,
       "distinct_symbols": 1,
@@ -1836,7 +2165,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 15,
+          "solve_ms": 13,
           "verdict": "sat"
         }
       },
@@ -1893,7 +2222,7 @@
     {
       "assertions": 17,
       "backend_stats": {
-        "check_auto_ms": 4.8240799999999995
+        "check_auto_ms": 4.036271999999999
       },
       "dag_nodes": 1030,
       "distinct_symbols": 13,
@@ -1904,9 +2233,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 133.65,
-          "memory": 125.51,
-          "num allocs": 3183846.0,
+          "max memory": 124.4,
+          "memory": 83.62,
+          "num allocs": 2061010.0,
           "rlimit count": 28674.0,
           "sat backjumps": 1.0,
           "sat conflicts": 1.0,
@@ -1981,7 +2310,7 @@
     {
       "assertions": 5,
       "backend_stats": {
-        "check_auto_ms": 24.43487
+        "check_auto_ms": 24.357255000000002
       },
       "dag_nodes": 626,
       "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
@@ -2048,7 +2377,7 @@
     {
       "assertions": 6,
       "backend_stats": {
-        "check_auto_ms": 7.546357
+        "check_auto_ms": 7.142451
       },
       "dag_nodes": 354,
       "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
@@ -2110,7 +2439,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 37.289063999999996
+        "check_auto_ms": 35.364985000000004
       },
       "dag_nodes": 2404,
       "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
@@ -2165,14 +2494,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 37,
+      "solve_ms": 35,
       "translate_ms": 0,
       "tree_nodes": 18611305
     },
     {
       "assertions": 7,
       "backend_stats": {
-        "check_auto_ms": 1.406085
+        "check_auto_ms": 1.42972
       },
       "dag_nodes": 588,
       "distinct_symbols": 3,
@@ -2183,9 +2512,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 133.65,
-          "memory": 100.06,
-          "num allocs": 17313197.0,
+          "max memory": 124.4,
+          "memory": 83.3,
+          "num allocs": 19574005.0,
           "rlimit count": 11295.0,
           "sat backjumps": 7.0,
           "sat conflicts": 8.0,
@@ -2199,14 +2528,14 @@
           "sat propagations 2ary": 1029.0,
           "sat propagations nary": 570.0,
           "sat units": 70.0,
-          "time": 0.005
+          "time": 0.004
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "unsat",
-        "solve_ms": 5,
+        "solve_ms": 4,
         "translate_ms": 0
       },
       "outcome": "unsat",
@@ -2262,7 +2591,7 @@
     {
       "assertions": 2,
       "backend_stats": {
-        "check_auto_ms": 1.354624
+        "check_auto_ms": 1.222955
       },
       "dag_nodes": 603,
       "distinct_symbols": 1,
@@ -2273,9 +2602,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 134.73,
-          "memory": 107.6,
-          "num allocs": 22917264.0,
+          "max memory": 124.4,
+          "memory": 83.27,
+          "num allocs": 20468837.0,
           "rlimit count": 6668.0,
           "sat backjumps": 2.0,
           "sat conflicts": 2.0,
@@ -2285,15 +2614,15 @@
           "sat mk var": 96.0,
           "sat propagations 2ary": 105.0,
           "sat propagations nary": 10.0,
-          "time": 0.004
+          "time": 0.003
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 4,
-        "translate_ms": 1
+        "solve_ms": 3,
+        "translate_ms": 0
       },
       "outcome": "sat",
       "query_plan": {
@@ -2348,7 +2677,7 @@
     {
       "assertions": 14,
       "backend_stats": {
-        "check_auto_ms": 3.800998
+        "check_auto_ms": 3.78998
       },
       "dag_nodes": 324,
       "distinct_symbols": 4,
@@ -2369,7 +2698,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 32,
+          "solve_ms": 35,
           "verdict": "sat"
         }
       },
@@ -2421,7 +2750,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 0.5092230000000001
+        "check_auto_ms": 0.498719
       },
       "dag_nodes": 64,
       "detail": "Incomplete: integer constant 10000000000000000000000000000 does not fit the bounded width 32; widen the bound",
@@ -2483,7 +2812,7 @@
     {
       "assertions": 12,
       "backend_stats": {
-        "check_auto_ms": 18.124111
+        "check_auto_ms": 17.459680000000002
       },
       "dag_nodes": 233,
       "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
@@ -2538,14 +2867,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 18,
+      "solve_ms": 17,
       "translate_ms": 0,
       "tree_nodes": 474
     },
     {
       "assertions": 12,
       "backend_stats": {
-        "check_auto_ms": 13.178924
+        "check_auto_ms": 13.029603000000002
       },
       "dag_nodes": 174,
       "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
@@ -2605,14 +2934,71 @@
       "tree_nodes": 384
     },
     {
-      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+      "assertions": 3,
+      "backend_stats": {
+        "check_auto_ms": 187.676319
+      },
+      "dag_nodes": 5174,
+      "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
+      "distinct_symbols": 2,
+      "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-pred-small-rw_392.smt2",
-      "outcome": "unsupported"
+      "max_depth": 100,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 3,
+          "assumptions": 0,
+          "dag_nodes": 5174,
+          "digest": "30550508fb545763",
+          "tree_nodes": 2224977052
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 3,
+            "assumptions": 0,
+            "dag_nodes": 5174,
+            "digest": "30550508fb545763",
+            "tree_nodes": 2224977052
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 5174,
+        "input_tree_nodes": 2224977052,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 3,
+        "output_dag_nodes": 5174,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 100,
+        "output_tree_nodes": 2224977052,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 187,
+      "translate_ms": 0,
+      "tree_nodes": 2224977052
     },
     {
       "assertions": 9,
       "backend_stats": {
-        "check_auto_ms": 3.037474
+        "check_auto_ms": 2.980174
       },
       "dag_nodes": 624,
       "distinct_symbols": 5,
@@ -2623,9 +3009,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 134.73,
-          "memory": 91.52,
-          "num allocs": 32769783.0,
+          "max memory": 124.4,
+          "memory": 83.39,
+          "num allocs": 32873617.0,
           "rlimit count": 28447.0,
           "sat backjumps": 11.0,
           "sat conflicts": 12.0,
@@ -2693,14 +3079,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 3,
+      "solve_ms": 2,
       "translate_ms": 0,
       "tree_nodes": 5306
     },
     {
       "assertions": 4,
       "backend_stats": {
-        "check_auto_ms": 1.140339
+        "check_auto_ms": 1.148019
       },
       "dag_nodes": 264,
       "distinct_symbols": 1,
@@ -2721,7 +3107,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 340,
+          "solve_ms": 356,
           "verdict": "sat"
         }
       },
@@ -2773,7 +3159,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 0.7334890000000001
+        "check_auto_ms": 0.7498659999999999
       },
       "dag_nodes": 261,
       "distinct_symbols": 1,
@@ -2784,9 +3170,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 134.73,
-          "memory": 100.71,
-          "num allocs": 31352184.0,
+          "max memory": 124.4,
+          "memory": 83.09,
+          "num allocs": 36487628.0,
           "rlimit count": 3568.0,
           "sat backjumps": 2.0,
           "sat conflicts": 2.0,
@@ -2796,14 +3182,14 @@
           "sat mk var": 107.0,
           "sat propagations 2ary": 98.0,
           "sat propagations nary": 10.0,
-          "time": 0.002
+          "time": 0.003
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 2,
+        "solve_ms": 3,
         "translate_ms": 0
       },
       "outcome": "sat",
@@ -2854,7 +3240,7 @@
     {
       "assertions": 6,
       "backend_stats": {
-        "check_auto_ms": 6.567505000000001
+        "check_auto_ms": 6.240253
       },
       "dag_nodes": 738,
       "distinct_symbols": 5,
@@ -2875,7 +3261,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 12,
+          "solve_ms": 13,
           "verdict": "sat"
         }
       },
@@ -2932,7 +3318,7 @@
     {
       "assertions": 4,
       "backend_stats": {
-        "check_auto_ms": 7.623493
+        "check_auto_ms": 7.523954
       },
       "dag_nodes": 159,
       "distinct_symbols": 1,
@@ -2953,7 +3339,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 12,
           "verdict": "sat"
         }
       },
@@ -3003,12 +3389,12 @@
       "tree_nodes": 3803
     },
     {
-      "detail": "string/regex operator `str.update` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.update` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.replace, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_update-ex1.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.update` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.update` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.replace, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_update-ex2.smt2",
       "outcome": "unsupported"
     },
@@ -3030,7 +3416,7 @@
     {
       "assertions": 6,
       "backend_stats": {
-        "check_auto_ms": 1.701054
+        "check_auto_ms": 1.689482
       },
       "dag_nodes": 330,
       "distinct_symbols": 2,
@@ -3051,7 +3437,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "(error \"line 4 column 25: unknown parameter 'strings_fmf'",
-          "solve_ms": 13,
+          "solve_ms": 12,
           "verdict": null
         }
       },
@@ -3103,7 +3489,7 @@
     {
       "assertions": 4,
       "backend_stats": {
-        "check_auto_ms": 3.991898
+        "check_auto_ms": 4.611683
       },
       "dag_nodes": 724,
       "distinct_symbols": 1,
@@ -3124,7 +3510,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 12,
           "verdict": "sat"
         }
       },
@@ -3169,7 +3555,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 3,
+      "solve_ms": 4,
       "translate_ms": 0,
       "tree_nodes": 5312
     },
@@ -3191,7 +3577,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 0.849875
+        "check_auto_ms": 0.930451
       },
       "dag_nodes": 162,
       "distinct_symbols": 1,
@@ -3202,9 +3588,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 133.65,
-          "memory": 83.19,
-          "num allocs": 5704755.0,
+          "max memory": 124.4,
+          "memory": 83.14,
+          "num allocs": 318816.0,
           "rlimit count": 2791.0,
           "solve-eqs-elim-vars": 60.0,
           "solve-eqs-steps": 60.0
@@ -3288,19 +3674,19 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.replace_all` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.replace_all` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.replace, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue8981-2-strings-deq-ext-nth.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_lower` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_lower` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.replace, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue8981-strings-deq-ext-nth.smt2",
       "outcome": "unsupported"
     },
     {
       "assertions": 4,
       "backend_stats": {
-        "check_auto_ms": 2.01483
+        "check_auto_ms": 1.3693950000000001
       },
       "dag_nodes": 214,
       "distinct_symbols": 3,
@@ -3311,9 +3697,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 133.65,
-          "memory": 83.34,
-          "num allocs": 6601168.0,
+          "max memory": 124.4,
+          "memory": 83.29,
+          "num allocs": 539736.0,
           "rlimit count": 15506.0,
           "sat backjumps": 1.0,
           "sat conflicts": 1.0,
@@ -3328,14 +3714,14 @@
           "sat propagations nary": 42.0,
           "solve-eqs-elim-vars": 58.0,
           "solve-eqs-steps": 355.0,
-          "time": 0.003
+          "time": 0.005
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 3,
+        "solve_ms": 5,
         "translate_ms": 0
       },
       "outcome": "sat",
@@ -3379,14 +3765,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 2,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 459
     },
     {
       "assertions": 7,
       "backend_stats": {
-        "check_auto_ms": 1.901619
+        "check_auto_ms": 1.8544
       },
       "dag_nodes": 343,
       "distinct_symbols": 6,
@@ -3397,9 +3783,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 133.65,
-          "memory": 83.4,
-          "num allocs": 8476937.0,
+          "max memory": 124.4,
+          "memory": 109.47,
+          "num allocs": 1560444.0,
           "rlimit count": 17348.0,
           "sat decisions": 48.0,
           "sat mk clause 2ary": 620.0,
@@ -3409,14 +3795,14 @@
           "sat propagations nary": 34.0,
           "solve-eqs-elim-vars": 56.0,
           "solve-eqs-steps": 275.0,
-          "time": 0.004
+          "time": 0.006
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 4,
+        "solve_ms": 6,
         "translate_ms": 0
       },
       "outcome": "sat",
@@ -3472,7 +3858,7 @@
     {
       "assertions": 7,
       "backend_stats": {
-        "check_auto_ms": 3.1678919999999997
+        "check_auto_ms": 3.293322
       },
       "dag_nodes": 315,
       "distinct_symbols": 6,
@@ -3483,9 +3869,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 133.65,
-          "memory": 100.62,
-          "num allocs": 13142029.0,
+          "max memory": 124.4,
+          "memory": 83.45,
+          "num allocs": 3972149.0,
           "rlimit count": 26462.0,
           "sat decisions": 67.0,
           "sat mk clause 2ary": 1837.0,
@@ -3493,14 +3879,14 @@
           "sat mk var": 1756.0,
           "sat propagations 2ary": 941.0,
           "sat propagations nary": 748.0,
-          "time": 0.006
+          "time": 0.007
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 6,
+        "solve_ms": 7,
         "translate_ms": 0
       },
       "outcome": "sat",
@@ -3551,7 +3937,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 0.955666
+        "check_auto_ms": 0.939696
       },
       "dag_nodes": 112,
       "distinct_symbols": 1,
@@ -3629,7 +4015,7 @@
     {
       "assertions": 17,
       "backend_stats": {
-        "check_auto_ms": 5.1816960000000005
+        "check_auto_ms": 7.037996000000001
       },
       "dag_nodes": 1068,
       "distinct_symbols": 13,
@@ -3640,9 +4026,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 134.73,
-          "memory": 109.26,
-          "num allocs": 21117789.0,
+          "max memory": 124.4,
+          "memory": 109.11,
+          "num allocs": 8495200.0,
           "rlimit count": 33921.0,
           "sat backjumps": 2.0,
           "sat conflicts": 2.0,
@@ -3656,14 +4042,14 @@
           "sat propagations 2ary": 1181.0,
           "sat propagations nary": 115.0,
           "sat units": 1.0,
-          "time": 0.009
+          "time": 0.008
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 9,
+        "solve_ms": 8,
         "translate_ms": 1
       },
       "outcome": "sat",
@@ -3707,7 +4093,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 5,
+      "solve_ms": 7,
       "translate_ms": 0,
       "tree_nodes": 49191
     },
@@ -3719,7 +4105,7 @@
     {
       "assertions": 4,
       "backend_stats": {
-        "check_auto_ms": 1.449163
+        "check_auto_ms": 0.954312
       },
       "dag_nodes": 243,
       "distinct_symbols": 1,
@@ -3730,9 +4116,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 134.73,
-          "memory": 126.51,
-          "num allocs": 19990979.0,
+          "max memory": 124.4,
+          "memory": 91.31,
+          "num allocs": 10938291.0,
           "rlimit count": 4337.0,
           "sat decisions": 10.0,
           "sat mk clause 2ary": 196.0,
@@ -3740,14 +4126,14 @@
           "sat mk var": 114.0,
           "sat propagations 2ary": 96.0,
           "sat propagations nary": 8.0,
-          "time": 0.004
+          "time": 0.002
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 4,
+        "solve_ms": 2,
         "translate_ms": 0
       },
       "outcome": "sat",
@@ -3791,14 +4177,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 1,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 1972
     },
     {
       "assertions": 4,
       "backend_stats": {
-        "check_auto_ms": 1.09231
+        "check_auto_ms": 1.047373
       },
       "dag_nodes": 398,
       "distinct_symbols": 2,
@@ -3809,9 +4195,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 134.73,
-          "memory": 99.92,
-          "num allocs": 24709087.0,
+          "max memory": 124.4,
+          "memory": 100.06,
+          "num allocs": 13199870.0,
           "rlimit count": 8491.0,
           "sat backjumps": 14.0,
           "sat conflicts": 15.0,
@@ -3886,7 +4272,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 0.885602
+        "check_auto_ms": 0.84156
       },
       "dag_nodes": 217,
       "distinct_symbols": 1,
@@ -3897,9 +4283,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 134.73,
-          "memory": 91.32,
-          "num allocs": 25917435.0,
+          "max memory": 124.4,
+          "memory": 83.22,
+          "num allocs": 15435756.0,
           "rlimit count": 5639.0,
           "sat backjumps": 9.0,
           "sat conflicts": 10.0,
@@ -3913,14 +4299,14 @@
           "sat propagations 2ary": 280.0,
           "sat propagations nary": 27.0,
           "sat units": 27.0,
-          "time": 0.003
+          "time": 0.002
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "unsat",
-        "solve_ms": 3,
+        "solve_ms": 2,
         "translate_ms": 0
       },
       "outcome": "unsat",
@@ -3971,7 +4357,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 0.778726
+        "check_auto_ms": 0.7894329999999999
       },
       "dag_nodes": 173,
       "distinct_symbols": 1,
@@ -3992,7 +4378,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 12,
+          "solve_ms": 11,
           "verdict": "sat"
         }
       },
@@ -4044,7 +4430,7 @@
     {
       "assertions": 7,
       "backend_stats": {
-        "check_auto_ms": 1.72731
+        "check_auto_ms": 2.5713630000000003
       },
       "dag_nodes": 332,
       "distinct_symbols": 2,
@@ -4110,7 +4496,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 1,
+      "solve_ms": 2,
       "translate_ms": 0,
       "tree_nodes": 14872
     },
@@ -4137,7 +4523,7 @@
     {
       "assertions": 5,
       "backend_stats": {
-        "check_auto_ms": 1.4648249999999998
+        "check_auto_ms": 1.056425
       },
       "dag_nodes": 196,
       "distinct_symbols": 2,
@@ -4148,9 +4534,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 133.65,
-          "memory": 83.25,
-          "num allocs": 15459285.0,
+          "max memory": 124.4,
+          "memory": 91.32,
+          "num allocs": 22397277.0,
           "rlimit count": 13633.0,
           "sat backjumps": 2.0,
           "sat conflicts": 3.0,
@@ -4166,14 +4552,14 @@
           "sat units": 11.0,
           "solve-eqs-elim-vars": 58.0,
           "solve-eqs-steps": 355.0,
-          "time": 0.005
+          "time": 0.003
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "unsat",
-        "solve_ms": 5,
+        "solve_ms": 3,
         "translate_ms": 0
       },
       "outcome": "unsat",
@@ -4224,7 +4610,7 @@
     {
       "assertions": 6,
       "backend_stats": {
-        "check_auto_ms": 29.052185
+        "check_auto_ms": 28.281137
       },
       "dag_nodes": 480,
       "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
@@ -4279,15 +4665,15 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 29,
+      "solve_ms": 28,
       "translate_ms": 0,
       "tree_nodes": 32159
     }
   ],
   "summary": {
-    "agree": 41,
+    "agree": 45,
     "blocker_buckets": {
-      "unknown:Incomplete": 11
+      "unknown:Incomplete": 13
     },
     "disagree": 0,
     "errors": 0,
@@ -4295,21 +4681,21 @@
     "layer_attribution": null,
     "model_replay_failures": 0,
     "oracle": {
-      "agree": 40,
+      "agree": 43,
       "backend": "z3 4.13.3.0",
-      "compared": 40,
+      "compared": 43,
       "disagree": 0,
       "enabled": true,
-      "skipped": 12
+      "skipped": 15
     },
-    "par2_mean_s": 4.232609863673076,
+    "par2_mean_s": 4.485865229017241,
     "query_plan": {
-      "original_dag_nodes": 21212,
-      "original_tree_nodes": 19610546,
+      "original_dag_nodes": 42996,
+      "original_tree_nodes": 6100272564,
       "slice_changed_instances": 0,
-      "slice_dag_nodes": 21212,
+      "slice_dag_nodes": 42996,
       "slice_dropped_terms": 0,
-      "slice_tree_nodes": 19610546
+      "slice_tree_nodes": 6100272564
     },
     "rewrite": {
       "applications": 0,
@@ -4323,10 +4709,10 @@
       "output_tree_nodes": 0,
       "sat_unsat_conflicts": 0
     },
-    "sat": 29,
-    "unknown": 11,
+    "sat": 33,
+    "unknown": 13,
     "unsat": 12,
-    "unsupported": 71
+    "unsupported": 65
   },
   "triage": {
     "errors": [],
@@ -4339,17 +4725,12 @@
     },
     "unsupported": [
       {
-        "detail": "string/regex operator `str.indexof` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.indexof` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.replace, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_bug613.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_ctn-repl-to-ctn.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.replace, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_indexof_re-start-index.smt2",
         "outcome": "unsupported"
       },
@@ -4359,7 +4740,7 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.indexof` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.indexof` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.replace, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue3497.smt2",
         "outcome": "unsupported"
       },
@@ -4376,11 +4757,6 @@
       {
         "detail": "str.++ result of bounded max length 24 exceeds the cap 16 (ADR-0029); the query needs a larger string bound",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue6520.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue6643-ctn-decompose-conflict.smt2",
         "outcome": "unsupported"
       },
       {
@@ -4424,7 +4800,7 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+        "detail": "str.++ result of bounded max length 24 exceeds the cap 16 (ADR-0029); the query needs a larger string bound",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_replace-find-base.smt2",
         "outcome": "unsupported"
       },
@@ -4446,11 +4822,6 @@
       {
         "detail": "string literal longer than the bounded length 8 (ADR-0029)",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_escchar_25.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_issue3440.smt2",
         "outcome": "unsupported"
       },
       {
@@ -4489,11 +4860,6 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue4701_substr_splice.smt2",
-        "outcome": "unsupported"
-      },
-      {
         "detail": "str.to_re of a non-literal string is declined (ADR-0029)",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6057-replace-re-all-jiwonparc.smt2",
         "outcome": "unsupported"
@@ -4504,7 +4870,7 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.replace, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6203-6-replace-re.smt2",
         "outcome": "unsupported"
       },
@@ -4514,13 +4880,8 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.replace, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6337-replace-re.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "sort List([Atom(\"Seq\"), Atom(\"Int\")])",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6653-3-seq.smt2",
         "outcome": "unsupported"
       },
       {
@@ -4574,22 +4935,17 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-pred-small-rw_392.smt2",
-        "outcome": "unsupported"
-      },
-      {
         "detail": "str.++ result of bounded max length 24 exceeds the cap 16 (ADR-0029); the query needs a larger string bound",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_type002.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.update` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.update` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.replace, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_update-ex1.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.update` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.update` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.replace, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_update-ex2.smt2",
         "outcome": "unsupported"
       },
@@ -4649,12 +5005,12 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.replace_all` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.replace_all` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.replace, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue8981-2-strings-deq-ext-nth.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_lower` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_lower` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.replace, str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue8981-strings-deq-ext-nth.smt2",
         "outcome": "unsupported"
       },

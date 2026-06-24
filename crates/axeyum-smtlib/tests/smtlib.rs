@@ -1553,6 +1553,95 @@ fn string_substr_variable_index_eval() {
 }
 
 #[test]
+fn string_replace_constant_eval() {
+    // First leftmost occurrence only; not-found unchanged; empty `a` prepends `b`;
+    // shrink and grow cases. All folded over fully-constant arguments.
+    assert!(
+        eval_const_script("(assert (= (str.replace \"abcabc\" \"bc\" \"X\") \"aXabc\"))\n"),
+        "first occurrence only"
+    );
+    assert!(
+        eval_const_script("(assert (= (str.replace \"abc\" \"z\" \"Y\") \"abc\"))\n"),
+        "not found ⇒ unchanged"
+    );
+    assert!(
+        eval_const_script("(assert (= (str.replace \"abc\" \"\" \"Z\") \"Zabc\"))\n"),
+        "empty `a` ⇒ prepend `b`"
+    );
+    // Length shrink: replace a 2-byte match with a 1-byte string.
+    assert!(
+        eval_const_script("(assert (= (str.replace \"xxYYxx\" \"YY\" \"Q\") \"xxQxx\"))\n"),
+        "shrink (|b| < |a|)"
+    );
+    // Length grow: replace a 1-byte match with a 3-byte string.
+    assert!(
+        eval_const_script("(assert (= (str.replace \"a-b\" \"-\" \"XYZ\") \"aXYZb\"))\n"),
+        "grow (|b| > |a|)"
+    );
+    // Negative oracle: the wrong (all-occurrences) result must NOT hold.
+    assert!(
+        !eval_const_script("(assert (= (str.replace \"abcabc\" \"bc\" \"X\") \"aXaX\"))\n"),
+        "replace is first-only, not all"
+    );
+}
+
+#[test]
+fn string_replace_symbolic_b_eval() {
+    // (str.replace "aXb" "X" y) = "aZZb" — literal `a`, symbolic `b`. The replace
+    // grows when y has length 2, so only y = "ZZ" satisfies it.
+    let text = "(declare-fun y () String)\n\
+                (assert (= (str.replace \"aXb\" \"X\" y) \"aZZb\"))\n(check-sat)\n";
+    assert!(
+        eval_string_script_vars(text, &[("y", b"ZZ")]),
+        "y=ZZ ⇒ aXb[X→ZZ] = aZZb"
+    );
+    assert!(
+        !eval_string_script_vars(text, &[("y", b"Z")]),
+        "y=Z ⇒ aZb ≠ aZZb"
+    );
+    assert!(
+        !eval_string_script_vars(text, &[("y", b"QQ")]),
+        "y=QQ ⇒ aQQb ≠ aZZb"
+    );
+}
+
+#[test]
+fn string_replace_symbolic_s_eval() {
+    // (str.replace s "A" "B") with symbolic `s`: literal `a`/`b`, length-preserving.
+    let text = "(declare-fun s () String)\n\
+                (assert (= (str.replace s \"A\" \"B\") \"xByz\"))\n(check-sat)\n";
+    // s = "xAyz" is the witness: replacing the first A with B yields "xByz".
+    assert!(
+        eval_string_script_vars(text, &[("s", b"xAyz")]),
+        "first A → B"
+    );
+    // s = "xqyz" (no A): unchanged "xqyz" ≠ "xByz".
+    assert!(
+        !eval_string_script_vars(text, &[("s", b"xqyz")]),
+        "no A ⇒ unchanged ≠ target"
+    );
+    // s with a SECOND A: only the first is replaced, so "xAyA" → "xByA" ≠ "xByz".
+    assert!(
+        !eval_string_script_vars(text, &[("s", b"xAyA")]),
+        "only first A replaced"
+    );
+}
+
+#[test]
+fn string_replace_over_cap_declines() {
+    // A replace whose result max length (m_s + m_b) exceeds STRING_BOUND_CAP (16)
+    // is a clean Unsupported — never truncated to a wrong string. Concatenating
+    // two length-8 strings into `b` makes m_b = 16, so m_s(8) + m_b(16) = 24 > 16.
+    let err = parse_script(
+        "(declare-fun s () String)\n\
+         (declare-fun b1 () String)\n(declare-fun b2 () String)\n\
+         (assert (= (str.replace s \"a\" (str.++ b1 b2)) s))\n(check-sat)\n",
+    )
+    .expect_err("over-cap replace declines");
+    assert!(matches!(err, SmtError::Unsupported(_)), "got {err:?}");
+}
+
+#[test]
 fn string_at_variable_index_eval() {
     // (= (str.at "ab" i) "b") → true only at i = 1. Models the regression shape
     // `(= (str.at x i) "b")` with a non-constant Int index.
@@ -2236,13 +2325,76 @@ fn seq_update_eq_distinct_elements_is_unsat_shaped() {
 }
 
 #[test]
+fn seq_replace_first_occurrence_eval() {
+    // (seq.replace s [3] [9]) over (Seq Int): replace the FIRST [3] with [9].
+    // Witness s = [1,3,2,3] ⇒ [1,9,2,3] (only the first 3 changes).
+    let text = "(declare-fun s () (Seq Int))\n\
+                (assert (= (seq.replace s (seq.unit 3) (seq.unit 9))\n\
+                           (seq.++ (seq.unit 1) (seq.unit 9) (seq.unit 2) (seq.unit 3))))\n\
+                (check-sat)\n";
+    assert!(
+        eval_seq_script(text, "s", SEQ_INT_TOTAL, pack_seq_int(&[1, 3, 2, 3])),
+        "first [3] → [9], second [3] kept"
+    );
+    // The wrong (both-occurrences) result must NOT hold for this witness.
+    let wrong = "(declare-fun s () (Seq Int))\n\
+                 (assert (= (seq.replace s (seq.unit 3) (seq.unit 9))\n\
+                            (seq.++ (seq.unit 1) (seq.unit 9) (seq.unit 2) (seq.unit 9))))\n\
+                 (check-sat)\n";
+    assert!(
+        !eval_seq_script(wrong, "s", SEQ_INT_TOTAL, pack_seq_int(&[1, 3, 2, 3])),
+        "replace is first-only, not all"
+    );
+}
+
+#[test]
+fn seq_replace_not_found_unchanged_eval() {
+    // `a` not present ⇒ `s` unchanged.
+    let text = "(declare-fun s () (Seq Int))\n\
+                (assert (= (seq.replace s (seq.unit 7) (seq.unit 9)) s))\n(check-sat)\n";
+    assert!(
+        eval_seq_script(text, "s", SEQ_INT_TOTAL, pack_seq_int(&[1, 2, 3])),
+        "no 7 ⇒ unchanged"
+    );
+}
+
+#[test]
+fn seq_replace_shrink_eval() {
+    // Shrink: replace [3,3] (len 2) with [8] (len 1) ⇒ [1,8,2] from [1,3,3,2].
+    // rm = max(7, 7 − 2 + 1) = 7 (fits the 128-bit cap for 16-bit elements).
+    let shrink = "(declare-fun s () (Seq Int))\n\
+                  (assert (= (seq.replace s (seq.++ (seq.unit 3) (seq.unit 3)) (seq.unit 8))\n\
+                             (seq.++ (seq.unit 1) (seq.unit 8) (seq.unit 2))))\n(check-sat)\n";
+    assert!(
+        eval_seq_script(shrink, "s", SEQ_INT_TOTAL, pack_seq_int(&[1, 3, 3, 2])),
+        "shrink: [3,3] → [8]"
+    );
+}
+
+#[test]
+fn seq_replace_grow_over_cap_declines() {
+    // A `(Seq Int)` symbol already uses the full max length 7 (the 128-bit packed
+    // ceiling for 16-bit elements). A growing replace (here a symbolic `a`, so the
+    // prepend case keeps all of `s`, plus a length-1 `b`) needs rm = 7 + 1 = 8 > 7
+    // → a clean Unsupported, never a truncated (wrong) sequence.
+    let err = parse_script(
+        "(declare-fun s () (Seq Int))\n(declare-fun a () (Seq Int))\n\
+         (assert (= (seq.replace s a (seq.unit 9)) s))\n(check-sat)\n",
+    )
+    .expect_err("over-cap seq.replace declines");
+    assert!(matches!(err, SmtError::Unsupported(_)), "got {err:?}");
+}
+
+#[test]
 fn seq_replace_family_still_declined() {
-    // The slice-4 ops stay cleanly declined (Unsupported), never a wrong verdict.
-    for op in ["seq.replace", "seq.replace_all", "seq.indexof"] {
+    // `seq.replace` is now wired (first-occurrence splice); the remaining
+    // replace-all / index-of search ops stay cleanly declined (Unsupported),
+    // never a wrong verdict.
+    for op in ["seq.replace_all", "seq.indexof"] {
         let text = format!(
             "(declare-fun s () (Seq Int))\n(assert (= (seq.len ({op} s s s)) 0))\n(check-sat)\n"
         );
-        let err = parse_script(&text).expect_err("slice-4 op declines");
+        let err = parse_script(&text).expect_err("declined op");
         assert!(matches!(err, SmtError::Unsupported(_)), "{op}: got {err:?}");
     }
 }
@@ -2250,15 +2402,17 @@ fn seq_replace_family_still_declined() {
 #[test]
 fn unsupported_string_op_declines_gracefully() {
     // A `str.*` operator outside the wired bounded subset is a clean `Unsupported`
-    // (the benchmark is declined, never mis-decided).
+    // (the benchmark is declined, never mis-decided). `str.replace` is now wired,
+    // so this checks a still-unsupported op (`str.indexof`).
     let err = parse_script(
-        "(declare-fun s () String)\n(assert (= (str.replace s \"a\" \"b\") \"x\"))\n(check-sat)\n",
+        "(declare-fun s () String)\n\
+         (assert (= (str.indexof s \"a\" 0) 0))\n(check-sat)\n",
     )
-    .expect_err("str.replace is outside the wired subset");
+    .expect_err("str.indexof is outside the wired subset");
     let SmtError::Unsupported(msg) = err else {
-        panic!("expected Unsupported for str.replace, got {err:?}");
+        panic!("expected Unsupported for str.indexof, got {err:?}");
     };
-    assert!(msg.contains("str.replace"), "actionable msg: {msg}");
+    assert!(msg.contains("str.indexof"), "actionable msg: {msg}");
 }
 
 /// The full set of standard output/query no-op commands is accepted, so a

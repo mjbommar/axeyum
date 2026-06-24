@@ -2481,6 +2481,136 @@ fn string_substr(
     arena.concat(content, rlen).map_err(SmtError::Ir)
 }
 
+/// `(str.replace s a b)` — replace the **first leftmost** occurrence of `a` in
+/// `s` with `b` (SMT-LIB total function). Corner cases verbatim: if `a` does not
+/// occur in `s`, the result is `s` unchanged; if `a` is the **empty** string, the
+/// first match is at position 0, so the result is `b ++ s` (`b` prepended). The
+/// result length is `len(s) − len(a) + len(b)` when found (it can grow or shrink),
+/// else `len(s)`.
+///
+/// Encoding (bounded match + byte-wise splice over the packed layout, no concat
+/// blowup): the first-match position `P` and a `found` flag are a mux over the
+/// candidate starts `p ∈ 0..=m_s`. `match(p)` holds when `p + len(a) ≤ len(s)` and
+/// `s[p+j] = a[j]` for every `j < len(a)`; `first(p) = match(p) ∧ ¬match(q)` for
+/// all `q < p`. The result byte at output position `o` is selected by Int
+/// comparisons against the symbolic boundaries `P` and `P + len(b)`: `s[o]` for
+/// `o < P`, `b[o − P]` for `P ≤ o < P + len(b)`, and the tail `s[o − len(b) +
+/// len(a)]` for `o ≥ P + len(b)` — and plain `s[o]` when `¬found`. This is sound
+/// for **arbitrary** (literal or symbolic) `a`/`b`, because `len(a)`/`len(b)` are
+/// kept as `Int`s and every byte read goes through the in-range mux
+/// ([`string_byte_at_int`]).
+///
+/// The result is packed in a max-length-`rm` layout where `rm = m_s + m_b` (the
+/// largest the splice can produce — the prepend case `len(a)=0` keeps all of `s`
+/// and adds all of `b`). When `rm > STRING_BOUND_CAP` the op is **declined**
+/// (`Unsupported` → `unknown`), never truncated to a wrong string.
+#[allow(clippy::too_many_lines)]
+fn string_replace(
+    arena: &mut TermArena,
+    s: TermId,
+    a: TermId,
+    b: TermId,
+) -> Result<TermId, SmtError> {
+    let ms = string_max_len(arena, s)?;
+    let ma = string_max_len(arena, a)?;
+    let mb = string_max_len(arena, b)?;
+    // Result max length: when found, `len(s) − len(a) + len(b) ≤ m_s − len(a)_min
+    // + m_b`; when **not** found the result is `s` (≤ `m_s`). So `rm = max(m_s,
+    // m_s − len(a)_min + m_b)`. A **literal** `a` pins `len(a)_min` to its exact
+    // length, tightening the bound; a symbolic `a` can be empty (the prepend
+    // case), so `len(a)_min = 0`.
+    let a_lit_len =
+        string_const_bytes(arena, a).map_or(0, |bytes| u32::try_from(bytes.len()).unwrap_or(0));
+    let rm = ms.max(ms.saturating_sub(a_lit_len) + mb);
+    if rm > STRING_BOUND_CAP {
+        return Err(SmtError::Unsupported(format!(
+            "str.replace result of bounded max length {rm} exceeds the cap {STRING_BOUND_CAP} \
+             (ADR-0029)"
+        )));
+    }
+    let len_s = string_len_int(arena, s, ms)?;
+    let len_a = string_len_int(arena, a, ma)?;
+    let len_b = string_len_int(arena, b, mb)?;
+    let zero8 = arena.bv_const(8, 0)?;
+
+    // `match(p)` for a candidate start position `p` (an `Int` constant): the
+    // substring `a` fits (`p + len(a) ≤ len(s)`) and aligns byte-for-byte. We walk
+    // `p` over `0..=m_s` (an empty `a` can match at `p = len(s)`, but the first
+    // match for an empty `a` is `p = 0`, so the cascade below picks it).
+    let match_at = |arena: &mut TermArena, p: u32| -> Result<TermId, SmtError> {
+        let pconst = arena.int_const(i128::from(p));
+        let p_plus_la = arena.int_add(pconst, len_a)?;
+        let mut fits = arena.int_le(p_plus_la, len_s)?; // p + len(a) ≤ len(s)
+        for j in 0..ma {
+            let jconst = arena.int_const(i128::from(j));
+            let j_lt_la = arena.int_lt(jconst, len_a)?; // j < len(a)
+            // s[p+j] and a[j] (both via the in-range Int mux / direct slot).
+            let src = arena.int_add(pconst, jconst)?;
+            let (sbyte, _sin) = string_byte_at_int(arena, s, src, ms)?;
+            let abyte = string_byte_m(arena, a, j, ma)?;
+            let beq = arena.eq(sbyte, abyte)?;
+            let nj = arena.not(j_lt_la)?;
+            let ok = arena.or(nj, beq)?; // j ≥ len(a) ∨ s[p+j] = a[j]
+            fits = arena.and(fits, ok)?;
+        }
+        Ok(fits)
+    };
+
+    // First-match position `P` (an `Int`) and `found`: `first(p) = match(p) ∧
+    // ¬match(q)` for all `q < p`. Walk low→high; the first `match` wins.
+    let mut found = arena.bool_const(false);
+    let mut pos_i = arena.int_const(0); // P; meaningful only when `found`.
+    let mut none_before = arena.bool_const(true); // ¬match(q) for every q seen so far.
+    for p in 0..=ms {
+        let mp = match_at(arena, p)?;
+        let first_p = arena.and(none_before, mp)?; // this is the leftmost match
+        let pconst = arena.int_const(i128::from(p));
+        pos_i = arena.ite(first_p, pconst, pos_i)?;
+        found = arena.or(found, first_p)?;
+        let nmp = arena.not(mp)?;
+        none_before = arena.and(none_before, nmp)?;
+    }
+
+    // Result length: `len(s) − len(a) + len(b)` when found, else `len(s)`.
+    let found_len0 = arena.int_sub(len_s, len_a)?;
+    let found_len = arena.int_add(found_len0, len_b)?;
+    let result_len = arena.ite(found, found_len, len_s)?;
+
+    // Result content, byte-by-byte (high→low), over `rm` output positions.
+    let mut content: Option<TermId> = None;
+    for o in (0..rm).rev() {
+        let oconst = arena.int_const(i128::from(o));
+        // not-found branch: plain `s[o]`.
+        let (s_o, _s_o_in) = string_byte_at_int(arena, s, oconst, ms)?;
+        // found branch boundaries: P and P + len(b).
+        let o_lt_p = arena.int_lt(oconst, pos_i)?; // o < P  → s[o]
+        let p_plus_lb = arena.int_add(pos_i, len_b)?;
+        let o_lt_p_lb = arena.int_lt(oconst, p_plus_lb)?; // o < P+len(b)
+        // b[o − P]  (valid only in the middle band; the mux gates by len(b)).
+        let o_minus_p = arena.int_sub(oconst, pos_i)?;
+        let (b_byte, _b_in) = string_byte_at_int(arena, b, o_minus_p, mb)?;
+        // tail s[o − len(b) + len(a)]  (for o ≥ P+len(b)).
+        let tail_idx0 = arena.int_sub(oconst, len_b)?;
+        let tail_idx = arena.int_add(tail_idx0, len_a)?;
+        let (tail_byte, _t_in) = string_byte_at_int(arena, s, tail_idx, ms)?;
+        // middle band (P ≤ o < P+len(b)) → b[o−P]; else tail.
+        let mid_or_tail = arena.ite(o_lt_p_lb, b_byte, tail_byte)?;
+        // o < P → s[o]; else (middle or tail).
+        let found_byte = arena.ite(o_lt_p, s_o, mid_or_tail)?;
+        // gate the whole output byte by `o < result_len` (else canonical 0 pad).
+        let o_lt_len = arena.int_lt(oconst, result_len)?;
+        let chosen = arena.ite(found, found_byte, s_o)?;
+        let out_byte = arena.ite(o_lt_len, chosen, zero8)?;
+        content = Some(match content {
+            None => out_byte,
+            Some(acc) => arena.concat(acc, out_byte)?,
+        });
+    }
+    let content = content.expect("rm ≥ 1");
+    let rlen = arena.int2bv(len_width(rm), result_len)?;
+    arena.concat(content, rlen).map_err(SmtError::Ir)
+}
+
 /// `str.to_code s`: the code point of the single character of `s` when
 /// `|s| = 1`, else `-1` (SMT-LIB total function). In the byte model a character
 /// is one byte, so the code is `bv2nat(s[0])` (`0..=255`); any other length
@@ -4553,6 +4683,162 @@ fn seq_update_const(
     arena.concat(content, len_field).map_err(SmtError::Ir)
 }
 
+/// Selects content element at an **`Int`** index `i` of a packed sequence `s`
+/// (max length `m`, element width `ew`): returns `(elem, in_range)` with
+/// `in_range` exactly when `0 ≤ i < len(s)` (else `(0, false)`). The sequence
+/// analogue of [`string_byte_at_int`] — an `Int`-equality mux over the `≤ m`
+/// slots gated by the length field, so any out-of-bound `i` matches no slot.
+fn seq_elem_at_int(
+    arena: &mut TermArena,
+    s: TermId,
+    i: TermId,
+    m: u32,
+    ew: u32,
+) -> Result<(TermId, TermId), SmtError> {
+    let len_field = seq_len_field(arena, s, m)?;
+    let mut elem = arena.bv_const(ew, 0)?;
+    let mut in_range = arena.bool_const(false);
+    for k in 0..m {
+        let kconst = arena.int_const(i128::from(k));
+        let is_k = arena.eq(i, kconst)?;
+        let kbv = arena.bv_const(len_width(m), u128::from(k))?;
+        let k_active = arena.bv_ult(kbv, len_field)?;
+        let hit = arena.and(is_k, k_active)?;
+        let ek = seq_elem_m(arena, s, k, m, ew)?;
+        elem = arena.ite(hit, ek, elem)?;
+        in_range = arena.or(in_range, hit)?;
+    }
+    Ok((elem, in_range))
+}
+
+/// The concrete length of a **ground** packed sequence `v` (max length `m`), or
+/// `0` if `v` is symbolic (so a symbolic operand is treated as possibly empty —
+/// the conservative bound). A `seq.unit`/`seq.++` construction is an `Op::Concat`
+/// tree, *not* a folded `BvConst`, so we evaluate its length field with the empty
+/// assignment: a ground term folds to a concrete length; anything referencing a
+/// symbol returns `0` (conservative).
+fn seq_const_len(arena: &mut TermArena, v: TermId, m: u32) -> u32 {
+    let Ok(len_field) = seq_len_field(arena, v, m) else {
+        return 0;
+    };
+    match axeyum_ir::eval(arena, len_field, &axeyum_ir::Assignment::new()) {
+        Ok(axeyum_ir::Value::Bv { value, .. }) => u32::try_from(value).unwrap_or(0).min(m),
+        _ => 0,
+    }
+}
+
+/// `(seq.replace s a b)` — replace the **first leftmost** occurrence of the
+/// sub-sequence `a` in `s` with `b` (SMT-LIB Sequences total function), the
+/// element-wise analogue of [`string_replace`]. Corner cases verbatim: `a` not
+/// occurring → `s` unchanged; `a` the **empty** sequence → `b ++ s` (`b`
+/// prepended); result length `len(s) − len(a) + len(b)` when found.
+///
+/// Encoding: identical to [`string_replace`] over `ew`-bit elements instead of
+/// bytes — a bounded first-match mux (`match(p)` aligns `a` at `p` with `p +
+/// len(a) ≤ len(s)`) feeding a byte-wise (here element-wise) splice keyed by the
+/// symbolic boundaries `P` and `P + len(b)`. Sound for literal or symbolic
+/// `a`/`b`. The result max length is `rm = m_s + m_b`; if `rm` exceeds the
+/// soft/total caps the op is **declined** (`Unsupported`), never truncated.
+#[allow(clippy::too_many_lines, clippy::similar_names)]
+fn seq_replace(
+    arena: &mut TermArena,
+    seq: &SeqInfo,
+    s: TermId,
+    a: TermId,
+    b: TermId,
+) -> Result<TermId, SmtError> {
+    let (ews, ms) = seq_max_len(arena, seq, s)?;
+    let (ewa, ma) = seq_max_len(arena, seq, a)?;
+    let (ewb, mb) = seq_max_len(arena, seq, b)?;
+    if ews != ewa || ews != ewb {
+        return Err(SmtError::Unsupported(format!(
+            "seq.replace over differing element widths (s={ews}, a={ewa}, b={ewb})"
+        )));
+    }
+    let ew = ews;
+    // Result max length: `max(m_s, m_s − len(a)_min + m_b)` (see `string_replace`).
+    // A **constant** `a` (a `BvConst` packed sequence) pins `len(a)_min` to its
+    // exact length, tightening the bound; a symbolic `a` can be empty (prepend),
+    // so `len(a)_min = 0`.
+    let a_const_len = seq_const_len(arena, a, ma);
+    let rm = ms.max(ms.saturating_sub(a_const_len) + mb);
+    if rm > SEQ_LEN_SOFT_CAP || seq_total(ew, rm) > SEQ_TOTAL_BITS_CAP {
+        return Err(SmtError::Unsupported(format!(
+            "seq.replace result of bounded max length {rm} (over {ew}-bit elements) exceeds the \
+             packed-sequence bound (ADR-0029)"
+        )));
+    }
+    let len_s_f = seq_len_field(arena, s, ms)?;
+    let len_a_f = seq_len_field(arena, a, ma)?;
+    let len_b_f = seq_len_field(arena, b, mb)?;
+    let len_s = arena.bv2nat(len_s_f)?;
+    let len_a = arena.bv2nat(len_a_f)?;
+    let len_b = arena.bv2nat(len_b_f)?;
+    let zero = arena.bv_const(ew, 0)?;
+
+    // `match(p)`: `a` fits at `p` (`p + len(a) ≤ len(s)`) and aligns element-wise.
+    let match_at = |arena: &mut TermArena, p: u32| -> Result<TermId, SmtError> {
+        let pconst = arena.int_const(i128::from(p));
+        let p_plus_la = arena.int_add(pconst, len_a)?;
+        let mut fits = arena.int_le(p_plus_la, len_s)?;
+        for j in 0..ma {
+            let jconst = arena.int_const(i128::from(j));
+            let j_lt_la = arena.int_lt(jconst, len_a)?;
+            let src = arena.int_add(pconst, jconst)?;
+            let (selem, _sin) = seq_elem_at_int(arena, s, src, ms, ew)?;
+            let aelem = seq_elem_m(arena, a, j, ma, ew)?;
+            let eeq = arena.eq(selem, aelem)?;
+            let nj = arena.not(j_lt_la)?;
+            let ok = arena.or(nj, eeq)?;
+            fits = arena.and(fits, ok)?;
+        }
+        Ok(fits)
+    };
+
+    let mut found = arena.bool_const(false);
+    let mut pos_i = arena.int_const(0);
+    let mut none_before = arena.bool_const(true);
+    for p in 0..=ms {
+        let mp = match_at(arena, p)?;
+        let first_p = arena.and(none_before, mp)?;
+        let pconst = arena.int_const(i128::from(p));
+        pos_i = arena.ite(first_p, pconst, pos_i)?;
+        found = arena.or(found, first_p)?;
+        let nmp = arena.not(mp)?;
+        none_before = arena.and(none_before, nmp)?;
+    }
+
+    let found_len0 = arena.int_sub(len_s, len_a)?;
+    let found_len = arena.int_add(found_len0, len_b)?;
+    let result_len = arena.ite(found, found_len, len_s)?;
+
+    let mut content: Option<TermId> = None;
+    for o in (0..rm).rev() {
+        let oconst = arena.int_const(i128::from(o));
+        let (s_o, _s_o_in) = seq_elem_at_int(arena, s, oconst, ms, ew)?;
+        let o_lt_p = arena.int_lt(oconst, pos_i)?;
+        let p_plus_lb = arena.int_add(pos_i, len_b)?;
+        let o_lt_p_lb = arena.int_lt(oconst, p_plus_lb)?;
+        let o_minus_p = arena.int_sub(oconst, pos_i)?;
+        let (b_elem, _b_in) = seq_elem_at_int(arena, b, o_minus_p, mb, ew)?;
+        let tail_idx0 = arena.int_sub(oconst, len_b)?;
+        let tail_idx = arena.int_add(tail_idx0, len_a)?;
+        let (tail_elem, _t_in) = seq_elem_at_int(arena, s, tail_idx, ms, ew)?;
+        let mid_or_tail = arena.ite(o_lt_p_lb, b_elem, tail_elem)?;
+        let found_elem = arena.ite(o_lt_p, s_o, mid_or_tail)?;
+        let o_lt_len = arena.int_lt(oconst, result_len)?;
+        let chosen = arena.ite(found, found_elem, s_o)?;
+        let out_elem = arena.ite(o_lt_len, chosen, zero)?;
+        content = Some(match content {
+            None => out_elem,
+            Some(acc) => arena.concat(acc, out_elem)?,
+        });
+    }
+    let content = content.expect("rm ≥ 1");
+    let rlen = arena.int2bv(len_width(rm), result_len)?;
+    arena.concat(content, rlen).map_err(SmtError::Ir)
+}
+
 /// Coerces a `seq.unit` element argument to a `BitVec(ew)`: an `Int` element is
 /// `int2bv`-narrowed to the bounded width (its low `ew` bits, two's-complement),
 /// a `Bool` element becomes a 1-bit value, and a `BitVec(ew)` passes through. An
@@ -4668,10 +4954,18 @@ fn apply_seq_op(
             need(1)?;
             seq_rev(arena, seq, args[0])?
         }
-        // Declined (slice 4): the search/replace ops.
-        "seq.replace" | "seq.replace_all" | "seq.indexof" | "seq.nth_total" => {
+        // `(seq.replace s a b)` — replace the FIRST occurrence of `a` in `s` with
+        // `b` (first leftmost; `a` empty → prepend; not found → `s`); a bounded
+        // match + element-wise splice, sound for literal or symbolic `a`/`b`,
+        // declined when the result could exceed the cap (ADR-0029 slice 4).
+        "seq.replace" => {
+            need(3)?;
+            seq_replace(arena, seq, args[0], args[1], args[2])?
+        }
+        // Declined (slice 4+): replace-all / index-of search ops.
+        "seq.replace_all" | "seq.indexof" | "seq.nth_total" => {
             return Err(SmtError::Unsupported(format!(
-                "sequence operator `{op}` is outside the slice-3 sound subset (ADR-0029)"
+                "sequence operator `{op}` is outside the wired sound subset (ADR-0029)"
             )));
         }
         _ => return Ok(None),
@@ -4768,6 +5062,15 @@ fn apply_op(
         "str.substr" => {
             need(3)?;
             string_substr(arena, args[0], args[1], args[2])?
+        }
+        // `str.replace s a b` — replace the FIRST occurrence of `a` in `s` with
+        // `b` (first leftmost; `a` empty → prepend `b`; not found → `s`). A
+        // bounded match + byte-wise splice over the packed layout, sound for
+        // literal or symbolic `a`/`b`; declined (Unsupported) when the result
+        // could exceed the cap (ADR-0029 slice 4).
+        "str.replace" => {
+            need(3)?;
+            string_replace(arena, args[0], args[1], args[2])?
         }
         // `str.to_code s` — the code point of the single char of `s`, else `-1`
         // (an `Int`, composes with arithmetic). Byte model: code is `s[0]`
@@ -5249,8 +5552,9 @@ fn apply_op(
                 return Err(SmtError::Unsupported(format!(
                     "string/regex operator `{other}` is outside the wired bounded subset \
                      (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, \
-                     str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, \
-                     str.< , str.<=, str.++ (variable, bounded), = / distinct over String"
+                     str.at, str.substr, str.replace, str.to_code, str.from_code, str.to_int, \
+                     str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over \
+                     String"
                 )));
             }
             if let Some(func) = arena.find_function(other) {
