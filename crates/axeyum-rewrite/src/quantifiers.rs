@@ -19,6 +19,16 @@ use crate::canonical::build_app;
 /// instances); wider domains would blow up the formula and are rejected.
 pub const QUANT_EXPAND_BIT_LIMIT: u32 = 10;
 
+/// The cap on the **cumulative** number of ground instances the recursive
+/// finite-domain expansion may materialize across an entire nested-quantifier
+/// formula. Each variable's domain passes [`QUANT_EXPAND_BIT_LIMIT`], but a
+/// *nested* chain (`∀A,B,C,D:BitVec8` = `256⁴` instances) multiplies those
+/// domains and would otherwise fold ~2³² terms and OOM. Hitting this cap makes
+/// the expander decline (a sound `UnsupportedDomain`), so the caller degrades to
+/// a bounded `unknown`/refutation rather than crashing. Mirrors
+/// [`CHAIN_INSTANCE_CAP`] on the prenex `instantiate_chain` path.
+pub const MAX_EXPAND_INSTANCES: usize = 1 << 20;
+
 /// Error from quantifier expansion.
 #[derive(Debug, Clone)]
 pub enum QuantExpandError {
@@ -70,11 +80,33 @@ pub fn expand_quantifiers(
 
 #[derive(Default)]
 struct Expander {
-    memo: HashMap<TermId, TermId>,
+    /// Memo of `term → (expanded term, instance count)`. The count is how many
+    /// ground instances the expanded subterm stands for (`1` for a
+    /// quantifier-free leaf), which the cumulative-budget check multiplies
+    /// through nested quantifiers.
+    memo: HashMap<TermId, (TermId, usize)>,
 }
 
 impl Expander {
     fn expand(&mut self, arena: &mut TermArena, term: TermId) -> Result<TermId, QuantExpandError> {
+        Ok(self.expand_counted(arena, term)?.0)
+    }
+
+    /// Expands `term`, returning the quantifier-free term **and** the number of
+    /// ground instances it stands for. The count multiplies through nested
+    /// quantifiers (an inner `∀` of count `c` under an outer `∀` over a
+    /// `d`-element domain stands for `c·d` instances) and combines by `max`
+    /// across the arguments of an ordinary application (siblings produce separate
+    /// terms — the dominant one bounds the worst single fold). Bounding this
+    /// cumulative count — not just each variable's domain — is what stops a
+    /// nested chain like `∀A,B,C,D:BitVec8` (`256⁴` instances) from OOM-aborting:
+    /// over [`MAX_EXPAND_INSTANCES`] the expander declines (`UnsupportedDomain`)
+    /// and the caller degrades to a bounded `unknown`.
+    fn expand_counted(
+        &mut self,
+        arena: &mut TermArena,
+        term: TermId,
+    ) -> Result<(TermId, usize), QuantExpandError> {
         if let Some(&cached) = self.memo.get(&term) {
             return Ok(cached);
         }
@@ -85,27 +117,30 @@ impl Expander {
             | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
             | TermNode::RealConst(_)
-            | TermNode::Symbol(_) => term,
+            | TermNode::Symbol(_) => (term, 1),
             TermNode::App {
                 op: Op::Forall(var),
                 args,
             } => {
-                let body = self.expand(arena, args[0])?;
-                instantiate(arena, var, body, true)?
+                let (body, body_count) = self.expand_counted(arena, args[0])?;
+                instantiate(arena, var, body, body_count, true)?
             }
             TermNode::App {
                 op: Op::Exists(var),
                 args,
             } => {
-                let body = self.expand(arena, args[0])?;
-                instantiate(arena, var, body, false)?
+                let (body, body_count) = self.expand_counted(arena, args[0])?;
+                instantiate(arena, var, body, body_count, false)?
             }
             TermNode::App { op, args } => {
                 let mut expanded = Vec::with_capacity(args.len());
+                let mut count = 1usize;
                 for &arg in &args {
-                    expanded.push(self.expand(arena, arg)?);
+                    let (e, c) = self.expand_counted(arena, arg)?;
+                    expanded.push(e);
+                    count = count.max(c);
                 }
-                build_app(arena, op, &expanded)?
+                (build_app(arena, op, &expanded)?, count)
             }
         };
         self.memo.insert(term, result);
@@ -115,14 +150,44 @@ impl Expander {
 
 /// Expands `forall var. body` (or `exists`) over `var`'s finite domain by
 /// substituting each value and folding with `and` (`forall`) / `or` (`exists`).
-/// `body` is already quantifier-free.
+/// `body` is already quantifier-free and stands for `body_count` instances.
+///
+/// Charges the materialized instances against the cumulative
+/// [`MAX_EXPAND_INSTANCES`] budget *before* folding, so a nested chain whose
+/// product of domain sizes would explode declines (`UnsupportedDomain`) rather
+/// than allocating the full conjunction/disjunction. Folding a `domain_size`-way
+/// connective over a `body` standing for `body_count` instances materializes
+/// `body_count × domain_size` distinct ground terms, which is the returned
+/// instance count and the quantity bounded here.
 fn instantiate(
     arena: &mut TermArena,
     var: SymbolId,
     body: TermId,
+    body_count: usize,
     is_forall: bool,
-) -> Result<TermId, QuantExpandError> {
+) -> Result<(TermId, usize), QuantExpandError> {
     let values = domain_values(arena, var)?;
+    // Charge the product up front and decline (a sound `UnsupportedDomain`,
+    // which the caller maps to a bounded `unknown`) before allocating if it
+    // would exceed the budget — bounding the true materialized blow-up across
+    // the whole nested expansion, not just this one domain.
+    let total = body_count
+        .checked_mul(values.len())
+        .filter(|&t| t <= MAX_EXPAND_INSTANCES)
+        .ok_or_else(|| QuantExpandError::UnsupportedDomain(arena.symbol(var).1))?;
+    let folded = instantiate_fold(arena, var, body, is_forall, values)?;
+    Ok((folded, total))
+}
+
+/// Folds the substituted `values` of `var` into `body` with `and` (`forall`) /
+/// `or` (`exists`). Budget accounting lives in [`instantiate`].
+fn instantiate_fold(
+    arena: &mut TermArena,
+    var: SymbolId,
+    body: TermId,
+    is_forall: bool,
+    values: Vec<TermId>,
+) -> Result<TermId, QuantExpandError> {
     let mut acc: Option<TermId> = None;
     for value in values {
         let mut subst_memo = HashMap::new();
@@ -907,7 +972,7 @@ fn contains_quantifier(arena: &TermArena, term: TermId) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::expand_quantifiers;
+    use super::{QuantExpandError, expand_quantifiers};
     use axeyum_ir::{Assignment, Sort, TermArena, Value, eval};
 
     #[test]
@@ -950,5 +1015,54 @@ mod tests {
         let ge = arena.real_ge(r, zero).unwrap();
         let all = arena.forall(r_sym, ge).unwrap();
         assert!(expand_quantifiers(&mut arena, &[all]).is_err());
+    }
+
+    #[test]
+    fn nested_forall_over_budget_declines_bounded_not_oom() {
+        // ∀A,B,C,D:BitVec8. A == B  is `256⁴ = 2³²` instances — far over
+        // MAX_EXPAND_INSTANCES. The expander must DECLINE quickly (bounded,
+        // before materializing the conjunction), not OOM, so the caller degrades
+        // to a sound `unknown`. (Each domain individually passes
+        // QUANT_EXPAND_BIT_LIMIT — only the cumulative product is over budget.)
+        let mut arena = TermArena::new();
+        let sym_a = arena.declare("A", Sort::BitVec(8)).unwrap();
+        let sym_b = arena.declare("B", Sort::BitVec(8)).unwrap();
+        let sym_c = arena.declare("C", Sort::BitVec(8)).unwrap();
+        let sym_d = arena.declare("D", Sort::BitVec(8)).unwrap();
+        let (var_a, var_b) = (arena.var(sym_a), arena.var(sym_b));
+        let body = arena.eq(var_a, var_b).unwrap();
+        // Nest four universals; the inner two (C, D) do not appear in the body
+        // but still multiply the domain product.
+        let mut formula = body;
+        for &sym in &[sym_d, sym_c, sym_b, sym_a] {
+            formula = arena.forall(sym, formula).unwrap();
+        }
+        let result = expand_quantifiers(&mut arena, &[formula]);
+        assert!(
+            matches!(result, Err(QuantExpandError::UnsupportedDomain(_))),
+            "nested ∀ over the instance budget must decline, got {result:?}",
+        );
+    }
+
+    #[test]
+    fn small_nested_forall_under_budget_still_expands_and_decides() {
+        // ∀A,B:BitVec2. A == A  is 4·4 = 16 instances — well under budget; it
+        // must still expand to a quantifier-free tautology agreeing with the
+        // enumerating evaluator (verdict-invariant for in-budget formulas).
+        let mut arena = TermArena::new();
+        let sym_a = arena.declare("A", Sort::BitVec(2)).unwrap();
+        let sym_b = arena.declare("B", Sort::BitVec(2)).unwrap();
+        let var_a = arena.var(sym_a);
+        let body = arena.eq(var_a, var_a).unwrap();
+        let inner = arena.forall(sym_b, body).unwrap();
+        let all = arena.forall(sym_a, inner).unwrap();
+
+        let expanded = expand_quantifiers(&mut arena, &[all]).unwrap();
+        let asg = Assignment::new();
+        assert_eq!(
+            eval(&arena, expanded[0], &asg).unwrap(),
+            eval(&arena, all, &asg).unwrap()
+        );
+        assert_eq!(eval(&arena, expanded[0], &asg).unwrap(), Value::Bool(true));
     }
 }
