@@ -7,23 +7,25 @@ opened this session by generalizing the proven bounded packed-bit-vector string
 layout (ADR-0029) from bytes to fixed-width `E`-elements: a bounded `(Seq E)` is
 the same structure a bounded `String` uses (`String` ≈ `Seq` of bytes).
 
-- `cvc5-regress-clean/` — **29** clean files: **10** from the cvc5 sequences
+- `cvc5-regress-clean/` — **33** clean files: **10** from the cvc5 sequences
   regression suite (`references/cvc5/test/regress/cli/regress0/{seq,strings}`, a
   gitignored shallow clone — `array3.smt2` is the slice-3 `seq.update` addition)
   plus **6** hand-authored `seq.nth`/`seq.at` files (slice 2), **8**
-  hand-authored `seq.update`/`seq.rev` files (slice 3), and **5** hand-authored
-  `seq.replace` files (slice 4), each with a `:status` ground truth. Filtered to:
-  a fixed-width element sort (`Int`, `Bool`, or `(_ BitVec w)`); only the wired
-  sequence operators (slice 1 + `seq.nth`/`seq.at` + `seq.update`/`seq.rev` +
-  `seq.replace`; no `seq.replace_all`/`seq.indexof`); a machine-readable
+  hand-authored `seq.update`/`seq.rev` files (slice 3), **5** hand-authored
+  `seq.replace` files (slice 4), and **4** hand-authored
+  `seq.indexof`/`seq.replace_all` files (slice 5), each with a `:status` ground
+  truth. Filtered to: a fixed-width element sort (`Int`, `Bool`, or
+  `(_ BitVec w)`); only the wired sequence operators (slice 1 +
+  `seq.nth`/`seq.at` + `seq.update`/`seq.rev` + `seq.replace` +
+  `seq.indexof`/`seq.replace_all` (ground)); a machine-readable
   `(set-info :status sat|unsat)` ground truth; and only plain commands (no
   `push`/`pop`, `get-value`, quantifiers, or datatypes). Files are prefixed with
   their declared `:status`. **Note:** Z3 4.13.3 does not support `seq.update` or
   `seq.rev` (it errors on those constants), so those files have **no Z3
   head-to-head** — the binary declines and the instance is `oracle_skipped`; the
   `:status` ground truth (cvc5-semantics-derived) is the binding soundness check.
-  (Z3 4.13.3 *does* support `seq.replace`, so the `seq.replace` files carry a
-  full head-to-head.)
+  (Z3 4.13.3 *does* support `seq.replace`/`seq.indexof`/`seq.replace_all`, so
+  those files carry a full head-to-head where the element shape is comparable.)
 
 ```sh
 target/release/axeyum-bench \
@@ -37,14 +39,23 @@ target/release/axeyum-bench \
 Slice 1 (open, 9 files): `files=9 sat=6 unsat=0 unknown=2 unsupported=1 agree=6
 DISAGREE=0`. Slice 2 (`seq.nth`/`seq.at`, 15 files): `files=15 sat=10 unsat=1
 unknown=3 unsupported=1 agree=11 DISAGREE=0`. Slice 3
-(`seq.update`/`seq.rev`, 24 files):
+(`seq.update`/`seq.rev`, 24 files): `files=24 sat=15 unsat=4 unknown=4
+unsupported=1 agree=19 DISAGREE=0`. Slice 4 (`seq.replace`, 29 files):
+`files=29 sat=18 unsat=4 unknown=6 unsupported=1 agree=22 DISAGREE=0`. Slice 5
+(`seq.indexof`/`seq.replace_all`, 33 files):
 
 ```
-files=24 sat=15 unsat=4 unknown=4 unsupported=1 errors=0 agree=19 DISAGREE=0
+files=33 sat=21 unsat=5 unknown=6 unsupported=1 errors=0 agree=26 DISAGREE=0
 ```
 
 **DISAGREE=0** against both Z3 (where Z3 supports the ops) and the declared
-`:status`. Decided rose 11 → 19 — the slice-3 additions: `seq.update`/`seq.rev`
+`:status`. Decided rose 22 → 26 — the slice-5 additions: `seq.indexof` decides
+two `sat` (`first-occurrence`, `offset-second` — the first match at-or-after the
+start offset, an `Int` position search) and `seq.replace_all` (ground) one `sat`
+(`all-ones`, every `[1]`→`[2]`) and one `unsat` (`not-first-only`, two distinct
+ground replace_all literals compared). All four agree with the `:status` (and
+with Z3 where the integer-element shape is comparable). Decided rose 11 → 19 at
+slice 3 — the slice-3 additions: `seq.update`/`seq.rev`
 decide five `sat` (`array3`, `ground-reverse`, `ground-replace`, `oob-noop`,
 `span-truncate`) and three `unsat` (`not-identity`, `wrong-result`,
 `span-truncate`); plus a QF_S file (`issue6653-3-seq`) that the wider seq support
@@ -93,7 +104,8 @@ same canonical well-formedness (length ≤ m; padding elements zero) a bounded
   their `str.*` counterparts with the element width swapped in for `8`):
   `seq.empty`, `seq.unit`, `seq.++`, `seq.len`, `seq.extract`, `=`/`distinct`,
   `seq.prefixof`, `seq.suffixof`, `seq.contains` (slice 1), `seq.nth`/`seq.at`
-  (slice 2), `seq.update`/`seq.rev` (slice 3), and `seq.replace` (slice 4).
+  (slice 2), `seq.update`/`seq.rev` (slice 3), `seq.replace` (slice 4), and
+  `seq.indexof` + `seq.replace_all` (ground) (slice 5).
 - **`seq.nth` (slice 2, sound out-of-bounds).** `(seq.nth s i)` is the SMT-LIB
   **partial** function: in-bounds (`0 ≤ i < len(s)`) the `i`-th element (the
   position mux); out-of-bounds an **unconstrained, fresh** value of the element
@@ -127,8 +139,30 @@ same canonical well-formedness (length ≤ m; padding elements zero) a bounded
   (Unknown), never a truncated (wrong) sequence. Some ground unsat cases come
   back `unknown` (the `Int`-bridge in the splice keeps them off the pure
   bit-blast path) — sound, agreeing with the `:status`, never a wrong verdict.
-- **Declined (slice 4+):** `seq.replace_all`/`seq.indexof` — clean `Unsupported`
-  (Unknown), never a wrong verdict.
+- **`seq.indexof` (slice 5, first-match position search).** `(seq.indexof s t i)`
+  (or `(seq.indexof s t)` at offset 0) is the position of the **first** occurrence
+  of the sub-sequence `t` in `s` at-or-after offset `i`, or `-1` if none — the
+  element-wise analogue of `str.indexof`. Encoded as the slice-4 first-match
+  cascade (`match(p)` aligns `t` at `p` with `p + len(t) ≤ len(s)`) restricted to
+  eligible candidates `p ≥ i`; the leftmost eligible `P` is the `Int` result,
+  `-1` when none or `i < 0` (`i > len(s)` yields no eligible match → `-1`). A pure
+  position search (no length-changing rebuild), sound for literal or symbolic
+  `s`/`t`/`i`. As with `seq.replace`, an `indexof`-keyed **ground unsat** comes
+  back `unknown` (the `Int` result bridge keeps it off the pure bit-blast path) —
+  sound, never a wrong verdict; the curated unsats use the pure-BV replace_all
+  literal path instead.
+- **`seq.replace_all` (slice 5, ground fold).** `(seq.replace_all s a b)` replaces
+  **all** non-overlapping, left-to-right occurrences of `a` with `b` (`a = ε` is
+  the **identity**, unlike single `seq.replace`'s prepend; the scan resumes
+  *after* each inserted `b`, never inside it). This slice wires the **fully-ground**
+  case exactly — all of `s`, `a`, `b` packed constants — folding the replacement
+  and re-packing the literal (so the result rides the pure-BV path and decides both
+  directions); the result must fit the element-width max length or it declines. A
+  **symbolic** operand declines cleanly to `Unsupported` (Unknown) — a sound
+  symbolic moving-cursor splice (bounded only for a concrete `len(a)`) is a
+  scoped follow-up, never a wrong/truncated sequence.
+- **Declined (slice 5+):** `seq.nth_total` and symbolic `seq.replace_all` — clean
+  `Unsupported` (Unknown), never a wrong verdict.
 - Element sorts with no sound fixed-width packing — `Real`, `String`, a nested
   `(Seq …)`, an uninterpreted/parametric sort, or `(_ BitVec 8)` — and sequences
   whose packed sort would exceed 128 bits, decline cleanly (Unknown), never wrong.

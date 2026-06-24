@@ -2611,6 +2611,137 @@ fn string_replace(
     arena.concat(content, rlen).map_err(SmtError::Ir)
 }
 
+/// `(str.indexof s t i)` — the position of the **first** occurrence of `t` in
+/// `s` at or after offset `i`, or `-1` if there is none (SMT-LIB total function;
+/// result is an `Int`). Corner cases verbatim: `i < 0` → `-1`; `i > len(s)` →
+/// `-1`; `t = ""` → `i` when `0 ≤ i ≤ len(s)` (the empty pattern matches at every
+/// position, so the first one at-or-after `i` is `i` itself); `t` not occurring
+/// at-or-after `i` → `-1`. The 2-argument form `(str.indexof s t)` is offset `0`.
+///
+/// Encoding: reuses the first-match cascade of [`string_replace`] — `match(p)`
+/// holds when `p + len(t) ≤ len(s)` and `s[p+j] = t[j]` for every `j < len(t)` —
+/// but restricted to **eligible** candidates `p ≥ i`. The leftmost eligible match
+/// position `P` (an `Int`) and a `found` flag are a mux over `p ∈ 0..=m_s`;
+/// the result is `P` when `found ∧ i ≥ 0`, else `-1`. This is a **pure position
+/// search** (no length-changing rebuild), so there is no result-length cap to
+/// exceed — but the operands must still pack (over-bound `s`/`t` decline at pack
+/// time). Sound for literal **or** symbolic `s`/`t`/`i` (every byte read goes
+/// through the in-range `Int` mux [`string_byte_at_int`]).
+fn string_indexof(
+    arena: &mut TermArena,
+    s: TermId,
+    t: TermId,
+    i: TermId,
+) -> Result<TermId, SmtError> {
+    let ms = string_max_len(arena, s)?;
+    let mt = string_max_len(arena, t)?;
+    let len_s = string_len_int(arena, s, ms)?;
+    let len_t = string_len_int(arena, t, mt)?;
+
+    // `match(p)`: `t` fits at `p` (`p + len(t) ≤ len(s)`) and aligns byte-for-byte.
+    // (Identical to `string_replace`'s `match_at`, over `t` here.)
+    let match_at = |arena: &mut TermArena, p: u32| -> Result<TermId, SmtError> {
+        let pconst = arena.int_const(i128::from(p));
+        let p_plus_lt = arena.int_add(pconst, len_t)?;
+        let mut fits = arena.int_le(p_plus_lt, len_s)?; // p + len(t) ≤ len(s)
+        for j in 0..mt {
+            let jconst = arena.int_const(i128::from(j));
+            let j_lt_lt = arena.int_lt(jconst, len_t)?; // j < len(t)
+            let src = arena.int_add(pconst, jconst)?;
+            let (sbyte, _sin) = string_byte_at_int(arena, s, src, ms)?;
+            let tbyte = string_byte_m(arena, t, j, mt)?;
+            let beq = arena.eq(sbyte, tbyte)?;
+            let nj = arena.not(j_lt_lt)?;
+            let ok = arena.or(nj, beq)?; // j ≥ len(t) ∨ s[p+j] = t[j]
+            fits = arena.and(fits, ok)?;
+        }
+        Ok(fits)
+    };
+
+    // Leftmost **eligible** (`p ≥ i`) match: walk low→high, the first eligible
+    // match wins. `none_before` only tracks eligible matches already seen.
+    let mut found = arena.bool_const(false);
+    let mut pos_i = arena.int_const(0); // P; meaningful only when `found`.
+    let mut none_before = arena.bool_const(true);
+    for p in 0..=ms {
+        let pconst = arena.int_const(i128::from(p));
+        let p_ge_i = arena.int_le(i, pconst)?; // i ≤ p  ⇔  p ≥ i
+        let mp = match_at(arena, p)?;
+        let eligible = arena.and(p_ge_i, mp)?;
+        let first_p = arena.and(none_before, eligible)?;
+        pos_i = arena.ite(first_p, pconst, pos_i)?;
+        found = arena.or(found, first_p)?;
+        let neli = arena.not(eligible)?;
+        none_before = arena.and(none_before, neli)?;
+    }
+
+    // `i < 0` ⇒ `-1` regardless of any match (`p ≥ i` is vacuous for negative `i`,
+    // so it is gated here, not in the cascade). `i > len(s)` already yields no
+    // eligible match (no `p ≤ m_s` is both `≥ i` and `≤ len(s)`), so it falls to
+    // the `-1` branch via `¬found`.
+    let zero = arena.int_const(0);
+    let i_ge_0 = arena.int_le(zero, i)?;
+    let valid = arena.and(found, i_ge_0)?;
+    let neg_one = arena.int_const(-1);
+    arena.ite(valid, pos_i, neg_one).map_err(SmtError::Ir)
+}
+
+/// `(str.replace_all s a b)` — replace **all** non-overlapping, left-to-right
+/// occurrences of `a` in `s` with `b` (SMT-LIB total function). Corner cases
+/// verbatim: `a = ""` → `s` **unchanged** (the empty-pattern `replace_all` is the
+/// identity — this differs from single `str.replace`, where an empty `a` prepends
+/// `b`; **verified against Z3/cvc5**); `a` not occurring → `s`; matches are
+/// consumed left-to-right and the scan resumes **after** each inserted `b` (it
+/// does **not** rescan inside `b`, so `(str.replace_all "aa" "a" "aa") = "aaaa"`,
+/// not a divergent rewrite).
+///
+/// Encoding: this slice wires the **fully-ground** case exactly (all of `s`, `a`,
+/// `b` are packed constants) by folding the non-overlapping replacement in Rust
+/// and packing the literal result. The unbounded-round splice over a *symbolic*
+/// `s`/`b` (or a symbolic `a`, whose length — hence the round count — is unknown)
+/// is **declined** cleanly (`Unsupported` → `unknown`), never a wrong/truncated
+/// string: a sound symbolic `replace_all` needs a moving-cursor splice whose round
+/// count is bounded only when `len(a)` is concrete and whose growing result must
+/// stay under [`STRING_BOUND_CAP`] — left as a tightly-scoped follow-up. An
+/// over-bound ground result (more than `STRING_MAX_LEN` bytes) declines at pack
+/// time rather than truncate.
+fn string_replace_all(
+    arena: &mut TermArena,
+    s: TermId,
+    a: TermId,
+    b: TermId,
+) -> Result<TermId, SmtError> {
+    let (Some(sb), Some(ab), Some(bb)) = (
+        string_const_bytes(arena, s),
+        string_const_bytes(arena, a),
+        string_const_bytes(arena, b),
+    ) else {
+        return Err(SmtError::Unsupported(
+            "str.replace_all over a non-constant operand is outside the wired sound subset \
+             (a symbolic moving-cursor splice is bounded only for a concrete len(a); ADR-0029)"
+                .to_owned(),
+        ));
+    };
+    // `a = ""` is the identity (empty-pattern replace_all leaves `s` unchanged).
+    if ab.is_empty() {
+        return pack_string_literal(arena, &sb);
+    }
+    // Non-overlapping, left-to-right: at each match consume `a` and emit `b`, then
+    // resume scanning **after** the emitted `b`'s source span (never inside `b`).
+    let mut out: Vec<u8> = Vec::new();
+    let mut k = 0usize;
+    while k < sb.len() {
+        if k + ab.len() <= sb.len() && sb[k..k + ab.len()] == ab[..] {
+            out.extend_from_slice(&bb);
+            k += ab.len();
+        } else {
+            out.push(sb[k]);
+            k += 1;
+        }
+    }
+    pack_string_literal(arena, &out)
+}
+
 /// `str.to_code s`: the code point of the single character of `s` when
 /// `|s| = 1`, else `-1` (SMT-LIB total function). In the byte model a character
 /// is one byte, so the code is `bv2nat(s[0])` (`0..=255`); any other length
@@ -4839,6 +4970,189 @@ fn seq_replace(
     arena.concat(content, rlen).map_err(SmtError::Ir)
 }
 
+/// `(seq.indexof s t i)` — the position of the **first** occurrence of the
+/// sub-sequence `t` in `s` at or after offset `i`, or `-1` if none (SMT-LIB
+/// Sequences total function; `Int` result), the element-wise analogue of
+/// [`string_indexof`]. Corner cases verbatim: `i < 0` → `-1`; `i > len(s)` →
+/// `-1`; `t = ε` (empty) → `i` when `0 ≤ i ≤ len(s)`; not found → `-1`. The
+/// 2-argument form is offset `0`. Encoding: the first-match cascade of
+/// [`seq_replace`]/[`string_indexof`] over `ew`-bit elements restricted to
+/// eligible `p ≥ i`; a pure position search (no length-changing rebuild), sound
+/// for literal or symbolic `s`/`t`/`i`.
+#[allow(clippy::similar_names)]
+fn seq_indexof(
+    arena: &mut TermArena,
+    seq: &SeqInfo,
+    s: TermId,
+    t: TermId,
+    i: TermId,
+) -> Result<TermId, SmtError> {
+    let (ews, ms) = seq_max_len(arena, seq, s)?;
+    let (ewt, mt) = seq_max_len(arena, seq, t)?;
+    if ews != ewt {
+        return Err(SmtError::Unsupported(format!(
+            "seq.indexof over differing element widths (s={ews}, t={ewt})"
+        )));
+    }
+    let ew = ews;
+    let len_s_f = seq_len_field(arena, s, ms)?;
+    let len_t_f = seq_len_field(arena, t, mt)?;
+    let len_s = arena.bv2nat(len_s_f)?;
+    let len_t = arena.bv2nat(len_t_f)?;
+
+    let match_at = |arena: &mut TermArena, p: u32| -> Result<TermId, SmtError> {
+        let pconst = arena.int_const(i128::from(p));
+        let p_plus_lt = arena.int_add(pconst, len_t)?;
+        let mut fits = arena.int_le(p_plus_lt, len_s)?; // p + len(t) ≤ len(s)
+        for j in 0..mt {
+            let jconst = arena.int_const(i128::from(j));
+            let j_lt_lt = arena.int_lt(jconst, len_t)?;
+            let src = arena.int_add(pconst, jconst)?;
+            let (selem, _sin) = seq_elem_at_int(arena, s, src, ms, ew)?;
+            let telem = seq_elem_m(arena, t, j, mt, ew)?;
+            let eeq = arena.eq(selem, telem)?;
+            let nj = arena.not(j_lt_lt)?;
+            let ok = arena.or(nj, eeq)?;
+            fits = arena.and(fits, ok)?;
+        }
+        Ok(fits)
+    };
+
+    let mut found = arena.bool_const(false);
+    let mut pos_i = arena.int_const(0);
+    let mut none_before = arena.bool_const(true);
+    for p in 0..=ms {
+        let pconst = arena.int_const(i128::from(p));
+        let p_ge_i = arena.int_le(i, pconst)?; // p ≥ i
+        let mp = match_at(arena, p)?;
+        let eligible = arena.and(p_ge_i, mp)?;
+        let first_p = arena.and(none_before, eligible)?;
+        pos_i = arena.ite(first_p, pconst, pos_i)?;
+        found = arena.or(found, first_p)?;
+        let neli = arena.not(eligible)?;
+        none_before = arena.and(none_before, neli)?;
+    }
+
+    let zero = arena.int_const(0);
+    let i_ge_0 = arena.int_le(zero, i)?; // i < 0 ⇒ -1
+    let valid = arena.and(found, i_ge_0)?;
+    let neg_one = arena.int_const(-1);
+    arena.ite(valid, pos_i, neg_one).map_err(SmtError::Ir)
+}
+
+/// The concrete element list of a **ground** packed sequence `v` (max length `m`,
+/// element width `ew`), or `None` if `v` is symbolic. Evaluates the length field
+/// and each content element under the empty assignment: a `seq.unit`/`seq.++`
+/// tree (an `Op::Concat`, not a folded `BvConst`) folds to concrete values;
+/// anything referencing a symbol returns `None` (the caller declines).
+fn seq_const_elems(arena: &mut TermArena, v: TermId, m: u32, ew: u32) -> Option<Vec<u128>> {
+    let len_field = seq_len_field(arena, v, m).ok()?;
+    let asg = axeyum_ir::Assignment::new();
+    let len = match axeyum_ir::eval(arena, len_field, &asg) {
+        Ok(axeyum_ir::Value::Bv { value, .. }) => u32::try_from(value).ok()?.min(m),
+        _ => return None,
+    };
+    let mut elems = Vec::with_capacity(len as usize);
+    for k in 0..len {
+        let elem = seq_elem_m(arena, v, k, m, ew).ok()?;
+        match axeyum_ir::eval(arena, elem, &asg) {
+            Ok(axeyum_ir::Value::Bv { value, .. }) => elems.push(value),
+            _ => return None,
+        }
+    }
+    Some(elems)
+}
+
+/// Packs a concrete element list into the canonical packed-sequence `BvConst`
+/// (max length `m`, element width `ew`): length in the low `len_width(m)` bits,
+/// elements above it, padding zero — the same layout `seq_unit`/`seq.++` produce.
+fn seq_pack_const(
+    arena: &mut TermArena,
+    elems: &[u128],
+    m: u32,
+    ew: u32,
+) -> Result<TermId, SmtError> {
+    let lwm = len_width(m);
+    let mut packed = u128::from(u32::try_from(elems.len()).unwrap_or(0));
+    let mask = if ew >= 128 {
+        u128::MAX
+    } else {
+        (1u128 << ew) - 1
+    };
+    for (k, &e) in elems.iter().enumerate() {
+        let shift = lwm + u32::try_from(k).expect("len ≤ m") * ew;
+        packed |= (e & mask) << shift;
+    }
+    arena
+        .bv_const(seq_total(ew, m), packed)
+        .map_err(SmtError::Ir)
+}
+
+/// `(seq.replace_all s a b)` — replace **all** non-overlapping, left-to-right
+/// occurrences of the sub-sequence `a` in `s` with `b` (SMT-LIB Sequences total
+/// function), the element-wise analogue of [`string_replace_all`]. Corner cases
+/// verbatim: `a = ε` → `s` unchanged (empty-pattern `replace_all` is the identity,
+/// unlike single `seq.replace`); not found → `s`; matches consumed left-to-right,
+/// the scan resuming **after** each inserted `b`.
+///
+/// This slice wires the **fully-ground** case exactly (all of `s`, `a`, `b` are
+/// packed constants) by folding the replacement and re-packing the literal; the
+/// result must still fit the max length `m` for the element width (an over-bound
+/// ground result declines). A symbolic operand is **declined** (`Unsupported` →
+/// `unknown`), never truncated.
+#[allow(clippy::similar_names)]
+fn seq_replace_all(
+    arena: &mut TermArena,
+    seq: &SeqInfo,
+    s: TermId,
+    a: TermId,
+    b: TermId,
+) -> Result<TermId, SmtError> {
+    let (ews, ms) = seq_max_len(arena, seq, s)?;
+    let (ewa, ma) = seq_max_len(arena, seq, a)?;
+    let (ewb, mb) = seq_max_len(arena, seq, b)?;
+    if ews != ewa || ews != ewb {
+        return Err(SmtError::Unsupported(format!(
+            "seq.replace_all over differing element widths (s={ews}, a={ewa}, b={ewb})"
+        )));
+    }
+    let ew = ews;
+    let (Some(sv), Some(av), Some(bv)) = (
+        seq_const_elems(arena, s, ms, ew),
+        seq_const_elems(arena, a, ma, ew),
+        seq_const_elems(arena, b, mb, ew),
+    ) else {
+        return Err(SmtError::Unsupported(
+            "seq.replace_all over a non-constant operand is outside the wired sound subset \
+             (a symbolic moving-cursor splice is bounded only for a concrete len(a); ADR-0029)"
+                .to_owned(),
+        ));
+    };
+    // `a = ε` is the identity (empty-pattern replace_all leaves `s` unchanged).
+    if av.is_empty() {
+        return seq_pack_const(arena, &sv, ms, ew);
+    }
+    let mut out: Vec<u128> = Vec::new();
+    let mut k = 0usize;
+    while k < sv.len() {
+        if k + av.len() <= sv.len() && sv[k..k + av.len()] == av[..] {
+            out.extend_from_slice(&bv);
+            k += av.len();
+        } else {
+            out.push(sv[k]);
+            k += 1;
+        }
+    }
+    if u32::try_from(out.len()).unwrap_or(u32::MAX) > ms {
+        return Err(SmtError::Unsupported(format!(
+            "seq.replace_all ground result of length {} exceeds the packed max length {ms} \
+             (ADR-0029)",
+            out.len()
+        )));
+    }
+    seq_pack_const(arena, &out, ms, ew)
+}
+
 /// Coerces a `seq.unit` element argument to a `BitVec(ew)`: an `Int` element is
 /// `int2bv`-narrowed to the bounded width (its low `ew` bits, two's-complement),
 /// a `Bool` element becomes a 1-bit value, and a `BitVec(ew)` passes through. An
@@ -4962,8 +5276,29 @@ fn apply_seq_op(
             need(3)?;
             seq_replace(arena, seq, args[0], args[1], args[2])?
         }
-        // Declined (slice 4+): replace-all / index-of search ops.
-        "seq.replace_all" | "seq.indexof" | "seq.nth_total" => {
+        // `(seq.indexof s t i)` / `(seq.indexof s t)` — the position of the FIRST
+        // occurrence of `t` in `s` at-or-after offset `i` (0 in the 2-arg form),
+        // else `-1`. A pure first-match position search over the packed elements,
+        // the `Int` result composing with arithmetic; sound for literal or symbolic
+        // operands (ADR-0029 slice 5).
+        "seq.indexof" => {
+            if args.len() == 2 {
+                let zero = arena.int_const(0);
+                seq_indexof(arena, seq, args[0], args[1], zero)?
+            } else {
+                need(3)?;
+                seq_indexof(arena, seq, args[0], args[1], args[2])?
+            }
+        }
+        // `(seq.replace_all s a b)` — replace ALL non-overlapping occurrences of
+        // `a` with `b` (`a = ε` is the identity; not found → `s`). Wired for the
+        // ground case; symbolic operands decline cleanly (ADR-0029 slice 5).
+        "seq.replace_all" => {
+            need(3)?;
+            seq_replace_all(arena, seq, args[0], args[1], args[2])?
+        }
+        // Declined: the remaining partial-`nth` total variant.
+        "seq.nth_total" => {
             return Err(SmtError::Unsupported(format!(
                 "sequence operator `{op}` is outside the wired sound subset (ADR-0029)"
             )));
@@ -5071,6 +5406,27 @@ fn apply_op(
         "str.replace" => {
             need(3)?;
             string_replace(arena, args[0], args[1], args[2])?
+        }
+        // `(str.indexof s t i)` / `(str.indexof s t)` — the position of the FIRST
+        // occurrence of `t` in `s` at-or-after offset `i` (offset 0 in the 2-arg
+        // form), else `-1`. A pure first-match position search over the packed
+        // layout, the `Int` result composing with arithmetic; sound for literal or
+        // symbolic operands (ADR-0029 slice 5).
+        "str.indexof" => {
+            if args.len() == 2 {
+                let zero = arena.int_const(0);
+                string_indexof(arena, args[0], args[1], zero)?
+            } else {
+                need(3)?;
+                string_indexof(arena, args[0], args[1], args[2])?
+            }
+        }
+        // `(str.replace_all s a b)` — replace ALL non-overlapping occurrences of
+        // `a` with `b` (`a = ""` is the identity; not found → `s`). Wired for the
+        // ground case; symbolic operands decline cleanly (ADR-0029 slice 5).
+        "str.replace_all" => {
+            need(3)?;
+            string_replace_all(arena, args[0], args[1], args[2])?
         }
         // `str.to_code s` — the code point of the single char of `s`, else `-1`
         // (an `Int`, composes with arithmetic). Byte model: code is `s[0]`
@@ -5544,17 +5900,17 @@ fn apply_op(
         // Builtins above take priority, matching SMT-LIB reserved names.
         other => {
             // String/regex operators outside the wired bounded subset
-            // (`str.replace`, `str.indexof`, `str.in_re`, the `re.*` constructors,
-            // …) are declined cleanly (ADR-0029) so a benchmark using them returns
-            // `Unknown`/`Unsupported` — never a wrong verdict, never a confusing
-            // "unknown operator".
+            // (`str.replace_re`, `str.indexof_re`, the `re.comp`/`re.diff`
+            // constructors, …) are declined cleanly (ADR-0029) so a benchmark using
+            // them returns `Unknown`/`Unsupported` — never a wrong verdict, never a
+            // confusing "unknown operator".
             if other.starts_with("str.") || other.starts_with("re.") {
                 return Err(SmtError::Unsupported(format!(
                     "string/regex operator `{other}` is outside the wired bounded subset \
                      (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, \
-                     str.at, str.substr, str.replace, str.to_code, str.from_code, str.to_int, \
-                     str.from_int, str.< , str.<=, str.++ (variable, bounded), = / distinct over \
-                     String"
+                     str.at, str.substr, str.replace, str.replace_all (ground), str.indexof, \
+                     str.to_code, str.from_code, str.to_int, str.from_int, str.< , str.<=, \
+                     str.++ (variable, bounded), = / distinct over String"
                 )));
             }
             if let Some(func) = arena.find_function(other) {

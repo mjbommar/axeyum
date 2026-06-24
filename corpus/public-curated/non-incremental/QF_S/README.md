@@ -6,11 +6,13 @@ This is the **first** QF_S (Strings) measurement — the division opened this
 session by wiring the bounded packed-bit-vector string lowering (ADR-0029) into
 the SMT-LIB parser.
 
-- `cvc5-regress-clean/` — **123** clean files from the cvc5 strings regression
-  suite (`references/cvc5/test/regress/cli/regress{0,1}/strings`, a gitignored
-  shallow clone), filtered to `(set-logic QF_S)` or `(set-logic QF_SLIA)` with a
-  machine-readable `(set-info :status sat|unsat)` ground truth and **only** plain
-  commands (`set-logic`/`set-info`/`set-option`/`declare-fun`/`declare-const`/
+- `cvc5-regress-clean/` — **127** files: **123** clean files from the cvc5
+  strings regression suite
+  (`references/cvc5/test/regress/cli/regress{0,1}/strings`, a gitignored shallow
+  clone) plus **4** hand-authored `str.indexof`/`str.replace_all` files (slice 6),
+  filtered to `(set-logic QF_S)` or `(set-logic QF_SLIA)` with a machine-readable
+  `(set-info :status sat|unsat)` ground truth and **only** plain commands
+  (`set-logic`/`set-info`/`set-option`/`declare-fun`/`declare-const`/
   `assert`/`check-sat`/`exit`) — no `push`/`pop`, `get-value`, `define-fun-rec`,
   or other exotic/incremental commands.
 
@@ -31,7 +33,9 @@ Both `(declare-const s String)` and `(declare-fun s () String)` open this
 representation. Wired operators: `str.len`, `str.prefixof`, `str.contains`,
 `str.suffixof`, `str.at` (constant **and** variable `Int` index), `str.++`
 (variable, bounded), `str.substr`, `str.replace` (first-occurrence splice,
-literal or symbolic `a`/`b`), `str.to_code`, `str.from_code` (conservative
+literal or symbolic `a`/`b`), `str.indexof` (first-match position at-or-after an
+offset, literal or symbolic), `str.replace_all` (ground non-overlapping fold),
+`str.to_code`, `str.from_code` (conservative
 to ASCII), `str.to_int`, `str.from_int` (QF_SLIA Int bridge), `str.<`, `str.<=`,
 `str.in_re` over the bounded **regex** fragment (`str.to_re` of a literal,
 `re.range`, `re.allchar`/`re.all`/`re.none`, `re.++`/`re.union`/`re.inter`,
@@ -40,12 +44,52 @@ to ASCII), `str.to_int`, `str.from_int` (QF_SLIA Int bridge), `str.<`, `str.<=`,
 
 Everything outside this subset — the regex constructs `re.comp`/`re.diff`/
 `re.loop`/`re.^`, a symbolic `str.to_re x`, a code point > 255, an NFA over the
-state cap, `str.indexof`/`str.replace_all`/`str.replace_re`/`str.indexof_re`, the
-`Seq` sort, and over-bound cases (literals > 8 bytes, a concat past the 16-byte
-cap, a `str.replace` whose result max length exceeds the 16-byte cap, a
-`str.from_int` whose decimal expansion exceeds 10 digits) — is declined as
-a clean `Unsupported`. **Soundness is by construction**: an incomplete or
-unsupported case returns `unknown`/`unsupported`, never a wrong verdict.
+state cap, `str.replace_re`/`str.indexof_re`, a **symbolic** `str.replace_all`,
+the `Seq` sort, and over-bound cases (literals > 8 bytes, a concat past the
+16-byte cap, a `str.replace`/`str.replace_all` whose result max length exceeds
+the 16-byte cap, a `str.from_int` whose decimal expansion exceeds 10 digits) — is
+declined as a clean `Unsupported`. **Soundness is by construction**: an incomplete
+or unsupported case returns `unknown`/`unsupported`, never a wrong verdict.
+
+### `str.indexof` / `str.replace_all` (slice 6)
+
+`(str.indexof s t i)` (or `(str.indexof s t)` at offset 0) returns the position
+of the **first** occurrence of `t` in `s` at-or-after `i`, else `-1`. It reuses
+the slice-4 `str.replace` first-match cascade — `match(p)` aligns `t` at `p` with
+`p + len(t) ≤ len(s)` — restricted to eligible candidates `p ≥ i`; the leftmost
+eligible `P` is the `Int` result, with the SMT-LIB corners verbatim: `i < 0` →
+`-1`, `i > len(s)` → `-1`, `t = ""` → `i` when `0 ≤ i ≤ len(s)`. It is a pure
+position search (no length-changing rebuild), sound for literal **or** symbolic
+`s`/`t`/`i`. Because the result is an `Int`, an `indexof`-keyed **ground unsat**
+comes back `unknown` (the `Int` bridge keeps it off the pure bit-blast path) — a
+sound decline, never a wrong verdict; the curated unsats use the pure-BV
+`replace_all` literal path instead.
+
+`(str.replace_all s a b)` replaces **all** non-overlapping, left-to-right
+occurrences of `a` with `b`. SMT-LIB corner (**verified against Z3/cvc5**):
+`a = ""` is the **identity** (the empty-pattern replace_all leaves `s` unchanged
+— this differs from single `str.replace`, where empty `a` prepends `b`); the scan
+resumes *after* each inserted `b` (no rescan inside `b`, so
+`(str.replace_all "aa" "a" "aa") = "aaaa"`). This slice wires the **fully-ground**
+case exactly (all of `s`, `a`, `b` constant) by folding the replacement and
+packing the literal (so it rides the pure-BV path and decides both directions); a
+**symbolic** operand declines cleanly (`Unsupported` → `unknown`) — a sound
+symbolic moving-cursor splice (bounded only for a concrete `len(a)`, with the
+growing result kept under the 16-byte cap) is a scoped follow-up, never a
+wrong/truncated string.
+
+### Slice 6 measurement (`str.indexof` / `str.replace_all`)
+
+- **files 127** (123 + 4 curated). axeyum **decides 51** (sat 38, unsat 13),
+  unknown 13, **unsupported 63**, errors 0; **compared 48, agree 48, DISAGREE 0**.
+  Every decided verdict matches both the Z3 4.13.3 binary and the benchmark's
+  `:status`, and every `sat` model replay-checks. No regression on
+  QF_UF/QF_UFLIA (DISAGREE 0), `par2_mean` ≈ 4.07 s (no new timeout).
+- New deciders (all in `axeyum-smtlib`, no `axeyum-ir`/`axeyum-solver` change):
+  `str.indexof` clears two existing regress files — `bug613` (sat,
+  `(< (str.indexof s "<a>" 0) (str.indexof s "</a>" 0))` over a literal `s`) and
+  `issue3497` (sat) — plus the 4 curated `str.indexof`/`str.replace_all` files
+  (2 sat indexof, 1 sat replace_all grow, 1 unsat replace_all not-first-only).
 
 ### Bounded regex matching (`str.in_re`, slice 5)
 
@@ -224,9 +268,9 @@ artifact):
 |---|---|---|
 | over-bound `concat` past the 16-byte cap | 25 | **biggest bucket** — a wider-cap or a length-abstraction path; mind the formula-size blowup (naively raising `STRING_MAX_LEN` regresses the decide-rate, measured in slice 4) |
 | string literal > 8 bytes | 10 | same length-bound tension; a literal-only widening (without widening every symbol) is the cheaper lever to try |
-| `str.replace_all` (plain `str.replace` now **wired**, slice 4: first-occurrence byte-match + splice, literal or symbolic `a`/`b`) | few | `replace_all` repeats the first-match splice until no match; the result-length growth (capped) and the no-match corner are handled the same way |
+| `str.replace_all` — ground case **wired** (slice 6: non-overlapping fold + literal pack); a **symbolic** `replace_all` still declines | few | the symbolic case needs a moving-cursor splice whose round count is bounded only for a concrete `len(a)` and whose growing result stays under the 16-byte cap |
 | declined regex (`re.comp`/`re.diff` 4, `re.loop`/`re.^` indexed 6, symbolic `str.to_re` 5, a regex op used outside `str.in_re` ~5) | ~20 | `re.comp`/`re.diff` need a complement-aware (DFA-product) encoding; `re.loop` is a bounded-repeat unroll; symbolic `str.to_re` needs matching against an unknown string |
-| `str.indexof` / `str.indexof_re` | 2 | bounded byte-matching cascade returning the first match position (or `-1`); reuses the Int↔position bridge from slice-3 `str.at`/`str.substr` |
+| `str.indexof` now **wired** (slice 6: first-match cascade restricted to `p ≥ i`, `Int` result); `str.indexof_re` still declines | ~1 | `indexof_re` matches a regex from an offset; the off-lane residual is the `Int`-result bridge (an `indexof`-keyed ground *unsat* returns a sound `unknown`) and the over-bound length lever |
 | `str.update`, `str.to_lower`, `re.inter` (nested), `Seq`, a 29-digit Int constant | few | genuinely unsupported / unbounded / int-width-limited — remain a sound decline |
 
 Note on slice-5 unknowns: the 11 `unknown:Incomplete` instances are sound

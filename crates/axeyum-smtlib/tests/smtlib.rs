@@ -1642,6 +1642,117 @@ fn string_replace_over_cap_declines() {
 }
 
 #[test]
+fn string_indexof_constant_eval() {
+    // First occurrence at-or-after the offset; -1 when none; empty `t` corners.
+    assert!(
+        eval_const_script("(assert (= (str.indexof \"abcabc\" \"bc\" 0) 1))\n"),
+        "first bc at 1"
+    );
+    assert!(
+        eval_const_script("(assert (= (str.indexof \"abcabc\" \"bc\" 2) 4))\n"),
+        "next bc at-or-after 2 is 4"
+    );
+    assert!(
+        eval_const_script("(assert (= (str.indexof \"abc\" \"z\" 0) (- 1)))\n"),
+        "not found ⇒ -1"
+    );
+    // 2-arg form is offset 0.
+    assert!(
+        eval_const_script("(assert (= (str.indexof \"abcabc\" \"bc\") 1))\n"),
+        "2-arg defaults to offset 0"
+    );
+    // Empty pattern: returns the offset when 0 ≤ i ≤ len(s).
+    assert!(
+        eval_const_script("(assert (= (str.indexof \"abc\" \"\" 1) 1))\n"),
+        "empty t ⇒ offset i"
+    );
+    assert!(
+        eval_const_script("(assert (= (str.indexof \"abc\" \"\" 3) 3))\n"),
+        "empty t at i = len(s) ⇒ len(s)"
+    );
+    assert!(
+        eval_const_script("(assert (= (str.indexof \"abc\" \"\" 4) (- 1)))\n"),
+        "empty t with i > len(s) ⇒ -1"
+    );
+    // i > len(s) with a non-empty pattern ⇒ -1.
+    assert!(
+        eval_const_script("(assert (= (str.indexof \"abc\" \"a\" 5) (- 1)))\n"),
+        "i > len ⇒ -1"
+    );
+    // i < 0 ⇒ -1 (even though `a` occurs).
+    assert!(
+        eval_const_script("(assert (= (str.indexof \"abc\" \"a\" (- 1)) (- 1)))\n"),
+        "i < 0 ⇒ -1"
+    );
+}
+
+#[test]
+fn string_indexof_symbolic_eval() {
+    // (str.indexof s "b" 0) = 2 over a symbolic `s`: only a witness whose first `b`
+    // is at position 2 satisfies it.
+    let text = "(declare-fun s () String)\n\
+                (assert (= (str.indexof s \"b\" 0) 2))\n(check-sat)\n";
+    assert!(
+        eval_string_script_vars(text, &[("s", b"aab")]),
+        "first b at 2"
+    );
+    assert!(
+        !eval_string_script_vars(text, &[("s", b"abc")]),
+        "first b at 1 ≠ 2"
+    );
+    assert!(
+        !eval_string_script_vars(text, &[("s", b"aaa")]),
+        "no b ⇒ -1 ≠ 2"
+    );
+}
+
+#[test]
+fn string_replace_all_constant_eval() {
+    // Replace ALL non-overlapping occurrences; empty `a` is the identity.
+    assert!(
+        eval_const_script("(assert (= (str.replace_all \"aaa\" \"a\" \"bb\") \"bbbbbb\"))\n"),
+        "all a → bb"
+    );
+    assert!(
+        eval_const_script("(assert (= (str.replace_all \"abc\" \"x\" \"y\") \"abc\"))\n"),
+        "not found ⇒ unchanged"
+    );
+    // Empty pattern is the identity (NOT the single-replace prepend behaviour).
+    assert!(
+        eval_const_script("(assert (= (str.replace_all \"abc\" \"\" \"Z\") \"abc\"))\n"),
+        "empty a ⇒ identity"
+    );
+    // Non-overlapping, scan resumes AFTER the inserted b (no rescan inside b):
+    // "aa" with a → "aa" gives "aaaa", not a divergent rewrite.
+    assert!(
+        eval_const_script("(assert (= (str.replace_all \"aa\" \"a\" \"aa\") \"aaaa\"))\n"),
+        "no rescan inside inserted b"
+    );
+    // Multi-byte pattern, non-overlapping left-to-right.
+    assert!(
+        eval_const_script("(assert (= (str.replace_all \"ababab\" \"ab\" \"X\") \"XXX\"))\n"),
+        "each ab → X"
+    );
+    // Negative oracle: a wrong (first-only) result must NOT hold.
+    assert!(
+        !eval_const_script("(assert (= (str.replace_all \"aaa\" \"a\" \"bb\") \"bbaa\"))\n"),
+        "replace_all is all, not first-only"
+    );
+}
+
+#[test]
+fn string_replace_all_symbolic_declines() {
+    // replace_all over a symbolic operand declines cleanly (Unknown), never a wrong
+    // verdict — the symbolic moving-cursor splice is left as a follow-up.
+    let err = parse_script(
+        "(declare-fun s () String)\n\
+         (assert (= (str.replace_all s \"a\" \"b\") \"b\"))\n(check-sat)\n",
+    )
+    .expect_err("symbolic replace_all declines");
+    assert!(matches!(err, SmtError::Unsupported(_)), "got {err:?}");
+}
+
+#[test]
 fn string_at_variable_index_eval() {
     // (= (str.at "ab" i) "b") → true only at i = 1. Models the regression shape
     // `(= (str.at x i) "b")` with a non-constant Int index.
@@ -2386,33 +2497,88 @@ fn seq_replace_grow_over_cap_declines() {
 }
 
 #[test]
-fn seq_replace_family_still_declined() {
-    // `seq.replace` is now wired (first-occurrence splice); the remaining
-    // replace-all / index-of search ops stay cleanly declined (Unsupported),
+fn seq_replace_all_symbolic_declines() {
+    // `seq.replace_all` is wired for the GROUND case only; a symbolic operand
+    // declines cleanly (Unsupported), never a wrong/truncated sequence.
+    let err = parse_script(
+        "(declare-fun s () (Seq Int))\n\
+         (assert (= (seq.replace_all s (seq.unit 1) (seq.unit 2)) s))\n(check-sat)\n",
+    )
+    .expect_err("symbolic seq.replace_all declines");
+    assert!(matches!(err, SmtError::Unsupported(_)), "got {err:?}");
+}
+
+#[test]
+fn seq_nth_total_still_declined() {
+    // The remaining `seq.nth_total` variant stays cleanly declined (Unsupported),
     // never a wrong verdict.
-    for op in ["seq.replace_all", "seq.indexof"] {
-        let text = format!(
-            "(declare-fun s () (Seq Int))\n(assert (= (seq.len ({op} s s s)) 0))\n(check-sat)\n"
-        );
-        let err = parse_script(&text).expect_err("declined op");
-        assert!(matches!(err, SmtError::Unsupported(_)), "{op}: got {err:?}");
-    }
+    let text = "(declare-fun s () (Seq Int))\n\
+                (assert (= (seq.nth_total s 0) 0))\n(check-sat)\n";
+    let err = parse_script(text).expect_err("declined op");
+    assert!(matches!(err, SmtError::Unsupported(_)), "got {err:?}");
+}
+
+#[test]
+fn seq_indexof_eval() {
+    // (seq.indexof s [3] 0) over (Seq Int): position of the first [3].
+    // Witness s = [1,3,2,3] ⇒ first [3] at index 1.
+    let text = "(declare-fun s () (Seq Int))\n\
+                (assert (= (seq.indexof s (seq.unit 3) 0) 1))\n(check-sat)\n";
+    assert!(
+        eval_seq_script(text, "s", SEQ_INT_TOTAL, pack_seq_int(&[1, 3, 2, 3])),
+        "first [3] at 1"
+    );
+    // At-or-after offset 2: the next [3] is at index 3.
+    let text2 = "(declare-fun s () (Seq Int))\n\
+                 (assert (= (seq.indexof s (seq.unit 3) 2) 3))\n(check-sat)\n";
+    assert!(
+        eval_seq_script(text2, "s", SEQ_INT_TOTAL, pack_seq_int(&[1, 3, 2, 3])),
+        "next [3] at-or-after 2 is 3"
+    );
+    // Not found ⇒ -1.
+    let text3 = "(declare-fun s () (Seq Int))\n\
+                 (assert (= (seq.indexof s (seq.unit 7) 0) (- 1)))\n(check-sat)\n";
+    assert!(
+        eval_seq_script(text3, "s", SEQ_INT_TOTAL, pack_seq_int(&[1, 3, 2, 3])),
+        "no [7] ⇒ -1"
+    );
+}
+
+#[test]
+fn seq_replace_all_ground_eval() {
+    // (seq.replace_all [1,1,1] [1] [2]) = [2,2,2] over (Seq Int), folded ground.
+    let text = "(declare-fun unused () (Seq Int))\n\
+                (assert (= (seq.replace_all (seq.++ (seq.unit 1) (seq.++ (seq.unit 1) (seq.unit 1)))\n\
+                            (seq.unit 1) (seq.unit 2))\n\
+                           (seq.++ (seq.unit 2) (seq.++ (seq.unit 2) (seq.unit 2)))))\n(check-sat)\n";
+    assert!(eval_seq_ground(text), "all [1] → [2]");
+    // Empty pattern is the identity: replace_all [1,2] [] [9] = [1,2].
+    let id = "(declare-fun unused () (Seq Int))\n\
+              (assert (= (seq.replace_all (seq.++ (seq.unit 1) (seq.unit 2)) (as seq.empty (Seq Int)) (seq.unit 9))\n\
+                         (seq.++ (seq.unit 1) (seq.unit 2))))\n(check-sat)\n";
+    assert!(eval_seq_ground(id), "empty a ⇒ identity");
+    // Not found ⇒ unchanged.
+    let nf = "(declare-fun unused () (Seq Int))\n\
+              (assert (= (seq.replace_all (seq.++ (seq.unit 1) (seq.unit 2)) (seq.unit 7) (seq.unit 9))\n\
+                         (seq.++ (seq.unit 1) (seq.unit 2))))\n(check-sat)\n";
+    assert!(eval_seq_ground(nf), "no [7] ⇒ unchanged");
 }
 
 #[test]
 fn unsupported_string_op_declines_gracefully() {
     // A `str.*` operator outside the wired bounded subset is a clean `Unsupported`
-    // (the benchmark is declined, never mis-decided). `str.replace` is now wired,
-    // so this checks a still-unsupported op (`str.indexof`).
+    // (the benchmark is declined, never mis-decided). `str.replace`/`str.indexof`/
+    // `str.replace_all` are now wired, so this checks a still-unsupported op
+    // (`str.to_lower`).
     let err = parse_script(
         "(declare-fun s () String)\n\
-         (assert (= (str.indexof s \"a\" 0) 0))\n(check-sat)\n",
+         (assert (= (str.to_lower s) s))\n(check-sat)\n",
     )
-    .expect_err("str.indexof is outside the wired subset");
+    .expect_err("str.to_lower is outside the wired subset");
     let SmtError::Unsupported(msg) = err else {
-        panic!("expected Unsupported for str.indexof, got {err:?}");
+        panic!("expected Unsupported for str.to_lower, got {err:?}");
     };
-    assert!(msg.contains("str.indexof"), "actionable msg: {msg}");
+    assert!(msg.contains("str.to_lower"), "actionable msg: {msg}");
 }
 
 /// The full set of standard output/query no-op commands is accepted, so a
