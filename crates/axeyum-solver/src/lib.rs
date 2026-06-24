@@ -121,7 +121,10 @@ mod uflra_online;
 mod z3_backend;
 
 pub use abduct::{MAX_CANDIDATES, abduct};
-pub use abv::{check_qf_abv_lazy, check_qf_abv_lazy_row, check_with_array_elimination};
+pub use abv::{
+    ArrayElimUnsatCertificate, certify_array_elim_unsat, check_qf_abv_lazy, check_qf_abv_lazy_row,
+    check_with_array_elimination,
+};
 pub use alethe_lra::{
     check_alethe_lra, prove_lia_unsat_alethe, prove_lra_unsat_alethe, prove_uflra_unsat_alethe,
 };

@@ -30,7 +30,25 @@ pub enum TrustId {
     Tseitin,
     /// CNF UNSAT from the CDCL core (DRAT-checked).
     SatRefutation,
-    /// Arrays → BV by read-over-write + Ackermann (ADR-0010).
+    /// Arrays → BV by read-over-write + Ackermann (ADR-0010). The
+    /// **eager-elimination** UNSAT sub-case (`check_with_array_elimination`: every
+    /// `select` over an array variable replaced by a fresh var after read-over-write,
+    /// the full pairwise select-congruence set asserted up front, the resulting
+    /// `QF_BV` refuted) now has an independent per-query re-checker —
+    /// [`crate::ArrayElimUnsatCertificate::recheck`] re-runs the deterministic
+    /// [`eliminate_arrays`](axeyum_rewrite::eliminate_arrays) on the original
+    /// assertions, structurally re-derives the select-congruence set (witnessing
+    /// each appended constraint is a valid array-read consequence — read-over-write
+    /// is an equivalence, select-congruence is valid — so the eliminated formula is
+    /// a sound relaxation), re-bit-blasts it to confirm the stored CNF, and re-runs
+    /// `check_drat`. This composes the Ackermann congruence witness ([`Ackermann`]):
+    /// array elim's second step IS an Ackermann congruence over a per-array read
+    /// function. `is_certified` stays `false` because the *general* array reasoning
+    /// (the lazy/CEGAR `sat` path, lazy extensionality, the array-combined
+    /// `QF_AUFBV` route, and array `sat` models) carries no such certificate — see
+    /// [`TrustId::is_certified`].
+    ///
+    /// [`Ackermann`]: TrustId::Ackermann
     ArrayElim,
     /// Uninterpreted-function applications → fresh vars + functional consistency (ADR-0013).
     /// The **eager-elimination** UNSAT sub-case (`check_with_function_elimination`:
@@ -190,9 +208,18 @@ impl TrustId {
     /// array-combined `QF_AUFBV` route, and arithmetic-sorted function `sat` models
     /// have no per-query certificate, so this bit stays `false`.
     ///
+    /// [`ArrayElim`] is likewise analogous: its **eager-elimination** UNSAT sub-case
+    /// now carries a re-checkable [`crate::ArrayElimUnsatCertificate`] (the
+    /// read-over-write + full select-congruence set re-derived from the originals,
+    /// the CNF re-blasted, plus `check_drat`), composing the Ackermann congruence
+    /// witness, but the lazy/CEGAR `sat` path, lazy extensionality, the
+    /// array-combined `QF_AUFBV` route, and array `sat` models have no per-query
+    /// certificate, so this bit stays `false`.
+    ///
     /// [`XorGaussian`]: TrustId::XorGaussian
     /// [`IntBlast`]: TrustId::IntBlast
     /// [`Ackermann`]: TrustId::Ackermann
+    /// [`ArrayElim`]: TrustId::ArrayElim
     #[must_use]
     pub const fn is_certified(self) -> bool {
         match self {
