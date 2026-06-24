@@ -494,6 +494,25 @@ fn record_probe(arena: &TermArena, assertions: &[TermId], rec: &mut Recorder<'_>
     });
 }
 
+/// Whether an [`UnknownKind`] is a **resource/budget** decline (wall-clock,
+/// deterministic resource, memory, translation-node, or CNF-size cap) rather than a
+/// logical incompleteness. A budget `Unknown` from a route that ran out of its
+/// configured budget mid-decision must NOT be silently swallowed by a later,
+/// strictly-less-capable fallback that then reports a *logical* `Unknown` — that
+/// would mask the true (budget) cause and look like a capability regression to a
+/// fresh-budget caller. Returning the budget `Unknown` verbatim keeps the honest,
+/// first-class result; `unknown` is never an error and never a wrong verdict.
+fn is_budget_unknown_kind(kind: UnknownKind) -> bool {
+    matches!(
+        kind,
+        UnknownKind::Timeout
+            | UnknownKind::ResourceLimit
+            | UnknownKind::MemoryLimit
+            | UnknownKind::NodeBudget
+            | UnknownKind::EncodingBudget
+    )
+}
+
 /// Whether any declared uninterpreted function has an `Int`/`Real` parameter or
 /// result — the signal to route through EUF + arithmetic combination
 /// ([`crate::check_with_uf_arithmetic`]) rather than the bit-blasting fallback.
@@ -1177,6 +1196,28 @@ fn dispatch_uf_fast_paths(
                 });
                 return Ok(Some(CheckResult::Unknown(reason)));
             }
+            // A *budget* `Unknown` (wall-clock / resource / memory / node / CNF cap)
+            // means the eager EUF + arithmetic route ran out of its configured budget
+            // mid-decision — this very query decides under a fresh full budget (it is
+            // the eager Ackermann route that `check_with_uf_arithmetic` *standalone*
+            // settles). The int-blast + Ackermann fallback below is NOT a different,
+            // more-capable procedure here: it is bounded-width-incomplete (it reports
+            // `Incomplete` "no model within width 32") and, after the budget is already
+            // spent, only burns more wall-clock to return a *logical* `Unknown` that
+            // masks the true cause. So return the eager route's budget `Unknown`
+            // verbatim, preserving its budget character — never a wrong verdict, and the
+            // first-class budget result is the honest answer (a fresh-budget caller, or
+            // the `check_with_uf_arithmetic` baseline, still decides). Soundness: this
+            // only ever returns an `Unknown` the eager route already computed.
+            CheckResult::Unknown(reason) if is_budget_unknown_kind(reason.kind) => {
+                with_recorder(rec, |t| {
+                    t.record_declined("uf-arithmetic", DeclineReason::from_unknown(&reason));
+                });
+                return Ok(Some(CheckResult::Unknown(reason)));
+            }
+            // A genuinely *logical* (non-budget) eager `Unknown` (a shape the EUF +
+            // arithmetic combination cannot settle) may still decide via the complete
+            // int-blast + Ackermann path: fall through to it.
             CheckResult::Unknown(reason) => {
                 with_recorder(rec, |t| {
                     t.record_declined("uf-arithmetic", DeclineReason::from_unknown(&reason));
