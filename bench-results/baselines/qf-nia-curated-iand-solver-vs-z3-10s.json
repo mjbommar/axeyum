@@ -1,0 +1,300 @@
+{
+  "config": {
+    "backend": "axeyum-solver check_auto",
+    "backend_kind": "solver",
+    "cnf_clause_budget": null,
+    "cnf_inprocessing": false,
+    "cnf_variable_budget": null,
+    "cnf_vivify": false,
+    "compare_backend": "z3 4.13.3.0",
+    "compare_z3": true,
+    "config_hash": "93490eee3a8be066",
+    "corpus": "corpus/public-curated/iand",
+    "corpus_hash": "5767a58da974a2b3",
+    "corpus_source": null,
+    "hardware": {
+      "arch": "x86_64",
+      "hostname": null,
+      "os": "linux",
+      "parallelism": 16
+    },
+    "harness": "axeyum-bench 0.1.0",
+    "jobs": 4,
+    "limit": null,
+    "logic": "QF_NIA",
+    "native_cdcl": false,
+    "node_budget": null,
+    "preprocess": false,
+    "query_plan": {
+      "mode": "full",
+      "refine_adaptive_batch": false,
+      "refine_batch": 1,
+      "refine_rounds": 16,
+      "refine_select": "first",
+      "sat_replay_failure_policy": "soundness-alarm"
+    },
+    "rewrite": {
+      "enabled_rule_ids": [],
+      "mode": "off",
+      "rule_set": null
+    },
+    "seed": "none",
+    "selected_families": null,
+    "timeout_ms": 10000
+  },
+  "instances": [
+    {
+      "assertions": 3,
+      "backend_stats": {
+        "check_auto_ms": 0.323504
+      },
+      "dag_nodes": 15,
+      "distinct_symbols": 2,
+      "expected": "sat",
+      "file": "corpus/public-curated/iand/cvc5__iand-native-1.smt2",
+      "max_depth": 5,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": null,
+        "decision_compared": false,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "unsupported",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "(error \"line 17 column 26: unknown constant iand (Int Int) \")",
+          "solve_ms": 11,
+          "verdict": null
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 3,
+          "assumptions": 0,
+          "dag_nodes": 15,
+          "digest": "095717f1f76ff544",
+          "tree_nodes": 22
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 3,
+            "assumptions": 0,
+            "dag_nodes": 15,
+            "digest": "095717f1f76ff544",
+            "tree_nodes": 22
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 15,
+        "input_tree_nodes": 22,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 3,
+        "output_dag_nodes": 15,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 5,
+        "output_tree_nodes": 22,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 22
+    },
+    {
+      "assertions": 5,
+      "backend_stats": {
+        "check_auto_ms": 39.079445
+      },
+      "dag_nodes": 20,
+      "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
+      "distinct_symbols": 2,
+      "expected": "unsat",
+      "file": "corpus/public-curated/iand/cvc5__iand-native-2.smt2",
+      "max_depth": 5,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 5,
+          "assumptions": 0,
+          "dag_nodes": 20,
+          "digest": "fa169ec723f2b881",
+          "tree_nodes": 32
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 5,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 5,
+            "assumptions": 0,
+            "dag_nodes": 20,
+            "digest": "fa169ec723f2b881",
+            "tree_nodes": 32
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 20,
+        "input_tree_nodes": 32,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 5,
+        "output_dag_nodes": 20,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 5,
+        "output_tree_nodes": 32,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 39,
+      "translate_ms": 0,
+      "tree_nodes": 32
+    },
+    {
+      "assertions": 4,
+      "backend_stats": {
+        "check_auto_ms": 3.1085879999999997
+      },
+      "dag_nodes": 19,
+      "detail": "Incomplete: bounded integer model overflowed at width 32 (assertion #7 is false over exact semantics); widen the bound",
+      "distinct_symbols": 2,
+      "expected": "unsat",
+      "file": "corpus/public-curated/iand/cvc5__iand-native-granularities.smt2",
+      "max_depth": 6,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 4,
+          "assumptions": 0,
+          "dag_nodes": 19,
+          "digest": "7db089643ca01e1e",
+          "tree_nodes": 28
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 4,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 4,
+            "assumptions": 0,
+            "dag_nodes": 19,
+            "digest": "7db089643ca01e1e",
+            "tree_nodes": 28
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 19,
+        "input_tree_nodes": 28,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 4,
+        "output_dag_nodes": 19,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 6,
+        "output_tree_nodes": 28,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 3,
+      "translate_ms": 0,
+      "tree_nodes": 28
+    }
+  ],
+  "summary": {
+    "agree": 1,
+    "blocker_buckets": {
+      "unknown:Incomplete": 2
+    },
+    "disagree": 0,
+    "errors": 0,
+    "files": 3,
+    "layer_attribution": null,
+    "model_replay_failures": 0,
+    "oracle": {
+      "agree": 0,
+      "backend": "z3 4.13.3.0",
+      "compared": 0,
+      "disagree": 0,
+      "enabled": true,
+      "skipped": 3
+    },
+    "par2_mean_s": 13.333441168,
+    "query_plan": {
+      "original_dag_nodes": 54,
+      "original_tree_nodes": 82,
+      "slice_changed_instances": 0,
+      "slice_dag_nodes": 54,
+      "slice_dropped_terms": 0,
+      "slice_tree_nodes": 82
+    },
+    "rewrite": {
+      "applications": 0,
+      "changed_instances": 0,
+      "decision_changes": 0,
+      "decision_matches": 0,
+      "input_dag_nodes": 0,
+      "input_tree_nodes": 0,
+      "mode": "off",
+      "output_dag_nodes": 0,
+      "output_tree_nodes": 0,
+      "sat_unsat_conflicts": 0
+    },
+    "sat": 1,
+    "unknown": 2,
+    "unsat": 0,
+    "unsupported": 0
+  },
+  "triage": {
+    "errors": [],
+    "rewrite_decision_changes": [],
+    "soundness": {
+      "model_replay_failures": 0,
+      "oracle_disagreements": 0,
+      "rewrite_sat_unsat_conflicts": 0,
+      "status_disagreements": 0
+    },
+    "unsupported": []
+  },
+  "version": 14
+}

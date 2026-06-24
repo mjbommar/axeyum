@@ -82,6 +82,12 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
     let mut aliases: HashMap<String, TermId> = HashMap::new();
     let mut macros: HashMap<String, MacroDef<'_>> = HashMap::new();
     let mut sort_aliases: HashMap<String, Sort> = HashMap::new();
+    // `:named` term annotations: `(! t :named foo)` binds `foo` as an alias for
+    // the term `t` (SMT-LIB `:named` attribute). The binding is script-global
+    // (not lexically scoped), so the map persists across commands; a later bare
+    // reference to `foo` resolves to `t`. Declared symbols take precedence (see
+    // `parse_atom`), so a real declaration never gets shadowed by a `:named`.
+    let mut named: HashMap<String, TermId> = HashMap::new();
 
     // Width used to model every arity-0 `(declare-sort U 0)` uninterpreted sort
     // as a `BitVec(W)` (see [`uninterpreted_sort_width`]). Computed once from a
@@ -96,6 +102,7 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
             &mut aliases,
             &mut macros,
             &mut sort_aliases,
+            &mut named,
             uninterpreted_width,
             command,
         )?;
@@ -160,6 +167,7 @@ fn parse_command<'a>(
     aliases: &mut HashMap<String, TermId>,
     macros: &mut HashMap<String, MacroDef<'a>>,
     sort_aliases: &mut HashMap<String, Sort>,
+    named: &mut HashMap<String, TermId>,
     uninterpreted_width: u32,
     command: &'a SExpr,
 ) -> Result<(), SmtError> {
@@ -216,7 +224,13 @@ fn parse_command<'a>(
         // Optimization objectives (OMT): `(maximize t)` / `(minimize t)`.
         "maximize" | "minimize" => {
             exact_len(items, 2, head)?;
-            let t = parse_term(&mut script.arena, sexpr_at(items, 1)?, aliases, macros)?;
+            let t = parse_term(
+                &mut script.arena,
+                sexpr_at(items, 1)?,
+                aliases,
+                macros,
+                named,
+            )?;
             script.objectives.push((t, head == "maximize"));
         }
         // `(get-info k)` and `(echo "string")`: 2-token output/query commands,
@@ -229,7 +243,7 @@ fn parse_command<'a>(
                 .and_then(SExpr::list)
                 .ok_or_else(|| SmtError::Syntax("get-value expects (t …)".to_owned()))?;
             for t in list {
-                let term = parse_term(&mut script.arena, t, aliases, macros)?;
+                let term = parse_term(&mut script.arena, t, aliases, macros, named)?;
                 script.get_value_terms.push(term);
             }
         }
@@ -241,7 +255,7 @@ fn parse_command<'a>(
                 .ok_or_else(|| SmtError::Syntax("check-sat-assuming expects (l ...)".to_owned()))?;
             let mut assumptions = Vec::with_capacity(list.len());
             for lit in list {
-                assumptions.push(parse_term(&mut script.arena, lit, aliases, macros)?);
+                assumptions.push(parse_term(&mut script.arena, lit, aliases, macros, named)?);
             }
             script.check_sats += 1;
             script
@@ -257,7 +271,7 @@ fn parse_command<'a>(
         "declare-const" => parse_declare_const(script, sort_aliases, items)?,
         "declare-datatype" => parse_declare_datatype(script, sort_aliases, items)?,
         "declare-datatypes" => parse_declare_datatypes(script, sort_aliases, items)?,
-        "define-fun" => parse_define_fun(script, aliases, macros, sort_aliases, items)?,
+        "define-fun" => parse_define_fun(script, aliases, macros, sort_aliases, named, items)?,
         "define-sort" => parse_define_sort(script, sort_aliases, items)?,
         // `(declare-sort U 0)` — an arity-0 uninterpreted sort, modeled as a
         // `BitVec(W)` (soundness on [`uninterpreted_sort_width`]). Arity ≥ 1
@@ -267,7 +281,7 @@ fn parse_command<'a>(
             exact_len(items, 2, head)?;
             let body = sexpr_at(items, 1)?;
             let name = named_label(body);
-            let t = parse_term(&mut script.arena, body, aliases, macros)?;
+            let t = parse_term(&mut script.arena, body, aliases, macros, named)?;
             script.assertions.push(t);
             script.assertion_names.push(name);
             script.commands.push(ScriptCommand::Assert(t));
@@ -295,6 +309,22 @@ fn parse_command<'a>(
         other => return Err(SmtError::Unsupported(format!("command `{other}`"))),
     }
     Ok(())
+}
+
+/// The `:named` attribute value of an attributed term `(! t :attr v … :named
+/// name …)`, returned as a borrowed name to bind script-globally as an alias for
+/// the inner term `t`. `items` is the full `!` application list. Scans the
+/// `:attr value` pairs after the term (index 2 onward), mirroring
+/// [`named_label`] but yielding the borrowed `&str` the iterative parser needs.
+fn attribute_named_name(items: &[SExpr]) -> Option<&str> {
+    let mut i = 2;
+    while i + 1 < items.len() {
+        if items[i].atom() == Some(":named") {
+            return items[i + 1].atom();
+        }
+        i += 2;
+    }
+    None
 }
 
 /// The `:named` label of an attributed assertion `(! t :named name …)`, if any.
@@ -473,6 +503,7 @@ fn parse_define_fun<'a>(
     aliases: &mut HashMap<String, TermId>,
     macros: &mut HashMap<String, MacroDef<'a>>,
     sort_aliases: &HashMap<String, Sort>,
+    named: &mut HashMap<String, TermId>,
     items: &'a [SExpr],
 ) -> Result<(), SmtError> {
     exact_len(items, 5, "define-fun")?;
@@ -484,7 +515,15 @@ fn parse_define_fun<'a>(
     let declared_sort = parse_sort(&script.arena, sort_aliases, sexpr_at(items, 3)?)?;
     let body_expr = sexpr_at(items, 4)?;
     if args.is_empty() {
-        parse_define_fun_alias(script, aliases, macros, name, declared_sort, body_expr)
+        parse_define_fun_alias(
+            script,
+            aliases,
+            macros,
+            named,
+            name,
+            declared_sort,
+            body_expr,
+        )
     } else {
         macros.insert(
             name.to_owned(),
@@ -502,11 +541,12 @@ fn parse_define_fun_alias(
     script: &mut Script,
     aliases: &mut HashMap<String, TermId>,
     macros: &HashMap<String, MacroDef<'_>>,
+    named: &mut HashMap<String, TermId>,
     name: &str,
     declared_sort: Sort,
     body_expr: &SExpr,
 ) -> Result<(), SmtError> {
-    let body = parse_term(&mut script.arena, body_expr, aliases, macros)?;
+    let body = parse_term(&mut script.arena, body_expr, aliases, macros, named)?;
     let body_sort = script.arena.sort_of(body);
     if body_sort != declared_sort {
         return Err(SmtError::Ir(axeyum_ir::IrError::SortsDiffer(
@@ -753,6 +793,10 @@ fn is_builtin_sort_name(name: &str) -> bool {
 enum Frame<'a> {
     /// Evaluate this expression (pushing children first when needed).
     Eval(&'a SExpr),
+    /// After the inner term of `(! t :named name)` is on the result stack, bind
+    /// `name → t` in the script-global `:named` map (the term itself stays on
+    /// the stack as the attributed term's value).
+    RegisterNamed { name: &'a str },
     /// Pop `argc` results and apply the operator list.
     Apply { items: &'a [SExpr], argc: usize },
     /// Pop `argc` results and apply a rounding-mode FP op. The mode is the first
@@ -807,11 +851,13 @@ enum Frame<'a> {
     CombineMatch { testers: Vec<Option<TermId>> },
 }
 
+#[allow(clippy::too_many_lines)]
 fn parse_term<'a>(
     arena: &mut TermArena,
     root: &'a SExpr,
     aliases: &HashMap<String, TermId>,
     macros: &HashMap<String, MacroDef<'a>>,
+    named: &mut HashMap<String, TermId>,
 ) -> Result<TermId, SmtError> {
     let mut frames: Vec<Frame> = vec![Frame::Eval(root)];
     let mut results: Vec<TermId> = Vec::new();
@@ -824,10 +870,20 @@ fn parse_term<'a>(
                 e,
                 aliases,
                 macros,
+                named,
                 &scopes,
                 &mut frames,
                 &mut results,
             )?,
+            Frame::RegisterNamed { name } => {
+                // The just-evaluated `(! t :named name)` inner term is on top of
+                // the stack; bind `name → t` script-globally (it stays on the
+                // stack as the attributed term's value).
+                let t = *results
+                    .last()
+                    .ok_or_else(|| SmtError::Syntax("`:named` term".to_owned()))?;
+                named.insert(name.to_owned(), t);
+            }
             Frame::Apply { items, argc } => {
                 let args = results.split_off(results.len() - argc);
                 results.push(apply_op(arena, items, &args)?);
@@ -914,17 +970,19 @@ fn parse_term<'a>(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn queue_eval<'a>(
     arena: &mut TermArena,
     expr: &'a SExpr,
     aliases: &HashMap<String, TermId>,
     macros: &HashMap<String, MacroDef<'a>>,
+    named: &HashMap<String, TermId>,
     scopes: &[HashMap<&'a str, TermId>],
     frames: &mut Vec<Frame<'a>>,
     results: &mut Vec<TermId>,
 ) -> Result<(), SmtError> {
     match expr {
-        SExpr::Atom(a) => results.push(parse_atom(arena, a, aliases, scopes)?),
+        SExpr::Atom(a) => results.push(parse_atom(arena, a, aliases, named, scopes)?),
         SExpr::List(items) => queue_list_eval(arena, items, macros, frames, results)?,
     }
     Ok(())
@@ -943,11 +1001,17 @@ fn queue_list_eval<'a>(
     if head.atom() == Some("_") {
         results.push(parse_indexed_constant(arena, items)?);
     } else if head.atom() == Some("!") {
-        // Attributed term `(! t :attr v ...)` denotes `t`; the annotations
-        // (`:pattern` triggers, `:named`, …) are hints we currently drop.
+        // Attributed term `(! t :attr v ...)` denotes `t`. Non-`:named`
+        // annotations (`:pattern` triggers, …) are hints we drop. A `:named foo`
+        // attribute additionally binds `foo` as a script-global alias for `t`,
+        // so later bare references to `foo` resolve — we queue a
+        // [`Frame::RegisterNamed`] to record the binding once `t` is evaluated.
         let inner = items
             .get(1)
             .ok_or_else(|| SmtError::Syntax("`!` expects a term".to_owned()))?;
+        if let Some(name) = attribute_named_name(items) {
+            frames.push(Frame::RegisterNamed { name });
+        }
         frames.push(Frame::Eval(inner));
     } else if head.atom() == Some("let") {
         queue_let(items, frames)?;
@@ -1712,6 +1776,7 @@ fn parse_atom(
     arena: &mut TermArena,
     a: &str,
     aliases: &HashMap<String, TermId>,
+    named: &HashMap<String, TermId>,
     scopes: &[HashMap<&str, TermId>],
 ) -> Result<TermId, SmtError> {
     for scope in scopes.iter().rev() {
@@ -1754,6 +1819,11 @@ fn parse_atom(
     }
     if let Some(sym) = arena.find_symbol(a) {
         return Ok(arena.var(sym));
+    }
+    // A `:named` alias bound earlier by `(! t :named a)`. Consulted *after*
+    // declared symbols so a real declaration is never shadowed by a `:named`.
+    if let Some(&t) = named.get(a) {
+        return Ok(t);
     }
     // A bare numeral is a non-negative integer literal (negatives are `(- n)`).
     if a.bytes().all(|b| b.is_ascii_digit()) {
@@ -2276,6 +2346,14 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
             need(1)?;
             arena.bv_nego(args[0])?
         }
+        // Unary BV→BitVec(1) reductions (SMT-LIB 2.6), desugared to existing BV
+        // ops per cvc5/bitwuzla's authoritative elimination rules. See
+        // [`bv_reduce`] for the exact desugaring and soundness note. The result
+        // is always one bit wide.
+        "bvredor" | "bvredand" | "bvredxor" => {
+            need(1)?;
+            bv_reduce(arena, op, args[0])?
+        }
         // Floating-point: a value is its bit-vector pattern carried by a
         // `Sort::Float` (ADR-0026); the format is recovered from the operand sort.
         // Rounding-mode-free ops only; `(fp s e m)` assembles a literal.
@@ -2732,6 +2810,108 @@ fn bin(
     Ok(f(arena, args[0], args[1])?)
 }
 
+/// Desugars a unary BV reduction (`bvredor` / `bvredand` / `bvredxor`) over the
+/// `w`-bit operand `x` into a one-bit (`BitVec(1)`) result using existing BV
+/// operators only. The semantics follow SMT-LIB 2.6 verbatim, matching the
+/// authoritative elimination rules in cvc5
+/// (`src/theory/bv/rewrites-elimination`) and bitwuzla
+/// (`BV_RED{OR,AND,XOR}_ELIM`):
+///
+/// - `(bvredor x)`  = `#b1` iff `x != 0`. Desugared as `(bvnot (bvcomp x 0))`:
+///   `bvcomp x 0` is the one-bit equality `#b1` iff `x = 0`, so the `bvnot`
+///   flips it to `#b1` iff `x != 0`.
+/// - `(bvredand x)` = `#b1` iff every bit of `x` is set, i.e. `x` equals the
+///   all-ones value of its width. Desugared as `(bvcomp x (bvnot 0))`, where
+///   `(bvnot 0)` is the `w`-bit all-ones constant.
+/// - `(bvredxor x)` = the parity of `x` (XOR of all its bits). Desugared as the
+///   left-fold `(bvxor … (bvxor (extract 0 0 x) (extract 1 1 x)) …)` over every
+///   single-bit slice `((_ extract i i) x)` for `i` in `0..w`, each itself a
+///   `BitVec(1)`.
+///
+/// All three desugarings are denotation-preserving by construction (each named
+/// op is replaced by its definitional expansion in terms of ops axeyum already
+/// decides), so they can never produce a wrong `sat`/`unsat`.
+fn bv_reduce(arena: &mut TermArena, op: &str, x: TermId) -> Result<TermId, SmtError> {
+    let Sort::BitVec(w) = arena.sort_of(x) else {
+        return Err(SmtError::Syntax(format!(
+            "`{op}` expects a bit-vector operand, got {:?}",
+            arena.sort_of(x)
+        )));
+    };
+    Ok(match op {
+        "bvredor" => {
+            let zero = arena.bv_const(w, 0)?;
+            let eq = arena.bv_comp(x, zero)?;
+            arena.bv_not(eq)?
+        }
+        "bvredand" => {
+            let zero = arena.bv_const(w, 0)?;
+            let ones = arena.bv_not(zero)?;
+            arena.bv_comp(x, ones)?
+        }
+        "bvredxor" => {
+            let mut acc = arena.extract(0, 0, x)?;
+            for i in 1..w {
+                let bit = arena.extract(i, i, x)?;
+                acc = arena.bv_xor(acc, bit)?;
+            }
+            acc
+        }
+        _ => unreachable!("bv_reduce called with non-reduction op `{op}`"),
+    })
+}
+
+/// Desugars `((_ iand N) a b)` — the SMT-LIB integer bitwise-AND at bit-width
+/// `N` — into existing Int↔BV ops. Per the SMT-LIB `Ints` theory definition,
+/// for integer operands `a`, `b`:
+///
+/// ```text
+/// ((_ iand N) a b) = bv2nat( bvand( ((_ int2bv N) a), ((_ int2bv N) b) ) )
+/// ```
+///
+/// `((_ int2bv N) x)` reduces `x` modulo `2^N` to an `N`-bit two's-complement
+/// pattern (axeyum's [`TermArena::int2bv`] is exactly "the operand integer
+/// reduced mod `2^N`"), `bvand` is the bitwise AND of those patterns, and
+/// `bv2nat` ([`TermArena::bv2nat`]) reinterprets the `N`-bit result as the
+/// non-negative integer in `[0, 2^N)`. This is the operator's *definition*, so
+/// the desugaring is denotation-preserving and cannot yield a wrong verdict.
+///
+/// The index `N` must be a positive numeral; the application is binary.
+///
+/// # Errors
+///
+/// [`SmtError::Syntax`] for a missing/non-numeric/zero index, a wrong argument
+/// count, or non-integer operands.
+fn apply_iand(arena: &mut TermArena, head: &[SExpr], args: &[TermId]) -> Result<TermId, SmtError> {
+    if head.len() != 3 {
+        return Err(SmtError::Syntax(format!(
+            "`iand` expects 1 index, got {}",
+            head.len().saturating_sub(2)
+        )));
+    }
+    let n = head
+        .get(2)
+        .and_then(SExpr::atom)
+        .and_then(|s| s.parse::<u32>().ok())
+        .filter(|&n| n > 0)
+        .ok_or_else(|| SmtError::Syntax("`iand` index must be a positive numeral".to_owned()))?;
+    if args.len() != 2 {
+        return Err(SmtError::Syntax(format!(
+            "`(_ iand {n})` expects 2 arguments, got {}",
+            args.len()
+        )));
+    }
+    if arena.sort_of(args[0]) != Sort::Int || arena.sort_of(args[1]) != Sort::Int {
+        return Err(SmtError::Syntax(
+            "`iand` expects two integer arguments".to_owned(),
+        ));
+    }
+    let a_bv = arena.int2bv(n, args[0])?;
+    let b_bv = arena.int2bv(n, args[1])?;
+    let anded = arena.bv_and(a_bv, b_bv)?;
+    Ok(arena.bv2nat(anded)?)
+}
+
 #[allow(clippy::too_many_lines)]
 fn apply_parameterized(
     arena: &mut TermArena,
@@ -2754,6 +2934,14 @@ fn apply_parameterized(
             return Ok(arena.const_array(index, args[0])?);
         }
         return Err(SmtError::Unsupported(format!("`as` form {head:?}")));
+    }
+    // `((_ iand N) a b)` — integer bitwise-AND at bit-width `N` (QF_NIA,
+    // SMT-LIB). This is the one indexed op here that is *binary*, so it is
+    // handled before the unary-arity guard below. See [`apply_iand`].
+    if head.first().and_then(SExpr::atom) == Some("_")
+        && head.get(1).and_then(SExpr::atom) == Some("iand")
+    {
+        return apply_iand(arena, head, args);
     }
     if head.first().and_then(SExpr::atom) != Some("_") || args.len() != 1 {
         return Err(SmtError::Unsupported(format!("application head {head:?}")));

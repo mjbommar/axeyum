@@ -1520,6 +1520,170 @@ fn sym_of(script: &axeyum_smtlib::Script, name: &str) -> SymbolId {
         .unwrap_or_else(|| panic!("symbol `{name}` not declared"))
 }
 
+// --- Front-end coverage gaps: bvred* / iand / :named -----------------------
+
+/// `(bvredor x)` desugars to `(bvnot (bvcomp x 0))` — `#b1` iff `x != 0`. The
+/// concrete-value checks via `eval` are oracle-checkable.
+#[test]
+fn bvredor_reduces_to_nonzero_bit() {
+    // x = 0b0100 ≠ 0  ⇒  bvredor = #b1.
+    let s = parse_script("(set-logic QF_BV)\n(assert (= (bvredor (_ bv4 4)) (_ bv1 1)))").unwrap();
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
+    // x = 0  ⇒  bvredor = #b0.
+    let s = parse_script("(set-logic QF_BV)\n(assert (= (bvredor (_ bv0 4)) (_ bv0 1)))").unwrap();
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
+    // The result sort is one bit wide.
+    assert_eq!(s.arena.sort_of(s.assertions[0]), Sort::Bool);
+}
+
+/// `(bvredand x)` desugars to `(bvcomp x ~0)` — `#b1` iff every bit is set.
+#[test]
+fn bvredand_reduces_to_all_ones_bit() {
+    // x = 0b1111 = ~0  ⇒  bvredand = #b1.
+    let s =
+        parse_script("(set-logic QF_BV)\n(assert (= (bvredand (_ bv15 4)) (_ bv1 1)))").unwrap();
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
+    // x = 0b1110 ≠ ~0  ⇒  bvredand = #b0.
+    let s =
+        parse_script("(set-logic QF_BV)\n(assert (= (bvredand (_ bv14 4)) (_ bv0 1)))").unwrap();
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
+}
+
+/// `(bvredxor x)` desugars to the XOR-fold of all bits — the parity of `x`.
+#[test]
+fn bvredxor_reduces_to_parity_bit() {
+    // popcount(0b1011) = 3 (odd)  ⇒  bvredxor = #b1.
+    let s =
+        parse_script("(set-logic QF_BV)\n(assert (= (bvredxor (_ bv11 4)) (_ bv1 1)))").unwrap();
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
+    // popcount(0b0011) = 2 (even)  ⇒  bvredxor = #b0.
+    let s = parse_script("(set-logic QF_BV)\n(assert (= (bvredxor (_ bv3 4)) (_ bv0 1)))").unwrap();
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
+}
+
+/// A tiny SAT and tiny UNSAT formula over `bvredor`, each evaluated against the
+/// satisfying / contradicting assignment to confirm the desugaring's verdict.
+#[test]
+fn bvred_sat_and_unsat_witnesses() {
+    // SAT: there is an x with (bvredor x) = #b1, e.g. x = 1.
+    let s = parse_script(
+        "(set-logic QF_BV)\n(declare-const x (_ BitVec 4))\n\
+         (assert (= (bvredor x) (_ bv1 1)))",
+    )
+    .unwrap();
+    let mut asg = Assignment::new();
+    asg.set(sym_of(&s, "x"), Value::Bv { width: 4, value: 1 });
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &asg).unwrap(),
+        Value::Bool(true),
+        "x=1 should satisfy (bvredor x) = 1"
+    );
+
+    // UNSAT shape: (bvredor 0) = #b1 is contradictory (ground, evaluates false).
+    let s = parse_script("(set-logic QF_BV)\n(assert (= (bvredor (_ bv0 4)) (_ bv1 1)))").unwrap();
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(false),
+        "(bvredor 0) = 1 is unsatisfiable"
+    );
+}
+
+/// `((_ iand N) a b)` desugars to `bv2nat(bvand(int2bv_N a, int2bv_N b))`.
+/// `(_ iand 4) 6 3` = bitand(0b0110, 0b0011) = 0b0010 = 2.
+#[test]
+fn iand_computes_integer_bitwise_and() {
+    let s = parse_script("(set-logic QF_NIA)\n(assert (= ((_ iand 4) 6 3) 2))").unwrap();
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
+
+    // Operands are reduced mod 2^N: (_ iand 4) 22 3 — 22 mod 16 = 6, so still 2.
+    let s = parse_script("(set-logic QF_NIA)\n(assert (= ((_ iand 4) 22 3) 2))").unwrap();
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true),
+        "iand reduces operands mod 2^N (22 ≡ 6 mod 16)"
+    );
+
+    // The result is an Int (it is fed to an integer equality above).
+    assert_eq!(s.arena.sort_of(s.assertions[0]), Sort::Bool);
+}
+
+/// A `:named` annotation binds an alias; a later bare reference resolves to the
+/// annotated term. Here `(! (+ x 1) :named s)` then `(= s 5)`.
+#[test]
+fn named_annotation_binds_reusable_alias() {
+    let s = parse_script(
+        "(set-logic QF_LIA)\n(declare-const x Int)\n\
+         (assert (> (! (+ x 1) :named s) 3))\n\
+         (assert (= s 5))",
+    )
+    .unwrap();
+    assert_eq!(s.assertions.len(), 2);
+    // The second assertion `(= s 5)` resolves `s` to `(+ x 1)`; with x = 4 it
+    // evaluates true (5 = 5) and the first (5 > 3) also holds.
+    let mut asg = Assignment::new();
+    asg.set(sym_of(&s, "x"), Value::Int(4));
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &asg).unwrap(),
+        Value::Bool(true)
+    );
+    assert_eq!(
+        eval(&s.arena, s.assertions[1], &asg).unwrap(),
+        Value::Bool(true)
+    );
+    // With x = 0, `s = 1`, so `(= s 5)` is false — confirms `s` really is `x+1`.
+    let mut asg0 = Assignment::new();
+    asg0.set(sym_of(&s, "x"), Value::Int(0));
+    assert_eq!(
+        eval(&s.arena, s.assertions[1], &asg0).unwrap(),
+        Value::Bool(false)
+    );
+}
+
+/// A real declared symbol is never shadowed by a `:named` of the same name: the
+/// declaration wins (the `:named` map is consulted only after symbol lookup).
+#[test]
+fn declared_symbol_wins_over_named_alias() {
+    // `(! (+ y 5) :named y)` would bind `y → (+ y 5)`, but a bare `y` must still
+    // resolve to the declared variable. The assertion `(= (! (+ y 5) :named y) y)`
+    // is therefore `(+ y 5) = y` (RHS = declared var), which is false for all y.
+    // If the `:named` alias had won, the RHS `y` would be `(+ y 5)` and the
+    // assertion would be the tautology `(+ y 5) = (+ y 5)` (true) — so a `false`
+    // result confirms the declaration wins.
+    let s = parse_script(
+        "(set-logic QF_LIA)\n(declare-const y Int)\n\
+         (assert (= (! (+ y 5) :named y) y))",
+    )
+    .unwrap();
+    let mut asg = Assignment::new();
+    asg.set(sym_of(&s, "y"), Value::Int(7));
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &asg).unwrap(),
+        Value::Bool(false),
+        "declared `y` must win over the `:named y` alias"
+    );
+}
+
 fn dt_of(script: &axeyum_smtlib::Script, name: &str) -> axeyum_ir::DatatypeId {
     script
         .arena
