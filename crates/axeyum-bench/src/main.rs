@@ -39,7 +39,7 @@ mod run {
     use axeyum_solver::Z3Backend;
     use axeyum_solver::{
         BvLayerStats, Capabilities, CheckResult, LazyBvBackend, Model, SatBvBackend, SolveStats,
-        SolverBackend, SolverConfig, SolverError, UnknownKind, check_auto,
+        SolverBackend, SolverConfig, SolverError, UnknownKind, solve,
     };
     use rayon::prelude::*;
     use serde_json::{Value as JsonValue, json};
@@ -75,10 +75,13 @@ mod run {
         LazyBv,
         /// Lazy bit-blasting that also abstracts `ite` (P2.1 lever #3).
         LazyBvIte,
-        /// The high-level division-general dispatcher
-        /// ([`axeyum_solver::check_auto`]) — the actual product path that routes
+        /// The unified division-general front door
+        /// ([`axeyum_solver::solve`]) — the actual product path that routes
         /// `QF_LRA`→LRA, `QF_UF`→EUF, `QF_LIA`→LIA, `QF_NRA`/`QF_NIA`, `QF_ABV`,
-        /// `QF_DT`, … so non-BV divisions can be measured head-to-head against Z3.
+        /// `QF_DT`, … and quantified queries (`forall`/`exists`) to the
+        /// quantifier solver, so every division can be measured head-to-head
+        /// against Z3. (Quantifier-free queries delegate to `check_auto`
+        /// unchanged.)
         Solver,
         #[cfg(feature = "z3")]
         Z3,
@@ -657,15 +660,18 @@ mod run {
         }
     }
 
-    /// A [`SolverBackend`] adapter over the high-level division-general dispatcher
-    /// [`axeyum_solver::check_auto`] — the actual product path that routes a parsed
+    /// A [`SolverBackend`] adapter over the unified division-general front door
+    /// [`axeyum_solver::solve`] — the actual product path that routes a parsed
     /// benchmark to its theory engine (`QF_LRA`→LRA, `QF_UF`→EUF, `QF_LIA`→LIA,
-    /// `QF_NRA`/`QF_NIA`, `QF_ABV`, `QF_DT`, …). It exists so non-BV divisions can be
+    /// `QF_NRA`/`QF_NIA`, `QF_ABV`, `QF_DT`, …) and routes quantified
+    /// (`forall`/`exists`) queries to the quantifier solver. It exists so every
+    /// division — quantifier-free and quantified — can be
     /// measured head-to-head against Z3 through the *same* result/timing/PAR-2/`--compare-z3`
     /// plumbing the BV backends use; the only difference is how the verdict is
-    /// obtained.
+    /// obtained. For quantifier-free queries `solve` delegates to `check_auto`,
+    /// so the quantifier-free behavior is unchanged.
     ///
-    /// `check_auto` takes `&mut TermArena` (its preprocessing/elimination passes
+    /// `solve` takes `&mut TermArena` (its preprocessing/elimination passes
     /// build new terms), but the [`SolverBackend::check`] contract hands an
     /// immutable `&TermArena` shared across the rayon workers. We therefore solve
     /// against a per-call **clone** of the arena. This is sound for downstream model
@@ -686,9 +692,9 @@ mod run {
     impl SolverBackend for CheckAutoBackend {
         fn capabilities(&self) -> Capabilities {
             Capabilities {
-                name: "axeyum-solver check_auto".to_owned(),
+                name: "axeyum-solver solve".to_owned(),
                 produces_models: true,
-                // `check_auto` returns a first-class `unknown` on the
+                // `solve` returns a first-class `unknown` on the
                 // undecidable/unimplemented frontier; it is not a complete decider
                 // for every fragment it accepts.
                 complete: false,
@@ -705,7 +711,8 @@ mod run {
             // for model replay against the caller's original arena.
             let mut owned = arena.clone();
             let start = Instant::now();
-            // `check_auto` is reached through engines that still panic (rather than
+            // `solve` (and the `check_auto` it delegates to for QF queries) is
+            // reached through engines that still panic (rather than
             // returning a first-class `unknown`) on a few corners of their accepted
             // fragment — a measurement harness must not let one such instance abort
             // the whole rayon batch and lose every other verdict. Isolate the call:
@@ -715,11 +722,11 @@ mod run {
             // not observed after a panic (the clone is dropped), so asserting
             // unwind-safety is correct.
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                check_auto(&mut owned, assertions, config)
+                solve(&mut owned, assertions, config)
             }))
             .unwrap_or_else(|_| {
                 Err(SolverError::Unsupported(
-                    "check_auto panicked on this instance (engine-internal); recorded \
+                    "solve panicked on this instance (engine-internal); recorded \
                      as unsupported rather than crashing the batch or fabricating a verdict"
                         .to_owned(),
                 ))
@@ -732,7 +739,7 @@ mod run {
             // backends populate `backend` so `backend_stats_record` is non-empty.
             stats
                 .backend
-                .push(("check_auto_ms".to_owned(), elapsed.as_secs_f64() * 1000.0));
+                .push(("solve_ms".to_owned(), elapsed.as_secs_f64() * 1000.0));
             self.stats = Some(stats);
             result
         }

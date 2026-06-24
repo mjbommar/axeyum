@@ -1,6 +1,13 @@
 {
+  "note_excluded": {
+    "reason": "Two files excluded from this 52/54 baseline: the eager finite-domain quantifier expansion (axeyum-rewrite::quantifiers::expand_quantifiers, reached via axeyum_solver::check_with_quantifiers) materializes the full Cartesian product of the bound-variable domains with no domain-size budget and without honoring config.timeout, so it allocates many GB and the process OOM-aborts rather than returning a sound `unknown` within the deadline. Excluded so the baseline completes; the harness has no per-file exclude flag and an OOM-abort kills the whole batch. This is a termination/resource finding (NOT a soundness/DISAGREE issue) tracked for a fix in expand_quantifiers (domain-size cap -> unknown).",
+    "files": [
+      "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-simp.smt2",
+      "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__bug802.smt2"
+    ]
+  },
   "config": {
-    "backend": "axeyum-solver check_auto",
+    "backend": "axeyum-solver solve",
     "backend_kind": "solver",
     "cnf_clause_budget": null,
     "cnf_inprocessing": false,
@@ -8,9 +15,9 @@
     "cnf_vivify": false,
     "compare_backend": "z3 4.13.3.0",
     "compare_z3": true,
-    "config_hash": "e11bc1b09f3bd2d1",
+    "config_hash": "ef4b9a6bfb549e0c",
     "corpus": "corpus/public-curated/quantified/BV/cvc5-regress-clean",
-    "corpus_hash": "7840e3b5cdbe346c",
+    "corpus_hash": "c5ba51a5d838ddca",
     "corpus_source": null,
     "hardware": {
       "arch": "x86_64",
@@ -46,7 +53,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.028832
+        "solve_ms": 0.046276000000000005
       },
       "dag_nodes": 6,
       "detail": "term #4 uses unsupported pure-Rust BV operator Exists(SymbolId(0))",
@@ -108,7 +115,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.02456
+        "solve_ms": 0.030329000000000002
       },
       "dag_nodes": 19,
       "detail": "term #17 uses unsupported pure-Rust BV operator Forall(SymbolId(3))",
@@ -170,10 +177,10 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.018484
+        "solve_ms": 0.028558999999999998
       },
       "dag_nodes": 20,
-      "detail": "term #21 uses unsupported pure-Rust BV operator Exists(SymbolId(0))",
+      "detail": "term #20 uses unsupported pure-Rust BV operator Exists(SymbolId(1))",
       "distinct_symbols": 2,
       "expected": "unsat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__issue2031-bv-var-elim.smt2",
@@ -232,21 +239,32 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.009815
+        "solve_ms": 10.491529
       },
       "dag_nodes": 8,
-      "detail": "term #7 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-inequality2.smt2",
       "max_depth": 5,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 9,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -284,31 +302,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 5,
         "output_tree_nodes": 10,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 10,
       "translate_ms": 0,
       "tree_nodes": 10
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.010497
+        "solve_ms": 0.5000910000000001
       },
       "dag_nodes": 10,
-      "detail": "term #9 uses unsupported pure-Rust BV operator Forall(SymbolId(3))",
       "distinct_symbols": 4,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-multi-lit-uge.smt2",
       "max_depth": 6,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 8,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -346,7 +375,7 @@
         "output_distinct_symbols": 4,
         "output_max_depth": 6,
         "output_tree_nodes": 11,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
       "solve_ms": 0,
@@ -356,83 +385,32 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.015903
-      },
-      "dag_nodes": 15,
-      "detail": "term #14 uses unsupported pure-Rust BV operator Forall(SymbolId(0))",
-      "distinct_symbols": 4,
-      "expected": "unsat",
-      "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-simp.smt2",
-      "max_depth": 8,
-      "model_lift_ms": 0,
-      "oracle": {
-        "backend_kind": "z3",
-        "enabled": true,
-        "skipped": "primary-outcome-unsupported"
-      },
-      "outcome": "unsupported",
-      "query_plan": {
-        "cache_key": {
-          "assertions": 1,
-          "assumptions": 0,
-          "dag_nodes": 15,
-          "digest": "aa4d98c5b35e85d1",
-          "tree_nodes": 19
-        },
-        "submitted": {
-          "dropped_terms": 0,
-          "planned_terms": 1,
-          "sliced": false,
-          "solver_cache_key": {
-            "assertions": 1,
-            "assumptions": 0,
-            "dag_nodes": 15,
-            "digest": "aa4d98c5b35e85d1",
-            "tree_nodes": 19
-          },
-          "strategy": "full",
-          "target_support_symbols": 0
-        }
-      },
-      "rewrite": {
-        "applications": 0,
-        "changed": false,
-        "decision_changed": null,
-        "input_dag_nodes": 15,
-        "input_tree_nodes": 19,
-        "mode": "off",
-        "original_detail": null,
-        "original_outcome": null,
-        "output_assertions": 1,
-        "output_dag_nodes": 15,
-        "output_distinct_symbols": 4,
-        "output_max_depth": 8,
-        "output_tree_nodes": 19,
-        "rewritten_outcome": "unsupported",
-        "rule_counts": {}
-      },
-      "solve_ms": 0,
-      "translate_ms": 0,
-      "tree_nodes": 19
-    },
-    {
-      "assertions": 1,
-      "backend_stats": {
-        "check_auto_ms": 0.003623
+        "solve_ms": 9.318593
       },
       "dag_nodes": 6,
-      "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "unsat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvadd-neq.smt2",
       "max_depth": 4,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 11,
+          "verdict": "unsat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "unsat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -470,31 +448,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 4,
         "output_tree_nodes": 6,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 9,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.0019219999999999999
+        "solve_ms": 7.593557
       },
       "dag_nodes": 6,
-      "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvand-neq.smt2",
       "max_depth": 4,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 8,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -532,31 +521,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 4,
         "output_tree_nodes": 6,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 7,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.003558
+        "solve_ms": 8.478674
       },
       "dag_nodes": 7,
-      "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvand.smt2",
       "max_depth": 5,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 10,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -594,31 +594,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 5,
         "output_tree_nodes": 7,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 8,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.0021560000000000004
+        "solve_ms": 11.687767
       },
       "dag_nodes": 6,
-      "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "unsat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvashr-0-neq.smt2",
       "max_depth": 4,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 11,
+          "verdict": "unsat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "unsat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -656,31 +667,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 4,
         "output_tree_nodes": 6,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 11,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.0021959999999999996
+        "solve_ms": 10.53369
       },
       "dag_nodes": 6,
-      "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvashr-1-neq.smt2",
       "max_depth": 4,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 8,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -718,31 +740,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 4,
         "output_tree_nodes": 6,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 10,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.002092
+        "solve_ms": 9.159332
       },
       "dag_nodes": 6,
-      "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvlshr-0-neq.smt2",
       "max_depth": 4,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 13,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -780,31 +813,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 4,
         "output_tree_nodes": 6,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 9,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.002432
+        "solve_ms": 10.707042999999999
       },
       "dag_nodes": 7,
-      "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvlshr-0.smt2",
       "max_depth": 5,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 10,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -842,31 +886,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 5,
         "output_tree_nodes": 7,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 10,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.028844
+        "solve_ms": 11.422984000000001
       },
       "dag_nodes": 6,
-      "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvlshr-1-neq.smt2",
       "max_depth": 4,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 11,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -904,31 +959,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 4,
         "output_tree_nodes": 6,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 11,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.004131
+        "solve_ms": 7.853088
       },
       "dag_nodes": 6,
-      "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvor-neq.smt2",
       "max_depth": 4,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 16,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -966,31 +1032,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 4,
         "output_tree_nodes": 6,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 7,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.003701
+        "solve_ms": 13.472776000000001
       },
       "dag_nodes": 7,
-      "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvor.smt2",
       "max_depth": 5,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 10,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -1028,31 +1105,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 5,
         "output_tree_nodes": 7,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 13,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.002509
+        "solve_ms": 9.529005999999999
       },
       "dag_nodes": 6,
-      "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvshl-0-neq.smt2",
       "max_depth": 4,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 11,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -1090,31 +1178,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 4,
         "output_tree_nodes": 6,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 9,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.002512
+        "solve_ms": 10.674939
       },
       "dag_nodes": 7,
-      "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvshl-0.smt2",
       "max_depth": 5,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 10,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -1152,31 +1251,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 5,
         "output_tree_nodes": 7,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 10,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.0024159999999999997
+        "solve_ms": 8.514576
       },
       "dag_nodes": 5,
-      "detail": "term #4 uses unsupported pure-Rust BV operator Forall(SymbolId(1))",
       "distinct_symbols": 2,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvult-1.smt2",
       "max_depth": 4,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 9,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -1214,31 +1324,42 @@
         "output_distinct_symbols": 2,
         "output_max_depth": 4,
         "output_tree_nodes": 5,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 8,
       "translate_ms": 0,
       "tree_nodes": 5
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.00362
+        "solve_ms": 12.781913000000001
       },
       "dag_nodes": 7,
-      "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(1))",
       "distinct_symbols": 2,
       "expected": "unsat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvxor-neq.smt2",
       "max_depth": 5,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 90,
+          "verdict": "unsat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "unsat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -1276,31 +1397,42 @@
         "output_distinct_symbols": 2,
         "output_max_depth": 5,
         "output_tree_nodes": 9,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 12,
       "translate_ms": 0,
       "tree_nodes": 9
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.028769
+        "solve_ms": 7.391311
       },
       "dag_nodes": 6,
-      "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "unsat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-concat-0-neq.smt2",
       "max_depth": 4,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 10,
+          "verdict": "unsat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "unsat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -1338,31 +1470,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 4,
         "output_tree_nodes": 6,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 7,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.008237
+        "solve_ms": 9.332048
       },
       "dag_nodes": 7,
-      "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-concat-0.smt2",
       "max_depth": 5,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 10,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -1400,31 +1543,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 5,
         "output_tree_nodes": 7,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 9,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.006763
+        "solve_ms": 7.827576
       },
       "dag_nodes": 6,
-      "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "unsat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-concat-1-neq.smt2",
       "max_depth": 4,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 10,
+          "verdict": "unsat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "unsat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -1462,31 +1616,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 4,
         "output_tree_nodes": 6,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 7,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.00718
+        "solve_ms": 11.075248
       },
       "dag_nodes": 7,
-      "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-concat-1.smt2",
       "max_depth": 5,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 12,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -1524,31 +1689,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 5,
         "output_tree_nodes": 7,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 11,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.006528
+        "solve_ms": 8.964018000000001
       },
       "dag_nodes": 6,
-      "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 2,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-sign-extend.smt2",
       "max_depth": 5,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 10,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -1586,17 +1762,17 @@
         "output_distinct_symbols": 2,
         "output_max_depth": 5,
         "output_tree_nodes": 6,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 8,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.003443
+        "solve_ms": 0.021498
       },
       "dag_nodes": 5,
       "detail": "term #3 uses unsupported pure-Rust BV operator Exists(SymbolId(0))",
@@ -1658,7 +1834,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.003506
+        "solve_ms": 0.006902
       },
       "dag_nodes": 7,
       "detail": "term #5 uses unsupported pure-Rust BV operator Exists(SymbolId(0))",
@@ -1720,69 +1896,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 2.129143
-      },
-      "dag_nodes": 3317,
-      "detail": "term #3316 uses unsupported pure-Rust BV operator Forall(SymbolId(0))",
-      "distinct_symbols": 530,
-      "expected": "unsat",
-      "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__bug802.smt2",
-      "max_depth": 640,
-      "model_lift_ms": 0,
-      "oracle": {
-        "backend_kind": "z3",
-        "enabled": true,
-        "skipped": "primary-outcome-unsupported"
-      },
-      "outcome": "unsupported",
-      "query_plan": {
-        "cache_key": {
-          "assertions": 1,
-          "assumptions": 0,
-          "dag_nodes": 3317,
-          "digest": "1ff9a41ca2dbc4f5",
-          "tree_nodes": 5760
-        },
-        "submitted": {
-          "dropped_terms": 0,
-          "planned_terms": 1,
-          "sliced": false,
-          "solver_cache_key": {
-            "assertions": 1,
-            "assumptions": 0,
-            "dag_nodes": 3317,
-            "digest": "1ff9a41ca2dbc4f5",
-            "tree_nodes": 5760
-          },
-          "strategy": "full",
-          "target_support_symbols": 0
-        }
-      },
-      "rewrite": {
-        "applications": 0,
-        "changed": false,
-        "decision_changed": null,
-        "input_dag_nodes": 3317,
-        "input_tree_nodes": 5760,
-        "mode": "off",
-        "original_detail": null,
-        "original_outcome": null,
-        "output_assertions": 1,
-        "output_dag_nodes": 3317,
-        "output_distinct_symbols": 530,
-        "output_max_depth": 640,
-        "output_tree_nodes": 5760,
-        "rewritten_outcome": "unsupported",
-        "rule_counts": {}
-      },
-      "solve_ms": 2,
-      "translate_ms": 0,
-      "tree_nodes": 5760
-    },
-    {
-      "assertions": 1,
-      "backend_stats": {
-        "check_auto_ms": 0.066523
+        "solve_ms": 0.098361
       },
       "dag_nodes": 70,
       "detail": "term #68 uses unsupported pure-Rust BV operator Exists(SymbolId(13))",
@@ -1844,10 +1958,10 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.006753
+        "solve_ms": 0.155555
       },
       "dag_nodes": 5,
-      "detail": "term #4 uses unsupported pure-Rust BV operator Forall(SymbolId(0))",
+      "detail": "Incomplete: query has quantifiers instantiation does not reach (nested, existential, or non-top-level)",
       "distinct_symbols": 2,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__issue4328-nqe.smt2",
@@ -1856,9 +1970,9 @@
       "oracle": {
         "backend_kind": "z3",
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "skipped": "primary-outcome-unknown"
       },
-      "outcome": "unsupported",
+      "outcome": "unknown",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -1896,7 +2010,7 @@
         "output_distinct_symbols": 2,
         "output_max_depth": 4,
         "output_tree_nodes": 5,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
       "solve_ms": 0,
@@ -1906,10 +2020,10 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.021381
+        "solve_ms": 0.16397699999999998
       },
       "dag_nodes": 24,
-      "detail": "term #23 uses unsupported pure-Rust BV operator Exists(SymbolId(0))",
+      "detail": "Incomplete: query has quantifiers instantiation does not reach (nested, existential, or non-top-level)",
       "distinct_symbols": 7,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__issue5365-nqe.smt2",
@@ -1918,9 +2032,9 @@
       "oracle": {
         "backend_kind": "z3",
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "skipped": "primary-outcome-unknown"
       },
-      "outcome": "unsupported",
+      "outcome": "unknown",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -1958,7 +2072,7 @@
         "output_distinct_symbols": 7,
         "output_max_depth": 13,
         "output_tree_nodes": 28,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
       "solve_ms": 0,
@@ -1968,10 +2082,10 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.060305
+        "solve_ms": 0.19427999999999998
       },
       "dag_nodes": 66,
-      "detail": "term #65 uses unsupported pure-Rust BV operator Forall(SymbolId(8))",
+      "detail": "Incomplete: query has quantifiers instantiation does not reach (nested, existential, or non-top-level)",
       "distinct_symbols": 8,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__model_6_1_bv.smt2",
@@ -1980,9 +2094,9 @@
       "oracle": {
         "backend_kind": "z3",
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "skipped": "primary-outcome-unknown"
       },
-      "outcome": "unsupported",
+      "outcome": "unknown",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -2020,7 +2134,7 @@
         "output_distinct_symbols": 8,
         "output_max_depth": 16,
         "output_tree_nodes": 112,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
       "solve_ms": 0,
@@ -2030,7 +2144,7 @@
     {
       "assertions": 2,
       "backend_stats": {
-        "check_auto_ms": 0.035619
+        "solve_ms": 0.043314
       },
       "dag_nodes": 32,
       "detail": "term #17 uses unsupported pure-Rust BV operator Exists(SymbolId(3))",
@@ -2092,7 +2206,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.087547
+        "solve_ms": 0.169635
       },
       "dag_nodes": 147,
       "detail": "term #121 uses unsupported pure-Rust BV operator Forall(SymbolId(14))",
@@ -2154,7 +2268,7 @@
     {
       "assertions": 2,
       "backend_stats": {
-        "check_auto_ms": 0.13304
+        "solve_ms": 0.25619899999999995
       },
       "dag_nodes": 217,
       "detail": "term #155 uses unsupported pure-Rust BV operator Forall(SymbolId(27))",
@@ -2216,21 +2330,32 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.004941
+        "solve_ms": 23.625611000000003
       },
       "dag_nodes": 7,
-      "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-disequality3.smt2",
       "max_depth": 5,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 9,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -2268,31 +2393,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 5,
         "output_tree_nodes": 8,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 23,
       "translate_ms": 0,
       "tree_nodes": 8
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "check_auto_ms": 0.010331
+        "solve_ms": 510.941791
       },
       "dag_nodes": 17,
-      "detail": "term #16 uses unsupported pure-Rust BV operator Forall(SymbolId(3))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-simple-2vars-vo.smt2",
       "max_depth": 7,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 59,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 2,
@@ -2330,31 +2466,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 7,
         "output_tree_nodes": 19,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 510,
       "translate_ms": 0,
       "tree_nodes": 19
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.025318
+        "solve_ms": 1.256395
       },
       "dag_nodes": 43,
-      "detail": "term #42 uses unsupported pure-Rust BV operator Forall(SymbolId(3))",
       "distinct_symbols": 5,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-subcall.smt2",
       "max_depth": 16,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 12,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -2392,31 +2539,42 @@
         "output_distinct_symbols": 5,
         "output_max_depth": 16,
         "output_tree_nodes": 70,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 70
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.007124
+        "solve_ms": 12.07692
       },
       "dag_nodes": 7,
-      "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvashr-0.smt2",
       "max_depth": 5,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 11,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -2454,31 +2612,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 5,
         "output_tree_nodes": 7,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 12,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.004123
+        "solve_ms": 7.836756
       },
       "dag_nodes": 7,
-      "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvashr-1.smt2",
       "max_depth": 5,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 8,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -2516,31 +2685,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 5,
         "output_tree_nodes": 7,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 7,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.007024
+        "solve_ms": 9.189868
       },
       "dag_nodes": 7,
-      "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvlshr-1.smt2",
       "max_depth": 5,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 11,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -2578,31 +2758,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 5,
         "output_tree_nodes": 7,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 9,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.006344
+        "solve_ms": 10.44105
       },
       "dag_nodes": 6,
-      "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvmul-neq.smt2",
       "max_depth": 4,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 11,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -2640,31 +2831,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 4,
         "output_tree_nodes": 6,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 10,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.0067610000000000005
+        "solve_ms": 22.617205000000002
       },
       "dag_nodes": 7,
-      "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvmul.smt2",
       "max_depth": 5,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 12,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -2702,31 +2904,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 5,
         "output_tree_nodes": 7,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 22,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "check_auto_ms": 0.01983
+        "solve_ms": 57.442838
       },
       "dag_nodes": 15,
-      "detail": "term #14 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "unsat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvudiv-0-neq.smt2",
       "max_depth": 5,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 10,
+          "verdict": "unsat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "unsat",
       "query_plan": {
         "cache_key": {
           "assertions": 2,
@@ -2764,31 +2977,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 5,
         "output_tree_nodes": 20,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 57,
       "translate_ms": 0,
       "tree_nodes": 20
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "check_auto_ms": 0.017272
+        "solve_ms": 55.662667
       },
       "dag_nodes": 16,
-      "detail": "term #15 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvudiv-0.smt2",
       "max_depth": 5,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 12,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 2,
@@ -2826,31 +3050,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 5,
         "output_tree_nodes": 21,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 55,
       "translate_ms": 0,
       "tree_nodes": 21
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "check_auto_ms": 0.015539
+        "solve_ms": 17.700434
       },
       "dag_nodes": 15,
-      "detail": "term #14 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "unsat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvudiv-1-neq.smt2",
       "max_depth": 5,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 13,
+          "verdict": "unsat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "unsat",
       "query_plan": {
         "cache_key": {
           "assertions": 2,
@@ -2888,31 +3123,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 5,
         "output_tree_nodes": 20,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 17,
       "translate_ms": 0,
       "tree_nodes": 20
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "check_auto_ms": 0.016961
+        "solve_ms": 18.681047999999997
       },
       "dag_nodes": 16,
-      "detail": "term #15 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvudiv-1.smt2",
       "max_depth": 5,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 10,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 2,
@@ -2950,31 +3196,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 5,
         "output_tree_nodes": 21,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 18,
       "translate_ms": 0,
       "tree_nodes": 21
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.005094
+        "solve_ms": 23.770647999999998
       },
       "dag_nodes": 6,
-      "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvurem-1-neq.smt2",
       "max_depth": 4,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 12,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -3012,31 +3269,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 4,
         "output_tree_nodes": 6,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 23,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.004293
+        "solve_ms": 30.358665
       },
       "dag_nodes": 7,
-      "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvurem-1.smt2",
       "max_depth": 5,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 9,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -3074,31 +3342,42 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 5,
         "output_tree_nodes": 7,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 30,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.0032370000000000003
+        "solve_ms": 2.5385500000000003
       },
       "dag_nodes": 7,
-      "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-urem-rewrite.smt2",
       "max_depth": 5,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 14,
+          "verdict": "sat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -3136,20 +3415,20 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 5,
         "output_tree_nodes": 7,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 2,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.12339499999999999
+        "solve_ms": 0.217614
       },
       "dag_nodes": 235,
-      "detail": "term #234 uses unsupported pure-Rust BV operator Forall(SymbolId(0))",
+      "detail": "Incomplete: query has quantifiers instantiation does not reach (nested, existential, or non-top-level)",
       "distinct_symbols": 55,
       "expected": "unsat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__small-pipeline-fixpoint-3.smt2",
@@ -3158,9 +3437,9 @@
       "oracle": {
         "backend_kind": "z3",
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "skipped": "primary-outcome-unknown"
       },
-      "outcome": "unsupported",
+      "outcome": "unknown",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -3198,7 +3477,7 @@
         "output_distinct_symbols": 55,
         "output_max_depth": 67,
         "output_tree_nodes": 304,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
       "solve_ms": 0,
@@ -3208,10 +3487,10 @@
     {
       "assertions": 2,
       "backend_stats": {
-        "check_auto_ms": 0.020965
+        "solve_ms": 0.401436
       },
       "dag_nodes": 37,
-      "detail": "term #25 uses unsupported pure-Rust BV operator Forall(SymbolId(1))",
+      "detail": "term #35 uses unsupported pure-Rust BV operator Forall(SymbolId(6))",
       "distinct_symbols": 8,
       "expected": "sat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__smtcomp-qbv-053118.smt2",
@@ -3270,21 +3549,32 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.00938
+        "solve_ms": 2.6692310000000004
       },
       "dag_nodes": 11,
-      "detail": "term #8 uses unsupported pure-Rust BV operator Exists(SymbolId(2))",
       "distinct_symbols": 3,
       "expected": "unsat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__tpp-unit-fail-qbv.smt2",
       "max_depth": 6,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 15,
+          "verdict": "unsat"
+        }
       },
-      "outcome": "unsupported",
+      "outcome": "unsat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -3322,17 +3612,17 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 6,
         "output_tree_nodes": 13,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 2,
       "translate_ms": 0,
       "tree_nodes": 13
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.08679100000000001
+        "solve_ms": 0.084698
       },
       "dag_nodes": 88,
       "detail": "term #86 uses unsupported pure-Rust BV operator Exists(SymbolId(11))",
@@ -3393,31 +3683,32 @@
     }
   ],
   "summary": {
-    "agree": 0,
+    "agree": 37,
     "blocker_buckets": {
-      "unsupported": 54
+      "unknown:Incomplete": 4,
+      "unsupported": 11
     },
     "disagree": 0,
     "errors": 0,
-    "files": 54,
+    "files": 52,
     "layer_attribution": null,
     "model_replay_failures": 0,
     "oracle": {
-      "agree": 0,
+      "agree": 37,
       "backend": "z3 4.13.3.0",
-      "compared": 0,
+      "compared": 37,
       "disagree": 0,
       "enabled": true,
-      "skipped": 54
+      "skipped": 15
     },
-    "par2_mean_s": 1080.0,
+    "par2_mean_s": 7.341563888682927,
     "query_plan": {
-      "original_dag_nodes": 4642,
-      "original_tree_nodes": 7651,
+      "original_dag_nodes": 1310,
+      "original_tree_nodes": 1872,
       "slice_changed_instances": 0,
-      "slice_dag_nodes": 4642,
+      "slice_dag_nodes": 1310,
       "slice_dropped_terms": 0,
-      "slice_tree_nodes": 7651
+      "slice_tree_nodes": 1872
     },
     "rewrite": {
       "applications": 0,
@@ -3431,10 +3722,10 @@
       "output_tree_nodes": 0,
       "sat_unsat_conflicts": 0
     },
-    "sat": 0,
-    "unknown": 0,
-    "unsat": 0,
-    "unsupported": 54
+    "sat": 29,
+    "unknown": 4,
+    "unsat": 8,
+    "unsupported": 11
   },
   "triage": {
     "errors": [],
@@ -3457,118 +3748,8 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "term #21 uses unsupported pure-Rust BV operator Exists(SymbolId(0))",
+        "detail": "term #20 uses unsupported pure-Rust BV operator Exists(SymbolId(1))",
         "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__issue2031-bv-var-elim.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #7 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-inequality2.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #9 uses unsupported pure-Rust BV operator Forall(SymbolId(3))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-multi-lit-uge.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #14 uses unsupported pure-Rust BV operator Forall(SymbolId(0))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-simp.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvadd-neq.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvand-neq.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvand.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvashr-0-neq.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvashr-1-neq.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvlshr-0-neq.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvlshr-0.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvlshr-1-neq.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvor-neq.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvor.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvshl-0-neq.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvshl-0.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #4 uses unsupported pure-Rust BV operator Forall(SymbolId(1))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvult-1.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(1))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvxor-neq.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-concat-0-neq.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-concat-0.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-concat-1-neq.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-concat-1.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-sign-extend.smt2",
         "outcome": "unsupported"
       },
       {
@@ -3582,28 +3763,8 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "term #3316 uses unsupported pure-Rust BV operator Forall(SymbolId(0))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__bug802.smt2",
-        "outcome": "unsupported"
-      },
-      {
         "detail": "term #68 uses unsupported pure-Rust BV operator Exists(SymbolId(13))",
         "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__intersection-example-onelane.proof-node22337.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #4 uses unsupported pure-Rust BV operator Forall(SymbolId(0))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__issue4328-nqe.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #23 uses unsupported pure-Rust BV operator Exists(SymbolId(0))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__issue5365-nqe.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #65 uses unsupported pure-Rust BV operator Forall(SymbolId(8))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__model_6_1_bv.smt2",
         "outcome": "unsupported"
       },
       {
@@ -3622,93 +3783,8 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-disequality3.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #16 uses unsupported pure-Rust BV operator Forall(SymbolId(3))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-simple-2vars-vo.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #42 uses unsupported pure-Rust BV operator Forall(SymbolId(3))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-subcall.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvashr-0.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvashr-1.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvlshr-1.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvmul-neq.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvmul.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #14 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvudiv-0-neq.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #15 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvudiv-0.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #14 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvudiv-1-neq.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #15 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvudiv-1.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #5 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvurem-1-neq.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvurem-1.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #6 uses unsupported pure-Rust BV operator Forall(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-urem-rewrite.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #234 uses unsupported pure-Rust BV operator Forall(SymbolId(0))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__small-pipeline-fixpoint-3.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #25 uses unsupported pure-Rust BV operator Forall(SymbolId(1))",
+        "detail": "term #35 uses unsupported pure-Rust BV operator Forall(SymbolId(6))",
         "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__smtcomp-qbv-053118.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "term #8 uses unsupported pure-Rust BV operator Exists(SymbolId(2))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__tpp-unit-fail-qbv.smt2",
         "outcome": "unsupported"
       },
       {
