@@ -26,7 +26,7 @@ mod run {
     use std::fs;
     use std::path::{Path, PathBuf};
     use std::process::ExitCode;
-    use std::time::Duration;
+    use std::time::{Duration, Instant};
 
     use axeyum_ir::{TermArena, TermId, TermStats, Value, eval};
     use axeyum_query::{Query, QueryPlan, StructuralCacheKey};
@@ -34,12 +34,12 @@ mod run {
         DEFAULT_SOLVE_EQS_FUEL, ModelReconstructionTrail, RewriteReport, canonicalize_terms,
         default_manifest, propagate_values, solve_eqs_bounded,
     };
-    use axeyum_smtlib::{Script, SmtError, parse_script};
+    use axeyum_smtlib::{Script, ScriptCommand, SmtError, parse_script};
     #[cfg(feature = "z3")]
     use axeyum_solver::Z3Backend;
     use axeyum_solver::{
-        BvLayerStats, CheckResult, LazyBvBackend, Model, SatBvBackend, SolveStats, SolverBackend,
-        SolverConfig, SolverError, UnknownKind,
+        BvLayerStats, Capabilities, CheckResult, LazyBvBackend, Model, SatBvBackend, SolveStats,
+        SolverBackend, SolverConfig, SolverError, UnknownKind, check_auto,
     };
     use rayon::prelude::*;
     use serde_json::{Value as JsonValue, json};
@@ -75,6 +75,11 @@ mod run {
         LazyBv,
         /// Lazy bit-blasting that also abstracts `ite` (P2.1 lever #3).
         LazyBvIte,
+        /// The high-level division-general dispatcher
+        /// ([`axeyum_solver::check_auto`]) — the actual product path that routes
+        /// `QF_LRA`→LRA, `QF_UF`→EUF, `QF_LIA`→LIA, `QF_NRA`/`QF_NIA`, `QF_ABV`,
+        /// `QF_DT`, … so non-BV divisions can be measured head-to-head against Z3.
+        Solver,
         #[cfg(feature = "z3")]
         Z3,
     }
@@ -85,6 +90,7 @@ mod run {
                 BackendKind::SatBv => "sat-bv",
                 BackendKind::LazyBv => "lazy-bv",
                 BackendKind::LazyBvIte => "lazy-bv-ite",
+                BackendKind::Solver => "solver",
                 #[cfg(feature = "z3")]
                 BackendKind::Z3 => "z3",
             }
@@ -378,6 +384,7 @@ mod run {
             "sat-bv" => Ok(BackendKind::SatBv),
             "lazy-bv" => Ok(BackendKind::LazyBv),
             "lazy-bv-ite" => Ok(BackendKind::LazyBvIte),
+            "solver" | "auto" => Ok(BackendKind::Solver),
             "z3" => {
                 #[cfg(feature = "z3")]
                 {
@@ -644,8 +651,94 @@ mod run {
             BackendKind::SatBv => Box::new(SatBvBackend::new()),
             BackendKind::LazyBv => Box::new(LazyBvBackend::new()),
             BackendKind::LazyBvIte => Box::new(LazyBvBackend::new().with_abstract_ite(true)),
+            BackendKind::Solver => Box::new(CheckAutoBackend::new()),
             #[cfg(feature = "z3")]
             BackendKind::Z3 => Box::new(Z3Backend::new()),
+        }
+    }
+
+    /// A [`SolverBackend`] adapter over the high-level division-general dispatcher
+    /// [`axeyum_solver::check_auto`] — the actual product path that routes a parsed
+    /// benchmark to its theory engine (`QF_LRA`→LRA, `QF_UF`→EUF, `QF_LIA`→LIA,
+    /// `QF_NRA`/`QF_NIA`, `QF_ABV`, `QF_DT`, …). It exists so non-BV divisions can be
+    /// measured head-to-head against Z3 through the *same* result/timing/PAR-2/`--compare-z3`
+    /// plumbing the BV backends use; the only difference is how the verdict is
+    /// obtained.
+    ///
+    /// `check_auto` takes `&mut TermArena` (its preprocessing/elimination passes
+    /// build new terms), but the [`SolverBackend::check`] contract hands an
+    /// immutable `&TermArena` shared across the rayon workers. We therefore solve
+    /// against a per-call **clone** of the arena. This is sound for downstream model
+    /// replay: `TermArena::clone` preserves the [`TermId`]s of the original terms
+    /// (it only ever *appends* new ones), and a [`Model`] keys on global
+    /// `SymbolId`/`FuncId`s — never clone-local ids — so the returned model replays
+    /// verbatim against the original arena the harness evaluates with.
+    struct CheckAutoBackend {
+        stats: Option<SolveStats>,
+    }
+
+    impl CheckAutoBackend {
+        fn new() -> Self {
+            Self { stats: None }
+        }
+    }
+
+    impl SolverBackend for CheckAutoBackend {
+        fn capabilities(&self) -> Capabilities {
+            Capabilities {
+                name: "axeyum-solver check_auto".to_owned(),
+                produces_models: true,
+                // `check_auto` returns a first-class `unknown` on the
+                // undecidable/unimplemented frontier; it is not a complete decider
+                // for every fragment it accepts.
+                complete: false,
+            }
+        }
+
+        fn check(
+            &mut self,
+            arena: &TermArena,
+            assertions: &[TermId],
+            config: &SolverConfig,
+        ) -> Result<CheckResult, SolverError> {
+            // Solve against a mutable clone; see the type doc for why this is sound
+            // for model replay against the caller's original arena.
+            let mut owned = arena.clone();
+            let start = Instant::now();
+            // `check_auto` is reached through engines that still panic (rather than
+            // returning a first-class `unknown`) on a few corners of their accepted
+            // fragment — a measurement harness must not let one such instance abort
+            // the whole rayon batch and lose every other verdict. Isolate the call:
+            // a panic becomes a per-instance `Unsupported` (recorded as
+            // `unsupported`, never a fabricated `sat`/`unsat`), so the run stays
+            // soundness-clean and completes. `owned`, `assertions`, and `config` are
+            // not observed after a panic (the clone is dropped), so asserting
+            // unwind-safety is correct.
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                check_auto(&mut owned, assertions, config)
+            }))
+            .unwrap_or_else(|_| {
+                Err(SolverError::Unsupported(
+                    "check_auto panicked on this instance (engine-internal); recorded \
+                     as unsupported rather than crashing the batch or fabricating a verdict"
+                        .to_owned(),
+                ))
+            });
+            let elapsed = start.elapsed();
+            let mut stats = SolveStats::default();
+            stats.solve = elapsed;
+            stats.assertion_count = usize_to_u64(assertions.len());
+            // Surface wall time as a backend stat too, mirroring how the other
+            // backends populate `backend` so `backend_stats_record` is non-empty.
+            stats
+                .backend
+                .push(("check_auto_ms".to_owned(), elapsed.as_secs_f64() * 1000.0));
+            self.stats = Some(stats);
+            result
+        }
+
+        fn last_stats(&self) -> Option<&SolveStats> {
+            self.stats.as_ref()
         }
     }
 
@@ -771,6 +864,7 @@ mod run {
         let oracle_record = compare_backend.as_deref_mut().map(|backend| {
             compare_with_oracle(
                 backend,
+                file,
                 &script,
                 &rewrite,
                 &primary_solve.solve,
@@ -857,7 +951,24 @@ mod run {
             }
         };
         match parse_script(&text) {
-            Ok(s) => Ok(s),
+            Ok(s) => {
+                // Soundness guard: never report a real verdict for a benchmark the
+                // slice-parser could not faithfully represent. The harness solves the
+                // *flat* `assertions` view; if the script's actual decision query
+                // includes inline assumptions, or the file plainly carries constraints
+                // the flat view dropped, solving the flat view would answer a
+                // *different* (often vacuously satisfiable) problem and could
+                // false-alarm against `:status` — see [`under_parsed_reason`].
+                if let Some(reason) = under_parsed_reason(&s, &text) {
+                    summary.unsupported += 1;
+                    return Err(json!({
+                        "file": name,
+                        "outcome": "unsupported",
+                        "detail": reason,
+                    }));
+                }
+                Ok(s)
+            }
             Err(SmtError::Unsupported(what)) => {
                 summary.unsupported += 1;
                 Err(json!({
@@ -883,6 +994,54 @@ mod run {
                 }))
             }
         }
+    }
+
+    /// Detects a benchmark the slice-parser under-represented, so the harness can
+    /// mark it `unsupported` instead of reporting a (possibly vacuous) verdict that
+    /// would silently solve a *different* problem than the source asked — and could
+    /// false-alarm against `:status` or, worse, hide a real disagreement. Returns
+    /// `Some(reason)` when under-parsed, `None` when the flat assertion view is a
+    /// faithful encoding of the script's decision query.
+    ///
+    /// Two cases are detected (the minimum the course-correction calls out):
+    ///
+    /// 1. **`check-sat-assuming` with inline assumptions.** The flat `assertions`
+    ///    view omits the per-`check-sat` assumption literals, so solving it answers a
+    ///    strictly weaker query. (An *empty* assumption list is equivalent to
+    ///    `check-sat`, so it is not flagged.)
+    /// 2. **Zero assertions parsed from a non-trivial file.** The flat view is empty,
+    ///    yet the raw source contains an `assert`/`constraint`/`check-sat-assuming`
+    ///    token — i.e. constraints the slice could not represent were dropped, and
+    ///    solving "no constraints" is a vacuous `sat`.
+    fn under_parsed_reason(script: &Script, text: &str) -> Option<String> {
+        if script.commands.iter().any(|cmd| {
+            matches!(cmd, ScriptCommand::CheckSatAssuming(assumptions) if !assumptions.is_empty())
+        }) {
+            return Some(
+                "check-sat-assuming with inline assumptions not represented by the flat \
+                 assertion view; solving it would answer a weaker query"
+                    .to_owned(),
+            );
+        }
+        if script.assertions.is_empty() && source_has_constraints(text) {
+            return Some(
+                "0 assertions parsed from a file containing assert/constraint text; the \
+                 slice-parser dropped constraints — solving the empty problem would be a \
+                 vacuous verdict"
+                    .to_owned(),
+            );
+        }
+        None
+    }
+
+    /// Whether the raw SMT-LIB source carries any constraint-bearing token. A coarse
+    /// substring scan is deliberate: the goal is only to distinguish a genuinely
+    /// empty benchmark (no constraints, where an empty assertion view is faithful)
+    /// from one whose constraints the parser silently dropped.
+    fn source_has_constraints(text: &str) -> bool {
+        text.contains("(assert")
+            || text.contains("(constraint")
+            || text.contains("check-sat-assuming")
     }
 
     struct RewriteRun {
@@ -1815,8 +1974,10 @@ mod run {
         total.layer_model_lift_s += next.layer_model_lift_s;
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn compare_with_oracle(
         oracle: &mut dyn SolverBackend,
+        file: &Path,
         script: &Script,
         rewrite: &RewriteRun,
         primary: &SolveRecord,
@@ -1848,8 +2009,28 @@ mod run {
             ReplayFailurePolicy::SoundnessAlarm,
             reconstruct,
         );
-        let compared = matches!(oracle_solve.outcome, "sat" | "unsat");
-        let agrees = compared && oracle_solve.outcome == primary.outcome;
+        let mut compared = matches!(oracle_solve.outcome, "sat" | "unsat");
+        // The in-repo `Z3Backend` oracle only supports `QF_BV` (it returns
+        // `unsupported` for UF/arithmetic/datatypes/quantifiers/FP). So for the
+        // non-BV divisions this keystone exists to measure, it cannot give a
+        // head-to-head. When it declines, fall back to the **Z3 binary** run on the
+        // original file — the same verdict a Z3 user would get — so the oracle
+        // agree/disagree counters carry a true comparison. This is a verdict-only
+        // cross-check (no model lift), which is exactly what a soundness `:status`
+        // / disagreement gate needs.
+        let mut z3_binary: Option<Z3BinaryResult> = None;
+        let mut oracle_outcome = oracle_solve.outcome;
+        if !compared {
+            if let Some(result) = run_z3_binary(file, config.timeout) {
+                if let Some(verdict) = result.verdict {
+                    oracle_outcome = verdict;
+                    compared = true;
+                }
+                z3_binary = Some(result);
+            }
+        }
+
+        let agrees = compared && oracle_outcome == primary.outcome;
         if compared {
             summary.oracle_compared += 1;
             if agrees {
@@ -1863,8 +2044,8 @@ mod run {
 
         let mut record = json!({
             "enabled": true,
-            "backend_kind": "z3",
-            "outcome": oracle_solve.outcome,
+            "backend_kind": if z3_binary.is_some() { "z3-binary" } else { "z3" },
+            "outcome": oracle_outcome,
             "decision_compared": compared,
             "decision_agrees": if compared { JsonValue::Bool(agrees) } else { JsonValue::Null },
             "translate_ms": duration_ms(oracle_solve.stats.translate),
@@ -1872,12 +2053,69 @@ mod run {
             "model_lift_ms": duration_ms(oracle_solve.stats.model_lift),
             "backend_stats": backend_stats_record(&oracle_solve.stats),
         });
-        if let Some(detail) = &oracle_solve.detail
-            && let JsonValue::Object(obj) = &mut record
-        {
-            obj.insert("detail".to_owned(), json!(detail));
+        if let JsonValue::Object(obj) = &mut record {
+            if let Some(detail) = &oracle_solve.detail {
+                obj.insert("in_repo_z3_detail".to_owned(), json!(detail));
+            }
+            if let Some(result) = &z3_binary {
+                obj.insert(
+                    "z3_binary".to_owned(),
+                    json!({
+                        "verdict": result.verdict,
+                        "raw": result.raw,
+                        "solve_ms": result.elapsed_ms,
+                    }),
+                );
+            }
         }
         record
+    }
+
+    /// The verdict a stand-alone Z3 binary returns for one benchmark file.
+    struct Z3BinaryResult {
+        /// `"sat"` / `"unsat"` when Z3 decided; `None` for `unknown`/timeout/other.
+        verdict: Option<&'static str>,
+        /// The first non-empty line of Z3's stdout (for the artifact record).
+        raw: String,
+        elapsed_ms: u64,
+    }
+
+    /// Runs the stand-alone Z3 binary on `file` with a per-call timeout, returning
+    /// its `(check-sat)` verdict. The binary path is overridable via the `AXEYUM_Z3`
+    /// environment variable (default `z3`, resolved on `PATH`). Returns `None` only
+    /// when Z3 could not be launched at all (so the caller leaves the instance
+    /// `skipped` rather than fabricating a comparison); a Z3 `unknown`/timeout is a
+    /// `Some` with `verdict: None`.
+    fn run_z3_binary(file: &Path, timeout: Option<Duration>) -> Option<Z3BinaryResult> {
+        let binary = std::env::var("AXEYUM_Z3").unwrap_or_else(|_| "z3".to_owned());
+        let mut cmd = std::process::Command::new(binary);
+        cmd.arg(file);
+        if let Some(t) = timeout {
+            // Z3's own soft timeout, in milliseconds; keeps a wedged instance from
+            // hanging the harness. Add a small margin so Z3's internal timeout fires
+            // before any external watchdog.
+            cmd.arg(format!("-T:{}", t.as_secs().max(1) + 1));
+        }
+        let start = Instant::now();
+        let output = cmd.output().ok()?;
+        let elapsed_ms = duration_ms(start.elapsed());
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let first = stdout
+            .lines()
+            .map(str::trim)
+            .find(|line| !line.is_empty())
+            .unwrap_or("")
+            .to_owned();
+        let verdict = match first.as_str() {
+            "sat" => Some("sat"),
+            "unsat" => Some("unsat"),
+            _ => None,
+        };
+        Some(Z3BinaryResult {
+            verdict,
+            raw: first,
+            elapsed_ms,
+        })
     }
 
     fn query_plan_for_assertions(
@@ -2449,6 +2687,63 @@ mod run {
             assert_eq!(
                 blocker_leaderboard(&s.blocker_buckets),
                 "unknown:Timeout=2 unknown:EncodingBudget=1 unsupported=1"
+            );
+        }
+
+        #[test]
+        fn under_parse_guard_flags_check_sat_assuming_with_assumptions() {
+            // A `check-sat-assuming` with an inline assumption: the flat assertion
+            // view omits it, so the harness must NOT report a real verdict.
+            let text = "\
+                (set-logic QF_UF)\n\
+                (declare-const p Bool)\n\
+                (assert (or p (not p)))\n\
+                (check-sat-assuming (p))\n";
+            let script = parse_script(text).expect("parses");
+            let reason = under_parsed_reason(&script, text);
+            assert!(
+                reason.is_some_and(|r| r.contains("check-sat-assuming")),
+                "inline-assumption check-sat-assuming must be flagged unsupported",
+            );
+        }
+
+        #[test]
+        fn under_parse_guard_allows_plain_check_sat_assuming_empty() {
+            // An *empty* assumption list is equivalent to `check-sat`; not flagged.
+            let text = "\
+                (set-logic QF_UF)\n\
+                (declare-const p Bool)\n\
+                (assert p)\n\
+                (check-sat-assuming ())\n";
+            let script = parse_script(text).expect("parses");
+            assert!(
+                under_parsed_reason(&script, text).is_none(),
+                "empty check-sat-assuming is faithful and must not be flagged",
+            );
+        }
+
+        #[test]
+        fn under_parse_guard_flags_zero_assertions_from_constraint_text() {
+            // If the flat view is empty but the source plainly carries an assert,
+            // constraints were dropped — solving "nothing" is a vacuous verdict.
+            let text = "(assert true)";
+            // Build a Script that parsed no assertions but whose source has `assert`.
+            let mut script = Script::default();
+            script.assertions.clear();
+            assert!(
+                under_parsed_reason(&script, text).is_some(),
+                "0 parsed assertions over constraint-bearing text must be flagged",
+            );
+        }
+
+        #[test]
+        fn under_parse_guard_allows_genuinely_empty_benchmark() {
+            // A truly empty benchmark (no constraints) is faithfully empty.
+            let text = "(set-logic QF_UF)\n(check-sat)\n";
+            let script = parse_script(text).expect("parses");
+            assert!(
+                under_parsed_reason(&script, text).is_none(),
+                "a constraint-free benchmark must not be flagged",
             );
         }
 
