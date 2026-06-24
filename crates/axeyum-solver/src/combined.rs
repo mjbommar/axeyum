@@ -63,6 +63,16 @@ pub fn check_with_all_theories<B: SolverBackend>(
     let after_arrays = array_elim.assertions().to_vec();
 
     // Reduction 2: functions -> QF_LIA.
+    // Deterministic admission bound (graceful `unknown`, never an unbounded
+    // hang/OOM): refuse before the eager Ackermann elimination when it would emit
+    // too many congruence constraints — the O(k²) construction and the bit-blast of
+    // the result both run unbounded past `config.timeout`. Mirrors the gate on the
+    // direct `check_with_uf_arithmetic` route; a decided verdict never changes.
+    if let Some(refusal) =
+        crate::euf::refuse_oversized_ackermann(arena, &after_arrays, "combined theories")
+    {
+        return Ok(refusal);
+    }
     let func_elim = eliminate_functions(arena, &after_arrays).map_err(map_func_error)?;
     let after_funcs = func_elim.assertions().to_vec();
 

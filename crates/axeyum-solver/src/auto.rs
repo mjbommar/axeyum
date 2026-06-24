@@ -1056,6 +1056,31 @@ fn dispatch_uf_fast_paths(
     features: &Features,
     rec: &mut Recorder<'_>,
 ) -> Result<Option<CheckResult>, SolverError> {
+    // Deterministic admission bound (graceful `unknown`, never an unbounded
+    // hang/OOM) for **UF + arithmetic** instances, applied *before* any of the
+    // recursive e-graph / arithmetic passes below. The eager UF+arithmetic route
+    // these instances eventually reach expands each function's `k` applications to
+    // `k·(k−1)/2` Ackermann congruence constraints, whose O(k²) construction and
+    // unbounded downstream LIA/IDL solve neither honor `config.timeout`; and the
+    // upstream e-graph passes themselves recurse over the (often deeply-nested)
+    // assertion and can stack-overflow before any deadline check fires. Refusing the
+    // oversized instance here — by the same `MAX_ACKERMANN_CONGRUENCE_PAIRS` size
+    // estimate used at the eager construction sites — converts every such would-be
+    // hang into a sound, immediate `Unknown` without ever entering a recursive pass.
+    // Gated on `has_arithmetic_function` so pure-`QF_UF` (handled by the
+    // timeout-bounded e-graph path, ADR/commit af35fe1) is unaffected. SOUNDNESS: a
+    // refusal only ever replaces a hang with `Unknown`; no decided verdict changes.
+    if has_arithmetic_function(arena) {
+        if let Some(CheckResult::Unknown(reason)) =
+            crate::euf::refuse_oversized_ackermann(arena, assertions, "UF+arithmetic")
+        {
+            with_recorder(rec, |t| {
+                t.record_declined("uf-arith-admission", DeclineReason::from_unknown(&reason));
+            });
+            return Ok(Some(CheckResult::Unknown(reason)));
+        }
+    }
+
     // Try the **online** DPLL(T) decider on the backtrackable e-graph first: it
     // keeps one incremental congruence graph across the Boolean search. Both its
     // `sat` (replay-checked) and `unsat` (root-level congruence conflict) are

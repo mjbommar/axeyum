@@ -9,11 +9,122 @@
 
 use std::collections::HashSet;
 
-use axeyum_ir::{Assignment, FuncId, TermArena, TermId, Value, eval};
+use axeyum_ir::{Assignment, FuncId, Op, TermArena, TermId, TermNode, Value, eval};
 use axeyum_rewrite::{FuncElimError, eliminate_functions};
 
-use crate::backend::{CheckResult, SolverBackend, SolverConfig, SolverError};
+use crate::backend::{
+    CheckResult, SolverBackend, SolverConfig, SolverError, UnknownKind, UnknownReason,
+};
 use crate::model::Model;
+
+/// Deterministic admission bound on the number of **Ackermann congruence
+/// constraints** the eager UF-elimination would generate — graceful `Unknown`,
+/// never an unbounded hang/OOM (the standing hard rule).
+///
+/// Eager elimination ([`eliminate_functions`]) adds, for every *pair* of distinct
+/// applications of the same uninterpreted function `f`, one congruence constraint
+/// `(⋀ argsᵢ = argsⱼ) ⇒ f(argsᵢ) = f(argsⱼ)`. A function with `k` distinct
+/// applications therefore contributes `k·(k−1)/2` constraints — **quadratic** in
+/// the application count. This blowup happens entirely *inside a single
+/// `eliminate_functions` construction call* (building the O(k²) constraint terms),
+/// and the resulting eliminated formula then drives a downstream arithmetic solve
+/// whose per-round deadline check cannot intercept a single oversized solve.
+/// Neither the wall-clock nor `config.timeout` can bound either step once it has
+/// started, so the only sound guard is to refuse *before* construction.
+///
+/// Measured on a synthetic integer instance with `k` distinct applications of one
+/// function (one congruence pair = `k·(k−1)/2`): `k = 60` already generates 1 770
+/// constraints whose downstream integer solve runs unbounded past a 2 s
+/// `config.timeout` (killed at 200 s); `k = 700` generates 244 650 constraints,
+/// taking ~1 s just to *build* and then overflowing the stack in the solve.
+///
+/// The real cvc5-regression `QF_UFLIA` / `QF_UFIDL` instances that hang under the
+/// eager UF+arithmetic path carry hundreds of congruence pairs and hang **in the
+/// downstream LIA/IDL solve** (which does not honor `config.timeout`) even when the
+/// O(k²) construction itself is cheap — so the bound must sit *below* the smallest
+/// hanging instance, not merely below the construction blowup. Measured pair counts:
+/// `ooo.rf6` = 117 (truly unbounded, killed at 45 s), `hash_sat_06_19` = 328
+/// (unbounded), `simple_cyclic2` = 805 (was unbounded). The committed *bounded*
+/// `QF_UFLIA` / `QF_UF` slices (decided within budget) top out at **40** congruence
+/// pairs. The value `64` is the documented boundary: above the 40-pair decidable
+/// frontier (a 1.6x margin) yet below the 117-pair smallest hang, so every
+/// genuinely-decidable in-tree instance is still admitted while the unbounded ones
+/// degrade to a sound `Unknown` immediately. Closing the gap above it needs a
+/// *lazy* (CEGAR) congruence route and a deadline-honoring LIA/IDL solve, not an
+/// eager O(k²) expansion into an unbounded downstream solve.
+pub(crate) const MAX_ACKERMANN_CONGRUENCE_PAIRS: usize = 64;
+
+/// Counts the Ackermann congruence constraints the eager UF-elimination would
+/// generate for `assertions`: the sum over each uninterpreted function `f` of
+/// `k·(k−1)/2`, where `k` is the number of **distinct** (arena-interned)
+/// applications of `f` reachable from the assertions.
+///
+/// This is a sound **over-approximation** of the real pair count: the arena
+/// interns syntactically-identical applications to one `TermId`, so counting
+/// distinct application `TermId`s never *under*-counts the pairs the eliminator
+/// emits (post-rewrite argument canonicalization can only merge applications,
+/// reducing the count). Over-approximating keeps the admission guard
+/// conservative — it never lets a larger blowup slip through.
+///
+/// Saturates at [`usize::MAX`] on overflow (an astronomically large instance is
+/// refused all the same), so the count itself never panics.
+pub(crate) fn ackermann_congruence_pairs(arena: &TermArena, assertions: &[TermId]) -> usize {
+    // Distinct application TermIds per function, collected by a deterministic
+    // worklist DFS over the (interned) term DAG. `visited` dedups shared
+    // subterms so each application is counted once.
+    let mut visited: HashSet<TermId> = HashSet::new();
+    let mut per_func: Vec<(FuncId, usize)> = Vec::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !visited.insert(term) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(term) {
+            if let Op::Apply(func) = op {
+                let func = *func;
+                if let Some((_, count)) = per_func.iter_mut().find(|(f, _)| *f == func) {
+                    *count += 1;
+                } else {
+                    per_func.push((func, 1));
+                }
+            }
+            for &arg in args {
+                stack.push(arg);
+            }
+        }
+    }
+
+    per_func.into_iter().fold(0usize, |acc, (_func, k)| {
+        let pairs = k.saturating_mul(k.saturating_sub(1)) / 2;
+        acc.saturating_add(pairs)
+    })
+}
+
+/// The deterministic Ackermann admission check shared by every eager
+/// UF-elimination entry point: returns `Some(Unknown)` — a graceful, sound refusal
+/// — when `assertions` would generate more than [`MAX_ACKERMANN_CONGRUENCE_PAIRS`]
+/// congruence constraints (see [`ackermann_congruence_pairs`] for the conservative
+/// over-approximation), and `None` (admit) otherwise. `context` names the calling
+/// route in the [`UnknownReason`] detail. A refusal only ever turns a would-be
+/// unbounded hang/OOM into `Unknown`; it never changes a decided verdict.
+pub(crate) fn refuse_oversized_ackermann(
+    arena: &TermArena,
+    assertions: &[TermId],
+    context: &str,
+) -> Option<CheckResult> {
+    let pairs = ackermann_congruence_pairs(arena, assertions);
+    if pairs <= MAX_ACKERMANN_CONGRUENCE_PAIRS {
+        return None;
+    }
+    Some(CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::ResourceLimit,
+        detail: format!(
+            "{context}: eager Ackermann elimination would emit {pairs} congruence constraints, \
+             exceeding the deterministic admission bound of {MAX_ACKERMANN_CONGRUENCE_PAIRS} (the \
+             O(k²) expansion and its downstream solve run unbounded; this needs a lazy/CEGAR route)"
+        ),
+    }))
+}
 
 /// Checks a (possibly function-using) `QF_UFBV` conjunction with `backend`.
 ///
@@ -189,6 +300,15 @@ pub fn check_with_uf_arithmetic(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    // Deterministic admission bound (graceful `unknown`, never an unbounded
+    // hang/OOM): refuse oversized instances *before* building the O(k²) eager
+    // Ackermann congruence constraints, whose construction and downstream
+    // arithmetic solve both run unbounded past `config.timeout`. Refusing only ever
+    // turns a would-be hang into a sound `Unknown`; a decided verdict never changes.
+    if let Some(refusal) = refuse_oversized_ackermann(arena, assertions, "UF+arithmetic") {
+        return Ok(refusal);
+    }
+
     let elimination = eliminate_functions(arena, assertions).map_err(map_elim_error)?;
     let eliminated = elimination.assertions().to_vec();
     let result = crate::check_auto(arena, &eliminated, config)?;
@@ -652,5 +772,163 @@ mod tests {
             CheckResult::Unsat => Some(false),
             CheckResult::Unknown(_) => None,
         }
+    }
+
+    /// Builds an integer UF instance with `n` distinct applications of one unary
+    /// function, returned as a **flat** list of equality assertions (one per
+    /// adjacent application pair) so the term DAG stays shallow. The instance
+    /// forces `n·(n−1)/2` congruence pairs — the quadratic Ackermann blowup —
+    /// without a deeply-nested conjunction (which would stack-overflow unrelated
+    /// recursive passes, an artifact rather than the bug under test).
+    fn build_uf_blowup(arena: &mut TermArena, n: usize) -> Vec<axeyum_ir::TermId> {
+        let f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+        let mut apps = Vec::with_capacity(n);
+        for i in 0..n {
+            let v = arena.int_var(&format!("v{i}")).unwrap();
+            apps.push(arena.apply(f, &[v]).unwrap());
+        }
+        apps.windows(2)
+            .map(|w| arena.eq(w[0], w[1]).unwrap())
+            .collect()
+    }
+
+    #[test]
+    fn uf_arith_blowup_refused_quickly_as_unknown() {
+        use super::{
+            MAX_ACKERMANN_CONGRUENCE_PAIRS, ackermann_congruence_pairs, check_with_uf_arithmetic,
+        };
+        use crate::backend::{UnknownKind, UnknownReason};
+        use std::time::{Duration, Instant};
+
+        // 200 distinct applications => C(200,2) = 19_900 congruence pairs, far
+        // above the 512 admission bound — and a downstream integer solve that runs
+        // unbounded past `config.timeout` if it were ever built.
+        let mut arena = TermArena::new();
+        let assertions = build_uf_blowup(&mut arena, 200);
+
+        // The size estimate is the real pair count for this single-function shape.
+        let pairs = ackermann_congruence_pairs(&arena, &assertions);
+        assert_eq!(pairs, 200 * 199 / 2, "exact congruence-pair count");
+        assert!(pairs > MAX_ACKERMANN_CONGRUENCE_PAIRS);
+
+        // Even with a generous 5 s timeout the admission bound returns *immediately*
+        // (well under the budget) — the bound, not the clock, is what stops it.
+        let config = SolverConfig::default().with_timeout(Duration::from_secs(5));
+        let start = Instant::now();
+        let result = check_with_uf_arithmetic(&mut arena, &assertions, &config).unwrap();
+        let elapsed = start.elapsed();
+
+        assert!(
+            matches!(
+                result,
+                CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::ResourceLimit,
+                    ..
+                })
+            ),
+            "expected a ResourceLimit Unknown, got {result:?}"
+        );
+        assert!(
+            elapsed < Duration::from_secs(1),
+            "admission refusal must be effectively instant, took {elapsed:?}"
+        );
+    }
+
+    #[test]
+    fn uf_arith_blowup_refused_via_check_auto_bounded() {
+        use std::time::{Duration, Instant};
+        // The full `check_auto` dispatch (online probe -> eager -> int-blast ladder)
+        // must also stay bounded: every UF+arithmetic route is now gated. A 600-app
+        // instance (179_700 pairs) must return within budget, never hang.
+        let mut arena = TermArena::new();
+        let assertions = build_uf_blowup(&mut arena, 600);
+
+        let config = SolverConfig::default().with_timeout(Duration::from_secs(5));
+        let start = Instant::now();
+        let result = crate::check_auto(&mut arena, &assertions, &config).unwrap();
+        let elapsed = start.elapsed();
+
+        assert!(
+            matches!(result, CheckResult::Unknown(_)),
+            "blowup must degrade to Unknown, got {result:?}"
+        );
+        assert!(
+            elapsed < Duration::from_secs(10),
+            "check_auto on the blowup must stay bounded, took {elapsed:?}"
+        );
+    }
+
+    #[test]
+    fn committed_bounded_corpora_stay_under_admission_bound() {
+        // Calibration guard: every file in the committed *bounded* QF_UFLIA / QF_UF
+        // slices (which `check_auto` decides within budget) must stay below the
+        // admission bound, so the gate never refuses a decidable instance. Measured
+        // max is 40 pairs vs the 512 bound (a 12x margin); the 15 excluded hang
+        // files carry tens of thousands of pairs. Skips cleanly if the corpus dir
+        // is absent (it is committed in-tree, so normally present).
+        use super::{MAX_ACKERMANN_CONGRUENCE_PAIRS, ackermann_congruence_pairs};
+        use std::path::Path;
+        let roots = [
+            "../../corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-bounded",
+            "../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded",
+        ];
+        let mut checked = 0usize;
+        let mut max_seen = 0usize;
+        for root in roots {
+            let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join(root);
+            let Ok(entries) = std::fs::read_dir(&dir) else {
+                continue;
+            };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|e| e.to_str()) != Some("smt2") {
+                    continue;
+                }
+                let Ok(text) = std::fs::read_to_string(&path) else {
+                    continue;
+                };
+                let Ok(script) = axeyum_smtlib::parse_script(&text) else {
+                    continue;
+                };
+                let pairs = ackermann_congruence_pairs(&script.arena, &script.assertions);
+                max_seen = max_seen.max(pairs);
+                assert!(
+                    pairs <= MAX_ACKERMANN_CONGRUENCE_PAIRS,
+                    "{} would be newly refused ({pairs} pairs > bound)",
+                    path.display()
+                );
+                checked += 1;
+            }
+        }
+        if checked > 0 {
+            assert!(max_seen <= MAX_ACKERMANN_CONGRUENCE_PAIRS);
+        }
+    }
+
+    #[test]
+    fn uf_arith_small_instances_decide_identically() {
+        // Verdict invariance: small UF+arithmetic instances (below the bound) still
+        // decide exactly as before — the admission gate only touches the blowup.
+        use super::check_with_uf_arithmetic;
+        let config = SolverConfig::default();
+
+        // UNSAT: f(a) != f(b) AND a = b over Int.
+        let mut arena = TermArena::new();
+        let f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+        let a = arena.int_var("a").unwrap();
+        let b = arena.int_var("b").unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let fb = arena.apply(f, &[b]).unwrap();
+        let ne = {
+            let eq = arena.eq(fa, fb).unwrap();
+            arena.not(eq).unwrap()
+        };
+        let a_eq_b = arena.eq(a, b).unwrap();
+        let unsat = check_with_uf_arithmetic(&mut arena, &[ne, a_eq_b], &config).unwrap();
+        assert_eq!(unsat, CheckResult::Unsat, "congruence refutation must hold");
+
+        // The estimator is well below the bound for this small instance.
+        let pairs = super::ackermann_congruence_pairs(&arena, &[ne, a_eq_b]);
+        assert!(pairs <= super::MAX_ACKERMANN_CONGRUENCE_PAIRS);
     }
 }
