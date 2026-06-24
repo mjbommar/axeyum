@@ -1471,6 +1471,26 @@ fn check_auto_dispatch(
     }
 
     if features.has_int {
+        return dispatch_nonlinear_int_tail(arena, assertions, config, rec);
+    }
+
+    let mut backend = SatBvBackend::new();
+    let result =
+        check_with_all_theories(&mut backend, arena, assertions, DEFAULT_INT_WIDTH, config)?;
+    with_recorder(rec, |t| t.record_result("qf-bv", &result));
+    Ok(result)
+}
+
+/// The pure-integer nonlinear tail of [`check_auto_dispatch`] (`features.has_int`
+/// after the EUF/array fast paths). Split out for length; the verdict logic is
+/// verbatim the inlined original, `rec` only annotates the existing sites.
+fn dispatch_nonlinear_int_tail(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    rec: &mut Recorder<'_>,
+) -> Result<CheckResult, SolverError> {
+    {
         // Single-variable integer SQUARE constraint (`x*x ⋈ c`, constant `c`): an
         // exact, bounded NIA decision. The bounded bit-blast width ladder and the
         // real relaxation both only ever report `Unknown` for a non-perfect-square
@@ -1519,16 +1539,19 @@ fn check_auto_dispatch(
             with_recorder(rec, |t| t.record_decided("int-real-relax", Verdict::Unsat));
             return Ok(CheckResult::Unsat);
         }
+        // **Bound-aware EXACT int-blast** (closes the QF_NIA UNSAT blind spot):
+        // when every free `Int` variable is provably confined to a finite box,
+        // blasting at a box-covering width is EXACT, so a bit-vector `Unsat` is a
+        // genuine integer `Unsat` — the one thing the width ladder never trusts.
+        // Gated on the all-bounded proof; see `decide_bounded_int_blast`.
+        if let Some(result) = decide_bounded_int_blast(arena, assertions, config)? {
+            with_recorder(rec, |t| t.record_result("nia-bounded-blast", &result));
+            return Ok(result);
+        }
         let result = dispatch_int_blast_width_ladder(arena, assertions, config)?;
         with_recorder(rec, |t| t.record_result("int-blast-ladder", &result));
-        return Ok(result);
+        Ok(result)
     }
-
-    let mut backend = SatBvBackend::new();
-    let result =
-        check_with_all_theories(&mut backend, arena, assertions, DEFAULT_INT_WIDTH, config)?;
-    with_recorder(rec, |t| t.record_result("qf-bv", &result));
-    Ok(result)
 }
 
 /// Array fast paths, tried before the eager read-over-write + Ackermann
@@ -1583,6 +1606,660 @@ fn dispatch_pure_qf_abv(
 /// Whether `deadline` (if set) has passed.
 fn past_deadline(deadline: Option<Instant>) -> bool {
     deadline.is_some_and(|d| Instant::now() >= d)
+}
+
+// ===========================================================================
+// Bounded EXACT integer bit-blast (closes the QF_NIA UNSAT blind spot).
+// ===========================================================================
+//
+// The width ladder above is sound for `Sat` only: it never trusts a bit-vector
+// `Unsat` for an integer query, because at a fixed width the bit-vector search
+// missed any model living above `2^w`. This pass earns the right to trust a
+// blast-`Unsat` by first PROVING the whole query lives in a finite integer box,
+// then blasting at a width that encodes that box (and every intermediate value)
+// EXACTLY — no wraparound is possible, so a bit-vector `Unsat` is a genuine
+// integer `Unsat`.
+
+/// A closed integer interval `[lo, hi]` (inclusive). Used to track provable
+/// ranges of variables and subterms during the bound proof.
+#[derive(Clone, Copy, Debug)]
+struct IntInterval {
+    lo: i128,
+    hi: i128,
+}
+
+impl IntInterval {
+    fn point(v: i128) -> Self {
+        IntInterval { lo: v, hi: v }
+    }
+
+    /// The largest absolute value any member can take (for width sizing).
+    fn max_abs(self) -> u128 {
+        self.lo.unsigned_abs().max(self.hi.unsigned_abs())
+    }
+}
+
+/// Saturating-checked interval addition; `None` on `i128` overflow (→ decline).
+fn iv_add(a: IntInterval, b: IntInterval) -> Option<IntInterval> {
+    Some(IntInterval {
+        lo: a.lo.checked_add(b.lo)?,
+        hi: a.hi.checked_add(b.hi)?,
+    })
+}
+
+/// Checked interval subtraction (`a - b`); `None` on overflow.
+fn iv_sub(a: IntInterval, b: IntInterval) -> Option<IntInterval> {
+    Some(IntInterval {
+        lo: a.lo.checked_sub(b.hi)?,
+        hi: a.hi.checked_sub(b.lo)?,
+    })
+}
+
+/// Checked interval negation.
+fn iv_neg(a: IntInterval) -> Option<IntInterval> {
+    Some(IntInterval {
+        lo: a.hi.checked_neg()?,
+        hi: a.lo.checked_neg()?,
+    })
+}
+
+/// Checked interval multiplication: the product range is the min/max over the
+/// four corner products. `None` on any `i128` overflow.
+fn iv_mul(a: IntInterval, b: IntInterval) -> Option<IntInterval> {
+    let corners = [
+        a.lo.checked_mul(b.lo)?,
+        a.lo.checked_mul(b.hi)?,
+        a.hi.checked_mul(b.lo)?,
+        a.hi.checked_mul(b.hi)?,
+    ];
+    let lo = *corners.iter().min().expect("four corners");
+    let hi = *corners.iter().max().expect("four corners");
+    Some(IntInterval { lo, hi })
+}
+
+/// Evaluates the integer interval of `term` given known variable bounds in
+/// `bounds`. Returns `None` (decline) for any construct whose range is not
+/// computable here: an unbounded integer variable, a non-`Int`-arithmetic op
+/// (`div`/`mod`/`abs`/comparisons/`ite`/`bv2nat`/uninterpreted), or an `i128`
+/// overflow. Recognizing FEWER shapes is always sound — it only declines.
+fn interval_of(
+    arena: &TermArena,
+    term: TermId,
+    bounds: &HashMap<SymbolId, IntInterval>,
+    depth: u32,
+) -> Option<IntInterval> {
+    // Cap recursion so a pathologically deep term cannot blow the stack.
+    if depth > 256 {
+        return None;
+    }
+    match arena.node(term) {
+        TermNode::IntConst(value) => Some(IntInterval::point(*value)),
+        TermNode::Symbol(sym) => {
+            if arena.sort_of(term) == Sort::Int {
+                bounds.get(sym).copied()
+            } else {
+                None
+            }
+        }
+        TermNode::App { op, args } => {
+            // Only the *total* linear/multiplicative integer arithmetic that the
+            // exact bit-blast encoding preserves verbatim is interval-evaluated
+            // here; `div`/`mod`/`abs` (and everything else) decline.
+            let args = args.clone();
+            match op {
+                Op::IntAdd => iv_add(
+                    interval_of(arena, args[0], bounds, depth + 1)?,
+                    interval_of(arena, args[1], bounds, depth + 1)?,
+                ),
+                Op::IntSub => iv_sub(
+                    interval_of(arena, args[0], bounds, depth + 1)?,
+                    interval_of(arena, args[1], bounds, depth + 1)?,
+                ),
+                Op::IntNeg => iv_neg(interval_of(arena, args[0], bounds, depth + 1)?),
+                Op::IntMul => iv_mul(
+                    interval_of(arena, args[0], bounds, depth + 1)?,
+                    interval_of(arena, args[1], bounds, depth + 1)?,
+                ),
+                _ => None,
+            }
+        }
+        TermNode::BoolConst(_)
+        | TermNode::BvConst { .. }
+        | TermNode::WideBvConst(_)
+        | TermNode::RealConst(_) => None,
+    }
+}
+
+/// Bound side, used while collecting variable bounds from top-level conjuncts.
+#[derive(Clone, Copy)]
+enum BoundKind {
+    /// `var >= c` (lower).
+    Lower(i128),
+    /// `var <= c` (upper).
+    Upper(i128),
+}
+
+/// If `term` is exactly a single `Int` variable, returns its symbol.
+fn as_int_var(arena: &TermArena, term: TermId) -> Option<SymbolId> {
+    match arena.node(term) {
+        TermNode::Symbol(sym) if arena.sort_of(term) == Sort::Int => Some(*sym),
+        _ => None,
+    }
+}
+
+/// If `term` is an integer constant, returns its value.
+fn as_int_const(arena: &TermArena, term: TermId) -> Option<i128> {
+    match arena.node(term) {
+        TermNode::IntConst(v) => Some(*v),
+        _ => None,
+    }
+}
+
+/// Recognizes an atomic top-level bound literal `var ⋈ const` (or `const ⋈
+/// var`) on an `Int` variable and reports the implied half-bound. Only the
+/// **total** order relations `<`, `<=`, `>`, `>=` and equality produce a bound;
+/// strict bounds are tightened to the integer-inclusive form (`x < c` ⇒ `x <=
+/// c-1`). Returns `(symbol, BoundKind)` pairs (equality yields both halves).
+///
+/// SOUNDNESS: the caller only feeds atoms that hold UNCONDITIONALLY (top-level
+/// conjuncts, never under `or`/`not`/`ite`/`=>`), so each reported half-bound is
+/// a fact about every model. A shape not matched here simply yields no bound.
+fn atom_bounds(arena: &TermArena, term: TermId, out: &mut Vec<(SymbolId, BoundKind)>) {
+    let TermNode::App { op, args } = arena.node(term) else {
+        return;
+    };
+    if args.len() != 2 {
+        return;
+    }
+    let (a, b) = (args[0], args[1]);
+    // Normalize to `var ⋈ const`; the flipped orientation swaps the relation.
+    let (sym, c, flipped) =
+        if let (Some(s), Some(c)) = (as_int_var(arena, a), as_int_const(arena, b)) {
+            (s, c, false)
+        } else if let (Some(c), Some(s)) = (as_int_const(arena, a), as_int_var(arena, b)) {
+            (s, c, true)
+        } else {
+            return;
+        };
+    // `op` relates (var, const) when not flipped, else (const, var).
+    match op {
+        // var == const, or const == var: both bounds.
+        Op::Eq => {
+            out.push((sym, BoundKind::Lower(c)));
+            out.push((sym, BoundKind::Upper(c)));
+        }
+        // var <= const   (or const >= var)
+        Op::IntLe if !flipped => out.push((sym, BoundKind::Upper(c))),
+        Op::IntGe if flipped => out.push((sym, BoundKind::Upper(c))),
+        // var >= const   (or const <= var)
+        Op::IntGe if !flipped => out.push((sym, BoundKind::Lower(c))),
+        Op::IntLe if flipped => out.push((sym, BoundKind::Lower(c))),
+        // var < const ⇒ var <= const-1   (or const > var)
+        Op::IntLt if !flipped => {
+            if let Some(d) = c.checked_sub(1) {
+                out.push((sym, BoundKind::Upper(d)));
+            }
+        }
+        Op::IntGt if flipped => {
+            if let Some(d) = c.checked_sub(1) {
+                out.push((sym, BoundKind::Upper(d)));
+            }
+        }
+        // var > const ⇒ var >= const+1   (or const < var)
+        Op::IntGt if !flipped => {
+            if let Some(d) = c.checked_add(1) {
+                out.push((sym, BoundKind::Lower(d)));
+            }
+        }
+        Op::IntLt if flipped => {
+            if let Some(d) = c.checked_add(1) {
+                out.push((sym, BoundKind::Lower(d)));
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Collects the top-level **unconditional** conjuncts of `assertions` into
+/// `out`, flattening `and` and the assertion list itself. A conjunct under any
+/// other connective (`or`/`not`/`ite`/`=>`) is NOT unconditional and is skipped
+/// (its truth is not guaranteed in every model), so every collected term is a
+/// fact — the soundness basis for reading bounds off them.
+fn collect_top_conjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
+    match arena.node(term) {
+        TermNode::App {
+            op: Op::BoolAnd,
+            args,
+        } => {
+            let args = args.clone();
+            for arg in args {
+                collect_top_conjuncts(arena, arg, out);
+            }
+        }
+        _ => out.push(term),
+    }
+}
+
+/// Walks `term` collecting every free `Int` variable symbol that appears.
+fn collect_int_vars(arena: &TermArena, term: TermId, out: &mut BTreeSet<SymbolId>) {
+    let mut stack = vec![term];
+    let mut seen = BTreeSet::new();
+    while let Some(t) = stack.pop() {
+        if !seen.insert(t) {
+            continue;
+        }
+        match arena.node(t) {
+            TermNode::Symbol(sym) if arena.sort_of(t) == Sort::Int => {
+                out.insert(*sym);
+            }
+            TermNode::App { args, .. } => stack.extend(args.iter().copied()),
+            _ => {}
+        }
+    }
+}
+
+/// Proves a finite integer box for every free `Int` variable of `assertions`,
+/// then bit-blasts at a width that encodes the box (and every intermediate
+/// value) EXACTLY, returning a TRUSTED `Sat`/`Unsat` — or `None` (decline) when
+/// the all-bounded proof, the covering width, or the exact-encoding guarantee
+/// cannot be established (the query falls through to the sat-only width ladder
+/// unchanged).
+///
+/// SOUNDNESS — why a returned `Unsat` is sound. The bounds are read only off
+/// UNCONDITIONAL top-level conjuncts, so each `lo_v ≤ v ≤ hi_v` holds in every
+/// model of the original. With a derived bound (via an equality), the same is
+/// true: a top-level equality `e₁ = e₂` holds in every model, so a variable it
+/// pins to a bounded interval is bounded in every model. We then require an
+/// interval analysis to bound EVERY subterm of EVERY assertion (declining
+/// otherwise), and pick a width whose signed range strictly contains every such
+/// interval. At that width two's-complement arithmetic equals integer
+/// arithmetic on every subterm (no `bvadd`/`bvsub`/`bvmul` wraps), so the blast
+/// is a *faithful* encoding of the box. Conjoining the explicit clamp `lo ≤ v ≤
+/// hi` forces the bit-vector search to stay in the box. Hence: bit-vector
+/// `Unsat` ⇒ no model in the box ⇒ (no model can leave the box) ⇒ original
+/// `Unsat`. A `Sat` is independently replay-checked against the *original*
+/// assertions by `check_with_all_theories`, so a mis-analysis can only cause a
+/// declined `Unknown`, never a wrong verdict.
+fn decide_bounded_int_blast(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<Option<CheckResult>, SolverError> {
+    // 1. Free Int variables and the unconditional top-level conjuncts.
+    let mut int_vars = BTreeSet::new();
+    let mut conjuncts = Vec::new();
+    for &a in assertions {
+        collect_int_vars(arena, a, &mut int_vars);
+        collect_top_conjuncts(arena, a, &mut conjuncts);
+    }
+    if int_vars.is_empty() {
+        return Ok(None);
+    }
+
+    // 2. Direct constant half-bounds from atomic top-level conjuncts.
+    let mut raw_bounds: Vec<(SymbolId, BoundKind)> = Vec::new();
+    for &c in &conjuncts {
+        atom_bounds(arena, c, &mut raw_bounds);
+    }
+    let mut lo: HashMap<SymbolId, i128> = HashMap::new();
+    let mut hi: HashMap<SymbolId, i128> = HashMap::new();
+    for (sym, kind) in raw_bounds {
+        match kind {
+            BoundKind::Lower(c) => {
+                let e = lo.entry(sym).or_insert(c);
+                *e = (*e).max(c);
+            }
+            BoundKind::Upper(c) => {
+                let e = hi.entry(sym).or_insert(c);
+                *e = (*e).min(c);
+            }
+        }
+    }
+    let mut bounds: HashMap<SymbolId, IntInterval> = HashMap::new();
+    for &v in &int_vars {
+        if let (Some(&l), Some(&h)) = (lo.get(&v), hi.get(&v)) {
+            if l <= h {
+                bounds.insert(v, IntInterval { lo: l, hi: h });
+            } else {
+                // Contradictory direct bounds (`lo > hi`): the conjunction is
+                // already UNSAT on these literals alone.
+                return Ok(Some(CheckResult::Unsat));
+            }
+        }
+    }
+
+    // 3. Derive bounds for still-unbounded variables from top-level EQUALITIES,
+    //    to a fixpoint. For an `Int` equality `e₁ = e₂` with exactly one
+    //    still-unbounded variable `v` appearing AFFINELY (coefficient `k ≠ 0`),
+    //    we have `k·v = interval(e₂ − e₁ with v dropped)`, so `v` is bounded.
+    let int_eqs: Vec<(TermId, TermId)> = conjuncts
+        .iter()
+        .filter_map(|&c| match arena.node(c) {
+            TermNode::App { op: Op::Eq, args } if args.len() == 2 => {
+                let (a, b) = (args[0], args[1]);
+                if arena.sort_of(a) == Sort::Int && arena.sort_of(b) == Sort::Int {
+                    Some((a, b))
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        })
+        .collect();
+
+    let mut changed = true;
+    while changed {
+        changed = false;
+        for &v in &int_vars {
+            if bounds.contains_key(&v) {
+                continue;
+            }
+            for &(e1, e2) in &int_eqs {
+                if let Some(iv) = derive_var_bound(arena, v, e1, e2, &bounds) {
+                    bounds.insert(v, iv);
+                    changed = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    // 4. Every free Int variable must now be bounded; otherwise decline.
+    if int_vars.iter().any(|v| !bounds.contains_key(v)) {
+        return Ok(None);
+    }
+
+    // 5. Interval-analyze EVERY subterm of EVERY assertion. The covering width
+    //    must contain every Int-arithmetic subterm's interval; a subterm whose
+    //    interval is not computable (an integer `div`/`mod`/`abs`, a `bv2nat`, an
+    //    unbounded var — impossible here — or an `i128` overflow) means we cannot
+    //    PROVE the encoding is exact, so we decline.
+    let mut max_abs: u128 = 1;
+    for &a in assertions {
+        if !accumulate_max_abs(arena, a, &bounds, &mut max_abs, 0) {
+            return Ok(None);
+        }
+    }
+
+    // 6. Width to cover signed `[-max_abs-?, max_abs]`: bits for the magnitude
+    //    plus a sign bit. `bits(n)` is the smallest `w` with `n < 2^(w-1)`, i.e.
+    //    `n` fits in signed `w` bits. Decline beyond `MAX_INT_BLAST_WIDTH`.
+    let width = match covering_width(max_abs) {
+        Some(w) if w <= axeyum_rewrite::MAX_INT_BLAST_WIDTH => w,
+        _ => return Ok(None),
+    };
+
+    // 7. Conjoin the explicit clamp `lo ≤ v ≤ hi` for every variable so the
+    //    bit-vector search is forced to stay inside the proven box (the encoding
+    //    is exact there). Build on the real arena (clones inside the blast).
+    let mut clamped: Vec<TermId> = assertions.to_vec();
+    for (&v, iv) in &bounds {
+        let var = arena.var(v);
+        let lo_c = arena.int_const(iv.lo);
+        let hi_c = arena.int_const(iv.hi);
+        let ge = arena
+            .int_ge(var, lo_c)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+        let le = arena
+            .int_le(var, hi_c)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+        clamped.push(ge);
+        clamped.push(le);
+    }
+
+    // 8. Solve the clamped, exactly-encoded box at the covering width.
+    solve_exact_bounded_box(arena, &clamped, width, config)
+}
+
+/// Solves the clamped, exactly-encoded box query (`decide_bounded_int_blast`
+/// step 8) at the proven covering `width`, returning a TRUSTED verdict or
+/// `None` (decline). `check_with_all_theories` replays a `Sat` against the
+/// originals (sound `Sat`); for `Unsat` it conservatively returns `Unknown`
+/// because it cannot tell the blast was exact — but the caller HAS proven the
+/// box and the width covers every subterm, so we re-blast directly and trust the
+/// raw bit-vector `Unsat`. The no-overflow side-constraints the blaster adds are
+/// then valid (no product wraps in the box), so the raw `Unsat` is a genuine
+/// integer `Unsat`. A raw `Sat` from the re-blast is NOT trusted here (the
+/// combined path already had its replay-checked say), so anything but `Unsat`
+/// declines.
+fn solve_exact_bounded_box(
+    arena: &TermArena,
+    clamped: &[TermId],
+    width: u32,
+    config: &SolverConfig,
+) -> Result<Option<CheckResult>, SolverError> {
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    if past_deadline(deadline) {
+        return Ok(None);
+    }
+
+    // 8a. SAT side via the replay-checked combined path.
+    let mut scratch = arena.clone();
+    let mut backend = SatBvBackend::new();
+    match check_with_all_theories(&mut backend, &mut scratch, clamped, width, config)? {
+        sat @ CheckResult::Sat(_) => return Ok(Some(sat)),
+        // No integers in the clamped query — impossible here, but a definite
+        // `Unsat` transfers regardless.
+        CheckResult::Unsat => return Ok(Some(CheckResult::Unsat)),
+        CheckResult::Unknown(_) => {}
+    }
+
+    // 8b. UNSAT side: re-blast directly to read the RAW bit-vector verdict.
+    if past_deadline(deadline) {
+        return Ok(None);
+    }
+    let mut scratch = arena.clone();
+    let Ok(blast) = axeyum_rewrite::blast_integers(&mut scratch, clamped, width) else {
+        return Ok(None);
+    };
+    let mut backend = SatBvBackend::new();
+    match crate::backend::SolverBackend::check(&mut backend, &scratch, blast.assertions(), config)?
+    {
+        CheckResult::Unsat => Ok(Some(CheckResult::Unsat)),
+        _ => Ok(None),
+    }
+}
+
+/// If `v` appears affinely (coefficient `k ≠ 0`, no nonlinear occurrence) in
+/// `e1 - e2` and every OTHER variable in `e1`/`e2` is already bounded, returns
+/// the derived interval for `v` from `k·v = (e2 − e1 without v)`. Otherwise
+/// `None` (cannot derive here — decline this variable for now).
+fn derive_var_bound(
+    arena: &TermArena,
+    v: SymbolId,
+    e1: TermId,
+    e2: TermId,
+    bounds: &HashMap<SymbolId, IntInterval>,
+) -> Option<IntInterval> {
+    // Linearize `e1 - e2` as `k·v + rest`, where `rest` is `v`-free. `affine_in`
+    // returns `(k, rest_interval)`; it declines (`None`) if `v` occurs
+    // non-affinely (e.g. `v·v`, `v·w`) or any `v`-free part is not boundable.
+    let (k1, rest1) = affine_in(arena, e1, v, bounds, 0)?;
+    let (k2, rest2) = affine_in(arena, e2, v, bounds, 0)?;
+    let k = k1.checked_sub(k2)?;
+    if k == 0 {
+        return None;
+    }
+    // rest = rest1 - rest2 ; equation: k·v + rest = 0  ⇒  v = -rest / k.
+    let rest = iv_sub(rest1, rest2)?;
+    let neg_rest = iv_neg(rest)?;
+    // Divide the interval by `k` and round INWARD to integers (a sound superset
+    // of the true integer solutions: any integer `v` with `k·v ∈ neg_rest` lies
+    // in `[ceil(neg_rest.lo/k), floor(neg_rest.hi/k)]`).
+    let (dlo, dhi) = if k > 0 {
+        (div_ceil(neg_rest.lo, k)?, div_floor(neg_rest.hi, k)?)
+    } else {
+        // Negative `k` flips the order.
+        (div_ceil(neg_rest.hi, k)?, div_floor(neg_rest.lo, k)?)
+    };
+    if dlo <= dhi {
+        Some(IntInterval { lo: dlo, hi: dhi })
+    } else {
+        // Empty derived interval ⇒ the equality is infeasible given the other
+        // bounds; declining keeps this path conservative (the UNSAT, if any, is
+        // still found by the exact blast once all vars are bounded — here we
+        // simply cannot bound `v`, so we leave it).
+        None
+    }
+}
+
+/// Linearizes `term` as `k·v + rest` in the single variable `v`: returns
+/// `(k, interval(rest))` where `rest` is `v`-free, or `None` if `v` occurs
+/// non-affinely or any `v`-free subterm is not interval-boundable. `k` is an
+/// exact integer coefficient.
+fn affine_in(
+    arena: &TermArena,
+    term: TermId,
+    v: SymbolId,
+    bounds: &HashMap<SymbolId, IntInterval>,
+    depth: u32,
+) -> Option<(i128, IntInterval)> {
+    if depth > 256 {
+        return None;
+    }
+    match arena.node(term) {
+        TermNode::IntConst(c) => Some((0, IntInterval::point(*c))),
+        TermNode::Symbol(sym) => {
+            if *sym == v {
+                Some((1, IntInterval::point(0)))
+            } else if arena.sort_of(term) == Sort::Int {
+                bounds.get(sym).copied().map(|iv| (0, iv))
+            } else {
+                None
+            }
+        }
+        TermNode::App { op, args } => {
+            let args = args.clone();
+            match op {
+                Op::IntAdd => {
+                    let (k1, r1) = affine_in(arena, args[0], v, bounds, depth + 1)?;
+                    let (k2, r2) = affine_in(arena, args[1], v, bounds, depth + 1)?;
+                    Some((k1.checked_add(k2)?, iv_add(r1, r2)?))
+                }
+                Op::IntSub => {
+                    let (k1, r1) = affine_in(arena, args[0], v, bounds, depth + 1)?;
+                    let (k2, r2) = affine_in(arena, args[1], v, bounds, depth + 1)?;
+                    Some((k1.checked_sub(k2)?, iv_sub(r1, r2)?))
+                }
+                Op::IntNeg => {
+                    let (k, r) = affine_in(arena, args[0], v, bounds, depth + 1)?;
+                    Some((k.checked_neg()?, iv_neg(r)?))
+                }
+                Op::IntMul => {
+                    let (k1, r1) = affine_in(arena, args[0], v, bounds, depth + 1)?;
+                    let (k2, r2) = affine_in(arena, args[1], v, bounds, depth + 1)?;
+                    // The product is affine in `v` only if at least one factor is
+                    // `v`-free (a constant coefficient). `v·v` (both `k≠0`) is
+                    // nonlinear ⇒ decline.
+                    match (k1, k2) {
+                        (0, 0) => Some((0, iv_mul(r1, r2)?)),
+                        // (k1·v + r1)·r2  with k2 = 0: factor-2 is `v`-free.
+                        (k1, 0) => {
+                            let c = const_of(r2)?;
+                            Some((k1.checked_mul(c)?, iv_mul(r1, IntInterval::point(c))?))
+                        }
+                        // r1·(k2·v + r2) with k1 = 0: factor-1 is `v`-free.
+                        (0, k2) => {
+                            let c = const_of(r1)?;
+                            Some((k2.checked_mul(c)?, iv_mul(IntInterval::point(c), r2)?))
+                        }
+                        _ => None,
+                    }
+                }
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
+/// A point interval's value, or `None` if it is not a single integer (a true
+/// non-constant coefficient cannot be folded into a linear term soundly).
+fn const_of(iv: IntInterval) -> Option<i128> {
+    if iv.lo == iv.hi { Some(iv.lo) } else { None }
+}
+
+/// `ceil(a / b)` for nonzero `b`, with the true mathematical rounding; `None` on
+/// overflow.
+fn div_ceil(a: i128, b: i128) -> Option<i128> {
+    if b == 0 {
+        return None;
+    }
+    let q = a.checked_div(b)?;
+    let r = a.checked_rem(b)?;
+    if r != 0 && ((r > 0) == (b > 0)) {
+        q.checked_add(1)
+    } else {
+        Some(q)
+    }
+}
+
+/// `floor(a / b)` for nonzero `b`, with the true mathematical rounding; `None` on
+/// overflow.
+fn div_floor(a: i128, b: i128) -> Option<i128> {
+    if b == 0 {
+        return None;
+    }
+    let q = a.checked_div(b)?;
+    let r = a.checked_rem(b)?;
+    if r != 0 && ((r > 0) != (b > 0)) {
+        q.checked_sub(1)
+    } else {
+        Some(q)
+    }
+}
+
+/// Folds the maximum absolute value over every `Int`-arithmetic subterm of
+/// `term` into `max_abs`. Returns `false` (caller declines) if any `Int`
+/// subterm's interval is not computable — the exactness guarantee then cannot be
+/// established. Non-`Int` subterms (Bool/BV structure, comparisons) are walked
+/// for their `Int` children but contribute no magnitude themselves.
+fn accumulate_max_abs(
+    arena: &TermArena,
+    term: TermId,
+    bounds: &HashMap<SymbolId, IntInterval>,
+    max_abs: &mut u128,
+    depth: u32,
+) -> bool {
+    if depth > 1024 {
+        return false;
+    }
+    if arena.sort_of(term) == Sort::Int {
+        // Every Int subterm carries a width-`w` value at blast time, so EACH must
+        // have a computable interval that the chosen width covers — a deeply
+        // nested product (e.g. `x*x` inside `(x*x) - (x*x)`) can dominate even when
+        // its parent's interval is tiny. So we record this node's magnitude AND
+        // keep recursing into its children (rather than trusting the parent
+        // interval to dominate).
+        let Some(iv) = interval_of(arena, term, bounds, 0) else {
+            return false;
+        };
+        *max_abs = (*max_abs).max(iv.max_abs());
+    }
+    match arena.node(term) {
+        TermNode::App { args, .. } => {
+            let args = args.clone();
+            for arg in args {
+                if !accumulate_max_abs(arena, arg, bounds, max_abs, depth + 1) {
+                    return false;
+                }
+            }
+            true
+        }
+        _ => true,
+    }
+}
+
+/// Smallest signed bit-width whose range `[-2^(w-1), 2^(w-1) - 1]` strictly
+/// contains every value of magnitude `≤ max_abs`, i.e. the smallest `w` with
+/// `max_abs < 2^(w-1)`. `None` if no width `≤ 128` suffices.
+fn covering_width(max_abs: u128) -> Option<u32> {
+    // Need `2^(w-1) > max_abs`  ⇒  `w - 1 > log2(max_abs)`  ⇒
+    // `w = bit_length(max_abs) + 1` (the extra bit is the sign). Guard the
+    // `max_abs` magnitude so the strict-greater holds even at a power of two.
+    let bits = 128 - max_abs.leading_zeros(); // bit_length(max_abs); 0 ⇒ 0
+    let w = bits.checked_add(1)?; // + sign bit
+    if w > 128 { None } else { Some(w.max(1)) }
 }
 
 /// Smallest integer bit-blast width tried by the ladder. A narrow width leaves no
@@ -2931,6 +3608,177 @@ mod tests {
         assert!(
             matches!(result, CheckResult::Unsat),
             "expected Unsat from keystone instantiation, got {result:?}"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Bounded EXACT int-blast (QF_NIA UNSAT blind spot).
+    // -----------------------------------------------------------------------
+
+    /// `x*x = 2 ∧ 0 ≤ x ≤ 5`: no integer in `[0,5]` squares to 2, so the bounded
+    /// box is finite and the exact blast must REFUTE it (the width ladder alone
+    /// only ever says `Unknown` for `x*x = 2`).
+    #[test]
+    fn bounded_nonlinear_square_no_root_is_unsat() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let sq = arena.int_mul(xv, xv).unwrap();
+        let two = arena.int_const(2);
+        let zero = arena.int_const(0);
+        let five = arena.int_const(5);
+        let eq = arena.eq(sq, two).unwrap();
+        let lo = arena.int_ge(xv, zero).unwrap();
+        let hi = arena.int_le(xv, five).unwrap();
+        let result = check_auto(&mut arena, &[eq, lo, hi], &SolverConfig::default()).unwrap();
+        assert!(
+            matches!(result, CheckResult::Unsat),
+            "bounded x*x=2 must be unsat, got {result:?}"
+        );
+    }
+
+    /// `x*y = 7 ∧ 2 ≤ x,y ≤ 3`: products in range are 4,6,9, never 7 ⇒ unsat.
+    #[test]
+    fn bounded_product_no_factorization_is_unsat() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let y = arena.declare("y", Sort::Int).unwrap();
+        let (xv, yv) = (arena.var(x), arena.var(y));
+        let prod = arena.int_mul(xv, yv).unwrap();
+        let seven = arena.int_const(7);
+        let two = arena.int_const(2);
+        let three = arena.int_const(3);
+        let eq = arena.eq(prod, seven).unwrap();
+        let xlo = arena.int_ge(xv, two).unwrap();
+        let xhi = arena.int_le(xv, three).unwrap();
+        let ylo = arena.int_ge(yv, two).unwrap();
+        let yhi = arena.int_le(yv, three).unwrap();
+        let result = check_auto(
+            &mut arena,
+            &[eq, xlo, xhi, ylo, yhi],
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        assert!(
+            matches!(result, CheckResult::Unsat),
+            "bounded x*y=7 (2..3) must be unsat, got {result:?}"
+        );
+    }
+
+    /// `x*y = 6 ∧ 1 ≤ x,y ≤ 6`: a genuine bounded SAT (e.g. 2·3) ⇒ a replayed
+    /// model. Confirms the path's `Sat` is real (replay-checked), not just unsat.
+    #[test]
+    fn bounded_product_with_factorization_is_sat() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let y = arena.declare("y", Sort::Int).unwrap();
+        let (xv, yv) = (arena.var(x), arena.var(y));
+        let prod = arena.int_mul(xv, yv).unwrap();
+        let six = arena.int_const(6);
+        let one = arena.int_const(1);
+        let eq = arena.eq(prod, six).unwrap();
+        let xlo = arena.int_ge(xv, one).unwrap();
+        let xhi = arena.int_le(xv, six).unwrap();
+        let ylo = arena.int_ge(yv, one).unwrap();
+        let yhi = arena.int_le(yv, six).unwrap();
+        let asserts = [eq, xlo, xhi, ylo, yhi];
+        let result = check_auto(&mut arena, &asserts, &SolverConfig::default()).unwrap();
+        let CheckResult::Sat(model) = result else {
+            panic!("bounded x*y=6 must be sat, got {result:?}");
+        };
+        // The model must replay against EVERY original assertion exactly.
+        let assignment = model.to_assignment();
+        for &a in &asserts {
+            assert_eq!(
+                eval(&arena, a, &assignment).unwrap(),
+                Value::Bool(true),
+                "sat model must satisfy every original assertion"
+            );
+        }
+    }
+
+    /// SOUNDNESS GUARD: an UNBOUNDED nonlinear integer query (`x² = 2y² ∧ x,y ≥
+    /// 1`, no upper bound on either variable) must NOT be falsely refuted. The
+    /// bound-detection cannot prove a finite box (no upper bound), so the exact
+    /// path DECLINES — the query stays `Unknown`, never a wrong `Unsat`.
+    #[test]
+    fn unbounded_nonlinear_is_not_falsely_refuted() {
+        let mut arena = TermArena::new();
+        let xs = arena.declare("x", Sort::Int).unwrap();
+        let ys = arena.declare("y", Sort::Int).unwrap();
+        let (xv, yv) = (arena.var(xs), arena.var(ys));
+        let xsq = arena.int_mul(xv, xv).unwrap();
+        let ysq = arena.int_mul(yv, yv).unwrap();
+        let two = arena.int_const(2);
+        let two_ysq = arena.int_mul(two, ysq).unwrap();
+        let eq = arena.eq(xsq, two_ysq).unwrap();
+        let one = arena.int_const(1);
+        let xlo = arena.int_ge(xv, one).unwrap();
+        let ylo = arena.int_ge(yv, one).unwrap();
+        // Tight timeout so even if some other engine grinds, it returns Unknown,
+        // not a wrong verdict; the point is NEVER `Unsat` from THIS path.
+        let config = SolverConfig {
+            timeout: Some(std::time::Duration::from_secs(5)),
+            ..Default::default()
+        };
+        let result = check_auto(&mut arena, &[eq, xlo, ylo], &config).unwrap();
+        assert!(
+            !matches!(result, CheckResult::Unsat),
+            "unbounded x²=2y² (x,y≥1) must NOT be falsely refuted, got {result:?}"
+        );
+    }
+
+    /// The bounded EXACT blast must DECIDE the `no-square-mod` shape that pins the
+    /// `nia_unsat` frontier: `x² = m·t + r ∧ 0 ≤ x < N·m ∧ t ≥ 0`, with `t`'s
+    /// upper bound DERIVED from `x`'s via the equality. `r=2` is a non-residue
+    /// mod 3, so the system is unsat.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn no_square_mod_with_derived_t_bound_is_unsat() {
+        let (m, r, n) = (3i128, 2i128, 2i128);
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let t = arena.declare("t", Sort::Int).unwrap();
+        let (xv, tv) = (arena.var(x), arena.var(t));
+        // x*x = m*t + r
+        let xsq = arena.int_mul(xv, xv).unwrap();
+        let m_c = arena.int_const(m);
+        let mt = arena.int_mul(m_c, tv).unwrap();
+        let r_c = arena.int_const(r);
+        let rhs = arena.int_add(mt, r_c).unwrap();
+        let eq = arena.eq(xsq, rhs).unwrap();
+        // 0 <= x < N*m
+        let zero = arena.int_const(0);
+        let upper = arena.int_const(n * m);
+        let xlo = arena.int_ge(xv, zero).unwrap();
+        let xhi = arena.int_lt(xv, upper).unwrap();
+        // t >= 0
+        let tlo = arena.int_ge(tv, zero).unwrap();
+        let result =
+            check_auto(&mut arena, &[eq, xlo, xhi, tlo], &SolverConfig::default()).unwrap();
+        assert!(
+            matches!(result, CheckResult::Unsat),
+            "no-square-mod (derived t bound) must be unsat, got {result:?}"
+        );
+    }
+
+    /// Verdict-invariance smoke: a bounded LINEAR query the LIA engines already
+    /// decide unsat is unchanged (the new branch runs only in the nonlinear tail,
+    /// after the LIA refuters short-circuit).
+    #[test]
+    fn linear_unsat_unchanged() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        // x > 0 ∧ x < 1  ⇒ unsat (no integer strictly between 0 and 1).
+        let gt = arena.int_gt(xv, zero).unwrap();
+        let lt = arena.int_lt(xv, one).unwrap();
+        let result = check_auto(&mut arena, &[gt, lt], &SolverConfig::default()).unwrap();
+        assert!(
+            matches!(result, CheckResult::Unsat),
+            "bounded linear x>0 ∧ x<1 must be unsat, got {result:?}"
         );
     }
 }

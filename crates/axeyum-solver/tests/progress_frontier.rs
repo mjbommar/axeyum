@@ -131,13 +131,14 @@ const BASELINE_NRA_DEGREE: u32 = 2;
 
 /// `nia_unsat`: largest bound multiplier `N` whose integer-nonlinear
 /// `no-square-mod` refutation axeyum refutes (UNSAT) within budget. The measured
-/// frontier is **0** — axeyum returns `unknown` on every `N` today (the NIA
-/// decider has no integer-nonlinear UNSAT capability yet). A baseline of `0` is
-/// *correct and useful*: it is a high-signal tracking row for an unfilled
-/// capability, and `frontier >= 0` always holds, so the test PASSES and PRINTS
-/// the live frontier — which RISES above `0` the moment the NIA decider gains
-/// integer-nonlinear UNSAT power (then the floor is bumped).
-const BASELINE_NIA_UNSAT: u32 = 0;
+/// frontier was **0** (the NIA decider had no integer-nonlinear UNSAT capability)
+/// and is now **40** = [`MAX_N`], the full sweep: the bound-aware EXACT int-blast
+/// (`decide_bounded_int_blast` in `auto.rs`) proves the finite box — `x` directly
+/// bounded by `0 ≤ x < N·m`, `t`'s upper bound *derived* from `x`'s via the
+/// equality `x² = m·t + r` — then blasts at a width that encodes the box exactly,
+/// so a bit-vector `Unsat` is a TRUSTED integer `Unsat`. The floor is ratcheted to
+/// the measured frontier; `frontier >= BASELINE` holds, so the test PASSES.
+const BASELINE_NIA_UNSAT: u32 = 40;
 
 /// The largest `N` any family is ever swept to (a hard ceiling so a regression
 /// that suddenly decides "everything" can't run forever).
