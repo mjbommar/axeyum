@@ -177,7 +177,8 @@ pub use euf::{check_qf_ufbv_lazy, check_with_function_elimination, check_with_uf
 pub use euf_alethe::prove_qf_uf_unsat_alethe;
 pub use euf_egraph::{
     EufConflict, EufTheory, TheoryLit, TheoryProp, TheorySolver, check_qf_uf,
-    prove_unsat_by_congruence, prove_unsat_lazy, prove_unsat_qf_uf_online, solve_qf_uf_online,
+    check_qf_uf_with_config, prove_unsat_by_congruence, prove_unsat_lazy, prove_unsat_qf_uf_online,
+    solve_qf_uf_online,
 };
 pub use euf_interpolant::{
     QfUfInterpolantCertificate, qf_uf_interpolant, qf_uf_interpolant_certified,

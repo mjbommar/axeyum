@@ -1075,7 +1075,7 @@ fn dispatch_uf_fast_paths(
             });
         }
     }
-    match crate::euf_egraph::check_qf_uf(arena, assertions) {
+    match crate::euf_egraph::check_qf_uf_with_config(arena, assertions, config) {
         CheckResult::Sat(model) => {
             with_recorder(rec, |t| t.record_decided("euf-offline", Verdict::Sat));
             return Ok(Some(CheckResult::Sat(model)));

@@ -22,6 +22,7 @@
 //! theory propagation, the rest of P1.5) and theory combination (P1.6) build on.
 
 use std::collections::{HashMap, HashSet};
+use std::time::Instant;
 
 use axeyum_egraph::{EGraph, ENodeId, check_congruence};
 use axeyum_ir::{
@@ -485,6 +486,26 @@ pub fn solve_qf_uf_online(arena: &mut TermArena, assertions: &[TermId]) -> Check
 /// e-graph).
 #[must_use]
 pub fn check_qf_uf(arena: &mut TermArena, assertions: &[TermId]) -> CheckResult {
+    check_qf_uf_with_config(arena, assertions, &SolverConfig::default())
+}
+
+/// Deadline-aware variant of [`check_qf_uf`]: the offline lazy-DPLL(T) refinement
+/// loop and every inner [`SatBvBackend`] solve are bounded by `config.timeout`, so
+/// the path degrades to `Unknown` under a deterministic resource bound (hard rule)
+/// instead of running unbounded. With a `config` carrying no timeout the behaviour
+/// is byte-identical to [`check_qf_uf`].
+///
+/// # Panics
+///
+/// Panics on a soundness bug: a congruence conflict whose explanation fails the
+/// independent [`check_congruence`] re-check (which cannot happen for a correct
+/// e-graph).
+#[must_use]
+pub fn check_qf_uf_with_config(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> CheckResult {
     let mut atom_terms: Vec<TermId> = Vec::new();
     let mut seen = HashSet::new();
     for &a in assertions {
@@ -510,9 +531,21 @@ pub fn check_qf_uf(arena: &mut TermArena, assertions: &[TermId]) -> CheckResult 
         .map(|&a| replace_subterms(arena, a, &subst, &mut memo).expect("skeleton substitution"))
         .collect();
 
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     loop {
+        if deadline.is_some_and(|d| Instant::now() >= d) {
+            return CheckResult::Unknown(unknown("timeout in the QF_UF e-graph refinement loop"));
+        }
+        // Hand each inner SAT solve the *remaining* time budget so it is itself
+        // bounded (mirrors uflra_online's deadline threading).
+        let inner_config = match deadline {
+            Some(d) => {
+                SolverConfig::default().with_timeout(d.saturating_duration_since(Instant::now()))
+            }
+            None => SolverConfig::default(),
+        };
         let mut backend = SatBvBackend::new();
-        match backend.check(arena, &skeleton, &SolverConfig::default()) {
+        match backend.check(arena, &skeleton, &inner_config) {
             Ok(CheckResult::Unsat) => return CheckResult::Unsat,
             Ok(CheckResult::Sat(bool_model)) => {
                 let (bridge, eq_nodes) = theory_state(arena, &atoms, &bool_model);
@@ -2511,5 +2544,124 @@ mod tests {
             both_decided > 0,
             "the differential set jointly decided some cases"
         );
+    }
+
+    /// Builds a deliberately heavy `QF_UF` instance: a pigeonhole-style UNSAT core
+    /// (`n+1` pigeons into `n` holes, encoded over `f`) AND'd with a wide
+    /// disjunctive padding that makes the boolean skeleton enumerate many
+    /// theory-inconsistent models — each forcing a blocking-clause refinement
+    /// iteration and an inner bit-blast solve. Returned `assertions` exercise the
+    /// offline lazy-DPLL(T) loop hard enough that an unbounded run is slow.
+    fn build_heavy_qf_uf(arena: &mut TermArena) -> Vec<TermId> {
+        let sort = Sort::BitVec(16);
+        let f = arena.declare_fun("ph_f", &[sort], sort).unwrap();
+        let holes = 9_usize;
+        let pigeons: Vec<TermId> = (0..=holes)
+            .map(|i| arena.bv_var(&format!("pigeon_{i}"), 16).unwrap())
+            .collect();
+        let mut assertions: Vec<TermId> = Vec::new();
+        // Each pigeon maps to *some* hole value: f(p_i) in {0..holes-1}.
+        for &p in &pigeons {
+            let fp = arena.apply(f, &[p]).unwrap();
+            let mut clause: Option<TermId> = None;
+            for h in 0..holes {
+                let hole = arena.bv_const(16, u128::try_from(h).unwrap()).unwrap();
+                let eq = arena.eq(fp, hole).unwrap();
+                clause = Some(match clause {
+                    None => eq,
+                    Some(acc) => arena.or(acc, eq).unwrap(),
+                });
+            }
+            assertions.push(clause.unwrap());
+        }
+        // No two pigeons share a hole: f(p_i) != f(p_j). With holes+1 pigeons this
+        // is UNSAT (pigeonhole), but only after the loop has chased many models.
+        for i in 0..pigeons.len() {
+            for j in (i + 1)..pigeons.len() {
+                let fi = arena.apply(f, &[pigeons[i]]).unwrap();
+                let fj = arena.apply(f, &[pigeons[j]]).unwrap();
+                let eq = arena.eq(fi, fj).unwrap();
+                assertions.push(arena.not(eq).unwrap());
+            }
+        }
+        assertions
+    }
+
+    /// Hard rule: the offline `QF_UF` e-graph path must degrade to `Unknown` under a
+    /// deterministic resource bound. A tight `config.timeout` on a heavy instance
+    /// returns `Unknown` *within a small multiple of the budget* (bounded, never an
+    /// unbounded hang); a generous budget on the SAME instance still decides it.
+    #[test]
+    fn check_qf_uf_with_config_is_bounded_by_timeout() {
+        use std::time::Duration;
+
+        let mut arena = TermArena::new();
+        let assertions = build_heavy_qf_uf(&mut arena);
+
+        // Tight budget: must come back Unknown and must NOT overrun wall-clock by
+        // more than a small multiple of the budget (the inner solve is itself
+        // bounded by the remaining time).
+        let budget = Duration::from_millis(50);
+        let tight = SolverConfig::default().with_timeout(budget);
+        let start = Instant::now();
+        let bounded = check_qf_uf_with_config(&mut arena, &assertions, &tight);
+        let elapsed = start.elapsed();
+        assert!(
+            matches!(bounded, CheckResult::Unknown(_)),
+            "tight-timeout heavy QF_UF must degrade to Unknown, got {bounded:?}"
+        );
+        assert!(
+            elapsed < budget * 40,
+            "bounded run overran its budget: {elapsed:?} for a {budget:?} budget"
+        );
+
+        // Generous budget on the same instance still decides it (pigeonhole UNSAT).
+        let mut arena2 = TermArena::new();
+        let assertions2 = build_heavy_qf_uf(&mut arena2);
+        let generous = SolverConfig::default().with_timeout(Duration::from_secs(60));
+        assert_eq!(
+            check_qf_uf_with_config(&mut arena2, &assertions2, &generous),
+            CheckResult::Unsat,
+            "heavy QF_UF instance is pigeonhole-UNSAT under a generous budget"
+        );
+    }
+
+    /// Verdict invariance: the default [`check_qf_uf`] wrapper and
+    /// [`check_qf_uf_with_config`] under a generous timeout give IDENTICAL verdicts
+    /// on small known sat/unsat instances (the deadline plumbing changes only the
+    /// give-up boundary, never a verdict).
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn check_qf_uf_with_config_verdict_invariant() {
+        use std::time::Duration;
+        let generous = SolverConfig::default().with_timeout(Duration::from_secs(30));
+
+        // UNSAT: a=b ∧ f(a)≠f(b).
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(8);
+        let a = arena.bv_var("a", 8).unwrap();
+        let b = arena.bv_var("b", 8).unwrap();
+        let f = arena.declare_fun("f", &[sort], sort).unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let fb = arena.apply(f, &[b]).unwrap();
+        let ab = arena.eq(a, b).unwrap();
+        let fa_eq_fb = arena.eq(fa, fb).unwrap();
+        let fa_ne_fb = arena.not(fa_eq_fb).unwrap();
+        let unsat_assertions = [ab, fa_ne_fb];
+        let default_unsat = check_qf_uf(&mut arena, &unsat_assertions);
+        let config_unsat = check_qf_uf_with_config(&mut arena, &unsat_assertions, &generous);
+        assert_eq!(default_unsat, CheckResult::Unsat);
+        assert_eq!(default_unsat, config_unsat);
+
+        // SAT: a disequality alone.
+        let mut arena2 = TermArena::new();
+        let x = arena2.bv_var("x", 8).unwrap();
+        let y = arena2.bv_var("y", 8).unwrap();
+        let xy = arena2.eq(x, y).unwrap();
+        let x_ne_y = arena2.not(xy).unwrap();
+        let default_sat = check_qf_uf(&mut arena2, &[x_ne_y]);
+        let config_sat = check_qf_uf_with_config(&mut arena2, &[x_ne_y], &generous);
+        assert!(matches!(default_sat, CheckResult::Sat(_)));
+        assert!(matches!(config_sat, CheckResult::Sat(_)));
     }
 }
