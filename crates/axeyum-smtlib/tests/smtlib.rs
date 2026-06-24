@@ -1454,6 +1454,217 @@ fn string_prefix_and_suffix_eval() {
     );
 }
 
+/// Evaluates every assertion of a parsed script under concrete assignments of
+/// the named **string** symbols (each to its packed bit-vector) and the named
+/// **Int** symbols (each to an integer), AND-ing the Bool results. Lets the
+/// Int-indexed string ops (`str.at`/`str.substr` with a non-constant index) be
+/// oracle-checked by concrete evaluation of the packed-BV encoding.
+fn eval_string_int_script(
+    text: &str,
+    str_vars: &[(&str, &[u8])],
+    int_vars: &[(&str, i128)],
+) -> bool {
+    let mut script = parse_script(text).expect("script parses");
+    let mut asg = Assignment::new();
+    for &(name, bytes) in str_vars {
+        let sym = script
+            .arena
+            .find_symbol(name)
+            .expect("string symbol declared");
+        let v = script.arena.var(sym);
+        let Sort::BitVec(width) = script.arena.sort_of(v) else {
+            panic!("string symbol should be a bit-vector");
+        };
+        asg.set(
+            sym,
+            Value::Bv {
+                width,
+                value: pack_str(bytes),
+            },
+        );
+    }
+    for &(name, value) in int_vars {
+        let sym = script.arena.find_symbol(name).expect("int symbol declared");
+        asg.set(sym, Value::Int(value));
+    }
+    script
+        .assertions
+        .iter()
+        .all(|&a| eval(&script.arena, a, &asg).unwrap() == Value::Bool(true))
+}
+
+/// Evaluates the single assertion of a fully-**constant** script (no free
+/// symbols) and returns whether it is `true`. Used to oracle-check the string
+/// ops over constant arguments (they fold to a concrete Bool).
+fn eval_const_script(text: &str) -> bool {
+    let script = parse_script(text).expect("script parses");
+    let asg = Assignment::new();
+    script
+        .assertions
+        .iter()
+        .all(|&a| eval(&script.arena, a, &asg).unwrap() == Value::Bool(true))
+}
+
+#[test]
+fn string_substr_constant_eval() {
+    // (= (str.substr "hello" 1 3) "ell"): the middle 3 bytes. Out-of-range cases
+    // (negative offset, offset ≥ len, non-positive length) all yield "".
+    assert!(
+        eval_const_script("(assert (= (str.substr \"hello\" 1 3) \"ell\"))\n"),
+        "\"ell\" extracted"
+    );
+    assert!(
+        eval_const_script("(assert (= (str.substr \"hello\" 9 3) \"\"))\n"),
+        "offset ≥ len ⇒ \"\""
+    );
+    assert!(
+        eval_const_script("(assert (= (str.substr \"hello\" (- 1) 3) \"\"))\n"),
+        "negative off ⇒ \"\""
+    );
+    assert!(
+        eval_const_script("(assert (= (str.substr \"hello\" 1 0) \"\"))\n"),
+        "n = 0 ⇒ \"\""
+    );
+    // Clamped length: off+n past the end stops at |s|.
+    assert!(
+        eval_const_script("(assert (= (str.substr \"hello\" 3 9) \"lo\"))\n"),
+        "clamped to |s|"
+    );
+}
+
+#[test]
+fn string_substr_variable_index_eval() {
+    // (= (str.substr x i 3) "ell") with x = "hello": only i = 1 makes it true.
+    let text = "(declare-fun x () String)\n\
+                (declare-fun i () Int)\n\
+                (assert (= (str.substr x i 3) \"ell\"))\n(check-sat)\n";
+    assert!(
+        eval_string_int_script(text, &[("x", b"hello")], &[("i", 1)]),
+        "x=\"hello\", i=1 ⇒ substr = \"ell\""
+    );
+    assert!(
+        !eval_string_int_script(text, &[("x", b"hello")], &[("i", 0)]),
+        "i=0 ⇒ \"hel\" ≠ \"ell\""
+    );
+    assert!(
+        !eval_string_int_script(text, &[("x", b"hello")], &[("i", 9)]),
+        "i out of range ⇒ \"\" ≠ \"ell\""
+    );
+}
+
+#[test]
+fn string_at_variable_index_eval() {
+    // (= (str.at "ab" i) "b") → true only at i = 1. Models the regression shape
+    // `(= (str.at x i) "b")` with a non-constant Int index.
+    let text = "(declare-fun i () Int)\n\
+                (assert (= (str.at \"ab\" i) \"b\"))\n(check-sat)\n";
+    assert!(eval_string_int_script(text, &[], &[("i", 1)]), "ab[1] = b");
+    assert!(!eval_string_int_script(text, &[], &[("i", 0)]), "ab[0] = a");
+    assert!(
+        !eval_string_int_script(text, &[], &[("i", 5)]),
+        "out of range ⇒ \"\" ≠ \"b\""
+    );
+    assert!(
+        !eval_string_int_script(text, &[], &[("i", -1)]),
+        "negative ⇒ \"\" ≠ \"b\""
+    );
+}
+
+#[test]
+fn string_to_code_eval() {
+    // (= (str.to_code "A") 65); a 2-char string ⇒ -1; "" ⇒ -1.
+    assert!(
+        eval_const_script("(assert (= (str.to_code \"A\") 65))\n"),
+        "code of 'A' is 65"
+    );
+    assert!(
+        eval_const_script("(assert (= (str.to_code \"AB\") (- 1)))\n"),
+        "len 2 ⇒ -1"
+    );
+    assert!(
+        eval_const_script("(assert (= (str.to_code \"\") (- 1)))\n"),
+        "empty ⇒ -1"
+    );
+}
+
+#[test]
+fn string_from_code_roundtrip_eval() {
+    // (= (str.from_code 65) "A") and the round-trip (= (str.to_code (str.from_code 66)) 66).
+    assert!(
+        eval_const_script("(assert (= (str.from_code 65) \"A\"))\n"),
+        "from_code 65 = \"A\""
+    );
+    assert!(
+        eval_const_script("(assert (= (str.to_code (str.from_code 66)) 66))\n"),
+        "to_code ∘ from_code round-trips on ASCII"
+    );
+    // Out-of-range code → "" (conservative for non-ASCII).
+    assert!(
+        eval_const_script("(assert (= (str.from_code (- 1)) \"\"))\n"),
+        "negative code ⇒ \"\""
+    );
+}
+
+#[test]
+fn string_lex_order_eval() {
+    // str.< / str.<= over constants: "AC" < "AF", "ab" < "abc" (prefix), and the
+    // reflexive/antisymmetric corners.
+    assert!(
+        eval_const_script("(assert (str.< \"AC\" \"AF\"))\n"),
+        "AC < AF (byte order)"
+    );
+    assert!(
+        eval_const_script("(assert (str.< \"ab\" \"abc\"))\n"),
+        "proper prefix is less"
+    );
+    assert!(
+        eval_const_script("(assert (not (str.< \"AF\" \"AC\")))\n"),
+        "AF not < AC"
+    );
+    assert!(
+        eval_const_script("(assert (not (str.< \"ab\" \"ab\")))\n"),
+        "strict: ab not < ab"
+    );
+    assert!(
+        eval_const_script("(assert (str.<= \"ab\" \"ab\"))\n"),
+        "reflexive: ab <= ab"
+    );
+    assert!(
+        eval_const_script("(assert (str.<= \"AC\" \"AF\"))\n"),
+        "AC <= AF"
+    );
+}
+
+#[test]
+fn string_lex_order_variable_eval() {
+    // (str.< "AC" y) ∧ (str.< y "AF") — the regression shape; y = "AD" witnesses.
+    let text = "(declare-fun y () String)\n\
+                (assert (str.< \"AC\" y))\n\
+                (assert (str.< y \"AF\"))\n(check-sat)\n";
+    assert!(
+        eval_string_int_script(text, &[("y", b"AD")], &[]),
+        "AC<AD<AF"
+    );
+    assert!(
+        !eval_string_int_script(text, &[("y", b"AG")], &[]),
+        "AG not < AF"
+    );
+    assert!(
+        !eval_string_int_script(text, &[("y", b"AC")], &[]),
+        "AC not < AC (strict)"
+    );
+}
+
+#[test]
+fn string_to_int_still_declines() {
+    // `str.to_int` (digit parsing) is deferred to slice 4 — it must decline as a
+    // clean Unsupported, never a wrong verdict.
+    let err =
+        parse_script("(declare-fun s () String)\n(assert (= (str.to_int s) 5))\n(check-sat)\n")
+            .expect_err("str.to_int is outside the wired subset");
+    assert!(matches!(err, SmtError::Unsupported(_)), "got {err:?}");
+}
+
 #[test]
 fn declare_fun_string_constant_is_wired_like_declare_const() {
     // QF_S benchmarks overwhelmingly use `(declare-fun s () String)`, not

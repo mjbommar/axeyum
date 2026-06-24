@@ -2241,6 +2241,206 @@ fn string_at_const(arena: &mut TermArena, s: TermId, k: i128) -> Result<TermId, 
     arena.concat(rbyte, rlen).map_err(SmtError::Ir)
 }
 
+/// `len(s)` as an `Int` (the length field lifted out of the packed BV via
+/// `bv2nat`). Used by the Int-indexed string ops (`str.at`/`str.substr` with a
+/// non-constant index), which compare an `Int` index against the length.
+fn string_len_int(arena: &mut TermArena, s: TermId, m: u32) -> Result<TermId, SmtError> {
+    let len = string_len_field(arena, s, m)?;
+    arena.bv2nat(len).map_err(SmtError::Ir)
+}
+
+/// Selects content byte at an **`Int`** index `i` of a packed string `s` (max
+/// length `m`): returns `(byte, in_range)` where `in_range` holds exactly when
+/// `0 ≤ i < len(s)` and `byte` is `s[i]` there (else `0`). The selection is an
+/// `Int`-equality mux over the `m` representable positions, so a negative or
+/// out-of-bound `i` (including values ≥ `m`) matches no position and yields
+/// `(0, false)` — matching the SMT-LIB total-function semantics exactly.
+fn string_byte_at_int(
+    arena: &mut TermArena,
+    s: TermId,
+    i: TermId,
+    m: u32,
+) -> Result<(TermId, TermId), SmtError> {
+    let len_i = string_len_int(arena, s, m)?;
+    let zero8 = arena.bv_const(8, 0)?;
+    let mut byte = zero8;
+    let mut in_range = arena.bool_const(false);
+    // Walk positions high-to-low so the ITE cascade ends with position 0 outermost.
+    for k in (0..m).rev() {
+        let kconst = arena.int_const(i128::from(k));
+        let i_is_k = arena.eq(i, kconst)?; // i == k (Int)
+        let k_in_len = arena.int_lt(kconst, len_i)?; // k < len(s)
+        let hit = arena.and(i_is_k, k_in_len)?;
+        let byte_k = string_byte_m(arena, s, k, m)?;
+        byte = arena.ite(hit, byte_k, byte)?;
+        in_range = arena.ite(i_is_k, k_in_len, in_range)?;
+    }
+    Ok((byte, in_range))
+}
+
+/// `str.at s i` for a **non-constant** `Int` index `i`: the length-1 string
+/// `s[i]` when `0 ≤ i < len(s)`, else the empty string (SMT-LIB total function).
+/// Result is a max-length-1 packed string (smallest sort), so it composes with
+/// equality. Pure mux over the ≤`m` positions — decides both directions.
+fn string_at_int(arena: &mut TermArena, s: TermId, i: TermId) -> Result<TermId, SmtError> {
+    let m = string_max_len(arena, s)?;
+    let (byte, in_range) = string_byte_at_int(arena, s, i, m)?;
+    let zero8 = arena.bv_const(8, 0)?;
+    let one_len = arena.bv_const(len_width(1), 1)?;
+    let zero_len = arena.bv_const(len_width(1), 0)?;
+    let rlen = arena.ite(in_range, one_len, zero_len)?;
+    let rbyte = arena.ite(in_range, byte, zero8)?;
+    arena.concat(rbyte, rlen).map_err(SmtError::Ir)
+}
+
+/// `str.substr s off n` (SMT-LIB total function): the substring of `s` starting
+/// at position `off` of length at most `n`. Non-empty only when `0 ≤ off < |s|`
+/// and `n > 0`; the result is `s[off .. min(off+n, |s|)]`. Any out-of-range
+/// `off` (negative or `≥ |s|`) or non-positive `n` yields the empty string. The
+/// result is a packed string of the **same** max length `m` as `s` (a substring
+/// is never longer than the source). `off` and `n` are arbitrary `Int`s; output
+/// byte `p` is `s[off + p]` selected by the same Int-equality mux, gated by
+/// `p < n`, and the result length is the count of valid output positions.
+fn string_substr(
+    arena: &mut TermArena,
+    s: TermId,
+    off: TermId,
+    n: TermId,
+) -> Result<TermId, SmtError> {
+    let m = string_max_len(arena, s)?;
+    let len_i = string_len_int(arena, s, m)?;
+    let zero_i = arena.int_const(0);
+    // `off` is a valid start: 0 ≤ off < len(s). Out of that range → "" entirely.
+    let off_nonneg = arena.int_ge(off, zero_i)?;
+    let off_in = arena.int_lt(off, len_i)?;
+    let start_ok = arena.and(off_nonneg, off_in)?;
+    let zero8 = arena.bv_const(8, 0)?;
+    // Output byte `p` present iff start_ok ∧ p < n ∧ (off+p) < len(s).
+    let present = |arena: &mut TermArena, p: u32, src_in: TermId| -> Result<TermId, SmtError> {
+        let pconst = arena.int_const(i128::from(p));
+        let p_lt_n = arena.int_lt(pconst, n)?;
+        let present0 = arena.and(start_ok, p_lt_n)?;
+        arena.and(present0, src_in).map_err(SmtError::Ir)
+    };
+    // Length count (low→high) and content assembly (high→low).
+    let mut count_i = arena.int_const(0);
+    for p in 0..m {
+        let pconst = arena.int_const(i128::from(p));
+        let src = arena.int_add(off, pconst)?;
+        let (_byte, src_in) = string_byte_at_int(arena, s, src, m)?;
+        let pres = present(arena, p, src_in)?;
+        let one_i = arena.int_const(1);
+        let inc = arena.ite(pres, one_i, zero_i)?;
+        count_i = arena.int_add(count_i, inc)?;
+    }
+    let mut content: Option<TermId> = None;
+    for p in (0..m).rev() {
+        let pconst = arena.int_const(i128::from(p));
+        let src = arena.int_add(off, pconst)?;
+        let (byte, src_in) = string_byte_at_int(arena, s, src, m)?;
+        let pres = present(arena, p, src_in)?;
+        let out_byte = arena.ite(pres, byte, zero8)?;
+        content = Some(match content {
+            None => out_byte,
+            Some(acc) => arena.concat(acc, out_byte)?,
+        });
+    }
+    let content = content.expect("m ≥ 1");
+    // Result length: the byte count, as an `Int`, packed back into the BV field.
+    let rlen = arena.int2bv(len_width(m), count_i)?;
+    arena.concat(content, rlen).map_err(SmtError::Ir)
+}
+
+/// `str.to_code s`: the code point of the single character of `s` when
+/// `|s| = 1`, else `-1` (SMT-LIB total function). In the byte model a character
+/// is one byte, so the code is `bv2nat(s[0])` (`0..=255`); any other length
+/// yields `-1`. Decides both directions (composes with `Int` arithmetic).
+fn string_to_code(arena: &mut TermArena, s: TermId) -> Result<TermId, SmtError> {
+    let m = string_max_len(arena, s)?;
+    let len_i = string_len_int(arena, s, m)?;
+    let one_i = arena.int_const(1);
+    let is_one = arena.eq(len_i, one_i)?;
+    let byte0 = string_byte_m(arena, s, 0, m)?;
+    let code = arena.bv2nat(byte0)?; // 0..=255
+    let neg_one = arena.int_const(-1);
+    arena.ite(is_one, code, neg_one).map_err(SmtError::Ir)
+}
+
+/// `str.from_code i`: the length-1 string whose single character has code point
+/// `i` when `i` is a valid code point, else the empty string (SMT-LIB total
+/// function). The byte model represents a character as one byte, so this is
+/// **sound only** for `0 ≤ i ≤ 127` (ASCII, where the code point round-trips
+/// through a single UTF-8 byte and matches how literals are packed); a code
+/// point in `128..` would be a multi-byte UTF-8 character that the byte layout
+/// cannot represent faithfully. We therefore build the byte for `0 ≤ i ≤ 127`
+/// and the empty string otherwise — which is **conservative**: it returns `""`
+/// for `i ≥ 128` where SMT-LIB would return a non-empty string, so any equality
+/// against a (necessarily ASCII, in this model) string still decides correctly,
+/// and a `from_code` over a non-ASCII code never claims a byte it cannot model.
+fn string_from_code(arena: &mut TermArena, i: TermId) -> Result<TermId, SmtError> {
+    let zero_i = arena.int_const(0);
+    let hi_i = arena.int_const(127);
+    let lo_ok = arena.int_ge(i, zero_i)?;
+    let hi_ok = arena.int_le(i, hi_i)?;
+    let valid = arena.and(lo_ok, hi_ok)?;
+    // Byte value = i mod 256, but under `valid` (0..=127) it is exactly i. We take
+    // the low 8 bits of `int2bv 8 i`, which equals i for 0..=127.
+    let byte = arena.int2bv(8, i)?;
+    let zero8 = arena.bv_const(8, 0)?;
+    let rbyte = arena.ite(valid, byte, zero8)?;
+    let one_len = arena.bv_const(len_width(1), 1)?;
+    let zero_len = arena.bv_const(len_width(1), 0)?;
+    let rlen = arena.ite(valid, one_len, zero_len)?;
+    arena.concat(rbyte, rlen).map_err(SmtError::Ir)
+}
+
+/// `str.< x y` — strict lexicographic order over the packed bytes. `x < y` iff
+/// at the first position where they differ `x` has the smaller byte, or `x` is a
+/// proper prefix of `y`. Encoded as a bounded cascade over the ≤`m` positions:
+/// `x < y` holds at the first index `i` with `x[i] < y[i]` provided every earlier
+/// byte was equal, OR all `min(|x|,|y|)` shared bytes are equal and `|x| < |y|`.
+/// Pure BV/Bool — decides both directions. Matches SMT-LIB's code-point order on
+/// the ASCII byte model.
+fn string_lt(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId, SmtError> {
+    let (x, y, m) = string_align(arena, x, y)?;
+    let xlen = string_len_field(arena, x, m)?;
+    let ylen = string_len_field(arena, y, m)?;
+    // `eq_prefix` (Bool): bytes 0..i are all "shared and equal". Built inline.
+    let mut eq_prefix = arena.bool_const(true);
+    let mut less = arena.bool_const(false);
+    for i in 0..m {
+        let iconst = arena.bv_const(len_width(m), u128::from(i))?;
+        let i_in_x = arena.bv_ult(iconst, xlen)?; // i < len(x)
+        let i_in_y = arena.bv_ult(iconst, ylen)?; // i < len(y)
+        let xb = string_byte_m(arena, x, i, m)?;
+        let yb = string_byte_m(arena, y, i, m)?;
+        // Strict-less is decided at the first shared, still-equal-prefix position:
+        //   (a) y has byte i but x ended here: x is a proper prefix of y → less.
+        //   (b) both have byte i and x[i] < y[i].
+        let x_ended = arena.not(i_in_x)?;
+        let prefix_case = arena.and(x_ended, i_in_y)?; // x ran out, y did not
+        let byte_lt = arena.bv_ult(xb, yb)?; // x[i] < y[i] (both present here)
+        let both = arena.and(i_in_x, i_in_y)?;
+        let byte_lt_here = arena.and(both, byte_lt)?;
+        let decide_here = arena.or(prefix_case, byte_lt_here)?;
+        let decide = arena.and(eq_prefix, decide_here)?;
+        less = arena.or(less, decide)?;
+        // Extend the equal-prefix flag: byte i is shared (both present) and equal.
+        let beq = arena.eq(xb, yb)?;
+        let shared_eq = arena.and(both, beq)?;
+        eq_prefix = arena.and(eq_prefix, shared_eq)?;
+    }
+    Ok(less)
+}
+
+/// `str.<= x y` — `x < y ∨ x = y` (non-strict lexicographic order). Reuses
+/// [`string_lt`] and [`string_equal`].
+fn string_le(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId, SmtError> {
+    let lt = string_lt(arena, x, y)?;
+    let eq = string_equal(arena, x, y)?;
+    arena.or(lt, eq).map_err(SmtError::Ir)
+}
+
 /// The bytes and total length of a **constant** packed string argument, or
 /// `None` if `arg` is not a string constant (so a mixed const/variable `str.++`
 /// folds the constant runs and concatenates the variable spans symbolically).
@@ -2910,20 +3110,45 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
             need(2)?;
             string_suffixof(arena, args[0], args[1])?
         }
-        // `str.at s k` — constant index only (symbolic indices need the Int↔
-        // position bridge); returns a length-≤1 packed string.
+        // `str.at s k` — a constant index folds directly; a non-constant `Int`
+        // index is an Int-equality mux over the ≤`m` positions (ADR-0029 slice 3).
+        // Returns a length-≤1 packed string.
         "str.at" => {
             need(2)?;
-            let k = match arena.node(args[1]) {
-                TermNode::IntConst(k) => *k,
-                _ => {
-                    return Err(SmtError::Unsupported(
-                        "str.at with a non-constant index is not yet supported (ADR-0029)"
-                            .to_owned(),
-                    ));
-                }
-            };
-            string_at_const(arena, args[0], k)?
+            match arena.node(args[1]) {
+                TermNode::IntConst(k) => string_at_const(arena, args[0], *k)?,
+                _ => string_at_int(arena, args[0], args[1])?,
+            }
+        }
+        // `str.substr s off n` — bounded substring, total function: "" unless
+        // `0 ≤ off < |s|` and `n > 0`; else `s[off .. min(off+n,|s|)]`. The
+        // `off`/`n` indices may be arbitrary `Int`s (ADR-0029 slice 3).
+        "str.substr" => {
+            need(3)?;
+            string_substr(arena, args[0], args[1], args[2])?
+        }
+        // `str.to_code s` — the code point of the single char of `s`, else `-1`
+        // (an `Int`, composes with arithmetic). Byte model: code is `s[0]`
+        // (0..=255) when `|s| = 1` (ADR-0029 slice 3).
+        "str.to_code" => {
+            need(1)?;
+            string_to_code(arena, args[0])?
+        }
+        // `str.from_code i` — the length-1 string of code point `i` (conservative
+        // to ASCII `0..=127`, else ""), the partial inverse of `str.to_code`.
+        "str.from_code" => {
+            need(1)?;
+            string_from_code(arena, args[0])?
+        }
+        // `str.<` / `str.<=` — lexicographic order over the packed bytes; pure
+        // BV/Bool, decides both directions (ADR-0029 slice 3).
+        "str.<" => {
+            need(2)?;
+            string_lt(arena, args[0], args[1])?
+        }
+        "str.<=" => {
+            need(2)?;
+            string_le(arena, args[0], args[1])?
         }
         // `str.++` — variable concatenation grows into a wider packed sort; a run
         // of constant operands folds to a literal (ADR-0029 slice 2).
@@ -3344,15 +3569,16 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
         // Builtins above take priority, matching SMT-LIB reserved names.
         other => {
             // String/regex operators outside the wired bounded subset
-            // (`str.replace`, `str.indexof`, `str.substr`, `str.<`, `str.to_int`,
-            // `str.in_re`, the `re.*` constructors, …) are declined cleanly
-            // (ADR-0029) so a benchmark using them returns `Unknown`/`Unsupported`
-            // — never a wrong verdict, never a confusing "unknown operator".
+            // (`str.replace`, `str.indexof`, `str.to_int`/`from_int`, `str.in_re`,
+            // the `re.*` constructors, …) are declined cleanly (ADR-0029) so a
+            // benchmark using them returns `Unknown`/`Unsupported` — never a wrong
+            // verdict, never a confusing "unknown operator".
             if other.starts_with("str.") || other.starts_with("re.") {
                 return Err(SmtError::Unsupported(format!(
                     "string/regex operator `{other}` is outside the wired bounded subset \
                      (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, \
-                     str.at (const idx), str.++ (variable, bounded), = / distinct over String"
+                     str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, \
+                     str.++ (variable, bounded), = / distinct over String"
                 )));
             }
             if let Some(func) = arena.find_function(other) {

@@ -29,13 +29,14 @@ canonical well-formedness constraint (length ≤ max, padding bytes zero) so equ
 strings share one bit pattern and `=`/`distinct` decide on the sound BV path.
 Both `(declare-const s String)` and `(declare-fun s () String)` open this
 representation. Wired operators: `str.len`, `str.prefixof`, `str.contains`,
-`str.suffixof`, `str.at` (constant index), `str.++` (constant args), and
-`=`/`distinct`. String literals (including `""`-escaped quotes) pack to
-constants.
+`str.suffixof`, `str.at` (constant **and** variable `Int` index), `str.++`
+(variable, bounded), `str.substr`, `str.to_code`, `str.from_code` (conservative
+to ASCII), `str.<`, `str.<=`, and `=`/`distinct`. String literals (including
+`""`-escaped quotes) pack to constants.
 
-Everything outside this subset — variable `str.++`, regex (`str.in_re`/`re.*`),
-`str.substr`/`str.replace`/`str.indexof`/`str.to_int`/`str.from_int`/`str.<`,
-symbolic `str.at`, over-bound literals (> 8 bytes), and the `Seq` sort — is
+Everything outside this subset — regex (`str.in_re`/`re.*`),
+`str.replace`/`str.indexof`/`str.to_int`/`str.from_int`, the `Seq` sort, and
+over-bound cases (literals > 8 bytes, a concat past the 16-byte cap) — is
 declined as a clean `Unsupported`. **Soundness is by construction**: an
 incomplete or unsupported case returns `unknown`/`unsupported`, never a wrong
 verdict.
@@ -43,6 +44,29 @@ verdict.
 ## Measured head-to-head
 
 `qf-s-cvc5-regress-clean-solver-vs-z3-10s.json`, `--timeout-ms 10000 --jobs 4`:
+
+### Slice 3 — substr / variable-index `str.at` / to_code / lex order (2026-06-24)
+
+- **files 123**. axeyum **decides 22** (sat 16, unsat 6), **unknown 6**
+  (all `Incomplete` — bounded integer width or out-of-range constant, **not** a
+  wrong verdict), **unsupported 95** (declined cleanly), errors 0.
+- **compared 22, agree 22, DISAGREE 0.** Every decided verdict matches both the
+  Z3 4.13.3 binary **and** the benchmark's `(set-info :status …)` annotation.
+- New deciders, each encoded over the same packed BV layout (no `axeyum-ir`
+  change):
+  - `str.at s i` for a **variable** `Int` index — an Int-equality mux over the
+    ≤`m` positions (`0 ≤ i < |s|` → `s[i]`, else `""`).
+  - `str.substr s off n` — bounded substring, total function: `""` unless
+    `0 ≤ off < |s|` and `n > 0`; else `s[off .. min(off+n,|s|)]`. `off`/`n` are
+    arbitrary `Int`s.
+  - `str.to_code s` (code of the single char, else `-1`) and `str.from_code i`
+    (length-1 string of code point `i`, **conservative to ASCII `0..=127`**, else
+    `""` — a code point ≥ 128 is a multi-byte UTF-8 char the byte layout cannot
+    represent, so we never claim a byte we cannot model).
+  - `str.<` / `str.<=` — lexicographic order over the packed bytes (a bounded
+    BV/Bool cascade respecting length; matches code-point order on ASCII).
+- Slice 2 measured decided 13 / unsupported 108; slice 3 is decided 22 /
+  unsupported 95.
 
 ### Slice 2 — variable `str.++` (2026-06-24)
 
@@ -85,24 +109,27 @@ literals are `STRING_MAX_LEN = 8` bytes; a concat result is capped at
 summed bound exceeds the cap declines as `Unsupported` (Unknown to the consumer)
 — **never a wrong verdict**.
 
-## Slice-3 decomposition (raise the decide-rate, stay sound)
+## Slice-4 decomposition (raise the decide-rate, stay sound)
 
-The remaining unsupported instances break down by the first gating operator (the
-solver's `axeyum_solver::strings::BoundedString` API **already** implements all
-of these end-to-end — the remaining work is front-end wiring onto the same
-self-describing packed layout):
+Slices 2–3 wired the BV-expressible manipulation/conversion ops (variable
+`str.++`, variable-index `str.at`, `str.substr`, `str.to_code`/`from_code`,
+`str.<`/`str.<=`). The remaining unsupported instances break down by the first
+gating operator:
 
-| gap | slice-3 action |
+| gap | slice-4 action |
 |---|---|
-| regex (`str.to_re`, `re.range`, `re.++`, `re.*`, `re.all/none/allchar`, `str.in_re`) | wire the `Regex` NFA fragment already in the solver |
-| `str.substr` | wire `BoundedString::substr`/`substr_at` (result in a smaller sort) |
-| `str.replace` | wire `BoundedString::replace`/`replace_same_len` |
-| `str.to_code` / `str.from_code` | wire `to_code`/`from_code` |
-| `str.from_int` / `str.to_int` | wire `from_int`/`to_int` (QF_SLIA Int bridge) |
-| `str.indexof` | wire `index_of` (constant `from`) |
-| `str.<` / `str.<=` | wire `less`/`less_equal` |
-| over-bound literal (> 8 bytes) | raise `STRING_MAX_LEN` toward the 16-byte cap |
+| regex (`str.to_re`, `re.range`, `re.++`, `re.*`, `re.all/none/allchar`, `str.in_re`, `str.indexof_re`, `str.replace_re`) | **biggest bucket** — wire a bounded `Regex`/NFA fragment onto the packed layout (regex matching of a ≤`m`-byte string) |
+| `str.replace` (first occurrence) / `str.replace_all` | bounded byte-matching + rebuild over the ≤`m` positions; mind the result-length growth and the no-match corner |
+| `str.indexof s sub off` | bounded byte-matching cascade returning the first match position (or `-1`); needs the Int↔position bridge like slice-3 `str.at`/`str.substr` |
+| `str.to_int` / `str.from_int` | digit parsing / formatting (QF_SLIA Int bridge) — bounded-digit encoding |
+| over-bound case (literal > 8 bytes, concat past the 16-byte cap, a model needing integer width > 32) | raise `STRING_MAX_LEN` / the bounded integer width (several slice-3 `unknown:Incomplete` instances clear with a wider bound) |
 | `str.update`, `str.to_lower`, `str.replace_re_all`, `Seq` | genuinely unsupported / unbounded — remain a sound decline |
+
+Note on slice-3 unknowns: the 6 `unknown:Incomplete` instances are sound
+declines, not wrong verdicts — most are unsat-shaped queries (e.g. the
+`str-code-unsat*` family) whose refutation needs more than the bounded integer
+width 32, or a literal integer constant that overflows the bounded width. Raising
+the bound is a slice-4 lever, gated by the same DISAGREE = 0 re-measure.
 
 Each slice is gated by the same DISAGREE = 0 re-measure.
 

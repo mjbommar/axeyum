@@ -8,8 +8,8 @@
     "cnf_vivify": false,
     "compare_backend": "z3 4.13.3.0",
     "compare_z3": true,
-    "config_hash": "cf9e2fcb3b0da586",
-    "corpus": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean",
+    "config_hash": "df8065badfb2d8db",
+    "corpus": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/",
     "corpus_hash": "8f9f647ea02273cd",
     "corpus_source": null,
     "hardware": {
@@ -44,22 +44,90 @@
   },
   "instances": [
     {
-      "detail": "string/regex operator `str.indexof` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.indexof` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_bug613.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "assertions": 4,
+      "backend_stats": {
+        "check_auto_ms": 1.6872269999999998
+      },
+      "dag_nodes": 109,
+      "distinct_symbols": 2,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_code-sat-neg-one.smt2",
-      "outcome": "unsupported"
+      "max_depth": 12,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support integer terms yet (ADR-0014)",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 21,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 4,
+          "assumptions": 0,
+          "dag_nodes": 109,
+          "digest": "10375ea3c4c1ec64",
+          "tree_nodes": 193
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 4,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 4,
+            "assumptions": 0,
+            "dag_nodes": 109,
+            "digest": "10375ea3c4c1ec64",
+            "tree_nodes": 193
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 109,
+        "input_tree_nodes": 193,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 4,
+        "output_dag_nodes": 109,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 12,
+        "output_tree_nodes": 193,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 1,
+      "translate_ms": 0,
+      "tree_nodes": 193
     },
     {
-      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_ctn-repl-to-ctn.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_indexof_re-start-index.smt2",
       "outcome": "unsupported"
     },
@@ -69,12 +137,12 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue2958.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.indexof` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.indexof` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue3497.smt2",
       "outcome": "unsupported"
     },
@@ -84,7 +152,7 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue5508-multiple-conflicts.smt2",
       "outcome": "unsupported"
     },
@@ -94,7 +162,7 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue6643-ctn-decompose-conflict.smt2",
       "outcome": "unsupported"
     },
@@ -104,17 +172,92 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "str.++ result of bounded max length 24 exceeds the cap 16 (ADR-0029); the query needs a larger string bound",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue6834-str-eq-const-nhomog.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.<=` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "assertions": 3,
+      "backend_stats": {
+        "check_auto_ms": 6.122926
+      },
+      "dag_nodes": 1058,
+      "distinct_symbols": 2,
+      "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_leq.smt2",
-      "outcome": "unsupported"
+      "max_depth": 45,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 134.49,
+          "memory": 100.49,
+          "num allocs": 3463880.0,
+          "rlimit count": 11709.0,
+          "sat backjumps": 1.0,
+          "sat conflicts": 2.0,
+          "sat decisions": 3.0,
+          "sat mk clause 2ary": 301.0,
+          "sat mk clause nary": 360.0,
+          "sat mk var": 275.0,
+          "sat propagations 2ary": 20.0,
+          "time": 0.006
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 6,
+        "translate_ms": 1
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 3,
+          "assumptions": 0,
+          "dag_nodes": 1058,
+          "digest": "73bcba4543478c4a",
+          "tree_nodes": 199477
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 3,
+            "assumptions": 0,
+            "dag_nodes": 1058,
+            "digest": "73bcba4543478c4a",
+            "tree_nodes": 199477
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 1058,
+        "input_tree_nodes": 199477,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 3,
+        "output_dag_nodes": 1058,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 45,
+        "output_tree_nodes": 199477,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 6,
+      "translate_ms": 0,
+      "tree_nodes": 199477
     },
     {
-      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_norn-31.smt2",
       "outcome": "unsupported"
     },
@@ -124,7 +267,7 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.from_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex constant `re.all` is outside the wired bounded subset (ADR-0029)",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_proj-issue409-re-loop-none.smt2",
       "outcome": "unsupported"
     },
@@ -149,29 +292,29 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_re.all.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_regexp_inclusion_reduction.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_replace-find-base.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.from_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_simple-nth-fail.smt2",
       "outcome": "unsupported"
     },
     {
       "assertions": 8,
       "backend_stats": {
-        "check_auto_ms": 38.634249000000004
+        "check_auto_ms": 31.324592
       },
       "dag_nodes": 439,
       "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
@@ -226,7 +369,7 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 38,
+      "solve_ms": 31,
       "translate_ms": 0,
       "tree_nodes": 3828
     },
@@ -236,14 +379,14 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_type001.smt2",
       "outcome": "unsupported"
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 0.647516
+        "check_auto_ms": 0.6092650000000001
       },
       "dag_nodes": 135,
       "distinct_symbols": 1,
@@ -316,7 +459,7 @@
     {
       "assertions": 7,
       "backend_stats": {
-        "check_auto_ms": 0.280107
+        "check_auto_ms": 0.267449
       },
       "dag_nodes": 145,
       "distinct_symbols": 3,
@@ -327,9 +470,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 117.6,
-          "memory": 83.09,
-          "num allocs": 5534293.0,
+          "max memory": 134.49,
+          "memory": 109.04,
+          "num allocs": 9301514.0,
           "rlimit count": 1818.0,
           "solve-eqs-elim-vars": 3.0,
           "solve-eqs-steps": 3.0
@@ -390,7 +533,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 0.689545
+        "check_auto_ms": 0.7247990000000001
       },
       "dag_nodes": 382,
       "distinct_symbols": 1,
@@ -401,9 +544,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 117.6,
-          "memory": 99.41,
-          "num allocs": 3843387.0,
+          "max memory": 134.49,
+          "memory": 83.19,
+          "num allocs": 3740315.0,
           "rlimit count": 5343.0,
           "sat backjumps": 8.0,
           "sat conflicts": 9.0,
@@ -419,14 +562,14 @@
           "sat propagations nary": 25.0,
           "sat subs resolution dyn": 1.0,
           "sat units": 10.0,
-          "time": 0.004
+          "time": 0.002
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "unsat",
-        "solve_ms": 4,
+        "solve_ms": 2,
         "translate_ms": 0
       },
       "outcome": "unsat",
@@ -485,12 +628,12 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_issue3440.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_issue4674-recomp-nf.smt2",
       "outcome": "unsupported"
     },
@@ -510,14 +653,14 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_leadingzero001.smt2",
       "outcome": "unsupported"
     },
     {
       "assertions": 7,
       "backend_stats": {
-        "check_auto_ms": 1.594989
+        "check_auto_ms": 1.646141
       },
       "dag_nodes": 343,
       "distinct_symbols": 6,
@@ -528,9 +671,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 117.6,
-          "memory": 116.75,
-          "num allocs": 3322930.0,
+          "max memory": 134.49,
+          "memory": 83.32,
+          "num allocs": 4531057.0,
           "rlimit count": 17431.0,
           "solve-eqs-elim-vars": 45.0,
           "solve-eqs-steps": 284.0,
@@ -592,7 +735,7 @@
     {
       "assertions": 4,
       "backend_stats": {
-        "check_auto_ms": 0.7278560000000001
+        "check_auto_ms": 0.7159220000000001
       },
       "dag_nodes": 101,
       "distinct_symbols": 2,
@@ -613,7 +756,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 9,
+          "solve_ms": 8,
           "verdict": "sat"
         }
       },
@@ -663,14 +806,14 @@
       "tree_nodes": 179
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_re-include-union.smt2",
       "outcome": "unsupported"
     },
     {
       "assertions": 9,
       "backend_stats": {
-        "check_auto_ms": 1.5316859999999999
+        "check_auto_ms": 2.4653129999999996
       },
       "dag_nodes": 469,
       "distinct_symbols": 6,
@@ -681,20 +824,20 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 117.6,
-          "memory": 83.18,
-          "num allocs": 5143173.0,
+          "max memory": 134.49,
+          "memory": 91.34,
+          "num allocs": 6323422.0,
           "rlimit count": 11167.0,
           "solve-eqs-elim-vars": 68.0,
           "solve-eqs-steps": 68.0,
-          "time": 0.001
+          "time": 0.002
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "unsat",
-        "solve_ms": 1,
+        "solve_ms": 2,
         "translate_ms": 0
       },
       "outcome": "unsat",
@@ -738,14 +881,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 1,
+      "solve_ms": 2,
       "translate_ms": 0,
       "tree_nodes": 3828
     },
     {
       "assertions": 8,
       "backend_stats": {
-        "check_auto_ms": 12.169538000000001
+        "check_auto_ms": 12.760155000000001
       },
       "dag_nodes": 274,
       "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
@@ -805,17 +948,85 @@
       "tree_nodes": 513
     },
     {
-      "detail": "string/regex operator `str.to_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_artemis-0512-nonterm.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "str.at with a non-constant index is not yet supported (ADR-0029)",
+      "assertions": 5,
+      "backend_stats": {
+        "check_auto_ms": 0.979068
+      },
+      "dag_nodes": 185,
+      "distinct_symbols": 2,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_at001.smt2",
-      "outcome": "unsupported"
+      "max_depth": 30,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 12,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 5,
+          "assumptions": 0,
+          "dag_nodes": 185,
+          "digest": "6521d0d0857da9da",
+          "tree_nodes": 8959
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 5,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 5,
+            "assumptions": 0,
+            "dag_nodes": 185,
+            "digest": "6521d0d0857da9da",
+            "tree_nodes": 8959
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 185,
+        "input_tree_nodes": 8959,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 5,
+        "output_dag_nodes": 185,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 30,
+        "output_tree_nodes": 8959,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 8959
     },
     {
-      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_fmf002.smt2",
       "outcome": "unsupported"
     },
@@ -825,32 +1036,32 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue2981.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue4379.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue4701_substr_splice.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6057-replace-re-all-jiwonparc.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6057-replace-re.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6203-6-replace-re.smt2",
       "outcome": "unsupported"
     },
@@ -860,7 +1071,7 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6337-replace-re.smt2",
       "outcome": "unsupported"
     },
@@ -880,7 +1091,7 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue9269-rei-nconst.smt2",
       "outcome": "unsupported"
     },
@@ -892,7 +1103,7 @@
     {
       "assertions": 8,
       "backend_stats": {
-        "check_auto_ms": 8.967848
+        "check_auto_ms": 6.565771
       },
       "dag_nodes": 256,
       "distinct_symbols": 4,
@@ -913,7 +1124,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 11,
+          "solve_ms": 12,
           "verdict": "sat"
         }
       },
@@ -958,7 +1169,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 8,
+      "solve_ms": 6,
       "translate_ms": 0,
       "tree_nodes": 759
     },
@@ -970,7 +1181,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 1.056056
+        "check_auto_ms": 1.689743
       },
       "dag_nodes": 131,
       "distinct_symbols": 1,
@@ -1046,7 +1257,7 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_norn-re-inter-none.smt2",
       "outcome": "unsupported"
     },
@@ -1056,107 +1267,698 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "assertions": 5,
+      "backend_stats": {
+        "check_auto_ms": 24.23902
+      },
+      "dag_nodes": 626,
+      "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
+      "distinct_symbols": 2,
+      "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_open-pf-merge.smt2",
-      "outcome": "unsupported"
+      "max_depth": 36,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 5,
+          "assumptions": 0,
+          "dag_nodes": 626,
+          "digest": "bd4746679d000eb4",
+          "tree_nodes": 24343
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 5,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 5,
+            "assumptions": 0,
+            "dag_nodes": 626,
+            "digest": "bd4746679d000eb4",
+            "tree_nodes": 24343
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 626,
+        "input_tree_nodes": 24343,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 5,
+        "output_dag_nodes": 626,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 36,
+        "output_tree_nodes": 24343,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 24,
+      "translate_ms": 0,
+      "tree_nodes": 24343
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_pattern1.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-agg-total1.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-inter-stack-ovf.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-mod-eq.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_reloop.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_simple-re-consume.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_slent-re-pos-eager.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "assertions": 14,
+      "backend_stats": {
+        "check_auto_ms": 3.612456
+      },
+      "dag_nodes": 324,
+      "distinct_symbols": 4,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-sat.smt2",
-      "outcome": "unsupported"
+      "max_depth": 38,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 31,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 14,
+          "assumptions": 0,
+          "dag_nodes": 324,
+          "digest": "f1aece5e22ec0ae6",
+          "tree_nodes": 638
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 14,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 14,
+            "assumptions": 0,
+            "dag_nodes": 324,
+            "digest": "f1aece5e22ec0ae6",
+            "tree_nodes": 638
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 324,
+        "input_tree_nodes": 638,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 14,
+        "output_dag_nodes": 324,
+        "output_distinct_symbols": 4,
+        "output_max_depth": 38,
+        "output_tree_nodes": 638,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 3,
+      "translate_ms": 0,
+      "tree_nodes": 638
     },
     {
-      "detail": "string/regex operator `str.to_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "assertions": 3,
+      "backend_stats": {
+        "check_auto_ms": 0.48392999999999997
+      },
+      "dag_nodes": 64,
+      "detail": "Incomplete: integer constant 10000000000000000000000000000 does not fit the bounded width 32; widen the bound",
+      "distinct_symbols": 1,
+      "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-2.smt2",
-      "outcome": "unsupported"
+      "max_depth": 12,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 3,
+          "assumptions": 0,
+          "dag_nodes": 64,
+          "digest": "ba234cf36a2f405d",
+          "tree_nodes": 114
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 3,
+            "assumptions": 0,
+            "dag_nodes": 64,
+            "digest": "ba234cf36a2f405d",
+            "tree_nodes": 114
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 64,
+        "input_tree_nodes": 114,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 3,
+        "output_dag_nodes": 64,
+        "output_distinct_symbols": 1,
+        "output_max_depth": 12,
+        "output_tree_nodes": 114,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 114
     },
     {
-      "detail": "string/regex operator `str.to_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "assertions": 12,
+      "backend_stats": {
+        "check_auto_ms": 17.260046000000003
+      },
+      "dag_nodes": 233,
+      "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
+      "distinct_symbols": 3,
+      "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-3.smt2",
-      "outcome": "unsupported"
+      "max_depth": 23,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 12,
+          "assumptions": 0,
+          "dag_nodes": 233,
+          "digest": "bec90ea1e8c1a801",
+          "tree_nodes": 474
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 12,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 12,
+            "assumptions": 0,
+            "dag_nodes": 233,
+            "digest": "bec90ea1e8c1a801",
+            "tree_nodes": 474
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 233,
+        "input_tree_nodes": 474,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 12,
+        "output_dag_nodes": 233,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 23,
+        "output_tree_nodes": 474,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 17,
+      "translate_ms": 0,
+      "tree_nodes": 474
     },
     {
-      "detail": "string/regex operator `str.to_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "assertions": 12,
+      "backend_stats": {
+        "check_auto_ms": 13.079217
+      },
+      "dag_nodes": 174,
+      "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
+      "distinct_symbols": 3,
+      "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat.smt2",
-      "outcome": "unsupported"
+      "max_depth": 12,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 12,
+          "assumptions": 0,
+          "dag_nodes": 174,
+          "digest": "936bba8e8c1da453",
+          "tree_nodes": 384
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 12,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 12,
+            "assumptions": 0,
+            "dag_nodes": 174,
+            "digest": "936bba8e8c1da453",
+            "tree_nodes": 384
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 174,
+        "input_tree_nodes": 384,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 12,
+        "output_dag_nodes": 174,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 12,
+        "output_tree_nodes": 384,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 13,
+      "translate_ms": 0,
+      "tree_nodes": 384
     },
     {
-      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-pred-small-rw_392.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.<=` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "assertions": 9,
+      "backend_stats": {
+        "check_auto_ms": 2.839461
+      },
+      "dag_nodes": 624,
+      "distinct_symbols": 5,
+      "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-leq-trans-unsat.smt2",
-      "outcome": "unsupported"
+      "max_depth": 38,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 134.49,
+          "memory": 83.46,
+          "num allocs": 9831170.0,
+          "rlimit count": 28447.0,
+          "sat backjumps": 11.0,
+          "sat conflicts": 12.0,
+          "sat decisions": 30.0,
+          "sat del clause": 18.0,
+          "sat elim clauses": 7.0,
+          "sat elim literals": 15.0,
+          "sat minimized lits": 8.0,
+          "sat mk clause 2ary": 1221.0,
+          "sat mk clause nary": 900.0,
+          "sat mk var": 771.0,
+          "sat propagations 2ary": 1225.0,
+          "sat propagations nary": 300.0,
+          "sat units": 32.0,
+          "solve-eqs-elim-vars": 2.0,
+          "solve-eqs-steps": 14.0,
+          "time": 0.005
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 5,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 9,
+          "assumptions": 0,
+          "dag_nodes": 624,
+          "digest": "e49a485c10ad056f",
+          "tree_nodes": 5306
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 9,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 9,
+            "assumptions": 0,
+            "dag_nodes": 624,
+            "digest": "e49a485c10ad056f",
+            "tree_nodes": 5306
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 624,
+        "input_tree_nodes": 5306,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 9,
+        "output_dag_nodes": 624,
+        "output_distinct_symbols": 5,
+        "output_max_depth": 38,
+        "output_tree_nodes": 5306,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 2,
+      "translate_ms": 0,
+      "tree_nodes": 5306
     },
     {
-      "detail": "string/regex operator `str.<` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "assertions": 4,
+      "backend_stats": {
+        "check_auto_ms": 1.141724
+      },
+      "dag_nodes": 264,
+      "distinct_symbols": 1,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-lt-len5.smt2",
-      "outcome": "unsupported"
+      "max_depth": 15,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 337,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 4,
+          "assumptions": 0,
+          "dag_nodes": 264,
+          "digest": "5b82d45d21dbb2d7",
+          "tree_nodes": 1451
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 4,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 4,
+            "assumptions": 0,
+            "dag_nodes": 264,
+            "digest": "5b82d45d21dbb2d7",
+            "tree_nodes": 1451
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 264,
+        "input_tree_nodes": 1451,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 4,
+        "output_dag_nodes": 264,
+        "output_distinct_symbols": 1,
+        "output_max_depth": 15,
+        "output_tree_nodes": 1451,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 1,
+      "translate_ms": 0,
+      "tree_nodes": 1451
     },
     {
-      "detail": "string/regex operator `str.<` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "assertions": 3,
+      "backend_stats": {
+        "check_auto_ms": 0.698631
+      },
+      "dag_nodes": 261,
+      "distinct_symbols": 1,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-lt-simple.smt2",
-      "outcome": "unsupported"
+      "max_depth": 15,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 134.49,
+          "memory": 108.72,
+          "num allocs": 8632441.0,
+          "rlimit count": 3568.0,
+          "sat backjumps": 2.0,
+          "sat conflicts": 2.0,
+          "sat decisions": 16.0,
+          "sat mk clause 2ary": 141.0,
+          "sat mk clause nary": 43.0,
+          "sat mk var": 107.0,
+          "sat propagations 2ary": 98.0,
+          "sat propagations nary": 10.0,
+          "time": 0.002
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 2,
+        "translate_ms": 0
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 3,
+          "assumptions": 0,
+          "dag_nodes": 261,
+          "digest": "670a9143c8bd79ab",
+          "tree_nodes": 1446
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 3,
+            "assumptions": 0,
+            "dag_nodes": 261,
+            "digest": "670a9143c8bd79ab",
+            "tree_nodes": 1446
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 261,
+        "input_tree_nodes": 1446,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 3,
+        "output_dag_nodes": 261,
+        "output_distinct_symbols": 1,
+        "output_max_depth": 15,
+        "output_tree_nodes": 1446,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 1446
     },
     {
-      "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "assertions": 6,
+      "backend_stats": {
+        "check_auto_ms": 7.197552
+      },
+      "dag_nodes": 738,
+      "distinct_symbols": 5,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_substr001.smt2",
-      "outcome": "unsupported"
+      "max_depth": 25,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 12,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 6,
+          "assumptions": 0,
+          "dag_nodes": 738,
+          "digest": "ca07f5bc9ab0f90f",
+          "tree_nodes": 5343
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 6,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 6,
+            "assumptions": 0,
+            "dag_nodes": 738,
+            "digest": "ca07f5bc9ab0f90f",
+            "tree_nodes": 5343
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 738,
+        "input_tree_nodes": 5343,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 6,
+        "output_dag_nodes": 738,
+        "output_distinct_symbols": 5,
+        "output_max_depth": 25,
+        "output_tree_nodes": 5343,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 7,
+      "translate_ms": 0,
+      "tree_nodes": 5343
     },
     {
-      "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_type002.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_type003.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.update` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.update` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_update-ex1.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.update` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.update` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_update-ex2.smt2",
       "outcome": "unsupported"
     },
@@ -1176,14 +1978,82 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_fmf001.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "assertions": 4,
+      "backend_stats": {
+        "check_auto_ms": 4.381238
+      },
+      "dag_nodes": 724,
+      "distinct_symbols": 1,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_goodAI.smt2",
-      "outcome": "unsupported"
+      "max_depth": 25,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 11,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 4,
+          "assumptions": 0,
+          "dag_nodes": 724,
+          "digest": "1bbe5f2668ca8d0a",
+          "tree_nodes": 5312
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 4,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 4,
+            "assumptions": 0,
+            "dag_nodes": 724,
+            "digest": "1bbe5f2668ca8d0a",
+            "tree_nodes": 5312
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 724,
+        "input_tree_nodes": 5312,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 4,
+        "output_dag_nodes": 724,
+        "output_distinct_symbols": 1,
+        "output_max_depth": 25,
+        "output_tree_nodes": 5312,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 4,
+      "translate_ms": 0,
+      "tree_nodes": 5312
     },
     {
       "detail": "string/regex constant `re.allchar` is outside the wired bounded subset (ADR-0029)",
@@ -1191,17 +2061,17 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_instance3303-delta.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_instance7075-delta.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue1684-regex.smt2",
       "outcome": "unsupported"
     },
@@ -1211,12 +2081,12 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue4608-re-derive.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue4759-comp-delta.smt2",
       "outcome": "unsupported"
     },
@@ -1231,19 +2101,19 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.replace_all` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.replace_all` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue8981-2-strings-deq-ext-nth.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_lower` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_lower` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue8981-strings-deq-ext-nth.smt2",
       "outcome": "unsupported"
     },
     {
       "assertions": 4,
       "backend_stats": {
-        "check_auto_ms": 1.510585
+        "check_auto_ms": 1.3626459999999998
       },
       "dag_nodes": 214,
       "distinct_symbols": 3,
@@ -1254,9 +2124,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 117.6,
-          "memory": 109.35,
-          "num allocs": 271235.0,
+          "max memory": 123.09,
+          "memory": 83.25,
+          "num allocs": 1172602.0,
           "rlimit count": 15506.0,
           "sat backjumps": 1.0,
           "sat conflicts": 1.0,
@@ -1271,14 +2141,14 @@
           "sat propagations nary": 42.0,
           "solve-eqs-elim-vars": 58.0,
           "solve-eqs-steps": 355.0,
-          "time": 0.006
+          "time": 0.005
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 6,
+        "solve_ms": 5,
         "translate_ms": 0
       },
       "outcome": "sat",
@@ -1329,7 +2199,7 @@
     {
       "assertions": 7,
       "backend_stats": {
-        "check_auto_ms": 1.880045
+        "check_auto_ms": 1.954698
       },
       "dag_nodes": 343,
       "distinct_symbols": 6,
@@ -1340,9 +2210,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 117.6,
-          "memory": 66.9,
-          "num allocs": 1448968.0,
+          "max memory": 134.49,
+          "memory": 117.23,
+          "num allocs": 2305428.0,
           "rlimit count": 17348.0,
           "sat decisions": 48.0,
           "sat mk clause 2ary": 620.0,
@@ -1352,14 +2222,14 @@
           "sat propagations nary": 34.0,
           "solve-eqs-elim-vars": 56.0,
           "solve-eqs-steps": 275.0,
-          "time": 0.005
+          "time": 0.004
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 5,
+        "solve_ms": 4,
         "translate_ms": 0
       },
       "outcome": "sat",
@@ -1415,7 +2285,7 @@
     {
       "assertions": 7,
       "backend_stats": {
-        "check_auto_ms": 3.5298220000000002
+        "check_auto_ms": 3.847491
       },
       "dag_nodes": 315,
       "distinct_symbols": 6,
@@ -1426,9 +2296,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 117.6,
-          "memory": 75.11,
-          "num allocs": 615740.0,
+          "max memory": 123.09,
+          "memory": 83.41,
+          "num allocs": 468912.0,
           "rlimit count": 26462.0,
           "sat decisions": 67.0,
           "sat mk clause 2ary": 1837.0,
@@ -1436,7 +2306,7 @@
           "sat mk var": 1756.0,
           "sat propagations 2ary": 941.0,
           "sat propagations nary": 748.0,
-          "time": 0.008
+          "time": 0.009
         },
         "decision_agrees": true,
         "decision_compared": true,
@@ -1494,7 +2364,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 0.916677
+        "check_auto_ms": 0.976408
       },
       "dag_nodes": 112,
       "distinct_symbols": 1,
@@ -1515,7 +2385,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 11,
+          "solve_ms": 10,
           "verdict": "sat"
         }
       },
@@ -1570,42 +2440,42 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_norn-13.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_norn-nel-bug-052116.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_re-neg-concat-reduct.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_re-neg-unfold-rev-a.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_regexp-strat-fix.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_regexp001.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_regexp002.smt2",
       "outcome": "unsupported"
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_regexp003.smt2",
       "outcome": "unsupported"
     },
@@ -1627,7 +2497,7 @@
     {
       "assertions": 5,
       "backend_stats": {
-        "check_auto_ms": 1.009217
+        "check_auto_ms": 1.0296159999999999
       },
       "dag_nodes": 196,
       "distinct_symbols": 2,
@@ -1638,9 +2508,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 117.6,
-          "memory": 74.91,
-          "num allocs": 2250430.0,
+          "max memory": 134.49,
+          "memory": 118.07,
+          "num allocs": 2069542.0,
           "rlimit count": 13633.0,
           "sat backjumps": 2.0,
           "sat conflicts": 3.0,
@@ -1656,14 +2526,14 @@
           "sat units": 11.0,
           "solve-eqs-elim-vars": 58.0,
           "solve-eqs-steps": 355.0,
-          "time": 0.003
+          "time": 0.005
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "unsat",
-        "solve_ms": 3,
+        "solve_ms": 5,
         "translate_ms": 0
       },
       "outcome": "unsat",
@@ -1712,15 +2582,15 @@
       "tree_nodes": 589
     },
     {
-      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+      "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_username_checker_min.smt2",
       "outcome": "unsupported"
     }
   ],
   "summary": {
-    "agree": 13,
+    "agree": 22,
     "blocker_buckets": {
-      "unknown:Incomplete": 2
+      "unknown:Incomplete": 6
     },
     "disagree": 0,
     "errors": 0,
@@ -1728,21 +2598,21 @@
     "layer_attribution": null,
     "model_replay_failures": 0,
     "oracle": {
-      "agree": 13,
+      "agree": 22,
       "backend": "z3 4.13.3.0",
-      "compared": 13,
+      "compared": 22,
       "disagree": 0,
       "enabled": true,
-      "skipped": 2
+      "skipped": 6
     },
-    "par2_mean_s": 2.668289463266666,
+    "par2_mean_s": 4.287589840892857,
     "query_plan": {
-      "original_dag_nodes": 3855,
-      "original_tree_nodes": 15286,
+      "original_dag_nodes": 9239,
+      "original_tree_nodes": 268726,
       "slice_changed_instances": 0,
-      "slice_dag_nodes": 3855,
+      "slice_dag_nodes": 9239,
       "slice_dropped_terms": 0,
-      "slice_tree_nodes": 15286
+      "slice_tree_nodes": 268726
     },
     "rewrite": {
       "applications": 0,
@@ -1756,10 +2626,10 @@
       "output_tree_nodes": 0,
       "sat_unsat_conflicts": 0
     },
-    "sat": 9,
-    "unknown": 2,
-    "unsat": 4,
-    "unsupported": 108
+    "sat": 16,
+    "unknown": 6,
+    "unsat": 6,
+    "unsupported": 95
   },
   "triage": {
     "errors": [],
@@ -1772,22 +2642,17 @@
     },
     "unsupported": [
       {
-        "detail": "string/regex operator `str.indexof` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.indexof` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_bug613.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_code-sat-neg-one.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_ctn-repl-to-ctn.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_indexof_re-start-index.smt2",
         "outcome": "unsupported"
       },
@@ -1797,12 +2662,12 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue2958.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.indexof` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.indexof` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue3497.smt2",
         "outcome": "unsupported"
       },
@@ -1812,7 +2677,7 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue5508-multiple-conflicts.smt2",
         "outcome": "unsupported"
       },
@@ -1822,7 +2687,7 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue6643-ctn-decompose-conflict.smt2",
         "outcome": "unsupported"
       },
@@ -1832,17 +2697,12 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "str.++ result of bounded max length 24 exceeds the cap 16 (ADR-0029); the query needs a larger string bound",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_issue6834-str-eq-const-nhomog.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.<=` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_leq.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_norn-31.smt2",
         "outcome": "unsupported"
       },
@@ -1852,7 +2712,7 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.from_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex constant `re.all` is outside the wired bounded subset (ADR-0029)",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_proj-issue409-re-loop-none.smt2",
         "outcome": "unsupported"
       },
@@ -1877,22 +2737,22 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_re.all.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_regexp_inclusion_reduction.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_replace-find-base.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.from_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_simple-nth-fail.smt2",
         "outcome": "unsupported"
       },
@@ -1902,7 +2762,7 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_type001.smt2",
         "outcome": "unsupported"
       },
@@ -1917,12 +2777,12 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_issue3440.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_issue4674-recomp-nf.smt2",
         "outcome": "unsupported"
       },
@@ -1942,27 +2802,22 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_leadingzero001.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_re-include-union.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_artemis-0512-nonterm.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "str.at with a non-constant index is not yet supported (ADR-0029)",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_at001.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_fmf002.smt2",
         "outcome": "unsupported"
       },
@@ -1972,32 +2827,32 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue2981.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue4379.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue4701_substr_splice.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6057-replace-re-all-jiwonparc.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6057-replace-re.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6203-6-replace-re.smt2",
         "outcome": "unsupported"
       },
@@ -2007,7 +2862,7 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue6337-replace-re.smt2",
         "outcome": "unsupported"
       },
@@ -2027,7 +2882,7 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_issue9269-rei-nconst.smt2",
         "outcome": "unsupported"
       },
@@ -2047,7 +2902,7 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_norn-re-inter-none.smt2",
         "outcome": "unsupported"
       },
@@ -2057,107 +2912,62 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_open-pf-merge.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_pattern1.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-agg-total1.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-inter-stack-ovf.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-mod-eq.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_reloop.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_simple-re-consume.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_slent-re-pos-eager.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-sat.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "string/regex operator `str.to_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-2.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "string/regex operator `str.to_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-3.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "string/regex operator `str.to_code` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.replace` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-pred-small-rw_392.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.<=` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-leq-trans-unsat.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "string/regex operator `str.<` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-lt-len5.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "string/regex operator `str.<` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-lt-simple.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_substr001.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.from_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_type002.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_int` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_type003.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.update` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.update` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_update-ex1.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.update` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.update` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_update-ex2.smt2",
         "outcome": "unsupported"
       },
@@ -2177,13 +2987,8 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_fmf001.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "string/regex operator `str.substr` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_goodAI.smt2",
         "outcome": "unsupported"
       },
       {
@@ -2192,17 +2997,17 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_instance3303-delta.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_instance7075-delta.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue1684-regex.smt2",
         "outcome": "unsupported"
       },
@@ -2212,12 +3017,12 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue4608-re-derive.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue4759-comp-delta.smt2",
         "outcome": "unsupported"
       },
@@ -2232,12 +3037,12 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.replace_all` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.replace_all` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue8981-2-strings-deq-ext-nth.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_lower` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_lower` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue8981-strings-deq-ext-nth.smt2",
         "outcome": "unsupported"
       },
@@ -2252,42 +3057,42 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_norn-13.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `re.range` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_norn-nel-bug-052116.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_re-neg-concat-reduct.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_re-neg-unfold-rev-a.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_regexp-strat-fix.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_regexp001.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_regexp002.smt2",
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_regexp003.smt2",
         "outcome": "unsupported"
       },
@@ -2307,7 +3112,7 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at (const idx), str.++ (variable, bounded), = / distinct over String",
+        "detail": "string/regex operator `str.to_re` is outside the wired bounded subset (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, str.++ (variable, bounded), = / distinct over String",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_username_checker_min.smt2",
         "outcome": "unsupported"
       }
