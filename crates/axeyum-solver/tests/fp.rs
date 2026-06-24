@@ -144,7 +144,25 @@ fn min_max() {
     let neg_two = c(&mut a, NEG_TWO);
     let nan = c(&mut a, NAN);
 
-    let bits_eq = |a: &TermArena, t: axeyum_ir::TermId, bits: u128| matches!(eval(a, t, &Assignment::new()), Ok(Value::Bv { value, .. }) if value == bits);
+    // `fp.min`/`fp.max` carry a fresh per-application sign bit for the
+    // SMT-LIB-unspecified opposite-sign-zero case (see `axeyum_fp::select_by_order`).
+    // For a determined (non-opposite-sign-zero) result the choice bit never
+    // reaches the value, but it must still be *bound* to ground-evaluate the
+    // term — bind every `.signzero.` symbol to `v` (any value gives the same
+    // determined result for these non-zero / NaN cases).
+    let bound = |a: &TermArena, v: u128| {
+        let mut asg = Assignment::new();
+        for (sid, name, _) in a.symbols() {
+            if name.contains(".signzero.") {
+                asg.set(sid, Value::Bv { width: 1, value: v });
+            }
+        }
+        asg
+    };
+    let bits_eq = |a: &TermArena, t: axeyum_ir::TermId, bits: u128| {
+        matches!(eval(a, t, &bound(a, 0)), Ok(Value::Bv { value, .. }) if value == bits)
+            && matches!(eval(a, t, &bound(a, 1)), Ok(Value::Bv { value, .. }) if value == bits)
+    };
 
     let m = fp::min(&mut a, F32, one, two).unwrap();
     assert!(bits_eq(&a, m, ONE), "min(1,2) = 1");
@@ -160,6 +178,22 @@ fn min_max() {
     assert!(bits_eq(&a, m, ONE), "min(NaN,1) = 1");
     let m = fp::max(&mut a, F32, two, nan).unwrap();
     assert!(bits_eq(&a, m, TWO), "max(2,NaN) = 2");
+
+    // Opposite-sign zeros: SMT-LIB-unspecified, so the result is a ±0 whose sign
+    // is the application's fresh bit — driving the bit drives the result's sign,
+    // and the value is always a valid ±0 (the order-dependence that makes
+    // issue208 sat is gated end-to-end through the solver / bench).
+    let pos0 = c(&mut a, POS0);
+    let neg0 = c(&mut a, NEG0);
+    let mx = fp::max(&mut a, F32, pos0, neg0).unwrap();
+    for v in [0u128, 1] {
+        let got = match eval(&a, mx, &bound(&a, v)) {
+            Ok(Value::Bv { value, .. }) => value,
+            other => panic!("expected bit-vector, got {other:?}"),
+        };
+        let want = if v == 0 { POS0 } else { NEG0 };
+        assert_eq!(got, want, "fp.max(+0,-0) sign follows the fresh bit");
+    }
 }
 
 #[test]

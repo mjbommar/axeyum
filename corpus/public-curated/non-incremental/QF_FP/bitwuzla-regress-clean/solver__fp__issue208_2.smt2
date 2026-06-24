@@ -1,0 +1,6 @@
+(set-logic QF_FP)
+(set-info :status sat)
+(define-fun x () Float64 (_ +zero 11 53))
+(define-fun y () Float64 (_ -zero 11 53))
+(assert (distinct (fp.min x y) (fp.min y x)))
+(check-sat)

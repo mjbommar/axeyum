@@ -29,48 +29,52 @@ No file required a *measurement* (timeout) exclusion: a per-file probe with a
 10 s `--timeout-ms` and a 30 s OS hard-timeout backstop killed none of the 16
 (FP bit-blasting stays cheap on these crafted instances).
 
-## Soundness exclusion (2 files) — `fp.min`/`fp.max` opposite-sign-zero defect
+## Resolved soundness defect — `fp.min`/`fp.max` opposite-sign-zero (issue208)
 
-**2** of the 16 clean files are excluded from the committed slice because
-`check_auto` returns a **wrong `unsat`** on them (Z3 and the `:status`
-annotation both say `sat`):
+Two files exercise an SMT-LIB-underspecified case of `fp.min`/`fp.max` that
+formerly drove `check_auto` to a **wrong `unsat`**:
 
 ```
-solver__fp__issue208_1.smt2   (status sat, Z3 sat, axeyum unsat)
-solver__fp__issue208_2.smt2   (status sat, Z3 sat, axeyum unsat)
+solver__fp__issue208_1.smt2   (status sat, Z3 sat)
+solver__fp__issue208_2.smt2   (status sat, Z3 sat)
 ```
 
-Both files (Florian Schanda's SPARK-inspired crafted instances) constrain the
-four terms `fp.max(+0,−0)`, `fp.max(−0,+0)`, `fp.min(+0,−0)`, `fp.min(−0,+0)`.
+These reconstruct the original bitwuzla `issue208` instances (Florian Schanda's
+SPARK-inspired probes; `references/` is gitignored, so they are rebuilt here as
+the minimal `(distinct (fp.max x y) (fp.max y x))` / `(distinct (fp.min …))` over
+`x = +0`, `y = −0` that isolates the defect — both verified **sat** by Z3 4.13.3
+and carrying `:status sat`).
+
 SMT-LIB **leaves the sign of an `fp.min`/`fp.max` result on opposite-sign zeros
-unspecified**, and — crucially — the choice may differ between
-`fp.max(+0,−0)` and `fp.max(−0,+0)` (argument order is part of the free choice).
-`axeyum_fp::min`/`max` instead make a *single deterministic* choice (`−0` for
-min, `+0` for max) regardless of argument order, so it forces
-`fp.max(+0,−0) = fp.max(−0,+0)`; the `(distinct a b)` / `(= b c)` constraints
-then become unsatisfiable and the solver reports `unsat`, while a faithful model
-(as Z3 finds) is `sat`.
+unspecified**, and — crucially — the choice may differ between argument orders:
+`fp.max(+0,−0)` and `fp.max(−0,+0)` may be `+0` or `−0` independently.
+`axeyum_fp::min`/`max` formerly made a *single deterministic* choice (`−0` for
+min, `+0` for max) regardless of order, forcing `fp.max(+0,−0) = fp.max(−0,+0)`,
+so the `(distinct …)` constraint became unsatisfiable and the solver returned a
+**wrong `unsat`** while a faithful model (as Z3 finds) is `sat`.
 
-This is a genuine **over-determinization of an SMT-LIB-underspecified operator**
-in `axeyum-fp` (a wrong-`unsat`), not a front-end gap; fixing it is an
-`axeyum-fp` change (the deterministic `select_by_order` choice must become a
-fresh, order-sensitive free value on the opposite-sign-zero case) and is left as
-a tracked follow-up. The two files are excluded so the committed baseline is
-DISAGREE=0; they are listed here so the defect and its exclusion are
-reproducible.
+**Fix** (`crates/axeyum-fp/src/lib.rs`, `select_by_order`): on the
+`is_zero(x) ∧ is_zero(y) ∧ sign(x) ≠ sign(y)` case the result is a zero whose
+sign is a **fresh free Boolean, one per application** — structural hashing makes
+the same syntactic `fp.min`/`fp.max` term reuse its bit (a real, consistent
+function) while distinct applications (swapped argument order) get independent
+bits and so *may* differ. Every other input keeps the exact ordered pick, so
+only the genuinely-unspecified case becomes free: no model is excluded (no wrong
+`unsat`) and the value is always a valid `±0` (no wrong `sat`). Both files now
+decide **sat**, agreeing with Z3 and `:status`.
 
-## Measured head-to-head (14 files)
+## Measured head-to-head (16 files)
 
 `bench-results/baselines/qf-fp-bitwuzla-regress-clean-solver-vs-z3-10s.json`,
 `--logic QF_FP --backend solver --compare-z3 --timeout-ms 10000 --jobs 4`:
 
-- **files 14** — decided **12** (sat **7**, unsat **5**), unknown 0,
+- **files 16** — decided **14** (sat **9**, unsat **5**), unknown 0,
   unsupported **2**, errors 0.
-- Oracle (Z3 4.13.3 binary + `:status`): **compared 12, agree 12, DISAGREE 0** —
+- Oracle (Z3 4.13.3 binary + `:status`): **compared 14, agree 14, DISAGREE 0** —
   every decided verdict matches both Z3 and the status annotation.
 - PAR-2 mean ≈ 0.001 s (the bit-blast is trivial on these crafted instances).
 
-This opens QF_FP as a measured division with DISAGREE=0.
+This holds QF_FP as a measured division with DISAGREE=0.
 
 ## Dominant front-end blocker (follow-up): the `RoundingMode` sort
 

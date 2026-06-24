@@ -499,8 +499,11 @@ pub fn geq(
 /// (`min(NaN, y) = y`, `min(x, NaN) = x`); the result is always one of the input
 /// bit patterns unchanged, so this is exact (no rounding).
 ///
-/// For zeros of opposite sign — where SMT-LIB leaves the result unspecified —
-/// this makes the deterministic, allowed choice `−0` (the smaller ordering key).
+/// For zeros of **opposite sign** — where SMT-LIB leaves the result unspecified
+/// (it may be `+0` OR `−0`, and the choice may differ between argument orders) —
+/// the result's sign is a **fresh free Boolean, one per application** (see
+/// `select_by_order`): a faithful nondeterministic-but-consistent encoding,
+/// never a wrong `unsat`.
 pub fn min(
     arena: &mut TermArena,
     fmt: FloatFormat,
@@ -511,8 +514,13 @@ pub fn min(
 }
 
 /// `fp.max(x, y)`: the larger operand. NaN propagates the other operand; the
-/// result is one of the inputs unchanged (exact, no rounding). Opposite-sign
-/// zeros pick `+0` (the larger ordering key), a deterministic allowed choice.
+/// result is one of the inputs unchanged (exact, no rounding).
+///
+/// On **opposite-sign zeros** SMT-LIB leaves the sign unspecified (it may be
+/// `+0` OR `−0`, order-dependent), so the result's sign is a **fresh free
+/// Boolean, one per application** (see `select_by_order`) — consistent for the
+/// same syntactic term, free to differ across distinct ones, never a wrong
+/// `unsat`.
 pub fn max(
     arena: &mut TermArena,
     fmt: FloatFormat,
@@ -3226,6 +3234,18 @@ fn not_nan_not_zero_and(
 
 /// Shared core of [`min`]/[`max`]: pick `x` or `y` by ordering key, propagating
 /// the non-NaN operand when one is NaN. `want_smaller` selects min vs max.
+///
+/// SMT-LIB leaves the result of `fp.min`/`fp.max` on **opposite-sign zeros**
+/// (`+0` vs `−0`, equal magnitude) **unspecified** — the result may be `+0` OR
+/// `−0`, and the choice may even differ between argument orders. A *deterministic*
+/// pick is therefore unsound for `unsat` (it could force two genuinely-free
+/// results equal and exclude a real model). So on the opposite-sign-zero case the
+/// result here is a zero whose sign is a **fresh free Boolean**, one per
+/// application: structural hashing makes the same syntactic `fp.min`/`fp.max`
+/// term reuse its fresh bit (self-consistent — a real function), while distinct
+/// applications (e.g. `fp.max(a,b)` vs `fp.max(b,a)`) get independent bits and so
+/// **may** differ. Every other input keeps the exact [`order_key`] selection
+/// unchanged, so only the genuinely-unspecified case becomes free.
 fn select_by_order(
     arena: &mut TermArena,
     fmt: FloatFormat,
@@ -3241,11 +3261,55 @@ fn select_by_order(
     // min: x when x ≤ y; max: y when x ≤ y.
     let (lo, hi) = if want_smaller { (x, y) } else { (y, x) };
     let by_order = arena.ite(x_le_y, lo, hi)?;
+    // Opposite-sign-zero override: SMT-LIB-unspecified, so a free zero whose sign
+    // is a fresh per-application bit. `both_zero ∧ sign(x) ≠ sign(y)`.
+    let opp = opposite_sign_zero(arena, fmt, x, y)?;
+    let free_zero = free_sign_zero(arena, fmt, x, y, want_smaller)?;
+    let by_order = arena.ite(opp, free_zero, by_order)?;
     // NaN propagation: if x is NaN return y, if y is NaN return x.
     let nx = is_nan(arena, fmt, x)?;
     let ny = is_nan(arena, fmt, y)?;
     let if_x_nan = arena.ite(nx, y, by_order)?;
     arena.ite(ny, x, if_x_nan)
+}
+
+/// `is_zero(x) ∧ is_zero(y) ∧ sign(x) ≠ sign(y)` — the genuinely-unspecified
+/// case for `fp.min`/`fp.max` (both operands zero, opposite signs).
+fn opposite_sign_zero(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+    y: TermId,
+) -> Result<TermId, IrError> {
+    let zx = is_zero(arena, fmt, x)?;
+    let zy = is_zero(arena, fmt, y)?;
+    let sx = sign_set(arena, fmt, x)?;
+    let sy = sign_set(arena, fmt, y)?;
+    let diff_sign = arena.eq(sx, sy)?;
+    let diff_sign = arena.not(diff_sign)?;
+    let both_zero = arena.and(zx, zy)?;
+    arena.and(both_zero, diff_sign)
+}
+
+/// A zero of the format's width whose sign is a **fresh free Boolean**, one per
+/// `fp.min`/`fp.max` application. The fresh symbol's name is a deterministic
+/// function of the operand term ids and the min/max flavor, so the same
+/// syntactic application reuses one bit (consistent — a real function) while
+/// distinct applications get independent bits (so they may differ, exactly as
+/// SMT-LIB permits). Magnitude is `0`; only the sign bit varies.
+fn free_sign_zero(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+    y: TermId,
+    want_smaller: bool,
+) -> Result<TermId, IrError> {
+    let flavor = if want_smaller { "min" } else { "max" };
+    let name = format!("axeyum_fp.{flavor}.signzero.{}.{}", x.index(), y.index());
+    let sign = arena.bv_var(&name, 1)?;
+    // result = sign-bit ++ (width-1) zero bits = ±0 with the chosen sign.
+    let lower = arena.bv_const(fmt.width() - 1, 0)?;
+    arena.concat(sign, lower)
 }
 
 /// The monotone unsigned ordering key: flip all bits if the sign is set,
@@ -6706,5 +6770,151 @@ mod fp_to_int_symbolic_tests {
                 assert_eq!(got, oracle, "i32 {v} → F32 mode {mode:?}");
             }
         }
+    }
+
+    // --- fp.min / fp.max opposite-sign-zero nondeterminism (issue208) ---------
+
+    /// On opposite-sign zeros `fp.min`/`fp.max` is SMT-LIB-*unspecified*: the
+    /// result may be `+0` OR `−0`, and the choice may differ between argument
+    /// orders. The fix encodes a *fresh per-application* sign bit so:
+    ///   * `fp.max(+0,−0)` and `fp.max(−0,+0)` CAN differ (the sat model that
+    ///     `(distinct …)` needs — what was a wrong-`unsat` before),
+    ///   * the SAME syntactic term is self-consistent (a real function),
+    ///   * a non-opposite-sign case stays the deterministic ordered pick.
+    #[test]
+    fn min_max_opposite_sign_zero_is_free_per_application() {
+        const POS0: u128 = 0;
+        const NEG0: u128 = 1u128 << 63; // F64 sign bit
+
+        let bit = |a: &TermArena, t, asg: &Assignment| match eval(a, t, asg) {
+            Ok(Value::Bv { value, .. }) => value,
+            other => panic!("expected a bit-vector value, got {other:?}"),
+        };
+
+        let mut a = TermArena::new();
+        let xp = a.bv_const(64, POS0).unwrap(); // +0
+        let yn = a.bv_const(64, NEG0).unwrap(); // −0
+
+        // Two distinct applications of fp.max with swapped argument order.
+        let m_xy = max(&mut a, FloatFormat::F64, xp, yn).unwrap();
+        let m_yx = max(&mut a, FloatFormat::F64, yn, xp).unwrap();
+        // The SAME syntactic application reuses its fresh bit (structural hash).
+        let m_xy2 = max(&mut a, FloatFormat::F64, xp, yn).unwrap();
+        assert_eq!(m_xy, m_xy2, "same fp.max application must reuse its term");
+
+        // The fresh sign bits are deterministically named per application
+        // (`<flavor>.signzero.<x>.<y>`); look them up by that exact name.
+        let s_xy = a
+            .find_symbol(&format!(
+                "axeyum_fp.max.signzero.{}.{}",
+                xp.index(),
+                yn.index()
+            ))
+            .expect("fp.max(+0,−0) declared its fresh sign bit");
+        let s_yx = a
+            .find_symbol(&format!(
+                "axeyum_fp.max.signzero.{}.{}",
+                yn.index(),
+                xp.index()
+            ))
+            .expect("fp.max(−0,+0) declared its fresh sign bit");
+        assert_ne!(s_xy, s_yx, "swapped-order applications get distinct bits");
+
+        // Witness that the two applications CAN differ: set m_xy → +0, m_yx → −0.
+        // This is precisely the model the issue208 `(distinct …)` needs; a
+        // deterministic encoding would have made them equal (wrong unsat).
+        let mut differ = Assignment::new();
+        differ.set(s_xy, Value::Bv { width: 1, value: 0 }); // +0
+        differ.set(s_yx, Value::Bv { width: 1, value: 1 }); // −0
+        assert_eq!(bit(&a, m_xy, &differ), POS0);
+        assert_eq!(bit(&a, m_yx, &differ), NEG0);
+        assert_ne!(
+            bit(&a, m_xy, &differ),
+            bit(&a, m_yx, &differ),
+            "opposite-sign-zero fp.max results must be free to differ",
+        );
+
+        // They CAN also coincide (the choice is genuinely free both ways).
+        let mut same = Assignment::new();
+        same.set(s_xy, Value::Bv { width: 1, value: 1 });
+        same.set(s_yx, Value::Bv { width: 1, value: 1 });
+        assert_eq!(bit(&a, m_xy, &same), bit(&a, m_yx, &same));
+
+        // The result is always a valid ±0 bit pattern (no spurious magnitude).
+        for v in [0u128, 1] {
+            let mut asg = Assignment::new();
+            asg.set(s_xy, Value::Bv { width: 1, value: v });
+            let r = bit(&a, m_xy, &asg);
+            assert!(r == POS0 || r == NEG0, "result must be ±0, got {r:#x}");
+        }
+    }
+
+    /// `fp.min` over opposite-sign zeros is symmetric to `fp.max`, and a NON-zero
+    /// `fp.min`/`fp.max` stays the deterministic ordered pick (the override only
+    /// fires on the genuinely-unspecified both-zero-opposite-sign case).
+    #[test]
+    fn min_nonzero_stays_deterministic_and_zero_case_is_free() {
+        const POS0: u128 = 0;
+        const NEG0: u128 = 1u128 << 63;
+        // Two finite F64 values: 1.0 = 0x3FF0…, 2.0 = 0x4000…
+        const ONE: u128 = 0x3FF0_0000_0000_0000;
+        const TWO: u128 = 0x4000_0000_0000_0000;
+
+        let bit = |a: &TermArena, t, asg: &Assignment| match eval(a, t, asg) {
+            Ok(Value::Bv { value, .. }) => value,
+            other => panic!("expected a bit-vector value, got {other:?}"),
+        };
+
+        let mut a = TermArena::new();
+        let one = a.bv_const(64, ONE).unwrap();
+        let two = a.bv_const(64, TWO).unwrap();
+        let mn = min(&mut a, FloatFormat::F64, one, two).unwrap();
+        let mx = max(&mut a, FloatFormat::F64, one, two).unwrap();
+        // The opposite-sign-zero guard is structurally present but evaluates
+        // false here (1.0/2.0 are not zero), so the ordered pick is fully
+        // determined regardless of the (unconstrained) fresh sign bits — bind
+        // them arbitrarily to evaluate, and try BOTH values to prove the pick
+        // does not depend on them.
+        let signzero_ids: Vec<axeyum_ir::SymbolId> = a
+            .symbols()
+            .filter(|(_, name, _)| name.contains(".signzero."))
+            .map(|(sid, _, _)| sid)
+            .collect();
+        for v in [0u128, 1] {
+            let mut asg = Assignment::new();
+            for &sid in &signzero_ids {
+                asg.set(sid, Value::Bv { width: 1, value: v });
+            }
+            assert_eq!(bit(&a, mn, &asg), ONE, "min(1,2) = 1, deterministic");
+            assert_eq!(bit(&a, mx, &asg), TWO, "max(1,2) = 2, deterministic");
+        }
+
+        // fp.min on opposite-sign zeros is free (mirror of the fp.max test).
+        let xp = a.bv_const(64, POS0).unwrap();
+        let yn = a.bv_const(64, NEG0).unwrap();
+        let mn_xy = min(&mut a, FloatFormat::F64, xp, yn).unwrap();
+        let mn_yx = min(&mut a, FloatFormat::F64, yn, xp).unwrap();
+        let s_xy = a
+            .find_symbol(&format!(
+                "axeyum_fp.min.signzero.{}.{}",
+                xp.index(),
+                yn.index()
+            ))
+            .expect("fp.min(+0,−0) declared its fresh sign bit");
+        let s_yx = a
+            .find_symbol(&format!(
+                "axeyum_fp.min.signzero.{}.{}",
+                yn.index(),
+                xp.index()
+            ))
+            .expect("fp.min(−0,+0) declared its fresh sign bit");
+        let mut differ = Assignment::new();
+        differ.set(s_xy, Value::Bv { width: 1, value: 0 });
+        differ.set(s_yx, Value::Bv { width: 1, value: 1 });
+        assert_ne!(
+            bit(&a, mn_xy, &differ),
+            bit(&a, mn_yx, &differ),
+            "opposite-sign-zero fp.min results must be free to differ",
+        );
     }
 }
