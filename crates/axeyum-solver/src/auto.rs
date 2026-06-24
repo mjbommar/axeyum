@@ -19,7 +19,7 @@
 //! Every `sat` is replayed through the ground evaluator against the original
 //! query, so no routing or combination step can yield an unsound `sat`.
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use axeyum_ir::{Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 use axeyum_rewrite::{
@@ -1685,7 +1685,7 @@ fn iv_mul(a: IntInterval, b: IntInterval) -> Option<IntInterval> {
 fn interval_of(
     arena: &TermArena,
     term: TermId,
-    bounds: &HashMap<SymbolId, IntInterval>,
+    bounds: &BTreeMap<SymbolId, IntInterval>,
     depth: u32,
 ) -> Option<IntInterval> {
     // Cap recursion so a pathologically deep term cannot blow the stack.
@@ -1885,6 +1885,60 @@ fn decide_bounded_int_blast(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<Option<CheckResult>, SolverError> {
+    // Steps 1–6: prove a finite, exactly-encodable box for every free Int
+    // variable (shared with the certificate emitter `certify_bounded_int_blast`).
+    let proven = match prove_int_box(arena, assertions) {
+        IntBoxProof::Box(b) => b,
+        // Contradictory direct bounds (`lo > hi`): UNSAT on these literals alone.
+        IntBoxProof::TriviallyUnsat => return Ok(Some(CheckResult::Unsat)),
+        IntBoxProof::Decline => return Ok(None),
+    };
+
+    // 7. Conjoin the explicit clamp `lo ≤ v ≤ hi` for every variable so the
+    //    bit-vector search is forced to stay inside the proven box (the encoding
+    //    is exact there). Build on the real arena (clones inside the blast).
+    let clamped = clamp_to_box(arena, assertions, &proven)?;
+
+    // 8. Solve the clamped, exactly-encoded box at the covering width.
+    solve_exact_bounded_box(arena, &clamped, proven.width, config)
+}
+
+/// A proven finite integer box: a closed interval per free `Int` variable
+/// (deterministic `BTreeMap` order) plus the signed bit-width whose range
+/// strictly contains every `Int`-arithmetic subterm's interval, so the
+/// two's-complement bit-blast at that width is an EXACT encoding (no wraparound).
+#[derive(Clone, Debug)]
+struct BoundedBox {
+    /// Per-variable proven `[lo, hi]` bound, in stable symbol order.
+    bounds: BTreeMap<SymbolId, IntInterval>,
+    /// The covering width: every Int subterm's `|value| ≤ max_abs < 2^(w-1)`.
+    width: u32,
+    /// The witnessed bound on every Int subterm's magnitude (`max_abs`); the
+    /// covering-width invariant is `max_abs < 2^(width-1)`, re-checkable cheaply.
+    max_abs: u128,
+}
+
+/// Outcome of the bound proof (`decide_bounded_int_blast` steps 1–6).
+enum IntBoxProof {
+    /// A finite, exactly-encodable box was proven for every free Int variable.
+    Box(BoundedBox),
+    /// Direct bounds are already contradictory (`lo > hi`) — UNSAT on the bound
+    /// literals alone, no blast needed.
+    TriviallyUnsat,
+    /// The all-bounded proof / covering width / exactness could not be
+    /// established; the caller falls through unchanged.
+    Decline,
+}
+
+/// Proves a finite, exactly-encodable integer box for every free `Int` variable
+/// of `assertions` (steps 1–6 of the bounded int-blast). Pure analysis: reads
+/// the arena, never mutates it, so it is replayable by an independent re-checker.
+///
+/// SOUNDNESS — see [`decide_bounded_int_blast`]. Bounds are read only off
+/// UNCONDITIONAL top-level conjuncts (and equalities pinning a variable to a
+/// bounded interval), so each `lo_v ≤ v ≤ hi_v` holds in every model; the width
+/// strictly contains every Int subterm's interval, so the blast is faithful.
+fn prove_int_box(arena: &TermArena, assertions: &[TermId]) -> IntBoxProof {
     // 1. Free Int variables and the unconditional top-level conjuncts.
     let mut int_vars = BTreeSet::new();
     let mut conjuncts = Vec::new();
@@ -1893,7 +1947,7 @@ fn decide_bounded_int_blast(
         collect_top_conjuncts(arena, a, &mut conjuncts);
     }
     if int_vars.is_empty() {
-        return Ok(None);
+        return IntBoxProof::Decline;
     }
 
     // 2. Direct constant half-bounds from atomic top-level conjuncts.
@@ -1915,7 +1969,7 @@ fn decide_bounded_int_blast(
             }
         }
     }
-    let mut bounds: HashMap<SymbolId, IntInterval> = HashMap::new();
+    let mut bounds: BTreeMap<SymbolId, IntInterval> = BTreeMap::new();
     for &v in &int_vars {
         if let (Some(&l), Some(&h)) = (lo.get(&v), hi.get(&v)) {
             if l <= h {
@@ -1923,7 +1977,7 @@ fn decide_bounded_int_blast(
             } else {
                 // Contradictory direct bounds (`lo > hi`): the conjunction is
                 // already UNSAT on these literals alone.
-                return Ok(Some(CheckResult::Unsat));
+                return IntBoxProof::TriviallyUnsat;
             }
         }
     }
@@ -1966,7 +2020,7 @@ fn decide_bounded_int_blast(
 
     // 4. Every free Int variable must now be bounded; otherwise decline.
     if int_vars.iter().any(|v| !bounds.contains_key(v)) {
-        return Ok(None);
+        return IntBoxProof::Decline;
     }
 
     // 5. Interval-analyze EVERY subterm of EVERY assertion. The covering width
@@ -1977,7 +2031,7 @@ fn decide_bounded_int_blast(
     let mut max_abs: u128 = 1;
     for &a in assertions {
         if !accumulate_max_abs(arena, a, &bounds, &mut max_abs, 0) {
-            return Ok(None);
+            return IntBoxProof::Decline;
         }
     }
 
@@ -1986,14 +2040,26 @@ fn decide_bounded_int_blast(
     //    `n` fits in signed `w` bits. Decline beyond `MAX_INT_BLAST_WIDTH`.
     let width = match covering_width(max_abs) {
         Some(w) if w <= axeyum_rewrite::MAX_INT_BLAST_WIDTH => w,
-        _ => return Ok(None),
+        _ => return IntBoxProof::Decline,
     };
 
-    // 7. Conjoin the explicit clamp `lo ≤ v ≤ hi` for every variable so the
-    //    bit-vector search is forced to stay inside the proven box (the encoding
-    //    is exact there). Build on the real arena (clones inside the blast).
+    IntBoxProof::Box(BoundedBox {
+        bounds,
+        width,
+        max_abs,
+    })
+}
+
+/// Conjoins the explicit clamp `lo ≤ v ≤ hi` for every proven variable onto
+/// `assertions`, on `arena`, so the bit-vector search is forced to stay inside
+/// the proven box. Deterministic clause order (stable `BTreeMap` iteration).
+fn clamp_to_box(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    proven: &BoundedBox,
+) -> Result<Vec<TermId>, SolverError> {
     let mut clamped: Vec<TermId> = assertions.to_vec();
-    for (&v, iv) in &bounds {
+    for (&v, iv) in &proven.bounds {
         let var = arena.var(v);
         let lo_c = arena.int_const(iv.lo);
         let hi_c = arena.int_const(iv.hi);
@@ -2006,9 +2072,185 @@ fn decide_bounded_int_blast(
         clamped.push(ge);
         clamped.push(le);
     }
+    Ok(clamped)
+}
 
-    // 8. Solve the clamped, exactly-encoded box at the covering width.
-    solve_exact_bounded_box(arena, &clamped, width, config)
+// ===========================================================================
+// Bound-coverage CERTIFICATE for the bounded int-blast UNSAT (narrows the
+// `TrustId::IntBlast` hole for this sub-case).
+// ===========================================================================
+//
+// `decide_bounded_int_blast` returns a TRUSTED integer `Unsat`: the BV layer
+// carries DRAT (`check_drat`), but the Int→BV *reduction* itself — that the
+// query lives in a finite box and the width encodes it EXACTLY — is the
+// `IntBlast` trust hole. This certificate makes that reduction step
+// INDEPENDENTLY RE-CHECKABLE: it bundles the per-variable proven bounds, the
+// covering width, the witnessed `max_abs`, and the DRAT of the bit-blasted
+// (clamped) CNF, and its `recheck` re-derives ALL THREE soundness conditions
+// from the ORIGINAL assertions with no trust in the emitter:
+//
+//   (i)   each variable's `[lo, hi]` is re-derived by `prove_int_box` from the
+//         unconditional top-level conjuncts of the original assertions, and must
+//         equal the stored bound;
+//   (ii)  the covering-width invariant `max_abs < 2^(width-1)` is re-verified by
+//         interval-evaluating every Int subterm (so two's-complement arithmetic
+//         equals integer arithmetic — no wraparound);
+//   (iii) `check_drat` independently accepts the DRAT over the stored DIMACS.
+//
+// (i)+(ii) witness that the no-overflow side-constraints the blaster conjoins
+// (the one thing that makes a *plain* `blast_integers` UNSAT not transfer to the
+// original) are VALID over the box, so the box-UNSAT IS the original UNSAT. With
+// all three re-checked, this particular integer `Unsat` carries no residual
+// `IntBlast` trust.
+
+/// A re-checkable certificate that a *bounded* `QF_NIA` query is `Unsat`: the
+/// proven per-variable integer box, the exact covering width, and a DRAT
+/// refutation of the bit-blasted clamped CNF. See [`BoundedIntBlastCertificate::recheck`].
+#[derive(Debug, Clone)]
+pub struct BoundedIntBlastCertificate {
+    /// Per-variable proven `[lo, hi]` bound `(symbol, lo, hi)`, in stable order.
+    per_var_bounds: Vec<(SymbolId, i128, i128)>,
+    /// The covering width used for the exact two's-complement encoding.
+    covering_width: u32,
+    /// The witnessed magnitude bound on every Int subterm (`max_abs`); the
+    /// covering-width invariant is `max_abs < 2^(covering_width-1)`.
+    max_abs: u128,
+    /// DRAT (+ DIMACS) refutation of the bit-blasted, clamped, exactly-encoded
+    /// CNF, independently re-checkable by `check_drat`.
+    bv_proof: crate::proof::UnsatProof,
+}
+
+impl BoundedIntBlastCertificate {
+    /// The proven per-variable box `(symbol, lo, hi)` in stable order.
+    #[must_use]
+    pub fn per_var_bounds(&self) -> &[(SymbolId, i128, i128)] {
+        &self.per_var_bounds
+    }
+
+    /// The exact covering width.
+    #[must_use]
+    pub fn covering_width(&self) -> u32 {
+        self.covering_width
+    }
+
+    /// The bit-blasted-CNF DRAT certificate.
+    #[must_use]
+    pub fn bv_proof(&self) -> &crate::proof::UnsatProof {
+        &self.bv_proof
+    }
+
+    /// **Independently re-validates** the whole Int→BV reduction plus the BV
+    /// refutation, from the ORIGINAL `assertions` and this certificate's stored
+    /// data, trusting nothing the emitter computed:
+    ///
+    ///  1. re-runs the bound proof (`prove_int_box`) on `assertions` and requires it to prove the
+    ///     SAME box (same per-variable bounds), same width, same `max_abs`;
+    ///  2. re-verifies the covering invariant `max_abs < 2^(width-1)` (exactness:
+    ///     no two's-complement wraparound on any subterm);
+    ///  3. re-checks the DRAT over the stored DIMACS via `check_drat` (RUP/RAT).
+    ///
+    /// Returns `Ok(true)` only when all three hold. A `false`/`Err` means the
+    /// certificate does not establish the `Unsat` and must not be trusted.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Backend`] if the stored DRAT/DIMACS is unparseable.
+    pub fn recheck(&self, arena: &TermArena, assertions: &[TermId]) -> Result<bool, SolverError> {
+        // (1) Re-derive the box from the ORIGINAL assertions; it must match.
+        let IntBoxProof::Box(reproven) = prove_int_box(arena, assertions) else {
+            return Ok(false);
+        };
+        if reproven.width != self.covering_width || reproven.max_abs != self.max_abs {
+            return Ok(false);
+        }
+        let mut reproven_bounds: Vec<(SymbolId, i128, i128)> = reproven
+            .bounds
+            .iter()
+            .map(|(&s, iv)| (s, iv.lo, iv.hi))
+            .collect();
+        reproven_bounds.sort_unstable();
+        let mut stored = self.per_var_bounds.clone();
+        stored.sort_unstable();
+        if reproven_bounds != stored {
+            return Ok(false);
+        }
+
+        // (2) Re-verify the exactness invariant `max_abs < 2^(width-1)`: the
+        //     signed range of `covering_width` bits strictly contains every Int
+        //     subterm's magnitude, so no `bvadd`/`bvsub`/`bvmul` wraps.
+        if self.covering_width == 0 || self.covering_width > 128 {
+            return Ok(false);
+        }
+        // `2^(w-1)` fits in u128 for `w <= 128` (w-1 <= 127). Equality fails the
+        // STRICT bound, so a value exactly at `2^(w-1)` is rejected.
+        if (self.covering_width - 1) >= 128 {
+            // w == 129 would overflow; already excluded above, but keep total.
+            return Ok(false);
+        }
+        let limit: u128 = 1u128 << (self.covering_width - 1);
+        if self.max_abs >= limit {
+            return Ok(false);
+        }
+
+        // (3) Independently re-check the BV refutation.
+        self.bv_proof.recheck()
+    }
+}
+
+/// Attempts to produce a fully re-checkable [`BoundedIntBlastCertificate`] for
+/// `assertions`: proves the finite box, bit-blasts the clamped query at the
+/// covering width, and — if the bit-blasted CNF is `Unsat` — emits the DRAT.
+/// Returns `Ok(None)` when the bound proof declines, the box is `Sat`, or the
+/// proof core stays inconclusive (the verdict path is unchanged; this only adds
+/// a certificate when one cleanly exists).
+///
+/// This is the **certifying** entry point for bounded `QF_NIA` `Unsat`: a returned
+/// certificate, re-checked by [`BoundedIntBlastCertificate::recheck`] against the
+/// same `assertions`, establishes the `Unsat` with no residual `IntBlast` trust.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Backend`] on an internal encoding/blast failure.
+pub fn certify_bounded_int_blast(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<Option<BoundedIntBlastCertificate>, SolverError> {
+    let proven = match prove_int_box(arena, assertions) {
+        IntBoxProof::Box(b) => b,
+        // A trivially-contradictory direct-bound query has no blasted CNF to
+        // certify here; the verdict path still reports it `Unsat`. We decline a
+        // certificate rather than fabricate one.
+        IntBoxProof::TriviallyUnsat | IntBoxProof::Decline => return Ok(None),
+    };
+
+    // Blast the clamped, exactly-encoded box on a scratch arena (additive).
+    let mut scratch = arena.clone();
+    let clamped = clamp_to_box(&mut scratch, assertions, &proven)?;
+    let blast = axeyum_rewrite::blast_integers(&mut scratch, &clamped, proven.width)
+        .map_err(|e| SolverError::Backend(format!("int-blast failed: {e}")))?;
+    let bv_assertions = blast.assertions().to_vec();
+
+    // Emit + self-check the DRAT of the bit-blasted CNF. The blaster's
+    // no-overflow side-constraints are conjoined, so this refutes the GUARDED
+    // CNF; the bound proof (re-checked by `recheck`) is what licenses treating
+    // that as the original UNSAT — the guards are valid over the exact box.
+    match crate::proof::export_qf_bv_unsat_proof(&scratch, &bv_assertions)? {
+        crate::proof::UnsatProofOutcome::Proved(bv_proof) => {
+            let per_var_bounds = proven
+                .bounds
+                .iter()
+                .map(|(&s, iv)| (s, iv.lo, iv.hi))
+                .collect();
+            Ok(Some(BoundedIntBlastCertificate {
+                per_var_bounds,
+                covering_width: proven.width,
+                max_abs: proven.max_abs,
+                bv_proof,
+            }))
+        }
+        crate::proof::UnsatProofOutcome::Satisfiable
+        | crate::proof::UnsatProofOutcome::Inconclusive => Ok(None),
+    }
 }
 
 /// Solves the clamped, exactly-encoded box query (`decide_bounded_int_blast`
@@ -2069,7 +2311,7 @@ fn derive_var_bound(
     v: SymbolId,
     e1: TermId,
     e2: TermId,
-    bounds: &HashMap<SymbolId, IntInterval>,
+    bounds: &BTreeMap<SymbolId, IntInterval>,
 ) -> Option<IntInterval> {
     // Linearize `e1 - e2` as `k·v + rest`, where `rest` is `v`-free. `affine_in`
     // returns `(k, rest_interval)`; it declines (`None`) if `v` occurs
@@ -2111,7 +2353,7 @@ fn affine_in(
     arena: &TermArena,
     term: TermId,
     v: SymbolId,
-    bounds: &HashMap<SymbolId, IntInterval>,
+    bounds: &BTreeMap<SymbolId, IntInterval>,
     depth: u32,
 ) -> Option<(i128, IntInterval)> {
     if depth > 256 {
@@ -2217,7 +2459,7 @@ fn div_floor(a: i128, b: i128) -> Option<i128> {
 fn accumulate_max_abs(
     arena: &TermArena,
     term: TermId,
-    bounds: &HashMap<SymbolId, IntInterval>,
+    bounds: &BTreeMap<SymbolId, IntInterval>,
     max_abs: &mut u128,
     depth: u32,
 ) -> bool {

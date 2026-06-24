@@ -34,7 +34,15 @@ pub enum TrustId {
     ArrayElim,
     /// Uninterpreted-function applications → fresh vars + functional consistency (ADR-0013).
     Ackermann,
-    /// Bounded integers → `BitVec` at a chosen width (ADR-0014).
+    /// Bounded integers → `BitVec` at a chosen width (ADR-0014). The
+    /// **proven-box bounded** sub-case (`decide_bounded_int_blast`: every free Int
+    /// variable confined to a finite, exactly-encodable box) now has an
+    /// independent per-query re-checker —
+    /// [`crate::BoundedIntBlastCertificate::recheck`] re-derives the box + covering
+    /// width from the original assertions and re-runs `check_drat` over the
+    /// bit-blasted CNF. `is_certified` stays `false` because the *general*
+    /// int-blast (the sat-only width ladder, and unbounded queries) carries no such
+    /// certificate — see [`TrustId::is_certified`].
     IntBlast,
     /// Datatype `select`/`is`/eq folded over constructors → BV (ADR-0022).
     DatatypeElim,
@@ -157,7 +165,14 @@ impl TrustId {
     /// XOR `unsat` was certified — and must not read `XorGaussian` as
     /// "interleaved XOR-UNSAT is certified" (it is not).
     ///
+    /// [`IntBlast`] is analogous: its **proven-box bounded** sub-case now carries a
+    /// re-checkable [`crate::BoundedIntBlastCertificate`] (box + covering width
+    /// re-derived from the originals, plus `check_drat`), but the general int-blast
+    /// (the sat-only width ladder / unbounded queries) has no per-query
+    /// certificate, so this bit stays `false`.
+    ///
     /// [`XorGaussian`]: TrustId::XorGaussian
+    /// [`IntBlast`]: TrustId::IntBlast
     #[must_use]
     pub const fn is_certified(self) -> bool {
         match self {

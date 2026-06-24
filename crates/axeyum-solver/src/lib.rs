@@ -127,8 +127,9 @@ pub use alethe_lra::{
 };
 pub use aufbv::check_with_arrays_and_functions;
 pub use auto::{
-    check_auto, check_auto_explained, check_with_quantifiers, prove_unsat_by_ematching,
-    prove_unsat_by_instantiation, prove_unsat_by_mbqi, solve, unsat_core,
+    BoundedIntBlastCertificate, certify_bounded_int_blast, check_auto, check_auto_explained,
+    check_with_quantifiers, prove_unsat_by_ematching, prove_unsat_by_instantiation,
+    prove_unsat_by_mbqi, solve, unsat_core,
 };
 pub use backend::{
     Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind,
