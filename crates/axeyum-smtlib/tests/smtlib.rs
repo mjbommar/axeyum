@@ -1656,13 +1656,157 @@ fn string_lex_order_variable_eval() {
 }
 
 #[test]
-fn string_to_int_still_declines() {
-    // `str.to_int` (digit parsing) is deferred to slice 4 — it must decline as a
-    // clean Unsupported, never a wrong verdict.
+fn string_to_int_constant_corners_eval() {
+    // SMT-LIB UnicodeStrings total-function corners, oracle-checked by evaluating
+    // the packed-BV encoding of constant operands:
+    //   - leading zeros are valid: "042" → 42, "007" → 7, "0001" → 1.
+    //   - any non-digit char → -1; the empty string → -1.
+    assert!(
+        eval_const_script("(assert (= (str.to_int \"042\") 42))\n"),
+        "042"
+    );
+    assert!(
+        eval_const_script("(assert (= (str.to_int \"007\") 7))\n"),
+        "007"
+    );
+    assert!(
+        eval_const_script("(assert (= (str.to_int \"0001\") 1))\n"),
+        "leading zeros valid"
+    );
+    assert!(
+        eval_const_script("(assert (= (str.to_int \"1a\") (- 1)))\n"),
+        "non-digit ⇒ -1"
+    );
+    assert!(
+        eval_const_script("(assert (= (str.to_int \"\") (- 1)))\n"),
+        "empty ⇒ -1"
+    );
+    assert!(
+        eval_const_script("(assert (= (str.to_int \" 1\") (- 1)))\n"),
+        "leading space (non-digit) ⇒ -1"
+    );
+    // A wrong-equality stays unsat-shaped (never spuriously true).
+    assert!(
+        !eval_const_script("(assert (= (str.to_int \"042\") 41))\n"),
+        "042 ≠ 41"
+    );
+}
+
+#[test]
+fn string_to_int_symbolic_eval() {
+    // (str.to_int s) over a declared string symbol, oracle-checked under concrete
+    // packings: a digit string decodes; a non-digit string is -1.
+    let text = "(declare-fun s () String)\n\
+                (assert (= (str.to_int s) 25))\n(check-sat)\n";
+    assert!(eval_string_script(text, pack_str(b"25")), "\"25\" → 25");
+    assert!(
+        !eval_string_script(text, pack_str(b"99")),
+        "\"99\" → 99 ≠ 25"
+    );
+    let neg = "(declare-fun s () String)\n\
+               (assert (= (str.to_int s) (- 1)))\n(check-sat)\n";
+    assert!(eval_string_script(neg, pack_str(b"a")), "non-digit → -1");
+    assert!(eval_string_script(neg, pack_str(b"")), "empty → -1");
+    assert!(!eval_string_script(neg, pack_str(b"7")), "\"7\" → 7 ≠ -1");
+}
+
+#[test]
+fn string_to_int_over_length_literal_declines() {
+    // A string literal longer than STRING_MAX_LEN declines at pack time, so
+    // (str.to_int "<24 digits>") is a clean Unsupported (never a wrapped value).
     let err =
-        parse_script("(declare-fun s () String)\n(assert (= (str.to_int s) 5))\n(check-sat)\n")
-            .expect_err("str.to_int is outside the wired subset");
+        parse_script("(assert (= (str.to_int \"783914785582390527685649\") 5))\n(check-sat)\n")
+            .expect_err("over-length string literal declines");
     assert!(matches!(err, SmtError::Unsupported(_)), "got {err:?}");
+}
+
+#[test]
+fn string_from_int_constant_corners_eval() {
+    // str.from_int: i ≥ 0 → canonical decimal (no leading zeros, 0 → "0"); i < 0 → "".
+    assert!(
+        eval_const_script("(assert (= (str.from_int 42) \"42\"))\n"),
+        "42"
+    );
+    assert!(
+        eval_const_script("(assert (= (str.from_int 0) \"0\"))\n"),
+        "0"
+    );
+    assert!(
+        eval_const_script("(assert (= (str.from_int 7) \"7\"))\n"),
+        "single digit"
+    );
+    assert!(
+        eval_const_script("(assert (= (str.from_int (- 5)) \"\"))\n"),
+        "negative ⇒ \"\""
+    );
+    // No spurious leading zero / wrong string.
+    assert!(
+        !eval_const_script("(assert (= (str.from_int 42) \"042\"))\n"),
+        "42 ≠ \"042\""
+    );
+}
+
+#[test]
+fn string_from_int_over_bound_constant_declines() {
+    // A non-negative constant whose decimal needs more than FROM_INT_MAX_DIGITS
+    // bytes cannot be represented in the bounded string sort — a clean Unsupported
+    // (Unknown to the consumer), never a truncated/wrong string.
+    let err = parse_script(
+        "(declare-fun x () String)\n\
+         (assert (= x (str.from_int 4785582390527685649)))\n(check-sat)\n",
+    )
+    .expect_err("19-digit from_int constant exceeds the bound");
+    assert!(matches!(err, SmtError::Unsupported(_)), "got {err:?}");
+}
+
+#[test]
+fn string_from_int_symbolic_eval() {
+    // Symbolic `str.from_int i` over an Int symbol, oracle-checked: the packed
+    // result equals the decimal string of i (faithful for every in-range i).
+    let text = "(declare-fun i () Int)\n\
+                (declare-fun x () String)\n\
+                (assert (= x (str.from_int i)))\n(check-sat)\n";
+    assert!(
+        eval_string_int_script(text, &[("x", b"42")], &[("i", 42)]),
+        "from_int 42 = \"42\""
+    );
+    assert!(
+        eval_string_int_script(text, &[("x", b"7")], &[("i", 7)]),
+        "from_int 7 = \"7\""
+    );
+    assert!(
+        eval_string_int_script(text, &[("x", b"0")], &[("i", 0)]),
+        "from_int 0 = \"0\""
+    );
+    // i < 0 ⇒ "" (negative formats to the empty string).
+    assert!(
+        eval_string_int_script(text, &[("x", b"")], &[("i", -5)]),
+        "from_int (-5) = \"\""
+    );
+    // A wrong string never spuriously holds.
+    assert!(
+        !eval_string_int_script(text, &[("x", b"43")], &[("i", 42)]),
+        "from_int 42 ≠ \"43\""
+    );
+}
+
+#[test]
+fn string_from_int_round_trip_eval() {
+    // to_int ∘ from_int over a constant in range round-trips: a small UNSAT shape
+    // catches an encoding that disagrees with itself.
+    assert!(
+        eval_const_script("(assert (= (str.to_int (str.from_int 123)) 123))\n"),
+        "to_int(from_int 123) = 123"
+    );
+    assert!(
+        eval_const_script("(assert (= (str.to_int (str.from_int 0)) 0))\n"),
+        "to_int(from_int 0) = 0"
+    );
+    // from_int of a negative is "", whose to_int is -1 (not the original).
+    assert!(
+        eval_const_script("(assert (= (str.to_int (str.from_int (- 4))) (- 1)))\n"),
+        "to_int(from_int -4) = to_int(\"\") = -1"
+    );
 }
 
 #[test]

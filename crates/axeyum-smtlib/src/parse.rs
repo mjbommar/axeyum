@@ -2394,6 +2394,181 @@ fn string_from_code(arena: &mut TermArena, i: TermId) -> Result<TermId, SmtError
     arena.concat(rbyte, rlen).map_err(SmtError::Ir)
 }
 
+/// Maximum number of decimal digits a `str.from_int` result string carries (the
+/// max length of the packed string `str.from_int` builds). Sized so it holds the
+/// full decimal expansion of **every** integer the bounded int bit-blast can
+/// model — `DEFAULT_INT_WIDTH = 32` bits, so the largest representable value is
+/// `2^31 − 1 = 2_147_483_647 < 10^10`, i.e. ≤ 10 digits. Building the result in a
+/// 10-byte packed sort therefore makes [`string_from_int`] *faithful for every
+/// `i` the solver can assign*: any `i ≥ 10^10` is already outside the int-blast
+/// range (replay returns `Unknown`), so the bounded encoding never claims a wrong
+/// string. Kept ≤ [`STRING_BOUND_CAP`] so the packed width is representable.
+const FROM_INT_MAX_DIGITS: u32 = 10;
+
+/// `str.to_int s` (SMT-LIB `UnicodeStrings` total function): the decimal value of
+/// `s` when `s` is a **non-empty** string of ASCII digits `'0'..='9'`, else `-1`.
+/// Leading zeros are valid (`"007" → 7`, `"0001" → 1`); the empty string and any
+/// string containing a non-digit character yield `-1`. Encoded as a bounded
+/// Horner fold over the ≤`m` content bytes guarded by a digit-validity check;
+/// the result is an `Int`, so it composes with integer arithmetic.
+///
+/// Position 0 is the most-significant digit, so the fold
+/// `acc ← acc·10 + digit(s[p])` over the *present* positions (`p < len(s)`)
+/// builds the value left-to-right; positions `p ≥ len(s)` contribute nothing
+/// (`acc·1 + 0`). The maximum value is `10^m − 1`; for `m = STRING_MAX_LEN = 8`
+/// that is `99_999_999 < 2^31`, so the value always fits the default bounded
+/// integer width and the op is **complete** within the bound (and sound for any
+/// `m`: an over-wide Horner value simply overflows the int-blast and replay
+/// returns `Unknown`, never a wrong verdict).
+fn string_to_int(arena: &mut TermArena, s: TermId) -> Result<TermId, SmtError> {
+    let m = string_max_len(arena, s)?;
+    let len_field = string_len_field(arena, s, m)?;
+    let ascii_zero = arena.bv_const(8, u128::from(b'0'))?;
+    let ascii_nine = arena.bv_const(8, u128::from(b'9'))?;
+    let ten = arena.int_const(10);
+    let mut acc = arena.int_const(0);
+    // `all_digits`: every *present* byte (`p < len(s)`) is an ASCII digit.
+    let mut all_digits = arena.bool_const(true);
+    for p in 0..m {
+        let byte = string_byte_m(arena, s, p, m)?;
+        // Present iff p < len(s).
+        let pconst = arena.bv_const(len_width(m), u128::from(p))?;
+        let present = arena.bv_ult(pconst, len_field)?;
+        // Digit-ness: '0' ≤ byte ≤ '9'.
+        let ge0 = arena.bv_uge(byte, ascii_zero)?;
+        let le9 = arena.bv_ule(byte, ascii_nine)?;
+        let is_digit = arena.and(ge0, le9)?;
+        // A present byte must be a digit; an absent byte is unconstrained here.
+        let npresent = arena.not(present)?;
+        let ok = arena.or(npresent, is_digit)?;
+        all_digits = arena.and(all_digits, ok)?;
+        // Digit value (only meaningful when present ∧ digit): byte − '0', as Int.
+        let digit_bv = arena.bv_sub(byte, ascii_zero)?;
+        let digit_int = arena.bv2nat(digit_bv)?; // 0..=255 (0..=9 under is_digit)
+        // Contribute only when present: acc ← present ? acc·10 + digit : acc.
+        let shifted = arena.int_mul(acc, ten)?;
+        let added = arena.int_add(shifted, digit_int)?;
+        acc = arena.ite(present, added, acc)?;
+    }
+    // Non-empty: len(s) ≥ 1.
+    let zero_len = arena.bv_const(len_width(m), 0)?;
+    let is_empty = arena.eq(len_field, zero_len)?;
+    let nonempty = arena.not(is_empty)?;
+    let valid = arena.and(nonempty, all_digits)?;
+    let neg_one = arena.int_const(-1);
+    arena.ite(valid, acc, neg_one).map_err(SmtError::Ir)
+}
+
+/// `str.from_int i` (SMT-LIB `UnicodeStrings` total function): the canonical
+/// decimal string of `i` when `i ≥ 0` (no leading zeros, `0 → "0"`), and `""`
+/// when `i < 0`. The result is a packed string of max length
+/// [`FROM_INT_MAX_DIGITS`] = 10, which holds the full decimal expansion of every
+/// integer the bounded int bit-blast can assign (`< 2^31 < 10^10`), so the
+/// encoding is **faithful for every model the solver can produce** — see
+/// [`FROM_INT_MAX_DIGITS`] for the soundness argument.
+///
+/// Construction: for `i < 0` the string is empty. For `0 ≤ i` we mux over the
+/// digit-count `nd ∈ 1..=10`: under the guard `10^{nd−1} ≤ i < 10^{nd}` (with the
+/// `nd = 1` lower bound relaxed to `i ≥ 0`) the result is the `nd`-byte
+/// left-aligned string whose byte `p` (0 = most significant) is the ASCII digit
+/// `(i / 10^{nd−1−p}) mod 10`. An `i ≥ 10^{10}` selects no `nd` and yields `""`,
+/// but such an `i` is outside the int-blast range, so this case never appears in
+/// a replaying model.
+fn string_from_int(arena: &mut TermArena, i: TermId) -> Result<TermId, SmtError> {
+    let m = FROM_INT_MAX_DIGITS;
+    let lw = len_width(m);
+    let zero_i = arena.int_const(0);
+    let nonneg = arena.int_ge(i, zero_i)?;
+    let ten = arena.int_const(10);
+    // Powers of ten 10^0..=10^m as Int constants (10^m guards the top digit-count).
+    let mut pow10: Vec<TermId> = Vec::with_capacity((m + 1) as usize);
+    let mut acc: i128 = 1;
+    for _ in 0..=m {
+        pow10.push(arena.int_const(acc));
+        acc = acc.saturating_mul(10);
+    }
+    // `i / 10^k mod 10` as an Int (the k-th least-significant decimal digit).
+    let digit_k = |arena: &mut TermArena, i: TermId, k: u32| -> Result<TermId, SmtError> {
+        let div = arena.int_div(i, pow10[k as usize])?;
+        let dmod = arena.int_mod(div, ten)?;
+        Ok(dmod)
+    };
+    // Result bytes, high-to-low position; default (no nd selected, or i < 0) "".
+    let zero8 = arena.bv_const(8, 0)?;
+    let ascii_zero_int = arena.int_const(i128::from(b'0'));
+    // For each digit-count nd, build its guard and its byte layout, then mux.
+    // byte[p] (0 = most significant) and len = nd, all defaulting to the empty
+    // string and overwritten by the matching nd.
+    let mut bytes: Vec<TermId> = vec![zero8; m as usize];
+    let zero_len = arena.bv_const(lw, 0)?;
+    let mut rlen = zero_len;
+    for nd in 1..=m {
+        // Guard: i < 10^nd  ∧  (nd == 1 ? true : i ≥ 10^{nd-1}).
+        let lt_hi = arena.int_lt(i, pow10[nd as usize])?;
+        let guard = if nd == 1 {
+            arena.and(nonneg, lt_hi)?
+        } else {
+            let ge_lo = arena.int_ge(i, pow10[(nd - 1) as usize])?;
+            let g0 = arena.and(nonneg, ge_lo)?;
+            arena.and(g0, lt_hi)?
+        };
+        // Under this nd, byte position p (0 = MSB) is digit (nd-1-p); set len = nd.
+        let nd_len = arena.bv_const(lw, u128::from(nd))?;
+        rlen = arena.ite(guard, nd_len, rlen)?;
+        for p in 0..nd {
+            let k = nd - 1 - p; // least-significant index of the digit at position p
+            let dval = digit_k(arena, i, k)?; // 0..=9 Int
+            let byte_int = arena.int_add(dval, ascii_zero_int)?; // ASCII digit
+            let byte_bv = arena.int2bv(8, byte_int)?;
+            let slot = p as usize;
+            bytes[slot] = arena.ite(guard, byte_bv, bytes[slot])?;
+        }
+    }
+    // Assemble the packed string: content bytes high-to-low, then the length field.
+    let mut content: Option<TermId> = None;
+    for p in (0..m as usize).rev() {
+        content = Some(match content {
+            None => bytes[p],
+            Some(c) => arena.concat(c, bytes[p])?,
+        });
+    }
+    let content = content.expect("m ≥ 1");
+    arena.concat(content, rlen).map_err(SmtError::Ir)
+}
+
+/// `str.from_int i` for a **constant** `i`: folds to the exact decimal-string
+/// literal, packed into the same [`FROM_INT_MAX_DIGITS`]-byte sort the symbolic
+/// [`string_from_int`] builds (so a constant and a symbolic `from_int` compare).
+/// `i < 0 → ""`; otherwise the canonical decimal (no leading zeros, `0 → "0"`).
+/// **Declines** (`Unsupported`) when the decimal expansion needs more than
+/// `FROM_INT_MAX_DIGITS` bytes — a value the bounded string sort cannot hold, so
+/// it is reported as Unknown rather than truncated to a wrong string.
+fn string_from_int_const(arena: &mut TermArena, v: i128) -> Result<TermId, SmtError> {
+    let m = FROM_INT_MAX_DIGITS;
+    let bytes: Vec<u8> = if v < 0 {
+        Vec::new()
+    } else {
+        v.to_string().into_bytes()
+    };
+    if bytes.len() > m as usize {
+        return Err(SmtError::Unsupported(format!(
+            "str.from_int of the constant {v} needs {} decimal digits, exceeding the \
+             bounded string length {m} (ADR-0029); widen the bound to decide this query",
+            bytes.len()
+        )));
+    }
+    // Pack into the m-byte layout (length low, content above, padding zero).
+    let mut content: u128 = 0;
+    for (idx, &b) in bytes.iter().enumerate() {
+        content |= u128::from(b) << (8 * idx);
+    }
+    let packed =
+        u128::from(u32::try_from(bytes.len()).expect("len ≤ m")) | (content << len_width(m));
+    arena
+        .bv_const(string_total(m), packed)
+        .map_err(SmtError::Ir)
+}
+
 /// `str.< x y` — strict lexicographic order over the packed bytes. `x < y` iff
 /// at the first position where they differ `x` has the smaller byte, or `x` is a
 /// proper prefix of `y`. Encoded as a bounded cascade over the ≤`m` positions:
@@ -3150,6 +3325,29 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
             need(2)?;
             string_le(arena, args[0], args[1])?
         }
+        // `str.to_int s` — the decimal value of a non-empty all-ASCII-digit `s`,
+        // else `-1` (SMT-LIB total function; leading zeros valid). A bounded Horner
+        // fold over the packed bytes; the result is an `Int` (ADR-0029 slice 4).
+        // An over-bound string literal (> STRING_MAX_LEN bytes) already declined at
+        // pack time, so `string_to_int` only ever sees a representable operand.
+        "str.to_int" => {
+            need(1)?;
+            string_to_int(arena, args[0])?
+        }
+        // `str.from_int i` — the canonical decimal string of `i ≥ 0` (no leading
+        // zeros, `0 → "0"`), else `""` for `i < 0` (SMT-LIB total function). A
+        // **constant** argument folds exactly and declines (Unsupported) when the
+        // decimal expansion needs more than FROM_INT_MAX_DIGITS bytes (over-bound,
+        // never a wrong string). A symbolic argument builds the bounded packed
+        // string, faithful for every model the bounded int bit-blast can produce
+        // (ADR-0029 slice 4).
+        "str.from_int" => {
+            need(1)?;
+            match arena.node(args[0]) {
+                TermNode::IntConst(v) => string_from_int_const(arena, *v)?,
+                _ => string_from_int(arena, args[0])?,
+            }
+        }
         // `str.++` — variable concatenation grows into a wider packed sort; a run
         // of constant operands folds to a literal (ADR-0029 slice 2).
         "str.concat" | "str.++" => string_concat(arena, args)?,
@@ -3569,16 +3767,16 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
         // Builtins above take priority, matching SMT-LIB reserved names.
         other => {
             // String/regex operators outside the wired bounded subset
-            // (`str.replace`, `str.indexof`, `str.to_int`/`from_int`, `str.in_re`,
-            // the `re.*` constructors, …) are declined cleanly (ADR-0029) so a
-            // benchmark using them returns `Unknown`/`Unsupported` — never a wrong
-            // verdict, never a confusing "unknown operator".
+            // (`str.replace`, `str.indexof`, `str.in_re`, the `re.*` constructors,
+            // …) are declined cleanly (ADR-0029) so a benchmark using them returns
+            // `Unknown`/`Unsupported` — never a wrong verdict, never a confusing
+            // "unknown operator".
             if other.starts_with("str.") || other.starts_with("re.") {
                 return Err(SmtError::Unsupported(format!(
                     "string/regex operator `{other}` is outside the wired bounded subset \
                      (ADR-0029); supported: str.len, str.prefixof, str.contains, str.suffixof, \
-                     str.at, str.substr, str.to_code, str.from_code, str.< , str.<=, \
-                     str.++ (variable, bounded), = / distinct over String"
+                     str.at, str.substr, str.to_code, str.from_code, str.to_int, str.from_int, \
+                     str.< , str.<=, str.++ (variable, bounded), = / distinct over String"
                 )));
             }
             if let Some(func) = arena.find_function(other) {
