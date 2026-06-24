@@ -1,0 +1,5 @@
+(set-logic QF_S)
+(set-info :status sat)
+(declare-fun s () String)
+(assert (str.in_re s (re.diff (re.range "a" "z") (str.to_re "a"))))
+(check-sat)

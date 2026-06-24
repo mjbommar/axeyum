@@ -1,0 +1,6 @@
+(set-logic QF_S)
+(set-info :status sat)
+(declare-fun s () String)
+(assert (str.in_re s (re.comp re.none)))
+(assert (= s "hi"))
+(check-sat)

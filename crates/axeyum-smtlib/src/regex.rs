@@ -42,12 +42,24 @@
 //! - `(re.+ R)` — one or more (`R ++ R*`).
 //! - `(re.opt R)` — zero or one (`R | ε`).
 //!
+//! - `(re.comp R)` — complement `Σ* \ L(R)`, via determinization to a **complete**
+//!   DFA (subset construction over the full byte alphabet, missing transitions
+//!   routed to an explicit dead state) followed by flipping the accepting set.
+//!   Complement is sound **only** over a complete DFA, so the completion is
+//!   mandatory before the flip (a partial DFA would wrongly reject strings whose
+//!   run "falls off" the transition table).
+//! - `(re.diff R1 R2)` — difference `L(R1) \ L(R2)`, defined as
+//!   `R1 ∩ comp(R2)` and built by reusing the [`product_intersection`] machinery
+//!   over `R1` and the complemented DFA of `R2`.
+//!
 //! ## Declined (clean `Unsupported`, never a wrong verdict)
 //!
-//! `re.comp` (complement), `re.diff` (difference), `(re.loop …)` / `(_ re.^ n)`,
-//! `str.replace_re`/`str.replace_re_all`/`str.indexof_re`, `str.to_re` of a
+//! `(re.loop …)` / `(_ re.^ n)`, `str.indexof_re` (not in the SMT-LIB
+//! `UnicodeStrings` theory and unsupported by the Z3 oracle), `str.to_re` of a
 //! **non-literal** string (would require matching against a symbolic string),
-//! and any regex whose NFA exceeds [`MAX_NFA_STATES`].
+//! `str.replace_re`/`str.replace_re_all` over a **non-constant** string operand
+//! (the leftmost-shortest regex splice over a symbolic string is a scoped
+//! follow-up), and any regex whose NFA/DFA exceeds [`MAX_NFA_STATES`].
 
 use std::collections::BTreeSet;
 
@@ -194,6 +206,10 @@ enum Regex {
     Union(Vec<Regex>),
     /// Intersection `R1 ∩ R2 ∩ …` (top-level only).
     Inter(Vec<Regex>),
+    /// Complement `Σ* \ R` (top-level only; built by DFA determinization + flip).
+    Comp(Box<Regex>),
+    /// Difference `R1 \ R2` = `R1 ∩ comp(R2)` (top-level only).
+    Diff(Box<Regex>, Box<Regex>),
     /// Kleene star `R*`.
     Star(Box<Regex>),
     /// One or more `R+`.
@@ -296,6 +312,15 @@ fn compile(nfa: &mut Nfa, expr: &Regex) -> Result<Fragment, SmtError> {
             // because `build_nfa`/`build_inter_nfa` special-case it.
             Err(SmtError::Unsupported(
                 "re.inter nested inside another regex construct is declined (ADR-0029)".to_owned(),
+            ))
+        }
+        Regex::Comp(_) | Regex::Diff(..) => {
+            // Complement/difference require a *complete* determinized DFA; there is
+            // no single-fragment Thompson form. They are handled at the top level by
+            // [`build_nfa`]. Nesting one inside another construct is declined.
+            Err(SmtError::Unsupported(
+                "re.comp/re.diff nested inside another regex construct is declined (ADR-0029)"
+                    .to_owned(),
             ))
         }
     }
@@ -511,6 +536,18 @@ fn parse_regex_app(head: &str, args: &[RegexSexpr<'_>]) -> Result<Regex, SmtErro
         "re.++" => Ok(Regex::Concat(parse_regex_args(args)?)),
         "re.union" => Ok(Regex::Union(parse_regex_args(args)?)),
         "re.inter" => Ok(Regex::Inter(parse_regex_args(args)?)),
+        "re.comp" => Ok(Regex::Comp(Box::new(parse_regex_one(args)?))),
+        "re.diff" => {
+            let [r1, r2] = args else {
+                return Err(SmtError::Unsupported(
+                    "re.diff expects exactly two arguments".to_owned(),
+                ));
+            };
+            Ok(Regex::Diff(
+                Box::new(parse_regex(r1)?),
+                Box::new(parse_regex(r2)?),
+            ))
+        }
         "re.*" => Ok(Regex::Star(Box::new(parse_regex_one(args)?))),
         "re.+" => Ok(Regex::Plus(Box::new(parse_regex_one(args)?))),
         "re.opt" => Ok(Regex::Opt(Box::new(parse_regex_one(args)?))),
@@ -544,14 +581,122 @@ fn parse_regex_one(args: &[RegexSexpr<'_>]) -> Result<Regex, SmtError> {
 /// `re.inter` by an explicit product (intersection has no single-fragment
 /// Thompson form). A nested `re.inter` declines (see [`compile`]).
 fn build_nfa(regex: &Regex) -> Result<Nfa, SmtError> {
-    if let Regex::Inter(parts) = regex {
-        return build_inter_nfa(parts);
+    match regex {
+        Regex::Inter(parts) => return build_inter_nfa(parts),
+        Regex::Comp(inner) => return build_comp_nfa(inner),
+        // `R1 \ R2` = `R1 ∩ comp(R2)`: reuse the intersection product over `R1` and
+        // the complemented DFA of `R2`.
+        Regex::Diff(r1, r2) => {
+            let n1 = build_nfa(r1)?;
+            let n2 = build_comp_nfa(r2)?;
+            return product_intersection(&[n1, n2]);
+        }
+        _ => {}
     }
     let mut nfa = Nfa::new();
     let frag = compile(&mut nfa, regex)?;
     nfa.start = frag.start;
     nfa.accepting.insert(frag.exit);
     Ok(nfa)
+}
+
+/// Builds the NFA (a complete DFA) for `(re.comp R)` = `Σ* \ L(R)`.
+///
+/// Determinizes `R`'s NFA to a DFA by the subset construction over the full byte
+/// alphabet, **completes** the transition function by routing every missing
+/// `state × byte` to an explicit dead (empty-subset) state, then flips the
+/// accepting set. Completion is what makes the flip a sound complement: in a
+/// complete DFA every string drives the run to exactly one state, so "`R` rejects
+/// `w`" ⇔ "the run on `w` ends in a non-`R`-accepting (hence dead-or-other) DFA
+/// state" ⇔ "the run ends in an accepting state of the flipped automaton". A
+/// *partial* DFA would let a run "fall off" with no state, and flipping would
+/// then wrongly classify that string. Bounded by [`MAX_NFA_STATES`]; a blow-up of
+/// the subset construction declines as a sound `unknown`. A nested complement /
+/// difference declines (see [`compile`]).
+fn build_comp_nfa(inner: &Regex) -> Result<Nfa, SmtError> {
+    if matches!(inner, Regex::Comp(_) | Regex::Diff(..) | Regex::Inter(_)) {
+        return Err(SmtError::Unsupported(
+            "re.comp of a re.comp/re.diff/re.inter is declined (ADR-0029)".to_owned(),
+        ));
+    }
+    let nfa = build_nfa(inner)?;
+    let dfa = determinize_complete(&nfa)?;
+    Ok(complement_dfa(dfa))
+}
+
+/// Subset-constructs a **complete** DFA from `nfa`: a deterministic, fully
+/// total automaton whose every state has a transition on each of the 256 bytes
+/// (missing transitions go to an explicit dead state, the empty subset). The
+/// result is itself an [`Nfa`] (a DFA is a special NFA) with ε-free
+/// [`CharClass::Exact`] transitions, exactly one per `(state, byte)`. Bounded by
+/// [`MAX_NFA_STATES`].
+fn determinize_complete(nfa: &Nfa) -> Result<Nfa, SmtError> {
+    use std::collections::HashMap;
+
+    let mut dfa = Nfa::new();
+    // Index a DFA state by its ε-closed NFA subset. The dead state is the **empty**
+    // subset; create it eagerly so completion always has a target.
+    let mut index: HashMap<BTreeSet<usize>, usize> = HashMap::new();
+
+    let empty: BTreeSet<usize> = BTreeSet::new();
+    let dead = dfa.fresh()?;
+    index.insert(empty.clone(), dead);
+    // The dead state self-loops on every byte (it is a sink); add those edges so
+    // the DFA is complete and the dead subset is reachable/total.
+    for byte in 0u16..256 {
+        let b = u8::try_from(byte).expect("0..256");
+        dfa.add_char(dead, CharClass::Exact(b), dead);
+    }
+
+    let mut start_seed = BTreeSet::new();
+    start_seed.insert(nfa.start);
+    let start = nfa.eps_closure(&start_seed);
+    let q0 = if start.is_empty() {
+        dead
+    } else {
+        let id = dfa.fresh()?;
+        index.insert(start.clone(), id);
+        id
+    };
+    dfa.start = q0;
+
+    let mut worklist: Vec<(BTreeSet<usize>, usize)> = Vec::new();
+    if q0 != dead {
+        worklist.push((start, q0));
+    }
+    while let Some((subset, did)) = worklist.pop() {
+        if subset.iter().any(|q| nfa.accepting.contains(q)) {
+            dfa.accepting.insert(did);
+        }
+        for byte in 0u16..256 {
+            let b = u8::try_from(byte).expect("0..256");
+            let stepped = step_byte(nfa, &subset, b);
+            let closed = nfa.eps_closure(&stepped);
+            let to = if let Some(&id) = index.get(&closed) {
+                id
+            } else {
+                // A genuinely-empty step lands on the pre-made dead state; a new
+                // non-empty subset becomes a fresh DFA state.
+                let id = dfa.fresh()?;
+                index.insert(closed.clone(), id);
+                worklist.push((closed, id));
+                id
+            };
+            dfa.add_char(did, CharClass::Exact(b), to);
+        }
+    }
+    Ok(dfa)
+}
+
+/// Flips the accepting set of a **complete** DFA in place: a state is accepting
+/// in the complement iff it was non-accepting in `dfa`. The caller guarantees
+/// completeness (every `state × byte` has a target), so the flip is the exact
+/// complement language `Σ* \ L(dfa)`.
+fn complement_dfa(mut dfa: Nfa) -> Nfa {
+    let n = dfa.out.len();
+    let new_accepting: BTreeSet<usize> = (0..n).filter(|q| !dfa.accepting.contains(q)).collect();
+    dfa.accepting = new_accepting;
+    dfa
 }
 
 /// Builds the NFA for a top-level `(re.inter R1 R2 …)` by the synchronous
@@ -681,6 +826,43 @@ pub(crate) fn encode_in_re(
     let nfa = build_nfa(&regex)?;
     let m = packed_string_max_len(arena, s)?;
     encode_match(arena, s, &nfa, m)
+}
+
+/// A compiled regex over the byte alphabet, ready for **concrete** simulation on
+/// a known byte string. Used by the ground `str.replace_re`/`str.replace_re_all`
+/// path (where `s` is a literal): a compiled regex is matched against each
+/// substring `s[i..j]` to find the leftmost-shortest match.
+pub(crate) struct CompiledRegex {
+    nfa: Nfa,
+}
+
+impl CompiledRegex {
+    /// Whether `bytes` is in the language of the compiled regex (a concrete NFA
+    /// simulation: track the ε-closed reachable-state set across the bytes, accept
+    /// iff a final state is reached after the last byte).
+    pub(crate) fn matches(&self, bytes: &[u8]) -> bool {
+        let mut seed = BTreeSet::new();
+        seed.insert(self.nfa.start);
+        let mut cur = self.nfa.eps_closure(&seed);
+        for &b in bytes {
+            let stepped = step_byte(&self.nfa, &cur, b);
+            cur = self.nfa.eps_closure(&stepped);
+            if cur.is_empty() {
+                return false; // stuck — no continuation can accept
+            }
+        }
+        cur.iter().any(|q| self.nfa.accepting.contains(q))
+    }
+}
+
+/// Compiles a `RegLan` s-expression into a [`CompiledRegex`] for concrete
+/// substring matching. Declines (clean [`SmtError::Unsupported`]) the same
+/// constructs [`encode_in_re`] declines, including a DFA/NFA over the state cap.
+pub(crate) fn compile_regex(re: &SExpr) -> Result<CompiledRegex, SmtError> {
+    let view = from_sexpr(re);
+    let regex = parse_regex(&view)?;
+    let nfa = build_nfa(&regex)?;
+    Ok(CompiledRegex { nfa })
 }
 
 /// Recovers the bounded maximum length `m` of the packed string `s` from its

@@ -1597,6 +1597,12 @@ enum Frame<'a> {
     /// bounded regex match against the regex s-expression `re_expr` (which is
     /// **not** a term and so is compiled, not evaluated, by [`crate::regex`]).
     ApplyInRe { re_expr: &'a SExpr },
+    /// Pop the two evaluated string operands `s` and `t` of
+    /// `(str.replace_re s R t)` / `(str.replace_re_all s R t)` and apply the
+    /// regex-driven replace against the regex s-expression `re_expr` (the middle
+    /// `RegLan` argument, which is **compiled**, not evaluated as a term).
+    /// `all` selects `str.replace_re_all` over `str.replace_re`.
+    ApplyReplaceRe { re_expr: &'a SExpr, all: bool },
     /// Pop `argc` results and apply a rounding-mode FP op. The mode is the first
     /// child (a `RoundingMode` value, not a term) parsed before queueing.
     ApplyFpRounded {
@@ -1692,6 +1698,21 @@ fn parse_term<'a>(
                     .pop()
                     .ok_or_else(|| SmtError::Syntax("str.in_re string operand".to_owned()))?;
                 results.push(crate::regex::encode_in_re(arena, s, re_expr)?);
+            }
+            Frame::ApplyReplaceRe { re_expr, all } => {
+                // Operands were queued `s` then `t`, so the stack top is `t`.
+                let t = results
+                    .pop()
+                    .ok_or_else(|| SmtError::Syntax("str.replace_re replacement".to_owned()))?;
+                let s = results
+                    .pop()
+                    .ok_or_else(|| SmtError::Syntax("str.replace_re string operand".to_owned()))?;
+                let out = if all {
+                    string_replace_re_all(arena, s, re_expr, t)?
+                } else {
+                    string_replace_re(arena, s, re_expr, t)?
+                };
+                results.push(out);
             }
             Frame::ApplyFpRounded { items, mode, argc } => {
                 let args = results.split_off(results.len() - argc);
@@ -1793,6 +1814,7 @@ fn queue_eval<'a>(
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 fn queue_list_eval<'a>(
     arena: &mut TermArena,
     items: &'a [SExpr],
@@ -1857,6 +1879,32 @@ fn queue_list_eval<'a>(
         // bounded regex match against `R` (ADR-0029 slice 5).
         frames.push(Frame::ApplyInRe { re_expr: &items[2] });
         frames.push(Frame::Eval(&items[1]));
+    } else if let Some(name @ ("str.replace_re" | "str.replace_re_all")) = head.atom()
+        && items.len() == 4
+    {
+        // `(str.replace_re s R t)` / `(str.replace_re_all s R t)`: the middle
+        // argument `R` is a `RegLan` regex (no term sort) — compiled, not
+        // evaluated. Queue the string operands `s` (items[1]) and `t` (items[3]),
+        // then a [`Frame::ApplyReplaceRe`] that pops them and applies the
+        // regex-driven replace against `R` (items[2]). Evals push in reverse so the
+        // stack ends with `t` on top (ADR-0029).
+        frames.push(Frame::ApplyReplaceRe {
+            re_expr: &items[2],
+            all: name == "str.replace_re_all",
+        });
+        frames.push(Frame::Eval(&items[3]));
+        frames.push(Frame::Eval(&items[1]));
+    } else if head.atom() == Some("str.indexof_re") {
+        // `str.indexof_re` is **not** in the SMT-LIB `UnicodeStrings` theory (it is
+        // a cvc5 extension) and is unsupported by the Z3 differential oracle, so
+        // there is no ground truth to validate an encoding against. Decline cleanly
+        // (a sound `unknown`) rather than risk a wrong verdict (ADR-0029). The
+        // regex argument is never queued for term evaluation.
+        return Err(SmtError::Unsupported(
+            "str.indexof_re is not in the SMT-LIB UnicodeStrings theory (a cvc5 extension, \
+             unsupported by the oracle); declined (ADR-0029)"
+                .to_owned(),
+        ));
     } else if let Some(name) = head.atom()
         && is_fp_rounded_op(name)
     {
@@ -3032,6 +3080,127 @@ fn string_replace_all(
             k += 1;
         }
     }
+    pack_string_literal(arena, &out)
+}
+
+/// `(str.replace_re s R t)` — replace the **leftmost, shortest** substring of `s`
+/// matching the regex `R` with `t` (SMT-LIB `UnicodeStrings`). Spec semantics
+/// verbatim: `⟦str.replace_re⟧(w, L, t) = u₁ t u₂` where `u₁, w₁` are the
+/// **shortest** words with `w = u₁ w₁ u₂` and `w₁ ∈ L` — so `u₁` shortest selects
+/// the **leftmost** start, and `w₁` shortest selects the **shortest** match at
+/// that start (which is `ε` when `ε ∈ L`, giving the prepend `t ++ w`). If no
+/// substring of `w` is in `L`, the result is `w` unchanged.
+///
+/// This slice wires the **ground** case (a constant `s`): the literal bytes are
+/// scanned for the leftmost-shortest match by concrete NFA simulation over each
+/// substring, the splice is folded in Rust, and the literal result is packed —
+/// so it rides the pure-BV path and decides both directions. `t` may be any
+/// packed string (constant or symbolic) — only `s` must be constant here. A
+/// **symbolic** `s` declines cleanly (`Unsupported` → `unknown`), never a
+/// truncated/wrong string: the leftmost-shortest splice over an unknown string is
+/// a scoped follow-up. The regex `R` is compiled (and may decline on its own —
+/// over-cap DFA, unsupported construct). An over-bound ground result declines at
+/// pack time.
+fn string_replace_re(
+    arena: &mut TermArena,
+    s: TermId,
+    re: &SExpr,
+    t: TermId,
+) -> Result<TermId, SmtError> {
+    let Some(sb) = string_const_bytes(arena, s) else {
+        return Err(SmtError::Unsupported(
+            "str.replace_re over a non-constant string is outside the wired sound subset \
+             (the leftmost-shortest splice over a symbolic string is a scoped follow-up; ADR-0029)"
+                .to_owned(),
+        ));
+    };
+    let Some(tb) = string_const_bytes(arena, t) else {
+        return Err(SmtError::Unsupported(
+            "str.replace_re with a non-constant replacement `t` is outside the wired ground \
+             subset (ADR-0029)"
+                .to_owned(),
+        ));
+    };
+    let rx = crate::regex::compile_regex(re)?;
+    // Leftmost-shortest match: smallest start `i`, and at that `i` the smallest
+    // `j ≥ i` with `R` accepting `s[i..j]` (allowing the empty match `j = i`).
+    let mut spliced: Option<Vec<u8>> = None;
+    'outer: for i in 0..=sb.len() {
+        for j in i..=sb.len() {
+            if rx.matches(&sb[i..j]) {
+                let mut out = Vec::with_capacity(i + tb.len() + (sb.len() - j));
+                out.extend_from_slice(&sb[..i]);
+                out.extend_from_slice(&tb);
+                out.extend_from_slice(&sb[j..]);
+                spliced = Some(out);
+                break 'outer;
+            }
+        }
+    }
+    // No substring matched → `s` unchanged.
+    let out = spliced.unwrap_or(sb);
+    pack_string_literal(arena, &out)
+}
+
+/// `(str.replace_re_all s R t)` — replace **all** non-overlapping, left-to-right
+/// **leftmost-shortest non-empty** matches of the regex `R` with `t` (SMT-LIB
+/// `UnicodeStrings`). Spec semantics verbatim: each replaced `w₁` is the
+/// **shortest** word at the leftmost remaining start with `w₁ ∈ L` **and**
+/// `w₁ ≠ ε` (empty matches are *not* replaced — `replace_re_all` never inserts on
+/// an `ε ∈ L`, so it terminates), and the scan resumes **after** each consumed
+/// match. If no non-empty substring is in `L`, the result is `s` unchanged.
+///
+/// Wired for the **ground** case (constant `s`); a symbolic `s` declines cleanly
+/// (`Unsupported` → `unknown`). `t` may be symbolic only via the constant path —
+/// here it must also be constant to fold. An over-bound ground result declines at
+/// pack time.
+fn string_replace_re_all(
+    arena: &mut TermArena,
+    s: TermId,
+    re: &SExpr,
+    t: TermId,
+) -> Result<TermId, SmtError> {
+    let Some(sb) = string_const_bytes(arena, s) else {
+        return Err(SmtError::Unsupported(
+            "str.replace_re_all over a non-constant string is outside the wired sound subset \
+             (a moving-cursor regex splice over a symbolic string is a scoped follow-up; \
+             ADR-0029)"
+                .to_owned(),
+        ));
+    };
+    let Some(tb) = string_const_bytes(arena, t) else {
+        return Err(SmtError::Unsupported(
+            "str.replace_re_all with a non-constant replacement `t` is outside the wired ground \
+             subset (ADR-0029)"
+                .to_owned(),
+        ));
+    };
+    let rx = crate::regex::compile_regex(re)?;
+    let mut out: Vec<u8> = Vec::new();
+    let mut k = 0usize;
+    while k < sb.len() {
+        // Leftmost-shortest **non-empty** match at-or-after `k`: scan starts
+        // `i = k.., j > i` shortest. (`replace_re_all` never matches `ε`, so the
+        // cursor always advances and the loop terminates.)
+        let mut hit: Option<(usize, usize)> = None;
+        'find: for lo in k..sb.len() {
+            for hi in (lo + 1)..=sb.len() {
+                if rx.matches(&sb[lo..hi]) {
+                    hit = Some((lo, hi));
+                    break 'find;
+                }
+            }
+        }
+        match hit {
+            Some((lo, hi)) => {
+                out.extend_from_slice(&sb[k..lo]); // unmatched prefix kept verbatim
+                out.extend_from_slice(&tb); // the replacement
+                k = hi; // resume after the consumed match
+            }
+            None => break, // no further match: keep the tail below
+        }
+    }
+    out.extend_from_slice(&sb[k..]);
     pack_string_literal(arena, &out)
 }
 

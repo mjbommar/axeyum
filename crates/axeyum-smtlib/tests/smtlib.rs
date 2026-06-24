@@ -3813,19 +3813,22 @@ fn regex_range_endpoints_and_degenerate() {
 
 #[test]
 fn regex_declined_constructs_are_clean_unsupported() {
-    // re.comp (complement) is declined cleanly — never a wrong verdict.
+    // str.indexof_re is not in the SMT-LIB UnicodeStrings theory (a cvc5
+    // extension, unsupported by the Z3 oracle) — declined cleanly.
     assert!(matches!(
         parse_script(
             "(declare-fun s () String)\n\
-             (assert (str.in_re s (re.comp (str.to_re \"a\"))))\n(check-sat)\n"
+             (assert (= (str.indexof_re s (re.range \"0\" \"9\") 0) 1))\n(check-sat)\n"
         ),
         Err(SmtError::Unsupported(_))
     ));
-    // re.diff is declined.
+    // A re.comp nested *inside* another construct has no single-fragment form and
+    // is declined (only top-level comp/diff determinize).
     assert!(matches!(
         parse_script(
             "(declare-fun s () String)\n\
-             (assert (str.in_re s (re.diff re.all (str.to_re \"a\"))))\n(check-sat)\n"
+             (assert (str.in_re s (re.++ (re.comp (str.to_re \"a\")) (str.to_re \"b\"))))\n\
+             (check-sat)\n"
         ),
         Err(SmtError::Unsupported(_))
     ));
@@ -3862,6 +3865,178 @@ fn regex_inter_matches_intersection() {
         !eval_string_script(text, pack_str(b"AB")),
         "uppercase not lowercase-class"
     );
+}
+
+#[test]
+fn regex_comp_is_dfa_complement() {
+    // (str.in_re s (re.comp (str.to_re "a"))): every string EXCEPT "a".
+    let text = "(declare-fun s () String)\n\
+                (assert (str.in_re s (re.comp (str.to_re \"a\"))))\n(check-sat)\n";
+    assert!(
+        eval_string_script(text, pack_str(b"x")),
+        "\"x\" not in {{a}} => in comp"
+    );
+    assert!(
+        !eval_string_script(text, pack_str(b"a")),
+        "\"a\" in {{a}} => NOT in comp"
+    );
+    assert!(
+        eval_string_script(text, pack_str(b"")),
+        "\"\" not in {{a}} => in comp"
+    );
+    assert!(
+        eval_string_script(text, pack_str(b"aa")),
+        "\"aa\" not in {{a}} => in comp"
+    );
+    assert!(
+        eval_string_script(text, pack_str(b"ab")),
+        "\"ab\" not in {{a}} => in comp"
+    );
+}
+
+#[test]
+fn regex_comp_unsat_is_sound() {
+    // s = "a" yet asserted in comp(to_re "a") is unsatisfiable over the bounded
+    // model: no representable witness equals "a" and lies in the complement. Eval
+    // under the lone candidate "a" is false (the conjunction can never hold).
+    let text = "(declare-fun s () String)\n\
+                (assert (= s \"a\"))\n\
+                (assert (str.in_re s (re.comp (str.to_re \"a\"))))\n(check-sat)\n";
+    assert!(parse_script(text).is_ok(), "comp constraint parses");
+    assert!(
+        !eval_string_script(text, pack_str(b"a")),
+        "s=\"a\" and s in comp({{a}}) is contradictory"
+    );
+    for w in [b"x".as_slice(), b"", b"aa"] {
+        assert!(
+            !eval_string_script(text, pack_str(w)),
+            "only candidate forced by s=\"a\" is \"a\", which fails the comp"
+        );
+    }
+}
+
+#[test]
+fn regex_comp_of_range_complements_the_class() {
+    // comp(re.range "a" "z"): everything except a single lowercase letter.
+    let text = "(declare-fun s () String)\n\
+                (assert (str.in_re s (re.comp (re.range \"a\" \"z\"))))\n(check-sat)\n";
+    assert!(
+        !eval_string_script(text, pack_str(b"a")),
+        "'a' is in the class"
+    );
+    assert!(
+        !eval_string_script(text, pack_str(b"z")),
+        "'z' is in the class"
+    );
+    assert!(
+        eval_string_script(text, pack_str(b"A")),
+        "'A' not lowercase"
+    );
+    assert!(
+        eval_string_script(text, pack_str(b"")),
+        "empty not a single letter"
+    );
+    assert!(
+        eval_string_script(text, pack_str(b"ab")),
+        "two chars not a single letter"
+    );
+}
+
+#[test]
+fn regex_diff_is_inter_with_complement() {
+    // (re.diff (re.range "a" "z") (str.to_re "a")): a single lowercase letter that
+    // is NOT "a".
+    let text = "(declare-fun s () String)\n\
+                (assert (str.in_re s (re.diff (re.range \"a\" \"z\") (str.to_re \"a\"))))\n\
+                (check-sat)\n";
+    assert!(
+        eval_string_script(text, pack_str(b"b")),
+        "b in [a-z] minus {{a}}"
+    );
+    assert!(
+        eval_string_script(text, pack_str(b"z")),
+        "z in [a-z] minus {{a}}"
+    );
+    assert!(
+        !eval_string_script(text, pack_str(b"a")),
+        "'a' removed by diff"
+    );
+    assert!(!eval_string_script(text, pack_str(b"A")), "'A' ∉ [a-z]");
+    assert!(
+        !eval_string_script(text, pack_str(b"bc")),
+        "two chars ∉ single-letter"
+    );
+}
+
+#[test]
+fn string_replace_re_leftmost_shortest_constant() {
+    // (str.replace_re "a1b" (re.range "0" "9") "X") = "aXb": first digit replaced.
+    assert!(
+        eval_const_script(
+            "(assert (= (str.replace_re \"a1b\" (re.range \"0\" \"9\") \"X\") \"aXb\"))\n"
+        ),
+        "first digit replaced"
+    );
+    // No match → unchanged.
+    assert!(
+        eval_const_script(
+            "(assert (= (str.replace_re \"abc\" (re.range \"0\" \"9\") \"X\") \"abc\"))\n"
+        ),
+        "no digit ⇒ unchanged"
+    );
+    // Leftmost-SHORTEST: (re.+ "a") over "aaa" matches the shortest "a" at pos 0 →
+    // "Xaa" (not the greedy "X").
+    assert!(
+        eval_const_script(
+            "(assert (= (str.replace_re \"aaa\" (re.+ (str.to_re \"a\")) \"X\") \"Xaa\"))\n"
+        ),
+        "leftmost-shortest: only one 'a' consumed"
+    );
+    // Empty-language match (ε ∈ L): re.opt prepends at pos 0.
+    assert!(
+        eval_const_script(
+            "(assert (= (str.replace_re \"bc\" (re.opt (str.to_re \"a\")) \"X\") \"Xbc\"))\n"
+        ),
+        "ε ∈ L ⇒ prepend X"
+    );
+}
+
+#[test]
+fn string_replace_re_all_non_empty_left_to_right() {
+    // (str.replace_re_all "a1b2c" (re.range "0" "9") "X") = "aXbXc": all digits.
+    assert!(
+        eval_const_script(
+            "(assert (= (str.replace_re_all \"a1b2c\" (re.range \"0\" \"9\") \"X\") \"aXbXc\"))\n"
+        ),
+        "all digits replaced"
+    );
+    // re.+ "a" over "aaa": shortest non-empty match is "a", consumed one at a time →
+    // "XXX".
+    assert!(
+        eval_const_script(
+            "(assert (= (str.replace_re_all \"aaa\" (re.+ (str.to_re \"a\")) \"X\") \"XXX\"))\n"
+        ),
+        "shortest non-empty repeated ⇒ XXX"
+    );
+    // ε ∈ L is NOT replaced by replace_re_all (it skips empty matches) → unchanged.
+    assert!(
+        eval_const_script(
+            "(assert (= (str.replace_re_all \"abc\" (re.opt (str.to_re \"z\")) \"X\") \"abc\"))\n"
+        ),
+        "empty matches not replaced ⇒ unchanged"
+    );
+}
+
+#[test]
+fn string_replace_re_symbolic_string_declines() {
+    // A symbolic `s` operand to str.replace_re is outside the wired ground subset:
+    // a clean Unsupported, never a truncated/wrong string.
+    let err = parse_script(
+        "(declare-fun s () String)\n\
+         (assert (= (str.replace_re s (re.range \"0\" \"9\") \"X\") \"aXb\"))\n(check-sat)\n",
+    )
+    .expect_err("symbolic str.replace_re declines");
+    assert!(matches!(err, SmtError::Unsupported(_)), "got {err:?}");
 }
 
 #[test]

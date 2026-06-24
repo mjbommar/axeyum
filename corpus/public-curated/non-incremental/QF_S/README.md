@@ -6,11 +6,12 @@ This is the **first** QF_S (Strings) measurement — the division opened this
 session by wiring the bounded packed-bit-vector string lowering (ADR-0029) into
 the SMT-LIB parser.
 
-- `cvc5-regress-clean/` — **127** files: **123** clean files from the cvc5
+- `cvc5-regress-clean/` — **134** files: **123** clean files from the cvc5
   strings regression suite
   (`references/cvc5/test/regress/cli/regress{0,1}/strings`, a gitignored shallow
-  clone) plus **4** hand-authored `str.indexof`/`str.replace_all` files (slice 6),
-  filtered to `(set-logic QF_S)` or `(set-logic QF_SLIA)` with a machine-readable
+  clone) plus **4** hand-authored `str.indexof`/`str.replace_all` files (slice 6)
+  and **7** hand-authored `re.comp`/`re.diff`/`str.replace_re`/`str.replace_re_all`
+  files (slice 7), filtered to `(set-logic QF_S)` or `(set-logic QF_SLIA)` with a machine-readable
   `(set-info :status sat|unsat)` ground truth and **only** plain commands
   (`set-logic`/`set-info`/`set-option`/`declare-fun`/`declare-const`/
   `assert`/`check-sat`/`exit`) — no `push`/`pop`, `get-value`, `define-fun-rec`,
@@ -39,17 +40,71 @@ offset, literal or symbolic), `str.replace_all` (ground non-overlapping fold),
 to ASCII), `str.to_int`, `str.from_int` (QF_SLIA Int bridge), `str.<`, `str.<=`,
 `str.in_re` over the bounded **regex** fragment (`str.to_re` of a literal,
 `re.range`, `re.allchar`/`re.all`/`re.none`, `re.++`/`re.union`/`re.inter`,
-`re.*`/`re.+`/`re.opt`), and `=`/`distinct`. String literals (including
-`""`-escaped quotes and `\u{…}`/`\uXXXX` code points ≤ 255) pack to constants.
+`re.comp`/`re.diff` (top-level, via DFA determinization + complement),
+`re.*`/`re.+`/`re.opt`), `str.replace_re`/`str.replace_re_all` (leftmost-shortest
+regex splice over a **ground** string), and `=`/`distinct`. String literals
+(including `""`-escaped quotes and `\u{…}`/`\uXXXX` code points ≤ 255) pack to
+constants.
 
-Everything outside this subset — the regex constructs `re.comp`/`re.diff`/
-`re.loop`/`re.^`, a symbolic `str.to_re x`, a code point > 255, an NFA over the
-state cap, `str.replace_re`/`str.indexof_re`, a **symbolic** `str.replace_all`,
-the `Seq` sort, and over-bound cases (literals > 8 bytes, a concat past the
-16-byte cap, a `str.replace`/`str.replace_all` whose result max length exceeds
-the 16-byte cap, a `str.from_int` whose decimal expansion exceeds 10 digits) — is
+Everything outside this subset — the regex constructs `re.loop`/`re.^`, a
+**nested** `re.comp`/`re.diff`/`re.inter`, a symbolic `str.to_re x`, a code point
+> 255, an NFA/DFA over the state cap, `str.indexof_re` (not in the SMT-LIB
+`UnicodeStrings` theory; a cvc5 extension unsupported by the Z3 oracle), a
+**symbolic-string** `str.replace_re`/`str.replace_re_all`/`str.replace_all`, the
+`Seq` sort, and over-bound cases (literals > 8 bytes, a concat past the 16-byte
+cap, a `str.replace`/`str.replace_all` whose result max length exceeds the
+16-byte cap, a `str.from_int` whose decimal expansion exceeds 10 digits) — is
 declined as a clean `Unsupported`. **Soundness is by construction**: an incomplete
 or unsupported case returns `unknown`/`unsupported`, never a wrong verdict.
+
+### `re.comp` / `re.diff` + `str.replace_re` / `str.replace_re_all` (slice 7)
+
+**`re.comp R`** (complement `Σ* \ L(R)`) and **`re.diff R1 R2`** (difference
+`L(R1) \ L(R2)`) extend the bounded regex matcher. `re.comp` determinizes `R`'s
+Thompson NFA to a DFA by the subset construction over the full byte alphabet,
+**completes** the transition function (every `state × byte` has a target; missing
+transitions route to an explicit dead sink), then **flips** the accepting set.
+Completion is the soundness pivot: complement is the exact `Σ* \ L(R)` **only**
+over a complete DFA — in a complete DFA every string drives the run to exactly one
+state, so "`R` rejects `w`" ⇔ "the flipped automaton accepts `w`"; a *partial* DFA
+would let a run fall off the table and the flip would misclassify it. `re.diff` is
+`R1 ∩ comp(R2)`, reusing the existing product-intersection machinery over `R1` and
+the complemented DFA of `R2`. Both are **top-level** only and bounded by the same
+state cap (a blow-up declines as a sound `unknown`); a nested
+`re.comp`/`re.diff`/`re.inter` declines.
+
+**`str.replace_re s R t`** replaces the **leftmost, shortest** substring of `s`
+matching `R` with `t`; **`str.replace_re_all`** replaces all such **non-empty**
+matches left-to-right (SMT-LIB `UnicodeStrings`: `⟦replace_re⟧(w,L,t) = u₁ t u₂`
+with `u₁,w₁` the **shortest** words s.t. `w = u₁ w₁ u₂, w₁ ∈ L` — so leftmost
+start, shortest match; `ε ∈ L` ⇒ prepend `t`; no match ⇒ `w`; `replace_re_all`
+requires `w₁ ≠ ε`, so it never loops on `ε`). This slice wires the **ground**
+case (constant `s` and `t`): the literal bytes are scanned for the
+leftmost-shortest match by concrete NFA simulation over each substring `s[i..j]`,
+the splice is folded and packed (riding the pure-BV path, deciding both
+directions). A **symbolic** `s` declines cleanly (`Unsupported` → `unknown`),
+never a truncated/wrong string. **`str.indexof_re` is declined** — it is not in
+the SMT-LIB `UnicodeStrings` theory (a cvc5 extension) and the Z3 oracle does not
+support it, so there is no ground truth to validate an encoding against.
+
+### Slice 7 measurement (`re.comp` / `re.diff` / `str.replace_re`)
+
+- **files 134** (123 + 4 indexof/replace_all + 7 curated comp/diff/replace_re).
+  axeyum **decides 59** (sat 42, unsat 17), unknown 13, **unsupported 62**,
+  errors 0; **compared 59, agree 59, DISAGREE 0**. Every decided verdict matches
+  the benchmark's `:status` (and the Z3 4.13.3 binary wherever Z3 returns a
+  definitive verdict), every `sat` model replay-checks. No regression on
+  QF_SEQ/QF_UF (DISAGREE 0, decided counts and `par2_mean` unchanged);
+  `par2_mean` ≈ 3.62 s (no new timeout).
+- New deciders (all in `axeyum-smtlib`, no `axeyum-ir`/`axeyum-solver` change):
+  the existing regress file `re-in-rewrite` newly clears (**unsat** — `re.comp` of
+  the non-empty language intersected with "starts with a", agreeing with Z3 +
+  `:status`), plus the 7 curated files (2 sat comp/diff, 1 unsat comp,
+  `comp(re.none) = Σ*` sat + `comp(re.all) = ∅` unsat exercising the DFA-completion
+  edge cases, 1 sat ground `replace_re`, 1 unsat ground `replace_re_all`). Z3
+  4.13.3 returns `unknown` on the ground `str.replace_re`/`str.replace_re_all`
+  queries (it cannot constant-fold them), so those two files are validated by
+  `:status` and skipped from the Z3 head-to-head — never a DISAGREE.
 
 ### `str.indexof` / `str.replace_all` (slice 6)
 

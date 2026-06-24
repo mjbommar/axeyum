@@ -1,0 +1,6 @@
+(set-logic QF_S)
+(set-info :status sat)
+(declare-fun y () String)
+(assert (= y (str.replace_re "a1b" (re.range "0" "9") "X")))
+(assert (= y "aXb"))
+(check-sat)
