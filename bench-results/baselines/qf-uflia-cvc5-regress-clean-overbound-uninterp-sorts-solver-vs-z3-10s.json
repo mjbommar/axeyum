@@ -1,0 +1,227 @@
+{
+  "config": {
+    "backend": "axeyum-solver check_auto",
+    "backend_kind": "solver",
+    "cnf_clause_budget": null,
+    "cnf_inprocessing": false,
+    "cnf_variable_budget": null,
+    "cnf_vivify": false,
+    "compare_backend": "z3 4.13.3.0",
+    "compare_z3": true,
+    "config_hash": "e0983bfd0ac78985",
+    "corpus": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound",
+    "corpus_hash": "971480354e2f585f",
+    "corpus_source": null,
+    "hardware": {
+      "arch": "x86_64",
+      "hostname": null,
+      "os": "linux",
+      "parallelism": 16
+    },
+    "harness": "axeyum-bench 0.1.0",
+    "jobs": 4,
+    "limit": null,
+    "logic": null,
+    "native_cdcl": false,
+    "node_budget": null,
+    "preprocess": false,
+    "query_plan": {
+      "mode": "full",
+      "refine_adaptive_batch": false,
+      "refine_batch": 1,
+      "refine_rounds": 16,
+      "refine_select": "first",
+      "sat_replay_failure_policy": "soundness-alarm"
+    },
+    "rewrite": {
+      "enabled_rule_ids": [],
+      "mode": "off",
+      "rule_set": null
+    },
+    "seed": "none",
+    "selected_families": null,
+    "timeout_ms": 10000
+  },
+  "instances": [
+    {
+      "assertions": 1248,
+      "backend_stats": {
+        "check_auto_ms": 15.41731
+      },
+      "dag_nodes": 4024,
+      "detail": "ResourceLimit: UF+arithmetic: eager Ackermann elimination would emit 282 congruence constraints, exceeding the deterministic admission bound of 64 (the O(k²) expansion and its downstream solve run unbounded; this needs a lazy/CEGAR route)",
+      "distinct_symbols": 13,
+      "expected": "unsat",
+      "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2",
+      "max_depth": 43,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1248,
+          "assumptions": 0,
+          "dag_nodes": 4024,
+          "digest": "2dd81094315b6558",
+          "tree_nodes": 82285
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1248,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1248,
+            "assumptions": 0,
+            "dag_nodes": 4024,
+            "digest": "2dd81094315b6558",
+            "tree_nodes": 82285
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 4024,
+        "input_tree_nodes": 82285,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1248,
+        "output_dag_nodes": 4024,
+        "output_distinct_symbols": 13,
+        "output_max_depth": 43,
+        "output_tree_nodes": 82285,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 15,
+      "translate_ms": 0,
+      "tree_nodes": 82285
+    },
+    {
+      "assertions": 1248,
+      "backend_stats": {
+        "check_auto_ms": 15.098979
+      },
+      "dag_nodes": 4024,
+      "detail": "ResourceLimit: UF+arithmetic: eager Ackermann elimination would emit 282 congruence constraints, exceeding the deterministic admission bound of 64 (the O(k²) expansion and its downstream solve run unbounded; this needs a lazy/CEGAR route)",
+      "distinct_symbols": 13,
+      "expected": "unsat",
+      "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2",
+      "max_depth": 43,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1248,
+          "assumptions": 0,
+          "dag_nodes": 4024,
+          "digest": "2dd81094315b6558",
+          "tree_nodes": 82285
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1248,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1248,
+            "assumptions": 0,
+            "dag_nodes": 4024,
+            "digest": "2dd81094315b6558",
+            "tree_nodes": 82285
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 4024,
+        "input_tree_nodes": 82285,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1248,
+        "output_dag_nodes": 4024,
+        "output_distinct_symbols": 13,
+        "output_max_depth": 43,
+        "output_tree_nodes": 82285,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 15,
+      "translate_ms": 0,
+      "tree_nodes": 82285
+    }
+  ],
+  "summary": {
+    "agree": 0,
+    "blocker_buckets": {
+      "unknown:ResourceLimit": 2
+    },
+    "disagree": 0,
+    "errors": 0,
+    "files": 2,
+    "layer_attribution": null,
+    "model_replay_failures": 0,
+    "oracle": {
+      "agree": 0,
+      "backend": "z3 4.13.3.0",
+      "compared": 0,
+      "disagree": 0,
+      "enabled": true,
+      "skipped": 2
+    },
+    "par2_mean_s": 20.0,
+    "query_plan": {
+      "original_dag_nodes": 8048,
+      "original_tree_nodes": 164570,
+      "slice_changed_instances": 0,
+      "slice_dag_nodes": 8048,
+      "slice_dropped_terms": 0,
+      "slice_tree_nodes": 164570
+    },
+    "rewrite": {
+      "applications": 0,
+      "changed_instances": 0,
+      "decision_changes": 0,
+      "decision_matches": 0,
+      "input_dag_nodes": 0,
+      "input_tree_nodes": 0,
+      "mode": "off",
+      "output_dag_nodes": 0,
+      "output_tree_nodes": 0,
+      "sat_unsat_conflicts": 0
+    },
+    "sat": 0,
+    "unknown": 2,
+    "unsat": 0,
+    "unsupported": 0
+  },
+  "triage": {
+    "errors": [],
+    "rewrite_decision_changes": [],
+    "soundness": {
+      "model_replay_failures": 0,
+      "oracle_disagreements": 0,
+      "rewrite_sat_unsat_conflicts": 0,
+      "status_disagreements": 0
+    },
+    "unsupported": []
+  },
+  "version": 14
+}
