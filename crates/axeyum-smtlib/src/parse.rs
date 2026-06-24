@@ -91,6 +91,11 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
     // parse; an empty table is the fast path for sequence-free scripts. A `(Seq E)`
     // over an unsupported element sort makes this a clean [`SmtError::Unsupported`].
     let seq = build_seq_info(&exprs)?;
+    // Finite fields (QF_FF): build the modeled-width → prime registry for every
+    // `(_ FiniteField p)` sort (directly and via `define-sort`), once, up front
+    // (mirroring [`build_seq_info`]). A modulus over the bit-width cap, a non-prime
+    // "field", or a width collision makes the whole script a clean `Unsupported`.
+    let ff = build_ff_info(&exprs)?;
     let mut script = Script::default();
     let mut aliases: HashMap<String, TermId> = HashMap::new();
     let mut macros: HashMap<String, MacroDef<'_>> = HashMap::new();
@@ -118,6 +123,7 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
             &mut named,
             uninterpreted_width,
             &seq,
+            &ff,
             command,
         )?;
     }
@@ -841,6 +847,7 @@ fn parse_command<'a>(
     named: &mut HashMap<String, TermId>,
     uninterpreted_width: u32,
     seq: &SeqInfo,
+    ff: &FfInfo,
     command: &'a SExpr,
 ) -> Result<(), SmtError> {
     let items = command
@@ -903,6 +910,7 @@ fn parse_command<'a>(
                 macros,
                 named,
                 seq,
+                ff,
             )?;
             script.objectives.push((t, head == "maximize"));
         }
@@ -916,7 +924,7 @@ fn parse_command<'a>(
                 .and_then(SExpr::list)
                 .ok_or_else(|| SmtError::Syntax("get-value expects (t …)".to_owned()))?;
             for t in list {
-                let term = parse_term(&mut script.arena, t, aliases, macros, named, seq)?;
+                let term = parse_term(&mut script.arena, t, aliases, macros, named, seq, ff)?;
                 script.get_value_terms.push(term);
             }
         }
@@ -935,6 +943,7 @@ fn parse_command<'a>(
                     macros,
                     named,
                     seq,
+                    ff,
                 )?);
             }
             script.check_sats += 1;
@@ -947,16 +956,18 @@ fn parse_command<'a>(
             script.check_sats += 1;
             script.commands.push(ScriptCommand::CheckSat);
         }
-        "declare-fun" => parse_declare_fun(script, sort_aliases, items)?,
-        "declare-const" => parse_declare_const(script, sort_aliases, items)?,
+        "declare-fun" => parse_declare_fun(script, sort_aliases, ff, items)?,
+        "declare-const" => parse_declare_const(script, sort_aliases, ff, items)?,
         "declare-datatype" => parse_declare_datatype(script, sort_aliases, items)?,
         "declare-datatypes" => parse_declare_datatypes(script, sort_aliases, items)?,
-        "define-fun" => parse_define_fun(script, aliases, macros, sort_aliases, named, seq, items)?,
+        "define-fun" => {
+            parse_define_fun(script, aliases, macros, sort_aliases, named, seq, ff, items)?;
+        }
         // `(define-const c S body)` is exact sugar for `(define-fun c () S body)`
         // (SMT-LIB §3.7.2 abbreviation): a nullary definition. We reuse the
         // no-args alias path verbatim, so soundness is identical to `define-fun`.
         "define-const" => {
-            parse_define_const(script, aliases, macros, sort_aliases, named, seq, items)?;
+            parse_define_const(script, aliases, macros, sort_aliases, named, seq, ff, items)?;
         }
         "define-sort" => parse_define_sort(script, sort_aliases, items)?,
         // `(declare-sort U 0)` — an arity-0 uninterpreted sort, modeled as a
@@ -967,7 +978,7 @@ fn parse_command<'a>(
             exact_len(items, 2, head)?;
             let body = sexpr_at(items, 1)?;
             let name = named_label(body);
-            let t = parse_term(&mut script.arena, body, aliases, macros, named, seq)?;
+            let t = parse_term(&mut script.arena, body, aliases, macros, named, seq, ff)?;
             script.assertions.push(t);
             script.assertion_names.push(name);
             script.commands.push(ScriptCommand::Assert(t));
@@ -1033,6 +1044,7 @@ fn named_label(body: &SExpr) -> Option<String> {
 fn parse_declare_fun(
     script: &mut Script,
     sort_aliases: &HashMap<String, Sort>,
+    ff: &FfInfo,
     items: &[SExpr],
 ) -> Result<(), SmtError> {
     exact_len(items, 4, "declare-fun")?;
@@ -1054,6 +1066,15 @@ fn parse_declare_fun(
     // exactly like `declare-const … RoundingMode`.
     if args.is_empty() && sexpr_at(items, 3)?.atom() == Some("RoundingMode") {
         declare_rounding_mode_symbol(script, name)?;
+        return Ok(());
+    }
+    // A 0-ary finite-field constant `(_ FiniteField p)` (directly or via a
+    // `define-sort` alias): a `BitVec(ff_width(p))` plus a `bvult var p`
+    // well-formedness constraint, so the modeled domain is exactly `GF(p)`.
+    if args.is_empty()
+        && let Some(p) = ff_decl_prime(ff, sexpr_at(items, 3)?)
+    {
+        declare_ff_symbol(script, name, p)?;
         return Ok(());
     }
     // A 0-ary `(Seq E)` constant: packed sequence + well-formedness (ADR-0029),
@@ -1186,6 +1207,7 @@ fn parse_declare_datatypes(
 fn parse_declare_const(
     script: &mut Script,
     sort_aliases: &HashMap<String, Sort>,
+    ff: &FfInfo,
     items: &[SExpr],
 ) -> Result<(), SmtError> {
     exact_len(items, 3, "declare-const")?;
@@ -1200,6 +1222,12 @@ fn parse_declare_const(
     // constraint, so it can only take one of the 5 SMT-LIB rounding-mode tokens.
     if sexpr_at(items, 2)?.atom() == Some("RoundingMode") {
         return declare_rounding_mode_symbol(script, name);
+    }
+    // A finite-field constant `(_ FiniteField p)` (directly or via a `define-sort`
+    // alias): a `BitVec(ff_width(p))` plus a `bvult var p` well-formedness
+    // constraint, so the modeled domain is exactly `GF(p)`.
+    if let Some(p) = ff_decl_prime(ff, sexpr_at(items, 2)?) {
+        return declare_ff_symbol(script, name, p);
     }
     // A `(Seq E)` constant: the packed sequence bit-vector plus its canonical
     // well-formedness constraint (ADR-0029), exactly like a `String` symbol.
@@ -1278,6 +1306,36 @@ fn declare_rounding_mode_symbol(script: &mut Script, name: &str) -> Result<(), S
     Ok(())
 }
 
+/// The prime modulus of a declaration sort s-expr if it is a finite field
+/// `(_ FiniteField p)` — directly or via a registered `define-sort` alias — and
+/// `None` otherwise (so a non-field declaration falls through to the normal
+/// sort path). A malformed/over-cap/non-prime finite-field sort would have already
+/// made [`build_ff_info`] decline the whole script, so this is a clean lookup.
+fn ff_decl_prime(ff: &FfInfo, sort: &SExpr) -> Option<u128> {
+    if is_ff_sort_sexpr(sort) {
+        return parse_ff_modulus(sort.list().expect("checked is_ff_sort_sexpr")).ok();
+    }
+    sort.atom().and_then(|n| ff.alias_to_prime.get(n).copied())
+}
+
+/// Declares a 0-ary finite-field symbol of `GF(p)`: a `BitVec(ff_width(p))` plus
+/// a `bvult var p` well-formedness constraint (asserted in both the flat and
+/// incremental views), so the symbol can only take a canonical residue `< p` —
+/// making the modeled domain exactly the `p` field elements. Shared by
+/// `declare-const`/0-ary `declare-fun` of `(_ FiniteField p)`.
+fn declare_ff_symbol(script: &mut Script, name: &str, p: u128) -> Result<(), SmtError> {
+    let w = ff_width(p);
+    let sym = script.arena.declare(name, Sort::BitVec(w))?;
+    let v = script.arena.var(sym);
+    let pw = script.arena.bv_const(w, p)?;
+    let wf = script.arena.bv_ult(v, pw)?;
+    script.assertions.push(wf);
+    script.assertion_names.push(None);
+    script.commands.push(ScriptCommand::Assert(wf));
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
 fn parse_define_fun<'a>(
     script: &mut Script,
     aliases: &mut HashMap<String, TermId>,
@@ -1285,6 +1343,7 @@ fn parse_define_fun<'a>(
     sort_aliases: &HashMap<String, Sort>,
     named: &mut HashMap<String, TermId>,
     seq: &SeqInfo,
+    ff: &FfInfo,
     items: &'a [SExpr],
 ) -> Result<(), SmtError> {
     exact_len(items, 5, "define-fun")?;
@@ -1302,6 +1361,7 @@ fn parse_define_fun<'a>(
             macros,
             named,
             seq,
+            ff,
             name,
             declared_sort,
             body_expr,
@@ -1325,6 +1385,7 @@ fn parse_define_fun<'a>(
 /// dispatch straight to [`parse_define_fun_alias`], so the binding semantics
 /// (sort check + `aliases` insertion) are byte-for-byte identical to a no-args
 /// `define-fun`.
+#[allow(clippy::too_many_arguments)]
 fn parse_define_const<'a>(
     script: &mut Script,
     aliases: &mut HashMap<String, TermId>,
@@ -1332,6 +1393,7 @@ fn parse_define_const<'a>(
     sort_aliases: &HashMap<String, Sort>,
     named: &mut HashMap<String, TermId>,
     seq: &SeqInfo,
+    ff: &FfInfo,
     items: &'a [SExpr],
 ) -> Result<(), SmtError> {
     exact_len(items, 4, "define-const")?;
@@ -1344,6 +1406,7 @@ fn parse_define_const<'a>(
         macros,
         named,
         seq,
+        ff,
         name,
         declared_sort,
         body_expr,
@@ -1357,11 +1420,20 @@ fn parse_define_fun_alias(
     macros: &HashMap<String, MacroDef<'_>>,
     named: &mut HashMap<String, TermId>,
     seq: &SeqInfo,
+    ff: &FfInfo,
     name: &str,
     declared_sort: Sort,
     body_expr: &SExpr,
 ) -> Result<(), SmtError> {
-    let body = parse_term(&mut script.arena, body_expr, aliases, macros, named, seq)?;
+    let body = parse_term(
+        &mut script.arena,
+        body_expr,
+        aliases,
+        macros,
+        named,
+        seq,
+        ff,
+    )?;
     let body_sort = script.arena.sort_of(body);
     if body_sort != declared_sort {
         return Err(SmtError::Ir(axeyum_ir::IrError::SortsDiffer(
@@ -1496,6 +1568,17 @@ fn parse_sort(
                 && let Some(w) = items[2].atom().and_then(|s| s.parse::<u32>().ok())
             {
                 return Ok(Sort::BitVec(w));
+            }
+            // `(_ FiniteField p)` — a prime field `GF(p)` modeled as `BitVec(w)`
+            // with `w = ff_width(p)` (QF_FF). The prime `p` is carried directly, so
+            // resolution is pure; the modulus is validated (prime, ≤ the bit cap)
+            // by the up-front [`build_ff_info`] scan, which would have declined the
+            // whole script otherwise — so re-validating here only re-derives the
+            // width and surfaces the same `Unsupported` reason on the unusual path
+            // where a finite-field sort appears outside a declaration/`as`.
+            if is_ff_sort_sexpr(e) {
+                let p = parse_ff_modulus(items)?;
+                return Ok(Sort::BitVec(ff_width(p)));
             }
             if items.len() == 3 && items[0].atom() == Some("Array") {
                 let index = parse_sort(arena, sort_aliases, &items[1])?;
@@ -1709,6 +1792,7 @@ enum Frame<'a> {
 }
 
 #[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_arguments)]
 fn parse_term<'a>(
     arena: &mut TermArena,
     root: &'a SExpr,
@@ -1716,6 +1800,7 @@ fn parse_term<'a>(
     macros: &HashMap<String, MacroDef<'a>>,
     named: &mut HashMap<String, TermId>,
     seq: &SeqInfo,
+    ff: &FfInfo,
 ) -> Result<TermId, SmtError> {
     let mut frames: Vec<Frame> = vec![Frame::Eval(root)];
     let mut results: Vec<TermId> = Vec::new();
@@ -1729,6 +1814,7 @@ fn parse_term<'a>(
                 aliases,
                 macros,
                 named,
+                ff,
                 &scopes,
                 &mut frames,
                 &mut results,
@@ -1744,7 +1830,7 @@ fn parse_term<'a>(
             }
             Frame::Apply { items, argc } => {
                 let args = results.split_off(results.len() - argc);
-                results.push(apply_op(arena, seq, items, &args)?);
+                results.push(apply_op(arena, seq, ff, items, &args)?);
             }
             Frame::ApplyInRe { re_expr } => {
                 let s = results
@@ -1874,13 +1960,14 @@ fn queue_eval<'a>(
     aliases: &HashMap<String, TermId>,
     macros: &HashMap<String, MacroDef<'a>>,
     named: &HashMap<String, TermId>,
+    ff: &FfInfo,
     scopes: &[HashMap<&'a str, TermId>],
     frames: &mut Vec<Frame<'a>>,
     results: &mut Vec<TermId>,
 ) -> Result<(), SmtError> {
     match expr {
         SExpr::Atom(a) => results.push(parse_atom(arena, a, aliases, named, scopes)?),
-        SExpr::List(items) => queue_list_eval(arena, items, macros, frames, results)?,
+        SExpr::List(items) => queue_list_eval(arena, items, macros, ff, frames, results)?,
     }
     Ok(())
 }
@@ -1890,6 +1977,7 @@ fn queue_list_eval<'a>(
     arena: &mut TermArena,
     items: &'a [SExpr],
     macros: &HashMap<String, MacroDef<'a>>,
+    ff: &FfInfo,
     frames: &mut Vec<Frame<'a>>,
     results: &mut Vec<TermId>,
 ) -> Result<(), SmtError> {
@@ -1932,6 +2020,22 @@ fn queue_list_eval<'a>(
             ))
         })?;
         results.push(seq_empty(arena, ew)?);
+    } else if head.atom() == Some("as")
+        && items.len() == 3
+        && !ff.is_empty()
+        && is_ff_literal_name(items[1].atom())
+    {
+        // `(as ffK Sort)` — a finite-field literal whose value is `K` and whose
+        // modulus is the ascribed field sort `(_ FiniteField p)` (directly or via a
+        // `define-sort` alias). Resolved to a canonical residue `BitVec` constant
+        // (QF_FF). The leading `ffK` is not a bare term, so it must be handled here,
+        // before the generic ascription branch evaluates `items[1]`.
+        results.push(parse_ff_as_literal(
+            arena,
+            ff,
+            items[1].atom().expect("checked is_ff_literal_name"),
+            &items[2],
+        )?);
     } else if head.atom() == Some("as") && items.len() == 3 {
         // Sort ascription `(as t S)` denotes `t` — it only annotates the sort of
         // an otherwise-determined term (SMT-LIB §3.6, "qualified identifier").
@@ -3797,6 +3901,12 @@ fn parse_atom(
             value,
         )?);
     }
+    // A finite-field literal `#fKmM` (value `K` mod prime `M`, QF_FF): a canonical
+    // residue `BitVec(ff_width(M))` constant. Self-describing (the modulus is in
+    // the token), so it needs no registry. A non-`#f…m…` token falls through.
+    if let Some(res) = parse_ff_literal(arena, a) {
+        return res;
+    }
     // SMT-LIB string literal `"..."` (the lexer keeps the surrounding quotes;
     // a doubled `""` escapes one quote). Pack into the canonical bit-vector.
     if a.len() >= 2 && a.starts_with('"') && a.ends_with('"') {
@@ -4627,6 +4737,492 @@ fn scan_seq_sorts(e: &SExpr, info: &mut SeqInfo) -> Result<(), SmtError> {
         scan_seq_sorts(child, info)?;
     }
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Finite fields (QF_FF) — a prime field `GF(p)` modeled as modular bit-vector
+// arithmetic.
+//
+// `(_ FiniteField p)` is modeled as `BitVec(w)` with `w = ceil(log2(p))` (the
+// fewest bits that index the `p` field elements `0..p`). A field element is the
+// bit-vector holding its canonical residue `0 ≤ v < p`; declared field symbols
+// carry a `bvult v p` well-formedness constraint (asserted at declaration), so
+// the modeled domain is *exactly* `{0, …, p-1}` = `GF(p)`. Every field op is
+// recomputed to a canonical residue `< p`:
+//
+//   * `ff.add x y …`  → `(x + y + …) mod p`   (n-ary; conditional subtract)
+//   * `ff.neg x`      → `(p − x) mod p`        (`ite(x = 0, 0, p − x)`)
+//   * `ff.mul x y …`  → `(x · y · …) mod p`    (n-ary; `bvurem` after a `2w` mul)
+//   * `ff.bitsum x …` → `Σ 2^i · x_i mod p`    (cvc5 extension; positional sum)
+//   * `=` / `distinct` over field elements → plain BV `=` (residues are
+//     canonical `< p`, so equality is exact).
+//
+// Soundness: well-formedness (`< p`) makes the BV domain exactly `GF(p)`, and
+// each op's result is reduced to a canonical residue `< p`, so the encoding is
+// denotation-preserving — `bv = bv` iff the field elements are equal, and the
+// modular arithmetic matches `GF(p)` verbatim. Fully bit-blasted, so SAT and
+// UNSAT are both complete for any prime that fits the width cap.
+//
+// Bound: only primes whose modeling width fits `MAX_FF_PRIME_BITS` are decided;
+// a larger (e.g. crypto-sized 254–381-bit) prime, a modulus that overflows
+// `u128`, or a non-prime "field" (invalid SMT-LIB) makes the whole script a
+// clean `Unsupported` (→ `unknown`), never a wrong/heavy result.
+// ---------------------------------------------------------------------------
+
+/// The maximum field-modulus bit-width axeyum bit-blasts for `QF_FF`. A modulus
+/// of `b` bits is modeled as a `BitVec(b)`, and `ff.mul` forms a `2b`-bit product
+/// before the `bvurem` reduction, so the heaviest bit-blasted operation is on
+/// `2·MAX_FF_PRIME_BITS` bits. `16` decides every small test prime (2, 3, 5, 7,
+/// 11, 13, 17 — all ≤ 5 bits) while declining crypto-sized primes whose
+/// bit-blasting would blow up. (A modulus this small is also cheap to verify
+/// prime by trial division.)
+const MAX_FF_PRIME_BITS: u32 = 16;
+
+/// The bit-width modeling a finite field `GF(p)`: the fewest bits that index the
+/// `p` residues `0..p`, i.e. `ceil(log2(p))`. For `p ≤ 2` a single bit suffices.
+fn ff_width(p: u128) -> u32 {
+    if p <= 2 {
+        1
+    } else {
+        // ceil(log2(p)) = bits needed to represent the largest residue `p-1`.
+        (p - 1).ilog2() + 1
+    }
+}
+
+/// Whether `p` is prime — a finite field's modulus must be prime (SMT-LIB
+/// `FiniteField` requires a prime power; only prime fields are modeled). `p` is
+/// already known to fit [`MAX_FF_PRIME_BITS`] (≤ 2^16), so trial division to
+/// `sqrt(p) ≤ 256` is trivial.
+fn is_ff_prime(p: u128) -> bool {
+    if p < 2 {
+        return false;
+    }
+    if p % 2 == 0 {
+        return p == 2;
+    }
+    let mut d: u128 = 3;
+    while d * d <= p {
+        if p % d == 0 {
+            return false;
+        }
+        d += 2;
+    }
+    true
+}
+
+/// Per-script finite-field registry: the modeled bit-width → prime modulus, and
+/// the `define-sort` alias names that resolve to a finite field. Built once,
+/// up front (mirroring [`build_seq_info`]); immutable for the parse, so the
+/// `ff.*` operator dispatch can recover an operand's prime from its bit width.
+#[derive(Default)]
+pub(crate) struct FfInfo {
+    /// `modeled_width → prime`. The width `ff_width(p)` is injective across the
+    /// primes a *single* script declares unless two distinct primes share a
+    /// bit-length (e.g. 11 and 13 both need 4 bits); such a collision makes the
+    /// whole script decline (so an `ff.*` op can never recover the *wrong* prime
+    /// from a width).
+    width_to_prime: HashMap<u32, u128>,
+    /// `define-sort` alias name → prime, so `(as ffK F)` over a sort alias `F`
+    /// (e.g. `(define-sort F () (_ FiniteField 17))`) recovers its prime.
+    alias_to_prime: HashMap<String, u128>,
+}
+
+impl FfInfo {
+    /// Whether the script declares no finite-field sort (the fast path: a
+    /// non-`QF_FF` script threads an empty registry and never hits FF dispatch).
+    fn is_empty(&self) -> bool {
+        self.width_to_prime.is_empty()
+    }
+
+    /// The prime modulus of a finite-field operand of bit width `w`, or `None` if
+    /// `w` is not a registered finite-field width (so a stray `ff.*` over a plain
+    /// bit-vector declines rather than misbehaves).
+    fn prime_of_width(&self, w: u32) -> Option<u128> {
+        self.width_to_prime.get(&w).copied()
+    }
+}
+
+/// Whether `e` mentions a `FiniteField` sort head or any `ff.*`/`#f…` token
+/// anywhere (the fast-path guard: a script with no finite fields skips
+/// [`build_ff_info`]).
+fn mentions_ff(e: &SExpr) -> bool {
+    match e {
+        SExpr::Atom(a) => a.starts_with("ff.") || a.starts_with("#f"),
+        SExpr::List(items) => {
+            items.get(1).and_then(SExpr::atom) == Some("FiniteField")
+                || items.iter().any(mentions_ff)
+        }
+    }
+}
+
+/// Parses the modulus of a `(_ FiniteField p)` sort s-expr. Returns the prime as
+/// a `u128`, declining (with the relevant `Unsupported` reason) when the modulus
+/// overflows `u128`, exceeds the bit-width cap, or is not prime.
+fn parse_ff_modulus(items: &[SExpr]) -> Result<u128, SmtError> {
+    let raw = items[2]
+        .atom()
+        .ok_or_else(|| SmtError::Syntax("FiniteField modulus must be a numeral".to_owned()))?;
+    let p = raw.parse::<u128>().map_err(|_| {
+        SmtError::Unsupported(format!(
+            "finite field modulus `{raw}` exceeds the modeled range (a crypto-sized prime; \
+             bit-blasting is declined)"
+        ))
+    })?;
+    if ff_width(p) > MAX_FF_PRIME_BITS {
+        return Err(SmtError::Unsupported(format!(
+            "finite field modulus {p} needs {} bits (> the {MAX_FF_PRIME_BITS}-bit cap); \
+             bit-blasting a field this large is declined",
+            ff_width(p)
+        )));
+    }
+    if !is_ff_prime(p) {
+        return Err(SmtError::Unsupported(format!(
+            "finite field modulus {p} is not prime; only prime fields `GF(p)` are modeled"
+        )));
+    }
+    Ok(p)
+}
+
+/// Whether an atom is a finite-field literal identifier `ffK` (`ff` followed by an
+/// optional `-` and decimal digits, e.g. `ff0`, `ff16`, `ff-1`) — the term form
+/// used inside `(as ffK Sort)`.
+fn is_ff_literal_name(a: Option<&str>) -> bool {
+    let Some(rest) = a.and_then(|a| a.strip_prefix("ff")) else {
+        return false;
+    };
+    let digits = rest.strip_prefix('-').unwrap_or(rest);
+    !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit())
+}
+
+/// Whether a sort s-expr is `(_ FiniteField p)` (a list of 3 with that head).
+fn is_ff_sort_sexpr(e: &SExpr) -> bool {
+    e.list().is_some_and(is_ff_sort_items)
+}
+
+/// Whether a list's items are `[_, FiniteField, p]` — the `(_ FiniteField p)` shape.
+fn is_ff_sort_items(items: &[SExpr]) -> bool {
+    items.len() == 3 && items[0].atom() == Some("_") && items[1].atom() == Some("FiniteField")
+}
+
+/// Builds the finite-field registry for a script by scanning every
+/// `(_ FiniteField p)` sort s-expr — directly and through `define-sort` aliases —
+/// once, up front (mirroring [`build_seq_info`]). The registry is then immutable
+/// for the parse, so the `ff.*` dispatch can recover an operand's prime from its
+/// modeled bit width.
+///
+/// # Errors
+///
+/// [`SmtError::Unsupported`] for a modulus that overflows `u128`, exceeds
+/// [`MAX_FF_PRIME_BITS`], is non-prime, or a width collision (two distinct primes
+/// of the same modeled bit-width — the dispatch could not tell them apart, so the
+/// whole script declines, soundly).
+fn build_ff_info(exprs: &[SExpr]) -> Result<FfInfo, SmtError> {
+    let mut info = FfInfo::default();
+    if !exprs.iter().any(mentions_ff) {
+        return Ok(info);
+    }
+    for e in exprs {
+        scan_ff_sorts(e, &mut info)?;
+    }
+    Ok(info)
+}
+
+/// Recursively registers every `(_ FiniteField p)` sort s-expr in `e`, and binds
+/// `define-sort` aliases (`(define-sort F () (_ FiniteField p))`) to their prime.
+/// Also registers the modulus of any `#fKmM` field literal, so a script whose
+/// fields appear only through literals (no declared field symbol) still resolves
+/// the `ff.*` dispatch.
+fn scan_ff_sorts(e: &SExpr, info: &mut FfInfo) -> Result<(), SmtError> {
+    let SExpr::Atom(a) = e else {
+        let SExpr::List(items) = e else {
+            return Ok(());
+        };
+        return scan_ff_sorts_list(items, info);
+    };
+    // A `#fKmM` literal carries its prime modulus `M`; register it (validating
+    // bit-cap and primality) so the dispatch can recover the field by width.
+    if let Some(body) = a.strip_prefix("#f")
+        && let Some((_, m_str)) = body.split_once('m')
+        && let Ok(m) = m_str.parse::<u128>()
+    {
+        if ff_width(m) > MAX_FF_PRIME_BITS {
+            return Err(SmtError::Unsupported(format!(
+                "finite-field literal `{a}` modulus needs > {MAX_FF_PRIME_BITS} bits; declined"
+            )));
+        }
+        if !is_ff_prime(m) {
+            return Err(SmtError::Unsupported(format!(
+                "finite-field literal `{a}` modulus {m} is not prime"
+            )));
+        }
+        register_ff_prime(info, m)?;
+    }
+    Ok(())
+}
+
+/// Registers finite-field sorts/aliases in a list s-expr (the recursive case of
+/// [`scan_ff_sorts`]).
+fn scan_ff_sorts_list(items: &[SExpr], info: &mut FfInfo) -> Result<(), SmtError> {
+    if is_ff_sort_items(items) {
+        let p = parse_ff_modulus(items)?;
+        register_ff_prime(info, p)?;
+        return Ok(());
+    }
+    // `(define-sort name () (_ FiniteField p))` — record name → prime so a later
+    // `(as ffK name)` (and `(_ FiniteField p)` resolution) can recover the prime.
+    if items.len() == 4
+        && items[0].atom() == Some("define-sort")
+        && items
+            .get(2)
+            .and_then(SExpr::list)
+            .is_some_and(<[SExpr]>::is_empty)
+        && is_ff_sort_sexpr(&items[3])
+        && let Some(name) = items[1].atom()
+    {
+        let p = parse_ff_modulus(items[3].list().expect("checked is_ff_sort_sexpr"))?;
+        register_ff_prime(info, p)?;
+        info.alias_to_prime.insert(name.to_owned(), p);
+    }
+    for child in items {
+        scan_ff_sorts(child, info)?;
+    }
+    Ok(())
+}
+
+/// Registers a finite-field prime by its modeled bit-width, declining on a width
+/// collision (two distinct primes of the same bit-length).
+fn register_ff_prime(info: &mut FfInfo, p: u128) -> Result<(), SmtError> {
+    let w = ff_width(p);
+    match info.width_to_prime.insert(w, p) {
+        Some(prev) if prev != p => Err(SmtError::Unsupported(format!(
+            "two finite-field moduli ({prev} and {p}) share the {w}-bit modeling width; \
+             this script mixes fields the bit-width dispatch cannot separate"
+        ))),
+        _ => Ok(()),
+    }
+}
+
+/// The prime modulus of a finite-field operand term `v`, recovered from its
+/// modeled bit width.
+///
+/// # Errors
+///
+/// [`SmtError::Unsupported`] if `v` is not a registered finite-field operand (so a
+/// stray `ff.*` over a plain bit-vector declines rather than misbehaves).
+fn ff_prime_of(arena: &TermArena, ff: &FfInfo, v: TermId) -> Result<u128, SmtError> {
+    match arena.sort_of(v) {
+        Sort::BitVec(w) => ff.prime_of_width(w).ok_or_else(|| {
+            SmtError::Unsupported(format!(
+                "finite-field operator applied to a non-field `BitVec({w})`"
+            ))
+        }),
+        s => Err(SmtError::Unsupported(format!(
+            "finite-field operator applied to a non-field operand of sort {s:?}"
+        ))),
+    }
+}
+
+/// `(x + y) mod p` for two well-formed (`< p`) field elements of width `w`: add
+/// in width `w + 1` (the sum is `< 2p ≤ 2^{w+1}`), then one conditional subtract
+/// of `p` (`ite(sum ≥ p, sum − p, sum)`), truncated back to `w`. The single
+/// conditional subtract is exact because both operands are `< p`, so the sum is
+/// `< 2p`, hence at most one `p` need be removed.
+fn ff_add2(
+    arena: &mut TermArena,
+    p: u128,
+    w: u32,
+    x: TermId,
+    y: TermId,
+) -> Result<TermId, SmtError> {
+    let zero = arena.bv_const(1, 0)?;
+    let xe = arena.concat(zero, x)?; // zero-extend to w+1
+    let ye = arena.concat(zero, y)?;
+    let sum = arena.bv_add(xe, ye)?; // < 2p, fits w+1 bits
+    let pw = arena.bv_const(w + 1, p)?;
+    let ge = arena.bv_uge(sum, pw)?;
+    let sub = arena.bv_sub(sum, pw)?;
+    let reduced = arena.ite(ge, sub, sum)?;
+    Ok(arena.extract(w - 1, 0, reduced)?) // canonical residue, width w
+}
+
+/// `(p − x) mod p` = the field negation of a well-formed (`< p`) element:
+/// `ite(x = 0, 0, p − x)`. (`p − x` is computed in width `w`; for `x ≠ 0` it
+/// equals `(−x) mod p` and is already `< p`.)
+fn ff_neg(arena: &mut TermArena, p: u128, w: u32, x: TermId) -> Result<TermId, SmtError> {
+    let zero = arena.bv_const(w, 0)?;
+    let pw = arena.bv_const(w, p)?;
+    let is_zero = arena.eq(x, zero)?;
+    let sub = arena.bv_sub(pw, x)?;
+    Ok(arena.ite(is_zero, zero, sub)?)
+}
+
+/// `(x · y) mod p` for two well-formed (`< p`) field elements of width `w`:
+/// zero-extend both to `2w`, multiply (the product `< p^2 ≤ 2^{2w}` fits), then
+/// `bvurem` by `p` (exact unsigned remainder), truncated back to `w`.
+fn ff_mul2(
+    arena: &mut TermArena,
+    p: u128,
+    w: u32,
+    x: TermId,
+    y: TermId,
+) -> Result<TermId, SmtError> {
+    let zero = arena.bv_const(w, 0)?;
+    let xe = arena.concat(zero, x)?; // zero-extend to 2w
+    let ye = arena.concat(zero, y)?;
+    let prod = arena.bv_mul(xe, ye)?; // < p^2, fits 2w bits
+    let p2w = arena.bv_const(2 * w, p)?;
+    let rem = arena.bv_urem(prod, p2w)?; // exact mod p, < p
+    Ok(arena.extract(w - 1, 0, rem)?) // canonical residue, width w
+}
+
+/// `ff.bitsum x0 x1 … x_{k-1}` = `Σ_i 2^i · x_i (mod p)` (cvc5 extension): a
+/// positional weighted sum of the field operands. Each weight `2^i mod p` is a
+/// constant, so the term is built as a fold of `ff.add`s of `(2^i · x_i) mod p`.
+fn ff_bitsum(arena: &mut TermArena, p: u128, w: u32, args: &[TermId]) -> Result<TermId, SmtError> {
+    let mut acc = arena.bv_const(w, 0)?;
+    let mut weight: u128 = 1 % p;
+    for &xi in args {
+        // weight·xi mod p, then add into the accumulator (both mod p).
+        let wt = arena.bv_const(w, weight)?;
+        let term = ff_mul2(arena, p, w, wt, xi)?;
+        acc = ff_add2(arena, p, w, acc, term)?;
+        weight = (weight * 2) % p;
+    }
+    Ok(acc)
+}
+
+/// Parses a finite-field literal atom `#fKmM` (value `K` mod modulus `M`) into a
+/// canonical residue `BitVec(ff_width(M))` constant. `K` may be negative
+/// (`#f-1m5`); the residue is `K mod M` reduced into `0..M`. Returns `None` if
+/// `a` is not an `#f…m…` literal so `parse_atom` falls through.
+fn parse_ff_literal(arena: &mut TermArena, a: &str) -> Option<Result<TermId, SmtError>> {
+    let body = a.strip_prefix("#f")?;
+    let (k_str, m_str) = body.split_once('m')?;
+    Some((|| {
+        let m = m_str.parse::<u128>().map_err(|_| {
+            SmtError::Unsupported(format!(
+                "finite-field literal modulus in `{a}` exceeds the modeled range"
+            ))
+        })?;
+        if ff_width(m) > MAX_FF_PRIME_BITS {
+            return Err(SmtError::Unsupported(format!(
+                "finite-field literal `{a}` modulus needs > {MAX_FF_PRIME_BITS} bits; declined"
+            )));
+        }
+        if !is_ff_prime(m) {
+            return Err(SmtError::Unsupported(format!(
+                "finite-field literal `{a}` modulus {m} is not prime"
+            )));
+        }
+        let residue = ff_residue(k_str, m, a)?;
+        Ok(arena.bv_const(ff_width(m), residue)?)
+    })())
+}
+
+/// `(as ffK Sort)` — a field literal whose value is `K` and whose modulus comes
+/// from the sort ascription (`(_ FiniteField p)` directly, or a `define-sort`
+/// alias resolved via [`FfInfo::alias_to_prime`]). `K` may be negative. Returns
+/// the canonical residue `BitVec(ff_width(p))` constant.
+fn parse_ff_as_literal(
+    arena: &mut TermArena,
+    ff: &FfInfo,
+    k_atom: &str,
+    sort: &SExpr,
+) -> Result<TermId, SmtError> {
+    let k_str = k_atom.strip_prefix("ff").ok_or_else(|| {
+        SmtError::Syntax(format!("`(as {k_atom} …)` is not a finite-field literal"))
+    })?;
+    let p = ff_sort_prime(ff, sort)?;
+    let residue = ff_residue(k_str, p, k_atom)?;
+    Ok(arena.bv_const(ff_width(p), residue)?)
+}
+
+/// The prime modulus of a sort s-expr that must be a finite field — either
+/// `(_ FiniteField p)` directly or a `define-sort` alias registered in `ff`.
+fn ff_sort_prime(ff: &FfInfo, sort: &SExpr) -> Result<u128, SmtError> {
+    if is_ff_sort_sexpr(sort) {
+        return parse_ff_modulus(sort.list().expect("checked is_ff_sort_sexpr"));
+    }
+    if let Some(name) = sort.atom()
+        && let Some(&p) = ff.alias_to_prime.get(name)
+    {
+        return Ok(p);
+    }
+    Err(SmtError::Unsupported(format!(
+        "`(as ff… {sort:?})` ascription is not a recognized finite-field sort"
+    )))
+}
+
+/// The residue `K mod M` (in `0..M`) of a (possibly negative) field literal value
+/// string `k_str`. The literal value is parsed as an `i128`; values outside that
+/// range decline.
+fn ff_residue(k_str: &str, m: u128, lit: &str) -> Result<u128, SmtError> {
+    let k = k_str.parse::<i128>().map_err(|_| {
+        SmtError::Unsupported(format!(
+            "finite-field literal value in `{lit}` exceeds the modeled range"
+        ))
+    })?;
+    let mi = i128::try_from(m).map_err(|_| {
+        SmtError::Unsupported(format!(
+            "finite-field modulus in `{lit}` exceeds the modeled range"
+        ))
+    })?;
+    // `k.rem_euclid(m)` is the non-negative residue in `0..m`.
+    let r = k.rem_euclid(mi);
+    Ok(u128::try_from(r).expect("rem_euclid result is in 0..m, non-negative"))
+}
+
+/// Dispatch for the finite-field operators `ff.add`, `ff.neg`, `ff.mul`, and
+/// `ff.bitsum` (`QF_FF`). Returns `Some(term)` for an `ff.*` head, or `None` for any
+/// other operator (so the normal `apply_op` dispatch continues untouched). The
+/// operand prime is recovered from the first field argument's modeled width; every
+/// result is reduced to a canonical residue `< p` so the modeling stays
+/// denotation-preserving.
+fn apply_ff_op(
+    arena: &mut TermArena,
+    ff: &FfInfo,
+    op: &str,
+    args: &[TermId],
+) -> Result<Option<TermId>, SmtError> {
+    let out = match op {
+        "ff.add" | "ff.mul" | "ff.bitsum" => {
+            if args.is_empty() {
+                return Err(SmtError::Syntax(format!("`{op}` expects ≥ 1 argument")));
+            }
+            let p = ff_prime_of(arena, ff, args[0])?;
+            let w = ff_width(p);
+            match op {
+                "ff.add" => {
+                    let mut acc = args[0];
+                    for &next in &args[1..] {
+                        acc = ff_add2(arena, p, w, acc, next)?;
+                    }
+                    acc
+                }
+                "ff.mul" => {
+                    let mut acc = args[0];
+                    for &next in &args[1..] {
+                        acc = ff_mul2(arena, p, w, acc, next)?;
+                    }
+                    acc
+                }
+                "ff.bitsum" => ff_bitsum(arena, p, w, args)?,
+                _ => unreachable!("matched ff.add/ff.mul/ff.bitsum"),
+            }
+        }
+        "ff.neg" => {
+            if args.len() != 1 {
+                return Err(SmtError::Syntax(format!(
+                    "`ff.neg` expects 1 argument, got {}",
+                    args.len()
+                )));
+            }
+            let p = ff_prime_of(arena, ff, args[0])?;
+            ff_neg(arena, p, ff_width(p), args[0])?
+        }
+        _ => return Ok(None),
+    };
+    Ok(Some(out))
 }
 
 /// Resolves a `(Seq E)` sort s-expr to its packed `BitVec` sort (max length
@@ -5962,6 +6558,7 @@ fn apply_seq_op(
 fn apply_op(
     arena: &mut TermArena,
     seq: &SeqInfo,
+    ff: &FfInfo,
     items: &[SExpr],
     args: &[TermId],
 ) -> Result<TermId, SmtError> {
@@ -5975,6 +6572,14 @@ fn apply_op(
     // `None`, leaving the normal dispatch untouched).
     if !seq.is_empty()
         && let Some(t) = apply_seq_op(arena, seq, op, args)?
+    {
+        return Ok(t);
+    }
+    // Finite-field operators (`ff.*`, QF_FF): dispatched only when the script
+    // declares a finite-field sort (else `ff` is empty and this returns `None`,
+    // leaving the normal dispatch untouched).
+    if !ff.is_empty()
+        && let Some(t) = apply_ff_op(arena, ff, op, args)?
     {
         return Ok(t);
     }

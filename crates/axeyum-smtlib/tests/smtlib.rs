@@ -4233,3 +4233,224 @@ fn regex_out_of_byte_codepoint_declines() {
         Err(SmtError::Unsupported(_))
     ));
 }
+
+// --- Finite fields (QF_FF) -------------------------------------------------
+
+/// `ff.add 5 4 = 2` over `GF(7)` (9 mod 7 = 2): the constant assertion evaluates
+/// true; the encoding is the canonical modular-BV residue.
+#[test]
+fn ff_add_mod_p() {
+    let text = r"
+        (set-logic QF_FF)
+        (define-sort F () (_ FiniteField 7))
+        (assert (= (ff.add (as ff5 F) (as ff4 F)) (as ff2 F)))
+    ";
+    let script = parse_script(text).unwrap();
+    // No declared symbols, so no well-formedness assertion precedes the body.
+    assert_eq!(script.assertions.len(), 1);
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
+    // A wrong sum is false: 9 mod 7 = 2, not 3.
+    let bad = parse_script(
+        "(set-logic QF_FF)\n(define-sort F () (_ FiniteField 7))\n\
+         (assert (= (ff.add (as ff5 F) (as ff4 F)) (as ff3 F)))\n",
+    )
+    .unwrap();
+    assert_eq!(
+        eval(&bad.arena, bad.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(false)
+    );
+}
+
+/// `ff.mul 5 4 = 6` over `GF(7)` (20 mod 7 = 6), using the `#fKmM` literal form.
+#[test]
+fn ff_mul_mod_p_literal_form() {
+    let text = r"
+        (set-logic QF_FF)
+        (assert (= (ff.mul #f5m7 #f4m7) #f6m7))
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
+}
+
+/// `ff.neg 3 = 4` over `GF(7)` (7 − 3 = 4), and `ff.neg 0 = 0`.
+#[test]
+fn ff_neg_mod_p() {
+    let script = parse_script(
+        "(set-logic QF_FF)\n(define-sort F () (_ FiniteField 7))\n\
+         (assert (= (ff.neg (as ff3 F)) (as ff4 F)))\n\
+         (assert (= (ff.neg (as ff0 F)) (as ff0 F)))\n",
+    )
+    .unwrap();
+    for a in &script.assertions {
+        assert_eq!(
+            eval(&script.arena, *a, &Assignment::new()).unwrap(),
+            Value::Bool(true)
+        );
+    }
+}
+
+/// A negative literal `#f-1m17` is the residue `16` over `GF(17)`; double negation
+/// is the identity (`negneg.smt2`'s shape, here as a concrete identity).
+#[test]
+fn ff_negative_literal_and_double_neg() {
+    let script = parse_script(
+        "(set-logic QF_FF)\n\
+         (assert (= #f-1m17 #f16m17))\n\
+         (assert (= (ff.neg (ff.neg #f5m17)) #f5m17))\n",
+    )
+    .unwrap();
+    for a in &script.assertions {
+        assert_eq!(
+            eval(&script.arena, *a, &Assignment::new()).unwrap(),
+            Value::Bool(true)
+        );
+    }
+}
+
+/// A declared field symbol carries a `bvult var p` well-formedness constraint, and
+/// a witness satisfies a field equation (`x*x = x` over `GF(17)` holds at `x = 1`,
+/// the sat case of `univar_conjunction_*`). The body and the well-formedness
+/// constraint both evaluate true under the witness.
+#[test]
+fn ff_symbol_well_formedness_and_sat_witness() {
+    let text = r"
+        (set-logic QF_FF)
+        (declare-fun x () (_ FiniteField 17))
+        (assert (= (ff.mul x x) x))
+    ";
+    let script = parse_script(text).unwrap();
+    // The declaration emits a well-formedness assertion, then the body assert.
+    assert_eq!(script.assertions.len(), 2);
+    let x = script.arena.find_symbol("x").unwrap();
+    // x = 1 is a witness: 1*1 = 1, and 1 < 17 (well-formed).
+    let mut asg = Assignment::new();
+    asg.set(x, Value::Bv { width: 5, value: 1 });
+    for a in &script.assertions {
+        assert_eq!(
+            eval(&script.arena, *a, &asg).unwrap(),
+            Value::Bool(true),
+            "witness x=1 must satisfy both the body and the well-formedness constraint"
+        );
+    }
+    // An ill-formed value (17 = the prime itself) violates the `< p` constraint:
+    // the well-formedness assertion (the first one) is false.
+    let mut bad = Assignment::new();
+    bad.set(
+        x,
+        Value::Bv {
+            width: 5,
+            value: 17,
+        },
+    );
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &bad).unwrap(),
+        Value::Bool(false)
+    );
+}
+
+/// `ff.bitsum` is the positional weighted sum `Σ 2^i x_i mod p`: over `GF(3)`,
+/// `bitsum(1, 2, 0) = 1 + 2·2 + 0 = 5 mod 3 = 2`.
+#[test]
+fn ff_bitsum_weighted_sum() {
+    let script = parse_script(
+        "(set-logic QF_FF)\n\
+         (assert (= (ff.bitsum #f1m3 #f2m3 #f0m3) #f2m3))\n",
+    )
+    .unwrap();
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
+}
+
+/// A finite field sort resolves to the right `BitVec` modeling width
+/// (`ff_width(p) = ceil(log2 p)`): `GF(17)` → `BitVec(5)`.
+#[test]
+fn ff_sort_resolves_to_modeling_width() {
+    let text = r"
+        (set-logic QF_FF)
+        (declare-fun x () (_ FiniteField 17))
+        (assert (= x x))
+    ";
+    let mut script = parse_script(text).unwrap();
+    let x = script.arena.find_symbol("x").unwrap();
+    let xv = script.arena.var(x);
+    assert_eq!(script.arena.sort_of(xv), Sort::BitVec(5));
+}
+
+/// A non-prime "field" modulus is invalid SMT-LIB; it declines as `Unsupported`
+/// (never a wrong verdict over a bogus structure).
+#[test]
+fn ff_non_prime_modulus_declines() {
+    assert!(matches!(
+        parse_script(
+            "(set-logic QF_FF)\n(declare-fun x () (_ FiniteField 15))\n\
+             (assert (= x x))\n(check-sat)\n"
+        ),
+        Err(SmtError::Unsupported(_))
+    ));
+}
+
+/// A crypto-sized (over-cap) prime modulus is declined cleanly (no heavy
+/// bit-blasting), as is a modulus that overflows `u128`.
+#[test]
+fn ff_over_width_prime_declines() {
+    // 254-bit BN254 scalar field prime — well over the bit cap.
+    assert!(matches!(
+        parse_script(
+            "(set-logic QF_FF)\n(define-sort F () (_ FiniteField \
+             21888242871839275222246405745257275088548364400416034343698204186575808495617))\n\
+             (declare-fun x () F)\n(assert (= x x))\n(check-sat)\n"
+        ),
+        Err(SmtError::Unsupported(_))
+    ));
+    // A modulus that overflows u128.
+    assert!(matches!(
+        parse_script(
+            "(set-logic QF_FF)\n(declare-fun x () (_ FiniteField \
+             4002409555221667393417789825735904156556882819939007885332058136124031650490837864442687629129015664037894272559787))\n\
+             (assert (= x x))\n(check-sat)\n"
+        ),
+        Err(SmtError::Unsupported(_))
+    ));
+}
+
+/// Two distinct primes of the same modeling bit-width in one script (11 and 13,
+/// both 4 bits) collide on the width→prime recovery and decline (soundly).
+#[test]
+fn ff_width_collision_declines() {
+    assert!(matches!(
+        parse_script(
+            "(set-logic QF_FF)\n(declare-fun a () (_ FiniteField 11))\n\
+             (declare-fun b () (_ FiniteField 13))\n(assert (= (ff.add a a) a))\n(check-sat)\n"
+        ),
+        Err(SmtError::Unsupported(_))
+    ));
+}
+
+/// Two different small primes of distinct bit-widths in one script (3 → 2 bits,
+/// 5 → 3 bits) both parse — the `combination.smt2` shape.
+#[test]
+fn ff_two_distinct_width_primes_parse() {
+    let text = r"
+        (set-logic QF_FF)
+        (define-sort F3 () (_ FiniteField 3))
+        (define-sort F5 () (_ FiniteField 5))
+        (declare-fun a () F3)
+        (declare-fun b () F5)
+        (assert (= (ff.add a a) (as ff0 F3)))
+        (assert (= (ff.mul b b) (as ff1 F5)))
+    ";
+    let mut script = parse_script(text).unwrap();
+    let a = script.arena.find_symbol("a").unwrap();
+    let b = script.arena.find_symbol("b").unwrap();
+    let (av, bv) = (script.arena.var(a), script.arena.var(b));
+    assert_eq!(script.arena.sort_of(av), Sort::BitVec(2));
+    assert_eq!(script.arena.sort_of(bv), Sort::BitVec(3));
+}
