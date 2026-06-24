@@ -1063,21 +1063,41 @@ fn dispatch_uf_fast_paths(
     // `k·(k−1)/2` Ackermann congruence constraints, whose O(k²) construction and
     // unbounded downstream LIA/IDL solve neither honor `config.timeout`; and the
     // upstream e-graph passes themselves recurse over the (often deeply-nested)
-    // assertion and can stack-overflow before any deadline check fires. Refusing the
-    // oversized instance here — by the same `MAX_ACKERMANN_CONGRUENCE_PAIRS` size
-    // estimate used at the eager construction sites — converts every such would-be
-    // hang into a sound, immediate `Unknown` without ever entering a recursive pass.
-    // Gated on `has_arithmetic_function` so pure-`QF_UF` (handled by the
-    // timeout-bounded e-graph path, ADR/commit af35fe1) is unaffected. SOUNDNESS: a
-    // refusal only ever replaces a hang with `Unknown`; no decided verdict changes.
-    if has_arithmetic_function(arena) {
-        if let Some(CheckResult::Unknown(reason)) =
-            crate::euf::refuse_oversized_ackermann(arena, assertions, "UF+arithmetic")
+    // assertion and can stack-overflow before any deadline check fires.
+    //
+    // When the eager bound `MAX_ACKERMANN_CONGRUENCE_PAIRS` would fire, we DO NOT
+    // enter those passes. Instead we first try the **lazy/CEGAR** UF+arithmetic
+    // route (`try_lazy_arith_for_overbound`), which abstracts each application and
+    // refines congruence on demand under the real `config` deadline — deciding many
+    // over-bound instances without the eager blowup — and degrades to a sound
+    // `Unknown` only if that route also declines / hits its deadline (pathological
+    // huge / deeply-nested inputs are refused fast inside, before any recursive
+    // build). Gated on an arithmetic-sorted function being **actually applied in the
+    // assertions** (`features.has_function`, not merely *declared*): the lazy route
+    // recursively solves its abstraction with `check_auto`, and the abstraction has
+    // no `Op::Apply` nodes, so without this `has_function` guard that recursive
+    // `check_auto` would re-enter this very block (the function is still declared) and
+    // loop on a pure-arithmetic query that the LIA refuters below already decide. So
+    // pure-`QF_UF` (no arith function) and post-abstraction pure-arithmetic queries
+    // are both byte-identically unaffected. SOUNDNESS: this only ever replaces a
+    // would-be hang with a decided verdict or a sound `Unknown`; no verdict changes
+    // (a query with no applied arith function has zero congruence pairs, so the eager
+    // bound never fired for it anyway).
+    if features.has_function && has_arithmetic_function(arena) {
+        if let Some(result) =
+            crate::euf::try_lazy_arith_for_overbound(arena, assertions, config, "UF+arithmetic")?
         {
-            with_recorder(rec, |t| {
-                t.record_declined("uf-arith-admission", DeclineReason::from_unknown(&reason));
+            with_recorder(rec, |t| match &result {
+                CheckResult::Sat(_) => t.record_decided("uf-arith-lazy-overbound", Verdict::Sat),
+                CheckResult::Unsat => {
+                    t.record_decided("uf-arith-lazy-overbound", Verdict::Unsat);
+                }
+                CheckResult::Unknown(reason) => t.record_declined(
+                    "uf-arith-lazy-overbound",
+                    DeclineReason::from_unknown(reason),
+                ),
             });
-            return Ok(Some(CheckResult::Unknown(reason)));
+            return Ok(Some(result));
         }
     }
 
@@ -1118,7 +1138,14 @@ fn dispatch_uf_fast_paths(
     // Arithmetic-sorted uninterpreted functions (QF_UFLIA / QF_UFLRA): decide them
     // by EUF + linear-arithmetic combination. Sound either way — its `unsat` is a
     // relaxation refutation, its `sat`/`unknown` fall through.
-    if has_arithmetic_function(arena) {
+    //
+    // Gated on the arithmetic function being **actually applied** (`features.has_function`),
+    // not merely declared: a query (or a lazy-abstraction sub-query) whose assertions
+    // contain no `Op::Apply` is pure arithmetic and must fall through to the LIA
+    // refuters below — re-entering the eager UF+arithmetic route here on such a query
+    // would recurse on the same function-free assertions and loop. A query with no
+    // applied function has no congruence pairs, so this narrowing is verdict-preserving.
+    if features.has_function && has_arithmetic_function(arena) {
         // FIRST attempt: the **online** EUF + linear-arithmetic combination
         // (warm, equality-sharing `Nelson–Oppen`), in place of eager Ackermann as
         // the normal mixed-theory answer (gap-analysis keystone). Its `sat` is

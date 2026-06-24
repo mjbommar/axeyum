@@ -8,8 +8,9 @@
 //! ground evaluator. Pure `QF_BV` queries pass straight through unchanged.
 
 use std::collections::HashSet;
+use std::time::Instant;
 
-use axeyum_ir::{Assignment, FuncId, Op, TermArena, TermId, TermNode, Value, eval};
+use axeyum_ir::{Assignment, FuncId, Op, TermArena, TermId, TermNode, TermStats, Value, eval};
 use axeyum_rewrite::{FuncElimError, eliminate_functions};
 
 use crate::backend::{
@@ -124,6 +125,138 @@ pub(crate) fn refuse_oversized_ackermann(
              O(k²) expansion and its downstream solve run unbounded; this needs a lazy/CEGAR route)"
         ),
     }))
+}
+
+/// Secondary (pathological-input) admission bound on the **congruence-pair
+/// count** for the *lazy* (CEGAR) UF+arithmetic route. This sits far above the
+/// eager [`MAX_ACKERMANN_CONGRUENCE_PAIRS`] (which the lazy route deliberately
+/// exceeds): the lazy loop never asserts all `O(pairs)` constraints up front —
+/// it refines only on observed violations — so the *downstream solve* stays
+/// bounded by the deadline regardless of pair count. The remaining cost the
+/// lazy route still pays eagerly is the **one** [`eliminate_functions`] call it
+/// makes to build the abstraction (which, as an artifact of the shared
+/// eliminator, also constructs the `O(pairs)` congruence terms it then
+/// discards). That construction is `O(pairs)` in time/memory and is *not*
+/// deadline-bounded, so an astronomically large pair count is refused here
+/// before construction — a graceful `Unknown`, never an OOM. The value is high
+/// enough that every realistically-decidable in-tree instance is admitted
+/// (the over-bound cvc5-regression files top out in the low thousands of
+/// pairs) yet bounds the eager abstraction build to a few million terms.
+pub(crate) const MAX_LAZY_ACKERMANN_CONGRUENCE_PAIRS: usize = 2_000_000;
+
+/// Secondary (pathological-input) admission bound on the **DAG node count** for
+/// the lazy UF+arithmetic route. The lazy abstraction build
+/// ([`eliminate_functions`]) recurses over the assertion DAG; a huge graph
+/// makes the (memoized, so DAG-linear) rewrite expensive and — together with
+/// [`MAX_LAZY_DEPTH`] — bounds the work before any unbounded solve. Refusing an
+/// over-large graph here keeps the route bounded; it is a graceful `Unknown`.
+pub(crate) const MAX_LAZY_DAG_NODES: u64 = 2_000_000;
+
+/// Secondary (pathological-input) admission bound on the **maximum term depth**
+/// for the lazy UF+arithmetic route. The shared eliminator's `rewrite`
+/// ([`eliminate_functions`]) and the upstream e-graph passes recurse on the
+/// term structure, so a deeply-nested assertion can **stack-overflow before any
+/// deadline check fires** (the exact failure mode `6233a7c` documented for the
+/// eager path). Refusing beyond this depth keeps the route bounded and
+/// crash-free. `64 Ki` is far above any realistic decidable nesting (the
+/// over-bound cvc5-regression files are < 100 deep) yet well below a depth that
+/// would overflow the default stack during the recursive rewrite.
+pub(crate) const MAX_LAZY_DEPTH: u64 = 65_536;
+
+/// Whether an over-eager-bound instance is *also* beyond the secondary
+/// (pathological-input) bounds for the lazy route — in which case even the lazy
+/// CEGAR path cannot help (its one eager abstraction build / recursive rewrite
+/// would blow up or stack-overflow) and the instance must still be refused fast.
+///
+/// Returns `Some(Unknown)` (refuse) when the pair count exceeds
+/// [`MAX_LAZY_ACKERMANN_CONGRUENCE_PAIRS`], the DAG exceeds [`MAX_LAZY_DAG_NODES`],
+/// or the term depth exceeds [`MAX_LAZY_DEPTH`]; `None` (admit to the lazy route)
+/// otherwise. All three checks run on iterative (non-recursive) passes
+/// ([`ackermann_congruence_pairs`], [`TermStats::compute`]) so the guard itself
+/// never recurses or hangs. A refusal only ever replaces a would-be hang/OOM/
+/// stack-overflow with a sound `Unknown`; it never changes a decided verdict.
+fn refuse_pathological_for_lazy(
+    arena: &TermArena,
+    assertions: &[TermId],
+    context: &str,
+) -> Option<CheckResult> {
+    let pairs = ackermann_congruence_pairs(arena, assertions);
+    if pairs > MAX_LAZY_ACKERMANN_CONGRUENCE_PAIRS {
+        return Some(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::ResourceLimit,
+            detail: format!(
+                "{context}: lazy Ackermann abstraction build would still construct {pairs} \
+                 congruence terms, exceeding the secondary bound of \
+                 {MAX_LAZY_ACKERMANN_CONGRUENCE_PAIRS}"
+            ),
+        }));
+    }
+    let stats = TermStats::compute(arena, assertions);
+    if stats.dag_nodes > MAX_LAZY_DAG_NODES {
+        return Some(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::ResourceLimit,
+            detail: format!(
+                "{context}: query has {} DAG nodes, exceeding the lazy-route bound of \
+                 {MAX_LAZY_DAG_NODES}",
+                stats.dag_nodes
+            ),
+        }));
+    }
+    if stats.max_depth > MAX_LAZY_DEPTH {
+        return Some(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::ResourceLimit,
+            detail: format!(
+                "{context}: query term depth {} exceeds the lazy-route bound of {MAX_LAZY_DEPTH} \
+                 (recursive rewrite would risk stack overflow)",
+                stats.max_depth
+            ),
+        }));
+    }
+    None
+}
+
+/// The bounded **lazy-Ackermann fallback** for UF+arithmetic instances that the
+/// eager admission bound ([`MAX_ACKERMANN_CONGRUENCE_PAIRS`]) would refuse.
+///
+/// Many such over-bound instances decide fine via the *lazy* (CEGAR) congruence
+/// route ([`check_with_uf_arithmetic_lazy`]): it abstracts each application and
+/// adds congruence constraints **on demand**, so it never pays the eager
+/// `O(pairs)` downstream-solve blowup. This helper is the additive bridge: when
+/// `refuse_oversized_ackermann` *would* fire (pairs > eager bound) **and** the
+/// instance is not pathological ([`refuse_pathological_for_lazy`] admits it),
+/// it tries the lazy route under the real `config`; a `Sat`/`Unsat` within
+/// budget is returned, an `Unknown`/deadline degrades gracefully. Pathological
+/// inputs (huge / deeply-nested) still refuse fast — never a hang or
+/// stack-overflow.
+///
+/// Returns `Some(result)` when this over-bound instance was routed (decided or a
+/// graceful `Unknown`), and `None` when the eager bound did **not** fire — the
+/// caller then proceeds on the unchanged eager path, so small / in-bound
+/// instances are byte-identical to before.
+///
+/// # Errors
+///
+/// Propagates [`SolverError`] from the lazy route's IR builders / dispatcher.
+pub(crate) fn try_lazy_arith_for_overbound(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    context: &str,
+) -> Result<Option<CheckResult>, SolverError> {
+    // Only engage when the EAGER bound would have refused; otherwise signal the
+    // caller to keep its byte-identical in-bound behaviour.
+    if refuse_oversized_ackermann(arena, assertions, context).is_none() {
+        return Ok(None);
+    }
+    // Genuinely-pathological inputs (even the lazy route's single eager
+    // abstraction build / recursive rewrite would blow up): refuse fast.
+    if let Some(refusal) = refuse_pathological_for_lazy(arena, assertions, context) {
+        return Ok(Some(refusal));
+    }
+    // Admitted: try the lazy CEGAR route under the real config (deadline-bounded).
+    Ok(Some(check_with_uf_arithmetic_lazy(
+        arena, assertions, config,
+    )?))
 }
 
 /// Checks a (possibly function-using) `QF_UFBV` conjunction with `backend`.
@@ -301,12 +434,18 @@ pub fn check_with_uf_arithmetic(
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
     // Deterministic admission bound (graceful `unknown`, never an unbounded
-    // hang/OOM): refuse oversized instances *before* building the O(k²) eager
-    // Ackermann congruence constraints, whose construction and downstream
-    // arithmetic solve both run unbounded past `config.timeout`. Refusing only ever
-    // turns a would-be hang into a sound `Unknown`; a decided verdict never changes.
-    if let Some(refusal) = refuse_oversized_ackermann(arena, assertions, "UF+arithmetic") {
-        return Ok(refusal);
+    // hang/OOM): the O(k²) eager Ackermann construction and its downstream
+    // arithmetic solve both run unbounded past `config.timeout`, so when the bound
+    // would fire we DO NOT build them. Instead we first try the **lazy/CEGAR**
+    // route (`try_lazy_arith_for_overbound`), which abstracts each application and
+    // refines congruence on demand under the real `config` deadline — deciding many
+    // such over-bound instances without the eager blowup — and only degrades to a
+    // graceful `Unknown` if that route also declines / hits its deadline (or the
+    // input is pathological, refused fast). This only ever turns a would-be hang
+    // into a decided verdict or a sound `Unknown`; a decided verdict never changes.
+    if let Some(result) = try_lazy_arith_for_overbound(arena, assertions, config, "UF+arithmetic")?
+    {
+        return Ok(result);
     }
 
     let elimination = eliminate_functions(arena, assertions).map_err(map_elim_error)?;
@@ -322,6 +461,71 @@ pub fn check_with_uf_arithmetic(
         assertions,
         &assignment,
     ))
+}
+
+/// **Lazy/CEGAR** EUF + arithmetic (`QF_UFLIA` / `QF_UFLRA`): the on-demand
+/// counterpart of the eager [`check_with_uf_arithmetic`]. Instead of asserting
+/// every same-function congruence constraint up front (the eager `O(k²)` blowup),
+/// it abstracts each application to a fresh result variable, solves the abstraction
+/// with the general dispatcher [`crate::check_auto`], and adds a congruence lemma
+/// `(⋀ argsᵢ = argsⱼ) ⇒ resultᵢ = resultⱼ` ONLY for an application pair a candidate
+/// model actually violates — re-solving until the model is functionally consistent
+/// or the abstraction is UNSAT. This decides over-eager-bound instances the eager
+/// route refuses, without ever feeding the downstream arithmetic solve the full
+/// `O(k²)` constraint set.
+///
+/// SOUNDNESS is identical to the shared functional-consistency loop: the
+/// abstraction is a relaxation (strictly fewer constraints), so an UNSAT
+/// abstraction soundly witnesses UNSAT of the original; a functionally-consistent
+/// `sat` model projects, replays against the originals, and is returned — a replay
+/// failure / arith-sorted-function model that cannot be reconstructed degrades to a
+/// sound `Unknown`, never a wrong `Sat`.
+///
+/// BOUNDEDNESS (the standing hard rule — graceful `Unknown`, never a hang/OOM):
+/// every abstraction solve runs under a **shared wall-clock deadline** derived from
+/// `config.timeout`; once it passes, the CEGAR loop returns `Unknown(ResourceLimit)`
+/// rather than entering another (full-budget) solve. The loop itself terminates in
+/// at most `O(applications²)` refinements (each lemma added once). Pathological
+/// inputs (huge / deeply-nested) are rejected *before* this runs by the over-bound
+/// caller's secondary admission guard, so the one eager abstraction build inside
+/// cannot blow up or stack-overflow. When
+/// `config.timeout` is `None` the loop is bounded only by its finite refinement
+/// count (no wall-clock budget to honor — the same contract as the rest of the
+/// dispatcher).
+///
+/// # Errors
+///
+/// Propagates [`SolverError`] from the dispatcher / IR builders.
+pub fn check_with_uf_arithmetic_lazy(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    // A single shared deadline for the WHOLE CEGAR loop: without it, each round's
+    // `check_auto` would honor the full `config.timeout` independently, so N rounds
+    // could run N×budget (unbounded in aggregate). With it, every per-round solve
+    // gets only the *remaining* budget and an exhausted deadline ends the loop with
+    // a graceful `Unknown` — the loop is bounded by `config.timeout`, not a multiple.
+    let deadline = config.timeout.map(|t| Instant::now() + t);
+    check_with_function_consistency(arena, assertions, |a, asserts| {
+        if let Some(d) = deadline {
+            let now = Instant::now();
+            if now >= d {
+                return Ok(CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::ResourceLimit,
+                    detail: "lazy UF+arithmetic exhausted the configured timeout before \
+                             converging"
+                        .to_string(),
+                }));
+            }
+            // Give this round only the remaining budget, so the aggregate loop stays
+            // within `config.timeout`.
+            let round_config = config.clone().with_timeout(d - now);
+            crate::check_auto(a, asserts, &round_config)
+        } else {
+            crate::check_auto(a, asserts, config)
+        }
+    })
 }
 
 /// The shared functional-consistency CEGAR loop: abstract each uninterpreted
@@ -792,27 +996,114 @@ mod tests {
             .collect()
     }
 
+    /// Builds an over-eager-bound **UNSAT** integer UF instance that the *lazy*
+    /// route decides: `pad` distinct congruence pairs (to push past the eager
+    /// `MAX_ACKERMANN_CONGRUENCE_PAIRS`) plus the classic congruence refutation
+    /// `f(a) ≠ f(b) ∧ a = b`. The padding applies `f` to `n` fresh, mutually
+    /// unconstrained variables — so it adds pairs without making the instance hard —
+    /// and the refutation is the only thing forcing UNSAT. A handful of CEGAR
+    /// refinements decide it.
+    fn build_overbound_unsat(arena: &mut TermArena, n: usize) -> Vec<axeyum_ir::TermId> {
+        let f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+        let mut assertions = Vec::new();
+        // Padding: `n` distinct applications => C(n,2) congruence pairs, but all over
+        // fresh unconstrained vars (no model violation forces a lemma).
+        for i in 0..n {
+            let v = arena.int_var(&format!("pad{i}")).unwrap();
+            let app = arena.apply(f, &[v]).unwrap();
+            // Touch each application in a trivially-true atom so it is reachable.
+            let eq = arena.eq(app, app).unwrap();
+            assertions.push(eq);
+        }
+        // The refutation: f(a) != f(b) AND a = b.
+        let a = arena.int_var("a").unwrap();
+        let b = arena.int_var("b").unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let fb = arena.apply(f, &[b]).unwrap();
+        let ne = {
+            let eq = arena.eq(fa, fb).unwrap();
+            arena.not(eq).unwrap()
+        };
+        let a_eq_b = arena.eq(a, b).unwrap();
+        assertions.push(ne);
+        assertions.push(a_eq_b);
+        assertions
+    }
+
     #[test]
-    fn uf_arith_blowup_refused_quickly_as_unknown() {
+    fn uf_arith_overbound_unsat_decided_by_lazy() {
+        // An UNSAT instance ABOVE the eager admission bound is now DECIDED via the
+        // lazy/CEGAR fallback (it was a refused `Unknown` under the eager-only cap).
+        // The verdict matches the known-good oracle (congruence: a = b ⇒ f(a) = f(b)
+        // contradicts f(a) ≠ f(b)).
+        use super::{MAX_ACKERMANN_CONGRUENCE_PAIRS, ackermann_congruence_pairs};
+        use std::time::{Duration, Instant};
+
+        // 20 padding applications => C(20,2) = 190 congruence pairs, comfortably above
+        // the 64 eager bound, plus the 2-app refutation => well over-bound.
+        let mut arena = TermArena::new();
+        let assertions = build_overbound_unsat(&mut arena, 20);
+        let pairs = ackermann_congruence_pairs(&arena, &assertions);
+        assert!(
+            pairs > MAX_ACKERMANN_CONGRUENCE_PAIRS,
+            "fixture must be over the eager bound, got {pairs} pairs"
+        );
+
+        let config = SolverConfig::default().with_timeout(Duration::from_secs(10));
+
+        // Direct lazy entry decides UNSAT.
+        let mut a1 = arena.clone();
+        let direct = super::check_with_uf_arithmetic_lazy(&mut a1, &assertions, &config).unwrap();
+        assert_eq!(
+            direct,
+            CheckResult::Unsat,
+            "lazy UF+arithmetic must refute the over-bound congruence violation"
+        );
+
+        // The full `check_auto` dispatch also reaches the same verdict via the
+        // over-bound lazy fallback, bounded.
+        let mut a2 = arena.clone();
+        let start = Instant::now();
+        let auto = crate::check_auto(&mut a2, &assertions, &config).unwrap();
+        let elapsed = start.elapsed();
+        assert_eq!(
+            auto,
+            CheckResult::Unsat,
+            "check_auto must decide the over-bound instance UNSAT via lazy"
+        );
+        assert!(
+            elapsed < Duration::from_secs(10),
+            "over-bound lazy decision must stay within budget, took {elapsed:?}"
+        );
+    }
+
+    #[test]
+    fn uf_arith_pathological_blowup_refused_quickly_as_unknown() {
         use super::{
-            MAX_ACKERMANN_CONGRUENCE_PAIRS, ackermann_congruence_pairs, check_with_uf_arithmetic,
+            MAX_LAZY_ACKERMANN_CONGRUENCE_PAIRS, ackermann_congruence_pairs,
+            check_with_uf_arithmetic,
         };
         use crate::backend::{UnknownKind, UnknownReason};
         use std::time::{Duration, Instant};
 
-        // 200 distinct applications => C(200,2) = 19_900 congruence pairs, far
-        // above the 512 admission bound — and a downstream integer solve that runs
-        // unbounded past `config.timeout` if it were ever built.
+        // A pathologically large pair count — above the SECONDARY (lazy) bound — must
+        // be refused *before* even the lazy route's single eager abstraction build.
+        // `k` apps => C(k,2) pairs; pick the smallest `k` with C(k,2) strictly above
+        // MAX_LAZY_ACKERMANN_CONGRUENCE_PAIRS by an integer search (no float casts).
+        let mut k = 2usize;
+        while k * (k - 1) / 2 <= MAX_LAZY_ACKERMANN_CONGRUENCE_PAIRS {
+            k += 1;
+        }
         let mut arena = TermArena::new();
-        let assertions = build_uf_blowup(&mut arena, 200);
-
-        // The size estimate is the real pair count for this single-function shape.
+        let assertions = build_uf_blowup(&mut arena, k);
         let pairs = ackermann_congruence_pairs(&arena, &assertions);
-        assert_eq!(pairs, 200 * 199 / 2, "exact congruence-pair count");
-        assert!(pairs > MAX_ACKERMANN_CONGRUENCE_PAIRS);
+        assert!(
+            pairs > MAX_LAZY_ACKERMANN_CONGRUENCE_PAIRS,
+            "fixture must exceed the secondary lazy bound, got {pairs} pairs"
+        );
 
-        // Even with a generous 5 s timeout the admission bound returns *immediately*
-        // (well under the budget) — the bound, not the clock, is what stops it.
+        // Even with a generous 5 s timeout the secondary bound returns *immediately*
+        // (the iterative pair count, not the clock, is what stops it).
         let config = SolverConfig::default().with_timeout(Duration::from_secs(5));
         let start = Instant::now();
         let result = check_with_uf_arithmetic(&mut arena, &assertions, &config).unwrap();
@@ -830,30 +1121,34 @@ mod tests {
         );
         assert!(
             elapsed < Duration::from_secs(1),
-            "admission refusal must be effectively instant, took {elapsed:?}"
+            "pathological refusal must be effectively instant, took {elapsed:?}"
         );
     }
 
     #[test]
-    fn uf_arith_blowup_refused_via_check_auto_bounded() {
+    fn uf_arith_blowup_via_check_auto_stays_bounded() {
         use std::time::{Duration, Instant};
-        // The full `check_auto` dispatch (online probe -> eager -> int-blast ladder)
-        // must also stay bounded: every UF+arithmetic route is now gated. A 600-app
-        // instance (179_700 pairs) must return within budget, never hang.
+        // The full `check_auto` dispatch must stay bounded on a large over-bound
+        // instance: a 600-app flat instance (179_700 pairs — under the secondary
+        // lazy bound, so it is routed to lazy) must return a verdict or a graceful
+        // `Unknown` within a small multiple of the budget, never hang.
         let mut arena = TermArena::new();
         let assertions = build_uf_blowup(&mut arena, 600);
 
-        let config = SolverConfig::default().with_timeout(Duration::from_secs(5));
+        let config = SolverConfig::default().with_timeout(Duration::from_secs(3));
         let start = Instant::now();
         let result = crate::check_auto(&mut arena, &assertions, &config).unwrap();
         let elapsed = start.elapsed();
 
+        // The flat instance is SAT (all results may be equal; args unconstrained), so
+        // lazy converges quickly with no violated pair — but a verdict OR a bounded
+        // `Unknown` are both acceptable; boundedness is the invariant under test.
         assert!(
-            matches!(result, CheckResult::Unknown(_)),
-            "blowup must degrade to Unknown, got {result:?}"
+            matches!(result, CheckResult::Sat(_) | CheckResult::Unknown(_)),
+            "blowup must decide or degrade to Unknown, got {result:?}"
         );
         assert!(
-            elapsed < Duration::from_secs(10),
+            elapsed < Duration::from_secs(15),
             "check_auto on the blowup must stay bounded, took {elapsed:?}"
         );
     }

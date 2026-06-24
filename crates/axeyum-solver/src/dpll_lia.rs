@@ -24,6 +24,7 @@
 //! the search (`unknown`, never wrong).
 
 use std::collections::{HashMap, HashSet};
+use std::time::Instant;
 
 use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 
@@ -277,7 +278,26 @@ fn run_arith_dpll(
     let mut blocking: Vec<TermId> = Vec::new();
     let mut lemmas: Vec<Vec<ArithLemmaLiteral>> = Vec::new();
 
+    // Wall-clock deadline (graceful `Unknown`, never an unbounded hang — the
+    // standing hard rule). The lazy-SMT loop can need up to `MAX_DPLL_ROUNDS`
+    // refinements, each a fresh SAT solve plus simplex over a growing clause set;
+    // on a large instance that is effectively unbounded, so honor `config.timeout`
+    // by checking the deadline at the top of every round. Exceeding it degrades to
+    // the same sound `Unknown(ResourceLimit)` the round-exhaustion path returns —
+    // a decided verdict is only ever reached *inside* a round, never by timeout.
+    let deadline = config.timeout.map(|t| Instant::now() + t);
+
     for _ in 0..MAX_DPLL_ROUNDS {
+        if deadline.is_some_and(|d| Instant::now() >= d) {
+            return Ok(ArithRun {
+                result: CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::ResourceLimit,
+                    detail: "lazy linear arithmetic exhausted the configured timeout".to_string(),
+                }),
+                skeleton,
+                lemmas,
+            });
+        }
         let mut sat_assertions = skeleton.clone();
         sat_assertions.extend(blocking.iter().copied());
         let propositional = match backend.check(arena, &sat_assertions, config)? {

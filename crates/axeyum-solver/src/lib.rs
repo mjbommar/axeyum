@@ -173,7 +173,10 @@ pub use dpll_t::{
     LemmaLiteral, LraDpllOutcome, LraDpllRefutation, certify_lra_dpll_unsat, check_with_lra_dpll,
 };
 pub use enums::{EnumError, EnumSort, EnumVar};
-pub use euf::{check_qf_ufbv_lazy, check_with_function_elimination, check_with_uf_arithmetic};
+pub use euf::{
+    check_qf_ufbv_lazy, check_with_function_elimination, check_with_uf_arithmetic,
+    check_with_uf_arithmetic_lazy,
+};
 pub use euf_alethe::prove_qf_uf_unsat_alethe;
 pub use euf_egraph::{
     EufConflict, EufTheory, TheoryLit, TheoryProp, TheorySolver, check_qf_uf,
