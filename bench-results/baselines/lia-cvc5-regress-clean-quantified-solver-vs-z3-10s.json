@@ -1,0 +1,908 @@
+{
+  "config": {
+    "backend": "axeyum-solver check_auto",
+    "backend_kind": "solver",
+    "cnf_clause_budget": null,
+    "cnf_inprocessing": false,
+    "cnf_variable_budget": null,
+    "cnf_vivify": false,
+    "compare_backend": "z3 4.13.3.0",
+    "compare_z3": true,
+    "config_hash": "4300089329004588",
+    "corpus": "corpus/public-curated/quantified/LIA/cvc5-regress-clean",
+    "corpus_hash": "01d4811f566e66c7",
+    "corpus_source": null,
+    "hardware": {
+      "arch": "x86_64",
+      "hostname": null,
+      "os": "linux",
+      "parallelism": 16
+    },
+    "harness": "axeyum-bench 0.1.0",
+    "jobs": 4,
+    "limit": null,
+    "logic": "LIA",
+    "native_cdcl": false,
+    "node_budget": null,
+    "preprocess": false,
+    "query_plan": {
+      "mode": "full",
+      "refine_adaptive_batch": false,
+      "refine_batch": 1,
+      "refine_rounds": 16,
+      "refine_select": "first",
+      "sat_replay_failure_policy": "soundness-alarm"
+    },
+    "rewrite": {
+      "enabled_rule_ids": [],
+      "mode": "off",
+      "rule_set": null
+    },
+    "seed": "none",
+    "selected_families": null,
+    "timeout_ms": 10000
+  },
+  "instances": [
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.13564299999999999
+      },
+      "dag_nodes": 13,
+      "detail": "term #35 uses unsupported pure-Rust BV operator Forall(SymbolId(0))",
+      "distinct_symbols": 2,
+      "expected": "unsat",
+      "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress0__quantifiers__ARI176e1.smt2",
+      "max_depth": 8,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unsupported"
+      },
+      "outcome": "unsupported",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 13,
+          "digest": "e9efd9db2aedf8c7",
+          "tree_nodes": 13
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 13,
+            "digest": "e9efd9db2aedf8c7",
+            "tree_nodes": 13
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 13,
+        "input_tree_nodes": 13,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 13,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 8,
+        "output_tree_nodes": 13,
+        "rewritten_outcome": "unsupported",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 13
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.062057999999999995
+      },
+      "dag_nodes": 15,
+      "detail": "term #34 uses unsupported pure-Rust BV operator Forall(SymbolId(1))",
+      "distinct_symbols": 3,
+      "expected": "unsat",
+      "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress0__quantifiers__clock-10.smt2",
+      "max_depth": 9,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unsupported"
+      },
+      "outcome": "unsupported",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 15,
+          "digest": "850606edb2066f56",
+          "tree_nodes": 18
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 15,
+            "digest": "850606edb2066f56",
+            "tree_nodes": 18
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 15,
+        "input_tree_nodes": 18,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 15,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 9,
+        "output_tree_nodes": 18,
+        "rewritten_outcome": "unsupported",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 18
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.050814
+      },
+      "dag_nodes": 15,
+      "detail": "term #34 uses unsupported pure-Rust BV operator Forall(SymbolId(1))",
+      "distinct_symbols": 3,
+      "expected": "unsat",
+      "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress0__quantifiers__clock-3.smt2",
+      "max_depth": 9,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unsupported"
+      },
+      "outcome": "unsupported",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 15,
+          "digest": "cb695b029363414a",
+          "tree_nodes": 18
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 15,
+            "digest": "cb695b029363414a",
+            "tree_nodes": 18
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 15,
+        "input_tree_nodes": 18,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 15,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 9,
+        "output_tree_nodes": 18,
+        "rewritten_outcome": "unsupported",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 18
+    },
+    {
+      "assertions": 2,
+      "backend_stats": {
+        "check_auto_ms": 1.0362660000000001
+      },
+      "dag_nodes": 436,
+      "detail": "term #993 uses unsupported pure-Rust BV operator Forall(SymbolId(37))",
+      "distinct_symbols": 82,
+      "expected": "unsat",
+      "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__006-cbqi-ite.smt2",
+      "max_depth": 85,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unsupported"
+      },
+      "outcome": "unsupported",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 2,
+          "assumptions": 0,
+          "dag_nodes": 436,
+          "digest": "b90c398f70efc920",
+          "tree_nodes": 1215
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 2,
+            "assumptions": 0,
+            "dag_nodes": 436,
+            "digest": "b90c398f70efc920",
+            "tree_nodes": 1215
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 436,
+        "input_tree_nodes": 1215,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 2,
+        "output_dag_nodes": 436,
+        "output_distinct_symbols": 82,
+        "output_max_depth": 85,
+        "output_tree_nodes": 1215,
+        "rewritten_outcome": "unsupported",
+        "rule_counts": {}
+      },
+      "solve_ms": 1,
+      "translate_ms": 0,
+      "tree_nodes": 1215
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 1.486924
+      },
+      "dag_nodes": 607,
+      "detail": "term #1711 uses unsupported pure-Rust BV operator Forall(SymbolId(25))",
+      "distinct_symbols": 75,
+      "expected": "sat",
+      "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__015-psyco-pp.smt2",
+      "max_depth": 123,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unsupported"
+      },
+      "outcome": "unsupported",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 607,
+          "digest": "0d5d0688e146e6e6",
+          "tree_nodes": 3327
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 607,
+            "digest": "0d5d0688e146e6e6",
+            "tree_nodes": 3327
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 607,
+        "input_tree_nodes": 3327,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 607,
+        "output_distinct_symbols": 75,
+        "output_max_depth": 123,
+        "output_tree_nodes": 3327,
+        "rewritten_outcome": "unsupported",
+        "rule_counts": {}
+      },
+      "solve_ms": 1,
+      "translate_ms": 0,
+      "tree_nodes": 3327
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.136907
+      },
+      "dag_nodes": 36,
+      "detail": "term #65 uses unsupported pure-Rust BV operator Forall(SymbolId(0))",
+      "distinct_symbols": 7,
+      "expected": "unsat",
+      "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__cbqi-sdlx-fixpoint-3-dd.smt2",
+      "max_depth": 13,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unsupported"
+      },
+      "outcome": "unsupported",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 36,
+          "digest": "348301b215609222",
+          "tree_nodes": 47
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 36,
+            "digest": "348301b215609222",
+            "tree_nodes": 47
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 36,
+        "input_tree_nodes": 47,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 36,
+        "output_distinct_symbols": 7,
+        "output_max_depth": 13,
+        "output_tree_nodes": 47,
+        "rewritten_outcome": "unsupported",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 47
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.129384
+      },
+      "dag_nodes": 16,
+      "detail": "term #45 uses unsupported pure-Rust BV operator Forall(SymbolId(0))",
+      "distinct_symbols": 3,
+      "expected": "unsat",
+      "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__issue4433-nqe.smt2",
+      "max_depth": 8,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unsupported"
+      },
+      "outcome": "unsupported",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 16,
+          "digest": "5654556f0ba9ea84",
+          "tree_nodes": 24
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 16,
+            "digest": "5654556f0ba9ea84",
+            "tree_nodes": 24
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 16,
+        "input_tree_nodes": 24,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 16,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 8,
+        "output_tree_nodes": 24,
+        "rewritten_outcome": "unsupported",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 24
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.067423
+      },
+      "dag_nodes": 11,
+      "detail": "term #30 uses unsupported pure-Rust BV operator Forall(SymbolId(0))",
+      "distinct_symbols": 2,
+      "expected": "sat",
+      "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__issue4849-nqe.smt2",
+      "max_depth": 6,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unsupported"
+      },
+      "outcome": "unsupported",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 11,
+          "digest": "b41d22e81593fab3",
+          "tree_nodes": 15
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 11,
+            "digest": "b41d22e81593fab3",
+            "tree_nodes": 15
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 11,
+        "input_tree_nodes": 15,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 11,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 6,
+        "output_tree_nodes": 15,
+        "rewritten_outcome": "unsupported",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 15
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.039329
+      },
+      "dag_nodes": 8,
+      "detail": "term #21 uses unsupported pure-Rust BV operator Forall(SymbolId(0))",
+      "distinct_symbols": 2,
+      "expected": "unsat",
+      "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__issue5279-nqe.smt2",
+      "max_depth": 5,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unsupported"
+      },
+      "outcome": "unsupported",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 8,
+          "digest": "fb5570eecaf012be",
+          "tree_nodes": 8
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 8,
+            "digest": "fb5570eecaf012be",
+            "tree_nodes": 8
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 8,
+        "input_tree_nodes": 8,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 8,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 5,
+        "output_tree_nodes": 8,
+        "rewritten_outcome": "unsupported",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 8
+    },
+    {
+      "assertions": 25,
+      "backend_stats": {
+        "check_auto_ms": 1.555383
+      },
+      "dag_nodes": 564,
+      "detail": "term #1338 uses unsupported pure-Rust BV operator Forall(SymbolId(16))",
+      "distinct_symbols": 50,
+      "expected": "sat",
+      "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__psyco-196.smt2",
+      "max_depth": 91,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unsupported"
+      },
+      "outcome": "unsupported",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 25,
+          "assumptions": 0,
+          "dag_nodes": 564,
+          "digest": "84d6af9a7b88861f",
+          "tree_nodes": 2855
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 25,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 25,
+            "assumptions": 0,
+            "dag_nodes": 564,
+            "digest": "84d6af9a7b88861f",
+            "tree_nodes": 2855
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 564,
+        "input_tree_nodes": 2855,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 25,
+        "output_dag_nodes": 564,
+        "output_distinct_symbols": 50,
+        "output_max_depth": 91,
+        "output_tree_nodes": 2855,
+        "rewritten_outcome": "unsupported",
+        "rule_counts": {}
+      },
+      "solve_ms": 1,
+      "translate_ms": 0,
+      "tree_nodes": 2855
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.10682900000000001
+      },
+      "dag_nodes": 24,
+      "detail": "term #82 uses unsupported pure-Rust BV operator Forall(SymbolId(3))",
+      "distinct_symbols": 4,
+      "expected": "unsat",
+      "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__repair-const-nterm.smt2",
+      "max_depth": 17,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unsupported"
+      },
+      "outcome": "unsupported",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 24,
+          "digest": "b35e5ca975a45bd4",
+          "tree_nodes": 26
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 24,
+            "digest": "b35e5ca975a45bd4",
+            "tree_nodes": 26
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 24,
+        "input_tree_nodes": 26,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 24,
+        "output_distinct_symbols": 4,
+        "output_max_depth": 17,
+        "output_tree_nodes": 26,
+        "rewritten_outcome": "unsupported",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 26
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.03954
+      },
+      "dag_nodes": 13,
+      "detail": "term #25 uses unsupported pure-Rust BV operator Forall(SymbolId(0))",
+      "distinct_symbols": 3,
+      "expected": "sat",
+      "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__sygus-infer-nested.smt2",
+      "max_depth": 7,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unsupported"
+      },
+      "outcome": "unsupported",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 13,
+          "digest": "428bf9244f5bf40b",
+          "tree_nodes": 16
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 13,
+            "digest": "428bf9244f5bf40b",
+            "tree_nodes": 16
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 13,
+        "input_tree_nodes": 16,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 13,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 7,
+        "output_tree_nodes": 16,
+        "rewritten_outcome": "unsupported",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 16
+    }
+  ],
+  "summary": {
+    "agree": 0,
+    "blocker_buckets": {
+      "unsupported": 12
+    },
+    "disagree": 0,
+    "errors": 0,
+    "files": 12,
+    "layer_attribution": null,
+    "model_replay_failures": 0,
+    "oracle": {
+      "agree": 0,
+      "backend": "z3 4.13.3.0",
+      "compared": 0,
+      "disagree": 0,
+      "enabled": true,
+      "skipped": 12
+    },
+    "par2_mean_s": 240.0,
+    "query_plan": {
+      "original_dag_nodes": 1758,
+      "original_tree_nodes": 7582,
+      "slice_changed_instances": 0,
+      "slice_dag_nodes": 1758,
+      "slice_dropped_terms": 0,
+      "slice_tree_nodes": 7582
+    },
+    "rewrite": {
+      "applications": 0,
+      "changed_instances": 0,
+      "decision_changes": 0,
+      "decision_matches": 0,
+      "input_dag_nodes": 0,
+      "input_tree_nodes": 0,
+      "mode": "off",
+      "output_dag_nodes": 0,
+      "output_tree_nodes": 0,
+      "sat_unsat_conflicts": 0
+    },
+    "sat": 0,
+    "unknown": 0,
+    "unsat": 0,
+    "unsupported": 12
+  },
+  "triage": {
+    "errors": [],
+    "rewrite_decision_changes": [],
+    "soundness": {
+      "model_replay_failures": 0,
+      "oracle_disagreements": 0,
+      "rewrite_sat_unsat_conflicts": 0,
+      "status_disagreements": 0
+    },
+    "unsupported": [
+      {
+        "detail": "term #35 uses unsupported pure-Rust BV operator Forall(SymbolId(0))",
+        "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress0__quantifiers__ARI176e1.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "term #34 uses unsupported pure-Rust BV operator Forall(SymbolId(1))",
+        "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress0__quantifiers__clock-10.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "term #34 uses unsupported pure-Rust BV operator Forall(SymbolId(1))",
+        "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress0__quantifiers__clock-3.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "term #993 uses unsupported pure-Rust BV operator Forall(SymbolId(37))",
+        "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__006-cbqi-ite.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "term #1711 uses unsupported pure-Rust BV operator Forall(SymbolId(25))",
+        "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__015-psyco-pp.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "term #65 uses unsupported pure-Rust BV operator Forall(SymbolId(0))",
+        "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__cbqi-sdlx-fixpoint-3-dd.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "term #45 uses unsupported pure-Rust BV operator Forall(SymbolId(0))",
+        "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__issue4433-nqe.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "term #30 uses unsupported pure-Rust BV operator Forall(SymbolId(0))",
+        "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__issue4849-nqe.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "term #21 uses unsupported pure-Rust BV operator Forall(SymbolId(0))",
+        "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__issue5279-nqe.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "term #1338 uses unsupported pure-Rust BV operator Forall(SymbolId(16))",
+        "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__psyco-196.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "term #82 uses unsupported pure-Rust BV operator Forall(SymbolId(3))",
+        "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__repair-const-nterm.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "term #25 uses unsupported pure-Rust BV operator Forall(SymbolId(0))",
+        "file": "corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__sygus-infer-nested.smt2",
+        "outcome": "unsupported"
+      }
+    ]
+  },
+  "version": 14
+}
