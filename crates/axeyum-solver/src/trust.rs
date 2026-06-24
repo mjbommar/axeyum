@@ -76,7 +76,30 @@ pub enum TrustId {
     IntBlast,
     /// Datatype `select`/`is`/eq folded over constructors → BV (ADR-0022).
     DatatypeElim,
-    /// Floating-point operators → BV circuits (ADR-0023).
+    /// Floating-point operators → BV circuits (ADR-0023). The
+    /// **small IEEE-style-format** sub-case now carries an independent
+    /// **exhaustive faithfulness witness**: for `FP8_E5M2` (8 bits, IEEE ∞/NaN
+    /// conventions) the per-operator FP→BV circuits are checked over **every** input
+    /// bit pattern against `rustc_apfloat`'s native `Float8E5M2` reference
+    /// (`crates/axeyum-fp/tests/fpa2bv_faithfulness.rs`): all 256 unary / 65 536
+    /// binary inputs of `fp.add`/`fp.sub`/`fp.mul`/`fp.neg`/`fp.abs`/`fp.eq`/
+    /// `fp.lt`/`fp.leq`/`fp.min`/`fp.max` agree, modulo the SMT-LIB-*unspecified*
+    /// opposite-sign-zero `fp.min`/`fp.max` sign (both `±0` are accepted, matching
+    /// the `af6c8bf` fix) and NaN-payload tolerance. This is **stronger** than the
+    /// re-derivation certificates ([`ArrayElim`]/[`Ackermann`]/[`IntBlast`]): those
+    /// re-blast the same circuit and re-check its CNF, which proves *determinism*
+    /// but not *faithfulness* — a stably-wrong circuit (exactly the `af6c8bf` ±0
+    /// wrong-`unsat`) survives re-derivation. An exhaustive independent oracle does
+    /// not, and the witness has demonstrated teeth (it rejects a swapped-selection
+    /// `fp.min`/`fp.max` mutation). `is_certified` stays `false` because the
+    /// **large** formats (`F32`/`F64`/`F128` — not exhaustively enumerable, only
+    /// sampled differentially) and the **non-IEEE** small formats (`FP8_E4M3`,
+    /// `FP4_E2M1` — no Axeyum arithmetic circuit and a deviating reference) carry no
+    /// such per-query certificate — see [`TrustId::is_certified`].
+    ///
+    /// [`ArrayElim`]: TrustId::ArrayElim
+    /// [`Ackermann`]: TrustId::Ackermann
+    /// [`IntBlast`]: TrustId::IntBlast
     Fpa2Bv,
     /// Reduction-free exhaustive evaluation over the finite symbol domain.
     TermLevelEnum,
@@ -216,10 +239,20 @@ impl TrustId {
     /// array-combined `QF_AUFBV` route, and array `sat` models have no per-query
     /// certificate, so this bit stays `false`.
     ///
+    /// [`Fpa2Bv`] is analogous in spirit but witnessed *forward* rather than by
+    /// re-derivation: its **small IEEE-style-format** sub-case (`FP8_E5M2`) now
+    /// carries an **exhaustive faithfulness** check — every input bit pattern of the
+    /// per-operator circuit agrees with the independent `rustc_apfloat` reference
+    /// (`crates/axeyum-fp/tests/fpa2bv_faithfulness.rs`), a stronger guarantee than
+    /// re-blasting the same circuit. This bit stays `false` because the large
+    /// formats (`F32`/`F64`/`F128`, only sampled) and the non-IEEE small formats
+    /// (`FP8_E4M3`/`FP4_E2M1`) have no per-query certificate.
+    ///
     /// [`XorGaussian`]: TrustId::XorGaussian
     /// [`IntBlast`]: TrustId::IntBlast
     /// [`Ackermann`]: TrustId::Ackermann
     /// [`ArrayElim`]: TrustId::ArrayElim
+    /// [`Fpa2Bv`]: TrustId::Fpa2Bv
     #[must_use]
     pub const fn is_certified(self) -> bool {
         match self {
