@@ -30,15 +30,27 @@ path (`/` → `__`).
 
 A file is included only if it:
 
-- declares the target logic (`(set-logic QF_UF)` / `(set-logic QF_LRA)`),
+- declares the target logic — exact `(set-logic …)` for a specific division
+  (`QF_LRA`, `QF_UFLIA`, `QF_LIA`), or the `QF_UF*` *family* prefix for the
+  EUF-family `QF_UF` slice (so `QF_UFLIA`, `QF_UFNRAT`, `QF_UFBV`, … are kept),
 - carries a `(set-info :status …)` ground truth,
 - uses plain `(assert …)` + `(check-sat)` only,
 - is **not** an SMT-v1-derived (`.smtv1.smt2`) file, and
 - contains **none** of the incremental/exotic commands that the flat
   benchmark-slice parser cannot faithfully represent:
   `check-sat-assuming`, `get-value`, `get-model`, `get-unsat-core`,
-  `push`/`pop`, `reset-assertions`, `get-info`, `get-assignment`,
-  `define-fun-rec`, `echo`.
+  `get-unsat-assumptions`, `get-interpolant`, `get-abduct`, `get-proof`,
+  `push`/`pop`, `reset`, `reset-assertions`, `get-info`, `get-assignment`,
+  `declare-pool`, `block-model`, `define-fun-rec`, `echo`, and the
+  `set-option :incremental true` / `:produce-models true` options, and
+- contains at least one `(assert …)` (a zero-assert file would let the flat
+  view solve a different, vacuous problem than the source).
+
+The curation is reproduced by the committed helper
+[`scripts/curate-public-slice.py`](../../scripts/curate-public-slice.py)
+(`python3 scripts/curate-public-slice.py <LOGIC> <out_dir> [--prefix]`); it
+reads the gitignored `references/cvc5/test/regress` clone and re-derives the
+QF_UF / QF_UFLIA / QF_LIA slices byte-for-byte.
 
 This filter mirrors the bench harness's own **under-parse soundness guard**: the
 harness independently re-checks each instance and marks it `unsupported` (never a
@@ -73,6 +85,51 @@ cli__regress2__ooo.tag10.smt2
 cli__regress2__simplify.javafe.ast.ArrayInit.35_without_quantification2.smt2
 cli__regress4__xs-11-20-5-2-5-3.smt2
 ```
+
+### QF_UF full re-measure: still blocked (measured 2026-06-24)
+
+A planned "full" QF_UF re-measure — re-including the 15 files above on the
+premise that commit `af35fe1` ("bound the QF_UF e-graph path by config.timeout")
+makes them return `Unknown` within budget — was **measured and does not hold**.
+Under `af35fe1` (HEAD at measurement) every one of the 15 still runs unbounded:
+a per-file probe with a 10 s `--timeout-ms` and a 20 s / 60 s OS hard-timeout
+backstop killed all 15 at the backstop (the budget was not honored). Root cause:
+all 15 declare a UF-plus-integer-arithmetic logic
+(`QF_UFLIA` / `QF_UFNIA` / `QF_UFIDL`), **not** pure `QF_UF`, so `check_auto`
+routes them through the UFLIA-class arithmetic decision path, which `af35fe1`
+did not touch — that fix bounds only the pure-EUF e-graph path (`check_qf_uf`).
+The `cvc5-regress-clean-bounded` slice therefore remains the honest, runnable
+QF_UF measurement; closing the gap needs the timeout threaded through the
+UF+arithmetic path (a solver-source change, out of scope for corpus curation).
+
+## QF_UFLIA: `cvc5-regress-clean-bounded` (8 files)
+
+The `QF_UFLIA` slice (exact-logic match) yields 17 clean files from cvc5
+`test/regress` (65 total declare `QF_UFLIA`; 18 are `.smtv1`-derived and 29
+carry no `:status`). Of those 17, **9** run unbounded under `check_auto`'s
+UF+integer-arithmetic path (the same unbounded path described above — they are
+the `QF_UFLIA`-logic members of the QF_UF exclusion list plus their siblings),
+so the committed slice is the **8** that respect the `--timeout-ms` budget. The
+9 measurement-excluded files are:
+
+```
+cli__regress1__uflia__FIREFLY_luke_1b_e2_3049_e7_1173.ec.minimized.smt2
+cli__regress2__hash_sat_06_19.smt2
+cli__regress2__hash_sat_07_17.smt2
+cli__regress2__hash_sat_09_09.smt2
+cli__regress2__hash_sat_10_09.smt2
+cli__regress2__javafe.ast.StandardPrettyPrint.319_no_forall.smt2
+cli__regress2__javafe.ast.WhileStmt.447_no_forall.smt2
+cli__regress2__simplify.javafe.ast.ArrayInit.35_without_quantification2.smt2
+cli__regress4__xs-11-20-5-2-5-3.smt2
+```
+
+## QF_LIA: `cvc5-regress-clean-bounded` (11 files)
+
+The `QF_LIA` slice (exact-logic match) yields 12 clean files from cvc5
+`test/regress`. **1** of them runs unbounded under `check_auto`'s QF_LIA path
+(`cli__regress3__arith_prp-13-24.smt2`), so the committed slice is the **11**
+that respect the `--timeout-ms` budget.
 
 ## Note on the Z3 comparison oracle
 
