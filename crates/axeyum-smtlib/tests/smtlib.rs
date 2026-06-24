@@ -1975,3 +1975,238 @@ fn ctor_of(script: &axeyum_smtlib::Script, name: &str) -> axeyum_ir::Constructor
         .find_constructor(name)
         .unwrap_or_else(|| panic!("constructor `{name}` not declared"))
 }
+
+// --- finite Sets via BitVec modeling ---------------------------------------
+//
+// `(Set E)` is modeled as a `BitVec(W)` over the finite element domain; the sound
+// subset of set ops is desugared to BV ops at parse time. These tests are
+// oracle-free: a satisfiable formula is checked by `eval`-ing the original
+// assertions under a concrete BV model, and an unsatisfiable/declined shape is
+// checked structurally.
+
+/// A `(Set E)` constant resolves to a `BitVec(W)` sort (so set ops are BV ops).
+#[test]
+fn set_sort_is_modeled_as_bitvec() {
+    let text = r"
+        (set-logic QF_UFLIAFS)
+        (declare-sort E 0)
+        (declare-fun s () (Set E))
+        (assert (set.member 0 s))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    let s = sym_of(&script, "s");
+    assert!(
+        matches!(script.arena.symbol(s).1, Sort::BitVec(_)),
+        "a (Set E) constant must resolve to a BitVec sort"
+    );
+    // The assertion `(set.member 0 s)` is a Bool (a bit test).
+    assert_eq!(script.arena.sort_of(script.assertions[0]), Sort::Bool);
+}
+
+/// `(set.member e (set.union (set.singleton a) (set.singleton b)))` is true exactly
+/// when `e ∈ {a, b}`. Checked by `eval` over the empty assignment (no free vars).
+#[test]
+fn set_member_of_union_of_singletons() {
+    // 1 ∈ {1, 2}  ⇒ true.
+    let s = parse_script(
+        "(set-logic QF_UFLIAFS)\n(declare-sort E 0)\n\
+         (assert (set.member 1 (set.union (set.singleton 1) (set.singleton 2))))",
+    )
+    .unwrap();
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
+    // 3 ∈ {1, 2}  ⇒ false.
+    let s = parse_script(
+        "(set-logic QF_UFLIAFS)\n(declare-sort E 0)\n\
+         (assert (set.member 3 (set.union (set.singleton 1) (set.singleton 2))))",
+    )
+    .unwrap();
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(false)
+    );
+}
+
+/// Intersection / difference are exact over the named-element domain. `{1,2} ∩
+/// {2,3} = {2}` and `{1,2} \ {2,3} = {1}`, checked by membership via `eval`.
+#[test]
+fn set_inter_and_minus_are_exact() {
+    let s = parse_script(
+        "(set-logic QF_UFLIAFS)\n(declare-sort E 0)\n\
+         (assert (and \
+            (set.member 2 (set.inter (set.union (set.singleton 1) (set.singleton 2)) \
+                                     (set.union (set.singleton 2) (set.singleton 3)))) \
+            (not (set.member 1 (set.inter (set.union (set.singleton 1) (set.singleton 2)) \
+                                          (set.union (set.singleton 2) (set.singleton 3))))) \
+            (set.member 1 (set.minus (set.union (set.singleton 1) (set.singleton 2)) \
+                                     (set.union (set.singleton 2) (set.singleton 3)))) \
+            (not (set.member 2 (set.minus (set.union (set.singleton 1) (set.singleton 2)) \
+                                          (set.union (set.singleton 2) (set.singleton 3)))))))",
+    )
+    .unwrap();
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
+}
+
+/// `(as set.empty (Set E))` is the all-zeros bit-set: nothing is a member, and a
+/// `subset` of empty forces a free set empty. A satisfiable membership formula is
+/// witnessed by a concrete BV model and re-checked by `eval`.
+#[test]
+fn set_empty_and_subset_witness() {
+    // `(not (set.member 0 (as set.empty (Set E))))` is valid (empty has no members).
+    let s = parse_script(
+        "(set-logic QF_UFLIAFS)\n(declare-sort E 0)\n\
+         (assert (not (set.member 0 (as set.empty (Set E)))))",
+    )
+    .unwrap();
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
+
+    // A free set `s` with `(set.subset (set.singleton 0) s)` and `(set.member 0 s)`:
+    // pick the BV model where bit-0 of `s` is set; `eval` the original assertions.
+    let s = parse_script(
+        "(set-logic QF_UFLIAFS)\n(declare-sort E 0)\n(declare-fun s () (Set E))\n\
+         (assert (set.subset (set.singleton 0) s))\n(assert (set.member 0 s))",
+    )
+    .unwrap();
+    let sv = sym_of(&s, "s");
+    let Sort::BitVec(w) = s.arena.symbol(sv).1 else {
+        panic!("set var must be a BitVec");
+    };
+    let mut asg = Assignment::new();
+    // bit-0 of `s` set (0 is the only named element → bit 0).
+    asg.set(sv, Value::Bv { width: w, value: 1 });
+    for &a in &s.assertions {
+        assert_eq!(eval(&s.arena, a, &asg).unwrap(), Value::Bool(true));
+    }
+}
+
+/// A `subset` that forces a contradiction is unsatisfiable: `s ⊆ {1}` and `2 ∈ s`
+/// and `1 ∉ s` over a *free* `s` cannot hold, because the only members `s` can
+/// have are among the named domain and the constraints pin every named bit. The
+/// encoding makes this a pure BV/Bool formula; checked by exhausting the (tiny)
+/// modeled domain.
+#[test]
+fn set_subset_unsat_shape_is_pure_bv() {
+    let s = parse_script(
+        "(set-logic QF_UFLIAFS)\n(declare-sort E 0)\n(declare-fun s () (Set E))\n\
+         (assert (set.subset s (set.singleton 1)))\n(assert (set.member 2 s))",
+    )
+    .unwrap();
+    // Every assertion is a Bool over a BitVec set var; no unsupported sort leaks.
+    for &a in &s.assertions {
+        assert_eq!(s.arena.sort_of(a), Sort::Bool);
+    }
+    let sv = sym_of(&s, "s");
+    let Sort::BitVec(w) = s.arena.symbol(sv).1 else {
+        panic!("set var must be a BitVec");
+    };
+    // Exhaust all 2^w assignments of `s`: the conjunction is never true (unsat).
+    let mut any_sat = false;
+    for value in 0u128..(1u128 << w) {
+        let mut asg = Assignment::new();
+        asg.set(sv, Value::Bv { width: w, value });
+        let all = s
+            .assertions
+            .iter()
+            .all(|&a| eval(&s.arena, a, &asg).unwrap() == Value::Bool(true));
+        any_sat |= all;
+    }
+    assert!(!any_sat, "s ⊆ {{1}} ∧ 2 ∈ s must be unsatisfiable");
+}
+
+/// Two free sets over an infinite element sort can differ: `(not (= x y))` is
+/// satisfiable. The junk margin bits give room for the witness; checked by `eval`.
+#[test]
+fn distinct_free_sets_are_satisfiable() {
+    let s = parse_script(
+        "(set-logic QF_UFLIAFS)\n(declare-fun x () (Set Int))\n(declare-fun y () (Set Int))\n\
+         (assert (not (= x y)))",
+    )
+    .unwrap();
+    let xv = sym_of(&s, "x");
+    let yv = sym_of(&s, "y");
+    let Sort::BitVec(w) = s.arena.symbol(xv).1 else {
+        panic!("set var must be a BitVec");
+    };
+    let mut asg = Assignment::new();
+    asg.set(xv, Value::Bv { width: w, value: 0 });
+    asg.set(yv, Value::Bv { width: w, value: 1 });
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &asg).unwrap(),
+        Value::Bool(true)
+    );
+}
+
+/// `set.card` ranges over the whole (possibly infinite) element sort, so it is
+/// **declined** — gracefully `Unsupported`, never a wrong verdict.
+#[test]
+fn set_card_is_declined_not_wrong() {
+    let text = r"
+        (set-logic QF_UFLIAFS)
+        (declare-sort E 0)
+        (declare-fun s () (Set E))
+        (assert (>= (set.card s) 5))
+        (check-sat)
+    ";
+    assert!(
+        matches!(parse_script(text), Err(SmtError::Unsupported(_))),
+        "set.card must be declined as Unsupported"
+    );
+}
+
+/// `set.complement`/`set.universe`/`set.comprehension` are likewise declined.
+#[test]
+fn set_complement_and_comprehension_are_declined() {
+    for op in [
+        "(set.complement s)",
+        "(set.subset x (set.comprehension ((z U)) (not (= z a)) z))",
+    ] {
+        let text = format!(
+            "(set-logic QF_UFLIAFS)\n(declare-sort U 0)\n(declare-fun a () U)\n\
+             (declare-fun s () (Set U))\n(declare-fun x () (Set U))\n(assert {op})"
+        );
+        assert!(
+            matches!(parse_script(&text), Err(SmtError::Unsupported(_))),
+            "`{op}` must be declined"
+        );
+    }
+}
+
+/// A non-literal element term (`(set.member (* v 7) s)`) can alias another element
+/// term, so it is **declined** rather than risk an unsound per-term bit.
+#[test]
+fn nonliteral_set_element_is_declined() {
+    let text = r"
+        (set-logic QF_UFLIAFS)
+        (declare-fun v () Int)
+        (declare-fun s () (Set Int))
+        (assert (set.member (* v 7) s))
+        (check-sat)
+    ";
+    assert!(
+        matches!(parse_script(text), Err(SmtError::Unsupported(_))),
+        "non-literal set elements must be declined"
+    );
+}
+
+/// A script with no sets at all is completely unaffected by the set pre-pass.
+#[test]
+fn no_set_usage_is_untouched() {
+    let text = r"
+        (set-logic QF_BV)
+        (declare-fun a () (_ BitVec 4))
+        (assert (= a (_ bv5 4)))
+        (check-sat)
+    ";
+    let s = parse_script(text).unwrap();
+    assert_eq!(s.assertions.len(), 1);
+    assert_eq!(s.arena.sort_of(s.assertions[0]), Sort::Bool);
+}

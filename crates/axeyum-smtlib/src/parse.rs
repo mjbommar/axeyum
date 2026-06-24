@@ -77,7 +77,14 @@ pub struct Script {
 /// constructs outside the `QF_BV` benchmark slice, and sort errors surfaced
 /// as [`SmtError::Ir`].
 pub fn parse_script(input: &str) -> Result<Script, SmtError> {
-    let exprs = read_all(input)?;
+    let mut exprs = read_all(input)?;
+    // Finite-set theory: model every `(Set E)` as a `BitVec(W)` over the finite
+    // element domain and rewrite the sound subset of set operations to bit-vector
+    // operations *in place* on the s-expression tree, before any term is built.
+    // A no-op (and no allocation) for scripts that use no sets; an
+    // [`SmtError::Unsupported`] for a script whose set usage falls outside the
+    // provably-sound subset (see [`desugar_sets`]).
+    desugar_sets(&mut exprs)?;
     let mut script = Script::default();
     let mut aliases: HashMap<String, TermId> = HashMap::new();
     let mut macros: HashMap<String, MacroDef<'_>> = HashMap::new();
@@ -158,6 +165,348 @@ fn count_sexpr_nodes(e: &SExpr) -> usize {
         SExpr::Atom(_) => 1,
         SExpr::List(items) => 1 + items.iter().map(count_sexpr_nodes).sum::<usize>(),
     }
+}
+
+// --- finite-set theory: `(Set E)` modeled as `BitVec(W)` ---------------------
+//
+// SMT-LIB's finite-set theory (cvc5 `set.*`) over a finite element domain is
+// isomorphic to the powerset of the domain, which is exactly a bit-set. We model
+// `(Set E)` as a `BitVec(W)` where each bit position is a distinct element of the
+// modeled domain, and rewrite the **denotation-preserving subset** of the set
+// operators to bit-vector operators, entirely at the s-expression level (so no IR
+// `Sort`/`Op` change is needed — just like uninterpreted sorts, `79a0679`).
+//
+// # The modeled element domain and its bit positions
+//
+// The only set elements a quantifier-free formula can *name* are the terms that
+// appear as the element argument of `set.singleton`/`set.member`. We give each
+// **distinct** such element term its own bit index `0..D` (`D` distinct element
+// terms), plus a `MARGIN` of extra high "junk" bits standing for elements the
+// formula never names. The width is `W = D + MARGIN` (at least `1`).
+//
+// # Soundness — when is this denotation-preserving?
+//
+// The encoding is exact (isomorphic to the real powerset semantics) provided two
+// conditions hold, which [`scan_set_ops`] enforces by **declining** (leaving the
+// whole script [`SmtError::Unsupported`]) otherwise:
+//
+//  1. **Distinct element terms denote distinct elements.** We only accept element
+//     terms that are *constant literals* (numerals, decimals, `#b`/`#x`/`(_ bvN
+//     W)` bit-vectors, `true`/`false`). Two syntactically-distinct literals are
+//     two distinct values, so giving them distinct bits introduces no spurious
+//     (dis)equality. (Arithmetic element terms such as `(* v0 7)` can *alias*
+//     another element term — `(* 7 v0)` — so a per-term bit would be unsound
+//     without congruence constraints; those files are declined for a later
+//     slice.)
+//
+//  2. **Only finite-domain-safe operators.** `set.empty`, `set.singleton`,
+//     `set.member`, `set.union`, `set.inter`, `set.minus`, `set.subset`, and set
+//     `=`/`distinct` are all pointwise over the membership function, so they
+//     commute with projecting onto the modeled domain: `union=bvor`,
+//     `inter=bvand`, `minus=bvand-bvnot`, `member=bit test`, `subset=(a = a&b)`.
+//     The `MARGIN` junk bits let a *free* set variable differ from another set on
+//     unnamed elements (so `(not (= x y))` over two free sets is `sat`, and an
+//     equality never wrongly forces two free sets equal on the unnamed tail).
+//     `set.card`, `set.complement`, and `set.universe` are **not** pointwise on a
+//     finite projection — they quantify over the *whole* (possibly infinite)
+//     element sort — so they are declined (a `BitVec` popcount/complement over the
+//     modeled domain would give a *wrong* cardinality/complement for the unnamed
+//     tail). `set.comprehension`/`set.choose`/`set.insert` are likewise declined.
+//
+// Under (1) and (2) every set term denotes a subset of the modeled domain and
+// every operator is computed exactly on that domain, so a model of the `BitVec`
+// encoding lifts to a set model (map bit `i` to element `i`, and realize the
+// junk bits with that many fresh distinct unnamed elements) and vice-versa: the
+// encoding is **equisatisfiable**, so neither a wrong `sat` nor a wrong `unsat`
+// is possible.
+
+/// Operators that quantify over the *entire* element sort (not just the modeled
+/// finite projection) or otherwise fall outside the sound `BitVec` subset; any
+/// occurrence makes [`desugar_sets`] decline the whole script.
+const UNSUPPORTED_SET_OPS: &[&str] = &[
+    "set.card",
+    "set.complement",
+    "set.universe",
+    "set.comprehension",
+    "set.choose",
+    "set.insert",
+    "set.filter",
+    "set.map",
+    "set.fold",
+];
+
+/// Margin of extra high "junk" bits added beyond the `D` named-element bits, so a
+/// free set variable can differ from another set on elements the formula never
+/// names. See the module-level soundness note.
+const SET_MARGIN_BITS: u32 = 2;
+
+/// Cap on the modeled set width. The single-bit `set.singleton` constant is
+/// emitted as `(_ bv(1<<i) W)`, whose value must fit a `u128`, so more than 127
+/// distinct element terms is declined (rare; these benchmarks have a handful).
+const MAX_SET_WIDTH: u32 = 128;
+
+/// Rewrites the sound subset of finite-set operations to bit-vector operations,
+/// in place on the whole s-expression script `exprs`, modeling every `(Set E)` as
+/// a `BitVec(W)` (see the module-level soundness note).
+///
+/// Fast path: a script that mentions no set sort or `set.*` operator is left
+/// untouched (and unallocated).
+///
+/// # Errors
+///
+/// [`SmtError::Unsupported`] if the script's set usage falls outside the
+/// provably-sound subset (an unsupported operator, a non-literal element term, or
+/// a modeled width over [`MAX_SET_WIDTH`]). Declining is *sound*: an unsupported
+/// file is reported as such rather than risking a wrong verdict.
+fn desugar_sets(exprs: &mut [SExpr]) -> Result<(), SmtError> {
+    // Fast path: nothing set-related anywhere.
+    if !exprs.iter().any(mentions_sets) {
+        return Ok(());
+    }
+    // Collect the distinct (literal) element terms, in first-appearance order, and
+    // validate the sound-subset conditions.
+    let mut element_keys: Vec<String> = Vec::new();
+    scan_set_ops(exprs, &mut element_keys)?;
+    let d = u32::try_from(element_keys.len()).unwrap_or(u32::MAX);
+    let width = d
+        .checked_add(SET_MARGIN_BITS)
+        .filter(|&w| w <= MAX_SET_WIDTH)
+        .ok_or_else(|| {
+            SmtError::Unsupported(format!(
+                "finite-set modeling needs {d} element bits, over the {MAX_SET_WIDTH}-bit cap"
+            ))
+        })?
+        .max(1);
+    let bit_index: HashMap<String, u32> = element_keys
+        .into_iter()
+        .enumerate()
+        .map(|(i, k)| (k, u32::try_from(i).expect("index fits (width capped)")))
+        .collect();
+    for e in exprs.iter_mut() {
+        rewrite_set_sexpr(e, width, &bit_index);
+    }
+    Ok(())
+}
+
+/// Whether `e` mentions the `Set` sort head or any `set.*` operator anywhere.
+fn mentions_sets(e: &SExpr) -> bool {
+    match e {
+        SExpr::Atom(a) => a.starts_with("set."),
+        SExpr::List(items) => {
+            items.first().and_then(SExpr::atom) == Some("Set") || items.iter().any(mentions_sets)
+        }
+    }
+}
+
+/// Validates the sound-subset conditions and collects the distinct literal element
+/// terms (first-appearance order) into `element_keys`.
+///
+/// # Errors
+///
+/// [`SmtError::Unsupported`] for an [`UNSUPPORTED_SET_OPS`] operator or a
+/// non-literal `set.singleton`/`set.member` element term.
+fn scan_set_ops(exprs: &[SExpr], element_keys: &mut Vec<String>) -> Result<(), SmtError> {
+    for e in exprs {
+        if let SExpr::List(items) = e {
+            if let Some(head) = items.first().and_then(SExpr::atom) {
+                if UNSUPPORTED_SET_OPS.contains(&head) {
+                    return Err(SmtError::Unsupported(format!(
+                        "finite-set operator `{head}` is outside the sound BitVec subset \
+                         (it ranges over the whole element sort, not the named finite domain)"
+                    )));
+                }
+                if (head == "set.singleton" || head == "set.member") && items.len() >= 2 {
+                    // The element is the LAST argument: `(set.singleton e)` and
+                    // `(set.member e S)`.
+                    let elem = &items[items.len() - if head == "set.member" { 2 } else { 1 }];
+                    let key = set_element_key(elem).ok_or_else(|| {
+                        SmtError::Unsupported(format!(
+                            "finite-set element `{elem:?}` is not a constant literal; only \
+                             literal elements are soundly modeled (non-literal elements may \
+                             alias and need congruence — a later slice)"
+                        ))
+                    })?;
+                    if !element_keys.contains(&key) {
+                        element_keys.push(key);
+                    }
+                }
+            }
+            scan_set_ops(items, element_keys)?;
+        }
+    }
+    Ok(())
+}
+
+/// The canonical bit-position key for a set element term, or `None` if the term is
+/// not a constant literal (so giving it its own bit could be unsound; see the
+/// module note, condition 1).
+///
+/// Accepts numerals (`7`), decimals (`1.5`), `#b`/`#x` bit-vector literals,
+/// indexed bit-vector constants `(_ bvN W)`, and the booleans `true`/`false`. The
+/// key is the literal's normalized text, so two syntactically-equal literals share
+/// a bit and two distinct literals get distinct bits.
+fn set_element_key(e: &SExpr) -> Option<String> {
+    match e {
+        SExpr::Atom(a) => is_set_element_literal_atom(a).then(|| a.clone()),
+        SExpr::List(items) => {
+            // `(_ bvN W)` indexed bit-vector constant.
+            if items.len() == 3
+                && items[0].atom() == Some("_")
+                && items[1].atom().is_some_and(|n| n.starts_with("bv"))
+                && items[2].atom().is_some_and(|w| w.parse::<u32>().is_ok())
+            {
+                let n = items[1].atom().expect("checked");
+                let w = items[2].atom().expect("checked");
+                Some(format!("(_ {n} {w})"))
+            } else {
+                None
+            }
+        }
+    }
+}
+
+/// Whether an atom is a constant literal usable as a finite-set element bit key:
+/// a numeral, a decimal, a `#b`/`#x` bit-vector literal, or `true`/`false`.
+fn is_set_element_literal_atom(a: &str) -> bool {
+    if a == "true" || a == "false" {
+        return true;
+    }
+    if let Some(rest) = a.strip_prefix("#b") {
+        return !rest.is_empty() && rest.bytes().all(|c| c == b'0' || c == b'1');
+    }
+    if let Some(rest) = a.strip_prefix("#x") {
+        return !rest.is_empty() && rest.bytes().all(|c| c.is_ascii_hexdigit());
+    }
+    // Numeral or decimal: digits with at most one `.`.
+    let mut seen_dot = false;
+    let mut seen_digit = false;
+    for c in a.bytes() {
+        match c {
+            b'0'..=b'9' => seen_digit = true,
+            b'.' if !seen_dot => seen_dot = true,
+            _ => return false,
+        }
+    }
+    seen_digit
+}
+
+/// Recursively rewrites every finite-set sort/operator in `e` (in place) to its
+/// bit-vector encoding at width `width`, using `bit_index` for element positions.
+fn rewrite_set_sexpr(e: &mut SExpr, width: u32, bit_index: &HashMap<String, u32>) {
+    let SExpr::List(items) = e else { return };
+    // Rewrite children first (bottom-up), so set sub-terms become BV before the
+    // parent operator consumes them.
+    for child in items.iter_mut() {
+        rewrite_set_sexpr(child, width, bit_index);
+    }
+    // `(Set E)` in a sort position → `(_ BitVec W)`.
+    if items.len() == 2 && items[0].atom() == Some("Set") {
+        *e = bitvec_sort(width);
+        return;
+    }
+    let Some(head) = items.first().and_then(SExpr::atom) else {
+        return;
+    };
+    match head {
+        // `(as set.empty (Set E))` and the bare `set.empty` (handled as an atom
+        // elsewhere) → the all-zeros bit-set. The `(Set E)` argument has already
+        // been rewritten to `(_ BitVec W)` above; we ignore it.
+        "as" if items.len() == 3 && items[1].atom() == Some("set.empty") => {
+            *e = bv_zero(width);
+        }
+        "set.empty" => *e = bv_zero(width),
+        "set.singleton" if items.len() == 2 => {
+            *e = singleton_sexpr(&items[1], width, bit_index);
+        }
+        "set.member" if items.len() == 3 => {
+            // `(set.member e S)` → bit `i` of `S` is set:
+            //   `(= ((_ extract i i) S) #b1)`.
+            *e = member_sexpr(&items[1], &items[2], bit_index);
+        }
+        "set.union" if items.len() >= 2 => {
+            *e = fold_set_sexpr("bvor", &items[1..]);
+        }
+        "set.inter" if items.len() >= 2 => {
+            *e = fold_set_sexpr("bvand", &items[1..]);
+        }
+        "set.minus" if items.len() == 3 => {
+            // `a \ b` = `a & ~b`.
+            *e = SExpr::List(vec![
+                atom("bvand"),
+                items[1].clone(),
+                SExpr::List(vec![atom("bvnot"), items[2].clone()]),
+            ]);
+        }
+        "set.subset" if items.len() == 3 => {
+            // `a ⊆ b` ⇔ `a = a & b`.
+            let a = items[1].clone();
+            let b = items[2].clone();
+            *e = SExpr::List(vec![
+                atom("="),
+                a.clone(),
+                SExpr::List(vec![atom("bvand"), a, b]),
+            ]);
+        }
+        _ => {}
+    }
+}
+
+/// `(_ BitVec width)` sort s-expr.
+fn bitvec_sort(width: u32) -> SExpr {
+    SExpr::List(vec![atom("_"), atom("BitVec"), atom(&width.to_string())])
+}
+
+/// `(_ bv0 width)` — the empty bit-set / all-zeros constant.
+fn bv_zero(width: u32) -> SExpr {
+    SExpr::List(vec![atom("_"), atom("bv0"), atom(&width.to_string())])
+}
+
+/// `(set.singleton e)` → the one-hot constant `(_ bv(1<<i) W)` for `e`'s bit `i`.
+/// An element with no registered bit (impossible after [`scan_set_ops`]) maps to
+/// the empty set, which is sound (it can only under-constrain, never wrong-`unsat`
+/// — but the scan guarantees every singleton element is registered).
+fn singleton_sexpr(elem: &SExpr, width: u32, bit_index: &HashMap<String, u32>) -> SExpr {
+    let value = set_element_key(elem)
+        .and_then(|k| bit_index.get(&k).copied())
+        .map_or(0u128, |i| 1u128 << i);
+    SExpr::List(vec![
+        atom("_"),
+        atom(&format!("bv{value}")),
+        atom(&width.to_string()),
+    ])
+}
+
+/// `(set.member e S)` → `(= ((_ extract i i) S) #b1)`, the bit-`i` membership test.
+/// A `set.member` whose element has no bit (impossible after [`scan_set_ops`])
+/// becomes `false` (the element is in no modeled set), which is sound here.
+fn member_sexpr(elem: &SExpr, set: &SExpr, bit_index: &HashMap<String, u32>) -> SExpr {
+    let Some(i) = set_element_key(elem).and_then(|k| bit_index.get(&k).copied()) else {
+        return atom("false");
+    };
+    let extract = SExpr::List(vec![
+        SExpr::List(vec![
+            atom("_"),
+            atom("extract"),
+            atom(&i.to_string()),
+            atom(&i.to_string()),
+        ]),
+        set.clone(),
+    ]);
+    SExpr::List(vec![atom("="), extract, atom("#b1")])
+}
+
+/// Folds a set operator `op` (`bvor`/`bvand`) over `args` (≥ 1), left-associating.
+fn fold_set_sexpr(op: &str, args: &[SExpr]) -> SExpr {
+    let mut acc = args[0].clone();
+    for next in &args[1..] {
+        acc = SExpr::List(vec![atom(op), acc, next.clone()]);
+    }
+    acc
+}
+
+/// A borrowed-free atom s-expr.
+fn atom(s: &str) -> SExpr {
+    SExpr::Atom(s.to_owned())
 }
 
 // A flat dispatch over the SMT-LIB command keywords; one match arm per command.
